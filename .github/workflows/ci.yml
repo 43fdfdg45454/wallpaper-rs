@@ -70,19 +70,18 @@ jobs:
   package:
     name: Package
     needs: check
+    # Ubuntu 24.04 is the oldest base with PipeWire >= 1.0 headers, which the
+    # bindings need. Its glibc 2.39 keeps the binaries portable to current
+    # distributions.
     runs-on: ubuntu-24.04
-    # Debian 12 keeps the glibc requirement low so the binaries run on most
-    # current distributions.
-    container: debian:12
     steps:
+      - uses: actions/checkout@v5
+
       - name: Install system packages
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            ca-certificates curl git build-essential pkg-config \
-            libclang-dev libpipewire-0.3-dev
-
-      - uses: actions/checkout@v5
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libclang-dev libpipewire-0.3-dev
 
       - uses: dtolnay/rust-toolchain@stable
 
