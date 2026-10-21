@@ -111,7 +111,7 @@ jobs:
             plasma-workspace kwin kpipewire spectacle \
             pipewire wireplumber dbus \
             mesa vulkan-swrast vulkan-icd-loader \
-            imagemagick tar gzip libcap
+            imagemagick tar gzip libcap gdb
           pacman -Q plasma-workspace kwin kpipewire
 
       - uses: actions/checkout@v5

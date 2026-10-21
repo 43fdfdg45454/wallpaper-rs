@@ -57,19 +57,35 @@ pipewire >"$OUT/pipewire.log" 2>&1 & pids+=($!)
 wait_for 15 test -S "$XDG_RUNTIME_DIR/pipewire-0"
 wireplumber >"$OUT/wireplumber.log" 2>&1 & pids+=($!)
 
-# Headless compositor with software rendering.
+# KDE programs log to the journal by default; there is none here.
+export QT_FORCE_STDERR_LOGGING=1
+# Software OpenGL (llvmpipe) for every client.
+export LIBGL_ALWAYS_SOFTWARE=1
+
+# Runs a program under gdb when available so crashes leave a backtrace.
+debug_run() { # <log> <program> [args...]
+  local log=$1
+  shift
+  if command -v gdb >/dev/null 2>&1; then
+    gdb -q -batch -ex "set pagination off" -ex "handle SIGPIPE nostop noprint" \
+      -ex run -ex "thread apply all bt 25" --args "$@" >"$log" 2>&1
+  else
+    "$@" >"$log" 2>&1
+  fi
+}
+
+# Headless compositor with QPainter compositing.
 export KWIN_COMPOSE=Q
-kwin_wayland --virtual --width 1280 --height 720 --socket wayland-test \
-  >"$OUT/kwin.log" 2>&1 & pids+=($!)
+debug_run "$OUT/kwin.log" kwin_wayland --virtual --width 1280 --height 720 \
+  --socket wayland-test & pids+=($!)
 wait_for 30 test -S "$XDG_RUNTIME_DIR/wayland-test"
 export WAYLAND_DISPLAY=wayland-test QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland
 export XDG_CURRENT_DESKTOP=KDE KDE_FULL_SESSION=true KDE_SESSION_VERSION=6
-export QT_QUICK_BACKEND=software
 
-RUST_LOG=debug "$HOME/.local/bin/wprsd" >"$OUT/wprsd.log" 2>&1 & pids+=($!)
+# The daemon is started by D-Bus activation, as on a real desktop.
 wait_for 30 "$HOME/.local/bin/wprs-ctl" state
 
-plasmashell --no-respawn >"$OUT/plasmashell.log" 2>&1 & pids+=($!)
+debug_run "$OUT/plasmashell.log" plasmashell --no-respawn & pids+=($!)
 wait_for 60 bus_has org.kde.plasmashell
 sleep 5
 
