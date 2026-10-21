@@ -82,6 +82,11 @@ wait_for 30 test -S /tmp/.X11-unix/X99
 export DISPLAY=:99 QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11
 unset WAYLAND_DISPLAY
 export XDG_CURRENT_DESKTOP=KDE KDE_FULL_SESSION=true KDE_SESSION_VERSION=6
+# Services started by D-Bus activation (activity manager, the daemon) need
+# the same graphical environment.
+dbus-update-activation-environment DISPLAY QT_QPA_PLATFORM XDG_SESSION_TYPE \
+  XDG_CURRENT_DESKTOP KDE_FULL_SESSION KDE_SESSION_VERSION LIBGL_ALWAYS_SOFTWARE \
+  QT_FORCE_STDERR_LOGGING
 
 # The daemon is started by D-Bus activation, as on a real desktop.
 wait_for 30 "$HOME/.local/bin/wprs-ctl" state
