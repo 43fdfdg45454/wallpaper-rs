@@ -77,8 +77,8 @@ scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
 ```
 
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
-paquete con `install.sh`, arranca plasmashell sobre un servidor X virtual, activa el plugin
-y comprueba los píxeles de una captura.
+paquete con `install.sh`, arranca plasmashell sobre Xorg con un monitor virtual, activa el
+plugin y comprueba los píxeles de una captura.
 
 | Ruta | Contenido |
 |------|-----------|

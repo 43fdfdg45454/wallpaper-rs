@@ -23,6 +23,23 @@ cp "$ROOT/scripts/plasma-session.sh" "$WORK/plasma-session.sh"
 chown -R "$TEST_USER:" "$WORK"
 chmod 777 "$OUT"
 
+# X server with a named RandR output (see tests/plasma/xorg-dummy.conf).
+# It runs as root here; the test user connects as a local client.
+Xorg :99 -noreset -nolisten tcp -novtswitch -keeptty \
+  -config "$ROOT/tests/plasma/xorg-dummy.conf" -logfile "$OUT/xorg.log" \
+  >"$OUT/xorg-stderr.log" 2>&1 &
+xorg_pid=$!
+for _ in $(seq 100); do
+  [ -S /tmp/.X11-unix/X99 ] && break
+  sleep 0.1
+done
+if [ ! -S /tmp/.X11-unix/X99 ]; then
+  echo "Xorg did not start:"
+  tail -n 40 "$OUT/xorg-stderr.log" "$OUT/xorg.log" 2>/dev/null || true
+  exit 1
+fi
+
 status=0
-su -l "$TEST_USER" -s /bin/bash -c "bash '$WORK/plasma-session.sh' '$WORK' '$OUT'" || status=$?
+su -l "$TEST_USER" -s /bin/bash -c "bash '$WORK/plasma-session.sh' '$WORK' '$OUT' :99" || status=$?
+kill "$xorg_pid" 2>/dev/null || true
 exit "$status"

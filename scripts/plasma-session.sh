@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Inner part of plasma-test.sh, run as the unprivileged test user.
-# Usage: plasma-session.sh <work-dir> <output-dir>
+# Usage: plasma-session.sh <work-dir> <output-dir> <x-display>
 set -euo pipefail
 
 WORK=$1
 OUT=$2
+X_DISPLAY=$3
 
 # Run everything inside a private session bus.
 if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
@@ -74,12 +75,8 @@ debug_run() { # <log> <program> [args...]
   fi
 }
 
-# Headless X server. Current KWin needs a GPU render device, which CI
-# containers do not have; plasmashell runs on X11 just as well and the
-# plugin, PipeWire and KPipeWire behave the same.
-Xvfb :99 -screen 0 1280x720x24 -nolisten tcp >"$OUT/xvfb.log" 2>&1 & pids+=($!)
-wait_for 30 test -S /tmp/.X11-unix/X99
-export DISPLAY=:99 QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11
+# The X server is started by plasma-test.sh.
+export DISPLAY=$X_DISPLAY QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11
 unset WAYLAND_DISPLAY
 export XDG_CURRENT_DESKTOP=KDE KDE_FULL_SESSION=true KDE_SESSION_VERSION=6
 # Services started by D-Bus activation (activity manager, the daemon) need
@@ -137,7 +134,7 @@ wait_for 60 bus_has org.kde.plasmashell
 sleep 15
 "$HOME/.local/bin/wprs-ctl" state | tee "$OUT/state.json"
 
-magick import -display :99 -window root "$OUT/screenshot.png"
+magick import -display "$X_DISPLAY" -window root "$OUT/screenshot.png"
 
 pixel() { magick "$OUT/screenshot.png" -format "%[fx:int(255*p{$1,$2}.r)],%[fx:int(255*p{$1,$2}.g)],%[fx:int(255*p{$1,$2}.b)]" info:; }
 fail=0
@@ -153,6 +150,8 @@ echo "===== screenshot colors"
 magick "$OUT/screenshot.png" -format %c histogram:info:- | sort -rn | head -n 5
 echo "===== X windows"
 xwininfo -root -tree 2>&1 | head -n 30 || true
+echo "===== RandR outputs"
+xrandr --query 2>&1 | head -n 10 || true
 echo "===== desktop config written by Plasma"
 cat "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc" || true
 echo "===== D-Bus calls to the daemon"

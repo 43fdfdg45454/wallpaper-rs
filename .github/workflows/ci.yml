@@ -100,14 +100,16 @@ jobs:
     needs: package
     runs-on: ubuntu-24.04
     # Released Plasma 6 in a disposable container: installs the release
-    # tarball, runs plasmashell on a virtual X server and checks a screenshot.
+    # tarball, runs plasmashell on Xorg with a dummy monitor and checks a
+    # screenshot.
     container: archlinux:latest
     timeout-minutes: 30
     steps:
       - name: Install Plasma
         run: |
           pacman -Syu --noconfirm --needed \
-            plasma-desktop plasma-workspace kpipewire xorg-server-xvfb \
+            plasma-desktop plasma-workspace kpipewire \
+            xorg-server xf86-video-dummy xorg-xrandr \
             pipewire wireplumber dbus \
             mesa vulkan-swrast vulkan-icd-loader \
             imagemagick tar gzip gdb xorg-xwininfo
