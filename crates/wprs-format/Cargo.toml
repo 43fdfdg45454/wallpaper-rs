@@ -1,0 +1,18 @@
+[package]
+name = "wprs-format"
+description = "The .wpak wallpaper package format: manifest, validation, reading and building"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+semver.workspace = true
+sha2.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

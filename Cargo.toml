@@ -5,6 +5,8 @@ members = [
     "crates/wprs-render",
     "crates/wprs-pipewire",
     "crates/wprs-video",
+    "crates/wprs-format",
+    "crates/wprs-schedule",
     "apps/wprsd",
     "apps/wprs-ctl",
 ]
@@ -21,10 +23,17 @@ wprs-core = { path = "crates/wprs-core" }
 wprs-render = { path = "crates/wprs-render" }
 wprs-pipewire = { path = "crates/wprs-pipewire" }
 wprs-video = { path = "crates/wprs-video" }
+wprs-format = { path = "crates/wprs-format" }
+wprs-schedule = { path = "crates/wprs-schedule" }
 anyhow = "1"
 thiserror = "2"
 rustix = { version = "1", features = ["fs", "mm"] }
 futures-util = { version = "0.3", default-features = false }
+zip = { version = "9", default-features = false, features = ["deflate"] }
+sha2 = "0.11"
+semver = "1"
+tempfile = "3"
+chrono = { version = "0.4.41", default-features = false, features = ["std", "serde"] }
 gstreamer = "0.24"
 gstreamer-app = "0.24"
 gstreamer-video = "0.24"
