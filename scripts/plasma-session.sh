@@ -180,7 +180,7 @@ if [ ! -s "$OUT/screenshot.png" ]; then
   shot_ok=0
 else
   pixel() { magick "$OUT/screenshot.png" -format "%[fx:int(255*p{$1,$2}.r)],%[fx:int(255*p{$1,$2}.g)],%[fx:int(255*p{$1,$2}.b)]" info:; }
-  read -r shot_w shot_h < <(magick identify -format "%w %h" "$OUT/screenshot.png")
+  read -r shot_w shot_h < <(magick identify -format "%w %h\n" "$OUT/screenshot.png")
   echo "screenshot: ${shot_w}x${shot_h}"
   for xy in "$((shot_w / 2)) $((shot_h / 2))" "$((shot_w / 10)) $((shot_h / 7))" "$((shot_w * 9 / 10)) $((shot_h / 7))"; do
     # shellcheck disable=SC2086
