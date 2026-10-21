@@ -112,6 +112,11 @@ jobs:
       # virtual monitor, both without a GPU.
       - name: Virtual DRM devices
         run: |
+          # Some runner kernels ship these modules only in the extra package.
+          if ! modinfo vgem >/dev/null 2>&1 || ! modinfo vkms >/dev/null 2>&1; then
+            sudo apt-get update -q
+            sudo apt-get install -y -q "linux-modules-extra-$(uname -r)"
+          fi
           sudo modprobe vgem
           sudo modprobe vkms
           sudo chmod 666 /dev/dri/*
