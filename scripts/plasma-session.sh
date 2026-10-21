@@ -25,9 +25,19 @@ cd "$WORK"
 
 pids=()
 cleanup() {
+  local rc=$?
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
+  if [ "$rc" != 0 ]; then
+    for f in "$OUT"/*.log; do
+      echo "===== $(basename "$f") (last 60 lines)"
+      tail -n 60 "$f"
+    done
+  fi
 }
 trap cleanup EXIT
+
+kwin_wayland --version || true
+plasmashell --version || true
 
 wait_for() { # <seconds> <command...>
   local t=$1
