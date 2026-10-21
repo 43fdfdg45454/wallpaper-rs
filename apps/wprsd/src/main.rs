@@ -42,6 +42,8 @@ async fn run(args: Args) -> anyhow::Result<()> {
     let daemon =
         Arc::new(tokio::task::spawn_blocking(move || daemon::Daemon::new(config, config_path)).await??);
     let connection = zbus::connection::Builder::session()
+        .allow_name_replacements(false)
+        .replace_existing_names(false)
         .name(dbus::BUS_NAME)
         .serve_at(dbus::OBJECT_PATH, service::Service::new(daemon.clone()))
         .build()
