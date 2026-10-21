@@ -35,10 +35,12 @@ WallpaperItem {
         color: "black"
     }
 
+    // Must stay visible: KPipeWire only activates the stream of a visible
+    // item, so hiding it until the first frame would never show one. It draws
+    // nothing until a frame arrives, leaving the black background above.
     PipeWire.PipeWireSourceItem {
         id: source
         anchors.fill: parent
-        visible: ready
     }
 
     Text {
@@ -128,6 +130,13 @@ WallpaperItem {
         onTriggered: root.requestInFlight = false
     }
 
+    // Coalesces the initial image, path and fill mode changes into one call.
+    Timer {
+        id: applyDebounce
+        interval: 100
+        onTriggered: root.applyConfiguredImage()
+    }
+
     // Coalesces resize and scale changes into one request.
     Timer {
         id: resizeDebounce
@@ -147,11 +156,11 @@ WallpaperItem {
     onPixelWidthChanged: resizeDebounce.restart()
     onPixelHeightChanged: resizeDebounce.restart()
     onOutputNameChanged: resizeDebounce.restart()
-    onConfiguredImageChanged: root.applyConfiguredImage()
-    onConfiguredFitChanged: root.applyConfiguredImage()
+    onConfiguredImageChanged: applyDebounce.restart()
+    onConfiguredFitChanged: applyDebounce.restart()
 
     Component.onCompleted: {
-        root.applyConfiguredImage();
+        applyDebounce.restart();
         resizeDebounce.restart();
     }
 }

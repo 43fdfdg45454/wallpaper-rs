@@ -153,29 +153,52 @@ wait_for 60 bus_has org.kde.plasmashell
 sleep 15
 "$HOME/.local/bin/wprs-ctl" state | tee "$OUT/state.json"
 
+# The plugin's KPipeWire stream must reach the streaming state; a stream
+# stuck in "paused" never delivers a frame and leaves the desktop black.
+echo "===== KPipeWire stream states"
+grep -E "kpipewire_logging: (state changed|created successfully|Stream error)" "$OUT/plasmashell.log" || true
+fail=0
+if ! grep -q "kpipewire_logging: state changed paused -> streaming" "$OUT/plasmashell.log"; then
+  echo "FAIL: the wallpaper stream never started streaming in plasmashell"
+  fail=1
+fi
+
+# A screenshot proves the frames reach the screen, but only when KWin can
+# composite in this environment; otherwise it is reported and not enforced.
+kwin_renders=1
+if grep -q "Failed to find a working output layer configuration" "$OUT"/kwin*.log; then
+  kwin_renders=0
+  echo "note: KWin cannot composite here; the screenshot check is informational"
+fi
 spectacle --background --nonotify --fullscreen --output "$OUT/screenshot.png" \
   >"$OUT/spectacle.log" 2>&1 || true
 wait_for 20 test -s "$OUT/screenshot.png" || true
+shot_ok=1
 if [ ! -s "$OUT/screenshot.png" ]; then
-  echo "FAIL: no screenshot"
-  cat "$OUT/spectacle.log"
-  exit 1
+  echo "no screenshot; spectacle said:"
+  grep -v "kf.service" "$OUT/spectacle.log" | tail -n 20
+  shot_ok=0
+else
+  pixel() { magick "$OUT/screenshot.png" -format "%[fx:int(255*p{$1,$2}.r)],%[fx:int(255*p{$1,$2}.g)],%[fx:int(255*p{$1,$2}.b)]" info:; }
+  read -r shot_w shot_h < <(magick identify -format "%w %h" "$OUT/screenshot.png")
+  echo "screenshot: ${shot_w}x${shot_h}"
+  for xy in "$((shot_w / 2)) $((shot_h / 2))" "$((shot_w / 10)) $((shot_h / 7))" "$((shot_w * 9 / 10)) $((shot_h / 7))"; do
+    # shellcheck disable=SC2086
+    rgb=$(pixel $xy)
+    echo "pixel ($xy): $rgb"
+    IFS=, read -r r g b <<<"$rgb"
+    if [ "$r" -gt 40 ] || [ "$g" -lt 200 ] || [ "$b" -gt 40 ]; then shot_ok=0; fi
+  done
+fi
+if [ "$shot_ok" = 0 ] && [ "$kwin_renders" = 1 ]; then
+  echo "FAIL: the screenshot does not show the wallpaper"
+  fail=1
 fi
 
-pixel() { magick "$OUT/screenshot.png" -format "%[fx:int(255*p{$1,$2}.r)],%[fx:int(255*p{$1,$2}.g)],%[fx:int(255*p{$1,$2}.b)]" info:; }
-fail=0
-read -r shot_w shot_h < <(magick identify -format "%w %h" "$OUT/screenshot.png")
-echo "screenshot: ${shot_w}x${shot_h}"
-for xy in "$((shot_w / 2)) $((shot_h / 2))" "$((shot_w / 10)) $((shot_h / 7))" "$((shot_w * 9 / 10)) $((shot_h / 7))"; do
-  # shellcheck disable=SC2086
-  rgb=$(pixel $xy)
-  echo "pixel ($xy): $rgb"
-  IFS=, read -r r g b <<<"$rgb"
-  if [ "$r" -gt 40 ] || [ "$g" -lt 200 ] || [ "$b" -gt 40 ]; then fail=1; fi
-done
-
-echo "===== screenshot colors"
-magick "$OUT/screenshot.png" -format %c histogram:info:- | sort -rn | head -n 5
+if [ -s "$OUT/screenshot.png" ]; then
+  echo "===== screenshot colors"
+  magick "$OUT/screenshot.png" -format %c histogram:info:- | sort -rn | head -n 5
+fi
 echo "===== desktop config written by Plasma"
 cat "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc" || true
 echo "===== D-Bus calls to the daemon"
@@ -188,7 +211,6 @@ grep -i -E "screen|view|corona|containment|activit|wallpaper|qml|pipewire|output
   "$OUT/plasmashell.log" | grep -v -i "fontconfig" | head -n 120 || true
 
 if [ "$fail" = 1 ]; then
-  echo "FAIL: the desktop does not show the wallpaper"
   exit 1
 fi
 echo "plasma test passed"
