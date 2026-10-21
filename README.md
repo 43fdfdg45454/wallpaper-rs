@@ -1,14 +1,9 @@
 # wallpaper-rs
 
-Fondos de pantalla animados y estáticos para Linux y Android, libres y escritos en Rust.
+Fondos de pantalla para Linux, libres y escritos en Rust.
 
-El objetivo es un reemplazo completo de los motores de fondos de pantalla comerciales:
-escenas, vídeo, web, listas de reproducción, multi-monitor, pausa inteligente, audio
-reactivo, editor de escenas e imágenes, servidores propios de contenido y un formato de
-paquete abierto. El plan completo está en [`docs/PLAN.md`](docs/PLAN.md).
-
-> **Estado: hito H0.** El daemon dibuja una imagen en cada pantalla de KDE Plasma 6 a
-> través de un plugin de fondo. Todavía no hay vídeo, escenas ni aplicación gráfica.
+Un daemon dibuja el fondo de cada pantalla con la GPU y KDE Plasma 6 lo muestra a través
+de un plugin de fondo.
 
 ## Cómo funciona
 
@@ -89,7 +84,7 @@ dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una ca
 | `apps/wprs-ctl` | CLI |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `packaging` | Servicio systemd, activación D-Bus, scripts de instalación |
-| `docs` | Plan y especificaciones |
+| `docs` | Especificación de la interfaz D-Bus |
 
 ## Licencia
 

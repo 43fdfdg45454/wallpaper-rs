@@ -1,7 +1,6 @@
-# D-Bus interface (v1, H0)
+# D-Bus interface
 
-Status: implemented. Names are provisional until the project name is final; every component
-takes them from `wprs_core::dbus`.
+Every component takes these names from `wprs_core::dbus`.
 
 | Item | Value |
 |------|-------|

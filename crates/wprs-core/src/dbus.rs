@@ -1,7 +1,6 @@
 //! Names of the daemon's D-Bus interface.
 //!
-//! These are provisional until the project name is final. Every component
-//! must use these constants instead of literal strings.
+//! Every component must use these constants instead of literal strings.
 
 /// Well-known bus name owned by the daemon.
 pub const BUS_NAME: &str = "io.github.wallpaper_rs.Daemon";
