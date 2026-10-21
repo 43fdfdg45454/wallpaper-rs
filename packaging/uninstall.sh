@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Removes everything install.sh installed. User configuration is kept in
-# ~/.config/wallpaper-rs unless --purge is given.
 set -euo pipefail
 
 PREFIX=${PREFIX:-$HOME/.local}
@@ -12,6 +10,7 @@ if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/d
 fi
 if command -v kpackagetool6 >/dev/null 2>&1; then
   kpackagetool6 --type Plasma/Wallpaper --remove io.github.wallpaper_rs 2>/dev/null || true
+  kpackagetool6 --type Plasma/Applet --remove io.github.wallpaper_rs.tray 2>/dev/null || true
 fi
 rm -f "$PREFIX/bin/wprsd" "$PREFIX/bin/wprs-ctl" \
   "$CONFIG_HOME/systemd/user/wprsd.service" \

@@ -1,9 +1,11 @@
 # wallpaper-rs
 
-Fondos de pantalla para Linux, libres y escritos en Rust.
+Fondos de pantalla para Linux, libres y escritos en Rust: imágenes y vídeos en bucle, con
+transiciones, un fondo distinto por pantalla y pausa automática cuando no se ven.
 
 Un daemon dibuja el fondo de cada pantalla con la GPU y KDE Plasma 6 lo muestra a través
-de un plugin de fondo.
+de un plugin de fondo. Todo se gestiona igual desde la terminal (`wprs-ctl`) o desde el icono
+de la bandeja del sistema.
 
 ## Cómo funciona
 
@@ -20,7 +22,9 @@ de un plugin de fondo.
 - `wprsd` renderiza en la GPU sin ventana propia y publica un stream PipeWire por pantalla.
 - El plugin de Plasma pide un stream del tamaño exacto de su pantalla y lo muestra con
   KPipeWire, sin tapar iconos ni widgets del escritorio.
-- `wprs-ctl` controla el daemon desde la terminal.
+- `wprs-ctl` y el icono de la bandeja controlan el daemon: cada acción está en los dos.
+- Los vídeos se decodifican con GStreamer y se pausan cuando una ventana maximizada o a
+  pantalla completa tapa la pantalla, con batería o con la pantalla bloqueada.
 
 ## Instalación (sin root)
 
@@ -36,34 +40,42 @@ cd wallpaper-rs-*-x86_64-linux
 ```
 
 Instala todo en tu directorio personal: binarios en `~/.local/bin`, servicio de usuario de
-systemd, activación por D-Bus y el plugin de Plasma. Funciona también en distribuciones con
+systemd, activación por D-Bus, el plugin de fondo y el icono de la bandeja de Plasma. Funciona también en distribuciones con
 sistema de archivos inmutable. Para desinstalar: `./uninstall.sh` (añade `--purge` para borrar
 también la configuración).
 
 Después, en Plasma: clic derecho en el escritorio → *Configurar escritorio y fondo de
-pantalla* → tipo de fondo **wallpaper-rs** → elegir imagen.
+pantalla* → tipo de fondo **wallpaper-rs**. El fondo de cada pantalla, el modo de ajuste, la
+pausa, el volumen y los ajustes se eligen desde el icono de wallpaper-rs en la bandeja.
 
-Requisitos: KDE Plasma 6, PipeWire y un controlador Vulkan u OpenGL.
+Requisitos: KDE Plasma 6, PipeWire, GStreamer (con los plugins base y good) y un controlador
+Vulkan u OpenGL.
 
 ## Uso desde la terminal
 
 ```sh
 wprs-ctl set ~/Imágenes/fondo.jpg               # todas las pantallas
-wprs-ctl set ~/Imágenes/otro.png -o DP-1 -f fit # una pantalla, modo de ajuste
+wprs-ctl set ~/Vídeos/mar.mp4 -o DP-1 -f fit    # una pantalla, modo de ajuste
+wprs-ctl pause | resume | toggle                # pausar los fondos animados
+wprs-ctl volume 40 | mute | unmute              # sonido de los vídeos
+wprs-ctl config                                 # ver los ajustes
+wprs-ctl config transition.duration_ms 1000     # cambiar un ajuste
 wprs-ctl state                                  # estado en JSON
 wprs-ctl reload                                 # releer la configuración
 ```
 
-Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile`. La configuración vive en
-`~/.config/wallpaper-rs/config.toml`.
+Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile`. Ajustes: transición (`fade` o
+`none` y su duración), fotogramas por segundo y cuándo pausar (ventana encima, batería,
+bloqueo). La configuración vive en `~/.config/wallpaper-rs/config.toml`.
 
 ## Desarrollo
 
-Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config`.
-Para las pruebas: `mesa-vulkan-drivers pipewire wireplumber dbus-x11`.
+Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
+libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`. Para las pruebas: `mesa-vulkan-drivers
+pipewire wireplumber dbus-x11 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`.
 
 ```sh
-cargo test --workspace                   # pruebas unitarias y de render (GPU por software)
+cargo test --workspace                   # pruebas unitarias, de render y de vídeo
 cargo build -p wprs-pipewire --example probe
 cargo build -p wprsd -p wprs-ctl
 cp target/debug/examples/probe target/debug/
@@ -80,9 +92,11 @@ dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una ca
 | `crates/wprs-core` | Configuración, modos de ajuste, nombres D-Bus |
 | `crates/wprs-render` | Renderizador wgpu sin ventana |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
+| `crates/wprs-video` | Reproducción de vídeo en bucle con GStreamer |
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
+| `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
 | `packaging` | Servicio systemd, activación D-Bus, scripts de instalación |
 | `docs` | Especificación de la interfaz D-Bus |
 

@@ -1,248 +1,110 @@
-//! Daemon state: configuration, known outputs, renderer and exporter.
-
+use crate::compositor::{Compositor, Settings, lock};
 use anyhow::Context;
 use image::RgbaImage;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::SystemTime;
-use wprs_core::{Config, Fit, dbus};
-use wprs_pipewire::{Exporter, StreamInfo, VideoFrame};
-use wprs_render::{Renderer, Scene};
+use wprs_core::{Config, dbus};
+use wprs_pipewire::{Exporter, Reply};
+use wprs_render::Renderer;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-pub struct OutputSize {
-    pub width: u32,
-    pub height: u32,
+pub(crate) struct OutputInfo {
+    pub(crate) size: (u32, u32),
+    pub(crate) covered: bool,
 }
 
-struct CachedImage {
-    modified: Option<SystemTime>,
-    image: Arc<RgbaImage>,
-}
-
-struct State {
-    config: Config,
-    config_path: PathBuf,
-    outputs: HashMap<String, OutputSize>,
-    images: HashMap<PathBuf, CachedImage>,
+pub(crate) struct State {
+    pub(crate) config: Config,
+    pub(crate) config_path: PathBuf,
+    pub(crate) outputs: HashMap<String, OutputInfo>,
+    pub(crate) images: HashMap<PathBuf, (Option<SystemTime>, Arc<RgbaImage>)>,
+    pub(crate) user_paused: bool,
+    pub(crate) on_battery: bool,
+    pub(crate) locked: bool,
 }
 
 pub struct Daemon {
-    renderer: Renderer,
-    exporter: Exporter,
-    state: Mutex<State>,
-    /// Serializes renders so concurrent requests do not race on the GPU queue.
-    render_lock: Mutex<()>,
+    pub(crate) compositor: Compositor,
+    pub(crate) state: Mutex<State>,
+    exporter: Arc<Exporter>,
+    pub(crate) adapter: String,
+    max_edge: u32,
 }
 
 impl Daemon {
     pub fn new(config: Config, config_path: PathBuf) -> anyhow::Result<Self> {
         let renderer = Renderer::new().context("cannot initialize the GPU renderer")?;
-        tracing::info!(adapter = renderer.adapter(), "renderer ready");
-        let exporter = Exporter::start().context("cannot connect to PipeWire")?;
-        Ok(Self {
-            renderer,
-            exporter,
-            state: Mutex::new(State {
-                config,
-                config_path,
-                outputs: HashMap::new(),
-                images: HashMap::new(),
-            }),
-            render_lock: Mutex::new(()),
-        })
+        let (adapter, max_edge) = (renderer.adapter().to_owned(), renderer.max_edge());
+        tracing::info!(adapter, "renderer ready");
+        let exporter = Arc::new(Exporter::start().context("cannot connect to PipeWire")?);
+        let compositor = Compositor::start(renderer, exporter.clone(), settings(&config))?;
+        let state = State {
+            config,
+            config_path,
+            outputs: HashMap::new(),
+            images: HashMap::new(),
+            user_paused: false,
+            on_battery: false,
+            locked: false,
+        };
+        Ok(Self { compositor, state: Mutex::new(state), exporter, adapter, max_edge })
     }
 
-    pub fn adapter(&self) -> &str {
-        self.renderer.adapter()
+    pub(crate) fn state(&self) -> MutexGuard<'_, State> {
+        lock(&self.state)
     }
 
-    fn state(&self) -> std::sync::MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(|e| e.into_inner())
-    }
-
-    /// Validates a stream request and normalizes the output name.
     pub fn check_request(&self, output: &str, width: u32, height: u32) -> Result<String, String> {
-        let max = self.renderer.max_edge().min(dbus::MAX_STREAM_EDGE);
-        if width == 0 || height == 0 || width > max || height > max {
-            return Err(format!("invalid size {width}x{height} (allowed 1..={max})"));
-        }
-        let output = output.trim();
-        if output.len() > 128 || output.chars().any(|c| c.is_control()) {
-            return Err("invalid output name".into());
-        }
-        Ok(if output.is_empty() {
-            dbus::DEFAULT_OUTPUT.to_owned()
-        } else {
-            output.to_owned()
-        })
+        let max = self.max_edge.min(dbus::MAX_STREAM_EDGE);
+        let valid = (1..=max).contains(&width) && (1..=max).contains(&height);
+        valid.then_some(()).ok_or(format!("invalid size {width}x{height} (allowed 1..={max})"))?;
+        output_name(output)
     }
 
-    /// Creates or reuses the stream for `output` and reports it through `reply`.
-    pub fn ensure_stream(
-        &self,
-        output: &str,
-        width: u32,
-        height: u32,
-        reply: Box<dyn FnOnce(Result<StreamInfo, String>) + Send>,
-    ) {
-        self.state()
-            .outputs
-            .insert(output.to_owned(), OutputSize { width, height });
+    pub fn ensure_stream(&self, output: &str, width: u32, height: u32, reply: Reply) {
+        let info = OutputInfo { size: (width, height), covered: false };
+        self.state().outputs.entry(output.to_owned()).and_modify(|o| o.size = info.size).or_insert(info);
         self.exporter.ensure_stream(output, width, height, reply);
     }
 
-    /// Renders `output` with its current settings and pushes the frame.
-    pub fn render_output(&self, output: &str) -> anyhow::Result<()> {
-        let (size, resolved) = {
-            let st = self.state();
-            let Some(size) = st.outputs.get(output).copied() else {
-                return Ok(());
-            };
-            (size, st.config.resolve(output))
-        };
-        let image = match resolved.image.as_deref() {
-            Some(path) => match self.load_image(path) {
-                Ok(img) => Some(img),
-                Err(e) => {
-                    tracing::warn!("{e:#}; showing the background color instead");
-                    None
-                }
-            },
-            None => None,
-        };
-        let frame = {
-            let _guard = self.render_lock.lock().unwrap_or_else(|e| e.into_inner());
-            self.renderer.render(
-                Scene {
-                    image: image.as_deref(),
-                    fit: resolved.fit,
-                    background: resolved.background,
-                },
-                size.width,
-                size.height,
-            )?
-        };
-        tracing::debug!(
-            output,
-            width = frame.width,
-            height = frame.height,
-            "frame rendered"
-        );
-        self.exporter.push_frame(
-            output,
-            Arc::new(VideoFrame {
-                width: frame.width,
-                height: frame.height,
-                stride: frame.stride,
-                data: frame.data,
-            }),
-        )?;
-        Ok(())
-    }
-
-    /// Renders every output that has a stream.
-    pub fn render_all(&self) {
-        let outputs: Vec<String> = self.state().outputs.keys().cloned().collect();
-        for output in outputs {
-            if let Err(e) = self.render_output(&output) {
-                tracing::error!(output, "render failed: {e:#}");
-            }
-        }
-    }
-
-    /// Decodes an image, reusing the cached copy while the file is unchanged.
-    pub fn load_image(&self, path: &Path) -> anyhow::Result<Arc<RgbaImage>> {
-        let modified = std::fs::metadata(path)
-            .with_context(|| format!("cannot read {}", path.display()))?
-            .modified()
-            .ok();
-        if let Some(c) = self.state().images.get(path)
-            && c.modified == modified
-        {
-            return Ok(c.image.clone());
-        }
-        let image = image::ImageReader::open(path)
-            .with_context(|| format!("cannot open {}", path.display()))?
-            .with_guessed_format()
-            .with_context(|| format!("cannot read {}", path.display()))?
-            .decode()
-            .with_context(|| format!("cannot decode {}", path.display()))?
-            .into_rgba8();
-        let image = Arc::new(image);
-        let mut st = self.state();
-        // Keep the cache small: only images that are currently configured.
-        let in_use: Vec<PathBuf> = std::iter::once(&st.config.default)
-            .chain(st.config.outputs.values())
-            .filter_map(|o| o.image.clone())
-            .collect();
-        st.images.retain(|p, _| in_use.contains(p));
-        st.images.insert(
-            path.to_owned(),
-            CachedImage {
-                modified,
-                image: image.clone(),
-            },
-        );
-        Ok(image)
-    }
-
-    /// Sets and persists the wallpaper, then re-renders affected outputs.
-    pub fn set_wallpaper(&self, path: PathBuf, output: &str, fit: Option<Fit>) -> anyhow::Result<()> {
-        let path = std::fs::canonicalize(&path).with_context(|| format!("cannot find {}", path.display()))?;
-        self.load_image(&path)?;
-        {
-            let mut st = self.state();
-            st.config.set_image(output, path, fit);
-            let config_path = st.config_path.clone();
-            st.config.save(&config_path)?;
-        }
-        if output.is_empty() {
-            self.render_all();
-        } else {
-            self.render_output(output)?;
+    pub fn release_stream(&self, output: &str) -> anyhow::Result<()> {
+        if self.state().outputs.remove(output).is_some() {
+            self.compositor.remove(output);
+            self.exporter.remove_stream(output)?;
+            tracing::info!(output, "stream released");
         }
         Ok(())
     }
 
-    /// Re-reads the configuration file and re-renders everything.
-    pub fn reload(&self) -> anyhow::Result<()> {
-        {
-            let mut st = self.state();
-            let config = Config::load(&st.config_path)?;
-            st.config = config;
-            st.images.clear();
-        }
-        self.render_all();
-        Ok(())
-    }
-
-    /// JSON description of the daemon state, for diagnostics.
-    pub fn state_json(&self) -> String {
+    pub(crate) fn apply_activity(&self) {
         let st = self.state();
-        let outputs: serde_json::Map<String, serde_json::Value> = st
-            .outputs
-            .iter()
-            .map(|(name, size)| {
-                let r = st.config.resolve(name);
-                (
-                    name.clone(),
-                    serde_json::json!({
-                        "width": size.width,
-                        "height": size.height,
-                        "image": r.image,
-                        "fit": r.fit.as_str(),
-                    }),
-                )
-            })
-            .collect();
-        serde_json::json!({
-            "version": env!("CARGO_PKG_VERSION"),
-            "adapter": self.renderer.adapter(),
-            "config": st.config_path,
-            "outputs": outputs,
-        })
-        .to_string()
+        st.outputs.iter().for_each(|(name, info)| self.compositor.set_active(name, st.active(info)));
     }
+
+    pub fn reload(&self) -> anyhow::Result<()> {
+        let settings = {
+            let mut st = self.state();
+            st.config = Config::load(&st.config_path)?;
+            st.images.clear();
+            settings(&st.config)
+        };
+        self.compositor.set_settings(settings);
+        self.configure_all();
+        Ok(())
+    }
+}
+
+pub(crate) fn settings(config: &Config) -> Settings {
+    let playback = config.playback.sanitized();
+    let transition = config.transition.duration();
+    Settings { transition, max_fps: playback.max_fps, volume: playback.volume, muted: playback.muted }
+}
+
+pub(crate) fn output_name(output: &str) -> Result<String, String> {
+    let output = output.trim();
+    if output.len() > 128 || output.chars().any(char::is_control) {
+        return Err("invalid output name".into());
+    }
+    Ok(if output.is_empty() { dbus::DEFAULT_OUTPUT.to_owned() } else { output.to_owned() })
 }

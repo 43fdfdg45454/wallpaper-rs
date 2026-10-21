@@ -58,10 +58,8 @@ jobs:
 
       - name: Plasma plugin syntax
         run: |
-          python3 -c "import json; json.load(open('integrations/plasma-wallpaper/metadata.json'))"
-          for f in integrations/plasma-wallpaper/contents/ui/*.qml; do
-            /usr/lib/qt6/bin/qmlformat "$f" > /dev/null
-          done
+          for f in integrations/*/metadata.json; do python3 -c "import json, sys; json.load(open(sys.argv[1]))" "$f"; done
+          for f in integrations/*/contents/ui/*.qml; do /usr/lib/qt6/bin/qmlformat "$f" > /dev/null; done
 
       - name: End-to-end test (D-Bus + PipeWire + daemon)
         run: |
@@ -72,9 +70,6 @@ jobs:
 
   package:
     name: Package
-    # Ubuntu 24.04 is the oldest base with PipeWire >= 1.0 headers, which the
-    # bindings need. Its glibc 2.39 keeps the binaries portable to current
-    # distributions.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -99,6 +94,35 @@ jobs:
           path: dist/*.tar.gz
           if-no-files-found: error
 
+  rpm:
+    name: Fedora package
+    needs: package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: wallpaper-rs-x86_64-linux
+          path: dist
+
+      - name: Build and install the RPM
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src fedora:latest bash -c '
+            set -e
+            dnf -y -q install rpm-build systemd-rpm-macros >/dev/null
+            scripts/rpm.sh dist/wallpaper-rs-*.tar.gz rpm
+            dnf -y -q install ./rpm/*.rpm >/dev/null
+            rpm -ql wallpaper-rs
+            wprs-ctl --version
+          '
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: wallpaper-rs-fedora-rpm
+          path: rpm/*.rpm
+          if-no-files-found: error
+
   plasma:
     name: Plasma end-to-end
     needs: package
@@ -112,11 +136,8 @@ jobs:
           name: wallpaper-rs-x86_64-linux
           path: dist
 
-      # KWin needs a DRM device. vgem provides a render node and vkms a
-      # virtual monitor, both without a GPU.
       - name: Virtual DRM devices
         run: |
-          # Some runner kernels ship these modules only in the extra package.
           if ! modinfo vgem >/dev/null 2>&1 || ! modinfo vkms >/dev/null 2>&1; then
             sudo apt-get update -q
             sudo apt-get install -y -q "linux-modules-extra-$(uname -r)"
@@ -126,9 +147,6 @@ jobs:
           sudo chmod 666 /dev/dri/*
           ls -l /dev/dri
 
-      # Released Plasma 6 in a disposable container with the DRM devices:
-      # installs the release tarball, runs a headless KWin Wayland session
-      # with plasmashell and checks a screenshot.
       - name: Run Plasma session test
         run: |
           docker run --rm --device /dev/dri -v "$PWD:/src" -w /src archlinux:latest bash -c '
@@ -137,7 +155,7 @@ jobs:
               plasma-desktop plasma-workspace kwin kpipewire spectacle \
               pipewire wireplumber dbus gst-plugins-base gst-plugins-good \
               mesa vulkan-swrast vulkan-icd-loader \
-              imagemagick tar gzip libcap gdb >/dev/null
+              imagemagick tar gzip libcap gdb jq qt6-declarative >/dev/null
             pacman -Q plasma-desktop plasma-workspace kwin kpipewire mesa
             scripts/plasma-test.sh dist/wallpaper-rs-*.tar.gz plasma-test-output
           '

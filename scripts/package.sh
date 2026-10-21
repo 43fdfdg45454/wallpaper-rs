@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Builds the release tarball: scripts/package.sh [output-dir]
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${1:-$ROOT/dist}
@@ -15,6 +14,7 @@ D=$STAGE/$NAME
 mkdir -p "$D/bin" "$D/packaging"
 install -m755 "$ROOT/target/release/wprsd" "$ROOT/target/release/wprs-ctl" "$D/bin/"
 cp -r "$ROOT/integrations/plasma-wallpaper" "$D/plasma-wallpaper"
+cp -r "$ROOT/integrations/plasma-tray" "$D/plasma-tray"
 cp -r "$ROOT/packaging/systemd" "$ROOT/packaging/dbus" "$D/packaging/"
 install -m755 "$ROOT/packaging/install.sh" "$ROOT/packaging/uninstall.sh" "$D/"
 cp "$ROOT/LICENSE" "$ROOT/README.md" "$D/"

@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Plasma end-to-end test. Runs as root in a disposable container that has
-# Plasma 6 installed and access to /dev/dri (a virtual render node from the
-# vgem kernel module is enough): creates an unprivileged user, installs the
-# release tarball with install.sh, starts a headless KWin Wayland session with
-# plasmashell and the wallpaper-rs plugin selected, takes a screenshot and
-# checks its pixels.
-#
-# Usage: scripts/plasma-test.sh <release-tarball> <output-dir>
 set -euo pipefail
 
 TARBALL=$(realpath "${1:?usage: $0 <release-tarball> <output-dir>}")
@@ -21,13 +13,11 @@ rm -rf "$WORK"
 mkdir -p "$WORK"
 cp "$TARBALL" "$WORK/release.tar.gz"
 cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/green.png"
-cp "$ROOT/scripts/plasma-session.sh" "$WORK/plasma-session.sh"
+cp "$ROOT/tests/fixtures/magenta-64x32.webm" "$WORK/magenta.webm"
+cp "$ROOT"/scripts/plasma-{session,config,checks,features}.sh "$WORK/"
 chown -R "$TEST_USER:" "$WORK"
 chmod 777 "$OUT"
 
-# Distributions ship kwin_wayland with file capabilities (CAP_SYS_NICE for
-# realtime scheduling). Containers drop that capability, so exec would fail
-# with EPERM; the test does not need it.
 if command -v setcap >/dev/null 2>&1; then
   setcap -r "$(command -v kwin_wayland)" 2>/dev/null || true
 fi

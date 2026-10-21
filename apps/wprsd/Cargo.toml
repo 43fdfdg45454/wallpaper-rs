@@ -10,6 +10,8 @@ rust-version.workspace = true
 wprs-core.workspace = true
 wprs-render.workspace = true
 wprs-pipewire.workspace = true
+wprs-video.workspace = true
+futures-util.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
@@ -18,3 +20,4 @@ tokio.workspace = true
 zbus.workspace = true
 image.workspace = true
 serde = { workspace = true }
+clap.workspace = true

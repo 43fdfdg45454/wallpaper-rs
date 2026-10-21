@@ -1,0 +1,23 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "io.github.wallpaper_rs.tray",
+        "Name": "wallpaper-rs",
+        "Description": "Manage the wallpapers rendered by wallpaper-rs",
+        "Icon": "preferences-desktop-wallpaper",
+        "Category": "System Information",
+        "EnabledByDefault": true,
+        "License": "GPL-3.0-or-later",
+        "Version": "0.2.0",
+        "Website": "https://github.com/43fdfdg45454/wallpaper-rs",
+        "Authors": [
+            {
+                "Name": "wallpaper-rs contributors"
+            }
+        ]
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-NotificationArea": "true",
+    "X-Plasma-NotificationAreaCategory": "ApplicationStatus",
+    "X-Plasma-DBusActivationService": "io.github.wallpaper_rs.Daemon"
+}
