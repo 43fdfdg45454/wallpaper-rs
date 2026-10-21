@@ -52,6 +52,15 @@ echo "probe: $result"
 grep -q "frame 320x180" <<<"$result" || { echo "FAIL: unexpected frame size"; exit 1; }
 grep -q "center bgra \[0, 255, 0, 255\]" <<<"$result" || { echo "FAIL: unexpected center color"; exit 1; }
 
+# Older KPipeWire releases connect by node id instead of serial.
+result=$("$BIN/probe" "node:$node" 10)
+echo "probe by node id: $result"
+grep -q "center bgra \[0, 255, 0, 255\]" <<<"$result" || { echo "FAIL: connecting by node id"; exit 1; }
+
+# Requesting the same size again must reuse the stream.
+read -r _ _ _ serial_again < <("$BIN/wprs-ctl" stream TEST-1 320 180)
+[ "$serial_again" = "$serial" ] || { echo "FAIL: same size created a new stream"; exit 1; }
+
 # Changing the size must replace the stream.
 read -r _ _ _ serial2 < <("$BIN/wprs-ctl" stream TEST-1 640 360)
 [ "$serial2" != "$serial" ] || { echo "FAIL: resize kept the old stream"; exit 1; }

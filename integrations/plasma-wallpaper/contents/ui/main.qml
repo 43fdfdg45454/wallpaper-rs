@@ -87,19 +87,30 @@ WallpaperItem {
         root.requestInFlight = true;
         root.call("RequestStream", [root.outputName, root.pixelWidth, root.pixelHeight], reply => {
             root.requestInFlight = false;
-            const values = reply.values && reply.values.length >= 2 ? reply.values : [reply.value, 0];
-            const nodeId = root.toNumber(values[0]);
-            const serial = root.toNumber(values[1]);
-            if (serial > 0) {
-                if (source.objectSerial !== serial) {
-                    source.objectSerial = serial;
-                }
-            } else if (source.nodeId !== nodeId) {
-                source.nodeId = nodeId;
+            try {
+                const values = reply.values && reply.values.length >= 2 ? reply.values : [reply.value, 0];
+                root.connectStream(root.toNumber(values[0]), root.toNumber(values[1]));
+            } catch (e) {
+                root.lastError = String(e);
+                console.warn("wallpaper-rs: cannot connect to the stream:", e);
             }
         });
         // The error callback does not reset the flag; do it after a timeout.
         inFlightReset.restart();
+    }
+
+    // Older KPipeWire releases only have nodeId; objectSerial was added later
+    // and assigning a property that does not exist throws.
+    readonly property bool hasObjectSerial: source.objectSerial !== undefined
+
+    function connectStream(nodeId, serial) {
+        if (serial > 0 && root.hasObjectSerial) {
+            if (source.objectSerial !== serial) {
+                source.objectSerial = serial;
+            }
+        } else if (nodeId > 0 && source.nodeId !== nodeId) {
+            source.nodeId = nodeId;
+        }
     }
 
     function applyConfiguredImage() {

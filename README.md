@@ -76,6 +76,10 @@ scripts/integration-test.sh target/debug # D-Bus + PipeWire + daemon de punta a 
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
 ```
 
+La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
+paquete con `install.sh`, arranca una sesión sin pantalla (KWin y plasmashell), activa el
+plugin y comprueba los píxeles de una captura.
+
 | Ruta | Contenido |
 |------|-----------|
 | `crates/wprs-core` | Configuración, modos de ajuste, nombres D-Bus |

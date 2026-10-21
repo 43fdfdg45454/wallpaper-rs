@@ -95,3 +95,38 @@ jobs:
           name: wallpaper-rs-x86_64-linux
           path: dist/*.tar.gz
           if-no-files-found: error
+
+  plasma:
+    name: Plasma end-to-end
+    needs: package
+    runs-on: ubuntu-24.04
+    # Released Plasma 6 in a disposable container: installs the release
+    # tarball, runs a headless session and checks a screenshot.
+    container: archlinux:latest
+    timeout-minutes: 30
+    steps:
+      - name: Install Plasma
+        run: |
+          pacman -Syu --noconfirm --needed \
+            plasma-workspace kwin kpipewire spectacle \
+            pipewire wireplumber dbus \
+            mesa vulkan-swrast vulkan-icd-loader \
+            imagemagick tar gzip
+          pacman -Q plasma-workspace kwin kpipewire
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: wallpaper-rs-x86_64-linux
+          path: dist
+
+      - name: Run Plasma session test
+        run: scripts/plasma-test.sh dist/wallpaper-rs-*.tar.gz plasma-test-output
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: plasma-test-output
+          path: plasma-test-output
+          if-no-files-found: warn

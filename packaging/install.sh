@@ -30,6 +30,7 @@ if command -v kpackagetool6 >/dev/null 2>&1; then
   echo "Installing the Plasma wallpaper plugin"
   if kpackagetool6 --type Plasma/Wallpaper --show io.github.wallpaper_rs >/dev/null 2>&1; then
     kpackagetool6 --type Plasma/Wallpaper --upgrade "$HERE/plasma-wallpaper"
+    plugin_upgraded=1
   else
     kpackagetool6 --type Plasma/Wallpaper --install "$HERE/plasma-wallpaper"
   fi
@@ -44,6 +45,15 @@ if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/d
   echo "wprsd is running: systemctl --user status wprsd"
 else
   echo "systemd user session not available: start $BINDIR/wprsd manually"
+fi
+
+if [ "${plugin_upgraded:-0}" = 1 ]; then
+  cat <<MSG
+
+The Plasma plugin was upgraded. Plasma keeps the old version in memory until
+it restarts: log out and back in, or run
+  systemctl --user restart plasma-plasmashell
+MSG
 fi
 
 cat <<MSG

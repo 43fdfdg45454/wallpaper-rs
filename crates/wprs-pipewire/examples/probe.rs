@@ -1,7 +1,9 @@
 //! Diagnostic consumer: connects to a stream by object serial, receives one
 //! frame and prints its size and the color at the center.
 //!
-//! Usage: `probe <object-serial> [timeout-seconds]`
+//! Usage: `probe <object-serial | node:ID> [timeout-seconds]`
+//!
+//! `node:ID` connects by node id, like older KPipeWire releases do.
 
 use pipewire as pw;
 use pw::spa;
@@ -17,25 +19,27 @@ struct Probe {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
-    let serial: u64 = args
+    let target = args
         .next()
-        .ok_or("usage: probe <object-serial> [timeout-seconds]")?
-        .parse()?;
+        .ok_or("usage: probe <object-serial | node:ID> [timeout-seconds]")?;
+    let (serial, node_id) = match target.strip_prefix("node:") {
+        Some(id) => (None, Some(id.parse::<u32>()?)),
+        None => (Some(target.parse::<u64>()?), None),
+    };
     let timeout: u64 = args.next().map(|s| s.parse()).transpose()?.unwrap_or(5);
 
     pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None)?;
     let context = pw::context::ContextRc::new(&mainloop, None)?;
     let core = context.connect_rc(None)?;
-    let stream = pw::stream::StreamRc::new(
-        core.clone(),
-        "wprs-probe",
-        pw::properties::properties! {
-            *pw::keys::MEDIA_TYPE => "Video",
-            *pw::keys::MEDIA_CATEGORY => "Capture",
-            *pw::keys::TARGET_OBJECT => serial.to_string(),
-        },
-    )?;
+    let mut props = pw::properties::properties! {
+        *pw::keys::MEDIA_TYPE => "Video",
+        *pw::keys::MEDIA_CATEGORY => "Capture",
+    };
+    if let Some(serial) = serial {
+        props.insert(*pw::keys::TARGET_OBJECT, serial.to_string());
+    }
+    let stream = pw::stream::StreamRc::new(core.clone(), "wprs-probe", props)?;
 
     let probe = Rc::new(RefCell::new(Probe::default()));
     let ml = mainloop.downgrade();
@@ -113,7 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut params = [spa::pod::Pod::from_bytes(&format).ok_or("bad pod")?];
     stream.connect(
         spa::utils::Direction::Input,
-        None,
+        node_id,
         pw::stream::StreamFlags::AUTOCONNECT | pw::stream::StreamFlags::MAP_BUFFERS,
         &mut params,
     )?;

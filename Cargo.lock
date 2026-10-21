@@ -2188,7 +2188,7 @@ dependencies = [
 
 [[package]]
 name = "wprs-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "dirs",
  "serde",
@@ -2198,7 +2198,7 @@ dependencies = [
 
 [[package]]
 name = "wprs-ctl"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2209,7 +2209,7 @@ dependencies = [
 
 [[package]]
 name = "wprs-pipewire"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "pipewire",
  "thiserror",
@@ -2219,7 +2219,7 @@ dependencies = [
 
 [[package]]
 name = "wprs-render"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "image",
@@ -2232,7 +2232,7 @@ dependencies = [
 
 [[package]]
 name = "wprsd"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "image",
