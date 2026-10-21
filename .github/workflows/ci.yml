@@ -101,18 +101,18 @@ jobs:
     needs: package
     runs-on: ubuntu-24.04
     # Released Plasma 6 in a disposable container: installs the release
-    # tarball, runs a headless session and checks a screenshot.
+    # tarball, runs plasmashell on a virtual X server and checks a screenshot.
     container: archlinux:latest
     timeout-minutes: 30
     steps:
       - name: Install Plasma
         run: |
           pacman -Syu --noconfirm --needed \
-            plasma-workspace kwin kpipewire spectacle \
+            plasma-workspace kpipewire xorg-server-xvfb \
             pipewire wireplumber dbus \
             mesa vulkan-swrast vulkan-icd-loader \
-            imagemagick tar gzip libcap gdb
-          pacman -Q plasma-workspace kwin kpipewire
+            imagemagick tar gzip gdb
+          pacman -Q plasma-workspace kpipewire
 
       - uses: actions/checkout@v5
 

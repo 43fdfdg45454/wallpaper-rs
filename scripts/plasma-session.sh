@@ -67,19 +67,20 @@ debug_run() { # <log> <program> [args...]
   local log=$1
   shift
   if command -v gdb >/dev/null 2>&1; then
-    gdb -q -batch -ex "set pagination off" -ex "handle SIGPIPE nostop noprint" \
+    gdb -q -batch -ex "set debuginfod enabled off" -ex "set pagination off" -ex "handle SIGPIPE nostop noprint" \
       -ex run -ex "thread apply all bt 25" --args "$@" >"$log" 2>&1
   else
     "$@" >"$log" 2>&1
   fi
 }
 
-# Headless compositor with QPainter compositing.
-export KWIN_COMPOSE=Q
-debug_run "$OUT/kwin.log" kwin_wayland --virtual --width 1280 --height 720 \
-  --socket wayland-test & pids+=($!)
-wait_for 30 test -S "$XDG_RUNTIME_DIR/wayland-test"
-export WAYLAND_DISPLAY=wayland-test QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland
+# Headless X server. Current KWin needs a GPU render device, which CI
+# containers do not have; plasmashell runs on X11 just as well and the
+# plugin, PipeWire and KPipeWire behave the same.
+Xvfb :99 -screen 0 1280x720x24 -nolisten tcp >"$OUT/xvfb.log" 2>&1 & pids+=($!)
+wait_for 30 test -S /tmp/.X11-unix/X99
+export DISPLAY=:99 QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11
+unset WAYLAND_DISPLAY
 export XDG_CURRENT_DESKTOP=KDE KDE_FULL_SESSION=true KDE_SESSION_VERSION=6
 
 # The daemon is started by D-Bus activation, as on a real desktop.
@@ -104,9 +105,7 @@ dbus-send --session --print-reply --dest=org.kde.plasmashell /PlasmaShell \
 sleep 15
 "$HOME/.local/bin/wprs-ctl" state | tee "$OUT/state.json"
 
-spectacle --background --nonotify --fullscreen --output "$OUT/screenshot.png" \
-  >"$OUT/spectacle.log" 2>&1 || true
-wait_for 20 test -s "$OUT/screenshot.png"
+magick import -display :99 -window root "$OUT/screenshot.png"
 
 pixel() { magick "$OUT/screenshot.png" -format "%[fx:int(255*p{$1,$2}.r)],%[fx:int(255*p{$1,$2}.g)],%[fx:int(255*p{$1,$2}.b)]" info:; }
 fail=0
