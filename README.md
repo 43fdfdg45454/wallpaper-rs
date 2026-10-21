@@ -81,6 +81,7 @@ cargo build -p wprsd -p wprs-ctl
 cp target/debug/examples/probe target/debug/
 scripts/integration-test.sh target/debug # D-Bus + PipeWire + daemon de punta a punta
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
+scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
 ```
 
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
@@ -97,6 +98,7 @@ dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una ca
 | `apps/wprs-ctl` | CLI |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
+| `po` | Traducciones gettext de los paquetes de Plasma |
 | `packaging` | Servicio systemd, activación D-Bus, scripts de instalación |
 | `docs` | Especificación de la interfaz D-Bus |
 

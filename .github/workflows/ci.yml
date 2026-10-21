@@ -33,7 +33,7 @@ jobs:
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
             mesa-vulkan-drivers libvulkan1 \
             pipewire pipewire-bin wireplumber dbus-x11 \
-            shellcheck qt6-declarative-dev-tools
+            shellcheck qt6-declarative-dev-tools gettext
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -61,6 +61,9 @@ jobs:
           for f in integrations/*/metadata.json; do python3 -c "import json, sys; json.load(open(sys.argv[1]))" "$f"; done
           for f in integrations/*/contents/ui/*.qml; do /usr/lib/qt6/bin/qmlformat "$f" > /dev/null; done
 
+      - name: Translations
+        run: scripts/translations.sh check
+
       - name: End-to-end test (D-Bus + PipeWire + daemon)
         run: |
           cargo build --locked -p wprsd -p wprs-ctl
@@ -79,7 +82,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             pkg-config libclang-dev libpipewire-0.3-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gettext
 
       - uses: dtolnay/rust-toolchain@stable
 

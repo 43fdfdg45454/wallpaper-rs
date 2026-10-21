@@ -4,6 +4,7 @@
         "Id": "io.github.wallpaper_rs.tray",
         "Name": "wallpaper-rs",
         "Description": "Manage the wallpapers rendered by wallpaper-rs",
+        "Description[es]": "Gestionar los fondos de pantalla generados por wallpaper-rs",
         "Icon": "preferences-desktop-wallpaper",
         "Category": "System Information",
         "EnabledByDefault": true,

@@ -1,0 +1,27 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: wallpaper-rs\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-21 23:47+0000\n"
+"PO-Revision-Date: 2026-10-21 23:47+0000\n"
+"Last-Translator: wallpaper-rs contributors\n"
+"Language-Team: wallpaper-rs contributors\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: integrations/plasma-wallpaper/contents/ui/config.qml
+#, kde-format
+msgid ""
+"wallpaper-rs is managed from its icon in the system tray or with the wprs-"
+"ctl command."
+msgstr ""
+"wallpaper-rs se gestiona desde su icono en la bandeja del sistema o con la "
+"orden wprs-ctl."
+
+#: integrations/plasma-wallpaper/contents/ui/main.qml
+#, kde-format
+msgid "the daemon (wprsd) is not running"
+msgstr "el servicio (wprsd) no se está ejecutando"

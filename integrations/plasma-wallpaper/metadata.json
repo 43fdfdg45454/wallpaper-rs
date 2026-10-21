@@ -4,6 +4,7 @@
         "Id": "io.github.wallpaper_rs",
         "Name": "wallpaper-rs",
         "Description": "Animated and static wallpapers rendered by the wallpaper-rs daemon",
+        "Description[es]": "Fondos de pantalla animados y estáticos generados por el servicio de wallpaper-rs",
         "Icon": "preferences-desktop-wallpaper",
         "License": "GPL-3.0-or-later",
         "Version": "0.2.0",

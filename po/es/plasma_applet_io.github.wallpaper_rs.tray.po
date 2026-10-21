@@ -1,0 +1,103 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: wallpaper-rs\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-21 23:47+0000\n"
+"PO-Revision-Date: 2026-10-21 23:47+0000\n"
+"Last-Translator: wallpaper-rs contributors\n"
+"Language-Team: wallpaper-rs contributors\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgid "background color"
+msgstr "color de fondo"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgid "playing"
+msgstr "reproduciendo"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgid "paused"
+msgstr "en pausa"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgid "Every screen"
+msgstr "Todas las pantallas"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgid "Choose…"
+msgstr "Elegir…"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgid "Images and videos"
+msgstr "Imágenes y vídeos"
+
+#: integrations/plasma-tray/contents/ui/Panel.qml
+#, kde-format
+msgid "Resume"
+msgstr "Reanudar"
+
+#: integrations/plasma-tray/contents/ui/Panel.qml
+#, kde-format
+msgid "Pause"
+msgstr "Pausar"
+
+#: integrations/plasma-tray/contents/ui/Panel.qml
+#, kde-format
+msgid "Reload configuration"
+msgstr "Recargar la configuración"
+
+#: integrations/plasma-tray/contents/ui/Settings.qml
+#, kde-format
+msgid "Pause when a window covers the screen"
+msgstr "Pausar cuando una ventana cubra la pantalla"
+
+#: integrations/plasma-tray/contents/ui/Settings.qml
+#, kde-format
+msgid "Pause on battery"
+msgstr "Pausar al funcionar con batería"
+
+#: integrations/plasma-tray/contents/ui/Settings.qml
+#, kde-format
+msgid "Pause while the screen is locked"
+msgstr "Pausar mientras la pantalla esté bloqueada"
+
+#: integrations/plasma-tray/contents/ui/Settings.qml
+#, kde-format
+msgid "Frames per second:"
+msgstr "Fotogramas por segundo:"
+
+#: integrations/plasma-tray/contents/ui/Settings.qml
+#, kde-format
+msgid "Transition:"
+msgstr "Transición:"
+
+#: integrations/plasma-tray/contents/ui/Settings.qml
+#, kde-format
+msgid "Transition length (ms):"
+msgstr "Duración de la transición (ms):"
+
+#: integrations/plasma-tray/contents/ui/main.qml
+#, kde-format
+msgid "The wallpaper-rs daemon is not running"
+msgstr "El servicio de wallpaper-rs no se está ejecutando"
+
+#: integrations/plasma-tray/contents/ui/main.qml
+#, kde-format
+msgid "Paused"
+msgstr "En pausa"
+
+#: integrations/plasma-tray/contents/ui/main.qml
+#, kde-format
+msgid "Playing"
+msgstr "Reproduciendo"
