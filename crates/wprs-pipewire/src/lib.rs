@@ -401,8 +401,8 @@ fn create_stream(
                     (None, Some(dst)) => {
                         // No frame yet: send opaque black.
                         let len = dst.len().min((stride * height) as usize);
-                        for px in dst[..len].chunks_exact_mut(4) {
-                            px.copy_from_slice(&[0, 0, 0, 255]);
+                        for px in dst[..len].as_chunks_mut::<4>().0 {
+                            *px = [0, 0, 0, 255];
                         }
                         len
                     }
