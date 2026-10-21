@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # Inner part of plasma-test.sh, run as the unprivileged test user.
-# Usage: plasma-session.sh <work-dir> <output-dir> <x-display>
+# Usage: plasma-session.sh <work-dir> <output-dir>
 set -euo pipefail
 
 WORK=$1
 OUT=$2
-X_DISPLAY=$3
 
 # Run everything inside a private session bus.
 if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
@@ -75,13 +74,25 @@ debug_run() { # <log> <program> [args...]
   fi
 }
 
-# The X server is started by plasma-test.sh.
-export DISPLAY=$X_DISPLAY QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11
-unset WAYLAND_DISPLAY
+# Headless KWin. The virtual backend needs a render node (vgem provides one);
+# if it cannot start, fall back to the DRM backend on a vkms virtual monitor.
+start_kwin() { # <log> [args...]
+  local log=$1
+  shift
+  debug_run "$log" kwin_wayland --socket wayland-test "$@" & pids+=($!)
+  wait_for 20 test -S "$XDG_RUNTIME_DIR/wayland-test"
+}
+ls -l /dev/dri || true
+if ! start_kwin "$OUT/kwin.log" --virtual --width 1280 --height 720; then
+  vkms=$(for c in /sys/class/drm/card*-Writeback-*; do basename "${c%%-*}"; done | head -n 1)
+  echo "virtual backend failed; trying DRM on /dev/dri/$vkms"
+  KWIN_DRM_DEVICES=/dev/dri/$vkms start_kwin "$OUT/kwin-drm.log" --drm
+fi
+export WAYLAND_DISPLAY=wayland-test QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland
 export XDG_CURRENT_DESKTOP=KDE KDE_FULL_SESSION=true KDE_SESSION_VERSION=6
 # Services started by D-Bus activation (activity manager, the daemon) need
 # the same graphical environment.
-dbus-update-activation-environment DISPLAY QT_QPA_PLATFORM XDG_SESSION_TYPE \
+dbus-update-activation-environment WAYLAND_DISPLAY QT_QPA_PLATFORM XDG_SESSION_TYPE \
   XDG_CURRENT_DESKTOP KDE_FULL_SESSION KDE_SESSION_VERSION LIBGL_ALWAYS_SOFTWARE \
   QT_FORCE_STDERR_LOGGING
 
@@ -134,11 +145,20 @@ wait_for 60 bus_has org.kde.plasmashell
 sleep 15
 "$HOME/.local/bin/wprs-ctl" state | tee "$OUT/state.json"
 
-magick import -display "$X_DISPLAY" -window root "$OUT/screenshot.png"
+spectacle --background --nonotify --fullscreen --output "$OUT/screenshot.png" \
+  >"$OUT/spectacle.log" 2>&1 || true
+wait_for 20 test -s "$OUT/screenshot.png" || true
+if [ ! -s "$OUT/screenshot.png" ]; then
+  echo "FAIL: no screenshot"
+  cat "$OUT/spectacle.log"
+  exit 1
+fi
 
 pixel() { magick "$OUT/screenshot.png" -format "%[fx:int(255*p{$1,$2}.r)],%[fx:int(255*p{$1,$2}.g)],%[fx:int(255*p{$1,$2}.b)]" info:; }
 fail=0
-for xy in "640 360" "100 100" "1180 100"; do
+read -r shot_w shot_h < <(magick identify -format "%w %h" "$OUT/screenshot.png")
+echo "screenshot: ${shot_w}x${shot_h}"
+for xy in "$((shot_w / 2)) $((shot_h / 2))" "$((shot_w / 10)) $((shot_h / 7))" "$((shot_w * 9 / 10)) $((shot_h / 7))"; do
   # shellcheck disable=SC2086
   rgb=$(pixel $xy)
   echo "pixel ($xy): $rgb"
@@ -148,10 +168,6 @@ done
 
 echo "===== screenshot colors"
 magick "$OUT/screenshot.png" -format %c histogram:info:- | sort -rn | head -n 5
-echo "===== X windows"
-xwininfo -root -tree 2>&1 | head -n 30 || true
-echo "===== RandR outputs"
-xrandr --query 2>&1 | head -n 10 || true
 echo "===== desktop config written by Plasma"
 cat "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc" || true
 echo "===== D-Bus calls to the daemon"

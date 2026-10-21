@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Plasma end-to-end test. Runs as root in a disposable container that has
-# Plasma 6 installed: creates an unprivileged user, installs the release
-# tarball with install.sh, starts a headless KWin + plasmashell session,
-# selects the wallpaper-rs plugin, takes a screenshot and checks its pixels.
+# Plasma 6 installed and access to /dev/dri (a virtual render node from the
+# vgem kernel module is enough): creates an unprivileged user, installs the
+# release tarball with install.sh, starts a headless KWin Wayland session with
+# plasmashell and the wallpaper-rs plugin selected, takes a screenshot and
+# checks its pixels.
 #
 # Usage: scripts/plasma-test.sh <release-tarball> <output-dir>
 set -euo pipefail
@@ -23,23 +25,13 @@ cp "$ROOT/scripts/plasma-session.sh" "$WORK/plasma-session.sh"
 chown -R "$TEST_USER:" "$WORK"
 chmod 777 "$OUT"
 
-# X server with a named RandR output (see tests/plasma/xorg-dummy.conf).
-# It runs as root here; the test user connects as a local client.
-Xorg :99 -noreset -nolisten tcp -novtswitch -keeptty \
-  -config "$ROOT/tests/plasma/xorg-dummy.conf" -logfile "$OUT/xorg.log" \
-  >"$OUT/xorg-stderr.log" 2>&1 &
-xorg_pid=$!
-for _ in $(seq 100); do
-  [ -S /tmp/.X11-unix/X99 ] && break
-  sleep 0.1
-done
-if [ ! -S /tmp/.X11-unix/X99 ]; then
-  echo "Xorg did not start:"
-  tail -n 40 "$OUT/xorg-stderr.log" "$OUT/xorg.log" 2>/dev/null || true
-  exit 1
+# Distributions ship kwin_wayland with file capabilities (CAP_SYS_NICE for
+# realtime scheduling). Containers drop that capability, so exec would fail
+# with EPERM; the test does not need it.
+if command -v setcap >/dev/null 2>&1; then
+  setcap -r "$(command -v kwin_wayland)" 2>/dev/null || true
 fi
 
 status=0
-su -l "$TEST_USER" -s /bin/bash -c "bash '$WORK/plasma-session.sh' '$WORK' '$OUT' :99" || status=$?
-kill "$xorg_pid" 2>/dev/null || true
+su -l "$TEST_USER" -s /bin/bash -c "bash '$WORK/plasma-session.sh' '$WORK' '$OUT'" || status=$?
 exit "$status"

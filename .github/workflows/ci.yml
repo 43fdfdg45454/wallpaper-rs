@@ -99,22 +99,8 @@ jobs:
     name: Plasma end-to-end
     needs: package
     runs-on: ubuntu-24.04
-    # Released Plasma 6 in a disposable container: installs the release
-    # tarball, runs plasmashell on Xorg with a dummy monitor and checks a
-    # screenshot.
-    container: archlinux:latest
     timeout-minutes: 30
     steps:
-      - name: Install Plasma
-        run: |
-          pacman -Syu --noconfirm --needed \
-            plasma-desktop plasma-workspace kpipewire \
-            xorg-server xf86-video-dummy xorg-xrandr \
-            pipewire wireplumber dbus \
-            mesa vulkan-swrast vulkan-icd-loader \
-            imagemagick tar gzip gdb xorg-xwininfo
-          pacman -Q plasma-desktop plasma-workspace kpipewire
-
       - uses: actions/checkout@v5
 
       - uses: actions/download-artifact@v5
@@ -122,8 +108,30 @@ jobs:
           name: wallpaper-rs-x86_64-linux
           path: dist
 
+      # KWin needs a DRM device. vgem provides a render node and vkms a
+      # virtual monitor, both without a GPU.
+      - name: Virtual DRM devices
+        run: |
+          sudo modprobe vgem
+          sudo modprobe vkms
+          sudo chmod 666 /dev/dri/*
+          ls -l /dev/dri
+
+      # Released Plasma 6 in a disposable container with the DRM devices:
+      # installs the release tarball, runs a headless KWin Wayland session
+      # with plasmashell and checks a screenshot.
       - name: Run Plasma session test
-        run: scripts/plasma-test.sh dist/wallpaper-rs-*.tar.gz plasma-test-output
+        run: |
+          docker run --rm --device /dev/dri -v "$PWD:/src" -w /src archlinux:latest bash -c '
+            set -e
+            pacman -Syu --noconfirm --needed \
+              plasma-desktop plasma-workspace kwin kpipewire spectacle \
+              pipewire wireplumber dbus \
+              mesa vulkan-swrast vulkan-icd-loader \
+              imagemagick tar gzip libcap gdb >/dev/null
+            pacman -Q plasma-desktop plasma-workspace kwin kpipewire mesa
+            scripts/plasma-test.sh dist/wallpaper-rs-*.tar.gz plasma-test-output
+          '
 
       - uses: actions/upload-artifact@v5
         if: always()
