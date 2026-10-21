@@ -171,13 +171,7 @@ if grep -q "received signal" "$OUT/plasmashell.log" || ! bus_has org.kde.plasmas
   fail=1
 fi
 
-# A screenshot proves the frames reach the screen, but only when KWin can
-# composite in this environment; otherwise it is reported and not enforced.
-kwin_renders=1
-if grep -q "Failed to find a working output layer configuration" "$OUT"/kwin*.log; then
-  kwin_renders=0
-  echo "note: KWin cannot composite here; the screenshot check is informational"
-fi
+# A screenshot proves the frames reach the screen.
 spectacle --background --nonotify --fullscreen --output "$OUT/screenshot.png" \
   >"$OUT/spectacle.log" 2>&1 || true
 wait_for 20 test -s "$OUT/screenshot.png" || true
@@ -198,7 +192,7 @@ else
     if [ "$r" -gt 40 ] || [ "$g" -lt 200 ] || [ "$b" -gt 40 ]; then shot_ok=0; fi
   done
 fi
-if [ "$shot_ok" = 0 ] && [ "$kwin_renders" = 1 ]; then
+if [ "$shot_ok" = 0 ]; then
   echo "FAIL: the screenshot does not show the wallpaper"
   fail=1
 fi
