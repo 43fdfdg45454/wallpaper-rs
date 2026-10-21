@@ -91,20 +91,42 @@ dbus-update-activation-environment DISPLAY QT_QPA_PLATFORM XDG_SESSION_TYPE \
 # The daemon is started by D-Bus activation, as on a real desktop.
 wait_for 30 "$HOME/.local/bin/wprs-ctl" state
 
+# Start from an existing session in which the wallpaper-rs plugin is already
+# selected, as after choosing it in "Configure Desktop and Wallpaper". This
+# also keeps plasmashell from running its first-start layout script and
+# pending update scripts, which need a full graphical session.
+activity=6f1d2a0e-3b7c-4e58-9a41-0c2d5e7f8a90
+mkdir -p "$HOME/.config"
+cat >"$HOME/.config/kactivitymanagerdrc" <<CONF
+[activities]
+$activity=Default
+
+[main]
+currentActivity=$activity
+CONF
+cat >"$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc" <<CONF
+[Containments][1]
+activityId=$activity
+formfactor=0
+immutability=1
+lastScreen=0
+location=0
+plugin=org.kde.plasma.folder
+wallpaperplugin=io.github.wallpaper_rs
+
+[Containments][1][Wallpaper][io.github.wallpaper_rs][General]
+FillMode=fill
+Image=$WORK/green.png
+CONF
+updates=$(find /usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates \
+  -name '*.js' 2>/dev/null | sort | paste -sd, -)
+cat >"$HOME/.config/plasmashellrc" <<CONF
+[Updates]
+performed=$updates
+CONF
+
 debug_run "$OUT/plasmashell.log" plasmashell --no-respawn & pids+=($!)
 wait_for 60 bus_has org.kde.plasmashell
-sleep 5
-
-# Select the plugin the same way the settings dialog does.
-script="desktops().forEach(d => {
-  d.wallpaperPlugin = 'io.github.wallpaper_rs';
-  d.currentConfigGroup = ['Wallpaper', 'io.github.wallpaper_rs', 'General'];
-  d.writeConfig('Image', '$WORK/green.png');
-  d.writeConfig('FillMode', 'fill');
-  d.reloadConfig();
-});"
-dbus-send --session --print-reply --dest=org.kde.plasmashell /PlasmaShell \
-  org.kde.PlasmaShell.evaluateScript "string:$script" >"$OUT/evaluate.log" 2>&1
 
 # Give the plugin time to request the stream and show the first frame.
 sleep 15
