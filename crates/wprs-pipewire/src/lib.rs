@@ -5,6 +5,7 @@
 //! Each stream is a driver: frames are produced only when a new frame is
 //! pushed, when a consumer starts streaming, and on a slow keep-alive tick.
 
+mod memfd;
 mod params;
 
 use pipewire as pw;
@@ -384,6 +385,17 @@ fn create_stream(
                     tracing::warn!("cannot set buffer parameters: {e}");
                 }
             })
+            .add_buffer(move |_, _, buffer| {
+                tracing::trace!("allocating a stream buffer");
+                // SAFETY: called by the stream with one of its buffers.
+                if let Err(e) = unsafe { memfd::add(buffer, width * 4 * height) } {
+                    tracing::warn!("cannot allocate a stream buffer: {e}");
+                }
+            })
+            .remove_buffer(|_, _, buffer| {
+                // SAFETY: called by the stream with one of its buffers.
+                unsafe { memfd::remove(buffer) }
+            })
             .process(move |stream, _| {
                 let Some(mut buffer) = stream.dequeue_buffer() else {
                     tracing::trace!("process: no buffer available");
@@ -422,8 +434,8 @@ fn create_stream(
     stream.connect(
         spa::utils::Direction::Output,
         None,
-        // PipeWire allocates the buffers (memfd) from our Buffers param.
-        pw::stream::StreamFlags::DRIVER | pw::stream::StreamFlags::MAP_BUFFERS,
+        // The stream allocates its own memfd buffers (see memfd.rs).
+        pw::stream::StreamFlags::DRIVER | pw::stream::StreamFlags::ALLOC_BUFFERS,
         &mut pods,
     )?;
 

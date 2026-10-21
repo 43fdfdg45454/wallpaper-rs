@@ -9,5 +9,6 @@ rust-version.workspace = true
 [dependencies]
 wprs-core.workspace = true
 pipewire.workspace = true
+rustix.workspace = true
 thiserror.workspace = true
 tracing.workspace = true

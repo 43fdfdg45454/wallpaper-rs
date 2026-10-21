@@ -69,11 +69,12 @@ pub fn enum_format(width: u32, height: u32) -> Vec<u8> {
     })
 }
 
-/// Buffer requirements: tightly packed rows, memfd or plain memory.
+/// Buffer requirements: tightly packed rows in memfd buffers. Plain memory
+/// (MemPtr) is not offered: KPipeWire crashes on it.
 pub fn buffers(width: u32, height: u32) -> Vec<u8> {
     let stride = (width * 4) as i32;
     let size = stride * height as i32;
-    let data_types = (1 << spa::sys::SPA_DATA_MemFd) | (1 << spa::sys::SPA_DATA_MemPtr);
+    let data_types = 1 << spa::sys::SPA_DATA_MemFd;
     serialize(Object {
         type_: SpaTypes::ObjectParamBuffers.as_raw(),
         id: ParamType::Buffers.as_raw(),

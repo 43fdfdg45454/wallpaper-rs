@@ -163,6 +163,14 @@ if ! grep -q "kpipewire_logging: state changed paused -> streaming" "$OUT/plasma
   fail=1
 fi
 
+# plasmashell runs under gdb: a crash (for instance while handling a frame)
+# shows up as a received signal and must fail the test.
+if grep -q "received signal" "$OUT/plasmashell.log" || ! bus_has org.kde.plasmashell; then
+  echo "FAIL: plasmashell crashed"
+  grep -A 30 "received signal" "$OUT/plasmashell.log" | head -n 40 || true
+  fail=1
+fi
+
 # A screenshot proves the frames reach the screen, but only when KWin can
 # composite in this environment; otherwise it is reported and not enforced.
 kwin_renders=1
