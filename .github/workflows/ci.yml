@@ -141,8 +141,10 @@ jobs:
           if ! modinfo vgem >/dev/null 2>&1 || ! modinfo vkms >/dev/null 2>&1; then
             sudo apt-get update -q
             sudo apt-get install -y -q "linux-modules-extra-$(uname -r)"
+            sudo depmod -a
           fi
-          sudo modprobe vgem
+          find "/lib/modules/$(uname -r)" -name 'vgem.ko*' -o -name 'vkms.ko*'
+          sudo modprobe vgem || echo "vgem is not available on this runner kernel"
           sudo modprobe vkms
           sudo chmod 666 /dev/dri/*
           ls -l /dev/dri

@@ -93,8 +93,9 @@ dbus-update-activation-environment WAYLAND_DISPLAY QT_QPA_PLATFORM XDG_SESSION_T
 
 RUST_LOG=info,wgpu_hal=debug,wgpu_core=info debug_run "$OUT/wprsd.log" "$HOME/.local/bin/wprsd" & pids+=($!)
 wait_for 30 "$HOME/.local/bin/wprs-ctl" state
+"$HOME/.local/bin/wprs-ctl" set "$WORK/green.png" --fit fill
 
-bash "$WORK/plasma-config.sh" "$WORK"
+bash "$WORK/plasma-config.sh"
 
 dbus-monitor --session "interface='io.github.wallpaper_rs.Daemon1'" \
   >"$OUT/dbus-monitor.log" 2>&1 & pids+=($!)
