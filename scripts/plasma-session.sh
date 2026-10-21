@@ -29,8 +29,14 @@ cleanup() {
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
   if [ "$rc" != 0 ]; then
     for f in "$OUT"/*.log; do
-      echo "===== $(basename "$f") (last 60 lines)"
-      tail -n 60 "$f"
+      echo "===== $(basename "$f") (first 40 lines)"
+      head -n 40 "$f"
+      if grep -q 'received signal' "$f"; then
+        echo "===== $(basename "$f") (crash)"
+        grep -m 1 -A 50 'received signal' "$f"
+      fi
+      echo "===== $(basename "$f") (last 40 lines)"
+      tail -n 40 "$f"
     done
   fi
 }
@@ -68,7 +74,7 @@ debug_run() { # <log> <program> [args...]
   shift
   if command -v gdb >/dev/null 2>&1; then
     gdb -q -batch -ex "set debuginfod enabled off" -ex "set pagination off" -ex "handle SIGPIPE nostop noprint" \
-      -ex run -ex "thread apply all bt 25" --args "$@" >"$log" 2>&1
+      -ex run -ex "bt 40" -ex "thread apply all bt 12" --args "$@" >"$log" 2>&1
   else
     "$@" >"$log" 2>&1
   fi
