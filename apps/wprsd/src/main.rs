@@ -39,8 +39,21 @@ fn parse_args() -> Option<PathBuf> {
     config
 }
 
+fn main() -> anyhow::Result<()> {
+    // Mesa's Vulkan device selection layer inspects the Wayland session to
+    // pick the compositor's GPU, and crashes when that device has no Vulkan
+    // driver (virtual machines, software rendering). The daemon only renders
+    // offscreen and picks its adapter through wgpu, so it skips the layer
+    // unless the user configured it explicitly.
+    if std::env::var_os("NODEVICE_SELECT").is_none() {
+        // SAFETY: no other thread exists yet; the runtime starts below.
+        unsafe { std::env::set_var("NODEVICE_SELECT", "1") };
+    }
+    run()
+}
+
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .init();
