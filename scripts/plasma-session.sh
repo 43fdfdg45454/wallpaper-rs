@@ -96,7 +96,9 @@ dbus-update-activation-environment WAYLAND_DISPLAY QT_QPA_PLATFORM XDG_SESSION_T
   XDG_CURRENT_DESKTOP KDE_FULL_SESSION KDE_SESSION_VERSION LIBGL_ALWAYS_SOFTWARE \
   QT_FORCE_STDERR_LOGGING
 
-# The daemon is started by D-Bus activation, as on a real desktop.
+# Start the daemon directly (under gdb) so a crash leaves a backtrace; on a
+# real desktop it is started by systemd or D-Bus activation instead.
+RUST_LOG=info,wgpu_hal=debug,wgpu_core=info debug_run "$OUT/wprsd.log" "$HOME/.local/bin/wprsd" & pids+=($!)
 wait_for 30 "$HOME/.local/bin/wprs-ctl" state
 
 # Start from an existing session in which the wallpaper-rs plugin is already
