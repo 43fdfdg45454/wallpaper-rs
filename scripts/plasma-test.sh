@@ -17,6 +17,7 @@ cp "$ROOT/tests/fixtures/magenta-64x32.webm" "$WORK/magenta.webm"
 cp "$ROOT"/scripts/plasma-{session,config,checks,features}.sh "$WORK/"
 chown -R "$TEST_USER:" "$WORK"
 chmod 777 "$OUT"
+chmod 666 /dev/dri/* 2>/dev/null || true
 
 if command -v setcap >/dev/null 2>&1; then
   setcap -r "$(command -v kwin_wayland)" 2>/dev/null || true

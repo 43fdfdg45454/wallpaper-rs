@@ -141,14 +141,24 @@ jobs:
 
       - name: Virtual DRM devices
         run: |
-          if ! modinfo vgem >/dev/null 2>&1 || ! modinfo vkms >/dev/null 2>&1; then
-            sudo apt-get update -q
-            sudo apt-get install -y -q "linux-modules-extra-$(uname -r)"
-            sudo depmod -a
-          fi
-          find "/lib/modules/$(uname -r)" -name 'vgem.ko*' -o -name 'vkms.ko*'
-          sudo modprobe vgem || echo "vgem is not available on this runner kernel"
+          kernel=$(uname -r)
+          sudo apt-get update -q
+          sudo apt-get install -y -q "linux-modules-extra-$kernel"
+          sudo depmod -a
           sudo modprobe vkms
+          if ! sudo modprobe vgem; then
+            cc=$(grep -oE 'gcc-[0-9]+' /proc/version | head -n 1)
+            sudo apt-get install -y -q "linux-headers-$kernel" ${cc:+"$cc"}
+            mkdir -p "$RUNNER_TEMP/vgem" && cd "$RUNNER_TEMP/vgem"
+            for f in vgem_drv.c vgem_drv.h vgem_fence.c; do
+              curl -sSfLO "https://raw.githubusercontent.com/torvalds/linux/v$(cut -d. -f1,2 <<<"$kernel")/drivers/gpu/drm/vgem/$f"
+            done
+            printf 'obj-m := vgem.o\nvgem-y := vgem_drv.o vgem_fence.o\n' > Kbuild
+            make -s -C "/lib/modules/$kernel/build" M="$PWD" CC="${cc:-gcc}" modules
+            sudo modprobe drm_shmem_helper
+            sudo insmod vgem.ko
+          fi
+          sudo udevadm settle
           sudo chmod 666 /dev/dri/*
           ls -l /dev/dri
 
