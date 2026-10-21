@@ -51,13 +51,55 @@ impl Frame {
     }
 }
 
-/// What to draw on one target.
+/// What to draw on one target with [`Renderer::render`].
 #[derive(Debug, Clone, Copy)]
 pub struct Scene<'a> {
     pub image: Option<&'a RgbaImage>,
     pub fit: Fit,
     /// sRGB background color.
     pub background: [u8; 3],
+}
+
+/// An image or video frame stored on the GPU.
+pub struct GpuImage {
+    texture: wgpu::Texture,
+    view: wgpu::TextureView,
+    width: u32,
+    height: u32,
+}
+
+impl GpuImage {
+    pub fn size(&self) -> (u32, u32) {
+        (self.width, self.height)
+    }
+}
+
+/// A reusable render target with its readback buffer.
+pub struct Target {
+    texture: wgpu::Texture,
+    view: wgpu::TextureView,
+    readback: wgpu::Buffer,
+    width: u32,
+    height: u32,
+}
+
+impl Target {
+    pub fn size(&self) -> (u32, u32) {
+        (self.width, self.height)
+    }
+}
+
+/// One layer of a frame. Layers are drawn in order; each one covers the
+/// whole target (image plus background) and is blended over the previous
+/// layers with `opacity`.
+#[derive(Clone, Copy)]
+pub struct Layer<'a> {
+    pub image: Option<&'a GpuImage>,
+    pub fit: Fit,
+    /// sRGB background color.
+    pub background: [u8; 3],
+    /// 0.0 (invisible) to 1.0 (opaque).
+    pub opacity: f32,
 }
 
 #[repr(C)]
@@ -72,10 +114,12 @@ struct Params {
 pub struct Renderer {
     device: wgpu::Device,
     queue: wgpu::Queue,
-    pipeline: wgpu::RenderPipeline,
+    opaque: wgpu::RenderPipeline,
+    blended: wgpu::RenderPipeline,
     layout: wgpu::BindGroupLayout,
     clamp: wgpu::Sampler,
     repeat: wgpu::Sampler,
+    placeholder: GpuImage,
     adapter: String,
     max_edge: u32,
 }
@@ -152,31 +196,44 @@ impl Renderer {
             bind_group_layouts: &[Some(&layout)],
             immediate_size: 0,
         });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("wprs-render pipeline"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: TARGET_FORMAT,
-                    blend: None,
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
+        let pipeline = |blend: Option<wgpu::BlendState>| {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("wprs-render pipeline"),
+                layout: Some(&pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: Some("vs_main"),
+                    compilation_options: Default::default(),
+                    buffers: &[],
+                },
+                primitive: wgpu::PrimitiveState::default(),
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: Some("fs_main"),
+                    compilation_options: Default::default(),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: TARGET_FORMAT,
+                        blend,
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                multiview_mask: None,
+                cache: None,
+            })
+        };
+        // Crossfade: result = layer * c + below * (1 - c), with c set per draw.
+        let fade = wgpu::BlendComponent {
+            src_factor: wgpu::BlendFactor::Constant,
+            dst_factor: wgpu::BlendFactor::OneMinusConstant,
+            operation: wgpu::BlendOperation::Add,
+        };
+        let opaque = pipeline(None);
+        let blended = pipeline(Some(wgpu::BlendState {
+            color: fade,
+            alpha: fade,
+        }));
         let sampler = |mode| {
             device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("wprs-render sampler"),
@@ -189,16 +246,19 @@ impl Renderer {
         };
         let clamp = sampler(wgpu::AddressMode::ClampToEdge);
         let repeat = sampler(wgpu::AddressMode::Repeat);
+        let placeholder = create_image(&device, &queue, &[0u8; 4], 1, 1, 4);
 
         Ok(Self {
             adapter: format!("{} ({:?})", info.name, info.backend),
             max_edge: limits.max_texture_dimension_2d,
             device,
             queue,
-            pipeline,
+            opaque,
+            blended,
             layout,
             clamp,
             repeat,
+            placeholder,
         })
     }
 
@@ -212,65 +272,65 @@ impl Renderer {
         self.max_edge
     }
 
-    /// Renders `scene` into a `width` x `height` frame.
-    pub fn render(&self, scene: Scene<'_>, width: u32, height: u32) -> Result<Frame, RenderError> {
+    /// Uploads a still image prepared for showing on a `target`-sized output
+    /// with `fit`: large images are downscaled on the CPU first, so the GPU
+    /// never minifies by more than 2x and textures stay within device limits.
+    pub fn upload(&self, image: &RgbaImage, fit: Fit, target: (u32, u32)) -> GpuImage {
+        let prepared = prepare_image(image, fit, target, self.max_edge);
+        let (w, h) = prepared.dimensions();
+        create_image(&self.device, &self.queue, prepared.as_raw(), w, h, w * 4)
+    }
+
+    /// Uploads raw RGBA pixels with rows of `stride` bytes.
+    pub fn upload_rgba(
+        &self,
+        rgba: &[u8],
+        width: u32,
+        height: u32,
+        stride: u32,
+    ) -> Result<GpuImage, RenderError> {
+        check_pixels(rgba, width, height, stride, self.max_edge)?;
+        Ok(create_image(
+            &self.device,
+            &self.queue,
+            rgba,
+            width,
+            height,
+            stride,
+        ))
+    }
+
+    /// Replaces the pixels of `image`, reusing its texture when the size is
+    /// unchanged (video frames).
+    pub fn update_rgba(
+        &self,
+        image: &mut GpuImage,
+        rgba: &[u8],
+        width: u32,
+        height: u32,
+        stride: u32,
+    ) -> Result<(), RenderError> {
+        check_pixels(rgba, width, height, stride, self.max_edge)?;
+        if image.size() == (width, height) {
+            write_image(&self.queue, &image.texture, rgba, width, height, stride);
+        } else {
+            *image = create_image(&self.device, &self.queue, rgba, width, height, stride);
+        }
+        Ok(())
+    }
+
+    /// Creates a render target of `width` x `height` pixels.
+    pub fn create_target(&self, width: u32, height: u32) -> Result<Target, RenderError> {
         if width == 0 || height == 0 || width > self.max_edge || height > self.max_edge {
             return Err(RenderError::InvalidSize(width, height));
         }
-
-        // Pre-scale large images on the CPU so the GPU never minifies by more
-        // than 2x without mipmaps, and so textures stay within device limits.
-        let prepared = scene
-            .image
-            .map(|img| prepare_image(img, scene.fit, (width, height), self.max_edge));
-        let image = prepared.as_ref().map(|c| c.as_ref());
-
-        let (uv, has_image) = match image {
-            Some(img) => (UvRect::compute(scene.fit, img.dimensions(), (width, height)), 1),
-            None => (UvRect::compute(Fit::Stretch, (1, 1), (1, 1)), 0),
-        };
-        let bg = scene.background.map(srgb_to_linear);
-        let params = Params {
-            offset: uv.offset,
-            scale: uv.scale,
-            background: [bg[0], bg[1], bg[2], 1.0],
-            flags: [uv.repeat as u32, has_image, 0, 0],
-        };
-
-        let texture = self.upload(image);
-        let uniform = wgpu::util_buffer(&self.device, bytemuck::bytes_of(&params));
-        let view = texture.create_view(&Default::default());
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("wprs-render bind group"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: uniform.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(if uv.repeat {
-                        &self.repeat
-                    } else {
-                        &self.clamp
-                    }),
-                },
-            ],
-        });
-
-        let extent = wgpu::Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        };
-        let target = self.device.create_texture(&wgpu::TextureDescriptor {
+        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("wprs-render target"),
-            size: extent,
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -278,22 +338,60 @@ impl Renderer {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
             view_formats: &[],
         });
-        let target_view = target.create_view(&Default::default());
-
-        let padded = padded_row_bytes(width);
+        let view = texture.create_view(&Default::default());
         let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("wprs-render readback"),
-            size: u64::from(padded) * u64::from(height),
+            size: u64::from(padded_row_bytes(width)) * u64::from(height),
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
+        Ok(Target {
+            texture,
+            view,
+            readback,
+            width,
+            height,
+        })
+    }
 
+    /// Renders `scene` into a new `width` x `height` frame.
+    pub fn render(&self, scene: Scene<'_>, width: u32, height: u32) -> Result<Frame, RenderError> {
+        let target = self.create_target(width, height)?;
+        let image = scene
+            .image
+            .map(|img| self.upload(img, scene.fit, (width, height)));
+        self.render_layers(
+            &target,
+            &[Layer {
+                image: image.as_ref(),
+                fit: scene.fit,
+                background: scene.background,
+                opacity: 1.0,
+            }],
+        )
+    }
+
+    /// Draws `layers` into `target` and reads the result back.
+    pub fn render_layers(&self, target: &Target, layers: &[Layer<'_>]) -> Result<Frame, RenderError> {
+        let (width, height) = target.size();
+        let bind_groups: Vec<(wgpu::BindGroup, f32)> = layers
+            .iter()
+            .filter(|l| l.opacity > 0.0)
+            .map(|l| (self.layer_bind_group(l, (width, height)), l.opacity.min(1.0)))
+            .collect();
+
+        let extent = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+        let padded = padded_row_bytes(width);
         let mut encoder = self.device.create_command_encoder(&Default::default());
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("wprs-render pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &target_view,
+                    view: &target.view,
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
@@ -303,19 +401,32 @@ impl Renderer {
                 })],
                 ..Default::default()
             });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
-            pass.draw(0..3, 0..1);
+            for (i, (bind_group, opacity)) in bind_groups.iter().enumerate() {
+                if i == 0 || *opacity >= 1.0 {
+                    pass.set_pipeline(&self.opaque);
+                } else {
+                    pass.set_pipeline(&self.blended);
+                    let c = f64::from(*opacity);
+                    pass.set_blend_constant(wgpu::Color {
+                        r: c,
+                        g: c,
+                        b: c,
+                        a: c,
+                    });
+                }
+                pass.set_bind_group(0, bind_group, &[]);
+                pass.draw(0..3, 0..1);
+            }
         }
         encoder.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfo {
-                texture: &target,
+                texture: &target.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
             wgpu::TexelCopyBufferInfo {
-                buffer: &readback,
+                buffer: &target.readback,
                 layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(padded),
@@ -326,7 +437,7 @@ impl Renderer {
         );
         self.queue.submit([encoder.finish()]);
 
-        let slice = readback.slice(..);
+        let slice = target.readback.slice(..);
         let (tx, rx) = mpsc::channel();
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
@@ -348,7 +459,7 @@ impl Renderer {
                 data.extend_from_slice(&row[..stride as usize]);
             }
         }
-        readback.unmap();
+        target.readback.unmap();
         Ok(Frame {
             width,
             height,
@@ -357,47 +468,118 @@ impl Renderer {
         })
     }
 
-    fn upload(&self, image: Option<&RgbaImage>) -> wgpu::Texture {
-        let placeholder;
-        let (w, h, bytes) = match image {
-            Some(img) => (img.width(), img.height(), img.as_raw().as_slice()),
-            None => {
-                placeholder = [0u8; 4];
-                (1, 1, &placeholder[..])
-            }
+    fn layer_bind_group(&self, layer: &Layer<'_>, target: (u32, u32)) -> wgpu::BindGroup {
+        let (uv, has_image) = match layer.image {
+            Some(img) => (UvRect::compute(layer.fit, img.size(), target), 1),
+            None => (UvRect::compute(Fit::Stretch, (1, 1), (1, 1)), 0),
         };
-        let extent = wgpu::Extent3d {
-            width: w,
-            height: h,
-            depth_or_array_layers: 1,
+        let bg = layer.background.map(srgb_to_linear);
+        let params = Params {
+            offset: uv.offset,
+            scale: uv.scale,
+            background: [bg[0], bg[1], bg[2], 1.0],
+            flags: [uv.repeat as u32, has_image, 0, 0],
         };
-        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("wprs-render image"),
-            size: extent,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-        self.queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
-                texture: &texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            bytes,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(w * 4),
-                rows_per_image: Some(h),
-            },
-            extent,
-        );
-        texture
+        let uniform = wgpu::util_buffer(&self.device, bytemuck::bytes_of(&params));
+        let view = &layer.image.unwrap_or(&self.placeholder).view;
+        self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("wprs-render bind group"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: uniform.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(if uv.repeat {
+                        &self.repeat
+                    } else {
+                        &self.clamp
+                    }),
+                },
+            ],
+        })
     }
+}
+
+fn check_pixels(rgba: &[u8], width: u32, height: u32, stride: u32, max_edge: u32) -> Result<(), RenderError> {
+    let needed = u64::from(stride) * u64::from(height.saturating_sub(1)) + u64::from(width) * 4;
+    if width == 0
+        || height == 0
+        || width > max_edge
+        || height > max_edge
+        || stride < width * 4
+        || (rgba.len() as u64) < needed
+    {
+        return Err(RenderError::InvalidSize(width, height));
+    }
+    Ok(())
+}
+
+fn create_image(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    stride: u32,
+) -> GpuImage {
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("wprs-render image"),
+        size: wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+    write_image(queue, &texture, rgba, width, height, stride);
+    let view = texture.create_view(&Default::default());
+    GpuImage {
+        texture,
+        view,
+        width,
+        height,
+    }
+}
+
+fn write_image(
+    queue: &wgpu::Queue,
+    texture: &wgpu::Texture,
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    stride: u32,
+) {
+    queue.write_texture(
+        wgpu::TexelCopyTextureInfo {
+            texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        rgba,
+        wgpu::TexelCopyBufferLayout {
+            offset: 0,
+            bytes_per_row: Some(stride),
+            rows_per_image: Some(height),
+        },
+        wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+    );
 }
 
 /// Small helper module kept private to the crate, named to read naturally at the call site.

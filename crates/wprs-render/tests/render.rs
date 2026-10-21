@@ -3,7 +3,7 @@
 
 use image::{Rgba, RgbaImage};
 use wprs_core::Fit;
-use wprs_render::{Renderer, Scene};
+use wprs_render::{Layer, Renderer, Scene};
 
 fn renderer() -> Option<Renderer> {
     match Renderer::new() {
@@ -104,4 +104,83 @@ fn rejects_invalid_sizes() {
     };
     assert!(r.render(scene, 0, 10).is_err());
     assert!(r.render(scene, r.max_edge() + 1, 10).is_err());
+}
+
+#[test]
+fn crossfade_blends_layers() {
+    let Some(r) = renderer() else { return };
+    let red = r.upload(
+        &RgbaImage::from_pixel(4, 4, Rgba([255, 0, 0, 255])),
+        Fit::Fill,
+        (8, 8),
+    );
+    let blue = r.upload(
+        &RgbaImage::from_pixel(4, 4, Rgba([0, 0, 255, 255])),
+        Fit::Fill,
+        (8, 8),
+    );
+    let target = r.create_target(8, 8).unwrap();
+    let layer = |image, opacity| Layer {
+        image: Some(image),
+        fit: Fit::Fill,
+        background: [0, 0, 0],
+        opacity,
+    };
+    let start = r
+        .render_layers(&target, &[layer(&red, 1.0), layer(&blue, 0.0)])
+        .unwrap();
+    assert!(close(rgb(start.pixel(4, 4)), [255, 0, 0]));
+    let end = r
+        .render_layers(&target, &[layer(&red, 1.0), layer(&blue, 1.0)])
+        .unwrap();
+    assert!(close(rgb(end.pixel(4, 4)), [0, 0, 255]));
+    // Halfway the blend happens in linear light: both channels are
+    // sqrt-ish brighter than 128 once encoded back to sRGB.
+    let mid = rgb(r
+        .render_layers(&target, &[layer(&red, 1.0), layer(&blue, 0.5)])
+        .unwrap()
+        .pixel(4, 4));
+    assert!(mid[0].abs_diff(188) <= 3 && mid[2].abs_diff(188) <= 3, "{mid:?}");
+    assert!(mid[1] <= 2);
+}
+
+#[test]
+fn video_frames_update_in_place() {
+    let Some(r) = renderer() else { return };
+    let green = [0u8, 255, 0, 255].repeat(6 * 4);
+    let mut tex = r.upload_rgba(&green, 6, 4, 24).unwrap();
+    let target = r.create_target(6, 4).unwrap();
+    let draw = |tex: &wprs_render::GpuImage| {
+        let frame = r
+            .render_layers(
+                &target,
+                &[Layer {
+                    image: Some(tex),
+                    fit: Fit::Stretch,
+                    background: [0, 0, 0],
+                    opacity: 1.0,
+                }],
+            )
+            .unwrap();
+        rgb(frame.pixel(3, 2))
+    };
+    assert!(close(draw(&tex), [0, 255, 0]));
+
+    // Same size with padded rows: the texture is reused.
+    let mut white = vec![0u8; 32 * 4];
+    for row in white.as_chunks_mut::<32>().0 {
+        row[..24].fill(255);
+    }
+    r.update_rgba(&mut tex, &white, 6, 4, 32).unwrap();
+    assert_eq!(tex.size(), (6, 4));
+    assert!(close(draw(&tex), [255, 255, 255]));
+
+    // A new size replaces the texture.
+    let red = [255u8, 0, 0, 255].repeat(3 * 2);
+    r.update_rgba(&mut tex, &red, 3, 2, 12).unwrap();
+    assert_eq!(tex.size(), (3, 2));
+    assert!(close(draw(&tex), [255, 0, 0]));
+
+    // Short buffers are rejected.
+    assert!(r.update_rgba(&mut tex, &red[..8], 3, 2, 12).is_err());
 }
