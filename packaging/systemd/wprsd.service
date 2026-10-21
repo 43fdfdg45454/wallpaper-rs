@@ -1,0 +1,16 @@
+[Unit]
+Description=wallpaper-rs wallpaper daemon
+Documentation=https://github.com/43fdfdg45454/wallpaper-rs
+PartOf=graphical-session.target
+After=graphical-session.target pipewire.service
+Wants=pipewire.service
+
+[Service]
+Type=dbus
+BusName=io.github.wallpaper_rs.Daemon
+ExecStart=@BINDIR@/wprsd
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

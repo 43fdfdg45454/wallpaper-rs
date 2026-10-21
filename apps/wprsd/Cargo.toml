@@ -1,0 +1,20 @@
+[package]
+name = "wprsd"
+description = "wallpaper-rs daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+wprs-core.workspace = true
+wprs-render.workspace = true
+wprs-pipewire.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tokio.workspace = true
+zbus.workspace = true
+image.workspace = true
+serde = { workspace = true }

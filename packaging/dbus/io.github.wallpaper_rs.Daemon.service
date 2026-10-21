@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=io.github.wallpaper_rs.Daemon
+Exec=@BINDIR@/wprsd
+SystemdService=wprsd.service

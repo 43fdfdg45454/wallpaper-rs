@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+
+jobs:
+  check:
+    name: Lint and test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libclang-dev libpipewire-0.3-dev \
+            mesa-vulkan-drivers libvulkan1 \
+            pipewire pipewire-bin wireplumber dbus-x11 \
+            shellcheck qt6-declarative-dev-tools
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Unit and render tests
+        env:
+          WPRS_REQUIRE_GPU: "1"
+        run: cargo test --workspace --locked
+
+      - name: Shell scripts
+        run: shellcheck packaging/*.sh scripts/*.sh
+
+      - name: Plasma plugin syntax
+        run: |
+          python3 -c "import json; json.load(open('integrations/plasma-wallpaper/metadata.json'))"
+          for f in integrations/plasma-wallpaper/contents/ui/*.qml; do
+            /usr/lib/qt6/bin/qmlformat "$f" > /dev/null
+          done
+
+      - name: End-to-end test (D-Bus + PipeWire + daemon)
+        run: |
+          cargo build --locked -p wprsd -p wprs-ctl
+          cargo build --locked -p wprs-pipewire --example probe
+          cp target/debug/examples/probe target/debug/probe
+          scripts/integration-test.sh target/debug
+
+  package:
+    name: Package
+    needs: check
+    runs-on: ubuntu-24.04
+    # Debian 12 keeps the glibc requirement low so the binaries run on most
+    # current distributions.
+    container: debian:12
+    steps:
+      - name: Install system packages
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl git build-essential pkg-config \
+            libclang-dev libpipewire-0.3-dev
+
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build tarball
+        run: scripts/package.sh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wallpaper-rs-x86_64-linux
+          path: dist/*.tar.gz
+          if-no-files-found: error
