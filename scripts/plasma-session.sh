@@ -126,7 +126,7 @@ CONF
 dbus-monitor --session "interface='io.github.wallpaper_rs.Daemon1'" \
   >"$OUT/dbus-monitor.log" 2>&1 & pids+=($!)
 
-export QT_LOGGING_RULES="qml.debug=true;js.debug=true;kf.plasma.*.debug=true;kpipewire*=true"
+export QT_LOGGING_RULES="*.debug=true;qt.*.debug=false;kf.kio.*.debug=false;kf.config.*.debug=false"
 debug_run "$OUT/plasmashell.log" plasmashell --no-respawn & pids+=($!)
 wait_for 60 bus_has org.kde.plasmashell
 
@@ -156,8 +156,12 @@ echo "===== desktop config written by Plasma"
 cat "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc" || true
 echo "===== D-Bus calls to the daemon"
 cat "$OUT/dbus-monitor.log" || true
-echo "===== plasmashell messages about the plugin"
-grep -i -E "wallpaper|qml|kpipewire|pipewire|error|warning" "$OUT/plasmashell.log" | tail -n 80 || true
+echo "===== current activity"
+dbus-send --session --print-reply --dest=org.kde.ActivityManager /ActivityManager/Activities \
+  org.kde.ActivityManager.Activities.CurrentActivity 2>&1 | tail -n 1 || true
+echo "===== plasmashell messages (screens, views, containments, plugin)"
+grep -i -E "screen|view|corona|containment|activit|wallpaper|qml|pipewire|output" \
+  "$OUT/plasmashell.log" | grep -v -i "fontconfig" | head -n 120 || true
 
 if [ "$fail" = 1 ]; then
   echo "FAIL: the desktop does not show the wallpaper"
