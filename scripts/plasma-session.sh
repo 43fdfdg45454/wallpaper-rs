@@ -36,8 +36,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-kwin_wayland --version || true
-plasmashell --version || true
 
 wait_for() { # <seconds> <command...>
   local t=$1

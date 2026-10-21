@@ -12,6 +12,13 @@ OUT=$(mkdir -p "${2:?usage: $0 <release-tarball> <output-dir>}" && realpath "$2"
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 TEST_USER=plasmatest
 
+# Distributions ship kwin_wayland with file capabilities (CAP_SYS_NICE for
+# realtime scheduling). Containers drop that capability, so exec would fail
+# with EPERM; the test does not need it.
+if command -v setcap >/dev/null 2>&1; then
+  setcap -r "$(command -v kwin_wayland)" 2>/dev/null || true
+fi
+
 id "$TEST_USER" >/dev/null 2>&1 || useradd -m "$TEST_USER"
 HOME_DIR=$(getent passwd "$TEST_USER" | cut -d: -f6)
 WORK=$HOME_DIR/test
