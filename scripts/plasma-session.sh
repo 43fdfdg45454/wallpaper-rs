@@ -125,6 +125,11 @@ cat >"$HOME/.config/plasmashellrc" <<CONF
 performed=$updates
 CONF
 
+# Record every call to the daemon interface.
+dbus-monitor --session "interface='io.github.wallpaper_rs.Daemon1'" \
+  >"$OUT/dbus-monitor.log" 2>&1 & pids+=($!)
+
+export QT_LOGGING_RULES="qml.debug=true;js.debug=true;kf.plasma.*.debug=true;kpipewire*=true"
 debug_run "$OUT/plasmashell.log" plasmashell --no-respawn & pids+=($!)
 wait_for 60 bus_has org.kde.plasmashell
 
@@ -144,7 +149,16 @@ for xy in "640 360" "100 100" "1180 100"; do
   if [ "$r" -gt 40 ] || [ "$g" -lt 200 ] || [ "$b" -gt 40 ]; then fail=1; fi
 done
 
-grep -i "wallpaper-rs\|wallpaper_rs\|kpipewire\|pipewire" "$OUT/plasmashell.log" | tail -n 40 || true
+echo "===== screenshot colors"
+magick "$OUT/screenshot.png" -format %c histogram:info:- | sort -rn | head -n 5
+echo "===== X windows"
+xwininfo -root -tree 2>&1 | head -n 30 || true
+echo "===== desktop config written by Plasma"
+cat "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc" || true
+echo "===== D-Bus calls to the daemon"
+cat "$OUT/dbus-monitor.log" || true
+echo "===== plasmashell messages about the plugin"
+grep -i -E "wallpaper|qml|kpipewire|pipewire|error|warning" "$OUT/plasmashell.log" | tail -n 80 || true
 
 if [ "$fail" = 1 ]; then
   echo "FAIL: the desktop does not show the wallpaper"

@@ -69,7 +69,6 @@ jobs:
 
   package:
     name: Package
-    needs: check
     # Ubuntu 24.04 is the oldest base with PipeWire >= 1.0 headers, which the
     # bindings need. Its glibc 2.39 keeps the binaries portable to current
     # distributions.
@@ -111,7 +110,7 @@ jobs:
             plasma-desktop plasma-workspace kpipewire xorg-server-xvfb \
             pipewire wireplumber dbus \
             mesa vulkan-swrast vulkan-icd-loader \
-            imagemagick tar gzip gdb
+            imagemagick tar gzip gdb xorg-xwininfo
           pacman -Q plasma-desktop plasma-workspace kpipewire
 
       - uses: actions/checkout@v5
