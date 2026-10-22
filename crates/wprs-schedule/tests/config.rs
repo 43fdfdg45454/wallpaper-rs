@@ -3,7 +3,7 @@ use std::time::Duration;
 use wprs_schedule::{Action, Condition, Location, Order, Rule, Schedule, ScheduleError, parse_interval};
 
 const EXAMPLE: &str = r#"
-location = { latitude = -34.6037, longitude = -58.3816 }
+location = { latitude = -33.9249, longitude = 18.4241 }
 
 [[playlists]]
 id = "day"
@@ -42,7 +42,7 @@ fn parse(text: &str) -> Schedule {
 fn parses_the_example() {
     let s = parse(EXAMPLE);
     s.validate().unwrap();
-    assert_eq!(s.location, Some(Location { latitude: -34.6037, longitude: -58.3816 }));
+    assert_eq!(s.location, Some(Location { latitude: -33.9249, longitude: 18.4241 }));
     let (day, night) = (s.playlist("day").unwrap(), s.playlist("night").unwrap());
     assert_eq!((day.order, day.interval, day.per_output), (Order::Shuffle, Duration::from_secs(5400), true));
     assert_eq!(

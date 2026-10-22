@@ -1,7 +1,7 @@
 use chrono::{DateTime, FixedOffset, NaiveDate, TimeDelta, TimeZone, Utc};
 use wprs_schedule::{Location, Sun};
 
-const BUENOS_AIRES: Location = Location { latitude: -34.6037, longitude: -58.3816 };
+const CAPE_TOWN: Location = Location { latitude: -33.9249, longitude: 18.4241 };
 const MADRID: Location = Location { latitude: 40.4168, longitude: -3.7038 };
 const REYKJAVIK: Location = Location { latitude: 64.1466, longitude: -21.9426 };
 const TROMSO: Location = Location { latitude: 69.6492, longitude: 18.9553 };
@@ -26,8 +26,8 @@ fn assert_sun(location: Location, day: NaiveDate, rise: &str, set: &str) {
 }
 
 #[test]
-fn buenos_aires_winter_solstice() {
-    assert_sun(BUENOS_AIRES, date(2024, 6, 21), "2024-06-21T08:00:00-03:00", "2024-06-21T17:50:00-03:00");
+fn cape_town_winter_solstice() {
+    assert_sun(CAPE_TOWN, date(2024, 6, 21), "2024-06-21T07:51:00+02:00", "2024-06-21T17:45:00+02:00");
 }
 
 #[test]
@@ -69,9 +69,9 @@ fn polar_periods_end_on_the_expected_days() {
 
 #[test]
 fn changes_alternate_through_a_year() {
-    let tz = FixedOffset::east_opt(-3 * 3600).unwrap();
+    let tz = FixedOffset::east_opt(2 * 3600).unwrap();
     let start = tz.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap().to_utc();
-    for (location, max_gap) in [(BUENOS_AIRES, 16), (TROMSO, 24 * 80)] {
+    for (location, max_gap) in [(CAPE_TOWN, 16), (TROMSO, 24 * 80)] {
         let mut at = start;
         while at < start + TimeDelta::days(365) {
             let next = location.next_sun_change(at).unwrap();

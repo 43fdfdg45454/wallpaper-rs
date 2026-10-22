@@ -44,11 +44,11 @@ fn next_change_skips_edges_that_change_nothing() {
         r#"{ when = { all = [{ weekdays = ["sat", "sun"] }, { time_range = { start = "09:00", end = "12:00" } }] },
              then = "pause" }"#,
     );
-    let friday = s.evaluate(&at("2024-06-21T10:00:00-03:00"), false);
+    let friday = s.evaluate(&at("2024-06-21T10:00:00+02:00"), false);
     assert!(friday.actions.is_empty());
-    assert_eq!(friday.next_change, Some(at("2024-06-22T09:00:00-03:00")));
-    let sunday = s.evaluate(&at("2024-06-23T12:00:00-03:00"), false);
-    assert_eq!(sunday.next_change, Some(at("2024-06-29T09:00:00-03:00")));
+    assert_eq!(friday.next_change, Some(at("2024-06-22T09:00:00+02:00")));
+    let sunday = s.evaluate(&at("2024-06-23T12:00:00+02:00"), false);
+    assert_eq!(sunday.next_change, Some(at("2024-06-29T09:00:00+02:00")));
 }
 
 #[test]
