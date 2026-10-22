@@ -7,12 +7,14 @@ sudo apt-get update -q
 sudo apt-get install -y -q "linux-modules-extra-$kernel" || echo "no extra modules package for $kernel"
 sudo depmod -a
 
+get() { curl -sSfL --retry 6 --retry-delay 10 --retry-all-errors "$@"; }
+
 fetch() {
   local base=https://raw.githubusercontent.com/torvalds/linux/$2/drivers/gpu/drm/$1 files name
-  curl -sSfL -o "$3/Makefile" "$base/Makefile"
+  get -o "$3/Makefile" "$base/Makefile"
   files=$(grep -oE '\b[a-z0-9_]+\.o\b' "$3/Makefile" | sed 's/\.o$/.c/' | grep -vx "$1.c" | sort -u)
   while [ -n "$files" ]; do
-    for name in $files; do curl -sSfL -o "$3/$name" "$base/$name"; done
+    for name in $files; do get -o "$3/$name" "$base/$name"; done
     files=$(cat "$3"/*.[ch] | sed -n 's/^#include "\([^"/]*\)"/\1/p' | sort -u \
       | while read -r name; do [ -e "$3/$name" ] || echo "$name"; done)
   done
