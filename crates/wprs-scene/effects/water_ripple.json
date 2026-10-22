@@ -1,0 +1,23 @@
+{
+  "id": "water_ripple",
+  "name": { "en": "Water ripples" },
+  "uses": ["cursor"],
+  "mask_mode": "strength",
+  "params": [
+    { "id": "strength", "type": "float", "default": 32, "min": 0, "max": 256 },
+    { "id": "damping", "type": "float", "default": 0.96, "min": 0.5, "max": 0.97 },
+    { "id": "radius", "type": "float", "default": 24, "min": 1, "max": 256 },
+    { "id": "cursor", "type": "float", "default": 1, "min": 0, "max": 8 },
+    { "id": "click", "type": "float", "default": 1, "min": 0, "max": 8 },
+    { "id": "beat", "type": "float", "default": 0, "min": 0, "max": 8, "uses": "audio" },
+    { "id": "specular", "type": "float", "default": 0.15, "min": 0, "max": 2 }
+  ],
+  "state": { "scale": 0.25, "settle": 4 },
+  "passes": [
+    { "entry": "fs_water_ripple_step", "scale": 0.25, "inputs": ["state"], "output": "state" },
+    { "entry": "fs_water_ripple", "inputs": ["input", "state"] }
+  ],
+  "cost": { "taps": 3, "passes": 2, "scale": 1 },
+  "reach": "strength",
+  "quality": { "q1": { "scale": 0.5 } }
+}

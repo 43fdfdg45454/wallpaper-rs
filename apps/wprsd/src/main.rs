@@ -9,6 +9,7 @@ mod daemon;
 mod decode;
 mod edits;
 mod error;
+mod examples;
 mod flatpak;
 mod folders;
 mod import;

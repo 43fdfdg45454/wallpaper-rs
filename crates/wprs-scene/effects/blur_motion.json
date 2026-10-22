@@ -1,0 +1,14 @@
+{
+  "id": "blur_motion",
+  "name": { "en": "Motion blur" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "angle", "type": "float", "default": 0, "min": -360, "max": 360 },
+    { "id": "length", "type": "float", "default": 16, "min": 0, "max": 256 },
+    { "id": "samples", "type": "float", "default": 12, "min": 2, "max": 32 }
+  ],
+  "passes": [{ "entry": "fs_blur_motion" }],
+  "cost": { "taps": 2, "passes": 1, "scale": 1 },
+  "reach": "length",
+  "quality": { "q1": { "params": { "samples": 8 } } }
+}

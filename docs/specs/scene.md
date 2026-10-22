@@ -32,10 +32,14 @@ what each frame costs.
   `fit`, `stretch`, `center`). `background` is `#rrggbb[aa]` or `[r, g, b, a]` from 0 to 1.
   `blend_space` is `linear` (default) or `srgb`, which mixes encoded values as most editors do.
 - `clock.max_fps` caps the frame rate (`1..=240`, default 60), `poster_time` is the instant shown
-  where motion is not wanted, `seed` feeds procedural effects.
+  where motion is not wanted or where the device cannot run the scene even at its lowest quality
+  level, `seed` feeds procedural effects.
 - `assets` maps at most 256 ids (`[a-z0-9_]{1,32}`) to `{ "path", "linear", "atlas" }`. Images
-  (PNG, JPEG, WebP, GIF, BMP), fonts (TTF, OTF) and videos (WebM, MP4, MKV, stored uncompressed)
-  are used. `scene.json` is at most 8 MiB and the images of a scene at most 512 MiB once decoded.
+  (PNG, JPEG, WebP, GIF, BMP), fonts (TTF, OTF), videos (WebM, MP4, MKV, stored uncompressed) and
+  color lookup tables (`.cube`, `LUT_3D_SIZE` 2 to 65, domain 0 to 1, at most 16 MiB each and 64 MiB
+  of table data per scene; a file named by several ids is read once) are used.
+  `linear` marks data images such as depth or flow maps, which are read without color decoding.
+  `scene.json` is at most 8 MiB and the images of a scene at most 512 MiB once decoded.
 
 ## Layers
 
@@ -55,7 +59,7 @@ layer's own box (default `[0.5, 0.5]`, or the anchor point).
 | `shape` | `shape` (`rect` with `radius`, `ellipse`, `ring`, `polygon`, `star`, `line`), `fill`, `gradient` (`radial`, `from`, `to`, 2 to 4 `stops`), `stroke` (`color`, `width`) |
 | `spectrum` | `size`, `style` (`bars`, `circle`, `wave`), `bands` (16, 32 or 64), `channel`, `color`, `gap` |
 | `solid` | `color`, `size` (the canvas by default) |
-| `particles` | `system`, a key of `particles` (emitters, initial values, forces, colliders); not drawn yet |
+| `particles` | `system`, a key of `particles` (see below) |
 | `adjustment` | only `effects`, applied to everything below it |
 
 `blend` is `normal`, `add`, `multiply`, `screen`, `lighten`, `darken`, `overlay`, `soft_light`,
@@ -92,24 +96,160 @@ clock only runs while the output is shown and active, keeps real time while a st
 
 ## Effects
 
-An effect use is `{ "effect", "enabled", "mask", "params", "optional" }`. Built-in effects:
+An effect use is `{ "effect", "enabled", "mask", "params", "optional" }`. The built-in effects are
+the descriptors in `crates/wprs-scene/effects/`, which list every parameter with its type, range
+and default. `texture` parameters take the id of an image asset and `lut` parameters the id of a
+`.cube` asset, both as literals. The mask of an effect is a texture; layer and shape masks are
+refused there and belong on the layer. At lower quality levels (on battery, with software
+rendering or when the frame budget is exceeded) medium and heavy effects run their inner passes at
+half or a quarter of their size, use the cheaper settings of their descriptor or are dropped,
+`optional` ones first; the pass that writes the result of an effect keeps its full size. An effect
+dropped at the current level needs no input, and neither does one whose `enabled` or input
+parameter is bound to a property that currently turns it off.
 
-| `effect` | Parameters | Passes |
-|----------|------------|--------|
-| `blur` | `radius` (0–128 px) | separable Gaussian |
-| `color_adjust` | `exposure` (EV), `contrast`, `saturation`, `hue` (degrees, OKLab) | 1 |
-| `waves` | `amplitude` (px), `frequency`, `speed`, `direction` (degrees) | 1, animated |
-| `bloom` | `threshold`, `intensity`, `radius` (px), `knee` | bright pass, blur and add at half size |
+Positions such as `center` and `source` are fractions of the layer (of the canvas on an adjustment
+layer, which also places its masks and images there), and a `follow` flag hands them to the pointer
+while it is on the output and eases them back within a quarter second after it leaves.
+`tilt_shift` blurs outside a band, or by depth when `depth` names an image. `depth_parallax` shifts
+each point by `(depth - focus) × strength` pixels towards the pointer (`follow`) or along a slow
+orbit (`orbit`, which also takes over while the pointer is away), searching its `depth` image (a
+`linear` asset, bright is near) in 8 to 16 `steps`, fewer at lower quality levels, so that near
+parts slide over far ones without tearing; `overscan` enlarges the layer to keep its edges out of
+sight. Still images with a depth map move with the same search. `glitch` stays still until
+`bursts` or `beat` is set (a beat keeps it on for `length` seconds), and `film_grain` only changes
+over time with an `fps` above zero.
 
-Each effect is a JSON descriptor (`id`, `uses`, `mask_mode`, `params`, `passes`, `cost`, `fuse`,
-`reach`) and WGSL fragment entry points that share one prelude: group 0 holds the frame uniform
-(time, size, pointer, audio levels and 64 bands) and the sampler, group 1 the parameters as 16
-`vec4` slots in declaration order, the input, the mask and up to four more textures (`previous`,
-`input`, `source`, `pass:N`). Built-in descriptors are in `crates/wprs-scene/src/effects.json`
-and their passes in `effects.wgsl`; a new effect is a descriptor plus its entry points there.
-`mask_mode: mix` blends the result with the input by the mask; `strength` lets the effect read
-`mask_at(uv)` itself. The mask of an effect is a texture; layer and shape masks are refused there
-and belong on the layer. With a lower quality level `optional` effects are dropped first.
+### Writing an effect
+
+A built-in effect is two files in `crates/wprs-scene/effects/`, found when the crate is built:
+`<id>.json`, its descriptor, and `<id>.wgsl`, its fragment entry points. Nothing else changes.
+
+```json
+{
+  "id": "nudge",
+  "name": { "en": "Nudge" },
+  "params": [{ "id": "distance", "type": "float", "default": 8, "min": -64, "max": 64 }],
+  "mask_mode": "strength",
+  "fuse": "uv",
+  "reach": "distance"
+}
+```
+
+```wgsl
+fn uv_nudge(uv: vec2<f32>) -> vec2<f32> {
+    return uv - px(param(0u).x) * vec2<f32>(1.0, 0.0) * mask_at(uv);
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `uses` | `time`, `cursor`, `audio`: the scene keeps rendering while time runs, the pointer moves or sound plays; otherwise the effect costs nothing after its first frame |
+| `pace` | when a time effect changes: `{ "rate": "<float parameter>" }` (that many times a second), `{ "sweep": ["<speed>", "<gap>", "<phase>"] }` (a band crosses the layer once every `1 + gap` turns and waits off it in between) or `"outside"` (only while the pointer is off the output); the scene then sleeps until the picture changes |
+| `mask_mode` | `mix` (default) blends the result with the input by the mask; with `strength` the shader scales itself by `mask_at(uv)`, as distortions should |
+| `params` | at most 16 of `float`, `vec2`, `color`, `bool`, `texture` and `lut`, with `id`, `default`, `min`, `max` and `uses`, an input needed only while the parameter is not zero (a `follow` flag needs the pointer only when set, a `vec2` while either part is not zero); parameter *n* is `param(nu)`, in `.x`, `.xy` or `.rgba` (linear) |
+| `passes` | `{ "entry", "scale", "inputs", "output" }`; `scale` is a fraction of the layer size, and lower quality levels shrink every pass but the last; `inputs` (default `["previous"]`) name `previous`, `input`, `source` (the layer before its effects), `mask`, `pass:N`, `state` or `asset:<texture parameter>`, bound to `input_tex` and then `aux0` to `aux3` |
+| `cost` | `{ "taps", "passes", "scale" }`; taps × passes × scale² units, light up to 1, medium up to 6, heavy above |
+| `fuse` | `uv` or `color` for single-pass effects, see below |
+| `reach` | a float parameter, in pixels, by which the effect grows the layer bounds |
+| `state` | `{ "scale", "settle" }`, persistent textures for simulations, see below |
+| `solve` | `homography`: the first four parameters are `vec2` corners (top left, top right, bottom right, bottom left, as fractions of the layer) and the three slots after the parameters hold the rows of the matrix that takes a layer point back to the unit square; such an effect is not fused |
+| `quality` | overrides per level, `{ "q1": { "params": { "taps": 8 }, "scale": 0.5 } }`, applied at that level and below; a number is an upper limit for the value the scene sets, other values replace it, and `scale` shrinks the inner passes and the state |
+
+Every shader starts from one prelude. `frame` holds `time`, `dt`, `resolution`, `cursor` and
+`cursor_delta` (fractions of the output), `buttons` (the pressed pointer buttons as a bit mask),
+`inside` (1 while the pointer is on the output), `presence` (`inside` eased over a quarter second),
+`bass`, `mid`, `treble`, `level`, `beat`,
+`since_beat` (seconds since the last beat), `seed`,
+`quality` and 64 audio bands (`band(i)`). The samplers are `samp` (clamped) and `wrap` (repeating);
+`lut_tex` is the 3D texture of the first `lut` parameter, read with `lut(rgb)`. Helpers: `tap(uv)`,
+`sample(t, uv)`, `px(pixels)`, `mask_at(uv)`, `layer_uv(uv)` and its inverse `from_layer(uv)`,
+`asset_at(t, uv)` (an asset placed on the layer, such as a depth map), `cursor_uv()`,
+`screen_uv(uv)`, `to_linear`, `from_linear`, `straight`, `oklab`, `from_oklab`, `gauss`, `hash`,
+`hash2`, `noise1`, `value_noise`, `gradient_noise`, `fbm(p, octaves)`, `bayer(pixel)` and
+`relief(depth, sampler, uv, shift, focus, steps)`, the depth search of `depth_parallax`.
+`fx.texel` is the size of the first input, `fx.info.z` the pass index and `fx.area` the effect
+rectangle in output pixels. Effects may not declare bindings of their own.
+
+An effect with `fuse` defines `fn uv_<id>(uv) -> vec2<f32>`, where its output reads its input, or
+`fn color_<id>(color, uv) -> vec4<f32>` on premultiplied colors, and gets the single pass
+`fs_<id>`. Consecutive light fused effects of a layer without masks and with a fixed `enabled` run
+as one generated pass, compiled when the scene loads, so their helper functions start with the
+effect id.
+
+`"state": { "scale": 0.25, "settle": 3 }` gives the effect two textures (16-bit float where the GPU
+allows) at that fraction of the layer size, kept between frames. A pass with `"output": "state"`
+writes the next one once per 1/60 s of scene time (at most four times a frame, so a simulation
+keeps its speed at any frame rate; `fx.info.y` counts these steps) and `state` reads the latest.
+They start transparent, restart when the layer size changes and are dropped when the scene leaves,
+stops or pauses. `settle` keeps rendering that many
+seconds after the pointer moves, a button is pressed or the sound stops, so ripples fade before the
+scene goes still.
+
+`cargo test -p wprs-scene` checks every descriptor and compiles its shader. A GPU test for an
+effect goes in `crates/wprs-render/tests/effects/<id>.rs`, also found automatically:
+
+```rust
+use super::*;
+
+#[test]
+fn nudge_moves_the_image() {
+    let Some(out) = Fx::new("nudge", json!({ "distance": 8 })).input(halves(RED, BLUE)).shot() else { return };
+    out.check(&[((36, 16), RED), ((44, 16), BLUE)]);
+}
+```
+
+`Fx::chain(effects)`, `.adjust()` (effects on an adjustment layer), `.image(id, image, linear)`,
+`.lut(id, text)` and `.quality(level)` set up the scene. `.run()` returns a `Run` whose `runtime`
+(time, audio) and `pointer([x, y])` change between `shot()`s, and whose `stats()` count passes and
+new textures. A `Shot` has `at`, `check`, `mean` and `diff`.
+
+## Particles
+
+`particles` maps at most 8 ids to systems, which hold at most 200 000 particles together. A
+`particles` layer draws one system; several layers may draw the same system, which then moves only
+once per frame and shares its budget between them. Positions are canvas pixels, and the transform of the layer moves, turns and
+scales the whole system around the canvas center.
+
+```json
+"particles": {
+  "sparks": {
+    "capacity": 4000, "seed": 7, "prewarm": 2.0,
+    "emitters": [{ "shape": { "box": [[0, 1080], [1920, 1100]] }, "rate": { "prop": "density" },
+                   "burst": { "count": 40, "on": "beat" } }],
+    "init": { "life": [2, 5], "speed": [40, 120], "angle": [250, 290], "size": [4, 12], "color": ["#ffd27a", "#ff7a3d"] },
+    "forces": [{ "gravity": [0, -20] }, { "turbulence": { "strength": 30, "scale": 0.004 } },
+               { "attractor": { "target": "cursor", "strength": 5000 } }, { "drag": 0.4 }],
+    "collide": [{ "bounds": "canvas", "bounce": 0.3 }],
+    "render": { "texture": "spark", "frames": "life", "size_over_life": [[0, 0], [0.1, 1], [1, 0]],
+                "trail": { "length": 8, "width": 0.5 } }
+  }
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `capacity`, `seed`, `prewarm` | 1 to 200 000 particles; the seed of the system, mixed with `clock.seed`; seconds simulated when the system first shows (at most 10) |
+| `emitters` | at most 4 of `{ "shape", "rate", "burst", "follow", "inherit" }`. Shapes are `{ "point": [x, y] }`, `{ "box": [[x0, y0], [x1, y1]] }`, `{ "circle": { "center", "radius", "inner" } }` (a ring when `inner` is above 0), `{ "line": [[x0, y0], [x1, y1]] }`, `"edge"` (the border of the canvas) and `{ "mask": { "texture", "threshold" } }` (where the alpha of an image stretched over the canvas is above `threshold`, 0.5 by default). `rate` is particles per second and may be bound like any value. `burst` emits `count` particles every `every` seconds, `on` each `beat` or `click`, or once when the system starts. `follow: "cursor"` moves the shape with the pointer and `inherit` adds that fraction of the pointer velocity |
+| `init` | `[min, max]` ranges picked for each particle: `life` (seconds), `speed` (pixels per second), `angle` (clockwise degrees, 0 to the right), `size` (pixels), `rotation`, `spin` (degrees per second), `frame` (first atlas frame) and `color` (two colors mixed at random) |
+| `forces` | at most 8 of `{ "gravity": [x, y] }` (also `wind`), `{ "drag": k }`, `{ "turbulence": { "strength", "scale" } }` (curl noise), `{ "attractor": { "target", "strength" } }` (negative strengths repel), `{ "vortex": { "center", "strength" } }`, `{ "orbit": { "center", "strength" } }` and `{ "noise": strength }`. Gravity and strengths may be bound, as in `{ "noise": { "audio": "bass", "scale": 300 } }`. Targets and centers are a point or `"cursor"`, which pulls nothing while the pointer is away |
+| `collide` | at most 4 of `{ "bounds", "bounce", "friction", "kill" }` where `bounds` is `"canvas"`, `{ "plane": { "point", "normal" } }` (particles stay on the side the normal points to) or `{ "circle": { "center", "radius" } }` (particles stay outside). `bounce` and `friction` go from 0 to 1 and `kill` removes a particle when it touches |
+| `render` | `texture` (an image asset, split into frames by its `atlas: [rows, columns]`), `frames` (`time` at `fps`, `life` or `random`), `mix` (blends one frame into the next), `size_over_life` and `color_over_life` (`[t, value]` keys from 0 to 1, at most 64, that multiply size and color), `stretch` (seconds of motion a particle is stretched along) and `trail` (`length` from 1 to 16 steps, `width` from 0 to 1). Without a texture particles are soft discs. The layer's `blend` (`add` suits glowing particles), `opacity`, `mask` and effects apply |
+
+The simulation advances in fixed steps of 1/60 s, at most 15 per frame; a longer frame takes 15
+equal steps up to a second, so particles keep real time down to one frame per second and never
+catch up more than a second, and the same seed and the same frames give the same particles. While
+no particle lives and none is emitted, the system skips ahead to its next timed burst. A paused
+scene frees its particles and starts them again, prewarmed, when it resumes. It runs in compute shaders
+on the GPU, and on the CPU with software rendering or where compute shaders are missing. Particles
+only move while their layer is shown and the scene runs, and a scene keeps rendering only while
+particles live, are emitted or wait for their next timed burst. A scene holds at most 2 000
+particles with software rendering, 5 000 on other devices without compute shaders and 10 000,
+50 000 or 200 000 on the GPU depending on the device; the budget is shared by capacity, particles
+are drawn smaller where they would cover the screen more than 1, 1.5, 3 or 6 times over, and trails
+are limited to 0, 4, 8 or 16 steps. Lower quality levels let only 75 %, 50 % or 25 % of the
+particles be born and halve or drop trails. `wprs-ctl scene bench` reports where particles run,
+their slots, how many are alive at the end, the steps per frame and the simulation time after the
+warm-up frames.
 
 ## User properties and presets
 
@@ -128,7 +268,12 @@ refer to them by id. Each has a `type` and `label`, `help`, `group`, `visible_if
 
 `presets` is a list of `{ "id", "label", "values" }`; a preset cannot set a `file` property.
 Values are changed through `GetSceneProperties`, `SetSceneProperty`, `ApplyScenePreset` and
-`ResetSceneProperties` (`dbus.md`) or `wprs-ctl prop`, and stored in `config.toml`.
+`ResetSceneProperties` (`dbus.md`) or `wprs-ctl prop`, and stored in `config.toml`. Labels and
+help are text or `{ "<language>": text }`. `group` names a property of type `group`, under which
+the property is listed; `visible_if` (`{ "<other id>": value }`) hides it while another property
+has a different value; `order` sorts properties and groups. The app and the tray show these forms
+under *Scene settings*. The scenes in the `scenes/` folder of the repository are examples of this
+format, dedicated to the public domain.
 
 ## Inputs
 

@@ -114,6 +114,7 @@ msgid "Background color"
 msgstr "Color de fondo"
 
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/SceneField.qml
 #: integrations/plasma-tray/contents/ui/Settings.qml
 msgid "Choose…"
 msgstr "Elegir…"
@@ -129,6 +130,10 @@ msgstr "Anterior"
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
 msgid "Next"
 msgstr "Siguiente"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+msgid "Scene settings"
+msgstr "Ajustes de la escena"
 
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
 msgid "Unfavorite"
@@ -172,9 +177,48 @@ msgstr "Recargar la configuración"
 msgid "Open wallpaper-rs"
 msgstr "Abrir wallpaper-rs"
 
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid "Follow the sound that plays"
+msgstr "Seguir el sonido que se reproduce"
+
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid ""
+"The sound is turned into levels on this computer while the scene is shown; "
+"nothing is recorded, kept or sent, and the desktop may show a microphone "
+"indicator."
+msgstr ""
+"Mientras se muestra la escena, el sonido se convierte en niveles en este "
+"equipo; no se graba, no se guarda ni se envía, y el escritorio puede mostrar "
+"un indicador de micrófono."
+
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid "Follow the pointer"
+msgstr "Seguir el puntero"
+
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid ""
+"Only the latest pointer position over this screen reaches the scene; "
+"positions are never kept and keys are never read."
+msgstr ""
+"A la escena solo le llega la última posición del puntero sobre esta "
+"pantalla; las posiciones nunca se guardan y las teclas nunca se leen."
+
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid "Presets"
+msgstr "Preajustes"
+
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid "Reset"
+msgstr "Restablecer"
+
+#: integrations/plasma-tray/contents/ui/SceneField.qml
 #: integrations/plasma-tray/contents/ui/Settings.qml
 msgid "Clear"
 msgstr "Borrar"
+
+#: integrations/plasma-tray/contents/ui/SceneField.qml
+msgid "Images"
+msgstr "Imágenes"
 
 #: integrations/plasma-tray/contents/ui/main.qml
 #, kde-format

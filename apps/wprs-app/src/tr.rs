@@ -1,27 +1,16 @@
 use std::collections::HashMap;
-use std::env;
 use std::sync::LazyLock;
 
 pub const CATALOGS: &[(&str, &str)] = include!(concat!(env!("OUT_DIR"), "/catalogs.rs"));
-static CATALOG: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(&languages()));
+static CATALOG: LazyLock<HashMap<String, String>> =
+    LazyLock::new(|| catalog(&wprs_core::locale::languages()));
 
 pub fn tr(text: &str) -> String {
     CATALOG.get(text).cloned().unwrap_or_else(|| text.to_owned())
 }
 
-fn languages() -> Vec<String> {
-    let var = |key| env::var(key).ok().filter(|v| !v.is_empty());
-    let locale = var("LC_ALL").or_else(|| var("LC_MESSAGES")).or_else(|| var("LANG")).unwrap_or_default();
-    if locale.is_empty() || locale == "POSIX" || locale.split('.').next() == Some("C") {
-        return Vec::new();
-    }
-    let preferred = var("LANGUAGE").unwrap_or_default();
-    preferred.split(':').filter(|l| !l.is_empty()).map(String::from).chain([locale]).collect()
-}
-
 pub fn catalog(languages: &[String]) -> HashMap<String, String> {
-    let names = languages.iter().map(|l| l.split(['.', '@']).next().unwrap_or_default());
-    let mut names = names.flat_map(|l| [l, l.split('_').next().unwrap_or_default()]);
+    let mut names = wprs_core::locale::names(languages);
     let found = names.find_map(|name| CATALOGS.iter().find(|(lang, _)| *lang == name));
     found.map(|(_, po)| parse(po)).unwrap_or_default()
 }

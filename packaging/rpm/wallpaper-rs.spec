@@ -17,11 +17,23 @@ Requires:       gstreamer1-plugins-base
 Requires:       gstreamer1-plugins-good
 Requires:       kf6-kirigami
 Requires:       kf6-qqc2-desktop-style
+Recommends:     %{name}-examples
 
 %description
 Images and looping videos as wallpapers, with transitions, one wallpaper per screen and
 automatic pausing. A daemon renders each screen on the GPU and KDE Plasma shows it through a
 wallpaper plugin; the wallpaper-rs app, wprs-ctl and the system tray icon manage it.
+
+%package examples
+Summary:        Example scenes for wallpaper-rs
+License:        CC0-1.0
+BuildArch:      noarch
+Requires:       %{name} = %{version}-%{release}
+
+%description examples
+Small scenes made for wallpaper-rs and dedicated to the public domain: layers and blend modes,
+particles, effects, a scene that follows the sound, one that follows the pointer and a scripted
+one. They appear in the library, can be removed from it, and leave it with this package.
 
 %prep
 %autosetup -n wallpaper-rs-%{version}-x86_64-linux
@@ -38,6 +50,7 @@ cp -r plasma-wallpaper %{buildroot}%{_datadir}/plasma/wallpapers/io.github.wallp
 cp -r plasma-tray %{buildroot}%{_datadir}/plasma/plasmoids/io.github.wallpaper_rs.tray
 mkdir -p %{buildroot}%{_datadir}/wallpaper-rs
 cp -r kwin-pointer %{buildroot}%{_datadir}/wallpaper-rs/kwin-pointer
+install -Dm644 -t %{buildroot}%{_datadir}/wallpaper-rs/examples examples/*.wpak
 
 %files
 %license LICENSE
@@ -52,4 +65,9 @@ cp -r kwin-pointer %{buildroot}%{_datadir}/wallpaper-rs/kwin-pointer
 %{_datadir}/icons/hicolor/scalable/apps/io.github.wallpaper_rs.svg
 %{_datadir}/plasma/wallpapers/io.github.wallpaper_rs
 %{_datadir}/plasma/plasmoids/io.github.wallpaper_rs.tray
-%{_datadir}/wallpaper-rs
+%dir %{_datadir}/wallpaper-rs
+%{_datadir}/wallpaper-rs/kwin-pointer
+
+%files examples
+%license examples/LICENSE
+%{_datadir}/wallpaper-rs/examples

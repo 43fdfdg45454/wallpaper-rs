@@ -100,6 +100,7 @@ impl Daemon {
                 videos.push((id.clone(), blob));
             }
         }
+        assets.luts.extend(package.luts(&scene)?);
         let mut scripts = Vec::new();
         for script in &scene.scripts {
             let source = String::from_utf8(package.read_file(&script.path)?)

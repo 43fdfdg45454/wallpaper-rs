@@ -1,0 +1,18 @@
+{
+  "schema": "wallpaper-rs.wpak/1",
+  "id": "io.github.wallpaper_rs.example.orbits",
+  "version": "1.0.0",
+  "title": "Orbits",
+  "description": "Planets moved by a scene script around a glowing sun, with a clock in the corner.",
+  "authors": ["wallpaper-rs contributors"],
+  "license": "CC0-1.0",
+  "kind": "scene",
+  "entry": "scene.json",
+  "preview": "preview.jpg",
+  "tags": ["example", "space", "script"],
+  "properties": {
+    "speed": { "type": "slider", "min": 0, "max": 4, "step": 0.25, "default": 1, "unit": "×",
+               "label": { "en": "Speed", "es": "Velocidad" } },
+    "clock": { "type": "bool", "order": 1, "default": true, "label": { "en": "Clock", "es": "Reloj" } }
+  }
+}

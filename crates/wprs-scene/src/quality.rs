@@ -53,6 +53,18 @@ impl Tier {
         [4.0, 8.0, 16.0, 40.0][self as usize]
     }
 
+    pub fn particles(self) -> u32 {
+        [2_000, 10_000, 50_000, 200_000][self as usize]
+    }
+
+    pub fn overdraw(self) -> f32 {
+        [1.0, 1.5, 3.0, 6.0][self as usize]
+    }
+
+    pub fn trail(self) -> u32 {
+        [0, 4, 8, 16][self as usize]
+    }
+
     pub fn quality(self, on_battery: bool) -> Quality {
         let base = [Quality::Q0, Quality::Q2, Quality::Q3, Quality::Q3][self as usize];
         if on_battery { base.lower() } else { base }
@@ -76,14 +88,19 @@ impl Quality {
         match (self, class) {
             (_, Class::Light) | (Quality::Q3, _) => Some(1.0),
             (Quality::Q2, _) => Some(0.5),
+            (Quality::Q1, _) if optional => None,
             (Quality::Q1, Class::Medium) => Some(0.5),
-            (Quality::Q1, Class::Heavy) if !optional => Some(0.25),
+            (Quality::Q1, Class::Heavy) => Some(0.25),
             _ => None,
         }
     }
 
     pub fn particles(self) -> f32 {
         [0.25, 0.5, 0.75, 1.0][self as usize]
+    }
+
+    pub fn trail(self, length: u32) -> u32 {
+        [0, 0, length / 2, length][self as usize]
     }
 
     pub fn fit(scene: &Scene, tier: Tier, start: Quality) -> Quality {
@@ -99,14 +116,17 @@ impl Scene {
     pub fn cost(&self, quality: Quality) -> f32 {
         let effects = self.layers().flat_map(|l| &l.effects).filter_map(|e| {
             let d = descriptor(&e.effect)?;
-            let scale = quality.effect_scale(d.class(), e.optional)?;
+            let scale = quality.effect_scale(d.class(), e.optional)? * d.scale_at(quality);
+            let scale = if d.passes.len() > 1 { scale } else { 1.0 };
             Some(d.units() * scale * scale)
         });
         let particles = self.layers().filter_map(|l| match &l.kind {
             Kind::Particles { system } => self.particles.get(system),
             _ => None,
         });
-        let particles = particles.map(|s| s.capacity as f32 * quality.particles() / 100_000.0);
+        let canvas = self.canvas.size;
+        let particles =
+            particles.map(|s| (s.capacity as f32 / 100_000.0 + s.overdraw(canvas)) * quality.particles());
         let scale = quality.render_scale();
         1.5 + (effects.sum::<f32>() + particles.sum::<f32>()) * scale * scale
     }

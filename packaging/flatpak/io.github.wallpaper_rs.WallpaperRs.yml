@@ -42,6 +42,8 @@ modules:
       - cp -r integrations/plasma-tray /app/share/plasma/plasmoids/io.github.wallpaper_rs.tray
       - sed 's|@BINDIR@|/app/bin|' packaging/dbus/io.github.wallpaper_rs.Daemon.service > /app/share/dbus-1/services/io.github.wallpaper_rs.Daemon.service
       - install -Dm644 -t /app/share/metainfo packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.metainfo.xml
+      - install -Dm644 -t /app/share/wallpaper-rs/examples scenes/LICENSE
+      - for scene in scenes/*/; do target/release/wprs-ctl pack build "$scene" -o "/app/share/wallpaper-rs/examples/$(basename "$scene").wpak"; done
     sources:
       - type: dir
         path: ../..

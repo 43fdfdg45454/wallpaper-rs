@@ -51,10 +51,23 @@ impl Daemon {
     pub fn scene_properties(&self, output: &str) -> Result<String> {
         let (output, pack) = self.scene_on(output)?;
         let values = pack.values(&self.state().config.scene_values(&output, &pack.id));
+        let languages = wprs_core::locale::languages();
+        let (fields, preset_labels) = wprs_scene::form(&pack.properties, &pack.presets, &values, &languages);
         let properties = pack.properties.iter().map(|(k, p)| (k.clone(), json(p))).collect();
         let presets = pack.presets.iter().map(json).collect();
         let (package, title, serial) = (pack.id.clone(), pack.title.clone(), self.changes.serial());
-        reply(SceneProperties { model: MODEL, serial, output, package, title, properties, values, presets })
+        reply(SceneProperties {
+            model: MODEL,
+            serial,
+            output,
+            package,
+            title,
+            properties,
+            values,
+            presets,
+            fields,
+            preset_labels,
+        })
     }
 
     pub fn set_scene_property(&self, output: &str, id: &str, value: &str) -> Result<()> {

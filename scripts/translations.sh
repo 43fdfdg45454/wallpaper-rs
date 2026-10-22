@@ -30,6 +30,7 @@ catalog() {
           msginit -i "$pot" -o "$po" -l "$lang" --no-translator
           sed -i 's/^"\(Last-Translator\|Language-Team\): .*/"\1: wallpaper-rs contributors\\n"/' "$po"
         fi
+        msgattrib --no-obsolete -o "$po" "$po"
         sed -i -e 's/^"\(POT-Creation-Date\|PO-Revision-Date\): \([0-9-]*\) .*/"\1: \2 00:00+0000\\n"/' \
           -e '/^"X-Generator: /d' "$po"
         ;;

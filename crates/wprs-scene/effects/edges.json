@@ -1,0 +1,15 @@
+{
+  "id": "edges",
+  "name": { "en": "Edges" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "strength", "type": "float", "default": 1, "min": 0, "max": 1 },
+    { "id": "threshold", "type": "float", "default": 0.25, "min": 0, "max": 4 },
+    { "id": "width", "type": "float", "default": 1, "min": 0.5, "max": 8 },
+    { "id": "color", "type": "color", "default": "#000000" },
+    { "id": "sketch", "type": "bool", "default": false },
+    { "id": "paper", "type": "color", "default": "#ffffff" }
+  ],
+  "passes": [{ "entry": "fs_edges" }],
+  "cost": { "taps": 2.5 }
+}

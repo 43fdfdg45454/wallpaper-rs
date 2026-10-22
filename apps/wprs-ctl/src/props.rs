@@ -68,22 +68,18 @@ pub async fn run(client: &Client, command: Prop) -> Result<()> {
 }
 
 fn list(reply: SceneProperties) -> String {
-    let rows = reply.properties.iter().map(|(id, p)| {
-        let kind = p["type"].as_str().unwrap_or_default().to_owned();
-        let value = reply.values.get(id).map_or(String::new(), Value::to_string);
-        let range = match (&p["min"], &p["max"], &p["options"]) {
-            (Value::Number(lo), Value::Number(hi), _) => format!("{lo} to {hi}"),
-            (.., Value::Array(options)) => options
-                .iter()
-                .filter_map(|o| o.as_str().or(o["value"].as_str()))
-                .collect::<Vec<_>>()
-                .join(", "),
-            _ => String::new(),
+    let fields = reply.fields.iter().filter(|f| !["group", "label"].contains(&f.kind.as_str()));
+    let rows = fields.map(|f| {
+        let label = if f.visible { f.label.clone() } else { format!("{} (hidden)", f.label) };
+        let value = if f.value.is_null() { String::new() } else { f.value.to_string() };
+        let range = match (f.min, f.max) {
+            (Some(lo), Some(hi)) => format!("{lo} to {hi}"),
+            _ => f.options.iter().map(|o| o.value.as_str()).collect::<Vec<_>>().join(", "),
         };
-        vec![id.clone(), kind, value, range]
+        vec![f.key.clone(), label, f.kind.clone(), value, range]
     });
-    let presets = reply.presets.iter().filter_map(|p| p["id"].as_str()).collect::<Vec<_>>().join(", ");
+    let presets = reply.preset_labels.iter().map(|p| p.value.as_str()).collect::<Vec<_>>().join(", ");
     let head = format!("{} ({})\n", reply.title, reply.package);
     let tail = if presets.is_empty() { String::new() } else { format!("presets: {presets}\n") };
-    head + &table(&["PROPERTY", "TYPE", "VALUE", "RANGE"], rows) + &tail
+    head + &table(&["PROPERTY", "LABEL", "TYPE", "VALUE", "RANGE"], rows) + &tail
 }

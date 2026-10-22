@@ -67,6 +67,8 @@ QtObject {
             "video": App.tr("Video"),
             "package": App.tr("Package"),
             "scene": App.tr("Scene"),
+            "audio": App.tr("the sound"),
+            "pointer": App.tr("the pointer"),
             "scan": App.tr("Folder scan"),
             "import": App.tr("Import"),
             "analyze": App.tr("Analysis"),

@@ -246,10 +246,6 @@ msgid "Installed: %1"
 msgstr "Instalado: %1"
 
 #: apps/wprs-app/qml/Browse.qml
-msgid "Scenes are not supported yet"
-msgstr "Las escenas aún no se admiten"
-
-#: apps/wprs-app/qml/Browse.qml
 msgid "Update"
 msgstr "Actualizar"
 
@@ -859,7 +855,7 @@ msgstr "En listas"
 msgid "Remove from this playlist"
 msgstr "Quitar de esta lista"
 
-#: apps/wprs-app/qml/ItemExtras.qml
+#: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/SceneControls.qml
 msgid "Presets"
 msgstr "Preajustes"
 
@@ -916,7 +912,8 @@ msgstr "Lista %1 (%2 de %3)"
 msgid "Background color"
 msgstr "Color de fondo"
 
-#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/Settings.qml
+#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/SceneField.qml
+#: apps/wprs-app/qml/Settings.qml
 msgid "Choose…"
 msgstr "Elegir…"
 
@@ -931,6 +928,10 @@ msgstr "Anterior"
 #: apps/wprs-app/qml/OutputRow.qml
 msgid "Next"
 msgstr "Siguiente"
+
+#: apps/wprs-app/qml/OutputRow.qml
+msgid "Scene settings"
+msgstr "Ajustes de la escena"
 
 #: apps/wprs-app/qml/OutputRow.qml
 msgid "Images and videos"
@@ -1235,6 +1236,44 @@ msgstr "Quitar el repositorio"
 msgid "Also uninstall its packages"
 msgstr "Desinstalar también sus paquetes"
 
+#: apps/wprs-app/qml/SceneControls.qml
+msgid "Follow the sound that plays"
+msgstr "Seguir el sonido que se reproduce"
+
+#: apps/wprs-app/qml/SceneControls.qml
+msgid ""
+"The sound is turned into levels on this computer while the scene is shown; "
+"nothing is recorded, kept or sent, and the desktop may show a microphone "
+"indicator."
+msgstr ""
+"Mientras se muestra la escena, el sonido se convierte en niveles en este "
+"equipo; no se graba, no se guarda ni se envía, y el escritorio puede mostrar "
+"un indicador de micrófono."
+
+#: apps/wprs-app/qml/SceneControls.qml
+msgid "Follow the pointer"
+msgstr "Seguir el puntero"
+
+#: apps/wprs-app/qml/SceneControls.qml
+msgid ""
+"Only the latest pointer position over this screen reaches the scene; "
+"positions are never kept and keys are never read."
+msgstr ""
+"A la escena solo le llega la última posición del puntero sobre esta "
+"pantalla; las posiciones nunca se guardan y las teclas nunca se leen."
+
+#: apps/wprs-app/qml/SceneControls.qml
+msgid "Reset"
+msgstr "Restablecer"
+
+#: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/Settings.qml
+msgid "Clear"
+msgstr "Borrar"
+
+#: apps/wprs-app/qml/SceneField.qml
+msgid "Images"
+msgstr "Imágenes"
+
 #: apps/wprs-app/qml/SelectionDialogs.qml
 msgid "Import files"
 msgstr "Importar archivos"
@@ -1279,10 +1318,6 @@ msgstr "Cambiar el nombre de la etiqueta"
 msgid "Rate"
 msgstr "Valorar"
 
-#: apps/wprs-app/qml/Settings.qml
-msgid "Clear"
-msgstr "Borrar"
-
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Add folder…"
 msgstr "Añadir una carpeta…"
@@ -1310,6 +1345,38 @@ msgstr "Volver a analizar"
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Include subfolders"
 msgstr "Incluir las subcarpetas"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Scene permissions"
+msgstr "Permisos de las escenas"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid ""
+"A scene follows the sound that plays or the pointer only after you allow it "
+"for that scene, and only while it is shown. The sound is turned into levels "
+"on this computer and never recorded, kept or sent; pointer positions are "
+"never kept."
+msgstr ""
+"Una escena solo sigue el sonido que se reproduce o el puntero después de que "
+"lo permitas para esa escena, y solo mientras se muestra. El sonido se "
+"convierte en niveles en este equipo y nunca se graba, se guarda ni se envía; "
+"las posiciones del puntero nunca se guardan."
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "A scene is following the sound now."
+msgstr "Ahora mismo una escena está siguiendo el sonido."
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "A scene is following the pointer now."
+msgstr "Ahora mismo una escena está siguiendo el puntero."
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "No scene has been allowed yet."
+msgstr "Todavía no has dado permiso a ninguna escena."
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Stop using %1"
+msgstr "Dejar de usar %1"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "About"
@@ -1594,6 +1661,14 @@ msgstr "Paquete"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Scene"
 msgstr "Escena"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "the sound"
+msgstr "el sonido"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "the pointer"
+msgstr "el puntero"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Folder scan"

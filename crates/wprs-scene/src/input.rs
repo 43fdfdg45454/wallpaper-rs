@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 pub const BANDS: usize = 64;
 const SETTLE: f32 = 0.15;
+const FADE: f32 = 0.25;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AudioFrame {
@@ -27,6 +28,7 @@ pub struct PointerState {
     pub velocity: [f32; 2],
     pub buttons: u8,
     pub inside: bool,
+    pub presence: f32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -78,7 +80,8 @@ impl Default for AudioFrame {
 
 impl Default for PointerState {
     fn default() -> Self {
-        PointerState { pos: None, smooth: [0.5; 2], velocity: [0.0; 2], buttons: 0, inside: false }
+        let (smooth, velocity) = ([0.5; 2], [0.0; 2]);
+        PointerState { pos: None, smooth, velocity, buttons: 0, inside: false, presence: 0.0 }
     }
 }
 
@@ -86,14 +89,19 @@ impl PointerState {
     pub fn moving(&self) -> bool {
         let settling =
             self.pos.is_some_and(|p| (p[0] - self.smooth[0]).abs() + (p[1] - self.smooth[1]).abs() > 1e-4);
-        settling || self.velocity != [0.0; 2]
+        settling || self.velocity != [0.0; 2] || self.presence != f32::from(u8::from(self.inside))
     }
 
     pub fn follow(&self, pos: Option<[f32; 2]>, buttons: u8, dt: f32) -> PointerState {
         let (target, dt, omega) = (pos.unwrap_or([0.5; 2]), dt.clamp(0.0, 0.1), 4.0 / SETTLE);
         let x = omega * dt;
         let decay = 1.0 / (1.0 + x + 0.48 * x * x + 0.235 * x * x * x);
-        let mut next = PointerState { pos, buttons, inside: pos.is_some(), ..*self };
+        let (goal, fade) = (f32::from(u8::from(pos.is_some())), dt / FADE);
+        let presence = match goal - self.presence {
+            gap if gap.abs() <= fade => goal,
+            gap => self.presence + fade.copysign(gap),
+        };
+        let mut next = PointerState { pos, buttons, inside: pos.is_some(), presence, ..*self };
         for (i, goal) in target.into_iter().enumerate() {
             let change = self.smooth[i] - goal;
             let pull = (self.velocity[i] + omega * change) * dt;

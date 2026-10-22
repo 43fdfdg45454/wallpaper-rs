@@ -5982,6 +5982,7 @@ dependencies = [
 name = "wprs-scene"
 version = "0.2.0"
 dependencies = [
+ "bytemuck",
  "naga",
  "serde",
  "serde_json",

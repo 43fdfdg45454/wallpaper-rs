@@ -9,9 +9,12 @@ Kirigami.ScrollablePage {
     id: page
 
     property var sources: []
+    property var inputs: ({})
+    readonly property var grants: inputs.grants ?? {}
 
     function load() {
         App.query("ListSources", [], "Library1", reply => page.sources = reply.sources);
+        App.query("GetInputs", [], "Inputs1", reply => page.inputs = reply);
     }
 
     title: App.tr("Settings")
@@ -33,7 +36,7 @@ Kirigami.ScrollablePage {
         target: App.backend
 
         function onChanged(topic) {
-            if (topic === "library")
+            if (topic === "library" || topic === "inputs")
                 page.load();
         }
     }
@@ -84,6 +87,43 @@ Kirigami.ScrollablePage {
 
             text: App.tr("Include subfolders")
             checked: true
+        }
+
+        Kirigami.Separator {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: App.tr("Scene permissions")
+        }
+
+        QQC2.Label {
+            Layout.maximumWidth: Kirigami.Units.gridUnit * 30
+            wrapMode: Text.Wrap
+            text: [App.tr("A scene follows the sound that plays or the pointer only after you allow it for that scene, and only while it is shown. The sound is turned into levels on this computer and never recorded, kept or sent; pointer positions are never kept."), page.inputs.capturing ? App.tr("A scene is following the sound now.") : "", page.inputs.tracking ? App.tr("A scene is following the pointer now.") : "", Object.keys(page.grants).length ? "" : App.tr("No scene has been allowed yet.")].filter(t => t).join("\n")
+        }
+
+        Repeater {
+            model: Object.keys(page.grants)
+
+            delegate: RowLayout {
+                id: grant
+
+                required property string modelData
+
+                QQC2.Label {
+                    text: grant.modelData
+                }
+
+                Repeater {
+                    model: page.grants[grant.modelData]
+
+                    delegate: QQC2.Button {
+                        required property string modelData
+
+                        icon.name: "dialog-cancel"
+                        text: App.tr("Stop using %1").arg(Labels.value(modelData))
+                        onClicked: App.act("Revoke", [grant.modelData, modelData], "Inputs1")
+                    }
+                }
+            }
         }
 
         Kirigami.Separator {

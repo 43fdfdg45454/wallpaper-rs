@@ -38,7 +38,7 @@ impl Renderer {
     pub(crate) fn reliefs(&self) -> &Reliefs {
         self.reliefs.get_or_init(|| Reliefs {
             layout: bind_group_layout(&self.device, 2),
-            shader: module(&self.device, include_str!("parallax.wgsl")),
+            shader: module(&self.device, &[wprs_scene::RELIEF_WGSL, include_str!("parallax.wgsl")].concat()),
             pipelines: Mutex::default(),
         })
     }

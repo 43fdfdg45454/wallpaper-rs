@@ -9,6 +9,13 @@ DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 UNIT_DIR=$CONFIG_HOME/systemd/user
 DBUS_DIR=$DATA_HOME/dbus-1/services
 APP_ID=io.github.wallpaper_rs
+EXAMPLES=1
+for arg in "$@"; do
+  case $arg in
+    --no-examples) EXAMPLES=0 ;;
+    *) echo "usage: $0 [--no-examples]" >&2 && exit 2 ;;
+  esac
+done
 
 echo "Installing binaries to $BINDIR"
 install -Dm755 "$HERE/bin/wprsd" "$BINDIR/wprsd"
@@ -31,6 +38,13 @@ echo "Installing the KWin pointer script, loaded only while a scene follows the 
 install -d -m700 "$DATA_HOME/wallpaper-rs"
 rm -rf "$DATA_HOME/wallpaper-rs/kwin-pointer"
 cp -r "$HERE/kwin-pointer" "$DATA_HOME/wallpaper-rs/kwin-pointer"
+
+rm -rf "$DATA_HOME/wallpaper-rs/examples"
+if [ "$EXAMPLES" = 1 ] && [ -d "$HERE/examples" ]; then
+  echo "Installing the example scenes; remove them from the library, or install with --no-examples"
+  install -d -m700 "$DATA_HOME/wallpaper-rs/examples"
+  install -m644 "$HERE"/examples/* "$DATA_HOME/wallpaper-rs/examples/"
+fi
 
 install_package() {
   if kpackagetool6 --type "$1" --show "$2" >/dev/null 2>&1; then

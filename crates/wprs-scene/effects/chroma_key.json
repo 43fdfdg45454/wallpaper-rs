@@ -1,0 +1,12 @@
+{
+  "id": "chroma_key",
+  "name": { "en": "Chroma key" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "key", "type": "color", "default": "#00ff00" },
+    { "id": "tolerance", "type": "float", "default": 0.1, "min": 0, "max": 1 },
+    { "id": "softness", "type": "float", "default": 0.08, "min": 0, "max": 1 },
+    { "id": "spill", "type": "float", "default": 0.5, "min": 0, "max": 1 }
+  ],
+  "fuse": "color"
+}

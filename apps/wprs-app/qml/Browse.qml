@@ -100,8 +100,7 @@ ColumnLayout {
                 }
 
                 QQC2.Button {
-                    enabled: row.modelData.kind !== "scene"
-                    text: row.modelData.kind === "scene" ? App.tr("Scenes are not supported yet") : row.modelData.update ? App.tr("Update") : App.tr("Install")
+                    text: row.modelData.update ? App.tr("Update") : App.tr("Install")
                     icon.name: "download"
                     onClicked: browse.installer.install(row.modelData.repo_id + "/" + row.modelData.id + "@" + version.currentText)
                 }

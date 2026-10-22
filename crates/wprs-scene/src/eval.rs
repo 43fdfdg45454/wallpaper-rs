@@ -1,20 +1,12 @@
 use crate::input::LayerOverride;
 use crate::resolve::Context;
+use crate::wake::wakes;
 use crate::{
-    Align, Blend, Color, Descriptor, Gradient, Kind, Layer, Mask, Quality, Shape, Spectrum, descriptor,
+    Affine, Align, Blend, Color, Descriptor, EffectUse, Gradient, Kind, Layer, Mask, Quality, Shape,
+    Spectrum, Wake, descriptor, fusion,
 };
 use std::borrow::Cow;
 use std::ops::Range;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Wake {
-    Frame,
-    At(f64),
-    Idle,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Affine(pub [f32; 6]);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Content<'a> {
@@ -32,10 +24,12 @@ pub enum Content<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EffectDraw<'a> {
     pub descriptor: &'static Descriptor,
+    pub effect: &'a EffectUse,
     pub slots: [[f32; 4]; 16],
     pub mask: Option<&'a Mask>,
     pub scale: f32,
     pub reach: f32,
+    pub chain: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -61,56 +55,8 @@ pub struct Frame<'a> {
     pub time: f32,
     pub view: [f32; 4],
     pub background: Color,
+    pub quality: Quality,
     pub wake: Wake,
-}
-
-impl Wake {
-    pub fn min(self, other: Wake) -> Wake {
-        match (self, other) {
-            (Wake::Frame, _) | (_, Wake::Frame) => Wake::Frame,
-            (Wake::At(a), Wake::At(b)) => Wake::At(a.min(b)),
-            (Wake::At(a), Wake::Idle) | (Wake::Idle, Wake::At(a)) => Wake::At(a),
-            (Wake::Idle, Wake::Idle) => Wake::Idle,
-        }
-    }
-}
-
-impl Affine {
-    pub const IDENTITY: Affine = Affine([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]);
-
-    pub fn then(self, inner: Affine) -> Affine {
-        let ([a, b, c, d, e, f], [g, h, i, j, k, l]) = (self.0, inner.0);
-        Affine([
-            a * g + c * h,
-            b * g + d * h,
-            a * i + c * j,
-            b * i + d * j,
-            a * k + c * l + e,
-            b * k + d * l + f,
-        ])
-    }
-
-    pub fn translate([x, y]: [f32; 2]) -> Affine {
-        Affine([1.0, 0.0, 0.0, 1.0, x, y])
-    }
-
-    pub fn scale([x, y]: [f32; 2]) -> Affine {
-        Affine([x, 0.0, 0.0, y, 0.0, 0.0])
-    }
-
-    pub fn rotate(degrees: f32) -> Affine {
-        let (s, c) = degrees.to_radians().sin_cos();
-        Affine([c, s, -s, c, 0.0, 0.0])
-    }
-
-    pub fn skew([x, y]: [f32; 2]) -> Affine {
-        Affine([1.0, y.to_radians().tan(), x.to_radians().tan(), 1.0, 0.0, 0.0])
-    }
-
-    pub fn apply(self, [x, y]: [f32; 2]) -> [f32; 2] {
-        let [a, b, c, d, e, f] = self.0;
-        [a * x + c * y + e, b * x + d * y + f]
-    }
 }
 
 pub(crate) fn walk<'a>(
@@ -168,15 +114,18 @@ fn emit<'a>(
     let origin = t.origin.or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5; 2]);
     let content = content(cx, layer, set, canvas);
     let start = frame.effects.len();
-    for effect in &layer.effects {
+    let runs = if layer.effects.len() > 1 { fusion(&layer.effects) } else { Vec::new() };
+    let mut paced = false;
+    for (i, effect) in layer.effects.iter().enumerate() {
         let Some(d) = descriptor(&effect.effect).filter(|_| effect.enabled.get(cx)) else { continue };
         let Some(scale) = quality.effect_scale(d.class(), effect.optional) else { continue };
-        if d.animates() {
-            cx.note(Wake::Frame);
-        }
-        let slots = d.pack(|id| effect.params.get(id).map(|v| v.get(cx)));
+        let slots = d.pack(|id| d.setting(quality, id, effect.params.get(id).map(|v| v.get(cx))));
+        let wake = wakes(d, &slots, cx);
+        (paced, _) = (paced || matches!(wake, Wake::At(_)), cx.note(wake));
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
-        frame.effects.push(EffectDraw { descriptor: d, slots, mask: effect.mask.as_ref(), scale, reach });
+        let (mask, scale) = (effect.mask.as_ref(), scale * d.scale_at(quality));
+        let chain = runs.iter().find(|r| r.start == i).map_or(1, |r| r.len());
+        frame.effects.push(EffectDraw { descriptor: d, effect, slots, mask, scale, reach, chain });
     }
     let effects = start..frame.effects.len();
     let group = matches!(layer.kind, Kind::Group { .. });
@@ -204,8 +153,9 @@ fn emit<'a>(
     };
     frame.draws.push(draw);
     walk(cx, layer.children(), world, quality, frame, canvas);
-    let moving =
-        matches!(layer.kind, Kind::Video { .. } | Kind::Particles { .. }) || cx.wake.get() == Wake::Frame;
+    let moving = paced
+        || matches!(layer.kind, Kind::Video { .. } | Kind::Particles { .. })
+        || cx.wake.get() == Wake::Frame;
     let children = frame.draws[index + 1..].iter().any(|d| d.dynamic);
     let end = frame.draws.len();
     let draw = &mut frame.draws[index];

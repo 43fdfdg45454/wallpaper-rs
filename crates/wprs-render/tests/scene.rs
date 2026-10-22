@@ -1,3 +1,5 @@
+mod effects;
+
 use image::{Rgba, RgbaImage};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;

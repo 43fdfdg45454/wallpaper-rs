@@ -181,7 +181,9 @@ fn the_pointer_settles_and_hidden_mattes_stay_in_the_draw_list() {
     pointer = (0..60).fold(pointer, |p, _| step(p, Some([1.0, 0.0])));
     assert_eq!((pointer.smooth, pointer.velocity, pointer.moving()), ([1.0, 0.0], [0.0; 2], false));
     let left = step(pointer, None);
-    assert!(!left.inside && left.smooth[0] < 1.0 && left.moving());
+    assert!(!left.inside && left.smooth[0] < 1.0 && left.moving() && left.presence > 0.9);
+    let gone = (0..60).fold(left, |p, _| step(p, None));
+    assert_eq!((gone.smooth, gone.presence, gone.moving()), ([0.5; 2], 0.0, false));
     let text = scene(json!([
         { "id": "mattes", "type": "group", "visible": false, "layers": [{ "id": "m", "type": "solid", "color": "#ffffff" }] },
         { "id": "cut", "type": "solid", "color": "#ff0000", "mask": { "layer": "m" } },
@@ -223,4 +225,63 @@ fn properties_check_and_clamp_values() {
     let sample = Scene::from_json(include_str!("sample.json")).unwrap();
     assert!(sample.cost(Quality::Q0) < sample.cost(Quality::Q3));
     assert_eq!(Quality::fit(&sample, Tier::T3, Quality::Q3), Quality::Q3);
+}
+
+#[test]
+fn forms_order_localize_and_hide_properties() {
+    let mut props = props();
+    let extra: BTreeMap<String, Property> = serde_json::from_value(json!({
+        "look": { "type": "group", "label": { "en": "Look", "es": "Aspecto" }, "order": -1 },
+        "glow": { "type": "slider", "group": "look", "min": 0, "max": 1, "step": 0.1, "default": 0.5,
+                  "label": { "en": "Glow", "es-ES": "Brillo" } }
+    }))
+    .unwrap();
+    props.extend(extra);
+    let presets: Vec<Preset> = serde_json::from_value(
+        json!([{ "id": "calm", "label": { "en": "Calm", "es": "Calma" }, "values": {} }]),
+    )
+    .unwrap();
+    let values = effective(&props, &[&BTreeMap::from([("soft".to_string(), json!(false))])]);
+    let (fields, labels) = form(&props, &presets, &values, &["es_ES.UTF-8".to_string()]);
+    let keys: Vec<_> = fields.iter().map(|f| f.key.as_str()).collect();
+    assert_eq!(
+        keys,
+        ["look", "glow", "density", "depth", "photo", "show_clock", "soft", "style", "text_color"]
+    );
+    assert_eq!(
+        (fields[0].label.as_str(), fields[1].label.as_str(), &fields[1].value),
+        ("Aspecto", "Brillo", &json!(0.5))
+    );
+    let find = |key: &str| fields.iter().find(|f| f.key == key).unwrap();
+    assert!(!find("show_clock").visible && find("soft").visible && find("density").integer);
+    let style = find("style");
+    let options: Vec<_> = style.options.iter().map(|o| (o.value.as_str(), o.label.as_str())).collect();
+    assert_eq!((style.label.as_str(), options), ("Style", vec![("night", "Night"), ("dawn", "dawn")]));
+    assert_eq!(
+        (labels[0].label.as_str(), form(&props, &presets, &values, &[]).1[0].label.as_str()),
+        ("Calma", "Calm")
+    );
+    let broken = |extra: serde_json::Value| {
+        let mut props = props.clone();
+        props.extend(serde_json::from_value::<BTreeMap<String, Property>>(extra).unwrap());
+        check_presets(&props, &[]).is_err()
+    };
+    assert!(!broken(json!({})));
+    assert!(broken(json!({ "x": { "type": "bool", "default": true, "group": "soft" } })));
+    assert!(broken(json!({ "x": { "type": "bool", "default": true, "visible_if": { "nothing": true } } })));
+    assert!(broken(json!({ "x": { "type": "bool", "default": true, "visible_if": { "soft": 3 } } })));
+    let mut shown = props.clone();
+    shown.extend(
+        serde_json::from_value::<BTreeMap<String, Property>>(json!({
+            "a": { "type": "bool", "default": true, "visible_if": { "density": 120 } },
+            "b": { "type": "bool", "default": true, "visible_if": { "density": 120.0, "text_color": "#FFFFFF" } },
+            "c": { "type": "bool", "default": true, "visible_if": { "depth": 0.4 } },
+            "d": { "type": "bool", "default": true, "visible_if": { "depth": 1 } }
+        }))
+        .unwrap(),
+    );
+    assert_eq!(check_presets(&shown, &[]), Ok(()));
+    let fields = form(&shown, &[], &effective(&shown, &[]), &[]).0;
+    let visible = |key: &str| fields.iter().any(|f| f.key == key && f.visible);
+    assert_eq!(["a", "b", "c", "d"].map(visible), [true, true, true, false]);
 }

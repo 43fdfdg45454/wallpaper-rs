@@ -35,6 +35,7 @@ pub(crate) struct Fx {
     pub(crate) mask_m0: [f32; 4],
     pub(crate) mask_m1: [f32; 4],
     pub(crate) info: [f32; 4],
+    pub(crate) area: [f32; 4],
 }
 
 #[repr(C)]
@@ -45,11 +46,18 @@ pub(crate) struct FrameData {
     pub(crate) resolution: [f32; 2],
     pub(crate) cursor: [f32; 2],
     pub(crate) cursor_delta: [f32; 2],
-    pub(crate) levels: [f32; 4],
+    pub(crate) bass: f32,
+    pub(crate) mid: f32,
+    pub(crate) treble: f32,
+    pub(crate) level: f32,
     pub(crate) beat: f32,
     pub(crate) srgb: f32,
     pub(crate) quality: f32,
     pub(crate) seed: f32,
+    pub(crate) buttons: f32,
+    pub(crate) inside: f32,
+    pub(crate) since_beat: f32,
+    pub(crate) presence: f32,
     pub(crate) audio: [[f32; 4]; 16],
 }
 
@@ -200,11 +208,18 @@ pub(crate) fn frame_data(
         resolution: [size.0 as f32, size.1 as f32],
         cursor: pointer.smooth,
         cursor_delta: pointer.velocity,
-        levels: [audio.bass, audio.mid, audio.treble, audio.level],
+        bass: audio.bass,
+        mid: audio.mid,
+        treble: audio.treble,
+        level: audio.level,
         beat: f32::from(u8::from(audio.beat)),
         srgb: f32::from(u8::from(srgb)),
         quality: quality as u8 as f32,
         seed: (runtime.scene.clock.seed % 65_536) as f32,
+        buttons: f32::from(pointer.buttons),
+        inside: f32::from(u8::from(pointer.inside)),
+        since_beat: runtime.since_beat(),
+        presence: pointer.presence * pointer.presence * (3.0 - 2.0 * pointer.presence),
         audio: bands,
     }
 }

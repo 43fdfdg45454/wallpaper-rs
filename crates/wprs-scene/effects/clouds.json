@@ -1,0 +1,20 @@
+{
+  "id": "clouds",
+  "name": { "en": "Clouds and fog" },
+  "uses": ["time"],
+  "params": [
+    { "id": "color", "type": "color", "default": "#ffffff" },
+    { "id": "shade", "type": "color", "default": "#a7b0c2" },
+    { "id": "opacity", "type": "float", "default": 0.8, "min": 0, "max": 1 },
+    { "id": "coverage", "type": "float", "default": 0.45, "min": 0, "max": 1 },
+    { "id": "softness", "type": "float", "default": 0.3, "min": 0.01, "max": 1 },
+    { "id": "size", "type": "float", "default": 320, "min": 8, "max": 16384 },
+    { "id": "speed", "type": "vec2", "default": [6, 0], "min": -1024, "max": 1024 },
+    { "id": "warp", "type": "float", "default": 0.8, "min": 0, "max": 4 },
+    { "id": "octaves", "type": "float", "default": 5, "min": 1, "max": 8 },
+    { "id": "height", "type": "float", "default": 1, "min": 0, "max": 1 }
+  ],
+  "fuse": "color",
+  "cost": { "taps": 4 },
+  "quality": { "q2": { "params": { "octaves": 4 } }, "q1": { "params": { "octaves": 3 } } }
+}

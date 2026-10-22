@@ -335,6 +335,16 @@ wprs-ctl prop preset calma -o DP-1 && wprs-ctl prop reset -o DP-1
 wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon
 ```
 
+En la app y en la bandeja, el botón *Ajustes de la escena* de cada pantalla que muestra una
+escena cambia sus propiedades al momento, aplica sus preajustes y da o retira el permiso de sonido
+y de puntero. La carpeta `scenes/` guarda cinco escenas de ejemplo de dominio público (CC0):
+capas, modos de fusión, máscaras, línea de tiempo y profundidad que sigue al puntero o una órbita
+lenta con un mapa calculado a partir de sus formas (`dusk`), partículas y efectos (`snowfall`),
+sonido (`pulse`), puntero (`pond`) y un script (`orbits`). `install.sh` las instala en
+`~/.local/share/wallpaper-rs/examples` (`--no-examples` las omite), el RPM en el paquete opcional
+`wallpaper-rs-examples` y el Flatpak las incluye. Aparecen en la biblioteca y, si se quitan de
+ella, no vuelven.
+
 ## Desarrollo
 
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
@@ -430,7 +440,7 @@ raíz y la misma pausa.
   repositorios que añadas tú, y sus registros no incluyen rutas, nombres de archivo, servidores
   propios ni el modelo de GPU salvo con `RUST_LOG=debug`.
 - Ninguna escena oye el sonido ni sigue el puntero sin tu permiso, que se da y se retira por
-  escena (`wprs-ctl input grant|revoke <escena> audio|pointer`). Aun con permiso, la captura del
+  escena desde la app, la bandeja o `wprs-ctl input grant|revoke <escena> audio|pointer`. Aun con permiso, la captura del
   sonido (un stream de PipeWire llamado «wallpaper-rs audio analysis», que puede encender el
   indicador de micrófono) y el seguimiento del puntero solo funcionan mientras se ve una escena
   que los usa, y se paran al pausar o bloquear la pantalla. Al taparla se para el puntero, y
@@ -451,4 +461,5 @@ raíz y la misma pausa.
 
 ## Licencia
 
-GPL-3.0-or-later. Ver [`LICENSE`](LICENSE).
+GPL-3.0-or-later. Ver [`LICENSE`](LICENSE). Las escenas de ejemplo de `scenes/` son de dominio
+público (CC0 1.0, [`scenes/LICENSE`](scenes/LICENSE)).

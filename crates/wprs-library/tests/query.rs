@@ -80,7 +80,7 @@ fn ordered(library: &Library, query: &str, offset: u32, limit: u32) -> Vec<Strin
 fn every_key_filters_items() {
     let Fixture { library, source, .. } = fixture();
     let source_query = format!("source:{source}");
-    let cases: [(&str, &[&str]); 47] = [
+    let cases: [(&str, &[&str]); 48] = [
         ("", &["café", "forest", "night", "ocean waves", "square"]),
         ("waves", &["ocean waves"]),
         ("oce wav", &["ocean waves"]),
@@ -94,6 +94,7 @@ fn every_key_filters_items() {
         ("kind:video", &["forest", "night"]),
         ("kind:image", &["café", "ocean waves", "square"]),
         ("kind:package", &[]),
+        ("kind:scene", &[]),
         ("fav:", &["café"]),
         ("fav:no", &["forest", "night", "ocean waves", "square"]),
         ("rating:>=4", &["café", "night"]),

@@ -63,7 +63,32 @@ model! {
         pub properties: BTreeMap<String, Value>,
         pub values: BTreeMap<String, Value>,
         pub presets: Vec<Value>,
+        #[serde(default)]
+        pub fields: Vec<SceneField>,
+        #[serde(default)]
+        pub preset_labels: Vec<SceneOption>,
     }
+
+    pub struct SceneField {
+        pub key: String,
+        pub kind: String,
+        pub label: String,
+        pub help: String,
+        pub value: Value,
+        pub visible: bool,
+        pub min: Option<f64>,
+        pub max: Option<f64>,
+        pub step: Option<f64>,
+        pub integer: bool,
+        pub unit: String,
+        pub options: Vec<SceneOption>,
+        pub alpha: bool,
+        pub multiline: bool,
+        pub max_len: Option<u32>,
+        pub accept: Vec<String>,
+    }
+
+    pub struct SceneOption { pub value: String, pub label: String }
 
     pub struct OutputPlaylist {
         pub uid: Uid,

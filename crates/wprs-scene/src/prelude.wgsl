@@ -5,6 +5,7 @@ struct Fx {
     mask_m0: vec4<f32>,
     mask_m1: vec4<f32>,
     info: vec4<f32>,
+    area: vec4<f32>,
 };
 
 struct VertexOut {
@@ -14,6 +15,7 @@ struct VertexOut {
 
 @group(0) @binding(0) var<uniform> frame: Frame;
 @group(0) @binding(1) var samp: sampler;
+@group(0) @binding(2) var wrap: sampler;
 @group(1) @binding(0) var<uniform> fx: Fx;
 @group(1) @binding(1) var input_tex: texture_2d<f32>;
 @group(1) @binding(2) var mask_tex: texture_2d<f32>;
@@ -21,6 +23,9 @@ struct VertexOut {
 @group(1) @binding(4) var aux1: texture_2d<f32>;
 @group(1) @binding(5) var aux2: texture_2d<f32>;
 @group(1) @binding(6) var aux3: texture_2d<f32>;
+@group(1) @binding(7) var lut_tex: texture_3d<f32>;
+
+var<private> fx_base: u32;
 
 const TAU: f32 = 6.2831853;
 const LUMA: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
@@ -32,7 +37,7 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOut {
 }
 
 fn param(i: u32) -> vec4<f32> {
-    return fx.slot[i];
+    return fx.slot[fx_base + i];
 }
 
 fn px(v: f32) -> vec2<f32> {
@@ -47,10 +52,43 @@ fn tap(uv: vec2<f32>) -> vec4<f32> {
     return sample(input_tex, uv);
 }
 
-fn mask_at(uv: vec2<f32>) -> f32 {
+fn layer_uv(uv: vec2<f32>) -> vec2<f32> {
     let p = vec3<f32>(uv, 1.0);
-    let m = dot(sample(mask_tex, vec2<f32>(dot(fx.mask_m0.xyz, p), dot(fx.mask_m1.xyz, p))), fx.channel);
+    return vec2<f32>(dot(fx.mask_m0.xyz, p), dot(fx.mask_m1.xyz, p));
+}
+
+fn from_layer(p: vec2<f32>) -> vec2<f32> {
+    let a = fx.mask_m0;
+    let b = fx.mask_m1;
+    let q = p - vec2<f32>(a.z, b.z);
+    return vec2<f32>(b.y * q.x - a.y * q.y, a.x * q.y - b.x * q.x) / (a.x * b.y - a.y * b.x);
+}
+
+fn mask_at(uv: vec2<f32>) -> f32 {
+    let m = dot(sample(mask_tex, layer_uv(uv)), fx.channel);
     return mix(m, 1.0 - m, fx.info.x);
+}
+
+fn asset_at(t: texture_2d<f32>, uv: vec2<f32>) -> vec4<f32> {
+    return sample(t, layer_uv(uv));
+}
+
+fn cursor_uv() -> vec2<f32> {
+    return (frame.cursor * frame.resolution - fx.area.xy) / max(fx.area.zw, vec2<f32>(1.0));
+}
+
+fn screen_uv(uv: vec2<f32>) -> vec2<f32> {
+    return (fx.area.xy + uv * fx.area.zw) / max(frame.resolution, vec2<f32>(1.0));
+}
+
+fn band(i: u32) -> f32 {
+    return frame.audio[min(i, 63u) / 4u][i % 4u];
+}
+
+fn lut(c: vec3<f32>) -> vec3<f32> {
+    let n = f32(textureDimensions(lut_tex).x);
+    let uvw = clamp(c, vec3<f32>(0.0), vec3<f32>(1.0)) * (n - 1.0) / n + 0.5 / n;
+    return textureSampleLevel(lut_tex, samp, uvw, 0.0).rgb;
 }
 
 fn straight(c: vec4<f32>) -> vec4<f32> {
@@ -65,4 +103,9 @@ fn to_linear(c: vec3<f32>) -> vec3<f32> {
 fn from_linear(c: vec3<f32>) -> vec3<f32> {
     let encoded = select(1.055 * pow(c, vec3<f32>(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3<f32>(0.0031308));
     return select(c, encoded, frame.srgb > 0.5);
+}
+
+@fragment
+fn fs_mask_mix(in: VertexOut) -> @location(0) vec4<f32> {
+    return mix(sample(aux0, in.uv), tap(in.uv), mask_at(in.uv));
 }

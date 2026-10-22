@@ -103,8 +103,10 @@ fn draw(
 ) -> anyhow::Result<()> {
     let (renderer, exporter, players, power, limits) = shared;
     let moved = limits.map(|(steps, _)| (output.offset, steps));
-    if let Some(scene) = output.shown.scene.as_mut() {
-        scene.render(renderer, output.size, power, players, output.active, now)?;
+    if let Some(scene) = output.shown.scene.as_mut()
+        && scene.render(renderer, output.size, power, players, output.active, now)?
+    {
+        super::feed::declare(name, Some(scene));
     }
     let progress = output.progress(now, output.shown.transition.map_or(transition, |d| d.as_secs_f32()));
     let opacity = if output.fade.is_some() { smoothstep(progress) } else { 1.0 };

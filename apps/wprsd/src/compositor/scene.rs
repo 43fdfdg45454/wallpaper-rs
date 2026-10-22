@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView, log_allowed};
-use wprs_scene::{PointerState, Runtime, ScriptOutputs, Uses, Wake};
+use wprs_scene::{PointerState, Quality, Runtime, ScriptOutputs, Uses, Wake};
 use wprs_script::{Error, Frame, Host};
 
 const SCRIPT_HOST: &str = "/proc/self/exe";
@@ -17,6 +17,9 @@ const POLL: f64 = 0.5;
 pub(super) struct SceneState {
     pub(super) spec: SceneSpec,
     runtime: Runtime,
+    still: bool,
+    reads: (bool, bool),
+    quality: Quality,
     uses: Uses,
     view: Option<SceneView>,
     tick: Option<Instant>,
@@ -35,16 +38,55 @@ fn wall() -> f64 {
 }
 
 impl SceneState {
-    pub(super) fn new(spec: SceneSpec) -> SceneState {
-        let runtime = Runtime::new(spec.pack.scene.clone(), spec.values.clone());
+    pub(super) fn new(spec: SceneSpec, power: Power) -> SceneState {
+        let mut runtime = Runtime::new(spec.pack.scene.clone(), spec.values.clone());
+        let still = power.still(&runtime);
+        if still {
+            tracing::debug!("the scene is too heavy for this device and stays at its poster time");
+            runtime.seek(f64::from(runtime.scene.clock.poster_time));
+        }
         let (scripts, seed) = (&spec.pack.scripts, runtime.scene.clock.seed);
-        let host = runtime.uses().scripts.then(|| Host::new(SCRIPT_HOST, &["--script-host"], scripts, seed));
-        let reads = |word| scripts.iter().any(|(_, source)| source.contains(word));
-        let mut uses = runtime.uses();
-        (uses.audio, uses.cursor) = (uses.audio || reads("audio"), uses.cursor || reads("cursor"));
-        let (view, tick, pointer, calm, error, due) = Default::default();
-        let (interval, moving) = (Duration::ZERO, false);
-        SceneState { spec, runtime, uses, view, tick, pointer, host, calm, error, due, interval, moving }
+        let host = (!still && runtime.uses().scripts)
+            .then(|| Host::new(SCRIPT_HOST, &["--script-host"], scripts, seed));
+        let read = |word| scripts.iter().any(|(_, source)| source.contains(word));
+        let (reads, quality) = ((read("audio"), read("cursor")), power.quality(&runtime));
+        let (view, tick, pointer, calm, error, due, uses) = Default::default();
+        let (interval, moving) = (Duration::ZERO, !still);
+        let mut scene = SceneState {
+            spec,
+            runtime,
+            still,
+            reads,
+            quality,
+            uses,
+            view,
+            tick,
+            pointer,
+            host,
+            calm,
+            error,
+            due,
+            interval,
+            moving,
+        };
+        scene.uses = scene.needs(quality);
+        scene
+    }
+
+    fn needs(&self, quality: Quality) -> Uses {
+        if self.still {
+            return Uses::default();
+        }
+        let uses = self.runtime.uses_at(quality);
+        Uses { audio: uses.audio || self.reads.0, cursor: uses.cursor || self.reads.1, ..uses }
+    }
+
+    pub(super) fn pause(&mut self) {
+        self.tick = None;
+        if let Some(view) = self.view.as_mut() {
+            view.trim();
+            self.runtime.restart_particles();
+        }
     }
 
     pub(super) fn uses(&self) -> Uses {
@@ -57,7 +99,7 @@ impl SceneState {
 
     pub(super) fn update(&mut self, spec: SceneSpec) -> bool {
         let changed = self.runtime.set_props(spec.values.clone());
-        self.spec = spec;
+        (self.spec, self.uses) = (spec, self.needs(self.quality));
         changed
     }
 
@@ -113,10 +155,10 @@ impl SceneState {
         players: &HashMap<PathBuf, PlayerSlot>,
         active: bool,
         now: Instant,
-    ) -> Result<(), RenderError> {
+    ) -> Result<bool, RenderError> {
         self.due = None;
         let dt = self.tick.filter(|_| active).map_or(0.0, |t| now.saturating_duration_since(t).as_secs_f64());
-        if active {
+        if active && !self.still {
             self.runtime.advance(dt);
         }
         self.tick = active.then_some(now);
@@ -124,14 +166,21 @@ impl SceneState {
         let pointer = self.runtime.pointer().follow(p.pos, p.buttons, dt as f32);
         self.runtime.set_pointer(pointer);
         self.runtime.set_wall(wall());
-        let quality = power.quality(&self.runtime);
+        let (quality, uses) = (power.quality(&self.runtime), self.uses);
+        if quality != self.quality {
+            (self.quality, self.uses) = (quality, self.needs(quality));
+        }
         let scale = quality.render_scale();
         let inner = (
             (size.0 as f32 * scale).round().max(1.0) as u32,
             (size.1 as f32 * scale).round().max(1.0) as u32,
         );
         if self.view.is_none() {
-            self.view = Some(renderer.scene_view(&self.spec.pack.scene, &self.assets())?);
+            let view = renderer.scene_view(&self.spec.pack.scene, &self.assets())?;
+            if view.gpu_particles() == Some(false) {
+                tracing::debug!("particles run on the CPU with a smaller budget");
+            }
+            self.view = Some(view);
         }
         let view = self.view.as_mut().expect("created above");
         let frame = self.runtime.frame(view.view(inner), quality);
@@ -142,6 +191,7 @@ impl SceneState {
         let interval = Duration::from_secs(1) / power.fps(&self.runtime, quality);
         let after = |s: f64| Duration::try_from_secs_f64(s.clamp(0.0, 86_400.0)).unwrap_or_default();
         let wake = match self.host {
+            _ if self.still => Wake::Idle,
             Some(_) if self.calm < CALM => Wake::Frame,
             Some(_) => frame.wake.min(Wake::At(POLL)),
             None => frame.wake,
@@ -156,7 +206,7 @@ impl SceneState {
         if self.due.is_none() {
             view.trim();
         }
-        Ok(())
+        Ok(uses != self.uses)
     }
 
     fn assets(&self) -> wprs_render::SceneAssets {

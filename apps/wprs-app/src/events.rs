@@ -6,8 +6,8 @@ use serde_json::json;
 use std::pin::Pin;
 use wprs_core::model::JobsReply;
 
-const TOPICS: [&str; 8] =
-    ["state", "library", "playlists", "profiles", "providers", "repos", "jobs", "account"];
+const TOPICS: [&str; 9] =
+    ["state", "library", "playlists", "profiles", "providers", "repos", "jobs", "inputs", "account"];
 
 fn q(text: &str) -> QString {
     QString::from(text)

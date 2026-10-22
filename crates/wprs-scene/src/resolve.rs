@@ -1,9 +1,8 @@
 use crate::animate::Animate;
-use crate::eval::Wake;
 use crate::input::{AudioFrame, PointerState, ScriptOutputs};
 use crate::timeline::{Loop, Playhead, local, sample};
 use crate::value::{AudioChannel, Axis, Band, Binding, Level, Value};
-use crate::{Timeline, Values};
+use crate::{Timeline, Values, Wake};
 use serde_json::Value as Json;
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeSet, HashMap};
@@ -11,6 +10,8 @@ use std::collections::{BTreeSet, HashMap};
 pub(crate) struct Context<'a> {
     pub(crate) t: f32,
     pub(crate) dt: f32,
+    pub(crate) calm: [f32; 2],
+    pub(crate) beat: f32,
     pub(crate) wall: f64,
     pub(crate) audio: &'a AudioFrame,
     pub(crate) pointer: &'a PointerState,
@@ -115,6 +116,15 @@ impl Context<'_> {
 }
 
 impl<T: Animate> Value<T> {
+    pub(crate) fn settled(&self, props: &Values) -> Option<T> {
+        let b = match self {
+            Value::Fixed(v) => return Some(v.clone()),
+            Value::Bound(b) => b,
+        };
+        let id = b.prop.as_ref().filter(|_| b.keys.is_none())?;
+        Some(shaped(b, prop(b, id, props)))
+    }
+
     pub(crate) fn get(&self, cx: &Context) -> T {
         let b = match self {
             Value::Fixed(v) => return v.clone(),
@@ -123,9 +133,7 @@ impl<T: Animate> Value<T> {
         let raw = if let Some(keys) = &b.keys {
             sample(keys, cx.keys_time(b, keys.last().map_or(0.0, |k| k.t)))
         } else if let Some(id) = &b.prop {
-            let prop = cx.props.get(id).unwrap_or(&Json::Null);
-            let mapped = b.map.as_ref().and_then(|map| map.get(&key(prop)).cloned());
-            mapped.or_else(|| T::from_json(prop)).unwrap_or_default()
+            prop(b, id, cx.props)
         } else if let Some(pattern) = &b.clock {
             T::from_text(cx.clock(pattern)).unwrap_or_default()
         } else if let Some(path) = &b.script {
@@ -133,20 +141,30 @@ impl<T: Animate> Value<T> {
         } else {
             cx.signal(b).and_then(T::from_signal).unwrap_or_default()
         };
-        let (mut comps, n) = raw.comps();
-        comps[..n].iter_mut().for_each(|c| *c = b.modify(*c));
-        if let Some(tau) = b.smooth.filter(|tau| *tau > 0.0) {
-            let mut memo = cx.memo.borrow_mut();
-            let last = memo.entry(&**b as *const Binding<T> as usize).or_insert(comps);
-            let k = 1.0 - (-cx.dt / tau).exp();
-            last[..n].iter_mut().zip(&comps).for_each(|(l, c)| *l += (c - *l) * k);
-            if last[..n].iter().zip(&comps).any(|(l, c)| (l - c).abs() > 1e-3) {
-                cx.note(Wake::Frame);
-            }
-            comps = *last;
+        let value = shaped(b, raw);
+        let Some(tau) = b.smooth.filter(|tau| *tau > 0.0) else { return value };
+        let (comps, n) = value.comps();
+        let mut memo = cx.memo.borrow_mut();
+        let last = memo.entry(&**b as *const Binding<T> as usize).or_insert(comps);
+        let k = 1.0 - (-cx.dt / tau).exp();
+        last[..n].iter_mut().zip(&comps).for_each(|(l, c)| *l += (c - *l) * k);
+        if last[..n].iter().zip(&comps).any(|(l, c)| (l - c).abs() > 1e-3) {
+            cx.note(Wake::Frame);
         }
-        if n == 0 { raw } else { raw.with_comps(comps) }
+        value.with_comps(*last)
     }
+}
+
+fn prop<T: Animate>(b: &Binding<T>, id: &str, props: &Values) -> T {
+    let value = props.get(id).unwrap_or(&Json::Null);
+    let mapped = b.map.as_ref().and_then(|map| map.get(&key(value)).cloned());
+    mapped.or_else(|| T::from_json(value)).unwrap_or_default()
+}
+
+fn shaped<T: Animate>(b: &Binding<T>, raw: T) -> T {
+    let (mut comps, n) = raw.comps();
+    comps[..n].iter_mut().for_each(|c| *c = b.modify(*c));
+    if n == 0 { raw } else { raw.with_comps(comps) }
 }
 
 pub(crate) fn key(value: &Json) -> String {

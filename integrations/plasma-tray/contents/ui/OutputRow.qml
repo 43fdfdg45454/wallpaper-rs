@@ -15,6 +15,7 @@ RowLayout {
     readonly property var playing: info.playlist ?? null
     readonly property var credit: info.credit ?? null
     readonly property var fits: daemon.schema.fits ?? ["fill", "fit", "stretch", "center", "tile"]
+    readonly property bool scene: info.kind === "scene"
     property string thumb
     property bool favorite
 
@@ -69,6 +70,16 @@ RowLayout {
             source: row.daemon.url(row.thumb)
             asynchronous: true
             fillMode: Image.PreserveAspectCrop
+        }
+
+        Kirigami.Icon {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: Kirigami.Units.smallSpacing
+            width: Kirigami.Units.iconSizes.small
+            height: width
+            visible: row.scene
+            source: "view-media-visualization"
         }
     }
 
@@ -145,10 +156,31 @@ RowLayout {
             }
 
             QQC2.ToolButton {
+                id: settings
+
+                visible: row.scene
+                checkable: true
+                checked: row.daemon.checking === true
+                icon.name: "configure"
+                text: row.daemon.tr("Scene settings")
+            }
+
+            QQC2.ToolButton {
                 visible: row.item !== ""
                 icon.name: row.favorite ? "emblem-favorite" : "bookmark-new"
                 text: row.favorite ? row.daemon.tr("Unfavorite") : row.daemon.tr("Favorite")
                 onClicked: row.daemon.act("SetFavorite", [[row.item], !row.favorite], "Library1")
+            }
+        }
+
+        Loader {
+            Layout.fillWidth: true
+            active: row.scene && settings.checked
+            visible: active
+
+            sourceComponent: SceneControls {
+                daemon: row.daemon
+                output: row.name
             }
         }
     }

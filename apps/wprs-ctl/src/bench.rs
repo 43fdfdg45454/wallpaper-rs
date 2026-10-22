@@ -59,6 +59,7 @@ fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAsse
             _ => {}
         }
     }
+    assets.luts.extend(package.luts(&scene)?);
     let values = effective(&package.manifest.properties, &[]);
     Ok((scene, values, assets))
 }
@@ -69,6 +70,11 @@ fn spread(mut samples: Vec<f64>) -> serde_json::Value {
         |q: f64| samples.get(((samples.len() as f64 - 1.0) * q).round() as usize).copied().unwrap_or(0.0);
     let mean = samples.iter().sum::<f64>() / samples.len().max(1) as f64;
     json!({ "mean": mean, "p50": at(0.5), "p95": at(0.95), "max": at(1.0) })
+}
+
+fn ms_of(value: &serde_json::Value, unit: &str) -> String {
+    let at = |key: &str| value[key].as_f64().unwrap_or(0.0);
+    format!("{:.3} {unit} (p95 {:.3}, max {:.3})", at("mean"), at("p95"), at("max"))
 }
 
 pub fn run(command: SceneCommand) -> Result<()> {
@@ -87,7 +93,9 @@ pub fn run(command: SceneCommand) -> Result<()> {
     let cost = scene.cost(quality);
     let mut runtime = Runtime::new(Arc::new(scene), values);
     let mut view = r.scene_view(&runtime.scene, &assets)?;
+    view.profile_particles(true);
     let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);
+    let (mut sim, mut steps, mut compiled) = (Vec::new(), 0, 0);
     let mut wake = Wake::Frame;
     let mut since = Duration::ZERO;
     let step = Duration::from_secs(1) / fps.max(1);
@@ -111,27 +119,32 @@ pub fn run(command: SceneCommand) -> Result<()> {
         r.finish()?;
         render.push(start.elapsed().as_secs_f64() * 1e3);
         wake = frame.wake;
-        created += if i >= WARMUP { view.stats().created } else { 0 };
+        if i >= WARMUP {
+            let s = view.stats();
+            (created, steps, compiled) = (created + s.created, steps + s.steps, compiled + s.compiled);
+            sim.push(f64::from(view.stats().sim_us) / 1e3);
+        }
     }
+    let steady = frames.saturating_sub(WARMUP).max(1);
     let stats = view.stats();
+    let alive: u32 = r.census(&view)?.iter().map(|(_, c)| c.alive).sum();
+    let engine = view.gpu_particles().map_or("none", |gpu| if gpu { "gpu" } else { "cpu" });
+    let particles = json!({
+        "engine": engine, "slots": stats.particles, "alive": alive, "steps": steps, "sim_ms": spread(sim),
+    });
     let report = json!({
         "path": path, "adapter": r.adapter(), "tier": tier, "quality": quality, "size": [size.0, size.1],
         "render_size": [inner.0, inner.1], "frames": frames, "needed": needed, "cost_units": cost,
         "eval_us": spread(eval), "render_ms": spread(render), "passes": stats.passes, "draws": stats.draws,
         "textures": stats.textures, "cached": stats.reused, "created_after_warmup": created,
+        "compiled_after_warmup": compiled,
+        "particles": particles,
     });
     if json {
         println!("{report}");
         return Ok(());
     }
-    let ms = |key: &str, unit: &str| {
-        format!(
-            "{:.3} {unit} (p95 {:.3}, max {:.3})",
-            report[key]["mean"].as_f64().unwrap_or(0.0),
-            report[key]["p95"].as_f64().unwrap_or(0.0),
-            report[key]["max"].as_f64().unwrap_or(0.0)
-        )
-    };
+    let ms = |key: &str, unit: &str| ms_of(&report[key], unit);
     println!(
         "adapter      {}\ntier         {tier:?}, quality {quality:?}, {}x{} rendered at {}x{}",
         r.adapter(),
@@ -146,6 +159,19 @@ pub fn run(command: SceneCommand) -> Result<()> {
         "last frame   {} passes, {} draws, {} pooled textures, {} cached parts",
         stats.passes, stats.draws, stats.textures, stats.reused
     );
-    println!("created      {created} GPU resources after {WARMUP} warm-up frames");
+    println!(
+        "created      {created} GPU resources, {compiled} of them shaders, after {WARMUP} warm-up frames"
+    );
+    if engine != "none" {
+        let per_frame = f64::from(steps) / steady as f64;
+        println!(
+            "particles    {engine}, {} slots, {alive} alive at the end, {per_frame:.1} steps per frame",
+            stats.particles
+        );
+        println!(
+            "simulation   {} after {WARMUP} warm-up frames",
+            ms_of(&report["particles"]["sim_ms"], "ms")
+        );
+    }
     Ok(())
 }

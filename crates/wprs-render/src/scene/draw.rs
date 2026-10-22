@@ -66,6 +66,9 @@ impl Painter<'_, '_, '_> {
         (opacity, blend, mask): (f32, Blend, Option<&Mask>),
         atop: bool,
     ) {
+        if matches!(self.frame.draws[i].content, Content::Particles { .. }) {
+            return self.particles(i, target, (opacity, blend, mask), atop);
+        }
         let Some((size, quad)) = self.geometry(i) else { return };
         let Some((entry, mut item, src)) = self.content(i, opacity) else { return };
         let m = self.local(i, size);
@@ -118,7 +121,7 @@ impl Painter<'_, '_, '_> {
         let size = target.rect.size();
         let Some(copy) = self.acquire(size) else { return };
         self.ops.push(Op::Copy { from: target.src, to: copy, origin: [0, 0], size, at: [0, 0] });
-        let out = self.effects(i, copy, target.rect, Affine::IDENTITY);
+        let out = self.effects(i, copy, target.rect, invert(self.stage).then(target.rect.affine()));
         let mut item = Item {
             quad: [0.0, 0.0, 1.0, 1.0],
             uv: [0.0, 0.0, 1.0, 1.0],

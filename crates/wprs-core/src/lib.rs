@@ -3,6 +3,7 @@ pub mod dbus;
 pub mod edit;
 pub mod fit;
 pub mod layout;
+pub mod locale;
 pub mod model;
 pub mod motion;
 pub mod settings;

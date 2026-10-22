@@ -189,6 +189,10 @@ fn packages_are_described_by_their_manifest() {
     let source = library.add_folder(&root, true).unwrap();
     assert_eq!(counts(&mut library, &source, NOW), [2, 0, 0, 0]);
     let calm = find(&library, "kind:package tag:water");
+    assert_eq!(
+        (library.count("kind:scene", NOW).unwrap(), library.count("-kind:scene", NOW).unwrap()),
+        (0, 2)
+    );
     let info = PackageInfo {
         id: "org.example.calm".into(),
         version: "1.2.0".into(),

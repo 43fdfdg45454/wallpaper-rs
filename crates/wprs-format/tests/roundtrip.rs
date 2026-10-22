@@ -4,6 +4,7 @@ use common::manifest;
 use std::fs;
 use std::os::unix::fs::symlink;
 use std::path::Path;
+use std::sync::Arc;
 use wprs_format::{
     Control, Error, Kind, Limits, Manifest, Property, build, extract, open, sha256, sha256_file,
 };
@@ -46,6 +47,29 @@ fn build_read_extract_roundtrip() {
         assert_eq!(fs::read(dest.join(path)).unwrap(), fs::read(src.join(path)).unwrap(), "{path}");
     }
     assert_eq!(build(&dest, tmp.path().join("again.wpak"), &Limits::default()).unwrap(), digest);
+}
+
+#[test]
+fn luts_are_read_once_per_file_and_within_limits() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (src, out) = (tmp.path().join("src"), tmp.path().join("grade.wpak"));
+    source(&src);
+    let corners: String = (0..8).map(|i| format!("{} {} {}\n", i & 1, (i >> 1) & 1, i >> 2)).collect();
+    fs::write(src.join("assets/grade.cube"), format!("LUT_3D_SIZE 2\n{corners}")).unwrap();
+    let ids: String = (0..200).map(|i| format!(r#", "g{i}": {{"path": "assets/grade.cube"}}"#)).collect();
+    let sky = r#""path": "assets/textures/sky.png"}"#;
+    fs::write(src.join("scene.json"), SCENE.replace(sky, &format!("{sky}{ids}"))).unwrap();
+    build(&src, &out, &Limits::default()).unwrap();
+    let mut package = open(&out, &Limits::default()).unwrap();
+    let scene = package.scene().unwrap();
+    let luts = package.luts(&scene).unwrap();
+    assert!(luts.len() == 200 && luts.iter().all(|(_, lut)| Arc::ptr_eq(lut, &luts[0].1)));
+    let noise = (0..(16u32 << 20) + 1).map(|i| b'0' + (i.wrapping_mul(2_654_435_761) >> 28) as u8 % 10);
+    fs::write(src.join("assets/grade.cube"), noise.collect::<Vec<u8>>()).unwrap();
+    build(&src, &out, &Limits::default()).unwrap();
+    let mut package = open(&out, &Limits::default()).unwrap();
+    let large = package.luts(&scene);
+    assert!(matches!(large, Err(Error::Limit { what: "LUT size", .. })), "{large:?}");
 }
 
 #[test]

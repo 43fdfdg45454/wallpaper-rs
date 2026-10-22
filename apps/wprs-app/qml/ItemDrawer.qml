@@ -96,7 +96,7 @@ Kirigami.OverlayDrawer {
 
                 QQC2.Label {
                     Kirigami.FormData.label: App.tr("Kind:")
-                    text: [Labels.value(drawer.item.kind), drawer.item.width ? drawer.item.width + "×" + drawer.item.height : ""].filter(t => t).join(" · ")
+                    text: [Labels.value(drawer.item.package?.kind === "scene" ? "scene" : drawer.item.kind), drawer.item.width ? drawer.item.width + "×" + drawer.item.height : ""].filter(t => t).join(" · ")
                 }
 
                 QQC2.Label {

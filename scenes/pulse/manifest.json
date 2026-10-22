@@ -1,0 +1,26 @@
+{
+  "schema": "wallpaper-rs.wpak/1",
+  "id": "io.github.wallpaper_rs.example.pulse",
+  "version": "1.0.0",
+  "title": "Pulse",
+  "description": "A ring and a spectrum that follow the sound playing on the computer, once you allow it.",
+  "authors": ["wallpaper-rs contributors"],
+  "license": "CC0-1.0",
+  "kind": "scene",
+  "entry": "scene.json",
+  "preview": "preview.jpg",
+  "tags": ["example", "audio", "music"],
+  "properties": {
+    "note": { "type": "label", "label": { "en": "Allow audio for this scene to make it move with the sound.",
+                                          "es": "Permite el audio a esta escena para que se mueva con el sonido." } },
+    "color": { "type": "color", "order": 1, "default": "#5ee7ff", "label": { "en": "Color", "es": "Color" } },
+    "show": { "type": "combo", "order": 2, "default": "both", "label": { "en": "Spectrum", "es": "Espectro" },
+              "options": [{ "value": "circle", "label": { "en": "Circle", "es": "Círculo" } },
+                          { "value": "bars", "label": { "en": "Bars", "es": "Barras" } },
+                          { "value": "both", "label": { "en": "Both", "es": "Ambos" } }] },
+    "glitch": { "type": "bool", "order": 3, "default": true, "label": { "en": "Glitch on beats", "es": "Interferencias con el ritmo" } }
+  },
+  "presets": [
+    { "id": "calm", "label": { "en": "Calm", "es": "Tranquilo" }, "values": { "show": "circle", "glitch": false, "color": "#9f8cff" } }
+  ]
+}

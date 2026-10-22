@@ -137,7 +137,9 @@ Consumers should connect by serial; `serial` is `0` only if PipeWire did not pub
 Stream format: raw video, `BGRx` (or `BGRA`), fixed size, variable frame rate, one memfd per
 buffer mapped from offset 0. Frames are produced when the picture changes (new wallpaper,
 transition, video frame, a scene that animates or whose inputs changed), when a consumer starts
-streaming, and every 10 s as a keep-alive.
+streaming, and every 10 s as a keep-alive. After a consumer starts, the stream also runs again
+50 ms, 250 ms, 1.25 s and 6.25 s later without a new frame, so a consumer that was not ready for
+the first cycle still receives the last one.
 While no consumer is streaming an output, its video is paused and the daemon renders only the
 final picture after each change, which a consumer receives as soon as it connects.
 
@@ -205,7 +207,11 @@ returns `InvalidArgs`.
 
 A `SceneProperties` document for the scene package shown on `output`, or for `output = ""` the
 one set in the `[default]` section: its user properties as declared in its manifest, their
-current values and its presets. `NotFound` when no scene package is shown there.
+current values and its presets. `NotFound` when no scene package is shown there. `fields` lists
+the properties in the order to show them (by `order`, each group followed by its members), with
+labels, help and option labels in the language of the daemon's locale and `visible` false while
+a `visible_if` condition of the property or of its group does not hold; `preset_labels` names
+the presets the same way. Clients draw their forms from `fields` alone.
 
 ### `SetSceneProperty(s output, s id, s value_json)`
 
@@ -416,7 +422,7 @@ The query is normalized first and `SearchPage.query` echoes it: `in:<name>` beco
 `sort:random` becomes `sort:random:<seed>` with a new seed, which orders the same way every time.
 Clients pass the normalized query unchanged for later pages, so random pages neither repeat nor
 skip items. `ItemSummary.thumb` is the cached 256 px thumbnail or `null`: `Search` never makes
-thumbnails.
+thumbnails. `ItemSummary.package` describes package items, whose `kind` tells scenes apart.
 
 ### `GetItem(s uid) → (s json)`
 
@@ -1159,6 +1165,10 @@ the scene canvas, transitions and claims as other wallpapers.
   `SetOption`) or whose stream has no consumer renders nothing and its scene clock stops; it
   continues where it stopped, without catching up.
 - `GetState().outputs[x].kind` is `scene` and `playing` tells whether the scene is animating.
+- Example scenes are packages in `wallpaper-rs/examples/` under `$XDG_DATA_HOME` or a folder of
+  `$XDG_DATA_DIRS`. The daemon adds each one to the library once, when it starts and on a
+  `Rescan` of every source; an example removed from the library is not added again, and the
+  item of an example whose file was uninstalled is removed. `kind:scene` finds scene packages.
 
 ## Change notification
 
@@ -1273,7 +1283,14 @@ struct OutputPlaylist { uid: Uid, name: String, position: u32, count: u32, next_
 struct SceneProperties {
     model: u32, serial: u64, output: String, package: String, title: String,
     properties: BTreeMap<String, Value>, values: BTreeMap<String, Value>, presets: Vec<Value>,
+    fields: Vec<SceneField>, preset_labels: Vec<SceneOption>,
 }
+struct SceneField {
+    key: String, kind: String, label: String, help: String, value: Value, visible: bool,
+    min: Option<f64>, max: Option<f64>, step: Option<f64>, integer: bool, unit: String,
+    options: Vec<SceneOption>, alpha: bool, multiline: bool, max_len: Option<u32>, accept: Vec<String>,
+}
+struct SceneOption { value: String, label: String }
 
 struct Schema {
     model: u32, serial: u64, options: Vec<Field>, rules: Vec<Field>, auto: Vec<Field>,
@@ -1312,7 +1329,7 @@ struct ItemSummary {
     uid: Uid, kind: ItemKind, title: String, width: Option<u32>, height: Option<u32>,
     duration_ms: Option<u32>, color: Option<u32>, tags: Vec<String>, rating: u8, favorite: bool,
     missing: bool, error: Option<String>, revoked: Option<Reason>, removable: bool, imported: bool,
-    thumb: Option<PathBuf>,
+    thumb: Option<PathBuf>, package: Option<PackageInfo>,
 }
 struct SearchPage { model: u32, serial: u64, query: String, total: u32, offset: u32, items: Vec<ItemSummary> }
 struct ItemDetails {

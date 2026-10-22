@@ -1,0 +1,15 @@
+{
+  "id": "waves",
+  "name": { "en": "Waves" },
+  "uses": ["time"],
+  "mask_mode": "strength",
+  "params": [
+    { "id": "amplitude", "type": "float", "default": 8, "min": 0, "max": 256 },
+    { "id": "frequency", "type": "float", "default": 4, "min": 0, "max": 64 },
+    { "id": "speed", "type": "float", "default": 1, "min": -20, "max": 20 },
+    { "id": "direction", "type": "float", "default": 0, "min": -360, "max": 360 }
+  ],
+  "passes": [{ "entry": "fs_waves" }],
+  "fuse": "uv",
+  "reach": "amplitude"
+}

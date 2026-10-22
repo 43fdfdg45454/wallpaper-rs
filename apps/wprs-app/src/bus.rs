@@ -99,13 +99,14 @@ pub async fn call(iface: &str, member: &str, args: Vec<Value>) -> Result<String,
 
 pub fn topic(iface: &str, member: &str) -> &'static str {
     match (iface, member) {
-        ("Daemon1", "GetState") => "state",
+        ("Daemon1", "GetState" | "GetSceneProperties") => "state",
         ("Daemon1", "ListJobs" | "GetJob") => "jobs",
         ("Library1", _) => "library",
         ("Playlists1", _) => "playlists",
         ("Profiles1", _) => "profiles",
         ("Providers1", _) => "providers",
         ("Repos1", _) => "repos",
+        ("Inputs1", _) => "inputs",
         ("Sync1", _) => "account",
         _ => "",
     }

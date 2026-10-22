@@ -2,6 +2,7 @@ use crate::{StreamInfo, VideoFrame};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError, RwLock};
+use std::time::Instant;
 
 type Notify = Box<dyn Fn() + Send + Sync>;
 
@@ -11,6 +12,7 @@ pub struct Slot {
     pub info: Mutex<Option<StreamInfo>>,
     pub streaming: AtomicBool,
     pub dirty: AtomicBool,
+    pub started: Mutex<Option<Instant>>,
 }
 
 impl Slot {

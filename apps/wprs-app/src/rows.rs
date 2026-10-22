@@ -87,7 +87,7 @@ impl ItemModel {
         match role - USER {
             0 => text(&item.uid),
             1 => text(&item.title),
-            2 => text(&grid::name(item.kind)),
+            2 => text(&grid::kind(item)),
             3 => text(&item.color.map(|c| format!("#{c:06x}")).unwrap_or_default()),
             4 => text(&row.thumb.as_deref().filter(|p| !p.is_empty()).map(bus::url).unwrap_or_default()),
             5 => QVariant::from(&item.favorite),

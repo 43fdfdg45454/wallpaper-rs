@@ -10,6 +10,7 @@ use std::sync::atomic::Ordering::SeqCst;
 use std::time::{Duration, Instant};
 
 const KEEPALIVE: Duration = Duration::from_secs(10);
+const SETTLE: Duration = Duration::from_millis(50);
 const SERIAL_TIMEOUT: Duration = Duration::from_secs(2);
 
 struct Live {
@@ -85,15 +86,19 @@ impl OutputStream {
         })
     }
 
+    fn next_kick(&self) -> Option<(Instant, Duration)> {
+        let live = self.live.as_ref().filter(|_| self.slot.streaming.load(SeqCst))?;
+        Some(pace(live.last_trigger, lock(&self.slot.started).unwrap_or(live.since)))
+    }
+
     pub fn keepalive_at(&self) -> Option<Instant> {
-        let streaming = self.slot.streaming.load(SeqCst);
-        self.live.as_ref().filter(|_| streaming).map(|live| live.last_trigger + KEEPALIVE)
+        self.next_kick().map(|(at, _)| at)
     }
 
     pub fn keep_alive(&mut self) {
-        if self.keepalive_at().is_some_and(|at| at <= Instant::now()) {
-            self.trigger();
-        }
+        let Some((_, step)) = self.next_kick().filter(|(at, _)| *at <= Instant::now()) else { return };
+        self.slot.dirty.fetch_or(step == KEEPALIVE, SeqCst);
+        self.trigger();
     }
 
     pub fn trigger(&mut self) {
@@ -103,5 +108,29 @@ impl OutputStream {
             tracing::debug!("trigger_process failed: {e}");
         }
         live.last_trigger = Instant::now();
+    }
+}
+
+fn pace(last: Instant, start: Instant) -> (Instant, Duration) {
+    let last = last.max(start);
+    let step = (last.duration_since(start) * 4).clamp(SETTLE, KEEPALIVE);
+    (last + step, step)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kicks_settle_quickly_after_a_start_and_then_keep_alive() {
+        let (start, mut last) = (Instant::now(), Instant::now());
+        let steps: Vec<_> = (0..6)
+            .map(|_| {
+                let (at, step) = pace(last, start);
+                last = at;
+                step.as_millis()
+            })
+            .collect();
+        assert_eq!(steps, [50, 200, 1000, 5000, 10_000, 10_000]);
     }
 }

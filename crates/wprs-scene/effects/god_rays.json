@@ -1,0 +1,23 @@
+{
+  "id": "god_rays",
+  "name": { "en": "Light rays" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "source", "type": "vec2", "default": [0.5, 0.15], "min": -1, "max": 2 },
+    { "id": "threshold", "type": "float", "default": 0.7, "min": 0, "max": 4 },
+    { "id": "density", "type": "float", "default": 0.8, "min": 0, "max": 1 },
+    { "id": "decay", "type": "float", "default": 0.96, "min": 0.5, "max": 1 },
+    { "id": "exposure", "type": "float", "default": 0.6, "min": 0, "max": 4 },
+    { "id": "color", "type": "color", "default": "#fff4e0" },
+    { "id": "samples", "type": "float", "default": 12, "min": 4, "max": 16 },
+    { "id": "follow", "type": "bool", "default": false, "uses": "cursor" }
+  ],
+  "passes": [
+    { "entry": "fs_god_rays_bright", "scale": 0.5 },
+    { "entry": "fs_god_rays_march", "scale": 0.5 },
+    { "entry": "fs_god_rays_march", "scale": 0.5 },
+    { "entry": "fs_god_rays_mix", "inputs": ["input", "pass:2"] }
+  ],
+  "cost": { "taps": 3, "passes": 4, "scale": 0.5 },
+  "quality": { "q1": { "params": { "samples": 8 } } }
+}

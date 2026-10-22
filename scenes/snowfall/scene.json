@@ -1,0 +1,43 @@
+{
+  "schema": "wallpaper-rs.scene/1",
+  "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#0d1b33" },
+  "clock": { "max_fps": 30, "seed": 11 },
+  "layers": [
+    { "id": "sky", "type": "shape", "shape": { "rect": { "size": [1920, 1080] } },
+      "gradient": { "stops": [[0, "#0b1830"], [0.6, "#24456b"], [1, "#6b8aa8"]] },
+      "effects": [{ "effect": "clouds", "enabled": { "prop": "clouds" },
+                    "params": { "color": "#c9d6e8", "shade": "#4f6380", "opacity": 0.55, "coverage": 0.5, "size": 460,
+                                "speed": [18, 0], "height": 0.7 } }] },
+    { "id": "moon", "type": "shape", "shape": { "ellipse": { "size": [130, 130] } }, "fill": "#f4f1e6", "transform": { "position": [1480, 220] } },
+    { "id": "halo", "type": "shape", "shape": { "ellipse": { "size": [760, 760] } }, "blend": "add", "transform": { "position": [1480, 220] },
+      "gradient": { "radial": true, "from": [0.5, 0.5], "to": [1, 0.5], "stops": [[0, "#cfe0ff50"], [0.3, "#cfe0ff1b"], [0.65, "#cfe0ff03"], [1, "#cfe0ff00"]] } },
+    { "id": "rays", "type": "adjustment", "effects": [{ "effect": "god_rays", "optional": true,
+      "params": { "source": [0.77, 0.2], "threshold": 0.85, "exposure": 0.35, "color": "#dfe9ff" } }] },
+    { "id": "far", "type": "shape", "shape": { "ellipse": { "size": [2500, 620] } }, "fill": "#b9c7d8", "transform": { "position": [560, 1040] } },
+    { "id": "pines", "type": "group", "layers": [
+      { "id": "p1", "type": "shape", "shape": { "polygon": { "sides": 3, "size": 110 } }, "fill": "#1b3047", "transform": { "position": [300, 780], "scale": [0.55, 1.5] } },
+      { "id": "p2", "type": "shape", "shape": { "polygon": { "sides": 3, "size": 80 } }, "fill": "#1b3047", "transform": { "position": [420, 820], "scale": [0.55, 1.5] } },
+      { "id": "p3", "type": "shape", "shape": { "polygon": { "sides": 3, "size": 130 } }, "fill": "#16283c", "transform": { "position": [1320, 800], "scale": [0.55, 1.5] } },
+      { "id": "p4", "type": "shape", "shape": { "polygon": { "sides": 3, "size": 90 } }, "fill": "#16283c", "transform": { "position": [1450, 840], "scale": [0.55, 1.5] } }
+    ] },
+    { "id": "near", "type": "shape", "shape": { "ellipse": { "size": [2700, 560] } }, "fill": "#e8eef6", "transform": { "position": [1400, 1130] } },
+    { "id": "snow", "type": "particles", "system": "snow" },
+    { "id": "post", "type": "adjustment", "effects": [
+      { "effect": "vignette", "params": { "intensity": 0.45 } },
+      { "effect": "film_grain", "params": { "amount": 0.035 } }
+    ] }
+  ],
+  "particles": {
+    "snow": {
+      "capacity": 2000, "seed": 3, "prewarm": 8,
+      "emitters": [{ "shape": { "box": [[-200, -40], [2120, -10]] }, "rate": { "prop": "density" } },
+                   { "shape": { "line": [[-30, -40], [-30, 1060]] }, "rate": { "prop": "wind", "map": { "calm": 0, "breeze": 50, "gale": 110 } } }],
+      "init": { "life": [12, 18], "speed": [30, 70], "angle": [80, 100], "size": [3, 8], "color": ["#ffffff", "#dce6f4"] },
+      "forces": [{ "gravity": { "prop": "wind", "map": { "calm": [0, 14], "breeze": [22, 16], "gale": [60, 20] } } },
+                 { "turbulence": { "strength": 14, "scale": 0.004 } }, { "drag": 0.25 }],
+      "collide": [{ "bounds": { "plane": { "point": [1940, 0], "normal": [-1, 0] } }, "kill": true },
+                  { "bounds": { "plane": { "point": [0, 1100], "normal": [0, -1] } }, "kill": true }],
+      "render": { "color_over_life": [[0, "#ffffff00"], [0.08, "#ffffffff"], [0.9, "#ffffffff"], [1, "#ffffff00"]] }
+    }
+  }
+}

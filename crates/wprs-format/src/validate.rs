@@ -10,7 +10,7 @@ const RATIO_FLOOR: u64 = 1 << 20;
 const IMAGES: &[&str] = &["png", "jpg", "jpeg", "webp", "avif", "gif", "bmp", "ktx2"];
 const VIDEOS: &[&str] = &["webm", "mp4", "mkv"];
 const SCENES: &[&str] =
-    &["json", "wgsl", "js", "gltf", "glb", "bin", "ogg", "opus", "flac", "mp3", "wav", "ttf", "otf"];
+    &["json", "wgsl", "js", "gltf", "glb", "bin", "ogg", "opus", "flac", "mp3", "wav", "ttf", "otf", "cube"];
 const COMMON: &[&str] = &["txt"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

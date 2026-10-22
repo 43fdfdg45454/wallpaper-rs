@@ -465,9 +465,11 @@ MANIFEST
   ctl repo keygen root --no-password >/dev/null
   ctl repo keygen online --no-password >/dev/null
   ctl pack build src -o dawn.wpak >/dev/null
+  ctl pack build "$ROOT/scenes/dusk" -o dusk.wpak >/dev/null
   ctl repo init repo --name Example --root-key root.pub --online-key online.pub >/dev/null 2>&1
   ctl repo sign-root repo --key root.key >/dev/null
   ctl repo add repo dawn.wpak >/dev/null
+  ctl repo add repo dusk.wpak >/dev/null
   ctl repo publish repo --key online.key >/dev/null
 )
 anchor=$(ctl repo status "$site/repo" | sed -n 's/^anchor = //p')
@@ -479,7 +481,7 @@ if ctl remote add "http://127.0.0.1:$port/" 2>"$WORK/anchor.out"; then fail "a r
 grep -q "fingerprint or repo_id" "$WORK/anchor.out" || fail "anchor message: $(cat "$WORK/anchor.out")"
 repo=$(ctl remote add "http://127.0.0.1:$port/$anchor" --wait --json | jq_ "r['output']['repo_id']")
 [ "$(ctl remote ls --json | jq_ "[(x['name'], x['hosts'], x['packages'], x['stale']) for x in r['repos']]")" = \
-  "[('Example', ['127.0.0.1'], 1, False)]" ] || fail "repositories: $(ctl remote ls --json)"
+  "[('Example', ['127.0.0.1'], 2, False)]" ] || fail "repositories: $(ctl remote ls --json)"
 [ "$(ctl pkg search sky --json | jq_ "[(p['id'], p['version'], p['preview'], p['repo_name']) for p in r['packages']]")" = \
   "[('org.example.dawn', '1.0.0', True, 'Example')]" ] || fail "browse: $(ctl pkg search sky --json)"
 preview=$(ctl pkg preview "${repo:0:8}/org.example.dawn")
@@ -496,6 +498,13 @@ refused "use Repos1.Uninstall" Library1 Remove asb 1 "$item" false
 ctl pkg uninstall org.example.dawn
 [ "$(ctl pkg ls --json | jq_ "len(r['packages'])")" = 0 ] || fail "the package was kept"
 [ "$(ctl lib search kind:package --json | jq_ "r['total']")" = 0 ] || fail "the package item was kept"
+dusk=io.github.wallpaper_rs.example.dusk
+[ "$(ctl pkg search dusk --json | jq_ "[(p['id'], p['kind']) for p in r['packages']]")" = "[('$dusk', 'scene')]" ] ||
+  fail "browse scenes: $(ctl pkg search dusk --json)"
+item=$(ctl pkg install "$dusk" --wait --json | jq_ "r['output']['item']")
+[ "$(ctl lib search kind:scene --json | jq_ "[i['uid'] for i in r['items']]")" = "['$item']" ] ||
+  fail "installed scene: $(ctl lib search kind:scene --json)"
+ctl pkg uninstall "$dusk"
 python3 -c "import socket, time; s = socket.socket(); s.bind(('127.0.0.1', 0)); s.listen(8)
 print(s.getsockname()[1], flush=True); time.sleep(600)" >"$WORK/stall.port" & pids+=($!)
 wait_for 5 test -s "$WORK/stall.port" || fail "the stalled server did not start"
@@ -708,6 +717,49 @@ ctl release TEST-12 && expect "list(s['outputs'])" "[]"
 ctl input revoke "$sea" audio
 bus Library1 Remove asb 2 "$sea_uid" "$spin_uid" false >/dev/null
 echo "audio and script scene checks passed"
+examples=$XDG_DATA_HOME/wallpaper-rs/examples
+mkdir -p "$examples"
+for dir in "$ROOT"/scenes/*/; do ctl pack build "$dir" -o "$examples/$(basename "$dir").wpak" >/dev/null; done
+packed=$(cat "$examples"/*.wpak | wc -c) && count=$(find "$examples" -name '*.wpak' | wc -l)
+((packed < 409600 && count >= 5)) || fail "$count example scenes take $packed bytes"
+rescanned() {
+  local job
+  job=$(bus Library1 Rescan s "" | out "d[0]")
+  wait_for 60 finished "$job" || fail "rescan: $(bus Daemon1 GetJob t "$job")"
+}
+listed() { [ "$(reply "r['total'], {i['package']['kind'] for i in r['items']}" Library1 Search suu "kind:scene" 0 50)" = "$1" ]; }
+rescanned
+wait_for 10 listed "($count, {'scene'})" || fail "examples in the library: $(ctl lib search kind:scene)"
+example() { reply "r['items'][0]['uid']" Library1 Search suu "kind:scene $1" 0 1; }
+snow=$(example snowfall) && dusk=$(example dusk) && orbits=$(example orbits)
+[ -s "$(bus Library1 Thumbnail su "$snow" 256 | out "d[0]")" ] || fail "no thumbnail from an example preview"
+read -r _ _ _ s13 < <(ctl stream TEST-13 160 90)
+digest() { "$BIN/probe" "$s13" 3 | sed -n 's/.* hash \([0-9a-f]*\)$/\1/p'; }
+changes() { local a b; a=$(digest) && sleep 0.5 && b=$(digest) && [ -n "$a" ] && [ "$a" != "$b" ]; }
+consume "$s13"
+for uid in "$snow" "$orbits"; do
+  ctl lib apply "$uid" -o TEST-13
+  expect "s['outputs']['TEST-13']['item'], s['outputs']['TEST-13']['error']" "('$uid', None)"
+  expect "s['outputs']['TEST-13']['playing']" True
+  retry 10 changes || fail "example $uid stands still: $("$BIN/probe" "$s13" 3)"
+done
+ctl lib apply "$dusk" -o TEST-13
+still() { [ "$(field "s['outputs']['TEST-13']['item'], s['outputs']['TEST-13']['playing']")" = "('$dusk', False)" ]; }
+wait_for 15 still || fail "the still example keeps animating: $(ctl state)"
+idle=$(ticks) && sleep 2 && idle=$(($(ticks) - idle))
+[ "$idle" -lt 20 ] || fail "the still example used $idle ticks in 2 s"
+leave
+first=$(digest)
+[ -n "$first" ] || fail "no frame from the still example: $("$BIN/probe" "$s13" 3 2>&1)"
+[ "$first" = "$(digest)" ] || fail "the still example changed while nothing moved"
+ctl release TEST-13 && expect "list(s['outputs'])" "[]"
+rm "$examples/pulse.wpak" && rescanned
+wait_for 10 listed "($((count - 1)), {'scene'})" || fail "an uninstalled example stayed: $(ctl lib search kind:scene)"
+mapfile -t uids < <(reply "'\\n'.join(i['uid'] for i in r['items'])" Library1 Search suu "kind:scene" 0 50)
+bus Library1 Remove asb "${#uids[@]}" "${uids[@]}" false >/dev/null && rescanned
+listed "(0, set())" || fail "removed examples came back: $(ctl lib search kind:scene)"
+rm -r "$examples"
+echo "example scene checks passed"
 
 read -r _ _ _ left < <(ctl stream TEST-9 160 90)
 read -r _ _ _ right < <(ctl stream TEST-10 160 90)

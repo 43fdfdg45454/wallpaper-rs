@@ -1,4 +1,5 @@
 use super::pipes::{Pipes, STRIDE};
+use super::state::volume;
 use crate::texture::{create_texture, next_id};
 use std::collections::HashMap;
 use wgpu::{BindGroup, TextureFormat, TextureUsages as U};
@@ -6,6 +7,7 @@ use wgpu::{BindGroup, TextureFormat, TextureUsages as U};
 const KEEP_FRAMES: u64 = 120;
 pub(crate) const BUDGET: u64 = 512 << 20;
 
+#[derive(Clone)]
 pub(crate) struct Tex {
     pub(crate) texture: wgpu::Texture,
     pub(crate) view: wgpu::TextureView,
@@ -21,6 +23,7 @@ pub(crate) struct Pool {
     frame_group: Option<(BindGroup, BindGroup)>,
     pub(crate) white: Tex,
     pub(crate) clear: Tex,
+    pub(crate) void: Tex,
     pub(crate) frame: u64,
     pub(crate) created: u32,
     bytes: u64,
@@ -57,9 +60,9 @@ impl Pool {
         };
         let _ = format;
         let (free, busy, groups, data) = Default::default();
-        let (white, clear) = (solid([255; 4]), solid([0; 4]));
-        let (buffer, frame_group) = (None, None);
-        Pool { free, busy, groups, data, buffer, frame_group, white, clear, frame: 0, created: 2, bytes: 0 }
+        let (white, clear, void) = (solid([255; 4]), solid([0; 4]), volume(device, queue, 1, &[[0.0; 3]]));
+        let (buffer, frame_group, frame, created, bytes) = (None, None, 0, 3, 0);
+        Pool { free, busy, groups, data, buffer, frame_group, white, clear, void, frame, created, bytes }
     }
 
     pub(crate) fn acquire(
@@ -119,12 +122,11 @@ impl Pool {
                         resource: wgpu::BindingResource::Sampler(&pipes.sampler),
                     },
                 ];
-                if items {
-                    list.push(wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: wgpu::BindingResource::Buffer(item),
-                    });
-                }
+                let resource = match items {
+                    true => wgpu::BindingResource::Buffer(item),
+                    false => wgpu::BindingResource::Sampler(&pipes.wrap),
+                };
+                list.push(wgpu::BindGroupEntry { binding: 2, resource });
                 list
             };
             let group = |layout, items| {

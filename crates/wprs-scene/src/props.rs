@@ -190,6 +190,17 @@ impl Property {
 }
 
 pub fn check_presets(props: &BTreeMap<String, Property>, presets: &[Preset]) -> Result<(), String> {
+    for (id, prop) in props {
+        let group = prop.group.as_ref().map(|g| (g, props.get(g).map(|p| &p.control)));
+        if let Some((g, _)) = group.filter(|(_, c)| !matches!(c, Some(Control::Group {}))) {
+            return Err(format!("{id} names {g}, which is not a group"));
+        }
+        for (other, want) in &prop.visible_if {
+            let target = props.get(other).filter(|_| other != id);
+            let target = target.ok_or_else(|| format!("{id} is shown by the unknown property {other}"))?;
+            target.value(want).map_err(|e| format!("{id} is shown when {other} {e}"))?;
+        }
+    }
     for (i, preset) in presets.iter().enumerate() {
         if presets[..i].iter().any(|p| p.id == preset.id) {
             return Err(format!("preset {} is defined twice", preset.id));

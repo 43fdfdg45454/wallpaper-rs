@@ -47,9 +47,10 @@ pub fn describe(data: &Data, info: &VideoInfoRaw, stride: usize, buffers: usize)
     if data.type_() != DataType::MemFd {
         return format!("error: buffer type {:?}, KPipeWire needs MemFd", data.type_());
     }
-    match read_mapped_from_offset_zero(raw.fd, raw.maxsize + raw.mapoffset, center) {
-        Ok(px) => format!(
-            "frame {}x{} format {:?} stride {stride} type MemFd buffers {buffers} center bgra {px:?}",
+    let frame = size.height as usize * stride;
+    match read_mapped_from_offset_zero(raw.fd, raw.maxsize + raw.mapoffset, center, frame) {
+        Ok((px, hash)) => format!(
+            "frame {}x{} format {:?} stride {stride} type MemFd buffers {buffers} center bgra {px:?} hash {hash:016x}",
             size.width,
             size.height,
             info.format()
@@ -58,14 +59,23 @@ pub fn describe(data: &Data, info: &VideoInfoRaw, stride: usize, buffers: usize)
     }
 }
 
-fn read_mapped_from_offset_zero(fd: i64, len: u32, offset: usize) -> Result<[u8; 4], AnyError> {
+fn read_mapped_from_offset_zero(
+    fd: i64,
+    len: u32,
+    offset: usize,
+    frame: usize,
+) -> Result<([u8; 4], u64), AnyError> {
     let fd = unsafe { BorrowedFd::borrow_raw(i32::try_from(fd)?) };
     let len = len as usize;
     if offset + 4 > len {
         return Err("pixel outside the mapping".into());
     }
     let map = unsafe { mmap(std::ptr::null_mut(), len, ProtFlags::READ, MapFlags::PRIVATE, fd, 0)? };
-    let px = unsafe { map.cast::<u8>().add(offset).cast::<[u8; 4]>().read() };
+    let bytes = unsafe { std::slice::from_raw_parts(map.cast::<u8>(), len) };
+    let px = [0, 1, 2, 3].map(|i| bytes[offset + i]);
+    let hash = bytes[..frame.min(len)]
+        .iter()
+        .fold(0xcbf2_9ce4_8422_2325_u64, |h, b| (h ^ u64::from(*b)).wrapping_mul(0x100_0000_01b3));
     unsafe { munmap(map, len)? };
-    Ok(px)
+    Ok((px, hash))
 }

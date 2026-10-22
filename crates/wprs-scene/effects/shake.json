@@ -1,0 +1,12 @@
+{
+  "id": "shake",
+  "name": { "en": "Shake" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "strength", "type": "float", "default": 0, "min": 0, "max": 256, "uses": "time" },
+    { "id": "speed", "type": "float", "default": 2, "min": 0, "max": 60 },
+    { "id": "direction", "type": "vec2", "default": [1, 1], "min": -1, "max": 1 }
+  ],
+  "fuse": "uv",
+  "reach": "strength"
+}

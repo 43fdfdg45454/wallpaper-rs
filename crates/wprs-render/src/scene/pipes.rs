@@ -1,7 +1,9 @@
-use std::collections::HashMap;
-use std::sync::Mutex;
+use super::chains::{Shelf, lock};
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::{Arc, Mutex};
 use wgpu::{BindGroupLayout, BlendComponent as C, BlendFactor as F, BlendOperation, TextureFormat};
-use wprs_scene::{EFFECTS_WGSL, FRAME_WGSL, PRELUDE};
+use wgpu::{ShaderModule, TextureViewDimension as Dim};
+use wprs_scene::FRAME_WGSL;
 
 pub(crate) const STRIDE: u64 = 512;
 
@@ -15,17 +17,24 @@ pub(crate) enum Mode {
     Atop,
 }
 
-type Key = (&'static str, Mode, TextureFormat);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum Shader {
+    Scene(&'static str),
+    Fx(u64, &'static str),
+}
+
+pub(crate) type Key = (Shader, Mode, TextureFormat);
 
 pub(crate) struct Pipes {
-    composite: wgpu::ShaderModule,
-    effects: wgpu::ShaderModule,
+    composite: ShaderModule,
+    pub(crate) shelf: Arc<Mutex<Shelf>>,
     pub(crate) frame: BindGroupLayout,
     pub(crate) textures: BindGroupLayout,
     pub(crate) fx_frame: BindGroupLayout,
     pub(crate) fx: BindGroupLayout,
     pub(crate) sampler: wgpu::Sampler,
-    cache: Mutex<HashMap<Key, wgpu::RenderPipeline>>,
+    pub(crate) wrap: wgpu::Sampler,
+    pub(crate) created: AtomicU32,
 }
 
 fn entry(binding: u32, ty: wgpu::BindingType) -> wgpu::BindGroupLayoutEntry {
@@ -41,16 +50,12 @@ fn uniform(dynamic: bool) -> wgpu::BindingType {
     }
 }
 
-fn texture() -> wgpu::BindingType {
+fn texture(view_dimension: Dim) -> wgpu::BindingType {
     let sample_type = wgpu::TextureSampleType::Float { filterable: true };
-    wgpu::BindingType::Texture {
-        sample_type,
-        view_dimension: wgpu::TextureViewDimension::D2,
-        multisampled: false,
-    }
+    wgpu::BindingType::Texture { sample_type, view_dimension, multisampled: false }
 }
 
-fn blend(mode: Mode) -> Option<wgpu::BlendState> {
+pub(crate) fn blend(mode: Mode) -> Option<wgpu::BlendState> {
     let c = |src_factor, dst_factor| C { src_factor, dst_factor, operation: BlendOperation::Add };
     let over = c(F::One, F::OneMinusSrcAlpha);
     let (color, alpha) = match mode {
@@ -73,48 +78,57 @@ impl Pipes {
             })
         };
         let sampler = wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering);
-        let fx: Vec<_> =
-            std::iter::once(entry(0, uniform(true))).chain((1..=6).map(|b| entry(b, texture()))).collect();
-        let module = |source: String| {
-            let source = wgpu::ShaderSource::Wgsl(source.into());
-            device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("wprs-scene shader"),
-                source,
+        let flat = |b| entry(b, texture(Dim::D2));
+        let fx: Vec<_> = std::iter::once(entry(0, uniform(true)))
+            .chain((1..=6).map(flat))
+            .chain([entry(7, texture(Dim::D3))])
+            .collect();
+        let filter = wgpu::FilterMode::Linear;
+        let sampler_of = |address_mode| {
+            device.create_sampler(&wgpu::SamplerDescriptor {
+                label: Some("wprs-scene sampler"),
+                address_mode_u: address_mode,
+                address_mode_v: address_mode,
+                mag_filter: filter,
+                min_filter: filter,
+                ..Default::default()
             })
         };
         Pipes {
-            composite: module(format!("{FRAME_WGSL}\n{}", include_str!("scene.wgsl"))),
-            effects: module(format!("{PRELUDE}\n{EFFECTS_WGSL}")),
+            composite: module(device, format!("{FRAME_WGSL}\n{}", include_str!("scene.wgsl"))),
+            shelf: Arc::default(),
             frame: layout(&[entry(0, uniform(false)), entry(1, sampler), entry(2, uniform(true))]),
-            textures: layout(&[entry(0, texture()), entry(1, texture()), entry(2, texture())]),
-            fx_frame: layout(&[entry(0, uniform(false)), entry(1, sampler)]),
+            textures: layout(&[flat(0), flat(1), flat(2)]),
+            fx_frame: layout(&[entry(0, uniform(false)), entry(1, sampler), entry(2, sampler)]),
             fx: layout(&fx),
-            sampler: device.create_sampler(&wgpu::SamplerDescriptor {
-                label: Some("wprs-scene sampler"),
-                mag_filter: wgpu::FilterMode::Linear,
-                min_filter: wgpu::FilterMode::Linear,
-                ..Default::default()
-            }),
-            cache: Mutex::default(),
+            sampler: sampler_of(wgpu::AddressMode::ClampToEdge),
+            wrap: sampler_of(wgpu::AddressMode::Repeat),
+            created: AtomicU32::new(0),
         }
     }
 
     pub(crate) fn get(
         &self,
         device: &wgpu::Device,
-        entry: &'static str,
+        shader: Shader,
         mode: Mode,
         format: TextureFormat,
     ) -> wgpu::RenderPipeline {
-        let mut cache = self.cache.lock().unwrap_or_else(|e| e.into_inner());
-        let key = (entry, mode, format);
-        if let Some(found) = cache.get(&key) {
+        let mut guard = lock(&self.shelf);
+        let shelf = &mut *guard;
+        let key = (shader, mode, format);
+        if let Some(found) = shelf.cache.get(&key) {
             return found.clone();
         }
-        let composite = ["fs_texture", "fs_solid", "fs_shape", "fs_spectrum"].contains(&entry);
-        let (module, vertex, groups, strip) = match composite {
-            true => (&self.composite, "vs_item", [&self.frame, &self.textures], true),
-            false => (&self.effects, "vs_main", [&self.fx_frame, &self.fx], false),
+        let (module, entry, vertex, groups, strip) = match shader {
+            Shader::Scene(entry) => (&self.composite, entry, "vs_item", [&self.frame, &self.textures], true),
+            Shader::Fx(id, entry) => (
+                shelf.modules.get(&id).expect("created first"),
+                entry,
+                "vs_main",
+                [&self.fx_frame, &self.fx],
+                false,
+            ),
         };
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("wprs-scene pipeline layout"),
@@ -148,7 +162,13 @@ impl Pipes {
             multiview_mask: None,
             cache: None,
         });
-        cache.insert(key, pipeline.clone());
+        shelf.cache.insert(key, pipeline.clone());
+        self.created.fetch_add(1, Ordering::Relaxed);
         pipeline
     }
+}
+
+pub(crate) fn module(device: &wgpu::Device, source: String) -> ShaderModule {
+    let source = wgpu::ShaderSource::Wgsl(source.into());
+    device.create_shader_module(wgpu::ShaderModuleDescriptor { label: Some("wprs-scene shader"), source })
 }

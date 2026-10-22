@@ -1,0 +1,11 @@
+{
+  "id": "twirl",
+  "name": { "en": "Twirl" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "angle", "type": "float", "default": 60, "min": -1080, "max": 1080 },
+    { "id": "radius", "type": "float", "default": 256, "min": 0, "max": 16384 },
+    { "id": "center", "type": "vec2", "default": [0.5, 0.5], "min": -1, "max": 2 }
+  ],
+  "fuse": "uv"
+}

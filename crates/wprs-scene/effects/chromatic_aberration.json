@@ -1,0 +1,11 @@
+{
+  "id": "chromatic_aberration",
+  "name": { "en": "Chromatic aberration" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "amount", "type": "float", "default": 3, "min": -64, "max": 64 },
+    { "id": "center", "type": "vec2", "default": [0.5, 0.5], "min": -1, "max": 2 }
+  ],
+  "passes": [{ "entry": "fs_chromatic_aberration" }],
+  "reach": "amount"
+}

@@ -26,7 +26,7 @@ pub(crate) fn bind_group_layout(device: &wgpu::Device, textures: u32) -> wgpu::B
     })
 }
 
-pub(crate) fn module(device: &wgpu::Device, source: &'static str) -> wgpu::ShaderModule {
+pub(crate) fn module(device: &wgpu::Device, source: &str) -> wgpu::ShaderModule {
     device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("wprs-render shader"),
         source: wgpu::ShaderSource::Wgsl(source.into()),

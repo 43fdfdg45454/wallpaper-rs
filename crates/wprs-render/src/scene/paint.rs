@@ -1,5 +1,6 @@
 use super::item::{Rect, invert, scale_of, shape};
 use super::pool::{BUDGET, Pool, Tex};
+use super::state::Sim;
 use super::{Cached, Image, Op, Src};
 use crate::{GpuImage, Renderer};
 use std::collections::HashMap;
@@ -13,17 +14,22 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) frame: &'a Frame<'f>,
     pub(crate) pool: &'p mut Pool,
     pub(crate) caches: &'p mut HashMap<usize, Cached>,
+    pub(crate) states: &'p mut HashMap<usize, Sim>,
     pub(crate) images: &'a HashMap<String, Image>,
+    pub(crate) luts: &'a [(String, Tex)],
     pub(crate) texts: &'a HashMap<usize, (&'a GpuImage, [f32; 2])>,
     pub(crate) videos: &'a [(&'a str, &'a GpuImage)],
     pub(crate) exts: Vec<&'a GpuImage>,
     pub(crate) screen: Affine,
+    pub(crate) stage: Affine,
     pub(crate) full: Rect,
     pub(crate) srgb: bool,
     pub(crate) format: wgpu::TextureFormat,
+    pub(crate) state_format: wgpu::TextureFormat,
     pub(crate) ops: Vec<Op>,
     pub(crate) reused: u32,
     pub(crate) kept: Vec<usize>,
+    pub(crate) swarms: Option<&'p mut super::swarm::Swarms>,
 }
 
 #[derive(Clone, Copy)]
@@ -92,6 +98,7 @@ impl<'a> Painter<'a, '_, '_> {
             Content::Text { .. } => Some((self.texts.get(&i)?.1, unit)),
             Content::Solid { size, .. } => Some((*size, unit)),
             Content::Spectrum { spectrum, .. } => Some((spectrum.size, unit)),
+            Content::Particles { .. } => Some((self.swarms.as_ref()?.canvas, unit)),
             Content::Shape { shape: s, stroke, .. } => {
                 let (size, ..) = shape(s);
                 let px = 2.0 / scale_of(self.screen.then(d.world)).max(1e-6);
@@ -234,7 +241,8 @@ impl<'a> Painter<'a, '_, '_> {
             Src::Pool(i) => self.pool.busy[i].size(),
             Src::Ext(i) => self.exts[i].size(),
             Src::Cache(k) => self.caches.get(&k).map_or((1, 1), |c| c.tex.size()),
-            Src::White | Src::Clear => (1, 1),
+            Src::State(k, side) => self.states.get(&k).map_or((1, 1), |s| s.tex[side].size()),
+            Src::White | Src::Clear | Src::Lut(_) | Src::Void => (1, 1),
             Src::Canvas => self.full.size(),
         }
     }

@@ -1,0 +1,26 @@
+{
+  "schema": "wallpaper-rs.scene/1",
+  "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#050716" },
+  "clock": { "max_fps": 30 },
+  "scripts": [{ "path": "scripts/orbits.js" }],
+  "layers": [
+    { "id": "space", "type": "shape", "shape": { "rect": { "size": [1920, 1080] } },
+      "gradient": { "radial": true, "from": [0.5, 0.5], "to": [1, 1], "stops": [[0, "#18204a"], [1, "#04050f"]] } },
+    { "id": "paths", "type": "group", "opacity": 0.35, "layers": [
+      { "id": "r1", "type": "shape", "shape": { "ring": { "size": [420, 176], "width": 2 } }, "fill": "#9fb4ff" },
+      { "id": "r2", "type": "shape", "shape": { "ring": { "size": [660, 277], "width": 2 } }, "fill": "#9fb4ff" },
+      { "id": "r3", "type": "shape", "shape": { "ring": { "size": [940, 395], "width": 2 } }, "fill": "#9fb4ff" }
+    ] },
+    { "id": "corona", "type": "shape", "shape": { "ellipse": { "size": [520, 520] } }, "blend": "add",
+      "gradient": { "radial": true, "from": [0.5, 0.5], "to": [1, 0.5], "stops": [[0, "#ffcf6a90"], [0.3, "#ffcf6a31"], [0.65, "#ffcf6a06"], [1, "#ffcf6a00"]] } },
+    { "id": "sun", "type": "shape", "shape": { "ellipse": { "size": [150, 150] } },
+      "gradient": { "radial": true, "from": [0.4, 0.4], "to": [1, 0.5], "stops": [[0, "#fff6d0"], [1, "#ffb43c"]] } },
+    { "id": "inner", "type": "shape", "shape": { "ellipse": { "size": [34, 34] } }, "fill": "#d9a37c", "transform": { "position": [1153, 574], "scale": 0.91 } },
+    { "id": "middle", "type": "shape", "shape": { "ellipse": { "size": [52, 52] } }, "fill": "#e7c98f", "transform": { "position": [677, 611], "scale": 0.93 } },
+    { "id": "outer", "type": "shape", "shape": { "ellipse": { "size": [60, 60] } },
+      "gradient": { "from": [0, 0], "to": [1, 1], "stops": [[0, "#7fd0ff"], [1, "#2c6bb8"]] }, "transform": { "position": [816, 352], "scale": 0.71 } },
+    { "id": "moon", "type": "shape", "shape": { "ellipse": { "size": [16, 16] } }, "fill": "#e9ecf2", "transform": { "position": [886, 352] } },
+    { "id": "time", "type": "text", "text": { "clock": "HH:mm" }, "font": "monospace", "size": 64, "color": "#c9d4ff",
+      "anchor": "top_right", "transform": { "position": [-64, 48] }, "visible": { "prop": "clock" } }
+  ]
+}

@@ -48,6 +48,8 @@ model! {
         pub removable: bool,
         pub imported: bool,
         pub thumb: Option<PathBuf>,
+        #[serde(default)]
+        pub package: Option<PackageInfo>,
     }
 
     pub struct SearchPage {

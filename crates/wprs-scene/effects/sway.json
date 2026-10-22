@@ -1,0 +1,16 @@
+{
+  "id": "sway",
+  "name": { "en": "Sway" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "amplitude", "type": "float", "default": 6, "min": 0, "max": 256, "uses": "time" },
+    { "id": "speed", "type": "float", "default": 0.4, "min": 0, "max": 10 },
+    { "id": "stiffness", "type": "float", "default": 2, "min": 0, "max": 8 },
+    { "id": "spread", "type": "float", "default": 1.5, "min": 0, "max": 64 },
+    { "id": "swing", "type": "bool", "default": false },
+    { "id": "angle", "type": "float", "default": 3, "min": 0, "max": 90 },
+    { "id": "pivot", "type": "vec2", "default": [0.5, 0], "min": -1, "max": 2 }
+  ],
+  "fuse": "uv",
+  "reach": "amplitude"
+}

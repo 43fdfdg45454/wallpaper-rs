@@ -72,9 +72,7 @@ impl Scene {
         c.range("/particles", total as f32, 0.0, MAX_PARTICLES as f32);
         for (id, system) in &self.particles {
             c.id(&format!("/particles/{id}"), id);
-            if system.emitters.is_empty() {
-                c.issues.push(Issue::Empty(format!("/particles/{id}/emitters")));
-            }
+            c.system(&format!("/particles/{id}"), system);
         }
         c.count("/timelines", self.timelines.len(), MAX_TIMELINES);
         c.ids("/timelines", self.timelines.iter().map(|t| t.id.as_str()));

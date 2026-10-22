@@ -51,7 +51,7 @@ QQC2.ItemDelegate {
                 anchors.margins: Kirigami.Units.smallSpacing
 
                 Repeater {
-                    model: [tile.favorite && "emblem-favorite", tile.kind === "video" && "media-playback-start", tile.kind === "package" && "package-x-generic", (tile.missing || tile.broken) && "emblem-error", tile.revoked && "emblem-unavailable"].filter(icon => icon)
+                    model: [tile.favorite && "emblem-favorite", tile.kind === "video" && "media-playback-start", tile.kind === "package" && "package-x-generic", tile.kind === "scene" && "view-media-visualization", (tile.missing || tile.broken) && "emblem-error", tile.revoked && "emblem-unavailable"].filter(icon => icon)
 
                     delegate: Kirigami.Icon {
                         required property string modelData

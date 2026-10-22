@@ -1,5 +1,6 @@
-use super::pipes::Mode;
+use super::pipes::{Mode, Shader};
 use super::pool::{Pool, Tex};
+use super::state::Sim;
 use super::{Cached, Op, SceneStats, Src};
 use crate::{GpuImage, Renderer};
 use std::collections::HashMap;
@@ -7,10 +8,12 @@ use wgpu::{BindGroup, RenderPipeline, TextureFormat as Format};
 
 pub(crate) struct Sources<'a> {
     pub(crate) caches: &'a HashMap<usize, Cached>,
+    pub(crate) states: &'a HashMap<usize, Sim>,
+    pub(crate) luts: &'a [(String, Tex)],
     pub(crate) exts: &'a [&'a GpuImage],
     pub(crate) canvas: &'a Tex,
     pub(crate) output: &'a GpuImage,
-    pub(crate) format: Format,
+    pub(crate) swarms: Option<&'a super::swarm::Swarms>,
 }
 
 impl Sources<'_> {
@@ -23,6 +26,11 @@ impl Sources<'_> {
             Src::White => tex(&pool.white),
             Src::Clear => tex(&pool.clear),
             Src::Canvas => tex(self.canvas),
+            Src::State(k, side) => {
+                self.states.get(&k).map_or_else(|| tex(&pool.clear), |s| tex(&s.tex[side]))
+            }
+            Src::Lut(i) => tex(&self.luts[i].1),
+            Src::Void => tex(&pool.void),
         }
     }
 
@@ -76,15 +84,21 @@ impl Renderer {
                     encoder.copy_texture_to_texture(place(&from, *origin), place(&to, *at), extent);
                     k += 1;
                 }
-                Op::Effect { target, entry, slot, tex } => {
-                    let pipeline = pipes.get(&self.device, entry, Mode::Replace, src.format);
+                Op::Effect { target, shader, slot, tex } => {
+                    let (_, view, texture) = src.get(pool, *target);
+                    let pipeline = pipes.get(&self.device, *shader, Mode::Replace, texture.format());
                     let group = src.group(self, pool, true, tex);
-                    let view = src.get(pool, *target).1;
                     let mut pass = pass(&mut encoder, &view, wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT));
                     pass.set_pipeline(&pipeline);
                     pass.set_bind_group(0, &frame.1, &[]);
                     pass.set_bind_group(1, &group, &[*slot]);
                     pass.draw(0..3, 0..1);
+                    (stats.passes, stats.draws, k) = (stats.passes + 1, stats.draws + 1, k + 1);
+                }
+                Op::Particles { target, system, slot, mode } => {
+                    let view = src.get(pool, *target).1;
+                    let mut pass = pass(&mut encoder, &view, wgpu::LoadOp::Load);
+                    src.swarms.iter().for_each(|s| s.draw(&mut pass, *system, *slot, *mode));
                     (stats.passes, stats.draws, k) = (stats.passes + 1, stats.draws + 1, k + 1);
                 }
                 Op::Clear(target, _) | Op::Draw { target, .. } => {
@@ -97,12 +111,13 @@ impl Renderer {
                         _ => wgpu::LoadOp::Load,
                     };
                     let mut calls: Vec<(RenderPipeline, BindGroup, u32)> = Vec::new();
+                    let format = src.get(pool, target).2.format();
                     while let Some(Op::Draw { target: t, entry, mode, slot, tex }) = ops.get(k) {
                         if *t != target {
                             break;
                         }
                         calls.push((
-                            pipes.get(&self.device, entry, *mode, src.format),
+                            pipes.get(&self.device, Shader::Scene(entry), *mode, format),
                             src.group(self, pool, false, tex),
                             *slot,
                         ));
@@ -121,7 +136,8 @@ impl Renderer {
             }
         }
         if let Some(slot) = resolve {
-            let pipeline = pipes.get(&self.device, "fs_texture", Mode::Replace, Format::Rgba8UnormSrgb);
+            let pipeline =
+                pipes.get(&self.device, Shader::Scene("fs_texture"), Mode::Replace, Format::Rgba8UnormSrgb);
             let group = src.group(self, pool, false, &[Src::Canvas, Src::White, Src::Clear]);
             let mut pass =
                 pass(&mut encoder, &src.output.view, wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT));

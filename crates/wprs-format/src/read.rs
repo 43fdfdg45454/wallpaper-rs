@@ -1,9 +1,11 @@
-use crate::validate::within;
+use crate::validate::{extension, within};
 use crate::{Error, FileEntry, Kind, Limits, MANIFEST, Manifest, Result, check_path, ensure, validate};
+use std::collections::BTreeMap;
 use std::fs::{self, File, FileType, OpenOptions};
 use std::io::{self, BufReader, Read, Seek, Write};
 use std::path::Path;
-use wprs_scene::Scene;
+use std::sync::Arc;
+use wprs_scene::{Lut, MAX_LUT_BYTES, MAX_LUT_TOTAL, Scene};
 use zip::{CompressionMethod, ZipArchive};
 
 const MAX_MANIFEST: u64 = 1 << 20;
@@ -63,6 +65,29 @@ impl<R: Read + Seek> Package<R> {
         let missing =
             scene.paths().into_iter().find(|p| !self.entries.iter().any(|e| e.path == *p)).map(String::from);
         missing.map_or(Ok(scene), |path| Err(Error::Missing(path)))
+    }
+
+    pub fn luts(&mut self, scene: &Scene) -> Result<Vec<(String, Arc<Lut>)>> {
+        let (mut parsed, mut out) = (BTreeMap::<String, Arc<Lut>>::new(), Vec::new());
+        for (id, asset) in scene.assets.iter().filter(|(_, a)| extension(&a.path).as_deref() == Some("cube"))
+        {
+            if let Some(lut) = parsed.get(&asset.path) {
+                out.push((id.clone(), lut.clone()));
+                continue;
+            }
+            let size = self.entries.iter().find(|e| e.path == asset.path).map_or(0, |e| e.size);
+            within("LUT size", size, MAX_LUT_BYTES as u64)?;
+            let lut = Lut::parse(&self.read_file(&asset.path)?)
+                .map_err(|e| Error::Invalid { field: asset.path.clone(), reason: e.to_string() })?;
+            parsed.insert(asset.path.clone(), Arc::new(lut));
+            within(
+                "LUT data",
+                parsed.values().map(|l| l.data.len() as u64 * 12).sum(),
+                MAX_LUT_TOTAL as u64,
+            )?;
+            out.extend(parsed.get(&asset.path).map(|lut| (id.clone(), lut.clone())));
+        }
+        Ok(out)
     }
 
     pub fn read_file(&mut self, path: &str) -> Result<Vec<u8>> {

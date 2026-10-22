@@ -7,7 +7,7 @@ fn search_pages_round_trip() {
         "total": 42, "offset": 0, "items": [{"uid": "01J9Z0X9Z6Q7X4F3K5E1V0R1AB", "kind": "image",
         "title": "Harbour", "width": 3840, "height": 2160, "duration_ms": null, "color": 3_368_703,
         "tags": ["sea"], "rating": 4, "favorite": true, "missing": false, "error": null, "revoked": null,
-        "removable": false, "imported": false, "thumb": "/thumbs/256/9f1c.jpg"}]});
+        "removable": false, "imported": false, "thumb": "/thumbs/256/9f1c.jpg", "package": null}]});
     let page: SearchPage = serde_json::from_value(reply.clone()).unwrap();
     assert_eq!((page.model, page.total, page.items[0].kind), (MODEL, 42, ItemKind::Image));
     assert_eq!(serde_json::to_value(&page).unwrap(), reply);

@@ -1,0 +1,7 @@
+{
+  "id": "scroll",
+  "name": { "en": "Scroll" },
+  "mask_mode": "strength",
+  "params": [{ "id": "speed", "type": "vec2", "default": [0.01, 0], "min": -4, "max": 4, "uses": "time" }],
+  "fuse": "uv"
+}

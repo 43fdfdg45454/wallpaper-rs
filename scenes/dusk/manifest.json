@@ -1,0 +1,40 @@
+{
+  "schema": "wallpaper-rs.wpak/1",
+  "id": "io.github.wallpaper_rs.example.dusk",
+  "version": "1.0.0",
+  "title": "Dusk hills",
+  "description": "Layered hills under a rising sun, with blend modes, a masked reflection, a timeline, depth that follows the pointer once you allow it, and user properties.",
+  "authors": ["wallpaper-rs contributors"],
+  "license": "CC0-1.0",
+  "kind": "scene",
+  "entry": "scene.json",
+  "preview": "preview.jpg",
+  "tags": ["example", "landscape", "depth"],
+  "properties": {
+    "look": { "type": "group", "label": { "en": "Look", "es": "Aspecto" } },
+    "mood": { "type": "combo", "group": "look", "order": 1, "default": "dusk", "label": { "en": "Time of day", "es": "Momento del día" },
+              "options": [{ "value": "dusk", "label": { "en": "Dusk", "es": "Atardecer" } },
+                          { "value": "night", "label": { "en": "Night", "es": "Noche" } }] },
+    "stars": { "type": "bool", "group": "look", "order": 2, "default": true,
+               "label": { "en": "Stars", "es": "Estrellas" } },
+    "light": { "type": "color", "group": "look", "order": 3, "default": "#ff9a5c", "label": { "en": "Light color", "es": "Color de la luz" } },
+    "warmth": { "type": "slider", "group": "look", "order": 4, "min": 0, "max": 1, "step": 0.05, "default": 0.35,
+                "label": { "en": "Light strength", "es": "Intensidad de la luz" } },
+    "sun_size": { "type": "slider", "group": "look", "order": 5, "min": 0.5, "max": 1.5, "step": 0.05, "default": 1, "unit": "×",
+                  "label": { "en": "Sun size", "es": "Tamaño del sol" } },
+    "vignette": { "type": "bool", "group": "look", "order": 6, "default": true, "label": { "en": "Dark corners", "es": "Esquinas oscuras" } },
+    "depth": { "type": "combo", "group": "look", "order": 7, "default": "pointer", "label": { "en": "Depth", "es": "Profundidad" },
+               "options": [{ "value": "pointer", "label": { "en": "Follow the pointer", "es": "Seguir al puntero" } },
+                           { "value": "orbit", "label": { "en": "Slow orbit", "es": "Órbita lenta" } },
+                           { "value": "off", "label": { "en": "Off", "es": "Apagada" } }] },
+    "words": { "type": "group", "order": 1, "label": { "en": "Caption", "es": "Rótulo" } },
+    "caption": { "type": "text", "group": "words", "order": 1, "default": "", "max_len": 40,
+                 "label": { "en": "Text", "es": "Texto" }, "help": { "en": "Shown in the lower left corner.", "es": "Se muestra en la esquina inferior izquierda." } },
+    "caption_color": { "type": "color", "group": "words", "order": 2, "default": "#ffffffd0", "alpha": true,
+                       "label": { "en": "Text color", "es": "Color del texto" } }
+  },
+  "presets": [
+    { "id": "golden", "label": { "en": "Golden hour", "es": "Hora dorada" }, "values": { "mood": "dusk", "light": "#ffb347", "warmth": 0.55 } },
+    { "id": "moonlight", "label": { "en": "Moonlight", "es": "Luz de luna" }, "values": { "mood": "night", "stars": true, "light": "#7f9cff", "warmth": 0.2 } }
+  ]
+}

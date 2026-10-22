@@ -1,6 +1,6 @@
 use crate::validate::{Check, Issue};
 use crate::value::{Band, Param, Value, Vec2};
-use crate::{Color, Ease, Kind, Layer, MAX_DEPTH, MAX_EFFECTS, Mask, Shape, descriptor};
+use crate::{Color, Ease, Kind, Layer, MAX_DEPTH, MAX_EFFECTS, Mask, ParamKind, Shape, descriptor};
 use std::collections::HashMap;
 
 pub(crate) trait Probe: Sized {
@@ -146,11 +146,21 @@ impl Check<'_> {
                     continue;
                 };
                 self.value(&path, value);
+                let asset = matches!(def.kind, ParamKind::Texture | ParamKind::Lut);
                 match value {
                     Value::Fixed(v) if !def.accepts(v) => self.issues.push(Issue::Type(path)),
                     Value::Fixed(Param::Number(n)) => {
                         self.range(&path, *n, def.min.unwrap_or(f32::MIN), def.max.unwrap_or(f32::MAX))
                     }
+                    Value::Fixed(Param::Text(id)) => {
+                        let cube =
+                            self.scene.assets.get(id).map(|a| a.path.to_lowercase().ends_with(".cube"));
+                        self.known(&path, "asset", id, cube.is_some());
+                        if cube.is_some_and(|cube| cube != (def.kind == ParamKind::Lut)) {
+                            self.issues.push(Issue::Type(path));
+                        }
+                    }
+                    Value::Bound(_) if asset => self.issues.push(Issue::Type(path)),
                     _ => {}
                 }
             }

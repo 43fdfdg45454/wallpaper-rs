@@ -7,7 +7,7 @@ pub enum Edit {
     Remove(usize, usize),
     Insert(usize, Vec<ItemSummary>),
     Move(usize, usize),
-    Set(usize, ItemSummary),
+    Set(usize, Box<ItemSummary>),
 }
 
 impl Grid {
@@ -45,7 +45,7 @@ impl Grid {
                 }
             }
             if rows[i].is_some_and(|row| *row != item) {
-                edits.push(Edit::Set(i, item));
+                edits.push(Edit::Set(i, Box::new(item)));
             }
         }
         if rows.len() > count {
@@ -80,7 +80,7 @@ impl Grid {
                 if let Some(thumb) = cached(item) {
                     (self.rows[*i].thumb, self.rows[*i].stale) = (Some(thumb), false);
                 }
-                self.rows[*i].item = item.clone();
+                self.rows[*i].item = item.as_ref().clone();
             }
         }
     }

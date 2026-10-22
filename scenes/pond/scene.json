@@ -1,0 +1,25 @@
+{
+  "schema": "wallpaper-rs.scene/1",
+  "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#06222c" },
+  "clock": { "max_fps": 60 },
+  "layers": [
+    { "id": "water", "type": "shape", "shape": { "rect": { "size": [2000, 1160] } }, "parallax": 0.01,
+      "gradient": { "stops": [[0, "#15506a"], [0.55, "#0d3746"], [1, "#05202a"]] } },
+    { "id": "light", "type": "shape", "shape": { "ellipse": { "size": [1500, 900] } }, "blend": "add", "parallax": 0.02,
+      "gradient": { "radial": true, "from": [0.5, 0.5], "to": [1, 0.5], "stops": [[0, "#5fd0d040"], [0.3, "#5fd0d016"], [0.65, "#5fd0d003"], [1, "#5fd0d000"]] },
+      "transform": { "position": [700, 380] } },
+    { "id": "pads", "type": "group", "parallax": 0.04, "visible": { "prop": "pads" }, "layers": [
+      { "id": "a", "type": "shape", "shape": { "ellipse": { "size": [240, 190] } }, "fill": "#2f7d4d", "transform": { "position": [360, 760], "rotation": 12 } },
+      { "id": "b", "type": "shape", "shape": { "ellipse": { "size": [170, 140] } }, "fill": "#3a8f58", "transform": { "position": [560, 880], "rotation": -20 } },
+      { "id": "c", "type": "shape", "shape": { "ellipse": { "size": [280, 220] } }, "fill": "#2a6f45", "transform": { "position": [1450, 300], "rotation": 30 } },
+      { "id": "d", "type": "shape", "shape": { "ellipse": { "size": [190, 150] } }, "fill": "#3a8f58", "transform": { "position": [1650, 470] } },
+      { "id": "e", "type": "shape", "shape": { "ellipse": { "size": [210, 170] } }, "fill": "#2f7d4d", "transform": { "position": [1180, 860], "rotation": -8 } },
+      { "id": "f1", "type": "shape", "shape": { "star": { "points": 8, "size": 34, "inner": 0.45 } }, "fill": "#f6c8db", "transform": { "position": [390, 740] } },
+      { "id": "f2", "type": "shape", "shape": { "star": { "points": 8, "size": 28, "inner": 0.45 } }, "fill": "#fbe3ec", "transform": { "position": [1470, 280] } }
+    ] },
+    { "id": "ripples", "type": "adjustment", "effects": [
+      { "effect": "water_ripple", "params": { "strength": { "prop": "ripples" }, "radius": 30, "beat": 0, "specular": 0.3 } },
+      { "effect": "vignette", "params": { "intensity": 0.4, "color": "#021016" } }
+    ] }
+  ]
+}

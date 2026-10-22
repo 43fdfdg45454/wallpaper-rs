@@ -1,0 +1,15 @@
+{
+  "id": "reflection",
+  "name": { "en": "Reflection" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "line", "type": "float", "default": 0.6, "min": 0, "max": 1 },
+    { "id": "opacity", "type": "float", "default": 0.6, "min": 0, "max": 1 },
+    { "id": "fade", "type": "float", "default": 1, "min": 0, "max": 1 },
+    { "id": "amplitude", "type": "float", "default": 2, "min": 0, "max": 128, "uses": "time" },
+    { "id": "frequency", "type": "float", "default": 12, "min": 0, "max": 512 },
+    { "id": "speed", "type": "float", "default": 0.5, "min": -20, "max": 20 }
+  ],
+  "passes": [{ "entry": "fs_reflection" }],
+  "reach": "amplitude"
+}

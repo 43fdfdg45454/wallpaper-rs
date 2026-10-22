@@ -1,0 +1,13 @@
+{
+  "id": "perspective",
+  "name": { "en": "Perspective" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "top_left", "type": "vec2", "default": [0.04, 0], "min": -2, "max": 3 },
+    { "id": "top_right", "type": "vec2", "default": [0.96, 0], "min": -2, "max": 3 },
+    { "id": "bottom_right", "type": "vec2", "default": [1, 1], "min": -2, "max": 3 },
+    { "id": "bottom_left", "type": "vec2", "default": [0, 1], "min": -2, "max": 3 }
+  ],
+  "passes": [{ "entry": "fs_perspective" }],
+  "solve": "homography"
+}

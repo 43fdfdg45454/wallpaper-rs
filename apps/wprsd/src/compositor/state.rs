@@ -96,6 +96,7 @@ impl State {
             Command::SetActive(output, active) => {
                 if let Some(o) = self.outputs.get_mut(&output).filter(|o| o.active != active) {
                     o.active = active;
+                    o.shown.scene.iter_mut().filter(|_| !active).for_each(SceneState::pause);
                     let cancelled = !active && o.fade.take().is_some();
                     o.dirty |= cancelled || (active && o.animated());
                 }
@@ -126,6 +127,7 @@ impl State {
             && let Some(scene) = o.shown.scene.as_mut()
         {
             o.dirty |= scene.update(new.clone());
+            super::feed::declare(&name, Some(scene));
             o.shown.content = spec.content;
             return;
         }
@@ -144,7 +146,7 @@ impl State {
         let (content, fit, background, transition) =
             (spec.content, spec.fit, spec.background, spec.transition);
         let scene = match &content {
-            Content::Scene(s) => Some(SceneState::new(s.clone())),
+            Content::Scene(s) => Some(SceneState::new(s.clone(), self.power)),
             _ => None,
         };
         super::feed::declare(&name, scene.as_ref());

@@ -24,11 +24,11 @@ pub(crate) fn load(path: &Path) -> Grants {
     })
 }
 
-pub(crate) fn save(path: &Path, grants: &Grants) -> std::io::Result<()> {
+pub(crate) fn save(path: &Path, value: &impl serde::Serialize) -> std::io::Result<()> {
     let dir = path.parent().unwrap_or(Path::new("."));
     crate::store::private_dir(dir)?;
     let mut file = tempfile::Builder::new().prefix(".tmp-").tempfile_in(dir)?;
-    file.write_all(&serde_json::to_vec_pretty(grants)?)?;
+    file.write_all(&serde_json::to_vec_pretty(value)?)?;
     file.persist(path).map(drop).map_err(|e| e.error)
 }
 

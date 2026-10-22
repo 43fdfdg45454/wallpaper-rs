@@ -38,6 +38,10 @@ calls! {
         SetVolume set_volume(volume: f64);
         SetMuted set_muted(muted: bool);
         PreviewEdit preview_edit(path: str, edit_json: str);
+        GetSceneProperties get_scene_properties(output: str) json;
+        SetSceneProperty set_scene_property(output: str, id: str, value_json: str);
+        ApplyScenePreset apply_scene_preset(output: str, preset: str);
+        ResetSceneProperties reset_scene_properties(output: str);
         Reload reload();
         GetState get_state() json;
         GetSchema get_schema() json;
@@ -113,6 +117,11 @@ calls! {
         Install install(spec: str, allow_stale: bool, allow_downgrade: bool);
         Uninstall uninstall(id: str, version: str);
         ListInstalled list_installed() json;
+    }
+    Inputs1 inputs {
+        Grant grant(scene: str, input: str);
+        Revoke revoke(scene: str, input: str);
+        GetInputs get_inputs() json;
     }
     Sync1 sync {
         AddServer add_server(url: str);

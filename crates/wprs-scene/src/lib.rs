@@ -1,8 +1,13 @@
+mod affine;
 mod animate;
+mod chain;
 mod content;
+mod cube;
 mod easing;
 mod effects;
 mod eval;
+mod form;
+mod fx;
 mod input;
 mod layer;
 mod particles;
@@ -12,26 +17,38 @@ mod resolve;
 mod rules;
 mod runtime;
 mod timeline;
+mod uses;
 mod validate;
 mod value;
+mod wake;
 
+pub use affine::Affine;
 pub use animate::Animate;
+pub use chain::{CHAIN_ENTRY, effect_source, fusion};
 pub use content::{Align, EffectUse, Gradient, Mask, MaskChannel, Shape, Spectrum, SpectrumStyle, Stroke};
+pub use cube::{Lut, LutError, MAX_LUT_BYTES, MAX_LUT_SIZE, MAX_LUT_TOTAL};
 pub use easing::Ease;
 pub use effects::{
-    Cost, Descriptor, EFFECTS_WGSL, FRAME_WGSL, MaskMode, PRELUDE, ParamDef, ParamKind, PassDef, SLOTS, Use,
-    builtin, descriptor,
+    Cost, Descriptor, FRAME_WGSL, Fuse, MaskMode, Output, PRELUDE, Pace, ParamDef, ParamKind, PassDef,
+    RELIEF_WGSL, SLOTS, Solve, State, Tune, Use, builtin, descriptor, register,
 };
-pub use eval::{Affine, Content, Draw, EffectDraw, Frame, Wake};
+pub use eval::{Content, Draw, EffectDraw, Frame};
+pub use form::form;
 pub use input::{AudioFrame, BANDS, LayerOverride, PointerState, ScriptOutputs, TimelineCommand};
 pub use layer::{Anchor, Blend, Kind, Layer, Transform};
-pub use particles::{Emitter, System};
+pub use particles::{
+    Bake, Burst, CPU_PARTICLES, Census, Cloud, Collider, Cue, EmitShape, Emitter, Follow, Force, Frames,
+    Init, MAX_COLLIDERS, MAX_CURVE, MAX_EMITTERS, MAX_FORCES, MAX_POINTS, MAX_PREWARM, Particle, Render,
+    STEP, SUBSTEPS, Sim, Surface, Swarm, System, Target, Trail,
+};
 pub use props::{Choice, Control, Preset, Property, Text, Values, check_presets, effective};
 pub use quality::{Class, Quality, Tier};
-pub use runtime::{Runtime, Uses};
+pub use runtime::Runtime;
 pub use timeline::{Key, Loop, Timeline, local, sample};
+pub use uses::Uses;
 pub use validate::Issue;
 pub use value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2};
+pub use wake::Wake;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;

@@ -1,0 +1,25 @@
+{
+  "schema": "wallpaper-rs.scene/1",
+  "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#07040f" },
+  "clock": { "max_fps": 60 },
+  "layers": [
+    { "id": "room", "type": "shape", "shape": { "rect": { "size": [1920, 1080] } },
+      "gradient": { "radial": true, "from": [0.5, 0.5], "to": [1, 1], "stops": [[0, "#2a1446"], [0.6, "#120a24"], [1, "#05030b"]] } },
+    { "id": "core", "type": "shape", "shape": { "ellipse": { "size": [420, 420] } }, "blend": "add",
+      "gradient": { "radial": true, "from": [0.5, 0.5], "to": [1, 0.5], "stops": [[0, "#ffffff90"], [0.4, "#ff4fd860"], [0.75, "#ff4fd807"], [1, "#ff4fd800"]] },
+      "opacity": { "audio": "level", "scale": 1.5, "offset": 0.35, "clamp": [0, 1], "smooth": 0.1 },
+      "transform": { "scale": { "audio": "bass", "scale": 0.6, "offset": 1, "smooth": 0.08 } } },
+    { "id": "ring", "type": "shape", "shape": { "ring": { "size": [560, 560], "width": 5 } }, "fill": { "prop": "color" },
+      "transform": { "scale": { "audio": "bass", "scale": 0.25, "offset": 1, "smooth": 0.06 } } },
+    { "id": "circle", "type": "spectrum", "size": [760, 760], "style": "circle", "bands": 64, "gap": 0.35,
+      "color": { "prop": "color" }, "visible": { "prop": "show", "map": { "circle": true, "bars": false, "both": true } } },
+    { "id": "bars", "type": "spectrum", "size": [1920, 280], "style": "bars", "bands": 64, "gap": 0.3, "anchor": "bottom",
+      "color": { "prop": "color" }, "opacity": 0.6, "blend": "add",
+      "visible": { "prop": "show", "map": { "circle": false, "bars": true, "both": true } } },
+    { "id": "post", "type": "adjustment", "effects": [
+      { "effect": "chromatic_aberration", "params": { "amount": { "audio": "bass", "scale": 10, "smooth": 0.05 } } },
+      { "effect": "glitch", "enabled": { "prop": "glitch" }, "params": { "beat": true, "shift": 36, "threshold": 0.75 } },
+      { "effect": "vignette", "params": { "intensity": 0.5 } }
+    ] }
+  ]
+}

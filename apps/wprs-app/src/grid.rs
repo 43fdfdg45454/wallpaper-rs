@@ -87,6 +87,13 @@ pub fn info(item: &ItemSummary) -> String {
     [size, time].into_iter().flatten().collect::<Vec<_>>().join(" · ")
 }
 
+pub fn kind(item: &ItemSummary) -> String {
+    match &item.package {
+        Some(p) if p.kind == "scene" => p.kind.clone(),
+        _ => name(item.kind),
+    }
+}
+
 pub fn name(value: impl Serialize) -> String {
     match serde_json::to_value(value) {
         Ok(Value::String(name)) => name,

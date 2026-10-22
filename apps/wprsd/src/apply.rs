@@ -132,6 +132,7 @@ impl Daemon {
     }
 
     pub fn tidy(self: &Arc<Self>) {
+        self.offer_examples();
         self.thumbs.prune(u64::from(self.state().config.library.thumb_cache_mb) << 20);
         let packages = self.store.read(|lib| lib.search("kind:package", now(), 0, u32::MAX));
         let Ok(packages) = packages else { return };

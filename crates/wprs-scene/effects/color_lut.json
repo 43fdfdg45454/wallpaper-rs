@@ -1,0 +1,10 @@
+{
+  "id": "color_lut",
+  "name": { "en": "Color grading" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "lut", "type": "lut", "default": "" },
+    { "id": "intensity", "type": "float", "default": 1, "min": 0, "max": 1 }
+  ],
+  "passes": [{ "entry": "fs_color_lut" }]
+}
