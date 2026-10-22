@@ -33,7 +33,7 @@ dependencies {
     implementation(libs.activity)
 }
 
-val cargo by tasks.registering(Exec::class) {
+val cargo = tasks.register<Exec>("cargo") {
     workingDir = workspace
     commandLine(
         "cargo", "ndk", "-t", "arm64-v8a", "-t", "x86_64", "-P", "31", "-o", rustLibs,
