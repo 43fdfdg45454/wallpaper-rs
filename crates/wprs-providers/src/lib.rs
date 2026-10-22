@@ -14,8 +14,9 @@ pub use wallhaven::Wallhaven;
 pub use webdav::WebDav;
 pub use wikimedia::WikimediaPotd;
 
-use reqwest::redirect::Policy;
+use reqwest::redirect::{Action, Attempt, Policy};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -74,21 +75,43 @@ pub trait Provider: Send + Sync {
 }
 
 pub fn client() -> Result<reqwest::Client> {
-    build(Policy::default())
+    build(Policy::custom(|attempt| redirect(attempt, false)))
 }
 
 pub(crate) fn keyed_client() -> Result<reqwest::Client> {
-    build(Policy::custom(|attempt| match attempt.previous().first() {
-        Some(first) if first.host_str() != attempt.url().host_str() => attempt.stop(),
-        _ if attempt.previous().len() > 10 => attempt.error("too many redirects"),
+    build(Policy::custom(|attempt| redirect(attempt, true)))
+}
+
+fn redirect(attempt: Attempt, same_host: bool) -> Action {
+    let (url, previous) = (attempt.url(), attempt.previous());
+    let downgrade = previous.last().is_some_and(|p| p.scheme() == "https") && url.scheme() != "https";
+    let moved = same_host && previous.first().is_some_and(|first| first.host_str() != url.host_str());
+    let hops = previous.len();
+    match () {
+        _ if downgrade || moved => attempt.stop(),
+        _ if hops > 10 => attempt.error("too many redirects"),
         _ => attempt.follow(),
-    }))
+    }
 }
 
 fn build(redirects: Policy) -> Result<reqwest::Client> {
     let builder = reqwest::Client::builder().user_agent(concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION")));
     let builder = builder.connect_timeout(Duration::from_secs(15)).read_timeout(Duration::from_secs(30));
-    Ok(builder.redirect(redirects).build()?)
+    Ok(builder.referer(false).redirect(redirects).build()?)
+}
+
+pub(crate) fn secure(url: &str) -> String {
+    let local = |host: &str| {
+        host == "localhost"
+            || host.trim_matches(['[', ']']).parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
+    };
+    match reqwest::Url::parse(url) {
+        Ok(mut parsed) if parsed.scheme() == "http" && !parsed.host_str().is_some_and(local) => {
+            let _ = parsed.set_scheme("https");
+            parsed.into()
+        }
+        _ => url.into(),
+    }
 }
 
 pub(crate) async fn json<T: DeserializeOwned>(request: reqwest::RequestBuilder) -> Result<T> {
@@ -115,4 +138,15 @@ pub(crate) fn plain(html: &str) -> String {
 
 pub(crate) fn utc_date(days_ago: u32) -> String {
     (chrono::Utc::now().date_naive() - chrono::Days::new(days_ago.into())).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn upgrades_remote_http_only() {
+        assert_eq!(super::secure("http://apod.nasa.gov/a.jpg"), "https://apod.nasa.gov/a.jpg");
+        assert_eq!(super::secure("http://127.0.0.1:8080/a.jpg"), "http://127.0.0.1:8080/a.jpg");
+        assert_eq!(super::secure("http://[::1]/a.jpg"), "http://[::1]/a.jpg");
+        assert_eq!(super::secure("https://example.org/a.jpg"), "https://example.org/a.jpg");
+    }
 }

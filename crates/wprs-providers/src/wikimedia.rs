@@ -105,6 +105,6 @@ impl Provider for WikimediaPotd {
     }
 
     async fn fetch(&self, item: &Item, cache: &Cache) -> Result<PathBuf> {
-        cache.download(item, self.client.get(&item.url)).await
+        cache.download(item, self.client.get(crate::secure(&item.url))).await
     }
 }

@@ -1,7 +1,7 @@
 use serde_json::json;
 use wiremock::matchers::{basic_auth, body_partial_json, header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
-use wprs_providers::{Cache, Immich, Media, Provider, WebDav, client};
+use wprs_providers::{Cache, Immich, Media, Provider, WebDav};
 
 const ALBUM: &str = "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f";
 const ASSET: &str = "8d2f1c3a-5b6e-4f70-8a91-b2c3d4e5f601";
@@ -14,13 +14,8 @@ fn bytes(body: &[u8]) -> ResponseTemplate {
 
 #[test]
 fn nextcloud_urls_encode_user_and_folder() {
-    let dav = WebDav::nextcloud(
-        client().unwrap(),
-        "https://cloud.example.com/",
-        "alice@example.com",
-        "x",
-        "/My Walls/",
-    );
+    let dav =
+        WebDav::nextcloud("https://cloud.example.com/", "alice@example.com", "x", "/My Walls/").unwrap();
     assert_eq!(dav.url, "https://cloud.example.com/remote.php/dav/files/alice%40example.com/My%20Walls/");
 }
 
@@ -36,7 +31,7 @@ async fn webdav_lists_one_level_and_downloads_with_basic_auth() {
         Mock::given(method("GET")).and(path("/remote.php/dav/files/alice/Wallpapers/Mountain%20Lake.jpg"));
     file.and(basic_auth("alice", "app-password")).respond_with(bytes(b"lake")).expect(1).mount(&server).await;
 
-    let dav = WebDav::nextcloud(client().unwrap(), &server.uri(), "alice", "app-password", "Wallpapers");
+    let dav = WebDav::nextcloud(&server.uri(), "alice", "app-password", "Wallpapers").unwrap();
     let items = dav.list().await.unwrap();
     let found: Vec<_> = items.iter().map(|item| (item.title.as_str(), item.media)).collect();
     assert_eq!(found, [("Mountain Lake.jpg", Media::Image), ("Waves.webm", Media::Video)]);

@@ -1,4 +1,5 @@
 use std::fs::{self, File, FileTimes};
+use std::os::unix::fs::PermissionsExt;
 use std::time::{Duration, UNIX_EPOCH};
 use wiremock::matchers::{header, method};
 use wiremock::{Mock, MockServer, Request, ResponseTemplate};
@@ -46,6 +47,8 @@ async fn cache_revalidates_with_etag_and_last_modified() {
     let (cache, client) = (Cache::new(dir.path(), 1 << 20).unwrap(), client().unwrap());
     let item = sample("sample", format!("{}/wall.png?size=large", server.uri()));
     let first = cache.download(&item, client.get(&item.url)).await.unwrap();
+    let mode = |path: &std::path::Path| fs::metadata(path).unwrap().permissions().mode() & 0o777;
+    assert_eq!((mode(dir.path()), mode(&first)), (0o700, 0o600));
     assert_eq!((first.parent(), first.extension().unwrap().to_str()), (Some(dir.path()), Some("png")));
     let sidecar: serde_json::Value =
         serde_json::from_slice(&fs::read(format!("{}.json", first.display())).unwrap()).unwrap();

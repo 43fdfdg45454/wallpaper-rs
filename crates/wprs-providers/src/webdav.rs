@@ -18,21 +18,17 @@ pub struct WebDav {
 }
 
 impl WebDav {
-    pub fn new(
-        client: Client,
-        url: impl Into<String>,
-        user: impl Into<String>,
-        password: impl Into<String>,
-    ) -> Self {
-        Self { client, url: url.into(), user: user.into(), password: password.into() }
+    pub fn new(url: impl Into<String>, user: impl Into<String>, password: impl Into<String>) -> Result<Self> {
+        let client = crate::keyed_client()?;
+        Ok(Self { client, url: url.into(), user: user.into(), password: password.into() })
     }
 
-    pub fn nextcloud(client: Client, server: &str, user: &str, password: &str, folder: &str) -> Self {
+    pub fn nextcloud(server: &str, user: &str, password: &str, folder: &str) -> Result<Self> {
         let segments = [user].into_iter().chain(folder.split('/')).filter(|segment| !segment.is_empty());
         let path: Vec<_> =
             segments.map(|segment| utf8_percent_encode(segment, SEGMENT).to_string()).collect();
         let url = format!("{}/remote.php/dav/files/{}/", server.trim_end_matches('/'), path.join("/"));
-        Self::new(client, url, user, password)
+        Self::new(url, user, password)
     }
 
     fn auth(&self, request: RequestBuilder) -> RequestBuilder {

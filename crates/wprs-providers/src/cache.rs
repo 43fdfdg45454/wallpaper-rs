@@ -2,7 +2,8 @@ use crate::{Item, Media, Result, path_of};
 use reqwest::header::{ETAG, HeaderName, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::{Deserialize, Serialize};
-use std::fs::{File, FileTimes};
+use std::fs::{File, FileTimes, Permissions};
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use tokio::io::AsyncWriteExt;
@@ -26,6 +27,7 @@ impl Cache {
     pub fn new(dir: impl Into<PathBuf>, limit: u64) -> Result<Self> {
         let dir = dir.into();
         std::fs::create_dir_all(&dir)?;
+        std::fs::set_permissions(&dir, Permissions::from_mode(0o700))?;
         Ok(Self { dir, limit })
     }
 
@@ -62,7 +64,7 @@ impl Cache {
         }
         tokio::fs::rename(&part, &path).await?;
         let temp = sidecar.with_extension("tmp");
-        tokio::fs::write(&temp, serde_json::to_vec(&fresh)?).await?;
+        private(&temp).await?.write_all(&serde_json::to_vec(&fresh)?).await?;
         tokio::fs::rename(&temp, &sidecar).await?;
         self.evict()?;
         Ok(path)
@@ -94,11 +96,15 @@ impl Cache {
 }
 
 async fn store(part: &Path, mut response: Response) -> Result<()> {
-    let mut file = tokio::fs::File::create(part).await?;
+    let mut file = private(part).await?;
     while let Some(chunk) = response.chunk().await? {
         file.write_all(&chunk).await?;
     }
     Ok(file.sync_all().await?)
+}
+
+async fn private(path: &Path) -> std::io::Result<tokio::fs::File> {
+    tokio::fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(path).await
 }
 
 fn touch(path: PathBuf) -> Result<PathBuf> {
