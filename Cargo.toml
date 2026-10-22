@@ -11,6 +11,7 @@ members = [
     "crates/wprs-scene",
     "crates/wprs-library",
     "crates/wprs-client",
+    "crates/wprs-wayland",
     "apps/wprsd",
     "apps/wprs-ctl",
 ]
@@ -33,6 +34,7 @@ wprs-providers = { path = "crates/wprs-providers" }
 wprs-scene = { path = "crates/wprs-scene" }
 wprs-library = { path = "crates/wprs-library" }
 wprs-client = { path = "crates/wprs-client" }
+wprs-wayland = { path = "crates/wprs-wayland" }
 anyhow = "1"
 thiserror = "2"
 rustix = { version = "1", features = ["fs", "mm"] }
@@ -73,6 +75,9 @@ rpassword = "7"
 dirs = "7"
 blake3 = "1"
 libc = "0.2"
+smithay-client-toolkit = { version = "0.21.1", default-features = false, features = ["system"] }
+raw-window-handle = "0.6"
+wayland-backend = { version = "0.3", features = ["dlopen"] }
 
 [profile.dev]
 debug = "line-tables-only"

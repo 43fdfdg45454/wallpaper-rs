@@ -60,51 +60,54 @@ impl Renderer {
         layers: &[Layer<'_>],
         read: impl FnOnce(u32, u32, u32, &[u8]) -> R,
     ) -> Result<R, RenderError> {
-        let visible = || layers.iter().filter(|l| l.opacity > 0.0);
         let rendered = self.scoped(|| {
             let size = target.size();
-            visible().enumerate().for_each(|(i, layer)| self.bind(&mut target.slots, i, layer, size));
-            target.slots.truncate(visible().count());
-            let submission = self.encode(target, visible().map(|l| l.opacity.min(1.0)));
+            let mut encoder = self.encode(&target.view, &mut target.slots, layers, size, &self.pipelines);
+            let layout = wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(padded_row_bytes(size.0)),
+                rows_per_image: Some(size.1),
+            };
+            let copy = wgpu::TexelCopyBufferInfo { buffer: &target.readback, layout };
+            encoder.copy_texture_to_buffer(target.texture.as_image_copy(), copy, target.texture.size());
+            let submission = self.queue.submit([encoder.finish()]);
             self.read(target, submission, read)
         });
         rendered.flatten().inspect_err(|_| target.slots.clear())
     }
 
-    fn encode(&self, target: &Target, opacities: impl Iterator<Item = f32>) -> wgpu::SubmissionIndex {
+    pub(crate) fn encode(
+        &self,
+        view: &wgpu::TextureView,
+        slots: &mut Vec<Slot>,
+        layers: &[Layer<'_>],
+        size: (u32, u32),
+        [opaque, blended]: &[wgpu::RenderPipeline; 2],
+    ) -> wgpu::CommandEncoder {
+        let visible = || layers.iter().filter(|l| l.opacity > 0.0);
+        visible().enumerate().for_each(|(i, layer)| self.bind(slots, i, layer, size));
+        slots.truncate(visible().count());
         let mut encoder = self.device.create_command_encoder(&Default::default());
         let ops =
             wgpu::Operations { load: wgpu::LoadOp::Clear(wgpu::Color::BLACK), store: wgpu::StoreOp::Store };
-        let attachment = wgpu::RenderPassColorAttachment {
-            view: &target.view,
-            depth_slice: None,
-            resolve_target: None,
-            ops,
-        };
+        let attachment =
+            wgpu::RenderPassColorAttachment { view, depth_slice: None, resolve_target: None, ops };
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("wprs-render pass"),
             color_attachments: &[Some(attachment)],
             ..Default::default()
         });
-        for (i, (slot, opacity)) in target.slots.iter().zip(opacities).enumerate() {
-            let fading = i > 0 && opacity < 1.0;
-            pass.set_pipeline(if fading { &self.blended } else { &self.opaque });
+        for (i, (slot, layer)) in slots.iter().zip(visible()).enumerate() {
+            let fading = i > 0 && layer.opacity < 1.0;
+            pass.set_pipeline(if fading { blended } else { opaque });
             if fading {
-                let c = f64::from(opacity);
+                let c = f64::from(layer.opacity);
                 pass.set_blend_constant(wgpu::Color { r: c, g: c, b: c, a: c });
             }
             pass.set_bind_group(0, &slot.group, &[]);
             pass.draw(0..3, 0..1);
         }
         drop(pass);
-        let (width, height) = target.size();
-        let layout = wgpu::TexelCopyBufferLayout {
-            offset: 0,
-            bytes_per_row: Some(padded_row_bytes(width)),
-            rows_per_image: Some(height),
-        };
-        let copy = wgpu::TexelCopyBufferInfo { buffer: &target.readback, layout };
-        encoder.copy_texture_to_buffer(target.texture.as_image_copy(), copy, target.texture.size());
-        self.queue.submit([encoder.finish()])
+        encoder
     }
 }

@@ -1,4 +1,4 @@
-use super::output::{Output, smoothstep};
+use super::output::{Output, Sink, smoothstep};
 use super::slot::PlayerSlot;
 use super::state::State;
 use crate::fatal;
@@ -18,9 +18,8 @@ fn interval(output: &Output, max_fps: u32) -> Duration {
     Duration::from_secs(1) / fps.max(1)
 }
 
-fn deadline(output: &Output, streaming: bool, max_fps: u32, now: Instant) -> Option<Instant> {
-    let wanted = output.dirty && (streaming || output.stale);
-    wanted.then(|| output.last_render.map_or(now, |t| t + interval(output, max_fps)))
+fn deadline(output: &Output, open: bool, max_fps: u32, now: Instant) -> Option<Instant> {
+    (output.dirty && open).then(|| output.last_render.map_or(now, |t| t + interval(output, max_fps)))
 }
 
 impl State {
@@ -40,9 +39,9 @@ impl State {
 
     pub(super) fn next_deadline(&self) -> Option<Instant> {
         let (now, max_fps) = (Instant::now(), self.settings.max_fps);
-        let streaming = |name: &String| self.exporter.is_streaming(name);
-        let renders = self.outputs.iter().filter_map(|(name, o)| deadline(o, streaming(name), max_fps, now));
-        renders.chain(self.players.values().filter_map(|s| s.due)).min()
+        let open = |name: &String, o: &Output| o.open(self.exporter.is_streaming(name));
+        let renders = self.outputs.iter().filter_map(|(name, o)| deadline(o, open(name, o), max_fps, now));
+        renders.chain(self.players.values().filter_map(|s| s.due)).chain(self.starvation()).min()
     }
 
     pub(super) fn render_due(&mut self) {
@@ -51,10 +50,10 @@ impl State {
         let shared = (&self.renderer, &*self.exporter, &self.players);
         for (name, output) in &mut self.outputs {
             let streaming = shared.1.is_streaming(name);
-            if deadline(output, streaming, max_fps, now).is_none_or(|at| at > now) {
+            if deadline(output, output.open(streaming), max_fps, now).is_none_or(|at| at > now) {
                 continue;
             }
-            if !streaming {
+            if !output.watched(streaming) {
                 output.fade = None;
             }
             if let Err(e) = draw(name, output, shared, transition, now) {
@@ -77,17 +76,25 @@ fn draw(
 ) -> anyhow::Result<()> {
     let (renderer, exporter, players) = shared;
     let progress = output.progress(now, transition);
-    let target = match &mut output.target {
-        Some(target) => target,
-        empty => empty.insert(renderer.create_target(output.size.0, output.size.1)?),
-    };
     let shown = output.shown.layer(players, if output.fade.is_some() { smoothstep(progress) } else { 1.0 });
     let from = output.fade.as_ref().map(|(from, _)| from.layer(players, 1.0));
     let layers = [from.unwrap_or(shown), shown];
-    let written =
-        renderer.render_layers_with(target, &layers[usize::from(from.is_none())..], |w, h, s, d| {
-            exporter.write_frame(name, VideoFrame { width: w, height: h, stride: s, data: d })
-        });
+    let layers = &layers[usize::from(from.is_none())..];
+    let written = match &mut output.sink {
+        Sink::Stream(target) => {
+            let target = match target {
+                Some(target) => target,
+                empty => empty.insert(renderer.create_target(output.size.0, output.size.1)?),
+            };
+            renderer.render_layers_with(target, layers, |w, h, s, d| {
+                exporter.write_frame(name, VideoFrame { width: w, height: h, stride: s, data: d })
+            })
+        }
+        Sink::Surface(screen) => match screen.present(renderer, layers, name) {
+            Ok(false) => return Ok(()),
+            presented => presented.map(|_| Ok(())),
+        },
+    };
     if let Err(RenderError::DeviceLost(reason)) = &written {
         fatal(&format!("the GPU stopped responding ({reason})"));
     }
@@ -97,8 +104,10 @@ fn draw(
     output.fade = output.fade.take().filter(|_| progress < 1.0);
     output.dirty = output.fading();
     output.stale = output.missing_frame || output.fade.is_some();
-    if !output.animated() {
-        output.target = None;
+    if !output.animated()
+        && let Sink::Stream(target) = &mut output.sink
+    {
+        *target = None;
     }
     Ok(())
 }

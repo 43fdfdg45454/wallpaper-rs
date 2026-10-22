@@ -1,5 +1,6 @@
-use super::output::{Output, Shown};
+use super::output::{Output, Shown, Sink};
 use super::slot::PlayerSlot;
+use super::surface::Screen;
 use super::{Command, Content, OutputStatus, Settings, Spec};
 use image::RgbaImage;
 use std::collections::{BTreeMap, HashMap};
@@ -9,6 +10,7 @@ use std::time::Instant;
 use wprs_core::Fit;
 use wprs_pipewire::Exporter;
 use wprs_render::{GpuImage, Renderer, decode_image};
+use wprs_wayland::Window;
 
 pub(super) struct State {
     pub(super) renderer: Renderer,
@@ -19,6 +21,7 @@ pub(super) struct State {
     pub(super) tx: mpsc::Sender<Command>,
     pub(super) status: Arc<Mutex<BTreeMap<String, OutputStatus>>>,
     pub(super) on_status: Box<dyn Fn(Vec<String>) + Send>,
+    pub(super) windows: HashMap<String, Window>,
 }
 
 impl State {
@@ -29,8 +32,9 @@ impl State {
         tx: mpsc::Sender<Command>,
         status: Arc<Mutex<BTreeMap<String, OutputStatus>>>,
     ) -> Self {
-        let (outputs, players, on_status) = (BTreeMap::new(), HashMap::new(), Box::new(|_| {}));
-        Self { renderer, exporter, settings, outputs, players, tx, status, on_status }
+        let (outputs, players, windows) = (BTreeMap::new(), HashMap::new(), HashMap::new());
+        let on_status = Box::new(|_| {});
+        Self { renderer, exporter, settings, outputs, players, tx, status, on_status, windows }
     }
 
     pub(super) fn run(&mut self, rx: &mpsc::Receiver<Command>) {
@@ -53,6 +57,7 @@ impl State {
             self.sync_players();
             self.take_video_frames();
             self.start_fades();
+            self.check_starvation();
             self.render_due();
             self.publish_status();
         }
@@ -61,7 +66,9 @@ impl State {
     fn handle(&mut self, command: Command) -> bool {
         match command {
             Command::Configure(output, size, spec) => self.configure(output, size, spec),
-            Command::Remove(output) => drop(self.outputs.remove(&output)),
+            Command::Remove(output) => drop((self.outputs.remove(&output), self.windows.remove(&output))),
+            Command::Attach(output, window) => self.attach(output, window),
+            Command::Frame(output) => self.frame_done(&output),
             Command::SetActive(output, active) => {
                 if let Some(o) = self.outputs.get_mut(&output).filter(|o| o.active != active) {
                     o.active = active;
@@ -96,7 +103,11 @@ impl State {
         let transition = !self.settings.transition.is_zero();
         match self.outputs.get_mut(&name) {
             Some(output) => output.show(shown, size, transition),
-            None => drop(self.outputs.insert(name, Output::new(size, shown))),
+            None => {
+                let sink =
+                    self.windows.remove(&name).map_or(Sink::Stream(None), |w| Sink::Surface(Screen::new(w)));
+                self.outputs.insert(name, Output::new(size, shown, sink));
+            }
         }
     }
 

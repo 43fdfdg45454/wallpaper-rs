@@ -11,6 +11,7 @@ wprs-core.workspace = true
 wprs-render.workspace = true
 wprs-pipewire.workspace = true
 wprs-video.workspace = true
+wprs-wayland.workspace = true
 futures-util.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true

@@ -4,8 +4,8 @@ Fondos de pantalla para Linux, libres y escritos en Rust: imágenes y vídeos en
 transiciones, un fondo distinto por pantalla y pausa automática cuando no se ven.
 
 Un daemon dibuja el fondo de cada pantalla con la GPU y KDE Plasma 6 lo muestra a través
-de un plugin de fondo. Todo se gestiona igual desde la terminal (`wprs-ctl`) o desde el icono
-de la bandeja del sistema.
+de un plugin de fondo; en Sway, Hyprland, river, niri y COSMIC el daemon lo dibuja él mismo. Todo
+se gestiona igual desde la terminal (`wprs-ctl`) o desde el icono de la bandeja del sistema.
 
 ## Cómo funciona
 
@@ -83,6 +83,38 @@ configuración vive en `~/.var/app/io.github.wallpaper_rs.WallpaperRs/config/wal
 desinstalar: `flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs remove | sh` y
 `flatpak uninstall --user io.github.wallpaper_rs.WallpaperRs`.
 
+## Sway, Hyprland, river, niri y COSMIC
+
+Aquí no hace falta plugin: `wprsd` pone en cada pantalla una superficie en la capa de fondo
+(`wlr-layer-shell`) y dibuja en ella con la GPU, sin copias. Se instala con el `.tar.gz` y se
+arranca desde la configuración del compositor:
+
+```sh
+exec wprsd                       # Sway (~/.config/sway/config)
+exec-once = wprsd                # Hyprland (~/.config/hypr/hyprland.conf)
+riverctl spawn wprsd             # river (~/.config/river/init)
+spawn-at-startup "wprsd"         # niri (~/.config/niri/config.kdl)
+```
+
+En COSMIC, añádelo a las aplicaciones de inicio y elige un color sólido como fondo propio del
+escritorio. Si `install.sh` dejó activo el servicio de usuario, pásale el entorno gráfico desde la
+misma configuración en vez de lanzar el binario: `systemctl --user import-environment
+WAYLAND_DISPLAY && systemctl --user restart wprsd` (en Hyprland, importa también
+`HYPRLAND_INSTANCE_SIGNATURE`).
+
+`wprsd` elige solo: con Plasma (`plasmashell` en el bus o `KDE` en `XDG_CURRENT_DESKTOP`) usa los
+streams del plugin y en otro escritorio Wayland con `wlr-layer-shell`, sus propias superficies.
+`wprsd --backend streams|layer-shell` lo fuerza. Las pantallas se llaman como las anuncia el
+compositor (`DP-1`, `HDMI-A-1`…; las muestran `swaymsg -t get_outputs`, `hyprctl monitors`,
+`niri msg outputs` o `wlr-randr`) y esos nombres son los de `-o` y de la configuración. Las
+pantallas que se conectan o se quitan con la sesión abierta se siguen solas, y la escala
+fraccional se respeta.
+
+Los vídeos se pausan cuando una ventana tapa la pantalla: el compositor deja de pedir fotogramas
+al fondo, una ventana activa a pantalla completa o maximizada lo confirma y, en Hyprland, también
+su IPC. El Flatpak no sirve en estos escritorios: no dejan usar `wlr-layer-shell` ni la
+información de ventanas a las aplicaciones aisladas.
+
 ## Uso desde la terminal
 
 ```sh
@@ -143,7 +175,8 @@ una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
 
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
 libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`. Para las pruebas: `mesa-vulkan-drivers
-pipewire wireplumber dbus-x11 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`.
+pipewire wireplumber dbus-x11 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`, y `sway grim
+foot` para la de Sway.
 
 ```sh
 cargo test --workspace                   # pruebas unitarias, de render y de vídeo
@@ -151,6 +184,7 @@ cargo build -p wprs-pipewire --example probe
 cargo build -p wprsd -p wprs-ctl
 cp target/debug/examples/probe target/debug/
 scripts/integration-test.sh target/debug # D-Bus + PipeWire + daemon de punta a punta
+scripts/sway-test.sh target/debug        # superficies layer-shell en un Sway sin pantalla
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
 scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
 ```
@@ -167,14 +201,18 @@ flatpak-builder --user --install --install-deps-from=flathub --force-clean \
 
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre
-dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una captura.
+dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una captura. También
+ejecuta `scripts/sway-test.sh` en un Sway sin pantalla: captura cada salida con `grim`, conecta y
+quita una pantalla y comprueba que el vídeo se pausa bajo una ventana a pantalla completa y con
+la pantalla apagada.
 
 | Ruta | Contenido |
 |------|-----------|
 | `crates/wprs-core` | Configuración, modos de ajuste, nombres D-Bus |
-| `crates/wprs-render` | Renderizador wgpu sin ventana |
+| `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
 | `crates/wprs-video` | Reproducción de vídeo en bucle con GStreamer |
+| `crates/wprs-wayland` | Superficies layer-shell, escala, ritmo de fotogramas y oclusión en Wayland |
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |

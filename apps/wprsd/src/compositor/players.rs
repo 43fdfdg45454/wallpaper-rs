@@ -10,7 +10,7 @@ use wprs_pipewire::Exporter;
 fn demand(outputs: &BTreeMap<String, Output>, exporter: &Exporter, path: &PathBuf) -> ((u32, u32), bool) {
     let users = outputs.iter().filter(|(_, o)| o.uses_video(path));
     users.fold(((0, 0), false), |((w, h), on), (name, o)| {
-        ((w.max(o.size.0), h.max(o.size.1)), on || (o.active && exporter.is_streaming(name)))
+        ((w.max(o.size.0), h.max(o.size.1)), on || (o.active && o.watched(exporter.is_streaming(name))))
     })
 }
 
@@ -58,7 +58,11 @@ impl State {
                 Content::Video(_) => "video",
             };
             let running = slot.is_some_and(|s| s.playing && s.player.is_some());
-            (kind, o.active && running && error.is_none() && self.exporter.is_streaming(name), error)
+            (
+                kind,
+                o.active && running && error.is_none() && o.watched(self.exporter.is_streaming(name)),
+                error,
+            )
         };
         let mut published = lock(&self.status);
         let unchanged = published.len() == self.outputs.len()

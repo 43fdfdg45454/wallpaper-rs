@@ -1,5 +1,3 @@
-use crate::draw::TARGET_FORMAT;
-
 pub(crate) fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
         binding,
@@ -24,7 +22,11 @@ pub(crate) fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout 
     })
 }
 
-pub(crate) fn pipelines(device: &wgpu::Device, layout: &wgpu::BindGroupLayout) -> [wgpu::RenderPipeline; 2] {
+pub(crate) fn pipelines(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    format: wgpu::TextureFormat,
+) -> [wgpu::RenderPipeline; 2] {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("wprs-render shader"),
         source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
@@ -53,7 +55,7 @@ pub(crate) fn pipelines(device: &wgpu::Device, layout: &wgpu::BindGroupLayout) -
                 module: &shader,
                 entry_point: Some("fs_main"),
                 compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState { blend, ..TARGET_FORMAT.into() })],
+                targets: &[Some(wgpu::ColorTargetState { blend, ..format.into() })],
             }),
             primitive: Default::default(),
             depth_stencil: None,

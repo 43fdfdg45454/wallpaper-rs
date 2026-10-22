@@ -4,15 +4,17 @@ mod device;
 mod draw;
 mod readback;
 mod shader;
+mod surface;
 mod texture;
 
 pub use decode::decode_image;
-pub use device::Renderer;
+pub use device::{Display, Renderer};
 pub use draw::Target;
 pub use readback::TargetLimits;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
+pub use surface::Surface;
 pub use texture::GpuImage;
 use wprs_core::Fit;
 
@@ -32,6 +34,8 @@ pub enum RenderError {
     Readback(String),
     #[error("the GPU stopped responding: {0}")]
     DeviceLost(String),
+    #[error("cannot present to the surface: {0}")]
+    Surface(String),
 }
 
 #[derive(Clone, Copy)]

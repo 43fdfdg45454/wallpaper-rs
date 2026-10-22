@@ -94,6 +94,16 @@ reports it covered. `SetOutputCovered` from a client without a claim applies to 
 Output names are trimmed and an empty name means `default` in `RequestStream`, `HoldStream`,
 `ReleaseStream` and `SetOutputCovered`.
 
+## Layer-shell outputs
+
+Outside Plasma, on Wayland compositors that offer `zwlr_layer_shell_v1`, the daemon shows each
+`wl_output` itself on a background layer surface (`wprsd --backend auto|streams|layer-shell`).
+These outputs are named after the compositor's output names and appear in `GetState` like
+streams, with one claim owned by the daemon: `ReleaseStream` and `SetOutputCovered` do not
+apply to them. They count as covered while the compositor stops sending frame callbacks, while
+an active fullscreen or maximized window is on them, or, on Hyprland, while their workspace has
+a fullscreen window; `pause.when_covered` then pauses their video as for streams.
+
 ## `io.github.wallpaper_rs.Daemon1`
 
 ### `RequestStream(s output, u width, u height) → (u node_id, t serial)`

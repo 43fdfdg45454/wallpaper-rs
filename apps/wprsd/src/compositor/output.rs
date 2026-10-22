@@ -1,4 +1,5 @@
 use super::slot::PlayerSlot;
+use super::surface::Screen;
 use super::{Content, Spec};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -28,6 +29,11 @@ impl Shown {
     }
 }
 
+pub(super) enum Sink {
+    Stream(Option<Target>),
+    Surface(Screen),
+}
+
 pub(super) struct Output {
     pub(super) size: (u32, u32),
     pub(super) shown: Shown,
@@ -36,15 +42,15 @@ pub(super) struct Output {
     pub(super) dirty: bool,
     pub(super) missing_frame: bool,
     pub(super) stale: bool,
-    pub(super) target: Option<Target>,
+    pub(super) sink: Sink,
     pub(super) last_render: Option<Instant>,
 }
 
 impl Output {
-    pub(super) fn new(size: (u32, u32), shown: Shown) -> Self {
-        let (fade, target, last_render) = (None, None, None);
+    pub(super) fn new(size: (u32, u32), shown: Shown, sink: Sink) -> Self {
+        let (fade, last_render) = (None, None);
         let (active, dirty, missing_frame, stale) = (true, true, false, true);
-        Self { size, shown, fade, active, dirty, missing_frame, stale, target, last_render }
+        Self { size, shown, fade, active, dirty, missing_frame, stale, sink, last_render }
     }
 
     pub(super) fn show(&mut self, shown: Shown, size: (u32, u32), transition: bool) {
@@ -52,8 +58,23 @@ impl Output {
         let animate = transition && !resized && self.active && self.last_render.is_some();
         let old = std::mem::replace(&mut self.shown, shown);
         self.fade = (animate && !old.content.same_source(&self.shown.content)).then_some((old, None));
-        self.target = self.target.take().filter(|_| !resized);
+        if let Sink::Stream(target) = &mut self.sink
+            && resized
+        {
+            *target = None;
+        }
         (self.dirty, self.stale) = (true, true);
+    }
+
+    pub(super) fn open(&self, streaming: bool) -> bool {
+        match &self.sink {
+            Sink::Stream(_) => streaming || self.stale,
+            Sink::Surface(screen) => screen.ready(),
+        }
+    }
+
+    pub(super) fn watched(&self, streaming: bool) -> bool {
+        streaming || matches!(self.sink, Sink::Surface(_))
     }
 
     pub(super) fn layers(&self) -> impl Iterator<Item = &Shown> {

@@ -3,6 +3,7 @@ mod output;
 mod players;
 mod slot;
 mod state;
+mod surface;
 
 use crate::fatal;
 use image::RgbaImage;
@@ -15,6 +16,7 @@ use std::time::{Duration, SystemTime};
 use wprs_core::Fit;
 use wprs_pipewire::Exporter;
 use wprs_render::{RenderError, Renderer, TargetLimits};
+use wprs_wayland::Window;
 
 #[derive(Clone)]
 pub enum Content {
@@ -73,6 +75,8 @@ pub struct OutputStatus {
 enum Command {
     Configure(String, (u32, u32), Spec),
     Remove(String),
+    Attach(String, Window),
+    Frame(String),
     SetActive(String, bool),
     Settings(Settings),
     Wake,
@@ -108,6 +112,11 @@ impl Compositor {
         move || drop(tx.send(Command::Wake))
     }
 
+    pub fn framer(&self) -> impl Fn(&str) + Send + Sync + 'static {
+        let tx = self.tx.clone();
+        move |output| drop(tx.send(Command::Frame(output.into())))
+    }
+
     pub fn check_target(&self, width: u32, height: u32) -> Result<(), RenderError> {
         self.limits.check(width, height)
     }
@@ -125,6 +134,10 @@ impl Compositor {
 
     pub fn remove(&self, output: &str) {
         self.send(Command::Remove(output.into()))
+    }
+
+    pub fn attach(&self, output: &str, window: Window) {
+        self.send(Command::Attach(output.into(), window))
     }
 
     pub fn set_active(&self, output: &str, active: bool) {

@@ -1,3 +1,4 @@
+use crate::draw::TARGET_FORMAT;
 use crate::readback::{MAX_READBACK_BYTES, TargetLimits};
 use crate::shader::{bind_group_layout, pipelines};
 use crate::texture::{GpuImage, create_image};
@@ -5,11 +6,14 @@ use crate::{RenderError, log_allowed};
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 
+pub type Display = Box<dyn wgpu::wgt::WgpuHasDisplayHandle>;
+
 pub struct Renderer {
+    pub(crate) instance: wgpu::Instance,
+    pub(crate) gpu: wgpu::Adapter,
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
-    pub(crate) opaque: wgpu::RenderPipeline,
-    pub(crate) blended: wgpu::RenderPipeline,
+    pub(crate) pipelines: [wgpu::RenderPipeline; 2],
     pub(crate) layout: wgpu::BindGroupLayout,
     pub(crate) clamp: wgpu::Sampler,
     pub(crate) repeat: wgpu::Sampler,
@@ -20,20 +24,24 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new() -> Result<Self, RenderError> {
-        pollster::block_on(Self::new_async())
+        Self::with_display(None)
     }
 
-    async fn new_async() -> Result<Self, RenderError> {
+    pub fn with_display(display: Option<Display>) -> Result<Self, RenderError> {
+        pollster::block_on(Self::new_async(display))
+    }
+
+    async fn new_async(display: Option<Display>) -> Result<Self, RenderError> {
         let mut desc = wgpu::InstanceDescriptor::new_without_display_handle_from_env();
         desc.backends = wgpu::Backends::from_env().unwrap_or(wgpu::Backends::VULKAN | wgpu::Backends::GL);
+        desc.display = display;
         let options = wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::LowPower,
             ..Default::default()
         };
-        let adapter = wgpu::Instance::new(desc)
-            .request_adapter(&options)
-            .await
-            .map_err(|e| RenderError::NoAdapter(e.to_string()))?;
+        let instance = wgpu::Instance::new(desc);
+        let adapter =
+            instance.request_adapter(&options).await.map_err(|e| RenderError::NoAdapter(e.to_string()))?;
         let offered = adapter.limits();
         let required_limits = wgpu::Limits {
             max_texture_dimension_2d: offered.max_texture_dimension_2d,
@@ -56,7 +64,6 @@ impl Renderer {
             max_buffer_size: granted.max_buffer_size.min(MAX_READBACK_BYTES),
         };
         let layout = bind_group_layout(&device);
-        let [opaque, blended] = pipelines(&device, &layout);
         let sampler = |mode| {
             device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("wprs-render sampler"),
@@ -69,8 +76,7 @@ impl Renderer {
         };
         let info = adapter.get_info();
         Ok(Self {
-            opaque,
-            blended,
+            pipelines: pipelines(&device, &layout, TARGET_FORMAT),
             clamp: sampler(wgpu::AddressMode::ClampToEdge),
             repeat: sampler(wgpu::AddressMode::Repeat),
             placeholder: create_image(&device, &queue, &[0; 4], 1, 1, 4),
@@ -79,6 +85,8 @@ impl Renderer {
             layout,
             device,
             queue,
+            instance,
+            gpu: adapter,
         })
     }
 

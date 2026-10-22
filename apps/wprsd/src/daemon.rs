@@ -54,7 +54,7 @@ pub struct Daemon {
 }
 
 impl Daemon {
-    pub fn new(config_path: PathBuf) -> anyhow::Result<Self> {
+    pub fn new(config_path: PathBuf, display: Option<wprs_render::Display>) -> anyhow::Result<Self> {
         let store = Store::open();
         let (config, config_error) = load(&config_path, &store)
             .map_or_else(|e| (Config::default(), Some(e.to_string())), |config| (config, None));
@@ -65,7 +65,7 @@ impl Daemon {
             }
             None => tracing::debug!(path = %config_path.display(), "configuration loaded"),
         }
-        let renderer = Renderer::new().context("cannot initialize the GPU renderer")?;
+        let renderer = Renderer::with_display(display).context("cannot initialize the GPU renderer")?;
         let adapter = renderer.adapter().to_owned();
         tracing::info!("renderer ready");
         tracing::debug!(adapter, "GPU adapter");

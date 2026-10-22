@@ -13,6 +13,7 @@ mod items;
 mod jobs;
 mod library1;
 mod pool;
+mod present;
 mod scan;
 mod schema;
 mod service;
@@ -36,12 +37,17 @@ use wprs_core::{Config, dbus};
 use zbus::fdo::{DBusProxy, RequestNameFlags};
 
 #[derive(Parser)]
-#[command(version, about = "Renders wallpapers and serves them to the desktop over D-Bus and PipeWire")]
+#[command(
+    version,
+    about = "Renders wallpapers and shows them through PipeWire streams or layer-shell surfaces"
+)]
 struct Args {
     #[arg(long, help = "Configuration file to use instead of the default one")]
     config: Option<PathBuf>,
     #[arg(long, hide = true)]
     worker: bool,
+    #[arg(long, value_enum, default_value = "auto", help = "How wallpapers reach the desktop")]
+    backend: present::Backend,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -82,7 +88,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
     if bus.name_has_owner(dbus::BUS_NAME.try_into()?).await? {
         return Err(taken());
     }
-    let daemon = Arc::new(tokio::task::spawn_blocking(move || daemon::Daemon::new(config_path)).await??);
+    let session = present::select(args.backend, &bus).await?;
+    let display = session.as_ref().map(|s| Box::new(s.display()) as wprs_render::Display);
+    let daemon =
+        Arc::new(tokio::task::spawn_blocking(move || daemon::Daemon::new(config_path, display)).await??);
     let vanished = bus.receive_name_owner_changed_with_args(&[(2, "")]).await?;
     tokio::spawn(watch::clients(vanished, daemon.clone()));
     let server = connection.object_server();
@@ -106,6 +115,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
         e => e.into(),
     })?;
     tracing::info!("serving {} on the session bus", dbus::BUS_NAME);
+    session.map(|s| present::start(s, daemon.clone())).transpose()?;
     tokio::spawn(flatpak::request_background(connection.clone()));
     tokio::spawn(watch::battery(daemon.clone()));
     tokio::spawn(watch::screen_lock(connection.clone(), daemon.clone()));
