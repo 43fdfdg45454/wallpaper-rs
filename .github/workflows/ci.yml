@@ -241,6 +241,8 @@ jobs:
           path: dist
 
       - name: Virtual DRM devices
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-drm.sh
 
       - name: Run Plasma session test

@@ -96,6 +96,8 @@ expect "s['outputs']['HEADLESS-1']['edited']" True
 echo "span checks passed"
 
 ticks() { awk '{print $14 + $15}' "/proc/$wprsd/stat"; }
+settled() { local start; start=$(ticks); sleep 0.5; [ $(($(ticks) - start)) -le 2 ]; }
+wait_for 10 settled || fail "the daemon did not settle after the edit"
 before=$(ticks); sleep 2
 [ $(($(ticks) - before)) -le 20 ] || fail "the daemon kept working with a still wallpaper"
 echo "idle check passed"

@@ -7,14 +7,22 @@ sudo apt-get update -q
 sudo apt-get install -y -q "linux-modules-extra-$kernel" || echo "no extra modules package for $kernel"
 sudo depmod -a
 
-get() { curl -sSfL --retry 6 --retry-delay 10 --retry-all-errors "$@"; }
+get() {
+  local base auth=()
+  [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
+  for base in "https://raw.githubusercontent.com/torvalds/linux/$2" "https://gitlab.com/linux-kernel/linux/-/raw/$2"; do
+    [[ $base == *gitlab* ]] && auth=()
+    curl -sSfL --retry 3 --retry-delay 5 --retry-all-errors "${auth[@]}" -o "$1" "$base/$3" && return
+  done
+  return 1
+}
 
 fetch() {
-  local base=https://raw.githubusercontent.com/torvalds/linux/$2/drivers/gpu/drm/$1 files name
-  get -o "$3/Makefile" "$base/Makefile"
+  local dir=drivers/gpu/drm/$1 files name
+  get "$3/Makefile" "$2" "$dir/Makefile"
   files=$(grep -oE '\b[a-z0-9_]+\.o\b' "$3/Makefile" | sed 's/\.o$/.c/' | grep -vx "$1.c" | sort -u)
   while [ -n "$files" ]; do
-    for name in $files; do get -o "$3/$name" "$base/$name"; done
+    for name in $files; do get "$3/$name" "$2" "$dir/$name"; done
     files=$(cat "$3"/*.[ch] | sed -n 's/^#include "\([^"/]*\)"/\1/p' | sort -u \
       | while read -r name; do [ -e "$3/$name" ] || echo "$name"; done)
   done
