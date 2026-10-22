@@ -81,7 +81,7 @@ fn valid_name(name: &str) -> bool {
         && name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
 }
 
-fn valid_id(id: &str) -> bool {
+pub(crate) fn valid_id(id: &str) -> bool {
     id.len() <= 255 && id.split('.').count() >= 2 && id.split('.').all(valid_name)
 }
 

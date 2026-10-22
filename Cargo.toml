@@ -39,6 +39,9 @@ zip = { version = "9", default-features = false, features = ["deflate"] }
 sha2 = "0.11"
 rusqlite = { version = "0.40", features = ["bundled"] }
 ulid = "3"
+base64 = "0.23"
+minisign-verify = "0.3"
+minisign = "0.10"
 semver = "1"
 tempfile = "3"
 chrono = { version = "0.4.41", default-features = false, features = ["std", "serde"] }
@@ -76,3 +79,6 @@ debug = false
 lto = "thin"
 codegen-units = 4
 strip = true
+
+[profile.dev.package.scrypt]
+opt-level = 3

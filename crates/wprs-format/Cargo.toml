@@ -1,10 +1,13 @@
 [package]
 name = "wprs-format"
-description = "The .wpak wallpaper package format: manifest, validation, reading and building"
+description = "The .wpak wallpaper package format: manifest, validation, reading, building and signed repositories"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+
+[features]
+sign = ["dep:minisign"]
 
 [dependencies]
 serde.workspace = true
@@ -13,6 +16,26 @@ thiserror.workspace = true
 semver.workspace = true
 sha2.workspace = true
 zip.workspace = true
+chrono.workspace = true
+base64.workspace = true
+minisign-verify.workspace = true
+minisign = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true
+
+[[test]]
+name = "sign"
+required-features = ["sign"]
+
+[[test]]
+name = "repo"
+required-features = ["sign"]
+
+[[test]]
+name = "client"
+required-features = ["sign"]
+
+[[test]]
+name = "update"
+required-features = ["sign"]

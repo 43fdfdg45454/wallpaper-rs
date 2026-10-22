@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 pub const MANIFEST: &str = "manifest.json";
+pub const SIGNATURE: &str = "manifest.json.minisig";
 
 const MAX_PATH: usize = 255;
 const RATIO_FLOOR: u64 = 1 << 20;
@@ -50,8 +51,8 @@ pub fn validate(manifest: &Manifest, files: &[FileEntry], limits: &Limits) -> Re
         check_path(&file.path)?;
         ensure(!file.symlink, || Error::Symlink(file.path.clone()))?;
         ensure(seen.insert(file.path.to_lowercase()), || Error::Duplicate(file.path.clone()))?;
-        let allowed =
-            file.path == MANIFEST || extension(&file.path).is_some_and(|e| allows(manifest.kind, &e));
+        let allowed = [MANIFEST, SIGNATURE].contains(&file.path.as_str())
+            || extension(&file.path).is_some_and(|e| allows(manifest.kind, &e));
         ensure(allowed, || Error::Extension { path: file.path.clone(), kind: manifest.kind })?;
         within("file size", file.size, limits.max_file_size)?;
         total = total.saturating_add(file.size);

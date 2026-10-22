@@ -47,13 +47,13 @@ jobs:
         run: cargo fmt --all --check
 
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
       - name: Unit and render tests
         env:
           WPRS_REQUIRE_GPU: "1"
           WPRS_REQUIRE_VIDEO: "1"
-        run: cargo test --workspace --locked
+        run: cargo test --workspace --all-features --locked
 
       - name: Shell scripts
         run: shellcheck packaging/*.sh scripts/*.sh
