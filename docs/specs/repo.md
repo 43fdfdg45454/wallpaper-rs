@@ -185,6 +185,8 @@ carry no cookies or identifiers.
 
 `wprs_providers::HttpFetch` is the blocking HTTP implementation: a generic `User-Agent`, no
 cookies or `Referer`, `https://` or `http://` to a loopback host only (redirects included, never
-from HTTPS to HTTP), `file://` URLs and plain paths served by `FileFetch`, a 10 s connect
-timeout, and an abort (`io::ErrorKind::TimedOut`) when less than 8 KiB arrive in 30 s. A shared
-cancel flag, checked for every chunk, fails the transfer with `io::ErrorKind::Interrupted`.
+from HTTPS to HTTP), redirects only to the origins of the bases it was asked to read or given with
+`within(bases)` (a repository's URL and the mirrors of its signed root), `file://` URLs and plain
+paths served by `FileFetch`, a 10 s connect timeout, and an abort (`io::ErrorKind::TimedOut`)
+when less than 8 KiB arrive in 30 s. A shared cancel flag, checked for every chunk, fails the
+transfer with `io::ErrorKind::Interrupted`.

@@ -118,7 +118,7 @@ impl Daemon {
         let dir = self.store.cache.join("previews");
         private_dir(&dir).ok()?;
         let download = dir.join(format!(".tmp-{}", NEXT.fetch_add(1, Ordering::Relaxed)));
-        let fetch = HttpFetch::new(Arc::default()).ok()?;
+        let fetch = HttpFetch::new(Arc::default()).ok()?.within(&self.bases(&repo_id));
         let found = wprs_format::preview(&self.store.data, &fetch, &repo_id, &id, &version, &download);
         if !found.inspect_err(|_| tracing::debug!("cannot download a preview")).ok()? {
             return None;

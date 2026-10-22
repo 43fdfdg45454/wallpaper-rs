@@ -78,19 +78,19 @@ impl Playlists {
     }
 
     async fn start(&self, playlist: String, output: String) -> Result<()> {
-        library(&self.0)?.run(move |d| d.start(&playlist, &output)).await
+        library(&self.0)?.render(move |d| d.start(&playlist, &output)).await
     }
 
     async fn stop(&self, output: String) -> Result<()> {
-        library(&self.0)?.run(move |d| d.stop(&output)).await
+        library(&self.0)?.render(move |d| d.stop(&output)).await
     }
 
     async fn next(&self, output: String) -> Result<()> {
-        library(&self.0)?.run(move |d| d.step(&output, true)).await
+        library(&self.0)?.render(move |d| d.step(&output, true)).await
     }
 
     async fn previous(&self, output: String) -> Result<()> {
-        library(&self.0)?.run(move |d| d.step(&output, false)).await
+        library(&self.0)?.render(move |d| d.step(&output, false)).await
     }
 
     #[zbus(out_args("json"))]

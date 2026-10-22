@@ -90,6 +90,18 @@ impl Jobs {
         let matches = |e: &&Entry| e.job.kind == kind && e.job.target == target && active(&e.job);
         lock(&self.list).iter().filter(matches).map(|e| e.job.id).collect()
     }
+
+    pub fn scanning(&self) -> bool {
+        let library =
+            |kind| matches!(kind, JobKind::Scan | JobKind::Import | JobKind::Analyze | JobKind::ProviderSync);
+        lock(&self.list).iter().any(|e| library(e.job.kind) && active(&e.job))
+    }
+
+    pub fn wait(&self, ids: &[u64]) {
+        while lock(&self.list).iter().any(|e| ids.contains(&e.job.id) && active(&e.job)) {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
 }
 
 impl Ctl {
@@ -196,5 +208,36 @@ impl Daemon {
             self.finish_job(id, Err(Error::Cancelled));
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(id: u64, kind: JobKind) -> Entry {
+        let (target, state) = (String::new(), JobState::Running);
+        let (finished_at, error, output) = (None, None, None);
+        let job =
+            Job { id, kind, target, state, done: 0, total: 0, started_at: 0, finished_at, error, output };
+        Entry { job, cancel: Arc::default() }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn waiting_covers_only_the_given_jobs() {
+        let jobs = Arc::new(Jobs::new());
+        lock(&jobs.list).extend([entry(1, JobKind::RepoRefresh), entry(2, JobKind::Install)]);
+        let _turn = jobs.repos.acquire().await.unwrap();
+        assert!(!jobs.scanning());
+        let waiter = tokio::task::spawn_blocking({
+            let jobs = jobs.clone();
+            move || jobs.wait(&[2])
+        });
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert!(!waiter.is_finished());
+        jobs.with(2, |e| e.job.state = JobState::Cancelled);
+        tokio::time::timeout(Duration::from_secs(2), waiter).await.unwrap().unwrap();
+        lock(&jobs.list).push(entry(3, JobKind::Analyze));
+        assert!(active(&jobs.list()[0]) && jobs.scanning());
     }
 }

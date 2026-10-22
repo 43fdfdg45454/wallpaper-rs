@@ -12,70 +12,139 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
+msgid "Pause when a window covers the screen"
+msgstr "Pausar cuando una ventana cubra la pantalla"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
+msgid "Pause on battery"
+msgstr "Pausar al funcionar con batería"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
+msgid "Pause while the screen is locked"
+msgstr "Pausar mientras la pantalla esté bloqueada"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
+msgid "Frames per second"
+msgstr "Fotogramas por segundo"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
+msgid "Transition"
+msgstr "Transición"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
+msgid "Transition length (ms)"
+msgstr "Duración de la transición (ms)"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
 msgctxt "@item:inlistbox wallpaper fit mode"
 msgid "Fill"
 msgstr "Rellenar"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
 msgctxt "@item:inlistbox wallpaper fit mode"
 msgid "Fit"
 msgstr "Ajustar"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
 msgctxt "@item:inlistbox wallpaper fit mode"
 msgid "Stretch"
 msgstr "Estirar"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
 msgctxt "@item:inlistbox wallpaper fit mode"
 msgid "Center"
 msgstr "Centrar"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
 msgctxt "@item:inlistbox wallpaper fit mode"
 msgid "Tile"
 msgstr "Mosaico"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
-msgid "background color"
-msgstr "color de fondo"
+msgctxt "@item:inlistbox wallpaper transition"
+msgid "Fade"
+msgstr "Fundido"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
+msgctxt "@item:inlistbox wallpaper transition"
+msgid "None"
+msgstr "Ninguna"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
+msgid "The wallpaper-rs daemon is not running"
+msgstr "El servicio de wallpaper-rs no se está ejecutando"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
+msgid "wallpaper-rs could not be opened"
+msgstr "No se pudo abrir wallpaper-rs"
 
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
-#, kde-format
-msgid "playing"
-msgstr "reproduciendo"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-#, kde-format
-msgid "paused"
-msgstr "en pausa"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-#, kde-format
 msgid "Every screen"
 msgstr "Todas las pantallas"
 
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
 #, kde-format
-msgid "Choose…"
-msgstr "Elegir…"
+msgid "Playlist %1 (%2 of %3)"
+msgstr "Lista %1 (%2 de %3)"
 
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
-#, kde-format
 msgid "Background color"
 msgstr "Color de fondo"
 
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
-#, kde-format
+#: integrations/plasma-tray/contents/ui/Settings.qml
+msgid "Choose…"
+msgstr "Elegir…"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+msgid "No playlist"
+msgstr "Sin lista"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+msgid "Previous"
+msgstr "Anterior"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+msgid "Next"
+msgstr "Siguiente"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+msgid "Unfavorite"
+msgstr "Quitar de favoritos"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+msgid "Favorite"
+msgstr "Añadir a favoritos"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
 msgid "Images and videos"
 msgstr "Imágenes y vídeos"
+
+#: integrations/plasma-tray/contents/ui/Panel.qml
+#, kde-format
+msgid "No profile"
+msgstr "Sin perfil"
+
+#: integrations/plasma-tray/contents/ui/Panel.qml
+#, kde-format
+msgid "Profile: %1"
+msgstr "Perfil: %1"
 
 #: integrations/plasma-tray/contents/ui/Panel.qml
 #, kde-format
@@ -98,56 +167,8 @@ msgid "Open wallpaper-rs"
 msgstr "Abrir wallpaper-rs"
 
 #: integrations/plasma-tray/contents/ui/Settings.qml
-#, kde-format
-msgid "Pause when a window covers the screen"
-msgstr "Pausar cuando una ventana cubra la pantalla"
-
-#: integrations/plasma-tray/contents/ui/Settings.qml
-#, kde-format
-msgid "Pause on battery"
-msgstr "Pausar al funcionar con batería"
-
-#: integrations/plasma-tray/contents/ui/Settings.qml
-#, kde-format
-msgid "Pause while the screen is locked"
-msgstr "Pausar mientras la pantalla esté bloqueada"
-
-#: integrations/plasma-tray/contents/ui/Settings.qml
-#, kde-format
-msgid "Frames per second:"
-msgstr "Fotogramas por segundo:"
-
-#: integrations/plasma-tray/contents/ui/Settings.qml
-#, kde-format
-msgid "Transition:"
-msgstr "Transición:"
-
-#: integrations/plasma-tray/contents/ui/Settings.qml
-#, kde-format
-msgid "Transition length (ms):"
-msgstr "Duración de la transición (ms):"
-
-#: integrations/plasma-tray/contents/ui/Settings.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper transition"
-msgid "Fade"
-msgstr "Fundido"
-
-#: integrations/plasma-tray/contents/ui/Settings.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper transition"
-msgid "None"
-msgstr "Ninguna"
-
-#: integrations/plasma-tray/contents/ui/main.qml
-#, kde-format
-msgid "The wallpaper-rs daemon is not running"
-msgstr "El servicio de wallpaper-rs no se está ejecutando"
-
-#: integrations/plasma-tray/contents/ui/main.qml
-#, kde-format
-msgid "wallpaper-rs could not be opened"
-msgstr "No se pudo abrir wallpaper-rs"
+msgid "Clear"
+msgstr "Borrar"
 
 #: integrations/plasma-tray/contents/ui/main.qml
 #, kde-format

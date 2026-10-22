@@ -1,5 +1,6 @@
+use crate::compositor::lock;
 use crate::daemon::Daemon;
-use crate::error::{Result, failed, invalid, not_found};
+use crate::error::{Error, Result, failed, invalid, not_found};
 use crate::items::reply;
 use crate::jobs::now;
 use crate::repos::{fetcher, newer};
@@ -105,12 +106,15 @@ impl Daemon {
             }
             (None, None) => return Err(not_found(format!("{spec} is not offered"))),
         };
-        let spec = full(Some(&repo_id));
+        let (spec, bases, from) = (full(Some(&repo_id)), self.bases(&repo_id), repo_id.clone());
         Ok(self.start_job(JobKind::Install, &format!("{repo_id}/{id}@{version}"), move |d, ctl| {
+            if lock(&d.remote.removing).contains(&from) {
+                return Err(Error::Cancelled);
+            }
             let record = match done {
                 Some(done) => done,
                 None => {
-                    let fetch = Progress(fetcher(ctl)?, |done| ctl.progress(done, size));
+                    let fetch = Progress(fetcher(ctl, &bases)?, |done| ctl.progress(done, size));
                     wprs_format::install(&d.store.data, &fetch, &spec, now(), allow_stale, allow_downgrade)?
                 }
             };

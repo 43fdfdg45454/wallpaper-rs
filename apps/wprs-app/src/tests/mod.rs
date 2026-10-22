@@ -3,7 +3,8 @@ mod fake;
 use crate::args::{INVALID, carries_secret, fixture};
 use crate::bus::{Daemon, url};
 use crate::calls::{CALLS, dispatch};
-use crate::grid::{Grid, Shape, compose, info, name};
+use crate::diff::Edit;
+use crate::grid::{Grid, compose, info, name};
 use crate::{app, tr};
 use serde_json::{Value, json};
 use std::path::Path;
@@ -24,6 +25,11 @@ fn qml() -> Vec<String> {
         .collect()
 }
 
+fn iface(line: &str) -> &'static str {
+    let ifaces = ["Library1", "Playlists1", "Profiles1", "Providers1", "Repos1"];
+    ifaces.into_iter().find(|i| line.contains(&format!("\"{i}\""))).unwrap_or("Daemon1")
+}
+
 fn literals<'a>(text: &'a str, call: &str) -> Vec<&'a str> {
     text.split(call).skip(1).filter_map(|rest| rest.strip_prefix('"')?.split('"').next()).collect()
 }
@@ -38,22 +44,58 @@ fn filters_compose_one_query() {
     assert_eq!(compose("", "", false, ""), "");
 }
 
+fn reload(grid: &mut Grid, uids: &[&str]) -> Vec<Edit> {
+    let edits = grid.plan(uids.iter().map(|uid| summary(uid)).collect());
+    edits.iter().for_each(|edit| grid.apply(edit));
+    edits
+}
+
 #[test]
-fn reloads_keep_thumbnails_and_selection() {
+fn reloads_update_rows_in_place() {
     let mut grid = Grid { size: 256, ..Grid::default() };
-    grid.store(0, 3, vec![summary("A"), summary("B")]);
-    assert!(matches!(grid.shape(2, &[summary("C")]), Shape::Append));
-    grid.store(2, 3, vec![summary("C")]);
+    grid.apply(&Edit::Insert(0, vec![summary("A"), summary("B"), summary("C")]));
     assert_eq!(grid.wanted(0, 9), ["A", "B", "C"]);
-    assert_eq!(grid.thumb("B", "/tmp/b.jpg"), [1]);
-    assert_eq!(grid.toggle(1, true), [1]);
-    assert_eq!(grid.toggle(2, false), [2]);
-    assert!(matches!(grid.shape(0, &[summary("A"), summary("B")]), Shape::Shrink(2, 3)));
-    grid.store(0, 2, vec![summary("A"), summary("B")]);
-    assert_eq!((grid.rows[1].thumb.as_deref(), grid.rows[1].selected), (Some("/tmp/b.jpg"), true));
-    assert_eq!(grid.selected().map(|i| i.uid.as_str()).collect::<Vec<_>>(), ["B"]);
-    assert!(matches!(grid.shape(0, &[summary("B")]), Shape::Reset));
-    assert_eq!(grid.toggle(usize::MAX, true), [1]);
+    assert_eq!((grid.thumb("B", "/tmp/b.jpg"), grid.toggle(1, true)), (vec![1], vec![1]));
+    let renamed = ItemSummary { title: "Renamed".into(), ..summary("A") };
+    let edits = grid.plan(vec![summary("N"), summary("M"), summary("B"), renamed.clone()]);
+    let expected = [
+        Edit::Remove(2, 3),
+        Edit::Insert(0, vec![summary("N"), summary("M")]),
+        Edit::Move(3, 2),
+        Edit::Set(3, renamed),
+    ];
+    assert_eq!(edits, expected);
+    edits.iter().for_each(|edit| grid.apply(edit));
+    let uids: Vec<_> = grid.rows.iter().map(|r| r.item.uid.as_str()).collect();
+    assert_eq!((uids, grid.rows[3].item.title.as_str()), (vec!["N", "M", "B", "A"], "Renamed"));
+    assert_eq!((grid.rows[2].thumb.as_deref(), grid.rows[2].selected), (Some("/tmp/b.jpg"), true));
+    assert_eq!(reload(&mut grid, &["N", "M", "B", "A"]), [Edit::Set(3, summary("A"))]);
+    assert!(reload(&mut grid, &["N", "M", "B", "A"]).is_empty());
+    let twice =
+        [Edit::Remove(3, 4), Edit::Remove(1, 2), Edit::Move(1, 0), Edit::Insert(1, vec![summary("B")])];
+    assert_eq!(reload(&mut grid, &["B", "B", "N"]), twice);
+    assert_eq!(reload(&mut grid, &["B"]), [Edit::Remove(2, 3), Edit::Remove(1, 2)]);
+    assert_eq!((grid.rows.len(), grid.rows[0].selected), (1, true));
+}
+
+#[test]
+fn changed_items_refresh_their_thumbnails() {
+    let mut grid = Grid { size: 256, ..Grid::default() };
+    grid.apply(&Edit::Insert(0, vec![summary("A"), summary("B")]));
+    grid.thumb("A", "/tmp/a.jpg");
+    grid.thumb("B", "/tmp/b.jpg");
+    assert!(grid.wanted(0, 9).is_empty());
+    grid.stale(&["B".into()]);
+    assert_eq!(grid.wanted(0, 9), ["B"]);
+    assert_eq!(grid.thumb("B", "/tmp/b.jpg"), Vec::<usize>::new());
+    grid.stale(&[]);
+    assert_eq!(grid.wanted(0, 9), ["A", "B"]);
+    assert_eq!(grid.thumb("A", "/tmp/a2.jpg"), [0]);
+    let cached = ItemSummary { thumb: Some("/tmp/b3.jpg".into()), ..summary("B") };
+    grid.apply(&Edit::Set(1, cached));
+    assert_eq!(grid.rows[1].thumb.as_deref(), Some("/tmp/b3.jpg"));
+    assert!(grid.wanted(0, 9).is_empty());
+    assert_eq!(grid.toggle(usize::MAX, true), Vec::<usize>::new());
 }
 
 #[test]
@@ -92,7 +134,7 @@ fn catalogs_are_parsed_and_chosen_by_locale() {
 #[test]
 fn every_qml_string_has_a_spanish_translation() {
     let spanish = tr::catalog(&["es".into()]);
-    for text in qml().iter().flat_map(|file| literals(file, "App.tr(")) {
+    for text in qml().iter().flat_map(|file| literals(file, ".tr(")) {
         let translated = spanish.get(text).unwrap_or_else(|| panic!("no Spanish translation for {text:?}"));
         let marks = |s: &str| (1..4).filter(|n| s.contains(&format!("%{n}"))).count();
         assert_eq!(marks(text), marks(translated), "{text:?}");
@@ -102,10 +144,30 @@ fn every_qml_string_has_a_spanish_translation() {
 #[test]
 fn qml_calls_name_members_of_the_call_table() {
     for line in qml().iter().flat_map(|file| file.lines().map(String::from).collect::<Vec<_>>()) {
-        for member in literals(&line, "App.query(").into_iter().chain(literals(&line, "App.act(")) {
-            let iface = ["Library1", "Playlists1", "Profiles1", "Providers1", "Repos1"];
-            let iface = iface.into_iter().find(|i| line.contains(&format!("\"{i}\""))).unwrap_or("Daemon1");
+        for member in literals(&line, ".query(").into_iter().chain(literals(&line, ".act(")) {
+            let iface = iface(&line);
             assert!(CALLS.iter().any(|(i, m, _)| (*i, *m) == (iface, member)), "{iface}.{member} in {line}");
+        }
+    }
+}
+
+#[test]
+fn tray_calls_carry_their_signatures() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/plasma-tray/contents/ui");
+    let files = std::fs::read_dir(dir).unwrap().map(|f| std::fs::read_to_string(f.unwrap().path()).unwrap());
+    let text: String = files.collect();
+    for line in text.lines() {
+        for member in literals(line, "act(").into_iter().chain(literals(line, "query(")) {
+            let iface = iface(line);
+            let call = CALLS.iter().find(|(i, m, _)| (*i, *m) == (iface, member));
+            let (_, _, args) = call.unwrap_or_else(|| panic!("{iface}.{member} in {line}"));
+            let signature =
+                text.split(&format!("\"{iface}.{member}\": \"(")).nth(1).and_then(|s| s.split(')').next());
+            assert_eq!(
+                signature.unwrap_or_default().replace("as", "s").len(),
+                args.len(),
+                "{iface}.{member}"
+            );
         }
     }
 }

@@ -35,6 +35,7 @@ pub struct Remote {
     pub credits: Mutex<HashMap<PathBuf, Credit>>,
     pub poke: Notify,
     pub repo_errors: Mutex<HashMap<String, String>>,
+    pub removing: Mutex<HashSet<String>>,
     pub previews: Mutex<Vec<(String, String)>>,
     pub preview_wake: Notify,
 }
@@ -52,7 +53,7 @@ pub fn claim<'a>(set: &'a Mutex<HashSet<String>>, id: &str) -> Option<Claim<'a>>
 }
 
 pub fn start(daemon: &Arc<Daemon>, bus: zbus::Connection) {
-    daemon.remote.keyring.set(Keyring(bus)).ok();
+    daemon.remote.keyring.set(Keyring::new(bus)).ok();
     for (id, value) in daemon.state().config.providers.iter() {
         if let Err(e) = entry(value) {
             tracing::warn!(provider = id, "skipping a provider whose configuration cannot be used");

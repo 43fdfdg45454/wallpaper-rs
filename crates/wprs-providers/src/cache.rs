@@ -65,7 +65,9 @@ impl Cache {
         }
         tokio::fs::rename(&part, &path).await?;
         let temp = sidecar.with_extension("tmp");
-        private(&temp).await?.write_all(&serde_json::to_vec(&fresh)?).await?;
+        let mut file = private(&temp).await?;
+        file.write_all(&serde_json::to_vec(&fresh)?).await?;
+        file.flush().await?;
         tokio::fs::rename(&temp, &sidecar).await?;
         Ok(path)
     }

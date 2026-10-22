@@ -69,6 +69,17 @@ pub mod qobject {
         #[inherit]
         unsafe fn end_remove_rows(self: Pin<&mut ItemModel>);
         #[inherit]
+        unsafe fn begin_move_rows(
+            self: Pin<&mut ItemModel>,
+            parent: &QModelIndex,
+            first: i32,
+            last: i32,
+            destination: &QModelIndex,
+            row: i32,
+        ) -> bool;
+        #[inherit]
+        unsafe fn end_move_rows(self: Pin<&mut ItemModel>);
+        #[inherit]
         unsafe fn begin_reset_model(self: Pin<&mut ItemModel>);
         #[inherit]
         unsafe fn end_reset_model(self: Pin<&mut ItemModel>);

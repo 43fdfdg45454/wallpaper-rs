@@ -59,11 +59,13 @@ Kirigami.ScrollablePage {
         Repeater {
             model: App.outputs.concat([""])
 
-            delegate: OutputCard {
+            delegate: OutputRow {
                 required property string modelData
 
                 Layout.fillWidth: true
+                daemon: App
                 name: modelData
+                info: (App.state.outputs ?? {})[modelData] ?? {}
                 playlists: page.playlists
             }
         }

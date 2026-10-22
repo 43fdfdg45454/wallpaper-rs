@@ -61,7 +61,8 @@ ColumnLayout {
             }
         }
 
-        FieldForm {
+        Settings {
+            daemon: App
             model: App.schema.rules ?? []
             values: editor.playlist.rules ?? {}
             onEdited: (key, value) => App.act("SetRule", [editor.uid, key, value], "Playlists1")

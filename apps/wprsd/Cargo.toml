@@ -29,7 +29,7 @@ wprs-format.workspace = true
 blake3.workspace = true
 dirs.workspace = true
 libc.workspace = true
-rustix.workspace = true
+rustix = { workspace = true, features = ["time"] }
 tempfile.workspace = true
 wprs-providers.workspace = true
 reqwest.workspace = true

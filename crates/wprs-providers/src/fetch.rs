@@ -3,19 +3,23 @@ use reqwest::StatusCode;
 use reqwest::Url;
 use reqwest::blocking::Client;
 use reqwest::redirect::Policy;
+use std::collections::HashSet;
 use std::io::{self, Read, Write};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 use wprs_format::{Fetch, FileFetch};
 
 const WINDOW: Duration = Duration::from_secs(30);
 const MIN_BYTES: u64 = 8 << 10;
 
+type Origins = Arc<Mutex<HashSet<String>>>;
+
 pub struct HttpFetch {
     client: Client,
     cancel: Arc<AtomicBool>,
     window: Duration,
+    origins: Origins,
 }
 
 impl HttpFetch {
@@ -24,10 +28,21 @@ impl HttpFetch {
     }
 
     pub fn with_window(cancel: Arc<AtomicBool>, window: Duration) -> Result<Self> {
-        let policy = Policy::custom(|a| if allowed(a.url()) { redirect(a, false) } else { a.stop() });
+        let origins = Origins::default();
+        let known = origins.clone();
+        let policy = Policy::custom(move |a| {
+            let within = declared(&known).contains(&origin(a.url()));
+            if within && allowed(a.url()) { redirect(a, false) } else { a.stop() }
+        });
         let builder = Client::builder().user_agent(AGENT).referer(false).redirect(policy);
         let client = builder.connect_timeout(Duration::from_secs(10)).timeout(window).build()?;
-        Ok(Self { client, cancel, window })
+        Ok(Self { client, cancel, window, origins })
+    }
+
+    pub fn within(self, bases: &[String]) -> Self {
+        let parsed = bases.iter().filter_map(|base| Url::parse(base).ok());
+        declared(&self.origins).extend(parsed.map(|url| origin(&url)));
+        self
     }
 
     fn live(&self) -> io::Result<()> {
@@ -57,6 +72,7 @@ impl Fetch for HttpFetch {
                 "plain http is only allowed to loopback hosts",
             ));
         }
+        declared(&self.origins).insert(origin(&url));
         let response = self.client.get(url).send();
         let mut response = response.map_err(|e| io::Error::new(kind(&e), e.without_url()))?;
         match response.status() {
@@ -82,6 +98,14 @@ impl Fetch for HttpFetch {
         }
         Ok(true)
     }
+}
+
+fn declared(origins: &Origins) -> MutexGuard<'_, HashSet<String>> {
+    origins.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+fn origin(url: &Url) -> String {
+    url.origin().ascii_serialization()
 }
 
 fn allowed(url: &Url) -> bool {

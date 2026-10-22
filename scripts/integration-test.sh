@@ -408,6 +408,9 @@ expect "s['outputs']['TEST-8']['preset'], s['outputs']['TEST-8']['fit']" "(None,
 ctl preset save - Wide fit=fill >/dev/null
 [ "$(ctl preset ls --json | js "[(p['name'], p['item'], p['value']['fit']) for p in r['presets']]")" = "[('Wide', None, 'fill')]" ] ||
   fail "global presets: $(ctl preset ls --json)"
+morning=$(ctl profile save Morning)
+ctl profile use Morning && expect "s['profile']" "$morning"
+[ "$(stat -c %a "$XDG_DATA_HOME/wallpaper-rs/profile-hold.json")" = 600 ] || fail "the manual profile choice is not private"
 ctl release TEST-8 && expect "list(s['outputs'])" "[]"
 ctl lib unsource "$rot_source"
 echo "profile and preset checks passed"
@@ -491,7 +494,16 @@ refused "use Repos1.Uninstall" Library1 Remove asb 1 "$item" false
 ctl pkg uninstall org.example.dawn
 [ "$(ctl pkg ls --json | jq_ "len(r['packages'])")" = 0 ] || fail "the package was kept"
 [ "$(ctl lib search kind:package --json | jq_ "r['total']")" = 0 ] || fail "the package item was kept"
+python3 -c "import socket, time; s = socket.socket(); s.bind(('127.0.0.1', 0)); s.listen(8)
+print(s.getsockname()[1], flush=True); time.sleep(600)" >"$WORK/stall.port" & pids+=($!)
+wait_for 5 test -s "$WORK/stall.port" || fail "the stalled server did not start"
+stalled=$(bus Repos1 Add s "http://127.0.0.1:$(cat "$WORK/stall.port")/?fingerprint=$(printf '%064d' 0)" | out "d[0]")
+running() { [ "$(reply "r['job']['state']" Daemon1 GetJob t "$1")" = running ]; }
+wait_for 10 running "$stalled" || fail "the stalled repository job: $(bus Daemon1 GetJob t "$stalled")"
+SECONDS=0
 ctl remote rm "${repo:0:8}"
+[ "$SECONDS" -lt 5 ] || fail "removing a repository waited for the job of another repository"
+bus Daemon1 CancelJob t "$stalled" >/dev/null
 [ "$(ctl remote ls --json | jq_ "len(r['repos'])")" = 0 ] || fail "the repository was kept"
 [ ! -e "$preview" ] || fail "the preview was kept with its repository"
 echo "repository checks passed"
@@ -550,6 +562,21 @@ ctl release TEST-9
 shown "$right" 0 255 0
 ctl release TEST-10 && expect "list(s['outputs'])" "[]"
 echo "edit and span checks passed"
+
+kill "$daemon"
+wait "$daemon" 2>/dev/null || true
+RUST_LOG=$log "$BIN/wprsd" >"$WORK/restarted.log" 2>&1 & daemon=$!; pids+=("$daemon")
+wait_for 30 ctl state || fail "the daemon did not start again"
+ctl stream TEST-8 160 90 >/dev/null
+sleep 4
+expect "s['profile']" "$morning"
+ctl stream TEST-9 160 90 >/dev/null
+sleep 3
+ctl release TEST-9
+evening() { [ "$(field "s['profile']")" = "$profile" ]; }
+wait_for 10 evening || fail "the manual profile choice outlived a change of outputs: $(ctl state)"
+ctl release TEST-8 && expect "list(s['outputs'])" "[]"
+echo "manual profile choice kept across a restart"
 
 restored() {
   read -r _ _ _ serial < <(ctl stream TEST-1 320 180) || return 1

@@ -1,6 +1,5 @@
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::HashMap;
 use wprs_core::model::{ItemKind, ItemSummary};
 
 pub const PAGE: u32 = 200;
@@ -13,6 +12,7 @@ pub struct Row {
     pub item: ItemSummary,
     pub thumb: Option<String>,
     pub selected: bool,
+    pub stale: bool,
 }
 
 #[derive(Default)]
@@ -20,13 +20,6 @@ pub struct Grid {
     pub rows: Vec<Row>,
     pub total: u32,
     pub size: u32,
-}
-
-pub enum Shape {
-    Append,
-    Grow(usize, usize),
-    Shrink(usize, usize),
-    Reset,
 }
 
 pub fn compose(text: &str, kind: &str, favorite: bool, tag: &str) -> String {
@@ -43,39 +36,26 @@ pub fn compose(text: &str, kind: &str, favorite: bool, tag: &str) -> String {
 }
 
 impl Grid {
-    pub fn shape(&self, offset: u32, items: &[ItemSummary]) -> Shape {
-        let (old, new) = (self.rows.len(), items.len());
-        let same = self.rows.iter().zip(items).all(|(row, item)| row.item.uid == item.uid);
-        match (offset as usize, same) {
-            (o, _) if o == old && o > 0 => Shape::Append,
-            (0, true) if new >= old => Shape::Grow(old, new),
-            (0, true) => Shape::Shrink(new, old),
-            _ => Shape::Reset,
+    pub fn stale(&mut self, uids: &[String]) {
+        for row in self.rows.iter_mut().filter(|r| uids.is_empty() || uids.contains(&r.item.uid)) {
+            row.stale = row.thumb.is_some();
         }
-    }
-
-    pub fn store(&mut self, offset: u32, total: u32, items: Vec<ItemSummary>) {
-        let keep =
-            (offset == 0).then(|| self.rows.drain(..).map(|r| (r.item.uid.clone(), (r.thumb, r.selected))));
-        let keep: HashMap<_, _> = keep.into_iter().flatten().collect();
-        self.total = total;
-        self.rows.extend(items.into_iter().map(|item| {
-            let (thumb, selected) = keep.get(&item.uid).cloned().unwrap_or_default();
-            let cached = item.thumb.as_ref().filter(|_| self.size == 256).map(|p| p.display().to_string());
-            Row { thumb: cached.or(thumb), selected, item }
-        }));
     }
 
     pub fn wanted(&self, first: usize, last: usize) -> Vec<String> {
         let rows = self.rows.iter().skip(first).take(last.saturating_sub(first) + 1);
-        rows.filter(|r| r.thumb.is_none() && !r.item.missing).map(|r| r.item.uid.clone()).collect()
+        let wanted = rows.filter(|r| (r.thumb.is_none() || r.stale) && !r.item.missing);
+        wanted.map(|r| r.item.uid.clone()).collect()
     }
 
     pub fn thumb(&mut self, uid: &str, path: &str) -> Vec<usize> {
         let mut changed = Vec::new();
         for (i, row) in self.rows.iter_mut().enumerate().filter(|(_, r)| r.item.uid == uid) {
-            row.thumb = Some(path.to_owned());
-            changed.push(i);
+            row.stale = false;
+            if row.thumb.as_deref() != Some(path) {
+                row.thumb = Some(path.to_owned());
+                changed.push(i);
+            }
         }
         changed
     }

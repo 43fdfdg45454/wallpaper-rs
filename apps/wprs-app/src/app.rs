@@ -3,6 +3,7 @@ use futures_util::StreamExt;
 use percent_encoding::percent_decode_str;
 use serde_json::json;
 use std::collections::HashMap;
+use std::process::ExitCode;
 use wprs_client::{Client, Daemon1Proxy, Library1Proxy, Repos1Proxy, explain};
 use wprs_core::dbus::{APP_ID, APP_PATH, BUS_NAME};
 use zbus::Connection;
@@ -12,17 +13,17 @@ use zbus::{OwnedVariant, Variant};
 
 const APPLICATION: &str = "org.freedesktop.Application";
 
-pub fn start(uris: Vec<String>) -> bool {
+pub fn start(uris: Vec<String>) -> Option<ExitCode> {
     if bus::checking() {
         set_link(Ok(Daemon::Fixtures));
-        return true;
+        return None;
     }
     bus::block_on(async move {
         let conn = match Connection::session().await {
             Ok(conn) => conn,
             Err(e) => {
                 set_link(Err(format!("cannot connect to the session bus: {e}")));
-                return true;
+                return None;
             }
         };
         if conn.object_server().at(APP_PATH, Application).await.is_ok()
@@ -35,12 +36,13 @@ pub fn start(uris: Vec<String>) -> bool {
             } else {
                 conn.call_method(Some(APP_ID), APP_PATH, Some(APPLICATION), "Open", &(uris, data)).await
             };
-            sent.map_err(|e| eprintln!("wprs-app: {}", explain(e))).ok();
-            return false;
+            let Err(e) = sent else { return Some(ExitCode::SUCCESS) };
+            eprintln!("wprs-app: {}", explain(e));
+            return Some(ExitCode::FAILURE);
         }
         spawn(watch(conn));
         spawn(open(uris));
-        true
+        None
     })
 }
 

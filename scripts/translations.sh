@@ -51,7 +51,7 @@ for pkg in integrations/*/; do
   domain=plasma_${kind,,}_$(sed -n 's|.*"Id": "\(.*\)".*|\1|p' "$pkg/metadata.json")
   mapfile -t sources < <(find "$pkg/contents" -name '*.qml' | LC_ALL=C sort)
   xgettext --c++ --kde --from-code=UTF-8 -ci18n -k{,x}i18n:1 -k{,x}i18nc:1c,2 -k{,x}i18np:1,2 \
-    -k{,x}i18ncp:1c,2,3 --add-location=file --force-po --package-name=wallpaper-rs -o "$TMP/$domain.pot" "${sources[@]}"
+    -k{,x}i18ncp:1c,2,3 -ktr:1 --add-location=file --force-po --package-name=wallpaper-rs -o "$TMP/$domain.pot" "${sources[@]}"
   catalog "$domain" "$OUT/${pkg#integrations/}/contents/locale"
 done
 

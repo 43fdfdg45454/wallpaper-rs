@@ -1,5 +1,5 @@
 use crate::daemon::Daemon;
-use crate::error::Error;
+use crate::error::{Error, failed};
 use crate::service::Service;
 use crate::streams::HELD;
 use std::sync::Arc;
@@ -8,6 +8,10 @@ use wprs_core::model::{MODEL, OutputState, Shown, State};
 use zbus::fdo::DBusProxy;
 use zbus::message::Header;
 use zbus::object_server::SignalEmitter;
+
+pub(crate) fn rendering(running: bool) -> Result<(), Error> {
+    if running { Ok(()) } else { Err(failed("the renderer stopped after an error; restart wprsd")) }
+}
 
 pub(crate) fn client(header: &Header<'_>) -> String {
     header.sender().map_or(HELD, |s| s.as_str()).to_owned()
@@ -49,7 +53,15 @@ impl Daemon {
     ) -> Result<T, Error> {
         let daemon = self.clone();
         let done = tokio::task::spawn_blocking(move || work(&daemon).map_err(Into::into)).await;
-        done.map_err(|e| crate::error::failed(format!("internal error: {e}")))?
+        done.map_err(|e| failed(format!("internal error: {e}")))?
+    }
+
+    pub(crate) async fn render<T: Send + 'static, E: Into<Error>>(
+        self: &Arc<Self>,
+        work: impl FnOnce(&Arc<Daemon>) -> Result<T, E> + Send + 'static,
+    ) -> Result<T, Error> {
+        rendering(self.compositor.running())?;
+        self.run(work).await
     }
 
     pub(crate) async fn request(
@@ -61,7 +73,7 @@ impl Daemon {
     ) -> Result<(u32, u64), Error> {
         let (tx, rx) = tokio::sync::oneshot::channel();
         let (claimant, reply) = (client.clone(), Box::new(|r| drop(tx.send(r))));
-        let output = self.run(move |d| d.claim(&output, &claimant, size, reply)).await?;
+        let output = self.render(move |d| d.claim(&output, &claimant, size, reply)).await?;
         let ready = match gone(bus, &client).await {
             true => Err("the client left the bus".into()),
             false => rx.await.unwrap_or_else(|_| Err("PipeWire thread stopped".into())),
@@ -70,7 +82,7 @@ impl Daemon {
             Ok(info) => info,
             Err(e) => {
                 self.unclaim(&mut self.state(), &output, &client, 1).ok();
-                return Err(crate::error::failed(e));
+                return Err(failed(e));
             }
         };
         if info.created {

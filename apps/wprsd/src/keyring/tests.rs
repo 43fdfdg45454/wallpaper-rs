@@ -50,6 +50,7 @@ pub struct Vault {
     pub items: Vec<Entry>,
     pub locked: bool,
     pub accept: bool,
+    pub hang: bool,
     next: u32,
 }
 
@@ -61,13 +62,23 @@ fn path(text: &str) -> OwnedObjectPath {
 
 struct MockService(Shared);
 
+impl MockService {
+    async fn stall(&self) {
+        let hang = self.0.lock().unwrap().hang;
+        if hang {
+            std::future::pending::<()>().await;
+        }
+    }
+}
+
 #[zbus::interface(name = "org.freedesktop.Secret.Service")]
 impl MockService {
-    fn open_session(
+    async fn open_session(
         &self,
         algorithm: &str,
         _input: OwnedVariant,
     ) -> zbus::fdo::Result<(OwnedVariant, OwnedObjectPath)> {
+        self.stall().await;
         let plain = algorithm == "plain";
         let output = Variant::from("").try_to_owned().unwrap();
         plain
@@ -75,7 +86,8 @@ impl MockService {
             .ok_or_else(|| zbus::fdo::Error::NotSupported(algorithm.into()))
     }
 
-    fn search_items(&self, attributes: HashMap<String, String>) -> (Paths, Paths) {
+    async fn search_items(&self, attributes: HashMap<String, String>) -> (Paths, Paths) {
+        self.stall().await;
         let vault = self.0.lock().unwrap();
         let matches = |item: &&Entry| attributes.iter().all(|(key, value)| item.1.get(key) == Some(value));
         let found: Paths = vault.items.iter().filter(matches).map(|item| path(&item.0)).collect();
@@ -185,9 +197,9 @@ async fn secret(keyring: &Keyring, id: &str, prompt: bool) -> Option<String> {
 #[tokio::test]
 async fn secrets_are_stored_read_and_deleted() {
     let bus = Bus::start();
-    let keyring = Keyring(bus.connect().await);
+    let keyring = Keyring::new(bus.connect().await);
     assert_eq!(unavailable_with(keyring.store("photos", "s3cret").await), ABSENT);
-    assert!(!keyring.has("photos").await && secret(&keyring, "photos", true).await.is_none());
+    assert!(!keyring.has("photos").await.unwrap() && secret(&keyring, "photos", true).await.is_none());
     keyring.delete("photos").await.unwrap();
     let vault = Shared::default();
     let _service = serve(&bus, &vault).await;
@@ -200,16 +212,16 @@ async fn secrets_are_stored_read_and_deleted() {
         assert_eq!(labels, ["wallpaper-rs: photos", "wallpaper-rs: album"]);
         assert_eq!(vault.items[0].1["xdg:schema"], SCHEMA);
     }
-    assert!(keyring.has("photos").await);
+    assert!(keyring.has("photos").await.unwrap());
     assert_eq!(secret(&keyring, "photos", false).await.as_deref(), Some("s3cret"));
     keyring.delete("photos").await.unwrap();
-    assert!(!keyring.has("photos").await && keyring.has("album").await);
+    assert!(!keyring.has("photos").await.unwrap() && keyring.has("album").await.unwrap());
 }
 
 #[tokio::test]
 async fn locked_keyrings_prompt_only_when_allowed() {
     let bus = Bus::start();
-    let keyring = Keyring(bus.connect().await);
+    let keyring = Keyring::new(bus.connect().await);
     let vault = Shared::new(Mutex::new(Vault { locked: true, ..Vault::default() }));
     let _service = serve(&bus, &vault).await;
     let refused = unavailable_with(keyring.store("photos", "s3cret").await);
@@ -218,10 +230,42 @@ async fn locked_keyrings_prompt_only_when_allowed() {
     vault.lock().unwrap().accept = true;
     keyring.store("photos", "s3cret").await.unwrap();
     vault.lock().unwrap().locked = true;
-    assert!(keyring.has("photos").await);
+    assert!(keyring.has("photos").await.unwrap());
     assert_eq!(secret(&keyring, "photos", false).await.as_deref(), Some("<locked>"));
     assert_eq!(secret(&keyring, "photos", true).await.as_deref(), Some("s3cret"));
     vault.lock().unwrap().locked = true;
     keyring.delete("photos").await.unwrap();
     assert!(vault.lock().unwrap().items.is_empty());
+}
+
+#[tokio::test]
+async fn orphan_secrets_go_only_without_a_prompt() {
+    let bus = Bus::start();
+    let keyring = Keyring::new(bus.connect().await);
+    assert!(keyring.discard("photos").await.unwrap());
+    let vault = Shared::default();
+    let _service = serve(&bus, &vault).await;
+    keyring.store("photos", "old").await.unwrap();
+    vault.lock().unwrap().locked = true;
+    assert!(!keyring.discard("photos").await.unwrap());
+    assert_eq!(vault.lock().unwrap().items.len(), 1);
+    vault.lock().unwrap().locked = false;
+    assert!(keyring.discard("photos").await.unwrap());
+    assert!(vault.lock().unwrap().items.is_empty());
+}
+
+#[tokio::test]
+async fn a_keyring_that_does_not_answer_times_out() {
+    let bus = Bus::start();
+    let vault = Shared::new(Mutex::new(Vault { hang: true, ..Vault::default() }));
+    let _service = serve(&bus, &vault).await;
+    let (lookup, write) = (Duration::from_millis(200), Duration::from_millis(300));
+    let keyring = Keyring { lookup, write, ..Keyring::new(bus.connect().await) };
+    let started = std::time::Instant::now();
+    assert_eq!(unavailable_with(keyring.has("photos").await.map(drop)), SLOW);
+    assert_eq!(unavailable_with(keyring.read("photos", false).await.map(drop)), SLOW);
+    assert_eq!(unavailable_with(keyring.store("photos", "s3cret").await), SLOW);
+    assert_eq!(unavailable_with(keyring.delete("photos").await), SLOW);
+    assert_eq!(unavailable_with(keyring.discard("photos").await.map(drop)), SLOW);
+    assert!(started.elapsed() < Duration::from_secs(5));
 }

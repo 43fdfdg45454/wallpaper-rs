@@ -56,7 +56,8 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: card.expanded
 
-        FieldForm {
+        Settings {
+            daemon: App
             model: App.schema.auto ?? []
             values: Object.assign({
                 "priority": card.profile.priority

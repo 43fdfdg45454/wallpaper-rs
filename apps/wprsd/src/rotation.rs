@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{BuildHasher, RandomState};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::Notify;
 use wprs_core::model::{OutputPlaylist, OutputState};
@@ -26,6 +27,7 @@ pub struct Playing {
 pub struct Rotations {
     lists: Mutex<HashMap<String, Vec<String>>>,
     due: Mutex<Option<i64>>,
+    retime: AtomicBool,
     pub wake: Notify,
 }
 
@@ -64,6 +66,11 @@ fn unresolved(uid: &str, error: &str) -> Playing {
 impl Rotations {
     pub fn known(&self, keys: &[String]) {
         lock(&self.lists).extend(keys.iter().map(|key| (key.clone(), Vec::new())));
+    }
+
+    pub fn retime(&self) {
+        self.retime.store(true, Ordering::Relaxed);
+        self.wake.notify_one();
     }
 }
 
@@ -136,7 +143,7 @@ impl Daemon {
 
     fn sync(&self, act: Act<'_>) -> (Vec<String>, Option<i64>) {
         let mut lists = lock(&self.rotations.lists);
-        let now = Utc::now();
+        let (now, retime) = (Utc::now(), self.rotations.retime.swap(false, Ordering::Relaxed));
         let ((assigned, on_battery), before) = (self.fingerprint(), self.state().playing.clone());
         let (rows, found) = self.read(&assigned, on_battery, now.timestamp());
         let mut groups: BTreeMap<String, (String, Vec<(String, bool)>)> = BTreeMap::new();
@@ -166,7 +173,7 @@ impl Daemon {
                 _ => None,
             };
             let live = info.rules.advance_while_paused || members.iter().any(|(_, active)| *active);
-            let turn = Turn { live, fresh: !lists.contains_key(&key), start, step };
+            let turn = Turn { live, fresh: !lists.contains_key(&key), start, step, retime };
             let last = lists.get(&key).map(Vec::as_slice);
             let switched = rotate(&mut row, last, resolved, &info.rules, turn, now, &Local);
             lists.insert(key, resolved.uids.clone());

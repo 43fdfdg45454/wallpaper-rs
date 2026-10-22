@@ -1,79 +1,108 @@
 import QtQuick
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
-Kirigami.FormLayout {
-    id: settings
+Repeater {
+    id: form
 
     required property var daemon
-    required property var options
-    readonly property var labels: ({
-            "pause.when_covered": i18n("Pause when a window covers the screen"),
-            "pause.on_battery": i18n("Pause on battery"),
-            "pause.when_locked": i18n("Pause while the screen is locked"),
-            "playback.max_fps": i18n("Frames per second:"),
-            "transition.kind": i18n("Transition:"),
-            "transition.duration_ms": i18n("Transition length (ms):")
-        })
-    readonly property var kinds: [
-        {
-            "value": "fade",
-            "text": i18nc("@item:inlistbox wallpaper transition", "Fade")
-        },
-        {
-            "value": "none",
-            "text": i18nc("@item:inlistbox wallpaper transition", "None")
-        }
-    ]
+    property var values: ({})
 
-    function set(key, value) {
-        daemon.act("SetOption", [key, String(value)]);
+    signal edited(string key, string value)
+
+    function shown(field) {
+        const value = values[field.key];
+        return Array.isArray(value) ? value.join(",") : String(value ?? "");
     }
 
-    Repeater {
-        model: Object.keys(settings.labels)
-
-        delegate: Loader {
-            required property string modelData
-            readonly property var value: settings.options[modelData]
-
-            Kirigami.FormData.label: typeof value === "boolean" ? "" : settings.labels[modelData]
-            sourceComponent: modelData === "transition.kind" ? kind : typeof value === "boolean" ? toggle : number
+    function hint(field) {
+        if (field.kind !== "interval" || typeof field.default !== "number")
+            return String(field.default ?? "");
+        const units = {
+            "d": 86400,
+            "h": 3600,
+            "m": 60,
+            "s": 1
+        };
+        let rest = field.default, text = "";
+        for (const unit in units) {
+            if (rest >= units[unit])
+                text += Math.floor(rest / units[unit]) + unit;
+            rest %= units[unit];
         }
+        return text || "0s";
     }
 
-    Component {
-        id: toggle
+    delegate: RowLayout {
+        id: row
+
+        required property var modelData
+        readonly property string text: form.shown(modelData)
+
+        Kirigami.FormData.label: modelData.kind === "bool" ? "" : form.daemon.field(modelData.key) + ":"
 
         QQC2.CheckBox {
-            text: settings.labels[parent.modelData]
-            checked: parent.value === true
-            onToggled: settings.set(parent.modelData, checked)
+            visible: row.modelData.kind === "bool"
+            text: form.daemon.field(row.modelData.key)
+            checked: row.text === "true"
+            onToggled: form.edited(row.modelData.key, String(checked))
         }
-    }
-
-    Component {
-        id: number
 
         QQC2.SpinBox {
-            from: parent.modelData === "playback.max_fps" ? 1 : 0
-            to: parent.modelData === "playback.max_fps" ? 240 : 10000
-            stepSize: parent.modelData === "playback.max_fps" ? 1 : 100
-            value: parent.value ?? 0
-            onValueModified: settings.set(parent.modelData, value)
+            visible: row.modelData.kind === "int"
+            from: row.modelData.min ?? -2147483647
+            to: row.modelData.max ?? 2147483647
+            stepSize: row.modelData.step ?? 1
+            editable: true
+            value: Number(row.text || row.modelData.default || 0)
+            onValueModified: form.edited(row.modelData.key, String(value))
         }
-    }
-
-    Component {
-        id: kind
 
         QQC2.ComboBox {
-            model: settings.kinds
+            visible: row.modelData.kind === "enum"
+            model: row.modelData.values.map(value => ({
+                        "value": value,
+                        "text": form.daemon.value(value)
+                    }))
             textRole: "text"
             valueRole: "value"
-            currentIndex: Math.max(0, settings.kinds.findIndex(option => option.value === parent.value))
-            onActivated: settings.set(parent.modelData, currentValue)
+            currentIndex: Math.max(0, row.modelData.values.indexOf(row.text || row.modelData.default))
+            onActivated: form.edited(row.modelData.key, currentValue)
+        }
+
+        QQC2.Button {
+            visible: row.modelData.kind === "color"
+            text: row.text || form.daemon.tr("Choose…")
+            icon.name: "color-picker"
+            onClicked: colors.open()
+
+            ColorDialog {
+                id: colors
+
+                selectedColor: row.text || "black"
+                onAccepted: form.edited(row.modelData.key, selectedColor.toString())
+            }
+        }
+
+        QQC2.TextField {
+            visible: !["bool", "int", "enum", "color"].includes(row.modelData.kind)
+            text: row.text
+            placeholderText: form.hint(row.modelData)
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 14
+            onEditingFinished: {
+                if (text !== row.text)
+                    form.edited(row.modelData.key, text);
+            }
+        }
+
+        QQC2.ToolButton {
+            visible: row.modelData.clearable && row.text !== ""
+            icon.name: "edit-clear"
+            text: form.daemon.tr("Clear")
+            display: QQC2.AbstractButton.IconOnly
+            onClicked: form.edited(row.modelData.key, "")
         }
     }
 }

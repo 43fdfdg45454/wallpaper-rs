@@ -168,7 +168,7 @@ impl Library {
     }
 
     async fn apply(&self, uid: String, output: String, fit: String, preset: String) -> Result<()> {
-        self.d()?.run(move |d| d.apply(&uid, &output, &fit, &preset)).await
+        self.d()?.render(move |d| d.apply(&uid, &output, &fit, &preset)).await
     }
 
     #[zbus(signal)]

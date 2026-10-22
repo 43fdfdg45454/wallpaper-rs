@@ -10,6 +10,7 @@ Kirigami.OverlayDrawer {
     property string uid
     property string preview
     property var details: ({})
+    property string repo
     property bool removable
     readonly property var item: details.item ?? {}
     readonly property var credit: details.credit ?? null
@@ -21,6 +22,7 @@ Kirigami.OverlayDrawer {
         drawer.uid = uid;
         details = {};
         preview = "";
+        repo = "";
         load();
         App.query("Thumbnail", [uid, 1024], "Library1", reply => {
             if (drawer.uid === uid)
@@ -32,8 +34,14 @@ Kirigami.OverlayDrawer {
     function load() {
         const uid = drawer.uid;
         App.query("GetItem", [uid], "Library1", reply => {
-            if (drawer.uid === uid)
-                drawer.details = reply;
+            if (drawer.uid !== uid)
+                return;
+            drawer.details = reply;
+            if (reply.installed)
+                App.query("List", [], "Repos1", list => {
+                    if (drawer.uid === uid)
+                        drawer.repo = list.repos.find(repo => repo.repo_id === reply.installed.repo_id)?.name ?? "";
+                });
         });
     }
 
@@ -109,6 +117,14 @@ Kirigami.OverlayDrawer {
                     Kirigami.FormData.label: App.tr("Package:")
                     visible: !!drawer.item.package
                     text: drawer.item.package ? [drawer.item.package.id, drawer.item.package.version, drawer.item.package.license].join(" · ") : ""
+                }
+
+                QQC2.Label {
+                    Kirigami.FormData.label: App.tr("Installed from:")
+                    visible: !!drawer.details.installed
+                    Layout.maximumWidth: Kirigami.Units.gridUnit * 14
+                    text: drawer.details.installed ? [drawer.repo || drawer.details.installed.repo_id.slice(0, 8), drawer.details.installed.signer ? App.tr("signed by %1").arg(drawer.details.installed.signer) : ""].filter(t => t).join("\n") : ""
+                    wrapMode: Text.WrapAnywhere
                 }
 
                 QQC2.Label {

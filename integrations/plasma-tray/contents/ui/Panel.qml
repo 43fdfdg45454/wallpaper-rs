@@ -8,14 +8,31 @@ ColumnLayout {
     id: panel
 
     required property var daemon
-    readonly property var current: daemon.daemonState
+    readonly property var current: daemon.current
+    readonly property var profiles: daemon.profiles
 
-    Layout.minimumWidth: Kirigami.Units.gridUnit * 24
+    Layout.minimumWidth: Kirigami.Units.gridUnit * 26
     spacing: Kirigami.Units.smallSpacing
 
-    PlasmaExtras.Heading {
-        level: 3
-        text: "wallpaper-rs"
+    RowLayout {
+        PlasmaExtras.Heading {
+            Layout.fillWidth: true
+            level: 3
+            text: "wallpaper-rs"
+        }
+
+        QQC2.BusyIndicator {
+            Layout.preferredHeight: Kirigami.Units.iconSizes.medium
+            visible: (panel.current.jobs ?? 0) > 0
+            running: visible && Window.window?.visible === true
+        }
+
+        QQC2.ComboBox {
+            model: [i18n("No profile")].concat(panel.profiles.map(profile => profile.name))
+            displayText: i18n("Profile: %1", currentText)
+            currentIndex: panel.profiles.findIndex(profile => profile.uid === panel.current.profile) + 1
+            onActivated: index => panel.daemon.act("Activate", [index > 0 ? panel.profiles[index - 1].uid : ""], "Profiles1")
+        }
     }
 
     QQC2.Label {
@@ -60,26 +77,26 @@ ColumnLayout {
     }
 
     Repeater {
-        model: Object.keys(panel.current.outputs ?? {})
+        model: Object.keys(panel.current.outputs ?? {}).concat([""])
 
         delegate: OutputRow {
             required property string modelData
 
+            Layout.fillWidth: true
             daemon: panel.daemon
             name: modelData
-            info: panel.current.outputs[modelData]
+            info: (panel.current.outputs ?? {})[modelData] ?? {}
+            playlists: panel.daemon.playlists
         }
     }
 
-    OutputRow {
-        daemon: panel.daemon
-        name: ""
-        info: Object.values(panel.current.outputs ?? {})[0] ?? {}
-    }
-
-    Settings {
-        daemon: panel.daemon
-        options: panel.current.options ?? {}
+    Kirigami.FormLayout {
+        Settings {
+            daemon: panel.daemon
+            model: (panel.daemon.schema.options ?? []).filter(field => field.key in panel.daemon.fields)
+            values: panel.current.options ?? {}
+            onEdited: (key, value) => panel.daemon.act("SetOption", [key, value])
+        }
     }
 
     RowLayout {

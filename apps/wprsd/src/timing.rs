@@ -10,6 +10,7 @@ pub struct Turn {
     pub fresh: bool,
     pub start: bool,
     pub step: Option<bool>,
+    pub retime: bool,
 }
 
 fn days(rules: &Rules, from: NaiveDate) -> impl Iterator<Item = NaiveDate> + '_ {
@@ -37,6 +38,12 @@ pub fn next_due<Tz: TimeZone>(rules: &Rules, after: DateTime<Utc>, tz: &Tz) -> O
         day => day.and_then(|day| local(tz, day, NaiveTime::MIN)),
     });
     timed.into_iter().chain(every).min()
+}
+
+fn retimed<Tz: TimeZone>(rules: &Rules, old: Option<i64>, now: DateTime<Utc>, tz: &Tz) -> Option<i64> {
+    let every = TimeDelta::from_std(rules.interval).ok().filter(|d| !d.is_zero());
+    let kept = old.filter(|at| every.is_some_and(|d| *at <= (now + d).timestamp()));
+    kept.into_iter().chain(next_due(rules, now, tz).map(|t| t.timestamp())).min()
 }
 
 pub fn nap(due_ms: Option<i64>, now_ms: i64) -> Option<Duration> {
@@ -73,6 +80,8 @@ pub fn rotate<Tz: TimeZone>(
     }
     if step.is_some() || turn.start || row.next_at.is_none() {
         row.next_at = next_due(rules, now, tz).map(|t| t.timestamp());
+    } else if turn.retime {
+        row.next_at = retimed(rules, row.next_at, now, tz);
     }
     row.current = row.state.index(list).map(|i| uids[i].clone());
     step.is_some()
@@ -244,6 +253,27 @@ mod tests {
         }
         seen.sort();
         assert_eq!(seen, ["a", "b", "c", "d", "e", "f"]);
+    }
+
+    #[test]
+    fn clock_and_time_zone_changes_recompute_the_next_switch() {
+        let (resolved, now) = (list(&["a", "b"], Order::Sequential), at("2026-10-21T05:00:00Z"));
+        let retime = |rules: &Rules, next_at: &str, tz: FixedOffset| {
+            let mut row =
+                Rotation { next_at: Some(at(next_at).timestamp()), current: Some("a".into()), ..row() };
+            let turn = Turn { live: true, retime: true, ..Turn::default() };
+            let switched = rotate(&mut row, Some(&resolved.uids), &resolved, rules, turn, now, &tz);
+            (switched, Utc.timestamp_opt(row.next_at.unwrap(), 0).unwrap().to_rfc3339())
+        };
+        let (east, west) =
+            (FixedOffset::east_opt(3 * 3600).unwrap(), FixedOffset::west_opt(3 * 3600).unwrap());
+        let nine = rules(serde_json::json!({"interval": "0s", "at": ["09:00"]}));
+        assert_eq!(retime(&nine, "2026-10-21T09:00:00Z", east), (false, "2026-10-21T06:00:00+00:00".into()));
+        assert_eq!(retime(&nine, "2026-10-21T09:00:00Z", west), (false, "2026-10-21T12:00:00+00:00".into()));
+        let half = Rules::default();
+        assert_eq!(retime(&half, "2026-10-21T05:10:00Z", east), (false, "2026-10-21T05:10:00+00:00".into()));
+        assert_eq!(retime(&half, "2026-10-22T05:10:00Z", east), (false, "2026-10-21T05:30:00+00:00".into()));
+        assert_eq!(retime(&half, "2026-10-21T04:50:00Z", east), (true, "2026-10-21T05:30:00+00:00".into()));
     }
 
     #[test]

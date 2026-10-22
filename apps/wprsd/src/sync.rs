@@ -116,7 +116,7 @@ impl Daemon {
             }
             let busy = [id.as_str(), ""].iter().any(|t| !self.jobs.find(JobKind::ProviderSync, t).is_empty());
             let required = known.secret.as_ref().is_some_and(|s| s.required);
-            if !busy && (!required || self.has_secret(&id, Some(&known.kind)).await) {
+            if !busy && (!required || self.has_secret(&id, Some(&known.kind)).await.unwrap_or(false)) {
                 self.sync_job(&id, false);
             }
         }

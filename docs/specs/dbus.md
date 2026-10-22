@@ -22,10 +22,13 @@ A panic in any thread of the daemon, a lost GPU device or a GPU that stops respo
 daemon exit with status 70; the user unit restarts it (`Restart=on-failure`, at most 5 starts
 in 60 s) and clients get their streams again through `RequestStream`. Only the methods that
 change what is shown (`Library1.Apply`, `Playlists1.Start`, `Stop`, `Next` and `Previous`,
-`Profiles1.Activate` and the `Daemon1` methods that change something) need the renderer.
+`Profiles1.Activate` and the `Daemon1` methods that change something) need the renderer: while
+it is not running they return `Failed` (`the renderer stopped after an error; restart wprsd`)
+and change nothing. Every other method keeps working.
 
 The daemon opens network connections only to the providers and repositories the user added
-(including the signed mirrors of a repository), with a generic `User-Agent:
+(including the signed mirrors of a repository, the only hosts a repository request may be
+redirected to), with a generic `User-Agent:
 wallpaper-rs/<version>` and without cookies or `Referer`. At startup it contacts only providers
 due for their automatic sync; the daily repository refresh starts 10 minutes later.
 
@@ -62,12 +65,12 @@ Every error carries a readable English message.
 | Error name | When |
 |------------|------|
 | `org.freedesktop.DBus.Error.InvalidArgs` | Malformed or out-of-range argument, bad query syntax, operation not allowed on that object |
-| `org.freedesktop.DBus.Error.Failed` | Anything else: I/O, database, verification failure, library unavailable |
+| `org.freedesktop.DBus.Error.Failed` | Anything else: I/O, database, verification failure, library unavailable, renderer stopped |
 | `org.freedesktop.DBus.Error.NotSupported` | The method is not available in this version of wprsd |
 | `io.github.wallpaper_rs.Error.NotFound` | Unknown uid, name, output assignment, provider, repository, package or job |
 | `io.github.wallpaper_rs.Error.Exists` | Name, folder, provider id or repository already present |
 | `io.github.wallpaper_rs.Error.NeedsSecret` | A provider needs a secret that is missing or was rejected |
-| `io.github.wallpaper_rs.Error.KeyringUnavailable` | The keyring item cannot be written or deleted, the keyring stayed locked for 20 s or its unlock prompt was dismissed, or no Secret Service is available to store a secret |
+| `io.github.wallpaper_rs.Error.KeyringUnavailable` | The keyring item cannot be written or deleted, the keyring stayed locked for 20 s or its unlock prompt was dismissed, the Secret Service did not answer in time, or no Secret Service is available to store a secret |
 | `io.github.wallpaper_rs.Error.Stale` | A repository's signed index expired; retry with `allow_stale = true` after asking the user |
 | `io.github.wallpaper_rs.Error.Conflict` | A playlist edit by index found other entries than expected: `the playlist changed; reload it` |
 
@@ -452,6 +455,11 @@ daemon and needs no client:
   clock, and recomputes after a resume from suspend and when the configuration, the power
   source, the pause state, the outputs or the library change. With no switch pending (no
   playlist shown, paused outputs, empty playlists, no timer) it does not wake at all.
+- When the wall clock is set or `org.freedesktop.timedate1` reports a new `Timezone`, the next
+  `at` time is computed again at once; an interval keeps its next switch unless the clock moved
+  back past it, and an overdue switch happens once.
+- While a `scan`, `import`, `analyze` or `provider_sync` job runs, library changes resolve the
+  playlists shown at most once every 3 seconds.
 - Each output has its own position (`synced = false`), or every output showing the playlist
   shares one (`synced = true`) and shows the same item. Positions are kept in the library, so a
   restart shows the same item (`resume = true`) or the next one (`resume = false`).
@@ -570,7 +578,11 @@ A profile with rules (`SetAuto`) is activated automatically when every rule it s
 the set of connected outputs has stayed the same for 2 seconds following a connect or
 disconnect, and when the power source changes. The highest `priority` wins, ties go to the
 first name. A manual `Activate` holds until the next such change; when nothing matches, nothing
-changes.
+changes. The choice also survives a restart of the daemon: the profile chosen with `Activate`
+(or cleared with `""`) and the connected outputs and power source at that moment are kept in
+`~/.local/share/wallpaper-rs/profile-hold.json` (`0600`) until the outputs or the power source
+differ from them. A moment without any output, as while the daemon starts, does not end the
+hold.
 
 ### `List() → (s json)`
 
@@ -638,7 +650,10 @@ job errors, logs or `config.toml`. A secret has at most 4096 bytes and no contro
 Only `Add` with a secret, `SetSecret`, `ForgetSecret`, `Set` of `url`, `server` or `user`,
 `Remove` and an explicit `Sync` may show the keyring's unlock prompt; they wait at most 20 s and
 then return `KeyringUnavailable` (`unlock the keyring and try again`) without storing or
-deleting anything. Clients call `Add` and `SetSecret` with a timeout of 120 s.
+deleting anything. Clients call `Add` and `SetSecret` with a timeout of 120 s. A Secret Service
+that does not answer gives `KeyringUnavailable` (`the keyring did not answer in time`) after
+10 s for lookups (`List` then reports `has_secret = false`, and scheduled syncs wait for their
+next due time) and after 100 s for writes, deletions and reads that may prompt.
 
 URL options (`url`, `server`) must be `https://`, or `http://` to this computer; any other
 `http://` URL needs the option `allow_plain_http = true`, given explicitly. URLs with user
@@ -674,7 +689,12 @@ bad value, a secret written by hand) are listed with state `error`, their reason
 Validates everything, then stores a non-empty `secret` in the keyring (`KeyringUnavailable`:
 nothing is created), registers the cache folder as a library source, writes
 `[providers.<id>]` to `config.toml`, and returns the source uid. `secret = ""` stores none; a
-kind whose secret is required then starts in `needs_secret`. `InvalidArgs` for an invalid id,
+kind whose secret is required then starts in `needs_secret`. On a kind with a secret,
+`secret = ""` also makes sure that no secret left in the keyring under the same id (by a
+provider removed while the keyring could not be reached) reaches the new provider: such an item
+is deleted when that needs no unlock prompt; when the keyring is locked, `Add` returns
+`NeedsSecret` and creates nothing, and the message asks to give the secret (which replaces the
+item) or to unlock the keyring and add the provider again. `InvalidArgs` for an invalid id,
 an unknown kind, option or value, a missing required option, an option named like a secret
 (`password`, `api_key`, `token`, `secret`), a refused URL, or a secret given to a kind without
 one; `Exists` for a taken id.
@@ -711,10 +731,11 @@ Deletes the provider's secret. Kinds without secret never touch the keyring.
 Signed repositories of `.wpak` packages (see `repo.md`), kept in `~/.local/share/wallpaper-rs`.
 `repo` arguments take a full repository id or a unique prefix of at least 8 hex digits. Trust is
 anchored by the URL a repository is added with (`fingerprint=` and/or `repo_id=`); repository
-jobs (`repo_add`, `repo_refresh` and the download of `install`) run one at a time. Installed
-packages are imported into the library; revoked ones are never applied again (`Apply` returns
-`Failed`), rotation skips them, and an output showing one when its revocation arrives shows its
-background color instead.
+jobs (`repo_add`, `repo_refresh` and the download of `install`) run one at a time. Requests to
+a repository follow redirects only to its declared bases (the URL it was added with and the
+mirrors of its signed root), never from HTTPS to HTTP. Installed packages are imported into the
+library; revoked ones are never applied again (`Apply` returns `Failed`), rotation skips them,
+and an output showing one when its revocation arrives shows its background color instead.
 
 ### `List() → (s json)`
 
@@ -739,7 +760,9 @@ every 24 hours; updates are never installed automatically.
 
 Removes a repository with its cached previews; `uninstall` also uninstalls its packages
 (`Failed` if one of them is shown on an output). Without it the packages stay usable, without
-updates or revocations.
+updates or revocations. Queued or running jobs of this repository (its refreshes and installs
+from it) are cancelled first and the call waits only for them; jobs of other repositories go on.
+An install from it that starts while it is being removed ends `cancelled`.
 
 ### `Browse(s query, u offset, u limit) → (s json)`
 

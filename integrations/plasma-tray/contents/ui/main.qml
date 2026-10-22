@@ -6,78 +6,21 @@ import org.kde.plasma.workspace.dbus as DBus
 PlasmoidItem {
     id: root
 
-    property var daemonState: ({})
-    property string pollError: ""
-    property string actionError: ""
-    readonly property string lastError: actionError || pollError
-    readonly property bool paused: daemonState.paused === true
-
-    function call(member, args, onReply, onError) {
-        const signatures = {
-            "GetState": "()",
-            "Reload": "()",
-            "SetWallpaper": "(sss)",
-            "SetBackground": "(ss)",
-            "SetOption": "(ss)",
-            "SetPaused": "(b)",
-            "SetVolume": "(d)",
-            "SetMuted": "(b)"
-        };
-        const message = {
-            "service": "io.github.wallpaper_rs.Daemon",
-            "path": "/io/github/wallpaper_rs/Daemon",
-            "iface": "io.github.wallpaper_rs.Daemon1",
-            "member": member,
-            "signature": signatures[member],
-            "arguments": args
-        };
-        DBus.SessionBus.asyncCall(message, onReply, reply => onError(reply?.error?.message || i18n("The wallpaper-rs daemon is not running")));
-    }
-
-    function refresh() {
-        call("GetState", [], reply => {
-            try {
-                root.daemonState = JSON.parse(String(reply.value));
-                root.pollError = "";
-            } catch (e) {
-                root.pollError = String(e);
-            }
-        }, error => root.pollError = error);
-    }
-
-    function openApp() {
-        const message = {
-            "service": "io.github.wallpaper_rs",
-            "path": "/io/github/wallpaper_rs",
-            "iface": "org.freedesktop.Application",
-            "member": "Activate",
-            "signature": "(a{sv})",
-            "arguments": [
-                {}
-            ]
-        };
-        DBus.SessionBus.asyncCall(message, () => {}, reply => {
-            root.actionError = reply?.error?.message || i18n("wallpaper-rs could not be opened");
-            errorTimeout.restart();
-        });
-    }
-
-    function act(member, args) {
-        actionError = "";
-        call(member, args, () => root.refresh(), error => {
-            root.actionError = error;
-            errorTimeout.restart();
-        });
-    }
+    readonly property Daemon daemon: Daemon {}
+    readonly property bool paused: daemon.current.paused === true
 
     Plasmoid.icon: paused ? "media-playback-pause" : "preferences-desktop-wallpaper"
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
     toolTipMainText: "wallpaper-rs"
-    toolTipSubText: lastError || (paused ? i18n("Paused") : i18n("Playing"))
+    toolTipSubText: daemon.lastError || (paused ? i18n("Paused") : i18n("Playing"))
     fullRepresentation: Panel {
-        daemon: root
+        daemon: root.daemon
     }
-    Component.onCompleted: refresh()
+    Component.onCompleted: daemon.refresh()
+    onExpandedChanged: {
+        if (expanded)
+            daemon.refresh();
+    }
 
     DBus.SignalWatcher {
         service: "io.github.wallpaper_rs.Daemon"
@@ -85,22 +28,33 @@ PlasmoidItem {
         iface: "org.freedesktop.DBus.Properties"
 
         function dbusPropertiesChanged() {
-            root.refresh();
+            root.daemon.refresh("state");
+        }
+    }
+
+    DBus.SignalWatcher {
+        service: "io.github.wallpaper_rs.Daemon"
+        path: "/io/github/wallpaper_rs/Daemon"
+        iface: "io.github.wallpaper_rs.Daemon1"
+
+        function dbusChanged(topic, ids) {
+            root.daemon.refresh(String(topic));
+            root.daemon.updated(String(topic), Array.from(ids));
+        }
+
+        function dbusJobProgress() {
+        }
+
+        function dbusJobFinished() {
+        }
+
+        function dbusStreamChanged() {
         }
     }
 
     Timer {
-        interval: 2000
-        running: root.expanded
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: root.refresh()
-    }
-
-    Timer {
-        id: errorTimeout
-
         interval: 8000
-        onTriggered: root.actionError = ""
+        running: root.daemon.actionError !== ""
+        onTriggered: root.daemon.actionError = ""
     }
 }

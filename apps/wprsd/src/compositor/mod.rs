@@ -163,6 +163,10 @@ impl Compositor {
         lock(&self.status).clone()
     }
 
+    pub fn running(&self) -> bool {
+        self.thread.as_ref().is_some_and(|thread| !thread.is_finished())
+    }
+
     fn send(&self, command: Command) {
         if self.tx.send(command).is_err() {
             fatal("the render thread stopped");

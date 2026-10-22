@@ -48,8 +48,9 @@ sistema de archivos inmutable. Para desinstalar: `./uninstall.sh` (añade `--pur
 también la configuración).
 
 Después, en Plasma: clic derecho en el escritorio → *Configurar escritorio y fondo de
-pantalla* → tipo de fondo **wallpaper-rs**. El fondo de cada pantalla, el modo de ajuste, la
-pausa, el volumen y los ajustes se eligen desde el icono de wallpaper-rs en la bandeja.
+pantalla* → tipo de fondo **wallpaper-rs**. El fondo, el modo de ajuste y la lista de cada
+pantalla, el perfil, la pausa, el volumen y los ajustes se eligen desde el icono de wallpaper-rs
+en la bandeja.
 
 Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good) y un
 controlador Vulkan u OpenGL. El plugin de fondo usa los módulos QML de KPipeWire, KWindowSystem y
@@ -249,7 +250,8 @@ la pantalla apagada.
 - Sin telemetría ni estadísticas de uso. El servicio solo se conecta a internet para los
   proveedores de fondos y los repositorios que añadas tú. Al arrancar solo contacta con un
   proveedor si le toca su sincronización automática; la comprobación diaria de los repositorios
-  (`repos.auto_refresh`) empieza 10 minutos después.
+  (`repos.auto_refresh`) empieza 10 minutos después. Un repositorio solo puede redirigir a su propia
+  dirección y a las réplicas que declara en su raíz firmada.
 - Los proveedores de fondos en línea (Bing, APOD, Wikimedia, Wallhaven, WebDAV/Nextcloud, Immich)
   solo se usan si los configuras. Los servicios públicos se usan siempre por HTTPS; todos llevan un
   User-Agent genérico (`wallpaper-rs/<versión>`), sin cookies ni cabecera Referer, y las claves de API

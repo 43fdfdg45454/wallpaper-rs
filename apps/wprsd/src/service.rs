@@ -55,7 +55,7 @@ impl Service {
 
     async fn release_stream(&self, output: String, #[zbus(header)] header: Header<'_>) -> Result<()> {
         let client = client(&header);
-        self.d()?.run(move |d| d.release(&output, &client)).await
+        self.d()?.render(move |d| d.release(&output, &client)).await
     }
 
     async fn set_output_covered(
@@ -65,7 +65,7 @@ impl Service {
         #[zbus(header)] header: Header<'_>,
     ) -> Result<()> {
         let client = client(&header);
-        self.d()?.run(move |d| d.set_covered(&output, &client, covered)).await
+        self.d()?.render(move |d| d.set_covered(&output, &client, covered)).await
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -94,19 +94,19 @@ impl Service {
 
     async fn set_wallpaper(&self, path: String, output: String, fit: String) -> Result<()> {
         let path = local_path(&path)?;
-        self.d()?.run(move |d| d.change_wallpaper(&path, &output, &fit)).await
+        self.d()?.render(move |d| d.change_wallpaper(&path, &output, &fit)).await
     }
 
     async fn set_background(&self, color: String, output: String) -> Result<()> {
-        self.d()?.run(move |d| d.set_background(&color, &output)).await
+        self.d()?.render(move |d| d.set_background(&color, &output)).await
     }
 
     async fn set_option(&self, key: String, value: String) -> Result<()> {
-        self.d()?.run(move |d| d.set_option(&key, &value)).await
+        self.d()?.render(move |d| d.set_option(&key, &value)).await
     }
 
     async fn reload(&self) -> Result<()> {
-        self.d()?.run(|d| d.reload()).await
+        self.d()?.render(|d| d.reload()).await
     }
 
     #[zbus(out_args("json"))]
@@ -120,15 +120,15 @@ impl Service {
     }
 
     async fn set_paused(&self, paused: bool) -> Result<()> {
-        self.d()?.run(move |d| d.set_paused(paused)).await
+        self.d()?.render(move |d| d.set_paused(paused)).await
     }
 
     async fn set_volume(&self, volume: f64) -> Result<()> {
-        self.d()?.run(move |d| d.set_audio(Some(volume), None)).await
+        self.d()?.render(move |d| d.set_audio(Some(volume), None)).await
     }
 
     async fn set_muted(&self, muted: bool) -> Result<()> {
-        self.d()?.run(move |d| d.set_audio(None, Some(muted))).await
+        self.d()?.render(move |d| d.set_audio(None, Some(muted))).await
     }
 
     #[zbus(out_args("serial", "topics"))]
@@ -231,6 +231,28 @@ mod tests {
     fn interface_name_matches_core_constant() {
         let literal = format!("#[zbus::interface(name = \"{}\")]", wprs_core::dbus::INTERFACE);
         assert!(include_str!("service.rs").contains(&literal));
+    }
+
+    #[test]
+    fn only_methods_that_change_what_is_shown_need_the_renderer() {
+        let guarded = |source: &str| -> Vec<String> {
+            let code = source.split("#[cfg(test)]").next().unwrap_or_default();
+            let uses = |body: &&str| [".render(", ".request("].iter().any(|call| body.contains(call));
+            let methods = code.split("async fn ").skip(1).filter(uses);
+            methods.map(|m| m.split('(').next().unwrap_or_default().to_owned()).collect()
+        };
+        let daemon = "request_stream hold_stream release_stream set_output_covered set_wallpaper set_background \
+            set_option reload set_paused set_volume set_muted";
+        assert_eq!(guarded(include_str!("service.rs")), daemon.split_whitespace().collect::<Vec<_>>());
+        assert_eq!(guarded(include_str!("library1.rs")), ["apply"]);
+        assert_eq!(guarded(include_str!("playlists1.rs")), ["start", "stop", "next", "previous"]);
+        assert_eq!(guarded(include_str!("profiles1.rs")), ["activate"]);
+        for source in [include_str!("providers1.rs"), include_str!("repos1.rs")] {
+            assert!(guarded(source).is_empty());
+        }
+        let (name, message) = crate::bus::rendering(false).unwrap_err().parts();
+        assert_eq!(name, "org.freedesktop.DBus.Error.Failed");
+        assert!(crate::bus::rendering(true).is_ok() && message.ends_with("restart wprsd"));
     }
 
     #[test]

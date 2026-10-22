@@ -14,6 +14,7 @@ QtObject {
                 "name": name,
                 "message": message
             })
+        onChanged: (topic, ids) => app.updated(topic, JSON.parse(ids))
     }
     readonly property var state: JSON.parse(backend.state || "{}")
     readonly property var schema: JSON.parse(backend.schema || "{}")
@@ -24,6 +25,7 @@ QtObject {
     property var pending: ({})
 
     signal navigate(int page, string query)
+    signal updated(string topic, var ids)
 
     function settle(tag, slot, value) {
         const handler = (pending[tag] ?? [])[slot];
@@ -54,8 +56,16 @@ QtObject {
         backend.setSecret(remember(onDone, onError), id, secret);
     }
 
-    function tr(text) {
-        return backend.tr(text);
+    function tr(text, first, second, third) {
+        return [first, second, third].filter(arg => arg !== undefined).reduce((out, arg) => out.arg(arg), backend.tr(text));
+    }
+
+    function field(key) {
+        return Labels.field(key);
+    }
+
+    function value(text) {
+        return Labels.value(text);
     }
 
     function url(path) {

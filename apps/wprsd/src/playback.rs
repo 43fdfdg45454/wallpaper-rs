@@ -9,6 +9,8 @@ use chrono::Utc;
 use futures_util::StreamExt;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::Instant;
 use wprs_core::Config;
 use wprs_core::model::{HistoryEntry, HistoryReply, MODEL};
 
@@ -136,13 +138,20 @@ fn now_ms() -> i64 {
     Utc::now().timestamp_millis()
 }
 
+const SETTLE: Duration = Duration::from_secs(3);
+
+fn settle(scanning: bool, since: Duration) -> bool {
+    scanning && since < SETTLE
+}
+
 pub async fn run(daemon: Arc<Daemon>) {
     tokio::spawn(resumes(daemon.clone()));
+    crate::clock::start(&daemon);
     let (mut serial, mut seen) = (daemon.changes.subscribe(), daemon.changes.serial());
     loop {
-        let (print, worker) = (daemon.fingerprint(), daemon.clone());
+        let (print, worker, resolved) = (daemon.fingerprint(), daemon.clone(), Instant::now());
         let due = tokio::task::spawn_blocking(move || worker.show(Act::Check)).await.ok().flatten();
-        let due = due.map(|at| at.saturating_mul(1000));
+        let (due, mut pending) = (due.map(|at| at.saturating_mul(1000)), false);
         loop {
             let nap = nap(due, now_ms());
             tokio::select! {
@@ -151,14 +160,21 @@ pub async fn run(daemon: Arc<Daemon>) {
                         break;
                     }
                 }
+                () = tokio::time::sleep_until(resolved + SETTLE), if pending => break,
                 changed = serial.changed() => {
                     if changed.is_err() {
                         return;
                     }
                     let (now, topics) = daemon.changes.since(seen);
                     seen = now;
-                    if topics.iter().any(|t| t == "library") || daemon.fingerprint() != print {
+                    if daemon.fingerprint() != print {
                         break;
+                    }
+                    if topics.iter().any(|t| t == "library") {
+                        if !settle(daemon.jobs.scanning(), resolved.elapsed()) {
+                            break;
+                        }
+                        pending = true;
                     }
                 }
                 () = daemon.rotations.wake.notified() => break,
@@ -171,6 +187,13 @@ pub async fn run(daemon: Arc<Daemon>) {
 mod tests {
     use super::*;
     use wprs_core::model::OutputPlaylist;
+
+    #[test]
+    fn library_changes_during_scans_resolve_at_most_every_few_seconds() {
+        assert!(!settle(false, Duration::ZERO));
+        assert!(settle(true, Duration::from_secs(1)));
+        assert!(!settle(true, SETTLE));
+    }
 
     #[test]
     fn stopping_keeps_the_item_shown() {

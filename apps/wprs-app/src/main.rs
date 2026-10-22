@@ -4,7 +4,9 @@ mod args;
 mod backend;
 mod bus;
 mod calls;
+mod diff;
 mod events;
+mod fetch;
 mod grid;
 mod items;
 mod library;
@@ -29,8 +31,7 @@ fn main() -> ExitCode {
         Some("--version" | "-V") => println!("wprs-app {}", env!("CARGO_PKG_VERSION")),
         Some("--help" | "-h") => println!("usage: wprs-app [--check | --version] [FILE | URI]..."),
         Some("--check") if !bus::checking() => return check(),
-        _ if app::start(args.iter().filter_map(|a| file(a)).collect()) => return run(),
-        _ => {}
+        _ => return app::start(args.iter().filter_map(|a| file(a)).collect()).unwrap_or_else(run),
     }
     ExitCode::SUCCESS
 }

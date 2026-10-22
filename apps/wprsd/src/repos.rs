@@ -35,8 +35,8 @@ pub fn newer(a: &str, b: &str) -> bool {
     semver::Version::parse(a).ok() > semver::Version::parse(b).ok()
 }
 
-pub fn fetcher(ctl: &Ctl) -> Result<HttpFetch> {
-    HttpFetch::new(ctl.flag()).map_err(|e| failed(e.to_string()))
+pub fn fetcher(ctl: &Ctl, bases: &[String]) -> Result<HttpFetch> {
+    Ok(HttpFetch::new(ctl.flag()).map_err(|e| failed(e.to_string()))?.within(bases))
 }
 
 fn warning(text: &str) -> RepoWarning {
@@ -106,6 +106,11 @@ impl Daemon {
         reply(ReposReply { model: MODEL, serial, repos })
     }
 
+    pub fn bases(&self, repo_id: &str) -> Vec<String> {
+        let repos = wprs_format::repos(&self.store.data, now()).unwrap_or_default();
+        repos.into_iter().find(|r| r.repo_id == repo_id).map(|r| r.hosts).unwrap_or_default()
+    }
+
     pub fn repo_id(&self, repo: &str) -> Result<String> {
         let repo = repo.trim().to_ascii_lowercase();
         if !(8..=64).contains(&repo.len()) || !repo.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -131,7 +136,7 @@ impl Daemon {
         }
         let (url, target) = (url.to_owned(), url.split('?').next().unwrap_or_default());
         Ok(self.start_job(JobKind::RepoAdd, target, move |d, ctl| {
-            let info = wprs_format::add_repo(&d.store.data, &fetcher(ctl)?, &url, now())?;
+            let info = wprs_format::add_repo(&d.store.data, &fetcher(ctl, &[])?, &url, now())?;
             tracing::info!(repo = &info.repo_id[..8], "repository added");
             d.changes.changed("repos", vec![info.repo_id.clone()]);
             Ok(serde_json::to_value(d.repo_model(info)).unwrap_or_default())
@@ -149,17 +154,18 @@ impl Daemon {
     }
 
     fn refresh(self: &Arc<Self>, target: &str, ctl: &Ctl) -> Result<Value> {
+        let known = wprs_format::repos(&self.store.data, now())?;
         let ids: Vec<String> = match target {
-            "" => wprs_format::repos(&self.store.data, now())?.into_iter().map(|r| r.repo_id).collect(),
+            "" => known.iter().map(|r| r.repo_id.clone()).collect(),
             id => vec![id.to_owned()],
         };
-        let (fetch, mut out) =
-            (fetcher(ctl)?, RefreshOutput { repos: Vec::new(), updates: Vec::new(), revoked: Vec::new() });
+        let mut out = RefreshOutput { repos: Vec::new(), updates: Vec::new(), revoked: Vec::new() };
         let mut failure = None;
         for id in ids {
-            let updated = ctl
-                .check()
-                .and_then(|()| Ok(wprs_format::update_repo(&self.store.data, &fetch, &id, now())?));
+            let bases = known.iter().find(|r| r.repo_id == id).map_or(&[][..], |r| &r.hosts);
+            let updated = ctl.check().and_then(|()| {
+                Ok(wprs_format::update_repo(&self.store.data, &fetcher(ctl, bases)?, &id, now())?)
+            });
             match updated {
                 Ok(outcome) => {
                     lock(&self.remote.repo_errors).remove(&id);
@@ -198,9 +204,16 @@ impl Daemon {
         }
         let ours =
             |job: &wprs_core::model::Job| job.target == id || job.target.starts_with(&format!("{id}/"));
-        let jobs = self.jobs.list().into_iter().filter(|j| j.finished_at.is_none() && ours(j));
-        jobs.map(|job| job.id).collect::<Vec<_>>().into_iter().try_for_each(|job| self.cancel_job(job))?;
-        let _turn = self.jobs.wait_turn(JobKind::Install);
+        let _removing = crate::remote::claim(&self.remote.removing, &id);
+        loop {
+            let jobs = self.jobs.list().into_iter().filter(|j| j.finished_at.is_none() && ours(j));
+            let jobs: Vec<u64> = jobs.map(|job| job.id).collect();
+            if jobs.is_empty() {
+                break;
+            }
+            jobs.iter().try_for_each(|job| self.cancel_job(*job))?;
+            self.jobs.wait(&jobs);
+        }
         let previews: Vec<PathBuf> = wprs_format::browse(&self.store.data, "")?
             .into_iter()
             .filter(|item| item.repo_id == id)

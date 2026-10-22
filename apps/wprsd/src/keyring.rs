@@ -12,7 +12,10 @@ const SCHEMA: &str = "io.github.wallpaper_rs.Provider";
 const COLLECTIONS: [&str; 2] =
     ["/org/freedesktop/secrets/aliases/default", "/org/freedesktop/secrets/collection/login"];
 const WAIT: Duration = Duration::from_secs(20);
+const LOOKUP: Duration = Duration::from_secs(10);
+const WRITE: Duration = Duration::from_secs(100);
 const ABSENT: &str = "no Secret Service is available to store the secret";
+const SLOW: &str = "the keyring did not answer in time";
 
 type Secret = (OwnedObjectPath, Vec<u8>, Vec<u8>, String);
 type Paths = Vec<OwnedObjectPath>;
@@ -68,7 +71,11 @@ pub enum Stored {
     Locked,
 }
 
-pub struct Keyring(pub zbus::Connection);
+pub struct Keyring {
+    bus: zbus::Connection,
+    lookup: Duration,
+    write: Duration,
+}
 
 fn unavailable(message: impl Into<String>) -> Error {
     Error::Named(KEYRING_UNAVAILABLE, message.into())
@@ -82,20 +89,34 @@ fn attributes(id: &str) -> HashMap<&str, &str> {
     HashMap::from([("xdg:schema", SCHEMA), ("provider", id)])
 }
 
+async fn bounded<T>(limit: Duration, work: impl Future<Output = Result<T>>) -> Result<T> {
+    tokio::time::timeout(limit, work).await.unwrap_or_else(|_| Err(unavailable(SLOW)))
+}
+
 impl Keyring {
+    pub fn new(bus: zbus::Connection) -> Self {
+        Keyring { bus, lookup: LOOKUP, write: WRITE }
+    }
+
     async fn service(&self) -> zbus::Result<ServiceProxy<'static>> {
-        ServiceProxy::new(&self.0).await
+        ServiceProxy::new(&self.bus).await
     }
 
     async fn search(&self, id: &str) -> zbus::Result<(Paths, Paths)> {
         self.service().await?.search_items(attributes(id)).await
     }
 
-    pub async fn has(&self, id: &str) -> bool {
-        self.search(id).await.is_ok_and(|(open, locked)| !open.is_empty() || !locked.is_empty())
+    pub async fn has(&self, id: &str) -> Result<bool> {
+        let found =
+            tokio::time::timeout(self.lookup, self.search(id)).await.map_err(|_| unavailable(SLOW))?;
+        Ok(found.is_ok_and(|(open, locked)| !open.is_empty() || !locked.is_empty()))
     }
 
     pub async fn read(&self, id: &str, prompt: bool) -> Result<Stored> {
+        bounded(if prompt { self.write } else { self.lookup }, self.fetch(id, prompt)).await
+    }
+
+    async fn fetch(&self, id: &str, prompt: bool) -> Result<Stored> {
         let Ok((mut open, locked)) = self.search(id).await else { return Ok(Stored::Missing) };
         if open.is_empty() && !locked.is_empty() {
             if !prompt {
@@ -117,6 +138,10 @@ impl Keyring {
     }
 
     pub async fn store(&self, id: &str, secret: &str) -> Result<()> {
+        bounded(self.write, self.create(id, secret)).await
+    }
+
+    async fn create(&self, id: &str, secret: &str) -> Result<()> {
         let service = self.service().await.map_err(|_| unavailable(ABSENT))?;
         let collection = self.collection().await?;
         if collection.locked().await.map_err(refused)? {
@@ -135,21 +160,44 @@ impl Keyring {
     }
 
     pub async fn delete(&self, id: &str) -> Result<()> {
-        let Ok((open, locked)) = self.search(id).await else { return Ok(()) };
-        if !locked.is_empty() {
-            self.unlock(&locked).await?;
-        }
-        for path in open.into_iter().chain(locked) {
-            let item = ItemProxy::builder(&self.0).path(path).cache_properties(CacheProperties::No);
-            let prompt = item.build().await.map_err(refused)?;
-            self.complete(prompt.delete().await.map_err(refused)?).await?;
-        }
-        Ok(())
+        bounded(self.write, async {
+            let Ok((open, locked)) = self.search(id).await else { return Ok(()) };
+            if !locked.is_empty() {
+                self.unlock(&locked).await?;
+            }
+            for path in open.into_iter().chain(locked) {
+                self.complete(self.item(path).await?.delete().await.map_err(refused)?).await?;
+            }
+            Ok(())
+        })
+        .await
+    }
+
+    pub async fn discard(&self, id: &str) -> Result<bool> {
+        bounded(self.write, async {
+            let Ok((open, locked)) = self.search(id).await else { return Ok(true) };
+            for path in open {
+                let prompt = self.item(path).await?.delete().await.map_err(refused)?;
+                if prompt.as_str() != "/" {
+                    let pending = PromptProxy::builder(&self.bus).path(prompt).build().await;
+                    pending.map_err(refused)?.dismiss().await.ok();
+                    return Ok(false);
+                }
+            }
+            Ok(locked.is_empty())
+        })
+        .await
+    }
+
+    async fn item(&self, path: OwnedObjectPath) -> Result<ItemProxy<'static>> {
+        let item = ItemProxy::builder(&self.bus).path(path);
+        item.cache_properties(CacheProperties::No).build().await.map_err(refused)
     }
 
     async fn collection(&self) -> Result<CollectionProxy<'static>> {
         for path in COLLECTIONS {
-            let builder = CollectionProxy::builder(&self.0).path(path).cache_properties(CacheProperties::No);
+            let builder =
+                CollectionProxy::builder(&self.bus).path(path).cache_properties(CacheProperties::No);
             let proxy = builder.build().await.map_err(refused)?;
             if proxy.locked().await.is_ok() {
                 return Ok(proxy);
@@ -167,7 +215,7 @@ impl Keyring {
         if prompt.as_str() == "/" {
             return Ok(());
         }
-        let proxy = PromptProxy::builder(&self.0).path(prompt).build().await.map_err(refused)?;
+        let proxy = PromptProxy::builder(&self.bus).path(prompt).build().await.map_err(refused)?;
         let mut completed = proxy.receive_completed().await.map_err(refused)?;
         proxy.prompt("").await.map_err(refused)?;
         match tokio::time::timeout(WAIT, completed.next()).await {
@@ -182,7 +230,7 @@ impl Keyring {
 
     async fn close(&self, session: &ObjectPath<'_>) {
         let interface = Some("org.freedesktop.Secret.Session");
-        self.0.call_method(Some(SERVICE), session, interface, "Close", &()).await.ok();
+        self.bus.call_method(Some(SERVICE), session, interface, "Close", &()).await.ok();
     }
 }
 

@@ -39,7 +39,8 @@ Kirigami.ScrollablePage {
     }
 
     Kirigami.FormLayout {
-        FieldForm {
+        Settings {
+            daemon: App
             model: App.schema.options ?? []
             values: App.state.options ?? {}
             onEdited: (key, value) => App.act("SetOption", [key, value])

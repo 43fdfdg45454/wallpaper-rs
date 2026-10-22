@@ -69,6 +69,26 @@ async fn requests_are_generic_capped_and_stay_on_safe_schemes() {
 }
 
 #[tokio::test]
+async fn redirects_stay_within_the_declared_bases() {
+    let (origin, mirror) = (MockServer::start().await, MockServer::start().await);
+    let signed = ResponseTemplate::new(200).set_body_bytes(b"signed".to_vec());
+    Mock::given(path("/repo/data")).respond_with(signed).mount(&mirror).await;
+    let to_mirror = moved(format!("{}/repo/data", mirror.uri()));
+    Mock::given(path("/repo/data")).respond_with(to_mirror).mount(&origin).await;
+    let (base, mirrors) = (format!("{}/repo/", origin.uri()), vec![format!("{}/repo/", mirror.uri())]);
+    let (refused, followed) = tokio::task::spawn_blocking(move || {
+        let refused = HttpFetch::new(Arc::default()).unwrap().get(&base, "data", 100).is_err();
+        let fetch = HttpFetch::new(Arc::default()).unwrap().within(&mirrors);
+        (refused, fetch.get(&base, "data", 100).unwrap())
+    })
+    .await
+    .unwrap();
+    assert!(refused);
+    assert_eq!(followed, Some(b"signed".to_vec()));
+    assert_eq!(mirror.received_requests().await.unwrap().len(), 1);
+}
+
+#[tokio::test]
 async fn cancellation_interrupts_between_chunks() {
     let server = MockServer::start().await;
     let big = ResponseTemplate::new(200).set_body_bytes(vec![7; 1 << 20]);

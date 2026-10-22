@@ -8,7 +8,7 @@ use crate::remote::{check_secret, last_sync, needs_secret};
 use crate::store::private_dir;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
-use wprs_core::dbus::error::EXISTS;
+use wprs_core::dbus::error::{EXISTS, NEEDS_SECRET};
 use wprs_core::model::{JobKind, MODEL, Provider, ProviderState, ProvidersReply};
 use zeroize::Zeroizing;
 
@@ -17,20 +17,26 @@ fn trimmed(options: HashMap<String, String>) -> Options {
 }
 
 impl Daemon {
-    pub async fn has_secret(&self, id: &str, kind: Option<&str>) -> bool {
+    pub async fn has_secret(&self, id: &str, kind: Option<&str>) -> Result<bool> {
         let secret = kind.and_then(|kind| kind_of(kind).ok()?.secret).is_some();
         match self.keyring().ok().filter(|_| secret) {
             Some(keyring) => keyring.has(id).await,
-            None => false,
+            None => Ok(false),
         }
     }
 
     pub async fn list_providers(self: &Arc<Self>) -> Result<String> {
         let serial = self.changes.serial();
         let entries: Vec<(String, toml::Value)> = self.state().config.providers.clone().into_iter().collect();
+        let check = |(id, value): &(String, toml::Value)| {
+            let kind = value.get("kind").and_then(toml::Value::as_str).map(String::from);
+            let (d, id) = (self.clone(), id.clone());
+            tokio::spawn(async move { d.has_secret(&id, kind.as_deref()).await })
+        };
+        let checks: Vec<_> = entries.iter().map(check).collect();
         let mut providers = Vec::new();
-        for (id, value) in entries {
-            let has_secret = self.has_secret(&id, value.get("kind").and_then(toml::Value::as_str)).await;
+        for ((id, value), check) in entries.into_iter().zip(checks) {
+            let has_secret = matches!(check.await, Ok(Ok(true)));
             providers.push(self.run(move |d| Ok::<_, Error>(d.describe(&id, &value, has_secret))).await?);
         }
         reply(ProvidersReply { model: MODEL, serial, providers })
@@ -107,6 +113,8 @@ impl Daemon {
         self.library_ready()?;
         if !secret.is_empty() {
             self.keyring()?.store(&id, &secret).await?;
+        } else if known.secret.is_some() {
+            self.drop_orphan(&id).await?;
         }
         let (owned, entry) = (id.clone(), table(&known, &given));
         let added = self.run(move |d| d.create_provider(&owned, entry)).await;
@@ -117,6 +125,19 @@ impl Daemon {
         tracing::info!(provider = id, kind, "provider added");
         self.remote.poke.notify_one();
         Ok(source)
+    }
+
+    async fn drop_orphan(&self, id: &str) -> Result<()> {
+        match self.keyring() {
+            Ok(keyring) if !keyring.discard(id).await? => Err(Error::Named(
+                NEEDS_SECRET,
+                format!(
+                    "the locked keyring holds an older secret for {id}; give the secret now to replace it, \
+                     or unlock the keyring and add the provider again to delete it"
+                ),
+            )),
+            _ => Ok(()),
+        }
     }
 
     fn create_provider(&self, id: &str, entry: toml::Value) -> Result<String> {
@@ -162,7 +183,7 @@ impl Daemon {
         let value = self.state().config.providers.get(&id).cloned();
         let value = value.ok_or_else(|| not_found(format!("provider {id:?} not found")))?;
         self.library_ready()?;
-        if self.has_secret(&id, value.get("kind").and_then(toml::Value::as_str)).await {
+        if self.has_secret(&id, value.get("kind").and_then(toml::Value::as_str)).await? {
             self.keyring()?.delete(&id).await?;
         }
         self.jobs.find(JobKind::ProviderSync, &id).into_iter().try_for_each(|job| self.cancel_job(job))?;
@@ -220,7 +241,7 @@ impl Daemon {
         if !id.is_empty() {
             let (known, ..) = self.provider(&id)?;
             let required = known.secret.is_some_and(|s| s.required);
-            if required && !self.has_secret(&id, Some(&known.kind)).await {
+            if required && !self.has_secret(&id, Some(&known.kind)).await? {
                 return Err(needs_secret(&id));
             }
         }

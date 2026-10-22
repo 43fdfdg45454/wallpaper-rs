@@ -1,6 +1,7 @@
 mod apply;
 mod bus;
 mod changes;
+mod clock;
 mod compositor;
 mod controls;
 mod daemon;

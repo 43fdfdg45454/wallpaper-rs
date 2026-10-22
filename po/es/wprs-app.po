@@ -38,10 +38,12 @@ msgid "Tags…"
 msgstr "Etiquetas…"
 
 #: apps/wprs-app/qml/Actions.qml apps/wprs-app/qml/ItemDrawer.qml
+#: apps/wprs-app/qml/OutputRow.qml
 msgid "Unfavorite"
 msgstr "Quitar de favoritos"
 
 #: apps/wprs-app/qml/Actions.qml apps/wprs-app/qml/ItemDrawer.qml
+#: apps/wprs-app/qml/OutputRow.qml
 msgid "Favorite"
 msgstr "Añadir a favoritos"
 
@@ -97,14 +99,6 @@ msgstr "Actualizar"
 #: apps/wprs-app/qml/Browse.qml
 msgid "Install"
 msgstr "Instalar"
-
-#: apps/wprs-app/qml/FieldForm.qml apps/wprs-app/qml/OutputCard.qml
-msgid "Choose…"
-msgstr "Elegir…"
-
-#: apps/wprs-app/qml/FieldForm.qml
-msgid "Clear"
-msgstr "Borrar"
 
 #: apps/wprs-app/qml/Filters.qml
 msgid "Search, for example: tag:sea kind:image -fav:yes sort:random"
@@ -182,6 +176,14 @@ msgid "Package:"
 msgstr "Paquete:"
 
 #: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Installed from:"
+msgstr "Instalado desde:"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "signed by %1"
+msgstr "firmado por %1"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
 msgid "Revoked:"
 msgstr "Revocado:"
 
@@ -250,31 +252,35 @@ msgstr "Repositorios"
 msgid "Settings"
 msgstr "Ajustes"
 
-#: apps/wprs-app/qml/OutputCard.qml
+#: apps/wprs-app/qml/OutputRow.qml
 msgid "Every screen"
 msgstr "Todas las pantallas"
 
-#: apps/wprs-app/qml/OutputCard.qml
+#: apps/wprs-app/qml/OutputRow.qml
 msgid "Playlist %1 (%2 of %3)"
 msgstr "Lista %1 (%2 de %3)"
 
-#: apps/wprs-app/qml/OutputCard.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/facade/Labels.qml
 msgid "Background color"
 msgstr "Color de fondo"
 
-#: apps/wprs-app/qml/OutputCard.qml
+#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/Settings.qml
+msgid "Choose…"
+msgstr "Elegir…"
+
+#: apps/wprs-app/qml/OutputRow.qml
 msgid "No playlist"
 msgstr "Sin lista"
 
-#: apps/wprs-app/qml/OutputCard.qml
+#: apps/wprs-app/qml/OutputRow.qml
 msgid "Previous"
 msgstr "Anterior"
 
-#: apps/wprs-app/qml/OutputCard.qml
+#: apps/wprs-app/qml/OutputRow.qml
 msgid "Next"
 msgstr "Siguiente"
 
-#: apps/wprs-app/qml/OutputCard.qml
+#: apps/wprs-app/qml/OutputRow.qml
 msgid "Images and videos"
 msgstr "Imágenes y vídeos"
 
@@ -636,6 +642,10 @@ msgstr "Cambiar el nombre de la etiqueta"
 #: apps/wprs-app/qml/SelectionDialogs.qml
 msgid "Rate"
 msgstr "Valorar"
+
+#: apps/wprs-app/qml/Settings.qml
+msgid "Clear"
+msgstr "Borrar"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Add folder…"

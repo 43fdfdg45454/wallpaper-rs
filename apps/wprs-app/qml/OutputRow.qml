@@ -1,0 +1,1 @@
+../../../integrations/plasma-tray/contents/ui/OutputRow.qml

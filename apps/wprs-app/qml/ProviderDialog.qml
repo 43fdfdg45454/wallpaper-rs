@@ -61,7 +61,8 @@ Kirigami.Dialog {
             onActivated: dialog.values = {}
         }
 
-        FieldForm {
+        Settings {
+            daemon: App
             model: dialog.fields
             values: dialog.values
             onEdited: (key, value) => dialog.values[key] = value
