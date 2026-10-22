@@ -261,8 +261,10 @@ jobs:
             set -e
             dnf -y -q install rpm-build systemd-rpm-macros >/dev/null
             scripts/rpm.sh dist/wallpaper-rs-*.tar.gz rpm
-            test "$(rpm -qp --qf "%{BUILDHOST}" rpm/*.rpm)" = localhost
-            rpm -qpR rpm/*.rpm | grep -v "^rpmlib(" | while read -r dep; do
+            test "$(rpm -qp --qf "%{BUILDHOST}\n" rpm/*.rpm | sort -u)" = localhost
+            own=$(rpm -qp --provides rpm/*.rpm | cut -d" " -f1)
+            rpm -qpR rpm/*.rpm | grep -v "^rpmlib(" | sort -u | while read -r dep; do
+              grep -qxF "${dep%% *}" <<< "$own" && continue
               dnf -q repoquery --whatprovides "$dep" | grep -q . || { echo "nothing provides $dep"; exit 1; }
             done
             rpm -i --nodeps rpm/*.rpm
