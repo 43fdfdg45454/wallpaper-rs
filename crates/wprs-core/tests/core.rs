@@ -86,7 +86,7 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 8);
+    assert_eq!(c.options().len(), 11);
     c.set_option("pause.on_battery", "false").unwrap();
     c.set_option("transition.kind", "none").unwrap();
     c.set_option("playback.max_fps", "60").unwrap();

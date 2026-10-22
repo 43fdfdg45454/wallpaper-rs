@@ -1,5 +1,6 @@
 use crate::fit::Fit;
-use crate::settings::{Pause, Playback, Transition};
+use crate::settings::{Library, Pause, Playback, Repos, Transition};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -12,21 +13,29 @@ pub struct OutputConfig {
     pub image: Option<PathBuf>,
     pub fit: Option<Fit>,
     pub background: Option<String>,
+    pub playlist: Option<String>,
+    pub preset: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
+    pub profile: Option<String>,
     pub default: OutputConfig,
     pub outputs: BTreeMap<String, OutputConfig>,
     pub playback: Playback,
     pub transition: Transition,
     pub pause: Pause,
+    pub library: Library,
+    pub repos: Repos,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub providers: BTreeMap<String, toml::Value>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Resolved {
     pub image: Option<PathBuf>,
+    pub playlist: Option<String>,
     pub fit: Fit,
     pub background: [u8; 3],
 }
@@ -36,6 +45,7 @@ impl Config {
         let before = self.options();
         self.playback = self.playback.sanitized();
         self.transition.duration_ms = self.transition.duration_ms.min(Transition::MAX_MS);
+        self.library.thumb_cache_mb = self.library.thumb_cache_mb.clamp(Library::MIN_MB, Library::MAX_MB);
         let changed = |(key, value): (String, toml::Value)| (before.get(&key) != Some(&value)).then_some(key);
         let mut fixed: Vec<String> = self.options().into_iter().filter_map(changed).collect();
         let sections = std::iter::once(("default".to_owned(), &mut self.default))
@@ -49,8 +59,12 @@ impl Config {
     }
 
     pub fn resolve(&self, output: &str) -> Resolved {
+        let content = (self.outputs.get(output))
+            .filter(|o| o.image.is_some() || o.playlist.is_some())
+            .unwrap_or(&self.default);
         Resolved {
-            image: self.pick(output, |o| o.image.clone()),
+            image: content.image.clone().filter(|_| content.playlist.is_none()),
+            playlist: content.playlist.clone(),
             fit: self.pick(output, |o| o.fit).unwrap_or_default(),
             background: self
                 .pick(output, |o| o.background.as_deref().and_then(parse_hex_color))
@@ -63,10 +77,19 @@ impl Config {
     }
 
     pub fn set_image(&mut self, output: &str, image: PathBuf, fit: Option<Fit>) {
-        self.section(output, |o| o.image = None).image = Some(image);
+        self.set_content(output, Some(image), None);
         if let Some(fit) = fit {
             self.set_fit(output, fit);
         }
+    }
+
+    pub fn set_playlist(&mut self, output: &str, playlist: String) {
+        self.set_content(output, None, Some(playlist));
+    }
+
+    fn set_content(&mut self, output: &str, image: Option<PathBuf>, playlist: Option<String>) {
+        let o = self.section(output, |o| (o.image, o.playlist, o.preset) = (None, None, None));
+        (o.image, o.playlist, o.preset) = (image, playlist, None);
     }
 
     pub fn set_fit(&mut self, output: &str, fit: Fit) {
@@ -87,6 +110,11 @@ impl Config {
         self.outputs.values_mut().for_each(clear);
         self.outputs.retain(|_, o| *o != OutputConfig::default());
         &mut self.default
+    }
+
+    pub fn read_providers<T: DeserializeOwned>(&self) -> impl Iterator<Item = (&str, Result<T, String>)> {
+        let read = |entry: &toml::Value| T::deserialize(entry.clone()).map_err(|e| e.message().to_owned());
+        self.providers.iter().map(move |(id, entry)| (id.as_str(), read(entry)))
     }
 }
 

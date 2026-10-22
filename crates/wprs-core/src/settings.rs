@@ -75,7 +75,37 @@ impl Default for Pause {
     }
 }
 
-const OPTION_SECTIONS: [&str; 3] = ["playback", "transition", "pause"];
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Library {
+    pub watch: bool,
+    pub thumb_cache_mb: u32,
+}
+
+impl Default for Library {
+    fn default() -> Self {
+        Self { watch: true, thumb_cache_mb: 512 }
+    }
+}
+
+impl Library {
+    pub const MIN_MB: u32 = 64;
+    pub const MAX_MB: u32 = 8192;
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Repos {
+    pub auto_refresh: bool,
+}
+
+impl Default for Repos {
+    fn default() -> Self {
+        Self { auto_refresh: true }
+    }
+}
+
+const OPTION_SECTIONS: [&str; 5] = ["playback", "transition", "pause", "library", "repos"];
 
 impl Config {
     pub fn options(&self) -> BTreeMap<String, toml::Value> {

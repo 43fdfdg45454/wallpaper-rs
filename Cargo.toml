@@ -10,6 +10,7 @@ members = [
     "crates/wprs-providers",
     "crates/wprs-scene",
     "crates/wprs-library",
+    "crates/wprs-client",
     "apps/wprsd",
     "apps/wprs-ctl",
 ]
@@ -31,6 +32,7 @@ wprs-schedule = { path = "crates/wprs-schedule" }
 wprs-providers = { path = "crates/wprs-providers" }
 wprs-scene = { path = "crates/wprs-scene" }
 wprs-library = { path = "crates/wprs-library" }
+wprs-client = { path = "crates/wprs-client" }
 anyhow = "1"
 thiserror = "2"
 rustix = { version = "1", features = ["fs", "mm"] }

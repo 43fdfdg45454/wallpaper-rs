@@ -3971,11 +3971,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "wprs-client"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "wprs-core",
+ "zbus",
+]
+
+[[package]]
 name = "wprs-core"
 version = "0.2.0"
 dependencies = [
  "dirs",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
  "toml",

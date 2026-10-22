@@ -9,8 +9,8 @@ pub enum ConfigError {
     Read { path: PathBuf, source: std::io::Error },
     #[error("cannot write {path}: {source}")]
     Write { path: PathBuf, source: std::io::Error },
-    #[error("invalid configuration in {path}: {source}")]
-    Parse { path: PathBuf, source: toml::de::Error },
+    #[error("invalid configuration at line {line}, column {column}: {message}")]
+    Parse { line: usize, column: usize, message: String },
     #[error("cannot serialize configuration: {0}")]
     Serialize(#[from] toml::ser::Error),
     #[error("no configuration directory could be determined")]
@@ -28,8 +28,7 @@ impl Config {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Config::default()),
             Err(source) => return Err(ConfigError::Read { path: path.into(), source }),
         };
-        let mut config: Config =
-            toml::from_str(&text).map_err(|source| ConfigError::Parse { path: path.into(), source })?;
+        let mut config: Config = toml::from_str(&text).map_err(|e| ConfigError::parse(&text, &e))?;
         for key in config.normalize() {
             tracing::warn!(key, "invalid value replaced by the nearest valid one");
         }
@@ -44,6 +43,15 @@ impl Config {
         let data = std::fs::read(path).map_err(|source| ConfigError::Read { path: path.into(), source })?;
         let backup = path.with_added_extension("broken");
         write_private(&backup, &data).map(|()| backup)
+    }
+}
+
+impl ConfigError {
+    fn parse(text: &str, error: &toml::de::Error) -> ConfigError {
+        let before = text.get(..error.span().map_or(0, |span| span.start)).unwrap_or_default();
+        let line = before.split('\n').count();
+        let column = before.rsplit('\n').next().unwrap_or_default().chars().count() + 1;
+        ConfigError::Parse { line, column, message: error.message().trim().replace('\n', "; ") }
     }
 }
 
