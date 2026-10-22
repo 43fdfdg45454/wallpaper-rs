@@ -1,0 +1,14 @@
+**/target
+.git
+.github
+dist
+docs
+integrations
+packaging
+po
+scripts
+tests
+deploy
+.claude
+.env
+.env.*

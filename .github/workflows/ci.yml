@@ -267,3 +267,26 @@ jobs:
           path: plasma-test-output
           if-no-files-found: warn
           retention-days: 7
+
+  server:
+    name: Server container
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - name: Build and start with compose
+        run: docker compose up -d --build --wait --wait-timeout 180
+
+      - name: Health, setup, repository, backup and restore
+        run: scripts/server-smoke.sh
+
+      - name: Server logs
+        if: always()
+        run: docker compose logs
+
+      - name: Stop
+        if: always()
+        run: docker compose down --volumes

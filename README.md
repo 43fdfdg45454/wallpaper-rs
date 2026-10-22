@@ -193,6 +193,70 @@ wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
 publicación, rotación y verificación de un repositorio) funcionan sin daemon. La contraseña de
 una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
 
+## Servidor propio
+
+`wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas
+con subidas y moderación, y la sincronización de la biblioteca, las listas y los ajustes entre
+dispositivos, cifrada de extremo a extremo por defecto. Es un solo binario en un contenedor sin
+shell, con un usuario sin privilegios y la raíz de solo lectura; todos los datos viven en el
+volumen `/data`. No envía telemetría ni se conecta a terceros.
+
+```sh
+docker compose up -d                          # construye la imagen desde este repositorio
+docker compose logs wprs | grep setup         # token de un solo uso del primer administrador
+docker compose exec wprs wprs-server repo init --name "Fondos de casa"
+```
+
+En `http://localhost:8080/setup` se pega el token y se crea el administrador (si el registro ya
+no lo muestra, `docker compose exec wprs wprs-server setup-token` da otro). `repo init` crea las
+claves del repositorio y muestra una sola vez la clave raíz, que hay que guardar fuera del
+servidor; el servidor solo conserva la clave en línea, con la que vuelve a firmar el índice cada
+día (cada firma caduca a los 7). Desde *Administración* se crean invitaciones y desde *Cuenta*,
+tokens, dispositivos enlazados con un código y subidas de paquetes `.wpak`.
+
+La configuración va en variables de entorno, en un `.env` junto a `compose.yaml`; `VARIABLE_FILE`
+lee el valor de un archivo, para los secretos:
+
+| Variable | Por defecto | Uso |
+|----------|-------------|-----|
+| `WPRS_PUBLIC_URL` | `http://localhost:8080` | URL pública del servidor |
+| `WPRS_BIND` | `127.0.0.1:8080` | Dirección y puerto que publica compose |
+| `WPRS_TRUSTED_PROXIES` | vacía | Redes del proxy inverso cuyo `X-Forwarded-For` se cree; sin ellas, los límites de peticiones ven a todos los clientes del proxy como uno solo |
+| `WPRS_REGISTRATION` | `invite` | `closed`, `invite` u `open` |
+| `WPRS_AUTO_PUBLISH` | `trusted` | Publicar sin revisión: `never`, `trusted` o `all` |
+| `WPRS_LICENSES` | `CC0-1.0,CC-BY-4.0,CC-BY-SA-4.0` | Licencias aceptadas |
+| `WPRS_LEGAL_OPERATOR`, `WPRS_LEGAL_CONTACT` | vacías | Responsable y contacto de las páginas legales |
+| `WPRS_OIDC_ISSUER`, `WPRS_OIDC_CLIENT_ID`, `WPRS_OIDC_CLIENT_SECRET` | vacías | Inicio de sesión único opcional |
+| `WPRS_LOG_CLIENTS` | `off` | IP en un registro de abusos: `off`, `prefix` o `full`; se borra a los `WPRS_LOG_CLIENTS_DAYS` días (7) |
+
+La lista completa de variables y la API HTTP están en
+[`docs/specs/server.md`](docs/specs/server.md).
+
+Copias de seguridad: `docker compose exec wprs wprs-server backup` deja en
+`/data/backups/<fecha>` una instantánea coherente de la base de datos (`VACUUM INTO`) y de los
+paquetes, miniaturas, claves y el repositorio, con la suma SHA-256 de cada archivo. Para
+restaurar, con el servidor parado:
+
+```sh
+docker compose cp wprs:/data/backups ./backups             # sacar las copias del volumen
+docker compose stop wprs
+docker compose run --rm wprs restore /data/backups/<fecha> --force
+docker compose up -d
+```
+
+La restauración comprueba las sumas y la integridad de la base de datos, firma un índice nuevo
+para que los clientes no vean una versión anterior y hace que cada dispositivo vuelva a descargar
+lo sincronizado.
+
+Con dominio propio y certificado automático, Caddy delante:
+
+```sh
+WPRS_DOMAIN=fondos.example.org docker compose -f compose.yaml -f deploy/compose.caddy.yaml up -d
+```
+
+Caddy obtiene el certificado y reenvía las peticiones; el servidor solo cree `X-Forwarded-For`
+cuando llega desde la red de los contenedores.
+
 ## Desarrollo
 
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
@@ -239,11 +303,13 @@ la pantalla apagada.
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
 | `apps/wprs-app` | App de escritorio (Qt Quick y Kirigami sobre Rust con cxx-qt) |
+| `apps/wprs-server` | Servidor propio: repositorio, catálogo, subidas, moderación y sincronización |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
 | `po` | Traducciones gettext de los paquetes de Plasma y de la app |
 | `packaging` | Servicio systemd, activación D-Bus, lanzador e icono, scripts de instalación, Flatpak |
-| `docs` | Especificación de la interfaz D-Bus |
+| `deploy` | Despliegue de referencia del servidor con Caddy |
+| `docs` | Especificaciones de la interfaz D-Bus, los repositorios firmados y el servidor |
 
 ## Privacidad
 
@@ -269,6 +335,8 @@ la pantalla apagada.
   repositorios que añadas tú, y sus registros no incluyen rutas, nombres de archivo, servidores
   propios ni el modelo de GPU salvo con `RUST_LOG=debug`.
 - Los paquetes se generan sin rutas, usuarios ni nombre del equipo de quien los compila.
+- El servidor propio no guarda IP ni user agents en sus registros salvo que su administrador
+  active el registro de abusos, que se borra solo; los datos sincronizados le llegan cifrados.
 
 ## Licencia
 

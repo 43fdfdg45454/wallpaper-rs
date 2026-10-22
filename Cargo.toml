@@ -15,6 +15,7 @@ members = [
     "apps/wprsd",
     "apps/wprs-ctl",
     "apps/wprs-app",
+    "apps/wprs-server",
 ]
 
 [workspace.package]
@@ -85,6 +86,12 @@ libc = "0.2"
 smithay-client-toolkit = { version = "0.21.1", default-features = false, features = ["system"] }
 raw-window-handle = "0.6"
 wayland-backend = { version = "0.3", features = ["dlopen"] }
+axum = { version = "0.8.9", features = ["multipart"] }
+maud = { version = "0.27", features = ["axum"] }
+argon2 = "0.6"
+getrandom = "0.4"
+openidconnect = { version = "4.0.1", default-features = false }
+tokio-util = { version = "0.7", features = ["io"] }
 
 [profile.dev]
 debug = "line-tables-only"

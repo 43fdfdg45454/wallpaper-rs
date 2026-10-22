@@ -1,0 +1,28 @@
+name: wprs
+
+services:
+  wprs:
+    build:
+      context: .
+      dockerfile: apps/wprs-server/Dockerfile
+    image: wprs-server:local
+    pull_policy: build
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "${WPRS_BIND:-127.0.0.1:8080}:8080"
+    volumes:
+      - wprs-data:/data
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  wprs-data: {}
