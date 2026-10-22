@@ -22,7 +22,7 @@ jobs:
     name: Lint and test
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
 
@@ -37,11 +37,11 @@ jobs:
             pipewire pipewire-bin wireplumber dbus-x11 \
             shellcheck qt6-declarative-dev-tools gettext
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
           components: rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
 
       - name: Format
         run: cargo fmt --all --check
@@ -77,7 +77,7 @@ jobs:
     name: Package
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
 
@@ -88,9 +88,9 @@ jobs:
             pkg-config libclang-dev libpipewire-0.3-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gettext
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
 
       - name: Build tarball
         run: scripts/package.sh dist
@@ -98,10 +98,14 @@ jobs:
       - name: Packages carry no build machine data
         run: |
           tar -xzf dist/*.tar.gz -C "$RUNNER_TEMP"
-          if strings "$RUNNER_TEMP"/wallpaper-rs-*/bin/* | grep -F -e "$HOME" -e "$GITHUB_WORKSPACE"; then exit 1; fi
-          tar -tvzf dist/*.tar.gz | awk '{print $2}' | sort -u | grep -qx '0/0'
+          bins=("$RUNNER_TEMP"/wallpaper-rs-*/bin/*)
+          if strings "${bins[@]}" | grep -F -e "$HOME" -e "$GITHUB_WORKSPACE" -e "$USER@"; then exit 1; fi
+          if strings "${bins[@]}" | grep -E '/(home|root)/'; then exit 1; fi
+          if readelf -p .comment "${bins[@]}" 2>/dev/null | grep -q '\['; then exit 1; fi
+          tar --numeric-owner -tvzf dist/*.tar.gz | awk '$2 != "0/0" {bad = 1} END {exit bad}'
+          python3 -c 'import sys; h = open(sys.argv[1], "rb").read(8); sys.exit(h[3] & 8 or h[4:8] != bytes(4))' dist/*.tar.gz
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: wallpaper-rs-x86_64-linux
           path: dist/*.tar.gz
@@ -113,11 +117,11 @@ jobs:
     needs: package
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
         with:
           name: wallpaper-rs-x86_64-linux
           path: dist
@@ -134,7 +138,7 @@ jobs:
             wprs-ctl --version
           '
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: wallpaper-rs-fedora-rpm
           path: rpm/*.rpm
@@ -147,11 +151,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
         with:
           name: wallpaper-rs-x86_64-linux
           path: dist
@@ -172,7 +176,7 @@ jobs:
             scripts/plasma-test.sh dist/wallpaper-rs-*.tar.gz plasma-test-output
           '
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         if: always()
         with:
           name: plasma-test-output
