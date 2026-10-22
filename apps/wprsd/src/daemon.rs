@@ -54,6 +54,7 @@ pub struct Daemon {
     pub(crate) thumbs: Arc<Thumbs>,
     pub(crate) folders: Folders,
     pub(crate) rotations: Rotations,
+    pub(crate) remote: crate::remote::Remote,
 }
 
 impl Daemon {
@@ -100,6 +101,7 @@ impl Daemon {
             thumbs,
             folders,
             rotations: Rotations::default(),
+            remote: Default::default(),
         };
         daemon.refresh_items();
         Ok(daemon)
@@ -129,6 +131,7 @@ impl Daemon {
         self.refresh_items();
         self.watch_sources();
         self.rotations.wake.notify_one();
+        self.remote.poke.notify_one();
         self.publish();
         Ok(())
     }

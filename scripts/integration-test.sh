@@ -411,6 +411,90 @@ ctl preset save - Wide fit=fill >/dev/null
 ctl release TEST-8 && expect "list(s['outputs'])" "[]"
 ctl lib unsource "$rot_source"
 echo "profile and preset checks passed"
+jq_() { python3 -c "import json, sys; r = json.load(sys.stdin); print(eval(sys.argv[1]))" "$1"; }
+config=$XDG_CONFIG_HOME/wallpaper-rs/config.toml
+daily=$(ctl provider add daily bing refresh=0s count=2)
+[ "$(ctl provider ls --json | jq_ "[(p['id'], p['state'], p['hosts'], p['next_sync'], p['source']) for p in r['providers']]")" = \
+  "[('daily', 'idle', ['www.bing.com'], None, '$daily')]" ] || fail "providers: $(ctl provider ls --json)"
+ctl provider set daily count 3
+grep -q '^\[providers.daily\]' "$config" || fail "provider config: $(cat "$config")"
+grep -q '^count = 3' "$config" || fail "provider option: $(cat "$config")"
+[ "$(ctl lib sources --json | jq_ "[s['provider'] for s in r['sources']]")" = "['daily']" ] || fail "provider source"
+refused "belongs to provider" Library1 RemoveSource s "$daily"
+if ctl provider set daily count 9 2>"$WORK/provider.out"; then fail "an invalid provider option was accepted"; fi
+if ctl provider add daily bing 2>/dev/null; then fail "a provider id was added twice"; fi
+if printf 'hunter2\n' | ctl provider add photos webdav url=https://dav.example.org/files user=me 2>"$WORK/keyring.out"; then
+  fail "a secret was accepted without a keyring"
+fi
+grep -q "no Secret Service is available" "$WORK/keyring.out" || fail "keyring message: $(cat "$WORK/keyring.out")"
+grep -q photos "$config" && fail "a provider was created although its secret could not be stored"
+ctl provider add photos webdav url=https://dav.example.org/files user=me --no-secret >/dev/null
+[ "$(ctl provider ls --json | jq_ "[p['state'] for p in r['providers'] if p['id'] == 'photos']")" = "['needs_secret']" ] ||
+  fail "provider without secret: $(ctl provider ls --json)"
+if ctl provider sync photos 2>"$WORK/sync.out"; then fail "a provider synced without its secret"; fi
+grep -q "needs its secret" "$WORK/sync.out" || fail "sync message: $(cat "$WORK/sync.out")"
+if printf 'hunter2\n' | ctl provider secret photos 2>"$WORK/secret.out"; then fail "a secret was stored without a keyring"; fi
+grep -q "no Secret Service is available" "$WORK/secret.out" || fail "secret message: $(cat "$WORK/secret.out")"
+if ctl provider set photos url http://dav.example.org/files 2>"$WORK/plain.out"; then fail "plain http was accepted"; fi
+grep -q "plain http" "$WORK/plain.out" || fail "plain http message: $(cat "$WORK/plain.out")"
+if ctl provider add leak webdav url=https://me:pw@dav.example.org user=me --no-secret 2>"$WORK/url.out"; then
+  fail "credentials in a URL were accepted"
+fi
+grep -q "not in the URL" "$WORK/url.out" || fail "URL message: $(cat "$WORK/url.out")"
+grep -q hunter2 "$config" "$WORK"/*.log && fail "a secret reached the configuration or a log"
+ctl provider rm photos && ctl provider rm daily --purge
+[ "$(ctl provider ls --json | jq_ "len(r['providers'])")" = 0 ] || fail "providers were kept"
+[ ! -e "$XDG_CACHE_HOME/wallpaper-rs/providers/daily" ] || fail "the provider cache was kept"
+echo "provider checks passed"
+
+site=$WORK/site
+mkdir -p "$site/src"
+cp "$ROOT/tests/fixtures/green-64x32.png" "$site/src/image.png"
+cp "$ROOT/tests/fixtures/green-64x32.png" "$site/src/preview.png"
+cat >"$site/src/manifest.json" <<'MANIFEST'
+{"schema": "wallpaper-rs.wpak/1", "id": "org.example.dawn", "version": "1.0.0", "title": "Dawn",
+ "license": "CC0-1.0", "kind": "image", "entry": "image.png", "preview": "preview.png", "tags": ["sky"]}
+MANIFEST
+(
+  cd "$site"
+  ctl repo keygen root --no-password >/dev/null
+  ctl repo keygen online --no-password >/dev/null
+  ctl pack build src -o dawn.wpak >/dev/null
+  ctl repo init repo --name Example --root-key root.pub --online-key online.pub >/dev/null 2>&1
+  ctl repo sign-root repo --key root.key >/dev/null
+  ctl repo add repo dawn.wpak >/dev/null
+  ctl repo publish repo --key online.key >/dev/null
+)
+anchor=$(ctl repo status "$site/repo" | sed -n 's/^anchor = //p')
+port=$(python3 -c "import socket; s = socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1])")
+python3 -m http.server --bind 127.0.0.1 --directory "$site/repo" "$port" >"$WORK/http.log" 2>&1 & pids+=($!)
+wait_for 10 python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:$port/entry/latest')" ||
+  fail "the repository server did not start"
+if ctl remote add "http://127.0.0.1:$port/" 2>"$WORK/anchor.out"; then fail "a repository without anchor was added"; fi
+grep -q "fingerprint or repo_id" "$WORK/anchor.out" || fail "anchor message: $(cat "$WORK/anchor.out")"
+repo=$(ctl remote add "http://127.0.0.1:$port/$anchor" --wait --json | jq_ "r['output']['repo_id']")
+[ "$(ctl remote ls --json | jq_ "[(x['name'], x['hosts'], x['packages'], x['stale']) for x in r['repos']]")" = \
+  "[('Example', ['127.0.0.1'], 1, False)]" ] || fail "repositories: $(ctl remote ls --json)"
+[ "$(ctl pkg search sky --json | jq_ "[(p['id'], p['version'], p['preview'], p['repo_name']) for p in r['packages']]")" = \
+  "[('org.example.dawn', '1.0.0', True, 'Example')]" ] || fail "browse: $(ctl pkg search sky --json)"
+preview=$(ctl pkg preview "${repo:0:8}/org.example.dawn")
+[ "$(head -c 3 "$preview" | od -An -tx1 | tr -d ' ')" = ffd8ff ] || fail "the preview is not a re-encoded JPEG"
+[ "$(stat -c %a "$preview") $(stat -c %a "$(dirname "$preview")")" = "600 700" ] || fail "previews are not private"
+[ "$(ctl pkg preview org.example.dawn)" = "$preview" ] || fail "the cached preview was not reused"
+ctl remote refresh --wait >/dev/null
+item=$(ctl pkg install org.example.dawn --wait --json | jq_ "r['output']['item']")
+[ "$(ctl pkg ls --json | jq_ "[(p['id'], p['version'], p['item']) for p in r['packages']]")" = \
+  "[('org.example.dawn', '1.0.0', '$item')]" ] || fail "installed: $(ctl pkg ls --json)"
+[ "$(ctl lib show "$item" --json | jq_ "r['installed']['version'], r['item']['title'], 'sky' in r['item']['tags']")" = \
+  "('1.0.0', 'Dawn', True)" ] || fail "installed item: $(ctl lib show "$item" --json)"
+refused "use Repos1.Uninstall" Library1 Remove asb 1 "$item" false
+ctl pkg uninstall org.example.dawn
+[ "$(ctl pkg ls --json | jq_ "len(r['packages'])")" = 0 ] || fail "the package was kept"
+[ "$(ctl lib search kind:package --json | jq_ "r['total']")" = 0 ] || fail "the package item was kept"
+ctl remote rm "${repo:0:8}"
+[ "$(ctl remote ls --json | jq_ "len(r['repos'])")" = 0 ] || fail "the repository was kept"
+[ ! -e "$preview" ] || fail "the preview was kept with its repository"
+echo "repository checks passed"
 
 restored() {
   read -r _ _ _ serial < <(ctl stream TEST-1 320 180) || return 1

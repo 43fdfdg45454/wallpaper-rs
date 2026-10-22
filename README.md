@@ -81,8 +81,10 @@ alias wprs-ctl='flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperR
 ```
 
 Permisos: la GPU, el socket de PipeWire para publicar los streams, el sonido de los vídeos, el
-nombre D-Bus del daemon, el bloqueo de pantalla y la batería, y lectura de Imágenes, Vídeos y
-Descargas. Sin red. Para usar fondos de otra carpeta:
+nombre D-Bus del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
+Service) para las contraseñas y claves de los proveedores, lectura de Imágenes, Vídeos y
+Descargas, y red. La red solo se usa para los proveedores de fondos y los repositorios que
+añadas tú. Para usar fondos de otra carpeta:
 `flatpak override --user --filesystem=/ruta:ro io.github.wallpaper_rs.WallpaperRs`. La
 configuración vive en `~/.var/app/io.github.wallpaper_rs.WallpaperRs/config/wallpaper-rs/`. Para
 desinstalar: `flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs remove | sh` y
@@ -230,12 +232,16 @@ la pantalla apagada.
 
 ## Privacidad
 
-- Sin telemetría ni estadísticas de uso. El servicio no se conecta a internet: los fondos se leen
-  de archivos locales.
+- Sin telemetría ni estadísticas de uso. El servicio solo se conecta a internet para los
+  proveedores de fondos y los repositorios que añadas tú. Al arrancar solo contacta con un
+  proveedor si le toca su sincronización automática; la comprobación diaria de los repositorios
+  (`repos.auto_refresh`) empieza 10 minutos después.
 - Los proveedores de fondos en línea (Bing, APOD, Wikimedia, Wallhaven, WebDAV/Nextcloud, Immich)
   solo se usan si los configuras. Los servicios públicos se usan siempre por HTTPS; todos llevan un
   User-Agent genérico (`wallpaper-rs/<versión>`), sin cookies ni cabecera Referer, y las claves de API
-  y contraseñas solo se envían al servidor configurado.
+  y contraseñas solo se envían al servidor configurado. Se guardan en el llavero del sistema
+  (Secret Service) y en ningún otro sitio: ni en la configuración, ni en los registros, ni en la
+  línea de órdenes. `http://` sin cifrar a otro equipo solo se permite con `allow_plain_http`.
 - La configuración se escribe con permisos `0600` dentro de una carpeta `0700`: solo tu usuario
   puede leerla.
 - La caché de descargas se guarda en una carpeta privada.
@@ -243,8 +249,9 @@ la pantalla apagada.
   entradas de paquetes (`~/.cache/wallpaper-rs`) se guardan con permisos `0600` en carpetas `0700`.
   Las miniaturas y el análisis de la biblioteca (tamaño, duración, color) los hace un proceso aparte
   con la prioridad más baja de CPU y disco.
-- El servicio de systemd tiene prohibido abrir conexiones de red y sus registros no incluyen rutas,
-  nombres de archivo ni el modelo de GPU salvo con `RUST_LOG=debug`.
+- El servicio de systemd solo puede abrir conexiones de red (IPv4 e IPv6) para los proveedores y
+  repositorios que añadas tú, y sus registros no incluyen rutas, nombres de archivo, servidores
+  propios ni el modelo de GPU salvo con `RUST_LOG=debug`.
 - Los paquetes se generan sin rutas, usuarios ni nombre del equipo de quien los compila.
 
 ## Licencia

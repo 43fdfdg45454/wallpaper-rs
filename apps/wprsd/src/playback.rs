@@ -122,6 +122,7 @@ async fn resumes(daemon: Arc<Daemon>) {
         while let Some(signal) = sleeps.next().await {
             if signal.args().is_ok_and(|a| !a.start) {
                 daemon.rotations.wake.notify_one();
+                daemon.remote.poke.notify_one();
             }
         }
         zbus::Result::Ok(())

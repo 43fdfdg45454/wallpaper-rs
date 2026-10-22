@@ -83,12 +83,13 @@ impl Daemon {
     }
 
     pub fn get_item(&self, uid: &str) -> Result<String> {
-        let (model, serial, credit) = (MODEL, self.changes.serial(), None);
+        let (model, serial) = (MODEL, self.changes.serial());
         let found = |lib: &Library| {
             Ok::<_, wprs_library::Error>((lib.item(uid)?, lib.presets(Some(uid))?, lib.item_playlists(uid)?))
         };
         let (item, presets, playlists) = self.store.read(found)?;
-        let (thumb, installed) = (self.thumbs.cached(&item, 512), self.installed(&item));
+        let (thumb, installed, credit) =
+            (self.thumbs.cached(&item, 512), self.installed(&item), self.credit(&item.path));
         let revoked =
             installed.as_ref().and_then(|i| i.revoked).map(|r| merged(r, Value::Null)).transpose()?;
         let installed = installed.map(|i| merged(i, json!({"item": uid, "update": null}))).transpose()?;

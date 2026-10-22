@@ -21,6 +21,7 @@ pub enum Signal {
     Progress(u64, u64, u64),
     Finished(u64, &'static str, String, String),
     Thumbnail(String, u32, String),
+    Preview(String, String),
 }
 
 type Ids = Option<BTreeSet<String>>;
@@ -148,6 +149,7 @@ pub async fn emit(connection: zbus::Connection, daemon: Arc<Daemon>) {
                 Service::job_finished(&emitter, job, state, &name, &message).await
             }
             Signal::Thumbnail(uid, size, path) => Library::thumbnail_ready(&emitter, &uid, size, &path).await,
+            Signal::Preview(spec, path) => crate::repos1::Repos::preview_ready(&emitter, &spec, &path).await,
         };
         sent.unwrap_or_else(|e| tracing::debug!("cannot emit a signal: {e}"));
     }

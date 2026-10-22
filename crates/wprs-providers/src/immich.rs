@@ -47,7 +47,7 @@ impl Immich {
     }
 
     fn keyed(&self, request: RequestBuilder) -> RequestBuilder {
-        request.header("x-api-key", &self.api_key.0)
+        request.header("x-api-key", &self.api_key)
     }
 
     fn item(&self, asset: Asset) -> Option<Item> {

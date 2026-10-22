@@ -16,6 +16,7 @@ pub use wallhaven::Wallhaven;
 pub use webdav::WebDav;
 pub use wikimedia::WikimediaPotd;
 
+use reqwest::header::{HeaderValue, InvalidHeaderValue};
 use reqwest::redirect::{Action, Attempt, Policy};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::net::IpAddr;
@@ -60,6 +61,16 @@ impl std::fmt::Debug for Secret {
 impl<T: Into<String>> From<T> for Secret {
     fn from(value: T) -> Self {
         Self(value.into())
+    }
+}
+
+impl TryFrom<&Secret> for HeaderValue {
+    type Error = InvalidHeaderValue;
+
+    fn try_from(secret: &Secret) -> Result<Self, Self::Error> {
+        let mut value = HeaderValue::from_str(&secret.0)?;
+        value.set_sensitive(true);
+        Ok(value)
     }
 }
 
@@ -192,5 +203,7 @@ mod tests {
     fn secrets_stay_out_of_debug() {
         let text = format!("{:?}", super::Secret::from("hunter2"));
         assert!(!text.contains("hunter2"));
+        let header = super::HeaderValue::try_from(&super::Secret::from("hunter2")).unwrap();
+        assert!(header.is_sensitive() && !format!("{header:?}").contains("hunter2"));
     }
 }

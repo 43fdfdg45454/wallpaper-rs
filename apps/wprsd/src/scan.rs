@@ -58,6 +58,7 @@ impl Daemon {
 
     pub fn provider_of(&self, path: &Path) -> Option<String> {
         let providers = self.store.cache.join("providers");
+        let providers = std::fs::canonicalize(&providers).unwrap_or(providers);
         let own = path.parent().is_some_and(|parent| parent == providers);
         own.then(|| path.file_name().map(|name| name.to_string_lossy().into_owned())).flatten()
     }

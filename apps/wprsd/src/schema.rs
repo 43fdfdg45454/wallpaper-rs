@@ -87,7 +87,7 @@ fn provider(
     ProviderKind { kind: kind.into(), hosts: hosts.iter().map(|h| h.to_string()).collect(), options, secret }
 }
 
-fn providers() -> Vec<ProviderKind> {
+pub fn providers() -> Vec<ProviderKind> {
     let text = |key: &str, default: &str| field(key, FieldKind::Text, json!(default));
     let int = |key: &str, default: u32, min: f64, max: f64| {
         range(field(key, FieldKind::Int, json!(default)), min, max, Some(1.0))

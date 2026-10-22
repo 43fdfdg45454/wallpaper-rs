@@ -6,7 +6,7 @@ use serde_json::Value;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::sync::Semaphore;
+use tokio::sync::{Semaphore, SemaphorePermit};
 use wprs_core::model::{Job, JobError, JobKind, JobState};
 
 const KEPT_FOR: i64 = 600;
@@ -22,6 +22,8 @@ pub struct Jobs {
     next: AtomicU64,
     list: Mutex<Vec<Entry>>,
     library: Semaphore,
+    repos: Semaphore,
+    downloads: Semaphore,
     runtime: tokio::runtime::Handle,
 }
 
@@ -43,7 +45,20 @@ fn active(job: &Job) -> bool {
 impl Jobs {
     pub fn new() -> Self {
         let runtime = tokio::runtime::Handle::current();
-        Self { next: AtomicU64::new(1), list: Mutex::default(), library: Semaphore::new(1), runtime }
+        let (library, repos, downloads) = (Semaphore::new(1), Semaphore::new(1), Semaphore::new(2));
+        Self { next: AtomicU64::new(1), list: Mutex::default(), library, repos, downloads, runtime }
+    }
+
+    fn queue(&self, kind: JobKind) -> &Semaphore {
+        match kind {
+            JobKind::ProviderSync => &self.downloads,
+            JobKind::RepoAdd | JobKind::RepoRefresh | JobKind::Install => &self.repos,
+            _ => &self.library,
+        }
+    }
+
+    pub fn wait_turn(&self, kind: JobKind) -> Option<SemaphorePermit<'_>> {
+        self.runtime.block_on(self.queue(kind).acquire()).ok()
     }
 
     fn with<T>(&self, id: u64, change: impl FnOnce(&mut Entry) -> T) -> Option<T> {
@@ -82,6 +97,10 @@ impl Ctl {
         if self.cancel.load(Ordering::Relaxed) { Err(Error::Cancelled) } else { Ok(()) }
     }
 
+    pub fn flag(&self) -> Arc<AtomicBool> {
+        self.cancel.clone()
+    }
+
     pub fn progress(&self, done: u64, total: u64) {
         self.daemon.jobs.with(self.id, |e| (e.job.done, e.job.total) = (done, total));
         let mut shown = lock(&self.shown);
@@ -114,7 +133,7 @@ impl Daemon {
         self.jobs_changed(id);
         let daemon = self.clone();
         self.jobs.runtime.spawn(async move {
-            let _turn = daemon.jobs.library.acquire().await;
+            let _turn = daemon.jobs.queue(kind).acquire().await;
             let start = |e: &mut Entry| {
                 let queued = e.job.state == JobState::Queued;
                 e.job.state = if queued { JobState::Running } else { e.job.state };

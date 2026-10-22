@@ -31,6 +31,13 @@ dirs.workspace = true
 libc.workspace = true
 rustix.workspace = true
 tempfile.workspace = true
+wprs-providers.workspace = true
+reqwest.workspace = true
+semver.workspace = true
+zeroize.workspace = true
+toml.workspace = true
 
 [dev-dependencies]
 roxmltree.workspace = true
+wprs-format = { workspace = true, features = ["sign"] }
+wiremock.workspace = true

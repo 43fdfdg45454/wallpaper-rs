@@ -100,6 +100,7 @@ impl Daemon {
             let section = st.config.outputs.get(name).filter(|o| o.image.is_some() || o.playlist.is_some());
             let preset = section.unwrap_or(&st.config.default).preset.clone();
             let item = r.image.as_ref().and_then(|image| st.items.get(image).cloned());
+            let credit = r.image.as_deref().and_then(|image| self.credit(image));
             let mut state = OutputState {
                 width,
                 height,
@@ -115,7 +116,7 @@ impl Daemon {
                 item,
                 preset,
                 playlist: None,
-                credit: None,
+                credit,
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)

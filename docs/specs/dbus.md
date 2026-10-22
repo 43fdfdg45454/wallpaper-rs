@@ -24,8 +24,10 @@ in 60 s) and clients get their streams again through `RequestStream`. Only the m
 change what is shown (`Library1.Apply`, `Playlists1.Start`, `Stop`, `Next` and `Previous`,
 `Profiles1.Activate` and the `Daemon1` methods that change something) need the renderer.
 
-This version of wprsd serves `Providers1` and `Repos1` with every member listed below, but their
-methods return `org.freedesktop.DBus.Error.NotSupported`.
+The daemon opens network connections only to the providers and repositories the user added
+(including the signed mirrors of a repository), with a generic `User-Agent:
+wallpaper-rs/<version>` and without cookies or `Referer`. At startup it contacts only providers
+due for their automatic sync; the daily repository refresh starts 10 minutes later.
 
 ## Conventions
 
@@ -65,13 +67,15 @@ Every error carries a readable English message.
 | `io.github.wallpaper_rs.Error.NotFound` | Unknown uid, name, output assignment, provider, repository, package or job |
 | `io.github.wallpaper_rs.Error.Exists` | Name, folder, provider id or repository already present |
 | `io.github.wallpaper_rs.Error.NeedsSecret` | A provider needs a secret that is missing or was rejected |
-| `io.github.wallpaper_rs.Error.KeyringUnavailable` | The keyring item cannot be written or deleted, or the keyring stayed locked |
+| `io.github.wallpaper_rs.Error.KeyringUnavailable` | The keyring item cannot be written or deleted, the keyring stayed locked for 20 s or its unlock prompt was dismissed, or no Secret Service is available to store a secret |
 | `io.github.wallpaper_rs.Error.Stale` | A repository's signed index expired; retry with `allow_stale = true` after asking the user |
 | `io.github.wallpaper_rs.Error.Conflict` | A playlist edit by index found other entries than expected: `the playlist changed; reload it` |
 
 If `library.db` cannot be opened (for example because a newer build wrote it), the daemon still
 renders, `GetState().library_error` holds the reason and every `Library1`, `Playlists1` and
-`Profiles1` method returns `Failed` with it. An output whose playlist cannot be resolved then
+`Profiles1` method, `Providers1.Add`, `Remove` and `Sync`, and `Repos1.Install`, `Uninstall`
+and `Remove(uninstall = true)` return `Failed` with it; scheduled syncs are skipped. The other
+`Providers1` and `Repos1` methods keep working. An output whose playlist cannot be resolved then
 shows its background color and `GetState().outputs[x].error` says why.
 
 ## Streams and claims
@@ -601,86 +605,165 @@ Deletes a preset; configuration sections that used it keep their fit and backgro
 
 ## `io.github.wallpaper_rs.Providers1`
 
-Providers download wallpapers from online services into a cache folder that is a library
-source. Kinds and their options are listed in `GetSchema().providers`. Secrets are written to
-the Secret Service and never stored anywhere else.
+Providers download wallpapers from online services into a cache folder,
+`~/.cache/wallpaper-rs/providers/<id>/` (`0700`), that is a library source; playlists use their
+items through the library (for example `Playlists1.Create(name, "source:<source uid>")`). Kinds
+are `bing`, `apod`, `wikimedia`, `wallhaven`, `webdav`, `nextcloud` and `immich`; their options,
+defaults, contacted hosts and secrets are listed in `GetSchema().providers`. Local folders are
+`Library1` sources, not providers. Provider ids match `^[a-z][a-z0-9_-]{0,31}$`.
+
+Secrets (passwords and API keys) are written only by `Add` and `SetSecret`, to the Secret
+Service (`org.freedesktop.secrets`, default collection, falling back to `login`) as an item
+labelled `wallpaper-rs: <id>` with the attributes `xdg:schema = io.github.wallpaper_rs.Provider`
+and `provider = <id>`. They are never stored anywhere else and never appear in replies, signals,
+job errors, logs or `config.toml`. A secret has at most 4096 bytes and no control characters.
+Only `Add` with a secret, `SetSecret`, `ForgetSecret`, `Set` of `url`, `server` or `user`,
+`Remove` and an explicit `Sync` may show the keyring's unlock prompt; they wait at most 20 s and
+then return `KeyringUnavailable` (`unlock the keyring and try again`) without storing or
+deleting anything. Clients call `Add` and `SetSecret` with a timeout of 120 s.
+
+URL options (`url`, `server`) must be `https://`, or `http://` to this computer; any other
+`http://` URL needs the option `allow_plain_http = true`, given explicitly. URLs with user
+information, a query or a fragment return `InvalidArgs` (`put credentials in the secret, not in
+the URL`). Requests that carry a secret never follow a redirect to another origin or from HTTPS
+to HTTP.
+
+A sync job lists the provider's items and downloads them in list order into the cache folder.
+Files of items shown on an output, favorite, rated above 0 or in a manual playlist are protected:
+downloading stops when the other files would exceed `cache_mb` minus the protected files (the
+rest count as `skipped`), and older unprotected files are then evicted. The folder is scanned
+(evicted items become `missing` and never rotate), the items get the provider's titles while
+their title is still the file name, and their credits (title, attribution, license, and a link
+for public services) are kept in the folder's `.credits.json` and reported as
+`ItemDetails.credit` and `GetState().outputs[x].credit`.
+
+A provider whose `refresh` is not `0s` syncs automatically when it has never synced or its last
+sync is older than `refresh`; the schedule is checked again 5 s after `Add`, `Set` and
+`SetSecret`. Failed syncs are retried after 30 s, doubling up to 1 h, and cancelled ones after
+1 h. A provider whose required secret is missing is in state `needs_secret` and does not sync
+automatically; one whose secret was rejected (HTTP 401 or 403, `NeedsSecret`) waits for
+`SetSecret`. Automatic syncs never show an unlock prompt: with a locked keyring the provider's
+state becomes `locked` and the sync waits for its next due time.
 
 ### `List() → (s json)`
 
-A `ProvidersReply`.
+A `ProvidersReply`. Entries of `config.toml` that cannot be read (an unknown kind or option, a
+bad value, a secret written by hand) are listed with state `error`, their reason in
+`last_error` and no options; they are never synced and are kept in the file unchanged.
 
 ### `Add(s id, s kind, a{ss} options, s secret) → (s source)`
 
-Adds a provider (`id` matches `^[a-z][a-z0-9_-]{0,31}$`) and returns the library source of its
-cache folder. `secret = ""` stores none.
+Validates everything, then stores a non-empty `secret` in the keyring (`KeyringUnavailable`:
+nothing is created), registers the cache folder as a library source, writes
+`[providers.<id>]` to `config.toml`, and returns the source uid. `secret = ""` stores none; a
+kind whose secret is required then starts in `needs_secret`. `InvalidArgs` for an invalid id,
+an unknown kind, option or value, a missing required option, an option named like a secret
+(`password`, `api_key`, `token`, `secret`), a refused URL, or a secret given to a kind without
+one; `Exists` for a taken id.
 
 ### `Set(s id, s key, s value)`
 
-Changes one option. Changing `url`, `server` or `user` also forgets the secret.
+Changes one option with the same checks. Cached files stay until the next sync replaces them.
+On a kind with a secret, changing `url`, `server` or `user` also deletes the stored secret first
+(`KeyringUnavailable`: nothing changes), so a new host never receives the old secret.
 
 ### `Remove(s id, b purge)`
 
-Removes a provider with its library source and secret; `purge` also deletes the cache folder.
+Cancels a running sync, deletes the stored secret (`KeyringUnavailable` only when it exists and
+cannot be deleted; then nothing is removed), the library source with its items and thumbnails,
+and the configuration entry. `purge` also deletes the cache folder.
 
 ### `Sync(s id) → (t job)`
 
-Starts a `provider_sync` job; `id = ""` syncs every provider.
+Starts a `provider_sync` job; `id = ""` syncs every provider that is not `needs_secret`. A
+provider that another sync job is already syncing is skipped. `NeedsSecret` when the provider's
+required secret is missing.
 
 ### `SetSecret(s id, s secret)`
 
-Stores the provider's secret (at most 4096 bytes).
+Stores the provider's secret, replacing the previous one. `InvalidArgs` for an empty secret or
+a kind without secret.
 
 ### `ForgetSecret(s id)`
 
-Deletes the provider's secret.
+Deletes the provider's secret. Kinds without secret never touch the keyring.
 
 ## `io.github.wallpaper_rs.Repos1`
 
-Signed repositories of `.wpak` packages (see `repo.md`). `repo` arguments take a full
-repository id or a unique prefix of at least 8 hex digits.
+Signed repositories of `.wpak` packages (see `repo.md`), kept in `~/.local/share/wallpaper-rs`.
+`repo` arguments take a full repository id or a unique prefix of at least 8 hex digits. Trust is
+anchored by the URL a repository is added with (`fingerprint=` and/or `repo_id=`); repository
+jobs (`repo_add`, `repo_refresh` and the download of `install`) run one at a time. Installed
+packages are imported into the library; revoked ones are never applied again (`Apply` returns
+`Failed`), rotation skips them, and an output showing one when its revocation arrives shows its
+background color instead.
 
 ### `List() → (s json)`
 
-A `ReposReply`.
+A `ReposReply`. `stale` and `warnings` are computed at every call; `last_error` is the message
+of the last failed refresh since the daemon started.
 
 ### `Add(s url) → (t job)`
 
-Adds a repository whose URL carries its trust anchor (`fingerprint=` and/or `repo_id=`).
+Adds a repository whose URL carries its trust anchor. The URL is `https://`, `file://` or
+`http://` to this computer, without user information or fragment. `Exists` at once when its
+`repo_id=` names an added repository, or when the job finds it already added. The job verifies
+the repository fully and stores its signed state.
 
 ### `Refresh(s repo) → (t job)`
 
-Refreshes a repository (`""` = all) and applies revocations.
+Refreshes a repository (`""` = all) and applies revocations to the installed packages, also
+when the repository is stale. A failed refresh keeps the last verified state. With
+`repos.auto_refresh`, every repository is refreshed 10 minutes after the daemon starts and then
+every 24 hours; updates are never installed automatically.
 
 ### `Remove(s repo, b uninstall)`
 
-Removes a repository; `uninstall` also uninstalls its packages.
+Removes a repository with its cached previews; `uninstall` also uninstalls its packages
+(`Failed` if one of them is shown on an output). Without it the packages stay usable, without
+updates or revocations.
 
 ### `Browse(s query, u offset, u limit) → (s json)`
 
 A `BrowsePage` of the packages offered, matched without case on id, title, description, tags
-and authors.
+and authors, sorted by id then repository. `limit` is `0..=500`. Scene packages are listed;
+installing them returns `InvalidArgs`.
 
 ### `RequestPreviews(as specs) → (a{ss} paths)`
 
-Returns `{spec: path}` for the cached previews of `[repo/]id[@version]` specs and queues the
-others; `PreviewReady` follows for each of them.
+Returns `{spec: path}` for the cached previews of `[repo/]id[@version]` specs (at most 500,
+keys as given) and queues the others; `PreviewReady` follows for each of them. A new call from
+the same sender replaces its queued requests. Previews are downloaded within their signed size
+and hash, re-encoded by the thumbnail worker to JPEG files of at most 1024 px in
+`~/.cache/wallpaper-rs/previews/`, and only the re-encoded file is handed out.
 
 ### `Install(s spec, b allow_stale, b allow_downgrade) → (t job)`
 
-Installs or updates a package. `Stale` when the repository's index expired and `allow_stale` is
-false.
+Installs `[repo/]id[@version]`; without a version, the newest release when it is newer than the
+installed one (this is how updates are installed), else the job finishes at once with the
+installed record. Checked before the job starts: `InvalidArgs` for a malformed spec, a package
+offered by several repositories without `repo`, a package installed from another repository, a
+scene package or an explicit version older than the installed one without `allow_downgrade`;
+`NotFound` for an unknown package or version; `Failed` for an expired root (`root expired:
+possible freeze attack`) or a revoked version; `Stale` when the repository's index expired and
+`allow_stale` is false. The first installed version is imported into the library; later
+versions relink the same item, keeping its title, tags, rating, presets and playlist entries.
 
 ### `Uninstall(s id, s version)`
 
-Uninstalls one version, or every version for `version = ""`.
+Uninstalls one version, or every version for `version = ""`. `Failed` when one of them is shown
+on an output. When the version linked to the library item goes, the item moves to the newest
+remaining version, or is removed with its thumbnails when none remains.
 
 ### `ListInstalled() → (s json)`
 
-An `InstalledReply`.
+An `InstalledReply`; `item` is set on the version linked to the library item and `update` on
+the newest installed version when a newer one is available.
 
 ### Signal `PreviewReady(s spec, s path)`
 
-A preview queued by `RequestPreviews` is ready, or could not be made (`path = ""`).
+A preview queued by `RequestPreviews` is ready, or could not be made (`path = ""`: unknown
+package, no preview, or a failed download or check).
 
 ## Change notification
 
@@ -717,7 +800,10 @@ returns `(Serial, [])` on timeout.
 Job ids start at 1 for every daemon run and are never reused in a run; clients notice a restart
 of the daemon through `NameOwnerChanged`. Starting a job whose kind and target equal a queued or
 running job returns that job's id (`import` jobs are never merged). Library jobs (`scan`,
-`import`, `analyze`) run one at a time; a job waiting for its turn is `queued`.
+`import`, `analyze`) run one at a time, repository jobs (`repo_add`, `repo_refresh`, `install`)
+run one at a time, and at most two `provider_sync` jobs download at once; a job waiting for its
+turn is `queued`. A sync after its downloads and an install after its commit stay `running`
+while they wait for the library.
 
 | Kind | Started by | Target | Progress unit | Output |
 |------|------------|--------|---------------|--------|
@@ -730,9 +816,10 @@ running job returns that job's id (`import` jobs are never merged). Library jobs
 | `install` | `Repos1.Install` | `repo_id/id@version` | bytes | `InstalledPackage` |
 
 `CancelJob` drops a queued job; a running job stops at its next checkpoint (between scan
-batches of at most 256 files, imported files and analyzed items). Finished steps stay: a
-cancelled scan keeps the batches it stored and marks nothing missing. Cancelling a finished job
-changes nothing.
+batches of at most 256 files, imported files, analyzed items, provider downloads and download
+chunks). Finished steps stay: a cancelled scan keeps the batches it stored and marks nothing
+missing, and a package whose commit finished stays installed. Cancelling a finished job changes
+nothing.
 
 ## Thumbnails
 
@@ -932,6 +1019,14 @@ thumb_cache_mb = 512
 
 [repos]
 auto_refresh = true
+
+[providers.photos]        # one table per provider
+kind = "immich"
+server = "https://photos.example.org"
+album = "0d6a…"
+allow_plain_http = false
+refresh = "1h"
+cache_mb = 1024
 ```
 
 A section shows its `playlist` if set, else its `image`. An output section that sets either one
@@ -940,3 +1035,8 @@ field. `preset` is only a label: `Library1.Apply`, `Profiles1.Activate` and
 `Profiles1.SavePreset` write the effective fit and background into the section. When the
 library is available at startup or `Reload`, `preset`, `playlist` and `profile` uids that name
 nothing are dropped with a warning naming the key, and the file is saved.
+
+Each `[providers.<id>]` table holds the provider's `kind` and the options given to it; missing
+options take the defaults of `GetSchema().providers`. Secrets are never written here. A table
+that cannot be read is skipped with a warning naming the provider and kept unchanged when the
+daemon saves the file.

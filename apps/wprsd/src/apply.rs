@@ -68,6 +68,8 @@ impl Daemon {
             let video = wprs_video::is_video(&path);
             return Ok((path, video));
         }
+        let revoked = self.state().installed.iter().any(|i| i.path == path && i.revoked.is_some());
+        anyhow::ensure!(!revoked, "the package is revoked");
         let meta = std::fs::metadata(&path)?;
         let blob = self.blob(&path, meta.mtime(), meta.len());
         let video = materialize(&path, &blob)?;
