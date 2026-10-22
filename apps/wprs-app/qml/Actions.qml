@@ -100,6 +100,7 @@ Item {
     ItemDrawer {
         id: drawer
 
+        parent: tools.QQC2.Overlay.overlay
         removable: tools.items.selected === 1 && tools.items.removable
         onApply: uid => apply.show(uid)
         onRemove: uid => {

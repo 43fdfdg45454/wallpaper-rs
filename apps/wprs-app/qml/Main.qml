@@ -29,8 +29,10 @@ Kirigami.ApplicationWindow {
 
     function showPage(index, properties) {
         current = index;
+        const old = pageStack.currentItem;
         pageStack.clear();
-        pageStack.push(pages[index], properties ?? {});
+        old?.destroy();
+        pageStack.push(pages[index].createObject(pageStack, properties ?? {}));
     }
 
     title: "wallpaper-rs"
