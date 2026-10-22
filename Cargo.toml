@@ -9,6 +9,7 @@ members = [
     "crates/wprs-schedule",
     "crates/wprs-providers",
     "crates/wprs-scene",
+    "crates/wprs-library",
     "apps/wprsd",
     "apps/wprs-ctl",
 ]
@@ -29,12 +30,15 @@ wprs-format = { path = "crates/wprs-format" }
 wprs-schedule = { path = "crates/wprs-schedule" }
 wprs-providers = { path = "crates/wprs-providers" }
 wprs-scene = { path = "crates/wprs-scene" }
+wprs-library = { path = "crates/wprs-library" }
 anyhow = "1"
 thiserror = "2"
 rustix = { version = "1", features = ["fs", "mm"] }
 futures-util = { version = "0.3", default-features = false }
 zip = { version = "9", default-features = false, features = ["deflate"] }
 sha2 = "0.11"
+rusqlite = { version = "0.40", features = ["bundled"] }
+ulid = "3"
 semver = "1"
 tempfile = "3"
 chrono = { version = "0.4.41", default-features = false, features = ["std", "serde"] }
