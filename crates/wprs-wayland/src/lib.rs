@@ -2,6 +2,7 @@ mod backdrop;
 mod desk;
 mod handlers;
 mod hyprland;
+mod modes;
 mod monitors;
 mod pacer;
 mod pointer;
@@ -12,13 +13,15 @@ mod toplevel;
 mod window;
 mod x11;
 
+pub use modes::watch_modes;
 pub use pacer::Pacer;
 pub use window::{Display, Window};
 
 use smithay_client_toolkit::reexports::client::globals::{GlobalList, registry_queue_init};
-use smithay_client_toolkit::reexports::client::{Connection, EventQueue};
+use smithay_client_toolkit::reexports::client::{Connection, DispatchError, EventQueue};
 use state::State;
 use std::sync::Arc;
+use wayland_backend::client::WaylandError;
 use x11::X11;
 
 pub enum Event {
@@ -27,7 +30,9 @@ pub enum Event {
     Frame(String),
     Covered(String, Cover, bool),
     Pointer(String, Option<[f32; 2]>, u8),
+    Exposed(String),
     Lost(String),
+    Failed(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,8 +95,39 @@ impl Session {
                     break e;
                 }
             };
-            (state.sink)(Event::Lost(error.to_string()))
+            (state.sink)(ended(error))
         })?;
         Ok(())
+    }
+}
+
+fn ended(error: DispatchError) -> Event {
+    use std::io::ErrorKind::{BrokenPipe, ConnectionAborted, ConnectionReset, NotConnected, UnexpectedEof};
+    match error {
+        DispatchError::Backend(WaylandError::Io(e))
+            if matches!(
+                e.kind(),
+                BrokenPipe | ConnectionReset | ConnectionAborted | NotConnected | UnexpectedEof
+            ) =>
+        {
+            Event::Lost(e.to_string())
+        }
+        error => Event::Failed(error.to_string()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wayland_backend::protocol::ProtocolError;
+
+    #[test]
+    fn protocol_errors_fail_and_a_closed_connection_ends() {
+        let (code, object_id, object_interface) = (2, 9, "zwlr_layer_surface_v1".into());
+        let error = ProtocolError { code, object_id, object_interface, message: "invalid size".into() };
+        assert!(matches!(ended(DispatchError::Backend(WaylandError::Protocol(error))), Event::Failed(_)));
+        let io = |kind| DispatchError::Backend(WaylandError::Io(std::io::Error::from(kind)));
+        assert!(matches!(ended(io(std::io::ErrorKind::BrokenPipe)), Event::Lost(_)));
+        assert!(matches!(ended(io(std::io::ErrorKind::InvalidData)), Event::Failed(_)));
     }
 }

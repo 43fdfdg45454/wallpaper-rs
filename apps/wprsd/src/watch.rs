@@ -69,11 +69,12 @@ pub async fn motion(connection: zbus::Connection, daemon: Arc<Daemon>) {
     }
 }
 
-pub async fn battery(daemon: Arc<Daemon>) {
+pub async fn battery(daemon: Arc<Daemon>, known: tokio::sync::oneshot::Sender<()>) {
     let follow = async {
         let upower = UPowerProxy::new(&zbus::Connection::system().await?).await?;
         let mut changes = upower.receive_on_battery_changed().await;
         upower.on_battery().await.map(|v| daemon.set_on_battery(v)).ok();
+        drop(known);
         while let Some(change) = changes.next().await {
             change.get().await.map(|v| daemon.set_on_battery(v)).ok();
         }

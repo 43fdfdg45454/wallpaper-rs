@@ -33,7 +33,7 @@ pub(super) struct SceneState {
 }
 
 fn wall() -> f64 {
-    let now = chrono::Local::now();
+    let now = chrono::Utc::now().with_timezone(&crate::zone::Zone);
     f64::from(now.num_seconds_from_midnight()) + f64::from(now.nanosecond() % 1_000_000_000) / 1e9
 }
 

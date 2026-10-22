@@ -2,7 +2,8 @@ use crate::compositor::lock;
 use crate::daemon::{Daemon, State};
 use crate::error::Error;
 use crate::timing::{Turn, rotate};
-use chrono::{Local, Utc};
+use crate::zone::Zone;
+use chrono::Utc;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{BuildHasher, RandomState};
 use std::path::{Path, PathBuf};
@@ -175,7 +176,7 @@ impl Daemon {
             let live = info.rules.advance_while_paused || members.iter().any(|(_, active)| *active);
             let turn = Turn { live, fresh: !lists.contains_key(&key), start, step, retime };
             let last = lists.get(&key).map(Vec::as_slice);
-            let switched = rotate(&mut row, last, resolved, &info.rules, turn, now, &Local);
+            let switched = rotate(&mut row, last, resolved, &info.rules, turn, now, &Zone);
             lists.insert(key, resolved.uids.clone());
             if stored.as_ref() != Some(&row) {
                 saves.push(row.clone());

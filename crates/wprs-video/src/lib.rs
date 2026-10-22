@@ -1,4 +1,6 @@
+mod audio;
 mod bus;
+mod pipewire;
 mod player;
 mod probe;
 mod still;

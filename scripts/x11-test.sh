@@ -118,6 +118,18 @@ expect "s['outputs']['DP-1']['playing']" True
 kill "$xev"
 echo "fullscreen pause checks passed"
 
+ctl pause && expect "s['outputs']['DP-2']['playing']" False
+opened=$(grep -c "video opened" "$WORK/wprsd.log")
+xev -geometry 300x200+800+260 >"$WORK/xev.log" 2>&1 & xev=$!; pids+=("$xev")
+timeout 10 xdotool search --sync --onlyvisible --name '^Event Tester$' >/dev/null
+kill "$xev"
+wait "$xev" 2>/dev/null || true
+check 640x720+640+0 "0.5,0.5,$magenta"
+expect "s['outputs']['DP-2']['playing']" False
+[ "$(grep -c "video opened" "$WORK/wprsd.log")" = "$opened" ] || fail "an exposure restarted the paused video"
+ctl resume
+echo "exposure of a paused video checks passed"
+
 xrandr --delmonitor DP-2
 xrandr --delmonitor DP-1
 expect "sorted(s['outputs'])" "['screen']"
@@ -132,6 +144,24 @@ check "$full" "0.5,0.1,$green" "0.02,0.02,$blue"
 expect "s['outputs']['screen']['parallax']" False
 wait_for 10 rooted || fail "no root pixmap for a still image"
 echo "hotplug checks passed"
+
+desks() {
+  local w found=0
+  for w in $(xdotool search --class '^wprsd$'); do
+    xwininfo -id "$w" | grep -q "Override Redirect State: $1" || return 1
+    found=1
+  done
+  [ "$found" = 1 ]
+}
+wait_for 10 desks yes || fail "the wallpaper window is not override-redirect without a window manager"
+openbox --sm-disable >"$WORK/openbox.log" 2>&1 & wm=$!; pids+=("$wm")
+wait_for 30 desks no || fail "the window manager did not get the wallpaper window"
+check "$full" "0.5,0.1,$green" "0.02,0.02,$blue"
+kill "$wm"
+wait "$wm" 2>/dev/null || true
+wait_for 30 desks yes || fail "the wallpaper window was not taken back from the window manager"
+check "$full" "0.5,0.1,$green" "0.02,0.02,$blue"
+echo "window manager checks passed"
 
 xdotool search --class '^wprsd$' windowunmap %@
 check "$full" "0.5,0.1,$green" "0.02,0.02,$blue" "0.98,0.98,$blue"

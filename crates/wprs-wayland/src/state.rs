@@ -18,8 +18,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-fn physical(info: &OutputInfo) -> (u32, u32) {
-    let (w, h) = (info.physical_size.0.max(0) as u32, info.physical_size.1.max(0) as u32);
+pub(crate) fn turned(info: &OutputInfo, (w, h): (i32, i32)) -> (u32, u32) {
+    let (w, h) = (w.max(0) as u32, h.max(0) as u32);
     let turned = matches!(
         info.transform,
         Transform::_90 | Transform::_270 | Transform::Flipped90 | Transform::Flipped270
@@ -112,7 +112,12 @@ impl State {
 
     pub(crate) fn remove(&mut self, gone: impl Fn(&Screen) -> bool) {
         let removed: Vec<_> = self.screens.extract_if(.., |s| gone(s)).collect();
-        removed.into_iter().for_each(|s| (self.sink)(Event::Gone(s.name)));
+        for screen in removed {
+            match self.screens.iter().rev().find(|s| s.name == screen.name).map(|s| s.parts.layer.clone()) {
+                Some(twin) => self.changed(|s| s.parts.layer == twin, |_| {}),
+                None => (self.sink)(Event::Gone(screen.name)),
+            }
+        }
     }
 
     pub(crate) fn changed(&mut self, matches: impl Fn(&Screen) -> bool, change: impl FnOnce(&mut Screen)) {
@@ -132,7 +137,7 @@ impl State {
             scale: effective(screen.fractional, screen.integer, screen.parts.viewport.is_some()),
             refresh: Duration::from_micros(1_000_000_000 / refresh),
             position: info.as_ref().map_or((0, 0), |i| i.logical_position.unwrap_or(i.location)),
-            mm: info.as_ref().map_or((0, 0), physical),
+            mm: info.as_ref().map_or((0, 0), |i| turned(i, i.physical_size)),
             identity: info
                 .as_ref()
                 .map_or(String::new(), |i| format!("{} {}", i.make, i.model).trim().to_owned()),

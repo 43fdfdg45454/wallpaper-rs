@@ -78,11 +78,16 @@ también la configuración).
 Después, en Plasma: clic derecho en el escritorio → *Configurar escritorio y fondo de
 pantalla* → tipo de fondo **wallpaper-rs**. El fondo, el modo de ajuste y la lista de cada
 pantalla, el perfil, la pausa, el volumen y los ajustes se eligen desde el icono de wallpaper-rs
-en la bandeja.
+en la bandeja. Con escala fraccional y Qt anterior a 6.11, el plugin pide más píxeles de los que
+tiene la pantalla; el daemon reduce el stream a los píxeles reales de la pantalla, los del modo que
+anuncia el compositor Wayland, para no gastar GPU ni memoria de más (el tamaño y la escala que le
+pasa el plugin no bastan, porque llevan la misma escala que la petición).
 
-Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good) y un
-controlador Vulkan u OpenGL. El plugin de fondo usa los módulos QML de KPipeWire, KWindowSystem y
-plasma-workspace; en Debian y Ubuntu vienen en `qml6-module-org-kde-pipewire`,
+Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good y el de
+PipeWire, que lleva el sonido de los vídeos desde su versión 1.2; sin él o con uno anterior, el
+sonido va a la salida por defecto; si aún no hay ninguna salida de sonido, el vídeo suena en cuanto
+aparece una) y un controlador Vulkan u OpenGL. El plugin de fondo usa los módulos QML de KPipeWire,
+KWindowSystem y plasma-workspace; en Debian y Ubuntu vienen en `qml6-module-org-kde-pipewire`,
 `qml6-module-org-kde-kwindowsystem` y `plasma-workspace`. La app de escritorio usa Qt 6 Quick,
 Kirigami y el estilo de escritorio de KDE (`qml6-module-org-kde-kirigami` y
 `qml6-module-org-kde-qqc2desktopstyle`).
@@ -108,13 +113,15 @@ el `.tar.gz`, porque los dos registran el mismo servicio D-Bus: ejecuta antes `.
 alias wprs-ctl='flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperRs'
 ```
 
-Permisos: la GPU, el socket de PipeWire para publicar los streams, el sonido de los vídeos, el
+Permisos: la GPU, el socket de PipeWire, que publica los streams, lleva el sonido de los vídeos y
+permite capturar el sonido solo para las escenas con permiso (no hace falta el de PulseAudio), el
+socket de Wayland, solo para leer la resolución de cada pantalla (el daemon no abre ventanas), el
 nombre D-Bus del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
-Service) para las contraseñas y claves de los proveedores, KWin para cargar el script del
-puntero solo mientras una escena con permiso o un paralaje que sigue al puntero lo usa, lectura
-de Imágenes, Vídeos y Descargas, y
-red. La red solo se usa para los proveedores de fondos y los repositorios que
-añadas tú. Para usar fondos de otra carpeta:
+Service) para las contraseñas y claves de los proveedores, KWin para cargar el script del puntero
+solo mientras una escena con permiso o un paralaje que sigue al puntero lo usa, lectura de
+Imágenes, Vídeos y Descargas, y red. La red solo se usa para los proveedores de fondos y los
+repositorios que añadas tú. Los cambios de zona horaria llegan sin permisos, por el fichero que
+Flatpak actualiza en el sandbox. Para usar fondos de otra carpeta:
 `flatpak override --user --filesystem=/ruta:ro io.github.wallpaper_rs.WallpaperRs`. La
 configuración vive en `~/.var/app/io.github.wallpaper_rs.WallpaperRs/config/wallpaper-rs/`. Para
 desinstalar: `flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs remove | sh` y
@@ -145,7 +152,10 @@ streams del plugin y en otro escritorio Wayland con `wlr-layer-shell`, sus propi
 compositor (`DP-1`, `HDMI-A-1`…; las muestran `swaymsg -t get_outputs`, `hyprctl monitors`,
 `niri msg outputs` o `wlr-randr`) y esos nombres son los de `-o` y de la configuración. Las
 pantallas que se conectan o se quitan con la sesión abierta se siguen solas, y la escala
-fraccional se respeta.
+fraccional se respeta. Un cambio de pantallas se aplica cuando lleva medio segundo estable, así que
+una pantalla que el compositor anuncia dos veces, quita y vuelve a poner, o deja un instante sin
+tamaño no rehace su superficie ni reinicia su vídeo. Si el compositor corta la conexión por un error
+de protocolo, `wprsd` sale con estado 70 y el servicio de usuario lo arranca de nuevo.
 
 Los vídeos se pausan cuando una ventana tapa la pantalla: el compositor deja de pedir fotogramas
 al fondo, una ventana activa a pantalla completa o maximizada lo confirma y, en Hyprland, también
@@ -162,7 +172,10 @@ pone el fondo de la ventana raíz (`_XROOTPMAP_ID` y `ESETROOT_PMAP_ID`) para lo
 terminales con transparencia, y los vídeos se pausan cuando una ventana del escritorio actual está a
 pantalla completa o maximizada en ese monitor según EWMH. Se arranca con `wprsd &` en `~/.xinitrc`,
 antes del gestor de ventanas, o desde el arranque automático de este; con el servicio de usuario,
-`systemctl --user import-environment DISPLAY && systemctl --user restart wprsd`.
+`systemctl --user import-environment DISPLAY && systemctl --user restart wprsd`. Si el gestor de
+ventanas arranca después que `wprsd` (o se cierra), las ventanas pasan solas a ser ventanas de
+escritorio gestionadas (o *override-redirect*). Cuando una ventana deja de tapar el fondo, se dibuja
+otra vez el último fotograma, también con el vídeo en pausa, sin reiniciarlo.
 
 ## Android
 
@@ -433,8 +446,9 @@ ella, no vuelven.
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
 libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev qt6-base-dev qt6-declarative-dev`. Para las
 pruebas: `mesa-vulkan-drivers pipewire wireplumber dbus-x11 gstreamer1.0-plugins-base
-gstreamer1.0-plugins-good`, `sway grim foot` para la de Sway, `xvfb x11-utils x11-xserver-utils
-xdotool imagemagick` para la de X11 y `gnome-keyring` para la del servidor.
+gstreamer1.0-plugins-good gstreamer1.0-pipewire gstreamer1.0-tools`, `sway grim foot` para la de
+Sway, `xvfb x11-utils x11-xserver-utils xdotool imagemagick openbox` para la de X11 y
+`gnome-keyring` para la del servidor.
 
 ```sh
 cargo test --workspace                   # pruebas unitarias, de render y de vídeo

@@ -110,6 +110,7 @@ impl Daemon {
             info.screen.replace(screen.clone()) != Some(screen)
         };
         if changed {
+            self.refit(&output);
             self.configure_all();
             self.changes.changed("state", vec![output]);
         }

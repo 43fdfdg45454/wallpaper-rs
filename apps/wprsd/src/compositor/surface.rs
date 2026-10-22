@@ -84,7 +84,10 @@ impl State {
                 (screen.window, screen.fresh) = (window, screen.fresh || moved);
                 output.dirty |= moved;
             }
-            sink => (*sink, output.dirty) = (Sink::Surface(Screen::new(window)), true),
+            sink => {
+                window.report(Cover::Starved, false);
+                (*sink, output.dirty) = (Sink::Surface(Screen::new(window)), true);
+            }
         }
     }
 
@@ -93,6 +96,11 @@ impl State {
         if screen.pacer.done() {
             screen.window.report(Cover::Starved, false);
         }
+    }
+
+    pub(super) fn repaint(&mut self, name: &str) {
+        let shown = |o: &&mut super::output::Output| matches!(o.sink, Sink::Surface(_)) && o.animated();
+        self.outputs.get_mut(name).filter(shown).into_iter().for_each(|o| o.dirty = true);
     }
 
     pub(super) fn starvation(&self) -> impl Iterator<Item = Instant> + '_ {

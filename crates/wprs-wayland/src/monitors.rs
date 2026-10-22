@@ -29,10 +29,11 @@ struct Watch {
     sink: Sink,
     screens: Vec<Screen>,
     clients: HashSet<u32>,
+    check: Option<u32>,
 }
 
 pub(crate) fn start(x: Arc<X11>, sink: Sink) -> anyhow::Result<()> {
-    let mut watch = Watch { x, sink, screens: Vec::new(), clients: HashSet::new() };
+    let mut watch = Watch { x, sink, screens: Vec::new(), clients: HashSet::new(), check: None };
     std::thread::Builder::new().name("wprs-x11".into()).spawn(move || {
         let Err(error) = watch.run();
         (watch.sink)(Event::Lost(error.to_string()))
@@ -42,34 +43,62 @@ pub(crate) fn start(x: Arc<X11>, sink: Sink) -> anyhow::Result<()> {
 
 impl Watch {
     fn run(&mut self) -> Result<Infallible, ReplyOrIdError> {
-        let (mut monitors, mut stacking) = (true, true);
+        let (mut monitors, mut stacking, mut manager) = (true, true, true);
         loop {
+            if manager {
+                self.manager()?;
+            }
             if monitors {
                 self.monitors()?;
             }
-            if monitors || stacking {
+            if monitors || stacking || manager {
                 self.stacking()?;
             }
             let (x, first) = (self.x.clone(), self.x.conn.wait_for_event()?);
             let more = std::iter::from_fn(|| x.conn.poll_for_event().transpose());
-            (monitors, stacking) = (false, false);
+            let (a, mut exposed) = (&x.atoms, HashSet::new());
+            (monitors, stacking, manager) = (false, false, false);
             for event in std::iter::once(Ok(first)).chain(more) {
                 match event? {
                     Received::RandrScreenChangeNotify(_) | Received::RandrNotify(_) => monitors = true,
                     Received::ConfigureNotify(e) if e.window == x.root => monitors = true,
                     Received::ConfigureNotify(e) => {
                         let theirs = self.screens.iter().all(|s| s.desk.window != e.window);
-                        if !x.managed && theirs && e.above_sibling == x11rb::NONE {
+                        if !x.managed() && theirs && e.above_sibling == x11rb::NONE {
                             self.screens.iter().try_for_each(|s| s.desk.lower())?;
                         }
                         stacking = true;
                     }
                     Received::MapNotify(_) | Received::UnmapNotify(_) => stacking = true,
-                    Received::PropertyNotify(e) => stacking |= relevant(&x.atoms, e.atom),
+                    Received::DestroyNotify(e) => manager |= self.check == Some(e.window),
+                    Received::PropertyNotify(e)
+                        if [a._NET_SUPPORTING_WM_CHECK, a._NET_SUPPORTED].contains(&e.atom) =>
+                    {
+                        manager |= e.window == x.root
+                    }
+                    Received::PropertyNotify(e) => stacking |= relevant(a, e.atom),
+                    Received::Expose(e) if e.count == 0 => drop(exposed.insert(e.window)),
                     _ => {}
                 }
             }
+            let shown = self.screens.iter().filter(|s| exposed.contains(&s.desk.window));
+            shown.for_each(|s| (self.sink)(Event::Exposed(s.monitor.name.clone())));
         }
+    }
+
+    fn manager(&mut self) -> Result<(), ReplyOrIdError> {
+        let (managed, check) = self.x.manager()?;
+        self.check = check;
+        if self.x.managed.swap(managed, std::sync::atomic::Ordering::Relaxed) == managed {
+            return Ok(());
+        }
+        tracing::info!(managed, "the window manager changed; replacing the desktop windows");
+        for Screen { monitor, desk, .. } in &mut self.screens {
+            *desk = Arc::new(Desk::new(&self.x, monitor.area)?);
+            let window = desk.window(&monitor.name, monitor.area, monitor.mm, self.sink.clone());
+            (self.sink)(Event::Output(monitor.name.clone(), window));
+        }
+        Ok(())
     }
 
     fn monitors(&mut self) -> Result<(), ReplyOrIdError> {

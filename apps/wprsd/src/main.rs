@@ -21,6 +21,7 @@ mod keyring;
 mod kinds;
 mod library1;
 mod packages;
+mod pixels;
 mod playback;
 mod playlists;
 mod playlists1;
@@ -46,6 +47,7 @@ mod service;
 mod spec;
 mod store;
 mod streams;
+mod surfaces;
 mod sync;
 mod sync1;
 mod thumbs;
@@ -54,6 +56,7 @@ mod wallpaper;
 mod watch;
 mod words;
 mod worker;
+mod zone;
 
 use anyhow::Context;
 use clap::Parser;
@@ -154,15 +157,20 @@ async fn run(args: Args) -> anyhow::Result<()> {
         e => e.into(),
     })?;
     tracing::info!("serving {} on the session bus", dbus::BUS_NAME);
-    session.map(|s| present::start(s, daemon.clone())).transpose()?;
+    match session {
+        Some(session) => surfaces::start(session, daemon.clone())?,
+        None if std::env::var_os("WAYLAND_DISPLAY").is_some() => pixels::follow_modes(&daemon),
+        None => {}
+    }
     tokio::spawn(flatpak::request_background(connection.clone()));
-    tokio::spawn(watch::battery(daemon.clone()));
+    let (power, known) = tokio::sync::oneshot::channel();
+    tokio::spawn(watch::battery(daemon.clone(), power));
     tokio::spawn(watch::screen_lock(connection.clone(), daemon.clone()));
     tokio::spawn(watch::properties(connection.clone(), daemon.clone()));
     tokio::spawn(watch::motion(connection.clone(), daemon.clone()));
     tokio::spawn(bus::announce_streams(connection.clone(), daemon.clone()));
     tokio::spawn(playback::run(daemon.clone()));
-    tokio::spawn(profiles1::follow(daemon.clone()));
+    tokio::spawn(profiles1::follow(daemon.clone(), known));
     let mut terminate = signal(SignalKind::terminate())?;
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {}

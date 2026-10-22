@@ -23,9 +23,10 @@ pub struct Desk {
 impl Desk {
     pub(crate) fn new(x: &Arc<X11>, area: Rect) -> Result<Self, ReplyOrIdError> {
         let (c, a, window) = (&x.conn, &x.atoms, x.conn.generate_id()?);
-        let background = if x.managed { BackPixmap::NONE } else { BackPixmap::PARENT_RELATIVE };
-        let aux =
-            CreateWindowAux::new().override_redirect(u32::from(!x.managed)).background_pixmap(background);
+        let managed = x.managed();
+        let background = if managed { BackPixmap::NONE } else { BackPixmap::PARENT_RELATIVE };
+        let aux = CreateWindowAux::new().override_redirect(u32::from(!managed)).background_pixmap(background);
+        let aux = aux.event_mask(EventMask::EXPOSURE);
         let (depth, visual, class) = (COPY_DEPTH_FROM_PARENT, COPY_FROM_PARENT, WindowClass::INPUT_OUTPUT);
         c.create_window(depth, window, x.root, 0, 0, 1, 1, 0, class, visual, &aux)?;
         let desk = Self { x: x.clone(), window };

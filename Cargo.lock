@@ -6176,6 +6176,7 @@ dependencies = [
  "dirs",
  "futures-util",
  "image",
+ "jiff",
  "libc",
  "reqwest",
  "roxmltree 0.21.1",

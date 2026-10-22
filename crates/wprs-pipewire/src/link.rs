@@ -33,12 +33,21 @@ impl Link {
         let _registry_listener = registry
             .add_listener_local()
             .global(move |global| {
-                if global.type_ == pw::types::ObjectType::Node
-                    && let Some(serial) = global.props.and_then(|p| p.get("object.serial")?.parse().ok())
-                    && let Ok(mut state) = on_global.try_borrow_mut()
-                {
-                    state.serials.insert(global.id, serial);
-                    state.resolve();
+                let Ok(mut state) = on_global.try_borrow_mut() else { return };
+                let value = |key| global.props.and_then(|p| p.get(key));
+                match global.type_ {
+                    pw::types::ObjectType::Node => {
+                        if let Some(serial) = value("object.serial").and_then(|s| s.parse().ok()) {
+                            state.serials.insert(global.id, serial);
+                            state.resolve();
+                        }
+                    }
+                    pw::types::ObjectType::Link => {
+                        if let Some(node) = value("link.output.node").and_then(|n| n.parse().ok()) {
+                            state.linked(node);
+                        }
+                    }
+                    _ => {}
                 }
             })
             .global_remove(move |id| {

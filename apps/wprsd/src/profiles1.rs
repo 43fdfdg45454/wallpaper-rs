@@ -10,6 +10,7 @@ use std::time::Duration;
 use wprs_core::model::ProfileAuto;
 
 const HOLD: &str = "profile-hold.json";
+const POWER_WAIT: Duration = Duration::from_secs(5);
 
 type Conditions = (BTreeSet<String>, bool);
 type Hold = (Option<String>, Conditions);
@@ -136,8 +137,9 @@ fn conditions(daemon: &Daemon) -> Conditions {
     (st.outputs.keys().cloned().collect(), st.on_battery)
 }
 
-pub async fn follow(daemon: Arc<Daemon>) {
+pub async fn follow(daemon: Arc<Daemon>, power: tokio::sync::oneshot::Receiver<()>) {
     let (mut serial, mut seen) = (daemon.changes.subscribe(), None::<Conditions>);
+    let _ = tokio::time::timeout(POWER_WAIT, power).await;
     loop {
         let now = conditions(&daemon);
         if seen.as_ref() != Some(&now) {

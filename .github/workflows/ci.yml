@@ -75,7 +75,7 @@ jobs:
           scripts/ci-apt.sh \
             pkg-config libclang-dev libpipewire-0.3-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-            gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-pipewire gstreamer1.0-tools \
             mesa-vulkan-drivers libvulkan1 \
             pipewire pipewire-bin wireplumber dbus-x11 \
             shellcheck qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools gettext
@@ -190,7 +190,7 @@ jobs:
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
             mesa-vulkan-drivers libvulkan1 \
             pipewire pipewire-bin wireplumber dbus-x11 \
-            xvfb x11-utils x11-xserver-utils xdotool imagemagick
+            xvfb x11-utils x11-xserver-utils xdotool imagemagick openbox
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
 

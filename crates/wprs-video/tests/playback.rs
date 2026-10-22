@@ -1,3 +1,4 @@
+use gstreamer::prelude::*;
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
@@ -129,4 +130,38 @@ fn unsupported_files_report_an_error() {
         Ok(Event::Frame(_)) => panic!("a text file produced a frame"),
         Err(_) => panic!("no error reported"),
     }
+}
+
+#[test]
+fn videos_with_sound_play_without_a_pipewire_audio_output() {
+    if wprs_video::init().is_err() {
+        return;
+    }
+    let clip = std::env::temp_dir().join(format!("wprs-sound-{}.webm", std::process::id()));
+    let encode = format!(
+        "videotestsrc num-buffers=30 ! video/x-raw,width=64,height=32,framerate=30/1 ! vp8enc ! webmmux name=m ! \
+         filesink location={} audiotestsrc wave=silence num-buffers=50 ! audioconvert ! vorbisenc ! m.",
+        clip.display()
+    );
+    let Ok(pipeline) = gstreamer::parse::launch(&encode) else { return };
+    pipeline.set_state(gstreamer::State::Playing).unwrap();
+    let done = pipeline.bus().unwrap().timed_pop_filtered(
+        gstreamer::ClockTime::from_seconds(20),
+        &[gstreamer::MessageType::Eos, gstreamer::MessageType::Error],
+    );
+    pipeline.set_state(gstreamer::State::Null).unwrap();
+    assert!(
+        done.is_some_and(|m| m.type_() == gstreamer::MessageType::Eos),
+        "cannot encode a clip with sound"
+    );
+    let (tx, rx) = mpsc::channel();
+    let options = Options { max_size: (64, 32), max_fps: 30, volume: 0.5, muted: false };
+    let player = Player::open(&clip, options, move |event| drop(tx.send(event))).unwrap();
+    let first = next_frame(&rx, Duration::from_secs(10));
+    let deadline = Instant::now() + Duration::from_millis(2500);
+    let frames =
+        std::iter::from_fn(|| (Instant::now() < deadline).then(|| next_frame(&rx, WAIT)).flatten()).count();
+    std::fs::remove_file(&clip).unwrap();
+    assert!(first.is_some() && player.audio_enabled(), "no frame from a video with sound");
+    assert!(frames > 45, "only {frames} frames in 2.5 s of a 1 s video with sound");
 }

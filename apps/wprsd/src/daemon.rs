@@ -35,6 +35,8 @@ pub(crate) struct State {
     pub(crate) sidecars: crate::edits::Sidecars,
     pub(crate) depths: HashMap<PathBuf, crate::relief::Cached>,
     pub(crate) scenes: HashMap<PathBuf, ((i64, u64), Weak<crate::scenes::ScenePack>)>,
+    pub(crate) modes: HashMap<String, (u32, u32)>,
+    pub(crate) resized: Vec<(String, (u32, u32))>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

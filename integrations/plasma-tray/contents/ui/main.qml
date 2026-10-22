@@ -52,13 +52,10 @@ PlasmoidItem {
         }
     }
 
-    DBus.SignalWatcher {
-        service: "org.freedesktop.DBus"
-        path: "/org/freedesktop/DBus"
-        iface: "org.freedesktop.DBus"
-
-        function dbusNameOwnerChanged(name, before, after) {
-            if (String(name) !== "io.github.wallpaper_rs.Daemon" || String(after) === "")
+    DBus.DBusServiceWatcher {
+        watchedService: "io.github.wallpaper_rs.Daemon"
+        onRegisteredChanged: {
+            if (!registered)
                 return;
             root.daemon.refresh();
             root.daemon.updated("library", []);

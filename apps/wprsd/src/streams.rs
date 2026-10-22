@@ -16,6 +16,7 @@ pub(crate) struct Claim {
 #[derive(Default)]
 pub(crate) struct OutputInfo {
     pub(crate) size: (u32, u32),
+    pub(crate) requested: (u32, u32),
     pub(crate) claims: HashMap<String, Claim>,
     pub(crate) uploaded: Option<Upload>,
     pub(crate) screen: Option<wprs_core::Screen>,
@@ -47,8 +48,9 @@ impl Daemon {
     pub fn claim(&self, output: &str, client: &str, size: (u32, u32), reply: Reply) -> fdo::Result<String> {
         let output = self.check_request(output, size.0, size.1)?;
         let mut st = self.state();
+        let (requested, size) = (size, crate::pixels::fit(size, st.real_pixels(&output)));
         let info = st.outputs.entry(output.clone()).or_default();
-        info.size = size;
+        (info.size, info.requested) = (size, requested);
         let claim = info.claims.entry(client.to_owned()).or_default();
         claim.count = if client == HELD { 1 } else { claim.count + 1 };
         self.exporter.ensure_stream(&output, size.0, size.1, reply);

@@ -65,8 +65,13 @@ pub fn start(daemon: &Arc<Daemon>) {
         tracing::info!("cannot follow changes of the clock: {e}");
     }
     let daemon = daemon.clone();
+    let sandboxed = crate::flatpak::app_id().is_some();
     tokio::spawn(async move {
-        if let Err(e) = follow_zone(daemon).await {
+        let followed = match sandboxed {
+            true => crate::flatpak::follow_zone(Arc::downgrade(&daemon)).map_err(zbus::Error::from),
+            false => follow_zone(daemon).await,
+        };
+        if let Err(e) = followed {
             tracing::info!("cannot follow time zone changes: {e}");
         }
     });

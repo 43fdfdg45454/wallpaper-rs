@@ -93,6 +93,7 @@ impl State {
             }
             Command::Attach(output, window) => self.attach(output, window),
             Command::Frame(output) => self.frame_done(&output),
+            Command::Repaint(output) => self.repaint(&output),
             Command::SetActive(output, active) => {
                 if let Some(o) = self.outputs.get_mut(&output).filter(|o| o.active != active) {
                     o.active = active;

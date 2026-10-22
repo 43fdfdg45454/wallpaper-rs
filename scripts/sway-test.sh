@@ -36,7 +36,7 @@ expect() {
 fail() { echo "FAIL: $*"; exit 1; }
 
 shows() {
-  grim -o "$1" -t ppm "$WORK/shot.ppm" && python3 - "$WORK/shot.ppm" "${@:2}" <<'EOF'
+  timeout 5 grim -o "$1" -t ppm "$WORK/shot.ppm" && python3 - "$WORK/shot.ppm" "${@:2}" <<'EOF'
 import re, sys
 data = open(sys.argv[1], "rb").read()
 header = re.match(rb"P6\s+(\d+)\s+(\d+)\s+255\s", data)
@@ -64,7 +64,7 @@ output HEADLESS-2 mode --custom 640x360@60Hz scale 1.5 pos 640 0
 output HEADLESS-3 mode --custom 480x270@60Hz
 for_window [app_id="foot"] fullscreen enable
 EOF
-sway -c "$WORK/sway.conf" >"$WORK/sway.log" 2>&1 & pids+=($!)
+sway -c "$WORK/sway.conf" >"$WORK/sway.log" 2>&1 & sway=$!; pids+=("$sway")
 wait_for 10 compgen -G "$XDG_RUNTIME_DIR/sway-ipc.*.sock" || fail "sway did not start"
 SWAYSOCK=$(compgen -G "$XDG_RUNTIME_DIR/sway-ipc.*.sock")
 WAYLAND_DISPLAY=$(basename "$(compgen -G "$XDG_RUNTIME_DIR/wayland-[0-9]")")
@@ -109,6 +109,13 @@ expect "sorted(s['outputs'])" "['HEADLESS-1', 'HEADLESS-2', 'HEADLESS-3']"
 check HEADLESS-3 "0.5,0.5,$green" "0.02,0.02,$blue"
 swaymsg -q output HEADLESS-3 unplug
 expect "sorted(s['outputs'])" "['HEADLESS-1', 'HEADLESS-2']"
+surfaces() { grep "surface ready" "$WORK/wprsd.log" | grep -c "$1"; }
+before=$(surfaces HEADLESS-2)
+swaymsg -q output HEADLESS-2 disable && swaymsg -q output HEADLESS-2 enable
+check HEADLESS-2 "0.5,0.5,$green" "0.02,0.02,$blue"
+sleep 1
+if grep "output removed" "$WORK/wprsd.log" | grep -q HEADLESS-2; then fail "a short output flap removed the output"; fi
+[ $(($(surfaces HEADLESS-2) - before)) -le 1 ] || fail "a short output flap rebuilt the surface more than once"
 echo "hotplug checks passed"
 
 ctl set "$ROOT/tests/fixtures/magenta-64x32.webm" --fit stretch
@@ -131,6 +138,33 @@ expect "s['outputs']['HEADLESS-2']['playing']" False
 swaymsg -q output HEADLESS-2 power on
 expect "s['outputs']['HEADLESS-2']['playing']" True
 echo "frame callback starvation checks passed"
+
+before=$(surfaces HEADLESS-2)
+rebuilt() { [ "$(surfaces HEADLESS-2)" -gt "$before" ]; }
+swaymsg -q output HEADLESS-2 disable && swaymsg -q output HEADLESS-2 enable
+wait_for 10 rebuilt || fail "a short output flap did not rebuild the surface"
+sleep 1
+expect "s['outputs']['HEADLESS-2']['covered']" False
+expect "s['outputs']['HEADLESS-2']['playing']" True
+echo "video output flap checks passed"
+
+kill "$wprsd"
+wait "$wprsd" || true
+RUST_LOG=$log "$BIN/wprsd" --backend streams >"$WORK/streams.log" 2>&1 & wprsd=$!; pids+=("$wprsd")
+wait_for 30 ctl state || fail "the daemon did not start with streams"
+ctl stream HEADLESS-1 1280 720 >/dev/null && ctl stream HEADLESS-2 1920 1080 >/dev/null
+ctl stream OTHER-1 1280 720 >/dev/null
+expect "[(s['outputs'][o]['width'], s['outputs'][o]['height']) for o in ('HEADLESS-1', 'HEADLESS-2', 'OTHER-1')]" \
+  "[(640, 360), (640, 360), (1280, 720)]"
+echo "stream size limited to the output mode checks passed"
+
+kill "$sway"; wait "$sway" 2>/dev/null || true
+sed -i 's/HEADLESS-1 mode --custom 640x360/HEADLESS-1 mode --custom 960x540/' "$WORK/sway.conf"
+sway -c "$WORK/sway.conf" >"$WORK/sway-restarted.log" 2>&1 & pids+=($!)
+wait_for 10 test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" || fail "sway did not come back on $WAYLAND_DISPLAY"
+followed() { [ "$(field "(s['outputs']['HEADLESS-1']['width'], s['outputs']['HEADLESS-1']['height'])")" = "(960, 540)" ]; }
+wait_for 30 followed || fail "the stream did not follow the mode of the restarted compositor"
+echo "compositor restart checks passed"
 
 status=0
 echo "sway test passed"

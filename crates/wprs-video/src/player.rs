@@ -1,11 +1,14 @@
 use crate::bus::watch_bus;
-use crate::{Error, Event, Options, Sink, local_uri, make, video_sink};
+use crate::{Error, Event, Options, Sink, local_uri, make, pipewire, video_sink};
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::JoinHandle;
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
+use std::time::Duration;
+
+const STOP_WAIT: Duration = Duration::from_secs(2);
 
 pub struct Player {
     playbin: gst::Element,
@@ -13,7 +16,7 @@ pub struct Player {
     audio: bool,
     playing: Arc<AtomicBool>,
     stop: Arc<AtomicBool>,
-    bus_thread: Option<JoinHandle<()>>,
+    stopped: Receiver<()>,
 }
 
 impl Player {
@@ -31,23 +34,35 @@ impl Player {
         playbin.set_property_from_str("flags", if audio { "video+audio+soft-volume" } else { "video" });
         playbin.set_property("volume", options.volume.clamp(0.0, 1.0));
         playbin.set_property("mute", options.muted);
+        let piped = audio.then(pipewire::sink).flatten();
+        piped.iter().for_each(|sink| playbin.set_property("audio-sink", sink));
         let (video_sink, size) = video_sink::build(options, sink.clone())?;
         playbin.set_property("video-sink", &video_sink);
-        playbin.connect("about-to-finish", false, move |args| {
-            if let Ok(finishing) = args[0].get::<gst::Element>() {
-                finishing.set_property("uri", &uri);
-            }
-            None
-        });
+        let again = uri.clone();
+        if !audio {
+            playbin.connect("about-to-finish", false, move |args| {
+                if let Ok(finishing) = args[0].get::<gst::Element>() {
+                    finishing.set_property("uri", &again);
+                }
+                None
+            });
+        }
         let (stop, playing) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(true)));
         let bus = playbin.bus().expect("playbin has a bus");
         let (weak_playbin, flags) = (playbin.downgrade(), (stop.clone(), playing.clone()));
-        let bus_thread = std::thread::Builder::new()
+        let (done, stopped) = mpsc::channel::<()>();
+        std::thread::Builder::new()
             .name("wprs-video-bus".into())
-            .spawn(move || watch_bus(&bus, &weak_playbin, &flags.0, &flags.1, &*sink))
+            .spawn(move || {
+                let _done = done;
+                watch_bus(&bus, (&weak_playbin, uri), &flags.0, &flags.1, &*sink);
+            })
             .map_err(Error::state)?;
-        let player = Self { playbin, size, audio, playing, stop, bus_thread: Some(bus_thread) };
-        player.playbin.set_state(gst::State::Playing).map_err(Error::state)?;
+        let player = Self { playbin, size, audio, playing, stop, stopped };
+        match player.playbin.set_state(gst::State::Paused) {
+            Err(_) if piped.is_some() => {}
+            started => drop(started.map_err(Error::state)?),
+        }
         Ok(player)
     }
 
@@ -86,9 +101,8 @@ impl Drop for Player {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
         self.wake();
-        if let Some(thread) = self.bus_thread.take() {
-            let _ = thread.join();
+        if let Err(RecvTimeoutError::Timeout) = self.stopped.recv_timeout(STOP_WAIT) {
+            tracing::warn!("the video did not stop within {STOP_WAIT:?}, leaving it behind");
         }
-        let _ = self.playbin.set_state(gst::State::Null);
     }
 }

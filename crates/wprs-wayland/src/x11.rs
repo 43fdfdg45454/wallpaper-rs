@@ -1,6 +1,7 @@
 use anyhow::Context;
 use raw_window_handle::{DisplayHandle, HandleError, XcbDisplayHandle};
 use std::ptr::NonNull;
+use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 use std::sync::{Arc, Mutex};
 use x11rb::connection::{Connection as _, RequestConnection as _};
 use x11rb::errors::ReplyError;
@@ -43,7 +44,7 @@ pub struct X11 {
     pub(crate) screen: usize,
     pub(crate) root: Window,
     pub(crate) atoms: Atoms,
-    pub(crate) managed: bool,
+    pub(crate) managed: AtomicBool,
     pub(crate) gc: Gcontext,
     pub(crate) depth: Option<u8>,
     pub(crate) pixmap: Mutex<Option<(Pixmap, (u16, u16))>>,
@@ -68,17 +69,22 @@ impl X11 {
         let changes = NotifyMask::SCREEN_CHANGE | NotifyMask::CRTC_CHANGE | NotifyMask::OUTPUT_CHANGE;
         randr::select_input(&conn, root, changes)?;
         let (depth, pixmap) = (packed.then_some(depth), Mutex::new(None));
-        let mut x = Self { conn, screen, root, atoms, managed: false, gc, depth, pixmap };
-        x.managed = x.manages_desktops()?;
-        tracing::debug!(managed = x.managed, "connected to the X server");
+        let x = Self { conn, screen, root, atoms, managed: AtomicBool::new(false), gc, depth, pixmap };
+        x.managed.store(x.manager()?.0, Relaxed);
+        tracing::debug!(managed = x.managed(), "connected to the X server");
         Ok(Arc::new(x))
     }
 
-    fn manages_desktops(&self) -> Result<bool, ReplyError> {
+    pub(crate) fn managed(&self) -> bool {
+        self.managed.load(Relaxed)
+    }
+
+    pub(crate) fn manager(&self) -> Result<(bool, Option<Window>), ReplyError> {
         let (check, a) = (self.atoms._NET_SUPPORTING_WM_CHECK, &self.atoms);
         let wm = self.property(self.root, check)?.first().copied();
-        let alive = wm.is_some_and(|w| self.property(w, check).is_ok_and(|v| v.first() == Some(&w)));
-        Ok(alive && self.property(self.root, a._NET_SUPPORTED)?.contains(&a._NET_WM_WINDOW_TYPE_DESKTOP))
+        let alive = wm.filter(|&w| self.property(w, check).is_ok_and(|v| v.first() == Some(&w)));
+        let desktops = self.property(self.root, a._NET_SUPPORTED)?.contains(&a._NET_WM_WINDOW_TYPE_DESKTOP);
+        Ok((alive.is_some() && desktops, alive))
     }
 
     pub(crate) fn property(&self, window: Window, atom: Atom) -> Result<Vec<u32>, ReplyError> {

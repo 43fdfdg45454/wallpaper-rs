@@ -15,18 +15,21 @@ type AnyError = Box<dyn std::error::Error>;
 struct Probe {
     format: VideoInfoRaw,
     buffers: usize,
+    skip: bool,
     result: Option<String>,
 }
 
 fn main() -> Result<(), AnyError> {
     let mut args = std::env::args().skip(1);
-    let target = args.next().ok_or("usage: probe <object-serial | node:ID> [timeout-seconds] [--hold]")?;
+    let target =
+        args.next().ok_or("usage: probe <object-serial | node:ID> [timeout-seconds] [--hold | --late]")?;
     let (serial, node_id) = match target.strip_prefix("node:") {
         Some(id) => (None, Some(id.parse::<u32>()?)),
         None => (Some(target.parse::<u64>()?), None),
     };
     let timeout: u64 = args.next().map(|s| s.parse()).transpose()?.unwrap_or(5);
-    let hold = args.next().as_deref() == Some("--hold");
+    let mode = args.next();
+    let (hold, late) = (mode.as_deref() == Some("--hold"), mode.as_deref() == Some("--late"));
 
     pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None)?;
@@ -41,7 +44,7 @@ fn main() -> Result<(), AnyError> {
     }
     let stream = pw::stream::StreamRc::new(core.clone(), "wprs-probe", props)?;
 
-    let probe = Rc::new(RefCell::new(Probe::default()));
+    let probe = Rc::new(RefCell::new(Probe { skip: late, ..Probe::default() }));
     let (on_param, on_process, weak_loop) = (probe.clone(), probe.clone(), mainloop.downgrade());
     let (on_add, on_remove) = (probe.clone(), probe.clone());
     let _listener = stream
@@ -65,6 +68,9 @@ fn main() -> Result<(), AnyError> {
             let Some(data) = buffer.datas_mut().first_mut() else { return };
             let stride = data.chunk().stride().max(0) as usize;
             if probe.result.is_some() || data.chunk().size() == 0 || stride == 0 {
+                return;
+            }
+            if std::mem::take(&mut probe.skip) {
                 return;
             }
             let result = kpipewire::describe(data, &probe.format, stride, probe.buffers);

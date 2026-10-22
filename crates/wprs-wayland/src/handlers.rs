@@ -50,10 +50,10 @@ impl LayerShellHandler for State {
         _: u32,
     ) {
         let output = self.screens.iter().find(|s| s.parts.layer == *layer).map(|s| s.output.clone());
-        let fallback = output.and_then(|o| self.outputs.info(&o)?.logical_size).unwrap_or((1, 1));
-        let pick = |given: u32, fallback: i32| if given > 0 { given } else { fallback.max(1) as u32 };
-        let (width, height) = configure.new_size;
-        let logical = (pick(width, fallback.0), pick(height, fallback.1));
+        let fallback = output.and_then(|o| self.outputs.info(&o)?.logical_size);
+        let fallback = fallback.map(|(w, h)| (w.max(0) as u32, h.max(0) as u32));
+        let sized = |(w, h): &(u32, u32)| *w > 0 && *h > 0;
+        let Some(logical) = Some(configure.new_size).filter(sized).or(fallback.filter(sized)) else { return };
         self.changed(|s| s.parts.layer == *layer, |s| s.logical = Some(logical))
     }
 }

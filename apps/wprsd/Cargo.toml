@@ -18,6 +18,7 @@ wprs-schedule.workspace = true
 wprs-audio.workspace = true
 wprs-script.workspace = true
 chrono = { workspace = true, features = ["clock"] }
+jiff.workspace = true
 futures-util.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true

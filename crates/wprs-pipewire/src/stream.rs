@@ -86,19 +86,22 @@ impl OutputStream {
         })
     }
 
-    fn next_kick(&self) -> Option<(Instant, Duration)> {
+    pub fn keepalive_at(&self) -> Option<Instant> {
         let live = self.live.as_ref().filter(|_| self.slot.streaming.load(SeqCst))?;
         Some(pace(live.last_trigger, lock(&self.slot.started).unwrap_or(live.since)))
     }
 
-    pub fn keepalive_at(&self) -> Option<Instant> {
-        self.next_kick().map(|(at, _)| at)
+    pub fn keep_alive(&mut self) {
+        if self.keepalive_at().is_some_and(|at| at <= Instant::now()) {
+            self.slot.dirty.store(true, SeqCst);
+            self.trigger();
+        }
     }
 
-    pub fn keep_alive(&mut self) {
-        let Some((_, step)) = self.next_kick().filter(|(at, _)| *at <= Instant::now()) else { return };
-        self.slot.dirty.fetch_or(step == KEEPALIVE, SeqCst);
-        self.trigger();
+    pub fn linked(&mut self, node: u32) {
+        if self.live.as_ref().is_some_and(|live| live.stream.node_id() == node) {
+            *lock(&self.slot.started) = Some(Instant::now());
+        }
     }
 
     pub fn trigger(&mut self) {
@@ -111,26 +114,35 @@ impl OutputStream {
     }
 }
 
-fn pace(last: Instant, start: Instant) -> (Instant, Duration) {
+fn pace(last: Instant, start: Instant) -> Instant {
     let last = last.max(start);
-    let step = (last.duration_since(start) * 4).clamp(SETTLE, KEEPALIVE);
-    (last + step, step)
+    last + (last.duration_since(start) * 4).clamp(SETTLE, KEEPALIVE)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn kicks(start: Instant, mut last: Instant) -> Vec<u128> {
+        let mut next = || {
+            last = pace(last, start);
+            (last - start).as_millis()
+        };
+        (0..6).map(|_| next()).collect()
+    }
+
     #[test]
-    fn kicks_settle_quickly_after_a_start_and_then_keep_alive() {
-        let (start, mut last) = (Instant::now(), Instant::now());
-        let steps: Vec<_> = (0..6)
-            .map(|_| {
-                let (at, step) = pace(last, start);
-                last = at;
-                step.as_millis()
-            })
-            .collect();
-        assert_eq!(steps, [50, 200, 1000, 5000, 10_000, 10_000]);
+    fn a_first_late_consumer_gets_the_frame_again_until_it_settles() {
+        let start = Instant::now();
+        assert_eq!(kicks(start, start), [50, 250, 1250, 6250, 16_250, 26_250]);
+    }
+
+    #[test]
+    fn a_second_consumer_restarts_the_quick_resends() {
+        let first = Instant::now();
+        let last = first + Duration::from_secs(60);
+        assert_eq!(pace(last, first), last + KEEPALIVE);
+        let linked = last + Duration::from_secs(4);
+        assert_eq!(kicks(linked, last), [50, 250, 1250, 6250, 16_250, 26_250]);
     }
 }

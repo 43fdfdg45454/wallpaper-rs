@@ -30,16 +30,20 @@ pub(crate) async fn announce_streams(connection: zbus::Connection, daemon: Arc<D
         daemon.streams_changed.notified().await;
         let generation = daemon.exporter.generation();
         if generation != seen {
-            (seen, waiting) = (generation, daemon.state().outputs.keys().cloned().collect());
+            (seen, waiting) =
+                (generation, daemon.state().outputs.keys().map(|o| (o.clone(), None)).collect());
         }
-        for output in std::mem::take(&mut waiting) {
-            match daemon.exporter.stream_info(&output) {
+        waiting
+            .extend(std::mem::take(&mut daemon.state().resized).into_iter().map(|(o, size)| (o, Some(size))));
+        for (output, size) in std::mem::take(&mut waiting) {
+            let info = daemon.exporter.stream_info(&output);
+            match info.filter(|i| size.is_none_or(|s| (i.width, i.height) == s)) {
                 Some(info) => {
                     tracing::info!(output, node = info.node_id, serial = info.serial, "stream recreated");
                     let sent = Service::stream_changed(&emitter, &output, info.node_id, info.serial).await;
                     sent.unwrap_or_else(|e| tracing::warn!("cannot announce a recreated stream: {e}"));
                 }
-                None if daemon.state().outputs.contains_key(&output) => waiting.push(output),
+                None if daemon.state().outputs.contains_key(&output) => waiting.push((output, size)),
                 None => {}
             }
         }

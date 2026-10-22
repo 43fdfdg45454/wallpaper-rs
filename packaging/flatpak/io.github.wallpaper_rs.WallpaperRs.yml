@@ -9,7 +9,7 @@ finish-args:
   - --device=dri
   - --share=network
   - --filesystem=xdg-run/pipewire-0:ro
-  - --socket=pulseaudio
+  - --socket=wayland
   - --own-name=io.github.wallpaper_rs.Daemon
   - --talk-name=org.freedesktop.ScreenSaver
   - --talk-name=org.freedesktop.secrets

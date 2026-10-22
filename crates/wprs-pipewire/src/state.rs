@@ -61,6 +61,10 @@ impl State {
         self.streams.values_mut().filter(|s| s.slot.dirty.load(SeqCst)).for_each(OutputStream::trigger);
     }
 
+    pub fn linked(&mut self, node: u32) {
+        self.streams.values_mut().for_each(|s| s.linked(node));
+    }
+
     pub fn tick(&mut self) {
         self.resolve();
         self.streams.values_mut().for_each(OutputStream::keep_alive);

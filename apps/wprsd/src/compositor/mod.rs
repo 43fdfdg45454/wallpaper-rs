@@ -145,6 +145,7 @@ enum Command {
     Remove(String),
     Attach(String, Window),
     Frame(String),
+    Repaint(String),
     SetActive(String, bool),
     Settings(Settings),
     Calm(bool),
@@ -183,8 +184,16 @@ impl Compositor {
     }
 
     pub fn framer(&self) -> impl Fn(&str) + Send + Sync + 'static {
+        self.relay(Command::Frame)
+    }
+
+    pub fn repainter(&self) -> impl Fn(&str) + Send + Sync + 'static {
+        self.relay(Command::Repaint)
+    }
+
+    fn relay(&self, command: fn(String) -> Command) -> impl Fn(&str) + Send + Sync + 'static {
         let tx = self.tx.clone();
-        move |output| drop(tx.send(Command::Frame(output.into())))
+        move |output| drop(tx.send(command(output.into())))
     }
 
     pub fn check_target(&self, width: u32, height: u32) -> Result<(), RenderError> {

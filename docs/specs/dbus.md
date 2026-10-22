@@ -18,13 +18,14 @@ Flatpak exports the same activation file, starts the daemon with `flatpak run` a
 replacement. A second daemon checks the name before initializing the GPU and PipeWire and exits
 at once with an error saying that another wprsd owns it.
 
-A panic in any thread of the daemon, a lost GPU device or a GPU that stops responding makes the
-daemon exit with status 70; the user unit restarts it (`Restart=on-failure`, at most 5 starts
-in 60 s) and clients get their streams again through `RequestStream`. Only the methods that
-change what is shown (`Library1.Apply`, `Playlists1.Start`, `Stop`, `Next` and `Previous`,
-`Profiles1.Activate` and the `Daemon1` methods that change something) need the renderer: while
-it is not running they return `Failed` (`the renderer stopped after an error; restart wprsd`)
-and change nothing. Every other method keeps working.
+A panic in any thread of the daemon, a lost GPU device, a GPU that stops responding or a Wayland
+protocol error from the compositor makes the daemon exit with status 70; the user unit restarts
+it (`Restart=on-failure`, at most 5 starts in 60 s) and clients get their streams again through
+`RequestStream`. Only the methods that change what is shown (`Library1.Apply`,
+`Playlists1.Start`, `Stop`, `Next` and `Previous`, `Profiles1.Activate` and the `Daemon1` methods
+that change something) need the renderer: while it is not running they return `Failed` (`the
+renderer stopped after an error; restart wprsd`) and change nothing. Every other method keeps
+working.
 
 The daemon opens network connections only to the providers, repositories and the sync server
 the user added (including the signed mirrors of a repository, the only hosts a repository request
@@ -117,6 +118,16 @@ desktop is fullscreen or maximized on them; `pause.when_covered` then pauses the
 streams. In X11, still images also become the root window background (`_XROOTPMAP_ID` and
 `ESETROOT_PMAP_ID`).
 
+An output that appears, changes or disappears is applied once it has stayed the same for 0.5 s: an
+output that the compositor reports twice, removes and adds back, or announces for a moment with a
+zero size keeps its wallpaper, its playback and a single surface; a layer surface without a size
+is shown only once the compositor gives it one. When the compositor closes the connection the
+daemon exits with status 0; a protocol error ends it with status 70 so that the user unit starts
+it again. In X11, an exposed desktop window is drawn again from the last frame, so a paused video
+stays paused. The desktop windows are managed by the window manager when it announces
+`_NET_WM_WINDOW_TYPE_DESKTOP` in `_NET_SUPPORTED`, and are *override-redirect* windows kept at
+the bottom otherwise; the daemon replaces them when a window manager starts or stops.
+
 ## `io.github.wallpaper_rs.Daemon1`
 
 ### `RequestStream(s output, u width, u height) → (u node_id, t serial)`
@@ -132,14 +143,21 @@ Consumers should connect by serial; `serial` is `0` only if PipeWire did not pub
 - Each edge must be in `1..=min(16384, GPU limit)` and one frame, with rows padded to 256
   bytes, must fit in 256 MiB and in the GPU buffer limit (for example 8192 × 8192); otherwise
   `InvalidArgs`.
+- A stream is never larger than the screen: when the daemon knows the pixels of the output (the
+  current mode of the `wl_output` with that name, turned with the output, while the daemon is
+  connected to the Wayland compositor, which it reconnects to when the compositor restarts;
+  otherwise `width` × `scale` from `SetOutputInfo`, which only reduces a request that was not
+  built from that same scale), a larger request is reduced to them keeping its aspect ratio, and
+  `GetState` shows the size used. When the pixels of the screen change, the stream follows them
+  again, up to the size requested. A later request of the same size returns that stream.
 - Call `ReleaseStream` once for every successful `RequestStream`.
 
 Stream format: raw video, `BGRx` (or `BGRA`), fixed size, variable frame rate, one memfd per
 buffer mapped from offset 0. Frames are produced when the picture changes (new wallpaper,
 transition, video frame, a scene that animates or whose inputs changed), when a consumer starts
-streaming, and every 10 s as a keep-alive. After a consumer starts, the stream also runs again
-50 ms, 250 ms, 1.25 s and 6.25 s later without a new frame, so a consumer that was not ready for
-the first cycle still receives the last one.
+streaming or another consumer links to the stream, again 50 ms, 250 ms, 1.25 s and 6.25 s later
+(so a consumer that was not ready for the first frame, or a link that was still being set up, gets
+the last picture), and every 10 s as a keep-alive.
 While no consumer is streaming an output, its video is paused and the daemon renders only the
 final picture after each change, which a consumer receives as soon as it connects.
 
@@ -166,7 +184,9 @@ density in physical pixels per millimetre (`0` when unknown) and `identity` the 
 serial number of the monitor (at most 256 bytes, no control characters). The desktop
 integration calls it after every successful `RequestStream`; layer-shell outputs take the same
 values from `wl_output` and `xdg_output`, and X11 outputs from RandR. `NotFound` when `output`
-has no stream.
+has no stream. When the screen has fewer pixels than the stream, or more pixels than a stream
+that was reduced, the daemon creates the stream again at the size of the screen (never above the
+size requested) and emits `StreamChanged`.
 
 ### `PreviewEdit(s path, s edit_json)`
 
@@ -283,7 +303,14 @@ Pauses or resumes every animated wallpaper.
 
 ### `SetVolume(d volume)`
 
-Sets the volume of video wallpapers, `0.0` to `1.0`.
+Sets the volume of video wallpapers, `0.0` to `1.0`. The sound of videos goes to PipeWire
+directly (`pipewiresink`, stream `wallpaper-rs` with `media.role = Movie`) when the GStreamer
+PipeWire plugin 1.2 or newer is installed; without it, with an older one (whose buffer pool can
+deadlock), or when PipeWire cannot be reached outside the Flatpak, it goes to the default audio
+output of GStreamer. While PipeWire has no audio output (and in the
+Flatpak while PipeWire cannot be reached) the video plays without sound and its sound goes back
+to PipeWire, at the same position, once an audio output appears. Videos with sound loop by
+seeking back at their end.
 
 ### `SetMuted(b muted)`
 
@@ -500,9 +527,11 @@ daemon and needs no client:
   clock, and recomputes after a resume from suspend and when the configuration, the power
   source, the pause state, the outputs or the library change. With no switch pending (no
   playlist shown, paused outputs, empty playlists, no timer) it does not wake at all.
-- When the wall clock is set or `org.freedesktop.timedate1` reports a new `Timezone`, the next
-  `at` time is computed again at once; an interval keeps its next switch unless the clock moved
-  back past it, and an overdue switch happens once.
+- When the wall clock is set or the time zone changes (`org.freedesktop.timedate1` reports a new
+  `Timezone`; in the Flatpak, whose `/etc/localtime` keeps the zone the sandbox started with, the
+  daemon follows `/run/host/monitor/timezone` instead), the next `at` time is computed again at
+  once; an interval keeps its next switch unless the clock moved back past it, and an overdue
+  switch happens once.
 - While a `scan`, `import`, `analyze` or `provider_sync` job runs, library changes resolve the
   playlists shown at most once every 3 seconds.
 - Each output has its own position (`synced = false`), or every output showing the playlist
@@ -623,11 +652,12 @@ A profile with rules (`SetAuto`) is activated automatically when every rule it s
 the set of connected outputs has stayed the same for 2 seconds following a connect or
 disconnect, and when the power source changes. The highest `priority` wins, ties go to the
 first name. A manual `Activate` holds until the next such change; when nothing matches, nothing
-changes. The choice also survives a restart of the daemon: the profile chosen with `Activate`
-(or cleared with `""`) and the connected outputs and power source at that moment are kept in
-`~/.local/share/wallpaper-rs/profile-hold.json` (`0600`) until the outputs or the power source
-differ from them. A moment without any output, as while the daemon starts, does not end the
-hold.
+changes. At start the rules wait for the power source (at most 5 s), so a battery state not yet
+known does not end a hold. The choice also survives a restart of the daemon: the profile chosen
+with `Activate` (or cleared with `""`) and the connected outputs and power source at that moment
+are kept in `~/.local/share/wallpaper-rs/profile-hold.json` (`0600`) until the outputs or the
+power source differ from them. A moment without any output, as while the daemon starts, does not
+end the hold.
 
 ### `List() → (s json)`
 
