@@ -1,0 +1,45 @@
+{
+  "images": [
+    {
+      "startdate": "20261021",
+      "fullstartdate": "202610210700",
+      "enddate": "20261022",
+      "url": "/th?id=OHR.AutumnFjord_EN-US4385123890_1920x1080.jpg&rf=LaDigue_1920x1080.jpg&pid=hp",
+      "urlbase": "/th?id=OHR.AutumnFjord_EN-US4385123890",
+      "copyright": "Autumn colors along a fjord, Norway (© Jane Example/Example Images)",
+      "copyrightlink": "https://www.bing.com/search?q=fjord+norway&form=hpcapt",
+      "title": "Autumn on the fjord",
+      "quiz": "/search?q=Bing+homepage+quiz&filters=WQOskey:%22HPQuiz_20261021_AutumnFjord%22&FORM=HPQUIZ",
+      "wp": true,
+      "hsh": "4f2d3c1b0a9e8d7c6b5a49382716f5e4",
+      "drk": 1,
+      "top": 1,
+      "bot": 1,
+      "hs": []
+    },
+    {
+      "startdate": "20261020",
+      "fullstartdate": "202610200700",
+      "enddate": "20261021",
+      "url": "/th?id=OHR.DesertBloom_EN-US1029384756_1920x1080.jpg&rf=LaDigue_1920x1080.jpg&pid=hp",
+      "urlbase": "/th?id=OHR.DesertBloom_EN-US1029384756",
+      "copyright": "Wildflowers in the desert after rain (© John Example/Example Images)",
+      "copyrightlink": "https://www.bing.com/search?q=desert+wildflowers&form=hpcapt",
+      "title": "",
+      "quiz": "/search?q=Bing+homepage+quiz&filters=WQOskey:%22HPQuiz_20261020_DesertBloom%22&FORM=HPQUIZ",
+      "wp": true,
+      "hsh": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+      "drk": 1,
+      "top": 1,
+      "bot": 1,
+      "hs": []
+    }
+  ],
+  "tooltips": {
+    "loading": "Loading...",
+    "previous": "Previous image",
+    "next": "Next image",
+    "walle": "This image is not available to download as wallpaper.",
+    "walls": "Download this image. Use of this image is restricted to wallpaper only."
+  }
+}

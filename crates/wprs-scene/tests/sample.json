@@ -1,0 +1,80 @@
+{
+  "schema": "wallpaper-rs.scene/1",
+  "size": [1920, 1080],
+  "background": [0.02, 0.02, 0.05, 1.0],
+  "layers": [
+    {
+      "id": "sky",
+      "name": "Sky",
+      "kind": { "type": "image", "src": "images/sky.jpg" },
+      "effects": [
+        { "type": "color_grade", "brightness": 0.05, "contrast": 1.1, "saturation": 1.2, "hue": 0.0 },
+        { "type": "waves", "amplitude": 3.0, "frequency": 2.0, "speed": 0.2, "direction": 90.0 },
+        { "type": "vignette", "strength": 0.6, "radius": 0.9 }
+      ]
+    },
+    {
+      "id": "skyline",
+      "kind": { "type": "image", "src": "images/city.png" },
+      "transform": { "x": 960.0, "y": 760.0, "scale": 1.25, "rotation": 0.0, "origin": [0.5, 1.0] },
+      "mask": "masks/city.png",
+      "effects": [
+        { "type": "blur", "radius": 2.0 },
+        { "type": "chromatic_aberration", "amount": 1.5 },
+        { "type": "pixelate", "size": 1.0 }
+      ]
+    },
+    {
+      "id": "rain",
+      "kind": { "type": "video", "src": "videos/rain.webm" },
+      "opacity": 0.6,
+      "blend": "screen",
+      "effects": [{ "type": "scroll", "speed_x": 0.0, "speed_y": 40.0 }]
+    },
+    {
+      "id": "glow",
+      "kind": { "type": "color", "color": [0.2, 0.3, 0.9, 1.0] },
+      "opacity": 0.3,
+      "blend": "add",
+      "effects": [
+        { "type": "tint", "color": [1.0, 0.8, 0.6, 1.0], "amount": 0.5 },
+        { "type": "pulse", "amount": 0.1, "speed": 0.5 }
+      ]
+    },
+    {
+      "id": "title",
+      "kind": { "type": "text", "text": "Good evening", "font": "Sans", "size": 72.0, "color": [1.0, 1.0, 1.0, 1.0] },
+      "transform": { "x": 960.0, "y": 200.0 },
+      "effects": [{ "type": "shake", "amplitude": 0.0, "frequency": 0.0 }]
+    },
+    {
+      "id": "dust",
+      "kind": {
+        "type": "particles",
+        "rate": 24.0,
+        "lifetime": [3.0, 6.0],
+        "speed": [5.0, 25.0],
+        "direction": -90.0,
+        "spread": 120.0,
+        "gravity": [2.0, -4.0],
+        "size": [1.0, 3.0],
+        "gradient": [[1.0, 1.0, 1.0, 0.0], [1.0, 0.9, 0.7, 0.8], [1.0, 1.0, 1.0, 0.0]],
+        "texture": "textures/dot.png",
+        "max_particles": 300
+      },
+      "blend": "add"
+    }
+  ],
+  "properties": [
+    { "id": "accent", "label": "Accent color", "kind": { "type": "color", "value": [1.0, 1.0, 1.0, 1.0] }, "targets": ["/layers/4/kind/color", "/layers/3/kind/color"] },
+    { "id": "dust", "label": "Dust amount", "kind": { "type": "slider", "value": 24.0, "min": 0.0, "max": 200.0, "step": 1.0 }, "targets": ["/layers/5/kind/rate"] },
+    { "id": "rain", "label": "Rain", "kind": { "type": "bool", "value": true }, "targets": ["/layers/2/visible"] },
+    { "id": "skyline", "label": "Skyline", "kind": { "type": "combo", "value": "images/city.png", "options": ["images/city.png", "images/city-night.png"] }, "targets": ["/layers/1/kind/src"] },
+    { "id": "greeting", "label": "Greeting", "kind": { "type": "text", "value": "Good evening" }, "targets": ["/layers/4/kind/text"] }
+  ],
+  "timelines": [
+    { "target": "/layers/3/opacity", "keyframes": [[0.0, 0.2], [2.0, 0.5]], "easing": "ease_in_out", "repeat": "ping_pong" },
+    { "target": "/layers/4/transform/y", "keyframes": [[0.0, 240.0], [1.5, 200.0]], "easing": "ease_out" },
+    { "target": "/layers/3/kind/color", "keyframes": [[0.0, [0.2, 0.3, 0.9, 1.0]], [5.0, [0.9, 0.3, 0.4, 1.0]], [10.0, [0.2, 0.3, 0.9, 1.0]]], "repeat": "loop" }
+  ]
+}

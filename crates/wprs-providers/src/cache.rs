@@ -1,0 +1,117 @@
+use crate::{Item, Media, Result, path_of};
+use reqwest::header::{ETAG, HeaderName, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
+use reqwest::{RequestBuilder, Response, StatusCode};
+use serde::{Deserialize, Serialize};
+use std::fs::{File, FileTimes};
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
+use tokio::io::AsyncWriteExt;
+
+const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+const FNV_PRIME: u64 = 0x100_0000_01b3;
+
+#[derive(Debug, Clone)]
+pub struct Cache {
+    dir: PathBuf,
+    limit: u64,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct Validators {
+    etag: Option<String>,
+    modified: Option<String>,
+}
+
+impl Cache {
+    pub fn new(dir: impl Into<PathBuf>, limit: u64) -> Result<Self> {
+        let dir = dir.into();
+        std::fs::create_dir_all(&dir)?;
+        Ok(Self { dir, limit })
+    }
+
+    pub fn path(&self, item: &Item) -> PathBuf {
+        let ext = [path_of(&item.url), item.title.as_str()]
+            .into_iter()
+            .find_map(|name| Media::detect(name).filter(|(media, _)| *media == item.media))
+            .map_or_else(|| if item.media == Media::Image { "jpg" } else { "mp4" }.into(), |(_, ext)| ext);
+        let safe = |c: char| if c.is_ascii_alphanumeric() || "-_.".contains(c) { c } else { '_' };
+        let slug: String = item.id.chars().take(48).map(safe).collect();
+        let hash = item.id.bytes().fold(FNV_OFFSET, |h, b| (h ^ u64::from(b)).wrapping_mul(FNV_PRIME));
+        self.dir.join(format!("{slug}-{hash:016x}.{ext}"))
+    }
+
+    pub async fn download(&self, item: &Item, request: RequestBuilder) -> Result<PathBuf> {
+        let path = self.path(item);
+        let sidecar = sidecar(&path);
+        let read = || std::fs::read(&sidecar).ok().and_then(|b| serde_json::from_slice(&b).ok());
+        let known: Validators = path.exists().then(read).flatten().unwrap_or_default();
+        let request = known.etag.iter().fold(request, |r, v| r.header(IF_NONE_MATCH, v));
+        let request = known.modified.iter().fold(request, |r, v| r.header(IF_MODIFIED_SINCE, v));
+        let response = match request.send().await.and_then(Response::error_for_status) {
+            Err(_) if path.exists() => return touch(path),
+            response => response?,
+        };
+        if response.status() == StatusCode::NOT_MODIFIED {
+            return touch(path);
+        }
+        let fresh = Validators { etag: header(&response, ETAG), modified: header(&response, LAST_MODIFIED) };
+        let part = path.with_extension("part");
+        if let Err(error) = store(&part, response).await {
+            let _ = tokio::fs::remove_file(&part).await;
+            return Err(error);
+        }
+        tokio::fs::rename(&part, &path).await?;
+        let temp = sidecar.with_extension("tmp");
+        tokio::fs::write(&temp, serde_json::to_vec(&fresh)?).await?;
+        tokio::fs::rename(&temp, &sidecar).await?;
+        self.evict()?;
+        Ok(path)
+    }
+
+    pub fn evict(&self) -> Result<Vec<PathBuf>> {
+        let media = std::fs::read_dir(&self.dir)?.flatten().map(|entry| entry.path());
+        let media = media.filter(|path| path.to_str().and_then(Media::detect).is_some());
+        let stat = |path: PathBuf| {
+            let meta = std::fs::metadata(&path).ok().filter(|meta| meta.is_file())?;
+            Some((meta.accessed().ok()?, meta.len(), path))
+        };
+        let mut files: Vec<_> = media.filter_map(stat).collect();
+        files.sort();
+        let mut total: u64 = files.iter().map(|file| file.1).sum();
+        files.pop();
+        let mut removed = Vec::new();
+        for (_, len, path) in files {
+            if total <= self.limit {
+                break;
+            }
+            let _ = std::fs::remove_file(sidecar(&path));
+            std::fs::remove_file(&path)?;
+            total -= len;
+            removed.push(path);
+        }
+        Ok(removed)
+    }
+}
+
+async fn store(part: &Path, mut response: Response) -> Result<()> {
+    let mut file = tokio::fs::File::create(part).await?;
+    while let Some(chunk) = response.chunk().await? {
+        file.write_all(&chunk).await?;
+    }
+    Ok(file.sync_all().await?)
+}
+
+fn touch(path: PathBuf) -> Result<PathBuf> {
+    File::options().write(true).open(&path)?.set_times(FileTimes::new().set_accessed(SystemTime::now()))?;
+    Ok(path)
+}
+
+fn header(response: &Response, name: HeaderName) -> Option<String> {
+    response.headers().get(name)?.to_str().ok().map(Into::into)
+}
+
+fn sidecar(path: &Path) -> PathBuf {
+    let mut name = path.as_os_str().to_owned();
+    name.push(".json");
+    name.into()
+}

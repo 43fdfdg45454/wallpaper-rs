@@ -1,0 +1,31 @@
+{
+  "batchcomplete": true,
+  "query": {
+    "pages": [
+      {
+        "pageid": 123456789,
+        "ns": 6,
+        "title": "File:Lake Bled at sunrise.jpg",
+        "imagerepository": "local",
+        "imageinfo": [
+          {
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Lake_Bled_at_sunrise.jpg/3840px-Lake_Bled_at_sunrise.jpg",
+            "thumbwidth": 3840,
+            "thumbheight": 2560,
+            "url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Lake_Bled_at_sunrise.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Lake_Bled_at_sunrise.jpg",
+            "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=123456789",
+            "extmetadata": {
+              "ObjectName": { "value": "Lake Bled at sunrise", "source": "mediawiki-metadata", "hidden": true },
+              "Artist": {
+                "value": "<bdi><a href=\"//commons.wikimedia.org/wiki/User:Example\" title=\"User:Example\">Jane Example</a></bdi>",
+                "source": "commons-desc-page"
+              },
+              "LicenseShortName": { "value": "CC BY-SA 4.0", "source": "commons-desc-page", "hidden": true }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

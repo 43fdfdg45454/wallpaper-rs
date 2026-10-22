@@ -7,6 +7,8 @@ members = [
     "crates/wprs-video",
     "crates/wprs-format",
     "crates/wprs-schedule",
+    "crates/wprs-providers",
+    "crates/wprs-scene",
     "apps/wprsd",
     "apps/wprs-ctl",
 ]
@@ -25,6 +27,8 @@ wprs-pipewire = { path = "crates/wprs-pipewire" }
 wprs-video = { path = "crates/wprs-video" }
 wprs-format = { path = "crates/wprs-format" }
 wprs-schedule = { path = "crates/wprs-schedule" }
+wprs-providers = { path = "crates/wprs-providers" }
+wprs-scene = { path = "crates/wprs-scene" }
 anyhow = "1"
 thiserror = "2"
 rustix = { version = "1", features = ["fs", "mm"] }
@@ -34,6 +38,11 @@ sha2 = "0.11"
 semver = "1"
 tempfile = "3"
 chrono = { version = "0.4.41", default-features = false, features = ["std", "serde"] }
+async-trait = "0.1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "query"] }
+roxmltree = "0.21"
+percent-encoding = "2"
+wiremock = "0.6"
 gstreamer = "0.24"
 gstreamer-app = "0.24"
 gstreamer-video = "0.24"
@@ -45,6 +54,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signal", "time"] }
 zbus = { version = "6", default-features = false, features = ["tokio", "service", "proxy"] }
 wgpu = "30"
+naga = { version = "30", features = ["wgsl-in"] }
 pollster = "1"
 bytemuck = { version = "1", features = ["derive"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp"] }
