@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Install system packages
         run: |
@@ -76,6 +78,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Install system packages
         run: |
@@ -91,11 +95,18 @@ jobs:
       - name: Build tarball
         run: scripts/package.sh dist
 
+      - name: Packages carry no build machine data
+        run: |
+          tar -xzf dist/*.tar.gz -C "$RUNNER_TEMP"
+          if strings "$RUNNER_TEMP"/wallpaper-rs-*/bin/* | grep -F -e "$HOME" -e "$GITHUB_WORKSPACE"; then exit 1; fi
+          tar -tvzf dist/*.tar.gz | awk '{print $2}' | sort -u | grep -qx '0/0'
+
       - uses: actions/upload-artifact@v5
         with:
           name: wallpaper-rs-x86_64-linux
           path: dist/*.tar.gz
           if-no-files-found: error
+          retention-days: 7
 
   rpm:
     name: Fedora package
@@ -103,6 +114,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: actions/download-artifact@v5
         with:
@@ -115,6 +128,7 @@ jobs:
             set -e
             dnf -y -q install rpm-build systemd-rpm-macros >/dev/null
             scripts/rpm.sh dist/wallpaper-rs-*.tar.gz rpm
+            test "$(rpm -qp --qf "%{BUILDHOST}" rpm/*.rpm)" = localhost
             dnf -y -q install ./rpm/*.rpm >/dev/null
             rpm -ql wallpaper-rs
             wprs-ctl --version
@@ -125,6 +139,7 @@ jobs:
           name: wallpaper-rs-fedora-rpm
           path: rpm/*.rpm
           if-no-files-found: error
+          retention-days: 7
 
   plasma:
     name: Plasma end-to-end
@@ -133,6 +148,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: actions/download-artifact@v5
         with:
@@ -181,3 +198,4 @@ jobs:
           name: plasma-test-output
           path: plasma-test-output
           if-no-files-found: warn
+          retention-days: 7

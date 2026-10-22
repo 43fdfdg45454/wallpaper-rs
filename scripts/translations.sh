@@ -37,6 +37,7 @@ for pkg in integrations/*/; do
           msginit -i "$pot" -o "$po" -l "$lang" --no-translator
           sed -i 's/^"\(Last-Translator\|Language-Team\): .*/"\1: wallpaper-rs contributors\\n"/' "$po"
         fi
+        sed -i 's/^"\(POT-Creation-Date\|PO-Revision-Date\): \([0-9-]*\) .*/"\1: \2 00:00+0000\\n"/' "$po"
         ;;
       check)
         msgfmt --check -o /dev/null "$po"

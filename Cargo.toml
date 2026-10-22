@@ -65,3 +65,4 @@ dirs = "7"
 [profile.release]
 lto = "thin"
 codegen-units = 4
+strip = true
