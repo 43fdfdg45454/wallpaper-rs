@@ -178,3 +178,21 @@ pub trait Inputs1 {
     fn get_inputs(&self) -> Result<String>;
     fn set_pointer(&self, x: i32, y: i32) -> Result<()>;
 }
+
+#[proxy(
+    interface = "io.github.wallpaper_rs.Sync1",
+    default_service = "io.github.wallpaper_rs.Daemon",
+    default_path = "/io/github/wallpaper_rs/Daemon"
+)]
+pub trait Sync1 {
+    fn add_server(&self, url: &str) -> Result<u64>;
+    fn link(&self, name: &str, plaintext: bool) -> Result<(String, String, u64)>;
+    fn approve(&self, user_code: &str) -> Result<u64>;
+    fn get_status(&self) -> Result<String>;
+    fn sync_now(&self) -> Result<u64>;
+    fn set_paused(&self, paused: bool) -> Result<()>;
+    fn join(&self, device: &str) -> Result<(String, u64)>;
+    fn share_key(&self, device: &str, code: &str) -> Result<u64>;
+    fn upload(&self, path: &str) -> Result<u64>;
+    fn remove_server(&self, wipe: bool) -> Result<()>;
+}

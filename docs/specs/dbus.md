@@ -9,7 +9,7 @@ system tray and the desktop integration offer a subset.
 | Bus | session |
 | Well-known name | `io.github.wallpaper_rs.Daemon` |
 | Object path | `/io/github/wallpaper_rs/Daemon` |
-| Interfaces | `io.github.wallpaper_rs.Daemon1`, `Library1`, `Playlists1`, `Profiles1`, `Providers1`, `Repos1`, `Inputs1`, all on that object |
+| Interfaces | `io.github.wallpaper_rs.Daemon1`, `Library1`, `Playlists1`, `Profiles1`, `Providers1`, `Repos1`, `Inputs1`, `Sync1`, all on that object |
 
 The daemon is D-Bus activatable (`packaging/dbus`) and runs as the systemd user unit
 `wprsd.service`. In the Flatpak (`packaging/flatpak`) it owns the name through `--own-name`, so
@@ -26,11 +26,12 @@ change what is shown (`Library1.Apply`, `Playlists1.Start`, `Stop`, `Next` and `
 it is not running they return `Failed` (`the renderer stopped after an error; restart wprsd`)
 and change nothing. Every other method keeps working.
 
-The daemon opens network connections only to the providers and repositories the user added
-(including the signed mirrors of a repository, the only hosts a repository request may be
-redirected to), with a generic `User-Agent:
+The daemon opens network connections only to the providers, repositories and the sync server
+the user added (including the signed mirrors of a repository, the only hosts a repository request
+may be redirected to), with a generic `User-Agent:
 wallpaper-rs/<version>` and without cookies or `Referer`. At startup it contacts only providers
-due for their automatic sync; the daily repository refresh starts 10 minutes later.
+due for their automatic sync and a linked sync server whose sync is not paused; the daily
+repository refresh starts 10 minutes later.
 
 ## Conventions
 
@@ -886,6 +887,125 @@ The pointer position in logical desktop coordinates, as sent by the KWin script.
 on the output whose `SetOutputInfo` geometry contains it when that output follows the pointer, and
 ignored otherwise.
 
+## `io.github.wallpaper_rs.Sync1`
+
+Connects this computer to one self-hosted `wprs-server` (see `server.md`) and keeps its library
+metadata, playlists, profiles, presets and settings in sync with the other devices of the
+account. The server address is `https://`, or `http://` to this computer, without user
+information, query or fragment; the daemon contacts no other host for sync, follows no redirect
+and sends the generic `User-Agent`. The device token, the private X25519 key of this device and
+the 32-byte sync key live only in the Secret Service, in one item labelled `wallpaper-rs:
+server` with the attributes `xdg:schema = io.github.wallpaper_rs.Server` and `server = server`,
+with the timeouts and unlock rules of `Providers1`; they never appear in replies, signals, job
+errors, logs, `config.toml` or command lines. The rest of the state (server address, device
+names, sync heads and the last synced copy of every record) is kept in
+`~/.local/share/wallpaper-rs/sync.json` (`0600`).
+
+End-to-end encryption is the default: every record is `0x01 ‖ nonce ‖ XChaCha20-Poly1305` of the
+JSON padded to a multiple of 256 bytes (a `0x80` byte, then zeros), with the key and the
+additional data of `server.md` (user id and epoch as 8-byte big-endian integers, epoch also
+8-byte big-endian in the HKDF info). Plain-text sync exists only as the explicit opt-out
+`Link(plaintext = true)` on an account that has no sync yet; the server then labels the account
+with a warning, reported in `warning`. The setting is fixed when the device links: a sync fails
+without sending anything when the server later reports another one. In both modes the sync key names the items: library items
+are `hex(HMAC-SHA-256(K_id, repo_id ‖ 0x00 ‖ package id))` for installed packages and
+`hex(HMAC-SHA-256(K_id, "blob:" ‖ quick hash))` for other files, so devices that hold the same
+file share its record; playlists, profiles and presets are the first 32 hex digits of
+`HMAC-SHA-256(K_id, kind ‖ 0x00 ‖ uid)`. The server names devices `Device N`; the name of this
+computer (`Link(name)`, the host name when empty) travels only inside the encrypted `device`
+record and is never sent in plain-text mode.
+
+| Collection | Item | Fields |
+|------------|------|--------|
+| `library` | keyed hash | `title`, `rating`, `favorite`, `t:<tag>`; only items with a tag, a rating or a favorite mark get a record |
+| `playlists` | keyed hash | `name`, `query`, `r:<rule>` (rules this version does not know are kept as synced), and for manual playlists one `e:<entry>` per entry with its item and a fractional position |
+| `settings` | `playback`, `transition`, `pause`, `library`, `repos` | every option except `playback.volume`, `playback.muted` and `library.thumb_cache_mb`; options and sections this version does not know are kept as synced |
+| `settings` | `profile_…`, `preset_…` | the profile or preset, with items, playlists and presets named by their synced ids |
+| `device` | device id | `name`, `platform`; never applied, shown in `devices[].label` |
+
+Every record holds per field a value and a hybrid logical clock (milliseconds, counter, device);
+a sync pulls the changes since the last head, merges each record field by field with the later
+clock winning (a deletion wins only when it is later than every field), applies the result,
+pushes local changes with the `seq` they are based on and repeats the round for conflicts at
+most three times. Records whose clock is older than the last one seen for the item are refused
+and overwritten with the newer copy. Devices delete with a record whose payload says so; a
+`deleted` record without payload carries no clock, nor in an encrypted account any proof of its
+origin, so it deletes nothing and the devices upload their copy again.
+Library records of items that are not on this computer,
+playlist entries and presets of such items are kept and applied once the item appears. Records
+that cannot be decrypted are skipped and the sync job fails with their count.
+
+While a linked device holds the sync key and sync is not paused, the daemon keeps the event
+stream of the server open (reconnecting after 30 s, doubling up to 15 min), syncs when another
+device wrote, 5 s after local library, playlist and profile changes that differ from the synced
+copies (showing a wallpaper is no such change), every 15 minutes and at startup. Automatic syncs never show an unlock prompt; a locked keyring sets `last_error`.
+
+### `AddServer(s url) → (t job)`
+
+Starts an `account` job that reads `/.well-known/wprs-server` and stores the server. `Exists`
+when a server is already added; `InvalidArgs` for a refused address. The repository the server
+announces is remembered when its address has the origin of the server.
+
+### `Link(s name, b plaintext) → (s user_code, s verification_uri, t job)`
+
+Creates the key pair of this device, starts the device code flow and returns the code to approve
+at `verification_uri` (or with `Approve` on a linked device); an address the server gives on
+another origin is replaced with `<server>/link`. The `link` job polls until the
+code is approved, refused or expired (10 minutes), stores the token, sets up sync when the
+account has none (encrypted unless `plaintext`, then a new sync key is stored first), adds the
+server's repository with `Repos1.Add` and syncs. On an account that already syncs, the device
+needs the sync key from another device: state `needs_key`, see `Join`. `NotFound` without a
+server, `Exists` when this computer is linked or linking, `InvalidArgs` for a name over 64
+characters or with control characters.
+
+### `Approve(s user_code) → (t job)`
+
+Approves the code shown by a new device of the same account from this linked device.
+
+### `GetStatus() → (s json)`
+
+An `AccountReply`; `account` is `null` without a server. It reads no network; `devices` and the
+quota are those of the last sync.
+
+### `SyncNow() → (t job)`
+
+Starts an `account_sync` job. `Failed` until this computer is linked and holds the sync key.
+
+### `SetPaused(b paused)`
+
+Pauses or resumes automatic sync and closes or opens the event stream; `SyncNow` still works.
+
+### `Join(s device) → (s code, t job)`
+
+On a linked device without the sync key: `device` is the id, server name or label of a device
+that holds it. Returns a 12-digit code derived with Argon2id from the public keys of both
+devices; the `link` job waits up to 10 minutes for that device's `key-share` mailbox message,
+opens it with HPKE (auth mode, DHKEM X25519, HKDF-SHA256, ChaCha20-Poly1305, info `wprs
+key-share v1`, additional data user id ‖ receiving device id ‖ epoch ‖ one byte, 1 when the
+account is encrypted and 0 otherwise) and stores the key, so a server that tells the two devices
+different encryption settings makes the share fail.
+
+### `ShareKey(s device, s code) → (t job)`
+
+On a device that holds the sync key: compares `code` with the code computed from both public keys
+and, when they match, sends the sync key sealed to `device` through the mailbox. The job fails
+with `InvalidArgs` when the codes differ, which means the server or another device stands
+between them.
+
+### `Upload(s path) → (t job)`
+
+Uploads a `.wpak` package with this device's token (`POST /api/v1/uploads`, `PUT`, `finalize`)
+in an `upload` job whose output is an `UploadOutput`; the job fails when the server refuses the
+package. It is published in the server's repository after review, or at once when the server
+publishes uploads of the account's role.
+
+### `RemoveServer(b wipe)`
+
+Cancels the account jobs, deletes the keyring item (`KeyringUnavailable`: nothing is removed),
+asks the server in the background to revoke this device, and forgets the server. Without `wipe`
+the synced copies stay so that linking the same account again resumes; `wipe` deletes them too.
+The added repository stays.
+
 ## Edits and spanning
 
 Edits never change the image. An edit lives in `<image file name>.wprs.json` next to the image
@@ -999,6 +1119,7 @@ for every `Changed` signal. Topics and their `ids`:
 | `repos` | Repositories or installed packages change | repository ids, or `[]` |
 | `jobs` | A job is created or finishes | job ids as decimal strings |
 | `inputs` | A grant changes, or audio capture or the pointer feed starts or stops | `[]` |
+| `account` | The sync server, this device's link or the sync state change | `[]` |
 
 Per topic, the first change emits `Changed` at once and opens a 250 ms window; changes inside the
 window are merged and emitted once when it closes. Merged `ids` are the union, or `[]` when one
@@ -1021,7 +1142,8 @@ Job ids start at 1 for every daemon run and are never reused in a run; clients n
 of the daemon through `NameOwnerChanged`. Starting a job whose kind and target equal a queued or
 running job returns that job's id (`import` jobs are never merged). Library jobs (`scan`,
 `import`, `analyze`) run one at a time, repository jobs (`repo_add`, `repo_refresh`, `install`)
-run one at a time, and at most two `provider_sync` jobs download at once; a job waiting for its
+run one at a time, at most two `provider_sync` jobs download at once, `account`, `account_sync`
+and `upload` jobs run one at a time, and so do `link` jobs; a job waiting for its
 turn is `queued`. A sync after its downloads and an install after its commit stay `running`
 while they wait for the library.
 
@@ -1034,6 +1156,10 @@ while they wait for the library.
 | `repo_add` | `Repos1.Add` | repository URL without query | `0/0` | `Repo` |
 | `repo_refresh` | `Repos1.Refresh`, schedule | repository id, or `""` | `0/0` | `RefreshOutput` |
 | `install` | `Repos1.Install` | `repo_id/id@version` | bytes | `InstalledPackage` |
+| `account` | `Sync1.AddServer`, `Approve`, `ShareKey` | server URL, `approve <code>` or `share <device>` | `0/0` | server answer |
+| `link` | `Sync1.Link`, `Join` | `link` or `join <device id>` | `0/0` | `{device, encrypted, needs_key}` or `{from}` |
+| `account_sync` | `Sync1.SyncNow`, schedule | `""` | `0/0` | `{applied, records}` |
+| `upload` | `Sync1.Upload` | package path | `0/0` | `UploadOutput` |
 
 `CancelJob` drops a queued job; a running job stops at its next checkpoint (between scan
 batches of at most 256 files, imported files, analyzed items, provider downloads and download
@@ -1109,7 +1235,7 @@ struct Job {
     id: u64, kind: JobKind, target: String, state: JobState, done: u64, total: u64,
     started_at: Time, finished_at: Option<Time>, error: Option<JobError>, output: Option<Value>,
 }
-enum JobKind { Scan, Import, Analyze, ProviderSync, RepoAdd, RepoRefresh, Install }
+enum JobKind { Scan, Import, Analyze, ProviderSync, RepoAdd, RepoRefresh, Install, Account, Link, AccountSync, Upload }
 enum JobState { Queued, Running, Done, Failed, Cancelled }
 struct JobError { name: String, message: String }
 struct JobsReply { model: u32, serial: u64, jobs: Vec<Job> }
@@ -1220,6 +1346,19 @@ struct InputsReply {
     model: u32, serial: u64, capturing: bool, tracking: bool,
     grants: BTreeMap<String, Vec<Input>>, shown: BTreeMap<String, SceneInputs>,
 }
+enum AccountState { Unlinked, Linking, NeedsKey, Ready, Paused, Error }
+struct AccountDevice {
+    id: String, name: String, label: Option<String>, platform: String, created_at: Time,
+    seen_at: Option<Time>, current: bool,
+}
+struct Account {
+    url: String, name: String, repo_id: Option<String>, handle: Option<String>,
+    device: Option<String>, label: String, state: AccountState, encrypted: Option<bool>,
+    warning: Option<String>, paused: bool, last_sync: Option<Time>, last_error: Option<String>,
+    records: u32, used_bytes: u64, quota_bytes: u64, devices: Vec<AccountDevice>, job: Option<u64>,
+}
+struct AccountReply { model: u32, serial: u64, account: Option<Account> }
+struct UploadOutput { id: String, state: String, package: Option<String>, version: Option<String>, errors: Vec<String> }
 ```
 
 Bulk replies (`Search`, playlist pages, history, installed packages) carry no file paths except

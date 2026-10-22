@@ -6,12 +6,14 @@ macro_rules! model {
     )*};
 }
 
+mod account;
 mod inputs;
 mod library;
 mod playlists;
 mod remote;
 mod state;
 
+pub use account::*;
 pub use inputs::*;
 pub use library::*;
 pub use playlists::*;
@@ -26,5 +28,5 @@ model! {
     pub struct Header { pub model: u32, pub serial: u64 }
 
     #[derive(Copy, Eq, Hash)]
-    pub enum Topic { State, Library, Playlists, Profiles, Providers, Repos, Jobs, Inputs, #[serde(other)] Unknown }
+    pub enum Topic { State, Library, Playlists, Profiles, Providers, Repos, Jobs, Inputs, Account, #[serde(other)] Unknown }
 }

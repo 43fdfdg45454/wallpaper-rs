@@ -114,4 +114,16 @@ calls! {
         Uninstall uninstall(id: str, version: str);
         ListInstalled list_installed() json;
     }
+    Sync1 sync {
+        AddServer add_server(url: str);
+        Link link(name: str, plaintext: bool);
+        Approve approve(user_code: str);
+        GetStatus get_status() json;
+        SyncNow sync_now();
+        SetPaused set_paused(paused: bool);
+        Join join(device: str);
+        ShareKey share_key(device: str, code: str);
+        Upload upload(path: str);
+        RemoveServer remove_server(wipe: bool);
+    }
 }

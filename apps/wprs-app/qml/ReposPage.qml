@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
@@ -29,6 +30,11 @@ Kirigami.Page {
             text: App.tr("Add repository…")
             icon.name: "list-add"
             onTriggered: adder.open()
+        },
+        Kirigami.Action {
+            text: App.tr("Upload package…")
+            icon.name: "document-export"
+            onTriggered: packages.open()
         },
         Kirigami.Action {
             text: App.tr("Refresh all")
@@ -86,6 +92,13 @@ Kirigami.Page {
 
     Installer {
         id: installer
+    }
+
+    FileDialog {
+        id: packages
+
+        nameFilters: [App.tr("Packages (*.wpak)")]
+        onAccepted: App.act("Upload", [App.path(selectedFile)], "Sync1")
     }
 
     Kirigami.Dialog {

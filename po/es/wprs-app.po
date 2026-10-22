@@ -12,6 +12,156 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: apps/wprs-app/qml/AccountDevice.qml
+msgid "this computer"
+msgstr "este equipo"
+
+#: apps/wprs-app/qml/AccountDevice.qml
+msgid "seen %1"
+msgstr "visto %1"
+
+#: apps/wprs-app/qml/AccountDevice.qml
+msgid "Compare on that device: %1"
+msgstr "Compáralo en ese equipo: %1"
+
+#: apps/wprs-app/qml/AccountDevice.qml
+msgid "Get the key from it"
+msgstr "Recibir la clave de este"
+
+#: apps/wprs-app/qml/AccountDevice.qml
+msgid "Share the key…"
+msgstr "Compartir la clave…"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid "Add server"
+msgstr "Añadir un servidor"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid "Link this computer"
+msgstr "Enlazar este equipo"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid "Name of this computer, seen only by your devices"
+msgstr "Nombre de este equipo, que solo ven tus equipos"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid "Sync without end-to-end encryption"
+msgstr "Sincronizar sin cifrado de extremo a extremo"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid ""
+"The operator of the server will be able to read your library, playlists and "
+"settings."
+msgstr "Quien administra el servidor podrá leer tu biblioteca, tus listas y tus ajustes."
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid "Approve a device"
+msgstr "Aprobar un equipo"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid "Share the sync key with %1"
+msgstr "Compartir la clave de sincronización con %1"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid "The 12 digits shown on that device"
+msgstr "Las 12 cifras que muestra ese equipo"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid "Remove server"
+msgstr "Quitar el servidor"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
+msgid "Also forget the synced copies on this computer"
+msgstr "Olvidar también las copias sincronizadas en este equipo"
+
+#: apps/wprs-app/qml/AccountPage.qml apps/wprs-app/qml/Main.qml
+msgid "Account"
+msgstr "Cuenta"
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid "Add server…"
+msgstr "Añadir un servidor…"
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid "Link this computer…"
+msgstr "Enlazar este equipo…"
+
+#: apps/wprs-app/qml/AccountPage.qml apps/wprs-app/qml/ProviderCard.qml
+msgid "Sync now"
+msgstr "Sincronizar ahora"
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid "Resume sync"
+msgstr "Reanudar la sincronización"
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid "Pause sync"
+msgstr "Pausar la sincronización"
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid "Approve a device…"
+msgstr "Aprobar un equipo…"
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid "Remove server…"
+msgstr "Quitar el servidor…"
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid "No server yet"
+msgstr "Aún no hay servidor"
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid ""
+"A wallpaper-rs server keeps your library, playlists and settings in sync "
+"between your computers, encrypted end to end."
+msgstr "Un servidor de wallpaper-rs mantiene sincronizados tu biblioteca, tus listas y tus ajustes entre tus equipos, cifrados de extremo a extremo."
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid "Open %1 and enter the code %2, or approve it on a linked computer."
+msgstr "Abre %1 e introduce el código %2, o apruébalo en un equipo ya enlazado."
+
+#: apps/wprs-app/qml/AccountPage.qml
+msgid ""
+"Sync is not encrypted: the operator of the server can read your library, "
+"playlists and settings."
+msgstr "La sincronización no está cifrada: quien administra el servidor puede leer tu biblioteca, tus listas y tus ajustes."
+
+#: apps/wprs-app/qml/AccountSummary.qml
+msgid "Server:"
+msgstr "Servidor:"
+
+#: apps/wprs-app/qml/AccountSummary.qml
+msgid "Account:"
+msgstr "Cuenta:"
+
+#: apps/wprs-app/qml/AccountSummary.qml
+msgid "This computer:"
+msgstr "Este equipo:"
+
+#: apps/wprs-app/qml/AccountSummary.qml
+msgid "%1, named %2 for your devices"
+msgstr "%1, que tus equipos ven como %2"
+
+#: apps/wprs-app/qml/AccountSummary.qml apps/wprs-app/qml/ProviderCard.qml
+msgid "State:"
+msgstr "Estado:"
+
+#: apps/wprs-app/qml/AccountSummary.qml apps/wprs-app/qml/ProviderCard.qml
+msgid "Last sync:"
+msgstr "Última sincronización:"
+
+#: apps/wprs-app/qml/AccountSummary.qml
+msgid "Storage:"
+msgstr "Espacio:"
+
+#: apps/wprs-app/qml/AccountSummary.qml
+msgid "%1 of %2"
+msgstr "%1 de %2"
+
+#: apps/wprs-app/qml/AccountSummary.qml apps/wprs-app/qml/ProviderCard.qml
+msgid "Error:"
+msgstr "Error:"
+
 #: apps/wprs-app/qml/Actions.qml
 msgid "Import…"
 msgstr "Importar…"
@@ -741,10 +891,6 @@ msgid "Include settings"
 msgstr "Incluir los ajustes"
 
 #: apps/wprs-app/qml/ProviderCard.qml
-msgid "Sync now"
-msgstr "Sincronizar ahora"
-
-#: apps/wprs-app/qml/ProviderCard.qml
 msgid "Set secret…"
 msgstr "Guardar el secreto…"
 
@@ -765,14 +911,6 @@ msgid "Show items"
 msgstr "Mostrar los elementos"
 
 #: apps/wprs-app/qml/ProviderCard.qml
-msgid "State:"
-msgstr "Estado:"
-
-#: apps/wprs-app/qml/ProviderCard.qml
-msgid "Error:"
-msgstr "Error:"
-
-#: apps/wprs-app/qml/ProviderCard.qml
 msgid "Contacts:"
 msgstr "Contacta con:"
 
@@ -783,10 +921,6 @@ msgstr "Elementos:"
 #: apps/wprs-app/qml/ProviderCard.qml
 msgid "%1 (cache: %2)"
 msgstr "%1 (caché: %2)"
-
-#: apps/wprs-app/qml/ProviderCard.qml
-msgid "Last sync:"
-msgstr "Última sincronización:"
 
 #: apps/wprs-app/qml/ProviderCard.qml
 msgid "never"
@@ -910,6 +1044,10 @@ msgid "Add repository…"
 msgstr "Añadir un repositorio…"
 
 #: apps/wprs-app/qml/ReposPage.qml
+msgid "Upload package…"
+msgstr "Subir un paquete…"
+
+#: apps/wprs-app/qml/ReposPage.qml
 msgid "Refresh all"
 msgstr "Actualizar todos"
 
@@ -920,6 +1058,10 @@ msgstr "Explorar"
 #: apps/wprs-app/qml/ReposPage.qml
 msgid "Installed"
 msgstr "Instalados"
+
+#: apps/wprs-app/qml/ReposPage.qml
+msgid "Packages (*.wpak)"
+msgstr "Paquetes (*.wpak)"
 
 #: apps/wprs-app/qml/ReposPage.qml
 msgid "Add repository"
@@ -1320,6 +1462,42 @@ msgstr "Actualización de repositorios"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Package install"
 msgstr "Instalación de paquete"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Server account"
+msgstr "Cuenta del servidor"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Device link"
+msgstr "Enlace de equipo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Server sync"
+msgstr "Sincronización con el servidor"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Package upload"
+msgstr "Subida de paquete"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Not linked"
+msgstr "Sin enlazar"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Waiting for approval"
+msgstr "Esperando la aprobación"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Needs the sync key from another device"
+msgstr "Necesita la clave de sincronización de otro equipo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Ready"
+msgstr "Listo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Paused"
+msgstr "En pausa"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Queued"

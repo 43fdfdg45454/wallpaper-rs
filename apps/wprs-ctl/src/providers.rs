@@ -120,7 +120,7 @@ fn ask(field: &SecretField, id: &str, kind: &str, stdin: bool) -> Result<String>
     Ok(secret)
 }
 
-async fn patient<T>(call: impl Future<Output = zbus::Result<T>>) -> Result<T> {
+pub async fn patient<T>(call: impl Future<Output = zbus::Result<T>>) -> Result<T> {
     let answer = tokio::time::timeout(PATIENCE, call).await;
     answer.context("wprsd did not answer within 120 s")?.map_err(explain)
 }

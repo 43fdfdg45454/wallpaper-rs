@@ -24,6 +24,8 @@ pub struct Jobs {
     library: Semaphore,
     repos: Semaphore,
     downloads: Semaphore,
+    account: Semaphore,
+    linking: Semaphore,
     runtime: tokio::runtime::Handle,
 }
 
@@ -46,13 +48,17 @@ impl Jobs {
     pub fn new() -> Self {
         let runtime = tokio::runtime::Handle::current();
         let (library, repos, downloads) = (Semaphore::new(1), Semaphore::new(1), Semaphore::new(2));
-        Self { next: AtomicU64::new(1), list: Mutex::default(), library, repos, downloads, runtime }
+        let (account, linking) = (Semaphore::new(1), Semaphore::new(1));
+        let list = Mutex::default();
+        Self { next: AtomicU64::new(1), list, library, repos, downloads, account, linking, runtime }
     }
 
     fn queue(&self, kind: JobKind) -> &Semaphore {
         match kind {
             JobKind::ProviderSync => &self.downloads,
             JobKind::RepoAdd | JobKind::RepoRefresh | JobKind::Install => &self.repos,
+            JobKind::Account | JobKind::AccountSync | JobKind::Upload => &self.account,
+            JobKind::Link => &self.linking,
             _ => &self.library,
         }
     }

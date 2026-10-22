@@ -133,6 +133,34 @@ jobs:
           cargo build --locked -p wprsd -p wprs-ctl
           scripts/x11-test.sh target/debug
 
+  sync:
+    name: Server sync end-to-end
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libclang-dev libpipewire-0.3-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            mesa-vulkan-drivers libvulkan1 \
+            pipewire pipewire-bin wireplumber dbus-x11 gnome-keyring
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+
+      - name: Two daemons and wprs-server with end-to-end encrypted sync
+        run: |
+          cargo build --locked -p wprsd -p wprs-ctl -p wprs-server
+          scripts/sync-test.sh target/debug
+
   package:
     name: Package
     runs-on: ubuntu-24.04

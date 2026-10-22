@@ -1,3 +1,4 @@
+mod account;
 mod apply;
 mod bus;
 mod changes;
@@ -44,6 +45,7 @@ mod spec;
 mod store;
 mod streams;
 mod sync;
+mod sync1;
 mod thumbs;
 mod timing;
 mod wallpaper;
@@ -130,12 +132,14 @@ async fn run(args: Args) -> anyhow::Result<()> {
     server.at(dbus::OBJECT_PATH, profiles1::Profiles(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, providers1::Providers(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, inputs1::Inputs(weak.clone())).await?;
-    server.at(dbus::OBJECT_PATH, repos1::Repos(weak)).await?;
+    server.at(dbus::OBJECT_PATH, repos1::Repos(weak.clone())).await?;
+    server.at(dbus::OBJECT_PATH, sync1::Sync(weak)).await?;
     tokio::spawn(changes::emit(connection.clone(), daemon.clone()));
     inputs1::start(&daemon, connection.clone());
     pool::start(&daemon);
     folders::start(&daemon);
     remote::start(&daemon, connection.clone());
+    account::start(&daemon, connection.clone());
     edits::start(&daemon);
     tokio::task::spawn_blocking({
         let daemon = daemon.clone();

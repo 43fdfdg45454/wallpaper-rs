@@ -1,0 +1,116 @@
+use crate::{Error, Result};
+use reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE};
+use reqwest::redirect::Policy;
+use reqwest::{Method, RequestBuilder, Response, Url};
+use serde_json::Value;
+use std::net::IpAddr;
+use std::path::Path;
+use std::sync::Arc;
+use std::time::Duration;
+use zeroize::Zeroizing;
+
+pub const AGENT: &str = concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION"));
+
+#[derive(Clone)]
+pub struct Api {
+    http: reqwest::Client,
+    pub base: String,
+    token: Option<Arc<Zeroizing<String>>>,
+}
+
+fn invalid(message: &str) -> Error {
+    Error::Invalid(message.into())
+}
+
+fn net(e: reqwest::Error) -> Error {
+    Error::Network(e.without_url().to_string())
+}
+
+pub fn check_url(url: &str) -> Result<String> {
+    let parsed = Url::parse(url.trim()).map_err(|_| invalid("the server address is not a URL"))?;
+    let host = parsed.host_str().unwrap_or_default();
+    let local = host == "localhost"
+        || host.trim_matches(['[', ']']).parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback());
+    if parsed.scheme() != "https" && !(parsed.scheme() == "http" && local) {
+        return Err(invalid("the server address must start with https://, or http:// for this computer"));
+    }
+    if !parsed.username().is_empty()
+        || parsed.password().is_some()
+        || parsed.query().is_some()
+        || parsed.fragment().is_some()
+    {
+        return Err(invalid("the server address takes no user, query or fragment"));
+    }
+    Ok(parsed.as_str().trim_end_matches('/').to_owned())
+}
+
+impl Api {
+    pub fn new(base: &str) -> Result<Api> {
+        let builder = reqwest::Client::builder().user_agent(AGENT).referer(false).redirect(Policy::none());
+        let http = builder.connect_timeout(Duration::from_secs(10)).build().map_err(net)?;
+        Ok(Api { http, base: check_url(base)?, token: None })
+    }
+
+    pub fn with_token(mut self, token: &str) -> Api {
+        self.token = Some(Arc::new(Zeroizing::new(token.to_owned())));
+        self
+    }
+
+    fn request(&self, method: Method, path: &str) -> RequestBuilder {
+        let request = self.http.request(method, format!("{}{path}", self.base));
+        match &self.token {
+            Some(token) => request.bearer_auth(token.as_str()),
+            None => request,
+        }
+    }
+
+    async fn answer(response: Response) -> Result<Value> {
+        let status = response.status();
+        let body: Value = serde_json::from_str(&response.text().await.map_err(net)?).unwrap_or(Value::Null);
+        if status.is_success() {
+            return Ok(body);
+        }
+        let code = body["code"].as_str().unwrap_or_default().to_owned();
+        let detail =
+            body["detail"].as_str().map_or_else(|| format!("the server answered {status}"), String::from);
+        Err(Error::Server { status: status.as_u16(), code, detail })
+    }
+
+    pub async fn slow(&self, method: Method, path: &str) -> Result<Value> {
+        let request = self.request(method, path).timeout(Duration::from_secs(600));
+        Self::answer(request.send().await.map_err(net)?).await
+    }
+
+    pub async fn call(&self, method: Method, path: &str, body: Option<Value>) -> Result<Value> {
+        let request = self.request(method, path).timeout(Duration::from_secs(30));
+        let request = match body {
+            Some(body) => request.json(&body),
+            None => request,
+        };
+        Self::answer(request.send().await.map_err(net)?).await
+    }
+
+    pub async fn get(&self, path: &str) -> Result<Value> {
+        self.call(Method::GET, path, None).await
+    }
+
+    pub async fn post(&self, path: &str, body: Value) -> Result<Value> {
+        self.call(Method::POST, path, Some(body)).await
+    }
+
+    pub async fn put_file(&self, path: &str, file: &Path, size: u64) -> Result<Value> {
+        let file = tokio::fs::File::open(file).await.map_err(|e| Error::Invalid(e.to_string()))?;
+        let body = reqwest::Body::wrap_stream(tokio_util::io::ReaderStream::new(file));
+        let request = self.request(Method::PUT, path).header(CONTENT_LENGTH, size);
+        let request = request.header(CONTENT_TYPE, "application/octet-stream").body(body);
+        Self::answer(request.send().await.map_err(net)?).await
+    }
+
+    pub async fn events(&self) -> Result<Response> {
+        let response = self.request(Method::GET, "/api/v1/sync/events").send().await.map_err(net)?;
+        match response.status().is_success() {
+            true => Ok(response),
+            false => Err(Self::answer(response).await.err().unwrap_or(invalid("no event stream"))),
+        }
+    }
+}

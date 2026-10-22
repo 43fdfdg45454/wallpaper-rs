@@ -75,6 +75,7 @@ pub struct Keyring {
     bus: zbus::Connection,
     lookup: Duration,
     write: Duration,
+    kind: (&'static str, &'static str),
 }
 
 fn unavailable(message: impl Into<String>) -> Error {
@@ -85,17 +86,21 @@ fn refused(e: zbus::Error) -> Error {
     unavailable(format!("the keyring refused the request: {e}"))
 }
 
-fn attributes(id: &str) -> HashMap<&str, &str> {
-    HashMap::from([("xdg:schema", SCHEMA), ("provider", id)])
-}
-
 async fn bounded<T>(limit: Duration, work: impl Future<Output = Result<T>>) -> Result<T> {
     tokio::time::timeout(limit, work).await.unwrap_or_else(|_| Err(unavailable(SLOW)))
 }
 
 impl Keyring {
     pub fn new(bus: zbus::Connection) -> Self {
-        Keyring { bus, lookup: LOOKUP, write: WRITE }
+        Keyring { bus, lookup: LOOKUP, write: WRITE, kind: (SCHEMA, "provider") }
+    }
+
+    pub fn server(bus: zbus::Connection) -> Self {
+        Keyring { kind: ("io.github.wallpaper_rs.Server", "server"), ..Keyring::new(bus) }
+    }
+
+    fn attributes<'a>(&self, id: &'a str) -> HashMap<&'a str, &'a str> {
+        HashMap::from([("xdg:schema", self.kind.0), (self.kind.1, id)])
     }
 
     async fn service(&self) -> zbus::Result<ServiceProxy<'static>> {
@@ -103,7 +108,7 @@ impl Keyring {
     }
 
     async fn search(&self, id: &str) -> zbus::Result<(Paths, Paths)> {
-        self.service().await?.search_items(attributes(id)).await
+        self.service().await?.search_items(self.attributes(id)).await
     }
 
     pub async fn has(&self, id: &str) -> Result<bool> {
@@ -150,7 +155,7 @@ impl Keyring {
         let (_, session) = service.open_session("plain", &Variant::from("")).await.map_err(refused)?;
         let properties = HashMap::from([
             ("org.freedesktop.Secret.Item.Label", Variant::from(format!("wallpaper-rs: {id}"))),
-            ("org.freedesktop.Secret.Item.Attributes", Variant::from(attributes(id))),
+            ("org.freedesktop.Secret.Item.Attributes", Variant::from(self.attributes(id))),
         ]);
         let mut value = (session.clone(), Vec::new(), secret.as_bytes().to_vec(), "text/plain".to_owned());
         let created = collection.create_item(properties, &value, true).await;

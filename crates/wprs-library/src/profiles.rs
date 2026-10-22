@@ -48,6 +48,14 @@ impl Library {
         })
     }
 
+    pub fn all_presets(&self) -> Result<Vec<Preset>> {
+        let sql = "SELECT p.uid, i.uid, p.name, p.value FROM presets p LEFT JOIN items i ON i.id = p.item_id \
+            ORDER BY p.id";
+        rows(&self.db, sql, [], |r| {
+            Ok(Preset { uid: r.get(0)?, item: r.get(1)?, name: r.get(2)?, value: json(r, 3)? })
+        })
+    }
+
     pub fn preset(&self, uid: &str) -> Result<Preset> {
         let sql = "SELECT p.uid, i.uid, p.name, p.value FROM presets p LEFT JOIN items i ON i.id = p.item_id \
             WHERE p.id = ?1";

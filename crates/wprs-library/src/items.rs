@@ -103,6 +103,10 @@ impl Library {
         ensure(changed == 1, || Error::NotFound("item", uid.into()))
     }
 
+    pub fn hashed(&self) -> Result<Vec<(Item, Vec<u8>)>> {
+        rows(&self.db, SELECT_ITEMS, [], |row| Ok((item_row(row)?, row.get("qhash")?)))
+    }
+
     pub fn unanalyzed(&self, limit: u32) -> Result<Vec<Item>> {
         let sql = format!(
             "{SELECT_ITEMS} WHERE i.missing = 0 AND i.width IS NULL AND i.duration_ms IS NULL AND i.error IS NULL \

@@ -57,6 +57,7 @@ pub struct Daemon {
     pub(crate) folders: Folders,
     pub(crate) rotations: Rotations,
     pub(crate) remote: crate::remote::Remote,
+    pub(crate) account: crate::account::Account,
 }
 
 impl Daemon {
@@ -104,6 +105,7 @@ impl Daemon {
             folders,
             rotations: Rotations::default(),
             remote: Default::default(),
+            account: Default::default(),
         };
         daemon.refresh_items();
         Ok(daemon)

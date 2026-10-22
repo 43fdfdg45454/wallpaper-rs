@@ -88,3 +88,9 @@ impl Out for (String, u64) {
         json!([self.0, self.1])
     }
 }
+
+impl Out for (String, String, u64) {
+    fn out(self) -> Value {
+        json!([self.0, self.1, self.2])
+    }
+}

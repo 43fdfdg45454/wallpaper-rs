@@ -1,0 +1,24 @@
+[package]
+name = "wprs-sync"
+description = "End-to-end encrypted device sync with a wallpaper-rs server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+argon2.workspace = true
+base64.workspace = true
+chacha20poly1305.workspace = true
+getrandom.workspace = true
+hkdf.workspace = true
+hmac.workspace = true
+hpke.workspace = true
+reqwest = { workspace = true, features = ["stream"] }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["fs"] }
+tokio-util.workspace = true
+zeroize.workspace = true

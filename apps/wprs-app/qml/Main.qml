@@ -24,6 +24,9 @@ Kirigami.ApplicationWindow {
         },
         Component {
             SettingsPage {}
+        },
+        Component {
+            AccountPage {}
         }
     ]
 
@@ -89,6 +92,12 @@ Kirigami.ApplicationWindow {
                 icon.name: "configure"
                 checked: root.current === 5
                 onTriggered: root.showPage(5)
+            },
+            Kirigami.Action {
+                text: App.tr("Account")
+                icon.name: "folder-cloud"
+                checked: root.current === 6
+                onTriggered: root.showPage(6)
             }
         ]
     }

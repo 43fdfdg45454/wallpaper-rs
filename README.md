@@ -250,6 +250,27 @@ lee el valor de un archivo, para los secretos:
 La lista completa de variables y la API HTTP están en
 [`docs/specs/server.md`](docs/specs/server.md).
 
+### Enlazar los equipos
+
+El servicio de cada equipo se enlaza con el servidor desde *Cuenta* en la app o con la CLI:
+
+```sh
+wprs-ctl server add https://fondos.example.org
+wprs-ctl server link --name Escritorio          # muestra un código para /link o para:
+wprs-ctl server approve BCDF-GHJK                # … en un equipo ya enlazado
+wprs-ctl server join "Device 1"                  # equipo nuevo de una cuenta cifrada: 12 cifras
+wprs-ctl server share "Device 2" "1234 5678 9012"   # en el equipo con la clave, tras compararlas
+wprs-ctl server status
+wprs-ctl server upload fondo.wpak                # sube un paquete con el token del equipo
+```
+
+Se sincronizan los títulos, etiquetas, valoraciones y favoritos de la biblioteca, las listas, los
+perfiles, los ajustes predefinidos y los ajustes (salvo el volumen y la caché), cifrados de
+extremo a extremo; sin cifrar solo con `--plaintext`, que avisa antes. El token y la clave de
+sincronización viven solo en el llavero del sistema; el servidor ve los equipos como `Device 1`,
+`Device 2`… y el nombre real viaja cifrado. Al enlazar se añade también el repositorio del
+servidor.
+
 Copias de seguridad: `docker compose exec wprs wprs-server backup` deja en
 `/data/backups/<fecha>` una instantánea coherente de la base de datos (`VACUUM INTO`) y de los
 paquetes, miniaturas, claves y el repositorio, con la suma SHA-256 de cada archivo. Para
@@ -291,8 +312,8 @@ wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fot
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
 libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev qt6-base-dev qt6-declarative-dev`. Para las
 pruebas: `mesa-vulkan-drivers pipewire wireplumber dbus-x11 gstreamer1.0-plugins-base
-gstreamer1.0-plugins-good`, `sway grim foot` para la de Sway y `xvfb x11-utils x11-xserver-utils
-xdotool imagemagick` para la de X11.
+gstreamer1.0-plugins-good`, `sway grim foot` para la de Sway, `xvfb x11-utils x11-xserver-utils
+xdotool imagemagick` para la de X11 y `gnome-keyring` para la del servidor.
 
 ```sh
 cargo test --workspace                   # pruebas unitarias, de render y de vídeo
@@ -302,6 +323,8 @@ cp target/debug/examples/probe target/debug/
 scripts/integration-test.sh target/debug # D-Bus + PipeWire + daemon de punta a punta
 scripts/sway-test.sh target/debug        # superficies layer-shell en un Sway sin pantalla
 scripts/x11-test.sh target/debug         # ventanas de escritorio en un Xvfb
+cargo build -p wprs-server
+scripts/sync-test.sh target/debug        # dos daemons y wprs-server: enlace, clave y sincronización
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
 scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
 target/debug/wprs-app --check            # carga todo el QML de la app y falla ante cualquier aviso
@@ -335,6 +358,7 @@ raíz y la misma pausa.
 | `crates/wprs-wayland` | Superficies layer-shell y ventanas de escritorio X11, escala, ritmo y oclusión |
 | `crates/wprs-audio` | Captura del sonido con PipeWire y su análisis en bandas para las escenas |
 | `crates/wprs-script` | Scripts de escena en JavaScript, aislados y con límites de CPU y memoria |
+| `crates/wprs-sync` | Cifrado, relojes, fusión y protocolo de la sincronización con el servidor |
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
 | `apps/wprs-app` | App de escritorio (Qt Quick y Kirigami sobre Rust con cxx-qt) |
@@ -350,7 +374,7 @@ raíz y la misma pausa.
 ## Privacidad
 
 - Sin telemetría ni estadísticas de uso. El servicio solo se conecta a internet para los
-  proveedores de fondos y los repositorios que añadas tú. Al arrancar solo contacta con un
+  proveedores de fondos, los repositorios y el servidor propio que añadas tú. Al arrancar solo contacta con un
   proveedor si le toca su sincronización automática; la comprobación diaria de los repositorios
   (`repos.auto_refresh`) empieza 10 minutos después. Un repositorio solo puede redirigir a su propia
   dirección y a las réplicas que declara en su raíz firmada.
@@ -380,6 +404,10 @@ raíz y la misma pausa.
   puntero solo se guarda en memoria la última posición, y nunca se leen las teclas.
 - Los scripts de las escenas se ejecutan en un proceso aparte, sin archivos, red ni otros
   procesos, con límites de memoria y de CPU por fotograma.
+- Con un servidor propio, los registros sincronizados salen cifrados con una clave que solo
+  tienen tus equipos; los identificadores de los paquetes se derivan de esa clave y el nombre de
+  cada equipo solo viaja cifrado. La clave pasa a un equipo nuevo por el buzón del servidor,
+  sellada para él, después de comparar un código de 12 cifras en las dos pantallas.
 - Los paquetes se generan sin rutas, usuarios ni nombre del equipo de quien los compila.
 - El servidor propio no guarda IP ni user agents en sus registros salvo que su administrador
   active el registro de abusos, que se borra solo; los datos sincronizados le llegan cifrados.

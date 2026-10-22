@@ -29,5 +29,11 @@
  "Repos1.RequestPreviews": [{}],
  "Repos1.Add": [8],
  "Repos1.Refresh": [9],
- "Repos1.Install": [10]
+ "Repos1.Install": [10],
+ "Sync1.GetStatus": {"model": 1, "serial": 1, "account": {"url": "https://wallpapers.example.org", "name": "Example wallpapers", "repo_id": "3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f", "handle": "reader", "device": "Device 1", "label": "Desk", "state": "ready", "encrypted": true, "warning": null, "paused": false, "last_sync": 1792368000, "last_error": null, "records": 12, "used_bytes": 3584, "quota_bytes": 67108864, "devices": [{"id": "0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a", "name": "Device 1", "label": "Desk", "platform": "linux", "created_at": 1792368000, "seen_at": 1792368600, "current": true}, {"id": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b", "name": "Device 2", "label": null, "platform": "linux", "created_at": 1792368300, "seen_at": null, "current": false}], "job": null}},
+ "Sync1.Link": ["BCDF-GHJK", "https://wallpapers.example.org/link", 11],
+ "Sync1.Join": ["1234 5678 9012", 12],
+ "Sync1.AddServer": [13],
+ "Sync1.SyncNow": [14],
+ "Sync1.Upload": [15]
 }

@@ -6,7 +6,9 @@ use serde_json::{Value, from_value};
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use wprs_client::parse;
-use wprs_core::model::{Field, Header, InstalledPackage, Job, JobKind, JobReply, JobsReply, Repo, Schema};
+use wprs_core::model::{
+    Field, Header, InstalledPackage, Job, JobKind, JobReply, JobsReply, Repo, Schema, UploadOutput,
+};
 
 pub fn reply<T: DeserializeOwned>(json: String, raw: bool, human: impl FnOnce(T) -> String) -> Result<()> {
     print!("{}", if raw { self::raw(&json)? } else { human(parse(&json)?) });
@@ -161,6 +163,9 @@ pub fn summary(job: &Job) -> String {
         JobKind::Install => {
             from_value(output).ok().map(|p: InstalledPackage| format!("{} {}", p.id, p.version))
         }
+        JobKind::Upload => from_value(output).ok().map(|u: UploadOutput| {
+            format!("{} {} {}", u.package.unwrap_or_default(), u.version.unwrap_or_default(), u.state)
+        }),
         JobKind::Unknown => None,
         _ => Some(counts(&output)).filter(|counts| !counts.is_empty()),
     };

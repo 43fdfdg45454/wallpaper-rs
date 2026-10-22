@@ -125,7 +125,10 @@ model! {
     }
 
     #[derive(Copy, Eq, Hash)]
-    pub enum JobKind { Scan, Import, Analyze, ProviderSync, RepoAdd, RepoRefresh, Install, #[serde(other)] Unknown }
+    pub enum JobKind {
+        Scan, Import, Analyze, ProviderSync, RepoAdd, RepoRefresh, Install, Account, Link, AccountSync, Upload,
+        #[serde(other)] Unknown,
+    }
 
     #[derive(Copy, Eq, Hash)]
     pub enum JobState { Queued, Running, Done, Failed, Cancelled, #[serde(other)] Unknown }
