@@ -13,7 +13,7 @@ fetch() {
   files=$(grep -oE '\b[a-z0-9_]+\.o\b' "$3/Makefile" | sed 's/\.o$/.c/' | grep -vx "$1.c" | sort -u)
   while [ -n "$files" ]; do
     for name in $files; do curl -sSfL -o "$3/$name" "$base/$name"; done
-    files=$(cat "$3"/*.c "$3"/*.h 2>/dev/null | sed -n 's/^#include "\([^"/]*\)"/\1/p' | sort -u \
+    files=$(cat "$3"/*.[ch] | sed -n 's/^#include "\([^"/]*\)"/\1/p' | sort -u \
       | while read -r name; do [ -e "$3/$name" ] || echo "$name"; done)
   done
 }
