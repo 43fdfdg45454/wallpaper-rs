@@ -13,6 +13,7 @@ finish-args:
   - --own-name=io.github.wallpaper_rs.Daemon
   - --talk-name=org.freedesktop.ScreenSaver
   - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.KWin
   - --system-talk-name=org.freedesktop.UPower
   - --system-talk-name=org.freedesktop.login1
   - --filesystem=xdg-pictures:ro
@@ -24,6 +25,8 @@ modules:
     build-options:
       append-path: /run/build/wallpaper-rs/rust/bin:/usr/lib/sdk/llvm22/bin
       prepend-ld-library-path: /usr/lib/sdk/llvm22/lib
+      cflags: -ffile-prefix-map=/run/build/wallpaper-rs=/src
+      cxxflags: -ffile-prefix-map=/run/build/wallpaper-rs=/src
       env:
         CARGO_HOME: /run/build/wallpaper-rs/cargo
         RUSTFLAGS: --remap-path-prefix=/run/build/wallpaper-rs=/src --remap-path-prefix=/run/build/wallpaper-rs/cargo=/cargo
@@ -33,7 +36,8 @@ modules:
       - install -Dm755 -t /app/bin target/release/wprsd target/release/wprs-ctl
       - install -Dm755 packaging/flatpak/wprs-plasma.sh /app/bin/wprs-plasma
       - scripts/translations.sh build
-      - install -d /app/share/plasma/wallpapers /app/share/plasma/plasmoids /app/share/dbus-1/services
+      - install -d /app/share/plasma/wallpapers /app/share/plasma/plasmoids /app/share/dbus-1/services /app/share/wallpaper-rs
+      - cp -r integrations/kwin-pointer /app/share/wallpaper-rs/kwin-pointer
       - cp -r integrations/plasma-wallpaper /app/share/plasma/wallpapers/io.github.wallpaper_rs
       - cp -r integrations/plasma-tray /app/share/plasma/plasmoids/io.github.wallpaper_rs.tray
       - sed 's|@BINDIR@|/app/bin|' packaging/dbus/io.github.wallpaper_rs.Daemon.service > /app/share/dbus-1/services/io.github.wallpaper_rs.Daemon.service

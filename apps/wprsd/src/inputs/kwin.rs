@@ -16,7 +16,7 @@ pub(crate) async fn kwin(connection: &zbus::Connection, on: bool) -> anyhow::Res
     connection.call_method(Some(KWIN), path, interface, "unloadScript", &(SCRIPT,)).await?;
     if on {
         let file = script().ok_or_else(|| anyhow::anyhow!("the KWin pointer script is not installed"))?;
-        let load = (file.to_string_lossy().into_owned(), SCRIPT);
+        let load = (crate::flatpak::host_path(&file).to_string_lossy().into_owned(), SCRIPT);
         connection.call_method(Some(KWIN), path, interface, "loadScript", &load).await?;
         connection.call_method(Some(KWIN), path, interface, "start", &()).await?;
     }

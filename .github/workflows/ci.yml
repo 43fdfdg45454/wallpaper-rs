@@ -271,6 +271,7 @@ jobs:
             test -f "$files/share/plasma/$p/metadata.json"
             grep -F -e "--install '$files/share/plasma/$p'" plasma.sh
           done
+          test -f "$files/share/wallpaper-rs/kwin-pointer/contents/code/main.js"
           grep -x "Exec=.* --command=/app/bin/wprsd $app" /var/lib/flatpak/exports/share/dbus-1/services/io.github.wallpaper_rs.Daemon.service
           ls "$files/bin/wprsd" "$files/bin/wprs-ctl"
           if grep -l -E '/run/build|/(home|root)/' "$files"/bin/wprs*; then exit 1; fi

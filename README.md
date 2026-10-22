@@ -83,8 +83,9 @@ alias wprs-ctl='flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperR
 
 Permisos: la GPU, el socket de PipeWire para publicar los streams, el sonido de los vídeos, el
 nombre D-Bus del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
-Service) para las contraseñas y claves de los proveedores, lectura de Imágenes, Vídeos y
-Descargas, y red. La red solo se usa para los proveedores de fondos y los repositorios que
+Service) para las contraseñas y claves de los proveedores, KWin para cargar el script del
+puntero solo mientras una escena con permiso lo usa, lectura de Imágenes, Vídeos y Descargas, y
+red. La red solo se usa para los proveedores de fondos y los repositorios que
 añadas tú. Para usar fondos de otra carpeta:
 `flatpak override --user --filesystem=/ruta:ro io.github.wallpaper_rs.WallpaperRs`. La
 configuración vive en `~/.var/app/io.github.wallpaper_rs.WallpaperRs/config/wallpaper-rs/`. Para
