@@ -1,7 +1,7 @@
 use chrono::DateTime;
 use rusqlite::Connection;
 use serde_json::json;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -27,6 +27,10 @@ fn find(library: &Library, query: &str) -> Item {
     let mut found = library.search(query, NOW, 0, 10).unwrap();
     assert_eq!(found.len(), 1, "{query}: {found:?}");
     found.remove(0)
+}
+
+fn resolve(library: &Library, key: &str, on_battery: bool) -> Playlist {
+    library.resolve(key, NOW, on_battery, &HashSet::new()).unwrap().playlist
 }
 
 fn mode(path: impl AsRef<Path>) -> u32 {
@@ -260,12 +264,12 @@ fn manual_playlists_keep_their_order_and_resolve_to_schedule_playlists() {
         interval: Duration::from_secs(90),
         per_output: false,
     };
-    assert_eq!(library.resolve(&list, NOW, true).unwrap(), expected);
+    assert_eq!(resolve(&library, &list, true), expected);
     let mut info = library.playlist(&list).unwrap();
     info.rules.skip_videos_on_battery = true;
     library.update_playlist(&info).unwrap();
-    assert_eq!(library.resolve(&list, NOW, true).unwrap().items, [b.path.as_path()]);
-    assert_eq!(library.resolve(&list, NOW, false).unwrap().items.len(), 2);
+    assert_eq!(resolve(&library, &list, true).items, [b.path.as_path()]);
+    assert_eq!(resolve(&library, &list, false).items.len(), 2);
     let error = library.create_playlist(" morning ", None, &Rules::default()).unwrap_err();
     assert_eq!(error.to_string(), "playlist \"morning\" already exists");
 }
@@ -276,12 +280,12 @@ fn smart_playlists_follow_their_query_and_skip_missing_items() {
     let (mut library, source, [a, b, c]) = folder_with_three_items(&dir);
     library.add_tag(&a.uid, "sea").unwrap();
     let smart = library.create_playlist("Sea", Some("tag:sea sort:title"), &Rules::default()).unwrap();
-    assert_eq!(library.resolve(&smart, NOW, false).unwrap().items, [a.path.as_path()]);
+    assert_eq!(resolve(&library, &smart, false).items, [a.path.as_path()]);
     library.add_tag(&c.uid, "sea").unwrap();
-    assert_eq!(library.resolve("sea", NOW, false).unwrap().items, [a.path.clone(), c.path.clone()]);
+    assert_eq!(resolve(&library, "sea", false).items, [a.path.clone(), c.path.clone()]);
     fs::remove_file(&a.path).unwrap();
     library.scan(&source, NOW).unwrap();
-    assert_eq!(library.resolve(&smart, NOW, false).unwrap().items, [c.path.as_path()]);
+    assert_eq!(resolve(&library, &smart, false).items, [c.path.as_path()]);
     assert!(matches!(library.add_to_playlist(&smart, &[&b.uid]), Err(Error::Invalid("playlist", _))));
     let bad = library.create_playlist("Bad", Some("nope:1"), &Rules::default());
     assert!(matches!(bad, Err(Error::Query(_))));
@@ -319,7 +323,7 @@ fn rotation_state_survives_reopening_the_library() {
     let rules = Rules { order: Order::Shuffle, ..Rules::default() };
     let list = library.create_playlist("All", None, &rules).unwrap();
     library.add_to_playlist(&list, &[&a.uid, &b.uid, &c.uid]).unwrap();
-    let playlist = library.resolve(&list, NOW, false).unwrap();
+    let playlist = resolve(&library, &list, false);
     let mut state = PlaylistState::new(7);
     state.advance(&playlist, DateTime::from_timestamp(NOW, 0).unwrap());
     let rotation = Rotation {
@@ -327,6 +331,7 @@ fn rotation_state_survives_reopening_the_library() {
         playlist: list.clone(),
         state: state.clone(),
         next_at: Some(NOW + 600),
+        current: Some(b.uid.clone()),
     };
     library.save_rotation(&rotation).unwrap();
     drop(library);

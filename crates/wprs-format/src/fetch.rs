@@ -1,7 +1,7 @@
 use crate::repo::hex64;
 use crate::store::State;
 use crate::validate::within;
-use crate::{Result, Root, require};
+use crate::{Error, Result, Root, require};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::Path;
@@ -79,6 +79,7 @@ pub(crate) fn first<T>(
         match attempt(base) {
             Ok(Some(value)) => return Ok(Some(value)),
             Ok(None) => missing = true,
+            Err(Error::Io(e)) if e.kind() == io::ErrorKind::Interrupted => return Err(e.into()),
             Err(e) => error = Some(e),
         }
     }

@@ -1,4 +1,4 @@
-use crate::db::{ensure, printable, rows, uid};
+use crate::db::{ensure, printable, row_id, rows, uid, unique};
 use crate::tags::{TAG_LENGTH, tag_item};
 use crate::{Error, Kind, Library, Result, ScanReport};
 use rusqlite::{Connection, OptionalExtension, params};
@@ -34,6 +34,25 @@ impl Library {
         tx.commit()?;
         Ok(uid)
     }
+
+    pub fn relink_item(&mut self, uid: &str, path: &Path, _now: i64) -> Result<()> {
+        let path = fs::canonicalize(path)?;
+        let tx = self.db.transaction()?;
+        let (id, text) = (row_id(&tx, "item", uid)?, utf8(&path)?);
+        let sql = "UPDATE items SET path = ?2, missing = 0 WHERE id = ?1";
+        unique(tx.execute(sql, params![id, text]), "item", text)?;
+        refresh(&tx, id, &path)?;
+        Ok(tx.commit()?)
+    }
+}
+
+fn facts(path: &Path) -> Result<(Kind, &str, i64, i64)> {
+    let not_media =
+        || Error::Invalid("file", format!("{} is not an image, video or package", path.display()));
+    let kind = Kind::detect(path).ok_or_else(not_media)?;
+    let (text, meta) = (utf8(path)?, fs::metadata(path)?);
+    ensure(meta.is_file(), not_media)?;
+    Ok((kind, text, meta.len() as i64, meta.mtime()))
 }
 
 pub(crate) fn upsert(
@@ -43,12 +62,7 @@ pub(crate) fn upsert(
     now: i64,
     report: &mut ScanReport,
 ) -> Result<i64> {
-    let not_media =
-        || Error::Invalid("file", format!("{} is not an image, video or package", path.display()));
-    let kind = Kind::detect(path).ok_or_else(not_media)?;
-    let (text, meta) = (utf8(path)?, fs::metadata(path)?);
-    ensure(meta.is_file(), not_media)?;
-    let (size, mtime) = (meta.len() as i64, meta.mtime());
+    let (kind, text, size, mtime) = facts(path)?;
     let sql = "SELECT id, size = ?2 AND mtime = ?3, missing FROM items WHERE path = ?1";
     let known: Option<(i64, bool, bool)> = db
         .query_row(sql, params![text, size, mtime], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
@@ -57,10 +71,7 @@ pub(crate) fn upsert(
     if let Some((id, same, missing)) = known {
         db.execute(found, params![id, text, mtime, source])?;
         if !same {
-            let sql = "UPDATE items SET size = ?2, mtime = ?3, qhash = ?4, width = NULL, height = NULL, \
-                duration_ms = NULL, audio = NULL, color = NULL, error = NULL WHERE id = ?1";
-            db.execute(sql, params![id, size, mtime, qhash(path)?])?;
-            package(db, id, kind, path)?;
+            refresh(db, id, path)?;
         }
         report.updated += u32::from(missing || !same);
         return Ok(id);
@@ -83,12 +94,18 @@ pub(crate) fn upsert(
     let id = db.last_insert_rowid();
     if let Some(manifest) = package(db, id, kind, path)? {
         db.execute("UPDATE items SET title = ?2 WHERE id = ?1", params![id, manifest.title])?;
-        for tag in manifest.tags.iter().filter(|tag| printable(tag.trim(), TAG_LENGTH)) {
-            tag_item(db, id, tag)?;
-        }
     }
     report.added += 1;
     Ok(id)
+}
+
+fn refresh(db: &Connection, id: i64, path: &Path) -> Result<()> {
+    let (kind, _, size, mtime) = facts(path)?;
+    let sql = "UPDATE items SET kind = ?2, size = ?3, mtime = ?4, qhash = ?5, width = NULL, height = NULL, \
+        duration_ms = NULL, audio = NULL, color = NULL, error = NULL, pkg_id = NULL, pkg_version = NULL, \
+        pkg_type = NULL, license = NULL WHERE id = ?1";
+    db.execute(sql, params![id, kind, size, mtime, qhash(path)?])?;
+    package(db, id, kind, path).map(drop)
 }
 
 fn package(db: &Connection, id: i64, kind: Kind, path: &Path) -> Result<Option<Manifest>> {
@@ -104,6 +121,9 @@ fn package(db: &Connection, id: i64, kind: Kind, path: &Path) -> Result<Option<M
     let (pkg_type, license) = (m.map(|m| m.kind.to_string()), m.map(|m| &m.license));
     let sql = "UPDATE items SET error = ?2, pkg_id = ?3, pkg_version = ?4, pkg_type = ?5, license = ?6 WHERE id = ?1";
     db.execute(sql, params![id, error, pkg_id, version, pkg_type, license])?;
+    for tag in m.iter().flat_map(|m| &m.tags).filter(|tag| printable(tag.trim(), TAG_LENGTH)) {
+        tag_item(db, id, tag)?;
+    }
     Ok(manifest)
 }
 

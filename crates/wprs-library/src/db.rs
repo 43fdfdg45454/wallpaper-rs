@@ -1,12 +1,12 @@
 use crate::{Error, Library, Result};
 use rusqlite::types::Type;
-use rusqlite::{Connection, OptionalExtension, Params, Row};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, Params, Row};
 use serde::de::DeserializeOwned;
 use std::fs::{self, DirBuilder, OpenOptions, Permissions};
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 
-const MIGRATIONS: [&str; 1] = [include_str!("schema.sql")];
+const MIGRATIONS: [&str; 2] = [include_str!("schema.sql"), "ALTER TABLE rotation ADD COLUMN current TEXT;"];
 
 pub const SCHEMA_VERSION: u32 = MIGRATIONS.len() as u32;
 
@@ -28,6 +28,16 @@ impl Library {
         Ok(library)
     }
 
+    pub fn open_read_only(path: impl AsRef<Path>) -> Result<Self> {
+        let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+        let db = Connection::open_with_flags(path, flags)?;
+        match version(&db)? {
+            SCHEMA_VERSION => Ok(Self { db }),
+            newer if newer > SCHEMA_VERSION => Err(Error::Newer(newer, SCHEMA_VERSION)),
+            old => Err(Error::Invalid("database", format!("schema version {old} is not migrated yet"))),
+        }
+    }
+
     pub fn open_in_memory() -> Result<Self> {
         Self::setup(Connection::open_in_memory()?)
     }
@@ -41,8 +51,12 @@ impl Library {
     }
 }
 
+fn version(db: &Connection) -> Result<u32> {
+    Ok(db.pragma_query_value(None, "user_version", |row| row.get(0))?)
+}
+
 fn migrate(db: &mut Connection) -> Result<()> {
-    let version: u32 = db.pragma_query_value(None, "user_version", |row| row.get(0))?;
+    let version = version(db)?;
     ensure(version <= SCHEMA_VERSION, || Error::Newer(version, SCHEMA_VERSION))?;
     let tx = db.transaction()?;
     for (sql, next) in MIGRATIONS.iter().zip(1..).skip(version as usize) {
@@ -90,6 +104,10 @@ pub(crate) fn row_id(db: &Connection, what: &'static str, key: &str) -> Result<i
         _ => format!("SELECT id FROM {what}s WHERE uid = ?1"),
     };
     db.query_row(&sql, [key], |row| row.get(0)).optional()?.ok_or_else(|| Error::NotFound(what, key.into()))
+}
+
+pub(crate) fn item_ids(db: &Connection, uids: &[&str]) -> Result<Vec<i64>> {
+    uids.iter().map(|uid| row_id(db, "item", uid)).collect()
 }
 
 pub(crate) fn remove(db: &Connection, what: &'static str, key: &str) -> Result<()> {

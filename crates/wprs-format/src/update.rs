@@ -3,6 +3,7 @@ use crate::fetch::{bases, first, get};
 use crate::store::{Doc, Snapshot, State};
 use crate::{Anchor, Entry, Error, Fetch, Result, Root, comment, ensure, require, sha256};
 use std::collections::BTreeMap;
+use std::io;
 
 const MAX_ROOT: u64 = 512 << 10;
 const MAX_SIG: u64 = 16 << 10;
@@ -129,10 +130,11 @@ impl Run<'_> {
         version = version.max(self.state.entry_version);
         let Some(mut entry) = self.load_entry(root, base, version)? else { return Ok(None) };
         for _ in 0..MAX_PROBES {
-            let Some(Ok(Some(next))) = version.checked_add(1).map(|v| self.load_entry(root, base, v)) else {
-                break;
-            };
-            (entry, version) = (next, version + 1);
+            match version.checked_add(1).map(|v| self.load_entry(root, base, v)) {
+                Some(Ok(Some(next))) => (entry, version) = (next, version + 1),
+                Some(Err(Error::Io(e))) if e.kind() == io::ErrorKind::Interrupted => return Err(e.into()),
+                _ => break,
+            }
         }
         Ok(Some(entry))
     }

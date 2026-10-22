@@ -44,21 +44,56 @@ pub(crate) struct Snapshot {
     pub revoked: Revoked,
 }
 
-pub(crate) fn place(dest: &Path, private: bool, fill: impl FnOnce(&mut File) -> Result<()>) -> Result<()> {
-    let dir = dest.parent().ok_or_else(|| Error::Blocked(dest.into()))?;
-    DirBuilder::new().recursive(true).mode(if private { 0o700 } else { 0o755 }).create(dir)?;
-    let tmp = dir.join(format!(".tmp-{}-{}", process::id(), COUNTER.fetch_add(1, Ordering::Relaxed)));
-    let mode = if private { 0o600 } else { 0o644 };
-    let mut file = OpenOptions::new().read(true).write(true).create_new(true).mode(mode).open(&tmp)?;
-    let result = fill(&mut file).and_then(|()| {
-        file.sync_all()?;
-        fs::rename(&tmp, dest)?;
-        Ok(File::open(dir)?.sync_all()?)
-    });
-    if result.is_err() {
-        let _ = fs::remove_file(&tmp);
+pub(crate) struct Temp {
+    path: PathBuf,
+    pub file: File,
+}
+
+impl Temp {
+    pub fn new(dest: &Path, private: bool) -> Result<Temp> {
+        let dir = dest.parent().ok_or_else(|| Error::Blocked(dest.into()))?;
+        DirBuilder::new().recursive(true).mode(if private { 0o700 } else { 0o755 }).create(dir)?;
+        let path = dir.join(format!(".tmp-{}-{}", process::id(), COUNTER.fetch_add(1, Ordering::Relaxed)));
+        let mode = if private { 0o600 } else { 0o644 };
+        let file = OpenOptions::new().read(true).write(true).create_new(true).mode(mode).open(&path)?;
+        Ok(Temp { path, file })
     }
-    result
+
+    pub fn keep(self, dest: &Path) -> Result<()> {
+        self.file.sync_all()?;
+        fs::rename(&self.path, dest)?;
+        Ok(File::open(dest.parent().ok_or_else(|| Error::Blocked(dest.into()))?)?.sync_all()?)
+    }
+}
+
+impl Drop for Temp {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
+pub(crate) fn place(dest: &Path, private: bool, fill: impl FnOnce(&mut File) -> Result<()>) -> Result<()> {
+    let mut tmp = Temp::new(dest, private)?;
+    fill(&mut tmp.file)?;
+    tmp.keep(dest)
+}
+
+pub(crate) fn locked<T>(data: &Path, exclusive: bool, run: impl FnOnce() -> Result<T>) -> Result<T> {
+    if exclusive {
+        DirBuilder::new().recursive(true).mode(0o700).create(data)?;
+    }
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).create(true).truncate(false).mode(0o600);
+    let file = match options.open(data.join(".repos.lock")) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound && !exclusive => return run(),
+        file => file?,
+    };
+    if exclusive {
+        file.lock()?
+    } else {
+        file.lock_shared()?
+    }
+    run()
 }
 
 pub(crate) fn write(dest: &Path, bytes: &[u8], private: bool) -> Result<()> {

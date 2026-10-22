@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::{self, File, FileTimes};
 use std::os::unix::fs::PermissionsExt;
 use std::time::{Duration, UNIX_EPOCH};
@@ -74,7 +75,7 @@ async fn cache_serves_the_stored_copy_when_the_server_is_gone() {
 }
 
 #[tokio::test]
-async fn download_evicts_older_entries_but_keeps_the_newest() {
+async fn downloads_leave_eviction_to_the_caller() {
     let server = MockServer::start().await;
     Mock::given(method("GET")).respond_with(pixels()).expect(2).mount(&server).await;
     let dir = tempfile::tempdir().unwrap();
@@ -86,7 +87,10 @@ async fn download_evicts_older_entries_but_keeps_the_newest() {
     let old_path = cache.download(&old, client.get(&old.url)).await.unwrap();
     tokio::time::sleep(Duration::from_millis(20)).await;
     let new_path = cache.download(&new, client.get(&new.url)).await.unwrap();
-    assert!(!old_path.exists() && new_path.exists());
+    assert!(old_path.exists() && new_path.exists());
+    assert!(cache.evict_except(&HashSet::from([old_path.clone()])).unwrap().is_empty());
+    assert_eq!(cache.evict_except(&HashSet::new()).unwrap(), [old_path]);
+    assert!(new_path.exists());
 }
 
 #[test]
@@ -102,8 +106,10 @@ fn evict_removes_least_recently_accessed_media_first() {
     fs::write(dir.path().join("old.jpg.json"), "{}").unwrap();
     fs::write(dir.path().join("notes.txt"), "not cached media, never evicted").unwrap();
 
-    let removed = cache.evict().unwrap();
-    assert_eq!(removed, [dir.path().join("old.jpg"), dir.path().join("mid.png")]);
+    let removed = cache.evict_except(&HashSet::from([dir.path().join("old.jpg")])).unwrap();
+    assert_eq!(removed, [dir.path().join("mid.png")]);
+    assert!(dir.path().join("old.jpg.json").exists());
+    assert_eq!(cache.evict_except(&HashSet::new()).unwrap(), [dir.path().join("old.jpg")]);
     assert!(!dir.path().join("old.jpg.json").exists());
     assert!(dir.path().join("new.mp4").exists() && dir.path().join("notes.txt").exists());
 }

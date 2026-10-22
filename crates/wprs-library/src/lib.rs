@@ -1,20 +1,26 @@
 mod db;
+mod edits;
+mod entries;
 mod filter;
 mod import;
 mod items;
 mod playlists;
 mod profiles;
 mod query;
+mod resolve;
 mod rotation;
 mod rules;
 mod scan;
 mod tags;
 
 pub use db::SCHEMA_VERSION;
+pub use entries::EntryEdit;
+pub use filter::query_keys;
 pub use import::qhash;
 pub use items::{Item, Meta, PackageInfo};
 pub use playlists::PlaylistInfo;
 pub use profiles::{Preset, Profile};
+pub use resolve::Resolved;
 pub use rotation::{Rotation, Used};
 pub use rules::Rules;
 pub use scan::{ScanReport, Source};
@@ -48,6 +54,10 @@ pub enum Error {
     Query(String),
     #[error("the database uses schema version {0} but this build only knows up to {1}")]
     Newer(u32, u32),
+    #[error("the playlist changed; reload it")]
+    Conflict,
+    #[error("cancelled")]
+    Cancelled,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

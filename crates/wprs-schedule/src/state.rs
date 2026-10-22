@@ -10,14 +10,22 @@ pub struct PlaylistState {
     cycle: u32,
     position: usize,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    previous: Option<usize>,
+    anchor: Option<(u32, usize)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     since: Option<DateTime<Utc>>,
 }
 
 impl PlaylistState {
     pub fn new(seed: u32) -> Self {
-        Self { seed, cycle: 0, position: 0, previous: None, since: None }
+        Self { seed, cycle: 0, position: 0, anchor: None, since: None }
+    }
+
+    pub fn position(&self) -> u32 {
+        self.position as u32
+    }
+
+    pub fn cycle(&self) -> u32 {
+        self.cycle
     }
 
     pub fn index(&self, playlist: &Playlist) -> Option<usize> {
@@ -34,7 +42,6 @@ impl PlaylistState {
 
     pub fn advance<'a>(&mut self, playlist: &'a Playlist, now: DateTime<Utc>) -> Option<&'a Path> {
         if self.position + 1 >= playlist.items.len() {
-            self.previous = self.index(playlist);
             self.cycle = self.cycle.wrapping_add(1);
             self.position = 0;
         } else {
@@ -42,6 +49,27 @@ impl PlaylistState {
         }
         self.since = Some(now);
         self.current(playlist)
+    }
+
+    pub fn back<'a>(&mut self, playlist: &'a Playlist, now: DateTime<Utc>) -> Option<&'a Path> {
+        let len = playlist.items.len();
+        match self.position.min(len) {
+            0 if self.cycle == 0 || len == 0 => return self.current(playlist),
+            0 => (self.cycle, self.position) = (self.cycle - 1, len - 1),
+            position => self.position = position - 1,
+        }
+        self.since = Some(now);
+        self.current(playlist)
+    }
+
+    pub fn seek(&mut self, playlist: &Playlist, index: usize) {
+        if playlist.order == Order::Sequential {
+            self.position = index;
+        } else {
+            self.cycle = self.cycle.wrapping_add(1);
+            self.position = 0;
+            self.anchor = Some((self.cycle, index));
+        }
     }
 
     pub fn poll<'a>(&mut self, playlist: &'a Playlist, now: DateTime<Utc>) -> Option<&'a Path> {
@@ -58,7 +86,19 @@ impl PlaylistState {
     }
 
     fn permutation(&self, len: usize) -> Vec<usize> {
-        let mut x = mix(u64::from(self.seed) << 32 | u64::from(self.cycle)) | 1;
+        if len == 2 {
+            return self.order(self.anchor.map_or(0, |(cycle, _)| cycle), len);
+        }
+        let mut order = self.order(self.cycle, len);
+        let anchored = self.anchor.is_some_and(|(cycle, _)| cycle == self.cycle);
+        if len > 2 && !anchored && order[0] == self.order(self.cycle.wrapping_sub(1), len)[len - 1] {
+            order.swap(0, 1);
+        }
+        order
+    }
+
+    fn order(&self, cycle: u32, len: usize) -> Vec<usize> {
+        let mut x = mix(u64::from(self.seed) << 32 | u64::from(cycle)) | 1;
         let mut order: Vec<usize> = (0..len).collect();
         for i in (1..len).rev() {
             x ^= x << 13;
@@ -66,8 +106,9 @@ impl PlaylistState {
             x ^= x << 17;
             order.swap(i, ((u128::from(x) * (i as u128 + 1)) >> 64) as usize);
         }
-        if len > 1 && order.first() == self.previous.as_ref() {
-            order.swap(0, len - 1);
+        let anchor = self.anchor.filter(|(anchored, _)| *anchored == cycle);
+        if let Some(at) = anchor.and_then(|(_, first)| order.iter().position(|i| *i == first)) {
+            order.swap(0, at);
         }
         order
     }

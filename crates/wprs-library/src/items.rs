@@ -1,7 +1,6 @@
-use crate::db::{ensure, label, remove};
+use crate::db::{ensure, rows};
 use crate::{Error, Kind, Library, Result};
-use rusqlite::types::ToSql;
-use rusqlite::{OptionalExtension, Row, params};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -86,26 +85,14 @@ pub(crate) fn item_row(row: &Row<'_>) -> rusqlite::Result<Item> {
     })
 }
 
+pub(crate) fn item_in(db: &Connection, uid: &str) -> Result<Item> {
+    let sql = format!("{SELECT_ITEMS} WHERE i.uid = ?1");
+    db.query_row(&sql, [uid], item_row).optional()?.ok_or_else(|| Error::NotFound("item", uid.into()))
+}
+
 impl Library {
     pub fn item(&self, uid: &str) -> Result<Item> {
-        let sql = format!("{SELECT_ITEMS} WHERE i.uid = ?1");
-        self.db
-            .query_row(&sql, [uid], item_row)
-            .optional()?
-            .ok_or_else(|| Error::NotFound("item", uid.into()))
-    }
-
-    pub fn set_title(&mut self, uid: &str, title: &str) -> Result<()> {
-        self.update(uid, "title = ?2", &label("title", title, 256)?)
-    }
-
-    pub fn set_rating(&mut self, uid: &str, rating: u8) -> Result<()> {
-        ensure(rating <= 5, || Error::Invalid("rating", format!("{rating} is not between 0 and 5")))?;
-        self.update(uid, "rating = ?2", &rating)
-    }
-
-    pub fn set_favorite(&mut self, uid: &str, favorite: bool) -> Result<()> {
-        self.update(uid, "favorite = ?2", &favorite)
+        item_in(&self.db, uid)
     }
 
     pub fn set_meta(&mut self, uid: &str, meta: &Meta) -> Result<()> {
@@ -116,13 +103,11 @@ impl Library {
         ensure(changed == 1, || Error::NotFound("item", uid.into()))
     }
 
-    fn update(&self, uid: &str, assignment: &'static str, value: &dyn ToSql) -> Result<()> {
-        let changed =
-            self.db.execute(&format!("UPDATE items SET {assignment} WHERE uid = ?1"), params![uid, value])?;
-        ensure(changed == 1, || Error::NotFound("item", uid.into()))
-    }
-
-    pub fn remove_item(&mut self, uid: &str) -> Result<()> {
-        remove(&self.db, "item", uid)
+    pub fn unanalyzed(&self, limit: u32) -> Result<Vec<Item>> {
+        let sql = format!(
+            "{SELECT_ITEMS} WHERE i.missing = 0 AND i.width IS NULL AND i.duration_ms IS NULL AND i.error IS NULL \
+            ORDER BY i.added_at, i.id LIMIT ?1"
+        );
+        rows(&self.db, &sql, [limit], item_row)
     }
 }

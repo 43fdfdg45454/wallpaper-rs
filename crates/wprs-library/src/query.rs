@@ -13,11 +13,11 @@ pub(crate) struct Compiled {
     order: String,
 }
 
-struct Term {
-    negated: bool,
-    key: Option<String>,
-    value: String,
-    quoted: bool,
+pub(crate) struct Term {
+    pub(crate) negated: bool,
+    pub(crate) key: Option<String>,
+    pub(crate) value: String,
+    pub(crate) quoted: bool,
 }
 
 impl Library {
@@ -60,7 +60,7 @@ pub(crate) fn compile(query: &str, now: i64) -> Result<Compiled> {
     Ok(compiled)
 }
 
-fn terms(query: &str) -> Vec<Term> {
+pub(crate) fn terms(query: &str) -> Vec<Term> {
     let mut chars = query.chars().peekable();
     let mut terms = Vec::new();
     while chars.peek().is_some() {
@@ -90,12 +90,12 @@ fn terms(query: &str) -> Vec<Term> {
 fn sort(value: &str) -> Option<String> {
     let (name, descending) = value.strip_suffix('-').map_or((value, false), |name| (name, true));
     let column = match name {
-        "added" => "i.added_at",
-        "title" => "i.title COLLATE NOCASE",
-        "rating" => "i.rating",
-        "used" => "i.used_at",
-        "random" => "random()",
-        _ => return None,
+        "added" => "i.added_at".into(),
+        "title" => "i.title COLLATE NOCASE".into(),
+        "rating" => "i.rating".into(),
+        "used" => "i.used_at".into(),
+        "random" => "random()".into(),
+        _ => format!("(i.id * {} + 7) % 2147483647", name.strip_prefix("random:")?.parse::<u32>().ok()?),
     };
     Some(format!("{column} {}, i.id", if descending { "DESC" } else { "ASC" }))
 }

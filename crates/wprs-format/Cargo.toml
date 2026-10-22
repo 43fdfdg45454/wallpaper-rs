@@ -39,3 +39,7 @@ required-features = ["sign"]
 [[test]]
 name = "update"
 required-features = ["sign"]
+
+[[test]]
+name = "data"
+required-features = ["sign"]

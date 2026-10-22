@@ -1,8 +1,9 @@
 use crate::browse::{available, listing, newer};
-use crate::install::save;
-use crate::store::{Snapshot, State, commit, load, repo_dir};
+use crate::fetch::bases;
+use crate::install::{records, save};
+use crate::store::{Snapshot, State, commit, load, locked, repo_dir};
 use crate::update::refresh;
-use crate::{Anchor, Fetch, Installed, Result, Time, installed, require, sha256_file};
+use crate::{Anchor, Error, Fetch, Installed, Result, Time, ensure, sha256_file};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fs;
@@ -16,10 +17,13 @@ pub struct RepoInfo {
     pub repo_id: String,
     pub url: String,
     pub name: String,
+    pub hosts: Vec<String>,
+    pub fingerprints: Vec<String>,
     pub root_version: u64,
     pub root_expires: Time,
     pub entry_version: u64,
     pub entry_expires: Time,
+    pub checked: Time,
     pub stale: bool,
     pub packages: usize,
     pub warnings: Vec<String>,
@@ -52,36 +56,50 @@ pub fn verify<F: Fetch>(fetch: &F, url: &str, now: i64) -> Result<RepoInfo> {
 }
 
 pub fn add_repo<F: Fetch>(data: &Path, fetch: &F, url: &str, now: i64) -> Result<RepoInfo> {
-    let snap = contact(fetch, url, &Anchor::parse(url)?, now)?;
-    let fresh = !repo_dir(data, &snap.state.repo_id)?.join("state.json").exists();
-    require(fresh, "url", "this repository is already added")?;
-    commit(data, &snap)?;
-    Ok(apply(data, &snap, now)?.repo)
+    let anchor = Anchor::parse(url)?;
+    anchor.repo_id.as_ref().map_or(Ok(()), |id| absent(data, id))?;
+    let snap = contact(fetch, url, &anchor, now)?;
+    locked(data, true, || {
+        absent(data, &snap.state.repo_id)?;
+        commit(data, &snap)?;
+        Ok(apply(data, &snap, now)?.repo)
+    })
 }
 
 pub fn update_repo<F: Fetch>(data: &Path, fetch: &F, repo_id: &str, now: i64) -> Result<Outcome> {
-    let old = load(data, repo_id)?;
+    let old = locked(data, false, || load(data, repo_id))?;
     let snap = refresh(fetch, old.state, Some(old.root), &old.blobs, None, now)?;
-    commit(data, &snap)?;
-    apply(data, &snap, now)
+    locked(data, true, || {
+        let kept = repo_dir(data, repo_id)?.join("state.json").exists();
+        ensure(kept, || Error::NotFound(format!("repository {repo_id}")))?;
+        commit(data, &snap)?;
+        apply(data, &snap, now)
+    })
 }
 
-pub fn repos(data: &Path) -> Result<Vec<RepoInfo>> {
-    Ok(snapshots(data)?.iter().map(|snap| info(snap, snap.state.checked)).collect())
+pub fn repos(data: &Path, now: i64) -> Result<Vec<RepoInfo>> {
+    Ok(snapshots(data)?.iter().map(|snap| info(snap, now)).collect())
 }
 
 pub fn remove_repo(data: &Path, repo_id: &str) -> Result<()> {
-    Ok(fs::remove_dir_all(repo_dir(data, repo_id)?)?)
+    locked(data, true, || Ok(fs::remove_dir_all(repo_dir(data, repo_id)?)?))
 }
 
 pub(crate) fn snapshots(data: &Path) -> Result<Vec<Snapshot>> {
-    let dirs = match fs::read_dir(data.join("repos")) {
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
-        dirs => dirs?,
-    };
-    let names = dirs.map(|d| Ok(d?.file_name().to_string_lossy().into_owned()));
-    let names = names.collect::<Result<Vec<_>>>()?;
-    names.iter().filter(|n| !n.starts_with('.')).map(|name| load(data, name)).collect()
+    locked(data, false, || {
+        let dirs = match fs::read_dir(data.join("repos")) {
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+            dirs => dirs?,
+        };
+        let names = dirs.map(|d| Ok(d?.file_name().to_string_lossy().into_owned()));
+        let names = names.collect::<Result<Vec<_>>>()?;
+        names.iter().filter(|n| !n.starts_with('.')).map(|name| load(data, name)).collect()
+    })
+}
+
+fn absent(data: &Path, repo_id: &str) -> Result<()> {
+    let found = repo_dir(data, repo_id)?.join("state.json").exists();
+    ensure(!found, || Error::Exists(format!("repository {repo_id}")))
 }
 
 fn contact(fetch: &dyn Fetch, url: &str, anchor: &Anchor, now: i64) -> Result<Snapshot> {
@@ -91,28 +109,33 @@ fn contact(fetch: &dyn Fetch, url: &str, anchor: &Anchor, now: i64) -> Result<Sn
 
 fn info(snap: &Snapshot, now: i64) -> RepoInfo {
     let (root, entry, state) = (&snap.root.value, &snap.entry.value, &snap.state);
-    let soon = |expires: &Time| expires.timestamp() - now < WARN;
+    let left = |expires: &Time| expires.timestamp() - now.max(state.max_timestamp);
+    let (root_left, entry_left) = (left(&root.expires), left(&entry.expires));
     let notes = [
-        (soon(&root.expires), "root metadata expires within 72 hours"),
-        (state.stale, "signed index expired: the repository is stale"),
-        (!state.stale && soon(&entry.expires), "signed index expires within 72 hours"),
+        (root_left <= 0, "root metadata has expired: nothing can be installed or updated from it"),
+        (root_left > 0 && root_left < WARN, "root metadata expires within 72 hours"),
+        (entry_left <= 0, "signed index expired: the repository is stale"),
+        (entry_left > 0 && entry_left < WARN, "signed index expires within 72 hours"),
     ];
     RepoInfo {
         repo_id: state.repo_id.clone(),
         url: state.url.clone(),
         name: root.name.clone(),
+        hosts: bases(state, root),
+        fingerprints: root.roles.root.keys.clone(),
         root_version: root.version,
         root_expires: root.expires,
         entry_version: entry.version,
         entry_expires: entry.expires,
-        stale: state.stale,
+        checked: Time::from_timestamp(state.checked, 0).unwrap_or_default(),
+        stale: entry_left <= 0,
         packages: snap.shards.iter().map(|s| s.packages.len()).sum(),
         warnings: notes.iter().filter(|(on, _)| *on).map(|(_, note)| note.to_string()).collect(),
     }
 }
 
 fn apply(data: &Path, snap: &Snapshot, now: i64) -> Result<Outcome> {
-    let (mut list, repo_id) = (installed(data)?, &snap.state.repo_id);
+    let (mut list, repo_id) = (records(data)?, &snap.state.repo_id);
     for item in list.iter_mut().filter(|i| &i.repo_id == repo_id) {
         let key = item.signer.as_deref().and_then(|fp| snap.revoked.key(fp));
         item.revoked = snap.revoked.version(&item.id, &item.version).or(key);

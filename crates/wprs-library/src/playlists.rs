@@ -1,10 +1,9 @@
 use crate::db::{ensure, json, label, remove, row_id, rows, uid, unique};
 use crate::items::{SELECT_ITEMS, item_row};
 use crate::query::compile;
-use crate::{Error, Item, Kind, Library, Result, Rules};
-use rusqlite::{Connection, Row, params};
+use crate::{Error, Item, Library, Result, Rules};
+use rusqlite::{Row, params};
 use serde::{Deserialize, Serialize};
-use wprs_schedule::Playlist;
 
 const SELECT_PLAYLISTS: &str = "SELECT uid, name, query, rules FROM playlists";
 
@@ -66,66 +65,12 @@ impl Library {
         rows(&self.db, &sql, [playlist.uid], item_row)
     }
 
-    pub fn resolve(&self, key: &str, now: i64, on_battery: bool) -> Result<Playlist> {
-        let PlaylistInfo { uid, rules, .. } = self.playlist(key)?;
-        let skip_videos = on_battery && rules.skip_videos_on_battery;
-        let video = |item: &Item| {
-            item.kind == Kind::Video || item.package.as_ref().is_some_and(|p| p.kind == "video")
-        };
-        let items =
-            self.playlist_items(&uid, now)?.into_iter().filter(|i| !i.missing && !(skip_videos && video(i)));
-        let (order, interval, per_output) = (rules.order, rules.interval, !rules.synced);
-        Ok(Playlist { id: uid, items: items.map(|item| item.path).collect(), order, interval, per_output })
-    }
-
-    pub fn add_to_playlist(&mut self, key: &str, items: &[&str]) -> Result<()> {
-        self.edit(key, |db, ids| {
-            for item in items {
-                ids.push(row_id(db, "item", item)?);
-            }
-            Ok(())
-        })
-    }
-
-    pub fn remove_from_playlist(&mut self, key: &str, item: &str) -> Result<()> {
-        self.edit(key, |db, ids| {
-            let id = row_id(db, "item", item)?;
-            ids.retain(|other| *other != id);
-            Ok(())
-        })
-    }
-
-    pub fn move_in_playlist(&mut self, key: &str, from: usize, to: usize) -> Result<()> {
-        self.edit(key, |_, ids| {
-            let len = ids.len();
-            let outside = || Error::Invalid("position", format!("{from} or {to} is not below {len}"));
-            ensure(from < len && to < len, outside)?;
-            let id = ids.remove(from);
-            ids.insert(to, id);
-            Ok(())
-        })
-    }
-
-    fn edit(
-        &mut self,
-        key: &str,
-        change: impl FnOnce(&Connection, &mut Vec<i64>) -> Result<()>,
-    ) -> Result<()> {
-        let tx = self.db.transaction()?;
-        let id = row_id(&tx, "playlist", key)?;
-        let sql = "SELECT query IS NOT NULL FROM playlists WHERE id = ?1";
-        let smart: bool = tx.query_row(sql, [id], |r| r.get(0))?;
-        let smart_error =
-            || Error::Invalid("playlist", format!("{key:?} is smart, its items come from its query"));
-        ensure(!smart, smart_error)?;
-        let sql = "SELECT item_id FROM playlist_items WHERE playlist_id = ?1 ORDER BY pos";
-        let mut ids = rows(&tx, sql, [id], |r| r.get(0))?;
-        change(&tx, &mut ids)?;
-        tx.execute("DELETE FROM playlist_items WHERE playlist_id = ?1", [id])?;
-        let sql = "INSERT INTO playlist_items(playlist_id, pos, item_id) VALUES (?1, ?2, ?3)";
-        for (pos, item) in (0_i64..).zip(ids) {
-            tx.execute(sql, params![id, pos, item])?;
-        }
-        Ok(tx.commit()?)
+    pub fn item_playlists(&self, uid: &str) -> Result<Vec<PlaylistInfo>> {
+        let id = row_id(&self.db, "item", uid)?;
+        let sql = format!(
+            "{SELECT_PLAYLISTS} WHERE query IS NULL \
+            AND id IN (SELECT playlist_id FROM playlist_items WHERE item_id = ?1) ORDER BY name"
+        );
+        rows(&self.db, &sql, [id], playlist_row)
     }
 }

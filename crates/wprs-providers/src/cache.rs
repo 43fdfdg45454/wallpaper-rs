@@ -2,6 +2,7 @@ use crate::{Item, Media, Result, invalid, path_of};
 use reqwest::header::{ETAG, HeaderName, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fs::{File, FileTimes, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -66,11 +67,10 @@ impl Cache {
         let temp = sidecar.with_extension("tmp");
         private(&temp).await?.write_all(&serde_json::to_vec(&fresh)?).await?;
         tokio::fs::rename(&temp, &sidecar).await?;
-        self.evict()?;
         Ok(path)
     }
 
-    pub fn evict(&self) -> Result<Vec<PathBuf>> {
+    pub fn evict_except(&self, protected: &HashSet<PathBuf>) -> Result<Vec<PathBuf>> {
         let media = std::fs::read_dir(&self.dir)?.flatten().map(|entry| entry.path());
         let media = media.filter(|path| path.to_str().and_then(Media::detect).is_some());
         let stat = |path: PathBuf| {
@@ -82,7 +82,7 @@ impl Cache {
         let mut total: u64 = files.iter().map(|file| file.1).sum();
         files.pop();
         let mut removed = Vec::new();
-        for (_, len, path) in files {
+        for (_, len, path) in files.into_iter().filter(|file| !protected.contains(&file.2)) {
             if total <= self.limit {
                 break;
             }

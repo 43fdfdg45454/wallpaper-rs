@@ -1,5 +1,6 @@
 mod cache;
 mod daily;
+mod fetch;
 mod immich;
 mod local;
 mod wallhaven;
@@ -8,6 +9,7 @@ mod wikimedia;
 
 pub use cache::Cache;
 pub use daily::{Apod, Bing};
+pub use fetch::HttpFetch;
 pub use immich::Immich;
 pub use local::LocalFolder;
 pub use wallhaven::Wallhaven;
@@ -22,6 +24,7 @@ use std::time::Duration;
 
 const IMAGES: [&str; 6] = ["jpg", "jpeg", "png", "webp", "gif", "bmp"];
 const VIDEOS: [&str; 7] = ["mp4", "webm", "mkv", "mov", "m4v", "avi", "ogv"];
+const AGENT: &str = concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION"));
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -116,7 +119,7 @@ fn redirect(attempt: Attempt, same_host: bool) -> Action {
 }
 
 fn build(redirects: Policy) -> Result<reqwest::Client> {
-    let builder = reqwest::Client::builder().user_agent(concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION")));
+    let builder = reqwest::Client::builder().user_agent(AGENT);
     let builder = builder.connect_timeout(Duration::from_secs(15)).read_timeout(Duration::from_secs(30));
     Ok(builder.referer(false).redirect(redirects).build()?)
 }

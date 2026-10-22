@@ -1,4 +1,4 @@
-use crate::db::{label, row_id, rows};
+use crate::db::{label, rows};
 use crate::{Library, Result};
 use rusqlite::{Connection, params};
 
@@ -14,17 +14,11 @@ pub(crate) fn tag_item(db: &Connection, item: i64, tag: &str) -> Result<()> {
 
 impl Library {
     pub fn add_tag(&mut self, uid: &str, tag: &str) -> Result<()> {
-        let tx = self.db.transaction()?;
-        tag_item(&tx, row_id(&tx, "item", uid)?, tag)?;
-        Ok(tx.commit()?)
+        self.retag(&[uid], &[tag], &[])
     }
 
     pub fn remove_tag(&mut self, uid: &str, tag: &str) -> Result<()> {
-        let id = row_id(&self.db, "item", uid)?;
-        let sql =
-            "DELETE FROM item_tags WHERE item_id = ?1 AND tag_id = (SELECT id FROM tags WHERE name = ?2)";
-        self.db.execute(sql, params![id, tag.trim()])?;
-        Ok(())
+        self.retag(&[uid], &[], &[tag])
     }
 
     pub fn tags(&self) -> Result<Vec<(String, u32)>> {

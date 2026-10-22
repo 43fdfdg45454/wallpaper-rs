@@ -5,7 +5,8 @@ use wprs_schedule::parse_interval;
 const COLOR_DISTANCE: i64 = 3 * 40 * 40;
 const TAGGED: &str =
     "i.id IN (SELECT it.item_id FROM item_tags it JOIN tags t ON t.id = it.tag_id WHERE t.name = ?)";
-const LISTED: &str = "i.id IN (SELECT pi.item_id FROM playlist_items pi JOIN playlists p ON p.id = pi.playlist_id WHERE p.name = ?)";
+const LISTED: &str = "i.id IN (SELECT pi.item_id FROM playlist_items pi JOIN playlists p ON p.id = pi.playlist_id \
+    WHERE (p.uid = ? OR p.name = ?) AND p.query IS NULL)";
 const COLOR: &str = "(((i.color >> 16) & 255) - ?) * (((i.color >> 16) & 255) - ?) \
     + (((i.color >> 8) & 255) - ?) * (((i.color >> 8) & 255) - ?) + ((i.color & 255) - ?) * ((i.color & 255) - ?) <= ?";
 const SIZES: [(&str, i64, i64); 6] = [
@@ -31,13 +32,17 @@ const KEYS: [(&str, &str); 15] = [
     ("dur", "a duration like <30s, >2m or <=1h"),
     ("audio", "yes or no"),
     ("source", "a source id"),
-    ("in", "a playlist name"),
+    ("in", "a manual playlist uid or name"),
     ("added", "an age like <7d"),
     ("used", "never or an age like <7d"),
     ("missing", "nothing, yes or no"),
     ("color", "a color like #3366ff"),
-    ("sort", "added, title, rating, used or random, with a - suffix for descending"),
+    ("sort", "added, title, rating, used, random or random:<seed>, with a - suffix for descending"),
 ];
+
+pub fn query_keys() -> &'static [(&'static str, &'static str)] {
+    &KEYS
+}
 
 pub(crate) fn invalid(key: &str, value: &str) -> Error {
     let expected = KEYS.iter().find(|(k, _)| *k == key).map_or("", |(_, hint)| hint);
@@ -60,7 +65,7 @@ fn parse(key: &str, value: &str, now: i64) -> Option<(String, Vec<Value>)> {
     let (sql, params) = match key {
         "tag" | "in" | "source" | "audio" if value.is_empty() => return None,
         "tag" => (TAGGED.into(), text(value)),
-        "in" => (LISTED.into(), text(value)),
+        "in" => (LISTED.into(), [text(value), text(value)].concat()),
         "source" => ("i.source_id = (SELECT id FROM sources WHERE uid = ?)".into(), text(value)),
         "kind" => ("i.kind = ?".into(), text(lower.parse::<Kind>().ok()?.as_str())),
         "fav" => ("i.favorite = ?".into(), int(flag(&lower)?)),

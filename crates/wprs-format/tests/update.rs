@@ -35,7 +35,7 @@ fn anchors_must_match() {
     let wrong_key = format!("{base}?fingerprint={}", repo.online.fingerprint);
     assert!(matches!(add_repo(&repo.data, &FileFetch, &wrong_key, NOW), Err(Error::Signature(_))));
     assert!(matches!(add_repo(&repo.data, &FileFetch, &base, NOW), Err(Error::Invalid { .. })));
-    assert!(repos(&repo.data).unwrap().is_empty());
+    assert!(repos(&repo.data, NOW).unwrap().is_empty());
     let both = format!("{base}?fingerprint={}&repo_id={id}", repo.root.fingerprint);
     assert_eq!(add_repo(&repo.data, &FileFetch, &both, NOW).unwrap().repo_id, id);
 }
@@ -152,7 +152,7 @@ fn root_rotation_follows_the_chain() {
     assert_eq!((rotated.version, rotated.complete), (2, false));
     assert!(!sign_root(&repo.dir, &signer(&root2)).unwrap().complete);
     assert!(matches!(update_repo(&repo.data, &FileFetch, &id, NOW + 20), Err(Error::Signature(_))));
-    assert_eq!(repos(&repo.data).unwrap()[0].root_version, 1);
+    assert_eq!(repos(&repo.data, NOW).unwrap()[0].root_version, 1);
     let root2_json = fs::read(repo.dir.join("root/2.json")).unwrap();
     let old_only = signer(&repo.root).sign(&root2_json, &comment("root", 2, &id)).unwrap();
     fs::write(repo.dir.join("root/2.json.minisig"), old_only).unwrap();

@@ -3,6 +3,7 @@ mod browse;
 mod build;
 mod catalog;
 mod client;
+mod download;
 mod entry;
 mod fetch;
 mod index;
@@ -28,6 +29,7 @@ pub use browse::{Item, browse};
 pub use build::{build, sha256, sha256_file};
 pub use catalog::{Added, add, revoke, revoke_key};
 pub use client::{Outcome, RepoInfo, Update, add_repo, remove_repo, repos, update_repo, verify};
+pub use download::preview;
 pub use entry::{Blob, ENTRY_FORMAT, Entry, Pin};
 pub use fetch::{Anchor, Fetch, FileFetch};
 pub use index::{
@@ -97,6 +99,8 @@ pub enum Error {
     Revoked(String),
     #[error("{0} not found")]
     NotFound(String),
+    #[error("{0} already exists")]
+    Exists(String),
 }
 
 pub(crate) fn ensure(ok: bool, error: impl FnOnce() -> Error) -> Result<()> {

@@ -1,4 +1,4 @@
-use crate::db::{ensure, remove, row_id, rows, uid, unique};
+use crate::db::{ensure, row_id, rows, uid, unique};
 use crate::import::{upsert, utf8};
 use crate::{Error, Kind, Library, Result};
 use rusqlite::params;
@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::io;
+use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
+
+const BATCH: usize = 256;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Source {
@@ -43,32 +46,42 @@ impl Library {
         })
     }
 
-    pub fn remove_source(&mut self, uid: &str) -> Result<()> {
-        remove(&self.db, "source", uid)
+    pub fn scan(&mut self, uid: &str, now: i64) -> Result<ScanReport> {
+        self.scan_with(uid, now, &mut |_, _| ControlFlow::Continue(()))
     }
 
-    pub fn scan(&mut self, uid: &str, now: i64) -> Result<ScanReport> {
-        let tx = self.db.transaction()?;
-        let id = row_id(&tx, "source", uid)?;
+    pub fn scan_with(
+        &mut self,
+        uid: &str,
+        now: i64,
+        progress: &mut dyn FnMut(u32, u32) -> ControlFlow<()>,
+    ) -> Result<ScanReport> {
+        let id = row_id(&self.db, "source", uid)?;
         let sql = "SELECT uri, recursive FROM sources WHERE id = ?1";
-        let (root, recursive): (String, bool) = tx.query_row(sql, [id], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        let (root, recursive): (String, bool) =
+            self.db.query_row(sql, [id], |r| Ok((r.get(0)?, r.get(1)?)))?;
         let mut files = Vec::new();
-        let walked = walk(Path::new(&root), recursive, &mut files);
-        let error = walked.as_ref().err().map(ToString::to_string);
-        tx.execute("UPDATE sources SET scanned_at = ?2, error = ?3 WHERE id = ?1", params![id, now, error])?;
-        if let Err(e) = walked {
-            tx.commit()?;
+        if let Err(e) = walk(Path::new(&root), recursive, &mut files) {
+            let sql = "UPDATE sources SET scanned_at = ?2, error = ?3 WHERE id = ?1";
+            self.db.execute(sql, params![id, now, e.to_string()])?;
             return Err(e.into());
         }
         files.sort();
-        let (mut report, mut seen) = (ScanReport::default(), HashSet::new());
-        for file in files {
-            match upsert(&tx, Some(id), &file, now, &mut report) {
-                Ok(item) => _ = seen.insert(item),
-                Err(Error::Io(_)) => {}
-                Err(e) => return Err(e),
+        let (mut report, mut seen, mut done, total) =
+            (ScanReport::default(), HashSet::new(), 0, files.len() as u32);
+        for batch in files.chunks(BATCH) {
+            let tx = self.db.transaction()?;
+            let id = row_id(&tx, "source", uid)?;
+            for file in batch {
+                seen.extend(skip_file(upsert(&tx, Some(id), file, now, &mut report))?);
             }
+            tx.commit()?;
+            done += batch.len() as u32;
+            ensure(progress(done, total).is_continue(), || Error::Cancelled)?;
         }
+        let tx = self.db.transaction()?;
+        let id = row_id(&tx, "source", uid)?;
+        tx.execute("UPDATE sources SET scanned_at = ?2, error = NULL WHERE id = ?1", params![id, now])?;
         let sql = "SELECT id FROM items WHERE source_id = ?1 AND missing = 0";
         let present: Vec<i64> = rows(&tx, sql, [id], |r| r.get(0))?;
         for item in present.into_iter().filter(|item| !seen.contains(item)) {
@@ -78,6 +91,30 @@ impl Library {
         tx.commit()?;
         Ok(report)
     }
+
+    pub fn check_loose(&mut self, now: i64) -> Result<ScanReport> {
+        let tx = self.db.transaction()?;
+        let sql = "SELECT id, path, missing FROM items WHERE source_id IS NULL";
+        let loose: Vec<(i64, String, bool)> = rows(&tx, sql, [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
+        let mut report = ScanReport::default();
+        for (id, path, missing) in loose {
+            if Path::new(&path).is_file() {
+                skip_file(upsert(&tx, None, Path::new(&path), now, &mut report))?;
+            } else if !missing {
+                tx.execute("UPDATE items SET missing = 1 WHERE id = ?1", [id])?;
+                report.missing += 1;
+            }
+        }
+        tx.commit()?;
+        Ok(report)
+    }
+}
+
+fn skip_file<T>(result: Result<T>) -> Result<Option<T>> {
+    match result {
+        Err(Error::Io(_) | Error::Invalid(..)) => Ok(None),
+        other => other.map(Some),
+    }
 }
 
 fn walk(dir: &Path, recursive: bool, files: &mut Vec<PathBuf>) -> io::Result<()> {
@@ -85,7 +122,9 @@ fn walk(dir: &Path, recursive: bool, files: &mut Vec<PathBuf>) -> io::Result<()>
         let path = entry.path();
         match entry.file_type() {
             Ok(kind) if kind.is_dir() && recursive => _ = walk(&path, true, files),
-            _ if Kind::detect(&path).is_some() && path.is_file() => files.push(path),
+            _ if Kind::detect(&path).is_some() && path.to_str().is_some() && path.is_file() => {
+                files.push(path)
+            }
             _ => {}
         }
     }

@@ -87,9 +87,65 @@ fn persisted_state_continues_the_same_sequence() {
     let p = playlist(6, Order::Shuffle);
     let mut state = PlaylistState::new(5);
     sequence(&mut state, &p, 9);
+    state.seek(&p, 4);
     let mut from_toml: PlaylistState = toml::from_str(&toml::to_string(&state).unwrap()).unwrap();
     let mut from_json: PlaylistState = serde_json::from_str(&serde_json::to_string(&state).unwrap()).unwrap();
     let expected = sequence(&mut state, &p, 20);
     assert_eq!(sequence(&mut from_toml, &p, 20), expected);
     assert_eq!(sequence(&mut from_json, &p, 20), expected);
+}
+
+#[test]
+fn back_retraces_advances_across_cycles_and_stops_at_the_start() {
+    for order in [Order::Sequential, Order::Shuffle] {
+        for len in 1..=6 {
+            let p = playlist(len, order);
+            let mut state = PlaylistState::new(3);
+            let forward = sequence(&mut state, &p, len * 3 + 2);
+            assert_eq!(
+                (state.cycle() as usize, state.position() as usize),
+                ((len * 3 + 1) / len, (len * 3 + 1) % len)
+            );
+            let mut backward: Vec<usize> = (1..forward.len())
+                .map(|_| {
+                    state.back(&p, t0());
+                    state.index(&p).unwrap()
+                })
+                .collect();
+            backward.reverse();
+            assert_eq!(backward, forward[..forward.len() - 1], "{order:?} {len}");
+            let start = state.clone();
+            assert_eq!(state.back(&p, t0() + TimeDelta::hours(1)), Some(p.items[forward[0]].as_path()));
+            assert_eq!(state, start);
+        }
+    }
+}
+
+#[test]
+fn seeking_keeps_the_item_and_a_shuffle_cycle_starts_from_it_without_repeats() {
+    for len in 1..=8 {
+        let p = playlist(len, Order::Shuffle);
+        for index in 0..len {
+            let mut state = PlaylistState::new(11);
+            sequence(&mut state, &p, 5);
+            let cycle = state.cycle();
+            state.seek(&p, index);
+            assert_eq!((state.cycle(), state.position(), state.index(&p)), (cycle + 1, 0, Some(index)));
+            let seq = sequence(&mut state, &p, len * 3);
+            let mut first = seq[..len].to_vec();
+            first.sort_unstable();
+            assert_eq!(first, (0..len).collect::<Vec<_>>());
+            assert!(len == 1 || seq.windows(2).all(|w| w[0] != w[1]), "{len} {index}: {seq:?}");
+        }
+    }
+    let p = playlist(5, Order::Sequential);
+    let mut state = PlaylistState::new(11);
+    state.seek(&p, 3);
+    assert_eq!((state.current(&p), state.position(), state.cycle()), (Some(Path::new("/w/3.png")), 3, 0));
+}
+
+#[test]
+fn states_saved_without_newer_fields_still_load() {
+    let state: PlaylistState = serde_json::from_str(r#"{"seed": 5, "cycle": 2, "position": 1}"#).unwrap();
+    assert_eq!((state.cycle(), state.position()), (2, 1));
 }

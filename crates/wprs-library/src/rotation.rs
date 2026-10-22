@@ -18,23 +18,25 @@ pub struct Rotation {
     pub playlist: String,
     pub state: PlaylistState,
     pub next_at: Option<i64>,
+    pub current: Option<String>,
 }
 
 impl Library {
     pub fn save_rotation(&mut self, rotation: &Rotation) -> Result<()> {
-        let Rotation { output, playlist, state, next_at } = rotation;
+        let Rotation { output, playlist, state, next_at, current } = rotation;
         let id = row_id(&self.db, "playlist", playlist)?;
-        let sql =
-            "INSERT OR REPLACE INTO rotation(output, playlist_id, state, next_at) VALUES (?1, ?2, ?3, ?4)";
-        self.db.execute(sql, params![output, id, serde_json::to_string(state)?, next_at])?;
+        let sql = "INSERT OR REPLACE INTO rotation(output, playlist_id, state, next_at, current) \
+            VALUES (?1, ?2, ?3, ?4, ?5)";
+        self.db.execute(sql, params![output, id, serde_json::to_string(state)?, next_at, current])?;
         Ok(())
     }
 
     pub fn rotations(&self) -> Result<Vec<Rotation>> {
-        let sql = "SELECT r.output, p.uid, r.state, r.next_at FROM rotation r JOIN playlists p ON p.id = r.playlist_id \
-            ORDER BY r.output";
+        let sql = "SELECT r.output, p.uid, r.state, r.next_at, r.current FROM rotation r \
+            JOIN playlists p ON p.id = r.playlist_id ORDER BY r.output";
         rows(&self.db, sql, [], |r| {
-            Ok(Rotation { output: r.get(0)?, playlist: r.get(1)?, state: json(r, 2)?, next_at: r.get(3)? })
+            let (output, playlist, next_at, current) = (r.get(0)?, r.get(1)?, r.get(3)?, r.get(4)?);
+            Ok(Rotation { output, playlist, state: json(r, 2)?, next_at, current })
         })
     }
 

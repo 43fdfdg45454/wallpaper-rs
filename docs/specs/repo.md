@@ -117,7 +117,8 @@ URL query. `settings(dir)` returns the current settings for editing before a rot
 ## Client update
 
 Each step that fails for a base (network, size, hash, signature or format) is retried on the
-next base: the user URL first, then the root mirrors. If every base fails nothing is stored.
+next base: the user URL first, then the root mirrors. If every base fails nothing is stored. A
+cancelled transfer (`io::ErrorKind::Interrupted`) stops at once without trying further bases.
 
 1. `T = max(now, max_timestamp)`.
 2. First contact: fetch `root/1.json`, check the anchor, `genesis`, `version` and its own root
@@ -132,7 +133,8 @@ next base: the user URL first, then the root mirrors. If every base fails nothin
    a valid lifetime, a timestamp not older than the last one and not more than 24 hours after
    `T`. The same version with different bytes is an equivocation.
 7. If `expires ≤ T` the repository is stale: it is shown as such, installs need confirmation
-   and revocations still apply.
+   and revocations still apply. `repos(data, now)` recomputes staleness and expiry warnings at
+   every call with the same `T`, so listings and installs agree.
 8. Fetch every shard and the revocation list not already cached, cut at the declared size,
    check size and SHA-256, then parse them strictly.
 9. Store root, entry, shards and revocations, then `state.json`; drop unreferenced shards.
@@ -142,14 +144,19 @@ next base: the user URL first, then the root mirrors. If every base fails nothin
 ## Package installation
 
 1. Resolve `id[@version]` (optionally `<repo_id>/id[@version]`) against verified shards only.
-2. Refuse revoked versions, expired roots, stale repositories without confirmation, and ids
-   installed from another repository. Without an explicit version nothing is downgraded.
-3. Download `packages/<id>/<version>.wpak` from the bases in order into a temporary file,
-   cut at the declared size, and check size and SHA-256.
+2. Refuse ids installed from another repository, scene packages, expired roots, stale
+   repositories without confirmation and revoked versions. Without an explicit version nothing
+   is downgraded; an explicit version older than the newest installed one needs confirmation.
+3. Download `packages/<id>/<version>.wpak` from the bases in order into a temporary file in
+   `<data>/packages/<id>/`, cut at the declared size, and check size and SHA-256.
 4. Validate the package, check `id`, `version`, `kind`, `license` and `manifest_sha256` against
    the release, and check the author signature when the root requires it or the listing names
    an author (key bound to that author in the root and not revoked).
-5. Rename into place and record it.
+5. Under the exclusive lock, re-read `installed.json`, rename into place and record it.
+
+`preview(data, fetch, repo_id, id, version, dest)` downloads `previews/<sha256>.<ext>` of a
+release from the bases in order, cut at the signed size, checks SHA-256 and writes `dest`
+(`0600`) atomically. It returns `false` when the release has no preview.
 
 ## Client storage
 
@@ -160,10 +167,14 @@ next base: the user URL first, then the root mirrors. If every base fails nothin
 <data>/repos/<repo_id>/blobs/<sha256>.json    verified shards and revocations
 <data>/packages/<id>/<version>.wpak           installed packages
 <data>/installed.json                         origin, hash, signer and revocation of each package
+<data>/.repos.lock                            flock serializing writers
 ```
 
 Files are written to a temporary file in the same directory, synced and renamed. Files are
-`0600` and directories `0700`. Nothing is stored before it is verified.
+`0600` and directories `0700`. Nothing is stored before it is verified. Committing a snapshot,
+removing a repository and saving `installed.json` hold an exclusive `flock` on
+`<data>/.repos.lock`; reading snapshots or `installed.json` holds a shared one. Downloads finish
+before the lock is taken, so readers never wait for the network.
 
 ## Network interface
 
@@ -171,3 +182,9 @@ The library does no networking. Callers implement `Fetch::get(base, path, max)`,
 at most `max + 1` bytes or `None` when the file does not exist, and may override
 `Fetch::copy` to stream packages. `FileFetch` serves `file://` URLs and plain paths. Requests
 carry no cookies or identifiers.
+
+`wprs_providers::HttpFetch` is the blocking HTTP implementation: a generic `User-Agent`, no
+cookies or `Referer`, `https://` or `http://` to a loopback host only (redirects included, never
+from HTTPS to HTTP), `file://` URLs and plain paths served by `FileFetch`, a 10 s connect
+timeout, and an abort (`io::ErrorKind::TimedOut`) when less than 8 KiB arrive in 30 s. A shared
+cancel flag, checked for every chunk, fails the transfer with `io::ErrorKind::Interrupted`.

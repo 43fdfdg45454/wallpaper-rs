@@ -23,12 +23,12 @@ fn round_trip_from_keygen_to_revocation() {
     assert_eq!((info.root_version, info.entry_version, info.packages, info.stale), (1, 1, 2, false));
     assert_eq!(info.name, "Example wallpapers");
     assert!(info.warnings.is_empty(), "{:?}", info.warnings);
-    assert!(matches!(add_repo(&repo.data, &FileFetch, &repo.url(), NOW), Err(Error::Invalid { .. })));
+    assert!(matches!(add_repo(&repo.data, &FileFetch, &repo.url(), NOW), Err(Error::Exists(_))));
     let all: Vec<String> = browse(&repo.data, "").unwrap().into_iter().map(|i| i.id).collect();
     assert_eq!(all, [DAWN, DUSK]);
     let found = browse(&repo.data, "DUSK").unwrap();
     assert_eq!((found.len(), found[0].release.version.as_str()), (1, "2.1.0"));
-    let done = install(&repo.data, &FileFetch, DAWN, NOW, false).unwrap();
+    let done = install(&repo.data, &FileFetch, DAWN, NOW, false, false).unwrap();
     assert_eq!(done.path, repo.data.join("packages").join(DAWN).join("1.0.0.wpak"));
     assert_eq!(done.signer.as_deref(), Some(repo.author.fingerprint.as_str()));
     assert_eq!(
@@ -49,12 +49,12 @@ fn round_trip_from_keygen_to_revocation() {
     assert_eq!(installed(&repo.data).unwrap()[0].revoked, Some(Reason::Malware));
     assert!(browse(&repo.data, "dawn").unwrap().is_empty());
     assert!(matches!(
-        install(&repo.data, &FileFetch, "org.example.dawn@1.0.0", NOW, false),
+        install(&repo.data, &FileFetch, "org.example.dawn@1.0.0", NOW, false, false),
         Err(Error::Revoked(_))
     ));
-    assert_eq!(repos(&repo.data).unwrap()[0].entry_version, 2);
+    assert_eq!(repos(&repo.data, NOW).unwrap()[0].entry_version, 2);
     remove_repo(&repo.data, &info.repo_id).unwrap();
-    assert!(repos(&repo.data).unwrap().is_empty());
+    assert!(repos(&repo.data, NOW).unwrap().is_empty());
 }
 
 #[test]
@@ -63,18 +63,21 @@ fn versions_updates_and_removal() {
     repo.add(DAWN, "1.0.0");
     repo.publish(NOW);
     let repo_id = add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap().repo_id;
-    install(&repo.data, &FileFetch, DAWN, NOW, false).unwrap();
+    install(&repo.data, &FileFetch, DAWN, NOW, false, false).unwrap();
     repo.add(DAWN, "1.1.0");
     repo.publish(NOW + 10);
     let outcome = update_repo(&repo.data, &FileFetch, &repo_id, NOW + 20).unwrap();
     let updates: Vec<_> =
         outcome.updates.iter().map(|u| (u.installed.as_str(), u.available.as_str())).collect();
     assert_eq!(updates, [("1.0.0", "1.1.0")]);
-    assert_eq!(install(&repo.data, &FileFetch, DAWN, NOW + 20, false).unwrap().version, "1.1.0");
-    assert_eq!(install(&repo.data, &FileFetch, DAWN, NOW + 20, false).unwrap().version, "1.1.0");
+    assert_eq!(install(&repo.data, &FileFetch, DAWN, NOW + 20, false, false).unwrap().version, "1.1.0");
+    assert_eq!(install(&repo.data, &FileFetch, DAWN, NOW + 20, false, false).unwrap().version, "1.1.0");
     assert!(update_repo(&repo.data, &FileFetch, &repo_id, NOW + 30).unwrap().updates.is_empty());
     let spec = format!("{repo_id}/{DAWN}@1.0.0");
-    assert_eq!(install(&repo.data, &FileFetch, &spec, NOW + 20, false).unwrap().version, "1.0.0");
+    let older = install(&repo.data, &FileFetch, &spec, NOW + 20, false, false);
+    assert!(matches!(&older, Err(Error::Invalid { reason, .. }) if reason.contains("older")), "{older:?}");
+    assert_eq!(install(&repo.data, &FileFetch, &spec, NOW + 20, false, true).unwrap().version, "1.0.0");
+    assert_eq!(install(&repo.data, &FileFetch, &spec, NOW + 20, false, true).unwrap().version, "1.0.0");
     assert_eq!(remove(&repo.data, DAWN, Some("1.0.0")).unwrap().len(), 1);
     assert_eq!(files(&repo.data.join("packages").join(DAWN)), ["1.1.0.wpak"]);
     assert_eq!(remove(&repo.data, DAWN, None).unwrap()[0].version, "1.1.0");
@@ -96,8 +99,8 @@ fn packages_fall_back_from_bad_mirrors() {
     bytes[40] ^= 1;
     fs::write(&flipped, bytes).unwrap();
     add_repo(&repo.data, &FileFetch, &repo.url_at(&bad), NOW).unwrap();
-    install(&repo.data, &FileFetch, DAWN, NOW, false).unwrap();
-    install(&repo.data, &FileFetch, DUSK, NOW, false).unwrap();
+    install(&repo.data, &FileFetch, DAWN, NOW, false, false).unwrap();
+    install(&repo.data, &FileFetch, DUSK, NOW, false, false).unwrap();
     let alone = Repo::new();
     alone.add(DAWN, "1.0.0");
     alone.publish(NOW);
@@ -106,7 +109,7 @@ fn packages_fall_back_from_bad_mirrors() {
     bytes[40] ^= 1;
     fs::write(&path, bytes).unwrap();
     add_repo(&alone.data, &FileFetch, &alone.url(), NOW).unwrap();
-    assert!(matches!(install(&alone.data, &FileFetch, DAWN, NOW, false), Err(Error::Mismatch(_))));
+    assert!(matches!(install(&alone.data, &FileFetch, DAWN, NOW, false, false), Err(Error::Mismatch(_))));
     assert!(files(&alone.data.join("packages").join(DAWN)).is_empty());
 }
 
@@ -118,7 +121,7 @@ fn manifests_must_match_their_listing() {
     fs::write(&catalog, fs::read_to_string(&catalog).unwrap().replace("CC0-1.0", "CC-BY-4.0")).unwrap();
     repo.publish(NOW);
     add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap();
-    assert!(matches!(install(&repo.data, &FileFetch, DAWN, NOW, false), Err(Error::Mismatch(_))));
+    assert!(matches!(install(&repo.data, &FileFetch, DAWN, NOW, false, false), Err(Error::Mismatch(_))));
 }
 
 #[test]
@@ -139,13 +142,16 @@ fn author_signatures_are_enforced() {
     );
     repo.publish(NOW);
     let repo_id = add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap().repo_id;
-    install(&repo.data, &FileFetch, DAWN, NOW, false).unwrap();
+    install(&repo.data, &FileFetch, DAWN, NOW, false, false).unwrap();
     repo.add(DAWN, "1.1.0");
     revoke_key(&repo.dir, &repo.author.fingerprint, Reason::Other).unwrap();
     repo.publish(NOW + 10);
     let outcome = update_repo(&repo.data, &FileFetch, &repo_id, NOW + 20).unwrap();
     assert_eq!(outcome.revoked[0].revoked, Some(Reason::Other));
-    assert!(matches!(install(&repo.data, &FileFetch, DAWN, NOW + 20, false), Err(Error::Signature(_))));
+    assert!(matches!(
+        install(&repo.data, &FileFetch, DAWN, NOW + 20, false, false),
+        Err(Error::Signature(_))
+    ));
     assert!(matches!(
         add(&repo.dir, &repo.package(DUSK, "1.0.0", Some(&repo.author)), None, NOW),
         Err(Error::Signature(_))
@@ -159,15 +165,18 @@ fn stale_repositories_need_confirmation_but_still_revoke() {
     repo.add(DUSK, "1.0.0");
     repo.publish(NOW);
     let repo_id = add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap().repo_id;
-    install(&repo.data, &FileFetch, DAWN, NOW, false).unwrap();
+    install(&repo.data, &FileFetch, DAWN, NOW, false, false).unwrap();
     revoke(&repo.dir, DAWN, None, Reason::Takedown, "").unwrap();
     wprs_format::publish(&repo.dir, &fixture::signer(&repo.online), 1, NOW + 60).unwrap();
     let outcome = update_repo(&repo.data, &FileFetch, &repo_id, NOW + 3 * DAY).unwrap();
     assert!(outcome.repo.stale);
     assert_eq!(outcome.revoked[0].revoked, Some(Reason::Takedown));
     assert!(outcome.repo.warnings.iter().any(|w| w.contains("stale")));
-    assert!(matches!(install(&repo.data, &FileFetch, DUSK, NOW + 3 * DAY, false), Err(Error::Stale(_))));
-    install(&repo.data, &FileFetch, DUSK, NOW + 3 * DAY, true).unwrap();
+    assert!(matches!(
+        install(&repo.data, &FileFetch, DUSK, NOW + 3 * DAY, false, false),
+        Err(Error::Stale(_))
+    ));
+    install(&repo.data, &FileFetch, DUSK, NOW + 3 * DAY, true, false).unwrap();
 }
 
 #[test]
@@ -180,7 +189,7 @@ fn ids_specs_and_urls_cannot_escape() {
         ["../../etc/passwd", "org.example.dawn@../../x", "../org.example.dawn", "org.example.dawn@1.0.0/../x"]
     {
         assert!(
-            matches!(install(&repo.data, &FileFetch, spec, NOW, false), Err(Error::NotFound(_))),
+            matches!(install(&repo.data, &FileFetch, spec, NOW, false, false), Err(Error::NotFound(_))),
             "{spec}"
         );
     }
