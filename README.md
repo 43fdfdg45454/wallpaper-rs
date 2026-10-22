@@ -5,7 +5,8 @@ transiciones, un fondo distinto por pantalla y pausa automática cuando no se ve
 
 Un daemon dibuja el fondo de cada pantalla con la GPU y KDE Plasma 6 lo muestra a través
 de un plugin de fondo; en Sway, Hyprland, river, niri y COSMIC el daemon lo dibuja él mismo. Todo
-se gestiona igual desde la terminal (`wprs-ctl`) o desde el icono de la bandeja del sistema.
+se gestiona desde la app de escritorio, desde la terminal (`wprs-ctl`) o desde el icono de la
+bandeja del sistema.
 
 ## Cómo funciona
 
@@ -22,7 +23,8 @@ se gestiona igual desde la terminal (`wprs-ctl`) o desde el icono de la bandeja 
 - `wprsd` renderiza en la GPU sin ventana propia y publica un stream PipeWire por pantalla.
 - El plugin de Plasma pide un stream del tamaño exacto de su pantalla y lo muestra con
   KPipeWire, sin tapar iconos ni widgets del escritorio.
-- `wprs-ctl` y el icono de la bandeja controlan el daemon: cada acción está en los dos.
+- `wprs-ctl` y la app de escritorio controlan el daemon: cada acción está en los dos. El icono
+  de la bandeja ofrece las más frecuentes y abre la app.
 - Los vídeos se decodifican con GStreamer y se pausan cuando una ventana maximizada o a
   pantalla completa tapa la pantalla, con batería o con la pantalla bloqueada.
 
@@ -40,7 +42,8 @@ cd wallpaper-rs-*-x86_64-linux
 ```
 
 Instala todo en tu directorio personal: binarios en `~/.local/bin`, servicio de usuario de
-systemd, activación por D-Bus, el plugin de fondo y el icono de la bandeja de Plasma. Funciona también en distribuciones con
+systemd, activación por D-Bus, la app de escritorio (con su lanzador e icono), el plugin de fondo
+y el icono de la bandeja de Plasma. Funciona también en distribuciones con
 sistema de archivos inmutable. Para desinstalar: `./uninstall.sh` (añade `--purge` para borrar
 también la configuración).
 
@@ -51,7 +54,9 @@ pausa, el volumen y los ajustes se eligen desde el icono de wallpaper-rs en la b
 Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good) y un
 controlador Vulkan u OpenGL. El plugin de fondo usa los módulos QML de KPipeWire, KWindowSystem y
 plasma-workspace; en Debian y Ubuntu vienen en `qml6-module-org-kde-pipewire`,
-`qml6-module-org-kde-kwindowsystem` y `plasma-workspace`.
+`qml6-module-org-kde-kwindowsystem` y `plasma-workspace`. La app de escritorio usa Qt 6 Quick,
+Kirigami y el estilo de escritorio de KDE (`qml6-module-org-kde-kirigami` y
+`qml6-module-org-kde-qqc2desktopstyle`).
 
 ## Instalación con Flatpak
 
@@ -174,9 +179,9 @@ una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
 ## Desarrollo
 
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
-libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`. Para las pruebas: `mesa-vulkan-drivers
-pipewire wireplumber dbus-x11 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`, y `sway grim
-foot` para la de Sway.
+libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev qt6-base-dev qt6-declarative-dev`. Para las
+pruebas: `mesa-vulkan-drivers pipewire wireplumber dbus-x11 gstreamer1.0-plugins-base
+gstreamer1.0-plugins-good`, y `sway grim foot` para la de Sway.
 
 ```sh
 cargo test --workspace                   # pruebas unitarias, de render y de vídeo
@@ -187,6 +192,7 @@ scripts/integration-test.sh target/debug # D-Bus + PipeWire + daemon de punta a 
 scripts/sway-test.sh target/debug        # superficies layer-shell en un Sway sin pantalla
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
 scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
+target/debug/wprs-app --check            # carga todo el QML de la app y falla ante cualquier aviso
 ```
 
 Flatpak local (compila sin red, con Rust 1.99.1 y las fuentes de Cargo descargadas antes por
@@ -215,10 +221,11 @@ la pantalla apagada.
 | `crates/wprs-wayland` | Superficies layer-shell, escala, ritmo de fotogramas y oclusión en Wayland |
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
+| `apps/wprs-app` | App de escritorio (Qt Quick y Kirigami sobre Rust con cxx-qt) |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
-| `po` | Traducciones gettext de los paquetes de Plasma |
-| `packaging` | Servicio systemd, activación D-Bus, scripts de instalación, Flatpak |
+| `po` | Traducciones gettext de los paquetes de Plasma y de la app |
+| `packaging` | Servicio systemd, activación D-Bus, lanzador e icono, scripts de instalación, Flatpak |
 | `docs` | Especificación de la interfaz D-Bus |
 
 ## Privacidad

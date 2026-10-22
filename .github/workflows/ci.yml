@@ -35,7 +35,7 @@ jobs:
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
             mesa-vulkan-drivers libvulkan1 \
             pipewire pipewire-bin wireplumber dbus-x11 \
-            shellcheck qt6-declarative-dev-tools gettext
+            shellcheck qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools gettext
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
@@ -58,10 +58,12 @@ jobs:
       - name: Shell scripts
         run: shellcheck packaging/*.sh packaging/flatpak/*.sh scripts/*.sh
 
-      - name: Plasma plugin syntax
+      - name: QML syntax
         run: |
           for f in integrations/*/metadata.json; do python3 -c "import json, sys; json.load(open(sys.argv[1]))" "$f"; done
-          for f in integrations/*/contents/ui/*.qml; do /usr/lib/qt6/bin/qmlformat "$f" > /dev/null; done
+          for f in integrations/*/contents/ui/*.qml apps/wprs-app/qml/*.qml apps/wprs-app/qml/*/*.qml; do
+            /usr/lib/qt6/bin/qmlformat "$f" > /dev/null
+          done
 
       - name: Translations
         run: scripts/translations.sh check
@@ -115,7 +117,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             pkg-config libclang-dev libpipewire-0.3-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gettext
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gettext \
+            qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
 
@@ -248,8 +251,10 @@ jobs:
               plasma-desktop plasma-workspace kwin kpipewire spectacle \
               pipewire wireplumber dbus gst-plugins-base gst-plugins-good \
               mesa vulkan-swrast vulkan-icd-loader \
-              imagemagick tar gzip libcap gdb jq qt6-declarative >/dev/null
-            pacman -Q plasma-desktop plasma-workspace kwin kpipewire mesa
+              imagemagick tar gzip libcap gdb jq qt6-declarative kirigami qqc2-desktop-style >/dev/null
+            pacman -Q plasma-desktop plasma-workspace kwin kpipewire mesa kirigami
+            mkdir -p /tmp/app && tar -xzf dist/wallpaper-rs-*.tar.gz -C /tmp/app
+            /tmp/app/wallpaper-rs-*/bin/wprs-app --check
             scripts/plasma-test.sh dist/wallpaper-rs-*.tar.gz plasma-test-output
           '
 

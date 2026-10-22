@@ -20,11 +20,16 @@ msgstr "el servicio (wprsd) no se está ejecutando"
 #: integrations/plasma-wallpaper/contents/ui/config.qml
 #, kde-format
 msgid ""
-"wallpaper-rs is managed from its icon in the system tray or with the wprs-"
-"ctl command."
+"wallpaper-rs is managed from its app, its icon in the system tray or the "
+"wprs-ctl command."
 msgstr ""
-"wallpaper-rs se gestiona desde su icono en la bandeja del sistema o con la "
-"orden wprs-ctl."
+"wallpaper-rs se gestiona desde su aplicación, su icono en la bandeja del "
+"sistema o la orden wprs-ctl."
+
+#: integrations/plasma-wallpaper/contents/ui/config.qml
+#, kde-format
+msgid "Open wallpaper-rs"
+msgstr "Abrir wallpaper-rs"
 
 #: integrations/plasma-wallpaper/contents/ui/main.qml
 #, kde-format

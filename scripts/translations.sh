@@ -16,18 +16,11 @@ LANGS=("${LANGS[@]#po/}")
 LANGS=("${LANGS[@]%/}")
 if [ "$MODE" = update ]; then LANGS+=("${@:2}"); fi
 
-for pkg in integrations/*/; do
-  pkg=${pkg%/}
-  kind=$(sed -n 's|.*"KPackageStructure": "Plasma/\(.*\)".*|\1|p' "$pkg/metadata.json")
-  domain=plasma_${kind,,}_$(sed -n 's|.*"Id": "\(.*\)".*|\1|p' "$pkg/metadata.json")
-  pot=$TMP/$domain.pot
-  mapfile -t sources < <(find "$pkg/contents" -name '*.qml' | LC_ALL=C sort)
-  xgettext --c++ --kde --from-code=UTF-8 -ci18n -k{,x}i18n:1 -k{,x}i18nc:1c,2 -k{,x}i18np:1,2 \
-    -k{,x}i18ncp:1c,2,3 --add-location=file --force-po --package-name=wallpaper-rs -o "$pot" "${sources[@]}"
+catalog() {
+  local domain=$1 locale=$2 pot=$TMP/$1.pot
   sed -i -e '/^#\( \|$\)/d' -e 's/charset=[^\\]*/charset=UTF-8/' "$pot"
   for lang in "${LANGS[@]}"; do
     po=po/$lang/$domain.po
-    mo=$OUT/${pkg#integrations/}/contents/locale/$lang/LC_MESSAGES/$domain.mo
     case $MODE in
       update)
         if [ -f "$po" ]; then
@@ -43,8 +36,26 @@ for pkg in integrations/*/; do
       check)
         msgfmt --check -o /dev/null "$po"
         msgcmp -N "$po" "$pot"
+        if { msgattrib --untranslated --no-obsolete "$po" && msgattrib --only-fuzzy --no-obsolete "$po"; } | grep -q '^msgid '; then
+          echo "$po has untranslated or fuzzy strings" >&2 && exit 1
+        fi
         ;;
-      build) mkdir -p "$(dirname "$mo")" && msgfmt --check -o "$mo" "$po" ;;
+      build) [ -z "$locale" ] || { mkdir -p "$locale/$lang/LC_MESSAGES" && msgfmt --check -o "$locale/$lang/LC_MESSAGES/$domain.mo" "$po"; } ;;
     esac
   done
+}
+
+for pkg in integrations/*/; do
+  pkg=${pkg%/}
+  kind=$(sed -n 's|.*"KPackageStructure": "Plasma/\(.*\)".*|\1|p' "$pkg/metadata.json")
+  domain=plasma_${kind,,}_$(sed -n 's|.*"Id": "\(.*\)".*|\1|p' "$pkg/metadata.json")
+  mapfile -t sources < <(find "$pkg/contents" -name '*.qml' | LC_ALL=C sort)
+  xgettext --c++ --kde --from-code=UTF-8 -ci18n -k{,x}i18n:1 -k{,x}i18nc:1c,2 -k{,x}i18np:1,2 \
+    -k{,x}i18ncp:1c,2,3 --add-location=file --force-po --package-name=wallpaper-rs -o "$TMP/$domain.pot" "${sources[@]}"
+  catalog "$domain" "$OUT/${pkg#integrations/}/contents/locale"
 done
+
+mapfile -t sources < <(find apps/wprs-app/qml -name '*.qml' | LC_ALL=C sort)
+xgettext --c++ --from-code=UTF-8 -k -ktr:1 --add-location=file --force-po --package-name=wallpaper-rs \
+  -o "$TMP/wprs-app.pot" "${sources[@]}"
+catalog wprs-app ""

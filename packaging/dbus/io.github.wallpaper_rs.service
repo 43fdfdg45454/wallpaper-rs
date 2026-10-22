@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=io.github.wallpaper_rs
+Exec=@BINDIR@/wprs-app

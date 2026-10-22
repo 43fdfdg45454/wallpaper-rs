@@ -1,0 +1,27 @@
+[package]
+name = "wprs-app"
+description = "Desktop app of wallpaper-rs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+wprs-core.workspace = true
+wprs-client.workspace = true
+cxx.workspace = true
+cxx-qt.workspace = true
+cxx-qt-lib.workspace = true
+futures-util.workspace = true
+percent-encoding.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+zbus.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[build-dependencies]
+cxx-qt-build.workspace = true

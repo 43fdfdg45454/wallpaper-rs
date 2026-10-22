@@ -45,6 +45,23 @@ PlasmoidItem {
         }, error => root.pollError = error);
     }
 
+    function openApp() {
+        const message = {
+            "service": "io.github.wallpaper_rs",
+            "path": "/io/github/wallpaper_rs",
+            "iface": "org.freedesktop.Application",
+            "member": "Activate",
+            "signature": "(a{sv})",
+            "arguments": [
+                {}
+            ]
+        };
+        DBus.SessionBus.asyncCall(message, () => {}, reply => {
+            root.actionError = reply?.error?.message || i18n("wallpaper-rs could not be opened");
+            errorTimeout.restart();
+        });
+    }
+
     function act(member, args) {
         actionError = "";
         call(member, args, () => root.refresh(), error => {

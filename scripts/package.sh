@@ -14,19 +14,22 @@ RUSTUP_HOME=${RUSTUP_HOME:-$HOME/.rustup}
 unset CARGO_ENCODED_RUSTFLAGS CARGO_BUILD_RUSTFLAGS
 export RUSTFLAGS="--remap-path-prefix=$CARGO_HOME=/cargo --remap-path-prefix=$RUSTUP_HOME=/rustup \
   --remap-path-prefix=$HOME=/build --remap-path-prefix=$ROOT=/src"
-cargo build --release --locked -p wprsd -p wprs-ctl --manifest-path "$ROOT/Cargo.toml"
+export CFLAGS="-ffile-prefix-map=$CARGO_HOME=/cargo -ffile-prefix-map=$HOME=/build -ffile-prefix-map=$ROOT=/src"
+export CXXFLAGS=$CFLAGS
+cargo build --release --locked -p wprsd -p wprs-ctl -p wprs-app --manifest-path "$ROOT/Cargo.toml"
 
 SRC=$STAGE/src
 D=$STAGE/$NAME
 mkdir -p "$SRC" "$D/bin" "$D/packaging"
 git -C "$ROOT" archive HEAD integrations packaging LICENSE README.md | tar -x -C "$SRC"
-install -m755 "$ROOT/target/release/wprsd" "$ROOT/target/release/wprs-ctl" "$D/bin/"
-objcopy --remove-section=.comment "$D/bin/wprsd"
-objcopy --remove-section=.comment "$D/bin/wprs-ctl"
+for bin in wprsd wprs-ctl wprs-app; do
+  install -m755 "$ROOT/target/release/$bin" "$D/bin/"
+  objcopy --remove-section=.comment "$D/bin/$bin"
+done
 cp -r "$SRC/integrations/plasma-wallpaper" "$D/plasma-wallpaper"
 cp -r "$SRC/integrations/plasma-tray" "$D/plasma-tray"
 "$ROOT/scripts/translations.sh" build "$D"
-cp -r "$SRC/packaging/systemd" "$SRC/packaging/dbus" "$D/packaging/"
+cp -r "$SRC/packaging/systemd" "$SRC/packaging/dbus" "$SRC/packaging/desktop" "$SRC/packaging/icons" "$D/packaging/"
 install -m755 "$SRC/packaging/install.sh" "$SRC/packaging/uninstall.sh" "$D/"
 cp "$SRC/LICENSE" "$SRC/README.md" "$D/"
 

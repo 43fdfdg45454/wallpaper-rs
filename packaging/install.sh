@@ -8,16 +8,24 @@ CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
 DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 UNIT_DIR=$CONFIG_HOME/systemd/user
 DBUS_DIR=$DATA_HOME/dbus-1/services
+APP_ID=io.github.wallpaper_rs
 
 echo "Installing binaries to $BINDIR"
 install -Dm755 "$HERE/bin/wprsd" "$BINDIR/wprsd"
 install -Dm755 "$HERE/bin/wprs-ctl" "$BINDIR/wprs-ctl"
+install -Dm755 "$HERE/bin/wprs-app" "$BINDIR/wprs-app"
 
 echo "Installing the user service"
 mkdir -p "$UNIT_DIR" "$DBUS_DIR"
 sed "s|@BINDIR@|$BINDIR|g" "$HERE/packaging/systemd/wprsd.service" >"$UNIT_DIR/wprsd.service"
 sed "s|@BINDIR@|$BINDIR|g" "$HERE/packaging/dbus/io.github.wallpaper_rs.Daemon.service" \
   >"$DBUS_DIR/io.github.wallpaper_rs.Daemon.service"
+
+echo "Installing the app"
+mkdir -p "$DATA_HOME/applications"
+sed "s|@BINDIR@|$BINDIR|g" "$HERE/packaging/dbus/$APP_ID.service" >"$DBUS_DIR/$APP_ID.service"
+sed "s|@BINDIR@|$BINDIR|g" "$HERE/packaging/desktop/$APP_ID.desktop" >"$DATA_HOME/applications/$APP_ID.desktop"
+install -Dm644 "$HERE/packaging/icons/$APP_ID.svg" "$DATA_HOME/icons/hicolor/scalable/apps/$APP_ID.svg"
 
 install_package() {
   if kpackagetool6 --type "$1" --show "$2" >/dev/null 2>&1; then
@@ -57,8 +65,9 @@ fi
 cat <<MSG
 
 Done. In Plasma: right-click the desktop, "Configure Desktop and Wallpaper" and
-choose "wallpaper-rs" as the wallpaper type. Manage it from the wallpaper-rs icon
-in the system tray (after restarting Plasma) or from a terminal:
+choose "wallpaper-rs" as the wallpaper type. Manage it with the wallpaper-rs app,
+from the wallpaper-rs icon in the system tray (after restarting Plasma) or from a
+terminal:
   wprs-ctl set /path/to/image-or-video
   wprs-ctl --help
 MSG

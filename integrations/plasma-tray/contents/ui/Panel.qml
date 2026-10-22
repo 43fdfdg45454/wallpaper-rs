@@ -82,9 +82,17 @@ ColumnLayout {
         options: panel.current.options ?? {}
     }
 
-    QQC2.Button {
-        icon.name: "view-refresh"
-        text: i18n("Reload configuration")
-        onClicked: panel.daemon.act("Reload", [])
+    RowLayout {
+        QQC2.Button {
+            icon.name: "view-refresh"
+            text: i18n("Reload configuration")
+            onClicked: panel.daemon.act("Reload", [])
+        }
+
+        QQC2.Button {
+            icon.name: "preferences-desktop-wallpaper"
+            text: i18n("Open wallpaper-rs")
+            onClicked: panel.daemon.openApp()
+        }
     }
 }

@@ -1,0 +1,1052 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: wallpaper-rs\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-22 00:00+0000\n"
+"PO-Revision-Date: 2026-10-22 00:00+0000\n"
+"Last-Translator: wallpaper-rs contributors\n"
+"Language-Team: wallpaper-rs contributors\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: apps/wprs-app/qml/Actions.qml
+msgid "Import…"
+msgstr "Importar…"
+
+#: apps/wprs-app/qml/Actions.qml
+msgid "Rescan all"
+msgstr "Volver a analizar todo"
+
+#: apps/wprs-app/qml/Actions.qml
+msgid "Details"
+msgstr "Detalles"
+
+#: apps/wprs-app/qml/Actions.qml apps/wprs-app/qml/ApplyDialog.qml
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Apply to…"
+msgstr "Aplicar a…"
+
+#: apps/wprs-app/qml/Actions.qml
+msgid "Add to playlist…"
+msgstr "Añadir a una lista…"
+
+#: apps/wprs-app/qml/Actions.qml
+msgid "Tags…"
+msgstr "Etiquetas…"
+
+#: apps/wprs-app/qml/Actions.qml apps/wprs-app/qml/ItemDrawer.qml
+msgid "Unfavorite"
+msgstr "Quitar de favoritos"
+
+#: apps/wprs-app/qml/Actions.qml apps/wprs-app/qml/ItemDrawer.qml
+msgid "Favorite"
+msgstr "Añadir a favoritos"
+
+#: apps/wprs-app/qml/Actions.qml
+msgid "Rate…"
+msgstr "Valorar…"
+
+#: apps/wprs-app/qml/Actions.qml apps/wprs-app/qml/ItemDrawer.qml
+#: apps/wprs-app/qml/ProviderCard.qml apps/wprs-app/qml/RepoList.qml
+msgid "Remove…"
+msgstr "Quitar…"
+
+#: apps/wprs-app/qml/ApplyDialog.qml
+msgid "Screen:"
+msgstr "Pantalla:"
+
+#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/PlaylistEditor.qml
+msgid "All screens"
+msgstr "Todas las pantallas"
+
+#: apps/wprs-app/qml/ApplyDialog.qml
+msgid "Placement:"
+msgstr "Colocación:"
+
+#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/PresetDialog.qml
+msgid "Keep"
+msgstr "Mantener"
+
+#: apps/wprs-app/qml/ApplyDialog.qml
+msgid "Preset:"
+msgstr "Preajuste:"
+
+#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/facade/Labels.qml
+msgid "None"
+msgstr "Ninguno"
+
+#: apps/wprs-app/qml/Browse.qml
+msgid "Showing %1 of %2 packages; refine the search to see others."
+msgstr "Se muestran %1 de %2 paquetes; afina la búsqueda para ver otros."
+
+#: apps/wprs-app/qml/Browse.qml
+msgid "Installed: %1"
+msgstr "Instalado: %1"
+
+#: apps/wprs-app/qml/Browse.qml
+msgid "Scenes are not supported yet"
+msgstr "Las escenas aún no se admiten"
+
+#: apps/wprs-app/qml/Browse.qml
+msgid "Update"
+msgstr "Actualizar"
+
+#: apps/wprs-app/qml/Browse.qml
+msgid "Install"
+msgstr "Instalar"
+
+#: apps/wprs-app/qml/FieldForm.qml apps/wprs-app/qml/OutputCard.qml
+msgid "Choose…"
+msgstr "Elegir…"
+
+#: apps/wprs-app/qml/FieldForm.qml
+msgid "Clear"
+msgstr "Borrar"
+
+#: apps/wprs-app/qml/Filters.qml
+msgid "Search, for example: tag:sea kind:image -fav:yes sort:random"
+msgstr "Buscar, por ejemplo: tag:mar kind:image -fav:yes sort:random"
+
+#: apps/wprs-app/qml/Filters.qml
+msgid "Favorites"
+msgstr "Favoritos"
+
+#: apps/wprs-app/qml/History.qml
+msgid "an item that was removed"
+msgstr "un elemento que se quitó"
+
+#: apps/wprs-app/qml/Installed.qml
+msgid "Update all"
+msgstr "Actualizar todo"
+
+#: apps/wprs-app/qml/Installed.qml
+msgid "revoked: %1"
+msgstr "revocado: %1"
+
+#: apps/wprs-app/qml/Installed.qml
+msgid "Update to %1"
+msgstr "Actualizar a %1"
+
+#: apps/wprs-app/qml/Installed.qml
+msgid "Uninstall"
+msgstr "Desinstalar"
+
+#: apps/wprs-app/qml/Installed.qml
+msgid "Uninstall all versions"
+msgstr "Desinstalar todas las versiones"
+
+#: apps/wprs-app/qml/Installer.qml
+msgid "The repository is out of date"
+msgstr "El repositorio está desactualizado"
+
+#: apps/wprs-app/qml/Installer.qml
+msgid ""
+"Its signed index expired, so it may miss recent fixes or revocations. "
+"Install anyway?"
+msgstr ""
+"Su índice firmado ha caducado, así que puede faltarle alguna corrección o "
+"revocación reciente. ¿Instalar de todos modos?"
+
+#: apps/wprs-app/qml/Installer.qml
+msgid "Install an older version?"
+msgstr "¿Instalar una versión anterior?"
+
+#: apps/wprs-app/qml/Installer.qml
+msgid ""
+"A newer version of this package is installed. Install the older one too?"
+msgstr ""
+"Hay instalada una versión más reciente de este paquete. ¿Instalar también la "
+"anterior?"
+
+#: apps/wprs-app/qml/ItemDrawer.qml apps/wprs-app/qml/ProviderDialog.qml
+msgid "Kind:"
+msgstr "Tipo:"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "File:"
+msgstr "Archivo:"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Problem:"
+msgstr "Problema:"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "The file is missing"
+msgstr "Falta el archivo"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Package:"
+msgstr "Paquete:"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Revoked:"
+msgstr "Revocado:"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Credit:"
+msgstr "Créditos:"
+
+#: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Tags"
+msgstr "Etiquetas"
+
+#: apps/wprs-app/qml/ItemExtras.qml
+msgid "Add a tag"
+msgstr "Añadir una etiqueta"
+
+#: apps/wprs-app/qml/ItemExtras.qml
+msgid "In playlists"
+msgstr "En listas"
+
+#: apps/wprs-app/qml/ItemExtras.qml
+msgid "Remove from this playlist"
+msgstr "Quitar de esta lista"
+
+#: apps/wprs-app/qml/ItemExtras.qml
+msgid "Presets"
+msgstr "Preajustes"
+
+#: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/PlaylistsPage.qml
+#: apps/wprs-app/qml/ProfileCard.qml apps/wprs-app/qml/ProfilesPage.qml
+msgid "Delete"
+msgstr "Eliminar"
+
+#: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/ProfilesPage.qml
+msgid "New preset…"
+msgstr "Nuevo preajuste…"
+
+#: apps/wprs-app/qml/LibraryPage.qml apps/wprs-app/qml/Main.qml
+msgid "Library"
+msgstr "Biblioteca"
+
+#: apps/wprs-app/qml/LibraryPage.qml
+msgid "Nothing here yet"
+msgstr "Aquí aún no hay nada"
+
+#: apps/wprs-app/qml/LibraryPage.qml
+msgid "Add folders in the settings, import files or drop them here."
+msgstr "Añade carpetas en los ajustes, importa archivos o suéltalos aquí."
+
+#: apps/wprs-app/qml/Main.qml apps/wprs-app/qml/PlaylistsPage.qml
+msgid "Playlists"
+msgstr "Listas"
+
+#: apps/wprs-app/qml/Main.qml apps/wprs-app/qml/ProfilesPage.qml
+msgid "Profiles and presets"
+msgstr "Perfiles y preajustes"
+
+#: apps/wprs-app/qml/Main.qml apps/wprs-app/qml/ProvidersPage.qml
+msgid "Providers"
+msgstr "Proveedores"
+
+#: apps/wprs-app/qml/Main.qml apps/wprs-app/qml/ReposPage.qml
+msgid "Repositories"
+msgstr "Repositorios"
+
+#: apps/wprs-app/qml/Main.qml apps/wprs-app/qml/SettingsPage.qml
+msgid "Settings"
+msgstr "Ajustes"
+
+#: apps/wprs-app/qml/OutputCard.qml
+msgid "Every screen"
+msgstr "Todas las pantallas"
+
+#: apps/wprs-app/qml/OutputCard.qml
+msgid "Playlist %1 (%2 of %3)"
+msgstr "Lista %1 (%2 de %3)"
+
+#: apps/wprs-app/qml/OutputCard.qml apps/wprs-app/qml/facade/Labels.qml
+msgid "Background color"
+msgstr "Color de fondo"
+
+#: apps/wprs-app/qml/OutputCard.qml
+msgid "No playlist"
+msgstr "Sin lista"
+
+#: apps/wprs-app/qml/OutputCard.qml
+msgid "Previous"
+msgstr "Anterior"
+
+#: apps/wprs-app/qml/OutputCard.qml
+msgid "Next"
+msgstr "Siguiente"
+
+#: apps/wprs-app/qml/OutputCard.qml
+msgid "Images and videos"
+msgstr "Imágenes y vídeos"
+
+#: apps/wprs-app/qml/PlaylistEditor.qml apps/wprs-app/qml/PlaylistsPage.qml
+#: apps/wprs-app/qml/PresetDialog.qml apps/wprs-app/qml/ProfilesPage.qml
+#: apps/wprs-app/qml/ProviderDialog.qml
+msgid "Name:"
+msgstr "Nombre:"
+
+#: apps/wprs-app/qml/PlaylistEditor.qml apps/wprs-app/qml/PlaylistsPage.qml
+msgid "Smart query:"
+msgstr "Consulta inteligente:"
+
+#: apps/wprs-app/qml/PlaylistEditor.qml
+msgid "Manual playlist"
+msgstr "Lista manual"
+
+#: apps/wprs-app/qml/PlaylistEditor.qml
+msgid "Matches: %1"
+msgstr "Coincidencias: %1"
+
+#: apps/wprs-app/qml/PlaylistEditor.qml
+msgid "Make manual"
+msgstr "Convertir en manual"
+
+#: apps/wprs-app/qml/PlaylistEditor.qml
+msgid "Show on:"
+msgstr "Mostrar en:"
+
+#: apps/wprs-app/qml/PlaylistEditor.qml
+msgid "Start"
+msgstr "Iniciar"
+
+#: apps/wprs-app/qml/PlaylistEditor.qml
+msgid "Playing on %1:"
+msgstr "Reproduciéndose en %1:"
+
+#: apps/wprs-app/qml/PlaylistEditor.qml
+msgid "Stop"
+msgstr "Detener"
+
+#: apps/wprs-app/qml/PlaylistItems.qml
+msgid "Items (%1)"
+msgstr "Elementos (%1)"
+
+#: apps/wprs-app/qml/PlaylistItems.qml
+msgid "History"
+msgstr "Historial"
+
+#: apps/wprs-app/qml/PlaylistItems.qml
+msgid "The playlist changed meanwhile; it was reloaded."
+msgstr "La lista cambió entretanto; se ha vuelto a cargar."
+
+#: apps/wprs-app/qml/PlaylistItems.qml apps/wprs-app/qml/SettingsPage.qml
+msgid "Remove"
+msgstr "Quitar"
+
+#: apps/wprs-app/qml/PlaylistsPage.qml
+msgid "New playlist…"
+msgstr "Nueva lista…"
+
+#: apps/wprs-app/qml/PlaylistsPage.qml
+msgid "No playlists yet"
+msgstr "Aún no hay listas"
+
+#: apps/wprs-app/qml/PlaylistsPage.qml
+msgid "New playlist"
+msgstr "Nueva lista"
+
+#: apps/wprs-app/qml/PlaylistsPage.qml
+msgid "Empty for a manual playlist"
+msgstr "Vacía para una lista manual"
+
+#: apps/wprs-app/qml/PresetDialog.qml
+msgid "New preset for this item"
+msgstr "Nuevo preajuste para este elemento"
+
+#: apps/wprs-app/qml/PresetDialog.qml
+msgid "New preset"
+msgstr "Nuevo preajuste"
+
+#: apps/wprs-app/qml/ProfileCard.qml
+msgid "Activate"
+msgstr "Activar"
+
+#: apps/wprs-app/qml/ProfileCard.qml
+msgid "Automatic rules"
+msgstr "Reglas automáticas"
+
+#: apps/wprs-app/qml/ProfileCard.qml
+msgid "Rename…"
+msgstr "Cambiar el nombre…"
+
+#: apps/wprs-app/qml/ProfileCard.qml
+msgid "Rename profile"
+msgstr "Cambiar el nombre del perfil"
+
+#: apps/wprs-app/qml/ProfilesPage.qml
+msgid "Save current as…"
+msgstr "Guardar lo actual como…"
+
+#: apps/wprs-app/qml/ProfilesPage.qml
+msgid "No profile"
+msgstr "Sin perfil"
+
+#: apps/wprs-app/qml/ProfilesPage.qml
+msgid "Screens"
+msgstr "Pantallas"
+
+#: apps/wprs-app/qml/ProfilesPage.qml
+msgid "Profiles"
+msgstr "Perfiles"
+
+#: apps/wprs-app/qml/ProfilesPage.qml
+msgid "Global presets"
+msgstr "Preajustes globales"
+
+#: apps/wprs-app/qml/ProfilesPage.qml
+msgid "Save the current setup as a profile"
+msgstr "Guardar la configuración actual como perfil"
+
+#: apps/wprs-app/qml/ProfilesPage.qml
+msgid "Include settings"
+msgstr "Incluir los ajustes"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Sync now"
+msgstr "Sincronizar ahora"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Set secret…"
+msgstr "Guardar el secreto…"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Forget secret"
+msgstr "Olvidar el secreto"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Change option…"
+msgstr "Cambiar una opción…"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Create playlist"
+msgstr "Crear una lista"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Show items"
+msgstr "Mostrar los elementos"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "State:"
+msgstr "Estado:"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Error:"
+msgstr "Error:"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Contacts:"
+msgstr "Contacta con:"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Items:"
+msgstr "Elementos:"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "%1 (cache: %2)"
+msgstr "%1 (caché: %2)"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Last sync:"
+msgstr "Última sincronización:"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "never"
+msgstr "nunca"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Next sync:"
+msgstr "Próxima sincronización:"
+
+#: apps/wprs-app/qml/ProviderDialog.qml
+msgid "Add provider"
+msgstr "Añadir un proveedor"
+
+#: apps/wprs-app/qml/ProviderDialog.qml
+msgid "Add"
+msgstr "Añadir"
+
+#: apps/wprs-app/qml/ProviderDialog.qml
+msgid "lowercase letters, digits, - and _"
+msgstr "minúsculas, dígitos, - y _"
+
+#: apps/wprs-app/qml/ProviderDialog.qml
+msgid "Required"
+msgstr "Obligatorio"
+
+#: apps/wprs-app/qml/ProviderDialog.qml
+msgid "Optional"
+msgstr "Opcional"
+
+#: apps/wprs-app/qml/ProviderDialog.qml
+msgid "Advanced:"
+msgstr "Avanzado:"
+
+#: apps/wprs-app/qml/ProviderDialog.qml
+msgid ""
+"Without encryption the secret and the pictures travel in clear text over the "
+"network."
+msgstr "Sin cifrado, el secreto y las imágenes viajan en claro por la red."
+
+#: apps/wprs-app/qml/ProviderDialogs.qml
+msgid "Secret of %1"
+msgstr "Secreto de %1"
+
+#: apps/wprs-app/qml/ProviderDialogs.qml
+msgid "Change an option of %1"
+msgstr "Cambiar una opción de %1"
+
+#: apps/wprs-app/qml/ProviderDialogs.qml
+msgid "Option:"
+msgstr "Opción:"
+
+#: apps/wprs-app/qml/ProviderDialogs.qml
+msgid "Value:"
+msgstr "Valor:"
+
+#: apps/wprs-app/qml/ProviderDialogs.qml
+msgid "Changing this forgets the stored secret."
+msgstr "Al cambiar esto se olvida el secreto guardado."
+
+#: apps/wprs-app/qml/ProviderDialogs.qml
+msgid "Remove %1"
+msgstr "Quitar %1"
+
+#: apps/wprs-app/qml/ProviderDialogs.qml
+msgid "Delete cached files"
+msgstr "Eliminar los archivos en caché"
+
+#: apps/wprs-app/qml/ProvidersPage.qml
+msgid "Add provider…"
+msgstr "Añadir un proveedor…"
+
+#: apps/wprs-app/qml/ProvidersPage.qml
+msgid "Sync all"
+msgstr "Sincronizar todo"
+
+#: apps/wprs-app/qml/ProvidersPage.qml
+msgid "No providers yet"
+msgstr "Aún no hay proveedores"
+
+#: apps/wprs-app/qml/ProvidersPage.qml
+msgid ""
+"Providers download pictures from online sources you choose into your library."
+msgstr ""
+"Los proveedores descargan a tu biblioteca imágenes de las fuentes en línea "
+"que elijas."
+
+#: apps/wprs-app/qml/RepoList.qml
+msgid "No repositories yet"
+msgstr "Aún no hay repositorios"
+
+#: apps/wprs-app/qml/RepoList.qml
+msgid ""
+"Add a repository with the link its publisher gives you, including its "
+"fingerprint."
+msgstr ""
+"Añade un repositorio con el enlace que te dé quien lo publica, con su huella "
+"incluida."
+
+#: apps/wprs-app/qml/RepoList.qml
+msgid "Packages: %1"
+msgstr "Paquetes: %1"
+
+#: apps/wprs-app/qml/RepoList.qml
+msgid "Contacts: %1"
+msgstr "Contacta con: %1"
+
+#: apps/wprs-app/qml/RepoList.qml
+msgid "Keys: %1"
+msgstr "Claves: %1"
+
+#: apps/wprs-app/qml/RepoList.qml
+msgid "Last check: %1"
+msgstr "Última comprobación: %1"
+
+#: apps/wprs-app/qml/RepoList.qml
+msgid "Refresh"
+msgstr "Actualizar"
+
+#: apps/wprs-app/qml/ReposPage.qml
+msgid "Add repository…"
+msgstr "Añadir un repositorio…"
+
+#: apps/wprs-app/qml/ReposPage.qml
+msgid "Refresh all"
+msgstr "Actualizar todos"
+
+#: apps/wprs-app/qml/ReposPage.qml
+msgid "Browse"
+msgstr "Explorar"
+
+#: apps/wprs-app/qml/ReposPage.qml
+msgid "Installed"
+msgstr "Instalados"
+
+#: apps/wprs-app/qml/ReposPage.qml
+msgid "Add repository"
+msgstr "Añadir un repositorio"
+
+#: apps/wprs-app/qml/ReposPage.qml
+msgid "Remove repository"
+msgstr "Quitar el repositorio"
+
+#: apps/wprs-app/qml/ReposPage.qml
+msgid "Also uninstall its packages"
+msgstr "Desinstalar también sus paquetes"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Import files"
+msgstr "Importar archivos"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Choose files…"
+msgstr "Elegir archivos…"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Copy into the library"
+msgstr "Copiar a la biblioteca"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Add to playlist"
+msgstr "Añadir a una lista"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Add (comma separated):"
+msgstr "Añadir (separadas por comas):"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Remove:"
+msgstr "Quitar:"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Remove from the library"
+msgstr "Quitar de la biblioteca"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Items to remove: %1"
+msgstr "Elementos que se quitarán: %1"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Also delete the imported copies"
+msgstr "Eliminar también las copias importadas"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Rename tag"
+msgstr "Cambiar el nombre de la etiqueta"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Rate"
+msgstr "Valorar"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Add folder…"
+msgstr "Añadir una carpeta…"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Reload configuration"
+msgstr "Recargar la configuración"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Library folders"
+msgstr "Carpetas de la biblioteca"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "without subfolders"
+msgstr "sin subcarpetas"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Items: %1"
+msgstr "Elementos: %1"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Rescan"
+msgstr "Volver a analizar"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Include subfolders"
+msgstr "Incluir las subcarpetas"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "About"
+msgstr "Acerca de"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Version:"
+msgstr "Versión:"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "data model %1"
+msgstr "modelo de datos %1"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Configuration:"
+msgstr "Configuración:"
+
+#: apps/wprs-app/qml/Stars.qml
+msgid "Stars: %1"
+msgstr "Estrellas: %1"
+
+#: apps/wprs-app/qml/StatusBar.qml
+msgid "Resume"
+msgstr "Reanudar"
+
+#: apps/wprs-app/qml/StatusBar.qml
+msgid "Pause"
+msgstr "Pausar"
+
+#: apps/wprs-app/qml/StatusBar.qml
+msgid "Unmute"
+msgstr "Activar el sonido"
+
+#: apps/wprs-app/qml/StatusBar.qml
+msgid "Mute"
+msgstr "Silenciar"
+
+#: apps/wprs-app/qml/StatusBar.qml
+msgid "Jobs: %1"
+msgstr "Tareas: %1"
+
+#: apps/wprs-app/qml/StatusBar.qml
+msgid "Jobs"
+msgstr "Tareas"
+
+#: apps/wprs-app/qml/StatusBar.qml
+msgid "No jobs"
+msgstr "No hay tareas"
+
+#: apps/wprs-app/qml/StatusBar.qml
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: apps/wprs-app/qml/facade/App.qml
+msgid "%1 MB"
+msgstr "%1 MB"
+
+#: apps/wprs-app/qml/facade/App.qml
+msgid "%1 KB"
+msgstr "%1 KB"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Volume"
+msgstr "Volumen"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Muted"
+msgstr "Silenciado"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Frames per second"
+msgstr "Fotogramas por segundo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Transition"
+msgstr "Transición"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Transition length (ms)"
+msgstr "Duración de la transición (ms)"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Pause when a window covers the screen"
+msgstr "Pausar cuando una ventana cubre la pantalla"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Pause on battery"
+msgstr "Pausar con batería"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Pause while the screen is locked"
+msgstr "Pausar con la pantalla bloqueada"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Watch library folders for changes"
+msgstr "Vigilar los cambios en las carpetas de la biblioteca"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Thumbnail cache (MB)"
+msgstr "Caché de miniaturas (MB)"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Refresh repositories every day"
+msgstr "Actualizar los repositorios cada día"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Order"
+msgstr "Orden"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Change every"
+msgstr "Cambiar cada"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Change at (HH:MM, …)"
+msgstr "Cambiar a las (HH:MM, …)"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Days"
+msgstr "Días"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Same picture on every screen"
+msgstr "La misma imagen en todas las pantallas"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Resume where it stopped"
+msgstr "Seguir donde se quedó"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Advance while paused"
+msgstr "Avanzar en pausa"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Skip videos on battery"
+msgstr "Saltar los vídeos con batería"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "When exactly these screens are connected"
+msgstr "Cuando estén conectadas exactamente estas pantallas"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "When on battery"
+msgstr "Con batería"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Priority"
+msgstr "Prioridad"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Placement"
+msgstr "Colocación"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Sync every"
+msgstr "Sincronizar cada"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Cache size (MB)"
+msgstr "Tamaño de la caché (MB)"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Market"
+msgstr "Mercado"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Ultra HD"
+msgstr "Ultra HD"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Pictures"
+msgstr "Imágenes"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Include videos"
+msgstr "Incluir vídeos"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Width"
+msgstr "Anchura"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Search"
+msgstr "Búsqueda"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Categories"
+msgstr "Categorías"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Purity"
+msgstr "Pureza"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Sorting"
+msgstr "Orden"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Minimum resolution"
+msgstr "Resolución mínima"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Address"
+msgstr "Dirección"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "User name"
+msgstr "Nombre de usuario"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Server"
+msgstr "Servidor"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Folder"
+msgstr "Carpeta"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Album"
+msgstr "Álbum"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Allow unencrypted HTTP"
+msgstr "Permitir HTTP sin cifrar"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "API key"
+msgstr "Clave de API"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Password"
+msgstr "Contraseña"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Fill"
+msgstr "Rellenar"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Fit"
+msgstr "Ajustar"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Stretch"
+msgstr "Estirar"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Center"
+msgstr "Centrar"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Tile"
+msgstr "Mosaico"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "In order"
+msgstr "En orden"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Shuffled"
+msgstr "Aleatorio"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Fade"
+msgstr "Fundido"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Image"
+msgstr "Imagen"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Video"
+msgstr "Vídeo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Package"
+msgstr "Paquete"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Scene"
+msgstr "Escena"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Folder scan"
+msgstr "Análisis de carpetas"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Import"
+msgstr "Importación"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Analysis"
+msgstr "Análisis"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Provider sync"
+msgstr "Sincronización de proveedores"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Repository download"
+msgstr "Descarga de repositorio"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Repository refresh"
+msgstr "Actualización de repositorios"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Package install"
+msgstr "Instalación de paquete"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Queued"
+msgstr "En cola"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Running"
+msgstr "En curso"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Done"
+msgstr "Terminada"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Failed"
+msgstr "Fallida"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Cancelled"
+msgstr "Cancelada"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Idle"
+msgstr "Inactivo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Syncing"
+msgstr "Sincronizando"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Keyring locked"
+msgstr "Depósito de claves bloqueado"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Error"
+msgstr "Error"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Needs its secret"
+msgstr "Necesita su secreto"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "The signing keys expire soon"
+msgstr "Las claves de firma caducan pronto"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "The signing keys expired: nothing can be installed or updated from it"
+msgstr ""
+"Las claves de firma han caducado: no se puede instalar ni actualizar nada "
+"desde él"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "The signed index expires soon"
+msgstr "El índice firmado caduca pronto"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "The signed index expired"
+msgstr "El índice firmado ha caducado"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Malware"
+msgstr "Software malicioso"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "License problem"
+msgstr "Problema de licencia"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Taken down"
+msgstr "Retirado"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Broken"
+msgstr "Dañado"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Other reason"
+msgstr "Otro motivo"

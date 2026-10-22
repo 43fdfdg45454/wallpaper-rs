@@ -12,9 +12,12 @@ if command -v kpackagetool6 >/dev/null 2>&1; then
   kpackagetool6 --type Plasma/Wallpaper --remove io.github.wallpaper_rs 2>/dev/null || true
   kpackagetool6 --type Plasma/Applet --remove io.github.wallpaper_rs.tray 2>/dev/null || true
 fi
-rm -f "$PREFIX/bin/wprsd" "$PREFIX/bin/wprs-ctl" \
+rm -f "$PREFIX/bin/wprsd" "$PREFIX/bin/wprs-ctl" "$PREFIX/bin/wprs-app" \
   "$CONFIG_HOME/systemd/user/wprsd.service" \
-  "$DATA_HOME/dbus-1/services/io.github.wallpaper_rs.Daemon.service"
+  "$DATA_HOME/dbus-1/services/io.github.wallpaper_rs.Daemon.service" \
+  "$DATA_HOME/dbus-1/services/io.github.wallpaper_rs.service" \
+  "$DATA_HOME/applications/io.github.wallpaper_rs.desktop" \
+  "$DATA_HOME/icons/hicolor/scalable/apps/io.github.wallpaper_rs.svg"
 if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
   systemctl --user daemon-reload
 fi

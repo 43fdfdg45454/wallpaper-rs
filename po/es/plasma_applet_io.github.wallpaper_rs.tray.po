@@ -92,6 +92,11 @@ msgstr "Pausar"
 msgid "Reload configuration"
 msgstr "Recargar la configuración"
 
+#: integrations/plasma-tray/contents/ui/Panel.qml
+#, kde-format
+msgid "Open wallpaper-rs"
+msgstr "Abrir wallpaper-rs"
+
 #: integrations/plasma-tray/contents/ui/Settings.qml
 #, kde-format
 msgid "Pause when a window covers the screen"
@@ -138,6 +143,11 @@ msgstr "Ninguna"
 #, kde-format
 msgid "The wallpaper-rs daemon is not running"
 msgstr "El servicio de wallpaper-rs no se está ejecutando"
+
+#: integrations/plasma-tray/contents/ui/main.qml
+#, kde-format
+msgid "wallpaper-rs could not be opened"
+msgstr "No se pudo abrir wallpaper-rs"
 
 #: integrations/plasma-tray/contents/ui/main.qml
 #, kde-format

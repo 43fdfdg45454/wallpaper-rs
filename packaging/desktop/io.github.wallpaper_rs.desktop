@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=wallpaper-rs
+GenericName=Wallpaper manager
+GenericName[es]=Gestor de fondos de pantalla
+Comment=Organize wallpapers, playlists, profiles and online sources
+Comment[es]=Organiza fondos de pantalla, listas, perfiles y fuentes en línea
+Keywords=wallpaper;background;desktop;playlist;
+Keywords[es]=fondo;pantalla;escritorio;lista;
+Exec=@BINDIR@/wprs-app %U
+Icon=io.github.wallpaper_rs
+Terminal=false
+Categories=Qt;KDE;Settings;DesktopSettings;
+MimeType=image/png;image/jpeg;image/webp;image/gif;image/bmp;video/mp4;video/webm;video/x-matroska;video/quicktime;
+DBusActivatable=true
+StartupNotify=true
+StartupWMClass=io.github.wallpaper_rs
