@@ -59,7 +59,7 @@ wireplumber >"$WORK/wireplumber.log" 2>&1 & pids+=($!)
 
 Xvfb -displayfd 3 -screen 0 1280x720x24 -nolisten tcp -noreset 3>"$WORK/display" >"$WORK/xvfb.log" 2>&1 &
 pids+=($!)
-wait_for 10 test -s "$WORK/display" || fail "Xvfb did not start"
+wait_for 60 test -s "$WORK/display" || fail "Xvfb did not start"
 DISPLAY=:$(cat "$WORK/display")
 export DISPLAY
 
