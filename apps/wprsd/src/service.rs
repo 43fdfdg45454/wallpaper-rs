@@ -1,11 +1,23 @@
 use crate::bus::client;
 use crate::daemon::Daemon;
 use crate::streams::HELD;
+use std::path::PathBuf;
 use std::sync::Arc;
-use zbus::fdo;
+use wprs_core::dbus::uri_scheme;
+use zbus::fdo::{self, Error::InvalidArgs};
 use zbus::message::Header;
+use zbus::object_server::SignalEmitter;
 
 pub struct Service(pub Arc<Daemon>);
+
+fn local_path(path: &str) -> fdo::Result<PathBuf> {
+    match uri_scheme(path) {
+        None => Ok(path.into()),
+        Some(scheme) if scheme.eq_ignore_ascii_case("file") => wprs_video::path_from_uri(path)
+            .ok_or_else(|| InvalidArgs(format!("{path} is not a local file URI"))),
+        Some(_) => Err(InvalidArgs(format!("{path} is not a local file"))),
+    }
+}
 
 #[zbus::interface(name = "io.github.wallpaper_rs.Daemon1")]
 impl Service {
@@ -40,6 +52,7 @@ impl Service {
     }
 
     async fn set_wallpaper(&self, path: String, output: String, fit: String) -> fdo::Result<()> {
+        let path = local_path(&path)?;
         self.0.run(move |d| d.change_wallpaper(&path, &output, &fit)).await
     }
 
@@ -95,10 +108,27 @@ impl Service {
     async fn muted(&self) -> bool {
         self.0.props.borrow().muted
     }
+
+    #[zbus(signal)]
+    pub(crate) async fn stream_changed(
+        emitter: &SignalEmitter<'_>,
+        output: &str,
+        node_id: u32,
+        serial: u64,
+    ) -> zbus::Result<()>;
 }
 
 #[test]
 fn interface_name_matches_core_constant() {
     let literal = format!("#[zbus::interface(name = \"{}\")]", wprs_core::dbus::INTERFACE);
     assert!(include_str!("service.rs").contains(&literal));
+}
+
+#[test]
+fn only_local_files_are_wallpapers() {
+    assert_eq!(local_path("file:///tmp/a%20b.png").ok(), Some("/tmp/a b.png".into()));
+    assert_eq!(local_path("/tmp/a:b.png").ok(), Some("/tmp/a:b.png".into()));
+    for uri in ["http://127.0.0.1:9/x.webm", "data:image/png;base64,AA", "file://elsewhere/x.png"] {
+        assert!(matches!(local_path(uri), Err(InvalidArgs(_))), "{uri}");
+    }
 }

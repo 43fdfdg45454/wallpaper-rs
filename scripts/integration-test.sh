@@ -95,15 +95,21 @@ grep -q "frame 640x360" <<<"$result" || { echo "FAIL: resized frame: $result"; e
 
 output="s['outputs']['TEST-1']"
 
+consumers=()
+consume() { "$BIN/probe" "$1" 120 --hold >"$WORK/consumer-$1.out" 2>&1 & consumers+=($!); pids+=($!); }
+leave() { kill "${consumers[@]}"; wait "${consumers[@]}" 2>/dev/null || true; consumers=(); }
+
 ctl set "$ROOT/tests/fixtures/magenta-64x32.webm" --fit stretch
 expect "${output}['kind']" video
-expect "${output}['playing']" True
 near() { [ $(($1 > $2 ? $1 - $2 : $2 - $1)) -le 24 ]; }
 shows_video() {
   read -r b g r _ < <("$BIN/probe" "$serial2" 10 | sed 's/.*center bgra \[\(.*\)\]/\1/; s/,/ /g')
   near "$r" 208 && near "$g" 32 && near "$b" 96
 }
 wait_for 5 shows_video || { echo "FAIL: video frame $("$BIN/probe" "$serial2" 10)"; exit 1; }
+expect "${output}['playing']" False
+consume "$serial2"
+expect "${output}['playing']" True
 
 ctl pause && expect "${output}['playing']" False && expect "s['paused']" True
 ctl resume && expect "${output}['playing']" True
@@ -113,14 +119,36 @@ ctl config pause.when_covered true && ctl covered TEST-1 false
 if ctl config playback.max_fps 0 2>/dev/null; then echo "FAIL: invalid setting accepted"; exit 1; fi
 ctl volume 30 && expect "s['volume']" 0.3 && expect "s['muted']" False
 ctl mute && expect "s['muted']" True
+leave && expect "${output}['playing']" False
 ctl release TEST-1 && expect "list(s['outputs'])" "[]"
 echo "video, pause, settings and release checks passed"
+
+read -r _ _ _ left < <(ctl stream TEST-5 160 90)
+read -r _ _ _ right < <(ctl stream TEST-6 160 90)
+ctl set "$ROOT/tests/fixtures/magenta-64x32.webm"
+consume "$left" && consume "$right"
+expect "s['outputs']['TEST-5']['playing']" True
+expect "s['outputs']['TEST-6']['playing']" True
+ctl covered TEST-5 true
+expect "s['outputs']['TEST-5']['playing']" False
+expect "s['outputs']['TEST-6']['playing']" True
+leave
+ctl release TEST-5 && ctl release TEST-6 && expect "list(s['outputs'])" "[]"
+echo "one video on two outputs, one of them covered, checks passed"
 
 if ctl config no.such.setting >"$WORK/unknown.out" 2>&1; then fail "an unknown setting was accepted"; fi
 grep -q "unknown setting" "$WORK/unknown.out" || fail "unknown setting message: $(cat "$WORK/unknown.out")"
 if ctl stream TEST-4 8200 8200 2>/dev/null; then fail "a stream larger than the GPU buffers was accepted"; fi
+head -c 65536 /dev/urandom >"$WORK/noise.webm"
+if ctl set "$WORK/noise.webm" 2>/dev/null; then fail "a file of random bytes was accepted as a video"; fi
+if ctl set http://127.0.0.1:9/x.webm >"$WORK/remote.out" 2>&1; then fail "a URL was accepted"; fi
+grep -q "not a local file" "$WORK/remote.out" || fail "URL message: $(cat "$WORK/remote.out")"
+dbus-send --session --print-reply --dest=io.github.wallpaper_rs.Daemon /io/github/wallpaper_rs/Daemon \
+  io.github.wallpaper_rs.Daemon1.SetWallpaper string:http://127.0.0.1:9/x.webm string: string: \
+  >"$WORK/remote-bus.out" 2>&1 || true
+grep -q "InvalidArgs" "$WORK/remote-bus.out" || fail "the daemon accepted a URL: $(cat "$WORK/remote-bus.out")"
 ctl state >/dev/null
-echo "unknown setting and size limit checks passed"
+echo "unknown setting, size limit and local file checks passed"
 
 read -r _ _ _ held < <(ctl stream " " 160 90)
 sleep 0.5
@@ -156,9 +184,12 @@ expect "s['outputs']['TEST-3']['image'].endswith('green-64x32.png')" True
 ctl fit tile -o TEST-3 && expect "s['outputs']['TEST-3']['fit']" tile
 expect "s['outputs']['TEST-3']['image'].endswith('green-64x32.png')" True
 if ctl background red 2>/dev/null; then fail "an invalid color was accepted"; fi
-ctl background '#102030' -o TEST-3
+ctl background '#102030' -o TEST-3 && expect "s['outputs']['TEST-3']['background']" '#102030'
+cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/green #1.png"
+ctl set "file://$WORK/green%20%231.png" -o TEST-3
+expect "s['outputs']['TEST-3']['image'].endswith('/green #1.png')" True
 ctl release TEST-3 && expect "list(s['outputs'])" "[]"
-echo "fit and background checks passed"
+echo "fit, background and file URI checks passed"
 
 restored() {
   read -r _ _ _ serial < <(ctl stream TEST-1 320 180) || return 1
@@ -168,6 +199,9 @@ retry() { for _ in $(seq "$1"); do "${@:2}" && return 0; sleep 0.5; done; return
 ctl stream TEST-1 320 180 >/dev/null
 ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
 retry 10 restored || { echo "FAIL: stream before the PipeWire restart"; exit 1; }
+dbus-monitor --session "type='signal',interface='io.github.wallpaper_rs.Daemon1',member='StreamChanged'" \
+  >"$WORK/signals.log" 2>&1 & pids+=($!)
+sleep 0.5
 kill "${pids[0]}" "${pids[1]}"
 wait "${pids[0]}" "${pids[1]}" 2>/dev/null || true
 wait_for 5 test ! -S "$XDG_RUNTIME_DIR/pipewire-0"
@@ -175,7 +209,9 @@ pipewire >"$WORK/pipewire-restarted.log" 2>&1 & pids+=($!)
 wait_for 10 test -S "$XDG_RUNTIME_DIR/pipewire-0"
 wireplumber >"$WORK/wireplumber-restarted.log" 2>&1 & pids+=($!)
 retry 30 restored || { echo "FAIL: stream not restored after restarting PipeWire"; exit 1; }
-echo "PipeWire restart recovery passed (serial $serial)"
+announced() { grep -A1 "member=StreamChanged" "$WORK/signals.log" | grep -q 'string "TEST-1"'; }
+wait_for 10 announced || fail "no StreamChanged signal for TEST-1: $(cat "$WORK/signals.log")"
+echo "PipeWire restart recovery and StreamChanged passed (serial $serial)"
 
 status=0
 echo "integration test passed"

@@ -13,6 +13,17 @@ BusName=io.github.wallpaper_rs.Daemon
 ExecStart=@BINDIR@/wprsd
 Restart=on-failure
 RestartSec=2
+UMask=0077
+LimitCORE=0
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
 
 [Install]
 WantedBy=graphical-session.target

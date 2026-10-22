@@ -1,5 +1,6 @@
 use crate::daemon::{Daemon, State, settings};
 use crate::streams::OutputInfo;
+use std::path::Path;
 use wprs_core::{Config, Fit};
 use zbus::fdo::Error::InvalidArgs;
 
@@ -24,7 +25,8 @@ impl Daemon {
             change(&mut config).map_err(InvalidArgs)?;
             if st.config_error.is_some() && st.config_path.exists() {
                 let backup = Config::backup_broken(&st.config_path)?;
-                tracing::warn!(backup = %backup.display(), "kept a copy of the broken configuration");
+                tracing::warn!("kept a copy of the broken configuration");
+                tracing::debug!(backup = %backup.display(), "broken configuration copy");
             }
             config.save(&st.config_path)?;
             (st.config, st.config_error) = (config, None);
@@ -49,16 +51,16 @@ impl Daemon {
         })
     }
 
-    pub fn change_wallpaper(&self, path: &str, output: &str, fit: &str) -> anyhow::Result<()> {
+    pub fn change_wallpaper(&self, path: &Path, output: &str, fit: &str) -> anyhow::Result<()> {
         let fit = Some(fit.trim()).filter(|f| !f.is_empty()).map(str::parse::<Fit>).transpose();
         let fit = fit.map_err(|e| InvalidArgs(e.to_string()))?;
-        match (path.strip_prefix("file://").unwrap_or(path), output.trim(), fit) {
-            ("", _, None) => Err(InvalidArgs("give a wallpaper, a fit or both".into()).into()),
-            ("", output, Some(fit)) => self.change_output(output, |c| {
+        match (path.as_os_str().is_empty(), output.trim(), fit) {
+            (true, _, None) => Err(InvalidArgs("give a wallpaper, a fit or both".into()).into()),
+            (true, output, Some(fit)) => self.change_output(output, |c| {
                 c.set_fit(output, fit);
                 Ok(())
             }),
-            (path, output, fit) => self.set_wallpaper(path.into(), output, fit),
+            (false, output, fit) => self.set_wallpaper(path, output, fit),
         }
     }
 
@@ -67,7 +69,7 @@ impl Daemon {
         self.change_output(output, |c| c.set_background(output, color))
     }
 
-    fn change_output(
+    pub(crate) fn change_output(
         &self,
         output: &str,
         change: impl FnOnce(&mut Config) -> Result<(), String>,
@@ -75,14 +77,14 @@ impl Daemon {
         self.update_config(change)?;
         match output.is_empty() {
             true => self.configure_all(),
-            false => self.configure_output(output),
+            false => drop(self.configure_output(output)),
         }
         Ok(())
     }
 
     pub fn set_paused(&self, paused: bool) -> anyhow::Result<()> {
         self.state().user_paused = paused;
-        tracing::info!(paused, "user pause changed");
+        tracing::debug!(paused, "user pause changed");
         self.apply_activity();
         self.publish();
         Ok(())
@@ -90,13 +92,13 @@ impl Daemon {
 
     pub fn set_on_battery(&self, on_battery: bool) {
         self.state().on_battery = on_battery;
-        tracing::info!(on_battery, "power source changed");
+        tracing::debug!(on_battery, "power source changed");
         self.apply_activity();
     }
 
     pub fn set_locked(&self, locked: bool) {
         self.state().locked = locked;
-        tracing::info!(locked, "screen lock changed");
+        tracing::debug!(locked, "screen lock changed");
         self.apply_activity();
     }
 

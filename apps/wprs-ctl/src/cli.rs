@@ -28,7 +28,7 @@ pub struct Cli {
 pub enum Command {
     #[command(about = "Set the wallpaper: an image or a video")]
     Set {
-        #[arg(help = "Image or video file")]
+        #[arg(help = "Local image or video file, as a path or a file:// URI")]
         path: PathBuf,
         #[arg(short, long, default_value = "", help = "Output name such as DP-1; every output when omitted")]
         output: String,

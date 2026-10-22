@@ -84,8 +84,19 @@ fn rejects_invalid_and_oversized_targets() {
     assert!(r.create_target(0, 10).is_err());
     assert!(r.create_target(r.max_edge() + 1, 10).is_err());
     assert!(r.check_target(u32::MAX, u32::MAX).is_err());
-    assert!(r.check_target(1, 1).is_ok());
+    assert!(r.check_target(1, 1).is_ok() && r.check_target(8200, 8200).is_err());
     assert_eq!(r.limits().max_edge, r.max_edge());
+}
+
+#[test]
+fn borrowed_readback_hands_out_padded_rows() {
+    let Some(r) = renderer() else { return };
+    let mut target = r.create_target(65, 3).unwrap();
+    let layers = [layer(None, Fit::Fill, [0, 255, 0], 1.0)];
+    let read = |w, h, stride, data: &[u8]| ((w, h, stride, data.len()), [data[642], data[641], data[640]]);
+    let (geometry, center) = r.render_layers_with(&mut target, &layers, read).unwrap();
+    assert_eq!(geometry, (65, 3, 512, 512 * 3));
+    assert!(close(center, [0, 255, 0]));
 }
 
 #[test]

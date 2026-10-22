@@ -3,7 +3,9 @@ mod cli;
 use anyhow::Context;
 use clap::Parser;
 use cli::{Cli, Command};
+use std::path::Path;
 use tokio::signal::unix::{SignalKind, signal};
+use wprs_core::dbus::uri_scheme;
 
 #[zbus::proxy(
     interface = "io.github.wallpaper_rs.Daemon1",
@@ -38,9 +40,7 @@ async fn main() -> anyhow::Result<()> {
 async fn run(command: Command, daemon: &DaemonProxy<'_>) -> anyhow::Result<()> {
     match command {
         Command::Set { path, output, fit } => {
-            let path = std::path::absolute(&path)?;
-            let path = path.to_str().context("the path is not valid UTF-8")?;
-            daemon.set_wallpaper(path, &output, fit.map_or("", |f| f.as_str())).await?
+            daemon.set_wallpaper(&wallpaper(&path)?, &output, fit.map_or("", |f| f.as_str())).await?
         }
         Command::Fit { fit, output } => daemon.set_wallpaper("", &output, fit.as_str()).await?,
         Command::Background { color, output } => daemon.set_background(&color, &output).await?,
@@ -73,6 +73,15 @@ async fn run(command: Command, daemon: &DaemonProxy<'_>) -> anyhow::Result<()> {
         Command::Covered { output, covered } => daemon.set_output_covered(&output, covered).await?,
     }
     Ok(())
+}
+
+fn wallpaper(path: &Path) -> anyhow::Result<String> {
+    let text = path.to_str().context("the path is not valid UTF-8")?;
+    match uri_scheme(text).filter(|_| !path.exists()) {
+        Some(scheme) if scheme.eq_ignore_ascii_case("file") => Ok(text.into()),
+        Some(_) => anyhow::bail!("{text} is not a local file"),
+        None => Ok(std::path::absolute(path)?.to_str().context("the path is not valid UTF-8")?.into()),
+    }
 }
 
 fn interrupted() -> std::io::Result<impl Future<Output = ()>> {

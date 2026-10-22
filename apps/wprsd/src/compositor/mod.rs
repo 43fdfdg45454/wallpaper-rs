@@ -4,14 +4,14 @@ mod players;
 mod slot;
 mod state;
 
+use crate::fatal;
 use image::RgbaImage;
 use state::State;
 use std::collections::BTreeMap;
-use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, mpsc};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use wprs_core::Fit;
 use wprs_pipewire::Exporter;
 use wprs_render::{RenderError, Renderer, TargetLimits};
@@ -19,15 +19,22 @@ use wprs_render::{RenderError, Renderer, TargetLimits};
 #[derive(Clone)]
 pub enum Content {
     Color,
-    Image(Arc<RgbaImage>),
+    Image(Picture),
     Video(PathBuf),
+}
+
+#[derive(Clone)]
+pub struct Picture {
+    pub file: PathBuf,
+    pub modified: Option<SystemTime>,
+    pub pixels: Option<Arc<RgbaImage>>,
 }
 
 impl Content {
     fn same_source(&self, other: &Content) -> bool {
         match (self, other) {
             (Content::Color, Content::Color) => true,
-            (Content::Image(a), Content::Image(b)) => Arc::ptr_eq(a, b),
+            (Content::Image(a), Content::Image(b)) => (&a.file, a.modified) == (&b.file, b.modified),
             (Content::Video(a), Content::Video(b)) => a == b,
             _ => false,
         }
@@ -86,13 +93,13 @@ impl Compositor {
         let (tx, rx) = mpsc::channel();
         let status = Arc::new(Mutex::new(BTreeMap::new()));
         let mut state = State::new(renderer, exporter, settings, tx.clone(), status.clone());
-        let run = move || {
-            if std::panic::catch_unwind(AssertUnwindSafe(|| state.run(&rx))).is_err() {
-                fatal("the render thread panicked");
-            }
-        };
-        let thread = std::thread::Builder::new().name("wprs-render".into()).spawn(run)?;
+        let thread = std::thread::Builder::new().name("wprs-render".into()).spawn(move || state.run(&rx))?;
         Ok(Self { tx, status, limits, thread: Some(thread) })
+    }
+
+    pub fn waker(&self) -> impl Fn() + Send + Sync + 'static {
+        let tx = self.tx.clone();
+        move || drop(tx.send(Command::Wake))
     }
 
     pub fn check_target(&self, width: u32, height: u32) -> Result<(), RenderError> {
@@ -128,7 +135,7 @@ impl Compositor {
 
     fn send(&self, command: Command) {
         if self.tx.send(command).is_err() {
-            tracing::error!("the render thread is not running");
+            fatal("the render thread stopped");
         }
     }
 }
@@ -142,9 +149,4 @@ impl Drop for Compositor {
 
 pub fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|e| e.into_inner())
-}
-
-fn fatal(reason: &str) -> ! {
-    tracing::error!("{reason}; exiting so that the service manager restarts the daemon");
-    std::process::exit(70)
 }

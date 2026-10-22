@@ -17,6 +17,7 @@ PlasmoidItem {
             "GetState": "()",
             "Reload": "()",
             "SetWallpaper": "(sss)",
+            "SetBackground": "(ss)",
             "SetOption": "(ss)",
             "SetPaused": "(b)",
             "SetVolume": "(d)",

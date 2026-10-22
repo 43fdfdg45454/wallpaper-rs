@@ -27,6 +27,12 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     skip_vulkan_device_selection_layer();
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    tracing_subscriber::fmt().with_env_filter(filter).init();
+    std::panic::set_hook(Box::new(|info| {
+        let thread = std::thread::current();
+        fatal(&format!("thread {} {info}", thread.name().unwrap_or("unnamed")))
+    }));
     run(args)
 }
 
@@ -36,10 +42,13 @@ fn skip_vulkan_device_selection_layer() {
     }
 }
 
+pub(crate) fn fatal(reason: &str) -> ! {
+    tracing::error!("{reason}; exiting so that the service manager restarts the daemon");
+    std::process::exit(70)
+}
+
 #[tokio::main]
 async fn run(args: Args) -> anyhow::Result<()> {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    tracing_subscriber::fmt().with_env_filter(filter).init();
     let config_path = args.config.map_or_else(Config::default_path, Ok)?;
     let connection = zbus::Connection::session().await.context("cannot connect to the session bus")?;
     let bus = DBusProxy::new(&connection).await?;
@@ -61,6 +70,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
     tokio::spawn(watch::battery(daemon.clone()));
     tokio::spawn(watch::screen_lock(connection.clone(), daemon.clone()));
     tokio::spawn(watch::properties(connection.clone(), daemon.clone()));
+    tokio::spawn(bus::announce_streams(connection.clone(), daemon.clone()));
     let mut terminate = signal(SignalKind::terminate())?;
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {}

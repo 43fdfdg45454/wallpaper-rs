@@ -11,6 +11,8 @@ ExclusiveArch:  x86_64
 BuildRequires:  systemd-rpm-macros
 Requires:       pipewire
 Requires:       kpipewire
+Requires:       kf6-kwindowsystem
+Requires:       plasma-workspace
 Requires:       gstreamer1-plugins-base
 Requires:       gstreamer1-plugins-good
 

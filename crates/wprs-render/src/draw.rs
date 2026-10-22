@@ -1,5 +1,5 @@
 use crate::bind::Slot;
-use crate::readback::padded_row_bytes;
+use crate::readback::{copy_rows, padded_row_bytes};
 use crate::texture::create_texture;
 use crate::{Layer, RenderError, Renderer};
 use std::sync::Arc;
@@ -49,15 +49,26 @@ impl Renderer {
         layers: &[Layer<'_>],
         dst: &mut Vec<u8>,
     ) -> Result<(), RenderError> {
+        self.render_layers_with(target, layers, |width, height, stride, src| {
+            copy_rows(src, dst, width, height, stride)
+        })
+    }
+
+    pub fn render_layers_with<R>(
+        &self,
+        target: &mut Target,
+        layers: &[Layer<'_>],
+        read: impl FnOnce(u32, u32, u32, &[u8]) -> R,
+    ) -> Result<R, RenderError> {
         let visible = || layers.iter().filter(|l| l.opacity > 0.0);
         let rendered = self.scoped(|| {
             let size = target.size();
             visible().enumerate().for_each(|(i, layer)| self.bind(&mut target.slots, i, layer, size));
             target.slots.truncate(visible().count());
             let submission = self.encode(target, visible().map(|l| l.opacity.min(1.0)));
-            self.read(target, dst, submission)
+            self.read(target, submission, read)
         });
-        rendered.and_then(|read| read).inspect_err(|_| target.slots.clear())
+        rendered.flatten().inspect_err(|_| target.slots.clear())
     }
 
     fn encode(&self, target: &Target, opacities: impl Iterator<Item = f32>) -> wgpu::SubmissionIndex {

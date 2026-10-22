@@ -1,21 +1,26 @@
-use super::fatal;
 use super::output::{Output, smoothstep};
 use super::slot::PlayerSlot;
 use super::state::State;
+use crate::fatal;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
-use wprs_pipewire::VideoFrame;
+use wprs_pipewire::{Exporter, VideoFrame};
 use wprs_render::{RenderError, Renderer, log_allowed};
 
 const TRANSITION_FPS: u32 = 60;
-const POOL: usize = 3;
+
+type Shared<'a> = (&'a Renderer, &'a Exporter, &'a HashMap<PathBuf, PlayerSlot>);
 
 fn interval(output: &Output, max_fps: u32) -> Duration {
     let fps = if output.fading() { TRANSITION_FPS.max(max_fps) } else { max_fps };
     Duration::from_secs(1) / fps.max(1)
+}
+
+fn deadline(output: &Output, streaming: bool, max_fps: u32, now: Instant) -> Option<Instant> {
+    let wanted = output.dirty && (streaming || output.stale);
+    wanted.then(|| output.last_render.map_or(now, |t| t + interval(output, max_fps)))
 }
 
 impl State {
@@ -34,24 +39,25 @@ impl State {
     }
 
     pub(super) fn next_deadline(&self) -> Option<Instant> {
-        let due =
-            |o: &Output| o.last_render.map_or_else(Instant::now, |t| t + interval(o, self.settings.max_fps));
-        let renders = self.outputs.values().filter(|o| o.dirty).map(due);
+        let (now, max_fps) = (Instant::now(), self.settings.max_fps);
+        let streaming = |name: &String| self.exporter.is_streaming(name);
+        let renders = self.outputs.iter().filter_map(|(name, o)| deadline(o, streaming(name), max_fps, now));
         renders.chain(self.players.values().filter_map(|s| s.due)).min()
     }
 
     pub(super) fn render_due(&mut self) {
         let (now, max_fps, transition) =
             (Instant::now(), self.settings.max_fps, self.settings.transition.as_secs_f32());
-        let due = |o: &Output| o.dirty && o.last_render.is_none_or(|t| t + interval(o, max_fps) <= now);
-        for (name, output) in self.outputs.iter_mut().filter(|(_, o)| due(o)) {
-            let frame = draw(output, &self.renderer, &self.players, transition, now);
-            if let Err(RenderError::DeviceLost(reason)) = &frame {
-                fatal(&format!("the GPU stopped responding ({reason})"));
+        let shared = (&self.renderer, &*self.exporter, &self.players);
+        for (name, output) in &mut self.outputs {
+            let streaming = shared.1.is_streaming(name);
+            if deadline(output, streaming, max_fps, now).is_none_or(|at| at > now) {
+                continue;
             }
-            let pushed =
-                frame.map_err(anyhow::Error::from).and_then(|f| Ok(self.exporter.push_frame(name, f)?));
-            if let Err(e) = pushed {
+            if !streaming {
+                output.fade = None;
+            }
+            if let Err(e) = draw(name, output, shared, transition, now) {
                 static FAILURES: AtomicU64 = AtomicU64::new(0);
                 if log_allowed(&FAILURES) {
                     tracing::error!(output = name, "render failed: {e:#}");
@@ -63,12 +69,13 @@ impl State {
 }
 
 fn draw(
+    name: &str,
     output: &mut Output,
-    renderer: &Renderer,
-    players: &HashMap<PathBuf, PlayerSlot>,
+    shared: Shared<'_>,
     transition: f32,
     now: Instant,
-) -> Result<Arc<VideoFrame>, RenderError> {
+) -> anyhow::Result<()> {
+    let (renderer, exporter, players) = shared;
     let progress = output.progress(now, transition);
     let target = match &mut output.target {
         Some(target) => target,
@@ -77,28 +84,21 @@ fn draw(
     let shown = output.shown.layer(players, if output.fade.is_some() { smoothstep(progress) } else { 1.0 });
     let from = output.fade.as_ref().map(|(from, _)| from.layer(players, 1.0));
     let layers = [from.unwrap_or(shown), shown];
-    let frame = free_frame(&mut output.frames);
-    let pixels = Arc::get_mut(frame).expect("free frames are not shared");
-    renderer.render_layers(target, &layers[usize::from(from.is_none())..], &mut pixels.data)?;
-    ((pixels.width, pixels.height), pixels.stride) = (target.size(), target.stride());
+    let written =
+        renderer.render_layers_with(target, &layers[usize::from(from.is_none())..], |w, h, s, d| {
+            exporter.write_frame(name, VideoFrame { width: w, height: h, stride: s, data: d })
+        });
+    if let Err(RenderError::DeviceLost(reason)) = &written {
+        fatal(&format!("the GPU stopped responding ({reason})"));
+    }
+    written??;
     output.missing_frame = output.shown.content.video().is_some() && shown.image.is_none();
-    let frame = frame.clone();
     output.last_render = Some(now);
     output.fade = output.fade.take().filter(|_| progress < 1.0);
     output.dirty = output.fading();
+    output.stale = output.missing_frame || output.fade.is_some();
     if !output.animated() {
-        (output.target, output.frames) = (None, Vec::new());
+        output.target = None;
     }
-    Ok(frame)
-}
-
-fn free_frame(pool: &mut Vec<Arc<VideoFrame>>) -> &mut Arc<VideoFrame> {
-    let index = pool.iter_mut().position(|f| Arc::get_mut(f).is_some()).unwrap_or_else(|| {
-        if pool.len() >= POOL {
-            pool.remove(0);
-        }
-        pool.push(Arc::new(VideoFrame { width: 0, height: 0, stride: 0, data: Vec::new() }));
-        pool.len() - 1
-    });
-    &mut pool[index]
+    Ok(())
 }

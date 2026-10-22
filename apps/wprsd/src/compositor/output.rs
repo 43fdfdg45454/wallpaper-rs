@@ -2,10 +2,8 @@ use super::slot::PlayerSlot;
 use super::{Content, Spec};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Instant;
 use wprs_core::Fit;
-use wprs_pipewire::VideoFrame;
 use wprs_render::{GpuImage, Layer, Target};
 
 pub(super) struct Shown {
@@ -37,25 +35,16 @@ pub(super) struct Output {
     pub(super) active: bool,
     pub(super) dirty: bool,
     pub(super) missing_frame: bool,
+    pub(super) stale: bool,
     pub(super) target: Option<Target>,
-    pub(super) frames: Vec<Arc<VideoFrame>>,
     pub(super) last_render: Option<Instant>,
 }
 
 impl Output {
     pub(super) fn new(size: (u32, u32), shown: Shown) -> Self {
-        let (fade, target, frames, last_render) = (None, None, Vec::new(), None);
-        Self {
-            size,
-            shown,
-            fade,
-            active: true,
-            dirty: true,
-            missing_frame: false,
-            target,
-            frames,
-            last_render,
-        }
+        let (fade, target, last_render) = (None, None, None);
+        let (active, dirty, missing_frame, stale) = (true, true, false, true);
+        Self { size, shown, fade, active, dirty, missing_frame, stale, target, last_render }
     }
 
     pub(super) fn show(&mut self, shown: Shown, size: (u32, u32), transition: bool) {
@@ -64,7 +53,7 @@ impl Output {
         let old = std::mem::replace(&mut self.shown, shown);
         self.fade = (animate && !old.content.same_source(&self.shown.content)).then_some((old, None));
         self.target = self.target.take().filter(|_| !resized);
-        self.dirty = true;
+        (self.dirty, self.stale) = (true, true);
     }
 
     pub(super) fn layers(&self) -> impl Iterator<Item = &Shown> {

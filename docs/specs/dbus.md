@@ -19,8 +19,9 @@ replacement. A second daemon checks the name before initializing the GPU and Pip
 at once with an error saying that another wprsd owns it.
 
 Errors: invalid arguments return `InvalidArgs`; other failures return `Failed` and change
-nothing. If the render thread has stopped after an internal error, every method that changes
-something returns `Failed` until the daemon is restarted.
+nothing. A panic in any thread of the daemon, a lost GPU device or a GPU that stops responding
+makes the daemon exit with status 70; the user unit restarts it (`Restart=on-failure`, at most
+5 starts in 60 s) and clients get their streams again through `RequestStream`.
 
 ## Streams and claims
 
@@ -56,12 +57,15 @@ Consumers should connect by serial; `serial` is `0` only if PipeWire did not pub
 - A request with the same size returns the existing stream.
 - A request with a different size replaces the stream; the old serial becomes invalid.
 - Each edge must be in `1..=min(16384, GPU limit)` and one frame, with rows padded to 256
-  bytes, must fit in 256 MiB (for example 8192 × 8192); otherwise `InvalidArgs`.
+  bytes, must fit in 256 MiB and in the GPU buffer limit (for example 8192 × 8192); otherwise
+  `InvalidArgs`.
 - Call `ReleaseStream` once for every successful `RequestStream`.
 
 Stream format: raw video, `BGRx` (or `BGRA`), fixed size, variable frame rate, one memfd per
 buffer mapped from offset 0. Frames are produced when the picture changes (new wallpaper,
 transition, video frame), when a consumer starts streaming, and every 10 s as a keep-alive.
+While no consumer is streaming an output, its video is paused and the daemon renders only the
+final picture after each change, which a consumer receives as soon as it connects.
 
 ### `HoldStream(s output, u width, u height) → (u node_id, t serial)`
 
@@ -77,9 +81,10 @@ Removes one claim of the caller on `output`, or the held claim if the caller has
 Sets the wallpaper of `output`, or of every output when `output` is empty (this also clears
 per-output wallpapers). `path` is an image or a video (`mp4`, `m4v`, `webm`, `mkv`, `mov`,
 `avi`, `ogv`, `mpg`, `mpeg`); videos loop and are decoded with GStreamer. `fit` is `fill`,
-`fit`, `stretch`, `center`, `tile`, or empty to keep the current mode. A `file://` prefix is
-accepted. Images are decoded before the configuration is saved. A new wallpaper replaces the
-old one with the configured transition.
+`fit`, `stretch`, `center`, `tile`, or empty to keep the current mode. Only local files are
+accepted: an absolute path or a `file://` URI (percent-encoded, with an empty or `localhost`
+host); any other URI returns `InvalidArgs`. Images are decoded before the configuration is
+saved. A new wallpaper replaces the old one with the configured transition.
 
 With an empty `path`, only the fit changes and the current wallpapers stay: the fit of
 `output`, or of every output when `output` is empty. A fit for every output also clears
@@ -129,7 +134,8 @@ configuration stays, `config_error` is set and the call returns `Failed`.
 
 JSON document: `version`, `adapter`, `config` (file path), `config_error`, `paused`,
 `on_battery`, `locked`, `volume`, `muted`, `options` (key → value) and `outputs`, where each
-output has `width`, `height`, `image`, `fit`, `kind` (`color`, `image` or `video`), `playing`,
+output has `width`, `height`, `image`, `fit`, `background` (`#rrggbb`), `kind` (`color`,
+`image` or `video`), `playing` (a consumer is streaming the output and its video plays),
 `active`, `covered`, `clients` (number of claimants) and `error`.
 
 ## Properties
@@ -144,6 +150,15 @@ output has `width`, `height`, `image`, `fit`, `kind` (`color`, `image` or `video
 
 `PropertiesChanged` is emitted for `Paused`, `Volume` and `Muted` whenever their values change,
 whichever method changed them (including `SetOption` and `Reload`).
+
+## Signals
+
+### `StreamChanged(s output, u node_id, t serial)`
+
+Emitted for every output with a stream after the daemon reconnects to a restarted PipeWire, as
+soon as the stream of `output` exists again under a new node. The claims stay valid, but
+consumers lose their own PipeWire connection and must connect again to `serial` (or `node_id`
+when `serial` is `0`).
 
 ## Configuration file
 

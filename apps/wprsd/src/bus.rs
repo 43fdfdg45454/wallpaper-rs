@@ -1,12 +1,12 @@
 use crate::daemon::Daemon;
+use crate::service::Service;
 use crate::streams::HELD;
 use serde_json::json;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use wprs_core::dbus;
 use zbus::fdo::{self, DBusProxy};
 use zbus::message::Header;
-
-static RENDER_PANICKED: AtomicBool = AtomicBool::new(false);
+use zbus::object_server::SignalEmitter;
 
 pub(crate) fn client(header: &Header<'_>) -> String {
     header.sender().map_or(HELD, |s| s.as_str()).to_owned()
@@ -18,27 +18,36 @@ async fn gone(bus: Option<&zbus::Connection>, client: &str) -> bool {
     owner.await.is_ok_and(|owned| !owned)
 }
 
-pub(crate) fn track_render_panics() {
-    let report = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |info| {
-        RENDER_PANICKED.fetch_or(std::thread::current().name() == Some("wprs-render"), Ordering::Relaxed);
-        report(info)
-    }));
+pub(crate) async fn announce_streams(connection: zbus::Connection, daemon: Arc<Daemon>) {
+    let Ok(emitter) = SignalEmitter::new(&connection, dbus::OBJECT_PATH) else { return };
+    let (mut seen, mut waiting) = (daemon.exporter.generation(), Vec::new());
+    loop {
+        daemon.streams_changed.notified().await;
+        let generation = daemon.exporter.generation();
+        if generation != seen {
+            (seen, waiting) = (generation, daemon.state().outputs.keys().cloned().collect());
+        }
+        for output in std::mem::take(&mut waiting) {
+            match daemon.exporter.stream_info(&output) {
+                Some(info) => {
+                    tracing::info!(output, node = info.node_id, serial = info.serial, "stream recreated");
+                    let sent = Service::stream_changed(&emitter, &output, info.node_id, info.serial).await;
+                    sent.unwrap_or_else(|e| tracing::warn!("cannot announce a recreated stream: {e}"));
+                }
+                None if daemon.state().outputs.contains_key(&output) => waiting.push(output),
+                None => {}
+            }
+        }
+    }
 }
 
 impl Daemon {
-    pub(crate) fn rendering(&self) -> anyhow::Result<()> {
-        let stopped = RENDER_PANICKED.load(Ordering::Relaxed);
-        anyhow::ensure!(!stopped, "the renderer stopped after an error; restart wprsd");
-        Ok(())
-    }
-
     pub(crate) async fn run<T: Send + 'static>(
         self: &Arc<Self>,
         work: impl FnOnce(&Daemon) -> anyhow::Result<T> + Send + 'static,
     ) -> fdo::Result<T> {
         let daemon = self.clone();
-        let done = tokio::task::spawn_blocking(move || daemon.rendering().and_then(|()| work(&daemon))).await;
+        let done = tokio::task::spawn_blocking(move || work(&daemon)).await;
         done.map_err(|e| fdo::Error::Failed(format!("internal error: {e}")))?
             .map_err(|e| e.downcast().unwrap_or_else(|e| fdo::Error::Failed(format!("{e:#}"))))
     }
@@ -81,9 +90,10 @@ impl Daemon {
         let outputs: serde_json::Map<_, _> = (st.outputs.iter())
             .map(|(name, info)| {
                 let (r, s) = (st.config.resolve(name), status.get(name).cloned().unwrap_or_default());
-                let (width, height) = info.size;
+                let ((width, height), [red, green, blue]) = (info.size, r.background);
                 let value = json!({ "width": width, "height": height, "image": r.image, "fit": r.fit.as_str(),
-                    "kind": s.kind, "playing": s.playing, "active": st.active(info), "covered": info.covered(),
+                    "background": format!("#{red:02x}{green:02x}{blue:02x}"), "kind": s.kind,
+                    "playing": s.playing, "active": st.active(info), "covered": info.covered(),
                     "clients": info.claims.len(), "error": s.error });
                 (name.clone(), value)
             })

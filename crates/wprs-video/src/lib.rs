@@ -8,7 +8,7 @@ pub use probe::probe;
 
 use gstreamer as gst;
 use gstreamer::prelude::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 pub const EXTENSIONS: [&str; 9] = ["mp4", "m4v", "webm", "mkv", "mov", "avi", "ogv", "mpg", "mpeg"];
@@ -25,7 +25,7 @@ pub enum Error {
     Init(String),
     #[error("GStreamer element '{0}' is missing; install the GStreamer base plugins")]
     MissingElement(&'static str),
-    #[error("{0} is not an existing local file")]
+    #[error("the video is not an existing local file")]
     NotLocal(String),
     #[error("cannot decode the video: {0}")]
     Decode(String),
@@ -98,6 +98,11 @@ fn local_uri(path: &Path) -> Result<String, Error> {
     let absolute = std::path::absolute(path).map_err(|_| not_local())?;
     absolute.is_file().then_some(()).ok_or_else(not_local)?;
     gst::glib::filename_to_uri(&absolute, None).map(Into::into).map_err(|_| not_local())
+}
+
+pub fn path_from_uri(uri: &str) -> Option<PathBuf> {
+    let (path, host) = gst::glib::filename_from_uri(uri).ok()?;
+    host.is_none_or(|host| host == "localhost").then_some(path)
 }
 
 fn make(factory: &'static str) -> Result<gst::Element, Error> {

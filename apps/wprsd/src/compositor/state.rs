@@ -1,12 +1,14 @@
 use super::output::{Output, Shown};
 use super::slot::PlayerSlot;
 use super::{Command, Content, OutputStatus, Settings, Spec};
+use image::RgbaImage;
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Instant;
+use wprs_core::Fit;
 use wprs_pipewire::Exporter;
-use wprs_render::Renderer;
+use wprs_render::{GpuImage, Renderer, decode_image};
 
 pub(super) struct State {
     pub(super) renderer: Renderer,
@@ -72,19 +74,21 @@ impl State {
         true
     }
 
-    fn configure(&mut self, name: String, size: (u32, u32), spec: Spec) {
+    fn configure(&mut self, name: String, size: (u32, u32), mut spec: Spec) {
         let slot = spec.content.video().and_then(|path| self.players.get_mut(path));
         slot.into_iter().for_each(|slot| slot.revive(Instant::now()));
-        if self.outputs.get(&name).is_some_and(|o| o.size == size && o.shown.matches(&spec)) {
+        let current = self.outputs.get_mut(&name).filter(|o| o.size == size);
+        if current.as_ref().is_some_and(|o| o.shown.matches(&spec)) {
             return;
         }
-        let image = match &spec.content {
-            Content::Image(image) => self
-                .renderer
-                .upload(image, spec.fit, size)
-                .inspect_err(|e| tracing::warn!(output = name, "cannot upload the image: {e}"))
-                .ok(),
-            _ => None,
+        let same = |o: &&mut Output| o.shown.fit == spec.fit && o.shown.content.same_source(&spec.content);
+        let kept = current.filter(same).and_then(|o| o.shown.image.take());
+        let image = match &mut spec.content {
+            Content::Image(picture) => {
+                let pixels = picture.pixels.take();
+                kept.or_else(|| self.upload(&name, &picture.file, pixels, spec.fit, size))
+            }
+            _ => kept,
         };
         let shown = Shown { content: spec.content, fit: spec.fit, background: spec.background, image };
         let transition = !self.settings.transition.is_zero();
@@ -92,6 +96,20 @@ impl State {
             Some(output) => output.show(shown, size, transition),
             None => drop(self.outputs.insert(name, Output::new(size, shown))),
         }
+    }
+
+    fn upload(
+        &self,
+        output: &str,
+        file: &Path,
+        pixels: Option<Arc<RgbaImage>>,
+        fit: Fit,
+        size: (u32, u32),
+    ) -> Option<GpuImage> {
+        let pixels = pixels.map_or_else(|| decode_image(file, self.renderer.max_edge()).map(Arc::new), Ok);
+        let uploaded =
+            pixels.map_err(anyhow::Error::from).and_then(|p| Ok(self.renderer.upload(&p, fit, size)?));
+        uploaded.inspect_err(|e| tracing::warn!(output, "cannot show the image: {e}")).ok()
     }
 
     fn apply_settings(&mut self, settings: Settings) {

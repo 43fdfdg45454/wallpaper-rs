@@ -69,6 +69,11 @@ msgstr "Elegir…"
 
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
 #, kde-format
+msgid "Background color"
+msgstr "Color de fondo"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
 msgid "Images and videos"
 msgstr "Imágenes y vídeos"
 

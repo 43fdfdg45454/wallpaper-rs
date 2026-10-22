@@ -26,10 +26,8 @@ pub(crate) fn watch_bus(
         let Some(message) = bus.timed_pop(gst::ClockTime::NONE) else { continue };
         match message.view() {
             gst::MessageView::Error(err) => {
-                let error = err.error();
-                let text =
-                    err.debug().map_or_else(|| error.to_string(), |debug| format!("{error} ({debug})"));
-                sink(Event::Error(text));
+                tracing::debug!(details = err.debug().as_deref(), "video error");
+                sink(Event::Error(err.error().to_string()));
                 if let Some(playbin) = playbin.upgrade() {
                     let _ = playbin.set_state(gst::State::Null);
                 }

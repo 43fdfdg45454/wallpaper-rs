@@ -62,7 +62,7 @@ impl PlayerSlot {
         });
         match opened {
             Ok(player) => {
-                tracing::info!(path = %path.display(), "video opened");
+                tracing::debug!(path = %path.display(), "video opened");
                 player.set_playing(self.playing);
                 (self.player, self.due) = (Some(player), Some(now + FIRST_FRAME));
             }
@@ -92,7 +92,8 @@ impl PlayerSlot {
         };
         static UPLOAD_ERRORS: AtomicU64 = AtomicU64::new(0);
         if log_allowed(&UPLOAD_ERRORS) {
-            tracing::warn!(path = %path.display(), "cannot upload a video frame: {e}");
+            tracing::warn!("cannot upload a video frame: {e}");
+            tracing::debug!(path = %path.display(), "video with frames that cannot be uploaded");
         }
         false
     }
@@ -102,7 +103,10 @@ impl PlayerSlot {
         self.failures += 1;
         let retry = self.failures <= RETRIES;
         self.due = retry.then(|| now + FIRST_RETRY * 2u32.pow(self.failures - 1));
-        tracing::warn!(path = %path.display(), retry, "video playback failed: {error}");
+        let file = std::path::absolute(path).unwrap_or_else(|_| path.into());
+        let shown = error.replace(&*file.to_string_lossy(), "<video>");
+        tracing::warn!(retry, "video playback failed: {shown}");
+        tracing::debug!(path = %path.display(), "video that failed: {error}");
         self.error = Some(error);
     }
 }

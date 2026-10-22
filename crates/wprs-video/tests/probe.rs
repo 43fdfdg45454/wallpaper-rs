@@ -86,3 +86,13 @@ fn honours_rotation_tags() {
         other => panic!("no rotated frame: {other:?}"),
     }
 }
+
+#[test]
+fn file_uris_decode_to_local_paths_only() {
+    let path = |uri| wprs_video::path_from_uri(uri);
+    assert_eq!(path("file:///tmp/a%20b%23c.webm"), Some("/tmp/a b#c.webm".into()));
+    assert_eq!(path("file://localhost/tmp/x.png"), Some("/tmp/x.png".into()));
+    assert_eq!(path("file://elsewhere/tmp/x.png"), None);
+    assert_eq!(path("http://127.0.0.1:9/x.webm"), None);
+    assert_eq!(path("/tmp/x.png"), None);
+}

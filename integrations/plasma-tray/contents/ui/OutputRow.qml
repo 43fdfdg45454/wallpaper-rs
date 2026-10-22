@@ -55,6 +55,22 @@ RowLayout {
         onClicked: dialog.open()
     }
 
+    QQC2.ToolButton {
+        icon.name: "color-picker"
+        text: i18n("Background color")
+        display: QQC2.AbstractButton.IconOnly
+        QQC2.ToolTip.text: text
+        QQC2.ToolTip.visible: hovered
+        onClicked: colors.open()
+    }
+
+    ColorDialog {
+        id: colors
+
+        selectedColor: row.info.background ?? "black"
+        onAccepted: row.daemon.act("SetBackground", [selectedColor.toString(), row.name])
+    }
+
     FileDialog {
         id: dialog
 

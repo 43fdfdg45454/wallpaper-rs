@@ -49,7 +49,9 @@ pantalla* → tipo de fondo **wallpaper-rs**. El fondo de cada pantalla, el modo
 pausa, el volumen y los ajustes se eligen desde el icono de wallpaper-rs en la bandeja.
 
 Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good) y un
-controlador Vulkan u OpenGL.
+controlador Vulkan u OpenGL. El plugin de fondo usa los módulos QML de KPipeWire, KWindowSystem y
+plasma-workspace; en Debian y Ubuntu vienen en `qml6-module-org-kde-pipewire`,
+`qml6-module-org-kde-kwindowsystem` y `plasma-workspace`.
 
 ## Instalación con Flatpak
 
@@ -162,7 +164,11 @@ dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una ca
   solo se usan si los configuras. Los servicios públicos se usan siempre por HTTPS; todos llevan un
   User-Agent genérico (`wallpaper-rs/<versión>`), sin cookies ni cabecera Referer, y las claves de API
   y contraseñas solo se envían al servidor configurado.
+- La configuración se escribe con permisos `0600` dentro de una carpeta `0700`: solo tu usuario
+  puede leerla.
 - La caché de descargas se guarda en una carpeta privada.
+- El servicio de systemd tiene prohibido abrir conexiones de red y sus registros no incluyen rutas,
+  nombres de archivo ni el modelo de GPU salvo con `RUST_LOG=debug`.
 - Los paquetes se generan sin rutas, usuarios ni nombre del equipo de quien los compila.
 
 ## Licencia

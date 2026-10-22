@@ -126,14 +126,17 @@ jobs:
           name: wallpaper-rs-x86_64-linux
           path: dist
 
-      - name: Build and install the RPM
+      - name: Build and install the RPM without its desktop dependencies
         run: |
           docker run --rm -v "$PWD:/src" -w /src fedora:latest bash -c '
             set -e
             dnf -y -q install rpm-build systemd-rpm-macros >/dev/null
             scripts/rpm.sh dist/wallpaper-rs-*.tar.gz rpm
             test "$(rpm -qp --qf "%{BUILDHOST}" rpm/*.rpm)" = localhost
-            dnf -y -q install ./rpm/*.rpm >/dev/null
+            rpm -qpR rpm/*.rpm | grep -v "^rpmlib(" | while read -r dep; do
+              dnf -q repoquery --whatprovides "$dep" | grep -q . || { echo "nothing provides $dep"; exit 1; }
+            done
+            rpm -i --nodeps rpm/*.rpm
             rpm -ql wallpaper-rs
             wprs-ctl --version
           '

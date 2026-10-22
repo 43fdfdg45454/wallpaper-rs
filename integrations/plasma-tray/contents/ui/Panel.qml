@@ -74,9 +74,7 @@ ColumnLayout {
     OutputRow {
         daemon: panel.daemon
         name: ""
-        info: ({
-                "fit": Object.values(panel.current.outputs ?? {})[0]?.fit
-            })
+        info: Object.values(panel.current.outputs ?? {})[0] ?? {}
     }
 
     Settings {

@@ -20,12 +20,13 @@ struct Probe {
 
 fn main() -> Result<(), AnyError> {
     let mut args = std::env::args().skip(1);
-    let target = args.next().ok_or("usage: probe <object-serial | node:ID> [timeout-seconds]")?;
+    let target = args.next().ok_or("usage: probe <object-serial | node:ID> [timeout-seconds] [--hold]")?;
     let (serial, node_id) = match target.strip_prefix("node:") {
         Some(id) => (None, Some(id.parse::<u32>()?)),
         None => (Some(target.parse::<u64>()?), None),
     };
     let timeout: u64 = args.next().map(|s| s.parse()).transpose()?.unwrap_or(5);
+    let hold = args.next().as_deref() == Some("--hold");
 
     pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None)?;
@@ -66,8 +67,12 @@ fn main() -> Result<(), AnyError> {
             if probe.result.is_some() || data.chunk().size() == 0 || stride == 0 {
                 return;
             }
-            probe.result = Some(kpipewire::describe(data, &probe.format, stride, probe.buffers));
-            quit(&weak_loop);
+            let result = kpipewire::describe(data, &probe.format, stride, probe.buffers);
+            match hold && !result.starts_with("error:") {
+                true => println!("{result}"),
+                false => quit(&weak_loop),
+            }
+            probe.result = Some(result);
         })
         .register()?;
 
@@ -84,7 +89,9 @@ fn main() -> Result<(), AnyError> {
     match probe.borrow_mut().result.take() {
         Some(result) if result.starts_with("error:") => Err(result.into()),
         Some(result) => {
-            println!("{result}");
+            if !hold {
+                println!("{result}");
+            }
             Ok(())
         }
         None => Err(format!("no frame received within {timeout}s").into()),

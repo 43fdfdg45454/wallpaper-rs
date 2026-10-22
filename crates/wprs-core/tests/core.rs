@@ -113,6 +113,17 @@ fn hex_colors() {
     assert_eq!(parse_hex_color("#gg0000"), None);
 }
 
+#[test]
+fn uri_schemes() {
+    let scheme = wprs_core::dbus::uri_scheme;
+    assert_eq!(scheme("http://127.0.0.1:9/x.webm"), Some("http"));
+    assert_eq!(scheme("file:///tmp/a.png"), Some("file"));
+    assert_eq!(scheme("svn+ssh:x"), Some("svn+ssh"));
+    assert_eq!(scheme("/tmp/a:b.png"), None);
+    assert_eq!(scheme("a b:c.png"), None);
+    assert_eq!(scheme("1x:y"), None);
+}
+
 fn mode(path: &Path) -> u32 {
     std::fs::metadata(path).unwrap().permissions().mode() & 0o777
 }

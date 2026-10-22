@@ -31,7 +31,7 @@ impl Config {
         let mut config: Config =
             toml::from_str(&text).map_err(|source| ConfigError::Parse { path: path.into(), source })?;
         for key in config.normalize() {
-            tracing::warn!(key, path = %path.display(), "invalid value replaced by the nearest valid one");
+            tracing::warn!(key, "invalid value replaced by the nearest valid one");
         }
         Ok(config)
     }
@@ -42,9 +42,8 @@ impl Config {
 
     pub fn backup_broken(path: &Path) -> Result<PathBuf, ConfigError> {
         let data = std::fs::read(path).map_err(|source| ConfigError::Read { path: path.into(), source })?;
-        let mut backup = path.as_os_str().to_owned();
-        backup.push(".broken");
-        write_private(backup.as_ref(), &data).map(|()| backup.into())
+        let backup = path.with_added_extension("broken");
+        write_private(&backup, &data).map(|()| backup)
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::readback::TargetLimits;
+use crate::readback::{MAX_READBACK_BYTES, TargetLimits};
 use crate::shader::{bind_group_layout, pipelines};
 use crate::texture::{GpuImage, create_image};
 use crate::{RenderError, log_allowed};
@@ -53,7 +53,7 @@ impl Renderer {
         let granted = device.limits();
         let limits = TargetLimits {
             max_edge: granted.max_texture_dimension_2d,
-            max_buffer_size: granted.max_buffer_size,
+            max_buffer_size: granted.max_buffer_size.min(MAX_READBACK_BYTES),
         };
         let layout = bind_group_layout(&device);
         let [opaque, blended] = pipelines(&device, &layout);

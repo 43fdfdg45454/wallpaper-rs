@@ -88,10 +88,6 @@ impl Config {
         self.outputs.retain(|_, o| *o != OutputConfig::default());
         &mut self.default
     }
-
-    pub fn images(&self) -> impl Iterator<Item = &PathBuf> {
-        std::iter::once(&self.default).chain(self.outputs.values()).filter_map(|o| o.image.as_ref())
-    }
 }
 
 pub fn parse_hex_color(s: &str) -> Option<[u8; 3]> {

@@ -71,16 +71,19 @@ Item {
         }
         owned = target;
         const values = (reply.values ?? []).map(v => Number(v?.value ?? v));
-        const node = values[0] ?? 0, serial = values[1] ?? 0;
-        if (broken || node !== view.node || serial !== view.serial) {
-            view.node = node;
-            view.serial = serial;
-            view.active = false;
-            view.active = true;
-        }
+        show(values[0] ?? 0, values[1] ?? 0, broken);
         send("SetOutputCovered", [target, covered]);
         if (w !== pixels.width || h !== pixels.height)
             resize.restart();
+    }
+
+    function show(node, serial, reconnect) {
+        if (!reconnect && node === view.node && serial === view.serial)
+            return;
+        view.node = node;
+        view.serial = serial;
+        view.active = false;
+        view.active = true;
     }
 
     function failed(reply) {
@@ -125,6 +128,17 @@ Item {
                 else
                     source.nodeId = view.node;
             }
+        }
+    }
+
+    DBus.SignalWatcher {
+        service: "io.github.wallpaper_rs.Daemon"
+        path: "/io/github/wallpaper_rs/Daemon"
+        iface: "io.github.wallpaper_rs.Daemon1"
+
+        function dbusStreamChanged(target, node, serial) {
+            if (target === stream.owned)
+                stream.show(Number(node), Number(serial), true);
         }
     }
 

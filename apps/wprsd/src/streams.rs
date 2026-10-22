@@ -1,12 +1,11 @@
 use crate::daemon::{Daemon, State, output_name};
+use crate::wallpaper::Upload;
 use std::collections::HashMap;
 use wprs_core::dbus;
 use wprs_pipewire::Reply;
 use zbus::fdo;
 
 pub(crate) const HELD: &str = "";
-const ROW_ALIGNMENT: u64 = 256;
-const MAX_READBACK_BYTES: u64 = 256 << 20;
 
 #[derive(Default)]
 pub(crate) struct Claim {
@@ -18,6 +17,7 @@ pub(crate) struct Claim {
 pub(crate) struct OutputInfo {
     pub(crate) size: (u32, u32),
     pub(crate) claims: HashMap<String, Claim>,
+    pub(crate) uploaded: Option<Upload>,
 }
 
 impl OutputInfo {
@@ -32,16 +32,13 @@ impl OutputInfo {
 
 impl Daemon {
     pub fn check_request(&self, output: &str, width: u32, height: u32) -> fdo::Result<String> {
-        let max = self.max_edge.min(dbus::MAX_STREAM_EDGE);
-        let edges = (1..=max).contains(&width) && (1..=max).contains(&height);
-        let bytes = || (u64::from(width) * 4).next_multiple_of(ROW_ALIGNMENT) * u64::from(height);
-        let mib = MAX_READBACK_BYTES >> 20;
+        let max = self.compositor.max_edge().min(dbus::MAX_STREAM_EDGE);
+        let fits = width.max(height) <= max && self.compositor.check_target(width, height).is_ok();
         let error = || {
-            fdo::Error::InvalidArgs(format!(
-                "invalid size {width}x{height} (edges 1..={max}, at most {mib} MiB)"
-            ))
+            let limits = format!("edges 1..={max} and one frame within the GPU readback limit");
+            fdo::Error::InvalidArgs(format!("invalid size {width}x{height} ({limits})"))
         };
-        (edges && bytes() <= MAX_READBACK_BYTES).then_some(()).ok_or_else(error)?;
+        fits.then_some(()).ok_or_else(error)?;
         output_name(output)
     }
 
@@ -70,7 +67,7 @@ impl Daemon {
             |(name, info): (&String, &OutputInfo)| info.claims.contains_key(client).then(|| name.clone());
         let outputs: Vec<String> = st.outputs.iter().filter_map(held).collect();
         if !outputs.is_empty() {
-            tracing::info!(client, "a client left the bus");
+            tracing::debug!(client, "a client left the bus");
         }
         outputs.iter().try_for_each(|output| self.unclaim(&mut st, output, client, u32::MAX))
     }
