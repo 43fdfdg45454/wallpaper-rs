@@ -2,6 +2,7 @@ use crate::bench::SceneCommand;
 use crate::edit::Edits;
 use crate::inputs::Inputs;
 use crate::library::Lib;
+use crate::models::Models;
 use crate::pack::Pack;
 use crate::pkg::Pkg;
 use crate::playlists::Playlist;
@@ -203,6 +204,11 @@ pub enum Command {
         about = "Edit images without changing their files; needs no daemon except for preview"
     )]
     Edit(Edits),
+    #[command(
+        subcommand,
+        about = "Download, check and remove the depth model and its runtime; needs no daemon"
+    )]
+    Models(Models),
     #[command(subcommand, about = "Build, sign and check .wpak packages; needs no daemon")]
     Pack(Pack),
     #[command(subcommand, about = "Operate a package repository; needs no daemon")]

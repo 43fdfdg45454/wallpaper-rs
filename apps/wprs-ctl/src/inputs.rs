@@ -76,5 +76,7 @@ fn status(reply: InputsReply) -> String {
             list(used.filter_map(|(on, name)| on.then_some(name)))
         )
     }));
+    let follows = |output: &String| format!("{output} shows an image whose parallax follows the pointer");
+    lines.extend(reply.parallax.iter().map(follows));
     lines.join("\n") + "\n"
 }

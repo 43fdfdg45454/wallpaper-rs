@@ -31,6 +31,7 @@ mod profiles;
 mod profiles1;
 mod providers;
 mod providers1;
+mod relief;
 mod remote;
 mod repos;
 mod repos1;
@@ -156,6 +157,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
     tokio::spawn(watch::battery(daemon.clone()));
     tokio::spawn(watch::screen_lock(connection.clone(), daemon.clone()));
     tokio::spawn(watch::properties(connection.clone(), daemon.clone()));
+    tokio::spawn(watch::motion(connection.clone(), daemon.clone()));
     tokio::spawn(bus::announce_streams(connection.clone(), daemon.clone()));
     tokio::spawn(playback::run(daemon.clone()));
     tokio::spawn(profiles1::follow(daemon.clone()));

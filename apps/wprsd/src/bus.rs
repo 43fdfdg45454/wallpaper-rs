@@ -132,6 +132,8 @@ impl Daemon {
                 credit,
                 edited: info.edited(),
                 screen: info.screen.clone(),
+                parallax: s.parallax,
+                frames: s.frames,
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)

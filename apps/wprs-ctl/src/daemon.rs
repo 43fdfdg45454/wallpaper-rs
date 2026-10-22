@@ -83,7 +83,7 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Pkg(command) => pkg::run(client, command).await?,
         Command::Input(command) => inputs::run(client, command).await?,
         Command::Server(command) => server::run(client, command).await?,
-        Command::Pack(_) | Command::Repo(_) | Command::Edit(_) | Command::Scene(_) => {
+        Command::Pack(_) | Command::Repo(_) | Command::Edit(_) | Command::Scene(_) | Command::Models(_) => {
             unreachable!("local commands never connect")
         }
     }

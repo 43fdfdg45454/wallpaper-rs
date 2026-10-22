@@ -45,6 +45,10 @@ model! {
         pub edited: bool,
         #[serde(default)]
         pub screen: Option<Screen>,
+        #[serde(default)]
+        pub parallax: bool,
+        #[serde(default)]
+        pub frames: u64,
     }
 
     #[derive(Copy, Eq, Hash)]

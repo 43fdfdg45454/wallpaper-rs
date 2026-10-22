@@ -49,7 +49,7 @@ fn columns(m: &Matrix) -> [[f32; 4]; 3] {
     std::array::from_fn(|j| [m[0][j] as f32, m[1][j] as f32, m[2][j] as f32, 0.0])
 }
 
-fn gate(mask: &Mask, brushes: &mut u32) -> Gate {
+fn gate(mask: &Mask, brushes: &mut u32, deep: bool) -> Gate {
     let mut g = Gate::zeroed();
     let invert = match *mask {
         Mask::Linear { from, to, invert } => {
@@ -64,6 +64,10 @@ fn gate(mask: &Mask, brushes: &mut u32) -> Gate {
             (g.kind, g.a) = (3, [range[0], range[1], soft.max(1e-3), 0.0]);
             invert
         }
+        Mask::Depth { range, soft, invert } => {
+            (g.kind, g.a) = (if deep { 5 } else { 6 }, [range[0], range[1], soft.max(1e-3), 0.0]);
+            invert
+        }
         Mask::Brush { invert, .. } => {
             (g.kind, g.channel, *brushes) = (4, *brushes, *brushes + 1);
             invert
@@ -73,14 +77,14 @@ fn gate(mask: &Mask, brushes: &mut u32) -> Gate {
     g
 }
 
-pub(crate) fn plan(edit: &Edit, image: (u32, u32), size: (u32, u32)) -> Plan {
+pub(crate) fn plan(edit: &Edit, image: (u32, u32), size: (u32, u32), deep: bool) -> Plan {
     let mut stack = Stack::zeroed();
     stack.geo = columns(&edit.geometry.matrix(image));
     let ratio = |(w, h): (u32, u32)| w.max(1) as f32 / h.max(1) as f32;
     (stack.aspect, stack.ratio) = (ratio(image), ratio(size));
     let mut brushes = 0;
     for (i, mask) in edit.masks.values().enumerate() {
-        stack.masks[i] = gate(mask, &mut brushes);
+        stack.masks[i] = gate(mask, &mut brushes, deep);
     }
     let (mut lut, mut rows, mut blurs, mut count) = (Vec::new(), 0, Vec::new(), 0);
     let long = size.0.max(size.1) as f32;

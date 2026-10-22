@@ -85,7 +85,8 @@ pub fn export(path: &Path, out: &Path, quality: u8, size: Option<&str>) -> Resul
     let (uv, [x, y, cw, ch]) = (UvRect::compute(Fit::Fill, (w, h), size), edit.geometry.region());
     let [ux, uy, uw, uh] = [uv.offset[0], uv.offset[1], uv.scale[0], uv.scale[1]];
     edit.geometry.crop = Some([x + ux * cw, y + uy * ch, uw * cw, uh * ch]);
-    let pixels = renderer.read_image(&renderer.develop(&image, &edit, size)?)?;
+    let depth = if edit.needs_depth() { crate::depth::map(path, &edit)? } else { None };
+    let pixels = renderer.read_image(&renderer.develop(&image, &edit, depth.as_ref(), size)?)?;
     match out.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref() {
         Some("png") => pixels.save_with_format(out, ImageFormat::Png)?,
         Some("jpg" | "jpeg") => {

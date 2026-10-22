@@ -87,6 +87,7 @@ impl Renderer {
         let view = frame.texture.create_view(&Default::default());
         let pipelines = target.pipelines.as_ref().unwrap_or(&self.pipelines);
         self.scoped(|| {
+            let pipelines = (pipelines, target.config.format);
             let encoder = self.encode(&view, &mut target.slots, layers, (width, height), pipelines);
             self.queue.submit([encoder.finish()]);
         })

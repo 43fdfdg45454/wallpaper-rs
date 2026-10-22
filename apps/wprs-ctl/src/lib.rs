@@ -2,7 +2,9 @@ mod account;
 mod bench;
 mod calls;
 pub mod cli;
+mod consent;
 mod daemon;
+mod depth;
 pub mod edit;
 mod editing;
 pub mod input;
@@ -10,6 +12,7 @@ pub mod inputs;
 pub mod items;
 pub mod keys;
 pub mod library;
+pub mod models;
 pub mod pack;
 pub mod pkg;
 pub mod playlists;
@@ -50,6 +53,7 @@ pub fn main() -> ExitCode {
         Command::Scene(command) => bench::run(command),
         Command::Repo(command) => repo::run(command),
         Command::Edit(command) => edit::run(command),
+        Command::Models(command) => models::run(command),
         command => tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()

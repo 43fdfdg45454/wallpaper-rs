@@ -1,6 +1,9 @@
 mod feed;
 mod frames;
+mod iio;
+mod motion;
 mod output;
+mod parallax;
 mod players;
 mod power;
 mod scene;
@@ -19,7 +22,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime};
 use wprs_core::{Edit, Fit, Place};
 use wprs_pipewire::Exporter;
-use wprs_render::{RenderError, Renderer, TargetLimits};
+use wprs_render::{DepthMap, RenderError, Renderer, TargetLimits};
 use wprs_scene::{AudioFrame, PointerState, ScriptOutputs, Values};
 use wprs_wayland::Window;
 
@@ -52,6 +55,14 @@ pub struct Picture {
     pub pixels: Option<Arc<RgbaImage>>,
     pub edit: Option<Arc<Edit>>,
     pub place: Place,
+    pub depth: Option<Depth>,
+}
+
+#[derive(Clone)]
+pub struct Depth {
+    pub file: PathBuf,
+    pub modified: Option<SystemTime>,
+    pub map: Arc<DepthMap>,
 }
 
 impl Content {
@@ -67,7 +78,10 @@ impl Content {
 
     fn same_look(&self, other: &Content) -> bool {
         let look = |c: &Content| match c {
-            Content::Image(p) => Some((p.edit.clone(), p.place.clone())),
+            Content::Image(p) => {
+                let depth = p.depth.as_ref().map(|d| (d.file.clone(), d.modified));
+                Some((p.edit.clone(), p.place.clone(), depth))
+            }
             _ => None,
         };
         let values = |c: &Content| match c {
@@ -114,6 +128,7 @@ pub struct Settings {
     pub max_fps: u32,
     pub volume: f64,
     pub muted: bool,
+    pub software_parallax: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
@@ -121,6 +136,8 @@ pub struct OutputStatus {
     pub kind: &'static str,
     pub playing: bool,
     pub error: Option<String>,
+    pub parallax: bool,
+    pub frames: u64,
 }
 
 enum Command {
@@ -130,6 +147,7 @@ enum Command {
     Frame(String),
     SetActive(String, bool),
     Settings(Settings),
+    Calm(bool),
     Power(bool),
     Wake,
     Quit,
@@ -198,6 +216,10 @@ impl Compositor {
 
     pub fn set_settings(&self, settings: Settings) {
         self.send(Command::Settings(settings))
+    }
+
+    pub fn calm(&self, calm: bool) {
+        self.send(Command::Calm(calm))
     }
 
     pub fn set_power(&self, on_battery: bool) {

@@ -1,5 +1,6 @@
 use crate::develop::Developer;
 use crate::draw::TARGET_FORMAT;
+use crate::parallax::Reliefs;
 use crate::readback::{MAX_READBACK_BYTES, TargetLimits};
 use crate::shader::{bind_group_layout, pipelines};
 use crate::texture::{GpuImage, create_image};
@@ -22,6 +23,7 @@ pub struct Renderer {
     adapter: String,
     pub(crate) limits: TargetLimits,
     pub(crate) developer: OnceLock<Developer>,
+    pub(crate) reliefs: OnceLock<Reliefs>,
     pub(crate) scene: OnceLock<crate::scene::Pipes>,
 }
 
@@ -86,6 +88,7 @@ impl Renderer {
             adapter: format!("{} ({:?})", info.name, info.backend),
             limits,
             developer: OnceLock::new(),
+            reliefs: OnceLock::new(),
             scene: OnceLock::new(),
             layout,
             device,

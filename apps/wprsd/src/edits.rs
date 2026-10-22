@@ -167,11 +167,13 @@ async fn expire(daemon: Weak<Daemon>, path: PathBuf) {
 
 pub fn start(daemon: &Arc<Daemon>) {
     let Ok(fd) = inotify::init(CreateFlags::CLOEXEC) else { return };
-    let edits = daemon.store.data.join("edits");
-    if private_dir(&edits).is_ok() {
-        inotify::add_watch(&fd, &edits, flags())
-            .map(drop)
-            .unwrap_or_else(|e| tracing::debug!("cannot watch: {e}"));
+    let (data, cache) = (&daemon.store.data, &daemon.store.cache);
+    for dir in [data.join("edits"), data.join("depth"), cache.join("depth")] {
+        if private_dir(&dir).is_ok() {
+            inotify::add_watch(&fd, &dir, flags())
+                .map(drop)
+                .unwrap_or_else(|e| tracing::debug!("cannot watch: {e}"));
+        }
     }
     let Ok(reader) = fd.try_clone() else { return };
     daemon.state().sidecars.fd = Some(fd);
@@ -190,8 +192,9 @@ fn read(fd: &OwnedFd, daemon: &Weak<Daemon>) {
             Err(_) => return,
         };
         let name = event.file_name().map(|n| n.to_bytes()).unwrap_or_default();
-        let hashed = name.len() == 69 && name[..64].iter().all(u8::is_ascii_hexdigit);
-        if !name.ends_with(b".wprs.json") && !(hashed && name.ends_with(b".json")) {
+        let hex = name.len() >= 68 && name[..64].iter().all(u8::is_ascii_hexdigit);
+        let edit = name.ends_with(b".wprs.json") || hex && name.len() == 69 && name.ends_with(b".json");
+        if !edit && !name.ends_with(b".depth.png") && !(hex && name.ends_with(b".png")) {
             continue;
         }
         let Some(daemon) = daemon.upgrade() else { return };

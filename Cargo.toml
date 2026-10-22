@@ -12,6 +12,7 @@ members = [
     "crates/wprs-library",
     "crates/wprs-client",
     "crates/wprs-wayland",
+    "crates/wprs-depth",
     "crates/wprs-audio",
     "crates/wprs-script",
     "crates/wprs-sync",
@@ -40,6 +41,7 @@ wprs-scene = { path = "crates/wprs-scene" }
 wprs-library = { path = "crates/wprs-library" }
 wprs-client = { path = "crates/wprs-client" }
 wprs-wayland = { path = "crates/wprs-wayland" }
+wprs-depth = { path = "crates/wprs-depth", default-features = false }
 wprs-audio = { path = "crates/wprs-audio" }
 wprs-script = { path = "crates/wprs-script" }
 wprs-sync = { path = "crates/wprs-sync" }
@@ -101,6 +103,9 @@ getrandom = "0.4"
 openidconnect = { version = "4.0.1", default-features = false }
 tokio-util = { version = "0.7", features = ["io"] }
 x11rb = { version = "0.14", default-features = false, features = ["dl-libxcb", "randr", "shape"] }
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic"] }
+flate2 = "1"
+tar = { version = "0.4", default-features = false }
 realfft = "3.5"
 rtrb = "0.4"
 rquickjs = { version = "0.14", features = ["loader"] }

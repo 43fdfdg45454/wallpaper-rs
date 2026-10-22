@@ -1,10 +1,13 @@
+use super::depth::Look;
 use super::parse::{invalid, numbers, usage};
 use super::tool::Turn;
 use super::{Edit, Mask, Span};
 use serde::Deserialize;
 
-pub const ACTIONS: [&str; 10] =
-    ["set", "crop", "curve", "blur", "vignette", "overlay", "mask", "order", "span", "reset"];
+pub const ACTIONS: [&str; 12] = [
+    "set", "crop", "curve", "blur", "vignette", "overlay", "mask", "order", "span", "reset", "depth",
+    "parallax",
+];
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
@@ -70,6 +73,24 @@ pub enum Action {
         #[serde(default)]
         ids: Vec<String>,
     },
+    Depth {
+        near: Option<f32>,
+        far: Option<f32>,
+        gamma: Option<f32>,
+        smooth: Option<u32>,
+        dilate: Option<u32>,
+        input: Option<u32>,
+    },
+    Parallax {
+        source: Option<String>,
+        strength: Option<f32>,
+        focus: Option<f32>,
+        steps: Option<u32>,
+        smoothing: Option<u32>,
+        overscan: Option<f32>,
+        #[serde(default)]
+        off: bool,
+    },
 }
 
 impl Edit {
@@ -127,6 +148,13 @@ impl Edit {
             Action::Reset { ids } if ids.is_empty() => {
                 *self = Edit { source: self.source.clone(), ..Edit::default() };
                 Ok(())
+            }
+            Action::Depth { near, far, gamma, smooth, dilate, input } => {
+                self.depth([near, far, gamma], [smooth, dilate, input]);
+                Ok(())
+            }
+            Action::Parallax { source, strength, focus, steps, smoothing, overscan, off } => {
+                self.parallax(Look { source, strength, focus, steps, smoothing, overscan, off })
             }
             Action::Reset { ids } => {
                 let before = self.ops.len();

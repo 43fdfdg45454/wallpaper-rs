@@ -1,5 +1,6 @@
 use crate::color::LUT;
 use crate::decode::{scaled, shown};
+use crate::parallax::{DepthMap, halves};
 use crate::shader::{bind_group_layout, module, pipeline};
 use crate::stack::{Plan, plan};
 use crate::texture::{GpuImage, create_texture, gpu_image, texture};
@@ -11,11 +12,11 @@ use wgpu::{TextureUsages as Usage, TextureView};
 use wprs_core::{Edit, UvRect};
 
 pub(crate) struct Developer {
-    develop: wgpu::RenderPipeline,
+    pub(crate) develop: wgpu::RenderPipeline,
     output: wgpu::RenderPipeline,
     blur: [wgpu::RenderPipeline; 2],
-    layout: wgpu::BindGroupLayout,
-    format: Format,
+    pub(crate) layout: wgpu::BindGroupLayout,
+    pub(crate) format: Format,
 }
 
 impl Developer {
@@ -24,7 +25,7 @@ impl Developer {
         let half = offered.allowed_usages.contains(Usage::RENDER_ATTACHMENT)
             && offered.flags.contains(wgpu::TextureFormatFeatureFlags::FILTERABLE);
         let format = if half { Format::Rgba16Float } else { Format::Rgba8UnormSrgb };
-        let layout = bind_group_layout(&r.device, 4);
+        let layout = bind_group_layout(&r.device, 5);
         let (develop, kawase) =
             (module(&r.device, include_str!("develop.wgsl")), module(&r.device, include_str!("kawase.wgsl")));
         let make =
@@ -54,15 +55,25 @@ impl Renderer {
         ((fw * factor).round().max(1.0) as u32, (fh * factor).round().max(1.0) as u32)
     }
 
-    pub fn develop(&self, image: &RgbaImage, edit: &Edit, size: (u32, u32)) -> Result<GpuImage, RenderError> {
+    pub(crate) fn developer(&self) -> &Developer {
+        self.developer.get_or_init(|| Developer::new(self))
+    }
+
+    pub fn develop(
+        &self,
+        image: &RgbaImage,
+        edit: &Edit,
+        depth: Option<&DepthMap>,
+        size: (u32, u32),
+    ) -> Result<GpuImage, RenderError> {
         self.check_target(size.0, size.1)?;
         let frame = edit.geometry.frame(image.dimensions());
         let factor = (size.0 as f32 / frame.0 as f32).max(size.1 as f32 / frame.1 as f32);
         let (source, mut plan) =
-            (scaled(image, factor, self.max_edge()), plan(edit, image.dimensions(), size));
+            (scaled(image, factor, self.max_edge()), plan(edit, image.dimensions(), size, depth.is_some()));
         self.scoped(|| {
-            let d = self.developer.get_or_init(|| Developer::new(self));
-            let [src, lut, aux] = self.inputs(&source, &plan);
+            let d = self.developer();
+            let [src, lut, aux, dep] = self.inputs(&source, &plan, depth);
             let mut encoder = self.device.create_command_encoder(&Default::default());
             let ends: Vec<u32> = plan.blurs.iter().map(|(i, _)| *i).chain([plan.stack.end]).collect();
             let pair: Vec<_> =
@@ -75,21 +86,21 @@ impl Renderer {
             for (k, end) in ends.into_iter().enumerate() {
                 (plan.stack.start, plan.stack.end) = (start, end);
                 let out = &pair[k % 2];
-                let views = [&current, blurred.as_ref().unwrap_or(&current), &lut, &aux];
+                let views = [&current, blurred.as_ref().unwrap_or(&current), &lut, &aux, &dep];
                 self.pass(&mut encoder, &d.develop, &d.layout, bytemuck::bytes_of(&plan.stack), &views, out);
                 blurred =
                     plan.blurs.get(k).map(|(_, radius)| self.kawase(&mut encoder, d, out, &chain, *radius));
                 (current, start) = (view(out), end);
             }
             let out = self.target(size, Format::Rgba8UnormSrgb, Usage::COPY_SRC);
-            let views = [&current, &current, &lut, &aux];
+            let views = [&current, &current, &lut, &aux, &dep];
             self.pass(&mut encoder, &d.output, &d.layout, bytemuck::bytes_of(&plan.stack), &views, &out);
             self.queue.submit([encoder.finish()]);
             gpu_image(out)
         })
     }
 
-    fn inputs(&self, source: &RgbaImage, plan: &Plan) -> [TextureView; 3] {
+    fn inputs(&self, source: &RgbaImage, plan: &Plan, depth: Option<&DepthMap>) -> [TextureView; 4] {
         let image =
             |i: &RgbaImage, format| view(&texture(self, i.as_raw(), i.dimensions(), i.width() * 4, format));
         let src = image(source, Format::Rgba8UnormSrgb);
@@ -97,10 +108,22 @@ impl Renderer {
         let curves = bytemuck::cast_slice(if *rows == 0 { &blank } else { curves });
         let lut = texture(self, curves, (LUT as u32, (*rows).max(1)), 8 * LUT as u32, Format::Rgba16Float);
         let aux = plan.brush.as_ref().map_or_else(|| src.clone(), |b| image(b, Format::Rgba8Unorm));
-        [src, view(&lut), aux]
+        let dep = depth.map_or_else(
+            || src.clone(),
+            |m| {
+                view(&texture(
+                    self,
+                    bytemuck::cast_slice(&halves(m)),
+                    m.dimensions(),
+                    m.width() * 2,
+                    Format::R16Float,
+                ))
+            },
+        );
+        [src, view(&lut), aux, dep]
     }
 
-    fn target(&self, (w, h): (u32, u32), format: Format, extra: Usage) -> wgpu::Texture {
+    pub(crate) fn target(&self, (w, h): (u32, u32), format: Format, extra: Usage) -> wgpu::Texture {
         let usage = Usage::RENDER_ATTACHMENT | Usage::TEXTURE_BINDING | extra;
         create_texture(&self.device, "wprs-render develop", (w.max(1), h.max(1)), format, usage)
     }
@@ -128,7 +151,7 @@ impl Renderer {
         view(&chain[0])
     }
 
-    fn pass(
+    pub(crate) fn pass(
         &self,
         encoder: &mut Encoder,
         pipeline: &wgpu::RenderPipeline,

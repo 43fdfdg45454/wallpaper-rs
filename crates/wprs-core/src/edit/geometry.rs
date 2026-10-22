@@ -70,7 +70,8 @@ impl Edit {
 
     pub fn is_empty(&self) -> bool {
         let unused = self.ops.is_empty() && self.masks.is_empty() && self.outputs.is_empty();
-        unused && self.span.is_none() && self.geometry == Default::default()
+        let still = self.span.is_none() && self.depth.is_none() && self.parallax.is_none();
+        unused && still && self.geometry == Default::default()
     }
 
     pub fn crop_for(&self, output: &str, identity: Option<&str>) -> Option<[f32; 4]> {

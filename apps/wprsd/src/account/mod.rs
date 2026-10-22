@@ -16,6 +16,7 @@ mod upload;
 mod views;
 mod watch;
 
+pub use local::DOWNLOADS;
 pub use watch::start;
 
 use crate::compositor::lock;

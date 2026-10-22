@@ -47,7 +47,9 @@ fn slot<'a>(doc: &'a mut Value, key: &str) -> Option<&'a mut Value> {
             Value::Array(ops) => ops.iter_mut().find(|op| op["id"] == part)?,
             Value::Object(map) => match (last, part) {
                 (true, _) => map.entry(part).or_insert(Value::Null),
-                (false, "span") => map.entry(part).or_insert_with(|| serde_json::json!({})),
+                (false, "span" | "depth" | "parallax") => {
+                    map.entry(part).or_insert_with(|| serde_json::json!({}))
+                }
                 _ => map.get_mut(part)?,
             },
             _ => return None,

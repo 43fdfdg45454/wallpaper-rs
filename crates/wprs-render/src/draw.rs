@@ -62,7 +62,8 @@ impl Renderer {
     ) -> Result<R, RenderError> {
         let rendered = self.scoped(|| {
             let size = target.size();
-            let mut encoder = self.encode(&target.view, &mut target.slots, layers, size, &self.pipelines);
+            let pipelines = (&self.pipelines, TARGET_FORMAT);
+            let mut encoder = self.encode(&target.view, &mut target.slots, layers, size, pipelines);
             let layout = wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(padded_row_bytes(size.0)),
@@ -82,11 +83,12 @@ impl Renderer {
         slots: &mut Vec<Slot>,
         layers: &[Layer<'_>],
         size: (u32, u32),
-        [opaque, blended]: &[wgpu::RenderPipeline; 2],
+        (flat, format): (&[wgpu::RenderPipeline; 2], wgpu::TextureFormat),
     ) -> wgpu::CommandEncoder {
         let visible = || layers.iter().filter(|l| l.opacity > 0.0);
         visible().enumerate().for_each(|(i, layer)| self.bind(slots, i, layer, size));
         slots.truncate(visible().count());
+        let deep = slots.iter().any(Slot::deep).then(|| self.relief_pipelines(format));
         let mut encoder = self.device.create_command_encoder(&Default::default());
         let ops =
             wgpu::Operations { load: wgpu::LoadOp::Clear(wgpu::Color::BLACK), store: wgpu::StoreOp::Store };
@@ -99,6 +101,7 @@ impl Renderer {
         });
         for (i, (slot, layer)) in slots.iter().zip(visible()).enumerate() {
             let fading = i > 0 && layer.opacity < 1.0;
+            let [opaque, blended] = deep.as_ref().filter(|_| slot.deep()).unwrap_or(flat);
             pass.set_pipeline(if fading { blended } else { opaque });
             if fading {
                 let c = f64::from(layer.opacity);

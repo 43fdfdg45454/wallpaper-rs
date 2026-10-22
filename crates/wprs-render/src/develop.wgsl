@@ -8,7 +8,8 @@ struct VertexOut { @builtin(position) position: vec4<f32>, @location(0) uv: vec2
 @group(0) @binding(2) var blr: texture_2d<f32>;
 @group(0) @binding(3) var lut: texture_2d<f32>;
 @group(0) @binding(4) var aux: texture_2d<f32>;
-@group(0) @binding(5) var smp: sampler;
+@group(0) @binding(5) var dep: texture_2d<f32>;
+@group(0) @binding(6) var smp: sampler;
 
 const LUMA = vec3<f32>(0.2126, 0.7152, 0.0722);
 
@@ -63,6 +64,8 @@ fn mask(i: u32, p: vec2<f32>, c: vec3<f32>) -> f32 {
         case 2u: { v = 1.0 - smoothstep(1.0 - k.b.x, 1.0, length((p - k.a.xy) / max(k.a.zw, vec2(1e-4)))); }
         case 3u: { v = band(dot(enc(c), LUMA), k.a); }
         case 4u: { v = textureSampleLevel(aux, smp, p, 0.0)[k.channel]; }
+        case 5u: { v = band(textureSampleLevel(dep, smp, p, 0.0).r, k.a); }
+        case 6u: { return 0.0; }
         default: {}
     }
     return select(v, 1.0 - v, k.invert == 1u);

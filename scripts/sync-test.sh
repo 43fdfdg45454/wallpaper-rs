@@ -123,6 +123,12 @@ b server sync --wait >/dev/null
 [ "$(b lib search tag:evening-glow --json | jq_ "r['total']")" = 1 ] || fail "the tag did not arrive: $(b lib search '')"
 [ "$(b playlist show "Quiet evenings" --json | jq_ "r['total']")" = 1 ] || fail "the playlist entry did not arrive"
 [ "$(value b "['devices'][0]['label']")" = Desk ] || fail "device names: $(b server status --json)"
+b config models.allow_download false
+a config pause.on_battery false
+for d in a b a; do "$d" server sync --wait >/dev/null; done
+[ "$(b config pause.on_battery)" = "pause.on_battery = false" ] || fail "a setting did not arrive"
+[ "$(a config models.allow_download)/$(b config models.allow_download)" = \
+  "models.allow_download = true/models.allow_download = false" ] || fail "the download switch left its device"
 echo "sync checks passed"
 
 sql() { python3 -c "import sqlite3, sys; print(*sqlite3.connect(sys.argv[1]).execute(sys.argv[2]).fetchone())" \

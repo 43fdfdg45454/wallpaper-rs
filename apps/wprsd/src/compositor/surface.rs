@@ -110,11 +110,13 @@ impl State {
     }
 
     pub(super) fn paint_backdrops(&mut self, now: Instant) {
+        let steps = self.relief_limits().map(|(steps, _)| steps);
         for output in self.outputs.values_mut() {
+            let moved = steps.map(|steps| (output.offset, steps));
             if let Sink::Surface(screen) = &mut output.sink
                 && screen.due.is_some_and(|due| due <= now)
                 && let Err(e) =
-                    screen.backdrop(&self.renderer, &[output.shown.layer(&self.players, 1.0)], now)
+                    screen.backdrop(&self.renderer, &[output.shown.layer(&self.players, 1.0, moved)], now)
             {
                 tracing::warn!("cannot render the root window background: {e:#}");
             }

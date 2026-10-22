@@ -1,3 +1,4 @@
+use crate::account::DOWNLOADS;
 use crate::apply::target_output;
 use crate::daemon::Daemon;
 use crate::error::{Error, Result, invalid};
@@ -68,8 +69,8 @@ impl Daemon {
             sections.map(|(name, o)| (name, content(o, &items))).collect();
         let text = |value: Value| value.as_str().map_or_else(|| value.to_string(), String::from);
         let options = serde_json::to_value(config.options()).ok().and_then(|v| v.as_object().cloned());
-        let options: BTreeMap<String, String> =
-            options.into_iter().flatten().filter(|_| with_options).map(|(k, v)| (k, text(v))).collect();
+        let options = options.into_iter().flatten().filter(|(k, _)| with_options && k != DOWNLOADS);
+        let options: BTreeMap<String, String> = options.map(|(k, v)| (k, text(v))).collect();
         let (outputs, options) = (stored(&outputs), stored(&options));
         let uid = self.store.write(|lib| {
             match lib.profiles()?.into_iter().find(|p| p.name.eq_ignore_ascii_case(name.trim())) {
@@ -138,7 +139,7 @@ impl Daemon {
             sections.iter_mut().for_each(|(name, section)| section.scenes = c.scene_section(name).clone());
             (c.default, c.profile) = (sections.remove("").unwrap_or_default(), Some(profile.uid.clone()));
             c.outputs = sections;
-            for (key, value) in &profile.options {
+            for (key, value) in profile.options.iter().filter(|(key, _)| *key != DOWNLOADS) {
                 if let Err(e) = c.set_option(key, value) {
                     tracing::warn!(key, "skipped a profile setting: {e}");
                 }

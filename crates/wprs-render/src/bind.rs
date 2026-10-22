@@ -1,3 +1,4 @@
+use crate::parallax::zoom;
 use crate::texture::GpuImage;
 use crate::{Layer, Renderer};
 use bytemuck::{Pod, Zeroable};
@@ -11,13 +12,22 @@ struct Params {
     scale: [f32; 2],
     background: [f32; 4],
     flags: [u32; 4],
+    shift: [f32; 2],
+    focus: f32,
+    steps: f32,
 }
 
 pub(crate) struct Slot {
     uniform: wgpu::Buffer,
     params: Params,
     pub(crate) group: wgpu::BindGroup,
-    key: (u64, bool),
+    key: (u64, bool, Option<u64>),
+}
+
+impl Slot {
+    pub(crate) fn deep(&self) -> bool {
+        self.key.2.is_some()
+    }
 }
 
 impl Renderer {
@@ -25,22 +35,27 @@ impl Renderer {
         let uv = layer.image.map_or(UvRect::compute(Fit::Stretch, (1, 1), (1, 1)), |image| {
             layer.uv.unwrap_or_else(|| UvRect::compute(layer.fit, image.size(), target))
         });
+        let relief = layer.relief.filter(|_| layer.image.is_some());
+        let uv = relief.map_or(uv, |r| zoom(uv, r.overscan));
         let [r, g, b] = layer.background.map(srgb_to_linear);
         let params = Params {
             offset: uv.offset,
             scale: uv.scale,
             background: [r, g, b, 1.0],
             flags: [uv.repeat as u32, layer.image.is_some() as u32, 0, 0],
+            shift: relief.map_or([0.0; 2], |r| r.shift),
+            focus: relief.map_or(0.0, |r| r.focus),
+            steps: relief.map_or(1, |r| r.steps.max(1)) as f32,
         };
-        let image = layer.image.unwrap_or(&self.placeholder);
-        let key = (image.id, uv.repeat);
+        let (image, depth) = (layer.image.unwrap_or(&self.placeholder), relief.map(|r| r.depth));
+        let key = (image.id, uv.repeat, depth.map(|d| d.id));
         let Some(slot) = slots.get_mut(index) else {
             let uniform = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("wprs-render params"),
                 contents: bytemuck::bytes_of(&params),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
-            let group = self.group(&uniform, image, uv.repeat);
+            let group = self.group(&uniform, image, uv.repeat, depth);
             return slots.push(Slot { uniform, params, group, key });
         };
         if slot.params != params {
@@ -48,24 +63,32 @@ impl Renderer {
             slot.params = params;
         }
         if slot.key != key {
-            slot.group = self.group(&slot.uniform, image, uv.repeat);
+            slot.group = self.group(&slot.uniform, image, uv.repeat, depth);
             slot.key = key;
         }
     }
 
-    fn group(&self, uniform: &wgpu::Buffer, image: &GpuImage, repeat: bool) -> wgpu::BindGroup {
-        let sampler = if repeat { &self.repeat } else { &self.clamp };
+    fn group(
+        &self,
+        uniform: &wgpu::Buffer,
+        image: &GpuImage,
+        repeat: bool,
+        depth: Option<&GpuImage>,
+    ) -> wgpu::BindGroup {
+        let sampler = if repeat && depth.is_none() { &self.repeat } else { &self.clamp };
+        let layout = if depth.is_some() { &self.reliefs().layout } else { &self.layout };
+        let views = std::iter::once(image).chain(depth).map(|i| wgpu::BindingResource::TextureView(&i.view));
+        let resources = std::iter::once(uniform.as_entire_binding())
+            .chain(views)
+            .chain([wgpu::BindingResource::Sampler(sampler)]);
+        let entries: Vec<_> = resources
+            .enumerate()
+            .map(|(i, resource)| wgpu::BindGroupEntry { binding: i as u32, resource })
+            .collect();
         self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("wprs-render bind group"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: uniform.as_entire_binding() },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&image.view),
-                },
-                wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::Sampler(sampler) },
-            ],
+            layout,
+            entries: &entries,
         })
     }
 }
@@ -90,8 +113,14 @@ mod tests {
         let blue = r.upload_rgba(&[0, 0, 255, 255].repeat(4), 2, 2, 8).unwrap();
         let mut target = r.create_target(16, 8).unwrap();
         let mut pixels = Vec::new();
-        let layer =
-            |image, fit, opacity| Layer { image: Some(image), fit, background: [0; 3], opacity, uv: None };
+        let layer = |image, fit, opacity| Layer {
+            image: Some(image),
+            fit,
+            background: [0; 3],
+            opacity,
+            uv: None,
+            relief: None,
+        };
         let mut draw = |layers: &[Layer<'_>]| {
             r.render_layers(&mut target, layers, &mut pixels).unwrap();
             target.slots.iter().map(|s| (s.group.clone(), s.uniform.clone(), s.params)).collect::<Vec<_>>()

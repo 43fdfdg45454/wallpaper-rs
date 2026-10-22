@@ -73,13 +73,22 @@ pub(crate) fn pipelines(
     layout: &wgpu::BindGroupLayout,
     format: wgpu::TextureFormat,
 ) -> [wgpu::RenderPipeline; 2] {
-    let shader = module(device, include_str!("shader.wgsl"));
+    pair(device, layout, &module(device, include_str!("shader.wgsl")), "fs_main", format)
+}
+
+pub(crate) fn pair(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    shader: &wgpu::ShaderModule,
+    entry: &str,
+    format: wgpu::TextureFormat,
+) -> [wgpu::RenderPipeline; 2] {
     let fade = wgpu::BlendComponent {
         src_factor: wgpu::BlendFactor::Constant,
         dst_factor: wgpu::BlendFactor::OneMinusConstant,
         operation: wgpu::BlendOperation::Add,
     };
     [None, Some(wgpu::BlendState { color: fade, alpha: fade })].map(|blend| {
-        pipeline(device, layout, &shader, "fs_main", wgpu::ColorTargetState { blend, ..format.into() })
+        pipeline(device, layout, shader, entry, wgpu::ColorTargetState { blend, ..format.into() })
     })
 }

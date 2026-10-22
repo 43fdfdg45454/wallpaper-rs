@@ -1,5 +1,6 @@
 mod hub;
 mod kwin;
+mod parallax;
 #[cfg(test)]
 mod tests;
 
@@ -13,6 +14,8 @@ use wprs_audio::{Audio, Capture};
 use wprs_core::model::{Input, SceneInputs};
 use wprs_scene::{AudioFrame, PointerState};
 use wprs_wayland::Window;
+
+pub(crate) use parallax::{pointer_over, relief};
 
 const PACE: Duration = Duration::from_millis(16);
 
@@ -32,6 +35,7 @@ pub(crate) struct View {
 pub(crate) struct Control {
     pub(crate) grants: Grants,
     pub(crate) shown: BTreeMap<String, SceneInputs>,
+    pub(crate) parallax: BTreeSet<String>,
     pub(crate) views: BTreeMap<String, View>,
     pub(crate) followed: BTreeSet<String>,
     pub(crate) capturing: bool,

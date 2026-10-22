@@ -5,6 +5,7 @@ mod develop;
 mod device;
 mod draw;
 mod export;
+mod parallax;
 mod readback;
 mod scene;
 mod shader;
@@ -15,6 +16,7 @@ mod texture;
 pub use decode::{decode_image, image_size, needed_edge};
 pub use device::{Display, Renderer};
 pub use draw::Target;
+pub use parallax::{DepthMap, Relief};
 pub use readback::TargetLimits;
 pub use scene::{SceneAssets, SceneStats, SceneView};
 use std::sync::OnceLock;
@@ -51,6 +53,7 @@ pub struct Layer<'a> {
     pub background: [u8; 3],
     pub opacity: f32,
     pub uv: Option<UvRect>,
+    pub relief: Option<Relief<'a>>,
 }
 
 pub fn log_allowed(last: &AtomicU64) -> bool {

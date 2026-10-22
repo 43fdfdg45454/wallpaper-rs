@@ -4,6 +4,9 @@ mod args;
 mod backend;
 mod bus;
 mod calls;
+mod depth;
+mod depthproc;
+mod depthwork;
 mod diff;
 mod editing;
 mod editor;
@@ -33,6 +36,7 @@ fn main() -> ExitCode {
         Some("--version" | "-V") => println!("wprs-app {}", env!("CARGO_PKG_VERSION")),
         Some("--help" | "-h") => println!("usage: wprs-app [--check | --version] [FILE | URI]..."),
         Some("--check") if !bus::checking() => return check(),
+        Some("--depth") => return depthproc::child(&args[1..]),
         _ => return app::start(args.iter().filter_map(|a| file(a)).collect()).unwrap_or_else(run),
     }
     ExitCode::SUCCESS

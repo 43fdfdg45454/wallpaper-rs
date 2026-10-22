@@ -45,4 +45,11 @@ fn the_editor_describes_what_its_controls_show() {
         json!({"kind": "radial", "values": [0.5, 0.5, 0.25, 0.25, 0.5], "invert": true})
     );
     assert!(edit.ops.len() == 1 && turned["tools"]["bl"]["radius"] == json!(0.0));
+    assert_eq!((&blank["depth"]["input"], &blank["parallax"]["enabled"]), (&json!(518), &json!(false)));
+    edit.act(serde_json::from_value(json!({"parallax": {"source": "pointer"}})).unwrap()).unwrap();
+    let moving = values(&edit);
+    assert_eq!(
+        (&moving["parallax"]["enabled"], &moving["parallax"]["source"]),
+        (&json!(true), &json!("pointer"))
+    );
 }

@@ -52,7 +52,9 @@ msgstr "Sincronizar sin cifrado de extremo a extremo"
 msgid ""
 "The operator of the server will be able to read your library, playlists and "
 "settings."
-msgstr "Quien administra el servidor podrá leer tu biblioteca, tus listas y tus ajustes."
+msgstr ""
+"Quien administra el servidor podrá leer tu biblioteca, tus listas y tus "
+"ajustes."
 
 #: apps/wprs-app/qml/AccountDialogs.qml
 msgid "Approve a device"
@@ -114,17 +116,22 @@ msgstr "Aún no hay servidor"
 msgid ""
 "A wallpaper-rs server keeps your library, playlists and settings in sync "
 "between your computers, encrypted end to end."
-msgstr "Un servidor de wallpaper-rs mantiene sincronizados tu biblioteca, tus listas y tus ajustes entre tus equipos, cifrados de extremo a extremo."
+msgstr ""
+"Un servidor de wallpaper-rs mantiene sincronizados tu biblioteca, tus listas "
+"y tus ajustes entre tus equipos, cifrados de extremo a extremo."
 
 #: apps/wprs-app/qml/AccountPage.qml
 msgid "Open %1 and enter the code %2, or approve it on a linked computer."
-msgstr "Abre %1 e introduce el código %2, o apruébalo en un equipo ya enlazado."
+msgstr ""
+"Abre %1 e introduce el código %2, o apruébalo en un equipo ya enlazado."
 
 #: apps/wprs-app/qml/AccountPage.qml
 msgid ""
 "Sync is not encrypted: the operator of the server can read your library, "
 "playlists and settings."
-msgstr "La sincronización no está cifrada: quien administra el servidor puede leer tu biblioteca, tus listas y tus ajustes."
+msgstr ""
+"La sincronización no está cifrada: quien administra el servidor puede leer "
+"tu biblioteca, tus listas y tus ajustes."
 
 #: apps/wprs-app/qml/AccountSummary.qml
 msgid "Server:"
@@ -250,6 +257,40 @@ msgstr "Actualizar"
 msgid "Install"
 msgstr "Instalar"
 
+#: apps/wprs-app/qml/DepthDialog.qml
+msgid "Download the depth model?"
+msgstr "¿Descargar el modelo de profundidad?"
+
+#: apps/wprs-app/qml/DepthDialog.qml
+msgid "Download"
+msgstr "Descargar"
+
+#: apps/wprs-app/qml/DepthDialog.qml
+msgid "Install from a file…"
+msgstr "Instalar desde un archivo…"
+
+#: apps/wprs-app/qml/DepthDialog.qml
+msgid ""
+"Depth maps are estimated on this computer by a model that is not included. "
+"The picture never leaves it; these files are downloaded once, checked "
+"against their SHA-256 and kept in your data folder:"
+msgstr ""
+"Los mapas de profundidad se calculan en este equipo con un modelo que no "
+"viene incluido. La imagen nunca sale de él; estos archivos se descargan una "
+"sola vez, se comprueban con su SHA-256 y se guardan en tu carpeta de datos:"
+
+#: apps/wprs-app/qml/DepthDialog.qml
+msgid "%1: %2 from %3, license %4"
+msgstr "%1: %2 desde %3, licencia %4"
+
+#: apps/wprs-app/qml/DepthDialog.qml
+msgid ""
+"Downloads are turned off in the settings. Install files fetched by other "
+"means instead."
+msgstr ""
+"Las descargas están desactivadas en los ajustes. Instala archivos obtenidos "
+"por otra vía."
+
 #: apps/wprs-app/qml/EditCurves.qml
 msgid "All channels"
 msgstr "Todos los canales"
@@ -268,11 +309,75 @@ msgstr "Azul"
 
 #: apps/wprs-app/qml/EditCurves.qml
 msgid "Click to add a point, drag to move it, double-click to remove it."
-msgstr "Haz clic para añadir un punto, arrástralo para moverlo y haz doble clic para quitarlo."
+msgstr ""
+"Haz clic para añadir un punto, arrástralo para moverlo y haz doble clic para "
+"quitarlo."
 
 #: apps/wprs-app/qml/EditCurves.qml
 msgid "Reset this curve"
 msgstr "Restablecer esta curva"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Downloading the model…"
+msgstr "Descargando el modelo…"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Loading the model…"
+msgstr "Cargando el modelo…"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Estimating depth…"
+msgstr "Calculando la profundidad…"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Saving the map…"
+msgstr "Guardando el mapa…"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "This picture has no depth map yet. White is near and black is far."
+msgstr ""
+"Esta imagen aún no tiene mapa de profundidad. El blanco está cerca y el "
+"negro, lejos."
+
+#: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/StatusBar.qml
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Generate the map"
+msgstr "Generar el mapa"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Import a map…"
+msgstr "Importar un mapa…"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Save next to the picture"
+msgstr "Guardar junto a la imagen"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Near level"
+msgstr "Nivel cercano"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Far level"
+msgstr "Nivel lejano"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Curve"
+msgstr "Curva"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Smoothing (px)"
+msgstr "Suavizado (px)"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Grow near edges (px)"
+msgstr "Ensanchar los bordes cercanos (px)"
+
+#: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/facade/Labels.qml
+msgid "Pictures"
+msgstr "Imágenes"
 
 #: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditOps.qml
 msgid "Blur"
@@ -341,7 +446,9 @@ msgstr "Opacidad"
 #: apps/wprs-app/qml/EditEffects.qml
 msgid ""
 "Limit an effect to part of the picture with a mask in the list of operations."
-msgstr "Limita un efecto a una parte de la imagen con una máscara en la lista de operaciones."
+msgstr ""
+"Limita un efecto a una parte de la imagen con una máscara en la lista de "
+"operaciones."
 
 #: apps/wprs-app/qml/EditGeometry.qml
 msgid "Free"
@@ -504,7 +611,7 @@ msgstr "Bajar"
 msgid "Remove"
 msgstr "Quitar"
 
-#: apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/EditParallax.qml
 msgid "Strength"
 msgstr "Fuerza"
 
@@ -537,6 +644,14 @@ msgid "Masks"
 msgstr "Máscaras"
 
 #: apps/wprs-app/qml/EditPage.qml
+msgid "Depth"
+msgstr "Profundidad"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Parallax"
+msgstr "Paralaje"
+
+#: apps/wprs-app/qml/EditPage.qml
 msgid "Edit %1"
 msgstr "Editar %1"
 
@@ -555,6 +670,51 @@ msgstr "Ver en el escritorio"
 #: apps/wprs-app/qml/EditPage.qml
 msgid "Reset all"
 msgstr "Restablecer todo"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid "Move the picture in depth"
+msgstr "Mover la imagen en profundidad"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid "Slow orbit"
+msgstr "Órbita lenta"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid "Pointer"
+msgstr "Puntero"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid "Accelerometer"
+msgstr "Acelerómetro"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid "Fastest: shift only"
+msgstr "Lo más rápido: solo desplazar"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid "%1 steps"
+msgstr "%1 pasos"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid "Depth that stays still"
+msgstr "Profundidad que no se mueve"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid "Smoothing (ms)"
+msgstr "Suavizado (ms)"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid "Zoom to hide the edges"
+msgstr "Ampliación para ocultar los bordes"
+
+#: apps/wprs-app/qml/EditParallax.qml
+msgid ""
+"Turn on Show on the desktop to try it. The parallax needs a depth map, "
+"pauses like videos and stays still when the system asks for reduced motion."
+msgstr ""
+"Activa «Ver en el escritorio» para probarlo. El paralaje necesita un mapa de "
+"profundidad, se pausa como los vídeos y se queda quieto cuando el sistema "
+"pide reducir el movimiento."
 
 #: apps/wprs-app/qml/EditScreens.qml
 msgid "A part for each screen"
@@ -1199,10 +1359,6 @@ msgstr "Tareas"
 msgid "No jobs"
 msgstr "No hay tareas"
 
-#: apps/wprs-app/qml/StatusBar.qml
-msgid "Cancel"
-msgstr "Cancelar"
-
 #: apps/wprs-app/qml/facade/App.qml
 msgid "%1 MB"
 msgstr "%1 MB"
@@ -1222,6 +1378,10 @@ msgstr "Silenciado"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Frames per second"
 msgstr "Fotogramas por segundo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Depth parallax with software rendering"
+msgstr "Parallax de profundidad con renderizado por software"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Transition"
@@ -1258,6 +1418,10 @@ msgstr "Actualizar los repositorios cada día"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Screen frame width for spanning (mm)"
 msgstr "Ancho del marco de las pantallas al extender (mm)"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Allow downloading the depth model"
+msgstr "Permitir descargar el modelo de profundidad"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Order"
@@ -1322,10 +1486,6 @@ msgstr "Mercado"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Ultra HD"
 msgstr "Ultra HD"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Pictures"
-msgstr "Imágenes"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Include videos"

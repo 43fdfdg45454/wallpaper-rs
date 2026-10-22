@@ -5,8 +5,11 @@ use super::{Content, Spec};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
+use wprs_core::edit::Parallax;
 use wprs_core::{Fit, UvRect};
-use wprs_render::{GpuImage, Layer, Target};
+use wprs_render::{GpuImage, Layer, Relief, Target};
+
+pub(super) type Raised = (GpuImage, Parallax);
 
 pub(super) struct Shown {
     pub(super) content: Content,
@@ -15,6 +18,7 @@ pub(super) struct Shown {
     pub(super) image: Option<GpuImage>,
     pub(super) transition: Option<Duration>,
     pub(super) uv: Option<UvRect>,
+    pub(super) relief: Option<Raised>,
     pub(super) scene: Option<SceneState>,
 }
 
@@ -23,14 +27,25 @@ impl Shown {
         self.content.same_look(&spec.content) && self.fit == spec.fit && self.background == spec.background
     }
 
-    pub(super) fn layer<'a>(&'a self, players: &'a HashMap<PathBuf, PlayerSlot>, opacity: f32) -> Layer<'a> {
+    pub(super) fn layer<'a>(
+        &'a self,
+        players: &'a HashMap<PathBuf, PlayerSlot>,
+        opacity: f32,
+        moved: Option<([f32; 2], u32)>,
+    ) -> Layer<'a> {
         let (image, fit) = match &self.content {
             Content::Color => (None, self.fit),
             Content::Image(_) => (self.image.as_ref(), self.fit),
             Content::Video(path) => (players.get(path).and_then(|p| p.texture.as_ref()), self.fit),
             Content::Scene(_) => (self.scene.as_ref().and_then(SceneState::image), Fit::Stretch),
         };
-        Layer { image, fit, background: self.background, opacity, uv: self.uv }
+        let aspect = image.map_or(1.0, |i| i.size().0 as f32 / i.size().1.max(1) as f32);
+        let relief = self.relief.as_ref().zip(moved).map(|((depth, p), ([x, y], steps))| {
+            let reach = x.hypot(y).max(1.0);
+            let shift = [p.strength * x / reach, p.strength * y * aspect / reach];
+            Relief { depth, shift, focus: p.focus, steps: p.steps.min(steps), overscan: p.overscan }
+        });
+        Layer { image, fit, background: self.background, opacity, uv: self.uv, relief }
     }
 }
 
@@ -49,13 +64,16 @@ pub(super) struct Output {
     pub(super) stale: bool,
     pub(super) sink: Sink,
     pub(super) last_render: Option<Instant>,
+    pub(super) offset: [f32; 2],
+    pub(super) moving: bool,
 }
 
 impl Output {
     pub(super) fn new(size: (u32, u32), shown: Shown, sink: Sink) -> Self {
         let (fade, last_render) = (None, None);
-        let (active, dirty, missing_frame, stale) = (true, true, false, true);
-        Self { size, shown, fade, active, dirty, missing_frame, stale, sink, last_render }
+        let (active, dirty, missing_frame, stale, moving) = (true, true, false, true, false);
+        let offset = [0.0; 2];
+        Self { size, shown, fade, active, dirty, missing_frame, stale, sink, last_render, offset, moving }
     }
 
     pub(super) fn show(&mut self, shown: Shown, size: (u32, u32), transition: bool) {
@@ -93,7 +111,7 @@ impl Output {
     pub(super) fn animated(&self) -> bool {
         let moving =
             |s: &Shown| !s.content.videos().is_empty() || s.scene.as_ref().is_some_and(|sc| sc.due.is_some());
-        self.fade.is_some() || self.layers().any(moving)
+        self.fade.is_some() || self.moving || self.layers().any(moving)
     }
 
     pub(super) fn fading(&self) -> bool {

@@ -71,7 +71,7 @@ fn invalid_files_name_the_field() {
     assert_eq!(broken("ops/6/color", json!("blue")), "ops[6].color: use #rrggbb");
     assert_eq!(broken("span/zoom", json!(0.5)), "span.zoom: 0.5 is out of range 1 to 8");
     assert_eq!(broken("version", json!(2)), "version 2 is newer than 1");
-    assert!(broken("masks/sky/type", json!("depth")).contains("unknown variant"));
+    assert!(broken("masks/sky/type", json!("sketch")).contains("unknown variant"));
     let crowded = json!({"version": 1, "ops": (0..25).map(|i| json!({"id": format!("e{i}"), "type": "exposure", "ev": 0})).collect::<Vec<_>>()});
     assert!(Edit::from_value(crowded).unwrap_err().contains("at most 24 ops"));
 }

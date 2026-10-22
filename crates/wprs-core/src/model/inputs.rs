@@ -13,6 +13,8 @@ model! {
         pub tracking: bool,
         pub grants: BTreeMap<String, BTreeSet<Input>>,
         pub shown: BTreeMap<String, SceneInputs>,
+        #[serde(default)]
+        pub parallax: BTreeSet<String>,
     }
 }
 

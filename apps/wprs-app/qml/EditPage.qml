@@ -13,7 +13,7 @@ Kirigami.Page {
     readonly property var edit: JSON.parse(editor.json || "{}")
     readonly property var values: JSON.parse(editor.values || "{}")
     readonly property var ops: edit.ops ?? []
-    readonly property var tools: [App.tr("Crop and rotate"), App.tr("Screens"), App.tr("Light and color"), App.tr("Curves"), App.tr("Effects"), App.tr("Masks")]
+    readonly property var tools: [App.tr("Crop and rotate"), App.tr("Screens"), App.tr("Light and color"), App.tr("Curves"), App.tr("Effects"), App.tr("Masks"), App.tr("Depth"), App.tr("Parallax")]
 
     function run(action, args) {
         editor.run(action, JSON.stringify(args ?? {}));
@@ -26,6 +26,8 @@ Kirigami.Page {
         editor.run("curve", '{"points": ["0,0", "0.5,0.6", "1,1"]}');
         editor.run("overlay", '{"mask": "radial:0.5,0.5,0.3,0.3", "opacity": 0.5}');
         editor.run("mask", '{"name": "sky", "spec": "luminance:0,0.4"}');
+        editor.run("depth", '{"near": 0.9, "dilate": 4}');
+        editor.run("parallax", '{"source": "pointer", "steps": 8}');
         for (let i = page.tools.length - 1; i >= 0; i--)
             pick.currentIndex = i;
         editor.preview(true);
@@ -119,6 +121,14 @@ Kirigami.Page {
                     }
 
                     EditMasks {
+                        page: page
+                    }
+
+                    EditDepth {
+                        page: page
+                    }
+
+                    EditParallax {
                         page: page
                     }
                 }

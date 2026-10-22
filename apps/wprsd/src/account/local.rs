@@ -7,7 +7,9 @@ use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 use wprs_sync::{Ids, Replica, View};
 
-pub const DEVICE_KEYS: [&str; 3] = ["playback.volume", "playback.muted", "library.thumb_cache_mb"];
+pub const DOWNLOADS: &str = "models.allow_download";
+pub const DEVICE_KEYS: [&str; 5] =
+    ["playback.volume", "playback.muted", "playback.software_parallax", "library.thumb_cache_mb", DOWNLOADS];
 pub const OBJECTS: [&str; 3] = ["playlists/", "settings/profile_", "settings/preset_"];
 
 type Links = BTreeMap<String, String>;

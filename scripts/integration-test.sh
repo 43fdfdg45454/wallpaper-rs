@@ -41,16 +41,18 @@ log=${WPRS_IT_LOG:-debug},naga=warn,wgpu_core=warn,wgpu_hal=warn
 
 broken=$WORK/broken/config.toml
 mkdir -p "$(dirname "$broken")"
-printf '[playback\nvolume = 0.5\n' >"$broken"
+printf '[playback\nvolume = 0.5\n[models]\nallow_download = false\n' >"$broken"
 RUST_LOG=$log "$BIN/wprsd" --config "$broken" >"$WORK/broken.log" 2>&1 & broken_pid=$!; pids+=("$broken_pid")
 wait_for 30 ctl state
 expect "s['config_error'] is not None" True
 if ctl reload 2>/dev/null; then fail "reload accepted a broken configuration"; fi
 expect "s['config_error'] is not None" True
+expect "s['options']['models.allow_download']" False
 ctl config pause.on_battery false
 expect "s['config_error']" None
 grep -qx '\[playback' "$broken.broken" || fail "the broken configuration was not kept"
 grep -q 'on_battery = false' "$broken" || fail "the new configuration was not saved"
+grep -qx 'allow_download = false' "$broken" || fail "a broken configuration turned downloads back on"
 [ "$(stat -c %a "$broken")" = 600 ] || fail "config.toml is not private"
 [ "$(stat -c %a "$broken.broken")" = 600 ] || fail "config.toml.broken is not private"
 kill "$broken_pid"
@@ -213,7 +215,7 @@ cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/import/sunset.png"
 dbus-monitor --session "type='signal',interface='io.github.wallpaper_rs.Daemon1'" \
   "type='signal',interface='io.github.wallpaper_rs.Library1'" >"$WORK/library-signals.log" 2>&1 & pids+=($!)
 sleep 0.5
-[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(12, 7, [256, 512, 1024])" ] ||
+[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(14, 7, [256, 512, 1024])" ] ||
   fail "schema: $(bus Daemon1 GetSchema)"
 read -r source job < <(bus Library1 AddSource sb "$pics" true | out "' '.join(map(str, d))")
 wait_for 20 finished "$job" || fail "scan job: $(bus Daemon1 GetJob t "$job")"
@@ -717,6 +719,50 @@ ctl config layout.bezel_mm 40 && expect "s['options']['layout.bezel_mm']" 40.0
 shown "$left" 255 0 0 && shown "$right" 0 0 255
 ctl release TEST-9 && ctl release TEST-10 && expect "list(s['outputs'])" "[]"
 echo "screen frame checks passed"
+
+cp "$ROOT/tests/fixtures/bands-640x180.png" "$WORK/relief.png"
+ctl edit depth import "$WORK/relief.png" "$ROOT/tests/fixtures/bands-640x180.png" >/dev/null
+ctl edit parallax "$WORK/relief.png" --source auto --steps 8
+read -r _ _ _ deep < <(ctl stream TEST-11 160 90)
+ctl set "$WORK/relief.png" -o TEST-11 --fit fill
+case $(field "s['adapter']") in
+  llvmpipe*) expect "s['outputs']['TEST-11']['parallax']" False ;;
+esac
+ctl config playback.software_parallax true
+expect "s['outputs']['TEST-11']['parallax']" True
+consume "$deep"
+frames() { field "s['outputs']['TEST-11']['frames']"; }
+past() { [ "$(frames)" -gt "$1" ]; }
+moves() { wait_for "$1" past "$(frames)"; }
+quiet() { local from; from=$(frames); sleep 1; [ "$(frames)" = "$from" ]; }
+moves 10 || fail "the parallax does not move: $(ctl state)"
+ctl pause
+wait_for 10 quiet || fail "the parallax moves while paused"
+ctl resume
+moves 10 || fail "the parallax did not resume"
+ctl screen TEST-11 --pos 0,0 --size 160x90 --density 4
+ctl edit parallax "$WORK/relief.png" --source pointer --strength 0.03
+wait_for 10 reads "r['tracking'], r['parallax']" "(True, ['TEST-11'])" ||
+  fail "the pointer parallax does not follow the pointer: $(ctl input status --json)"
+wait_for 10 quiet || fail "the parallax moves without a pointer"
+held=$(frames)
+ctl input pointer 150 80
+wait_for 10 past "$held" || fail "the parallax does not follow the pointer"
+wait_for 10 quiet || fail "the parallax does not settle after the pointer"
+ctl edit parallax "$WORK/relief.png" --off
+expect "s['outputs']['TEST-11']['parallax']" False
+wait_for 10 reads "r['tracking'], r['parallax']" "(False, [])" || fail "the pointer is still followed"
+wait_for 10 quiet || fail "the parallax moves after it was turned off"
+cp "$ROOT/tests/fixtures/bands-640x180.png" "$WORK/torn.png" && printf 'not a png' >"$WORK/torn.png.depth.png"
+ctl edit parallax "$WORK/torn.png" --source auto && ctl set "$WORK/torn.png" -o TEST-11 --fit fill
+wait_for 10 grep -q "cannot use a depth map" "$WORK/restarted.log" || fail "a broken depth map was not reported"
+above() { sed 's/\x1b\[[0-9;]*m//g' "$WORK"/*.log | grep -E '^[^ ]+ +(INFO|WARN|ERROR) '; }
+above | grep "cannot use a depth map" >/dev/null || fail "the log level filter does not match"
+if above | grep torn; then fail "a log above debug names an image"; fi
+leave
+ctl release TEST-11 && expect "list(s['outputs'])" "[]"
+ctl config playback.software_parallax false
+echo "depth parallax checks passed"
 
 restored() {
   read -r _ _ _ serial < <(ctl stream TEST-1 320 180) || return 1

@@ -4,6 +4,7 @@ use futures_util::StreamExt;
 use std::sync::Arc;
 use wprs_core::dbus;
 use zbus::fdo::NameOwnerChangedStream;
+use zbus::{OwnedVariant, Variant};
 
 #[zbus::proxy(
     interface = "org.freedesktop.UPower",
@@ -25,6 +26,47 @@ trait ScreenSaver {
 
     #[zbus(signal)]
     fn active_changed(&self, active: bool) -> zbus::Result<()>;
+}
+
+#[zbus::proxy(
+    interface = "org.freedesktop.portal.Settings",
+    default_service = "org.freedesktop.portal.Desktop",
+    default_path = "/org/freedesktop/portal/desktop"
+)]
+trait Portal {
+    fn read_one(&self, namespace: &str, key: &str) -> zbus::Result<OwnedVariant>;
+
+    #[zbus(signal)]
+    fn setting_changed(&self, namespace: &str, key: &str, value: Variant<'_>) -> zbus::Result<()>;
+}
+
+const APPEARANCE: &str = "org.freedesktop.appearance";
+const REDUCED_MOTION: &str = "reduced-motion";
+
+fn reduced(value: &Variant<'_>) -> bool {
+    let value = match value {
+        Variant::Variant(inner) => inner,
+        value => value,
+    };
+    matches!(value, Variant::U32(1))
+}
+
+pub async fn motion(connection: zbus::Connection, daemon: Arc<Daemon>) {
+    let follow = async {
+        let portal = PortalProxy::new(&connection).await?;
+        let mut changes =
+            portal.receive_setting_changed_with_args(&[(0, APPEARANCE), (1, REDUCED_MOTION)]).await?;
+        if let Ok(value) = portal.read_one(APPEARANCE, REDUCED_MOTION).await {
+            daemon.compositor.calm(reduced(&value));
+        }
+        while let Some(signal) = changes.next().await {
+            signal.args().map(|a| daemon.compositor.calm(reduced(&a.value))).ok();
+        }
+        zbus::Result::Ok(())
+    };
+    if let Err(e) = follow.await {
+        tracing::debug!("reduced motion unknown, parallax stays on: {e}");
+    }
 }
 
 pub async fn battery(daemon: Arc<Daemon>) {

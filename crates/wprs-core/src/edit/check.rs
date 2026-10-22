@@ -137,7 +137,9 @@ impl Edit {
                     all(&at, center, WIDE)?;
                     all(&at, &[radius[0], radius[1], *feather], (0.0, 2.0))?
                 }
-                Mask::Luminance { range, soft, .. } => all(&at, &[range[0], range[1], *soft], UNIT)?,
+                Mask::Luminance { range, soft, .. } | Mask::Depth { range, soft, .. } => {
+                    all(&at, &[range[0], range[1], *soft], UNIT)?
+                }
                 Mask::Brush { strokes, .. } => strokes.iter().try_for_each(|s| {
                     within(&at, s.radius, (0.0, 0.5))?;
                     within(&at, s.hardness, UNIT)?;
@@ -149,6 +151,7 @@ impl Edit {
             ensure(key.len() <= 128 && out.connector.len() <= 128, || format!("outputs.{key}: too long"))?;
             rect(&format!("outputs.{key}.crop"), out.crop)?;
         }
+        super::depth::check(self.depth.as_ref(), self.parallax.as_ref())?;
         let Some(span) = &self.span else { return Ok(()) };
         all("span.center", &span.center, UNIT)?;
         within("span.zoom", span.zoom, (1.0, 8.0))

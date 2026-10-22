@@ -9,6 +9,7 @@ rust-version.workspace = true
 [dependencies]
 wprs-core.workspace = true
 wprs-render.workspace = true
+wprs-depth.workspace = true
 wprs-scene.workspace = true
 wprs-pipewire.workspace = true
 wprs-video.workspace = true

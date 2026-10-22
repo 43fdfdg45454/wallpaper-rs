@@ -86,7 +86,10 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 12);
+    assert_eq!(c.options().len(), 14);
+    c.set_option("models.allow_download", "false").unwrap();
+    c.set_option("playback.software_parallax", "true").unwrap();
+    assert!(!c.models.allow_download && c.playback.sanitized().software_parallax);
     c.set_option("layout.bezel_mm", "8.5").unwrap();
     assert!(toml::to_string(&c).unwrap().contains("[layout]\nbezel_mm = 8.5"));
     c.set_option("pause.on_battery", "false").unwrap();

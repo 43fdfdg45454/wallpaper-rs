@@ -85,7 +85,8 @@ impl Inputs {
         let (serial, tracking) = (d.changes.serial(), *hub.tracking.borrow());
         let control = lock(&hub.control);
         let (grants, shown, capturing) = (control.grants.clone(), control.shown.clone(), control.capturing);
-        reply(InputsReply { model: MODEL, serial, capturing, tracking, grants, shown })
+        let parallax = control.parallax.clone();
+        reply(InputsReply { model: MODEL, serial, capturing, tracking, grants, shown, parallax })
     }
 
     async fn set_pointer(&self, x: i32, y: i32) -> Result<()> {

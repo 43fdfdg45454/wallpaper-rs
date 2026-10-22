@@ -65,7 +65,8 @@ impl Mask {
             "luminance" => {
                 numbers(&full).map(|[lo, hi, soft]| Mask::Luminance { range: [lo, hi], soft, invert })
             }
-            _ => Err(usage(format!("{kind} is not linear, radial or luminance"))),
+            "depth" => numbers(&full).map(|[lo, hi, soft]| Mask::Depth { range: [lo, hi], soft, invert }),
+            _ => Err(usage(format!("{kind} is not linear, radial, luminance or depth"))),
         }
     }
 
@@ -79,6 +80,7 @@ impl Mask {
             Mask::Luminance { range, soft, .. } => {
                 format!("luminance:{}", list(&[range[0], range[1], *soft]))
             }
+            Mask::Depth { range, soft, .. } => format!("depth:{}", list(&[range[0], range[1], *soft])),
             Mask::Brush { .. } => return None,
         })
     }

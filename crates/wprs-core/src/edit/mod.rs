@@ -1,6 +1,7 @@
 mod action;
 mod check;
 mod curve;
+mod depth;
 mod file;
 mod geometry;
 mod parse;
@@ -9,6 +10,7 @@ mod tool;
 
 pub use action::{ACTIONS, Action, Error};
 pub use curve::spline;
+pub use depth::{Depth, MAX_STRENGTH, MODEL, Motion, Parallax, STEPS};
 pub use file::{MAX_BYTES, commit, dir, load, remove, save};
 pub use geometry::{Matrix, mul};
 pub use parse::numbers;
@@ -32,6 +34,10 @@ pub struct Edit {
     pub outputs: BTreeMap<String, OutputCrop>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub span: Option<Span>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub depth: Option<Depth>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parallax: Option<Parallax>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -147,6 +153,13 @@ pub enum Mask {
         #[serde(default)]
         invert: bool,
     },
+    Depth {
+        range: [f32; 2],
+        #[serde(default)]
+        soft: f32,
+        #[serde(default)]
+        invert: bool,
+    },
     Brush {
         strokes: Vec<Stroke>,
         #[serde(default)]
@@ -186,8 +199,8 @@ impl Default for Span {
 impl Default for Edit {
     fn default() -> Self {
         let (source, geometry, ops) = (Source::default(), Geometry::default(), Vec::new());
-        let (masks, outputs, span) = (BTreeMap::new(), BTreeMap::new(), None);
-        Self { version: VERSION, source, geometry, ops, masks, outputs, span }
+        let (masks, outputs, span, depth, parallax) = (BTreeMap::new(), BTreeMap::new(), None, None, None);
+        Self { version: VERSION, source, geometry, ops, masks, outputs, span, depth, parallax }
     }
 }
 

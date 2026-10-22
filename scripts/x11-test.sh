@@ -4,7 +4,7 @@ set -euo pipefail
 BIN=$(realpath "${1:?usage: $0 <bin-dir>}")
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=$(mktemp -d /tmp/wprs-x11.XXXXXX)
-export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config
+export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config XDG_DATA_HOME=$WORK/data XDG_CACHE_HOME=$WORK/cache
 unset WAYLAND_DISPLAY DISPLAY XDG_SESSION_TYPE XDG_CURRENT_DESKTOP
 mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME"
 chmod 700 "$XDG_RUNTIME_DIR"
@@ -51,6 +51,7 @@ EOF
 }
 check() { wait_for 10 shows "$@" || { shows "$@"; fail "$1 does not show ${*:2}"; }; }
 pixmap() { xprop -root "$1" | awk '/# 0x/ {print $NF}'; }
+rooted() { [ -n "$(pixmap _XROOTPMAP_ID)" ]; }
 
 eval "$(dbus-launch --sh-syntax)"
 pipewire >"$WORK/pipewire.log" 2>&1 & pids+=($!)
@@ -76,7 +77,7 @@ check "$full" "0.5,0.5,$blue" "0.02,0.98,$blue"
 ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
 expect "s['outputs']['screen']['kind']" image
 check "$full" "0.5,0.5,$green" "0.02,0.02,$blue" "0.98,0.98,$blue"
-wait_for 10 test -n "$(pixmap _XROOTPMAP_ID)" || fail "no root pixmap"
+wait_for 10 rooted || fail "no root pixmap"
 [ "$(pixmap _XROOTPMAP_ID)" = "$(pixmap ESETROOT_PMAP_ID)" ] || fail "the root pixmap properties differ"
 exposed() {
   xev -geometry 400x300+300+200 >"$WORK/xev.log" 2>&1 & local xev=$!
@@ -120,8 +121,16 @@ echo "fullscreen pause checks passed"
 xrandr --delmonitor DP-2
 xrandr --delmonitor DP-1
 expect "sorted(s['outputs'])" "['screen']"
-ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
+still=$WORK/still.png
+cp "$ROOT/tests/fixtures/green-64x32.png" "$still"
+case $(field "s['adapter']") in
+  llvmpipe*) ctl edit depth import "$still" "$still" >/dev/null && ctl edit parallax "$still" --source auto ;;
+esac
+xprop -root -remove _XROOTPMAP_ID
+ctl set "$still" --fit fit
 check "$full" "0.5,0.1,$green" "0.02,0.02,$blue"
+expect "s['outputs']['screen']['parallax']" False
+wait_for 10 rooted || fail "no root pixmap for a still image"
 echo "hotplug checks passed"
 
 xdotool search --class '^wprsd$' windowunmap %@

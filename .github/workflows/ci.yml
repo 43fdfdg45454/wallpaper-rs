@@ -60,6 +60,21 @@ jobs:
           WPRS_REQUIRE_VIDEO: "1"
         run: cargo test --workspace --all-features --locked
 
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: |
+            ~/.local/share/wallpaper-rs/models
+            ~/.local/share/wallpaper-rs/runtime
+          key: depth-anything-v2-small-46c4e8ee-onnxruntime-1.31.0
+
+      - name: Depth model test
+        run: |
+          cargo build --locked -p wprs-ctl
+          target/debug/wprs-ctl models download depth-anything-v2-small --yes
+          target/debug/wprs-ctl models download onnxruntime --yes
+          WPRS_DEPTH_MODEL=$HOME/.local/share/wallpaper-rs/models/depth-anything-v2-small/depth_anything_v2_vits_dynamic.onnx \
+            cargo test --locked -p wprs-depth --all-features --test model -- --nocapture
+
       - name: Shell scripts
         run: shellcheck packaging/*.sh packaging/flatpak/*.sh scripts/*.sh
 

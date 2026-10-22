@@ -238,6 +238,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `playback.volume` | `0.0` to `1.0` | `0.5` |
 | `playback.muted` | `true`, `false` | `true` |
 | `playback.max_fps` | `1` to `240` | `30` |
+| `playback.software_parallax` | move depth parallax images even when the GPU is emulated on the CPU (such as llvmpipe), with 8 steps at 15 frames per second at most | `false` |
 | `transition.kind` | `fade`, `none` | `fade` |
 | `transition.duration_ms` | `0` to `10000` | `600` |
 | `pause.when_covered` | pause while a maximized or fullscreen window covers the output | `true` |
@@ -247,6 +248,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `library.thumb_cache_mb` | `64` to `8192`, size of the thumbnail cache | `512` |
 | `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
+| `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
 
 Only the changed key is validated. Unknown keys and invalid or out-of-range values return
 `InvalidArgs` and change nothing.
@@ -630,8 +632,9 @@ A `ProfileReply`.
 
 ### `Save(s name, b with_options) → (s uid)`
 
-Saves the current assignment of every output, and with `with_options` every setting, as a
-profile. An existing profile of that name is replaced and keeps its uid, rules and priority.
+Saves the current assignment of every output, and with `with_options` every setting except
+`models.allow_download` (which `Activate` never applies either), as a profile. An existing
+profile of that name is replaced and keeps its uid, rules and priority.
 
 ### `Activate(s profile)`
 
@@ -845,12 +848,17 @@ package, no preview, or a failed download or check).
 
 Scenes may follow the sound that plays and the pointer. Both inputs are off for every scene
 until the user grants them to that scene; grants are kept per scene package id in
-`~/.local/share/wallpaper-rs/inputs.json` (mode `0600`) and can be revoked at any time.
+`~/.local/share/wallpaper-rs/inputs.json` (mode `0600`) and can be revoked at any time. A still
+image whose depth parallax has `source` `pointer` (see "Edits and spanning") also uses the
+pointer: choosing that source for that image is the user's consent, so it needs no grant, and it
+follows the same rules as a scene, without clicks.
 
-An input is on only while an output shows a scene that declares it, the screen is unlocked
-(whatever `pause.when_locked` says), that output is active (not paused, and not covered while
-`pause.when_covered` holds) and the scene holds the grant; the pointer also stops while the
-output is covered. Revoking, locking, pausing or hiding the scene stops it at once.
+An input is on only while an output shows a scene that declares it and holds the grant (or a
+pointer parallax image that moves: not under reduced motion, nor with software rendering unless
+`playback.software_parallax` is set), the screen is unlocked (whatever `pause.when_locked`
+says) and that output is active (not paused, and not covered while `pause.when_covered` holds);
+the pointer also stops while the output is covered. Revoking, locking, pausing or hiding the
+scene or image stops it at once.
 
 - Audio: the daemon captures the monitor of the default output device through a PipeWire
   stream named "wallpaper-rs audio analysis" (desktop microphone indicators may show it) and
@@ -858,12 +866,12 @@ output is covered. Revoking, locking, pausing or hiding the scene stops it at on
   Samples stay in memory only for that analysis: they are never stored, logged or sent anywhere,
   and scenes and scripts only get the bands and levels. A scene without the grant gets silence
   even while another output's scene is listening. The stream is destroyed when no scene needs it.
-- Pointer: on layer-shell outputs only the background of an output whose scene uses the pointer
-  accepts pointer events, showing the default cursor, so other backgrounds never take desktop
-  clicks; in Plasma the daemon loads a KWin script that reports
+- Pointer: on layer-shell outputs only the background of an output whose scene or parallax image
+  uses the pointer accepts pointer events, showing the default cursor, so other backgrounds never
+  take desktop clicks; in Plasma the daemon loads a KWin script that reports
   `workspace.cursorPos` with `SetPointer`, at most 60 times per second and only while the
-  pointer moves, and unloads it when no scene needs it. Keys are never read, and positions are
-  neither kept nor logged: each output only has the latest one.
+  pointer moves, and unloads it when no scene or parallax image needs it. Keys are never read,
+  and positions are neither kept nor logged: each output only has the latest one.
 
 ### `Grant(s scene, s input)`
 
@@ -878,8 +886,9 @@ input that was not granted changes nothing.
 
 ### `GetInputs() → (s json)`
 
-An `InputsReply`: the grants, the scenes that declare inputs on each output, whether audio is
-being captured (`capturing`) and whether the pointer is being followed (`tracking`).
+An `InputsReply`: the grants, the scenes that declare inputs on each output, the outputs whose
+parallax image follows the pointer (`parallax`), whether audio is being captured (`capturing`)
+and whether the pointer is being followed (`tracking`).
 
 ### `SetPointer(i x, i y)`
 
@@ -919,7 +928,7 @@ record and is never sent in plain-text mode.
 |------------|------|--------|
 | `library` | keyed hash | `title`, `rating`, `favorite`, `t:<tag>`; only items with a tag, a rating or a favorite mark get a record |
 | `playlists` | keyed hash | `name`, `query`, `r:<rule>` (rules this version does not know are kept as synced), and for manual playlists one `e:<entry>` per entry with its item and a fractional position |
-| `settings` | `playback`, `transition`, `pause`, `library`, `repos` | every option except `playback.volume`, `playback.muted` and `library.thumb_cache_mb`; options and sections this version does not know are kept as synced |
+| `settings` | `playback`, `transition`, `pause`, `library`, `repos` | every option except `playback.volume`, `playback.muted`, `playback.software_parallax`, `library.thumb_cache_mb` and `models.allow_download`; options and sections this version does not know are kept as synced |
 | `settings` | `profile_…`, `preset_…` | the profile or preset, with items, playlists and presets named by their synced ids |
 | `device` | device id | `name`, `platform`; never applied, shown in `devices[].label` |
 
@@ -1033,7 +1042,9 @@ that cannot be used is ignored with a warning.
     "sky": { "type": "linear", "from": [0.5, 0.0], "to": [0.5, 0.45], "invert": true }
   },
   "outputs": { "Maker Model 1234": { "connector": "DP-1", "crop": [0.0, 0.1, 0.5, 0.5625] } },
-  "span": { "center": [0.5, 0.46], "zoom": 1.0 }
+  "span": { "center": [0.5, 0.46], "zoom": 1.0 },
+  "depth": { "model": "depth-anything-v2-small", "input": 518, "near": 1.0, "far": 0.0, "gamma": 1.0, "smooth": 2, "dilate": 3 },
+  "parallax": { "enabled": true, "source": "auto", "strength": 0.02, "focus": 0.3, "steps": 16, "smoothing_ms": 150, "overscan": 1.04 }
 }
 ```
 
@@ -1060,12 +1071,57 @@ that cannot be used is ignored with a warning.
 | `vignette` | `amount`, `-1` to `1`; `midpoint`, `roundness` and `feather`, `0` to `1` |
 
 - `masks`, at most 8, use coordinates of the original image: `linear` (`from`, `to`), `radial`
-  (`center`, `radius` `[rx, ry]`, `feather`), `luminance` (`range` `[low, high]`, `soft`) and up
-  to 4 `brush` masks (`strokes` of `radius`, `hardness`, `erase` and `points`, at most 20 000
-  points in all). Every mask takes `invert`.
+  (`center`, `radius` `[rx, ry]`, `feather`), `luminance` and `depth` (`range` `[low, high]`,
+  `soft`; `depth` reads the depth map, `1` near, and selects nothing while the image has none)
+  and up to 4 `brush` masks (`strokes` of `radius`, `hardness`, `erase` and `points`, at most
+  20 000 points in all). Every mask takes `invert`.
 - `outputs` crops the edited image for one screen, keyed by its identity (as in
   `SetOutputInfo`) or output name; `connector` names the output as a hint.
 - `span` places the image when the fit is `span`: `center` `[x, y]` and `zoom` from `1` to `8`.
+- `depth` shapes the depth map: `near` and `far` (`0` to `1`) are the levels of the nearest and
+  farthest points, `gamma` (`0.2` to `5`) curves the levels between them, `dilate` (`0` to `16`
+  pixels of the map) grows near objects over their edges and `smooth` (`0` to `16`) blurs the
+  result. `model` is `depth-anything-v2-small` and `input` (a multiple of 14 from `196` to `1036`)
+  the short side given to it, which also names the generated map.
+- `parallax` moves the image in depth on the desktop while `enabled`: `source` is `auto` (a slow
+  orbit), `pointer` (the pointer feed of `Inputs1`, back to the centre when the pointer leaves the
+  outputs that show the image or rests for 3 s) or `accelerometer` (the IIO accelerometer of the
+  computer, `(raw + offset) × scale` turned by its mount matrix, read 30 times per second only
+  while the parallax is shown, looked for again every 5 s while none answers, with its resting
+  tilt slowly recentred); a new source starts from the offset the image has;
+  `strength` (`0` to `0.03`) is the largest shift as a fraction of the image width, `focus` (`0`
+  far to `1` near) the depth that stays still, `steps` `1`, `8`, `16` or `32` the quality,
+  `smoothing_ms` (`0` to `2000`) the time a critically damped spring takes to follow the source and
+  `overscan` (`1` to `1.1`) the zoom that hides the edges.
+
+The depth map of an image is a grey PNG, white near. It can sit next to the image
+(`hills.jpg.depth.png`, where `wprs-ctl edit depth import` and `export` put it), in
+`~/.local/share/wallpaper-rs/depth/<SHA-256 of the image>.png` (imports whose folder cannot be
+written) or in `~/.cache/wallpaper-rs/depth/<SHA-256>-<model>-<input>.png`, where
+`wprs-ctl edit depth generate` and the app write maps estimated in their own process; the newest
+of these files wins, and on equal times an import comes first. An import whose width to height
+ratio differs from the image's (after its EXIF orientation) by more than 2 % is refused. The cache
+keeps at most 256 MB of estimated maps and deletes the oldest first; temporary files left by an
+interrupted write or install are deleted by the next one in that folder once they are an hour
+old. The daemon never runs the model: it reads the map at
+1024 pixels at most, applies `depth` and reloads it when any of these files changes. A parallax
+image is rendered only while its smoothed offset moves by a quarter of a pixel or more, at most
+`playback.max_fps` times per second, under the same pause rules as videos (`pause.when_covered`,
+`pause.on_battery`, `pause.when_locked` and `SetPaused`), and stays still while the desktop asks
+for reduced motion (`reduced-motion` of the Settings portal). With software rendering (a GPU
+emulated on the CPU) the image stays still and flat unless `playback.software_parallax` is set,
+and then moves with 8 steps at most and 15 frames per second at most. On `span` outputs every
+screen moves by the same offset; `tile` images stay still. The model and ONNX Runtime are only
+downloaded by `wprs-ctl models download` or the app after showing their size, license and every
+host they may come from, from their pinned address (the manifest may list mirrors, which must
+serve the same bytes), with a generic User-Agent, no Referer, no redirect from HTTPS to HTTP and
+their pinned SHA-256; `NOTICE.txt` and the full license text (`LICENSE.txt`, shipped with
+wallpaper-rs) are stored next to each file, and ONNX Runtime keeps the `THIRD-PARTY-NOTICES.txt`
+of its archive. ONNX Runtime runs with its telemetry off (`ORT_DISABLE_TELEMETRY=1` and its
+environment's switch), so it neither stores a device id nor contacts anyone.
+`models.allow_download = false` turns downloads off on this device only: it is not synced and a
+configuration that cannot be read counts as `false`, also when a setting change saves it again.
+`wprs-ctl models install` takes files fetched by other means.
 
 Exposure, white balance, contrast, saturation, vignette and blur work in linear light, curves and
 overlays (with their `opacity`) in sRGB. The GPU renders an edit once, at the size the output
@@ -1194,6 +1250,8 @@ not know as unknown. Adding a field, an enum value or a method keeps the model v
 removing, renaming or retyping something increases it. Times are Unix seconds; `Fit` is
 `"fill"`, `"fit"`, `"stretch"`, `"center"`, `"tile"` or `"span"`; enums are written in snake case.
 `edited` tells whether an edit applies to the shown image and `screen` repeats `SetOutputInfo`.
+`parallax` tells whether the image moves in depth and `frames` counts the frames rendered for the
+output since it appeared.
 
 ```rust
 struct State {
@@ -1207,7 +1265,7 @@ struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
-    edited: bool, screen: Option<Screen>,
+    edited: bool, screen: Option<Screen>, parallax: bool, frames: u64,
 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
 enum Shown { Color, Image, Video, Scene }
@@ -1344,7 +1402,7 @@ enum Input { Audio, Pointer }
 struct SceneInputs { scene: String, audio: bool, pointer: bool }
 struct InputsReply {
     model: u32, serial: u64, capturing: bool, tracking: bool,
-    grants: BTreeMap<String, Vec<Input>>, shown: BTreeMap<String, SceneInputs>,
+    grants: BTreeMap<String, Vec<Input>>, shown: BTreeMap<String, SceneInputs>, parallax: Vec<String>,
 }
 enum AccountState { Unlinked, Linking, NeedsKey, Ready, Paused, Error }
 struct AccountDevice {
@@ -1395,6 +1453,9 @@ thumb_cache_mb = 512
 
 [repos]
 auto_refresh = true
+
+[models]
+allow_download = true
 
 [providers.photos]        # one table per provider
 kind = "immich"

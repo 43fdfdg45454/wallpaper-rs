@@ -62,25 +62,26 @@ impl State {
             };
             let scene = o.shown.scene.as_ref().is_some_and(SceneState::playing);
             let running = scene || slot.is_some_and(|s| s.playing && s.player.is_some());
-            (
-                kind,
-                o.active && running && error.is_none() && o.watched(self.exporter.is_streaming(name)),
-                error,
-            )
+            let watched = o.active && o.watched(self.exporter.is_streaming(name));
+            (kind, watched && running && error.is_none(), error, self.moves(o))
         };
         let mut published = lock(&self.status);
         let unchanged = published.len() == self.outputs.len()
             && self.outputs.iter().all(|(name, o)| {
-                let (kind, playing, error) = status(name, o);
-                let same = |s: &OutputStatus| (s.kind, s.playing, &s.error) == (kind, playing, &error);
+                let (kind, playing, error, parallax) = status(name, o);
+                let same = |s: &OutputStatus| {
+                    (s.kind, s.playing, &s.error, s.parallax) == (kind, playing, &error, parallax)
+                };
                 published.get(name).is_some_and(same)
             });
         if !unchanged {
             let entry = |(name, o): (&String, &Output)| {
-                let (kind, playing, error) = status(name, o);
-                (name.clone(), OutputStatus { kind, playing, error })
+                let (kind, playing, error, parallax) = status(name, o);
+                let frames = published.get(name).map_or(0, |s| s.frames);
+                (name.clone(), OutputStatus { kind, playing, error, parallax, frames })
             };
-            let old = std::mem::replace(&mut *published, self.outputs.iter().map(entry).collect());
+            let fresh = self.outputs.iter().map(entry).collect();
+            let old = std::mem::replace(&mut *published, fresh);
             let names = published.keys().chain(old.keys());
             let mut changed: Vec<String> =
                 names.filter(|n| published.get(*n) != old.get(*n)).cloned().collect();

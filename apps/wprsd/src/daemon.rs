@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::SystemTime;
 use tokio::sync::{Notify, watch};
-use wprs_core::{Config, dbus};
+use wprs_core::{Config, Models, dbus};
 use wprs_format::Installed;
 use wprs_pipewire::Exporter;
 use wprs_render::Renderer;
@@ -33,6 +33,7 @@ pub(crate) struct State {
     pub(crate) installed: Vec<Installed>,
     pub(crate) playing: HashMap<String, Playing>,
     pub(crate) sidecars: crate::edits::Sidecars,
+    pub(crate) depths: HashMap<PathBuf, crate::relief::Cached>,
     pub(crate) scenes: HashMap<PathBuf, ((i64, u64), Weak<crate::scenes::ScenePack>)>,
 }
 
@@ -63,8 +64,9 @@ pub struct Daemon {
 impl Daemon {
     pub fn new(config_path: PathBuf, display: Option<wprs_render::Display>) -> anyhow::Result<Self> {
         let store = Store::open();
+        let closed = || Config { models: Models { allow_download: false }, ..Config::default() };
         let (config, config_error) = load(&config_path, &store)
-            .map_or_else(|e| (Config::default(), Some(e.to_string())), |config| (config, None));
+            .map_or_else(|e| (closed(), Some(e.to_string())), |config| (config, None));
         match &config_error {
             Some(e) => {
                 tracing::error!("cannot use the configuration file; using the defaults until it is fixed");
@@ -159,7 +161,8 @@ impl State {
 pub(crate) fn settings(config: &Config) -> Settings {
     let playback = config.playback.sanitized();
     let transition = config.transition.duration();
-    Settings { transition, max_fps: playback.max_fps, volume: playback.volume, muted: playback.muted }
+    let (max_fps, volume, muted) = (playback.max_fps, playback.volume, playback.muted);
+    Settings { transition, max_fps, volume, muted, software_parallax: playback.software_parallax }
 }
 
 pub(crate) fn output_name(output: &str) -> fdo::Result<String> {

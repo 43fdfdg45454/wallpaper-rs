@@ -89,6 +89,7 @@ impl Daemon {
         let modified = modified(&file)?;
         let edit = self.edit_for(&file);
         let place = self.place(output, fit, edit.as_deref());
+        let depth = edit.as_deref().filter(|e| e.needs_depth()).and_then(|e| self.depth_for(&file, e));
         let upload = (size, fit, file.clone(), modified, edit.clone(), place.clone());
         let edge = || {
             wprs_render::needed_edge(&file, edit.as_deref(), &place, (fit, size), self.compositor.max_edge())
@@ -96,7 +97,7 @@ impl Daemon {
         let pixels = (uploaded.as_ref() != Some(&upload))
             .then(|| self.load_image(&file, modified, Some(edge())))
             .transpose()?;
-        Ok((Picture { file, modified, pixels, edit, place }, upload))
+        Ok((Picture { file, modified, pixels, edit, place, depth }, upload))
     }
 
     pub(crate) fn load_image(

@@ -1,0 +1,37 @@
+[package]
+name = "wprs-depth"
+description = "Depth maps for wallpaper-rs: model files, estimation and storage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+fetch = ["dep:reqwest", "dep:flate2", "dep:tar"]
+infer = ["dep:ort", "dep:libc"]
+
+[dependencies]
+wprs-core.workspace = true
+anyhow.workspace = true
+dirs.workspace = true
+image.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+reqwest = { workspace = true, features = ["blocking"], optional = true }
+flate2 = { workspace = true, optional = true }
+tar = { workspace = true, optional = true }
+ort = { workspace = true, optional = true }
+libc = { workspace = true, optional = true }
+
+[[test]]
+name = "fetch"
+required-features = ["fetch"]
+
+[[test]]
+name = "install"
+required-features = ["fetch"]
+
+[[test]]
+name = "model"
+required-features = ["infer"]

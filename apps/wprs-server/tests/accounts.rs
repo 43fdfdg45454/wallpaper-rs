@@ -61,7 +61,8 @@ async fn first_admin_registration_and_tokens() {
         StatusCode::FORBIDDEN
     );
     assert_eq!(server.json(Method::GET, "/api/v1/sync/state", &bearer, None).await.0, StatusCode::FORBIDDEN);
-    let forged = Who::Bearer(format!("{}0", &token["token"].as_str().unwrap()[..79]));
+    let real = token["token"].as_str().unwrap();
+    let forged = Who::Bearer(format!("{}{}", &real[..79], if real.ends_with('0') { 1 } else { 0 }));
     assert_eq!(server.json(Method::GET, "/api/v1/me", &forged, None).await.0, StatusCode::UNAUTHORIZED);
     let revoke = format!("/api/v1/me/tokens/{}?_method=DELETE&back=/account", token["id"]);
     let done = server.form(&revoke, &user, &[]).await;

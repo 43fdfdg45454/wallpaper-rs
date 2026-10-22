@@ -27,7 +27,7 @@ fn op(kind: serde_json::Value) -> Edit {
 }
 
 fn develop(r: &Renderer, image: &RgbaImage, edit: &Edit, size: (u32, u32)) -> RgbaImage {
-    r.read_image(&r.develop(image, edit, size).unwrap()).unwrap()
+    r.read_image(&r.develop(image, edit, None, size).unwrap()).unwrap()
 }
 
 fn flat(color: [u8; 3]) -> RgbaImage {
@@ -193,11 +193,17 @@ fn the_daemon_draw_and_the_export_produce_the_same_pixels() {
     let edit = edit(
         json!({"ops": [{"id": "ev", "type": "exposure", "ev": 0.4}, {"id": "s", "type": "saturation", "vibrance": 30}]}),
     );
-    let developed = r.develop(&image, &edit, (40, 24)).unwrap();
+    let developed = r.develop(&image, &edit, None, (40, 24)).unwrap();
     let exported = r.read_image(&developed).unwrap();
     let mut target = r.create_target(40, 24).unwrap();
-    let layer =
-        Layer { image: Some(&developed), fit: Fit::Stretch, background: [0; 3], opacity: 1.0, uv: None };
+    let layer = Layer {
+        image: Some(&developed),
+        fit: Fit::Stretch,
+        background: [0; 3],
+        opacity: 1.0,
+        uv: None,
+        relief: None,
+    };
     let mut drawn = Vec::new();
     r.render_layers(&mut target, &[layer], &mut drawn).unwrap();
     for (i, pixel) in exported.pixels().enumerate() {

@@ -84,7 +84,8 @@ alias wprs-ctl='flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperR
 Permisos: la GPU, el socket de PipeWire para publicar los streams, el sonido de los vídeos, el
 nombre D-Bus del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
 Service) para las contraseñas y claves de los proveedores, KWin para cargar el script del
-puntero solo mientras una escena con permiso lo usa, lectura de Imágenes, Vídeos y Descargas, y
+puntero solo mientras una escena con permiso o un parallax que sigue al puntero lo usa, lectura
+de Imágenes, Vídeos y Descargas, y
 red. La red solo se usa para los proveedores de fondos y los repositorios que
 añadas tú. Para usar fondos de otra carpeta:
 `flatpak override --user --filesystem=/ruta:ro io.github.wallpaper_rs.WallpaperRs`. La
@@ -208,6 +209,31 @@ wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
 wprs-ctl config layout.bezel_mm 8                    # ancho del marco de cada pantalla al extender
 ```
 
+Una imagen fija puede moverse en profundidad (parallax): con un mapa de profundidad en gris (blanco
+cerca), el daemon desplaza más lo cercano que lo lejano siguiendo una órbita lenta, el puntero o el
+acelerómetro del equipo, solo mientras el fondo se ve, con el tope de `playback.max_fps`, las
+mismas pausas que el vídeo y quieto si el sistema pide reducir el movimiento. Elegir el puntero
+como fuente para una imagen es tu permiso para seguirlo mientras se ve, igual que en las
+escenas. Con render por software (sin GPU) la imagen queda quieta salvo que actives
+`playback.software_parallax`, que la mueve con 8 pasos y 15 fotogramas por segundo como mucho.
+El mapa puede ser propio (`wprs-ctl edit depth import`, con la misma proporción que la imagen) o
+calcularse en el propio equipo con Depth Anything V2 Small (Apache-2.0) mediante ONNX Runtime, en
+un proceso aparte y nunca dentro del daemon; gana el mapa más reciente y la caché de mapas
+calculados no pasa de 256 MB. Ni el modelo (99 MB) ni ONNX Runtime (11 MB) vienen incluidos: solo
+se descargan de GitHub cuando lo pides, después de mostrar tamaño, licencia y servidores, se
+comprueban con su SHA-256 fijado, se guardan junto al texto completo de su licencia (y ONNX
+Runtime junto a los avisos de terceros de su archivo) y la imagen no sale nunca del equipo.
+`models.allow_download = false` impide cualquier descarga y `wprs-ctl models install` instala
+archivos obtenidos por otra vía:
+
+```sh
+wprs-ctl models list                                 # tamaño, licencia, servidor y estado
+wprs-ctl models download depth-anything-v2-small     # pregunta antes de descargar
+wprs-ctl edit depth generate foto.jpg                # mapa calculado aquí; Ctrl-C cancela
+wprs-ctl edit depth foto.jpg --dilate 4 --smooth 2   # ajustar cerca, lejos, curva y bordes
+wprs-ctl edit parallax foto.jpg --source pointer --strength 0.02 --focus 0.3
+```
+
 `wprs-ctl pack` (crear, firmar y validar paquetes `.wpak`) y `wprs-ctl repo` (claves, firma,
 publicación, rotación y verificación de un repositorio) funcionan sin daemon. La contraseña de
 una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
@@ -266,7 +292,8 @@ wprs-ctl server upload fondo.wpak                # sube un paquete con el token 
 ```
 
 Se sincronizan los títulos, etiquetas, valoraciones y favoritos de la biblioteca, las listas, los
-perfiles, los ajustes predefinidos y los ajustes (salvo el volumen y la caché), cifrados de
+perfiles, los ajustes predefinidos y los ajustes (salvo el volumen, la caché, el paralaje por
+software y el permiso para descargar modelos, que se quedan en cada equipo), cifrados de
 extremo a extremo; sin cifrar solo con `--plaintext`, que avisa antes. El token y la clave de
 sincronización viven solo en el llavero del sistema; el servidor ve los equipos como `Device 1`,
 `Device 2`… y el nombre real viaja cifrado. Al enlazar se añade también el repositorio del
@@ -353,6 +380,7 @@ raíz y la misma pausa.
 |------|-----------|
 | `crates/wprs-core` | Configuración, modos de ajuste, nombres D-Bus |
 | `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland y X11 |
+| `crates/wprs-depth` | Mapas de profundidad: modelo bajo demanda, cálculo con ONNX Runtime y caché |
 | `crates/wprs-scene` | Modelo de las escenas: capas, valores enlazados, líneas de tiempo y efectos, sin GPU |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
 | `crates/wprs-video` | Reproducción de vídeo en bucle con GStreamer |
@@ -366,7 +394,7 @@ raíz y la misma pausa.
 | `apps/wprs-server` | Servidor propio: repositorio, catálogo, subidas, moderación y sincronización |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
-| `integrations/kwin-pointer` | Script de KWin que envía la posición del puntero mientras una escena la usa |
+| `integrations/kwin-pointer` | Script de KWin que envía la posición del puntero mientras una escena o un parallax la usa |
 | `po` | Traducciones gettext de los paquetes de Plasma y de la app |
 | `packaging` | Servicio systemd, activación D-Bus, lanzador e icono, scripts de instalación, Flatpak |
 | `deploy` | Despliegue de referencia del servidor con Caddy |
@@ -385,6 +413,12 @@ raíz y la misma pausa.
   y contraseñas solo se envían al servidor configurado. Se guardan en el llavero del sistema
   (Secret Service) y en ningún otro sitio: ni en la configuración, ni en los registros, ni en la
   línea de órdenes. `http://` sin cifrar a otro equipo solo se permite con `allow_plain_http`.
+- El modelo de profundidad y ONNX Runtime solo se descargan si lo pides y aceptas su tamaño,
+  licencia y servidores; llevan el mismo User-Agent genérico, sin cabecera Referer ni redirecciones
+  de HTTPS a HTTP, se verifican con SHA-256 y los mapas se calculan en el equipo, en un proceso
+  aparte. ONNX Runtime funciona con su telemetría desactivada: no guarda ningún identificador ni se
+  conecta a nadie. `models.allow_download` se queda en cada equipo y, si la configuración no se
+  puede leer, cuenta como desactivado.
 - La configuración se escribe con permisos `0600` dentro de una carpeta `0700`: solo tu usuario
   puede leerla.
 - La caché de descargas se guarda en una carpeta privada.
@@ -402,7 +436,9 @@ raíz y la misma pausa.
   que los usa, y se paran al pausar o bloquear la pantalla. Al taparla se para el puntero, y
   también el sonido si está activa la pausa al tapar, como viene por defecto. Del sonido solo se
   calculan bandas y niveles en memoria: no se guarda, no se registra y no sale del equipo. Del
-  puntero solo se guarda en memoria la última posición, y nunca se leen las teclas.
+  puntero solo se guarda en memoria la última posición, y nunca se leen las teclas. Una imagen
+  cuyo parallax sigue al puntero lo usa con las mismas reglas, porque elegir esa fuente es el
+  permiso.
 - Los scripts de las escenas se ejecutan en un proceso aparte, sin archivos, red ni otros
   procesos, con límites de memoria y de CPU por fotograma.
 - Con un servidor propio, los registros sincronizados salen cifrados con una clave que solo

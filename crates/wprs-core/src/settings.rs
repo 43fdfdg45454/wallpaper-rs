@@ -9,11 +9,12 @@ pub struct Playback {
     pub volume: f64,
     pub muted: bool,
     pub max_fps: u32,
+    pub software_parallax: bool,
 }
 
 impl Default for Playback {
     fn default() -> Self {
-        Self { volume: 0.5, muted: true, max_fps: 30 }
+        Self { volume: 0.5, muted: true, max_fps: 30, software_parallax: false }
     }
 }
 
@@ -25,6 +26,7 @@ impl Playback {
             volume: if self.volume.is_finite() { self.volume.clamp(0.0, 1.0) } else { 0.0 },
             muted: self.muted,
             max_fps: self.max_fps.clamp(1, Self::MAX_FPS),
+            software_parallax: self.software_parallax,
         }
     }
 }
@@ -105,7 +107,19 @@ impl Default for Repos {
     }
 }
 
-const OPTION_SECTIONS: [&str; 5] = ["playback", "transition", "pause", "library", "repos"];
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Models {
+    pub allow_download: bool,
+}
+
+impl Default for Models {
+    fn default() -> Self {
+        Self { allow_download: true }
+    }
+}
+
+const OPTION_SECTIONS: [&str; 6] = ["playback", "transition", "pause", "library", "repos", "models"];
 
 impl Config {
     pub fn options(&self) -> BTreeMap<String, toml::Value> {

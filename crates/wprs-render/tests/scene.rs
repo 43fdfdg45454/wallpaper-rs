@@ -49,8 +49,14 @@ impl Shot {
         let image = r.render_scene(&mut self.view, &self.runtime, &frame, SIZE, Quality::Q3, &[]).unwrap();
         let mut target = r.create_target(SIZE.0, SIZE.1).unwrap();
         let mut pixels = Vec::new();
-        let layer =
-            Layer { image: Some(image), fit: Fit::Stretch, background: [0; 3], opacity: 1.0, uv: None };
+        let layer = Layer {
+            image: Some(image),
+            fit: Fit::Stretch,
+            background: [0; 3],
+            opacity: 1.0,
+            uv: None,
+            relief: None,
+        };
         r.render_layers(&mut target, &[layer], &mut pixels).unwrap();
         pixels
     }

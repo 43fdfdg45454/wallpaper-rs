@@ -19,10 +19,12 @@ impl View {
 
 impl Control {
     pub(crate) fn allows(&self, output: &str, input: Input) -> bool {
-        self.shown.get(output).is_some_and(|need| {
-            let declared = if input == Input::Audio { need.audio } else { need.pointer };
-            declared && self.grants.get(&need.scene).is_some_and(|g| g.contains(&input))
-        })
+        let still = input == Input::Pointer && self.parallax.contains(output);
+        still
+            || self.shown.get(output).is_some_and(|need| {
+                let declared = if input == Input::Audio { need.audio } else { need.pointer };
+                declared && self.grants.get(&need.scene).is_some_and(|g| g.contains(&input))
+            })
     }
 
     pub(crate) fn wants(&self, input: Input) -> BTreeSet<String> {
@@ -30,7 +32,7 @@ impl Control {
             let view = self.views.get(*output).copied().unwrap_or_default();
             self.allows(output, input) && view.active && (input == Input::Audio || !view.covered)
         };
-        self.shown.keys().filter(wanted).cloned().collect()
+        self.shown.keys().chain(&self.parallax).filter(wanted).cloned().collect()
     }
 }
 

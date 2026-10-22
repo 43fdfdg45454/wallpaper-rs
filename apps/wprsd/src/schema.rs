@@ -46,6 +46,7 @@ fn options() -> Vec<Field> {
         range(option("playback.volume", FieldKind::Float), 0.0, 1.0, Some(0.01)),
         flag("playback.muted"),
         range(option("playback.max_fps", FieldKind::Int), 1.0, 240.0, Some(1.0)),
+        flag("playback.software_parallax"),
         values(option("transition.kind", FieldKind::Enum), &["fade", "none"]),
         range(option("transition.duration_ms", FieldKind::Int), 0.0, 10_000.0, Some(1.0)),
         flag("pause.when_covered"),
@@ -55,6 +56,7 @@ fn options() -> Vec<Field> {
         range(option("library.thumb_cache_mb", FieldKind::Int), 64.0, 8192.0, Some(1.0)),
         flag("repos.auto_refresh"),
         range(option("layout.bezel_mm", FieldKind::Float), 0.0, 100.0, Some(0.5)),
+        flag("models.allow_download"),
     ]
 }
 

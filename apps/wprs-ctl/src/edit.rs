@@ -117,6 +117,50 @@ pub enum Edits {
         #[arg(value_name = "ID")]
         ids: Vec<String>,
     },
+    #[command(
+        about = "Adjust the depth map of an image, or generate, import or export it",
+        args_conflicts_with_subcommands = true,
+        subcommand_negates_reqs = true
+    )]
+    Depth {
+        #[arg(required = true)]
+        path: Option<PathBuf>,
+        #[arg(long, help = "Level of the nearest point, 0 to 1, 1 by default")]
+        near: Option<f32>,
+        #[arg(long, help = "Level of the farthest point, 0 to 1, 0 by default")]
+        far: Option<f32>,
+        #[arg(long, help = "Curve between them, 0.2 to 5, 1 by default")]
+        gamma: Option<f32>,
+        #[arg(long, help = "Blur radius in pixels of the map, 0 to 16, 2 by default")]
+        smooth: Option<u32>,
+        #[arg(long, help = "Pixels by which near objects grow over their edges, 0 to 16, 3 by default")]
+        dilate: Option<u32>,
+        #[arg(
+            long,
+            help = "Short side given to the model: a multiple of 14 from 196 to 1036, 518 by default"
+        )]
+        input: Option<u32>,
+        #[command(subcommand)]
+        map: Option<crate::depth::Maps>,
+    },
+    #[command(about = "Move the image in depth on the desktop; any change turns it on unless --off")]
+    Parallax {
+        path: PathBuf,
+        #[arg(long, value_parser = ["auto", "pointer", "accelerometer"], help = "What moves it; auto when new")]
+        source: Option<String>,
+        #[arg(long, help = "Largest shift as a fraction of the width, up to 0.03")]
+        strength: Option<f32>,
+        #[arg(long, help = "Depth that stays still, 0 far to 1 near")]
+        focus: Option<f32>,
+        #[arg(long, value_parser = ["1", "8", "16", "32"], help = "Quality: 1 shifts, more steps follow edges")]
+        steps: Option<String>,
+        #[arg(long, value_name = "MS", help = "Time the movement takes to settle, 0 to 2000 ms")]
+        smoothing: Option<u32>,
+        #[arg(long, help = "Zoom that hides the edges, 1 to 1.1")]
+        overscan: Option<f32>,
+        #[arg(long, help = "Turn the parallax off and keep its settings")]
+        off: bool,
+    },
     #[command(about = "Replace the edit with a JSON file, or - for standard input")]
     Apply { path: PathBuf, file: String },
     #[command(about = "Show changes on the desktop for 60 s without saving them")]
@@ -161,7 +205,18 @@ fn action(command: Edits) -> Option<(PathBuf, Action)> {
         Edits::Order { path, ids } => (path, Action::Order { ids }),
         Edits::Span { path, zoom, center } => (path, Action::Span { zoom, center }),
         Edits::Reset { path, ids } => (path, Action::Reset { ids }),
-        Edits::Show { .. } | Edits::Apply { .. } | Edits::Preview { .. } | Edits::Export { .. } => {
+        Edits::Depth { path, near, far, gamma, smooth, dilate, input, map: None } => {
+            (path?, Action::Depth { near, far, gamma, smooth, dilate, input })
+        }
+        Edits::Parallax { path, source, strength, focus, steps, smoothing, overscan, off } => {
+            let steps = steps.and_then(|s| s.parse().ok());
+            (path, Action::Parallax { source, strength, focus, steps, smoothing, overscan, off })
+        }
+        Edits::Show { .. }
+        | Edits::Apply { .. }
+        | Edits::Preview { .. }
+        | Edits::Export { .. }
+        | Edits::Depth { map: Some(_), .. } => {
             return None;
         }
     })
@@ -176,6 +231,7 @@ pub fn run(command: Edits) -> Result<()> {
         Edits::Apply { path, file } => apply(&path, &file)?,
         Edits::Preview { path, changes, stop } => preview(&path, changes, stop)?,
         Edits::Export { path, out, quality, size } => export(&path, &out, quality, size.as_deref())?,
+        Edits::Depth { map: Some(map), .. } => crate::depth::run(map)?,
         command => action(command).map_or(Ok(()), |(path, action)| change(&path, action))?,
     }
     Ok(())
