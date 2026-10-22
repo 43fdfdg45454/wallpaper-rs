@@ -3,7 +3,7 @@ use super::surface::Screen;
 use super::{Content, Spec};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use wprs_core::Fit;
 use wprs_render::{GpuImage, Layer, Target};
 
@@ -12,6 +12,7 @@ pub(super) struct Shown {
     pub(super) fit: Fit,
     pub(super) background: [u8; 3],
     pub(super) image: Option<GpuImage>,
+    pub(super) transition: Option<Duration>,
 }
 
 impl Shown {

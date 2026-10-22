@@ -12,6 +12,7 @@ finish-args:
   - --own-name=io.github.wallpaper_rs.Daemon
   - --talk-name=org.freedesktop.ScreenSaver
   - --system-talk-name=org.freedesktop.UPower
+  - --system-talk-name=org.freedesktop.login1
   - --filesystem=xdg-pictures:ro
   - --filesystem=xdg-videos:ro
   - --filesystem=xdg-download:ro

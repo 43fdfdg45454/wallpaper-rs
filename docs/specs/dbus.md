@@ -24,8 +24,8 @@ in 60 s) and clients get their streams again through `RequestStream`. Only the m
 change what is shown (`Library1.Apply`, `Playlists1.Start`, `Stop`, `Next` and `Previous`,
 `Profiles1.Activate` and the `Daemon1` methods that change something) need the renderer.
 
-This version of wprsd serves `Playlists1`, `Profiles1`, `Providers1` and `Repos1` with every
-member listed below, but their methods return `org.freedesktop.DBus.Error.NotSupported`.
+This version of wprsd serves `Providers1` and `Repos1` with every member listed below, but their
+methods return `org.freedesktop.DBus.Error.NotSupported`.
 
 ## Conventions
 
@@ -70,8 +70,9 @@ Every error carries a readable English message.
 | `io.github.wallpaper_rs.Error.Conflict` | A playlist edit by index found other entries than expected: `the playlist changed; reload it` |
 
 If `library.db` cannot be opened (for example because a newer build wrote it), the daemon still
-renders, `GetState().library_error` holds the reason and every `Library1` method returns
-`Failed` with it.
+renders, `GetState().library_error` holds the reason and every `Library1`, `Playlists1` and
+`Profiles1` method returns `Failed` with it. An output whose playlist cannot be resolved then
+shows its background color and `GetState().outputs[x].error` says why.
 
 ## Streams and claims
 
@@ -419,7 +420,32 @@ A thumbnail queued by `RequestThumbnails` is ready, or could not be made (`path 
 
 ## `io.github.wallpaper_rs.Playlists1`
 
-Playlist arguments take a full uid or a name (names compare without case).
+Playlist arguments take a full uid or a name (names compare without case). Rotation runs in the
+daemon and needs no client:
+
+- A playlist switches at every `interval` and at every `at` time (local time), on the listed
+  `days` only. A time skipped by a daylight saving jump fires right after the gap; a time that
+  occurs twice fires once. `Next` and `Previous` work on any day and restart the interval.
+- The daemon sleeps until the nearest switch, waking at least every 15 minutes to follow the wall
+  clock, and recomputes after a resume from suspend and when the configuration, the power
+  source, the pause state, the outputs or the library change. With no switch pending (no
+  playlist shown, paused outputs, empty playlists, no timer) it does not wake at all.
+- Each output has its own position (`synced = false`), or every output showing the playlist
+  shares one (`synced = true`) and shows the same item. Positions are kept in the library, so a
+  restart shows the same item (`resume = true`) or the next one (`resume = false`).
+- Adding, removing or reordering items, or a scan, never changes the item shown; if that item
+  is gone, the item at its position is shown. Shuffled playlists never repeat an item within a
+  cycle.
+- While an output is not active (paused, covered, locked or paused on battery) its playlist does
+  not switch unless `advance_while_paused` is set; when it becomes active and a switch is
+  overdue, it switches once. Disconnected outputs do not switch either, and switch once when
+  they come back after a missed switch.
+- Missing items, items that cannot be decoded and revoked packages are left out, and so are
+  videos on battery with `skip_videos_on_battery`. If a playlist has nothing to show, the output
+  keeps its last picture, or shows its background color with the reason in
+  `GetState().outputs[x].error`.
+- `GetState().outputs[x]` reports the `item` shown and `playlist` (`uid`, `name`, `position` in
+  the cycle, `count` of playable items, `next_at`). Every shown item is recorded in `History`.
 
 ### `List() → (s json)`
 
@@ -447,7 +473,7 @@ The manual entries stay stored and come back when the query is cleared.
 
 ### `Delete(s playlist)`
 
-Stops the playlist on its outputs (the picture shown stays), then deletes it.
+Stops the playlist on its outputs (the picture shown stays), then deletes it with its positions.
 
 ### `AddItems(s playlist, as uids)`
 
@@ -469,7 +495,8 @@ Moves the entry at `from` to `to` when the entry at `from` is `expected`; otherw
 
 ### `SetRule(s playlist, s key, s value)`
 
-Sets one rotation rule; the keys are listed in `GetSchema().rules`:
+Sets one rotation rule; the keys are listed in `GetSchema().rules`. Changing `synced` keeps the
+item shown as the start of the new positions; any change restarts the interval.
 
 | Key | Value | Default |
 |-----|-------|---------|
@@ -485,22 +512,27 @@ Sets one rotation rule; the keys are listed in `GetSchema().rules`:
 
 ### `Start(s playlist, s output)`
 
-Assigns the playlist to `output` (`""` = every output) and shows its current or first item at
-once. `Failed` (`the playlist has no items to show`) when nothing is playable.
+Assigns the playlist to `output` (`""` = every output, clearing the wallpapers and playlists of
+single outputs), writes it as `playlist` of that configuration section and clears its `image`
+and `preset`, then shows the current or first item at once (the next one with `resume = false`)
+and restarts the interval. `Failed` (`the playlist has no items to show`) when nothing is
+playable; nothing changes then.
 
 ### `Stop(s output)`
 
 Removes the playlist of `output` (`""` = every output that has one) and keeps the item shown as
-the fixed wallpaper.
+the fixed wallpaper (written as `image`). An output without playlist is left as it is.
 
 ### `Next(s output)`
 
-Shows the next item on `output` (`""` = every output with a playlist). `NotFound` for an output
+Shows the next item on `output` (`""` = every output with a playlist) and restarts the
+interval. A synced playlist moves on every output that shows it. `NotFound` for an output
 without playlist.
 
 ### `Previous(s output)`
 
-Goes one step back on `output`, like `Next`.
+Goes one step back on `output`, like `Next`: from the first item of a shuffle cycle to the last
+item of the previous cycle; at the very start nothing changes.
 
 ### `History(s output, u limit) → (s json)`
 
@@ -509,7 +541,14 @@ A `HistoryReply`, newest first. `output` is a connector name; `limit` is `1..=10
 ## `io.github.wallpaper_rs.Profiles1`
 
 Profiles store a complete assignment of wallpapers to outputs, optionally with settings;
-presets store a fit and a background color, for one item or for every item.
+presets store a fit and a background color, for one item or for every item. Profile arguments
+take a full uid or a name (names compare without case).
+
+A profile with rules (`SetAuto`) is activated automatically when every rule it sets holds: after
+the set of connected outputs has stayed the same for 2 seconds following a connect or
+disconnect, and when the power source changes. The highest `priority` wins, ties go to the
+first name. A manual `Activate` holds until the next such change; when nothing matches, nothing
+changes.
 
 ### `List() → (s json)`
 
@@ -526,7 +565,11 @@ profile. An existing profile of that name is replaced and keeps its uid, rules a
 
 ### `Activate(s profile)`
 
-Applies a profile at once and marks it active; `""` only clears the active marker.
+Applies a profile at once and marks it active; `""` only clears the active marker. Outputs not
+in the profile lose their own wallpaper. Entries whose item, file or playlist is gone or cannot
+be shown are skipped with a warning, and those outputs show the default section; unknown or
+invalid settings are skipped too. The configuration is saved once and every output is
+reconfigured.
 
 ### `Rename(s profile, s name)`
 
@@ -549,7 +592,8 @@ A `PresetsReply`: the presets of `item`, or the global presets for `item = ""`.
 ### `SavePreset(s item, s name, a{ss} values) → (s uid)`
 
 Saves a preset of `item` (`""` = global) with `fit` and/or `background` (`#rrggbb`). An
-existing name in that scope is replaced and keeps its uid.
+existing name in that scope is replaced and keeps its uid, and the configuration sections that
+use it get its new fit and background.
 
 ### `DeletePreset(s preset)`
 
@@ -892,7 +936,7 @@ auto_refresh = true
 
 A section shows its `playlist` if set, else its `image`. An output section that sets either one
 overrides the content of `[default]` as a whole; `fit` and `background` still fall back field by
-field. `preset` is only a label: `Library1.Apply` writes the effective fit and background into
-the section. When the library is available at startup or `Reload`, `preset`, `playlist` and
-`profile` uids that name nothing are dropped with a warning naming the key, and the file is
-saved.
+field. `preset` is only a label: `Library1.Apply`, `Profiles1.Activate` and
+`Profiles1.SavePreset` write the effective fit and background into the section. When the
+library is available at startup or `Reload`, `preset`, `playlist` and `profile` uids that name
+nothing are dropped with a warning naming the key, and the file is saved.

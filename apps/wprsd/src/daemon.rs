@@ -2,6 +2,7 @@ use crate::changes::Changes;
 use crate::compositor::{Compositor, Settings, lock};
 use crate::folders::Folders;
 use crate::jobs::Jobs;
+use crate::rotation::{Playing, Rotations};
 use crate::store::Store;
 use crate::streams::OutputInfo;
 use crate::thumbs::Thumbs;
@@ -30,6 +31,7 @@ pub(crate) struct State {
     pub(crate) locked: bool,
     pub(crate) items: HashMap<PathBuf, String>,
     pub(crate) installed: Vec<Installed>,
+    pub(crate) playing: HashMap<String, Playing>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -51,6 +53,7 @@ pub struct Daemon {
     pub(crate) jobs: Jobs,
     pub(crate) thumbs: Arc<Thumbs>,
     pub(crate) folders: Folders,
+    pub(crate) rotations: Rotations,
 }
 
 impl Daemon {
@@ -96,6 +99,7 @@ impl Daemon {
             jobs,
             thumbs,
             folders,
+            rotations: Rotations::default(),
         };
         daemon.refresh_items();
         Ok(daemon)
@@ -124,6 +128,7 @@ impl Daemon {
         self.configure_all();
         self.refresh_items();
         self.watch_sources();
+        self.rotations.wake.notify_one();
         self.publish();
         Ok(())
     }

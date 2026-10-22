@@ -55,6 +55,7 @@ pub struct Spec {
     pub content: Content,
     pub fit: Fit,
     pub background: [u8; 3],
+    pub transition: Option<Duration>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

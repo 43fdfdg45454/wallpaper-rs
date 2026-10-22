@@ -99,8 +99,10 @@ impl State {
             }
             _ => kept,
         };
-        let shown = Shown { content: spec.content, fit: spec.fit, background: spec.background, image };
-        let transition = !self.settings.transition.is_zero();
+        let (content, fit, background, transition) =
+            (spec.content, spec.fit, spec.background, spec.transition);
+        let shown = Shown { content, fit, background, image, transition };
+        let transition = !transition.unwrap_or(self.settings.transition).is_zero();
         match self.outputs.get_mut(&name) {
             Some(output) => output.show(shown, size, transition),
             None => {

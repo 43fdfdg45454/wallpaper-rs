@@ -53,6 +53,10 @@ impl Changes {
         move |outputs| drop(tx.send(Signal::Changed("state", outputs)))
     }
 
+    pub fn subscribe(&self) -> watch::Receiver<u64> {
+        self.serial.subscribe()
+    }
+
     pub fn serial(&self) -> u64 {
         *self.serial.borrow()
     }

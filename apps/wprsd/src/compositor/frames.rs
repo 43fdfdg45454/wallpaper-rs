@@ -75,7 +75,7 @@ fn draw(
     now: Instant,
 ) -> anyhow::Result<()> {
     let (renderer, exporter, players) = shared;
-    let progress = output.progress(now, transition);
+    let progress = output.progress(now, output.shown.transition.map_or(transition, |d| d.as_secs_f32()));
     let shown = output.shown.layer(players, if output.fade.is_some() { smoothstep(progress) } else { 1.0 });
     let from = output.fade.as_ref().map(|(from, _)| from.layer(players, 1.0));
     let layers = [from.unwrap_or(shown), shown];

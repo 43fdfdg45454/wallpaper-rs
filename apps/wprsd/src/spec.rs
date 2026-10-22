@@ -1,6 +1,8 @@
 use crate::library1::Library;
+use crate::playlists1::Playlists;
+use crate::profiles1::Profiles;
 use crate::service::Service;
-use crate::stubs::{Playlists, Profiles, Providers, Repos};
+use crate::stubs::{Providers, Repos};
 use std::sync::Weak;
 use wprs_core::dbus;
 use zbus::object_server::Interface;
@@ -41,8 +43,8 @@ fn every_documented_member_exists_and_the_reverse() {
     let interfaces: [(&str, Box<dyn Interface>); 6] = [
         (dbus::INTERFACE, Box::new(Service(Weak::new()))),
         (dbus::LIBRARY, Box::new(Library(Weak::new()))),
-        (dbus::PLAYLISTS, Box::new(Playlists)),
-        (dbus::PROFILES, Box::new(Profiles)),
+        (dbus::PLAYLISTS, Box::new(Playlists(Weak::new()))),
+        (dbus::PROFILES, Box::new(Profiles(Weak::new()))),
         (dbus::PROVIDERS, Box::new(Providers)),
         (dbus::REPOS, Box::new(Repos)),
     ];

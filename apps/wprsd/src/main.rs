@@ -12,8 +12,15 @@ mod import;
 mod items;
 mod jobs;
 mod library1;
+mod playback;
+mod playlists;
+mod playlists1;
 mod pool;
 mod present;
+mod presets;
+mod profiles;
+mod profiles1;
+mod rotation;
 mod scan;
 mod schema;
 mod service;
@@ -23,6 +30,7 @@ mod store;
 mod streams;
 mod stubs;
 mod thumbs;
+mod timing;
 mod wallpaper;
 mod watch;
 mod worker;
@@ -97,9 +105,9 @@ async fn run(args: Args) -> anyhow::Result<()> {
     let server = connection.object_server();
     let weak = Arc::downgrade(&daemon);
     server.at(dbus::OBJECT_PATH, service::Service(weak.clone())).await?;
-    server.at(dbus::OBJECT_PATH, library1::Library(weak)).await?;
-    server.at(dbus::OBJECT_PATH, stubs::Playlists).await?;
-    server.at(dbus::OBJECT_PATH, stubs::Profiles).await?;
+    server.at(dbus::OBJECT_PATH, library1::Library(weak.clone())).await?;
+    server.at(dbus::OBJECT_PATH, playlists1::Playlists(weak.clone())).await?;
+    server.at(dbus::OBJECT_PATH, profiles1::Profiles(weak)).await?;
     server.at(dbus::OBJECT_PATH, stubs::Providers).await?;
     server.at(dbus::OBJECT_PATH, stubs::Repos).await?;
     tokio::spawn(changes::emit(connection.clone(), daemon.clone()));
@@ -121,6 +129,8 @@ async fn run(args: Args) -> anyhow::Result<()> {
     tokio::spawn(watch::screen_lock(connection.clone(), daemon.clone()));
     tokio::spawn(watch::properties(connection.clone(), daemon.clone()));
     tokio::spawn(bus::announce_streams(connection.clone(), daemon.clone()));
+    tokio::spawn(playback::run(daemon.clone()));
+    tokio::spawn(profiles1::follow(daemon.clone()));
     let mut terminate = signal(SignalKind::terminate())?;
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {}

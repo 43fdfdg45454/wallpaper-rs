@@ -29,38 +29,6 @@ macro_rules! stub {
     };
 }
 
-stub!(Playlists "io.github.wallpaper_rs.Playlists1" {
-    list() -> String ["json"];
-    get(playlist: String, offset: u32, limit: u32) -> String ["json"];
-    create(name: String, query: String) -> String ["uid"];
-    rename(playlist: String, name: String) -> ();
-    set_query(playlist: String, query: String) -> ();
-    delete(playlist: String) -> ();
-    add_items(playlist: String, uids: Vec<String>) -> ();
-    remove_items(playlist: String, uids: Vec<String>) -> ();
-    remove_entries(playlist: String, indexes: Vec<u32>, expected: Vec<String>) -> ();
-    move_item(playlist: String, from: u32, to: u32, expected: String) -> ();
-    set_rule(playlist: String, key: String, value: String) -> ();
-    start(playlist: String, output: String) -> ();
-    stop(output: String) -> ();
-    next(output: String) -> ();
-    previous(output: String) -> ();
-    history(output: String, limit: u32) -> String ["json"];
-});
-
-stub!(Profiles "io.github.wallpaper_rs.Profiles1" {
-    list() -> String ["json"];
-    get(profile: String) -> String ["json"];
-    save(name: String, with_options: bool) -> String ["uid"];
-    activate(profile: String) -> ();
-    rename(profile: String, name: String) -> ();
-    delete(profile: String) -> ();
-    set_auto(profile: String, key: String, value: String) -> ();
-    list_presets(item: String) -> String ["json"];
-    save_preset(item: String, name: String, values: HashMap<String, String>) -> String ["uid"];
-    delete_preset(preset: String) -> ();
-});
-
 stub!(Providers "io.github.wallpaper_rs.Providers1" {
     list() -> String ["json"];
     add(id: String, kind: String, options: HashMap<String, String>, secret: String) -> String ["source"];

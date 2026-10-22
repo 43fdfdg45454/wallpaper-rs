@@ -22,7 +22,9 @@ impl Daemon {
             let info = st.outputs.get(output)?;
             (info.size, st.config.resolve(output), info.uploaded.clone())
         };
-        let (content, upload) = match resolved.image.map(|image| self.media(image)) {
+        let (image, transition) =
+            self.playlist_media(output, resolved.playlist).unwrap_or((resolved.image, None));
+        let (content, upload) = match image.map(|image| self.media(image)) {
             None => (Content::Color, None),
             Some(Err(e)) => {
                 tracing::warn!(output, "cannot show the package; showing the color instead");
@@ -50,7 +52,7 @@ impl Daemon {
         self.compositor.configure(
             output,
             size,
-            Spec { content, fit: resolved.fit, background: resolved.background },
+            Spec { content, fit: resolved.fit, background: resolved.background, transition },
         );
         if let Some(info) = self.state().outputs.get_mut(output) {
             info.uploaded = upload;

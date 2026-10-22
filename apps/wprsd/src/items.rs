@@ -42,7 +42,7 @@ impl Daemon {
         self.state().installed.iter().find(|i| i.path == item.path).cloned()
     }
 
-    fn summary(&self, item: Item) -> Result<ItemSummary> {
+    pub fn summary(&self, item: Item) -> Result<ItemSummary> {
         let installed = self.installed(&item);
         let removable = installed.is_none() && (item.source.is_none() || !item.path.exists());
         let (imported, thumb) = (item.path.starts_with(self.store.files()), self.thumbs.cached(&item, 256));
