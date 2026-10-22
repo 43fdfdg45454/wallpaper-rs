@@ -102,15 +102,19 @@ reports it covered. `SetOutputCovered` from a client without a claim applies to 
 Output names are trimmed and an empty name means `default` in `RequestStream`, `HoldStream`,
 `ReleaseStream` and `SetOutputCovered`.
 
-## Layer-shell outputs
+## Layer-shell and X11 outputs
 
 Outside Plasma, on Wayland compositors that offer `zwlr_layer_shell_v1`, the daemon shows each
-`wl_output` itself on a background layer surface (`wprsd --backend auto|streams|layer-shell`).
-These outputs are named after the compositor's output names and appear in `GetState` like
-streams, with one claim owned by the daemon: `ReleaseStream` and `SetOutputCovered` do not
-apply to them. They count as covered while the compositor stops sending frame callbacks, while
-an active fullscreen or maximized window is on them, or, on Hyprland, while their workspace has
-a fullscreen window; `pause.when_covered` then pauses their video as for streams.
+`wl_output` itself on a background layer surface, and in X11 sessions each RandR monitor on a
+desktop window below all others (`wprsd --backend auto|streams|layer-shell|x11`). These outputs
+are named after the compositor's output names or the RandR monitor names and appear in
+`GetState` like streams, with one claim owned by the daemon: `ReleaseStream` and
+`SetOutputCovered` do not apply to them. They count as covered while the compositor stops
+sending frame callbacks, while an active fullscreen or maximized window is on them, on Hyprland
+while their workspace has a fullscreen window, or in X11 while a window shown on the current
+desktop is fullscreen or maximized on them; `pause.when_covered` then pauses their video as for
+streams. In X11, still images also become the root window background (`_XROOTPMAP_ID` and
+`ESETROOT_PMAP_ID`).
 
 ## `io.github.wallpaper_rs.Daemon1`
 
@@ -157,7 +161,8 @@ size in the desktop layout, `scale` its device pixel ratio (`0.1` to `16`), `px_
 density in physical pixels per millimetre (`0` when unknown) and `identity` the maker, model and
 serial number of the monitor (at most 256 bytes, no control characters). The desktop
 integration calls it after every successful `RequestStream`; layer-shell outputs take the same
-values from `wl_output` and `xdg_output`. `NotFound` when `output` has no stream.
+values from `wl_output` and `xdg_output`, and X11 outputs from RandR. `NotFound` when `output`
+has no stream.
 
 ### `PreviewEdit(s path, s edit_json)`
 
@@ -212,6 +217,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `library.watch` | rescan folder sources when files in them change, one scan per source at most every 5 s | `true` |
 | `library.thumb_cache_mb` | `64` to `8192`, size of the thumbnail cache | `512` |
 | `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
+| `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
 
 Only the changed key is validated. Unknown keys and invalid or out-of-range values return
 `InvalidArgs` and change nothing.

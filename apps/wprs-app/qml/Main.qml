@@ -27,12 +27,16 @@ Kirigami.ApplicationWindow {
         }
     ]
 
-    function showPage(index, properties) {
-        current = index;
+    function open(component, properties) {
         const old = pageStack.currentItem;
         pageStack.clear();
         old?.destroy();
-        pageStack.push(pages[index].createObject(pageStack, properties ?? {}));
+        pageStack.push(component.createObject(pageStack, properties ?? {}));
+    }
+
+    function showPage(index, properties) {
+        current = index;
+        open(pages[index], properties);
     }
 
     title: "wallpaper-rs"
@@ -108,6 +112,19 @@ Kirigami.ApplicationWindow {
                 "query": query
             });
         }
+
+        function onEdit(item) {
+            root.current = -1;
+            root.open(editor, {
+                "item": item
+            });
+        }
+    }
+
+    Component {
+        id: editor
+
+        EditPage {}
     }
 
     Timer {
@@ -117,9 +134,13 @@ Kirigami.ApplicationWindow {
         repeat: true
         running: App.checking
         onTriggered: {
-            if (step >= root.pages.length)
+            const at = step++;
+            if (at > root.pages.length + 1)
                 return Qt.quit();
-            root.showPage(step++);
+            if (at === root.pages.length)
+                return App.query("GetItem", [""], "Library1", reply => App.edit(reply.item));
+            if (at < root.pages.length)
+                root.showPage(at);
             const page = root.pageStack.currentItem;
             if (page.exercise)
                 page.exercise();

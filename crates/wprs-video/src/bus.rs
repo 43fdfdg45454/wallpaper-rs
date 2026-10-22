@@ -50,8 +50,14 @@ fn apply_wanted_state(playbin: &gst::Element, playing: bool) -> Result<(), gst::
     let wanted = if playing { gst::State::Playing } else { gst::State::Paused };
     let (_, current, pending) = playbin.state(gst::ClockTime::ZERO);
     let settled = pending == gst::State::VoidPending && current >= gst::State::Paused;
-    if settled && current != wanted {
-        playbin.set_state(wanted)?;
+    if !settled || current == wanted {
+        return Ok(());
+    }
+    if playbin.set_state(wanted)? == gst::StateChangeSuccess::Success && !playing {
+        let at = playbin.query_position::<gst::ClockTime>().unwrap_or_default();
+        playbin
+            .seek_simple(gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE, at)
+            .unwrap_or_else(|e| tracing::debug!("cannot settle the pause: {e}"));
     }
     Ok(())
 }

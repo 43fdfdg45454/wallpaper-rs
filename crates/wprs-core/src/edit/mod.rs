@@ -1,10 +1,17 @@
+mod action;
 mod check;
+mod curve;
 mod file;
 mod geometry;
+mod parse;
 mod set;
+mod tool;
 
-pub use file::{MAX_BYTES, dir, load, remove, save};
+pub use action::{ACTIONS, Action, Error};
+pub use curve::spline;
+pub use file::{MAX_BYTES, commit, dir, load, remove, save};
 pub use geometry::{Matrix, mul};
+pub use parse::numbers;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 

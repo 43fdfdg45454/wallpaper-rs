@@ -4,9 +4,9 @@ Fondos de pantalla para Linux, libres y escritos en Rust: imágenes y vídeos en
 transiciones, un fondo distinto por pantalla y pausa automática cuando no se ven.
 
 Un daemon dibuja el fondo de cada pantalla con la GPU y KDE Plasma 6 lo muestra a través
-de un plugin de fondo; en Sway, Hyprland, river, niri y COSMIC el daemon lo dibuja él mismo. Todo
-se gestiona desde la app de escritorio, desde la terminal (`wprs-ctl`) o desde el icono de la
-bandeja del sistema.
+de un plugin de fondo; en Sway, Hyprland, river, niri, COSMIC y las sesiones X11 el daemon lo
+dibuja él mismo. Todo se gestiona desde la app de escritorio, desde la terminal (`wprs-ctl`) o
+desde el icono de la bandeja del sistema.
 
 ## Cómo funciona
 
@@ -112,7 +112,7 @@ WAYLAND_DISPLAY && systemctl --user restart wprsd` (en Hyprland, importa tambié
 
 `wprsd` elige solo: con Plasma (`plasmashell` en el bus o `KDE` en `XDG_CURRENT_DESKTOP`) usa los
 streams del plugin y en otro escritorio Wayland con `wlr-layer-shell`, sus propias superficies.
-`wprsd --backend streams|layer-shell` lo fuerza. Las pantallas se llaman como las anuncia el
+`wprsd --backend streams|layer-shell|x11` lo fuerza. Las pantallas se llaman como las anuncia el
 compositor (`DP-1`, `HDMI-A-1`…; las muestran `swaymsg -t get_outputs`, `hyprctl monitors`,
 `niri msg outputs` o `wlr-randr`) y esos nombres son los de `-o` y de la configuración. Las
 pantallas que se conectan o se quitan con la sesión abierta se siguen solas, y la escala
@@ -122,6 +122,18 @@ Los vídeos se pausan cuando una ventana tapa la pantalla: el compositor deja de
 al fondo, una ventana activa a pantalla completa o maximizada lo confirma y, en Hyprland, también
 su IPC. El Flatpak no sirve en estos escritorios: no dejan usar `wlr-layer-shell` ni la
 información de ventanas a las aplicaciones aisladas.
+
+## Sesiones X11
+
+Con `DISPLAY` y sin sesión Wayland ni Plasma, `wprsd` pone en cada monitor de RandR una ventana de
+escritorio debajo de todas las demás (si el gestor de ventanas no las coloca, una ventana
+*override-redirect* que se mantiene al fondo) y dibuja en ella con la GPU. Los monitores se llaman
+como en `xrandr --listmonitors` y se siguen al conectarlos o quitarlos. Con imágenes fijas también
+pone el fondo de la ventana raíz (`_XROOTPMAP_ID` y `ESETROOT_PMAP_ID`) para los compositores y las
+terminales con transparencia, y los vídeos se pausan cuando una ventana del escritorio actual está a
+pantalla completa o maximizada en ese monitor según EWMH. Se arranca con `wprsd &` en `~/.xinitrc`,
+antes del gestor de ventanas, o desde el arranque automático de este; con el servicio de usuario,
+`systemctl --user import-environment DISPLAY && systemctl --user restart wprsd`.
 
 ## Uso desde la terminal
 
@@ -178,15 +190,19 @@ de salida: 0 bien, 1 error, 2 uso incorrecto.
 
 Las ediciones no tocan la imagen: se guardan en `<imagen>.wprs.json` a su lado (o en
 `~/.local/share/wallpaper-rs/edits/` si la carpeta no se puede escribir), las aplica la GPU y el
-daemon las vuelve a leer en cuanto cambian. `wprs-ctl edit` las cambia sin daemon:
+daemon las vuelve a leer en cuanto cambian. La app las edita desde la ficha de cada imagen
+(«Editar…») con vista previa en el fondo real, y cada acción del editor existe también en
+`wprs-ctl edit`, que las cambia sin daemon:
 
 ```sh
 wprs-ctl edit set foto.jpg ev=0.3 contrast=10 temperature=5200 tint=4
 wprs-ctl edit crop foto.jpg 0.1,0.05,0.8,0.9 --rotate 90
+wprs-ctl edit crop foto.jpg --aspect 16:9 -o DP-1      # recorte propio de una pantalla
 wprs-ctl edit overlay foto.jpg '#ff8800' --blend soft-light --opacity 0.3 --mask linear:0.5,0,0.5,0.5
 wprs-ctl edit preview foto.jpg ev=1                  # verlo en el escritorio 60 s sin guardar
 wprs-ctl edit export foto.jpg -o foto-editada.png    # mismo resultado, sin daemon
 wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
+wprs-ctl config layout.bezel_mm 8                    # ancho del marco de cada pantalla al extender
 ```
 
 `wprs-ctl pack` (crear, firmar y validar paquetes `.wpak`) y `wprs-ctl repo` (claves, firma,
@@ -262,7 +278,8 @@ cuando llega desde la red de los contenedores.
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
 libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev qt6-base-dev qt6-declarative-dev`. Para las
 pruebas: `mesa-vulkan-drivers pipewire wireplumber dbus-x11 gstreamer1.0-plugins-base
-gstreamer1.0-plugins-good`, y `sway grim foot` para la de Sway.
+gstreamer1.0-plugins-good`, `sway grim foot` para la de Sway y `xvfb x11-utils x11-xserver-utils
+xdotool imagemagick` para la de X11.
 
 ```sh
 cargo test --workspace                   # pruebas unitarias, de render y de vídeo
@@ -271,6 +288,7 @@ cargo build -p wprsd -p wprs-ctl
 cp target/debug/examples/probe target/debug/
 scripts/integration-test.sh target/debug # D-Bus + PipeWire + daemon de punta a punta
 scripts/sway-test.sh target/debug        # superficies layer-shell en un Sway sin pantalla
+scripts/x11-test.sh target/debug         # ventanas de escritorio en un Xvfb
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
 scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
 target/debug/wprs-app --check            # carga todo el QML de la app y falla ante cualquier aviso
@@ -291,15 +309,16 @@ paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasm
 dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una captura. También
 ejecuta `scripts/sway-test.sh` en un Sway sin pantalla: captura cada salida con `grim`, conecta y
 quita una pantalla y comprueba que el vídeo se pausa bajo una ventana a pantalla completa y con
-la pantalla apagada.
+la pantalla apagada, y `scripts/x11-test.sh` en un Xvfb con dos monitores, el fondo de la ventana
+raíz y la misma pausa.
 
 | Ruta | Contenido |
 |------|-----------|
 | `crates/wprs-core` | Configuración, modos de ajuste, nombres D-Bus |
-| `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland |
+| `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland y X11 |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
 | `crates/wprs-video` | Reproducción de vídeo en bucle con GStreamer |
-| `crates/wprs-wayland` | Superficies layer-shell, escala, ritmo de fotogramas y oclusión en Wayland |
+| `crates/wprs-wayland` | Superficies layer-shell y ventanas de escritorio X11, escala, ritmo y oclusión |
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
 | `apps/wprs-app` | App de escritorio (Qt Quick y Kirigami sobre Rust con cxx-qt) |

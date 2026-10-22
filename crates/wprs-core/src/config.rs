@@ -49,6 +49,7 @@ impl Config {
         self.playback = self.playback.sanitized();
         self.transition.duration_ms = self.transition.duration_ms.min(Transition::MAX_MS);
         self.library.thumb_cache_mb = self.library.thumb_cache_mb.clamp(Library::MIN_MB, Library::MAX_MB);
+        self.layout.bezel_mm = self.layout.bezel_mm.clamp(0.0, Layout::MAX_BEZEL_MM).max(0.0);
         let changed = |(key, value): (String, toml::Value)| (before.get(&key) != Some(&value)).then_some(key);
         let mut fixed: Vec<String> = self.options().into_iter().filter_map(changed).collect();
         let sections = std::iter::once(("default".to_owned(), &mut self.default))

@@ -37,6 +37,7 @@ calls! {
         SetPaused set_paused(paused: bool);
         SetVolume set_volume(volume: f64);
         SetMuted set_muted(muted: bool);
+        PreviewEdit preview_edit(path: str, edit_json: str);
         Reload reload();
         GetState get_state() json;
         GetSchema get_schema() json;

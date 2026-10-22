@@ -74,6 +74,12 @@ msgstr "Mosaico"
 
 #: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
+msgctxt "@item:inlistbox wallpaper fit mode"
+msgid "Span"
+msgstr "Extender"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
 msgctxt "@item:inlistbox wallpaper transition"
 msgid "Fade"
 msgstr "Fundido"

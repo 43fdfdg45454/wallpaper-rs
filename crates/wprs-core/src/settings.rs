@@ -116,6 +116,7 @@ impl Config {
             .flat_map(|(section, table)| {
                 table.iter().map(move |(k, v)| (format!("{section}.{k}"), v.clone()))
             })
+            .chain([("layout.bezel_mm".into(), toml::Value::Float(self.layout.bezel_mm))])
             .collect()
     }
 
@@ -132,7 +133,8 @@ impl Config {
         .map_err(|e| format!("invalid value for {key}: {e}"))?;
         let (section, field) = key.split_once('.').ok_or_else(unknown)?;
         let mut doc = toml::Value::try_from(&*self).map_err(|e| e.to_string())?;
-        doc[section][field] = parsed;
+        let table = doc.as_table_mut().map(|d| d.entry(section).or_insert_with(|| toml::Table::new().into()));
+        table.and_then(toml::Value::as_table_mut).ok_or_else(unknown)?.insert(field.into(), parsed);
         let mut updated: Config = doc.try_into().map_err(|e| format!("invalid value for {key}: {e}"))?;
         if updated.normalize().iter().any(|fixed| fixed == key) {
             return Err(format!("{text} is out of range for {key}"));

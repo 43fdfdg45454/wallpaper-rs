@@ -213,7 +213,7 @@ cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/import/sunset.png"
 dbus-monitor --session "type='signal',interface='io.github.wallpaper_rs.Daemon1'" \
   "type='signal',interface='io.github.wallpaper_rs.Library1'" >"$WORK/library-signals.log" 2>&1 & pids+=($!)
 sleep 0.5
-[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(11, 7, [256, 512, 1024])" ] ||
+[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(12, 7, [256, 512, 1024])" ] ||
   fail "schema: $(bus Daemon1 GetSchema)"
 read -r source job < <(bus Library1 AddSource sb "$pics" true | out "' '.join(map(str, d))")
 wait_for 20 finished "$job" || fail "scan job: $(bus Daemon1 GetJob t "$job")"
@@ -577,6 +577,17 @@ evening() { [ "$(field "s['profile']")" = "$profile" ]; }
 wait_for 10 evening || fail "the manual profile choice outlived a change of outputs: $(ctl state)"
 ctl release TEST-8 && expect "list(s['outputs'])" "[]"
 echo "manual profile choice kept across a restart"
+
+read -r _ _ _ left < <(ctl stream TEST-9 160 90)
+read -r _ _ _ right < <(ctl stream TEST-10 160 90)
+ctl screen TEST-9 --pos 0,0 --size 160x90 --density 4
+ctl screen TEST-10 --pos 160,0 --size 160x90 --density 4
+ctl set "$WORK/bands.png" --fit span && ctl edit span "$WORK/bands.png" --zoom 2
+shown "$left" 0 255 0 && shown "$right" 0 255 0
+ctl config layout.bezel_mm 40 && expect "s['options']['layout.bezel_mm']" 40.0
+shown "$left" 255 0 0 && shown "$right" 0 0 255
+ctl release TEST-9 && ctl release TEST-10 && expect "list(s['outputs'])" "[]"
+echo "screen frame checks passed"
 
 restored() {
   read -r _ _ _ serial < <(ctl stream TEST-1 320 180) || return 1

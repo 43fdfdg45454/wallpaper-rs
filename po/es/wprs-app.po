@@ -100,6 +100,344 @@ msgstr "Actualizar"
 msgid "Install"
 msgstr "Instalar"
 
+#: apps/wprs-app/qml/EditCurves.qml
+msgid "All channels"
+msgstr "Todos los canales"
+
+#: apps/wprs-app/qml/EditCurves.qml
+msgid "Red"
+msgstr "Rojo"
+
+#: apps/wprs-app/qml/EditCurves.qml
+msgid "Green"
+msgstr "Verde"
+
+#: apps/wprs-app/qml/EditCurves.qml
+msgid "Blue"
+msgstr "Azul"
+
+#: apps/wprs-app/qml/EditCurves.qml
+msgid "Click to add a point, drag to move it, double-click to remove it."
+msgstr "Haz clic para añadir un punto, arrástralo para moverlo y haz doble clic para quitarlo."
+
+#: apps/wprs-app/qml/EditCurves.qml
+msgid "Reset this curve"
+msgstr "Restablecer esta curva"
+
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditOps.qml
+msgid "Blur"
+msgstr "Desenfoque"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Radius"
+msgstr "Radio"
+
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditOps.qml
+msgid "Vignette"
+msgstr "Viñeta"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Amount"
+msgstr "Cantidad"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Midpoint"
+msgstr "Punto medio"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Roundness"
+msgstr "Redondez"
+
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditMasks.qml
+msgid "Feather"
+msgstr "Difuminado"
+
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditOps.qml
+msgid "Color overlay"
+msgstr "Superposición de color"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Choose a color…"
+msgstr "Elegir un color…"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Normal"
+msgstr "Normal"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Multiply"
+msgstr "Multiplicar"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Screen"
+msgstr "Trama"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Overlay"
+msgstr "Superponer"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Soft light"
+msgstr "Luz suave"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Color"
+msgstr "Color"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid "Opacity"
+msgstr "Opacidad"
+
+#: apps/wprs-app/qml/EditEffects.qml
+msgid ""
+"Limit an effect to part of the picture with a mask in the list of operations."
+msgstr "Limita un efecto a una parte de la imagen con una máscara en la lista de operaciones."
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Free"
+msgstr "Libre"
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Screen %1"
+msgstr "Pantalla %1"
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Shape of the crop"
+msgstr "Forma del recorte"
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Use the whole picture"
+msgstr "Usar toda la imagen"
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Rotate left"
+msgstr "Girar a la izquierda"
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Rotate right"
+msgstr "Girar a la derecha"
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Straighten (degrees)"
+msgstr "Enderezar (grados)"
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Flip horizontally"
+msgstr "Voltear en horizontal"
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Flip vertically"
+msgstr "Voltear en vertical"
+
+#: apps/wprs-app/qml/EditLight.qml
+msgid "Exposure (EV)"
+msgstr "Exposición (EV)"
+
+#: apps/wprs-app/qml/EditLight.qml
+msgid "Temperature (K)"
+msgstr "Temperatura (K)"
+
+#: apps/wprs-app/qml/EditLight.qml
+msgid "Tint"
+msgstr "Tinte"
+
+#: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/EditOps.qml
+msgid "Contrast"
+msgstr "Contraste"
+
+#: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/EditOps.qml
+msgid "Saturation"
+msgstr "Saturación"
+
+#: apps/wprs-app/qml/EditLight.qml
+msgid "Vibrance"
+msgstr "Intensidad"
+
+#: apps/wprs-app/qml/EditLight.qml
+msgid "Reset light and color"
+msgstr "Restablecer luz y color"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Start X"
+msgstr "Inicio X"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Start Y"
+msgstr "Inicio Y"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "End X"
+msgstr "Fin X"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "End Y"
+msgstr "Fin Y"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Center X"
+msgstr "Centro X"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Center Y"
+msgstr "Centro Y"
+
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/Labels.qml
+msgid "Width"
+msgstr "Anchura"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Height"
+msgstr "Altura"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Darkest"
+msgstr "Más oscuro"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Brightest"
+msgstr "Más claro"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Softness"
+msgstr "Suavidad"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Name of the mask"
+msgstr "Nombre de la máscara"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Linear gradient"
+msgstr "Degradado lineal"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Radial gradient"
+msgstr "Degradado radial"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Brightness range"
+msgstr "Rango de brillo"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Invert"
+msgstr "Invertir"
+
+#: apps/wprs-app/qml/EditOps.qml
+msgid "Exposure"
+msgstr "Exposición"
+
+#: apps/wprs-app/qml/EditOps.qml
+msgid "White balance"
+msgstr "Balance de blancos"
+
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/EditPage.qml
+msgid "Curves"
+msgstr "Curvas"
+
+#: apps/wprs-app/qml/EditOps.qml
+msgid "Operations, in order"
+msgstr "Operaciones, en orden"
+
+#: apps/wprs-app/qml/EditOps.qml
+msgid "No changes yet"
+msgstr "Aún no hay cambios"
+
+#: apps/wprs-app/qml/EditOps.qml
+msgid "Move up"
+msgstr "Subir"
+
+#: apps/wprs-app/qml/EditOps.qml
+msgid "Move down"
+msgstr "Bajar"
+
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/PlaylistItems.qml
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Remove"
+msgstr "Quitar"
+
+#: apps/wprs-app/qml/EditOps.qml
+msgid "Strength"
+msgstr "Fuerza"
+
+#: apps/wprs-app/qml/EditOps.qml
+msgid "Whole picture"
+msgstr "Toda la imagen"
+
+#: apps/wprs-app/qml/EditOps.qml
+msgid "Mask %1"
+msgstr "Máscara %1"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Crop and rotate"
+msgstr "Recortar y girar"
+
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/ProfilesPage.qml
+msgid "Screens"
+msgstr "Pantallas"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Light and color"
+msgstr "Luz y color"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Effects"
+msgstr "Efectos"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Masks"
+msgstr "Máscaras"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Edit %1"
+msgstr "Editar %1"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Back"
+msgstr "Volver"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Save"
+msgstr "Guardar"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Show on the desktop"
+msgstr "Ver en el escritorio"
+
+#: apps/wprs-app/qml/EditPage.qml
+msgid "Reset all"
+msgstr "Restablecer todo"
+
+#: apps/wprs-app/qml/EditScreens.qml
+msgid "A part for each screen"
+msgstr "Una parte por pantalla"
+
+#: apps/wprs-app/qml/EditScreens.qml
+msgid "%1 (%2×%3)"
+msgstr "%1 (%2×%3)"
+
+#: apps/wprs-app/qml/EditScreens.qml
+msgid "Spread over the screens"
+msgstr "Extender por las pantallas"
+
+#: apps/wprs-app/qml/EditScreens.qml
+msgid "Zoom"
+msgstr "Ampliación"
+
+#: apps/wprs-app/qml/EditScreens.qml
+msgid "Horizontal center"
+msgstr "Centro horizontal"
+
+#: apps/wprs-app/qml/EditScreens.qml
+msgid "Vertical center"
+msgstr "Centro vertical"
+
+#: apps/wprs-app/qml/EditScreens.qml
+msgid "Spread this picture over every screen"
+msgstr "Extender esta imagen por todas las pantallas"
+
+#: apps/wprs-app/qml/EditScreens.qml
+msgid "The width of the screen frames is in the settings."
+msgstr "El ancho de los marcos de las pantallas está en los ajustes."
+
 #: apps/wprs-app/qml/Filters.qml
 msgid "Search, for example: tag:sea kind:image -fav:yes sort:random"
 msgstr "Buscar, por ejemplo: tag:mar kind:image -fav:yes sort:random"
@@ -190,6 +528,10 @@ msgstr "Revocado:"
 #: apps/wprs-app/qml/ItemDrawer.qml
 msgid "Credit:"
 msgstr "Créditos:"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Edit…"
+msgstr "Editar…"
 
 #: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/SelectionDialogs.qml
 msgid "Tags"
@@ -334,10 +676,6 @@ msgstr "Historial"
 msgid "The playlist changed meanwhile; it was reloaded."
 msgstr "La lista cambió entretanto; se ha vuelto a cargar."
 
-#: apps/wprs-app/qml/PlaylistItems.qml apps/wprs-app/qml/SettingsPage.qml
-msgid "Remove"
-msgstr "Quitar"
-
 #: apps/wprs-app/qml/PlaylistsPage.qml
 msgid "New playlist…"
 msgstr "Nueva lista…"
@@ -385,10 +723,6 @@ msgstr "Guardar lo actual como…"
 #: apps/wprs-app/qml/ProfilesPage.qml
 msgid "No profile"
 msgstr "Sin perfil"
-
-#: apps/wprs-app/qml/ProfilesPage.qml
-msgid "Screens"
-msgstr "Pantallas"
 
 #: apps/wprs-app/qml/ProfilesPage.qml
 msgid "Profiles"
@@ -780,6 +1114,10 @@ msgid "Refresh repositories every day"
 msgstr "Actualizar los repositorios cada día"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+msgid "Screen frame width for spanning (mm)"
+msgstr "Ancho del marco de las pantallas al extender (mm)"
+
+#: apps/wprs-app/qml/facade/Labels.qml
 msgid "Order"
 msgstr "Orden"
 
@@ -852,10 +1190,6 @@ msgid "Include videos"
 msgstr "Incluir vídeos"
 
 #: apps/wprs-app/qml/facade/Labels.qml
-msgid "Width"
-msgstr "Anchura"
-
-#: apps/wprs-app/qml/facade/Labels.qml
 msgid "Search"
 msgstr "Búsqueda"
 
@@ -926,6 +1260,10 @@ msgstr "Centrar"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Tile"
 msgstr "Mosaico"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Span"
+msgstr "Extender"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "In order"

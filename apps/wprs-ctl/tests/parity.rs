@@ -1,5 +1,6 @@
 use clap::CommandFactory;
 use std::collections::HashSet;
+use wprs_core::edit::{ACTIONS, Action};
 use wprs_ctl::{CALLS, Cli};
 
 const NOT_IN_CLI: &[&str] = &["Library1.RequestThumbnails"];
@@ -65,5 +66,31 @@ fn every_documented_method_has_a_command() {
     for (interface, method, ..) in CALLS {
         let member = format!("{interface}.{method}");
         assert!(members.iter().any(|(m, _)| *m == member), "{member} is not documented");
+    }
+}
+
+fn expected(value: serde_json::Value) -> Vec<String> {
+    let refused = serde_json::from_value::<Action>(value).unwrap_err().to_string();
+    refused.split('`').skip(3).step_by(2).map(String::from).collect()
+}
+
+#[test]
+fn every_editor_action_has_an_edit_command_with_the_same_arguments() {
+    assert_eq!(expected(serde_json::json!({"": {}})), ACTIONS);
+    for name in ACTIONS {
+        let command = subcommand(&format!("edit {name}"));
+        for field in expected(serde_json::json!({name: {"": null}})) {
+            assert!(
+                command.get_arguments().any(|a| a.get_id() == field.as_str()),
+                "edit {name} lacks {field}"
+            );
+        }
+        for id in
+            command.get_arguments().map(|a| a.get_id().as_str()).filter(|id| !["path", "help"].contains(id))
+        {
+            let refused = serde_json::from_value::<Action>(serde_json::json!({name: {id: null}})).err();
+            let message = refused.map(|e| e.to_string()).unwrap_or_default();
+            assert!(!message.contains("unknown field"), "wprs-ctl edit {name} {id}: {message}");
+        }
     }
 }

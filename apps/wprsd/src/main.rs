@@ -58,7 +58,7 @@ use zbus::fdo::{DBusProxy, RequestNameFlags};
 #[derive(Parser)]
 #[command(
     version,
-    about = "Renders wallpapers and shows them through PipeWire streams or layer-shell surfaces"
+    about = "Renders wallpapers and shows them through PipeWire streams, layer-shell surfaces or X11 windows"
 )]
 struct Args {
     #[arg(long, help = "Configuration file to use instead of the default one")]

@@ -68,6 +68,11 @@ impl Edit {
         !self.geometry.is_identity() || self.ops.iter().any(|op| op.enabled)
     }
 
+    pub fn is_empty(&self) -> bool {
+        let unused = self.ops.is_empty() && self.masks.is_empty() && self.outputs.is_empty();
+        unused && self.span.is_none() && self.geometry == Default::default()
+    }
+
     pub fn crop_for(&self, output: &str, identity: Option<&str>) -> Option<[f32; 4]> {
         let named = identity.filter(|i| !i.is_empty()).and_then(|i| self.outputs.get(i));
         let found = named.or_else(|| self.outputs.get(output));

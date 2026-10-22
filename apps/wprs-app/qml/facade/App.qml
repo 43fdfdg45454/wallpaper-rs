@@ -25,6 +25,7 @@ QtObject {
     property var pending: ({})
 
     signal navigate(int page, string query)
+    signal edit(var item)
     signal updated(string topic, var ids)
 
     function settle(tag, slot, value) {

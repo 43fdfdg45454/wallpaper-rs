@@ -83,7 +83,14 @@ fn every_editor_action_edits_the_file_beside_the_image() {
     assert_eq!((show()["ops"][0].get("mask"), show()["masks"].get("sky")), (None, None));
     edit(&["reset", "ov", "bl"]);
     assert_eq!(show()["ops"].as_array().unwrap().len(), 5);
+    edit(&["crop", "--aspect", "1:2", "--output", "HDMI-A-1"]);
+    edit(&["curve", "--channel", "g"]);
+    let shaped = show();
+    let [.., w, h] =
+        serde_json::from_value::<[f32; 4]>(shaped["outputs"]["HDMI-A-1"]["crop"].clone()).unwrap();
+    assert!(shaped["ops"][3]["g"] == json!([]) && (w.max(h) - 1.0).abs() < 1e-5, "{shaped}");
     edit(&["crop", "none", "--output", "DP-1"]);
+    edit(&["crop", "none", "--output", "HDMI-A-1"]);
     edit(&["crop", "none"]);
     let cleared = show();
     assert_eq!((&cleared["outputs"], &cleared["geometry"]["crop"]), (&json!({}), &json!(null)));
@@ -96,6 +103,10 @@ fn every_editor_action_edits_the_file_beside_the_image() {
     assert_eq!(show()["ops"], json!([{"id": "e", "enabled": true, "type": "exposure", "ev": 2.0}]));
     edit(&["reset"]);
     assert!(!dir.join("hills.png.wprs.json").exists() && dir.join("hills.png").exists());
+    std::fs::write(dir.join("hills.png.wprs.json"), r#"{"version": 9}"#).unwrap();
+    assert!(fails(dir, &["edit", "set", "hills.png", "ev=1"], 1).contains("newer"));
+    edit(&["reset"]);
+    assert!(!dir.join("hills.png.wprs.json").exists());
 }
 
 #[test]

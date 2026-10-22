@@ -1,6 +1,6 @@
 [package]
 name = "wprs-wayland"
-description = "Wayland layer-shell surfaces for wallpaper-rs"
+description = "Wayland layer-shell and X11 desktop surfaces for wallpaper-rs"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,6 +10,7 @@ rust-version.workspace = true
 smithay-client-toolkit.workspace = true
 raw-window-handle.workspace = true
 wayland-backend.workspace = true
+x11rb.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 tracing.workspace = true

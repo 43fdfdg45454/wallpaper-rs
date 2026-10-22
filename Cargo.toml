@@ -92,6 +92,7 @@ argon2 = "0.6"
 getrandom = "0.4"
 openidconnect = { version = "4.0.1", default-features = false }
 tokio-util = { version = "0.7", features = ["io"] }
+x11rb = { version = "0.14", default-features = false, features = ["dl-libxcb", "randr", "shape"] }
 
 [profile.dev]
 debug = "line-tables-only"

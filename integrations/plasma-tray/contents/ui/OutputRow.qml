@@ -42,9 +42,20 @@ RowLayout {
         target: row.daemon
 
         function onUpdated(topic, ids) {
-            if (topic === "library" && (ids.length === 0 || ids.includes(row.item)))
+            if (topic !== "library")
+                return;
+            if (ids.includes(row.item))
                 row.load();
+            else if (ids.length === 0)
+                settle.restart();
         }
+    }
+
+    Timer {
+        id: settle
+
+        interval: 1000
+        onTriggered: row.load()
     }
 
     Rectangle {

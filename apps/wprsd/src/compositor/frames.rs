@@ -41,7 +41,8 @@ impl State {
         let (now, max_fps) = (Instant::now(), self.settings.max_fps);
         let open = |name: &String, o: &Output| o.open(self.exporter.is_streaming(name));
         let renders = self.outputs.iter().filter_map(|(name, o)| deadline(o, open(name, o), max_fps, now));
-        renders.chain(self.players.values().filter_map(|s| s.due)).chain(self.starvation()).min()
+        let players = self.players.values().filter_map(|s| s.due);
+        renders.chain(players).chain(self.starvation()).chain(self.backdrops()).min()
     }
 
     pub(super) fn render_due(&mut self) {
@@ -64,6 +65,7 @@ impl State {
                 output.dirty = false;
             }
         }
+        self.paint_backdrops(now);
     }
 }
 
@@ -104,10 +106,13 @@ fn draw(
     output.fade = output.fade.take().filter(|_| progress < 1.0);
     output.dirty = output.fading();
     output.stale = output.missing_frame || output.fade.is_some();
-    if !output.animated()
-        && let Sink::Stream(target) = &mut output.sink
-    {
-        *target = None;
+    match (output.animated(), &mut output.sink) {
+        (true, Sink::Surface(screen)) => screen.due = None,
+        (true, Sink::Stream(_)) => {}
+        (false, Sink::Stream(target)) => *target = None,
+        (false, Sink::Surface(screen)) => {
+            screen.backdrop(renderer, &[output.shown.layer(players, 1.0)], now)?
+        }
     }
     Ok(())
 }

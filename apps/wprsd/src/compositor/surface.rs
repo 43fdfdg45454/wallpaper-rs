@@ -1,19 +1,23 @@
 use super::output::Sink;
 use super::state::State;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use wprs_render::{Layer, RenderError, Renderer, Surface};
 use wprs_wayland::{Cover, Pacer, Window};
+
+const SETTLE: Duration = Duration::from_millis(500);
 
 pub(super) struct Screen {
     surface: Option<Surface>,
     window: Window,
     pacer: Pacer,
     fresh: bool,
+    painted: Option<Instant>,
+    pub(super) due: Option<Instant>,
 }
 
 impl Screen {
     pub(super) fn new(window: Window) -> Self {
-        Self { surface: None, window, pacer: Pacer::default(), fresh: true }
+        Self { surface: None, window, pacer: Pacer::default(), fresh: true, painted: None, due: None }
     }
 
     pub(super) fn ready(&self) -> bool {
@@ -49,6 +53,22 @@ impl Screen {
         self.pacer.requested(Instant::now());
         Ok(presented)
     }
+
+    pub(super) fn backdrop(
+        &mut self,
+        renderer: &Renderer,
+        layers: &[Layer<'_>],
+        now: Instant,
+    ) -> Result<(), RenderError> {
+        let Some(paint) = self.window.backdrop() else { return Ok(()) };
+        self.due = self.painted.map(|at| at + SETTLE).filter(|due| now < *due);
+        if self.due.is_some() {
+            return Ok(());
+        }
+        self.painted = Some(now);
+        let (width, height) = self.window.size();
+        renderer.render_layers_with(&mut renderer.create_target(width, height)?, layers, paint)
+    }
 }
 
 impl State {
@@ -59,7 +79,8 @@ impl State {
         };
         match &mut output.sink {
             Sink::Surface(screen) if screen.window.same_surface(&window) => {
-                let moved = screen.window.geometry() != window.geometry();
+                let moved = (screen.window.geometry(), screen.window.placement())
+                    != (window.geometry(), window.placement());
                 (screen.window, screen.fresh) = (window, screen.fresh || moved);
                 output.dirty |= moved;
             }
@@ -79,6 +100,25 @@ impl State {
             Sink::Surface(screen) => screen.pacer.deadline(screen.window.refresh()),
             Sink::Stream(_) => None,
         })
+    }
+
+    pub(super) fn backdrops(&self) -> impl Iterator<Item = Instant> + '_ {
+        self.outputs.values().filter_map(|o| match &o.sink {
+            Sink::Surface(screen) => screen.due,
+            Sink::Stream(_) => None,
+        })
+    }
+
+    pub(super) fn paint_backdrops(&mut self, now: Instant) {
+        for output in self.outputs.values_mut() {
+            if let Sink::Surface(screen) = &mut output.sink
+                && screen.due.is_some_and(|due| due <= now)
+                && let Err(e) =
+                    screen.backdrop(&self.renderer, &[output.shown.layer(&self.players, 1.0)], now)
+            {
+                tracing::warn!("cannot render the root window background: {e:#}");
+            }
+        }
     }
 
     pub(super) fn check_starvation(&mut self) {

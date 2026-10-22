@@ -56,6 +56,11 @@ impl Player {
         self.wake();
     }
 
+    pub fn paused(&self) -> bool {
+        let (_, current, pending) = self.playbin.state(gst::ClockTime::ZERO);
+        current == gst::State::Paused && pending == gst::State::VoidPending
+    }
+
     fn wake(&self) {
         if let Some(bus) = self.playbin.bus() {
             bus.set_flushing(false);

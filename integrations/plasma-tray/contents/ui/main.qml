@@ -52,6 +52,19 @@ PlasmoidItem {
         }
     }
 
+    DBus.SignalWatcher {
+        service: "org.freedesktop.DBus"
+        path: "/org/freedesktop/DBus"
+        iface: "org.freedesktop.DBus"
+
+        function dbusNameOwnerChanged(name, before, after) {
+            if (String(name) !== "io.github.wallpaper_rs.Daemon" || String(after) === "")
+                return;
+            root.daemon.refresh();
+            root.daemon.updated("library", []);
+        }
+    }
+
     Timer {
         interval: 8000
         running: root.daemon.actionError !== ""

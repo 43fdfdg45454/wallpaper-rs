@@ -57,8 +57,7 @@ fn slot<'a>(doc: &'a mut Value, key: &str) -> Option<&'a mut Value> {
 }
 
 impl Edit {
-    pub fn set(&mut self, key: &str, value: &str) -> Result<(), String> {
-        let key = key.trim();
+    fn resolve(&self, key: &str) -> Result<(Value, String), String> {
         let mut next = self.clone();
         let path = match shorthand(key) {
             Some((id, kind, field)) => {
@@ -69,7 +68,17 @@ impl Edit {
             }
             None => key.to_owned(),
         };
-        let mut doc = serde_json::to_value(&next).map_err(|e| e.to_string())?;
+        Ok((serde_json::to_value(&next).map_err(|e| e.to_string())?, path))
+    }
+
+    pub fn get(&self, key: &str) -> Option<Value> {
+        let (mut doc, path) = self.resolve(key.trim()).ok()?;
+        slot(&mut doc, &path).map(Value::take).filter(|v| !v.is_null())
+    }
+
+    pub fn set(&mut self, key: &str, value: &str) -> Result<(), String> {
+        let key = key.trim();
+        let (mut doc, path) = self.resolve(key)?;
         let field = slot(&mut doc, &path).ok_or_else(|| format!("{key}: unknown setting"))?;
         *field = typed(field, value).map_err(|e| format!("{key}: {e}"))?;
         *self = Edit::from_value(doc)?;

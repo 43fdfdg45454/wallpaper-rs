@@ -72,6 +72,8 @@ fn beside(m: &Monitor, p: &Screen, s: &Screen, (w, h): (f64, f64), gap: f64) -> 
 }
 
 impl Layout {
+    pub const MAX_BEZEL_MM: f64 = 100.0;
+
     pub fn is_default(&self) -> bool {
         *self == Layout::default()
     }
@@ -82,7 +84,8 @@ impl Layout {
     ) -> Vec<Monitor> {
         let mut screens: Vec<_> = screens.into_iter().collect();
         screens.sort_by_key(|(id, _, s)| (s.x, s.y, *id));
-        let gap = 2.0 * if self.bezel_mm.is_finite() { self.bezel_mm.clamp(0.0, 100.0) } else { 0.0 };
+        let gap =
+            2.0 * if self.bezel_mm.is_finite() { self.bezel_mm.clamp(0.0, Self::MAX_BEZEL_MM) } else { 0.0 };
         let mut placed: Vec<(Monitor, &Screen)> = Vec::new();
         for (id, px, s) in screens {
             let size = size_mm(px, s);

@@ -1,8 +1,8 @@
-use crate::editing::{apply, change, export, mask, named, numbers, open, preview, set, upsert};
-use anyhow::{Context, Result};
+use crate::editing::{apply, change, export, open, preview};
+use anyhow::Result;
 use clap::Subcommand;
 use std::path::PathBuf;
-use wprs_core::edit::{self, Kind, OutputCrop, Span};
+use wprs_core::edit::{self, Action};
 
 const MASK: &str = "Mask name, or linear:X0,Y0,X1,Y1, radial:X,Y,RX,RY[,FEATHER] or luminance:LO,HI[,SOFT]";
 
@@ -26,6 +26,12 @@ pub enum Edits {
             help = "Rectangle in fractions of the image, none for all of it; kept when omitted"
         )]
         rect: Option<String>,
+        #[arg(
+            long,
+            value_name = "W:H",
+            help = "Shape such as 16:9 for the rectangle, which keeps its center; the largest one for the whole picture"
+        )]
+        aspect: Option<String>,
         #[arg(long, help = "Clockwise rotation: 0, 90, 180 or 270")]
         rotate: Option<u16>,
         #[arg(long, allow_hyphen_values = true, help = "Degrees between -45 and 45")]
@@ -35,15 +41,15 @@ pub enum Edits {
         #[arg(short, long, help = "Output name or monitor identity that shows only this rectangle")]
         output: Option<String>,
     },
-    #[command(about = "Set a tone curve through X,Y points between 0 and 1")]
+    #[command(about = "Set a tone curve through X,Y points between 0 and 1, or clear it without points")]
     Curve {
         path: PathBuf,
-        #[arg(value_name = "X,Y", required = true)]
+        #[arg(value_name = "X,Y")]
         points: Vec<String>,
-        #[arg(long, default_value = "rgb", value_parser = ["rgb", "r", "g", "b"])]
-        channel: String,
-        #[arg(long, default_value = "cu")]
-        id: String,
+        #[arg(long, value_parser = ["rgb", "r", "g", "b"], help = "rgb when omitted")]
+        channel: Option<String>,
+        #[arg(long, help = "cu when omitted")]
+        id: Option<String>,
     },
     #[command(about = "Blur the image; the radius is in pixels of a picture 1000 pixels long")]
     Blur {
@@ -51,36 +57,36 @@ pub enum Edits {
         radius: f32,
         #[arg(long, help = MASK)]
         mask: Option<String>,
-        #[arg(long, default_value = "bl")]
-        id: String,
+        #[arg(long, help = "bl when omitted")]
+        id: Option<String>,
     },
     #[command(about = "Darken (negative amount) or lighten the edges")]
     Vignette {
         path: PathBuf,
         #[arg(allow_hyphen_values = true)]
         amount: f32,
-        #[arg(long, default_value_t = 0.5)]
-        midpoint: f32,
-        #[arg(long, default_value_t = 0.0)]
-        roundness: f32,
-        #[arg(long, default_value_t = 0.5)]
-        feather: f32,
-        #[arg(long, default_value = "vi")]
-        id: String,
+        #[arg(long, help = "0.5 for a new vignette, otherwise kept when omitted")]
+        midpoint: Option<f32>,
+        #[arg(long, help = "0 for a new vignette, otherwise kept when omitted")]
+        roundness: Option<f32>,
+        #[arg(long, help = "0.5 for a new vignette, otherwise kept when omitted")]
+        feather: Option<f32>,
+        #[arg(long, help = "vi when omitted")]
+        id: Option<String>,
     },
     #[command(about = "Lay a color over the image")]
     Overlay {
         path: PathBuf,
         #[arg(help = "Color as #rrggbb")]
         color: String,
-        #[arg(long, default_value = "normal", value_parser = ["normal", "multiply", "screen", "overlay", "soft-light", "color"])]
-        blend: String,
-        #[arg(long, default_value_t = 1.0)]
-        opacity: f32,
+        #[arg(long, value_parser = ["normal", "multiply", "screen", "overlay", "soft-light", "color"], help = "normal for a new overlay, otherwise kept when omitted")]
+        blend: Option<String>,
+        #[arg(long, help = "1 for a new overlay, otherwise kept when omitted")]
+        opacity: Option<f32>,
         #[arg(long, help = MASK)]
         mask: Option<String>,
-        #[arg(long, default_value = "ov")]
-        id: String,
+        #[arg(long, help = "ov when omitted")]
+        id: Option<String>,
     },
     #[command(about = "Add or replace a named mask, or remove it with none")]
     Mask {
@@ -137,79 +143,40 @@ pub enum Edits {
     },
 }
 
+fn action(command: Edits) -> Option<(PathBuf, Action)> {
+    Some(match command {
+        Edits::Set { path, changes } => (path, Action::Set { changes }),
+        Edits::Crop { path, rect, aspect, rotate, straighten, flip, output } => {
+            (path, Action::Crop { rect, aspect, rotate, straighten, flip, output })
+        }
+        Edits::Curve { path, points, channel, id } => (path, Action::Curve { points, channel, id }),
+        Edits::Blur { path, radius, mask, id } => (path, Action::Blur { radius: Some(radius), mask, id }),
+        Edits::Vignette { path, amount, midpoint, roundness, feather, id } => {
+            (path, Action::Vignette { amount: Some(amount), midpoint, roundness, feather, id })
+        }
+        Edits::Overlay { path, color, blend, opacity, mask, id } => {
+            (path, Action::Overlay { color: Some(color), blend, opacity, mask, id })
+        }
+        Edits::Mask { path, name, spec, invert } => (path, Action::Mask { name, spec, invert }),
+        Edits::Order { path, ids } => (path, Action::Order { ids }),
+        Edits::Span { path, zoom, center } => (path, Action::Span { zoom, center }),
+        Edits::Reset { path, ids } => (path, Action::Reset { ids }),
+        Edits::Show { .. } | Edits::Apply { .. } | Edits::Preview { .. } | Edits::Export { .. } => {
+            return None;
+        }
+    })
+}
+
 pub fn run(command: Edits) -> Result<()> {
     match command {
         Edits::Show { path } => print!("{}", open(&path)?.to_json()),
-        Edits::Set { path, changes } => change(&path, |e| set(e, &changes))?,
-        Edits::Crop { path, rect, rotate, straighten, flip, output } => change(&path, |e| {
-            let none = rect.as_deref() == Some("none");
-            let rect = rect.as_deref().filter(|_| !none).map(numbers::<4>).transpose()?;
-            if let Some(output) = output {
-                let crop =
-                    OutputCrop { connector: output.clone(), crop: rect.unwrap_or([0.0, 0.0, 1.0, 1.0]) };
-                drop(if none { e.outputs.remove(&output) } else { e.outputs.insert(output, crop) });
-                return Ok(());
-            }
-            let g = &mut e.geometry;
-            g.crop = if none { None } else { rect.or(g.crop) };
-            g.rotate = rotate.unwrap_or(g.rotate);
-            g.straighten = straighten.unwrap_or(g.straighten);
-            g.flip = flip.map_or(g.flip, |f| [f.contains('h'), f.contains('v')]);
-            Ok(())
-        })?,
-        Edits::Curve { path, points, channel, id } => change(&path, |e| {
-            let points = points.iter().map(|p| numbers::<2>(p)).collect::<Result<Vec<_>>>()?;
-            if !e.ops.iter().any(|op| op.id == id) {
-                upsert(e, &id, Kind::Curves { rgb: vec![], r: vec![], g: vec![], b: vec![] }, None, None)?;
-            }
-            e.set(&format!("ops.{id}.{channel}"), &serde_json::to_string(&points)?)
-                .map_err(anyhow::Error::msg)
-        })?,
-        Edits::Blur { path, radius, mask: spec, id } => change(&path, |e| {
-            let mask = spec.map(|spec| mask(e, &id, &spec)).transpose()?;
-            upsert(e, &id, Kind::Blur { radius }, mask, None)
-        })?,
-        Edits::Vignette { path, amount, midpoint, roundness, feather, id } => change(&path, |e| {
-            upsert(e, &id, Kind::Vignette { amount, midpoint, roundness, feather }, None, None)
-        })?,
-        Edits::Overlay { path, color, blend, opacity, mask: spec, id } => change(&path, |e| {
-            let blend = serde_json::from_value(blend.replace('-', "_").into())?;
-            let mask = spec.map(|spec| mask(e, &id, &spec)).transpose()?;
-            upsert(e, &id, Kind::Overlay { color, blend }, mask, Some(opacity))
-        })?,
-        Edits::Mask { path, name, spec, invert } => change(&path, |e| match spec.as_str() {
-            "none" => {
-                e.ops.iter_mut().filter(|op| op.mask.as_ref() == Some(&name)).for_each(|op| op.mask = None);
-                e.masks.remove(&name).map(drop).with_context(|| format!("no mask is named {name}"))
-            }
-            spec => named(e, &name, spec, invert),
-        })?,
-        Edits::Order { path, ids } => change(&path, |e| {
-            if let Some(id) = ids.iter().find(|id| !e.ops.iter().any(|op| op.id == **id)) {
-                anyhow::bail!("no operation is named {id}");
-            }
-            e.ops.sort_by_key(|op| ids.iter().position(|id| *id == op.id).unwrap_or(usize::MAX));
-            Ok(())
-        })?,
-        Edits::Span { path, zoom, center } => change(&path, |e| {
-            let span = e.span.get_or_insert_with(Span::default);
-            span.zoom = zoom.unwrap_or(span.zoom);
-            span.center = center.as_deref().map(numbers::<2>).transpose()?.unwrap_or(span.center);
-            Ok(())
-        })?,
         Edits::Reset { path, ids } if ids.is_empty() => {
             edit::remove(&path, &edit::dir()).map_err(anyhow::Error::msg)?;
         }
-        Edits::Reset { path, ids } => change(&path, |e| {
-            let before = e.ops.len();
-            e.ops.retain(|op| !ids.contains(&op.id));
-            let gone = before - e.ops.len();
-            anyhow::ensure!(gone == ids.len(), "some of {} are not operations", ids.join(" "));
-            Ok(())
-        })?,
         Edits::Apply { path, file } => apply(&path, &file)?,
-        Edits::Preview { path, changes, stop } => preview(&path, &changes, stop)?,
+        Edits::Preview { path, changes, stop } => preview(&path, changes, stop)?,
         Edits::Export { path, out, quality, size } => export(&path, &out, quality, size.as_deref())?,
+        command => action(command).map_or(Ok(()), |(path, action)| change(&path, action))?,
     }
     Ok(())
 }

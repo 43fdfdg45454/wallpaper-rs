@@ -1,4 +1,4 @@
-use super::Edit;
+use super::{Edit, Source};
 use crate::store::write_private;
 use sha2::{Digest, Sha256};
 use std::io::ErrorKind::NotFound;
@@ -13,11 +13,31 @@ pub fn dir() -> PathBuf {
     dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join("wallpaper-rs").join("edits")
 }
 
+fn hex(digest: &[u8]) -> String {
+    digest.iter().map(|b| format!("{b:02x}")).collect()
+}
+
 fn places(image: &Path, edits: &Path) -> [PathBuf; 2] {
     let canonical = std::fs::canonicalize(image).or_else(|_| std::path::absolute(image));
     let key = Sha256::digest(canonical.unwrap_or_else(|_| image.into()).as_os_str().as_bytes());
-    let hex: String = key.iter().map(|b| format!("{b:02x}")).collect();
-    [image.with_added_extension("wprs.json"), edits.join(hex + ".json")]
+    [image.with_added_extension("wprs.json"), edits.join(hex(&key) + ".json")]
+}
+
+impl Source {
+    pub fn read(image: &Path, pixels: [u32; 2]) -> std::io::Result<Source> {
+        let (mut file, mut hash, mut chunk) = (std::fs::File::open(image)?, Sha256::new(), vec![0; 1 << 16]);
+        let mut bytes = 0;
+        loop {
+            let n = file.read(&mut chunk)?;
+            if n == 0 {
+                break;
+            }
+            hash.update(&chunk[..n]);
+            bytes += n as u64;
+        }
+        let name = image.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        Ok(Source { name, bytes, sha256: hex(&hash.finalize()), pixels })
+    }
 }
 
 fn read(path: &Path) -> Result<Option<(SystemTime, String)>, String> {
@@ -57,6 +77,13 @@ pub fn save(edit: &Edit, image: &Path, edits: &Path) -> Result<PathBuf, String> 
         return Ok(beside);
     }
     write_private(&fallback, text.as_bytes()).map(|()| fallback).map_err(|e| e.to_string())
+}
+
+pub fn commit(edit: &Edit, image: &Path, edits: &Path) -> Result<Option<PathBuf>, String> {
+    match edit.is_empty() {
+        true => remove(image, edits).map(|_| None),
+        false => save(edit, image, edits).map(Some),
+    }
 }
 
 pub fn remove(image: &Path, edits: &Path) -> Result<bool, String> {

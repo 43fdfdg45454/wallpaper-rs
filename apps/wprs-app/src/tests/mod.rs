@@ -1,3 +1,4 @@
+mod editor;
 mod fake;
 
 use crate::args::{INVALID, carries_secret, fixture};
@@ -15,7 +16,7 @@ fn summary(uid: &str) -> ItemSummary {
     ItemSummary { uid: uid.into(), ..page.items.remove(0) }
 }
 
-fn qml() -> Vec<String> {
+pub fn qml() -> Vec<String> {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("qml");
     let files = std::fs::read_dir(&dir).unwrap().chain(std::fs::read_dir(dir.join("facade")).unwrap());
     files
@@ -30,7 +31,7 @@ fn iface(line: &str) -> &'static str {
     ifaces.into_iter().find(|i| line.contains(&format!("\"{i}\""))).unwrap_or("Daemon1")
 }
 
-fn literals<'a>(text: &'a str, call: &str) -> Vec<&'a str> {
+pub fn literals<'a>(text: &'a str, call: &str) -> Vec<&'a str> {
     text.split(call).skip(1).filter_map(|rest| rest.strip_prefix('"')?.split('"').next()).collect()
 }
 

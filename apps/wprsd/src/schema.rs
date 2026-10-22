@@ -54,6 +54,7 @@ fn options() -> Vec<Field> {
         flag("library.watch"),
         range(option("library.thumb_cache_mb", FieldKind::Int), 64.0, 8192.0, Some(1.0)),
         flag("repos.auto_refresh"),
+        range(option("layout.bezel_mm", FieldKind::Float), 0.0, 100.0, Some(0.5)),
     ]
 }
 

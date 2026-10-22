@@ -149,6 +149,16 @@ Kirigami.OverlayDrawer {
 
             RowLayout {
                 QQC2.Button {
+                    text: App.tr("Edit…")
+                    icon.name: "document-edit"
+                    visible: drawer.item.kind === "image" && !drawer.item.missing
+                    onClicked: {
+                        drawer.close();
+                        App.edit(drawer.item);
+                    }
+                }
+
+                QQC2.Button {
                     text: App.tr("Apply to…")
                     icon.name: "preferences-desktop-wallpaper"
                     onClicked: drawer.apply(drawer.uid)

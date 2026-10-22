@@ -1,6 +1,6 @@
 use crate::scale::{Scaling, effective};
 use crate::toplevel::Toplevel;
-use crate::window::{Parts, Window};
+use crate::window::{Display, Native, Parts, Window};
 use crate::{Event, Sink};
 use smithay_client_toolkit::compositor::CompositorState;
 use smithay_client_toolkit::output::{OutputInfo, OutputState};
@@ -111,9 +111,8 @@ impl State {
         let refresh =
             mode.map(|m| m.refresh_rate).filter(|r| *r > 0).unwrap_or(60_000).clamp(1_000, 1_000_000) as u64;
         let window = Window {
-            parts: screen.parts.clone(),
-            qh: self.qh.clone(),
-            conn: self.conn.clone(),
+            native: Native::Layer(screen.parts.clone(), self.qh.clone()),
+            server: Display::Wayland(self.conn.clone()),
             sink: self.sink.clone(),
             name: screen.name.clone(),
             logical,

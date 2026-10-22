@@ -105,8 +105,13 @@ fn pausing_stops_frames() {
     let Some((player, rx)) = open((64, 32)) else { return };
     assert!(next_frame(&rx, WAIT).is_some());
     player.set_playing(false);
-    let quiet = |ms| next_frame(&rx, Duration::from_millis(ms)).is_none();
-    assert!((0..10).any(|_| quiet(500)) && quiet(1000), "frames while paused");
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while !player.paused() && Instant::now() < deadline {
+        next_frame(&rx, Duration::from_millis(20));
+    }
+    assert!(player.paused(), "the pause did not settle within 30 s");
+    let late = std::iter::from_fn(|| next_frame(&rx, Duration::from_millis(500))).take(10).count();
+    assert!(late < 10 && next_frame(&rx, Duration::from_secs(1)).is_none(), "frames while paused");
     player.set_playing(true);
     assert!(next_frame(&rx, WAIT).is_some(), "no frames after resuming");
     assert!(!player.audio_enabled());

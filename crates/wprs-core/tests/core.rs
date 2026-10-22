@@ -86,7 +86,9 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 11);
+    assert_eq!(c.options().len(), 12);
+    c.set_option("layout.bezel_mm", "8.5").unwrap();
+    assert!(toml::to_string(&c).unwrap().contains("[layout]\nbezel_mm = 8.5"));
     c.set_option("pause.on_battery", "false").unwrap();
     c.set_option("transition.kind", "none").unwrap();
     c.set_option("playback.max_fps", "60").unwrap();
@@ -96,13 +98,18 @@ fn options_are_listed_and_validated() {
     let invalid = [
         ("playback.max_fps", "0"),
         ("playback.volume", "3"),
+        ("layout.bezel_mm", "-1"),
+        ("layout.bezel_mm", "nan"),
+        ("layout.monitors", "x"),
         ("transition.kind", "spin"),
         ("pause.on_battery", "maybe"),
         ("default.image", "/x"),
         ("nope", "1"),
     ];
     invalid.iter().for_each(|(k, v)| assert!(c.set_option(k, v).is_err(), "{k} = {v}"));
-    assert_eq!(c.playback.max_fps, 60);
+    assert_eq!((c.playback.max_fps, c.layout.bezel_mm), (60, 8.5));
+    c.set_option("layout.bezel_mm", "0").unwrap();
+    assert!(c.layout.is_default());
 }
 
 #[test]

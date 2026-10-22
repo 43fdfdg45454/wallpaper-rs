@@ -25,6 +25,7 @@ QtObject {
             "stretch": i18nc("@item:inlistbox wallpaper fit mode", "Stretch"),
             "center": i18nc("@item:inlistbox wallpaper fit mode", "Center"),
             "tile": i18nc("@item:inlistbox wallpaper fit mode", "Tile"),
+            "span": i18nc("@item:inlistbox wallpaper fit mode", "Span"),
             "fade": i18nc("@item:inlistbox wallpaper transition", "Fade"),
             "none": i18nc("@item:inlistbox wallpaper transition", "None")
         })

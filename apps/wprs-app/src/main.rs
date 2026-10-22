@@ -5,6 +5,8 @@ mod backend;
 mod bus;
 mod calls;
 mod diff;
+mod editing;
+mod editor;
 mod events;
 mod fetch;
 mod grid;

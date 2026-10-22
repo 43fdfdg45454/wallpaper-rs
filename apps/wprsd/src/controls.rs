@@ -45,6 +45,9 @@ impl Daemon {
         if key.starts_with("library.") {
             self.watch_sources();
         }
+        if key.starts_with("layout.") {
+            self.respan(self.state());
+        }
         Ok(())
     }
 
