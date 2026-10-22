@@ -32,6 +32,7 @@ pub(crate) struct State {
     pub(crate) items: HashMap<PathBuf, String>,
     pub(crate) installed: Vec<Installed>,
     pub(crate) playing: HashMap<String, Playing>,
+    pub(crate) sidecars: crate::edits::Sidecars,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

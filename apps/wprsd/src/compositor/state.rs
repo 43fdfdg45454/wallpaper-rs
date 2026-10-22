@@ -1,15 +1,15 @@
 use super::output::{Output, Shown, Sink};
 use super::slot::PlayerSlot;
 use super::surface::Screen;
-use super::{Command, Content, OutputStatus, Settings, Spec};
+use super::{Command, Content, OutputStatus, Picture, Settings, Spec};
 use image::RgbaImage;
 use std::collections::{BTreeMap, HashMap};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Instant;
-use wprs_core::Fit;
+use wprs_core::{Fit, UvRect};
 use wprs_pipewire::Exporter;
-use wprs_render::{GpuImage, Renderer, decode_image};
+use wprs_render::{GpuImage, Renderer, decode_image, needed_edge};
 use wprs_wayland::Window;
 
 pub(super) struct State {
@@ -49,8 +49,18 @@ impl State {
                     Err(_) => return,
                 },
             };
-            for command in first.into_iter().chain(std::iter::from_fn(|| rx.try_recv().ok())) {
-                if !self.handle(command) {
+            let batch: Vec<Command> =
+                first.into_iter().chain(std::iter::from_fn(|| rx.try_recv().ok())).collect();
+            let later = |i: usize, name: &String| {
+                batch[i + 1..].iter().any(|c| matches!(c, Command::Configure(n, ..) if n == name))
+            };
+            let stale: Vec<bool> = batch
+                .iter()
+                .enumerate()
+                .map(|(i, c)| matches!(c, Command::Configure(n, ..) if later(i, n)))
+                .collect();
+            for (command, stale) in batch.into_iter().zip(stale) {
+                if !stale && !self.handle(command) {
                     return;
                 }
             }
@@ -90,18 +100,19 @@ impl State {
         if current.as_ref().is_some_and(|o| o.shown.matches(&spec)) {
             return;
         }
-        let same = |o: &&mut Output| o.shown.fit == spec.fit && o.shown.content.same_source(&spec.content);
-        let kept = current.filter(same).and_then(|o| o.shown.image.take());
-        let image = match &mut spec.content {
+        let same = |o: &&mut Output| o.shown.fit == spec.fit && o.shown.content.same_look(&spec.content);
+        let kept = current.filter(same).and_then(|o| o.shown.image.take().zip(o.shown.uv));
+        let (image, uv) = match &mut spec.content {
             Content::Image(picture) => {
                 let pixels = picture.pixels.take();
-                kept.or_else(|| self.upload(&name, &picture.file, pixels, spec.fit, size))
+                kept.or_else(|| self.upload(&name, picture, pixels, spec.fit, size))
             }
             _ => kept,
-        };
+        }
+        .unzip();
         let (content, fit, background, transition) =
             (spec.content, spec.fit, spec.background, spec.transition);
-        let shown = Shown { content, fit, background, image, transition };
+        let shown = Shown { content, fit, background, image, uv, transition };
         let transition = !transition.unwrap_or(self.settings.transition).is_zero();
         match self.outputs.get_mut(&name) {
             Some(output) => output.show(shown, size, transition),
@@ -116,15 +127,25 @@ impl State {
     fn upload(
         &self,
         output: &str,
-        file: &Path,
+        picture: &Picture,
         pixels: Option<Arc<RgbaImage>>,
         fit: Fit,
         size: (u32, u32),
-    ) -> Option<GpuImage> {
-        let pixels = pixels.map_or_else(|| decode_image(file, self.renderer.max_edge()).map(Arc::new), Ok);
-        let uploaded =
-            pixels.map_err(anyhow::Error::from).and_then(|p| Ok(self.renderer.upload(&p, fit, size)?));
-        uploaded.inspect_err(|e| tracing::warn!(output, "cannot show the image: {e}")).ok()
+    ) -> Option<(GpuImage, UvRect)> {
+        let (file, edit, max) = (&picture.file, picture.edit.as_deref(), self.renderer.max_edge());
+        let edge = || needed_edge(file, edit, &picture.place, (fit, size), max);
+        let pixels = pixels.map_or_else(|| decode_image(file, edge()).map(Arc::new), Ok);
+        let shown = pixels.map_err(anyhow::Error::from).and_then(|p| {
+            let edit = edit.filter(|e| e.develops());
+            let frame = edit.map_or(p.dimensions(), |e| e.geometry.frame(p.dimensions()));
+            let uv = picture.place.uv(fit, frame, size);
+            let image = match edit {
+                Some(edit) => self.renderer.develop(&p, edit, self.renderer.develop_size(frame, uv, size))?,
+                None => self.renderer.upload_placed(&p, uv, size)?,
+            };
+            Ok((image, uv))
+        });
+        shown.inspect_err(|e| tracing::warn!(output, "cannot show the image: {e}")).ok()
     }
 
     fn apply_settings(&mut self, settings: Settings) {

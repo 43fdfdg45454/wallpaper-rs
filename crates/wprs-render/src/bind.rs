@@ -23,7 +23,7 @@ pub(crate) struct Slot {
 impl Renderer {
     pub(crate) fn bind(&self, slots: &mut Vec<Slot>, index: usize, layer: &Layer<'_>, target: (u32, u32)) {
         let uv = layer.image.map_or(UvRect::compute(Fit::Stretch, (1, 1), (1, 1)), |image| {
-            UvRect::compute(layer.fit, image.size(), target)
+            layer.uv.unwrap_or_else(|| UvRect::compute(layer.fit, image.size(), target))
         });
         let [r, g, b] = layer.background.map(srgb_to_linear);
         let params = Params {
@@ -90,7 +90,8 @@ mod tests {
         let blue = r.upload_rgba(&[0, 0, 255, 255].repeat(4), 2, 2, 8).unwrap();
         let mut target = r.create_target(16, 8).unwrap();
         let mut pixels = Vec::new();
-        let layer = |image, fit, opacity| Layer { image: Some(image), fit, background: [0; 3], opacity };
+        let layer =
+            |image, fit, opacity| Layer { image: Some(image), fit, background: [0; 3], opacity, uv: None };
         let mut draw = |layers: &[Layer<'_>]| {
             r.render_layers(&mut target, layers, &mut pixels).unwrap();
             target.slots.iter().map(|s| (s.group.clone(), s.uniform.clone(), s.params)).collect::<Vec<_>>()

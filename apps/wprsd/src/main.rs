@@ -5,6 +5,7 @@ mod compositor;
 mod controls;
 mod daemon;
 mod decode;
+mod edits;
 mod error;
 mod flatpak;
 mod folders;
@@ -123,6 +124,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
     pool::start(&daemon);
     folders::start(&daemon);
     remote::start(&daemon, connection.clone());
+    edits::start(&daemon);
     tokio::task::spawn_blocking({
         let daemon = daemon.clone();
         move || daemon.tidy()

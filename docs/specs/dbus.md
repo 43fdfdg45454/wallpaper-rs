@@ -146,12 +146,30 @@ Removes one claim of the caller on `output`, or the held claim if the caller has
 Reported by the desktop integration when a maximized or fullscreen window covers `output`.
 See "Streams and claims".
 
+### `SetOutputInfo(s output, i x, i y, u width, u height, d scale, d px_per_mm, s identity)`
+
+Tells the daemon where the screen of `output` sits, for the `span` fit and the per-screen crops of
+edits (see "Edits and spanning"). `x`, `y`, `width` and `height` are its logical position and
+size in the desktop layout, `scale` its device pixel ratio (`0.1` to `16`), `px_per_mm` its
+density in physical pixels per millimetre (`0` when unknown) and `identity` the maker, model and
+serial number of the monitor (at most 256 bytes, no control characters). The desktop
+integration calls it after every successful `RequestStream`; layer-shell outputs take the same
+values from `wl_output` and `xdg_output`. `NotFound` when `output` has no stream.
+
+### `PreviewEdit(s path, s edit_json)`
+
+Shows the image `path` with `edit_json`, an edit as described in "Edits and spanning", instead
+of its saved edit wherever `path` is shown, without saving anything. Calls replace the preview
+and are rendered at most once per frame; an empty `edit_json` ends it, and so do 60 s without a
+call. `path` is absolute; a relative path, an invalid edit (the message names the field) or more
+than 2 MiB of JSON return `InvalidArgs`, a missing file `NotFound`.
+
 ### `SetWallpaper(s path, s output, s fit)`
 
 Sets the wallpaper of `output`, or of every output when `output` is empty (this also clears
 per-output wallpapers). `path` is an image or a video (`mp4`, `m4v`, `webm`, `mkv`, `mov`,
 `avi`, `ogv`, `mpg`, `mpeg`); videos loop and are decoded with GStreamer. `fit` is `fill`,
-`fit`, `stretch`, `center`, `tile`, or empty to keep the current mode. Only local files are
+`fit`, `stretch`, `center`, `tile`, `span`, or empty to keep the current mode. Only local files are
 accepted: an absolute path or a `file://` URI with an empty or `localhost` host, which the
 daemon percent-decodes; any other URI returns `InvalidArgs`. Clients should still convert URIs
 to paths themselves, as the other methods reject URIs. A `.wpak` package returns `InvalidArgs`
@@ -765,6 +783,83 @@ the newest installed version when a newer one is available.
 A preview queued by `RequestPreviews` is ready, or could not be made (`path = ""`: unknown
 package, no preview, or a failed download or check).
 
+## Edits and spanning
+
+Edits never change the image. An edit lives in `<image file name>.wprs.json` next to the image
+(`hills.jpg.wprs.json` for `hills.jpg`) or, when that folder cannot be written, in
+`~/.local/share/wallpaper-rs/edits/<SHA-256 of the canonical image path>.json`, which is also
+used when the file next to the image is a symbolic link; when both exist the newer one wins. Both
+are written atomically with mode `0600` and read up to 2 MiB. `wprs-ctl edit` changes them without
+the daemon. The daemon reads the edit whenever it loads an image for an output (a file, a library
+item, a package entry or a playlist item) and loads it again as soon as the file changes; an edit
+that cannot be used is ignored with a warning.
+
+```json
+{
+  "version": 1,
+  "source": { "name": "hills.jpg", "bytes": 8421337, "sha256": "9f2c…", "pixels": [6000, 4000] },
+  "geometry": { "crop": [0.0, 0.08, 1.0, 0.84], "rotate": 0, "straighten": -1.2, "flip": [false, false] },
+  "ops": [
+    { "id": "wb", "type": "white_balance", "temperature": 5600, "tint": 4 },
+    { "id": "ev", "type": "exposure", "ev": 0.35 },
+    { "id": "bl", "type": "blur", "radius": 18, "mask": "back" },
+    { "id": "ov", "type": "overlay", "color": "#1a2b6d", "blend": "soft_light", "opacity": 0.35, "mask": "sky" }
+  ],
+  "masks": {
+    "back": { "type": "luminance", "range": [0.0, 0.35], "soft": 0.05 },
+    "sky": { "type": "linear", "from": [0.5, 0.0], "to": [0.5, 0.45], "invert": true }
+  },
+  "outputs": { "Maker Model 1234": { "connector": "DP-1", "crop": [0.0, 0.1, 0.5, 0.5625] } },
+  "span": { "center": [0.5, 0.46], "zoom": 1.0 }
+}
+```
+
+- `version` is `1`; newer files are refused. Unknown fields, out-of-range values and broken
+  references are errors that name the field, such as `ops[1].ev: 7 is out of range -5 to 5`.
+- `source` holds the name, size, SHA-256 and pixel size of the image when the edit was created;
+  `wprs-ctl edit` warns when the file size or the pixel size changed.
+- `geometry`: `crop` `[x, y, w, h]` in fractions of the rotated image (`null` for all of it),
+  `rotate` clockwise `0`, `90`, `180` or `270`, `straighten` from `-45` to `45` degrees
+  counterclockwise keeping the largest centred rectangle, `flip` `[horizontal, vertical]`.
+- `ops` run in order, at most 24. Each has a unique `id` (1 to 64 letters, digits, `-` or `_`), a
+  `type`, `enabled` (`true` when absent), an optional `mask` naming one of `masks` and an
+  optional `opacity` from `0` to `1`.
+
+| `type` | Fields |
+|--------|--------|
+| `exposure` | `ev`, `-5` to `5` |
+| `white_balance` | `temperature`, `2000` to `12000` K with `6504` neutral; `tint`, `-100` to `100`, positive adds magenta |
+| `contrast` | `amount`, `-100` to `100` |
+| `saturation` | `saturation` and `vibrance`, `-100` to `100` |
+| `curves` | `rgb`, `r`, `g` and `b`: empty or 2 to 16 `[x, y]` points from `0` to `1` with growing `x` |
+| `blur` | `radius`, `0` to `200` pixels of a picture 1000 pixels long |
+| `overlay` | `color` `#rrggbb`; `blend` `normal`, `multiply`, `screen`, `overlay`, `soft_light` or `color` |
+| `vignette` | `amount`, `-1` to `1`; `midpoint`, `roundness` and `feather`, `0` to `1` |
+
+- `masks`, at most 8, use coordinates of the original image: `linear` (`from`, `to`), `radial`
+  (`center`, `radius` `[rx, ry]`, `feather`), `luminance` (`range` `[low, high]`, `soft`) and up
+  to 4 `brush` masks (`strokes` of `radius`, `hardness`, `erase` and `points`, at most 20 000
+  points in all). Every mask takes `invert`.
+- `outputs` crops the edited image for one screen, keyed by its identity (as in
+  `SetOutputInfo`) or output name; `connector` names the output as a hint.
+- `span` places the image when the fit is `span`: `center` `[x, y]` and `zoom` from `1` to `8`.
+
+Exposure, white balance, contrast, saturation, vignette and blur work in linear light, curves and
+overlays (with their `opacity`) in sRGB. The GPU renders an edit once, at the size the output
+needs, and dithers the result; nothing is rendered again while the image, the edit and the output
+stay the same.
+`wprs-ctl edit export` renders with the same code at the size of the edited image, or at `--size`
+after cropping the edited image to that shape.
+
+With the `span` fit, the outputs that use it form one canvas in millimetres. A screen measures its
+physical pixels divided by its density (96 dpi times its scale when the density is unknown or
+outside 2 to 20 px/mm). Screens that touch in the logical layout touch on the canvas, centred along
+the shared edge and `2 × layout.bezel_mm` apart; `[layout.monitors."<identity or output>"]` with
+`mm = [x, y, w, h]` places a screen by hand. The edited image covers the canvas, moved by
+`span.zoom` and `span.center`, and every output shows its part of it, so a picture keeps its
+physical size across screens of different densities. An output without `SetOutputInfo` shows
+`span` like `fill`.
+
 ## Change notification
 
 `Serial` starts at the daemon's start time in microseconds since the Unix epoch and grows by one
@@ -846,7 +941,8 @@ Every reply below carries `model` (currently `1`) and `serial` first. Every fiel
 written (`null` for none); clients ignore fields they do not know, and read enum values they do
 not know as unknown. Adding a field, an enum value or a method keeps the model version;
 removing, renaming or retyping something increases it. Times are Unix seconds; `Fit` is
-`"fill"`, `"fit"`, `"stretch"`, `"center"` or `"tile"`; enums are written in snake case.
+`"fill"`, `"fit"`, `"stretch"`, `"center"`, `"tile"` or `"span"`; enums are written in snake case.
+`edited` tells whether an edit applies to the shown image and `screen` repeats `SetOutputInfo`.
 
 ```rust
 struct State {
@@ -860,7 +956,9 @@ struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
+    edited: bool, screen: Option<Screen>,
 }
+struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
 enum Shown { Color, Image, Video }
 struct OutputPlaylist { uid: Uid, name: String, position: u32, count: u32, next_at: Option<Time> }
 
@@ -1027,6 +1125,12 @@ album = "0d6a…"
 allow_plain_http = false
 refresh = "1h"
 cache_mb = 1024
+
+[layout]                  # only written when set
+bezel_mm = 8.0            # frame width of every screen side, for the span fit
+
+[layout.monitors."Maker Model 1234"]
+mm = [0.0, 0.0, 596.7, 335.6]
 ```
 
 A section shows its `playlist` if set, else its `image`. An output section that sets either one

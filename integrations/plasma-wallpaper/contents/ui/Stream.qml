@@ -8,10 +8,9 @@ Item {
 
     required property bool covered
     readonly property string output: Screen.name
-    readonly property size pixels: {
-        const ratio = Window.window?.devicePixelRatio || Screen.devicePixelRatio;
-        return Qt.size(Math.max(1, Math.round(width * ratio)), Math.max(1, Math.round(height * ratio)));
-    }
+    readonly property real ratio: Window.window?.devicePixelRatio || Screen.devicePixelRatio
+    readonly property size pixels: Qt.size(Math.max(1, Math.round(width * ratio)), Math.max(1, Math.round(height * ratio)))
+    readonly property var place: [Screen.virtualX, Screen.virtualY, Screen.width, Screen.height, ratio, Screen.pixelDensity * ratio, [Screen.manufacturer, Screen.model, Screen.serialNumber].filter(part => part).join(" ")]
     readonly property bool wanted: output !== "" && width > 0 && height > 0
     readonly property bool broken: error !== "" || (view.item?.state ?? 0) <= PipeWire.PipeWireSourceItem.Unconnected
     readonly property bool streaming: view.item?.state === PipeWire.PipeWireSourceItem.Streaming
@@ -28,7 +27,8 @@ Item {
         const signatures = {
             "RequestStream": "(suu)",
             "ReleaseStream": "(s)",
-            "SetOutputCovered": "(sb)"
+            "SetOutputCovered": "(sb)",
+            "SetOutputInfo": "(siiuudds)"
         };
         return {
             "service": "io.github.wallpaper_rs.Daemon",
@@ -70,6 +70,7 @@ Item {
             return;
         }
         owned = target;
+        send("SetOutputInfo", [target].concat(place));
         const values = (reply.values ?? []).map(v => Number(v?.value ?? v));
         show(values[0] ?? 0, values[1] ?? 0, broken);
         send("SetOutputCovered", [target, covered]);
@@ -92,6 +93,10 @@ Item {
     }
 
     onPixelsChanged: resize.restart()
+    onPlaceChanged: {
+        if (owned !== "")
+            send("SetOutputInfo", [owned].concat(place));
+    }
     onOutputChanged: {
         release();
         resize.restart();

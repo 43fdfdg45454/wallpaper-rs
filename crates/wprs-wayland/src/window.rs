@@ -43,6 +43,9 @@ pub struct Window {
     pub(crate) logical: (u32, u32),
     pub(crate) scale: u32,
     pub(crate) refresh: Duration,
+    pub(crate) position: (i32, i32),
+    pub(crate) mm: (u32, u32),
+    pub(crate) identity: String,
 }
 
 impl Window {
@@ -56,6 +59,10 @@ impl Window {
 
     pub fn geometry(&self) -> ((u32, u32), u32) {
         (self.logical, self.scale)
+    }
+
+    pub fn placement(&self) -> ((i32, i32), (u32, u32), &str) {
+        (self.position, self.mm, &self.identity)
     }
 
     pub fn refresh(&self) -> Duration {

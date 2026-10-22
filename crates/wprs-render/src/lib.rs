@@ -1,13 +1,17 @@
 mod bind;
+mod color;
 mod decode;
+mod develop;
 mod device;
 mod draw;
+mod export;
 mod readback;
 mod shader;
+mod stack;
 mod surface;
 mod texture;
 
-pub use decode::decode_image;
+pub use decode::{decode_image, image_size, needed_edge};
 pub use device::{Display, Renderer};
 pub use draw::Target;
 pub use readback::TargetLimits;
@@ -16,7 +20,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 pub use surface::Surface;
 pub use texture::GpuImage;
-use wprs_core::Fit;
+use wprs_core::{Fit, UvRect};
 
 const LOG_PERIOD: Duration = Duration::from_secs(5);
 
@@ -44,6 +48,7 @@ pub struct Layer<'a> {
     pub fit: Fit,
     pub background: [u8; 3],
     pub opacity: f32,
+    pub uv: Option<UvRect>,
 }
 
 pub fn log_allowed(last: &AtomicU64) -> bool {

@@ -495,6 +495,61 @@ ctl remote rm "${repo:0:8}"
 [ "$(ctl remote ls --json | jq_ "len(r['repos'])")" = 0 ] || fail "the repository was kept"
 [ ! -e "$preview" ] || fail "the preview was kept with its repository"
 echo "repository checks passed"
+looks() {
+  read -r b g r _ < <("$BIN/probe" "$1" 3 | sed 's/.*center bgra \[\(.*\)\]/\1/; s/,/ /g')
+  near "$r" "$2" && near "$g" "$3" && near "$b" "$4"
+}
+shown() { wait_for 10 looks "$@" || fail "stream $1 shows $("$BIN/probe" "$1" 3), expected $2 $3 $4"; }
+pic=$WORK/edits/meadow.png
+mkdir -p "$WORK/edits"
+cp "$ROOT/tests/fixtures/green-64x32.png" "$pic"
+ctl edit set "$pic" ev=-1
+[ "$(stat -c %a "$pic.wprs.json")" = 600 ] || fail "the edit file is not private"
+read -r _ _ _ edited < <(ctl stream TEST-8 160 90)
+ctl set "$pic" -o TEST-8 --fit stretch
+shown "$edited" 0 188 0
+expect "s['outputs']['TEST-8']['edited']" True
+ctl edit set "$pic" ev=-2
+shown "$edited" 0 137 0
+ctl edit preview "$pic" ev=0
+shown "$edited" 0 255 0
+ctl edit preview "$pic" --stop
+shown "$edited" 0 137 0
+ctl edit overlay "$pic" '#ff0000'
+shown "$edited" 255 0 0
+ctl edit reset "$pic"
+shown "$edited" 0 255 0
+expect "s['outputs']['TEST-8']['edited']" False
+if [ "$(id -u)" != 0 ]; then
+  chmod 555 "$WORK/edits"
+  ctl edit set "$pic" ev=-1
+  if [ -e "$pic.wprs.json" ] || ! compgen -G "$XDG_DATA_HOME/wallpaper-rs/edits/*.json" >/dev/null; then
+    fail "the edit of an image in a read-only folder is not in the data folder"
+  fi
+  shown "$edited" 0 188 0
+  chmod 755 "$WORK/edits"
+fi
+ctl release TEST-8 && expect "list(s['outputs'])" "[]"
+cp "$ROOT/tests/fixtures/bands-640x180.png" "$WORK/bands.png"
+read -r _ _ _ left < <(ctl stream TEST-9 160 90)
+read -r _ _ _ right < <(ctl stream TEST-10 160 90)
+ctl screen TEST-9 --pos 0,0 --size 160x90 --density 4 --identity "Maker Model 9"
+ctl screen TEST-10 --pos 160,0 --size 160x90 --density 4
+ctl set "$WORK/bands.png" --fit fill
+shown "$left" 0 255 0 && shown "$right" 0 255 0
+ctl fit span
+shown "$left" 255 0 0 && shown "$right" 0 0 255
+expect "s['outputs']['TEST-9']['screen']['identity']" "Maker Model 9"
+ctl edit span "$WORK/bands.png" --zoom 2
+shown "$left" 0 255 0 && shown "$right" 0 255 0
+ctl edit crop "$WORK/bands.png" 0.7,0,0.3,1 --output TEST-10
+shown "$right" 0 0 255
+ctl edit reset "$WORK/bands.png"
+shown "$left" 255 0 0 && shown "$right" 0 0 255
+ctl release TEST-9
+shown "$right" 0 255 0
+ctl release TEST-10 && expect "list(s['outputs'])" "[]"
+echo "edit and span checks passed"
 
 restored() {
   read -r _ _ _ serial < <(ctl stream TEST-1 320 180) || return 1

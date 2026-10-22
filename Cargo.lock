@@ -4452,6 +4452,7 @@ dependencies = [
  "dirs",
  "serde",
  "serde_json",
+ "sha2 0.11.1",
  "tempfile",
  "thiserror 2.0.21",
  "toml",
@@ -4466,6 +4467,7 @@ dependencies = [
  "chrono",
  "clap",
  "futures-util",
+ "image",
  "percent-encoding",
  "rpassword",
  "serde",
@@ -4476,6 +4478,7 @@ dependencies = [
  "wprs-core",
  "wprs-format",
  "wprs-providers",
+ "wprs-render",
  "zbus",
 ]
 
@@ -4546,8 +4549,10 @@ name = "wprs-render"
 version = "0.2.0"
 dependencies = [
  "bytemuck",
+ "half",
  "image",
  "pollster",
+ "serde_json",
  "thiserror 2.0.21",
  "tracing",
  "wgpu",

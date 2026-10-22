@@ -1,5 +1,5 @@
 use super::{Credit, Time, Uid};
-use crate::Fit;
+use crate::{Fit, Screen};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -41,6 +41,10 @@ model! {
         pub preset: Option<Uid>,
         pub playlist: Option<OutputPlaylist>,
         pub credit: Option<Credit>,
+        #[serde(default)]
+        pub edited: bool,
+        #[serde(default)]
+        pub screen: Option<Screen>,
     }
 
     #[derive(Copy, Eq, Hash)]

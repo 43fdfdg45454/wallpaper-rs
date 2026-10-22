@@ -117,6 +117,8 @@ impl Daemon {
                 preset,
                 playlist: None,
                 credit,
+                edited: info.edited(),
+                screen: info.screen.clone(),
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)

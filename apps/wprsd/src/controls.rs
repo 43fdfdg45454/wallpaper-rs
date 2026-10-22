@@ -79,7 +79,8 @@ impl Daemon {
         change: impl FnOnce(&mut Config) -> Result<(), String>,
     ) -> anyhow::Result<()> {
         self.update_config(change)?;
-        match output.is_empty() {
+        let all = output.is_empty() || crate::edits::spans(&self.state());
+        match all {
             true => self.configure_all(),
             false => drop(self.configure_output(output)),
         }

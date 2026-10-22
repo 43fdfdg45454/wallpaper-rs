@@ -11,10 +11,12 @@ wprs-core.workspace = true
 wprs-client.workspace = true
 wprs-format = { workspace = true, features = ["sign"] }
 wprs-providers.workspace = true
+wprs-render.workspace = true
 anyhow.workspace = true
 chrono = { workspace = true, features = ["clock"] }
 clap.workspace = true
 futures-util.workspace = true
+image.workspace = true
 percent-encoding.workspace = true
 rpassword.workspace = true
 serde.workspace = true

@@ -3,7 +3,7 @@ use crate::{RenderError, Renderer};
 use std::sync::atomic::Ordering::Relaxed;
 use std::time::Duration;
 
-const GPU_TIMEOUT: Duration = Duration::from_secs(10);
+pub(crate) const GPU_TIMEOUT: Duration = Duration::from_secs(10);
 const MAPPED: u8 = 1;
 const FAILED: u8 = 2;
 pub(crate) const MAX_READBACK_BYTES: u64 = 256 << 20;

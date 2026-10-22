@@ -59,8 +59,8 @@ wireplumber >"$WORK/wireplumber.log" 2>&1 & pids+=($!)
 
 cat >"$WORK/sway.conf" <<'EOF'
 xwayland disable
-output HEADLESS-1 mode --custom 640x360@60Hz
-output HEADLESS-2 mode --custom 640x360@60Hz scale 1.5
+output HEADLESS-1 mode --custom 640x360@60Hz pos 0 0
+output HEADLESS-2 mode --custom 640x360@60Hz scale 1.5 pos 640 0
 output HEADLESS-3 mode --custom 480x270@60Hz
 for_window [app_id="foot"] fullscreen enable
 EOF
@@ -86,10 +86,21 @@ for output in HEADLESS-1 HEADLESS-2; do
 done
 echo "image and background checks passed"
 
+cp "$ROOT/tests/fixtures/bands-640x180.png" "$WORK/bands.png"
+ctl set "$WORK/bands.png" --fit span
+check HEADLESS-1 "0.1,0.5,#ff0000" "0.9,0.5,$green"
+check HEADLESS-2 "0.1,0.5,$green" "0.9,0.5,#0000ff"
+expect "s['outputs']['HEADLESS-2']['screen']['scale']" 1.5
+ctl edit set "$WORK/bands.png" ev=-1
+expect "s['outputs']['HEADLESS-1']['edited']" True
+echo "span checks passed"
+
 ticks() { awk '{print $14 + $15}' "/proc/$wprsd/stat"; }
 before=$(ticks); sleep 2
 [ $(($(ticks) - before)) -le 20 ] || fail "the daemon kept working with a still wallpaper"
 echo "idle check passed"
+
+ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
 
 swaymsg -q create_output
 expect "sorted(s['outputs'])" "['HEADLESS-1', 'HEADLESS-2', 'HEADLESS-3']"

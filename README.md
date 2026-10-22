@@ -138,7 +138,8 @@ wprs-ctl state                                  # estado en JSON
 wprs-ctl reload                                 # releer la configuración
 ```
 
-Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile`. Ajustes: transición (`fade` o
+Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile` y `span` (una imagen sobre todas las
+pantallas, con su tamaño físico y los marcos entre ellas). Ajustes: transición (`fade` o
 `none` y su duración), fotogramas por segundo y cuándo pausar (ventana encima, batería,
 bloqueo). Un ajuste desconocido termina con error y muestra la lista de ajustes válidos.
 
@@ -173,6 +174,19 @@ tablas para leer, no para scripts. Lo que lanza un trabajo imprime su número y 
 (`wprs-ctl cancel <n>` lo para). Las contraseñas y claves de los proveedores se piden sin eco o
 se leen de la primera línea de la entrada con `--secret-stdin`; nunca van en la orden. Códigos
 de salida: 0 bien, 1 error, 2 uso incorrecto.
+
+Las ediciones no tocan la imagen: se guardan en `<imagen>.wprs.json` a su lado (o en
+`~/.local/share/wallpaper-rs/edits/` si la carpeta no se puede escribir), las aplica la GPU y el
+daemon las vuelve a leer en cuanto cambian. `wprs-ctl edit` las cambia sin daemon:
+
+```sh
+wprs-ctl edit set foto.jpg ev=0.3 contrast=10 temperature=5200 tint=4
+wprs-ctl edit crop foto.jpg 0.1,0.05,0.8,0.9 --rotate 90
+wprs-ctl edit overlay foto.jpg '#ff8800' --blend soft-light --opacity 0.3 --mask linear:0.5,0,0.5,0.5
+wprs-ctl edit preview foto.jpg ev=1                  # verlo en el escritorio 60 s sin guardar
+wprs-ctl edit export foto.jpg -o foto-editada.png    # mismo resultado, sin daemon
+wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
+```
 
 `wprs-ctl pack` (crear, firmar y validar paquetes `.wpak`) y `wprs-ctl repo` (claves, firma,
 publicación, rotación y verificación de un repositorio) funcionan sin daemon. La contraseña de

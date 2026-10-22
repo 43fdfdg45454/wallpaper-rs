@@ -1,6 +1,8 @@
 mod calls;
 pub mod cli;
 mod daemon;
+pub mod edit;
+mod editing;
 pub mod input;
 pub mod items;
 pub mod keys;
@@ -41,6 +43,7 @@ pub fn main() -> ExitCode {
     let result = match Cli::parse().command {
         Command::Pack(command) => pack::run(command),
         Command::Repo(command) => repo::run(command),
+        Command::Edit(command) => edit::run(command),
         command => tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()

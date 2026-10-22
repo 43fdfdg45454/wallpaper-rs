@@ -4,7 +4,7 @@ use super::{Content, Spec};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
-use wprs_core::Fit;
+use wprs_core::{Fit, UvRect};
 use wprs_render::{GpuImage, Layer, Target};
 
 pub(super) struct Shown {
@@ -13,11 +13,12 @@ pub(super) struct Shown {
     pub(super) background: [u8; 3],
     pub(super) image: Option<GpuImage>,
     pub(super) transition: Option<Duration>,
+    pub(super) uv: Option<UvRect>,
 }
 
 impl Shown {
     pub(super) fn matches(&self, spec: &Spec) -> bool {
-        self.content.same_source(&spec.content) && self.fit == spec.fit && self.background == spec.background
+        self.content.same_look(&spec.content) && self.fit == spec.fit && self.background == spec.background
     }
 
     pub(super) fn layer<'a>(&'a self, players: &'a HashMap<PathBuf, PlayerSlot>, opacity: f32) -> Layer<'a> {
@@ -26,7 +27,7 @@ impl Shown {
             Content::Image(_) => self.image.as_ref(),
             Content::Video(path) => players.get(path).and_then(|p| p.texture.as_ref()),
         };
-        Layer { image, fit: self.fit, background: self.background, opacity }
+        Layer { image, fit: self.fit, background: self.background, opacity, uv: self.uv }
     }
 }
 

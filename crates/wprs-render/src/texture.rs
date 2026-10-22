@@ -2,7 +2,7 @@ use crate::decode::prepare_image;
 use crate::{RenderError, Renderer};
 use image::RgbaImage;
 use std::sync::atomic::{AtomicU64, Ordering};
-use wprs_core::Fit;
+use wprs_core::{Fit, UvRect};
 
 pub struct GpuImage {
     pub(crate) texture: wgpu::Texture,
@@ -18,7 +18,16 @@ impl GpuImage {
 
 impl Renderer {
     pub fn upload(&self, image: &RgbaImage, fit: Fit, target: (u32, u32)) -> Result<GpuImage, RenderError> {
-        let prepared = prepare_image(image, fit, target, self.max_edge());
+        self.upload_placed(image, UvRect::compute(fit, image.dimensions(), target), target)
+    }
+
+    pub fn upload_placed(
+        &self,
+        image: &RgbaImage,
+        uv: UvRect,
+        target: (u32, u32),
+    ) -> Result<GpuImage, RenderError> {
+        let prepared = prepare_image(image, uv, target, self.max_edge());
         let (w, h) = prepared.dimensions();
         self.scoped(|| create_image(&self.device, &self.queue, prepared.as_raw(), w, h, w * 4))
     }
@@ -77,6 +86,25 @@ pub(crate) fn create_texture(
     })
 }
 
+pub(crate) fn texture(
+    r: &Renderer,
+    data: &[u8],
+    size: (u32, u32),
+    stride: u32,
+    format: wgpu::TextureFormat,
+) -> wgpu::Texture {
+    let usage = wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST;
+    let texture = create_texture(&r.device, "wprs-render image", size, format, usage);
+    write_image(&r.queue, &texture, data, stride);
+    texture
+}
+
+pub(crate) fn gpu_image(texture: wgpu::Texture) -> GpuImage {
+    static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+    GpuImage { view: texture.create_view(&Default::default()), texture, id }
+}
+
 pub(crate) fn create_image(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
@@ -85,13 +113,11 @@ pub(crate) fn create_image(
     height: u32,
     stride: u32,
 ) -> GpuImage {
-    static NEXT_ID: AtomicU64 = AtomicU64::new(1);
     let usage = wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST;
     let format = wgpu::TextureFormat::Rgba8UnormSrgb;
     let texture = create_texture(device, "wprs-render image", (width, height), format, usage);
     write_image(queue, &texture, rgba, stride);
-    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-    GpuImage { view: texture.create_view(&Default::default()), texture, id }
+    gpu_image(texture)
 }
 
 fn write_image(queue: &wgpu::Queue, texture: &wgpu::Texture, rgba: &[u8], stride: u32) {

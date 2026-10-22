@@ -3,10 +3,10 @@ use crate::toplevel::Toplevel;
 use crate::window::{Parts, Window};
 use crate::{Event, Sink};
 use smithay_client_toolkit::compositor::CompositorState;
-use smithay_client_toolkit::output::OutputState;
+use smithay_client_toolkit::output::{OutputInfo, OutputState};
 use smithay_client_toolkit::reexports::client::backend::ObjectId;
 use smithay_client_toolkit::reexports::client::globals::{Global, GlobalList};
-use smithay_client_toolkit::reexports::client::protocol::wl_output::WlOutput;
+use smithay_client_toolkit::reexports::client::protocol::wl_output::{Transform, WlOutput};
 use smithay_client_toolkit::reexports::client::{Connection, QueueHandle};
 use smithay_client_toolkit::registry::RegistryState;
 use smithay_client_toolkit::shell::WaylandSurface;
@@ -14,6 +14,15 @@ use smithay_client_toolkit::shell::wlr_layer::{Anchor, KeyboardInteractivity, La
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+
+fn physical(info: &OutputInfo) -> (u32, u32) {
+    let (w, h) = (info.physical_size.0.max(0) as u32, info.physical_size.1.max(0) as u32);
+    let turned = matches!(
+        info.transform,
+        Transform::_90 | Transform::_270 | Transform::Flipped90 | Transform::Flipped270
+    );
+    if turned { (h, w) } else { (w, h) }
+}
 
 pub(crate) fn is_layer_shell(global: &Global) -> bool {
     global.interface == "zwlr_layer_shell_v1"
@@ -97,7 +106,8 @@ impl State {
         let Some(screen) = self.screens.iter_mut().find(|s| matches(s)) else { return };
         change(screen);
         let Some(logical) = screen.logical else { return };
-        let mode = self.outputs.info(&screen.output).and_then(|i| i.modes.into_iter().find(|m| m.current));
+        let info = self.outputs.info(&screen.output);
+        let mode = info.as_ref().and_then(|i| i.modes.iter().find(|m| m.current));
         let refresh =
             mode.map(|m| m.refresh_rate).filter(|r| *r > 0).unwrap_or(60_000).clamp(1_000, 1_000_000) as u64;
         let window = Window {
@@ -109,6 +119,11 @@ impl State {
             logical,
             scale: effective(screen.fractional, screen.integer, screen.parts.viewport.is_some()),
             refresh: Duration::from_micros(1_000_000_000 / refresh),
+            position: info.as_ref().map_or((0, 0), |i| i.logical_position.unwrap_or(i.location)),
+            mm: info.as_ref().map_or((0, 0), physical),
+            identity: info
+                .as_ref()
+                .map_or(String::new(), |i| format!("{} {}", i.make, i.model).trim().to_owned()),
         };
         (self.sink)(Event::Output(screen.name.clone(), window));
     }

@@ -1,14 +1,16 @@
-use crate::compositor::{Content, Picture, Spec};
+use crate::compositor::{Content, Picture, Spec, lock};
 use crate::daemon::Daemon;
 use anyhow::Context;
 use image::RgbaImage;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
-use wprs_core::Fit;
+use wprs_core::{Edit, Fit, Place};
 use zbus::fdo::Error::InvalidArgs;
 
-pub(crate) type Upload = ((u32, u32), Fit, PathBuf, Option<SystemTime>);
+pub(crate) type Upload = ((u32, u32), Fit, PathBuf, Option<SystemTime>, Option<Arc<Edit>>, Place);
+
+static ORDER: Mutex<()> = Mutex::new(());
 
 fn modified(path: &Path) -> anyhow::Result<Option<SystemTime>> {
     let metadata = std::fs::metadata(path).with_context(|| format!("cannot read {}", path.display()))?;
@@ -17,6 +19,7 @@ fn modified(path: &Path) -> anyhow::Result<Option<SystemTime>> {
 
 impl Daemon {
     pub fn configure_output(&self, output: &str) -> Option<Arc<RgbaImage>> {
+        let _order = lock(&ORDER);
         let (size, resolved, uploaded) = {
             let st = self.state();
             let info = st.outputs.get(output)?;
@@ -32,7 +35,7 @@ impl Daemon {
                 (Content::Color, None)
             }
             Some(Ok((path, true))) => (Content::Video(path), None),
-            Some(Ok((file, false))) => match self.picture(file, (size, resolved.fit), uploaded) {
+            Some(Ok((file, false))) => match self.picture(output, file, (size, resolved.fit), uploaded) {
                 Ok((picture, upload)) => (Content::Image(picture), Some(upload)),
                 Err(e) => {
                     tracing::warn!(
@@ -68,24 +71,37 @@ impl Daemon {
 
     fn picture(
         &self,
+        output: &str,
         file: PathBuf,
         (size, fit): ((u32, u32), Fit),
         uploaded: Option<Upload>,
     ) -> anyhow::Result<(Picture, Upload)> {
         let modified = modified(&file)?;
-        let upload = (size, fit, file.clone(), modified);
-        let pixels =
-            (uploaded.as_ref() != Some(&upload)).then(|| self.load_image(&file, modified)).transpose()?;
-        Ok((Picture { file, modified, pixels }, upload))
+        let edit = self.edit_for(&file);
+        let place = self.place(output, fit, edit.as_deref());
+        let upload = (size, fit, file.clone(), modified, edit.clone(), place.clone());
+        let edge = || {
+            wprs_render::needed_edge(&file, edit.as_deref(), &place, (fit, size), self.compositor.max_edge())
+        };
+        let pixels = (uploaded.as_ref() != Some(&upload))
+            .then(|| self.load_image(&file, modified, Some(edge())))
+            .transpose()?;
+        Ok((Picture { file, modified, pixels, edit, place }, upload))
     }
 
-    fn load_image(&self, path: &Path, modified: Option<SystemTime>) -> anyhow::Result<Arc<RgbaImage>> {
+    fn load_image(
+        &self,
+        path: &Path,
+        modified: Option<SystemTime>,
+        edge: Option<u32>,
+    ) -> anyhow::Result<Arc<RgbaImage>> {
         let cached =
             self.state().images.get(path).filter(|(m, _)| *m == modified).and_then(|(_, w)| w.upgrade());
-        if let Some(image) = cached {
+        if let Some(image) = cached.filter(|i| edge.is_none_or(|e| i.width().max(i.height()) + 2 >= e)) {
             return Ok(image);
         }
-        let image = wprs_render::decode_image(path, self.compositor.max_edge())
+        let max_edge = self.compositor.max_edge();
+        let image = wprs_render::decode_image(path, edge.map_or(max_edge, |e| e.min(max_edge)))
             .with_context(|| format!("cannot decode {}", path.display()))?;
         let image = Arc::new(image);
         let mut st = self.state();
@@ -110,7 +126,7 @@ impl Daemon {
         anyhow::ensure!(path.is_file(), "{} is not a file", path.display());
         let (file, video) = self.media(path.to_owned())?;
         if !video {
-            return Ok(Some(self.load_image(&file, modified(&file)?)?));
+            return Ok(Some(self.load_image(&file, modified(&file)?, None)?));
         }
         let size = wprs_video::probe(&file).with_context(|| format!("cannot play {}", path.display()))?;
         tracing::debug!(path = %path.display(), ?size, "video accepted");

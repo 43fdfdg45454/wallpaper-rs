@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, mpsc};
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime};
-use wprs_core::Fit;
+use wprs_core::{Edit, Fit, Place};
 use wprs_pipewire::Exporter;
 use wprs_render::{RenderError, Renderer, TargetLimits};
 use wprs_wayland::Window;
@@ -30,6 +30,8 @@ pub struct Picture {
     pub file: PathBuf,
     pub modified: Option<SystemTime>,
     pub pixels: Option<Arc<RgbaImage>>,
+    pub edit: Option<Arc<Edit>>,
+    pub place: Place,
 }
 
 impl Content {
@@ -40,6 +42,14 @@ impl Content {
             (Content::Video(a), Content::Video(b)) => a == b,
             _ => false,
         }
+    }
+
+    fn same_look(&self, other: &Content) -> bool {
+        let look = |c: &Content| match c {
+            Content::Image(p) => Some((p.edit.clone(), p.place.clone())),
+            _ => None,
+        };
+        self.same_source(other) && look(self) == look(other)
     }
 
     fn video(&self) -> Option<&PathBuf> {

@@ -1,3 +1,4 @@
+use crate::edit::Edits;
 use crate::library::Lib;
 use crate::pack::Pack;
 use crate::pkg::Pkg;
@@ -109,6 +110,26 @@ pub enum Command {
     },
     #[command(about = "Release a stream created with the stream command")]
     Release { output: String },
+    #[command(about = "Tell the daemon where a screen sits, for wallpapers that span screens")]
+    Screen {
+        output: String,
+        #[arg(
+            long,
+            value_name = "X,Y",
+            default_value = "0,0",
+            allow_hyphen_values = true,
+            help = "Logical position"
+        )]
+        pos: String,
+        #[arg(long, value_name = "WxH", help = "Logical size")]
+        size: String,
+        #[arg(long, default_value_t = 1.0)]
+        scale: f64,
+        #[arg(long, default_value_t = 0.0, help = "Physical pixels per millimetre, 0 when unknown")]
+        density: f64,
+        #[arg(long, default_value = "", help = "Maker, model and serial number of the screen")]
+        identity: String,
+    },
     #[command(about = "Report whether a window covers an output")]
     Covered {
         output: String,
@@ -165,6 +186,11 @@ pub enum Command {
     Remote(Remote),
     #[command(subcommand, about = "Packages of the added repositories")]
     Pkg(Pkg),
+    #[command(
+        subcommand,
+        about = "Edit images without changing their files; needs no daemon except for preview"
+    )]
+    Edit(Edits),
     #[command(subcommand, about = "Build, sign and check .wpak packages; needs no daemon")]
     Pack(Pack),
     #[command(subcommand, about = "Operate a package repository; needs no daemon")]

@@ -55,7 +55,7 @@ impl ConfigError {
     }
 }
 
-fn write_private(path: &Path, data: &[u8]) -> Result<(), ConfigError> {
+pub(crate) fn write_private(path: &Path, data: &[u8]) -> Result<(), ConfigError> {
     let target = std::fs::canonicalize(path)
         .or_else(|_| std::fs::read_link(path).map(|link| path.with_file_name(link)))
         .unwrap_or_else(|_| path.to_owned());

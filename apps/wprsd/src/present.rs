@@ -61,15 +61,15 @@ impl Daemon {
     fn surface_event(&self, covers: &mut HashMap<String, u8>, event: Event) {
         let result = match event {
             Event::Output(output, window) => {
-                let size = window.size();
+                let (size, screen) = (window.size(), crate::edits::screen_of(&window));
                 self.compositor.attach(&output, window);
                 {
                     let mut st = self.state();
                     let info = st.outputs.entry(output.clone()).or_default();
-                    info.size = size;
+                    (info.size, info.screen) = (size, Some(screen));
                     info.claims.entry(SURFACE.into()).or_default();
                 }
-                self.configure_output(&output);
+                self.configure_all();
                 self.set_covered(&output, SURFACE, covers.get(&output).is_some_and(|c| *c != 0))
             }
             Event::Covered(output, cover, covered) => {
@@ -82,6 +82,7 @@ impl Daemon {
                 self.state().outputs.remove(&output);
                 self.compositor.remove(&output);
                 tracing::info!(output, "output removed");
+                self.configure_all();
                 Ok(())
             }
             Event::Lost(reason) => {

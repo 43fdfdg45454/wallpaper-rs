@@ -1,10 +1,11 @@
+use crate::develop::Developer;
 use crate::draw::TARGET_FORMAT;
 use crate::readback::{MAX_READBACK_BYTES, TargetLimits};
 use crate::shader::{bind_group_layout, pipelines};
 use crate::texture::{GpuImage, create_image};
 use crate::{RenderError, log_allowed};
-use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
+use std::sync::{Arc, OnceLock};
 
 pub type Display = Box<dyn wgpu::wgt::WgpuHasDisplayHandle>;
 
@@ -20,6 +21,7 @@ pub struct Renderer {
     pub(crate) placeholder: GpuImage,
     adapter: String,
     pub(crate) limits: TargetLimits,
+    pub(crate) developer: OnceLock<Developer>,
 }
 
 impl Renderer {
@@ -63,7 +65,7 @@ impl Renderer {
             max_edge: granted.max_texture_dimension_2d,
             max_buffer_size: granted.max_buffer_size.min(MAX_READBACK_BYTES),
         };
-        let layout = bind_group_layout(&device);
+        let layout = bind_group_layout(&device, 1);
         let sampler = |mode| {
             device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("wprs-render sampler"),
@@ -82,6 +84,7 @@ impl Renderer {
             placeholder: create_image(&device, &queue, &[0; 4], 1, 1, 4),
             adapter: format!("{} ({:?})", info.name, info.backend),
             limits,
+            developer: OnceLock::new(),
             layout,
             device,
             queue,

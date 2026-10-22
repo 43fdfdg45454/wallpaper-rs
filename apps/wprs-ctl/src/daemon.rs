@@ -48,6 +48,13 @@ pub async fn run(command: Command) -> Result<()> {
         }
         Command::Release { output } => daemon.release_stream(&output).await?,
         Command::Covered { output, covered } => daemon.set_output_covered(&output, covered).await?,
+        Command::Screen { output, pos, size, scale, density, identity } => {
+            let point =
+                pos.split_once(',').and_then(|(x, y)| Some((x.trim().parse().ok()?, y.trim().parse().ok()?)));
+            let (x, y) = point.ok_or_else(|| crate::usage(format!("{pos} is not X,Y")))?;
+            let (width, height) = crate::editing::dimensions(&size)?;
+            daemon.set_output_info(&output, x, y, width, height, scale, density, &identity).await?
+        }
         Command::Schema { json } => show::reply(daemon.get_schema().await?, json, show::schema)?,
         Command::Watch { json } => watch(client, json).await?,
         Command::Wait { serial, timeout, json } => {
@@ -73,7 +80,9 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Provider(command) => providers::run(client, command).await?,
         Command::Remote(command) => remote::run(client, command).await?,
         Command::Pkg(command) => pkg::run(client, command).await?,
-        Command::Pack(_) | Command::Repo(_) => unreachable!("local commands never connect"),
+        Command::Pack(_) | Command::Repo(_) | Command::Edit(_) => {
+            unreachable!("local commands never connect")
+        }
     }
     Ok(())
 }

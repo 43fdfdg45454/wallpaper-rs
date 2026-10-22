@@ -1,4 +1,4 @@
-pub(crate) fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+pub(crate) fn bind_group_layout(device: &wgpu::Device, textures: u32) -> wgpu::BindGroupLayout {
     let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
         binding,
         visibility: wgpu::ShaderStages::FRAGMENT,
@@ -16,9 +16,55 @@ pub(crate) fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout 
         multisampled: false,
     };
     let sampler = wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering);
+    let entries: Vec<_> = std::iter::once(entry(0, uniform))
+        .chain((1..=textures).map(|binding| entry(binding, texture)))
+        .chain([entry(textures + 1, sampler)])
+        .collect();
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("wprs-render bind group layout"),
-        entries: &[entry(0, uniform), entry(1, texture), entry(2, sampler)],
+        entries: &entries,
+    })
+}
+
+pub(crate) fn module(device: &wgpu::Device, source: &'static str) -> wgpu::ShaderModule {
+    device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("wprs-render shader"),
+        source: wgpu::ShaderSource::Wgsl(source.into()),
+    })
+}
+
+pub(crate) fn pipeline(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    shader: &wgpu::ShaderModule,
+    entry: &str,
+    target: wgpu::ColorTargetState,
+) -> wgpu::RenderPipeline {
+    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("wprs-render pipeline layout"),
+        bind_group_layouts: &[Some(layout)],
+        immediate_size: 0,
+    });
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("wprs-render pipeline"),
+        layout: Some(&layout),
+        vertex: wgpu::VertexState {
+            module: shader,
+            entry_point: Some("vs_main"),
+            compilation_options: Default::default(),
+            buffers: &[],
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: shader,
+            entry_point: Some(entry),
+            compilation_options: Default::default(),
+            targets: &[Some(target)],
+        }),
+        primitive: Default::default(),
+        depth_stencil: None,
+        multisample: Default::default(),
+        multiview_mask: None,
+        cache: None,
     })
 }
 
@@ -27,41 +73,13 @@ pub(crate) fn pipelines(
     layout: &wgpu::BindGroupLayout,
     format: wgpu::TextureFormat,
 ) -> [wgpu::RenderPipeline; 2] {
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("wprs-render shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-    });
-    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("wprs-render pipeline layout"),
-        bind_group_layouts: &[Some(layout)],
-        immediate_size: 0,
-    });
+    let shader = module(device, include_str!("shader.wgsl"));
     let fade = wgpu::BlendComponent {
         src_factor: wgpu::BlendFactor::Constant,
         dst_factor: wgpu::BlendFactor::OneMinusConstant,
         operation: wgpu::BlendOperation::Add,
     };
     [None, Some(wgpu::BlendState { color: fade, alpha: fade })].map(|blend| {
-        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("wprs-render pipeline"),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState { blend, ..format.into() })],
-            }),
-            primitive: Default::default(),
-            depth_stencil: None,
-            multisample: Default::default(),
-            multiview_mask: None,
-            cache: None,
-        })
+        pipeline(device, layout, &shader, "fs_main", wgpu::ColorTargetState { blend, ..format.into() })
     })
 }

@@ -17,6 +17,19 @@ pub trait Daemon1 {
     fn set_volume(&self, volume: f64) -> Result<()>;
     fn set_muted(&self, muted: bool) -> Result<()>;
     fn set_output_covered(&self, output: &str, covered: bool) -> Result<()>;
+    #[allow(clippy::too_many_arguments)]
+    fn set_output_info(
+        &self,
+        output: &str,
+        x: i32,
+        y: i32,
+        width: u32,
+        height: u32,
+        scale: f64,
+        px_per_mm: f64,
+        identity: &str,
+    ) -> Result<()>;
+    fn preview_edit(&self, path: &str, edit_json: &str) -> Result<()>;
     fn reload(&self) -> Result<()>;
     fn get_state(&self) -> Result<String>;
     fn get_schema(&self) -> Result<String>;

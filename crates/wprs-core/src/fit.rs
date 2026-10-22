@@ -11,10 +11,11 @@ pub enum Fit {
     Stretch,
     Center,
     Tile,
+    Span,
 }
 
 impl Fit {
-    pub const ALL: [Fit; 5] = [Fit::Fill, Fit::Fit, Fit::Stretch, Fit::Center, Fit::Tile];
+    pub const ALL: [Fit; 6] = [Fit::Fill, Fit::Fit, Fit::Stretch, Fit::Center, Fit::Tile, Fit::Span];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -23,6 +24,7 @@ impl Fit {
             Fit::Stretch => "stretch",
             Fit::Center => "center",
             Fit::Tile => "tile",
+            Fit::Span => "span",
         }
     }
 }
@@ -34,7 +36,7 @@ impl fmt::Display for Fit {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("unknown fit mode '{0}' (expected fill, fit, stretch, center or tile)")]
+#[error("unknown fit mode '{0}' (expected fill, fit, stretch, center, tile or span)")]
 pub struct UnknownFit(pub String);
 
 impl FromStr for Fit {
@@ -62,7 +64,7 @@ impl UvRect {
         let contain = (tw / iw).min(th / ih);
         let (shown_w, shown_h) = match fit {
             Fit::Stretch => (tw, th),
-            Fit::Fill => (iw * cover, ih * cover),
+            Fit::Fill | Fit::Span => (iw * cover, ih * cover),
             Fit::Fit => (iw * contain, ih * contain),
             Fit::Center | Fit::Tile => (iw, ih),
         };

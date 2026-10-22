@@ -18,6 +18,7 @@ pub(crate) struct OutputInfo {
     pub(crate) size: (u32, u32),
     pub(crate) claims: HashMap<String, Claim>,
     pub(crate) uploaded: Option<Upload>,
+    pub(crate) screen: Option<wprs_core::Screen>,
 }
 
 impl OutputInfo {
@@ -59,7 +60,9 @@ impl Daemon {
         let output = output_name(output)?;
         let mut st = self.state();
         let client = st.outputs.get(&output).map_or(HELD, |info| info.claimant(client));
-        self.unclaim(&mut st, &output, client, 1)
+        self.unclaim(&mut st, &output, client, 1)?;
+        self.respan(st);
+        Ok(())
     }
 
     pub fn drop_client(&self, client: &str) -> anyhow::Result<()> {

@@ -1,4 +1,5 @@
 use crate::fit::Fit;
+use crate::layout::Layout;
 use crate::settings::{Library, Pause, Playback, Repos, Transition};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -28,6 +29,8 @@ pub struct Config {
     pub pause: Pause,
     pub library: Library,
     pub repos: Repos,
+    #[serde(skip_serializing_if = "Layout::is_default")]
+    pub layout: Layout,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub providers: BTreeMap<String, toml::Value>,
 }

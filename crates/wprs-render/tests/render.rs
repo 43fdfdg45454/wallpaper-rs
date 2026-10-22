@@ -14,7 +14,7 @@ fn renderer() -> Option<Renderer> {
 }
 
 fn layer(image: Option<&GpuImage>, fit: Fit, background: [u8; 3], opacity: f32) -> Layer<'_> {
-    Layer { image, fit, background, opacity }
+    Layer { image, fit, background, opacity, uv: None }
 }
 
 fn draw(r: &Renderer, image: Option<&RgbaImage>, fit: Fit, background: [u8; 3], size: (u32, u32)) -> Vec<u8> {

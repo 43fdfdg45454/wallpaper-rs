@@ -68,6 +68,30 @@ impl Service {
         self.d()?.run(move |d| d.set_covered(&output, &client, covered)).await
     }
 
+    #[allow(clippy::too_many_arguments)]
+    async fn set_output_info(
+        &self,
+        output: String,
+        x: i32,
+        y: i32,
+        width: u32,
+        height: u32,
+        scale: f64,
+        px_per_mm: f64,
+        identity: String,
+    ) -> Result<()> {
+        let screen = wprs_core::Screen { x, y, width, height, scale, px_per_mm, identity };
+        self.d()?.run(move |d| d.set_screen(&output, screen)).await
+    }
+
+    async fn preview_edit(&self, path: String, edit_json: String) -> Result<()> {
+        let path = PathBuf::from(path);
+        if !path.is_absolute() {
+            return Err(InvalidArgs(format!("{} is not an absolute path", path.display())).into());
+        }
+        self.d()?.run(move |d| d.preview_edit(&path, &edit_json)).await
+    }
+
     async fn set_wallpaper(&self, path: String, output: String, fit: String) -> Result<()> {
         let path = local_path(&path)?;
         self.d()?.run(move |d| d.change_wallpaper(&path, &output, &fit)).await

@@ -3,7 +3,7 @@ use wprs_core::model::{Field, FieldKind, MODEL, ProviderKind, QueryKey, Schema, 
 use wprs_core::{Config, Fit};
 
 const DAY: f64 = 86_400.0;
-const FITS: [Fit; 5] = [Fit::Fill, Fit::Fit, Fit::Stretch, Fit::Center, Fit::Tile];
+const FITS: [Fit; 6] = Fit::ALL;
 const WEEKDAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 fn field(key: &str, kind: FieldKind, default: Value) -> Field {
