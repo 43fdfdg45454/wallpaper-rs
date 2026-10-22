@@ -29,13 +29,19 @@ pub fn format_param() -> Vec<u8> {
 
 pub fn buffers_param() -> Vec<u8> {
     let types = (1 << spa::sys::SPA_DATA_MemFd) | (1 << spa::sys::SPA_DATA_MemPtr);
-    let choice = Choice(ChoiceFlags::empty(), ChoiceEnum::Flags { default: types, flags: vec![types] });
-    let data_type = Value::Choice(ChoiceValue::Int(choice));
-    let property = Property::new(spa::sys::SPA_PARAM_BUFFERS_dataType, data_type);
-    serialize(object!(SpaTypes::ObjectParamBuffers, ParamType::Buffers, property))
+    let int_choice = |choice| Value::Choice(ChoiceValue::Int(Choice(ChoiceFlags::empty(), choice)));
+    let count = int_choice(ChoiceEnum::Range { default: 3, min: 2, max: 16 });
+    let data_type = int_choice(ChoiceEnum::Flags { default: types, flags: vec![types] });
+    serialize(object!(
+        SpaTypes::ObjectParamBuffers,
+        ParamType::Buffers,
+        Property::new(spa::sys::SPA_PARAM_BUFFERS_buffers, count),
+        Property::new(spa::sys::SPA_PARAM_BUFFERS_align, Value::Int(16)),
+        Property::new(spa::sys::SPA_PARAM_BUFFERS_dataType, data_type),
+    ))
 }
 
-pub fn describe(data: &Data, info: &VideoInfoRaw, stride: usize) -> String {
+pub fn describe(data: &Data, info: &VideoInfoRaw, stride: usize, buffers: usize) -> String {
     let (size, raw) = (info.size(), data.as_raw());
     let center = size.height as usize / 2 * stride + size.width as usize / 2 * 4;
     if data.type_() != DataType::MemFd {
@@ -43,7 +49,7 @@ pub fn describe(data: &Data, info: &VideoInfoRaw, stride: usize) -> String {
     }
     match read_mapped_from_offset_zero(raw.fd, raw.maxsize + raw.mapoffset, center) {
         Ok(px) => format!(
-            "frame {}x{} format {:?} stride {stride} type MemFd center bgra {px:?}",
+            "frame {}x{} format {:?} stride {stride} type MemFd buffers {buffers} center bgra {px:?}",
             size.width,
             size.height,
             info.format()

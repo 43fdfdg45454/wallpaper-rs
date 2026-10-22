@@ -1,6 +1,9 @@
-use crate::RenderError;
+use crate::readback::TargetLimits;
 use crate::shader::{bind_group_layout, pipelines};
 use crate::texture::{GpuImage, create_image};
+use crate::{RenderError, log_allowed};
+use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 
 pub struct Renderer {
     pub(crate) device: wgpu::Device,
@@ -12,7 +15,7 @@ pub struct Renderer {
     pub(crate) repeat: wgpu::Sampler,
     pub(crate) placeholder: GpuImage,
     adapter: String,
-    max_edge: u32,
+    pub(crate) limits: TargetLimits,
 }
 
 impl Renderer {
@@ -31,13 +34,27 @@ impl Renderer {
             .request_adapter(&options)
             .await
             .map_err(|e| RenderError::NoAdapter(e.to_string()))?;
-        let max_edge = adapter.limits().max_texture_dimension_2d;
-        let required_limits =
-            wgpu::Limits { max_texture_dimension_2d: max_edge, ..wgpu::Limits::downlevel_defaults() };
+        let offered = adapter.limits();
+        let required_limits = wgpu::Limits {
+            max_texture_dimension_2d: offered.max_texture_dimension_2d,
+            max_buffer_size: offered.max_buffer_size,
+            ..wgpu::Limits::downlevel_defaults()
+        };
         let descriptor =
             wgpu::DeviceDescriptor { label: Some("wprs-render"), required_limits, ..Default::default() };
         let (device, queue) =
             adapter.request_device(&descriptor).await.map_err(|e| RenderError::Device(e.to_string()))?;
+        static GPU_ERRORS: AtomicU64 = AtomicU64::new(0);
+        device.on_uncaptured_error(Arc::new(|e| {
+            if log_allowed(&GPU_ERRORS) {
+                tracing::error!("GPU error: {e}");
+            }
+        }));
+        let granted = device.limits();
+        let limits = TargetLimits {
+            max_edge: granted.max_texture_dimension_2d,
+            max_buffer_size: granted.max_buffer_size,
+        };
         let layout = bind_group_layout(&device);
         let [opaque, blended] = pipelines(&device, &layout);
         let sampler = |mode| {
@@ -58,7 +75,7 @@ impl Renderer {
             repeat: sampler(wgpu::AddressMode::Repeat),
             placeholder: create_image(&device, &queue, &[0; 4], 1, 1, 4),
             adapter: format!("{} ({:?})", info.name, info.backend),
-            max_edge,
+            limits,
             layout,
             device,
             queue,
@@ -69,31 +86,19 @@ impl Renderer {
         &self.adapter
     }
 
-    pub fn max_edge(&self) -> u32 {
-        self.max_edge
+    pub fn on_device_lost(&self, callback: impl Fn(String) + Send + 'static) {
+        self.device.set_device_lost_callback(move |reason, message| {
+            if reason != wgpu::DeviceLostReason::Destroyed {
+                callback(format!("{reason:?}: {message}"));
+            }
+        });
     }
 
-    pub(crate) fn check_size(&self, width: u32, height: u32) -> Result<(), RenderError> {
-        let fits = |edge| (1..=self.max_edge).contains(&edge);
-        (fits(width) && fits(height)).then_some(()).ok_or(RenderError::InvalidSize(width, height))
+    pub(crate) fn scoped<T>(&self, work: impl FnOnce() -> T) -> Result<T, RenderError> {
+        let memory = self.device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
+        let validation = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let value = work();
+        let failure = [validation.pop(), memory.pop()].into_iter().find_map(pollster::block_on);
+        failure.map_or(Ok(value), |e| Err(RenderError::Gpu(e.to_string())))
     }
-}
-
-pub(crate) fn create_texture(
-    device: &wgpu::Device,
-    label: &str,
-    (width, height): (u32, u32),
-    format: wgpu::TextureFormat,
-    usage: wgpu::TextureUsages,
-) -> wgpu::Texture {
-    device.create_texture(&wgpu::TextureDescriptor {
-        label: Some(label),
-        size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format,
-        usage,
-        view_formats: &[],
-    })
 }

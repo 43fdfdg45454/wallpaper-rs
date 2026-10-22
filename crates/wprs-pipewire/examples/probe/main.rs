@@ -14,6 +14,7 @@ type AnyError = Box<dyn std::error::Error>;
 #[derive(Default)]
 struct Probe {
     format: VideoInfoRaw,
+    buffers: usize,
     result: Option<String>,
 }
 
@@ -41,6 +42,7 @@ fn main() -> Result<(), AnyError> {
 
     let probe = Rc::new(RefCell::new(Probe::default()));
     let (on_param, on_process, weak_loop) = (probe.clone(), probe.clone(), mainloop.downgrade());
+    let (on_add, on_remove) = (probe.clone(), probe.clone());
     let _listener = stream
         .add_local_listener::<()>()
         .param_changed(move |stream, _, id, param| {
@@ -54,6 +56,8 @@ fn main() -> Result<(), AnyError> {
                 }
             }
         })
+        .add_buffer(move |_, _, _| on_add.borrow_mut().buffers += 1)
+        .remove_buffer(move |_, _, _| on_remove.borrow_mut().buffers -= 1)
         .process(move |stream, _| {
             let Some(mut buffer) = stream.dequeue_buffer() else { return };
             let mut probe = on_process.borrow_mut();
@@ -62,7 +66,7 @@ fn main() -> Result<(), AnyError> {
             if probe.result.is_some() || data.chunk().size() == 0 || stride == 0 {
                 return;
             }
-            probe.result = Some(kpipewire::describe(data, &probe.format, stride));
+            probe.result = Some(kpipewire::describe(data, &probe.format, stride, probe.buffers));
             quit(&weak_loop);
         })
         .register()?;

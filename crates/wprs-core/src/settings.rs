@@ -92,23 +92,22 @@ impl Config {
     pub fn set_option(&mut self, key: &str, value: &str) -> Result<(), String> {
         let unknown = || format!("unknown setting '{key}', see the list of settings");
         let current = self.options().remove(key).ok_or_else(unknown)?;
+        let text = value.trim();
         let parsed = match current {
-            toml::Value::Boolean(_) => {
-                value.trim().parse().map(toml::Value::Boolean).map_err(|e| e.to_string())
-            }
-            toml::Value::Integer(_) => {
-                value.trim().parse().map(toml::Value::Integer).map_err(|e| e.to_string())
-            }
-            toml::Value::Float(_) => value.trim().parse().map(toml::Value::Float).map_err(|e| e.to_string()),
-            _ => Ok(toml::Value::String(value.trim().to_owned())),
+            toml::Value::Boolean(_) => text.parse().map(toml::Value::Boolean).map_err(|e| e.to_string()),
+            toml::Value::Integer(_) => text.parse().map(toml::Value::Integer).map_err(|e| e.to_string()),
+            toml::Value::Float(_) => text.parse().map(toml::Value::Float).map_err(|e| e.to_string()),
+            _ => Ok(toml::Value::String(text.to_owned())),
         }
         .map_err(|e| format!("invalid value for {key}: {e}"))?;
         let (section, field) = key.split_once('.').ok_or_else(unknown)?;
         let mut doc = toml::Value::try_from(&*self).map_err(|e| e.to_string())?;
         doc[section][field] = parsed;
-        let updated: Config = doc.try_into().map_err(|e| format!("invalid value for {key}: {e}"))?;
-        let in_range = updated.playback.sanitized() == updated.playback
-            && updated.transition.duration_ms <= Transition::MAX_MS;
-        in_range.then(|| *self = updated).ok_or_else(|| format!("{value} is out of range for {key}"))
+        let mut updated: Config = doc.try_into().map_err(|e| format!("invalid value for {key}: {e}"))?;
+        if updated.normalize().iter().any(|fixed| fixed == key) {
+            return Err(format!("{text} is out of range for {key}"));
+        }
+        *self = updated;
+        Ok(())
     }
 }

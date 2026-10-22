@@ -48,14 +48,17 @@ Después, en Plasma: clic derecho en el escritorio → *Configurar escritorio y 
 pantalla* → tipo de fondo **wallpaper-rs**. El fondo de cada pantalla, el modo de ajuste, la
 pausa, el volumen y los ajustes se eligen desde el icono de wallpaper-rs en la bandeja.
 
-Requisitos: KDE Plasma 6, PipeWire, GStreamer (con los plugins base y good) y un controlador
-Vulkan u OpenGL.
+Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good) y un
+controlador Vulkan u OpenGL.
 
 ## Uso desde la terminal
 
 ```sh
 wprs-ctl set ~/Imágenes/fondo.jpg               # todas las pantallas
 wprs-ctl set ~/Vídeos/mar.mp4 -o DP-1 -f fit    # una pantalla, modo de ajuste
+wprs-ctl fit center                             # solo el modo de ajuste, mismo fondo
+wprs-ctl fit tile -o DP-1                       # el modo de ajuste de una pantalla
+wprs-ctl background '#203040'                   # color alrededor del fondo
 wprs-ctl pause | resume | toggle                # pausar los fondos animados
 wprs-ctl volume 40 | mute | unmute              # sonido de los vídeos
 wprs-ctl config                                 # ver los ajustes
@@ -66,7 +69,16 @@ wprs-ctl reload                                 # releer la configuración
 
 Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile`. Ajustes: transición (`fade` o
 `none` y su duración), fotogramas por segundo y cuándo pausar (ventana encima, batería,
-bloqueo). La configuración vive en `~/.config/wallpaper-rs/config.toml`.
+bloqueo). Un ajuste desconocido termina con error y muestra la lista de ajustes válidos.
+
+La configuración vive en `~/.config/wallpaper-rs/config.toml` y solo la puede leer su usuario.
+Si se edita a mano, los valores fuera de rango se corrigen al leerla. Si tiene un error de
+sintaxis, el daemon arranca con los valores por defecto y muestra el error en `wprs-ctl state`
+(`config_error`); el archivo roto se copia a `config.toml.broken` antes de guardar otro.
+
+Para pruebas, `wprs-ctl stream <salida> <ancho> <alto>` crea un flujo que sigue vivo al salir
+la orden y `wprs-ctl release <salida>` lo destruye. Con `--wait`, el flujo dura lo que dure la
+orden, igual que el de un escritorio.
 
 ## Desarrollo
 

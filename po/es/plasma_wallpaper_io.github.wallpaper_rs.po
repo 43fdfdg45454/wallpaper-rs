@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 00:00+0000\n"
-"PO-Revision-Date: 2026-10-21 00:00+0000\n"
+"POT-Creation-Date: 2026-10-22 00:00+0000\n"
+"PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
 "Language: es\n"
@@ -11,6 +11,11 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: integrations/plasma-wallpaper/contents/ui/Stream.qml
+#, kde-format
+msgid "the daemon (wprsd) is not running"
+msgstr "el servicio (wprsd) no se está ejecutando"
 
 #: integrations/plasma-wallpaper/contents/ui/config.qml
 #, kde-format
@@ -23,5 +28,5 @@ msgstr ""
 
 #: integrations/plasma-wallpaper/contents/ui/main.qml
 #, kde-format
-msgid "the daemon (wprsd) is not running"
-msgstr "el servicio (wprsd) no se está ejecutando"
+msgid "wallpaper-rs: %1"
+msgstr "wallpaper-rs: %1"

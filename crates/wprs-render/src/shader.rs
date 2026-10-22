@@ -1,16 +1,4 @@
-use crate::{Layer, Renderer, draw::TARGET_FORMAT};
-use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt;
-use wprs_core::{Fit, UvRect};
-
-#[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable)]
-struct Params {
-    offset: [f32; 2],
-    scale: [f32; 2],
-    background: [f32; 4],
-    flags: [u32; 4],
-}
+use crate::draw::TARGET_FORMAT;
 
 pub(crate) fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
@@ -74,40 +62,4 @@ pub(crate) fn pipelines(device: &wgpu::Device, layout: &wgpu::BindGroupLayout) -
             cache: None,
         })
     })
-}
-
-impl Renderer {
-    pub(crate) fn bind_group(&self, layer: &Layer<'_>, target: (u32, u32)) -> wgpu::BindGroup {
-        let uv = layer.image.map_or(UvRect::compute(Fit::Stretch, (1, 1), (1, 1)), |image| {
-            UvRect::compute(layer.fit, image.size(), target)
-        });
-        let [r, g, b] = layer.background.map(srgb_to_linear);
-        let params = Params {
-            offset: uv.offset,
-            scale: uv.scale,
-            background: [r, g, b, 1.0],
-            flags: [uv.repeat as u32, layer.image.is_some() as u32, 0, 0],
-        };
-        let uniform = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("wprs-render params"),
-            contents: bytemuck::bytes_of(&params),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
-        let view = &layer.image.unwrap_or(&self.placeholder).view;
-        let sampler = if uv.repeat { &self.repeat } else { &self.clamp };
-        self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("wprs-render bind group"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: uniform.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(view) },
-                wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::Sampler(sampler) },
-            ],
-        })
-    }
-}
-
-fn srgb_to_linear(c: u8) -> f32 {
-    let c = f32::from(c) / 255.0;
-    if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
 }

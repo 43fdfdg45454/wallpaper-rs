@@ -37,7 +37,7 @@ pub fn buffers(width: u32, height: u32) -> Vec<u8> {
     serialize(object!(
         SpaTypes::ObjectParamBuffers,
         ParamType::Buffers,
-        int_property(spa::sys::SPA_PARAM_BUFFERS_buffers, ChoiceEnum::Range { default: 3, min: 2, max: 8 }),
+        int_property(spa::sys::SPA_PARAM_BUFFERS_buffers, ChoiceEnum::Range { default: 4, min: 4, max: 8 }),
         Property::new(spa::sys::SPA_PARAM_BUFFERS_blocks, Value::Int(1)),
         Property::new(spa::sys::SPA_PARAM_BUFFERS_size, Value::Int(stride * height as i32)),
         Property::new(spa::sys::SPA_PARAM_BUFFERS_stride, Value::Int(stride)),
@@ -58,5 +58,19 @@ mod tests {
             assert!(spa::pod::Pod::from_bytes(&bytes).is_some());
             assert_eq!(bytes.len() % 8, 0);
         }
+    }
+
+    #[test]
+    fn asks_for_at_least_four_buffers() {
+        let bytes = buffers(64, 64);
+        let Ok((_, Value::Object(object))) =
+            spa::pod::deserialize::PodDeserializer::deserialize_any_from(&bytes)
+        else {
+            panic!("buffers pod is not an object")
+        };
+        let count = object.properties.iter().find(|p| p.key == spa::sys::SPA_PARAM_BUFFERS_buffers);
+        let range = count.map(|p| &p.value);
+        let expected = ChoiceEnum::Range { default: 4, min: 4, max: 8 };
+        assert!(matches!(range, Some(Value::Choice(ChoiceValue::Int(Choice(_, c)))) if *c == expected));
     }
 }

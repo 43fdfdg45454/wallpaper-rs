@@ -43,11 +43,20 @@ ColumnLayout {
             from: 0
             to: 1
             value: panel.current.volume ?? 0
-            onPressedChanged: {
-                if (!pressed)
-                    panel.daemon.act("SetVolume", [value]);
+            onMoved: {
+                volume.level = value;
+                volume.restart();
             }
         }
+    }
+
+    Timer {
+        id: volume
+
+        property real level
+
+        interval: 200
+        onTriggered: panel.daemon.act("SetVolume", [level])
     }
 
     Repeater {
@@ -65,7 +74,9 @@ ColumnLayout {
     OutputRow {
         daemon: panel.daemon
         name: ""
-        info: ({})
+        info: ({
+                "fit": Object.values(panel.current.outputs ?? {})[0]?.fit
+            })
     }
 
     Settings {

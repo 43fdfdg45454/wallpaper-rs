@@ -16,6 +16,16 @@ Kirigami.FormLayout {
             "transition.kind": i18n("Transition:"),
             "transition.duration_ms": i18n("Transition length (ms):")
         })
+    readonly property var kinds: [
+        {
+            "value": "fade",
+            "text": i18nc("@item:inlistbox wallpaper transition", "Fade")
+        },
+        {
+            "value": "none",
+            "text": i18nc("@item:inlistbox wallpaper transition", "None")
+        }
+    ]
 
     function set(key, value) {
         daemon.act("SetOption", [key, String(value)]);
@@ -59,9 +69,11 @@ Kirigami.FormLayout {
         id: kind
 
         QQC2.ComboBox {
-            model: ["fade", "none"]
-            currentIndex: Math.max(0, model.indexOf(parent.value))
-            onActivated: settings.set(parent.modelData, currentText)
+            model: settings.kinds
+            textRole: "text"
+            valueRole: "value"
+            currentIndex: Math.max(0, settings.kinds.findIndex(option => option.value === parent.value))
+            onActivated: settings.set(parent.modelData, currentValue)
         }
     }
 }

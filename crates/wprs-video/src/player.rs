@@ -1,6 +1,6 @@
-use crate::{Error, Event, Options, Sink, make, video_sink};
+use crate::bus::watch_bus;
+use crate::{Error, Event, Options, Sink, local_uri, make, video_sink};
 use gstreamer as gst;
-use gstreamer::glib::WeakRef;
 use gstreamer::prelude::*;
 use std::path::Path;
 use std::sync::Arc;
@@ -9,6 +9,7 @@ use std::thread::JoinHandle;
 
 pub struct Player {
     playbin: gst::Element,
+    size: gst::Element,
     audio: bool,
     playing: Arc<AtomicBool>,
     stop: Arc<AtomicBool>,
@@ -22,8 +23,7 @@ impl Player {
         sink: impl Fn(Event) + Send + Sync + 'static,
     ) -> Result<Self, Error> {
         crate::init()?;
-        let path = std::path::absolute(path).map_err(Error::path)?;
-        let uri = gst::glib::filename_to_uri(&path, None).map_err(Error::path)?;
+        let uri = local_uri(path)?;
         let sink: Sink = Arc::new(sink);
         let audio = options.audible();
         let playbin = make("playbin")?;
@@ -31,7 +31,8 @@ impl Player {
         playbin.set_property_from_str("flags", if audio { "video+audio+soft-volume" } else { "video" });
         playbin.set_property("volume", options.volume.clamp(0.0, 1.0));
         playbin.set_property("mute", options.muted);
-        playbin.set_property("video-sink", &video_sink::build(options, sink.clone())?);
+        let (video_sink, size) = video_sink::build(options, sink.clone())?;
+        playbin.set_property("video-sink", &video_sink);
         playbin.connect("about-to-finish", false, move |args| {
             if let Ok(finishing) = args[0].get::<gst::Element>() {
                 finishing.set_property("uri", &uri);
@@ -45,13 +46,25 @@ impl Player {
             .name("wprs-video-bus".into())
             .spawn(move || watch_bus(&bus, &weak_playbin, &flags.0, &flags.1, &*sink))
             .map_err(Error::state)?;
-        let player = Self { playbin, audio, playing, stop, bus_thread: Some(bus_thread) };
+        let player = Self { playbin, size, audio, playing, stop, bus_thread: Some(bus_thread) };
         player.playbin.set_state(gst::State::Playing).map_err(Error::state)?;
         Ok(player)
     }
 
     pub fn set_playing(&self, playing: bool) {
         self.playing.store(playing, Ordering::Relaxed);
+        self.wake();
+    }
+
+    fn wake(&self) {
+        if let Some(bus) = self.playbin.bus() {
+            bus.set_flushing(false);
+            let _ = bus.post(gst::message::Application::new(gst::Structure::new_empty("wprs-wake")));
+        }
+    }
+
+    pub fn set_max_size(&self, max_size: (u32, u32)) {
+        self.size.set_property("caps", video_sink::size_caps(max_size));
     }
 
     pub fn set_volume(&self, volume: f64, muted: bool) {
@@ -67,57 +80,10 @@ impl Player {
 impl Drop for Player {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
-        let _ = self.playbin.set_state(gst::State::Null);
+        self.wake();
         if let Some(thread) = self.bus_thread.take() {
             let _ = thread.join();
         }
-    }
-}
-
-fn watch_bus(
-    bus: &gst::Bus,
-    playbin: &WeakRef<gst::Element>,
-    stop: &AtomicBool,
-    playing: &AtomicBool,
-    sink: &dyn Fn(Event),
-) {
-    while !stop.load(Ordering::Relaxed) {
-        if let Some(playbin) = playbin.upgrade() {
-            apply_wanted_state(&playbin, playing.load(Ordering::Relaxed));
-        }
-        let Some(message) = bus.timed_pop(gst::ClockTime::from_mseconds(100)) else { continue };
-        match message.view() {
-            gst::MessageView::Error(err) => {
-                let error = err.error();
-                let text =
-                    err.debug().map_or_else(|| error.to_string(), |debug| format!("{error} ({debug})"));
-                sink(Event::Error(text));
-                if let Some(playbin) = playbin.upgrade() {
-                    let _ = playbin.set_state(gst::State::Null);
-                }
-                return;
-            }
-            gst::MessageView::Eos(_) => {
-                if let Some(playbin) = playbin.upgrade()
-                    && let Err(e) = playbin
-                        .seek_simple(gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT, gst::ClockTime::ZERO)
-                {
-                    tracing::debug!("cannot restart the video: {e}");
-                }
-            }
-            _ => {}
-        }
-    }
-}
-
-fn apply_wanted_state(playbin: &gst::Element, playing: bool) {
-    let wanted = if playing { gst::State::Playing } else { gst::State::Paused };
-    let (_, current, pending) = playbin.state(gst::ClockTime::ZERO);
-    let settled = pending == gst::State::VoidPending && current >= gst::State::Paused;
-    if settled
-        && current != wanted
-        && let Err(e) = playbin.set_state(wanted)
-    {
-        tracing::warn!("cannot change the video state: {e}");
+        let _ = self.playbin.set_state(gst::State::Null);
     }
 }

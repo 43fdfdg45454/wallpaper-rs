@@ -1,90 +1,75 @@
+use super::output::Output;
+use super::slot::PlayerSlot;
 use super::state::State;
-use super::{Command, Settings, lock};
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, mpsc};
-use wprs_render::GpuImage;
-use wprs_video::{Event, Frame, Options, Player};
+use super::{Content, OutputStatus, lock};
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+use std::time::Instant;
 
-pub(super) struct PlayerSlot {
-    pub(super) player: Option<Player>,
-    pub(super) texture: Option<GpuImage>,
-    pub(super) error: Arc<Mutex<Option<String>>>,
-    pub(super) playing: bool,
-    latest: Arc<Mutex<Option<Frame>>>,
-}
-
-impl PlayerSlot {
-    fn open(path: &Path, max_size: (u32, u32), settings: Settings, tx: mpsc::Sender<Command>) -> Self {
-        let latest = Arc::new(Mutex::new(None));
-        let error = Arc::new(Mutex::new(None));
-        let options =
-            Options { max_size, max_fps: settings.max_fps, volume: settings.volume, muted: settings.muted };
-        let (frames, errors, tx, file) =
-            (latest.clone(), error.clone(), Mutex::new(tx), path.display().to_string());
-        let player = Player::open(path, options, move |event| {
-            let wake = match event {
-                Event::Frame(frame) => lock(&frames).replace(frame).is_none(),
-                Event::Error(e) => {
-                    tracing::warn!(path = file, "video playback failed: {e}");
-                    lock(&errors).replace(e);
-                    true
-                }
-            };
-            if wake {
-                let _ = lock(&tx).send(Command::Wake);
-            }
-        })
-        .inspect(|_| tracing::info!(path = %path.display(), "video opened"))
-        .inspect_err(|e| {
-            tracing::warn!(path = %path.display(), "cannot play the video: {e}");
-            lock(&error).replace(e.to_string());
-        })
-        .ok();
-        Self { player, texture: None, error, playing: true, latest }
-    }
+fn demand(outputs: &BTreeMap<String, Output>, path: &PathBuf) -> ((u32, u32), bool) {
+    let users = outputs.values().filter(|o| o.uses_video(path));
+    users.fold(((0, 0), false), |((w, h), on), o| ((w.max(o.size.0), h.max(o.size.1)), on || o.active))
 }
 
 impl State {
     pub(super) fn sync_players(&mut self) {
-        let mut wanted: HashMap<PathBuf, ((u32, u32), bool)> = HashMap::new();
-        for output in self.outputs.values() {
-            for path in output.layers().filter_map(|s| s.content.video()) {
-                let ((w, h), active) = wanted.entry(path.clone()).or_default();
-                (*w, *h) = ((*w).max(output.size.0), (*h).max(output.size.1));
-                *active |= output.active;
+        let (outputs, settings, tx, now) = (&self.outputs, self.settings, &self.tx, Instant::now());
+        self.players.retain(|path, _| outputs.values().any(|o| o.uses_video(path)));
+        for path in outputs.values().flat_map(|o| o.layers().filter_map(|s| s.content.video())) {
+            if !self.players.contains_key(path) {
+                let (max_size, playing) = demand(outputs, path);
+                self.players.insert(path.clone(), PlayerSlot::new(max_size, playing, now));
             }
         }
-        self.players.retain(|path, _| wanted.contains_key(path));
-        for (path, (max_size, active)) in wanted {
-            let slot = match self.players.entry(path) {
-                Entry::Occupied(e) => e.into_mut(),
-                Entry::Vacant(e) => {
-                    let slot = PlayerSlot::open(e.key(), max_size, self.settings, self.tx.clone());
-                    e.insert(slot)
-                }
-            };
+        for (path, slot) in &mut self.players {
+            let (max_size, active) = demand(outputs, path);
             if slot.playing != active {
                 slot.player.iter().for_each(|p| p.set_playing(active));
                 slot.playing = active;
             }
+            if slot.max_size != max_size {
+                slot.player.iter().for_each(|p| p.set_max_size(max_size));
+                slot.max_size = max_size;
+            }
+            slot.tick(path, settings, tx, now);
         }
     }
 
     pub(super) fn take_video_frames(&mut self) {
+        let now = Instant::now();
         for (path, slot) in &mut self.players {
-            let Some(frame) = lock(&slot.latest).take() else { continue };
-            let (data, w, h, stride) = (&frame.data, frame.width, frame.height, frame.stride);
-            let uploaded = match &mut slot.texture {
-                Some(texture) => self.renderer.update_rgba(texture, data, w, h, stride),
-                None => self.renderer.upload_rgba(data, w, h, stride).map(|t| drop(slot.texture.replace(t))),
-            };
-            if let Err(e) = uploaded {
-                tracing::warn!(path = %path.display(), "cannot upload a video frame: {e}");
-                continue;
+            if slot.receive(path, &self.renderer, now) {
+                let wants = |o: &Output| o.uses_video(path) && (o.active || o.missing_frame);
+                self.outputs.values_mut().filter(|o| wants(o)).for_each(|o| o.dirty = true);
             }
-            self.outputs.values_mut().filter(|o| o.uses_video(path)).for_each(|o| o.dirty = true);
+        }
+    }
+
+    pub(super) fn publish_status(&self) {
+        let status = |o: &Output| {
+            let slot = o.shown.content.video().and_then(|p| self.players.get(p));
+            let error = slot.and_then(|s| s.error.as_ref());
+            let kind = match o.shown.content {
+                Content::Color => "color",
+                Content::Image(_) => "image",
+                Content::Video(_) => "video",
+            };
+            let running = slot.is_some_and(|s| s.playing && s.player.is_some());
+            (kind, o.active && running && error.is_none(), error)
+        };
+        let mut published = lock(&self.status);
+        let unchanged = published.len() == self.outputs.len()
+            && self.outputs.iter().all(|(name, o)| {
+                let (kind, playing, error) = status(o);
+                let same = |s: &OutputStatus| (s.kind, s.playing, s.error.as_ref()) == (kind, playing, error);
+                published.get(name).is_some_and(same)
+            });
+        if !unchanged {
+            let entry = |(name, o): (&String, &Output)| {
+                let (kind, playing, error) = status(o);
+                (name.clone(), OutputStatus { kind, playing, error: error.cloned() })
+            };
+            *published = self.outputs.iter().map(entry).collect();
         }
     }
 }

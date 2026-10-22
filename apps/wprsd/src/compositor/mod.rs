@@ -1,18 +1,20 @@
 mod frames;
 mod output;
 mod players;
+mod slot;
 mod state;
 
 use image::RgbaImage;
 use state::State;
 use std::collections::BTreeMap;
+use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, mpsc};
 use std::thread::JoinHandle;
 use std::time::Duration;
 use wprs_core::Fit;
 use wprs_pipewire::Exporter;
-use wprs_render::Renderer;
+use wprs_render::{RenderError, Renderer, TargetLimits};
 
 #[derive(Clone)]
 pub enum Content {
@@ -73,20 +75,39 @@ enum Command {
 pub struct Compositor {
     tx: mpsc::Sender<Command>,
     status: Arc<Mutex<BTreeMap<String, OutputStatus>>>,
+    limits: TargetLimits,
     thread: Option<JoinHandle<()>>,
 }
 
 impl Compositor {
     pub fn start(renderer: Renderer, exporter: Arc<Exporter>, settings: Settings) -> std::io::Result<Self> {
+        renderer.on_device_lost(|reason| fatal(&format!("the GPU device was lost ({reason})")));
+        let limits = renderer.limits();
         let (tx, rx) = mpsc::channel();
         let status = Arc::new(Mutex::new(BTreeMap::new()));
         let mut state = State::new(renderer, exporter, settings, tx.clone(), status.clone());
-        let thread = std::thread::Builder::new().name("wprs-render".into()).spawn(move || state.run(&rx))?;
-        Ok(Self { tx, status, thread: Some(thread) })
+        let run = move || {
+            if std::panic::catch_unwind(AssertUnwindSafe(|| state.run(&rx))).is_err() {
+                fatal("the render thread panicked");
+            }
+        };
+        let thread = std::thread::Builder::new().name("wprs-render".into()).spawn(run)?;
+        Ok(Self { tx, status, limits, thread: Some(thread) })
+    }
+
+    pub fn check_target(&self, width: u32, height: u32) -> Result<(), RenderError> {
+        self.limits.check(width, height)
+    }
+
+    pub fn max_edge(&self) -> u32 {
+        self.limits.max_edge
     }
 
     pub fn configure(&self, output: &str, size: (u32, u32), spec: Spec) {
-        self.send(Command::Configure(output.into(), size, spec))
+        match self.check_target(size.0, size.1) {
+            Ok(()) => self.send(Command::Configure(output.into(), size, spec)),
+            Err(e) => tracing::warn!(output, "cannot render this output: {e}"),
+        }
     }
 
     pub fn remove(&self, output: &str) {
@@ -121,4 +142,9 @@ impl Drop for Compositor {
 
 pub fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+fn fatal(reason: &str) -> ! {
+    tracing::error!("{reason}; exiting so that the service manager restarts the daemon");
+    std::process::exit(70)
 }

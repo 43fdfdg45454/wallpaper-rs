@@ -1,5 +1,5 @@
 use super::output::{Output, Shown};
-use super::players::PlayerSlot;
+use super::slot::PlayerSlot;
 use super::{Command, Content, OutputStatus, Settings, Spec};
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
@@ -61,8 +61,8 @@ impl State {
             Command::SetActive(output, active) => {
                 if let Some(o) = self.outputs.get_mut(&output).filter(|o| o.active != active) {
                     o.active = active;
-                    o.fade = o.fade.take().filter(|_| active);
-                    o.dirty = true;
+                    let cancelled = !active && o.fade.take().is_some();
+                    o.dirty |= cancelled || (active && o.animated());
                 }
             }
             Command::Settings(settings) => self.apply_settings(settings),
@@ -73,11 +73,17 @@ impl State {
     }
 
     fn configure(&mut self, name: String, size: (u32, u32), spec: Spec) {
+        let slot = spec.content.video().and_then(|path| self.players.get_mut(path));
+        slot.into_iter().for_each(|slot| slot.revive(Instant::now()));
         if self.outputs.get(&name).is_some_and(|o| o.size == size && o.shown.matches(&spec)) {
             return;
         }
         let image = match &spec.content {
-            Content::Image(image) => Some(self.renderer.upload(image, spec.fit, size)),
+            Content::Image(image) => self
+                .renderer
+                .upload(image, spec.fit, size)
+                .inspect_err(|e| tracing::warn!(output = name, "cannot upload the image: {e}"))
+                .ok(),
             _ => None,
         };
         let shown = Shown { content: spec.content, fit: spec.fit, background: spec.background, image };

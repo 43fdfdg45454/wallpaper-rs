@@ -43,10 +43,9 @@ impl Daemon {
         if let Some((_, image)) = self.state().images.get(path).filter(|(m, _)| *m == modified) {
             return Ok(image.clone());
         }
-        let decode =
-            || image::ImageReader::open(path)?.with_guessed_format()?.decode().map_err(anyhow::Error::from);
-        let image =
-            Arc::new(decode().with_context(|| format!("cannot decode {}", path.display()))?.into_rgba8());
+        let image = wprs_render::decode_image(path, self.compositor.max_edge())
+            .with_context(|| format!("cannot decode {}", path.display()))?;
+        let image = Arc::new(image);
         let mut st = self.state();
         let in_use: Vec<PathBuf> = st.config.images().cloned().collect();
         st.images.retain(|p, _| in_use.contains(p));
@@ -55,9 +54,15 @@ impl Daemon {
     }
 
     pub fn set_wallpaper(&self, path: PathBuf, output: &str, fit: Option<Fit>) -> anyhow::Result<()> {
+        let remote = path.to_str().is_some_and(|p| p.contains("://"));
+        anyhow::ensure!(!remote, "{} is not a local file", path.display());
         let path = std::fs::canonicalize(&path).with_context(|| format!("cannot find {}", path.display()))?;
         anyhow::ensure!(path.is_file(), "{} is not a file", path.display());
-        if !wprs_video::is_video(&path) {
+        if wprs_video::is_video(&path) {
+            let (width, height) =
+                wprs_video::probe(&path).with_context(|| format!("cannot play {}", path.display()))?;
+            tracing::info!(path = %path.display(), width, height, "video accepted");
+        } else {
             self.load_image(&path)?;
         }
         self.update_config(|c| {

@@ -1,12 +1,22 @@
+mod bind;
+mod decode;
 mod device;
 mod draw;
+mod readback;
 mod shader;
 mod texture;
 
+pub use decode::decode_image;
 pub use device::Renderer;
 pub use draw::Target;
+pub use readback::TargetLimits;
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant};
 pub use texture::GpuImage;
 use wprs_core::Fit;
+
+const LOG_PERIOD: Duration = Duration::from_secs(5);
 
 #[derive(Debug, thiserror::Error)]
 pub enum RenderError {
@@ -16,41 +26,12 @@ pub enum RenderError {
     Device(String),
     #[error("invalid target size {0}x{1}")]
     InvalidSize(u32, u32),
+    #[error("GPU error: {0}")]
+    Gpu(String),
     #[error("GPU readback failed: {0}")]
     Readback(String),
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct Frame {
-    pub width: u32,
-    pub height: u32,
-    pub stride: u32,
-    pub data: Vec<u8>,
-}
-
-impl std::fmt::Debug for Frame {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Frame")
-            .field("width", &self.width)
-            .field("height", &self.height)
-            .field("stride", &self.stride)
-            .field("bytes", &self.data.len())
-            .finish()
-    }
-}
-
-impl Frame {
-    pub fn pixel(&self, x: u32, y: u32) -> [u8; 4] {
-        let i = (y * self.stride + x * 4) as usize;
-        std::array::from_fn(|k| self.data[i + k])
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Scene<'a> {
-    pub image: Option<&'a image::RgbaImage>,
-    pub fit: Fit,
-    pub background: [u8; 3],
+    #[error("the GPU stopped responding: {0}")]
+    DeviceLost(String),
 }
 
 #[derive(Clone, Copy)]
@@ -59,4 +40,13 @@ pub struct Layer<'a> {
     pub fit: Fit,
     pub background: [u8; 3],
     pub opacity: f32,
+}
+
+pub fn log_allowed(last: &AtomicU64) -> bool {
+    static START: OnceLock<Instant> = OnceLock::new();
+    let period = LOG_PERIOD.as_millis() as u64;
+    let now = START.get_or_init(Instant::now).elapsed().as_millis() as u64 + period;
+    let previous = last.load(Ordering::Relaxed);
+    now >= previous + period
+        && last.compare_exchange(previous, now, Ordering::Relaxed, Ordering::Relaxed).is_ok()
 }

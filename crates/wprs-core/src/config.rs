@@ -2,21 +2,9 @@ use crate::fit::Fit;
 use crate::settings::{Pause, Playback, Transition};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-#[derive(Debug, thiserror::Error)]
-pub enum ConfigError {
-    #[error("cannot read {path}: {source}")]
-    Read { path: PathBuf, source: std::io::Error },
-    #[error("cannot write {path}: {source}")]
-    Write { path: PathBuf, source: std::io::Error },
-    #[error("invalid configuration in {path}: {source}")]
-    Parse { path: PathBuf, source: toml::de::Error },
-    #[error("cannot serialize configuration: {0}")]
-    Serialize(#[from] toml::ser::Error),
-    #[error("no configuration directory could be determined")]
-    NoConfigDir,
-}
+pub use crate::store::ConfigError;
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -44,54 +32,61 @@ pub struct Resolved {
 }
 
 impl Config {
-    pub fn default_path() -> Result<PathBuf, ConfigError> {
-        Ok(dirs::config_dir().ok_or(ConfigError::NoConfigDir)?.join("wallpaper-rs").join("config.toml"))
-    }
-
-    pub fn load(path: &Path) -> Result<Config, ConfigError> {
-        match std::fs::read_to_string(path) {
-            Ok(text) => {
-                toml::from_str(&text).map_err(|source| ConfigError::Parse { path: path.into(), source })
+    pub fn normalize(&mut self) -> Vec<String> {
+        let before = self.options();
+        self.playback = self.playback.sanitized();
+        self.transition.duration_ms = self.transition.duration_ms.min(Transition::MAX_MS);
+        let changed = |(key, value): (String, toml::Value)| (before.get(&key) != Some(&value)).then_some(key);
+        let mut fixed: Vec<String> = self.options().into_iter().filter_map(changed).collect();
+        let sections = std::iter::once(("default".to_owned(), &mut self.default))
+            .chain(self.outputs.iter_mut().map(|(name, o)| (format!("outputs.{name}"), o)));
+        for (section, o) in sections {
+            if o.background.take_if(|c| parse_hex_color(c).is_none()).is_some() {
+                fixed.push(format!("{section}.background"));
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Config::default()),
-            Err(source) => Err(ConfigError::Read { path: path.into(), source }),
         }
-    }
-
-    pub fn save(&self, path: &Path) -> Result<(), ConfigError> {
-        let text = toml::to_string_pretty(self)?;
-        let write_err = |source| ConfigError::Write { path: path.into(), source };
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).map_err(write_err)?;
-        }
-        let tmp = path.with_extension("toml.tmp");
-        std::fs::write(&tmp, text).map_err(write_err)?;
-        std::fs::rename(&tmp, path).map_err(write_err)
+        fixed
     }
 
     pub fn resolve(&self, output: &str) -> Resolved {
-        let specific = self.outputs.get(output);
-        let pick = |f: fn(&OutputConfig) -> Option<_>| specific.and_then(f).or_else(|| f(&self.default));
         Resolved {
-            image: specific.and_then(|o| o.image.clone()).or_else(|| self.default.image.clone()),
-            fit: pick(|o| o.fit).unwrap_or_default(),
-            background: specific
-                .and_then(|o| o.background.as_deref())
-                .or(self.default.background.as_deref())
-                .and_then(parse_hex_color)
-                .unwrap_or([0, 0, 0]),
+            image: self.pick(output, |o| o.image.clone()),
+            fit: self.pick(output, |o| o.fit).unwrap_or_default(),
+            background: self
+                .pick(output, |o| o.background.as_deref().and_then(parse_hex_color))
+                .unwrap_or_default(),
         }
     }
 
+    fn pick<T>(&self, output: &str, field: impl Fn(&OutputConfig) -> Option<T>) -> Option<T> {
+        self.outputs.get(output).and_then(&field).or_else(|| field(&self.default))
+    }
+
     pub fn set_image(&mut self, output: &str, image: PathBuf, fit: Option<Fit>) {
-        let entry = if output.is_empty() {
-            self.outputs.values_mut().for_each(|o| o.image = None);
-            &mut self.default
-        } else {
-            self.outputs.entry(output.to_owned()).or_default()
-        };
-        entry.image = Some(image);
-        entry.fit = fit.or(entry.fit);
+        self.section(output, |o| o.image = None).image = Some(image);
+        if let Some(fit) = fit {
+            self.set_fit(output, fit);
+        }
+    }
+
+    pub fn set_fit(&mut self, output: &str, fit: Fit) {
+        self.section(output, |o| o.fit = None).fit = Some(fit);
+    }
+
+    pub fn set_background(&mut self, output: &str, color: &str) -> Result<(), String> {
+        let [r, g, b] =
+            parse_hex_color(color).ok_or_else(|| format!("invalid color '{color}', expected #rrggbb"))?;
+        self.section(output, |o| o.background = None).background = Some(format!("#{r:02x}{g:02x}{b:02x}"));
+        Ok(())
+    }
+
+    fn section(&mut self, output: &str, clear: impl FnMut(&mut OutputConfig)) -> &mut OutputConfig {
+        if !output.is_empty() {
+            return self.outputs.entry(output.to_owned()).or_default();
+        }
+        self.outputs.values_mut().for_each(clear);
+        self.outputs.retain(|_, o| *o != OutputConfig::default());
+        &mut self.default
     }
 
     pub fn images(&self) -> impl Iterator<Item = &PathBuf> {

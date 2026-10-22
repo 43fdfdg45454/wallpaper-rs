@@ -9,7 +9,28 @@ RowLayout {
     required property var daemon
     required property string name
     required property var info
-    readonly property var fits: ["fill", "fit", "stretch", "center", "tile"]
+    readonly property var fits: [
+        {
+            "value": "fill",
+            "text": i18nc("@item:inlistbox wallpaper fit mode", "Fill")
+        },
+        {
+            "value": "fit",
+            "text": i18nc("@item:inlistbox wallpaper fit mode", "Fit")
+        },
+        {
+            "value": "stretch",
+            "text": i18nc("@item:inlistbox wallpaper fit mode", "Stretch")
+        },
+        {
+            "value": "center",
+            "text": i18nc("@item:inlistbox wallpaper fit mode", "Center")
+        },
+        {
+            "value": "tile",
+            "text": i18nc("@item:inlistbox wallpaper fit mode", "Tile")
+        }
+    ]
     readonly property string file: info.image ? info.image.split("/").pop() : i18n("background color")
     readonly property string status: info.error ? info.error : info.kind === "video" ? (info.playing ? i18n("playing") : i18n("paused")) : ""
 
@@ -20,11 +41,12 @@ RowLayout {
     }
 
     QQC2.ComboBox {
-        visible: row.name !== ""
-        enabled: !!row.info.image
+        enabled: row.name === "" || !!row.info.image
         model: row.fits
-        currentIndex: row.fits.indexOf(row.info.fit ?? "fill")
-        onActivated: row.daemon.act("SetWallpaper", [row.info.image, row.name, currentText])
+        textRole: "text"
+        valueRole: "value"
+        currentIndex: Math.max(0, row.fits.findIndex(fit => fit.value === (row.info.fit ?? "fill")))
+        onActivated: row.daemon.act("SetWallpaper", ["", row.name, currentValue])
     }
 
     QQC2.Button {

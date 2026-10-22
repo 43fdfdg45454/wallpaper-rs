@@ -1,4 +1,5 @@
-use std::path::Path;
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use wprs_core::config::parse_hex_color;
 use wprs_core::{Config, Fit, Playback, UvRect};
@@ -110,4 +111,96 @@ fn hex_colors() {
     assert_eq!(parse_hex_color("ff0080"), Some([255, 0, 128]));
     assert_eq!(parse_hex_color("#fff"), None);
     assert_eq!(parse_hex_color("#gg0000"), None);
+}
+
+fn mode(path: &Path) -> u32 {
+    std::fs::metadata(path).unwrap().permissions().mode() & 0o777
+}
+
+#[test]
+fn hand_edited_values_are_clamped_and_only_the_changed_key_is_validated() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("config.toml");
+    std::fs::write(&path, "[playback]\nvolume = 2.0\nmax_fps = 0\n[transition]\nduration_ms = 20000\n")
+        .unwrap();
+    let mut c = Config::load(&path).unwrap();
+    assert_eq!((c.playback.volume, c.playback.max_fps, c.transition.duration_ms), (1.0, 1, 10_000));
+    c.set_option("pause.on_battery", "false").unwrap();
+    let mut raw: Config = toml::from_str("[playback]\nvolume = 2.0").unwrap();
+    raw.set_option("playback.muted", "false").unwrap();
+    let error = raw.set_option("transition.duration_ms", "20000").unwrap_err();
+    assert!(error.contains("transition.duration_ms"), "{error}");
+}
+
+#[test]
+fn a_fit_for_every_output_clears_per_output_fits() {
+    let mut c = Config::default();
+    c.set_image("DP-1", "/b.png".into(), Some(Fit::Tile));
+    c.set_image("", "/a.png".into(), Some(Fit::Center));
+    assert_eq!(c.resolve("DP-1"), c.resolve("HDMI-A-1"));
+    assert_eq!(c.resolve("DP-1").fit, Fit::Center);
+}
+
+#[test]
+fn fit_only_changes_keep_the_images() {
+    let mut c = Config::default();
+    c.set_image("", "/a.png".into(), None);
+    c.set_image("DP-1", "/b.png".into(), Some(Fit::Tile));
+    c.set_fit("HDMI-A-1", Fit::Stretch);
+    let hdmi = c.resolve("HDMI-A-1");
+    assert_eq!((hdmi.image, hdmi.fit), (Some(PathBuf::from("/a.png")), Fit::Stretch));
+    c.set_fit("", Fit::Center);
+    let dp = c.resolve("DP-1");
+    assert_eq!((dp.image, dp.fit), (Some(PathBuf::from("/b.png")), Fit::Center));
+    assert_eq!(c.resolve("HDMI-A-1").fit, Fit::Center);
+}
+
+#[test]
+fn saving_through_a_symlink_keeps_the_link() {
+    let dir = tempfile::tempdir().unwrap();
+    let (real, link) = (dir.path().join("shared/config.toml"), dir.path().join("config/config.toml"));
+    std::fs::create_dir_all(link.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink("../shared/config.toml", &link).unwrap();
+    let mut c = Config::default();
+    for fit in [Fit::Center, Fit::Tile] {
+        c.set_fit("", fit);
+        c.save(&link).unwrap();
+        assert!(link.symlink_metadata().unwrap().file_type().is_symlink());
+        assert_eq!(Config::load(&real).unwrap(), c);
+    }
+    assert_eq!(std::fs::read_dir(real.parent().unwrap()).unwrap().count(), 1);
+}
+
+#[test]
+fn invalid_colors_are_rejected_when_set_and_ignored_when_loaded() {
+    let mut c = Config::default();
+    assert!(c.set_background("", "red").is_err());
+    c.set_background("", "#A0B0C0").unwrap();
+    c.set_background("DP-1", "102030").unwrap();
+    assert_eq!(
+        (c.default.background.as_deref(), c.resolve("DP-1").background),
+        (Some("#a0b0c0"), [16, 32, 48])
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("config.toml");
+    std::fs::write(&path, "[default]\nbackground = \"#102030\"\n[outputs.DP-1]\nbackground = \"red\"\n")
+        .unwrap();
+    let c = Config::load(&path).unwrap();
+    assert_eq!((c.resolve("DP-1").background, c.outputs["DP-1"].background.as_deref()), ([16, 32, 48], None));
+}
+
+#[test]
+fn configuration_files_are_private() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("wallpaper-rs/config.toml");
+    Config::default().save(&path).unwrap();
+    assert_eq!((mode(&path), mode(path.parent().unwrap())), (0o600, 0o700));
+    std::fs::write(&path, "[default").unwrap();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+    assert!(Config::load(&path).is_err());
+    let backup = Config::backup_broken(&path).unwrap();
+    assert_eq!((backup.file_name().unwrap().to_str(), mode(&backup)), (Some("config.toml.broken"), 0o600));
+    assert_eq!(std::fs::read_to_string(&backup).unwrap(), "[default");
+    Config::default().save(&path).unwrap();
+    assert_eq!(mode(&path), 0o600);
 }

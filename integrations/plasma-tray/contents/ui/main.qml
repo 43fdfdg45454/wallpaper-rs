@@ -7,29 +7,49 @@ PlasmoidItem {
     id: root
 
     property var daemonState: ({})
-    property string lastError: ""
+    property string pollError: ""
+    property string actionError: ""
+    readonly property string lastError: actionError || pollError
     readonly property bool paused: daemonState.paused === true
 
-    function call(member, args, onReply) {
+    function call(member, args, onReply, onError) {
+        const signatures = {
+            "GetState": "()",
+            "Reload": "()",
+            "SetWallpaper": "(sss)",
+            "SetOption": "(ss)",
+            "SetPaused": "(b)",
+            "SetVolume": "(d)",
+            "SetMuted": "(b)"
+        };
         const message = {
             "service": "io.github.wallpaper_rs.Daemon",
             "path": "/io/github/wallpaper_rs/Daemon",
             "iface": "io.github.wallpaper_rs.Daemon1",
             "member": member,
+            "signature": signatures[member],
             "arguments": args
         };
-        DBus.SessionBus.asyncCall(message, reply => {
-            root.lastError = "";
-            onReply?.(reply);
-        }, reply => root.lastError = reply?.error?.message ?? i18n("The wallpaper-rs daemon is not running"));
+        DBus.SessionBus.asyncCall(message, onReply, reply => onError(reply?.error?.message || i18n("The wallpaper-rs daemon is not running")));
     }
 
     function refresh() {
-        call("GetState", [], reply => root.daemonState = JSON.parse(reply.value));
+        call("GetState", [], reply => {
+            try {
+                root.daemonState = JSON.parse(String(reply.value));
+                root.pollError = "";
+            } catch (e) {
+                root.pollError = String(e);
+            }
+        }, error => root.pollError = error);
     }
 
     function act(member, args) {
-        call(member, args, refresh);
+        actionError = "";
+        call(member, args, () => root.refresh(), error => {
+            root.actionError = error;
+            errorTimeout.restart();
+        });
     }
 
     Plasmoid.icon: paused ? "media-playback-pause" : "preferences-desktop-wallpaper"
@@ -39,12 +59,30 @@ PlasmoidItem {
     fullRepresentation: Panel {
         daemon: root
     }
+    Component.onCompleted: refresh()
+
+    DBus.SignalWatcher {
+        service: "io.github.wallpaper_rs.Daemon"
+        path: "/io/github/wallpaper_rs/Daemon"
+        iface: "org.freedesktop.DBus.Properties"
+
+        function dbusPropertiesChanged() {
+            root.refresh();
+        }
+    }
 
     Timer {
-        interval: root.expanded ? 2000 : 10000
-        running: true
+        interval: 2000
+        running: root.expanded
         repeat: true
         triggeredOnStart: true
         onTriggered: root.refresh()
+    }
+
+    Timer {
+        id: errorTimeout
+
+        interval: 8000
+        onTriggered: root.actionError = ""
     }
 }

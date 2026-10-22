@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 00:00+0000\n"
-"PO-Revision-Date: 2026-10-21 00:00+0000\n"
+"POT-Creation-Date: 2026-10-22 00:00+0000\n"
+"PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
 "Language: es\n"
@@ -11,6 +11,36 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgctxt "@item:inlistbox wallpaper fit mode"
+msgid "Fill"
+msgstr "Rellenar"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgctxt "@item:inlistbox wallpaper fit mode"
+msgid "Fit"
+msgstr "Ajustar"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgctxt "@item:inlistbox wallpaper fit mode"
+msgid "Stretch"
+msgstr "Estirar"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgctxt "@item:inlistbox wallpaper fit mode"
+msgid "Center"
+msgstr "Centrar"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#, kde-format
+msgctxt "@item:inlistbox wallpaper fit mode"
+msgid "Tile"
+msgstr "Mosaico"
 
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
 #, kde-format
@@ -86,6 +116,18 @@ msgstr "Transición:"
 #, kde-format
 msgid "Transition length (ms):"
 msgstr "Duración de la transición (ms):"
+
+#: integrations/plasma-tray/contents/ui/Settings.qml
+#, kde-format
+msgctxt "@item:inlistbox wallpaper transition"
+msgid "Fade"
+msgstr "Fundido"
+
+#: integrations/plasma-tray/contents/ui/Settings.qml
+#, kde-format
+msgctxt "@item:inlistbox wallpaper transition"
+msgid "None"
+msgstr "Ninguna"
 
 #: integrations/plasma-tray/contents/ui/main.qml
 #, kde-format

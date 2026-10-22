@@ -1,11 +1,16 @@
+mod exporter;
 mod frame;
+mod link;
+mod listener;
 mod main_loop;
 mod memfd;
 mod params;
+mod shared;
 mod state;
 mod stream;
 
 use pipewire as pw;
+use shared::{Shared, Slot};
 use std::sync::{Arc, mpsc};
 use std::thread::JoinHandle;
 
@@ -28,17 +33,22 @@ pub enum Error {
     PipeWire(String),
     #[error("PipeWire thread exited unexpectedly")]
     ThreadGone,
+    #[error("invalid frame {width}x{height} with stride {stride} and {len} bytes")]
+    InvalidFrame { width: u32, height: u32, stride: u32, len: usize },
+    #[error("a change listener is already registered")]
+    ListenerTaken,
 }
 
 enum Command {
-    Ensure { output: String, width: u32, height: u32, reply: Reply },
-    Frame { output: String, frame: Arc<VideoFrame> },
+    Ensure { slot: Arc<Slot>, output: String, width: u32, height: u32, reply: Reply },
     Remove { output: String },
+    Wake,
     Quit,
 }
 
 pub struct Exporter {
     tx: pw::channel::Sender<Command>,
+    shared: Arc<Shared>,
     thread: Option<JoinHandle<()>>,
 }
 
@@ -46,40 +56,23 @@ impl Exporter {
     pub fn start() -> Result<Self, Error> {
         let (tx, rx) = pw::channel::channel::<Command>();
         let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
+        let shared = Arc::new(Shared::default());
+        let for_thread = shared.clone();
         let thread = std::thread::Builder::new()
             .name("wprs-pipewire".into())
             .spawn(move || {
-                if let Err(e) = main_loop::run(rx, &ready_tx) {
+                if let Err(e) = main_loop::run(rx, for_thread, &ready_tx) {
                     let _ = ready_tx.send(Err(e.to_string()));
                 }
             })
             .map_err(|e| Error::PipeWire(e.to_string()))?;
         let failure = match ready_rx.recv() {
-            Ok(Ok(())) => return Ok(Self { tx, thread: Some(thread) }),
+            Ok(Ok(())) => return Ok(Self { tx, shared, thread: Some(thread) }),
             Ok(Err(e)) => Error::PipeWire(e),
             Err(_) => Error::ThreadGone,
         };
         let _ = thread.join();
         Err(failure)
-    }
-
-    pub fn ensure_stream(&self, output: &str, width: u32, height: u32, reply: Reply) {
-        let command = Command::Ensure { output: output.to_owned(), width, height, reply };
-        if let Err(Command::Ensure { reply, .. }) = self.tx.send(command) {
-            reply(Err("PipeWire thread is not running".into()));
-        }
-    }
-
-    pub fn push_frame(&self, output: &str, frame: Arc<VideoFrame>) -> Result<(), Error> {
-        self.send(Command::Frame { output: output.to_owned(), frame })
-    }
-
-    pub fn remove_stream(&self, output: &str) -> Result<(), Error> {
-        self.send(Command::Remove { output: output.to_owned() })
-    }
-
-    fn send(&self, command: Command) -> Result<(), Error> {
-        self.tx.send(command).map_err(|_| Error::ThreadGone)
     }
 }
 

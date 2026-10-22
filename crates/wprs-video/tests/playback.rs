@@ -35,7 +35,7 @@ fn open(max_size: (u32, u32)) -> Option<(Player, Receiver<Event>)> {
 fn replay_first(first: Frame, rest: Receiver<Event>) -> Receiver<Event> {
     let (tx, rx) = mpsc::channel();
     tx.send(Event::Frame(first)).unwrap();
-    std::thread::spawn(move || rest.into_iter().try_for_each(|event| tx.send(event)));
+    std::thread::spawn(move || rest.into_iter().try_for_each(|event| tx.send(event).map_err(drop)));
     rx
 }
 
@@ -62,7 +62,7 @@ fn decodes_rgba_frames() {
     assert_eq!((frame.width, frame.height), (64, 32));
     assert!(frame.stride >= 64 * 4);
     let i = (16 * frame.stride + 32 * 4) as usize;
-    let px = &frame.data[i..i + 4];
+    let px = &frame.data()[i..i + 4];
     assert!(px.iter().zip(MAGENTA_RGB).all(|(&got, want)| got.abs_diff(want) <= LOSSY_TOLERANCE), "{px:?}");
     assert_eq!(px[3], 255);
 }
@@ -72,6 +72,21 @@ fn downscales_to_the_largest_output() {
     let Some((_player, rx)) = open((32, 32)) else { return };
     let frame = next_frame(&rx, WAIT).expect("a frame");
     assert_eq!((frame.width, frame.height), (32, 16));
+}
+
+#[test]
+fn follows_the_largest_output_size() {
+    let Some((player, rx)) = open((32, 32)) else { return };
+    let size_within = |size, timeout: Duration| {
+        let deadline = Instant::now() + timeout;
+        std::iter::from_fn(|| (Instant::now() < deadline).then(|| next_frame(&rx, WAIT)).flatten())
+            .any(|f| (f.width, f.height) == size)
+    };
+    assert!(size_within((32, 16), WAIT));
+    player.set_max_size((1920, 1080));
+    assert!(size_within((64, 32), WAIT), "no full-size frames after growing");
+    player.set_max_size((16, 16));
+    assert!(size_within((16, 8), WAIT), "no smaller frames after shrinking");
 }
 
 #[test]

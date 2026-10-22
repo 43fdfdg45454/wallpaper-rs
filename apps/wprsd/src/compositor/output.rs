@@ -1,9 +1,11 @@
-use super::players::PlayerSlot;
+use super::slot::PlayerSlot;
 use super::{Content, Spec};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 use wprs_core::Fit;
+use wprs_pipewire::VideoFrame;
 use wprs_render::{GpuImage, Layer, Target};
 
 pub(super) struct Shown {
@@ -34,13 +36,26 @@ pub(super) struct Output {
     pub(super) fade: Option<(Shown, Option<Instant>)>,
     pub(super) active: bool,
     pub(super) dirty: bool,
+    pub(super) missing_frame: bool,
     pub(super) target: Option<Target>,
+    pub(super) frames: Vec<Arc<VideoFrame>>,
     pub(super) last_render: Option<Instant>,
 }
 
 impl Output {
     pub(super) fn new(size: (u32, u32), shown: Shown) -> Self {
-        Self { size, shown, fade: None, active: true, dirty: true, target: None, last_render: None }
+        let (fade, target, frames, last_render) = (None, None, Vec::new(), None);
+        Self {
+            size,
+            shown,
+            fade,
+            active: true,
+            dirty: true,
+            missing_frame: false,
+            target,
+            frames,
+            last_render,
+        }
     }
 
     pub(super) fn show(&mut self, shown: Shown, size: (u32, u32), transition: bool) {
@@ -58,6 +73,10 @@ impl Output {
 
     pub(super) fn uses_video(&self, path: &PathBuf) -> bool {
         self.layers().any(|s| s.content.video() == Some(path))
+    }
+
+    pub(super) fn animated(&self) -> bool {
+        self.fade.is_some() || self.layers().any(|s| s.content.video().is_some())
     }
 
     pub(super) fn fading(&self) -> bool {

@@ -3,8 +3,7 @@ mod cli;
 use anyhow::Context;
 use clap::Parser;
 use cli::{Cli, Command};
-use wprs_core::dbus::BUS_NAME;
-use zbus::fdo;
+use tokio::signal::unix::{SignalKind, signal};
 
 #[zbus::proxy(
     interface = "io.github.wallpaper_rs.Daemon1",
@@ -13,8 +12,10 @@ use zbus::fdo;
 )]
 trait Daemon {
     fn request_stream(&self, output: &str, width: u32, height: u32) -> zbus::Result<(u32, u64)>;
+    fn hold_stream(&self, output: &str, width: u32, height: u32) -> zbus::Result<(u32, u64)>;
     fn release_stream(&self, output: &str) -> zbus::Result<()>;
     fn set_wallpaper(&self, path: &str, output: &str, fit: &str) -> zbus::Result<()>;
+    fn set_background(&self, color: &str, output: &str) -> zbus::Result<()>;
     fn set_option(&self, key: &str, value: &str) -> zbus::Result<()>;
     fn reload(&self) -> zbus::Result<()>;
     fn get_state(&self) -> zbus::Result<String>;
@@ -31,21 +32,7 @@ async fn main() -> anyhow::Result<()> {
     let command = Cli::parse().command;
     let connection = zbus::Connection::session().await.context("cannot connect to the session bus")?;
     let daemon = DaemonProxy::new(&connection).await?;
-    run(command, &daemon).await.map_err(|e| e.downcast::<zbus::Error>().map_or_else(|e| e, explain))
-}
-
-fn explain(error: zbus::Error) -> anyhow::Error {
-    let not_running = || anyhow::anyhow!("wprsd is not running ({} is not on the session bus)", BUS_NAME);
-    match error {
-        zbus::Error::FDO(e) => match *e {
-            fdo::Error::ServiceUnknown(_) | fdo::Error::NameHasNoOwner(_) => not_running(),
-            fdo::Error::Failed(message) | fdo::Error::InvalidArgs(message) => anyhow::anyhow!(message),
-            other => other.into(),
-        },
-        zbus::Error::MethodError(name, _, _) if name.as_str().ends_with("ServiceUnknown") => not_running(),
-        zbus::Error::MethodError(_, Some(message), _) => anyhow::anyhow!(message),
-        other => other.into(),
-    }
+    run(command, &daemon).await.map_err(|e| e.downcast::<zbus::Error>().map_or_else(|e| e, cli::explain))
 }
 
 async fn run(command: Command, daemon: &DaemonProxy<'_>) -> anyhow::Result<()> {
@@ -55,6 +42,8 @@ async fn run(command: Command, daemon: &DaemonProxy<'_>) -> anyhow::Result<()> {
             let path = path.to_str().context("the path is not valid UTF-8")?;
             daemon.set_wallpaper(path, &output, fit.map_or("", |f| f.as_str())).await?
         }
+        Command::Fit { fit, output } => daemon.set_wallpaper("", &output, fit.as_str()).await?,
+        Command::Background { color, output } => daemon.set_background(&color, &output).await?,
         Command::Config { key: Some(key), value: Some(value) } => daemon.set_option(&key, &value).await?,
         Command::Config { key, .. } => print_options(&daemon.get_state().await?, key.as_deref())?,
         Command::Reload => daemon.reload().await?,
@@ -68,9 +57,17 @@ async fn run(command: Command, daemon: &DaemonProxy<'_>) -> anyhow::Result<()> {
         }
         Command::Mute => daemon.set_muted(true).await?,
         Command::Unmute => daemon.set_muted(false).await?,
-        Command::Stream { output, width, height } => {
-            let (node, serial) = daemon.request_stream(&output, width, height).await?;
-            println!("node {node} serial {serial}")
+        Command::Stream { output, width, height, wait } => {
+            let interrupted = wait.then(interrupted).transpose()?;
+            let (node, serial) = match wait {
+                true => daemon.request_stream(&output, width, height).await?,
+                false => daemon.hold_stream(&output, width, height).await?,
+            };
+            println!("node {node} serial {serial}");
+            if let Some(interrupted) = interrupted {
+                interrupted.await;
+                daemon.release_stream(&output).await?
+            }
         }
         Command::Release { output } => daemon.release_stream(&output).await?,
         Command::Covered { output, covered } => daemon.set_output_covered(&output, covered).await?,
@@ -78,11 +75,24 @@ async fn run(command: Command, daemon: &DaemonProxy<'_>) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn interrupted() -> std::io::Result<impl Future<Output = ()>> {
+    let (mut interrupt, mut terminate) = (signal(SignalKind::interrupt())?, signal(SignalKind::terminate())?);
+    Ok(async move {
+        tokio::select! {
+            _ = interrupt.recv() => {}
+            _ = terminate.recv() => {}
+        }
+    })
+}
+
 fn print_options(state: &str, filter: Option<&str>) -> anyhow::Result<()> {
     let state: serde_json::Value = serde_json::from_str(state)?;
     let options = state["options"].as_object().context("the daemon did not report its settings")?;
-    options
-        .iter()
+    if let Some(key) = filter.filter(|key| !options.contains_key(*key)) {
+        let known: Vec<&str> = options.keys().map(String::as_str).collect();
+        anyhow::bail!("unknown setting '{key}'; the settings are {}", known.join(", "));
+    }
+    (options.iter())
         .filter(|(key, _)| filter.is_none_or(|f| key.as_str() == f))
         .for_each(|(key, value)| println!("{key} = {value}"));
     Ok(())

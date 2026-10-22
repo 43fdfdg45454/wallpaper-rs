@@ -1,12 +1,13 @@
-use crate::daemon::{Daemon, OutputInfo, State, output_name, settings};
-use serde_json::json;
-use wprs_core::Config;
+use crate::daemon::{Daemon, State, settings};
+use crate::streams::OutputInfo;
+use wprs_core::{Config, Fit};
+use zbus::fdo::Error::InvalidArgs;
 
 impl State {
     pub(crate) fn active(&self, info: &OutputInfo) -> bool {
         let p = &self.config.pause;
         !(self.user_paused
-            || (p.when_covered && info.covered)
+            || (p.when_covered && info.covered())
             || (p.on_battery && self.on_battery)
             || (p.when_locked && self.locked))
     }
@@ -20,13 +21,18 @@ impl Daemon {
         let settings = {
             let mut st = self.state();
             let mut config = st.config.clone();
-            change(&mut config).map_err(anyhow::Error::msg)?;
+            change(&mut config).map_err(InvalidArgs)?;
+            if st.config_error.is_some() && st.config_path.exists() {
+                let backup = Config::backup_broken(&st.config_path)?;
+                tracing::warn!(backup = %backup.display(), "kept a copy of the broken configuration");
+            }
             config.save(&st.config_path)?;
-            st.config = config;
+            (st.config, st.config_error) = (config, None);
             settings(&st.config)
         };
         self.compositor.set_settings(settings);
         self.apply_activity();
+        self.publish();
         Ok(())
     }
 
@@ -43,22 +49,43 @@ impl Daemon {
         })
     }
 
-    pub fn paused(&self) -> bool {
-        self.state().user_paused
+    pub fn change_wallpaper(&self, path: &str, output: &str, fit: &str) -> anyhow::Result<()> {
+        let fit = Some(fit.trim()).filter(|f| !f.is_empty()).map(str::parse::<Fit>).transpose();
+        let fit = fit.map_err(|e| InvalidArgs(e.to_string()))?;
+        match (path.strip_prefix("file://").unwrap_or(path), output.trim(), fit) {
+            ("", _, None) => Err(InvalidArgs("give a wallpaper, a fit or both".into()).into()),
+            ("", output, Some(fit)) => self.change_output(output, |c| {
+                c.set_fit(output, fit);
+                Ok(())
+            }),
+            (path, output, fit) => self.set_wallpaper(path.into(), output, fit),
+        }
     }
 
-    pub fn volume(&self) -> f64 {
-        self.state().config.playback.sanitized().volume
+    pub fn set_background(&self, color: &str, output: &str) -> anyhow::Result<()> {
+        let output = output.trim();
+        self.change_output(output, |c| c.set_background(output, color))
     }
 
-    pub fn muted(&self) -> bool {
-        self.state().config.playback.muted
+    fn change_output(
+        &self,
+        output: &str,
+        change: impl FnOnce(&mut Config) -> Result<(), String>,
+    ) -> anyhow::Result<()> {
+        self.update_config(change)?;
+        match output.is_empty() {
+            true => self.configure_all(),
+            false => self.configure_output(output),
+        }
+        Ok(())
     }
 
-    pub fn set_paused(&self, paused: bool) {
+    pub fn set_paused(&self, paused: bool) -> anyhow::Result<()> {
         self.state().user_paused = paused;
         tracing::info!(paused, "user pause changed");
         self.apply_activity();
+        self.publish();
+        Ok(())
     }
 
     pub fn set_on_battery(&self, on_battery: bool) {
@@ -73,34 +100,11 @@ impl Daemon {
         self.apply_activity();
     }
 
-    pub fn set_covered(&self, output: &str, covered: bool) -> Result<(), String> {
-        let output = output_name(output)?;
-        let changed = (self.state().outputs.get_mut(&output))
-            .is_some_and(|o| std::mem::replace(&mut o.covered, covered) != covered);
-        if changed {
-            tracing::debug!(output, covered, "output coverage changed");
-            self.apply_activity();
-        }
-        Ok(())
+    pub(crate) fn apply_activity(&self) {
+        self.activity(&self.state());
     }
 
-    pub fn state_json(&self) -> String {
-        let status = self.compositor.status();
-        let st = self.state();
-        let outputs: serde_json::Map<_, _> = (st.outputs.iter())
-            .map(|(name, info)| {
-                let (r, s) = (st.config.resolve(name), status.get(name).cloned().unwrap_or_default());
-                let (width, height) = info.size;
-                let value = json!({ "width": width, "height": height, "image": r.image, "fit": r.fit.as_str(),
-                    "kind": s.kind, "playing": s.playing, "active": st.active(info), "covered": info.covered,
-                    "error": s.error });
-                (name.clone(), value)
-            })
-            .collect();
-        let playback = st.config.playback.sanitized();
-        json!({ "version": env!("CARGO_PKG_VERSION"), "adapter": self.adapter, "config": st.config_path,
-            "paused": st.user_paused, "on_battery": st.on_battery, "locked": st.locked, "volume": playback.volume,
-            "muted": playback.muted, "options": st.config.options(), "outputs": outputs })
-        .to_string()
+    pub(crate) fn activity(&self, st: &State) {
+        st.outputs.iter().for_each(|(name, info)| self.compositor.set_active(name, st.active(info)));
     }
 }
