@@ -390,3 +390,39 @@ jobs:
       - name: Stop
         if: always()
         run: docker compose down --volumes
+
+  release:
+    name: Release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [check, sway, x11, sync, package, rpm, flatpak, plasma, server]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          pattern: wallpaper-rs-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish the latest build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir out
+          cp artifacts/wallpaper-rs-*-x86_64-linux.tar.gz out/wallpaper-rs-x86_64-linux.tar.gz
+          cp artifacts/wallpaper-rs.flatpak out/wallpaper-rs.flatpak
+          cp artifacts/wallpaper-rs-[0-9]*.x86_64.rpm out/wallpaper-rs.x86_64.rpm
+          cp artifacts/wallpaper-rs-examples-*.noarch.rpm out/wallpaper-rs-examples.noarch.rpm
+          (cd out && sha256sum -- * > SHA256SUMS)
+          tag=latest-build
+          title="wallpaper-rs ${GITHUB_SHA::7}"
+          notes="Latest build of the main branch (${GITHUB_SHA::7}) after every check passed. Verify the files with: sha256sum -c SHA256SUMS"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/$tag" -f sha="$GITHUB_SHA" -F force=true >/dev/null
+            gh release upload "$tag" out/* --clobber
+            gh release edit "$tag" --title "$title" --notes "$notes" --latest
+          else
+            gh release create "$tag" out/* --target "$GITHUB_SHA" --title "$title" --notes "$notes" --latest
+          fi

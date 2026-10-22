@@ -30,13 +30,12 @@ desde el icono de la bandeja del sistema.
 
 ## Instalación (sin root)
 
-Cada ejecución de la CI en GitHub Actions genera el artefacto `wallpaper-rs-x86_64-linux`.
-Descárgalo desde la pestaña *Actions* (es un `.zip` con un `.tar.gz` dentro, que conserva los
-permisos de ejecución) y ejecuta:
+Cada vez que la rama principal pasa todas las pruebas, la CI publica la última compilación en la
+página *Releases* del repositorio, siempre con los mismos nombres de archivo y un `SHA256SUMS`
+para comprobarlos. Descarga `wallpaper-rs-x86_64-linux.tar.gz` y ejecuta:
 
 ```sh
-unzip wallpaper-rs-x86_64-linux.zip
-tar xzf wallpaper-rs-*-x86_64-linux.tar.gz
+tar xzf wallpaper-rs-x86_64-linux.tar.gz
 cd wallpaper-rs-*-x86_64-linux
 ./install.sh
 ```
@@ -61,12 +60,11 @@ Kirigami y el estilo de escritorio de KDE (`qml6-module-org-kde-kirigami` y
 
 ## Instalación con Flatpak
 
-La CI genera también el artefacto `wallpaper-rs-flatpak`, con el daemon, `wprs-ctl`, GStreamer y
+La misma página *Releases* trae `wallpaper-rs.flatpak`, con el daemon, `wprs-ctl`, GStreamer y
 los códecs dentro de un Flatpak. El runtime (`org.freedesktop.Platform` 26.08) se descarga de
 Flathub al instalarlo:
 
 ```sh
-unzip wallpaper-rs-flatpak.zip
 flatpak install --user ./wallpaper-rs.flatpak
 flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs | sh
 ```
