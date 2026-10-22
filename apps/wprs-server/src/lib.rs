@@ -46,6 +46,11 @@ type St = axum::extract::State<Arc<App>>;
 type Router = axum::Router<Arc<App>>;
 type Reply = error::Res<axum::Json<serde_json::Value>>;
 
+pub const VERSION: &str = match option_env!("WPRS_VERSION") {
+    Some(v) if !v.is_empty() => v,
+    _ => concat!(env!("CARGO_PKG_VERSION"), "-local"),
+};
+
 pub struct App {
     pub cfg: Config,
     db: db::Db,

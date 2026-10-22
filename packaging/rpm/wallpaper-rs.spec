@@ -1,12 +1,12 @@
 %global debug_package %{nil}
 
 Name:           wallpaper-rs
-Version:        %{wprs_version}
-Release:        1%{?dist}
+Version:        %{wprs_core}
+Release:        %{wprs_release}%{?dist}
 Summary:        Animated and static wallpapers for KDE Plasma
 License:        GPL-3.0-or-later
 URL:            https://github.com/43fdfdg45454/wallpaper-rs
-Source0:        wallpaper-rs-%{version}-x86_64-linux.tar.gz
+Source0:        wallpaper-rs-%{wprs_version}-x86_64-linux.tar.gz
 ExclusiveArch:  x86_64
 BuildRequires:  systemd-rpm-macros
 Requires:       pipewire
@@ -36,7 +36,7 @@ particles, effects, a scene that follows the sound, one that follows the pointer
 one. They appear in the library, can be removed from it, and leave it with this package.
 
 %prep
-%autosetup -n wallpaper-rs-%{version}-x86_64-linux
+%autosetup -n wallpaper-rs-%{wprs_version}-x86_64-linux
 
 %install
 install -Dm755 -t %{buildroot}%{_bindir} bin/wprsd bin/wprs-ctl bin/wprs-app

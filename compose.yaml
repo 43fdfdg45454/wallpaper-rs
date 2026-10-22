@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: apps/wprs-server/Dockerfile
+      args: [WPRS_VERSION]
     image: wprs-server:local
     pull_policy: build
     read_only: true

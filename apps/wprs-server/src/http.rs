@@ -221,7 +221,7 @@ async fn discovery(State(app): St) -> Json<Value> {
         "privacy": c.url("/legal/privacy"), "contact": c.contact,
     });
     Json(json!({
-        "name": c.name, "version": env!("CARGO_PKG_VERSION"), "api": ["v1"], "registration": registration,
+        "name": c.name, "version": crate::VERSION, "api": ["v1"], "registration": registration,
         "oidc": c.oidc.is_some(), "sync": sync, "repository": repo, "legal": legal,
         "uploads": {"max_bytes": c.package_max, "per_day": c.uploads_per_day, "licenses": c.licenses},
     }))

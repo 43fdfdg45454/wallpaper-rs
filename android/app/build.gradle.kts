@@ -15,7 +15,7 @@ android {
         minSdk = 31
         targetSdk = 36
         versionCode = providers.gradleProperty("versionCode").getOrElse("1").toInt()
-        versionName = workspace.resolve("Cargo.toml").useLines { lines ->
+        versionName = providers.gradleProperty("versionName").orNull ?: workspace.resolve("Cargo.toml").useLines { lines ->
             lines.first { it.startsWith("version = ") }.substringAfter('"').substringBefore('"')
         }
     }

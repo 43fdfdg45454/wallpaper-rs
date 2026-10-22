@@ -7,7 +7,7 @@
         "Description[es]": "Fondos de pantalla animados y estáticos generados por el servicio de wallpaper-rs",
         "Icon": "preferences-desktop-wallpaper",
         "License": "GPL-3.0-or-later",
-        "Version": "0.2.0",
+        "Version": "0.3.0",
         "Website": "https://github.com/43fdfdg45454/wallpaper-rs",
         "Authors": [
             {

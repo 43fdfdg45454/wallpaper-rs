@@ -2,7 +2,8 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${1:-$ROOT/dist}
-VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT/Cargo.toml" | head -1)
+export WPRS_VERSION=${WPRS_VERSION:-$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT/Cargo.toml" | head -1)-local}
+VERSION=${WPRS_VERSION%%+*}
 ARCH=$(uname -m)
 NAME=wallpaper-rs-$VERSION-$ARCH-linux
 STAGE=$(mktemp -d)
@@ -29,6 +30,7 @@ done
 cp -r "$SRC/integrations/plasma-wallpaper" "$D/plasma-wallpaper"
 cp -r "$SRC/integrations/plasma-tray" "$D/plasma-tray"
 cp -r "$SRC/integrations/kwin-pointer" "$D/kwin-pointer"
+sed -i "s/\"Version\": \"[^\"]*\"/\"Version\": \"$VERSION\"/" "$D"/*/metadata.json
 "$ROOT/scripts/translations.sh" build "$D"
 mkdir -p "$D/examples"
 for scene in "$SRC"/scenes/*/; do

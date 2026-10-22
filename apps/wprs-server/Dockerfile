@@ -1,5 +1,6 @@
 FROM docker.io/library/rust:1.99-alpine@sha256:3ea887915f261f273d6a24efdfdb92665dee12199923e57870453644fe4ae5c9 AS build
 WORKDIR /src
+ARG WPRS_VERSION
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \

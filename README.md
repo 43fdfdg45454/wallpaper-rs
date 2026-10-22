@@ -28,11 +28,40 @@ desde el icono de la bandeja del sistema.
 - Los vídeos se decodifican con GStreamer y se pausan cuando una ventana maximizada o a
   pantalla completa tapa la pantalla, con batería o con la pantalla bloqueada.
 
+## Versiones
+
+Las versiones siguen Semantic Versioning 2.0.0 de forma estricta. GitVersion las calcula en la CI
+a partir de los commits de la rama principal, escritos con Conventional Commits
+(`tipo(ámbito)!: descripción`, donde el ámbito y `!` son opcionales):
+
+- `fix` y `perf` suben el parche: 0.3.0 → 0.3.1.
+- `feat` sube la versión menor: 0.3.0 → 0.4.0.
+- `!` tras el tipo o el ámbito, o un pie `BREAKING CHANGE:` o `BREAKING-CHANGE:`, sube la mayor,
+  también de 0.x a 1.0.0.
+- `build`, `chore`, `ci`, `docs`, `refactor`, `revert`, `style` y `test` no cambian la versión.
+
+La CI comprueba el asunto de todos los commits desde la última versión publicada y el título de
+cada pull request; mientras alguno no siga ese formato, la rama principal falla y no publica nada.
+Un commit mal escrito que ya está en la rama se corrige añadiendo su hash a `ignore.sha` en
+`GitVersion.yml` junto con un commit nuevo del tipo correcto. GitVersion toma como actual el commit
+de fecha más reciente, así que cada commit necesita una fecha de commit posterior a la de toda su
+historia, algo que la CI también comprueba. Si la fecha se fija a mano, sirve
+`GIT_COMMITTER_DATE=@$(( $(git log --format=%ct | sort -n | tail -1) + 1 ))`.
+
+Solo los commits que suben la versión publican una nueva: cuando el último commit de la rama
+principal pasa todas las pruebas y su versión es mayor que todas las publicadas, la CI crea
+`v<versión>` en la página *Releases* del repositorio, con los archivos, un `SHA256SUMS` y las notas
+agrupadas en cambios incompatibles, novedades y correcciones. Una versión publicada no cambia nunca
+y volver a lanzar una ejecución antigua no publica nada. Las demás ramas y las pull requests llevan
+una prerelease de la versión siguiente cuyo número crece con cada commit (`0.3.1-branch-rama.2`,
+`0.4.0-feature-rama.1`, `0.3.1-PullRequest12.1`) y no se publican. `--version`, el daemon por
+D-Bus, el servidor y los paquetes de Plasma y KWin muestran la versión; una compilación local sin
+`WPRS_VERSION` usa la de `Cargo.toml` con el sufijo `-local`.
+
 ## Instalación (sin root)
 
-Cada vez que la rama principal pasa todas las pruebas, la CI publica la última compilación en la
-página *Releases* del repositorio, siempre con los mismos nombres de archivo y un `SHA256SUMS`
-para comprobarlos. Descarga `wallpaper-rs-x86_64-linux.tar.gz` y ejecuta:
+Cada versión de la página *Releases* trae siempre los mismos nombres de archivo y un `SHA256SUMS`
+para comprobarlos. Descarga `wallpaper-rs-x86_64-linux.tar.gz` de la última y ejecuta:
 
 ```sh
 tar xzf wallpaper-rs-x86_64-linux.tar.gz
@@ -272,6 +301,13 @@ claves del repositorio y muestra una sola vez la clave raíz, que hay que guarda
 servidor; el servidor solo conserva la clave en línea, con la que vuelve a firmar el índice cada
 día (cada firma caduca a los 7). Desde *Administración* se crean invitaciones y desde *Cuenta*,
 tokens, dispositivos enlazados con un código y subidas de paquetes `.wpak`.
+
+El servidor construido así se identifica con la versión de `Cargo.toml` y el sufijo `-local`. Para
+que muestre la de una versión publicada, se construye desde su etiqueta:
+
+```sh
+WPRS_VERSION=$(git describe --tags --exact-match --match 'v[0-9]*' | cut -c2-) docker compose up -d --build
+```
 
 La configuración va en variables de entorno, en un `.env` junto a `compose.yaml`; `VARIABLE_FILE`
 lee el valor de un archivo, para los secretos:

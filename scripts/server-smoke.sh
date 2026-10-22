@@ -14,6 +14,7 @@ fi
 
 test "$(curl -fsS "$URL/healthz")" = ok
 curl -fsS "$URL/.well-known/wprs-server" | grep '"end_to_end_default":true' > /dev/null
+[ -z "${WPRS_VERSION:-}" ] || curl -fsS "$URL/.well-known/wprs-server" | grep -F "\"version\":\"$WPRS_VERSION\"" > /dev/null
 docker compose logs wprs | grep 'one-time setup token' > /dev/null
 
 token=$(docker compose exec -T wprs wprs-server setup-token)

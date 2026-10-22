@@ -21,7 +21,7 @@ pub const JSON: &str = "Print the daemon reply as JSON";
 pub const ITEM: &str = "Item: a file path, a uid or the last 6 or more characters of one";
 
 #[derive(Parser, Debug)]
-#[command(name = "wprs-ctl", version, about = "Control the wallpaper-rs daemon")]
+#[command(name = "wprs-ctl", version = wprs_core::VERSION, about = "Control the wallpaper-rs daemon")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,

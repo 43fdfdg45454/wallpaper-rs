@@ -9,7 +9,7 @@ use wprs_server::{App, Config};
 
 #[derive(Parser)]
 #[command(
-    version,
+    version = wprs_server::VERSION,
     about = "Self-hosted wallpaper-rs server: signed repository, catalog, uploads, moderation and device sync"
 )]
 struct Cli {

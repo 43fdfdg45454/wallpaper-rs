@@ -1,0 +1,20 @@
+workflow: GitHubFlow/v1
+next-version: 0.3.0
+semantic-version-format: Strict
+major-version-bump-message: '(?-i)^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^()\r\n]+\))?(!: \S|: \S[\s\S]*\nBREAKING[ -]CHANGE: \S)'
+minor-version-bump-message: '(?-i)^feat(\([^()\r\n]+\))?: \S'
+patch-version-bump-message: '(?-i)^(fix|perf)(\([^()\r\n]+\))?: \S'
+no-bump-message: '(?-i)^(build|chore|ci|docs|refactor|revert|style|test)(\([^()\r\n]+\))?: (?![\s\S]*\nBREAKING[ -]CHANGE: \S)\S'
+strategies:
+  - Fallback
+  - ConfiguredNextVersion
+  - TaggedCommit
+branches:
+  main: {regex: ^master$, mode: ContinuousDeployment, increment: None}
+  release: {mode: ContinuousDelivery, label: 'release-{BranchName}', increment: Patch}
+  feature: {mode: ContinuousDelivery, label: 'feature-{BranchName}', increment: Patch}
+  pull-request: {regex: '^pull/(?<Number>\d+)/merge$', increment: Patch}
+  unknown: {mode: ContinuousDelivery, label: 'branch-{BranchName}', increment: Patch}
+ignore:
+  sha:
+    - 16241057ccc870cbba98c22dd7fca9ca66658ce4

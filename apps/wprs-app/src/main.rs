@@ -33,7 +33,7 @@ const STYLE: &str = "org.kde.desktop";
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
-        Some("--version" | "-V") => println!("wprs-app {}", env!("CARGO_PKG_VERSION")),
+        Some("--version" | "-V") => println!("wprs-app {}", wprs_core::VERSION),
         Some("--help" | "-h") => println!("usage: wprs-app [--check | --version] [FILE | URI]..."),
         Some("--check") if !bus::checking() => return check(),
         Some("--depth") => return depthproc::child(&args[1..]),

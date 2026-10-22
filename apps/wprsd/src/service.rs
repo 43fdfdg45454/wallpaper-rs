@@ -173,7 +173,7 @@ impl Service {
 
     #[zbus(property(emits_changed_signal = "const"))]
     async fn version(&self) -> String {
-        env!("CARGO_PKG_VERSION").to_owned()
+        wprs_core::VERSION.to_owned()
     }
 
     #[zbus(property(emits_changed_signal = "const"))]

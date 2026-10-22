@@ -66,7 +66,7 @@ use zbus::fdo::{DBusProxy, RequestNameFlags};
 
 #[derive(Parser)]
 #[command(
-    version,
+    version = wprs_core::VERSION,
     about = "Renders wallpapers and shows them through PipeWire streams, layer-shell surfaces or X11 windows"
 )]
 struct Args {

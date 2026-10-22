@@ -141,7 +141,7 @@ impl Daemon {
         let playback = &st.config.playback;
         let state = State {
             model: MODEL,
-            version: env!("CARGO_PKG_VERSION").into(),
+            version: wprs_core::VERSION.into(),
             adapter: self.adapter.clone(),
             config: st.config_path.clone(),
             config_error: st.config_error.clone(),

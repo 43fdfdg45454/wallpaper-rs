@@ -32,7 +32,7 @@ modules:
         RUSTFLAGS: --remap-path-prefix=/run/build/wallpaper-rs=/src --remap-path-prefix=/run/build/wallpaper-rs/cargo=/cargo
     build-commands:
       - rust-dist/install.sh --prefix=/run/build/wallpaper-rs/rust --components=rustc,cargo,rust-std-x86_64-unknown-linux-gnu --disable-ldconfig
-      - cargo build --release --offline --locked -p wprsd -p wprs-ctl
+      - WPRS_VERSION=$(cat VERSION 2>/dev/null) cargo build --release --offline --locked -p wprsd -p wprs-ctl
       - install -Dm755 -t /app/bin target/release/wprsd target/release/wprs-ctl
       - install -Dm755 packaging/flatpak/wprs-plasma.sh /app/bin/wprs-plasma
       - scripts/translations.sh build
