@@ -1,8 +1,6 @@
 use crate::develop::Developer;
-use crate::draw::TARGET_FORMAT;
-use crate::parallax::Reliefs;
 use crate::readback::{MAX_READBACK_BYTES, TargetLimits};
-use crate::shader::{bind_group_layout, pipelines};
+use crate::shader::{Pairs, bind_group_layout, module};
 use crate::texture::{GpuImage, create_image};
 use crate::{RenderError, log_allowed};
 use std::sync::atomic::AtomicU64;
@@ -15,15 +13,14 @@ pub struct Renderer {
     pub(crate) gpu: wgpu::Adapter,
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
-    pub(crate) pipelines: [wgpu::RenderPipeline; 2],
-    pub(crate) layout: wgpu::BindGroupLayout,
+    pub(crate) layers: Pairs,
     pub(crate) clamp: wgpu::Sampler,
     pub(crate) repeat: wgpu::Sampler,
     pub(crate) placeholder: GpuImage,
     adapter: String,
     pub(crate) limits: TargetLimits,
     pub(crate) developer: OnceLock<Developer>,
-    pub(crate) reliefs: OnceLock<Reliefs>,
+    pub(crate) reliefs: OnceLock<Pairs>,
     pub(crate) scene: OnceLock<crate::scene::Pipes>,
 }
 
@@ -33,10 +30,6 @@ impl Renderer {
     }
 
     pub fn with_display(display: Option<Display>) -> Result<Self, RenderError> {
-        pollster::block_on(Self::new_async(display))
-    }
-
-    async fn new_async(display: Option<Display>) -> Result<Self, RenderError> {
         let mut desc = wgpu::InstanceDescriptor::new_without_display_handle_from_env();
         desc.backends = wgpu::Backends::from_env().unwrap_or(wgpu::Backends::VULKAN | wgpu::Backends::GL);
         desc.display = display;
@@ -45,8 +38,12 @@ impl Renderer {
             ..Default::default()
         };
         let instance = wgpu::Instance::new(desc);
-        let adapter =
-            instance.request_adapter(&options).await.map_err(|e| RenderError::NoAdapter(e.to_string()))?;
+        let adapter = pollster::block_on(instance.request_adapter(&options))
+            .map_err(|e| RenderError::NoAdapter(e.to_string()))?;
+        Self::with_adapter(instance, adapter)
+    }
+
+    pub fn with_adapter(instance: wgpu::Instance, adapter: wgpu::Adapter) -> Result<Self, RenderError> {
         let offered = adapter.limits();
         let required_limits = wgpu::Limits {
             max_texture_dimension_2d: offered.max_texture_dimension_2d,
@@ -55,8 +52,8 @@ impl Renderer {
         };
         let descriptor =
             wgpu::DeviceDescriptor { label: Some("wprs-render"), required_limits, ..Default::default() };
-        let (device, queue) =
-            adapter.request_device(&descriptor).await.map_err(|e| RenderError::Device(e.to_string()))?;
+        let (device, queue) = pollster::block_on(adapter.request_device(&descriptor))
+            .map_err(|e| RenderError::Device(e.to_string()))?;
         static GPU_ERRORS: AtomicU64 = AtomicU64::new(0);
         device.on_uncaptured_error(Arc::new(|e| {
             if log_allowed(&GPU_ERRORS) {
@@ -81,7 +78,7 @@ impl Renderer {
         };
         let info = adapter.get_info();
         Ok(Self {
-            pipelines: pipelines(&device, &layout, TARGET_FORMAT),
+            layers: Pairs::new(layout, module(&device, include_str!("shader.wgsl")), "fs_main"),
             clamp: sampler(wgpu::AddressMode::ClampToEdge),
             repeat: sampler(wgpu::AddressMode::Repeat),
             placeholder: create_image(&device, &queue, &[0; 4], 1, 1, 4),
@@ -90,12 +87,15 @@ impl Renderer {
             developer: OnceLock::new(),
             reliefs: OnceLock::new(),
             scene: OnceLock::new(),
-            layout,
             device,
             queue,
             instance,
             gpu: adapter,
         })
+    }
+
+    pub fn instance(&self) -> &wgpu::Instance {
+        &self.instance
     }
 
     pub fn adapter(&self) -> &str {

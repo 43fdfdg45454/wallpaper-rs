@@ -1,3 +1,5 @@
+use std::sync::{Mutex, PoisonError};
+
 pub(crate) fn bind_group_layout(device: &wgpu::Device, textures: u32) -> wgpu::BindGroupLayout {
     let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
         binding,
@@ -68,14 +70,6 @@ pub(crate) fn pipeline(
     })
 }
 
-pub(crate) fn pipelines(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    format: wgpu::TextureFormat,
-) -> [wgpu::RenderPipeline; 2] {
-    pair(device, layout, &module(device, include_str!("shader.wgsl")), "fs_main", format)
-}
-
 pub(crate) fn pair(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
@@ -91,4 +85,35 @@ pub(crate) fn pair(
     [None, Some(wgpu::BlendState { color: fade, alpha: fade })].map(|blend| {
         pipeline(device, layout, shader, entry, wgpu::ColorTargetState { blend, ..format.into() })
     })
+}
+
+pub(crate) struct Pairs {
+    pub(crate) layout: wgpu::BindGroupLayout,
+    shader: wgpu::ShaderModule,
+    entry: &'static str,
+    made: Mutex<Vec<(wgpu::TextureFormat, [wgpu::RenderPipeline; 2])>>,
+}
+
+impl Pairs {
+    pub(crate) fn new(
+        layout: wgpu::BindGroupLayout,
+        shader: wgpu::ShaderModule,
+        entry: &'static str,
+    ) -> Self {
+        Self { layout, shader, entry, made: Mutex::default() }
+    }
+
+    pub(crate) fn get(
+        &self,
+        device: &wgpu::Device,
+        format: wgpu::TextureFormat,
+    ) -> [wgpu::RenderPipeline; 2] {
+        let mut made = self.made.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some((_, found)) = made.iter().find(|(f, _)| *f == format) {
+            return found.clone();
+        }
+        let found = pair(device, &self.layout, &self.shader, self.entry, format);
+        made.push((format, found.clone()));
+        found
+    }
 }

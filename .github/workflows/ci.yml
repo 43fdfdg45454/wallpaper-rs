@@ -241,6 +241,75 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  android:
+    name: Android debug APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          targets: aarch64-linux-android, x86_64-linux-android
+          components: clippy
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          key: android
+
+      - name: Install cargo-ndk
+        run: cargo install --locked cargo-ndk --version 4.1.2
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+          add-job-summary: on-failure
+
+      - name: Clippy for Android
+        run: |
+          for target in aarch64-linux-android x86_64-linux-android; do
+            cargo clippy --locked -p wprs-android --target "$target" -- -D warnings
+          done
+
+      - name: Debug APK and lint
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          WPRS_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          if [ -n "$KEYSTORE" ]; then
+            base64 -d <<< "$KEYSTORE" > "$RUNNER_TEMP/wprs.keystore"
+            export WPRS_KEYSTORE="$RUNNER_TEMP/wprs.keystore"
+          else
+            echo "::warning::ANDROID_KEYSTORE is not set, so this APK is signed with a temporary debug key"
+          fi
+          android/gradlew -p android assembleDebug lint -PversionCode="$VERSION_CODE"
+
+      - name: 16 KB page alignment
+        run: |
+          readelf="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          for abi in arm64-v8a x86_64; do
+            lib=android/app/build/rustJniLibs/$abi/libwprs_android.so
+            aligns=$("$readelf" -lW "$lib" | awk '$1 == "LOAD" { print $NF }')
+            test -n "$aligns"
+            for align in $aligns; do
+              (( align >= 0x4000 )) || { echo "::error::$lib has a LOAD segment aligned to $align"; exit 1; }
+            done
+          done
+          tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
+          "$tools/zipalign" -c -P 16 -v 4 android/app/build/outputs/apk/debug/*.apk
+          cp android/app/build/outputs/apk/debug/*.apk wallpaper-rs-android-debug.apk
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: wallpaper-rs-android-debug.apk
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
+
   rpm:
     name: Fedora package
     needs: package
@@ -394,12 +463,12 @@ jobs:
   release:
     name: Release
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: [check, sway, x11, sync, package, rpm, flatpak, plasma, server]
+    needs: [check, sway, x11, sync, package, android, rpm, flatpak, plasma, server]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           pattern: wallpaper-rs-*
           path: artifacts
@@ -415,6 +484,7 @@ jobs:
           cp artifacts/wallpaper-rs.flatpak out/wallpaper-rs.flatpak
           cp artifacts/wallpaper-rs-[0-9]*.x86_64.rpm out/wallpaper-rs.x86_64.rpm
           cp artifacts/wallpaper-rs-examples-*.noarch.rpm out/wallpaper-rs-examples.noarch.rpm
+          cp artifacts/wallpaper-rs-android-debug.apk out/wallpaper-rs-android.apk
           (cd out && sha256sum -- * > SHA256SUMS)
           tag=latest-build
           title="wallpaper-rs ${GITHUB_SHA::7}"

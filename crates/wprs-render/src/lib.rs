@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod allocations;
 mod bind;
 mod color;
 mod decode;
@@ -22,7 +24,7 @@ pub use scene::{SceneAssets, SceneStats, SceneView};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
-pub use surface::Surface;
+pub use surface::{Presentation, Surface};
 pub use texture::GpuImage;
 use wprs_core::{Fit, UvRect};
 

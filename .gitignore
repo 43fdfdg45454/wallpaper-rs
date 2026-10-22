@@ -3,3 +3,9 @@
 /integrations/*/contents/locale
 /packaging/flatpak/cargo-sources.json
 /apps/wprs-app/.qmlls.ini
+/android/.gradle
+/android/.kotlin
+/android/build
+/android/app/build
+/android/local.properties
+*.keystore

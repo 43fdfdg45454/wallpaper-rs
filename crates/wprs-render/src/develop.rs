@@ -33,7 +33,7 @@ impl Developer {
         Self {
             develop: make(&layout, &develop, "fs_develop", format),
             output: make(&layout, &develop, "fs_output", Format::Rgba8UnormSrgb),
-            blur: ["fs_down", "fs_up"].map(|entry| make(&r.layout, &kawase, entry, format)),
+            blur: ["fs_down", "fs_up"].map(|entry| make(&r.layers.layout, &kawase, entry, format)),
             layout,
             format,
         }
@@ -140,7 +140,7 @@ impl Renderer {
         let offset = radius / (1u32 << levels) as f32;
         let mut blur = |pipeline, from: &wgpu::Texture, to: &wgpu::Texture| {
             let params = [1.0 / from.width() as f32, 1.0 / from.height() as f32, offset, 0.0];
-            self.pass(encoder, pipeline, &self.layout, bytemuck::bytes_of(&params), &[&view(from)], to)
+            self.pass(encoder, pipeline, &self.layers.layout, bytemuck::bytes_of(&params), &[&view(from)], to)
         };
         for i in 0..levels {
             blur(&d.blur[0], if i == 0 { source } else { &chain[i] }, &chain[i + 1]);

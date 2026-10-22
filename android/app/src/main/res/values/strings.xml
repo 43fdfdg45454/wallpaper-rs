@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">wallpaper-rs</string>
+    <string name="description">Your own images as a live wallpaper drawn with the GPU</string>
+    <string name="choose">Choose image</string>
+    <string name="apply">Set as wallpaper</string>
+    <string name="stored">Image ready</string>
+    <string name="unreadable">This image cannot be opened</string>
+    <string name="unsupported">This device cannot set live wallpapers</string>
+</resources>

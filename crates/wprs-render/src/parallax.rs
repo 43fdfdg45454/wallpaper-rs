@@ -1,9 +1,8 @@
-use crate::shader::{bind_group_layout, module, pair};
+use crate::shader::{Pairs, bind_group_layout, module};
 use crate::stack::plan;
 use crate::texture::{GpuImage, gpu_image, texture};
 use crate::{RenderError, Renderer};
 use half::f16;
-use std::sync::{Mutex, PoisonError};
 use wgpu::{TextureFormat as Format, TextureUsages as Usage};
 use wprs_core::{Edit, UvRect};
 
@@ -18,12 +17,6 @@ pub struct Relief<'a> {
     pub overscan: f32,
 }
 
-pub(crate) struct Reliefs {
-    pub(crate) layout: wgpu::BindGroupLayout,
-    shader: wgpu::ShaderModule,
-    pipelines: Mutex<Vec<(Format, [wgpu::RenderPipeline; 2])>>,
-}
-
 pub(crate) fn zoom(uv: UvRect, overscan: f32) -> UvRect {
     let z = overscan.max(1.0);
     let offset = uv.offset.map(|o| 0.5 + (o - 0.5) / z);
@@ -35,23 +28,12 @@ pub(crate) fn halves(map: &DepthMap) -> Vec<u16> {
 }
 
 impl Renderer {
-    pub(crate) fn reliefs(&self) -> &Reliefs {
-        self.reliefs.get_or_init(|| Reliefs {
-            layout: bind_group_layout(&self.device, 2),
-            shader: module(&self.device, &[wprs_scene::RELIEF_WGSL, include_str!("parallax.wgsl")].concat()),
-            pipelines: Mutex::default(),
+    pub(crate) fn reliefs(&self) -> &Pairs {
+        self.reliefs.get_or_init(|| {
+            let shader =
+                module(&self.device, &[wprs_scene::RELIEF_WGSL, include_str!("parallax.wgsl")].concat());
+            Pairs::new(bind_group_layout(&self.device, 2), shader, "fs_parallax")
         })
-    }
-
-    pub(crate) fn relief_pipelines(&self, format: Format) -> [wgpu::RenderPipeline; 2] {
-        let r = self.reliefs();
-        let mut cached = r.pipelines.lock().unwrap_or_else(PoisonError::into_inner);
-        if let Some((_, made)) = cached.iter().find(|(f, _)| *f == format) {
-            return made.clone();
-        }
-        let made = pair(&self.device, &r.layout, &r.shader, "fs_parallax", format);
-        cached.push((format, made.clone()));
-        made
     }
 
     pub fn upload_depth(&self, map: &DepthMap, edit: Option<&Edit>) -> Result<GpuImage, RenderError> {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="description">Tus propias imágenes como fondo de pantalla animado dibujado con la GPU</string>
+    <string name="choose">Elegir imagen</string>
+    <string name="apply">Usar como fondo</string>
+    <string name="stored">Imagen lista</string>
+    <string name="unreadable">No se puede abrir esta imagen</string>
+    <string name="unsupported">Este dispositivo no permite fondos animados</string>
+</resources>

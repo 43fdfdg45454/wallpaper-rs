@@ -16,6 +16,7 @@ members = [
     "crates/wprs-audio",
     "crates/wprs-script",
     "crates/wprs-sync",
+    "crates/wprs-android",
     "apps/wprsd",
     "apps/wprs-ctl",
     "apps/wprs-app",
@@ -95,6 +96,9 @@ blake3 = "1"
 libc = "0.2"
 smithay-client-toolkit = { version = "0.21.1", default-features = false, features = ["system"] }
 raw-window-handle = "0.6"
+jni = "0.22.4"
+ndk = { version = "0.9", default-features = false }
+log = "0.4"
 wayland-backend = { version = "0.3", features = ["dlopen"] }
 axum = { version = "0.8.9", features = ["multipart"] }
 maud = { version = "0.27", features = ["axum"] }

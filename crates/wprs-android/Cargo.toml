@@ -1,0 +1,22 @@
+[package]
+name = "wprs-android"
+description = "Android live wallpaper for wallpaper-rs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[target.'cfg(target_os = "android")'.dependencies]
+wprs-core.workspace = true
+wprs-render.workspace = true
+wgpu.workspace = true
+pollster.workspace = true
+jni.workspace = true
+ndk.workspace = true
+log.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+tracing = { workspace = true, features = ["log"] }

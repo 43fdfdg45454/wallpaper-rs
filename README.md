@@ -135,6 +135,22 @@ pantalla completa o maximizada en ese monitor según EWMH. Se arranca con `wprsd
 antes del gestor de ventanas, o desde el arranque automático de este; con el servicio de usuario,
 `systemctl --user import-environment DISPLAY && systemctl --user restart wprsd`.
 
+## Android
+
+La misma página *Releases* trae `wallpaper-rs-android.apk`, un APK de depuración para Android 12
+o posterior (64 bits). Siempre se firma con la misma clave, así que cada versión se instala encima
+de la anterior y conserva la imagen elegida. Ábrelo en el teléfono (Android pedirá permitir la
+instalación desde esa app) o instálalo desde un ordenador con
+`adb install -r wallpaper-rs-android.apk`.
+
+Para ponerlo de fondo, abre la app **wallpaper-rs**, pulsa *Elegir imagen* y después *Usar como
+fondo*: se abre la vista previa del sistema, donde se elige si va en la pantalla de inicio, en la
+de bloqueo o en las dos. También se llega desde los fondos animados del sistema. La imagen se
+elige con el selector de fotos de Android y se copia al almacenamiento privado de la app, así que
+no hace falta ningún permiso, y la app no usa la red. Se dibuja con la GPU (Vulkan, u OpenGL ES si
+no hay Vulkan) con el mismo renderizador que el escritorio y solo cuando cambia algo: con una
+imagen fija no se dibuja ningún fotograma más. Admite JPEG, PNG, WebP, GIF y BMP.
+
 ## Uso desde la terminal
 
 ```sh
@@ -399,6 +415,30 @@ scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
 target/debug/wprs-app --check            # carga todo el QML de la app y falla ante cualquier aviso
 ```
 
+APK de Android (con el SDK, el NDK 28 o posterior y `cargo install cargo-ndk`):
+
+```sh
+rustup target add aarch64-linux-android x86_64-linux-android
+ANDROID_NDK_HOME=/ruta/al/ndk android/gradlew -p android assembleDebug
+adb install -r -d android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+La CI firma el APK con la clave de alias `wallpaper-rs` de un almacén PKCS12 guardado en base64 en
+el secreto `ANDROID_KEYSTORE`, con su contraseña en `ANDROID_KEYSTORE_PASSWORD`; sin ellos usa una
+clave temporal y lo avisa. Se crea una vez con:
+
+```sh
+keytool -genkeypair -keystore wprs.keystore -storetype PKCS12 -alias wallpaper-rs \
+  -keyalg RSA -keysize 4096 -validity 36500 -dname CN=wallpaper-rs
+base64 -w0 wprs.keystore
+```
+
+Una compilación local usa ese almacén con `WPRS_KEYSTORE=/ruta/al/almacen` y
+`WPRS_KEYSTORE_PASSWORD`; si no, se firma con la clave de depuración del ordenador y antes de
+instalarla hay que quitar el APK publicado con `adb uninstall io.github.wallpaper_rs`, que borra
+también la imagen elegida. Su número de versión es 1 y el de la CI es el de cada ejecución, de
+ahí el `-d` de `adb install`.
+
 Flatpak local (compila sin red, con Rust 1.99.1 y las fuentes de Cargo descargadas antes por
 `flatpak-builder`):
 
@@ -420,7 +460,7 @@ raíz y la misma pausa.
 | Ruta | Contenido |
 |------|-----------|
 | `crates/wprs-core` | Configuración, modos de ajuste, nombres D-Bus |
-| `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland y X11 |
+| `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland, X11 y Android |
 | `crates/wprs-depth` | Mapas de profundidad: modelo bajo demanda, cálculo con ONNX Runtime y caché |
 | `crates/wprs-scene` | Modelo de las escenas: capas, valores enlazados, líneas de tiempo y efectos, sin GPU |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
@@ -429,10 +469,12 @@ raíz y la misma pausa.
 | `crates/wprs-audio` | Captura del sonido con PipeWire y su análisis en bandas para las escenas |
 | `crates/wprs-script` | Scripts de escena en JavaScript, aislados y con límites de CPU y memoria |
 | `crates/wprs-sync` | Cifrado, relojes, fusión y protocolo de la sincronización con el servidor |
+| `crates/wprs-android` | Fondo animado de Android en Rust: JNI, GPU compartida y una superficie por fondo |
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
 | `apps/wprs-app` | App de escritorio (Qt Quick y Kirigami sobre Rust con cxx-qt) |
 | `apps/wprs-server` | Servidor propio: repositorio, catálogo, subidas, moderación y sincronización |
+| `android` | App de Android: proyecto Gradle, servicio de fondo y actividad en Kotlin |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
 | `integrations/kwin-pointer` | Script de KWin que envía la posición del puntero mientras una escena o un paralaje la usa |

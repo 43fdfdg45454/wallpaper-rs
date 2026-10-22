@@ -76,7 +76,7 @@ impl Renderer {
         depth: Option<&GpuImage>,
     ) -> wgpu::BindGroup {
         let sampler = if repeat && depth.is_none() { &self.repeat } else { &self.clamp };
-        let layout = if depth.is_some() { &self.reliefs().layout } else { &self.layout };
+        let layout = if depth.is_some() { &self.reliefs().layout } else { &self.layers.layout };
         let views = std::iter::once(image).chain(depth).map(|i| wgpu::BindingResource::TextureView(&i.view));
         let resources = std::iter::once(uniform.as_entire_binding())
             .chain(views)
