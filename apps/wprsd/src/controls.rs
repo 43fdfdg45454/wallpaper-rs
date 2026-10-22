@@ -100,6 +100,7 @@ impl Daemon {
 
     pub fn set_on_battery(&self, on_battery: bool) {
         self.state().on_battery = on_battery;
+        self.compositor.set_power(on_battery);
         tracing::debug!(on_battery, "power source changed");
         self.apply_activity();
         self.changes.changed("state", Vec::new());

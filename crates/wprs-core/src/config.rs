@@ -16,6 +16,8 @@ pub struct OutputConfig {
     pub background: Option<String>,
     pub playlist: Option<String>,
     pub preset: Option<String>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub scenes: BTreeMap<String, BTreeMap<String, toml::Value>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -114,6 +116,18 @@ impl Config {
         self.outputs.values_mut().for_each(clear);
         self.outputs.retain(|_, o| *o != OutputConfig::default());
         &mut self.default
+    }
+
+    pub fn scene_values(&self, output: &str, package: &str) -> Vec<&BTreeMap<String, toml::Value>> {
+        let own = self.outputs.get(output).filter(|_| !output.is_empty()).and_then(|o| o.scenes.get(package));
+        own.into_iter().chain(self.default.scenes.get(package)).collect()
+    }
+
+    pub fn scene_section(&mut self, output: &str) -> &mut BTreeMap<String, BTreeMap<String, toml::Value>> {
+        match output {
+            "" => &mut self.default.scenes,
+            name => &mut self.outputs.entry(name.to_owned()).or_default().scenes,
+        }
     }
 
     pub fn read_providers<T: DeserializeOwned>(&self) -> impl Iterator<Item = (&str, Result<T, String>)> {

@@ -1,4 +1,5 @@
 use super::output::Output;
+use super::scene::SceneState;
 use super::slot::PlayerSlot;
 use super::state::State;
 use super::{Content, OutputStatus, lock};
@@ -18,7 +19,7 @@ impl State {
     pub(super) fn sync_players(&mut self) {
         let (outputs, exporter, now) = (&self.outputs, &*self.exporter, Instant::now());
         self.players.retain(|path, _| outputs.values().any(|o| o.uses_video(path)));
-        for path in outputs.values().flat_map(|o| o.layers().filter_map(|s| s.content.video())) {
+        for path in outputs.values().flat_map(|o| o.layers().flat_map(|s| s.content.videos())) {
             if !self.players.contains_key(path) {
                 let (max_size, playing) = demand(outputs, exporter, path);
                 self.players.insert(path.clone(), PlayerSlot::new(max_size, playing, now));
@@ -51,13 +52,16 @@ impl State {
     pub(super) fn publish_status(&self) {
         let status = |name: &str, o: &Output| {
             let slot = o.shown.content.video().and_then(|p| self.players.get(p));
-            let error = slot.and_then(|s| s.error.as_ref());
+            let scene_error = o.shown.scene.as_ref().and_then(|s| s.error.as_ref());
+            let error = slot.and_then(|s| s.error.as_ref()).or(scene_error).cloned();
             let kind = match o.shown.content {
                 Content::Color => "color",
                 Content::Image(_) => "image",
                 Content::Video(_) => "video",
+                Content::Scene(_) => "scene",
             };
-            let running = slot.is_some_and(|s| s.playing && s.player.is_some());
+            let scene = o.shown.scene.as_ref().is_some_and(SceneState::playing);
+            let running = scene || slot.is_some_and(|s| s.playing && s.player.is_some());
             (
                 kind,
                 o.active && running && error.is_none() && o.watched(self.exporter.is_streaming(name)),
@@ -68,13 +72,13 @@ impl State {
         let unchanged = published.len() == self.outputs.len()
             && self.outputs.iter().all(|(name, o)| {
                 let (kind, playing, error) = status(name, o);
-                let same = |s: &OutputStatus| (s.kind, s.playing, s.error.as_ref()) == (kind, playing, error);
+                let same = |s: &OutputStatus| (s.kind, s.playing, &s.error) == (kind, playing, &error);
                 published.get(name).is_some_and(same)
             });
         if !unchanged {
             let entry = |(name, o): (&String, &Output)| {
                 let (kind, playing, error) = status(name, o);
-                (name.clone(), OutputStatus { kind, playing, error: error.cloned() })
+                (name.clone(), OutputStatus { kind, playing, error })
             };
             let old = std::mem::replace(&mut *published, self.outputs.iter().map(entry).collect());
             let names = published.keys().chain(old.keys());

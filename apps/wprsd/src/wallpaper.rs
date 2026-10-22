@@ -1,4 +1,5 @@
-use crate::compositor::{Content, Picture, Spec, lock};
+use crate::apply::Media;
+use crate::compositor::{Content, Picture, SceneSpec, Spec, lock};
 use crate::daemon::Daemon;
 use anyhow::Context;
 use image::RgbaImage;
@@ -27,6 +28,7 @@ impl Daemon {
         };
         let (image, transition) =
             self.playlist_media(output, resolved.playlist).unwrap_or((resolved.image, None));
+        let mut shown_scene = None;
         let (content, upload) = match image.map(|image| self.media(image)) {
             None => (Content::Color, None),
             Some(Err(e)) => {
@@ -34,19 +36,27 @@ impl Daemon {
                 tracing::debug!("{e:#}");
                 (Content::Color, None)
             }
-            Some(Ok((path, true))) => (Content::Video(path), None),
-            Some(Ok((file, false))) => match self.picture(output, file, (size, resolved.fit), uploaded) {
-                Ok((picture, upload)) => (Content::Image(picture), Some(upload)),
-                Err(e) => {
-                    tracing::warn!(
-                        output,
-                        "cannot show the image ({}); showing the color instead",
-                        e.root_cause()
-                    );
-                    tracing::debug!("{e:#}");
-                    (Content::Color, None)
+            Some(Ok(Media::Video(path))) => (Content::Video(path), None),
+            Some(Ok(Media::Scene(pack))) => {
+                let values = pack.values(&self.state().config.scene_values(output, &pack.id));
+                let extra = self.scene_extra(&pack, &values);
+                shown_scene = Some(pack.clone());
+                (Content::Scene(SceneSpec { pack, values, extra }), None)
+            }
+            Some(Ok(Media::Picture(file))) => {
+                match self.picture(output, file, (size, resolved.fit), uploaded) {
+                    Ok((picture, upload)) => (Content::Image(picture), Some(upload)),
+                    Err(e) => {
+                        tracing::warn!(
+                            output,
+                            "cannot show the image ({}); showing the color instead",
+                            e.root_cause()
+                        );
+                        tracing::debug!("{e:#}");
+                        (Content::Color, None)
+                    }
                 }
-            },
+            }
         };
         let pixels = match &content {
             Content::Image(picture) => picture.pixels.clone(),
@@ -58,7 +68,7 @@ impl Daemon {
             Spec { content, fit: resolved.fit, background: resolved.background, transition },
         );
         if let Some(info) = self.state().outputs.get_mut(output) {
-            info.uploaded = upload;
+            (info.uploaded, info.scene) = (upload, shown_scene);
         }
         self.apply_activity();
         pixels
@@ -89,7 +99,7 @@ impl Daemon {
         Ok((Picture { file, modified, pixels, edit, place }, upload))
     }
 
-    fn load_image(
+    pub(crate) fn load_image(
         &self,
         path: &Path,
         modified: Option<SystemTime>,
@@ -124,10 +134,11 @@ impl Daemon {
 
     pub fn check_media(&self, path: &Path) -> anyhow::Result<Option<Arc<RgbaImage>>> {
         anyhow::ensure!(path.is_file(), "{} is not a file", path.display());
-        let (file, video) = self.media(path.to_owned())?;
-        if !video {
-            return Ok(Some(self.load_image(&file, modified(&file)?, None)?));
-        }
+        let file = match self.media(path.to_owned())? {
+            Media::Picture(file) => return Ok(Some(self.load_image(&file, modified(&file)?, None)?)),
+            Media::Scene(_) => return Ok(None),
+            Media::Video(file) => file,
+        };
         let size = wprs_video::probe(&file).with_context(|| format!("cannot play {}", path.display()))?;
         tracing::debug!(path = %path.display(), ?size, "video accepted");
         Ok(None)

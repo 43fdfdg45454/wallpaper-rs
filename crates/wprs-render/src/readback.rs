@@ -35,6 +35,11 @@ impl Renderer {
         self.limits
     }
 
+    pub fn finish(&self) -> Result<(), RenderError> {
+        let wait = wgpu::PollType::Wait { submission_index: None, timeout: Some(GPU_TIMEOUT) };
+        self.device.poll(wait).map(drop).map_err(|e| RenderError::DeviceLost(e.to_string()))
+    }
+
     pub fn check_target(&self, width: u32, height: u32) -> Result<(), RenderError> {
         self.limits.check(width, height)
     }

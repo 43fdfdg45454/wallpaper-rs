@@ -1,9 +1,12 @@
+use crate::bench::SceneCommand;
 use crate::edit::Edits;
+use crate::inputs::Inputs;
 use crate::library::Lib;
 use crate::pack::Pack;
 use crate::pkg::Pkg;
 use crate::playlists::Playlist;
 use crate::profiles::{Preset, Profile};
+use crate::props::Prop;
 use crate::providers::Provider;
 use crate::remote::Remote;
 use crate::repo::Repo;
@@ -168,6 +171,10 @@ pub enum Command {
     },
     #[command(about = "Cancel a queued or running job")]
     Cancel { id: u64 },
+    #[command(subcommand, about = "Properties of the scene shown on an output")]
+    Prop(Prop),
+    #[command(subcommand, about = "Scene packages; needs no daemon")]
+    Scene(SceneCommand),
     #[command(subcommand, about = "Library folders, items, tags and thumbnails")]
     Lib(Lib),
     #[command(subcommand, about = "Placement presets of items, and global presets")]
@@ -186,6 +193,8 @@ pub enum Command {
     Remote(Remote),
     #[command(subcommand, about = "Packages of the added repositories")]
     Pkg(Pkg),
+    #[command(subcommand, about = "Audio and pointer input of scenes: grants and state")]
+    Input(Inputs),
     #[command(
         subcommand,
         about = "Edit images without changing their files; needs no daemon except for preview"

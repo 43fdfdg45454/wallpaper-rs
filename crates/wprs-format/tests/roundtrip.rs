@@ -4,17 +4,25 @@ use common::manifest;
 use std::fs;
 use std::os::unix::fs::symlink;
 use std::path::Path;
-use wprs_format::{Error, Kind, Limits, Manifest, Property, build, extract, open, sha256, sha256_file};
+use wprs_format::{
+    Control, Error, Kind, Limits, Manifest, Property, build, extract, open, sha256, sha256_file,
+};
 
 const FILES: [&str; 5] =
     ["manifest.json", "assets/effect.wgsl", "assets/textures/sky.png", "preview.webp", "scene.json"];
 
+const SCENE: &str = r#"{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32]},
+    "assets": {"sky": {"path": "assets/textures/sky.png"}},
+    "layers": [{"id": "sky", "type": "image", "image": "sky"}, {"id": "tint", "type": "solid", "color": {"prop": "tint"}}]}"#;
+
 fn source(dir: &Path) -> Manifest {
     let mut manifest = manifest(Kind::Scene);
-    manifest.properties.insert("tint".into(), Property::Color { default: "#336699".into() });
+    manifest
+        .properties
+        .insert("tint".into(), Property::new(Control::Color { default: "#336699".into(), alpha: false }));
     fs::create_dir_all(dir.join("assets/textures")).unwrap();
     fs::write(dir.join("manifest.json"), manifest.to_json().unwrap()).unwrap();
-    fs::write(dir.join("scene.json"), br#"{"layers":[]}"#).unwrap();
+    fs::write(dir.join("scene.json"), SCENE).unwrap();
     fs::write(dir.join("preview.webp"), b"RIFF\0\0\0\0WEBP").unwrap();
     fs::write(dir.join("assets/textures/sky.png"), vec![7u8; 5000]).unwrap();
     fs::write(dir.join("assets/effect.wgsl"), b"@fragment fn main() {}").unwrap();
@@ -56,6 +64,25 @@ fn build_rejects_invalid_sources() {
         matches!(build(&src, &out, &Limits::default()), Err(Error::Symlink(p)) if p == "assets/host.png")
     );
     fs::remove_file(src.join("assets/host.png")).unwrap();
+    fs::write(src.join("scene.json"), SCENE.replace("assets/textures/sky.png", "assets/gone.png")).unwrap();
+    assert!(
+        matches!(build(&src, &out, &Limits::default()), Err(Error::Missing(p)) if p == "assets/gone.png")
+    );
+    assert!(!out.exists());
+    fs::write(src.join("scene.json"), SCENE.replace("\"prop\": \"tint\"", "\"prop\": \"shade\"")).unwrap();
+    assert!(
+        matches!(build(&src, &out, &Limits::default()), Err(Error::Invalid { field, .. }) if field == "scene")
+    );
+    let mut seed = 7u64;
+    let mut noise = || {
+        seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+        char::from(b'a' + (seed >> 60) as u8)
+    };
+    let pad: String = (0..9 << 20).map(|_| noise()).collect();
+    let padded = SCENE.replace("\"layers\"", &format!("\"ext\": {{\"x_pad\": \"{pad}\"}}, \"layers\""));
+    fs::write(src.join("scene.json"), padded).unwrap();
+    let large = build(&src, &out, &Limits::default());
+    assert!(matches!(large, Err(Error::Limit { what: "scene size", .. })), "{large:?}");
     fs::remove_file(src.join("scene.json")).unwrap();
     assert!(matches!(build(&src, &out, &Limits::default()), Err(Error::Missing(p)) if p == "scene.json"));
     fs::remove_file(src.join("manifest.json")).unwrap();

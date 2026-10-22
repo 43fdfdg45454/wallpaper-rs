@@ -22,6 +22,7 @@ pub struct Renderer {
     adapter: String,
     pub(crate) limits: TargetLimits,
     pub(crate) developer: OnceLock<Developer>,
+    pub(crate) scene: OnceLock<crate::scene::Pipes>,
 }
 
 impl Renderer {
@@ -85,6 +86,7 @@ impl Renderer {
             adapter: format!("{} ({:?})", info.name, info.backend),
             limits,
             developer: OnceLock::new(),
+            scene: OnceLock::new(),
             layout,
             device,
             queue,

@@ -58,6 +58,7 @@ pub fn start(session: Session, daemon: Arc<Daemon>) -> anyhow::Result<()> {
     let frame = daemon.compositor.framer();
     session.start(move |event| match event {
         Event::Frame(output) => frame(&output),
+        Event::Pointer(output, pos, buttons) => crate::inputs::surface_pointer(&output, pos, buttons),
         event => drop(tx.send(event)),
     })?;
     let follow = move || {
@@ -73,6 +74,7 @@ impl Daemon {
         let result = match event {
             Event::Output(output, window) => {
                 let (size, screen) = (window.size(), crate::edits::screen_of(&window));
+                crate::inputs::window(&output, Some(window.clone()));
                 self.compositor.attach(&output, window);
                 {
                     let mut st = self.state();
@@ -90,6 +92,7 @@ impl Daemon {
             }
             Event::Gone(output) => {
                 covers.remove(&output);
+                crate::inputs::window(&output, None);
                 self.state().outputs.remove(&output);
                 self.compositor.remove(&output);
                 tracing::info!(output, "output removed");
@@ -100,7 +103,7 @@ impl Daemon {
                 tracing::info!("the display server closed the connection ({reason}); exiting");
                 std::process::exit(0)
             }
-            Event::Frame(_) => Ok(()),
+            Event::Frame(_) | Event::Pointer(..) => Ok(()),
         };
         result.unwrap_or_else(|e| tracing::warn!("cannot follow an output: {e:#}"))
     }

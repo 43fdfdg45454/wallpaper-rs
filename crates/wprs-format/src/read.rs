@@ -1,11 +1,13 @@
 use crate::validate::within;
-use crate::{Error, FileEntry, Limits, MANIFEST, Manifest, Result, check_path, ensure, validate};
+use crate::{Error, FileEntry, Kind, Limits, MANIFEST, Manifest, Result, check_path, ensure, validate};
 use std::fs::{self, File, FileType, OpenOptions};
 use std::io::{self, BufReader, Read, Seek, Write};
 use std::path::Path;
+use wprs_scene::Scene;
 use zip::{CompressionMethod, ZipArchive};
 
 const MAX_MANIFEST: u64 = 1 << 20;
+const MAX_SCENE: u64 = 8 << 20;
 
 #[derive(Debug)]
 pub struct Package<R> {
@@ -43,10 +45,26 @@ pub fn read<R: Read + Seek>(reader: R, limits: &Limits) -> Result<Package<R>> {
     within("manifest size", bytes.len() as u64, MAX_MANIFEST)?;
     let manifest = Manifest::from_json(&bytes)?;
     validate(&manifest, &entries, limits)?;
-    Ok(Package { manifest, entries, archive })
+    let mut package = Package { manifest, entries, archive };
+    if package.manifest.kind == Kind::Scene {
+        package.scene()?;
+    }
+    Ok(package)
 }
 
 impl<R: Read + Seek> Package<R> {
+    pub fn scene(&mut self) -> Result<Scene> {
+        let entry = self.manifest.entry.clone();
+        let size = self.entries.iter().find(|e| e.path == entry).map_or(0, |e| e.size);
+        within("scene size", size, MAX_SCENE)?;
+        let text = String::from_utf8(self.read_file(&entry)?)
+            .map_err(|_| invalid("scene.json is not UTF-8".into()))?;
+        let scene = Scene::load(&text, &self.manifest.properties).map_err(|e| invalid(e.to_string()))?;
+        let missing =
+            scene.paths().into_iter().find(|p| !self.entries.iter().any(|e| e.path == *p)).map(String::from);
+        missing.map_or(Ok(scene), |path| Err(Error::Missing(path)))
+    }
+
     pub fn read_file(&mut self, path: &str) -> Result<Vec<u8>> {
         let index =
             self.entries.iter().position(|e| e.path == path).ok_or_else(|| Error::Missing(path.into()))?;
@@ -98,4 +116,8 @@ fn file_type(path: &Path) -> Result<Option<FileType>> {
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e.into()),
     }
+}
+
+fn invalid(reason: String) -> Error {
+    Error::Invalid { field: "scene".into(), reason }
 }

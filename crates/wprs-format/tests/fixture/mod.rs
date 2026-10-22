@@ -71,6 +71,21 @@ impl Repo {
         add(&self.dir, &self.package(id, version, Some(&self.author)), Some("studio"), NOW).unwrap()
     }
 
+    pub fn add_scene(&self, id: &str, version: &str) -> Added {
+        let src = self.tmp.path().join(format!("scene-{id}-{version}"));
+        fs::create_dir_all(&src).unwrap();
+        let manifest = Manifest { kind: Kind::Scene, entry: "scene.json".into(), ..manifest(id, version) };
+        fs::write(src.join("manifest.json"), manifest.to_json().unwrap()).unwrap();
+        let scene = r##"{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32]},
+            "layers": [{"id": "fill", "type": "solid", "color": "#336699"}]}"##;
+        fs::write(src.join("scene.json"), scene).unwrap();
+        fs::write(src.join("preview.webp"), b"RIFF\0\0\0\0WEBP").unwrap();
+        sign_source(&src, &signer(&self.author)).unwrap();
+        let out = self.tmp.path().join(format!("{id}-{version}.wpak"));
+        build(&src, &out, &Limits::default()).unwrap();
+        add(&self.dir, &out, Some("studio"), NOW).unwrap()
+    }
+
     pub fn publish(&self, now: i64) -> Published {
         publish(&self.dir, &signer(&self.online), 7, now).unwrap()
     }
@@ -112,6 +127,7 @@ pub fn manifest(id: &str, version: &str) -> Manifest {
         preview: Some("preview.webp".into()),
         tags: vec!["sky".into()],
         properties: BTreeMap::new(),
+        presets: Vec::new(),
     }
 }
 

@@ -161,7 +161,7 @@ impl Daemon {
     pub fn forget_files(&self, items: &[Item]) {
         for item in items {
             self.thumbs.remove(item);
-            drop(std::fs::remove_file(self.blob(&item.path, item.mtime, item.size)));
+            self.drop_blobs(&item.path, item.mtime, item.size);
         }
     }
 

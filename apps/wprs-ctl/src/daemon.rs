@@ -1,6 +1,6 @@
 use crate::cli::{Command, Wait};
 use crate::input::path_arg;
-use crate::{library, pkg, playlists, profiles, providers, remote, show};
+use crate::{inputs, library, pkg, playlists, profiles, props, providers, remote, show};
 use anyhow::{Context, Result, bail};
 use futures_util::TryFutureExt;
 use serde_json::{Value, json};
@@ -71,6 +71,7 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Jobs { json } => show::reply(daemon.list_jobs().await?, json, show::jobs)?,
         Command::Job { id, json } => show::reply(daemon.get_job(id).await?, json, show::job)?,
         Command::Cancel { id } => daemon.cancel_job(id).await?,
+        Command::Prop(command) => props::run(client, command).await?,
         Command::Lib(command) => library::run(client, command).await?,
         Command::Preset(command) => profiles::preset(client, command).await?,
         Command::Playlist(command) => playlists::run(client, command).await?,
@@ -80,7 +81,8 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Provider(command) => providers::run(client, command).await?,
         Command::Remote(command) => remote::run(client, command).await?,
         Command::Pkg(command) => pkg::run(client, command).await?,
-        Command::Pack(_) | Command::Repo(_) | Command::Edit(_) => {
+        Command::Input(command) => inputs::run(client, command).await?,
+        Command::Pack(_) | Command::Repo(_) | Command::Edit(_) | Command::Scene(_) => {
             unreachable!("local commands never connect")
         }
     }

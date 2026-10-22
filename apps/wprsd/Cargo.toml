@@ -9,10 +9,13 @@ rust-version.workspace = true
 [dependencies]
 wprs-core.workspace = true
 wprs-render.workspace = true
+wprs-scene.workspace = true
 wprs-pipewire.workspace = true
 wprs-video.workspace = true
 wprs-wayland.workspace = true
 wprs-schedule.workspace = true
+wprs-audio.workspace = true
+wprs-script.workspace = true
 chrono = { workspace = true, features = ["clock"] }
 futures-util.workspace = true
 anyhow.workspace = true

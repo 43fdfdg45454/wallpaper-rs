@@ -12,6 +12,7 @@ wprs-client.workspace = true
 wprs-format = { workspace = true, features = ["sign"] }
 wprs-providers.workspace = true
 wprs-render.workspace = true
+wprs-scene.workspace = true
 anyhow.workspace = true
 chrono = { workspace = true, features = ["clock"] }
 clap.workspace = true

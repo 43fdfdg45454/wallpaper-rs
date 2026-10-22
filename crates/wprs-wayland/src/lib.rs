@@ -4,6 +4,7 @@ mod handlers;
 mod hyprland;
 mod monitors;
 mod pacer;
+mod pointer;
 mod scale;
 mod stacking;
 mod state;
@@ -25,6 +26,7 @@ pub enum Event {
     Gone(String),
     Frame(String),
     Covered(String, Cover, bool),
+    Pointer(String, Option<[f32; 2]>, u8),
     Lost(String),
 }
 

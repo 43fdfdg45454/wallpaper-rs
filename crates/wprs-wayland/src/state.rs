@@ -2,15 +2,18 @@ use crate::scale::{Scaling, effective};
 use crate::toplevel::Toplevel;
 use crate::window::{Display, Native, Parts, Window};
 use crate::{Event, Sink};
-use smithay_client_toolkit::compositor::CompositorState;
+use smithay_client_toolkit::compositor::{CompositorState, Region};
 use smithay_client_toolkit::output::{OutputInfo, OutputState};
 use smithay_client_toolkit::reexports::client::backend::ObjectId;
 use smithay_client_toolkit::reexports::client::globals::{Global, GlobalList};
 use smithay_client_toolkit::reexports::client::protocol::wl_output::{Transform, WlOutput};
 use smithay_client_toolkit::reexports::client::{Connection, QueueHandle};
 use smithay_client_toolkit::registry::RegistryState;
+use smithay_client_toolkit::seat::SeatState;
+use smithay_client_toolkit::seat::pointer::ThemedPointer;
 use smithay_client_toolkit::shell::WaylandSurface;
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell};
+use smithay_client_toolkit::shm::Shm;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,7 +44,11 @@ pub(crate) struct Screen {
 pub(crate) struct State {
     pub(crate) registry: RegistryState,
     pub(crate) outputs: OutputState,
-    compositor: CompositorState,
+    pub(crate) seat: SeatState,
+    pub(crate) pointer: Option<ThemedPointer>,
+    pub(crate) buttons: u8,
+    pub(crate) shm: Shm,
+    pub(crate) compositor: CompositorState,
     layers: LayerShell,
     scaling: Scaling,
     pub(crate) screens: Vec<Screen>,
@@ -61,6 +68,10 @@ impl State {
         let state = Self {
             registry: RegistryState::new(globals),
             outputs: OutputState::new(globals, qh),
+            seat: SeatState::new(globals, qh),
+            pointer: None,
+            buttons: 0,
+            shm: Shm::bind(globals, qh)?,
             compositor: CompositorState::bind(globals, qh)?,
             layers: LayerShell::bind(globals, qh)?,
             scaling: Scaling::bind(globals, qh),
@@ -89,9 +100,11 @@ impl State {
         layer.set_exclusive_zone(-1);
         layer.set_keyboard_interactivity(KeyboardInteractivity::None);
         let (viewport, fractional) = self.scaling.attach(layer.wl_surface(), qh);
+        let empty = Region::new(&self.compositor).ok();
+        layer.wl_surface().set_input_region(empty.as_ref().map(Region::wl_region));
         layer.commit();
         tracing::info!(output = name, "layer surface created");
-        let (parts, integer) = (Arc::new(Parts { layer, viewport, fractional }), info.scale_factor);
+        let (parts, integer) = (Arc::new(Parts { layer, viewport, fractional, empty }), info.scale_factor);
         let screen =
             Screen { output, name, parts, logical: None, integer, fractional: None, toplevel: false };
         self.screens.push(screen);

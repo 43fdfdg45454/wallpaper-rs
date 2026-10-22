@@ -23,6 +23,7 @@ pub struct Client {
     pub profiles: Profiles1Proxy<'static>,
     pub providers: Providers1Proxy<'static>,
     pub repos: Repos1Proxy<'static>,
+    pub inputs: Inputs1Proxy<'static>,
 }
 
 enum Event {
@@ -49,6 +50,7 @@ impl Client {
             profiles: Profiles1Proxy::new(&bus).await?,
             providers: Providers1Proxy::new(&bus).await?,
             repos: Repos1Proxy::new(&bus).await?,
+            inputs: Inputs1Proxy::new(&bus).await?,
             daemon,
             bus,
         })

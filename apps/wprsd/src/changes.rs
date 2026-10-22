@@ -10,7 +10,8 @@ use tokio::time::{Instant, sleep_until};
 use wprs_core::dbus;
 use zbus::object_server::SignalEmitter;
 
-pub const TOPICS: [&str; 7] = ["state", "library", "playlists", "profiles", "providers", "repos", "jobs"];
+pub const TOPICS: [&str; 8] =
+    ["state", "library", "playlists", "profiles", "providers", "repos", "jobs", "inputs"];
 const WINDOW: Duration = Duration::from_millis(250);
 const KEPT: usize = 256;
 const MAX_IDS: usize = 256;

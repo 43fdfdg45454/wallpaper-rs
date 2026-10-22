@@ -1,42 +1,131 @@
-mod effect;
+mod animate;
+mod content;
+mod easing;
+mod effects;
+mod eval;
+mod input;
 mod layer;
-mod perf;
-mod property;
+mod particles;
+mod props;
+mod quality;
+mod resolve;
 mod rules;
+mod runtime;
 mod timeline;
 mod validate;
+mod value;
 
-pub use effect::{EFFECTS_WGSL, Effect};
-pub use layer::{Blend, Emitter, Layer, LayerKind, Transform};
-pub use perf::{Cost, Quality};
-pub use property::{Property, PropertyKind, Value};
-pub use timeline::{Easing, Repeat, Timeline};
+pub use animate::Animate;
+pub use content::{Align, EffectUse, Gradient, Mask, MaskChannel, Shape, Spectrum, SpectrumStyle, Stroke};
+pub use easing::Ease;
+pub use effects::{
+    Cost, Descriptor, EFFECTS_WGSL, FRAME_WGSL, MaskMode, PRELUDE, ParamDef, ParamKind, PassDef, SLOTS, Use,
+    builtin, descriptor,
+};
+pub use eval::{Affine, Content, Draw, EffectDraw, Frame, Wake};
+pub use input::{AudioFrame, BANDS, LayerOverride, PointerState, ScriptOutputs, TimelineCommand};
+pub use layer::{Anchor, Blend, Kind, Layer, Transform};
+pub use particles::{Emitter, System};
+pub use props::{Choice, Control, Preset, Property, Text, Values, check_presets, effective};
+pub use quality::{Class, Quality, Tier};
+pub use runtime::{Runtime, Uses};
+pub use timeline::{Key, Loop, Timeline, local, sample};
 pub use validate::Issue;
+pub use value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2};
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use serde_json::Value as Json;
+use std::collections::{BTreeMap, BTreeSet};
+use wprs_core::Fit;
 
 pub const SCHEMA: &str = "wallpaper-rs.scene/1";
 pub const MAX_SIZE: u32 = 16_384;
-pub const MAX_LAYERS: usize = 64;
+pub const MAX_LAYERS: usize = 256;
+pub const MAX_DEPTH: usize = 8;
 pub const MAX_EFFECTS: usize = 16;
-pub const MAX_STOPS: usize = 16;
-pub const MAX_PARTICLES: u32 = 100_000;
-pub const MAX_RATE: f32 = 5_000.0;
-pub const MAX_KEYFRAMES: usize = 1_024;
-pub const MAX_TIME: f32 = 3_600.0;
+pub const MAX_SYSTEMS: usize = 8;
+pub const MAX_PARTICLES: u32 = 200_000;
+pub const MAX_TIMELINES: usize = 64;
+pub const MAX_KEYS: usize = 256;
+pub const MAX_SCRIPTS: usize = 16;
+pub const MAX_ASSETS: usize = 256;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SceneError {
     #[error("invalid scene: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("{0} is not a bindable layer field of matching type")]
-    Binding(String),
+    #[error("invalid scene: {0}")]
+    Invalid(Issue),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(transparent)]
+#[serde(try_from = "value::ColorRepr", into = "[f32; 4]")]
 pub struct Color(pub [f32; 4]);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BlendSpace {
+    #[default]
+    Linear,
+    Srgb,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Canvas {
+    pub size: [u32; 2],
+    #[serde(default)]
+    pub fit: Fit,
+    #[serde(default)]
+    pub background: Color,
+    #[serde(default)]
+    pub blend_space: BlendSpace,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Clock {
+    pub max_fps: u32,
+    pub poster_time: f32,
+    pub seed: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Asset {
+    pub path: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub linear: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub atlas: Option<[u32; 2]>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Script {
+    pub path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Scene {
+    pub schema: String,
+    pub canvas: Canvas,
+    #[serde(default)]
+    pub clock: Clock,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub assets: BTreeMap<String, Asset>,
+    #[serde(default)]
+    pub layers: Vec<Layer>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub particles: BTreeMap<String, System>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub timelines: Vec<Timeline>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scripts: Vec<Script>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub ext: BTreeMap<String, Json>,
+}
 
 impl Default for Color {
     fn default() -> Self {
@@ -44,55 +133,63 @@ impl Default for Color {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Scene {
-    pub schema: String,
-    pub size: (u32, u32),
-    #[serde(default)]
-    pub background: Color,
-    #[serde(default)]
-    pub layers: Vec<Layer>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub properties: Vec<Property>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub timelines: Vec<Timeline>,
+impl Default for Clock {
+    fn default() -> Self {
+        Clock { max_fps: 60, poster_time: 0.0, seed: 0 }
+    }
 }
 
 impl Scene {
-    pub fn new(size: (u32, u32)) -> Scene {
-        let (layers, properties, timelines) = Default::default();
-        Scene { schema: SCHEMA.into(), size, background: Color::default(), layers, properties, timelines }
+    pub fn new(size: [u32; 2]) -> Scene {
+        let canvas =
+            Canvas { size, fit: Fit::Fill, background: Color::default(), blend_space: BlendSpace::Linear };
+        let (assets, layers, particles, timelines, scripts, ext) = Default::default();
+        Scene {
+            schema: SCHEMA.into(),
+            canvas,
+            clock: Clock::default(),
+            assets,
+            layers,
+            particles,
+            timelines,
+            scripts,
+            ext,
+        }
     }
 
     pub fn from_json(text: &str) -> Result<Scene, SceneError> {
         Ok(serde_json::from_str(text)?)
     }
 
+    pub fn load(text: &str, props: &BTreeMap<String, Property>) -> Result<Scene, SceneError> {
+        let scene = Scene::from_json(text)?;
+        match scene.validate(props).into_iter().next() {
+            Some(issue) => Err(SceneError::Invalid(issue)),
+            None => Ok(scene),
+        }
+    }
+
     pub fn to_json(&self) -> Result<String, SceneError> {
         Ok(serde_json::to_string_pretty(self)?)
     }
 
-    pub fn layer(&self, id: &str) -> Option<&Layer> {
-        self.layers.iter().find(|l| l.id == id)
+    pub fn layers(&self) -> impl Iterator<Item = &Layer> {
+        let mut stack: Vec<&Layer> = self.layers.iter().rev().collect();
+        std::iter::from_fn(move || {
+            let layer = stack.pop()?;
+            if let Kind::Group { layers, .. } = &layer.kind {
+                stack.extend(layers.iter().rev());
+            }
+            Some(layer)
+        })
     }
 
-    pub fn assets(&self) -> BTreeSet<&str> {
-        let layers = self.layers.iter().flat_map(|l| {
-            let src = match &l.kind {
-                LayerKind::Image { src } | LayerKind::Video { src } => Some(src),
-                LayerKind::Particles(e) => e.texture.as_ref(),
-                _ => None,
-            };
-            src.into_iter().chain(&l.mask)
-        });
-        let is_asset = |t: &String| ["/src", "/mask", "/texture"].iter().any(|f| t.ends_with(f));
-        let bound =
-            self.properties.iter().filter(|p| p.targets.iter().any(is_asset)).flat_map(|p| match &p.kind {
-                PropertyKind::Combo { options, .. } => options.as_slice(),
-                PropertyKind::Text { value } => std::slice::from_ref(value),
-                _ => &[],
-            });
-        layers.chain(bound).map(String::as_str).filter(|s| !s.trim().is_empty()).collect()
+    pub fn layer(&self, id: &str) -> Option<&Layer> {
+        self.layers().find(|l| l.id == id)
+    }
+
+    pub fn paths(&self) -> BTreeSet<&str> {
+        let assets = self.assets.values().map(|a| a.path.as_str());
+        assets.chain(self.scripts.iter().map(|s| s.path.as_str())).collect()
     }
 }

@@ -28,6 +28,7 @@ for bin in wprsd wprs-ctl wprs-app; do
 done
 cp -r "$SRC/integrations/plasma-wallpaper" "$D/plasma-wallpaper"
 cp -r "$SRC/integrations/plasma-tray" "$D/plasma-tray"
+cp -r "$SRC/integrations/kwin-pointer" "$D/kwin-pointer"
 "$ROOT/scripts/translations.sh" build "$D"
 cp -r "$SRC/packaging/systemd" "$SRC/packaging/dbus" "$SRC/packaging/desktop" "$SRC/packaging/icons" "$D/packaging/"
 install -m755 "$SRC/packaging/install.sh" "$SRC/packaging/uninstall.sh" "$D/"

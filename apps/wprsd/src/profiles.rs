@@ -129,9 +129,13 @@ impl Daemon {
             let o = &profile.outputs[&name];
             let background = o.background.as_deref().and_then(parse_hex_color);
             let background = background.map(|[r, g, b]| format!("#{r:02x}{g:02x}{b:02x}"));
-            sections.insert(name, OutputConfig { image, playlist, fit: o.fit, background, preset });
+            sections.insert(
+                name,
+                OutputConfig { image, playlist, fit: o.fit, background, preset, ..Default::default() },
+            );
         }
         self.update_config(|c| {
+            sections.iter_mut().for_each(|(name, section)| section.scenes = c.scene_section(name).clone());
             (c.default, c.profile) = (sections.remove("").unwrap_or_default(), Some(profile.uid.clone()));
             c.outputs = sections;
             for (key, value) in &profile.options {

@@ -19,6 +19,7 @@ pub(crate) struct OutputInfo {
     pub(crate) claims: HashMap<String, Claim>,
     pub(crate) uploaded: Option<Upload>,
     pub(crate) screen: Option<wprs_core::Screen>,
+    pub(crate) scene: Option<std::sync::Arc<crate::scenes::ScenePack>>,
 }
 
 impl OutputInfo {

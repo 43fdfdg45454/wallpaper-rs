@@ -30,6 +30,10 @@ pub trait Daemon1 {
         identity: &str,
     ) -> Result<()>;
     fn preview_edit(&self, path: &str, edit_json: &str) -> Result<()>;
+    fn get_scene_properties(&self, output: &str) -> Result<String>;
+    fn set_scene_property(&self, output: &str, id: &str, value_json: &str) -> Result<()>;
+    fn apply_scene_preset(&self, output: &str, preset: &str) -> Result<()>;
+    fn reset_scene_properties(&self, output: &str) -> Result<()>;
     fn reload(&self) -> Result<()>;
     fn get_state(&self) -> Result<String>;
     fn get_schema(&self) -> Result<String>;
@@ -161,4 +165,16 @@ pub trait Repos1 {
     fn list_installed(&self) -> Result<String>;
     #[zbus(signal)]
     fn preview_ready(&self, spec: &str, path: &str) -> Result<()>;
+}
+
+#[proxy(
+    interface = "io.github.wallpaper_rs.Inputs1",
+    default_service = "io.github.wallpaper_rs.Daemon",
+    default_path = "/io/github/wallpaper_rs/Daemon"
+)]
+pub trait Inputs1 {
+    fn grant(&self, scene: &str, input: &str) -> Result<()>;
+    fn revoke(&self, scene: &str, input: &str) -> Result<()>;
+    fn get_inputs(&self) -> Result<String>;
+    fn set_pointer(&self, x: i32, y: i32) -> Result<()>;
 }

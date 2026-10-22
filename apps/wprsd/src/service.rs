@@ -101,6 +101,23 @@ impl Service {
         self.d()?.render(move |d| d.set_background(&color, &output)).await
     }
 
+    #[zbus(out_args("json"))]
+    async fn get_scene_properties(&self, output: String) -> Result<String> {
+        self.d()?.run(move |d| d.scene_properties(&output)).await
+    }
+
+    async fn set_scene_property(&self, output: String, id: String, value_json: String) -> Result<()> {
+        self.d()?.run(move |d| d.set_scene_property(&output, &id, &value_json)).await
+    }
+
+    async fn apply_scene_preset(&self, output: String, preset: String) -> Result<()> {
+        self.d()?.run(move |d| d.apply_scene_preset(&output, &preset)).await
+    }
+
+    async fn reset_scene_properties(&self, output: String) -> Result<()> {
+        self.d()?.run(move |d| d.reset_scene_properties(&output)).await
+    }
+
     async fn set_option(&self, key: String, value: String) -> Result<()> {
         self.d()?.render(move |d| d.set_option(&key, &value)).await
     }

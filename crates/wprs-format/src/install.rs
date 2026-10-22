@@ -2,7 +2,7 @@ use crate::browse::{available, listing, newer};
 use crate::client::snapshots;
 use crate::download::package;
 use crate::store::{Snapshot, locked, optional, write};
-use crate::{Error, Fetch, Kind, Listing, Reason, Release, Result, ensure, require};
+use crate::{Error, Fetch, Listing, Reason, Release, Result, ensure, require};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -41,7 +41,6 @@ pub fn install<F: Fetch>(
     let foreign = |list: &[Installed]| list.iter().any(|i| i.id == id && &i.repo_id != repo_id);
     let list = installed(data)?;
     require(!foreign(&list), "id", "is installed from another repository")?;
-    require(release.kind != Kind::Scene, "kind", "scene packages are not supported yet")?;
     ensure(root.expires.timestamp() > t, || Error::Expired(format!("root {}", root.version)))?;
     ensure(allow_stale || snap.entry.value.expires.timestamp() > t, || Error::Stale(repo_id.clone()))?;
     if let Some(reason) = snap.revoked.version(id, &release.version) {

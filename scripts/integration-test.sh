@@ -577,6 +577,135 @@ evening() { [ "$(field "s['profile']")" = "$profile" ]; }
 wait_for 10 evening || fail "the manual profile choice outlived a change of outputs: $(ctl state)"
 ctl release TEST-8 && expect "list(s['outputs'])" "[]"
 echo "manual profile choice kept across a restart"
+scene=$WORK/scene
+mkdir -p "$scene"
+python3 - "$scene/glow.wpak" "$ROOT/tests/fixtures/green-64x32.png" <<'PACKAGE'
+import json, sys, zipfile
+manifest = {"schema": "wallpaper-rs.wpak/1", "id": "org.example.glow", "version": "1.0.0", "title": "Glow",
+            "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "preview": "preview.png",
+            "properties": {"tint": {"type": "color", "label": "Tint", "default": "#0000ff"}},
+            "presets": [{"id": "warm", "values": {"tint": "#ff0000"}}]}
+scene = {"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32], "fit": "stretch"},
+         "assets": {"backdrop": {"path": "assets/backdrop.png"}},
+         "layers": [{"id": "backdrop", "type": "image", "image": "backdrop"},
+                    {"id": "tint", "type": "solid", "color": {"prop": "tint"}, "size": [32, 16]}]}
+with zipfile.ZipFile(sys.argv[1], "w") as package:
+    package.writestr("manifest.json", json.dumps(manifest))
+    package.writestr("scene.json", json.dumps(scene))
+    package.write(sys.argv[2], "preview.png")
+    package.write(sys.argv[2], "assets/backdrop.png")
+PACKAGE
+[ "$(ctl scene bench "$scene/glow.wpak" --frames 20 --size 160x90 --json | js "r['needed'], r['created_after_warmup']")" = "(1, 0)" ] ||
+  fail "scene bench: $(ctl scene bench "$scene/glow.wpak" --frames 20 --size 160x90)"
+read -r _ _ _ s11 < <(ctl stream TEST-11 160 90)
+job=$(bus Library1 Import asb 1 "$scene/glow.wpak" false | out "d[0]")
+wait_for 20 finished "$job" || fail "scene import: $(bus Daemon1 GetJob t "$job")"
+glow=$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")
+[ -s "$(bus Library1 Thumbnail su "$glow" 256 | out "d[0]")" ] || fail "no thumbnail from the scene preview"
+ctl lib apply "$glow" -o TEST-11
+expect "s['outputs']['TEST-11']['kind'], s['outputs']['TEST-11']['item']" "('scene', '$glow')"
+shown "$s11" 0 0 255
+ctl prop set tint '#ff0000' -o TEST-11
+shown "$s11" 255 0 0
+[ "$(ctl prop get tint -o TEST-11)" = '"#ff0000"' ] || fail "property value: $(ctl prop ls -o TEST-11)"
+[ "$(ctl prop ls -o TEST-11 --json | js "r['package'], list(r['properties']), r['presets'][0]['id']")" = \
+  "('org.example.glow', ['tint'], 'warm')" ] || fail "properties: $(ctl prop ls -o TEST-11 --json)"
+grep -q '^\[outputs.TEST-11.scenes."org.example.glow"\]' "$config" || fail "scene values: $(cat "$config")"
+if ctl prop set tint red -o TEST-11 2>/dev/null; then fail "an invalid color was accepted"; fi
+ctl prop reset -o TEST-11
+shown "$s11" 0 0 255
+ctl prop preset warm -o TEST-11
+shown "$s11" 255 0 0
+sleep 1
+idle=$(ticks) && sleep 2 && idle=$(($(ticks) - idle))
+[ "$idle" -lt 50 ] || fail "the daemon used $idle ticks in 2 s while a still scene was shown"
+python3 - "$scene/clip.wpak" "$ROOT/tests/fixtures/magenta-64x32.webm" "$ROOT/tests/fixtures/green-64x32.png" <<'PACKAGE'
+import json, sys, zipfile
+manifest = {"schema": "wallpaper-rs.wpak/1", "id": "org.example.clip", "version": "1.0.0", "title": "Clip",
+            "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "preview": "preview.png"}
+scene = {"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32], "fit": "stretch"},
+         "assets": {"clip": {"path": "assets/clip.webm"}},
+         "layers": [{"id": "clip", "type": "video", "video": "clip", "size": [64, 32]}]}
+with zipfile.ZipFile(sys.argv[1], "w") as package:
+    package.writestr("manifest.json", json.dumps(manifest))
+    package.writestr("scene.json", json.dumps(scene))
+    package.write(sys.argv[2], "assets/clip.webm", zipfile.ZIP_STORED)
+    package.write(sys.argv[3], "preview.png")
+PACKAGE
+job=$(bus Library1 Import asb 1 "$scene/clip.wpak" false | out "d[0]")
+wait_for 20 finished "$job" || fail "video scene import: $(bus Daemon1 GetJob t "$job")"
+clip=$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")
+ctl lib apply "$clip" -o TEST-11
+shown "$s11" 208 32 96
+ctl release TEST-11 && expect "list(s['outputs'])" "[]"
+bus Library1 Remove asb 2 "$glow" "$clip" false >/dev/null
+echo "scene checks passed"
+sea=org.example.sea
+inputs() { ctl input status --json | python3 -c "import json, sys; r = json.load(sys.stdin); print(eval(sys.argv[1]))" "$1"; }
+[ "$(inputs "r['grants'], r['capturing'], r['tracking']")" = "({}, False, False)" ] || fail "inputs start on"
+ctl input grant "$sea" audio && ctl input grant "$sea" pointer && ctl input grant "$sea" audio
+[ "$(inputs "r['grants']")" = "{'$sea': ['audio', 'pointer']}" ] || fail "grants: $(ctl input status --json)"
+[ "$(stat -c %a "$XDG_DATA_HOME/wallpaper-rs/inputs.json")" = 600 ] || fail "inputs.json is not private"
+[ "$(inputs "r['capturing'], r['tracking']")" = "(False, False)" ] || fail "a grant alone started an input"
+ctl input pointer 10 10 && ctl input pointer -10 -10
+ctl input status | grep -qx "audio capture: off" || fail "status: $(ctl input status)"
+refused "is not audio or pointer" Inputs1 Grant ss "$sea" camera
+refused "is not a scene package id" Inputs1 Grant ss "Not A Scene" audio
+refused "Signature mismatch" Inputs1 SetPointer dd 1 1
+ctl input revoke "$sea" audio
+[ "$(inputs "r['grants']")" = "{'$sea': ['pointer']}" ] || fail "revoke: $(ctl input status --json)"
+ctl input revoke "$sea" pointer && ctl input revoke "$sea" pointer
+[ "$(inputs "r['grants'], r['capturing'], r['tracking']")" = "({}, False, False)" ] || fail "inputs after revoking"
+grep -q "$sea" "$XDG_DATA_HOME/wallpaper-rs/inputs.json" && fail "a revoked grant was kept"
+echo "input permission checks passed"
+python3 - "$scene" "$ROOT/tests/fixtures/green-64x32.png" <<'PACKAGE'
+import json, sys, zipfile
+def package(name, scene, files):
+    manifest = {"schema": "wallpaper-rs.wpak/1", "id": f"org.example.{name}", "version": "1.0.0", "title": name,
+                "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "preview": "preview.png"}
+    scene = {"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32], "fit": "stretch"}, **scene}
+    with zipfile.ZipFile(f"{sys.argv[1]}/{name}.wpak", "w") as out:
+        out.writestr("manifest.json", json.dumps(manifest))
+        out.writestr("scene.json", json.dumps(scene))
+        out.write(sys.argv[2], "preview.png")
+        for path, text in files.items():
+            out.writestr(path, text)
+package("sea", {"layers": [{"id": "bars", "type": "spectrum", "size": [64, 32], "bands": 16}]}, {})
+tint = "import { scene } from 'wprs';\nexport function update() { scene.layer('tint').color = [1, 0, 0, 1]; }\n"
+package("spin", {"layers": [{"id": "tint", "type": "solid", "color": "#0000ff"}],
+                 "scripts": [{"path": "scripts/tint.js"}]}, {"scripts/tint.js": tint})
+PACKAGE
+imported() {
+  local job
+  job=$(bus Library1 Import asb 1 "$1" false | out "d[0]")
+  wait_for 20 finished "$job" || fail "import of $1: $(bus Daemon1 GetJob t "$job")"
+  reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job"
+}
+sea_uid=$(imported "$scene/sea.wpak") && spin_uid=$(imported "$scene/spin.wpak")
+analysing() { pw-dump 2>/dev/null | grep -q '"media.name": "wallpaper-rs audio analysis"'; }
+reads() { [ "$(inputs "$1")" = "$2" ]; }
+read -r _ _ _ s12 < <(ctl stream TEST-12 160 90)
+ctl lib apply "$sea_uid" -o TEST-12
+wait_for 10 reads "r['shown']['TEST-12']['audio'], r['shown']['TEST-12']['scene']" "(True, '$sea')" ||
+  fail "the audio scene was not declared: $(ctl input status --json)"
+sleep 1
+[ "$(inputs "r['capturing']")" = False ] || fail "audio was captured without permission"
+if analysing; then fail "an audio stream exists without permission"; fi
+ctl input grant "$sea" audio
+wait_for 10 reads "r['capturing']" True || fail "no audio capture with the permission: $(ctl input status --json)"
+wait_for 10 analysing || fail "no PipeWire stream for the audio analysis"
+ctl lib apply "$spin_uid" -o TEST-12
+wait_for 10 reads "r['capturing'], list(r['shown'])" "(False, [])" || fail "the capture outlived its scene"
+wait_for 10 sh -c "! pw-dump 2>/dev/null | grep -q 'wallpaper-rs audio analysis'" || fail "the audio stream was kept"
+shown "$s12" 255 0 0
+expect "s['outputs']['TEST-12']['kind'], s['outputs']['TEST-12']['error']" "('scene', None)"
+consume "$s12" && sleep 2
+idle=$(ticks) && sleep 2 && idle=$(($(ticks) - idle)) && leave
+[ "$idle" -lt 8 ] || fail "the daemon used $idle ticks in 2 s while a watched scripted scene stayed the same"
+ctl release TEST-12 && expect "list(s['outputs'])" "[]"
+ctl input revoke "$sea" audio
+bus Library1 Remove asb 2 "$sea_uid" "$spin_uid" false >/dev/null
+echo "audio and script scene checks passed"
 
 read -r _ _ _ left < <(ctl stream TEST-9 160 90)
 read -r _ _ _ right < <(ctl stream TEST-10 160 90)

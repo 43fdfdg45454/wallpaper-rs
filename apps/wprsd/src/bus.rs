@@ -107,6 +107,7 @@ impl Daemon {
             let kind = match s.kind {
                 "image" => Shown::Image,
                 "video" => Shown::Video,
+                "scene" => Shown::Scene,
                 _ => Shown::Color,
             };
             let section = st.config.outputs.get(name).filter(|o| o.image.is_some() || o.playlist.is_some());

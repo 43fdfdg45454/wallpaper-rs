@@ -9,7 +9,7 @@ system tray and the desktop integration offer a subset.
 | Bus | session |
 | Well-known name | `io.github.wallpaper_rs.Daemon` |
 | Object path | `/io/github/wallpaper_rs/Daemon` |
-| Interfaces | `io.github.wallpaper_rs.Daemon1`, `Library1`, `Playlists1`, `Profiles1`, `Providers1`, `Repos1`, all on that object |
+| Interfaces | `io.github.wallpaper_rs.Daemon1`, `Library1`, `Playlists1`, `Profiles1`, `Providers1`, `Repos1`, `Inputs1`, all on that object |
 
 The daemon is D-Bus activatable (`packaging/dbus`) and runs as the systemd user unit
 `wprsd.service`. In the Flatpak (`packaging/flatpak`) it owns the name through `--own-name`, so
@@ -135,7 +135,8 @@ Consumers should connect by serial; `serial` is `0` only if PipeWire did not pub
 
 Stream format: raw video, `BGRx` (or `BGRA`), fixed size, variable frame rate, one memfd per
 buffer mapped from offset 0. Frames are produced when the picture changes (new wallpaper,
-transition, video frame), when a consumer starts streaming, and every 10 s as a keep-alive.
+transition, video frame, a scene that animates or whose inputs changed), when a consumer starts
+streaming, and every 10 s as a keep-alive.
 While no consumer is streaming an output, its video is paused and the daemon renders only the
 final picture after each change, which a consumer receives as soon as it connects.
 
@@ -198,6 +199,33 @@ per-output fits, with or without a path. An empty `path` and an empty `fit` retu
 Sets the color shown around and behind the wallpaper of `output`, or of every output when
 `output` is empty (this also clears per-output colors). `color` is `#rrggbb`; anything else
 returns `InvalidArgs`.
+
+### `GetSceneProperties(s output) → (s json)`
+
+A `SceneProperties` document for the scene package shown on `output`, or for `output = ""` the
+one set in the `[default]` section: its user properties as declared in its manifest, their
+current values and its presets. `NotFound` when no scene package is shown there.
+
+### `SetSceneProperty(s output, s id, s value_json)`
+
+Sets one user property of the scene shown on `output` (`""` = the `[default]` section, used by
+every output without its own value) to `value_json`, a JSON value of the property's type: a
+`#rrggbb` (or `#rrggbbaa` with `alpha`) string for `color`, a number for `slider`, `true` or
+`false` for `bool`, one of the options for `combo`, a string for `text` and an absolute path or
+`null` for `file`. Numbers out of range are clamped and integers rounded; anything else that does
+not fit, an unknown `id` and a file that cannot be read as an image return `InvalidArgs`. Values
+are stored per output and per package id in the configuration file (see "Configuration file"),
+never inside the package, and apply at once without reloading the scene.
+
+### `ApplyScenePreset(s output, s preset)`
+
+Stores every value of the preset `preset` of the scene shown on `output`, as `SetSceneProperty`
+would. `NotFound` for a preset the package does not declare.
+
+### `ResetSceneProperties(s output)`
+
+Forgets the values stored for the scene shown on `output` (`""` = the `[default]` section), so its
+properties take their defaults or the `[default]` values again.
 
 ### `SetOption(s key, s value)`
 
@@ -440,10 +468,11 @@ playlists) and stops the playlists of the affected outputs. `fit` is a fit or `"
 current one. `preset` is `""`, a preset uid, or a preset name looked up first among the item's
 presets and then among the global ones; its `fit` and `background` are applied first, and an
 explicit `fit` wins over the preset's. `Failed` before changing anything when the item is
-missing, has an `error` (invalid and scene packages), or is a revoked package. The item's path,
+missing, has an `error` (invalid packages), or is a revoked package. The item's path,
 the effective fit and background and the preset uid (as a label) are written to the affected
-configuration sections, and the use is recorded once per affected connected output. Packages
-show their entry: it is copied once to `~/.cache/wallpaper-rs/blobs/`.
+configuration sections, and the use is recorded once per affected connected output. Image and
+video packages show their entry: it is copied once to `~/.cache/wallpaper-rs/blobs/`. Scene
+packages are rendered live (see "Scenes"); the videos they contain are copied there once.
 
 ### Signal `ThumbnailReady(s uid, u size, s path)`
 
@@ -773,8 +802,7 @@ An install from it that starts while it is being removed ends `cancelled`.
 ### `Browse(s query, u offset, u limit) → (s json)`
 
 A `BrowsePage` of the packages offered, matched without case on id, title, description, tags
-and authors, sorted by id then repository. `limit` is `0..=500`. Scene packages are listed;
-installing them returns `InvalidArgs`.
+and authors, sorted by id then repository. `limit` is `0..=500`.
 
 ### `RequestPreviews(as specs) → (a{ss} paths)`
 
@@ -789,8 +817,8 @@ and hash, re-encoded by the thumbnail worker to JPEG files of at most 1024 px in
 Installs `[repo/]id[@version]`; without a version, the newest release when it is newer than the
 installed one (this is how updates are installed), else the job finishes at once with the
 installed record. Checked before the job starts: `InvalidArgs` for a malformed spec, a package
-offered by several repositories without `repo`, a package installed from another repository, a
-scene package or an explicit version older than the installed one without `allow_downgrade`;
+offered by several repositories without `repo`, a package installed from another repository or an
+explicit version older than the installed one without `allow_downgrade`;
 `NotFound` for an unknown package or version; `Failed` for an expired root (`root expired:
 possible freeze attack`) or a revoked version; `Stale` when the repository's index expired and
 `allow_stale` is false. The first installed version is imported into the library; later
@@ -811,6 +839,52 @@ the newest installed version when a newer one is available.
 
 A preview queued by `RequestPreviews` is ready, or could not be made (`path = ""`: unknown
 package, no preview, or a failed download or check).
+
+## `io.github.wallpaper_rs.Inputs1`
+
+Scenes may follow the sound that plays and the pointer. Both inputs are off for every scene
+until the user grants them to that scene; grants are kept per scene package id in
+`~/.local/share/wallpaper-rs/inputs.json` (mode `0600`) and can be revoked at any time.
+
+An input is on only while an output shows a scene that declares it, the screen is unlocked
+(whatever `pause.when_locked` says), that output is active (not paused, and not covered while
+`pause.when_covered` holds) and the scene holds the grant; the pointer also stops while the
+output is covered. Revoking, locking, pausing or hiding the scene stops it at once.
+
+- Audio: the daemon captures the monitor of the default output device through a PipeWire
+  stream named "wallpaper-rs audio analysis" (desktop microphone indicators may show it) and
+  turns it into at most 64 spectrum bands per channel, levels and beats on the render thread.
+  Samples stay in memory only for that analysis: they are never stored, logged or sent anywhere,
+  and scenes and scripts only get the bands and levels. A scene without the grant gets silence
+  even while another output's scene is listening. The stream is destroyed when no scene needs it.
+- Pointer: on layer-shell outputs only the background of an output whose scene uses the pointer
+  accepts pointer events, showing the default cursor, so other backgrounds never take desktop
+  clicks; in Plasma the daemon loads a KWin script that reports
+  `workspace.cursorPos` with `SetPointer`, at most 60 times per second and only while the
+  pointer moves, and unloads it when no scene needs it. Keys are never read, and positions are
+  neither kept nor logged: each output only has the latest one.
+
+### `Grant(s scene, s input)`
+
+Lets the scene with package id `scene` use `input`, `audio` or `pointer`, whenever it is shown.
+`InvalidArgs` for another input or a malformed id (1 to 255 characters of `a-z`, `0-9`, `.`,
+`_`, `-`). Granting twice changes nothing.
+
+### `Revoke(s scene, s input)`
+
+Takes `input` back from `scene` and stops it at once if that scene was using it. Revoking an
+input that was not granted changes nothing.
+
+### `GetInputs() → (s json)`
+
+An `InputsReply`: the grants, the scenes that declare inputs on each output, whether audio is
+being captured (`capturing`) and whether the pointer is being followed (`tracking`).
+
+### `SetPointer(i x, i y)`
+
+The pointer position in logical desktop coordinates, as sent by the KWin script. It is placed
+on the output whose `SetOutputInfo` geometry contains it when that output follows the pointer, and
+ignored otherwise.
 
 ## Edits and spanning
 
@@ -889,6 +963,27 @@ the shared edge and `2 × layout.bezel_mm` apart; `[layout.monitors."<identity o
 physical size across screens of different densities. An output without `SetOutputInfo` shows
 `span` like `fill`.
 
+## Scenes
+
+A scene package (`kind: scene`) holds a `scene.json` (see `scene.md`) and the assets it names.
+The daemon renders it on the GPU for every output that shows it, with the same streams, fits of
+the scene canvas, transitions and claims as other wallpapers.
+
+- A frame is rendered only when something visible changes: a running animation or timeline, a
+  clock text when its minute (or second) changes, a video frame, a changed user property, or an
+  input the scene uses (audio levels, pointer, script outputs). A still scene renders once and
+  then only the 10 s keep-alive of the stream runs.
+- The frame rate is the lowest of `playback.max_fps`, the scene's `clock.max_fps`, the quality
+  level and the GPU class: software renderers allow 24 FPS (15 on battery), integrated GPUs 60
+  (30 on battery), dedicated GPUs 144 (60 on battery).
+- The quality level follows the GPU class and the power source: on battery or on a software
+  renderer heavy effects run at a lower resolution or not at all when the scene marks them
+  `optional`, and the scene itself renders at 0.75 or 0.5 of the output size.
+- An output that is not active (paused, covered, locked or paused on battery, see
+  `SetOption`) or whose stream has no consumer renders nothing and its scene clock stops; it
+  continues where it stopped, without catching up.
+- `GetState().outputs[x].kind` is `scene` and `playing` tells whether the scene is animating.
+
 ## Change notification
 
 `Serial` starts at the daemon's start time in microseconds since the Unix epoch and grows by one
@@ -903,6 +998,7 @@ for every `Changed` signal. Topics and their `ids`:
 | `providers` | Providers change | provider ids |
 | `repos` | Repositories or installed packages change | repository ids, or `[]` |
 | `jobs` | A job is created or finishes | job ids as decimal strings |
+| `inputs` | A grant changes, or audio capture or the pointer feed starts or stops | `[]` |
 
 Per topic, the first change emits `Changed` at once and opens a 250 ms window; changes inside the
 window are merged and emitted once when it closes. Merged `ids` are the union, or `[]` when one
@@ -914,7 +1010,7 @@ Every query reply carries the `serial` read before the query ran. A client that 
 current.
 
 `WaitChanged(serial, timeout_ms)` returns at once with `(Serial, topics changed after serial)`
-when `serial` is older than `Serial` (all seven topics when it is older than the last 256
+when `serial` is older than `Serial` (all eight topics when it is older than the last 256
 changes), and with `(Serial, all topics)` for a `serial` of a previous daemon run or one larger
 than `Serial`. When `serial` equals `Serial` it waits until a change or the timeout, then
 returns `(Serial, [])` on timeout.
@@ -988,8 +1084,12 @@ struct OutputState {
     edited: bool, screen: Option<Screen>,
 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
-enum Shown { Color, Image, Video }
+enum Shown { Color, Image, Video, Scene }
 struct OutputPlaylist { uid: Uid, name: String, position: u32, count: u32, next_at: Option<Time> }
+struct SceneProperties {
+    model: u32, serial: u64, output: String, package: String, title: String,
+    properties: BTreeMap<String, Value>, values: BTreeMap<String, Value>, presets: Vec<Value>,
+}
 
 struct Schema {
     model: u32, serial: u64, options: Vec<Field>, rules: Vec<Field>, auto: Vec<Field>,
@@ -1113,6 +1213,13 @@ struct InstalledPackage {
 struct InstalledReply { model: u32, serial: u64, packages: Vec<InstalledPackage> }
 struct Update { repo_id: String, id: String, installed: String, available: String }
 struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
+
+enum Input { Audio, Pointer }
+struct SceneInputs { scene: String, audio: bool, pointer: bool }
+struct InputsReply {
+    model: u32, serial: u64, capturing: bool, tracking: bool,
+    grants: BTreeMap<String, Vec<Input>>, shown: BTreeMap<String, SceneInputs>,
+}
 ```
 
 Bulk replies (`Search`, playlist pages, history, installed packages) carry no file paths except
@@ -1139,6 +1246,9 @@ fit = "fill"
 background = "#000000"
 playlist = "01J…"         # playlist assigned to this section
 preset = "01J…"           # label of the preset applied to this section
+
+[default.scenes."org.example.calm"]   # and [outputs.<name>.scenes."<package id>"]
+tint = "#ff8800"          # values of the user properties of a scene package
 
 [library]
 watch = true

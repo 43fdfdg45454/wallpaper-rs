@@ -26,6 +26,7 @@ fn package(dir: &Path, version: &str, tags: &[&str], pixels: &str) -> PathBuf {
         preview: None,
         tags: tags.iter().map(ToString::to_string).collect(),
         properties: BTreeMap::new(),
+        presets: Vec::new(),
     };
     let source = dir.join(format!("source-{version}"));
     fs::create_dir_all(&source).unwrap();

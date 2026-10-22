@@ -36,6 +36,8 @@ sed 's|@BINDIR@|%{_bindir}|g' packaging/desktop/io.github.wallpaper_rs.desktop >
 install -Dm644 packaging/icons/io.github.wallpaper_rs.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/io.github.wallpaper_rs.svg
 cp -r plasma-wallpaper %{buildroot}%{_datadir}/plasma/wallpapers/io.github.wallpaper_rs
 cp -r plasma-tray %{buildroot}%{_datadir}/plasma/plasmoids/io.github.wallpaper_rs.tray
+mkdir -p %{buildroot}%{_datadir}/wallpaper-rs
+cp -r kwin-pointer %{buildroot}%{_datadir}/wallpaper-rs/kwin-pointer
 
 %files
 %license LICENSE
@@ -50,3 +52,4 @@ cp -r plasma-tray %{buildroot}%{_datadir}/plasma/plasmoids/io.github.wallpaper_r
 %{_datadir}/icons/hicolor/scalable/apps/io.github.wallpaper_rs.svg
 %{_datadir}/plasma/wallpapers/io.github.wallpaper_rs
 %{_datadir}/plasma/plasmoids/io.github.wallpaper_rs.tray
+%{_datadir}/wallpaper-rs

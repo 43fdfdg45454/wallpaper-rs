@@ -27,6 +27,7 @@ pub fn manifest(kind: Kind) -> Manifest {
         preview: Some("preview.webp".into()),
         tags: vec!["nature".into()],
         properties: BTreeMap::new(),
+        presets: Vec::new(),
     }
 }
 

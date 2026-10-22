@@ -1,0 +1,19 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Id": "io.github.wallpaper_rs.pointer",
+        "Name": "wallpaper-rs pointer",
+        "Description": "Tells wallpaper-rs where the pointer is while a scene that follows it is shown",
+        "Description[es]": "Indica a wallpaper-rs dónde está el puntero mientras se muestra una escena que lo sigue",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.2.0",
+        "Website": "https://github.com/43fdfdg45454/wallpaper-rs",
+        "Authors": [
+            {
+                "Name": "wallpaper-rs contributors"
+            }
+        ]
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

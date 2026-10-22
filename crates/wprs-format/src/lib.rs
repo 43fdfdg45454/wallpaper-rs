@@ -11,7 +11,6 @@ mod install;
 #[cfg(feature = "sign")]
 mod keys;
 mod manifest;
-mod property;
 #[cfg(feature = "sign")]
 mod publish;
 mod read;
@@ -40,7 +39,6 @@ pub use install::{Installed, install, installed, remove};
 #[cfg(feature = "sign")]
 pub use keys::{Keypair, Signer, keygen, sign_source};
 pub use manifest::{Kind, Manifest, SCHEMA};
-pub use property::Property;
 #[cfg(feature = "sign")]
 pub use publish::{Published, publish};
 pub use read::{Package, extract, open, read};
@@ -48,6 +46,7 @@ pub use repo::{Author, Key, Policy, ROOT_FORMAT, Role, Roles, Root, Time, commen
 pub use settings::{Settings, settings};
 pub use sign::{fingerprint, manifest_comment, public_key, threshold, verify_blocks, verify_package};
 pub use validate::{FileEntry, Limits, MANIFEST, SIGNATURE, check_path, validate};
+pub use wprs_scene::{Control, Preset, Property, Scene};
 
 use std::path::PathBuf;
 

@@ -1,80 +1,93 @@
 {
   "schema": "wallpaper-rs.scene/1",
-  "size": [1920, 1080],
-  "background": [0.02, 0.02, 0.05, 1.0],
+  "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#0b1020", "blend_space": "linear" },
+  "clock": { "max_fps": 60, "poster_time": 3.0, "seed": 42 },
+  "assets": {
+    "sky": { "path": "assets/sky.png" },
+    "sky_dawn": { "path": "assets/sky-dawn.png" },
+    "lake": { "path": "assets/lake-mask.png", "linear": true },
+    "spark": { "path": "assets/spark.png", "atlas": [4, 4] },
+    "mono": { "path": "assets/mono.ttf" },
+    "sea": { "path": "assets/sea.webm" }
+  },
   "layers": [
     {
-      "id": "sky",
-      "name": "Sky",
-      "kind": { "type": "image", "src": "images/sky.jpg" },
+      "id": "background",
+      "type": "image",
+      "image": { "prop": "style", "map": { "night": "sky", "dawn": "sky_dawn" } },
       "effects": [
-        { "type": "color_grade", "brightness": 0.05, "contrast": 1.1, "saturation": 1.2, "hue": 0.0 },
-        { "type": "waves", "amplitude": 3.0, "frequency": 2.0, "speed": 0.2, "direction": 90.0 },
-        { "type": "vignette", "strength": 0.6, "radius": 0.9 }
+        { "effect": "waves", "mask": "lake", "params": { "amplitude": 4, "speed": 0.8 } },
+        { "effect": "blur", "enabled": { "prop": "soft" }, "params": { "radius": { "prop": "depth", "scale": 10 } } }
       ]
     },
     {
-      "id": "skyline",
-      "kind": { "type": "image", "src": "images/city.png" },
-      "transform": { "x": 960.0, "y": 760.0, "scale": 1.25, "rotation": 0.0, "origin": [0.5, 1.0] },
-      "mask": "masks/city.png",
-      "effects": [
-        { "type": "blur", "radius": 2.0 },
-        { "type": "chromatic_aberration", "amount": 1.5 },
-        { "type": "pixelate", "size": 1.0 }
-      ]
-    },
-    {
-      "id": "rain",
-      "kind": { "type": "video", "src": "videos/rain.webm" },
+      "id": "sea",
+      "type": "video",
+      "video": "sea",
       "opacity": 0.6,
       "blend": "screen",
-      "effects": [{ "type": "scroll", "speed_x": 0.0, "speed_y": 40.0 }]
+      "transform": { "position": [960, 900], "scale": [1, 0.4] }
+    },
+    { "id": "sparks", "type": "particles", "system": "sparks", "blend": "add" },
+    {
+      "id": "clock",
+      "type": "text",
+      "font": "mono",
+      "size": 96,
+      "text": { "clock": "HH:mm" },
+      "color": { "prop": "text_color" },
+      "anchor": "bottom_right",
+      "transform": { "position": [-64, -64] },
+      "visible": { "prop": "show_clock" },
+      "opacity": { "timeline": "intro", "keys": [[0, 0, "out_cubic"], [1.5, 1]] }
     },
     {
-      "id": "glow",
-      "kind": { "type": "color", "color": [0.2, 0.3, 0.9, 1.0] },
-      "opacity": 0.3,
-      "blend": "add",
-      "effects": [
-        { "type": "tint", "color": [1.0, 0.8, 0.6, 1.0], "amount": 0.5 },
-        { "type": "pulse", "amount": 0.1, "speed": 0.5 }
+      "id": "badge",
+      "type": "group",
+      "opacity": 0.8,
+      "transform": { "position": [200, 200], "rotation": { "keys": [[0, 0], [10, 360]], "loop": "repeat" } },
+      "layers": [
+        { "id": "disc", "type": "shape", "shape": { "ellipse": { "size": [120, 120] } }, "fill": "#ff8800" },
+        {
+          "id": "ring",
+          "type": "shape",
+          "shape": { "ring": { "size": [140, 140], "width": 6 } },
+          "stroke": { "color": "#ffffff", "width": 2 },
+          "mask": { "layer": "disc", "channel": "a", "invert": true }
+        }
       ]
     },
     {
-      "id": "title",
-      "kind": { "type": "text", "text": "Good evening", "font": "Sans", "size": 72.0, "color": [1.0, 1.0, 1.0, 1.0] },
-      "transform": { "x": 960.0, "y": 200.0 },
-      "effects": [{ "type": "shake", "amplitude": 0.0, "frequency": 0.0 }]
+      "id": "bars",
+      "type": "spectrum",
+      "size": [800, 120],
+      "bands": 32,
+      "color": { "prop": "text_color" },
+      "anchor": "bottom",
+      "transform": { "position": [0, -40] },
+      "opacity": { "audio": "level", "scale": 0.8, "offset": 0.2, "clamp": [0, 1], "smooth": 0.2 }
     },
     {
-      "id": "dust",
-      "kind": {
-        "type": "particles",
-        "rate": 24.0,
-        "lifetime": [3.0, 6.0],
-        "speed": [5.0, 25.0],
-        "direction": -90.0,
-        "spread": 120.0,
-        "gravity": [2.0, -4.0],
-        "size": [1.0, 3.0],
-        "gradient": [[1.0, 1.0, 1.0, 0.0], [1.0, 0.9, 0.7, 0.8], [1.0, 1.0, 1.0, 0.0]],
-        "texture": "textures/dot.png",
-        "max_particles": 300
-      },
-      "blend": "add"
+      "id": "post",
+      "type": "adjustment",
+      "effects": [
+        { "effect": "bloom", "params": { "intensity": { "audio": "bass", "scale": 0.8, "offset": 0.2 } } },
+        { "effect": "color_adjust", "params": { "saturation": 1.2 }, "optional": true }
+      ]
     }
   ],
-  "properties": [
-    { "id": "accent", "label": "Accent color", "kind": { "type": "color", "value": [1.0, 1.0, 1.0, 1.0] }, "targets": ["/layers/4/kind/color", "/layers/3/kind/color"] },
-    { "id": "dust", "label": "Dust amount", "kind": { "type": "slider", "value": 24.0, "min": 0.0, "max": 200.0, "step": 1.0 }, "targets": ["/layers/5/kind/rate"] },
-    { "id": "rain", "label": "Rain", "kind": { "type": "bool", "value": true }, "targets": ["/layers/2/visible"] },
-    { "id": "skyline", "label": "Skyline", "kind": { "type": "combo", "value": "images/city.png", "options": ["images/city.png", "images/city-night.png"] }, "targets": ["/layers/1/kind/src"] },
-    { "id": "greeting", "label": "Greeting", "kind": { "type": "text", "value": "Good evening" }, "targets": ["/layers/4/kind/text"] }
-  ],
-  "timelines": [
-    { "target": "/layers/3/opacity", "keyframes": [[0.0, 0.2], [2.0, 0.5]], "easing": "ease_in_out", "repeat": "ping_pong" },
-    { "target": "/layers/4/transform/y", "keyframes": [[0.0, 240.0], [1.5, 200.0]], "easing": "ease_out" },
-    { "target": "/layers/3/kind/color", "keyframes": [[0.0, [0.2, 0.3, 0.9, 1.0]], [5.0, [0.9, 0.3, 0.4, 1.0]], [10.0, [0.2, 0.3, 0.9, 1.0]]], "repeat": "loop" }
-  ]
+  "particles": {
+    "sparks": {
+      "capacity": 4000,
+      "seed": 7,
+      "prewarm": 2.0,
+      "emitters": [{ "shape": { "box": [[0, 1080], [1920, 1100]] }, "rate": { "prop": "density" }, "burst": { "count": 40, "on": "beat" } }],
+      "init": { "life": [2, 5], "speed": [40, 120], "angle": [250, 290], "size": [4, 12], "color": ["#ffd27a", "#ff7a3d"] },
+      "forces": [{ "gravity": [0, -20] }, { "turbulence": { "strength": 30, "scale": 0.004 } }, { "attractor": { "target": "cursor", "strength": 5000 } }, { "drag": 0.4 }],
+      "collide": [{ "bounds": "canvas", "bounce": 0.3 }],
+      "render": { "texture": "spark", "frames": "life", "size_over_life": [[0, 0], [0.1, 1], [1, 0]], "trail": { "length": 8, "width": 0.5 } }
+    }
+  },
+  "timelines": [{ "id": "intro", "duration": 1.5, "loop": "once", "autoplay": true }],
+  "scripts": [{ "path": "scripts/scene.js" }]
 }

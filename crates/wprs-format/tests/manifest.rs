@@ -1,7 +1,7 @@
 mod common;
 
 use common::manifest;
-use wprs_format::{Error, Kind, Manifest, Property, Result};
+use wprs_format::{Control, Error, Kind, Manifest, Property, Result};
 
 fn with(edit: impl FnOnce(&mut Manifest)) -> Result<()> {
     let mut manifest = manifest(Kind::Image);
@@ -19,7 +19,9 @@ fn field(result: Result<()>) -> String {
 #[test]
 fn valid_manifest_roundtrips_through_json() {
     let mut manifest = manifest(Kind::Scene);
-    manifest.properties.insert("tint".into(), Property::Color { default: "#ff8800".into() });
+    manifest
+        .properties
+        .insert("tint".into(), Property::new(Control::Color { default: "#ff8800".into(), alpha: false }));
     manifest.check().unwrap();
     assert_eq!(Manifest::from_json(manifest.to_json().unwrap().as_bytes()).unwrap(), manifest);
 }
@@ -34,9 +36,16 @@ fn parses_minimal_json_with_typed_properties() {
     assert_eq!(manifest.kind, Kind::Scene);
     assert_eq!(
         manifest.properties["speed"],
-        Property::Slider { min: 0.0, max: 2.0, step: 0.25, default: 1.0 }
+        Property::new(Control::Slider {
+            min: 0.0,
+            max: 2.0,
+            step: 0.25,
+            default: 1.0,
+            integer: false,
+            unit: None
+        })
     );
-    assert_eq!(manifest.properties["dark"], Property::Bool { default: false });
+    assert_eq!(manifest.properties["dark"], Property::new(Control::Bool { default: false }));
     manifest.check().unwrap();
 }
 

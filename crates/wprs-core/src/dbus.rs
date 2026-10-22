@@ -6,6 +6,7 @@ pub const PLAYLISTS: &str = "io.github.wallpaper_rs.Playlists1";
 pub const PROFILES: &str = "io.github.wallpaper_rs.Profiles1";
 pub const PROVIDERS: &str = "io.github.wallpaper_rs.Providers1";
 pub const REPOS: &str = "io.github.wallpaper_rs.Repos1";
+pub const INPUTS: &str = "io.github.wallpaper_rs.Inputs1";
 pub const APP_ID: &str = "io.github.wallpaper_rs";
 pub const APP_PATH: &str = "/io/github/wallpaper_rs";
 pub const DEFAULT_OUTPUT: &str = "default";

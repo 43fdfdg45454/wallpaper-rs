@@ -144,7 +144,7 @@ cancelled transfer (`io::ErrorKind::Interrupted`) stops at once without trying f
 ## Package installation
 
 1. Resolve `id[@version]` (optionally `<repo_id>/id[@version]`) against verified shards only.
-2. Refuse ids installed from another repository, scene packages, expired roots, stale
+2. Refuse ids installed from another repository, expired roots, stale
    repositories without confirmation and revoked versions. Without an explicit version nothing
    is downgraded; an explicit version older than the newest installed one needs confirmation.
 3. Download `packages/<id>/<version>.wpak` from the bases in order into a temporary file in

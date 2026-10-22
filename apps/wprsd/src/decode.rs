@@ -5,8 +5,6 @@ use std::path::Path;
 use wprs_format::{Kind as PackageKind, Package};
 use wprs_library::Meta;
 
-pub const SCENE: &str = "scene packages are not supported yet";
-
 pub struct Picture {
     pub meta: Meta,
     pub image: Option<DynamicImage>,
@@ -74,12 +72,9 @@ pub fn package(path: &Path) -> Result<Picture, Problem> {
     let entry = package.read_file(&manifest.entry);
     let entry = match manifest.kind {
         PackageKind::Scene => {
+            let [width, height] = package.scene()?.canvas.size.map(Some);
             let failure = preview.is_none().then(|| "no preview".to_owned());
-            return Ok(Picture {
-                meta: Meta { error: Some(SCENE.into()), ..Meta::default() },
-                image: preview,
-                failure,
-            });
+            return Ok(Picture { meta: Meta { width, height, ..Meta::default() }, image: preview, failure });
         }
         PackageKind::Image => Picture::of(bytes(entry?)?),
         PackageKind::Video => {

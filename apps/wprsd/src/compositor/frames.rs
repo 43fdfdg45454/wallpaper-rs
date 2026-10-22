@@ -1,4 +1,5 @@
 use super::output::{Output, Sink, smoothstep};
+use super::power::Power;
 use super::slot::PlayerSlot;
 use super::state::State;
 use crate::fatal;
@@ -11,11 +12,12 @@ use wprs_render::{RenderError, Renderer, log_allowed};
 
 const TRANSITION_FPS: u32 = 60;
 
-type Shared<'a> = (&'a Renderer, &'a Exporter, &'a HashMap<PathBuf, PlayerSlot>);
+type Shared<'a> = (&'a Renderer, &'a Exporter, &'a HashMap<PathBuf, PlayerSlot>, Power);
 
 fn interval(output: &Output, max_fps: u32) -> Duration {
     let fps = if output.fading() { TRANSITION_FPS.max(max_fps) } else { max_fps };
-    Duration::from_secs(1) / fps.max(1)
+    let scene = output.shown.scene.as_ref().filter(|_| !output.fading()).map(|s| s.interval);
+    (Duration::from_secs(1) / fps.max(1)).max(scene.unwrap_or_default())
 }
 
 fn deadline(output: &Output, open: bool, max_fps: u32, now: Instant) -> Option<Instant> {
@@ -41,16 +43,25 @@ impl State {
         let (now, max_fps) = (Instant::now(), self.settings.max_fps);
         let open = |name: &String, o: &Output| o.open(self.exporter.is_streaming(name));
         let renders = self.outputs.iter().filter_map(|(name, o)| deadline(o, open(name, o), max_fps, now));
-        let players = self.players.values().filter_map(|s| s.due);
-        renders.chain(players).chain(self.starvation()).chain(self.backdrops()).min()
+        let scenes = self.outputs.iter().filter(|(name, o)| o.active && open(name, o));
+        let scenes = scenes.filter_map(|(_, o)| o.shown.scene.as_ref()?.due);
+        renders
+            .chain(scenes)
+            .chain(self.players.values().filter_map(|s| s.due))
+            .chain(self.starvation())
+            .chain(self.backdrops())
+            .min()
     }
 
     pub(super) fn render_due(&mut self) {
         let (now, max_fps, transition) =
             (Instant::now(), self.settings.max_fps, self.settings.transition.as_secs_f32());
-        let shared = (&self.renderer, &*self.exporter, &self.players);
+        let shared = (&self.renderer, &*self.exporter, &self.players, self.power);
         for (name, output) in &mut self.outputs {
             let streaming = shared.1.is_streaming(name);
+            if output.active && output.shown.scene.as_ref().and_then(|s| s.due).is_some_and(|at| at <= now) {
+                output.dirty = true;
+            }
             if deadline(output, output.open(streaming), max_fps, now).is_none_or(|at| at > now) {
                 continue;
             }
@@ -76,7 +87,10 @@ fn draw(
     transition: f32,
     now: Instant,
 ) -> anyhow::Result<()> {
-    let (renderer, exporter, players) = shared;
+    let (renderer, exporter, players, power) = shared;
+    if let Some(scene) = output.shown.scene.as_mut() {
+        scene.render(renderer, output.size, power, players, output.active, now)?;
+    }
     let progress = output.progress(now, output.shown.transition.map_or(transition, |d| d.as_secs_f32()));
     let shown = output.shown.layer(players, if output.fade.is_some() { smoothstep(progress) } else { 1.0 });
     let from = output.fade.as_ref().map(|(from, _)| from.layer(players, 1.0));

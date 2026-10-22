@@ -1,7 +1,8 @@
 mod common;
 
 use common::manifest;
-use wprs_format::{Error, Kind, Property, Result};
+use wprs_format::{Control, Error, Kind, Property, Result};
+use wprs_scene::Choice;
 
 fn check(name: &str, property: Property) -> Result<()> {
     let mut manifest = manifest(Kind::Scene);
@@ -10,19 +11,20 @@ fn check(name: &str, property: Property) -> Result<()> {
 }
 
 fn slider(min: f64, max: f64, step: f64, default: f64) -> Property {
-    Property::Slider { min, max, step, default }
+    Property::new(Control::Slider { min, max, step, default, integer: false, unit: None })
 }
 
 fn combo(options: &[&str], default: &str) -> Property {
-    Property::Combo { options: options.iter().map(|o| o.to_string()).collect(), default: default.into() }
+    let options = options.iter().map(|o| Choice::Plain(o.to_string())).collect();
+    Property::new(Control::Combo { options, default: default.into() })
 }
 
 fn color(default: &str) -> Property {
-    Property::Color { default: default.into() }
+    Property::new(Control::Color { default: default.into(), alpha: false })
 }
 
 fn text(default: &str) -> Property {
-    Property::Text { default: default.into() }
+    Property::new(Control::Text { default: default.into(), max_len: None, multiline: false })
 }
 
 #[test]
@@ -32,7 +34,7 @@ fn valid_defaults_pass() {
         slider(0.0, 1.0, 0.1, 0.3),
         slider(-5.0, 5.0, 1.0, -5.0),
         slider(0.0, 1e9, 0.001, 123456.789),
-        Property::Bool { default: true },
+        Property::new(Control::Bool { default: true }),
         combo(&["calm", "storm"], "storm"),
         text(""),
         text(&"é".repeat(1024)),
@@ -78,7 +80,7 @@ fn invalid_defaults_are_rejected() {
 fn property_names_must_be_identifiers() {
     for name in ["", "Bad", "two words", "1st", "dot.ted", &"n".repeat(64)] {
         assert!(
-            matches!(check(name, Property::Bool { default: true }), Err(Error::Invalid { field, .. }) if field == format!("properties.{name}")),
+            matches!(check(name, Property::new(Control::Bool { default: true })), Err(Error::Invalid { field, .. }) if field == format!("properties.{name}")),
             "{name:?}"
         );
     }

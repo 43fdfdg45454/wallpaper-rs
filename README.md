@@ -179,6 +179,8 @@ wprs-ctl provider add diario bing               # una fuente en línea
 wprs-ctl remote add 'https://example.org/repo/?fingerprint=…'
 wprs-ctl pkg install org.example.dawn --wait    # instalar un paquete de un repositorio
 wprs-ctl jobs | watch | schema                  # trabajos, cambios en vivo, claves válidas
+wprs-ctl input grant org.example.dawn audio     # dejar que una escena siga el sonido
+wprs-ctl input status                           # permisos y si se captura el sonido o el puntero
 ```
 
 Las consultas aceptan `--json` e imprimen la respuesta del daemon tal cual; sin él muestran
@@ -273,6 +275,17 @@ WPRS_DOMAIN=fondos.example.org docker compose -f compose.yaml -f deploy/compose.
 Caddy obtiene el certificado y reenvía las peticiones; el servidor solo cree `X-Forwarded-For`
 cuando llega desde la red de los contenedores.
 
+Los paquetes de escena (`docs/specs/scene.md`) se importan y se aplican como cualquier otro
+elemento de la biblioteca. El daemon los dibuja en la GPU solo cuando algo visible cambia, con
+menos fotogramas y menos calidad con batería o con render por software:
+
+```sh
+wprs-ctl prop ls -o DP-1                     # propiedades de la escena que muestra DP-1
+wprs-ctl prop set tint '#ff8800' -o DP-1     # se aplica al momento y se guarda en config.toml
+wprs-ctl prop preset calma -o DP-1 && wprs-ctl prop reset -o DP-1
+wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon
+```
+
 ## Desarrollo
 
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
@@ -316,15 +329,19 @@ raíz y la misma pausa.
 |------|-----------|
 | `crates/wprs-core` | Configuración, modos de ajuste, nombres D-Bus |
 | `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland y X11 |
+| `crates/wprs-scene` | Modelo de las escenas: capas, valores enlazados, líneas de tiempo y efectos, sin GPU |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
 | `crates/wprs-video` | Reproducción de vídeo en bucle con GStreamer |
 | `crates/wprs-wayland` | Superficies layer-shell y ventanas de escritorio X11, escala, ritmo y oclusión |
+| `crates/wprs-audio` | Captura del sonido con PipeWire y su análisis en bandas para las escenas |
+| `crates/wprs-script` | Scripts de escena en JavaScript, aislados y con límites de CPU y memoria |
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
 | `apps/wprs-app` | App de escritorio (Qt Quick y Kirigami sobre Rust con cxx-qt) |
 | `apps/wprs-server` | Servidor propio: repositorio, catálogo, subidas, moderación y sincronización |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
+| `integrations/kwin-pointer` | Script de KWin que envía la posición del puntero mientras una escena la usa |
 | `po` | Traducciones gettext de los paquetes de Plasma y de la app |
 | `packaging` | Servicio systemd, activación D-Bus, lanzador e icono, scripts de instalación, Flatpak |
 | `deploy` | Despliegue de referencia del servidor con Caddy |
@@ -353,6 +370,16 @@ raíz y la misma pausa.
 - El servicio de systemd solo puede abrir conexiones de red (IPv4 e IPv6) para los proveedores y
   repositorios que añadas tú, y sus registros no incluyen rutas, nombres de archivo, servidores
   propios ni el modelo de GPU salvo con `RUST_LOG=debug`.
+- Ninguna escena oye el sonido ni sigue el puntero sin tu permiso, que se da y se retira por
+  escena (`wprs-ctl input grant|revoke <escena> audio|pointer`). Aun con permiso, la captura del
+  sonido (un stream de PipeWire llamado «wallpaper-rs audio analysis», que puede encender el
+  indicador de micrófono) y el seguimiento del puntero solo funcionan mientras se ve una escena
+  que los usa, y se paran al pausar o bloquear la pantalla. Al taparla se para el puntero, y
+  también el sonido si está activa la pausa al tapar, como viene por defecto. Del sonido solo se
+  calculan bandas y niveles en memoria: no se guarda, no se registra y no sale del equipo. Del
+  puntero solo se guarda en memoria la última posición, y nunca se leen las teclas.
+- Los scripts de las escenas se ejecutan en un proceso aparte, sin archivos, red ni otros
+  procesos, con límites de memoria y de CPU por fotograma.
 - Los paquetes se generan sin rutas, usuarios ni nombre del equipo de quien los compila.
 - El servidor propio no guarda IP ni user agents en sus registros salvo que su administrador
   active el registro de abusos, que se borra solo; los datos sincronizados le llegan cifrados.

@@ -1,11 +1,15 @@
+mod feed;
 mod frames;
 mod output;
 mod players;
+mod power;
+mod scene;
 mod slot;
 mod state;
 mod surface;
 
 use crate::fatal;
+use crate::scenes::ScenePack;
 use image::RgbaImage;
 use state::State;
 use std::collections::BTreeMap;
@@ -16,6 +20,7 @@ use std::time::{Duration, SystemTime};
 use wprs_core::{Edit, Fit, Place};
 use wprs_pipewire::Exporter;
 use wprs_render::{RenderError, Renderer, TargetLimits};
+use wprs_scene::{AudioFrame, PointerState, ScriptOutputs, Values};
 use wprs_wayland::Window;
 
 #[derive(Clone)]
@@ -23,6 +28,21 @@ pub enum Content {
     Color,
     Image(Picture),
     Video(PathBuf),
+    Scene(SceneSpec),
+}
+
+#[derive(Clone)]
+pub struct SceneSpec {
+    pub pack: Arc<ScenePack>,
+    pub values: Values,
+    pub extra: Vec<(String, Arc<RgbaImage>)>,
+}
+
+#[derive(Debug, Clone)]
+pub enum SceneInput {
+    Audio(String, Box<AudioFrame>),
+    Pointer(String, PointerState),
+    Script(String, ScriptOutputs),
 }
 
 #[derive(Clone)]
@@ -40,6 +60,7 @@ impl Content {
             (Content::Color, Content::Color) => true,
             (Content::Image(a), Content::Image(b)) => (&a.file, a.modified) == (&b.file, b.modified),
             (Content::Video(a), Content::Video(b)) => a == b,
+            (Content::Scene(a), Content::Scene(b)) => a.same_source(b),
             _ => false,
         }
     }
@@ -49,7 +70,11 @@ impl Content {
             Content::Image(p) => Some((p.edit.clone(), p.place.clone())),
             _ => None,
         };
-        self.same_source(other) && look(self) == look(other)
+        let values = |c: &Content| match c {
+            Content::Scene(s) => Some(s.values.clone()),
+            _ => None,
+        };
+        self.same_source(other) && look(self) == look(other) && values(self) == values(other)
     }
 
     fn video(&self) -> Option<&PathBuf> {
@@ -57,6 +82,21 @@ impl Content {
             Content::Video(path) => Some(path),
             _ => None,
         }
+    }
+
+    fn videos(&self) -> Vec<&PathBuf> {
+        match self {
+            Content::Video(path) => vec![path],
+            Content::Scene(s) => s.pack.videos.iter().map(|(_, path)| path).collect(),
+            _ => Vec::new(),
+        }
+    }
+}
+
+impl SceneSpec {
+    fn same_source(&self, other: &SceneSpec) -> bool {
+        let files = |s: &SceneSpec| s.extra.iter().map(|(k, _)| k.clone()).collect::<Vec<_>>();
+        Arc::ptr_eq(&self.pack, &other.pack) && files(self) == files(other)
     }
 }
 
@@ -90,6 +130,7 @@ enum Command {
     Frame(String),
     SetActive(String, bool),
     Settings(Settings),
+    Power(bool),
     Wake,
     Quit,
 }
@@ -157,6 +198,10 @@ impl Compositor {
 
     pub fn set_settings(&self, settings: Settings) {
         self.send(Command::Settings(settings))
+    }
+
+    pub fn set_power(&self, on_battery: bool) {
+        self.send(Command::Power(on_battery))
     }
 
     pub fn status(&self) -> BTreeMap<String, OutputStatus> {

@@ -1,3 +1,4 @@
+use super::scene::SceneState;
 use super::slot::PlayerSlot;
 use super::surface::Screen;
 use super::{Content, Spec};
@@ -14,6 +15,7 @@ pub(super) struct Shown {
     pub(super) image: Option<GpuImage>,
     pub(super) transition: Option<Duration>,
     pub(super) uv: Option<UvRect>,
+    pub(super) scene: Option<SceneState>,
 }
 
 impl Shown {
@@ -22,12 +24,13 @@ impl Shown {
     }
 
     pub(super) fn layer<'a>(&'a self, players: &'a HashMap<PathBuf, PlayerSlot>, opacity: f32) -> Layer<'a> {
-        let image = match &self.content {
-            Content::Color => None,
-            Content::Image(_) => self.image.as_ref(),
-            Content::Video(path) => players.get(path).and_then(|p| p.texture.as_ref()),
+        let (image, fit) = match &self.content {
+            Content::Color => (None, self.fit),
+            Content::Image(_) => (self.image.as_ref(), self.fit),
+            Content::Video(path) => (players.get(path).and_then(|p| p.texture.as_ref()), self.fit),
+            Content::Scene(_) => (self.scene.as_ref().and_then(SceneState::image), Fit::Stretch),
         };
-        Layer { image, fit: self.fit, background: self.background, opacity, uv: self.uv }
+        Layer { image, fit, background: self.background, opacity, uv: self.uv }
     }
 }
 
@@ -84,11 +87,13 @@ impl Output {
     }
 
     pub(super) fn uses_video(&self, path: &PathBuf) -> bool {
-        self.layers().any(|s| s.content.video() == Some(path))
+        self.layers().any(|s| s.content.videos().contains(&path))
     }
 
     pub(super) fn animated(&self) -> bool {
-        self.fade.is_some() || self.layers().any(|s| s.content.video().is_some())
+        let moving =
+            |s: &Shown| !s.content.videos().is_empty() || s.scene.as_ref().is_some_and(|sc| sc.due.is_some());
+        self.fade.is_some() || self.layers().any(moving)
     }
 
     pub(super) fn fading(&self) -> bool {

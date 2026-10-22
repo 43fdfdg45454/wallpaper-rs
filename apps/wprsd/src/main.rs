@@ -11,6 +11,8 @@ mod error;
 mod flatpak;
 mod folders;
 mod import;
+mod inputs;
+mod inputs1;
 mod items;
 mod jobs;
 mod keyring;
@@ -33,6 +35,8 @@ mod repos;
 mod repos1;
 mod rotation;
 mod scan;
+mod sceneprops;
+mod scenes;
 mod schema;
 mod service;
 #[cfg(test)]
@@ -65,6 +69,8 @@ struct Args {
     config: Option<PathBuf>,
     #[arg(long, hide = true)]
     worker: bool,
+    #[arg(long, hide = true)]
+    script_host: bool,
     #[arg(long, value_enum, default_value = "auto", help = "How wallpapers reach the desktop")]
     backend: present::Backend,
 }
@@ -73,6 +79,9 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     if args.worker {
         return worker::run();
+    }
+    if args.script_host {
+        return Ok(wprs_script::serve()?);
     }
     skip_vulkan_device_selection_layer();
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
@@ -120,8 +129,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
     server.at(dbus::OBJECT_PATH, playlists1::Playlists(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, profiles1::Profiles(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, providers1::Providers(weak.clone())).await?;
+    server.at(dbus::OBJECT_PATH, inputs1::Inputs(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, repos1::Repos(weak)).await?;
     tokio::spawn(changes::emit(connection.clone(), daemon.clone()));
+    inputs1::start(&daemon, connection.clone());
     pool::start(&daemon);
     folders::start(&daemon);
     remote::start(&daemon, connection.clone());
@@ -150,5 +161,6 @@ async fn run(args: Args) -> anyhow::Result<()> {
         _ = terminate.recv() => {}
     }
     tracing::info!("shutting down");
+    inputs::stop(&connection).await;
     Ok(())
 }

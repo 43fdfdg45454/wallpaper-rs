@@ -1,5 +1,4 @@
 use crate::daemon::Daemon;
-use crate::decode::SCENE;
 use crate::error::{Error, Result, failed, invalid, not_found};
 use crate::jobs::now;
 use crate::store::private_dir;
@@ -39,12 +38,18 @@ fn find_preset(lib: &Library, item: &str, key: &str) -> Result<Option<(String, P
     Ok(Some((found.uid, found.value)))
 }
 
+pub enum Media {
+    Picture(PathBuf),
+    Video(PathBuf),
+    Scene(Arc<crate::scenes::ScenePack>),
+}
+
 pub fn materialize(wpak: &Path, blob: &Path) -> anyhow::Result<bool> {
     let mut package = wprs_format::open(wpak, &wprs_format::Limits::default())?;
     let video = match package.manifest.kind {
         wprs_format::Kind::Image => false,
         wprs_format::Kind::Video => true,
-        wprs_format::Kind::Scene => anyhow::bail!(SCENE),
+        wprs_format::Kind::Scene => anyhow::bail!("scene packages are not files"),
     };
     if !blob.is_file() {
         let dir = blob.parent().unwrap_or(Path::new("."));
@@ -63,17 +68,28 @@ impl Daemon {
         self.store.cache.join("blobs").join(name)
     }
 
-    pub fn media(&self, path: PathBuf) -> anyhow::Result<(PathBuf, bool)> {
+    pub fn media(&self, path: PathBuf) -> anyhow::Result<Media> {
         if Kind::detect(&path) != Some(Kind::Package) {
-            let video = wprs_video::is_video(&path);
-            return Ok((path, video));
+            return Ok(if wprs_video::is_video(&path) { Media::Video(path) } else { Media::Picture(path) });
         }
         let revoked = self.state().installed.iter().any(|i| i.path == path && i.revoked.is_some());
         anyhow::ensure!(!revoked, "the package is revoked");
+        let kind = wprs_format::open(&path, &wprs_format::Limits::default())?.manifest.kind;
+        if kind == wprs_format::Kind::Scene {
+            return self.scene_pack(&path).map(Media::Scene);
+        }
         let meta = std::fs::metadata(&path)?;
         let blob = self.blob(&path, meta.mtime(), meta.len());
-        let video = materialize(&path, &blob)?;
-        Ok((blob, video))
+        Ok(if materialize(&path, &blob)? { Media::Video(blob) } else { Media::Picture(blob) })
+    }
+
+    pub fn drop_blobs(&self, path: &Path, mtime: i64, size: u64) {
+        let blob = self.blob(path, mtime, size);
+        let name = blob.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let entries = std::fs::read_dir(self.store.cache.join("blobs")).into_iter().flatten().flatten();
+        let ours =
+            |e: &std::fs::DirEntry| e.file_name().to_string_lossy().split('.').next() == Some(name.as_str());
+        entries.filter(ours).for_each(|e| drop(std::fs::remove_file(e.path())));
     }
 
     pub fn apply(&self, uid: &str, output: &str, fit: &str, preset: &str) -> Result<()> {
@@ -121,7 +137,10 @@ impl Daemon {
         let Ok(packages) = packages else { return };
         let kept: HashSet<PathBuf> = packages.iter().map(|i| self.blob(&i.path, i.mtime, i.size)).collect();
         let blobs = std::fs::read_dir(self.store.cache.join("blobs")).into_iter().flatten().flatten();
-        blobs.filter(|e| !kept.contains(&e.path())).for_each(|e| drop(std::fs::remove_file(e.path())));
+        let base = |e: &std::fs::DirEntry| {
+            e.path().with_file_name(e.file_name().to_string_lossy().split('.').next().unwrap_or_default())
+        };
+        blobs.filter(|e| !kept.contains(&base(e))).for_each(|e| drop(std::fs::remove_file(e.path())));
         if self.store.read(|lib| lib.unanalyzed(1)).is_ok_and(|found| !found.is_empty()) {
             self.analyze_job();
         }

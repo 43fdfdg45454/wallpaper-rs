@@ -1,5 +1,5 @@
 use crate::validate::extension;
-use crate::{Error, FileEntry, Limits, MANIFEST, Manifest, Result, validate};
+use crate::{Error, FileEntry, Kind, Limits, MANIFEST, Manifest, Result, validate};
 use sha2::{Digest, Sha256};
 use std::fmt::Write as _;
 use std::fs::{self, File};
@@ -31,6 +31,12 @@ pub fn build(source: impl AsRef<Path>, out: impl AsRef<Path>, limits: &Limits) -
         io::copy(&mut File::open(source.join(&file.path))?.take(file.size), &mut zip)?;
     }
     zip.finish()?.flush()?;
+    if manifest.kind == Kind::Scene
+        && let Err(e) = crate::open(out.as_ref(), limits)
+    {
+        fs::remove_file(out.as_ref())?;
+        return Err(e);
+    }
     sha256_file(out)
 }
 

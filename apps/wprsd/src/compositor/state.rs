@@ -1,4 +1,6 @@
 use super::output::{Output, Shown, Sink};
+use super::power::Power;
+use super::scene::SceneState;
 use super::slot::PlayerSlot;
 use super::surface::Screen;
 use super::{Command, Content, OutputStatus, Picture, Settings, Spec};
@@ -22,6 +24,7 @@ pub(super) struct State {
     pub(super) status: Arc<Mutex<BTreeMap<String, OutputStatus>>>,
     pub(super) on_status: Box<dyn Fn(Vec<String>) + Send>,
     pub(super) windows: HashMap<String, Window>,
+    pub(super) power: Power,
 }
 
 impl State {
@@ -34,7 +37,9 @@ impl State {
     ) -> Self {
         let (outputs, players, windows) = (BTreeMap::new(), HashMap::new(), HashMap::new());
         let on_status = Box::new(|_| {});
-        Self { renderer, exporter, settings, outputs, players, tx, status, on_status, windows }
+        let tier = wprs_scene::Tier::detect(renderer.software(), renderer.discrete());
+        let power = Power { tier, on_battery: false, max_fps: settings.max_fps };
+        Self { renderer, exporter, settings, outputs, players, tx, status, on_status, windows, power }
     }
 
     pub(super) fn run(&mut self, rx: &mpsc::Receiver<Command>) {
@@ -65,6 +70,7 @@ impl State {
                 }
             }
             self.sync_players();
+            self.feed_inputs();
             self.take_video_frames();
             self.start_fades();
             self.check_starvation();
@@ -76,7 +82,10 @@ impl State {
     fn handle(&mut self, command: Command) -> bool {
         match command {
             Command::Configure(output, size, spec) => self.configure(output, size, spec),
-            Command::Remove(output) => drop((self.outputs.remove(&output), self.windows.remove(&output))),
+            Command::Remove(output) => {
+                super::feed::declare(&output, None);
+                drop((self.outputs.remove(&output), self.windows.remove(&output)))
+            }
             Command::Attach(output, window) => self.attach(output, window),
             Command::Frame(output) => self.frame_done(&output),
             Command::SetActive(output, active) => {
@@ -87,6 +96,10 @@ impl State {
                 }
             }
             Command::Settings(settings) => self.apply_settings(settings),
+            Command::Power(on_battery) => {
+                self.power.on_battery = on_battery;
+                self.outputs.values_mut().filter(|o| o.shown.scene.is_some()).for_each(|o| o.dirty = true);
+            }
             Command::Wake => {}
             Command::Quit => return false,
         }
@@ -96,8 +109,18 @@ impl State {
     fn configure(&mut self, name: String, size: (u32, u32), mut spec: Spec) {
         let slot = spec.content.video().and_then(|path| self.players.get_mut(path));
         slot.into_iter().for_each(|slot| slot.revive(Instant::now()));
-        let current = self.outputs.get_mut(&name).filter(|o| o.size == size);
+        let mut current = self.outputs.get_mut(&name).filter(|o| o.size == size);
         if current.as_ref().is_some_and(|o| o.shown.matches(&spec)) {
+            return;
+        }
+        if let Some(o) = current.as_deref_mut()
+            && let (Content::Scene(old), Content::Scene(new)) = (&o.shown.content, &spec.content)
+            && old.same_source(new)
+            && (o.shown.fit, o.shown.background) == (spec.fit, spec.background)
+            && let Some(scene) = o.shown.scene.as_mut()
+        {
+            o.dirty |= scene.update(new.clone());
+            o.shown.content = spec.content;
             return;
         }
         let same = |o: &&mut Output| o.shown.fit == spec.fit && o.shown.content.same_look(&spec.content);
@@ -112,7 +135,12 @@ impl State {
         .unzip();
         let (content, fit, background, transition) =
             (spec.content, spec.fit, spec.background, spec.transition);
-        let shown = Shown { content, fit, background, image, uv, transition };
+        let scene = match &content {
+            Content::Scene(s) => Some(SceneState::new(s.clone())),
+            _ => None,
+        };
+        super::feed::declare(&name, scene.as_ref());
+        let shown = Shown { content, fit, background, image, uv, transition, scene };
         let transition = !transition.unwrap_or(self.settings.transition).is_zero();
         match self.outputs.get_mut(&name) {
             Some(output) => output.show(shown, size, transition),
@@ -150,6 +178,7 @@ impl State {
 
     fn apply_settings(&mut self, settings: Settings) {
         let old = std::mem::replace(&mut self.settings, settings);
+        self.power.max_fps = settings.max_fps;
         let players: Vec<_> = self.players.values().filter_map(|s| s.player.as_ref()).collect();
         players.iter().for_each(|p| p.set_volume(settings.volume, settings.muted));
         let needs_audio =

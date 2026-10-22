@@ -12,6 +12,8 @@ members = [
     "crates/wprs-library",
     "crates/wprs-client",
     "crates/wprs-wayland",
+    "crates/wprs-audio",
+    "crates/wprs-script",
     "apps/wprsd",
     "apps/wprs-ctl",
     "apps/wprs-app",
@@ -37,6 +39,8 @@ wprs-scene = { path = "crates/wprs-scene" }
 wprs-library = { path = "crates/wprs-library" }
 wprs-client = { path = "crates/wprs-client" }
 wprs-wayland = { path = "crates/wprs-wayland" }
+wprs-audio = { path = "crates/wprs-audio" }
+wprs-script = { path = "crates/wprs-script" }
 cxx = "1"
 cxx-qt = "=0.10.0"
 cxx-qt-lib = { version = "=0.10.0", features = ["qt_gui", "qt_qml", "qt_quickcontrols"] }
@@ -76,6 +80,8 @@ naga = { version = "30", features = ["wgsl-in"] }
 pollster = "1"
 bytemuck = { version = "1", features = ["derive"] }
 half = "2"
+ab_glyph = "0.2.32"
+fontdb = "0.24"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp"] }
 pipewire = { version = "0.10", features = ["v0_3_65"] }
 clap = { version = "4", features = ["derive"] }
@@ -93,6 +99,9 @@ getrandom = "0.4"
 openidconnect = { version = "4.0.1", default-features = false }
 tokio-util = { version = "0.7", features = ["io"] }
 x11rb = { version = "0.14", default-features = false, features = ["dl-libxcb", "randr", "shape"] }
+realfft = "3.5"
+rtrb = "0.4"
+rquickjs = { version = "0.14", features = ["loader"] }
 
 [profile.dev]
 debug = "line-tables-only"
@@ -107,3 +116,9 @@ strip = true
 
 [profile.dev.package.scrypt]
 opt-level = 3
+
+[profile.dev.package.rustfft]
+opt-level = 3
+
+[profile.dev.package.rquickjs-sys]
+opt-level = 2

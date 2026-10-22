@@ -1,48 +1,112 @@
-use crate::{Color, Effect};
+use crate::Color;
+use crate::content::{Align, EffectUse, Gradient, Mask, Shape, Spectrum, Stroke, mask, shown, white};
+use crate::value::{Value, Vec2};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Layer {
     pub id: String,
-    #[serde(default)]
-    pub name: String,
-    pub kind: LayerKind,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Transform::is_default")]
     pub transform: Transform,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anchor: Option<Anchor>,
     #[serde(default = "one")]
-    pub opacity: f32,
+    pub opacity: Value<f32>,
+    #[serde(default = "shown")]
+    pub visible: Value<bool>,
     #[serde(default)]
     pub blend: Blend,
-    #[serde(default = "yes")]
-    pub visible: bool,
+    #[serde(default, deserialize_with = "mask", skip_serializing_if = "Option::is_none")]
+    pub mask: Option<Mask>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub effects: Vec<Effect>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mask: Option<String>,
+    pub effects: Vec<EffectUse>,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub parallax: f32,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub solid: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub cache: bool,
+    #[serde(flatten)]
+    pub kind: Kind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
-pub enum LayerKind {
-    Image { src: String },
-    Video { src: String },
-    Color { color: Color },
-    Text { text: String, font: String, size: f32, color: Color },
-    Particles(Emitter),
+pub enum Kind {
+    Group {
+        layers: Vec<Layer>,
+        #[serde(default)]
+        clip: bool,
+    },
+    Image {
+        image: Value<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        size: Option<[f32; 2]>,
+    },
+    Video {
+        video: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        size: Option<[f32; 2]>,
+    },
+    Text {
+        text: Value<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        font: Option<String>,
+        #[serde(default = "text_size")]
+        size: f32,
+        #[serde(default = "white")]
+        color: Value<Color>,
+        #[serde(default)]
+        align: Align,
+    },
+    Shape {
+        shape: Shape,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        fill: Option<Value<Color>>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        gradient: Option<Gradient>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        stroke: Option<Stroke>,
+    },
+    Particles {
+        system: String,
+    },
+    Spectrum(Spectrum),
+    Solid {
+        color: Value<Color>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        size: Option<[f32; 2]>,
+    },
+    Adjustment {},
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Transform {
-    pub x: f32,
-    pub y: f32,
-    pub scale: f32,
-    pub rotation: f32,
-    pub origin: [f32; 2],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub position: Option<Value<Vec2>>,
+    pub scale: Value<Vec2>,
+    pub rotation: Value<f32>,
+    pub skew: Value<Vec2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub origin: Option<[f32; 2]>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Anchor {
+    TopLeft,
+    Top,
+    TopRight,
+    Left,
+    Center,
+    Right,
+    BottomLeft,
+    Bottom,
+    BottomRight,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Blend {
     #[default]
@@ -50,58 +114,87 @@ pub enum Blend {
     Add,
     Multiply,
     Screen,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct Emitter {
-    pub rate: f32,
-    pub lifetime: [f32; 2],
-    pub speed: [f32; 2],
-    pub direction: f32,
-    pub spread: f32,
-    pub gravity: [f32; 2],
-    pub size: [f32; 2],
-    pub gradient: Vec<Color>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub texture: Option<String>,
-    pub max_particles: u32,
-}
-
-impl Layer {
-    pub fn new(id: impl Into<String>, kind: LayerKind) -> Layer {
-        let (name, transform, blend, effects, mask) = Default::default();
-        Layer { id: id.into(), name, kind, transform, opacity: 1.0, blend, visible: true, effects, mask }
-    }
+    Lighten,
+    Darken,
+    Overlay,
+    SoftLight,
+    HardLight,
+    Difference,
+    Exclusion,
+    ColorDodge,
+    ColorBurn,
+    Hue,
+    Saturation,
+    Color,
+    Luminosity,
 }
 
 impl Default for Transform {
     fn default() -> Self {
-        Transform { x: 0.0, y: 0.0, scale: 1.0, rotation: 0.0, origin: [0.5, 0.5] }
+        let (unit, zero) = (Value::Fixed(Vec2([1.0; 2])), Value::Fixed(Vec2([0.0; 2])));
+        Transform { position: None, scale: unit, rotation: Value::Fixed(0.0), skew: zero, origin: None }
     }
 }
 
-impl Default for Emitter {
-    fn default() -> Self {
-        Emitter {
-            rate: 16.0,
-            lifetime: [2.0, 4.0],
-            speed: [20.0, 60.0],
-            direction: -90.0,
-            spread: 30.0,
-            gravity: [0.0, 0.0],
-            size: [2.0, 6.0],
-            gradient: vec![Color([1.0; 4]), Color([1.0, 1.0, 1.0, 0.0])],
-            texture: None,
-            max_particles: 256,
+impl Transform {
+    fn is_default(&self) -> bool {
+        *self == Transform::default()
+    }
+}
+
+impl Anchor {
+    pub fn fraction(self) -> [f32; 2] {
+        let i = self as usize;
+        [(i % 3) as f32 / 2.0, (i / 3) as f32 / 2.0]
+    }
+}
+
+impl Blend {
+    pub fn fixed(self) -> bool {
+        matches!(self, Blend::Normal | Blend::Add | Blend::Multiply | Blend::Screen)
+    }
+
+    pub fn associative(self) -> bool {
+        matches!(self, Blend::Normal | Blend::Add)
+    }
+}
+
+impl Layer {
+    pub fn new(id: impl Into<String>, kind: Kind) -> Layer {
+        let (transform, anchor, blend, mask, effects) = Default::default();
+        let (opacity, visible) = (one(), shown());
+        Layer {
+            id: id.into(),
+            transform,
+            anchor,
+            opacity,
+            visible,
+            blend,
+            mask,
+            effects,
+            parallax: 0.0,
+            solid: false,
+            cache: false,
+            kind,
+        }
+    }
+
+    pub fn children(&self) -> &[Layer] {
+        match &self.kind {
+            Kind::Group { layers, .. } => layers,
+            _ => &[],
         }
     }
 }
 
-fn one() -> f32 {
-    1.0
+fn one() -> Value<f32> {
+    Value::Fixed(1.0)
 }
 
-fn yes() -> bool {
-    true
+fn is_zero(v: &f32) -> bool {
+    *v == 0.0
+}
+
+fn text_size() -> f32 {
+    48.0
 }

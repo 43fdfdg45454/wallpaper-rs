@@ -27,6 +27,11 @@ sed "s|@BINDIR@|$BINDIR|g" "$HERE/packaging/dbus/$APP_ID.service" >"$DBUS_DIR/$A
 sed "s|@BINDIR@|$BINDIR|g" "$HERE/packaging/desktop/$APP_ID.desktop" >"$DATA_HOME/applications/$APP_ID.desktop"
 install -Dm644 "$HERE/packaging/icons/$APP_ID.svg" "$DATA_HOME/icons/hicolor/scalable/apps/$APP_ID.svg"
 
+echo "Installing the KWin pointer script, loaded only while a scene follows the pointer"
+install -d -m700 "$DATA_HOME/wallpaper-rs"
+rm -rf "$DATA_HOME/wallpaper-rs/kwin-pointer"
+cp -r "$HERE/kwin-pointer" "$DATA_HOME/wallpaper-rs/kwin-pointer"
+
 install_package() {
   if kpackagetool6 --type "$1" --show "$2" >/dev/null 2>&1; then
     kpackagetool6 --type "$1" --upgrade "$3"

@@ -90,7 +90,6 @@ fn thumbnails(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decode::SCENE;
     use image::RgbaImage;
 
     #[test]
@@ -125,7 +124,8 @@ mod tests {
             .save(source.join("preview.png"))
             .unwrap();
         if kind == "scene" {
-            std::fs::write(source.join("scene.json"), "{}").unwrap();
+            let scene = r##"{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32]}, "layers": [{"id": "fill", "type": "solid", "color": "#ff0000"}]}"##;
+            std::fs::write(source.join("scene.json"), scene).unwrap();
         }
         let manifest = serde_json::json!({"schema": wprs_format::SCHEMA, "id": "org.example.calm", "version": "1.0.0",
             "title": "Calm", "license": "CC0-1.0", "kind": kind, "entry": entry, "preview": preview});
@@ -154,10 +154,11 @@ mod tests {
         );
         let scene = package(dir.path(), "scene", "scene.json", None);
         let response = handle(&Request { path: scene.clone(), kind: Kind::Package, thumbs: vec![] });
-        assert_eq!(
-            (response.meta.error.as_deref(), response.failure.as_deref()),
-            (Some(SCENE), Some("no preview"))
-        );
+        assert_eq!((response.meta.error.as_deref(), response.failure.as_deref()), (None, Some("no preview")));
         assert!(crate::apply::materialize(&scene, &blob.with_file_name("scene")).is_err());
+        std::fs::create_dir(dir.path().join("second")).unwrap();
+        let shown = package(&dir.path().join("second"), "scene", "scene.json", Some("preview.png"));
+        let response = handle(&Request { path: shown, kind: Kind::Package, thumbs: vec![] });
+        assert_eq!((response.meta.error, response.failure, response.meta.width), (None, None, Some(64)));
     }
 }

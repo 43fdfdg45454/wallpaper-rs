@@ -4,6 +4,7 @@ use image::RgbaImage;
 use std::sync::atomic::{AtomicU64, Ordering};
 use wprs_core::{Fit, UvRect};
 
+#[derive(Clone)]
 pub struct GpuImage {
     pub(crate) texture: wgpu::Texture,
     pub(crate) view: wgpu::TextureView,
@@ -99,10 +100,13 @@ pub(crate) fn texture(
     texture
 }
 
-pub(crate) fn gpu_image(texture: wgpu::Texture) -> GpuImage {
+pub(crate) fn next_id() -> u64 {
     static NEXT_ID: AtomicU64 = AtomicU64::new(1);
-    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-    GpuImage { view: texture.create_view(&Default::default()), texture, id }
+    NEXT_ID.fetch_add(1, Ordering::Relaxed)
+}
+
+pub(crate) fn gpu_image(texture: wgpu::Texture) -> GpuImage {
+    GpuImage { view: texture.create_view(&Default::default()), texture, id: next_id() }
 }
 
 pub(crate) fn create_image(

@@ -8,6 +8,9 @@ rust-version.workspace = true
 
 [dependencies]
 wprs-core.workspace = true
+wprs-scene.workspace = true
+ab_glyph.workspace = true
+fontdb.workspace = true
 wgpu.workspace = true
 pollster.workspace = true
 bytemuck.workspace = true

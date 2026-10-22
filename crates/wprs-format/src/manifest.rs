@@ -1,4 +1,4 @@
-use crate::{Property, Result, require};
+use crate::{Error, Preset, Property, Result, require};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -43,6 +43,8 @@ pub struct Manifest {
     pub tags: Vec<String>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub properties: BTreeMap<String, Property>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub presets: Vec<Preset>,
 }
 
 impl Manifest {
@@ -63,11 +65,18 @@ impl Manifest {
         require(valid_license(&self.license), "license", "expected an SPDX license expression")?;
         let tags = self.tags.len() <= 32 && self.tags.iter().all(|t| within(t, 32));
         require(tags, "tags", "expected at most 32 tags of 1 to 32 characters")?;
+        require(
+            self.properties.len() <= 64 && self.presets.len() <= 32,
+            "properties",
+            "too many properties or presets",
+        )?;
         self.properties.iter().try_for_each(|(name, property)| {
             let field = format!("properties.{name}");
             require(valid_name(name), &field, "expected a lowercase identifier")?;
-            property.check(&field)
-        })
+            property.check().map_err(|reason| Error::Invalid { field, reason })
+        })?;
+        wprs_scene::check_presets(&self.properties, &self.presets)
+            .map_err(|reason| Error::Invalid { field: "presets".into(), reason })
     }
 }
 

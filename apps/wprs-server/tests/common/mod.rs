@@ -140,6 +140,7 @@ pub fn package(dir: &Path, id: &str, version: &str) -> PathBuf {
         preview: Some("preview.png".into()),
         tags: vec!["sky".into()],
         properties: Default::default(),
+        presets: Vec::new(),
     };
     fs::write(src.join("manifest.json"), manifest.to_json().unwrap()).unwrap();
     image::RgbImage::from_pixel(64, 32, image::Rgb([20, 60, 120])).save(src.join("image.png")).unwrap();

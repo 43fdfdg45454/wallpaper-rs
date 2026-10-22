@@ -1,9 +1,11 @@
+mod bench;
 mod calls;
 pub mod cli;
 mod daemon;
 pub mod edit;
 mod editing;
 pub mod input;
+pub mod inputs;
 pub mod items;
 pub mod keys;
 pub mod library;
@@ -11,6 +13,7 @@ pub mod pack;
 pub mod pkg;
 pub mod playlists;
 pub mod profiles;
+pub mod props;
 pub mod providers;
 pub mod remote;
 pub mod repo;
@@ -42,6 +45,7 @@ pub fn usage(message: impl Into<String>) -> anyhow::Error {
 pub fn main() -> ExitCode {
     let result = match Cli::parse().command {
         Command::Pack(command) => pack::run(command),
+        Command::Scene(command) => bench::run(command),
         Command::Repo(command) => repo::run(command),
         Command::Edit(command) => edit::run(command),
         command => tokio::runtime::Builder::new_current_thread()

@@ -6,7 +6,7 @@ use crate::{Cover, Event, Sink};
 use fractional::wp_fractional_scale_v1::WpFractionalScaleV1;
 use raw_window_handle::{DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle};
 use raw_window_handle::{WaylandDisplayHandle, WaylandWindowHandle};
-use smithay_client_toolkit::compositor::FrameCallbackData;
+use smithay_client_toolkit::compositor::{FrameCallbackData, Region};
 use smithay_client_toolkit::reexports::client::{Connection, Proxy, QueueHandle};
 use smithay_client_toolkit::reexports::protocols::wp::{
     fractional_scale::v1::client as fractional, viewporter,
@@ -22,6 +22,7 @@ pub(crate) struct Parts {
     pub(crate) layer: LayerSurface,
     pub(crate) viewport: Option<WpViewport>,
     pub(crate) fractional: Option<WpFractionalScaleV1>,
+    pub(crate) empty: Option<Region>,
 }
 
 impl Drop for Parts {
@@ -105,6 +106,13 @@ impl Window {
             parts.layer.wl_surface().commit();
             let _ = conn.flush();
         }
+    }
+
+    pub fn track_pointer(&self, on: bool) {
+        let Native::Layer(parts, _) = &self.native else { return };
+        let region = parts.empty.as_ref().filter(|_| !on).map(Region::wl_region);
+        parts.layer.wl_surface().set_input_region(region);
+        self.commit();
     }
 
     pub fn report(&self, cover: Cover, covered: bool) {

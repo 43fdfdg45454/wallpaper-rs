@@ -1,0 +1,9 @@
+{
+  "style": { "type": "combo", "label": { "en": "Style" }, "default": "night", "options": [{ "value": "night", "label": "Night" }, "dawn"] },
+  "depth": { "type": "slider", "label": "Depth", "min": 0, "max": 1, "step": 0.05, "default": 0.4 },
+  "soft": { "type": "bool", "default": true },
+  "density": { "type": "slider", "min": 0, "max": 400, "step": 10, "integer": true, "default": 120 },
+  "text_color": { "type": "color", "default": "#ffffff" },
+  "show_clock": { "type": "bool", "default": true, "visible_if": { "soft": true } },
+  "photo": { "type": "file", "accept": ["image"] }
+}

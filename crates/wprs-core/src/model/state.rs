@@ -48,7 +48,18 @@ model! {
     }
 
     #[derive(Copy, Eq, Hash)]
-    pub enum Shown { Color, Image, Video, #[serde(other)] Unknown }
+    pub enum Shown { Color, Image, Video, Scene, #[serde(other)] Unknown }
+
+    pub struct SceneProperties {
+        pub model: u32,
+        pub serial: u64,
+        pub output: String,
+        pub package: String,
+        pub title: String,
+        pub properties: BTreeMap<String, Value>,
+        pub values: BTreeMap<String, Value>,
+        pub presets: Vec<Value>,
+    }
 
     pub struct OutputPlaylist {
         pub uid: Uid,

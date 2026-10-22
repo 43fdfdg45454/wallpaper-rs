@@ -1,8 +1,8 @@
-use crate::effect::Param;
-use crate::{Color, Layer, LayerKind, MAX_LAYERS, MAX_PARTICLES, MAX_SIZE, SCHEMA, Scene};
-use std::collections::HashSet;
-
-pub(crate) const FAR: f32 = 1e6;
+use crate::{
+    MAX_ASSETS, MAX_KEYS, MAX_LAYERS, MAX_PARTICLES, MAX_SCRIPTS, MAX_SIZE, MAX_SYSTEMS, MAX_TIMELINES,
+    Property, SCHEMA, Scene,
+};
+use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum Issue {
@@ -12,83 +12,148 @@ pub enum Issue {
     Range { path: String, value: f32, min: f32, max: f32 },
     #[error("{path} has {count} entries, at most {max} are allowed")]
     TooMany { path: String, count: usize, max: usize },
-    #[error("emitters request {0} particles in total, at most {MAX_PARTICLES} are allowed")]
-    ParticleBudget(u64),
     #[error("{0} must not be empty")]
     Empty(String),
+    #[error("{0} must match [a-z0-9_]{{1,32}}")]
+    Id(String),
     #[error("{0} repeats an id that is already in use")]
     DuplicateId(String),
-    #[error("{0} is not one of the options")]
-    Choice(String),
-    #[error("{0} keyframe times are not strictly increasing")]
+    #[error("{path} names the unknown {what} {id:?}")]
+    Unknown { path: String, what: &'static str, id: String },
+    #[error("{0} needs exactly one source: prop, keys, audio, cursor, clock or script")]
+    Source(String),
+    #[error("{0} does not fit the type of this field")]
+    Type(String),
+    #[error("{0} keyframe times are not increasing")]
     Unsorted(String),
-    #[error("{path} targets {target:?}, which is not a bindable layer field of matching type")]
-    Binding { path: String, target: String },
+    #[error("{0} is nested deeper than 8 levels")]
+    Depth(String),
+    #[error("{0} masks itself through other layers")]
+    Cycle(String),
+    #[error("{0} must be a texture: effects take texture masks, layer and shape masks go on the layer")]
+    EffectMask(String),
+    #[error("invalid color {0:?}, expected #rrggbb or #rrggbbaa")]
+    Color(String),
+}
+
+pub(crate) struct Check<'a> {
+    pub(crate) issues: Vec<Issue>,
+    pub(crate) scene: &'a Scene,
+    pub(crate) props: &'a BTreeMap<String, Property>,
 }
 
 impl Scene {
-    pub fn validate(&self) -> Vec<Issue> {
-        let mut c = Check(Vec::new());
+    pub fn validate(&self, props: &BTreeMap<String, Property>) -> Vec<Issue> {
+        let mut c = Check { issues: Vec::new(), scene: self, props };
         if self.schema != SCHEMA {
-            c.0.push(Issue::Schema(self.schema.clone()));
+            c.issues.push(Issue::Schema(self.schema.clone()));
         }
-        let (w, h, max) = (self.size.0 as f32, self.size.1 as f32, MAX_SIZE as f32);
-        c.params("/size", &[("0", w, 1.0, max), ("1", h, 1.0, max)]);
-        c.color("/background", self.background);
-        c.count("/layers", self.layers.len(), MAX_LAYERS);
-        c.ids("/layers", self.layers.iter().map(|l| &l.id));
-        c.ids("/properties", self.properties.iter().map(|p| &p.id));
-        self.layers.iter().enumerate().for_each(|(i, l)| c.layer(&format!("/layers/{i}"), l));
-        let particles = |l: &Layer| match &l.kind {
-            LayerKind::Particles(e) => u64::from(e.max_particles),
-            _ => 0,
-        };
-        let total = self.layers.iter().map(particles).sum();
-        if total > u64::from(MAX_PARTICLES) {
-            c.0.push(Issue::ParticleBudget(total));
+        let [w, h] = self.canvas.size.map(|v| v as f32);
+        c.range("/canvas/size/0", w, 1.0, MAX_SIZE as f32);
+        c.range("/canvas/size/1", h, 1.0, MAX_SIZE as f32);
+        c.color("/canvas/background", self.canvas.background);
+        c.range("/clock/max_fps", self.clock.max_fps as f32, 1.0, 240.0);
+        c.range("/clock/poster_time", self.clock.poster_time, 0.0, 86_400.0);
+        c.count("/assets", self.assets.len(), MAX_ASSETS);
+        for (id, asset) in &self.assets {
+            c.id(&format!("/assets/{id}"), id);
+            c.filled(&format!("/assets/{id}/path"), &asset.path);
         }
-        let json = serde_json::to_value(self).unwrap_or_default();
-        self.properties
-            .iter()
-            .enumerate()
-            .for_each(|(i, p)| c.property(&json, &format!("/properties/{i}"), p));
-        self.timelines.iter().enumerate().for_each(|(i, t)| c.timeline(&json, &format!("/timelines/{i}"), t));
-        c.0
+        let layers = self.layers().count();
+        c.count("/layers", layers, MAX_LAYERS);
+        if layers > MAX_LAYERS {
+            return c.issues;
+        }
+        c.ids("/layers", self.layers().map(|l| l.id.as_str()));
+        c.layers("/layers", &self.layers, 1);
+        c.masks();
+        c.count("/particles", self.particles.len(), MAX_SYSTEMS);
+        let total: u64 = self.particles.values().map(|s| u64::from(s.capacity)).sum();
+        c.range("/particles", total as f32, 0.0, MAX_PARTICLES as f32);
+        for (id, system) in &self.particles {
+            c.id(&format!("/particles/{id}"), id);
+            if system.emitters.is_empty() {
+                c.issues.push(Issue::Empty(format!("/particles/{id}/emitters")));
+            }
+        }
+        c.count("/timelines", self.timelines.len(), MAX_TIMELINES);
+        c.ids("/timelines", self.timelines.iter().map(|t| t.id.as_str()));
+        for (i, tl) in self.timelines.iter().enumerate() {
+            let p = format!("/timelines/{i}");
+            c.range(&format!("{p}/duration"), tl.duration, 1e-3, 86_400.0);
+            c.range(&format!("{p}/speed"), tl.speed, -100.0, 100.0);
+            c.range(&format!("{p}/delay"), tl.delay, 0.0, 86_400.0);
+            if let Some(trigger) = &tl.trigger {
+                c.trigger(&format!("{p}/trigger"), trigger);
+            }
+        }
+        c.count("/scripts", self.scripts.len(), MAX_SCRIPTS);
+        self.scripts.iter().enumerate().for_each(|(i, s)| c.filled(&format!("/scripts/{i}/path"), &s.path));
+        c.issues
     }
 }
 
-pub(crate) struct Check(pub(crate) Vec<Issue>);
-
-impl Check {
-    pub(crate) fn params(&mut self, base: &str, params: &[Param]) {
-        for &(key, value, min, max) in params {
-            if !(min..=max).contains(&value) {
-                self.0.push(Issue::Range { path: format!("{base}/{key}"), value, min, max });
-            }
+impl Check<'_> {
+    pub(crate) fn range(&mut self, path: &str, value: f32, min: f32, max: f32) {
+        if !(min..=max).contains(&value) {
+            self.issues.push(Issue::Range { path: path.into(), value, min, max });
         }
     }
 
-    pub(crate) fn color(&mut self, path: &str, Color([r, g, b, a]): Color) {
-        self.params(path, &[("0", r, 0.0, 1.0), ("1", g, 0.0, 1.0), ("2", b, 0.0, 1.0), ("3", a, 0.0, 1.0)]);
+    pub(crate) fn color(&mut self, path: &str, color: crate::Color) {
+        color.0.iter().enumerate().for_each(|(i, c)| self.range(&format!("{path}/{i}"), *c, 0.0, 1.0));
     }
 
     pub(crate) fn count(&mut self, path: &str, count: usize, max: usize) {
         if count > max {
-            self.0.push(Issue::TooMany { path: path.into(), count, max });
+            self.issues.push(Issue::TooMany { path: path.into(), count, max });
         }
     }
 
-    pub(crate) fn filled(&mut self, path: String, text: &str) {
+    pub(crate) fn filled(&mut self, path: &str, text: &str) {
         if text.trim().is_empty() {
-            self.0.push(Issue::Empty(path));
+            self.issues.push(Issue::Empty(path.into()));
         }
     }
 
-    pub(crate) fn ids<'a>(&mut self, base: &str, ids: impl Iterator<Item = &'a String>) {
+    pub(crate) fn id(&mut self, path: &str, id: &str) {
+        let valid = (1..=32).contains(&id.len())
+            && id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_');
+        if !valid {
+            self.issues.push(Issue::Id(path.into()));
+        }
+    }
+
+    fn ids<'b>(&mut self, base: &str, ids: impl Iterator<Item = &'b str>) {
         let mut seen = HashSet::new();
         for (i, id) in ids.enumerate() {
             let path = format!("{base}/{i}/id");
-            if seen.insert(id) { self.filled(path, id) } else { self.0.push(Issue::DuplicateId(path)) }
+            self.id(&path, id);
+            if !seen.insert(id) {
+                self.issues.push(Issue::DuplicateId(path));
+            }
+        }
+    }
+
+    pub(crate) fn known(&mut self, path: &str, what: &'static str, id: &str, exists: bool) {
+        if !exists {
+            self.issues.push(Issue::Unknown { path: path.into(), what, id: id.into() });
+        }
+    }
+
+    pub(crate) fn keys_sorted(&mut self, path: &str, times: impl Iterator<Item = f32>) {
+        let times: Vec<f32> = times.collect();
+        self.count(path, times.len(), MAX_KEYS);
+        if times.windows(2).any(|w| w[0] > w[1]) || times.iter().any(|t| !t.is_finite() || *t < 0.0) {
+            self.issues.push(Issue::Unsorted(path.into()));
+        }
+    }
+
+    fn trigger(&mut self, path: &str, trigger: &str) {
+        match trigger.split_once(':') {
+            None if matches!(trigger, "start" | "beat") => {}
+            Some(("prop", id)) => self.known(path, "property", id, self.props.contains_key(id)),
+            _ => self.known(path, "trigger", trigger, false),
         }
     }
 }

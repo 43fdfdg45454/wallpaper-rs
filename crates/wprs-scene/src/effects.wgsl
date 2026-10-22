@@ -1,80 +1,93 @@
-struct Fx {
-    a: vec4<f32>,
-    b: vec4<f32>,
-    size: vec2<f32>,
-    time: f32,
-}
-
-@group(0) @binding(0) var<uniform> fx: Fx;
-@group(0) @binding(1) var layer_texture: texture_2d<f32>;
-@group(0) @binding(2) var layer_sampler: sampler;
-
-const TAU: f32 = 6.2831853;
-
-fn tap(uv: vec2<f32>) -> vec4<f32> {
-    return textureSampleLevel(layer_texture, layer_sampler, uv, 0.0);
-}
-
-fn fx_blur(uv: vec2<f32>) -> vec4<f32> {
-    let n = i32(clamp(fx.a.x * 0.5, 1.0, 4.0));
-    let d = fx.a.x / f32(n) / fx.size;
-    var sum = vec4<f32>(0.0);
-    for (var x = -n; x <= n; x++) {
-        for (var y = -n; y <= n; y++) {
-            sum += tap(uv + vec2<f32>(f32(x), f32(y)) * d);
-        }
+fn gauss(t: texture_2d<f32>, uv: vec2<f32>, dir: vec2<f32>, radius: f32) -> vec4<f32> {
+    let r = max(radius * fx.info.w, 0.0);
+    if r < 0.5 {
+        return sample(t, uv);
     }
-    return sum / f32((2 * n + 1) * (2 * n + 1));
+    let sigma = max(r / 2.5, 0.5);
+    var sum = vec4<f32>(0.0);
+    var total = 0.0;
+    for (var i = -8; i <= 8; i++) {
+        let x = f32(i) * r / 8.0;
+        let w = exp(-x * x / (2.0 * sigma * sigma));
+        sum += sample(t, uv + dir * x * fx.texel.xy) * w;
+        total += w;
+    }
+    return sum / total;
 }
 
-fn fx_color_grade(uv: vec2<f32>) -> vec4<f32> {
-    let c = tap(uv);
-    let k = vec3<f32>(0.57735027);
-    let h = radians(fx.a.w);
-    var rgb = (c.rgb - 0.5) * fx.a.y + 0.5 + fx.a.x;
-    rgb = mix(vec3<f32>(dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722))), rgb, fx.a.z);
-    rgb = rgb * cos(h) + cross(k, rgb) * sin(h) + k * dot(k, rgb) * (1.0 - cos(h));
-    return vec4<f32>(clamp(rgb, vec3<f32>(0.0), vec3<f32>(1.0)), c.a);
+fn oklab(c: vec3<f32>) -> vec3<f32> {
+    let l = pow(max(mat3x3<f32>(0.4122214708, 0.2119034982, 0.0883024619, 0.5363325363, 0.6806995451, 0.2817188376,
+        0.0514459929, 0.1073969566, 0.6299787005) * c, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+    return mat3x3<f32>(0.2104542553, 1.9779984951, 0.0259040371, 0.7936177850, -2.4285922050, 0.7827717662,
+        -0.0040720468, 0.4505937099, -0.8086757660) * l;
 }
 
-fn fx_waves(uv: vec2<f32>) -> vec4<f32> {
-    let dir = vec2<f32>(cos(radians(fx.a.w)), sin(radians(fx.a.w)));
-    let phase = (dot(uv, dir) * fx.a.y - fx.time * fx.a.z) * TAU;
-    return tap(uv + vec2<f32>(-dir.y, dir.x) * sin(phase) * fx.a.x / fx.size);
+fn from_oklab(c: vec3<f32>) -> vec3<f32> {
+    let l = mat3x3<f32>(1.0, 1.0, 1.0, 0.3963377774, -0.1055613458, -0.0894841775, 0.2158037573, -0.0638541728,
+        -1.2914855480) * c;
+    return mat3x3<f32>(4.0767416621, -1.2684380046, -0.0041960863, -3.3077115913, 2.6097574011, -0.7034186147,
+        0.2309699292, -0.3413193965, 1.7076147010) * (l * l * l);
 }
 
-fn fx_scroll(uv: vec2<f32>) -> vec4<f32> {
-    return tap(fract(uv - fx.a.xy * fx.time / fx.size));
+@fragment
+fn fs_blur_h(in: VertexOut) -> @location(0) vec4<f32> {
+    return gauss(input_tex, in.uv, vec2<f32>(1.0, 0.0), param(0u).x);
 }
 
-fn fx_shake(uv: vec2<f32>) -> vec4<f32> {
-    let t = fx.time * fx.a.y * TAU;
-    return tap(uv + vec2<f32>(sin(t), cos(t * 1.618)) * fx.a.x / fx.size);
+@fragment
+fn fs_blur_v(in: VertexOut) -> @location(0) vec4<f32> {
+    return gauss(input_tex, in.uv, vec2<f32>(0.0, 1.0), param(0u).x);
 }
 
-fn fx_vignette(uv: vec2<f32>) -> vec4<f32> {
-    let c = tap(uv);
-    let d = distance(uv, vec2<f32>(0.5)) / max(fx.a.y, 0.01);
-    return vec4<f32>(c.rgb * (1.0 - fx.a.x * smoothstep(0.0, 1.0, d)), c.a);
+@fragment
+fn fs_color_adjust(in: VertexOut) -> @location(0) vec4<f32> {
+    let c = straight(tap(in.uv));
+    var rgb = to_linear(c.rgb) * exp2(param(0u).x);
+    rgb = 0.18 * pow(max(rgb, vec3<f32>(0.0)) / 0.18, vec3<f32>(param(1u).x));
+    rgb = mix(vec3<f32>(dot(rgb, LUMA)), rgb, param(2u).x);
+    let lab = oklab(rgb);
+    let h = radians(param(3u).x);
+    let ab = vec2<f32>(lab.y * cos(h) - lab.z * sin(h), lab.y * sin(h) + lab.z * cos(h));
+    rgb = max(from_oklab(vec3<f32>(lab.x, ab)), vec3<f32>(0.0));
+    return vec4<f32>(from_linear(rgb) * c.a, c.a);
 }
 
-fn fx_pulse(uv: vec2<f32>) -> vec4<f32> {
-    let c = tap(uv);
-    return vec4<f32>(c.rgb * (1.0 + fx.a.x * sin(fx.time * fx.a.y * TAU)), c.a);
+@fragment
+fn fs_waves(in: VertexOut) -> @location(0) vec4<f32> {
+    let angle = radians(param(3u).x);
+    let dir = vec2<f32>(cos(angle), sin(angle));
+    let phase = (dot(in.uv, dir) * param(1u).x - frame.time * param(2u).x) * TAU;
+    let shift = vec2<f32>(-dir.y, dir.x) * sin(phase) * px(param(0u).x) * mask_at(in.uv);
+    return tap(in.uv + shift);
 }
 
-fn fx_tint(uv: vec2<f32>) -> vec4<f32> {
-    let c = tap(uv);
-    return vec4<f32>(mix(c.rgb, c.rgb * fx.a.rgb, fx.b.x * fx.a.a), c.a);
+@fragment
+fn fs_bloom_bright(in: VertexOut) -> @location(0) vec4<f32> {
+    let c = tap(in.uv);
+    let l = max(c.r, max(c.g, c.b));
+    let t = param(0u).x;
+    let k = max(t * param(3u).x, 1e-4);
+    let soft = clamp(l - t + k, 0.0, 2.0 * k);
+    let gain = max(soft * soft / (4.0 * k), l - t) / max(l, 1e-4);
+    return c * max(gain, 0.0);
 }
 
-fn fx_pixelate(uv: vec2<f32>) -> vec4<f32> {
-    let cell = max(fx.a.x, 1.0) / fx.size;
-    return tap((floor(uv / cell) + 0.5) * cell);
+@fragment
+fn fs_bloom_h(in: VertexOut) -> @location(0) vec4<f32> {
+    return gauss(input_tex, in.uv, vec2<f32>(1.0, 0.0), param(2u).x);
 }
 
-fn fx_chromatic_aberration(uv: vec2<f32>) -> vec4<f32> {
-    let c = tap(uv);
-    let d = (uv - 0.5) * fx.a.x / fx.size;
-    return vec4<f32>(tap(uv + d).r, c.g, tap(uv - d).b, c.a);
+@fragment
+fn fs_bloom_v(in: VertexOut) -> @location(0) vec4<f32> {
+    return gauss(input_tex, in.uv, vec2<f32>(0.0, 1.0), param(2u).x);
+}
+
+@fragment
+fn fs_bloom_mix(in: VertexOut) -> @location(0) vec4<f32> {
+    return tap(in.uv) + sample(aux0, in.uv) * param(1u).x;
+}
+
+@fragment
+fn fs_mask_mix(in: VertexOut) -> @location(0) vec4<f32> {
+    return mix(sample(aux0, in.uv), tap(in.uv), mask_at(in.uv));
 }

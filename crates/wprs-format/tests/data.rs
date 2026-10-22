@@ -9,7 +9,8 @@ use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::Duration;
 use wprs_format::{
-    Error, Fetch, FileFetch, add_repo, install, installed, preview, publish, repos, update_repo,
+    Error, Fetch, FileFetch, Kind, Limits, add_repo, install, installed, open, preview, publish, repos,
+    update_repo,
 };
 
 struct Signal(Sender<()>);
@@ -87,19 +88,15 @@ fn downloads_finish_before_the_lock_is_taken() {
 }
 
 #[test]
-fn scenes_are_refused_and_cancellation_skips_mirrors() {
+fn scenes_install_and_cancellation_skips_mirrors() {
     let repo = Repo::with(|tmp, s| s.mirrors = vec![file_url(&tmp.join("repo"))]);
     repo.add(DAWN, "1.0.0");
-    repo.add(DUSK, "1.0.0");
-    let catalog = repo.dir.join("catalog.json");
-    let text = fs::read_to_string(&catalog).unwrap();
-    let (head, tail) = text.split_at(text.find(DUSK).unwrap());
-    fs::write(&catalog, head.to_string() + &tail.replacen("\"image\"", "\"scene\"", 1)).unwrap();
+    repo.add_scene(DUSK, "1.0.0");
     repo.publish(NOW);
     let repo_id = add_repo(&repo.data, &FileFetch, &repo.url_at(&repo.copy("origin")), NOW).unwrap().repo_id;
+    let scene = install(&repo.data, &FileFetch, DUSK, NOW, false, false).unwrap();
+    assert_eq!(open(&scene.path, &Limits::default()).unwrap().manifest.kind, Kind::Scene);
     let fetch = Halt(Counting::default(), "packages/");
-    let scene = install(&repo.data, &fetch, DUSK, NOW, false, false);
-    assert!(matches!(&scene, Err(Error::Invalid { field, .. }) if field == "kind"), "{scene:?}");
     let halted = install(&repo.data, &fetch, DAWN, NOW, false, false);
     assert!(matches!(&halted, Err(Error::Io(e)) if e.kind() == io::ErrorKind::Interrupted), "{halted:?}");
     assert_eq!(fetch.0.count("packages/"), 1);

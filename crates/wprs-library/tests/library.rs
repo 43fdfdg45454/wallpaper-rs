@@ -177,6 +177,7 @@ fn packages_are_described_by_their_manifest() {
         preview: None,
         tags: vec!["water".into()],
         properties: BTreeMap::new(),
+        presets: Vec::new(),
     };
     let package = dir.path().join("package");
     write(&package.join("manifest.json"), manifest.to_json().unwrap().as_bytes());
