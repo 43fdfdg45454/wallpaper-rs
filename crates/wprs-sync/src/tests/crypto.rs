@@ -44,26 +44,70 @@ fn ids_are_keyed_and_stable() {
 }
 
 #[test]
-fn the_key_share_opens_only_from_the_expected_device() {
+fn the_key_share_opens_only_from_the_expected_device_and_place() {
     let (sender, receiver, other) = (DeviceKey::generate(), DeviceKey::generate(), DeviceKey::generate());
     let key = SyncKey::generate();
-    let sealed = seal_key(&sender, &receiver.public(), b"aad", &key).unwrap();
-    let opened = open_key(&receiver, &sender.public(), b"aad", &sealed).unwrap();
-    assert_eq!(opened.bytes(), key.bytes());
-    assert!(open_key(&receiver, &other.public(), b"aad", &sealed).is_err());
-    assert!(open_key(&receiver, &sender.public(), b"other", &sealed).is_err());
-    assert!(open_key(&other, &sender.public(), b"aad", &sealed).is_err());
+    let bound = aad(7, "d2", 3, true, &[1; 32]);
+    let sealed = seal_key(&sender, &receiver.public(), &bound, &key).unwrap();
+    let opened = open_key(&receiver, &sender.public(), &bound, &sealed).unwrap();
+    assert_eq!(*opened.bytes(), *key.bytes());
+    assert!(open_key(&receiver, &other.public(), &bound, &sealed).is_err());
+    for changed in
+        [aad(7, "d2", 4, true, &[1; 32]), aad(7, "d2", 3, false, &[1; 32]), aad(8, "d2", 3, true, &[1; 32])]
+    {
+        assert!(open_key(&receiver, &sender.public(), &changed, &sealed).is_err());
+    }
+    assert!(open_key(&receiver, &sender.public(), &aad(7, "d2", 3, true, &[2; 32]), &sealed).is_err());
+    assert!(open_key(&other, &sender.public(), &bound, &sealed).is_err());
     let restored = DeviceKey::from_bytes(&receiver.bytes()).unwrap();
     assert_eq!(restored.public(), receiver.public());
 }
 
 #[test]
-fn both_devices_show_the_same_code() {
-    let (a, b) = (DeviceKey::generate().public(), DeviceKey::generate().public());
-    let shown = code(&a, &b);
-    assert_eq!(shown, code(&b, &a));
-    assert!(shown.len() == 14 && shown.split(' ').all(|g| g.len() == 4 && g.parse::<u32>().is_ok()));
-    assert_ne!(shown, code(&a, &DeviceKey::generate().public()));
+fn pairing_codes_change_with_every_key_and_nonce() {
+    let (j, h, m) =
+        (DeviceKey::generate().public(), DeviceKey::generate().public(), DeviceKey::generate().public());
+    let (pair, nj, nh) = ([1u8; 16], [2u8; 32], [3u8; 32]);
+    let honest = transcript(&pair, (&j, &nj), (&h, &nh));
+    let shown = code(&honest);
+    assert_eq!(shown, code(&transcript(&pair, (&j, &nj), (&h, &nh))));
+    assert!(shown.len() == 7 && shown.split(' ').all(|g| g.len() == 3 && g.parse::<u32>().is_ok()));
+    assert_ne!(honest, transcript(&pair, (&m, &nj), (&h, &nh)));
+    assert_ne!(honest, transcript(&pair, (&j, &nj), (&m, &nh)));
+    assert_ne!(honest, transcript(&pair, (&j, &nj), (&h, &[4; 32])));
+    assert_ne!(honest, transcript(&[9; 16], (&j, &nj), (&h, &nh)));
+    assert_eq!(commit(&pair, &nj), commit(&pair, &nj));
+    assert_ne!(commit(&pair, &nj), commit(&pair, &nh));
+    assert_ne!(commit(&pair, &nj), commit(&[9; 16], &nj));
+    let codes: std::collections::BTreeSet<String> =
+        (0..64u8).map(|n| code(&transcript(&pair, (&j, &nj), (&h, &[n; 32])))).collect();
+    assert!(codes.len() > 60);
+}
+
+#[test]
+fn device_messages_carry_their_version() {
+    let mail = Mail::read(&Mail::body("commit", "ab", b"xyz", 3)).unwrap();
+    assert_eq!((mail.step.as_str(), mail.pair.as_str(), mail.epoch), ("commit", "ab", 3));
+    assert_eq!(mail.bytes().unwrap(), b"xyz");
+    assert!(Mail::read(&[7; 80]).is_err());
+    assert!(Mail::read(br#"{"v": 3, "step": "key"}"#).is_err());
+}
+
+#[test]
+fn rotated_keys_keep_the_item_names_and_change_the_rest() {
+    let key = SyncKey::generate();
+    let next = key.rotated();
+    assert_eq!(next.ids().named("playlist", "x"), key.ids().named("playlist", "x"));
+    assert_ne!(next.records(2).as_slice(), key.records(2).as_slice());
+    assert_ne!((next.id(), next.check(2).to_vec()), (key.id(), key.check(2).to_vec()));
+    let copy = SyncKey::from_bytes(&next.bytes()).unwrap();
+    assert_eq!((copy.id(), copy.ids().blob(b"a")), (next.id(), next.ids().blob(b"a")));
+    let legacy = SyncKey::from_bytes(&[5; 32]).unwrap();
+    let mut derived = [0; 32];
+    hkdf::Hkdf::<sha2::Sha256>::new(None, &[5; 32]).expand(b"wprs-sync/ids/v1", &mut derived).unwrap();
+    let explicit = SyncKey::from_bytes(&[[5; 32], derived].concat()).unwrap();
+    assert_eq!(legacy.ids().named("playlist", "x"), explicit.ids().named("playlist", "x"));
+    assert!(SyncKey::from_bytes(&[5; 48]).is_err());
 }
 
 #[test]

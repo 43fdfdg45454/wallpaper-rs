@@ -43,9 +43,12 @@ struct Flow {
     at: Instant,
 }
 
+const FRESH: Duration = Duration::from_secs(3600);
+
 #[derive(Default)]
 pub struct Oidc {
     flows: Mutex<HashMap<String, Flow>>,
+    found: Mutex<Option<(CoreProviderMetadata, Instant)>>,
 }
 
 pub struct Http(reqwest::Client);
@@ -81,11 +84,29 @@ pub fn routes() -> Router {
         .route("/api/v1/auth/oidc/callback", get(callback))
 }
 
+fn stale(app: &App) -> bool {
+    let mut found = app.oidc.found.lock().unwrap_or_else(PoisonError::into_inner);
+    let stale = found.as_ref().is_none_or(|(_, at)| at.elapsed() > Duration::from_secs(60));
+    if stale {
+        *found = None;
+    }
+    stale
+}
+
 async fn client(app: &App) -> Res<Sso> {
     let cfg = app.cfg.oidc.as_ref().ok_or_else(|| Problem::missing("single sign-on"))?;
-    let issuer = IssuerUrl::new(cfg.issuer.clone()).map_err(Problem::internal)?;
-    let found = CoreProviderMetadata::discover_async(issuer, &http()?).await;
-    let metadata = found.map_err(|e| Problem::internal(format!("discovery failed: {e}")))?;
+    let cached = app.oidc.found.lock().unwrap_or_else(PoisonError::into_inner).clone();
+    let metadata = match cached.filter(|(_, at)| at.elapsed() < FRESH) {
+        Some((metadata, _)) => metadata,
+        None => {
+            let issuer = IssuerUrl::new(cfg.issuer.clone()).map_err(Problem::internal)?;
+            let found = CoreProviderMetadata::discover_async(issuer, &http()?).await;
+            let found = found.map_err(|e| Problem::internal(format!("discovery failed: {e}")))?;
+            *app.oidc.found.lock().unwrap_or_else(PoisonError::into_inner) =
+                Some((found.clone(), Instant::now()));
+            found
+        }
+    };
     let (id, secret) =
         (ClientId::new(cfg.client_id.clone()), Some(ClientSecret::new(cfg.client_secret.clone())));
     let redirect = RedirectUrl::new(app.cfg.url("/api/v1/auth/oidc/callback")).map_err(Problem::internal)?;
@@ -149,11 +170,18 @@ async fn callback(State(app): St, headers: HeaderMap, Query(c): Query<Callback>)
         .map_err(|e| Problem::forbidden(format!("the identity provider refused: {e}")))?;
     let token =
         tokens.id_token().ok_or_else(|| Problem::forbidden("the identity provider sent no ID token"))?;
-    let claims = token
-        .claims(&sso.id_token_verifier(), &flow.nonce)
-        .map_err(|e| Problem::forbidden(format!("invalid ID token: {e}")))?;
-    let (issuer, subject) = (claims.issuer().to_string(), claims.subject().to_string());
-    let wanted = claims.preferred_username().map(|u| u.to_string()).unwrap_or_default();
+    let check = |sso: &Sso| {
+        token.claims(&sso.id_token_verifier(), &flow.nonce).map(|c| {
+            let wanted = c.preferred_username().map(|u| u.to_string()).unwrap_or_default();
+            (c.issuer().to_string(), c.subject().to_string(), wanted)
+        })
+    };
+    let checked = match check(&sso) {
+        Err(_) if stale(&app) => check(&client(&app).await?),
+        checked => checked,
+    };
+    let (issuer, subject, wanted) =
+        checked.map_err(|e| Problem::forbidden(format!("invalid ID token: {e}")))?;
     let (provision, quota) = (app.cfg.oidc.as_ref().is_some_and(|o| o.auto_provision), app.cfg.user_quota);
     let (link, next) = (flow.link, flow.next);
     let user = app.db.run(move |c| {

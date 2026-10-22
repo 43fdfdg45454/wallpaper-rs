@@ -73,8 +73,9 @@ async fn encrypted_sync_round_trips_ciphertext_between_devices() {
     );
     let (status, ahead) = server.json(Method::GET, "/api/v1/sync/changes?since=9", &phone, None).await;
     assert_eq!((status, ahead["code"].as_str()), (StatusCode::GONE, Some("resync")));
-    let (status, rotated) =
-        server.json(Method::POST, "/api/v1/sync/epoch", &desk, Some(json!({"epoch": 1}))).await;
+    let (status, rotated) = server
+        .json(Method::POST, "/api/v1/sync/epoch", &desk, Some(json!({"epoch": 1, "key_id": "a".repeat(32)})))
+        .await;
     assert_eq!((status, rotated["epoch"].as_i64()), (StatusCode::OK, Some(1)));
     let stale = json!([{"collection": "playlists", "item": "evening", "base": 0, "payload": sealed(3)}]);
     assert_eq!(push(&server, &desk, 0, stale).await.1["code"], "epoch_mismatch");

@@ -2,7 +2,10 @@ use super::saved::{Peer, Saved};
 use crate::daemon::Daemon;
 use crate::error::Result;
 use crate::items::reply;
-use wprs_core::model::{Account, AccountDevice, AccountReply, AccountState, JobKind, MODEL};
+use crate::jobs::now;
+use wprs_core::model::{
+    Account, AccountDevice, AccountReply, AccountState, JobKind, MODEL, Pairing, Recovery,
+};
 
 impl Saved {
     pub fn label_of(&self, id: &str) -> Option<String> {
@@ -51,6 +54,22 @@ impl Saved {
             used_bytes: self.used_bytes,
             quota_bytes: self.quota_bytes,
             devices: self.peers.iter().map(device).collect(),
+            pairing: self.pairing.as_ref().filter(|p| !p.sharing || p.expires > now()).map(|p| Pairing {
+                device: p.device.clone(),
+                code: p.code.clone(),
+                sharing: p.sharing,
+            }),
+            quarantined: self.quarantine.len() as u32,
+            unapplied: self.unapplied.len() as u32,
+            offers: self.offers.clone(),
+            secrets: self.shared.iter().cloned().collect(),
+            recovery: match self.recovery {
+                None => Recovery::Off,
+                Some(epoch) if epoch == self.epoch => Recovery::Current,
+                Some(_) => Recovery::Stale,
+            },
+            files_bytes: self.files_bytes,
+            files_quota_bytes: self.files_quota,
             job,
         })
     }

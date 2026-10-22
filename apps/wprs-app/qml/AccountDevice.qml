@@ -9,7 +9,8 @@ RowLayout {
     required property var device
     required property bool keyed
     required property bool joining
-    property string code
+    required property var pairing
+    readonly property string code: row.pairing && !row.pairing.sharing && row.pairing.device === row.device.id ? (row.pairing.code ?? "") : ""
 
     signal share
 
@@ -21,14 +22,29 @@ RowLayout {
 
     QQC2.Label {
         visible: row.code !== ""
-        text: App.tr("Compare on that device: %1").arg(row.code)
+        text: App.tr("This computer shows %1. Type the code that device shows:").arg(row.code)
+    }
+
+    QQC2.TextField {
+        id: digits
+
+        visible: row.code !== ""
+        placeholderText: App.tr("The 6 digits shown on that device")
+    }
+
+    QQC2.Button {
+        visible: row.code !== ""
+        enabled: digits.text.trim() !== ""
+        text: App.tr("Take the key")
+        icon.name: "dialog-ok-apply"
+        onClicked: App.act("ConfirmShare", [row.device.id, digits.text], "Sync1")
     }
 
     QQC2.Button {
         visible: row.joining && !row.device.current
         text: App.tr("Get the key from it")
         icon.name: "document-encrypt"
-        onClicked: App.query("Join", [row.device.id], "Sync1", reply => row.code = reply[0])
+        onClicked: App.act("Join", [row.device.id], "Sync1")
     }
 
     QQC2.Button {

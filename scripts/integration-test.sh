@@ -814,6 +814,13 @@ if above | grep torn; then fail "a log above debug names an image"; fi
 leave
 ctl release TEST-11 && expect "list(s['outputs'])" "[]"
 ctl config playback.software_parallax false
+maps=$WORK/maps && mkdir -p "$maps" && cp "$WORK/relief.png" "$maps/hills.png"
+ctl edit depth import "$maps/hills.png" "$ROOT/tests/fixtures/bands-640x180.png" >/dev/null
+[ -f "$maps/hills.png.depth.png" ] || fail "the depth map was not saved beside the image"
+maps_source=$(ctl lib add "$maps" --wait | sed -n 1p)
+indexed() { ctl lib search "source:$maps_source" --json | js "[i['title'] for i in r['items']]"; }
+[ "$(indexed)" = "['hills']" ] || fail "a depth map became a wallpaper: $(indexed)"
+ctl lib unsource "$maps_source"
 echo "depth parallax checks passed"
 
 restored() {

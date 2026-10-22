@@ -4,44 +4,76 @@ use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use zeroize::Zeroizing;
 
-pub struct SyncKey(Zeroizing<[u8; 32]>);
+pub struct SyncKey {
+    key: Zeroizing<[u8; 32]>,
+    ids: Zeroizing<[u8; 32]>,
+}
 
 pub struct Ids(Zeroizing<[u8; 32]>);
 
+fn derive(key: &[u8], info: &[u8]) -> Zeroizing<[u8; 32]> {
+    let mut out = Zeroizing::new([0; 32]);
+    Hkdf::<Sha256>::new(None, key).expand(info, &mut *out).expect("32 bytes is a valid length");
+    out
+}
+
 impl SyncKey {
     pub fn generate() -> SyncKey {
-        SyncKey(Zeroizing::new(random()))
+        SyncKey { key: Zeroizing::new(random()), ids: Zeroizing::new(random()) }
+    }
+
+    pub fn rotated(&self) -> SyncKey {
+        SyncKey { key: Zeroizing::new(random()), ids: self.ids.clone() }
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<SyncKey> {
-        let key: [u8; 32] = bytes.try_into().map_err(|_| Error::Crypto("a sync key has 32 bytes"))?;
-        Ok(SyncKey(Zeroizing::new(key)))
+        let half =
+            |part: &[u8]| -> Zeroizing<[u8; 32]> { Zeroizing::new(part.try_into().unwrap_or([0; 32])) };
+        match bytes.len() {
+            32 => Ok(SyncKey { key: half(bytes), ids: derive(bytes, b"wprs-sync/ids/v1") }),
+            64 => Ok(SyncKey { key: half(&bytes[..32]), ids: half(&bytes[32..]) }),
+            _ => Err(Error::Crypto("a sync key has 32 or 64 bytes")),
+        }
     }
 
-    pub fn bytes(&self) -> &[u8; 32] {
-        &self.0
-    }
-
-    fn derive(&self, info: &[u8]) -> Zeroizing<[u8; 32]> {
-        let mut out = Zeroizing::new([0; 32]);
-        Hkdf::<Sha256>::new(None, &*self.0).expand(info, &mut *out).expect("32 bytes is a valid length");
-        out
+    pub fn bytes(&self) -> Zeroizing<Vec<u8>> {
+        Zeroizing::new([self.key.as_slice(), self.ids.as_slice()].concat())
     }
 
     pub fn records(&self, epoch: i64) -> Zeroizing<[u8; 32]> {
-        self.derive(&[b"wprs-sync/records/v1".as_slice(), &epoch.to_be_bytes()].concat())
+        derive(&*self.key, &[b"wprs-sync/records/v1".as_slice(), &epoch.to_be_bytes()].concat())
     }
 
     pub fn ids(&self) -> Ids {
-        Ids(self.derive(b"wprs-sync/ids/v1"))
+        Ids(self.ids.clone())
+    }
+
+    pub fn id(&self) -> String {
+        hex(&derive(&*self.key, b"wprs-sync/key-id/v1")[..16])
+    }
+
+    pub fn check(&self, epoch: i64) -> Zeroizing<[u8; 32]> {
+        derive(&*self.key, &[b"wprs-sync/rotate/v1".as_slice(), &epoch.to_be_bytes()].concat())
     }
 }
 
 impl Ids {
-    fn mac(&self, parts: &[&[u8]]) -> String {
+    fn raw(&self, parts: &[&[u8]]) -> Zeroizing<[u8; 32]> {
         let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(&*self.0).expect("HMAC takes any key");
         parts.iter().for_each(|part| mac.update(part));
-        hex(&mac.finalize().into_bytes())
+        Zeroizing::new(mac.finalize().into_bytes().into())
+    }
+
+    fn mac(&self, parts: &[&[u8]]) -> String {
+        hex(&*self.raw(parts))
+    }
+
+    pub fn stored(&self, hash: &[u8]) -> String {
+        self.mac(&[b"stored:", hash])
+    }
+
+    pub fn file_key(&self, hash: &[u8]) -> Zeroizing<[u8; 32]> {
+        self.raw(&[b"wprs-sync/file-key/v1", hash])
     }
 
     pub fn library(&self, repo_id: &str, package: &str) -> String {

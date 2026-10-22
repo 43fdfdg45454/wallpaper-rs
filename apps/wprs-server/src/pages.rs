@@ -2,6 +2,7 @@ use crate::account::{Register, authenticate, create_user, insert_user, profile};
 use crate::auth::Auth;
 use crate::creds::{self, check_handle, check_password, digest};
 use crate::db::now;
+use crate::device::{pending_device, user_code};
 use crate::error::{Problem, Res};
 use crate::me::listing;
 use crate::net::{Client, LOGIN};
@@ -154,14 +155,35 @@ async fn link(State(app): St, auth: Option<Auth>, Query(n): Query<Next>) -> Resp
     let Some(auth) = auth else {
         return Redirect::to(&format!("/login?next=/link%3Fcode%3D{code}")).into_response();
     };
+    let pending = match user_code(&code) {
+        Ok(key) => app.db.run(move |c| pending_device(c, &key)).await.ok(),
+        Err(_) => None,
+    };
+    let at = |v: &Value| {
+        chrono::DateTime::from_timestamp_millis(v.as_i64().unwrap_or_default()).unwrap_or_default()
+    };
     let body = html! {
-        p { "Compare the code with the one on the new device, then approve it. "
-            "It gets its own token; revoke it any time on your account page." }
-        form.stack method="post" action="/api/v1/auth/device/approve?back=/account" {
-            label { "Code" input name="user_code" value=(code) autocomplete="off" required; }
-            div {
-                button name="approve" value="true" { "Approve" } " "
-                button name="approve" value="false" { "Deny" }
+        p { strong { "Approve only a code that your own new device shows on its screen." } " "
+            "Someone who sends you a code or a link is trying to get into your account." }
+        @if let Some(d) = &pending {
+            dl {
+                dt { "Code" } dd { code { (code) } }
+                dt { "Platform" } dd { (text(d, "platform")) }
+                dt { "Software" } dd { (d["client"].as_str().filter(|c| !c.is_empty()).unwrap_or("not given")) }
+                dt { "Requested" } dd { (at(&d["requested_at"]).format("%Y-%m-%d %H:%M UTC")) }
+            }
+            form.stack method="post" action="/api/v1/auth/device/approve?back=/account" {
+                input type="hidden" name="user_code" value=(code);
+                div {
+                    button name="approve" value="true" { "This is my device: approve" } " "
+                    button name="approve" value="false" { "Deny" }
+                }
+            }
+        } @else {
+            @if !code.is_empty() { p { "No device waits for this code: it is wrong, used or expired." } }
+            form.stack method="get" action="/link" {
+                label { "Code shown on the new device" input name="code" value=(code) autocomplete="off" required; }
+                button { "Look up" }
             }
         }
     };
@@ -237,11 +259,17 @@ async fn account(State(app): St, auth: Option<Auth>) -> Res<Response> {
             @if app.cfg.oidc.is_some() {
                 p { a href="/api/v1/auth/oidc/start?link=true" { "Link single sign-on" } }
             }
+            p.muted { "A new password signs out every other session and deletes your access tokens. Your "
+                "devices stay linked unless you also sign them out." }
             form method="post" action="/api/v1/me/password?back=/account" {
                 label { "Current password"
                     input type="password" name="current" autocomplete="current-password"; }
                 label { "New password"
                     input type="password" name="new" autocomplete="new-password" minlength="10" required; }
+                label { input type="checkbox" name="devices" value="true"; "Also sign out every device" }
+                p.muted { "Signed-out devices have to be linked again and to get the sync key from a device "
+                    "that still holds it; without one, or a recovery passphrase, the encrypted sync data "
+                    "has to be reset." }
                 button { "Change password" }
             }
             p { a href="/api/v1/me/export" { "Download all your data (JSON)" } }

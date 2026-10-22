@@ -4,12 +4,13 @@ use super::{block_on, hostname, sync_error};
 use crate::daemon::Daemon;
 use crate::error::{Result, failed, invalid};
 use crate::jobs::Ctl;
+use reqwest::Method;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use wprs_core::dbus::error::EXISTS;
 use wprs_core::model::JobKind;
-use wprs_sync::{Api, DeviceKey, Poll, SyncKey, poll};
+use wprs_sync::{AGENT, Api, DeviceKey, Poll, SyncKey, poll};
 
 impl Daemon {
     pub fn link_device(self: &Arc<Self>, name: &str, plaintext: bool) -> Result<(String, String, u64)> {
@@ -22,7 +23,7 @@ impl Daemon {
             return Err(invalid("a device name has 1 to 64 printable characters"));
         }
         let (key, api) = (DeviceKey::generate(), Api::new(&url).map_err(sync_error)?);
-        let body = json!({"platform": "linux", "enc_key": encode(&key.public())});
+        let body = json!({"platform": "linux", "enc_key": encode(&key.public()), "client": AGENT});
         let start = block_on(api.post("/api/v1/auth/device/start", body)).map_err(sync_error)?;
         let text = |field: &str| start[field].as_str().unwrap_or_default().to_owned();
         let (code, interval, expires) =
@@ -60,35 +61,56 @@ impl Daemon {
         plaintext: bool,
     ) -> Result<Value> {
         let text = |field: &str| token[field].as_str().unwrap_or_default().to_owned();
-        let mut secrets = Secrets { token: text("token"), device: encode(&key.bytes()), key: String::new() };
+        let mut secrets = Secrets::default();
+        (secrets.token, secrets.device) = (text("token"), encode(&key.bytes()));
         self.store_secrets(&secrets)?;
         let api = api.with_token(&secrets.token);
         let me = block_on(api.get("/api/v1/me")).map_err(sync_error)?;
+        let existing = match block_on(api.get("/api/v1/sync/state")) {
+            Err(e) if e.code() == "sync_not_set_up" => None,
+            state => Some(state.map_err(sync_error)?),
+        };
+        if existing.as_ref().is_some_and(|state| state["encrypted"] != true) && !plaintext {
+            let gone = format!("/api/v1/me/devices/{}", text("device_id"));
+            let _ = block_on(api.call(Method::DELETE, &gone, None));
+            self.forget_secrets()?;
+            return Err(failed(
+                "the account syncs without end-to-end encryption; link with plain text only if you accept that",
+            ));
+        }
         let owner = (self.server_url()?, me["id"].as_i64().unwrap_or_default());
         self.update(|s| {
             if s.owner.as_ref() != Some(&owner) {
                 (s.replica, s.links, s.clock, s.present) = Default::default();
+                (s.kept, s.declined, s.unapplied, s.offers) = Default::default();
+                (s.files.stored, s.files.dropped, s.files.uploaded) = Default::default();
                 s.owner = Some(owner.clone());
             }
             (s.device, s.device_name, s.label) = (Some(text("device_id")), Some(text("device_name")), label);
+            (s.plaintext, s.pinned, s.members) = (plaintext, Some(Default::default()), Default::default());
             s.handle = me["handle"].as_str().map(String::from);
         })?;
-        let state = match block_on(api.get("/api/v1/sync/state")) {
-            Err(e) if e.code() == "sync_not_set_up" => {
-                secrets.key = encode(SyncKey::generate().bytes());
+        let state = match existing {
+            None => {
+                let sync = SyncKey::generate();
+                secrets.set_key(&sync, 0);
                 self.store_secrets(&secrets)?;
-                let body = json!({"encrypted": !plaintext, "confirm_plaintext": plaintext});
+                let body =
+                    json!({"encrypted": !plaintext, "confirm_plaintext": plaintext, "key_id": sync.id()});
                 let state = block_on(api.post("/api/v1/sync/setup", body)).map_err(sync_error)?;
                 if state["encrypted"].as_bool() != Some(!plaintext) {
                     return Err(failed("the server set up sync with another encryption than asked"));
                 }
+                secrets.set_key(&sync, state["epoch"].as_i64().unwrap_or(0));
+                self.store_secrets(&secrets)?;
                 state
             }
-            state => state.map_err(sync_error)?,
+            Some(state) => state,
         };
         self.update(|s| {
-            (s.encrypted, s.epoch) = (state["encrypted"].as_bool(), state["epoch"].as_i64().unwrap_or(1));
-            (s.warning, s.ready) = (state["warning"].as_str().map(String::from), !secrets.key.is_empty());
+            (s.encrypted, s.epoch) = (state["encrypted"].as_bool(), state["epoch"].as_i64().unwrap_or(0));
+            (s.warning, s.ready, s.stale) =
+                (state["warning"].as_str().map(String::from), !secrets.key.is_empty(), false);
         })?;
         let repo = self.saved().repo_url.clone();
         if let Some(Err(e)) =

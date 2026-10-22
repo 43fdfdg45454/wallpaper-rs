@@ -98,7 +98,10 @@ fn privacy(c: &Config) -> Markup {
             "which keeps them at most " (c.log_days) " days." }
         h2 { "How long" }
         p { "Sessions 30 days, device codes 10 minutes, device messages 7 days, deleted sync items "
-            "180 days. Everything else until you delete it or your account." }
+            "180 days, the name, email and signature of a legal notice " (c.notice_days) " days, a "
+            "package withdrawn by the moderators " (c.takedown_days) " days, as evidence and for a "
+            "counter-notice. "
+            "Everything else until you delete it or your account." }
         h2 { "Your rights" }
         p { "Download or delete all your data from your " a href="/account" { "account page" } ". "
             "For anything else write to " (contact) "." }

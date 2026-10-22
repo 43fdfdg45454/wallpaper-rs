@@ -17,7 +17,7 @@ impl Daemon {
         let size =
             std::fs::metadata(&path).map_err(|e| invalid(format!("cannot read the package: {e}")))?.len();
         self.linked()?;
-        let target = path.display().to_string();
+        let target = wprs_sync::hex(&wprs_sync::random::<8>());
         Ok(self.start_job(JobKind::Upload, &target, move |d, ctl| d.send_package(&path, size, ctl)))
     }
 

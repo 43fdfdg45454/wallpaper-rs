@@ -1,4 +1,4 @@
-use super::cycle::rules;
+use super::held::rules;
 use crate::daemon::Daemon;
 use crate::error::Result;
 use std::collections::BTreeSet;
@@ -7,12 +7,14 @@ use wprs_sync::{Hlc, step};
 
 impl Daemon {
     fn local_edits(&self) -> Result<bool> {
-        let key = self.secrets(false)?.sync_key()?;
-        let (replica, mut links, present) = {
+        let secrets = self.secrets(false)?;
+        let key = secrets.sync_key()?;
+        let (mut replica, mut links, present, mut kept) = {
             let s = self.saved();
-            (s.replica.clone(), s.links.clone(), s.present.clone())
+            (s.replica.clone(), s.links.clone(), s.present.clone(), s.kept.clone())
         };
-        let local = self.snapshot(&key.ids(), &replica, &mut links, &present)?;
+        secrets.join(&mut replica);
+        let local = self.snapshot(&key.ids(), &replica, &mut links, &present, &mut kept)?;
         let keys: BTreeSet<&String> = replica.bases.keys().chain(local.views.keys()).collect();
         let edited = keys.into_iter().any(|key| {
             let rules = rules(key.split('/').next().unwrap_or_default());

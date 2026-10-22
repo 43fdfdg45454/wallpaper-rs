@@ -1,4 +1,4 @@
-FROM docker.io/library/rust:1.99-alpine AS build
+FROM docker.io/library/rust:1.99-alpine@sha256:3ea887915f261f273d6a24efdfdb92665dee12199923e57870453644fe4ae5c9 AS build
 WORKDIR /src
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
@@ -7,7 +7,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && install -D -m 0755 target/release/wprs-server /out/wprs-server \
     && install -d -m 0700 /out/data
 
-FROM gcr.io/distroless/static-debian13:nonroot
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:d62067879de890a1def9da0e7766b7d20810a5e5555cef8506b752437d7a3e88
 LABEL org.opencontainers.image.title="wprs-server" \
       org.opencontainers.image.description="Self-hosted wallpaper-rs server" \
       org.opencontainers.image.licenses="GPL-3.0-or-later"

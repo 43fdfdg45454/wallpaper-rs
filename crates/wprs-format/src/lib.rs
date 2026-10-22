@@ -26,7 +26,7 @@ pub use admin::sign_root;
 pub use admin::{RootStatus, init, rotate_root, status};
 pub use browse::{Item, browse};
 pub use build::{build, sha256, sha256_file};
-pub use catalog::{Added, add, revoke, revoke_key};
+pub use catalog::{Added, add, revoke, revoke_key, unrevoke};
 pub use client::{Outcome, RepoInfo, Update, add_repo, remove_repo, repos, update_repo, verify};
 pub use download::preview;
 pub use entry::{Blob, ENTRY_FORMAT, Entry, Pin};

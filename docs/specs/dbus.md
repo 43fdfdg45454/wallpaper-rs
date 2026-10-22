@@ -368,7 +368,8 @@ folder inside a recursive source, or a recursive folder containing a source: `ov
 source <path>`), and when it lies inside `~/.cache/wallpaper-rs` or
 `~/.local/share/wallpaper-rs` or, being recursive, contains one of them through non-hidden
 folders (`contains wallpaper-rs data`). Scans skip hidden entries, so adding the home folder is
-allowed.
+allowed, and depth maps (`*.depth.png`), which are never items: `Import` refuses them and a scan
+marks one already in the library missing.
 
 ### `RemoveSource(s source)`
 
@@ -406,8 +407,8 @@ failing reference returns `NotFound` (`no item matches "<ref>"`) or `InvalidArgs
 Removes items with their thumbnails and materialized package entries, and with `delete_files`
 their files. Every uid is checked first (`NotFound` names the first unknown one); nothing
 changes and `InvalidArgs` is returned when an item is a package installed from a repository
-(`use Repos1.Uninstall`), belongs to a source while its file still exists (`remove the file or
-the folder`: the next scan would add it back), or lies outside
+(`use Repos1.Uninstall`), belongs to a source while its file still exists and is no depth map
+(`remove the file or the folder`: the next scan would add it back), or lies outside
 `~/.local/share/wallpaper-rs/files/` while `delete_files` is true. `ItemSummary.removable` and
 `imported` tell clients in advance.
 
@@ -905,15 +906,22 @@ ignored otherwise.
 ## `io.github.wallpaper_rs.Sync1`
 
 Connects this computer to one self-hosted `wprs-server` (see `server.md`) and keeps its library
-metadata, playlists, profiles, presets and settings in sync with the other devices of the
-account. The server address is `https://`, or `http://` to this computer, without user
+metadata, playlists, profiles, presets, settings, added repositories, chosen provider secrets and
+chosen wallpaper files in sync with the other devices of the account. The server address is `https://`, or `http://` to this computer, without user
 information, query or fragment; the daemon contacts no other host for sync, follows no redirect
-and sends the generic `User-Agent`. The device token, the private X25519 key of this device and
-the 32-byte sync key live only in the Secret Service, in one item labelled `wallpaper-rs:
-server` with the attributes `xdg:schema = io.github.wallpaper_rs.Server` and `server = server`,
-with the timeouts and unlock rules of `Providers1`; they never appear in replies, signals, job
-errors, logs, `config.toml` or command lines. The rest of the state (server address, device
-names, sync heads and the last synced copy of every record) is kept in
+and sends the generic `User-Agent`. Every answer is limited in size (1 MiB, 8 MiB for pages of
+changes, 2 MiB for the mailbox, 64 KiB per event); a larger one fails the job without being used.
+The device token, the private X25519 key of this device, the sync key (a 32-byte record key of
+the current key epoch and a 32-byte naming key) with its epoch, the next key during a key
+rotation and the devices that still wait for it, the key that seals the recovery escrow and the
+synced copies of `secrets` records live
+only in the Secret Service, in one item labelled `wallpaper-rs: server` with the
+attributes `xdg:schema = io.github.wallpaper_rs.Server` and `server = server`, with the timeouts
+and unlock rules of `Providers1`; they never appear in replies, signals, job targets, job errors,
+logs, `config.toml` or command lines. The rest of the state (server address, device names, sync
+heads, the last synced copy of every other record, values kept for other versions, the choices of
+private files, a running comparison and the public keys of the devices this computer compared
+codes with) is kept in
 `~/.local/share/wallpaper-rs/sync.json` (`0600`).
 
 End-to-end encryption is the default: every record is `0x01 ‖ nonce ‖ XChaCha20-Poly1305` of the
@@ -922,38 +930,107 @@ additional data of `server.md` (user id and epoch as 8-byte big-endian integers,
 8-byte big-endian in the HKDF info). Plain-text sync exists only as the explicit opt-out
 `Link(plaintext = true)` on an account that has no sync yet; the server then labels the account
 with a warning, reported in `warning`. The setting is fixed when the device links: a sync fails
-without sending anything when the server later reports another one. In both modes the sync key names the items: library items
-are `hex(HMAC-SHA-256(K_id, repo_id ‖ 0x00 ‖ package id))` for installed packages and
-`hex(HMAC-SHA-256(K_id, "blob:" ‖ quick hash))` for other files, so devices that hold the same
-file share its record; playlists, profiles and presets are the first 32 hex digits of
-`HMAC-SHA-256(K_id, kind ‖ 0x00 ‖ uid)`. The server names devices `Device N`; the name of this
-computer (`Link(name)`, the host name when empty) travels only inside the encrypted `device`
-record and is never sent in plain-text mode.
+without sending anything when the server later reports another one. In both modes the naming key
+`K_id` of `server.md` names the items: library items are `hex(HMAC-SHA-256(K_id, repo_id ‖ 0x00 ‖
+package id))` for installed packages and `hex(HMAC-SHA-256(K_id, "blob:" ‖ quick hash))` for other
+files, so devices that hold the same file share its record; playlists, profiles and presets are the
+first 32 hex digits of `HMAC-SHA-256(K_id, kind ‖ 0x00 ‖ uid)` and settings sections of
+`HMAC-SHA-256(K_id, "section" ‖ 0x00 ‖ name)`, so the server cannot tell sections, profiles and
+presets apart. Records synced by older versions under the plain names `settings/<section>`,
+`settings/profile_<id>` and `settings/preset_<id>` move to these names on the first sync, and the
+old records are deleted. The server names devices `Device N`; the name of this computer
+(`Link(name)`, the host name when empty) travels only inside the encrypted `device` record and is
+never sent in plain-text mode. Devices linked by older versions pin, once, the devices whose
+synced `device` record names the key the server lists.
 
 | Collection | Item | Fields |
 |------------|------|--------|
-| `library` | keyed hash | `title`, `rating`, `favorite`, `t:<tag>`; only items with a tag, a rating or a favorite mark get a record |
+| `library` | keyed hash | `title`, `rating`, `favorite`, `t:<tag>`, and `blob` `{id, hash, size, name}` for a private file on the server; only items with a tag, a rating, a favorite mark or a private file get a record |
 | `playlists` | keyed hash | `name`, `query`, `r:<rule>` (rules this version does not know are kept as synced), and for manual playlists one `e:<entry>` per entry with its item and a fractional position |
-| `settings` | `playback`, `transition`, `pause`, `library`, `repos` | every option except `playback.volume`, `playback.muted`, `playback.software_parallax`, `library.thumb_cache_mb` and `models.allow_download`; options and sections this version does not know are kept as synced |
-| `settings` | `profile_…`, `preset_…` | the profile or preset, with items, playlists and presets named by their synced ids |
-| `device` | device id | `name`, `platform`; never applied, shown in `devices[].label` |
+| `settings` | keyed hash of the section | every option except `playback.volume`, `playback.muted`, `playback.software_parallax`, `library.thumb_cache_mb` and `models.allow_download`; options and sections this version does not know are kept as synced |
+| `settings` | keyed hash | `kind` (`profile` or `preset`) and the profile or preset, with items, playlists and presets named by their synced ids; the options of a profile leave out the settings above that stay on each device, and a received profile keeps their values from this computer |
+| `device` | device id | `name`, `platform`, `key` (base64 of the public X25519 key); never applied, shown in `devices[].label` |
+| `repos` | keyed hash of the repo id | `url` (with its trust anchor), `repo_id`, `name`, `fingerprints` of the repositories added with an `https://` or loopback `http://` URL; a new one is only offered (`offers`) until `ConfirmRepo` |
+| `secrets` | keyed hash of the provider id | `provider`, `kind`, `bind` (its `url`, `server` and `user`), `secret`; only with end-to-end encryption and for providers chosen with `ShareSecret` |
 
 Every record holds per field a value and a hybrid logical clock (milliseconds, counter, device);
 a sync pulls the changes since the last head, merges each record field by field with the later
 clock winning (a deletion wins only when it is later than every field), applies the result,
 pushes local changes with the `seq` they are based on and repeats the round for conflicts at
 most three times. Records whose clock is older than the last one seen for the item are refused
-and overwritten with the newer copy. Devices delete with a record whose payload says so; a
+and overwritten with the newer copy. After `Join` or `Restore`, or when the server answers `410
+resync`, the sync downloads every record and uploads again the ones the server no longer holds. Devices delete with a record whose payload says so; a
 `deleted` record without payload carries no clock, nor in an encrypted account any proof of its
 origin, so it deletes nothing and the devices upload their copy again.
 Library records of items that are not on this computer,
-playlist entries and presets of such items are kept and applied once the item appears. Records
-that cannot be decrypted are skipped and the sync job fails with their count.
+playlist entries and presets of such items are kept and applied once the item appears. A record
+that cannot be decrypted fails the first sync that meets it with the count of such records and is
+then skipped (`quarantined`) until the server holds a newer copy of it.
 
-While a linked device holds the sync key and sync is not paused, the daemon keeps the event
-stream of the server open (reconnecting after 30 s, doubling up to 15 min), syncs when another
-device wrote, 5 s after local library, playlist and profile changes that differ from the synced
-copies (showing a wallpaper is no such change), every 15 minutes and at startup. Automatic syncs never show an unlock prompt; a locked keyring sets `last_error`.
+A page of changes, or a change, of another key epoch than the one the sync started with stops the
+sync with `epoch_mismatch` before anything is stored, and the next sync takes the new key first;
+records of the current or an older epoch that cannot be decrypted are quarantined.
+
+Fields this version does not know, and values it does not understand inside fields it knows (an
+option value, a playlist rule value, a rating above 5), are kept exactly as received: the field
+keeps its local value, and the copy sent back carries the received value until the user changes
+that field here. A received change that cannot be applied here (for example a profile name that
+cannot be stored) is not counted as synced: the record keeps the state this computer shows, the
+change is tried again at every sync, nothing is sent back for it, the first sync that meets it fails
+with the count and the first reason, and `unapplied` counts such changes. A received name of a
+playlist, profile or preset that another object already uses here (or that a preset never takes)
+keeps the local name, and the copy sent back carries the received name until the name changes here.
+A repository that already has a record keeps the record's address, name and fingerprints in the
+copy sent back until they change on this computer, so devices that added it through different
+addresses do not overwrite each other.
+
+When two devices change a playlist in ways that do not merge (one deletes it, or switches it
+between manual and smart, while the other changes its entries), the side with more entries wins
+and the other side is kept as a new playlist named `<name> (conflict)`, the suffix in the language
+of the daemon (`LC_ALL`, `LC_MESSAGES` or `LANG`); a deleted side leaves no copy.
+
+A repository removed on one device is removed on the others too, keeping its installed packages.
+Provider secrets travel only inside end-to-end encrypted records and are stored on a receiving
+device only in the Secret Service item of a provider with the same id, kind, `url`, `server` and
+`user`; they are never written to `sync.json`, and their synced copies live in the server keyring
+item. Only a device where `ShareSecret` chose a provider sends its secret; the others apply the
+received one when the provider matches and never send their own. A received record without the
+secret, or with a secret for another `url`, `server` or `user`, ends the choice of this device, so
+the last device that chose wins.
+
+Private files are files of the library that come from no repository: `ShareFiles` chooses items and
+folders, and a `files` job (kind `upload`) encrypts each file and uploads it to
+`/api/v1/sync/blobs` (see `server.md`) in pieces of 64 segments, resuming after the last piece the
+server holds; identical files are stored once. Each 64 KiB segment is sealed with
+ChaCha20-Poly1305 under `HMAC-SHA-256(K_id, "wprs-sync/file-key/v1" ‖ SHA-256 hex of the file)`, with
+a nonce of the segment number (11 bytes big-endian) and a byte that marks the last segment; the
+server name of the file is `hex(HMAC-SHA-256(K_id, "stored:" ‖ SHA-256 hex))`. Other devices list
+them with `ListFiles` and download one on demand with `FetchFile`, which checks every segment and
+the SHA-256 of the whole file and imports it into `~/.local/share/wallpaper-rs/files/`. A sync
+starts the `files` job when private files are chosen; it also deletes files that this computer
+uploaded and that no record refers to any more for a day, only while its copy of the records is as
+new as the server's. Transfers run in their own queue, so syncs and key changes never wait for
+them.
+
+Before syncing, the daemon compares the key epoch and key id of `/api/v1/sync/state` with its key.
+When the account moved to later epochs, it takes each new key in turn from a `rotate` message of a
+pinned device: a device whose public key this computer learned in a comparison with matching codes
+(`Join`, `ConfirmShare`), never one the server lists; a device that leaves the device list is
+unpinned for good. Messages of later epochs and of other devices stay in the mailbox; older ones
+and those that do not open are deleted. Without such a message the state becomes `needs_key` and
+nothing is sent until `Join`. After taking a key it passes it on to its other pinned devices, so
+the key follows the comparisons from device to device; a message that cannot be sent is sent again
+at every sync until it arrives. The daemon replaces the key itself (`Rotate`) when the server
+reports `rotate` after a device was revoked, or when a device listed at the last key change has
+left the device list, and it resumes an interrupted rotation with the next key kept in the Secret
+Service. A device that missed a revocation still trusts the revoked device if it compared codes
+with it; join such a device again.
+
+While a linked device holds the sync key, or waits for the next one, and sync is not paused, the
+daemon keeps the event stream of the server open (reconnecting after 30 s, doubling up to 15 min),
+syncs when another device wrote, when the key epoch changes, when a message arrives while it waits
+for a key, 5 s after local library, playlist and profile changes that differ from the synced copies
+(showing a wallpaper is no such change), every 15 minutes and at startup. Automatic syncs never show an unlock prompt; a locked keyring sets `last_error`.
 
 ### `AddServer(s url) → (t job)`
 
@@ -963,15 +1040,25 @@ announces is remembered when its address has the origin of the server.
 
 ### `Link(s name, b plaintext) → (s user_code, s verification_uri, t job)`
 
-Creates the key pair of this device, starts the device code flow and returns the code to approve
-at `verification_uri` (or with `Approve` on a linked device); an address the server gives on
-another origin is replaced with `<server>/link`. The `link` job polls until the
-code is approved, refused or expired (10 minutes), stores the token, sets up sync when the
-account has none (encrypted unless `plaintext`, then a new sync key is stored first), adds the
-server's repository with `Repos1.Add` and syncs. On an account that already syncs, the device
-needs the sync key from another device: state `needs_key`, see `Join`. `NotFound` without a
+Creates the key pair of this device, starts the device code flow with the platform, the public key
+and the client name `wallpaper-rs/<version>`, and returns the code to approve at
+`verification_uri` (or with `Approve` on a linked device); an address the server gives on another
+origin is replaced with `<server>/link`. The `link` job polls until the code is approved, refused
+or expired (10 minutes), stores the token, sets up sync with the key id of a new sync key when the
+account has none (encrypted unless `plaintext`, then the key is stored first), adds the server's
+repository with `Repos1.Add` and syncs. On an account that already syncs, the device
+needs the sync key from another device: state `needs_key`, see `Join`. When the account syncs
+without encryption and `plaintext` is false, the job fails, asks the server to revoke the new
+device and forgets its token. `NotFound` without a
 server, `Exists` when this computer is linked or linking, `InvalidArgs` for a name over 64
 characters or with control characters.
+
+### `PreviewCode(s user_code) → (t job)`
+
+Shows what waits behind a code before approving it: an `account` job whose output is the
+server's `{platform, client, requested_at, expires_at}` of the pending request (times in Unix
+milliseconds), never an address. Clients show it with the warning to approve only a code that the
+user's own new device shows, and ask for an explicit confirmation before `Approve`.
 
 ### `Approve(s user_code) → (t job)`
 
@@ -980,32 +1067,137 @@ Approves the code shown by a new device of the same account from this linked dev
 ### `GetStatus() → (s json)`
 
 An `AccountReply`; `account` is `null` without a server. It reads no network; `devices` and the
-quota are those of the last sync.
+quota are those of the last sync. `pairing` is the running comparison of `Join` or `ShareKey`: the
+other device's id, the code once both nonces are known, and `sharing` on the device that holds
+the key. `quarantined` counts the records skipped because they cannot be decrypted and `unapplied`
+the received changes that wait to be applied. `offers` are repositories synced from other devices
+that wait for `ConfirmRepo`, `secrets` the providers whose secret is synced, `recovery` whether the
+server holds an escrow of the current key (`current`), of an older one (`stale`) or none (`off`),
+and `files_bytes` of `files_quota_bytes` the private files on the server.
 
 ### `SyncNow() → (t job)`
 
-Starts an `account_sync` job. `Failed` until this computer is linked and holds the sync key.
+Starts an `account_sync` job. `Failed` until this computer is linked and holds a sync key.
 
 ### `SetPaused(b paused)`
 
 Pauses or resumes automatic sync and closes or opens the event stream; `SyncNow` still works.
 
-### `Join(s device) → (s code, t job)`
+### `Join(s device) → (t job)`
 
-On a linked device without the sync key: `device` is the id, server name or label of a device
-that holds it. Returns a 12-digit code derived with Argon2id from the public keys of both
-devices; the `link` job waits up to 10 minutes for that device's `key-share` mailbox message,
-opens it with HPKE (auth mode, DHKEM X25519, HKDF-SHA256, ChaCha20-Poly1305, info `wprs
-key-share v1`, additional data user id ‖ receiving device id ‖ epoch ‖ one byte, 1 when the
-account is encrypted and 0 otherwise) and stores the key, so a server that tells the two devices
-different encryption settings makes the share fail.
+On a linked device without the current sync key: `device` is the id, server name or label of a
+device that holds it, which runs `ShareKey` for this device. The `link` job runs a
+commit-then-reveal comparison through the mailbox, with `key-share` messages whose body is the
+JSON `{v: 2, step, pair, data, epoch}` (`data` base64); a message of another version, of another
+comparison, out of order or replayed fails the job, and so does an `abort`. This device sends
+`commit` with a random 16-byte comparison id `pair` (32 hex digits) and `SHA-256("wprs-sync/commit/v2"
+‖ pair ‖ N_j)` for a random 32-byte nonce `N_j`, waits for the other device's `nonce` `N_h`, and
+only then reveals `N_j`. Both devices show `GetStatus().account.pairing.code`: six digits of
+`T = SHA-256("wprs-sync/pair/v2" ‖ pair ‖ joining public key ‖ holding public key ‖ N_j ‖ N_h)`
+(the first 8 bytes big-endian modulo 10⁶, as `123 456`), so a server that changes the public keys
+gets one guess per comparison. The comparison is mutual: the job waits both for the `key` message
+and for `ConfirmShare` on this device with the code the other device shows, keeps a received key
+only in memory until then, and sends `abort` when the codes differ. It then opens the key with
+HPKE (auth mode, DHKEM X25519, HKDF-SHA256, ChaCha20-Poly1305, info `wprs key-share v2`,
+additional data user id ‖ receiving device id ‖ epoch ‖ one byte, 1 when the account is encrypted
+and 0 otherwise ‖ `T`), checks the key id the server reports, stores the key and pins the other
+device, so a server that plays the other device, or tells the two devices different accounts,
+epochs or encryption settings, makes the share fail. Each step waits at most 10 minutes.
 
-### `ShareKey(s device, s code) → (t job)`
+### `ShareKey(s device) → (t job)`
 
-On a device that holds the sync key: compares `code` with the code computed from both public keys
-and, when they match, sends the sync key sealed to `device` through the mailbox. The job fails
-with `InvalidArgs` when the codes differ, which means the server or another device stands
-between them.
+On a device that holds the current sync key: a `link` job that waits up to 10 minutes for the
+`commit` of the joining `device`, answers with its own `nonce`, checks the revealed nonce against
+the commitment and outputs `{device, code}`; the code also stays in `pairing` for 10 minutes.
+
+### `ConfirmShare(s device, s code) → (t job)`
+
+Confirms the running comparison with `device`; `code` is the six digits that `device` shows. On
+the device that holds the key it starts an `account` job that sends the sync key sealed, to the
+public key used in the comparison, in a `key` message when `code` equals the code of the
+comparison, and pins `device`. On the joining device it returns the job of the running `Join`,
+which stores the key only when `code` matches. Every comparison allows one attempt on each side:
+when the codes differ the job fails with `InvalidArgs`, which means the server or another device
+stands between them, and the other device gets `abort`.
+
+### `Rotate() → (t job)`
+
+Replaces the sync key of an encrypted account in an `account` job: makes the next record key
+(the naming key stays), stores it as the next key, starts the next epoch with its key id, encrypts
+every record the server holds again (records of the old epoch that cannot be decrypted and
+deletions without payload are not kept), finishes the epoch, which deletes the remaining old records, and sends every pinned device a
+`rotate` message: the new key sealed to its pinned public key like a `key` message with the
+additional data ending in `HKDF-SHA256(old record key, "wprs-sync/rotate/v1" ‖ epoch)` instead of
+`T`. Pinned devices pass it on to theirs; other devices get the key with `Join`. A rotation after
+a device left forgets the key of the recovery escrow (`recovery` becomes `stale` until `SetEscrow`
+runs again); otherwise this device seals the new key in the escrow again when it holds that key.
+Output: `{epoch, records, shared}`; messages that could not be sent are sent again by later syncs.
+It fails when another device replaced the key first.
+
+### `Reset() → (t job)`
+
+For an account whose key holders are lost: deletes every synced record on the server, sets up
+sync again with a new record key (the naming key and the links between records and local objects
+stay, so devices that join again merge instead of doubling their objects) with end-to-end
+encryption unless this device linked with `plaintext` to a plain-text account, and uploads the
+library, playlists and settings of this computer; output as `SyncNow`. Clients ask for an explicit
+confirmation first. Every other device has to `Join` again.
+
+### `ConfirmRepo(s repo, b add) → (t job)`
+
+Decides on a repository that another device synced and that waits in `offers`; `repo` is its offer
+`id` or at least the first 8 digits of its `repo_id`. With `add`, returns the `repo_add` job of
+`Repos1.Add` with the synced URL, its trust anchor completed with `repo_id=`; without it the offer
+is declined on this computer, returns `0`, and is not offered again. `NotFound` when no such offer
+waits, `InvalidArgs` when the URL names another repository than the record.
+
+### `ShareSecret(s provider, b share)`
+
+Starts or stops sending the secret of a provider of a kind with a secret from this device, only on
+an encrypted account (`Failed` otherwise, `InvalidArgs` for a provider without secret). Stopping
+removes the secret from the synced record once and keeps the copies that other devices already
+hold.
+
+### `SetEscrow(s passphrase) → (t job)`
+
+Stores the sync key on the server for recovery, in an `account` job: `passphrase` of at least 20
+characters is turned into a key with Argon2id (256 MiB, 3 passes, one lane, a random 16-byte salt)
+that seals the record and naming keys with XChaCha20-Poly1305; the escrow is `0x01 ‖ memory (KiB)
+‖ passes ‖ salt ‖ epoch ‖ nonce ‖ sealed keys` (numbers big-endian, 4 bytes for the costs and 8 for
+the epoch) with the additional data `"wprs-sync/escrow/v1" ‖ user id ‖ the first 33 bytes`. The
+derived key stays in the Secret Service item of this server, so that after a `Rotate` of this
+device it seals the new key again; a different escrow on the server makes it forget that key, and
+so does a key change after a device left, because the revoked device may know the passphrase: set
+the escrow again then, with a new passphrase, since whoever knew the old one can open every escrow
+sealed with it. An empty passphrase deletes the escrow. Only on an encrypted account. Clients warn
+that whoever holds a copy of the server's data can try passphrases without limit.
+
+### `Restore(s passphrase) → (t job)`
+
+On a linked device without the sync key: a `link` job that opens the escrow with `passphrase`,
+refuses an escrow of an epoch older than one this computer already saw, checks that it holds the
+key of the current epoch and key id, and stores it like `Join`; the output names the epoch. A
+device that got the key this way pins no device, so it needs `Join` or `Restore` again after a key
+change.
+
+### `ShareFiles(as targets, b share) → (t job)`
+
+Chooses private files: each target is an item uid or an absolute folder path (every item below it
+is chosen); with `share = false` an item or folder is unchosen, which removes its file from the
+server, and a target can also be the `id` of a file in `ListFiles` that is not on this computer.
+Returns the `files` job. Only on an encrypted account; `NotFound` for an unknown item, `InvalidArgs`
+for a missing folder.
+
+### `ListFiles() → (s json)`
+
+A `FilesReply`: the chosen folders and every private file, those on the server (`stored`, with the
+local item when this computer has the same file and `shared` when it is chosen here) and those
+waiting to upload. It reads no network.
+
+### `FetchFile(s file) → (t job)`
+
+Downloads the private file `file` (its `id` in `ListFiles`) in an `upload` job whose output is
+`{item}`, resuming a partial download.
 
 ### `Upload(s path) → (t job)`
 
@@ -1016,8 +1208,9 @@ publishes uploads of the account's role.
 
 ### `RemoveServer(b wipe)`
 
-Cancels the account jobs, deletes the keyring item (`KeyringUnavailable`: nothing is removed),
-asks the server in the background to revoke this device, and forgets the server. Without `wipe`
+Cancels the account jobs, deletes the keyring item of this server even when linking stopped half
+way (`KeyringUnavailable`: nothing is removed), asks the server in the background to revoke this
+device, and forgets the server. Without `wipe`
 the synced copies stay so that linking the same account again resumes; `wipe` deletes them too.
 The added repository stays.
 
@@ -1222,10 +1415,10 @@ while they wait for the library.
 | `repo_add` | `Repos1.Add` | repository URL without query | `0/0` | `Repo` |
 | `repo_refresh` | `Repos1.Refresh`, schedule | repository id, or `""` | `0/0` | `RefreshOutput` |
 | `install` | `Repos1.Install` | `repo_id/id@version` | bytes | `InstalledPackage` |
-| `account` | `Sync1.AddServer`, `Approve`, `ShareKey` | server URL, `approve <code>` or `share <device>` | `0/0` | server answer |
-| `link` | `Sync1.Link`, `Join` | `link` or `join <device id>` | `0/0` | `{device, encrypted, needs_key}` or `{from}` |
-| `account_sync` | `Sync1.SyncNow`, schedule | `""` | `0/0` | `{applied, records}` |
-| `upload` | `Sync1.Upload` | package path | `0/0` | `UploadOutput` |
+| `account` | `Sync1.AddServer`, `PreviewCode`, `Approve`, `ConfirmShare`, `Rotate`, `Reset`, `SetEscrow` | server URL, `preview <code>`, `approve <code>`, `share <device id>`, `rotate`, `reset` or `escrow` | `0/0` | server answer, or `{recovery}` |
+| `link` | `Sync1.Link`, `Join`, `ShareKey`, `Restore` | `link`, `join <device id>`, `share <device>` or `restore` | `0/0` | `{device, encrypted, needs_key}`, `{from}`, `{device, code}` or `{epoch}` |
+| `account_sync` | `Sync1.SyncNow`, schedule | `""` | `0/0` | `{applied, records, quarantined}` |
+| `upload` | `Sync1.Upload`, `ShareFiles`, `FetchFile`, after a sync with private files | random id, `files` or `fetch` | bytes, or segments for `fetch` | `UploadOutput`, `{uploaded}` or `{item}` |
 
 `CancelJob` drops a queued job; a running job stops at its next checkpoint (between scan
 batches of at most 256 files, imported files, analyzed items, provider downloads and download
@@ -1426,13 +1619,21 @@ struct AccountDevice {
     id: String, name: String, label: Option<String>, platform: String, created_at: Time,
     seen_at: Option<Time>, current: bool,
 }
+enum Recovery { Off, Current, Stale }
+struct RepoOffer { id: String, repo_id: String, name: String, url: String, fingerprints: Vec<String> }
+struct Pairing { device: String, code: Option<String>, sharing: bool }
 struct Account {
     url: String, name: String, repo_id: Option<String>, handle: Option<String>,
     device: Option<String>, label: String, state: AccountState, encrypted: Option<bool>,
     warning: Option<String>, paused: bool, last_sync: Option<Time>, last_error: Option<String>,
-    records: u32, used_bytes: u64, quota_bytes: u64, devices: Vec<AccountDevice>, job: Option<u64>,
+    records: u32, used_bytes: u64, quota_bytes: u64, devices: Vec<AccountDevice>,
+    pairing: Option<Pairing>, quarantined: u32, unapplied: u32, offers: Vec<RepoOffer>,
+    secrets: Vec<String>, recovery: Recovery, files_bytes: u64, files_quota_bytes: u64,
+    job: Option<u64>,
 }
 struct AccountReply { model: u32, serial: u64, account: Option<Account> }
+struct PrivateFile { id: String, name: String, size: u64, item: Option<Uid>, shared: bool, stored: bool }
+struct FilesReply { model: u32, serial: u64, folders: Vec<String>, files: Vec<PrivateFile> }
 struct UploadOutput { id: String, state: String, package: Option<String>, version: Option<String>, errors: Vec<String> }
 ```
 

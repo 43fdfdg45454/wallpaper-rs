@@ -1,7 +1,9 @@
 mod api;
+mod blob;
 mod doc;
 mod engine;
 mod enroll;
+mod escrow;
 mod events;
 mod hlc;
 mod keys;
@@ -13,18 +15,20 @@ mod share;
 #[cfg(test)]
 mod tests;
 
-pub use api::{AGENT, Api, check_url};
+pub use api::{AGENT, Api, MAIL, PAGE, SMALL, check_url};
+pub use blob::{SEALED, SEGMENT, open_segment, seal_segment, sealed_size};
 pub use doc::{Doc, View};
-pub use engine::{Change, Key, Outcome, Page, Remote, Replica, sync};
+pub use engine::{Change, Key, Outcome, Page, Remote, Replica, Synced, rekey, sync};
 pub use enroll::{Poll, poll};
+pub use escrow::{Cost, Lock, MIN_PASSPHRASE, STRONG, escrow_epoch, unseal};
 pub use events::Parser;
 pub use hlc::{Clock, Hlc, now_ms};
 pub use keys::{Ids, SyncKey};
-pub use order::positions;
-pub use plan::{Rules, Step, step};
+pub use order::{clash, positions};
+pub use plan::{Clash, Rules, Step, Winner, step};
 pub use record::{Context, open, pad, seal, unpad};
 pub use session::Session;
-pub use share::{DeviceKey, code, open_key, seal_key};
+pub use share::{DeviceKey, Mail, aad, code, commit, open_key, seal_key, transcript};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

@@ -68,6 +68,12 @@ Item {
             }
         },
         Kirigami.Action {
+            text: App.tr("Sync the files to my devices")
+            icon.name: "folder-cloud"
+            enabled: tools.items.selected > 0
+            onTriggered: App.act("ShareFiles", [tools.take(), true], "Sync1")
+        },
+        Kirigami.Action {
             text: App.tr("Remove…")
             icon.name: "edit-delete"
             enabled: tools.items.selected > 0 && tools.items.removable

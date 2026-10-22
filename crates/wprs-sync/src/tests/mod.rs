@@ -1,5 +1,7 @@
+mod clash;
 mod crypto;
 mod engine;
+mod files;
 mod merge;
 mod protocol;
 

@@ -1,16 +1,49 @@
-use super::views::Local;
+use super::apply::hold;
+use super::views::{Kept, Local};
 use crate::daemon::Daemon;
 use crate::error::{Error, Result};
 use crate::jobs::now;
-use serde_json::{Map, Value};
+use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use wprs_library::{Library, PlaylistInfo, Rules};
-use wprs_sync::View;
+use wprs_sync::{Ids, View};
 
 pub type Links = BTreeMap<String, String>;
 
 pub fn text(view: &View, field: &str, fallback: &str) -> String {
     view.get(field).and_then(Value::as_str).unwrap_or(fallback).to_owned()
+}
+
+pub fn playlist_rules(view: &View, current: &Rules) -> (Rules, BTreeMap<String, Value>) {
+    let shown = serde_json::to_value(current).unwrap_or_default();
+    let (mut merged, mut held) =
+        (serde_json::to_value(Rules::default()).unwrap_or_default(), BTreeMap::new());
+    for (field, value) in view.iter().filter_map(|(k, v)| Some((k.strip_prefix("r:")?, v))) {
+        if merged.get(field).is_none() {
+            continue;
+        }
+        let mut tried = merged.clone();
+        tried[field] = value.clone();
+        if serde_json::from_value::<Rules>(tried.clone()).is_ok() {
+            merged = tried;
+        } else {
+            let old = shown.get(field).cloned().unwrap_or_default();
+            merged[field] = old.clone();
+            held.insert(format!("r:{field}"), old);
+        }
+    }
+    (serde_json::from_value(merged).unwrap_or_else(|_| current.clone()), held)
+}
+
+pub fn keep_name(kept: &mut Kept, key: &str, shown: &str, received: &str) {
+    let fields = kept.entry(key.to_owned()).or_default();
+    match shown == received {
+        true => drop(fields.remove("name")),
+        false => drop(fields.insert("name".into(), json!(shown))),
+    }
+    if fields.is_empty() {
+        kept.remove(key);
+    }
 }
 
 pub fn renamed<T>(
@@ -40,6 +73,7 @@ impl Daemon {
         key: &str,
         view: Option<View>,
         links: &mut Links,
+        kept: &mut Kept,
     ) -> Result<()> {
         let uid = self.linked_uid(links, key, |lib, uid| lib.playlist(uid).is_ok());
         let Some(view) = view else {
@@ -48,10 +82,9 @@ impl Daemon {
         };
         let (name, query) =
             (text(&view, "name", "Playlist"), view.get("query").and_then(Value::as_str).map(String::from));
-        let known = serde_json::to_value(Rules::default()).unwrap_or_default();
-        let rules = view.iter().filter_map(|(k, v)| Some((k.strip_prefix("r:")?.to_owned(), v.clone())));
-        let rules: Map<String, Value> = rules.filter(|(k, _)| known.get(k).is_some()).collect();
-        let rules: Rules = serde_json::from_value(Value::Object(rules)).unwrap_or_default();
+        let current = uid.as_ref().and_then(|uid| self.store.read(|lib| lib.playlist(uid)).ok());
+        let (rules, held) = playlist_rules(&view, &current.map(|p| p.rules).unwrap_or_default());
+        hold(kept, key, held);
         let uid = match uid {
             Some(uid) => uid,
             None => self
@@ -69,9 +102,11 @@ impl Daemon {
             .iter()
             .filter_map(|(.., item)| local.items.get(*item)?.first().map(String::as_str))
             .collect();
+        let mut shown = name.clone();
         self.edit_playlist(&uid, |lib, info| {
             let updated = PlaylistInfo { name: name.clone(), query: query.clone(), rules, ..info.clone() };
             if updated != info && lib.update_playlist(&updated).is_err() {
+                shown.clone_from(&info.name);
                 lib.update_playlist(&PlaylistInfo { name: info.name.clone(), ..updated })?;
             }
             let current: Vec<String> = lib.playlist_items(&uid, now())?.into_iter().map(|i| i.uid).collect();
@@ -80,6 +115,28 @@ impl Daemon {
                 lib.add_to_playlist(&uid, &wanted)?;
             }
             Ok(Vec::new())
-        })
+        })?;
+        keep_name(kept, key, &shown, &name);
+        Ok(())
+    }
+
+    pub fn copy_playlists(&self, local: &Local, copies: Vec<(String, View)>, links: &mut Links, ids: &Ids) {
+        for (_, mut view) in copies.into_iter().filter(|(key, _)| key.starts_with("playlists/")) {
+            let name = crate::words::conflict(&text(&view, "name", "Playlist"));
+            view.insert("name".into(), json!(name));
+            let draft = "playlists/copy".to_owned();
+            let made = self.apply_playlist(local, &draft, Some(view), links, &mut Kept::new());
+            match (made, links.remove(&draft)) {
+                (Ok(()), Some(uid)) => {
+                    links.insert(format!("playlists/{}", ids.named("playlist", &uid)), uid);
+                    tracing::info!(
+                        "two devices changed a playlist in ways that do not merge; both were kept"
+                    );
+                }
+                (made, _) => {
+                    tracing::warn!("the conflict copy of a playlist could not be made: {:?}", made.err())
+                }
+            }
+        }
     }
 }

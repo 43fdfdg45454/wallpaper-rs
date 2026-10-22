@@ -119,6 +119,9 @@ fn secrets_never_travel_through_the_generic_call() {
     assert!(carries_secret("Providers1", "Add", &add("hunter2")));
     assert!(!carries_secret("Providers1", "Add", &add("")));
     assert!(!carries_secret("Library1", "Add", &add("x")));
+    assert!(carries_secret("Sync1", "SetEscrow", &[json!("copper lantern drifts over harbor")]));
+    assert!(carries_secret("Sync1", "Restore", &[json!("copper lantern drifts over harbor")]));
+    assert!(!carries_secret("Sync1", "SetEscrow", &[json!("")]));
 }
 
 #[test]
@@ -132,7 +135,7 @@ fn file_uris_become_paths() {
 #[test]
 fn catalogs_are_parsed_and_chosen_by_locale() {
     let po = "msgid \"\"\nmsgstr \"x\"\n\nmsgid \"A \\\"b\\\"\"\nmsgstr \"\"\n\"C\\n\"\n\n#, fuzzy\nmsgid \"D\"\nmsgstr \"E\"\n";
-    let parsed = tr::parse(po);
+    let parsed = wprs_core::locale::parse(po);
     assert_eq!((parsed.len(), parsed["A \"b\""].as_str()), (1, "C\n"));
     assert_eq!(tr::catalog(&["es_ES.UTF-8".into()])["Library"], "Biblioteca");
     assert!(tr::catalog(&["de_DE".into()]).is_empty());
@@ -220,4 +223,5 @@ fn fixtures_follow_the_data_model() {
     check::<SceneProperties>("Daemon1.GetSceneProperties");
     check::<InputsReply>("Inputs1.GetInputs");
     check::<AccountReply>("Sync1.GetStatus");
+    check::<FilesReply>("Sync1.ListFiles");
 }

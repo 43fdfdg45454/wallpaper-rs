@@ -1,5 +1,5 @@
 use crate::auth::Auth;
-use crate::db::{DAY, changed, now, one};
+use crate::db::{DAY, changed, cut, now, one, rows};
 use crate::error::{Input, Problem, Res, require};
 use crate::{App, Reply, Router, St};
 use axum::Json;
@@ -13,11 +13,11 @@ use futures_util::Stream;
 use rusqlite::params;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
-use tokio::sync::broadcast;
+use tokio::sync::{Notify, broadcast};
 
 pub fn routes() -> Router {
     Router::new()
@@ -36,7 +36,7 @@ pub struct Note {
 #[derive(Default)]
 pub struct Hub {
     channels: Mutex<HashMap<i64, broadcast::Sender<Note>>>,
-    live: Mutex<HashSet<String>>,
+    live: Mutex<HashMap<String, Arc<Notify>>>,
 }
 
 impl Hub {
@@ -45,6 +45,11 @@ impl Hub {
         if channels.get(&user).is_some_and(|tx| tx.send(note).is_err()) {
             channels.remove(&user);
         }
+    }
+
+    pub fn kick(&self, devices: &[String]) {
+        let live = self.live.lock().unwrap_or_else(PoisonError::into_inner);
+        devices.iter().filter_map(|d| live.get(d)).for_each(|stop| stop.notify_one());
     }
 
     fn subscribe(&self, user: i64) -> broadcast::Receiver<Note> {
@@ -94,9 +99,16 @@ struct After {
 
 async fn inbox(State(app): St, auth: Auth, Query(a): Query<After>) -> Reply {
     let device = auth.device()?.to_string();
+    let sizes = "SELECT id, LENGTH(body) FROM mailbox WHERE to_device = ?1 AND id > ?2 AND expires_at > ?3 \
+                 ORDER BY id LIMIT 101";
     let sql = "SELECT id, from_device, kind, body, created_at FROM mailbox WHERE to_device = ?1 AND id > ?2 \
-               AND expires_at > ?3 ORDER BY id LIMIT 100";
-    app.db.items(sql, vec![device.into(), a.after.into(), now().into()]).await
+               AND id <= ?3 AND expires_at > ?4 ORDER BY id";
+    let page = app.db.run(move |c| {
+        let t = now();
+        let (last, more) = cut(c, sizes, params![device, a.after, t], a.after, 100, 1 << 20)?;
+        Ok(json!({"items": rows(c, sql, params![device, a.after, last, t])?, "more": more}))
+    });
+    Ok(Json(page.await?))
 }
 
 async fn ack(State(app): St, auth: Auth, Path(id): Path<i64>) -> Res<StatusCode> {
@@ -122,23 +134,34 @@ impl Drop for Live {
 
 async fn events(State(app): St, auth: Auth) -> Res<Sse<impl Stream<Item = Result<Event, Infallible>>>> {
     let device = auth.device()?.to_string();
-    if !app.hub.live.lock().unwrap_or_else(PoisonError::into_inner).insert(device.clone()) {
-        return Err(Problem::conflict("connected", "this device already has an open event stream"));
+    let stop = Arc::new(Notify::new());
+    {
+        let mut live = app.hub.live.lock().unwrap_or_else(PoisonError::into_inner);
+        if live.contains_key(&device) {
+            return Err(Problem::conflict("connected", "this device already has an open event stream"));
+        }
+        live.insert(device.clone(), stop.clone());
     }
     let receiver = app.hub.subscribe(auth.user);
     let live = Live(app.clone(), device);
-    let stream = futures_util::stream::unfold((receiver, live), |(mut receiver, live)| async move {
-        loop {
-            match receiver.recv().await {
-                Ok(note) if note.device.as_ref().is_none_or(|d| *d == live.1) => {
-                    let key = if note.event == "mail" { "id" } else { note.event };
-                    let event = Event::default().event(note.event).data(json!({key: note.value}).to_string());
-                    return Some((Ok(event), (receiver, live)));
+    let stream =
+        futures_util::stream::unfold((receiver, live, stop), |(mut receiver, live, stop)| async move {
+            loop {
+                let note = tokio::select! {
+                    note = receiver.recv() => note,
+                    () = stop.notified() => return None,
+                };
+                match note {
+                    Ok(note) if note.device.as_ref().is_none_or(|d| *d == live.1) => {
+                        let key = if note.event == "mail" { "id" } else { note.event };
+                        let event =
+                            Event::default().event(note.event).data(json!({key: note.value}).to_string());
+                        return Some((Ok(event), (receiver, live, stop)));
+                    }
+                    Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Closed) => return None,
                 }
-                Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => continue,
-                Err(broadcast::error::RecvError::Closed) => return None,
             }
-        }
-    });
+        });
     Ok(Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(25))))
 }

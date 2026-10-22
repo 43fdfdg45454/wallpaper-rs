@@ -1,6 +1,6 @@
 use crate::auth::{Auth, DEVICE_SCOPES};
 use crate::creds::{self, digest, hex, random};
-use crate::db::{MINUTE, changed, now};
+use crate::db::{MINUTE, changed, now, rows};
 use crate::error::{Input, Problem, Res, require};
 use crate::net::{Client, LOGIN};
 use crate::{Reply, Router, St};
@@ -19,6 +19,7 @@ pub fn routes() -> Router {
         .route("/api/v1/auth/device/start", post(start))
         .route("/api/v1/auth/device/token", post(token))
         .route("/api/v1/auth/device/approve", post(approve))
+        .route("/api/v1/auth/device/preview", post(preview))
 }
 
 #[derive(Deserialize)]
@@ -28,6 +29,8 @@ pub struct NewDevice {
     pub enc_key: Option<String>,
     #[serde(default)]
     pub sig_key: Option<String>,
+    #[serde(default)]
+    pub client: String,
 }
 
 type Keys = (Option<Vec<u8>>, Option<Vec<u8>>);
@@ -75,14 +78,21 @@ fn enroll(
 async fn start(State(app): St, client: Client, Input(d): Input<NewDevice>) -> Reply {
     app.limits.take(&LOGIN, &client.key())?;
     let (enc, sig) = keys(&d)?;
+    let name = d.client.trim().to_string();
+    require(
+        name.chars().count() <= 64 && !name.chars().any(char::is_control),
+        "client: at most 64 characters",
+    )?;
     let (code, user_code) = (hex(&random::<32>()), creds::user_code());
     let (hash, shown) = (digest(&code), user_code.clone());
-    app.db.run(move |c| {
-        let sql = "INSERT INTO device_codes (code_hash, user_code, platform, enc_key, sig_key, expires_at) \
-                   VALUES (?1, ?2, ?3, ?4, ?5, ?6)";
-        Ok(c.execute(sql, params![hash, shown, d.platform, enc, sig, now() + 10 * MINUTE])?)
-    })
-    .await?;
+    app.db
+        .run(move |c| {
+            let sql = "INSERT INTO device_codes (code_hash, user_code, platform, enc_key, sig_key, client, \
+                   created_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
+            let t = now();
+            Ok(c.execute(sql, params![hash, shown, d.platform, enc, sig, name, t, t + 10 * MINUTE])?)
+        })
+        .await?;
     let complete = app.cfg.url(&format!("/link?code={user_code}"));
     Ok(Json(json!({
         "device_code": code, "user_code": user_code, "verification_uri": app.cfg.url("/link"),
@@ -150,12 +160,32 @@ fn yes() -> bool {
     true
 }
 
+pub fn user_code(text: &str) -> Res<String> {
+    let letters: String = text.chars().filter(char::is_ascii_alphanumeric).collect::<String>().to_uppercase();
+    require(letters.len() == 8, "user_code: the 8 letters shown on the new device")?;
+    Ok(format!("{}-{}", &letters[..4], &letters[4..]))
+}
+
+pub fn pending_device(c: &Connection, code: &str) -> Res<Value> {
+    let sql = "SELECT platform, client, created_at AS requested_at, expires_at FROM device_codes \
+               WHERE user_code = ?1 AND state = 'pending' AND expires_at > ?2";
+    rows(c, sql, params![code, now()])?.pop().ok_or_else(|| Problem::missing("pending code"))
+}
+
+#[derive(Deserialize)]
+struct Preview {
+    user_code: String,
+}
+
+async fn preview(State(app): St, auth: Auth, Input(p): Input<Preview>) -> Reply {
+    auth.scope("devices")?;
+    let code = user_code(&p.user_code)?;
+    Ok(Json(app.db.run(move |c| pending_device(c, &code)).await?))
+}
+
 async fn approve(State(app): St, auth: Auth, Input(a): Input<Approve>) -> Reply {
     auth.scope("devices")?;
-    let letters: String =
-        a.user_code.chars().filter(char::is_ascii_alphanumeric).collect::<String>().to_uppercase();
-    require(letters.len() == 8, "user_code: the 8 letters shown on the new device")?;
-    let code = format!("{}-{}", &letters[..4], &letters[4..]);
+    let code = user_code(&a.user_code)?;
     let state = if a.approve { "approved" } else { "denied" };
     let sql = "UPDATE device_codes SET state = ?2, user_id = ?3 WHERE user_code = ?1 AND state = 'pending' \
                AND expires_at > ?4";

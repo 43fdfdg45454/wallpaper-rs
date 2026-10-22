@@ -1,5 +1,8 @@
+use super::files::{blob_field, opted};
+use super::legacy::object;
+use super::presets::synced_options;
 pub use super::views::Local;
-use super::views::{item_view, link, references, settings};
+use super::views::{Kept, item_view, link, preserve, references, settings};
 use crate::daemon::Daemon;
 use crate::error::{Error, Result};
 use crate::jobs::now;
@@ -10,7 +13,6 @@ use wprs_sync::{Ids, Replica, View};
 pub const DOWNLOADS: &str = "models.allow_download";
 pub const DEVICE_KEYS: [&str; 5] =
     ["playback.volume", "playback.muted", "playback.software_parallax", "library.thumb_cache_mb", DOWNLOADS];
-pub const OBJECTS: [&str; 3] = ["playlists/", "settings/profile_", "settings/preset_"];
 
 type Links = BTreeMap<String, String>;
 
@@ -21,7 +23,12 @@ impl Daemon {
         replica: &Replica,
         links: &mut Links,
         present: &BTreeSet<String>,
+        kept: &mut Kept,
     ) -> Result<Local> {
+        let (files, encrypted) = {
+            let s = self.saved();
+            (s.files.clone(), s.encrypted == Some(true))
+        };
         let installed = self.state().installed.clone();
         let (hashed, playlists, profiles, presets) = self.store.read(|lib| {
             let lists = lib.playlists()?.into_iter().map(|p| {
@@ -32,7 +39,8 @@ impl Daemon {
             Ok::<_, Error>((lib.hashed()?, lists, lib.profiles()?, lib.all_presets()?))
         })?;
         let base = |key: &str| replica.bases.get(key).and_then(|(_, doc)| doc.view());
-        let mut local = Local::default();
+        let (mut local, mut dropped) =
+            (Local::default(), files.dropped.keys().cloned().collect::<BTreeSet<_>>());
         for (item, hash) in hashed {
             let package = installed.iter().find(|i| i.path == item.path);
             let key = package.map_or_else(|| ids.blob(&hash), |p| ids.library(&p.repo_id, &p.id));
@@ -40,12 +48,19 @@ impl Daemon {
             let uids = local.items.entry(key.clone()).or_default();
             uids.push(item.uid.clone());
             let record = format!("library/{key}");
+            if files.stored.get(&item.uid).is_some_and(|s| s.done) && !opted(&files, &item.uid, &item.path) {
+                dropped.insert(key.clone());
+            }
             match (uids.len(), base(&record)) {
                 (1, Some(view)) if !present.contains(&key) => {
                     local.fresh.insert(key);
                     local.views.insert(record, view);
                 }
-                (1, _) => drop(local.views.insert(record, item_view(&item))),
+                (1, old) => {
+                    let mut view = item_view(&item);
+                    view.extend(blob_field(&files, ids, &item, old.as_ref()).filter(|_| package.is_none()));
+                    local.views.insert(record, view);
+                }
                 _ => {}
             }
         }
@@ -55,8 +70,8 @@ impl Daemon {
         }
         for preset in presets {
             let key = link(links, ids, "preset", &preset.uid);
-            let mut view =
-                View::from([("name".to_owned(), json!(preset.name)), ("value".to_owned(), preset.value)]);
+            let fields = [("kind", json!("preset")), ("name", json!(preset.name)), ("value", preset.value)];
+            let mut view: View = fields.into_iter().map(|(k, v)| (k.to_owned(), v)).collect();
             let item = preset.item.and_then(|uid| local.keys.get(&uid));
             view.extend(item.map(|key| ("item".to_owned(), json!(key))));
             local.views.insert(key, view);
@@ -74,21 +89,23 @@ impl Daemon {
             let outputs = references(&profile.outputs, old.as_ref(), &to, &known);
             let (name, priority) = (json!(profile.name), json!(profile.priority));
             let fields = [
+                ("kind", json!("profile")),
                 ("name", name),
                 ("outputs", outputs),
-                ("options", profile.options),
+                ("options", synced_options(&profile.options, None)),
                 ("auto", profile.auto),
                 ("priority", priority),
             ];
             local.views.insert(key, fields.into_iter().map(|(k, v)| (k.to_owned(), v)).collect());
         }
         let unknown = |view: &View| view.get("item").and_then(Value::as_str).is_some_and(|i| !local.known(i));
-        let objects =
-            replica.bases.iter().filter(|(key, _)| OBJECTS.iter().any(|kind| key.starts_with(kind)));
+        let objects = replica.bases.iter().filter(|(key, (_, doc))| object(key, Some(doc)));
         let missing: Vec<(String, View, bool)> = objects
             .filter(|(key, _)| !local.views.contains_key(*key))
             .filter_map(|(key, (_, doc))| Some((key.clone(), doc.view()?, links.contains_key(key))))
-            .filter(|(key, view, linked)| !linked || (key.starts_with("settings/preset_") && unknown(view)))
+            .filter(|(_, view, linked)| {
+                !linked || (view.get("kind") == Some(&json!("preset")) && unknown(view))
+            })
             .collect();
         for (key, view, linked) in missing {
             if !linked {
@@ -96,7 +113,17 @@ impl Daemon {
             }
             local.views.insert(key, view);
         }
-        local.views.extend(settings(&self.state().config.options(), replica));
+        local.views.extend(settings(&self.state().config.options(), replica, ids));
+        self.repo_views(ids, replica, present, &mut local, kept)?;
+        if encrypted {
+            self.secret_views(ids, replica, &mut local)?;
+        }
+        for key in files.dropped.keys().map(|key| format!("library/{key}")) {
+            if let Some(view) = base(&key).filter(|_| !local.views.contains_key(&key)) {
+                local.views.insert(key, view.into_iter().filter(|(field, _)| field != "blob").collect());
+            }
+        }
+        preserve(&mut local.views, replica, kept, &dropped);
         Ok(local)
     }
 }

@@ -8,6 +8,7 @@ mod creds;
 mod db;
 mod device;
 mod error;
+mod files;
 mod http;
 mod jobs;
 mod legal;
@@ -56,13 +57,14 @@ pub struct App {
     hashing: Semaphore,
     dirty: Notify,
     deciding: Mutex<()>,
+    pieces: files::Pieces,
     #[cfg(feature = "oidc")]
     oidc: oidc::Oidc,
 }
 
 impl App {
     pub fn open(cfg: Config) -> anyhow::Result<Arc<App>> {
-        for dir in ["db", "blobs", "thumbs", "tmp", "keys", "repo", "logs", "backups"] {
+        for dir in ["db", "blobs", "thumbs", "held", "tmp", "keys", "repo", "logs", "backups"] {
             DirBuilder::new().recursive(true).mode(0o700).create(cfg.data.join(dir))?;
         }
         Ok(Arc::new(App {
@@ -75,6 +77,7 @@ impl App {
             hashing: Semaphore::new(4),
             dirty: Notify::new(),
             deciding: Mutex::new(()),
+            pieces: files::Pieces::default(),
             #[cfg(feature = "oidc")]
             oidc: oidc::Oidc::default(),
             cfg,

@@ -1,6 +1,6 @@
 use crate::auth::Auth;
 use crate::creds::digest;
-use crate::db::{now, rows};
+use crate::db::{cut, now, rows};
 use crate::error::{Problem, Res, require};
 use crate::mailbox::Note;
 use crate::net::SYNC;
@@ -16,7 +16,9 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-type Stored = (i64, String, bool, Vec<u8>, Option<Vec<u8>>);
+type Stored = (i64, String, bool, Vec<u8>, Option<Vec<u8>>, i64);
+
+pub const PAGE_BYTES: i64 = 4 << 20;
 
 const COLLECTIONS: [&str; 6] = ["repos", "library", "playlists", "settings", "device", "secrets"];
 
@@ -32,8 +34,10 @@ struct Since {
 
 async fn pull(State(app): St, auth: Auth, Query(q): Query<Since>) -> Reply {
     let (user, limit) = (auth.device().map(|_| auth.user)?, q.limit.unwrap_or(500).clamp(1, 500));
-    let sql = "SELECT collection, item, seq, device_id AS device, deleted, payload FROM sync_records \
-               WHERE user_id = ?1 AND seq > ?2 ORDER BY seq LIMIT ?3";
+    let sizes = "SELECT seq, COALESCE(LENGTH(payload), 0) FROM sync_records WHERE user_id = ?1 AND seq > ?2 \
+                 ORDER BY seq LIMIT ?3";
+    let sql = "SELECT collection, item, seq, epoch, device_id AS device, deleted, payload FROM sync_records \
+               WHERE user_id = ?1 AND seq > ?2 AND seq <= ?3 ORDER BY seq";
     app.db
         .run(move |c| {
             let h = head(c, user)?;
@@ -41,9 +45,8 @@ async fn pull(State(app): St, auth: Auth, Query(q): Query<Since>) -> Reply {
                 let detail = "the server does not hold these changes: download again from since=0";
                 return Err(Problem::new(StatusCode::GONE, "resync", detail));
             }
-            let mut changes = rows(c, sql, params![user, q.since, limit + 1])?;
-            let more = changes.len() as i64 > limit;
-            changes.truncate(limit as usize);
+            let (last, more) = cut(c, sizes, params![user, q.since, limit + 1], q.since, limit, PAGE_BYTES)?;
+            let mut changes = rows(c, sql, params![user, q.since, last])?;
             changes.iter_mut().for_each(|ch| ch["deleted"] = Value::Bool(ch["deleted"] == 1));
             let (seq, min_seq, epoch) = (h.seq, h.min_seq, h.epoch);
             Ok(Json(
@@ -117,16 +120,18 @@ fn apply(
     )?;
     require(h.encrypted || ch.collection != "secrets", "the secrets collection needs end-to-end encryption")?;
     let hash = digest(payload.as_deref().unwrap_or_default());
-    let sql = "SELECT seq, device_id, deleted, hash, payload FROM sync_records WHERE user_id = ?1 \
+    let sql = "SELECT seq, device_id, deleted, hash, payload, epoch FROM sync_records WHERE user_id = ?1 \
                AND collection = ?2 AND item = ?3";
-    let read = |r: &Row| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?));
+    let read = |r: &Row| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?));
     let found: Option<Stored> = tx.query_row(sql, params![user, ch.collection, ch.item], read).optional()?;
     let mine = found.as_ref().is_some_and(|f| f.1 == device && f.2 == ch.deleted && f.3 == hash);
     Ok(match found {
+        Some((seq, _, true, ..)) if ch.deleted => json!({"item": ch.item, "status": "ok", "seq": seq}),
         Some((seq, ..)) if seq != ch.base && mine => json!({"item": ch.item, "status": "ok", "seq": seq}),
-        Some((seq, dev, deleted, _, old)) if seq != ch.base => {
+        Some((seq, dev, deleted, _, old, epoch)) if seq != ch.base => {
+            let payload = old.map(|o| B64.encode(o));
             let current =
-                json!({"seq": seq, "device": dev, "deleted": deleted, "payload": old.map(|o| B64.encode(o))});
+                json!({"seq": seq, "epoch": epoch, "device": dev, "deleted": deleted, "payload": payload});
             json!({"item": ch.item, "status": "conflict", "current": current})
         }
         None if ch.base != 0 => json!({"item": ch.item, "status": "conflict", "current": null}),

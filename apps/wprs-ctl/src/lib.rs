@@ -16,6 +16,7 @@ pub mod models;
 pub mod pack;
 pub mod pkg;
 pub mod playlists;
+pub mod private;
 pub mod profiles;
 pub mod props;
 pub mod providers;

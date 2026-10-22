@@ -167,7 +167,7 @@ async fn csrf_rate_limits_and_password_changes() {
         }
         statuses.push((response.status(), response.headers().get("retry-after").is_some()));
     }
-    assert_eq!(statuses.iter().filter(|(s, _)| *s == StatusCode::SEE_OTHER).count(), 2);
+    assert_eq!(statuses.iter().filter(|(s, _)| *s == StatusCode::SEE_OTHER).count(), 1);
     assert_eq!(statuses.last(), Some(&(StatusCode::TOO_MANY_REQUESTS, true)));
 }
 

@@ -10,6 +10,9 @@ use std::time::Duration;
 use zeroize::Zeroizing;
 
 pub const AGENT: &str = concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION"));
+pub const SMALL: usize = 1 << 20;
+pub const PAGE: usize = 8 << 20;
+pub const MAIL: usize = 2 << 20;
 
 #[derive(Clone)]
 pub struct Api {
@@ -64,9 +67,25 @@ impl Api {
         }
     }
 
-    async fn answer(response: Response) -> Result<Value> {
+    async fn read(mut response: Response, max: usize) -> Result<Vec<u8>> {
+        let large =
+            || Error::Invalid(format!("the server sent an answer over {} KiB; nothing was used", max >> 10));
+        if response.content_length().is_some_and(|n| n > max as u64) {
+            return Err(large());
+        }
+        let mut body = Vec::new();
+        while let Some(chunk) = response.chunk().await.map_err(net)? {
+            if body.len() + chunk.len() > max {
+                return Err(large());
+            }
+            body.extend_from_slice(&chunk);
+        }
+        Ok(body)
+    }
+
+    async fn answer(response: Response, max: usize) -> Result<Value> {
         let status = response.status();
-        let body: Value = serde_json::from_str(&response.text().await.map_err(net)?).unwrap_or(Value::Null);
+        let body: Value = serde_json::from_slice(&Self::read(response, max).await?).unwrap_or(Value::Null);
         if status.is_success() {
             return Ok(body);
         }
@@ -78,7 +97,7 @@ impl Api {
 
     pub async fn slow(&self, method: Method, path: &str) -> Result<Value> {
         let request = self.request(method, path).timeout(Duration::from_secs(600));
-        Self::answer(request.send().await.map_err(net)?).await
+        Self::answer(request.send().await.map_err(net)?, SMALL).await
     }
 
     pub async fn call(&self, method: Method, path: &str, body: Option<Value>) -> Result<Value> {
@@ -87,11 +106,16 @@ impl Api {
             Some(body) => request.json(&body),
             None => request,
         };
-        Self::answer(request.send().await.map_err(net)?).await
+        Self::answer(request.send().await.map_err(net)?, SMALL).await
     }
 
     pub async fn get(&self, path: &str) -> Result<Value> {
         self.call(Method::GET, path, None).await
+    }
+
+    pub async fn fetch(&self, path: &str, max: usize) -> Result<Value> {
+        let request = self.request(Method::GET, path).timeout(Duration::from_secs(60));
+        Self::answer(request.send().await.map_err(net)?, max).await
     }
 
     pub async fn post(&self, path: &str, body: Value) -> Result<Value> {
@@ -103,14 +127,29 @@ impl Api {
         let body = reqwest::Body::wrap_stream(tokio_util::io::ReaderStream::new(file));
         let request = self.request(Method::PUT, path).header(CONTENT_LENGTH, size);
         let request = request.header(CONTENT_TYPE, "application/octet-stream").body(body);
-        Self::answer(request.send().await.map_err(net)?).await
+        Self::answer(request.send().await.map_err(net)?, SMALL).await
+    }
+
+    pub async fn put_bytes(&self, path: &str, bytes: Vec<u8>) -> Result<Value> {
+        let request = self.request(Method::PUT, path).timeout(Duration::from_secs(600));
+        let request = request.header(CONTENT_TYPE, "application/octet-stream").body(bytes);
+        Self::answer(request.send().await.map_err(net)?, SMALL).await
+    }
+
+    pub async fn get_bytes(&self, path: &str, max: usize) -> Result<Vec<u8>> {
+        let request = self.request(Method::GET, path).timeout(Duration::from_secs(600));
+        let response = request.send().await.map_err(net)?;
+        match response.status().is_success() {
+            true => Self::read(response, max).await,
+            false => Err(Self::answer(response, SMALL).await.err().unwrap_or(invalid("no file data"))),
+        }
     }
 
     pub async fn events(&self) -> Result<Response> {
         let response = self.request(Method::GET, "/api/v1/sync/events").send().await.map_err(net)?;
         match response.status().is_success() {
             true => Ok(response),
-            false => Err(Self::answer(response).await.err().unwrap_or(invalid("no event stream"))),
+            false => Err(Self::answer(response, SMALL).await.err().unwrap_or(invalid("no event stream"))),
         }
     }
 }

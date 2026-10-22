@@ -187,12 +187,23 @@ pub trait Inputs1 {
 pub trait Sync1 {
     fn add_server(&self, url: &str) -> Result<u64>;
     fn link(&self, name: &str, plaintext: bool) -> Result<(String, String, u64)>;
+    fn preview_code(&self, user_code: &str) -> Result<u64>;
     fn approve(&self, user_code: &str) -> Result<u64>;
     fn get_status(&self) -> Result<String>;
     fn sync_now(&self) -> Result<u64>;
     fn set_paused(&self, paused: bool) -> Result<()>;
-    fn join(&self, device: &str) -> Result<(String, u64)>;
-    fn share_key(&self, device: &str, code: &str) -> Result<u64>;
+    fn join(&self, device: &str) -> Result<u64>;
+    fn share_key(&self, device: &str) -> Result<u64>;
+    fn confirm_share(&self, device: &str, code: &str) -> Result<u64>;
+    fn rotate(&self) -> Result<u64>;
+    fn reset(&self) -> Result<u64>;
+    fn confirm_repo(&self, repo: &str, add: bool) -> Result<u64>;
+    fn share_secret(&self, provider: &str, share: bool) -> Result<()>;
+    fn set_escrow(&self, passphrase: &str) -> Result<u64>;
+    fn restore(&self, passphrase: &str) -> Result<u64>;
+    fn share_files(&self, targets: &[&str], share: bool) -> Result<u64>;
+    fn list_files(&self) -> Result<String>;
+    fn fetch_file(&self, file: &str) -> Result<u64>;
     fn upload(&self, path: &str) -> Result<u64>;
     fn remove_server(&self, wipe: bool) -> Result<()>;
 }

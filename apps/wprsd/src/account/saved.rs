@@ -1,9 +1,11 @@
 use crate::error::{Error, Result, failed};
 use crate::store::private_dir;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use wprs_core::model::RepoOffer;
 use wprs_sync::{Clock, Replica};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -14,6 +16,37 @@ pub struct Peer {
     pub enc_key: Option<String>,
     pub created_at: i64,
     pub seen_at: Option<i64>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Pair {
+    pub device: String,
+    pub code: Option<String>,
+    pub sharing: bool,
+    pub pair: String,
+    pub transcript: String,
+    pub key: String,
+    pub expires: i64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Stored {
+    pub hash: String,
+    pub size: u64,
+    pub mtime: i64,
+    pub done: bool,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Files {
+    pub folders: BTreeSet<PathBuf>,
+    pub items: BTreeMap<String, bool>,
+    pub stored: BTreeMap<String, Stored>,
+    pub dropped: BTreeMap<String, String>,
+    pub here: BTreeMap<String, String>,
+    pub uploaded: BTreeSet<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -29,8 +62,10 @@ pub struct Saved {
     pub device_name: Option<String>,
     pub label: String,
     pub encrypted: Option<bool>,
+    pub plaintext: bool,
     pub epoch: i64,
     pub ready: bool,
+    pub stale: bool,
     pub paused: bool,
     pub last_sync: Option<i64>,
     pub last_error: Option<String>,
@@ -38,10 +73,26 @@ pub struct Saved {
     pub used_bytes: u64,
     pub quota_bytes: u64,
     pub peers: Vec<Peer>,
+    pub pinned: Option<BTreeMap<String, String>>,
+    pub members: BTreeSet<String>,
     pub clock: Clock,
     pub replica: Replica,
     pub links: BTreeMap<String, String>,
     pub present: BTreeSet<String>,
+    pub names: String,
+    pub quarantine: BTreeMap<String, i64>,
+    pub legacy: BTreeMap<String, i64>,
+    pub pairing: Option<Pair>,
+    pub kept: BTreeMap<String, BTreeMap<String, Value>>,
+    pub unapplied: BTreeMap<String, i64>,
+    pub declined: BTreeSet<String>,
+    pub offers: Vec<RepoOffer>,
+    pub share: BTreeMap<String, bool>,
+    pub shared: BTreeSet<String>,
+    pub recovery: Option<i64>,
+    pub files: Files,
+    pub files_bytes: u64,
+    pub files_quota: u64,
 }
 
 pub fn load(path: &Path) -> Saved {
@@ -64,7 +115,7 @@ pub fn save(path: &Path, saved: &Saved) -> Result<()> {
 
 impl Saved {
     pub fn active(&self) -> bool {
-        !self.url.is_empty() && self.device.is_some() && self.ready && !self.paused
+        !self.url.is_empty() && self.device.is_some() && (self.ready || self.stale) && !self.paused
     }
 
     pub fn user(&self) -> i64 {
@@ -78,6 +129,11 @@ impl Saved {
             replica: std::mem::take(&mut self.replica),
             links: std::mem::take(&mut self.links),
             present: std::mem::take(&mut self.present),
+            legacy: std::mem::take(&mut self.legacy),
+            names: std::mem::take(&mut self.names),
+            kept: std::mem::take(&mut self.kept),
+            declined: std::mem::take(&mut self.declined),
+            files: std::mem::take(&mut self.files),
             ..Saved::default()
         };
         *self = if wipe { Saved::default() } else { kept };

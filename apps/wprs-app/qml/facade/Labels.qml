@@ -79,7 +79,7 @@ QtObject {
             "account": App.tr("Server account"),
             "link": App.tr("Device link"),
             "account_sync": App.tr("Server sync"),
-            "upload": App.tr("Package upload"),
+            "upload": App.tr("Transfer with the server"),
             "unlinked": App.tr("Not linked"),
             "linking": App.tr("Waiting for approval"),
             "needs_key": App.tr("Needs the sync key from another device"),

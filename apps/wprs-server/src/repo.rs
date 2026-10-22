@@ -64,6 +64,15 @@ impl Repo {
         Ok(())
     }
 
+    pub fn restore(&self, id: &str, version: &str, held: &Path, now: i64) -> anyhow::Result<()> {
+        let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
+        let dest = self.dir.join("packages").join(id).join(format!("{version}.wpak"));
+        wprs_format::add(&self.dir, held, None, now / 1000)?;
+        DirBuilder::new().recursive(true).mode(0o700).create(dest.parent().context("bad path")?)?;
+        fs::copy(held, &dest)?;
+        Ok(wprs_format::unrevoke(&self.dir, id, version)?)
+    }
+
     pub fn publish(&self, days: u32, now: i64) -> anyhow::Result<Published> {
         let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
         let signer = Signer::new(&fs::read_to_string(&self.key)?, None)?;

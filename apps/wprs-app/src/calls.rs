@@ -126,12 +126,23 @@ calls! {
     Sync1 sync {
         AddServer add_server(url: str);
         Link link(name: str, plaintext: bool);
+        PreviewCode preview_code(user_code: str);
         Approve approve(user_code: str);
         GetStatus get_status() json;
         SyncNow sync_now();
         SetPaused set_paused(paused: bool);
         Join join(device: str);
-        ShareKey share_key(device: str, code: str);
+        ShareKey share_key(device: str);
+        ConfirmShare confirm_share(device: str, code: str);
+        Rotate rotate();
+        Reset reset();
+        ConfirmRepo confirm_repo(repo: str, add: bool);
+        ShareSecret share_secret(provider: str, share: bool);
+        SetEscrow set_escrow(passphrase: str);
+        Restore restore(passphrase: str);
+        ShareFiles share_files(targets: strs, share: bool);
+        ListFiles list_files() json;
+        FetchFile fetch_file(file: str);
         Upload upload(path: str);
         RemoveServer remove_server(wipe: bool);
     }

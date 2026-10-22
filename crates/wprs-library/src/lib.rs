@@ -33,6 +33,7 @@ use std::str::FromStr;
 
 const IMAGES: [&str; 7] = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "avif"];
 const VIDEOS: [&str; 7] = ["mp4", "m4v", "webm", "mkv", "mov", "avi", "ogv"];
+const DEPTH_MAP: &str = ".depth.png";
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -71,7 +72,9 @@ pub enum Kind {
 impl Kind {
     pub fn detect(path: &Path) -> Option<Kind> {
         let extension = path.extension()?.to_str()?.to_ascii_lowercase();
+        let name = path.file_name()?.to_str()?.to_ascii_lowercase();
         match extension.as_str() {
+            _ if name.ends_with(DEPTH_MAP) => None,
             e if IMAGES.contains(&e) => Some(Kind::Image),
             e if VIDEOS.contains(&e) => Some(Kind::Video),
             "wpak" => Some(Kind::Package),

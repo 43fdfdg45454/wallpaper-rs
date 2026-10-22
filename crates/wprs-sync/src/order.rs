@@ -1,4 +1,22 @@
+use crate::{View, Winner};
+use serde_json::Value;
 use std::collections::BTreeMap;
+
+pub fn clash(base: Option<&View>, mine: Option<&View>, theirs: Option<&View>) -> Option<Winner> {
+    let entries = |v: Option<&View>| -> BTreeMap<String, Value> {
+        v.into_iter()
+            .flatten()
+            .filter(|(k, _)| k.starts_with("e:"))
+            .map(|(k, e)| (k.clone(), e.clone()))
+            .collect()
+    };
+    let smart = |v: Option<&View>| v.map(|v| v.contains_key("query"));
+    let switched = |v: Option<&View>| v.is_none() || smart(v) != smart(base);
+    let edited = |v: Option<&View>| v.is_some() && entries(v) != entries(base);
+    let clash = (switched(mine) && edited(theirs)) || (switched(theirs) && edited(mine));
+    let live = |v: Option<&View>| entries(v).len();
+    clash.then(|| if live(mine) > live(theirs) { Winner::Mine } else { Winner::Theirs })
+}
 
 fn kept(ids: &[String], base: &BTreeMap<String, f64>) -> Vec<bool> {
     let known: Vec<(usize, f64)> =

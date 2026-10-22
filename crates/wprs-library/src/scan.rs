@@ -98,8 +98,9 @@ impl Library {
         let loose: Vec<(i64, String, bool)> = rows(&tx, sql, [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
         let mut report = ScanReport::default();
         for (id, path, missing) in loose {
-            if Path::new(&path).is_file() {
-                skip_file(upsert(&tx, None, Path::new(&path), now, &mut report))?;
+            let path = Path::new(&path);
+            if path.is_file() && Kind::detect(path).is_some() {
+                skip_file(upsert(&tx, None, path, now, &mut report))?;
             } else if !missing {
                 tx.execute("UPDATE items SET missing = 1 WHERE id = ?1", [id])?;
                 report.missing += 1;

@@ -16,16 +16,16 @@ Kirigami.ScrollablePage {
 
     function load() {
         App.query("GetStatus", [], "Sync1", reply => {
-            page.account = reply.account;
-            page.error = "";
-        }, error => page.error = error.message);
+                page.account = reply.account;
+                page.error = "";
+            }, error => page.error = error.message);
     }
 
     function link(name, plaintext) {
         App.query("Link", [name, plaintext], "Sync1", reply => {
-            page.code = reply[0];
-            page.address = reply[1];
-        });
+                page.code = reply[0];
+                page.address = reply[1];
+            });
     }
 
     function exercise() {
@@ -63,7 +63,25 @@ Kirigami.ScrollablePage {
             text: App.tr("Approve a device…")
             icon.name: "dialog-ok-apply"
             visible: !!page.account?.device
-            onTriggered: dialogs.approver.open()
+            onTriggered: codes.approver.open()
+        },
+        Kirigami.Action {
+            text: App.tr("Restore with the recovery passphrase…")
+            icon.name: "document-decrypt"
+            visible: page.phase === "needs_key" && page.account?.encrypted === true
+            onTriggered: dialogs.restorer.open()
+        },
+        Kirigami.Action {
+            text: App.tr("Replace the sync key")
+            icon.name: "view-refresh"
+            visible: page.keyed && page.account?.encrypted === true
+            onTriggered: App.act("Rotate", [], "Sync1")
+        },
+        Kirigami.Action {
+            text: App.tr("Reset synced data…")
+            icon.name: "edit-clear-all"
+            visible: !!page.account?.device
+            onTriggered: dialogs.resetter.open()
         },
         Kirigami.Action {
             text: App.tr("Remove server…")
@@ -121,8 +139,21 @@ Kirigami.ScrollablePage {
                 device: modelData
                 keyed: page.keyed
                 joining: page.phase === "needs_key"
-                onShare: dialogs.share(modelData)
+                pairing: page.account?.pairing ?? null
+                onShare: codes.share(modelData)
             }
+        }
+
+        AccountShared {
+            Layout.fillWidth: true
+            visible: !!page.account?.device
+            account: page.account
+            dialogs: dialogs
+        }
+
+        AccountFiles {
+            Layout.fillWidth: true
+            account: page.account
         }
     }
 
@@ -130,5 +161,11 @@ Kirigami.ScrollablePage {
         id: dialogs
 
         page: page
+    }
+
+    AccountCodes {
+        id: codes
+
+        account: page.account
     }
 }

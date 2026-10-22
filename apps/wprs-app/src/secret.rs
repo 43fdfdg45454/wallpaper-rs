@@ -41,6 +41,20 @@ impl Backend {
     }
 }
 
+impl Backend {
+    pub fn passphrase(self: Pin<&mut Self>, tag: &QString, member: &QString, passphrase: &QString) {
+        let (member, passphrase) = (member.to_string(), Zeroizing::new(passphrase.to_string()));
+        self.run(tag, async move {
+            match (bus::daemon().await?, member.as_str()) {
+                (Daemon::Bus(c), "SetEscrow") => keyring(c.sync.set_escrow(&passphrase)).await,
+                (Daemon::Bus(c), "Restore") => keyring(c.sync.restore(&passphrase)).await,
+                (Daemon::Fixtures, "SetEscrow" | "Restore") => Ok(fixture("Sync1", &member)),
+                _ => Err(invalid(format!("{member} takes no passphrase"))),
+            }
+        });
+    }
+}
+
 async fn keyring<T: Out>(call: impl Future<Output = zbus::Result<T>>) -> Result<String, Error> {
     let late = |_| Error { name: FAILED.into(), message: "the keyring did not answer in time".into() };
     let reply = tokio::time::timeout(Duration::from_secs(120), call).await.map_err(late)?;

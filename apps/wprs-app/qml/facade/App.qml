@@ -11,9 +11,9 @@ QtObject {
     readonly property Backend backend: Backend {
         onReplied: (tag, json) => app.settle(tag, 0, JSON.parse(json))
         onFailed: (tag, name, message) => app.settle(tag, 1, {
-                "name": name,
-                "message": message
-            })
+                    "name": name,
+                    "message": message
+                })
         onChanged: (topic, ids) => app.updated(topic, JSON.parse(ids))
     }
     readonly property var state: JSON.parse(backend.state || "{}")
@@ -55,6 +55,10 @@ QtObject {
 
     function setSecret(id, secret, onDone, onError) {
         backend.setSecret(remember(onDone, onError), id, secret);
+    }
+
+    function passphrase(member, text, onDone, onError) {
+        backend.passphrase(remember(onDone, onError), member, text);
     }
 
     function tr(text, first, second, third) {

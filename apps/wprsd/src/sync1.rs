@@ -1,6 +1,7 @@
 use crate::daemon::Daemon;
 use crate::error::{Result, failed};
 use std::sync::{Arc, Weak};
+use zeroize::Zeroizing;
 
 pub struct Sync(pub Weak<Daemon>);
 
@@ -23,6 +24,11 @@ impl Sync {
     }
 
     #[zbus(out_args("job"))]
+    async fn preview_code(&self, user_code: String) -> Result<u64> {
+        self.d()?.run(move |d| d.preview_code(&user_code)).await
+    }
+
+    #[zbus(out_args("job"))]
     async fn approve(&self, user_code: String) -> Result<u64> {
         self.d()?.run(move |d| d.approve(&user_code)).await
     }
@@ -41,14 +47,65 @@ impl Sync {
         self.d()?.run(move |d| d.set_sync_paused(paused)).await
     }
 
-    #[zbus(out_args("code", "job"))]
-    async fn join(&self, device: String) -> Result<(String, u64)> {
+    #[zbus(out_args("job"))]
+    async fn join(&self, device: String) -> Result<u64> {
         self.d()?.run(move |d| d.join(&device)).await
     }
 
     #[zbus(out_args("job"))]
-    async fn share_key(&self, device: String, code: String) -> Result<u64> {
-        self.d()?.run(move |d| d.share_key(&device, &code)).await
+    async fn share_key(&self, device: String) -> Result<u64> {
+        self.d()?.run(move |d| d.share_key(&device)).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn confirm_share(&self, device: String, code: String) -> Result<u64> {
+        self.d()?.run(move |d| d.confirm_share(&device, &code)).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn rotate(&self) -> Result<u64> {
+        self.d()?.run(|d| d.rotate_now()).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn reset(&self) -> Result<u64> {
+        self.d()?.run(|d| d.reset_sync()).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn confirm_repo(&self, repo: String, add: bool) -> Result<u64> {
+        self.d()?.run(move |d| d.confirm_repo(&repo, add)).await
+    }
+
+    async fn share_secret(&self, provider: String, share: bool) -> Result<()> {
+        self.d()?.run(move |d| d.share_secret(&provider, share)).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn set_escrow(&self, passphrase: String) -> Result<u64> {
+        let passphrase = Zeroizing::new(passphrase);
+        self.d()?.run(move |d| d.set_escrow(passphrase)).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn restore(&self, passphrase: String) -> Result<u64> {
+        let passphrase = Zeroizing::new(passphrase);
+        self.d()?.run(move |d| d.restore(passphrase)).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn share_files(&self, targets: Vec<String>, share: bool) -> Result<u64> {
+        self.d()?.run(move |d| d.share_files(&targets, share)).await
+    }
+
+    #[zbus(out_args("json"))]
+    async fn list_files(&self) -> Result<String> {
+        self.d()?.run(|d| d.list_files()).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn fetch_file(&self, file: String) -> Result<u64> {
+        self.d()?.run(move |d| d.fetch_file(&file)).await
     }
 
     #[zbus(out_args("job"))]

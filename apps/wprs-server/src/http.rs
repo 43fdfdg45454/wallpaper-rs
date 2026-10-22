@@ -4,8 +4,8 @@ use crate::net::{API, client_ip, key};
 use crate::pages::local;
 use crate::web::layout;
 use crate::{
-    App, St, account, admin, catalog, device, legal, mailbox, me, moderation, pages, records, repo, sync,
-    upload, web,
+    App, St, account, admin, catalog, device, files, legal, mailbox, me, moderation, pages, records, repo,
+    sync, upload, web,
 };
 use axum::body::{Body, to_bytes};
 use axum::extract::{ConnectInfo, DefaultBodyLimit, MatchedPath, Request, State};
@@ -34,6 +34,7 @@ pub fn router(app: Arc<App>) -> Router {
         sync::routes,
         records::routes,
         mailbox::routes,
+        files::routes,
     ]);
     modules.extend([web::routes, pages::routes, legal::routes]);
     #[cfg(feature = "oidc")]
@@ -104,7 +105,7 @@ async fn guard(State(app): St, req: Request, next: Next) -> Response {
     let signed =
         req.headers().contains_key(header::AUTHORIZATION) || req.headers().contains_key(header::COOKIE);
     let long = path.starts_with("/api/v1/uploads/") || path.ends_with("/decision") || path == "/upload";
-    let long = long || path == "/api/v1/sync/events";
+    let long = long || path == "/api/v1/sync/events" || path.starts_with("/api/v1/sync/blobs/");
     let probe = path == "/healthz" || path == "/readyz";
     let mut response = match app.limits.take(&API, &key(ip, 32, 64)) {
         Err(problem) if !probe => problem.into_response(),
@@ -213,7 +214,7 @@ async fn discovery(State(app): St) -> Json<Value> {
     let registration = format!("{:?}", c.registration).to_lowercase();
     let sync = json!({
         "end_to_end_default": true, "plaintext_requires_confirmation": true,
-        "record_max_bytes": 262144, "quota_bytes": c.sync_quota,
+        "record_max_bytes": 262144, "quota_bytes": c.sync_quota, "files_quota_bytes": c.files_quota,
     });
     let legal = json!({
         "notice": c.url("/legal/notice"), "terms": c.url("/legal/terms"),

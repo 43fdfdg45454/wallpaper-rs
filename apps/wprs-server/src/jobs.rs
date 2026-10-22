@@ -50,10 +50,13 @@ pub async fn republish(app: &Arc<App>, force: bool) -> Res<Option<Published>> {
     Ok(Some(published))
 }
 
-async fn purge(app: &Arc<App>) -> Res<()> {
+pub async fn purge(app: &Arc<App>) -> Res<()> {
     app.clients.purge();
-    let t = now();
+    let (t, notices) = (now(), app.cfg.notice_days as i64 * DAY);
     let cleaned = app.db.run(move |c| {
+        let sql =
+            "UPDATE notices SET name = '', email = '', signature = '' WHERE received_at < ?1 AND email != ''";
+        c.execute(sql, [t - notices])?;
         c.execute(
             "DELETE FROM sessions WHERE seen_at < ?1 OR created_at < ?2",
             params![t - 7 * DAY, t - 30 * DAY],
@@ -67,16 +70,26 @@ async fn purge(app: &Arc<App>) -> Res<()> {
                      AND r.updated_at < ?1))";
         c.execute(floor, [old])?;
         c.execute("DELETE FROM sync_records WHERE deleted = 1 AND updated_at < ?1", [old])?;
-        Ok(c.execute("DELETE FROM uploads WHERE state != 'done' AND expires_at < ?1", [t])?)
+        c.execute("DELETE FROM uploads WHERE state != 'done' AND expires_at < ?1", [t])?;
+        let sql = "DELETE FROM sync_blobs WHERE received < size AND created_at < ?1 RETURNING user_id, id";
+        let mut stale = c.prepare(sql)?;
+        let stale = stale.query_map([t - 7 * DAY], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?;
+        Ok(stale.collect::<Result<Vec<_>, _>>()?)
     });
-    cleaned.await?;
-    let old = |item: &fs::DirEntry| {
-        item.metadata()
-            .and_then(|m| m.modified())
-            .is_ok_and(|m| m.elapsed().unwrap_or_default().as_secs() > 86400)
+    for (user, id) in cleaned.await? {
+        let _ = fs::remove_file(crate::files::dir(app, user).join(id));
+    }
+    let older = |days: u64| {
+        move |item: &fs::DirEntry| {
+            item.metadata()
+                .and_then(|m| m.modified())
+                .is_ok_and(|m| m.elapsed().unwrap_or_default().as_secs() > days * 86400)
+        }
     };
-    for item in fs::read_dir(app.cfg.data.join("tmp"))?.flatten().filter(old) {
-        let _ = fs::remove_file(item.path());
+    for (dir, days) in [("tmp", 1), ("held", app.cfg.takedown_days)] {
+        for item in fs::read_dir(app.cfg.data.join(dir))?.flatten().filter(older(days)) {
+            let _ = fs::remove_file(item.path());
+        }
     }
     Ok(())
 }

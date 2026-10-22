@@ -5,9 +5,10 @@ use crate::keyring::{Keyring, Stored};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD as B64;
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 use wprs_core::dbus::error::KEYRING_UNAVAILABLE;
-use wprs_sync::{Api, DeviceKey, SyncKey};
+use wprs_sync::{Api, DeviceKey, Doc, Lock, Replica, SyncKey};
 use zeroize::{Zeroize, Zeroizing};
 
 const ID: &str = "server";
@@ -17,11 +18,27 @@ pub struct Secrets {
     pub token: String,
     pub key: String,
     pub device: String,
+    #[serde(default)]
+    pub epoch: Option<i64>,
+    #[serde(default)]
+    pub next: String,
+    #[serde(default)]
+    pub lock: String,
+    #[serde(default)]
+    pub records: BTreeMap<String, (i64, Doc)>,
+    #[serde(default)]
+    pub held: BTreeMap<String, (i64, Doc)>,
+    #[serde(default)]
+    pub handover: Option<(i64, String, BTreeSet<String>)>,
 }
 
 impl Drop for Secrets {
     fn drop(&mut self) {
-        [&mut self.token, &mut self.key, &mut self.device].into_iter().for_each(Zeroize::zeroize);
+        let bound = self.handover.as_mut().map(|(_, bound, _)| bound);
+        [&mut self.token, &mut self.key, &mut self.device, &mut self.next, &mut self.lock]
+            .into_iter()
+            .chain(bound)
+            .for_each(Zeroize::zeroize);
     }
 }
 
@@ -33,6 +50,41 @@ impl Secrets {
     pub fn sync_key(&self) -> Result<SyncKey> {
         let bytes = Zeroizing::new(B64.decode(&self.key).map_err(|_| broken())?);
         SyncKey::from_bytes(&bytes).map_err(|_| failed("this computer does not hold the sync key yet"))
+    }
+
+    pub fn next_key(&self) -> Result<Option<SyncKey>> {
+        let bytes = Zeroizing::new(B64.decode(&self.next).map_err(|_| broken())?);
+        Ok(SyncKey::from_bytes(&bytes).ok())
+    }
+
+    pub fn set_key(&mut self, key: &SyncKey, epoch: i64) {
+        let names = |key: &SyncKey| key.ids().named("names", "");
+        if self.sync_key().is_ok_and(|old| names(&old) != names(key)) {
+            (self.records, self.held) = Default::default();
+        }
+        (self.key, self.epoch, self.next) = (encode(&key.bytes()), Some(epoch), String::new());
+    }
+
+    pub fn escrow_lock(&self) -> Option<Lock> {
+        Lock::from_bytes(&Zeroizing::new(B64.decode(&self.lock).ok()?))
+    }
+
+    pub fn join(&self, replica: &mut Replica) {
+        replica.bases.extend(self.records.clone());
+        replica.held.extend(self.held.clone());
+    }
+
+    pub fn split(&mut self, replica: &mut Replica) -> bool {
+        let take = |map: &mut BTreeMap<String, (i64, Doc)>| {
+            let (mine, rest) =
+                std::mem::take(map).into_iter().partition(|(key, _)| key.starts_with("secrets/"));
+            *map = rest;
+            mine
+        };
+        let (records, held) = (take(&mut replica.bases), take(&mut replica.held));
+        let changed = (&records, &held) != (&self.records, &self.held);
+        (self.records, self.held) = (records, held);
+        changed
     }
 
     pub fn device_key(&self) -> Result<DeviceKey> {

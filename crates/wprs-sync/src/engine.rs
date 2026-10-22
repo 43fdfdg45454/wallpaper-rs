@@ -7,6 +7,7 @@ pub type Key = String;
 pub struct Change {
     pub key: Key,
     pub seq: i64,
+    pub epoch: i64,
     pub doc: Doc,
 }
 
@@ -32,23 +33,35 @@ pub trait Remote {
 pub struct Replica {
     pub seq: i64,
     pub bases: BTreeMap<Key, (i64, Doc)>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub held: BTreeMap<Key, (i64, Doc)>,
 }
 
-async fn pull(remote: &impl Remote, replica: &mut Replica) -> Result<BTreeMap<Key, (i64, Doc)>> {
+#[derive(Debug, Default)]
+pub struct Synced {
+    pub applied: Vec<(Key, Option<View>)>,
+    pub copies: Vec<(Key, View)>,
+}
+
+async fn pull(remote: &impl Remote, replica: &mut Replica) -> Result<BTreeMap<Key, Change>> {
     let (mut since, mut found) = (replica.seq, BTreeMap::new());
+    let mut whole = since == 0;
     loop {
         let page = match remote.pull(since).await {
             Err(e) if e.code() == "resync" && since > 0 => {
-                since = 0;
+                (since, whole) = (0, true);
                 continue;
             }
             page => page?,
         };
         for change in page.changes {
-            found.insert(change.key, (change.seq, change.doc));
+            found.insert(change.key.clone(), change);
         }
         if !page.more {
             replica.seq = page.seq;
+            if whole {
+                replica.bases.retain(|key, _| found.contains_key(key));
+            }
             return Ok(found);
         }
         if page.last <= since {
@@ -64,9 +77,13 @@ pub async fn sync(
     local: &BTreeMap<Key, View>,
     rules: impl Fn(&str) -> Rules,
     now: &Hlc,
-) -> Result<Vec<(Key, Option<View>)>> {
-    let mut pending = pull(remote, replica).await?;
-    let (mut work, mut applied) = (local.clone(), BTreeMap::new());
+) -> Result<Synced> {
+    let mut pending: BTreeMap<Key, (i64, Doc)> =
+        pull(remote, replica).await?.into_iter().map(|(key, c)| (key, (c.seq, c.doc))).collect();
+    for (key, held) in std::mem::take(&mut replica.held) {
+        pending.entry(key).or_insert(held);
+    }
+    let (mut work, mut applied, mut copies) = (local.clone(), BTreeMap::new(), Vec::new());
     let mut keys: BTreeSet<Key> =
         replica.bases.keys().chain(pending.keys()).chain(local.keys()).cloned().collect();
     for _ in 0..3 {
@@ -85,6 +102,7 @@ pub async fn sync(
                 applied.insert(key.clone(), view);
             }
             pushes.extend(step.push.map(|(seq, doc)| (key.clone(), seq, doc)));
+            copies.extend(step.copy.map(|view| (key.clone(), view)));
         }
         if pushes.is_empty() {
             break;
@@ -104,5 +122,17 @@ pub async fn sync(
             }
         }
     }
-    Ok(applied.into_iter().collect())
+    Ok(Synced { applied: applied.into_iter().collect(), copies })
+}
+
+pub async fn rekey(remote: &impl Remote, epoch: i64) -> Result<usize> {
+    let found = pull(remote, &mut Replica::default()).await?;
+    let stale = found.into_values().filter(|c| c.epoch < epoch && c.doc != Doc::cleared());
+    let stale: Vec<(Key, i64, Doc)> = stale.map(|c| (c.key, c.seq, c.doc)).collect();
+    let mut done = 0;
+    for chunk in stale.chunks(100) {
+        let outcomes = remote.push(chunk).await?;
+        done += outcomes.iter().filter(|o| matches!(o, Outcome::Ok(_))).count();
+    }
+    Ok(done)
 }

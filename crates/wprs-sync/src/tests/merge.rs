@@ -3,8 +3,10 @@ use crate::*;
 use serde_json::json;
 use std::collections::BTreeMap;
 
-const PLAIN: Rules = Rules { weak: |_| false, keep_absent: false, needs_strong: false };
-const LIBRARY: Rules = Rules { weak: |key| key == "title", keep_absent: true, needs_strong: true };
+const PLAIN: Rules =
+    Rules { weak: |_| false, keep_absent: false, needs_strong: false, clash: |_, _, _| None };
+const LIBRARY: Rules =
+    Rules { weak: |key| key == "title", keep_absent: true, needs_strong: true, clash: |_, _, _| None };
 
 #[test]
 fn concurrent_edits_of_different_fields_both_survive() {

@@ -1,4 +1,5 @@
-use super::local::{DEVICE_KEYS, OBJECTS};
+use super::legacy::{kind, object};
+use super::local::DEVICE_KEYS;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use wprs_library::{Item, PlaylistInfo};
@@ -7,6 +8,7 @@ use wprs_sync::{Ids, Replica, View, positions};
 pub const REFERENCES: [&str; 3] = ["item", "playlist", "preset"];
 
 type Lookup<'a> = &'a dyn Fn(&str, &str) -> Option<String>;
+pub type Kept = BTreeMap<String, BTreeMap<String, Value>>;
 
 #[derive(Default)]
 pub struct Local {
@@ -15,14 +17,58 @@ pub struct Local {
     pub keys: HashMap<String, String>,
     pub fresh: BTreeSet<String>,
     pub unlinked: BTreeSet<String>,
+    pub repos: BTreeSet<String>,
+}
+
+fn known(key: &str, kind: &str, field: &str) -> bool {
+    let has = |names: &[&str]| names.contains(&field);
+    match key.split('/').next().unwrap_or_default() {
+        "library" => has(&["title", "rating", "favorite"]) || field.starts_with("t:"),
+        "playlists" => has(&["name", "query"]) || field.starts_with("r:") || field.starts_with("e:"),
+        "repos" => has(&["url", "repo_id", "name", "fingerprints"]),
+        "secrets" => has(&["provider", "kind", "bind", "secret"]),
+        "settings" if kind == "preset" => has(&["kind", "name", "value", "item"]),
+        "settings" if kind == "profile" => has(&["kind", "name", "outputs", "options", "auto", "priority"]),
+        _ => true,
+    }
+}
+
+pub fn preserve(
+    views: &mut BTreeMap<String, View>,
+    replica: &Replica,
+    kept: &mut Kept,
+    dropped: &BTreeSet<String>,
+) {
+    for (key, view) in views.iter_mut() {
+        let Some((base, doc)) = replica.bases.get(key).and_then(|(_, doc)| Some((doc.view()?, doc))) else {
+            continue;
+        };
+        let gone = |field: &str| {
+            field == "blob" && key.strip_prefix("library/").is_some_and(|k| dropped.contains(k))
+        };
+        let unknown =
+            base.iter().filter(|(f, _)| !view.contains_key(*f) && !known(key, kind(doc), f) && !gone(f));
+        let unknown: Vec<(String, Value)> = unknown.map(|(f, v)| (f.clone(), v.clone())).collect();
+        view.extend(unknown);
+        if let Some(fields) = kept.get_mut(key) {
+            fields.retain(|field, old| view.get(field).unwrap_or(&Value::Null) == old);
+            for field in fields.keys() {
+                match base.get(field) {
+                    Some(value) => drop(view.insert(field.clone(), value.clone())),
+                    None => drop(view.remove(field)),
+                }
+            }
+        }
+    }
+    kept.retain(|key, fields| !fields.is_empty() && views.contains_key(key));
 }
 
 pub fn link(links: &mut BTreeMap<String, String>, ids: &Ids, kind: &str, uid: &str) -> String {
     if let Some((key, _)) = links.iter().find(|(_, linked)| *linked == uid) {
         return key.clone();
     }
-    let collection = if kind == "playlist" { "playlists/".into() } else { format!("settings/{kind}_") };
-    let key = format!("{collection}{}", ids.named(kind, uid));
+    let collection = if kind == "playlist" { "playlists" } else { "settings" };
+    let key = format!("{collection}/{}", ids.named(kind, uid));
     links.insert(key.clone(), uid.to_owned());
     key
 }
@@ -46,17 +92,21 @@ pub fn references(
     out
 }
 
-pub fn settings(options: &BTreeMap<String, toml::Value>, replica: &Replica) -> BTreeMap<String, View> {
+pub fn settings(
+    options: &BTreeMap<String, toml::Value>,
+    replica: &Replica,
+    ids: &Ids,
+) -> BTreeMap<String, View> {
     let mut sections: BTreeMap<String, View> = BTreeMap::new();
     for (option, value) in options.iter().filter(|(k, _)| !DEVICE_KEYS.contains(&k.as_str())) {
-        let key = format!("settings/{}", option.split('.').next().unwrap_or_default());
+        let key = format!("settings/{}", ids.named("section", option.split('.').next().unwrap_or_default()));
         sections
             .entry(key)
             .or_default()
             .insert(option.clone(), serde_json::to_value(value).unwrap_or_default());
     }
     let synced = replica.bases.iter().filter(|(key, _)| key.starts_with("settings/"));
-    for (key, (_, doc)) in synced.filter(|(key, _)| !OBJECTS.iter().any(|kind| key.starts_with(kind))) {
+    for (key, (_, doc)) in synced.filter(|(key, (_, doc))| !object(key, Some(doc))) {
         let unknown = doc.view().into_iter().flatten().filter(|(option, _)| !options.contains_key(option));
         sections.entry(key.clone()).or_default().extend(unknown);
     }

@@ -52,6 +52,7 @@ mod thumbs;
 mod timing;
 mod wallpaper;
 mod watch;
+mod words;
 mod worker;
 
 use anyhow::Context;

@@ -9,7 +9,7 @@ use tokio::time::sleep;
 use wprs_core::model::JobKind;
 use wprs_sync::Parser;
 
-const EDITS: [&str; 3] = ["library", "playlists", "profiles"];
+const EDITS: [&str; 5] = ["library", "playlists", "profiles", "repos", "providers"];
 const PERIOD: Duration = Duration::from_secs(900);
 
 pub fn start(daemon: &Arc<Daemon>, bus: zbus::Connection) {
@@ -94,10 +94,15 @@ async fn listen(daemon: Weak<Daemon>) {
 async fn follow(mut response: reqwest::Response, daemon: &Weak<Daemon>) {
     let mut parser = Parser::default();
     while let Ok(Ok(Some(chunk))) = tokio::time::timeout(Duration::from_secs(60), response.chunk()).await {
-        for (event, value) in parser.feed(&chunk) {
+        let Ok(events) = parser.feed(&chunk) else {
+            tracing::warn!("the server sent an oversized event; reconnecting");
+            return;
+        };
+        for (event, value) in events {
             let Some(d) = daemon.upgrade() else { return };
             let behind = value["seq"].as_i64().is_some_and(|seq| seq > d.saved().replica.seq);
-            if (event == "seq" && behind) || event == "epoch" {
+            let stale = event == "mail" && d.saved().stale;
+            if (event == "seq" && behind) || event == "epoch" || stale {
                 d.account.wake.notify_one();
             }
         }

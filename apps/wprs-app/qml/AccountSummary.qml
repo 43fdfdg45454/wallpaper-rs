@@ -39,6 +39,20 @@ Kirigami.FormLayout {
     }
 
     QQC2.Label {
+        Kirigami.FormData.label: App.tr("Skipped records:")
+        visible: (summary.account.quarantined ?? 0) > 0
+        text: App.tr("%1 records cannot be decrypted with this key and are skipped").arg(summary.account.quarantined ?? 0)
+        wrapMode: Text.Wrap
+    }
+
+    QQC2.Label {
+        Kirigami.FormData.label: App.tr("Waiting changes:")
+        visible: (summary.account.unapplied ?? 0) > 0
+        text: App.tr("%1 changes from other devices cannot be applied here yet; they are tried again at every sync").arg(summary.account.unapplied ?? 0)
+        wrapMode: Text.Wrap
+    }
+
+    QQC2.Label {
         Kirigami.FormData.label: App.tr("Error:")
         visible: !!summary.account.last_error
         text: summary.account.last_error ?? ""

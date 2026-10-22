@@ -1,23 +1,38 @@
 use super::{KINDS, block_on, sync_error};
 use crate::daemon::Daemon;
 use crate::error::{Result, failed, invalid};
-use serde_json::json;
+use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::Duration;
 use wprs_core::model::JobKind;
 
 impl Daemon {
-    pub fn approve(self: &Arc<Self>, code: &str) -> Result<u64> {
+    fn device_code(
+        self: &Arc<Self>,
+        code: &str,
+        action: &str,
+        path: &'static str,
+        body: Value,
+    ) -> Result<u64> {
         let letters: String = code.chars().filter(char::is_ascii_alphanumeric).collect();
         if letters.len() != 8 {
             return Err(invalid("give the 8 letters shown on the new device"));
         }
         self.linked()?;
-        Ok(self.start_job(JobKind::Account, &format!("approve {letters}"), move |d, _| {
+        let mut body = body;
+        body["user_code"] = json!(letters.to_uppercase());
+        Ok(self.start_job(JobKind::Account, &format!("{action} {}", letters.to_uppercase()), move |d, _| {
             let (api, _) = d.account_api(true)?;
-            let body = json!({"user_code": letters, "approve": true});
-            block_on(api.post("/api/v1/auth/device/approve", body)).map_err(sync_error)
+            block_on(api.post(path, body)).map_err(sync_error)
         }))
+    }
+
+    pub fn approve(self: &Arc<Self>, code: &str) -> Result<u64> {
+        self.device_code(code, "approve", "/api/v1/auth/device/approve", json!({"approve": true}))
+    }
+
+    pub fn preview_code(self: &Arc<Self>, code: &str) -> Result<u64> {
+        self.device_code(code, "preview", "/api/v1/auth/device/preview", json!({}))
     }
 
     pub fn set_sync_paused(&self, paused: bool) -> Result<()> {
@@ -37,9 +52,7 @@ impl Daemon {
         }
         let device = self.saved().device.clone();
         let revoke = device.and_then(|device| Some((self.account_api(false).ok()?.0, device)));
-        if self.saved().device.is_some() {
-            self.forget_secrets()?;
-        }
+        self.forget_secrets()?;
         if let Some((api, device)) = revoke {
             tokio::runtime::Handle::current().spawn(async move {
                 let path = format!("/api/v1/me/devices/{device}");

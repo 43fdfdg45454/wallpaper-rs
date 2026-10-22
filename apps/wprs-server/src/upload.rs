@@ -13,7 +13,7 @@ use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use futures_util::{Stream, StreamExt};
-use rusqlite::{OptionalExtension, ToSql, params};
+use rusqlite::{Connection, OptionalExtension, ToSql, params};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -49,43 +49,44 @@ async fn open(State(app): St, auth: Auth, Input(o): Input<Open>) -> Res<impl Int
     Ok((StatusCode::CREATED, Json(json!({"id": id, "put_url": url, "expires_at": now() + DAY}))))
 }
 
+fn allowed(c: &Connection, user: i64, per_day: i64) -> Res<i64> {
+    let t = now();
+    let count = |sql: &str, values: &[&dyn ToSql]| c.query_row(sql, values, |r| r.get::<_, i64>(0));
+    if count("SELECT COUNT(*) FROM strikes WHERE user_id = ?1 AND expires_at > ?2", params![user, t])? >= 3 {
+        return Err(Problem::forbidden("uploads are suspended after three strikes"));
+    }
+    if count("SELECT COUNT(*) FROM uploads WHERE user_id = ?1 AND created_at > ?2", params![user, t - DAY])?
+        >= per_day
+    {
+        return Err(Problem::busy(3600));
+    }
+    if count("SELECT COUNT(*) FROM uploads WHERE user_id = ?1 AND state = 'open'", params![user])? >= 2 {
+        return Err(Problem::conflict("too_many_uploads", "finish or cancel an open upload first"));
+    }
+    let free = "SELECT (SELECT quota_bytes FROM users WHERE id = ?1) - COALESCE(SUM(size), 0) FROM versions \
+                WHERE uploaded_by = ?1 AND state != 'rejected'";
+    let free = count(free, params![user])?;
+    require(free > 0, "your storage quota is full")?;
+    Ok(free)
+}
+
 async fn start(app: &App, auth: &Auth, size: u64, sha256: String, state: &'static str) -> Res<String> {
     let (max, per_day, user) = (app.cfg.package_max, app.cfg.uploads_per_day as i64, auth.user);
     require((1..=max).contains(&size), format!("size: 1 to {max} bytes"))?;
     let hex64 =
         sha256.len() == 64 && sha256.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
     require(hex64, "sha256: 64 lowercase hex digits")?;
-    let free = "SELECT (SELECT quota_bytes FROM users WHERE id = ?1) - COALESCE(SUM(size), 0) FROM versions \
-                WHERE uploaded_by = ?1 AND state != 'rejected'";
     app.db
         .run(move |c| {
-            let t = now();
-            let count = |sql: &str, values: &[&dyn ToSql]| c.query_row(sql, values, |r| r.get::<_, i64>(0));
-            if count("SELECT COUNT(*) FROM blocklist WHERE sha256 = ?1", params![sha256])? > 0 {
+            let blocked = "SELECT COUNT(*) FROM blocklist WHERE sha256 = ?1";
+            if c.query_row(blocked, [&sha256], |r| r.get::<_, i64>(0))? > 0 {
                 return Err(Problem::forbidden("this file is on the blocklist"));
             }
-            if count("SELECT COUNT(*) FROM strikes WHERE user_id = ?1 AND expires_at > ?2", params![user, t])?
-                >= 3
-            {
-                return Err(Problem::forbidden("uploads are suspended after three strikes"));
-            }
-            if count(
-                "SELECT COUNT(*) FROM uploads WHERE user_id = ?1 AND created_at > ?2",
-                params![user, t - DAY],
-            )? >= per_day
-            {
-                return Err(Problem::busy(3600));
-            }
-            if count("SELECT COUNT(*) FROM uploads WHERE user_id = ?1 AND state = 'open'", params![user])?
-                >= 2
-            {
-                return Err(Problem::conflict("too_many_uploads", "finish or cancel an open upload first"));
-            }
             require(
-                count(free, params![user])? >= size as i64,
+                allowed(c, user, per_day)? >= size as i64,
                 "the upload does not fit in your storage quota",
             )?;
-            let id = hex(&random::<16>());
+            let (id, t) = (hex(&random::<16>()), now());
             let sql = "INSERT INTO uploads (id, user_id, size, sha256, state, created_at, expires_at) \
                        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
             c.execute(sql, params![id, user, size as i64, sha256, state, t, t + DAY])?;
@@ -145,6 +146,7 @@ async fn put(State(app): St, auth: Auth, Path(id): Path<String>, headers: Header
             "Content-Length must equal the declared size",
         ));
     }
+    let _turn = app.pieces.enter(auth.user, &id)?;
     let staging = tmp(&app, &format!("{id}.part-{}", hex(&random::<8>())));
     let received = receive(body.into_data_stream(), &staging, size as u64).await;
     if !matches!(received, Ok((hash, total)) if hash == sha && total == size as u64) {
@@ -213,20 +215,65 @@ async fn cancel(State(app): St, auth: Auth, Path(id): Path<String>) -> Res<Statu
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn web(State(app): St, auth: Auth, mut form: Multipart) -> Reply {
-    auth.scope("upload")?;
-    while let Some(field) = form.next_field().await.map_err(|e| Problem::bad(e.body_text()))? {
+async fn reserve(app: &App, user: i64) -> Res<(String, u64)> {
+    let (per_day, max) = (app.cfg.uploads_per_day as i64, app.cfg.package_max as i64);
+    app.db
+        .run(move |c| {
+            let room = allowed(c, user, per_day)?.min(max);
+            let (id, t) = (hex(&random::<16>()), now());
+            let sql = "INSERT INTO uploads (id, user_id, size, sha256, state, created_at, expires_at) \
+                       VALUES (?1, ?2, ?3, '', 'open', ?4, ?5)";
+            c.execute(sql, params![id, user, room, t, t + DAY])?;
+            Ok((id, room as u64))
+        })
+        .await
+}
+
+async fn package(app: &App, form: &mut Multipart, id: &str, room: u64) -> Res<()> {
+    let late = |_| Problem::bad("the form took longer than 30 seconds to arrive");
+    let wait = Duration::from_secs(30);
+    for _ in 0..8 {
+        let next = tokio::time::timeout(wait, form.next_field()).await.map_err(late)?;
+        let Some(mut field) = next.map_err(|e| Problem::bad(e.body_text()))? else { break };
         if field.name() != Some("package") {
+            let skip = async {
+                let mut size = 0;
+                while let Some(chunk) = field.chunk().await.map_err(|e| Problem::bad(e.body_text()))? {
+                    size += chunk.len();
+                    require(size <= 4096, "a form field is larger than 4 KiB")?;
+                }
+                Ok::<_, Problem>(())
+            };
+            tokio::time::timeout(wait, skip).await.map_err(late)??;
             continue;
         }
-        let staging = tmp(&app, &format!("web-{}", hex(&random::<16>())));
-        let started = match receive(field, &staging, app.cfg.package_max).await {
-            Ok((sha, size)) => start(&app, &auth, size, sha, "received").await,
-            Err(problem) => Err(problem),
-        };
-        let moved = started.and_then(|id| Ok(fs::rename(&staging, tmp(&app, &id)).map(|()| id)?));
-        let _ = fs::remove_file(&staging);
-        return finish(&app, &auth, moved?).await;
+        let staging = tmp(app, &format!("{id}.part"));
+        let (sha, size) = receive(field, &staging, room).await?;
+        let (key, sql) = (
+            id.to_string(),
+            "UPDATE uploads SET size = ?2, sha256 = ?3, state = 'received' \
+                                             WHERE id = ?1 AND state = 'open'",
+        );
+        let stored = app.db.run(move |c| {
+            let blocked = "SELECT COUNT(*) FROM blocklist WHERE sha256 = ?1";
+            if c.query_row(blocked, [&sha], |r| r.get::<_, i64>(0))? > 0 {
+                return Err(Problem::forbidden("this file is on the blocklist"));
+            }
+            Ok(c.execute(sql, params![key, size as i64, sha])?)
+        });
+        require(stored.await? == 1, "the upload was cancelled")?;
+        return Ok(fs::rename(&staging, tmp(app, id))?);
     }
     Err(Problem::bad("choose a .wpak file to upload"))
+}
+
+async fn web(State(app): St, auth: Auth, mut form: Multipart) -> Reply {
+    auth.scope("upload")?;
+    let (id, room) = reserve(&app, auth.user).await?;
+    if let Err(problem) = package(&app, &mut form, &id, room).await {
+        let _ = fs::remove_file(tmp(&app, &format!("{id}.part")));
+        fail(&app, &id, &problem.detail).await;
+        return Err(problem);
+    }
+    finish(&app, &auth, id).await
 }

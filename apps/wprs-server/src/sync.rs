@@ -1,7 +1,7 @@
 use crate::auth::Auth;
 use crate::error::{Input, Problem, Res, require};
 use crate::mailbox::Note;
-use crate::{Reply, Router, St};
+use crate::{Reply, Router, St, files};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -30,34 +30,43 @@ pub struct Head {
     pub epoch: i64,
     pub encrypted: bool,
     pub used: i64,
+    pub key_id: Option<String>,
+    pub rotate: bool,
+    pub escrow: bool,
+    pub files: i64,
 }
 
 pub fn head(c: &Connection, user: i64) -> Res<Head> {
-    let sql = "SELECT seq, min_seq, epoch, encrypted, used_bytes FROM sync_heads WHERE user_id = ?1";
+    let sql = "SELECT seq, min_seq, epoch, encrypted, used_bytes, key_id, rotate, escrow IS NOT NULL, \
+               (SELECT COALESCE(SUM(size), 0) FROM sync_blobs b WHERE b.user_id = ?1) FROM sync_heads \
+               WHERE user_id = ?1";
     let read = |r: &Row| {
-        Ok(Head {
-            seq: r.get(0)?,
-            min_seq: r.get(1)?,
-            epoch: r.get(2)?,
-            encrypted: r.get(3)?,
-            used: r.get(4)?,
-        })
+        let (seq, min_seq, epoch, encrypted, used) = (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?);
+        let (key_id, rotate, escrow, files) = (r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?);
+        Ok(Head { seq, min_seq, epoch, encrypted, used, key_id, rotate, escrow, files })
     };
     let unset = || Problem::new(StatusCode::NOT_FOUND, "sync_not_set_up", "set up sync first");
     c.query_row(sql, [user], read).optional()?.ok_or_else(unset)
 }
 
-fn describe(h: &Head, quota: u64) -> Value {
+fn describe(h: &Head, (quota, files_quota): (u64, u64)) -> Value {
     let (seq, min_seq, epoch, encrypted, used) = (h.seq, h.min_seq, h.epoch, h.encrypted, h.used);
     let warning = (!encrypted).then_some(WARNING);
     json!({
-        "seq": seq, "min_seq": min_seq, "epoch": epoch, "encrypted": encrypted,
-        "used_bytes": used, "quota_bytes": quota, "warning": warning,
+        "seq": seq, "min_seq": min_seq, "epoch": epoch, "encrypted": encrypted, "key_id": h.key_id,
+        "rotate": h.rotate, "used_bytes": used, "quota_bytes": quota, "warning": warning,
+        "escrow": h.escrow, "files_bytes": h.files, "files_quota_bytes": files_quota,
     })
 }
 
+fn key_id(id: &Option<String>) -> Res<()> {
+    let hex =
+        |k: &String| k.len() == 32 && k.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
+    require(id.as_ref().is_none_or(hex), "key_id: 32 lowercase hex digits")
+}
+
 async fn state(State(app): St, auth: Auth) -> Reply {
-    let (user, quota) = (auth.device().map(|_| auth.user)?, app.cfg.sync_quota);
+    let (user, quota) = (auth.device().map(|_| auth.user)?, (app.cfg.sync_quota, app.cfg.files_quota));
     Ok(Json(app.db.run(move |c| Ok(describe(&head(c, user)?, quota))).await?))
 }
 
@@ -67,6 +76,8 @@ struct Setup {
     encrypted: bool,
     #[serde(default)]
     confirm_plaintext: bool,
+    #[serde(default)]
+    key_id: Option<String>,
 }
 
 fn yes() -> bool {
@@ -74,14 +85,16 @@ fn yes() -> bool {
 }
 
 async fn setup(State(app): St, auth: Auth, Input(s): Input<Setup>) -> Res<impl IntoResponse> {
-    let (user, quota) = (auth.device().map(|_| auth.user)?, app.cfg.sync_quota);
+    let (user, quota) = (auth.device().map(|_| auth.user)?, (app.cfg.sync_quota, app.cfg.files_quota));
     require(
         s.encrypted || s.confirm_plaintext,
         "plain-text sync lets the server read every record: send confirm_plaintext: true",
     )?;
+    key_id(&s.key_id)?;
     let state = app.db.run(move |c| {
-        let sql = "INSERT INTO sync_heads (user_id, encrypted) VALUES (?1, ?2) ON CONFLICT DO NOTHING";
-        if c.execute(sql, params![user, s.encrypted])? == 0 {
+        let sql =
+            "INSERT INTO sync_heads (user_id, encrypted, key_id) VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING";
+        if c.execute(sql, params![user, s.encrypted, s.key_id])? == 0 {
             return Err(Problem::conflict(
                 "already_set_up",
                 "sync is already set up; reset it to change the mode",
@@ -95,18 +108,39 @@ async fn setup(State(app): St, auth: Auth, Input(s): Input<Setup>) -> Res<impl I
 #[derive(Deserialize)]
 struct Epoch {
     epoch: i64,
+    #[serde(default)]
+    key_id: Option<String>,
+    #[serde(default)]
+    done: bool,
 }
 
+const ROTATE: &str = "UPDATE sync_heads SET epoch = ?2, key_id = ?3, rotate = 0 WHERE user_id = ?1";
+const ADOPT: &str = "UPDATE sync_heads SET key_id = ?2 WHERE user_id = ?1 AND key_id IS NULL";
+const FINISH: &str = "DELETE FROM sync_records WHERE user_id = ?1 AND epoch < ?2";
+const USED: &str = "UPDATE sync_heads SET used_bytes = (SELECT COALESCE(SUM(LENGTH(payload)), 0) \
+                    FROM sync_records WHERE user_id = ?1) WHERE user_id = ?1";
+
 async fn epoch(State(app): St, auth: Auth, Input(e): Input<Epoch>) -> Reply {
-    let (user, quota) = (auth.device().map(|_| auth.user)?, app.cfg.sync_quota);
+    let (user, quota) = (auth.device().map(|_| auth.user)?, (app.cfg.sync_quota, app.cfg.files_quota));
+    key_id(&e.key_id)?;
     let state = app.db.run(move |c| {
-        let sql = "UPDATE sync_heads SET epoch = ?2 WHERE user_id = ?1 AND epoch = ?2 - 1";
-        if c.execute(sql, params![user, e.epoch])? == 0 {
-            return Err(Problem::conflict(
-                "epoch_mismatch",
-                "the new epoch must be the current one plus one",
-            ));
+        let tx = c.transaction()?;
+        let h = head(&tx, user)?;
+        let ok = match (e.epoch - h.epoch, e.done, e.key_id.as_deref()) {
+            (1, false, Some(id)) => tx.execute(ROTATE, params![user, e.epoch, id])? > 0,
+            (0, true, _) => {
+                tx.execute(FINISH, params![user, e.epoch])?;
+                tx.execute(USED, [user])? > 0
+            }
+            (0, false, Some(id)) if h.key_id.is_none() => tx.execute(ADOPT, params![user, id])? > 0,
+            (0, false, Some(id)) => h.key_id.as_deref() == Some(id),
+            _ => false,
+        };
+        if !ok {
+            let detail = format!("the key epoch is {}; a new epoch is the current one plus one", h.epoch);
+            return Err(Problem::conflict("epoch_mismatch", detail));
         }
+        tx.commit()?;
         Ok(describe(&head(c, user)?, quota))
     });
     let state = state.await?;
@@ -122,12 +156,14 @@ struct Reset {
 async fn reset(State(app): St, auth: Auth, Input(r): Input<Reset>) -> Res<StatusCode> {
     auth.scope("sync")?;
     require(r.confirm == "reset", "confirm: send \"reset\" to delete every synced record")?;
-    let user = auth.user;
+    let (user, files) = (auth.user, files::dir(&app, auth.user));
     let cleared = app.db.run(move |c| {
         c.execute("DELETE FROM sync_records WHERE user_id = ?1", [user])?;
+        c.execute("DELETE FROM sync_blobs WHERE user_id = ?1", [user])?;
         Ok(c.execute("DELETE FROM sync_heads WHERE user_id = ?1", [user])?)
     });
     cleared.await?;
+    let _ = tokio::fs::remove_dir_all(&files).await;
     app.hub.send(user, Note { event: "epoch", device: None, value: -1 });
     Ok(StatusCode::NO_CONTENT)
 }

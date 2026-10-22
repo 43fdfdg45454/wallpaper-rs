@@ -1,3 +1,4 @@
+use crate::{Error, Result};
 use serde_json::Value;
 
 const LIMIT: usize = 65_536;
@@ -10,12 +11,13 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn feed(&mut self, chunk: &[u8]) -> Vec<(String, Value)> {
+    pub fn feed(&mut self, chunk: &[u8]) -> Result<Vec<(String, Value)>> {
         let mut out = Vec::new();
         for &byte in chunk {
             if byte != b'\n' {
-                if self.line.len() < LIMIT {
-                    self.line.push(byte);
+                self.line.push(byte);
+                if self.line.len() > LIMIT {
+                    return Err(Error::Invalid("the server sent an event line over 64 KiB".into()));
                 }
                 continue;
             }
@@ -29,12 +31,15 @@ impl Parser {
                     }
                 }
                 Some(("event", name)) => self.event = name.trim().into(),
-                Some(("data", data)) if self.data.len() < LIMIT => {
-                    self.data.push_str(data.strip_prefix(' ').unwrap_or(data))
+                Some(("data", data)) => {
+                    self.data.push_str(data.strip_prefix(' ').unwrap_or(data));
+                    if self.data.len() > LIMIT {
+                        return Err(Error::Invalid("the server sent an event over 64 KiB".into()));
+                    }
                 }
                 _ => {}
             }
         }
-        out
+        Ok(out)
     }
 }

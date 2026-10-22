@@ -21,8 +21,8 @@ const SELECT: &str = "SELECT v.id AS row, v.package_id AS id, v.version, v.kind,
 const NEWEST: &str = " WHERE v.state = 'published' AND v.id = (SELECT w.id FROM versions w \
                       WHERE w.package_id = v.package_id AND w.state = 'published' \
                       ORDER BY w.published_at DESC, w.id DESC LIMIT 1) \
-                      AND (?1 = '' OR v.title LIKE ?2 ESCAPE '!' OR v.description LIKE ?2 ESCAPE '!' \
-                      OR v.tags LIKE ?2 ESCAPE '!' OR v.package_id LIKE ?2 ESCAPE '!') \
+                      AND (?1 = '' OR (?1 = 'm' AND v.id IN (SELECT rowid FROM search WHERE search MATCH ?2)) \
+                      OR (?1 = 't' AND v.tags LIKE ?2 ESCAPE '!')) \
                       AND (?3 = '' OR v.kind = ?3) AND (v.published_at, v.id) < (?4, ?5) \
                       ORDER BY v.published_at DESC, v.id DESC LIMIT ?6";
 
@@ -55,13 +55,26 @@ fn shape(mut item: Value) -> Value {
     item
 }
 
+fn pattern(q: &str) -> (&'static str, String) {
+    let long: Vec<String> = q
+        .split_whitespace()
+        .filter(|term| term.chars().count() >= 3)
+        .map(|term| format!("\"{}\"", term.replace('"', "\"\"")))
+        .collect();
+    match q.trim() {
+        "" => ("", String::new()),
+        _ if !long.is_empty() => ("m", long.join(" ")),
+        short => ("t", format!("%\"{}%", short.replace('!', "!!").replace('%', "!%").replace('_', "!_"))),
+    }
+}
+
 pub fn search(c: &Connection, s: &Search) -> Res<(Vec<Value>, Option<String>)> {
     let limit = s.limit.unwrap_or(24).clamp(1, 100) as usize;
     let cursor = B64.decode(&s.cursor).ok().and_then(|b| String::from_utf8(b).ok()).unwrap_or_default();
     let after = cursor.split_once(':').and_then(|(a, b)| Some((a.parse().ok()?, b.parse().ok()?)));
     let (at, row): (i64, i64) = after.unwrap_or((i64::MAX, i64::MAX));
-    let escaped = s.q.trim().replace('!', "!!").replace('%', "!%").replace('_', "!_");
-    let values = params![escaped, format!("%{escaped}%"), s.kind, at, row, limit as i64 + 1];
+    let (mode, pattern) = pattern(&s.q);
+    let values = params![mode, pattern, s.kind, at, row, limit as i64 + 1];
     let mut found = rows(c, &format!("{SELECT}{NEWEST}"), values)?;
     let more = found.len() > limit;
     found.truncate(limit);

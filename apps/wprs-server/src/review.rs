@@ -7,7 +7,9 @@ use semver::Version;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::fs;
+use std::path::Path;
 use std::sync::Arc;
+use std::time::SystemTime;
 use wprs_format::Reason;
 
 const REASONS: [(&str, Reason); 5] = [
@@ -27,6 +29,11 @@ pub struct Decision {
     pub reason: Option<String>,
     #[serde(default)]
     pub strike: bool,
+}
+
+fn keep(from: &Path, to: &Path) -> std::io::Result<()> {
+    fs::rename(from, to)?;
+    fs::File::options().write(true).open(to)?.set_modified(SystemTime::now())
 }
 
 pub async fn record(app: &App, user: i64, upload: &str, sha: &str, size: i64, report: Report) -> Res<i64> {
@@ -96,8 +103,8 @@ pub async fn decide(app: &Arc<App>, actor: Option<i64>, case: i64, d: Decision) 
     let choice = d.decision.as_str();
     let restrictive = matches!(choice, "reject" | "remove" | "revoke");
     require(
-        restrictive || matches!(choice, "approve" | "dismiss"),
-        "decision: approve, reject, remove, revoke or dismiss",
+        restrictive || matches!(choice, "approve" | "restore" | "dismiss"),
+        "decision: approve, reject, remove, revoke, restore or dismiss",
     )?;
     require(
         !restrictive || d.statement.trim().chars().count() >= 10,
@@ -124,11 +131,15 @@ pub async fn decide(app: &Arc<App>, actor: Option<i64>, case: i64, d: Decision) 
     if !open {
         return Err(Problem::conflict("case_closed", "this case was already decided"));
     }
+    if actor.is_some() && actor == owner && !restrictive {
+        return Err(Problem::forbidden("moderators cannot approve, restore or dismiss their own uploads"));
+    }
     let needs = |from: &str, to: &'static str| match state == from {
         true => Ok(Some(to)),
         false => Err(Problem::conflict("version_state", format!("the version is {state}, not {from}"))),
     };
     let (shared, blob) = (app.clone(), app.cfg.data.join("blobs").join(format!("{sha}.wpak")));
+    let held = |ext: &str| app.cfg.data.join("held").join(format!("{sha}.{ext}"));
     let (id, number, path) = (package.clone(), version.clone(), blob.clone());
     let next = match choice {
         "approve" if !app.repo.ready() => {
@@ -151,38 +162,72 @@ pub async fn decide(app: &Arc<App>, actor: Option<i64>, case: i64, d: Decision) 
             tokio::task::spawn_blocking(move || shared.repo.revoke(&id, &number, reason, &message)).await??;
             next
         }
+        "restore" => {
+            let next = needs(if state == "revoked" { "revoked" } else { "removed" }, "published")?;
+            let (kept, t) = (held("wpak"), now());
+            if !kept.is_file() {
+                return Err(Problem::conflict(
+                    "deleted",
+                    "the withdrawn file was deleted after its retention",
+                ));
+            }
+            tokio::task::spawn_blocking(move || shared.repo.restore(&id, &number, &kept, t)).await??;
+            next
+        }
         _ => None,
     };
-    if matches!(next, Some("published" | "rejected")) {
-        let _ = fs::remove_file(&blob);
-    }
     let (statement, strike, decision) =
         (d.statement.trim().to_string(), d.strike && restrictive, d.decision.clone());
     let (subject, closed) =
         (format!("{package}@{version}"), if choice == "dismiss" { "dismissed" } else { "actioned" });
-    let logged = subject.clone();
-    app.db
-        .run(move |c| {
-            let (tx, t) = (c.transaction()?, now());
-            if let Some(to) = next {
-                let sql = "UPDATE versions \
+    let (logged, key) = (subject.clone(), sha.clone());
+    let shown = app.db.run(move |c| {
+        let (tx, t) = (c.transaction()?, now());
+        if let Some(to) = next {
+            let sql = "UPDATE versions \
                            SET state = ?2, published_at = IIF(?2 = 'published', ?3, published_at) \
                            WHERE id = ?1";
-                tx.execute(sql, params![version_id, to, t])?;
-                tx.execute("UPDATE repo_state SET dirty = 1 WHERE ?1 != 'rejected'", [to])?;
-            }
-            let sql = "UPDATE cases \
+            tx.execute(sql, params![version_id, to, t])?;
+            tx.execute("UPDATE repo_state SET dirty = 1 WHERE ?1 != 'rejected'", [to])?;
+        }
+        let sql = "UPDATE cases \
                        SET state = ?2, decision = ?3, statement = ?4, decided_by = ?5, decided_at = ?6 \
                        WHERE id = ?1 OR (version_id = ?7 AND state = 'open' AND ?2 = 'actioned')";
-            tx.execute(sql, params![case, closed, decision, statement, actor, t, version_id])?;
-            if let (true, Some(owner)) = (strike, owner) {
-                let sql = "INSERT INTO strikes (user_id, case_id, expires_at) VALUES (?1, ?2, ?3)";
-                tx.execute(sql, params![owner, case, t + 365 * DAY])?;
+        tx.execute(sql, params![case, closed, decision, statement, actor, t, version_id])?;
+        if let (true, Some(owner)) = (strike, owner) {
+            let sql = "INSERT INTO strikes (user_id, case_id, expires_at) VALUES (?1, ?2, ?3)";
+            tx.execute(sql, params![owner, case, t + 365 * DAY])?;
+        }
+        audit(&tx, actor, &decision, &logged, &statement)?;
+        let sql = "SELECT COUNT(*) FROM versions WHERE sha256 = ?1 AND state IN ('pending', 'published')";
+        let shown: i64 = tx.query_row(sql, [&key], |r| r.get(0))?;
+        tx.commit()?;
+        Ok(shown > 0)
+    });
+    let shown = shown.await?;
+    let data = &app.cfg.data;
+    let (package, thumb) = (
+        data.join("repo/packages").join(&package).join(format!("{version}.wpak")),
+        data.join("thumbs").join(format!("{sha}.jpg")),
+    );
+    match next {
+        _ if choice == "restore" => {
+            let _ = fs::rename(held("jpg"), &thumb);
+            let _ = fs::remove_file(held("wpak"));
+        }
+        Some("published") => drop(fs::remove_file(blob)),
+        Some("rejected") => {
+            [blob].into_iter().chain((!shown).then_some(thumb)).for_each(|f| drop(fs::remove_file(f)))
+        }
+        Some(_) => {
+            for (from, ext) in [(package, "wpak")].into_iter().chain((!shown).then_some((thumb, "jpg"))) {
+                if let Err(e) = keep(&from, &held(ext)) {
+                    tracing::warn!("a withdrawn file could not be kept: {e}");
+                }
             }
-            audit(&tx, actor, &decision, &logged, &statement)?;
-            Ok(tx.commit()?)
-        })
-        .await?;
+        }
+        None => {}
+    }
     if next.is_some_and(|s| s != "rejected") {
         app.dirty.notify_one();
     }

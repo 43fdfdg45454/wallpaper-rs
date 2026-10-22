@@ -71,6 +71,12 @@ pub fn revoke(dir: &Path, id: &str, version: Option<&str>, reason: Reason, messa
     catalog.save(dir)
 }
 
+pub fn unrevoke(dir: &Path, id: &str, version: &str) -> Result<()> {
+    let mut catalog = Catalog::load(dir)?;
+    catalog.revoked.retain(|r| r.id != id || r.versions != [version]);
+    catalog.save(dir)
+}
+
 pub fn revoke_key(dir: &Path, fingerprint: &str, reason: Reason) -> Result<()> {
     let mut catalog = Catalog::load(dir)?;
     catalog.keys.push(KeyRevocation { fingerprint: fingerprint.into(), reason });

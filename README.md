@@ -84,7 +84,7 @@ alias wprs-ctl='flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperR
 Permisos: la GPU, el socket de PipeWire para publicar los streams, el sonido de los vídeos, el
 nombre D-Bus del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
 Service) para las contraseñas y claves de los proveedores, KWin para cargar el script del
-puntero solo mientras una escena con permiso o un parallax que sigue al puntero lo usa, lectura
+puntero solo mientras una escena con permiso o un paralaje que sigue al puntero lo usa, lectura
 de Imágenes, Vídeos y Descargas, y
 red. La red solo se usa para los proveedores de fondos y los repositorios que
 añadas tú. Para usar fondos de otra carpeta:
@@ -209,7 +209,7 @@ wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
 wprs-ctl config layout.bezel_mm 8                    # ancho del marco de cada pantalla al extender
 ```
 
-Una imagen fija puede moverse en profundidad (parallax): con un mapa de profundidad en gris (blanco
+Una imagen fija puede moverse en profundidad (paralaje): con un mapa de profundidad en gris (blanco
 cerca), el daemon desplaza más lo cercano que lo lejano siguiendo una órbita lenta, el puntero o el
 acelerómetro del equipo, solo mientras el fondo se ve, con el tope de `playback.max_fps`, las
 mismas pausas que el vídeo y quieto si el sistema pide reducir el movimiento. Elegir el puntero
@@ -273,6 +273,8 @@ lee el valor de un archivo, para los secretos:
 | `WPRS_LEGAL_OPERATOR`, `WPRS_LEGAL_CONTACT` | vacías | Responsable y contacto de las páginas legales |
 | `WPRS_OIDC_ISSUER`, `WPRS_OIDC_CLIENT_ID`, `WPRS_OIDC_CLIENT_SECRET` | vacías | Inicio de sesión único opcional |
 | `WPRS_LOG_CLIENTS` | `off` | IP en un registro de abusos: `off`, `prefix` o `full`; se borra a los `WPRS_LOG_CLIENTS_DAYS` días (7) |
+| `WPRS_NOTICE_DAYS` | `180` | Días que un aviso legal guarda el nombre, el correo y la firma de quien lo envía |
+| `WPRS_TAKEDOWN_DAYS` | `90` | Días que se guarda fuera de la vista pública un paquete retirado, como prueba y para una contranotificación |
 
 La lista completa de variables y la API HTTP están en
 [`docs/specs/server.md`](docs/specs/server.md).
@@ -284,12 +286,29 @@ El servicio de cada equipo se enlaza con el servidor desde *Cuenta* en la app o 
 ```sh
 wprs-ctl server add https://fondos.example.org
 wprs-ctl server link --name Escritorio          # muestra un código para /link o para:
-wprs-ctl server approve BCDF-GHJK                # … en un equipo ya enlazado
-wprs-ctl server join "Device 1"                  # equipo nuevo de una cuenta cifrada: 12 cifras
-wprs-ctl server share "Device 2" "1234 5678 9012"   # en el equipo con la clave, tras compararlas
+wprs-ctl server approve BCDF-GHJK                # … en un equipo ya enlazado, tras ver quién lo pide
+wprs-ctl server join "Device 1" --wait           # equipo nuevo de una cuenta cifrada: muestra sus cifras y pide las del otro
+wprs-ctl server share "Device 2"                 # en el equipo con la clave: muestra sus cifras y pide las del otro
 wprs-ctl server status
+wprs-ctl server rotate                           # clave nueva; los demás equipos la reciben solos
+wprs-ctl server reset                            # sin ningún equipo con la clave: rehace los datos desde este
 wprs-ctl server upload fondo.wpak                # sube un paquete con el token del equipo
+wprs-ctl server repo 1a2b3c4d                    # añade un repositorio que otro equipo sincronizó, tras revisarlo
+wprs-ctl server secret wallhaven                 # sincroniza la clave de un proveedor, cifrada
+wprs-ctl server files share ./fondos             # sube tus propios fondos, cifrados; en otro equipo:
+wprs-ctl server files ls                         # … los lista y `server files fetch <id>` descarga uno
+wprs-ctl server escrow                           # guarda la clave en el servidor, cerrada con una frase
+wprs-ctl server restore                          # equipo nuevo sin ningún otro: recupera la clave con la frase
 ```
+
+Aprueba solo un código que muestre la pantalla de tu propio equipo nuevo: quien te envía un código
+intenta entrar en tu cuenta. Las dos pantallas muestran el mismo número de seis cifras solo si
+nadie se ha colado entre los equipos, y en cada uno escribes las cifras del otro: la clave no sale
+ni se guarda hasta que coinciden en los dos; cada intento da una única oportunidad a quien lo
+intente. Al revocar un equipo, otro cambia la clave de sincronización y vuelve a cifrar todo, así
+que el equipo revocado ya no puede leer lo nuevo; la clave nueva pasa solo entre equipos que
+compararon sus cifras, y los demás vuelven a unirse. Cambiar la contraseña en la web cierra las
+demás sesiones y borra los tokens; los equipos siguen enlazados salvo que elijas cerrarlos también.
 
 Se sincronizan los títulos, etiquetas, valoraciones y favoritos de la biblioteca, las listas, los
 perfiles, los ajustes predefinidos y los ajustes (salvo el volumen, la caché, el paralaje por
@@ -299,9 +318,23 @@ sincronización viven solo en el llavero del sistema; el servidor ve los equipos
 `Device 2`… y el nombre real viaja cifrado. Al enlazar se añade también el repositorio del
 servidor.
 
+Los repositorios que añade un equipo llegan a los demás como propuesta: cada equipo los añade solo
+cuando lo confirmas, con su huella. Las claves de los proveedores viajan solo si lo eliges para
+cada proveedor, solo en cuentas cifradas, y en cada equipo se guardan solo en su llavero. Tus
+propios fondos (no los de un repositorio) suben cifrados por partes si eliges el archivo o su
+carpeta; si se corta, la subida sigue donde se quedó, el mismo archivo se guarda una vez y los
+demás equipos lo descargan cuando lo pides. Si dos equipos cambian una lista de formas que no se
+pueden juntar, se conservan las dos: la otra queda como «Lista (conflicto)». Lo que una versión
+más antigua no entiende se le devuelve tal cual.
+
+Si temes perder todos los equipos, `server escrow` guarda la clave en el servidor cerrada con una
+frase (Argon2id, 256 MiB). Quien consiga una copia del servidor puede probar frases sin límite: usa
+varias palabras sin relación que no uses en ningún otro sitio. Tras revocar un equipo la frase deja
+de valer: guarda otra nueva, porque quien conocía la anterior podría abrir lo que se cierre con ella.
+
 Copias de seguridad: `docker compose exec wprs wprs-server backup` deja en
-`/data/backups/<fecha>` una instantánea coherente de la base de datos (`VACUUM INTO`) y de los
-paquetes, miniaturas, claves y el repositorio, con la suma SHA-256 de cada archivo. Para
+`/data/backups/<fecha>` una instantánea coherente de la base de datos (`VACUUM INTO`) con los
+paquetes, miniaturas y archivos privados que nombra, las claves y el repositorio, con la suma SHA-256 de cada archivo. Para
 restaurar, con el servidor parado:
 
 ```sh
@@ -404,7 +437,7 @@ raíz y la misma pausa.
 | `apps/wprs-server` | Servidor propio: repositorio, catálogo, subidas, moderación y sincronización |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
-| `integrations/kwin-pointer` | Script de KWin que envía la posición del puntero mientras una escena o un parallax la usa |
+| `integrations/kwin-pointer` | Script de KWin que envía la posición del puntero mientras una escena o un paralaje la usa |
 | `po` | Traducciones gettext de los paquetes de Plasma y de la app |
 | `packaging` | Servicio systemd, activación D-Bus, lanzador e icono, scripts de instalación, Flatpak |
 | `deploy` | Despliegue de referencia del servidor con Caddy |
@@ -447,14 +480,14 @@ raíz y la misma pausa.
   también el sonido si está activa la pausa al tapar, como viene por defecto. Del sonido solo se
   calculan bandas y niveles en memoria: no se guarda, no se registra y no sale del equipo. Del
   puntero solo se guarda en memoria la última posición, y nunca se leen las teclas. Una imagen
-  cuyo parallax sigue al puntero lo usa con las mismas reglas, porque elegir esa fuente es el
+  cuyo paralaje sigue al puntero lo usa con las mismas reglas, porque elegir esa fuente es el
   permiso.
 - Los scripts de las escenas se ejecutan en un proceso aparte, sin archivos, red ni otros
   procesos, con límites de memoria y de CPU por fotograma.
 - Con un servidor propio, los registros sincronizados salen cifrados con una clave que solo
   tienen tus equipos; los identificadores de los paquetes se derivan de esa clave y el nombre de
   cada equipo solo viaja cifrado. La clave pasa a un equipo nuevo por el buzón del servidor,
-  sellada para él, después de comparar un código de 12 cifras en las dos pantallas.
+  sellada para él, después de comparar un código de 6 cifras en las dos pantallas.
 - Los paquetes se generan sin rutas, usuarios ni nombre del equipo de quien los compila.
 - El servidor propio no guarda IP ni user agents en sus registros salvo que su administrador
   active el registro de abusos, que se borra solo; los datos sincronizados le llegan cifrados.

@@ -5877,6 +5877,7 @@ dependencies = [
  "wprs-render",
  "wprs-scene",
  "zbus",
+ "zeroize",
 ]
 
 [[package]]

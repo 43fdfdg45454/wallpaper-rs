@@ -10,7 +10,7 @@ use wprs_core::model::{
     ItemDetails, ItemSummary, MODEL, PlaylistRef, Preset, SearchPage, SourcesReply, Tag, TagsReply,
 };
 use wprs_format::Installed;
-use wprs_library::{Item, Library};
+use wprs_library::{Item, Kind, Library};
 
 pub const MAX_UIDS: usize = 10_000;
 const MAX_PAGE: u32 = 500;
@@ -21,6 +21,10 @@ pub fn merged<T: DeserializeOwned>(base: impl Serialize, extra: Value) -> Result
         object.extend(extra);
     }
     serde_json::from_value(value).map_err(|e| failed(e.to_string()))
+}
+
+fn rescanned(item: &Item) -> bool {
+    item.source.is_some() && item.path.exists() && Kind::detect(&item.path).is_some()
 }
 
 pub fn reply(value: impl Serialize) -> Result<String> {
@@ -44,7 +48,7 @@ impl Daemon {
 
     pub fn summary(&self, item: Item) -> Result<ItemSummary> {
         let installed = self.installed(&item);
-        let removable = installed.is_none() && (item.source.is_none() || !item.path.exists());
+        let removable = installed.is_none() && !rescanned(&item);
         let (imported, thumb) = (item.path.starts_with(self.store.files()), self.thumbs.cached(&item, 256));
         let revoked = installed.and_then(|i| i.revoked);
         merged(
@@ -136,9 +140,7 @@ impl Daemon {
             () if installed.contains(&item.path) => {
                 Some("is installed from a repository; use Repos1.Uninstall")
             }
-            () if item.source.is_some() && item.path.exists() => {
-                Some("is in a source; remove the file or the folder")
-            }
+            () if rescanned(item) => Some("is in a source; remove the file or the folder"),
             () if delete_files && !item.path.starts_with(&files) => {
                 Some("is not an imported copy; refusing to delete files outside the imported-files folder")
             }

@@ -1,17 +1,28 @@
 mod apply;
 mod cycle;
+mod escrow;
+mod files;
+mod held;
 mod keys;
+mod legacy;
 mod link;
 mod local;
+mod mail;
 mod manage;
 mod objects;
+mod offers;
 mod pending;
 mod presets;
+mod rotate;
 mod saved;
 mod secrets;
 mod server;
 mod share;
+mod shared;
 mod status;
+#[cfg(test)]
+mod tests;
+mod transfer;
 mod upload;
 mod views;
 mod watch;
@@ -25,6 +36,7 @@ use crate::error::{Error, Result, failed, invalid, not_found};
 use crate::keyring::Keyring;
 use saved::{Peer, Saved};
 use serde_json::Value;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use tokio::sync::Notify;
@@ -39,6 +51,7 @@ pub struct Account {
     keyring: OnceLock<Keyring>,
     wake: Notify,
     restart: Notify,
+    confirmed: Mutex<Option<(String, String)>>,
 }
 
 pub fn block_on<T>(work: impl Future<Output = T>) -> T {
@@ -101,8 +114,42 @@ impl Daemon {
             seen_at: millis(&d["seen_at"]),
         };
         let peers: Vec<Peer> = found["items"].as_array().into_iter().flatten().map(peer).collect();
-        self.update(|s| s.peers = peers.clone())?;
+        self.update(|s| {
+            s.pinned.iter_mut().for_each(|pins| pins.retain(|id, _| peers.iter().any(|p| p.id == *id)));
+            s.members.extend(peers.iter().map(|p| p.id.clone()));
+            s.peers = peers.clone();
+        })?;
         Ok(peers)
+    }
+
+    fn pins(&self) -> Result<BTreeMap<String, String>> {
+        let seeded = {
+            let s = self.saved();
+            if let Some(pins) = &s.pinned {
+                return Ok(pins.clone());
+            }
+            let record =
+                |id: &str| s.replica.bases.get(&format!("device/{id}")).and_then(|(_, doc)| doc.view());
+            let vouched = |p: &&Peer| {
+                record(&p.id).and_then(|v| v.get("key").cloned()) == p.enc_key.clone().map(Value::from)
+            };
+            let peers = s.peers.iter().filter(|p| Some(&p.id) != s.device.as_ref()).filter(vouched);
+            peers.filter_map(|p| Some((p.id.clone(), p.enc_key.clone()?))).collect::<BTreeMap<_, _>>()
+        };
+        self.update(|s| s.pinned = Some(seeded.clone()))?;
+        Ok(seeded)
+    }
+
+    fn pin(&self, peer: &str, key: &str) -> Result<()> {
+        self.update(|s| drop(s.pinned.get_or_insert_default().insert(peer.to_owned(), key.to_owned())))
+    }
+
+    fn rekeyed(&self, api: &Api) -> Result<bool> {
+        let before = self.saved().members.clone();
+        let peers = self.refresh_peers(api)?;
+        let left = before.iter().any(|id| !peers.iter().any(|p| p.id == *id));
+        self.update(|s| s.members = peers.iter().map(|p| p.id.clone()).collect())?;
+        Ok(left)
     }
 }
 

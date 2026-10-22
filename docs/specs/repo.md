@@ -106,7 +106,7 @@ checked by hand with `minisign -Vm manifest.json -p author.pub`.
 | Add root signatures until the threshold is met | `sign_root(dir, signer)` |
 | Sign a package source before building it | `sign_source(dir, signer)` |
 | Add a package (validated, signature checked against root authors, preview copied) | `add(dir, wpak, author, now)` |
-| Revoke a package version or a key | `revoke(dir, id, version, reason, message)`, `revoke_key(dir, fingerprint, reason)` |
+| Revoke a package version or a key, or withdraw the revocation of a version | `revoke(dir, id, version, reason, message)`, `revoke_key(dir, fingerprint, reason)`, `unrevoke(dir, id, version)` |
 | Write shards, revocations and the next entry; repeat before expiry | `publish(dir, online, lifetime_days, now)` |
 | Replace keys or policy: write `root/<N+1>.json`, then sign with the old and the new root threshold, then publish with the current online key | `rotate_root(dir, settings, now)`, `sign_root`, `publish` |
 | Check a tree as a client would, without storing anything | `verify(fetch, url_or_dir, now)` |

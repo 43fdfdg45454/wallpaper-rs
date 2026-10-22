@@ -150,7 +150,7 @@ async fn moderation(State(app): St, auth: Option<Auth>) -> Res<Response> {
         return Ok(Redirect::to("/login?next=/mod").into_response());
     };
     let cases = app.db.run(|c| open_cases(c)).await?;
-    let decisions = ["approve", "reject", "remove", "revoke", "dismiss"];
+    let decisions = ["approve", "reject", "remove", "revoke", "restore", "dismiss"];
     let reasons = ["other", "malware", "license", "takedown", "broken"];
     let body = html! {
         @if cases.is_empty() { p { "No open cases." } }
