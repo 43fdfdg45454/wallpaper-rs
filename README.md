@@ -102,6 +102,17 @@ dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una ca
 | `packaging` | Servicio systemd, activación D-Bus, scripts de instalación |
 | `docs` | Especificación de la interfaz D-Bus |
 
+## Privacidad
+
+- Sin telemetría ni estadísticas de uso. El servicio no se conecta a internet: los fondos se leen
+  de archivos locales.
+- Los proveedores de fondos en línea (Bing, APOD, Wikimedia, Wallhaven, WebDAV/Nextcloud, Immich)
+  solo se usan si los configuras. Los servicios públicos se usan siempre por HTTPS; todos llevan un
+  User-Agent genérico (`wallpaper-rs/<versión>`), sin cookies ni cabecera Referer, y las claves de API
+  y contraseñas solo se envían al servidor configurado.
+- La caché de descargas se guarda en una carpeta privada.
+- Los paquetes se generan sin rutas, usuarios ni nombre del equipo de quien los compila.
+
 ## Licencia
 
 GPL-3.0-or-later. Ver [`LICENSE`](LICENSE).
