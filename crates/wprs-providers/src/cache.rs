@@ -1,4 +1,4 @@
-use crate::{Item, Media, Result, path_of};
+use crate::{Item, Media, Result, invalid, path_of};
 use reqwest::header::{ETAG, HeaderName, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -36,10 +36,8 @@ impl Cache {
             .into_iter()
             .find_map(|name| Media::detect(name).filter(|(media, _)| *media == item.media))
             .map_or_else(|| if item.media == Media::Image { "jpg" } else { "mp4" }.into(), |(_, ext)| ext);
-        let safe = |c: char| if c.is_ascii_alphanumeric() || "-_.".contains(c) { c } else { '_' };
-        let slug: String = item.id.chars().take(48).map(safe).collect();
         let hash = item.id.bytes().fold(FNV_OFFSET, |h, b| (h ^ u64::from(b)).wrapping_mul(FNV_PRIME));
-        self.dir.join(format!("{slug}-{hash:016x}.{ext}"))
+        self.dir.join(format!("{hash:016x}.{ext}"))
     }
 
     pub async fn download(&self, item: &Item, request: RequestBuilder) -> Result<PathBuf> {
@@ -50,12 +48,14 @@ impl Cache {
         let request = known.etag.iter().fold(request, |r, v| r.header(IF_NONE_MATCH, v));
         let request = known.modified.iter().fold(request, |r, v| r.header(IF_MODIFIED_SINCE, v));
         let response = match request.send().await.and_then(Response::error_for_status) {
+            Ok(response) if response.status() == StatusCode::NOT_MODIFIED => return touch(path),
+            Ok(response) if response.status().is_redirection() && !path.exists() => {
+                return Err(invalid("redirect refused"));
+            }
+            Ok(response) if response.status().is_redirection() => return touch(path),
             Err(_) if path.exists() => return touch(path),
             response => response?,
         };
-        if response.status() == StatusCode::NOT_MODIFIED {
-            return touch(path);
-        }
         let fresh = Validators { etag: header(&response, ETAG), modified: header(&response, LAST_MODIFIED) };
         let part = path.with_extension("part");
         if let Err(error) = store(&part, response).await {

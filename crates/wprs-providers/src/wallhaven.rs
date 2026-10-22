@@ -1,4 +1,4 @@
-use crate::{Cache, Item, Media, Provider, Result, json};
+use crate::{Cache, Item, Media, Provider, Result, Secret, json};
 use reqwest::Client;
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -12,7 +12,7 @@ pub struct Wallhaven {
     pub purity: String,
     pub sorting: String,
     pub atleast: Option<String>,
-    pub api_key: Option<String>,
+    pub api_key: Option<Secret>,
 }
 
 #[derive(Deserialize)]
@@ -44,7 +44,7 @@ impl Provider for Wallhaven {
         query.extend(self.query.as_deref().map(|q| ("q", q)));
         query.extend(self.atleast.as_deref().map(|size| ("atleast", size)));
         let request = self.client.get(format!("{}/search", self.base)).query(&query);
-        let request = self.api_key.iter().fold(request, |request, key| request.header("X-API-Key", key));
+        let request = self.api_key.iter().fold(request, |request, key| request.header("X-API-Key", &key.0));
         let search: Search = json(request).await?;
         let item = |paper: Wallpaper| Item {
             id: format!("wallhaven-{}", paper.id),

@@ -1,7 +1,7 @@
 use serde_json::json;
 use wiremock::matchers::{basic_auth, body_partial_json, header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
-use wprs_providers::{Cache, Immich, Media, Provider, WebDav};
+use wprs_providers::{Cache, Immich, Item, Media, Provider, WebDav};
 
 const ALBUM: &str = "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f";
 const ASSET: &str = "8d2f1c3a-5b6e-4f70-8a91-b2c3d4e5f601";
@@ -79,4 +79,30 @@ async fn immich_pages_through_an_album_and_downloads_originals() {
         (stored.extension().unwrap().to_str(), std::fs::read(&stored).unwrap()),
         (Some("jpg"), b"beach".to_vec())
     );
+}
+
+#[tokio::test]
+async fn credentials_stay_on_their_origin_and_off_plain_http() {
+    let (server, other) = (MockServer::start().await, MockServer::start().await);
+    let moved = ResponseTemplate::new(302).insert_header("location", format!("{}/leak", other.uri()));
+    Mock::given(method("GET")).respond_with(moved).mount(&server).await;
+    Mock::given(method("GET")).respond_with(bytes(b"leak")).expect(0).mount(&other).await;
+    let immich = Immich::new(&server.uri(), "key", ALBUM).unwrap();
+    let url = format!("{}/api/assets/{ASSET}/original", server.uri());
+    let item = Item {
+        id: ASSET.into(),
+        title: "a.jpg".into(),
+        url,
+        attribution: None,
+        license: None,
+        media: Media::Image,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    assert!(immich.fetch(&item, &Cache::new(dir.path(), 1 << 20).unwrap()).await.is_err());
+    assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
+
+    let remote = Immich::new("http://photos.example.org", "key", ALBUM).unwrap();
+    assert!(remote.list().await.is_err());
+    let dav = WebDav::new("http://dav.example.org/walls/", "alice", "x").unwrap();
+    assert!(dav.list().await.is_err());
 }

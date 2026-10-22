@@ -26,7 +26,7 @@ const VIDEOS: [&str; 7] = ["mp4", "webm", "mkv", "mov", "m4v", "avi", "ogv"];
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("http request failed: {0}")]
-    Http(#[from] reqwest::Error),
+    Http(reqwest::Error),
     #[error("i/o error: {0}")]
     Io(#[from] std::io::Error),
     #[error("invalid json: {0}")]
@@ -38,6 +38,27 @@ pub enum Error {
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+impl From<reqwest::Error> for Error {
+    fn from(error: reqwest::Error) -> Self {
+        Self::Http(error.without_url())
+    }
+}
+
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct Secret(pub String);
+
+impl std::fmt::Debug for Secret {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Secret(..)")
+    }
+}
+
+impl<T: Into<String>> From<T> for Secret {
+    fn from(value: T) -> Self {
+        Self(value.into())
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -85,7 +106,7 @@ pub(crate) fn keyed_client() -> Result<reqwest::Client> {
 fn redirect(attempt: Attempt, same_host: bool) -> Action {
     let (url, previous) = (attempt.url(), attempt.previous());
     let downgrade = previous.last().is_some_and(|p| p.scheme() == "https") && url.scheme() != "https";
-    let moved = same_host && previous.first().is_some_and(|first| first.host_str() != url.host_str());
+    let moved = same_host && previous.first().is_some_and(|first| first.origin() != url.origin());
     let hops = previous.len();
     match () {
         _ if downgrade || moved => attempt.stop(),
@@ -100,11 +121,17 @@ fn build(redirects: Policy) -> Result<reqwest::Client> {
     Ok(builder.referer(false).redirect(redirects).build()?)
 }
 
+fn local(host: &str) -> bool {
+    host == "localhost" || host.trim_matches(['[', ']']).parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
+}
+
+pub(crate) fn guarded(url: &str, allow_plain_http: bool) -> Result<()> {
+    let parsed = reqwest::Url::parse(url).map_err(invalid)?;
+    let safe = parsed.scheme() == "https" || allow_plain_http || parsed.host_str().is_some_and(local);
+    safe.then_some(()).ok_or_else(|| invalid("refusing to send credentials over plain http"))
+}
+
 pub(crate) fn secure(url: &str) -> String {
-    let local = |host: &str| {
-        host == "localhost"
-            || host.trim_matches(['[', ']']).parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
-    };
     match reqwest::Url::parse(url) {
         Ok(mut parsed) if parsed.scheme() == "http" && !parsed.host_str().is_some_and(local) => {
             let _ = parsed.set_scheme("https");
@@ -148,5 +175,19 @@ mod tests {
         assert_eq!(super::secure("http://127.0.0.1:8080/a.jpg"), "http://127.0.0.1:8080/a.jpg");
         assert_eq!(super::secure("http://[::1]/a.jpg"), "http://[::1]/a.jpg");
         assert_eq!(super::secure("https://example.org/a.jpg"), "https://example.org/a.jpg");
+    }
+
+    #[test]
+    fn credentials_need_tls_or_loopback() {
+        assert!(super::guarded("http://example.org/dav", false).is_err());
+        assert!(super::guarded("http://example.org/dav", true).is_ok());
+        assert!(super::guarded("http://localhost:2283", false).is_ok());
+        assert!(super::guarded("https://example.org/dav", false).is_ok());
+    }
+
+    #[test]
+    fn secrets_stay_out_of_debug() {
+        let text = format!("{:?}", super::Secret::from("hunter2"));
+        assert!(!text.contains("hunter2"));
     }
 }

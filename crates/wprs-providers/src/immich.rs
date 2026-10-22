@@ -1,4 +1,4 @@
-use crate::{Cache, Item, Media, Provider, Result, json};
+use crate::{Cache, Item, Media, Provider, Result, Secret, json};
 use reqwest::{Client, RequestBuilder};
 use serde::Deserialize;
 use serde_json::json;
@@ -8,7 +8,8 @@ use std::path::PathBuf;
 pub struct Immich {
     pub client: Client,
     pub server: String,
-    pub api_key: String,
+    pub api_key: Secret,
+    pub allow_plain_http: bool,
     pub album: String,
 }
 
@@ -36,11 +37,17 @@ struct Asset {
 impl Immich {
     pub fn new(server: &str, api_key: impl Into<String>, album: impl Into<String>) -> Result<Self> {
         let (client, server) = (crate::keyed_client()?, server.trim_end_matches('/').into());
-        Ok(Self { client, server, api_key: api_key.into(), album: album.into() })
+        Ok(Self {
+            client,
+            server,
+            api_key: Secret(api_key.into()),
+            album: album.into(),
+            allow_plain_http: false,
+        })
     }
 
     fn keyed(&self, request: RequestBuilder) -> RequestBuilder {
-        request.header("x-api-key", &self.api_key)
+        request.header("x-api-key", &self.api_key.0)
     }
 
     fn item(&self, asset: Asset) -> Option<Item> {
@@ -59,6 +66,7 @@ impl Immich {
 #[async_trait::async_trait]
 impl Provider for Immich {
     async fn list(&self) -> Result<Vec<Item>> {
+        crate::guarded(&self.server, self.allow_plain_http)?;
         let (mut items, mut page) = (Vec::new(), Some(1_u32));
         while let Some(number) = page {
             let body = json!({ "albumIds": [self.album], "page": number, "size": 1000 });
@@ -71,6 +79,7 @@ impl Provider for Immich {
     }
 
     async fn fetch(&self, item: &Item, cache: &Cache) -> Result<PathBuf> {
+        crate::guarded(&item.url, self.allow_plain_http)?;
         cache.download(item, self.keyed(self.client.get(&item.url))).await
     }
 }

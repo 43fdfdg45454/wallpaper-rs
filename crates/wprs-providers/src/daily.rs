@@ -1,4 +1,4 @@
-use crate::{Cache, Item, Media, Provider, Result, json, path_of, plain, utc_date};
+use crate::{Cache, Item, Media, Provider, Result, Secret, json, path_of, plain, utc_date};
 use reqwest::Client;
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -16,7 +16,7 @@ pub struct Bing {
 pub struct Apod {
     pub client: Client,
     pub base: String,
-    pub api_key: String,
+    pub api_key: Secret,
     pub days: u32,
     pub videos: bool,
 }
@@ -55,7 +55,7 @@ impl Bing {
 impl Apod {
     pub fn new(client: Client, api_key: impl Into<String>) -> Self {
         let base = "https://api.nasa.gov/planetary/apod".into();
-        Self { client, base, api_key: api_key.into(), days: 1, videos: false }
+        Self { client, base, api_key: Secret(api_key.into()), days: 1, videos: false }
     }
 
     fn item(&self, entry: Entry) -> Option<Item> {
@@ -100,7 +100,7 @@ impl Provider for Bing {
 impl Provider for Apod {
     async fn list(&self) -> Result<Vec<Item>> {
         let start = utc_date(self.days.max(1));
-        let query = [("api_key", self.api_key.as_str()), ("start_date", &start)];
+        let query = [("api_key", self.api_key.0.as_str()), ("start_date", &start)];
         let entries: Vec<Entry> = json(self.client.get(&self.base).query(&query)).await?;
         Ok(entries.into_iter().filter_map(|entry| self.item(entry)).collect())
     }

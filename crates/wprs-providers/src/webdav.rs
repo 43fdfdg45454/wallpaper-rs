@@ -1,4 +1,4 @@
-use crate::{Cache, Item, Media, Provider, Result, invalid};
+use crate::{Cache, Item, Media, Provider, Result, Secret, invalid};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{Client, Method, RequestBuilder, Url};
@@ -14,13 +14,20 @@ pub struct WebDav {
     pub client: Client,
     pub url: String,
     pub user: String,
-    pub password: String,
+    pub password: Secret,
+    pub allow_plain_http: bool,
 }
 
 impl WebDav {
     pub fn new(url: impl Into<String>, user: impl Into<String>, password: impl Into<String>) -> Result<Self> {
         let client = crate::keyed_client()?;
-        Ok(Self { client, url: url.into(), user: user.into(), password: password.into() })
+        Ok(Self {
+            client,
+            url: url.into(),
+            user: user.into(),
+            password: Secret(password.into()),
+            allow_plain_http: false,
+        })
     }
 
     pub fn nextcloud(server: &str, user: &str, password: &str, folder: &str) -> Result<Self> {
@@ -32,7 +39,7 @@ impl WebDav {
     }
 
     fn auth(&self, request: RequestBuilder) -> RequestBuilder {
-        request.basic_auth(&self.user, Some(&self.password))
+        request.basic_auth(&self.user, Some(&self.password.0))
     }
 }
 
@@ -60,6 +67,7 @@ fn item(base: &Url, response: Node) -> Option<Item> {
 impl Provider for WebDav {
     async fn list(&self) -> Result<Vec<Item>> {
         let method = Method::from_bytes(b"PROPFIND").map_err(invalid)?;
+        crate::guarded(&self.url, self.allow_plain_http)?;
         let request = self.auth(self.client.request(method, &self.url)).header("Depth", "1");
         let request = request.header(CONTENT_TYPE, "application/xml").body(PROPFIND);
         let body = request.send().await?.error_for_status()?.text().await?;
@@ -70,6 +78,7 @@ impl Provider for WebDav {
     }
 
     async fn fetch(&self, item: &Item, cache: &Cache) -> Result<PathBuf> {
+        crate::guarded(&item.url, self.allow_plain_http)?;
         cache.download(item, self.auth(self.client.get(&item.url))).await
     }
 }
