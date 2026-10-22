@@ -87,12 +87,18 @@ pub struct Compositor {
 }
 
 impl Compositor {
-    pub fn start(renderer: Renderer, exporter: Arc<Exporter>, settings: Settings) -> std::io::Result<Self> {
+    pub fn start(
+        renderer: Renderer,
+        exporter: Arc<Exporter>,
+        settings: Settings,
+        on_status: impl Fn(Vec<String>) + Send + 'static,
+    ) -> std::io::Result<Self> {
         renderer.on_device_lost(|reason| fatal(&format!("the GPU device was lost ({reason})")));
         let limits = renderer.limits();
         let (tx, rx) = mpsc::channel();
         let status = Arc::new(Mutex::new(BTreeMap::new()));
         let mut state = State::new(renderer, exporter, settings, tx.clone(), status.clone());
+        state.on_status = Box::new(on_status);
         let thread = std::thread::Builder::new().name("wprs-render".into()).spawn(move || state.run(&rx))?;
         Ok(Self { tx, status, limits, thread: Some(thread) })
     }

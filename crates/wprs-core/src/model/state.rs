@@ -29,6 +29,8 @@ model! {
         pub height: u32,
         pub image: Option<PathBuf>,
         pub fit: Fit,
+        #[serde(default)]
+        pub background: String,
         pub kind: Shown,
         pub playing: bool,
         pub active: bool,

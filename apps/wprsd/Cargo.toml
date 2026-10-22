@@ -21,3 +21,13 @@ zbus.workspace = true
 image.workspace = true
 serde = { workspace = true }
 clap.workspace = true
+wprs-library.workspace = true
+wprs-format.workspace = true
+blake3.workspace = true
+dirs.workspace = true
+libc.workspace = true
+rustix.workspace = true
+tempfile.workspace = true
+
+[dev-dependencies]
+roxmltree.workspace = true

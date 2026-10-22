@@ -51,6 +51,7 @@ impl Daemon {
         claim.count = if client == HELD { 1 } else { claim.count + 1 };
         self.exporter.ensure_stream(&output, size.0, size.1, reply);
         self.activity(&st);
+        self.changes.changed("state", vec![output.clone()]);
         Ok(output)
     }
 
@@ -87,6 +88,7 @@ impl Daemon {
             tracing::info!(output, "stream released");
         }
         self.activity(st);
+        self.changes.changed("state", vec![output.to_owned()]);
         Ok(())
     }
 
@@ -99,6 +101,7 @@ impl Daemon {
         if changed {
             tracing::debug!(output, covered, "output coverage changed");
             self.activity(&st);
+            self.changes.changed("state", vec![output]);
         }
         Ok(())
     }

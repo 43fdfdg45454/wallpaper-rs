@@ -34,6 +34,7 @@ impl Daemon {
         };
         self.compositor.set_settings(settings);
         self.apply_activity();
+        self.refresh_items();
         self.publish();
         Ok(())
     }
@@ -41,6 +42,9 @@ impl Daemon {
     pub fn set_option(&self, key: &str, value: &str) -> anyhow::Result<()> {
         self.update_config(|c| c.set_option(key, value))?;
         tracing::info!(key, value, "setting changed");
+        if key.starts_with("library.") {
+            self.watch_sources();
+        }
         Ok(())
     }
 
@@ -94,12 +98,14 @@ impl Daemon {
         self.state().on_battery = on_battery;
         tracing::debug!(on_battery, "power source changed");
         self.apply_activity();
+        self.changes.changed("state", Vec::new());
     }
 
     pub fn set_locked(&self, locked: bool) {
         self.state().locked = locked;
         tracing::debug!(locked, "screen lock changed");
         self.apply_activity();
+        self.changes.changed("state", Vec::new());
     }
 
     pub(crate) fn apply_activity(&self) {

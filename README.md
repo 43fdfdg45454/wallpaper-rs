@@ -112,6 +112,33 @@ Para pruebas, `wprs-ctl stream <salida> <ancho> <alto>` crea un flujo que sigue 
 la orden y `wprs-ctl release <salida>` lo destruye. Con `--wait`, el flujo dura lo que dure la
 orden, igual que el de un escritorio.
 
+La biblioteca, las listas, los perfiles, los proveedores y los paquetes se manejan igual
+(`wprs-ctl <grupo> --help` muestra cada orden):
+
+```sh
+wprs-ctl lib add ~/Imágenes --wait              # añadir una carpeta y esperar al escaneo
+wprs-ctl lib search 'tag:mar sort:random'       # buscar; los elementos se nombran por su uid
+wprs-ctl lib apply 1R1AB2 -o DP-1               # mostrar un elemento (uid o sus últimos 6+)
+wprs-ctl playlist new Mar --query tag:mar       # lista inteligente
+wprs-ctl playlist start Mar && wprs-ctl next    # rotar una lista y avanzar
+wprs-ctl profile save Escritorio                # guardar lo que muestra cada pantalla
+wprs-ctl provider add diario bing               # una fuente en línea
+wprs-ctl remote add 'https://example.org/repo/?fingerprint=…'
+wprs-ctl pkg install org.example.dawn --wait    # instalar un paquete de un repositorio
+wprs-ctl jobs | watch | schema                  # trabajos, cambios en vivo, claves válidas
+```
+
+Las consultas aceptan `--json` e imprimen la respuesta del daemon tal cual; sin él muestran
+tablas para leer, no para scripts. Lo que lanza un trabajo imprime su número y termina; con
+`--wait` muestra el progreso y el resultado, y Ctrl-C deja de esperar sin parar el trabajo
+(`wprs-ctl cancel <n>` lo para). Las contraseñas y claves de los proveedores se piden sin eco o
+se leen de la primera línea de la entrada con `--secret-stdin`; nunca van en la orden. Códigos
+de salida: 0 bien, 1 error, 2 uso incorrecto.
+
+`wprs-ctl pack` (crear, firmar y validar paquetes `.wpak`) y `wprs-ctl repo` (claves, firma,
+publicación, rotación y verificación de un repositorio) funcionan sin daemon. La contraseña de
+una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
+
 ## Desarrollo
 
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
@@ -167,6 +194,10 @@ dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una ca
 - La configuración se escribe con permisos `0600` dentro de una carpeta `0700`: solo tu usuario
   puede leerla.
 - La caché de descargas se guarda en una carpeta privada.
+- La biblioteca y las copias importadas (`~/.local/share/wallpaper-rs`), las miniaturas y las
+  entradas de paquetes (`~/.cache/wallpaper-rs`) se guardan con permisos `0600` en carpetas `0700`.
+  Las miniaturas y el análisis de la biblioteca (tamaño, duración, color) los hace un proceso aparte
+  con la prioridad más baja de CPU y disco.
 - El servicio de systemd tiene prohibido abrir conexiones de red y sus registros no incluyen rutas,
   nombres de archivo ni el modelo de GPU salvo con `RUST_LOG=debug`.
 - Los paquetes se generan sin rutas, usuarios ni nombre del equipo de quien los compila.

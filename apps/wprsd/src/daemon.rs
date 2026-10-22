@@ -1,13 +1,19 @@
+use crate::changes::Changes;
 use crate::compositor::{Compositor, Settings, lock};
+use crate::folders::Folders;
+use crate::jobs::Jobs;
+use crate::store::Store;
 use crate::streams::OutputInfo;
+use crate::thumbs::Thumbs;
 use anyhow::Context;
 use image::RgbaImage;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::SystemTime;
 use tokio::sync::{Notify, watch};
 use wprs_core::{Config, dbus};
+use wprs_format::Installed;
 use wprs_pipewire::Exporter;
 use wprs_render::Renderer;
 use zbus::fdo;
@@ -22,6 +28,8 @@ pub(crate) struct State {
     pub(crate) user_paused: bool,
     pub(crate) on_battery: bool,
     pub(crate) locked: bool,
+    pub(crate) items: HashMap<PathBuf, String>,
+    pub(crate) installed: Vec<Installed>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -38,11 +46,17 @@ pub struct Daemon {
     pub(crate) streams_changed: Arc<Notify>,
     pub(crate) props: watch::Sender<Props>,
     pub(crate) adapter: String,
+    pub(crate) store: Store,
+    pub(crate) changes: Changes,
+    pub(crate) jobs: Jobs,
+    pub(crate) thumbs: Arc<Thumbs>,
+    pub(crate) folders: Folders,
 }
 
 impl Daemon {
     pub fn new(config_path: PathBuf) -> anyhow::Result<Self> {
-        let (config, config_error) = Config::load(&config_path)
+        let store = Store::open();
+        let (config, config_error) = load(&config_path, &store)
             .map_or_else(|e| (Config::default(), Some(e.to_string())), |config| (config, None));
         match &config_error {
             Some(e) => {
@@ -55,17 +69,36 @@ impl Daemon {
         let adapter = renderer.adapter().to_owned();
         tracing::info!("renderer ready");
         tracing::debug!(adapter, "GPU adapter");
+        let changes = Changes::new();
         let exporter = Arc::new(Exporter::start().context("cannot connect to PipeWire")?);
-        let compositor = Compositor::start(renderer, exporter.clone(), settings(&config))?;
+        let compositor =
+            Compositor::start(renderer, exporter.clone(), settings(&config), changes.notifier())?;
         let (wake, streams_changed) = (compositor.waker(), Arc::new(Notify::new()));
         let changed = streams_changed.clone();
         exporter.on_change(move || {
             wake();
             changed.notify_one();
         })?;
-        let state = State { config, config_path, config_error, ..State::default() };
+        let installed = wprs_format::installed(&store.data).unwrap_or_default();
+        let state = State { config, config_path, config_error, installed, ..State::default() };
         let props = watch::Sender::new(state.props());
-        Ok(Self { compositor, state: Mutex::new(state), exporter, streams_changed, props, adapter })
+        let (jobs, thumbs, folders) = (Jobs::new(), Arc::new(Thumbs::new(&store.cache)), Folders::new());
+        let state = Mutex::new(state);
+        let daemon = Self {
+            compositor,
+            state,
+            exporter,
+            streams_changed,
+            props,
+            adapter,
+            store,
+            changes,
+            jobs,
+            thumbs,
+            folders,
+        };
+        daemon.refresh_items();
+        Ok(daemon)
     }
 
     pub(crate) fn state(&self) -> MutexGuard<'_, State> {
@@ -75,21 +108,33 @@ impl Daemon {
     pub(crate) fn publish(&self) {
         let st = self.state();
         self.props.send_if_modified(|props| std::mem::replace(props, st.props()) != *props);
+        self.changes.changed("state", Vec::new());
     }
 
     pub fn reload(&self) -> anyhow::Result<()> {
         let settings = {
             let mut st = self.state();
             let loaded =
-                Config::load(&st.config_path).inspect_err(|e| st.config_error = Some(e.to_string()))?;
+                load(&st.config_path, &self.store).inspect_err(|e| st.config_error = Some(e.to_string()))?;
             (st.config, st.config_error) = (loaded, None);
+            st.installed = wprs_format::installed(&self.store.data).unwrap_or_default();
             settings(&st.config)
         };
         self.compositor.set_settings(settings);
         self.configure_all();
+        self.refresh_items();
+        self.watch_sources();
         self.publish();
         Ok(())
     }
+}
+
+fn load(path: &Path, store: &Store) -> Result<Config, wprs_core::ConfigError> {
+    let mut config = Config::load(path)?;
+    if store.drop_dangling(&mut config) {
+        config.save(path)?;
+    }
+    Ok(config)
 }
 
 impl State {

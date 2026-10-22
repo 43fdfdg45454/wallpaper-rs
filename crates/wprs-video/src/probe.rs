@@ -20,7 +20,7 @@ pub fn probe(path: &Path) -> Result<(u32, u32), Error> {
     size
 }
 
-fn preroll(playbin: &gst::Element) -> Result<(), Error> {
+pub(crate) fn preroll(playbin: &gst::Element) -> Result<(), Error> {
     let started = playbin.set_state(gst::State::Paused).is_ok();
     match playbin.state(TIMEOUT).0 {
         Ok(gst::StateChangeSuccess::Async) if started => {

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
 use wprs_core::Fit;
+use zbus::fdo::Error::InvalidArgs;
 
 pub(crate) type Upload = ((u32, u32), Fit, PathBuf, Option<SystemTime>);
 
@@ -21,10 +22,15 @@ impl Daemon {
             let info = st.outputs.get(output)?;
             (info.size, st.config.resolve(output), info.uploaded.clone())
         };
-        let (content, upload) = match resolved.image {
+        let (content, upload) = match resolved.image.map(|image| self.media(image)) {
             None => (Content::Color, None),
-            Some(path) if wprs_video::is_video(&path) => (Content::Video(path), None),
-            Some(file) => match self.picture(file, (size, resolved.fit), uploaded) {
+            Some(Err(e)) => {
+                tracing::warn!(output, "cannot show the package; showing the color instead");
+                tracing::debug!("{e:#}");
+                (Content::Color, None)
+            }
+            Some(Ok((path, true))) => (Content::Video(path), None),
+            Some(Ok((file, false))) => match self.picture(file, (size, resolved.fit), uploaded) {
                 Ok((picture, upload)) => (Content::Image(picture), Some(upload)),
                 Err(e) => {
                     tracing::warn!(
@@ -88,20 +94,25 @@ impl Daemon {
 
     pub fn set_wallpaper(&self, path: &Path, output: &str, fit: Option<Fit>) -> anyhow::Result<()> {
         let path = std::fs::canonicalize(path).with_context(|| not_found(path))?;
-        anyhow::ensure!(path.is_file(), "{} is not a file", path.display());
-        let _decoded = match wprs_video::is_video(&path) {
-            true => {
-                let size =
-                    wprs_video::probe(&path).with_context(|| format!("cannot play {}", path.display()))?;
-                tracing::debug!(path = %path.display(), ?size, "video accepted");
-                None
-            }
-            false => Some(self.load_image(&path, modified(&path)?)?),
-        };
+        if wprs_library::Kind::detect(&path) == Some(wprs_library::Kind::Package) {
+            return Err(InvalidArgs("import the package and use Library1.Apply".into()).into());
+        }
+        let _decoded = self.check_media(&path)?;
         self.change_output(output, |c| {
             c.set_image(output, path, fit);
             Ok(())
         })
+    }
+
+    pub fn check_media(&self, path: &Path) -> anyhow::Result<Option<Arc<RgbaImage>>> {
+        anyhow::ensure!(path.is_file(), "{} is not a file", path.display());
+        let (file, video) = self.media(path.to_owned())?;
+        if !video {
+            return Ok(Some(self.load_image(&file, modified(&file)?)?));
+        }
+        let size = wprs_video::probe(&file).with_context(|| format!("cannot play {}", path.display()))?;
+        tracing::debug!(path = %path.display(), ?size, "video accepted");
+        Ok(None)
     }
 }
 

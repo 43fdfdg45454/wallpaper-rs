@@ -1,52 +1,71 @@
-use clap::{Parser, Subcommand};
-use std::path::PathBuf;
-use wprs_core::dbus::BUS_NAME;
-use zbus::fdo;
+use crate::library::Lib;
+use crate::pack::Pack;
+use crate::pkg::Pkg;
+use crate::playlists::Playlist;
+use crate::profiles::{Preset, Profile};
+use crate::providers::Provider;
+use crate::remote::Remote;
+use crate::repo::Repo;
+use clap::{Args, Parser, Subcommand};
+use wprs_core::Fit;
 
-pub fn explain(error: zbus::Error) -> anyhow::Error {
-    let not_running = || anyhow::anyhow!("wprsd is not running ({} is not on the session bus)", BUS_NAME);
-    match error {
-        zbus::Error::FDO(e) => match *e {
-            fdo::Error::ServiceUnknown(_) | fdo::Error::NameHasNoOwner(_) => not_running(),
-            fdo::Error::Failed(message) | fdo::Error::InvalidArgs(message) => anyhow::anyhow!(message),
-            other => other.into(),
-        },
-        zbus::Error::MethodError(name, _, _) if name.as_str().ends_with("ServiceUnknown") => not_running(),
-        zbus::Error::MethodError(_, Some(message), _) => anyhow::anyhow!(message),
-        other => other.into(),
-    }
-}
+pub const OUTPUT: &str = "Output name such as DP-1; every output when omitted";
+pub const FIT: &str = "Placement: fill, fit, stretch, center or tile";
+pub const JSON: &str = "Print the daemon reply as JSON";
+pub const ITEM: &str = "Item: a file path, a uid or the last 6 or more characters of one";
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(name = "wprs-ctl", version, about = "Control the wallpaper-rs daemon")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
 }
 
-#[derive(Subcommand)]
+#[derive(Args, Debug)]
+pub struct Out {
+    #[arg(short, long, default_value = "", help = OUTPUT)]
+    pub output: String,
+}
+
+#[derive(Args, Debug)]
+pub struct Wait {
+    #[arg(long, help = "Wait for the job, showing its progress, and print the finished job")]
+    pub wait: bool,
+    #[arg(long, help = "With --wait, print the finished job as JSON")]
+    pub json: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct Page {
+    #[arg(long, default_value_t = 0, help = "Number of entries to skip")]
+    pub offset: u32,
+    #[arg(long, default_value_t = 50, help = "Number of entries to print, at most 500")]
+    pub limit: u32,
+}
+
+#[derive(Subcommand, Debug)]
 pub enum Command {
     #[command(about = "Set the wallpaper: an image or a video")]
     Set {
         #[arg(help = "Local image or video file, as a path or a file:// URI")]
-        path: PathBuf,
-        #[arg(short, long, default_value = "", help = "Output name such as DP-1; every output when omitted")]
+        path: String,
+        #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
-        #[arg(short, long, help = "Placement: fill, fit, stretch, center or tile")]
-        fit: Option<wprs_core::Fit>,
+        #[arg(short, long, help = FIT)]
+        fit: Option<Fit>,
     },
     #[command(about = "Change only the placement of the current wallpaper")]
     Fit {
-        #[arg(help = "Placement: fill, fit, stretch, center or tile")]
-        fit: wprs_core::Fit,
-        #[arg(short, long, default_value = "", help = "Output name such as DP-1; every output when omitted")]
+        #[arg(help = FIT)]
+        fit: Fit,
+        #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
     #[command(about = "Set the color shown around and behind the wallpaper")]
     Background {
         #[arg(help = "Color as #rrggbb")]
         color: String,
-        #[arg(short, long, default_value = "", help = "Output name such as DP-1; every output when omitted")]
+        #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
     #[command(about = "Change a setting, or list them all without arguments")]
@@ -55,11 +74,16 @@ pub enum Command {
         key: Option<String>,
         #[arg(help = "New value of the setting")]
         value: Option<String>,
+        #[arg(long, help = "Print the settings as a JSON object")]
+        json: bool,
     },
     #[command(about = "Re-read the configuration file")]
     Reload,
     #[command(about = "Print the daemon state as JSON")]
-    State,
+    State {
+        #[arg(long, help = "Accepted for symmetry: the state is always JSON")]
+        json: bool,
+    },
     #[command(about = "Pause animated wallpapers")]
     Pause,
     #[command(about = "Resume animated wallpapers")]
@@ -91,4 +115,58 @@ pub enum Command {
         #[arg(action = clap::ArgAction::Set)]
         covered: bool,
     },
+    #[command(about = "Describe the settings, rules, provider kinds and search keys of the daemon")]
+    Schema {
+        #[arg(long, help = JSON)]
+        json: bool,
+    },
+    #[command(about = "Print changes and job events as they happen")]
+    Watch {
+        #[arg(long, help = "Print one JSON object per line")]
+        json: bool,
+    },
+    #[command(about = "Wait for a change and print the new serial and the changed topics")]
+    Wait {
+        #[arg(long, help = "Serial to wait from; the current one when omitted")]
+        serial: Option<u64>,
+        #[arg(long, default_value_t = 20000, help = "Milliseconds to wait, at most 20000")]
+        timeout: u32,
+        #[arg(long, help = "Print the result as JSON")]
+        json: bool,
+    },
+    #[command(about = "List running, queued and recently finished jobs")]
+    Jobs {
+        #[arg(long, help = JSON)]
+        json: bool,
+    },
+    #[command(about = "Show a job")]
+    Job {
+        id: u64,
+        #[arg(long, help = JSON)]
+        json: bool,
+    },
+    #[command(about = "Cancel a queued or running job")]
+    Cancel { id: u64 },
+    #[command(subcommand, about = "Library folders, items, tags and thumbnails")]
+    Lib(Lib),
+    #[command(subcommand, about = "Placement presets of items, and global presets")]
+    Preset(Preset),
+    #[command(subcommand, about = "Playlists and their rotation")]
+    Playlist(Playlist),
+    #[command(about = "Show the next item of the playlist of an output")]
+    Next(Out),
+    #[command(about = "Show the previous item of the playlist of an output")]
+    Prev(Out),
+    #[command(subcommand, about = "Profiles: saved assignments of every output")]
+    Profile(Profile),
+    #[command(subcommand, about = "Online sources of wallpapers")]
+    Provider(Provider),
+    #[command(subcommand, about = "Package repositories added to this computer")]
+    Remote(Remote),
+    #[command(subcommand, about = "Packages of the added repositories")]
+    Pkg(Pkg),
+    #[command(subcommand, about = "Build, sign and check .wpak packages; needs no daemon")]
+    Pack(Pack),
+    #[command(subcommand, about = "Operate a package repository; needs no daemon")]
+    Repo(Repo),
 }

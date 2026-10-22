@@ -1,10 +1,12 @@
 mod bus;
 mod player;
 mod probe;
+mod still;
 mod video_sink;
 
 pub use player::Player;
 pub use probe::probe;
+pub use still::{Still, still};
 
 use gstreamer as gst;
 use gstreamer::prelude::*;

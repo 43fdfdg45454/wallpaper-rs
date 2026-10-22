@@ -72,7 +72,14 @@ impl State {
                 let (kind, playing, error) = status(name, o);
                 (name.clone(), OutputStatus { kind, playing, error: error.cloned() })
             };
-            *published = self.outputs.iter().map(entry).collect();
+            let old = std::mem::replace(&mut *published, self.outputs.iter().map(entry).collect());
+            let names = published.keys().chain(old.keys());
+            let mut changed: Vec<String> =
+                names.filter(|n| published.get(*n) != old.get(*n)).cloned().collect();
+            changed.sort();
+            changed.dedup();
+            drop(published);
+            (self.on_status)(changed);
         }
     }
 }

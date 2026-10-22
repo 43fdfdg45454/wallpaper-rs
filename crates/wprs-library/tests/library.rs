@@ -359,6 +359,8 @@ fn presets_and_profiles_reject_duplicate_names() {
         Err(Error::Exists("preset", _))
     ));
     library.update_preset(&calm, &json!({"fit": "contain"})).unwrap();
+    assert_eq!(library.preset(&calm).unwrap().value, json!({"fit": "contain"}));
+    assert!(matches!(library.preset("01J0000000000000000000NONE"), Err(Error::NotFound("preset", _))));
     assert_eq!(library.presets(None).unwrap()[0].value, json!({"fit": "contain"}));
     assert_eq!(library.presets(Some(&a.uid)).unwrap()[0].item.as_deref(), Some(a.uid.as_str()));
     library.remove_preset(&calm).unwrap();

@@ -18,6 +18,7 @@ pub(super) struct State {
     pub(super) players: HashMap<PathBuf, PlayerSlot>,
     pub(super) tx: mpsc::Sender<Command>,
     pub(super) status: Arc<Mutex<BTreeMap<String, OutputStatus>>>,
+    pub(super) on_status: Box<dyn Fn(Vec<String>) + Send>,
 }
 
 impl State {
@@ -28,7 +29,8 @@ impl State {
         tx: mpsc::Sender<Command>,
         status: Arc<Mutex<BTreeMap<String, OutputStatus>>>,
     ) -> Self {
-        Self { renderer, exporter, settings, outputs: BTreeMap::new(), players: HashMap::new(), tx, status }
+        let (outputs, players, on_status) = (BTreeMap::new(), HashMap::new(), Box::new(|_| {}));
+        Self { renderer, exporter, settings, outputs, players, tx, status, on_status }
     }
 
     pub(super) fn run(&mut self, rx: &mpsc::Receiver<Command>) {

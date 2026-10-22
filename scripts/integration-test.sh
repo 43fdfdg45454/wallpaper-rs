@@ -4,7 +4,7 @@ set -euo pipefail
 BIN=$(realpath "${1:?usage: $0 <bin-dir>}")
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=$(mktemp -d /tmp/wprs-it.XXXXXX)
-export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config
+export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config XDG_DATA_HOME=$WORK/data XDG_CACHE_HOME=$WORK/cache
 mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME"
 chmod 700 "$XDG_RUNTIME_DIR"
 
@@ -191,11 +191,120 @@ expect "s['outputs']['TEST-3']['image'].endswith('/green #1.png')" True
 ctl release TEST-3 && expect "list(s['outputs'])" "[]"
 echo "fit, background and file URI checks passed"
 
+retry() { for _ in $(seq "$1"); do "${@:2}" && return 0; sleep 0.5; done; return 1; }
+bus() {
+  local iface=$1; shift
+  busctl --user --json=short call io.github.wallpaper_rs.Daemon /io/github/wallpaper_rs/Daemon \
+    "io.github.wallpaper_rs.$iface" "$@"
+}
+out() { python3 -c "import json, sys; d = json.load(sys.stdin)['data']; print(eval(sys.argv[1]))" "$1"; }
+reply() { bus "${@:2}" | python3 -c "import json, sys; r = json.loads(json.load(sys.stdin)['data'][0]); print(eval(sys.argv[1]))" "$1"; }
+finished() { [ "$(reply "r['job']['state']" Daemon1 GetJob t "$1")" = "done" ]; }
+idle() { [ "$(reply "len([j for j in r['jobs'] if j['state'] in ('queued', 'running')])" Daemon1 ListJobs)" = 0 ]; }
+signalled() { grep -A4 "member=$1" "$WORK/library-signals.log" | grep -q "$2"; }
+refused() { if bus "${@:2}" >"$WORK/refused.out" 2>&1; then fail "accepted: $*"; fi; grep -q "$1" "$WORK/refused.out" || fail "$*: $(cat "$WORK/refused.out")"; }
+
+pics=$WORK/pictures
+mkdir -p "$pics/videos" "$pics/.hidden" "$WORK/import"
+for name in harbour dunes forest; do cp "$ROOT/tests/fixtures/green-64x32.png" "$pics/$name.png"; done
+cp "$ROOT/tests/fixtures/magenta-64x32.webm" "$pics/videos/clip.webm"
+cp "$ROOT/tests/fixtures/green-64x32.png" "$pics/.hidden/skipped.png"
+cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/import/sunset.png"
+dbus-monitor --session "type='signal',interface='io.github.wallpaper_rs.Daemon1'" \
+  "type='signal',interface='io.github.wallpaper_rs.Library1'" >"$WORK/library-signals.log" 2>&1 & pids+=($!)
+sleep 0.5
+[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(11, 7, [256, 512, 1024])" ] ||
+  fail "schema: $(bus Daemon1 GetSchema)"
+read -r source job < <(bus Library1 AddSource sb "$pics" true | out "' '.join(map(str, d))")
+wait_for 20 finished "$job" || fail "scan job: $(bus Daemon1 GetJob t "$job")"
+wait_for 5 signalled JobProgress "uint64 $job" || fail "no progress for job $job"
+wait_for 5 signalled JobFinished "string \"done\"" || fail "no JobFinished for job $job"
+refused "overlaps the source" Library1 AddSource sb "$pics/videos" false
+refused "contains wallpaper-rs data" Library1 AddSource sb "$WORK" true
+[ "$(reply "r['total']" Library1 Search suu "" 0 50)" = 4 ] || fail "search: $(bus Library1 Search suu "" 0 50)"
+[ "$(reply "r['total']" Library1 Search suu "kind:video" 0 0)" = 1 ] || fail "video search"
+read -r dunes forest harbour < <(reply "' '.join(i['uid'] for i in r['items'])" Library1 Search suu "kind:image sort:title" 0 3)
+clip=$(reply "r['items'][0]['uid']" Library1 Search suu "kind:video" 0 1)
+[ "$(bus Library1 Resolve as 1 "${harbour: -8}" | out "d[0][0]")" = "$harbour" ] || fail "resolve by suffix"
+refused "no item matches \"ZZZZZZZZ\"" Library1 Resolve as 1 ZZZZZZZZ
+bus Library1 SetTags asasas 1 "$harbour" 1 sea 0 >/dev/null
+bus Library1 SetRating asu 2 "$harbour" "$dunes" 4 >/dev/null
+bus Library1 SetFavorite asb 1 "$harbour" true >/dev/null
+refused "rating must be 0 to 5" Library1 SetRating asu 1 "$harbour" 6
+[ "$(reply "r['tags']" Library1 ListTags)" = "[{'name': 'sea', 'count': 1}]" ] || fail "tags: $(bus Library1 ListTags)"
+[ "$(reply "[i['uid'] for i in r['items']]" Library1 Search suu "tag:sea rating:4 fav:" 0 5)" = "['$harbour']" ] ||
+  fail "search by tag, rating and favorite"
+wait_for 30 idle || fail "analysis did not finish: $(bus Daemon1 ListJobs)"
+[ "$(reply "r['item']['width'], r['item']['color'], r['item']['path'].endswith('/harbour.png')" Library1 GetItem s "$harbour")" = \
+  "(64, 65280, True)" ] || fail "analysis: $(bus Library1 GetItem s "$harbour")"
+[ "$(reply "r['item']['duration_ms'] > 0, r['item']['audio']" Library1 GetItem s "$clip")" = "(True, False)" ] ||
+  fail "video analysis: $(bus Library1 GetItem s "$clip")"
+thumb=$(bus Library1 Thumbnail su "$harbour" 256 | out "d[0]")
+[ "$(head -c 3 "$thumb" | od -An -tx1 | tr -d ' ')" = ffd8ff ] || fail "the thumbnail is not a JPEG"
+[ "$(stat -c %a "$thumb") $(stat -c %a "$(dirname "$thumb")")" = "600 700" ] || fail "thumbnails are not private"
+[ "$(stat -c %a "$XDG_DATA_HOME/wallpaper-rs/library.db")" = 600 ] || fail "library.db is not private"
+[ -s "$(bus Library1 Thumbnail su "$clip" 512 | out "d[0]")" ] || fail "no video thumbnail"
+refused "size must be one of" Library1 Thumbnail su "$clip" 300
+[ "$(bus Library1 RequestThumbnails asu 2 "$dunes" "$forest" 512 | out "d[0]")" = "{}" ] || fail "thumbnails were cached early"
+wait_for 20 signalled ThumbnailReady "$forest" || fail "no ThumbnailReady for $forest"
+wait_for 20 signalled ThumbnailReady "$dunes" || fail "no ThumbnailReady for $dunes"
+forest_thumb=$(bus Library1 RequestThumbnails asu 1 "$forest" 512 | out "d[0]['$forest']")
+serial=$(busctl --user --json=short get-property io.github.wallpaper_rs.Daemon /io/github/wallpaper_rs/Daemon \
+  io.github.wallpaper_rs.Daemon1 Serial | out "d")
+bus Library1 SetTitle ss "$dunes" "Dunes at noon" >/dev/null
+bus Daemon1 WaitChanged tu "$serial" 5000 | out "d[1]" | grep -q library || fail "WaitChanged missed the library change"
+refused "remove the file or the folder" Library1 Remove asb 1 "$forest" false
+rm "$pics/forest.png"
+job=$(bus Library1 Rescan s "" | out "d[0]")
+wait_for 20 finished "$job" || fail "rescan: $(bus Daemon1 GetJob t "$job")"
+[ "$(reply "r['item']['missing']" Library1 GetItem s "$forest")" = True ] || fail "the deleted file is not missing"
+bus Library1 Remove asb 1 "$forest" false >/dev/null
+[ ! -e "$forest_thumb" ] || fail "the thumbnail of a removed item was kept"
+job=$(bus Library1 Import asb 1 "$WORK/import/sunset.png" true | out "d[0]")
+wait_for 20 finished "$job" || fail "import: $(bus Daemon1 GetJob t "$job")"
+sunset=$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")
+copy=$XDG_DATA_HOME/wallpaper-rs/files/sunset.png
+[ "$(stat -c %a "$copy")" = 600 ] || fail "the imported copy is not private"
+[ "$(reply "r['items'][0]['imported'], r['items'][0]['removable'], r['items'][0]['title']" Library1 Search suu "sunset" 0 1)" = \
+  "(True, True, 'sunset')" ] || fail "imported copy: $(bus Library1 Search suu sunset 0 1)"
+ctl stream TEST-7 160 90 >/dev/null
+bus Library1 Apply ssss "$harbour" TEST-7 fit "" >/dev/null
+expect "s['outputs']['TEST-7']['item']" "$harbour"
+expect "s['outputs']['TEST-7']['fit']" fit
+python3 - "$WORK/import/calm.wpak" "$ROOT/tests/fixtures/green-64x32.png" <<'PACKAGE'
+import json, sys, zipfile
+manifest = {"schema": "wallpaper-rs.wpak/1", "id": "org.example.calm", "version": "1.0.0", "title": "Calm",
+            "license": "CC0-1.0", "kind": "image", "entry": "image.png"}
+with zipfile.ZipFile(sys.argv[1], "w") as package:
+    package.writestr("manifest.json", json.dumps(manifest))
+    package.write(sys.argv[2], "image.png")
+PACKAGE
+job=$(bus Library1 Import asb 1 "$WORK/import/calm.wpak" false | out "d[0]")
+wait_for 20 finished "$job" || fail "package import: $(bus Daemon1 GetJob t "$job")"
+calm=$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")
+bus Library1 Apply ssss "$calm" TEST-7 "" "" >/dev/null
+expect "s['outputs']['TEST-7']['item']" "$calm"
+read -r _ _ _ serial7 < <(ctl stream TEST-7 160 90)
+retry 10 sh -c "'$BIN/probe' $serial7 3 | grep -q 'center bgra \[0, 255, 0, 255\]'" || fail "the package is not shown"
+[ "$(find "$XDG_CACHE_HOME/wallpaper-rs/blobs" -type f | wc -l)" = 1 ] || fail "the package entry was not materialized once"
+if ctl set "$WORK/import/calm.wpak" 2>"$WORK/wpak.out"; then fail "SetWallpaper accepted a package"; fi
+grep -q "import the package" "$WORK/wpak.out" || fail "package message: $(cat "$WORK/wpak.out")"
+ctl release TEST-7 && expect "list(s['outputs'])" "[]"
+bus Library1 Remove asb 1 "$calm" false >/dev/null
+[ "$(find "$XDG_CACHE_HOME/wallpaper-rs/blobs" -type f | wc -l)" = 0 ] || fail "the package entry was kept"
+bus Library1 Remove asb 1 "$sunset" true >/dev/null
+[ ! -e "$copy" ] || fail "the imported copy was not deleted"
+refused "not supported" Playlists1 List
+bus Library1 RemoveSource s "$source" >/dev/null
+[ "$(reply "len(r['sources']), " Library1 ListSources)" = "(0,)" ] || fail "sources: $(bus Library1 ListSources)"
+[ "$(reply "r['total']" Library1 Search suu "" 0 0)" = 0 ] || fail "items were kept with their source"
+[ ! -e "$thumb" ] || fail "thumbnails were kept with their source"
+echo "library checks passed"
+
 restored() {
   read -r _ _ _ serial < <(ctl stream TEST-1 320 180) || return 1
   "$BIN/probe" "$serial" 3 | grep -q "frame 320x180 .* buffers 4 center bgra \[0, 255, 0, 255\]"
 }
-retry() { for _ in $(seq "$1"); do "${@:2}" && return 0; sleep 0.5; done; return 1; }
 ctl stream TEST-1 320 180 >/dev/null
 ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
 retry 10 restored || { echo "FAIL: stream before the PipeWire restart"; exit 1; }

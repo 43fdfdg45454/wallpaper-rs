@@ -1,15 +1,15 @@
 # D-Bus interface
 
-Every component takes these names from `wprs_core::dbus`. The command line client
-(`wprs-ctl`) and the management interface in the system tray are both plain clients of this
-interface: every action is available in both.
+Every component takes these names from `wprs_core::dbus`. The command line client (`wprs-ctl`)
+and the desktop app are plain clients of this interface: every action is available in both. The
+system tray and the desktop integration offer a subset.
 
 | Item | Value |
 |------|-------|
 | Bus | session |
 | Well-known name | `io.github.wallpaper_rs.Daemon` |
 | Object path | `/io/github/wallpaper_rs/Daemon` |
-| Interface | `io.github.wallpaper_rs.Daemon1` |
+| Interfaces | `io.github.wallpaper_rs.Daemon1`, `Library1`, `Playlists1`, `Profiles1`, `Providers1`, `Repos1`, all on that object |
 
 The daemon is D-Bus activatable (`packaging/dbus`) and runs as the systemd user unit
 `wprsd.service`. In the Flatpak (`packaging/flatpak`) it owns the name through `--own-name`, so
@@ -18,10 +18,60 @@ Flatpak exports the same activation file, starts the daemon with `flatpak run` a
 replacement. A second daemon checks the name before initializing the GPU and PipeWire and exits
 at once with an error saying that another wprsd owns it.
 
-Errors: invalid arguments return `InvalidArgs`; other failures return `Failed` and change
-nothing. A panic in any thread of the daemon, a lost GPU device or a GPU that stops responding
-makes the daemon exit with status 70; the user unit restarts it (`Restart=on-failure`, at most
-5 starts in 60 s) and clients get their streams again through `RequestStream`.
+A panic in any thread of the daemon, a lost GPU device or a GPU that stops responding makes the
+daemon exit with status 70; the user unit restarts it (`Restart=on-failure`, at most 5 starts
+in 60 s) and clients get their streams again through `RequestStream`. Only the methods that
+change what is shown (`Library1.Apply`, `Playlists1.Start`, `Stop`, `Next` and `Previous`,
+`Profiles1.Activate` and the `Daemon1` methods that change something) need the renderer.
+
+This version of wprsd serves `Playlists1`, `Profiles1`, `Providers1` and `Repos1` with every
+member listed below, but their methods return `org.freedesktop.DBus.Error.NotSupported`.
+
+## Conventions
+
+- Members are PascalCase; argument names are snake_case and are part of the interface.
+- Queries return one `s`: a JSON object whose first fields are `model` (the data model version,
+  property `Model`) and `serial` (the value of property `Serial` read before the query ran). The
+  shapes are listed in "JSON model".
+- Mutations take typed arguments and return nothing or a created identifier. Everything is
+  validated before anything changes: a failed call changes nothing. Calls that take several
+  uids check every uid first and change them in one transaction.
+- Operations that walk folders, copy files or touch the network return a job id at once and run
+  in the background (see "Jobs").
+- Library identifiers (`uid`) are ULIDs: 26 characters, uppercase Crockford base32. Only full
+  uids travel on the bus, except in `Library1.Resolve` and where an argument is documented as
+  "uid or name".
+- Output arguments are connector names such as `DP-1`, trimmed; more than 128 bytes or control
+  characters return `InvalidArgs`. `""` means every output. In the interfaces other than
+  `Daemon1`, a name starting with `@` returns `InvalidArgs`.
+- Times are `i64` Unix seconds, UTC.
+- Paths are absolute and UTF-8. `SetWallpaper` also accepts `file://` URIs; every other method
+  rejects URIs with `InvalidArgs`, so clients convert `file://` URIs to paths (percent-decoded)
+  before calling.
+- Batch arguments (`as uids`, `as paths`, `au indexes`) take at most 10 000 entries (1 000 for
+  `Import`, 500 for `RequestThumbnails` and `RequestPreviews`); page `limit` is at most 500.
+- Titles have 1 to 256 characters, playlist, profile and preset names 1 to 128, tags 1 to 64;
+  all are trimmed and may not contain control characters.
+
+## Errors
+
+Every error carries a readable English message.
+
+| Error name | When |
+|------------|------|
+| `org.freedesktop.DBus.Error.InvalidArgs` | Malformed or out-of-range argument, bad query syntax, operation not allowed on that object |
+| `org.freedesktop.DBus.Error.Failed` | Anything else: I/O, database, verification failure, library unavailable |
+| `org.freedesktop.DBus.Error.NotSupported` | The method is not available in this version of wprsd |
+| `io.github.wallpaper_rs.Error.NotFound` | Unknown uid, name, output assignment, provider, repository, package or job |
+| `io.github.wallpaper_rs.Error.Exists` | Name, folder, provider id or repository already present |
+| `io.github.wallpaper_rs.Error.NeedsSecret` | A provider needs a secret that is missing or was rejected |
+| `io.github.wallpaper_rs.Error.KeyringUnavailable` | The keyring item cannot be written or deleted, or the keyring stayed locked |
+| `io.github.wallpaper_rs.Error.Stale` | A repository's signed index expired; retry with `allow_stale = true` after asking the user |
+| `io.github.wallpaper_rs.Error.Conflict` | A playlist edit by index found other entries than expected: `the playlist changed; reload it` |
+
+If `library.db` cannot be opened (for example because a newer build wrote it), the daemon still
+renders, `GetState().library_error` holds the reason and every `Library1` method returns
+`Failed` with it.
 
 ## Streams and claims
 
@@ -44,7 +94,7 @@ reports it covered. `SetOutputCovered` from a client without a claim applies to 
 Output names are trimmed and an empty name means `default` in `RequestStream`, `HoldStream`,
 `ReleaseStream` and `SetOutputCovered`.
 
-## Methods
+## `io.github.wallpaper_rs.Daemon1`
 
 ### `RequestStream(s output, u width, u height) → (u node_id, t serial)`
 
@@ -76,15 +126,26 @@ tools that exit right after the call.
 
 Removes one claim of the caller on `output`, or the held claim if the caller has none.
 
+### `SetOutputCovered(s output, b covered)`
+
+Reported by the desktop integration when a maximized or fullscreen window covers `output`.
+See "Streams and claims".
+
 ### `SetWallpaper(s path, s output, s fit)`
 
 Sets the wallpaper of `output`, or of every output when `output` is empty (this also clears
 per-output wallpapers). `path` is an image or a video (`mp4`, `m4v`, `webm`, `mkv`, `mov`,
 `avi`, `ogv`, `mpg`, `mpeg`); videos loop and are decoded with GStreamer. `fit` is `fill`,
 `fit`, `stretch`, `center`, `tile`, or empty to keep the current mode. Only local files are
-accepted: an absolute path or a `file://` URI (percent-encoded, with an empty or `localhost`
-host); any other URI returns `InvalidArgs`. Images are decoded before the configuration is
+accepted: an absolute path or a `file://` URI with an empty or `localhost` host, which the
+daemon percent-decodes; any other URI returns `InvalidArgs`. Clients should still convert URIs
+to paths themselves, as the other methods reject URIs. A `.wpak` package returns `InvalidArgs`
+(`import the package and use Library1.Apply`). Images are decoded before the configuration is
 saved. A new wallpaper replaces the old one with the configured transition.
+
+A non-empty `path` also stops the playlist of `output` (of every output when `output` is
+empty) and clears the `playlist` and `preset` of the affected configuration sections. If `path`
+is a library item, `GetState().outputs[x].item` reports its uid. No history is recorded.
 
 With an empty `path`, only the fit changes and the current wallpapers stay: the fit of
 `output`, or of every output when `output` is empty. A fit for every output also clears
@@ -100,65 +161,694 @@ returns `InvalidArgs`.
 ### `SetOption(s key, s value)`
 
 Changes one setting and saves the configuration. Keys and their current values are listed in
-`GetState().options`:
+`GetState().options`, and described in `GetSchema().options`:
 
-| Key | Values |
-|-----|--------|
-| `playback.volume` | `0.0` to `1.0` |
-| `playback.muted` | `true`, `false` |
-| `playback.max_fps` | `1` to `240` |
-| `transition.kind` | `fade`, `none` |
-| `transition.duration_ms` | `0` to `10000` |
-| `pause.when_covered` | pause while a maximized or fullscreen window covers the output |
-| `pause.on_battery` | pause while running on battery |
-| `pause.when_locked` | pause while the screen is locked |
+| Key | Values | Default |
+|-----|--------|---------|
+| `playback.volume` | `0.0` to `1.0` | `0.5` |
+| `playback.muted` | `true`, `false` | `true` |
+| `playback.max_fps` | `1` to `240` | `30` |
+| `transition.kind` | `fade`, `none` | `fade` |
+| `transition.duration_ms` | `0` to `10000` | `600` |
+| `pause.when_covered` | pause while a maximized or fullscreen window covers the output | `true` |
+| `pause.on_battery` | pause while running on battery | `true` |
+| `pause.when_locked` | pause while the screen is locked | `true` |
+| `library.watch` | rescan folder sources when files in them change, one scan per source at most every 5 s | `true` |
+| `library.thumb_cache_mb` | `64` to `8192`, size of the thumbnail cache | `512` |
+| `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
 
 Only the changed key is validated. Unknown keys and invalid or out-of-range values return
 `InvalidArgs` and change nothing.
-
-### `SetPaused(b paused)`, `SetVolume(d volume)`, `SetMuted(b muted)`
-
-Pause or resume every animated wallpaper; set the volume and mute state of video wallpapers.
-
-### `SetOutputCovered(s output, b covered)`
-
-Reported by the desktop integration when a maximized or fullscreen window covers `output`.
-See "Streams and claims".
 
 ### `Reload()`
 
 Re-reads the configuration file and applies it. If the file is invalid, the current
 configuration stays, `config_error` is set and the call returns `Failed`.
 
-### `GetState() → s`
+### `GetState() → (s json)`
 
-JSON document: `version`, `adapter`, `config` (file path), `config_error`, `paused`,
-`on_battery`, `locked`, `volume`, `muted`, `options` (key → value) and `outputs`, where each
-output has `width`, `height`, `image`, `fit`, `background` (`#rrggbb`), `kind` (`color`,
-`image` or `video`), `playing` (a consumer is streaming the output and its video plays),
-`active`, `covered`, `clients` (number of claimants) and `error`.
+A `State` document (see "JSON model"). It never waits for the library: the library item, preset,
+playlist and credit of each output are kept up to date when they change.
 
-## Properties
+### `GetSchema() → (s json)`
 
-| Name | Type | Meaning |
-|------|------|---------|
-| `Version` | `s` | Daemon version |
-| `Adapter` | `s` | GPU adapter and backend in use |
-| `Paused` | `b` | Paused by the user |
-| `Volume` | `d` | Volume of video wallpapers |
-| `Muted` | `b` | Video wallpapers are muted |
+A `Schema` document describing every value a client would otherwise hard-code: the keys of
+`SetOption`, `Playlists1.SetRule`, `Profiles1.SetAuto` and `Profiles1.SavePreset`, the provider
+kinds and their options, the search keys, the thumbnail sizes and the fits. It carries no
+labels: clients translate keys with their own strings and fall back to the key. It never changes
+while the daemon runs.
 
-`PropertiesChanged` is emitted for `Paused`, `Volume` and `Muted` whenever their values change,
-whichever method changed them (including `SetOption` and `Reload`).
+### `SetPaused(b paused)`
 
-## Signals
+Pauses or resumes every animated wallpaper.
 
-### `StreamChanged(s output, u node_id, t serial)`
+### `SetVolume(d volume)`
+
+Sets the volume of video wallpapers, `0.0` to `1.0`.
+
+### `SetMuted(b muted)`
+
+Mutes or unmutes video wallpapers.
+
+### `WaitChanged(t serial, u timeout_ms) → (t serial, as topics)`
+
+Long poll for scripts; see "Change notification". `timeout_ms` is clamped to `0..=20000`.
+
+### `ListJobs() → (s json)`
+
+A `JobsReply`: queued and running jobs plus the jobs that finished in the last 10 minutes (at
+most 64 of them).
+
+### `GetJob(t job) → (s json)`
+
+A `JobReply`. `NotFound` for a job that is unknown or finished too long ago.
+
+### `CancelJob(t job)`
+
+Cancels a job; see "Jobs". `NotFound` for an id this daemon run never issued.
+
+### Property `Version` (`s`)
+
+Daemon version.
+
+### Property `Adapter` (`s`)
+
+GPU adapter and backend in use.
+
+### Property `Paused` (`b`)
+
+Paused by the user. `PropertiesChanged` is emitted whenever it changes.
+
+### Property `Volume` (`d`)
+
+Volume of video wallpapers. `PropertiesChanged` is emitted whenever it changes, whichever
+method changed it (including `SetOption` and `Reload`).
+
+### Property `Muted` (`b`)
+
+Video wallpapers are muted. `PropertiesChanged` is emitted whenever it changes.
+
+### Property `Serial` (`t`)
+
+Change counter; see "Change notification". No `PropertiesChanged` is emitted for it.
+
+### Property `Model` (`u`)
+
+Version of the JSON data model of the replies; constant.
+
+### Signal `StreamChanged(s output, u node_id, t serial)`
 
 Emitted for every output with a stream after the daemon reconnects to a restarted PipeWire, as
 soon as the stream of `output` exists again under a new node. The claims stay valid, but
 consumers lose their own PipeWire connection and must connect again to `serial` (or `node_id`
 when `serial` is `0`).
+
+### Signal `Changed(s topic, as ids, t serial)`
+
+Something of `topic` changed; `serial` is the new value of `Serial`. See "Change notification".
+
+### Signal `JobProgress(t job, t done, t total)`
+
+Progress of a running job, at most 4 times per second per job; `total = 0` means unknown.
+
+### Signal `JobFinished(t job, s state, s error_name, s message)`
+
+A job ended. `state` is `done`, `failed` or `cancelled`; `error_name` and `message` are empty
+unless the job failed. A cancelled job has `message = "cancelled"`.
+
+## `io.github.wallpaper_rs.Library1`
+
+The library catalogs images, videos and `.wpak` packages found in folder sources or imported
+one by one. Every method returns `Failed` while the library is unavailable.
+
+### `AddSource(s path, b recursive) → (s source, t job)`
+
+Adds a folder and starts a `scan` job of it. `path` is canonicalized. `InvalidArgs` when it is
+not an existing directory, when it would share files with an existing source (the same folder, a
+folder inside a recursive source, or a recursive folder containing a source: `overlaps the
+source <path>`), and when it lies inside `~/.cache/wallpaper-rs` or
+`~/.local/share/wallpaper-rs` or, being recursive, contains one of them through non-hidden
+folders (`contains wallpaper-rs data`). Scans skip hidden entries, so adding the home folder is
+allowed.
+
+### `RemoveSource(s source)`
+
+Cancels a queued or running scan of the source, then removes it with its items (their tags,
+ratings, playlist entries and thumbnails). Sources that belong to a provider return
+`InvalidArgs` (`belongs to provider "<id>"; remove the provider`).
+
+### `ListSources() → (s json)`
+
+A `SourcesReply`: every source with its item count and, for provider cache folders, the
+provider id.
+
+### `Rescan(s source) → (t job)`
+
+Starts a `scan` job. `source = ""` scans every source in one job and then checks the items that
+belong to no source (imported files and packages), so that deleted files become `missing`.
+
+### `Import(as paths, b copy) → (t job)`
+
+Imports files one by one in an `import` job. Each path must be absolute (no URI); directories go
+through `AddSource`. With `copy = false` the file is cataloged where it is. With `copy = true`
+it is first copied to `~/.local/share/wallpaper-rs/files/` (on a name collision as
+`<stem> (2).<ext>`, `(3)`, …) and takes the original file name without extension as title. A
+file that fails is listed in `ImportReport.failed`; the job fails only on a global error.
+
+### `Resolve(as refs) → (as uids)`
+
+Turns references into uids, in order. A reference is an exact uid (any case), a unique uid
+suffix of at least 6 characters (any case), or the absolute path of a known item. The first
+failing reference returns `NotFound` (`no item matches "<ref>"`) or `InvalidArgs`
+(`"<ref>" matches N items; use more characters`, or a suffix shorter than 6 characters).
+
+### `Remove(as uids, b delete_files)`
+
+Removes items with their thumbnails and materialized package entries, and with `delete_files`
+their files. Every uid is checked first (`NotFound` names the first unknown one); nothing
+changes and `InvalidArgs` is returned when an item is a package installed from a repository
+(`use Repos1.Uninstall`), belongs to a source while its file still exists (`remove the file or
+the folder`: the next scan would add it back), or lies outside
+`~/.local/share/wallpaper-rs/files/` while `delete_files` is true. `ItemSummary.removable` and
+`imported` tell clients in advance.
+
+### `Search(s query, u offset, u limit) → (s json)`
+
+A `SearchPage`. Free text matches the start of words in titles, tags and paths; `key:value`
+filters (listed in `GetSchema().query`), `-` negates and quotes group words. `sort:` orders the
+results (newest first by default). `limit` is `0..=500`; `0` returns only `total`.
+
+The query is normalized first and `SearchPage.query` echoes it: `in:<name>` becomes `in:<uid>`
+(`in:` takes a manual playlist; a smart or unknown playlist returns `InvalidArgs`), and a bare
+`sort:random` becomes `sort:random:<seed>` with a new seed, which orders the same way every time.
+Clients pass the normalized query unchanged for later pages, so random pages neither repeat nor
+skip items. `ItemSummary.thumb` is the cached 256 px thumbnail or `null`: `Search` never makes
+thumbnails.
+
+### `GetItem(s uid) → (s json)`
+
+An `ItemDetails`: the item with its path, the cached 512 px thumbnail, its presets, the manual
+playlists that contain it, and its provider credit, installed package record and revocation
+reason when they apply.
+
+### `SetTitle(s uid, s title)`
+
+Renames an item.
+
+### `SetRating(as uids, u rating)`
+
+Sets the rating, `0` to `5`, of every item.
+
+### `SetFavorite(as uids, b favorite)`
+
+Sets or clears the favorite flag of every item.
+
+### `SetTags(as uids, as add, as remove)`
+
+For every item, adds the tags of `add` and then removes those of `remove`, in one transaction.
+Tag names compare without case; the first spelling stored is kept.
+
+### `ListTags() → (s json)`
+
+A `TagsReply`: every tag in use with its item count.
+
+### `RenameTag(s from, s to)`
+
+Renames a tag; if `to` exists (without regard to case) the two merge. Renaming to the same name
+with another case changes the spelling. `NotFound` for an unknown `from`.
+
+### `Thumbnail(s uid, u size) → (s path)`
+
+Returns the path of the item's thumbnail of `size` (`256`, `512` or `1024`, else
+`InvalidArgs`), making it first when it is not cached, ahead of every other thumbnail work.
+`Failed` with the reason when it cannot be made or takes more than 20 s; a decoding problem also
+sets the item's `error`. A scene package without preview returns `Failed` (`no preview`).
+
+### `RequestThumbnails(as uids, u size) → (a{ss} paths)`
+
+Returns `{uid: path}` for every item whose thumbnail of `size` is cached, and queues the others
+ahead of background analysis; `ThumbnailReady` follows for each of them (`path = ""` when it
+cannot be made or the file is missing). A new call from the same sender replaces that sender's
+queued requests, so a fast scroll does not queue the whole library. Unknown uids are ignored.
+
+### `Apply(s uid, s output, s fit, s preset)`
+
+Shows the item on `output` (`""` = every output, clearing per-output wallpapers and
+playlists) and stops the playlists of the affected outputs. `fit` is a fit or `""` to keep the
+current one. `preset` is `""`, a preset uid, or a preset name looked up first among the item's
+presets and then among the global ones; its `fit` and `background` are applied first, and an
+explicit `fit` wins over the preset's. `Failed` before changing anything when the item is
+missing, has an `error` (invalid and scene packages), or is a revoked package. The item's path,
+the effective fit and background and the preset uid (as a label) are written to the affected
+configuration sections, and the use is recorded once per affected connected output. Packages
+show their entry: it is copied once to `~/.cache/wallpaper-rs/blobs/`.
+
+### Signal `ThumbnailReady(s uid, u size, s path)`
+
+A thumbnail queued by `RequestThumbnails` is ready, or could not be made (`path = ""`).
+
+## `io.github.wallpaper_rs.Playlists1`
+
+Playlist arguments take a full uid or a name (names compare without case).
+
+### `List() → (s json)`
+
+A `PlaylistsReply`.
+
+### `Get(s playlist, u offset, u limit) → (s json)`
+
+A `PlaylistPage`: the playlist and a page of its items. Manual playlists list their entries in
+stored order (missing items included); smart playlists list the current result of their query.
+The item at `items[i]` is entry `offset + i`. `limit` is `0..=500`.
+
+### `Create(s name, s query) → (s uid)`
+
+Creates a manual playlist (`query = ""`) or a smart one. The query is validated and normalized
+as in `Library1.Search`. `Exists` for a name in use.
+
+### `Rename(s playlist, s name)`
+
+Changes the name only.
+
+### `SetQuery(s playlist, s query)`
+
+`""` turns a smart playlist into a manual one; a query turns a manual playlist into a smart one.
+The manual entries stay stored and come back when the query is cleared.
+
+### `Delete(s playlist)`
+
+Stops the playlist on its outputs (the picture shown stays), then deletes it.
+
+### `AddItems(s playlist, as uids)`
+
+Appends items to a manual playlist; an item may appear more than once. `InvalidArgs` for a smart
+playlist.
+
+### `RemoveItems(s playlist, as uids)`
+
+Removes every occurrence of each item from a manual playlist.
+
+### `RemoveEntries(s playlist, au indexes, as expected)`
+
+Removes the entries at `indexes` when `expected[i]` is the uid stored at `indexes[i]`;
+otherwise nothing changes and `Conflict` is returned.
+
+### `MoveItem(s playlist, u from, u to, s expected)`
+
+Moves the entry at `from` to `to` when the entry at `from` is `expected`; otherwise `Conflict`.
+
+### `SetRule(s playlist, s key, s value)`
+
+Sets one rotation rule; the keys are listed in `GetSchema().rules`:
+
+| Key | Value | Default |
+|-----|-------|---------|
+| `order` | `sequential`, `shuffle` | `sequential` |
+| `interval` | `0s` (no timer) or `10s` to `30d`, such as `90s`, `1h30m`, `1d` | `30m` |
+| `at` | comma-separated `HH:MM` local times, at most 24; `""` clears | `""` |
+| `days` | comma-separated weekdays `Mon` to `Sun`; `""` = every day | `""` |
+| `synced` | `true`, `false`: one cursor for every output showing the playlist | `false` |
+| `resume` | `true`, `false`: show the current item again after a restart | `true` |
+| `advance_while_paused` | `true`, `false` | `false` |
+| `skip_videos_on_battery` | `true`, `false` | `false` |
+| `transition_ms` | `0` to `10000`; `""` = `transition.duration_ms` | `""` |
+
+### `Start(s playlist, s output)`
+
+Assigns the playlist to `output` (`""` = every output) and shows its current or first item at
+once. `Failed` (`the playlist has no items to show`) when nothing is playable.
+
+### `Stop(s output)`
+
+Removes the playlist of `output` (`""` = every output that has one) and keeps the item shown as
+the fixed wallpaper.
+
+### `Next(s output)`
+
+Shows the next item on `output` (`""` = every output with a playlist). `NotFound` for an output
+without playlist.
+
+### `Previous(s output)`
+
+Goes one step back on `output`, like `Next`.
+
+### `History(s output, u limit) → (s json)`
+
+A `HistoryReply`, newest first. `output` is a connector name; `limit` is `1..=1000`.
+
+## `io.github.wallpaper_rs.Profiles1`
+
+Profiles store a complete assignment of wallpapers to outputs, optionally with settings;
+presets store a fit and a background color, for one item or for every item.
+
+### `List() → (s json)`
+
+A `ProfilesReply`.
+
+### `Get(s profile) → (s json)`
+
+A `ProfileReply`.
+
+### `Save(s name, b with_options) → (s uid)`
+
+Saves the current assignment of every output, and with `with_options` every setting, as a
+profile. An existing profile of that name is replaced and keeps its uid, rules and priority.
+
+### `Activate(s profile)`
+
+Applies a profile at once and marks it active; `""` only clears the active marker.
+
+### `Rename(s profile, s name)`
+
+Renames a profile.
+
+### `Delete(s profile)`
+
+Deletes a profile; deleting the active profile clears the marker.
+
+### `SetAuto(s profile, s key, s value)`
+
+Sets a rule for automatic activation: `outputs` (comma-separated connector names, met when
+exactly these outputs are connected; `""` unsets), `on_battery` (`true`, `false`; `""` unsets)
+or `priority` (`-1000` to `1000`).
+
+### `ListPresets(s item) → (s json)`
+
+A `PresetsReply`: the presets of `item`, or the global presets for `item = ""`.
+
+### `SavePreset(s item, s name, a{ss} values) → (s uid)`
+
+Saves a preset of `item` (`""` = global) with `fit` and/or `background` (`#rrggbb`). An
+existing name in that scope is replaced and keeps its uid.
+
+### `DeletePreset(s preset)`
+
+Deletes a preset; configuration sections that used it keep their fit and background.
+
+## `io.github.wallpaper_rs.Providers1`
+
+Providers download wallpapers from online services into a cache folder that is a library
+source. Kinds and their options are listed in `GetSchema().providers`. Secrets are written to
+the Secret Service and never stored anywhere else.
+
+### `List() → (s json)`
+
+A `ProvidersReply`.
+
+### `Add(s id, s kind, a{ss} options, s secret) → (s source)`
+
+Adds a provider (`id` matches `^[a-z][a-z0-9_-]{0,31}$`) and returns the library source of its
+cache folder. `secret = ""` stores none.
+
+### `Set(s id, s key, s value)`
+
+Changes one option. Changing `url`, `server` or `user` also forgets the secret.
+
+### `Remove(s id, b purge)`
+
+Removes a provider with its library source and secret; `purge` also deletes the cache folder.
+
+### `Sync(s id) → (t job)`
+
+Starts a `provider_sync` job; `id = ""` syncs every provider.
+
+### `SetSecret(s id, s secret)`
+
+Stores the provider's secret (at most 4096 bytes).
+
+### `ForgetSecret(s id)`
+
+Deletes the provider's secret.
+
+## `io.github.wallpaper_rs.Repos1`
+
+Signed repositories of `.wpak` packages (see `repo.md`). `repo` arguments take a full
+repository id or a unique prefix of at least 8 hex digits.
+
+### `List() → (s json)`
+
+A `ReposReply`.
+
+### `Add(s url) → (t job)`
+
+Adds a repository whose URL carries its trust anchor (`fingerprint=` and/or `repo_id=`).
+
+### `Refresh(s repo) → (t job)`
+
+Refreshes a repository (`""` = all) and applies revocations.
+
+### `Remove(s repo, b uninstall)`
+
+Removes a repository; `uninstall` also uninstalls its packages.
+
+### `Browse(s query, u offset, u limit) → (s json)`
+
+A `BrowsePage` of the packages offered, matched without case on id, title, description, tags
+and authors.
+
+### `RequestPreviews(as specs) → (a{ss} paths)`
+
+Returns `{spec: path}` for the cached previews of `[repo/]id[@version]` specs and queues the
+others; `PreviewReady` follows for each of them.
+
+### `Install(s spec, b allow_stale, b allow_downgrade) → (t job)`
+
+Installs or updates a package. `Stale` when the repository's index expired and `allow_stale` is
+false.
+
+### `Uninstall(s id, s version)`
+
+Uninstalls one version, or every version for `version = ""`.
+
+### `ListInstalled() → (s json)`
+
+An `InstalledReply`.
+
+### Signal `PreviewReady(s spec, s path)`
+
+A preview queued by `RequestPreviews` is ready, or could not be made (`path = ""`).
+
+## Change notification
+
+`Serial` starts at the daemon's start time in microseconds since the Unix epoch and grows by one
+for every `Changed` signal. Topics and their `ids`:
+
+| Topic | Emitted when | `ids` |
+|-------|--------------|-------|
+| `state` | Anything in `GetState` changes | output names, or `[]` for global changes |
+| `library` | Items, sources or tags change | item uids, or `[]` for many items, sources or tags |
+| `playlists` | Playlists change, start or stop | playlist uids |
+| `profiles` | Profiles or presets change or are activated | profile or preset uids |
+| `providers` | Providers change | provider ids |
+| `repos` | Repositories or installed packages change | repository ids, or `[]` |
+| `jobs` | A job is created or finishes | job ids as decimal strings |
+
+Per topic, the first change emits `Changed` at once and opens a 250 ms window; changes inside the
+window are merged and emitted once when it closes. Merged `ids` are the union, or `[]` when one
+change had no specific ids or the union exceeds 256 ids, meaning "re-read everything of this
+topic".
+
+Every query reply carries the `serial` read before the query ran. A client that has seen a
+`Changed` of that reply's topic with a larger `serial` fetches again; otherwise the reply is
+current.
+
+`WaitChanged(serial, timeout_ms)` returns at once with `(Serial, topics changed after serial)`
+when `serial` is older than `Serial` (all seven topics when it is older than the last 256
+changes), and with `(Serial, all topics)` for a `serial` of a previous daemon run or one larger
+than `Serial`. When `serial` equals `Serial` it waits until a change or the timeout, then
+returns `(Serial, [])` on timeout.
+
+## Jobs
+
+Job ids start at 1 for every daemon run and are never reused in a run; clients notice a restart
+of the daemon through `NameOwnerChanged`. Starting a job whose kind and target equal a queued or
+running job returns that job's id (`import` jobs are never merged). Library jobs (`scan`,
+`import`, `analyze`) run one at a time; a job waiting for its turn is `queued`.
+
+| Kind | Started by | Target | Progress unit | Output |
+|------|------------|--------|---------------|--------|
+| `scan` | `AddSource`, `Rescan`, folder changes | source uid, or `""` for all | files (`0/0` while walking) | `ScanOutput` |
+| `import` | `Import` | `""` | files | `ImportReport` |
+| `analyze` | after a scan or import that added or changed items | `""` | items | `AnalyzeReport` |
+| `provider_sync` | `Providers1.Sync`, schedule | provider id, or `""` | items | `SyncOutput` |
+| `repo_add` | `Repos1.Add` | repository URL without query | `0/0` | `Repo` |
+| `repo_refresh` | `Repos1.Refresh`, schedule | repository id, or `""` | `0/0` | `RefreshOutput` |
+| `install` | `Repos1.Install` | `repo_id/id@version` | bytes | `InstalledPackage` |
+
+`CancelJob` drops a queued job; a running job stops at its next checkpoint (between scan
+batches of at most 256 files, imported files and analyzed items). Finished steps stay: a
+cancelled scan keeps the batches it stored and marks nothing missing. Cancelling a finished job
+changes nothing.
+
+## Thumbnails
+
+Thumbnails are JPEG files (quality 85) whose longest edge is 256, 512 or 1024 pixels, never
+upscaled, in `~/.cache/wallpaper-rs/thumbs/<size>/<key>.jpg`, where `key` is the lowercase hex
+BLAKE3 hash of `"<item path>\0<mtime>\0<size>"`; a changed file gets a new key. Directories are
+`0700` and files `0600`. Clients only get paths from the daemon and open them read-only.
+
+Only an isolated worker process (`wprsd --worker`, at the lowest CPU and I/O priority) decodes
+files: images with size limits, EXIF orientation applied and the first frame of animations;
+videos at 10 % of their duration (between 1 s and 30 s); packages from their preview, else from
+their image or video entry. The same run measures the item (dimensions, duration, audio,
+dominant color) or records why it cannot be decoded. At most `max(1, min(4, cores / 2))` files
+are decoded in parallel, each within 15 s, and a worker exits after 30 s without work. Requests
+waiting in `Thumbnail` come first, then `RequestThumbnails`, then background analysis.
+
+Every returned path has its modification time refreshed. When the cache grows beyond
+`library.thumb_cache_mb`, the oldest files are deleted until it is below 90 % of the limit.
+Removing items deletes their thumbnails of every size.
+
+## JSON model
+
+Every reply below carries `model` (currently `1`) and `serial` first. Every field is always
+written (`null` for none); clients ignore fields they do not know, and read enum values they do
+not know as unknown. Adding a field, an enum value or a method keeps the model version;
+removing, renaming or retyping something increases it. Times are Unix seconds; `Fit` is
+`"fill"`, `"fit"`, `"stretch"`, `"center"` or `"tile"`; enums are written in snake case.
+
+```rust
+struct State {
+    model: u32, version: String, adapter: String, config: PathBuf, config_error: Option<String>,
+    library_error: Option<String>, serial: u64, paused: bool, on_battery: bool, locked: bool,
+    volume: f64, muted: bool, profile: Option<Uid>, jobs: u32,
+    options: BTreeMap<String, Value>,
+    outputs: BTreeMap<String, OutputState>,
+}
+struct OutputState {
+    width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
+    kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
+    item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
+}
+enum Shown { Color, Image, Video }
+struct OutputPlaylist { uid: Uid, name: String, position: u32, count: u32, next_at: Option<Time> }
+
+struct Schema {
+    model: u32, serial: u64, options: Vec<Field>, rules: Vec<Field>, auto: Vec<Field>,
+    preset: Vec<Field>, providers: Vec<ProviderKind>, query: Vec<QueryKey>, thumb_sizes: Vec<u32>,
+    fits: Vec<Fit>,
+}
+struct Field {
+    key: String, kind: FieldKind, default: Value, min: Option<f64>, max: Option<f64>,
+    step: Option<f64>, values: Vec<String>, required: bool, clearable: bool,
+}
+enum FieldKind { Bool, Int, Float, Text, Enum, Color, Interval, Times, Weekdays, List, Url }
+struct ProviderKind { kind: String, hosts: Vec<String>, options: Vec<Field>, secret: Option<SecretField> }
+struct SecretField { name: String, required: bool }
+struct QueryKey { key: String, hint: String }
+
+struct Job {
+    id: u64, kind: JobKind, target: String, state: JobState, done: u64, total: u64,
+    started_at: Time, finished_at: Option<Time>, error: Option<JobError>, output: Option<Value>,
+}
+enum JobKind { Scan, Import, Analyze, ProviderSync, RepoAdd, RepoRefresh, Install }
+enum JobState { Queued, Running, Done, Failed, Cancelled }
+struct JobError { name: String, message: String }
+struct JobsReply { model: u32, serial: u64, jobs: Vec<Job> }
+struct JobReply { model: u32, serial: u64, job: Job }
+
+enum ItemKind { Image, Video, Package }
+struct PackageInfo { id: String, version: String, kind: String, license: String }
+struct Item {
+    uid: Uid, source: Option<Uid>, kind: ItemKind, path: PathBuf, title: String, size: u64,
+    mtime: Time, width: Option<u32>, height: Option<u32>, duration_ms: Option<u32>,
+    audio: Option<bool>, color: Option<u32>, error: Option<String>, package: Option<PackageInfo>,
+    tags: Vec<String>, rating: u8, favorite: bool, added_at: Time, used_at: Option<Time>,
+    use_count: u32, missing: bool,
+}
+struct ItemSummary {
+    uid: Uid, kind: ItemKind, title: String, width: Option<u32>, height: Option<u32>,
+    duration_ms: Option<u32>, color: Option<u32>, tags: Vec<String>, rating: u8, favorite: bool,
+    missing: bool, error: Option<String>, revoked: Option<Reason>, removable: bool, imported: bool,
+    thumb: Option<PathBuf>,
+}
+struct SearchPage { model: u32, serial: u64, query: String, total: u32, offset: u32, items: Vec<ItemSummary> }
+struct ItemDetails {
+    model: u32, serial: u64, item: Item, thumb: Option<PathBuf>, presets: Vec<Preset>,
+    playlists: Vec<PlaylistRef>, credit: Option<Credit>, installed: Option<InstalledPackage>,
+    revoked: Option<Reason>,
+}
+struct PlaylistRef { uid: Uid, name: String }
+struct Source {
+    uid: Uid, path: PathBuf, recursive: bool, scanned_at: Option<Time>, error: Option<String>,
+    items: u32, provider: Option<String>,
+}
+struct SourcesReply { model: u32, serial: u64, sources: Vec<Source> }
+struct Tag { name: String, count: u32 }
+struct TagsReply { model: u32, serial: u64, tags: Vec<Tag> }
+struct SourceScan { source: Option<Uid>, added: u32, updated: u32, moved: u32, missing: u32 }
+struct ScanOutput { reports: Vec<SourceScan> }
+struct Imported { path: PathBuf, uid: Uid }
+struct PathError { path: PathBuf, error: String }
+struct ImportReport { imported: Vec<Imported>, failed: Vec<PathError> }
+struct AnalyzeReport { analyzed: u32, failed: u32 }
+struct Credit { provider: String, title: String, attribution: Option<String>, license: Option<String>, link: Option<String> }
+
+enum Order { Sequential, Shuffle }
+struct Rules {
+    order: Order, interval: String, at: Vec<String>, days: Vec<String>, synced: bool,
+    resume: bool, advance_while_paused: bool, skip_videos_on_battery: bool,
+    transition_ms: Option<u32>,
+}
+struct Playlist { uid: Uid, name: String, query: Option<String>, rules: Rules, count: u32, outputs: Vec<String> }
+struct PlaylistsReply { model: u32, serial: u64, playlists: Vec<Playlist> }
+struct PlaylistPage { model: u32, serial: u64, playlist: Playlist, total: u32, offset: u32, items: Vec<ItemSummary> }
+struct HistoryEntry { at: Time, item: Option<ItemSummary> }
+struct HistoryReply { model: u32, serial: u64, output: String, entries: Vec<HistoryEntry> }
+struct ProfileOutput {
+    item: Option<Uid>, path: Option<PathBuf>, playlist: Option<Uid>, fit: Option<Fit>,
+    background: Option<String>, preset: Option<Uid>,
+}
+struct ProfileAuto { outputs: Option<Vec<String>>, on_battery: Option<bool> }
+struct Profile {
+    uid: Uid, name: String, outputs: BTreeMap<String, ProfileOutput>,
+    options: BTreeMap<String, String>, auto: ProfileAuto, priority: i32, active: bool,
+}
+struct ProfilesReply { model: u32, serial: u64, active: Option<Uid>, profiles: Vec<Profile> }
+struct ProfileReply { model: u32, serial: u64, profile: Profile }
+struct PresetValue { fit: Option<Fit>, background: Option<String> }
+struct Preset { uid: Uid, item: Option<Uid>, name: String, value: PresetValue }
+struct PresetsReply { model: u32, serial: u64, item: Option<Uid>, presets: Vec<Preset> }
+
+enum ProviderState { Idle, Syncing, Locked, Error, NeedsSecret }
+struct Provider {
+    id: String, kind: String, options: BTreeMap<String, String>, source: Option<Uid>,
+    state: ProviderState, has_secret: bool, hosts: Vec<String>, items: u32, cache_bytes: u64,
+    last_sync: Option<Time>, next_sync: Option<Time>, last_error: Option<String>, job: Option<u64>,
+}
+struct ProvidersReply { model: u32, serial: u64, providers: Vec<Provider> }
+struct SyncReport {
+    provider: String, listed: u32, downloaded: u32, reused: u32, skipped: u32, failed: u32,
+    scan: SourceScan,
+}
+struct SyncOutput { reports: Vec<SyncReport> }
+enum RepoWarning { RootExpiring, RootExpired, EntryExpiring, Stale }
+struct Repo {
+    repo_id: String, url: String, name: String, hosts: Vec<String>, fingerprints: Vec<String>,
+    root_version: u64, root_expires: Time, entry_version: u64, entry_expires: Time, checked: Time,
+    stale: bool, packages: u32, warnings: Vec<RepoWarning>, last_error: Option<String>,
+    job: Option<u64>,
+}
+struct ReposReply { model: u32, serial: u64, repos: Vec<Repo> }
+enum Reason { Malware, License, Takedown, Broken, Other }
+struct RepoPackage {
+    repo_id: String, repo_name: String, id: String, author: Option<String>, version: String,
+    kind: String, title: String, description: String, tags: Vec<String>, license: String,
+    authors: Vec<String>, size: u64, published: Time, preview: bool, versions: Vec<String>,
+    installed: Vec<String>, update: bool,
+}
+struct BrowsePage { model: u32, serial: u64, query: String, total: u32, offset: u32, packages: Vec<RepoPackage> }
+struct InstalledPackage {
+    repo_id: String, id: String, version: String, sha256: String, size: u64,
+    signer: Option<String>, revoked: Option<Reason>, item: Option<Uid>, update: Option<String>,
+}
+struct InstalledReply { model: u32, serial: u64, packages: Vec<InstalledPackage> }
+struct Update { repo_id: String, id: String, installed: String, available: String }
+struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
+```
+
+Bulk replies (`Search`, playlist pages, history, installed packages) carry no file paths except
+cached thumbnail paths; an item's path appears only in `GetItem` and in `GetState().outputs`.
 
 ## Configuration file
 
@@ -168,5 +858,31 @@ replaced. Values out of range are clamped when the file is read and invalid colo
 the default color, with a warning naming the key.
 
 If the file cannot be parsed at startup, the daemon starts with the default configuration and
-reports the error in `GetState().config_error` (`null` when the file is fine). Before the first
-save, the broken file is copied to `config.toml.broken` (mode `0600`).
+reports the error in `GetState().config_error` (`null` when the file is fine), as
+`invalid configuration at line L, column C: <message>`. Before the first save, the broken file
+is copied to `config.toml.broken` (mode `0600`).
+
+```toml
+profile = "01J…"          # active profile uid, absent when none
+
+[default]                 # and each [outputs.<name>]
+image = "/path"           # may be a .wpak written by Library1.Apply
+fit = "fill"
+background = "#000000"
+playlist = "01J…"         # playlist assigned to this section
+preset = "01J…"           # label of the preset applied to this section
+
+[library]
+watch = true
+thumb_cache_mb = 512
+
+[repos]
+auto_refresh = true
+```
+
+A section shows its `playlist` if set, else its `image`. An output section that sets either one
+overrides the content of `[default]` as a whole; `fit` and `background` still fall back field by
+field. `preset` is only a label: `Library1.Apply` writes the effective fit and background into
+the section. When the library is available at startup or `Reload`, `preset`, `playlist` and
+`profile` uids that name nothing are dropped with a warning naming the key, and the file is
+saved.

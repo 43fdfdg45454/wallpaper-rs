@@ -96,3 +96,19 @@ fn file_uris_decode_to_local_paths_only() {
     assert_eq!(path("http://127.0.0.1:9/x.webm"), None);
     assert_eq!(path("/tmp/x.png"), None);
 }
+
+#[test]
+fn stills_come_from_inside_the_video() {
+    if wprs_video::init().is_err() {
+        return;
+    }
+    let still = match wprs_video::still(Path::new(FIXTURE)) {
+        Ok(still) => still,
+        Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "still required: {e}"),
+    };
+    assert_eq!((still.width, still.height, still.audio), (64, 32, false));
+    assert!(still.duration_ms.is_some_and(|ms| ms > 0), "{:?}", still.duration_ms);
+    let center = &still.rgba[(16 * 64 + 32) * 4..][..3];
+    assert!(center[0] > 160 && center[1] < 80 && center[2] > 60, "{center:?}");
+    assert!(wprs_video::still(Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml"))).is_err());
+}

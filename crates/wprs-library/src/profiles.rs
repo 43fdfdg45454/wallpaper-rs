@@ -48,6 +48,14 @@ impl Library {
         })
     }
 
+    pub fn preset(&self, uid: &str) -> Result<Preset> {
+        let sql = "SELECT p.uid, i.uid, p.name, p.value FROM presets p LEFT JOIN items i ON i.id = p.item_id \
+            WHERE p.id = ?1";
+        let row =
+            |r: &Row<'_>| Ok(Preset { uid: r.get(0)?, item: r.get(1)?, name: r.get(2)?, value: json(r, 3)? });
+        Ok(self.db.query_row(sql, [row_id(&self.db, "preset", uid)?], row)?)
+    }
+
     pub fn update_preset(&mut self, uid: &str, value: &Value) -> Result<()> {
         let changed = self
             .db
