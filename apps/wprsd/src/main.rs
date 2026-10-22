@@ -2,6 +2,7 @@ mod bus;
 mod compositor;
 mod controls;
 mod daemon;
+mod flatpak;
 mod service;
 mod streams;
 mod wallpaper;
@@ -56,6 +57,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
         e => e.into(),
     })?;
     tracing::info!("serving {} on the session bus", dbus::BUS_NAME);
+    tokio::spawn(flatpak::request_background(connection.clone()));
     tokio::spawn(watch::battery(daemon.clone()));
     tokio::spawn(watch::screen_lock(connection.clone(), daemon.clone()));
     tokio::spawn(watch::properties(connection.clone(), daemon.clone()));

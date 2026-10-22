@@ -12,9 +12,11 @@ interface: every action is available in both.
 | Interface | `io.github.wallpaper_rs.Daemon1` |
 
 The daemon is D-Bus activatable (`packaging/dbus`) and runs as the systemd user unit
-`wprsd.service`. The name is owned without allowing replacement. A second daemon checks the
-name before initializing the GPU and PipeWire and exits at once with an error saying that
-another wprsd owns it.
+`wprsd.service`. In the Flatpak (`packaging/flatpak`) it owns the name through `--own-name`, so
+Flatpak exports the same activation file, starts the daemon with `flatpak run` and drops
+`SystemdService`; there is no systemd unit there. The name is owned without allowing
+replacement. A second daemon checks the name before initializing the GPU and PipeWire and exits
+at once with an error saying that another wprsd owns it.
 
 Errors: invalid arguments return `InvalidArgs`; other failures return `Failed` and change
 nothing. If the render thread has stopped after an internal error, every method that changes

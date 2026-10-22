@@ -56,7 +56,7 @@ impl Daemon {
     pub fn set_wallpaper(&self, path: PathBuf, output: &str, fit: Option<Fit>) -> anyhow::Result<()> {
         let remote = path.to_str().is_some_and(|p| p.contains("://"));
         anyhow::ensure!(!remote, "{} is not a local file", path.display());
-        let path = std::fs::canonicalize(&path).with_context(|| format!("cannot find {}", path.display()))?;
+        let path = std::fs::canonicalize(&path).with_context(|| not_found(&path))?;
         anyhow::ensure!(path.is_file(), "{} is not a file", path.display());
         if wprs_video::is_video(&path) {
             let (width, height) =
@@ -74,5 +74,16 @@ impl Daemon {
             false => self.configure_output(output),
         }
         Ok(())
+    }
+}
+
+fn not_found(path: &Path) -> String {
+    match crate::flatpak::app_id() {
+        Some(id) => format!(
+            "cannot find {} (if it exists, give access to its folder with: flatpak override --user --filesystem=\"{}:ro\" {id})",
+            path.display(),
+            path.parent().unwrap_or(path).display()
+        ),
+        None => format!("cannot find {}", path.display()),
     }
 }

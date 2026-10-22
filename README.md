@@ -51,6 +51,36 @@ pausa, el volumen y los ajustes se eligen desde el icono de wallpaper-rs en la b
 Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good) y un
 controlador Vulkan u OpenGL.
 
+## Instalación con Flatpak
+
+La CI genera también el artefacto `wallpaper-rs-flatpak`, con el daemon, `wprs-ctl`, GStreamer y
+los códecs dentro de un Flatpak. El runtime (`org.freedesktop.Platform` 26.08) se descarga de
+Flathub al instalarlo:
+
+```sh
+unzip wallpaper-rs-flatpak.zip
+flatpak install --user ./wallpaper-rs.flatpak
+flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs | sh
+```
+
+Flatpak no puede instalar el plugin de fondo ni el icono de la bandeja de Plasma: la última orden
+los instala con `kpackagetool6` desde los archivos del propio Flatpak (sin `| sh` solo muestra las
+órdenes). Hay que repetirla después de cada actualización y reiniciar Plasma. El plugin arranca el
+daemon por D-Bus cuando lo necesita; no hay servicio de systemd. No instales a la vez el Flatpak y
+el `.tar.gz`, porque los dos registran el mismo servicio D-Bus: ejecuta antes `./uninstall.sh`.
+
+```sh
+alias wprs-ctl='flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperRs'
+```
+
+Permisos: la GPU, el socket de PipeWire para publicar los streams, el sonido de los vídeos, el
+nombre D-Bus del daemon, el bloqueo de pantalla y la batería, y lectura de Imágenes, Vídeos y
+Descargas. Sin red. Para usar fondos de otra carpeta:
+`flatpak override --user --filesystem=/ruta:ro io.github.wallpaper_rs.WallpaperRs`. La
+configuración vive en `~/.var/app/io.github.wallpaper_rs.WallpaperRs/config/wallpaper-rs/`. Para
+desinstalar: `flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs remove | sh` y
+`flatpak uninstall --user io.github.wallpaper_rs.WallpaperRs`.
+
 ## Uso desde la terminal
 
 ```sh
@@ -96,6 +126,16 @@ scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
 scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
 ```
 
+Flatpak local (compila sin red, con Rust 1.99.1 y las fuentes de Cargo descargadas antes por
+`flatpak-builder`):
+
+```sh
+packaging/flatpak/cargo-sources.py      # genera cargo-sources.json desde Cargo.lock
+flatpak-builder --user --install --install-deps-from=flathub --force-clean \
+  --state-dir=target/flatpak-builder target/flatpak \
+  packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.yml
+```
+
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre
 dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una captura.
@@ -111,7 +151,7 @@ dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una ca
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
 | `po` | Traducciones gettext de los paquetes de Plasma |
-| `packaging` | Servicio systemd, activación D-Bus, scripts de instalación |
+| `packaging` | Servicio systemd, activación D-Bus, scripts de instalación, Flatpak |
 | `docs` | Especificación de la interfaz D-Bus |
 
 ## Privacidad

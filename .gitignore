@@ -1,3 +1,4 @@
 /target
 /dist
 /integrations/*/contents/locale
+/packaging/flatpak/cargo-sources.json

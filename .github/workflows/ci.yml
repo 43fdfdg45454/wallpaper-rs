@@ -56,7 +56,7 @@ jobs:
         run: cargo test --workspace --all-features --locked
 
       - name: Shell scripts
-        run: shellcheck packaging/*.sh scripts/*.sh
+        run: shellcheck packaging/*.sh packaging/flatpak/*.sh scripts/*.sh
 
       - name: Plasma plugin syntax
         run: |
@@ -142,6 +142,51 @@ jobs:
         with:
           name: wallpaper-rs-fedora-rpm
           path: rpm/*.rpm
+          if-no-files-found: error
+          retention-days: 7
+
+  flatpak:
+    name: Flatpak bundle
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-26.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - name: Vendored Cargo sources
+        run: packaging/flatpak/cargo-sources.py
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3
+        with:
+          manifest-path: packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.yml
+          bundle: wallpaper-rs.flatpak
+          cache-key: flatpak-${{ hashFiles('Cargo.lock', 'packaging/flatpak/*.yml') }}
+          upload-artifact: false
+
+      - name: Install and run the bundle
+        run: |
+          app=io.github.wallpaper_rs.WallpaperRs
+          flatpak install -y --noninteractive --bundle wallpaper-rs.flatpak
+          flatpak run --command=wprs-ctl $app --version
+          flatpak run --command=wprsd $app --version
+          files=$(flatpak info -l $app)/files
+          flatpak run --command=wprs-plasma $app > plasma.sh
+          sh -n plasma.sh
+          for p in wallpapers/io.github.wallpaper_rs plasmoids/io.github.wallpaper_rs.tray; do
+            test -f "$files/share/plasma/$p/metadata.json"
+            grep -F -e "--install '$files/share/plasma/$p'" plasma.sh
+          done
+          grep -x "Exec=.* --command=/app/bin/wprsd $app" /var/lib/flatpak/exports/share/dbus-1/services/io.github.wallpaper_rs.Daemon.service
+          ls "$files/bin/wprsd" "$files/bin/wprs-ctl"
+          if grep -l -E '/run/build|/(home|root)/' "$files"/bin/wprs*; then exit 1; fi
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: wallpaper-rs-flatpak
+          path: wallpaper-rs.flatpak
           if-no-files-found: error
           retention-days: 7
 

@@ -1,0 +1,51 @@
+app-id: io.github.wallpaper_rs.WallpaperRs
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.llvm22
+command: wprsd
+finish-args:
+  - --device=dri
+  - --filesystem=xdg-run/pipewire-0:ro
+  - --socket=pulseaudio
+  - --own-name=io.github.wallpaper_rs.Daemon
+  - --talk-name=org.freedesktop.ScreenSaver
+  - --system-talk-name=org.freedesktop.UPower
+  - --filesystem=xdg-pictures:ro
+  - --filesystem=xdg-videos:ro
+  - --filesystem=xdg-download:ro
+modules:
+  - name: wallpaper-rs
+    buildsystem: simple
+    build-options:
+      append-path: /run/build/wallpaper-rs/rust/bin:/usr/lib/sdk/llvm22/bin
+      prepend-ld-library-path: /usr/lib/sdk/llvm22/lib
+      env:
+        CARGO_HOME: /run/build/wallpaper-rs/cargo
+        RUSTFLAGS: --remap-path-prefix=/run/build/wallpaper-rs=/src --remap-path-prefix=/run/build/wallpaper-rs/cargo=/cargo
+    build-commands:
+      - rust-dist/install.sh --prefix=/run/build/wallpaper-rs/rust --components=rustc,cargo,rust-std-x86_64-unknown-linux-gnu --disable-ldconfig
+      - cargo build --release --offline --locked -p wprsd -p wprs-ctl
+      - install -Dm755 -t /app/bin target/release/wprsd target/release/wprs-ctl
+      - install -Dm755 packaging/flatpak/wprs-plasma.sh /app/bin/wprs-plasma
+      - scripts/translations.sh build
+      - install -d /app/share/plasma/wallpapers /app/share/plasma/plasmoids /app/share/dbus-1/services
+      - cp -r integrations/plasma-wallpaper /app/share/plasma/wallpapers/io.github.wallpaper_rs
+      - cp -r integrations/plasma-tray /app/share/plasma/plasmoids/io.github.wallpaper_rs.tray
+      - sed 's|@BINDIR@|/app/bin|' packaging/dbus/io.github.wallpaper_rs.Daemon.service > /app/share/dbus-1/services/io.github.wallpaper_rs.Daemon.service
+      - install -Dm644 -t /app/share/metainfo packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.metainfo.xml
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - .git
+          - target
+          - dist
+      - type: archive
+        only-arches:
+          - x86_64
+        url: https://static.rust-lang.org/dist/rust-1.99.1-x86_64-unknown-linux-gnu.tar.xz
+        sha256: 231fcae47ee950621374725b5fc3b5441d2fbda2955ac45dd7dc816d8876cfe7
+        dest: rust-dist
+      - cargo-sources.json
