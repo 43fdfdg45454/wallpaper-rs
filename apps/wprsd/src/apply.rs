@@ -30,7 +30,9 @@ fn find_preset(lib: &Library, item: &str, key: &str) -> Result<Option<(String, P
     if key.is_empty() {
         return Ok(None);
     }
-    let named = |list: Vec<wprs_library::Preset>| list.into_iter().find(|p| p.name.eq_ignore_ascii_case(key));
+    let named = |list: Vec<wprs_library::Preset>| {
+        list.into_iter().find(|p| p.name.eq_ignore_ascii_case(key) && p.package().is_none())
+    };
     let found = match lib.preset(key) {
         Ok(preset) => Some(preset),
         Err(_) => named(lib.presets(Some(item))?).or(named(lib.presets(None)?)),
@@ -41,7 +43,7 @@ fn find_preset(lib: &Library, item: &str, key: &str) -> Result<Option<(String, P
 
 pub enum Media {
     Picture(PathBuf),
-    Video(PathBuf),
+    Video(PathBuf, Option<Arc<crate::sceneprops::Props>>),
     Scene(Arc<crate::scenes::ScenePack>),
 }
 
@@ -62,6 +64,13 @@ pub fn materialize(wpak: &Path, blob: &Path) -> anyhow::Result<bool> {
     Ok(video)
 }
 
+fn author_fit(path: &Path) -> Option<Fit> {
+    let package = Kind::detect(path) == Some(Kind::Package);
+    let manifest =
+        package.then(|| wprs_format::open(path, &wprs_format::Limits::default()).ok()).flatten()?.manifest;
+    manifest.display.and_then(|d| d.fit)
+}
+
 impl Daemon {
     pub fn blob(&self, path: &Path, mtime: i64, size: u64) -> PathBuf {
         let identity = format!("{}\0{mtime}\0{size}", path.to_string_lossy());
@@ -71,7 +80,11 @@ impl Daemon {
 
     pub fn media(&self, path: PathBuf) -> anyhow::Result<Media> {
         if Kind::detect(&path) != Some(Kind::Package) {
-            return Ok(if wprs_video::is_video(&path) { Media::Video(path) } else { Media::Picture(path) });
+            return Ok(if wprs_video::is_video(&path) {
+                Media::Video(path, None)
+            } else {
+                Media::Picture(path)
+            });
         }
         let revoked = self.state().installed.iter().any(|i| i.path == path && i.revoked.is_some());
         anyhow::ensure!(!revoked, "the package is revoked");
@@ -81,7 +94,10 @@ impl Daemon {
         }
         let meta = std::fs::metadata(&path)?;
         let blob = self.blob(&path, meta.mtime(), meta.len());
-        Ok(if materialize(&path, &blob)? { Media::Video(blob) } else { Media::Picture(blob) })
+        Ok(match materialize(&path, &blob)? {
+            true => Media::Video(blob, self.video_props(&path).ok()),
+            false => Media::Picture(blob),
+        })
     }
 
     pub fn drop_blobs(&self, path: &Path, mtime: i64, size: u64) {
@@ -115,11 +131,12 @@ impl Daemon {
             return Err(failed(format!("{} {} is revoked ({reason})", package.id, package.version)));
         }
         let (fit, background, preset) = match preset {
-            Some((uid, PresetValue { fit: preset_fit, background })) => {
+            Some((uid, PresetValue { fit: preset_fit, background, .. })) => {
                 (fit.or(preset_fit), background, Some(uid))
             }
             None => (fit, None, None),
         };
+        let fit = fit.or_else(|| author_fit(&item.path));
         let _decoded = self.check_media(&item.path)?;
         self.change_output(&output, |c| {
             c.set_image(&output, item.path.clone(), fit);

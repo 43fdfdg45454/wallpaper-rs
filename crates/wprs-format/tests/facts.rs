@@ -11,7 +11,7 @@ use std::io::Cursor;
 use std::path::Path;
 use wprs_format::{
     Content, Error, Input, Kind, Limits, Manifest, Origin, OriginKind, Previews, Rating, build, features,
-    fill, media, open, read, upgrade, upgrade_json,
+    fill, media, open, read, rename_json, upgrade, upgrade_json,
 };
 
 const SCENE: &str = r##"{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [3840, 1600]},
@@ -206,6 +206,18 @@ fn upgrades_rename_hyphenated_properties_and_find_the_default_language() {
     assert_eq!(missing.len(), 3, "{missing:?}");
     assert!(missing[0].contains("content") && missing[2].contains("origin"));
     assert!(upgrade_json(&mut manifest, None).unwrap_err().to_string().contains("already"));
+}
+
+#[test]
+fn renames_reach_conditions_of_both_spellings() {
+    let mut manifest = json!({"properties": {"mood": {"type": "combo", "options": ["a", "b"], "default": "a"},
+        "moody": {"type": "bool", "default": false},
+        "tint": {"type": "color", "default": "#ffffff", "enabled_if": {"mood": "b"}, "visible_if": "mood == 'mood' || !moody"}}});
+    rename_json(&mut manifest, None, &BTreeMap::from([("mood".to_string(), "feel".to_string())]));
+    let tint = &manifest["properties"]["tint"];
+    assert_eq!(tint["enabled_if"], json!({"feel": "b"}));
+    assert_eq!(tint["visible_if"], "feel == 'mood' || !moody");
+    assert!(manifest["properties"].get("feel").is_some() && manifest["properties"].get("mood").is_none());
 }
 
 #[test]

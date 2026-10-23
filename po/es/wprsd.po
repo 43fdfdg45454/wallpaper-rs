@@ -19,3 +19,31 @@ msgstr "%1 (conflicto)"
 #: apps/wprsd/src/words.rs
 msgid "Volume"
 msgstr "Volumen"
+
+#: apps/wprsd/src/words.rs
+msgid "Speed"
+msgstr "Velocidad"
+
+#: apps/wprsd/src/words.rs
+msgid "Start"
+msgstr "Empezar en"
+
+#: apps/wprsd/src/words.rs
+msgid "Stop at"
+msgstr "Parar en"
+
+#: apps/wprsd/src/words.rs
+msgid "Zoom"
+msgstr "Zoom"
+
+#: apps/wprsd/src/words.rs
+msgid "Horizontal position"
+msgstr "Posición horizontal"
+
+#: apps/wprsd/src/words.rs
+msgid "Vertical position"
+msgstr "Posición vertical"
+
+#: apps/wprsd/src/words.rs
+msgid "0 plays to the end"
+msgstr "Con 0 se reproduce hasta el final"

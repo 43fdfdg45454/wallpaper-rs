@@ -1,13 +1,12 @@
 use super::power::Power;
 use super::slot::PlayerSlot;
-use super::{SceneInput, SceneSpec};
+use super::{Reel, SceneInput, SceneSpec};
 use chrono::Timelike;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView, log_allowed};
-use wprs_scene::{PointerState, Quality, Runtime, ScriptOutputs, Uses, Voice, Wake};
+use wprs_scene::{PointerState, Quality, Runtime, ScriptOutputs, Uses, Values, Voice, Wake};
 use wprs_script::{Error, Frame, Host};
 
 const SCRIPT_HOST: &str = "/proc/self/exe";
@@ -31,6 +30,9 @@ pub(super) struct SceneState {
     pub(super) moving: bool,
     pub(super) voices: Vec<Voice>,
     pub(super) heard: Option<Instant>,
+    exposed: Values,
+    pressed: Vec<String>,
+    restock: bool,
 }
 
 fn after(seconds: f64) -> Duration {
@@ -45,6 +47,7 @@ fn wall() -> f64 {
 impl SceneState {
     pub(super) fn new(spec: SceneSpec, power: Power) -> SceneState {
         let mut runtime = Runtime::new(spec.pack.scene.clone(), spec.values.clone());
+        runtime.set_playing(spec.clips.iter().map(|(asset, _)| asset.clone()).collect());
         let still = spec.hold.is_some() || power.still(&runtime);
         match spec.hold {
             Some(time) => runtime.seek(time),
@@ -55,8 +58,10 @@ impl SceneState {
             None => {}
         }
         let (scripts, seed) = (&spec.pack.scripts, runtime.scene.clock.seed);
+        let named = (spec.pack.locale.as_str(), &spec.pack.labels);
         let host = (!still && runtime.uses().scripts)
-            .then(|| Host::new(SCRIPT_HOST, &["--script-host"], scripts, seed, &spec.pack.locale));
+            .then(|| Host::new(SCRIPT_HOST, &["--script-host"], scripts, seed, named));
+        let exposed = wprs_scene::exposed(&spec.pack.props.properties, &spec.values);
         let read = |word| scripts.iter().any(|(_, source)| source.contains(word));
         let (reads, quality) = ((read("audio"), read("cursor")), power.quality(&runtime));
         let (view, tick, pointer, calm, error, due, uses) = Default::default();
@@ -78,6 +83,9 @@ impl SceneState {
             moving,
             voices,
             heard,
+            exposed,
+            pressed: Vec::new(),
+            restock: false,
         };
         scene.uses = scene.needs(quality);
         scene
@@ -117,14 +125,26 @@ impl SceneState {
         self.moving || self.host.is_some()
     }
 
+    pub(super) fn press(&mut self, id: &str) {
+        self.runtime.press(id);
+        self.pressed.push(id.to_owned());
+        self.calm = 0;
+    }
+
     pub(super) fn update(&mut self, spec: SceneSpec) -> bool {
         let mut changed = self.runtime.set_props(spec.values.clone());
+        let media = self.spec.media() != spec.media();
+        if media {
+            self.runtime.set_playing(spec.clips.iter().map(|(asset, _)| asset.clone()).collect());
+        }
+        self.restock |= changed || media;
+        self.exposed = wprs_scene::exposed(&spec.pack.props.properties, &spec.values);
         if spec.hold != self.spec.hold {
             spec.hold.into_iter().for_each(|time| self.runtime.seek(time));
             (self.still, self.moving, changed) = (spec.hold.is_some(), spec.hold.is_none(), true);
         }
         (self.spec, self.uses) = (spec, self.needs(self.quality));
-        changed
+        changed || media
     }
 
     pub(super) fn input(&mut self, input: SceneInput) -> bool {
@@ -149,18 +169,22 @@ impl SceneState {
 
     pub(super) fn script(&mut self) -> Option<ScriptOutputs> {
         let rt = &self.runtime;
-        let (time, dt, props, audio, pointer) = (rt.time(), rt.dt(), rt.props(), rt.audio(), rt.pointer());
-        match self.host.as_mut()?.update(&Frame { time, dt, props, audio, pointer }) {
+        let (time, dt, props, audio, pointer) = (rt.time(), rt.dt(), &self.exposed, rt.audio(), rt.pointer());
+        let actions = &std::mem::take(&mut self.pressed);
+        match self.host.as_mut()?.update(&Frame { time, dt, props, audio, pointer, actions }) {
             Ok(outputs) => outputs,
             Err(Error::Disabled) => {
-                tracing::warn!(scene = self.spec.pack.id, "the scene scripts failed too often and are off");
+                tracing::warn!(
+                    scene = self.spec.pack.props.id,
+                    "the scene scripts failed too often and are off"
+                );
                 (self.host, self.error) = (None, Some(Error::Disabled.to_string()));
                 None
             }
             Err(e) => {
                 static FAILURES: AtomicU64 = AtomicU64::new(0);
                 if log_allowed(&FAILURES) {
-                    tracing::warn!(scene = self.spec.pack.id, "scene script: {e}");
+                    tracing::warn!(scene = self.spec.pack.props.id, "scene script: {e}");
                 }
                 None
             }
@@ -180,7 +204,7 @@ impl SceneState {
         renderer: &Renderer,
         (size, refresh): ((u32, u32), u32),
         power: Power,
-        players: &HashMap<PathBuf, PlayerSlot>,
+        players: &HashMap<Reel, PlayerSlot>,
         active: bool,
         now: Instant,
     ) -> Result<bool, RenderError> {
@@ -199,8 +223,13 @@ impl SceneState {
             (size.0 as f32 * scale).round().max(1.0) as u32,
             (size.1 as f32 * scale).round().max(1.0) as u32,
         );
+        if let Some(view) = self.view.as_mut().filter(|_| std::mem::take(&mut self.restock)) {
+            let assets = assets(&self.spec);
+            renderer.refresh_scene(view, (&self.spec.pack.scene, self.runtime.props()), &assets)?;
+        }
         if self.view.is_none() {
-            let view = renderer.scene_view(&self.spec.pack.scene, &self.assets())?;
+            let view =
+                renderer.scene_view(&self.spec.pack.scene, &assets(&self.spec), self.runtime.props())?;
             if view.gpu_particles() == Some(false) {
                 tracing::debug!("particles run on the CPU with a smaller budget");
             }
@@ -208,8 +237,10 @@ impl SceneState {
         }
         let view = self.view.as_mut().expect("created above");
         let frame = self.runtime.frame(view.view(inner), quality);
-        let videos: Vec<(&str, &GpuImage)> = (self.spec.pack.videos.iter())
-            .filter_map(|(id, path)| Some((id.as_str(), players.get(path)?.texture.as_ref()?)))
+        let videos: Vec<(&str, &GpuImage)> = self
+            .spec
+            .reels()
+            .filter_map(|(id, reel, _)| Some((id, players.get(reel)?.texture.as_ref()?)))
             .collect();
         renderer.render_scene(view, &self.runtime, &frame, inner, quality, &videos)?;
         let interval = Duration::from_secs(1) / power.fps(&self.runtime, quality, refresh);
@@ -263,10 +294,53 @@ impl SceneState {
             Wake::Idle => None,
         };
     }
+}
 
-    fn assets(&self) -> wprs_render::SceneAssets {
-        let mut assets = self.spec.pack.assets.clone();
-        assets.images.extend(self.spec.extra.iter().cloned());
-        assets
+fn assets(spec: &SceneSpec) -> wprs_render::SceneAssets {
+    let mut assets = spec.pack.assets.clone();
+    assets.images.extend(spec.extra.iter().cloned());
+    assets
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::Content;
+    use super::*;
+    use crate::scenes::ScenePack;
+    use std::sync::Arc;
+    use wprs_scene::{Scene, Tier};
+
+    #[test]
+    fn new_media_of_the_same_scene_keep_its_clock_and_view() {
+        let renderer = match Renderer::new() {
+            Ok(renderer) => renderer,
+            Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
+        };
+        let scene = Scene::from_json(include_str!("../../../../scenes/snowfall/scene.json")).unwrap();
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../scenes/snowfall/manifest.json")).unwrap();
+        let properties = serde_json::from_value(manifest["properties"].clone()).unwrap();
+        let pack = Arc::new(ScenePack::bare(scene, properties, Vec::new()));
+        let spec = SceneSpec {
+            values: pack.props.values(&[]),
+            pack,
+            extra: Vec::new(),
+            clips: Vec::new(),
+            hold: None,
+        };
+        let extra = vec![("photo".to_string(), Arc::new(image::RgbaImage::new(2, 2)))];
+        let turned = SceneSpec { extra, ..spec.clone() };
+        let (old, new) = (Content::Scene(spec.clone()), Content::Scene(turned.clone()));
+        assert!(old.same_source(&new) && !old.same_look(&new));
+        let power = Power { tier: Tier::T3, on_battery: false, max_fps: 0 };
+        let (mut state, players, start) = (SceneState::new(spec, power), HashMap::new(), Instant::now());
+        let at = |s: u64| start + Duration::from_secs(s);
+        for s in [0, 2] {
+            state.render(&renderer, ((16, 9), 60), power, &players, true, at(s)).unwrap();
+        }
+        let time = state.runtime.time();
+        assert!(time > 1.0 && state.update(turned));
+        state.render(&renderer, ((16, 9), 60), power, &players, true, at(3)).unwrap();
+        assert!(state.view.is_some() && state.runtime.time() > time, "the scene restarted");
     }
 }

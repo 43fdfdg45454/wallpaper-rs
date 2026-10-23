@@ -29,6 +29,7 @@ pub struct Timeline {
     #[serde(default = "yes")]
     pub autoplay: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "trigger"))]
     pub trigger: Option<String>,
 }
 

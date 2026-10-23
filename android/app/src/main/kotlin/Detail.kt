@@ -76,7 +76,17 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
             item?.let { Text(facts(it), Modifier.padding(16.dp, 8.dp), style = MaterialTheme.typography.bodyMedium) }
             item?.about?.takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(16.dp, 0.dp), style = MaterialTheme.typography.bodySmall, maxLines = 4) }
             item?.lacks?.takeIf { it.isNotEmpty() }?.let { lacks ->
-                Note(lacks.map { stringResource(if (it == "scripts") R.string.lacks_scripts else R.string.lacks_sound) }.joinToString(" "))
+                val notes = lacks.mapNotNull { lack ->
+                    when (lack) {
+                        "scripts" -> R.string.lacks_scripts
+                        "sound" -> R.string.lacks_sound
+                        "folder" -> R.string.lacks_folder
+                        "user_videos" -> R.string.lacks_user_videos
+                        "video_properties" -> R.string.lacks_video_properties
+                        else -> null
+                    }
+                }.map { stringResource(it) }
+                Note(notes.joinToString(" "))
             }
             if (picture) {
                 Framing(main, uid, state)

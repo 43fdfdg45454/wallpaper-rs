@@ -136,8 +136,12 @@ QtObject {
                 if (!page.fields.some(field => field.widget === "points"))
                     throw new Error(kind + ": the emitter box has no editor");
             }
-            if (kind === "parallax")
+            if (kind === "parallax") {
                 manifest();
+                Qt.createComponent("SceneSettingsCheck.qml").createObject(page, {
+                        "page": page
+                    }).exercise();
+            }
             page.jump("/scene/layers/0/opacity");
             page.editor.seek(0.5, false);
             if (page.editor.error !== "" || page.view.problems.some(problem => !problem.warning))

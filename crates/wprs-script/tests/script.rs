@@ -8,7 +8,7 @@ fn update(script: &mut Script, time: f64) -> Result<ScriptOutputs, Error> {
     let audio = AudioFrame { bass: 0.25, beat: true, ..AudioFrame::default() };
     let pointer =
         PointerState { pos: Some([0.25, 0.75]), buttons: 1, inside: true, ..PointerState::default() };
-    script.update(&Frame { time, dt: 0.016, props: &props, audio: &audio, pointer: &pointer })
+    script.update(&Frame { time, dt: 0.016, props: &props, audio: &audio, pointer: &pointer, actions: &[] })
 }
 
 fn sources(source: &str) -> Vec<(String, String)> {
@@ -16,7 +16,7 @@ fn sources(source: &str) -> Vec<(String, String)> {
 }
 
 fn load(source: &str) -> Script {
-    Script::load(&sources(source), 7, "en", Limits::default()).unwrap()
+    Script::load(&sources(source), 7, ("en", &json!({})), Limits::default()).unwrap()
 }
 
 fn layer(outputs: &ScriptOutputs, id: &str) -> LayerOverride {
@@ -56,6 +56,24 @@ fn scripts_read_inputs_and_write_layer_fields() {
 }
 
 #[test]
+fn scripts_read_labels_colors_and_presses() {
+    let labels = json!({ "mood": { "2": "Storm" } });
+    let source = r#"import { props, scene } from "wprs";
+        export function update() {
+            const c = props.color("tint");
+            scene.layer("sky").text = `${props.label("mood")} ${c.r} ${c.a} ${props.pressed("again")} ${props.color("mood")}`;
+        }"#;
+    let mut script = Script::load(&sources(source), 1, ("en", &labels), Limits::default()).unwrap();
+    let props = [("mood".to_string(), json!(2)), ("tint".into(), json!("#ff000080"))].into();
+    let (audio, pointer, actions) = (AudioFrame::default(), PointerState::default(), ["again".to_string()]);
+    let frame =
+        Frame { time: 0.0, dt: 0.0, props: &props, audio: &audio, pointer: &pointer, actions: &actions };
+    let out = script.update(&frame).unwrap();
+    let text = layer(&out, "sky").text.unwrap();
+    assert_eq!(text, format!("Storm 1 {} true undefined", 128.0 / 255.0));
+}
+
+#[test]
 fn every_file_of_a_scene_runs_in_order() {
     let files = [
         ("a.js", "import { scene } from 'wprs'; export function update() { scene.layer('x').opacity = 1; }"),
@@ -66,7 +84,7 @@ fn every_file_of_a_scene_runs_in_order() {
         ("c.js", "import { scene } from 'wprs'; scene.layer('x').text = 'loaded';"),
     ];
     let files: Vec<_> = files.iter().map(|(p, s)| (p.to_string(), s.to_string())).collect();
-    let mut script = Script::load(&files, 1, "en", Limits::default()).unwrap();
+    let mut script = Script::load(&files, 1, ("en", &json!({})), Limits::default()).unwrap();
     let out = update(&mut script, 0.0).unwrap();
     let x = LayerOverride { opacity: Some(1.0), visible: Some(false), ..LayerOverride::default() };
     assert_eq!((layer(&out, "x"), out.values.get("b.js")), (x, Some(&Value::Bool(false))));
@@ -82,7 +100,7 @@ fn runaway_scripts_are_stopped_and_then_disabled() {
         assert!(start.elapsed() < Duration::from_millis(500), "{:?}", start.elapsed());
     }
     assert_eq!(update(&mut script, 0.0), Err(Error::Disabled));
-    let looping = Script::load(&sources("for (;;) {}"), 1, "en", Limits::default()).err();
+    let looping = Script::load(&sources("for (;;) {}"), 1, ("en", &json!({})), Limits::default()).err();
     assert_eq!(looping, Some(Error::Timeout(Duration::from_millis(100))));
 }
 
@@ -125,7 +143,10 @@ fn scripts_have_no_way_out() {
     assert_eq!(layer(&update(&mut script, 0.0).unwrap(), "a").text, Some(String::new()));
     for source in ["import * as fs from 'fs';", "import * as os from 'os';", "import x from './other.js';"] {
         assert!(
-            matches!(Script::load(&sources(source), 1, "en", Limits::default()), Err(Error::Script(_))),
+            matches!(
+                Script::load(&sources(source), 1, ("en", &json!({})), Limits::default()),
+                Err(Error::Script(_))
+            ),
             "{source}"
         );
     }
@@ -138,7 +159,7 @@ fn scripts_have_no_way_out() {
 fn random_numbers_follow_the_seed() {
     let source = "export function update() { return Math.random(); }";
     let values = |seed| {
-        let mut script = Script::load(&sources(source), seed, "en", Limits::default()).unwrap();
+        let mut script = Script::load(&sources(source), seed, ("en", &json!({})), Limits::default()).unwrap();
         (0..3).map(|t| update(&mut script, t as f64).unwrap().values["main.js"].clone()).collect::<Vec<_>>()
     };
     assert_eq!(values(1), values(1));

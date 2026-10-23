@@ -25,6 +25,9 @@
     <string name="show_anyway">Show anyway</string>
     <string name="lacks_scripts">Its scene scripts do not run on the phone.</string>
     <string name="lacks_sound">Its sounds do not play on the phone.</string>
+    <string name="lacks_folder">Pictures from a folder you choose are not shown on the phone.</string>
+    <string name="lacks_user_videos">Videos you choose do not play on the phone.</string>
+    <string name="lacks_video_properties">Its video plays without its speed, part and framing settings on the phone.</string>
     <string name="cancel">Cancel</string>
     <string name="size" translatable="false">%1$d × %2$d</string>
     <string name="duration" translatable="false">%1$d:%2$02d</string>
@@ -140,6 +143,16 @@
     <string name="presets">Presets</string>
     <string name="reset">Reset</string>
     <string name="not_on_phone">%1$s: not available on the phone</string>
+    <string name="save_preset">Save as preset</string>
+    <string name="preset_name">Name of the preset</string>
+    <string name="rename_preset">Rename the preset</string>
+    <string name="delete_preset">Delete the preset</string>
+    <string name="export_preset">Export the preset</string>
+    <string name="import_preset">Import as preset</string>
+    <string name="export_settings">Export settings</string>
+    <string name="import_settings">Import settings</string>
+    <string name="skipped_settings">Some settings were skipped: %1$s</string>
+    <string name="stored_secret">Stored on this phone</string>
     <string name="scene_level">Scenes: device class %1$s, level %2$s</string>
     <string name="strength">Intensity</string>
     <string name="focus">Focus</string>

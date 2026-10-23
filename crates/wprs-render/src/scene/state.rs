@@ -63,7 +63,8 @@ impl Painter<'_, '_, '_> {
 
     pub(crate) fn asset(&mut self, e: &EffectDraw<'_>, param: &str, kind: ParamKind) -> Option<Src> {
         let def = e.descriptor.params.iter().find(|p| p.id == param && p.kind == kind)?;
-        let id = def.named(e.effect)?;
+        let bound = e.textures.iter().find(|(id, _)| *id == param).map(|(_, name)| name.as_str());
+        let id = bound.or_else(|| def.named(e.effect))?;
         let (images, luts) = (self.images, self.luts);
         match kind {
             ParamKind::Lut => luts.iter().position(|(name, _)| name == id).map(Src::Lut),

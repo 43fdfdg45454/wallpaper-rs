@@ -22,6 +22,7 @@ mod keyring;
 mod kinds;
 mod library1;
 mod packages;
+mod picks;
 mod pixels;
 mod playback;
 mod playlists;
@@ -40,8 +41,10 @@ mod repos;
 mod repos1;
 mod rotation;
 mod scan;
+mod scenepresets;
 mod sceneprops;
 mod scenes;
+mod scenevalues;
 mod schema;
 mod service;
 #[cfg(test)]
@@ -171,6 +174,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
     tokio::spawn(watch::motion(connection.clone(), daemon.clone()));
     tokio::spawn(bus::announce_streams(connection.clone(), daemon.clone()));
     tokio::spawn(playback::run(daemon.clone()));
+    tokio::spawn(picks::run(daemon.clone()));
     tokio::spawn(profiles1::follow(daemon.clone(), known));
     let mut terminate = signal(SignalKind::terminate())?;
     tokio::select! {

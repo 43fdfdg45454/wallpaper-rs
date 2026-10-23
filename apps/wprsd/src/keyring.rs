@@ -99,6 +99,10 @@ impl Keyring {
         Keyring { kind: ("io.github.wallpaper_rs.Server", "server"), ..Keyring::new(bus) }
     }
 
+    pub fn properties(&self) -> Self {
+        Keyring { kind: ("io.github.wallpaper_rs.Property", "property"), ..Keyring::new(self.bus.clone()) }
+    }
+
     fn attributes<'a>(&self, id: &'a str) -> HashMap<&'a str, &'a str> {
         HashMap::from([("xdg:schema", self.kind.0), (self.kind.1, id)])
     }

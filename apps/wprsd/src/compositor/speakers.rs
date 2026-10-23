@@ -144,7 +144,7 @@ impl Speaker {
         };
         let track = Soundtrack::open(&pack.clips, &lanes, voices, volume, failed);
         let track = track.inspect_err(|e| tracing::warn!("cannot play the scene sound: {e}")).ok();
-        tracing::info!(scene = pack.id, "scene sound on");
+        tracing::info!(scene = pack.props.id, "scene sound on");
         let fade = sounds.iter().map(|s| Duration::from_secs_f32(s.fade_out)).max().unwrap_or_default();
         let (pack, output, voices) = (pack.clone(), String::new(), voices.to_vec());
         Speaker { pack, output, track, playing: false, volume, voices, fade, quiet: None }
@@ -162,7 +162,7 @@ impl Speaker {
 
 impl Drop for Speaker {
     fn drop(&mut self) {
-        tracing::info!(scene = self.pack.id, "scene sound off");
+        tracing::info!(scene = self.pack.props.id, "scene sound off");
     }
 }
 
@@ -199,25 +199,11 @@ mod tests {
             "assets": { "wind": { "path": "wind.ogg" } }, "timelines": [{ "id": "t", "duration": 9 }],
             "layers": [{ "id": "wind", "type": "sound", "sound": "wind",
                          "play": { "timeline": "t", "keys": [[0, false], [1.5, true]] } }] });
-        let scene = Arc::new(Scene::from_json(&text.to_string()).unwrap());
+        let scene = Scene::from_json(&text.to_string()).unwrap();
         let sounds = vec![("wind".into(), PathBuf::from("/wind.ogg"))];
-        let (path, id, title, properties, presets, assets, videos, clips, scripts) = Default::default();
-        let pack = Arc::new(ScenePack {
-            path,
-            id,
-            title,
-            languages: Vec::new(),
-            locale: String::new(),
-            scene,
-            properties,
-            presets,
-            assets,
-            videos,
-            sounds,
-            clips,
-            scripts,
-        });
-        let spec = SceneSpec { values: Default::default(), pack, extra: Vec::new(), hold: None };
+        let pack = Arc::new(ScenePack::bare(scene, Default::default(), sounds));
+        let spec =
+            SceneSpec { values: Default::default(), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
         SceneState::new(spec, super::super::power::Power { tier: Tier::T3, on_battery: false, max_fps: 30 })
     }
 

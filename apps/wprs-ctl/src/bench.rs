@@ -99,7 +99,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         ((size.0 as f32 * scale).round().max(1.0) as u32, (size.1 as f32 * scale).round().max(1.0) as u32);
     let cost = scene.cost(quality);
     let mut runtime = Runtime::new(Arc::new(scene), values);
-    let mut view = r.scene_view(&runtime.scene, &assets)?;
+    let mut view = r.scene_view(&runtime.scene, &assets, runtime.props())?;
     view.profile_particles(true);
     let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);
     let (mut sim, mut steps, mut compiled) = (Vec::new(), 0, 0);

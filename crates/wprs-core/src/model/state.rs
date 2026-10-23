@@ -79,6 +79,12 @@ model! {
         pub preset_labels: Vec<SceneOption>,
         #[serde(default)]
         pub warnings: Vec<String>,
+        #[serde(default)]
+        pub user_presets: Vec<SceneOption>,
+        #[serde(default)]
+        pub shared: bool,
+        #[serde(default)]
+        pub kind: String,
     }
 
     pub struct SceneField {
@@ -98,9 +104,32 @@ model! {
         pub multiline: bool,
         pub max_len: Option<u32>,
         pub accept: Vec<String>,
+        #[serde(default = "yes")]
+        pub enabled: bool,
+        #[serde(default)]
+        pub group: String,
+        #[serde(default)]
+        pub icon: String,
+        #[serde(default)]
+        pub decimals: Option<u32>,
+        #[serde(default)]
+        pub editable: bool,
+        #[serde(default)]
+        pub log: bool,
+        #[serde(default)]
+        pub collapsed: bool,
+        #[serde(default)]
+        pub secret: bool,
+        #[serde(default)]
+        pub filled: bool,
     }
 
-    pub struct SceneOption { pub value: String, pub label: String }
+    pub struct SceneOption {
+        pub value: Value,
+        pub label: String,
+        #[serde(default)]
+        pub icon: String,
+    }
 
     pub struct OutputPlaylist {
         pub uid: Uid,
@@ -179,4 +208,8 @@ model! {
     pub struct JobsReply { pub model: u32, pub serial: u64, pub jobs: Vec<Job> }
 
     pub struct JobReply { pub model: u32, pub serial: u64, pub job: Job }
+}
+
+fn yes() -> bool {
+    true
 }

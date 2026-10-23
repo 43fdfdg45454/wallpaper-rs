@@ -10,13 +10,24 @@ ColumnLayout {
     required property string output
     property var props: ({})
     property var inputs: ({})
+    property var folded: ({})
     readonly property string packageId: props.package ?? ""
     readonly property var uses: (inputs.shown ?? {})[output] ?? {}
     readonly property var granted: (inputs.grants ?? {})[packageId] ?? []
+    readonly property var fields: (props.fields ?? []).filter(field => field.visible && !scene.closed(field.group))
 
     function load() {
-        daemon.query("GetSceneProperties", [output], "Daemon1", reply => scene.props = reply, () => scene.props = ({}));
+        daemon.query("GetSceneProperties", [output], "Daemon1", reply => {
+            const fresh = Object.assign({}, scene.folded);
+            (reply.fields ?? []).filter(f => f.kind === "group" && !((reply.package + "/" + f.key) in fresh)).forEach(f => fresh[reply.package + "/" + f.key] = f.collapsed);
+            scene.folded = fresh;
+            scene.props = reply;
+        }, () => scene.props = ({}));
         daemon.query("GetInputs", [], "Inputs1", reply => scene.inputs = reply);
+    }
+
+    function closed(group) {
+        return group !== "" && folded[packageId + "/" + group] === true;
     }
 
     function set(key, value) {
@@ -29,7 +40,7 @@ ColumnLayout {
         target: scene.daemon
 
         function onUpdated(topic) {
-            if (topic === "state" || topic === "inputs")
+            if (["state", "inputs", "profiles"].includes(topic))
                 reload.restart();
         }
     }
@@ -74,32 +85,28 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
+    ScenePresets {
+        Layout.fillWidth: true
         visible: scene.packageId !== ""
-
-        QQC2.ComboBox {
-            visible: count > 0
-            model: scene.props.preset_labels ?? []
-            textRole: "label"
-            valueRole: "value"
-            displayText: scene.daemon.tr("Presets")
-            onActivated: scene.daemon.act("ApplyScenePreset", [scene.output, currentValue])
-        }
-
-        QQC2.Button {
-            icon.name: "edit-undo"
-            text: scene.daemon.tr("Reset")
-            onClicked: scene.daemon.act("ResetSceneProperties", [scene.output])
-        }
+        daemon: scene.daemon
+        output: scene.output
+        props: scene.props
     }
 
     Repeater {
-        model: (scene.props.fields ?? []).filter(field => field.visible)
+        model: scene.fields
 
         delegate: SceneField {
             Layout.fillWidth: true
             daemon: scene.daemon
+            output: scene.output
+            folded: scene.closed(modelData.key)
             onEdited: (key, value) => scene.set(key, value)
+            onFold: (key, on) => {
+                const next = Object.assign({}, scene.folded);
+                next[scene.packageId + "/" + key] = on;
+                scene.folded = next;
+            }
         }
     }
 }

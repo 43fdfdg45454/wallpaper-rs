@@ -1,7 +1,7 @@
 use clap::{ArgAction, Subcommand};
 use std::path::PathBuf;
 
-const DIR: &str = "Scene folder: manifest.json, scene.json and the assets";
+pub(crate) const DIR: &str = "Scene folder: manifest.json, scene.json and the assets";
 const POINTER: &str = "JSON Pointer into the document, such as /scene/layers/0/opacity or /manifest/title";
 const VALUE: &str = "JSON value; text that is not JSON is taken as a string";
 const ID: &str = "Layer id";
@@ -234,6 +234,8 @@ pub enum Author {
         #[arg(long = "derived-from", value_name = "AUTHOR", help = "Author of a work it is based on")]
         derived_from: Vec<String>,
     },
+    #[command(flatten)]
+    Properties(crate::userprops::UserProps),
     #[command(about = "Delete the files in assets/ that the scene does not use")]
     Prune {
         #[arg(help = DIR)]

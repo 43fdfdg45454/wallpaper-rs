@@ -1,6 +1,6 @@
 use super::{MAX_CURVE, is_zero};
-use crate::Color;
 use crate::validate::Check;
+use crate::{Color, Value};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +17,7 @@ pub enum Frames {
 pub struct Render {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-ref" = "image"))]
-    pub texture: Option<String>,
+    pub texture: Option<Value<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub frames: Option<Frames>,
     pub fps: f32,
@@ -80,8 +80,8 @@ fn curve(keys: &[(f32, [f32; 4])], t: f32) -> [f32; 4] {
 
 impl Check<'_> {
     pub(super) fn render(&mut self, p: &str, r: &Render) {
-        if let Some(id) = &r.texture {
-            self.known(&format!("{p}/render/texture"), "asset", id, self.scene.assets.contains_key(id));
+        if let Some(texture) = &r.texture {
+            self.named(&format!("{p}/render/texture"), texture);
         }
         self.range(&format!("{p}/render/fps"), r.fps, 0.0, 240.0);
         self.range(&format!("{p}/render/stretch"), r.stretch, 0.0, 10.0);

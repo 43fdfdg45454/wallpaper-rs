@@ -120,7 +120,16 @@ impl Daemon {
     }
 
     pub(crate) fn apply_activity(&self) {
-        self.activity(&self.state());
+        let mut st = self.state();
+        self.activity(&st);
+        let back: Vec<String> =
+            st.missed.iter().filter(|o| st.outputs.get(*o).is_none_or(|i| st.active(i))).cloned().collect();
+        if !back.is_empty() {
+            st.missed.retain(|o| !back.contains(o));
+            st.turns.extend(back.into_iter().map(|o| (o, tokio::time::Instant::now())));
+            drop(st);
+            self.turned.notify_one();
+        }
     }
 
     pub(crate) fn activity(&self, st: &State) {

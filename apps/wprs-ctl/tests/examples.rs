@@ -35,7 +35,7 @@ fn renderer() -> Option<Renderer> {
 }
 
 fn render(r: &Renderer, runtime: &mut Runtime, assets: &SceneAssets) -> (RgbImage, Wake, u32) {
-    let mut view = r.scene_view(&runtime.scene, assets).unwrap();
+    let mut view = r.scene_view(&runtime.scene, assets, runtime.props()).unwrap();
     let (mut target, mut pixels, mut wake, mut created) =
         (r.create_target(SIZE.0, SIZE.1).unwrap(), Vec::new(), Wake::Frame, 0);
     for i in 0..120 {

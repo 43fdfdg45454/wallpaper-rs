@@ -30,13 +30,14 @@ pub(super) fn kit(
     s: &System,
     bake: Bake,
     scene: &Scene,
-    image: Option<&Image>,
+    sprite: Option<(&str, Option<&Image>)>,
     white: &wgpu::TextureView,
     srgb: bool,
 ) -> Kit {
     let (sizes, colors) = s.render.luts();
     let r = &s.render;
-    let atlas = r.texture.as_ref().and_then(|t| scene.assets.get(t)?.atlas).unwrap_or([1, 1]);
+    let atlas = sprite.and_then(|(t, _)| scene.assets.get(t)?.atlas).unwrap_or([1, 1]);
+    let image = sprite.and_then(|(_, image)| image);
     let frames = match r.frames {
         None => 0.0,
         Some(Frames::Time) => 1.0,

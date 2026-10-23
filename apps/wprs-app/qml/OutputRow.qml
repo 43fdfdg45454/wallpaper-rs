@@ -16,6 +16,7 @@ RowLayout {
     readonly property var credit: info.credit ?? null
     readonly property var fits: daemon.schema.fits ?? ["fill", "fit", "stretch", "center", "tile"]
     readonly property bool scene: info.kind === "scene"
+    readonly property bool tunable: scene || (info.kind === "video" && pkg.kind === "video")
     readonly property string sound: info.sound ?? ""
     readonly property bool muted: daemon.state?.muted === true
     property string thumb
@@ -195,11 +196,11 @@ RowLayout {
             QQC2.ToolButton {
                 id: settings
 
-                visible: row.scene
+                visible: row.tunable
                 checkable: true
                 checked: row.daemon.checking === true
                 icon.name: "configure"
-                text: row.daemon.tr("Scene settings")
+                text: row.scene ? row.daemon.tr("Scene settings") : row.daemon.tr("Video settings")
             }
 
             QQC2.ToolButton {
@@ -232,7 +233,7 @@ RowLayout {
 
         Loader {
             Layout.fillWidth: true
-            active: row.scene && settings.checked
+            active: row.tunable && settings.checked
             visible: active
 
             sourceComponent: SceneControls {

@@ -191,6 +191,30 @@ for d in a b a; do "$d" server sync --wait >/dev/null; done
 options="sorted(set(r['profile']['options']) & {'playback.volume', 'playback.max_fps', 'library.thumb_cache_mb'})"
 [ "$(b profile show Calm --json | jq_ "$options")" = "['playback.max_fps']" ] ||
   fail "the profile did not arrive without device settings: $(b profile show Calm --json)"
+tint=$WORK/tint
+mkdir -p "$tint/src"
+cp "$ROOT/tests/fixtures/green-64x32.png" "$tint/src/preview.png"
+cat >"$tint/src/manifest.json" <<'MANIFEST'
+{"schema": "wallpaper-rs.wpak/1", "id": "org.example.tint", "version": "1.0.0", "title": "Tint",
+ "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "preview": "preview.png",
+ "properties": {"tint": {"type": "color", "label": "Tint", "default": "#0000ff"}}}
+MANIFEST
+cat >"$tint/src/scene.json" <<'SCENE'
+{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32]},
+ "layers": [{"id": "tint", "type": "solid", "color": {"prop": "tint"}, "size": [64, 32]}]}
+SCENE
+a pack build "$tint/src" -o "$tint/tint.wpak" >/dev/null
+for d in a b; do
+  "$d" lib import "$tint/tint.wpak" --wait >/dev/null
+  "$d" lib apply "$("$d" lib search kind:scene --json | jq_ "r['items'][0]['uid']")"
+done
+a prop preset save Mine >/dev/null
+for d in a b; do "$d" server sync --wait >/dev/null; done
+settings() { b prop preset ls --json | jq_ "[p['label'] for p in r['user_presets']]"; }
+[ "$(settings)" = "['Mine']" ] || fail "the preset of settings did not arrive: $(b prop preset ls)"
+a prop preset rename Mine Leaf
+for d in a b; do "$d" server sync --wait >/dev/null; done
+[ "$(settings)" = "['Leaf']" ] || fail "the renamed preset kept its old name: $(b prop preset ls)"
 echo "sync checks passed"
 
 sleep 8

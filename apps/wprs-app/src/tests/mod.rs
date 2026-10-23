@@ -181,7 +181,15 @@ fn package_texts_render_as_plain_text() {
     let files = ["PackageAbout", "Browse", "Tile", "PlaylistItems", "ItemDrawer", "Installed", "OutputRow"];
     let files = files
         .into_iter()
-        .chain(["SceneField", "History", "RepoList", "Thumbnail"])
+        .chain([
+            "SceneField",
+            "SceneEntry",
+            "ScenePresets",
+            "SavedPresets",
+            "History",
+            "RepoList",
+            "Thumbnail",
+        ])
         .map(|name| dir.join(name));
     let tray = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/plasma-tray/contents/ui");
     for name in files.chain(["ScreenRow", "Header", "Thumbnail"].map(|name| tray.join(name))) {

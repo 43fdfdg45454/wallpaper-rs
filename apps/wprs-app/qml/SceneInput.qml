@@ -36,7 +36,7 @@ ColumnLayout {
 
         QQC2.Label {
             Layout.fillWidth: true
-            text: SceneWords.label(input.field.key, input.field.pointer) + (input.field.unit ? " (" + input.field.unit + ")" : "")
+            text: (input.field.title || SceneWords.label(input.field.key, input.field.pointer)) + (input.field.unit ? " (" + input.field.unit + ")" : "")
             font.bold: input.field.widget === "group" || input.field.widget === "variant"
             elide: Text.ElideRight
         }
@@ -86,6 +86,8 @@ ColumnLayout {
                 "enum": choiceEditor,
                 "variant": choiceEditor,
                 "color": colorEditor,
+                "rgb": colorEditor,
+                "condition": conditionEditor,
                 "vec2": pairEditor,
                 "curve": curveEditor,
                 "stops": pairsEditor,
@@ -165,7 +167,7 @@ ColumnLayout {
             readonly property var known: variant || input.field.required ? input.field.options : [null].concat(input.field.options)
             readonly property var options: known.includes(input.value) || input.value === null ? known : known.concat([input.value])
 
-            model: options.map(option => option === null ? App.tr("Not set") : variant || input.field.widget === "enum" ? SceneWords.value(option) : String(option))
+            model: options.map(option => option === null ? App.tr("Not set") : variant || input.field.widget === "enum" ? SceneWords.value(option) : input.field.names[input.field.options.indexOf(option)] || (input.field.widget === "ref:trigger" ? SceneWords.label(option) : String(option)))
             currentIndex: variant ? options.findIndex(option => Object.keys(input.field.value ?? {}).includes(option) || option === input.field.value) : options.indexOf(input.value)
             onActivated: index => {
                 if (options[index] === null)
@@ -182,6 +184,7 @@ ColumnLayout {
         id: colorEditor
 
         SceneColor {
+            alpha: input.field.widget !== "rgb"
             hex: typeof input.value === "string" ? input.value : "#ffffff"
             onPicked: hex => input.commit(hex)
         }
@@ -283,6 +286,14 @@ ColumnLayout {
     }
 
     Component {
+        id: conditionEditor
+
+        SceneCondition {
+            host: input
+        }
+    }
+
+    Component {
         id: textsEditor
 
         SceneTexts {
@@ -302,8 +313,13 @@ ColumnLayout {
         id: rawEditor
 
         QQC2.TextField {
-            text: input.field.widget === "text" || input.field.widget.startsWith("ref:") ? String(input.value ?? "") : JSON.stringify(input.value ?? null)
+            readonly property bool plain: ["text", "scalar"].includes(input.field.widget) || input.field.widget.startsWith("ref:")
+
+            text: plain ? String(input.value ?? "") : JSON.stringify(input.value ?? null)
             onEditingFinished: {
+                const number = Number(text.trim());
+                if (input.field.widget === "scalar")
+                    return input.commit(["true", "false"].includes(text.trim()) ? text.trim() === "true" : text.trim() !== "" && Number.isFinite(number) ? number : text);
                 if (input.field.widget === "text")
                     return input.commit(text);
                 try {

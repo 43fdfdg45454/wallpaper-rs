@@ -264,3 +264,14 @@ fn usage_errors_exit_with_2() {
         assert_eq!(parse(args).unwrap_err().exit_code(), 2, "{args:?}");
     }
 }
+
+#[test]
+fn settings_take_negative_numbers() {
+    let cases = [
+        ("prop set x -0.5 -o DP-1", r#"Prop(Set { id: "x", value: Some("-0.5"), output: "DP-1" })"#),
+        ("prop set y -1", r#"Prop(Set { id: "y", value: Some("-1"), output: "" })"#),
+    ];
+    for (line, debug) in cases {
+        assert_eq!(parsed(line), debug, "{line}");
+    }
+}

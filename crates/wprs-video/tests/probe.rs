@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
-use wprs_video::{Options, Player, probe};
+use wprs_video::{Cut, Options, Player, probe};
 
 const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures/magenta-64x32.webm");
 
@@ -25,7 +25,8 @@ fn probe_accepts_decodable_local_videos_only() {
     {
         assert!(matches!(probe(Path::new(remote)), Err(wprs_video::Error::NotLocal(_))), "{remote}");
         let (tx, _rx) = mpsc::channel();
-        let options = Options { max_size: (64, 32), max_fps: 30, volume: 0.0, muted: true };
+        let options =
+            Options { max_size: (64, 32), max_fps: 30, volume: 0.0, muted: true, cut: Cut::default() };
         assert!(Player::open(Path::new(remote), options, move |e| drop(tx.send(e))).is_err(), "{remote}");
     }
     assert!(started.elapsed() < Duration::from_secs(10));
@@ -76,7 +77,8 @@ fn honours_rotation_tags() {
         return eprintln!("skipping rotation test: {why}");
     }
     let (tx, rx) = mpsc::channel();
-    let options = Options { max_size: (1920, 1080), max_fps: 30, volume: 0.0, muted: true };
+    let options =
+        Options { max_size: (1920, 1080), max_fps: 30, volume: 0.0, muted: true, cut: Cut::default() };
     let player = Player::open(&path, options, move |e| drop(tx.send(e)));
     let first = rx.recv_timeout(Duration::from_secs(10));
     drop(player);

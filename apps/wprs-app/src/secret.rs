@@ -42,6 +42,23 @@ impl Backend {
 }
 
 impl Backend {
+    pub fn scene_secret(
+        self: Pin<&mut Self>,
+        tag: &QString,
+        output: &QString,
+        key: &QString,
+        secret: &QString,
+    ) {
+        let (output, key) = (output.to_string(), key.to_string());
+        let value = Zeroizing::new(serde_json::Value::String(secret.to_string()).to_string());
+        self.run(tag, async move {
+            match bus::daemon().await? {
+                Daemon::Bus(c) => keyring(c.daemon.set_scene_property(&output, &key, &value)).await,
+                Daemon::Fixtures => Ok(fixture("Daemon1", "SetSceneProperty")),
+            }
+        });
+    }
+
     pub fn passphrase(self: Pin<&mut Self>, tag: &QString, member: &QString, passphrase: &QString) {
         let (member, passphrase) = (member.to_string(), Zeroizing::new(passphrase.to_string()));
         self.run(tag, async move {

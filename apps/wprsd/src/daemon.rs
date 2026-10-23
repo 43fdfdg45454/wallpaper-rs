@@ -39,6 +39,8 @@ pub(crate) struct State {
     pub(crate) scenes: HashMap<PathBuf, ((i64, u64), Weak<crate::scenes::ScenePack>)>,
     pub(crate) modes: HashMap<String, ((u32, u32), u32)>,
     pub(crate) resized: Vec<(String, (u32, u32))>,
+    pub(crate) turns: HashMap<String, tokio::time::Instant>,
+    pub(crate) missed: std::collections::HashSet<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -63,6 +65,7 @@ pub struct Daemon {
     pub(crate) rotations: Rotations,
     pub(crate) remote: crate::remote::Remote,
     pub(crate) account: crate::account::Account,
+    pub(crate) turned: Notify,
 }
 
 impl Daemon {
@@ -113,6 +116,7 @@ impl Daemon {
             rotations: Rotations::default(),
             remote: Default::default(),
             account: Default::default(),
+            turned: Notify::new(),
         };
         daemon.refresh_items();
         Ok(daemon)

@@ -1,6 +1,6 @@
 use crate::resolve::Context;
 use crate::validate::{Check, Issue};
-use crate::{Control, Kind, Layer, Property, Scene, Text, Value, clip};
+use crate::{Control, Kind, Layer, Property, Scene, Slider, Text, Value, clip};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -61,16 +61,10 @@ impl Scene {
     ) -> BTreeMap<String, Property> {
         let mut props = declared.clone();
         if self.sounds().next().is_some() {
-            let control = Control::Slider {
-                min: 0.0,
-                max: 100.0,
-                step: 5.0,
-                default: 100.0,
-                integer: true,
-                unit: None,
-            };
+            let control =
+                Control::Slider(Slider { integer: true, ..Slider::new(0.0, 100.0, Some(5.0), 100.0) });
             let volume =
-                Property { label: Some(Text::Plain(label.into())), order: -1, ..Property::new(control) };
+                Property { label: Some(Text::Plain(label.into())), order: -1.0, ..Property::new(control) };
             props.entry(VOLUME.into()).or_insert(volume);
         }
         props
@@ -83,7 +77,7 @@ impl Check<'_> {
         if count > MAX_SOUNDS {
             self.issues.push(Issue::Sounds(count));
         }
-        let fits = |p: &Property| matches!(p.control, Control::Slider { min, max, .. } if min >= 0.0 && max <= 100.0);
+        let fits = |p: &Property| matches!(&p.control, Control::Slider(s) if s.min >= 0.0 && s.max <= 100.0);
         if count > 0 && self.props.get(VOLUME).is_some_and(|p| !fits(p)) {
             self.issues.push(Issue::Volume);
         }

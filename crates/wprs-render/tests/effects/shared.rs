@@ -144,7 +144,7 @@ fn the_last_view_of_a_fused_chain_frees_its_shader() {
         return;
     };
     let held = r.effect_shaders();
-    let again = r.scene_view(&runtime.scene, &SceneAssets::default()).unwrap();
+    let again = r.scene_view(&runtime.scene, &SceneAssets::default(), runtime.props()).unwrap();
     drop(view);
     assert_eq!(r.effect_shaders(), held, "another view still draws the chain");
     drop(again);

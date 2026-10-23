@@ -65,7 +65,7 @@ fn scenes_with_sound_get_a_volume_property() {
     let loud = scene(json!([{ "id": "s", "type": "sound", "sound": "wind" }]));
     assert!(!quiet.properties(&props(), "Volume").contains_key(VOLUME));
     let added = loud.properties(&props(), "Volume");
-    assert_eq!((added[VOLUME].kind(), added[VOLUME].default_value()), ("slider", json!(100.0)));
+    assert_eq!((added[VOLUME].kind(), added[VOLUME].default_value()), ("slider", json!(100)));
 }
 
 #[test]

@@ -441,6 +441,7 @@ msgid "Error:"
 msgstr "Error:"
 
 #: apps/wprs-app/qml/Actions.qml apps/wprs-app/qml/SceneAssets.qml
+#: apps/wprs-app/qml/ScenePresets.qml
 msgid "Import…"
 msgstr "Importar…"
 
@@ -946,12 +947,12 @@ msgid "No changes yet"
 msgstr "Aún no hay cambios"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/SceneInspector.qml
-#: apps/wprs-app/qml/SceneProperties.qml
+#: apps/wprs-app/qml/SceneSetting.qml
 msgid "Move up"
 msgstr "Subir"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/SceneInspector.qml
-#: apps/wprs-app/qml/SceneProperties.qml
+#: apps/wprs-app/qml/SceneSetting.qml
 msgid "Move down"
 msgstr "Bajar"
 
@@ -959,7 +960,7 @@ msgstr "Bajar"
 #: apps/wprs-app/qml/SceneAssets.qml apps/wprs-app/qml/SceneInput.qml
 #: apps/wprs-app/qml/SceneInspector.qml apps/wprs-app/qml/SceneLayers.qml
 #: apps/wprs-app/qml/ScenePairs.qml apps/wprs-app/qml/SceneProperties.qml
-#: apps/wprs-app/qml/SettingsPage.qml
+#: apps/wprs-app/qml/SceneSettingMenu.qml apps/wprs-app/qml/SettingsPage.qml
 msgid "Remove"
 msgstr "Quitar"
 
@@ -1011,7 +1012,8 @@ msgstr "Editar %1"
 msgid "Back"
 msgstr "Volver"
 
-#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/ScenePage.qml
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/SceneEntry.qml
+#: apps/wprs-app/qml/ScenePage.qml
 msgid "Save"
 msgstr "Guardar"
 
@@ -1084,7 +1086,7 @@ msgstr "%1 (%2×%3)"
 msgid "Spread over the screens"
 msgstr "Extender por las pantallas"
 
-#: apps/wprs-app/qml/EditScreens.qml
+#: apps/wprs-app/qml/EditScreens.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Zoom"
 msgstr "Ampliación"
 
@@ -1220,13 +1222,15 @@ msgstr "En listas"
 msgid "Remove from this playlist"
 msgstr "Quitar de esta lista"
 
-#: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/SceneControls.qml
+#: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/ScenePresets.qml
+#: apps/wprs-app/qml/SceneProperties.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Presets"
 msgstr "Preajustes"
 
 #: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/PlaylistsPage.qml
 #: apps/wprs-app/qml/ProfileCard.qml apps/wprs-app/qml/ProfilesPage.qml
+#: apps/wprs-app/qml/SavedPresets.qml
 msgid "Delete"
 msgstr "Eliminar"
 
@@ -1266,7 +1270,8 @@ msgstr "Proveedores"
 msgid "Repositories"
 msgstr "Repositorios"
 
-#: apps/wprs-app/qml/Main.qml apps/wprs-app/qml/SettingsPage.qml
+#: apps/wprs-app/qml/Main.qml apps/wprs-app/qml/SavedPresets.qml
+#: apps/wprs-app/qml/ScenePresets.qml apps/wprs-app/qml/SettingsPage.qml
 msgid "Settings"
 msgstr "Ajustes"
 
@@ -1307,7 +1312,7 @@ msgid "This picture has its own placement: %1"
 msgstr "Esta imagen tiene su propia colocación: %1"
 
 #: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/SceneBuild.qml
-#: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/SceneMeta.qml
+#: apps/wprs-app/qml/SceneEntry.qml apps/wprs-app/qml/SceneMeta.qml
 #: apps/wprs-app/qml/Settings.qml
 msgid "Choose…"
 msgstr "Elegir…"
@@ -1328,6 +1333,10 @@ msgstr "Siguiente"
 msgid "Scene settings"
 msgstr "Ajustes de la escena"
 
+#: apps/wprs-app/qml/OutputRow.qml
+msgid "Video settings"
+msgstr "Ajustes del vídeo"
+
 #: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/StatusBar.qml
 msgid "Unmute"
 msgstr "Activar el sonido"
@@ -1340,7 +1349,7 @@ msgstr "Silenciar"
 msgid "Another screen plays the sound of this scene"
 msgstr "Otra pantalla reproduce el sonido de esta escena"
 
-#: apps/wprs-app/qml/OutputRow.qml
+#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/SceneEntry.qml
 msgid "Images and videos"
 msgstr "Imágenes y vídeos"
 
@@ -1446,7 +1455,7 @@ msgstr "Convertir en manual"
 msgid "Show on:"
 msgstr "Mostrar en:"
 
-#: apps/wprs-app/qml/PlaylistEditor.qml
+#: apps/wprs-app/qml/PlaylistEditor.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Start"
 msgstr "Iniciar"
 
@@ -1502,7 +1511,7 @@ msgstr "Activar"
 msgid "Automatic rules"
 msgstr "Reglas automáticas"
 
-#: apps/wprs-app/qml/ProfileCard.qml
+#: apps/wprs-app/qml/ProfileCard.qml apps/wprs-app/qml/SceneSettingMenu.qml
 msgid "Rename…"
 msgstr "Cambiar el nombre…"
 
@@ -1720,6 +1729,34 @@ msgstr "Quitar el repositorio"
 msgid "Also uninstall its packages"
 msgstr "Desinstalar también sus paquetes"
 
+#: apps/wprs-app/qml/SavedPresets.qml
+msgid "Rename"
+msgstr "Cambiar el nombre"
+
+#: apps/wprs-app/qml/SavedPresets.qml apps/wprs-app/qml/ScenePresets.qml
+msgid "Export…"
+msgstr "Exportar…"
+
+#: apps/wprs-app/qml/SavedPresets.qml
+msgid "Import as preset…"
+msgstr "Importar como preajuste…"
+
+#: apps/wprs-app/qml/SavedPresets.qml
+msgid "Rename the preset"
+msgstr "Cambiar el nombre del preajuste"
+
+#: apps/wprs-app/qml/SavedPresets.qml
+msgid "Name the imported preset"
+msgstr "Nombre del preajuste importado"
+
+#: apps/wprs-app/qml/SavedPresets.qml apps/wprs-app/qml/ScenePresets.qml
+msgid "Name"
+msgstr "Nombre"
+
+#: apps/wprs-app/qml/SavedPresets.qml apps/wprs-app/qml/ScenePresets.qml
+msgid "Cannot write the file"
+msgstr "No se puede escribir el archivo"
+
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid "Remove unused files"
 msgstr "Borrar los archivos sin usar"
@@ -1866,17 +1903,49 @@ msgstr ""
 msgid "The preview appears here while wprsd runs."
 msgstr "La vista previa aparece aquí mientras wprsd está en marcha."
 
-#: apps/wprs-app/qml/SceneControls.qml
-msgid "Reset"
-msgstr "Restablecer"
+#: apps/wprs-app/qml/SceneCondition.qml
+msgid "Always"
+msgstr "Siempre"
 
-#: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/Settings.qml
-msgid "Clear"
-msgstr "Borrar"
+#: apps/wprs-app/qml/SceneCondition.qml
+msgid ""
+"Ids of other properties, numbers, 'texts', true and false with == != < <= > "
+">= && || ! and parentheses, such as mood == 2 || speed > 1.5"
+msgstr ""
+"Ids de otras propiedades, números, 'textos', true y false con == != < <= > "
+">= && || ! y paréntesis, como mood == 2 || speed > 1.5"
 
-#: apps/wprs-app/qml/SceneField.qml
+#: apps/wprs-app/qml/SceneEntry.qml
+msgid "Stored in the keyring"
+msgstr "Guardado en el depósito de claves"
+
+#: apps/wprs-app/qml/SceneEntry.qml
+msgid "Forget"
+msgstr "Olvidar"
+
+#: apps/wprs-app/qml/SceneEntry.qml
+msgid "Choose a folder…"
+msgstr "Elegir una carpeta…"
+
+#: apps/wprs-app/qml/SceneEntry.qml
+msgid "Use the original"
+msgstr "Usar el original"
+
+#: apps/wprs-app/qml/SceneEntry.qml
 msgid "Images"
 msgstr "Imágenes"
+
+#: apps/wprs-app/qml/SceneEntry.qml
+msgid "Videos"
+msgstr "Vídeos"
+
+#: apps/wprs-app/qml/SceneField.qml
+msgid "Show"
+msgstr "Mostrar"
+
+#: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/SceneLayers.qml
+msgid "Hide"
+msgstr "Ocultar"
 
 #: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Default"
@@ -1922,10 +1991,6 @@ msgstr "Añadir un efecto"
 #: apps/wprs-app/qml/SceneInspector.qml
 msgid "Edit the particle system"
 msgstr "Editar el sistema de partículas"
-
-#: apps/wprs-app/qml/SceneLayers.qml
-msgid "Hide"
-msgstr "Ocultar"
 
 #: apps/wprs-app/qml/SceneLayers.qml
 msgid "Lock"
@@ -2029,6 +2094,34 @@ msgstr "Recursos"
 msgid "Package"
 msgstr "Paquete"
 
+#: apps/wprs-app/qml/ScenePresets.qml
+msgid "The settings were copied"
+msgstr "Los ajustes se copiaron"
+
+#: apps/wprs-app/qml/ScenePresets.qml
+msgid "Save as preset…"
+msgstr "Guardar como preajuste…"
+
+#: apps/wprs-app/qml/ScenePresets.qml
+msgid "Copy settings"
+msgstr "Copiar ajustes"
+
+#: apps/wprs-app/qml/ScenePresets.qml
+msgid "Paste settings"
+msgstr "Pegar ajustes"
+
+#: apps/wprs-app/qml/ScenePresets.qml
+msgid "Reset"
+msgstr "Restablecer"
+
+#: apps/wprs-app/qml/ScenePresets.qml
+msgid "Same settings on every screen"
+msgstr "Los mismos ajustes en todas las pantallas"
+
+#: apps/wprs-app/qml/ScenePresets.qml
+msgid "Save the current settings as a preset"
+msgstr "Guardar los ajustes actuales como preajuste"
+
 #: apps/wprs-app/qml/SceneProblems.qml
 msgid "Problems (%1)"
 msgstr "Problemas (%1)"
@@ -2038,10 +2131,50 @@ msgid "No problems"
 msgstr "Sin problemas"
 
 #: apps/wprs-app/qml/SceneProperties.qml
+msgid "Add property"
+msgstr "Añadir una propiedad"
+
+#: apps/wprs-app/qml/SceneProperties.qml
+msgid "Add preset"
+msgstr "Añadir un preajuste"
+
+#: apps/wprs-app/qml/SceneSetting.qml
+msgid "More"
+msgstr "Más"
+
+#: apps/wprs-app/qml/SceneSettingMenu.qml
+msgid "These scripts name it and are not rewritten: %1"
+msgstr "Estos scripts la nombran y no se reescriben: %1"
+
+#: apps/wprs-app/qml/SceneSettingMenu.qml
+msgid "Move to group"
+msgstr "Mover a un grupo"
+
+#: apps/wprs-app/qml/SceneSettingMenu.qml
+msgid "No group"
+msgstr "Sin grupo"
+
+#: apps/wprs-app/qml/SceneSettingMenu.qml
+msgid "Rename the property"
+msgstr "Cambiar el nombre de la propiedad"
+
+#: apps/wprs-app/qml/SceneSettingMenu.qml
+msgid ""
+"Bindings, triggers, groups, conditions and presets follow the new id; "
+"scripts are not rewritten."
+msgstr ""
+"Los enlaces, disparadores, grupos, condiciones y preajustes siguen al nuevo "
+"id; los scripts no se reescriben."
+
+#: apps/wprs-app/qml/SceneSettingMenu.qml
+msgid "Remove the property"
+msgstr "Quitar la propiedad"
+
+#: apps/wprs-app/qml/SceneSettingsHead.qml
 msgid "Package details"
 msgstr "Detalles del paquete"
 
-#: apps/wprs-app/qml/SceneProperties.qml
+#: apps/wprs-app/qml/SceneSettingsHead.qml
 msgid ""
 "This package uses the first version of the manifest. Upgrade it to give it a "
 "rating, credits and texts in several languages; what it cannot tell, such as "
@@ -2053,17 +2186,13 @@ msgstr ""
 "saber, como la clasificación, los destellos y el origen, queda entre los "
 "problemas hasta que lo indiques."
 
-#: apps/wprs-app/qml/SceneProperties.qml
+#: apps/wprs-app/qml/SceneSettingsHead.qml
 msgid "Upgrade"
 msgstr "Actualizar"
 
-#: apps/wprs-app/qml/SceneProperties.qml
+#: apps/wprs-app/qml/SceneSettingsHead.qml
 msgid "User properties"
 msgstr "Propiedades de usuario"
-
-#: apps/wprs-app/qml/SceneProperties.qml
-msgid "Add property"
-msgstr "Añadir una propiedad"
 
 #: apps/wprs-app/qml/SceneTexts.qml
 msgid "Remove this language"
@@ -2180,6 +2309,10 @@ msgstr "Cambiar el nombre de la etiqueta"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Rate"
 msgstr "Valorar"
+
+#: apps/wprs-app/qml/Settings.qml
+msgid "Clear"
+msgstr "Borrar"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Add folder…"
@@ -2462,7 +2595,7 @@ msgstr "Nombre de usuario"
 msgid "Server"
 msgstr "Servidor"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Folder"
 msgstr "Carpeta"
 
@@ -2502,7 +2635,7 @@ msgstr "Mosaico"
 msgid "Span"
 msgstr "Extender"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "In order"
 msgstr "En orden"
 
@@ -2831,6 +2964,10 @@ msgid "Reasons"
 msgstr "Motivos"
 
 #: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Framing"
+msgstr "Encuadre"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Version of wallpaper-rs"
 msgstr "Versión de wallpaper-rs"
 
@@ -2866,6 +3003,10 @@ msgstr "Archivos"
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Flashes or fast patterns"
 msgstr "Destellos o patrones rápidos"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Playback"
+msgstr "Reproducción"
 
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Preview"
@@ -3034,6 +3175,10 @@ msgid "Bursts"
 msgstr "Ráfagas"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Button"
+msgstr "Botón"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Cache"
 msgstr "Caché"
 
@@ -3075,6 +3220,10 @@ msgid "Clock"
 msgstr "Reloj"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Collapsed"
+msgstr "Plegado"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Collisions"
 msgstr "Colisiones"
 
@@ -3110,6 +3259,14 @@ msgid "Decay"
 msgstr "Atenuación"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Decimals"
+msgstr "Decimales"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Default asset"
+msgstr "Recurso por defecto"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Delay"
 msgstr "Retardo"
 
@@ -3127,6 +3284,10 @@ msgid "Dithering"
 msgstr "Tramado"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Divider"
+msgstr "Separador"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Drag"
 msgstr "Rozamiento"
 
@@ -3137,6 +3298,10 @@ msgstr "Duración"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Edge"
 msgstr "Borde"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Number box"
+msgstr "Casilla numérica"
 
 #
 #: apps/wprs-app/qml/facade/SceneWords.qml
@@ -3154,6 +3319,14 @@ msgstr "Emisores"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Enabled"
 msgstr "Activado"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Enabled when"
+msgstr "Activo cuando"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "End"
+msgstr "Fin"
 
 #
 #: apps/wprs-app/qml/facade/SceneWords.qml
@@ -3173,8 +3346,17 @@ msgid "Fade out"
 msgstr "Salida gradual"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Off"
+msgstr "Apagado"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Falloff"
 msgstr "Caída"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "File"
+msgstr "Archivo"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Fill color"
@@ -3246,6 +3428,10 @@ msgstr "Hexágonos"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Hue"
 msgstr "Tono"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Icon"
+msgstr "Icono"
 
 #
 #: apps/wprs-app/qml/facade/SceneWords.qml
@@ -3331,6 +3517,10 @@ msgstr "Línea"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Linear color"
 msgstr "Color lineal"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Logarithmic scale"
+msgstr "Escala logarítmica"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Loop"
@@ -3426,11 +3616,6 @@ msgstr "Parámetros"
 msgid "Particles"
 msgstr "Partículas"
 
-#
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "File"
-msgstr "Archivo"
-
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Phase"
 msgstr "Fase"
@@ -3438,6 +3623,10 @@ msgstr "Fase"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Phosphor"
 msgstr "Fósforo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Pick the files"
+msgstr "Elegir los archivos"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Dot pitch"
@@ -3543,6 +3732,10 @@ msgstr "Script"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Scripts"
 msgstr "Scripts"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Secret"
+msgstr "Secreto"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Seed"
@@ -3716,6 +3909,10 @@ msgstr "Transformación"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Trigger"
 msgstr "Disparador"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "On"
+msgstr "Encendido"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Turbulence"

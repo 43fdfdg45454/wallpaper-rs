@@ -17,7 +17,9 @@ pub use still::{Still, still};
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::atomic::AtomicU64;
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use std::time::Duration;
 
 pub const EXTENSIONS: [&str; 9] = ["mp4", "m4v", "webm", "mkv", "mov", "avi", "ogv", "mpg", "mpeg"];
 
@@ -52,6 +54,7 @@ pub struct Frame {
     pub width: u32,
     pub height: u32,
     pub stride: u32,
+    pub pts: Option<Duration>,
     offset: usize,
     buffer: gst::MappedBuffer<gst::buffer::Readable>,
 }
@@ -70,12 +73,54 @@ pub enum Event {
 
 type Sink = Arc<dyn Fn(Event) + Send + Sync>;
 
+#[derive(Clone, Default)]
+pub(crate) struct Shared {
+    pub(crate) cut: Arc<Mutex<Cut>>,
+    pub(crate) seen: Arc<AtomicU64>,
+}
+
+pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Options {
     pub max_size: (u32, u32),
     pub max_fps: u32,
     pub volume: f64,
     pub muted: bool,
+    pub cut: Cut,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Cut {
+    pub speed: u32,
+    pub start: u32,
+    pub end: u32,
+}
+
+impl Default for Cut {
+    fn default() -> Self {
+        Cut { speed: 100, start: 0, end: 0 }
+    }
+}
+
+impl Cut {
+    pub fn plain(&self) -> bool {
+        *self == Cut::default()
+    }
+
+    fn rate(&self) -> f64 {
+        f64::from(self.speed.clamp(10, 400)) / 100.0
+    }
+
+    fn cap(&self, max_fps: u32) -> i32 {
+        (u64::from(max_fps) * 100 / u64::from(self.speed.clamp(10, 400))).clamp(1, i32::MAX as u64) as i32
+    }
+
+    fn at(ms: u32) -> gst::ClockTime {
+        gst::ClockTime::from_mseconds(u64::from(ms))
+    }
 }
 
 impl Options {

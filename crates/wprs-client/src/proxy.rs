@@ -35,6 +35,13 @@ pub trait Daemon1 {
     fn set_scene_property(&self, output: &str, id: &str, value_json: &str) -> Result<()>;
     fn apply_scene_preset(&self, output: &str, preset: &str) -> Result<()>;
     fn reset_scene_properties(&self, output: &str) -> Result<()>;
+    fn save_scene_preset(&self, output: &str, name: &str) -> Result<String>;
+    fn rename_scene_preset(&self, preset: &str, name: &str) -> Result<()>;
+    fn delete_scene_preset(&self, preset: &str) -> Result<()>;
+    fn export_scene_values(&self, output: &str, preset: &str) -> Result<String>;
+    fn import_scene_values(&self, output: &str, json: &str, name: &str) -> Result<Vec<String>>;
+    fn press_scene_button(&self, output: &str, id: &str) -> Result<()>;
+    fn share_scene_values(&self, output: &str, shared: bool) -> Result<()>;
     fn reload(&self) -> Result<()>;
     fn get_state(&self) -> Result<String>;
     fn get_schema(&self) -> Result<String>;

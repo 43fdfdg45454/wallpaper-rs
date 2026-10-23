@@ -1,11 +1,11 @@
 use crate::bus::Pipe;
 use crate::mix::{Clip, Mix, RATE, Track};
-use crate::{Error, Event, local_uri, make, pipewire};
+use crate::{Error, Event, local_uri, lock, make, pipewire};
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use gstreamer_app::{AppSink, AppSrc, AppSrcCallbacks};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock, Weak, mpsc};
+use std::sync::{Arc, Mutex, OnceLock, Weak, mpsc};
 use std::time::{Duration, Instant};
 use wprs_scene::{MAX_SOUND_SECONDS, MAX_SOUND_TOTAL, Voice};
 
@@ -41,10 +41,6 @@ type Job = (Weak<Shared>, usize);
 
 #[derive(Clone, Default)]
 pub struct Bank(Arc<Shared>);
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(|e| e.into_inner())
-}
 
 fn raw(mono: bool) -> gst::Caps {
     let caps = gst::Caps::builder("audio/x-raw").field("format", "S16LE").field("layout", "interleaved");
@@ -203,7 +199,8 @@ impl Soundtrack {
                 }
             });
         }
-        let pipe = Pipe::start(playbin, SOURCE.into(), Arc::new(sink), piped.is_some())?;
+        let pipe =
+            Pipe::start(playbin, (SOURCE.into(), Default::default()), Arc::new(sink), piped.is_some())?;
         Ok(Soundtrack { pipe, mix })
     }
 

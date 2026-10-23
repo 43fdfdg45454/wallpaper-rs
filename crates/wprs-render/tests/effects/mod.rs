@@ -100,7 +100,7 @@ impl Fx {
         let scene = Scene::load(&text.to_string(), &BTreeMap::new()).unwrap_or_else(|e| panic!("{e}"));
         let mut files = self.files;
         files.images.insert("src".into(), Arc::new(self.input));
-        let view = r.scene_view(&scene, &files).unwrap();
+        let view = r.scene_view(&scene, &files, &Values::new()).unwrap();
         Some(Run { r, runtime: Runtime::new(Arc::new(scene), Values::new()), view, quality: self.quality })
     }
 

@@ -1,4 +1,4 @@
-use super::{Command, Settings, lock};
+use super::{Command, Reel, Settings, lock, loudness};
 use std::path::Path;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, mpsc};
@@ -10,7 +10,7 @@ const RETRIES: u32 = 3;
 const FIRST_RETRY: Duration = Duration::from_secs(2);
 const FIRST_FRAME: Duration = Duration::from_secs(10);
 
-pub(super) type Demand = ((u32, u32), bool, u32);
+pub(super) type Demand = ((u32, u32), bool, u32, u32);
 
 #[derive(Default)]
 struct Inbox {
@@ -26,27 +26,45 @@ pub(super) struct PlayerSlot {
     pub(super) playing: bool,
     pub(super) max_size: (u32, u32),
     pub(super) fps: u32,
+    pub(super) volume: u32,
     failures: u32,
     inbox: Arc<Inbox>,
 }
 
 impl PlayerSlot {
-    pub(super) fn new((max_size, playing, fps): Demand, open_at: Instant) -> Self {
-        let (player, texture, error, inbox) = (None, None, None, Arc::default());
-        Self { player, texture, error, due: Some(open_at), playing, max_size, fps, failures: 0, inbox }
+    pub(super) fn new((max_size, playing, fps, volume): Demand, open_at: Instant) -> Self {
+        let (player, texture, error, inbox, due) = (None, None, None, Arc::default(), Some(open_at));
+        Self { player, texture, error, due, playing, max_size, fps, volume, failures: 0, inbox }
+    }
+
+    pub(super) fn hush(&self, (settings, locked): (Settings, bool)) {
+        let (volume, muted) =
+            (loudness(settings.volume, self.volume), settings.muted || locked || self.volume == 0);
+        self.player.iter().for_each(|p| p.set_volume(volume, muted));
+    }
+
+    pub(super) fn set_volume(&mut self, volume: u32, heard: (Settings, bool), now: Instant) {
+        self.volume = volume;
+        let audible = volume > 0 && !heard.0.muted && heard.0.volume > 0.0;
+        if self.player.as_ref().is_some_and(|p| audible && !p.audio_enabled()) {
+            (self.player, self.due) = (None, Some(now));
+        }
+        self.hush(heard);
     }
 
     pub(super) fn tick(
         &mut self,
-        path: &Path,
+        reel: &Reel,
         heard: (Settings, bool),
         tx: &mpsc::Sender<Command>,
         now: Instant,
     ) {
         let Some(_) = self.due.take_if(|at| *at <= now) else { return };
         match self.player {
-            Some(_) => self.fail(path, format!("no video frame within {} s", FIRST_FRAME.as_secs()), now),
-            None => self.open(path, heard, tx, now),
+            Some(_) => {
+                self.fail(&reel.path, format!("no video frame within {} s", FIRST_FRAME.as_secs()), now)
+            }
+            None => self.open(reel, heard, tx, now),
         }
     }
 
@@ -58,14 +76,15 @@ impl PlayerSlot {
 
     fn open(
         &mut self,
-        path: &Path,
+        reel: &Reel,
         (settings, locked): (Settings, bool),
         tx: &mpsc::Sender<Command>,
         now: Instant,
     ) {
-        let (max_size, max_fps, volume, muted) = (self.max_size, self.fps, settings.volume, settings.muted);
+        let (max_size, max_fps, cut, path) = (self.max_size, self.fps, reel.cut, &reel.path);
+        let (volume, muted) = (loudness(settings.volume, self.volume), settings.muted || self.volume == 0);
         let (inbox, tx) = (self.inbox.clone(), tx.clone());
-        let opened = Player::open(path, Options { max_size, max_fps, volume, muted }, move |event| {
+        let opened = Player::open(path, Options { max_size, max_fps, volume, muted, cut }, move |event| {
             let first = match event {
                 Event::Frame(frame) => lock(&inbox.frame).replace(frame).is_none(),
                 Event::Error(e) => lock(&inbox.error).replace(e).is_none(),

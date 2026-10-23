@@ -24,6 +24,7 @@ static LOADED: Mutex<Vec<(Stamp, Weak<Pack>)>> = Mutex::new(Vec::new());
 
 pub(crate) struct Pack {
     pub(crate) id: String,
+    pub(crate) version: String,
     pub(crate) locale: Option<String>,
     pub(crate) scene: Arc<Scene>,
     pub(crate) properties: BTreeMap<String, Property>,
@@ -67,6 +68,14 @@ pub(crate) fn about(path: &Path, languages: &[String]) -> Option<wprs_core::mode
         about.changes = wprs_core::markup::plain(&about.changes);
     }
     Some(about)
+}
+
+pub(crate) fn lacks(path: &Path, facets: &[String]) -> Vec<String> {
+    let listed = wprs_format::peek(path).map(|m| m.features().to_vec()).unwrap_or_default();
+    let mut found = wprs_format::features::lacks("android", listed.iter().chain(facets));
+    found.sort();
+    found.dedup();
+    found
 }
 
 pub(crate) fn folder(path: &Path) -> Result<PathBuf, Error> {
@@ -122,9 +131,9 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
     }
     assets.luts.extend(package.luts(&scene)?);
     let m = package.manifest.localized();
-    let (id, locale, scene) = (m.id, m.default_locale, Arc::new(scene));
-    let pack =
-        Arc::new(Pack { id, locale, scene, properties: m.properties, presets: m.presets, assets, videos });
+    let (id, version, locale, scene) = (m.id, m.version, m.default_locale, Arc::new(scene));
+    let (properties, presets) = (m.properties, m.presets);
+    let pack = Arc::new(Pack { id, version, locale, scene, properties, presets, assets, videos });
     loaded.push((stamp, Arc::downgrade(&pack)));
     Ok(pack)
 }

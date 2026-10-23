@@ -103,10 +103,10 @@ fun Choices(label: String?, options: List<Pair<String, String>>, chosen: String,
     }
 
 @Composable
-fun Toggle(label: String, checked: Boolean, change: (Boolean) -> Unit) = ListItem(
+fun Toggle(label: String, checked: Boolean, enabled: Boolean = true, change: (Boolean) -> Unit) = ListItem(
     headlineContent = { Text(label) },
-    trailingContent = { Switch(checked, change) },
-    modifier = Modifier.clickable { change(!checked) },
+    trailingContent = { Switch(checked, change, enabled = enabled) },
+    modifier = Modifier.clickable(enabled) { change(!checked) },
 )
 
 @Composable

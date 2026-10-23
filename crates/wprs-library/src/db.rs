@@ -6,13 +6,15 @@ use std::fs::{self, DirBuilder, OpenOptions, Permissions};
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 
-const MIGRATIONS: [&str; 3] = [
+const MIGRATIONS: [&str; 4] = [
     include_str!("schema.sql"),
     "ALTER TABLE rotation ADD COLUMN current TEXT;",
     "ALTER TABLE items ADD COLUMN content TEXT; ALTER TABLE items ADD COLUMN photosensitive INTEGER; \
      ALTER TABLE items ADD COLUMN facets TEXT; ALTER TABLE items ADD COLUMN pkg_read TEXT; \
      ALTER TABLE items ADD COLUMN titles TEXT; \
      CREATE TABLE confirmations (pkg_id TEXT NOT NULL, what TEXT NOT NULL, PRIMARY KEY (pkg_id, what)) WITHOUT ROWID;",
+    "DROP INDEX presets_name; CREATE UNIQUE INDEX presets_name ON presets(coalesce(item_id, 0), \
+     coalesce(json_extract(value, '$.package'), ''), name);",
 ];
 
 pub const SCHEMA_VERSION: u32 = MIGRATIONS.len() as u32;

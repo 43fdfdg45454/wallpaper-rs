@@ -24,11 +24,13 @@ pub mod playlists;
 pub mod private;
 pub mod profiles;
 pub mod props;
+pub mod propsets;
 pub mod providers;
 pub mod remote;
 pub mod repo;
 pub mod server;
 pub mod show;
+mod userprops;
 
 pub use calls::CALLS;
 pub use cli::{Cli, Command};

@@ -46,6 +46,13 @@ calls! {
         SetSceneProperty set_scene_property(output: str, id: str, value_json: str);
         ApplyScenePreset apply_scene_preset(output: str, preset: str);
         ResetSceneProperties reset_scene_properties(output: str);
+        SaveScenePreset save_scene_preset(output: str, name: str);
+        RenameScenePreset rename_scene_preset(preset: str, name: str);
+        DeleteScenePreset delete_scene_preset(preset: str);
+        ExportSceneValues export_scene_values(output: str, preset: str);
+        ImportSceneValues import_scene_values(output: str, json: str, name: str);
+        PressSceneButton press_scene_button(output: str, id: str);
+        ShareSceneValues share_scene_values(output: str, shared: bool);
         Reload reload();
         GetState get_state() json;
         GetSchema get_schema() json;

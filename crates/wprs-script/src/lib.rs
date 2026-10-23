@@ -11,6 +11,7 @@ use clock::{Clock, cpu};
 use rquickjs::loader::{BuiltinLoader, BuiltinResolver};
 use rquickjs::{Array, Context, Ctx, Function, Module, Object, Persistent, Runtime};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 use std::rc::Rc;
 use std::time::Duration;
 use wprs_scene::{AudioFrame, PointerState, ScriptOutputs, Values};
@@ -63,7 +64,12 @@ pub struct Script {
 }
 
 impl Script {
-    pub fn load(sources: &[Source], seed: u64, locale: &str, limits: Limits) -> Result<Script, Error> {
+    pub fn load(
+        sources: &[Source],
+        seed: u64,
+        (locale, labels): (&str, &Json),
+        limits: Limits,
+    ) -> Result<Script, Error> {
         let failed = |e: rquickjs::Error| Error::Script(e.to_string());
         let runtime = Runtime::new().map_err(failed)?;
         runtime.set_memory_limit(limits.memory);
@@ -78,12 +84,15 @@ impl Script {
         })));
         let context = Context::full(&runtime).map_err(failed)?;
         let empty = (Values::new(), AudioFrame::default(), PointerState::default());
-        let frame = Frame { time: 0.0, dt: 0.0, props: &empty.0, audio: &empty.1, pointer: &empty.2 }.json();
+        let frame =
+            Frame { time: 0.0, dt: 0.0, props: &empty.0, audio: &empty.1, pointer: &empty.2, actions: &[] };
+        let (frame, labels) = (frame.json(), labels.to_string());
         let random = format!("Math.random = {RANDOM}({})", seed as u32 | 1);
         let (state, updates) = clock.run(&context, limits.load, |ctx| {
             let state = Object::new(ctx.clone())?;
             state.set("frame", ctx.json_parse(frame)?)?;
             state.set("locale", locale)?;
+            state.set("labels", ctx.json_parse(labels)?)?;
             state.set("out", outputs(ctx)?)?;
             ctx.globals().set("__wprs", state.clone())?;
             ctx.eval::<(), _>(random)?;

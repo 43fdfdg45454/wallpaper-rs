@@ -6,10 +6,11 @@ use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use wprs_format::features::{check, facts, warnings};
 use wprs_format::{
-    Content, Descriptor, Error, Facts, Input, Manifest, Origin, Rating, Requires, Scene, Text,
+    Content, Descriptor, Error, Facts, Input, Manifest, Origin, Rating, Requires, Scene, Text, newer_spelling,
 };
 
-const TOP: [&str; 6] = ["schema", "kind", "entry", "properties", "strings", "preview"];
+const TOP: [&str; 9] =
+    ["schema", "kind", "entry", "properties", "strings", "preview", "playback", "display", "presets"];
 const FIRST: [&str; 8] = ["title", "description", "version", "id", "authors", "license", "preview", "tags"];
 pub const ORDER: &str = "title description changes version id authors license content rating descriptors \
     photosensitive origin kind derived_from credits preview previews thumbnail animated links homepage source \
@@ -28,15 +29,20 @@ pub fn adjust(doc: &Value, field: &mut crate::Field) {
     match field.pointer.as_str() {
         "/manifest/inputs" => field.fixed = used(doc),
         "/manifest/default_locale" => field.required = true,
-        _ => {}
+        _ => crate::settings::adjust(doc, field),
     }
 }
 
 pub fn facts_of(doc: &Value) -> Option<(Manifest, Facts)> {
     let manifest = Manifest::deserialize(&doc["manifest"]).ok()?;
-    let scene = Scene::deserialize(&doc["scene"]).ok()?;
-    let found = facts(&manifest, Some(&scene), None);
+    let found = found(doc, &manifest, &doc["scene"])?;
     Some((manifest, found))
+}
+
+fn found(doc: &Value, manifest: &Manifest, scene: &Value) -> Option<Facts> {
+    let mut found = facts(manifest, Some(&Scene::deserialize(scene).ok()?), None);
+    found.features.extend(newer_spelling(&doc["manifest"]).map(|_| "properties2".to_owned()));
+    Some(found)
 }
 
 pub fn detected(doc: &Value) -> BTreeSet<Input> {
@@ -51,8 +57,8 @@ pub fn sync(doc: &Value, before: &BTreeSet<Input>) -> Vec<Op> {
 
 fn synced(doc: &Value, scene: &Value, before: &BTreeSet<Input>) -> Vec<Op> {
     let manifest = Manifest::deserialize(&doc["manifest"]).ok().filter(Manifest::v2);
-    let (Some(mut manifest), Ok(scene)) = (manifest, Scene::deserialize(scene)) else { return Vec::new() };
-    let found = facts(&manifest, Some(&scene), None);
+    let Some(mut manifest) = manifest else { return Vec::new() };
+    let Some(found) = found(doc, &manifest, scene) else { return Vec::new() };
     let gone = |i: &Input| before.contains(i) && !found.inputs.contains(i);
     let dropped: Vec<String> =
         manifest.inputs.iter().filter(|i| gone(i)).map(|i| format!("inputs.{}", i.name())).collect();

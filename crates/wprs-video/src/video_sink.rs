@@ -1,14 +1,21 @@
-use crate::{Error, Event, Frame, Options, Sink, make};
+use crate::{Cut, Error, Event, Frame, Options, Sink, make};
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use gstreamer_app as gst_app;
 use gstreamer_video as gst_video;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
-pub fn build(options: Options, sink: Sink) -> Result<(gst::Element, gst::Element, gst::Element), Error> {
+pub fn build(
+    options: Options,
+    sink: Sink,
+    seen: Arc<AtomicU64>,
+) -> Result<(gst::Element, gst::Element, gst::Element), Error> {
     let bin = gst::Bin::with_name("wprs-video-sink");
     let rate = make("videorate")?;
     if options.max_fps > 0 {
-        set_max_fps(&rate, options.max_fps);
+        set_max_fps(&rate, options.max_fps, options.cut);
         if rate.find_property("drop-only").is_some() {
             rate.set_property("drop-only", true);
         }
@@ -26,13 +33,17 @@ pub fn build(options: Options, sink: Sink) -> Result<(gst::Element, gst::Element
     bin.add_many(&chain).map_err(Error::state)?;
     gst::Element::link_many(&chain).map_err(Error::state)?;
     let pad = chain[0].static_pad("sink").expect("videorate has a sink pad");
+    pad.add_probe(gst::PadProbeType::BUFFER, move |_, _| {
+        seen.fetch_add(1, Ordering::Relaxed);
+        gst::PadProbeReturn::Ok
+    });
     let ghost = gst::GhostPad::with_target(&pad).map_err(Error::state)?;
     bin.add_pad(&ghost).map_err(Error::state)?;
     Ok((bin.upcast(), size, rate))
 }
 
-pub fn set_max_fps(rate: &gst::Element, max_fps: u32) {
-    rate.set_property("max-rate", max_fps.clamp(1, i32::MAX as u32) as i32);
+pub fn set_max_fps(rate: &gst::Element, max_fps: u32, cut: Cut) {
+    rate.set_property("max-rate", cut.cap(max_fps));
 }
 
 pub fn size_caps((max_width, max_height): (u32, u32)) -> gst::Caps {
@@ -67,10 +78,12 @@ fn deliver(sample: Option<gst::Sample>, sink: &Sink) -> Result<gst::FlowSuccess,
 
 fn to_frame(sample: &gst::Sample) -> Option<Frame> {
     let info = gst_video::VideoInfo::from_caps(sample.caps()?).ok()?;
-    let buffer = sample.buffer_owned()?.into_mapped_buffer_readable().ok()?;
+    let buffer = sample.buffer_owned()?;
+    let pts = buffer.pts().map(|t| Duration::from_nanos(t.nseconds()));
+    let buffer = buffer.into_mapped_buffer_readable().ok()?;
     let stride = u32::try_from(*info.stride().first()?).ok()?;
     let offset = *info.offset().first()?;
     let (width, height) = (info.width(), info.height());
     let complete = buffer.len() >= offset + stride as usize * height as usize;
-    complete.then_some(Frame { width, height, stride, offset, buffer })
+    complete.then_some(Frame { width, height, stride, pts, offset, buffer })
 }

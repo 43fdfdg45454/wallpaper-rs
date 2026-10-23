@@ -14,6 +14,7 @@ Kirigami.Page {
     property alias editor: editor
     property alias tabs: side
     property alias builder: builder
+    property alias settings: settings
     property string spot
     property var picked: []
     property string notice
@@ -37,9 +38,9 @@ Kirigami.Page {
     }
 
     function jump(pointer) {
-        const layer = (view.layers ?? []).some(item => item.pointer === pointer);
-        const parent = pointer.split("/").slice(0, -1).join("/").replace(/\/params$/, "");
-        editor.select(layer || parent.split("/").length < 3 ? pointer : parent);
+        const own = (view.layers ?? []).concat(view.properties ?? [], view.presets ?? []).some(item => item.pointer === pointer);
+        const parent = pointer.split("/").slice(0, -1).join("/").replace(/\/(params|values)$/, "");
+        editor.select(own || parent.split("/").length < 3 ? pointer : parent);
         spot = pointer;
     }
 
@@ -204,6 +205,8 @@ Kirigami.Page {
                 }
 
                 SceneProperties {
+                    id: settings
+
                     page: page
                 }
             }

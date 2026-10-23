@@ -25,6 +25,7 @@ pub struct Runtime {
     beat: f64,
     timelines: Vec<(Timeline, Playhead)>,
     mattes: BTreeSet<String>,
+    playing: BTreeSet<String>,
     memo: RefCell<HashMap<usize, [f32; 4]>>,
     wake: Cell<Wake>,
     uses: [Uses; 4],
@@ -55,6 +56,7 @@ impl Runtime {
             beat: f64::NEG_INFINITY,
             timelines,
             mattes,
+            playing: BTreeSet::new(),
             memo,
             wake,
             uses,
@@ -180,6 +182,14 @@ impl Runtime {
         changed
     }
 
+    pub fn set_playing(&mut self, assets: BTreeSet<String>) {
+        self.playing = assets;
+    }
+
+    pub fn press(&mut self, id: &str) {
+        self.trigger(|t| t.strip_prefix("prop:") == Some(id));
+    }
+
     fn trigger(&mut self, matches: impl Fn(&str) -> bool) {
         let fired = self.timelines.iter_mut().filter(|(tl, _)| tl.trigger.as_deref().is_some_and(&matches));
         fired.for_each(|(tl, head)| *head = Playhead { t: -tl.delay, playing: true, reversed: false });
@@ -204,6 +214,7 @@ impl Runtime {
             props: &self.props,
             timelines: &self.timelines,
             mattes: &self.mattes,
+            playing: &self.playing,
             memo: &self.memo,
             wake: Cell::new(Wake::Idle),
         }

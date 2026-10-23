@@ -2,8 +2,8 @@ use crate::input::LayerOverride;
 use crate::resolve::Context;
 use crate::wake::wakes;
 use crate::{
-    Affine, Align, Blend, Color, Descriptor, EffectUse, Gradient, Kind, Layer, Mask, Quality, Shape,
-    Spectrum, Wake, descriptor, fusion,
+    Affine, Align, Blend, Color, Descriptor, EffectUse, Gradient, Kind, Layer, Mask, ParamKind, Quality,
+    Shape, Spectrum, Wake, descriptor, fusion,
 };
 use std::borrow::Cow;
 use std::ops::Range;
@@ -12,7 +12,7 @@ use std::ops::Range;
 pub enum Content<'a> {
     Group { clip: bool },
     Image { asset: Cow<'a, str>, size: Option<[f32; 2]> },
-    Video { asset: &'a str, size: Option<[f32; 2]> },
+    Video { asset: Cow<'a, str>, size: Option<[f32; 2]> },
     Text { text: Cow<'a, str>, font: Option<&'a str>, size: f32, color: Color, align: Align },
     Shape { shape: Shape, fill: Option<Color>, gradient: Option<&'a Gradient>, stroke: Option<(Color, f32)> },
     Spectrum { spectrum: &'a Spectrum, color: Color },
@@ -27,9 +27,11 @@ pub struct EffectDraw<'a> {
     pub effect: &'a EffectUse,
     pub slots: [[f32; 4]; 16],
     pub mask: Option<&'a Mask>,
+    pub mask_texture: Option<Cow<'a, str>>,
     pub scale: f32,
     pub reach: f32,
     pub chain: usize,
+    pub textures: Vec<(&'static str, String)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -41,6 +43,7 @@ pub struct Draw<'a> {
     pub opacity: f32,
     pub blend: Blend,
     pub mask: Option<&'a Mask>,
+    pub mask_texture: Option<Cow<'a, str>>,
     pub effects: Range<usize>,
     pub content: Content<'a>,
     pub dynamic: bool,
@@ -113,6 +116,7 @@ fn emit<'a>(
         .then(Affine::scale(set.scale.unwrap_or_else(|| t.scale.get(cx).0)));
     let origin = t.origin.or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5; 2]);
     let content = content(cx, layer, set, canvas);
+    let playing = matches!(&content, Content::Image { asset, .. } if cx.playing.contains(asset.as_ref()));
     let start = frame.effects.len();
     let runs = if layer.effects.len() > 1 { fusion(&layer.effects) } else { Vec::new() };
     let mut paced = false;
@@ -125,7 +129,18 @@ fn emit<'a>(
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
         let (mask, scale) = (effect.mask.as_ref(), scale * d.scale_at(quality));
         let chain = runs.iter().find(|r| r.start == i).map_or(1, |r| r.len());
-        frame.effects.push(EffectDraw { descriptor: d, effect, slots, mask, scale, reach, chain });
+        let textures = d.params.iter().filter(|p| matches!(p.kind, ParamKind::Texture | ParamKind::Lut));
+        let textures = textures.filter_map(|p| match (effect.params.get(&p.id)?, p.id.as_str()) {
+            (bound @ crate::Value::Bound(_), id) => match bound.get(cx) {
+                crate::Param::Text(name) => Some((id, name)),
+                _ => None,
+            },
+            _ => None,
+        });
+        let (textures, mask_texture) = (textures.collect(), masked(cx, mask));
+        let draw =
+            EffectDraw { descriptor: d, effect, slots, mask, mask_texture, scale, reach, chain, textures };
+        frame.effects.push(draw);
     }
     let effects = start..frame.effects.len();
     let group = matches!(layer.kind, Kind::Group { .. });
@@ -145,6 +160,7 @@ fn emit<'a>(
         opacity,
         blend,
         mask,
+        mask_texture: masked(cx, mask),
         effects,
         content,
         dynamic: false,
@@ -154,6 +170,7 @@ fn emit<'a>(
     frame.draws.push(draw);
     walk(cx, layer.children(), world, quality, frame, canvas);
     let moving = paced
+        || playing
         || matches!(layer.kind, Kind::Video { .. } | Kind::Particles { .. })
         || cx.wake.get() == Wake::Frame;
     let children = frame.draws[index + 1..].iter().any(|d| d.dynamic);
@@ -166,14 +183,8 @@ fn content<'a>(cx: &Context, layer: &'a Layer, set: &LayerOverride, canvas: [f32
     let tint = |c: Color| set.color.map_or(c, Color);
     match &layer.kind {
         Kind::Group { clip, .. } => Content::Group { clip: *clip },
-        Kind::Image { image, size } => {
-            let asset = match image {
-                crate::Value::Fixed(id) => Cow::Borrowed(id.as_str()),
-                bound => Cow::Owned(bound.get(cx)),
-            };
-            Content::Image { asset, size: *size }
-        }
-        Kind::Video { video, size } => Content::Video { asset: video, size: *size },
+        Kind::Image { image, size } => Content::Image { asset: named(cx, image), size: *size },
+        Kind::Video { video, size } => Content::Video { asset: named(cx, video), size: *size },
         Kind::Text { text, font, size, color, align } => {
             let text = match (&set.text, text) {
                 (Some(t), _) => Cow::Owned(t.clone()),
@@ -205,5 +216,16 @@ fn content<'a>(cx: &Context, layer: &'a Layer, set: &LayerOverride, canvas: [f32
         }
         Kind::Particles { system } => Content::Particles { system },
         Kind::Adjustment {} | Kind::Sound(_) => Content::Adjustment,
+    }
+}
+
+fn masked<'a>(cx: &Context, mask: Option<&'a Mask>) -> Option<Cow<'a, str>> {
+    mask?.texture.as_ref().map(|t| named(cx, t))
+}
+
+fn named<'a>(cx: &Context, value: &'a crate::Value<String>) -> Cow<'a, str> {
+    match value {
+        crate::Value::Fixed(id) => Cow::Borrowed(id.as_str()),
+        bound => Cow::Owned(bound.get(cx)),
     }
 }

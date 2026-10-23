@@ -4,171 +4,130 @@ import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import io.github.wallpaper_rs.app
 
-ColumnLayout {
+Item {
     id: panel
 
     required property var page
     readonly property var properties: page.view.properties ?? []
-    readonly property var templates: ({
-            "slider": {
-                "min": 0,
-                "max": 100,
-                "step": 1,
-                "default": 50
-            },
-            "bool": {
-                "default": false
-            },
-            "color": {
-                "default": "#ffffff"
-            },
-            "combo": {
-                "options": ["one", "two"],
-                "default": "one"
-            },
-            "text": {
-                "default": ""
-            },
-            "group": {},
-            "label": {}
-        })
+    readonly property var presets: page.view.presets ?? []
+    property alias list: list
+    property alias tools: tools
 
-    function add(type) {
-        let n = properties.length + 1;
-        while (properties.some(p => p.id === type + "_" + n))
+    function add(kind) {
+        let n = 1;
+        while (properties.some(p => p.id.toLowerCase() === kind + "_" + n))
             n++;
-        const value = Object.assign({
-                "type": type,
-                "label": SceneWords.label(type),
-                "order": n
-            }, templates[type]);
-        page.run("set", {
-                "pointer": "/manifest/properties/" + type + "_" + n,
-                "value": value
+        page.run("add_property", {
+                "kind": kind,
+                "id": kind + "_" + n
             });
+        if (properties.some(p => p.id === kind + "_" + n))
+            page.editor.select("/manifest/properties/" + kind + "_" + n);
     }
 
-    function swap(i, j) {
-        const all = JSON.parse(page.editor.value("/manifest/properties"));
-        const a = properties[i], b = properties[j], same = a.order === b.order;
-        all[a.id].order = same ? j : b.order;
-        all[b.id].order = same ? i : a.order;
-        page.run("set", {
-                "pointer": "/manifest/properties",
-                "value": all
-            });
+    function addPreset() {
+        const at = presets.length;
+        page.run("add_preset");
+        if (presets.length > at)
+            page.editor.select("/manifest/presets/" + at);
     }
 
-    QQC2.ItemDelegate {
-        Layout.fillWidth: true
-        highlighted: panel.page.editor.selected === "/manifest"
-        icon.name: "documentinfo"
-        text: App.tr("Package details")
-        onClicked: panel.page.editor.select("/manifest")
+    SceneSettingMenu {
+        id: tools
 
-        QQC2.ToolTip.text: (panel.page.view.title ?? "") + " · " + (panel.page.view.version ?? "")
-        QQC2.ToolTip.visible: hovered
+        page: panel.page
     }
 
-    Kirigami.InlineMessage {
-        Layout.fillWidth: true
-        visible: panel.page.view.v2 === false
-        text: App.tr("This package uses the first version of the manifest. Upgrade it to give it a rating, credits and texts in several languages; what it cannot tell, such as the rating, the flashes and the origin, stays among the problems until you set it.")
-        actions: [
-            Kirigami.Action {
-                text: App.tr("Upgrade")
-                icon.name: "go-up"
-                onTriggered: panel.page.run("upgrade")
-            }
-        ]
-    }
+    ColumnLayout {
+        anchors.fill: parent
 
-    Kirigami.Separator {
-        Layout.fillWidth: true
-    }
-
-    Kirigami.Heading {
-        Layout.fillWidth: true
-        level: 4
-        text: App.tr("User properties")
-    }
-
-    QQC2.ScrollView {
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-
-        ListView {
-            model: panel.properties
-            clip: true
-
-            delegate: QQC2.ItemDelegate {
-                id: row
-
-                required property var modelData
-                required property int index
-
-                width: ListView.view.width
-                highlighted: panel.page.editor.selected === modelData.pointer
-                text: modelData.id + " · " + SceneWords.label(modelData.type)
-                onClicked: panel.page.editor.select(modelData.pointer)
-
-                QQC2.ToolButton {
-                    anchors.right: down.left
-                    icon.name: "go-up"
-                    text: App.tr("Move up")
-                    display: QQC2.AbstractButton.IconOnly
-                    QQC2.ToolTip.text: text
-                    QQC2.ToolTip.visible: hovered
-                    enabled: row.index > 0
-                    onClicked: panel.swap(row.index, row.index - 1)
-                }
-
-                QQC2.ToolButton {
-                    id: down
-
-                    anchors.right: remove.left
-                    icon.name: "go-down"
-                    text: App.tr("Move down")
-                    display: QQC2.AbstractButton.IconOnly
-                    QQC2.ToolTip.text: text
-                    QQC2.ToolTip.visible: hovered
-                    enabled: row.index < panel.properties.length - 1
-                    onClicked: panel.swap(row.index, row.index + 1)
-                }
-
-                QQC2.ToolButton {
-                    id: remove
-
-                    anchors.right: parent.right
-                    icon.name: "edit-delete"
-                    text: App.tr("Remove")
-                    display: QQC2.AbstractButton.IconOnly
-                    QQC2.ToolTip.text: text
-                    QQC2.ToolTip.visible: hovered
-                    onClicked: panel.page.run("remove", {
-                            "pointer": row.modelData.pointer
-                        })
-                }
-            }
+        SceneSettingsHead {
+            Layout.fillWidth: true
+            page: panel.page
         }
-    }
 
-    QQC2.ToolButton {
-        text: App.tr("Add property")
-        icon.name: "list-add"
-        onClicked: types.popup()
+        QQC2.ScrollView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
-        QQC2.Menu {
-            id: types
+            ListView {
+                id: list
 
-            Repeater {
-                model: Object.keys(panel.templates)
+                clip: true
+                model: panel.properties
 
-                delegate: QQC2.MenuItem {
-                    required property string modelData
+                delegate: SceneSetting {
+                    page: panel.page
+                    tools: panel.tools
+                }
 
-                    text: SceneWords.label(modelData)
-                    onTriggered: panel.add(modelData)
+                footer: ColumnLayout {
+                    width: list.width
+                    spacing: 0
+
+                    QQC2.ToolButton {
+                        text: App.tr("Add property")
+                        icon.name: "list-add"
+                        onClicked: kinds.popup()
+
+                        QQC2.Menu {
+                            id: kinds
+
+                            Repeater {
+                                model: panel.page.view.property_kinds ?? []
+
+                                delegate: QQC2.MenuItem {
+                                    required property string modelData
+
+                                    text: SceneWords.label(modelData)
+                                    onTriggered: panel.add(modelData)
+                                }
+                            }
+                        }
+                    }
+
+                    Kirigami.Heading {
+                        Layout.fillWidth: true
+                        level: 4
+                        text: App.tr("Presets")
+                    }
+
+                    Repeater {
+                        model: panel.presets
+
+                        delegate: QQC2.ItemDelegate {
+                            id: preset
+
+                            required property var modelData
+
+                            Layout.fillWidth: true
+                            highlighted: panel.page.editor.selected === modelData.pointer
+                            icon.name: "bookmarks"
+                            text: modelData.label
+                            onClicked: panel.page.editor.select(modelData.pointer)
+
+                            QQC2.ToolButton {
+                                anchors.right: parent.right
+                                icon.name: "edit-delete"
+                                text: App.tr("Remove")
+                                display: QQC2.AbstractButton.IconOnly
+                                QQC2.ToolTip.text: text
+                                QQC2.ToolTip.visible: hovered
+                                onClicked: {
+                                    panel.page.editor.select("/manifest");
+                                    panel.page.run("remove", {
+                                            "pointer": preset.modelData.pointer
+                                        });
+                                }
+                            }
+                        }
+                    }
+
+                    QQC2.ToolButton {
+                        text: App.tr("Add preset")
+                        icon.name: "list-add"
+                        onClicked: panel.addPreset()
+                    }
                 }
             }
         }

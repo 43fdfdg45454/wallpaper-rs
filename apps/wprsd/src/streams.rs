@@ -25,6 +25,7 @@ pub(crate) struct OutputInfo {
     pub(crate) screen: Option<wprs_core::Screen>,
     pub(crate) refresh: u32,
     pub(crate) scene: Option<std::sync::Arc<crate::scenes::ScenePack>>,
+    pub(crate) video: Option<std::sync::Arc<crate::sceneprops::Props>>,
 }
 
 impl OutputInfo {

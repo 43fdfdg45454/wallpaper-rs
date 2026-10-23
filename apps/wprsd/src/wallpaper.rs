@@ -1,5 +1,5 @@
 use crate::apply::Media;
-use crate::compositor::{Content, Picture, SceneSpec, Spec, lock};
+use crate::compositor::{Content, Movie, Picture, Reel, SceneSpec, Spec, lock};
 use crate::daemon::Daemon;
 use anyhow::Context;
 use image::RgbaImage;
@@ -37,7 +37,7 @@ impl Daemon {
             Some((pack, _)) => Some(Ok(Media::Scene(pack))),
             None => image.map(|image| self.media(image)),
         };
-        let (mut shown_scene, mut fit) = (None, resolved.fit);
+        let (mut shown_scene, mut shown_video, mut turn, mut fit) = (None, None, None, resolved.fit);
         let (content, upload) = match media {
             None => (Content::Color, None),
             Some(Err(e)) => {
@@ -45,17 +45,25 @@ impl Daemon {
                 tracing::debug!("{e:#}");
                 (Content::Color, None)
             }
-            Some(Ok(Media::Video(path))) => (Content::Video(path), None),
+            Some(Ok(Media::Video(path, props))) => {
+                let movie = match &props {
+                    Some(p) => p.movie(path, &p.values(&self.state().config.scene_values(output, &p.id))),
+                    None => Movie { reel: Reel::plain(path), volume: 100, zoom: 1.0, pan: [0.0; 2] },
+                };
+                shown_video = props;
+                (Content::Video(movie), None)
+            }
             Some(Ok(Media::Scene(pack))) => {
                 let (values, stale) = {
                     let st = self.state();
-                    let stored = st.config.scene_values(output, &pack.id);
-                    (pack.values(&stored), pack.stale(&stored))
+                    let stored = st.config.scene_values(output, &pack.props.id);
+                    (pack.props.values(&stored), pack.props.stale(&stored))
                 };
-                stale.iter().for_each(|w| tracing::warn!(output, scene = pack.id, "{w}"));
-                let extra = self.scene_extra(&pack, &values);
+                stale.iter().for_each(|w| tracing::warn!(output, scene = pack.props.id, "{w}"));
+                let (extra, clips) = self.scene_extra(&pack, &values);
+                turn = crate::picks::next_turn(&pack.props.properties, &values);
                 shown_scene = Some(pack.clone());
-                (Content::Scene(SceneSpec { pack, values, extra, hold }), None)
+                (Content::Scene(SceneSpec { pack, values, extra, clips, hold }), None)
             }
             Some(Ok(Media::Picture(file))) => {
                 match self.picture(output, file, (size, resolved.fit), uploaded) {
@@ -84,9 +92,15 @@ impl Daemon {
             size,
             Spec { content, fit, background: resolved.background, transition, refresh },
         );
-        if let Some(info) = self.state().outputs.get_mut(output) {
-            (info.uploaded, info.scene) = (upload, shown_scene);
+        let mut st = self.state();
+        if let Some(info) = st.outputs.get_mut(output) {
+            (info.uploaded, info.scene, info.video) = (upload, shown_scene, shown_video);
         }
+        st.turns.remove(output);
+        st.missed.remove(output);
+        st.turns.extend(turn.map(|at| (output.to_owned(), at)));
+        drop(st);
+        self.turned.notify_one();
         self.apply_activity();
         pixels
     }
@@ -156,7 +170,7 @@ impl Daemon {
         let file = match self.media(path.to_owned())? {
             Media::Picture(file) => return Ok(Some(self.load_image(&file, modified(&file)?, None)?)),
             Media::Scene(_) => return Ok(None),
-            Media::Video(file) => file,
+            Media::Video(file, _) => file,
         };
         let size = wprs_video::probe(&file).with_context(|| format!("cannot play {}", path.display()))?;
         tracing::debug!(path = %path.display(), ?size, "video accepted");

@@ -71,6 +71,12 @@ impl Library {
         ensure(changed == 1, || Error::NotFound("preset", uid.into()))
     }
 
+    pub fn rename_preset(&mut self, uid: &str, name: &str) -> Result<()> {
+        let name = label("name", name, 128)?;
+        let changed = self.db.execute("UPDATE presets SET name = ?2 WHERE uid = ?1", params![uid, name]);
+        ensure(unique(changed, "preset", name)? == 1, || Error::NotFound("preset", uid.into()))
+    }
+
     pub fn remove_preset(&mut self, uid: &str) -> Result<()> {
         remove(&self.db, "preset", uid)
     }

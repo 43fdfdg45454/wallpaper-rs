@@ -1,6 +1,6 @@
 use crate::library::with;
 use crate::pack::{self, Pack};
-use crate::{Error, settings, store};
+use crate::{Error, saved, settings, store};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
@@ -23,6 +23,13 @@ pub(crate) enum Request {
     Reset { uid: String },
     Grant { uid: String, input: String, on: bool },
     Examples { dir: String },
+    Save { uid: String, name: String },
+    Rename { preset: String, name: String },
+    Forget { preset: String },
+    Export { uid: String, preset: String },
+    Import { uid: String, text: String, name: String },
+    Press { uid: String, key: String },
+    Secret { uid: String, key: String, text: String },
 }
 
 pub(crate) fn request(request: Request) -> Result<Value, Error> {
@@ -30,10 +37,20 @@ pub(crate) fn request(request: Request) -> Result<Value, Error> {
     match request {
         Request::Scene { uid, languages } => form(&*scene(&uid)?, &languages),
         Request::Property { uid, key, value } => done(set(&*scene(&uid)?, &key, &value)),
-        Request::Preset { uid, preset } => done(choose(&*scene(&uid)?, &preset)),
+        Request::Preset { uid, preset } => {
+            let pack = scene(&uid)?;
+            done(saved::apply(&pack, &saved::chosen(&pack, &preset)?))
+        }
         Request::Reset { uid } => done(change(&*scene(&uid)?, BTreeMap::clear)),
         Request::Grant { uid, input, on } => done(grant(&*scene(&uid)?, &input, on)),
         Request::Examples { dir } => Ok(json!(pack::examples(Path::new(&dir))?)),
+        Request::Save { uid, name } => done(saved::save(&*scene(&uid)?, &name)),
+        Request::Rename { preset, name } => done(saved::rename(&preset, &name)),
+        Request::Forget { preset } => done(saved::forget(&preset)),
+        Request::Export { uid, preset } => Ok(json!(saved::export(&*scene(&uid)?, &preset)?)),
+        Request::Import { uid, text, name } => Ok(json!(saved::import(&*scene(&uid)?, &text, &name)?)),
+        Request::Press { uid, key } => done(saved::press(&*scene(&uid)?, &key)),
+        Request::Secret { uid, key, text } => done(saved::secret(&*scene(&uid)?, &key, &text)),
     }
 }
 
@@ -66,16 +83,21 @@ fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
     let mut props = pack.properties.clone();
     props.retain(|key, _| !sounds || key != VOLUME);
     let languages: Vec<String> = languages.iter().cloned().chain(pack.locale.clone()).collect();
-    let (fields, presets) = wprs_scene::form(&props, &pack.presets, &values, &languages);
+    let (mut fields, presets) = wprs_scene::form(&props, &pack.presets, &values, &languages);
+    let filled = saved::filled(pack);
+    fields.iter_mut().for_each(|f| f.filled = filled.contains(&f.key));
     let uses = Runtime::new(Arc::clone(&pack.scene), values).uses();
     let [audio, touch] = granted(&pack.id);
     Ok(json!({
-        "fields": fields, "presets": presets, "scripts": uses.scripts, "sounds": sounds,
+        "fields": fields, "presets": presets, "scripts": uses.scripts, "sounds": sounds, "saved": saved::listed(pack)?,
         "uses": { "audio": uses.audio, "touch": uses.cursor }, "granted": { "audio": audio, "touch": touch },
     }))
 }
 
-fn change(pack: &Pack, edit: impl FnOnce(&mut BTreeMap<String, toml::Value>)) -> Result<(), Error> {
+pub(crate) fn change(
+    pack: &Pack,
+    edit: impl FnOnce(&mut BTreeMap<String, toml::Value>),
+) -> Result<(), Error> {
     settings::update(|config| {
         let section = config.scene_section("");
         let values = section.entry(pack.id.clone()).or_default();
@@ -87,25 +109,18 @@ fn change(pack: &Pack, edit: impl FnOnce(&mut BTreeMap<String, toml::Value>)) ->
     })
 }
 
-fn stored(value: &Value) -> Option<toml::Value> {
+pub(crate) fn stored(value: &Value) -> Option<toml::Value> {
     (!value.is_null()).then(|| toml::Value::try_from(value).ok()).flatten()
 }
 
 fn set(pack: &Pack, key: &str, value: &Value) -> Result<(), Error> {
-    let property = pack.properties.get(key).ok_or_else(|| Error::Scene(format!("no property {key}")))?;
+    let property = pack.properties.get(key).filter(|p| p.holds_value() && !p.personal());
+    let property = property.ok_or_else(|| Error::Scene(format!("no property {key} to set here")))?;
     let checked = property.value(value).map_err(|e| Error::Scene(format!("{key} {e}")))?;
     change(pack, |values| match stored(&checked) {
         Some(value) => drop(values.insert(key.to_owned(), value)),
         None => drop(values.remove(key)),
     })
-}
-
-fn choose(pack: &Pack, id: &str) -> Result<(), Error> {
-    let preset =
-        pack.presets.iter().find(|p| p.id == id).ok_or_else(|| Error::Scene(format!("no preset {id}")))?;
-    let fit = |(k, v): (&String, &Value)| Some((k.clone(), stored(&pack.properties.get(k)?.value(v).ok()?)?));
-    let chosen: Vec<_> = preset.values.iter().filter_map(fit).collect();
-    change(pack, |values| values.extend(chosen))
 }
 
 fn grant(pack: &Pack, input: &str, on: bool) -> Result<(), Error> {

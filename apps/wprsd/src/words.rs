@@ -16,3 +16,10 @@ pub fn conflict(name: &str) -> String {
 pub fn volume() -> String {
     tr("Volume")
 }
+
+pub fn video() -> [String; 8] {
+    let (speed, start, stop, volume) = (tr("Speed"), tr("Start"), tr("Stop at"), tr("Volume"));
+    let (zoom, across, down, end) =
+        (tr("Zoom"), tr("Horizontal position"), tr("Vertical position"), tr("0 plays to the end"));
+    [speed, start, stop, volume, zoom, across, down, end]
+}

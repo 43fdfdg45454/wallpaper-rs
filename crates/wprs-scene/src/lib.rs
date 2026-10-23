@@ -39,7 +39,7 @@ pub use effects::{
     RELIEF_WGSL, SLOTS, Solve, State, Tune, Use, builtin, descriptor, register,
 };
 pub use eval::{Content, Draw, EffectDraw, Frame};
-pub use form::{form, tag};
+pub use form::{form, labels, order};
 pub use input::{AudioFrame, BANDS, LayerOverride, PointerState, ScriptOutputs, TimelineCommand};
 pub use layer::{Anchor, Blend, Kind, Layer, Transform};
 pub use particles::{
@@ -47,13 +47,16 @@ pub use particles::{
     Init, MAX_COLLIDERS, MAX_CURVE, MAX_EMITTERS, MAX_FORCES, MAX_POINTS, MAX_PREWARM, Particle, Render,
     STEP, SUBSTEPS, Sim, Surface, Swarm, System, Target, Trail,
 };
-pub use props::{Choice, Control, Preset, Property, Text, Values, check_presets, effective, stale};
+pub use props::{
+    Choice, Condition, Control, Expr, ICONS, Pick, Preset, Property, Slider, Text, Values, check_presets,
+    cycle, effective, exposed, icon, legacy, rename, stale, tag,
+};
 pub use quality::{Class, Quality, Tier};
 pub use runtime::Runtime;
 pub use schema::{easings, property_schema, schema};
 pub use sound::{MAX_SOUNDS, Sound, VOLUME, Voice};
 pub use timeline::{Key, Loop, Timeline, local, sample};
-pub use uses::{Uses, needs, source, tells_time};
+pub use uses::{Uses, needs, source, tells_time, variants};
 pub use validate::Issue;
 pub use value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2};
 pub use wake::Wake;

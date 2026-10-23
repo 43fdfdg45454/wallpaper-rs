@@ -1,7 +1,7 @@
 mod common;
 
 use common::manifest;
-use wprs_format::{Control, Error, Kind, Manifest, Property, Result};
+use wprs_format::{Control, Error, Kind, Manifest, Property, Result, Slider};
 
 fn with(edit: impl FnOnce(&mut Manifest)) -> Result<()> {
     let mut manifest = manifest(Kind::Image);
@@ -36,14 +36,7 @@ fn parses_minimal_json_with_typed_properties() {
     assert_eq!(manifest.kind, Kind::Scene);
     assert_eq!(
         manifest.properties["speed"],
-        Property::new(Control::Slider {
-            min: 0.0,
-            max: 2.0,
-            step: 0.25,
-            default: 1.0,
-            integer: false,
-            unit: None
-        })
+        Property::new(Control::Slider(Slider::new(0.0, 2.0, Some(0.25), 1.0)))
     );
     assert_eq!(manifest.properties["dark"], Property::new(Control::Bool { default: false }));
     manifest.check().unwrap();

@@ -36,7 +36,13 @@ impl Daemon {
         };
         let (name, value) = (text(&view, "name", "Preset"), view.get("value").cloned().unwrap_or(json!({})));
         let uid = self.store.write(|lib| match uid {
-            Some(uid) => lib.update_preset(&uid, &value).map(|()| uid),
+            Some(uid) => {
+                lib.update_preset(&uid, &value)?;
+                match lib.rename_preset(&uid, &name) {
+                    Err(wprs_library::Error::Exists(..)) | Ok(()) => Ok(uid),
+                    Err(e) => Err(e),
+                }
+            }
             None => renamed(&name, |name| lib.create_preset(item.as_deref(), name, &value)),
         })?;
         let shown = self.store.read(|lib| lib.preset(&uid))?.name;

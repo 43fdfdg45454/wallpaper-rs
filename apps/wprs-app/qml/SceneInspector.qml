@@ -23,6 +23,12 @@ ColumnLayout {
     readonly property int index: list ? Number(parts[parts.length - 1]) : -1
     readonly property int count: page.view && list ? page.editor.count(list) : 0
 
+    function crumb(part, i) {
+        const rows = i === 2 && parts[0] === "manifest" ? page.view[parts[1]] : undefined;
+        const found = Array.isArray(rows) ? rows.find(row => row.pointer === "/" + parts.slice(0, 3).join("/")) : undefined;
+        return found?.label ?? SceneWords.label(part);
+    }
+
     function shift(by) {
         const to = list + "/" + (index + by);
         page.run("move", {
@@ -54,7 +60,7 @@ ColumnLayout {
         Layout.fillWidth: true
         level: 4
         elide: Text.ElideLeft
-        text: inspector.node ? inspector.node.id : inspector.parts.map(part => SceneWords.label(part)).join(" › ")
+        text: inspector.node ? inspector.node.id : inspector.parts.map((part, i) => inspector.crumb(part, i)).join(" › ")
     }
 
     RowLayout {

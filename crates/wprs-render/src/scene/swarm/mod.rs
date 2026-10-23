@@ -1,5 +1,6 @@
 mod kit;
 mod setup;
+pub(crate) use setup::sprites;
 mod sprite;
 mod step;
 mod store;
@@ -31,6 +32,7 @@ pub(crate) struct Swarms {
     gpu: bool,
     profile: bool,
     kits: Vec<Kit>,
+    pub(crate) sprites: Vec<Option<String>>,
     stores: Vec<Option<Store>>,
     marks: Vec<(u64, u32)>,
     module: wgpu::ShaderModule,

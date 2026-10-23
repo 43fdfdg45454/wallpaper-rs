@@ -3,35 +3,51 @@ use super::power::Power;
 use super::scene::SceneState;
 use super::slot::{Demand, PlayerSlot};
 use super::state::State;
-use super::{Content, OutputStatus, lock};
+use super::{Content, OutputStatus, Reel, lock};
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 use std::time::Instant;
 use wprs_pipewire::Exporter;
 
-fn demand(outputs: &BTreeMap<String, Output>, exporter: &Exporter, path: &PathBuf, power: Power) -> Demand {
-    let users = outputs.iter().filter(|(_, o)| o.uses_video(path));
-    users.fold(((0, 0), false, 1), |((w, h), on, fps), (name, o)| {
+fn demand(outputs: &BTreeMap<String, Output>, exporter: &Exporter, reel: &Reel, power: Power) -> Demand {
+    let users = outputs.iter().filter_map(|(name, o)| Some((name, o, o.loudest(reel)?)));
+    users.fold(((0, 0), false, 1, 0), |((w, h), on, fps, volume), (name, o, loud)| {
         let on = on || (o.active && o.watched(exporter.is_streaming(name)));
-        ((w.max(o.size.0), h.max(o.size.1)), on, fps.max(o.fps(power)))
+        ((w.max(o.size.0), h.max(o.size.1)), on, fps.max(o.fps(power)), volume.max(loud))
     })
 }
 
 impl State {
     pub(super) fn sync_players(&mut self) {
         let (outputs, exporter, power, now) = (&self.outputs, &*self.exporter, self.power, Instant::now());
-        self.players.retain(|path, _| outputs.values().any(|o| o.uses_video(path)));
-        for path in outputs.values().flat_map(|o| o.layers().flat_map(|s| s.content.videos())) {
-            if !self.players.contains_key(path) {
-                self.players
-                    .insert(path.clone(), PlayerSlot::new(demand(outputs, exporter, path, power), now));
+        let wanted: Vec<&Reel> = outputs
+            .values()
+            .flat_map(|o| o.layers().flat_map(|s| s.content.videos()))
+            .map(|(r, _)| r)
+            .collect();
+        let mut orphans: Vec<(Reel, PlayerSlot)> =
+            self.players.extract_if(|reel, _| !wanted.contains(&reel)).collect();
+        for reel in wanted {
+            if self.players.contains_key(reel) {
+                continue;
             }
+            let moved = orphans.iter_mut().position(|(r, s)| {
+                r.path == reel.path && s.player.as_mut().is_some_and(|p| p.set_cut(reel.cut))
+            });
+            let slot = match moved {
+                Some(i) => orphans.swap_remove(i).1,
+                None => PlayerSlot::new(demand(outputs, exporter, reel, power), now),
+            };
+            self.players.insert(reel.clone(), slot);
         }
-        for (path, slot) in &mut self.players {
-            let (max_size, active, fps) = demand(outputs, exporter, path, power);
+        let heard = (self.settings, self.locked);
+        for (reel, slot) in &mut self.players {
+            let (max_size, active, fps, volume) = demand(outputs, exporter, reel, power);
             if slot.fps != fps {
-                slot.player.iter().for_each(|p| p.set_max_fps(fps));
+                slot.player.iter_mut().for_each(|p| p.set_max_fps(fps));
                 slot.fps = fps;
+            }
+            if slot.volume != volume {
+                slot.set_volume(volume, heard, now);
             }
             if slot.playing != active {
                 slot.player.iter().for_each(|p| p.set_playing(active));
@@ -41,15 +57,15 @@ impl State {
                 slot.player.iter().for_each(|p| p.set_max_size(max_size));
                 slot.max_size = max_size;
             }
-            slot.tick(path, (self.settings, self.locked), &self.tx, now);
+            slot.tick(reel, heard, &self.tx, now);
         }
     }
 
     pub(super) fn take_video_frames(&mut self) {
         let now = Instant::now();
-        for (path, slot) in &mut self.players {
-            if slot.receive(path, &self.renderer, now) {
-                let wants = |o: &Output| o.uses_video(path) && (o.active || o.missing_frame);
+        for (reel, slot) in &mut self.players {
+            if slot.receive(&reel.path, &self.renderer, now) {
+                let wants = |o: &Output| o.uses_video(reel) && (o.active || o.missing_frame);
                 self.outputs.values_mut().filter(|o| wants(o)).for_each(|o| o.dirty = true);
             }
         }

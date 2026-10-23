@@ -48,14 +48,27 @@ fn probe() -> ExitCode {
 }
 
 fn host(args: &[&str], source: &str) -> Host {
-    Host::new(std::env::current_exe().unwrap(), args, &[("main.js".into(), source.into())], 3, "es")
+    Host::new(
+        std::env::current_exe().unwrap(),
+        args,
+        &[("main.js".into(), source.into())],
+        3,
+        ("es", &serde_json::json!({})),
+    )
 }
 
 fn drive(host: &mut Host, until: impl Fn(&Result<Option<ScriptOutputs>, Error>) -> bool) {
     let (props, audio, pointer) = (Values::new(), AudioFrame::default(), PointerState::default());
     let start = Instant::now();
     for step in 0.. {
-        let frame = Frame { time: step as f64, dt: 0.016, props: &props, audio: &audio, pointer: &pointer };
+        let frame = Frame {
+            time: step as f64,
+            dt: 0.016,
+            props: &props,
+            audio: &audio,
+            pointer: &pointer,
+            actions: &[],
+        };
         let call = Instant::now();
         let result = host.update(&frame);
         assert!(call.elapsed() < Duration::from_millis(100), "an update took {:?}", call.elapsed());
@@ -109,5 +122,6 @@ fn a_host_that_hangs_is_killed_and_then_disabled() {
 
 fn drive_once(host: &mut Host) -> Result<(), Error> {
     let (props, audio, pointer) = (Values::new(), AudioFrame::default(), PointerState::default());
-    host.update(&Frame { time: 0.0, dt: 0.0, props: &props, audio: &audio, pointer: &pointer }).map(drop)
+    host.update(&Frame { time: 0.0, dt: 0.0, props: &props, audio: &audio, pointer: &pointer, actions: &[] })
+        .map(drop)
 }

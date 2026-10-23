@@ -97,3 +97,38 @@ fn has_key(json: &Json, key: &str) -> bool {
         _ => false,
     }
 }
+
+fn mapped(value: Option<&crate::Value<String>>) -> Vec<&str> {
+    match value {
+        Some(crate::Value::Bound(b)) => b.map.iter().flatten().map(|(_, id)| id.as_str()).collect(),
+        _ => Vec::new(),
+    }
+}
+
+pub fn variants(scene: &Scene) -> Vec<(String, Vec<&str>)> {
+    let mut found = Vec::new();
+    for l in scene.layers() {
+        let image = match &l.kind {
+            Kind::Image { image, .. } => mapped(Some(image)),
+            _ => Vec::new(),
+        };
+        let params = l.effects.iter().flat_map(|e| e.params.values()).filter_map(|v| match v {
+            crate::Value::Bound(b) => b.map.as_ref(),
+            _ => None,
+        });
+        let params = params.flat_map(|m| m.values()).filter_map(|p| match p {
+            crate::Param::Text(id) => Some(id.as_str()),
+            _ => None,
+        });
+        let masks = l.mask.iter().chain(l.effects.iter().filter_map(|e| e.mask.as_ref()));
+        let masks = masks.flat_map(|m| mapped(m.texture.as_ref()));
+        found.push((format!("layer {}", l.id), image));
+        found.push((format!("the effects of layer {}", l.id), params.collect()));
+        found.push((format!("the masks of layer {}", l.id), masks.collect()));
+    }
+    let sprites =
+        scene.particles.iter().map(|(id, s)| (format!("particles {id}"), mapped(s.render.texture.as_ref())));
+    found.extend(sprites);
+    found.retain(|(_, ids)| ids.len() > 1);
+    found
+}

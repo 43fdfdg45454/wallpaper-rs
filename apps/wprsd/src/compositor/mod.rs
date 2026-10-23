@@ -25,14 +25,29 @@ use wprs_core::{Edit, Fit, Place};
 use wprs_pipewire::Exporter;
 use wprs_render::{DepthMap, RenderError, Renderer, TargetLimits};
 use wprs_scene::{AudioFrame, PointerState, ScriptOutputs, Values};
+use wprs_video::Cut;
 use wprs_wayland::Window;
 
 #[derive(Clone)]
 pub enum Content {
     Color,
     Image(Picture),
-    Video(PathBuf),
+    Video(Movie),
     Scene(SceneSpec),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Reel {
+    pub path: PathBuf,
+    pub cut: Cut,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Movie {
+    pub reel: Reel,
+    pub volume: u32,
+    pub zoom: f32,
+    pub pan: [f32; 2],
 }
 
 #[derive(Clone)]
@@ -40,6 +55,7 @@ pub struct SceneSpec {
     pub pack: Arc<ScenePack>,
     pub values: Values,
     pub extra: Vec<(String, Arc<RgbaImage>)>,
+    pub clips: Vec<(String, Reel)>,
     pub hold: Option<f64>,
 }
 
@@ -72,8 +88,8 @@ impl Content {
         match (self, other) {
             (Content::Color, Content::Color) => true,
             (Content::Image(a), Content::Image(b)) => (&a.file, a.modified) == (&b.file, b.modified),
-            (Content::Video(a), Content::Video(b)) => a == b,
-            (Content::Scene(a), Content::Scene(b)) => a.same_source(b),
+            (Content::Video(a), Content::Video(b)) => a.reel.path == b.reel.path,
+            (Content::Scene(a), Content::Scene(b)) => Arc::ptr_eq(&a.pack, &b.pack),
             _ => false,
         }
     }
@@ -87,32 +103,55 @@ impl Content {
             _ => None,
         };
         let values = |c: &Content| match c {
-            Content::Scene(s) => Some((s.values.clone(), s.hold)),
+            Content::Scene(s) => Some((s.values.clone(), s.media(), s.hold)),
             _ => None,
         };
-        self.same_source(other) && look(self) == look(other) && values(self) == values(other)
+        let frame = |c: &Content| match c {
+            Content::Video(m) => Some((m.reel.cut, m.volume, m.zoom, m.pan)),
+            _ => None,
+        };
+        let same = look(self) == look(other) && values(self) == values(other) && frame(self) == frame(other);
+        self.same_source(other) && same
     }
 
-    fn video(&self) -> Option<&PathBuf> {
+    fn video(&self) -> Option<&Reel> {
         match self {
-            Content::Video(path) => Some(path),
+            Content::Video(movie) => Some(&movie.reel),
             _ => None,
         }
     }
 
-    fn videos(&self) -> Vec<&PathBuf> {
+    fn videos(&self) -> Vec<(&Reel, u32)> {
         match self {
-            Content::Video(path) => vec![path],
-            Content::Scene(s) => s.pack.videos.iter().map(|(_, path)| path).collect(),
+            Content::Video(movie) => vec![(&movie.reel, movie.volume)],
+            Content::Scene(s) => s.reels().map(|(_, reel, volume)| (reel, volume)).collect(),
             _ => Vec::new(),
         }
     }
 }
 
+impl Reel {
+    pub fn plain(path: PathBuf) -> Reel {
+        Reel { path, cut: Cut::default() }
+    }
+}
+
+pub(super) fn loudness(volume: f64, own: u32) -> f64 {
+    volume * f64::from(own.min(100)) / 100.0
+}
+
 impl SceneSpec {
-    fn same_source(&self, other: &SceneSpec) -> bool {
-        let files = |s: &SceneSpec| s.extra.iter().map(|(k, _)| k.clone()).collect::<Vec<_>>();
-        Arc::ptr_eq(&self.pack, &other.pack) && files(self) == files(other)
+    fn media(&self) -> Vec<(String, usize, Option<Reel>)> {
+        let files = self.extra.iter().map(|(k, i)| (k.clone(), Arc::as_ptr(i) as usize, None));
+        files.chain(self.clips.iter().map(|(k, reel)| (k.clone(), 0, Some(reel.clone())))).collect()
+    }
+
+    pub(super) fn reels(&self) -> impl Iterator<Item = (&str, &Reel, u32)> {
+        let replaced =
+            |id: &String| self.clips.iter().any(|(k, _)| k == id) || self.extra.iter().any(|(k, _)| k == id);
+        let own =
+            self.pack.videos.iter().filter(move |(id, _)| !replaced(id)).map(|(id, r)| (id.as_str(), r, 100));
+        own.chain(self.clips.iter().map(|(id, reel)| (id.as_str(), reel, 0)))
     }
 }
 
@@ -156,6 +195,7 @@ enum Command {
     Calm(bool),
     Power(bool),
     Locked(bool),
+    Press(String, String),
     Wake,
     Quit,
 }
@@ -243,6 +283,10 @@ impl Compositor {
 
     pub fn set_locked(&self, locked: bool) {
         self.send(Command::Locked(locked))
+    }
+
+    pub fn press(&self, output: &str, id: &str) {
+        self.send(Command::Press(output.into(), id.into()))
     }
 
     pub fn status(&self) -> BTreeMap<String, OutputStatus> {

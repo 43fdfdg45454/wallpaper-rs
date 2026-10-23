@@ -1,9 +1,9 @@
 use crate::{Error, Input, Kind, Manifest, Result, Scene, ensure, require};
 use semver::{Prerelease, Version, VersionReq};
 use std::collections::BTreeSet;
-use wprs_scene::{Control, Uses, descriptor, needs, source, tells_time};
+use wprs_scene::{Uses, descriptor, needs, source, tells_time};
 
-pub const REGISTRY: [(&str, &str); 7] = [
+pub const REGISTRY: [(&str, &str); 11] = [
     ("inputs.audio", "reacts to the sound playing on the computer"),
     ("inputs.pointer", "follows the pointer"),
     ("inputs.clicks", "reacts to clicks"),
@@ -11,9 +11,14 @@ pub const REGISTRY: [(&str, &str); 7] = [
     ("inputs.network", "connects to the network"),
     ("scripts", "runs scene scripts"),
     ("sound", "plays sound"),
+    ("properties2", "has settings of the newer kinds"),
+    ("folder", "shows pictures from a folder the user chooses"),
+    ("user_videos", "plays videos the user chooses"),
+    ("video_properties", "sets how its video plays"),
 ];
 
-pub const PROFILES: [(&str, &[&str]); 1] = [("android", &["scripts", "sound"])];
+pub const PROFILES: [(&str, &[&str]); 1] =
+    [("android", &["scripts", "sound", "folder", "user_videos", "video_properties"])];
 
 const DETECTED: [Input; 3] = [Input::Audio, Input::Pointer, Input::Clicks];
 
@@ -28,6 +33,7 @@ pub struct Facts {
     pub inputs: BTreeSet<Input>,
     pub facets: Vec<String>,
     pub found: Vec<(Input, String)>,
+    pub notes: Vec<String>,
 }
 
 fn builtin_first(id: &str) -> bool {
@@ -70,12 +76,13 @@ pub fn facts(manifest: &Manifest, scene: Option<&Scene>, size: Option<[u32; 2]>)
     let effects = scene.into_iter().flat_map(|s| s.layers().flat_map(|l| &l.effects));
     let effects = effects.filter(|e| !builtin_first(&e.effect)).map(|e| format!("effect.{}", e.effect));
     let mut features: BTreeSet<String> = declared.chain(effects).collect();
-    let used = [(uses.scripts, "scripts"), (sound, "sound")];
+    let video = manifest.playback.is_some() || manifest.display.is_some();
+    let used = [(uses.scripts, "scripts"), (sound, "sound"), (video, "video_properties")];
     features.extend(used.iter().filter(|(on, _)| *on).map(|(_, n)| n.to_string()));
+    features.extend(manifest.properties.values().flat_map(|p| p.features()).map(String::from));
     let author = manifest.inputs.iter().filter(|i| !DETECTED.contains(i));
     let mut facets: Vec<String> = inputs.iter().chain(author).map(|i| i.name().to_owned()).collect();
-    let customizable =
-        manifest.properties.values().any(|p| !matches!(p.control, Control::Group {} | Control::Label {}));
+    let customizable = video || manifest.properties.values().any(|p| p.holds_value() || p.kind() == "button");
     let clock = scene.is_some_and(tells_time);
     let flags = [
         (sound, "sound"),
@@ -96,7 +103,7 @@ pub fn facts(manifest: &Manifest, scene: Option<&Scene>, size: Option<[u32; 2]>)
     let missing = |i: &&Input| manifest.v2() && !manifest.inputs.contains(i);
     let found =
         scene.map_or(Vec::new(), |s| inputs.iter().filter(missing).map(|i| (*i, place(s, *i))).collect());
-    Facts { features, inputs, facets, found }
+    Facts { features, inputs, facets, found, notes: Vec::new() }
 }
 
 fn place(scene: &Scene, input: Input) -> String {
@@ -151,5 +158,6 @@ pub fn warnings(manifest: &Manifest, facts: &Facts) -> Vec<String> {
     unused
         .map(|f| format!("requires.features lists {f}, which the package does not use"))
         .chain(inputs)
+        .chain(facts.notes.iter().cloned())
         .collect()
 }

@@ -18,25 +18,36 @@ pub fn upgrade_json(manifest: &mut Value, scene: Option<&mut Value>) -> Result<R
         manifest["previews"] = json!({"thumbnail": preview});
     }
     let renames = renames(manifest);
-    rekey(manifest.get_mut("properties"), &renames);
-    for prop in
-        manifest.get_mut("properties").and_then(Value::as_object_mut).into_iter().flat_map(|p| p.values_mut())
-    {
-        if let Some(group) = prop.get("group").and_then(Value::as_str).and_then(|g| renames.get(g)) {
-            prop["group"] = json!(group);
-        }
-        rekey(prop.get_mut("visible_if"), &renames);
-    }
-    for preset in manifest.get_mut("presets").and_then(Value::as_array_mut).into_iter().flatten() {
-        rekey(preset.get_mut("values"), &renames);
-    }
-    scene.into_iter().for_each(|scene| bind(scene, &renames));
+    rename_json(manifest, scene, &renames);
     if manifest.get("default_locale").is_none()
         && let Some(locale) = common(manifest)
     {
         manifest["default_locale"] = json!(locale);
     }
     Ok(renames)
+}
+
+pub fn rename_json(manifest: &mut Value, scene: Option<&mut Value>, renames: &Renames) {
+    rekey(manifest.get_mut("properties"), renames);
+    let props = manifest.get_mut("properties").and_then(Value::as_object_mut);
+    for prop in props.into_iter().flat_map(|p| p.values_mut()) {
+        if let Some(group) = prop.get("group").and_then(Value::as_str).and_then(|g| renames.get(g)) {
+            prop["group"] = json!(group);
+        }
+        for key in ["visible_if", "enabled_if"] {
+            match prop.get_mut(key) {
+                Some(Value::String(text)) => {
+                    *text =
+                        renames.iter().fold(text.clone(), |t, (from, to)| wprs_scene::rename(&t, from, to))
+                }
+                found => rekey(found, renames),
+            }
+        }
+    }
+    for preset in manifest.get_mut("presets").and_then(Value::as_array_mut).into_iter().flatten() {
+        rekey(preset.get_mut("values"), renames);
+    }
+    scene.into_iter().for_each(|scene| bind(scene, renames));
 }
 
 fn renames(manifest: &Value) -> Renames {
@@ -105,7 +116,7 @@ pub fn upgrade(
 ) -> Result<(Manifest, Renames)> {
     let source = source.as_ref();
     let bytes = fs::read(source.join(MANIFEST))?;
-    let first = Manifest::from_json(&bytes)?;
+    let first = Manifest::read(&bytes, false)?;
     check_path(&first.entry)?;
     let entry = (first.kind == Kind::Scene).then(|| source.join(&first.entry));
     let read = |path: &Path| -> Result<Value> { Ok(serde_json::from_slice(&fs::read(path)?)?) };
@@ -115,7 +126,7 @@ pub fn upgrade(
     let mut manifest: Manifest = serde_json::from_value(json)?;
     (manifest.content, manifest.photosensitive, manifest.origin) =
         (Some(content), Some(photosensitive), Some(origin));
-    let facts = facts_of(source, &manifest, scene.as_ref().map(Value::to_string))?;
+    let facts = facts_of(source, &manifest, &bytes, scene.as_ref().map(Value::to_string))?;
     manifest.inputs = facts.inputs.into_iter().collect();
     let features = facts.features.into_iter().collect::<Vec<_>>();
     manifest.requires = (!features.is_empty()).then_some(crate::Requires { engine: None, features });

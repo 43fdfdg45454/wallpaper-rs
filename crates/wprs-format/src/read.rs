@@ -47,7 +47,8 @@ pub fn read<R: Read + Seek>(reader: R, limits: &Limits) -> Result<Package<R>> {
         entries.push(FileEntry { path, size, compressed_size, symlink: false });
     }
     ensure(entries.iter().any(|e| e.path == MANIFEST), || Error::Missing(MANIFEST.into()))?;
-    let manifest = manifest(&mut archive)?;
+    let raw = raw(&mut archive, MANIFEST, MAX_MANIFEST)?;
+    let manifest = Manifest::from_json(&raw)?;
     validate(&manifest, &entries, limits)?;
     let mut package = Package { manifest, entries, facts: Facts::default(), archive };
     let scene = (package.manifest.kind == Kind::Scene).then(|| package.scene()).transpose()?;
@@ -57,6 +58,7 @@ pub fn read<R: Read + Seek>(reader: R, limits: &Limits) -> Result<Package<R>> {
     };
     let size = media::probe(&size).map(|m| [m.width, m.height]);
     package.facts = facts(&package.manifest, scene.as_ref(), size);
+    package.facts.features.extend(Manifest::newer_spelling(&raw).map(|_| "properties2".to_owned()));
     if package.manifest.v2() {
         features::check(&package.manifest, &package.facts)?;
         package.previews()?;

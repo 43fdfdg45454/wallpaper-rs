@@ -40,6 +40,10 @@ pub mod qobject {
         #[qinvokable]
         fn value(self: &SceneEditor, pointer: &QString) -> QString;
         #[qinvokable]
+        fn condition(self: &SceneEditor, pointer: &QString, text: &QString) -> QString;
+        #[qinvokable]
+        fn scripts(self: &SceneEditor, id: &QString) -> QString;
+        #[qinvokable]
         fn save(self: Pin<&mut SceneEditor>);
         #[qinvokable]
         fn recover(self: Pin<&mut SceneEditor>, keep: bool);
@@ -77,7 +81,7 @@ use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use wprs_editor::starters::{default_id, locale, starter};
-use wprs_editor::{Action, Problem, Project, check, inspect, outline, package, project};
+use wprs_editor::{Action, Problem, Project, check, inspect, outline, package, project, references};
 
 #[derive(Default)]
 pub struct SceneEditorRust {
@@ -185,6 +189,18 @@ impl SceneEditor {
     pub fn value(&self, pointer: &QString) -> QString {
         let found = self.project.as_ref().and_then(|p| p.doc.pointer(&pointer.to_string()).cloned());
         QString::from(&found.unwrap_or_default().to_string())
+    }
+
+    pub fn condition(&self, pointer: &QString, text: &QString) -> QString {
+        let doc = self.project.as_ref().map(|p| &p.doc);
+        let found =
+            doc.and_then(|d| wprs_editor::settings::condition(d, &pointer.to_string(), &text.to_string()));
+        QString::from(&found.unwrap_or_default())
+    }
+
+    pub fn scripts(&self, id: &QString) -> QString {
+        let found = self.project.as_ref().map(|p| references::scripts(&p.dir, &p.doc, &id.to_string()));
+        QString::from(&serde_json::to_string(&found.unwrap_or_default()).unwrap_or_default())
     }
 
     pub fn count(&self, pointer: &QString) -> i32 {

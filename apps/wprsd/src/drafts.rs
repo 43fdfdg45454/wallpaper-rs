@@ -1,5 +1,7 @@
+use crate::compositor::Reel;
 use crate::daemon::{Daemon, output_name};
 use crate::error::invalid;
+use crate::sceneprops::Props;
 use crate::scenes::ScenePack;
 use anyhow::{Context, Result, ensure};
 use serde_json::Value;
@@ -68,7 +70,7 @@ impl Daemon {
                     assets.images.insert(id.clone(), image);
                 }
                 "ttf" | "otf" => drop(assets.fonts.insert(id.clone(), Arc::new(std::fs::read(&path)?))),
-                "webm" | "mp4" | "mkv" => videos.push((id.clone(), path)),
+                "webm" | "mp4" | "mkv" => videos.push((id.clone(), Reel::plain(path))),
                 "cube" => {
                     ensure!(size <= MAX_LUT_BYTES as u64, invalid(format!("{} is too large", asset.path)));
                     let lut = Lut::parse(&std::fs::read(&path)?).map_err(|e| invalid(e.to_string()))?;
@@ -97,22 +99,13 @@ impl Daemon {
         let user = wprs_core::locale::languages();
         let (locale, languages) = (m.locale_in(&user), m.languages(&user));
         let properties = scene.properties(&m.properties, &crate::words::volume());
+        let labels = wprs_scene::labels(&properties, &languages);
         let clips = Bank::new(sounds.iter().map(|(_, path)| path.clone()).collect());
-        Ok(ScenePack {
-            path: dir,
-            title: m.title.pick(&languages),
-            id: m.id,
-            languages,
-            locale,
-            scene: Arc::new(scene),
-            properties,
-            presets: m.presets,
-            assets,
-            videos,
-            sounds,
-            clips,
-            scripts,
-        })
+        let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
+        let (path, presets) = (dir.clone(), m.presets);
+        let props = Props { path, id, version, title, kind: "scene", languages, properties, presets };
+        let (props, scene) = (Arc::new(props), Arc::new(scene));
+        Ok(ScenePack { path: dir, props, locale, scene, assets, videos, sounds, clips, scripts, labels })
     }
 
     pub fn preview_scene(

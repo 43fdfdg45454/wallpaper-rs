@@ -73,4 +73,13 @@ impl UvRect {
         let offset = if repeat { [0.0, 0.0] } else { [0.5 - 0.5 * scale[0], 0.5 - 0.5 * scale[1]] };
         UvRect { offset, scale, repeat }
     }
+
+    pub fn framed(self, zoom: f32, pan: [f32; 2]) -> UvRect {
+        let scale = self.scale.map(|s| s / zoom.clamp(1.0, 8.0));
+        let offset = [0, 1].map(|i| {
+            let room = ((1.0 - scale[i]) / 2.0).max(0.0);
+            0.5 + pan[i].clamp(-1.0, 1.0) * room - scale[i] / 2.0
+        });
+        UvRect { offset, scale, repeat: self.repeat }
+    }
 }

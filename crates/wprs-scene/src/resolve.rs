@@ -19,6 +19,7 @@ pub(crate) struct Context<'a> {
     pub(crate) props: &'a Values,
     pub(crate) timelines: &'a [(Timeline, Playhead)],
     pub(crate) mattes: &'a BTreeSet<String>,
+    pub(crate) playing: &'a BTreeSet<String>,
     pub(crate) memo: &'a RefCell<HashMap<usize, [f32; 4]>>,
     pub(crate) wake: Cell<Wake>,
 }
@@ -116,7 +117,7 @@ impl Context<'_> {
 }
 
 impl<T: Animate> Value<T> {
-    pub(crate) fn settled(&self, props: Option<&Values>) -> Option<T> {
+    pub fn settled(&self, props: Option<&Values>) -> Option<T> {
         let b = match self {
             Value::Fixed(v) => return Some(v.clone()),
             Value::Bound(b) => b,

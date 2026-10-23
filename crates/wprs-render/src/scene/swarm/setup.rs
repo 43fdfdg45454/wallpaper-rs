@@ -4,12 +4,23 @@ use crate::Renderer;
 use crate::scene::{Image, SceneAssets};
 use std::collections::HashMap;
 use wgpu::ShaderStages as S;
-use wprs_scene::{Bake, Blend, Kind, Quality, Scene, Sim, Tier};
+use wprs_scene::{Bake, Blend, EmitShape, Kind, Quality, Scene, Sim, Tier, Values};
+
+pub(crate) fn sprites(scene: &Scene, props: &Values) -> Vec<Option<String>> {
+    scene.particles.values().map(|s| s.render.texture.as_ref().and_then(|t| t.settled(Some(props)))).collect()
+}
 
 impl Swarms {
+    pub(crate) fn uses(&self, scene: &Scene, id: &str) -> bool {
+        let masked = |s: &wprs_scene::System| {
+            s.emitters.iter().any(|e| matches!(&e.shape, EmitShape::Mask { texture, .. } if texture == id))
+        };
+        self.sprites.iter().flatten().any(|s| s == id) || scene.particles.values().any(masked)
+    }
+
     pub(crate) fn new(
         r: &Renderer,
-        scene: &Scene,
+        (scene, props): (&Scene, &Values),
         assets: &SceneAssets,
         images: &HashMap<String, Image>,
         white: &wgpu::TextureView,
@@ -47,9 +58,10 @@ impl Swarms {
             layout(&[entry(0, S::FRAGMENT, texture)]),
         ];
         let pixels = |id: &str| assets.images.get(id).map(|i| (i.width(), i.height(), i.as_raw().as_slice()));
-        let kits = scene.particles.iter().filter_map(|(id, s)| {
-            let image = s.render.texture.as_ref().and_then(|t| images.get(t));
-            Some(kit(id, s, Bake::new(scene, id, tier, !gpu, pixels)?, scene, image, white, srgb))
+        let sprites = sprites(scene, props);
+        let kits = scene.particles.iter().zip(&sprites).filter_map(|((id, s), sprite)| {
+            let sprite = sprite.as_deref().map(|t| (t, images.get(t)));
+            Some(kit(id, s, Bake::new(scene, id, tier, !gpu, pixels)?, scene, sprite, white, srgb))
         });
         let filter = wgpu::FilterMode::Linear;
         let sampler =
@@ -62,6 +74,7 @@ impl Swarms {
             gpu,
             profile: false,
             kits: kits.collect(),
+            sprites,
             stores: Vec::new(),
             marks: Vec::new(),
             module: module(r, include_str!("sprite.wgsl")),

@@ -370,6 +370,18 @@ fn presets_and_profiles_reject_duplicate_names() {
     assert_eq!(library.presets(Some(&a.uid)).unwrap()[0].item.as_deref(), Some(a.uid.as_str()));
     library.remove_preset(&calm).unwrap();
     assert!(library.presets(None).unwrap().is_empty());
+    let settings = |package: &str| json!({"package": package, "values": {"speed": 2}});
+    let night = library.create_preset(None, "Night", &settings("org.example.a")).unwrap();
+    library.create_preset(None, "night", &settings("org.example.b")).unwrap();
+    assert!(matches!(
+        library.create_preset(None, "NIGHT", &settings("org.example.a")),
+        Err(Error::Exists(..))
+    ));
+    library.create_preset(None, "Dusk", &settings("org.example.a")).unwrap();
+    assert!(matches!(library.rename_preset(&night, "dusk"), Err(Error::Exists(..))));
+    library.rename_preset(&night, "Late").unwrap();
+    assert_eq!(library.preset(&night).unwrap().name, "Late");
+    assert!(matches!(library.rename_preset("01J0000000000000000000NONE", "x"), Err(Error::NotFound(..))));
 
     let empty = json!({});
     let outputs = json!({"DP-1": {"playlist": "Morning"}});

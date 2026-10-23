@@ -1,14 +1,17 @@
+use crate::compositor::Reel;
 use crate::daemon::Daemon;
 use crate::decode::decode;
+use crate::sceneprops::Props;
 use crate::store::private_dir;
 use image::{ImageReader, RgbaImage};
+use serde_json::Value as Json;
 use std::collections::BTreeMap;
 use std::io::{Cursor, Write};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_render::SceneAssets;
-use wprs_scene::{Control, Preset, Property, Scene, Values};
+use wprs_scene::{Control, Scene, Values};
 use wprs_video::Bank;
 
 const IMAGES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
@@ -18,40 +21,44 @@ const DECODED: u64 = 512 << 20;
 
 pub struct ScenePack {
     pub path: PathBuf,
-    pub id: String,
-    pub title: String,
-    pub languages: Vec<String>,
+    pub props: Arc<Props>,
     pub locale: String,
     pub scene: Arc<Scene>,
-    pub properties: BTreeMap<String, Property>,
-    pub presets: Vec<Preset>,
     pub assets: SceneAssets,
-    pub videos: Vec<(String, PathBuf)>,
+    pub videos: Vec<(String, Reel)>,
     pub sounds: Vec<(String, PathBuf)>,
     pub clips: Bank,
     pub scripts: Vec<(String, String)>,
+    pub labels: Json,
 }
 
+pub type Extra = (Vec<(String, Arc<RgbaImage>)>, Vec<(String, Reel)>);
+
+#[cfg(test)]
 impl ScenePack {
-    pub fn values(&self, layers: &[&BTreeMap<String, toml::Value>]) -> Values {
-        wprs_scene::effective(&self.properties, &json(layers).iter().collect::<Vec<_>>())
+    pub fn bare(
+        scene: Scene,
+        properties: BTreeMap<String, wprs_scene::Property>,
+        sounds: Vec<(String, PathBuf)>,
+    ) -> ScenePack {
+        let (path, id, version, title, languages, presets) = Default::default();
+        let props =
+            Arc::new(Props { path, id, version, title, kind: "scene", languages, properties, presets });
+        let (path, locale, assets, videos, clips, scripts) = Default::default();
+        let labels = Json::Object(Default::default());
+        ScenePack {
+            path,
+            props,
+            locale,
+            scene: Arc::new(scene),
+            assets,
+            videos,
+            sounds,
+            clips,
+            scripts,
+            labels,
+        }
     }
-
-    pub fn stale(&self, layers: &[&BTreeMap<String, toml::Value>]) -> Vec<String> {
-        wprs_scene::stale(&self.properties, &json(layers).iter().collect::<Vec<_>>())
-    }
-
-    pub fn files(&self, values: &Values) -> Vec<String> {
-        let files = self.properties.iter().filter(|(_, p)| matches!(p.control, Control::File { .. }));
-        files.filter_map(|(id, _)| values.get(id)?.as_str().map(String::from)).collect()
-    }
-}
-
-fn json(layers: &[&BTreeMap<String, toml::Value>]) -> Vec<Values> {
-    let pairs = |l: &&BTreeMap<String, toml::Value>| {
-        l.iter().filter_map(|(k, v)| Some((k.clone(), serde_json::to_value(v).ok()?))).collect()
-    };
-    layers.iter().map(pairs).collect()
 }
 
 fn kind(path: &str) -> String {
@@ -109,8 +116,10 @@ impl Daemon {
                     file.write_all(&package.read_file(&asset.path)?)?;
                     file.persist(&blob)?;
                 }
-                let media = if VIDEOS.contains(&ext.as_str()) { &mut videos } else { &mut sounds };
-                media.push((id.clone(), blob));
+                match VIDEOS.contains(&ext.as_str()) {
+                    true => videos.push((id.clone(), Reel::plain(blob))),
+                    false => sounds.push((id.clone(), blob)),
+                }
             }
         }
         assets.luts.extend(package.luts(&scene)?);
@@ -124,21 +133,25 @@ impl Daemon {
         let locale = m.locale_in(&wprs_core::locale::languages());
         let languages = m.languages(&wprs_core::locale::languages());
         let properties = scene.properties(&m.properties, &crate::words::volume());
+        let labels = wprs_scene::labels(&properties, &languages);
         let clips = Bank::new(sounds.iter().map(|(_, path)| path.clone()).collect());
+        let (id, version, title, presets) =
+            (m.id.clone(), m.version.clone(), m.title.pick(&languages), m.presets);
+        let path = wpak.to_owned();
+        let props =
+            Props { path: path.clone(), id, version, title, kind: "scene", languages, properties, presets };
+        let (scene, props) = (Arc::new(scene), Arc::new(props));
         let pack = Arc::new(ScenePack {
-            path: wpak.to_owned(),
-            id: m.id.clone(),
-            title: m.title.pick(&languages),
-            languages,
+            path,
+            props,
             locale,
-            scene: Arc::new(scene),
-            properties,
-            presets: m.presets.clone(),
+            scene,
             assets,
             videos,
             sounds,
             clips,
             scripts,
+            labels,
         });
         let mut st = self.state();
         st.scenes.retain(|_, (_, weak)| weak.strong_count() > 0);
@@ -152,15 +165,37 @@ impl Daemon {
         self.load_image(path, std::fs::metadata(path)?.modified().ok(), None)
     }
 
-    pub fn scene_extra(&self, pack: &ScenePack, values: &Values) -> Vec<(String, Arc<RgbaImage>)> {
-        let load = |file: String| match self.scene_file(&file) {
-            Ok(decoded) => Some((file, decoded)),
-            Err(e) => {
-                tracing::warn!("cannot use the file chosen for a scene property: {}", e.root_cause());
-                tracing::debug!("{e:#}");
-                None
+    pub fn scene_extra(&self, pack: &ScenePack, values: &Values) -> Extra {
+        let (mut images, mut reels) = (Vec::new(), Vec::new());
+        for (id, prop) in &pack.props.properties {
+            let Some(chosen) = values.get(id).and_then(Json::as_str).filter(|v| v.starts_with('/')) else {
+                continue;
+            };
+            let keys = match &prop.control {
+                Control::File { default_asset: Some(asset), .. } => vec![asset.clone(), chosen.to_owned()],
+                _ => vec![chosen.to_owned()],
+            };
+            let file = match prop.control {
+                Control::Folder { pick, every, .. } => {
+                    match crate::picks::pick(Path::new(chosen), prop, pick, every) {
+                        Some(file) => file,
+                        None => continue,
+                    }
+                }
+                _ => PathBuf::from(chosen),
+            };
+            if wprs_video::is_video(&file) {
+                reels.extend(keys.into_iter().map(|key| (key, Reel::plain(file.clone()))));
+                continue;
             }
-        };
-        pack.files(values).into_iter().filter_map(load).collect()
+            match self.scene_file(&file.to_string_lossy()) {
+                Ok(decoded) => images.extend(keys.into_iter().map(|key| (key, decoded.clone()))),
+                Err(e) => {
+                    tracing::warn!("cannot use the file chosen for a scene property: {}", e.root_cause());
+                    tracing::debug!("{e:#}");
+                }
+            }
+        }
+        (images, reels)
     }
 }

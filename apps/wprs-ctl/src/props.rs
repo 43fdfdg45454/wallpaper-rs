@@ -1,4 +1,5 @@
 use crate::cli::{JSON, OUTPUT};
+use crate::propsets::{self, PropPreset};
 use crate::show::{self, table};
 use anyhow::{Context, Result};
 use clap::Subcommand;
@@ -8,37 +9,49 @@ use wprs_core::model::SceneProperties;
 
 #[derive(Subcommand, Debug)]
 pub enum Prop {
-    #[command(about = "List the properties of the scene shown on an output, with their values")]
+    #[command(about = "List the settings of the package shown on an output, with their values")]
     Ls {
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
         #[arg(long, help = JSON)]
         json: bool,
     },
-    #[command(about = "Print the value of one property")]
+    #[command(about = "Print the value of one setting")]
     Get {
         id: String,
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
-    #[command(about = "Set a property; the value is JSON or plain text such as #ff8800")]
+    #[command(
+        about = "Set a setting; the value is JSON or plain text such as #ff8800, asked for when left out"
+    )]
     Set {
         id: String,
-        value: String,
+        #[arg(allow_negative_numbers = true)]
+        value: Option<String>,
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
-    #[command(about = "Apply a preset of the scene")]
-    Preset {
-        preset: String,
-        #[arg(short, long, default_value = "", help = OUTPUT)]
-        output: String,
-    },
-    #[command(about = "Forget the values set for the scene, back to its defaults")]
+    #[command(about = "Forget the values set for the package, back to its defaults")]
     Reset {
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
+    #[command(about = "Press a button of the scene")]
+    Press {
+        id: String,
+        #[arg(short, long, default_value = "", help = OUTPUT)]
+        output: String,
+    },
+    #[command(about = "Let a screen follow the shared values of every screen, or keep its own with --own")]
+    Share {
+        #[arg(short, long, help = "Output name such as DP-1")]
+        output: String,
+        #[arg(long, help = "Give the screen its own copy of the values")]
+        own: bool,
+    },
+    #[command(subcommand, about = "Presets of the package and the ones you saved")]
+    Preset(PropPreset),
 }
 
 pub fn value(text: &str) -> String {
@@ -55,32 +68,62 @@ pub async fn run(client: &Client, command: Prop) -> Result<()> {
         Prop::Get { id, output } => {
             let reply: SceneProperties = wprs_client::parse(&daemon.get_scene_properties(&output).await?)?;
             let found =
-                reply.values.get(&id).with_context(|| format!("{} has no property {id}", reply.package))?;
+                reply.values.get(&id).with_context(|| format!("{} has no setting {id}", reply.package))?;
             println!("{found}");
         }
         Prop::Set { id, value: text, output } => {
+            let text = match text {
+                Some(text) => text,
+                None => crate::input::secret(&format!("{id}: "), false)?,
+            };
             daemon.set_scene_property(&output, &id, &value(&text)).await?
         }
-        Prop::Preset { preset, output } => daemon.apply_scene_preset(&output, &preset).await?,
         Prop::Reset { output } => daemon.reset_scene_properties(&output).await?,
+        Prop::Press { id, output } => daemon.press_scene_button(&output, &id).await?,
+        Prop::Share { output, own } => daemon.share_scene_values(&output, !own).await?,
+        Prop::Preset(command) => propsets::run(client, command).await?,
     }
     Ok(())
 }
 
 fn list(reply: SceneProperties) -> String {
-    let fields = reply.fields.iter().filter(|f| !["group", "label"].contains(&f.kind.as_str()));
+    let fields = reply.fields.iter().filter(|f| !["group", "label", "divider"].contains(&f.kind.as_str()));
     let rows = fields.map(|f| {
-        let label = if f.visible { f.label.clone() } else { format!("{} (hidden)", f.label) };
-        let value = if f.value.is_null() { String::new() } else { f.value.to_string() };
+        let state = [(!f.visible, "hidden"), (!f.enabled, "off")].into_iter().filter(|(on, _)| *on);
+        let state: Vec<&str> = state.map(|(_, w)| w).collect();
+        let label =
+            if state.is_empty() { f.label.clone() } else { format!("{} ({})", f.label, state.join(", ")) };
+        let value = match (f.secret, f.filled) {
+            (true, true) => "(stored)".into(),
+            _ if f.value.is_null() => String::new(),
+            _ => f.value.to_string(),
+        };
         let range = match (f.min, f.max) {
-            (Some(lo), Some(hi)) => format!("{lo} to {hi}"),
-            _ => f.options.iter().map(|o| o.value.as_str()).collect::<Vec<_>>().join(", "),
+            (Some(lo), Some(hi)) => format!(
+                "{lo} to {hi}{}",
+                if f.unit.is_empty() { String::new() } else { format!(" {}", f.unit) }
+            ),
+            _ => show::list(f.options.iter().map(|o| o.value.to_string())),
         };
         vec![f.key.clone(), label, f.kind.clone(), value, range]
     });
-    let presets = reply.preset_labels.iter().map(|p| p.value.as_str()).collect::<Vec<_>>().join(", ");
-    let head = format!("{} ({})\n", reply.title, reply.package);
-    let tail = if presets.is_empty() { String::new() } else { format!("presets: {presets}\n") };
+    let scope = match (reply.output.is_empty(), reply.shared) {
+        (true, _) => "every screen",
+        (false, true) => "shared with every screen",
+        (false, false) => "this screen only",
+    };
+    let head = format!("{} ({}, {scope})\n", reply.title, reply.package);
+    let named = |p: &wprs_core::model::SceneOption| match p.value.as_str().unwrap_or_default() {
+        id if id == p.label => id.to_owned(),
+        id => format!("{id} ({})", p.label),
+    };
+    let names = |list: &[wprs_core::model::SceneOption]| show::list(list.iter().map(named));
+    let presets = [
+        ("presets", names(&reply.preset_labels)),
+        ("saved", show::list(reply.user_presets.iter().map(|p| p.label.clone()))),
+    ];
+    let tail: String =
+        presets.iter().filter(|(_, n)| !n.is_empty()).map(|(k, n)| format!("{k}: {n}\n")).collect();
     let warnings: String = reply.warnings.iter().map(|w| format!("warning: {w}\n")).collect();
-    head + &table(&["PROPERTY", "LABEL", "TYPE", "VALUE", "RANGE"], rows) + &tail + &warnings
+    head + &table(&["SETTING", "LABEL", "TYPE", "VALUE", "RANGE"], rows) + &tail + &warnings
 }

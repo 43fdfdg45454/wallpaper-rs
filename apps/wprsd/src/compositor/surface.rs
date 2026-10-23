@@ -123,8 +123,11 @@ impl State {
             let moved = steps.map(|steps| (output.offset, steps));
             if let Sink::Surface(screen) = &mut output.sink
                 && screen.due.is_some_and(|due| due <= now)
-                && let Err(e) =
-                    screen.backdrop(&self.renderer, &[output.shown.layer(&self.players, 1.0, moved)], now)
+                && let Err(e) = screen.backdrop(
+                    &self.renderer,
+                    &[output.shown.layer(&self.players, 1.0, moved, output.size)],
+                    now,
+                )
             {
                 tracing::warn!("cannot render the root window background: {e:#}");
             }

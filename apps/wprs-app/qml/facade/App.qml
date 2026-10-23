@@ -62,6 +62,18 @@ QtObject {
         backend.passphrase(remember(onDone, onError), member, text);
     }
 
+    function sceneSecret(output, key, text, onDone, onError) {
+        backend.sceneSecret(remember(onDone, onError), output, key, text);
+    }
+
+    function writeText(url, text) {
+        return backend.writeText(String(url), text);
+    }
+
+    function readText(url) {
+        return backend.readText(String(url));
+    }
+
     function tr(text, first, second, third) {
         return [first, second, third].filter(arg => arg !== undefined).reduce((out, arg) => out.arg(arg), backend.tr(text));
     }

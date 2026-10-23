@@ -53,7 +53,7 @@ impl Check<'_> {
             self.issues.push(Issue::Source(path.into()));
         }
         if let Some(id) = &b.prop {
-            self.known(path, "property", id, self.props.contains_key(id));
+            self.property(path, id, false);
         }
         let misplaced = (b.map.is_some() && b.prop.is_none()) || (b.clock.is_some() && !T::TEXT);
         if misplaced || (T::TEXT && (b.audio.is_some() || b.cursor.is_some())) {
@@ -93,8 +93,26 @@ impl Check<'_> {
         }
     }
 
+    fn texture(&mut self, path: &str, id: &str, lut: bool) {
+        let cube = self.scene.assets.get(id).map(|a| a.path.to_lowercase().ends_with(".cube"));
+        self.known(path, "asset", id, cube.is_some());
+        if cube.is_some_and(|cube| cube != lut) {
+            self.issues.push(Issue::Type(path.into()));
+        }
+    }
+
     fn asset(&mut self, path: &str, id: &str) {
         self.known(path, "asset", id, self.scene.assets.contains_key(id));
+    }
+
+    pub(crate) fn named(&mut self, path: &str, named: &Value<String>) {
+        self.value(path, named);
+        match named {
+            Value::Fixed(id) => self.asset(path, id),
+            Value::Bound(b) => {
+                b.map.iter().flatten().for_each(|(k, id)| self.asset(&format!("{path}/map/{k}"), id))
+            }
+        }
     }
 
     pub(crate) fn layers(&mut self, base: &str, layers: &[Layer], depth: usize) {
@@ -155,15 +173,19 @@ impl Check<'_> {
                     Value::Fixed(Param::Number(n)) => {
                         self.range(&path, *n, def.min.unwrap_or(f32::MIN), def.max.unwrap_or(f32::MAX))
                     }
-                    Value::Fixed(Param::Text(id)) => {
-                        let cube =
-                            self.scene.assets.get(id).map(|a| a.path.to_lowercase().ends_with(".cube"));
-                        self.known(&path, "asset", id, cube.is_some());
-                        if cube.is_some_and(|cube| cube != (def.kind == ParamKind::Lut)) {
-                            self.issues.push(Issue::Type(path));
+                    Value::Fixed(Param::Text(id)) => self.texture(&path, id, def.kind == ParamKind::Lut),
+                    Value::Bound(b) if asset => {
+                        match (&b.map, b.prop.as_ref().and_then(|p| self.props.get(p))) {
+                            (Some(map), _) => map.iter().for_each(|(k, v)| match v {
+                                Param::Text(id) => {
+                                    self.texture(&format!("{path}/map/{k}"), id, def.kind == ParamKind::Lut)
+                                }
+                                _ => self.issues.push(Issue::Type(format!("{path}/map/{k}"))),
+                            }),
+                            (None, Some(p)) if def.kind == ParamKind::Texture && p.kind() == "file" => {}
+                            _ => self.issues.push(Issue::Type(path)),
                         }
                     }
-                    Value::Bound(_) if asset => self.issues.push(Issue::Type(path)),
                     _ => {}
                 }
             }
@@ -173,20 +195,9 @@ impl Check<'_> {
     fn kind(&mut self, p: &str, kind: &Kind, depth: usize) {
         match kind {
             Kind::Group { layers, .. } => self.layers(&format!("{p}/layers"), layers, depth + 1),
-            Kind::Image { image, size } => {
-                self.value(&format!("{p}/image"), image);
-                match image {
-                    Value::Fixed(id) => self.asset(&format!("{p}/image"), id),
-                    Value::Bound(b) => b
-                        .map
-                        .iter()
-                        .flatten()
-                        .for_each(|(k, id)| self.asset(&format!("{p}/image/map/{k}"), id)),
-                }
-                self.size(&format!("{p}/size"), *size);
-            }
-            Kind::Video { video, size } => {
-                self.asset(&format!("{p}/video"), video);
+            Kind::Image { image: named, size } | Kind::Video { video: named, size } => {
+                let field = if matches!(kind, Kind::Image { .. }) { "image" } else { "video" };
+                self.named(&format!("{p}/{field}"), named);
                 self.size(&format!("{p}/size"), *size);
             }
             Kind::Text { text, size, color, .. } => {
@@ -279,8 +290,8 @@ impl Check<'_> {
         if sources.iter().filter(|s| **s).count() != 1 {
             self.issues.push(Issue::Source(path.into()));
         }
-        if let Some(id) = &mask.texture {
-            self.asset(&format!("{path}/texture"), id);
+        if let Some(texture) = &mask.texture {
+            self.named(&format!("{path}/texture"), texture);
         }
         if let Some(id) = &mask.layer {
             let drawn = self.scene.layer(id).is_some_and(|l| !matches!(l.kind, Kind::Sound(_)));

@@ -293,23 +293,28 @@ escenas que trae el APK (las mismas que el escritorio), y *Abrir un paquete de e
 un `.wpak` de escena con el selector de documentos de Android. Se dibujan con el mismo motor que el
 escritorio: capas, efectos, partículas (en la GPU si admite sombreadores de cálculo y, si no, en la
 CPU con menos partículas), textos, líneas de tiempo y propiedades. La página de una escena muestra
-sus propiedades y sus ajustes predefinidos, que se guardan en la misma configuración que el
-escritorio. El nivel de calidad sale de la clase del teléfono (básica con poca memoria o sin
-sombreadores de cálculo, alta si el fabricante declara una clase de rendimiento de Android 13 o
-posterior, media en el resto) y de la batería: con batería baja un nivel, y con calor baja más. Una
-escena demasiado pesada para el teléfono se queda quieta en su fotograma de muestra. Cada escena
-dibuja a sus propios fotogramas por segundo, como mucho a los de los ajustes, solo mientras algo
-cambia y nunca mientras no se ve. Los vídeos dentro de una escena los decodifica el hardware y se
-copian a la GPU fotograma a fotograma, sin sonido, y se pausan si la escena se queda quieta. Los
-scripts de las escenas no se ejecutan en el teléfono: la escena se ve sin lo que mueven. Sus
-sonidos tampoco suenan en el teléfono, así que su volumen no aparece entre las propiedades.
+sus propiedades y sus preajustes, que se guardan en la misma configuración que el escritorio; los
+preajustes propios se guardan, se renombran y se borran ahí, y se exportan e importan como archivo,
+los botones de la escena funcionan y los textos secretos quedan sellados por el almacén de claves de
+Android. Las carpetas, los vídeos que elige el usuario y los ajustes de reproducción de los paquetes
+de vídeo no se usan en el teléfono, y la página del paquete lo avisa. El nivel de calidad sale de la
+clase del teléfono (básica con poca memoria o sin sombreadores de cálculo, alta si el fabricante
+declara una clase de rendimiento de Android 13 o posterior, media en el resto) y de la batería: con
+batería baja un nivel, y con calor baja más. Una escena demasiado pesada para el teléfono se queda
+quieta en su fotograma de muestra. Cada escena dibuja a sus propios fotogramas por segundo, como
+mucho a los de los ajustes, solo mientras algo cambia y nunca mientras no se ve. Los vídeos dentro
+de una escena los decodifica el hardware y se copian a la GPU fotograma a fotograma, sin sonido, y
+se pausan si la escena se queda quieta. Los scripts de las escenas no se ejecutan en el teléfono: la
+escena se ve sin lo que mueven. Sus sonidos tampoco suenan en el teléfono, así que su volumen no
+aparece entre las propiedades.
 
 Las miniaturas de los paquetes para adultos salen difuminadas y su página no los muestra hasta
 pulsar *Mostrar igualmente*. Un paquete fotosensible no se previsualiza ni se puede usar como fondo
 hasta aceptar el aviso de que destella o muestra patrones rápidos que pueden provocar crisis a
 personas con epilepsia fotosensible; las listas lo saltan mientras tanto. Cada decisión se recuerda
 por paquete. La biblioteca y la página de un paquete muestran su título y su descripción en el
-idioma del teléfono, y la página avisa si sus scripts o sus sonidos no funcionan en él.
+idioma del teléfono, y la página avisa si sus scripts, sus sonidos, sus carpetas, los vídeos que se
+eligen o sus ajustes de vídeo no funcionan en él.
 
 *Reaccionar al sonido* y *Reaccionar al tacto* solo aparecen en las escenas que los usan y se
 activan escena a escena. El sonido se lee con el visualizador de Android, que da un espectro de
@@ -464,7 +469,7 @@ En el teléfono se aplican los títulos, etiquetas, valoraciones, favoritos y ed
 ajuste, paralaje y el resto de la edición) de los fondos que tiene (el mismo archivo en el teléfono
 y en el ordenador es el mismo fondo), las listas con sus reglas y los ajustes compartidos, como el
 fundido. Se quedan en el teléfono el volumen, el sonido de los vídeos, los fotogramas por segundo y
-el permiso para descargar modelos; los perfiles, los ajustes predefinidos y los repositorios del
+el permiso para descargar modelos; los perfiles, los preajustes y los repositorios del
 escritorio se conservan sin tocar. Si cambias la clave en un ordenador, el teléfono la recibe solo,
 y si se revoca un equipo, el primero que sincroniza (también el teléfono) cambia la clave. La
 sincronización en segundo plano usa WorkManager cada hora, solo con Wi-Fi u otra red sin límite de
@@ -607,7 +612,7 @@ demás sesiones y borra los tokens; los equipos siguen enlazados salvo que elija
 Se sincronizan los títulos, etiquetas, valoraciones, favoritos y ediciones de las imágenes de la
 biblioteca (cada parte de la edición por separado, así que lo que cambian dos equipos en partes
 distintas se suma, y una parte de más de 64 KiB conserva la última copia enviada), las listas, los
-perfiles, los ajustes predefinidos y los ajustes (salvo el volumen, la caché, el paralaje por
+perfiles, los preajustes y los ajustes (salvo el volumen, la caché, el paralaje por
 software y el permiso para descargar modelos, que se quedan en cada equipo), cifrados de extremo a
 extremo; sin cifrar solo con `--plaintext`, que avisa antes. El token y la clave de sincronización
 viven solo en el llavero del sistema; el servidor ve los equipos como `Device 1`, `Device 2`… y el
@@ -661,13 +666,37 @@ menos fotogramas y menos calidad con batería o con render por software; las esc
 wprs-ctl prop ls -o DP-1                     # propiedades de la escena que muestra DP-1
 wprs-ctl prop set tint '#ff8800' -o DP-1     # se aplica al momento y se guarda en config.toml
 wprs-ctl prop set volume 60 -o DP-1          # volumen propio de una escena con sonido
-wprs-ctl prop preset calma -o DP-1 && wprs-ctl prop reset -o DP-1
+wprs-ctl prop press again -o DP-1            # pulsa un botón de la escena
+wprs-ctl prop share -o DP-1                  # los mismos valores en todas las pantallas (--own: solo esta)
+wprs-ctl prop preset load calma -o DP-1 && wprs-ctl prop reset -o DP-1
+wprs-ctl prop preset save Noche -o DP-1      # guarda los valores actuales como preajuste propio
+wprs-ctl prop preset export Noche -f noche.json -o DP-1
+wprs-ctl prop preset import noche.json --save Noche -o HDMI-A-1
 wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon
 ```
 
-En la página *Ajustes* de la app, el botón *Ajustes de la escena* de cada pantalla que muestra una
-escena cambia sus propiedades al momento, aplica sus preajustes y da o retira el permiso de sonido
-y de puntero. La carpeta `scenes/` guarda cinco escenas de ejemplo de dominio público (CC0):
+En la página *Ajustes* de la app, el botón *Ajustes de la escena* (o *Ajustes del vídeo*) de cada
+pantalla cambia sus propiedades al momento, aplica sus preajustes, guarda, renombra y borra los
+propios, copia y pega los ajustes o los exporta e importa como un archivo pequeño, decide si la
+pantalla comparte sus valores con las demás y da o retira el permiso de sonido y de puntero. Los
+preajustes propios son del paquete (siguen tras actualizarlo) y viajan con la sincronización.
+
+Los autores describen sus propiedades en el manifiesto (`docs/specs/scene.md`): colores con
+transparencia, deslizadores con paso, decimales, unidades, escala logarítmica y casilla para
+escribir el número, listas con iconos y etiquetas traducidas, textos y textos secretos (que se
+guardan en el llavero del sistema y nunca llegan a `config.toml`, a los registros ni a la
+sincronización), separadores, etiquetas y grupos plegables, botones que lanzan eventos de la escena,
+y archivos y carpetas que elige el usuario con el selector de archivos, también vídeos, que
+sustituyen una imagen, un vídeo, una máscara o la textura de unas partículas del paquete sin
+reiniciar la escena. Cada propiedad puede mostrarse o activarse según las demás con condiciones
+como `mood == 2 || speed > 1.5`, de un lenguaje pequeño que se comprueba al validar el paquete y
+que no ejecuta código. Los scripts nunca ven las rutas de los archivos elegidos. Una carpeta solo
+se lee mientras la escena se ve. Mientras una pantalla comparte los valores con las demás, lo que
+se cambia en ella cambia en todas. Un paquete de vídeo ofrece velocidad (sin cambiar el tono ni
+dibujar más fotogramas), el tramo que se repite, volumen propio, zoom y posición, con los valores
+por defecto que elige el autor, y se aplican sin volver a empezar el vídeo.
+
+La carpeta `scenes/` guarda cinco escenas de ejemplo de dominio público (CC0):
 capas, modos de fusión, máscaras, línea de tiempo y profundidad que sigue al puntero o una órbita
 lenta con un mapa calculado a partir de sus formas (`dusk`), partículas, efectos y el sonido del
 viento (`snowfall`), análisis del sonido (`pulse`), puntero y el sonido del agua (`pond`) y un
@@ -732,9 +761,28 @@ otra página no cierra un editor con cambios sin guardar.
   nueva toma como idioma por defecto el del escritorio. Un manifiesto de la primera versión ofrece
   *Actualizar*, que hace lo mismo que `wprs-ctl pack upgrade` (fija el idioma por defecto y cambia
   `velocidad-nieve` por `velocidad_nieve` también en la escena) pero no adivina la clasificación,
-  los destellos ni el origen: quedan juntos en *Problemas* hasta que los eliges. Debajo, en
-  *Propiedades de usuario*, se añaden, ordenan y quitan, y se edita su tipo, etiqueta en cada
-  idioma, valor por defecto, rango y condición (`visible_if`).
+  los destellos ni el origen: quedan juntos en *Problemas* hasta que los eliges.
+- **Propiedades y preajustes**: *Propiedades de usuario* las lista en el orden del formulario, cada
+  grupo con sus miembros debajo, y sigue con los preajustes en la misma lista. Se añaden de
+  cualquier tipo (deslizador, interruptor, color, selección, texto, archivo, carpeta, botón, grupo,
+  etiqueta o separador) sin texto en ningún idioma, así que muestran su id hasta que les pones una
+  etiqueta; se suben y bajan, se meten en un grupo o se sacan (los grupos no se anidan), se
+  renombran (los enlaces, disparadores, grupos, condiciones y preajustes que las nombran cambian con
+  ellas; los scripts no, y se avisa de los que la nombran) y se quitan junto con sus valores en los
+  preajustes y en las condiciones de mapa, salvo mientras un enlace, un disparador o una expresión
+  las nombra: entonces se dice dónde. El inspector edita cada campo de su tipo: paso, unidad,
+  decimales, casilla para el número y escala logarítmica de un deslizador, valores, etiquetas e
+  iconos de las opciones, color con transparencia, textos secretos, grupos plegados, archivos que
+  acepta y recurso por defecto, carpetas con su orden y su intervalo, icono y orden, y muestra los
+  textos `"@clave"` con los de `strings`. `visible_if` y `enabled_if` se escriben como una expresión
+  del lenguaje de las condiciones o como un mapa JSON y se comprueban mientras escribes; solo se
+  guarda una condición válida, y un problema de una condición o de un preajuste lleva a su campo.
+  *Preajustes* lista los del paquete y *Añadir un preajuste* crea otro, con una fila por cada
+  propiedad que pueden fijar. Solo las propiedades con valor se pueden enlazar, y el disparador de
+  una línea de tiempo se elige entre `start`, `beat`, los botones y esas propiedades. Un valor que
+  sigue a una selección o a un interruptor (la imagen de una capa, una máscara, la textura de unas
+  partículas, un vídeo o un color) muestra la propiedad que lo guía y una fila por opción para
+  elegir su variante. `requires.features` sigue a los tipos y campos nuevos que se usan.
 - **Recursos**: importa imágenes, vídeos, sonidos, fuentes y tablas `.cube` dentro de los límites
   del formato y borra los archivos que la escena ya no usa.
 - **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
@@ -765,6 +813,13 @@ wprs-ctl scene translate mar /manifest/title es Mar     # otro idioma; --add no 
 wprs-ctl scene set mar /manifest/content '{"rating": "mature", "descriptors": ["violence"]}'
 wprs-ctl scene thumbnail mar captura.png                # miniatura en assets/, reducida si hace falta
 wprs-ctl scene upgrade vieja --rating general --photosensitive false   # como pack upgrade, con deshacer
+wprs-ctl scene add-property mar combo --id tiempo      # y move-property, rename-property, remove-property
+wprs-ctl scene set mar /manifest/properties/tiempo/options '["calma", "tormenta"]'
+wprs-ctl scene set mar /manifest/properties/tiempo/default calma
+wprs-ctl scene add-property mar slider --id velocidad --label Speed
+wprs-ctl scene translate mar /manifest/properties/velocidad/label es Velocidad
+wprs-ctl scene condition mar velocidad "tiempo == 'tormenta'" --enabled   # comprobada como en validate
+wprs-ctl scene add-preset mar --label Calm && wprs-ctl scene set mar /manifest/presets/0/values/tiempo calma
 wprs-ctl scene group mar near far --id colinas && wprs-ctl scene hide mar sky
 wprs-ctl scene undo mar && wprs-ctl scene history mar
 wprs-ctl scene validate mar                             # problemas, cada uno con su JSON Pointer

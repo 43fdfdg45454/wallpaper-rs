@@ -12,13 +12,11 @@ impl Painter<'_, '_, '_> {
         let mut item = Item { uv: [0.0, 0.0, 1.0, 1.0], color: [opacity; 4], ..Item::default() };
         item.size = [0.0, 0.0, 1.0, f32::from(u8::from(srgb))];
         match &d.content {
-            Content::Image { asset, .. } => {
-                let images = self.images;
-                Some(("fs_texture", item, self.ext(&images.get(asset.as_ref())?.0)))
-            }
-            Content::Video { asset, .. } => {
-                let videos = self.videos;
-                Some(("fs_texture", item, self.ext(videos.iter().find(|(id, _)| id == asset)?.1)))
+            Content::Image { asset, .. } | Content::Video { asset, .. } => {
+                let (images, videos) = (self.images, self.videos);
+                let video = videos.iter().find(|(id, _)| id == asset).map(|(_, v)| *v);
+                let found = video.or_else(|| images.get(asset.as_ref()).map(|(i, _)| i))?;
+                Some(("fs_texture", item, self.ext(found)))
             }
             Content::Text { color, .. } => {
                 let texts = self.texts;
@@ -80,7 +78,7 @@ impl Painter<'_, '_, '_> {
         };
         item.quad = quad;
         (item.m0, item.m1) = ndc(target.rect, m);
-        let masked = self.mask(&mut item, mask, m, size, target);
+        let masked = self.mask(&mut item, (i, mask), m, size, target);
         let (mode, back) = self.blend(&mut item, blend, bounds, target, atop);
         let slot = self.pool.push(&item);
         self.ops.push(Op::Draw { target: target.src, entry, mode, slot, tex: [src, masked, back] });
@@ -100,7 +98,7 @@ impl Painter<'_, '_, '_> {
         let (m, size) = self
             .geometry(i)
             .map_or((rect.affine(), [rect.w, rect.h]), |(size, _)| (self.local(i, size), size));
-        let masked = self.mask(&mut item, d.mask, m, size, target);
+        let masked = self.mask(&mut item, (i, d.mask), m, size, target);
         let (mode, back) = self.blend(&mut item, d.blend, bounds, target, atop);
         let slot = self.pool.push(&item);
         self.ops.push(Op::Draw {
@@ -143,17 +141,19 @@ impl Painter<'_, '_, '_> {
     fn mask(
         &mut self,
         item: &mut Item,
-        mask: Option<&Mask>,
+        (i, mask): (usize, Option<&Mask>),
         m: Affine,
         size: [f32; 2],
         target: Target,
     ) -> Src {
         let Some(mask) = mask else { return Src::White };
+        let frame = self.frame;
+        let texture = frame.draws[i].mask_texture.as_deref();
         let to_local = invert(m).then(Affine::translate([target.rect.x, target.rect.y]));
         item.mask_info = [1.0, f32::from(u8::from(mask.invert)), mask.feather, 0.0];
         item.channel = channel(mask.channel, mask.texture.is_some());
         let images = self.images;
-        let (affine, src) = if let Some(id) = &mask.texture {
+        let (affine, src) = if let Some(id) = texture {
             let image = images.get(id).map(|(image, _)| image);
             (to_local, image.map_or(Src::White, |image| self.ext(image)))
         } else if let Some(id) = &mask.layer {

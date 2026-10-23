@@ -57,7 +57,7 @@ layer's own box (default `[0.5, 0.5]`, or the anchor point).
 |--------|--------|
 | `group` | `layers`, `clip` (later children only show where the first one is) |
 | `image` | `image` (asset id), `size` |
-| `video` | `video` (asset id), `size`; plays in a loop |
+| `video` | `video` (asset id, or a value such as `{ "prop", "map" }`), `size`; plays in a loop |
 | `text` | `text`, `font` (asset id or system family), `size`, `color`, `align` |
 | `shape` | `shape` (`rect` with `radius`, `ellipse`, `ring`, `polygon`, `star`, `line`), `fill`, `gradient` (`radial`, `from`, `to`, 2 to 4 `stops`), `stroke` (`color`, `width`) |
 | `spectrum` | `size`, `style` (`bars`, `circle`, `wave`), `bands` (16, 32 or 64), `channel`, `color`, `gap` |
@@ -94,7 +94,8 @@ Easings are `linear`, `step`, `hold`, `in_`, `out_` or `in_out_` followed by `si
 `[x1, y1, x2, y2]`. Colors interpolate per channel.
 
 `timelines` (at most 64) have `id`, `duration`, `loop` (`once`, `repeat`, `pingpong`), `speed`,
-`delay`, `autoplay` and `trigger` (`start`, `beat` or `prop:<id>`). The scene
+`delay`, `autoplay` and `trigger` (`start`, `beat` or `prop:<id>`, which also fires when the
+`button` setting `id` is pressed). The scene
 clock only runs while the output is shown and active, keeps real time while a still scene waits
 (up to ten minutes between frames, in steps of at most 0.1 s), and never catches up after a pause.
 
@@ -291,31 +292,92 @@ warm-up frames.
 
 ## User properties and presets
 
-User properties are declared in the manifest, under `properties` (id → definition), and scenes
-refer to them by id. Each has a `type` and `label`, `help`, `group`, `visible_if` and `order`:
+User properties (settings) are declared in the manifest, under `properties` (id → definition), and
+scenes refer to them by id. Each has a `type` and may set `label`, `help`, `group`, `visible_if`,
+`enabled_if`, `order` and `icon`:
 
 | `type` | Fields | Value |
 |--------|--------|-------|
 | `color` | `default`, `alpha` | `#rrggbb` or `#rrggbbaa` |
-| `slider` | `min`, `max`, `step`, `default`, `integer`, `unit` | number, clamped to the range |
+| `slider` | `min`, `max`, `default`, `step`, `decimals` (0 to 6), `integer`, `unit`, `editable`, `log` | number, clamped to the range, aligned to the step and rounded to the decimals |
 | `bool` | `default` | `true` or `false` |
-| `combo` | `options` (strings or `{ "value", "label" }`), `default` | one of the options |
-| `text` | `default`, `max_len` (≤ 1024), `multiline` | text |
-| `file` | `accept` | absolute path of an image chosen by the user, or `null` |
-| `group`, `label` | | presentation only |
+| `combo` | `options` (values or `{ "value", "label", "icon" }`, at most 64), `default` | one of the option values: texts, numbers or `true` and `false`, all of one kind |
+| `text` | `default`, `max_len` (≤ 1024), `multiline`, `secret` | text |
+| `file` | `accept` (`image`, `video`), `default_asset` | absolute path of a file chosen by the user, or `null` |
+| `folder` | `accept`, `pick` (`random`, `sequence`), `every` (10 to 86400 s) | absolute path of a folder chosen by the user, or `null` |
+| `button` | | none; pressing it is an event |
+| `group` | `collapsed` | none; the properties that name it are listed under it |
+| `label`, `divider` | | none; a line of text, or a line across the form with an optional label (a divider without one shows no text) |
 
-`presets` is a list of `{ "id", "label", "values" }`; a preset cannot set a `file` property. Values
-are changed through `GetSceneProperties`, `SetSceneProperty`, `ApplyScenePreset` and
-`ResetSceneProperties` (`dbus.md`) or `wprs-ctl prop`, and stored in `config.toml`. A stored value
-whose property no longer exists, changed its type or falls outside its range after an update of the
-package is ignored for the default, with a warning in the log, in `GetSceneProperties` (`warnings`)
-and in `wprs-ctl prop ls`. Labels and help are text or `{ "<language>": text }`, and in
-`wallpaper-rs.wpak/2` also `"@key"` of the manifest's `strings`; ids and limits depend on the
-manifest version (`package.md`). `group` names a property of type `group`, under which the property
-is listed; `visible_if` (`{ "<other id>": value }`) hides it while another property has a different
-value; `order` sorts properties and groups. The app shows these forms under *Scene settings* for
-each screen on its Settings page. The scenes in the `scenes/` folder of the repository are examples
-of this format, dedicated to the public domain.
+A slider without `step` moves in steps of its decimals, which come from `decimals`, else from
+`step`, else two (none for `integer`); its value is always rounded to them. `editable` adds a box to
+type the number and `log` spreads the range logarithmically (it needs `min > 0`). `order` is any
+number: properties sort by it and then by id, and the members of a group follow it in their own
+order; a group cannot be in another group. An option of a combo with an empty label shows its value.
+`icon` is one of `appointment-soon`, `audio-volume-high`, `audio-volume-muted`, `audio-x-generic`,
+`camera-photo`, `dialog-information`, `document-open`, `edit-find`, `emblem-favorite`, `folder`,
+`go-home`, `image-x-generic`, `input-keyboard`, `input-mouse`, `media-playback-start`,
+`media-playlist-repeat`, `media-playlist-shuffle`, `preferences-desktop-theme`,
+`preferences-system`, `text-x-generic`, `video-display`, `video-x-generic`, `view-refresh`,
+`weather-clear`, `weather-clear-night`, `weather-few-clouds`, `weather-overcast`, `weather-showers`,
+`weather-snow`, `weather-storm`, `x-office-calendar` or `zoom-in`, symbolic icons of the desktop
+theme; other names of `[a-z0-9-]` are accepted and not shown, so that newer versions can add icons.
+Packages never bring their own icons.
+
+`visible_if` hides a property and `enabled_if` greys it out while a condition does not hold, and a
+group's conditions apply to its members. A condition is a map `{ "<other id>": value }` (all must
+match) or an expression of a small language, never code: property ids, numbers, texts in `'…'` or
+`"…"`, `true`, `false`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `!` and parentheses, such as
+`"mood == 2 || speed > 1.5"`. An expression has at most 256 characters and 8 levels of nesting;
+it may compare a property only with a value of the same kind (`<` and the like only numbers), and
+the validator refuses unknown ids, properties without a value, conditions that are not true or
+false and conditions that depend on themselves through other properties.
+
+A `button` holds no value: pressing it (`PressSceneButton`, `wprs-ctl prop press`) starts the
+timelines whose `trigger` is `prop:<id>` and shows the press to the scripts for one frame, and it
+cannot be pressed while its `enabled_if` or that of its group does not hold. Only a property that
+holds a value may be followed with `{ "prop" }`, and a `trigger` `prop:<id>` names a button or such
+a property. A `secret` text has no default and is kept in the Secret Service on the desktop and
+sealed by the Android keystore on the phone, never in `config.toml`, logs, presets, exported
+settings or sync; a scene reads it as an empty text, since only content allowed to use the network
+may receive it.
+
+A `file` chosen by the user replaces the asset named by `default_asset` wherever the scene uses it
+(image and video layers, masks, effect textures and particle textures), and also shows wherever
+`{ "prop": "<id>" }` names the property, with or without `default_asset`. Images are decoded like
+the scene's own; with `accept: ["video"]` a video plays in image and video layers without sound,
+in a loop and paused with the scene, while masks, effect textures and particles keep the package's
+own asset. Image and video layers, the `texture` parameters of effects, the `texture` of masks and
+the `render.texture` of particles take `{ "prop", "map" }`, so that a combo or a flag switches
+between assets of the package (variants), and `{ "prop": "<id>" }` of a `file`; `wprs-ctl pack
+check` warns when the images of the variants of one place do not share one proportion. A new
+choice replaces only the textures it touches: the clock, the timelines, the particles (unless
+their own texture changed) and the scripts of the scene go on. A `folder` shows one of its
+images (or videos, with `accept`) in an image layer bound to it with `{ "prop": "<id>" }`, picked
+at random or in order and changed every `every` seconds while the scene is shown; only the folder
+itself is read, without following links out of it or reading hidden files, at most 1000 of them,
+and nothing is read while the scene is not shown, paused, covered or behind the lock screen: a
+turn missed then happens once when the scene shows again. Files and folders are chosen by the user
+through the file chooser, are never set by presets and never travel with exported settings or sync.
+
+`presets` is a list of `{ "id", "label", "values" }`; a preset cannot set files, folders, secrets
+or buttons. Values are changed through `GetSceneProperties`, `SetSceneProperty`,
+`ApplyScenePreset` and `ResetSceneProperties` (`dbus.md`) or `wprs-ctl prop`, and stored in
+`config.toml`, once for every screen or per screen: a screen without values of its own follows
+and changes the shared ones until it gets its own copy (`ShareSceneValues`, `wprs-ctl prop share`,
+*Same settings on every screen* in the app), which it keeps even when emptied by a reset. The
+user can also save the current values as a preset of their own, rename, delete, export it to a
+small file and import it back (`{"format": "wpak-values/1", "package", "version", "values"}`); saved
+presets belong to the package id, survive updates and travel with sync. A stored value whose
+property no longer exists, changed its type or falls outside its range after an update of the
+package is ignored for the default, with a warning in the log, in `GetSceneProperties`
+(`warnings`) and in `wprs-ctl prop ls`. Labels, help, option labels and preset labels are text or
+`{ "<language>": text }`, and in `wallpaper-rs.wpak/2` also `"@key"` of the manifest's `strings`;
+ids and limits depend on the manifest version (`package.md`), and the newer kinds and fields above
+need the second version and its feature `properties2` (`folder` and `user_videos` for folders and
+videos chosen by the user). The app shows these forms under *Scene settings* for each screen on its
+Settings page, and the Android app on the page of the scene. The scenes in the `scenes/` folder of
+the repository are examples of this format, dedicated to the public domain.
 
 ## Inputs
 
@@ -356,7 +418,11 @@ export function update({ time }) {
 ```
 
 `engine` has `time`, `dt` and `locale` (the language picked among the package's languages, as for
-its texts, in lowercase, or `""` when it declares none), `props.get(id)` the user properties,
+its texts, in lowercase, or `""` when it declares none), `props.get(id)` the user properties
+(a chosen file or folder reads `"wpak-user://<id>"`, never its path, and `null` while none is
+chosen), `props.label(id)` the label of the chosen option of a combo in that language,
+`props.color(id)` a color as `{ r, g, b, a }` from 0 to 1, `props.pressed(id)` whether a button was
+pressed since the last frame,
 `audio` `bands(16 | 32 | 64, "left" | "right" | "average")`, `bass`, `mid`, `treble`, `level` and
 `beat`, `input.cursor` `x`, `y`, `inside` and `buttons`. `scene.layer(id)` overrides `position`,
 `scale`, `rotation`, `opacity`, `visible`, `color` and `text` for the next frame, and `timeline(id)`

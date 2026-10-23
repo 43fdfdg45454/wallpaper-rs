@@ -8,23 +8,69 @@ ColumnLayout {
     id: field
 
     required property var daemon
+    required property string output
     required property var modelData
+    property bool folded: false
     readonly property string kind: modelData.kind
     readonly property string text: String(modelData.value ?? "")
+    readonly property bool log: modelData.log === true
+    readonly property real low: modelData.min ?? 0
+    readonly property real high: modelData.max ?? 1
+    readonly property int places: modelData.decimals ?? 0
 
     signal edited(string key, var value)
+    signal fold(string key, bool on)
 
     function hex(c) {
         const parts = modelData.alpha ? [c.r, c.g, c.b, c.a] : [c.r, c.g, c.b];
         return "#" + parts.map(v => Math.round(v * 255).toString(16).padStart(2, "0")).join("");
     }
 
-    QQC2.Label {
+    function toValue(p) {
+        return log ? low * Math.pow(high / low, p) : p;
+    }
+
+    function toPosition(v) {
+        return log ? Math.log(Math.max(v, low) / low) / Math.log(high / low) : v;
+    }
+
+    function shown(v) {
+        return Number(v).toLocaleString(Qt.locale(), "f", places) + (modelData.unit ? " " + modelData.unit : "");
+    }
+
+    enabled: modelData.enabled !== false
+
+    Kirigami.Separator {
         Layout.fillWidth: true
-        text: field.modelData.label + (field.kind === "slider" ? ": " + Math.round(slider.value * 1000) / 1000 + (field.modelData.unit ? " " + field.modelData.unit : "") : "")
-        textFormat: Text.PlainText
-        font.bold: field.kind === "group"
-        wrapMode: Text.Wrap
+        visible: field.kind === "divider" || field.kind === "group"
+    }
+
+    RowLayout {
+        visible: field.kind !== "button" && field.modelData.label !== ""
+
+        QQC2.ToolButton {
+            visible: field.kind === "group"
+            icon.name: field.folded ? "go-next" : "go-down"
+            display: QQC2.AbstractButton.IconOnly
+            text: field.folded ? field.daemon.tr("Show") : field.daemon.tr("Hide")
+            onClicked: field.fold(field.modelData.key, !field.folded)
+        }
+
+        Kirigami.Icon {
+            visible: field.modelData.icon !== "" && field.modelData.icon !== undefined
+            source: field.modelData.icon ?? ""
+            implicitWidth: Kirigami.Units.iconSizes.small
+            implicitHeight: implicitWidth
+        }
+
+        QQC2.Label {
+            Layout.fillWidth: true
+            text: field.modelData.label + (field.kind === "slider" ? ": " + field.shown(field.toValue(slider.value)) : "")
+            textFormat: Text.PlainText
+            font.bold: field.kind === "group"
+            font.italic: field.kind === "divider"
+            wrapMode: Text.Wrap
+        }
     }
 
     QQC2.Switch {
@@ -34,23 +80,40 @@ ColumnLayout {
         onToggled: field.edited(field.modelData.key, checked)
     }
 
-    QQC2.Slider {
-        id: slider
-
+    RowLayout {
         Layout.fillWidth: true
         visible: field.kind === "slider"
-        from: field.modelData.min ?? 0
-        to: field.modelData.max ?? 1
-        stepSize: field.modelData.step ?? 0
-        snapMode: QQC2.Slider.SnapAlways
-        value: Number(field.modelData.value ?? 0)
-        onMoved: settle.restart()
 
-        Timer {
-            id: settle
+        QQC2.Slider {
+            id: slider
 
-            interval: 150
-            onTriggered: field.edited(field.modelData.key, Math.round(slider.value * 10000) / 10000)
+            Layout.fillWidth: true
+            Accessible.name: field.modelData.label
+            from: field.log ? 0 : field.low
+            to: field.log ? 1 : field.high
+            stepSize: field.log ? 0 : (field.modelData.step ?? 0)
+            snapMode: QQC2.Slider.SnapAlways
+            value: field.toPosition(Number(field.modelData.value ?? field.low))
+            onMoved: settle.restart()
+
+            Timer {
+                id: settle
+
+                interval: 150
+                onTriggered: field.edited(field.modelData.key, field.toValue(slider.value))
+            }
+        }
+
+        QQC2.TextField {
+            visible: field.modelData.editable === true
+            Accessible.name: field.modelData.label
+            implicitWidth: Kirigami.Units.gridUnit * 5
+            text: Number(field.modelData.value ?? field.low).toLocaleString(Qt.locale(), "f", field.places)
+            onEditingFinished: {
+                const typed = Number.fromLocaleString(Qt.locale(), text);
+                if (!isNaN(typed))
+                    field.edited(field.modelData.key, typed);
+            }
         }
     }
 
@@ -74,57 +137,36 @@ ColumnLayout {
 
     QQC2.ComboBox {
         visible: field.kind === "combo"
+        Accessible.name: field.modelData.label
         model: field.modelData.options
         textRole: "label"
         valueRole: "value"
-        currentIndex: field.modelData.options.findIndex(option => option.value === field.modelData.value)
+        currentIndex: (field.modelData.options ?? []).findIndex(option => option.value === field.modelData.value)
         onActivated: field.edited(field.modelData.key, currentValue)
+
+        delegate: QQC2.ItemDelegate {
+            required property var modelData
+
+            width: ListView.view?.width ?? implicitWidth
+            text: modelData.label
+            icon.name: modelData.icon
+        }
     }
 
-    QQC2.TextField {
+    QQC2.Button {
+        visible: field.kind === "button"
+        text: field.modelData.label
+        icon.name: field.modelData.icon || "media-playback-start"
+        onClicked: field.daemon.act("PressSceneButton", [field.output, field.modelData.key])
+    }
+
+    SceneEntry {
         Layout.fillWidth: true
-        visible: field.kind === "text" && !field.modelData.multiline
-        text: field.text
-        maximumLength: field.modelData.max_len ?? 1024
-        onEditingFinished: {
-            if (text !== field.text)
-                field.edited(field.modelData.key, text);
-        }
-    }
-
-    QQC2.TextArea {
-        Layout.fillWidth: true
-        visible: field.kind === "text" && field.modelData.multiline
-        text: field.text
-        onEditingFinished: {
-            if (text !== field.text)
-                field.edited(field.modelData.key, text);
-        }
-    }
-
-    RowLayout {
-        visible: field.kind === "file"
-
-        QQC2.Button {
-            text: field.text.split("/").pop() || field.daemon.tr("Choose…")
-            icon.name: "document-open"
-            onClicked: files.open()
-        }
-
-        QQC2.ToolButton {
-            visible: field.text !== ""
-            icon.name: "edit-clear"
-            text: field.daemon.tr("Clear")
-            display: QQC2.AbstractButton.IconOnly
-            onClicked: field.edited(field.modelData.key, null)
-        }
-
-        FileDialog {
-            id: files
-
-            nameFilters: [field.daemon.tr("Images") + " (*.png *.jpg *.jpeg *.webp *.gif *.bmp)"]
-            onAccepted: field.edited(field.modelData.key, field.daemon.path(selectedFile))
-        }
+        daemon: field.daemon
+        output: field.output
+        modelData: field.modelData
+        visible: ["text", "file", "folder"].includes(field.kind)
+        onEdited: (key, value) => field.edited(key, value)
     }
 
     QQC2.Label {

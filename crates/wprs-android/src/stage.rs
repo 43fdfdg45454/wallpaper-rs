@@ -1,6 +1,6 @@
 use crate::pack::Pack;
 use crate::power::{Power, delay_ms};
-use crate::{hearing, props};
+use crate::{hearing, props, saved};
 use chrono::Timelike;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
@@ -28,6 +28,7 @@ pub(crate) struct Stage {
     tick: Option<i64>,
     due: Option<i64>,
     touch: (Option<[f32; 2]>, u8, bool),
+    restock: bool,
 }
 
 pub(crate) struct Shot<'a> {
@@ -64,13 +65,17 @@ impl Stage {
             tick,
             due,
             touch,
+            restock: false,
         }
     }
 
     pub(crate) fn refresh(&mut self) {
         self.granted = props::granted(&self.pack.id);
         let changed = self.runtime.set_props(props::values(&self.pack));
-        self.touch.2 |= changed;
+        self.restock |= changed;
+        let pressed = saved::pressed(&self.pack.id);
+        pressed.iter().for_each(|key| self.runtime.press(key));
+        self.touch.2 |= changed || !pressed.is_empty();
     }
 
     pub(crate) fn wants(&self) -> [bool; 2] {
@@ -144,8 +149,11 @@ impl Stage {
         self.quality = quality;
         let scale = quality.render_scale();
         let inner = [size.0, size.1].map(|v| (v as f32 * scale).round().max(1.0) as u32);
+        if let Some(view) = self.view.as_mut().filter(|_| std::mem::take(&mut self.restock)) {
+            r.refresh_scene(view, (&self.pack.scene, self.runtime.props()), &self.pack.assets)?;
+        }
         if self.view.is_none() {
-            self.view = Some(r.scene_view(&self.pack.scene, &self.pack.assets)?);
+            self.view = Some(r.scene_view(&self.pack.scene, &self.pack.assets, self.runtime.props())?);
         }
         let view = self.view.as_mut().expect("created above");
         let frame = self.runtime.frame(view.view((inner[0], inner[1])), quality);

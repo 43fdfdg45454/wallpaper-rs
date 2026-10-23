@@ -201,7 +201,7 @@ fn properties_check_and_clamp_values() {
     assert!(props.values().all(|p| p.check().is_ok()));
     let check = |id: &str, v: serde_json::Value| props[id].value(&v);
     assert_eq!(check("depth", json!(3.0)), Ok(json!(1.0)));
-    assert_eq!(check("density", json!(55.4)), Ok(json!(55)));
+    assert_eq!(check("density", json!(55.4)), Ok(json!(60)));
     assert_eq!(check("text_color", json!("#A0B0C0")), Ok(json!("#a0b0c0")));
     assert!(check("text_color", json!("#a0b0c0ff")).is_err());
     assert!(check("style", json!("noon")).is_err() && check("style", json!("dawn")).is_ok());
@@ -270,7 +270,8 @@ fn forms_order_localize_and_hide_properties() {
     let find = |key: &str| fields.iter().find(|f| f.key == key).unwrap();
     assert!(!find("show_clock").visible && find("soft").visible && find("density").integer);
     let style = find("style");
-    let options: Vec<_> = style.options.iter().map(|o| (o.value.as_str(), o.label.as_str())).collect();
+    let options: Vec<_> =
+        style.options.iter().map(|o| (o.value.as_str().unwrap(), o.label.as_str())).collect();
     assert_eq!((style.label.as_str(), options), ("Style", vec![("night", "Night"), ("dawn", "dawn")]));
     assert_eq!(
         (labels[0].label.as_str(), form(&props, &presets, &values, &[]).1[0].label.as_str()),

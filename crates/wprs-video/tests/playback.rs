@@ -2,7 +2,7 @@ use gstreamer::prelude::*;
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
-use wprs_video::{Event, Frame, Options, Player, is_video};
+use wprs_video::{Cut, Event, Frame, Options, Player, is_video};
 
 const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures/magenta-64x32.webm");
 const MAGENTA_RGB: [u8; 3] = [0xd0, 0x20, 0x60];
@@ -11,7 +11,7 @@ const WAIT: Duration = Duration::from_secs(5);
 
 fn play(path: &Path, max_size: (u32, u32)) -> Result<(Player, Receiver<Event>), wprs_video::Error> {
     let (tx, rx) = mpsc::channel();
-    let options = Options { max_size, max_fps: 60, volume: 0.0, muted: true };
+    let options = Options { max_size, max_fps: 60, volume: 0.0, muted: true, cut: Cut::default() };
     Player::open(path, options, move |event| {
         let _ = tx.send(event);
     })
@@ -103,7 +103,7 @@ fn loops_past_the_end() {
 
 #[test]
 fn a_lower_frame_rate_cap_applies_while_playing() {
-    let Some((player, rx)) = open((64, 32)) else { return };
+    let Some((mut player, rx)) = open((64, 32)) else { return };
     let count = |span: Duration| {
         let deadline = Instant::now() + span;
         std::iter::from_fn(|| (Instant::now() < deadline).then(|| next_frame(&rx, WAIT)).flatten()).count()
@@ -169,7 +169,7 @@ fn videos_with_sound_play_without_a_pipewire_audio_output() {
         "cannot encode a clip with sound"
     );
     let (tx, rx) = mpsc::channel();
-    let options = Options { max_size: (64, 32), max_fps: 30, volume: 0.5, muted: false };
+    let options = Options { max_size: (64, 32), max_fps: 30, volume: 0.5, muted: false, cut: Cut::default() };
     let player = Player::open(&clip, options, move |event| drop(tx.send(event))).unwrap();
     let first = next_frame(&rx, Duration::from_secs(10));
     let deadline = Instant::now() + Duration::from_millis(2500);

@@ -7,6 +7,10 @@ use std::collections::HashMap;
 use wprs_core::config::parse_hex_color;
 use wprs_core::model::{MODEL, PresetValue, PresetsReply};
 
+fn placing(preset: &wprs_library::Preset) -> bool {
+    preset.package().is_none()
+}
+
 fn scope(item: &str) -> Option<&str> {
     Some(item.trim()).filter(|item| !item.is_empty())
 }
@@ -39,7 +43,8 @@ impl Daemon {
 
     pub fn list_presets(&self, item: &str) -> Result<String> {
         let (serial, item) = (self.changes.serial(), scope(item));
-        let presets = self.store.read(|lib| lib.presets(item))?.into_iter().map(preset).collect();
+        let found = self.store.read(|lib| lib.presets(item))?.into_iter();
+        let presets = found.filter(placing).map(preset).collect();
         reply(PresetsReply { model: MODEL, serial, item: item.map(String::from), presets })
     }
 
@@ -48,7 +53,11 @@ impl Daemon {
         let json = stored(&value);
         let (uid, replaced) = self.store.write(|lib| {
             Ok::<_, Error>(
-                match lib.presets(item)?.into_iter().find(|p| p.name.eq_ignore_ascii_case(name.trim())) {
+                match lib
+                    .presets(item)?
+                    .into_iter()
+                    .find(|p| placing(p) && p.name.eq_ignore_ascii_case(name.trim()))
+                {
                     Some(found) => {
                         lib.update_preset(&found.uid, &json)?;
                         (found.uid, true)

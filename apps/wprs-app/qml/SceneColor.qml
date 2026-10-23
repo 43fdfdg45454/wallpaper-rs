@@ -6,6 +6,7 @@ QQC2.Button {
     id: swatch
 
     property string hex: "#ffffff"
+    property bool alpha: true
 
     signal picked(string hex)
 
@@ -18,7 +19,7 @@ QQC2.Button {
         id: dialog
 
         selectedColor: swatch.icon.color
-        options: ColorDialog.ShowAlphaChannel
-        onAccepted: swatch.picked("#" + [selectedColor.r, selectedColor.g, selectedColor.b, selectedColor.a].map(v => Math.round(v * 255).toString(16).padStart(2, "0")).join("").replace(/ff$/, ""))
+        options: swatch.alpha ? ColorDialog.ShowAlphaChannel : 0
+        onAccepted: swatch.picked("#" + [selectedColor.r, selectedColor.g, selectedColor.b].concat(swatch.alpha ? [selectedColor.a] : []).map(v => Math.round(v * 255).toString(16).padStart(2, "0")).join("").replace(/^(#[0-9a-f]{6})ff$/, "$1"))
     }
 }

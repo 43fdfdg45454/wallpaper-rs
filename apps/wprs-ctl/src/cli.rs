@@ -173,7 +173,7 @@ pub enum Command {
     },
     #[command(about = "Cancel a queued or running job")]
     Cancel { id: u64 },
-    #[command(subcommand, about = "Properties of the scene shown on an output")]
+    #[command(subcommand, about = "Settings of the scene or video package shown on an output")]
     Prop(Prop),
     #[command(
         subcommand,

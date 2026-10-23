@@ -62,12 +62,12 @@ QQC2.ToolButton {
             title: App.tr("Follow a user property")
 
             Repeater {
-                model: bind.page.view.properties ?? []
+                model: (bind.page.view.properties ?? []).filter(p => !["button", "group", "label", "divider"].includes(p.type))
 
                 delegate: QQC2.MenuItem {
                     required property var modelData
 
-                    text: modelData.id
+                    text: modelData.label
                     onTriggered: bind.bound({
                             "prop": modelData.id
                         })

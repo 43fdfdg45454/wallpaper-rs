@@ -312,36 +312,93 @@ returns `InvalidArgs`.
 
 ### `GetSceneProperties(s output) → (s json)`
 
-A `SceneProperties` document for the scene package shown on `output`, or for `output = ""` the
-one set in the `[default]` section: its user properties as declared in its manifest, their
-current values and its presets. `NotFound` when no scene package is shown there. `fields` lists
-the properties in the order to show them (by `order`, each group followed by its members), with
-labels, help and option labels in the language of the daemon's locale and `visible` false while
-a `visible_if` condition of the property or of its group does not hold; `preset_labels` names
-the presets the same way. Clients draw their forms from `fields` alone. `warnings` lists stored
-values that the package no longer accepts (a property removed, retyped or with a narrower range
-after an update), which are ignored for their defaults (`scene.md`).
+A `SceneProperties` document for the package shown on `output`, or for `output = ""` the one set in
+the `[default]` section: a scene package or a video package (`kind`), its settings as declared in
+its manifest (for a video package, the playback settings described in `package.md`), their current
+values, its presets and the presets the user saved for it. `NotFound` when no such package is shown
+there. `fields` lists the settings in the order to show them (by `order`, each group followed by its
+members), with labels, help and option labels in the language of the daemon's locale, `visible`
+false while a `visible_if` condition of the setting or of its group does not hold and `enabled`
+false while an `enabled_if` condition of the setting or of its group does not hold; `preset_labels`
+names the presets of the package the same way and `user_presets` the saved ones (`value` is their
+uid). Clients draw their forms from `fields` alone: `decimals` (always given for sliders, 0 for
+whole numbers), `step`, `editable` and `log` describe sliders, a `divider` without a label has
+`label` `""`, `icon` is one of the icons of `scene.md` or `""`, `group` names the group of a member,
+`collapsed` is the initial state of a group, and `accept` the kinds of file a `file` or `folder`
+takes. The value of a `file` or `folder` field is the chosen path or `null` (the package's own
+asset). A `secret` text never shows its value: `filled` tells whether one is stored. `shared` is
+true when the screen follows the values of the `[default]` section rather than its own. `warnings`
+lists stored values that the package no longer accepts (a setting removed, retyped or with a
+narrower range after an update), which are ignored for their defaults (`scene.md`).
 
 ### `SetSceneProperty(s output, s id, s value_json)`
 
-Sets one user property of the scene shown on `output` (`""` = the `[default]` section, used by
-every output without its own value) to `value_json`, a JSON value of the property's type: a
-`#rrggbb` (or `#rrggbbaa` with `alpha`) string for `color`, a number for `slider`, `true` or
-`false` for `bool`, one of the options for `combo`, a string for `text` and an absolute path or
-`null` for `file`. Numbers out of range are clamped and integers rounded; anything else that does
-not fit, an unknown `id` and a file that cannot be read as an image return `InvalidArgs`. Values
-are stored per output and per package id in the configuration file (see "Configuration file"),
-never inside the package, and apply at once without reloading the scene.
+Sets one setting of the package shown on `output` (`""` = the `[default]` section, used by every
+output without its own values) to `value_json`, a JSON value of the setting's type: a `#rrggbb` (or
+`#rrggbbaa` with `alpha`) string for `color`, a number for `slider`, `true` or `false` for `bool`,
+the value of one of the options for `combo`, a string for `text`, and an absolute path or `null` for
+`file` and `folder`. Numbers out of range are clamped, aligned to the step and rounded to the
+decimals; anything else that does not fit, an unknown `id`, a `button`, `group`, `label` or
+`divider`, a file of a kind the setting does not accept or that cannot be read as an image or a
+video, and a folder that is not one return `InvalidArgs`. Values are stored per package id in the
+configuration file (see "Configuration file"), never inside the package: in the section of `output`
+when that screen has its own values for the package, otherwise in the `[default]` section that the
+screens without their own values share. They apply at once without reloading the scene. A `secret`
+text is stored in the Secret Service instead, once for every output (`KeyringUnavailable` without
+one), and `""` forgets it; it never reaches the configuration, the logs, exported settings or sync.
 
 ### `ApplyScenePreset(s output, s preset)`
 
-Stores every value of the preset `preset` of the scene shown on `output`, as `SetSceneProperty`
-would. `NotFound` for a preset the package does not declare.
+Stores every value of a preset as `SetSceneProperty` would: a preset of the package by its id or its
+label, or a saved preset by its uid or name, ignoring case. Files, folders and secrets are never
+part of a preset. `NotFound` for a preset that does not exist.
 
 ### `ResetSceneProperties(s output)`
 
-Forgets the values stored for the scene shown on `output` (`""` = the `[default]` section), so its
-properties take their defaults or the `[default]` values again.
+Forgets the values stored for the package shown on `output` (`""` = the `[default]` section): the
+screen's own values when it has them, which it keeps having (empty), or else the shared ones, so its
+settings take their defaults. Secrets stay stored.
+
+### `SaveScenePreset(s output, s name) → (s preset)`
+
+Saves the current values of the package shown on `output` as a preset named `name` and returns its
+uid; saving a name the package already has replaces that preset and keeps its uid. Saved presets
+belong to the package id, so they survive updates of the package, live in the library and travel
+with sync to the user's other devices.
+
+### `RenameScenePreset(s preset, s name)`
+
+Renames a saved preset. `Exists` when the package already has a preset of that name.
+
+### `DeleteScenePreset(s preset)`
+
+Deletes a saved preset.
+
+### `ExportSceneValues(s output, s preset) → (s json)`
+
+The current values of the package shown on `output`, or those of a preset when `preset` is not
+`""`, as a small document `{"format": "wpak-values/1", "package", "version", "values"}` that the
+user may keep, copy or share. Files, folders and secrets are left out.
+
+### `ImportSceneValues(s output, s json, s name) → (as warnings)`
+
+Reads a `wpak-values/1` document of the package shown on `output` (at most 256 KiB): with
+`name = ""` its values are stored as `SetSceneProperty` would, otherwise they are saved as a preset
+named `name`. A document of another package returns `InvalidArgs`; settings that the package does
+not have or no longer accepts, files, folders and secrets are skipped and listed in `warnings`.
+
+### `PressSceneButton(s output, s id)`
+
+Presses the `button` setting `id` of the scene shown on `output` (`""` = every output that shows
+it): timelines whose `trigger` is `prop:<id>` start again and the scripts of the scene see the press
+in their next frame (`scene.md`). Nothing is stored.
+
+### `ShareSceneValues(s output, b shared)`
+
+With `shared`, the screen `output` stops having its own values for the package it shows: they move
+to the `[default]` section, which every screen without its own values follows. Without it, the
+screen gets its own copy of the shared values, which later changes on it keep for itself.
+`InvalidArgs` for `output = ""`.
 
 ### `SetOption(s key, s value)`
 
@@ -808,7 +865,8 @@ or `priority` (`-1000` to `1000`).
 
 ### `ListPresets(s item) → (s json)`
 
-A `PresetsReply`: the presets of `item`, or the global presets for `item = ""`.
+A `PresetsReply`: the presets of `item`, or the global presets for `item = ""`. Presets of the
+settings of a package (`SaveScenePreset`) are listed by `GetSceneProperties` instead.
 
 ### `SavePreset(s item, s name, a{ss} values) → (s uid)`
 
@@ -1699,13 +1757,16 @@ struct SceneProperties {
     model: u32, serial: u64, output: String, package: String, title: String,
     properties: BTreeMap<String, Value>, values: BTreeMap<String, Value>, presets: Vec<Value>,
     fields: Vec<SceneField>, preset_labels: Vec<SceneOption>, warnings: Vec<String>,
+    user_presets: Vec<SceneOption>, shared: bool, kind: String,
 }
 struct SceneField {
     key: String, kind: String, label: String, help: String, value: Value, visible: bool,
     min: Option<f64>, max: Option<f64>, step: Option<f64>, integer: bool, unit: String,
     options: Vec<SceneOption>, alpha: bool, multiline: bool, max_len: Option<u32>, accept: Vec<String>,
+    enabled: bool, group: String, icon: String, decimals: Option<u32>, editable: bool, log: bool,
+    collapsed: bool, secret: bool, filled: bool,
 }
-struct SceneOption { value: String, label: String }
+struct SceneOption { value: Value, label: String, icon: String }
 
 struct Schema {
     model: u32, serial: u64, options: Vec<Field>, rules: Vec<Field>, auto: Vec<Field>,
@@ -1901,7 +1962,7 @@ playlist = "01J…"         # playlist assigned to this section
 preset = "01J…"           # label of the preset applied to this section
 
 [default.scenes."org.example.calm"]   # and [outputs.<name>.scenes."<package id>"]
-tint = "#ff8800"          # values of the user properties of a scene package
+tint = "#ff8800"          # values of the settings of a scene or video package
 
 [library]
 watch = true

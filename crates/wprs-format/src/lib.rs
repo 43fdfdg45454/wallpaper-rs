@@ -30,6 +30,8 @@ mod store;
 mod update;
 mod upgrade;
 mod validate;
+pub mod values;
+mod video;
 
 #[cfg(feature = "sign")]
 pub use admin::sign_root;
@@ -50,7 +52,7 @@ pub use install::{Installed, install, installed, remove};
 #[cfg(feature = "sign")]
 pub use keys::{Keypair, Signer, keygen, sign_source};
 pub use locale::valid_tag;
-pub use manifest::{Kind, Manifest, SCHEMA, SCHEMA_V1, Strings, manifest_schema};
+pub use manifest::{Kind, Manifest, SCHEMA, SCHEMA_V1, Strings, manifest_schema, newer_spelling};
 pub use meta::{
     Ancestor, Content, Credit, Descriptor, Input, Links, Origin, OriginKind, Previews, Rating, Requires,
 };
@@ -63,10 +65,11 @@ pub use repo::{Author, Key, Policy, ROOT_FORMAT, Role, Roles, Root, Time, commen
 pub use settings::{Settings, settings};
 pub use sign::{fingerprint, manifest_comment, public_key, threshold, verify_blocks, verify_package};
 pub use source::{fill, inspect};
-pub use upgrade::{Renames, upgrade, upgrade_json};
+pub use upgrade::{Renames, rename_json, upgrade, upgrade_json};
 pub use validate::{FileEntry, Limits, MANIFEST, SIGNATURE, check_path, validate};
+pub use video::{Display, Playback, VIDEO_PROPERTIES};
 pub use wprs_core::markup;
-pub use wprs_scene::{Control, Preset, Property, Scene, Text};
+pub use wprs_scene::{Choice, Condition, Control, Preset, Property, Scene, Slider, Text};
 
 use std::path::PathBuf;
 

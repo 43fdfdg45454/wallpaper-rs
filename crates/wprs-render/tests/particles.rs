@@ -33,7 +33,8 @@ impl Run {
         let pair =
             RgbaImage::from_fn(2, 1, |x, _| Rgba(if x == 0 { [255, 0, 0, 255] } else { [0, 0, 255, 255] }));
         let images = [("pair".to_string(), Arc::new(pair))].into();
-        let mut view = r.scene_view(&scene, &SceneAssets { images, ..Default::default() }).unwrap();
+        let mut view =
+            r.scene_view(&scene, &SceneAssets { images, ..Default::default() }, &Values::new()).unwrap();
         if !view.set_gpu_particles(r, gpu) {
             eprintln!("skipping: no compute shaders on {}", r.adapter());
             return None;

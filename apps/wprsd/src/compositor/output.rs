@@ -3,9 +3,8 @@ use super::power::Power;
 use super::scene::SceneState;
 use super::slot::PlayerSlot;
 use super::surface::Screen;
-use super::{Content, Spec};
+use super::{Content, Reel, Spec};
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use wprs_core::edit::Parallax;
 use wprs_core::{Fit, UvRect};
@@ -32,15 +31,22 @@ impl Shown {
 
     pub(super) fn layer<'a>(
         &'a self,
-        players: &'a HashMap<PathBuf, PlayerSlot>,
+        players: &'a HashMap<Reel, PlayerSlot>,
         opacity: f32,
         moved: Option<([f32; 2], u32)>,
+        size: (u32, u32),
     ) -> Layer<'a> {
         let (image, fit) = match &self.content {
             Content::Color => (None, self.fit),
             Content::Image(_) => (self.image.as_ref(), self.fit),
-            Content::Video(path) => (players.get(path).and_then(|p| p.texture.as_ref()), self.fit),
+            Content::Video(m) => (players.get(&m.reel).and_then(|p| p.texture.as_ref()), self.fit),
             Content::Scene(_) => (self.scene.as_ref().and_then(SceneState::image), Fit::Stretch),
+        };
+        let framed = match (&self.content, image) {
+            (Content::Video(m), Some(i)) if m.zoom != 1.0 || m.pan != [0.0; 2] => {
+                Some(UvRect::compute(fit, i.size(), size).framed(m.zoom, m.pan))
+            }
+            _ => self.uv,
         };
         let aspect = image.map_or(1.0, |i| i.size().0 as f32 / i.size().1.max(1) as f32);
         let relief = self.relief.as_ref().zip(moved).map(|((depth, p), ([x, y], steps))| {
@@ -48,7 +54,7 @@ impl Shown {
             let shift = [p.strength * x / reach, p.strength * y * aspect / reach];
             Relief { depth, shift, focus: p.focus, steps: p.steps.min(steps), overscan: p.overscan }
         });
-        Layer { image, fit, background: self.background, opacity, uv: self.uv, relief }
+        Layer { image, fit, background: self.background, opacity, uv: framed, relief }
     }
 }
 
@@ -133,8 +139,13 @@ impl Output {
         std::iter::once(&self.shown).chain(self.fade.as_ref().map(|(from, _)| from))
     }
 
-    pub(super) fn uses_video(&self, path: &PathBuf) -> bool {
-        self.layers().any(|s| s.content.videos().contains(&path))
+    pub(super) fn uses_video(&self, reel: &Reel) -> bool {
+        self.loudest(reel).is_some()
+    }
+
+    pub(super) fn loudest(&self, reel: &Reel) -> Option<u32> {
+        let volumes = self.layers().flat_map(|s| s.content.videos()).filter(|(r, _)| *r == reel);
+        volumes.map(|(_, volume)| volume).max()
     }
 
     pub(super) fn animated(&self) -> bool {

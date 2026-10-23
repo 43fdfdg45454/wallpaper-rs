@@ -33,6 +33,18 @@ pub mod qobject {
         #[qinvokable]
         fn passphrase(self: Pin<&mut Backend>, tag: &QString, member: &QString, passphrase: &QString);
         #[qinvokable]
+        fn scene_secret(
+            self: Pin<&mut Backend>,
+            tag: &QString,
+            output: &QString,
+            key: &QString,
+            secret: &QString,
+        );
+        #[qinvokable]
+        fn write_text(self: &Backend, url: &QString, text: &QString) -> bool;
+        #[qinvokable]
+        fn read_text(self: &Backend, url: &QString) -> QString;
+        #[qinvokable]
         fn tr(self: &Backend, text: &QString) -> QString;
         #[qinvokable]
         fn url(self: &Backend, path: &QString) -> QString;
@@ -73,6 +85,7 @@ use cxx_qt::Threading;
 use cxx_qt_lib::QString;
 use qobject::Backend;
 use serde_json::Value;
+use std::io::Read;
 use std::pin::Pin;
 use wprs_client::Error;
 use wprs_core::model::Job;
@@ -122,6 +135,18 @@ impl Backend {
 
     pub fn path(&self, url: &QString) -> QString {
         QString::from(&app::path(&url.to_string()).unwrap_or_default())
+    }
+
+    pub fn write_text(&self, url: &QString, text: &QString) -> bool {
+        app::path(&url.to_string()).is_some_and(|path| std::fs::write(path, text.to_string()).is_ok())
+    }
+
+    pub fn read_text(&self, url: &QString) -> QString {
+        let read = |path: String| {
+            let mut text = String::new();
+            std::fs::File::open(path).ok()?.take(256 << 10).read_to_string(&mut text).ok().map(|_| text)
+        };
+        QString::from(&app::path(&url.to_string()).and_then(read).unwrap_or_default())
     }
 
     pub fn markup(&self, text: &QString) -> QString {

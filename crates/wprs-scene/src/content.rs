@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 pub struct Mask {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-ref" = "image"))]
-    pub texture: Option<String>,
+    pub texture: Option<Value<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-ref" = "layer"))]
     pub layer: Option<String>,
@@ -138,7 +138,7 @@ pub(crate) fn mask<'de, D: Deserializer<'de>>(d: D) -> Result<Option<Mask>, D::E
         Full(Mask),
     }
     Ok(Some(match Repr::deserialize(d)? {
-        Repr::Texture(texture) => Mask { texture: Some(texture), ..Mask::default() },
+        Repr::Texture(texture) => Mask { texture: Some(Value::Fixed(texture)), ..Mask::default() },
         Repr::Full(mask) => mask,
     }))
 }

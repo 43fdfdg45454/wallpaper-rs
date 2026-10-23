@@ -1,7 +1,7 @@
 use crate::locale::{has, valid_key, valid_tag};
 use crate::meta::{Content, Credit, Links, Origin};
 use crate::names::{clean, safe, valid_id, valid_license, valid_name, valid_property, within};
-use crate::{Error, Manifest, Result, SCHEMA, SCHEMA_V1, Text, markup, require};
+use crate::{Display, Error, Kind, Manifest, Playback, Result, SCHEMA, SCHEMA_V1, Text, markup, require};
 use std::collections::HashSet;
 use wprs_scene::Control;
 
@@ -40,8 +40,13 @@ impl Manifest {
             require(valid, &field, "expected a letter followed by letters, digits or _")?;
             property.check().map_err(|reason| Error::Invalid { field, reason })
         })?;
-        wprs_scene::check_presets(&self.properties, &self.presets)
-            .map_err(|reason| Error::Invalid { field: "presets".into(), reason })
+        let mut properties = match self.kind {
+            Kind::Video => self.video_properties(&Default::default(), None),
+            _ => Default::default(),
+        };
+        properties.extend(self.properties.clone());
+        wprs_scene::check_presets(&properties, &self.presets)
+            .map_err(|(field, reason)| Error::Invalid { field, reason })
     }
 
     pub fn missing(&self) -> Vec<Error> {
@@ -62,10 +67,14 @@ impl Manifest {
         let json = serde_json::to_value(self).unwrap_or_default();
         let newer = json.as_object().is_some_and(|o| o.keys().any(|k| !FIRST.split(' ').any(|f| f == k)));
         let limits = self.properties.len() <= 64 && self.presets.len() <= 32;
+        let older =
+            |p: &wprs_scene::Property| p.features().iter().all(|f| *f == "user_videos" && p.kind() == "file");
+        let kinds = self.properties.values().all(older);
         apply(&[
             ("schema", plain && !newer, "localized texts and the newer fields need wallpaper-rs.wpak/2"),
             ("title", within(&self.pick(&self.title, &[]), 128), "expected 1 to 128 characters"),
             ("properties", limits, "too many properties or presets"),
+            ("properties", kinds, "the newer kinds and fields of properties need wallpaper-rs.wpak/2"),
         ])
     }
 
@@ -76,6 +85,14 @@ impl Manifest {
         let unique = self.properties.keys().all(|id| lower.insert(id.to_lowercase()));
         let combo = |c: &Control| matches!(c, Control::Combo { options, .. } if options.len() > 64);
         let options = !self.properties.values().any(|p| combo(&p.control));
+        let accept = |c: &Control| match c {
+            Control::File { accept, .. } | Control::Folder { accept, .. } => {
+                accept.iter().all(|a| ["image", "video"].contains(&a.as_str()))
+            }
+            _ => true,
+        };
+        let accepted = self.properties.values().all(|p| accept(&p.control));
+        let video = self.kind == Kind::Video || (self.playback.is_none() && self.display.is_none());
         let limits = self.properties.len() <= 256 && self.presets.len() <= 64;
         let plain = self.authors.iter().chain(&self.tags).all(|t| safe(t));
         if let Some(missing) = self.missing().into_iter().next() {
@@ -105,6 +122,18 @@ impl Manifest {
                 "expected https:// addresses of 512 characters at most",
             ),
             ("properties", limits, "at most 256 properties and 64 presets"),
+            ("properties", accepted, "files and folders accept image, video or both"),
+            ("playback", video, "playback and display apply to video packages only"),
+            (
+                "playback",
+                self.playback.as_ref().is_none_or(Playback::valid),
+                "speed is 0.1 to 4, start and end 0 to 3600 s with end after start, volume 0 to 1",
+            ),
+            (
+                "display",
+                self.display.as_ref().is_none_or(Display::valid),
+                "zoom is 1 to 8 and position two numbers of -1 to 1",
+            ),
             (
                 "properties",
                 unique && options,

@@ -1,8 +1,8 @@
 mod common;
 
 use common::manifest;
-use wprs_format::{Control, Error, Kind, Property, Result};
-use wprs_scene::Choice;
+use serde_json::json;
+use wprs_format::{Choice, Control, Error, Kind, Property, Result, Slider};
 
 fn check(name: &str, property: Property) -> Result<()> {
     let mut manifest = manifest(Kind::Scene);
@@ -11,12 +11,12 @@ fn check(name: &str, property: Property) -> Result<()> {
 }
 
 fn slider(min: f64, max: f64, step: f64, default: f64) -> Property {
-    Property::new(Control::Slider { min, max, step, default, integer: false, unit: None })
+    Property::new(Control::Slider(Slider::new(min, max, Some(step), default)))
 }
 
 fn combo(options: &[&str], default: &str) -> Property {
-    let options = options.iter().map(|o| Choice::Plain(o.to_string())).collect();
-    Property::new(Control::Combo { options, default: default.into() })
+    let options = options.iter().map(|o| Choice::Plain(json!(o))).collect();
+    Property::new(Control::Combo { options, default: json!(default) })
 }
 
 fn color(default: &str) -> Property {
@@ -24,7 +24,7 @@ fn color(default: &str) -> Property {
 }
 
 fn text(default: &str) -> Property {
-    Property::new(Control::Text { default: default.into(), max_len: None, multiline: false })
+    Property::new(Control::Text { default: default.into(), max_len: None, multiline: false, secret: false })
 }
 
 #[test]

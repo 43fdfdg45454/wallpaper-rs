@@ -20,6 +20,8 @@ pub enum Issue {
     DuplicateId(String),
     #[error("{path} names the unknown {what} {id:?}")]
     Unknown { path: String, what: &'static str, id: String },
+    #[error("{path} names {id:?}, a property that holds no value")]
+    Valueless { path: String, id: String },
     #[error("{0} needs exactly one source: prop, keys, audio, cursor, clock or script")]
     Source(String),
     #[error("{0} does not fit the type of this field")]
@@ -89,6 +91,16 @@ impl Scene {
         c.layers("/layers", &self.layers, 1);
         c.masks();
         c.sounds();
+        for (id, prop) in props {
+            if let crate::Control::File { default_asset: Some(asset), .. } = &prop.control {
+                c.known(
+                    &format!("/properties/{id}/default_asset"),
+                    "asset",
+                    asset,
+                    self.assets.contains_key(asset),
+                );
+            }
+        }
         c.count("/particles", self.particles.len(), MAX_SYSTEMS);
         let total: u64 = self.particles.values().map(|s| u64::from(s.capacity)).sum();
         c.range("/particles", total as f32, 0.0, MAX_PARTICLES as f32);
@@ -155,6 +167,14 @@ impl Check<'_> {
         }
     }
 
+    pub(crate) fn property(&mut self, path: &str, id: &str, button: bool) {
+        match self.props.get(id) {
+            None => self.known(path, "property", id, false),
+            Some(p) if p.holds_value() || (button && p.kind() == "button") => {}
+            Some(_) => self.issues.push(Issue::Valueless { path: path.into(), id: id.into() }),
+        }
+    }
+
     pub(crate) fn known(&mut self, path: &str, what: &'static str, id: &str, exists: bool) {
         if !exists {
             self.issues.push(Issue::Unknown { path: path.into(), what, id: id.into() });
@@ -172,7 +192,7 @@ impl Check<'_> {
     fn trigger(&mut self, path: &str, trigger: &str) {
         match trigger.split_once(':') {
             None if matches!(trigger, "start" | "beat") => {}
-            Some(("prop", id)) => self.known(path, "property", id, self.props.contains_key(id)),
+            Some(("prop", id)) => self.property(path, id, true),
             _ => self.known(path, "trigger", trigger, false),
         }
     }

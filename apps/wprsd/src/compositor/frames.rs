@@ -1,12 +1,11 @@
-use super::lock;
 use super::output::{Output, Sink, smoothstep};
 use super::power::Power;
 use super::slot::PlayerSlot;
 use super::state::State;
+use super::{Reel, lock};
 use crate::fatal;
 use anyhow::Context;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 use wprs_pipewire::{Exporter, Grant, VideoFrame};
@@ -14,7 +13,7 @@ use wprs_render::{Exported, RenderError, Renderer, log_allowed};
 
 const TRANSITION_FPS: u32 = 60;
 
-type Shared<'a> = (&'a Renderer, &'a Exporter, &'a HashMap<PathBuf, PlayerSlot>, Power, Option<u32>);
+type Shared<'a> = (&'a Renderer, &'a Exporter, &'a HashMap<Reel, PlayerSlot>, Power, Option<u32>);
 
 fn interval(output: &Output, power: Power) -> Duration {
     let rate = power.rate(output.refresh, None);
@@ -108,8 +107,8 @@ fn draw(
     }
     let progress = output.progress(now, output.shown.transition.map_or(transition, |d| d.as_secs_f32()));
     let opacity = if output.fade.is_some() { smoothstep(progress) } else { 1.0 };
-    let shown = output.shown.layer(players, opacity, moved);
-    let from = output.fade.as_ref().map(|(from, _)| from.layer(players, 1.0, moved));
+    let shown = output.shown.layer(players, opacity, moved, output.size);
+    let from = output.fade.as_ref().map(|(from, _)| from.layer(players, 1.0, moved, output.size));
     let layers = [from.unwrap_or(shown), shown];
     let layers = &layers[usize::from(from.is_none())..];
     let written = match &mut output.sink {
@@ -152,7 +151,7 @@ fn draw(
         (true, Sink::Stream(_)) => {}
         (false, Sink::Stream(target)) => *target = None,
         (false, Sink::Surface(screen)) => {
-            screen.backdrop(renderer, &[output.shown.layer(players, 1.0, moved)], now)?
+            screen.backdrop(renderer, &[output.shown.layer(players, 1.0, moved, output.size)], now)?
         }
     }
     Ok(true)
@@ -170,29 +169,12 @@ mod tests {
     use wprs_scene::{Scene, Tier};
 
     fn snowfall() -> SceneSpec {
-        let scene =
-            Arc::new(Scene::from_json(include_str!("../../../../scenes/snowfall/scene.json")).unwrap());
+        let scene = Scene::from_json(include_str!("../../../../scenes/snowfall/scene.json")).unwrap();
         let manifest: serde_json::Value =
             serde_json::from_str(include_str!("../../../../scenes/snowfall/manifest.json")).unwrap();
         let properties = serde_json::from_value(manifest["properties"].clone()).unwrap();
-        let (path, id, title, presets, assets) = Default::default();
-        let (videos, sounds, clips, scripts) = Default::default();
-        let pack = Arc::new(ScenePack {
-            path,
-            id,
-            title,
-            languages: Vec::new(),
-            locale: String::new(),
-            scene,
-            properties,
-            presets,
-            assets,
-            videos,
-            sounds,
-            clips,
-            scripts,
-        });
-        SceneSpec { values: pack.values(&[]), pack, extra: Vec::new(), hold: None }
+        let pack = Arc::new(ScenePack::bare(scene, properties, Vec::new()));
+        SceneSpec { values: pack.props.values(&[]), pack, extra: Vec::new(), clips: Vec::new(), hold: None }
     }
 
     #[test]

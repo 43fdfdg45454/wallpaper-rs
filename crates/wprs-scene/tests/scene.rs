@@ -77,7 +77,7 @@ fn validation_names_the_broken_field() {
         [range("/layers/0/opacity", 2.0, 0.0, 1.0)]
     );
     assert_eq!(
-        issues(|s| s.layers[1].kind = Kind::Video { video: "gone".into(), size: None }),
+        issues(|s| s.layers[1].kind = Kind::Video { video: Value::Fixed("gone".into()), size: None }),
         [unknown("/layers/1/video", "asset", "gone")]
     );
     assert_eq!(

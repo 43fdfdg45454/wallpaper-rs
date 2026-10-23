@@ -23,7 +23,10 @@ working unchanged: it has no rating, so clients show it as not rated and the `co
 filter finds it. Within `/2` only optional fields, enum values and feature names are added; the
 meaning of what exists never changes, and a new major version is made only to remove or change
 something. The first version keeps its rules: none of the fields below marked *2* may appear
-in it, and its texts are plain.
+in it, its texts are plain, its properties are written as the first version reads them (every
+field it requires, such as the `default` of a text, the `accept` of a file and the `step` of a
+slider, no field it does not know, and a whole `order` written without decimals) and its `file`
+properties take images only, whatever `accept` lists.
 
 Readers work in two steps. They first read a tolerant header (`schema` and `requires`): a newer
 major version, a `requires.engine` that this version of wallpaper-rs does not meet, or a name in
@@ -65,7 +68,8 @@ releases where they look (`repo.md`).
 | `previews` | 2 | `{thumbnail, animated}`: png, jpg or webp of at most 1024 px a side and 1 MiB; gif or webp of at most 640 px, 15 s and 8 MiB; the file must be what its extension says |
 | `requires` | 2 | `{engine: "<SemVer requirement>", features: [..]}`, see "Features" |
 | `inputs` | 2 | `[audio, pointer, clicks, media, network]`, see "Inputs" |
-| `properties`, `presets` | 1, 2 | user properties (`scene.md`): in *1* at most 64 with ids `[a-z][a-z0-9_-]{0,62}`; in *2* at most 256 with ids `[A-Za-z][A-Za-z0-9_]{0,63}` that differ in more than case, and combos of at most 64 options; at most 32 presets in *1*, 64 in *2* |
+| `playback`, `display` | 2, `video` only | how the video plays by default, see "Video settings" |
+| `properties`, `presets` | 1, 2 | user properties (`scene.md`): in *1* at most 64 with ids `[a-z][a-z0-9_-]{0,62}` of the types `color`, `slider` with `step`, `bool`, `combo` of texts, `text`, `file`, `group` and `label`; in *2* at most 256 with ids `[A-Za-z][A-Za-z0-9_]{0,63}` that differ in more than case, combos of at most 64 options, files and folders that accept `image`, `video` or both, and every newer type and field; at most 32 presets in *1*, 64 in *2*, for scenes and videos |
 
 ```json
 {
@@ -83,6 +87,32 @@ releases where they look (`repo.md`).
   "properties": { "speed": { "type": "slider", "label": "@speed", "min": 0, "max": 2, "step": 0.1, "default": 1 } }
 }
 ```
+
+## Video settings
+
+A video package offers the same settings everywhere, which the user changes per screen or for every
+screen like the properties of a scene (`GetSceneProperties`, `wprs-ctl prop`): `speed` (0.1 to 4
+times, without changing the pitch of the sound), `start` and `end` (the part of the video that
+loops, in seconds; an `end` of 0 plays to the end), `volume` (0 to 100 % of the general volume),
+`zoom` (1 to 8) and `x` and `y` (-1 to 1, which part of the zoomed or cropped video shows). The
+author gives their defaults in the second version:
+
+```json
+{ "kind": "video", "entry": "rain.webm",
+  "playback": { "speed": 0.75, "start": 2.5, "end": 18, "volume": 0.4 },
+  "display": { "fit": "fill", "zoom": 1.5, "position": [0, -0.5] },
+  "presets": [{ "id": "calm", "label": "Calm", "values": { "speed": 0.5, "volume": 20 } }],
+  "requires": { "features": ["video_properties"] } }
+```
+
+`playback` takes `speed` (0.1 to 4), `start` and `end` (0 to 3600 s, `end` after `start`) and
+`volume` (0 to 1); `display` takes `fit` (the placement used when the video is applied without one),
+`zoom` (1 to 8) and `position` (two numbers of -1 to 1). Presets of a video package set these ids.
+Once the length of the video is known, `start` stays at least half a second before its end; a part
+that plays nothing, such as a `start` past the end of the file, loops the whole video instead.
+Speed and frame rate are independent: a faster video draws no more frames per second than the
+screen, the battery or `playback.max_fps` allow, and changing the speed, the part or the volume
+applies to the running video without starting it again.
 
 ## Rating and photosensitivity
 
@@ -125,11 +155,16 @@ use.
 | `inputs.audio`, `inputs.pointer`, `inputs.clicks`, `inputs.media`, `inputs.network` | declares or uses that input |
 | `scripts` | runs scene scripts |
 | `sound` | plays sound layers |
+| `properties2` | has settings of the newer kinds or fields: sliders without `step` or with `decimals`, `editable` or `log`, combos of numbers or flags or with icons, `secret` texts, `button`, `divider`, collapsed groups, icons, fractional `order`, `visible_if` expressions, `enabled_if` and `default_asset`, or settings written in a way the first version cannot read (a field it does not know, even with its default value, a missing `default` of a text or `accept` of a file, or an `order` such as `2.0`) |
+| `folder` | shows pictures from a folder the user chooses |
+| `user_videos` | lets the user choose videos for its files or folders |
+| `video_properties` | sets `playback` or `display` |
 | `effect.<id>` | uses a built-in effect that older versions do not have; `pack build` and `pack check` name the ones a package needs |
 
 Each profile states what it runs. The desktop runs every feature above; the Android app runs every
-one except `scripts` and `sound`: such packages play there without their scripts and sounds, their
-page on the phone says so, and only packages that run fully on the phone get the facet `android`.
+one except `scripts`, `sound`, `folder`, `user_videos` and `video_properties`: such packages play
+there without their scripts, sounds, chosen folders and videos and playback settings, their page on
+the phone says so, and only packages that run fully on the phone get the facet `android`.
 
 ## Languages
 

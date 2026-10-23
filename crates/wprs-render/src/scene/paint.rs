@@ -73,9 +73,13 @@ impl<'a> Painter<'a, '_, '_> {
         for d in &self.frame.draws[range] {
             let effects = &self.frame.effects[d.effects.clone()];
             let fields = (d.end, d.world, d.origin, d.opacity, d.blend, &d.content, d.mask, d.hidden);
-            let _ = write!(h, "{:p}{fields:?}", d.layer);
+            let _ = write!(h, "{:p}{fields:?}{:?}", d.layer, d.mask_texture);
             for e in effects {
-                let _ = write!(h, "{}{:?}{}{}", e.descriptor.id, e.slots, e.scale, e.mask.is_some());
+                let _ = write!(
+                    h,
+                    "{}{:?}{}{:?}{:?}",
+                    e.descriptor.id, e.slots, e.scale, e.mask_texture, e.textures
+                );
             }
         }
         let _ = write!(h, "{extra:?}");
@@ -87,12 +91,10 @@ impl<'a> Painter<'a, '_, '_> {
         let d = &frame.draws[i];
         let unit = [0.0, 0.0, 1.0, 1.0];
         match &d.content {
-            Content::Image { asset, size } => {
-                Some((size.unwrap_or(self.images.get(asset.as_ref())?.1), unit))
-            }
-            Content::Video { asset, size } => {
+            Content::Image { asset, size } | Content::Video { asset, size } => {
                 let found = self.videos.iter().find(|(id, _)| id == asset);
                 let natural = found.map(|(_, v)| [v.size().0 as f32, v.size().1 as f32]);
+                let natural = natural.or_else(|| self.images.get(asset.as_ref()).map(|(_, size)| *size));
                 Some((size.or(natural)?, unit))
             }
             Content::Text { .. } => Some((self.texts.get(&i)?.1, unit)),

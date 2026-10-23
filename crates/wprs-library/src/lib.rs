@@ -12,6 +12,7 @@ mod resolve;
 mod rotation;
 mod rules;
 mod scan;
+mod settings;
 mod tags;
 mod timing;
 

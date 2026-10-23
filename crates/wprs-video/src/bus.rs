@@ -1,6 +1,6 @@
-use crate::audio::{self, Audio};
+use crate::audio::Audio;
 use crate::pipewire::SINK;
-use crate::{Error, Event, Sink};
+use crate::{Error, Event, Shared, Sink};
 use gstreamer as gst;
 use gstreamer::glib::WeakRef;
 use gstreamer::prelude::*;
@@ -20,7 +20,12 @@ pub(crate) struct Pipe {
 }
 
 impl Pipe {
-    pub(crate) fn start(playbin: gst::Element, uri: String, sink: Sink, piped: bool) -> Result<Pipe, Error> {
+    pub(crate) fn start(
+        playbin: gst::Element,
+        (uri, shared): (String, Shared),
+        sink: Sink,
+        piped: bool,
+    ) -> Result<Pipe, Error> {
         let (stop, playing) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(true)));
         let bus = playbin.bus().expect("playbin has a bus");
         let (weak, flags) = (playbin.downgrade(), (stop.clone(), playing.clone()));
@@ -29,7 +34,7 @@ impl Pipe {
             .name("wprs-video-bus".into())
             .spawn(move || {
                 let _done = done;
-                watch_bus(&bus, (&weak, uri), &flags.0, &flags.1, &*sink);
+                watch_bus(&bus, (&weak, uri, shared), &flags.0, &flags.1, &*sink);
             })
             .map_err(Error::state)?;
         let pipe = Pipe { playbin, playing, stop, stopped };
@@ -51,9 +56,13 @@ impl Pipe {
     }
 
     fn wake(&self) {
+        self.post("wprs-wake");
+    }
+
+    pub(crate) fn post(&self, name: &str) {
         if let Some(bus) = self.playbin.bus() {
             bus.set_flushing(false);
-            let _ = bus.post(gst::message::Application::new(gst::Structure::new_empty("wprs-wake")));
+            let _ = bus.post(gst::message::Application::new(gst::Structure::new_empty(name)));
         }
     }
 }
@@ -70,16 +79,16 @@ impl Drop for Pipe {
 
 pub(crate) fn watch_bus(
     bus: &gst::Bus,
-    (weak, uri): (&WeakRef<gst::Element>, String),
+    (weak, uri, shared): (&WeakRef<gst::Element>, String, Shared),
     stop: &AtomicBool,
     playing: &AtomicBool,
     sink: &dyn Fn(Event),
 ) {
-    let (mut warned, mut audio) = (None::<Instant>, Audio::new(uri));
+    let (mut warned, mut audio) = (None::<Instant>, Audio::new(uri, shared));
     while !stop.load(Ordering::Relaxed) {
         if let Some(playbin) = weak.upgrade() {
             if !audio.holding()
-                && let Err(e) = apply_wanted_state(&playbin, playing.load(Ordering::Relaxed))
+                && let Err(e) = apply_wanted_state(&playbin, playing.load(Ordering::Relaxed), &audio)
                 && warned.is_none_or(|t| t.elapsed() >= LOG_PERIOD)
             {
                 warned = Some(Instant::now());
@@ -99,6 +108,11 @@ pub(crate) fn watch_bus(
                 break;
             }
             gst::MessageView::AsyncDone(_) => audio.settled(&playbin),
+            gst::MessageView::Application(a) if a.structure().is_some_and(|s| s.name() == "wprs-cut") => {
+                audio.retarget(&playbin)
+            }
+            gst::MessageView::SegmentDone(_) => audio.again(&playbin, false),
+            gst::MessageView::Eos(_) if !audio.cut.plain() => audio.again(&playbin, true),
             gst::MessageView::Eos(_) => {
                 let flags = gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT;
                 if let Err(e) = playbin.seek_simple(flags, gst::ClockTime::ZERO) {
@@ -113,7 +127,11 @@ pub(crate) fn watch_bus(
     }
 }
 
-fn apply_wanted_state(playbin: &gst::Element, playing: bool) -> Result<(), gst::StateChangeError> {
+fn apply_wanted_state(
+    playbin: &gst::Element,
+    playing: bool,
+    audio: &Audio,
+) -> Result<(), gst::StateChangeError> {
     let wanted = if playing { gst::State::Playing } else { gst::State::Paused };
     let (_, current, pending) = playbin.state(gst::ClockTime::ZERO);
     let settled = pending == gst::State::VoidPending && current >= gst::State::Paused;
@@ -122,7 +140,7 @@ fn apply_wanted_state(playbin: &gst::Element, playing: bool) -> Result<(), gst::
     }
     playbin.set_state(wanted)?;
     if let Some(at) = playbin.query_position().filter(|_| !playing) {
-        audio::seek(playbin, at);
+        audio.seek(playbin, at);
     }
     Ok(())
 }

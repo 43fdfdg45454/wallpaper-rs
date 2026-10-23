@@ -1,5 +1,5 @@
 use crate::bus::Pipe;
-use crate::{Error, Event, Options, Sink, local_uri, make, pipewire, video_sink};
+use crate::{Cut, Error, Event, Options, Shared, Sink, local_uri, lock, make, pipewire, video_sink};
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::path::Path;
@@ -10,6 +10,9 @@ pub struct Player {
     size: gst::Element,
     rate: gst::Element,
     audio: bool,
+    tempo: bool,
+    shared: Shared,
+    max_fps: u32,
 }
 
 impl Player {
@@ -29,19 +32,35 @@ impl Player {
         playbin.set_property("mute", options.muted);
         let piped = audio.then(pipewire::sink).flatten();
         piped.iter().for_each(|sink| playbin.set_property("audio-sink", sink));
-        let (video_sink, size, rate) = video_sink::build(options, sink.clone())?;
+        let tempo = (audio && options.cut.speed != 100).then(|| make("scaletempo").ok()).flatten();
+        tempo.iter().for_each(|tempo| playbin.set_property("audio-filter", tempo));
+        let shared = Shared { cut: Arc::new(options.cut.into()), ..Shared::default() };
+        let (video_sink, size, rate) = video_sink::build(options, sink.clone(), shared.seen.clone())?;
         playbin.set_property("video-sink", &video_sink);
-        let again = uri.clone();
+        let (again, cut) = (uri.clone(), shared.cut.clone());
         if !audio {
             playbin.connect("about-to-finish", false, move |args| {
-                if let Ok(finishing) = args[0].get::<gst::Element>() {
+                if let Some(finishing) = args[0].get::<gst::Element>().ok().filter(|_| lock(&cut).plain()) {
                     finishing.set_property("uri", &again);
                 }
                 None
             });
         }
-        let pipe = Pipe::start(playbin, uri, sink, piped.is_some())?;
-        Ok(Self { pipe, size, rate, audio })
+        let pipe = Pipe::start(playbin, (uri, shared.clone()), sink, piped.is_some())?;
+        let (tempo, max_fps) = (tempo.is_some(), options.max_fps);
+        Ok(Self { pipe, size, rate, audio, tempo, shared, max_fps })
+    }
+
+    pub fn set_cut(&mut self, cut: Cut) -> bool {
+        if self.audio && !self.tempo && cut.speed != 100 {
+            return false;
+        }
+        *lock(&self.shared.cut) = cut;
+        if self.max_fps > 0 {
+            video_sink::set_max_fps(&self.rate, self.max_fps, cut);
+        }
+        self.pipe.post("wprs-cut");
+        true
     }
 
     pub fn set_playing(&self, playing: bool) {
@@ -56,8 +75,9 @@ impl Player {
         self.size.set_property("caps", video_sink::size_caps(max_size));
     }
 
-    pub fn set_max_fps(&self, max_fps: u32) {
-        video_sink::set_max_fps(&self.rate, max_fps);
+    pub fn set_max_fps(&mut self, max_fps: u32) {
+        self.max_fps = max_fps;
+        video_sink::set_max_fps(&self.rate, max_fps, *lock(&self.shared.cut));
     }
 
     pub fn set_volume(&self, volume: f64, muted: bool) {

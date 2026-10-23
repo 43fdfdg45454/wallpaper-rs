@@ -3,7 +3,9 @@ use super::pool::{Pool, Tex};
 use super::state::Sim;
 use super::{Cached, Image, SceneStats, swarm, text};
 use crate::texture::GpuImage;
+use image::RgbaImage;
 use std::collections::HashMap;
+use std::sync::Arc;
 use wgpu::TextureFormat as Format;
 use wprs_core::{Fit, UvRect};
 use wprs_scene::Affine;
@@ -14,6 +16,7 @@ pub struct SceneView {
     pub(super) srgb: bool,
     pub(super) format: Format,
     pub(super) images: HashMap<String, Image>,
+    pub(super) sources: HashMap<String, Arc<RgbaImage>>,
     pub(super) fonts: text::Fonts,
     pub(super) texts: HashMap<u64, (GpuImage, [f32; 2], u64)>,
     pub(super) pool: Pool,

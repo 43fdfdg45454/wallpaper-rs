@@ -50,7 +50,7 @@ pub enum Kind {
     },
     Video {
         #[schemars(extend("x-ref" = "video"))]
-        video: String,
+        video: Value<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         size: Option<[f32; 2]>,
     },

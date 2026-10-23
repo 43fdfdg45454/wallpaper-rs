@@ -2,7 +2,7 @@ use crate::keys::value_at;
 use crate::layers::{assets_of, walk};
 use crate::meta::{ORDER, adjust, hidden};
 use crate::ops::escape;
-use crate::schema::{MANIFEST, at, branches, choose, deref, fits, properties, root_of, sample};
+use crate::schema::{MANIFEST, PROPERTY, at, branches, choose, deref, fits, properties, root_of, sample};
 use crate::texts::rows;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -28,9 +28,14 @@ pub struct Field {
     pub shown: Value,
     pub required: bool,
     pub fixed: Vec<Value>,
+    pub title: String,
+    pub names: Vec<String>,
 }
 
-fn candidates(doc: &Value, reference: &str) -> Vec<Value> {
+fn candidates(doc: &Value, reference: &str, pointer: &str) -> Vec<Value> {
+    if let Some(found) = crate::settings::candidates(doc, reference, pointer) {
+        return found;
+    }
     let keys =
         |p: &str| doc.pointer(p).and_then(Value::as_object).map(|o| o.keys().map(|k| json!(k)).collect());
     let ids = |p: &str| {
@@ -40,7 +45,6 @@ fn candidates(doc: &Value, reference: &str) -> Vec<Value> {
         "layer" => walk(doc).into_iter().map(|(_, l)| l["id"].clone()).collect(),
         "system" => keys("/scene/particles").unwrap_or_default(),
         "timeline" => ids("/scene/timelines").unwrap_or_default(),
-        "property" => keys("/manifest/properties").unwrap_or_default(),
         "language" => crate::meta::languages(doc),
         kind => assets_of(doc, kind).into_iter().map(|a| json!(a)).collect(),
     }
@@ -89,6 +93,9 @@ impl Walk<'_> {
         let listed = all.filter_map(|b| b["enum"].as_array().cloned()).next().filter(|_| banded);
         f.widget = match (name, types.as_str().unwrap_or_default()) {
             _ if meta["x-computed"] == true => "computed".into(),
+            _ if meta["x-condition"] == true => "condition".into(),
+            _ if meta["x-scalar"] == true => "scalar".into(),
+            _ if meta["x-color"] == true => "color".into(),
             ("Color", _) => "color".into(),
             ("Vec2", _) => "vec2".into(),
             ("Ease", _) => {
@@ -101,9 +108,10 @@ impl Walk<'_> {
                 if meta["x-markup"] == true { "markup" } else { "texts" }.into()
             }
             _ if schema.get("const").is_some() => return,
-            _ if reference.is_some() => {
-                f.options = candidates(self.doc, reference.unwrap_or_default());
-                format!("ref:{}", reference.unwrap_or_default())
+            _ if let Some(reference) = reference => {
+                f.options = candidates(self.doc, reference, &pointer);
+                f.names = crate::settings::names(self.doc, reference, &f.options);
+                format!("ref:{reference}")
             }
             _ if schema.get("enum").is_some() || listed.is_some() => {
                 f.options = schema["enum"].as_array().cloned().or(listed).unwrap_or_default();
@@ -205,7 +213,7 @@ impl Walk<'_> {
             value: current.cloned().unwrap_or_default(),
             default: serde_json::to_value(&p.default).unwrap_or_default(),
             set: current.is_some(),
-            options: reference.map(|r| candidates(self.doc, r)).unwrap_or_default(),
+            options: reference.map(|r| candidates(self.doc, r, base)).unwrap_or_default(),
             range,
             bindable: reference.is_none(),
             source: source.into(),
@@ -263,6 +271,7 @@ pub fn fields(doc: &Value, pointer: &str) -> Vec<Field> {
     let (hidden, order): (&[&str], &str) = match pointer {
         "/manifest" => (&top, ORDER),
         _ if std::ptr::eq(root, &*MANIFEST) => (&[], ORDER),
+        _ if std::ptr::eq(root, &*PROPERTY) => (&HIDDEN, crate::settings::ORDER),
         _ => (&HIDDEN, ""),
     };
     let mut walk = Walk { doc, root, hidden, order, out: Vec::new() };
@@ -280,6 +289,7 @@ pub fn fields(doc: &Value, pointer: &str) -> Vec<Field> {
             0,
         ),
     }
+    crate::forms::extend(doc, pointer, &mut walk.out);
     walk.out.iter_mut().for_each(|f| adjust(doc, f));
     walk.out
 }

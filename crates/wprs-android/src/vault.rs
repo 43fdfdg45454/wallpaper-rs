@@ -1,9 +1,10 @@
 use crate::{Error, store};
 use std::fs;
 use wprs_sync::Secrets;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 const FILE: &str = "account.vault";
+const TEXTS: &str = "texts.vault";
 
 #[cfg(target_os = "android")]
 mod keystore {
@@ -75,6 +76,23 @@ pub(crate) fn load() -> Result<Secrets, Error> {
 pub(crate) fn store(secrets: &Secrets) -> Result<(), Error> {
     let plain = Zeroizing::new(serde_json::to_vec(secrets)?);
     store::write(&store::dir()?.join(FILE), &seal(&plain)?)
+}
+
+pub(crate) fn kept() -> std::collections::BTreeMap<String, String> {
+    let sealed = store::dir().ok().and_then(|dir| fs::read(dir.join(TEXTS)).ok());
+    let plain = sealed.and_then(|sealed| open(&sealed).ok());
+    plain.and_then(|plain| serde_json::from_slice(&plain).ok()).unwrap_or_default()
+}
+
+pub(crate) fn keep(key: &str, text: &str) -> Result<(), Error> {
+    let mut texts = kept();
+    match text {
+        "" => drop(texts.remove(key)),
+        text => drop(texts.insert(key.to_owned(), text.to_owned())),
+    }
+    let plain = Zeroizing::new(serde_json::to_vec(&texts)?);
+    texts.values_mut().for_each(Zeroize::zeroize);
+    store::write(&store::dir()?.join(TEXTS), &seal(&plain)?)
 }
 
 pub(crate) fn forget() -> Result<(), Error> {

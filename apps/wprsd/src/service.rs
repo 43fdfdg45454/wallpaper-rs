@@ -111,11 +111,49 @@ impl Service {
 
     #[zbus(out_args("json"))]
     async fn get_scene_properties(&self, output: String) -> Result<String> {
-        self.d()?.run(move |d| d.scene_properties(&output)).await
+        let d = self.d()?;
+        let mut found = d.run(move |d| d.scene_properties(&output)).await?;
+        d.fill_secrets(&mut found).await;
+        reply(found)
     }
 
     async fn set_scene_property(&self, output: String, id: String, value_json: String) -> Result<()> {
-        self.d()?.run(move |d| d.set_scene_property(&output, &id, &value_json)).await
+        let (d, (o, i)) = (self.d()?, (output.clone(), id.clone()));
+        match d.run(move |d| d.secret_key(&o, &i)).await? {
+            Some(key) => d.store_secret(&key, &value_json).await,
+            None => d.run(move |d| d.set_scene_property(&output, &id, &value_json)).await,
+        }
+    }
+
+    #[zbus(out_args("preset"))]
+    async fn save_scene_preset(&self, output: String, name: String) -> Result<String> {
+        self.d()?.run(move |d| d.save_scene_preset(&output, &name)).await
+    }
+
+    async fn rename_scene_preset(&self, preset: String, name: String) -> Result<()> {
+        self.d()?.run(move |d| d.rename_scene_preset(&preset, &name)).await
+    }
+
+    async fn delete_scene_preset(&self, preset: String) -> Result<()> {
+        self.d()?.run(move |d| d.delete_scene_preset(&preset)).await
+    }
+
+    #[zbus(out_args("json"))]
+    async fn export_scene_values(&self, output: String, preset: String) -> Result<String> {
+        self.d()?.run(move |d| d.export_scene_values(&output, &preset)).await
+    }
+
+    #[zbus(out_args("warnings"))]
+    async fn import_scene_values(&self, output: String, json: String, name: String) -> Result<Vec<String>> {
+        self.d()?.run(move |d| d.import_scene_values(&output, &json, &name)).await
+    }
+
+    async fn press_scene_button(&self, output: String, id: String) -> Result<()> {
+        self.d()?.render(move |d| d.press_scene_button(&output, &id)).await
+    }
+
+    async fn share_scene_values(&self, output: String, shared: bool) -> Result<()> {
+        self.d()?.run(move |d| d.share_scene_values(&output, shared)).await
     }
 
     async fn apply_scene_preset(&self, output: String, preset: String) -> Result<()> {
@@ -267,7 +305,7 @@ mod tests {
             methods.map(|m| m.split('(').next().unwrap_or_default().to_owned()).collect()
         };
         let daemon = "request_stream hold_stream release_stream set_output_covered set_wallpaper set_background \
-            set_option reload set_paused set_volume set_muted";
+            press_scene_button set_option reload set_paused set_volume set_muted";
         assert_eq!(guarded(include_str!("service.rs")), daemon.split_whitespace().collect::<Vec<_>>());
         assert_eq!(guarded(include_str!("library1.rs")), ["apply"]);
         assert_eq!(guarded(include_str!("playlists1.rs")), ["start", "stop", "next", "previous"]);

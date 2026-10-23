@@ -1,66 +1,132 @@
 use crate::apply::target_output;
+use crate::compositor::{Movie, Reel};
 use crate::daemon::Daemon;
 use crate::error::{Result, invalid, not_found};
-use crate::items::reply;
-use crate::scenes::ScenePack;
-use serde_json::Value as Json;
+use crate::keyring::Keyring;
+use serde_json::{Value as Json, json};
 use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use wprs_core::model::{MODEL, SceneProperties};
-use wprs_scene::Control;
+use wprs_core::model::{MODEL, SceneOption, SceneProperties};
+use wprs_scene::{Control, Preset, Property, Values};
+use wprs_video::Cut;
 
-type Stored = BTreeMap<String, toml::Value>;
+pub type Stored = BTreeMap<String, toml::Value>;
 
-fn json(value: impl serde::Serialize) -> Json {
-    serde_json::to_value(value).unwrap_or_default()
+pub struct Props {
+    pub path: PathBuf,
+    pub id: String,
+    pub version: String,
+    pub title: String,
+    pub kind: &'static str,
+    pub languages: Vec<String>,
+    pub properties: BTreeMap<String, Property>,
+    pub presets: Vec<Preset>,
 }
 
-fn stored(value: &Json) -> Option<toml::Value> {
+pub fn stored(value: &Json) -> Option<toml::Value> {
     (!value.is_null()).then(|| toml::Value::try_from(value).ok()).flatten()
 }
 
+fn layers(stored: &[&Stored]) -> Vec<Values> {
+    let pairs = |l: &&Stored| {
+        l.iter().filter_map(|(k, v)| Some((k.clone(), serde_json::to_value(v).ok()?))).collect()
+    };
+    stored.iter().map(pairs).collect()
+}
+
+impl Props {
+    pub fn values(&self, stored: &[&Stored]) -> Values {
+        wprs_scene::effective(&self.properties, &layers(stored).iter().collect::<Vec<_>>())
+    }
+
+    pub fn stale(&self, stored: &[&Stored]) -> Vec<String> {
+        wprs_scene::stale(&self.properties, &layers(stored).iter().collect::<Vec<_>>())
+    }
+
+    pub fn movie(&self, path: PathBuf, values: &Values) -> Movie {
+        let num = |id: &str| values.get(id).and_then(Json::as_f64).unwrap_or(0.0);
+        let (start, end) = ((num("start") * 1000.0) as u32, (num("end") * 1000.0) as u32);
+        let end = if end > start + 100 { end } else { 0 };
+        let cut = Cut { speed: (num("speed") * 100.0).round() as u32, start, end };
+        let (reel, volume) = (Reel { path, cut }, num("volume").round() as u32);
+        Movie { reel, volume, zoom: num("zoom") as f32, pan: [num("x") as f32, num("y") as f32] }
+    }
+}
+
 impl Daemon {
-    fn scene_on(&self, output: &str) -> Result<(String, Arc<ScenePack>)> {
+    pub fn video_props(&self, path: &Path) -> anyhow::Result<Arc<Props>> {
+        let m = wprs_format::open(path, &wprs_format::Limits::default())?.manifest.localized();
+        anyhow::ensure!(m.kind == wprs_format::Kind::Video, "{} is not a video package", path.display());
+        let languages = m.languages(&wprs_core::locale::languages());
+        let item = |lib: &wprs_library::Library| lib.item(&lib.resolve_item(&path.to_string_lossy())?);
+        let length =
+            self.store.read(item).ok().and_then(|i| i.meta.duration_ms).map(|ms| f64::from(ms) / 1000.0);
+        let properties = m.video_properties(&crate::words::video(), length);
+        let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
+        let presets = m.presets;
+        Ok(Arc::new(Props {
+            path: path.into(),
+            id,
+            version,
+            title,
+            kind: "video",
+            languages,
+            properties,
+            presets,
+        }))
+    }
+
+    pub fn package_props(&self, path: &Path) -> anyhow::Result<Arc<Props>> {
+        match wprs_format::open(path, &wprs_format::Limits::default())?.manifest.kind {
+            wprs_format::Kind::Scene => Ok(self.scene_pack(path)?.props.clone()),
+            _ => self.video_props(path),
+        }
+    }
+
+    pub fn props_on(&self, output: &str) -> Result<(String, Arc<Props>)> {
         let output = target_output(output)?;
-        let shown = {
+        let (shown, path) = {
             let st = self.state();
             let info = st.outputs.get(&output).filter(|_| !output.is_empty());
+            let shown =
+                info.and_then(|i| i.scene.as_ref().map(|s| s.props.clone()).or_else(|| i.video.clone()));
             let path = if output.is_empty() {
                 st.config.default.image.clone()
             } else {
                 st.config.resolve(&output).image
             };
-            info.and_then(|i| i.scene.clone()).map(Ok).or(path.map(Err))
+            (shown, path)
         };
-        let missing = || {
-            not_found(format!(
-                "{} shows no scene",
-                if output.is_empty() { "the default section" } else { &output }
-            ))
-        };
-        let pack = match shown {
-            Some(Ok(pack)) => pack,
-            Some(Err(path)) if wprs_library::Kind::detect(&path) == Some(wprs_library::Kind::Package) => {
-                self.scene_pack(&path).map_err(|_| missing())?
-            }
+        let section = if output.is_empty() { "the default section" } else { &output };
+        let missing = || not_found(format!("{section} shows no package with settings"));
+        let package = |p: &PathBuf| wprs_library::Kind::detect(p) == Some(wprs_library::Kind::Package);
+        let props = match (shown, path) {
+            (Some(props), _) => props,
+            (None, Some(path)) if package(&path) => self.package_props(&path).map_err(|_| missing())?,
             _ => return Err(missing()),
         };
-        Ok((output, pack))
+        Ok((output, props))
     }
 
-    pub fn scene_properties(&self, output: &str) -> Result<String> {
-        let (output, pack) = self.scene_on(output)?;
-        let (values, warnings) = {
+    pub fn scene_properties(&self, output: &str) -> Result<SceneProperties> {
+        let (output, props) = self.props_on(output)?;
+        let (values, warnings, shared) = {
             let st = self.state();
-            let stored = st.config.scene_values(&output, &pack.id);
-            (pack.values(&stored), pack.stale(&stored))
+            let stored = st.config.scene_values(&output, &props.id);
+            let own = st.config.outputs.get(&output).is_some_and(|o| o.scenes.contains_key(&props.id));
+            (props.values(&stored), props.stale(&stored), !output.is_empty() && !own)
         };
         let (fields, preset_labels) =
-            wprs_scene::form(&pack.properties, &pack.presets, &values, &pack.languages);
-        let properties = pack.properties.iter().map(|(k, p)| (k.clone(), json(p))).collect();
-        let presets = pack.presets.iter().map(json).collect();
-        let (package, title, serial) = (pack.id.clone(), pack.title.clone(), self.changes.serial());
-        reply(SceneProperties {
+            wprs_scene::form(&props.properties, &props.presets, &values, &props.languages);
+        let mine = self.user_presets(&props.id)?.into_iter();
+        let user_presets =
+            mine.map(|p| SceneOption { value: json!(p.uid), label: p.name, icon: String::new() }).collect();
+        let properties = props.properties.iter().map(|(k, p)| (k.clone(), json!(p))).collect();
+        let presets = props.presets.iter().map(|p| json!(p)).collect();
+        let (package, title, kind) = (props.id.clone(), props.title.clone(), props.kind.into());
+        let serial = self.changes.serial();
+        Ok(SceneProperties {
             model: MODEL,
             serial,
             output,
@@ -72,62 +138,41 @@ impl Daemon {
             fields,
             preset_labels,
             warnings,
+            user_presets,
+            shared,
+            kind,
         })
     }
 
-    pub fn set_scene_property(&self, output: &str, id: &str, value: &str) -> Result<()> {
-        let (output, pack) = self.scene_on(output)?;
-        let prop =
-            pack.properties.get(id).ok_or_else(|| invalid(format!("{} has no property {id:?}", pack.id)))?;
-        let given: Json =
-            serde_json::from_str(value).map_err(|e| invalid(format!("the value is not JSON: {e}")))?;
-        let checked = prop.value(&given).map_err(|e| invalid(format!("{id} {e}")))?;
-        if checked != given {
-            tracing::warn!(property = id, "a scene property value was adjusted to its range");
+    fn property_keyring(&self) -> Result<Keyring> {
+        Ok(self.keyring()?.properties())
+    }
+
+    pub async fn store_secret(&self, key: &str, value: &str) -> Result<()> {
+        let text: String =
+            serde_json::from_str(value).map_err(|_| invalid("a secret text is a JSON string"))?;
+        if text.chars().count() > 1024 || text.chars().any(char::is_control) {
+            return Err(invalid("a secret text has at most 1024 characters and no control characters"));
         }
-        if let (Control::File { .. }, Some(file)) = (&prop.control, checked.as_str()) {
-            self.scene_file(file).map_err(|e| invalid(format!("{id}: cannot use {file}: {e:#}")))?;
+        match text.is_empty() {
+            true => self.property_keyring()?.delete(key).await?,
+            false => self.property_keyring()?.store(key, &text).await?,
         }
-        self.store_scene(&output, &pack, |values| match stored(&checked) {
-            Some(value) => drop(values.insert(id.to_owned(), value)),
-            None => drop(values.remove(id)),
-        })
-    }
-
-    pub fn apply_scene_preset(&self, output: &str, preset: &str) -> Result<()> {
-        let (output, pack) = self.scene_on(output)?;
-        let preset = pack.presets.iter().find(|p| p.id == preset.trim());
-        let preset =
-            preset.ok_or_else(|| not_found(format!("{} has no preset {preset:?}", pack.id)))?.clone();
-        self.store_scene(&output, &pack, |values| {
-            preset
-                .values
-                .iter()
-                .filter_map(|(k, v)| Some((k.clone(), stored(&pack.properties.get(k)?.value(v).ok()?)?)))
-                .for_each(|(k, v)| drop(values.insert(k, v)))
-        })
-    }
-
-    pub fn reset_scene_properties(&self, output: &str) -> Result<()> {
-        let (output, pack) = self.scene_on(output)?;
-        self.store_scene(&output, &pack, Stored::clear)
-    }
-
-    fn store_scene(&self, output: &str, pack: &ScenePack, change: impl FnOnce(&mut Stored)) -> Result<()> {
-        self.update_config(|c| {
-            let section = c.scene_section(output);
-            let values = section.entry(pack.id.clone()).or_default();
-            change(values);
-            if values.is_empty() {
-                section.remove(&pack.id);
-            }
-            Ok(())
-        })?;
-        let shows =
-            |info: &crate::streams::OutputInfo| info.scene.as_ref().is_some_and(|s| s.path == pack.path);
-        let affected: Vec<String> =
-            self.state().outputs.iter().filter(|(_, i)| shows(i)).map(|(n, _)| n.clone()).collect();
-        affected.iter().for_each(|o| drop(self.configure_output(o)));
+        self.changes.changed("state", Vec::new());
         Ok(())
+    }
+
+    pub async fn fill_secrets(&self, reply: &mut SceneProperties) {
+        let Ok(keyring) = self.property_keyring() else { return };
+        for field in reply.fields.iter_mut().filter(|f| f.secret) {
+            field.filled = keyring.has(&format!("{}/{}", reply.package, field.key)).await.unwrap_or(false);
+        }
+    }
+
+    pub fn secret_key(&self, output: &str, id: &str) -> Result<Option<String>> {
+        let (_, props) = self.props_on(output)?;
+        let secret =
+            matches!(props.properties.get(id).map(|p| &p.control), Some(Control::Text { secret: true, .. }));
+        Ok(secret.then(|| format!("{}/{id}", props.id)))
     }
 }

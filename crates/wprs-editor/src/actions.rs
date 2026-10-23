@@ -111,11 +111,46 @@ pub enum Action {
         #[serde(default)]
         derived_from: Vec<String>,
     },
+    AddProperty {
+        kind: String,
+        #[serde(default)]
+        id: Option<String>,
+        #[serde(default)]
+        group: Option<String>,
+        #[serde(default)]
+        label: Option<String>,
+    },
+    MoveProperty {
+        id: String,
+        to: usize,
+        #[serde(default)]
+        group: Option<String>,
+    },
+    RenameProperty {
+        id: String,
+        to: String,
+    },
+    RemoveProperty {
+        id: String,
+    },
+    Condition {
+        id: String,
+        #[serde(default)]
+        enabled: bool,
+        #[serde(default)]
+        text: String,
+    },
+    AddPreset {
+        #[serde(default)]
+        id: Option<String>,
+        #[serde(default)]
+        label: Option<String>,
+    },
     Undo {},
     Redo {},
 }
 
-pub const ACTIONS: [&str; 20] = [
+pub const ACTIONS: [&str; 26] = [
     "set",
     "add",
     "remove",
@@ -134,6 +169,12 @@ pub const ACTIONS: [&str; 20] = [
     "translate",
     "thumbnail",
     "upgrade",
+    "add_property",
+    "move_property",
+    "rename_property",
+    "remove_property",
+    "condition",
+    "add_preset",
     "undo",
     "redo",
 ];
@@ -261,6 +302,16 @@ pub fn plan(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         Action::Upgrade { rating, reasons, photosensitive, derived_from } => {
             crate::meta::upgrade(doc, *rating, reasons, *photosensitive, derived_from)?
         }
+        Action::AddProperty { kind, id, group, label } => {
+            crate::props::add_property(doc, kind, id.as_deref(), group.as_deref(), label.as_deref())?
+        }
+        Action::MoveProperty { id, to, group } => {
+            crate::props::move_property(doc, id, *to, group.as_deref())?
+        }
+        Action::RenameProperty { id, to } => crate::references::rename_property(doc, id, to)?,
+        Action::RemoveProperty { id } => crate::references::remove_property(doc, id)?,
+        Action::Condition { id, enabled, text } => crate::references::condition(doc, id, *enabled, text)?,
+        Action::AddPreset { id, label } => crate::props::add_preset(doc, id.as_deref(), label.as_deref())?,
         Action::Import { .. } | Action::Thumbnail { .. } | Action::Undo {} | Action::Redo {} => Vec::new(),
     })
 }

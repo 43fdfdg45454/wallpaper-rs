@@ -5,7 +5,7 @@ use super::scene::SceneState;
 use super::slot::PlayerSlot;
 use super::speakers::Speaker;
 use super::surface::Screen;
-use super::{Command, Content, OutputStatus, Picture, Settings, Spec};
+use super::{Command, Content, OutputStatus, Picture, Reel, Settings, Spec};
 use image::RgbaImage;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
@@ -22,7 +22,7 @@ pub(super) struct State {
     pub(super) exporter: Arc<Exporter>,
     pub(super) settings: Settings,
     pub(super) outputs: BTreeMap<String, Output>,
-    pub(super) players: HashMap<PathBuf, PlayerSlot>,
+    pub(super) players: HashMap<Reel, PlayerSlot>,
     pub(super) tx: mpsc::Sender<Command>,
     pub(super) status: Arc<Mutex<BTreeMap<String, OutputStatus>>>,
     pub(super) on_status: Box<dyn Fn(Vec<String>) + Send>,
@@ -132,6 +132,14 @@ impl State {
                 self.locked = locked;
                 self.hush();
             }
+            Command::Press(output, id) => {
+                if let Some(o) = self.outputs.get_mut(&output)
+                    && let Some(scene) = o.shown.scene.as_mut()
+                {
+                    scene.press(&id);
+                    o.dirty = true;
+                }
+            }
             Command::Wake => {}
             Command::Quit => return false,
         }
@@ -139,7 +147,7 @@ impl State {
     }
 
     fn configure(&mut self, name: String, size: (u32, u32), mut spec: Spec) {
-        let slot = spec.content.video().and_then(|path| self.players.get_mut(path));
+        let slot = spec.content.video().and_then(|reel| self.players.get_mut(reel));
         slot.into_iter().for_each(|slot| slot.revive(Instant::now()));
         self.outputs.get_mut(&name).into_iter().for_each(|o| o.refresh = spec.refresh);
         let resume = self.outputs.get(&name).and_then(|o| match (&o.shown.content, &spec.content) {
@@ -156,7 +164,7 @@ impl State {
         }
         if let Some(o) = current.as_deref_mut()
             && let (Content::Scene(old), Content::Scene(new)) = (&o.shown.content, &spec.content)
-            && old.same_source(new)
+            && Arc::ptr_eq(&old.pack, &new.pack)
             && (o.shown.fit, o.shown.background) == (spec.fit, spec.background)
             && let Some(scene) = o.shown.scene.as_mut()
         {
@@ -241,14 +249,14 @@ impl State {
             self.restill();
         }
         self.hush();
-        let mut players = self.players.values().filter_map(|s| s.player.as_ref());
+        let mut players = self.players.values().filter(|s| s.volume > 0).filter_map(|s| s.player.as_ref());
         if !settings.muted && settings.volume > 0.0 && players.any(|p| !p.audio_enabled()) {
-            self.players.clear();
+            self.players.retain(|_, slot| slot.volume == 0);
         }
     }
 
-    fn hush(&self) {
-        let (volume, muted) = (self.settings.volume, self.settings.muted || self.locked);
-        self.players.values().filter_map(|s| s.player.as_ref()).for_each(|p| p.set_volume(volume, muted));
+    pub(super) fn hush(&self) {
+        let heard = (self.settings, self.locked);
+        self.players.values().for_each(|slot| slot.hush(heard));
     }
 }

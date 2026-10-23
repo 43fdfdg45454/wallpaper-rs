@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::sync::{Mutex, mpsc};
 use std::time::{Duration, Instant};
-use wprs_video::{Options, Player};
+use wprs_video::{Cut, Options, Player};
 
 const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures/magenta-64x32.webm");
 
@@ -10,7 +10,7 @@ fn dropping_a_stuck_player_returns_in_time() {
     let (tx, rx) = mpsc::channel();
     let (release, stuck) = mpsc::channel::<()>();
     let stuck = Mutex::new(stuck);
-    let options = Options { max_size: (64, 32), max_fps: 60, volume: 0.0, muted: true };
+    let options = Options { max_size: (64, 32), max_fps: 60, volume: 0.0, muted: true, cut: Cut::default() };
     let opened = Player::open(Path::new(FIXTURE), options, move |_| {
         let _ = tx.send(());
         let _ = stuck.lock().map(|stuck| stuck.recv());

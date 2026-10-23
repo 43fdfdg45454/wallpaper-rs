@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use wprs_client::Client;
 use wprs_editor::actions::{Action, visible};
 use wprs_editor::starters::{default_id, starter};
-use wprs_editor::{Op, Project, assets, inspect, package};
+use wprs_editor::{Op, Project, assets, inspect, package, references};
 
 fn value(text: &str) -> Value {
     serde_json::from_str(text).unwrap_or_else(|_| Value::String(text.into()))
@@ -16,9 +16,16 @@ fn value(text: &str) -> Value {
 fn edit(dir: &Path, action: Action) -> Result<()> {
     let mut project = Project::open(dir)?;
     let undoing = matches!(action, Action::Undo {} | Action::Redo {});
+    let named = match &action {
+        Action::RenameProperty { id, .. } | Action::RemoveProperty { id } => {
+            references::scripts(&project.dir, &project.doc, id).into_iter().map(|p| (p, id.clone())).collect()
+        }
+        _ => Vec::new(),
+    };
     let ops = project.act(&action)?;
     ensure!(!(undoing && ops.is_empty()), "there is nothing to {}", action.name());
     project.save()?;
+    named.iter().for_each(|(path, id)| eprintln!("warning: {path} names {id:?}; scripts are not rewritten"));
     let added = ops.iter().filter_map(|op| match op {
         Op::Add { path, value } => {
             Some(value["id"].as_str().unwrap_or(path.rsplit('/').next().unwrap_or_default()))
@@ -28,6 +35,19 @@ fn edit(dir: &Path, action: Action) -> Result<()> {
     let added: Vec<&str> = added.collect();
     match action {
         Action::Import { .. } => added.last().iter().for_each(|id| println!("{id}")),
+        Action::AddPreset { .. } => {
+            let last = project.doc["manifest"]["presets"].as_array().and_then(|l| l.last());
+            last.and_then(|p| p["id"].as_str()).iter().for_each(|id| println!("{id}"))
+        }
+        Action::AddProperty { .. } => ops
+            .iter()
+            .filter_map(|op| match op {
+                Op::Add { path, .. } => {
+                    path.strip_prefix("/manifest/properties/").filter(|p| !p.contains('/'))
+                }
+                _ => None,
+            })
+            .for_each(|id| println!("{id}")),
         Action::Thumbnail { .. } => ops
             .iter()
             .filter_map(|op| match op {
@@ -81,6 +101,7 @@ fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> {
             let reasons = reasons.iter().filter_map(|r| serde_json::from_value(json!(r)).ok()).collect();
             (dir, Action::Upgrade { rating, reasons, photosensitive, derived_from })
         }
+        Author::Properties(command) => crate::userprops::action(command),
         Author::Undo { dir } => (dir, Action::Undo {}),
         Author::Redo { dir } => (dir, Action::Redo {}),
         other => return Err(Box::new(other)),

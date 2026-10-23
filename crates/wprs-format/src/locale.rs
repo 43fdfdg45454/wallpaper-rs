@@ -73,7 +73,8 @@ impl Manifest {
             out.extend(own.filter_map(|(f, t)| Some((format!("properties.{id}.{f}"), t?))));
             if let Control::Combo { options, .. } = &p.control {
                 out.extend(options.iter().filter_map(|o| match o {
-                    Choice::Labeled { value, label } => {
+                    Choice::Labeled { value, label, .. } => {
+                        let value = value.as_str().map_or_else(|| value.to_string(), String::from);
                         Some((format!("properties.{id}.options.{value}"), label))
                     }
                     Choice::Plain(_) => None,

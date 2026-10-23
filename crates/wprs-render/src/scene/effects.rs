@@ -33,7 +33,7 @@ impl Painter<'_, '_, '_> {
 
     fn base(&mut self, e: &EffectDraw<'_>, layer_uv: Affine) -> (Fx, Src) {
         let images = self.images;
-        let mask = e.mask.and_then(|m| m.texture.as_ref()).and_then(|id| images.get(id));
+        let mask = e.mask_texture.as_deref().and_then(|id| images.get(id));
         let mask = mask.map_or(Src::White, |(image, _)| self.ext(image));
         let (mask_m0, mask_m1) = rows(layer_uv);
         let fx = Fx {

@@ -57,12 +57,6 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
             json!({"id": id, "path": path, "kind": asset_kind(path), "size": size, "pointer": format!("/scene/assets/{}", escape(id))})
         })
         .collect();
-    let props = doc["manifest"]["properties"].as_object().into_iter().flatten();
-    let mut props: Vec<Value> = props
-        .map(|(id, p)| json!({"id": id, "type": p["type"], "label": p["label"], "order": p["order"].as_i64().unwrap_or(0),
-            "pointer": format!("/manifest/properties/{}", escape(id))}))
-        .collect();
-    props.sort_by_key(|p| p["order"].as_i64().unwrap_or(0));
     let timelines = doc["scene"]["timelines"].as_array().into_iter().flatten().enumerate();
     let timelines: Vec<Value> = timelines
         .map(|(i, t)| json!({"id": t["id"], "duration": t["duration"], "loop": t["loop"], "pointer": format!("/scene/timelines/{i}")}))
@@ -84,7 +78,8 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
     json!({"title": title, "id": m["id"], "version": m["version"], "license": m["license"], "canvas": doc["scene"]["canvas"],
         "v2": m["schema"] == wprs_format::SCHEMA, "rating": m["content"]["rating"], "photosensitive": m["photosensitive"],
         "layers": layers, "gizmos": gizmos(&project.dir, doc, time), "problems": problems, "assets": assets,
-        "properties": props, "timelines": timelines, "tracks": tracks, "length": length, "systems": systems,
+        "properties": crate::listing::rows(doc), "presets": crate::listing::presets(doc),
+        "property_kinds": crate::props::PROPERTY_KINDS, "timelines": timelines, "tracks": tracks, "length": length, "systems": systems,
         "history": {"done": done, "undone": undone}, "dirty": project.dirty(), "recoverable": project.pending.is_some(),
         "kinds": KINDS, "starters": STARTERS, "easings": wprs_scene::easings(),
         "effects": wprs_scene::builtin().iter().map(|d| d.id.as_str()).collect::<Vec<_>>()})

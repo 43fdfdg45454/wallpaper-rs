@@ -6,7 +6,7 @@ use std::time::Instant;
 use wprs_scene::{AudioFrame, Uses};
 
 pub(super) fn declare(output: &str, scene: Option<&SceneState>) {
-    let pack = scene.map(|s| (s.spec.pack.id.as_str(), s.spec.pack.title.as_str()));
+    let pack = scene.map(|s| (s.spec.pack.props.id.as_str(), s.spec.pack.props.title.as_str()));
     let uses = scene.map(SceneState::uses).unwrap_or_default();
     inputs::needs(output, pack.unwrap_or_default(), uses.audio, uses.cursor);
 }

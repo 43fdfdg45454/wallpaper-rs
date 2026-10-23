@@ -42,8 +42,9 @@ impl Shot {
             images: images.iter().map(|(id, i)| (id.to_string(), i.clone())).collect(),
             ..Default::default()
         };
-        let view = r.scene_view(&scene, &assets).unwrap();
-        Shot { runtime: Runtime::new(Arc::new(scene), effective(&props, &[])), view }
+        let values = effective(&props, &[]);
+        let view = r.scene_view(&scene, &assets, &values).unwrap();
+        Shot { runtime: Runtime::new(Arc::new(scene), values), view }
     }
 
     fn pixels(&mut self, r: &Renderer) -> Vec<u8> {
@@ -247,4 +248,21 @@ fn static_parts_are_cached_and_steady_frames_create_nothing() {
 
 fn fontdb_has_fonts() -> bool {
     ["/usr/share/fonts", "/usr/local/share/fonts"].iter().any(|d| std::path::Path::new(d).is_dir())
+}
+
+#[test]
+fn a_view_swaps_only_a_changed_image() {
+    let Some(r) = renderer() else { return };
+    let layers = json!([{ "id": "img", "type": "image", "image": "photo", "size": [100, 50] }]);
+    let (red, blue) =
+        (halves([255, 0, 0, 255], [255, 0, 0, 255]), halves([0, 0, 255, 255], [0, 0, 255, 255]));
+    let mut shot = Shot::new(&r, canvas("#000000"), layers, &[("photo", red.clone())]);
+    check(&shot.pixels(&r), &[((50, 25), [255, 0, 0])]);
+    let scene = shot.runtime.scene.clone();
+    let assets = |image| SceneAssets { images: [("photo".to_string(), image)].into(), ..Default::default() };
+    let mut swap =
+        |image| r.refresh_scene(&mut shot.view, (&scene, shot.runtime.props()), &assets(image)).unwrap();
+    assert!(!swap(red));
+    assert!(swap(blue));
+    check(&shot.pixels(&r), &[((50, 25), [0, 0, 255])]);
 }
