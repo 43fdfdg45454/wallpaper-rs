@@ -100,3 +100,41 @@ fn empty_fields_are_no_edit() {
     let same = step(Some(&base), Some(&base), Some(&local), PLAIN, &at(9, "a"));
     assert_eq!((same.push, same.apply), (None, None));
 }
+
+#[test]
+fn edits_travel_in_parts_without_their_source_and_large_parts_keep_the_last_sent() {
+    let edit: wprs_core::Edit = serde_json::from_value(json!({
+        "version": 1, "source": {"name": "IMG_1.jpg"}, "fit": "fit",
+        "outputs": {"Android": {"connector": "Android", "crop": [0.25, 0.0, 0.5, 1.0]}}
+    }))
+    .unwrap();
+    let fields = edit_fields(Some(&edit), None);
+    let android = json!({"connector": "Android", "crop": [0.25, 0.0, 0.5, 1.0]});
+    assert_eq!(fields, view(&[("e:fit", json!("fit")), ("e:outputs/Android", android.clone())]));
+    let whole = json!({"version": 1, "fit": "fit", "outputs": {"Android": android}});
+    assert_eq!(edit_of(&fields), Some(whole));
+    assert_eq!((edit_of(&title("IMG_1")), edit_fields(None, None)), (None, View::new()));
+    let stroke = json!({"radius": 0.1, "hardness": 0.5, "points": vec![[0.5, 0.5]; 9000]});
+    let masks = json!({"version": 1, "masks": {"b": {"type": "brush", "strokes": [stroke]}}});
+    let huge: wprs_core::Edit = serde_json::from_value(masks).unwrap();
+    let base = view(&[("e:masks", json!({}))]);
+    assert_eq!(edit_fields(Some(&huge), Some(&base)).get("e:masks"), Some(&json!({})));
+    assert_eq!(edit_fields(Some(&huge), None).get("e:masks"), None);
+    let held = edit_held(&view(&[("e:span", json!({})), ("t:sky", json!(true))]), fields);
+    assert_eq!(held.keys().collect::<Vec<_>>(), ["e:fit", "e:outputs/Android", "e:span"]);
+    assert_eq!(held["e:span"], json!(null));
+}
+
+#[test]
+fn edits_made_apart_before_the_first_sync_both_survive() {
+    let base = (1, doc(&[("title", json!("Hills"), 1)]));
+    let desk =
+        view(&[("title", json!("Hills")), ("e:ops", json!([{"id": "ev", "type": "exposure", "ev": 1.0}]))]);
+    let pushed = step(Some(&base), Some(&base), Some(&desk), LIBRARY, &at(5, "a")).push.unwrap();
+    let phone = view(&[("title", json!("Hills")), ("e:parallax", json!({"enabled": true}))]);
+    let both = step(Some(&base), Some(&pushed), Some(&phone), LIBRARY, &at(9, "b"));
+    let merged = both.apply.flatten().unwrap();
+    assert!(merged.contains_key("e:ops") && merged.contains_key("e:parallax"), "{merged:?}");
+    let sent = both.push.unwrap().1.view().unwrap();
+    assert_eq!(sent, merged);
+}

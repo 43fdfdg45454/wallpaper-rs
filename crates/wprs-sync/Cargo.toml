@@ -7,6 +7,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+wprs-core.workspace = true
 wprs-library.workspace = true
 argon2.workspace = true
 base64.workspace = true

@@ -1,8 +1,8 @@
 use crate::library::{now, with};
-use crate::{Error, apply, settings, store};
+use crate::{Error, apply, depth, settings, store};
 use std::collections::{BTreeMap, BTreeSet};
 use wprs_sync::{
-    DEVICE_KEYS, Ids, Kept, Local, Replica, View, item_view, keep, kind, link, object, preserve,
+    DEVICE_KEYS, Ids, Kept, Local, Replica, View, edit_fields, item_view, keep, kind, link, object, preserve,
     settings as sections,
 };
 
@@ -39,7 +39,11 @@ pub(crate) fn snapshot(
                 local.fresh.insert(key);
                 local.views.insert(record, view);
             }
-            (1, _) => drop(local.views.insert(record, item_view(&item))),
+            (1, old) => {
+                let mut view = item_view(&item);
+                view.extend(edit_fields(depth::shared(&item).as_ref(), old.as_ref()));
+                local.views.insert(record, view);
+            }
             _ => {}
         }
     }

@@ -6209,6 +6209,7 @@ dependencies = [
  "tokio-util",
  "toml",
  "webpki-root-certs",
+ "wprs-core",
  "wprs-library",
  "zeroize",
 ]

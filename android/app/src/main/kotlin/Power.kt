@@ -7,7 +7,10 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.PowerManager
 import android.os.SystemClock
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.content.ContextCompat
+
+val powered = mutableIntStateOf(0)
 
 class Power(private val context: Context) : BroadcastReceiver(), PowerManager.OnThermalStatusChangedListener {
     private val visible = mutableSetOf<Any>()
@@ -61,6 +64,7 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
             power.currentThermalStatus,
             headroom,
         )
+        powered.intValue++
         Render.post { Wallpaper.wake() }
     }
 

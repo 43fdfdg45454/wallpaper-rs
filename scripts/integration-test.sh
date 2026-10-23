@@ -676,6 +676,10 @@ ctl edit preview "$pic" ev=0
 shown "$edited" 0 255 0
 ctl edit preview "$pic" --stop
 shown "$edited" 0 137 0
+ctl edit fit "$pic" center
+expect "s['outputs']['TEST-8']['fit'], s['outputs']['TEST-8']['shown_fit']" "('stretch', 'center')"
+ctl edit fit "$pic" none
+expect "s['outputs']['TEST-8']['fit'], s['outputs']['TEST-8']['shown_fit']" "('stretch', 'stretch')"
 ctl edit overlay "$pic" '#ff0000'
 shown "$edited" 255 0 0
 ctl edit reset "$pic"

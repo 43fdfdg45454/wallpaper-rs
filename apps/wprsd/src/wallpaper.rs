@@ -37,7 +37,7 @@ impl Daemon {
             Some((pack, _)) => Some(Ok(Media::Scene(pack))),
             None => image.map(|image| self.media(image)),
         };
-        let mut shown_scene = None;
+        let (mut shown_scene, mut fit) = (None, resolved.fit);
         let (content, upload) = match media {
             None => (Content::Color, None),
             Some(Err(e)) => {
@@ -59,7 +59,10 @@ impl Daemon {
             }
             Some(Ok(Media::Picture(file))) => {
                 match self.picture(output, file, (size, resolved.fit), uploaded) {
-                    Ok((picture, upload)) => (Content::Image(picture), Some(upload)),
+                    Ok((picture, upload)) => {
+                        fit = upload.1;
+                        (Content::Image(picture), Some(upload))
+                    }
                     Err(e) => {
                         tracing::warn!(
                             output,
@@ -79,7 +82,7 @@ impl Daemon {
         self.compositor.configure(
             output,
             size,
-            Spec { content, fit: resolved.fit, background: resolved.background, transition, refresh },
+            Spec { content, fit, background: resolved.background, transition, refresh },
         );
         if let Some(info) = self.state().outputs.get_mut(output) {
             (info.uploaded, info.scene) = (upload, shown_scene);
@@ -102,6 +105,7 @@ impl Daemon {
     ) -> anyhow::Result<(Picture, Upload)> {
         let modified = modified(&file)?;
         let edit = self.edit_for(&file);
+        let fit = edit.as_ref().and_then(|e| e.fit).filter(|_| fit != Fit::Span).unwrap_or(fit);
         let place = self.place(output, fit, edit.as_deref());
         let depth = edit.as_deref().filter(|e| e.needs_depth()).and_then(|e| self.depth_for(&file, e));
         let upload = (size, fit, file.clone(), modified, edit.clone(), place.clone());

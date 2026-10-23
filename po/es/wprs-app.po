@@ -803,6 +803,14 @@ msgid "Use the whole picture"
 msgstr "Usar toda la imagen"
 
 #: apps/wprs-app/qml/EditGeometry.qml
+msgid "Placement of this picture"
+msgstr "Colocación de esta imagen"
+
+#: apps/wprs-app/qml/EditGeometry.qml
+msgid "Like the screen"
+msgstr "Como en la pantalla"
+
+#: apps/wprs-app/qml/EditGeometry.qml
 msgid "Rotate left"
 msgstr "Girar a la izquierda"
 
@@ -955,8 +963,7 @@ msgstr "Bajar"
 msgid "Remove"
 msgstr "Quitar"
 
-#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/EditParallax.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Strength"
 msgstr "Fuerza"
 
@@ -1040,9 +1047,13 @@ msgstr "Lo más rápido: solo desplazar"
 msgid "%1 steps"
 msgstr "%1 pasos"
 
-#: apps/wprs-app/qml/EditParallax.qml
-msgid "Depth that stays still"
-msgstr "Profundidad que no se mueve"
+#: apps/wprs-app/qml/EditParallax.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Intensity"
+msgstr "Intensidad"
+
+#: apps/wprs-app/qml/EditParallax.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Focus"
+msgstr "Enfoque"
 
 #: apps/wprs-app/qml/EditParallax.qml
 msgid "Smoothing (ms)"
@@ -1290,6 +1301,10 @@ msgid "Mature content: click the picture to always show this package"
 msgstr ""
 "Contenido para adultos: haz clic en la imagen para mostrar siempre este "
 "paquete"
+
+#: apps/wprs-app/qml/OutputRow.qml
+msgid "This picture has its own placement: %1"
+msgstr "Esta imagen tiene su propia colocación: %1"
 
 #: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/SceneBuild.qml
 #: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/SceneMeta.qml
@@ -3165,10 +3180,6 @@ msgstr "Caída"
 msgid "Fill color"
 msgstr "Color de relleno"
 
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Focus"
-msgstr "Enfoque"
-
 #
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Follow"
@@ -3257,10 +3268,6 @@ msgstr "Tamaño interior"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Whole numbers"
 msgstr "Números enteros"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Intensity"
-msgstr "Intensidad"
 
 #
 #: apps/wprs-app/qml/facade/SceneWords.qml

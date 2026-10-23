@@ -124,6 +124,7 @@ impl Daemon {
                 height,
                 image: r.image,
                 fit: r.fit,
+                shown_fit: info.uploaded.as_ref().map_or(r.fit, |upload| upload.1),
                 background: format!("#{red:02x}{green:02x}{blue:02x}"),
                 kind,
                 playing: s.playing,

@@ -14,12 +14,10 @@
     <string name="choose">Add</string>
     <string name="apply">Set as wallpaper</string>
     <string name="applied">Wallpaper updated</string>
-    <string name="unreadable">This file cannot be opened</string>
     <string name="unsupported">This device cannot set live wallpapers</string>
     <string name="favorite">Favorite</string>
     <string name="add_to_playlist">Add to playlist</string>
     <string name="remove">Remove</string>
-    <string name="remove_question">Remove it from the library? The copy kept by the app is deleted, the original stays on your device.</string>
     <string name="mature">Mature content</string>
     <string name="flashing">Flashing lights</string>
     <string name="mature_warning">This wallpaper has mature content.</string>
@@ -57,6 +55,7 @@
     <string name="whole">Whole image</string>
     <string name="stretch">Stretch</string>
     <string name="center">Center</string>
+    <string name="tile">Tile</string>
     <string name="battery_fps">Animation on battery</string>
     <string name="charger_fps">Animation while charging</string>
     <string name="fps" translatable="false">%d fps</string>
@@ -142,4 +141,37 @@
     <string name="reset">Reset</string>
     <string name="not_on_phone">%1$s: not available on the phone</string>
     <string name="scene_level">Scenes: device class %1$s, level %2$s</string>
+    <string name="strength">Intensity</string>
+    <string name="focus">Focus</string>
+    <string name="still_saver">Still while battery saver is on</string>
+    <string name="still_battery">Still while the battery is low</string>
+    <string name="still_heat">Still while the phone is hot</string>
+    <string name="depth_none">No depth map yet: the whole picture moves</string>
+    <string name="depth_making">Making the depth map…</string>
+    <string name="depth_ready">Depth map ready: near things move more than the background</string>
+    <string name="depth_kept">Depth map ready</string>
+    <string name="depth_missing">No depth map yet</string>
+    <string name="like_settings">As in Settings</string>
+    <string name="frame_hint">Drag and pinch the preview to frame the picture</string>
+    <string name="reset_frame">Reset framing</string>
+    <string name="photos">Photos and videos</string>
+    <string name="files">Choose files</string>
+    <string name="folder">Import a folder</string>
+    <string name="folder_empty">That folder has no pictures or videos</string>
+    <string name="imported">%1$d of %2$d added</string>
+    <string name="select_all">Select all</string>
+    <string name="unfavorite">Remove from favorites</string>
+    <string name="fit_pictures">Only pictures have their own fit: set on %1$d of %2$d</string>
+    <plurals name="selected">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="remove_question">
+        <item quantity="one">Remove this item from the library? The copy kept by the app is deleted, the original stays on your device.</item>
+        <item quantity="other">Remove %d items from the library? The copies kept by the app are deleted, the originals stay on your device.</item>
+    </plurals>
+    <plurals name="unreadable">
+        <item quantity="one">%d file cannot be opened</item>
+        <item quantity="other">%d files cannot be opened</item>
+    </plurals>
 </resources>

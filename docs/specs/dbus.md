@@ -1101,7 +1101,7 @@ synced `device` record names the key the server lists.
 
 | Collection | Item | Fields |
 |------------|------|--------|
-| `library` | keyed hash | `title`, `rating`, `favorite`, `t:<tag>`, and `blob` `{id, hash, size, name}` for a private file on the server; only items with a tag, a rating, a favorite mark or a private file get a record |
+| `library` | keyed hash | `title`, `rating`, `favorite`, `t:<tag>`, one field per part of the edit of a picture, so parts changed on two devices both survive: `e:geometry`, `e:ops`, `e:masks`, `e:span`, `e:depth`, `e:parallax`, `e:fit` and `e:outputs/<screen>` for each screen crop, leaving out the `source` and parts at their default (a part over 64 KiB keeps the last copy sent, parts this version does not know are kept as synced, and a received edit keeps the `source` of this computer) and `blob` `{id, hash, size, name}` for a private file on the server; only items with a tag, a rating, a favorite mark, an edit or a private file get a record |
 | `playlists` | keyed hash | `name`, `query`, `r:<rule>` (rules this version does not know are kept as synced), and for manual playlists one `e:<entry>` per entry with its item and a fractional position |
 | `settings` | keyed hash of the section | every option except `playback.volume`, `playback.muted`, `playback.software_parallax`, `library.thumb_cache_mb` and `models.allow_download`; options and sections this version does not know are kept as synced |
 | `settings` | keyed hash | `kind` (`profile` or `preset`) and the profile or preset, with items, playlists and presets named by their synced ids; the options of a profile leave out the settings above that stay on each device, and a received profile keeps their values from this computer |
@@ -1420,7 +1420,8 @@ that cannot be used is ignored with a warning.
   "outputs": { "Maker Model 1234": { "connector": "DP-1", "crop": [0.0, 0.1, 0.5, 0.5625] } },
   "span": { "center": [0.5, 0.46], "zoom": 1.0 },
   "depth": { "model": "depth-anything-v2-small", "input": 518, "near": 1.0, "far": 0.0, "gamma": 1.0, "smooth": 2, "dilate": 3 },
-  "parallax": { "enabled": true, "source": "auto", "strength": 0.02, "focus": 0.3, "steps": 16, "smoothing_ms": 150, "overscan": 1.04 }
+  "parallax": { "enabled": true, "source": "auto", "strength": 0.02, "focus": 0.3, "steps": 16, "smoothing_ms": 150, "overscan": 1.04 },
+  "fit": "fill"
 }
 ```
 
@@ -1452,7 +1453,9 @@ that cannot be used is ignored with a warning.
   and up to 4 `brush` masks (`strokes` of `radius`, `hardness`, `erase` and `points`, at most
   20 000 points in all). Every mask takes `invert`.
 - `outputs` crops the edited image for one screen, keyed by its identity (as in
-  `SetOutputInfo`) or output name; `connector` names the output as a hint.
+  `SetOutputInfo`) or output name; `connector` names the output as a hint. The Android app keeps
+  the framing chosen on the phone under `Android`, in the shape of the phone's screen, inside the
+  `geometry` crop; computers leave it to the phone.
 - `span` places the image when the fit is `span`: `center` `[x, y]` and `zoom` from `1` to `8`.
 - `depth` shapes the depth map: `near` and `far` (`0` to `1`) are the levels of the nearest and
   farthest points, `gamma` (`0.2` to `5`) curves the levels between them, `dilate` (`0` to `16`
@@ -1469,6 +1472,9 @@ that cannot be used is ignored with a warning.
   far to `1` near) the depth that stays still, `steps` `1`, `8`, `16` or `32` the quality,
   `smoothing_ms` (`0` to `2000`) the time a critically damped spring takes to follow the source and
   `overscan` (`1` to `1.1`) the zoom that hides the edges.
+- `fit` (`fill`, `fit`, `stretch`, `center` or `tile`) shows this picture with its own fit instead
+  of the fit of the output, except on `span` outputs; `GetState().outputs[x].fit` stays the fit of
+  the output and `shown_fit` reports the fit in use.
 
 The depth map of an image is a grey PNG, white near. It can sit next to the image
 (`hills.jpg.depth.png`, where `wprs-ctl edit depth import` and `export` put it), in
@@ -1684,7 +1690,7 @@ struct OutputState {
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
     edited: bool, screen: Option<Screen>, parallax: bool, frames: u64, refresh: u32, fps: u32,
-    buffers: String, sound: String,
+    buffers: String, sound: String, shown_fit: Fit,
 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
 enum Shown { Color, Image, Video, Scene }

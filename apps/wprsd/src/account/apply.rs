@@ -3,7 +3,9 @@ use crate::error::{Error, Result};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use wprs_sync::{DEVICE_KEYS, Kept, Local, Replica, View, item_view, keep as hold, kind};
+use wprs_sync::{
+    DEVICE_KEYS, Kept, Local, Replica, View, edit_fields, edit_held, edit_of, item_view, keep as hold, kind,
+};
 
 type Links = BTreeMap<String, String>;
 
@@ -93,8 +95,17 @@ impl Daemon {
                 if !add.is_empty() || !remove.is_empty() {
                     lib.retag(&[uid], &add, &remove)?;
                 }
-                Ok::<_, Error>(held)
+                Ok::<_, Error>((held, item))
             })?;
+            let (mut held, shown) = held;
+            let edits = self.store.data.join("edits");
+            let fresh = local.fresh.contains(item);
+            if shown.kind == wprs_library::Kind::Image
+                && let Err(e) = wprs_core::edit::adopt(edit_of(view).as_ref(), &shown.path, &edits, fresh)
+            {
+                tracing::debug!("a synced edit could not be used: {e}");
+                held.extend(edit_held(view, edit_fields(self.shared_edit(&shown).as_ref(), None)));
+            }
             hold(kept, key, held);
         }
         Ok(())

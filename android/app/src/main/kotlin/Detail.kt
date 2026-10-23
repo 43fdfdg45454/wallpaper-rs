@@ -4,9 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
@@ -14,14 +19,12 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.json.JSONObject
@@ -52,23 +56,51 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
         ready = true
     }
     DisposableEffect(uid) { onDispose { main.unpick(choice("item", uid)) } }
+    val picture = item?.run { !video && !scene } == true
+    val state by loaded(JSONObject(), uid, picture, main.revision.intValue, Depth.working.value, powered.intValue) {
+        if (picture) depth("item", "uid" to uid) as JSONObject else JSONObject()
+    }
+    val window = LocalWindowInfo.current.containerSize
+    val screen = remember(window) { main.wallpaperSize() }
+    val preview = @Composable { modifier: Modifier ->
+        Box(modifier.padding(horizontal = 16.dp), Alignment.Center) {
+            if (asks != null) Caution(asks) { main.act { ask("confirm", "uid" to uid, "what" to asks) } }
+            else if (ready) {
+                val shape = Modifier.aspectRatio(screen.width.coerceAtLeast(1) / screen.height.coerceAtLeast(1).toFloat(), true)
+                Live(main, main.revision.intValue, Depth.working.value, modifier = if (picture) shape.framing(main, uid, screen) else shape)
+            }
+        }
+    }
+    val about = @Composable { modifier: Modifier ->
+        Column(modifier.verticalScroll(rememberScrollState())) {
+            item?.let { Text(facts(it), Modifier.padding(16.dp, 8.dp), style = MaterialTheme.typography.bodyMedium) }
+            item?.about?.takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(16.dp, 0.dp), style = MaterialTheme.typography.bodySmall, maxLines = 4) }
+            item?.lacks?.takeIf { it.isNotEmpty() }?.let { lacks ->
+                Note(lacks.map { stringResource(if (it == "scripts") R.string.lacks_scripts else R.string.lacks_sound) }.joinToString(" "))
+            }
+            if (picture) {
+                Framing(main, uid, state)
+                Relief(main, uid, state)
+            }
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         Header(item?.title.orEmpty(), close)
-        Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
-            if (asks != null) Caution(asks) { main.act { ask("confirm", "uid" to uid, "what" to asks) } }
-            else if (ready) Live(main, main.revision.intValue, Depth.working.value)
+        if (window.width > window.height) Row(Modifier.weight(1f)) {
+            preview(Modifier.weight(1f).fillMaxHeight())
+            Column(Modifier.weight(1f)) {
+                about(Modifier.weight(1f, false))
+                if (item?.scene == true) Scene(main, uid, Modifier.weight(1f))
+            }
+        } else {
+            preview(Modifier.weight(1f).fillMaxWidth())
+            about(Modifier.heightIn(max = 360.dp))
+            if (item?.scene == true) Scene(main, uid, Modifier.weight(1f))
         }
-        item?.let { Text(facts(it), Modifier.padding(16.dp, 8.dp), style = MaterialTheme.typography.bodyMedium) }
-        item?.about?.takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(16.dp, 0.dp), style = MaterialTheme.typography.bodySmall, maxLines = 4) }
-        item?.lacks?.takeIf { it.isNotEmpty() }?.let { lacks ->
-            val notes = lacks.map { stringResource(if (it == "scripts") R.string.lacks_scripts else R.string.lacks_sound) }
-            Text(notes.joinToString(" "), Modifier.padding(16.dp, 4.dp), style = MaterialTheme.typography.bodySmall)
-        }
-        item?.let { shown -> if (shown.scene) Scene(main, uid, Modifier.weight(1f)) else if (!shown.video) Relief(main, uid) }
         Row(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
             Button(main::apply, Modifier.weight(1f), enabled = ready && asks == null) { Text(stringResource(R.string.apply)) }
             val favorite = item?.favorite == true
-            IconButton({ main.act { ask("favorite", "uid" to uid, "favorite" to !favorite) } }) {
+            IconButton({ main.act { ask("favorite", "uids" to listOf(uid), "favorite" to !favorite) } }) {
                 val icon = if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder
                 Icon(icon, stringResource(R.string.favorite))
             }
@@ -78,20 +110,13 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
             IconButton({ removing = true }) { Icon(Icons.Default.Delete, stringResource(R.string.remove)) }
         }
     }
-    if (adding) AddTo({ adding = false }) { playlist -> main.act { ask("add", "playlist" to playlist, "item" to uid) } }
-    if (removing) AlertDialog(
-        onDismissRequest = { removing = false },
-        confirmButton = {
-            TextButton({
-                main.act {
-                    ask("remove", "uid" to uid)
-                    close()
-                }
-            }) { Text(stringResource(R.string.remove)) }
-        },
-        dismissButton = { TextButton({ removing = false }) { Text(stringResource(R.string.cancel)) } },
-        text = { Text(stringResource(R.string.remove_question)) },
-    )
+    if (adding) AddTo({ adding = false }) { playlist -> main.act { ask("add", "playlist" to playlist, "items" to listOf(uid)) } }
+    if (removing) Removing(1, { removing = false }) {
+        main.act {
+            ask("remove", "uids" to listOf(uid))
+            close()
+        }
+    }
 }
 
 @Composable
@@ -107,24 +132,3 @@ private fun facts(item: Item): String = listOfNotNull(
     stringResource(R.string.size, item.width, item.height).takeIf { item.width > 0 },
     stringResource(R.string.duration, item.millis / 60_000, item.millis / 1000 % 60).takeIf { item.millis > 0 },
 ).joinToString(" · ")
-
-@Composable
-private fun AddTo(close: () -> Unit, add: (String) -> Unit) {
-    val lists by loaded(emptyList<Playlist>()) { playlists() }
-    AlertDialog(
-        onDismissRequest = close,
-        confirmButton = { TextButton(close) { Text(stringResource(R.string.cancel)) } },
-        title = { Text(stringResource(R.string.add_to_playlist)) },
-        text = {
-            Column {
-                if (lists.isEmpty()) Text(stringResource(R.string.no_playlists))
-                lists.forEach { list ->
-                    TextButton({
-                        add(list.uid)
-                        close()
-                    }) { Text(list.name) }
-                }
-            }
-        },
-    )
-}

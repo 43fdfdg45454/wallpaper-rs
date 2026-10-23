@@ -4,9 +4,9 @@ use super::tool::Turn;
 use super::{Edit, Mask, Span};
 use serde::Deserialize;
 
-pub const ACTIONS: [&str; 12] = [
+pub const ACTIONS: [&str; 13] = [
     "set", "crop", "curve", "blur", "vignette", "overlay", "mask", "order", "span", "reset", "depth",
-    "parallax",
+    "parallax", "fit",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -91,6 +91,9 @@ pub enum Action {
         #[serde(default)]
         off: bool,
     },
+    Fit {
+        mode: String,
+    },
 }
 
 impl Edit {
@@ -155,6 +158,13 @@ impl Edit {
             }
             Action::Parallax { source, strength, focus, steps, smoothing, overscan, off } => {
                 self.parallax(Look { source, strength, focus, steps, smoothing, overscan, off })
+            }
+            Action::Fit { mode } => {
+                self.fit = (mode != "none")
+                    .then(|| mode.parse())
+                    .transpose()
+                    .map_err(|e: crate::fit::UnknownFit| usage(e.to_string()))?;
+                Ok(())
             }
             Action::Reset { ids } => {
                 let before = self.ops.len();

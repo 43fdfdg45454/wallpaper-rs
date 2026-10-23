@@ -1,7 +1,5 @@
 package io.github.wallpaper_rs
 
-import android.content.Context
-import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -30,11 +28,7 @@ class RenderTest {
     private val thread = HandlerThread("reader").apply { start() }
     private val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
     private val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
-    private val blind = object : ContextWrapper(context) {
-        override fun getSystemService(name: String): Any? =
-            if (name == Context.SENSOR_SERVICE) null else super.getSystemService(name)
-    }
-    private val painter = Painter(false, Videos(context), Tilt(blind), Hearing(context))
+    private val painter = Painter(false, Videos(context), Tilt(blind(context)), Hearing(context))
 
     @Before
     fun attach() {
@@ -92,33 +86,6 @@ class RenderTest {
         assertEquals(settled(), quiet())
         Render.call { painter.offset(0f) }
         assertEquals(settled(), quiet())
-    }
-
-    @Test
-    fun tiltMovesParallaxWallpapersOnlyWhileShown() {
-        val uid = JSONObject(Native.library(JSONObject().put("op", "current").toString())).getString("image")
-        depth("parallax", "uid" to uid, "on" to true)
-        Render.call {
-            painter.refresh()
-            painter.show(true)
-        }
-        assertTrue(waitFor { frames.get() > 0 })
-        val still = settled()
-        lean(0.6f)
-        assertTrue(waitFor { frames.get() > still })
-        Thread.sleep(2000)
-        assertEquals(settled(), quiet())
-        Render.call { painter.show(false) }
-        val hidden = settled()
-        lean(-0.6f)
-        assertEquals(hidden, quiet())
-        depth("parallax", "uid" to uid, "on" to false)
-    }
-
-    private fun lean(side: Float) = (1..10).forEach { step ->
-        val x = side * step / 10
-        Render.call { if (Native.tilt(x, 0.8f, 0.6f, 0)) painter.move() }
-        Thread.sleep(20)
     }
 
     private fun choose(color: Int) = assertEquals(IMAGE, install(still(color)))

@@ -44,7 +44,7 @@ ColumnLayout {
     }
 
     Repeater {
-        model: [["strength", App.tr("Strength"), 0, 0.03, 0.001, 3], ["focus", App.tr("Depth that stays still"), 0, 1, 0.01, 2], ["smoothing_ms", App.tr("Smoothing (ms)"), 0, 2000, 10, 0], ["overscan", App.tr("Zoom to hide the edges"), 1, 1.1, 0.005, 3]]
+        model: [["strength", App.tr("Intensity"), 0, 0.03, 0.001, 3], ["focus", App.tr("Focus"), 0, 1, 0.01, 2], ["smoothing_ms", App.tr("Smoothing (ms)"), 0, 2000, 10, 0], ["overscan", App.tr("Zoom to hide the edges"), 1, 1.1, 0.005, 3]]
 
         delegate: EditSlider {
             required property var modelData

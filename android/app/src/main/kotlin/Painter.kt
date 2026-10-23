@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -146,7 +147,7 @@ class Painter(
 }
 
 @Composable
-fun Live(main: Main, vararg changes: Any?) {
+fun Live(main: Main, vararg changes: Any?, modifier: Modifier = Modifier.fillMaxSize()) = Box(modifier) {
     val painter = remember { Painter(true, main.videos, main.tilt, main.hearing) }
     LaunchedEffect(*changes) { Render.post(painter::refresh) }
     AndroidView({ SurfaceView(it).apply { holder.addCallback(Preview(this, painter)) } }, Modifier.fillMaxSize())

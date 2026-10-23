@@ -1,10 +1,15 @@
 use crate::{Doc, Ids, Replica, View, positions};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use wprs_core::edit::{Edit, VERSION};
 use wprs_library::{Item, PlaylistInfo};
 
 pub const REFERENCES: [&str; 3] = ["item", "playlist", "preset"];
 pub const DOWNLOADS: &str = "models.allow_download";
+const EDIT: &str = "e:";
+const SCREENS: &str = "e:outputs/";
+const PARTS: [&str; 7] = ["geometry", "ops", "masks", "span", "depth", "parallax", "fit"];
+const EDIT_BYTES: usize = 64 << 10;
 pub const DEVICE_KEYS: [&str; 5] =
     ["playback.volume", "playback.muted", "playback.software_parallax", "library.thumb_cache_mb", DOWNLOADS];
 
@@ -32,7 +37,7 @@ pub fn object(key: &str, doc: Option<&Doc>) -> bool {
 fn known(key: &str, kind: &str, field: &str) -> bool {
     let has = |names: &[&str]| names.contains(&field);
     match key.split('/').next().unwrap_or_default() {
-        "library" => has(&["title", "rating", "favorite"]) || field.starts_with("t:"),
+        "library" => has(&["title", "rating", "favorite"]) || field.starts_with("t:") || edit_part(field),
         "playlists" => has(&["name", "query"]) || field.starts_with("r:") || field.starts_with("e:"),
         "repos" => has(&["url", "repo_id", "name", "fingerprints"]),
         "secrets" => has(&["provider", "kind", "bind", "secret"]),
@@ -131,6 +136,51 @@ pub fn item_view(item: &Item) -> View {
     view.extend(item.favorite.then(|| ("favorite".to_owned(), json!(true))));
     view.extend(item.tags.iter().map(|tag| (format!("t:{tag}"), json!(true))));
     view
+}
+
+fn edit_part(field: &str) -> bool {
+    field.starts_with(SCREENS) || field.strip_prefix(EDIT).is_some_and(|part| PARTS.contains(&part))
+}
+
+pub fn edit_fields(edit: Option<&Edit>, base: Option<&View>) -> View {
+    let (Some(edit), Ok(Value::Object(blank))) = (edit, serde_json::to_value(Edit::default())) else {
+        return View::new();
+    };
+    let Ok(Value::Object(parts)) = serde_json::to_value(edit) else { return View::new() };
+    let parts = parts
+        .into_iter()
+        .filter(|(part, value)| PARTS.contains(&part.as_str()) && blank.get(part) != Some(value));
+    let screens = edit
+        .outputs
+        .iter()
+        .filter_map(|(screen, crop)| Some((format!("{SCREENS}{screen}"), serde_json::to_value(crop).ok()?)));
+    let fields = parts.map(|(part, value)| (format!("{EDIT}{part}"), value)).chain(screens);
+    fields
+        .filter_map(|(field, value)| match value.to_string().len() <= EDIT_BYTES {
+            true => Some((field, value)),
+            false => base?.get(&field).map(|sent| (field, sent.clone())),
+        })
+        .collect()
+}
+
+pub fn edit_of(view: &View) -> Option<Value> {
+    let mut edit = serde_json::Map::new();
+    for (field, value) in view.iter().filter(|(field, _)| edit_part(field)) {
+        match field.strip_prefix(SCREENS) {
+            Some(screen) => edit.entry("outputs").or_insert_with(|| json!({}))[screen] = value.clone(),
+            None => drop(edit.insert(field[EDIT.len()..].to_owned(), value.clone())),
+        }
+    }
+    (!edit.is_empty()).then(|| {
+        edit.insert("version".into(), json!(VERSION));
+        Value::Object(edit)
+    })
+}
+
+pub fn edit_held(view: &View, own: View) -> BTreeMap<String, Value> {
+    let synced = view.keys().filter(|field| edit_part(field)).cloned();
+    let fields: BTreeSet<String> = synced.chain(own.keys().cloned()).collect();
+    fields.into_iter().map(|field| (field.clone(), own.get(&field).cloned().unwrap_or_default())).collect()
 }
 
 impl Local {

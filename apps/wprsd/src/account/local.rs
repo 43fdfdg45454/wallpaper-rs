@@ -7,12 +7,20 @@ use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 pub use wprs_sync::Local;
 use wprs_sync::{
-    DEVICE_KEYS, Ids, Kept, Replica, View, item_view, link, object, preserve, references, settings,
+    DEVICE_KEYS, Ids, Kept, Replica, View, edit_fields, item_view, link, object, preserve, references,
+    settings,
 };
 
 type Links = BTreeMap<String, String>;
 
 impl Daemon {
+    pub fn shared_edit(&self, item: &wprs_library::Item) -> Option<wprs_core::Edit> {
+        let edits = self.store.data.join("edits");
+        let found =
+            (item.kind == wprs_library::Kind::Image).then(|| wprs_core::edit::load(&item.path, &edits));
+        found?.ok()?.map(|(_, edit)| edit)
+    }
+
     pub fn snapshot(
         &self,
         ids: &Ids,
@@ -55,6 +63,7 @@ impl Daemon {
                 (1, old) => {
                     let mut view = item_view(&item);
                     view.extend(blob_field(&files, ids, &item, old.as_ref()).filter(|_| package.is_none()));
+                    view.extend(edit_fields(self.shared_edit(&item).as_ref(), old.as_ref()));
                     local.views.insert(record, view);
                 }
                 _ => {}

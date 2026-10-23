@@ -1,9 +1,12 @@
-use crate::Error;
 use crate::library::{now, with};
+use crate::{Error, depth};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use wprs_library::PlaylistInfo;
-use wprs_sync::{Ids, Kept, Local, View, item_view, keep, keep_name, playlist_rules, renamed, text};
+use wprs_sync::{
+    Ids, Kept, Local, View, edit_fields, edit_held, edit_of, item_view, keep, keep_name, playlist_rules,
+    renamed, text,
+};
 
 type Links = BTreeMap<String, String>;
 
@@ -38,8 +41,13 @@ pub(crate) fn item(local: &Local, key: &str, item: &str, view: &View, kept: &mut
             if !add.is_empty() || !gone.is_empty() {
                 lib.retag(&[uid], &add, &gone)?;
             }
-            Ok(held)
+            Ok((held, item))
         })?;
+        let (mut held, shown) = held;
+        if let Err(e) = depth::adopt(&shown, edit_of(view).as_ref(), local.fresh.contains(item)) {
+            log::debug!("a synced edit could not be used: {e}");
+            held.extend(edit_held(view, edit_fields(depth::shared(&shown).as_ref(), None)));
+        }
         keep(kept, key, held);
     }
     Ok(())

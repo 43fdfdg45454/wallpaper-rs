@@ -36,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -107,3 +108,7 @@ fun Toggle(label: String, checked: Boolean, change: (Boolean) -> Unit) = ListIte
     trailingContent = { Switch(checked, change) },
     modifier = Modifier.clickable { change(!checked) },
 )
+
+@Composable
+fun Note(text: String, color: Color = Color.Unspecified) =
+    Text(text, Modifier.padding(16.dp, 4.dp), color, style = MaterialTheme.typography.bodySmall)

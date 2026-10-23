@@ -14,10 +14,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
+import androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree
+import androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments
 import androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.unit.IntSize
 import kotlin.concurrent.thread
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -27,12 +30,15 @@ import org.json.JSONObject
 class Main : ComponentActivity() {
     val revision = mutableIntStateOf(0)
     val importing = mutableIntStateOf(0)
+    val imports = mutableIntStateOf(0)
     val videos by lazy { Videos(applicationContext) }
     val tilt by lazy { Tilt(applicationContext) }
     val hearing by lazy { Hearing(applicationContext) }
     private val power by lazy { Power(applicationContext) }
     private val scope = MainScope()
     private val pick = registerForActivityResult(PickMultipleVisualMedia()) { store(it) }
+    private val files = registerForActivityResult(OpenMultipleDocuments()) { store(it) }
+    private val folder = registerForActivityResult(OpenDocumentTree()) { uri -> uri?.let(::importFolder) }
     private val packages = registerForActivityResult(OpenDocument()) { uri -> uri?.let { store(listOf(it)) } }
     private val preview = registerForActivityResult(StartActivityForResult()) {
         if (active()) commit() else if (it.resultCode != Activity.RESULT_OK) Wallpaper.commitWhenLive = false
@@ -64,7 +70,17 @@ class Main : ComponentActivity() {
 
     fun choose() = pick.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo))
 
+    fun chooseFiles() = files.launch(arrayOf("image/*", "video/*"))
+
+    fun chooseFolder() = folder.launch(null)
+
     fun openPackage() = packages.launch(arrayOf("*/*"))
+
+    fun wallpaperSize(): IntSize {
+        val bounds = windowManager.maximumWindowMetrics.bounds
+        val turned = display.rotation % 2 == 1
+        return if (turned) IntSize(bounds.height(), bounds.width()) else IntSize(bounds.width(), bounds.height())
+    }
 
     fun examples() {
         importing.intValue++
@@ -125,17 +141,21 @@ class Main : ComponentActivity() {
         }
     }
 
-    private fun store(uris: List<Uri>) {
+    fun store(uris: List<Uri>) {
+        if (uris.isEmpty()) return
         importing.intValue += uris.size
+        imports.intValue += uris.size
         thread {
-            uris.forEach { uri ->
+            val failed = uris.withIndex().count { (index, uri) ->
                 val stored = runCatching { store(uri) }.getOrDefault(false)
                 runOnUiThread {
                     importing.intValue--
-                    revision.intValue++
-                    if (!stored) toast(getString(R.string.unreadable))
+                    if (index % REFRESH == 0 || index == uris.lastIndex) revision.intValue++
+                    if (importing.intValue == 0) imports.intValue = 0
                 }
+                !stored
             }
+            if (failed > 0) runOnUiThread { toast(resources.getQuantityString(R.plurals.unreadable, failed, failed)) }
         }
     }
 
@@ -156,3 +176,4 @@ class Main : ComponentActivity() {
 }
 
 private const val EDITS = 30L
+private const val REFRESH = 10

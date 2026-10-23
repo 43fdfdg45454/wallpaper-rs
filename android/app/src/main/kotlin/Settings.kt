@@ -28,7 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-private val FIT =
+val FIT =
     listOf("fill" to R.string.fill, "fit" to R.string.whole, "stretch" to R.string.stretch, "center" to R.string.center)
 private val COLORS = listOf("chosen" to R.string.when_chosen, "always" to R.string.always, "never" to R.string.never)
 private val BACKENDS = listOf("auto" to R.string.automatic, "vulkan" to R.string.vulkan, "gl" to R.string.gl)

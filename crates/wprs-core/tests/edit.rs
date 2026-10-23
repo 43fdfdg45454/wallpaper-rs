@@ -138,3 +138,24 @@ fn edits_live_beside_the_image_or_in_the_data_folder() {
     edit::save(&edit, &image, &edits).unwrap();
     assert_eq!(edit::load(&image, &edits).unwrap(), Some((fallback, edit)));
 }
+
+#[test]
+fn synced_edits_keep_the_local_source_and_removals_wait_for_known_items() {
+    let dir = tempfile::tempdir().unwrap();
+    let (image, edits) = (dir.path().join("hills.jpg"), dir.path().join("edits"));
+    std::fs::write(&image, b"not really a picture").unwrap();
+    let synced = json!({"version": 1, "geometry": {"crop": [0.25, 0.0, 0.5, 1.0]}, "fit": "fit"});
+    assert!(edit::adopt(Some(&synced), &image, &edits, false).unwrap());
+    let (_, adopted) = edit::load(&image, &edits).unwrap().unwrap();
+    assert_eq!((adopted.geometry.crop, adopted.source.bytes), (Some([0.25, 0.0, 0.5, 1.0]), 20));
+    assert_eq!(adopted.source.sha256.len(), 64);
+    assert!(!edit::adopt(Some(&synced), &image, &edits, false).unwrap());
+    assert!(edit::adopt(Some(&json!({"version": 9})), &image, &edits, false).is_err());
+    assert!(
+        !edit::adopt(None, &image, &edits, true).unwrap() && edit::load(&image, &edits).unwrap().is_some()
+    );
+    assert!(
+        edit::adopt(None, &image, &edits, false).unwrap() && edit::load(&image, &edits).unwrap().is_none()
+    );
+    assert!(!edit::adopt(None, &image, &edits, false).unwrap());
+}

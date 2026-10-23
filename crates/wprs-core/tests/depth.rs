@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 use wprs_core::edit::{Depth, Edit, Mask, Motion, Parallax};
-use wprs_core::motion::{Spring, Tilt, gravity, mount_matrix, orbit};
+use wprs_core::motion::{Spring, Tilt, Turn, aim, gravity, mount_matrix, orbit};
 
 fn act(edit: &mut Edit, action: Value) -> Result<(), String> {
     edit.act(serde_json::from_value(action).unwrap()).map_err(|e| e.to_string())
@@ -87,4 +87,28 @@ fn iio_values_become_a_recentred_tilt() {
     assert!(tipped[0] > 0.5 && tipped[1].abs() < 1e-3, "{tipped:?}");
     let later = (0..1000).fold(tipped, |_, _| tilt.follow([2.5, 0.0, 9.5], 0.03));
     assert!(later[0].abs() < 0.01, "{later:?}");
+}
+
+#[test]
+fn turning_the_phone_moves_like_tilting_it_and_recentres() {
+    let around = |axis: [f32; 3], angle: f32| {
+        let (s, c) = (angle / 2.0).sin_cos();
+        [c, axis[0] * s, axis[1] * s, axis[2] * s]
+    };
+    let close = |a: [f32; 2], b: [f32; 2]| a.iter().zip(b).all(|(a, b)| (a - b).abs() < 0.02);
+    let (mut turn, mut tilt) = (Turn::default(), Tilt::default());
+    assert_eq!(turn.follow([1.0, 0.0, 0.0, 0.0], 0.03), [0.0; 3]);
+    tilt.follow([0.0, 0.0, 1.0], 0.03);
+    let yaw = aim(turn.follow(around([0.0, 1.0, 0.0], 0.1), 0.0));
+    let tipped = tilt.follow([-(0.1f32).sin(), 0.0, (0.1f32).cos()], 0.0);
+    assert!(close(yaw, tipped) && close(yaw, [-0.4, 0.0]), "{yaw:?} {tipped:?}");
+    let pitch = aim(turn.follow(around([1.0, 0.0, 0.0], 0.1), 0.0));
+    assert!(close(pitch, [0.0, 0.4]), "{pitch:?}");
+    let flipped = around([1.0, 0.0, 0.0], 0.1).map(|v| -v);
+    assert!(close(aim(turn.follow(flipped, 0.0)), [0.0, 0.4]));
+    assert_eq!(aim(turn.follow(around([0.0, 1.0, 0.0], 1.0), 0.0)), [-1.0, 0.0]);
+    assert_eq!(turn.follow([0.0; 4], 0.03), [0.0; 3]);
+    let held = around([0.0, 1.0, 0.0], 0.2);
+    let later = (0..1000).fold([0.0; 3], |_, _| turn.follow(held, 0.03));
+    assert!(later.iter().all(|v| v.abs() < 0.01), "{later:?}");
 }

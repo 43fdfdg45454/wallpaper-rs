@@ -13,12 +13,10 @@
     <string name="choose">Añadir</string>
     <string name="apply">Usar como fondo</string>
     <string name="applied">Fondo actualizado</string>
-    <string name="unreadable">No se puede abrir este archivo</string>
     <string name="unsupported">Este dispositivo no permite fondos animados</string>
     <string name="favorite">Favorito</string>
     <string name="add_to_playlist">Añadir a una lista</string>
     <string name="remove">Quitar</string>
-    <string name="remove_question">¿Quitarlo de la biblioteca? Se borra la copia que guarda la app, el original sigue en tu dispositivo.</string>
     <string name="mature">Contenido para adultos</string>
     <string name="flashing">Destellos</string>
     <string name="mature_warning">Este fondo tiene contenido para adultos.</string>
@@ -55,6 +53,7 @@
     <string name="whole">Imagen completa</string>
     <string name="stretch">Estirar</string>
     <string name="center">Centrar</string>
+    <string name="tile">Mosaico</string>
     <string name="battery_fps">Animación con batería</string>
     <string name="charger_fps">Animación al cargar</string>
     <string name="system_colors">Colores del sistema</string>
@@ -137,4 +136,40 @@
     <string name="reset">Restablecer</string>
     <string name="not_on_phone">%1$s: no disponible en el teléfono</string>
     <string name="scene_level">Escenas: clase de dispositivo %1$s, nivel %2$s</string>
+    <string name="strength">Intensidad</string>
+    <string name="focus">Enfoque</string>
+    <string name="still_saver">Quieto mientras el ahorro de energía está activado</string>
+    <string name="still_battery">Quieto mientras queda poca batería</string>
+    <string name="still_heat">Quieto mientras el teléfono está caliente</string>
+    <string name="depth_none">Aún sin mapa de profundidad: se mueve la imagen entera</string>
+    <string name="depth_making">Calculando el mapa de profundidad…</string>
+    <string name="depth_ready">Mapa de profundidad listo: lo cercano se mueve más que el fondo</string>
+    <string name="depth_kept">Mapa de profundidad listo</string>
+    <string name="depth_missing">Aún sin mapa de profundidad</string>
+    <string name="like_settings">Como en Ajustes</string>
+    <string name="frame_hint">Arrastra y pellizca la vista previa para encuadrar la imagen</string>
+    <string name="reset_frame">Restablecer el encuadre</string>
+    <string name="photos">Fotos y vídeos</string>
+    <string name="files">Elegir archivos</string>
+    <string name="folder">Importar una carpeta</string>
+    <string name="folder_empty">Esa carpeta no tiene imágenes ni vídeos</string>
+    <string name="imported">%1$d de %2$d añadidos</string>
+    <string name="select_all">Seleccionar todo</string>
+    <string name="unfavorite">Quitar de favoritos</string>
+    <string name="fit_pictures">Solo las imágenes tienen ajuste propio: puesto en %1$d de %2$d</string>
+    <plurals name="selected">
+        <item quantity="one">%d seleccionado</item>
+        <item quantity="many">%d seleccionados</item>
+        <item quantity="other">%d seleccionados</item>
+    </plurals>
+    <plurals name="remove_question">
+        <item quantity="one">¿Quitar este elemento de la biblioteca? Se borra la copia que guarda la app, el original sigue en tu dispositivo.</item>
+        <item quantity="many">¿Quitar %d elementos de la biblioteca? Se borran las copias que guarda la app, los originales siguen en tu dispositivo.</item>
+        <item quantity="other">¿Quitar %d elementos de la biblioteca? Se borran las copias que guarda la app, los originales siguen en tu dispositivo.</item>
+    </plurals>
+    <plurals name="unreadable">
+        <item quantity="one">No se puede abrir %d archivo</item>
+        <item quantity="many">No se pueden abrir %d archivos</item>
+        <item quantity="other">No se pueden abrir %d archivos</item>
+    </plurals>
 </resources>

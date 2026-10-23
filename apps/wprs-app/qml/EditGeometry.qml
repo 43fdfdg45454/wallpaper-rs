@@ -56,6 +56,24 @@ ColumnLayout {
             })
     }
 
+    QQC2.Label {
+        text: App.tr("Placement of this picture")
+    }
+
+    QQC2.ComboBox {
+        Layout.fillWidth: true
+        model: ["none", "fill", "fit", "stretch", "center", "tile"].map(value => ({
+                    "value": value,
+                    "text": value === "none" ? App.tr("Like the screen") : Labels.value(value)
+                }))
+        textRole: "text"
+        valueRole: "value"
+        currentIndex: Math.max(0, indexOfValue(tool.page.edit.fit ?? "none"))
+        onActivated: tool.page.run("fit", {
+                "mode": currentValue
+            })
+    }
+
     RowLayout {
         QQC2.Button {
             text: App.tr("Rotate left")

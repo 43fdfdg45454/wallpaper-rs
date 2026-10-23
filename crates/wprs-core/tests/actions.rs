@@ -98,3 +98,17 @@ fn empty_edits_remove_their_file() {
     assert_eq!(edit::commit(&e, &image, &edits).unwrap(), None);
     assert_eq!(edit::load(&image, &edits).unwrap(), None);
 }
+
+#[test]
+fn a_picture_keeps_its_own_fit() {
+    let mut e = picture();
+    act(&mut e, json!({"fit": {"mode": "center"}})).unwrap();
+    assert_eq!((e.fit, e.is_empty(), e.develops()), (Some(wprs_core::Fit::Center), false, false));
+    let saved = Edit::parse(&e.to_json()).unwrap();
+    assert_eq!(saved.fit, Some(wprs_core::Fit::Center));
+    assert!(matches!(act(&mut e, json!({"fit": {"mode": "span"}})), Err(Error::Invalid(_))));
+    assert!(matches!(act(&mut e, json!({"fit": {"mode": "zoom"}})), Err(Error::Usage(_))));
+    act(&mut e, json!({"fit": {"mode": "none"}})).unwrap();
+    assert!(e.fit.is_none() && e.is_empty());
+    assert!(Edit::parse(r#"{"version": 1, "fit": "span"}"#).is_err());
+}

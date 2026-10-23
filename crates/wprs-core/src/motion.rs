@@ -3,6 +3,7 @@ use std::f32::consts::TAU;
 const STILL: f32 = 1e-3;
 const RECENTER_S: f32 = 4.0;
 const TILT_GAIN: f32 = 4.0;
+const TURN_GAIN: f32 = 4.0;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Spring {
@@ -53,6 +54,38 @@ impl Tilt {
         (0..3).for_each(|i| rest[i] += (g[i] - rest[i]) * k);
         [0, 1].map(|i| ((g[i] - rest[i]) * TILT_GAIN).clamp(-1.0, 1.0))
     }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Turn {
+    rest: Option<[f32; 4]>,
+}
+
+fn unit(q: [f32; 4]) -> Option<[f32; 4]> {
+    let length = q.iter().map(|v| v * v).sum::<f32>().sqrt();
+    (length > 1e-6).then(|| q.map(|v| v / length))
+}
+
+fn product([a, b, c, d]: [f32; 4], [e, f, g, h]: [f32; 4]) -> [f32; 4] {
+    let w = a * e - b * f - c * g - d * h;
+    [w, a * f + b * e + c * h - d * g, a * g - b * h + c * e + d * f, a * h + b * g - c * f + d * e]
+}
+
+impl Turn {
+    pub fn follow(&mut self, turn: [f32; 4], dt: f32) -> [f32; 3] {
+        let Some(q) = unit(turn) else { return [0.0; 3] };
+        let rest = self.rest.get_or_insert(q);
+        let side = if (0..4).map(|i| rest[i] * q[i]).sum::<f32>() < 0.0 { -1.0 } else { 1.0 };
+        let k = (dt / RECENTER_S).clamp(0.0, 1.0);
+        *rest = unit(std::array::from_fn(|i| rest[i] + (side * q[i] - rest[i]) * k)).unwrap_or(q);
+        let [w, x, y, z] = product([rest[0], -rest[1], -rest[2], -rest[3]], q);
+        let s = if w < 0.0 { -2.0 } else { 2.0 };
+        [x * s, y * s, z * s]
+    }
+}
+
+pub fn aim([x, y, _]: [f32; 3]) -> [f32; 2] {
+    [-y, x].map(|v| (v * TURN_GAIN).clamp(-1.0, 1.0))
 }
 
 pub fn mount_matrix(text: &str) -> Option<[[f32; 3]; 3]> {

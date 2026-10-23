@@ -451,10 +451,13 @@ named() { ask "library {\"op\": \"$1\"$2}" | jq_ "sorted(${3:-x['playlist']['nam
 a config transition.duration_ms 900 >/dev/null
 a config playback.max_fps 60 >/dev/null
 a lib tag "$(a lib search meadow --json | jq_ "r['items'][0]['uid']")" --add from-the-desk >/dev/null
+a edit set "$own/meadow.png" ev=0.5 >/dev/null
 a server sync --wait >/dev/null
 green=$(ask "import $ROOT/tests/fixtures/green-64x32.png" | jq_ "r")
+ask "depth {\"op\": \"fit\", \"uids\": [\"$green\"], \"fit\": \"center\"}" >/dev/null
+ask "depth {\"op\": \"parallax\", \"uid\": \"$green\", \"on\": true}" >/dev/null
 mix=$(ask 'library {"op": "create", "name": "Phone mix"}' | jq_ "r")
-ask "library {\"op\": \"add\", \"playlist\": \"$mix\", \"item\": \"$green\"}" >/dev/null
+ask "library {\"op\": \"add\", \"playlist\": \"$mix\", \"items\": [\"$green\"]}" >/dev/null
 [ "$(phone "['state']")" = none ] || fail "a new phone: $(phone "")"
 ask "account {\"op\": \"add\", \"url\": \"$URL\"}" >/dev/null
 started=$(ask 'account {"op": "link", "label": "Pocket", "plaintext": false}')
@@ -479,9 +482,24 @@ expected="['After the revocation', 'From the revoked device', 'Phone mix', 'Quie
   fail "the desktop's title and tag did not reach the phone: $(ask 'library {"op": "items", "query": ""}')"
 [ "$(ask "setting transition.duration_ms")/$(ask "setting playback.max_fps")" = 900/30 ] ||
   fail "settings on the phone: $(ask "setting transition.duration_ms") $(ask "setting playback.max_fps")"
-ask "library {\"op\": \"favorite\", \"uid\": \"$green\", \"favorite\": true}" >/dev/null
+phoned=$(find "$WORK/phone" -name '*.wprs.json' | head -n 1)
+[ "$(jq_ "(r['ops'][0]['ev'], r['fit'], r['parallax']['enabled'])" <"$phoned")" = "(0.5, 'center', True)" ] ||
+  fail "edits made apart before the first sync did not meet on the phone: $(cat "$phoned")"
+ask "library {\"op\": \"favorite\", \"uids\": [\"$green\"], \"favorite\": true}" >/dev/null
 ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
 a server sync --wait >/dev/null
+[ "$(a edit show "$own/meadow.png" | jq_ "(r['ops'][0]['ev'], r['fit'], r['parallax']['source'])")" = "(0.5, 'center', 'auto')" ] ||
+  fail "the phone's fit and parallax did not reach the desktop next to its own edit: $(a edit show "$own/meadow.png")"
+a edit crop "$own/meadow.png" 0.25,0,0.5,1 >/dev/null
+a server sync --wait >/dev/null
+ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
+framed=$(ask "depth {\"op\": \"item\", \"uid\": \"$green\"}" | jq_ "(r['base'], r['crop'], r['fit'])")
+[ "$framed" = "([0.25, 0.0, 0.5, 1.0], None, 'center')" ] || fail "the desktop's crop did not reach the phone: $framed"
+ask "depth {\"op\": \"frame\", \"uid\": \"$green\", \"pan\": [0.1, 0], \"zoom\": 2, \"screen\": [1080, 2400], \"done\": true}" >/dev/null
+ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
+a server sync --wait >/dev/null
+[ "$(a edit show "$own/meadow.png" | jq_ "(r['geometry']['crop'], sorted(r['outputs']))")" = "([0.25, 0.0, 0.5, 1.0], ['Android'])" ] ||
+  fail "the phone's framing changed the desktop's crop: $(a edit show "$own/meadow.png")"
 [ "$(a playlist show "Phone mix" --json | jq_ "r['total']")" = 1 ] || fail "the phone's playlist on the desktop: $(a playlist ls)"
 [ "$(a lib search fav:yes --json | jq_ "[i['title'] for i in r['items']]")" = "['meadow']" ] ||
   fail "the phone's favourite on the desktop: $(a lib search fav:yes)"

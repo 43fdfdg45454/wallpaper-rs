@@ -1,7 +1,8 @@
 use crate::engine::Engine;
 use crate::gpu;
 use crate::power::Power;
-use crate::{Error, Logcat, store, tilt, vault};
+use crate::tilt::{self, Reading};
+use crate::{Error, Logcat, store, vault};
 use jni::errors::LogErrorAndDefault;
 use jni::objects::{JObject, JString};
 use jni::sys::{jboolean, jfloat, jint, jlong};
@@ -126,5 +127,18 @@ pub fn tilt<'a>(
     z: jfloat,
     rotation: jint,
 ) -> jboolean {
-    on(&mut env, |_| Ok(tilt::sense([x, y, z], rotation, Instant::now())))
+    on(&mut env, |_| Ok(tilt::sense(Reading::Gravity([x, y, z]), rotation, Instant::now())))
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn turn<'a>(
+    mut env: EnvUnowned<'a>,
+    _: JObject<'a>,
+    w: jfloat,
+    x: jfloat,
+    y: jfloat,
+    z: jfloat,
+    rotation: jint,
+) -> jboolean {
+    on(&mut env, |_| Ok(tilt::sense(Reading::Turn([w, x, y, z]), rotation, Instant::now())))
 }

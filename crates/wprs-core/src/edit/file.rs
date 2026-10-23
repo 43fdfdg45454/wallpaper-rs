@@ -86,6 +86,27 @@ pub fn commit(edit: &Edit, image: &Path, edits: &Path) -> Result<Option<PathBuf>
     }
 }
 
+pub fn adopt(
+    synced: Option<&serde_json::Value>,
+    image: &Path,
+    edits: &Path,
+    keep: bool,
+) -> Result<bool, String> {
+    let local = load(image, edits)?.map(|(_, edit)| edit);
+    let Some(value) = synced else {
+        return if keep || local.is_none() { Ok(false) } else { remove(image, edits) };
+    };
+    let mut edit = Edit::from_value(value.clone())?;
+    edit.source = match &local {
+        Some(local) => local.source.clone(),
+        None => Source::read(image, [0; 2]).map_err(|e| e.to_string())?,
+    };
+    if local.as_ref() == Some(&edit) {
+        return Ok(false);
+    }
+    commit(&edit, image, edits).map(|_| true)
+}
+
 pub fn remove(image: &Path, edits: &Path) -> Result<bool, String> {
     places(image, edits).iter().try_fold(false, |found, path| match std::fs::remove_file(path) {
         Ok(()) => Ok(true),

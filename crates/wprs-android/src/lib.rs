@@ -15,6 +15,7 @@ mod depth;
 mod engine;
 #[cfg(target_os = "android")]
 mod exports;
+mod framing;
 #[cfg(target_os = "android")]
 mod gpu;
 mod hearing;
@@ -40,7 +41,7 @@ mod tilt;
 mod vault;
 
 pub mod host {
-    use crate::{Error, account, library, settings, store};
+    use crate::{Error, account, depth, library, settings, store};
     use serde_json::json;
 
     pub fn prepare(files: &str) -> Result<(), String> {
@@ -53,6 +54,10 @@ pub mod host {
 
     pub fn library(request: &str) -> String {
         library::request(request, true)
+    }
+
+    pub fn depth(request: &str) -> String {
+        depth::request(request)
     }
 
     pub fn import(path: &str) -> String {

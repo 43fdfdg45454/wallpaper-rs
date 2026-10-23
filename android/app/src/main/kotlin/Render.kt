@@ -35,6 +35,8 @@ object Native {
 
     external fun tilt(x: Float, y: Float, z: Float, rotation: Int): Boolean
 
+    external fun turn(w: Float, x: Float, y: Float, z: Float, rotation: Int): Boolean
+
     external fun device(lowRam: Boolean, performance: Int)
 
     external fun visible(engine: Long, shown: Boolean)

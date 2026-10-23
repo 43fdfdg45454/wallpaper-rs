@@ -16,7 +16,6 @@ const HIGH_CLASS: i32 = 33;
 static CAPS: [AtomicU32; 2] = [AtomicU32::new(BATTERY_FPS), AtomicU32::new(CHARGING_FPS)];
 static CLASS: AtomicI32 = AtomicI32::new(0);
 
-#[cfg(target_os = "android")]
 static POWER: std::sync::Mutex<Power> = std::sync::Mutex::new(Power::BATTERY);
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -28,7 +27,6 @@ pub(crate) struct Power {
     pub(crate) headroom: f32,
 }
 
-#[cfg(target_os = "android")]
 impl Power {
     pub(crate) fn now() -> Power {
         *POWER.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -64,6 +62,14 @@ impl Power {
 
     pub(crate) fn moving(self) -> bool {
         !self.paused() && self.thermal < SEVERE
+    }
+
+    pub(crate) fn stills(self) -> Option<&'static str> {
+        match () {
+            _ if self.saver => Some("saver"),
+            _ if self.low && !self.charging => Some("battery"),
+            _ => (!self.moving()).then_some("heat"),
+        }
     }
 
     pub(crate) fn ceiling(self) -> Quality {
@@ -122,6 +128,17 @@ mod tests {
             assert_eq!((power.fps(false), power.moving()), (0, false));
         }
         assert_eq!(on(|p| (p.low, p.charging) = (true, true)).fps(false), 60);
+    }
+
+    #[test]
+    fn a_normal_battery_keeps_moving_and_each_pause_says_why() {
+        assert_eq!((Power::BATTERY.moving(), Power::BATTERY.stills()), (true, None));
+        let warm = on(|p| (p.thermal, p.headroom) = (MODERATE, 0.9));
+        assert_eq!((warm.moving(), warm.stills(), warm.fps(false)), (true, None, 15));
+        let reasons =
+            [on(|p| p.saver = true), on(|p| p.low = true), on(|p| p.thermal = SEVERE)].map(Power::stills);
+        assert_eq!(reasons, [Some("saver"), Some("battery"), Some("heat")]);
+        assert_eq!(on(|p| (p.low, p.charging) = (true, true)).stills(), None);
     }
 
     #[test]

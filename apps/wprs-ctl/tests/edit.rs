@@ -46,6 +46,7 @@ fn every_editor_action_edits_the_file_beside_the_image() {
     edit(&["overlay", "#ff8800", "--blend", "soft-light", "--opacity", "0.3", "--mask", "sky"]);
     edit(&["order", "ov", "ev"]);
     edit(&["span", "--zoom", "1.5", "--center", "0.4,0.5"]);
+    edit(&["fit", "center"]);
     edit(&["set", "ops.ov.opacity=0.2", "ops.ct.enabled=false"]);
     let saved = show();
     let ids: Vec<&str> =
@@ -69,6 +70,10 @@ fn every_editor_action_edits_the_file_beside_the_image() {
         (saved["masks"]["sky"]["feather"].clone(), saved["span"].clone()),
         (json!(0.5), json!({"center": [0.4, 0.5], "zoom": 1.5}))
     );
+    assert_eq!(saved["fit"], json!("center"));
+    assert!(fails(dir, &["edit", "fit", "hills.png", "span"], 2).contains("possible values"));
+    edit(&["fit", "none"]);
+    assert_eq!(show().get("fit"), None);
     let mode = std::fs::metadata(dir.join("hills.png.wprs.json")).unwrap().permissions().mode();
     assert_eq!(mode & 0o777, 0o600);
     assert!(

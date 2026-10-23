@@ -1,4 +1,5 @@
-use crate::{Error, library, settings, store};
+use crate::power::Power;
+use crate::{Error, framing, library, settings, store};
 use anyhow::anyhow;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -6,11 +7,12 @@ use std::fs::{self, File};
 use std::os::fd::BorrowedFd;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use wprs_core::edit::{self, Depth, Edit, Motion, Parallax, Source};
+use wprs_core::Fit;
+use wprs_core::edit::{self, Depth, Edit, Parallax, Source};
 use wprs_depth::{MODEL, Map, Places, adjust, beside, read, shrink};
 
 const AGENT: &str = concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION"));
-const EDITS: &str = "edits";
+pub(crate) const EDITS: &str = "edits";
 const EDGE: u32 = 1024;
 
 #[derive(Deserialize)]
@@ -19,10 +21,13 @@ enum Request {
     Model,
     Install,
     Forget,
-    Item { uid: String },
-    Parallax { uid: String, on: bool },
     Make { uid: String, library: PathBuf },
     Import { uid: String, fd: i32 },
+    Item { uid: String },
+    Parallax { uid: String, on: Option<bool>, strength: Option<f32>, focus: Option<f32> },
+    Fit { uids: Vec<String>, fit: Option<Fit> },
+    Frame { uid: String, pan: [f32; 2], zoom: f32, screen: [u32; 2], done: bool },
+    Unframe { uid: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -37,12 +42,12 @@ fn places() -> Result<Places, Error> {
     Ok(Places { data: dir.clone(), cache: dir })
 }
 
-fn loaded(image: &Path) -> Result<Edit, Error> {
+pub(crate) fn loaded(image: &Path) -> Result<Edit, Error> {
     let found = edit::load(image, &store::dir()?.join(EDITS)).map_err(Error::Setting)?;
     Ok(found.map(|(_, edit)| edit).unwrap_or_default())
 }
 
-fn edited(image: &Path) -> Result<Edit, Error> {
+pub(crate) fn edited(image: &Path) -> Result<Edit, Error> {
     let mut edit = loaded(image)?;
     if edit.source.sha256.is_empty() {
         edit.source = Source::read(image, [0; 2])?;
@@ -50,16 +55,30 @@ fn edited(image: &Path) -> Result<Edit, Error> {
     Ok(edit)
 }
 
-fn found(image: &Path, edit: &Edit) -> Option<PathBuf> {
+pub(crate) fn found(image: &Path, edit: &Edit) -> Option<PathBuf> {
     places().ok()?.find(image, &edit.source.sha256, edit.depth.as_ref().unwrap_or(&Depth::default()))
 }
 
-fn save(image: &Path, mut edit: Edit, on: bool) -> Result<Value, Error> {
-    let tilt = || Parallax { source: Motion::Accelerometer, ..Parallax::default() };
-    edit.parallax.get_or_insert_with(tilt).enabled = on;
+pub(crate) fn change(image: &Path, change: impl FnOnce(&mut Edit) -> Result<(), Error>) -> Result<(), Error> {
+    let mut edit = edited(image)?;
+    change(&mut edit)?;
     edit::commit(&edit, image, &store::dir()?.join(EDITS)).map_err(Error::Setting)?;
     store::changed();
-    Ok(Value::Null)
+    Ok(())
+}
+
+fn tune(edit: &mut Edit, on: Option<bool>, strength: Option<f32>, focus: Option<f32>) -> Result<(), Error> {
+    let p = edit.parallax.get_or_insert_with(Parallax::default);
+    p.enabled = on.unwrap_or(p.enabled);
+    (p.strength, p.focus) = (strength.unwrap_or(p.strength), focus.unwrap_or(p.focus));
+    if on == Some(true) && p.strength <= 0.0 {
+        p.strength = Parallax::default().strength;
+    }
+    Ok(())
+}
+
+fn moving(image: &Path) -> Result<Value, Error> {
+    change(image, |edit| tune(edit, Some(true), None, None)).map(|()| Value::Null)
 }
 
 pub(crate) fn request(text: &str) -> String {
@@ -95,33 +114,53 @@ fn answer(request: Request) -> Result<Value, Error> {
             Value::Null
         }
         Request::Forget => json!(fs::remove_dir_all(folder).is_ok()),
-        Request::Item { uid } => {
-            let image = image(&uid)?;
-            let edit = loaded(&image)?;
-            json!({ "parallax": edit.moving().is_some(), "map": found(&image, &edit).is_some() })
-        }
-        Request::Parallax { uid, on } => {
-            let image = image(&uid)?;
-            save(&image, edited(&image)?, on)?
-        }
         Request::Make { uid, library } => {
             let image = image(&uid)?;
             let edit = edited(&image)?;
             wprs_depth::background();
             let (depth, sha) = (edit.depth.clone().unwrap_or_default(), &edit.source.sha256);
             wprs_depth::generate(&places, (&image, sha), &depth, Some(&library), &mut |_| {})?;
-            save(&image, edit, true)?
+            moving(&image)?
         }
         Request::Import { uid, fd } => {
             let image = image(&uid)?;
             let mut source = File::from(unsafe { BorrowedFd::borrow_raw(fd) }.try_clone_to_owned()?);
             let mut copy = tempfile::NamedTempFile::new_in(store::dir()?)?;
             std::io::copy(&mut source, &mut copy)?;
-            let edit = edited(&image)?;
-            places.import(copy.path(), &image, &edit.source.sha256)?;
-            save(&image, edit, true)?
+            places.import(copy.path(), &image, &edited(&image)?.source.sha256)?;
+            moving(&image)?
         }
+        Request::Item { uid } => {
+            let image = image(&uid)?;
+            let edit = loaded(&image)?;
+            let p = edit.parallax.clone().unwrap_or_default();
+            json!({ "parallax": edit.moving().is_some(), "map": found(&image, &edit).is_some(),
+                "strength": p.strength, "focus": p.focus, "fit": edit.fit, "base": edit.geometry.crop,
+                "crop": framing::draft(&uid).or_else(|| framing::own(&edit)), "paused": Power::now().stills() })
+        }
+        Request::Parallax { uid, on, strength, focus } => {
+            change(&image(&uid)?, |edit| tune(edit, on, strength, focus))?;
+            Value::Null
+        }
+        Request::Fit { uids, fit } => framing::fit(&uids, fit)?,
+        Request::Frame { uid, pan, zoom, screen, done } => framing::frame(uid, pan, zoom, screen, done)?,
+        Request::Unframe { uid } => framing::unframe(&image(&uid)?, &uid)?,
     })
+}
+
+pub(crate) fn shared(item: &wprs_library::Item) -> Option<Edit> {
+    let edits = store::dir().ok()?.join(EDITS);
+    let found = (item.kind == wprs_library::Kind::Image).then(|| edit::load(&item.path, &edits));
+    found?.ok()?.map(|(_, edit)| edit)
+}
+
+pub(crate) fn adopt(item: &wprs_library::Item, synced: Option<&Value>, keep: bool) -> Result<(), Error> {
+    if item.kind == wprs_library::Kind::Image
+        && edit::adopt(synced, &item.path, &store::dir()?.join(EDITS), keep).map_err(Error::Setting)?
+    {
+        store::changed();
+    }
+    Ok(())
 }
 
 pub(crate) fn raised(image: &Path) -> Option<Raise> {

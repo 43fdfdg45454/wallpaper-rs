@@ -2,7 +2,8 @@ package io.github.wallpaper_rs
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,20 +11,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,13 +51,15 @@ private val FILTERS = listOf(
 @Composable
 fun Library(main: Main, open: (String) -> Unit) = Box(Modifier.fillMaxSize()) {
     var filter by rememberSaveable { mutableIntStateOf(0) }
+    val chosen = rememberSelection()
     val query = FILTERS[filter].second
     val languages = listOf(LocalLocale.current.toLanguageTag().replace('-', '_'))
     val items by loaded<List<Item>?>(null, main.revision.intValue, query, languages) {
         fetch("items", "query" to query, "languages" to languages)
     }
+    chosen.follow(items)
     Column {
-        Header(stringResource(R.string.library))
+        if (chosen.isEmpty()) Header(stringResource(R.string.library)) else Selecting(main, chosen, items.orEmpty().map(Item::uid))
         Choices(null, FILTERS.map { (label, query) -> query to stringResource(label) }, query) { chosen ->
             filter = FILTERS.indexOfFirst { it.second == chosen }
         }
@@ -67,7 +67,7 @@ fun Library(main: Main, open: (String) -> Unit) = Box(Modifier.fillMaxSize()) {
             TextButton(main::examples) { Text(stringResource(R.string.examples)) }
             TextButton(main::openPackage) { Text(stringResource(R.string.open_package)) }
         }
-        if (main.importing.intValue > 0) LinearProgressIndicator(Modifier.fillMaxWidth().padding(16.dp))
+        Importing(main)
         if (items?.isEmpty() == true) Text(stringResource(R.string.empty), Modifier.padding(16.dp))
         LazyVerticalGrid(
             columns = GridCells.Adaptive(112.dp),
@@ -76,22 +76,21 @@ fun Library(main: Main, open: (String) -> Unit) = Box(Modifier.fillMaxSize()) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(items.orEmpty(), key = Item::uid) { item ->
-                Thumb(item, Modifier.aspectRatio(0.75f).clickable { open(item.uid) })
+                val tap = { if (chosen.isEmpty()) open(item.uid) else chosen.toggle(item.uid) }
+                val press = Modifier.combinedClickable(onLongClick = { chosen.toggle(item.uid) }, onClick = tap)
+                Thumb(item, Modifier.aspectRatio(0.75f).then(press), item.uid in chosen)
             }
         }
     }
-    ExtendedFloatingActionButton(
-        onClick = main::choose,
-        icon = { Icon(Icons.Default.Add, null) },
-        text = { Text(stringResource(R.string.choose)) },
-        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-    )
+    if (chosen.isEmpty()) Adding(main, Modifier.align(Alignment.BottomEnd).padding(16.dp))
 }
 
 @Composable
-fun Thumb(item: Item, modifier: Modifier = Modifier) {
+fun Thumb(item: Item, modifier: Modifier = Modifier, picked: Boolean = false) {
     val bitmap by thumbnail(item)
-    Box(modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceVariant)) {
+    val shape = MaterialTheme.shapes.medium
+    val outline = if (picked) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, shape) else Modifier
+    Box(modifier.then(outline).clip(shape).background(MaterialTheme.colorScheme.surfaceVariant)) {
         val hidden = if (item.mature) Modifier.blur(24.dp) else Modifier
         bitmap?.let { Image(it, item.title, Modifier.fillMaxSize().then(hidden), contentScale = ContentScale.Crop) }
         if (item.mature) Icon(Icons.Default.Lock, stringResource(R.string.mature), Modifier.align(Alignment.Center), Color.White)
@@ -99,6 +98,7 @@ fun Thumb(item: Item, modifier: Modifier = Modifier) {
         val corner = Modifier.align(Alignment.BottomStart).padding(4.dp)
         if (item.video) Icon(Icons.Default.PlayArrow, null, corner, Color.White)
         if (item.scene) Icon(Icons.Default.Star, null, corner, Color.White)
+        if (picked) Icon(Icons.Default.CheckCircle, null, Modifier.align(Alignment.TopStart).padding(4.dp), MaterialTheme.colorScheme.primary)
     }
 }
 

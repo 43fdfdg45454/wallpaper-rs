@@ -1,5 +1,7 @@
 use crate::stage::Stage;
-use crate::{account, choice, depth, hearing, library, local, pack, power, settings, store, vault};
+use crate::{
+    account, choice, depth, framing, hearing, library, local, pack, power, settings, store, tilt, vault,
+};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
@@ -60,7 +62,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
 
     let mix = ask(json!({ "op": "create", "name": "Mix" })).as_str().unwrap().to_owned();
     for item in [&green, &bands, &clip, &green] {
-        assert_eq!(ask(json!({ "op": "add", "playlist": mix, "item": item })), Value::Null);
+        assert_eq!(ask(json!({ "op": "add", "playlist": mix, "items": [item] })), Value::Null);
     }
     ask(json!({ "op": "move", "playlist": mix, "from": 0, "to": 2 }));
     let entries = ask(json!({ "op": "entries", "playlist": mix }));
@@ -92,7 +94,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     info["rules"]["order"] = json!("shuffle");
     assert_eq!(ask(json!({ "op": "save", "playlist": info })), Value::Null);
     assert!(ask(json!({ "op": "save", "playlist": { "uid": mix, "name": "Mix", "query": null, "rules": { "x": 1 } } }))["error"].is_string());
-    assert_eq!(ask(json!({ "op": "remove", "uid": clip })), Value::Null);
+    assert_eq!(ask(json!({ "op": "remove", "uids": [clip] })), Value::Null);
     assert!(!store::thumb_file(&clip, "jpg").unwrap().exists());
     assert_eq!(ask(json!({ "op": "entries", "playlist": mix })).as_array().map(Vec::len), Some(2));
     assert_ne!(shown(false), clip);
@@ -109,6 +111,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     assert_eq!(settings::setting("transition.kind", Some("none")).unwrap(), "none");
     assert!(settings::look().fade.is_zero());
     assert_eq!(settings::setting("playback.max_fps", None).unwrap(), "30");
+    framing(&green, &bands);
     relief(&green);
     records();
     scenes();
@@ -205,6 +208,133 @@ fn records() {
     assert!(library::with(|lib| Ok(lib.playlist(&shared).is_err())).unwrap() && links.is_empty());
 }
 
+fn framing(green: &str, bands: &str) {
+    let deep = |request: Value| serde_json::from_str::<Value>(&depth::request(&request.to_string())).unwrap();
+    let image = |uid: &str| library::with(|lib| Ok(lib.item(uid)?.path)).unwrap();
+    ask(json!({ "op": "pick", "choice": { "item": green } }));
+    choice::commit(true).unwrap();
+    let wanted = || [tilt::wanted(true), tilt::wanted(false)];
+    assert_eq!(wanted(), [false, false]);
+    let fresh = deep(json!({ "op": "item", "uid": green }));
+    assert_eq!(
+        (&fresh["strength"], &fresh["fit"], &fresh["crop"], &fresh["base"], &fresh["paused"]),
+        (&json!(0.02f32), &Value::Null, &Value::Null, &Value::Null, &Value::Null)
+    );
+    assert_eq!(deep(json!({ "op": "parallax", "uid": green, "on": true })), Value::Null);
+    assert_eq!(wanted(), [true, true]);
+    let saved = depth::loaded(&image(green)).unwrap().parallax.unwrap();
+    assert_eq!(saved.source, wprs_core::edit::Motion::Auto, "the phone leaves the source to each device");
+    ask(json!({ "op": "pick", "choice": { "item": bands } }));
+    assert_eq!(
+        wanted(),
+        [false, true],
+        "the preview follows the item it shows, the wallpaper the chosen one"
+    );
+    ask(json!({ "op": "pick", "choice": null }));
+    let power = |f: fn(&mut power::Power)| {
+        let mut state = power::Power { charging: false, saver: false, low: false, thermal: 0, headroom: 0.0 };
+        f(&mut state);
+        [tilt::rate(true, state, false), tilt::rate(true, state, true)]
+    };
+    assert_eq!(
+        [power(|_| {}), power(|p| p.charging = true), power(|p| p.saver = true)],
+        [[30, 30], [60, 30], [0, 0]]
+    );
+    assert_eq!([power(|p| p.low = true), power(|p| (p.low, p.charging) = (true, true))], [[0, 0], [60, 30]]);
+    assert_eq!(tilt::rate(false, power::Power::now(), false), 0);
+    deep(json!({ "op": "parallax", "uid": green, "strength": 0.03, "focus": 0.5 }));
+    let tuned = deep(json!({ "op": "item", "uid": green }));
+    let strength = tuned["strength"].as_f64().unwrap();
+    assert!(
+        tuned["parallax"] == json!(true) && (strength - 0.03).abs() < 1e-6 && tuned["focus"] == json!(0.5)
+    );
+    assert!(
+        deep(json!({ "op": "parallax", "uid": green, "strength": 0.5 }))["error"]
+            .as_str()
+            .unwrap()
+            .contains("strength")
+    );
+    let moving = || {
+        let item = deep(json!({ "op": "item", "uid": green }));
+        (item["parallax"].clone(), item["strength"].as_f64().unwrap() as f32)
+    };
+    deep(json!({ "op": "parallax", "uid": green, "strength": 0.0 }));
+    assert_eq!(moving(), (json!(false), 0.0));
+    deep(json!({ "op": "parallax", "uid": green, "on": true }));
+    assert_eq!(moving(), (json!(true), 0.02), "turning it on again gives it back a strength");
+    assert_eq!(deep(json!({ "op": "fit", "uids": [green, bands, "missing"], "fit": "center" })), json!(2));
+    assert_eq!(deep(json!({ "op": "item", "uid": bands }))["fit"], json!("center"));
+    let framed = |preview| framing::framed(green, &image(green), wprs_core::Fit::Fill, preview);
+    assert_eq!((framed(false).fit, framed(false).crop), (wprs_core::Fit::Center, None));
+    let generation = store::generation();
+    let frame = |pan: [f32; 2], zoom: f32, done: bool| {
+        let request = json!({ "op": "frame", "uid": green, "pan": pan, "zoom": zoom, "screen": [32, 64], "done": done });
+        serde_json::from_value::<[f32; 4]>(deep(request)).unwrap()
+    };
+    let zoomed = frame([0.0, 0.0], 2.0, false);
+    assert!(store::generation() > generation && framing::draft(green) == Some(zoomed));
+    assert_eq!(zoomed, [0.4375, 0.25, 0.125, 0.5]);
+    assert_eq!((framed(true).crop, framed(false).crop), (Some(zoomed), None));
+    let generation = store::generation();
+    let moved = frame([0.5, 0.0], 1.0, true);
+    assert_eq!(moved, [0.375, 0.25, 0.125, 0.5]);
+    assert!(store::generation() > generation && framing::draft(green).is_none());
+    assert_eq!(deep(json!({ "op": "item", "uid": green }))["crop"], json!(moved));
+    let edit = depth::loaded(&image(green)).unwrap();
+    assert_eq!(
+        (edit.geometry.crop, edit.outputs[framing::SCREEN].crop),
+        (None, moved),
+        "the phone keeps its framing as its own screen, not as the crop every screen uses"
+    );
+    deep(json!({ "op": "fit", "uids": [green], "fit": null }));
+    assert_eq!(
+        (framed(false).fit, framed(false).crop, framed(false).develop.is_none()),
+        (wprs_core::Fit::Fill, Some(moved), true)
+    );
+    let crop = |crop| {
+        depth::change(&image(green), |edit| {
+            edit.geometry.crop = crop;
+            Ok(())
+        })
+        .unwrap()
+    };
+    crop(Some([0.0, 0.0, 0.5, 1.0]));
+    assert_eq!(
+        framed(false).crop,
+        Some([0.1875, 0.25, 0.0625, 0.5]),
+        "the framing sits inside a shared crop"
+    );
+    frame([0.0, 0.0], 1.0, false);
+    ask(json!({ "op": "unpick", "choice": { "item": green } }));
+    assert_eq!(framing::draft(green), None, "leaving the page drops an unfinished framing");
+    let fill = |crop, pan| framing::placed(wprs_core::Fit::Fill, crop, (64, 32), (32, 32), pan);
+    assert_eq!(
+        (fill(Some(moved), 0.5).offset, fill(Some(moved), 0.5).scale),
+        ([0.375, 0.375], [0.125, 0.25])
+    );
+    assert_eq!([fill(None, 0.0).offset, fill(None, 1.0).offset], [[0.0, 0.0], [0.5, 0.0]]);
+    assert_eq!(
+        fill(Some([0.0, 0.0, 1.0, 0.5]), 1.0).offset,
+        [0.75, 0.0],
+        "the launcher scrolls inside a crop wider than the screen"
+    );
+    let phone = |pan| framing::placed(wprs_core::Fit::Fill, Some(zoomed), (64, 32), (32, 64), pan).offset;
+    assert_eq!(phone(0.0), phone(1.0), "a framing in the shape of the screen stays still");
+    assert_eq!(deep(json!({ "op": "unframe", "uid": green })), Value::Null);
+    let unframed = deep(json!({ "op": "item", "uid": green }));
+    assert_eq!((&unframed["crop"], &unframed["base"]), (&Value::Null, &json!([0.0, 0.0, 0.5, 1.0])));
+    crop(None);
+    deep(json!({ "op": "fit", "uids": [bands], "fit": null }));
+    deep(json!({ "op": "parallax", "uid": green, "on": false }));
+    assert_eq!(wanted(), [false, false]);
+    assert!(deep(json!({ "op": "make", "uid": green }))["error"].as_str().unwrap().contains("library"));
+    assert_eq!(ask(json!({ "op": "favorite", "uids": [green, "gone"], "favorite": true })), Value::Null);
+    assert!(
+        library::with(|lib| Ok(lib.item(green)?.favorite)).unwrap(),
+        "a missing item does not stop the rest"
+    );
+}
+
 fn relief(uid: &str) {
     let deep = |request: Value| serde_json::from_str::<Value>(&depth::request(&request.to_string())).unwrap();
     let model = deep(json!({ "op": "model" }));
@@ -225,7 +355,11 @@ fn relief(uid: &str) {
             .unwrap()
             .contains("not installed")
     );
-    assert_eq!(deep(json!({ "op": "item", "uid": uid })), json!({ "parallax": false, "map": false }));
+    let state = || {
+        let item = deep(json!({ "op": "item", "uid": uid }));
+        (item["parallax"].clone(), item["map"].clone())
+    };
+    assert_eq!(state(), (json!(false), json!(false)));
     assert_eq!(deep(json!({ "op": "parallax", "uid": uid, "on": true })), Value::Null);
     let image = library::with(|lib| Ok(lib.item(uid)?.path)).unwrap();
     assert_eq!(depth::raised(&image).map(|raise| raise.map), Some(None));
@@ -238,7 +372,24 @@ fn relief(uid: &str) {
     };
     assert!(import(16, 16)["error"].as_str().unwrap().contains("shapes differ"));
     assert_eq!(import(32, 16), Value::Null);
-    assert_eq!(deep(json!({ "op": "item", "uid": uid })), json!({ "parallax": true, "map": true }));
+    assert_eq!(state(), (json!(true), json!(true)));
+    let (reader, mut writer) = std::io::pipe().unwrap();
+    let request = json!({ "op": "import", "uid": uid, "fd": reader.as_raw_fd() });
+    let importing = std::thread::spawn(move || {
+        let answer = deep(request);
+        drop(reader);
+        answer
+    });
+    assert_eq!(deep(json!({ "op": "fit", "uids": [uid], "fit": "stretch" })), json!(1));
+    std::io::Write::write_all(&mut writer, &fs::read(dir.path().join("32x16.png")).unwrap()).unwrap();
+    drop(writer);
+    assert_eq!(importing.join().unwrap(), Value::Null);
+    let after = depth::loaded(&image).unwrap();
+    assert_eq!(
+        (after.fit, after.moving().is_some()),
+        (Some(wprs_core::Fit::Stretch), true),
+        "a map keeps what changed while it was read"
+    );
     let raise = depth::raised(&image).unwrap();
     assert_eq!(depth::map(&raise).map(|map| map.dimensions()), Some((32, 16)));
     assert_eq!(deep(json!({ "op": "parallax", "uid": uid, "on": false })), Value::Null);
@@ -258,7 +409,7 @@ fn relief(uid: &str) {
         [deep(json!({ "op": "forget" })), deep(json!({ "op": "forget" }))],
         [json!(true), json!(false)]
     );
-    assert_eq!(ask(json!({ "op": "remove", "uid": uid })), Value::Null);
+    assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
     assert!(!wprs_depth::beside(&image).exists() && !image.with_added_extension("wprs.json").exists());
     assert!(!fs::read_dir(store::dir().unwrap().join("depth")).is_ok_and(|mut maps| maps.next().is_some()));
 }
@@ -391,7 +542,7 @@ fn scenes() {
     ask(json!({ "op": "pick", "choice": { "item": clip } }));
     assert!(choice::shown(true).is_some_and(|s| s.scene && !s.video));
     ask(json!({ "op": "pick", "choice": null }));
-    assert_eq!(ask(json!({ "op": "remove", "uid": clip })), Value::Null);
+    assert_eq!(ask(json!({ "op": "remove", "uids": [clip] })), Value::Null);
     assert!(!extracted.exists() && !stored.path.exists());
     let image = store::store(&mut open("green-64x32.png"), "green.png").unwrap().0;
     let bad = library::with(|lib| Ok(lib.item(&image)?.path)).unwrap();

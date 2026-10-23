@@ -8,10 +8,11 @@ mod parse;
 mod set;
 mod tool;
 
+use crate::Fit;
 pub use action::{ACTIONS, Action, Error};
 pub use curve::spline;
 pub use depth::{Depth, MAX_STRENGTH, MODEL, Motion, Parallax, STEPS};
-pub use file::{MAX_BYTES, commit, dir, load, remove, save};
+pub use file::{MAX_BYTES, adopt, commit, dir, load, remove, save};
 pub use geometry::{Matrix, mul};
 pub use parse::numbers;
 use serde::{Deserialize, Serialize};
@@ -38,6 +39,8 @@ pub struct Edit {
     pub depth: Option<Depth>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parallax: Option<Parallax>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fit: Option<Fit>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -200,7 +203,7 @@ impl Default for Edit {
     fn default() -> Self {
         let (source, geometry, ops) = (Source::default(), Geometry::default(), Vec::new());
         let (masks, outputs, span, depth, parallax) = (BTreeMap::new(), BTreeMap::new(), None, None, None);
-        Self { version: VERSION, source, geometry, ops, masks, outputs, span, depth, parallax }
+        Self { version: VERSION, source, geometry, ops, masks, outputs, span, depth, parallax, fit: None }
     }
 }
 

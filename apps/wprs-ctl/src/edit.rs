@@ -161,6 +161,12 @@ pub enum Edits {
         #[arg(long, help = "Turn the parallax off and keep its settings")]
         off: bool,
     },
+    #[command(about = "Show this picture with its own fit, or with the screen's fit again with none")]
+    Fit {
+        path: PathBuf,
+        #[arg(value_parser = ["fill", "fit", "stretch", "center", "tile", "none"])]
+        mode: String,
+    },
     #[command(about = "Replace the edit with a JSON file, or - for standard input")]
     Apply { path: PathBuf, file: String },
     #[command(about = "Show changes on the desktop for 60 s without saving them")]
@@ -212,6 +218,7 @@ fn action(command: Edits) -> Option<(PathBuf, Action)> {
             let steps = steps.and_then(|s| s.parse().ok());
             (path, Action::Parallax { source, strength, focus, steps, smoothing, overscan, off })
         }
+        Edits::Fit { path, mode } => (path, Action::Fit { mode }),
         Edits::Show { .. }
         | Edits::Apply { .. }
         | Edits::Preview { .. }

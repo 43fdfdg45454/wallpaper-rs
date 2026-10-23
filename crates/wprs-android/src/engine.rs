@@ -1,7 +1,8 @@
 use crate::clips::Clips;
+use crate::framing::{self, Framed};
 use crate::gpu::{self, Gpu, Key};
 use crate::power::{Power, delay_ms};
-use crate::relief::{self, Raised, Tilted, layer};
+use crate::relief::{self, Look as Seen, Raised, Tilted, layer};
 use crate::settings::{self, Look};
 use crate::stage::Stage;
 use crate::{Error, choice, store};
@@ -19,11 +20,15 @@ const RETRY_MS: i64 = 50;
 const SLACK_NS: i64 = 2_000_000;
 const ATTEMPTS: u32 = 3;
 
+type Fading = (Arc<GpuImage>, (Fit, Option<[f32; 4]>), Option<i64>);
+
 pub(crate) struct Engine {
     target: Option<(Gpu, Surface)>,
     image: Option<(Key, Arc<GpuImage>)>,
-    fading: Option<(Arc<GpuImage>, Option<i64>)>,
+    fading: Option<Fading>,
     raised: Option<Raised>,
+    framed: Option<(String, Framed)>,
+    crop: Option<[f32; 4]>,
     stage: Option<Stage>,
     clips: Clips,
     tilted: Tilted,
@@ -55,6 +60,8 @@ impl Engine {
             image,
             fading,
             raised: None,
+            framed: None,
+            crop: None,
             stage: None,
             clips: Clips::default(),
             tilted: Tilted::default(),
@@ -168,19 +175,34 @@ impl Engine {
                 self.stage.iter_mut().for_each(Stage::drop_view);
             }
             let Some((gpu, _)) = self.target.as_ref() else { return Ok((0, 0)) };
+            let before = (self.look.fit, self.crop);
             self.look = settings::look();
-            let raise = shown.as_ref().filter(|s| !s.scene).map(|s| (&*s.uid, &*s.path));
-            self.dirty |= relief::raise(&mut self.raised, gpu, raise);
-            let fit = self.look.fit;
             let shown = shown.filter(|shown| !shown.scene);
-            let wanted =
-                shown.map(|shown| (Key { epoch: gpu.epoch, item: shown.uid, fit, size }, shown.path));
-            if self.image.as_ref().map(|(key, _)| key) != wanted.as_ref().map(|(key, _)| key) {
-                let loaded = wanted.and_then(|(key, path)| Some((key.clone(), gpu.texture(key, &path)?)));
+            let framed =
+                shown.as_ref().map(|s| framing::framed(&s.uid, &s.path, self.look.fit, self.preview));
+            self.look.fit = framed.as_ref().map_or(self.look.fit, |framed| framed.fit);
+            let geometry = framed.as_ref().and_then(|f| f.develop.as_ref()).map(|edit| &edit.geometry);
+            let raise = shown.as_ref().map(|s| (&*s.uid, &*s.path));
+            self.dirty |= relief::raise(&mut self.raised, gpu, raise, geometry);
+            let fit = self.look.fit;
+            let wanted = shown.zip(framed).map(|(shown, framed)| {
+                let look = format!(
+                    "{:?}{:?}",
+                    framed.develop,
+                    framed.crop.map(|[.., w, h]| w.min(h).log2().floor())
+                );
+                (Key { epoch: gpu.epoch, item: shown.uid, fit, size, look }, shown.path, framed)
+            });
+            self.framed = wanted.as_ref().map(|(key, _, framed)| (key.item.clone(), framed.clone()));
+            if self.image.as_ref().map(|(key, _)| key) != wanted.as_ref().map(|(key, ..)| key) {
+                let loaded = wanted
+                    .and_then(|(key, path, framed)| Some((key.clone(), gpu.texture(key, &path, &framed)?)));
                 let previous = std::mem::replace(&mut self.image, loaded);
-                let fade = previous.filter(|(old, _)| (old.epoch, old.size) == (gpu.epoch, size));
+                let other = |old: &Key| self.image.as_ref().is_some_and(|(new, _)| new.item != old.item);
+                let fade =
+                    previous.filter(|(old, _)| (old.epoch, old.size) == (gpu.epoch, size) && other(old));
                 let fades = fps > 0 && self.image.is_some() && !self.look.fade.is_zero();
-                self.fading = fade.filter(|_| fades).map(|(_, old)| (old, None));
+                self.fading = fade.filter(|_| fades).map(|(_, old)| (old, before, None));
                 self.dirty = true;
                 gpu::trim();
             }
@@ -192,12 +214,16 @@ impl Engine {
         if power.moving() && self.offset != self.shown {
             (self.shown, self.dirty) = (self.offset, true);
         }
+        let crop = self.framed.as_ref().and_then(|(uid, framed)| framed.shown(uid, self.preview));
+        if crop != self.crop {
+            (self.crop, self.dirty) = (crop, true);
+        }
         let raised =
             self.raised.as_mut().map(|r| r.step(self.offset, (nanos, fps), power.moving(), self.size));
         let (moved, tilting) = raised.unwrap_or_default();
         self.dirty |= moved;
         let duration = self.look.fade.as_nanos().max(1) as f32;
-        let start = self.fading.as_mut().map(|(_, start)| *start.get_or_insert(nanos));
+        let start = self.fading.as_mut().map(|(.., start)| *start.get_or_insert(nanos));
         let progress = start.map_or(1.0, |start| ((nanos - start) as f32 / duration).clamp(0.0, 1.0));
         if self.fading.is_some() && (fps == 0 || progress >= 1.0) {
             (self.fading, self.dirty) = (None, true);
@@ -207,14 +233,16 @@ impl Engine {
         if !self.dirty && self.fading.is_none() {
             return Ok(animating(tilting));
         }
-        let (look, size) = ((self.look.fit, self.look.background, self.shown), self.size);
+        let (fit, background, pan, size) = (self.look.fit, self.look.background, self.shown, self.size);
+        let look = Seen { fit, background, pan, crop: self.crop };
         let current = self.image.as_ref().map(|(_, image)| image.as_ref());
         let raised = self.raised.as_ref().map(|raised| (raised, power.charging));
         let layers = match &self.fading {
-            Some((old, _)) => {
-                [layer(Some(old), 1.0, look, size, None), layer(current, progress, look, size, raised)]
+            Some((old, (fit, crop), _)) => {
+                let was = Seen { fit: *fit, crop: *crop, ..look };
+                [layer(Some(old), 1.0, &was, size, None), layer(current, progress, &look, size, raised)]
             }
-            None => [layer(current, 1.0, look, size, raised), layer(None, 0.0, look, size, None)],
+            None => [layer(current, 1.0, &look, size, raised), layer(None, 0.0, &look, size, None)],
         };
         self.dirty = !gpu.renderer.present_layers(surface, size, &layers, || {})?;
         if !self.dirty {

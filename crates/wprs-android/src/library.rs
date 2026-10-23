@@ -1,5 +1,5 @@
 use crate::choice::{self, Choice};
-use crate::{Error, pack, props, settings, store};
+use crate::{Error, framing, pack, props, settings, store};
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -18,15 +18,15 @@ enum Request {
     Item { uid: String, languages: Option<Vec<String>> },
     Confirm { uid: String, what: String },
     Thumb { uid: String },
-    Favorite { uid: String, favorite: bool },
-    Remove { uid: String },
+    Favorite { uids: Vec<String>, favorite: bool },
+    Remove { uids: Vec<String> },
     Playlists,
     Entries { playlist: String },
     Create { name: String },
     Save { playlist: PlaylistInfo },
     Delete { playlist: String },
-    Add { playlist: String, item: String },
-    Take { playlist: String, item: String },
+    Add { playlist: String, items: Vec<String> },
+    Take { playlist: String, items: Vec<String> },
     Move { playlist: String, from: usize, to: usize },
     Pick { choice: Option<Choice> },
     Unpick { choice: Choice },
@@ -83,12 +83,11 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
         }
         Request::Confirm { uid, what } => lib.confirm(&[&uid], &what).map(|_| Value::Null)?,
         Request::Thumb { uid } => json!(store::thumb(lib, &lib.item(&uid)?)?),
-        Request::Favorite { uid, favorite } => json!(lib.set_favorite(&uid, favorite)?),
-        Request::Remove { uid } => {
-            let item = lib.item(&uid)?;
-            lib.remove_item(&uid)?;
-            store::forget(&item)?;
-            if shown.image.as_ref() == Some(&item.path) {
+        Request::Favorite { uids, favorite } => json!(lib.set_favorite_many(&known(lib, &uids), favorite)?),
+        Request::Remove { uids } => {
+            let items = lib.remove_items(&known(lib, &uids))?;
+            items.iter().try_for_each(store::forget)?;
+            if items.iter().any(|item| shown.image.as_ref() == Some(&item.path)) {
                 settings::update(|config| {
                     config.default.image = None;
                     Ok(())
@@ -112,12 +111,17 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
             drop_playlist(lib, &playlist)?;
             Value::Null
         }
-        Request::Add { playlist, item } => match lib.item_playlists(&item)?.iter().any(|p| p.uid == playlist)
-        {
-            true => Value::Null,
-            false => json!(lib.add_to_playlist(&playlist, &[&item])?),
-        },
-        Request::Take { playlist, item } => json!(lib.remove_from_playlist(&playlist, &item)?),
+        Request::Add { playlist, items } => {
+            let listed =
+                |item: &str| lib.item_playlists(item).is_ok_and(|p| p.iter().any(|p| p.uid == playlist));
+            let mut seen = std::collections::HashSet::new();
+            let fresh: Vec<&str> =
+                known(lib, &items).into_iter().filter(|i| seen.insert(*i) && !listed(i)).collect();
+            json!(lib.add_to_playlist(&playlist, &fresh)?)
+        }
+        Request::Take { playlist, items } => {
+            json!(lib.remove_from_playlist_many(&playlist, &known(lib, &items))?)
+        }
         Request::Move { playlist, from, to } => json!(lib.move_in_playlist(&playlist, from, to)?),
         Request::Pick { choice } => {
             if let Some(Choice::Item(uid)) = &choice
@@ -127,7 +131,12 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
             }
             json!(choice::pick(choice))
         }
-        Request::Unpick { choice } => json!(choice::unpick(&choice)),
+        Request::Unpick { choice } => {
+            if let Choice::Item(uid) = &choice {
+                framing::discard(uid);
+            }
+            json!(choice::unpick(&choice))
+        }
         Request::Current => {
             let image = shown.image.and_then(|path| lib.resolve_item(path.to_str()?).ok());
             json!({ "image": image, "playlist": shown.playlist })
@@ -140,6 +149,10 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
         store::changed();
     }
     Ok(value)
+}
+
+fn known<'a>(lib: &Library, uids: &'a [String]) -> Vec<&'a str> {
+    uids.iter().map(String::as_str).filter(|uid| lib.item(uid).is_ok()).collect()
 }
 
 pub(crate) fn drop_playlist(lib: &mut Library, playlist: &str) -> Result<(), Error> {

@@ -1,3 +1,4 @@
+use crate::framing::{Framed, placed};
 use crate::settings::{self, BACKEND};
 use ndk::native_window::NativeWindow;
 use std::path::Path;
@@ -29,6 +30,7 @@ pub(crate) struct Key {
     pub(crate) item: String,
     pub(crate) fit: Fit,
     pub(crate) size: (u32, u32),
+    pub(crate) look: String,
 }
 
 impl Gpu {
@@ -36,7 +38,7 @@ impl Gpu {
         !LOST.load(Relaxed) && EPOCH.load(Relaxed) == self.epoch
     }
 
-    pub(crate) fn texture(&self, key: Key, path: &Path) -> Option<Arc<GpuImage>> {
+    pub(crate) fn texture(&self, key: Key, path: &Path, framed: &Framed) -> Option<Arc<GpuImage>> {
         let mut cache = TEXTURES.lock().unwrap_or_else(PoisonError::into_inner);
         cache.retain(|(cached, image)| cached.epoch == self.epoch && Arc::strong_count(image) > 1);
         if let Some((_, image)) = cache.iter().find(|(cached, _)| *cached == key) {
@@ -45,7 +47,15 @@ impl Gpu {
         let decoded = decode_image(path, self.renderer.max_edge())
             .inspect_err(|e| log::warn!("cannot read the wallpaper image: {e}"))
             .ok()?;
-        let image = self.renderer.upload(&decoded, key.fit, key.size).inspect_err(|e| log::error!("{e}"));
+        let (r, place) = (&self.renderer, |frame| placed(key.fit, framed.crop, frame, key.size, 0.5));
+        let image = match &framed.develop {
+            Some(edit) => {
+                let frame = edit.geometry.frame(decoded.dimensions());
+                r.develop(&decoded, edit, None, r.develop_size(frame, place(frame), key.size))
+            }
+            None => r.upload_placed(&decoded, place(decoded.dimensions()), key.size),
+        };
+        let image = image.inspect_err(|e| log::error!("{e}"));
         let image = Arc::new(image.ok()?);
         cache.push((key, image.clone()));
         Some(image)

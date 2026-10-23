@@ -152,6 +152,9 @@ impl Edit {
             rect(&format!("outputs.{key}.crop"), out.crop)?;
         }
         super::depth::check(self.depth.as_ref(), self.parallax.as_ref())?;
+        ensure(self.fit != Some(crate::Fit::Span), || {
+            "fit: span belongs to the screens, not to a picture".into()
+        })?;
         let Some(span) = &self.span else { return Ok(()) };
         all("span.center", &span.center, UNIT)?;
         within("span.zoom", span.zoom, (1.0, 8.0))

@@ -204,30 +204,53 @@ instalación desde esa app) o instálalo desde un ordenador con
 `adb install -r wallpaper-rs-android.apk`.
 
 Para ponerlo de fondo, abre la app **wallpaper-rs**. La pestaña *Biblioteca* muestra las fotos y
-los vídeos añadidos con *Añadir*, que abre el selector de fotos de Android (se pueden elegir varios a
-la vez) y los copia al almacenamiento privado de la app, así que no hace falta ningún permiso y la app
-no usa la red salvo para descargar el modelo de profundidad cuando lo pides y para tu servidor propio
-si lo añades. Un mismo archivo no se
-copia dos veces. Al tocar uno se abre su página, con una vista
-previa en vivo, sus medidas y duración, y los botones *Usar como fondo*, favorito, *Añadir a una
-lista* y *Quitar*. *Usar como fondo* abre la vista previa del sistema, donde se elige si va en la
-pantalla de inicio, en la de bloqueo o en las dos; si la app ya es el fondo, el cambio entra con un
-fundido sin pasar por ella. También se llega desde los fondos animados del sistema. Se dibuja con la
-GPU (Vulkan, u OpenGL ES si Vulkan falla) con el mismo renderizador que el escritorio, y se recupera
-sola si el sistema le quita la GPU o la superficie. Admite JPEG, PNG, WebP, GIF y BMP.
+los vídeos añadidos con *Añadir*, que ofrece tres caminos: *Fotos y vídeos* abre el selector de fotos
+de Android, *Elegir archivos* abre el selector de documentos para escoger varias imágenes y vídeos de
+cualquier carpeta, de la tarjeta o de una nube instalada, e *Importar una carpeta* añade las imágenes
+y los vídeos que hay dentro de una carpeta y de sus subcarpetas (5000 como mucho) mostrando cuántos
+lleva de cuántos. Todo se copia al almacenamiento privado de la app, así que no hace falta ningún
+permiso y la app no usa la red salvo para descargar el modelo de profundidad cuando lo pides y para
+tu servidor propio si lo añades. Un mismo archivo no se copia dos veces, y los que no se pueden abrir
+se cuentan en un solo aviso. Al tocar uno se abre su página, con una vista previa en vivo con la
+forma de la pantalla, sus medidas y duración, y los botones *Usar como fondo*, favorito, *Añadir a
+una lista* y *Quitar*.
+
+Una pulsación larga en la biblioteca, o en una lista abierta, empieza a seleccionar: cada toque marca
+o desmarca un elemento, la barra de arriba muestra cuántos hay con *Seleccionar todo* y *Cancelar*, y
+sus acciones sirven para todos a la vez: añadirlos a una lista, marcarlos o desmarcarlos como
+favoritos, elegir su ajuste y quitarlos de la biblioteca con una sola confirmación (en una lista,
+sacarlos de ella). El gesto de volver sale de la selección, que se conserva al girar el teléfono.
+
+En la página de una imagen, *Ajuste* elige cómo se coloca esa imagen (rellenar, imagen completa,
+estirar, centrar o mosaico, o como en *Ajustes*), y arrastrar o pellizcar la vista previa elige la
+parte que se ve en el teléfono; *Restablecer el encuadre* lo quita y vuelve a la imagen entera o al
+recorte hecho en el ordenador. El ajuste es un campo de la misma edición no destructiva que usa el
+escritorio (`wprs-ctl edit fit`), y el encuadre, un recorte con la forma de la pantalla del teléfono
+que la edición guarda como el de una pantalla más, `Android` (`wprs-ctl edit crop -o Android`): se
+sincroniza con el ordenador sin recortar sus pantallas, y se hace dentro del recorte de la imagen
+entera si se eligió en el ordenador. Se combina con el paralaje; el paso de páginas del lanzador
+recorre la imagen, o el recorte del ordenador si es más ancho que la pantalla, pero no mueve un
+encuadre hecho en el teléfono, que ya tiene su forma. La vista previa usa la forma de la pantalla en
+su orientación natural, también con el teléfono tumbado, donde se pone al lado de los controles.
+*Usar como fondo* abre la vista previa del sistema, donde se elige si va en la pantalla de inicio,
+en la de bloqueo o en las dos; si la app ya es el fondo, el cambio entra con un fundido sin pasar
+por ella. También se llega desde los fondos animados del sistema. Se dibuja con la GPU (Vulkan, u
+OpenGL ES si Vulkan falla) con el mismo renderizador que el escritorio, y se recupera sola si el
+sistema le quita la GPU o la superficie. Admite JPEG, PNG, WebP, GIF y BMP.
 
 La pestaña *Listas* crea listas de fondos que cambian solos cada 15 o 30 minutos, cada hora, cada 6
 horas, cada día o nunca, en orden o al azar y, si se quiere, saltando los vídeos con batería. El
 cambio se decide cuando el fondo vuelve a verse, sin alarmas ni despertar el teléfono. La biblioteca,
 las listas y sus reglas usan el mismo modelo y la misma lógica de rotación que el escritorio.
 
-La pestaña *Ajustes* elige cómo se ajusta la imagen (rellenar, imagen completa, estirar o centrar),
-el fundido entre fondos, el sonido de los vídeos, los fotogramas por segundo con batería (30, 15 o
-10) y con el cargador (60 o 30), cuándo cambian los colores del sistema y los gráficos (automático,
-Vulkan u OpenGL ES). Debajo, el diagnóstico muestra la GPU, los fotogramas dibujados y por segundo,
-el límite que se aplica en ese momento, el estado de carga, ahorro de energía y temperatura y, con
-una escena, la clase del teléfono y el nivel de calidad. *Licencias* muestra los textos de ONNX
-Runtime, de los componentes que incluye y del modelo de profundidad.
+La pestaña *Ajustes* elige cómo se ajustan las imágenes que no tienen ajuste propio y los vídeos
+(rellenar, imagen completa, estirar o centrar), el fundido entre fondos, el sonido de los vídeos,
+los fotogramas por segundo con batería (30, 15 o 10) y con el cargador (60 o 30), cuándo cambian los
+colores del sistema y los gráficos (automático, Vulkan u OpenGL ES). Debajo, el diagnóstico muestra
+la GPU, los fotogramas dibujados y por segundo, el límite que se aplica en ese momento, el estado de
+carga, ahorro de energía y temperatura y, con una escena, la clase del teléfono y el nivel de
+calidad. *Licencias* muestra los textos de ONNX Runtime, de los componentes que incluye y del modelo
+de profundidad.
 
 Los vídeos (MP4, MOV, 3GP, WebM o MKV) los decodifica el hardware del teléfono directamente sobre
 el fondo, sin pasar por la GPU ni copiar fotogramas, y se repiten en bucle. Se pausan en cuanto el
@@ -237,15 +260,23 @@ Van sin sonido salvo con *Reproducir el sonido de los vídeos*. Salvo con el aju
 a Android que llenen la pantalla recortando los bordes; ese recorte lo hace el compositor del
 sistema, así que un teléfono que no lo respete los mostrará estirados.
 
-En la página de una imagen, *Moverse con el teléfono* activa el paralaje. Sigue la inclinación con
-el sensor de rotación que no usa la brújula o, si no lo hay, con el normal; si el teléfono no tiene
-ninguno o no da datos, sigue el paso de páginas del lanzador. La inclinación se
-filtra y se recentra sola como en el escritorio, con el mismo muelle y el mismo sombreador: con un
-mapa de profundidad lo cercano se mueve más que el fondo, y sin él la imagen entera se desplaza un
-poco. El sensor solo se enciende mientras se ve un fondo con paralaje, a los fotogramas por segundo
-permitidos (60 como mucho), y se apaga al taparlo, con el ahorro de energía, con poca batería o con
-el teléfono muy caliente. Con el teléfono quieto no se dibuja ningún fotograma, y con batería el
-sombreador da como mucho 8 pasos de profundidad.
+En la página de una imagen, *Moverse con el teléfono* activa el paralaje. Sigue el giro del teléfono
+con el sensor de rotación que no usa la brújula o, si no lo hay, con el normal: girarlo hacia un
+lado mueve la imagen en horizontal y inclinarlo hacia delante o hacia atrás, en vertical, también
+con el teléfono de pie. Sin giroscopio sigue la inclinación con el acelerómetro, y si el teléfono no
+tiene ningún sensor o no da datos, el paso de páginas del lanzador. El giro se filtra y se recentra
+solo en unos segundos, con el mismo muelle y el mismo sombreador que el escritorio: con un mapa de
+profundidad lo cercano se mueve más que el fondo, y sin él la imagen entera se desplaza.
+*Intensidad* y *Enfoque* (la profundidad que se queda quieta) son los mismos valores que en el
+escritorio, pero en el teléfono la intensidad se mide sobre la parte que se ve y vale el triple,
+porque la pantalla es pequeña y se mira de cerca: con los valores por defecto lo cercano se desplaza
+hasta un 4 % del ancho de la pantalla y el fondo hasta un 2 % hacia el otro lado, y la imagen se
+amplía lo justo para no enseñar los bordes. La página muestra si la imagen aún no tiene mapa de
+profundidad, si se está calculando o si ya está listo, y avisa cuando el movimiento está en pausa
+por el ahorro de energía, por poca batería o por calor; con una batería normal, con o sin cargador,
+nunca se para. El sensor solo se enciende mientras se ve un fondo con paralaje, a los fotogramas por
+segundo permitidos (60 como mucho), y se apaga al taparlo. Con el teléfono quieto no se dibuja
+ningún fotograma, y con batería el sombreador da como mucho 8 pasos de profundidad.
 
 *Calcular un mapa de profundidad* usa el mismo modelo que el escritorio, Depth Anything V2 Small. La
 primera vez pide permiso para descargarlo y muestra su tamaño (99,1 MB), su licencia (Apache-2.0)
@@ -384,6 +415,7 @@ wprs-ctl edit crop foto.jpg --aspect 16:9 -o DP-1      # recorte propio de una p
 wprs-ctl edit overlay foto.jpg '#ff8800' --blend soft-light --opacity 0.3 --mask linear:0.5,0,0.5,0.5
 wprs-ctl edit preview foto.jpg ev=1                  # verlo en el escritorio 60 s sin guardar
 wprs-ctl edit export foto.jpg -o foto-editada.png    # mismo resultado, sin daemon
+wprs-ctl edit fit foto.jpg center                    # su propio ajuste; none vuelve al de la pantalla
 wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
 wprs-ctl config layout.bezel_mm 8                    # ancho del marco de cada pantalla al extender
 ```
@@ -428,18 +460,19 @@ clave. El token, la clave del teléfono y la de sincronización se guardan cifra
 almacén de claves de Android que no sale del teléfono. Los registros van cifrados de extremo a
 extremo y el servidor solo ve los equipos como `Device 1`, `Device 2`…
 
-En el teléfono se aplican los títulos, etiquetas, valoraciones y favoritos de los fondos que tiene
-(el mismo archivo en el teléfono y en el ordenador es el mismo fondo), las listas con sus reglas y
-los ajustes compartidos, como el fundido. Se quedan en el teléfono el volumen, el sonido de los
-vídeos, los fotogramas por segundo y el permiso para descargar modelos; los perfiles, los ajustes
-predefinidos y los repositorios del escritorio se conservan sin tocar. Si cambias la clave en un
-ordenador, el teléfono la recibe solo, y si se revoca un equipo, el primero que sincroniza (también
-el teléfono) cambia la clave. La sincronización en segundo plano usa WorkManager cada hora, solo con
-Wi-Fi u otra red sin límite de datos (salvo *Sincronizar también con datos móviles*) y sin batería
-baja, más una tras abrir la app y otra 30 segundos después de cada cambio; *Sincronizar ahora* la
-lanza al momento con cualquier red. Mientras el teléfono no está enlazado, la app no prepara ninguna
-tarea ni toca la red al arrancar. *Pausar la sincronización* y *Quitar el servidor* (que pide al
-servidor que olvide el teléfono) están en la misma pestaña.
+En el teléfono se aplican los títulos, etiquetas, valoraciones, favoritos y ediciones (encuadre,
+ajuste, paralaje y el resto de la edición) de los fondos que tiene (el mismo archivo en el teléfono
+y en el ordenador es el mismo fondo), las listas con sus reglas y los ajustes compartidos, como el
+fundido. Se quedan en el teléfono el volumen, el sonido de los vídeos, los fotogramas por segundo y
+el permiso para descargar modelos; los perfiles, los ajustes predefinidos y los repositorios del
+escritorio se conservan sin tocar. Si cambias la clave en un ordenador, el teléfono la recibe solo,
+y si se revoca un equipo, el primero que sincroniza (también el teléfono) cambia la clave. La
+sincronización en segundo plano usa WorkManager cada hora, solo con Wi-Fi u otra red sin límite de
+datos (salvo *Sincronizar también con datos móviles*) y sin batería baja, más una tras abrir la app
+y otra 30 segundos después de cada cambio; *Sincronizar ahora* la lanza al momento con cualquier
+red. Mientras el teléfono no está enlazado, la app no prepara ninguna tarea ni toca la red al
+arrancar. *Pausar la sincronización* y *Quitar el servidor* (que pide al servidor que olvide el
+teléfono) están en la misma pestaña.
 
 ## Paquetes: clasificación, idiomas y créditos
 
@@ -571,13 +604,14 @@ que el equipo revocado ya no puede leer lo nuevo; la clave nueva pasa solo entre
 compararon sus cifras, y los demás vuelven a unirse. Cambiar la contraseña en la web cierra las
 demás sesiones y borra los tokens; los equipos siguen enlazados salvo que elijas cerrarlos también.
 
-Se sincronizan los títulos, etiquetas, valoraciones y favoritos de la biblioteca, las listas, los
+Se sincronizan los títulos, etiquetas, valoraciones, favoritos y ediciones de las imágenes de la
+biblioteca (cada parte de la edición por separado, así que lo que cambian dos equipos en partes
+distintas se suma, y una parte de más de 64 KiB conserva la última copia enviada), las listas, los
 perfiles, los ajustes predefinidos y los ajustes (salvo el volumen, la caché, el paralaje por
-software y el permiso para descargar modelos, que se quedan en cada equipo), cifrados de
-extremo a extremo; sin cifrar solo con `--plaintext`, que avisa antes. El token y la clave de
-sincronización viven solo en el llavero del sistema; el servidor ve los equipos como `Device 1`,
-`Device 2`… y el nombre real viaja cifrado. Al enlazar se añade también el repositorio del
-servidor.
+software y el permiso para descargar modelos, que se quedan en cada equipo), cifrados de extremo a
+extremo; sin cifrar solo con `--plaintext`, que avisa antes. El token y la clave de sincronización
+viven solo en el llavero del sistema; el servidor ve los equipos como `Device 1`, `Device 2`… y el
+nombre real viaja cifrado. Al enlazar se añade también el repositorio del servidor.
 
 Los repositorios que añade un equipo llegan a los demás como propuesta: cada equipo los añade solo
 cuando lo confirmas, con su huella. Las claves de los proveedores viajan solo si lo eliges para
