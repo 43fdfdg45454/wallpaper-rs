@@ -140,3 +140,33 @@ fn extract_refuses_symlinks_and_obstacles() {
     assert!(matches!(extract(&mut package, &file_link), Err(Error::Symlink(_))));
     assert!(!outside.join("target").exists());
 }
+
+fn wav(seconds: u32) -> Vec<u8> {
+    let bytes = 8000 * seconds;
+    let head = [&b"RIFF"[..], &(36 + bytes).to_le_bytes(), b"WAVEfmt ", &16u32.to_le_bytes(), &[1, 0, 1, 0]];
+    let format =
+        [&8000u32.to_le_bytes()[..], &8000u32.to_le_bytes(), &[1, 0, 8, 0], b"data", &bytes.to_le_bytes()];
+    [head.concat(), format.concat(), vec![128; bytes as usize]].concat()
+}
+
+#[test]
+fn sounds_are_checked_when_a_scene_is_built_or_read() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (src, out) = (tmp.path().join("src"), tmp.path().join("rain.wpak"));
+    source(&src);
+    let sky = r#""path": "assets/textures/sky.png"}"#;
+    let layer = r#"{"id": "rain", "type": "sound", "sound": "rain"}, {"id": "sky""#;
+    let scene = SCENE.replace(sky, &format!(r#"{sky}, "rain": {{"path": "assets/rain.wav"}}"#));
+    fs::write(src.join("scene.json"), scene.replacen(r#"{"id": "sky""#, layer, 1)).unwrap();
+    fs::write(src.join("assets/rain.wav"), wav(2)).unwrap();
+    build(&src, &out, &Limits::default()).unwrap();
+    assert_eq!(open(&out, &Limits::default()).unwrap().scene().unwrap().sounds().count(), 1);
+    for (bytes, reason) in [(wav(61), "at most 60 s"), (b"not a sound".to_vec(), "is not an Ogg Vorbis")] {
+        fs::write(src.join("assets/rain.wav"), bytes).unwrap();
+        let refused = build(&src, &out, &Limits::default());
+        assert!(
+            matches!(&refused, Err(Error::Invalid { reason: r, .. }) if r.contains(reason)),
+            "{refused:?}"
+        );
+    }
+}

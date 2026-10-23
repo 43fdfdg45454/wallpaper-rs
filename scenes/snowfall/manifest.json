@@ -3,13 +3,13 @@
   "id": "io.github.wallpaper_rs.example.snowfall",
   "version": "1.0.0",
   "title": "Snowfall",
-  "description": "Snow drifting over pines in moonlight, with particles, drifting clouds, light rays, a vignette and film grain.",
+  "description": "Snow drifting over pines in moonlight, with particles, drifting clouds, light rays, a vignette, film grain and the sound of the wind.",
   "authors": ["wallpaper-rs contributors"],
   "license": "CC0-1.0",
   "kind": "scene",
   "entry": "scene.json",
   "preview": "preview.jpg",
-  "tags": ["example", "winter", "particles"],
+  "tags": ["example", "winter", "particles", "sound"],
   "properties": {
     "density": { "type": "slider", "min": 10, "max": 120, "step": 5, "integer": true, "default": 80,
                  "label": { "en": "Snowflakes per second", "es": "Copos por segundo" } },
@@ -17,7 +17,9 @@
               "options": [{ "value": "calm", "label": { "en": "Calm", "es": "En calma" } },
                           { "value": "breeze", "label": { "en": "Breeze", "es": "Brisa" } },
                           { "value": "gale", "label": { "en": "Gale", "es": "Ventisca" } }] },
-    "clouds": { "type": "bool", "order": 2, "default": true, "label": { "en": "Clouds", "es": "Nubes" } }
+    "clouds": { "type": "bool", "order": 2, "default": true, "label": { "en": "Clouds", "es": "Nubes" } },
+    "volume": { "type": "slider", "order": 3, "min": 0, "max": 100, "step": 5, "integer": true, "default": 100,
+                "label": { "en": "Wind volume", "es": "Volumen del viento" } }
   },
   "presets": [
     { "id": "blizzard", "label": { "en": "Blizzard", "es": "Tormenta de nieve" }, "values": { "density": 120, "wind": "gale" } },

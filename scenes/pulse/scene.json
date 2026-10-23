@@ -1,7 +1,7 @@
 {
   "schema": "wallpaper-rs.scene/1",
   "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#07040f" },
-  "clock": { "max_fps": 60 },
+  "clock": { "max_fps": "display" },
   "layers": [
     { "id": "room", "type": "shape", "shape": { "rect": { "size": [1920, 1080] } },
       "gradient": { "radial": true, "from": [0.5, 0.5], "to": [1, 1], "stops": [[0, "#2a1446"], [0.6, "#120a24"], [1, "#05030b"]] } },

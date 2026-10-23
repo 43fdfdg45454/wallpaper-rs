@@ -1,7 +1,7 @@
 {
   "schema": "wallpaper-rs.scene/1",
   "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#1b1630" },
-  "clock": { "max_fps": 30, "poster_time": 6 },
+  "clock": { "max_fps": "display", "poster_time": 6 },
   "timelines": [{ "id": "rise", "duration": 5 }],
   "assets": { "depth": { "path": "depth.png", "linear": true } },
   "layers": [

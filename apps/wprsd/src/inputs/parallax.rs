@@ -47,13 +47,13 @@ impl Hub {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{Grants, Hub, View};
+    use super::super::{Hub, View};
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
     #[test]
     fn a_pointer_parallax_follows_the_pointer_without_a_grant() {
-        let hub = Hub::new(Grants::new(), Arc::new(|| {}), Arc::new(|| {}));
+        let hub = Hub::new(Default::default(), Arc::new(|| {}), Arc::new(|| {}));
         let view = |x| View { active: true, covered: false, rect: Some([x, 0.0, 100.0, 50.0]) };
         let views = |covered| {
             let right = View { covered, ..view(100.0) };

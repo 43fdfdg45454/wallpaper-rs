@@ -52,7 +52,7 @@ pub struct Window {
     pub(crate) name: String,
     pub(crate) logical: (u32, u32),
     pub(crate) scale: u32,
-    pub(crate) refresh: Duration,
+    pub(crate) refresh: u32,
     pub(crate) position: (i32, i32),
     pub(crate) mm: (u32, u32),
     pub(crate) identity: String,
@@ -80,7 +80,12 @@ impl Window {
     }
 
     pub fn refresh(&self) -> Duration {
-        self.refresh
+        let millihertz = Some(self.refresh).filter(|r| *r > 0).unwrap_or(60_000).clamp(1_000, 1_000_000);
+        Duration::from_micros(1_000_000_000 / u64::from(millihertz))
+    }
+
+    pub fn hz(&self) -> u32 {
+        self.refresh.saturating_add(500) / 1000
     }
 
     pub fn apply(&self) {

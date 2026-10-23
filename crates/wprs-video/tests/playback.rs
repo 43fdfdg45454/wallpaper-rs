@@ -102,6 +102,20 @@ fn loops_past_the_end() {
 }
 
 #[test]
+fn a_lower_frame_rate_cap_applies_while_playing() {
+    let Some((player, rx)) = open((64, 32)) else { return };
+    let count = |span: Duration| {
+        let deadline = Instant::now() + span;
+        std::iter::from_fn(|| (Instant::now() < deadline).then(|| next_frame(&rx, WAIT)).flatten()).count()
+    };
+    let native = count(Duration::from_secs(1));
+    player.set_max_fps(4);
+    count(Duration::from_millis(500));
+    let capped = count(Duration::from_secs(2));
+    assert!(native > 12 && capped <= 12, "{native} frames in 1 s, then {capped} in 2 s at 4 FPS");
+}
+
+#[test]
 fn pausing_stops_frames() {
     let Some((player, rx)) = open((64, 32)) else { return };
     assert!(next_frame(&rx, WAIT).is_some());

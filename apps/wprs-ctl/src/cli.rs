@@ -96,14 +96,14 @@ pub enum Command {
     Resume,
     #[command(about = "Pause or resume animated wallpapers")]
     Toggle,
-    #[command(about = "Set the volume of video wallpapers, 0 to 100, and unmute them")]
+    #[command(about = "Set the volume of videos and scenes with sound, 0 to 100, and unmute them")]
     Volume {
         #[arg(value_parser = clap::value_parser!(u8).range(0..=100))]
         percent: u8,
     },
-    #[command(about = "Mute video wallpapers")]
+    #[command(about = "Mute videos and scenes with sound")]
     Mute,
-    #[command(about = "Unmute video wallpapers")]
+    #[command(about = "Unmute videos and scenes with sound")]
     Unmute,
     #[command(about = "Create the stream of an output and print its node id and serial")]
     Stream {

@@ -8,9 +8,10 @@ PlasmoidItem {
 
     readonly property Daemon daemon: Daemon {}
     readonly property bool paused: daemon.current.paused === true
+    property var asked: ({})
 
     Plasmoid.icon: paused ? "media-playback-pause" : "preferences-desktop-wallpaper"
-    Plasmoid.status: PlasmaCore.Types.ActiveStatus
+    Plasmoid.status: consent.ask.inputs.length > 0 ? PlasmaCore.Types.NeedsAttentionStatus : PlasmaCore.Types.ActiveStatus
     toolTipMainText: "wallpaper-rs"
     toolTipSubText: daemon.lastError || (paused ? i18n("Paused") : i18n("Playing"))
     fullRepresentation: Panel {
@@ -59,6 +60,22 @@ PlasmoidItem {
                 return;
             root.daemon.refresh();
             root.daemon.updated("library", []);
+        }
+    }
+
+    Consent {
+        id: consent
+
+        width: 0
+        height: 0
+        opacity: 0
+        daemon: root.daemon
+        inputs: root.daemon.inputs
+        onAskChanged: {
+            if (ask.scene === "" || root.asked[ask.scene])
+                return;
+            root.asked[ask.scene] = true;
+            root.expanded = true;
         }
     }
 

@@ -158,7 +158,9 @@ pub async fn run(client: &Client, command: Lib) -> Result<()> {
             println!("{}", lib.thumbnail(&one(client, &item).await?, size.parse()?).await?)
         }
         Lib::Apply { item, output, fit, preset } => {
-            lib.apply(&one(client, &item).await?, &output, fit.map_or("", Fit::as_str), &preset).await?
+            let uid = one(client, &item).await?;
+            let apply = lib.apply(&uid, &output, fit.map_or("", Fit::as_str), &preset);
+            crate::inputs::asking(client, &output, apply).await?
         }
     }
     Ok(())

@@ -1,8 +1,12 @@
 {
   "schema": "wallpaper-rs.scene/1",
   "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#0d1b33" },
-  "clock": { "max_fps": 30, "seed": 11 },
+  "clock": { "max_fps": "display", "seed": 11 },
+  "assets": { "wind": { "path": "assets/wind.ogg" } },
   "layers": [
+    { "id": "gusts", "type": "sound", "sound": "wind", "fade_in": 3, "fade_out": 3,
+      "play": { "prop": "wind", "map": { "calm": false, "breeze": true, "gale": true } },
+      "volume": { "prop": "wind", "map": { "calm": 0, "breeze": 0.6, "gale": 1 } } },
     { "id": "sky", "type": "shape", "shape": { "rect": { "size": [1920, 1080] } },
       "gradient": { "stops": [[0, "#0b1830"], [0.6, "#24456b"], [1, "#6b8aa8"]] },
       "effects": [{ "effect": "clouds", "enabled": { "prop": "clouds" },

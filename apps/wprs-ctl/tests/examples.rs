@@ -6,10 +6,11 @@ use std::sync::Arc;
 use wprs_core::Fit;
 use wprs_format::{Limits, build, open};
 use wprs_render::{Layer, Renderer, SceneAssets};
-use wprs_scene::{PointerState, Quality, Runtime, Wake, effective};
+use wprs_scene::{PointerState, Quality, Runtime, Wake, effective, playable};
 
 const SIZE: (u32, u32) = (480, 270);
 const STILL: &[&str] = &["dusk", "pond", "pulse"];
+const SOUNDS: &[&str] = &["pond", "snowfall"];
 const DEPTHS: [(&str, f32, f32); 4] =
     [("far", 0.3, 0.3), ("lake", 0.4, 0.65), ("left", 0.85, 0.85), ("right", 0.95, 0.95)];
 const SOFT: f32 = 4.0;
@@ -73,9 +74,11 @@ fn example_scenes_pack_small_render_and_rest() {
             "{name}"
         );
         let scene = Arc::new(package.scene().unwrap());
-        assert!(scene.assets.values().all(|a| a.linear), "{name} draws its pictures itself");
+        assert_eq!(scene.sounds().count(), usize::from(SOUNDS.contains(&name.as_str())), "{name}");
+        let pictures: Vec<_> = scene.assets.iter().filter(|(_, a)| !playable(&a.path)).collect();
+        assert!(pictures.iter().all(|(_, a)| a.linear), "{name} draws its pictures itself");
         let mut assets = SceneAssets::default();
-        for (id, asset) in &scene.assets {
+        for (id, asset) in pictures {
             let data = image::load_from_memory(&package.read_file(&asset.path).unwrap()).unwrap();
             assets.images.insert(id.clone(), Arc::new(data.into_rgba8()));
         }

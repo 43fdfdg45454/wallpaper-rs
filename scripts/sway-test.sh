@@ -61,7 +61,7 @@ cat >"$WORK/sway.conf" <<'EOF'
 xwayland disable
 output HEADLESS-1 mode --custom 640x360@60Hz pos 0 0
 output HEADLESS-2 mode --custom 640x360@60Hz scale 1.5 pos 640 0
-output HEADLESS-3 mode --custom 480x270@60Hz
+output HEADLESS-3 mode --custom 480x270@120Hz
 for_window [app_id="foot"] fullscreen enable
 EOF
 sway -c "$WORK/sway.conf" >"$WORK/sway.log" 2>&1 & sway=$!; pids+=("$sway")
@@ -106,6 +106,7 @@ ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
 
 swaymsg -q create_output
 expect "sorted(s['outputs'])" "['HEADLESS-1', 'HEADLESS-2', 'HEADLESS-3']"
+expect "[s['outputs'][o]['refresh'] for o in ('HEADLESS-1', 'HEADLESS-3')]" "[60, 120]"
 check HEADLESS-3 "0.5,0.5,$green" "0.02,0.02,$blue"
 swaymsg -q output HEADLESS-3 unplug
 expect "sorted(s['outputs'])" "['HEADLESS-1', 'HEADLESS-2']"
@@ -152,11 +153,13 @@ kill "$wprsd"
 wait "$wprsd" || true
 RUST_LOG=$log "$BIN/wprsd" --backend streams >"$WORK/streams.log" 2>&1 & wprsd=$!; pids+=("$wprsd")
 wait_for 30 ctl state || fail "the daemon did not start with streams"
+swaymsg -q "output HEADLESS-1 mode --custom 640x360@120Hz"
 ctl stream HEADLESS-1 1280 720 >/dev/null && ctl stream HEADLESS-2 1920 1080 >/dev/null
 ctl stream OTHER-1 1280 720 >/dev/null
 expect "[(s['outputs'][o]['width'], s['outputs'][o]['height']) for o in ('HEADLESS-1', 'HEADLESS-2', 'OTHER-1')]" \
   "[(640, 360), (640, 360), (1280, 720)]"
-echo "stream size limited to the output mode checks passed"
+expect "[s['outputs'][o]['refresh'] for o in ('HEADLESS-1', 'HEADLESS-2', 'OTHER-1')]" "[120, 60, 0]"
+echo "stream size and refresh rate of the output mode checks passed"
 
 kill "$sway"; wait "$sway" 2>/dev/null || true
 sed -i 's/HEADLESS-1 mode --custom 640x360/HEADLESS-1 mode --custom 960x540/' "$WORK/sway.conf"

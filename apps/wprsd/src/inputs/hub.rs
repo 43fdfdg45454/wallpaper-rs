@@ -37,25 +37,33 @@ impl Control {
 }
 
 impl Hub {
-    pub(super) fn new(grants: Grants, wake: Wake, changed: Wake) -> Hub {
-        let (control, tracking) =
-            (Mutex::new(Control { grants, ..Control::default() }), watch::Sender::new(false));
+    pub(super) fn new((grants, declined): (Grants, Grants), wake: Wake, changed: Wake) -> Hub {
+        let control = Mutex::new(Control { grants, declined, ..Control::default() });
+        let tracking = watch::Sender::new(false);
         let (switch, audio, pointers, moved, poke) = Default::default();
         Hub { control, tracking, switch, audio, pointers, moved, poke, wake, changed }
     }
 
     pub(crate) fn set_grant(&self, path: &Path, scene: &str, input: Input, granted: bool) -> io::Result<()> {
         let switch = lock(&self.switch);
-        let mut grants = lock(&self.control).grants.clone();
-        let inputs = grants.entry(scene.to_owned()).or_default();
-        let changed = if granted { inputs.insert(input) } else { inputs.remove(&input) };
-        if !changed {
+        let (mut grants, mut declined) = {
+            let control = lock(&self.control);
+            (control.grants.clone(), control.declined.clone())
+        };
+        let (changed, decided) =
+            (toggle(&mut grants, scene, input, granted), toggle(&mut declined, scene, input, !granted));
+        if changed {
+            crate::inputs1::save(path, &grants)?;
+        }
+        if decided {
+            crate::inputs1::save(&crate::inputs1::declined_path(path), &declined)?;
+        }
+        if !changed && !decided {
             return Ok(());
         }
-        grants.retain(|_, inputs| !inputs.is_empty());
-        crate::inputs1::save(path, &grants)?;
-        lock(&self.control).grants = grants;
-        drop(switch);
+        let mut control = lock(&self.control);
+        (control.grants, control.declined) = (grants, declined);
+        drop((control, switch));
         tracing::info!(scene, input = input.as_str(), granted, "input permission changed");
         self.update(None);
         (self.changed)();
@@ -123,4 +131,11 @@ impl Hub {
             self.moved.notify_one();
         }
     }
+}
+
+fn toggle(map: &mut Grants, scene: &str, input: Input, on: bool) -> bool {
+    let inputs = map.entry(scene.to_owned()).or_default();
+    let changed = if on { inputs.insert(input) } else { inputs.remove(&input) };
+    map.retain(|_, inputs| !inputs.is_empty());
+    changed
 }

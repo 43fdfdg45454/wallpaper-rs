@@ -34,6 +34,7 @@ pub(crate) struct View {
 #[derive(Default)]
 pub(crate) struct Control {
     pub(crate) grants: Grants,
+    pub(crate) declined: Grants,
     pub(crate) shown: BTreeMap<String, SceneInputs>,
     pub(crate) parallax: BTreeSet<String>,
     pub(crate) views: BTreeMap<String, View>,
@@ -64,7 +65,7 @@ pub(crate) fn hub() -> Option<&'static Arc<Hub>> {
     HUB.get()
 }
 
-pub(crate) fn start(daemon: &Arc<Daemon>, connection: zbus::Connection, grants: Grants) {
+pub(crate) fn start(daemon: &Arc<Daemon>, connection: zbus::Connection, grants: (Grants, Grants)) {
     let weak = Arc::downgrade(daemon);
     let changed = move || weak.upgrade().into_iter().for_each(|d| d.changes.changed("inputs", vec![]));
     let wake = Arc::new(daemon.compositor.waker());
@@ -100,9 +101,9 @@ async fn pace(hub: Arc<Hub>) {
     }
 }
 
-pub(crate) fn needs(output: &str, scene: &str, audio: bool, pointer: bool) {
+pub(crate) fn needs(output: &str, (scene, title): (&str, &str), audio: bool, pointer: bool) {
     let Some(hub) = hub() else { return };
-    let need = SceneInputs { scene: scene.into(), audio, pointer };
+    let need = SceneInputs { scene: scene.into(), audio, pointer, title: title.into() };
     let mut control = lock(&hub.control);
     let changed = match audio || pointer {
         true => control.shown.insert(output.into(), need.clone()) != Some(need),
@@ -111,6 +112,7 @@ pub(crate) fn needs(output: &str, scene: &str, audio: bool, pointer: bool) {
     drop(control);
     if changed {
         hub.poke.notify_one();
+        (hub.changed)();
     }
 }
 

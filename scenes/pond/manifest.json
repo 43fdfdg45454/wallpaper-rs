@@ -3,18 +3,20 @@
   "id": "io.github.wallpaper_rs.example.pond",
   "version": "1.0.0",
   "title": "Pond",
-  "description": "Lily pads that drift with the pointer and water that ripples where it moves or clicks, once you allow it.",
+  "description": "Lily pads that drift with the pointer and water that ripples where it moves or clicks, once you allow it, with the soft sound of water.",
   "authors": ["wallpaper-rs contributors"],
   "license": "CC0-1.0",
   "kind": "scene",
   "entry": "scene.json",
   "preview": "preview.jpg",
-  "tags": ["example", "water", "pointer"],
+  "tags": ["example", "water", "pointer", "sound"],
   "properties": {
     "note": { "type": "label", "label": { "en": "Allow the pointer for this scene, then move it over the water.",
                                           "es": "Permite el puntero a esta escena y muévelo sobre el agua." } },
     "ripples": { "type": "slider", "order": 1, "min": 0, "max": 96, "step": 4, "default": 40,
                  "label": { "en": "Ripple strength", "es": "Fuerza de las ondas" } },
-    "pads": { "type": "bool", "order": 2, "default": true, "label": { "en": "Lily pads", "es": "Nenúfares" } }
+    "pads": { "type": "bool", "order": 2, "default": true, "label": { "en": "Lily pads", "es": "Nenúfares" } },
+    "volume": { "type": "slider", "order": 3, "min": 0, "max": 100, "step": 5, "integer": true, "default": 100,
+                "label": { "en": "Water volume", "es": "Volumen del agua" } }
   }
 }

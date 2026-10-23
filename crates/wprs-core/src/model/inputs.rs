@@ -4,7 +4,13 @@ model! {
     #[derive(Copy, Eq, Hash, PartialOrd, Ord)]
     pub enum Input { Audio, Pointer }
 
-    pub struct SceneInputs { pub scene: String, pub audio: bool, pub pointer: bool }
+    pub struct SceneInputs {
+        pub scene: String,
+        pub audio: bool,
+        pub pointer: bool,
+        #[serde(default)]
+        pub title: String,
+    }
 
     pub struct InputsReply {
         pub model: u32,
@@ -15,6 +21,8 @@ model! {
         pub shown: BTreeMap<String, SceneInputs>,
         #[serde(default)]
         pub parallax: BTreeSet<String>,
+        #[serde(default)]
+        pub declined: BTreeMap<String, BTreeSet<Input>>,
     }
 }
 

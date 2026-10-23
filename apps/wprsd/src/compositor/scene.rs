@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView, log_allowed};
-use wprs_scene::{PointerState, Quality, Runtime, ScriptOutputs, Uses, Wake};
+use wprs_scene::{PointerState, Quality, Runtime, ScriptOutputs, Uses, Voice, Wake};
 use wprs_script::{Error, Frame, Host};
 
 const SCRIPT_HOST: &str = "/proc/self/exe";
@@ -28,8 +28,13 @@ pub(super) struct SceneState {
     calm: u32,
     pub(super) error: Option<String>,
     pub(super) due: Option<Instant>,
-    pub(super) interval: Duration,
     pub(super) moving: bool,
+    pub(super) voices: Vec<Voice>,
+    pub(super) heard: Option<Instant>,
+}
+
+fn after(seconds: f64) -> Duration {
+    Duration::try_from_secs_f64(seconds.clamp(0.0, 86_400.0)).unwrap_or_default()
 }
 
 fn wall() -> f64 {
@@ -51,7 +56,7 @@ impl SceneState {
         let read = |word| scripts.iter().any(|(_, source)| source.contains(word));
         let (reads, quality) = ((read("audio"), read("cursor")), power.quality(&runtime));
         let (view, tick, pointer, calm, error, due, uses) = Default::default();
-        let (interval, moving) = (Duration::ZERO, !still);
+        let (moving, voices, heard) = (!still, Vec::new(), None);
         let mut scene = SceneState {
             spec,
             runtime,
@@ -66,8 +71,9 @@ impl SceneState {
             calm,
             error,
             due,
-            interval,
             moving,
+            voices,
+            heard,
         };
         scene.uses = scene.needs(quality);
         scene
@@ -147,21 +153,21 @@ impl SceneState {
         self.view.as_ref().and_then(SceneView::image)
     }
 
+    pub(super) fn fps(&self, power: Power, refresh: u32) -> u32 {
+        power.fps(&self.runtime, self.quality, refresh)
+    }
+
     pub(super) fn render(
         &mut self,
         renderer: &Renderer,
-        size: (u32, u32),
+        (size, refresh): ((u32, u32), u32),
         power: Power,
         players: &HashMap<PathBuf, PlayerSlot>,
         active: bool,
         now: Instant,
     ) -> Result<bool, RenderError> {
         self.due = None;
-        let dt = self.tick.filter(|_| active).map_or(0.0, |t| now.saturating_duration_since(t).as_secs_f64());
-        if active && !self.still {
-            self.runtime.advance(dt);
-        }
-        self.tick = active.then_some(now);
+        let dt = self.step(active, now);
         let p = self.pointer;
         let pointer = self.runtime.pointer().follow(p.pos, p.buttons, dt as f32);
         self.runtime.set_pointer(pointer);
@@ -188,8 +194,7 @@ impl SceneState {
             .filter_map(|(id, path)| Some((id.as_str(), players.get(path)?.texture.as_ref()?)))
             .collect();
         renderer.render_scene(view, &self.runtime, &frame, inner, quality, &videos)?;
-        let interval = Duration::from_secs(1) / power.fps(&self.runtime, quality);
-        let after = |s: f64| Duration::try_from_secs_f64(s.clamp(0.0, 86_400.0)).unwrap_or_default();
+        let interval = Duration::from_secs(1) / power.fps(&self.runtime, quality, refresh);
         let wake = match self.host {
             _ if self.still => Wake::Idle,
             Some(_) if self.calm < CALM => Wake::Frame,
@@ -197,7 +202,7 @@ impl SceneState {
             None => frame.wake,
         };
         self.calm = self.calm.saturating_add(1);
-        (self.moving, self.interval) = (wake == Wake::Frame, interval);
+        self.moving = wake == Wake::Frame;
         self.due = match wake {
             Wake::Frame => Some(now + interval),
             Wake::At(seconds) => Some(now + after(seconds).max(interval)),
@@ -206,7 +211,39 @@ impl SceneState {
         if self.due.is_none() {
             view.trim();
         }
+        self.listen(interval, now);
         Ok(uses != self.uses)
+    }
+
+    fn step(&mut self, active: bool, now: Instant) -> f64 {
+        let dt = self.tick.filter(|_| active).map_or(0.0, |t| now.saturating_duration_since(t).as_secs_f64());
+        if active && !self.still {
+            self.runtime.advance(dt);
+        }
+        self.tick = active.then_some(now);
+        dt
+    }
+
+    pub(super) fn hold(&mut self) {
+        self.tick = None;
+    }
+
+    pub(super) fn hear(&mut self, interval: Duration, now: Instant) {
+        self.step(true, now);
+        self.listen(interval, now);
+    }
+
+    fn listen(&mut self, interval: Duration, now: Instant) {
+        if self.spec.pack.sounds.is_empty() {
+            return;
+        }
+        let (voices, wake) = self.runtime.voices();
+        self.voices = voices;
+        self.heard = match wake {
+            Wake::Frame => Some(now + interval),
+            Wake::At(seconds) => Some(now + after(seconds).max(interval)),
+            Wake::Idle => None,
+        };
     }
 
     fn assets(&self) -> wprs_render::SceneAssets {

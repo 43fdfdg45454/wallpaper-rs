@@ -35,7 +35,7 @@ pub(crate) struct State {
     pub(crate) sidecars: crate::edits::Sidecars,
     pub(crate) depths: HashMap<PathBuf, crate::relief::Cached>,
     pub(crate) scenes: HashMap<PathBuf, ((i64, u64), Weak<crate::scenes::ScenePack>)>,
-    pub(crate) modes: HashMap<String, (u32, u32)>,
+    pub(crate) modes: HashMap<String, ((u32, u32), u32)>,
     pub(crate) resized: Vec<(String, (u32, u32))>,
 }
 
@@ -82,6 +82,7 @@ impl Daemon {
         tracing::debug!(adapter, "GPU adapter");
         let changes = Changes::new();
         let exporter = Arc::new(Exporter::start().context("cannot connect to PipeWire")?);
+        crate::streams::gpu_buffers(&renderer).into_iter().for_each(|gpu| exporter.use_dmabuf(gpu));
         let compositor =
             Compositor::start(renderer, exporter.clone(), settings(&config), changes.notifier())?;
         let (wake, streams_changed) = (compositor.waker(), Arc::new(Notify::new()));

@@ -121,6 +121,9 @@ impl Check<'_> {
             }
             self.effects(&p, layer);
             self.kind(&p, &layer.kind, depth);
+            if let Kind::Sound(sound) = &layer.kind {
+                self.sound(&p, layer, sound);
+            }
         }
     }
 
@@ -231,7 +234,7 @@ impl Check<'_> {
                 self.value(&format!("{p}/color"), color);
                 self.size(&format!("{p}/size"), *size);
             }
-            Kind::Adjustment {} => {}
+            Kind::Adjustment {} | Kind::Sound(_) => {}
         }
     }
 
@@ -280,7 +283,8 @@ impl Check<'_> {
             self.asset(&format!("{path}/texture"), id);
         }
         if let Some(id) = &mask.layer {
-            self.known(&format!("{path}/layer"), "layer", id, self.scene.layer(id).is_some());
+            let drawn = self.scene.layer(id).is_some_and(|l| !matches!(l.kind, Kind::Sound(_)));
+            self.known(&format!("{path}/layer"), "layer", id, drawn);
         }
         if let Some(shape) = &mask.shape {
             self.shape(&format!("{path}/shape"), shape);

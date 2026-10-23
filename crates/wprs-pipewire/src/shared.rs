@@ -1,3 +1,5 @@
+use crate::dmabuf::Allocate;
+use crate::pool::Pool;
 use crate::{StreamInfo, VideoFrame};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
@@ -13,6 +15,7 @@ pub struct Slot {
     pub streaming: AtomicBool,
     pub dirty: AtomicBool,
     pub started: Mutex<Option<Instant>>,
+    pub pool: Mutex<Pool>,
 }
 
 impl Slot {
@@ -44,7 +47,9 @@ pub struct Shared {
     pub waking: AtomicBool,
     pub changed: AtomicBool,
     pub generation: AtomicU64,
+    pub recreated: Mutex<Vec<String>>,
     pub notify: OnceLock<Notify>,
+    pub gpu: OnceLock<Arc<dyn Allocate>>,
 }
 
 impl Shared {
@@ -55,6 +60,10 @@ impl Shared {
 
     pub fn remove(&self, output: &str) {
         self.slots.write().unwrap_or_else(PoisonError::into_inner).remove(output);
+    }
+
+    pub fn slot(&self, output: &str) -> Option<Arc<Slot>> {
+        self.slots.read().unwrap_or_else(PoisonError::into_inner).get(output).cloned()
     }
 
     pub fn with_slot<R>(&self, output: &str, f: impl FnOnce(&Slot) -> R) -> Option<R> {

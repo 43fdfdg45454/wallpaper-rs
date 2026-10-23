@@ -26,7 +26,8 @@ desde el icono de la bandeja del sistema.
 - `wprs-ctl` y la app de escritorio controlan el daemon: cada acción está en los dos. El icono
   de la bandeja ofrece las más frecuentes y abre la app.
 - Los vídeos se decodifican con GStreamer y se pausan cuando una ventana maximizada o a
-  pantalla completa tapa la pantalla, con batería o con la pantalla bloqueada.
+  pantalla completa tapa la pantalla, con batería o con la pantalla bloqueada; con la pantalla
+  bloqueada no suenan nunca, aunque no se pausen.
 
 ## Versiones
 
@@ -84,9 +85,9 @@ anuncia el compositor Wayland, para no gastar GPU ni memoria de más (el tamaño
 pasa el plugin no bastan, porque llevan la misma escala que la petición).
 
 Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good y el de
-PipeWire, que lleva el sonido de los vídeos desde su versión 1.2; sin él o con uno anterior, el
-sonido va a la salida por defecto; si aún no hay ninguna salida de sonido, el vídeo suena en cuanto
-aparece una) y un controlador Vulkan u OpenGL. El plugin de fondo usa los módulos QML de KPipeWire,
+PipeWire, que lleva el sonido de los vídeos y de las escenas desde su versión 1.2; sin él o con uno
+anterior, el sonido va a la salida por defecto; si aún no hay ninguna salida de sonido, el fondo
+suena en cuanto aparece una) y un controlador Vulkan u OpenGL. El plugin de fondo usa los módulos QML de KPipeWire,
 KWindowSystem y plasma-workspace; en Debian y Ubuntu vienen en `qml6-module-org-kde-pipewire`,
 `qml6-module-org-kde-kwindowsystem` y `plasma-workspace`. La app de escritorio usa Qt 6 Quick,
 Kirigami y el estilo de escritorio de KDE (`qml6-module-org-kde-kirigami` y
@@ -113,10 +114,10 @@ el `.tar.gz`, porque los dos registran el mismo servicio D-Bus: ejecuta antes `.
 alias wprs-ctl='flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperRs'
 ```
 
-Permisos: la GPU, el socket de PipeWire, que publica los streams, lleva el sonido de los vídeos y
-permite capturar el sonido solo para las escenas con permiso (no hace falta el de PulseAudio), el
-socket de Wayland, solo para leer la resolución de cada pantalla (el daemon no abre ventanas), el
-nombre D-Bus del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
+Permisos: la GPU, el socket de PipeWire, que publica los streams, lleva el sonido de los vídeos y de
+las escenas y permite capturar el sonido solo para las escenas con permiso (no hace falta el de
+PulseAudio), el socket de Wayland, solo para leer la resolución de cada pantalla (el daemon no abre
+ventanas), el nombre D-Bus del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
 Service) para las contraseñas y claves de los proveedores, KWin para cargar el script del puntero
 solo mientras una escena con permiso o un paralaje que sigue al puntero lo usa, lectura de
 Imágenes, Vídeos y Descargas, y red. La red solo se usa para los proveedores de fondos y los
@@ -252,7 +253,8 @@ escena demasiado pesada para el teléfono se queda quieta en su fotograma de mue
 dibuja a sus propios fotogramas por segundo, como mucho a los de los ajustes, solo mientras algo
 cambia y nunca mientras no se ve. Los vídeos dentro de una escena los decodifica el hardware y se
 copian a la GPU fotograma a fotograma, sin sonido, y se pausan si la escena se queda quieta. Los
-scripts de las escenas no se ejecutan en el teléfono: la escena se ve sin lo que mueven.
+scripts de las escenas no se ejecutan en el teléfono: la escena se ve sin lo que mueven. Sus
+sonidos tampoco suenan en el teléfono, así que su volumen no aparece entre las propiedades.
 
 *Reaccionar al sonido* y *Reaccionar al tacto* solo aparecen en las escenas que los usan y se
 activan escena a escena. El sonido se lee con el visualizador de Android, que da un espectro de
@@ -281,7 +283,7 @@ wprs-ctl fit center                             # solo el modo de ajuste, mismo 
 wprs-ctl fit tile -o DP-1                       # el modo de ajuste de una pantalla
 wprs-ctl background '#203040'                   # color alrededor del fondo
 wprs-ctl pause | resume | toggle                # pausar los fondos animados
-wprs-ctl volume 40 | mute | unmute              # sonido de los vídeos
+wprs-ctl volume 40 | mute | unmute              # sonido de los vídeos y las escenas
 wprs-ctl config                                 # ver los ajustes
 wprs-ctl config transition.duration_ms 1000     # cambiar un ajuste
 wprs-ctl state                                  # estado en JSON
@@ -292,6 +294,24 @@ Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile` y `span` (una imagen
 pantallas, con su tamaño físico y los marcos entre ellas). Ajustes: transición (`fade` o
 `none` y su duración), fotogramas por segundo y cuándo pausar (ventana encima, batería,
 bloqueo). Un ajuste desconocido termina con error y muestra la lista de ajustes válidos.
+
+`playback.max_fps` vale `display` por defecto (*Igual que la pantalla* en la app y la bandeja):
+con corriente cada pantalla se dibuja como mucho a su frecuencia de refresco (la del modo de
+`wl_output`, la de RandR en X11 o, en Plasma, la que da KWin) y con batería a 30 fotogramas por
+segundo; un número fija el tope (`wprs-ctl config playback.max_fps 60`). Salvo en los vídeos, la
+GPU pone su propio límite: el render por software se queda en 24 (15 con batería), una GPU
+integrada en 60 (30 con batería) salvo escenas ligeras con corriente, y una dedicada sigue a la
+pantalla hasta 240 (60 con batería). Los vídeos se quedan en 30 con `display` y render por
+software y nunca pasan de sus propios fotogramas, nada se dibuja si nada cambia y `wprs-ctl state`
+muestra la frecuencia (`refresh`) y el tope (`fps`) de cada pantalla.
+
+Los streams llevan cada fotograma en memoria de la GPU (DMA-BUF) cuando el controlador Vulkan
+puede exportarla y el consumidor (KPipeWire en Plasma) importarla: el daemon dibuja directamente en
+los búferes del stream, sin leer el fotograma de vuelta ni copiarlo con la CPU, también con batería.
+Si algo falta (OpenGL, render por software, un consumidor sin DMA-BUF), el stream usa memoria
+compartida sin intervención; `WPRS_DMABUF=0` en el entorno del daemon la fuerza y `WPRS_DMABUF=1`
+pide memoria de la GPU también con render por software. `wprs-ctl state` muestra el tipo de búfer
+de cada pantalla (`buffers`: `dmabuf` o `memfd`).
 
 La configuración vive en `~/.config/wallpaper-rs/config.toml` y solo la puede leer su usuario.
 Si se edita a mano, los valores fuera de rango se corrigen al leerla. Si tiene un error de
@@ -346,7 +366,7 @@ wprs-ctl config layout.bezel_mm 8                    # ancho del marco de cada p
 
 Una imagen fija puede moverse en profundidad (paralaje): con un mapa de profundidad en gris (blanco
 cerca), el daemon desplaza más lo cercano que lo lejano siguiendo una órbita lenta, el puntero o el
-acelerómetro del equipo, solo mientras el fondo se ve, con el tope de `playback.max_fps`, las
+acelerómetro del equipo, solo mientras el fondo se ve, al ritmo que permite la pantalla, con las
 mismas pausas que el vídeo y quieto si el sistema pide reducir el movimiento. Elegir el puntero
 como fuente para una imagen es tu permiso para seguirlo mientras se ve, igual que en las
 escenas. Con render por software (sin GPU) la imagen queda quieta salvo que actives
@@ -525,11 +545,13 @@ cuando llega desde la red de los contenedores.
 
 Los paquetes de escena (`docs/specs/scene.md`) se importan y se aplican como cualquier otro
 elemento de la biblioteca. El daemon los dibuja en la GPU solo cuando algo visible cambia, con
-menos fotogramas y menos calidad con batería o con render por software:
+menos fotogramas y menos calidad con batería o con render por software; las escenas con
+`"clock": { "max_fps": "display" }`, como las de ejemplo, siguen la frecuencia de la pantalla:
 
 ```sh
 wprs-ctl prop ls -o DP-1                     # propiedades de la escena que muestra DP-1
 wprs-ctl prop set tint '#ff8800' -o DP-1     # se aplica al momento y se guarda en config.toml
+wprs-ctl prop set volume 60 -o DP-1          # volumen propio de una escena con sonido
 wprs-ctl prop preset calma -o DP-1 && wprs-ctl prop reset -o DP-1
 wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon
 ```
@@ -538,8 +560,20 @@ En la app y en la bandeja, el botón *Ajustes de la escena* de cada pantalla que
 escena cambia sus propiedades al momento, aplica sus preajustes y da o retira el permiso de sonido
 y de puntero. La carpeta `scenes/` guarda cinco escenas de ejemplo de dominio público (CC0):
 capas, modos de fusión, máscaras, línea de tiempo y profundidad que sigue al puntero o una órbita
-lenta con un mapa calculado a partir de sus formas (`dusk`), partículas y efectos (`snowfall`),
-sonido (`pulse`), puntero (`pond`) y un script (`orbits`). `install.sh` las instala en
+lenta con un mapa calculado a partir de sus formas (`dusk`), partículas, efectos y el sonido del
+viento (`snowfall`), análisis del sonido (`pulse`), puntero y el sonido del agua (`pond`) y un
+script (`orbits`). `scripts/ambient-sounds.sh` sintetiza esos dos sonidos (ruido filtrado y gotas,
+también CC0) y los guarda como Ogg Vorbis.
+
+Las escenas pueden tener sonido propio: capas `sound` con sonidos Ogg Vorbis, Opus, FLAC o WAV del
+paquete (de 60 s como mucho cada uno), en bucle o de una vez, que empiezan y paran con una línea de
+tiempo o una propiedad, con volumen, panorama y fundidos, mezcladas en un solo stream. Empiezan en
+silencio, como los vídeos: suenan con `wprs-ctl unmute` o el botón de sonido de la app, de la
+bandeja o de cada pantalla que muestra una escena con sonido, y siguen el volumen general y la
+propiedad *Volumen* que aparece en los ajustes de cada escena con sonido. Solo suenan mientras la
+escena se ve en una pantalla activa y sin tapar (se pausan y siguen con ella al taparla, aunque la
+escena no se pause, al pausar o con batería, y se paran al quitarla), nunca con la pantalla
+bloqueada, y una escena que se ve en varias pantallas suena en una sola. `install.sh` las instala en
 `~/.local/share/wallpaper-rs/examples` (`--no-examples` las omite), el RPM en el paquete opcional
 `wallpaper-rs-examples` y el Flatpak las incluye. Aparecen en la biblioteca y, si se quitan de
 ella, no vuelven.
@@ -626,7 +660,7 @@ raíz y la misma pausa.
 | `crates/wprs-depth` | Mapas de profundidad: modelo bajo demanda, cálculo con ONNX Runtime y caché |
 | `crates/wprs-scene` | Modelo de las escenas: capas, valores enlazados, líneas de tiempo y efectos, sin GPU |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
-| `crates/wprs-video` | Reproducción de vídeo en bucle con GStreamer |
+| `crates/wprs-video` | Reproducción de vídeo en bucle y del sonido de las escenas con GStreamer |
 | `crates/wprs-wayland` | Superficies layer-shell y ventanas de escritorio X11, escala, ritmo y oclusión |
 | `crates/wprs-audio` | Captura del sonido con PipeWire y su análisis en bandas para las escenas, también a partir del espectro que da Android |
 | `crates/wprs-script` | Scripts de escena en JavaScript, aislados y con límites de CPU y memoria |
@@ -676,17 +710,22 @@ raíz y la misma pausa.
 - El servicio de systemd solo puede abrir conexiones de red (IPv4 e IPv6) para los proveedores y
   repositorios que añadas tú, y sus registros no incluyen rutas, nombres de archivo, servidores
   propios ni el modelo de GPU salvo con `RUST_LOG=debug`.
-- Ninguna escena oye el sonido ni sigue el puntero sin tu permiso, que se da y se retira por
-  escena desde la app, la bandeja o `wprs-ctl input grant|revoke <escena> audio|pointer`. Aun con permiso, la captura del
-  sonido (un stream de PipeWire llamado «wallpaper-rs audio analysis», que puede encender el
-  indicador de micrófono) y el seguimiento del puntero solo funcionan mientras se ve una escena
-  que los usa, y se paran al pausar o bloquear la pantalla. Al taparla se para el puntero, y
-  también el sonido si está activa la pausa al tapar, como viene por defecto. Del sonido solo se
-  calculan bandas y niveles en memoria: no se guarda, no se registra y no sale del equipo. Del
-  puntero solo se guarda en memoria la última posición, y nunca se leen las teclas. Una imagen
-  cuyo paralaje sigue al puntero lo usa con las mismas reglas, porque elegir esa fuente es el
-  permiso. En Android, el permiso del micrófono se pide la primera vez que se activa *Reaccionar al
-  sonido* en una escena, y solo se escucha mientras se ve una escena que lo usa y tiene ese permiso.
+- Ninguna escena oye el sonido ni sigue el puntero sin tu permiso, que se da y se retira por escena
+  desde la app, la bandeja o `wprs-ctl input grant|revoke <escena> audio|pointer`. Cuando se aplica
+  una escena que los pide sin permiso, desde donde sea (la app, la bandeja, una lista o `wprs-ctl`),
+  la app y la bandeja preguntan una vez por escena qué permitir, explicando qué se capta y que nada
+  se guarda ni se envía, y sus ajustes muestran un aviso con el botón *Permitir* hasta que decides;
+  *Ahora no* se recuerda y no vuelve a preguntar. `wprs-ctl lib apply`, `playlist start`, `next` y
+  `prev` imprimen la orden exacta para darlo. Aun con permiso, la captura del sonido (un stream de
+  PipeWire llamado «wallpaper-rs audio analysis», que puede encender el indicador de micrófono) y el
+  seguimiento del puntero solo funcionan mientras se ve una escena que los usa, y se paran al pausar
+  o bloquear la pantalla. Al taparla se para el puntero, y también el sonido si está activa la pausa
+  al tapar, como viene por defecto. Del sonido solo se calculan bandas y niveles en memoria: no se
+  guarda, no se registra y no sale del equipo. Del puntero solo se guarda en memoria la última
+  posición, y nunca se leen las teclas. Una imagen cuyo paralaje sigue al puntero lo usa con las
+  mismas reglas, porque elegir esa fuente es el permiso. En Android, el permiso del micrófono se pide
+  la primera vez que se activa *Reaccionar al sonido* en una escena, y solo se escucha mientras se ve
+  una escena que lo usa y tiene ese permiso.
 - Los scripts de las escenas se ejecutan en un proceso aparte, sin archivos, red ni otros
   procesos, con límites de memoria y de CPU por fotograma.
 - Con un servidor propio, los registros sincronizados salen cifrados con una clave que solo

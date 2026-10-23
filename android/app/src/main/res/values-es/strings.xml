@@ -125,6 +125,7 @@
     <string name="react_touch">Reaccionar al tacto</string>
     <string name="microphone_needed">Para reaccionar al sonido hace falta el permiso del micrófono</string>
     <string name="scripts_off">Los scripts de esta escena no se ejecutan en el teléfono</string>
+    <string name="sounds_off">Los sonidos de esta escena no se reproducen en el teléfono</string>
     <string name="presets">Ajustes predefinidos</string>
     <string name="reset">Restablecer</string>
     <string name="not_on_phone">%1$s: no disponible en el teléfono</string>

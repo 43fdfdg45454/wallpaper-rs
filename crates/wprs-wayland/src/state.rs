@@ -16,7 +16,6 @@ use smithay_client_toolkit::shell::wlr_layer::{Anchor, KeyboardInteractivity, La
 use smithay_client_toolkit::shm::Shm;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
 
 pub(crate) fn turned(info: &OutputInfo, (w, h): (i32, i32)) -> (u32, u32) {
     let (w, h) = (w.max(0) as u32, h.max(0) as u32);
@@ -126,8 +125,6 @@ impl State {
         let Some(logical) = screen.logical else { return };
         let info = self.outputs.info(&screen.output);
         let mode = info.as_ref().and_then(|i| i.modes.iter().find(|m| m.current));
-        let refresh =
-            mode.map(|m| m.refresh_rate).filter(|r| *r > 0).unwrap_or(60_000).clamp(1_000, 1_000_000) as u64;
         let window = Window {
             native: Native::Layer(screen.parts.clone(), self.qh.clone()),
             server: Display::Wayland(self.conn.clone()),
@@ -135,7 +132,7 @@ impl State {
             name: screen.name.clone(),
             logical,
             scale: effective(screen.fractional, screen.integer, screen.parts.viewport.is_some()),
-            refresh: Duration::from_micros(1_000_000_000 / refresh),
+            refresh: mode.map_or(0, |m| m.refresh_rate.max(0) as u32),
             position: info.as_ref().map_or((0, 0), |i| i.logical_position.unwrap_or(i.location)),
             mm: info.as_ref().map_or((0, 0), |i| turned(i, i.physical_size)),
             identity: info

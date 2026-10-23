@@ -12,3 +12,7 @@ fn tr(text: &str) -> String {
 pub fn conflict(name: &str) -> String {
     tr("%1 (conflict)").replace("%1", name)
 }
+
+pub fn volume() -> String {
+    tr("Volume")
+}

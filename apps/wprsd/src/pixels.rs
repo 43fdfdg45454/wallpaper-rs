@@ -17,21 +17,27 @@ impl State {
         let screen = self.outputs.get(output).and_then(|info| info.screen.as_ref());
         let pixels = |l: u32, scale: f64| (f64::from(l) * scale).round() as u32;
         let screen = screen.map(|s| (pixels(s.width, s.scale), pixels(s.height, s.scale)));
-        self.modes.get(output).copied().or(screen)
+        self.modes.get(output).map(|m| m.0).or(screen)
+    }
+
+    pub(crate) fn refresh(&self, output: &str) -> u32 {
+        let surface = self.outputs.get(output).map_or(0, |info| info.refresh);
+        if surface > 0 { surface } else { self.modes.get(output).map_or(0, |m| m.1) }
     }
 }
 
 pub(crate) fn follow_modes(daemon: &Arc<Daemon>) {
     let weak = Arc::downgrade(daemon);
-    let watched = wprs_wayland::watch_modes(move |output, size| {
+    let watched = wprs_wayland::watch_modes(move |output, mode| {
         let Some(daemon) = weak.upgrade() else { return };
         let mut st = daemon.state();
-        match size {
-            Some(size) => drop(st.modes.insert(output.clone(), size)),
-            None => drop(st.modes.remove(&output)),
-        }
+        let old = match mode {
+            Some(mode) => st.modes.insert(output.clone(), mode),
+            None => st.modes.remove(&output),
+        };
         drop(st);
-        if daemon.refit(&output) {
+        let refit = daemon.refit(&output);
+        if refit || old.map(|m| m.1) != mode.map(|m| m.1) {
             daemon.configure_all();
         }
     });

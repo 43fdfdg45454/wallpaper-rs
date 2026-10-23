@@ -7,8 +7,12 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+wprs-scene.workspace = true
 gstreamer.workspace = true
 gstreamer-app.workspace = true
 gstreamer-video.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

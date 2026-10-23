@@ -31,13 +31,15 @@ what each frame costs.
   the top left and angles are clockwise degrees. `fit` places the canvas on each screen (`fill`,
   `fit`, `stretch`, `center`). `background` is `#rrggbb[aa]` or `[r, g, b, a]` from 0 to 1.
   `blend_space` is `linear` (default) or `srgb`, which mixes encoded values as most editors do.
-- `clock.max_fps` caps the frame rate (`1..=240`, default 60), `poster_time` is the instant shown
-  where motion is not wanted or where the device cannot run the scene even at its lowest quality
-  level, `seed` feeds procedural effects.
+- `clock.max_fps` caps the frame rate (`1..=240`, or `"display"`, also `0`, to follow the refresh
+  rate of each output for motion that gains from it; default 60), `poster_time` is the instant
+  shown where motion is not wanted or where the device cannot run the scene even at its lowest
+  quality level, `seed` feeds procedural effects.
 - `assets` maps at most 256 ids (`[a-z0-9_]{1,32}`) to `{ "path", "linear", "atlas" }`. Images
-  (PNG, JPEG, WebP, GIF, BMP), fonts (TTF, OTF), videos (WebM, MP4, MKV, stored uncompressed) and
-  color lookup tables (`.cube`, `LUT_3D_SIZE` 2 to 65, domain 0 to 1, at most 16 MiB each and 64 MiB
-  of table data per scene; a file named by several ids is read once) are used.
+  (PNG, JPEG, WebP, GIF, BMP), fonts (TTF, OTF), videos (WebM, MP4, MKV, stored uncompressed),
+  sounds (Ogg Vorbis, Opus, FLAC or WAV, see "Sound") and color lookup tables (`.cube`,
+  `LUT_3D_SIZE` 2 to 65, domain 0 to 1, at most 16 MiB each and 64 MiB of table data per scene; a
+  file named by several ids is read once) are used.
   `linear` marks data images such as depth or flow maps, which are read without color decoding.
   `scene.json` is at most 8 MiB and the images of a scene at most 512 MiB once decoded.
 
@@ -60,6 +62,7 @@ layer's own box (default `[0.5, 0.5]`, or the anchor point).
 | `spectrum` | `size`, `style` (`bars`, `circle`, `wave`), `bands` (16, 32 or 64), `channel`, `color`, `gap` |
 | `solid` | `color`, `size` (the canvas by default) |
 | `particles` | `system`, a key of `particles` (see below) |
+| `sound` | `sound` (asset id), `loop`, `play`, `volume`, `pan`, `fade_in`, `fade_out` (see "Sound"); no visual field |
 | `adjustment` | only `effects`, applied to everything below it |
 
 `blend` is `normal`, `add`, `multiply`, `screen`, `lighten`, `darken`, `overlay`, `soft_light`,
@@ -203,6 +206,40 @@ fn nudge_moves_the_image() {
 (time, audio) and `pointer([x, y])` change between `shot()`s, and whose `stats()` count passes and
 new textures. A `Shot` has `at`, `check`, `mean` and `diff`.
 
+## Sound
+
+```json
+{ "id": "gusts", "type": "sound", "sound": "wind", "loop": true, "fade_in": 3, "fade_out": 3,
+  "play": { "prop": "wind", "map": { "calm": false, "breeze": true } },
+  "volume": { "timeline": "storm", "keys": [[0, 0.4], [20, 1, "in_out_sine"], [40, 0.4]] }, "pan": -0.3 }
+```
+
+A `sound` layer plays a sound asset: `.ogg` (Vorbis or Opus), `.opus`, `.flac` or `.wav`, mono or
+stereo, sampled at 8 to 192 kHz, at most 8 MiB and 60 s long, and at most 180 s for all the sounds
+of a scene together; the package reader checks the headers and the daemon stops decoding a sound
+that goes on longer than its header says. A scene has at most 8 sound layers, which mix together.
+
+| Field | Meaning |
+|-------|---------|
+| `loop` | `true` (default) repeats the sound without a gap; `false` plays it once each time `play` turns on |
+| `play` | starts the sound when it turns on and stops it when it turns off (default `true`); a sound starts from its beginning |
+| `volume` | `0` to `1` (default `1`) |
+| `pan` | `-1` (left) to `1` (right), default `0` |
+| `fade_in`, `fade_out` | seconds (`0` to `60`) the sound takes to rise when it starts and to fall when it stops |
+
+`play`, `volume` and `pan` may be literals or follow a user property or keyframes on the scene
+clock, which a timeline triggered by a property or a beat can drive; they never follow the audio
+analysis, the pointer, a clock text or a script, so a scene cannot hear its own sound. Values that
+change over time are read at the frame rate of the output without rendering a frame. A sound layer
+draws nothing, takes none of the visual fields (`transform`, `opacity`, `effects` and so on) and
+cannot be a mask.
+
+Every scene with sound has a `volume` user property, a slider from 0 to 100 % (100 by default)
+added automatically; a manifest may declare it to change its label, default or order, as long as
+it stays a slider within 0 to 100. Scenes start muted like videos and follow `playback.muted` and
+`playback.volume`; only one output plays the sound of a scene shown on several outputs, and nothing
+plays on the lock screen (see "Scene sound" in `dbus.md`).
+
 ## Particles
 
 `particles` maps at most 8 ids to systems, which hold at most 200 000 particles together. A
@@ -284,7 +321,8 @@ position, velocity, buttons, `inside`, in fractions of the screen) and `ScriptOu
 script sources, layer overrides and timeline commands). A scene only renders again for an input it
 uses. The pointer follows the reported position with a critically damped spring that settles in
 about 0.15 s and returns to the center when the pointer leaves the screen. Audio and the pointer
-need the user's grant for the scene (`dbus.md`, `Inputs1`).
+need the user's grant for the scene (`dbus.md`, `Inputs1`), which the app and the tray ask for once
+when such a scene is shown.
 
 ## Scripts
 

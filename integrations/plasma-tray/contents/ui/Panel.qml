@@ -35,6 +35,12 @@ ColumnLayout {
         }
     }
 
+    Consent {
+        Layout.fillWidth: true
+        daemon: panel.daemon
+        inputs: panel.daemon.inputs
+    }
+
     QQC2.Label {
         Layout.fillWidth: true
         visible: panel.daemon.lastError !== ""

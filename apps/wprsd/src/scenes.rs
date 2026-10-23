@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_render::SceneAssets;
 use wprs_scene::{Control, Preset, Property, Scene, Values};
+use wprs_video::Bank;
 
 const IMAGES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
 const FONTS: [&str; 2] = ["ttf", "otf"];
@@ -24,6 +25,8 @@ pub struct ScenePack {
     pub presets: Vec<Preset>,
     pub assets: SceneAssets,
     pub videos: Vec<(String, PathBuf)>,
+    pub sounds: Vec<(String, PathBuf)>,
+    pub clips: Bank,
     pub scripts: Vec<(String, String)>,
 }
 
@@ -68,7 +71,7 @@ impl Daemon {
             wpak.display()
         );
         let scene = package.scene()?;
-        let (mut assets, mut videos) = (SceneAssets::default(), Vec::new());
+        let (mut assets, mut videos, mut sounds) = (SceneAssets::default(), Vec::new(), Vec::new());
         let mut decoded: BTreeMap<String, Arc<RgbaImage>> = BTreeMap::new();
         for (id, asset) in &scene.assets {
             let ext = kind(&asset.path);
@@ -88,7 +91,7 @@ impl Daemon {
                 assets.images.insert(id.clone(), picture);
             } else if FONTS.contains(&ext.as_str()) {
                 assets.fonts.insert(id.clone(), Arc::new(package.read_file(&asset.path)?));
-            } else if VIDEOS.contains(&ext.as_str()) {
+            } else if VIDEOS.contains(&ext.as_str()) || scene.sounds().any(|s| s.sound == *id) {
                 let blob = self.blob(wpak, stamp.0, stamp.1).with_extension(format!("{id}.{ext}"));
                 if !blob.is_file() {
                     let dir = blob.parent().unwrap_or(Path::new("."));
@@ -97,7 +100,8 @@ impl Daemon {
                     file.write_all(&package.read_file(&asset.path)?)?;
                     file.persist(&blob)?;
                 }
-                videos.push((id.clone(), blob));
+                let media = if VIDEOS.contains(&ext.as_str()) { &mut videos } else { &mut sounds };
+                media.push((id.clone(), blob));
             }
         }
         assets.luts.extend(package.luts(&scene)?);
@@ -108,15 +112,19 @@ impl Daemon {
             scripts.push((script.path.clone(), source));
         }
         let m = &package.manifest;
+        let properties = scene.properties(&m.properties, &crate::words::volume());
+        let clips = Bank::new(sounds.iter().map(|(_, path)| path.clone()).collect());
         let pack = Arc::new(ScenePack {
             path: wpak.to_owned(),
             id: m.id.clone(),
             title: m.title.clone(),
             scene: Arc::new(scene),
-            properties: m.properties.clone(),
+            properties,
             presets: m.presets.clone(),
             assets,
             videos,
+            sounds,
+            clips,
             scripts,
         });
         let mut st = self.state();

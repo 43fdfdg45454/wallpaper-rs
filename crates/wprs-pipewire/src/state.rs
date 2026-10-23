@@ -67,7 +67,14 @@ impl State {
 
     pub fn tick(&mut self) {
         self.resolve();
-        self.streams.values_mut().for_each(OutputStream::keep_alive);
+        for (output, stream) in &mut self.streams {
+            stream.keep_alive();
+            if let Some(core) = &self.core
+                && stream.recover(core, &self.shared, output)
+            {
+                lock(&self.shared.recreated).push(output.clone());
+            }
+        }
     }
 
     pub fn deadline(&self) -> Option<Instant> {

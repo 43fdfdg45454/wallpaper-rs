@@ -8,7 +8,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use wprs_core::model::Input;
-use wprs_scene::{Runtime, Values};
+use wprs_scene::{Runtime, VOLUME, Values};
 
 const GRANTS: &str = "inputs.json";
 
@@ -62,11 +62,14 @@ pub(crate) fn granted(id: &str) -> [bool; 2] {
 
 fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
     let values = values(pack);
-    let (fields, presets) = wprs_scene::form(&pack.properties, &pack.presets, &values, languages);
+    let sounds = pack.scene.sounds().next().is_some();
+    let mut props = pack.properties.clone();
+    props.retain(|key, _| !sounds || key != VOLUME);
+    let (fields, presets) = wprs_scene::form(&props, &pack.presets, &values, languages);
     let uses = Runtime::new(Arc::clone(&pack.scene), values).uses();
     let [audio, touch] = granted(&pack.id);
     Ok(json!({
-        "fields": fields, "presets": presets, "scripts": uses.scripts,
+        "fields": fields, "presets": presets, "scripts": uses.scripts, "sounds": sounds,
         "uses": { "audio": uses.audio, "touch": uses.cursor }, "granted": { "audio": audio, "touch": touch },
     }))
 }

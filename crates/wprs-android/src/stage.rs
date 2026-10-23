@@ -134,7 +134,7 @@ impl Stage {
         self.runtime.set_wall(wall());
         let quality = budget.quality(&self.runtime).min(power.ceiling());
         LEVEL.store(1 + tier as u32 * 4 + quality as u32, Relaxed);
-        let fps = if still { 0 } else { budget.fps(&self.runtime, quality) };
+        let fps = if still { 0 } else { budget.fps(&self.runtime, quality, 0) };
         let due = self.due.is_some_and(|due| nanos >= due - SLACK_NS) || std::mem::take(&mut self.touch.2);
         if !(force || due || heard || felt || quality != self.quality || self.view.is_none()) {
             let left = self.due.map(|due| ((due - nanos) / 1_000_000).max(1));

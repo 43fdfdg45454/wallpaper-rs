@@ -1,13 +1,72 @@
-use crate::Event;
 use crate::audio::{self, Audio};
 use crate::pipewire::SINK;
+use crate::{Error, Event, Sink};
 use gstreamer as gst;
 use gstreamer::glib::WeakRef;
 use gstreamer::prelude::*;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::time::{Duration, Instant};
 
 const LOG_PERIOD: Duration = Duration::from_secs(5);
+const STOP_WAIT: Duration = Duration::from_secs(2);
+
+pub(crate) struct Pipe {
+    pub(crate) playbin: gst::Element,
+    playing: Arc<AtomicBool>,
+    stop: Arc<AtomicBool>,
+    stopped: Receiver<()>,
+}
+
+impl Pipe {
+    pub(crate) fn start(playbin: gst::Element, uri: String, sink: Sink, piped: bool) -> Result<Pipe, Error> {
+        let (stop, playing) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(true)));
+        let bus = playbin.bus().expect("playbin has a bus");
+        let (weak, flags) = (playbin.downgrade(), (stop.clone(), playing.clone()));
+        let (done, stopped) = mpsc::channel::<()>();
+        std::thread::Builder::new()
+            .name("wprs-video-bus".into())
+            .spawn(move || {
+                let _done = done;
+                watch_bus(&bus, (&weak, uri), &flags.0, &flags.1, &*sink);
+            })
+            .map_err(Error::state)?;
+        let pipe = Pipe { playbin, playing, stop, stopped };
+        match pipe.playbin.set_state(gst::State::Paused) {
+            Err(_) if piped => {}
+            started => drop(started.map_err(Error::state)?),
+        }
+        Ok(pipe)
+    }
+
+    pub(crate) fn set_playing(&self, playing: bool) {
+        self.playing.store(playing, Ordering::Relaxed);
+        self.wake();
+    }
+
+    pub(crate) fn paused(&self) -> bool {
+        let (_, current, pending) = self.playbin.state(gst::ClockTime::ZERO);
+        current == gst::State::Paused && pending == gst::State::VoidPending
+    }
+
+    fn wake(&self) {
+        if let Some(bus) = self.playbin.bus() {
+            bus.set_flushing(false);
+            let _ = bus.post(gst::message::Application::new(gst::Structure::new_empty("wprs-wake")));
+        }
+    }
+}
+
+impl Drop for Pipe {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Relaxed);
+        self.wake();
+        if let Err(RecvTimeoutError::Timeout) = self.stopped.recv_timeout(STOP_WAIT) {
+            tracing::warn!("playback did not stop within {STOP_WAIT:?}, leaving it behind");
+        }
+    }
+}
 
 pub(crate) fn watch_bus(
     bus: &gst::Bus,

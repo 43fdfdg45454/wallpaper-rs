@@ -14,7 +14,7 @@ fn hub(wakes: Arc<AtomicU32>) -> Arc<Hub> {
     let wake = move || {
         wakes.fetch_add(1, SeqCst);
     };
-    Arc::new(Hub::new(Grants::new(), Arc::new(wake), Arc::new(|| {})))
+    Arc::new(Hub::new(Default::default(), Arc::new(wake), Arc::new(|| {})))
 }
 
 fn mode(path: &std::path::Path) -> u32 {
@@ -40,11 +40,27 @@ fn permissions_are_stored_privately_and_can_be_revoked() {
 }
 
 #[test]
+fn declining_is_remembered_until_the_input_is_granted() {
+    let dir = tempfile::tempdir().unwrap();
+    let (path, hub) = (dir.path().join("inputs.json"), hub(Arc::default()));
+    let declined = crate::inputs1::declined_path(&path);
+    hub.set_grant(&path, SEA, Input::Audio, false).unwrap();
+    assert_eq!(load(&declined), Grants::from([(SEA.into(), [Input::Audio].into())]));
+    assert_eq!((lock(&hub.control).declined.clone(), mode(&declined)), (load(&declined), 0o600));
+    hub.set_grant(&path, SEA, Input::Audio, true).unwrap();
+    assert_eq!(load(&declined), Grants::new());
+    assert_eq!(load(&path), Grants::from([(SEA.into(), [Input::Audio].into())]));
+}
+
+#[test]
 fn inputs_need_a_shown_active_scene_with_permission() {
     let view = View { active: true, covered: false, rect: None };
     let mut control = Control::default();
     let on = |c: &Control, input| !c.wants(input).is_empty();
-    control.shown.insert("DP-1".into(), SceneInputs { scene: SEA.into(), audio: true, pointer: true });
+    control.shown.insert(
+        "DP-1".into(),
+        SceneInputs { scene: SEA.into(), audio: true, pointer: true, title: String::new() },
+    );
     control.views.insert("DP-1".into(), view);
     assert!(!on(&control, Input::Audio) && !on(&control, Input::Pointer), "off by default");
     control.grants.insert("org.example.other".into(), [Input::Audio, Input::Pointer].into());
@@ -58,9 +74,10 @@ fn inputs_need_a_shown_active_scene_with_permission() {
     assert!(!on(&control, Input::Audio) && !on(&control, Input::Pointer), "paused screens get nothing");
     control.views.clear();
     assert!(!on(&control, Input::Audio), "an output that is not shown");
-    control
-        .shown
-        .insert("DP-2".into(), SceneInputs { scene: "org.example.lake".into(), audio: true, pointer: true });
+    control.shown.insert(
+        "DP-2".into(),
+        SceneInputs { scene: "org.example.lake".into(), audio: true, pointer: true, title: String::new() },
+    );
     assert!(control.allows("DP-1", Input::Audio) && control.allows("DP-1", Input::Pointer));
     assert!(
         !control.allows("DP-2", Input::Audio) && !control.allows("DP-3", Input::Audio),
@@ -74,8 +91,14 @@ fn only_outputs_whose_scene_declares_the_pointer_follow_it() {
     let hub = hub(Arc::default());
     let mut control = lock(&hub.control);
     control.grants.insert(SEA.into(), [Input::Audio, Input::Pointer].into());
-    control.shown.insert("DP-1".into(), SceneInputs { scene: SEA.into(), audio: true, pointer: false });
-    control.shown.insert("DP-2".into(), SceneInputs { scene: SEA.into(), audio: false, pointer: true });
+    control.shown.insert(
+        "DP-1".into(),
+        SceneInputs { scene: SEA.into(), audio: true, pointer: false, title: String::new() },
+    );
+    control.shown.insert(
+        "DP-2".into(),
+        SceneInputs { scene: SEA.into(), audio: false, pointer: true, title: String::new() },
+    );
     control.views.extend(["DP-1", "DP-2", "DP-3"].map(|o| (o.to_string(), view)));
     assert_eq!(control.wants(Input::Pointer), ["DP-2".to_string()].into());
     control.followed = control.wants(Input::Pointer);

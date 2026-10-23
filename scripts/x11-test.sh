@@ -68,7 +68,7 @@ log=${WPRS_IT_LOG:-debug},naga=warn,wgpu_core=warn,wgpu_hal=warn
 RUST_LOG=$log "$BIN/wprsd" --backend x11 >"$WORK/wprsd.log" 2>&1 & wprsd=$!; pids+=("$wprsd")
 wait_for 30 ctl state || fail "the daemon did not start"
 expect "sorted(s['outputs'])" "['screen']"
-expect "[s['outputs']['screen'][k] for k in ('width', 'height')]" "[1280, 720]"
+expect "[s['outputs']['screen'][k] for k in ('width', 'height', 'refresh')]" "[1280, 720, 0]"
 grep -q "presentation backend chosen.*x11" "$WORK/wprsd.log" || fail "X11 not chosen"
 
 green='#00ff00' blue='#2040c0' magenta='#d02060' full=1280x720+0+0

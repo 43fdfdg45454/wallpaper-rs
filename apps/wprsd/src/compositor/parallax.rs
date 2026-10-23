@@ -2,14 +2,13 @@ use super::output::Output;
 use super::state::State;
 use wprs_core::edit::Motion as Source;
 
-const SOFTWARE: (u32, u32) = (8, 15);
+pub(super) const SOFTWARE: (u32, u32) = (8, 15);
 
 impl State {
-    pub(super) fn relief_limits(&self) -> Option<(u32, u32)> {
-        let fps = self.settings.max_fps;
+    pub(super) fn relief_limits(&self) -> Option<u32> {
         match (self.motion.software, self.settings.software_parallax) {
-            (false, _) => Some((u32::MAX, fps)),
-            (true, true) => Some((SOFTWARE.0, fps.min(SOFTWARE.1))),
+            (false, _) => Some(u32::MAX),
+            (true, true) => Some(SOFTWARE.0),
             (true, false) => None,
         }
     }

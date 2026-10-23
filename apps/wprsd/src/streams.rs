@@ -1,8 +1,11 @@
 use crate::daemon::{Daemon, State, output_name};
 use crate::wallpaper::Upload;
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use wprs_core::dbus;
-use wprs_pipewire::Reply;
+use wprs_pipewire::{Allocate, Dmabuf, Reply};
+use wprs_render::{Dmabufs, Renderer};
 use zbus::fdo;
 
 pub(crate) const HELD: &str = "";
@@ -20,6 +23,7 @@ pub(crate) struct OutputInfo {
     pub(crate) claims: HashMap<String, Claim>,
     pub(crate) uploaded: Option<Upload>,
     pub(crate) screen: Option<wprs_core::Screen>,
+    pub(crate) refresh: u32,
     pub(crate) scene: Option<std::sync::Arc<crate::scenes::ScenePack>>,
 }
 
@@ -31,6 +35,37 @@ impl OutputInfo {
     fn claimant<'a>(&self, client: &'a str) -> &'a str {
         if self.claims.contains_key(client) { client } else { HELD }
     }
+}
+
+struct Gpu(Dmabufs, Option<AtomicU64>);
+
+impl Allocate for Gpu {
+    fn modifiers(&self) -> &[u64] {
+        self.0.modifiers()
+    }
+
+    fn allocate(&self, width: u32, height: u32, modifiers: &[u64]) -> Option<Dmabuf> {
+        if self.1.as_ref().is_some_and(|made| made.fetch_add(1, Ordering::Relaxed) % 2 == 1) {
+            return None;
+        }
+        let made = self.0.allocate(width, height, modifiers).inspect_err(|e| tracing::debug!("{e}"));
+        let wprs_render::Dmabuf { fd, modifier, offset, stride, size, image } = made.ok()?;
+        Some(Dmabuf { fd, modifier, offset, stride, size, image: Arc::new(image) })
+    }
+}
+
+pub(crate) fn gpu_buffers(renderer: &Renderer) -> Option<Arc<dyn Allocate>> {
+    let wanted = std::env::var("WPRS_DMABUF").unwrap_or_default();
+    let flaky = cfg!(debug_assertions) && wanted == "emulate-flaky";
+    let emulate = flaky || cfg!(debug_assertions) && wanted == "emulate";
+    let on = match wanted.as_str() {
+        "0" | "off" => false,
+        "1" | "on" => true,
+        _ => emulate || !renderer.software(),
+    };
+    let gpu = on.then(|| renderer.dmabufs(emulate)).flatten();
+    tracing::debug!(wanted = on, available = gpu.is_some(), "streams in GPU memory");
+    gpu.map(|gpu| Arc::new(Gpu(gpu, flaky.then(AtomicU64::default))) as Arc<dyn Allocate>)
 }
 
 impl Daemon {

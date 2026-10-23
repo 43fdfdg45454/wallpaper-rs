@@ -4,11 +4,11 @@ use gstreamer::prelude::*;
 use gstreamer_app as gst_app;
 use gstreamer_video as gst_video;
 
-pub fn build(options: Options, sink: Sink) -> Result<(gst::Element, gst::Element), Error> {
+pub fn build(options: Options, sink: Sink) -> Result<(gst::Element, gst::Element, gst::Element), Error> {
     let bin = gst::Bin::with_name("wprs-video-sink");
     let rate = make("videorate")?;
     if options.max_fps > 0 {
-        rate.set_property("max-rate", options.max_fps.min(i32::MAX as u32) as i32);
+        set_max_fps(&rate, options.max_fps);
         if rate.find_property("drop-only").is_some() {
             rate.set_property("drop-only", true);
         }
@@ -22,13 +22,17 @@ pub fn build(options: Options, sink: Sink) -> Result<(gst::Element, gst::Element
     size.set_property("caps", size_caps(options.max_size));
     size.set_property_from_str("caps-change-mode", "delayed");
     let tail = [flip.ok(), Some(size.clone()), Some(appsink(sink).upcast())].into_iter().flatten();
-    let chain: Vec<gst::Element> = std::iter::once(rate).chain(convert).chain(tail).collect();
+    let chain: Vec<gst::Element> = std::iter::once(rate.clone()).chain(convert).chain(tail).collect();
     bin.add_many(&chain).map_err(Error::state)?;
     gst::Element::link_many(&chain).map_err(Error::state)?;
     let pad = chain[0].static_pad("sink").expect("videorate has a sink pad");
     let ghost = gst::GhostPad::with_target(&pad).map_err(Error::state)?;
     bin.add_pad(&ghost).map_err(Error::state)?;
-    Ok((bin.upcast(), size))
+    Ok((bin.upcast(), size, rate))
+}
+
+pub fn set_max_fps(rate: &gst::Element, max_fps: u32) {
+    rate.set_property("max-rate", max_fps.clamp(1, i32::MAX as u32) as i32);
 }
 
 pub fn size_caps((max_width, max_height): (u32, u32)) -> gst::Caps {

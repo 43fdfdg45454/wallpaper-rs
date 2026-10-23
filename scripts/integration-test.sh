@@ -86,6 +86,11 @@ grep -q "center bgra \[0, 255, 0, 255\]" <<<"$result" || { echo "FAIL: unexpecte
 result=$("$BIN/probe" "node:$node" 10)
 echo "probe by node id: $result"
 grep -q "center bgra \[0, 255, 0, 255\]" <<<"$result" || { echo "FAIL: connecting by node id"; exit 1; }
+result=$("$BIN/probe" "$serial" 10 --dmabuf)
+grep -q "type \(MemFd\|DmaBuf\) .*center bgra \[0, 255, 0, 255\]" <<<"$result" || fail "DMA-BUF consumer: $result"
+case $(field "s['adapter']") in
+  llvmpipe*) grep -q "type MemFd" <<<"$result" || fail "software rendering exported GPU memory: $result" ;;
+esac
 
 read -r _ _ _ serial_again < <("$BIN/wprs-ctl" stream TEST-1 320 180)
 [ "$serial_again" = "$serial" ] || { echo "FAIL: same size created a new stream"; exit 1; }
@@ -126,7 +131,11 @@ ctl resume && expect "${output}['playing']" True
 ctl covered TEST-1 true && expect "${output}['active']" False
 ctl config pause.when_covered false && expect "${output}['active']" True
 ctl config pause.when_covered true && ctl covered TEST-1 false
-if ctl config playback.max_fps 0 2>/dev/null; then echo "FAIL: invalid setting accepted"; exit 1; fi
+if ctl config playback.max_fps 241 2>/dev/null; then echo "FAIL: invalid setting accepted"; exit 1; fi
+expect "s['options']['playback.max_fps']" display
+expect "(${output}['refresh'], 0 < ${output}['fps'] <= 60)" "(0, True)"
+ctl config playback.max_fps 20 && expect "${output}['fps']" 20
+ctl config playback.max_fps display && expect "s['options']['playback.max_fps']" display
 ctl volume 30 && expect "s['volume']" 0.3 && expect "s['muted']" False
 ctl mute && expect "s['muted']" True
 leave && expect "${output}['playing']" False
@@ -824,6 +833,66 @@ first=$(digest)
 [ -n "$first" ] || fail "no frame from the still example: $("$BIN/probe" "$s13" 3 2>&1)"
 [ "$first" = "$(digest)" ] || fail "the still example changed while nothing moved"
 ctl release TEST-13 && expect "list(s['outputs'])" "[]"
+printf '%s\n' 'context.spa-libs = { audio.convert.* = audioconvert/libspa-audioconvert support.* = support/libspa-support }' \
+  'context.modules = [ { name = libpipewire-module-protocol-native } { name = libpipewire-module-client-node }' \
+  '{ name = libpipewire-module-adapter } { name = libpipewire-module-metadata }' \
+  '{ name = libpipewire-module-protocol-pulse args = { server.address = [ "unix:native" ] } } ]' >"$WORK/pulse.conf"
+pw-cli create-node adapter '{ factory.name=support.null-audio-sink node.name=wprs-scene-sink
+  media.class=Audio/Sink object.linger=true audio.position=[FL FR] }' >/dev/null
+pipewire -c "$WORK/pulse.conf" >"$WORK/pulse.log" 2>&1 & pulse=$!; pids+=("$pulse")
+wait_for 10 test -S "$XDG_RUNTIME_DIR/pulse/native" || fail "no PulseAudio server for the default audio output"
+streams() {
+  pw-dump 2>/dev/null | python3 -c "import json, sys; nodes = [o['info']['props'] for o in json.load(sys.stdin) if o['type'].endswith('Node')]
+print(sum(p.get('media.class') == 'Stream/Output/Audio' and p.get('application.process.binary') == 'wprsd' for p in nodes))"
+}
+heard() { [ "$(streams)" = "$1" ]; }
+speakers() { expect "s['outputs']['TEST-15']['sound'], s['outputs']['TEST-16']['sound']" "$1"; }
+pond=$(example pond) && lilies=io.github.wallpaper_rs.example.pond
+read -r _ _ _ s15 < <(ctl stream TEST-15 160 90)
+read -r _ _ _ s16 < <(ctl stream TEST-16 160 90)
+ctl mute && ctl lib apply "$snow" -o TEST-15 2>"$WORK/apply.err" && consume "$s15"
+speakers "('off', '')"
+sleep 1
+heard 0 || fail "a muted scene opened an audio stream"
+if [ -s "$WORK/apply.err" ]; then fail "a scene without inputs printed a hint: $(cat "$WORK/apply.err")"; fi
+ctl volume 50 && speakers "('playing', '')"
+wait_for 10 heard 1 || fail "no audio stream while the scene with sound is shown"
+ctl pause && speakers "('paused', '')"
+heard 1 || fail "a paused scene closed its audio stream"
+ctl resume && speakers "('playing', '')"
+ctl prop set volume 0 -o TEST-15 && speakers "('off', '')"
+wait_for 10 heard 0 || fail "a scene turned down to 0 kept its audio stream"
+ctl prop reset -o TEST-15 && speakers "('playing', '')"
+ctl prop set wind calm -o TEST-15
+wait_for 10 heard 0 || fail "a scene whose sound layers all stopped kept its audio stream"
+speakers "('off', '')"
+ctl prop reset -o TEST-15 && speakers "('playing', '')"
+ctl lib apply "$snow" -o TEST-16 && consume "$s16" && speakers "('playing', 'elsewhere')"
+wait_for 10 heard 1 || fail "a scene on two outputs played twice: $(streams)"
+ctl covered TEST-15 true && speakers "('elsewhere', 'playing')"
+ctl covered TEST-15 false
+heard 1 || fail "the sound did not move to the other output: $(streams)"
+ctl mute && speakers "('off', 'off')"
+wait_for 10 heard 0 || fail "muting kept the audio stream"
+ctl unmute
+wait_for 10 heard 1 || fail "unmuting did not bring the sound back"
+ctl lib apply "$dusk" -o TEST-15 && ctl lib apply "$dusk" -o TEST-16 && speakers "('', '')"
+wait_for 10 heard 0 || fail "the audio stream outlived its scene"
+ctl lib apply "$pond" -o TEST-15 2>"$WORK/hint.err"
+grep -q "wprs-ctl input grant $lilies pointer" "$WORK/hint.err" ||
+  fail "no grant command for a scene that follows the pointer: $(cat "$WORK/hint.err")"
+wait_for 10 reads "r['shown']['TEST-15']['title'], r['declined'].get('$lilies')" "('Pond', None)" ||
+  fail "the scene asking for the pointer was not declared: $(ctl input status --json)"
+ctl input revoke "$lilies" pointer
+[ "$(inputs "r['declined'].get('$lilies')")" = "['pointer']" ] || fail "not now was forgotten"
+ctl lib apply "$pond" -o TEST-15 2>"$WORK/hint.err"
+[ ! -s "$WORK/hint.err" ] || fail "a declined scene asked again: $(cat "$WORK/hint.err")"
+ctl input grant "$lilies" pointer
+[ "$(inputs "r['declined'].get('$lilies')")" = None ] || fail "a grant kept the decline"
+ctl input revoke "$lilies" pointer && ctl mute
+leave && ctl release TEST-15 && ctl release TEST-16 && expect "list(s['outputs'])" "[]"
+kill "$pulse" && { wait "$pulse" 2>/dev/null || true; }
+echo "scene sound and consent checks passed"
 rm "$examples/pulse.wpak" && rescanned
 wait_for 10 listed "($((count - 1)), {'scene'})" || fail "an uninstalled example stayed: $(ctl lib search kind:scene)"
 mapfile -t uids < <(reply "'\\n'.join(i['uid'] for i in r['items'])" Library1 Search suu "kind:scene" 0 50)
@@ -914,6 +983,38 @@ retry 30 restored || { echo "FAIL: stream not restored after restarting PipeWire
 announced() { grep -A1 "member=StreamChanged" "$WORK/signals.log" | grep -q 'string "TEST-1"'; }
 wait_for 10 announced || fail "no StreamChanged signal for TEST-1: $(cat "$WORK/signals.log")"
 echo "PipeWire restart recovery and StreamChanged passed (serial $serial)"
+
+kill "$daemon"
+wait "$daemon" 2>/dev/null || true
+WPRS_DMABUF=emulate RUST_LOG=$log "$BIN/wprsd" >"$WORK/dmabuf.log" 2>&1 & daemon=$!; pids+=("$daemon")
+wait_for 30 ctl state || fail "the daemon with GPU stream buffers did not start"
+read -r _ _ _ gpu < <(ctl stream TEST-1 320 180)
+ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
+green="buffers 4 center bgra \[0, 255, 0, 255\]"
+retry 10 sh -c "'$BIN/probe' $gpu 3 --dmabuf | grep -q 'type DmaBuf modifier 0x0 $green'" ||
+  fail "no frame in GPU memory: $("$BIN/probe" "$gpu" 3 --dmabuf 2>&1)"
+retry 10 sh -c "'$BIN/probe' $gpu 3 | grep -q 'type MemFd $green'" ||
+  fail "no shared memory fallback: $("$BIN/probe" "$gpu" 3 2>&1)"
+"$BIN/probe" "$gpu" 5 --dmabuf --late | grep -q "type DmaBuf" || fail "a late GPU memory consumer waited"
+ctl set "$ROOT/tests/fixtures/magenta-64x32.webm" --fit stretch
+"$BIN/probe" "$gpu" 4 --dmabuf --hold >"$WORK/gpu.out" & held=$!
+expect "${output}['buffers'], ${output}['kind']" "('dmabuf', 'video')"
+wait "$held"
+frames=$(sed -n 's/^frames //p' "$WORK/gpu.out")
+[ "${frames:-0}" -gt 12 ] || fail "GPU stream buffers were not recycled: $(cat "$WORK/gpu.out")"
+echo "GPU stream buffer checks passed ($frames frames through 4 buffers)"
+
+kill "$daemon"
+wait "$daemon" 2>/dev/null || true
+WPRS_DMABUF=emulate-flaky RUST_LOG=$log "$BIN/wprsd" >"$WORK/flaky.log" 2>&1 & daemon=$!; pids+=("$daemon")
+wait_for 30 ctl state || fail "the daemon with failing GPU stream buffers did not start"
+read -r _ _ _ gpu < <(ctl stream TEST-1 320 180)
+ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit && expect "${output}['kind']" image
+"$BIN/probe" "$gpu" 4 --dmabuf --hold >"$WORK/flaky.out" 2>&1 & held=$!
+expect "${output}['buffers']" memfd
+wait "$held" || fail "no frame after a failed GPU allocation: $(cat "$WORK/flaky.out")"
+grep -q "type MemFd $green" "$WORK/flaky.out" || fail "the consumer got no shared memory: $(cat "$WORK/flaky.out")"
+echo "GPU allocation fallback passed"
 
 status=0
 echo "integration test passed"

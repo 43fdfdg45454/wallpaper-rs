@@ -128,6 +128,73 @@ stays paused. The desktop windows are managed by the window manager when it anno
 `_NET_WM_WINDOW_TYPE_DESKTOP` in `_NET_SUPPORTED`, and are *override-redirect* windows kept at
 the bottom otherwise; the daemon replaces them when a window manager starts or stops.
 
+## Frame rate
+
+Every output knows the refresh rate of its screen: layer-shell outputs take it from the current
+mode of their `wl_output`, X11 outputs from the RandR mode of their CRTCs (the fastest when a
+monitor spans several) and streams from the current mode of the `wl_output` with the same name
+while the daemon is connected to the Wayland compositor, which on Plasma is KWin's own output
+information. With variable refresh the mode gives the highest rate. An output never renders more
+often than the lowest of:
+
+- `playback.max_fps`: its number, or with `display` (the default) the refresh rate of the output
+  on mains power (60 while it is unknown) and 30 on battery;
+- a known refresh rate;
+- except for videos, the GPU class: software renderers 24 (15 on battery), integrated GPUs 60 (30
+  on battery) or, on mains power, the rate above for a scene whose estimated cost at that rate
+  fits their budget, dedicated GPUs the rate above (60 on battery);
+- for scenes, their `clock.max_fps` (`display` follows the refresh rate) and the quality level;
+- for parallax images with software rendering, 15;
+- for videos with `display` and software rendering, 30.
+
+A fade between two wallpapers runs at 60 frames per second on mains power, or faster when the
+rate above is higher, never above a known refresh rate; on battery it keeps the rate above.
+Videos play at their own frame rate and drop the frames above the rate of the fastest output that
+shows them, never repeating one. Nothing is rendered while nothing changes, whatever the rate.
+
+## Stream buffers
+
+Each stream offers its consumers two formats, in this order:
+
+1. GPU memory: the raw video format with the `SPA_FORMAT_VIDEO_modifier` property, mandatory and
+   not fixated, listing every DRM format modifier that the GPU can export as a single-plane
+   `B8G8R8A8` color attachment. PipeWire keeps the modifiers that the consumer can also import, as
+   it announces them for screen casts (KPipeWire does so when the scene graph can import
+   DMA-BUFs). The daemon allocates a test image with the remaining modifiers, lets the driver
+   choose one and announces the format again with that modifier fixed. The buffers are then
+   `SPA_DATA_DmaBuf`, one plane each, with the offset and stride of the plane in their chunk.
+2. Shared memory: the same format without a modifier, one memfd per buffer mapped from offset 0.
+
+With GPU memory, each frame is drawn straight into one of the 4 to 8 stream buffers: the CPU
+neither reads it back nor copies it, and a video frame is uploaded to the GPU once and leaves in
+the exported buffer. A buffer is drawn into only after the consumer gave it back, the one sent
+longest ago first, and never while it holds the last frame, which keep-alives send again when the
+consumer has given it back. The daemon releases the image to external use and waits for the GPU to
+finish the frame before it queues the buffer. When the consumer still holds every other buffer,
+the frame is skipped and tried again one frame later.
+
+The stream uses shared memory, without any action from the consumer, when:
+
+- the renderer is not Vulkan (the GLES backend), or the driver cannot export such images through
+  `VK_KHR_external_memory_fd` and `VK_EXT_external_memory_dma_buf` (without
+  `VK_EXT_image_drm_format_modifier` only linear images, modifier `0`, are offered);
+- rendering is in software, unless the daemon runs with `WPRS_DMABUF=1`, or the daemon runs with
+  `WPRS_DMABUF=0`;
+- the consumer does not offer DMA-BUFs or none of its modifiers is exportable;
+- a buffer cannot be allocated. The daemon allocates the first four buffers of a stream as soon as
+  the consumer has chosen their layout, before any is handed out, so a failure there gives that
+  consumer shared memory; a failure for a fifth or later buffer recreates the stream in shared
+  memory. The stream then offers shared memory only, and new streams of that output do too for a
+  minute.
+
+GPU memory stays in use on battery, since it only removes work. All consumers of one stream share
+its buffers: the first consumer decides their kind, a consumer that links later receives the same
+buffers, and the kind is chosen again once all consumers have left. `GetState` shows the kind of
+buffers of each output in `buffers`. Debug builds also accept `WPRS_DMABUF=emulate`, which
+exports the Vulkan memory of software rendering as memfds marked as DMA-BUFs, so that tests can
+follow the whole path with lavapipe, and `WPRS_DMABUF=emulate-flaky`, where every second
+allocation fails.
+
 ## `io.github.wallpaper_rs.Daemon1`
 
 ### `RequestStream(s output, u width, u height) → (u node_id, t serial)`
@@ -152,14 +219,14 @@ Consumers should connect by serial; `serial` is `0` only if PipeWire did not pub
   again, up to the size requested. A later request of the same size returns that stream.
 - Call `ReleaseStream` once for every successful `RequestStream`.
 
-Stream format: raw video, `BGRx` (or `BGRA`), fixed size, variable frame rate, one memfd per
-buffer mapped from offset 0. Frames are produced when the picture changes (new wallpaper,
-transition, video frame, a scene that animates or whose inputs changed), when a consumer starts
-streaming or another consumer links to the stream, again 50 ms, 250 ms, 1.25 s and 6.25 s later
-(so a consumer that was not ready for the first frame, or a link that was still being set up, gets
-the last picture), and every 10 s as a keep-alive.
-While no consumer is streaming an output, its video is paused and the daemon renders only the
-final picture after each change, which a consumer receives as soon as it connects.
+Stream format: raw video, `BGRx` (or `BGRA`), fixed size, variable frame rate, buffers in GPU
+memory (DMA-BUF) or one memfd per buffer mapped from offset 0 (see "Stream buffers"). Frames are
+produced when the picture changes (new wallpaper, transition, video frame, a scene that animates or
+whose inputs changed), when a consumer starts streaming or another consumer links to the stream,
+again 50 ms, 250 ms, 1.25 s and 6.25 s later (so a consumer that was not ready for the first frame,
+or a link that was still being set up, gets the last picture), and every 10 s as a keep-alive.
+While no consumer is streaming an output, its video is paused and the daemon renders only the final
+picture after each change, which a consumer receives as soon as it connects.
 
 ### `HoldStream(s output, u width, u height) → (u node_id, t serial)`
 
@@ -261,15 +328,15 @@ Changes one setting and saves the configuration. Keys and their current values a
 
 | Key | Values | Default |
 |-----|--------|---------|
-| `playback.volume` | `0.0` to `1.0` | `0.5` |
-| `playback.muted` | `true`, `false` | `true` |
-| `playback.max_fps` | `1` to `240` | `30` |
+| `playback.volume` | `0.0` to `1.0`, for videos and scenes with sound | `0.5` |
+| `playback.muted` | `true`, `false`, for videos and scenes with sound | `true` |
+| `playback.max_fps` | `1` to `240`, or `display` (also `0`) for the refresh rate of each output on mains power and 30 on battery (see "Frame rate") | `display` |
 | `playback.software_parallax` | move depth parallax images even when the GPU is emulated on the CPU (such as llvmpipe), with 8 steps at 15 frames per second at most | `false` |
 | `transition.kind` | `fade`, `none` | `fade` |
 | `transition.duration_ms` | `0` to `10000` | `600` |
 | `pause.when_covered` | pause while a maximized or fullscreen window covers the output | `true` |
 | `pause.on_battery` | pause while running on battery | `true` |
-| `pause.when_locked` | pause while the screen is locked | `true` |
+| `pause.when_locked` | pause while the screen is locked; whatever it says, videos are muted and scenes play no sound while it is locked | `true` |
 | `library.watch` | rescan folder sources when files in them change, one scan per source at most every 5 s | `true` |
 | `library.thumb_cache_mb` | `64` to `8192`, size of the thumbnail cache | `512` |
 | `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
@@ -294,8 +361,9 @@ playlist and credit of each output are kept up to date when they change.
 A `Schema` document describing every value a client would otherwise hard-code: the keys of
 `SetOption`, `Playlists1.SetRule`, `Profiles1.SetAuto` and `Profiles1.SavePreset`, the provider
 kinds and their options, the search keys, the thumbnail sizes and the fits. It carries no
-labels: clients translate keys with their own strings and fall back to the key. It never changes
-while the daemon runs.
+labels: clients translate keys with their own strings and fall back to the key. An `int` field
+lists in `values` the words it also takes, such as `display` for `playback.max_fps`. It never
+changes while the daemon runs.
 
 ### `SetPaused(b paused)`
 
@@ -303,18 +371,18 @@ Pauses or resumes every animated wallpaper.
 
 ### `SetVolume(d volume)`
 
-Sets the volume of video wallpapers, `0.0` to `1.0`. The sound of videos goes to PipeWire
-directly (`pipewiresink`, stream `wallpaper-rs` with `media.role = Movie`) when the GStreamer
-PipeWire plugin 1.2 or newer is installed; without it, with an older one (whose buffer pool can
-deadlock), or when PipeWire cannot be reached outside the Flatpak, it goes to the default audio
-output of GStreamer. While PipeWire has no audio output (and in the
-Flatpak while PipeWire cannot be reached) the video plays without sound and its sound goes back
-to PipeWire, at the same position, once an audio output appears. Videos with sound loop by
-seeking back at their end.
+Sets the volume of video wallpapers and scenes with sound, `0.0` to `1.0`. Their sound goes to
+PipeWire directly (`pipewiresink`, stream `wallpaper-rs` with `media.role = Movie`) when the
+GStreamer PipeWire plugin 1.2 or newer is installed; without it, with an older one (whose buffer
+pool can deadlock), or when PipeWire cannot be reached outside the Flatpak, it goes to the default
+audio output of GStreamer. While PipeWire has no audio output (and in the Flatpak while PipeWire
+cannot be reached) the video plays without sound and its sound goes back to PipeWire, at the same
+position, once an audio output appears. Videos with sound loop by seeking back at their end.
 
 ### `SetMuted(b muted)`
 
-Mutes or unmutes video wallpapers.
+Mutes or unmutes video wallpapers and scenes with sound (see "Scene sound"). While the screen is
+locked they stay silent whatever this says.
 
 ### `WaitChanged(t serial, u timeout_ms) → (t serial, as topics)`
 
@@ -347,12 +415,13 @@ Paused by the user. `PropertiesChanged` is emitted whenever it changes.
 
 ### Property `Volume` (`d`)
 
-Volume of video wallpapers. `PropertiesChanged` is emitted whenever it changes, whichever
+Volume of video wallpapers and scenes. `PropertiesChanged` is emitted whenever it changes, whichever
 method changed it (including `SetOption` and `Reload`).
 
 ### Property `Muted` (`b`)
 
-Video wallpapers are muted. `PropertiesChanged` is emitted whenever it changes.
+Video wallpapers and scenes are muted. `PropertiesChanged` is emitted whenever it changes. It
+does not follow the screen lock, which silences them too.
 
 ### Property `Serial` (`t`)
 
@@ -883,10 +952,11 @@ package, no preview, or a failed download or check).
 
 ## `io.github.wallpaper_rs.Inputs1`
 
-Scenes may follow the sound that plays and the pointer. Both inputs are off for every scene
-until the user grants them to that scene; grants are kept per scene package id in
-`~/.local/share/wallpaper-rs/inputs.json` (mode `0600`) and can be revoked at any time. A still
-image whose depth parallax has `source` `pointer` (see "Edits and spanning") also uses the
+Scenes may follow the sound that plays and the pointer. Both inputs are off for every scene until
+the user grants them to that scene; grants are kept per scene package id in
+`~/.local/share/wallpaper-rs/inputs.json` (mode `0600`) and can be revoked at any time. A scene
+never follows the sound it plays itself: sound layers cannot take their values from the analysis. A
+still image whose depth parallax has `source` `pointer` (see "Edits and spanning") also uses the
 pointer: choosing that source for that image is the user's consent, so it needs no grant, and it
 follows the same rules as a scene, without clicks.
 
@@ -918,12 +988,22 @@ Lets the scene with package id `scene` use `input`, `audio` or `pointer`, whenev
 
 ### `Revoke(s scene, s input)`
 
-Takes `input` back from `scene` and stops it at once if that scene was using it. Revoking an
-input that was not granted changes nothing.
+Takes `input` back from `scene` and stops it at once if that scene was using it. It also records
+that the user declined `input` for `scene`, in `inputs-declined.json` next to `inputs.json` (mode
+`0600`), so that clients stop asking; `Grant` clears that record.
+
+Clients ask once per scene: when `shown` lists an input that the scene has neither been granted
+nor declined, whether the scene was applied from a client, a playlist or `wprs-ctl`, the app and
+the tray explain what is captured and that nothing is stored or sent, and offer *Allow*
+(`Grant`) or *Not now* (`Revoke`); the scene settings show the same hint with these actions until
+the user decides. `wprs-ctl lib apply`, `playlist start`, `next` and `prev` follow the same rule:
+once the daemon lists the inputs of the scene they showed in `shown`, they print the
+`wprs-ctl input grant` command for each input that is neither granted nor declined.
 
 ### `GetInputs() → (s json)`
 
-An `InputsReply`: the grants, the scenes that declare inputs on each output, the outputs whose
+An `InputsReply`: the grants, the declined inputs (`declined`), the scenes that declare inputs on
+each output with their `title`, the outputs whose
 parallax image follows the pointer (`parallax`), whether audio is being captured (`capturing`)
 and whether the pointer is being followed (`tracking`).
 
@@ -1335,7 +1415,7 @@ interrupted write or install are deleted by the next one in that folder once the
 old. The daemon never runs the model: it reads the map at
 1024 pixels at most, applies `depth` and reloads it when any of these files changes. A parallax
 image is rendered only while its smoothed offset moves by a quarter of a pixel or more, at most
-`playback.max_fps` times per second, under the same pause rules as videos (`pause.when_covered`,
+at the frame rate of the output, under the same pause rules as videos (`pause.when_covered`,
 `pause.on_battery`, `pause.when_locked` and `SetPaused`), and stays still while the desktop asks
 for reduced motion (`reduced-motion` of the Settings portal). With software rendering (a GPU
 emulated on the CPU) the image stays still and flat unless `playback.software_parallax` is set,
@@ -1379,8 +1459,8 @@ the scene canvas, transitions and claims as other wallpapers.
   input the scene uses (audio levels, pointer, script outputs). A still scene renders once and
   then only the 10 s keep-alive of the stream runs.
 - The frame rate is the lowest of `playback.max_fps`, the scene's `clock.max_fps`, the quality
-  level and the GPU class: software renderers allow 24 FPS (15 on battery), integrated GPUs 60
-  (30 on battery), dedicated GPUs 144 (60 on battery).
+  level and the GPU class, as described in "Frame rate"; a scene with `clock.max_fps = "display"`
+  follows the refresh rate of each output.
 - The quality level follows the GPU class and the power source: on battery or on a software
   renderer heavy effects run at a lower resolution or not at all when the scene marks them
   `optional`, and the scene itself renders at 0.75 or 0.5 of the output size.
@@ -1388,10 +1468,45 @@ the scene canvas, transitions and claims as other wallpapers.
   `SetOption`) or whose stream has no consumer renders nothing and its scene clock stops; it
   continues where it stopped, without catching up.
 - `GetState().outputs[x].kind` is `scene` and `playing` tells whether the scene is animating.
+- `GetState().outputs[x].sound` tells what the sound of the scene does there (see "Scene sound").
 - Example scenes are packages in `wallpaper-rs/examples/` under `$XDG_DATA_HOME` or a folder of
   `$XDG_DATA_DIRS`. The daemon adds each one to the library once, when it starts and on a
   `Rescan` of every source; an example removed from the library is not added again, and the
   item of an example whose file was uninstalled is removed. `kind:scene` finds scene packages.
+
+## Scene sound
+
+The sound layers of a scene (see `scene.md`) play through the same audio path as videos (see
+`SetVolume`), with the same handling of a missing audio output. The daemon mixes all the layers of
+a scene into one stream, so a scene has one audio pipeline at most. When that pipeline is first
+created, one worker thread decodes into memory the sounds of the layers that can play (not those
+whose `play` is a fixed `false`), the playing ones first, once for each version of the package:
+later pipelines of the same package reuse them, and they are freed when no output shows it. Each
+sound is decoded up to the length that its header gives plus 0.5 s, and all the sounds of a
+package up to 180.5 s; a sound that goes on longer is not played.
+
+- Scenes start muted like videos. Their sound plays only while `playback.muted` is `false` and the
+  stream volume, `playback.volume × volume / 100`, is above 0, where `volume` is the user property
+  that every scene with sound has (a slider from 0 to 100 %, 100 by default, added to
+  `GetSceneProperties` unless the manifest declares it as such a slider itself).
+- The pipeline is created only while the scene is shown on an active output (not paused, covered
+  or paused on battery, and with a consumer for a stream) and the screen is unlocked. It pauses
+  exactly when the scene pauses, together with the scene clock, and goes on from the same place;
+  it is destroyed when the scene leaves the output and when the sound is muted or turned down to
+  0. Once every sound layer has stopped and faded out it pauses, and 5 s later it is destroyed; a
+  layer that starts again within these 5 s resumes it, and one that starts later creates it again.
+  Nothing plays while the screen is locked or the output is covered, whatever `pause.when_locked`
+  and `pause.when_covered` say; videos are muted while the screen is locked too.
+- When several outputs show the same scene package, only one plays its sound: the first active
+  one by output name whose scene volume is above 0, which hands the sound over to the next one
+  when it pauses or is covered.
+- Sound layers start, stop and change their volume and pan as their values change on the scene
+  clock. Values that change over time are read at the frame rate of the output, without rendering
+  a frame while nothing visible changes; fades and volume changes are applied to every sample, and
+  values that stay the same cost nothing.
+- `GetState().outputs[x].sound` is `""` for content without sound layers, `"off"` while the sound
+  is muted, has not started or every layer has stopped, `"playing"`, `"paused"`, or `"elsewhere"`
+  when another output plays it.
 
 ## Change notification
 
@@ -1407,7 +1522,7 @@ for every `Changed` signal. Topics and their `ids`:
 | `providers` | Providers change | provider ids |
 | `repos` | Repositories or installed packages change | repository ids, or `[]` |
 | `jobs` | A job is created or finishes | job ids as decimal strings |
-| `inputs` | A grant changes, or audio capture or the pointer feed starts or stops | `[]` |
+| `inputs` | A grant or a decline changes, an output starts or stops showing a scene that declares inputs, or audio capture or the pointer feed starts or stops | `[]` |
 | `account` | The sync server, this device's link or the sync state change | `[]` |
 
 Per topic, the first change emits `Changed` at once and opens a 250 ms window; changes inside the
@@ -1484,7 +1599,10 @@ removing, renaming or retyping something increases it. Times are Unix seconds; `
 `"fill"`, `"fit"`, `"stretch"`, `"center"`, `"tile"` or `"span"`; enums are written in snake case.
 `edited` tells whether an edit applies to the shown image and `screen` repeats `SetOutputInfo`.
 `parallax` tells whether the image moves in depth and `frames` counts the frames rendered for the
-output since it appeared.
+output since it appeared. `refresh` is the refresh rate of its screen in Hz (`0` while unknown)
+and `fps` the most frames per second it renders now (see "Frame rate"). `buffers` is `"dmabuf"`
+or `"memfd"` while a consumer streams the output, and `""` otherwise (see "Stream buffers").
+`sound` is `""`, `"off"`, `"playing"`, `"paused"` or `"elsewhere"` (see "Scene sound").
 
 ```rust
 struct State {
@@ -1498,7 +1616,8 @@ struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
-    edited: bool, screen: Option<Screen>, parallax: bool, frames: u64,
+    edited: bool, screen: Option<Screen>, parallax: bool, frames: u64, refresh: u32, fps: u32,
+    buffers: String, sound: String,
 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
 enum Shown { Color, Image, Video, Scene }
@@ -1639,10 +1758,11 @@ struct Update { repo_id: String, id: String, installed: String, available: Strin
 struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
 
 enum Input { Audio, Pointer }
-struct SceneInputs { scene: String, audio: bool, pointer: bool }
+struct SceneInputs { scene: String, audio: bool, pointer: bool, title: String }
 struct InputsReply {
     model: u32, serial: u64, capturing: bool, tracking: bool,
     grants: BTreeMap<String, Vec<Input>>, shown: BTreeMap<String, SceneInputs>, parallax: Vec<String>,
+    declined: BTreeMap<String, Vec<Input>>,
 }
 enum AccountState { Unlinked, Linking, NeedsKey, Ready, Paused, Error }
 struct AccountDevice {

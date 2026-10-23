@@ -43,9 +43,13 @@ impl OutputStream {
             *pw::keys::NODE_DESCRIPTION => format!("wallpaper-rs ({output})"),
         };
         let stream = pw::stream::StreamRc::new(core.clone(), &name, props)?;
-        let _listener = listen(&stream, shared.clone(), self.slot.clone(), output, self.width, self.height)?;
-        let format = params::enum_format(self.width, self.height);
-        let mut pods = [spa::pod::Pod::from_bytes(&format).expect("valid format pod")];
+        let _listener =
+            listen(&stream, shared.clone(), self.slot.clone(), output, (self.width, self.height))?;
+        let allowed = lock(&self.slot.pool).gpu();
+        let modifiers = shared.gpu.get().filter(|_| allowed).map_or(&[][..], |gpu| gpu.modifiers());
+        let formats = params::formats(self.width, self.height, modifiers, None);
+        let mut pods: Vec<&spa::pod::Pod> =
+            formats.iter().filter_map(|b| spa::pod::Pod::from_bytes(b)).collect();
         let flags = pw::stream::StreamFlags::DRIVER | pw::stream::StreamFlags::ALLOC_BUFFERS;
         stream.connect(spa::utils::Direction::Output, None, flags, &mut pods)?;
         let now = Instant::now();
@@ -53,10 +57,20 @@ impl OutputStream {
         Ok(())
     }
 
+    pub fn recover(&mut self, core: &CoreRc, shared: &Arc<Shared>, output: &str) -> bool {
+        if self.live.is_none() || !lock(&self.slot.pool).broken {
+            return false;
+        }
+        self.disconnect(shared);
+        let connected = self.connect(core, shared, output);
+        connected.inspect_err(|e| tracing::warn!(output, "cannot recreate the stream: {e}")).is_ok()
+    }
+
     pub fn disconnect(&mut self, shared: &Shared) {
         if let Some(live) = self.live.take() {
             let _ = live.stream.disconnect();
         }
+        lock(&self.slot.pool).clear();
         let had_info = lock(&self.slot.info).take().is_some();
         if self.slot.streaming.swap(false, SeqCst) || had_info {
             shared.changed.store(true, SeqCst);

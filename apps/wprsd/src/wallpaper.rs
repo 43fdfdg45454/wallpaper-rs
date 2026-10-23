@@ -21,10 +21,10 @@ fn modified(path: &Path) -> anyhow::Result<Option<SystemTime>> {
 impl Daemon {
     pub fn configure_output(&self, output: &str) -> Option<Arc<RgbaImage>> {
         let _order = lock(&ORDER);
-        let (size, resolved, uploaded) = {
+        let (size, resolved, uploaded, refresh) = {
             let st = self.state();
             let info = st.outputs.get(output)?;
-            (info.size, st.config.resolve(output), info.uploaded.clone())
+            (info.size, st.config.resolve(output), info.uploaded.clone(), st.refresh(output))
         };
         let (image, transition) =
             self.playlist_media(output, resolved.playlist).unwrap_or((resolved.image, None));
@@ -65,7 +65,7 @@ impl Daemon {
         self.compositor.configure(
             output,
             size,
-            Spec { content, fit: resolved.fit, background: resolved.background, transition },
+            Spec { content, fit: resolved.fit, background: resolved.background, transition, refresh },
         );
         if let Some(info) = self.state().outputs.get_mut(output) {
             (info.uploaded, info.scene) = (upload, shown_scene);

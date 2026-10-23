@@ -5,8 +5,12 @@ mod color;
 mod decode;
 mod develop;
 mod device;
+#[cfg(target_os = "linux")]
+mod dmabuf;
 mod draw;
 mod export;
+#[cfg(target_os = "linux")]
+mod exported;
 mod palette;
 mod parallax;
 mod readback;
@@ -19,7 +23,11 @@ mod yuv;
 
 pub use decode::{decode_image, image_size, needed_edge, thumbnails};
 pub use device::{Display, Renderer};
+#[cfg(target_os = "linux")]
+pub use dmabuf::{Dmabuf, Dmabufs};
 pub use draw::Target;
+#[cfg(target_os = "linux")]
+pub use exported::Exported;
 pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};
 pub use readback::TargetLimits;

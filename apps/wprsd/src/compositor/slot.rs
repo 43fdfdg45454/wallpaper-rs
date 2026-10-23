@@ -10,6 +10,8 @@ const RETRIES: u32 = 3;
 const FIRST_RETRY: Duration = Duration::from_secs(2);
 const FIRST_FRAME: Duration = Duration::from_secs(10);
 
+pub(super) type Demand = ((u32, u32), bool, u32);
+
 #[derive(Default)]
 struct Inbox {
     frame: Mutex<Option<Frame>>,
@@ -23,21 +25,28 @@ pub(super) struct PlayerSlot {
     pub(super) due: Option<Instant>,
     pub(super) playing: bool,
     pub(super) max_size: (u32, u32),
+    pub(super) fps: u32,
     failures: u32,
     inbox: Arc<Inbox>,
 }
 
 impl PlayerSlot {
-    pub(super) fn new(max_size: (u32, u32), playing: bool, open_at: Instant) -> Self {
+    pub(super) fn new((max_size, playing, fps): Demand, open_at: Instant) -> Self {
         let (player, texture, error, inbox) = (None, None, None, Arc::default());
-        Self { player, texture, error, due: Some(open_at), playing, max_size, failures: 0, inbox }
+        Self { player, texture, error, due: Some(open_at), playing, max_size, fps, failures: 0, inbox }
     }
 
-    pub(super) fn tick(&mut self, path: &Path, settings: Settings, tx: &mpsc::Sender<Command>, now: Instant) {
+    pub(super) fn tick(
+        &mut self,
+        path: &Path,
+        heard: (Settings, bool),
+        tx: &mpsc::Sender<Command>,
+        now: Instant,
+    ) {
         let Some(_) = self.due.take_if(|at| *at <= now) else { return };
         match self.player {
             Some(_) => self.fail(path, format!("no video frame within {} s", FIRST_FRAME.as_secs()), now),
-            None => self.open(path, settings, tx, now),
+            None => self.open(path, heard, tx, now),
         }
     }
 
@@ -47,9 +56,14 @@ impl PlayerSlot {
         }
     }
 
-    fn open(&mut self, path: &Path, settings: Settings, tx: &mpsc::Sender<Command>, now: Instant) {
-        let (max_size, max_fps, volume, muted) =
-            (self.max_size, settings.max_fps, settings.volume, settings.muted);
+    fn open(
+        &mut self,
+        path: &Path,
+        (settings, locked): (Settings, bool),
+        tx: &mpsc::Sender<Command>,
+        now: Instant,
+    ) {
+        let (max_size, max_fps, volume, muted) = (self.max_size, self.fps, settings.volume, settings.muted);
         let (inbox, tx) = (self.inbox.clone(), tx.clone());
         let opened = Player::open(path, Options { max_size, max_fps, volume, muted }, move |event| {
             let first = match event {
@@ -63,6 +77,7 @@ impl PlayerSlot {
         match opened {
             Ok(player) => {
                 tracing::debug!(path = %path.display(), "video opened");
+                player.set_volume(volume, muted || locked);
                 player.set_playing(self.playing);
                 (self.player, self.due) = (Some(player), Some(now + FIRST_FRAME));
             }

@@ -51,13 +51,27 @@ Repeater {
         }
 
         QQC2.SpinBox {
+            id: number
+
+            readonly property real shown: Number(row.text || row.modelData.default || 0)
+
             visible: row.modelData.kind === "int"
+            enabled: !word.checked
             from: row.modelData.min ?? -2147483647
             to: row.modelData.max ?? 2147483647
             stepSize: row.modelData.step ?? 1
             editable: true
-            value: Number(row.text || row.modelData.default || 0)
+            value: isNaN(shown) ? 60 : shown
             onValueModified: form.edited(row.modelData.key, String(value))
+        }
+
+        QQC2.CheckBox {
+            id: word
+
+            visible: row.modelData.kind === "int" && row.modelData.values.length > 0
+            text: form.daemon.value(row.modelData.values[0] ?? "")
+            checked: row.modelData.values.includes(row.text)
+            onToggled: form.edited(row.modelData.key, checked ? row.modelData.values[0] : String(number.value))
         }
 
         QQC2.ComboBox {

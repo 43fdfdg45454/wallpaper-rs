@@ -10,8 +10,8 @@ use std::time::Duration;
 
 const RETRY: Duration = Duration::from_secs(1);
 
-type Size = Option<(u32, u32)>;
-type Report = Arc<dyn Fn(String, Size) + Send + Sync>;
+type Mode = Option<((u32, u32), u32)>;
+type Report = Arc<dyn Fn(String, Mode) + Send + Sync>;
 
 struct Modes {
     registry: RegistryState,
@@ -27,7 +27,7 @@ fn open(report: &Report) -> anyhow::Result<(EventQueue<Modes>, Modes)> {
     Ok((queue, Modes { registry, outputs, names: Vec::new(), report: report.clone() }))
 }
 
-pub fn watch_modes(report: impl Fn(String, Size) + Send + Sync + 'static) -> anyhow::Result<()> {
+pub fn watch_modes(report: impl Fn(String, Mode) + Send + Sync + 'static) -> anyhow::Result<()> {
     let report: Report = Arc::new(report);
     let mut opened = Some(open(&report)?);
     let follow = move || {
@@ -54,9 +54,10 @@ impl Modes {
             return;
         };
         let size = Some(turned(&info, mode.dimensions)).filter(|(w, h)| *w > 0 && *h > 0);
+        let hz = (mode.refresh_rate.max(0) as u32).saturating_add(500) / 1000;
         self.names.retain(|(o, _)| *o != output);
         self.names.push((output, name.clone()));
-        (self.report)(name, size);
+        (self.report)(name, size.map(|size| (size, hz)));
     }
 }
 

@@ -3,12 +3,14 @@ use crate::{Error, power, store};
 use std::fs;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
+use wprs_core::settings::fps::DISPLAY;
 use wprs_core::{Config, Fit};
 
 pub(crate) const COLORS: &str = "system_colors";
 pub(crate) const BACKEND: &str = "backend";
 const CHARGER: &str = "charger_fps";
 const FIT: &str = "fit";
+const BATTERY: &str = "playback.max_fps";
 const CHOICES: [(&str, &[&str]); 4] = [
     (COLORS, &["chosen", "always", "never"]),
     (CHARGER, &["60", "30"]),
@@ -111,6 +113,7 @@ pub(crate) fn setting(key: &str, value: Option<&str>) -> Result<String, Error> {
     let config = loaded()?;
     match (key, config.options().remove(key)) {
         (FIT, _) => Ok(config.resolve("").fit.to_string()),
+        (BATTERY, _) => Ok(on_battery(config.playback.max_fps).to_string()),
         (_, Some(toml::Value::String(text))) => Ok(text),
         (_, Some(value)) => Ok(value.to_string()),
         (_, None) => Err(Error::Setting(format!("unknown setting {key}"))),
@@ -121,8 +124,12 @@ pub(crate) fn chosen(key: &str) -> String {
     setting(key, None).unwrap_or_default()
 }
 
+fn on_battery(max_fps: u32) -> u32 {
+    if max_fps == DISPLAY { power::BATTERY_FPS } else { max_fps }
+}
+
 fn caps() {
-    power::caps(config().playback.max_fps, chosen(CHARGER).parse().unwrap_or(60));
+    power::caps(on_battery(config().playback.max_fps), chosen(CHARGER).parse().unwrap_or(60));
 }
 
 pub(crate) fn look() -> Look {

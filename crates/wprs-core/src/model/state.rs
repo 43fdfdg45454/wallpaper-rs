@@ -49,6 +49,14 @@ model! {
         pub parallax: bool,
         #[serde(default)]
         pub frames: u64,
+        #[serde(default)]
+        pub refresh: u32,
+        #[serde(default)]
+        pub fps: u32,
+        #[serde(default)]
+        pub buffers: String,
+        #[serde(default)]
+        pub sound: String,
     }
 
     #[derive(Copy, Eq, Hash)]

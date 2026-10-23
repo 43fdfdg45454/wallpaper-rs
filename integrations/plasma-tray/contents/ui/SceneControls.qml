@@ -41,6 +41,13 @@ ColumnLayout {
         onTriggered: scene.load()
     }
 
+    Consent {
+        Layout.fillWidth: true
+        daemon: scene.daemon
+        inputs: scene.inputs
+        output: scene.output
+    }
+
     Repeater {
         model: [["audio", scene.daemon.tr("Follow the sound that plays"), scene.daemon.tr("The sound is turned into levels on this computer while the scene is shown; nothing is recorded, kept or sent, and the desktop may show a microphone indicator.")], ["pointer", scene.daemon.tr("Follow the pointer"), scene.daemon.tr("Only the latest pointer position over this screen reaches the scene; positions are never kept and keys are never read.")]].filter(input => scene.uses[input[0]] === true)
 

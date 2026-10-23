@@ -34,6 +34,16 @@ pub enum Issue {
     EffectMask(String),
     #[error("invalid color {0:?}, expected #rrggbb or #rrggbbaa")]
     Color(String),
+    #[error(
+        "{0} is a sound layer: only id, type, sound, loop, play, volume, pan, fade_in and fade_out apply"
+    )]
+    Sound(String),
+    #[error("{0} may only follow a property or keyframes")]
+    SoundSource(String),
+    #[error("the scene has {0} sound layers, at most 8 are allowed")]
+    Sounds(usize),
+    #[error("/properties/volume of a scene with sound must be a slider within 0..=100")]
+    Volume,
 }
 
 pub(crate) struct Check<'a> {
@@ -52,7 +62,7 @@ impl Scene {
         c.range("/canvas/size/0", w, 1.0, MAX_SIZE as f32);
         c.range("/canvas/size/1", h, 1.0, MAX_SIZE as f32);
         c.color("/canvas/background", self.canvas.background);
-        c.range("/clock/max_fps", self.clock.max_fps as f32, 1.0, 240.0);
+        c.range("/clock/max_fps", self.clock.max_fps as f32, 0.0, 240.0);
         c.range("/clock/poster_time", self.clock.poster_time, 0.0, 86_400.0);
         c.count("/assets", self.assets.len(), MAX_ASSETS);
         for (id, asset) in &self.assets {
@@ -67,6 +77,7 @@ impl Scene {
         c.ids("/layers", self.layers().map(|l| l.id.as_str()));
         c.layers("/layers", &self.layers, 1);
         c.masks();
+        c.sounds();
         c.count("/particles", self.particles.len(), MAX_SYSTEMS);
         let total: u64 = self.particles.values().map(|s| u64::from(s.capacity)).sum();
         c.range("/particles", total as f32, 0.0, MAX_PARTICLES as f32);

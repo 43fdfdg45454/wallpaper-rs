@@ -8,6 +8,7 @@ mod players;
 mod power;
 mod scene;
 mod slot;
+mod speakers;
 mod state;
 mod surface;
 
@@ -120,6 +121,7 @@ pub struct Spec {
     pub fit: Fit,
     pub background: [u8; 3],
     pub transition: Option<Duration>,
+    pub refresh: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -138,6 +140,8 @@ pub struct OutputStatus {
     pub error: Option<String>,
     pub parallax: bool,
     pub frames: u64,
+    pub fps: u32,
+    pub sound: &'static str,
 }
 
 enum Command {
@@ -146,10 +150,11 @@ enum Command {
     Attach(String, Window),
     Frame(String),
     Repaint(String),
-    SetActive(String, bool),
+    SetActive(String, bool, bool),
     Settings(Settings),
     Calm(bool),
     Power(bool),
+    Locked(bool),
     Wake,
     Quit,
 }
@@ -219,8 +224,8 @@ impl Compositor {
         self.send(Command::Attach(output.into(), window))
     }
 
-    pub fn set_active(&self, output: &str, active: bool) {
-        self.send(Command::SetActive(output.into(), active))
+    pub fn set_active(&self, output: &str, active: bool, covered: bool) {
+        self.send(Command::SetActive(output.into(), active, covered))
     }
 
     pub fn set_settings(&self, settings: Settings) {
@@ -233,6 +238,10 @@ impl Compositor {
 
     pub fn set_power(&self, on_battery: bool) {
         self.send(Command::Power(on_battery))
+    }
+
+    pub fn set_locked(&self, locked: bool) {
+        self.send(Command::Locked(locked))
     }
 
     pub fn status(&self) -> BTreeMap<String, OutputStatus> {

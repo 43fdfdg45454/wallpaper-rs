@@ -1,13 +1,17 @@
 mod audio;
 mod bus;
+mod mix;
 mod pipewire;
 mod player;
 mod probe;
+mod sound;
 mod still;
 mod video_sink;
 
+pub use mix::{Clip, Mix, RATE, Track};
 pub use player::Player;
 pub use probe::probe;
+pub use sound::{Bank, Soundtrack, decode};
 pub use still::{Still, still};
 
 use gstreamer as gst;
@@ -90,7 +94,8 @@ fn local_sources_only() {
     let registry = gst::Registry::get();
     let remote = |feature: &gst::PluginFeature| {
         feature.downcast_ref::<gst::ElementFactory>().is_some_and(|f| {
-            let fetches = f.uri_type() == gst::URIType::Src && f.uri_protocols().iter().any(|p| p != "file");
+            let fetches = f.uri_type() == gst::URIType::Src
+                && f.uri_protocols().iter().any(|p| !["file", "appsrc"].contains(&p.as_str()));
             fetches || ["Network", "Adaptive"].iter().any(|k| f.klass().contains(k))
         })
     };

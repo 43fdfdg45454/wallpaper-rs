@@ -6,6 +6,8 @@ Kirigami.ApplicationWindow {
     id: root
 
     property int current: 0
+    property var inputs: ({})
+    property var asked: ({})
     readonly property list<Component> pages: [
         Component {
             LibraryPage {}
@@ -37,6 +39,10 @@ Kirigami.ApplicationWindow {
         pageStack.push(component.createObject(pageStack, properties ?? {}));
     }
 
+    function loadInputs() {
+        App.query("GetInputs", [], "Inputs1", reply => root.inputs = reply);
+    }
+
     function showPage(index, properties) {
         current = index;
         open(pages[index], properties);
@@ -47,7 +53,10 @@ Kirigami.ApplicationWindow {
     height: Kirigami.Units.gridUnit * 40
     minimumWidth: Kirigami.Units.gridUnit * 24
     minimumHeight: Kirigami.Units.gridUnit * 20
-    Component.onCompleted: showPage(0)
+    Component.onCompleted: {
+        showPage(0);
+        loadInputs();
+    }
     footer: StatusBar {}
     header: Kirigami.InlineMessage {
         type: Kirigami.MessageType.Error
@@ -111,6 +120,53 @@ Kirigami.ApplicationWindow {
             root.raise();
             root.requestActivate();
         }
+
+        function onChanged(topic) {
+            if (topic === "inputs" || topic === "state")
+                root.loadInputs();
+        }
+    }
+
+    Consent {
+        id: consent
+
+        visible: false
+        daemon: App
+        inputs: root.inputs
+        onAskChanged: {
+            if (ask.scene === "")
+                return asking.close();
+            if (root.asked[ask.scene])
+                return;
+            root.asked[ask.scene] = true;
+            asking.open();
+        }
+    }
+
+    Kirigami.PromptDialog {
+        id: asking
+
+        title: App.tr("Allow this scene?")
+        subtitle: consent.text
+        standardButtons: Kirigami.Dialog.NoButton
+        customFooterActions: [
+            Kirigami.Action {
+                text: App.tr("Allow")
+                icon.name: "dialog-ok-apply"
+                onTriggered: {
+                    consent.answer(true);
+                    asking.close();
+                }
+            },
+            Kirigami.Action {
+                text: App.tr("Not now")
+                icon.name: "dialog-cancel"
+                onTriggered: {
+                    consent.answer(false);
+                    asking.close();
+                }
+            }
+        ]
     }
 
     Connections {

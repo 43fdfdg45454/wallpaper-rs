@@ -4,7 +4,7 @@ use crate::particles::{Swarm, plan};
 use crate::resolve::Context;
 use crate::timeline::Playhead;
 use crate::uses::{self, Uses};
-use crate::{Affine, Layer, Quality, Scene, Timeline, Values, Wake};
+use crate::{Affine, Layer, Quality, Scene, Timeline, Values, Voice, Wake};
 use std::cell::{Cell, Ref, RefCell};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
@@ -185,8 +185,14 @@ impl Runtime {
         fired.for_each(|(tl, head)| *head = Playhead { t: -tl.delay, playing: true, reversed: false });
     }
 
-    pub fn frame(&self, view: [f32; 4], quality: Quality) -> Frame<'_> {
-        let cx = Context {
+    pub fn voices(&self) -> (Vec<Voice>, Wake) {
+        let cx = self.context();
+        let voices = self.scene.sounds().map(|s| s.voice(&cx)).collect();
+        (voices, cx.wake.get())
+    }
+
+    fn context(&self) -> Context<'_> {
+        Context {
             t: self.t as f32,
             dt: self.dt,
             calm: self.stirred.map(|s| (self.t - s) as f32),
@@ -200,7 +206,11 @@ impl Runtime {
             mattes: &self.mattes,
             memo: &self.memo,
             wake: Cell::new(Wake::Idle),
-        };
+        }
+    }
+
+    pub fn frame(&self, view: [f32; 4], quality: Quality) -> Frame<'_> {
+        let cx = self.context();
         let canvas = self.scene.canvas.size.map(|v| v as f32);
         let (draws, effects, background) = (Vec::new(), Vec::new(), self.scene.canvas.background);
         let (time, wake) = (self.t as f32, Wake::Idle);

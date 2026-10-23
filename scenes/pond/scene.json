@@ -1,8 +1,10 @@
 {
   "schema": "wallpaper-rs.scene/1",
   "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#06222c" },
-  "clock": { "max_fps": 60 },
+  "clock": { "max_fps": "display" },
+  "assets": { "water": { "path": "assets/water.ogg" } },
   "layers": [
+    { "id": "lapping", "type": "sound", "sound": "water", "volume": 0.8, "fade_in": 2, "fade_out": 2 },
     { "id": "water", "type": "shape", "shape": { "rect": { "size": [2000, 1160] } }, "parallax": 0.01,
       "gradient": { "stops": [[0, "#15506a"], [0.55, "#0d3746"], [1, "#05202a"]] } },
     { "id": "light", "type": "shape", "shape": { "ellipse": { "size": [1500, 900] } }, "blend": "add", "parallax": 0.02,

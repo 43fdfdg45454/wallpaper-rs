@@ -152,7 +152,9 @@ pub async fn run(client: &Client, command: Playlist) -> Result<()> {
             };
             print!("{text}")
         }
-        Playlist::Start { playlist, out } => pl.start(&playlist, &out.output).await?,
+        Playlist::Start { playlist, out } => {
+            crate::inputs::asking(client, &out.output, pl.start(&playlist, &out.output)).await?
+        }
         Playlist::Stop(out) => pl.stop(&out.output).await?,
         Playlist::History { output, limit, json } => {
             show::reply(pl.history(&output, limit).await?, json, history)?

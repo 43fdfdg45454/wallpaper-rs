@@ -8,13 +8,44 @@ use std::time::Duration;
 pub struct Playback {
     pub volume: f64,
     pub muted: bool,
+    #[serde(with = "fps")]
     pub max_fps: u32,
     pub software_parallax: bool,
 }
 
 impl Default for Playback {
     fn default() -> Self {
-        Self { volume: 0.5, muted: true, max_fps: 30, software_parallax: false }
+        Self { volume: 0.5, muted: true, max_fps: fps::DISPLAY, software_parallax: false }
+    }
+}
+
+pub mod fps {
+    use serde::{Deserialize, Deserializer, Serializer, de::Error};
+
+    pub const DISPLAY: u32 = 0;
+    pub const WORD: &str = "display";
+
+    pub fn serialize<S: Serializer>(fps: &u32, s: S) -> Result<S::Ok, S::Error> {
+        match *fps {
+            DISPLAY => s.serialize_str(WORD),
+            fps => s.serialize_u32(fps),
+        }
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<u32, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Fps {
+            Number(u32),
+            Text(String),
+        }
+        match Fps::deserialize(d)? {
+            Fps::Number(fps) => Ok(fps),
+            Fps::Text(text) if text == WORD => Ok(DISPLAY),
+            Fps::Text(text) => {
+                text.parse().map_err(|_| D::Error::custom(format!("expected 1 to 240 or {WORD}")))
+            }
+        }
     }
 }
 
@@ -25,7 +56,7 @@ impl Playback {
         Playback {
             volume: if self.volume.is_finite() { self.volume.clamp(0.0, 1.0) } else { 0.0 },
             muted: self.muted,
-            max_fps: self.max_fps.clamp(1, Self::MAX_FPS),
+            max_fps: self.max_fps.min(Self::MAX_FPS),
             software_parallax: self.software_parallax,
         }
     }
@@ -140,7 +171,11 @@ impl Config {
         let text = value.trim();
         let parsed = match current {
             toml::Value::Boolean(_) => text.parse().map(toml::Value::Boolean).map_err(|e| e.to_string()),
-            toml::Value::Integer(_) => text.parse().map(toml::Value::Integer).map_err(|e| e.to_string()),
+            toml::Value::Integer(_) => match text.parse() {
+                Ok(number) => Ok(toml::Value::Integer(number)),
+                Err(_) if text == fps::WORD => Ok(text.into()),
+                Err(e) => Err(e.to_string()),
+            },
             toml::Value::Float(_) => text.parse().map(toml::Value::Float).map_err(|e| e.to_string()),
             _ => Ok(toml::Value::String(text.to_owned())),
         }

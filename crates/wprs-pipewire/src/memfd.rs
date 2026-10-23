@@ -4,7 +4,7 @@ use rustix::fs::{MemfdFlags, SealFlags, fcntl_add_seals, ftruncate, memfd_create
 use rustix::mm::{MapFlags, ProtFlags, mmap, munmap};
 use std::os::fd::{FromRawFd, IntoRawFd, OwnedFd};
 
-unsafe fn first_data<'a>(buffer: *mut pw_sys::pw_buffer) -> Option<&'a mut spa_sys::spa_data> {
+pub unsafe fn first_data<'a>(buffer: *mut pw_sys::pw_buffer) -> Option<&'a mut spa_sys::spa_data> {
     unsafe {
         let spa_buffer = (*buffer).buffer;
         (!spa_buffer.is_null() && (*spa_buffer).n_datas >= 1).then(|| &mut *(*spa_buffer).datas)
@@ -29,8 +29,9 @@ pub unsafe fn add(buffer: *mut pw_sys::pw_buffer, size: u32) -> rustix::io::Resu
 }
 
 pub unsafe fn remove(buffer: *mut pw_sys::pw_buffer) {
-    let owned_memfd = |data: &&mut spa_sys::spa_data| data.type_ == spa_sys::SPA_DATA_MemFd && data.fd >= 0;
-    let Some(data) = unsafe { first_data(buffer) }.filter(owned_memfd) else { return };
+    let kinds = [spa_sys::SPA_DATA_MemFd, spa_sys::SPA_DATA_DmaBuf];
+    let owned = |data: &&mut spa_sys::spa_data| kinds.contains(&data.type_) && data.fd >= 0;
+    let Some(data) = unsafe { first_data(buffer) }.filter(owned) else { return };
     if !data.data.is_null() {
         let _ = unsafe { munmap(data.data, data.maxsize as usize) };
     }

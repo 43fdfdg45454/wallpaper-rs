@@ -1,3 +1,4 @@
+mod dmabuf;
 mod exporter;
 mod frame;
 mod link;
@@ -5,6 +6,7 @@ mod listener;
 mod main_loop;
 mod memfd;
 mod params;
+mod pool;
 mod shared;
 mod state;
 mod stream;
@@ -14,7 +16,9 @@ use shared::{Shared, Slot};
 use std::sync::{Arc, mpsc};
 use std::thread::JoinHandle;
 
+pub use dmabuf::{Allocate, Dmabuf, Image};
 pub use frame::VideoFrame;
+pub use pool::{Grant, Lease};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StreamInfo {

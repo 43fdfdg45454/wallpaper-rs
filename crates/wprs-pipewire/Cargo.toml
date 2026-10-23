@@ -12,3 +12,6 @@ pipewire.workspace = true
 rustix.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+libc.workspace = true

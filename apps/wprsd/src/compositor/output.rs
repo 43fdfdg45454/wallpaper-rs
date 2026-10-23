@@ -1,3 +1,5 @@
+use super::parallax::SOFTWARE;
+use super::power::Power;
 use super::scene::SceneState;
 use super::slot::PlayerSlot;
 use super::surface::Screen;
@@ -8,6 +10,7 @@ use std::time::{Duration, Instant};
 use wprs_core::edit::Parallax;
 use wprs_core::{Fit, UvRect};
 use wprs_render::{GpuImage, Layer, Relief, Target};
+use wprs_scene::Tier;
 
 pub(super) type Raised = (GpuImage, Parallax);
 
@@ -66,14 +69,40 @@ pub(super) struct Output {
     pub(super) last_render: Option<Instant>,
     pub(super) offset: [f32; 2],
     pub(super) moving: bool,
+    pub(super) refresh: u32,
+    pub(super) covered: bool,
 }
 
 impl Output {
-    pub(super) fn new(size: (u32, u32), shown: Shown, sink: Sink) -> Self {
+    pub(super) fn new(size: (u32, u32), shown: Shown, sink: Sink, refresh: u32) -> Self {
         let (fade, last_render) = (None, None);
         let (active, dirty, missing_frame, stale, moving) = (true, true, false, true, false);
-        let offset = [0.0; 2];
-        Self { size, shown, fade, active, dirty, missing_frame, stale, sink, last_render, offset, moving }
+        let (offset, covered) = ([0.0; 2], false);
+        Self {
+            size,
+            shown,
+            fade,
+            active,
+            dirty,
+            missing_frame,
+            stale,
+            sink,
+            last_render,
+            offset,
+            moving,
+            refresh,
+            covered,
+        }
+    }
+
+    pub(super) fn fps(&self, power: Power) -> u32 {
+        let rate = power.rate(self.refresh, None);
+        match (&self.shown.scene, &self.shown.relief, &self.shown.content) {
+            (Some(scene), ..) => scene.fps(power, self.refresh),
+            (None, Some(_), _) if power.tier == Tier::T0 => rate.min(SOFTWARE.1),
+            (.., Content::Video(_)) => power.video(self.refresh),
+            _ => rate,
+        }
     }
 
     pub(super) fn show(&mut self, shown: Shown, size: (u32, u32), transition: bool) {

@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicI32, AtomicU32, Ordering::Relaxed};
 use wprs_scene::{Quality, Tier};
 
 const CHARGING_FPS: u32 = 60;
-const BATTERY_FPS: u32 = 30;
+pub(crate) const BATTERY_FPS: u32 = 30;
 const MAX_FPS: u32 = 60;
 const PREVIEW_FPS: u32 = 30;
 const HOT_FPS: u32 = 10;

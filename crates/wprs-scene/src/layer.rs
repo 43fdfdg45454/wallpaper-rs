@@ -1,4 +1,5 @@
 use crate::Color;
+use crate::Sound;
 use crate::content::{Align, EffectUse, Gradient, Mask, Shape, Spectrum, Stroke, mask, shown, white};
 use crate::value::{Value, Vec2};
 use serde::{Deserialize, Serialize};
@@ -72,6 +73,7 @@ pub enum Kind {
         system: String,
     },
     Spectrum(Spectrum),
+    Sound(Sound),
     Solid {
         color: Value<Color>,
         #[serde(default, skip_serializing_if = "Option::is_none")]

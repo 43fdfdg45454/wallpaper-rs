@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 00:00+0000\n"
+"POT-Creation-Date: 2026-10-23 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -11,6 +11,49 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid "Follow the sound that plays"
+msgstr "Seguir el sonido que se reproduce"
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid ""
+"The sound is turned into levels on this computer while the scene is shown; "
+"nothing is recorded, kept or sent, and the desktop may show a microphone "
+"indicator."
+msgstr ""
+"Mientras se muestra la escena, el sonido se convierte en niveles en este "
+"equipo; no se graba, no se guarda ni se envía, y el escritorio puede mostrar "
+"un indicador de micrófono."
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid "Follow the pointer"
+msgstr "Seguir el puntero"
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+#: integrations/plasma-tray/contents/ui/SceneControls.qml
+msgid ""
+"Only the latest pointer position over this screen reaches the scene; "
+"positions are never kept and keys are never read."
+msgstr ""
+"A la escena solo le llega la última posición del puntero sobre esta "
+"pantalla; las posiciones nunca se guardan y las teclas nunca se leen."
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+#, kde-format
+msgid "The scene %1 asks for your permission:"
+msgstr "La escena %1 te pide permiso:"
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+msgid "Allow"
+msgstr "Permitir"
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+msgid "Not now"
+msgstr "Ahora no"
 
 #: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
@@ -80,6 +123,12 @@ msgstr "Extender"
 
 #: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
+msgctxt "@option:check frames per second"
+msgid "Match the display"
+msgstr "Igual que la pantalla"
+
+#: integrations/plasma-tray/contents/ui/Daemon.qml
+#, kde-format
 msgctxt "@item:inlistbox wallpaper transition"
 msgid "Fade"
 msgstr "Fundido"
@@ -136,6 +185,18 @@ msgid "Scene settings"
 msgstr "Ajustes de la escena"
 
 #: integrations/plasma-tray/contents/ui/OutputRow.qml
+msgid "Unmute"
+msgstr "Activar el sonido"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+msgid "Mute"
+msgstr "Silenciar"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
+msgid "Another screen plays the sound of this scene"
+msgstr "Otra pantalla reproduce el sonido de esta escena"
+
+#: integrations/plasma-tray/contents/ui/OutputRow.qml
 msgid "Unfavorite"
 msgstr "Quitar de favoritos"
 
@@ -176,32 +237,6 @@ msgstr "Recargar la configuración"
 #, kde-format
 msgid "Open wallpaper-rs"
 msgstr "Abrir wallpaper-rs"
-
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
-msgid "Follow the sound that plays"
-msgstr "Seguir el sonido que se reproduce"
-
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
-msgid ""
-"The sound is turned into levels on this computer while the scene is shown; "
-"nothing is recorded, kept or sent, and the desktop may show a microphone "
-"indicator."
-msgstr ""
-"Mientras se muestra la escena, el sonido se convierte en niveles en este "
-"equipo; no se graba, no se guarda ni se envía, y el escritorio puede mostrar "
-"un indicador de micrófono."
-
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
-msgid "Follow the pointer"
-msgstr "Seguir el puntero"
-
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
-msgid ""
-"Only the latest pointer position over this screen reaches the scene; "
-"positions are never kept and keys are never read."
-msgstr ""
-"A la escena solo le llega la última posición del puntero sobre esta "
-"pantalla; las posiciones nunca se guardan y las teclas nunca se leen."
 
 #: integrations/plasma-tray/contents/ui/SceneControls.qml
 msgid "Presets"

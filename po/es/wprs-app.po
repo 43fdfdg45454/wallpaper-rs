@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 00:00+0000\n"
+"POT-Creation-Date: 2026-10-23 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -527,6 +527,44 @@ msgstr "Actualizar"
 #: apps/wprs-app/qml/Browse.qml
 msgid "Install"
 msgstr "Instalar"
+
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid "Follow the sound that plays"
+msgstr "Seguir el sonido que se reproduce"
+
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid ""
+"The sound is turned into levels on this computer while the scene is shown; "
+"nothing is recorded, kept or sent, and the desktop may show a microphone "
+"indicator."
+msgstr ""
+"Mientras se muestra la escena, el sonido se convierte en niveles en este "
+"equipo; no se graba, no se guarda ni se envía, y el escritorio puede mostrar "
+"un indicador de micrófono."
+
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid "Follow the pointer"
+msgstr "Seguir el puntero"
+
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid ""
+"Only the latest pointer position over this screen reaches the scene; "
+"positions are never kept and keys are never read."
+msgstr ""
+"A la escena solo le llega la última posición del puntero sobre esta "
+"pantalla; las posiciones nunca se guardan y las teclas nunca se leen."
+
+#: apps/wprs-app/qml/Consent.qml
+msgid "The scene %1 asks for your permission:"
+msgstr "La escena %1 te pide permiso:"
+
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/Main.qml
+msgid "Allow"
+msgstr "Permitir"
+
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/Main.qml
+msgid "Not now"
+msgstr "Ahora no"
 
 #: apps/wprs-app/qml/DepthDialog.qml
 msgid "Download the depth model?"
@@ -1171,6 +1209,10 @@ msgstr "Repositorios"
 msgid "Settings"
 msgstr "Ajustes"
 
+#: apps/wprs-app/qml/Main.qml
+msgid "Allow this scene?"
+msgstr "¿Permitir esta escena?"
+
 #: apps/wprs-app/qml/OutputRow.qml
 msgid "Every screen"
 msgstr "Todas las pantallas"
@@ -1203,6 +1245,18 @@ msgstr "Siguiente"
 #: apps/wprs-app/qml/OutputRow.qml
 msgid "Scene settings"
 msgstr "Ajustes de la escena"
+
+#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/StatusBar.qml
+msgid "Unmute"
+msgstr "Activar el sonido"
+
+#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/StatusBar.qml
+msgid "Mute"
+msgstr "Silenciar"
+
+#: apps/wprs-app/qml/OutputRow.qml
+msgid "Another screen plays the sound of this scene"
+msgstr "Otra pantalla reproduce el sonido de esta escena"
 
 #: apps/wprs-app/qml/OutputRow.qml
 msgid "Images and videos"
@@ -1508,32 +1562,6 @@ msgid "Also uninstall its packages"
 msgstr "Desinstalar también sus paquetes"
 
 #: apps/wprs-app/qml/SceneControls.qml
-msgid "Follow the sound that plays"
-msgstr "Seguir el sonido que se reproduce"
-
-#: apps/wprs-app/qml/SceneControls.qml
-msgid ""
-"The sound is turned into levels on this computer while the scene is shown; "
-"nothing is recorded, kept or sent, and the desktop may show a microphone "
-"indicator."
-msgstr ""
-"Mientras se muestra la escena, el sonido se convierte en niveles en este "
-"equipo; no se graba, no se guarda ni se envía, y el escritorio puede mostrar "
-"un indicador de micrófono."
-
-#: apps/wprs-app/qml/SceneControls.qml
-msgid "Follow the pointer"
-msgstr "Seguir el puntero"
-
-#: apps/wprs-app/qml/SceneControls.qml
-msgid ""
-"Only the latest pointer position over this screen reaches the scene; "
-"positions are never kept and keys are never read."
-msgstr ""
-"A la escena solo le llega la última posición del puntero sobre esta "
-"pantalla; las posiciones nunca se guardan y las teclas nunca se leen."
-
-#: apps/wprs-app/qml/SceneControls.qml
 msgid "Reset"
 msgstr "Restablecer"
 
@@ -1676,14 +1704,6 @@ msgstr "Reanudar"
 #: apps/wprs-app/qml/StatusBar.qml
 msgid "Pause"
 msgstr "Pausar"
-
-#: apps/wprs-app/qml/StatusBar.qml
-msgid "Unmute"
-msgstr "Activar el sonido"
-
-#: apps/wprs-app/qml/StatusBar.qml
-msgid "Mute"
-msgstr "Silenciar"
 
 #: apps/wprs-app/qml/StatusBar.qml
 msgid "Jobs: %1"
@@ -1912,6 +1932,10 @@ msgstr "En orden"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Shuffled"
 msgstr "Aleatorio"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Match the display"
+msgstr "Igual que la pantalla"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Fade"

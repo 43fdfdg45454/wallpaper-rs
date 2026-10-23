@@ -2,6 +2,7 @@ mod affine;
 mod animate;
 mod budget;
 mod chain;
+mod clip;
 mod content;
 mod cube;
 mod easing;
@@ -17,6 +18,7 @@ mod quality;
 mod resolve;
 mod rules;
 mod runtime;
+mod sound;
 mod timeline;
 mod uses;
 mod validate;
@@ -27,6 +29,7 @@ pub use affine::Affine;
 pub use animate::Animate;
 pub use budget::Budget;
 pub use chain::{CHAIN_ENTRY, effect_source, fusion};
+pub use clip::{Clip, MAX_SOUND_BYTES, MAX_SOUND_SECONDS, MAX_SOUND_TOTAL, playable};
 pub use content::{Align, EffectUse, Gradient, Mask, MaskChannel, Shape, Spectrum, SpectrumStyle, Stroke};
 pub use cube::{Lut, LutError, MAX_LUT_BYTES, MAX_LUT_SIZE, MAX_LUT_TOTAL};
 pub use easing::Ease;
@@ -46,6 +49,7 @@ pub use particles::{
 pub use props::{Choice, Control, Preset, Property, Text, Values, check_presets, effective};
 pub use quality::{Class, Quality, Tier};
 pub use runtime::Runtime;
+pub use sound::{MAX_SOUNDS, Sound, VOLUME, Voice};
 pub use timeline::{Key, Loop, Timeline, local, sample};
 pub use uses::Uses;
 pub use validate::Issue;
@@ -104,6 +108,7 @@ pub struct Canvas {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Clock {
+    #[serde(with = "wprs_core::settings::fps")]
     pub max_fps: u32,
     pub poster_time: f32,
     pub seed: u64,

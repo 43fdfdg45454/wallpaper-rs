@@ -6026,6 +6026,7 @@ dependencies = [
 name = "wprs-pipewire"
 version = "0.3.0"
 dependencies = [
+ "libc",
  "pipewire",
  "rustix",
  "thiserror 2.0.21",
@@ -6056,11 +6057,13 @@ name = "wprs-render"
 version = "0.3.0"
 dependencies = [
  "ab_glyph",
+ "ash",
  "bytemuck",
  "fontdb",
  "half",
  "image",
  "pollster",
+ "rustix",
  "serde_json",
  "tempfile",
  "thiserror 2.0.21",
@@ -6168,8 +6171,10 @@ dependencies = [
  "gstreamer",
  "gstreamer-app",
  "gstreamer-video",
+ "tempfile",
  "thiserror 2.0.21",
  "tracing",
+ "wprs-scene",
 ]
 
 [[package]]

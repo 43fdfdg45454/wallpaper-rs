@@ -3,6 +3,7 @@ use super::output::{Output, Raised, Shown, Sink};
 use super::power::Power;
 use super::scene::SceneState;
 use super::slot::PlayerSlot;
+use super::speakers::Speaker;
 use super::surface::Screen;
 use super::{Command, Content, OutputStatus, Picture, Settings, Spec};
 use image::RgbaImage;
@@ -28,6 +29,8 @@ pub(super) struct State {
     pub(super) windows: HashMap<String, Window>,
     pub(super) motion: Motion,
     pub(super) power: Power,
+    pub(super) speakers: BTreeMap<PathBuf, Speaker>,
+    pub(super) locked: bool,
 }
 
 impl State {
@@ -42,7 +45,22 @@ impl State {
         let (on_status, motion) = (Box::new(|_| {}), Motion::new(renderer.software()));
         let tier = wprs_scene::Tier::detect(renderer.software(), renderer.discrete());
         let power = Power { tier, on_battery: false, max_fps: settings.max_fps };
-        Self { renderer, exporter, settings, outputs, players, tx, status, on_status, windows, motion, power }
+        let (speakers, locked) = (BTreeMap::new(), false);
+        Self {
+            renderer,
+            exporter,
+            settings,
+            outputs,
+            players,
+            tx,
+            status,
+            on_status,
+            windows,
+            motion,
+            power,
+            speakers,
+            locked,
+        }
     }
 
     pub(super) fn run(&mut self, rx: &mpsc::Receiver<Command>) {
@@ -79,6 +97,7 @@ impl State {
             self.check_starvation();
             self.move_reliefs();
             self.render_due();
+            self.sync_sounds();
             self.publish_status();
         }
     }
@@ -94,7 +113,8 @@ impl State {
             Command::Attach(output, window) => self.attach(output, window),
             Command::Frame(output) => self.frame_done(&output),
             Command::Repaint(output) => self.repaint(&output),
-            Command::SetActive(output, active) => {
+            Command::SetActive(output, active, covered) => {
+                self.outputs.get_mut(&output).into_iter().for_each(|o| o.covered = covered);
                 if let Some(o) = self.outputs.get_mut(&output).filter(|o| o.active != active) {
                     o.active = active;
                     o.shown.scene.iter_mut().filter(|_| !active).for_each(SceneState::pause);
@@ -108,6 +128,10 @@ impl State {
                 self.power.on_battery = on_battery;
                 self.outputs.values_mut().filter(|o| o.shown.scene.is_some()).for_each(|o| o.dirty = true);
             }
+            Command::Locked(locked) => {
+                self.locked = locked;
+                self.hush();
+            }
             Command::Wake => {}
             Command::Quit => return false,
         }
@@ -117,6 +141,7 @@ impl State {
     fn configure(&mut self, name: String, size: (u32, u32), mut spec: Spec) {
         let slot = spec.content.video().and_then(|path| self.players.get_mut(path));
         slot.into_iter().for_each(|slot| slot.revive(Instant::now()));
+        self.outputs.get_mut(&name).into_iter().for_each(|o| o.refresh = spec.refresh);
         let mut current = self.outputs.get_mut(&name).filter(|o| o.size == size);
         if current.as_ref().is_some_and(|o| o.shown.matches(&spec)) {
             return;
@@ -144,8 +169,8 @@ impl State {
             _ => kept,
         }
         .map_or((None, None, None), |(image, uv, relief)| (Some(image), Some(uv), relief));
-        let (content, fit, background, transition) =
-            (spec.content, spec.fit, spec.background, spec.transition);
+        let (content, fit, background, transition, refresh) =
+            (spec.content, spec.fit, spec.background, spec.transition, spec.refresh);
         let scene = match &content {
             Content::Scene(s) => Some(SceneState::new(s.clone(), self.power)),
             _ => None,
@@ -158,7 +183,7 @@ impl State {
             None => {
                 let sink =
                     self.windows.remove(&name).map_or(Sink::Stream(None), |w| Sink::Surface(Screen::new(w)));
-                self.outputs.insert(name.clone(), Output::new(size, shown, sink));
+                self.outputs.insert(name.clone(), Output::new(size, shown, sink, refresh));
             }
         }
         self.follow(&name);
@@ -203,12 +228,15 @@ impl State {
         if old.software_parallax != settings.software_parallax && self.motion.software {
             self.restill();
         }
-        let players: Vec<_> = self.players.values().filter_map(|s| s.player.as_ref()).collect();
-        players.iter().for_each(|p| p.set_volume(settings.volume, settings.muted));
-        let needs_audio =
-            !settings.muted && settings.volume > 0.0 && players.iter().any(|p| !p.audio_enabled());
-        if old.max_fps != settings.max_fps || needs_audio {
+        self.hush();
+        let mut players = self.players.values().filter_map(|s| s.player.as_ref());
+        if !settings.muted && settings.volume > 0.0 && players.any(|p| !p.audio_enabled()) {
             self.players.clear();
         }
+    }
+
+    fn hush(&self) {
+        let (volume, muted) = (self.settings.volume, self.settings.muted || self.locked);
+        self.players.values().filter_map(|s| s.player.as_ref()).for_each(|p| p.set_volume(volume, muted));
     }
 }

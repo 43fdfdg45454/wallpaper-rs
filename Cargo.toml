@@ -83,6 +83,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signal", "time"] }
 zbus = { version = "6", default-features = false, features = ["tokio", "service", "proxy"] }
 wgpu = "30"
+ash = "0.38"
 naga = { version = "30", features = ["wgsl-in"] }
 pollster = "1"
 bytemuck = { version = "1", features = ["derive"] }

@@ -1,7 +1,7 @@
 {
   "schema": "wallpaper-rs.scene/1",
   "canvas": { "size": [1920, 1080], "fit": "fill", "background": "#050716" },
-  "clock": { "max_fps": 30 },
+  "clock": { "max_fps": "display" },
   "scripts": [{ "path": "scripts/orbits.js" }],
   "layers": [
     { "id": "space", "type": "shape", "shape": { "rect": { "size": [1920, 1080] } },

@@ -61,6 +61,7 @@ QtObject {
             "span": App.tr("Span"),
             "sequential": App.tr("In order"),
             "shuffle": App.tr("Shuffled"),
+            "display": App.tr("Match the display"),
             "fade": App.tr("Fade"),
             "none": App.tr("None"),
             "image": App.tr("Image"),

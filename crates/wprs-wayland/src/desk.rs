@@ -1,11 +1,11 @@
 use crate::Sink;
+use crate::monitors::Monitor;
 use crate::scale::UNIT;
 use crate::window::{Display, Native};
 use crate::x11::{Rect, X11};
 use raw_window_handle::{HandleError, WindowHandle, XcbWindowHandle};
 use std::num::NonZeroU32;
 use std::sync::Arc;
-use std::time::Duration;
 use x11rb::connection::Connection as _;
 use x11rb::errors::ReplyOrIdError;
 use x11rb::properties::{WmSizeHints, WmSizeHintsSpecification::UserSpecified};
@@ -68,21 +68,16 @@ impl Desk {
         Ok(self.x.conn.flush()?)
     }
 
-    pub(crate) fn window(
-        self: &Arc<Self>,
-        name: &str,
-        area: Rect,
-        mm: (u32, u32),
-        sink: Sink,
-    ) -> crate::Window {
+    pub(crate) fn window(self: &Arc<Self>, monitor: &Monitor, sink: Sink) -> crate::Window {
+        let Monitor { name, area, mm, refresh } = monitor.clone();
         crate::Window {
             native: Native::X11(self.clone()),
             server: Display::X11(self.x.clone()),
             sink,
-            name: name.into(),
+            name,
             logical: (area.width, area.height),
             scale: UNIT,
-            refresh: Duration::from_micros(16_667),
+            refresh,
             position: (area.x, area.y),
             mm,
             identity: String::new(),

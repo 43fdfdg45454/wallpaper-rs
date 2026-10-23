@@ -130,6 +130,7 @@
     <string name="react_touch">React to touch</string>
     <string name="microphone_needed">Reacting to sound needs the microphone permission</string>
     <string name="scripts_off">The scripts of this scene do not run on the phone</string>
+    <string name="sounds_off">The sounds of this scene do not play on the phone</string>
     <string name="presets">Presets</string>
     <string name="reset">Reset</string>
     <string name="not_on_phone">%1$s: not available on the phone</string>

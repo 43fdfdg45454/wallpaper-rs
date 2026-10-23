@@ -75,8 +75,10 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Lib(command) => library::run(client, command).await?,
         Command::Preset(command) => profiles::preset(client, command).await?,
         Command::Playlist(command) => playlists::run(client, command).await?,
-        Command::Next(out) => client.playlists.next(&out.output).await?,
-        Command::Prev(out) => client.playlists.previous(&out.output).await?,
+        Command::Next(out) => inputs::asking(client, &out.output, client.playlists.next(&out.output)).await?,
+        Command::Prev(out) => {
+            inputs::asking(client, &out.output, client.playlists.previous(&out.output)).await?
+        }
         Command::Profile(command) => profiles::run(client, command).await?,
         Command::Provider(command) => providers::run(client, command).await?,
         Command::Remote(command) => remote::run(client, command).await?,

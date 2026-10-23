@@ -108,6 +108,7 @@ impl Daemon {
 
     pub fn set_locked(&self, locked: bool) {
         self.state().locked = locked;
+        self.compositor.set_locked(locked);
         tracing::debug!(locked, "screen lock changed");
         self.apply_activity();
         self.changes.changed("state", Vec::new());
@@ -118,6 +119,8 @@ impl Daemon {
     }
 
     pub(crate) fn activity(&self, st: &State) {
-        st.outputs.iter().for_each(|(name, info)| self.compositor.set_active(name, st.active(info)));
+        for (name, info) in &st.outputs {
+            self.compositor.set_active(name, st.active(info), info.covered());
+        }
     }
 }

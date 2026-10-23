@@ -66,13 +66,13 @@ impl Daemon {
     fn surface_event(&self, covers: &mut HashMap<String, u8>, event: Event) {
         let result = match event {
             Event::Output(output, window) => {
-                let (size, screen) = (window.size(), crate::edits::screen_of(&window));
+                let (size, screen, refresh) = (window.size(), crate::edits::screen_of(&window), window.hz());
                 crate::inputs::window(&output, Some(window.clone()));
                 self.compositor.attach(&output, window);
                 {
                     let mut st = self.state();
                     let info = st.outputs.entry(output.clone()).or_default();
-                    (info.size, info.screen) = (size, Some(screen));
+                    (info.size, info.screen, info.refresh) = (size, Some(screen), refresh);
                     info.claims.entry(SURFACE.into()).or_default();
                 }
                 self.configure_all();

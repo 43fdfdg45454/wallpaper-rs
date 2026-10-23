@@ -221,7 +221,7 @@ fn properties_check_and_clamp_values() {
         (&json!(0.9), &json!(false), &json!("night"))
     );
     let tier = Tier::detect(true, false);
-    assert_eq!((tier, tier.max_fps(true), tier.quality(false)), (Tier::T0, 15, Quality::Q0));
+    assert_eq!((tier, tier.max_fps(true, 60, None), tier.quality(false)), (Tier::T0, 15, Quality::Q0));
     let sample = Scene::from_json(include_str!("sample.json")).unwrap();
     assert!(sample.cost(Quality::Q0) < sample.cost(Quality::Q3));
     assert_eq!(Quality::fit(&sample, Tier::T3, Quality::Q3), Quality::Q3);

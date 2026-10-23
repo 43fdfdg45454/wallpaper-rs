@@ -16,6 +16,10 @@ fn grants_path(daemon: &Daemon) -> PathBuf {
     daemon.store.data.join("inputs.json")
 }
 
+pub(crate) fn declined_path(grants: &Path) -> PathBuf {
+    grants.with_file_name("inputs-declined.json")
+}
+
 pub(crate) fn load(path: &Path) -> Grants {
     let Ok(bytes) = std::fs::read(path) else { return Grants::new() };
     serde_json::from_slice(&bytes).unwrap_or_else(|e| {
@@ -39,7 +43,8 @@ pub(crate) fn scene_id(scene: &str) -> Result<&str> {
 }
 
 pub(crate) fn start(daemon: &Arc<Daemon>, connection: zbus::Connection) {
-    crate::inputs::start(daemon, connection, load(&grants_path(daemon)));
+    let path = grants_path(daemon);
+    crate::inputs::start(daemon, connection, (load(&path), load(&declined_path(&path))));
 }
 
 impl Daemon {
@@ -85,8 +90,8 @@ impl Inputs {
         let (serial, tracking) = (d.changes.serial(), *hub.tracking.borrow());
         let control = lock(&hub.control);
         let (grants, shown, capturing) = (control.grants.clone(), control.shown.clone(), control.capturing);
-        let parallax = control.parallax.clone();
-        reply(InputsReply { model: MODEL, serial, capturing, tracking, grants, shown, parallax })
+        let (parallax, declined) = (control.parallax.clone(), control.declined.clone());
+        reply(InputsReply { model: MODEL, serial, capturing, tracking, grants, shown, parallax, declined })
     }
 
     async fn set_pointer(&self, x: i32, y: i32) -> Result<()> {

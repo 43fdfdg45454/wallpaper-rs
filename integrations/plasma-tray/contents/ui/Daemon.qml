@@ -5,6 +5,8 @@ QtObject {
     id: daemon
 
     property var current: ({})
+    property var inputs: ({})
+    readonly property var state: current
     property var schema: ({})
     property var playlists: []
     property var profiles: []
@@ -26,6 +28,7 @@ QtObject {
             "center": i18nc("@item:inlistbox wallpaper fit mode", "Center"),
             "tile": i18nc("@item:inlistbox wallpaper fit mode", "Tile"),
             "span": i18nc("@item:inlistbox wallpaper fit mode", "Span"),
+            "display": i18nc("@option:check frames per second", "Match the display"),
             "fade": i18nc("@item:inlistbox wallpaper transition", "Fade"),
             "none": i18nc("@item:inlistbox wallpaper transition", "None")
         })
@@ -42,6 +45,7 @@ QtObject {
             "Daemon1.ResetSceneProperties": "(s)",
             "Inputs1.Grant": "(ss)",
             "Inputs1.Revoke": "(ss)",
+            "Inputs1.GetInputs": "()",
             "Library1.Thumbnail": "(su)",
             "Library1.GetItem": "(s)",
             "Library1.SetFavorite": "(asb)",
@@ -91,6 +95,8 @@ QtObject {
             query("List", [], "Playlists1", reply => daemon.playlists = reply.playlists ?? []);
         if (!topic || topic === "profiles")
             query("List", [], "Profiles1", reply => daemon.profiles = reply.profiles ?? []);
+        if (!topic || topic === "inputs" || topic === "state")
+            query("GetInputs", [], "Inputs1", reply => daemon.inputs = reply);
     }
 
     function openApp() {

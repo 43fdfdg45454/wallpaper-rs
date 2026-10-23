@@ -1,11 +1,11 @@
 use crate::validate::{extension, within};
 use crate::{Error, FileEntry, Kind, Limits, MANIFEST, Manifest, Result, check_path, ensure, validate};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File, FileType, OpenOptions};
 use std::io::{self, BufReader, Read, Seek, Write};
 use std::path::Path;
 use std::sync::Arc;
-use wprs_scene::{Lut, MAX_LUT_BYTES, MAX_LUT_TOTAL, Scene};
+use wprs_scene::{Clip, Lut, MAX_LUT_BYTES, MAX_LUT_TOTAL, MAX_SOUND_BYTES, MAX_SOUND_TOTAL, Scene};
 use zip::{CompressionMethod, ZipArchive};
 
 const MAX_MANIFEST: u64 = 1 << 20;
@@ -64,7 +64,24 @@ impl<R: Read + Seek> Package<R> {
         let scene = Scene::load(&text, &self.manifest.properties).map_err(|e| invalid(e.to_string()))?;
         let missing =
             scene.paths().into_iter().find(|p| !self.entries.iter().any(|e| e.path == *p)).map(String::from);
-        missing.map_or(Ok(scene), |path| Err(Error::Missing(path)))
+        missing.map_or(Ok(()), |path| Err(Error::Missing(path)))?;
+        self.sounds(&scene)?;
+        Ok(scene)
+    }
+
+    fn sounds(&mut self, scene: &Scene) -> Result<()> {
+        let paths: BTreeSet<&str> =
+            scene.sounds().filter_map(|s| scene.assets.get(&s.sound)).map(|a| a.path.as_str()).collect();
+        let mut total = 0.0;
+        for path in paths {
+            let size = self.entries.iter().find(|e| e.path == path).map_or(0, |e| e.size);
+            within("sound size", size, MAX_SOUND_BYTES)?;
+            let clip = Clip::probe(&self.read_file(path)?)
+                .map_err(|reason| Error::Invalid { field: path.into(), reason })?;
+            total += clip.seconds;
+            within("length of the sounds in seconds", total.ceil() as u64, MAX_SOUND_TOTAL as u64)?;
+        }
+        Ok(())
     }
 
     pub fn luts(&mut self, scene: &Scene) -> Result<Vec<(String, Arc<Lut>)>> {

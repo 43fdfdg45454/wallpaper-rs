@@ -16,6 +16,8 @@ RowLayout {
     readonly property var credit: info.credit ?? null
     readonly property var fits: daemon.schema.fits ?? ["fill", "fit", "stretch", "center", "tile"]
     readonly property bool scene: info.kind === "scene"
+    readonly property string sound: info.sound ?? ""
+    readonly property bool muted: daemon.state?.muted === true
     property string thumb
     property bool favorite
 
@@ -57,6 +59,16 @@ RowLayout {
 
         interval: 1000
         onTriggered: row.load()
+    }
+
+    Timer {
+        id: debounce
+
+        interval: 200
+        onTriggered: {
+            row.daemon.act("SetVolume", [loudness.value]);
+            row.daemon.act("SetMuted", [false]);
+        }
     }
 
     Rectangle {
@@ -163,6 +175,26 @@ RowLayout {
                 checked: row.daemon.checking === true
                 icon.name: "configure"
                 text: row.daemon.tr("Scene settings")
+            }
+
+            QQC2.ToolButton {
+                visible: row.sound !== ""
+                icon.name: row.muted ? "audio-volume-muted" : "audio-volume-high"
+                text: row.muted ? row.daemon.tr("Unmute") : row.daemon.tr("Mute")
+                display: QQC2.AbstractButton.IconOnly
+                QQC2.ToolTip.text: row.sound === "elsewhere" ? row.daemon.tr("Another screen plays the sound of this scene") : text
+                QQC2.ToolTip.visible: hovered
+                onClicked: row.daemon.act("SetMuted", [!row.muted])
+            }
+
+            QQC2.Slider {
+                id: loudness
+
+                visible: row.sound !== ""
+                from: 0
+                to: 1
+                value: row.daemon.state?.volume ?? 0
+                onMoved: debounce.restart()
             }
 
             QQC2.ToolButton {

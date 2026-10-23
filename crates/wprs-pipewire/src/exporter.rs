@@ -1,5 +1,5 @@
-use crate::shared::lock;
-use crate::{Command, Error, Exporter, Reply, StreamInfo, VideoFrame};
+use crate::shared::{Slot, lock};
+use crate::{Allocate, Command, Error, Exporter, Grant, Lease, Reply, StreamInfo, VideoFrame};
 use std::sync::Arc;
 use std::sync::atomic::Ordering::SeqCst;
 
@@ -27,6 +27,53 @@ impl Exporter {
         self.wake(self.shared.with_slot(output, |slot| slot.write(&frame)))
     }
 
+    pub fn use_dmabuf(&self, gpu: Arc<dyn Allocate>) {
+        let _ = self.shared.gpu.set(gpu);
+    }
+
+    pub fn lease(&self, output: &str) -> Grant {
+        let Some(slot) = self.shared.slot(output) else { return Grant::Copy };
+        let mut pool = lock(&slot.pool);
+        if !pool.active {
+            return Grant::Copy;
+        }
+        let lease = pool.lease(&slot);
+        drop(pool);
+        lease.map_or_else(
+            || {
+                slot.dirty.store(true, SeqCst);
+                let _ = self.wake(Some(slot.streaming.load(SeqCst)));
+                Grant::Wait
+            },
+            Grant::Buffer,
+        )
+    }
+
+    pub fn present(&self, mut lease: Lease) -> Result<(), Error> {
+        let slot = lease.slot();
+        lease.shown = true;
+        drop(lease);
+        slot.dirty.store(true, SeqCst);
+        self.wake(Some(slot.streaming.load(SeqCst)))
+    }
+
+    pub fn starved(&self, output: &str) -> bool {
+        let starved = |s: &Slot| {
+            let pool = lock(&s.pool);
+            s.streaming.load(SeqCst) && (pool.starved() || !pool.active && s.frame().is_none())
+        };
+        self.shared.with_slot(output, starved).unwrap_or(false)
+    }
+
+    pub fn buffers(&self, output: &str) -> &'static str {
+        let kind = |s: &Slot| match (s.streaming.load(SeqCst), lock(&s.pool).active) {
+            (false, _) => "",
+            (true, true) => "dmabuf",
+            (true, false) => "memfd",
+        };
+        self.shared.with_slot(output, kind).unwrap_or("")
+    }
+
     pub fn is_streaming(&self, output: &str) -> bool {
         self.shared.with_slot(output, |slot| slot.streaming.load(SeqCst)).unwrap_or(false)
     }
@@ -37,6 +84,10 @@ impl Exporter {
 
     pub fn generation(&self) -> u64 {
         self.shared.generation.load(SeqCst)
+    }
+
+    pub fn recreated(&self) -> Vec<String> {
+        std::mem::take(&mut lock(&self.shared.recreated))
     }
 
     pub fn on_change(&self, notify: impl Fn() + Send + Sync + 'static) -> Result<(), Error> {
@@ -102,5 +153,27 @@ mod tests {
         }
         assert_eq!(ALLOCATIONS.with(Cell::get), before);
         assert!(exporter.write_frame("A", VideoFrame { stride: 8, ..padded() }).is_err());
+    }
+
+    #[test]
+    fn gpu_buffers_are_leased_once_and_presented_for_the_next_cycle() {
+        let (tx, _rx) = pipewire::channel::channel();
+        let exporter = Exporter { tx, shared: Arc::new(Shared::default()), thread: None };
+        let slot = exporter.shared.insert("A");
+        slot.streaming.store(true, SeqCst);
+        assert!(matches!(exporter.lease("A"), Grant::Copy));
+        assert!(exporter.starved("A") && exporter.buffers("A") == "memfd");
+        let mut raw: [pipewire::sys::pw_buffer; 2] = unsafe { std::mem::zeroed() };
+        for buffer in &mut raw {
+            let mut pool = lock(&slot.pool);
+            let index = pool.insert(Arc::new(()), buffer);
+            pool.returned(index);
+        }
+        let leases = [exporter.lease("A"), exporter.lease("A")];
+        assert!(matches!(exporter.lease("A"), Grant::Wait));
+        let [Grant::Buffer(first), Grant::Buffer(_)] = leases else { panic!("two GPU buffers") };
+        slot.dirty.store(false, SeqCst);
+        exporter.present(first).unwrap();
+        assert!(slot.dirty.load(SeqCst) && !exporter.starved("A") && exporter.buffers("A") == "dmabuf");
     }
 }

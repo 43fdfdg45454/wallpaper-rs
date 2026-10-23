@@ -1,22 +1,15 @@
-use crate::bus::watch_bus;
+use crate::bus::Pipe;
 use crate::{Error, Event, Options, Sink, local_uri, make, pipewire, video_sink};
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
-use std::time::Duration;
-
-const STOP_WAIT: Duration = Duration::from_secs(2);
 
 pub struct Player {
-    playbin: gst::Element,
+    pipe: Pipe,
     size: gst::Element,
+    rate: gst::Element,
     audio: bool,
-    playing: Arc<AtomicBool>,
-    stop: Arc<AtomicBool>,
-    stopped: Receiver<()>,
 }
 
 impl Player {
@@ -36,7 +29,7 @@ impl Player {
         playbin.set_property("mute", options.muted);
         let piped = audio.then(pipewire::sink).flatten();
         piped.iter().for_each(|sink| playbin.set_property("audio-sink", sink));
-        let (video_sink, size) = video_sink::build(options, sink.clone())?;
+        let (video_sink, size, rate) = video_sink::build(options, sink.clone())?;
         playbin.set_property("video-sink", &video_sink);
         let again = uri.clone();
         if !audio {
@@ -47,62 +40,32 @@ impl Player {
                 None
             });
         }
-        let (stop, playing) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(true)));
-        let bus = playbin.bus().expect("playbin has a bus");
-        let (weak_playbin, flags) = (playbin.downgrade(), (stop.clone(), playing.clone()));
-        let (done, stopped) = mpsc::channel::<()>();
-        std::thread::Builder::new()
-            .name("wprs-video-bus".into())
-            .spawn(move || {
-                let _done = done;
-                watch_bus(&bus, (&weak_playbin, uri), &flags.0, &flags.1, &*sink);
-            })
-            .map_err(Error::state)?;
-        let player = Self { playbin, size, audio, playing, stop, stopped };
-        match player.playbin.set_state(gst::State::Paused) {
-            Err(_) if piped.is_some() => {}
-            started => drop(started.map_err(Error::state)?),
-        }
-        Ok(player)
+        let pipe = Pipe::start(playbin, uri, sink, piped.is_some())?;
+        Ok(Self { pipe, size, rate, audio })
     }
 
     pub fn set_playing(&self, playing: bool) {
-        self.playing.store(playing, Ordering::Relaxed);
-        self.wake();
+        self.pipe.set_playing(playing);
     }
 
     pub fn paused(&self) -> bool {
-        let (_, current, pending) = self.playbin.state(gst::ClockTime::ZERO);
-        current == gst::State::Paused && pending == gst::State::VoidPending
-    }
-
-    fn wake(&self) {
-        if let Some(bus) = self.playbin.bus() {
-            bus.set_flushing(false);
-            let _ = bus.post(gst::message::Application::new(gst::Structure::new_empty("wprs-wake")));
-        }
+        self.pipe.paused()
     }
 
     pub fn set_max_size(&self, max_size: (u32, u32)) {
         self.size.set_property("caps", video_sink::size_caps(max_size));
     }
 
+    pub fn set_max_fps(&self, max_fps: u32) {
+        video_sink::set_max_fps(&self.rate, max_fps);
+    }
+
     pub fn set_volume(&self, volume: f64, muted: bool) {
-        self.playbin.set_property("volume", volume.clamp(0.0, 1.0));
-        self.playbin.set_property("mute", muted);
+        self.pipe.playbin.set_property("volume", volume.clamp(0.0, 1.0));
+        self.pipe.playbin.set_property("mute", muted);
     }
 
     pub fn audio_enabled(&self) -> bool {
         self.audio
-    }
-}
-
-impl Drop for Player {
-    fn drop(&mut self) {
-        self.stop.store(true, Ordering::Relaxed);
-        self.wake();
-        if let Err(RecvTimeoutError::Timeout) = self.stopped.recv_timeout(STOP_WAIT) {
-            tracing::warn!("the video did not stop within {STOP_WAIT:?}, leaving it behind");
-        }
     }
 }

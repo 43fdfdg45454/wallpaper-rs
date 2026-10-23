@@ -35,6 +35,7 @@ pub(crate) async fn announce_streams(connection: zbus::Connection, daemon: Arc<D
         }
         waiting
             .extend(std::mem::take(&mut daemon.state().resized).into_iter().map(|(o, size)| (o, Some(size))));
+        waiting.extend(daemon.exporter.recreated().into_iter().map(|o| (o, None)));
         for (output, size) in std::mem::take(&mut waiting) {
             let info = daemon.exporter.stream_info(&output);
             match info.filter(|i| size.is_none_or(|s| (i.width, i.height) == s)) {
@@ -138,6 +139,10 @@ impl Daemon {
                 screen: info.screen.clone(),
                 parallax: s.parallax,
                 frames: s.frames,
+                refresh: st.refresh(name),
+                fps: s.fps,
+                buffers: self.exporter.buffers(name).into(),
+                sound: s.sound.into(),
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)

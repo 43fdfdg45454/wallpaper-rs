@@ -162,9 +162,10 @@ fn records() {
     let doc = |value: Value| Doc::stamp(None, Some(&view(value)), |_| false, &Hlc(1, 0, "a".into())).unwrap();
     let section = |name: &str| format!("settings/{}", ids.named("section", name));
     let mut replica = Replica::default();
-    replica
-        .bases
-        .insert(section("playback"), (1, doc(json!({ "playback.max_fps": 60, "playback.volume": 0.2 }))));
+    replica.bases.insert(
+        section("playback"),
+        (1, doc(json!({ "playback.max_fps": "display", "playback.volume": 0.2 }))),
+    );
     replica.bases.insert("settings/p".into(), (2, doc(json!({ "kind": "profile", "name": "Calm" }))));
     replica.bases.insert("repos/r".into(), (3, doc(json!({ "url": "https://example.org/repo" }))));
     let (mut links, mut kept) = (BTreeMap::new(), Kept::new());
@@ -176,11 +177,14 @@ fn records() {
         (echo("settings/p"), echo("repos/r"))
     );
     let playback = &local.views[&section("playback")];
-    assert_eq!((&playback["playback.max_fps"], playback.get("playback.muted")), (&json!(60), None));
+    assert_eq!((&playback["playback.max_fps"], playback.get("playback.muted")), (&json!("display"), None));
     let key = local.keys[&green].clone();
     let list = json!({ "name": "Shared", "r:order": "shuffle", "e:a-0": { "i": key, "p": 1.0 }, "e:b-0": { "i": "gone", "p": 2.0 } });
     let applied = vec![
-        (section("transition"), Some(view(json!({ "transition.duration_ms": 900, "playback.max_fps": 10 })))),
+        (
+            section("transition"),
+            Some(view(json!({ "transition.duration_ms": 900, "playback.max_fps": "display" }))),
+        ),
         (format!("library/{key}"), Some(view(json!({ "title": "Desk", "favorite": true, "t:sky": true })))),
         ("playlists/l".into(), Some(view(list))),
         ("settings/p".into(), Some(view(json!({ "kind": "profile", "name": "Calmer" })))),

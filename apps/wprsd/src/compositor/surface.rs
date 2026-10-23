@@ -118,7 +118,7 @@ impl State {
     }
 
     pub(super) fn paint_backdrops(&mut self, now: Instant) {
-        let steps = self.relief_limits().map(|(steps, _)| steps);
+        let steps = self.relief_limits();
         for output in self.outputs.values_mut() {
             let moved = steps.map(|steps| (output.offset, steps));
             if let Sink::Surface(screen) = &mut output.sink

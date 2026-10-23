@@ -51,6 +51,7 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
             Toggle(stringResource(R.string.react_touch), granted?.optBoolean("touch") == true) { grant("touch", it) }
         }
         if (form.optBoolean("scripts")) Text(stringResource(R.string.scripts_off), Modifier.padding(16.dp, 4.dp), style = small)
+        if (form.optBoolean("sounds")) Text(stringResource(R.string.sounds_off), Modifier.padding(16.dp, 4.dp), style = small)
         val presets = options(form.optJSONArray("presets"))
         if (presets.isNotEmpty()) Choices(stringResource(R.string.presets), presets, "") { preset ->
             main.act { ask("preset", "uid" to uid, "preset" to preset) }

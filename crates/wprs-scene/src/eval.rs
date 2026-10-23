@@ -68,7 +68,7 @@ pub(crate) fn walk<'a>(
     canvas: [f32; 2],
 ) {
     let none = LayerOverride::default();
-    for layer in layers {
+    for layer in layers.iter().filter(|l| !matches!(l.kind, Kind::Sound(_))) {
         let set = cx.script.layers.get(&layer.id).unwrap_or(&none);
         let outer = cx.wake.replace(Wake::Idle);
         let visible = set.visible.unwrap_or_else(|| layer.visible.get(cx));
@@ -204,6 +204,6 @@ fn content<'a>(cx: &Context, layer: &'a Layer, set: &LayerOverride, canvas: [f32
             Content::Solid { color: tint(color.get(cx)), size: size.unwrap_or(canvas) }
         }
         Kind::Particles { system } => Content::Particles { system },
-        Kind::Adjustment {} => Content::Adjustment,
+        Kind::Adjustment {} | Kind::Sound(_) => Content::Adjustment,
     }
 }
