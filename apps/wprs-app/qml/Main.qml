@@ -227,6 +227,8 @@ Kirigami.ApplicationWindow {
 
     Timer {
         property int step: 0
+        property var opened: null
+        property bool edited: false
 
         function keeps(page) {
             const shown = root.pageStack.currentItem;
@@ -240,17 +242,28 @@ Kirigami.ApplicationWindow {
         running: App.checking
         onTriggered: {
             const at = step++;
-            if (at > root.pages.length + 1) {
-                Qt.quit();
-                if (root.pageStack.currentItem.editor?.dirty !== true)
-                    throw new Error("the editor has no unsaved edits to keep");
-                return keeps("settings");
-            }
-            if (at === root.pages.length)
-                return App.query("GetItem", [""], "Library1", reply => App.edit(reply.item));
             if (at < root.pages.length) {
                 root.showPage(at);
                 keeps(root.names[at]);
+            } else if (at === root.pages.length) {
+                return App.query("GetItem", [""], "Library1", reply => {
+                    App.edit(reply.item);
+                    opened = root.pageStack.currentItem;
+                });
+            } else if (opened?.editor?.ready !== true || root.pageStack.currentItem !== opened) {
+                if (at < root.pages.length + 50)
+                    return;
+                stop();
+                Qt.quit();
+                throw new Error("the image editor did not open");
+            } else if (!edited) {
+                edited = true;
+            } else {
+                stop();
+                Qt.quit();
+                if (opened.editor.dirty !== true)
+                    throw new Error("the editor has no unsaved edits to keep");
+                return keeps("settings");
             }
             const page = root.pageStack.currentItem;
             if (page.exercise)

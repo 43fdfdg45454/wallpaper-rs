@@ -32,11 +32,11 @@ RowLayout {
         if (!item)
             return;
         daemon.query("GetItem", [item], "Library1", reply => {
-            if (row.item !== item)
+            if (!row || row.item !== item)
                 return;
             row.details = reply.item ?? {};
             daemon.query("Thumbnail", [item, 256], "Library1", answer => {
-                if (row.item === item)
+                if (row && row.item === item)
                     row.thumb = answer[0] ?? "";
             });
         });
