@@ -23,17 +23,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import java.text.NumberFormat
-import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 
 @Composable
 fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
-    val languages = listOf(Locale.getDefault().toLanguageTag().replace('-', '_'))
+    val languages = listOf(LocalLocale.current.toLanguageTag().replace('-', '_'))
     val form by loaded(JSONObject(), uid, main.revision.intValue) {
         ask("scene", "uid" to uid, "languages" to languages) as JSONObject
     }
