@@ -90,9 +90,10 @@ qué permitir a una escena que lo pide. Todo lo demás está en la app: *Abrir w
 *Ajustes…* la abre directamente en su página *Ajustes*, con el modo de ajuste, el color de fondo y
 la lista de cada pantalla o de todas a la vez, los ajustes de cada escena, los fotogramas por
 segundo, las pausas y las transiciones. Lo mismo hace `wprs-app --page settings` (o la acción
-*Ajustes* del lanzador); `--page` acepta también `library`, `playlists`, `profiles`, `providers`,
-`repos` y `account`. Si la app ya está abierta, pasa a esa página, salvo que el editor de imágenes
-tenga cambios sin guardar: entonces solo se muestra la ventana.
+*Ajustes* del lanzador); `--page` acepta también `library`, `scenes`, `playlists`, `profiles`,
+`providers`, `repos` y `account`. Si la app ya está abierta, pasa a esa página, salvo que el editor
+de imágenes o el de escenas tenga cambios sin guardar: entonces solo se muestra la ventana y el
+editor sigue abierto.
 
 Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good y el de
 PipeWire, que lleva el sonido de los vídeos y de las escenas desde su versión 1.2; sin él o con uno
@@ -652,6 +653,92 @@ bloqueada, y una escena que se ve en varias pantallas suena en una sola. `instal
 `wallpaper-rs-examples` y el Flatpak las incluye. Aparecen en la biblioteca y, si se quitan de
 ella, no vuelven.
 
+## Editor de escenas
+
+La página *Escenas* de la app crea una escena a partir de un punto de partida (vacía, partículas,
+paralaje por capas o reloj de texto), abre una carpeta de escena o edita una copia de una escena de
+la biblioteca, en una carpeta nueva dentro de la de documentos (`wallpaper-rs/<título>`) o en la
+que elijas. Una escena en edición es una carpeta con `manifest.json`, `scene.json` y sus recursos
+en `assets/`: el editor no tiene un formato propio y cambia los mismos archivos que lee el motor.
+Las escenas nuevas usan la segunda versión del manifiesto y nacen válidas: para todos los públicos,
+sin destellos, obra original y con las entradas que ya usan declaradas, hasta que cambies esos
+datos. `wprs-app --page scenes` abre esa página y, como con el editor de imágenes, una petición de
+otra página no cierra un editor con cambios sin guardar.
+
+- **Capas**: un árbol con todos los tipos de capa (imagen, vídeo, texto, forma, color, espectro,
+  partículas, sonido, grupo y ajuste) para añadir, quitar, duplicar, subir y bajar, agrupar (Ctrl y
+  clic eligen varias), meter en un grupo o sacar de él, ocultar (o silenciar un sonido), bloquear
+  y dejar *solo* una capa en la vista previa.
+- **Lienzo**: la vista previa la dibuja el propio daemon en una salida virtual que llega por
+  PipeWire, como el fondo de Plasma, así que necesita el módulo QML de KPipeWire. Ctrl y la rueda
+  amplían, la rueda o un arrastre con el botón central o el derecho desplazan, y la capa elegida se
+  mueve, gira y escala con sus asas. Las guías marcan lo que se ve en pantallas 16:9, 21:9, 32:9,
+  4:3, 16:10 y 9:16. *Ver en el escritorio* lleva la escena sin guardar a todas las pantallas
+  sin aplicarla; se quita al desactivarlo o al cerrar el editor, y como mucho un minuto después si
+  la app se cierra de golpe.
+- **Inspector**: se genera a partir del esquema JSON de las escenas (`wprs-ctl scene schema`), así
+  que los campos nuevos del formato aparecen solos: números con deslizador y unidad, colores,
+  opciones, vectores, curvas, recursos, efectos con sus parámetros y la vuelta al valor por
+  defecto de cada campo opcional. El rombo de cada valor animable pone o quita un fotograma clave
+  en el instante actual o lo enlaza a una propiedad de usuario, al sonido o al puntero, y *Editar
+  el origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace.
+- **Línea de tiempo**: reproducir, pausar y mover el cabezal (la vista previa se queda en ese
+  instante), una pista por valor animado con sus fotogramas clave, la interpolación de cada uno y
+  la línea de tiempo que la mueve, y la lista de líneas de tiempo para crearlas y editarlas.
+- **Paquete**: *Detalles del paquete* lleva el manifiesto al inspector, que también se genera a
+  partir de su esquema (`wprs-ctl scene schema --manifest`): título, descripción y notas de esta
+  versión en cada idioma (*Traducir* añade uno a partir del texto del idioma por defecto sin tocar
+  los que ya hay, y los textos `@clave` se escriben en `strings`), versión, id, autores, licencia,
+  clasificación (para todos o para adultos, con sus motivos), si destella, origen y obras de las que
+  procede, créditos por archivo, miniatura y vista previa animada (*Elegir…* copia la imagen a
+  `assets/` y reduce la miniatura si pasa de 1024 píxeles o de 1 MiB), enlaces, etiquetas, idioma
+  por defecto y las entradas que puede pedir. Las entradas que usa la escena se marcan solas y no se
+  pueden quitar, y `requires.features` se calcula en cada cambio como en `wprs-ctl pack build`:
+  nunca se escribe a mano; las entradas que añadió el editor se van cuando nada las usa. Una escena
+  nueva toma como idioma por defecto el del escritorio. Un manifiesto de la primera versión ofrece
+  *Actualizar*, que hace lo mismo que `wprs-ctl pack upgrade` (fija el idioma por defecto y cambia
+  `velocidad-nieve` por `velocidad_nieve` también en la escena) pero no adivina la clasificación,
+  los destellos ni el origen: quedan juntos en *Problemas* hasta que los eliges. Debajo, en
+  *Propiedades de usuario*, se añaden, ordenan y quitan, y se edita su tipo, etiqueta en cada
+  idioma, valor por defecto, rango y condición (`visible_if`).
+- **Recursos**: importa imágenes, vídeos, sonidos, fuentes y tablas `.cube` dentro de los límites
+  del formato y borra los archivos que la escena ya no usa.
+- **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
+  capa o el campo afectado.
+
+Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
+guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado
+se copia cada 30 segundos y al cerrar en `~/.local/state/wallpaper-rs/editor/`, que solo puede leer
+tu usuario, y la app ofrece recuperarlo al volver a abrir la carpeta; la copia se borra al cerrar
+con todo guardado y las que llevan 30 días sin usarse se borran solas. Importar, compilar y aplicar
+trabajan en segundo plano, sin bloquear la ventana. *Compilar y aplicar…* crea el `.wpak` con el
+mismo código que `wprs-ctl pack build`, lo firma si eliges una clave de autor (como `wprs-ctl pack
+sign`) y lo aplica a una pantalla o a todas.
+
+Cada acción del editor tiene su orden en `wprs-ctl scene`, que trabaja sobre la carpeta sin daemon
+(salvo `preview` y `apply`, que usan el servicio), guarda al momento y comparte con la app el
+historial de deshacer, donde cada orden es un paso (todas en
+[`docs/specs/editor.md`](docs/specs/editor.md)):
+
+```sh
+wprs-ctl scene new mar --from parallax --title Sea --locale en   # empty, particles, parallax o clock
+wprs-ctl scene open copia --from escena.wpak            # una copia sin firma, derivada, con el id <id>.copy
+wprs-ctl scene import mar ola.ogg                       # copiar un recurso a assets/
+wprs-ctl scene add-layer mar sound --source ola         # y remove-layer, duplicate-layer, move-layer
+wprs-ctl scene set mar /scene/layers/1/opacity 0.5      # cualquier campo por su JSON Pointer
+wprs-ctl scene keyframe mar /scene/layers/1/opacity 2 1 --ease in_out_sine
+wprs-ctl scene translate mar /manifest/title es Mar     # otro idioma; --add no pisa nada, --remove lo quita
+wprs-ctl scene set mar /manifest/content '{"rating": "mature", "descriptors": ["violence"]}'
+wprs-ctl scene thumbnail mar captura.png                # miniatura en assets/, reducida si hace falta
+wprs-ctl scene upgrade vieja --rating general --photosensitive false   # como pack upgrade, con deshacer
+wprs-ctl scene group mar near far --id colinas && wprs-ctl scene hide mar sky
+wprs-ctl scene undo mar && wprs-ctl scene history mar
+wprs-ctl scene validate mar                             # problemas, cada uno con su JSON Pointer
+wprs-ctl scene preview mar -o DP-1 --time 2             # verla en el escritorio 60 s sin aplicarla
+wprs-ctl scene build mar --key autor.key                # firmar y crear el .wpak
+wprs-ctl scene apply mar -o DP-1                        # añadirla a la biblioteca y mostrarla
+```
+
 ## Desarrollo
 
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
@@ -737,7 +824,8 @@ misma pausa.
 | `crates/wprs-core` | Configuración, modos de ajuste, nombres D-Bus |
 | `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland, X11 y Android, con escenas y conversión de vídeo YUV |
 | `crates/wprs-depth` | Mapas de profundidad: modelo bajo demanda, cálculo con ONNX Runtime y caché |
-| `crates/wprs-scene` | Modelo de las escenas: capas, valores enlazados, líneas de tiempo y efectos, sin GPU |
+| `crates/wprs-scene` | Modelo de las escenas: capas, valores enlazados, líneas de tiempo y efectos, sin GPU, y su esquema JSON |
+| `crates/wprs-editor` | Editor de escenas compartido por la app y `wprs-ctl scene`: operaciones, historial, puntos de partida, inspector y carpetas de escena |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
 | `crates/wprs-video` | Reproducción de vídeo en bucle y del sonido de las escenas con GStreamer |
 | `crates/wprs-wayland` | Superficies layer-shell y ventanas de escritorio X11, escala, ritmo y oclusión |
@@ -756,7 +844,7 @@ misma pausa.
 | `po` | Traducciones gettext de los paquetes de Plasma y de la app |
 | `packaging` | Servicio systemd, activación D-Bus, lanzador e icono, scripts de instalación, Flatpak |
 | `deploy` | Despliegue de referencia del servidor con Caddy |
-| `docs` | Especificaciones de la interfaz D-Bus, los paquetes y sus escenas, los repositorios firmados y el servidor |
+| `docs` | Especificaciones de la interfaz D-Bus, los paquetes y sus escenas, el editor de escenas, los repositorios firmados y el servidor |
 
 ## Privacidad
 

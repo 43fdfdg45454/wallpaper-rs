@@ -1,14 +1,17 @@
 use crate::Color;
 use crate::value::{AudioChannel, Param, Value};
+use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct Mask {
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "image"))]
     pub texture: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "layer"))]
     pub layer: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shape: Option<Shape>,
@@ -18,7 +21,7 @@ pub struct Mask {
     pub feather: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum MaskChannel {
     R,
@@ -28,7 +31,7 @@ pub enum MaskChannel {
     Luminance,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EffectUse {
     pub effect: String,
@@ -42,7 +45,7 @@ pub struct EffectUse {
     pub optional: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum Shape {
     Rect {
@@ -73,7 +76,7 @@ pub enum Shape {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Gradient {
     #[serde(default)]
@@ -85,7 +88,7 @@ pub struct Gradient {
     pub stops: Vec<(f32, Color)>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Stroke {
     #[serde(default = "white")]
@@ -93,7 +96,7 @@ pub struct Stroke {
     pub width: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Spectrum {
     pub size: [f32; 2],
@@ -109,7 +112,7 @@ pub struct Spectrum {
     pub gap: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SpectrumStyle {
     #[default]
@@ -118,7 +121,7 @@ pub enum SpectrumStyle {
     Wave,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Align {
     Left,

@@ -1,10 +1,11 @@
 use crate::Ease;
 use crate::animate::Animate;
+use schemars::JsonSchema;
 use serde::de::{self, Deserializer};
 use serde::ser::{SerializeTuple, Serializer};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Loop {
     #[default]
@@ -13,10 +14,11 @@ pub enum Loop {
     Pingpong,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Timeline {
     pub id: String,
+    #[schemars(extend("x-unit" = "s"))]
     pub duration: f32,
     #[serde(default, rename = "loop")]
     pub repeat: Loop,

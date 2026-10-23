@@ -18,6 +18,7 @@ mod quality;
 mod resolve;
 mod rules;
 mod runtime;
+mod schema;
 mod sound;
 mod timeline;
 mod uses;
@@ -49,6 +50,7 @@ pub use particles::{
 pub use props::{Choice, Control, Preset, Property, Text, Values, check_presets, effective, stale};
 pub use quality::{Class, Quality, Tier};
 pub use runtime::Runtime;
+pub use schema::{easings, property_schema, schema};
 pub use sound::{MAX_SOUNDS, Sound, VOLUME, Voice};
 pub use timeline::{Key, Loop, Timeline, local, sample};
 pub use uses::{Uses, needs, source, tells_time};
@@ -56,6 +58,7 @@ pub use validate::Issue;
 pub use value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2};
 pub use wake::Wake;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 use std::collections::{BTreeMap, BTreeSet};
@@ -81,11 +84,11 @@ pub enum SceneError {
     Invalid(Issue),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(try_from = "value::ColorRepr", into = "[f32; 4]")]
 pub struct Color(pub [f32; 4]);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum BlendSpace {
     #[default]
@@ -93,11 +96,12 @@ pub enum BlendSpace {
     Srgb,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Canvas {
     pub size: [u32; 2],
     #[serde(default)]
+    #[schemars(schema_with = "schema::fit")]
     pub fit: Fit,
     #[serde(default)]
     pub background: Color,
@@ -105,16 +109,18 @@ pub struct Canvas {
     pub blend_space: BlendSpace,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct Clock {
     #[serde(with = "wprs_core::settings::fps")]
+    #[schemars(schema_with = "schema::fps")]
     pub max_fps: u32,
+    #[schemars(extend("x-unit" = "s"))]
     pub poster_time: f32,
     pub seed: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Asset {
     pub path: String,
@@ -124,13 +130,13 @@ pub struct Asset {
     pub atlas: Option<[u32; 2]>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Script {
     pub path: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Scene {
     pub schema: String,

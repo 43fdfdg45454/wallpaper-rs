@@ -1,25 +1,30 @@
 use crate::timeline::{Key, Loop};
 use crate::{Color, Issue};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
+#[schemars(rename = "Value_for_{T}")]
 pub enum Value<T> {
     Fixed(T),
     Bound(Box<Binding<T>>),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, bound(deserialize = "T: Deserialize<'de>"))]
+#[schemars(rename = "Binding_for_{T}")]
 pub struct Binding<T> {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "property"))]
     pub prop: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub map: Option<BTreeMap<String, T>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keys: Option<Vec<Key<T>>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "timeline"))]
     pub timeline: Option<String>,
     #[serde(default, rename = "loop", skip_serializing_if = "Option::is_none")]
     pub repeat: Option<Loop>,
@@ -45,14 +50,14 @@ pub struct Binding<T> {
     pub invert: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum Band {
     Index(u32),
     Named(Level),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Level {
     Bass,
@@ -62,7 +67,7 @@ pub enum Level {
     Beat,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AudioChannel {
     #[default]
@@ -71,7 +76,7 @@ pub enum AudioChannel {
     Right,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Axis {
     X,
@@ -80,18 +85,18 @@ pub enum Axis {
     Speed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(from = "Vec2Repr", into = "[f32; 2]")]
 pub struct Vec2(pub [f32; 2]);
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
 #[serde(untagged)]
 enum Vec2Repr {
     One(f32),
     Two([f32; 2]),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum Param {
     Bool(bool),
@@ -101,7 +106,7 @@ pub enum Param {
     Text(String),
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub(crate) enum ColorRepr {
     Hex(String),

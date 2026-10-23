@@ -45,10 +45,14 @@ fn wall() -> f64 {
 impl SceneState {
     pub(super) fn new(spec: SceneSpec, power: Power) -> SceneState {
         let mut runtime = Runtime::new(spec.pack.scene.clone(), spec.values.clone());
-        let still = power.still(&runtime);
-        if still {
-            tracing::debug!("the scene is too heavy for this device and stays at its poster time");
-            runtime.seek(f64::from(runtime.scene.clock.poster_time));
+        let still = spec.hold.is_some() || power.still(&runtime);
+        match spec.hold {
+            Some(time) => runtime.seek(time),
+            None if still => {
+                tracing::debug!("the scene is too heavy for this device and stays at its poster time");
+                runtime.seek(f64::from(runtime.scene.clock.poster_time));
+            }
+            None => {}
         }
         let (scripts, seed) = (&spec.pack.scripts, runtime.scene.clock.seed);
         let host = (!still && runtime.uses().scripts)
@@ -95,6 +99,16 @@ impl SceneState {
         }
     }
 
+    pub(super) fn time(&self) -> f64 {
+        self.runtime.time()
+    }
+
+    pub(super) fn resume(&mut self, time: f64) {
+        if !self.still {
+            self.runtime.seek(time);
+        }
+    }
+
     pub(super) fn uses(&self) -> Uses {
         self.uses
     }
@@ -104,7 +118,11 @@ impl SceneState {
     }
 
     pub(super) fn update(&mut self, spec: SceneSpec) -> bool {
-        let changed = self.runtime.set_props(spec.values.clone());
+        let mut changed = self.runtime.set_props(spec.values.clone());
+        if spec.hold != self.spec.hold {
+            spec.hold.into_iter().for_each(|time| self.runtime.seek(time));
+            (self.still, self.moving, changed) = (spec.hold.is_some(), spec.hold.is_none(), true);
+        }
         (self.spec, self.uses) = (spec, self.needs(self.quality));
         changed
     }

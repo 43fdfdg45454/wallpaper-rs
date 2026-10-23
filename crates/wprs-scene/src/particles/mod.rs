@@ -19,6 +19,7 @@ pub use pack::Sim;
 pub(crate) use plan::plan;
 pub use swarm::{STEP, SUBSTEPS, Swarm};
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub const MAX_EMITTERS: usize = 4;
@@ -28,7 +29,7 @@ pub const MAX_CURVE: usize = 64;
 pub const MAX_PREWARM: f32 = 10.0;
 pub const MAX_RATE: f32 = 1e5;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct System {
     pub capacity: u32,

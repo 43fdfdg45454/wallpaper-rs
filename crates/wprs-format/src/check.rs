@@ -8,6 +8,12 @@ use wprs_scene::Control;
 const MAX_STRINGS: usize = 512 << 10;
 const FIRST: &str =
     "schema id version title description authors license kind entry preview tags properties presets";
+const NEEDED: [(&str, &str); 4] = [
+    ("content", "is required: a rating of general or mature and its reasons"),
+    ("photosensitive", "is required: true when the package flashes"),
+    ("origin", "is required: original, or derived with the works it comes from"),
+    ("default_locale", "is required with strings or localized texts"),
+];
 
 type Rule<'a> = (&'a str, bool, &'a str);
 
@@ -24,6 +30,10 @@ impl Manifest {
             ("tags", tags, "expected at most 32 tags of 1 to 32 characters"),
         ])?;
         if self.v2() { self.check_v2() } else { self.check_v1() }?;
+        self.check_properties()
+    }
+
+    pub fn check_properties(&self) -> Result<()> {
         self.properties.iter().try_for_each(|(name, property)| {
             let field = format!("properties.{name}");
             let valid = if self.v2() { valid_property(name) } else { valid_name(name) };
@@ -32,6 +42,19 @@ impl Manifest {
         })?;
         wprs_scene::check_presets(&self.properties, &self.presets)
             .map_err(|reason| Error::Invalid { field: "presets".into(), reason })
+    }
+
+    pub fn missing(&self) -> Vec<Error> {
+        let localized = self.texts().iter().any(|(_, t)| matches!(t, Text::Localized(_)));
+        let locale = self.default_locale.is_none() && (localized || !self.strings.is_empty());
+        let gone = [self.content.is_none(), self.photosensitive.is_none(), self.origin.is_none(), locale];
+        let found = NEEDED.iter().zip(gone).filter(|(_, gone)| *gone && self.v2());
+        found
+            .map(|((field, reason), _)| Error::Invalid {
+                field: field.to_string(),
+                reason: reason.to_string(),
+            })
+            .collect()
     }
 
     fn check_v1(&self) -> Result<()> {
@@ -55,16 +78,16 @@ impl Manifest {
         let options = !self.properties.values().any(|p| combo(&p.control));
         let limits = self.properties.len() <= 256 && self.presets.len() <= 64;
         let plain = self.authors.iter().chain(&self.tags).all(|t| safe(t));
+        if let Some(missing) = self.missing().into_iter().next() {
+            return Err(missing);
+        }
         apply(&[
             ("authors", plain, "authors and tags have no < or >"),
-            ("content", content.is_some(), "is required: a rating of general or mature and its reasons"),
             (
                 "content.descriptors",
                 content.is_none_or(Content::valid),
                 "lists each reason once, one at least for mature",
             ),
-            ("photosensitive", self.photosensitive.is_some(), "is required: true when the package flashes"),
-            ("origin", origin.is_some(), "is required: original, or derived with the works it comes from"),
             (
                 "origin.derived_from",
                 origin.is_none_or(Origin::valid),
@@ -98,8 +121,6 @@ impl Manifest {
         let values = tables.flat_map(|t| t.values()).all(|v| clean(v, 8000, true));
         let languages = self.strings.len() <= 64 && self.strings.keys().all(|l| valid_tag(l));
         let default = self.default_locale.as_deref();
-        let localized = self.texts().iter().any(|(_, t)| matches!(t, Text::Localized(_)));
-        let needed = default.is_some() || (self.strings.is_empty() && !localized);
         apply(&[
             ("strings", languages, "at most 64 languages named like en or pt-BR"),
             (
@@ -109,7 +130,6 @@ impl Manifest {
             ),
             ("strings", values, "texts of at most 8000 characters without control characters"),
             ("default_locale", default.is_none_or(valid_tag), "expected a language such as en or pt-BR"),
-            ("default_locale", needed, "is required with strings or localized texts"),
         ])?;
         self.texts().into_iter().try_for_each(|(field, text)| self.check_text(&field, text))
     }
@@ -126,17 +146,18 @@ impl Manifest {
             let known = default.and_then(|d| self.strings.get(d)).is_some_and(|t| t.contains_key(key));
             require(known, field, &format!("@{key} is not in the strings of the default language"))?;
         }
-        let values = match self.resolve(text) {
-            Text::Plain(t) => vec![t],
+        let values: Vec<(String, String)> = match self.resolve(text) {
+            Text::Plain(t) => vec![(String::new(), t)],
             Text::Localized(map) => {
                 let named = map.keys().all(|l| valid_tag(l)) && default.is_none_or(|d| has(&map, d));
                 require(named, field, "needs a text in the default language and languages like en or pt-BR")?;
-                map.into_values().collect()
+                map.into_iter().map(|(language, t)| (format!(" in {language}"), t)).collect()
             }
         };
         let marked = ["description", "changes"].contains(&field);
-        values.iter().try_for_each(|value| {
-            let ok = clean(value, max, lines) && (field != "title" || !value.trim().is_empty());
+        values.iter().try_for_each(|(language, value)| {
+            require(field != "title" || !value.trim().is_empty(), field, &format!("has no text{language}"))?;
+            let ok = clean(value, max, lines);
             require(ok, field, &format!("expected at most {max} characters without control characters"))?;
             require(marked || safe(value), field, "plain texts have no < or >")?;
             match marked {

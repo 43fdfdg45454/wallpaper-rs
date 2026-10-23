@@ -440,7 +440,7 @@ msgstr ""
 msgid "Error:"
 msgstr "Error:"
 
-#: apps/wprs-app/qml/Actions.qml
+#: apps/wprs-app/qml/Actions.qml apps/wprs-app/qml/SceneAssets.qml
 msgid "Import…"
 msgstr "Importar…"
 
@@ -498,7 +498,7 @@ msgstr ""
 "personas con epilepsia fotosensible. Aplícalo solo si es seguro para quien "
 "vea esta pantalla; no se volverá a preguntar por este paquete."
 
-#: apps/wprs-app/qml/ApplyDialog.qml
+#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/SceneBuild.qml
 msgid "Screen:"
 msgstr "Pantalla:"
 
@@ -568,7 +568,8 @@ msgstr ""
 "equipo; no se graba, no se guarda ni se envía, y el escritorio puede mostrar "
 "un indicador de micrófono."
 
-#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneBind.qml
+#: apps/wprs-app/qml/SceneControls.qml
 msgid "Follow the pointer"
 msgstr "Seguir el puntero"
 
@@ -626,15 +627,15 @@ msgstr ""
 msgid "All channels"
 msgstr "Todos los canales"
 
-#: apps/wprs-app/qml/EditCurves.qml
+#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Red"
 msgstr "Rojo"
 
-#: apps/wprs-app/qml/EditCurves.qml
+#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Green"
 msgstr "Verde"
 
-#: apps/wprs-app/qml/EditCurves.qml
+#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Blue"
 msgstr "Azul"
 
@@ -706,23 +707,26 @@ msgstr "Suavizado (px)"
 msgid "Grow near edges (px)"
 msgstr "Ensanchar los bordes cercanos (px)"
 
-#: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/SceneMeta.qml
+#: apps/wprs-app/qml/facade/Labels.qml
 msgid "Pictures"
 msgstr "Imágenes"
 
 #: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Blur"
 msgstr "Desenfoque"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Radius"
 msgstr "Radio"
 
 #: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Vignette"
 msgstr "Viñeta"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Amount"
 msgstr "Cantidad"
 
@@ -730,11 +734,12 @@ msgstr "Cantidad"
 msgid "Midpoint"
 msgstr "Punto medio"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Roundness"
 msgstr "Redondez"
 
 #: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditMasks.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Feather"
 msgstr "Difuminado"
 
@@ -746,31 +751,31 @@ msgstr "Superposición de color"
 msgid "Choose a color…"
 msgstr "Elegir un color…"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Normal"
 msgstr "Normal"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Multiply"
 msgstr "Multiplicar"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Screen"
 msgstr "Trama"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Overlay"
 msgstr "Superponer"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Soft light"
 msgstr "Luz suave"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Color"
 msgstr "Color"
 
-#: apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Opacity"
 msgstr "Opacidad"
 
@@ -830,10 +835,12 @@ msgid "Tint"
 msgstr "Tinte"
 
 #: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Contrast"
 msgstr "Contraste"
 
 #: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Saturation"
 msgstr "Saturación"
 
@@ -870,10 +877,11 @@ msgid "Center Y"
 msgstr "Centro Y"
 
 #: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Width"
 msgstr "Anchura"
 
-#: apps/wprs-app/qml/EditMasks.qml
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Height"
 msgstr "Altura"
 
@@ -885,7 +893,7 @@ msgstr "Más oscuro"
 msgid "Brightest"
 msgstr "Más claro"
 
-#: apps/wprs-app/qml/EditMasks.qml
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Softness"
 msgstr "Suavidad"
 
@@ -905,11 +913,11 @@ msgstr "Degradado radial"
 msgid "Brightness range"
 msgstr "Rango de brillo"
 
-#: apps/wprs-app/qml/EditMasks.qml
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Invert"
 msgstr "Invertir"
 
-#: apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Exposure"
 msgstr "Exposición"
 
@@ -929,20 +937,26 @@ msgstr "Operaciones, en orden"
 msgid "No changes yet"
 msgstr "Aún no hay cambios"
 
-#: apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/SceneInspector.qml
+#: apps/wprs-app/qml/SceneProperties.qml
 msgid "Move up"
 msgstr "Subir"
 
-#: apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/SceneInspector.qml
+#: apps/wprs-app/qml/SceneProperties.qml
 msgid "Move down"
 msgstr "Bajar"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/PlaylistItems.qml
+#: apps/wprs-app/qml/SceneAssets.qml apps/wprs-app/qml/SceneInput.qml
+#: apps/wprs-app/qml/SceneInspector.qml apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/ScenePairs.qml apps/wprs-app/qml/SceneProperties.qml
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Remove"
 msgstr "Quitar"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/EditParallax.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Strength"
 msgstr "Fuerza"
 
@@ -966,7 +980,7 @@ msgstr "Pantallas"
 msgid "Light and color"
 msgstr "Luz y color"
 
-#: apps/wprs-app/qml/EditPage.qml
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Effects"
 msgstr "Efectos"
 
@@ -974,11 +988,11 @@ msgstr "Efectos"
 msgid "Masks"
 msgstr "Máscaras"
 
-#: apps/wprs-app/qml/EditPage.qml
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Depth"
 msgstr "Profundidad"
 
-#: apps/wprs-app/qml/EditPage.qml
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Parallax"
 msgstr "Paralaje"
 
@@ -986,15 +1000,15 @@ msgstr "Paralaje"
 msgid "Edit %1"
 msgstr "Editar %1"
 
-#: apps/wprs-app/qml/EditPage.qml
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/ScenePage.qml
 msgid "Back"
 msgstr "Volver"
 
-#: apps/wprs-app/qml/EditPage.qml
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/ScenePage.qml
 msgid "Save"
 msgstr "Guardar"
 
-#: apps/wprs-app/qml/EditPage.qml
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/ScenePage.qml
 msgid "Show on the desktop"
 msgstr "Ver en el escritorio"
 
@@ -1010,7 +1024,7 @@ msgstr "Mover la imagen en profundidad"
 msgid "Slow orbit"
 msgstr "Órbita lenta"
 
-#: apps/wprs-app/qml/EditParallax.qml
+#: apps/wprs-app/qml/EditParallax.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Pointer"
 msgstr "Puntero"
 
@@ -1174,11 +1188,12 @@ msgstr "Revocado:"
 msgid "Credit:"
 msgstr "Créditos:"
 
-#: apps/wprs-app/qml/ItemDrawer.qml
+#: apps/wprs-app/qml/ItemDrawer.qml apps/wprs-app/qml/SceneInput.qml
 msgid "Edit…"
 msgstr "Editar…"
 
 #: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/SelectionDialogs.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Tags"
 msgstr "Etiquetas"
 
@@ -1195,6 +1210,7 @@ msgid "Remove from this playlist"
 msgstr "Quitar de esta lista"
 
 #: apps/wprs-app/qml/ItemExtras.qml apps/wprs-app/qml/SceneControls.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Presets"
 msgstr "Preajustes"
 
@@ -1218,6 +1234,10 @@ msgstr "Aquí aún no hay nada"
 #: apps/wprs-app/qml/LibraryPage.qml
 msgid "Add folders in the settings, import files or drop them here."
 msgstr "Añade carpetas en los ajustes, importa archivos o suéltalos aquí."
+
+#: apps/wprs-app/qml/Main.qml apps/wprs-app/qml/ScenesPage.qml
+msgid "Scenes"
+msgstr "Escenas"
 
 #: apps/wprs-app/qml/Main.qml apps/wprs-app/qml/PlaylistsPage.qml
 msgid "Playlists"
@@ -1243,7 +1263,7 @@ msgstr "Ajustes"
 msgid "Allow this scene?"
 msgstr "¿Permitir esta escena?"
 
-#: apps/wprs-app/qml/OutputRow.qml
+#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/SceneBuild.qml
 msgid "Every screen"
 msgstr "Todas las pantallas"
 
@@ -1252,6 +1272,7 @@ msgid "Playlist %1 (%2 of %3)"
 msgstr "Lista %1 (%2 de %3)"
 
 #: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Background color"
 msgstr "Color de fondo"
 
@@ -1270,7 +1291,8 @@ msgstr ""
 "Contenido para adultos: haz clic en la imagen para mostrar siempre este "
 "paquete"
 
-#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/SceneField.qml
+#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/SceneBuild.qml
+#: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/SceneMeta.qml
 #: apps/wprs-app/qml/Settings.qml
 msgid "Choose…"
 msgstr "Elegir…"
@@ -1541,7 +1563,8 @@ msgstr "Próxima sincronización:"
 msgid "Add provider"
 msgstr "Añadir un proveedor"
 
-#: apps/wprs-app/qml/ProviderDialog.qml
+#: apps/wprs-app/qml/ProviderDialog.qml apps/wprs-app/qml/SceneInput.qml
+#: apps/wprs-app/qml/ScenePairs.qml
 msgid "Add"
 msgstr "Añadir"
 
@@ -1553,7 +1576,7 @@ msgstr "minúsculas, dígitos, - y _"
 msgid "Required"
 msgstr "Obligatorio"
 
-#: apps/wprs-app/qml/ProviderDialog.qml
+#: apps/wprs-app/qml/ProviderDialog.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Optional"
 msgstr "Opcional"
 
@@ -1682,6 +1705,152 @@ msgstr "Quitar el repositorio"
 msgid "Also uninstall its packages"
 msgstr "Desinstalar también sus paquetes"
 
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "Remove unused files"
+msgstr "Borrar los archivos sin usar"
+
+#
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "Pictures, videos, sounds, fonts and color tables"
+msgstr "Imágenes, vídeos, sonidos, fuentes y tablas de color"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneInput.qml
+msgid "Follows %1"
+msgstr "Sigue %1"
+
+#: apps/wprs-app/qml/SceneBind.qml
+msgid "Fixed value"
+msgstr "Valor fijo"
+
+#: apps/wprs-app/qml/SceneBind.qml
+msgid "Keyframe here"
+msgstr "Fotograma clave aquí"
+
+#: apps/wprs-app/qml/SceneBind.qml
+msgid "Remove the keyframe here"
+msgstr "Quitar el fotograma clave de aquí"
+
+#: apps/wprs-app/qml/SceneBind.qml
+msgid "Edit the source…"
+msgstr "Editar el origen…"
+
+#: apps/wprs-app/qml/SceneBind.qml
+msgid "Follow a user property"
+msgstr "Seguir una propiedad de usuario"
+
+#: apps/wprs-app/qml/SceneBind.qml
+msgid "Follow the sound"
+msgstr "Seguir el sonido"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bass"
+msgstr "Graves"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Mids"
+msgstr "Medios"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Treble"
+msgstr "Agudos"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Level"
+msgstr "Nivel"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Beat"
+msgstr "Pulso"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Horizontal position"
+msgstr "Posición horizontal"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Vertical position"
+msgstr "Posición vertical"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Over the screen"
+msgstr "Sobre la pantalla"
+
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Speed"
+msgstr "Velocidad"
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "Build and apply"
+msgstr "Compilar y aplicar"
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "Save the scene and solve its problems before building it."
+msgstr "Guarda la escena y resuelve sus problemas antes de crear el paquete."
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "Package file:"
+msgstr "Archivo del paquete:"
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "Next to the folder, named after the id and version"
+msgstr "Junto a la carpeta, con el id y la versión como nombre"
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "Author key:"
+msgstr "Clave de autor:"
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "None: the package is not signed"
+msgstr "Ninguna: el paquete no se firma"
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "Key password:"
+msgstr "Contraseña de la clave:"
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "Build the package"
+msgstr "Crear el paquete"
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "Apply to the screen"
+msgstr "Aplicar a la pantalla"
+
+#: apps/wprs-app/qml/SceneBuild.qml
+msgid "Secret keys"
+msgstr "Claves secretas"
+
+#: apps/wprs-app/qml/SceneCanvas.qml
+msgid "Zoom out"
+msgstr "Reducir"
+
+#: apps/wprs-app/qml/SceneCanvas.qml
+msgid "Zoom in"
+msgstr "Ampliar"
+
+#: apps/wprs-app/qml/SceneCanvas.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Fit"
+msgstr "Ajustar"
+
+#: apps/wprs-app/qml/SceneCanvas.qml
+msgid "Guide:"
+msgstr "Guía:"
+
+#: apps/wprs-app/qml/SceneCanvas.qml
+msgid "No guide"
+msgstr "Sin guía"
+
+#: apps/wprs-app/qml/SceneCanvas.qml
+msgid ""
+"Install the KPipeWire QML module to see the preview here, or use Show on the "
+"desktop."
+msgstr ""
+"Instala el módulo QML de KPipeWire para ver aquí la vista previa, o usa Ver "
+"en el escritorio."
+
+#: apps/wprs-app/qml/SceneCanvas.qml
+msgid "The preview appears here while wprsd runs."
+msgstr "La vista previa aparece aquí mientras wprsd está en marcha."
+
 #: apps/wprs-app/qml/SceneControls.qml
 msgid "Reset"
 msgstr "Restablecer"
@@ -1693,6 +1862,264 @@ msgstr "Borrar"
 #: apps/wprs-app/qml/SceneField.qml
 msgid "Images"
 msgstr "Imágenes"
+
+#: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Default"
+msgstr "Valor por defecto"
+
+#: apps/wprs-app/qml/SceneInput.qml
+msgid "Not set"
+msgstr "Sin fijar"
+
+#: apps/wprs-app/qml/SceneInput.qml
+msgid "Yes"
+msgstr "Sí"
+
+#: apps/wprs-app/qml/SceneInput.qml
+msgid "No"
+msgstr "No"
+
+#
+#: apps/wprs-app/qml/SceneInput.qml
+msgid "1 item"
+msgstr "1 elemento"
+
+#: apps/wprs-app/qml/SceneInput.qml
+msgid "%1 items"
+msgstr "%1 elementos"
+
+#: apps/wprs-app/qml/SceneInput.qml
+msgid "Item %1"
+msgstr "Elemento %1"
+
+#: apps/wprs-app/qml/SceneInput.qml
+msgid "%1 is not valid JSON"
+msgstr "%1 no es JSON válido"
+
+#: apps/wprs-app/qml/SceneInspector.qml
+msgid "Up"
+msgstr "Subir un nivel"
+
+#: apps/wprs-app/qml/SceneInspector.qml
+msgid "Add effect"
+msgstr "Añadir un efecto"
+
+#: apps/wprs-app/qml/SceneInspector.qml
+msgid "Edit the particle system"
+msgstr "Editar el sistema de partículas"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Hide"
+msgstr "Ocultar"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Lock"
+msgstr "Bloquear"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Solo"
+msgstr "Solo"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Add layer"
+msgstr "Añadir una capa"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Duplicate"
+msgstr "Duplicar"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Ungroup"
+msgstr "Desagrupar"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Group the layers"
+msgstr "Agrupar"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Group the selected layer and the ones picked with Ctrl"
+msgstr "Agrupar la capa elegida y las marcadas con Ctrl"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Move into a group"
+msgstr "Meter en un grupo"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Raise"
+msgstr "Subir"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Lower"
+msgstr "Bajar"
+
+#: apps/wprs-app/qml/SceneLayers.qml
+msgid "Move out of the group"
+msgstr "Sacar del grupo"
+
+#: apps/wprs-app/qml/SceneMeta.qml
+msgid "One per line"
+msgstr "Uno por línea"
+
+#: apps/wprs-app/qml/SceneMeta.qml
+msgid "Filled from what the package uses: %1"
+msgstr "Se calcula a partir de lo que usa el paquete: %1"
+
+#
+#: apps/wprs-app/qml/SceneMeta.qml
+msgid "nothing"
+msgstr "nada"
+
+#: apps/wprs-app/qml/SceneMeta.qml
+msgid "No picture"
+msgstr "Sin imagen"
+
+#: apps/wprs-app/qml/ScenePage.qml
+msgid "Scene: %1"
+msgstr "Escena: %1"
+
+#: apps/wprs-app/qml/ScenePage.qml
+msgid "Undo"
+msgstr "Deshacer"
+
+#: apps/wprs-app/qml/ScenePage.qml
+msgid "Redo"
+msgstr "Rehacer"
+
+#: apps/wprs-app/qml/ScenePage.qml
+msgid "Build and apply…"
+msgstr "Compilar y aplicar…"
+
+#: apps/wprs-app/qml/ScenePage.qml
+msgid "This folder has unsaved changes from an earlier session."
+msgstr "Esta carpeta tiene cambios sin guardar de una sesión anterior."
+
+#: apps/wprs-app/qml/ScenePage.qml
+msgid "Recover"
+msgstr "Recuperar"
+
+#: apps/wprs-app/qml/ScenePage.qml
+msgid "Discard"
+msgstr "Descartar"
+
+#: apps/wprs-app/qml/ScenePage.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Layers"
+msgstr "Capas"
+
+#: apps/wprs-app/qml/ScenePage.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Assets"
+msgstr "Recursos"
+
+#: apps/wprs-app/qml/ScenePage.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Package"
+msgstr "Paquete"
+
+#: apps/wprs-app/qml/SceneProblems.qml
+msgid "Problems (%1)"
+msgstr "Problemas (%1)"
+
+#: apps/wprs-app/qml/SceneProblems.qml
+msgid "No problems"
+msgstr "Sin problemas"
+
+#: apps/wprs-app/qml/SceneProperties.qml
+msgid "Package details"
+msgstr "Detalles del paquete"
+
+#: apps/wprs-app/qml/SceneProperties.qml
+msgid ""
+"This package uses the first version of the manifest. Upgrade it to give it a "
+"rating, credits and texts in several languages; what it cannot tell, such as "
+"the rating, the flashes and the origin, stays among the problems until you "
+"set it."
+msgstr ""
+"Este paquete usa la primera versión del manifiesto. Actualízalo para darle "
+"una clasificación, créditos y textos en varios idiomas; lo que no puede "
+"saber, como la clasificación, los destellos y el origen, queda entre los "
+"problemas hasta que lo indiques."
+
+#: apps/wprs-app/qml/SceneProperties.qml
+msgid "Upgrade"
+msgstr "Actualizar"
+
+#: apps/wprs-app/qml/SceneProperties.qml
+msgid "User properties"
+msgstr "Propiedades de usuario"
+
+#: apps/wprs-app/qml/SceneProperties.qml
+msgid "Add property"
+msgstr "Añadir una propiedad"
+
+#: apps/wprs-app/qml/SceneTexts.qml
+msgid "Remove this language"
+msgstr "Quitar este idioma"
+
+#: apps/wprs-app/qml/SceneTexts.qml
+msgid "Language, such as es or pt-BR"
+msgstr "Idioma, como es o pt-BR"
+
+#: apps/wprs-app/qml/SceneTexts.qml
+msgid "Translate"
+msgstr "Traducir"
+
+#: apps/wprs-app/qml/SceneTimeline.qml apps/wprs-app/qml/StatusBar.qml
+msgid "Pause"
+msgstr "Pausar"
+
+#: apps/wprs-app/qml/SceneTimeline.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Play"
+msgstr "Reproducir"
+
+#: apps/wprs-app/qml/SceneTimeline.qml
+msgid "%1 s"
+msgstr "%1 s"
+
+#: apps/wprs-app/qml/SceneTimeline.qml
+msgid "Remove the keyframe"
+msgstr "Quitar el fotograma clave"
+
+#: apps/wprs-app/qml/SceneTimeline.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Timelines"
+msgstr "Líneas de tiempo"
+
+#: apps/wprs-app/qml/SceneTimeline.qml
+msgid "Add a timeline"
+msgstr "Añadir una línea de tiempo"
+
+#: apps/wprs-app/qml/SceneTimeline.qml
+msgid ""
+"No keyframes yet: the ◇ button next to a value adds one at the current time."
+msgstr ""
+"Aún no hay fotogramas clave: el botón ◇ junto a un valor añade uno en el "
+"instante actual."
+
+#: apps/wprs-app/qml/SceneTimeline.qml
+msgid "Scene clock"
+msgstr "Reloj de la escena"
+
+#: apps/wprs-app/qml/ScenesPage.qml
+msgid "Title:"
+msgstr "Título:"
+
+#: apps/wprs-app/qml/ScenesPage.qml
+msgid "My scene"
+msgstr "Mi escena"
+
+#: apps/wprs-app/qml/ScenesPage.qml
+msgid "Folder:"
+msgstr "Carpeta:"
+
+#: apps/wprs-app/qml/ScenesPage.qml
+msgid "Open"
+msgstr "Abrir"
+
+#: apps/wprs-app/qml/ScenesPage.qml
+msgid "Open a scene folder…"
+msgstr "Abrir una carpeta de escena…"
+
+#: apps/wprs-app/qml/ScenesPage.qml
+msgid "Edit a copy of a scene from the library"
+msgstr "Editar una copia de una escena de la biblioteca"
 
 #: apps/wprs-app/qml/SelectionDialogs.qml
 msgid "Import files"
@@ -1735,6 +2162,7 @@ msgid "Rename tag"
 msgstr "Cambiar el nombre de la etiqueta"
 
 #: apps/wprs-app/qml/SelectionDialogs.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Rate"
 msgstr "Valorar"
 
@@ -1827,10 +2255,6 @@ msgid "Resume"
 msgstr "Reanudar"
 
 #: apps/wprs-app/qml/StatusBar.qml
-msgid "Pause"
-msgstr "Pausar"
-
-#: apps/wprs-app/qml/StatusBar.qml
 msgid "Jobs: %1"
 msgstr "Tareas: %1"
 
@@ -1862,7 +2286,7 @@ msgstr "%1 MB"
 msgid "%1 KB"
 msgstr "%1 KB"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Volume"
 msgstr "Volumen"
 
@@ -1870,7 +2294,7 @@ msgstr "Volumen"
 msgid "Muted"
 msgstr "Silenciado"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Frames per second"
 msgstr "Fotogramas por segundo"
 
@@ -1922,7 +2346,7 @@ msgstr "Ancho del marco de las pantallas al extender (mm)"
 msgid "Allow downloading the depth model"
 msgstr "Permitir descargar el modelo de profundidad"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Order"
 msgstr "Orden"
 
@@ -1966,7 +2390,7 @@ msgstr "Con batería"
 msgid "Priority"
 msgstr "Prioridad"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Placement"
 msgstr "Colocación"
 
@@ -2011,6 +2435,7 @@ msgid "Minimum resolution"
 msgstr "Resolución mínima"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Address"
 msgstr "Dirección"
 
@@ -2042,15 +2467,11 @@ msgstr "Clave de API"
 msgid "Password"
 msgstr "Contraseña"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Fill"
 msgstr "Rellenar"
 
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Fit"
-msgstr "Ajustar"
-
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Stretch"
 msgstr "Estirar"
 
@@ -2074,35 +2495,31 @@ msgstr "En orden"
 msgid "Shuffled"
 msgstr "Aleatorio"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Match the display"
 msgstr "Igual que la pantalla"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Fade"
 msgstr "Fundido"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Image"
 msgstr "Imagen"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Video"
 msgstr "Vídeo"
 
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Package"
-msgstr "Paquete"
-
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Scene"
 msgstr "Escena"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "the sound"
 msgstr "el sonido"
 
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "the pointer"
 msgstr "el puntero"
 
@@ -2119,10 +2536,12 @@ msgid "the network"
 msgstr "la red"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "For everyone"
 msgstr "Para todos los públicos"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Mature"
 msgstr "Para adultos"
 
@@ -2147,26 +2566,32 @@ msgid "strong language"
 msgstr "lenguaje malsonante"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Original work"
 msgstr "Obra original"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Remade from another work"
 msgstr "Rehecho a partir de otra obra"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Home page"
 msgstr "Página principal"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Source"
 msgstr "Código fuente"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Support"
 msgstr "Ayuda"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Donate"
 msgstr "Donar"
 
@@ -2343,3 +2768,1326 @@ msgstr "reproduce sonido"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "uses the %1 effect"
 msgstr "usa el efecto %1"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Animated preview"
+msgstr "Vista previa animada"
+
+#
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Attribution"
+msgstr "Atribución"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Author"
+msgstr "Autor"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Authors"
+msgstr "Autores"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Changes in this version"
+msgstr "Cambios de esta versión"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Content"
+msgstr "Contenido"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Credits"
+msgstr "Créditos"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Default language"
+msgstr "Idioma por defecto"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Remade from"
+msgstr "Rehecho a partir de"
+
+#
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Description"
+msgstr "Descripción"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Reasons"
+msgstr "Motivos"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Version of wallpaper-rs"
+msgstr "Versión de wallpaper-rs"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Entry file"
+msgstr "Archivo de entrada"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Features"
+msgstr "Funciones"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "May ask for"
+msgstr "Puede pedir"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Kind"
+msgstr "Tipo"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "License"
+msgstr "Licencia"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Links"
+msgstr "Enlaces"
+
+#
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Files"
+msgstr "Archivos"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Flashes or fast patterns"
+msgstr "Destellos o patrones rápidos"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Preview"
+msgstr "Vista previa"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Previews"
+msgstr "Vistas previas"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Properties"
+msgstr "Propiedades"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Rating"
+msgstr "Clasificación"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Requirements"
+msgstr "Requisitos"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Translated texts"
+msgstr "Textos traducidos"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Thumbnail"
+msgstr "Miniatura"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Title"
+msgstr "Título"
+
+#
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Values"
+msgstr "Valores"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Version"
+msgstr "Versión"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Gore"
+msgstr "Sangre explícita"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Strong language"
+msgstr "Lenguaje malsonante"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Sexual content"
+msgstr "Contenido sexual"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Violence"
+msgstr "Violencia"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "The sound"
+msgstr "El sonido"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "The clicks"
+msgstr "Los clics"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "What the media player plays"
+msgstr "Lo que suena en el reproductor"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "The network"
+msgstr "La red"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "The pointer"
+msgstr "El puntero"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Accepted files"
+msgstr "Archivos admitidos"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Alignment"
+msgstr "Alineación"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Transparency"
+msgstr "Transparencia"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Amplitude"
+msgstr "Amplitud"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Anchor"
+msgstr "Anclaje"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Angle"
+msgstr "Ángulo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Sprite grid"
+msgstr "Rejilla de fotogramas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Attractor"
+msgstr "Atractor"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Sound"
+msgstr "Sonido"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Play at start"
+msgstr "Reproducir al empezar"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bands"
+msgstr "Bandas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Blend mode"
+msgstr "Modo de fusión"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Blend space"
+msgstr "Espacio de mezcla"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Switch"
+msgstr "Interruptor"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bottom left"
+msgstr "Abajo a la izquierda"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bottom right"
+msgstr "Abajo a la derecha"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bounce"
+msgstr "Rebote"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bounds"
+msgstr "Límites"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Box"
+msgstr "Caja"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Burst"
+msgstr "Ráfaga"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bursts"
+msgstr "Ráfagas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Cache"
+msgstr "Caché"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Canvas"
+msgstr "Lienzo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Capacity"
+msgstr "Capacidad"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Center point"
+msgstr "Centro"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Channel"
+msgstr "Canal"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Circle"
+msgstr "Círculo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Clamp to"
+msgstr "Limitar a"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Click"
+msgstr "Clic"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Clip"
+msgstr "Recorte"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Clock"
+msgstr "Reloj"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Collisions"
+msgstr "Colisiones"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Color over life"
+msgstr "Color a lo largo de la vida"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Choice"
+msgstr "Selección"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Count"
+msgstr "Número"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Coverage"
+msgstr "Cobertura"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Curvature"
+msgstr "Curvatura"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Damping"
+msgstr "Amortiguación"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Decay"
+msgstr "Atenuación"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Delay"
+msgstr "Retardo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Density"
+msgstr "Densidad"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Direction"
+msgstr "Dirección"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Dithering"
+msgstr "Tramado"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Drag"
+msgstr "Rozamiento"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Duration"
+msgstr "Duración"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Edge"
+msgstr "Borde"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Effect"
+msgstr "Efecto"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Ellipse"
+msgstr "Elipse"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Emitters"
+msgstr "Emisores"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Enabled"
+msgstr "Activado"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Every"
+msgstr "Cada"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Extensions"
+msgstr "Extensiones"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Fade in"
+msgstr "Entrada gradual"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Fade out"
+msgstr "Salida gradual"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Falloff"
+msgstr "Caída"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Fill color"
+msgstr "Color de relleno"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Focus"
+msgstr "Enfoque"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Follow"
+msgstr "Seguir"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Font"
+msgstr "Fuente"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Forces"
+msgstr "Fuerzas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Frame"
+msgstr "Fotograma"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Frames"
+msgstr "Fotogramas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Frequency"
+msgstr "Frecuencia"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Friction"
+msgstr "Fricción"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "From"
+msgstr "Desde"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Gap"
+msgstr "Separación"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Glow"
+msgstr "Resplandor"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Gradient"
+msgstr "Degradado"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Gravity"
+msgstr "Gravedad"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Group"
+msgstr "Grupo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Help"
+msgstr "Ayuda"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Hexagons"
+msgstr "Hexágonos"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Hue"
+msgstr "Tono"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Id"
+msgstr "Identificador"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Inherited speed"
+msgstr "Velocidad heredada"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Birth"
+msgstr "Nacimiento"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Inner size"
+msgstr "Tamaño interior"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Whole numbers"
+msgstr "Números enteros"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Intensity"
+msgstr "Intensidad"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Jitter"
+msgstr "Temblor"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Distortion k1"
+msgstr "Distorsión k1"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Distortion k2"
+msgstr "Distorsión k2"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Key color"
+msgstr "Color clave"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Keyframes"
+msgstr "Fotogramas clave"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Remove on contact"
+msgstr "Eliminar al tocar"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Threshold softness"
+msgstr "Suavidad del umbral"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Label"
+msgstr "Etiqueta"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Layer"
+msgstr "Capa"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Length"
+msgstr "Longitud"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Levels"
+msgstr "Niveles"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Life"
+msgstr "Vida"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Line"
+msgstr "Línea"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Linear color"
+msgstr "Color lineal"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Loop"
+msgstr "Bucle"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Color table"
+msgstr "Tabla de color"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Map"
+msgstr "Mapa"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Mask"
+msgstr "Máscara"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Maximum"
+msgstr "Máximo"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Maximum length"
+msgstr "Longitud máxima"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Minimum"
+msgstr "Mínimo"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Blend frames"
+msgstr "Mezclar fotogramas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Several lines"
+msgstr "Varias líneas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Noise"
+msgstr "Ruido"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Normal direction"
+msgstr "Dirección normal"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Detail levels"
+msgstr "Niveles de detalle"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Offset"
+msgstr "Desplazamiento"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Fire on"
+msgstr "Disparar con"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Options"
+msgstr "Opciones"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Orbit"
+msgstr "Órbita"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Origin"
+msgstr "Origen"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Overscan"
+msgstr "Margen extra"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Balance"
+msgstr "Panorama"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Paper color"
+msgstr "Color del papel"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Parameters"
+msgstr "Parámetros"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Particles"
+msgstr "Partículas"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "File"
+msgstr "Archivo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Phase"
+msgstr "Fase"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Phosphor"
+msgstr "Fósforo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Dot pitch"
+msgstr "Paso de puntos"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Pivot"
+msgstr "Pivote"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Plane"
+msgstr "Plano"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Point"
+msgstr "Punto"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Points"
+msgstr "Puntas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Polygon"
+msgstr "Polígono"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Position"
+msgstr "Posición"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Still frame at"
+msgstr "Fotograma fijo en"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Warm-up"
+msgstr "Precalentamiento"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Progress"
+msgstr "Progreso"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "User property"
+msgstr "Propiedad de usuario"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Radial"
+msgstr "Radial"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Range"
+msgstr "Alcance"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Rectangle"
+msgstr "Rectángulo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Look"
+msgstr "Aspecto"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Ring"
+msgstr "Anillo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Rotation"
+msgstr "Giro"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Rows"
+msgstr "Filas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Eye jumps"
+msgstr "Saltos de mirada"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Samples"
+msgstr "Muestras"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Scale"
+msgstr "Escala"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Scan lines"
+msgstr "Líneas de barrido"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Format"
+msgstr "Formato"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Script"
+msgstr "Script"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Scripts"
+msgstr "Scripts"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Seed"
+msgstr "Semilla"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Shade"
+msgstr "Sombra"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Shape"
+msgstr "Forma"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Color shift"
+msgstr "Desfase de color"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Sides"
+msgstr "Lados"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Size"
+msgstr "Tamaño"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Size over life"
+msgstr "Tamaño a lo largo de la vida"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Sketch"
+msgstr "Boceto"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Skew"
+msgstr "Inclinación"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Slider"
+msgstr "Deslizador"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Smoothing"
+msgstr "Suavizado"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Opaque"
+msgstr "Opaca"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Light source"
+msgstr "Fuente de luz"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Specular highlights"
+msgstr "Reflejos especulares"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Spill removal"
+msgstr "Eliminar el reflejo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Spin"
+msgstr "Velocidad de giro"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Color split"
+msgstr "Separación de color"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Spread"
+msgstr "Dispersión"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Star"
+msgstr "Estrella"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Step"
+msgstr "Paso"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Steps"
+msgstr "Pasos"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Stiffness"
+msgstr "Rigidez"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Color stops"
+msgstr "Paradas de color"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Stretch by speed"
+msgstr "Estirar según la velocidad"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Outline"
+msgstr "Contorno"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Style"
+msgstr "Estilo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Swing"
+msgstr "Balanceo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Particle system"
+msgstr "Sistema de partículas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Target"
+msgstr "Objetivo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Text"
+msgstr "Texto"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Texture"
+msgstr "Textura"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Threshold"
+msgstr "Umbral"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Timeline"
+msgstr "Línea de tiempo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "To"
+msgstr "Hasta"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Tolerance"
+msgstr "Tolerancia"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Top left"
+msgstr "Arriba a la izquierda"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Top right"
+msgstr "Arriba a la derecha"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Trail"
+msgstr "Estela"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Transform"
+msgstr "Transformación"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Trigger"
+msgstr "Disparador"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Turbulence"
+msgstr "Turbulencia"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Type"
+msgstr "Tipo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Unit"
+msgstr "Unidad"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Value"
+msgstr "Valor"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Visible"
+msgstr "Visible"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Shown when"
+msgstr "Visible cuando"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Vortex"
+msgstr "Vórtice"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Warp"
+msgstr "Deformación"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Wavelength"
+msgstr "Longitud de onda"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Alpha"
+msgstr "Alfa"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Additive"
+msgstr "Suma"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Average"
+msgstr "Media"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bars"
+msgstr "Barras"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bottom"
+msgstr "Abajo"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Centered"
+msgstr "Centrado"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Color burn"
+msgstr "Subexponer color"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Color dodge"
+msgstr "Sobreexponer color"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Darken"
+msgstr "Oscurecer"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Difference"
+msgstr "Diferencia"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Exclusion"
+msgstr "Exclusión"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Hard light"
+msgstr "Luz fuerte"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Hold"
+msgstr "Mantener"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Left"
+msgstr "Izquierda"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Lighten"
+msgstr "Aclarar"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Linear"
+msgstr "Lineal"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Luminance"
+msgstr "Luminancia"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Luminosity"
+msgstr "Luminosidad"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Once"
+msgstr "Una vez"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Back and forth"
+msgstr "Ida y vuelta"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Random"
+msgstr "Al azar"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Repeat"
+msgstr "Repetir"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Right"
+msgstr "Derecha"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "sRGB"
+msgstr "sRGB"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Jump"
+msgstr "Salto"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Time"
+msgstr "Tiempo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Top"
+msgstr "Arriba"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Wave"
+msgstr "Onda"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Motion blur"
+msgstr "Desenfoque de movimiento"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Radial blur"
+msgstr "Desenfoque radial"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Chroma key"
+msgstr "Croma"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Chromatic aberration"
+msgstr "Aberración cromática"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Clouds and fog"
+msgstr "Nubes y niebla"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Color adjustments"
+msgstr "Ajustes de color"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Color grading"
+msgstr "Etalonaje"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "CRT screen"
+msgstr "Pantalla CRT"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Depth parallax"
+msgstr "Paralaje de profundidad"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Dissolve"
+msgstr "Disolución"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Edges"
+msgstr "Bordes"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Film grain"
+msgstr "Grano de película"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Flow"
+msgstr "Flujo"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Glitch"
+msgstr "Fallo digital"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Light rays"
+msgstr "Rayos de luz"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Iris"
+msgstr "Iris"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Lens distortion"
+msgstr "Distorsión de lente"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Perspective"
+msgstr "Perspectiva"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Pixelate"
+msgstr "Pixelar"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Posterize"
+msgstr "Posterizar"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Reflection"
+msgstr "Reflejo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Scroll"
+msgstr "Desplazamiento continuo"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Shake"
+msgstr "Sacudida"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Shine"
+msgstr "Destello"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Sway"
+msgstr "Vaivén"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Tilt-shift"
+msgstr "Efecto miniatura"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Twirl"
+msgstr "Remolino"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Water rings"
+msgstr "Anillos en el agua"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Water ripples"
+msgstr "Ondulaciones del agua"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Waves"
+msgstr "Ondas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "overshoot"
+msgstr "con retroceso"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "bouncing"
+msgstr "con rebote"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "circular"
+msgstr "circular"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "cubic"
+msgstr "cúbica"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "elastic"
+msgstr "elástica"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "exponential"
+msgstr "exponencial"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "quadratic"
+msgstr "cuadrática"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "quartic"
+msgstr "cuártica"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "quintic"
+msgstr "quíntica"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "sine"
+msgstr "sinusoidal"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "the clock"
+msgstr "el reloj"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "the keyframes"
+msgstr "los fotogramas clave"
+
+#
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "a user property"
+msgstr "una propiedad de usuario"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "a script"
+msgstr "un script"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Solid color"
+msgstr "Color sólido"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Sound spectrum"
+msgstr "Espectro del sonido"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Adjustment"
+msgstr "Ajuste"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Empty"
+msgstr "Vacía"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Layered parallax"
+msgstr "Paralaje por capas"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Text clock"
+msgstr "Reloj de texto"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Ease in (%1)"
+msgstr "Entrada suave (%1)"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Ease out (%1)"
+msgstr "Salida suave (%1)"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Ease in and out (%1)"
+msgstr "Entrada y salida suaves (%1)"

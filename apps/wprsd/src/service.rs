@@ -92,6 +92,14 @@ impl Service {
         self.d()?.run(move |d| d.preview_edit(&path, &edit_json)).await
     }
 
+    async fn preview_scene(&self, output: String, dir: String, document: String, time: f64) -> Result<()> {
+        let dir = PathBuf::from(dir);
+        if !dir.is_absolute() {
+            return Err(InvalidArgs(format!("{} is not an absolute path", dir.display())).into());
+        }
+        self.d()?.run(move |d| d.preview_scene(&output, &dir, &document, time)).await
+    }
+
     async fn set_wallpaper(&self, path: String, output: String, fit: String) -> Result<()> {
         let path = local_path(&path)?;
         self.d()?.render(move |d| d.change_wallpaper(&path, &output, &fit)).await

@@ -80,7 +80,11 @@ impl State {
     pub fn assigned(&self) -> Vec<(String, String, bool)> {
         let playlist = |name: &String| self.config.resolve(name).playlist;
         let found = |(name, info): (&String, _)| Some((name.clone(), playlist(name)?, self.active(info)));
-        self.outputs.iter().filter_map(found).collect()
+        self.outputs
+            .iter()
+            .filter(|(name, _)| !crate::drafts::virtual_output(name))
+            .filter_map(found)
+            .collect()
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::{
-    MAX_ASSETS, MAX_KEYS, MAX_LAYERS, MAX_PARTICLES, MAX_SCRIPTS, MAX_SIZE, MAX_SYSTEMS, MAX_TIMELINES,
-    Property, SCHEMA, Scene,
+    Kind, Layer, MAX_ASSETS, MAX_KEYS, MAX_LAYERS, MAX_PARTICLES, MAX_SCRIPTS, MAX_SIZE, MAX_SYSTEMS,
+    MAX_TIMELINES, Property, SCHEMA, Scene,
 };
 use std::collections::{BTreeMap, HashSet};
 
@@ -46,6 +46,15 @@ pub enum Issue {
     Volume,
 }
 
+fn nested<'b>(base: &str, layers: &'b [Layer], out: &mut Vec<(String, &'b str)>) {
+    for (i, layer) in layers.iter().enumerate() {
+        out.push((format!("{base}/{i}"), layer.id.as_str()));
+        if let Kind::Group { layers, .. } = &layer.kind {
+            nested(&format!("{base}/{i}/layers"), layers, out);
+        }
+    }
+}
+
 pub(crate) struct Check<'a> {
     pub(crate) issues: Vec<Issue>,
     pub(crate) scene: &'a Scene,
@@ -74,7 +83,9 @@ impl Scene {
         if layers > MAX_LAYERS {
             return c.issues;
         }
-        c.ids("/layers", self.layers().map(|l| l.id.as_str()));
+        let mut tree = Vec::new();
+        nested("/layers", &self.layers, &mut tree);
+        c.ids(tree.into_iter());
         c.layers("/layers", &self.layers, 1);
         c.masks();
         c.sounds();
@@ -86,7 +97,7 @@ impl Scene {
             c.system(&format!("/particles/{id}"), system);
         }
         c.count("/timelines", self.timelines.len(), MAX_TIMELINES);
-        c.ids("/timelines", self.timelines.iter().map(|t| t.id.as_str()));
+        c.ids(self.timelines.iter().enumerate().map(|(i, t)| (format!("/timelines/{i}"), t.id.as_str())));
         for (i, tl) in self.timelines.iter().enumerate() {
             let p = format!("/timelines/{i}");
             c.range(&format!("{p}/duration"), tl.duration, 1e-3, 86_400.0);
@@ -133,10 +144,10 @@ impl Check<'_> {
         }
     }
 
-    fn ids<'b>(&mut self, base: &str, ids: impl Iterator<Item = &'b str>) {
+    fn ids<'b>(&mut self, ids: impl Iterator<Item = (String, &'b str)>) {
         let mut seen = HashSet::new();
-        for (i, id) in ids.enumerate() {
-            let path = format!("{base}/{i}/id");
+        for (at, id) in ids {
+            let path = format!("{at}/id");
             self.id(&path, id);
             if !seen.insert(id) {
                 self.issues.push(Issue::DuplicateId(path));

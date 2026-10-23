@@ -83,7 +83,11 @@ pub fn validate(manifest: &Manifest, files: &[FileEntry], limits: &Limits) -> Re
         let file = files.iter().find(|f| &f.path == path).ok_or_else(|| Error::Missing(path.clone()))?;
         let usable = path != MANIFEST && extension(path).is_some_and(|e| types.contains(&e.as_str()));
         require(usable, field, &format!("{path:?} is not a usable {field} for {} packages", manifest.kind))?;
-        within("preview size", file.size, max)
+        require(
+            file.size <= max,
+            field,
+            &format!("{path:?} has {} bytes, more than the {max} allowed", file.size),
+        )
     })?;
     manifest.credits.iter().flat_map(|c| &c.paths).try_for_each(|path| {
         check_path(path.trim_end_matches('/'))?;

@@ -8,7 +8,7 @@ Kirigami.ApplicationWindow {
     property int current: 0
     property var inputs: ({})
     property var asked: ({})
-    readonly property var names: ["library", "playlists", "profiles", "providers", "repos", "settings", "account"]
+    readonly property var names: ["library", "playlists", "profiles", "providers", "repos", "settings", "account", "scenes"]
     readonly property list<Component> pages: [
         Component {
             LibraryPage {}
@@ -30,6 +30,9 @@ Kirigami.ApplicationWindow {
         },
         Component {
             AccountPage {}
+        },
+        Component {
+            ScenesPage {}
         }
     ]
 
@@ -82,6 +85,12 @@ Kirigami.ApplicationWindow {
                 icon.name: "folder-pictures"
                 checked: root.current === 0
                 onTriggered: root.showPage(0)
+            },
+            Kirigami.Action {
+                text: App.tr("Scenes")
+                icon.name: "draw-freehand"
+                checked: root.current === 7
+                onTriggered: root.showPage(7)
             },
             Kirigami.Action {
                 text: App.tr("Playlists")
@@ -192,12 +201,28 @@ Kirigami.ApplicationWindow {
                 "item": item
             });
         }
+
+        function onCompose(folder, starter, text) {
+            root.current = -1;
+            root.open(composer, {
+                "folder": folder,
+                "starter": starter,
+                "heading": starter ? text : "",
+                "source": starter ? "" : text
+            });
+        }
     }
 
     Component {
         id: editor
 
         EditPage {}
+    }
+
+    Component {
+        id: composer
+
+        ScenePage {}
     }
 
     Timer {

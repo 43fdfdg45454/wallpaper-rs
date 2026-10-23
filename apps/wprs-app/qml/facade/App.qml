@@ -26,6 +26,7 @@ QtObject {
 
     signal navigate(int page, string query)
     signal edit(var item)
+    signal compose(string folder, string starter, string text)
     signal updated(string topic, var ids)
 
     function settle(tag, slot, value) {

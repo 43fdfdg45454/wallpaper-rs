@@ -1,5 +1,6 @@
 use crate::meta::{Content, Credit, Input, Links, Origin, Previews, Requires};
 use crate::{Error, Needs, Preset, Property, Result, Text, features};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -10,7 +11,7 @@ const PREFIX: &str = "wallpaper-rs.wpak/";
 
 pub type Strings = BTreeMap<String, BTreeMap<String, String>>;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
     #[default]
@@ -29,7 +30,7 @@ impl fmt::Display for Kind {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
     pub schema: String,
@@ -37,10 +38,13 @@ pub struct Manifest {
     pub version: String,
     pub title: Text,
     #[serde(default, skip_serializing_if = "Text::is_empty")]
+    #[schemars(extend("x-markup" = true))]
     pub description: Text,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-markup" = true))]
     pub changes: Option<Text>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "language"))]
     pub default_locale: Option<String>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub strings: Strings,
@@ -50,14 +54,18 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub credits: Vec<Credit>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-required" = true))]
     pub origin: Option<Origin>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-required" = true))]
     pub content: Option<Content>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-required" = true))]
     pub photosensitive: Option<bool>,
     pub kind: Kind,
     pub entry: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "thumbnail"))]
     pub preview: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub previews: Option<Previews>,
@@ -80,6 +88,10 @@ struct Header {
     schema: String,
     #[serde(default)]
     requires: Needs,
+}
+
+pub fn manifest_schema() -> serde_json::Value {
+    serde_json::Value::from(schemars::schema_for!(Manifest))
 }
 
 impl Manifest {

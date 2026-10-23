@@ -16,6 +16,10 @@ mod grid;
 mod items;
 mod library;
 mod rows;
+mod scene;
+mod scenefile;
+mod scenelive;
+mod scenework;
 mod secret;
 #[cfg(test)]
 mod tests;
@@ -85,9 +89,11 @@ fn run() -> ExitCode {
 
 fn check() -> ExitCode {
     let platform = std::env::var("QT_QPA_PLATFORM").unwrap_or_else(|_| "offscreen".into());
+    let state = std::env::temp_dir().join(format!("wprs-app-check-state-{}", std::process::id()));
     let child = std::env::current_exe().and_then(|exe| {
         let mut command = Command::new(exe);
         command.env(bus::CHECK, "1").env("QT_QPA_PLATFORM", platform).env("QT_FORCE_STDERR_LOGGING", "1");
+        command.env("XDG_STATE_HOME", &state);
         command.args(["--page", "settings"]);
         command.stderr(Stdio::piped()).spawn()
     });
@@ -98,7 +104,10 @@ fn check() -> ExitCode {
         problems +=
             usize::from([".qml", "QQmlApplicationEngine", "call failed"].iter().any(|p| line.contains(p)));
     }
-    match child.wait() {
+    let status = child.wait();
+    std::fs::remove_dir_all(std::env::temp_dir().join(format!("wprs-app-check-{}", child.id()))).ok();
+    std::fs::remove_dir_all(&state).ok();
+    match status {
         Ok(status) if status.success() && problems == 0 => ExitCode::SUCCESS,
         _ => {
             eprintln!("wprs-app: the QML check found {problems} problems");

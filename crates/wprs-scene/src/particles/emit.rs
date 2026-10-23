@@ -1,9 +1,10 @@
 use super::is_zero;
 use crate::Color;
 use crate::value::Value;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Emitter {
     pub shape: EmitShape,
@@ -17,7 +18,7 @@ pub struct Emitter {
     pub inherit: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum EmitShape {
     Point([f32; 2]),
@@ -31,26 +32,27 @@ pub enum EmitShape {
     Line([[f32; 2]; 2]),
     Edge,
     Mask {
+        #[schemars(extend("x-ref" = "image"))]
         texture: String,
         #[serde(default = "half")]
         threshold: f32,
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Follow {
     Cursor,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cue {
     Beat,
     Click,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Burst {
     pub count: u32,
@@ -60,7 +62,7 @@ pub struct Burst {
     pub on: Option<Cue>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct Init {
     pub life: [f32; 2],

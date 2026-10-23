@@ -1,6 +1,7 @@
 use crate::resolve::Context;
 use crate::validate::{Check, Issue};
 use crate::{Control, Kind, Layer, Property, Scene, Text, Value, clip};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -8,21 +9,26 @@ pub const MAX_SOUNDS: usize = 8;
 pub const VOLUME: &str = "volume";
 const MAX_FADE: f32 = 60.0;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Sound {
+    #[schemars(extend("x-ref" = "sound"))]
     pub sound: String,
     #[serde(default = "yes", rename = "loop")]
     pub repeat: bool,
     #[serde(default = "playing")]
     pub play: Value<bool>,
     #[serde(default = "full")]
+    #[schemars(extend("x-range" = [0, 1]))]
     pub volume: Value<f32>,
     #[serde(default = "centered")]
+    #[schemars(extend("x-range" = [-1, 1]))]
     pub pan: Value<f32>,
     #[serde(default)]
+    #[schemars(extend("x-unit" = "s", "x-range" = [0, 60]))]
     pub fade_in: f32,
     #[serde(default)]
+    #[schemars(extend("x-unit" = "s", "x-range" = [0, 60]))]
     pub fade_out: f32,
 }
 

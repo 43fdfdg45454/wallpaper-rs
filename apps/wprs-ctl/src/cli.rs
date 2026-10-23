@@ -175,7 +175,10 @@ pub enum Command {
     Cancel { id: u64 },
     #[command(subcommand, about = "Properties of the scene shown on an output")]
     Prop(Prop),
-    #[command(subcommand, about = "Scene packages; needs no daemon")]
+    #[command(
+        subcommand,
+        about = "Create, edit, build and benchmark scenes; needs no daemon except for preview and apply"
+    )]
     Scene(SceneCommand),
     #[command(subcommand, about = "Library folders, items, tags and thumbnails")]
     Lib(Lib),

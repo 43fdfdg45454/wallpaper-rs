@@ -31,6 +31,10 @@ macro_rules! calls {
 
 calls! {
     Daemon1 daemon {
+        RequestStream request_stream(output: str, width: u32, height: u32);
+        ReleaseStream release_stream(output: str);
+        SetOutputCovered set_output_covered(output: str, covered: bool);
+        PreviewScene preview_scene(output: str, dir: str, document: str, time: f64);
         SetWallpaper set_wallpaper(path: str, output: str, fit: str);
         SetBackground set_background(color: str, output: str);
         SetOption set_option(key: str, value: str);

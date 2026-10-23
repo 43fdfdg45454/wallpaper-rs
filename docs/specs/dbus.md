@@ -265,6 +265,24 @@ and are rendered at most once per frame; an empty `edit_json` ends it, and so do
 call. `path` is absolute; a relative path, an invalid edit (the message names the field) or more
 than 2 MiB of JSON return `InvalidArgs`, a missing file `NotFound`.
 
+### `PreviewScene(s output, s dir, s document, d time)`
+
+Shows a scene that is being edited on `output`, or on every output when `output` is empty,
+instead of what the output shows, without saving or applying anything (see `editor.md`).
+`dir` is the absolute path of the scene folder, whose files provide the assets, and `document`
+is `{"manifest": …, "scene": …}`, the unsaved manifest and `scene.json`. A `time` of 0 or more
+holds the scene at that second, as a still frame that only renders again when the call changes;
+a negative `time` plays it. The scene is checked for what it needs to render: the id, the user
+properties, the presets and the scene itself, while texts, rating, origin and credits may still be
+incomplete; an invalid document, a path outside `dir` or an asset over the limits return
+`InvalidArgs`. Calls replace the preview of the
+output and reuse the decoded assets of the previous one, without a crossfade; a playing preview
+of the same folder keeps its clock, so an edit does not restart it. An empty `document` ends it,
+and so do 60 s without a call or the output going away. Outputs whose name starts with
+`preview:` are virtual: a client creates one with `RequestStream` to show the preview inside its
+own window, and it is left out of `GetState`, of the conditions and holds of profiles, of
+playlists and of the record of what was shown, so it never counts as a screen.
+
 ### `SetWallpaper(s path, s output, s fit)`
 
 Sets the wallpaper of `output`, or of every output when `output` is empty (this also clears

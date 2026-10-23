@@ -14,6 +14,7 @@ wprs-providers.workspace = true
 wprs-render.workspace = true
 wprs-depth = { workspace = true, features = ["fetch", "infer"] }
 wprs-scene.workspace = true
+wprs-editor.workspace = true
 anyhow.workspace = true
 chrono = { workspace = true, features = ["clock"] }
 clap.workspace = true

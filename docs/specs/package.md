@@ -31,8 +31,12 @@ major version, a `requires.engine` that this version of wallpaper-rs does not me
 wallpaper-rs: it uses …`) instead of an error about an unknown field. Only then is the manifest
 read strictly, refusing unknown fields. `wprs-ctl pack upgrade DIR --rating general|mature
 [--reason …] --photosensitive true|false [--derived-from AUTHOR]` turns a first-version folder into
-the second version: it never guesses the rating, moves `preview` to `previews.thumbnail`, adds
-the inputs and features the scene uses and removes a signature that no longer matches.
+the second version: it never guesses the rating, moves `preview` to `previews.thumbnail`, sets
+`default_locale` when the texts are in several languages (`en` when all of them have English, or a
+language they all share), renames the property ids with a `-` (`snow-speed` becomes `snow_speed`)
+in the manifest and in the bindings and triggers of the scene, adds the inputs and features the
+scene uses and removes a signature that no longer matches. `wprs-ctl scene upgrade` does the same in
+the scene editor (`editor.md`).
 
 In the desktop library a package that needs a newer version still shows its thumbnail
 (`previews.thumbnail` or `preview`, read without the strict manifest) next to the reason. The

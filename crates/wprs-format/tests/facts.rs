@@ -4,12 +4,14 @@ use common::{archive, image, manifest as v1, package, v2};
 use image::ImageFormat;
 use image::codecs::gif::GifEncoder;
 use image::{Delay, Frame, RgbaImage};
+use serde_json::{Value, json};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::Cursor;
 use std::path::Path;
 use wprs_format::{
     Content, Error, Input, Kind, Limits, Manifest, Origin, OriginKind, Previews, Rating, build, features,
-    fill, media, open, read, upgrade,
+    fill, media, open, read, upgrade, upgrade_json,
 };
 
 const SCENE: &str = r##"{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [3840, 1600]},
@@ -136,7 +138,7 @@ fn upgrade_converts_a_version_one_source() {
     fs::write(src.join("manifest.json.minisig"), "stale").unwrap();
     let content = Content { rating: Rating::General, descriptors: Vec::new() };
     let origin = Origin { kind: OriginKind::Original, derived_from: Vec::new() };
-    let upgraded = upgrade(&src, content.clone(), false, origin.clone()).unwrap();
+    let (upgraded, _) = upgrade(&src, content.clone(), false, origin.clone()).unwrap();
     assert_eq!(
         (upgraded.inputs.as_slice(), upgraded.features()),
         (&[Input::Audio][..], &["inputs.audio".to_string()][..])
@@ -149,6 +151,61 @@ fn upgrade_converts_a_version_one_source() {
     build(&src, tmp.path().join("up.wpak"), &Limits::default()).unwrap();
     let again = upgrade(&src, content, false, origin);
     assert!(matches!(&again, Err(Error::Invalid { field, .. }) if field == "schema"), "{again:?}");
+}
+
+fn copy(from: &Path, to: &Path) {
+    fs::create_dir_all(to).unwrap();
+    for entry in fs::read_dir(from).unwrap().flatten() {
+        match entry.path().is_dir() {
+            true => copy(&entry.path(), &to.join(entry.file_name())),
+            false => drop(fs::copy(entry.path(), to.join(entry.file_name())).unwrap()),
+        }
+    }
+}
+
+#[test]
+fn released_example_scenes_upgrade_into_valid_packages() {
+    let released: BTreeMap<String, Value> =
+        serde_json::from_str(include_str!("fixture/released.json")).unwrap();
+    let (tmp, root) =
+        (tempfile::tempdir().unwrap(), Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scenes"));
+    for (name, manifest) in released {
+        let dir = tmp.path().join(&name);
+        copy(&root.join(&name), &dir);
+        fs::write(dir.join("manifest.json"), manifest.to_string()).unwrap();
+        let content = Content { rating: Rating::General, descriptors: Vec::new() };
+        let (upgraded, renames) = upgrade(&dir, content, false, Origin::by(&[])).unwrap();
+        let localized = manifest.to_string().contains(r#""es":"#);
+        assert_eq!((upgraded.default_locale.is_some(), renames.len()), (localized, 0), "{name}");
+        assert_eq!(upgraded.thumbnail().map(String::as_str), Some("preview.jpg"));
+        build(&dir, tmp.path().join(format!("{name}.wpak")), &Limits::default()).unwrap();
+    }
+}
+
+#[test]
+fn upgrades_rename_hyphenated_properties_and_find_the_default_language() {
+    let label = |es: &str, de: &str| json!({"es": es, "de": de});
+    let mut manifest = json!({"schema": "wallpaper-rs.wpak/1", "id": "org.example.old", "version": "1.0.0",
+        "title": "Old", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "properties": {
+            "snow-speed": {"type": "slider", "min": 0, "max": 9, "step": 1, "default": 3, "label": label("Velocidad", "Tempo")},
+            "snow_speed": {"type": "bool", "default": true, "visible_if": {"snow-speed": 3}, "label": label("Nieve", "Schnee")}},
+        "presets": [{"id": "fast", "values": {"snow-speed": 9}}]});
+    let mut scene = json!({"layers": [{"opacity": {"prop": "snow-speed", "scale": 0.1}}],
+        "timelines": [{"id": "intro", "trigger": "prop:snow-speed"}]});
+    let renames = upgrade_json(&mut manifest, Some(&mut scene)).unwrap();
+    assert_eq!(renames, BTreeMap::from([("snow-speed".to_string(), "snow_speed_2".to_string())]));
+    assert_eq!(manifest["properties"]["snow_speed"]["visible_if"], json!({"snow_speed_2": 3}));
+    assert_eq!(manifest["presets"][0]["values"], json!({"snow_speed_2": 9}));
+    assert_eq!(scene["layers"][0]["opacity"], json!({"prop": "snow_speed_2", "scale": 0.1}));
+    assert_eq!(
+        (&scene["timelines"][0]["trigger"], &manifest["default_locale"]),
+        (&json!("prop:snow_speed_2"), &json!("de"))
+    );
+    let upgraded: Manifest = serde_json::from_value(manifest.clone()).unwrap();
+    let missing: Vec<String> = upgraded.missing().iter().map(ToString::to_string).collect();
+    assert_eq!(missing.len(), 3, "{missing:?}");
+    assert!(missing[0].contains("content") && missing[2].contains("origin"));
+    assert!(upgrade_json(&mut manifest, None).unwrap_err().to_string().contains("already"));
 }
 
 #[test]

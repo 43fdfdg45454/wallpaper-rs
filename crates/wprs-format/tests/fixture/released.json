@@ -1,0 +1,517 @@
+{
+ "dusk": {
+  "schema": "wallpaper-rs.wpak/1",
+  "id": "io.github.wallpaper_rs.example.dusk",
+  "version": "1.0.0",
+  "title": "Dusk hills",
+  "description": "Layered hills under a rising sun, with blend modes, a masked reflection, a timeline, depth that follows the pointer once you allow it, and user properties.",
+  "authors": [
+   "wallpaper-rs contributors"
+  ],
+  "license": "CC0-1.0",
+  "kind": "scene",
+  "entry": "scene.json",
+  "preview": "preview.jpg",
+  "tags": [
+   "example",
+   "landscape",
+   "depth"
+  ],
+  "properties": {
+   "look": {
+    "type": "group",
+    "label": {
+     "en": "Look",
+     "es": "Aspecto"
+    }
+   },
+   "mood": {
+    "type": "combo",
+    "group": "look",
+    "order": 1,
+    "default": "dusk",
+    "label": {
+     "en": "Time of day",
+     "es": "Momento del día"
+    },
+    "options": [
+     {
+      "value": "dusk",
+      "label": {
+       "en": "Dusk",
+       "es": "Atardecer"
+      }
+     },
+     {
+      "value": "night",
+      "label": {
+       "en": "Night",
+       "es": "Noche"
+      }
+     }
+    ]
+   },
+   "stars": {
+    "type": "bool",
+    "group": "look",
+    "order": 2,
+    "default": true,
+    "label": {
+     "en": "Stars",
+     "es": "Estrellas"
+    }
+   },
+   "light": {
+    "type": "color",
+    "group": "look",
+    "order": 3,
+    "default": "#ff9a5c",
+    "label": {
+     "en": "Light color",
+     "es": "Color de la luz"
+    }
+   },
+   "warmth": {
+    "type": "slider",
+    "group": "look",
+    "order": 4,
+    "min": 0,
+    "max": 1,
+    "step": 0.05,
+    "default": 0.35,
+    "label": {
+     "en": "Light strength",
+     "es": "Intensidad de la luz"
+    }
+   },
+   "sun_size": {
+    "type": "slider",
+    "group": "look",
+    "order": 5,
+    "min": 0.5,
+    "max": 1.5,
+    "step": 0.05,
+    "default": 1,
+    "unit": "×",
+    "label": {
+     "en": "Sun size",
+     "es": "Tamaño del sol"
+    }
+   },
+   "vignette": {
+    "type": "bool",
+    "group": "look",
+    "order": 6,
+    "default": true,
+    "label": {
+     "en": "Dark corners",
+     "es": "Esquinas oscuras"
+    }
+   },
+   "depth": {
+    "type": "combo",
+    "group": "look",
+    "order": 7,
+    "default": "pointer",
+    "label": {
+     "en": "Depth",
+     "es": "Profundidad"
+    },
+    "options": [
+     {
+      "value": "pointer",
+      "label": {
+       "en": "Follow the pointer",
+       "es": "Seguir al puntero"
+      }
+     },
+     {
+      "value": "orbit",
+      "label": {
+       "en": "Slow orbit",
+       "es": "Órbita lenta"
+      }
+     },
+     {
+      "value": "off",
+      "label": {
+       "en": "Off",
+       "es": "Apagada"
+      }
+     }
+    ]
+   },
+   "words": {
+    "type": "group",
+    "order": 1,
+    "label": {
+     "en": "Caption",
+     "es": "Rótulo"
+    }
+   },
+   "caption": {
+    "type": "text",
+    "group": "words",
+    "order": 1,
+    "default": "",
+    "max_len": 40,
+    "label": {
+     "en": "Text",
+     "es": "Texto"
+    },
+    "help": {
+     "en": "Shown in the lower left corner.",
+     "es": "Se muestra en la esquina inferior izquierda."
+    }
+   },
+   "caption_color": {
+    "type": "color",
+    "group": "words",
+    "order": 2,
+    "default": "#ffffffd0",
+    "alpha": true,
+    "label": {
+     "en": "Text color",
+     "es": "Color del texto"
+    }
+   }
+  },
+  "presets": [
+   {
+    "id": "golden",
+    "label": {
+     "en": "Golden hour",
+     "es": "Hora dorada"
+    },
+    "values": {
+     "mood": "dusk",
+     "light": "#ffb347",
+     "warmth": 0.55
+    }
+   },
+   {
+    "id": "moonlight",
+    "label": {
+     "en": "Moonlight",
+     "es": "Luz de luna"
+    },
+    "values": {
+     "mood": "night",
+     "stars": true,
+     "light": "#7f9cff",
+     "warmth": 0.2
+    }
+   }
+  ]
+ },
+ "orbits": {
+  "schema": "wallpaper-rs.wpak/1",
+  "id": "io.github.wallpaper_rs.example.orbits",
+  "version": "1.0.0",
+  "title": "Orbits",
+  "description": "Planets moved by a scene script around a glowing sun, with a clock in the corner.",
+  "authors": [
+   "wallpaper-rs contributors"
+  ],
+  "license": "CC0-1.0",
+  "kind": "scene",
+  "entry": "scene.json",
+  "preview": "preview.jpg",
+  "tags": [
+   "example",
+   "space",
+   "script"
+  ],
+  "properties": {
+   "speed": {
+    "type": "slider",
+    "min": 0,
+    "max": 4,
+    "step": 0.25,
+    "default": 1,
+    "unit": "×",
+    "label": {
+     "en": "Speed",
+     "es": "Velocidad"
+    }
+   },
+   "clock": {
+    "type": "bool",
+    "order": 1,
+    "default": true,
+    "label": {
+     "en": "Clock",
+     "es": "Reloj"
+    }
+   }
+  }
+ },
+ "pond": {
+  "schema": "wallpaper-rs.wpak/1",
+  "id": "io.github.wallpaper_rs.example.pond",
+  "version": "1.0.0",
+  "title": "Pond",
+  "description": "Lily pads that drift with the pointer and water that ripples where it moves or clicks, once you allow it, with the soft sound of water.",
+  "authors": [
+   "wallpaper-rs contributors"
+  ],
+  "license": "CC0-1.0",
+  "kind": "scene",
+  "entry": "scene.json",
+  "preview": "preview.jpg",
+  "tags": [
+   "example",
+   "water",
+   "pointer",
+   "sound"
+  ],
+  "properties": {
+   "note": {
+    "type": "label",
+    "label": {
+     "en": "Allow the pointer for this scene, then move it over the water.",
+     "es": "Permite el puntero a esta escena y muévelo sobre el agua."
+    }
+   },
+   "ripples": {
+    "type": "slider",
+    "order": 1,
+    "min": 0,
+    "max": 96,
+    "step": 4,
+    "default": 40,
+    "label": {
+     "en": "Ripple strength",
+     "es": "Fuerza de las ondas"
+    }
+   },
+   "pads": {
+    "type": "bool",
+    "order": 2,
+    "default": true,
+    "label": {
+     "en": "Lily pads",
+     "es": "Nenúfares"
+    }
+   },
+   "volume": {
+    "type": "slider",
+    "order": 3,
+    "min": 0,
+    "max": 100,
+    "step": 5,
+    "integer": true,
+    "default": 100,
+    "label": {
+     "en": "Water volume",
+     "es": "Volumen del agua"
+    }
+   }
+  }
+ },
+ "pulse": {
+  "schema": "wallpaper-rs.wpak/1",
+  "id": "io.github.wallpaper_rs.example.pulse",
+  "version": "1.0.0",
+  "title": "Pulse",
+  "description": "A ring and a spectrum that follow the sound playing on the computer, once you allow it.",
+  "authors": [
+   "wallpaper-rs contributors"
+  ],
+  "license": "CC0-1.0",
+  "kind": "scene",
+  "entry": "scene.json",
+  "preview": "preview.jpg",
+  "tags": [
+   "example",
+   "audio",
+   "music"
+  ],
+  "properties": {
+   "note": {
+    "type": "label",
+    "label": {
+     "en": "Allow audio for this scene to make it move with the sound.",
+     "es": "Permite el audio a esta escena para que se mueva con el sonido."
+    }
+   },
+   "color": {
+    "type": "color",
+    "order": 1,
+    "default": "#5ee7ff",
+    "label": {
+     "en": "Color",
+     "es": "Color"
+    }
+   },
+   "show": {
+    "type": "combo",
+    "order": 2,
+    "default": "both",
+    "label": {
+     "en": "Spectrum",
+     "es": "Espectro"
+    },
+    "options": [
+     {
+      "value": "circle",
+      "label": {
+       "en": "Circle",
+       "es": "Círculo"
+      }
+     },
+     {
+      "value": "bars",
+      "label": {
+       "en": "Bars",
+       "es": "Barras"
+      }
+     },
+     {
+      "value": "both",
+      "label": {
+       "en": "Both",
+       "es": "Ambos"
+      }
+     }
+    ]
+   },
+   "glitch": {
+    "type": "bool",
+    "order": 3,
+    "default": true,
+    "label": {
+     "en": "Glitch on beats",
+     "es": "Interferencias con el ritmo"
+    }
+   }
+  },
+  "presets": [
+   {
+    "id": "calm",
+    "label": {
+     "en": "Calm",
+     "es": "Tranquilo"
+    },
+    "values": {
+     "show": "circle",
+     "glitch": false,
+     "color": "#9f8cff"
+    }
+   }
+  ]
+ },
+ "snowfall": {
+  "schema": "wallpaper-rs.wpak/1",
+  "id": "io.github.wallpaper_rs.example.snowfall",
+  "version": "1.0.0",
+  "title": "Snowfall",
+  "description": "Snow drifting over pines in moonlight, with particles, drifting clouds, light rays, a vignette, film grain and the sound of the wind.",
+  "authors": [
+   "wallpaper-rs contributors"
+  ],
+  "license": "CC0-1.0",
+  "kind": "scene",
+  "entry": "scene.json",
+  "preview": "preview.jpg",
+  "tags": [
+   "example",
+   "winter",
+   "particles",
+   "sound"
+  ],
+  "properties": {
+   "density": {
+    "type": "slider",
+    "min": 10,
+    "max": 120,
+    "step": 5,
+    "integer": true,
+    "default": 80,
+    "label": {
+     "en": "Snowflakes per second",
+     "es": "Copos por segundo"
+    }
+   },
+   "wind": {
+    "type": "combo",
+    "order": 1,
+    "default": "breeze",
+    "label": {
+     "en": "Wind",
+     "es": "Viento"
+    },
+    "options": [
+     {
+      "value": "calm",
+      "label": {
+       "en": "Calm",
+       "es": "En calma"
+      }
+     },
+     {
+      "value": "breeze",
+      "label": {
+       "en": "Breeze",
+       "es": "Brisa"
+      }
+     },
+     {
+      "value": "gale",
+      "label": {
+       "en": "Gale",
+       "es": "Ventisca"
+      }
+     }
+    ]
+   },
+   "clouds": {
+    "type": "bool",
+    "order": 2,
+    "default": true,
+    "label": {
+     "en": "Clouds",
+     "es": "Nubes"
+    }
+   },
+   "volume": {
+    "type": "slider",
+    "order": 3,
+    "min": 0,
+    "max": 100,
+    "step": 5,
+    "integer": true,
+    "default": 100,
+    "label": {
+     "en": "Wind volume",
+     "es": "Volumen del viento"
+    }
+   }
+  },
+  "presets": [
+   {
+    "id": "blizzard",
+    "label": {
+     "en": "Blizzard",
+     "es": "Tormenta de nieve"
+    },
+    "values": {
+     "density": 120,
+     "wind": "gale"
+    }
+   },
+   {
+    "id": "quiet",
+    "label": {
+     "en": "Quiet night",
+     "es": "Noche tranquila"
+    },
+    "values": {
+     "density": 25,
+     "wind": "calm",
+     "clouds": false
+    }
+   }
+  ]
+ }
+}

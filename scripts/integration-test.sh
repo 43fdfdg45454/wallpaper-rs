@@ -4,7 +4,7 @@ set -euo pipefail
 BIN=$(realpath "${1:?usage: $0 <bin-dir>}")
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=$(mktemp -d /tmp/wprs-it.XXXXXX)
-export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config XDG_DATA_HOME=$WORK/data XDG_CACHE_HOME=$WORK/cache
+export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config XDG_DATA_HOME=$WORK/data XDG_CACHE_HOME=$WORK/cache XDG_STATE_HOME=$WORK/state
 mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME"
 chmod 700 "$XDG_RUNTIME_DIR"
 
@@ -724,6 +724,12 @@ ctl stream TEST-8 160 90 >/dev/null
 sleep 4
 expect "s['profile']" "$morning"
 [ -e "$hold" ] || fail "the manual profile choice was forgotten across a restart"
+ctl stream preview:9 160 90 >/dev/null
+sleep 3
+ctl release preview:9
+sleep 3
+expect "s['profile']" "$morning"
+[ -e "$hold" ] || fail "a preview stream replaced the profile chosen by hand"
 ctl stream TEST-9 160 90 >/dev/null
 wait_for 30 test ! -e "$hold" || fail "the manual profile choice outlived a change of outputs"
 ctl release TEST-9
@@ -794,6 +800,53 @@ shown "$s11" 208 32 96
 ctl release TEST-11 && expect "list(s['outputs'])" "[]"
 bus Library1 Remove asb 2 "$glow" "$clip" false >/dev/null
 echo "scene checks passed"
+draft=$scene/draft
+ctl scene new "$draft" >/dev/null
+ctl scene set "$draft" /scene/canvas/background '#00ff00'
+read -r _ _ _ s15 < <(ctl stream preview:1 160 90)
+expect "list(s['outputs'])" "[]"
+ctl scene preview "$draft" -o preview:1 --time 0
+shown "$s15" 0 255 0
+ctl scene add-layer "$draft" solid >/dev/null
+ctl scene set "$draft" /scene/layers/0/color '#ff0000'
+ctl scene preview "$draft" -o preview:1 --time 0
+shown "$s15" 255 0 0
+ctl scene solo "$draft" solid && ctl scene hide "$draft" solid
+ctl scene preview "$draft" -o preview:1 --time 2
+shown "$s15" 0 255 0
+if ctl scene set "$draft" /scene/canvas/size/0 0 && ctl scene preview "$draft" -o preview:1 2>/dev/null; then
+  fail "an invalid scene was previewed"
+fi
+ctl scene undo "$draft"
+"$BIN/probe" "$s15" 4 --hold >"$WORK/edit-frames.out" 2>&1 & counter=$!; pids+=("$counter")
+sleep 1
+ctl scene set "$draft" /scene/canvas/background '#0000ff'
+ctl scene preview "$draft" -o preview:1 --time 2
+wait "$counter" || fail "no frames while editing: $(cat "$WORK/edit-frames.out")"
+frames=$(sed -n 's/^frames //p' "$WORK/edit-frames.out")
+[ "$frames" -lt 15 ] || fail "one edit of a held preview rendered $frames frames"
+ctl scene solo "$draft" && ctl scene hide "$draft" solid --hidden false
+ctl scene keyframe "$draft" /scene/layers/0/color 0 '#ff0000'
+ctl scene keyframe "$draft" /scene/layers/0/color 16 '#0000ff'
+"$BIN/probe" "$s15" 10 --hold >"$WORK/play-frames.out" 2>&1 & player=$!; pids+=("$player")
+ctl scene preview "$draft" -o preview:1
+sleep 6
+ctl scene set "$draft" /scene/canvas/background '#00ff00'
+ctl scene preview "$draft" -o preview:1
+read -r b g r _ < <("$BIN/probe" "$s15" 3 | sed 's/.*center bgra \[\(.*\)\]/\1/; s/,/ /g')
+[ "$b" -gt 85 ] || fail "an edit restarted the playing preview: bgra $b $g $r"
+wait "$player" || fail "the playing preview stopped: $(cat "$WORK/play-frames.out")"
+ctl scene translate "$draft" /manifest/title es Borrador
+ctl scene set "$draft" /manifest/content '{"rating": "mature", "descriptors": ["gore"]}'
+ctl scene preview "$draft" -o preview:1 --time 0
+shown "$s15" 255 0 0
+ctl scene remove "$draft" /manifest/content && ctl scene remove "$draft" /manifest/origin
+ctl scene hide "$draft" solid
+ctl scene preview "$draft" -o preview:1 --time 0 || fail "incomplete package details stopped the preview"
+shown "$s15" 0 255 0
+ctl scene preview "$draft" -o preview:1 --stop
+ctl release preview:1 && expect "list(s['outputs'])" "[]"
+echo "scene editor preview checks passed"
 sea=org.example.sea
 inputs() { ctl input status --json | python3 -c "import json, sys; r = json.load(sys.stdin); print(eval(sys.argv[1]))" "$1"; }
 [ "$(inputs "r['grants'], r['capturing'], r['tracking']")" = "({}, False, False)" ] || fail "inputs start on"

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 
-const FAMILIES: [&str; 10] =
+pub(crate) const FAMILIES: [&str; 10] =
     ["sine", "quad", "cubic", "quart", "quint", "expo", "circ", "back", "elastic", "bounce"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]

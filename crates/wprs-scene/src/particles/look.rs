@@ -1,9 +1,10 @@
 use super::{MAX_CURVE, is_zero};
 use crate::Color;
 use crate::validate::Check;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Frames {
     Time,
@@ -11,10 +12,11 @@ pub enum Frames {
     Random,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct Render {
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "image"))]
     pub texture: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub frames: Option<Frames>,
@@ -22,6 +24,7 @@ pub struct Render {
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub mix: bool,
     #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[schemars(extend("x-curve" = true))]
     pub size_over_life: Vec<[f32; 2]>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub color_over_life: Vec<(f32, Color)>,
@@ -31,7 +34,7 @@ pub struct Render {
     pub trail: Option<Trail>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Trail {
     pub length: u32,

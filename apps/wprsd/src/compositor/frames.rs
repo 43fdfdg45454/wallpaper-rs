@@ -192,7 +192,7 @@ mod tests {
             clips,
             scripts,
         });
-        SceneSpec { values: pack.values(&[]), pack, extra: Vec::new() }
+        SceneSpec { values: pack.values(&[]), pack, extra: Vec::new(), hold: None }
     }
 
     #[test]

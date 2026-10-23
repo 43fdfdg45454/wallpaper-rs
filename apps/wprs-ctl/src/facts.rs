@@ -2,9 +2,7 @@ use crate::show::{self, list, text};
 use anyhow::Result;
 use serde_json::{Value, json};
 use std::path::Path;
-use wprs_format::{
-    Ancestor, Content, Error, Facts, Limits, Manifest, Origin, OriginKind, features, inspect, open, upgrade,
-};
+use wprs_format::{Content, Error, Facts, Limits, Manifest, Origin, features, inspect, open, upgrade};
 
 pub fn check(path: &Path, json: bool) -> Result<()> {
     let (manifest, facts) = match path.is_dir() {
@@ -71,12 +69,9 @@ pub fn upgraded(
     from: &[String],
 ) -> Result<()> {
     let content: Content = serde_json::from_value(json!({"rating": rating, "descriptors": reasons}))?;
-    let ancestor =
-        |author: &String| Ancestor { author: author.clone(), title: None, url: None, license: None };
-    let kind = if from.is_empty() { OriginKind::Original } else { OriginKind::Derived };
-    let origin = Origin { kind, derived_from: from.iter().map(ancestor).collect() };
-    let manifest = upgrade(dir, content, photosensitive, origin)?;
+    let (manifest, renames) = upgrade(dir, content, photosensitive, Origin::by(from))?;
     let inputs = list(manifest.inputs.iter().map(|i| i.name()));
     println!("{} {} is now {} (inputs: {})", manifest.id, manifest.version, manifest.schema, inputs);
+    renames.iter().for_each(|(old, new)| println!("property {old} is now {new}"));
     Ok(())
 }

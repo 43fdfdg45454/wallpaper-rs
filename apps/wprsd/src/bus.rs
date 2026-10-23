@@ -166,7 +166,12 @@ impl Daemon {
             options: serde_json::to_value(st.config.options())
                 .and_then(serde_json::from_value)
                 .unwrap_or_default(),
-            outputs: st.outputs.iter().map(output).collect(),
+            outputs: st
+                .outputs
+                .iter()
+                .filter(|(name, _)| !crate::drafts::virtual_output(name))
+                .map(output)
+                .collect(),
         };
         serde_json::to_string(&state).unwrap_or_default()
     }

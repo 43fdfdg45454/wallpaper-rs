@@ -130,8 +130,14 @@ impl Daemon {
             }
             Ok(())
         })?;
-        let shown: Vec<String> =
-            self.state().outputs.keys().filter(|o| output.is_empty() || **o == output).cloned().collect();
+        let shown: Vec<String> = self
+            .state()
+            .outputs
+            .keys()
+            .filter(|o| !crate::drafts::virtual_output(o))
+            .filter(|o| output.is_empty() || **o == output)
+            .cloned()
+            .collect();
         self.store.write(|lib| shown.iter().try_for_each(|o| lib.mark_used(uid, o, now())))?;
         self.changes.changed("library", vec![uid.to_owned()]);
         Ok(())

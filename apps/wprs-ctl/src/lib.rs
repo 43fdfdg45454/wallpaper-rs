@@ -1,5 +1,7 @@
 mod about;
 mod account;
+pub mod author;
+mod authoring;
 mod bench;
 mod calls;
 mod caution;

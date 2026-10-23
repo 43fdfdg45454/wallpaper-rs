@@ -124,6 +124,7 @@ impl Daemon {
         }
         if info.claims.is_empty() {
             st.outputs.remove(output);
+            st.drafts.remove(output);
             self.compositor.remove(output);
             self.exporter.remove_stream(output)?;
             tracing::info!(output, "stream released");

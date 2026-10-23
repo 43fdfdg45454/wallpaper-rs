@@ -134,7 +134,7 @@ fn pick(daemon: &Daemon, now: &Conditions) -> Result<()> {
 
 fn conditions(daemon: &Daemon) -> Conditions {
     let st = daemon.state();
-    (st.outputs.keys().cloned().collect(), st.on_battery)
+    (st.outputs.keys().filter(|o| !crate::drafts::virtual_output(o)).cloned().collect(), st.on_battery)
 }
 
 pub async fn follow(daemon: Arc<Daemon>, power: tokio::sync::oneshot::Receiver<()>) {

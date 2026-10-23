@@ -40,6 +40,7 @@ pub struct SceneSpec {
     pub pack: Arc<ScenePack>,
     pub values: Values,
     pub extra: Vec<(String, Arc<RgbaImage>)>,
+    pub hold: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -86,7 +87,7 @@ impl Content {
             _ => None,
         };
         let values = |c: &Content| match c {
-            Content::Scene(s) => Some(s.values.clone()),
+            Content::Scene(s) => Some((s.values.clone(), s.hold)),
             _ => None,
         };
         self.same_source(other) && look(self) == look(other) && values(self) == values(other)

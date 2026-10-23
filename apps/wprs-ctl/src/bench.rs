@@ -29,6 +29,8 @@ pub enum SceneCommand {
         #[arg(long, help = "Print the report as JSON")]
         json: bool,
     },
+    #[command(flatten)]
+    Author(crate::author::Author),
 }
 
 fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAssets)> {
@@ -78,7 +80,12 @@ fn ms_of(value: &serde_json::Value, unit: &str) -> String {
 }
 
 pub fn run(command: SceneCommand) -> Result<()> {
-    let SceneCommand::Bench { path, frames, size, fps, quality, json } = command;
+    let (path, frames, size, fps, quality, json) = match command {
+        SceneCommand::Bench { path, frames, size, fps, quality, json } => {
+            (path, frames, size, fps, quality, json)
+        }
+        SceneCommand::Author(command) => return crate::authoring::run(command),
+    };
     let size = dimensions(&size)?;
     let (scene, values, assets) = load(&path)?;
     let r = Renderer::new()?;

@@ -7,6 +7,7 @@ mod compositor;
 mod controls;
 mod daemon;
 mod decode;
+mod drafts;
 mod edits;
 mod error;
 mod examples;

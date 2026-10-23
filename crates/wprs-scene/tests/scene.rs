@@ -67,6 +67,11 @@ fn validation_names_the_broken_field() {
     assert_eq!(issues(|s| s.canvas.size = [0, 1080]), [range("/canvas/size/0", 0.0, 1.0, 16384.0)]);
     assert_eq!(issues(|s| s.layers[1].id = "Sea".into()), [Issue::Id("/layers/1/id".into())]);
     assert_eq!(issues(|s| s.layers[2].id = "sea".into()), [Issue::DuplicateId("/layers/2/id".into())]);
+    let nested = issues(|s| {
+        let Kind::Group { layers, .. } = &mut s.layers[4].kind else { unreachable!() };
+        layers[1].id = "Ring".into();
+    });
+    assert_eq!(nested, [Issue::Id("/layers/4/layers/1/id".into())]);
     assert_eq!(
         issues(|s| s.layers[0].opacity = Value::Fixed(2.0)),
         [range("/layers/0/opacity", 2.0, 0.0, 1.0)]

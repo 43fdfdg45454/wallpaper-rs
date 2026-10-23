@@ -21,14 +21,16 @@ fn summary(uid: &str) -> ItemSummary {
     ItemSummary { uid: uid.into(), ..page.items.remove(0) }
 }
 
-pub fn qml() -> Vec<String> {
+pub fn qml_files() -> Vec<(String, String)> {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("qml");
     let files = std::fs::read_dir(&dir).unwrap().chain(std::fs::read_dir(dir.join("facade")).unwrap());
-    files
-        .map(|f| f.unwrap().path())
-        .filter(|p| p.is_file())
-        .map(|p| std::fs::read_to_string(p).unwrap())
-        .collect()
+    let files = files.map(|f| f.unwrap().path()).filter(|p| p.is_file());
+    let name = |p: &Path| p.file_name().unwrap().to_string_lossy().into_owned();
+    files.map(|p| (name(&p), std::fs::read_to_string(&p).unwrap())).collect()
+}
+
+pub fn qml() -> Vec<String> {
+    qml_files().into_iter().map(|(_, text)| text).collect()
 }
 
 pub fn private_bus() -> (Child, TempDir, String) {

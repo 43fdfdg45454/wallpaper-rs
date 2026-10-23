@@ -75,6 +75,9 @@ fn broken_texts_are_rejected() {
     let mut m = localized();
     m.strings.get_mut("en").unwrap().insert("about".into(), "<b>bold</b>".into());
     assert_eq!(field(&m), "description");
+    let mut m = localized();
+    m.title = map(&[("en", "Dusk"), ("es", "")]);
+    assert_eq!(m.check().unwrap_err().to_string(), "invalid title: has no text in es");
 }
 
 #[test]

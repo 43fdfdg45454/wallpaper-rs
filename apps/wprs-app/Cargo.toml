@@ -10,6 +10,9 @@ rust-version.workspace = true
 wprs-core.workspace = true
 wprs-client.workspace = true
 wprs-depth = { workspace = true, features = ["fetch", "infer"] }
+wprs-editor.workspace = true
+wprs-format.workspace = true
+dirs.workspace = true
 anyhow.workspace = true
 cxx.workspace = true
 cxx-qt.workspace = true
@@ -25,6 +28,7 @@ zeroize.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 image.workspace = true
+wprs-scene.workspace = true
 
 [build-dependencies]
 cxx-qt-build.workspace = true

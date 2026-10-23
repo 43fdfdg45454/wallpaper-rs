@@ -1,3 +1,6 @@
+use crate::validate::extension;
+use crate::{Result, require};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Media {
     pub format: &'static str,
@@ -78,4 +81,14 @@ fn jpeg(data: &[u8]) -> Option<(u32, u32)> {
         }
         i += 2 + len;
     }
+}
+
+pub fn preview(animated: bool, path: &str, data: &[u8]) -> Result<()> {
+    let (field, side, seconds) =
+        if animated { ("previews.animated", 640, 15) } else { ("previews.thumbnail", 1024, 0) };
+    let ext = extension(path).unwrap_or_default().replace("jpg", "jpeg");
+    let long = |m: &Media| seconds == 0 || m.duration_ms <= seconds * 1000;
+    let fits = probe(data).is_some_and(|m| m.format == ext && m.width.max(m.height) <= side && long(&m));
+    let most = if seconds > 0 { format!(" and {seconds} s") } else { String::new() };
+    require(fits, field, &format!("{path:?} must be a {ext} image of at most {side} pixels a side{most}"))
 }

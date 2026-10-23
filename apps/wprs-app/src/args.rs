@@ -78,6 +78,12 @@ macro_rules! out {
 
 out!(String, u64, HashMap<String, String>);
 
+impl Out for (u32, u64) {
+    fn out(self) -> Value {
+        json!([self.0, self.1])
+    }
+}
+
 impl Out for () {
     fn out(self) -> Value {
         json!([])

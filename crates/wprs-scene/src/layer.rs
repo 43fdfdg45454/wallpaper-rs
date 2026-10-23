@@ -2,9 +2,10 @@ use crate::Color;
 use crate::Sound;
 use crate::content::{Align, EffectUse, Gradient, Mask, Shape, Spectrum, Stroke, mask, shown, white};
 use crate::value::{Value, Vec2};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Layer {
     pub id: String,
     #[serde(default, skip_serializing_if = "Transform::is_default")]
@@ -12,6 +13,7 @@ pub struct Layer {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anchor: Option<Anchor>,
     #[serde(default = "one")]
+    #[schemars(extend("x-range" = [0, 1]))]
     pub opacity: Value<f32>,
     #[serde(default = "shown")]
     pub visible: Value<bool>,
@@ -22,6 +24,7 @@ pub struct Layer {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub effects: Vec<EffectUse>,
     #[serde(default, skip_serializing_if = "is_zero")]
+    #[schemars(extend("x-range" = [-1, 1]))]
     pub parallax: f32,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub solid: bool,
@@ -31,7 +34,7 @@ pub struct Layer {
     pub kind: Kind,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Kind {
     Group {
@@ -40,11 +43,13 @@ pub enum Kind {
         clip: bool,
     },
     Image {
+        #[schemars(extend("x-ref" = "image"))]
         image: Value<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         size: Option<[f32; 2]>,
     },
     Video {
+        #[schemars(extend("x-ref" = "video"))]
         video: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         size: Option<[f32; 2]>,
@@ -52,6 +57,7 @@ pub enum Kind {
     Text {
         text: Value<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(extend("x-ref" = "font"))]
         font: Option<String>,
         #[serde(default = "text_size")]
         size: f32,
@@ -70,6 +76,7 @@ pub enum Kind {
         stroke: Option<Stroke>,
     },
     Particles {
+        #[schemars(extend("x-ref" = "system"))]
         system: String,
     },
     Spectrum(Spectrum),
@@ -82,19 +89,21 @@ pub enum Kind {
     Adjustment {},
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct Transform {
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-unit" = "px"))]
     pub position: Option<Value<Vec2>>,
     pub scale: Value<Vec2>,
+    #[schemars(extend("x-unit" = "°", "x-range" = [-360, 360]))]
     pub rotation: Value<f32>,
     pub skew: Value<Vec2>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub origin: Option<[f32; 2]>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Anchor {
     TopLeft,
@@ -108,7 +117,7 @@ pub enum Anchor {
     BottomRight,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Blend {
     #[default]

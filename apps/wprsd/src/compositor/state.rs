@@ -142,6 +142,14 @@ impl State {
         let slot = spec.content.video().and_then(|path| self.players.get_mut(path));
         slot.into_iter().for_each(|slot| slot.revive(Instant::now()));
         self.outputs.get_mut(&name).into_iter().for_each(|o| o.refresh = spec.refresh);
+        let resume = self.outputs.get(&name).and_then(|o| match (&o.shown.content, &spec.content) {
+            (Content::Scene(old), Content::Scene(new))
+                if old.pack.path == new.pack.path && new.hold.is_none() =>
+            {
+                o.shown.scene.as_ref().map(SceneState::time)
+            }
+            _ => None,
+        });
         let mut current = self.outputs.get_mut(&name).filter(|o| o.size == size);
         if current.as_ref().is_some_and(|o| o.shown.matches(&spec)) {
             return;
@@ -172,7 +180,11 @@ impl State {
         let (content, fit, background, transition, refresh) =
             (spec.content, spec.fit, spec.background, spec.transition, spec.refresh);
         let scene = match &content {
-            Content::Scene(s) => Some(SceneState::new(s.clone(), self.power)),
+            Content::Scene(s) => {
+                let mut scene = SceneState::new(s.clone(), self.power);
+                resume.into_iter().for_each(|time| scene.resume(time));
+                Some(scene)
+            }
             _ => None,
         };
         super::feed::declare(&name, scene.as_ref());

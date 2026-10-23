@@ -5,7 +5,7 @@ use anyhow::Context;
 use image::RgbaImage;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use wprs_core::{Edit, Fit, Place};
 use zbus::fdo::Error::InvalidArgs;
 
@@ -26,10 +26,19 @@ impl Daemon {
             let info = st.outputs.get(output)?;
             (info.size, st.config.resolve(output), info.uploaded.clone(), st.refresh(output))
         };
-        let (image, transition) =
+        let (image, mut transition) =
             self.playlist_media(output, resolved.playlist).unwrap_or((resolved.image, None));
+        let draft = self.state().drafts.get(output).map(|d| (d.pack.clone(), d.hold));
+        if draft.is_some() {
+            transition = Some(Duration::ZERO);
+        }
+        let hold = draft.as_ref().and_then(|(_, hold)| *hold);
+        let media = match draft {
+            Some((pack, _)) => Some(Ok(Media::Scene(pack))),
+            None => image.map(|image| self.media(image)),
+        };
         let mut shown_scene = None;
-        let (content, upload) = match image.map(|image| self.media(image)) {
+        let (content, upload) = match media {
             None => (Content::Color, None),
             Some(Err(e)) => {
                 tracing::warn!(output, "cannot show the package; showing the color instead");
@@ -46,7 +55,7 @@ impl Daemon {
                 stale.iter().for_each(|w| tracing::warn!(output, scene = pack.id, "{w}"));
                 let extra = self.scene_extra(&pack, &values);
                 shown_scene = Some(pack.clone());
-                (Content::Scene(SceneSpec { pack, values, extra }), None)
+                (Content::Scene(SceneSpec { pack, values, extra, hold }), None)
             }
             Some(Ok(Media::Picture(file))) => {
                 match self.picture(output, file, (size, resolved.fit), uploaded) {

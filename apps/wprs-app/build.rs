@@ -30,6 +30,6 @@ fn main() {
     CxxQtBuilder::new_qml_module(
         QmlModule::new("io.github.wallpaper_rs.app").qml_files(pages.chain(singletons)),
     )
-    .files(["src/backend.rs", "src/depth.rs", "src/editor.rs", "src/items.rs"])
+    .files(["src/backend.rs", "src/depth.rs", "src/editor.rs", "src/items.rs", "src/scene.rs"])
     .build();
 }

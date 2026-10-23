@@ -1,0 +1,20 @@
+[package]
+name = "wprs-editor"
+description = "Scene editor of wallpaper-rs: JSON Pointer operations, history, starting points, inspector and package folders"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+wprs-core.workspace = true
+wprs-scene.workspace = true
+wprs-format = { workspace = true, features = ["sign"] }
+anyhow.workspace = true
+dirs.workspace = true
+image.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

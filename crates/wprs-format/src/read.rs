@@ -1,7 +1,7 @@
 use crate::features::{self, Facts, facts};
 use crate::validate::{extension, within};
 use crate::{
-    Error, FileEntry, Kind, Limits, MANIFEST, Manifest, Result, check_path, ensure, media, require, validate,
+    Error, FileEntry, Kind, Limits, MANIFEST, Manifest, Result, check_path, ensure, media, validate,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File, FileType, OpenOptions};
@@ -143,22 +143,9 @@ impl<R: Read + Seek> Package<R> {
 
     fn previews(&mut self) -> Result<()> {
         let previews = self.manifest.previews.clone().unwrap_or_default();
-        let wanted = [
-            ("previews.thumbnail", previews.thumbnail, 1024, 0),
-            ("previews.animated", previews.animated, 640, 15),
-        ];
-        for (field, path, side, seconds) in wanted {
+        for (animated, path) in [(false, previews.thumbnail), (true, previews.animated)] {
             let Some(path) = path else { continue };
-            let found = media::probe(&self.read_file(&path)?);
-            let ext = extension(&path).unwrap_or_default().replace("jpg", "jpeg");
-            let long = |m: &media::Media| seconds == 0 || m.duration_ms <= seconds * 1000;
-            let fits = found.is_some_and(|m| m.format == ext && m.width.max(m.height) <= side && long(&m));
-            let most = if seconds > 0 { format!(" and {seconds} s") } else { String::new() };
-            require(
-                fits,
-                field,
-                &format!("{path:?} must be a {ext} image of at most {side} pixels a side{most}"),
-            )?;
+            media::preview(animated, &path, &self.read_file(&path)?)?;
         }
         Ok(())
     }

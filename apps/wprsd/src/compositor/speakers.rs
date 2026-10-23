@@ -217,7 +217,7 @@ mod tests {
             clips,
             scripts,
         });
-        let spec = SceneSpec { values: Default::default(), pack, extra: Vec::new() };
+        let spec = SceneSpec { values: Default::default(), pack, extra: Vec::new(), hold: None };
         SceneState::new(spec, super::super::power::Power { tier: Tier::T3, on_battery: false, max_fps: 30 })
     }
 

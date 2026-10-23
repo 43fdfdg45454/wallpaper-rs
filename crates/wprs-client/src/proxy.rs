@@ -30,6 +30,7 @@ pub trait Daemon1 {
         identity: &str,
     ) -> Result<()>;
     fn preview_edit(&self, path: &str, edit_json: &str) -> Result<()>;
+    fn preview_scene(&self, output: &str, dir: &str, document: &str, time: f64) -> Result<()>;
     fn get_scene_properties(&self, output: &str) -> Result<String>;
     fn set_scene_property(&self, output: &str, id: &str, value_json: &str) -> Result<()>;
     fn apply_scene_preset(&self, output: &str, preset: &str) -> Result<()>;

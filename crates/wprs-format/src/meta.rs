@@ -1,16 +1,17 @@
 use crate::names::{safe, valid_license, within};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use wprs_core::markup::https;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Rating {
     General,
     Mature,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Descriptor {
     Sexual,
@@ -19,7 +20,7 @@ pub enum Descriptor {
     Language,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Content {
     pub rating: Rating,
@@ -27,14 +28,14 @@ pub struct Content {
     pub descriptors: Vec<Descriptor>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum OriginKind {
     Original,
     Derived,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Origin {
     pub kind: OriginKind,
@@ -42,7 +43,7 @@ pub struct Origin {
     pub derived_from: Vec<Ancestor>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Ancestor {
     pub author: String,
@@ -54,7 +55,7 @@ pub struct Ancestor {
     pub license: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Credit {
     pub paths: Vec<String>,
@@ -64,7 +65,7 @@ pub struct Credit {
     pub url: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Links {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -77,25 +78,28 @@ pub struct Links {
     pub donate: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Previews {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "thumbnail"))]
     pub thumbnail: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "animated"))]
     pub animated: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Requires {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub engine: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schemars(extend("x-computed" = true))]
     pub features: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Input {
     Audio,
@@ -147,6 +151,13 @@ impl Content {
 }
 
 impl Origin {
+    pub fn by(authors: &[String]) -> Origin {
+        let ancestor =
+            |author: &String| Ancestor { author: author.clone(), title: None, url: None, license: None };
+        let kind = if authors.is_empty() { OriginKind::Original } else { OriginKind::Derived };
+        Origin { kind, derived_from: authors.iter().map(ancestor).collect() }
+    }
+
     pub(crate) fn valid(&self) -> bool {
         let count = (self.kind == OriginKind::Derived) == !self.derived_from.is_empty();
         let valid = |a: &Ancestor| {

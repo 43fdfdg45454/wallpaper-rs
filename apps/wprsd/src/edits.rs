@@ -31,7 +31,7 @@ fn flags() -> WatchFlags {
 }
 
 pub(crate) fn spans(st: &State) -> bool {
-    st.outputs.keys().any(|o| st.config.resolve(o).fit == Fit::Span)
+    st.outputs.keys().any(|o| !crate::drafts::virtual_output(o) && st.config.resolve(o).fit == Fit::Span)
 }
 
 pub(crate) fn screen_of(window: &Window) -> Screen {

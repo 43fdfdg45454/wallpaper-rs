@@ -87,7 +87,7 @@ impl Manifest {
     }
 }
 
-pub(crate) fn valid_tag(name: &str) -> bool {
+pub fn valid_tag(name: &str) -> bool {
     let mut parts = name.split('-');
     let first = parts
         .next()

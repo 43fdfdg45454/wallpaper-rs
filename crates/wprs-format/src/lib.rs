@@ -28,6 +28,7 @@ mod sign;
 mod source;
 mod store;
 mod update;
+mod upgrade;
 mod validate;
 
 #[cfg(feature = "sign")]
@@ -48,10 +49,12 @@ pub use index::{
 pub use install::{Installed, install, installed, remove};
 #[cfg(feature = "sign")]
 pub use keys::{Keypair, Signer, keygen, sign_source};
-pub use manifest::{Kind, Manifest, SCHEMA, SCHEMA_V1, Strings};
+pub use locale::valid_tag;
+pub use manifest::{Kind, Manifest, SCHEMA, SCHEMA_V1, Strings, manifest_schema};
 pub use meta::{
     Ancestor, Content, Credit, Descriptor, Input, Links, Origin, OriginKind, Previews, Rating, Requires,
 };
+pub use names::valid_id;
 #[cfg(feature = "sign")]
 pub use publish::{Published, publish};
 pub use read::{Package, extract, open, peek, read, thumbnail};
@@ -59,7 +62,8 @@ pub use release::{Needs, Preview, Rated, Release};
 pub use repo::{Author, Key, Policy, ROOT_FORMAT, Role, Roles, Root, Time, comment};
 pub use settings::{Settings, settings};
 pub use sign::{fingerprint, manifest_comment, public_key, threshold, verify_blocks, verify_package};
-pub use source::{fill, inspect, upgrade};
+pub use source::{fill, inspect};
+pub use upgrade::{Renames, upgrade, upgrade_json};
 pub use validate::{FileEntry, Limits, MANIFEST, SIGNATURE, check_path, validate};
 pub use wprs_core::markup;
 pub use wprs_scene::{Control, Preset, Property, Scene, Text};
