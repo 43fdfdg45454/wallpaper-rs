@@ -145,13 +145,13 @@ ColumnLayout {
                     delegate: QQC2.MenuItem {
                         required property string modelData
 
-                        text: SceneWords.kind(modelData)
+                        enabled: !["image", "video", "sound"].includes(modelData) || (panel.page.view.assets ?? []).some(asset => asset.kind === modelData)
+                        text: SceneWords.kind(modelData) + (enabled ? "" : " (" + App.tr("import a file of this kind first") + ")")
                         icon.name: panel.icon(modelData)
-                        onTriggered: panel.page.run("add_layer", panel.current?.type === "group" ? {
+                        onTriggered: panel.page.run("add_layer", {
                                 "kind": modelData,
-                                "into": panel.current.id
-                            } : {
-                                "kind": modelData
+                                "name": SceneWords.kind(modelData),
+                                "into": panel.current?.type === "group" ? panel.current.id : undefined
                             })
                     }
                 }

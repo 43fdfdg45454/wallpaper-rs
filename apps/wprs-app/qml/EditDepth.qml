@@ -21,6 +21,10 @@ ColumnLayout {
         id: maps
 
         Component.onCompleted: open(tool.page.item.path ?? "")
+        onMapChanged: {
+            if (map !== "")
+                tool.page.editor.refresh();
+        }
     }
 
     Image {

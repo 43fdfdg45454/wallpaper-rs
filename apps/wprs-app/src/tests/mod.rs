@@ -2,6 +2,8 @@ mod depth;
 mod editor;
 mod fake;
 mod pages;
+mod picture;
+mod words;
 
 use crate::args::{INVALID, carries_secret, fixture};
 use crate::bus::{Daemon, url};

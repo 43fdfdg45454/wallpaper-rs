@@ -1,3 +1,4 @@
+use crate::starters::fold;
 use anyhow::{Result, anyhow, bail};
 use serde_json::{Value, json};
 use std::path::Path;
@@ -48,13 +49,17 @@ pub fn unique(doc: &Value, base: &str) -> String {
     unique_among(doc, base, &[])
 }
 
-fn unique_among(doc: &Value, base: &str, more: &[String]) -> String {
-    let clean: String = base
-        .to_lowercase()
-        .chars()
-        .map(|c| if c.is_ascii_lowercase() || c.is_ascii_digit() { c } else { '_' })
-        .take(26)
+pub fn clean(base: &str) -> String {
+    let folded: String = base.to_lowercase().chars().map(fold).collect();
+    let words: Vec<&str> = folded
+        .split(|c: char| !c.is_ascii_lowercase() && !c.is_ascii_digit())
+        .filter(|w| !w.is_empty())
         .collect();
+    words.join("_").chars().take(26).collect::<String>().trim_end_matches('_').into()
+}
+
+fn unique_among(doc: &Value, base: &str, more: &[String]) -> String {
+    let clean = clean(base);
     let base = if clean.is_empty() { "layer".into() } else { clean };
     let candidates = (1..).map(|n| if n == 1 { base.clone() } else { format!("{base}_{n}") });
     candidates.take(10_000).find(|id| !taken(doc, id) && !more.contains(id)).unwrap_or(base)
@@ -80,7 +85,13 @@ pub fn assets_of<'a>(doc: &'a Value, kind: &str) -> Vec<&'a str> {
         .collect()
 }
 
-pub fn template(doc: &Value, kind: &str, id: &str, source: Option<&str>) -> Result<Value> {
+pub fn template(
+    doc: &Value,
+    kind: &str,
+    id: &str,
+    source: Option<&str>,
+    name: Option<&str>,
+) -> Result<Value> {
     let asset = |what: &str| {
         let found = source.map(String::from).or_else(|| assets_of(doc, what).first().map(|a| a.to_string()));
         let article = if what == "image" { "an" } else { "a" };
@@ -90,7 +101,9 @@ pub fn template(doc: &Value, kind: &str, id: &str, source: Option<&str>) -> Resu
         "image" => json!({"id": id, "type": "image", "image": asset("image")?}),
         "video" => json!({"id": id, "type": "video", "video": asset("video")?}),
         "sound" => json!({"id": id, "type": "sound", "sound": asset("sound")?}),
-        "text" => json!({"id": id, "type": "text", "text": "Text", "size": 96, "color": "#ffffff"}),
+        "text" => {
+            json!({"id": id, "type": "text", "text": name.unwrap_or("Text"), "size": 96, "color": "#ffffff"})
+        }
         "shape" => json!({"id": id, "type": "shape", "shape": {"rect": {"size": [480, 320], "radius": 24}},
             "fill": "#4a90d9"}),
         "solid" => json!({"id": id, "type": "solid", "color": "#203040"}),

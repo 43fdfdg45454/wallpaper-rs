@@ -6,7 +6,7 @@ use crate::schema::{MANIFEST, PROPERTY, at, branches, choose, deref, fits, prope
 use crate::texts::rows;
 use serde::Serialize;
 use serde_json::{Value, json};
-use wprs_scene::{ParamKind, descriptor, easings};
+use wprs_scene::{ParamKind, builtin, descriptor, easings};
 
 const SOURCES: [&str; 6] = ["keys", "prop", "audio", "cursor", "clock", "script"];
 const HIDDEN: [&str; 4] = ["type", "layers", "id", "schema"];
@@ -46,6 +46,7 @@ fn candidates(doc: &Value, reference: &str, pointer: &str) -> Vec<Value> {
         "system" => keys("/scene/particles").unwrap_or_default(),
         "timeline" => ids("/scene/timelines").unwrap_or_default(),
         "language" => crate::meta::languages(doc),
+        "effect" => builtin().iter().map(|d| json!(d.id)).collect(),
         kind => assets_of(doc, kind).into_iter().map(|a| json!(a)).collect(),
     }
 }
@@ -88,9 +89,13 @@ impl Walk<'_> {
             t => t.clone(),
         };
         let reference = meta["x-ref"].as_str();
-        let all = branches(schema).iter().map(|b| deref(self.root, b).0);
-        let banded = all.clone().all(|b| b.get("enum").is_some() || b["type"] == "integer");
-        let listed = all.filter_map(|b| b["enum"].as_array().cloned()).next().filter(|_| banded);
+        let all: Vec<&Value> = branches(schema).iter().map(|b| deref(self.root, b).0).collect();
+        let banded = all.iter().all(|b| b.get("enum").is_some() || b["type"] == "integer");
+        let listed = all.iter().find_map(|b| b["enum"].as_array().cloned()).filter(|_| banded);
+        let named: Vec<Value> = all.iter().filter_map(|b| b.get("const").cloned()).collect();
+        let counted =
+            all.iter().filter_map(|b| b["type"].as_str()).find(|t| ["integer", "number"].contains(t));
+        let counted = counted.filter(|_| !named.is_empty() && named.len() + 1 == all.len());
         f.widget = match (name, types.as_str().unwrap_or_default()) {
             _ if meta["x-computed"] == true => "computed".into(),
             _ if meta["x-condition"] == true => "condition".into(),
@@ -120,6 +125,10 @@ impl Walk<'_> {
             (_, "boolean") => "bool".into(),
             (_, "integer") => "integer".into(),
             (_, "number") => "number".into(),
+            _ if counted.is_some() => {
+                f.options = named;
+                counted.unwrap_or_default().into()
+            }
             (_, "string") => "text".into(),
             (_, "array") => array(self.root, meta, schema),
             (_, "object") if optional && value.is_none() => {

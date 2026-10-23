@@ -130,10 +130,14 @@ QtObject {
             "inputs.media": App.tr("shows what the media player plays"),
             "inputs.network": App.tr("connects to the network"),
             "scripts": App.tr("runs scene scripts"),
-            "sound": App.tr("plays sound")
+            "sound": App.tr("plays sound"),
+            "properties2": App.tr("has settings of the newer kinds"),
+            "folder": App.tr("shows pictures from a folder the user chooses"),
+            "user_videos": App.tr("plays videos the user chooses"),
+            "video_properties": App.tr("sets how its video plays")
         })
     function feature(name) {
-        return features[name] ?? App.tr("uses the %1 effect").arg(String(name).replace(/^effect\./, ""));
+        return features[name] ?? App.tr("uses the %1 effect").arg(SceneWords.effect(String(name).replace(/^effect\./, "")));
     }
 
     function field(key) {

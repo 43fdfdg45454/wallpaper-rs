@@ -1,84 +1,64 @@
 import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import io.github.wallpaper_rs.app
 
-Item {
+ColumnLayout {
     id: canvas
 
     required property var page
-    property bool screens
-    readonly property var frame: page.values.frame ?? [1, 1]
-    readonly property var geometry: page.edit.geometry ?? {}
-    readonly property var crop: geometry.crop ?? [0, 0, 1, 1]
-    readonly property bool turned: (geometry.rotate ?? 0) % 180 === 90
+    property int section
+    readonly property var editor: page.editor
+    readonly property bool whole: section === 0
+    readonly property var crop: page.edit.geometry?.crop ?? [0, 0, 1, 1]
     readonly property var outputs: page.edit.outputs ?? {}
+    readonly property var troubles: ({
+            "gpu": App.tr("This computer has no graphics card the app can use. Show on the desktop still shows the edit."),
+            "decode": App.tr("This file is not a picture the app can read."),
+            "draw": App.tr("The graphics card could not draw this edit.")
+        })
 
-    clip: true
+    spacing: 0
+    onWholeChanged: editor.view(whole)
+    Component.onCompleted: editor.view(whole)
 
     Rectangle {
-        anchors.fill: parent
+        Layout.fillWidth: true
+        Layout.fillHeight: true
         color: Kirigami.Theme.alternateBackgroundColor
-    }
-
-    Item {
-        id: box
-
-        readonly property real ratio: canvas.frame[0] / Math.max(1, canvas.frame[1])
-
-        anchors.centerIn: parent
-        width: Math.min(canvas.width, canvas.height * ratio)
-        height: width / ratio
         clip: true
 
+        Image {
+            id: shown
+
+            anchors.fill: parent
+            anchors.margins: Kirigami.Units.largeSpacing
+            source: canvas.editor.picture
+            fillMode: Image.PreserveAspectFit
+            cache: false
+        }
+
         Item {
-            anchors.centerIn: parent
-            width: box.width * (canvas.page.values.zoom ?? 1)
-            height: box.height * (canvas.page.values.zoom ?? 1)
-            rotation: -(canvas.geometry.straighten ?? 0)
+            x: shown.x + (shown.width - shown.paintedWidth) / 2
+            y: shown.y + (shown.height - shown.paintedHeight) / 2
+            width: shown.paintedWidth
+            height: shown.paintedHeight
+            visible: shown.status === Image.Ready && canvas.editor.whole === canvas.whole
+            clip: true
 
-            Item {
-                id: turn
-
-                anchors.fill: parent
-
-                transform: Scale {
-                    origin.x: turn.width / 2
-                    origin.y: turn.height / 2
-                    xScale: canvas.geometry.flip?.[0] ? -1 : 1
-                    yScale: canvas.geometry.flip?.[1] ? -1 : 1
-                }
-
-                Image {
-                    anchors.centerIn: parent
-                    width: canvas.turned ? parent.height : parent.width
-                    height: canvas.turned ? parent.width : parent.height
-                    rotation: canvas.geometry.rotate ?? 0
-                    source: canvas.page.editor.source
-                    sourceSize.width: 2048
-                    fillMode: Image.Stretch
-                    asynchronous: true
-                }
+            EditFrame {
+                visible: canvas.whole
+                dim: true
+                rect: canvas.crop
+                onMoved: rect => canvas.page.run("crop", {
+                        "rect": rect,
+                        "aspect": canvas.page.aspect || undefined
+                    })
             }
-        }
-
-        EditFrame {
-            visible: !canvas.screens
-            rect: canvas.crop
-            onMoved: rect => canvas.page.run("crop", {
-                    "rect": rect,
-                    "aspect": canvas.page.aspect || undefined
-                })
-        }
-
-        Item {
-            x: canvas.crop[0] * box.width
-            y: canvas.crop[1] * box.height
-            width: canvas.crop[2] * box.width
-            height: canvas.crop[3] * box.height
-            visible: canvas.screens
 
             Repeater {
-                model: Object.keys(canvas.outputs)
+                model: canvas.section === 1 ? Object.keys(canvas.outputs) : []
 
                 delegate: EditFrame {
                     required property string modelData
@@ -94,5 +74,34 @@ Item {
                 }
             }
         }
+
+        QQC2.BusyIndicator {
+            anchors.centerIn: parent
+            running: canvas.editor.ready && canvas.editor.picture === "" && canvas.editor.trouble === "" && canvas.editor.error === ""
+        }
+
+        Kirigami.PlaceholderMessage {
+            anchors.centerIn: parent
+            width: parent.width - Kirigami.Units.gridUnit * 4
+            visible: canvas.editor.picture === "" && canvas.editor.trouble !== ""
+            icon.name: "image-x-generic"
+            text: App.tr("The picture cannot be drawn here")
+            explanation: canvas.troubles[canvas.editor.trouble] ?? ""
+        }
+    }
+
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        visible: canvas.editor.picture !== "" && canvas.editor.trouble !== ""
+        type: Kirigami.MessageType.Warning
+        showCloseButton: false
+        text: App.tr("The picture shown is not up to date. %1").arg(canvas.troubles[canvas.editor.trouble] ?? "")
+    }
+
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        visible: canvas.editor.live
+        showCloseButton: false
+        text: App.tr("The desktop shows this edit too, wherever this picture is the wallpaper.")
     }
 }

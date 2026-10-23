@@ -93,6 +93,8 @@ fn a_scene_is_made_edited_and_built_from_the_command_line() {
     assert_eq!(ok(dir, &["scene", "history", "copy"]), "set\nset\n");
     ok(dir, &["scene", "undo", "copy"]);
     assert_eq!(ok(dir, &["scene", "show", "copy", "/scene/canvas/background"]).trim(), "\"#111111\"");
+    assert_eq!(ok(dir, &["scene", "add-layer", "copy", "text", "--name", "Título"]), "titulo\n");
+    assert_eq!(ok(dir, &["scene", "show", "copy", "/scene/layers/3/text"]).trim(), "\"Título\"");
     std::fs::write(dir.join("snow/assets/stale.png"), b"x").unwrap();
     assert_eq!(ok(dir, &["scene", "prune", "snow"]), "assets/stale.png\n");
     let schema: Value = serde_json::from_str(&ok(dir, &["scene", "schema"])).unwrap();

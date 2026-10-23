@@ -13,13 +13,14 @@ Kirigami.Page {
     readonly property var edit: JSON.parse(editor.json || "{}")
     readonly property var values: JSON.parse(editor.values || "{}")
     readonly property var ops: edit.ops ?? []
-    readonly property var tools: [App.tr("Crop and rotate"), App.tr("Screens"), App.tr("Light and color"), App.tr("Curves"), App.tr("Effects"), App.tr("Masks"), App.tr("Depth"), App.tr("Parallax")]
+    readonly property var tools: [[App.tr("Crop and rotate"), "transform-crop"], [App.tr("Screens"), "video-display"], [App.tr("Light and color"), "adjustlevels"], [App.tr("Curves"), "adjustcurves"], [App.tr("Effects"), "draw-brush"], [App.tr("Masks"), "edit-select"], [App.tr("Depth"), "object-order-back"], [App.tr("Parallax"), "transform-move"]]
 
     function run(action, args) {
         editor.run(action, JSON.stringify(args ?? {}));
     }
 
     function exercise() {
+        editor.preview(false);
         editor.run("set", '{"changes": ["ev=0.3", "vibrance=12"]}');
         editor.run("crop", '{"aspect": "16:9", "rotate": 90}');
         editor.run("crop", JSON.stringify({"output": App.outputs[0] ?? "DP-1"}));
@@ -29,7 +30,7 @@ Kirigami.Page {
         editor.run("depth", '{"near": 0.9, "dilate": 4}');
         editor.run("parallax", '{"source": "pointer", "steps": 8}');
         for (let i = page.tools.length - 1; i >= 0; i--)
-            pick.currentIndex = i;
+            side.currentIndex = i;
         editor.preview(true);
     }
 
@@ -77,16 +78,32 @@ Kirigami.Page {
     RowLayout {
         anchors.fill: parent
         enabled: editor.ready
+        spacing: 0
+
+        EditSide {
+            id: side
+
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 13
+            Layout.maximumWidth: Layout.preferredWidth
+            Layout.fillWidth: false
+            Layout.fillHeight: true
+            page: page
+        }
+
+        Kirigami.Separator {
+            Layout.fillHeight: true
+        }
 
         ColumnLayout {
             Layout.preferredWidth: Kirigami.Units.gridUnit * 17
+            Layout.maximumWidth: Layout.preferredWidth
+            Layout.fillWidth: false
             Layout.fillHeight: true
 
-            QQC2.ComboBox {
-                id: pick
-
-                Layout.fillWidth: true
-                model: page.tools
+            Kirigami.Heading {
+                Layout.margins: Kirigami.Units.smallSpacing
+                level: 3
+                text: (page.tools[side.currentIndex] ?? [""])[0]
             }
 
             QQC2.ScrollView {
@@ -97,8 +114,9 @@ Kirigami.Page {
                 contentWidth: availableWidth
 
                 StackLayout {
-                    width: panel.availableWidth
-                    currentIndex: pick.currentIndex
+                    x: Kirigami.Units.smallSpacing
+                    width: panel.availableWidth - 2 * Kirigami.Units.smallSpacing
+                    currentIndex: side.currentIndex
 
                     EditGeometry {
                         page: page
@@ -139,20 +157,7 @@ Kirigami.Page {
             Layout.fillWidth: true
             Layout.fillHeight: true
             page: page
-            screens: pick.currentIndex === 1
-        }
-
-        QQC2.ScrollView {
-            id: side
-
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 15
-            Layout.fillHeight: true
-            contentWidth: availableWidth
-
-            EditOps {
-                width: side.availableWidth
-                page: page
-            }
+            section: side.currentIndex
         }
     }
 }

@@ -149,6 +149,7 @@ QtObject {
             "orbit": App.tr("Orbit"),
             "order": App.tr("Order"),
             "origin": App.tr("Origin"),
+            "other": App.tr("Other file"),
             "overscan": App.tr("Overscan"),
             "pan": App.tr("Balance"),
             "paper": App.tr("Paper color"),
@@ -400,7 +401,7 @@ QtObject {
 
     function value(option) {
         const text = String(option ?? "");
-        return values[text] ?? ManifestWords.values[text] ?? kinds[text] ?? (words[text] ? label(text) : easing(text));
+        return values[text] ?? ManifestWords.values[text] ?? kinds[text] ?? effects[text] ?? (words[text] ? label(text) : easing(text));
     }
 
     function binding(bound) {

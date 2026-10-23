@@ -624,6 +624,37 @@ msgstr ""
 "Las descargas están desactivadas en los ajustes. Instala archivos obtenidos "
 "por otra vía."
 
+#: apps/wprs-app/qml/EditCanvas.qml
+msgid ""
+"This computer has no graphics card the app can use. Show on the desktop "
+"still shows the edit."
+msgstr ""
+"Este equipo no tiene una tarjeta gráfica que la app pueda usar. «Ver en el "
+"escritorio» sigue mostrando la edición."
+
+#: apps/wprs-app/qml/EditCanvas.qml
+msgid "This file is not a picture the app can read."
+msgstr "Este archivo no es una imagen que la app pueda leer."
+
+#: apps/wprs-app/qml/EditCanvas.qml
+msgid "The graphics card could not draw this edit."
+msgstr "La tarjeta gráfica no pudo dibujar esta edición."
+
+#: apps/wprs-app/qml/EditCanvas.qml
+msgid "The picture cannot be drawn here"
+msgstr "La imagen no se puede dibujar aquí"
+
+#: apps/wprs-app/qml/EditCanvas.qml
+msgid "The picture shown is not up to date. %1"
+msgstr "La imagen que se ve no está al día. %1"
+
+#: apps/wprs-app/qml/EditCanvas.qml
+msgid ""
+"The desktop shows this edit too, wherever this picture is the wallpaper."
+msgstr ""
+"El escritorio también muestra esta edición allí donde esta imagen sea el "
+"fondo."
+
 #: apps/wprs-app/qml/EditCurves.qml
 msgid "All channels"
 msgstr "Todos los canales"
@@ -2005,6 +2036,10 @@ msgid "Add layer"
 msgstr "Añadir una capa"
 
 #: apps/wprs-app/qml/SceneLayers.qml
+msgid "import a file of this kind first"
+msgstr "importa antes un archivo de este tipo"
+
+#: apps/wprs-app/qml/SceneLayers.qml
 msgid "Duplicate"
 msgstr "Duplicar"
 
@@ -2914,6 +2949,22 @@ msgid "plays sound"
 msgstr "reproduce sonido"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+msgid "has settings of the newer kinds"
+msgstr "tiene ajustes de los tipos nuevos"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "shows pictures from a folder the user chooses"
+msgstr "muestra las imágenes de una carpeta que elige el usuario"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "plays videos the user chooses"
+msgstr "reproduce vídeos que elige el usuario"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "sets how its video plays"
+msgstr "define cómo se reproduce su vídeo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
 msgid "uses the %1 effect"
 msgstr "usa el efecto %1"
 
@@ -3084,6 +3135,130 @@ msgstr "La red"
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "The pointer"
 msgstr "El puntero"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Arabic"
+msgstr "Árabe"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Catalan"
+msgstr "Catalán"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Czech"
+msgstr "Checo"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Danish"
+msgstr "Danés"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "German"
+msgstr "Alemán"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Greek"
+msgstr "Griego"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "English"
+msgstr "Inglés"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Spanish"
+msgstr "Español"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Basque"
+msgstr "Euskera"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Finnish"
+msgstr "Finés"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "French"
+msgstr "Francés"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Galician"
+msgstr "Gallego"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Hebrew"
+msgstr "Hebreo"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Hindi"
+msgstr "Hindi"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Hungarian"
+msgstr "Húngaro"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Indonesian"
+msgstr "Indonesio"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Italian"
+msgstr "Italiano"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Japanese"
+msgstr "Japonés"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Korean"
+msgstr "Coreano"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Norwegian"
+msgstr "Noruego"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Dutch"
+msgstr "Neerlandés"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Polish"
+msgstr "Polaco"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Portuguese"
+msgstr "Portugués"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Romanian"
+msgstr "Rumano"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Russian"
+msgstr "Ruso"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Swedish"
+msgstr "Sueco"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Thai"
+msgstr "Tailandés"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Turkish"
+msgstr "Turco"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Ukrainian"
+msgstr "Ucraniano"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Vietnamese"
+msgstr "Vietnamita"
+
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Chinese"
+msgstr "Chino"
 
 #
 #: apps/wprs-app/qml/facade/SceneWords.qml
@@ -3594,6 +3769,10 @@ msgstr "Órbita"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Origin"
 msgstr "Origen"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Other file"
+msgstr "Otro archivo"
 
 #
 #: apps/wprs-app/qml/facade/SceneWords.qml

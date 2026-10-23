@@ -34,6 +34,7 @@ pub enum MaskChannel {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EffectUse {
+    #[schemars(extend("x-ref" = "effect"))]
     pub effect: String,
     #[serde(default = "shown")]
     pub enabled: Value<bool>,

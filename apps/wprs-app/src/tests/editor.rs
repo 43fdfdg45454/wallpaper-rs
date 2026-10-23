@@ -39,13 +39,11 @@ fn the_editor_describes_what_its_controls_show() {
     let values = |edit: &Edit| serde_json::from_str::<Value>(&describe(edit)).unwrap();
     let blank = values(&edit);
     assert_eq!((&blank["levels"]["temperature"], &blank["levels"]["ev"]), (&json!(6504.0), &json!(0.0)));
-    assert_eq!((&blank["frame"], &blank["zoom"]), (&json!([4000, 2000]), &json!(1.0)));
     assert_eq!(blank["tools"]["vi"]["midpoint"], json!(0.5));
     assert_eq!(
         (&blank["tools"]["ov"]["opacity"], &blank["curves"]["g"]["samples"][32]),
         (&json!(1.0), &json!(0.5))
     );
-    edit.set("geometry.rotate", "90").unwrap();
     edit.set("ev", "1").unwrap();
     edit.act(
         serde_json::from_value(
@@ -54,13 +52,13 @@ fn the_editor_describes_what_its_controls_show() {
         .unwrap(),
     )
     .unwrap();
-    let turned = values(&edit);
-    assert_eq!((&turned["frame"], &turned["levels"]["ev"]), (&json!([2000, 4000]), &json!(1.0)));
+    let changed = values(&edit);
+    assert_eq!(changed["levels"]["ev"], json!(1.0));
     assert_eq!(
-        turned["masks"]["sky"],
+        changed["masks"]["sky"],
         json!({"kind": "radial", "values": [0.5, 0.5, 0.25, 0.25, 0.5], "invert": true})
     );
-    assert!(edit.ops.len() == 1 && turned["tools"]["bl"]["radius"] == json!(0.0));
+    assert!(edit.ops.len() == 1 && changed["tools"]["bl"]["radius"] == json!(0.0));
     assert_eq!((&blank["depth"]["input"], &blank["parallax"]["enabled"]), (&json!(518), &json!(false)));
     edit.act(serde_json::from_value(json!({"parallax": {"source": "pointer"}})).unwrap()).unwrap();
     let moving = values(&edit);

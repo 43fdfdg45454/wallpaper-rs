@@ -22,6 +22,14 @@ ColumnLayout {
         return Number.isFinite(parsed) ? parsed : fallback;
     }
 
+    function name(option) {
+        if (field.widget === "ref:language")
+            return ManifestWords.language(option);
+        if (["enum", "variant", "ref:effect"].includes(field.widget))
+            return SceneWords.value(option);
+        return (field.names ?? [])[field.options.indexOf(option)] || (field.widget === "ref:trigger" ? SceneWords.label(option) : String(option));
+    }
+
     Layout.leftMargin: field.depth * Kirigami.Units.largeSpacing
 
     Rectangle {
@@ -107,9 +115,13 @@ ColumnLayout {
         id: numberEditor
 
         RowLayout {
+            id: amount
+
+            readonly property bool named: input.field.options.includes(input.value)
+
             QQC2.Slider {
                 Layout.fillWidth: true
-                visible: Array.isArray(input.field.range)
+                visible: Array.isArray(input.field.range) && !amount.named
                 from: (input.field.range ?? [0, 1])[0]
                 to: (input.field.range ?? [0, 1])[1]
                 stepSize: input.field.widget === "integer" ? 1 : 0
@@ -120,8 +132,22 @@ ColumnLayout {
             QQC2.TextField {
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 5
                 Layout.fillWidth: !Array.isArray(input.field.range)
+                visible: !amount.named
                 text: typeof input.value === "number" ? String(Number(input.value.toFixed(4))) : ""
                 onEditingFinished: input.commit(input.parse(text, input.value))
+            }
+
+            Repeater {
+                model: input.field.options
+
+                delegate: QQC2.CheckBox {
+                    required property var modelData
+
+                    Layout.fillWidth: amount.named
+                    text: SceneWords.value(modelData)
+                    checked: input.value === modelData
+                    onToggled: input.commit(checked ? modelData : typeof input.field.default === "number" ? input.field.default : 0)
+                }
             }
         }
     }
@@ -167,7 +193,7 @@ ColumnLayout {
             readonly property var known: variant || input.field.required ? input.field.options : [null].concat(input.field.options)
             readonly property var options: known.includes(input.value) || input.value === null ? known : known.concat([input.value])
 
-            model: options.map(option => option === null ? App.tr("Not set") : variant || input.field.widget === "enum" ? SceneWords.value(option) : input.field.names[input.field.options.indexOf(option)] || (input.field.widget === "ref:trigger" ? SceneWords.label(option) : String(option)))
+            model: options.map(option => option === null ? App.tr("Not set") : input.name(option))
             currentIndex: variant ? options.findIndex(option => Object.keys(input.field.value ?? {}).includes(option) || option === input.field.value) : options.indexOf(input.value)
             onActivated: index => {
                 if (options[index] === null)

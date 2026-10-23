@@ -7,6 +7,7 @@ Rectangle {
 
     required property var rect
     property string label
+    property bool dim
     property var moving: null
     readonly property var shown: moving ?? rect
 
@@ -33,6 +34,16 @@ Rectangle {
     color: "transparent"
     border.color: Kirigami.Theme.neutralTextColor
     border.width: 2
+
+    Rectangle {
+        anchors.centerIn: parent
+        width: parent.width + 2 * border.width
+        height: parent.height + 2 * border.width
+        visible: frame.dim
+        color: "transparent"
+        border.width: Math.max(frame.parent.width, frame.parent.height)
+        border.color: Qt.rgba(0, 0, 0, 0.45)
+    }
 
     QQC2.Label {
         anchors.left: parent.left

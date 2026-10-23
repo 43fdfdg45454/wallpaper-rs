@@ -103,7 +103,7 @@ const LATIN: [(&str, char); 15] = [
     ("žźż", 'z'),
 ];
 
-fn fold(c: char) -> char {
+pub(crate) fn fold(c: char) -> char {
     LATIN.iter().find(|(set, _)| set.contains(c)).map_or(c, |(_, base)| *base)
 }
 

@@ -6,7 +6,7 @@ use cxx_qt_lib::QString;
 use serde_json::{Map, Value, json};
 use std::pin::Pin;
 use std::time::Duration;
-use wprs_core::edit::{Action, Edit, Geometry, Kind, Parallax, spline};
+use wprs_core::edit::{Action, Edit, Kind, Parallax, spline};
 
 const LEVELS: [&str; 6] = ["ev", "temperature", "tint", "contrast", "saturation", "vibrance"];
 const CHANNELS: [&str; 4] = ["rgb", "r", "g", "b"];
@@ -29,9 +29,6 @@ fn curve(edit: &Edit, channel: &str) -> Value {
 pub fn describe(edit: &Edit) -> String {
     let levels: Map<String, Value> =
         LEVELS.iter().map(|k| (k.to_string(), edit.get(k).unwrap_or_default())).collect();
-    let image = (edit.source.pixels[0], edit.source.pixels[1]);
-    let (w, h) = Geometry { crop: None, ..edit.geometry.clone() }.frame(image);
-    let turned = if edit.geometry.rotate % 180 == 90 { image.1 } else { image.0 };
     let mut probe = edit.clone();
     let fresh = [
         Action::Blur { radius: None, mask: None, id: None },
@@ -63,11 +60,9 @@ pub fn describe(edit: &Edit) -> String {
         })
         .collect();
     let curves: Map<String, Value> = CHANNELS.iter().map(|c| (c.to_string(), curve(edit, c))).collect();
-    let zoom = f64::from(turned.max(1)) / f64::from(w.max(1));
     let depth = edit.depth.clone().unwrap_or_default();
     let parallax = edit.parallax.clone().unwrap_or(Parallax { enabled: false, ..Parallax::default() });
-    json!({"levels": levels, "frame": [w, h], "zoom": zoom, "tools": tools, "curves": curves, "masks": masks,
-        "depth": depth, "parallax": parallax})
+    json!({"levels": levels, "tools": tools, "curves": curves, "masks": masks, "depth": depth, "parallax": parallax})
     .to_string()
 }
 
@@ -124,6 +119,7 @@ impl Editor {
 
 impl Drop for EditorRust {
     fn drop(&mut self) {
+        self.drawn.take().map(std::fs::remove_file);
         if self.shown {
             let path = self.file.to_string_lossy().into_owned();
             bus::spawn(async move {

@@ -410,8 +410,17 @@ de salida: 0 bien, 1 error, 2 uso incorrecto.
 Las ediciones no tocan la imagen: se guardan en `<imagen>.wprs.json` a su lado (o en
 `~/.local/share/wallpaper-rs/edits/` si la carpeta no se puede escribir), las aplica la GPU y el
 daemon las vuelve a leer en cuanto cambian. La app las edita desde la ficha de cada imagen
-(«Editar…») con vista previa en el fondo real, y cada acción del editor existe también en
-`wprs-ctl edit`, que las cambia sin daemon:
+(«Editar…»). A la izquierda están siempre a la vista las secciones, cada una con su icono
+(*Recortar y girar*, *Pantallas*, *Luz y color*, *Curvas*, *Efectos*, *Máscaras*, *Profundidad* y
+*Paralaje*; las flechas recorren la lista), y debajo las *Operaciones, en orden*; al lado, los
+controles de la sección elegida, y a la derecha la imagen editada. La dibuja la propia app en la
+GPU, con el mismo revelado que el daemon y `wprs-ctl edit export`, reducida (1024 píxeles de lado
+como mucho, 512 con render por software) y solo cuando cambia un valor o llega un mapa de
+profundidad nuevo; si no puede dibujarla, un aviso dice por qué. En *Recortar y girar* se ve la
+imagen entera con el recorte encima para moverlo y cambiar su tamaño, y en *Pantallas* el recorte de
+cada pantalla sobre el resultado. *Ver en el escritorio* lleva además la edición sin guardar al
+fondo real, allí donde esa imagen sea el fondo, y la ventana lo avisa bajo la imagen. Cada acción
+del editor existe también en `wprs-ctl edit`, que las cambia sin daemon:
 
 ```sh
 wprs-ctl edit set foto.jpg ev=0.3 contrast=10 temperature=5200 tint=4
@@ -742,9 +751,14 @@ otra página no cierra un editor con cambios sin guardar.
 - **Inspector**: se genera a partir del esquema JSON de las escenas (`wprs-ctl scene schema`), así
   que los campos nuevos del formato aparecen solos: números con deslizador y unidad, colores,
   opciones, vectores, curvas, recursos, efectos con sus parámetros y la vuelta al valor por
-  defecto de cada campo opcional. El rombo de cada valor animable pone o quita un fotograma clave
-  en el instante actual o lo enlaza a una propiedad de usuario, al sonido o al puntero, y *Editar
-  el origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace.
+  defecto de cada campo opcional. Los nombres de los campos y de sus valores (modos de fusión,
+  formas, curvas de interpolación, efectos, tipos de capa y de recurso, idiomas, *Igual que la
+  pantalla* de los fotogramas por segundo) salen en el idioma del escritorio, y una prueba recorre
+  el inspector de cada punto de partida con todas sus variantes y falla si algo de lo que muestra
+  no tiene traducción al español. Las capas y opciones nuevas que crea la app llevan nombres y
+  textos en ese idioma. El rombo de cada valor animable pone o quita un fotograma clave en el
+  instante actual o lo enlaza a una propiedad de usuario, al sonido o al puntero, y *Editar el
+  origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace.
 - **Línea de tiempo**: reproducir, pausar y mover el cabezal (la vista previa se queda en ese
   instante), una pista por valor animado con sus fotogramas clave, la interpolación de cada uno y
   la línea de tiempo que la mueve, y la lista de líneas de tiempo para crearlas y editarlas.
@@ -807,6 +821,7 @@ wprs-ctl scene new mar --from parallax --title Sea --locale en   # empty, partic
 wprs-ctl scene open copia --from escena.wpak            # una copia sin firma, derivada, con el id <id>.copy
 wprs-ctl scene import mar ola.ogg                       # copiar un recurso a assets/
 wprs-ctl scene add-layer mar sound --source ola         # y remove-layer, duplicate-layer, move-layer
+wprs-ctl scene add-layer mar text --name Título         # id «titulo», con ese texto
 wprs-ctl scene set mar /scene/layers/1/opacity 0.5      # cualquier campo por su JSON Pointer
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 2 1 --ease in_out_sine
 wprs-ctl scene translate mar /manifest/title es Mar     # otro idioma; --add no pisa nada, --remove lo quita
@@ -962,7 +977,9 @@ misma pausa.
 - La biblioteca y las copias importadas (`~/.local/share/wallpaper-rs`), las miniaturas y las
   entradas de paquetes (`~/.cache/wallpaper-rs`) se guardan con permisos `0600` en carpetas `0700`.
   Las miniaturas y el análisis de la biblioteca (tamaño, duración, color) los hace un proceso aparte
-  con la prioridad más baja de CPU y disco.
+  con la prioridad más baja de CPU y disco. La vista del editor de imágenes se guarda como un
+  archivo `0600` en la carpeta de ejecución de tu sesión (`XDG_RUNTIME_DIR`, o la carpeta temporal
+  si no la hay) y se borra al dibujar la siguiente o al cerrar el editor.
 - El servicio de systemd solo puede abrir conexiones de red (IPv4 e IPv6) para los proveedores y
   repositorios que añadas tú, y sus registros no incluyen rutas, nombres de archivo, servidores
   propios ni el modelo de GPU salvo con `RUST_LOG=debug`.

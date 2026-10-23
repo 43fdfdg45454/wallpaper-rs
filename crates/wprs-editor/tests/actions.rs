@@ -75,6 +75,13 @@ fn layer_actions_keep_the_scene_valid() {
     act(&mut doc, json!({"set": {"pointer": "/scene/layers/0/visible", "value": {"prop": "shown"}}}));
     let unhide: Action = serde_json::from_value(json!({"hide": {"id": "text", "hidden": false}})).unwrap();
     assert_eq!(plan(&doc, &unhide).unwrap(), []);
+    act(&mut doc, json!({"add_layer": {"kind": "text", "name": "Título"}}));
+    act(&mut doc, json!({"add_layer": {"kind": "solid", "name": "Color sólido"}}));
+    act(&mut doc, json!({"add_layer": {"kind": "shape", "name": "形状"}}));
+    act(&mut doc, json!({"add_layer": {"kind": "text", "name": "Título"}}));
+    assert_eq!(ids(&doc, "/scene/layers")[6..], ["titulo", "color_solido", "shape", "titulo_2"]);
+    assert_eq!(doc["scene"]["layers"][6]["text"], "Título");
+    assert!(check(&doc).iter().all(|p| p.pointer == "/scene/layers/0/visible"));
 }
 
 #[test]
@@ -120,6 +127,14 @@ fn the_inspector_follows_the_schema() {
             && field("size").pointer.ends_with("/shape/ellipse/size")
     );
     let effect = fields(&doc, "/scene/layers/1/effects/0");
+    let id = effect.iter().find(|f| f.key == "effect").unwrap();
+    assert!(id.widget == "ref:effect" && id.options.contains(&json!("vignette")) && id.options.len() > 30);
+    let clock = fields(&doc, "/scene/clock");
+    let fps = clock.iter().find(|f| f.key == "max_fps").unwrap();
+    assert_eq!(
+        (fps.widget.as_str(), &fps.options, &fps.value),
+        ("integer", &vec![json!("display")], &json!("display"))
+    );
     let intensity = effect.iter().find(|f| f.key == "intensity").unwrap();
     assert_eq!(intensity.range, json!([0.0, 1.0]));
     assert!((intensity.default.as_f64().unwrap() - 0.35).abs() < 1e-6);

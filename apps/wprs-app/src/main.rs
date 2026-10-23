@@ -15,6 +15,7 @@ mod fetch;
 mod grid;
 mod items;
 mod library;
+mod picture;
 mod rows;
 mod scene;
 mod scenefile;

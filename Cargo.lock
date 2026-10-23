@@ -5928,6 +5928,7 @@ dependencies = [
  "wprs-depth",
  "wprs-editor",
  "wprs-format",
+ "wprs-render",
  "wprs-scene",
  "zbus",
  "zeroize",

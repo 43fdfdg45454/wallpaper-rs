@@ -9,7 +9,9 @@ pub mod qobject {
     extern "RustQt" {
         #[qobject]
         #[qml_element]
-        #[qproperty(QString, source)]
+        #[qproperty(QString, picture)]
+        #[qproperty(bool, whole)]
+        #[qproperty(QString, trouble)]
         #[qproperty(QString, json)]
         #[qproperty(QString, values)]
         #[qproperty(QString, error)]
@@ -26,6 +28,10 @@ pub mod qobject {
         fn save(self: Pin<&mut Editor>);
         #[qinvokable]
         fn preview(self: Pin<&mut Editor>, stop: bool);
+        #[qinvokable]
+        fn view(self: Pin<&mut Editor>, whole: bool);
+        #[qinvokable]
+        fn refresh(self: Pin<&mut Editor>);
     }
 
     impl cxx_qt::Threading for Editor {}
@@ -33,17 +39,21 @@ pub mod qobject {
 
 use crate::bus;
 use crate::editing::describe;
+use crate::picture::Picture;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use qobject::Editor;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
+use std::sync::Arc;
 use wprs_core::edit::{self, Action, Edit, Source};
 
 #[derive(Default)]
 pub struct EditorRust {
-    pub source: QString,
+    pub picture: QString,
+    pub whole: bool,
+    pub trouble: QString,
     pub json: QString,
     pub values: QString,
     pub error: QString,
@@ -57,6 +67,11 @@ pub struct EditorRust {
     pub queued: bool,
     pub shown: bool,
     pub sent: u64,
+    pub art: Option<Arc<Picture>>,
+    pub wanted: bool,
+    pub drawing: bool,
+    pub redraw: bool,
+    pub drawn: Option<PathBuf>,
 }
 
 fn load(file: &Path, pixels: [u32; 2]) -> (Edit, Result<(), String>) {
@@ -81,18 +96,19 @@ impl Editor {
         let (file, qt) = (PathBuf::from(path.to_string()), self.qt_thread());
         self.as_mut().rust_mut().file = file.clone();
         bus::spawn(async move {
-            let found = if file.is_file() { bus::url(&file.to_string_lossy()) } else { String::new() };
+            let missing = !file.is_file();
             let loaded = tokio::task::spawn_blocking(move || load(&file, [width, height])).await;
             let (edit, result) = loaded.unwrap_or_else(|e| (Edit::default(), Err(e.to_string())));
             qt.queue(move |mut editor| {
                 let mut this = editor.as_mut().rust_mut();
                 (this.saved, this.edit) = (edit.clone(), edit);
-                editor.as_mut().set_source(QString::from(&found));
-                let ready = result.is_ok() || found.is_empty();
+                let loaded = result.is_ok();
                 editor.as_mut().set_error(QString::from(result.err().unwrap_or_default().as_str()));
-                editor.as_mut().set_live(ready);
-                editor.as_mut().set_ready(ready);
-                editor.show();
+                editor.as_mut().set_ready(loaded || missing);
+                editor.as_mut().show();
+                if loaded {
+                    editor.paint();
+                }
             })
             .ok();
         });
@@ -113,6 +129,7 @@ impl Editor {
         self.as_mut().set_error(QString::from(failed.as_deref().unwrap_or_default()));
         if failed.is_none() {
             self.as_mut().show();
+            self.as_mut().draw();
             self.send();
         }
     }

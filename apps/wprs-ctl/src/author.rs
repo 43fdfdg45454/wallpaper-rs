@@ -85,8 +85,13 @@ pub enum Author {
         #[arg(help = DIR)]
         dir: PathBuf,
         kind: String,
-        #[arg(long, help = "Id of the new layer; made from the kind when omitted")]
+        #[arg(long, help = "Id of the new layer; made from the name, or else the kind, when omitted")]
         id: Option<String>,
+        #[arg(
+            long,
+            help = "Name of the layer in your language: the base of its id and the words of a text layer"
+        )]
+        name: Option<String>,
         #[arg(long, help = "Asset of an image, video or sound layer, or system of a particles layer")]
         source: Option<String>,
         #[arg(long, help = "Group to add the layer to")]

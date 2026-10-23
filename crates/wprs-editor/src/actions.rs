@@ -1,6 +1,6 @@
 use crate::arrange;
 use crate::keys::{Key, keyframe};
-use crate::layers::{children, find, parent, system, taken, template, unique, walk};
+use crate::layers::{children, clean, find, parent, system, taken, template, unique, walk};
 use crate::ops::{Op, set};
 use anyhow::{Result, anyhow, ensure};
 use serde::{Deserialize, Serialize};
@@ -32,6 +32,8 @@ pub enum Action {
         kind: String,
         #[serde(default)]
         id: Option<String>,
+        #[serde(default)]
+        name: Option<String>,
         #[serde(default)]
         source: Option<String>,
         #[serde(default)]
@@ -228,11 +230,12 @@ pub fn plan(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         Action::Add { pointer, value } => vec![Op::Add { path: pointer.clone(), value: value.clone() }],
         Action::Remove { pointer } => vec![Op::Remove { path: pointer.clone() }],
         Action::Move { from, to } => vec![Op::Move { from: from.clone(), path: to.clone() }],
-        Action::AddLayer { kind, id, source, into, at } => {
+        Action::AddLayer { kind, id, name, source, into, at } => {
             if let Some(id) = id {
                 ensure!(!taken(doc, id), "the id {id} is in use");
             }
-            let id = id.clone().unwrap_or_else(|| unique(doc, kind));
+            let base = name.as_deref().map(clean).filter(|c| !c.is_empty()).unwrap_or_else(|| kind.clone());
+            let id = id.clone().unwrap_or_else(|| unique(doc, &base));
             let list = children(doc, into.as_deref())?;
             let len = doc.pointer(&list).and_then(Value::as_array).map_or(0, Vec::len);
             let mut ops = Vec::new();
@@ -241,7 +244,7 @@ pub fn plan(doc: &Value, action: &Action) -> Result<Vec<Op>> {
                 ops.extend(set(doc, &format!("/scene/particles/{named}"), system()));
             }
             let path = format!("{list}/{}", at.unwrap_or(len).min(len));
-            ops.push(Op::Add { path, value: template(doc, kind, &id, source.as_deref())? });
+            ops.push(Op::Add { path, value: template(doc, kind, &id, source.as_deref(), name.as_deref())? });
             ops
         }
         Action::RemoveLayer { id } => {

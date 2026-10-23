@@ -12,12 +12,14 @@ wprs-client.workspace = true
 wprs-depth = { workspace = true, features = ["fetch", "infer"] }
 wprs-editor.workspace = true
 wprs-format.workspace = true
+wprs-render.workspace = true
 dirs.workspace = true
 anyhow.workspace = true
 cxx.workspace = true
 cxx-qt.workspace = true
 cxx-qt-lib.workspace = true
 futures-util.workspace = true
+image.workspace = true
 percent-encoding.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -27,7 +29,6 @@ zeroize.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-image.workspace = true
 wprs-scene.workspace = true
 
 [build-dependencies]

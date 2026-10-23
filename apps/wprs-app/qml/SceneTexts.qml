@@ -35,14 +35,14 @@ ColumnLayout {
                 visible: row.modelData.language !== ""
                 Layout.alignment: Qt.AlignTop
                 Layout.topMargin: Kirigami.Units.smallSpacing
-                text: row.modelData.language
+                text: ManifestWords.language(row.modelData.language)
             }
 
             QQC2.TextField {
                 Layout.fillWidth: true
                 visible: !texts.multiline
                 text: row.text
-                Accessible.name: SceneWords.label(texts.field.key) + " " + row.modelData.language
+                Accessible.name: SceneWords.label(texts.field.key) + " " + ManifestWords.language(row.modelData.language)
                 onEditingFinished: {
                     if (text !== row.text)
                         texts.put(row.modelData.language, text);
@@ -54,7 +54,7 @@ ColumnLayout {
                 visible: texts.multiline
                 text: row.text
                 wrapMode: TextEdit.Wrap
-                Accessible.name: SceneWords.label(texts.field.key) + " " + row.modelData.language
+                Accessible.name: SceneWords.label(texts.field.key) + " " + ManifestWords.language(row.modelData.language)
                 onEditingFinished: {
                     if (text !== row.text)
                         texts.put(row.modelData.language, text);

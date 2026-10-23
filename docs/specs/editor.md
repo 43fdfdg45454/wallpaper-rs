@@ -44,7 +44,7 @@ undo and redo walk through, the undone ones marked.
 |--------|-----------|---------|
 | `set` | `pointer`, `value`; creates the objects on the way | `set DIR POINTER VALUE` |
 | `add`, `remove`, `move` | `pointer` and `value`, `pointer`, `from` and `to` | `add`, `remove`, `move` |
-| `add_layer` | `kind`, optional `id`, `source` (the asset of an image, video or sound layer, the system of a particles layer), `into` (a group), `at` (0 is the bottom) | `add-layer DIR KIND` |
+| `add_layer` | `kind`, optional `id`, `name` (the name of the layer in the author's language), `source` (the asset of an image, video or sound layer, the system of a particles layer), `into` (a group), `at` (0 is the bottom) | `add-layer DIR KIND [--name N]` |
 | `remove_layer`, `duplicate_layer` | `id`; a copy gets new ids for itself and its children | `remove-layer`, `duplicate-layer` |
 | `move_layer` | `id`, `to`, optional `into`; without `into` the layer goes to the top level | `move-layer DIR ID TO` |
 | `group`, `ungroup` | `ids` of layers with the same parent, each taken once, and an optional group `id`; the `id` of a group, refused while the group has an opacity, transform, anchor, blend, mask, effects, parallax, visibility or clip of its own that ungrouping would lose | `group`, `ungroup` |
@@ -63,8 +63,12 @@ undo and redo walk through, the undone ones marked.
 | `add_preset` | optional `id` (`preset_<n>` when omitted), `label`; a preset without values | `add-preset DIR` |
 | `undo`, `redo` | none | `undo`, `redo` |
 
-A new layer gets an id made from its kind (`text`, `text_2`…) and sensible defaults; a particles
-layer without a `source` also gets a new system. `keyframe` turns a plain value into
+A new layer gets an id made from its `name`, or else from its kind (`text`, `text_2`…; accents
+are dropped, other characters become `_`, and a name with no Latin letter or digit falls back to
+the kind), and sensible defaults; a text layer starts with its name as its text, and a particles
+layer without a `source` also gets a new system. The app sends the name of the kind in the
+language of the desktop (`Texto` becomes `texto`), and offers an image, video or sound layer only
+once there is an asset of that kind. `keyframe` turns a plain value into
 `{"keys": [[time, value]]}`, adds or replaces the key at that time (to the millisecond), keeps the
 keys sorted and turns the value back into a plain one when its last key goes; it refuses a value
 that follows another source. Keyframe times are seconds on the named timeline, or on the scene
@@ -112,17 +116,24 @@ the fields it shows for a pointer, as JSON. Annotations in the schema guide the 
 |------------|---------|
 | `x-unit` | unit shown after the label (`px`, `°`, `s`) |
 | `x-range` | `[min, max]` of a slider |
-| `x-ref` | the value names an `image`, `video`, `sound`, `font` or `lut` asset, a `layer`, a particle `system`, a `timeline`, a user `property` that holds a value or, for the `trigger` of a timeline, `start`, `beat` or `prop:<id>` of a button or of such a property, offered in a list; properties show their labels |
+| `x-ref` | the value names an `image`, `video`, `sound`, `font` or `lut` asset, a `layer`, a particle `system`, a `timeline`, a user `property` that holds a value or, for the `trigger` of a timeline, `start`, `beat` or `prop:<id>` of a button or of such a property, or a built-in `effect`, offered in a list; properties show their labels and effects their translated names |
 | `x-key` | a keyframe `[time, value, ease]` |
 | `x-curve` | a list of `[t, value]` points plotted as a curve |
 
 Numbers become sliders when they have a range, colors a color picker, enumerations and tagged
 variants a list with translated names, pairs two fields, `x-curve` lists a curve, color stops
 `[t, color]` rows of a time and a color picker, fixed pairs of points (a box, a line) two rows of
-coordinates, objects a group of fields and other lists a count with *Add* and *Edit…*. The app
-names every field, value, effect and easing in the language of the desktop; a test fails when the
-schema gains one without a name. Effect parameters come from the descriptor of the effect. A
-field that may follow a source (keyframes, a user property, the sound analysis or the pointer) has
+coordinates, objects a group of fields and other lists a count with *Add* and *Edit…*. A number
+that may also be a name, such as `clock.max_fps` (`display`), has the widget of the number and the
+names in `options`, shown as check boxes. The app names every field, value, effect, easing, layer
+kind, asset kind, language and computed feature in the language of the desktop; a test fails when
+the schema gains one without a name, and another walks the inspector of every starting point with
+every layer kind, variant and list item and fails when an option or a shown value has no Spanish
+translation or a raw JSON field holds a plain text. Effect parameters come from the descriptor of
+the effect. Problems and refused actions show the message of the validator and of the editor, the
+same English text that `wprs-ctl scene validate` and the commands print, under a translated
+heading; each problem leads to its field, whose name is translated. A field that may follow a
+source (keyframes, a user property, the sound analysis or the pointer) has
 a menu to add or remove a keyframe at the current time, bind it, make it fixed again or edit the
 binding itself (timeline, loop, scale, offset, clamp, smoothing). An optional field that is set
 can go back to its default.
@@ -143,8 +154,8 @@ several languages need it. More annotations guide the widgets:
 |------------|---------|
 | `x-markup` | a text with the markup of `package.md`, edited on several lines |
 | `x-required` | required in `wallpaper-rs.wpak/2` (`content`, `photosensitive`, `origin`), so it has no way back to a default; a switch that is not set yet shows *No* and *Yes* |
-| `x-computed` | filled by the tools (`requires.features`), shown read-only |
-| `x-ref` | `thumbnail` or `animated`: a file chooser that runs `thumbnail`; `language`: the languages of the texts and of the desktop, offered in a list |
+| `x-computed` | filled by the tools (`requires.features`), shown read-only with translated names |
+| `x-ref` | `thumbnail` or `animated`: a file chooser that runs `thumbnail`; `language`: the languages of the texts and of the desktop, offered in a list by their names in the language of the desktop |
 
 Texts (titles, descriptions, change notes, labels, help, options and preset labels) show one row
 per language, a plain text under the default language. `translate` takes only a pointer whose

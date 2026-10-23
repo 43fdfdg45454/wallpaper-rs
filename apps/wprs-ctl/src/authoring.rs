@@ -72,8 +72,8 @@ fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> {
         Author::Add { dir, pointer, value: v } => (dir, Action::Add { pointer, value: value(&v) }),
         Author::Remove { dir, pointer } => (dir, Action::Remove { pointer }),
         Author::Move { dir, from, to } => (dir, Action::Move { from, to }),
-        Author::AddLayer { dir, kind, id, source, into, at } => {
-            (dir, Action::AddLayer { kind, id, source, into, at })
+        Author::AddLayer { dir, kind, id, name, source, into, at } => {
+            (dir, Action::AddLayer { kind, id, name, source, into, at })
         }
         Author::RemoveLayer { dir, id } => (dir, Action::RemoveLayer { id }),
         Author::DuplicateLayer { dir, id } => (dir, Action::DuplicateLayer { id }),

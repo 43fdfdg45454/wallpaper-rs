@@ -61,4 +61,43 @@ QtObject {
             "network": App.tr("The network"),
             "pointer": App.tr("The pointer")
         })
+    readonly property var languages: ({
+            "ar": App.tr("Arabic"),
+            "ca": App.tr("Catalan"),
+            "cs": App.tr("Czech"),
+            "da": App.tr("Danish"),
+            "de": App.tr("German"),
+            "el": App.tr("Greek"),
+            "en": App.tr("English"),
+            "es": App.tr("Spanish"),
+            "eu": App.tr("Basque"),
+            "fi": App.tr("Finnish"),
+            "fr": App.tr("French"),
+            "gl": App.tr("Galician"),
+            "he": App.tr("Hebrew"),
+            "hi": App.tr("Hindi"),
+            "hu": App.tr("Hungarian"),
+            "id": App.tr("Indonesian"),
+            "it": App.tr("Italian"),
+            "ja": App.tr("Japanese"),
+            "ko": App.tr("Korean"),
+            "nb": App.tr("Norwegian"),
+            "nl": App.tr("Dutch"),
+            "pl": App.tr("Polish"),
+            "pt": App.tr("Portuguese"),
+            "ro": App.tr("Romanian"),
+            "ru": App.tr("Russian"),
+            "sv": App.tr("Swedish"),
+            "th": App.tr("Thai"),
+            "tr": App.tr("Turkish"),
+            "uk": App.tr("Ukrainian"),
+            "vi": App.tr("Vietnamese"),
+            "zh": App.tr("Chinese")
+        })
+
+    function language(code) {
+        const parts = String(code ?? "").split("-");
+        const name = languages[parts[0].toLowerCase()];
+        return name ? name + (parts.length > 1 ? " (" + parts.slice(1).join("-") + ")" : "") : parts.join("-");
+    }
 }

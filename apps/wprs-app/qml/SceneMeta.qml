@@ -59,7 +59,7 @@ Loader {
         id: computed
 
         QQC2.Label {
-            text: App.tr("Filled from what the package uses: %1").arg(meta.list.join(", ") || App.tr("nothing"))
+            text: App.tr("Filled from what the package uses: %1").arg(meta.list.map(name => Labels.feature(name)).join(", ") || App.tr("nothing"))
             wrapMode: Text.Wrap
             color: Kirigami.Theme.disabledTextColor
         }
