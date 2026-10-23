@@ -1324,6 +1324,27 @@ device, and forgets the server. Without `wipe`
 the synced copies stay so that linking the same account again resumes; `wipe` deletes them too.
 The added repository stays.
 
+## The app: `io.github.wallpaper_rs`
+
+The desktop app owns `io.github.wallpaper_rs` (`APP_ID`) at `/io/github/wallpaper_rs` (`APP_PATH`)
+and implements `org.freedesktop.Application` there. Its desktop file sets `DBusActivatable=true`
+and `packaging/dbus/io.github.wallpaper_rs.service` lets the session bus start it for any of these
+calls. A second `wprs-app` passes its files and page to the running one through the same calls
+and exits.
+
+| Method | Effect |
+|--------|--------|
+| `Activate(a{sv} platform_data)` | raises the window |
+| `Open(as uris, a{sv} platform_data)` | imports the `file://` URIs and absolute paths into the library, then raises the window |
+| `ActivateAction(s name, av parameter, a{sv} platform_data)` | `library`, `playlists`, `profiles`, `providers`, `repos`, `settings` or `account` opens that page, also in an app the bus starts for this call; any other name only raises the window |
+
+A request for the page already shown keeps it as it is, and while the image editor has unsaved
+changes a page request only raises the window. `wprs-app --page <name>` and the launcher action
+*Settings* (`settings`) make the same request. The tray offers *Open wallpaper-rs* (`Activate`)
+and *Settings…* (`ActivateAction("settings")`) unless `ListActivatableNames` lists the daemon but
+not the app and the app is not running: the Flatpak ships no app, so there the tray says that the
+other settings are changed with `wprs-ctl`.
+
 ## Edits and spanning
 
 Edits never change the image. An edit lives in `<image file name>.wprs.json` next to the image

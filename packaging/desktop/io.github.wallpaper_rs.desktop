@@ -15,3 +15,10 @@ MimeType=image/png;image/jpeg;image/webp;image/gif;image/bmp;video/mp4;video/web
 DBusActivatable=true
 StartupNotify=true
 StartupWMClass=io.github.wallpaper_rs
+Actions=settings;
+
+[Desktop Action settings]
+Name=Settings
+Name[es]=Ajustes
+Icon=configure
+Exec=@BINDIR@/wprs-app --page settings

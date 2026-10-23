@@ -37,6 +37,8 @@ pub mod qobject {
         #[qinvokable]
         fn url(self: &Backend, path: &QString) -> QString;
         #[qinvokable]
+        fn requested(self: &Backend) -> QString;
+        #[qinvokable]
         fn path(self: &Backend, url: &QString) -> QString;
         #[qsignal]
         fn replied(self: Pin<&mut Backend>, tag: QString, json: QString);
@@ -53,7 +55,7 @@ pub mod qobject {
         #[qsignal]
         fn preview_ready(self: Pin<&mut Backend>, spec: QString, path: QString);
         #[qsignal]
-        fn activated(self: Pin<&mut Backend>);
+        fn activated(self: Pin<&mut Backend>, page: QString);
     }
 
     impl cxx_qt::Threading for Backend {}
@@ -104,6 +106,10 @@ impl Backend {
 
     pub fn tr(&self, text: &QString) -> QString {
         QString::from(&tr::tr(&text.to_string()))
+    }
+
+    pub fn requested(&self) -> QString {
+        QString::from(&bus::requested().unwrap_or_default())
     }
 
     pub fn url(&self, path: &QString) -> QString {

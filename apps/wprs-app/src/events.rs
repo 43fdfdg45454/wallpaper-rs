@@ -54,7 +54,7 @@ impl Backend {
             }
             Event::Thumb(uid, size, path) => self.thumbnail_ready(q(&uid), size, q(&path)),
             Event::Preview(spec, path) => self.preview_ready(q(&spec), q(&path)),
-            Event::Activate => self.activated(),
+            Event::Activate(page) => self.activated(q(&page)),
             Event::Error(message) => self.set_last_error(q(&message)),
         }
     }

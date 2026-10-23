@@ -34,12 +34,26 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("--version" | "-V") => println!("wprs-app {}", wprs_core::VERSION),
-        Some("--help" | "-h") => println!("usage: wprs-app [--check | --version] [FILE | URI]..."),
+        Some("--help" | "-h") => {
+            println!("usage: wprs-app [--check | --version | --page PAGE] [FILE | URI]...");
+            println!("pages: {}", app::PAGES.join(", "));
+        }
         Some("--check") if !bus::checking() => return check(),
         Some("--depth") => return depthproc::child(&args[1..]),
-        _ => return app::start(args.iter().filter_map(|a| file(a)).collect()).unwrap_or_else(run),
+        Some("--page") => match app::page(args.get(1).map(String::as_str)) {
+            Some(page) => return open(&args[2..], Some(page)),
+            None => {
+                eprintln!("wprs-app: --page takes one of {}", app::PAGES.join(", "));
+                return ExitCode::from(2);
+            }
+        },
+        _ => return open(&args, None),
     }
     ExitCode::SUCCESS
+}
+
+fn open(args: &[String], page: Option<&str>) -> ExitCode {
+    app::start(args.iter().filter_map(|a| file(a)).collect(), page).unwrap_or_else(run)
 }
 
 fn file(arg: &str) -> Option<String> {
@@ -74,6 +88,7 @@ fn check() -> ExitCode {
     let child = std::env::current_exe().and_then(|exe| {
         let mut command = Command::new(exe);
         command.env(bus::CHECK, "1").env("QT_QPA_PLATFORM", platform).env("QT_FORCE_STDERR_LOGGING", "1");
+        command.args(["--page", "settings"]);
         command.stderr(Stdio::piped()).spawn()
     });
     let Ok(mut child) = child else { return ExitCode::FAILURE };

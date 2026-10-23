@@ -932,7 +932,7 @@ msgstr "Máscara %1"
 msgid "Crop and rotate"
 msgstr "Recortar y girar"
 
-#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/ProfilesPage.qml
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/Screens.qml
 msgid "Screens"
 msgstr "Pantallas"
 
@@ -1624,6 +1624,10 @@ msgstr "Añadir una carpeta…"
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Reload configuration"
 msgstr "Recargar la configuración"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "General"
+msgstr "General"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Library folders"

@@ -41,107 +41,120 @@ Kirigami.ScrollablePage {
         }
     }
 
-    Kirigami.FormLayout {
-        Settings {
-            daemon: App
-            model: App.schema.options ?? []
-            values: App.state.options ?? {}
-            onEdited: (key, value) => App.act("SetOption", [key, value])
+    ColumnLayout {
+        Screens {
+            Layout.fillWidth: true
         }
 
-        Kirigami.Separator {
-            Kirigami.FormData.isSection: true
-            Kirigami.FormData.label: App.tr("Library folders")
-        }
+        Kirigami.FormLayout {
+            Layout.fillWidth: true
 
-        Repeater {
-            model: page.sources
-
-            delegate: RowLayout {
-                required property var modelData
-
-                QQC2.Label {
-                    text: [modelData.path, modelData.recursive ? "" : App.tr("without subfolders"), modelData.provider ?? "", App.tr("Items: %1").arg(modelData.items)].filter(t => t).join(" · ")
-                    color: modelData.error ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
-                }
-
-                QQC2.ToolButton {
-                    icon.name: "view-refresh"
-                    text: App.tr("Rescan")
-                    display: QQC2.AbstractButton.IconOnly
-                    onClicked: App.act("Rescan", [modelData.uid], "Library1")
-                }
-
-                QQC2.ToolButton {
-                    visible: !modelData.provider
-                    icon.name: "list-remove"
-                    text: App.tr("Remove")
-                    display: QQC2.AbstractButton.IconOnly
-                    onClicked: App.act("RemoveSource", [modelData.uid], "Library1")
-                }
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: App.tr("General")
             }
-        }
 
-        QQC2.Switch {
-            id: recursive
+            Settings {
+                daemon: App
+                model: App.schema.options ?? []
+                values: App.state.options ?? {}
+                onEdited: (key, value) => App.act("SetOption", [key, value])
+            }
 
-            text: App.tr("Include subfolders")
-            checked: true
-        }
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: App.tr("Library folders")
+            }
 
-        Kirigami.Separator {
-            Kirigami.FormData.isSection: true
-            Kirigami.FormData.label: App.tr("Scene permissions")
-        }
+            Repeater {
+                model: page.sources
 
-        QQC2.Label {
-            Layout.maximumWidth: Kirigami.Units.gridUnit * 30
-            wrapMode: Text.Wrap
-            text: [App.tr("A scene follows the sound that plays or the pointer only after you allow it for that scene, and only while it is shown. The sound is turned into levels on this computer and never recorded, kept or sent; pointer positions are never kept."), page.inputs.capturing ? App.tr("A scene is following the sound now.") : "", page.inputs.tracking ? App.tr("A scene is following the pointer now.") : "", Object.keys(page.grants).length ? "" : App.tr("No scene has been allowed yet.")].filter(t => t).join("\n")
-        }
+                delegate: RowLayout {
+                    required property var modelData
 
-        Repeater {
-            model: Object.keys(page.grants)
+                    QQC2.Label {
+                        text: [modelData.path, modelData.recursive ? "" : App.tr("without subfolders"), modelData.provider ?? "", App.tr("Items: %1").arg(modelData.items)].filter(t => t).join(" · ")
+                        color: modelData.error ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
+                    }
 
-            delegate: RowLayout {
-                id: grant
+                    QQC2.ToolButton {
+                        icon.name: "view-refresh"
+                        text: App.tr("Rescan")
+                        display: QQC2.AbstractButton.IconOnly
+                        onClicked: App.act("Rescan", [modelData.uid], "Library1")
+                    }
 
-                required property string modelData
-
-                QQC2.Label {
-                    text: grant.modelData
-                }
-
-                Repeater {
-                    model: page.grants[grant.modelData]
-
-                    delegate: QQC2.Button {
-                        required property string modelData
-
-                        icon.name: "dialog-cancel"
-                        text: App.tr("Stop using %1").arg(Labels.value(modelData))
-                        onClicked: App.act("Revoke", [grant.modelData, modelData], "Inputs1")
+                    QQC2.ToolButton {
+                        visible: !modelData.provider
+                        icon.name: "list-remove"
+                        text: App.tr("Remove")
+                        display: QQC2.AbstractButton.IconOnly
+                        onClicked: App.act("RemoveSource", [modelData.uid], "Library1")
                     }
                 }
             }
-        }
 
-        Kirigami.Separator {
-            Kirigami.FormData.isSection: true
-            Kirigami.FormData.label: App.tr("About")
-        }
+            QQC2.Switch {
+                id: recursive
 
-        QQC2.Label {
-            Kirigami.FormData.label: App.tr("Version:")
-            text: [App.state.version, App.state.adapter, App.tr("data model %1").arg(App.state.model ?? "")].filter(t => t).join(" · ")
-        }
+                text: App.tr("Include subfolders")
+                checked: true
+            }
 
-        QQC2.Label {
-            Kirigami.FormData.label: App.tr("Configuration:")
-            visible: !!App.state.config_error || !!App.state.library_error
-            text: [App.state.config_error, App.state.library_error].filter(t => t).join("\n")
-            color: Kirigami.Theme.negativeTextColor
-            wrapMode: Text.Wrap
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: App.tr("Scene permissions")
+            }
+
+            QQC2.Label {
+                Layout.maximumWidth: Kirigami.Units.gridUnit * 30
+                wrapMode: Text.Wrap
+                text: [App.tr("A scene follows the sound that plays or the pointer only after you allow it for that scene, and only while it is shown. The sound is turned into levels on this computer and never recorded, kept or sent; pointer positions are never kept."), page.inputs.capturing ? App.tr("A scene is following the sound now.") : "", page.inputs.tracking ? App.tr("A scene is following the pointer now.") : "", Object.keys(page.grants).length ? "" : App.tr("No scene has been allowed yet.")].filter(t => t).join("\n")
+            }
+
+            Repeater {
+                model: Object.keys(page.grants)
+
+                delegate: RowLayout {
+                    id: grant
+
+                    required property string modelData
+
+                    QQC2.Label {
+                        text: grant.modelData
+                    }
+
+                    Repeater {
+                        model: page.grants[grant.modelData]
+
+                        delegate: QQC2.Button {
+                            required property string modelData
+
+                            icon.name: "dialog-cancel"
+                            text: App.tr("Stop using %1").arg(Labels.value(modelData))
+                            onClicked: App.act("Revoke", [grant.modelData, modelData], "Inputs1")
+                        }
+                    }
+                }
+            }
+
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: App.tr("About")
+            }
+
+            QQC2.Label {
+                Kirigami.FormData.label: App.tr("Version:")
+                text: [App.state.version, App.state.adapter, App.tr("data model %1").arg(App.state.model ?? "")].filter(t => t).join(" · ")
+            }
+
+            QQC2.Label {
+                Kirigami.FormData.label: App.tr("Configuration:")
+                visible: !!App.state.config_error || !!App.state.library_error
+                text: [App.state.config_error, App.state.library_error].filter(t => t).join("\n")
+                color: Kirigami.Theme.negativeTextColor
+                wrapMode: Text.Wrap
+            }
         }
     }
 

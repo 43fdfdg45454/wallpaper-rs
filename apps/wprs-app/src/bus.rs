@@ -29,7 +29,7 @@ pub enum Event {
     Finished(u64, String, String, String),
     Thumb(String, u32, String),
     Preview(String, String),
-    Activate,
+    Activate(String),
     Error(String),
 }
 
@@ -38,6 +38,7 @@ struct Bus {
     events: broadcast::Sender<Event>,
     link: watch::Sender<Option<Result<Daemon, String>>>,
     seen: Mutex<HashMap<String, u64>>,
+    page: Mutex<Option<String>>,
 }
 
 static BUS: LazyLock<Bus> = LazyLock::new(|| Bus {
@@ -45,6 +46,7 @@ static BUS: LazyLock<Bus> = LazyLock::new(|| Bus {
     events: broadcast::channel(256).0,
     link: watch::channel(None).0,
     seen: Mutex::default(),
+    page: Mutex::default(),
 });
 
 pub fn checking() -> bool {
@@ -61,6 +63,19 @@ pub fn spawn(task: impl Future<Output = ()> + Send + 'static) {
 
 pub fn publish(event: Event) {
     BUS.events.send(event).ok();
+}
+
+pub fn request(page: &str) {
+    *BUS.page.lock().unwrap() = Some(page.to_owned());
+    publish(Event::Activate(page.to_owned()));
+}
+
+pub fn requested() -> Option<String> {
+    BUS.page.lock().unwrap().take()
+}
+
+pub fn events() -> broadcast::Receiver<Event> {
+    BUS.events.subscribe()
 }
 
 pub fn set_link(link: Result<Daemon, String>) {
@@ -117,7 +132,7 @@ pub fn url(path: &str) -> String {
 }
 
 pub fn listen<T: Threading + 'static>(qt: CxxQtThread<T>, handle: fn(Pin<&mut T>, Event)) {
-    let mut events = BUS.events.subscribe();
+    let mut events = events();
     let link = BUS.link.borrow().as_ref().map(|link| link.as_ref().map(|_| ()).map_err(Clone::clone));
     if let Some(link) = link {
         qt.queue(move |this| handle(this, Event::Link(link))).ok();

@@ -1,6 +1,7 @@
 mod depth;
 mod editor;
 mod fake;
+mod pages;
 
 use crate::args::{INVALID, carries_secret, fixture};
 use crate::bus::{Daemon, url};
@@ -9,7 +10,10 @@ use crate::diff::Edit;
 use crate::grid::{Grid, compose, info, kind, name};
 use crate::{app, tr};
 use serde_json::{Value, json};
+use std::io::{BufRead, BufReader};
 use std::path::Path;
+use std::process::{Child, Command, Stdio};
+use tempfile::TempDir;
 use wprs_core::model::*;
 
 fn summary(uid: &str) -> ItemSummary {
@@ -25,6 +29,22 @@ pub fn qml() -> Vec<String> {
         .filter(|p| p.is_file())
         .map(|p| std::fs::read_to_string(p).unwrap())
         .collect()
+}
+
+pub fn private_bus() -> (Child, TempDir, String) {
+    let dir = tempfile::tempdir().unwrap();
+    let listen = format!("<listen>unix:dir={}</listen><auth>EXTERNAL</auth>", dir.path().display());
+    let policy = r#"<policy context="default"><allow send_destination="*"/><allow receive_sender="*"/><allow own="*"/></policy>"#;
+    std::fs::write(dir.path().join("bus.conf"), format!("<busconfig>{listen}{policy}</busconfig>")).unwrap();
+    let mut bus = Command::new("dbus-daemon")
+        .args(["--nofork", "--print-address", "--config-file"])
+        .arg(dir.path().join("bus.conf"))
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("dbus-daemon is installed");
+    let mut address = String::new();
+    BufReader::new(bus.stdout.take().unwrap()).read_line(&mut address).unwrap();
+    (bus, dir, address.trim().to_owned())
 }
 
 fn iface(line: &str) -> &'static str {

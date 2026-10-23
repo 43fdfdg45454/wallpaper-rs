@@ -9,7 +9,6 @@ Kirigami.ScrollablePage {
 
     property var profiles: []
     property var presets: []
-    property var playlists: []
     property string active
 
     function load() {
@@ -18,7 +17,6 @@ Kirigami.ScrollablePage {
             page.active = reply.active ?? "";
         });
         App.query("ListPresets", [""], "Profiles1", reply => page.presets = reply.presets);
-        App.query("List", [], "Playlists1", reply => page.playlists = reply.playlists);
     }
 
     title: App.tr("Profiles and presets")
@@ -46,30 +44,12 @@ Kirigami.ScrollablePage {
         target: App.backend
 
         function onChanged(topic) {
-            if (topic === "profiles" || topic === "playlists")
+            if (topic === "profiles")
                 page.load();
         }
     }
 
     ColumnLayout {
-        Kirigami.Heading {
-            text: App.tr("Screens")
-        }
-
-        Repeater {
-            model: App.outputs.concat([""])
-
-            delegate: OutputRow {
-                required property string modelData
-
-                Layout.fillWidth: true
-                daemon: App
-                name: modelData
-                info: (App.state.outputs ?? {})[modelData] ?? {}
-                playlists: page.playlists
-            }
-        }
-
         Kirigami.Heading {
             text: App.tr("Profiles")
         }

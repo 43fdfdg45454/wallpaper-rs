@@ -13,12 +13,10 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: integrations/plasma-tray/contents/ui/Consent.qml
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
 msgid "Follow the sound that plays"
 msgstr "Seguir el sonido que se reproduce"
 
 #: integrations/plasma-tray/contents/ui/Consent.qml
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
 msgid ""
 "The sound is turned into levels on this computer while the scene is shown; "
 "nothing is recorded, kept or sent, and the desktop may show a microphone "
@@ -29,12 +27,10 @@ msgstr ""
 "un indicador de micrófono."
 
 #: integrations/plasma-tray/contents/ui/Consent.qml
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
 msgid "Follow the pointer"
 msgstr "Seguir el puntero"
 
 #: integrations/plasma-tray/contents/ui/Consent.qml
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
 msgid ""
 "Only the latest pointer position over this screen reaches the scene; "
 "positions are never kept and keys are never read."
@@ -57,90 +53,6 @@ msgstr "Ahora no"
 
 #: integrations/plasma-tray/contents/ui/Daemon.qml
 #, kde-format
-msgid "Pause when a window covers the screen"
-msgstr "Pausar cuando una ventana cubra la pantalla"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgid "Pause on battery"
-msgstr "Pausar al funcionar con batería"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgid "Pause while the screen is locked"
-msgstr "Pausar mientras la pantalla esté bloqueada"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgid "Frames per second"
-msgstr "Fotogramas por segundo"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgid "Transition"
-msgstr "Transición"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgid "Transition length (ms)"
-msgstr "Duración de la transición (ms)"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper fit mode"
-msgid "Fill"
-msgstr "Rellenar"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper fit mode"
-msgid "Fit"
-msgstr "Ajustar"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper fit mode"
-msgid "Stretch"
-msgstr "Estirar"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper fit mode"
-msgid "Center"
-msgstr "Centrar"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper fit mode"
-msgid "Tile"
-msgstr "Mosaico"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper fit mode"
-msgid "Span"
-msgstr "Extender"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgctxt "@option:check frames per second"
-msgid "Match the display"
-msgstr "Igual que la pantalla"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper transition"
-msgid "Fade"
-msgstr "Fundido"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
-msgctxt "@item:inlistbox wallpaper transition"
-msgid "None"
-msgstr "Ninguna"
-
-#: integrations/plasma-tray/contents/ui/Daemon.qml
-#, kde-format
 msgid "The wallpaper-rs daemon is not running"
 msgstr "El servicio de wallpaper-rs no se está ejecutando"
 
@@ -149,111 +61,100 @@ msgstr "El servicio de wallpaper-rs no se está ejecutando"
 msgid "wallpaper-rs could not be opened"
 msgstr "No se pudo abrir wallpaper-rs"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "Every screen"
-msgstr "Todas las pantallas"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/Header.qml
 #, kde-format
-msgid "Playlist %1 (%2 of %3)"
-msgstr "Lista %1 (%2 de %3)"
+msgid "Resume"
+msgstr "Reanudar"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "Background color"
-msgstr "Color de fondo"
+#: integrations/plasma-tray/contents/ui/Header.qml
+#, kde-format
+msgid "Pause"
+msgstr "Pausar"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-#: integrations/plasma-tray/contents/ui/SceneField.qml
-#: integrations/plasma-tray/contents/ui/Settings.qml
-msgid "Choose…"
-msgstr "Elegir…"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "No playlist"
-msgstr "Sin lista"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "Previous"
-msgstr "Anterior"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "Next"
-msgstr "Siguiente"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "Scene settings"
-msgstr "Ajustes de la escena"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/Header.qml
+#, kde-format
 msgid "Unmute"
 msgstr "Activar el sonido"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
+#: integrations/plasma-tray/contents/ui/Header.qml
+#, kde-format
 msgid "Mute"
 msgstr "Silenciar"
 
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "Another screen plays the sound of this scene"
-msgstr "Otra pantalla reproduce el sonido de esta escena"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "Unfavorite"
-msgstr "Quitar de favoritos"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "Favorite"
-msgstr "Añadir a favoritos"
-
-#: integrations/plasma-tray/contents/ui/OutputRow.qml
-msgid "Images and videos"
-msgstr "Imágenes y vídeos"
-
-#: integrations/plasma-tray/contents/ui/Panel.qml
+#: integrations/plasma-tray/contents/ui/Header.qml
 #, kde-format
 msgid "No profile"
 msgstr "Sin perfil"
 
-#: integrations/plasma-tray/contents/ui/Panel.qml
+#: integrations/plasma-tray/contents/ui/Header.qml
 #, kde-format
 msgid "Profile: %1"
 msgstr "Perfil: %1"
 
 #: integrations/plasma-tray/contents/ui/Panel.qml
 #, kde-format
-msgid "Resume"
-msgstr "Reanudar"
+msgid "No screen shows wallpaper-rs"
+msgstr "Ninguna pantalla muestra wallpaper-rs"
 
 #: integrations/plasma-tray/contents/ui/Panel.qml
 #, kde-format
-msgid "Pause"
-msgstr "Pausar"
+msgid "Choose wallpaper-rs as the wallpaper type in the desktop settings."
+msgstr "Elige wallpaper-rs como tipo de fondo en los ajustes del escritorio."
 
 #: integrations/plasma-tray/contents/ui/Panel.qml
 #, kde-format
-msgid "Reload configuration"
-msgstr "Recargar la configuración"
+msgid "Change the other settings with wprs-ctl"
+msgstr "Cambia los demás ajustes con wprs-ctl"
 
 #: integrations/plasma-tray/contents/ui/Panel.qml
 #, kde-format
 msgid "Open wallpaper-rs"
 msgstr "Abrir wallpaper-rs"
 
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
-msgid "Presets"
-msgstr "Preajustes"
+#: integrations/plasma-tray/contents/ui/Panel.qml
+#, kde-format
+msgid "Settings…"
+msgstr "Ajustes…"
 
-#: integrations/plasma-tray/contents/ui/SceneControls.qml
-msgid "Reset"
-msgstr "Restablecer"
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "Background color"
+msgstr "Color de fondo"
 
-#: integrations/plasma-tray/contents/ui/SceneField.qml
-#: integrations/plasma-tray/contents/ui/Settings.qml
-msgid "Clear"
-msgstr "Borrar"
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "%1 of %2"
+msgstr "%1 de %2"
 
-#: integrations/plasma-tray/contents/ui/SceneField.qml
-msgid "Images"
-msgstr "Imágenes"
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "Next"
+msgstr "Siguiente"
+
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "Choose…"
+msgstr "Elegir…"
+
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "Favorite"
+msgstr "Favorito"
+
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "Remove from favorites"
+msgstr "Quitar de favoritos"
+
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "Add to favorites"
+msgstr "Añadir a favoritos"
+
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "Images and videos"
+msgstr "Imágenes y vídeos"
 
 #: integrations/plasma-tray/contents/ui/main.qml
 #, kde-format

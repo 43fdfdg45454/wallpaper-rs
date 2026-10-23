@@ -308,9 +308,9 @@ Values are changed through `GetSceneProperties`, `SetSceneProperty`, `ApplyScene
 `ResetSceneProperties` (`dbus.md`) or `wprs-ctl prop`, and stored in `config.toml`. Labels and
 help are text or `{ "<language>": text }`. `group` names a property of type `group`, under which
 the property is listed; `visible_if` (`{ "<other id>": value }`) hides it while another property
-has a different value; `order` sorts properties and groups. The app and the tray show these forms
-under *Scene settings*. The scenes in the `scenes/` folder of the repository are examples of this
-format, dedicated to the public domain.
+has a different value; `order` sorts properties and groups. The app shows these forms under *Scene
+settings* for each screen on its Settings page. The scenes in the `scenes/` folder of the
+repository are examples of this format, dedicated to the public domain.
 
 ## Inputs
 

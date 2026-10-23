@@ -12,8 +12,17 @@ use zbus::proxy::CacheProperties;
 use zbus::{OwnedVariant, Variant};
 
 const APPLICATION: &str = "org.freedesktop.Application";
+pub const PAGES: [&str; 7] =
+    ["library", "playlists", "profiles", "providers", "repos", "settings", "account"];
 
-pub fn start(uris: Vec<String>) -> Option<ExitCode> {
+pub fn page(name: Option<&str>) -> Option<&'static str> {
+    PAGES.into_iter().find(|page| name == Some(page))
+}
+
+pub fn start(uris: Vec<String>, page: Option<&str>) -> Option<ExitCode> {
+    if let Some(page) = page {
+        bus::request(page);
+    }
     if bus::checking() {
         set_link(Ok(Daemon::Fixtures));
         return None;
@@ -30,13 +39,7 @@ pub fn start(uris: Vec<String>) -> Option<ExitCode> {
             && let Err(zbus::Error::NameTaken) =
                 conn.request_name_with_flags(APP_ID, RequestNameFlags::DO_NOT_QUEUE).await
         {
-            let data = HashMap::<&str, Variant>::new();
-            let sent = if uris.is_empty() {
-                conn.call_method(Some(APP_ID), APP_PATH, Some(APPLICATION), "Activate", &(data,)).await
-            } else {
-                conn.call_method(Some(APP_ID), APP_PATH, Some(APPLICATION), "Open", &(uris, data)).await
-            };
-            let Err(e) = sent else { return Some(ExitCode::SUCCESS) };
+            let Err(e) = pass_on(&conn, uris, page).await else { return Some(ExitCode::SUCCESS) };
             eprintln!("wprs-app: {}", explain(e));
             return Some(ExitCode::FAILURE);
         }
@@ -44,6 +47,19 @@ pub fn start(uris: Vec<String>) -> Option<ExitCode> {
         spawn(open(uris));
         None
     })
+}
+
+pub async fn pass_on(conn: &Connection, uris: Vec<String>, page: Option<&str>) -> zbus::Result<()> {
+    let (data, to) = (HashMap::<&str, Variant>::new(), (Some(APP_ID), APP_PATH, Some(APPLICATION)));
+    if !uris.is_empty() {
+        conn.call_method(to.0, to.1, to.2, "Open", &(&uris, &data)).await?;
+    }
+    if let Some(page) = page {
+        conn.call_method(to.0, to.1, to.2, "ActivateAction", &(page, Vec::<Variant>::new(), &data)).await?;
+    } else if uris.is_empty() {
+        conn.call_method(to.0, to.1, to.2, "Activate", &(&data,)).await?;
+    }
+    Ok(())
 }
 
 async fn watch(conn: Connection) {
@@ -108,25 +124,28 @@ pub fn path(uri: &str) -> Option<String> {
     path.starts_with('/').then_some(path)
 }
 
-struct Application;
+pub struct Application;
 
 #[zbus::interface(name = "org.freedesktop.Application")]
 impl Application {
     fn activate(&self, _platform_data: HashMap<String, OwnedVariant>) {
-        publish(Event::Activate);
+        publish(Event::Activate(String::new()));
     }
 
     fn open(&self, uris: Vec<String>, _platform_data: HashMap<String, OwnedVariant>) {
         spawn(open(uris));
-        publish(Event::Activate);
+        publish(Event::Activate(String::new()));
     }
 
     fn activate_action(
         &self,
-        _name: String,
+        name: String,
         _parameter: Vec<OwnedVariant>,
         _platform_data: HashMap<String, OwnedVariant>,
     ) {
-        publish(Event::Activate);
+        match page(Some(&name)) {
+            Some(page) => bus::request(page),
+            None => publish(Event::Activate(String::new())),
+        }
     }
 }

@@ -1,10 +1,9 @@
 use crate::args::{INVALID, fixture};
 use crate::bus::Daemon;
 use crate::calls::dispatch;
+use crate::tests::private_bus;
 use serde_json::{Value, json};
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader};
-use std::process::{Command, Stdio};
 use wprs_client::{Client, parse};
 use wprs_core::dbus::{BUS_NAME, OBJECT_PATH};
 use wprs_core::model::{MODEL, State};
@@ -46,18 +45,7 @@ impl FakeLibrary {
 
 #[tokio::test]
 async fn calls_reach_the_daemon_with_typed_arguments() {
-    let dir = tempfile::tempdir().unwrap();
-    let listen = format!("<listen>unix:dir={}</listen><auth>EXTERNAL</auth>", dir.path().display());
-    let policy = r#"<policy context="default"><allow send_destination="*"/><allow receive_sender="*"/><allow own="*"/></policy>"#;
-    std::fs::write(dir.path().join("bus.conf"), format!("<busconfig>{listen}{policy}</busconfig>")).unwrap();
-    let mut bus = Command::new("dbus-daemon")
-        .args(["--nofork", "--print-address", "--config-file"])
-        .arg(dir.path().join("bus.conf"))
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("dbus-daemon is installed");
-    let mut address = String::new();
-    BufReader::new(bus.stdout.take().unwrap()).read_line(&mut address).unwrap();
+    let (mut bus, _dir, address) = private_bus();
     let service = Builder::address(address.trim()).name(BUS_NAME);
     let service = service.serve_at(OBJECT_PATH, FakeDaemon).serve_at(OBJECT_PATH, FakeLibrary);
     let _service = service.build().await.unwrap();

@@ -77,12 +77,21 @@ sistema de archivos inmutable. Para desinstalar: `./uninstall.sh` (añade `--pur
 también la configuración).
 
 Después, en Plasma: clic derecho en el escritorio → *Configurar escritorio y fondo de
-pantalla* → tipo de fondo **wallpaper-rs**. El fondo, el modo de ajuste y la lista de cada
-pantalla, el perfil, la pausa, el volumen y los ajustes se eligen desde el icono de wallpaper-rs
-en la bandeja. Con escala fraccional y Qt anterior a 6.11, el plugin pide más píxeles de los que
-tiene la pantalla; el daemon reduce el stream a los píxeles reales de la pantalla, los del modo que
-anuncia el compositor Wayland, para no gastar GPU ni memoria de más (el tamaño y la escala que le
-pasa el plugin no bastan, porque llevan la misma escala que la petición).
+pantalla* → tipo de fondo **wallpaper-rs**. Con escala fraccional y Qt anterior a 6.11, el plugin
+pide más píxeles de los que tiene la pantalla; el daemon reduce el stream a los píxeles reales de la
+pantalla, los del modo que anuncia el compositor Wayland, para no gastar GPU ni memoria de más (el
+tamaño y la escala que le pasa el plugin no bastan, porque llevan la misma escala que la petición).
+
+El icono de wallpaper-rs en la bandeja reúne lo básico: pausar o reanudar, silenciar, el volumen,
+el perfil y una fila por pantalla con la miniatura y el nombre de su fondo y los botones
+*Siguiente* (solo con una lista en marcha), *Elegir…* y *Favorito*. También pregunta qué permitir
+a una escena que lo pide. Todo lo demás está en la app: *Abrir wallpaper-rs* la abre y *Ajustes…*
+la abre directamente en su página *Ajustes*, con el modo de ajuste, el color de fondo y la lista de
+cada pantalla o de todas a la vez, los ajustes de cada escena, los fotogramas por segundo, las
+pausas y las transiciones. Lo mismo hace `wprs-app --page settings` (o la acción *Ajustes* del
+lanzador); `--page` acepta también `library`, `playlists`, `profiles`, `providers`, `repos` y
+`account`. Si la app ya está abierta, pasa a esa página, salvo que el editor de imágenes tenga
+cambios sin guardar: entonces solo se muestra la ventana.
 
 Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good y el de
 PipeWire, que lleva el sonido de los vídeos y de las escenas desde su versión 1.2; sin él o con uno
@@ -96,8 +105,8 @@ Kirigami y el estilo de escritorio de KDE (`qml6-module-org-kde-kirigami` y
 ## Instalación con Flatpak
 
 La misma página *Releases* trae `wallpaper-rs.flatpak`, con el daemon, `wprs-ctl`, GStreamer y
-los códecs dentro de un Flatpak. El runtime (`org.freedesktop.Platform` 26.08) se descarga de
-Flathub al instalarlo:
+los códecs dentro de un Flatpak, sin la app de escritorio. El runtime (`org.freedesktop.Platform`
+26.08) se descarga de Flathub al instalarlo:
 
 ```sh
 flatpak install --user ./wallpaper-rs.flatpak
@@ -110,8 +119,14 @@ los instala con `kpackagetool6` desde los archivos del propio Flatpak (sin `| sh
 daemon por D-Bus cuando lo necesita; no hay servicio de systemd. No instales a la vez el Flatpak y
 el `.tar.gz`, porque los dos registran el mismo servicio D-Bus: ejecuta antes `./uninstall.sh`.
 
+Sin la app, el icono de la bandeja ofrece solo lo básico (pausar, silenciar, el volumen, el perfil
+y, en cada pantalla, *Siguiente*, *Elegir…* y *Favorito*) y, en lugar de *Abrir wallpaper-rs* y
+*Ajustes…*, recuerda que lo demás (modo de ajuste, color de fondo, listas, ajustes de escena,
+fotogramas por segundo, pausas y transiciones) se cambia con `wprs-ctl`:
+
 ```sh
 alias wprs-ctl='flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperRs'
+wprs-ctl --help
 ```
 
 Permisos: la GPU, el socket de PipeWire, que publica los streams, lleva el sonido de los vídeos y de
@@ -295,7 +310,7 @@ pantallas, con su tamaño físico y los marcos entre ellas). Ajustes: transició
 `none` y su duración), fotogramas por segundo y cuándo pausar (ventana encima, batería,
 bloqueo). Un ajuste desconocido termina con error y muestra la lista de ajustes válidos.
 
-`playback.max_fps` vale `display` por defecto (*Igual que la pantalla* en la app y la bandeja):
+`playback.max_fps` vale `display` por defecto (*Igual que la pantalla* en la app):
 con corriente cada pantalla se dibuja como mucho a su frecuencia de refresco (la del modo de
 `wl_output`, la de RandR en X11 o, en Plasma, la que da KWin) y con batería a 30 fotogramas por
 segundo; un número fija el tope (`wprs-ctl config playback.max_fps 60`). Salvo en los vídeos, la
@@ -556,7 +571,7 @@ wprs-ctl prop preset calma -o DP-1 && wprs-ctl prop reset -o DP-1
 wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon
 ```
 
-En la app y en la bandeja, el botón *Ajustes de la escena* de cada pantalla que muestra una
+En la página *Ajustes* de la app, el botón *Ajustes de la escena* de cada pantalla que muestra una
 escena cambia sus propiedades al momento, aplica sus preajustes y da o retira el permiso de sonido
 y de puntero. La carpeta `scenes/` guarda cinco escenas de ejemplo de dominio público (CC0):
 capas, modos de fusión, máscaras, línea de tiempo y profundidad que sigue al puntero o una órbita
@@ -647,11 +662,13 @@ flatpak-builder --user --install --install-deps-from=flathub --force-clean \
 
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre
-dispositivos DRM virtuales), activa el plugin y comprueba los píxeles de una captura. También
-ejecuta `scripts/sway-test.sh` en un Sway sin pantalla: captura cada salida con `grim`, conecta y
-quita una pantalla y comprueba que el vídeo se pausa bajo una ventana a pantalla completa y con
-la pantalla apagada, y `scripts/x11-test.sh` en un Xvfb con dos monitores, el fondo de la ventana
-raíz y la misma pausa.
+dispositivos DRM virtuales), activa el plugin, comprueba los píxeles de una captura, carga el icono
+de la bandeja, abre la app en su página *Ajustes* desde el botón de la bandeja y con
+`--page settings` y comprueba en un bus aparte que la bandeja solo ofrece la app donde está
+instalada. También ejecuta `scripts/sway-test.sh` en un Sway sin pantalla: captura cada salida con
+`grim`, conecta y quita una pantalla y comprueba que el vídeo se pausa bajo una ventana a pantalla
+completa y con la pantalla apagada, y `scripts/x11-test.sh` en un Xvfb con dos monitores, el fondo
+de la ventana raíz y la misma pausa.
 
 | Ruta | Contenido |
 |------|-----------|
@@ -711,7 +728,7 @@ raíz y la misma pausa.
   repositorios que añadas tú, y sus registros no incluyen rutas, nombres de archivo, servidores
   propios ni el modelo de GPU salvo con `RUST_LOG=debug`.
 - Ninguna escena oye el sonido ni sigue el puntero sin tu permiso, que se da y se retira por escena
-  desde la app, la bandeja o `wprs-ctl input grant|revoke <escena> audio|pointer`. Cuando se aplica
+  desde la app o `wprs-ctl input grant|revoke <escena> audio|pointer`. Cuando se aplica
   una escena que los pide sin permiso, desde donde sea (la app, la bandeja, una lista o `wprs-ctl`),
   la app y la bandeja preguntan una vez por escena qué permitir, explicando qué se capta y que nada
   se guarda ni se envía, y sus ajustes muestran un aviso con el botón *Permitir* hasta que decides;

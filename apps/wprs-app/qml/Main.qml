@@ -8,6 +8,7 @@ Kirigami.ApplicationWindow {
     property int current: 0
     property var inputs: ({})
     property var asked: ({})
+    readonly property var names: ["library", "playlists", "profiles", "providers", "repos", "settings", "account"]
     readonly property list<Component> pages: [
         Component {
             LibraryPage {}
@@ -48,13 +49,23 @@ Kirigami.ApplicationWindow {
         open(pages[index], properties);
     }
 
+    function activate(page) {
+        const index = names.indexOf(page);
+        if (index >= 0 && index !== current && pageStack.currentItem?.editor?.dirty !== true)
+            showPage(index);
+        if (visibility === Window.Minimized)
+            showNormal();
+        raise();
+        requestActivate();
+    }
+
     title: "wallpaper-rs"
     width: Kirigami.Units.gridUnit * 60
     height: Kirigami.Units.gridUnit * 40
     minimumWidth: Kirigami.Units.gridUnit * 24
     minimumHeight: Kirigami.Units.gridUnit * 20
     Component.onCompleted: {
-        showPage(0);
+        showPage(Math.max(0, names.indexOf(App.backend.requested())));
         loadInputs();
     }
     footer: StatusBar {}
@@ -114,11 +125,8 @@ Kirigami.ApplicationWindow {
     Connections {
         target: App.backend
 
-        function onActivated() {
-            if (root.visibility === Window.Minimized)
-                root.showNormal();
-            root.raise();
-            root.requestActivate();
+        function onActivated(page) {
+            root.activate(page);
         }
 
         function onChanged(topic) {
@@ -195,17 +203,30 @@ Kirigami.ApplicationWindow {
     Timer {
         property int step: 0
 
+        function keeps(page) {
+            const shown = root.pageStack.currentItem;
+            root.activate(page);
+            if (root.pageStack.currentItem !== shown)
+                throw new Error("a request for the " + page + " page replaced the page shown");
+        }
+
         interval: 300
         repeat: true
         running: App.checking
         onTriggered: {
             const at = step++;
-            if (at > root.pages.length + 1)
-                return Qt.quit();
+            if (at > root.pages.length + 1) {
+                Qt.quit();
+                if (root.pageStack.currentItem.editor?.dirty !== true)
+                    throw new Error("the editor has no unsaved edits to keep");
+                return keeps("settings");
+            }
             if (at === root.pages.length)
                 return App.query("GetItem", [""], "Library1", reply => App.edit(reply.item));
-            if (at < root.pages.length)
+            if (at < root.pages.length) {
                 root.showPage(at);
+                keeps(root.names[at]);
+            }
             const page = root.pageStack.currentItem;
             if (page.exercise)
                 page.exercise();

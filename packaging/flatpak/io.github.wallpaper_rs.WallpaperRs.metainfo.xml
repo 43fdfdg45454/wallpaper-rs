@@ -12,7 +12,13 @@
     <p>
       Images and looping videos as wallpapers, with transitions, one wallpaper per screen and
       automatic pausing. A daemon renders each screen on the GPU and KDE Plasma shows it through a
-      wallpaper plugin; wprs-ctl and the system tray icon manage it.
+      wallpaper plugin; wprs-ctl manages it.
+    </p>
+    <p>
+      This package has no desktop app: the system tray icon offers the basics (pause, mute, volume,
+      profile, next wallpaper, choose a file and favorite), and every other setting, such as the fit
+      mode, background color, playlists, scene settings, frame rate, pausing and transitions, is
+      changed with <code>flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperRs</code>.
     </p>
     <p>
       Flatpak cannot install the Plasma wallpaper plugin and tray icon. After installing or
