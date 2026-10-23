@@ -52,7 +52,7 @@ class Refused(message: String) : Exception(message)
 
 private fun answer(native: (String) -> String, op: String, args: Array<out Pair<String, Any?>>): Any? {
     val answer = JSONTokener(native(JSONObject(mapOf("op" to op, *args)).toString())).nextValue()
-    if (answer is JSONObject && answer.has("error")) throw Refused(answer.getString("error"))
+    if (answer is JSONObject && answer.length() == 1 && answer.opt("error") is String) throw Refused(answer.getString("error"))
     return answer.takeUnless { it == JSONObject.NULL }
 }
 

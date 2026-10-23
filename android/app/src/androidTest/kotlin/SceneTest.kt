@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -81,6 +82,13 @@ class SceneTest {
         assertTrue(waitFor { frames.get() > FRAMES })
         val start = frames.get()
         assertTrue(quiet(frames) > start + FRAMES)
+    }
+
+    @Test
+    fun pagesGetTheirItemAndProperties() = runBlocking {
+        val uid = show("Snowfall")
+        assertEquals("Snowfall", Item(ask("item", "uid" to uid) as JSONObject).title)
+        assertTrue((ask("scene", "uid" to uid, "languages" to listOf("en")) as JSONObject).has("fields"))
     }
 
     private fun show(title: String): String {
