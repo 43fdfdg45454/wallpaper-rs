@@ -1,30 +1,44 @@
-use crate::{Error, gpu};
-use ndk::native_window::NativeWindow;
-use std::fs::File;
-use std::os::fd::BorrowedFd;
-use std::path::PathBuf;
+use crate::clips::Clips;
+use crate::gpu::{self, Gpu, Key};
+use crate::power::{Power, delay_ms};
+use crate::relief::{self, Raised, Tilted, layer};
+use crate::settings::{self, Look};
+use crate::stage::Stage;
+use crate::{Error, choice, store};
+use ndk::native_window::{FrameRateCompatibility, NativeWindow};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
-use std::sync::{Mutex, OnceLock, PoisonError};
 use wprs_core::Fit;
-use wprs_render::{GpuImage, Layer, Renderer, Surface, decode_image, image_size};
+use wprs_render::{GpuImage, RenderError, Surface};
 
-const IMAGE: &str = "wallpaper";
-const BACKGROUND: [u8; 3] = [24, 24, 28];
+mod scenes;
 
-static FILES: OnceLock<PathBuf> = OnceLock::new();
-static GENERATION: AtomicU64 = AtomicU64::new(1);
-static SHOWN: Mutex<Option<(Loaded, GpuImage)>> = Mutex::new(None);
+pub(crate) static FRAMES: AtomicU64 = AtomicU64::new(0);
 
-type Loaded = (u64, (u32, u32));
+const RETRY_MS: i64 = 50;
+const SLACK_NS: i64 = 2_000_000;
+const ATTEMPTS: u32 = 3;
 
 pub(crate) struct Engine {
-    surface: Surface,
-    _window: NativeWindow,
-    renderer: &'static Renderer,
+    target: Option<(Gpu, Surface)>,
+    image: Option<(Key, Arc<GpuImage>)>,
+    fading: Option<(Arc<GpuImage>, Option<i64>)>,
+    raised: Option<Raised>,
+    stage: Option<Stage>,
+    clips: Clips,
+    tilted: Tilted,
+    checked: (u64, u64, (u32, u32)),
+    look: Look,
+    preview: bool,
     size: (u32, u32),
-    image: Option<GpuImage>,
-    loaded: Loaded,
+    offset: f32,
+    shown: f32,
     dirty: bool,
+    presented: i64,
+    rate: u32,
+    failures: u32,
+    video: bool,
+    window: NativeWindow,
 }
 
 fn size(width: i32, height: i32) -> (u32, u32) {
@@ -32,10 +46,46 @@ fn size(width: i32, height: i32) -> (u32, u32) {
 }
 
 impl Engine {
-    pub(crate) fn open(window: NativeWindow) -> Result<Self, Error> {
+    pub(crate) fn open(window: NativeWindow, preview: bool) -> Self {
         let size = size(window.width(), window.height());
-        let (renderer, surface) = gpu::open(&window, size)?;
-        Ok(Self { surface, _window: window, renderer, size, image: None, loaded: (0, size), dirty: true })
+        let (target, image, fading, checked, rate, failures) = (None, None, None, (0, 0, (0, 0)), 0, 0);
+        let (offset, shown, dirty, presented, video, look) = (0.5, 0.5, true, 0, false, settings::look());
+        Self {
+            target,
+            image,
+            fading,
+            raised: None,
+            stage: None,
+            clips: Clips::default(),
+            tilted: Tilted::default(),
+            checked,
+            look,
+            preview,
+            size,
+            offset,
+            shown,
+            dirty,
+            presented,
+            rate,
+            failures,
+            video,
+            window,
+        }
+    }
+
+    pub(crate) fn video(&mut self) -> Option<String> {
+        self.forget_old_gpu();
+        let uri = choice::shown(self.preview).filter(|shown| shown.video);
+        let uri = uri.map(|shown| format!("file://{}", shown.path.display()));
+        if uri.is_some() {
+            self.hint(0);
+            (self.target, self.image, self.fading, self.raised, self.stage) = (None, None, None, None, None);
+            gpu::trim();
+        }
+        if self.video != uri.is_some() {
+            (self.video, self.checked, self.dirty) = (uri.is_some(), (0, 0, (0, 0)), true);
+        }
+        uri
     }
 
     pub(crate) fn resize(&mut self, width: i32, height: i32) {
@@ -44,57 +94,133 @@ impl Engine {
         self.size = size;
     }
 
-    pub(crate) fn draw(&mut self, force: bool) -> Result<bool, Error> {
+    pub(crate) fn offset(&mut self, x: f32) -> bool {
+        self.offset = x.clamp(0.0, 1.0);
+        let pans = self.look.fit == Fit::Fill && self.offset != self.shown;
+        !self.video && self.stage.is_none() && (pans || self.raised.is_some()) && Power::now().moving()
+    }
+
+    pub(crate) fn parallax(&mut self) -> u32 {
+        if self.video { 0 } else { self.tilted.rate(self.preview) }
+    }
+
+    pub(crate) fn draw(&mut self, nanos: i64, force: bool) -> Result<i64, Error> {
+        if self.video {
+            return Ok(0);
+        }
+        let power = Power::now();
+        let fps = power.fps(self.preview);
+        let due = self.presented + 1_000_000_000 / i64::from(fps.max(1)) - SLACK_NS;
+        if !force && nanos < due {
+            return Ok(((due - nanos) / 1_000_000).max(1));
+        }
         self.dirty |= force;
-        let wanted = (GENERATION.load(Relaxed), self.size);
-        if self.loaded != wanted {
-            (self.image, self.loaded, self.dirty) = (texture(self.renderer, wanted), wanted, true);
-        }
-        if !self.dirty {
-            return Ok(false);
-        }
-        let layer = Layer {
-            image: self.image.as_ref(),
-            fit: Fit::Fill,
-            background: BACKGROUND,
-            opacity: 1.0,
-            uv: None,
-            relief: None,
+        let next = self.frame(nanos, fps, power).inspect_err(|e| {
+            (self.target, self.image, self.fading, self.raised, self.dirty) = (None, None, None, None, true);
+            log::warn!("{e}");
+        });
+        self.failures = if next.as_ref().is_ok_and(|_| !self.dirty) { 0 } else { self.failures + 1 };
+        let (hint, delay) = match next {
+            Err(e) if self.failures >= ATTEMPTS => return Err(e.into()),
+            result => result.unwrap_or((0, 0)),
         };
-        self.dirty = !self.renderer.present_layers(&mut self.surface, self.size, &[layer], || {})?;
-        Ok(self.dirty)
+        self.hint(hint);
+        Ok(match () {
+            _ if delay > 0 => delay,
+            _ if self.dirty && self.failures < ATTEMPTS => RETRY_MS,
+            _ => 0,
+        })
     }
-}
 
-fn texture(renderer: &Renderer, wanted: Loaded) -> Option<GpuImage> {
-    let mut shown = SHOWN.lock().unwrap_or_else(PoisonError::into_inner);
-    if let Some((loaded, image)) = shown.as_ref()
-        && *loaded == wanted
-    {
-        return Some(image.clone());
+    fn forget_old_gpu(&mut self) {
+        if self.target.as_ref().is_some_and(|(gpu, _)| !gpu.current()) {
+            (self.target, self.image, self.fading, self.raised, self.dirty) = (None, None, None, None, true);
+            self.checked = (0, 0, (0, 0));
+            self.stage.iter_mut().for_each(Stage::drop_view);
+            self.clips.forget();
+            gpu::trim();
+        }
     }
-    *shown = None;
-    let path = FILES.get()?.join(IMAGE);
-    let decoded = decode_image(&path, renderer.max_edge())
-        .inspect_err(|e| log::warn!("cannot read the wallpaper image: {e}"))
-        .ok()?;
-    let image = renderer.upload(&decoded, Fit::Fill, wanted.1).inspect_err(|e| log::error!("{e}")).ok()?;
-    *shown = Some((wanted, image.clone()));
-    Some(image)
-}
 
-pub(crate) fn prepare(files: String) {
-    let _ = FILES.set(files.into());
-}
+    fn hint(&mut self, fps: u32) {
+        if self.rate != fps {
+            self.rate = fps;
+            let _ = self.window.set_frame_rate(fps as f32, FrameRateCompatibility::Default);
+        }
+    }
 
-pub(crate) fn store(fd: i32) -> Result<bool, Error> {
-    let dir = FILES.get().ok_or(Error::Unprepared)?;
-    let mut source = File::from(unsafe { BorrowedFd::borrow_raw(fd) }.try_clone_to_owned()?);
-    let mut copy = tempfile::NamedTempFile::new_in(dir)?;
-    std::io::copy(&mut source, &mut copy)?;
-    image_size(copy.path()).map_err(|e| Error::Image(e.to_string()))?;
-    copy.as_file().sync_all()?;
-    copy.persist(dir.join(IMAGE)).map_err(|e| e.error)?;
-    GENERATION.fetch_add(1, Relaxed);
-    Ok(true)
+    fn frame(&mut self, nanos: i64, fps: u32, power: Power) -> Result<(u32, i64), RenderError> {
+        if self.target.as_ref().is_none_or(|(gpu, _)| !gpu.current()) {
+            (self.target, self.image, self.fading, self.raised, self.dirty) = (None, None, None, None, true);
+            self.checked = (0, 0, (0, 0));
+            self.target = Some(gpu::open(&self.window, self.size)?);
+        }
+        let epoch = self.target.as_ref().map_or(0, |(gpu, _)| gpu.epoch);
+        let check = (epoch, store::generation(), self.size);
+        if self.checked != check {
+            let old = std::mem::replace(&mut self.checked, check).0;
+            let (size, shown) = (self.size, choice::shown(self.preview));
+            if shown.as_ref().is_some_and(|shown| shown.video) {
+                return Ok((0, 0));
+            }
+            self.stage(shown.as_ref());
+            if old != epoch {
+                self.stage.iter_mut().for_each(Stage::drop_view);
+            }
+            let Some((gpu, _)) = self.target.as_ref() else { return Ok((0, 0)) };
+            self.look = settings::look();
+            let raise = shown.as_ref().filter(|s| !s.scene).map(|s| (&*s.uid, &*s.path));
+            self.dirty |= relief::raise(&mut self.raised, gpu, raise);
+            let fit = self.look.fit;
+            let shown = shown.filter(|shown| !shown.scene);
+            let wanted =
+                shown.map(|shown| (Key { epoch: gpu.epoch, item: shown.uid, fit, size }, shown.path));
+            if self.image.as_ref().map(|(key, _)| key) != wanted.as_ref().map(|(key, _)| key) {
+                let loaded = wanted.and_then(|(key, path)| Some((key.clone(), gpu.texture(key, &path)?)));
+                let previous = std::mem::replace(&mut self.image, loaded);
+                let fade = previous.filter(|(old, _)| (old.epoch, old.size) == (gpu.epoch, size));
+                let fades = fps > 0 && self.image.is_some() && !self.look.fade.is_zero();
+                self.fading = fade.filter(|_| fades).map(|(_, old)| (old, None));
+                self.dirty = true;
+                gpu::trim();
+            }
+        }
+        if let Some(next) = self.shoot(nanos, fps, power)? {
+            return Ok(next);
+        }
+        let Some((gpu, surface)) = self.target.as_mut() else { return Ok((0, 0)) };
+        if power.moving() && self.offset != self.shown {
+            (self.shown, self.dirty) = (self.offset, true);
+        }
+        let raised =
+            self.raised.as_mut().map(|r| r.step(self.offset, (nanos, fps), power.moving(), self.size));
+        let (moved, tilting) = raised.unwrap_or_default();
+        self.dirty |= moved;
+        let duration = self.look.fade.as_nanos().max(1) as f32;
+        let start = self.fading.as_mut().map(|(_, start)| *start.get_or_insert(nanos));
+        let progress = start.map_or(1.0, |start| ((nanos - start) as f32 / duration).clamp(0.0, 1.0));
+        if self.fading.is_some() && (fps == 0 || progress >= 1.0) {
+            (self.fading, self.dirty) = (None, true);
+            gpu::trim();
+        }
+        let animating = |on: bool| if on { (fps, delay_ms(fps)) } else { (0, 0) };
+        if !self.dirty && self.fading.is_none() {
+            return Ok(animating(tilting));
+        }
+        let (look, size) = ((self.look.fit, self.look.background, self.shown), self.size);
+        let current = self.image.as_ref().map(|(_, image)| image.as_ref());
+        let raised = self.raised.as_ref().map(|raised| (raised, power.charging));
+        let layers = match &self.fading {
+            Some((old, _)) => {
+                [layer(Some(old), 1.0, look, size, None), layer(current, progress, look, size, raised)]
+            }
+            None => [layer(current, 1.0, look, size, raised), layer(None, 0.0, look, size, None)],
+        };
+        self.dirty = !gpu.renderer.present_layers(surface, size, &layers, || {})?;
+        if !self.dirty {
+            self.presented = nanos;
+            FRAMES.fetch_add(1, Relaxed);
+        }
+        Ok(animating(self.fading.is_some() || tilting))
+    }
 }

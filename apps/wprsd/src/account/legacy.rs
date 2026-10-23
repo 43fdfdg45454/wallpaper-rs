@@ -4,17 +4,11 @@ use crate::error::Result;
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
 use wprs_sync::{Clock, Doc, Hlc, Ids, Outcome, Remote, Replica, Session};
+#[cfg(test)]
+use wprs_sync::{kind, object};
 
 type Links = BTreeMap<String, String>;
 type Kept = (Replica, Links, Clock, BTreeSet<String>, BTreeMap<String, i64>);
-
-pub fn kind(doc: &Doc) -> &str {
-    doc.fields.get("kind").and_then(|(value, _)| value.as_str()).unwrap_or("section")
-}
-
-pub fn object(key: &str, doc: Option<&Doc>) -> bool {
-    key.starts_with("playlists/") || doc.is_some_and(|doc| kind(doc) != "section")
-}
 
 fn legacy(key: &str) -> Option<&str> {
     let item = key.strip_prefix("settings/")?;

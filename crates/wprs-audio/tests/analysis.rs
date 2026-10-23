@@ -112,3 +112,25 @@ fn analysis_fits_the_frame_budget() {
     let per_frame = (0..5).map(|_| batch()).min().unwrap();
     assert!(per_frame < Duration::from_millis(2), "{per_frame:?} per frame");
 }
+
+#[test]
+fn a_spectrum_lands_in_the_same_bands_as_samples() {
+    let mut analyzer = Analyzer::new(48_000);
+    let mut bins = vec![0.0; 513];
+    bins[(1000.0 * 1024.0 / 44_100.0_f32).round() as usize] = 0.25;
+    let mut last = AudioFrame::default();
+    for _ in 0..30 {
+        analyzer.push_spectrum(&bins, 44_100);
+        last = analyzer.update(1.0 / FPS).clone();
+    }
+    assert_eq!(loudest(&last.average), KHZ_BAND);
+    assert!(last.left == last.right && !last.silent && last.mid > last.bass, "{last:?}");
+    for _ in 0..200 {
+        analyzer.push_spectrum(&[0.0; 513], 44_100);
+        last = analyzer.update(1.0 / FPS).clone();
+    }
+    assert!(last.silent && last.average.iter().all(|&v| v < 0.01), "{last:?}");
+    analyzer.push_spectrum(&[], 44_100);
+    analyzer.push_spectrum(&[f32::NAN; 3], 0);
+    assert!(analyzer.update(0.5).average.iter().all(|v| v.is_finite()));
+}

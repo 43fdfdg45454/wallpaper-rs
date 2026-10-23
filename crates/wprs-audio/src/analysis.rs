@@ -46,6 +46,7 @@ pub struct Analyzer {
     quiet: f32,
     stale: f32,
     fresh: bool,
+    given: bool,
     frame: AudioFrame,
 }
 
@@ -55,7 +56,7 @@ impl Analyzer {
         let hann = (0..WINDOW).map(|i| 0.5 - 0.5 * (TAU * i as f32 / WINDOW as f32).cos()).collect();
         let (input, spectrum, scratch) =
             (fft.make_input_vec(), fft.make_output_vec(), fft.make_scratch_vec());
-        let (bands, centers) = layout(rate);
+        let (bands, centers) = layout(rate, WINDOW);
         let (raw, last, frame) = ([[0.0; BANDS]; 2], [0.0; BANDS], AudioFrame::default());
         let history = [vec![0.0; WINDOW], vec![0.0; WINDOW]];
         let quiet = SILENT_AFTER;
@@ -79,13 +80,14 @@ impl Analyzer {
             quiet,
             stale: 0.0,
             fresh: false,
+            given: false,
             frame,
         }
     }
 
     pub fn set_rate(&mut self, rate: u32) {
         if rate != self.rate && rate > 0 {
-            ((self.bands, self.centers), self.rate) = (layout(rate), rate);
+            ((self.bands, self.centers), self.rate) = (layout(rate, WINDOW), rate);
         }
     }
 
@@ -98,6 +100,17 @@ impl Analyzer {
         }
     }
 
+    pub fn push_spectrum(&mut self, power: &[f32], rate: u32) {
+        let window = 2 * power.len().saturating_sub(1);
+        if window == 0 || rate == 0 {
+            return;
+        }
+        let bin = |k: usize| power.get(k).copied().filter(|p| p.is_finite()).unwrap_or(0.0).clamp(0.0, 1.0);
+        let bands = layout(rate, window).0.map(|band| level(band, bin));
+        let total = (0..power.len()).map(bin).sum::<f32>() / 2.0;
+        (self.raw, self.power, self.given, self.fresh) = ([bands; 2], total.min(1.0), true, true);
+    }
+
     pub fn update(&mut self, dt: f32) -> &AudioFrame {
         let dt = dt.clamp(0.0, 1.0);
         self.stale = if self.fresh { 0.0 } else { self.stale + dt };
@@ -106,7 +119,7 @@ impl Analyzer {
             self.fresh = true;
         }
         let fresh = std::mem::take(&mut self.fresh);
-        if fresh {
+        if fresh && !std::mem::take(&mut self.given) {
             self.raw = [self.analyze(0), self.analyze(1)];
             self.power = self.history.iter().flatten().map(|x| x * x).sum::<f32>() / (2 * WINDOW) as f32;
         }
@@ -151,15 +164,19 @@ impl Analyzer {
         let _ = self.fft.process_with_scratch(&mut self.input, &mut self.spectrum, &mut self.scratch);
         let scale = (WINDOW as f32 / 4.0).powi(-2);
         let power = |k: usize| self.spectrum.get(k).map_or(0.0, |x| x.norm_sqr() * scale);
-        self.bands.map(|(lo, hi, f)| match lo < hi {
-            true => (lo..hi).map(power).fold(0.0, f32::max),
-            false => power(lo) * (1.0 - f) + power(lo + 1) * f,
-        })
+        self.bands.map(|band| level(band, power))
     }
 }
 
-fn layout(rate: u32) -> ([(usize, usize, f32); BANDS], [f32; BANDS]) {
-    let bin = rate as f32 / WINDOW as f32;
+fn level((lo, hi, f): (usize, usize, f32), power: impl Fn(usize) -> f32) -> f32 {
+    match lo < hi {
+        true => (lo..hi).map(power).fold(0.0, f32::max),
+        false => power(lo) * (1.0 - f) + power(lo + 1) * f,
+    }
+}
+
+fn layout(rate: u32, window: usize) -> ([(usize, usize, f32); BANDS], [f32; BANDS]) {
+    let bin = rate as f32 / window as f32;
     let edge = |i: usize| RANGE.0 * (RANGE.1 / RANGE.0).powf(i as f32 / BANDS as f32);
     let band = |i: usize| {
         let (lo, hi) = (edge(i) / bin, edge(i + 1) / bin);

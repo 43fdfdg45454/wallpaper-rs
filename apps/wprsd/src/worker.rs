@@ -1,10 +1,9 @@
-use crate::decode::{Picture, Problem, color, decode, package, video};
-use image::codecs::jpeg::JpegEncoder;
-use image::{DynamicImage, ImageReader};
+use crate::decode::{Picture, Problem, decode, package, video};
+use image::ImageReader;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, Write};
 use std::os::fd::FromRawFd;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use wprs_library::{Kind, Meta};
 
 #[derive(Serialize, Deserialize)]
@@ -57,8 +56,8 @@ fn handle(request: &Request) -> Response {
         Ok(Picture { mut meta, image, failure }) => {
             let mut written = Vec::new();
             if let Some(image) = image {
-                meta.color = Some(color(&image));
-                if let Err(e) = thumbnails(image, &request.thumbs, &mut written) {
+                meta.color = Some(wprs_render::palette(&image).colors.first().copied().unwrap_or_default());
+                if let Err(e) = wprs_render::thumbnails(image, &request.thumbs, &mut written) {
                     return Response { meta, written, failure: Some(e.to_string()), missing: false };
                 }
             }
@@ -67,30 +66,11 @@ fn handle(request: &Request) -> Response {
     }
 }
 
-fn thumbnails(
-    mut image: DynamicImage,
-    thumbs: &[(u32, PathBuf)],
-    written: &mut Vec<u32>,
-) -> anyhow::Result<()> {
-    let mut thumbs = thumbs.to_vec();
-    thumbs.sort_by_key(|(size, _)| std::cmp::Reverse(*size));
-    for (size, dest) in thumbs {
-        if image.width().max(image.height()) > size {
-            image = image.resize(size, size, image::imageops::FilterType::Triangle);
-        }
-        let dir = dest.parent().unwrap_or(Path::new("."));
-        let mut file = tempfile::Builder::new().prefix(".tmp-").tempfile_in(dir)?;
-        image.to_rgb8().write_with_encoder(JpegEncoder::new_with_quality(&mut file, 85))?;
-        file.persist(&dest)?;
-        written.push(size);
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use image::RgbaImage;
+    use std::path::Path;
 
     #[test]
     fn images_get_meta_color_and_thumbnails() {

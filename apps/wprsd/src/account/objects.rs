@@ -1,60 +1,12 @@
-use super::apply::hold;
-use super::views::{Kept, Local};
 use crate::daemon::Daemon;
 use crate::error::{Error, Result};
 use crate::jobs::now;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
-use wprs_library::{Library, PlaylistInfo, Rules};
-use wprs_sync::{Ids, View};
+use wprs_library::{Library, PlaylistInfo};
+use wprs_sync::{Ids, Kept, Local, View, keep as hold, keep_name, playlist_rules, renamed, text};
 
 pub type Links = BTreeMap<String, String>;
-
-pub fn text(view: &View, field: &str, fallback: &str) -> String {
-    view.get(field).and_then(Value::as_str).unwrap_or(fallback).to_owned()
-}
-
-pub fn playlist_rules(view: &View, current: &Rules) -> (Rules, BTreeMap<String, Value>) {
-    let shown = serde_json::to_value(current).unwrap_or_default();
-    let (mut merged, mut held) =
-        (serde_json::to_value(Rules::default()).unwrap_or_default(), BTreeMap::new());
-    for (field, value) in view.iter().filter_map(|(k, v)| Some((k.strip_prefix("r:")?, v))) {
-        if merged.get(field).is_none() {
-            continue;
-        }
-        let mut tried = merged.clone();
-        tried[field] = value.clone();
-        if serde_json::from_value::<Rules>(tried.clone()).is_ok() {
-            merged = tried;
-        } else {
-            let old = shown.get(field).cloned().unwrap_or_default();
-            merged[field] = old.clone();
-            held.insert(format!("r:{field}"), old);
-        }
-    }
-    (serde_json::from_value(merged).unwrap_or_else(|_| current.clone()), held)
-}
-
-pub fn keep_name(kept: &mut Kept, key: &str, shown: &str, received: &str) {
-    let fields = kept.entry(key.to_owned()).or_default();
-    match shown == received {
-        true => drop(fields.remove("name")),
-        false => drop(fields.insert("name".into(), json!(shown))),
-    }
-    if fields.is_empty() {
-        kept.remove(key);
-    }
-}
-
-pub fn renamed<T>(
-    name: &str,
-    mut create: impl FnMut(&str) -> wprs_library::Result<T>,
-) -> wprs_library::Result<T> {
-    match create(name) {
-        Err(wprs_library::Error::Exists(..)) => create(&format!("{name} (2)")),
-        done => done,
-    }
-}
 
 impl Daemon {
     pub fn linked_uid(
@@ -133,9 +85,7 @@ impl Daemon {
                         "two devices changed a playlist in ways that do not merge; both were kept"
                     );
                 }
-                (made, _) => {
-                    tracing::warn!("the conflict copy of a playlist could not be made: {:?}", made.err())
-                }
+                _ => tracing::warn!("the conflict copy of a playlist could not be made"),
             }
         }
     }

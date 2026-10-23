@@ -1,4 +1,3 @@
-use super::held::{arrived, hold, rules};
 use super::secrets::{Secrets, encode};
 use super::{block_on, sync_error};
 use crate::daemon::Daemon;
@@ -8,7 +7,7 @@ use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use wprs_core::model::JobKind;
-use wprs_sync::{Api, Session, now_ms};
+use wprs_sync::{Api, Session, arrived, hold, now_ms, rules};
 
 impl Daemon {
     pub fn sync_now(self: &Arc<Self>) -> Result<u64> {

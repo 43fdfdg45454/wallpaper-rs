@@ -6,17 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use wprs_core::model::RepoOffer;
+pub use wprs_sync::Peer;
 use wprs_sync::{Clock, Replica};
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct Peer {
-    pub id: String,
-    pub name: String,
-    pub platform: String,
-    pub enc_key: Option<String>,
-    pub created_at: i64,
-    pub seen_at: Option<i64>,
-}
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]

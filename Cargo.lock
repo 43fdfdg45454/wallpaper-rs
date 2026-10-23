@@ -5853,16 +5853,33 @@ dependencies = [
 name = "wprs-android"
 version = "0.3.0"
 dependencies = [
+ "anyhow",
+ "base64 0.23.1",
+ "chrono",
+ "image",
  "jni",
  "log",
  "ndk",
  "pollster",
+ "reqwest",
+ "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.21",
+ "tokio",
+ "toml",
  "tracing",
  "wgpu",
+ "wprs-audio",
  "wprs-core",
+ "wprs-depth",
+ "wprs-format",
+ "wprs-library",
  "wprs-render",
+ "wprs-scene",
+ "wprs-schedule",
+ "wprs-sync",
+ "zeroize",
 ]
 
 [[package]]
@@ -6045,6 +6062,7 @@ dependencies = [
  "image",
  "pollster",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.21",
  "tracing",
  "wgpu",
@@ -6137,6 +6155,9 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
+ "toml",
+ "webpki-root-certs",
+ "wprs-library",
  "zeroize",
 ]
 

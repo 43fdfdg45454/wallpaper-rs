@@ -1,5 +1,6 @@
 mod affine;
 mod animate;
+mod budget;
 mod chain;
 mod content;
 mod cube;
@@ -24,6 +25,7 @@ mod wake;
 
 pub use affine::Affine;
 pub use animate::Animate;
+pub use budget::Budget;
 pub use chain::{CHAIN_ENTRY, effect_source, fusion};
 pub use content::{Align, EffectUse, Gradient, Mask, MaskChannel, Shape, Spectrum, SpectrumStyle, Stroke};
 pub use cube::{Lut, LutError, MAX_LUT_BYTES, MAX_LUT_SIZE, MAX_LUT_TOTAL};

@@ -1,4 +1,3 @@
-use super::views::{Kept, Local};
 use crate::daemon::Daemon;
 use crate::error::{Result, invalid, not_found};
 use crate::jobs::now;
@@ -8,7 +7,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 use wprs_core::model::RepoOffer;
 use wprs_format::Anchor;
-use wprs_sync::{Ids, Replica, View};
+use wprs_sync::{Ids, Kept, Local, Replica, View};
 
 fn shared(url: &str) -> bool {
     parse_url(url, true).is_ok_and(|u| u.scheme() == "https" || u.scheme() == "http" && local(&u))

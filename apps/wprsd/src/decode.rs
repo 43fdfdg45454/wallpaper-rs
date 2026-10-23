@@ -86,29 +86,3 @@ pub fn package(path: &Path) -> Result<Picture, Problem> {
     };
     Ok(Picture { image: preview.or(entry.image), ..entry })
 }
-
-pub fn color(image: &DynamicImage) -> u32 {
-    let small = image.thumbnail(32, 32).to_rgb8();
-    let mut bins = vec![(0u32, [0u32; 3]); 4096];
-    for pixel in small.pixels() {
-        let [r, g, b] = pixel.0.map(u32::from);
-        let bin = &mut bins[(((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4)) as usize];
-        bin.0 += 1;
-        (0..3).for_each(|i| bin.1[i] += u32::from(pixel.0[i]));
-    }
-    let (count, sum) = bins.into_iter().max_by_key(|(count, _)| *count).unwrap_or_default();
-    let [r, g, b] = sum.map(|c| c / count.max(1));
-    (r << 16) | (g << 8) | b
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn dominant_color_is_the_largest_bin() {
-        let mut image = RgbaImage::from_pixel(64, 64, image::Rgba([0x33, 0x66, 0xff, 255]));
-        (0..64).for_each(|x| image.put_pixel(x, 0, image::Rgba([255, 0, 0, 255])));
-        assert_eq!(color(&DynamicImage::ImageRgba8(image)), 0x3366ff);
-    }
-}

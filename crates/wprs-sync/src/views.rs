@@ -1,11 +1,12 @@
-use super::legacy::{kind, object};
-use super::local::DEVICE_KEYS;
+use crate::{Doc, Ids, Replica, View, positions};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use wprs_library::{Item, PlaylistInfo};
-use wprs_sync::{Ids, Replica, View, positions};
 
 pub const REFERENCES: [&str; 3] = ["item", "playlist", "preset"];
+pub const DOWNLOADS: &str = "models.allow_download";
+pub const DEVICE_KEYS: [&str; 5] =
+    ["playback.volume", "playback.muted", "playback.software_parallax", "library.thumb_cache_mb", DOWNLOADS];
 
 type Lookup<'a> = &'a dyn Fn(&str, &str) -> Option<String>;
 pub type Kept = BTreeMap<String, BTreeMap<String, Value>>;
@@ -18,6 +19,14 @@ pub struct Local {
     pub fresh: BTreeSet<String>,
     pub unlinked: BTreeSet<String>,
     pub repos: BTreeSet<String>,
+}
+
+pub fn kind(doc: &Doc) -> &str {
+    doc.fields.get("kind").and_then(|(value, _)| value.as_str()).unwrap_or("section")
+}
+
+pub fn object(key: &str, doc: Option<&Doc>) -> bool {
+    key.starts_with("playlists/") || doc.is_some_and(|doc| kind(doc) != "section")
 }
 
 fn known(key: &str, kind: &str, field: &str) -> bool {
@@ -96,9 +105,10 @@ pub fn settings(
     options: &BTreeMap<String, toml::Value>,
     replica: &Replica,
     ids: &Ids,
+    device: &[&str],
 ) -> BTreeMap<String, View> {
     let mut sections: BTreeMap<String, View> = BTreeMap::new();
-    for (option, value) in options.iter().filter(|(k, _)| !DEVICE_KEYS.contains(&k.as_str())) {
+    for (option, value) in options.iter().filter(|(k, _)| !device.contains(&k.as_str())) {
         let key = format!("settings/{}", ids.named("section", option.split('.').next().unwrap_or_default()));
         sections
             .entry(key)
@@ -107,7 +117,9 @@ pub fn settings(
     }
     let synced = replica.bases.iter().filter(|(key, _)| key.starts_with("settings/"));
     for (key, (_, doc)) in synced.filter(|(key, (_, doc))| !object(key, Some(doc))) {
-        let unknown = doc.view().into_iter().flatten().filter(|(option, _)| !options.contains_key(option));
+        let unknown = doc.view().into_iter().flatten();
+        let unknown =
+            unknown.filter(|(option, _)| !options.contains_key(option) || device.contains(&option.as_str()));
         sections.entry(key.clone()).or_default().extend(unknown);
     }
     sections

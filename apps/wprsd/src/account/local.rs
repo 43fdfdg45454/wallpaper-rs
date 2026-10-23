@@ -1,18 +1,14 @@
 use super::files::{blob_field, opted};
-use super::legacy::object;
 use super::presets::synced_options;
-pub use super::views::Local;
-use super::views::{Kept, item_view, link, preserve, references, settings};
 use crate::daemon::Daemon;
 use crate::error::{Error, Result};
 use crate::jobs::now;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
-use wprs_sync::{Ids, Replica, View};
-
-pub const DOWNLOADS: &str = "models.allow_download";
-pub const DEVICE_KEYS: [&str; 5] =
-    ["playback.volume", "playback.muted", "playback.software_parallax", "library.thumb_cache_mb", DOWNLOADS];
+pub use wprs_sync::Local;
+use wprs_sync::{
+    DEVICE_KEYS, Ids, Kept, Replica, View, item_view, link, object, preserve, references, settings,
+};
 
 type Links = BTreeMap<String, String>;
 
@@ -113,7 +109,7 @@ impl Daemon {
             }
             local.views.insert(key, view);
         }
-        local.views.extend(settings(&self.state().config.options(), replica, ids));
+        local.views.extend(settings(&self.state().config.options(), replica, ids, &DEVICE_KEYS));
         self.repo_views(ids, replica, present, &mut local, kept)?;
         if encrypted {
             self.secret_views(ids, replica, &mut local)?;

@@ -70,7 +70,7 @@ fn module(r: &Renderer, wgsl: &str) -> wgpu::ShaderModule {
         .create_shader_module(wgpu::ShaderModuleDescriptor { label: Some("wprs-scene particles"), source })
 }
 
-fn compute(r: &Renderer) -> bool {
+pub(super) fn compute(r: &Renderer) -> bool {
     r.gpu.get_downlevel_capabilities().flags.contains(wgpu::DownlevelFlags::COMPUTE_SHADERS)
 }
 

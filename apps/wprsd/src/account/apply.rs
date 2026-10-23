@@ -1,12 +1,9 @@
-use super::legacy::kind;
-use super::local::{DEVICE_KEYS, Local};
-use super::views::{Kept, item_view};
 use crate::daemon::Daemon;
 use crate::error::{Error, Result};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use wprs_sync::{Replica, View};
+use wprs_sync::{DEVICE_KEYS, Kept, Local, Replica, View, item_view, keep as hold, kind};
 
 type Links = BTreeMap<String, String>;
 
@@ -17,13 +14,6 @@ fn rank(key: &str, kind: &str) -> u8 {
         _ if key.starts_with("playlists/") => 2,
         "profile" => 3,
         _ => 4,
-    }
-}
-
-pub fn hold(kept: &mut Kept, key: &str, held: BTreeMap<String, Value>) {
-    match held.is_empty() {
-        true => drop(kept.remove(key)),
-        false => drop(kept.insert(key.to_owned(), held)),
     }
 }
 

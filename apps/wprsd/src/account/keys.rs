@@ -6,8 +6,6 @@ use crate::compositor::lock;
 use crate::daemon::Daemon;
 use crate::error::{Result, failed, invalid, not_found};
 use crate::jobs::Ctl;
-use base64::Engine;
-use base64::prelude::BASE64_STANDARD as B64;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -25,12 +23,11 @@ pub fn find(peers: &[Peer], wanted: &str, labels: impl Fn(&str) -> Option<String
 }
 
 pub fn public(peer: &Peer) -> Result<Vec<u8>> {
-    let key = peer.enc_key.as_deref().and_then(|k| B64.decode(k).ok());
-    key.ok_or_else(|| invalid(format!("{} has no encryption key to share with", peer.name)))
+    Ok(peer.public()?)
 }
 
 pub fn nonce(mail: &Mail) -> Result<[u8; 32]> {
-    mail.bytes().map_err(sync_error)?.try_into().map_err(|_| failed("a device message is broken"))
+    Ok(wprs_sync::nonce(mail)?)
 }
 
 impl Daemon {

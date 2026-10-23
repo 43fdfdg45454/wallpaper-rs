@@ -7,6 +7,7 @@ mod develop;
 mod device;
 mod draw;
 mod export;
+mod palette;
 mod parallax;
 mod readback;
 mod scene;
@@ -14,10 +15,12 @@ mod shader;
 mod stack;
 mod surface;
 mod texture;
+mod yuv;
 
-pub use decode::{decode_image, image_size, needed_edge};
+pub use decode::{decode_image, image_size, needed_edge, thumbnails};
 pub use device::{Display, Renderer};
 pub use draw::Target;
+pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};
 pub use readback::TargetLimits;
 pub use scene::{SceneAssets, SceneStats, SceneView};
@@ -27,6 +30,7 @@ use std::time::{Duration, Instant};
 pub use surface::{Presentation, Surface};
 pub use texture::GpuImage;
 use wprs_core::{Fit, UvRect};
+pub use yuv::{Planes, Yuv};
 
 const LOG_PERIOD: Duration = Duration::from_secs(5);
 

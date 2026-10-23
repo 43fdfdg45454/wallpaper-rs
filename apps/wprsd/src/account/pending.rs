@@ -1,9 +1,8 @@
-use super::held::rules;
 use crate::daemon::Daemon;
 use crate::error::Result;
 use std::collections::BTreeSet;
 use std::sync::Arc;
-use wprs_sync::{Hlc, step};
+use wprs_sync::{Hlc, rules, step};
 
 impl Daemon {
     fn local_edits(&self) -> Result<bool> {

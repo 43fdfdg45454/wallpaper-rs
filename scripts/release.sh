@@ -18,7 +18,7 @@ cp "$IN"/wallpaper-rs-*-x86_64-linux.tar.gz "$OUT/files/wallpaper-rs-x86_64-linu
 cp "$IN/wallpaper-rs.flatpak" "$OUT/files/wallpaper-rs.flatpak"
 cp "$IN"/wallpaper-rs-[0-9]*.x86_64.rpm "$OUT/files/wallpaper-rs.x86_64.rpm"
 cp "$IN"/wallpaper-rs-examples-*.noarch.rpm "$OUT/files/wallpaper-rs-examples.noarch.rpm"
-cp "$IN/wallpaper-rs-android-debug.apk" "$OUT/files/wallpaper-rs-android.apk"
+cp "$IN/wallpaper-rs-android.apk" "$OUT/files/wallpaper-rs-android.apk"
 (cd "$OUT/files" && sha256sum -- * > SHA256SUMS)
 
 PREV=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD 2>/dev/null || true)

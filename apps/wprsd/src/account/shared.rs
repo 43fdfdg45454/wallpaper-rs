@@ -1,5 +1,4 @@
 use super::block_on;
-use super::views::Local;
 use crate::compositor::lock;
 use crate::daemon::Daemon;
 use crate::error::{Result, failed, invalid};
@@ -7,7 +6,7 @@ use crate::keyring::Stored;
 use crate::remote::check_secret;
 use serde_json::{Value, json};
 use std::sync::Arc;
-use wprs_sync::{Ids, Replica, View};
+use wprs_sync::{Ids, Local, Replica, View};
 
 const BINDING: [&str; 3] = ["url", "server", "user"];
 

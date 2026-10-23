@@ -8,6 +8,8 @@ rust-version.workspace = true
 
 [dependencies]
 wprs-scene.workspace = true
-pipewire.workspace = true
 realfft.workspace = true
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+pipewire.workspace = true
 rtrb.workspace = true

@@ -7,16 +7,35 @@ license.workspace = true
 rust-version.workspace = true
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wprs-audio.workspace = true
+wprs-core.workspace = true
+wprs-depth = { workspace = true, features = ["infer"] }
+wprs-format.workspace = true
+wprs-library.workspace = true
+wprs-render.workspace = true
+wprs-scene.workspace = true
+wprs-schedule.workspace = true
+wprs-sync.workspace = true
+anyhow.workspace = true
+base64.workspace = true
+chrono = { workspace = true, features = ["clock"] }
+image.workspace = true
+log.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+toml.workspace = true
+zeroize.workspace = true
 
 [target.'cfg(target_os = "android")'.dependencies]
-wprs-core.workspace = true
-wprs-render.workspace = true
 wgpu.workspace = true
 pollster.workspace = true
 jni.workspace = true
-ndk.workspace = true
-log.workspace = true
-tempfile.workspace = true
-thiserror.workspace = true
+ndk = { workspace = true, features = ["media", "nativewindow", "api-level-31"] }
 tracing = { workspace = true, features = ["log"] }

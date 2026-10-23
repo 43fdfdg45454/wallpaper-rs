@@ -1,8 +1,9 @@
+use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
 use image::metadata::Orientation;
 use image::{DynamicImage, ImageDecoder, ImageReader, RgbaImage};
 use std::borrow::Cow;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use wprs_core::{Edit, Fit, Place, UvRect};
 
 const MAX_EDGE: u32 = 8192;
@@ -86,4 +87,24 @@ pub(crate) fn scaled(img: &RgbaImage, factor: f32, max_edge: u32) -> Cow<'_, Rgb
     }
     let size = |v: u32| ((v as f32 * factor).round() as u32).max(1);
     Cow::Owned(image::imageops::resize(img, size(iw), size(ih), FilterType::Triangle))
+}
+
+pub fn thumbnails(
+    mut image: DynamicImage,
+    thumbs: &[(u32, PathBuf)],
+    written: &mut Vec<u32>,
+) -> image::ImageResult<()> {
+    let mut thumbs = thumbs.to_vec();
+    thumbs.sort_by_key(|(size, _)| std::cmp::Reverse(*size));
+    for (size, dest) in thumbs {
+        if image.width().max(image.height()) > size {
+            image = image.resize(size, size, FilterType::Triangle);
+        }
+        let dir = dest.parent().unwrap_or(Path::new("."));
+        let mut file = tempfile::Builder::new().prefix(".tmp-").tempfile_in(dir)?;
+        image.to_rgb8().write_with_encoder(JpegEncoder::new_with_quality(&mut file, 85))?;
+        file.persist(&dest).map_err(|e| e.error)?;
+        written.push(size);
+    }
+    Ok(())
 }

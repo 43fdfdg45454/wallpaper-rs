@@ -50,6 +50,12 @@ pub fn check_url(url: &str) -> Result<String> {
 impl Api {
     pub fn new(base: &str) -> Result<Api> {
         let builder = reqwest::Client::builder().user_agent(AGENT).referer(false).redirect(Policy::none());
+        #[cfg(target_os = "android")]
+        let builder = builder.tls_certs_only(
+            webpki_root_certs::TLS_SERVER_ROOT_CERTS
+                .iter()
+                .filter_map(|der| reqwest::Certificate::from_der(der).ok()),
+        );
         let http = builder.connect_timeout(Duration::from_secs(10)).build().map_err(net)?;
         Ok(Api { http, base: check_url(base)?, token: None })
     }

@@ -41,6 +41,7 @@ pub const MODEL: Asset = Asset {
     file_sha256: "46c4e8eeda3a27f34701831b6a2ec7753d7b38779b215acb5633424703deed8f",
 };
 
+#[cfg(all(target_os = "linux", target_env = "gnu", any(target_arch = "x86_64", target_arch = "aarch64")))]
 const ORT: Asset = Asset {
     id: "onnxruntime",
     title: "ONNX Runtime 1.31.0",

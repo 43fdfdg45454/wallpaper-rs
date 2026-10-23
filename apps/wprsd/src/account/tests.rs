@@ -1,16 +1,15 @@
 use super::files::opted;
-use super::held::hold;
-use super::local::DEVICE_KEYS;
-use super::objects::playlist_rules;
 use super::presets::synced_options;
 use super::saved::Files;
-use super::views::{Kept, Local, preserve, settings};
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use wprs_library::Rules;
 use wprs_schedule::Order;
-use wprs_sync::{Doc, Hlc, Replica, Rules as Merge, SyncKey, View, step};
+use wprs_sync::{
+    DEVICE_KEYS, Doc, Hlc, Kept, Local, Replica, Rules as Merge, SyncKey, View, hold, keep_name,
+    playlist_rules, preserve, settings, step,
+};
 
 fn view(pairs: &[(&str, serde_json::Value)]) -> View {
     pairs.iter().map(|(k, v)| (k.to_string(), v.clone())).collect()
@@ -86,21 +85,21 @@ fn a_received_name_taken_here_is_not_sent_back() {
     let mut replica = Replica::default();
     replica.bases.insert("playlists/p".into(), (3, doc(&[("name", json!("Mix"))], 2)));
     let mut kept = Kept::new();
-    super::objects::keep_name(&mut kept, "playlists/p", "Mix (2)", "Mix");
+    keep_name(&mut kept, "playlists/p", "Mix (2)", "Mix");
     let mut views = BTreeMap::from([("playlists/p".to_string(), view(&[("name", json!("Mix (2)"))]))]);
     preserve(&mut views, &replica, &mut kept, &BTreeSet::new());
     assert_eq!(views["playlists/p"]["name"], "Mix");
     let mut views = BTreeMap::from([("playlists/p".to_string(), view(&[("name", json!("Evening"))]))]);
     preserve(&mut views, &replica, &mut kept, &BTreeSet::new());
     assert_eq!((views["playlists/p"]["name"].as_str(), kept.is_empty()), (Some("Evening"), true));
-    super::objects::keep_name(&mut kept, "playlists/p", "Mix", "Mix");
+    keep_name(&mut kept, "playlists/p", "Mix", "Mix");
     assert!(kept.is_empty());
 }
 
 #[test]
 fn device_settings_stay_out_of_synced_settings_and_profiles() {
     let (ids, options) = (SyncKey::generate().ids(), wprs_core::Config::default().options());
-    let sections = settings(&options, &Replica::default(), &ids);
+    let sections = settings(&options, &Replica::default(), &ids, &DEVICE_KEYS);
     let synced: BTreeSet<&str> = sections.values().flat_map(|view| view.keys().map(String::as_str)).collect();
     assert!(synced.contains("playback.max_fps") && synced.len() + DEVICE_KEYS.len() == options.len());
     assert!(DEVICE_KEYS.iter().all(|key| options.contains_key(*key) && !synced.contains(key)));

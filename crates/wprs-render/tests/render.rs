@@ -1,6 +1,6 @@
 use image::{Rgba, RgbaImage};
 use wprs_core::Fit;
-use wprs_render::{GpuImage, Layer, Renderer, TargetLimits};
+use wprs_render::{GpuImage, Layer, Planes, Renderer, TargetLimits};
 
 fn renderer() -> Option<Renderer> {
     match Renderer::new() {
@@ -185,4 +185,35 @@ fn video_frames_update_in_place() {
     assert_eq!(tex.size(), (3, 2));
     assert!(close(show(&tex), [255, 0, 0]));
     assert!(r.update_rgba(&mut tex, &red[..8], 3, 2, 12).is_err());
+}
+
+#[test]
+fn yuv_frames_convert_to_rgb_in_place() {
+    let Some(r) = renderer() else { return };
+    let frame = |left: [u8; 3], right: [u8; 3]| {
+        let luma: Vec<u8> =
+            (0..4).flat_map(|_| [left[0]; 3].into_iter().chain([right[0]; 3]).chain([0; 2])).collect();
+        let row = [left[1], left[2], 128, 128, right[1], right[2], 0, 0];
+        (luma, row.repeat(2))
+    };
+    let (red, green) = ([63, 102, 240], [173, 42, 26]);
+    let mut slot = None;
+    for (left, right, want) in
+        [(red, green, [[255, 0, 0], [0, 255, 0]]), (green, red, [[0, 255, 0], [255, 0, 0]])]
+    {
+        let (luma, chroma) = frame(left, right);
+        let planes =
+            Planes { size: (6, 4), luma: (&luma, 8), chroma: (&chroma, 8), bt709: true, full: false };
+        let image = r.read_image(r.convert_yuv(&mut slot, &planes).unwrap()).unwrap();
+        let pixel = |x, y| -> [u8; 3] { image.get_pixel(x, y).0[..3].try_into().unwrap() };
+        assert!(
+            close(pixel(0, 0), want[0]) && close(pixel(5, 3), want[1]),
+            "{:?} {:?}",
+            pixel(0, 0),
+            pixel(5, 3)
+        );
+    }
+    let short = [0; 10];
+    let planes = Planes { size: (6, 4), luma: (&short, 8), chroma: (&short, 8), bt709: false, full: true };
+    assert!(r.convert_yuv(&mut slot, &planes).is_err());
 }

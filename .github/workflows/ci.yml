@@ -229,9 +229,11 @@ jobs:
 
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
 
-      - name: Two daemons and wprs-server with end-to-end encrypted sync
+      - name: Daemons, the phone client and wprs-server with end-to-end encrypted sync
         run: |
           cargo build --locked -p wprsd -p wprs-ctl -p wprs-server
+          cargo build --locked -p wprs-android --example phone
+          cp target/debug/examples/phone target/debug/phone
           scripts/sync-test.sh target/debug
 
   package:
@@ -287,7 +289,7 @@ jobs:
           retention-days: 7
 
   android:
-    name: Android debug APK
+    name: Android APK
     needs: version
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -315,11 +317,10 @@ jobs:
 
       - name: Clippy for Android
         run: |
-          for target in aarch64-linux-android x86_64-linux-android; do
-            cargo clippy --locked -p wprs-android --target "$target" -- -D warnings
-          done
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME" ANDROID_NDK_ROOT="$ANDROID_NDK_LATEST_HOME"
+          cargo ndk -t arm64-v8a -t x86_64 -P 31 clippy --locked -p wprs-android -- -D warnings
 
-      - name: Debug APK and lint
+      - name: Release APK and lint
         env:
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: ${{ needs.version.outputs.semver }}
@@ -333,13 +334,17 @@ jobs:
           else
             echo "::warning::ANDROID_KEYSTORE is not set, so this APK is signed with a temporary debug key"
           fi
-          android/gradlew -p android assembleDebug lint -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME"
+          android/gradlew -p android assembleRelease lintRelease -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME"
 
       - name: 16 KB page alignment
         run: |
           readelf="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          unzip -q android/app/build/outputs/apk/release/*.apk 'lib/*' -d "$RUNNER_TEMP/apk"
           for abi in arm64-v8a x86_64; do
-            lib=android/app/build/rustJniLibs/$abi/libwprs_android.so
+            test -f "$RUNNER_TEMP/apk/lib/$abi/libwprs_android.so"
+            test -f "$RUNNER_TEMP/apk/lib/$abi/libonnxruntime.so"
+          done
+          for lib in "$RUNNER_TEMP"/apk/lib/*/*.so; do
             aligns=$("$readelf" -lW "$lib" | awk '$1 == "LOAD" { print $NF }')
             test -n "$aligns"
             for align in $aligns; do
@@ -347,15 +352,67 @@ jobs:
             done
           done
           tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
-          "$tools/zipalign" -c -P 16 -v 4 android/app/build/outputs/apk/debug/*.apk
-          cp android/app/build/outputs/apk/debug/*.apk wallpaper-rs-android-debug.apk
+          "$tools/zipalign" -c -P 16 -v 4 android/app/build/outputs/apk/release/*.apk
+          cp android/app/build/outputs/apk/release/*.apk wallpaper-rs-android.apk
+
+      - name: No build paths in the native library
+        run: |
+          if grep -a -l -F "$HOME/" "$RUNNER_TEMP"/apk/lib/*/libwprs_android.so; then
+            echo "::error::the native library keeps paths of the build machine"
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: wallpaper-rs-android-debug.apk
+          path: wallpaper-rs-android.apk
           archive: false
           if-no-files-found: error
           retention-days: 7
+
+  android-emulator:
+    name: Android emulator tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          targets: x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          key: android-emulator
+
+      - name: Install cargo-ndk
+        run: cargo install --locked cargo-ndk --version 4.1.2
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+          add-job-summary: on-failure
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: App and test APKs for x86_64
+        run: |
+          printf 'ANDROID_NDK_HOME=%s\nANDROID_NDK_ROOT=%s\n' "$ANDROID_NDK_LATEST_HOME" "$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME" ANDROID_NDK_ROOT="$ANDROID_NDK_LATEST_HOME"
+          android/gradlew -p android assembleDebug assembleDebugAndroidTest -Pabis=x86_64
+
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          emulator-boot-timeout: 900
+          script: android/gradlew -p android connectedDebugAndroidTest -Pabis=x86_64
 
   rpm:
     name: Fedora package
@@ -522,7 +579,7 @@ jobs:
   release:
     name: Release
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: [version, check, sway, x11, sync, package, android, rpm, flatpak, plasma, server]
+    needs: [version, check, sway, x11, sync, package, android, android-emulator, rpm, flatpak, plasma, server]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

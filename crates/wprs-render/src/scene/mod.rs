@@ -85,6 +85,10 @@ impl Renderer {
         self.gpu.get_info().device_type == wgpu::DeviceType::DiscreteGpu
     }
 
+    pub fn compute(&self) -> bool {
+        swarm::compute(self)
+    }
+
     pub fn render_scene<'v>(
         &self,
         view: &'v mut SceneView,

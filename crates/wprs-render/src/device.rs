@@ -22,6 +22,7 @@ pub struct Renderer {
     pub(crate) developer: OnceLock<Developer>,
     pub(crate) reliefs: OnceLock<Pairs>,
     pub(crate) scene: OnceLock<crate::scene::Pipes>,
+    pub(crate) yuv: OnceLock<crate::yuv::Converter>,
 }
 
 impl Renderer {
@@ -87,6 +88,7 @@ impl Renderer {
             developer: OnceLock::new(),
             reliefs: OnceLock::new(),
             scene: OnceLock::new(),
+            yuv: OnceLock::new(),
             device,
             queue,
             instance,

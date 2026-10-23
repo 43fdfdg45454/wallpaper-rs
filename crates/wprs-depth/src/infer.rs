@@ -6,6 +6,7 @@ use ort::environment::Environment;
 use ort::session::Session;
 use ort::value::Tensor;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 use wprs_core::edit::Depth;
 
 const MAX_EDGE: u32 = 2048;
@@ -35,15 +36,24 @@ pub fn background() {
     unsafe { libc::setpriority(libc::PRIO_PROCESS, 0, 19) };
 }
 
+fn environment(libraries: &[PathBuf]) -> Result<Environment> {
+    static SHARED: OnceLock<Environment> = OnceLock::new();
+    if let Some(environment) = SHARED.get() {
+        return Ok(environment.clone());
+    }
+    let mut failure = anyhow!("ONNX Runtime is not installed; see wprs-ctl models list");
+    unsafe { std::env::set_var(TELEMETRY, "1") };
+    let loaded = libraries.iter().find_map(|lib| {
+        ort::init_from(lib).inspect_err(|e| failure = anyhow!("cannot load ONNX Runtime: {e}")).ok()
+    });
+    let built =
+        loaded.ok_or(failure)?.with_name("wallpaper-rs").with_telemetry(false).build().map_err(text)?;
+    Ok(SHARED.get_or_init(|| built).clone())
+}
+
 impl Estimator {
     pub fn open(model: &Path, libraries: &[PathBuf], threads: usize) -> Result<Self> {
-        let mut failure = anyhow!("ONNX Runtime is not installed; see wprs-ctl models list");
-        unsafe { std::env::set_var(TELEMETRY, "1") };
-        let loaded = libraries.iter().find_map(|lib| {
-            ort::init_from(lib).inspect_err(|e| failure = anyhow!("cannot load ONNX Runtime: {e}")).ok()
-        });
-        let environment =
-            loaded.ok_or(failure)?.with_name("wallpaper-rs").with_telemetry(false).build().map_err(text)?;
+        let environment = environment(libraries)?;
         let cpu = ort::ep::CPU::default().with_arena_allocator(false).build();
         let session = Session::builder(&environment)
             .map_err(text)?

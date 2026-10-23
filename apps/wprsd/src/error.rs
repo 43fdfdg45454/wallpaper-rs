@@ -111,3 +111,12 @@ impl From<std::io::Error> for Error {
         failed(e.to_string())
     }
 }
+
+impl From<wprs_sync::Error> for Error {
+    fn from(e: wprs_sync::Error) -> Self {
+        match e {
+            wprs_sync::Error::Invalid(message) => invalid(message),
+            e => failed(e.to_string()),
+        }
+    }
+}

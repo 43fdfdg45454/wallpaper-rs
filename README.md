@@ -179,19 +179,98 @@ otra vez el último fotograma, también con el vídeo en pausa, sin reiniciarlo.
 
 ## Android
 
-La misma página *Releases* trae `wallpaper-rs-android.apk`, un APK de depuración para Android 12
-o posterior (64 bits). Siempre se firma con la misma clave, así que cada versión se instala encima
-de la anterior y conserva la imagen elegida. Ábrelo en el teléfono (Android pedirá permitir la
+La misma página *Releases* trae `wallpaper-rs-android.apk`, un APK para Android 12 o posterior (64
+bits). Siempre se firma con la misma clave, así que cada versión se instala encima de la anterior y
+conserva el fondo elegido. Ábrelo en el teléfono (Android pedirá permitir la
 instalación desde esa app) o instálalo desde un ordenador con
 `adb install -r wallpaper-rs-android.apk`.
 
-Para ponerlo de fondo, abre la app **wallpaper-rs**, pulsa *Elegir imagen* y después *Usar como
-fondo*: se abre la vista previa del sistema, donde se elige si va en la pantalla de inicio, en la
-de bloqueo o en las dos. También se llega desde los fondos animados del sistema. La imagen se
-elige con el selector de fotos de Android y se copia al almacenamiento privado de la app, así que
-no hace falta ningún permiso, y la app no usa la red. Se dibuja con la GPU (Vulkan, u OpenGL ES si
-no hay Vulkan) con el mismo renderizador que el escritorio y solo cuando cambia algo: con una
-imagen fija no se dibuja ningún fotograma más. Admite JPEG, PNG, WebP, GIF y BMP.
+Para ponerlo de fondo, abre la app **wallpaper-rs**. La pestaña *Biblioteca* muestra las fotos y
+los vídeos añadidos con *Añadir*, que abre el selector de fotos de Android (se pueden elegir varios a
+la vez) y los copia al almacenamiento privado de la app, así que no hace falta ningún permiso y la app
+no usa la red salvo para descargar el modelo de profundidad cuando lo pides y para tu servidor propio
+si lo añades. Un mismo archivo no se
+copia dos veces. Al tocar uno se abre su página, con una vista
+previa en vivo, sus medidas y duración, y los botones *Usar como fondo*, favorito, *Añadir a una
+lista* y *Quitar*. *Usar como fondo* abre la vista previa del sistema, donde se elige si va en la
+pantalla de inicio, en la de bloqueo o en las dos; si la app ya es el fondo, el cambio entra con un
+fundido sin pasar por ella. También se llega desde los fondos animados del sistema. Se dibuja con la
+GPU (Vulkan, u OpenGL ES si Vulkan falla) con el mismo renderizador que el escritorio, y se recupera
+sola si el sistema le quita la GPU o la superficie. Admite JPEG, PNG, WebP, GIF y BMP.
+
+La pestaña *Listas* crea listas de fondos que cambian solos cada 15 o 30 minutos, cada hora, cada 6
+horas, cada día o nunca, en orden o al azar y, si se quiere, saltando los vídeos con batería. El
+cambio se decide cuando el fondo vuelve a verse, sin alarmas ni despertar el teléfono. La biblioteca,
+las listas y sus reglas usan el mismo modelo y la misma lógica de rotación que el escritorio.
+
+La pestaña *Ajustes* elige cómo se ajusta la imagen (rellenar, imagen completa, estirar o centrar),
+el fundido entre fondos, el sonido de los vídeos, los fotogramas por segundo con batería (30, 15 o
+10) y con el cargador (60 o 30), cuándo cambian los colores del sistema y los gráficos (automático,
+Vulkan u OpenGL ES). Debajo, el diagnóstico muestra la GPU, los fotogramas dibujados y por segundo,
+el límite que se aplica en ese momento, el estado de carga, ahorro de energía y temperatura y, con
+una escena, la clase del teléfono y el nivel de calidad. *Licencias* muestra los textos de ONNX
+Runtime, de los componentes que incluye y del modelo de profundidad.
+
+Los vídeos (MP4, MOV, 3GP, WebM o MKV) los decodifica el hardware del teléfono directamente sobre
+el fondo, sin pasar por la GPU ni copiar fotogramas, y se repiten en bucle. Se pausan en cuanto el
+fondo deja de verse y sueltan el decodificador si siguen ocultos más de 30 segundos; al volver
+siguen por donde iban. Si inicio y bloqueo muestran el mismo vídeo, comparten un solo reproductor.
+Van sin sonido salvo con *Reproducir el sonido de los vídeos*. Salvo con el ajuste *Estirar*, piden
+a Android que llenen la pantalla recortando los bordes; ese recorte lo hace el compositor del
+sistema, así que un teléfono que no lo respete los mostrará estirados.
+
+En la página de una imagen, *Moverse con el teléfono* activa el paralaje. Sigue la inclinación con
+el sensor de rotación que no usa la brújula o, si no lo hay, con el normal; si el teléfono no tiene
+ninguno o no da datos, sigue el paso de páginas del lanzador. La inclinación se
+filtra y se recentra sola como en el escritorio, con el mismo muelle y el mismo sombreador: con un
+mapa de profundidad lo cercano se mueve más que el fondo, y sin él la imagen entera se desplaza un
+poco. El sensor solo se enciende mientras se ve un fondo con paralaje, a los fotogramas por segundo
+permitidos (60 como mucho), y se apaga al taparlo, con el ahorro de energía, con poca batería o con
+el teléfono muy caliente. Con el teléfono quieto no se dibuja ningún fotograma, y con batería el
+sombreador da como mucho 8 pasos de profundidad.
+
+*Calcular un mapa de profundidad* usa el mismo modelo que el escritorio, Depth Anything V2 Small. La
+primera vez pide permiso para descargarlo y muestra su tamaño (99,1 MB), su licencia (Apache-2.0)
+y el servidor (github.com). La descarga lleva el User-Agent genérico del escritorio, se reanuda si
+se corta, se comprueba con su SHA-256 fijado y se guarda con el texto de su licencia al lado. El
+mapa se calcula en segundo plano en el propio teléfono con ONNX Runtime, que va dentro del APK sin
+su módulo de telemetría, y la foto no sale del teléfono. *Usar un archivo de mapa de profundidad*
+importa un mapa hecho en el escritorio, el PNG de 16 bits que guarda junto a la imagen (por ejemplo
+`foto.jpg.depth.png`), si tiene la misma proporción. En *Ajustes*, *Permitir descargar el modelo de
+profundidad* (`models.allow_download`) bloquea la descarga, y ahí mismo se puede borrar el modelo.
+
+El filtro *Escenas* de la biblioteca tiene *Añadir las escenas de ejemplo*, que instala las cinco
+escenas que trae el APK (las mismas que el escritorio), y *Abrir un paquete de escena*, que importa
+un `.wpak` de escena con el selector de documentos de Android. Se dibujan con el mismo motor que el
+escritorio: capas, efectos, partículas (en la GPU si admite sombreadores de cálculo y, si no, en la
+CPU con menos partículas), textos, líneas de tiempo y propiedades. La página de una escena muestra
+sus propiedades y sus ajustes predefinidos, que se guardan en la misma configuración que el
+escritorio. El nivel de calidad sale de la clase del teléfono (básica con poca memoria o sin
+sombreadores de cálculo, alta si el fabricante declara una clase de rendimiento de Android 13 o
+posterior, media en el resto) y de la batería: con batería baja un nivel, y con calor baja más. Una
+escena demasiado pesada para el teléfono se queda quieta en su fotograma de muestra. Cada escena
+dibuja a sus propios fotogramas por segundo, como mucho a los de los ajustes, solo mientras algo
+cambia y nunca mientras no se ve. Los vídeos dentro de una escena los decodifica el hardware y se
+copian a la GPU fotograma a fotograma, sin sonido, y se pausan si la escena se queda quieta. Los
+scripts de las escenas no se ejecutan en el teléfono: la escena se ve sin lo que mueven.
+
+*Reaccionar al sonido* y *Reaccionar al tacto* solo aparecen en las escenas que los usan y se
+activan escena a escena. El sonido se lee con el visualizador de Android, que da un espectro de
+poca resolución de lo que suena en el teléfono; Android pide el permiso del micrófono la primera vez
+que se activa y muestra su indicador mientras escucha. Solo escucha mientras se ve una escena con
+ese permiso, y solo calcula bandas en memoria. Tras dos segundos de silencio deja de leerlo hasta que
+algo empieza a sonar; si un reproductor sigue activo en silencio, lo mira cada dos segundos. El tacto
+son los toques sobre el fondo en la pantalla de inicio, también solo en las escenas con ese permiso.
+
+Solo se dibuja cuando cambia algo y nunca mientras el fondo no se ve: con una imagen fija no hay
+ningún fotograma más. El fundido y el desplazamiento al pasar de página en el lanzador van como
+mucho a los fotogramas por segundo elegidos (30 con batería y 60 con el cargador si no se cambian, y
+30 en la vista previa), se detienen con el ahorro de energía o con poca batería y bajan cuando el
+teléfono se calienta. Los vídeos se pausan con el ahorro de energía, con poca batería o con el
+teléfono muy caliente. Los colores del sistema (Material You) salen de la imagen o del primer
+fotograma del vídeo y se calculan una sola vez al añadirlos. *Colores del sistema* decide si Android
+cambia de tema al elegir un fondo (lo normal), también en cada cambio de una lista o nunca, y Android
+lo aplica la próxima vez que se apaga y enciende la pantalla.
 
 ## Uso desde la terminal
 
@@ -293,6 +372,30 @@ wprs-ctl edit parallax foto.jpg --source pointer --strength 0.02 --focus 0.3
 `wprs-ctl pack` (crear, firmar y validar paquetes `.wpak`) y `wprs-ctl repo` (claves, firma,
 publicación, rotación y verificación de un repositorio) funcionan sin daemon. La contraseña de
 una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
+
+La pestaña *Dispositivos* enlaza el teléfono con tu [servidor propio](#servidor-propio) con el
+mismo cliente en Rust que el escritorio, para compartir la biblioteca, las listas y los ajustes con
+tus ordenadores. Se escribe la dirección del servidor, *Enlazar este teléfono* muestra un código que
+se aprueba en un ordenador ya enlazado (`wprs-ctl server approve` o la página *Cuenta* de la app) o
+en la web del servidor, y después *Obtener la clave* trae la clave de sincronización de otro equipo
+comparando seis cifras en las dos pantallas, como entre ordenadores. Desde el teléfono también se
+aprueba un equipo nuevo, tras ver qué sistema y qué programa piden el código, y se le comparte la
+clave. El token, la clave del teléfono y la de sincronización se guardan cifrados con una clave del
+almacén de claves de Android que no sale del teléfono. Los registros van cifrados de extremo a
+extremo y el servidor solo ve los equipos como `Device 1`, `Device 2`…
+
+En el teléfono se aplican los títulos, etiquetas, valoraciones y favoritos de los fondos que tiene
+(el mismo archivo en el teléfono y en el ordenador es el mismo fondo), las listas con sus reglas y
+los ajustes compartidos, como el fundido. Se quedan en el teléfono el volumen, el sonido de los
+vídeos, los fotogramas por segundo y el permiso para descargar modelos; los perfiles, los ajustes
+predefinidos y los repositorios del escritorio se conservan sin tocar. Si cambias la clave en un
+ordenador, el teléfono la recibe solo, y si se revoca un equipo, el primero que sincroniza (también
+el teléfono) cambia la clave. La sincronización en segundo plano usa WorkManager cada hora, solo con
+Wi-Fi u otra red sin límite de datos (salvo *Sincronizar también con datos móviles*) y sin batería
+baja, más una tras abrir la app y otra 30 segundos después de cada cambio; *Sincronizar ahora* la
+lanza al momento con cualquier red. Mientras el teléfono no está enlazado, la app no prepara ninguna
+tarea ni toca la red al arrancar. *Pausar la sincronización* y *Quitar el servidor* (que pide al
+servidor que olvide el teléfono) están en la misma pestaña.
 
 ## Servidor propio
 
@@ -458,8 +561,9 @@ cp target/debug/examples/probe target/debug/
 scripts/integration-test.sh target/debug # D-Bus + PipeWire + daemon de punta a punta
 scripts/sway-test.sh target/debug        # superficies layer-shell en un Sway sin pantalla
 scripts/x11-test.sh target/debug         # ventanas de escritorio en un Xvfb
-cargo build -p wprs-server
-scripts/sync-test.sh target/debug        # dos daemons y wprs-server: enlace, clave y sincronización
+cargo build -p wprs-server && cargo build -p wprs-android --example phone
+cp target/debug/examples/phone target/debug/
+scripts/sync-test.sh target/debug        # daemons, el cliente del teléfono y wprs-server: enlace, clave y sincronización
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
 scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
 target/debug/wprs-app --check            # carga todo el QML de la app y falla ante cualquier aviso
@@ -471,7 +575,15 @@ APK de Android (con el SDK, el NDK 28 o posterior y `cargo install cargo-ndk`):
 rustup target add aarch64-linux-android x86_64-linux-android
 ANDROID_NDK_HOME=/ruta/al/ndk android/gradlew -p android assembleDebug
 adb install -r -d android/app/build/outputs/apk/debug/app-debug.apk
+android/gradlew -p android connectedDebugAndroidTest -Pabis=x86_64  # pruebas en un emulador x86_64
+scripts/android-power.sh -o consumo.csv  # consumo, fps y memoria por escenario en el teléfono
 ```
+
+`scripts/android-power.sh` recorre por adb los escenarios de consumo (imagen fija, desplazamiento,
+fondo tapado, pantalla apagada, ahorro de energía, temperatura alta, paralaje con el teléfono quieto
+y vídeo, 30 minutos y 3 veces cada uno) y añade una fila por medida al CSV. Con `trace_processor` de Perfetto en el `PATH` usa los
+raíles de energía del teléfono; si no, la estimación de batterystats. Conviene conectar adb por
+Wi-Fi para que el cable no cargue el teléfono durante la medida.
 
 La CI firma el APK con la clave de alias `wallpaper-rs` de un almacén PKCS12 guardado en base64 en
 el secreto `ANDROID_KEYSTORE`, con su contraseña en `ANDROID_KEYSTORE_PASSWORD`; sin ellos usa una
@@ -510,21 +622,21 @@ raíz y la misma pausa.
 | Ruta | Contenido |
 |------|-----------|
 | `crates/wprs-core` | Configuración, modos de ajuste, nombres D-Bus |
-| `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland, X11 y Android |
+| `crates/wprs-render` | Renderizador wgpu, sin ventana o sobre superficies Wayland, X11 y Android, con escenas y conversión de vídeo YUV |
 | `crates/wprs-depth` | Mapas de profundidad: modelo bajo demanda, cálculo con ONNX Runtime y caché |
 | `crates/wprs-scene` | Modelo de las escenas: capas, valores enlazados, líneas de tiempo y efectos, sin GPU |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
 | `crates/wprs-video` | Reproducción de vídeo en bucle con GStreamer |
 | `crates/wprs-wayland` | Superficies layer-shell y ventanas de escritorio X11, escala, ritmo y oclusión |
-| `crates/wprs-audio` | Captura del sonido con PipeWire y su análisis en bandas para las escenas |
+| `crates/wprs-audio` | Captura del sonido con PipeWire y su análisis en bandas para las escenas, también a partir del espectro que da Android |
 | `crates/wprs-script` | Scripts de escena en JavaScript, aislados y con límites de CPU y memoria |
-| `crates/wprs-sync` | Cifrado, relojes, fusión y protocolo de la sincronización con el servidor |
-| `crates/wprs-android` | Fondo animado de Android en Rust: JNI, GPU compartida y una superficie por fondo |
+| `crates/wprs-sync` | Cifrado, relojes, fusión, protocolo, buzón y formato de los registros de la sincronización, compartidos por el escritorio y Android |
+| `crates/wprs-android` | Fondo animado de Android en Rust: JNI, GPU compartida, una superficie por fondo, biblioteca, listas, ajustes, escenas, paralaje, mapas de profundidad y sincronización con el servidor propio |
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
 | `apps/wprs-app` | App de escritorio (Qt Quick y Kirigami sobre Rust con cxx-qt) |
 | `apps/wprs-server` | Servidor propio: repositorio, catálogo, subidas, moderación y sincronización |
-| `android` | App de Android: proyecto Gradle, servicio de fondo y actividad en Kotlin |
+| `android` | App de Android: proyecto Gradle, servicio de fondo, reproductor de vídeo e interfaz Compose en Kotlin |
 | `integrations/plasma-wallpaper` | Plugin de fondo de Plasma 6 |
 | `integrations/plasma-tray` | Icono de gestión en la bandeja de Plasma 6 |
 | `integrations/kwin-pointer` | Script de KWin que envía la posición del puntero mientras una escena o un paralaje la usa |
@@ -550,8 +662,10 @@ raíz y la misma pausa.
   licencia y servidores; llevan el mismo User-Agent genérico, sin cabecera Referer ni redirecciones
   de HTTPS a HTTP, se verifican con SHA-256 y los mapas se calculan en el equipo, en un proceso
   aparte. ONNX Runtime funciona con su telemetría desactivada: no guarda ningún identificador ni se
-  conecta a nadie. `models.allow_download` se queda en cada equipo y, si la configuración no se
-  puede leer, cuenta como desactivado.
+  conecta a nadie. En Android, ONNX Runtime va dentro del APK sin el componente que arrancaba su
+  telemetría, y la app solo usa la red para descargar el modelo después de que lo aceptes.
+  `models.allow_download` se queda en cada equipo y, si la configuración no se puede leer, cuenta
+  como desactivado.
 - La configuración se escribe con permisos `0600` dentro de una carpeta `0700`: solo tu usuario
   puede leerla.
 - La caché de descargas se guarda en una carpeta privada.
@@ -571,11 +685,13 @@ raíz y la misma pausa.
   calculan bandas y niveles en memoria: no se guarda, no se registra y no sale del equipo. Del
   puntero solo se guarda en memoria la última posición, y nunca se leen las teclas. Una imagen
   cuyo paralaje sigue al puntero lo usa con las mismas reglas, porque elegir esa fuente es el
-  permiso.
+  permiso. En Android, el permiso del micrófono se pide la primera vez que se activa *Reaccionar al
+  sonido* en una escena, y solo se escucha mientras se ve una escena que lo usa y tiene ese permiso.
 - Los scripts de las escenas se ejecutan en un proceso aparte, sin archivos, red ni otros
   procesos, con límites de memoria y de CPU por fotograma.
 - Con un servidor propio, los registros sincronizados salen cifrados con una clave que solo
-  tienen tus equipos; los identificadores de los paquetes se derivan de esa clave y el nombre de
+  tienen tus equipos (en Android, guardada cifrada con una clave del almacén de claves del
+  teléfono, que no sale de él); los identificadores de los paquetes se derivan de esa clave y el nombre de
   cada equipo solo viaja cifrado. La clave pasa a un equipo nuevo por el buzón del servidor,
   sellada para él, después de comparar un código de 6 cifras en las dos pantallas.
 - Los paquetes se generan sin rutas, usuarios ni nombre del equipo de quien los compila.

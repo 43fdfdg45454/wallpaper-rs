@@ -1,11 +1,9 @@
-use super::local::DEVICE_KEYS;
-use super::objects::{Links, keep_name, renamed, text};
-use super::views::{Kept, Local, references};
+use super::objects::Links;
 use crate::daemon::Daemon;
 use crate::error::Result;
 use serde_json::{Value, json};
 use wprs_library::Profile;
-use wprs_sync::View;
+use wprs_sync::{DEVICE_KEYS, Kept, Local, View, keep_name, references, renamed, text};
 
 pub fn synced_options(options: &Value, here: Option<&Value>) -> Value {
     let Some(options) = options.as_object() else { return options.clone() };

@@ -2,7 +2,6 @@ mod apply;
 mod cycle;
 mod escrow;
 mod files;
-mod held;
 mod keys;
 mod legacy;
 mod link;
@@ -24,15 +23,14 @@ mod status;
 mod tests;
 mod transfer;
 mod upload;
-mod views;
 mod watch;
 
-pub use local::DOWNLOADS;
 pub use watch::start;
+pub use wprs_sync::DOWNLOADS;
 
 use crate::compositor::lock;
 use crate::daemon::Daemon;
-use crate::error::{Error, Result, failed, invalid, not_found};
+use crate::error::{Error, Result, failed, not_found};
 use crate::keyring::Keyring;
 use saved::{Peer, Saved};
 use serde_json::Value;
@@ -41,7 +39,7 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use tokio::sync::Notify;
 use wprs_core::model::JobKind;
-use wprs_sync::Api;
+use wprs_sync::{Api, devices};
 
 pub const KINDS: [JobKind; 4] = [JobKind::Account, JobKind::Link, JobKind::AccountSync, JobKind::Upload];
 
@@ -59,14 +57,7 @@ pub fn block_on<T>(work: impl Future<Output = T>) -> T {
 }
 
 pub fn sync_error(e: wprs_sync::Error) -> Error {
-    match e {
-        wprs_sync::Error::Invalid(message) => invalid(message),
-        e => failed(e.to_string()),
-    }
-}
-
-fn millis(value: &Value) -> Option<i64> {
-    value.as_i64().map(|ms| ms / 1000)
+    e.into()
 }
 
 impl Daemon {
@@ -104,16 +95,7 @@ impl Daemon {
     }
 
     fn refresh_peers(&self, api: &Api) -> Result<Vec<Peer>> {
-        let found = block_on(api.get("/api/v1/me/devices")).map_err(sync_error)?;
-        let peer = |d: &Value| Peer {
-            id: d["id"].as_str().unwrap_or_default().into(),
-            name: d["name"].as_str().unwrap_or_default().into(),
-            platform: d["platform"].as_str().unwrap_or_default().into(),
-            enc_key: d["enc_key"].as_str().map(String::from),
-            created_at: millis(&d["created_at"]).unwrap_or_default(),
-            seen_at: millis(&d["seen_at"]),
-        };
-        let peers: Vec<Peer> = found["items"].as_array().into_iter().flatten().map(peer).collect();
+        let peers = block_on(devices(api)).map_err(sync_error)?;
         self.update(|s| {
             s.pinned.iter_mut().for_each(|pins| pins.retain(|id, _| peers.iter().any(|p| p.id == *id)));
             s.members.extend(peers.iter().map(|p| p.id.clone()));

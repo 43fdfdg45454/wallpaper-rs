@@ -6,7 +6,9 @@ mod enroll;
 mod escrow;
 mod events;
 mod hlc;
+mod kept;
 mod keys;
+mod mailbox;
 mod order;
 mod plan;
 mod record;
@@ -14,6 +16,8 @@ mod session;
 mod share;
 #[cfg(test)]
 mod tests;
+mod vault;
+mod views;
 
 pub use api::{AGENT, Api, MAIL, PAGE, SMALL, check_url};
 pub use blob::{SEALED, SEGMENT, open_segment, seal_segment, sealed_size};
@@ -23,12 +27,19 @@ pub use enroll::{Poll, poll};
 pub use escrow::{Cost, Lock, MIN_PASSPHRASE, STRONG, escrow_epoch, unseal};
 pub use events::Parser;
 pub use hlc::{Clock, Hlc, now_ms};
+pub use kept::{arrived, hold, keep, keep_name, playlist_rules, renamed, rules, text};
 pub use keys::{Ids, SyncKey};
+pub use mailbox::{Letter, Peer, ack, devices, from, inbox, next, nonce, post};
 pub use order::{clash, positions};
 pub use plan::{Clash, Rules, Step, Winner, step};
 pub use record::{Context, open, pad, seal, unpad};
 pub use session::Session;
 pub use share::{DeviceKey, Mail, aad, code, commit, open_key, seal_key, transcript};
+pub use vault::{Secrets, encode};
+pub use views::{
+    DEVICE_KEYS, DOWNLOADS, Kept, Local, REFERENCES, item_view, kind, link, object, preserve, references,
+    settings,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

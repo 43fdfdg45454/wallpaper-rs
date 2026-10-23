@@ -12,6 +12,7 @@ mod rotation;
 mod rules;
 mod scan;
 mod tags;
+mod timing;
 
 pub use db::SCHEMA_VERSION;
 pub use entries::EntryEdit;
@@ -24,6 +25,7 @@ pub use resolve::Resolved;
 pub use rotation::{Rotation, Used};
 pub use rules::Rules;
 pub use scan::{ScanReport, Source};
+pub use timing::{Turn, rotate};
 
 use rusqlite::Connection;
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};

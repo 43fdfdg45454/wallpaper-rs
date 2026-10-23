@@ -7,6 +7,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+wprs-library.workspace = true
 argon2.workspace = true
 base64.workspace = true
 chacha20poly1305.workspace = true
@@ -19,6 +20,10 @@ serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
+toml.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 tokio-util.workspace = true
 zeroize.workspace = true
+
+[target.'cfg(target_os = "android")'.dependencies]
+webpki-root-certs.workspace = true

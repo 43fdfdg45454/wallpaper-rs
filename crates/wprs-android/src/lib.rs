@@ -1,40 +1,124 @@
-#![cfg(target_os = "android")]
+#![cfg_attr(not(target_os = "android"), allow(dead_code))]
 
+mod account;
+mod apply;
+#[cfg(target_os = "android")]
+mod bridge;
+#[cfg(target_os = "android")]
+mod calls;
+mod choice;
+#[cfg(target_os = "android")]
+mod clips;
+mod cycle;
+mod depth;
+#[cfg(target_os = "android")]
 mod engine;
+#[cfg(target_os = "android")]
+mod exports;
+#[cfg(target_os = "android")]
 mod gpu;
+mod hearing;
+mod keys;
+mod library;
+mod link;
+mod local;
+mod media;
+mod pack;
+mod pairing;
+mod power;
+mod props;
+#[cfg(target_os = "android")]
+mod relief;
+mod rotation;
+mod settings;
+mod stage;
+mod state;
+mod store;
+#[cfg(test)]
+mod tests;
+mod tilt;
+mod vault;
 
-use engine::Engine;
-use jni::errors::LogErrorAndDefault;
-use jni::objects::{JObject, JString};
-use jni::sys::{jboolean, jint, jlong};
-use jni::{EnvUnowned, jni_mangle};
-use ndk::native_window::NativeWindow;
-use std::ffi::{CString, c_char, c_int};
-use std::ptr::with_exposed_provenance_mut;
+pub mod host {
+    use crate::{Error, account, library, settings, store};
+    use serde_json::json;
+
+    pub fn prepare(files: &str) -> Result<(), String> {
+        store::prepare(files).map_err(|e| e.to_string())
+    }
+
+    pub fn account(request: &str) -> String {
+        account::request(request)
+    }
+
+    pub fn library(request: &str) -> String {
+        library::request(request, true)
+    }
+
+    pub fn import(path: &str) -> String {
+        let stored = std::fs::File::open(path).map_err(Error::from);
+        let stored = stored.and_then(|mut file| store::store(&mut file, path));
+        stored.map_or_else(|e| json!({ "error": e.to_string() }), |(uid, _)| json!(uid)).to_string()
+    }
+
+    pub fn setting(key: &str, value: Option<&str>) -> String {
+        settings::setting(key, value).unwrap_or_else(|e| e.to_string())
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum Error {
+    #[cfg(target_os = "android")]
     #[error(transparent)]
     Jni(#[from] jni::errors::Error),
+    #[cfg(target_os = "android")]
     #[error(transparent)]
     Render(#[from] wprs_render::RenderError),
     #[error(transparent)]
     Io(#[from] std::io::Error),
-    #[error("not a supported image: {0}")]
-    Image(String),
+    #[error(transparent)]
+    Library(#[from] wprs_library::Error),
+    #[error(transparent)]
+    Config(#[from] wprs_core::ConfigError),
+    #[error(transparent)]
+    Image(#[from] image::ImageError),
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+    #[error("{0:#}")]
+    Depth(#[from] anyhow::Error),
+    #[error(transparent)]
+    Sync(#[from] wprs_sync::Error),
+    #[error("{0}")]
+    Account(String),
+    #[error("not a supported image or video: {0}")]
+    Unreadable(String),
+    #[error(transparent)]
+    Format(#[from] wprs_format::Error),
+    #[error("{0}")]
+    Scene(String),
+    #[error("{0}")]
+    Setting(String),
+    #[cfg(target_os = "android")]
     #[error("the surface has no native window")]
     Window,
     #[error("the app storage is not known yet")]
     Unprepared,
 }
 
+#[cfg(target_os = "android")]
 #[link(name = "log")]
 unsafe extern "C" {
-    fn __android_log_write(priority: c_int, tag: *const c_char, text: *const c_char) -> c_int;
+    fn __android_log_write(
+        priority: std::ffi::c_int,
+        tag: *const std::ffi::c_char,
+        text: *const std::ffi::c_char,
+    ) -> std::ffi::c_int;
 }
 
+#[cfg(target_os = "android")]
 struct Logcat;
 
+#[cfg(target_os = "android")]
 impl log::Log for Logcat {
     fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
         metadata.level() <= log::Level::Info
@@ -42,78 +126,13 @@ impl log::Log for Logcat {
 
     fn log(&self, record: &log::Record<'_>) {
         if self.enabled(record.metadata())
-            && let Ok(text) = CString::new(record.args().to_string())
+            && let Ok(text) = std::ffi::CString::new(record.args().to_string())
         {
-            unsafe { __android_log_write(7 - record.level() as c_int, c"wprs".as_ptr(), text.as_ptr()) };
+            unsafe {
+                __android_log_write(7 - record.level() as std::ffi::c_int, c"wprs".as_ptr(), text.as_ptr())
+            };
         }
     }
 
     fn flush(&self) {}
-}
-
-fn live<'a>(handle: jlong) -> Option<&'a mut Engine> {
-    unsafe { with_exposed_provenance_mut::<Engine>(handle as usize).as_mut() }
-}
-
-#[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn prepare<'local>(mut env: EnvUnowned<'local>, _: JObject<'local>, files: JString<'local>) {
-    if log::set_logger(&Logcat).is_ok() {
-        log::set_max_level(log::LevelFilter::Info);
-        std::panic::set_hook(Box::new(|info| log::error!("{info}")));
-    }
-    env.with_env(|env| files.try_to_string(env).map(engine::prepare)).resolve::<LogErrorAndDefault>()
-}
-
-#[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn attach<'local>(mut env: EnvUnowned<'local>, _: JObject<'local>, surface: JObject<'local>) -> jlong {
-    env.with_env(|env| {
-        let window = unsafe { NativeWindow::from_surface(env.get_raw().cast(), surface.as_raw().cast()) };
-        let engine = Box::new(Engine::open(window.ok_or(Error::Window)?)?);
-        Ok::<_, Error>(Box::into_raw(engine).expose_provenance() as jlong)
-    })
-    .resolve::<LogErrorAndDefault>()
-}
-
-#[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn resize<'local>(
-    mut env: EnvUnowned<'local>,
-    _: JObject<'local>,
-    handle: jlong,
-    width: jint,
-    height: jint,
-) {
-    env.with_env(|_| {
-        if let Some(engine) = live(handle) {
-            engine.resize(width, height);
-        }
-        Ok::<_, Error>(())
-    })
-    .resolve::<LogErrorAndDefault>()
-}
-
-#[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn draw<'local>(
-    mut env: EnvUnowned<'local>,
-    _: JObject<'local>,
-    handle: jlong,
-    force: jboolean,
-) -> jboolean {
-    env.with_env(|_| live(handle).map_or(Ok(false), |e| e.draw(force))).resolve::<LogErrorAndDefault>()
-}
-
-#[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn detach<'local>(mut env: EnvUnowned<'local>, _: JObject<'local>, handle: jlong) {
-    env.with_env(|_| {
-        let engine = with_exposed_provenance_mut::<Engine>(handle as usize);
-        if !engine.is_null() {
-            drop(unsafe { Box::from_raw(engine) });
-        }
-        Ok::<_, Error>(())
-    })
-    .resolve::<LogErrorAndDefault>()
-}
-
-#[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn store<'local>(mut env: EnvUnowned<'local>, _: JObject<'local>, fd: jint) -> jboolean {
-    env.with_env(|_| engine::store(fd)).resolve::<LogErrorAndDefault>()
 }
