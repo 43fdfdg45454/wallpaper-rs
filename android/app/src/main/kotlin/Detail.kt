@@ -12,11 +12,14 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,19 +31,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 
 @Composable
 fun Detail(main: Main, uid: String, close: () -> Unit) {
+    val languages = listOf(LocalLocale.current.toLanguageTag().replace('-', '_'))
     val item by loaded<Item?>(null, uid, main.revision.intValue) {
-        (ask("item", "uid" to uid) as? JSONObject)?.let(::Item)
+        (ask("item", "uid" to uid, "languages" to languages) as? JSONObject)?.let(::Item)
     }
+    val asks = item?.let { if (it.flashing) "photosensitive" else if (it.mature) "mature" else null }
     var ready by remember(uid) { mutableStateOf(false) }
     var adding by remember { mutableStateOf(false) }
     var removing by remember { mutableStateOf(false) }
-    LaunchedEffect(uid) {
+    LaunchedEffect(uid, item == null, asks) {
+        if (item == null || asks != null) return@LaunchedEffect
         runCatching { ask("pick", "choice" to choice("item", uid)) }
         ready = true
     }
@@ -48,12 +55,18 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Header(item?.title.orEmpty(), close)
         Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
-            if (ready) Live(main, main.revision.intValue, Depth.working.value)
+            if (asks != null) Caution(asks) { main.act { ask("confirm", "uid" to uid, "what" to asks) } }
+            else if (ready) Live(main, main.revision.intValue, Depth.working.value)
         }
         item?.let { Text(facts(it), Modifier.padding(16.dp, 8.dp), style = MaterialTheme.typography.bodyMedium) }
+        item?.about?.takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(16.dp, 0.dp), style = MaterialTheme.typography.bodySmall, maxLines = 4) }
+        item?.lacks?.takeIf { it.isNotEmpty() }?.let { lacks ->
+            val notes = lacks.map { stringResource(if (it == "scripts") R.string.lacks_scripts else R.string.lacks_sound) }
+            Text(notes.joinToString(" "), Modifier.padding(16.dp, 4.dp), style = MaterialTheme.typography.bodySmall)
+        }
         item?.let { shown -> if (shown.scene) Scene(main, uid, Modifier.weight(1f)) else if (!shown.video) Relief(main, uid) }
         Row(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
-            Button(main::apply, Modifier.weight(1f)) { Text(stringResource(R.string.apply)) }
+            Button(main::apply, Modifier.weight(1f), enabled = ready && asks == null) { Text(stringResource(R.string.apply)) }
             val favorite = item?.favorite == true
             IconButton({ main.act { ask("favorite", "uid" to uid, "favorite" to !favorite) } }) {
                 val icon = if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder
@@ -79,6 +92,14 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
         dismissButton = { TextButton({ removing = false }) { Text(stringResource(R.string.cancel)) } },
         text = { Text(stringResource(R.string.remove_question)) },
     )
+}
+
+@Composable
+private fun Caution(asks: String, confirm: () -> Unit) = Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
+    val flashing = asks == "photosensitive"
+    Icon(if (flashing) Icons.Default.Warning else Icons.Default.Lock, null, Modifier.padding(8.dp), MaterialTheme.colorScheme.error)
+    Text(stringResource(if (flashing) R.string.flashing_warning else R.string.mature_warning), Modifier.padding(16.dp), style = MaterialTheme.typography.bodyLarge)
+    OutlinedButton(confirm) { Text(stringResource(R.string.show_anyway)) }
 }
 
 @Composable

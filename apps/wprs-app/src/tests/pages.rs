@@ -54,7 +54,9 @@ fn the_tray_leaves_every_advanced_setting_to_the_settings_page() {
         let quoted = format!("\"{call}\"");
         assert!(!tray.contains(&quoted) && settings.contains(&quoted), "{call}");
     }
-    for call in ["SetPaused", "SetMuted", "SetVolume", "Activate", "Next", "SetWallpaper", "SetFavorite"] {
+    for call in
+        ["SetPaused", "SetMuted", "SetVolume", "Activate", "Next", "SetWallpaper", "SetFavorite", "Confirm"]
+    {
         assert!(tray.contains(&format!("act(\"{call}\"")), "{call}");
     }
 }

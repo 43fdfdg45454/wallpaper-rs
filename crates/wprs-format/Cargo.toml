@@ -10,6 +10,7 @@ rust-version.workspace = true
 sign = ["dep:minisign"]
 
 [dependencies]
+wprs-core.workspace = true
 wprs-scene.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -24,6 +25,7 @@ minisign = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true
+image.workspace = true
 
 [[test]]
 name = "sign"
@@ -43,4 +45,8 @@ required-features = ["sign"]
 
 [[test]]
 name = "data"
+required-features = ["sign"]
+
+[[test]]
+name = "compat"
 required-features = ["sign"]

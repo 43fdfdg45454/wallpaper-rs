@@ -12,6 +12,8 @@ const VIDEOS: &[&str] = &["webm", "mp4", "mkv"];
 const SCENES: &[&str] =
     &["json", "wgsl", "js", "gltf", "glb", "bin", "ogg", "opus", "flac", "mp3", "wav", "ttf", "otf", "cube"];
 const COMMON: &[&str] = &["txt"];
+const THUMBNAILS: &[&str] = &["png", "jpg", "jpeg", "webp"];
+const ANIMATED: &[&str] = &["gif", "webp"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Limits {
@@ -67,14 +69,28 @@ pub fn validate(manifest: &Manifest, files: &[FileEntry], limits: &Limits) -> Re
         Kind::Video => VIDEOS,
         Kind::Scene => &["json"],
     };
-    let referenced =
-        [("entry", Some(&manifest.entry), entry_types), ("preview", manifest.preview.as_ref(), IMAGES)];
-    referenced.into_iter().try_for_each(|(field, path, types)| {
+    let (thumbs, limit) = if manifest.v2() { (THUMBNAILS, 1 << 20) } else { (IMAGES, u64::MAX) };
+    let previews = manifest.previews.clone().unwrap_or_default();
+    let referenced = [
+        ("entry", Some(&manifest.entry), entry_types, u64::MAX),
+        ("preview", manifest.preview.as_ref(), IMAGES, u64::MAX),
+        ("previews.thumbnail", previews.thumbnail.as_ref(), thumbs, limit),
+        ("previews.animated", previews.animated.as_ref(), ANIMATED, 8 << 20),
+    ];
+    referenced.into_iter().try_for_each(|(field, path, types, max)| {
         let Some(path) = path else { return Ok(()) };
         check_path(path)?;
-        ensure(files.iter().any(|f| &f.path == path), || Error::Missing(path.clone()))?;
+        let file = files.iter().find(|f| &f.path == path).ok_or_else(|| Error::Missing(path.clone()))?;
         let usable = path != MANIFEST && extension(path).is_some_and(|e| types.contains(&e.as_str()));
-        require(usable, field, &format!("{path:?} is not a usable {field} for {} packages", manifest.kind))
+        require(usable, field, &format!("{path:?} is not a usable {field} for {} packages", manifest.kind))?;
+        within("preview size", file.size, max)
+    })?;
+    manifest.credits.iter().flat_map(|c| &c.paths).try_for_each(|path| {
+        check_path(path.trim_end_matches('/'))?;
+        let dir = path.ends_with('/');
+        let found =
+            files.iter().any(|f| if dir { f.path.starts_with(path.as_str()) } else { f.path == *path });
+        require(found, "credits", &format!("{path:?} is not a file or folder of the package"))
     })
 }
 

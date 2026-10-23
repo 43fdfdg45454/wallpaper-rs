@@ -489,6 +489,16 @@ msgid "Remove…"
 msgstr "Quitar…"
 
 #: apps/wprs-app/qml/ApplyDialog.qml
+msgid ""
+"This wallpaper flashes or shows fast patterns that can trigger seizures in "
+"people with photosensitive epilepsy. Apply it only if that is safe for "
+"whoever sees this screen; you will not be asked again for this package."
+msgstr ""
+"Este fondo destella o muestra patrones rápidos que pueden provocar crisis a "
+"personas con epilepsia fotosensible. Aplícalo solo si es seguro para quien "
+"vea esta pantalla; no se volverá a preguntar por este paquete."
+
+#: apps/wprs-app/qml/ApplyDialog.qml
 msgid "Screen:"
 msgstr "Pantalla:"
 
@@ -519,6 +529,22 @@ msgstr "Se muestran %1 de %2 paquetes; afina la búsqueda para ver otros."
 #: apps/wprs-app/qml/Browse.qml
 msgid "Installed: %1"
 msgstr "Instalado: %1"
+
+#: apps/wprs-app/qml/Browse.qml apps/wprs-app/qml/Installed.qml
+msgid "What's new: %1"
+msgstr "Novedades: %1"
+
+#: apps/wprs-app/qml/Browse.qml
+msgid "Mature content: click the picture to show it"
+msgstr "Contenido para adultos: haz clic en la imagen para mostrarlo"
+
+#: apps/wprs-app/qml/Browse.qml
+msgid ""
+"Flashes or shows fast patterns that can trigger seizures in people with "
+"photosensitive epilepsy."
+msgstr ""
+"Destella o muestra patrones rápidos que pueden provocar crisis a personas "
+"con epilepsia fotosensible."
 
 #: apps/wprs-app/qml/Browse.qml
 msgid "Update"
@@ -1108,6 +1134,10 @@ msgstr ""
 "Hay instalada una versión más reciente de este paquete. ¿Instalar también la "
 "anterior?"
 
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Show mature content"
+msgstr "Mostrar el contenido para adultos"
+
 #: apps/wprs-app/qml/ItemDrawer.qml apps/wprs-app/qml/ProviderDialog.qml
 msgid "Kind:"
 msgstr "Tipo:"
@@ -1225,6 +1255,21 @@ msgstr "Lista %1 (%2 de %3)"
 msgid "Background color"
 msgstr "Color de fondo"
 
+#: apps/wprs-app/qml/OutputRow.qml
+msgid "Flashes or shows fast patterns; you allowed it"
+msgstr "Destella o muestra patrones rápidos; lo has permitido"
+
+#: apps/wprs-app/qml/OutputRow.qml
+msgid "Flashes or shows fast patterns that can trigger seizures"
+msgstr ""
+"Destella o muestra patrones rápidos que pueden provocar crisis epilépticas"
+
+#: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/Thumbnail.qml
+msgid "Mature content: click the picture to always show this package"
+msgstr ""
+"Contenido para adultos: haz clic en la imagen para mostrar siempre este "
+"paquete"
+
 #: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/SceneField.qml
 #: apps/wprs-app/qml/Settings.qml
 msgid "Choose…"
@@ -1261,6 +1306,82 @@ msgstr "Otra pantalla reproduce el sonido de esta escena"
 #: apps/wprs-app/qml/OutputRow.qml
 msgid "Images and videos"
 msgstr "Imágenes y vídeos"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "%1 by %2"
+msgstr "%1, de %2"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid ""
+"This wallpaper flashes or shows fast patterns that can trigger seizures in "
+"people with photosensitive epilepsy. Playlists skip it until you allow it."
+msgstr ""
+"Este fondo destella o muestra patrones rápidos que pueden provocar crisis a "
+"personas con epilepsia fotosensible. Las listas lo saltan hasta que lo "
+"permitas."
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid ""
+"This wallpaper flashes or shows fast patterns that can trigger seizures in "
+"people with photosensitive epilepsy."
+msgstr ""
+"Este fondo destella o muestra patrones rápidos que pueden provocar crisis a "
+"personas con epilepsia fotosensible."
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Allow this wallpaper…"
+msgstr "Permitir este fondo…"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Rating:"
+msgstr "Clasificación:"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Origin:"
+msgstr "Origen:"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Authors:"
+msgstr "Autores:"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Credits:"
+msgstr "Créditos:"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Uses:"
+msgstr "Usa:"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Needs:"
+msgstr "Necesita:"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Languages:"
+msgstr "Idiomas:"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "What's new:"
+msgstr "Novedades:"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Allow this wallpaper?"
+msgstr "¿Permitir este fondo?"
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid ""
+"It flashes or shows fast patterns that can trigger seizures in people with "
+"photosensitive epilepsy. Allow it only if that is safe for whoever sees your "
+"screens; screens and playlists may then show it without asking again."
+msgstr ""
+"Destella o muestra patrones rápidos que pueden provocar crisis a personas "
+"con epilepsia fotosensible. Permítelo solo si es seguro para quien vea tus "
+"pantallas; después las pantallas y las listas podrán mostrarlo sin volver a "
+"preguntar."
+
+#: apps/wprs-app/qml/PackageAbout.qml
+msgid "Open this address in the browser?"
+msgstr "¿Abrir esta dirección en el navegador?"
 
 #: apps/wprs-app/qml/PlaylistEditor.qml apps/wprs-app/qml/PlaylistsPage.qml
 #: apps/wprs-app/qml/PresetDialog.qml apps/wprs-app/qml/ProfilesPage.qml
@@ -1721,6 +1842,18 @@ msgstr "Tareas"
 msgid "No jobs"
 msgstr "No hay tareas"
 
+#: apps/wprs-app/qml/Tile.qml
+msgid "Mature content: open the details to show it"
+msgstr "Contenido para adultos: abre los detalles para mostrarlo"
+
+#: apps/wprs-app/qml/Tile.qml
+msgid ""
+"Flashes or shows fast patterns; playlists skip it until you allow it in its "
+"details"
+msgstr ""
+"Destella o muestra patrones rápidos; las listas lo saltan hasta que lo "
+"permitas en sus detalles"
+
 #: apps/wprs-app/qml/facade/App.qml
 msgid "%1 MB"
 msgstr "%1 MB"
@@ -1772,6 +1905,10 @@ msgstr "Vigilar los cambios en las carpetas de la biblioteca"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Thumbnail cache (MB)"
 msgstr "Caché de miniaturas (MB)"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Hide mature content"
+msgstr "Ocultar el contenido para adultos"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Refresh repositories every day"
@@ -1970,6 +2107,70 @@ msgid "the pointer"
 msgstr "el puntero"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+msgid "clicks"
+msgstr "los clics"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "what the media player plays"
+msgstr "lo que suena en el reproductor"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "the network"
+msgstr "la red"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "For everyone"
+msgstr "Para todos los públicos"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Mature"
+msgstr "Para adultos"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Not rated"
+msgstr "Sin clasificar"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "sexual content"
+msgstr "contenido sexual"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "violence"
+msgstr "violencia"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "gore"
+msgstr "sangre explícita"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "strong language"
+msgstr "lenguaje malsonante"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Original work"
+msgstr "Obra original"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Remade from another work"
+msgstr "Rehecho a partir de otra obra"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Home page"
+msgstr "Página principal"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Source"
+msgstr "Código fuente"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Support"
+msgstr "Ayuda"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Donate"
+msgstr "Donar"
+
+#: apps/wprs-app/qml/facade/Labels.qml
 msgid "Folder scan"
 msgstr "Análisis de carpetas"
 
@@ -2110,3 +2311,35 @@ msgstr "Dañado"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Other reason"
 msgstr "Otro motivo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "reacts to the sound playing on the computer"
+msgstr "reacciona al sonido que se reproduce en el equipo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "follows the pointer"
+msgstr "sigue al puntero"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "reacts to clicks"
+msgstr "reacciona a los clics"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "shows what the media player plays"
+msgstr "muestra lo que reproduce el reproductor multimedia"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "connects to the network"
+msgstr "se conecta a la red"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "runs scene scripts"
+msgstr "ejecuta scripts de escena"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "plays sound"
+msgstr "reproduce sonido"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "uses the %1 effect"
+msgstr "usa el efecto %1"

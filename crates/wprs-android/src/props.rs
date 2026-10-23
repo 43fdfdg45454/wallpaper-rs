@@ -65,7 +65,8 @@ fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
     let sounds = pack.scene.sounds().next().is_some();
     let mut props = pack.properties.clone();
     props.retain(|key, _| !sounds || key != VOLUME);
-    let (fields, presets) = wprs_scene::form(&props, &pack.presets, &values, languages);
+    let languages: Vec<String> = languages.iter().cloned().chain(pack.locale.clone()).collect();
+    let (fields, presets) = wprs_scene::form(&props, &pack.presets, &values, &languages);
     let uses = Runtime::new(Arc::clone(&pack.scene), values).uses();
     let [audio, touch] = granted(&pack.id);
     Ok(json!({
@@ -102,7 +103,8 @@ fn set(pack: &Pack, key: &str, value: &Value) -> Result<(), Error> {
 fn choose(pack: &Pack, id: &str) -> Result<(), Error> {
     let preset =
         pack.presets.iter().find(|p| p.id == id).ok_or_else(|| Error::Scene(format!("no preset {id}")))?;
-    let chosen: Vec<_> = preset.values.iter().filter_map(|(k, v)| Some((k.clone(), stored(v)?))).collect();
+    let fit = |(k, v): (&String, &Value)| Some((k.clone(), stored(&pack.properties.get(k)?.value(v).ok()?)?));
+    let chosen: Vec<_> = preset.values.iter().filter_map(fit).collect();
     change(pack, |values| values.extend(chosen))
 }
 

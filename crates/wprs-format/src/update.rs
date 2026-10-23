@@ -1,7 +1,7 @@
-use crate::entry::contents;
+use crate::entry::{contents, shards};
 use crate::fetch::{bases, first, get};
 use crate::store::{Doc, Snapshot, State};
-use crate::{Anchor, Entry, Error, Fetch, Result, Root, comment, ensure, require, sha256};
+use crate::{Anchor, Details, Entry, Error, Fetch, Result, Root, comment, ensure, require, sha256};
 use std::collections::BTreeMap;
 use std::io;
 
@@ -39,7 +39,9 @@ pub(crate) fn refresh(
     let bases = bases(&run.state, &root.value);
     let entry =
         first(&bases, |base| run.entry(&root, base))?.ok_or_else(|| Error::Missing("entry".into()))?;
-    let wanted = entry.value.shards.iter().map(|b| ("index", b)).chain([("revoked", &entry.value.revoked)]);
+    let details = first(&bases, |base| run.details(&root, &entry, base))?;
+    let list = shards(&entry.value, details.as_ref().map(|d| &d.value)).1;
+    let wanted = list.iter().map(|b| ("index", b)).chain([("revoked", &entry.value.revoked)]);
     let blobs = wanted.map(|(dir, blob)| {
         if let Some(bytes) = cache.get(&blob.sha256).filter(|b| blob.matches(b).is_ok()) {
             return Ok((blob.sha256.clone(), bytes.clone()));
@@ -52,7 +54,8 @@ pub(crate) fn refresh(
         Ok((blob.sha256.clone(), fetched.ok_or(Error::Missing(path))?))
     });
     let blobs = blobs.collect::<Result<BTreeMap<_, _>>>()?;
-    let (shards, revoked) = contents(&entry.value, &run.state.repo_id, &blobs)?;
+    let (shards, revoked) =
+        contents(&entry.value, details.as_ref().map(|d| &d.value), &run.state.repo_id, &blobs)?;
     let (mut state, timestamp) = (run.state, entry.value.timestamp.timestamp());
     state.root_version = root.value.version;
     state.entry_version = entry.value.version;
@@ -61,7 +64,7 @@ pub(crate) fn refresh(
     state.max_timestamp = state.max_timestamp.max(timestamp);
     state.stale = entry.value.expires.timestamp() <= run.t;
     state.checked = now;
-    Ok(Snapshot { state, root, entry, blobs, shards, revoked })
+    Ok(Snapshot { state, root, entry, details, blobs, shards, revoked })
 }
 
 impl Run<'_> {
@@ -137,6 +140,17 @@ impl Run<'_> {
             }
         }
         Ok(Some(entry))
+    }
+
+    fn details(&self, root: &Doc<Root>, entry: &Doc<Entry>, base: &str) -> Result<Option<Doc<Details>>> {
+        let version = entry.value.version;
+        let path = format!("details/{version}.json");
+        let Some((json, sig)) = self.signed(base, &path, MAX_ENTRY)? else { return Ok(None) };
+        let (online, text) = (&root.value.roles.online, comment("details", version, &self.state.repo_id));
+        root.value.meets(online, &json, &sig, &text)?;
+        let details: Details = serde_json::from_slice(&json)?;
+        details.check(&entry.value, &sha256(&entry.json[..])?)?;
+        Ok(Some(Doc { value: details, json, sig }))
     }
 
     fn load_entry(&self, root: &Doc<Root>, base: &str, version: u64) -> Result<Option<Doc<Entry>>> {

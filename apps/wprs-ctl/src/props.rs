@@ -81,5 +81,6 @@ fn list(reply: SceneProperties) -> String {
     let presets = reply.preset_labels.iter().map(|p| p.value.as_str()).collect::<Vec<_>>().join(", ");
     let head = format!("{} ({})\n", reply.title, reply.package);
     let tail = if presets.is_empty() { String::new() } else { format!("presets: {presets}\n") };
-    head + &table(&["PROPERTY", "LABEL", "TYPE", "VALUE", "RANGE"], rows) + &tail
+    let warnings: String = reply.warnings.iter().map(|w| format!("warning: {w}\n")).collect();
+    head + &table(&["PROPERTY", "LABEL", "TYPE", "VALUE", "RANGE"], rows) + &tail + &warnings
 }

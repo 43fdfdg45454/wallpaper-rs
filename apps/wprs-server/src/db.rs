@@ -17,6 +17,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../migrations/0001_init.sql"),
     include_str!("../migrations/0002_device_codes_and_key_epochs.sql"),
     include_str!("../migrations/0003_files.sql"),
+    include_str!("../migrations/0004_package_facts.sql"),
 ];
 
 pub fn now() -> i64 {

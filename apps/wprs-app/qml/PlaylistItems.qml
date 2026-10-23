@@ -83,6 +83,7 @@ ColumnLayout {
                     required property string color
                     required property string info
                     required property bool missing
+                    required property bool mature
 
                     width: list.width
                     contentItem: RowLayout {
@@ -104,14 +105,15 @@ ColumnLayout {
                                 source: row.thumb
                                 asynchronous: true
                                 fillMode: Image.PreserveAspectCrop
-                                sourceSize.width: width * 2
-                                sourceSize.height: height * 2
+                                sourceSize.width: row.mature ? 12 : width * 2
+                                sourceSize.height: row.mature ? 12 : height * 2
                             }
                         }
 
                         QQC2.Label {
                             Layout.fillWidth: true
                             text: row.title + (row.info ? " · " + row.info : "")
+                            textFormat: Text.PlainText
                             color: row.missing ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
                             elide: Text.ElideRight
                         }

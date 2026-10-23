@@ -220,6 +220,21 @@ fn properties_check_and_clamp_values() {
         (&values["depth"], &values["soft"], &values["style"]),
         (&json!(0.9), &json!(false), &json!("night"))
     );
+    let old = BTreeMap::from([
+        ("depth".to_string(), json!(3.0)),
+        ("soft".to_string(), json!("yes")),
+        ("gone".to_string(), json!(1)),
+    ]);
+    let values = effective(&props, &[&old, &global]);
+    assert_eq!((&values["depth"], &values["soft"]), (&json!(0.1), &json!(false)));
+    assert_eq!(
+        stale(&props, &[&old, &global]),
+        [
+            "depth no longer accepts 3.0; the default is used",
+            "gone no longer exists; the default is used",
+            "soft no longer accepts \"yes\"; the default is used"
+        ]
+    );
     let tier = Tier::detect(true, false);
     assert_eq!((tier, tier.max_fps(true, 60, None), tier.quality(false)), (Tier::T0, 15, Quality::Q0));
     let sample = Scene::from_json(include_str!("sample.json")).unwrap();

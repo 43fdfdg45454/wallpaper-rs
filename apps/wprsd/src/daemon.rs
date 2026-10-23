@@ -32,6 +32,7 @@ pub(crate) struct State {
     pub(crate) items: HashMap<PathBuf, String>,
     pub(crate) installed: Vec<Installed>,
     pub(crate) playing: HashMap<String, Playing>,
+    pub(crate) held: HashMap<String, String>,
     pub(crate) sidecars: crate::edits::Sidecars,
     pub(crate) depths: HashMap<PathBuf, crate::relief::Cached>,
     pub(crate) scenes: HashMap<PathBuf, ((i64, u64), Weak<crate::scenes::ScenePack>)>,

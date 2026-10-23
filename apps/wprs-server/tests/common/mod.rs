@@ -10,7 +10,9 @@ use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tempfile::TempDir;
-use wprs_format::{Fetch, Limits, Manifest, SCHEMA};
+use wprs_format::{
+    Content, Descriptor, Fetch, Limits, Manifest, Origin, OriginKind, Previews, Rating, SCHEMA, SCHEMA_V1,
+};
 use wprs_server::{App, Config};
 
 pub struct Server {
@@ -125,27 +127,47 @@ pub fn content_type(response: &Response) -> String {
 }
 
 pub fn package(dir: &Path, id: &str, version: &str) -> PathBuf {
-    let src = dir.join(format!("src-{id}-{version}"));
-    fs::create_dir_all(&src).unwrap();
+    build(
+        dir,
+        Manifest { schema: SCHEMA_V1.into(), preview: Some("preview.png".into()), ..manifest(id, version) },
+    )
+}
+
+pub fn package_v2(dir: &Path, id: &str, version: &str, rating: Rating) -> PathBuf {
+    let descriptors = if rating == Rating::Mature { vec![Descriptor::Sexual] } else { Vec::new() };
     let manifest = Manifest {
         schema: SCHEMA.into(),
+        previews: Some(Previews { thumbnail: Some("preview.png".into()), animated: None }),
+        content: Some(Content { rating, descriptors }),
+        photosensitive: Some(true),
+        origin: Some(Origin { kind: OriginKind::Original, derived_from: Vec::new() }),
+        ..manifest(id, version)
+    };
+    build(dir, manifest)
+}
+
+fn manifest(id: &str, version: &str) -> Manifest {
+    Manifest {
         id: id.into(),
         version: version.into(),
-        title: format!("Dawn {version}"),
+        title: format!("Dawn {version}").as_str().into(),
         description: "A quiet gradient".into(),
         authors: vec!["Example Studio".into()],
         license: "CC0-1.0".into(),
         kind: wprs_format::Kind::Image,
         entry: "image.png".into(),
-        preview: Some("preview.png".into()),
         tags: vec!["sky".into()],
-        properties: Default::default(),
-        presets: Vec::new(),
-    };
+        ..Default::default()
+    }
+}
+
+fn build(dir: &Path, manifest: Manifest) -> PathBuf {
+    let src = dir.join(format!("src-{}-{}", manifest.id, manifest.version));
+    fs::create_dir_all(&src).unwrap();
     fs::write(src.join("manifest.json"), manifest.to_json().unwrap()).unwrap();
     image::RgbImage::from_pixel(64, 32, image::Rgb([20, 60, 120])).save(src.join("image.png")).unwrap();
     image::RgbImage::from_pixel(32, 16, image::Rgb([200, 120, 40])).save(src.join("preview.png")).unwrap();
-    let out = dir.join(format!("{id}-{version}.wpak"));
+    let out = dir.join(format!("{}-{}.wpak", manifest.id, manifest.version));
     wprs_format::build(&src, &out, &Limits::default()).unwrap();
     out
 }

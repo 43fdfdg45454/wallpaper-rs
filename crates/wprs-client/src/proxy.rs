@@ -87,6 +87,7 @@ pub trait Library1 {
     fn thumbnail(&self, uid: &str, size: u32) -> Result<String>;
     fn request_thumbnails(&self, uids: &[&str], size: u32) -> Result<HashMap<String, String>>;
     fn apply(&self, uid: &str, output: &str, fit: &str, preset: &str) -> Result<()>;
+    fn confirm(&self, uids: &[&str], what: &str) -> Result<()>;
     #[zbus(signal)]
     fn thumbnail_ready(&self, uid: &str, size: u32, path: &str) -> Result<()>;
 }

@@ -290,7 +290,7 @@ cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/import/sunset.png"
 dbus-monitor --session "type='signal',interface='io.github.wallpaper_rs.Daemon1'" \
   "type='signal',interface='io.github.wallpaper_rs.Library1'" >"$WORK/library-signals.log" 2>&1 & pids+=($!)
 sleep 0.5
-[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(14, 7, [256, 512, 1024])" ] ||
+[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(15, 7, [256, 512, 1024])" ] ||
   fail "schema: $(bus Daemon1 GetSchema)"
 read -r source job < <(bus Library1 AddSource sb "$pics" true | out "' '.join(map(str, d))")
 wait_for 20 finished "$job" || fail "scan job: $(bus Daemon1 GetJob t "$job")"
@@ -366,7 +366,70 @@ retry 10 sh -c "'$BIN/probe' $serial7 3 | grep -q 'center bgra \[0, 255, 0, 255\
 [ "$(find "$XDG_CACHE_HOME/wallpaper-rs/blobs" -type f | wc -l)" = 1 ] || fail "the package entry was not materialized once"
 if ctl set "$WORK/import/calm.wpak" 2>"$WORK/wpak.out"; then fail "SetWallpaper accepted a package"; fi
 grep -q "import the package" "$WORK/wpak.out" || fail "package message: $(cat "$WORK/wpak.out")"
+mkdir -p "$WORK/storm" && cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/storm/image.png"
+cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/storm/preview.png"
+cat >"$WORK/storm/manifest.json" <<'STORM'
+{"schema": "wallpaper-rs.wpak/2", "id": "org.example.storm", "version": "1.0.0", "default_locale": "en",
+ "title": {"en": "Storm", "es": "Tormenta"}, "description": "Lightning over **the sea**.", "license": "CC0-1.0",
+ "kind": "image", "entry": "image.png", "previews": {"thumbnail": "preview.png"}, "origin": {"kind": "original"},
+ "content": {"rating": "mature", "descriptors": ["violence"]}, "photosensitive": true}
+STORM
+ctl pack check "$WORK/storm" | grep -q '^rating = mature (violence)$' || fail "pack check: $(ctl pack check "$WORK/storm")"
+ctl pack build "$WORK/storm" -o "$WORK/import/storm.wpak" >/dev/null
+job=$(bus Library1 Import asb 1 "$WORK/import/storm.wpak" false | out "d[0]")
+wait_for 20 finished "$job" || fail "rated package import: $(bus Daemon1 GetJob t "$job")"
+storm=$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")
+[ "$(reply "r['total']" Library1 Search suu "content:mature facet:photosensitive" 0 0)" = 1 ] || fail "rated search"
+ctl config library.hide_mature true
+[ "$(reply "r['total']" Library1 Search suu "storm" 0 0), $(reply "r['total']" Library1 Search suu "content:mature" 0 0)" = "0, 1" ] ||
+  fail "hidden mature content: $(ctl lib search storm)"
+ctl config library.hide_mature false
+refused "the user has not allowed it yet" Library1 Apply ssss "$storm" TEST-7 "" ""
+if ctl lib apply "$storm" -o TEST-7 </dev/null 2>"$WORK/flash.err"; then fail "a photosensitive package was applied without consent"; fi
+grep -q "photosensitive epilepsy.*lib confirm photosensitive" <(tr '\n' ' ' <"$WORK/flash.err") ||
+  fail "photosensitivity warning: $(cat "$WORK/flash.err")"
+ctl lib show "$storm" | grep -q '^photosensitive = yes, asks before it is shown$' || fail "lib show: $(ctl lib show "$storm")"
+ctl lib confirm photosensitive "$storm" && ctl lib apply "$storm" -o TEST-7
+expect "s['outputs']['TEST-7']['item']" "$storm"
+mkdir -p "$WORK/flash" && cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/flash/preview.png"
+echo '{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32]}, "layers": [{"id": "fill", "type": "solid", "color": "#ffffff"}]}' >"$WORK/flash/scene.json"
+flash() {
+  printf '{"schema": "wallpaper-rs.wpak/2", "id": "%s", "version": "1.0.0", "title": "Flash", "license": "CC0-1.0",
+    "kind": "scene", "entry": "scene.json", "previews": {"thumbnail": "preview.png"}, "origin": {"kind": "original"},
+    "content": {"rating": "general"}, "photosensitive": true}' "$1" >"$WORK/flash/manifest.json"
+  ctl pack build "$WORK/flash" -o "$WORK/import/flash.wpak" >/dev/null
+  job=$(bus Library1 Import asb 1 "$WORK/import/flash.wpak" false | out "d[0]")
+  wait_for 20 finished "$job" || fail "flashing scene import: $(bus Daemon1 GetJob t "$job")"
+}
+flash org.example.flash
+flashing=$(reply "r['items'][0]['uid']" Library1 Search suu "flash" 0 1)
+ctl lib confirm photosensitive "$flashing" && ctl lib apply "$flashing" -o TEST-7
+stormy=$(ctl profile save Stormy --no-options)
+flash org.example.flash2
+ctl profile use "$stormy"
+expect "s['outputs']['TEST-7']['item'], 'use the profile again' in (s['outputs']['TEST-7']['error'] or '')" "(None, True)"
+ctl profile off && ctl profile rm "$stormy"
+ctl lib apply "$storm" -o TEST-7
+expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['error']" "('$storm', None)"
+bus Library1 Remove asb 1 "$flashing" false >/dev/null
+[ "$(reply "r['item']['package']['confirmed'], r['about']['content'], r['about']['descriptors']" Library1 GetItem s "$storm")" = \
+  "(['photosensitive'], 'mature', ['violence'])" ] || fail "rated details: $(ctl lib show "$storm" --json)"
+sed -i 's/"1.0.0"/"1.1.0"/' "$WORK/storm/manifest.json"
+ctl pack build "$WORK/storm" -o "$WORK/import/storm-1.1.wpak" >/dev/null
+job=$(bus Library1 Import asb 1 "$WORK/import/storm-1.1.wpak" false | out "d[0]")
+wait_for 20 finished "$job" || fail "newer version import: $(bus Daemon1 GetJob t "$job")"
+newer=$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")
+wait_for 30 idle || fail "analysis did not finish: $(bus Daemon1 ListJobs)"
+sleep 0.5
+mark=$(wc -l <"$WORK/library-signals.log")
+ctl lib confirm mature "$storm"
+told() { tail -n "+$mark" "$WORK/library-signals.log" | grep -A5 "member=Changed" | grep -q "$newer"; }
+wait_for 5 told || fail "Confirm did not announce the other version: $(tail -n "+$mark" "$WORK/library-signals.log")"
+[ "$(reply "r['item']['package']['confirmed']" Library1 GetItem s "$newer")" = "['mature', 'photosensitive']" ] ||
+  fail "the other version does not keep the decisions: $(ctl lib show "$newer" --json)"
+bus Library1 Remove asb 1 "$newer" false >/dev/null
 ctl release TEST-7 && expect "list(s['outputs'])" "[]"
+bus Library1 Remove asb 1 "$storm" false >/dev/null
 bus Library1 Remove asb 1 "$calm" false >/dev/null
 [ "$(find "$XDG_CACHE_HOME/wallpaper-rs/blobs" -type f | wc -l)" = 0 ] || fail "the package entry was kept"
 bus Library1 Remove asb 1 "$sunset" true >/dev/null
@@ -811,7 +874,9 @@ listed() { [ "$(reply "r['total'], {i['package']['kind'] for i in r['items']}" L
 rescanned
 wait_for 10 listed "($count, {'scene'})" || fail "examples in the library: $(ctl lib search kind:scene)"
 example() { reply "r['items'][0]['uid']" Library1 Search suu "kind:scene $1" 0 1; }
-snow=$(example snowfall) && dusk=$(example dusk) && orbits=$(example orbits)
+snow=$(example snowfall) && dusk=$(example dusk) && orbits=$(example orbits) && flashing=$(example pulse)
+[ "$(reply "r['about']['photosensitive'], r['about']['languages'], 'audio' in r['item']['package']['facets']" Library1 GetItem s "$flashing")" = \
+  "(True, ['en', 'es'], True)" ] || fail "example metadata: $(ctl lib show "$flashing")"
 [ -s "$(bus Library1 Thumbnail su "$snow" 256 | out "d[0]")" ] || fail "no thumbnail from an example preview"
 read -r _ _ _ s13 < <(ctl stream TEST-13 160 90)
 digest() { "$BIN/probe" "$s13" 3 | sed -n 's/.* hash \([0-9a-f]*\)$/\1/p'; }

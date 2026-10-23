@@ -129,7 +129,7 @@ pub fn restore(cfg: &Config, src: &Path, force: bool) -> Result<()> {
     let seen = latest(&repo).filter(|_| same);
     for item in fs::read_dir(&repo).into_iter().flatten() {
         let item = item?;
-        let signed = ["root", "entry", "index", "revoked"].iter().any(|d| item.file_name() == *d);
+        let signed = ["root", "entry", "details", "index", "revoked"].iter().any(|d| item.file_name() == *d);
         match item.file_type()?.is_dir() {
             _ if same && signed => {}
             true => fs::remove_dir_all(item.path())?,

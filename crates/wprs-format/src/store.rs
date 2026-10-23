@@ -1,6 +1,6 @@
-use crate::entry::contents;
+use crate::entry::{contents, shards};
 use crate::repo::hex64;
-use crate::{Entry, Error, Result, Revoked, Root, Shard, require};
+use crate::{Details, Entry, Error, Result, Revoked, Root, Shard, require};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -39,6 +39,7 @@ pub(crate) struct Snapshot {
     pub state: State,
     pub root: Doc<Root>,
     pub entry: Doc<Entry>,
+    pub details: Option<Doc<Details>>,
     pub blobs: BTreeMap<String, Vec<u8>>,
     pub shards: Vec<Shard>,
     pub revoked: Revoked,
@@ -126,22 +127,40 @@ pub(crate) fn load(data: &Path, repo_id: &str) -> Result<Snapshot> {
     let root = Doc { value: serde_json::from_slice(&root_json)?, json: root_json, sig: root_sig };
     let entry: Doc<Entry> =
         Doc { value: serde_json::from_slice(&entry_json)?, json: entry_json, sig: entry_sig };
-    let blobs = entry.value.shards.iter().chain([&entry.value.revoked]).map(|blob| {
+    let details = match read("details.json") {
+        Err(Error::Io(e)) if e.kind() == io::ErrorKind::NotFound => None,
+        found => found
+            .and_then(|(json, sig)| Ok(Doc { value: serde_json::from_slice(&json)?, json, sig }))
+            .map(Some)?,
+    };
+    let value = details.as_ref().map(|d: &Doc<Details>| &d.value);
+    let blobs = shards(&entry.value, value).1.iter().chain([&entry.value.revoked]).map(|blob| {
         let bytes = fs::read(dir.join("blobs").join(format!("{}.json", blob.sha256)))?;
         blob.matches(&bytes).map(|()| (blob.sha256.clone(), bytes))
     });
     let blobs = blobs.collect::<Result<BTreeMap<_, _>>>()?;
-    let (shards, revoked) = contents(&entry.value, repo_id, &blobs)?;
-    Ok(Snapshot { state: json(&dir.join("state.json"))?, root, entry, blobs, shards, revoked })
+    let (shards, revoked) = contents(&entry.value, value, repo_id, &blobs)?;
+    let state = json(&dir.join("state.json"))?;
+    Ok(Snapshot { state, root, entry, details, blobs, shards, revoked })
 }
 
 pub(crate) fn commit(data: &Path, snap: &Snapshot) -> Result<()> {
     let dir = repo_dir(data, &snap.state.repo_id)?;
-    let (root, entry) = (&snap.root, &snap.entry);
-    let docs = [("root.json", &root.json, &root.sig), ("entry.json", &entry.json, &entry.sig)];
-    for (name, json, sig) in docs {
-        write(&dir.join(name), json, true)?;
-        write(&dir.join(format!("{name}.minisig")), sig.as_bytes(), true)?;
+    let (root, entry, details) = (&snap.root, &snap.entry, snap.details.as_ref());
+    let docs = [
+        ("root.json", Some((&root.json, &root.sig))),
+        ("entry.json", Some((&entry.json, &entry.sig))),
+        ("details.json", details.map(|d| (&d.json, &d.sig))),
+    ];
+    for (name, doc) in docs {
+        let sig = format!("{name}.minisig");
+        match doc {
+            Some((json, sig_text)) => {
+                write(&dir.join(name), json, true)?;
+                write(&dir.join(sig), sig_text.as_bytes(), true)?;
+            }
+            None => [name, &sig].iter().for_each(|f| drop(fs::remove_file(dir.join(f)))),
+        }
     }
     for (sha, bytes) in &snap.blobs {
         let path = dir.join("blobs").join(format!("{sha}.json"));

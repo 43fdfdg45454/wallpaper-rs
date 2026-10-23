@@ -52,7 +52,7 @@ impl SceneState {
         }
         let (scripts, seed) = (&spec.pack.scripts, runtime.scene.clock.seed);
         let host = (!still && runtime.uses().scripts)
-            .then(|| Host::new(SCRIPT_HOST, &["--script-host"], scripts, seed));
+            .then(|| Host::new(SCRIPT_HOST, &["--script-host"], scripts, seed, &spec.pack.locale));
         let read = |word| scripts.iter().any(|(_, source)| source.contains(word));
         let (reads, quality) = ((read("audio"), read("cursor")), power.quality(&runtime));
         let (view, tick, pointer, calm, error, due, uses) = Default::default();

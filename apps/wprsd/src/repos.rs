@@ -9,11 +9,12 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
-use wprs_core::dbus::error::{EXISTS, STALE};
+use wprs_core::dbus::error::{EXISTS, NEWER, STALE};
+use wprs_core::locale::languages;
 use wprs_core::model::{
     BrowsePage, JobKind, MODEL, RefreshOutput, Repo, RepoPackage, RepoWarning, ReposReply, Update,
 };
-use wprs_format::{Anchor, RepoInfo};
+use wprs_format::{Anchor, Rated, RepoInfo};
 use wprs_providers::HttpFetch;
 
 impl From<wprs_format::Error> for Error {
@@ -25,6 +26,7 @@ impl From<wprs_format::Error> for Error {
             F::Invalid { reason, .. } => invalid(reason),
             F::UnsafePath(_) => invalid(e.to_string()),
             F::Stale(_) => Error::Named(STALE, e.to_string()),
+            F::Newer(_) => Error::Named(NEWER, e.to_string()),
             F::Io(io) if io.kind() == std::io::ErrorKind::Interrupted => Error::Cancelled,
             e => failed(e.to_string()),
         }
@@ -169,7 +171,12 @@ impl Daemon {
             match updated {
                 Ok(outcome) => {
                     lock(&self.remote.repo_errors).remove(&id);
+                    let latest = self.latest().unwrap_or_default();
                     let update = |u: wprs_format::Update| Update {
+                        changes: latest
+                            .get(&(id.clone(), u.id.clone()))
+                            .map(|l| l.0.clone())
+                            .unwrap_or_default(),
                         repo_id: id.clone(),
                         id: u.id,
                         installed: u.installed,
@@ -240,10 +247,18 @@ impl Daemon {
         let serial = self.changes.serial();
         let names: HashMap<String, String> =
             wprs_format::repos(&self.store.data, now())?.into_iter().map(|r| (r.repo_id, r.name)).collect();
-        let items = wprs_format::browse(&self.store.data, query)?;
+        let hide = self.state().config.library.hide_mature;
+        let mature = |i: &wprs_format::Item| i.release.content.as_ref().is_some_and(Rated::mature);
+        let items: Vec<_> = wprs_format::browse(&self.store.data, query)?
+            .into_iter()
+            .filter(|i| !hide || !mature(i))
+            .collect();
         let total = items.len() as u32;
+        let langs = languages();
         let package = |item: wprs_format::Item| {
             let release = item.release;
+            let (title, description) = (release.title_in(&langs), release.description_in(&langs));
+            let changes = release.changes.as_ref().map(|c| c.pick(&langs)).unwrap_or_default();
             let update =
                 !item.installed.is_empty() && item.installed.iter().all(|v| newer(&release.version, v));
             RepoPackage {
@@ -253,8 +268,8 @@ impl Daemon {
                 author: item.author,
                 version: release.version,
                 kind: release.kind.to_string(),
-                title: release.title,
-                description: release.description,
+                title,
+                description,
                 tags: release.tags,
                 license: release.license,
                 authors: release.authors,
@@ -264,6 +279,10 @@ impl Daemon {
                 versions: item.versions,
                 installed: item.installed,
                 update,
+                content: release.content.map(|c| if c.mature() { "mature" } else { "general" }.into()),
+                photosensitive: release.photosensitive,
+                facets: release.facets,
+                changes,
             }
         };
         let packages = items.into_iter().skip(offset as usize).take(limit as usize).map(package).collect();

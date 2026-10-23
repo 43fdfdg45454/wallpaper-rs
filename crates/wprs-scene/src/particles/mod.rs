@@ -48,7 +48,7 @@ pub struct System {
 }
 
 impl System {
-    pub fn listens(&self) -> (bool, bool) {
+    pub fn listens(&self) -> (bool, bool, bool) {
         let cue = |c| self.emitters.iter().any(|e| e.burst.as_ref().is_some_and(|b| b.on == Some(c)));
         let target = |t: &Target| matches!(t, Target::Follow(_));
         let follows = self.forces.iter().any(|f| match f {
@@ -57,7 +57,8 @@ impl System {
             | Force::Orbit { center: t, .. } => target(t),
             _ => false,
         });
-        (cue(Cue::Beat), cue(Cue::Click) || follows || self.emitters.iter().any(|e| e.follow.is_some()))
+        let pointer = cue(Cue::Click) || follows || self.emitters.iter().any(|e| e.follow.is_some());
+        (cue(Cue::Beat), pointer, cue(Cue::Click))
     }
 
     pub fn overdraw(&self, canvas: [u32; 2]) -> f32 {

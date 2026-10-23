@@ -34,6 +34,12 @@ class Item(json: JSONObject) {
     val height = json.optInt("height")
     val millis = json.optInt("duration_ms")
     val favorite = json.optBoolean("favorite")
+    val about: String = json.optJSONObject("about")?.optString("description").orEmpty()
+    val lacks = json.optJSONArray("lacks")?.let { list -> List(list.length(), list::getString) }.orEmpty()
+    private val pack = json.optJSONObject("package")
+    private val confirmed = pack?.optJSONArray("confirmed")?.let { list -> List(list.length(), list::getString) }.orEmpty()
+    val mature = pack?.optString("content") == "mature" && "mature" !in confirmed
+    val flashing = pack?.optBoolean("photosensitive") == true && "photosensitive" !in confirmed
 }
 
 class Playlist(json: JSONObject) {

@@ -21,14 +21,28 @@ QQC2.ItemDelegate {
     required property string revoked
     required property bool selected
     required property string tags
+    required property bool mature
+    required property bool flashing
 
     signal picked(bool only)
     signal opened
 
     highlighted: selected
-    QQC2.ToolTip.text: [title, info, tags, broken, revoked ? Labels.value(revoked) : ""].filter(t => t).join("\n")
-    QQC2.ToolTip.visible: hovered
-    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+
+    QQC2.ToolTip {
+        id: tip
+
+        visible: tile.hovered
+        delay: Kirigami.Units.toolTipDelay
+        text: [tile.title, tile.info, tile.tags, tile.broken, tile.revoked ? Labels.value(tile.revoked) : "", tile.mature ? App.tr("Mature content: open the details to show it") : "", tile.flashing ? App.tr("Flashes or shows fast patterns; playlists skip it until you allow it in its details") : ""].filter(t => t).join("\n")
+
+        contentItem: QQC2.Label {
+            text: tip.text
+            textFormat: Text.PlainText
+            wrapMode: Text.Wrap
+            color: tip.palette.toolTipText
+        }
+    }
 
     contentItem: ColumnLayout {
         Rectangle {
@@ -41,8 +55,8 @@ QQC2.ItemDelegate {
                 source: tile.thumb
                 asynchronous: true
                 fillMode: Image.PreserveAspectFit
-                sourceSize.width: width * Screen.devicePixelRatio
-                sourceSize.height: height * Screen.devicePixelRatio
+                sourceSize.width: tile.mature ? 12 : width * Screen.devicePixelRatio
+                sourceSize.height: tile.mature ? 12 : height * Screen.devicePixelRatio
             }
 
             Row {
@@ -51,7 +65,7 @@ QQC2.ItemDelegate {
                 anchors.margins: Kirigami.Units.smallSpacing
 
                 Repeater {
-                    model: [tile.favorite && "emblem-favorite", tile.kind === "video" && "media-playback-start", tile.kind === "package" && "package-x-generic", tile.kind === "scene" && "view-media-visualization", (tile.missing || tile.broken) && "emblem-error", tile.revoked && "emblem-unavailable"].filter(icon => icon)
+                    model: [tile.favorite && "emblem-favorite", tile.kind === "video" && "media-playback-start", tile.kind === "package" && "package-x-generic", tile.kind === "scene" && "view-media-visualization", (tile.missing || tile.broken) && "emblem-error", tile.revoked && "emblem-unavailable", tile.mature && "view-private", tile.flashing && "dialog-warning"].filter(icon => icon)
 
                     delegate: Kirigami.Icon {
                         required property string modelData
@@ -67,6 +81,7 @@ QQC2.ItemDelegate {
         QQC2.Label {
             Layout.fillWidth: true
             text: tile.title
+            textFormat: Text.PlainText
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
             color: tile.missing ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor

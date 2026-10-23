@@ -17,8 +17,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -32,9 +34,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
@@ -50,7 +54,10 @@ private val FILTERS = listOf(
 fun Library(main: Main, open: (String) -> Unit) = Box(Modifier.fillMaxSize()) {
     var filter by rememberSaveable { mutableIntStateOf(0) }
     val query = FILTERS[filter].second
-    val items by loaded<List<Item>?>(null, main.revision.intValue, query) { fetch("items", "query" to query) }
+    val languages = listOf(LocalLocale.current.toLanguageTag().replace('-', '_'))
+    val items by loaded<List<Item>?>(null, main.revision.intValue, query, languages) {
+        fetch("items", "query" to query, "languages" to languages)
+    }
     Column {
         Header(stringResource(R.string.library))
         Choices(null, FILTERS.map { (label, query) -> query to stringResource(label) }, query) { chosen ->
@@ -85,7 +92,10 @@ fun Library(main: Main, open: (String) -> Unit) = Box(Modifier.fillMaxSize()) {
 fun Thumb(item: Item, modifier: Modifier = Modifier) {
     val bitmap by thumbnail(item)
     Box(modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceVariant)) {
-        bitmap?.let { Image(it, item.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+        val hidden = if (item.mature) Modifier.blur(24.dp) else Modifier
+        bitmap?.let { Image(it, item.title, Modifier.fillMaxSize().then(hidden), contentScale = ContentScale.Crop) }
+        if (item.mature) Icon(Icons.Default.Lock, stringResource(R.string.mature), Modifier.align(Alignment.Center), Color.White)
+        if (item.flashing) Icon(Icons.Default.Warning, stringResource(R.string.flashing), Modifier.align(Alignment.TopEnd).padding(4.dp), Color.White)
         val corner = Modifier.align(Alignment.BottomStart).padding(4.dp)
         if (item.video) Icon(Icons.Default.PlayArrow, null, corner, Color.White)
         if (item.scene) Icon(Icons.Default.Star, null, corner, Color.White)

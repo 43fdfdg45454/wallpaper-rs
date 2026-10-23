@@ -79,6 +79,14 @@ model! {
         pub versions: Vec<String>,
         pub installed: Vec<String>,
         pub update: bool,
+        #[serde(default)]
+        pub content: Option<String>,
+        #[serde(default)]
+        pub photosensitive: Option<bool>,
+        #[serde(default)]
+        pub facets: Vec<String>,
+        #[serde(default)]
+        pub changes: String,
     }
 
     pub struct BrowsePage {
@@ -100,11 +108,20 @@ model! {
         pub revoked: Option<Reason>,
         pub item: Option<Uid>,
         pub update: Option<String>,
+        #[serde(default)]
+        pub changes: String,
     }
 
     pub struct InstalledReply { pub model: u32, pub serial: u64, pub packages: Vec<InstalledPackage> }
 
-    pub struct Update { pub repo_id: String, pub id: String, pub installed: String, pub available: String }
+    pub struct Update {
+        pub repo_id: String,
+        pub id: String,
+        pub installed: String,
+        pub available: String,
+        #[serde(default)]
+        pub changes: String,
+    }
 
     pub struct RefreshOutput { pub repos: Vec<Repo>, pub updates: Vec<Update>, pub revoked: Vec<InstalledPackage> }
 }

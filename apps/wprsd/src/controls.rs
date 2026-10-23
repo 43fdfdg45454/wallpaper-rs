@@ -45,6 +45,10 @@ impl Daemon {
         if key.starts_with("library.") {
             self.watch_sources();
         }
+        if key == "library.hide_mature" {
+            self.library_changed(Vec::new());
+            self.changes.changed("repos", Vec::new());
+        }
         if key.starts_with("layout.") {
             self.respan(self.state());
         }
@@ -82,6 +86,7 @@ impl Daemon {
         change: impl FnOnce(&mut Config) -> Result<(), String>,
     ) -> anyhow::Result<()> {
         self.update_config(change)?;
+        self.state().held.retain(|name, _| !output.is_empty() && name != output);
         let all = output.is_empty() || crate::edits::spans(&self.state());
         match all {
             true => self.configure_all(),

@@ -98,6 +98,8 @@ impl ItemModel {
             10 => text(&item.revoked.map(grid::name).unwrap_or_default()),
             11 => QVariant::from(&row.selected),
             12 => text(&item.tags.join(", ")),
+            13 => QVariant::from(&item.package.as_ref().is_some_and(|p| p.asks("mature"))),
+            14 => QVariant::from(&item.package.as_ref().is_some_and(|p| p.asks("photosensitive"))),
             _ => QVariant::default(),
         }
     }

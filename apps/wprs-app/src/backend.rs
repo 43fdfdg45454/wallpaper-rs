@@ -40,6 +40,10 @@ pub mod qobject {
         fn requested(self: &Backend) -> QString;
         #[qinvokable]
         fn path(self: &Backend, url: &QString) -> QString;
+        #[qinvokable]
+        fn markup(self: &Backend, text: &QString) -> QString;
+        #[qinvokable]
+        fn plain(self: &Backend, text: &QString) -> QString;
         #[qsignal]
         fn replied(self: Pin<&mut Backend>, tag: QString, json: QString);
         #[qsignal]
@@ -118,6 +122,14 @@ impl Backend {
 
     pub fn path(&self, url: &QString) -> QString {
         QString::from(&app::path(&url.to_string()).unwrap_or_default())
+    }
+
+    pub fn markup(&self, text: &QString) -> QString {
+        QString::from(&wprs_core::markup::html(&text.to_string()))
+    }
+
+    pub fn plain(&self, text: &QString) -> QString {
+        QString::from(&wprs_core::markup::plain(&text.to_string()))
     }
 
     pub fn run(

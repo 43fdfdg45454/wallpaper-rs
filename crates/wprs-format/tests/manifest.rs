@@ -104,7 +104,7 @@ fn licenses_must_be_spdx_expressions() {
 #[test]
 fn text_fields_are_bounded() {
     assert_eq!(field(with(|m| m.title = " ".into())), "title");
-    assert_eq!(field(with(|m| m.title = "t".repeat(129))), "title");
+    assert_eq!(field(with(|m| m.title = "t".repeat(129).as_str().into())), "title");
     assert_eq!(field(with(|m| m.authors.push(String::new()))), "authors");
     assert_eq!(field(with(|m| m.tags = vec!["tag".into(); 33])), "tags");
     assert_eq!(field(with(|m| m.tags.push("t".repeat(33)))), "tags");

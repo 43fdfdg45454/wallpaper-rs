@@ -113,11 +113,13 @@ fn content(c: &Config) -> Markup {
         ul {
             li { "Wallpapers only: images, videos and scenes in .wpak packages with a preview image." }
             li { "Accepted licences: " (c.licenses.join(", ")) "." }
-            li { "No adult or mature content, no illegal content, no malware, no impersonation." }
+            li { "No adult or mature content, no illegal content, no malware, no impersonation. Packages \
+                rated mature in their manifest are refused." }
             li { "Upload only your own work or work whose licence allows sharing, and credit its authors." }
             li { "Content converted from other formats or products needs proof that you may share it." }
-            li { "Mark flashing or fast-changing animations in the description: "
-                 "they can affect people with photosensitive epilepsy." }
+            li { "Packages that flash or show fast patterns must set \"photosensitive\": true in their \
+                wallpaper-rs.wpak/2 manifest: they can trigger seizures in people with photosensitive \
+                epilepsy, and clients warn before showing them." }
         }
     }
 }

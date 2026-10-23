@@ -5994,6 +5994,7 @@ version = "0.3.0"
 dependencies = [
  "base64 0.23.1",
  "chrono",
+ "image",
  "minisign",
  "minisign-verify",
  "semver",
@@ -6002,6 +6003,7 @@ dependencies = [
  "sha2 0.11.1",
  "tempfile",
  "thiserror 2.0.21",
+ "wprs-core",
  "wprs-scene",
  "zip",
 ]
@@ -6018,6 +6020,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "ulid",
+ "wprs-core",
  "wprs-format",
  "wprs-schedule",
 ]

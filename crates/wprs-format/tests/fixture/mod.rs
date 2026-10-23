@@ -7,8 +7,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 use wprs_format::{
-    Added, Fetch, FileFetch, Keypair, Kind, Limits, Manifest, Published, SCHEMA, Settings, Signer, add,
-    build, init, keygen, publish, sign_root, sign_source,
+    Added, Content, Descriptor, Fetch, FileFetch, Keypair, Kind, Limits, Manifest, Origin, OriginKind,
+    Previews, Published, Rating, SCHEMA, SCHEMA_V1, Settings, Signer, Text, add, build, init, keygen,
+    publish, sign_root, sign_source,
 };
 
 pub const NOW: i64 = 1_800_000_000;
@@ -86,6 +87,36 @@ impl Repo {
         add(&self.dir, &out, Some("studio"), NOW).unwrap()
     }
 
+    pub fn add_v2(&self, id: &str, version: &str) -> Added {
+        let src = self.tmp.path().join(format!("v2-{id}-{version}"));
+        fs::create_dir_all(&src).unwrap();
+        let title =
+            BTreeMap::from([("en".to_string(), "Storm".to_string()), ("es".into(), "Tormenta".into())]);
+        let manifest = Manifest {
+            schema: SCHEMA.into(),
+            title: Text::Localized(title),
+            default_locale: Some("en".into()),
+            changes: Some("- Darker clouds".into()),
+            content: Some(Content { rating: Rating::Mature, descriptors: vec![Descriptor::Violence] }),
+            photosensitive: Some(true),
+            origin: Some(Origin { kind: OriginKind::Original, derived_from: Vec::new() }),
+            preview: None,
+            previews: Some(Previews {
+                thumbnail: Some("preview.png".into()),
+                animated: Some("loop.gif".into()),
+            }),
+            ..manifest(id, version)
+        };
+        fs::write(src.join("manifest.json"), manifest.to_json().unwrap()).unwrap();
+        fs::write(src.join("image.png"), picture(image::ImageFormat::Png)).unwrap();
+        fs::write(src.join("preview.png"), picture(image::ImageFormat::Png)).unwrap();
+        fs::write(src.join("loop.gif"), picture(image::ImageFormat::Gif)).unwrap();
+        sign_source(&src, &signer(&self.author)).unwrap();
+        let out = self.tmp.path().join(format!("{id}-{version}.wpak"));
+        build(&src, &out, &Limits::default()).unwrap();
+        add(&self.dir, &out, Some("studio"), NOW).unwrap()
+    }
+
     pub fn publish(&self, now: i64) -> Published {
         publish(&self.dir, &signer(&self.online), 7, now).unwrap()
     }
@@ -95,6 +126,12 @@ impl Repo {
         copy_dir(&self.dir, &to);
         to
     }
+}
+
+fn picture(format: image::ImageFormat) -> Vec<u8> {
+    let mut out = io::Cursor::new(Vec::new());
+    image::RgbImage::from_pixel(64, 36, [20, 30, 40].into()).write_to(&mut out, format).unwrap();
+    out.into_inner()
 }
 
 pub fn key() -> Keypair {
@@ -115,10 +152,10 @@ pub fn file_url(dir: &Path) -> String {
 
 pub fn manifest(id: &str, version: &str) -> Manifest {
     Manifest {
-        schema: SCHEMA.into(),
+        schema: SCHEMA_V1.into(),
         id: id.into(),
         version: version.into(),
-        title: format!("Sky at {}", id.rsplit('.').next().unwrap()),
+        title: Text::Plain(format!("Sky at {}", id.rsplit('.').next().unwrap())),
         description: "A calm gradient".into(),
         authors: vec!["Example Studio".into()],
         license: "CC0-1.0".into(),
@@ -126,8 +163,7 @@ pub fn manifest(id: &str, version: &str) -> Manifest {
         entry: "image.png".into(),
         preview: Some("preview.webp".into()),
         tags: vec!["sky".into()],
-        properties: BTreeMap::new(),
-        presets: Vec::new(),
+        ..Default::default()
     }
 }
 

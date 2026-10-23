@@ -22,7 +22,8 @@ const ORIENTATIONS: [(&str, &str); 3] = [
     ("landscape", "i.width > i.height"),
     ("square", "i.width = i.height"),
 ];
-const KEYS: [(&str, &str); 15] = [
+const FACETED: &str = "' ' || i.facets || ' ' LIKE '% ' || ? || ' %'";
+const KEYS: [(&str, &str); 17] = [
     ("tag", "a tag name"),
     ("kind", "image, video, package or scene"),
     ("fav", "nothing, yes or no"),
@@ -37,6 +38,8 @@ const KEYS: [(&str, &str); 15] = [
     ("used", "never or an age like <7d"),
     ("missing", "nothing, yes or no"),
     ("color", "a color like #3366ff"),
+    ("content", "general, mature or unrated"),
+    ("facet", "a package facet such as audio, pointer, sound, customizable, photosensitive or 4k"),
     ("sort", "added, title, rating, used, random or random:<seed>, with a - suffix for descending"),
 ];
 
@@ -63,7 +66,12 @@ fn parse(key: &str, value: &str, now: i64) -> Option<(String, Vec<Value>)> {
     let int = |n: i64| vec![Value::Integer(n)];
     let text = |text: &str| vec![Value::Text(text.into())];
     let (sql, params) = match key {
-        "tag" | "in" | "source" | "audio" if value.is_empty() => return None,
+        "tag" | "in" | "source" | "audio" | "facet" if value.is_empty() => return None,
+        "facet" => (FACETED.into(), text(&lower)),
+        "content" if lower == "unrated" => ("i.kind = 'package' AND i.content IS NULL".into(), vec![]),
+        "content" if ["general", "mature"].contains(&lower.as_str()) => {
+            ("i.content = ?".into(), text(&lower))
+        }
         "tag" => (TAGGED.into(), text(value)),
         "in" => (LISTED.into(), [text(value), text(value)].concat()),
         "source" => ("i.source_id = (SELECT id FROM sources WHERE uid = ?)".into(), text(value)),

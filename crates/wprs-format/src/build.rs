@@ -15,6 +15,7 @@ const STORED: &[&str] = &[
 
 pub fn build(source: impl AsRef<Path>, out: impl AsRef<Path>, limits: &Limits) -> Result<String> {
     let source = source.as_ref();
+    crate::fill(source)?;
     let manifest = Manifest::from_json(&fs::read(source.join(MANIFEST))?)?;
     let mut files = Vec::new();
     collect(source, "", &mut files)?;
@@ -31,7 +32,7 @@ pub fn build(source: impl AsRef<Path>, out: impl AsRef<Path>, limits: &Limits) -
         io::copy(&mut File::open(source.join(&file.path))?.take(file.size), &mut zip)?;
     }
     zip.finish()?.flush()?;
-    if manifest.kind == Kind::Scene
+    if (manifest.kind == Kind::Scene || manifest.v2())
         && let Err(e) = crate::open(out.as_ref(), limits)
     {
         fs::remove_file(out.as_ref())?;
@@ -66,7 +67,7 @@ impl Write for Hasher {
     }
 }
 
-fn collect(root: &Path, prefix: &str, files: &mut Vec<FileEntry>) -> Result<()> {
+pub(crate) fn collect(root: &Path, prefix: &str, files: &mut Vec<FileEntry>) -> Result<()> {
     for item in fs::read_dir(root.join(prefix))? {
         let item = item?;
         let name =

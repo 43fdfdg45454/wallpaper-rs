@@ -181,6 +181,8 @@ mod tests {
             path,
             id,
             title,
+            languages: Vec::new(),
+            locale: String::new(),
             scene,
             properties,
             presets,

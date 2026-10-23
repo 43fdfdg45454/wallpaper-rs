@@ -276,6 +276,38 @@ fn scenes() {
     let (pulse, path) =
         (pulse["uid"].as_str().unwrap().to_owned(), pulse["path"].as_str().unwrap().to_owned());
     assert!(listed.as_array().unwrap().iter().all(|i| i["thumb"].is_string() && i["width"].is_u64()));
+    let refused = ask(json!({ "op": "pick", "choice": { "item": pulse } }));
+    assert!(refused["error"].as_str().unwrap().contains("photosensitive"), "{refused}");
+    let about = ask(json!({ "op": "item", "uid": pulse, "languages": ["es_ES"] }));
+    assert_eq!(
+        (&about["package"]["photosensitive"], &about["about"]["title"], &about["title"]),
+        (&json!(true), &json!("Pulso"), &json!("Pulso"))
+    );
+    let spanish = ask(json!({ "op": "items", "query": "kind:scene", "languages": ["es_ES"] }));
+    let titles: BTreeSet<_> =
+        spanish.as_array().unwrap().iter().map(|i| i["title"].as_str().unwrap()).collect();
+    assert!(titles.contains("Pulso") && titles.contains("Colinas al atardecer"), "{titles:?}");
+    let lacks = |title: &str| {
+        let found = listed.as_array().unwrap().iter().find(|i| i["title"] == title).unwrap();
+        ask(json!({ "op": "item", "uid": found["uid"] }))["lacks"].clone()
+    };
+    assert_eq!(
+        [lacks("Orbits"), lacks("Snowfall"), lacks("Pulse")],
+        [json!(["scripts"]), json!(["sound"]), json!([])]
+    );
+    assert!(
+        about["about"]["description"].as_str().unwrap().contains("\n\nDestella con el ritmo y"),
+        "{about}"
+    );
+    assert_eq!(ask(json!({ "op": "confirm", "uid": pulse, "what": "photosensitive" })), Value::Null);
+    assert_eq!(ask(json!({ "op": "item", "uid": pulse }))["package"]["confirmed"], json!(["photosensitive"]));
+    assert_eq!(ask(json!({ "op": "pick", "choice": { "item": pulse } })), Value::Null);
+    ask(json!({ "op": "pick", "choice": null }));
+    let dusk = listed.as_array().unwrap().iter().find(|i| i["title"] == "Dusk hills").unwrap();
+    let dusk = ask(json!({ "op": "scene", "uid": dusk["uid"], "languages": ["es"] }));
+    let labels: Vec<&str> =
+        dusk["fields"].as_array().unwrap().iter().filter_map(|f| f["label"].as_str()).collect();
+    assert!(labels.contains(&"Momento del día") && !labels.iter().any(|l| l.starts_with('@')), "{labels:?}");
     let form = ask(json!({ "op": "scene", "uid": pulse, "languages": ["es"] }));
     assert_eq!((&form["uses"]["audio"], &form["granted"]["audio"]), (&json!(true), &json!(false)));
     let field = form["fields"].as_array().unwrap()[0].clone();
@@ -338,7 +370,7 @@ fn scenes() {
     let layers = json!([{ "id": "clip", "type": "video", "video": "clip" }]);
     let text = json!({ "schema": wprs_scene::SCHEMA, "canvas": { "size": [64, 32] }, "assets": { "clip": { "path": "clip.webm" } }, "layers": layers });
     fs::write(source.path().join("scene.json"), text.to_string()).unwrap();
-    let manifest = json!({ "schema": wprs_format::SCHEMA, "id": "org.example.clip", "version": "1.0.0", "title": "Clip", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json" });
+    let manifest = json!({ "schema": wprs_format::SCHEMA, "id": "org.example.clip", "version": "1.0.0", "title": "Clip", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "content": { "rating": "general" }, "photosensitive": false, "origin": { "kind": "original" } });
     fs::write(source.path().join("manifest.json"), manifest.to_string()).unwrap();
     let built = source.path().join("clip.wpak");
     wprs_format::build(source.path(), &built, &wprs_format::Limits::default()).unwrap();

@@ -6,7 +6,8 @@ use std::path::PathBuf;
 
 pub(crate) const SELECT_ITEMS: &str = "SELECT i.*, s.uid AS source, \
     (SELECT group_concat(t.name, char(31) ORDER BY t.name) FROM item_tags it JOIN tags t ON t.id = it.tag_id \
-    WHERE it.item_id = i.id) AS tag_list FROM items i LEFT JOIN sources s ON s.id = i.source_id";
+    WHERE it.item_id = i.id) AS tag_list, (SELECT group_concat(c.what, ' ' ORDER BY c.what) FROM confirmations c \
+    WHERE c.pkg_id = i.pkg_id) AS confirmed FROM items i LEFT JOIN sources s ON s.id = i.source_id";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Meta {
@@ -24,6 +25,10 @@ pub struct PackageInfo {
     pub version: String,
     pub kind: String,
     pub license: String,
+    pub content: Option<String>,
+    pub photosensitive: Option<bool>,
+    pub facets: Vec<String>,
+    pub confirmed: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -48,12 +53,20 @@ pub struct Item {
 }
 
 pub(crate) fn item_row(row: &Row<'_>) -> rusqlite::Result<Item> {
+    let words = |column: &str| -> rusqlite::Result<Vec<String>> {
+        let text: Option<String> = row.get(column)?;
+        Ok(text.iter().flat_map(|t| t.split_whitespace()).map(String::from).collect())
+    };
     let package = match row.get::<_, Option<String>>("pkg_id")? {
         Some(id) => Some(PackageInfo {
             id,
             version: row.get("pkg_version")?,
             kind: row.get("pkg_type")?,
             license: row.get("license")?,
+            content: row.get("content")?,
+            photosensitive: row.get("photosensitive")?,
+            facets: words("facets")?,
+            confirmed: words("confirmed")?,
         }),
         None => None,
     };

@@ -7,6 +7,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+wprs-core.workspace = true
 wprs-format.workspace = true
 wprs-schedule.workspace = true
 rusqlite.workspace = true

@@ -20,6 +20,8 @@ pub struct ScenePack {
     pub path: PathBuf,
     pub id: String,
     pub title: String,
+    pub languages: Vec<String>,
+    pub locale: String,
     pub scene: Arc<Scene>,
     pub properties: BTreeMap<String, Property>,
     pub presets: Vec<Preset>,
@@ -32,17 +34,24 @@ pub struct ScenePack {
 
 impl ScenePack {
     pub fn values(&self, layers: &[&BTreeMap<String, toml::Value>]) -> Values {
-        let json: Vec<Values> = layers
-            .iter()
-            .map(|l| l.iter().filter_map(|(k, v)| Some((k.clone(), serde_json::to_value(v).ok()?))).collect())
-            .collect();
-        wprs_scene::effective(&self.properties, &json.iter().collect::<Vec<_>>())
+        wprs_scene::effective(&self.properties, &json(layers).iter().collect::<Vec<_>>())
+    }
+
+    pub fn stale(&self, layers: &[&BTreeMap<String, toml::Value>]) -> Vec<String> {
+        wprs_scene::stale(&self.properties, &json(layers).iter().collect::<Vec<_>>())
     }
 
     pub fn files(&self, values: &Values) -> Vec<String> {
         let files = self.properties.iter().filter(|(_, p)| matches!(p.control, Control::File { .. }));
         files.filter_map(|(id, _)| values.get(id)?.as_str().map(String::from)).collect()
     }
+}
+
+fn json(layers: &[&BTreeMap<String, toml::Value>]) -> Vec<Values> {
+    let pairs = |l: &&BTreeMap<String, toml::Value>| {
+        l.iter().filter_map(|(k, v)| Some((k.clone(), serde_json::to_value(v).ok()?))).collect()
+    };
+    layers.iter().map(pairs).collect()
 }
 
 fn kind(path: &str) -> String {
@@ -111,13 +120,17 @@ impl Daemon {
                 .map_err(|_| anyhow::anyhow!("{} is not UTF-8 text", script.path))?;
             scripts.push((script.path.clone(), source));
         }
-        let m = &package.manifest;
+        let m = package.manifest.localized();
+        let locale = m.locale_in(&wprs_core::locale::languages());
+        let languages = m.languages(&wprs_core::locale::languages());
         let properties = scene.properties(&m.properties, &crate::words::volume());
         let clips = Bank::new(sounds.iter().map(|(_, path)| path.clone()).collect());
         let pack = Arc::new(ScenePack {
             path: wpak.to_owned(),
             id: m.id.clone(),
-            title: m.title.clone(),
+            title: m.title.pick(&languages),
+            languages,
+            locale,
             scene: Arc::new(scene),
             properties,
             presets: m.presets.clone(),

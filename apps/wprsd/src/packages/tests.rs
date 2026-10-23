@@ -24,7 +24,7 @@ fn repository(dir: &Path) -> String {
     for version in ["1.0.0", "1.1.0"] {
         let src = dir.join(version);
         fs::create_dir_all(&src).unwrap();
-        let manifest = json!({"schema": wprs_format::SCHEMA, "id": "org.example.dawn", "version": version,
+        let manifest = json!({"schema": wprs_format::SCHEMA_V1, "id": "org.example.dawn", "version": version,
             "title": "Dawn", "license": "CC0-1.0", "kind": "image", "entry": "image.png", "preview": "preview.png"});
         fs::write(src.join("manifest.json"), manifest.to_string()).unwrap();
         let green = image::RgbaImage::from_pixel(8, 4, image::Rgba([0, 255, 0, 255]));

@@ -46,7 +46,8 @@ pub fn seed() -> u32 {
 }
 
 pub fn excluded(lib: &Library, revoked: &[PathBuf]) -> HashSet<String> {
-    revoked.iter().filter_map(|p| lib.resolve_item(p.to_str()?).ok()).collect()
+    let flashing = lib.unconfirmed_flashing().unwrap_or_default();
+    revoked.iter().filter_map(|p| lib.resolve_item(p.to_str()?).ok()).chain(flashing).collect()
 }
 
 pub fn overlay(st: &State, output: &str, shown: &mut OutputState) {

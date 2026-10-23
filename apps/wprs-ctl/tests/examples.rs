@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_core::Fit;
-use wprs_format::{Limits, build, open};
+use wprs_format::{Limits, Rating, SCHEMA, build, features, inspect, open};
 use wprs_render::{Layer, Renderer, SceneAssets};
 use wprs_scene::{PointerState, Quality, Runtime, Wake, effective, playable};
 
@@ -64,15 +64,22 @@ fn example_scenes_pack_small_render_and_rest() {
     for source in scenes() {
         let name = source.file_name().unwrap().to_string_lossy().into_owned();
         let out = dir.path().join(format!("{name}.wpak"));
+        let (declared, facts) = inspect(&source).unwrap();
+        assert_eq!(declared.features(), facts.features.iter().cloned().collect::<Vec<_>>(), "{name}");
+        assert!(features::warnings(&declared, &facts).is_empty(), "{name}");
         build(&source, &out, &Limits::default()).unwrap_or_else(|e| panic!("{name}: {e}"));
         total += std::fs::metadata(&out).unwrap().len();
         let mut package = open(&out, &Limits::default()).unwrap();
         let manifest = package.manifest.clone();
         assert_eq!(
-            (manifest.license.as_str(), manifest.preview.as_deref()),
-            ("CC0-1.0", Some("preview.jpg")),
+            (manifest.schema.as_str(), manifest.license.as_str(), manifest.thumbnail().map(String::as_str)),
+            (SCHEMA, "CC0-1.0", Some("preview.jpg")),
             "{name}"
         );
+        let titles = ["en", "es"].map(|l| manifest.title_in(&[l.into()]));
+        assert!(titles[0] != titles[1] && manifest.locales().len() == 2, "{name} speaks English and Spanish");
+        let flashing = manifest.photosensitive == Some(name == "pulse");
+        assert!(flashing && manifest.content.as_ref().is_some_and(|c| c.rating == Rating::General), "{name}");
         let scene = Arc::new(package.scene().unwrap());
         assert_eq!(scene.sounds().count(), usize::from(SOUNDS.contains(&name.as_str())), "{name}");
         let pictures: Vec<_> = scene.assets.iter().filter(|(_, a)| !playable(&a.path)).collect();

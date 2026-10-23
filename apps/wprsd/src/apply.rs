@@ -8,6 +8,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_core::Fit;
+use wprs_core::dbus::error::UNCONFIRMED;
 use wprs_core::model::PresetValue;
 use wprs_library::{Kind, Library};
 
@@ -102,6 +103,11 @@ impl Daemon {
         if let Some(error) = &item.meta.error {
             return Err(failed(error.clone()));
         }
+        if item.package.as_ref().is_some_and(|p| p.asks("photosensitive")) {
+            let message = "this wallpaper flashes or shows fast patterns that can trigger seizures in people \
+                with photosensitive epilepsy; the user has not allowed it yet";
+            return Err(Error::Named(UNCONFIRMED, message.into()));
+        }
         if let Some(package) = self.installed(&item).filter(|i| i.revoked.is_some()) {
             let reason =
                 serde_json::to_value(package.revoked).ok().and_then(|v| v.as_str().map(String::from));
@@ -133,6 +139,9 @@ impl Daemon {
 
     pub fn tidy(self: &Arc<Self>) {
         self.offer_examples();
+        if self.store.write(|lib| lib.reread()).is_ok_and(|n| n > 0) {
+            self.library_changed(Vec::new());
+        }
         self.thumbs.prune(u64::from(self.state().config.library.thumb_cache_mb) << 20);
         let packages = self.store.read(|lib| lib.search("kind:package", now(), 0, u32::MAX));
         let Ok(packages) = packages else { return };

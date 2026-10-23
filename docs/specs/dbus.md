@@ -75,6 +75,8 @@ Every error carries a readable English message.
 | `io.github.wallpaper_rs.Error.KeyringUnavailable` | The keyring item cannot be written or deleted, the keyring stayed locked for 20 s or its unlock prompt was dismissed, the Secret Service did not answer in time, or no Secret Service is available to store a secret |
 | `io.github.wallpaper_rs.Error.Stale` | A repository's signed index expired; retry with `allow_stale = true` after asking the user |
 | `io.github.wallpaper_rs.Error.Conflict` | A playlist edit by index found other entries than expected: `the playlist changed; reload it` |
+| `io.github.wallpaper_rs.Error.Newer` | A package needs a newer wallpaper-rs: a newer manifest version, a `requires.engine` this version does not meet or a feature of `requires.features` it does not know (see `package.md`) |
+| `io.github.wallpaper_rs.Error.Unconfirmed` | `Apply` of a photosensitive package the user has not allowed yet (`this wallpaper flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy; the user has not allowed it yet`); ask, then call `Confirm(uids, "photosensitive")` and apply again |
 
 If `library.db` cannot be opened (for example because a newer build wrote it), the daemon still
 renders, `GetState().library_error` holds the reason and every `Library1`, `Playlists1` and
@@ -298,7 +300,9 @@ current values and its presets. `NotFound` when no scene package is shown there.
 the properties in the order to show them (by `order`, each group followed by its members), with
 labels, help and option labels in the language of the daemon's locale and `visible` false while
 a `visible_if` condition of the property or of its group does not hold; `preset_labels` names
-the presets the same way. Clients draw their forms from `fields` alone.
+the presets the same way. Clients draw their forms from `fields` alone. `warnings` lists stored
+values that the package no longer accepts (a property removed, retyped or with a narrower range
+after an update), which are ignored for their defaults (`scene.md`).
 
 ### `SetSceneProperty(s output, s id, s value_json)`
 
@@ -339,6 +343,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `pause.when_locked` | pause while the screen is locked; whatever it says, videos are muted and scenes play no sound while it is locked | `true` |
 | `library.watch` | rescan folder sources when files in them change, one scan per source at most every 5 s | `true` |
 | `library.thumb_cache_mb` | `64` to `8192`, size of the thumbnail cache | `512` |
+| `library.hide_mature` | leave packages rated `mature` out of `Search` (unless the query has its own `content:` filter; `SearchPage.query` stays the one given) and `Browse`; a change emits `library` and `repos` | `false` |
 | `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
 | `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
@@ -525,7 +530,11 @@ thumbnails. `ItemSummary.package` describes package items, whose `kind` tells sc
 
 An `ItemDetails`: the item with its path, the cached 512 px thumbnail, its presets, the manual
 playlists that contain it, and its provider credit, installed package record and revocation
-reason when they apply.
+reason when they apply. For a valid package, `about` holds its manifest metadata (`package.md`)
+with the texts in the user's language: `description` and `changes` keep their markup, which
+clients render without loading anything remote, opening a link only after a click and a
+confirmation, except the description of a first-version package (`schema` is
+`wallpaper-rs.wpak/1`), which is plain text shown as written. Every other text is plain.
 
 ### `SetTitle(s uid, s title)`
 
@@ -558,7 +567,9 @@ with another case changes the spelling. `NotFound` for an unknown `from`.
 Returns the path of the item's thumbnail of `size` (`256`, `512` or `1024`, else
 `InvalidArgs`), making it first when it is not cached, ahead of every other thumbnail work.
 `Failed` with the reason when it cannot be made or takes more than 20 s; a decoding problem also
-sets the item's `error`. A scene package without preview returns `Failed` (`no preview`).
+sets the item's `error`. A scene package without preview returns `Failed` (`no preview`). A
+package that needs a newer wallpaper-rs keeps that `error` and still gets the thumbnail of its
+preview. The library reads every package again once after the daemon is upgraded.
 
 ### `RequestThumbnails(as uids, u size) → (a{ss} paths)`
 
@@ -574,11 +585,22 @@ playlists) and stops the playlists of the affected outputs. `fit` is a fit or `"
 current one. `preset` is `""`, a preset uid, or a preset name looked up first among the item's
 presets and then among the global ones; its `fit` and `background` are applied first, and an
 explicit `fit` wins over the preset's. `Failed` before changing anything when the item is
-missing, has an `error` (invalid packages), or is a revoked package. The item's path,
+missing, has an `error` (invalid packages), or is a revoked package, and `Unconfirmed` when it
+is a photosensitive package the user has not confirmed: clients warn that it flashes or shows
+fast patterns that can trigger seizures, and apply it only after the user agrees. The item's path,
 the effective fit and background and the preset uid (as a label) are written to the affected
 configuration sections, and the use is recorded once per affected connected output. Image and
 video packages show their entry: it is copied once to `~/.cache/wallpaper-rs/blobs/`. Scene
 packages are rendered live (see "Scenes"); the videos they contain are copied there once.
+
+### `Confirm(as uids, s what)`
+
+Records a decision of the user about the packages of these items, once per package id, so that
+every version and copy of the package keeps it. `what` is `mature` (clients stop blurring the
+thumbnails of a package rated `mature`) or `photosensitive` (`Apply` and playlists may show it);
+anything else returns `InvalidArgs`, an unknown uid `NotFound`. Items that are no packages are
+accepted and change nothing. `PackageInfo.confirmed` lists the decisions, and the `library` change
+names every item that shares a package id with these items.
 
 ### Signal `ThumbnailReady(s uid, u size, s path)`
 
@@ -613,8 +635,9 @@ daemon and needs no client:
   not switch unless `advance_while_paused` is set; when it becomes active and a switch is
   overdue, it switches once. Disconnected outputs do not switch either, and switch once when
   they come back after a missed switch.
-- Missing items, items that cannot be decoded and revoked packages are left out, and so are
-  videos on battery with `skip_videos_on_battery`. If a playlist has nothing to show, the output
+- Missing items, items that cannot be decoded, revoked packages and photosensitive packages the
+  user has not confirmed are left out, and so are videos on battery with
+  `skip_videos_on_battery`. If a playlist has nothing to show, the output
   keeps its last picture, or shows its background color with the reason in
   `GetState().outputs[x].error`.
 - `GetState().outputs[x]` reports the `item` shown and `playlist` (`uid`, `name`, `position` in
@@ -744,11 +767,12 @@ profile of that name is replaced and keeps its uid, rules and priority.
 
 ### `Activate(s profile)`
 
-Applies a profile at once and marks it active; `""` only clears the active marker. Outputs not
-in the profile lose their own wallpaper. Entries whose item, file or playlist is gone or cannot
-be shown are skipped with a warning, and those outputs show the default section; unknown or
-invalid settings are skipped too. The configuration is saved once and every output is
-reconfigured.
+Applies a profile at once and marks it active; `""` only clears the active marker. Outputs not in
+the profile lose their own wallpaper. Entries whose item, file or playlist is gone or cannot be
+shown are skipped with a warning, and those outputs show the default section; so are photosensitive
+packages the user has not allowed (`Confirm`), and `GetState().outputs[x].error` says why until that
+output is changed again. Unknown or invalid settings are skipped too. The configuration is saved
+once and every output is reconfigured.
 
 ### `Rename(s profile, s name)`
 
@@ -911,8 +935,10 @@ An install from it that starts while it is being removed ends `cancelled`.
 
 ### `Browse(s query, u offset, u limit) → (s json)`
 
-A `BrowsePage` of the packages offered, matched without case on id, title, description, tags
-and authors, sorted by id then repository. `limit` is `0..=500`.
+A `BrowsePage` of the packages offered, matched without case on id, title, description (in every
+language), tags, authors and facets, sorted by id then repository. `limit` is `0..=500`. Titles,
+descriptions and change notes come in the user's language; with `library.hide_mature`, packages
+rated `mature` are left out.
 
 ### `RequestPreviews(as specs) → (a{ss} paths)`
 
@@ -943,7 +969,9 @@ remaining version, or is removed with its thumbnails when none remains.
 ### `ListInstalled() → (s json)`
 
 An `InstalledReply`; `item` is set on the version linked to the library item and `update` on
-the newest installed version when a newer one is available.
+the newest installed version when a newer one is available, with `changes` holding the change
+notes of that version in the user's language and with its markup. `RefreshOutput.updates` carries
+the same notes.
 
 ### Signal `PreviewReady(s spec, s path)`
 
@@ -1646,7 +1674,7 @@ struct OutputPlaylist { uid: Uid, name: String, position: u32, count: u32, next_
 struct SceneProperties {
     model: u32, serial: u64, output: String, package: String, title: String,
     properties: BTreeMap<String, Value>, values: BTreeMap<String, Value>, presets: Vec<Value>,
-    fields: Vec<SceneField>, preset_labels: Vec<SceneOption>,
+    fields: Vec<SceneField>, preset_labels: Vec<SceneOption>, warnings: Vec<String>,
 }
 struct SceneField {
     key: String, kind: String, label: String, help: String, value: Value, visible: bool,
@@ -1680,7 +1708,20 @@ struct JobsReply { model: u32, serial: u64, jobs: Vec<Job> }
 struct JobReply { model: u32, serial: u64, job: Job }
 
 enum ItemKind { Image, Video, Package }
-struct PackageInfo { id: String, version: String, kind: String, license: String }
+struct PackageInfo {
+    id: String, version: String, kind: String, license: String, content: Option<String>,
+    photosensitive: Option<bool>, facets: Vec<String>, confirmed: Vec<String>,
+}
+struct About {
+    schema: String, title: String, description: String, changes: String, authors: Vec<String>,
+    license: String, content: Option<String>, descriptors: Vec<String>, photosensitive: Option<bool>,
+    origin: Option<String>, derived_from: Vec<Work>, credits: Vec<PackageCredit>, links: Vec<Link>,
+    inputs: Vec<String>, features: Vec<Feature>, languages: Vec<String>,
+}
+struct Work { author: String, title: Option<String>, url: Option<String>, license: Option<String> }
+struct PackageCredit { paths: Vec<String>, license: String, attribution: String, url: Option<String> }
+struct Link { kind: String, url: String }
+struct Feature { name: String, why: String }
 struct Item {
     uid: Uid, source: Option<Uid>, kind: ItemKind, path: PathBuf, title: String, size: u64,
     mtime: Time, width: Option<u32>, height: Option<u32>, duration_ms: Option<u32>,
@@ -1698,7 +1739,7 @@ struct SearchPage { model: u32, serial: u64, query: String, total: u32, offset: 
 struct ItemDetails {
     model: u32, serial: u64, item: Item, thumb: Option<PathBuf>, presets: Vec<Preset>,
     playlists: Vec<PlaylistRef>, credit: Option<Credit>, installed: Option<InstalledPackage>,
-    revoked: Option<Reason>,
+    revoked: Option<Reason>, about: Option<About>,
 }
 struct PlaylistRef { uid: Uid, name: String }
 struct Source {
@@ -1767,15 +1808,17 @@ struct RepoPackage {
     repo_id: String, repo_name: String, id: String, author: Option<String>, version: String,
     kind: String, title: String, description: String, tags: Vec<String>, license: String,
     authors: Vec<String>, size: u64, published: Time, preview: bool, versions: Vec<String>,
-    installed: Vec<String>, update: bool,
+    installed: Vec<String>, update: bool, content: Option<String>, photosensitive: Option<bool>,
+    facets: Vec<String>, changes: String,
 }
 struct BrowsePage { model: u32, serial: u64, query: String, total: u32, offset: u32, packages: Vec<RepoPackage> }
 struct InstalledPackage {
     repo_id: String, id: String, version: String, sha256: String, size: u64,
     signer: Option<String>, revoked: Option<Reason>, item: Option<Uid>, update: Option<String>,
+    changes: String,
 }
 struct InstalledReply { model: u32, serial: u64, packages: Vec<InstalledPackage> }
-struct Update { repo_id: String, id: String, installed: String, available: String }
+struct Update { repo_id: String, id: String, installed: String, available: String, changes: String }
 struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
 
 enum Input { Audio, Pointer }

@@ -48,7 +48,7 @@ fn probe() -> ExitCode {
 }
 
 fn host(args: &[&str], source: &str) -> Host {
-    Host::new(std::env::current_exe().unwrap(), args, &[("main.js".into(), source.into())], 3)
+    Host::new(std::env::current_exe().unwrap(), args, &[("main.js".into(), source.into())], 3, "es")
 }
 
 fn drive(host: &mut Host, until: impl Fn(&Result<Option<ScriptOutputs>, Error>) -> bool) {
@@ -73,11 +73,15 @@ fn the_sandbox_blocks_files_network_and_processes() {
 }
 
 fn the_host_runs_scripts_in_another_process() {
-    let source = "import { scene } from 'wprs'; export function update({ time }) { scene.layer('a').rotation = time; }";
+    let source = "import { engine, scene } from 'wprs'; const a = scene.layer('a'); \
+        export function update({ time }) { a.rotation = time; a.text = engine.locale; }";
     let mut host = host(&["--script-host"], source);
     drive(&mut host, |r| {
-        let turned =
-            |o: &ScriptOutputs| o.layers.get("a").is_some_and(|a| a.rotation.is_some_and(|r| r > 0.0));
+        let turned = |o: &ScriptOutputs| {
+            o.layers
+                .get("a")
+                .is_some_and(|a| a.rotation.is_some_and(|r| r > 0.0) && a.text.as_deref() == Some("es"))
+        };
         r.as_ref().is_ok_and(|o| o.as_ref().is_some_and(turned))
     });
 }

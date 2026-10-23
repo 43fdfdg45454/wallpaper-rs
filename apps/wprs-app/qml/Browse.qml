@@ -11,6 +11,7 @@ ColumnLayout {
     property var packages: []
     property int total
     property var previews: ({})
+    property var shown: ({})
 
     function spec(pkg) {
         return pkg.repo_id + "/" + pkg.id + "@" + pkg.version;
@@ -66,6 +67,7 @@ ColumnLayout {
                 id: row
 
                 required property var modelData
+                readonly property bool veiled: modelData.content === "mature" && !browse.shown[modelData.id]
 
                 width: ListView.view.width
 
@@ -75,6 +77,14 @@ ColumnLayout {
                     source: App.url(browse.previews[browse.spec(row.modelData)] ?? "")
                     asynchronous: true
                     fillMode: Image.PreserveAspectCrop
+                    sourceSize: row.veiled ? Qt.size(12, 12) : undefined
+
+                    TapHandler {
+                        enabled: row.veiled
+                        onTapped: browse.shown = Object.assign({}, browse.shown, {
+                            [row.modelData.id]: true
+                        })
+                    }
                 }
 
                 ColumnLayout {
@@ -83,12 +93,22 @@ ColumnLayout {
                     Kirigami.Heading {
                         level: 4
                         text: row.modelData.title + " · " + Labels.value(row.modelData.kind)
+                        textFormat: Text.PlainText
                     }
 
                     QQC2.Label {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
-                        text: [row.modelData.description, row.modelData.authors.join(", ") + " · " + row.modelData.license + " · " + App.bytes(row.modelData.size), row.modelData.id + " · " + row.modelData.repo_name, row.modelData.installed.length > 0 ? App.tr("Installed: %1").arg(row.modelData.installed.join(", ")) : ""].filter(t => t).join("\n")
+                        textFormat: Text.PlainText
+                        text: [row.modelData.content ? App.plain(row.modelData.description) : row.modelData.description, row.modelData.authors.join(", ") + " · " + row.modelData.license + " · " + App.bytes(row.modelData.size), row.modelData.id + " · " + row.modelData.repo_name, row.modelData.installed.length > 0 ? App.tr("Installed: %1").arg(row.modelData.installed.join(", ")) : "", row.modelData.update && row.modelData.changes ? App.tr("What's new: %1").arg(App.plain(row.modelData.changes)) : "", row.veiled ? App.tr("Mature content: click the picture to show it") : ""].filter(t => t).join("\n")
+                    }
+
+                    QQC2.Label {
+                        Layout.fillWidth: true
+                        visible: row.modelData.photosensitive === true
+                        wrapMode: Text.Wrap
+                        color: Kirigami.Theme.negativeTextColor
+                        text: App.tr("Flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy.")
                     }
                 }
 

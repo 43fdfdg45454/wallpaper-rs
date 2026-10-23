@@ -63,7 +63,7 @@ pub struct Script {
 }
 
 impl Script {
-    pub fn load(sources: &[Source], seed: u64, limits: Limits) -> Result<Script, Error> {
+    pub fn load(sources: &[Source], seed: u64, locale: &str, limits: Limits) -> Result<Script, Error> {
         let failed = |e: rquickjs::Error| Error::Script(e.to_string());
         let runtime = Runtime::new().map_err(failed)?;
         runtime.set_memory_limit(limits.memory);
@@ -83,6 +83,7 @@ impl Script {
         let (state, updates) = clock.run(&context, limits.load, |ctx| {
             let state = Object::new(ctx.clone())?;
             state.set("frame", ctx.json_parse(frame)?)?;
+            state.set("locale", locale)?;
             state.set("out", outputs(ctx)?)?;
             ctx.globals().set("__wprs", state.clone())?;
             ctx.eval::<(), _>(random)?;

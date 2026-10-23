@@ -14,6 +14,7 @@ QtObject {
             "pause.when_locked": App.tr("Pause while the screen is locked"),
             "library.watch": App.tr("Watch library folders for changes"),
             "library.thumb_cache_mb": App.tr("Thumbnail cache (MB)"),
+            "library.hide_mature": App.tr("Hide mature content"),
             "repos.auto_refresh": App.tr("Refresh repositories every day"),
             "layout.bezel_mm": App.tr("Screen frame width for spanning (mm)"),
             "models.allow_download": App.tr("Allow downloading the depth model"),
@@ -70,6 +71,22 @@ QtObject {
             "scene": App.tr("Scene"),
             "audio": App.tr("the sound"),
             "pointer": App.tr("the pointer"),
+            "clicks": App.tr("clicks"),
+            "media": App.tr("what the media player plays"),
+            "network": App.tr("the network"),
+            "general": App.tr("For everyone"),
+            "mature": App.tr("Mature"),
+            "unrated": App.tr("Not rated"),
+            "sexual": App.tr("sexual content"),
+            "violence": App.tr("violence"),
+            "gore": App.tr("gore"),
+            "language": App.tr("strong language"),
+            "original": App.tr("Original work"),
+            "derived": App.tr("Remade from another work"),
+            "homepage": App.tr("Home page"),
+            "source": App.tr("Source"),
+            "support": App.tr("Support"),
+            "donate": App.tr("Donate"),
             "scan": App.tr("Folder scan"),
             "import": App.tr("Import"),
             "analyze": App.tr("Analysis"),
@@ -106,6 +123,19 @@ QtObject {
             "broken": App.tr("Broken"),
             "other": App.tr("Other reason")
         })
+    readonly property var features: ({
+            "inputs.audio": App.tr("reacts to the sound playing on the computer"),
+            "inputs.pointer": App.tr("follows the pointer"),
+            "inputs.clicks": App.tr("reacts to clicks"),
+            "inputs.media": App.tr("shows what the media player plays"),
+            "inputs.network": App.tr("connects to the network"),
+            "scripts": App.tr("runs scene scripts"),
+            "sound": App.tr("plays sound")
+        })
+    function feature(name) {
+        return features[name] ?? App.tr("uses the %1 effect").arg(String(name).replace(/^effect\./, ""));
+    }
+
     function field(key) {
         return fields[key] ?? key;
     }

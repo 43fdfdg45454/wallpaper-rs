@@ -130,7 +130,7 @@ impl Daemon {
                 active: st.active(info),
                 covered: info.covered(),
                 clients: info.claims.len() as u32,
-                error: s.error,
+                error: s.error.or_else(|| st.held.get(name).cloned()),
                 item,
                 preset,
                 playlist: None,

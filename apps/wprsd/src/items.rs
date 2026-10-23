@@ -76,10 +76,15 @@ impl Daemon {
         }
         let serial = self.changes.serial();
         let seed = (RandomState::new().hash_one(serial) % 2_147_483_646) as u32 + 1;
+        let hide = self.state().config.library.hide_mature;
         let (query, total, items) = self.store.read(|lib| {
             let query = lib.normalize_query(query, seed)?;
-            let total = lib.count(&query, now())?;
-            let items = if limit == 0 { Vec::new() } else { lib.search(&query, now(), offset, limit)? };
+            let shown = match hide && !query.contains("content:") {
+                true => format!("{query} -content:mature"),
+                false => query.clone(),
+            };
+            let total = lib.count(&shown, now())?;
+            let items = if limit == 0 { Vec::new() } else { lib.search(&shown, now(), offset, limit)? };
             Ok::<_, wprs_library::Error>((query, total, items))
         })?;
         let items = items.into_iter().map(|item| self.summary(item)).collect::<Result<_>>()?;
@@ -99,8 +104,21 @@ impl Daemon {
         let installed = installed.map(|i| merged(i, json!({"item": uid, "update": null}))).transpose()?;
         let presets = presets.into_iter().map(preset).collect();
         let playlists = playlists.into_iter().map(|p| PlaylistRef { uid: p.uid, name: p.name }).collect();
+        let about = item.package.as_ref().and_then(|_| wprs_format::peek(&item.path).ok());
+        let about = about.map(|m| m.about(&wprs_core::locale::languages()));
         let item = merged(item, Value::Null)?;
-        reply(ItemDetails { model, serial, item, thumb, presets, playlists, credit, installed, revoked })
+        reply(ItemDetails {
+            model,
+            serial,
+            item,
+            thumb,
+            presets,
+            playlists,
+            credit,
+            installed,
+            revoked,
+            about,
+        })
     }
 
     pub fn resolve(&self, refs: &[String]) -> Result<Vec<String>> {

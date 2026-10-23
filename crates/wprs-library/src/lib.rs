@@ -4,6 +4,7 @@ mod entries;
 mod filter;
 mod import;
 mod items;
+mod packages;
 mod playlists;
 mod profiles;
 mod query;

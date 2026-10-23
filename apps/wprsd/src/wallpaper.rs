@@ -38,7 +38,12 @@ impl Daemon {
             }
             Some(Ok(Media::Video(path))) => (Content::Video(path), None),
             Some(Ok(Media::Scene(pack))) => {
-                let values = pack.values(&self.state().config.scene_values(output, &pack.id));
+                let (values, stale) = {
+                    let st = self.state();
+                    let stored = st.config.scene_values(output, &pack.id);
+                    (pack.values(&stored), pack.stale(&stored))
+                };
+                stale.iter().for_each(|w| tracing::warn!(output, scene = pack.id, "{w}"));
                 let extra = self.scene_extra(&pack, &values);
                 shown_scene = Some(pack.clone());
                 (Content::Scene(SceneSpec { pack, values, extra }), None)

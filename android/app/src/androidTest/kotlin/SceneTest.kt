@@ -91,10 +91,35 @@ class SceneTest {
         assertTrue((ask("scene", "uid" to uid, "languages" to listOf("en")) as JSONObject).has("fields"))
     }
 
-    private fun show(title: String): String {
+    @Test
+    fun ratedScenesWaitForConsent() = runBlocking {
+        val dir = File(storage(), "rated/flash").apply { mkdirs() }
+        val id = "org.example.flash${System.currentTimeMillis()}"
+        File(dir, "scene.json").writeText(FLASH_SCENE)
+        File(dir, "manifest.json").writeText(FLASH_MANIFEST.replace("org.example.flash", id))
+        Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        val uid = find("Flash")
+        suspend fun item() = Item(ask("item", "uid" to uid, "languages" to listOf("es")) as JSONObject)
+        assertTrue(item().mature && item().flashing && item().about == "Destellos rápidos.")
+        assertTrue(item().title == "Destello" && item().lacks.isEmpty())
+        val pick = JSONObject(mapOf("op" to "pick", "choice" to choice("item", uid))).toString()
+        assertTrue(JSONObject(Native.library(pick)).getString("error").contains("photosensitive"))
+        ask("confirm", "uid" to uid, "what" to "photosensitive")
+        assertTrue(item().mature && !item().flashing)
+        ask("confirm", "uid" to uid, "what" to "mature")
+        assertTrue(!item().mature)
+        assertEquals("null", Native.library(pick))
+    }
+
+    private fun find(title: String): String {
         val query = JSONObject().put("op", "items").put("query", "kind:scene")
         val items = JSONArray(Native.library(query.toString()))
-        val uid = (0 until items.length()).map(items::getJSONObject).first { it.getString("title") == title }.getString("uid")
+        return (0 until items.length()).map(items::getJSONObject).first { it.getString("title") == title }.getString("uid")
+    }
+
+    private fun show(title: String): String {
+        val uid = find(title)
+        Native.library(JSONObject().put("op", "confirm").put("uid", uid).put("what", "photosensitive").toString())
         Native.library(JSONObject(mapOf("op" to "pick", "choice" to choice("item", uid))).toString())
         Render.call {
             Native.commit()
@@ -112,5 +137,11 @@ class SceneTest {
             "assets": { "clip": { "path": "clip.webm" } }, "layers": [{ "id": "clip", "type": "video", "video": "clip" }] }"""
         const val CLIP_MANIFEST = """{ "schema": "wallpaper-rs.wpak/1", "id": "org.example.clip", "version": "1.0.0",
             "title": "Clip", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json" }"""
+        const val FLASH_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
+            "layers": [{ "id": "fill", "type": "solid", "color": "#ffffff" }] }"""
+        const val FLASH_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.flash", "version": "1.0.0",
+            "default_locale": "en", "title": { "en": "Flash", "es": "Destello" }, "description": { "en": "Fast **flashes**.", "es": "Destellos **rápidos**." },
+            "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+            "content": { "rating": "mature", "descriptors": ["violence"] }, "photosensitive": true }"""
     }
 }

@@ -116,13 +116,13 @@ impl Context<'_> {
 }
 
 impl<T: Animate> Value<T> {
-    pub(crate) fn settled(&self, props: &Values) -> Option<T> {
+    pub(crate) fn settled(&self, props: Option<&Values>) -> Option<T> {
         let b = match self {
             Value::Fixed(v) => return Some(v.clone()),
             Value::Bound(b) => b,
         };
         let id = b.prop.as_ref().filter(|_| b.keys.is_none())?;
-        Some(shaped(b, prop(b, id, props)))
+        Some(shaped(b, prop(b, id, props?)))
     }
 
     pub(crate) fn get(&self, cx: &Context) -> T {

@@ -1,22 +1,31 @@
+mod about;
 mod admin;
 mod browse;
 mod build;
 mod catalog;
+mod check;
 mod client;
 mod download;
 mod entry;
+pub mod features;
 mod fetch;
 mod index;
 mod install;
 #[cfg(feature = "sign")]
 mod keys;
+mod locale;
 mod manifest;
+pub mod media;
+mod meta;
+mod names;
 #[cfg(feature = "sign")]
 mod publish;
 mod read;
+mod release;
 mod repo;
 mod settings;
 mod sign;
+mod source;
 mod store;
 mod update;
 mod validate;
@@ -29,24 +38,31 @@ pub use build::{build, sha256, sha256_file};
 pub use catalog::{Added, add, revoke, revoke_key, unrevoke};
 pub use client::{Outcome, RepoInfo, Update, add_repo, remove_repo, repos, update_repo, verify};
 pub use download::preview;
-pub use entry::{Blob, ENTRY_FORMAT, Entry, Pin};
+pub use entry::{Blob, DETAILS_FORMAT, Details, ENTRY_FORMAT, Entry, Pin};
+pub use features::Facts;
 pub use fetch::{Anchor, Fetch, FileFetch};
 pub use index::{
-    KeyRevocation, Listing, Preview, REVOKED_FORMAT, Reason, Release, Revocation, Revoked, SHARD_FORMAT,
+    DETAILED_FORMAT, KeyRevocation, Listing, REVOKED_FORMAT, Reason, Revocation, Revoked, SHARD_FORMAT,
     Shard, shard_of,
 };
 pub use install::{Installed, install, installed, remove};
 #[cfg(feature = "sign")]
 pub use keys::{Keypair, Signer, keygen, sign_source};
-pub use manifest::{Kind, Manifest, SCHEMA};
+pub use manifest::{Kind, Manifest, SCHEMA, SCHEMA_V1, Strings};
+pub use meta::{
+    Ancestor, Content, Credit, Descriptor, Input, Links, Origin, OriginKind, Previews, Rating, Requires,
+};
 #[cfg(feature = "sign")]
 pub use publish::{Published, publish};
-pub use read::{Package, extract, open, read};
+pub use read::{Package, extract, open, peek, read, thumbnail};
+pub use release::{Needs, Preview, Rated, Release};
 pub use repo::{Author, Key, Policy, ROOT_FORMAT, Role, Roles, Root, Time, comment};
 pub use settings::{Settings, settings};
 pub use sign::{fingerprint, manifest_comment, public_key, threshold, verify_blocks, verify_package};
+pub use source::{fill, inspect, upgrade};
 pub use validate::{FileEntry, Limits, MANIFEST, SIGNATURE, check_path, validate};
-pub use wprs_scene::{Control, Preset, Property, Scene};
+pub use wprs_core::markup;
+pub use wprs_scene::{Control, Preset, Property, Scene, Text};
 
 use std::path::PathBuf;
 
@@ -100,6 +116,8 @@ pub enum Error {
     NotFound(String),
     #[error("{0} already exists")]
     Exists(String),
+    #[error("this package needs a newer version of wallpaper-rs: it uses {0}")]
+    Newer(String),
 }
 
 pub(crate) fn ensure(ok: bool, error: impl FnOnce() -> Error) -> Result<()> {

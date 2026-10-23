@@ -19,24 +19,31 @@ RowLayout {
     readonly property string sound: info.sound ?? ""
     readonly property bool muted: daemon.state?.muted === true
     property string thumb
-    property bool favorite
+    property var details: ({})
+    readonly property var pkg: details.package ?? {}
+    readonly property var confirmed: pkg.confirmed ?? []
+    readonly property bool favorite: details.favorite === true
+    readonly property bool mature: pkg.content === "mature" && !confirmed.includes("mature")
+    readonly property bool allowed: confirmed.includes("photosensitive")
 
     function load() {
         const item = row.item;
-        if (item) {
-            daemon.query("Thumbnail", [item, 256], "Library1", reply => {
+        if (!item)
+            return;
+        daemon.query("GetItem", [item], "Library1", reply => {
+            if (row.item !== item)
+                return;
+            row.details = reply.item ?? {};
+            daemon.query("Thumbnail", [item, 256], "Library1", answer => {
                 if (row.item === item)
-                    row.thumb = reply[0] ?? "";
+                    row.thumb = answer[0] ?? "";
             });
-            daemon.query("GetItem", [item], "Library1", reply => {
-                if (row.item === item)
-                    row.favorite = reply.item?.favorite === true;
-            });
-        }
+        });
     }
 
     onItemChanged: {
         thumb = "";
+        details = {};
         Qt.callLater(load);
     }
     Component.onCompleted: Qt.callLater(load)
@@ -71,28 +78,15 @@ RowLayout {
         }
     }
 
-    Rectangle {
+    Thumbnail {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 6
         Layout.preferredHeight: Kirigami.Units.gridUnit * 4
         visible: row.item !== ""
-        color: Kirigami.Theme.alternateBackgroundColor
-
-        Image {
-            anchors.fill: parent
-            source: row.daemon.url(row.thumb)
-            asynchronous: true
-            fillMode: Image.PreserveAspectCrop
-        }
-
-        Kirigami.Icon {
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: Kirigami.Units.smallSpacing
-            width: Kirigami.Units.iconSizes.small
-            height: width
-            visible: row.scene
-            source: "view-media-visualization"
-        }
+        daemon: row.daemon
+        item: row.item
+        source: row.daemon.url(row.thumb)
+        mature: row.mature
+        scene: row.scene
     }
 
     ColumnLayout {
@@ -103,6 +97,7 @@ RowLayout {
             elide: Text.ElideMiddle
             font.bold: true
             text: row.name ? row.name + (row.info.width ? " · " + row.info.width + "×" + row.info.height : "") : row.daemon.tr("Every screen")
+            textFormat: Text.PlainText
         }
 
         QQC2.Label {
@@ -110,6 +105,25 @@ RowLayout {
             visible: row.name !== ""
             elide: Text.ElideMiddle
             text: row.info.error || (row.playing ? row.daemon.tr("Playlist %1 (%2 of %3)", row.playing.name, row.playing.position + 1, row.playing.count) : (row.info.image ?? "").split("/").pop()) || row.daemon.tr("Background color")
+            textFormat: Text.PlainText
+        }
+
+        QQC2.Label {
+            Layout.fillWidth: true
+            visible: row.pkg.photosensitive === true
+            wrapMode: Text.Wrap
+            text: row.allowed ? row.daemon.tr("Flashes or shows fast patterns; you allowed it") : row.daemon.tr("Flashes or shows fast patterns that can trigger seizures")
+            color: row.allowed ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.negativeTextColor
+            font: Kirigami.Theme.smallFont
+        }
+
+        QQC2.Label {
+            Layout.fillWidth: true
+            visible: row.mature
+            wrapMode: Text.Wrap
+            text: row.daemon.tr("Mature content: click the picture to always show this package")
+            color: Kirigami.Theme.disabledTextColor
+            font: Kirigami.Theme.smallFont
         }
 
         QQC2.Label {
@@ -117,6 +131,7 @@ RowLayout {
             visible: row.credit !== null
             elide: Text.ElideRight
             text: row.credit ? [row.credit.title, row.credit.attribution, row.credit.license].filter(t => t).join(" · ") : ""
+            textFormat: Text.PlainText
             font: Kirigami.Theme.smallFont
         }
 

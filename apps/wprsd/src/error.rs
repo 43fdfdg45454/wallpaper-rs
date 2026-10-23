@@ -99,6 +99,10 @@ impl From<anyhow::Error> for Error {
             Ok(e) => return Error::Fdo(e),
             Err(e) => e,
         };
+        let e = match e.downcast::<wprs_format::Error>() {
+            Ok(e) => return e.into(),
+            Err(e) => e,
+        };
         match e.downcast::<wprs_library::Error>() {
             Ok(e) => e.into(),
             Err(e) => failed(format!("{e:#}")),

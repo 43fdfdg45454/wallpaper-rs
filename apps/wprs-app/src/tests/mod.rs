@@ -172,6 +172,39 @@ fn every_qml_string_has_a_spanish_translation() {
 }
 
 #[test]
+fn package_texts_render_as_plain_text() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("qml");
+    let data = ["modelData", "title", "info", "credit", "item", "details", "name", "playing", "tags"];
+    let shown = |line: &str| data.iter().any(|d| line.contains(d));
+    let files = ["PackageAbout", "Browse", "Tile", "PlaylistItems", "ItemDrawer", "Installed", "OutputRow"];
+    let files = files
+        .into_iter()
+        .chain(["SceneField", "History", "RepoList", "Thumbnail"])
+        .map(|name| dir.join(name));
+    let tray = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/plasma-tray/contents/ui");
+    for name in files.chain(["ScreenRow", "Header", "Thumbnail"].map(|name| tray.join(name))) {
+        let text = std::fs::read_to_string(name.with_extension("qml")).unwrap();
+        let name = name.display();
+        let tips = text.lines().map(str::trim_start).filter(|l| l.contains("ToolTip.text:"));
+        tips.for_each(|tip| assert!(!shown(tip), "{name}: {tip}"));
+        let kinds = [".Label {", "Kirigami.Heading {", "QQC2.Switch {", "QQC2.CheckBox {"];
+        for (at, kind) in kinds.iter().flat_map(|k| text.match_indices(k)) {
+            let block = &text[at..];
+            let mut depth = 0;
+            let end = block.char_indices().find_map(|(i, c)| {
+                depth += i32::from(c == '{') - i32::from(c == '}');
+                (c == '}' && depth == 0).then_some(i)
+            });
+            let block = &block[..end.unwrap()];
+            let text = block.lines().find(|l| l.trim_start().starts_with("text:")).unwrap_or_default();
+            let plain = block.contains("textFormat:") && !kind.contains("Switch") && !kind.contains("Check");
+            assert!(!shown(text) || plain, "{name}: {block}");
+            assert!(!block.contains("StyledText") || block.contains("App.markup("), "{name}: {block}");
+        }
+    }
+}
+
+#[test]
 fn qml_calls_name_members_of_the_call_table() {
     for line in qml().iter().flat_map(|file| file.lines().map(String::from).collect::<Vec<_>>()) {
         for member in literals(&line, ".query(").into_iter().chain(literals(&line, ".act(")) {

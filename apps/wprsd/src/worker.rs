@@ -107,7 +107,7 @@ mod tests {
             let scene = r##"{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32]}, "layers": [{"id": "fill", "type": "solid", "color": "#ff0000"}]}"##;
             std::fs::write(source.join("scene.json"), scene).unwrap();
         }
-        let manifest = serde_json::json!({"schema": wprs_format::SCHEMA, "id": "org.example.calm", "version": "1.0.0",
+        let manifest = serde_json::json!({"schema": wprs_format::SCHEMA_V1, "id": "org.example.calm", "version": "1.0.0",
             "title": "Calm", "license": "CC0-1.0", "kind": kind, "entry": entry, "preview": preview});
         std::fs::write(source.join("manifest.json"), manifest.to_string()).unwrap();
         let wpak = dir.join(format!("{kind}.wpak"));

@@ -21,15 +21,15 @@ ColumnLayout {
 
     QQC2.Label {
         Layout.fillWidth: true
-        visible: field.kind !== "bool"
         text: field.modelData.label + (field.kind === "slider" ? ": " + Math.round(slider.value * 1000) / 1000 + (field.modelData.unit ? " " + field.modelData.unit : "") : "")
+        textFormat: Text.PlainText
         font.bold: field.kind === "group"
         wrapMode: Text.Wrap
     }
 
     QQC2.Switch {
         visible: field.kind === "bool"
-        text: field.modelData.label
+        Accessible.name: field.modelData.label
         checked: field.modelData.value === true
         onToggled: field.edited(field.modelData.key, checked)
     }
@@ -131,6 +131,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: field.modelData.help !== ""
         text: field.modelData.help
+        textFormat: Text.PlainText
         wrapMode: Text.Wrap
         font: Kirigami.Theme.smallFont
         color: Kirigami.Theme.disabledTextColor

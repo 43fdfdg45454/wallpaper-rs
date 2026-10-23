@@ -16,18 +16,23 @@ ColumnLayout {
     readonly property string title: details.title || info.credit?.title || String(info.image ?? "").split("/").pop() || (item ? "" : i18n("Background color"))
     property string thumb
     property var details: ({})
+    readonly property var pkg: details.package ?? {}
+    readonly property var confirmed: pkg.confirmed ?? []
+    readonly property bool mature: pkg.content === "mature" && !confirmed.includes("mature")
+    readonly property bool allowed: confirmed.includes("photosensitive")
 
     function load() {
         const item = row.item;
         if (!item)
             return;
-        daemon.query("Thumbnail", [item, 256], "Library1", reply => {
-            if (row.item === item)
-                row.thumb = reply[0] ?? "";
-        });
         daemon.query("GetItem", [item], "Library1", reply => {
-            if (row.item === item)
-                row.details = reply.item ?? {};
+            if (row.item !== item)
+                return;
+            row.details = reply.item ?? {};
+            daemon.query("Thumbnail", [item, 256], "Library1", answer => {
+                if (row.item === item)
+                    row.thumb = answer[0] ?? "";
+            });
         });
     }
 
@@ -68,30 +73,15 @@ ColumnLayout {
     RowLayout {
         spacing: Kirigami.Units.largeSpacing
 
-        Rectangle {
+        Thumbnail {
             Layout.preferredWidth: Kirigami.Units.gridUnit * 4
             Layout.preferredHeight: Kirigami.Units.gridUnit * 2.5
             color: row.info.background || Kirigami.Theme.alternateBackgroundColor
-            border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
-            clip: true
-
-            Image {
-                anchors.fill: parent
-                anchors.margins: parent.border.width
-                source: row.daemon.url(row.thumb)
-                asynchronous: true
-                fillMode: Image.PreserveAspectCrop
-            }
-
-            Kirigami.Icon {
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.margins: Kirigami.Units.smallSpacing
-                width: Kirigami.Units.iconSizes.small
-                height: width
-                visible: row.info.kind === "scene"
-                source: "view-media-visualization"
-            }
+            daemon: row.daemon
+            item: row.item
+            source: row.daemon.url(row.thumb)
+            mature: row.mature
+            scene: row.info.kind === "scene"
         }
 
         ColumnLayout {
@@ -112,6 +102,15 @@ ColumnLayout {
                 elide: Text.ElideRight
                 font: Kirigami.Theme.smallFont
                 color: row.info.error ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
+            }
+
+            PlasmaComponents3.Label {
+                Layout.fillWidth: true
+                visible: row.pkg.photosensitive === true
+                text: row.allowed ? i18n("Flashes or shows fast patterns; you allowed it") : i18n("Flashes or shows fast patterns that can trigger seizures")
+                wrapMode: Text.Wrap
+                font: Kirigami.Theme.smallFont
+                color: row.allowed ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.negativeTextColor
             }
         }
     }

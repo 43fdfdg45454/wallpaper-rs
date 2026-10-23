@@ -27,4 +27,6 @@ pub mod error {
     pub const KEYRING_UNAVAILABLE: &str = "io.github.wallpaper_rs.Error.KeyringUnavailable";
     pub const STALE: &str = "io.github.wallpaper_rs.Error.Stale";
     pub const CONFLICT: &str = "io.github.wallpaper_rs.Error.Conflict";
+    pub const NEWER: &str = "io.github.wallpaper_rs.Error.Newer";
+    pub const UNCONFIRMED: &str = "io.github.wallpaper_rs.Error.Unconfirmed";
 }

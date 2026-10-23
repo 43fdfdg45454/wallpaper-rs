@@ -102,6 +102,17 @@ impl Library {
             .await
     }
 
+    async fn confirm(&self, uids: Vec<String>, what: String) -> Result<()> {
+        self.d()?
+            .run(move |d| {
+                limited(&uids, crate::items::MAX_UIDS)?;
+                let changed = d.store.write(|lib| lib.confirm(&strs(&uids), &what))?;
+                d.changes.changed("library", changed);
+                Ok::<_, Error>(())
+            })
+            .await
+    }
+
     #[zbus(out_args("json"))]
     async fn list_tags(&self) -> Result<String> {
         self.d()?.run(|d| d.list_tags()).await

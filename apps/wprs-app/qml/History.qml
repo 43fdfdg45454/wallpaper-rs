@@ -35,6 +35,7 @@ ColumnLayout {
             required property var modelData
 
             text: App.time(modelData.at) + " · " + (modelData.item?.title ?? App.tr("an item that was removed"))
+            textFormat: Text.PlainText
         }
     }
 }

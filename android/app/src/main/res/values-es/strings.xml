@@ -19,6 +19,13 @@
     <string name="add_to_playlist">Añadir a una lista</string>
     <string name="remove">Quitar</string>
     <string name="remove_question">¿Quitarlo de la biblioteca? Se borra la copia que guarda la app, el original sigue en tu dispositivo.</string>
+    <string name="mature">Contenido para adultos</string>
+    <string name="flashing">Destellos</string>
+    <string name="mature_warning">Este fondo tiene contenido para adultos.</string>
+    <string name="flashing_warning">Este fondo destella o muestra patrones rápidos que pueden provocar crisis a personas con epilepsia fotosensible.</string>
+    <string name="show_anyway">Mostrar igualmente</string>
+    <string name="lacks_scripts">Sus scripts de escena no se ejecutan en el teléfono.</string>
+    <string name="lacks_sound">Sus sonidos no suenan en el teléfono.</string>
     <string name="cancel">Cancelar</string>
     <string name="no_playlists">Aún no hay listas</string>
     <string name="in_use">En uso</string>

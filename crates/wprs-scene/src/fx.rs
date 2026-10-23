@@ -91,7 +91,7 @@ impl Descriptor {
         !self.uses.is_empty() || self.state.is_some() || self.params.iter().any(|p| p.uses.is_some())
     }
 
-    pub fn needs(&self, input: Use, e: &crate::EffectUse, props: &crate::Values) -> bool {
+    pub fn needs(&self, input: Use, e: &crate::EffectUse, props: Option<&crate::Values>) -> bool {
         let on = |p: &ParamDef| {
             let value = e.params.get(&p.id).map_or(Some(p.default.clone()), |v| v.settled(props));
             value.is_none_or(|v| live(p.slot(&v)))

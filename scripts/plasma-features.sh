@@ -92,4 +92,9 @@ probe installed false 'Qt.quit()'
 qml installed || fail "the tray did not find the installed app"
 DBUS_SESSION_BUS_ADDRESS=$session
 
+echo "===== the tray and the app blur a mature thumbnail until it is clicked or keyed, and the tray warns of flashing"
+ln -sfn "$ui" "$WORK/ui"
+QT_QPA_PLATFORM=offscreen timeout 60 /usr/lib/qt6/bin/qmltestrunner -input "$WORK/tray-row.qml" >"$OUT/tray-row.log" 2>&1 ||
+  fail "the screen thumbnails: $(grep -A 3 FAIL "$OUT/tray-row.log")"
+
 echo "plasma test passed"

@@ -67,6 +67,7 @@ calls! {
         Thumbnail thumbnail(uid: str, size: u32);
         RequestThumbnails request_thumbnails(uids: strs, size: u32);
         Apply apply(uid: str, output: str, fit: str, preset: str);
+        Confirm confirm(uids: strs, what: str);
     }
     Playlists1 playlists {
         List list() json;

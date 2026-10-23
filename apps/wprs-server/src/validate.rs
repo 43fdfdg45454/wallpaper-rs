@@ -11,7 +11,7 @@ use std::io::Cursor;
 use std::path::Path;
 use std::process::Stdio;
 use std::time::Duration;
-use wprs_format::{Kind, Limits, SIGNATURE, fingerprint, public_key, verify_package};
+use wprs_format::{Kind, Limits, Rating, SIGNATURE, fingerprint, public_key, verify_package};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Report {
@@ -24,6 +24,12 @@ pub struct Report {
     pub tags: Vec<String>,
     pub authors: Vec<String>,
     pub signer: Option<String>,
+    #[serde(default)]
+    pub content: Option<String>,
+    #[serde(default)]
+    pub photosensitive: Option<bool>,
+    #[serde(default)]
+    pub facets: Vec<String>,
 }
 
 pub fn check(wpak: &Path, keys: &[String], require_signature: bool, thumb: &Path) -> anyhow::Result<Report> {
@@ -41,8 +47,13 @@ pub fn check(wpak: &Path, keys: &[String], require_signature: bool, thumb: &Path
     let unknown =
         "the manifest signature matches no author key of your account that the repository root lists";
     let signer = signed.then(|| verify_package(&mut package, &pairs).context(unknown)).transpose()?;
+    let rating = package.manifest.content.as_ref().map(|c| c.rating);
+    ensure!(
+        rating != Some(Rating::Mature),
+        "this server does not accept mature content; see its content policy"
+    );
     let preview =
-        package.manifest.preview.clone().context("the server needs a preview image in the package")?;
+        package.manifest.thumbnail().cloned().context("the server needs a preview image in the package")?;
     let mut reader = ImageReader::new(Cursor::new(package.read_file(&preview)?)).with_guessed_format()?;
     let mut limits = Pixels::default();
     (limits.max_image_width, limits.max_image_height, limits.max_alloc) =
@@ -51,18 +62,21 @@ pub fn check(wpak: &Path, keys: &[String], require_signature: bool, thumb: &Path
     let image = reader.decode().context("the preview is not a PNG, JPEG, WebP, GIF or BMP image")?;
     JpegEncoder::new_with_quality(File::create(thumb)?, 80)
         .encode_image(&image.thumbnail(640, 640).to_rgb8())?;
-    let m = package.manifest;
-    let (id, version, kind, title, description) = (m.id, m.version, m.kind, m.title, m.description);
+    let (m, facets) = (package.manifest.localized(), package.facts.facets);
+    let (title, description) = (m.title_in(&[]), m.pick(&m.description, &[]));
     Ok(Report {
-        id,
-        version,
-        kind,
+        id: m.id,
+        version: m.version,
+        kind: m.kind,
         title,
         description,
         license: m.license,
         tags: m.tags,
         authors: m.authors,
         signer,
+        content: rating.map(|r| if r == Rating::General { "general" } else { "mature" }.into()),
+        photosensitive: m.photosensitive,
+        facets,
     })
 }
 

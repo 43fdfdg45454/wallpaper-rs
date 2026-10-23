@@ -94,6 +94,11 @@ Item {
             drawer.show(uid);
     }
 
+    function exercise(uid) {
+        inspect(uid);
+        apply.show(uid);
+    }
+
     function renameTag(name) {
         dialogs.renamer.from = name;
         dialogs.renamer.open();

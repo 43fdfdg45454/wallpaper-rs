@@ -11,6 +11,9 @@ use wprs_core::config::parse_hex_color;
 use wprs_core::model::{MODEL, Profile, ProfileAuto, ProfileOutput, ProfileReply, ProfilesReply};
 use wprs_core::{Config, OutputConfig};
 
+const HELD: &str = "the profile left out a wallpaper that flashes or shows fast patterns that can trigger \
+    seizures in people with photosensitive epilepsy; allow it, then use the profile again";
+
 pub fn stored(value: impl Serialize) -> Value {
     fn strip(value: Value) -> Value {
         match value {
@@ -108,12 +111,16 @@ impl Daemon {
                     (.., Some(uid)) => lib.playlist(uid).ok().map(|p| (None, Some(p.uid))),
                     _ => Some((None, None)),
                 };
-                (name.clone(), content, o.preset.clone().filter(|uid| lib.preset(uid).is_ok()))
+                let image = content.as_ref().and_then(|(image, _)| image.as_ref()?.to_str());
+                let item = image.and_then(|path| lib.item(&lib.resolve_item(path).ok()?).ok());
+                let flashing = item.and_then(|i| i.package).is_some_and(|p| p.asks("photosensitive"));
+                let preset = o.preset.clone().filter(|u| lib.preset(u).is_ok());
+                (name.clone(), content.filter(|_| !flashing), preset, flashing)
             });
             Ok::<_, Error>(found.collect::<Vec<_>>())
         })?;
-        let (revoked, mut sections) = (self.revoked(), BTreeMap::new());
-        for (name, content, preset) in found {
+        let (revoked, mut sections, mut held) = (self.revoked(), BTreeMap::new(), HashMap::new());
+        for (name, content, preset, flashing) in found {
             let usable = |(image, _): &(Option<PathBuf>, Option<String>)| {
                 image.as_ref().is_none_or(|p| !revoked.contains(p) && self.check_media(p).is_ok())
             };
@@ -123,6 +130,9 @@ impl Daemon {
                     output = name,
                     "skipped a profile entry whose item, file or playlist is not usable"
                 );
+            }
+            if flashing {
+                held.insert(name.clone(), HELD.to_string());
             }
             let Some((image, playlist)) = content.or_else(|| name.is_empty().then_some((None, None))) else {
                 continue;
@@ -146,6 +156,7 @@ impl Daemon {
             }
             Ok(())
         })?;
+        self.state().held = held;
         self.configure_all();
         self.watch_sources();
         self.changes.changed("profiles", vec![profile.uid]);

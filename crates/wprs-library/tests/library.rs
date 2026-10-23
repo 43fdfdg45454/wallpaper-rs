@@ -1,13 +1,13 @@
 use chrono::DateTime;
 use rusqlite::Connection;
 use serde_json::json;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tempfile::TempDir;
-use wprs_format::{Limits, Manifest, SCHEMA};
+use wprs_format::{Limits, Manifest, SCHEMA_V1};
 use wprs_library::{Error, Item, Kind, Library, Meta, PackageInfo, Rotation, Rules, SCHEMA_VERSION, Used};
 use wprs_schedule::{Order, Playlist, PlaylistState};
 
@@ -165,19 +165,15 @@ fn packages_are_described_by_their_manifest() {
     let dir = TempDir::new().unwrap();
     let mut library = open(&dir);
     let manifest = Manifest {
-        schema: SCHEMA.into(),
+        schema: SCHEMA_V1.into(),
         id: "org.example.calm".into(),
         version: "1.2.0".into(),
         title: "Calm Water".into(),
-        description: String::new(),
-        authors: Vec::new(),
         license: "CC0-1.0".into(),
         kind: wprs_format::Kind::Image,
         entry: "image.png".into(),
-        preview: None,
         tags: vec!["water".into()],
-        properties: BTreeMap::new(),
-        presets: Vec::new(),
+        ..Default::default()
     };
     let package = dir.path().join("package");
     write(&package.join("manifest.json"), manifest.to_json().unwrap().as_bytes());
@@ -198,6 +194,10 @@ fn packages_are_described_by_their_manifest() {
         version: "1.2.0".into(),
         kind: "image".into(),
         license: "CC0-1.0".into(),
+        content: None,
+        photosensitive: None,
+        facets: vec!["android".into()],
+        confirmed: Vec::new(),
     };
     assert_eq!((calm.title.as_str(), calm.package), ("Calm Water", Some(info)));
     let broken = find(&library, "broken");

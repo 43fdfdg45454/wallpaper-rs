@@ -3,9 +3,9 @@ use serde_json::Value;
 use wprs_core::model::{ItemKind, ItemSummary};
 
 pub const PAGE: u32 = 200;
-pub const ROLES: [&str; 13] = [
+pub const ROLES: [&str; 15] = [
     "uid", "title", "kind", "color", "thumb", "favorite", "rating", "info", "missing", "broken", "revoked",
-    "selected", "tags",
+    "selected", "tags", "mature", "flashing",
 ];
 
 pub struct Row {

@@ -50,6 +50,8 @@ impl Signer {
 
 pub fn sign_source(dir: impl AsRef<Path>, signer: &Signer) -> Result<String> {
     let dir = dir.as_ref();
+    let _ = fs::remove_file(dir.join(SIGNATURE));
+    crate::fill(dir)?;
     let json = fs::read(dir.join(MANIFEST))?;
     let manifest = Manifest::from_json(&json)?;
     fs::write(dir.join(SIGNATURE), signer.sign(&json, &manifest_comment(&manifest.id, &manifest.version))?)?;

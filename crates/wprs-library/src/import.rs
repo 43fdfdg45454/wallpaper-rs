@@ -1,5 +1,5 @@
-use crate::db::{ensure, printable, row_id, rows, uid, unique};
-use crate::tags::{TAG_LENGTH, tag_item};
+use crate::db::{ensure, row_id, rows, uid, unique};
+use crate::packages::package;
 use crate::{Error, Kind, Library, Result, ScanReport};
 use rusqlite::{Connection, OptionalExtension, params};
 use sha2::{Digest, Sha256};
@@ -7,7 +7,6 @@ use std::fs::{self, File};
 use std::io::{self, Read, Seek, SeekFrom};
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
-use wprs_format::{Limits, Manifest};
 
 const MIB: u64 = 1 << 20;
 
@@ -93,7 +92,8 @@ pub(crate) fn upsert(
     db.execute(sql, params![uid(), source, kind, text, title, size, mtime, hash, now])?;
     let id = db.last_insert_rowid();
     if let Some(manifest) = package(db, id, kind, path)? {
-        db.execute("UPDATE items SET title = ?2 WHERE id = ?1", params![id, manifest.title])?;
+        let title = manifest.title_in(&wprs_core::locale::languages());
+        db.execute("UPDATE items SET title = ?2 WHERE id = ?1", params![id, title])?;
     }
     report.added += 1;
     Ok(id)
@@ -103,28 +103,9 @@ fn refresh(db: &Connection, id: i64, path: &Path) -> Result<()> {
     let (kind, _, size, mtime) = facts(path)?;
     let sql = "UPDATE items SET kind = ?2, size = ?3, mtime = ?4, qhash = ?5, width = NULL, height = NULL, \
         duration_ms = NULL, audio = NULL, color = NULL, error = NULL, pkg_id = NULL, pkg_version = NULL, \
-        pkg_type = NULL, license = NULL WHERE id = ?1";
+        pkg_type = NULL, license = NULL, content = NULL, photosensitive = NULL, facets = NULL WHERE id = ?1";
     db.execute(sql, params![id, kind, size, mtime, qhash(path)?])?;
     package(db, id, kind, path).map(drop)
-}
-
-fn package(db: &Connection, id: i64, kind: Kind, path: &Path) -> Result<Option<Manifest>> {
-    if kind != Kind::Package {
-        return Ok(None);
-    }
-    let (manifest, error) = match wprs_format::open(path, &Limits::default()) {
-        Ok(package) => (Some(package.manifest), None),
-        Err(e) => (None, Some(e.to_string())),
-    };
-    let m = manifest.as_ref();
-    let (pkg_id, version) = (m.map(|m| &m.id), m.map(|m| &m.version));
-    let (pkg_type, license) = (m.map(|m| m.kind.to_string()), m.map(|m| &m.license));
-    let sql = "UPDATE items SET error = ?2, pkg_id = ?3, pkg_version = ?4, pkg_type = ?5, license = ?6 WHERE id = ?1";
-    db.execute(sql, params![id, error, pkg_id, version, pkg_type, license])?;
-    for tag in m.iter().flat_map(|m| &m.tags).filter(|tag| printable(tag.trim(), TAG_LENGTH)) {
-        tag_item(db, id, tag)?;
-    }
-    Ok(manifest)
 }
 
 pub(crate) fn utf8(path: &Path) -> Result<&str> {

@@ -1,9 +1,10 @@
 use crate::choice::{self, Choice};
-use crate::{Error, props, settings, store};
+use crate::{Error, pack, props, settings, store};
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::{Mutex, PoisonError};
+use wprs_format::features;
 use wprs_library::{Item, Library, PlaylistInfo, Rules, Turn};
 
 const DATABASE: &str = "library.db";
@@ -13,8 +14,9 @@ static LIBRARY: Mutex<Option<Library>> = Mutex::new(None);
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 enum Request {
-    Items { query: String },
-    Item { uid: String },
+    Items { query: String, languages: Option<Vec<String>> },
+    Item { uid: String, languages: Option<Vec<String>> },
+    Confirm { uid: String, what: String },
     Thumb { uid: String },
     Favorite { uid: String, favorite: bool },
     Remove { uid: String },
@@ -65,8 +67,21 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
             | Request::Current
     );
     let value = match request {
-        Request::Items { query } => listed(lib.search(&query, now, 0, u32::MAX)?)?,
-        Request::Item { uid } => listed(vec![lib.item(&uid)?])?[0].take(),
+        Request::Items { query, languages } => {
+            let mut items = lib.search(&query, now, 0, u32::MAX)?;
+            lib.localize(&mut items, &languages.unwrap_or_default())?;
+            listed(items)?
+        }
+        Request::Item { uid, languages } => {
+            let (mut items, languages) = (vec![lib.item(&uid)?], languages.unwrap_or_default());
+            lib.localize(&mut items, &languages)?;
+            let about = items[0].package.as_ref().and_then(|_| pack::about(&items[0].path, &languages));
+            let lacks = items[0].package.as_ref().map(|p| features::lacks("android", &p.facets));
+            let mut value = listed(items)?[0].take();
+            (value["about"], value["lacks"]) = (json!(about), json!(lacks.unwrap_or_default()));
+            value
+        }
+        Request::Confirm { uid, what } => lib.confirm(&[&uid], &what).map(|_| Value::Null)?,
         Request::Thumb { uid } => json!(store::thumb(lib, &lib.item(&uid)?)?),
         Request::Favorite { uid, favorite } => json!(lib.set_favorite(&uid, favorite)?),
         Request::Remove { uid } => {
@@ -104,7 +119,14 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
         },
         Request::Take { playlist, item } => json!(lib.remove_from_playlist(&playlist, &item)?),
         Request::Move { playlist, from, to } => json!(lib.move_in_playlist(&playlist, from, to)?),
-        Request::Pick { choice } => json!(choice::pick(choice)),
+        Request::Pick { choice } => {
+            if let Some(Choice::Item(uid)) = &choice
+                && lib.item(uid)?.package.is_some_and(|p| p.asks("photosensitive"))
+            {
+                return Err(Error::Scene("confirm this photosensitive wallpaper first".into()));
+            }
+            json!(choice::pick(choice))
+        }
         Request::Unpick { choice } => json!(choice::unpick(&choice)),
         Request::Current => {
             let image = shown.image.and_then(|path| lib.resolve_item(path.to_str()?).ok());

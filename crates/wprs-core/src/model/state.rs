@@ -75,6 +75,8 @@ model! {
         pub fields: Vec<SceneField>,
         #[serde(default)]
         pub preset_labels: Vec<SceneOption>,
+        #[serde(default)]
+        pub warnings: Vec<String>,
     }
 
     pub struct SceneField {

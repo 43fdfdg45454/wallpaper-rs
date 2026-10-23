@@ -1,0 +1,3 @@
+ALTER TABLE versions ADD COLUMN content TEXT;
+ALTER TABLE versions ADD COLUMN photosensitive INTEGER;
+ALTER TABLE versions ADD COLUMN facets TEXT NOT NULL DEFAULT '[]';

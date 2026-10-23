@@ -4,8 +4,9 @@ use fixture::{DAWN, DUSK, NOW, Repo, files, key, signer};
 use std::collections::BTreeMap;
 use std::fs;
 use wprs_format::{
-    Entry, Error, Kind, Listing, Preview, REVOKED_FORMAT, Reason, Release, Revocation, Revoked, Root,
-    SHARD_FORMAT, Settings, Shard, Time, add, init, public_key, publish, settings, shard_of, sign_root,
+    DETAILED_FORMAT, Entry, Error, Kind, Listing, Preview, REVOKED_FORMAT, Reason, Release, Revocation,
+    Revoked, Root, SHARD_FORMAT, Settings, Shard, Time, add, init, public_key, publish, settings, shard_of,
+    sign_root,
 };
 
 #[test]
@@ -99,15 +100,12 @@ fn release(version: &str) -> Release {
         version: version.into(),
         kind: Kind::Image,
         title: "Sky".into(),
-        description: String::new(),
-        tags: Vec::new(),
         license: "CC0-1.0".into(),
-        authors: Vec::new(),
         size: 1,
         sha256: "b".repeat(64),
         manifest_sha256: "c".repeat(64),
-        preview: None,
         published: Time::from_timestamp(NOW, 0).unwrap(),
+        ..Default::default()
     }
 }
 
@@ -121,7 +119,9 @@ fn shards_reject_misplacement_and_path_tricks() {
     let index = shard_of(DAWN, 4);
     let shard =
         |packages| Shard { format: SHARD_FORMAT.into(), repo_id: repo_id.clone(), shard: index, packages };
-    shard(vec![listing(DAWN, &["0.3.0-beta.1", "1.0.0", "1.2.0"])]).check(&repo_id, index, 4).unwrap();
+    shard(vec![listing(DAWN, &["0.3.0-beta.1", "1.0.0", "1.2.0"])])
+        .check(SHARD_FORMAT, &repo_id, index, 4)
+        .unwrap();
     let elsewhere = (0..).map(|n| format!("org.example.n{n}")).find(|id| shard_of(id, 4) != index).unwrap();
     let hash = Release { sha256: "../../x".into(), ..release("1.0.0") };
     let preview = Preview { sha256: "d".repeat(64), size: 1, ext: "../png".into() };
@@ -142,10 +142,14 @@ fn shards_reject_misplacement_and_path_tricks() {
     ];
     for packages in bad {
         let shard = shard(packages);
-        assert!(matches!(shard.check(&repo_id, index, 4), Err(Error::Invalid { .. })), "{shard:?}");
+        assert!(
+            matches!(shard.check(SHARD_FORMAT, &repo_id, index, 4), Err(Error::Invalid { .. })),
+            "{shard:?}"
+        );
     }
-    assert!(shard(Vec::new()).check(&"d".repeat(64), index, 4).is_err());
-    assert!(shard(Vec::new()).check(&repo_id, (index + 1) % 16, 4).is_err());
+    assert!(shard(Vec::new()).check(SHARD_FORMAT, &"d".repeat(64), index, 4).is_err());
+    assert!(shard(Vec::new()).check(SHARD_FORMAT, &repo_id, (index + 1) % 16, 4).is_err());
+    assert!(shard(Vec::new()).check(DETAILED_FORMAT, &repo_id, index, 4).is_err());
     assert_eq!(
         (shard_of("01J9Z0X9Z6Q7X4F3K5E1V0R1AB", 4), shard_of("01J9Z0X9Z6Q7X4F3K5E1V0R1AB", 8)),
         (9, 156)

@@ -15,7 +15,12 @@ type Reply = Result<ScriptOutputs, Error>;
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum Request {
-    Load { sources: Vec<Source>, seed: u64 },
+    Load {
+        sources: Vec<Source>,
+        seed: u64,
+        #[serde(default)]
+        locale: String,
+    },
     Frame(serde_json::Value),
 }
 
@@ -24,8 +29,8 @@ pub fn serve() -> std::io::Result<()> {
     let (mut script, mut out) = (None, std::io::stdout().lock());
     for line in std::io::stdin().lock().lines() {
         let reply: Reply = match serde_json::from_str(&line?) {
-            Ok(Request::Load { sources, seed }) => {
-                Script::load(&sources, seed, Limits::default()).map(|loaded| {
+            Ok(Request::Load { sources, seed, locale }) => {
+                Script::load(&sources, seed, &locale, Limits::default()).map(|loaded| {
                     script = Some(loaded);
                     ScriptOutputs::default()
                 })
@@ -65,9 +70,15 @@ pub struct Host {
 }
 
 impl Host {
-    pub fn new(program: impl Into<PathBuf>, args: &[&str], sources: &[Source], seed: u64) -> Host {
-        let load =
-            serde_json::to_string(&Request::Load { sources: sources.to_vec(), seed }).unwrap_or_default();
+    pub fn new(
+        program: impl Into<PathBuf>,
+        args: &[&str],
+        sources: &[Source],
+        seed: u64,
+        locale: &str,
+    ) -> Host {
+        let load = Request::Load { sources: sources.to_vec(), seed, locale: locale.into() };
+        let load = serde_json::to_string(&load).unwrap_or_default();
         let command = (program.into(), args.iter().map(|a| a.to_string()).collect());
         Host { command, load, running: None, failures: 0, retry: Instant::now() }
     }

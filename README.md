@@ -82,16 +82,17 @@ pide más píxeles de los que tiene la pantalla; el daemon reduce el stream a lo
 pantalla, los del modo que anuncia el compositor Wayland, para no gastar GPU ni memoria de más (el
 tamaño y la escala que le pasa el plugin no bastan, porque llevan la misma escala que la petición).
 
-El icono de wallpaper-rs en la bandeja reúne lo básico: pausar o reanudar, silenciar, el volumen,
-el perfil y una fila por pantalla con la miniatura y el nombre de su fondo y los botones
-*Siguiente* (solo con una lista en marcha), *Elegir…* y *Favorito*. También pregunta qué permitir
-a una escena que lo pide. Todo lo demás está en la app: *Abrir wallpaper-rs* la abre y *Ajustes…*
-la abre directamente en su página *Ajustes*, con el modo de ajuste, el color de fondo y la lista de
-cada pantalla o de todas a la vez, los ajustes de cada escena, los fotogramas por segundo, las
-pausas y las transiciones. Lo mismo hace `wprs-app --page settings` (o la acción *Ajustes* del
-lanzador); `--page` acepta también `library`, `playlists`, `profiles`, `providers`, `repos` y
-`account`. Si la app ya está abierta, pasa a esa página, salvo que el editor de imágenes tenga
-cambios sin guardar: entonces solo se muestra la ventana.
+El icono de wallpaper-rs en la bandeja reúne lo básico: pausar o reanudar, silenciar, el volumen, el
+perfil y una fila por pantalla con la miniatura y el nombre de su fondo y los botones *Siguiente*
+(solo con una lista en marcha), *Elegir…* y *Favorito*; la miniatura de un paquete para adultos sale
+difuminada hasta que haces clic en ella y, si el fondo destella, la fila lo avisa. También pregunta
+qué permitir a una escena que lo pide. Todo lo demás está en la app: *Abrir wallpaper-rs* la abre y
+*Ajustes…* la abre directamente en su página *Ajustes*, con el modo de ajuste, el color de fondo y
+la lista de cada pantalla o de todas a la vez, los ajustes de cada escena, los fotogramas por
+segundo, las pausas y las transiciones. Lo mismo hace `wprs-app --page settings` (o la acción
+*Ajustes* del lanzador); `--page` acepta también `library`, `playlists`, `profiles`, `providers`,
+`repos` y `account`. Si la app ya está abierta, pasa a esa página, salvo que el editor de imágenes
+tenga cambios sin guardar: entonces solo se muestra la ventana.
 
 Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good y el de
 PipeWire, que lleva el sonido de los vídeos y de las escenas desde su versión 1.2; sin él o con uno
@@ -271,6 +272,13 @@ copian a la GPU fotograma a fotograma, sin sonido, y se pausan si la escena se q
 scripts de las escenas no se ejecutan en el teléfono: la escena se ve sin lo que mueven. Sus
 sonidos tampoco suenan en el teléfono, así que su volumen no aparece entre las propiedades.
 
+Las miniaturas de los paquetes para adultos salen difuminadas y su página no los muestra hasta
+pulsar *Mostrar igualmente*. Un paquete fotosensible no se previsualiza ni se puede usar como fondo
+hasta aceptar el aviso de que destella o muestra patrones rápidos que pueden provocar crisis a
+personas con epilepsia fotosensible; las listas lo saltan mientras tanto. Cada decisión se recuerda
+por paquete. La biblioteca y la página de un paquete muestran su título y su descripción en el
+idioma del teléfono, y la página avisa si sus scripts o sus sonidos no funcionan en él.
+
 *Reaccionar al sonido* y *Reaccionar al tacto* solo aparecen en las escenas que los usan y se
 activan escena a escena. El sonido se lee con el visualizador de Android, que da un espectro de
 poca resolución de lo que suena en el teléfono; Android pide el permiso del micrófono la primera vez
@@ -404,9 +412,9 @@ wprs-ctl edit depth foto.jpg --dilate 4 --smooth 2   # ajustar cerca, lejos, cur
 wprs-ctl edit parallax foto.jpg --source pointer --strength 0.02 --focus 0.3
 ```
 
-`wprs-ctl pack` (crear, firmar y validar paquetes `.wpak`) y `wprs-ctl repo` (claves, firma,
-publicación, rotación y verificación de un repositorio) funcionan sin daemon. La contraseña de
-una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
+`wprs-ctl pack` (crear, firmar, comprobar, actualizar y validar paquetes `.wpak`) y `wprs-ctl repo`
+(claves, firma, publicación, rotación y verificación de un repositorio) funcionan sin daemon. La
+contraseña de una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
 
 La pestaña *Dispositivos* enlaza el teléfono con tu [servidor propio](#servidor-propio) con el
 mismo cliente en Rust que el escritorio, para compartir la biblioteca, las listas y los ajustes con
@@ -432,6 +440,55 @@ lanza al momento con cualquier red. Mientras el teléfono no está enlazado, la 
 tarea ni toca la red al arrancar. *Pausar la sincronización* y *Quitar el servidor* (que pide al
 servidor que olvide el teléfono) están en la misma pestaña.
 
+## Paquetes: clasificación, idiomas y créditos
+
+El manifiesto de un paquete (`docs/specs/package.md`) lo describe. En `wallpaper-rs.wpak/2`
+declara su clasificación (para todos los públicos o para adultos, con sus motivos), si destella o
+muestra patrones rápidos que pueden provocar crisis a personas con epilepsia fotosensible, si es
+una obra original o rehecha a mano a partir de otras (con el nombre de sus autores), los créditos
+y la licencia de cada archivo, las entradas que puede pedir (sonido, puntero, clics, multimedia y
+red), sus enlaces y lo que necesita del motor. El título, la descripción, las notas de cambios y
+los textos de sus propiedades pueden ir en varios idiomas, con tablas de cadenas y una cadena de
+respaldo (tu idioma, su idioma base, el idioma del paquete); los scripts de una escena reciben el
+idioma elegido. La descripción y las notas admiten párrafos, listas, negrita, cursiva y enlaces
+`https`, que la app abre solo con un clic y tras confirmarlo; el resto de textos se muestran tal
+cual y no pueden llevar `<` ni `>`. Los paquetes de la primera versión siguen funcionando igual,
+su descripción se muestra tal cual y aparecen *Sin clasificar*. Las cinco escenas de ejemplo se
+describen en inglés y en español, y `pulse` avisa de que destella con el ritmo.
+
+La app y la bandeja difuminan las miniaturas de los paquetes para adultos hasta que decides
+mostrarlas (en los detalles de la app o con un clic o el teclado en la miniatura difuminada de una
+pantalla, en la página *Ajustes* de la app o en la bandeja), y *Ocultar el contenido para adultos*
+(`library.hide_mature`) los saca de las búsquedas y de los repositorios. Antes de aplicar un
+paquete fotosensible, la app y `wprs-ctl` avisan y piden confirmación una sola vez por paquete, y
+la app también lo permite desde sus detalles con *Permitir este fondo…*; hasta entonces el daemon
+no lo aplica, un perfil no lo pone (la pantalla muestra el motivo) y las listas lo saltan. La
+página *Ajustes* de la app y la bandeja avisan en la pantalla que lo muestra. La búsqueda filtra
+por clasificación y por facetas que se calculan del propio paquete: las entradas que usa la escena
+(`facet:audio`, `facet:pointer`, `facet:clicks`), el tamaño (`facet:4k`), `facet:photosensitive`,
+`facet:android` si funciona entero en el teléfono, etc. Solo `media` y `network` salen de lo que
+declara el autor en sus entradas, porque nada en el paquete muestra ese uso:
+
+```sh
+wprs-ctl lib show 1R1AB2                     # clasificación, origen, créditos, idiomas y descripción
+wprs-ctl lib search 'content:general facet:audio'
+wprs-ctl lib confirm photosensitive 1R1AB2   # permitir un paquete fotosensible
+wprs-ctl lib confirm mature 1R1AB2           # dejar de difuminar su miniatura
+wprs-ctl pack check fondo/                   # qué necesita, qué usa y qué declara un paquete
+wprs-ctl pack upgrade fondo/ --rating general --photosensitive false   # pasar a la versión 2
+```
+
+`wprs-ctl pack build` calcula las funciones del motor que usa el paquete (`requires.features`) y las
+escribe en el manifiesto; si un paquete pide una función o una versión que este wallpaper-rs no
+conoce, dice que hace falta una versión más nueva (en el escritorio, con su miniatura). Las
+versiones publicadas antes de la versión 2 del manifiesto no abren sus paquetes, pero siguen leyendo
+los repositorios que los tienen: solo ven en ellos los de la primera versión. El validador comprueba
+que las entradas declaradas incluyan las que la escena puede usar con cualquier valor de sus
+propiedades y dice dónde las usa. Después de actualizar wallpaper-rs, la biblioteca vuelve a leer
+una vez sus paquetes, así que los que pedían una versión más nueva empiezan a funcionar y los
+anteriores reciben sus facetas. En el teléfono, la página de un paquete avisa si sus scripts o sus
+sonidos no funcionan allí.
+
 ## Servidor propio
 
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas
@@ -451,7 +508,9 @@ no lo muestra, `docker compose exec wprs wprs-server setup-token` da otro). `rep
 claves del repositorio y muestra una sola vez la clave raíz, que hay que guardar fuera del
 servidor; el servidor solo conserva la clave en línea, con la que vuelve a firmar el índice cada
 día (cada firma caduca a los 7). Desde *Administración* se crean invitaciones y desde *Cuenta*,
-tokens, dispositivos enlazados con un código y subidas de paquetes `.wpak`.
+tokens, dispositivos enlazados con un código y subidas de paquetes `.wpak` de las dos versiones del
+manifiesto. El servidor rechaza los paquetes para adultos, y su catálogo filtra por clasificación y
+por faceta y avisa en la página de un paquete fotosensible.
 
 El servidor construido así se identifica con la versión de `Cargo.toml` y el sufijo `-local`. Para
 que muestre la de una versión publicada, se construye desde su etiqueta:
@@ -664,11 +723,14 @@ La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: in
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre
 dispositivos DRM virtuales), activa el plugin, comprueba los píxeles de una captura, carga el icono
 de la bandeja, abre la app en su página *Ajustes* desde el botón de la bandeja y con
-`--page settings` y comprueba en un bus aparte que la bandeja solo ofrece la app donde está
-instalada. También ejecuta `scripts/sway-test.sh` en un Sway sin pantalla: captura cada salida con
-`grim`, conecta y quita una pantalla y comprueba que el vídeo se pausa bajo una ventana a pantalla
-completa y con la pantalla apagada, y `scripts/x11-test.sh` en un Xvfb con dos monitores, el fondo
-de la ventana raíz y la misma pausa.
+`--page settings`, comprueba en un bus aparte que la bandeja solo ofrece la app donde está
+instalada y, con `qmltestrunner` de `qt6-declarative` (`tests/tray-row.qml`), que la miniatura de
+una pantalla, en la bandeja y en la app, sigue difuminada con un paquete para adultos hasta
+pulsarla con el ratón o el teclado, y que la bandeja avisa si el fondo destella. También ejecuta
+`scripts/sway-test.sh` en un Sway sin pantalla: captura cada salida con `grim`, conecta y quita una
+pantalla y comprueba que el vídeo se pausa bajo una ventana a pantalla completa y con la pantalla
+apagada, y `scripts/x11-test.sh` en un Xvfb con dos monitores, el fondo de la ventana raíz y la
+misma pausa.
 
 | Ruta | Contenido |
 |------|-----------|
@@ -694,7 +756,7 @@ de la ventana raíz y la misma pausa.
 | `po` | Traducciones gettext de los paquetes de Plasma y de la app |
 | `packaging` | Servicio systemd, activación D-Bus, lanzador e icono, scripts de instalación, Flatpak |
 | `deploy` | Despliegue de referencia del servidor con Caddy |
-| `docs` | Especificaciones de la interfaz D-Bus, los repositorios firmados y el servidor |
+| `docs` | Especificaciones de la interfaz D-Bus, los paquetes y sus escenas, los repositorios firmados y el servidor |
 
 ## Privacidad
 

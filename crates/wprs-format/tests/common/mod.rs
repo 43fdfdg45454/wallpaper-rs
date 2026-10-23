@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
-use std::collections::BTreeMap;
+use image::{ImageFormat, RgbImage};
 use std::io::{Cursor, Write};
-use wprs_format::{FileEntry, Kind, MANIFEST, Manifest, SCHEMA};
+use wprs_format::{
+    Content, FileEntry, Kind, MANIFEST, Manifest, Origin, OriginKind, Previews, Rating, SCHEMA, SCHEMA_V1,
+};
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
 
@@ -15,7 +17,7 @@ pub fn manifest(kind: Kind) -> Manifest {
         Kind::Scene => "scene.json",
     };
     Manifest {
-        schema: SCHEMA.into(),
+        schema: SCHEMA_V1.into(),
         id: "org.example.sunset".into(),
         version: "1.0.0".into(),
         title: "Sunset".into(),
@@ -26,9 +28,26 @@ pub fn manifest(kind: Kind) -> Manifest {
         entry: entry.into(),
         preview: Some("preview.webp".into()),
         tags: vec!["nature".into()],
-        properties: BTreeMap::new(),
-        presets: Vec::new(),
+        ..Default::default()
     }
+}
+
+pub fn v2(kind: Kind) -> Manifest {
+    Manifest {
+        schema: SCHEMA.into(),
+        preview: None,
+        previews: Some(Previews { thumbnail: Some("preview.png".into()), animated: None }),
+        content: Some(Content { rating: Rating::General, descriptors: Vec::new() }),
+        photosensitive: Some(false),
+        origin: Some(Origin { kind: OriginKind::Original, derived_from: Vec::new() }),
+        ..manifest(kind)
+    }
+}
+
+pub fn image(width: u32, height: u32, format: ImageFormat) -> Vec<u8> {
+    let mut out = Cursor::new(Vec::new());
+    RgbImage::from_pixel(width, height, [40, 90, 160].into()).write_to(&mut out, format).unwrap();
+    out.into_inner()
 }
 
 pub fn entry(path: &str, size: u64) -> FileEntry {

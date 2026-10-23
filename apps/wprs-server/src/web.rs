@@ -8,9 +8,10 @@ use axum::extract::{Path, Query, State};
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
-use maud::{DOCTYPE, Markup, html};
+use maud::{DOCTYPE, Markup, PreEscaped, html};
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use serde_json::Value;
+use wprs_format::markup;
 
 const STYLE: &str = "
 :root{color-scheme:light dark;--fg:#1b1b1f;--bg:#fafafa;--muted:#55555f;--line:#c8c8d0;
@@ -36,6 +37,7 @@ grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 ul.grid li,section.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
 img{max-width:100%;height:auto;border-radius:6px}table{border-collapse:collapse;width:100%}
 th,td{text-align:left;border-bottom:1px solid var(--line);padding:6px;vertical-align:top}
+.warning{border-left:4px solid #c2410c;padding:4px 12px}
 .muted,small{color:var(--muted)}dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px}
 dd{margin:0;overflow-wrap:anywhere}
 ";
@@ -107,8 +109,10 @@ pub fn layout(app: &App, account: Option<Markup>, title: &str, body: Markup) -> 
     }
 }
 
+const FACETS: [&str; 7] = ["audio", "pointer", "sound", "customizable", "localized", "photosensitive", "4k"];
+
 async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Res<Markup> {
-    let (q, kind) = (s.q.clone(), s.kind.clone());
+    let (q, kind, rating, facet) = (s.q.clone(), s.kind.clone(), s.content.clone(), s.facet.clone());
     let (items, next) = app.db.run(move |c| search(c, &s)).await?;
     let encode = |text: &str| utf8_percent_encode(text, NON_ALPHANUMERIC).to_string();
     let body = html! {
@@ -117,6 +121,14 @@ async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Re
             label { "Type" select name="kind" {
                 option value="" { "Any" }
                 @for k in ["image", "video", "scene"] { option value=(k) selected[kind == k] { (k) } }
+            } }
+            label { "Rating" select name="content" {
+                option value="" { "Any" }
+                @for r in ["general", "unrated"] { option value=(r) selected[rating == r] { (r) } }
+            } }
+            label { "With" select name="facet" {
+                option value="" { "Anything" }
+                @for f in FACETS { option value=(f) selected[facet == f] { (f) } }
             } }
             button { "Search" }
         }
@@ -132,7 +144,8 @@ async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Re
             }
         } } }
         @if let Some(next) = next {
-            p { a rel="next" href={ "/?cursor=" (next) "&q=" (encode(&q)) "&kind=" (encode(&kind)) } {
+            p { a rel="next" href={ "/?cursor=" (next) "&q=" (encode(&q)) "&kind=" (encode(&kind))
+                "&content=" (encode(&rating)) "&facet=" (encode(&facet)) } {
                 "More wallpapers"
             } }
         }
@@ -144,15 +157,23 @@ async fn package(State(app): St, auth: Option<Auth>, Path(id): Path<String>) -> 
     let key = id.clone();
     let (latest, versions) = app.db.run(move |c| details(c, &key)).await?;
     let (title, owner) = (text(&latest, "title"), latest["owner"].as_str().unwrap_or("a deleted account"));
+    let render = if latest["content"].is_null() { markup::verbatim } else { markup::html };
+    let description = render(text(&latest, "description"));
     let body = html! {
         img src=(text(&latest, "thumbnail")) alt={ "Preview of " (title) } width="640";
-        p { (text(&latest, "description")) }
+        @if latest["photosensitive"] == true {
+            p.warning { "This wallpaper has flashing lights or patterns that can affect people with \
+                photosensitive epilepsy." }
+        }
+        (PreEscaped(description))
         dl {
             dt { "Package" } dd { code { (id) } }
             dt { "Type" } dd { (text(&latest, "kind")) }
             dt { "License" } dd { (text(&latest, "license")) }
             dt { "Authors" } dd { (joined(&latest["authors"])) }
             dt { "Tags" } dd { (joined(&latest["tags"])) }
+            dt { "Rating" } dd { (latest["content"].as_str().unwrap_or("unrated")) }
+            dt { "Facets" } dd { (joined(&latest["facets"])) }
             dt { "Uploaded by" } dd { (owner) }
             dt { "SHA-256" } dd { code { (text(&latest, "sha256")) } }
         }

@@ -5,7 +5,47 @@ model! {
     #[derive(Copy, Eq, Hash)]
     pub enum ItemKind { Image, Video, Package, #[serde(other)] Unknown }
 
-    pub struct PackageInfo { pub id: String, pub version: String, pub kind: String, pub license: String }
+    pub struct PackageInfo {
+        pub id: String,
+        pub version: String,
+        pub kind: String,
+        pub license: String,
+        #[serde(default)]
+        pub content: Option<String>,
+        #[serde(default)]
+        pub photosensitive: Option<bool>,
+        #[serde(default)]
+        pub facets: Vec<String>,
+        #[serde(default)]
+        pub confirmed: Vec<String>,
+    }
+
+    pub struct About {
+        pub schema: String,
+        pub title: String,
+        pub description: String,
+        pub changes: String,
+        pub authors: Vec<String>,
+        pub license: String,
+        pub content: Option<String>,
+        pub descriptors: Vec<String>,
+        pub photosensitive: Option<bool>,
+        pub origin: Option<String>,
+        pub derived_from: Vec<Work>,
+        pub credits: Vec<PackageCredit>,
+        pub links: Vec<Link>,
+        pub inputs: Vec<String>,
+        pub features: Vec<Feature>,
+        pub languages: Vec<String>,
+    }
+
+    pub struct Work { pub author: String, pub title: Option<String>, pub url: Option<String>, pub license: Option<String> }
+
+    pub struct PackageCredit { pub paths: Vec<String>, pub license: String, pub attribution: String, pub url: Option<String> }
+
+    pub struct Link { pub kind: String, pub url: String }
+
+    pub struct Feature { pub name: String, pub why: String }
 
     pub struct Item {
         pub uid: Uid,
@@ -71,6 +111,8 @@ model! {
         pub credit: Option<Credit>,
         pub installed: Option<InstalledPackage>,
         pub revoked: Option<Reason>,
+        #[serde(default)]
+        pub about: Option<About>,
     }
 
     pub struct PlaylistRef { pub uid: Uid, pub name: String }
@@ -109,5 +151,16 @@ model! {
         pub attribution: Option<String>,
         pub license: Option<String>,
         pub link: Option<String>,
+    }
+}
+
+pub fn asks(what: &str, content: Option<&str>, photosensitive: Option<bool>, confirmed: &[String]) -> bool {
+    let flagged = if what == "mature" { content == Some("mature") } else { photosensitive == Some(true) };
+    flagged && !confirmed.iter().any(|c| c == what)
+}
+
+impl PackageInfo {
+    pub fn asks(&self, what: &str) -> bool {
+        asks(what, self.content.as_deref(), self.photosensitive, &self.confirmed)
     }
 }

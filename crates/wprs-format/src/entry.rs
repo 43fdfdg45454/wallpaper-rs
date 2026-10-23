@@ -1,10 +1,13 @@
 use crate::repo::hex64;
-use crate::{Error, Result, Revoked, Root, Shard, Time, ensure, require, sha256};
+use crate::{
+    DETAILED_FORMAT, Error, Result, Revoked, Root, SHARD_FORMAT, Shard, Time, ensure, require, sha256,
+};
 use chrono::TimeDelta;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 pub const ENTRY_FORMAT: &str = "wpak-repo-entry/1.0";
+pub const DETAILS_FORMAT: &str = "wpak-repo-details/1.0";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -18,6 +21,15 @@ pub struct Entry {
     pub shard_bits: u8,
     pub shards: Vec<Blob>,
     pub revoked: Blob,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Details {
+    pub format: String,
+    pub repo_id: String,
+    pub version: u64,
+    pub entry: String,
+    pub shards: Vec<Blob>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,6 +65,15 @@ impl Entry {
     }
 }
 
+impl Details {
+    pub fn check(&self, entry: &Entry, entry_sha256: &str) -> Result<()> {
+        let own = self.format == DETAILS_FORMAT && self.repo_id == entry.repo_id;
+        let pinned = self.version == entry.version && self.entry == entry_sha256;
+        let shards = self.shards.len() == entry.shards.len() && self.shards.iter().all(|b| hex64(&b.sha256));
+        require(own && pinned && shards, "details", "does not match the entry it extends")
+    }
+}
+
 impl Blob {
     pub fn matches(&self, bytes: &[u8]) -> Result<()> {
         let ok = bytes.len() as u64 == self.size && sha256(bytes)? == self.sha256;
@@ -60,15 +81,21 @@ impl Blob {
     }
 }
 
+pub(crate) fn shards<'a>(entry: &'a Entry, details: Option<&'a Details>) -> (&'static str, &'a [Blob]) {
+    details.map_or((SHARD_FORMAT, &entry.shards), |d| (DETAILED_FORMAT, &d.shards))
+}
+
 pub(crate) fn contents(
     entry: &Entry,
+    details: Option<&Details>,
     repo_id: &str,
     blobs: &BTreeMap<String, Vec<u8>>,
 ) -> Result<(Vec<Shard>, Revoked)> {
     let get = |blob: &Blob| blobs.get(&blob.sha256).ok_or_else(|| Error::Missing(blob.sha256.clone()));
-    let shards = entry.shards.iter().enumerate().map(|(index, blob)| {
+    let (format, list) = shards(entry, details);
+    let shards = list.iter().enumerate().map(|(index, blob)| {
         let shard: Shard = serde_json::from_slice(get(blob)?)?;
-        shard.check(repo_id, index, entry.shard_bits).map(|()| shard)
+        shard.check(format, repo_id, index, entry.shard_bits).map(|()| shard)
     });
     let shards = shards.collect::<Result<Vec<_>>>()?;
     let revoked: Revoked = serde_json::from_slice(get(&entry.revoked)?)?;

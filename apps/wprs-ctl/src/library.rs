@@ -107,6 +107,13 @@ pub enum Lib {
         #[arg(long, default_value = "512", value_parser = ["256", "512", "1024"])]
         size: String,
     },
+    #[command(about = "Show mature thumbnails of packages, or allow photosensitive packages to be shown")]
+    Confirm {
+        #[arg(value_parser = ["mature", "photosensitive"])]
+        what: String,
+        #[arg(required = true, value_name = "ITEM", help = ITEM)]
+        items: Vec<String>,
+    },
     #[command(about = "Show an item on the outputs")]
     Apply {
         #[arg(value_name = "ITEM", help = ITEM)]
@@ -157,10 +164,10 @@ pub async fn run(client: &Client, command: Lib) -> Result<()> {
         Lib::Thumb { item, size } => {
             println!("{}", lib.thumbnail(&one(client, &item).await?, size.parse()?).await?)
         }
+        Lib::Confirm { what, items } => lib.confirm(&strs(&resolve(client, &items).await?), &what).await?,
         Lib::Apply { item, output, fit, preset } => {
             let uid = one(client, &item).await?;
-            let apply = lib.apply(&uid, &output, fit.map_or("", Fit::as_str), &preset);
-            crate::inputs::asking(client, &output, apply).await?
+            crate::caution::apply(client, &uid, &output, fit.map_or("", Fit::as_str), &preset).await?
         }
     }
     Ok(())

@@ -47,11 +47,25 @@ ColumnLayout {
 
                 width: ListView.view.width
 
-                QQC2.Label {
+                ColumnLayout {
                     Layout.fillWidth: true
-                    text: row.modelData.id + " " + row.modelData.version + (row.modelData.revoked ? " · " + App.tr("revoked: %1").arg(Labels.value(row.modelData.revoked)) : "")
-                    color: row.modelData.revoked ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
-                    elide: Text.ElideRight
+
+                    QQC2.Label {
+                        Layout.fillWidth: true
+                        text: row.modelData.id + " " + row.modelData.version + (row.modelData.revoked ? " · " + App.tr("revoked: %1").arg(Labels.value(row.modelData.revoked)) : "")
+                        textFormat: Text.PlainText
+                        color: row.modelData.revoked ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
+                        elide: Text.ElideRight
+                    }
+
+                    QQC2.Label {
+                        Layout.fillWidth: true
+                        visible: !!row.modelData.update && text !== ""
+                        text: row.modelData.changes ? App.tr("What's new: %1").arg(App.plain(row.modelData.changes)) : ""
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                        font: Kirigami.Theme.smallFont
+                    }
                 }
 
                 QQC2.Button {

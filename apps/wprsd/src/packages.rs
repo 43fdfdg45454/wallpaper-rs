@@ -186,19 +186,23 @@ impl Daemon {
         Ok(())
     }
 
+    pub fn latest(&self) -> Result<HashMap<(String, String), (String, String)>> {
+        let langs = wprs_core::locale::languages();
+        let notes = |r: &wprs_format::Release| r.changes.as_ref().map(|c| c.pick(&langs)).unwrap_or_default();
+        let items = wprs_format::browse(&self.store.data, "")?.into_iter();
+        Ok(items.map(|i| ((i.repo_id, i.id), (notes(&i.release), i.release.version))).collect())
+    }
+
     pub fn list_installed(&self) -> Result<String> {
         let serial = self.changes.serial();
-        let list = wprs_format::installed(&self.store.data)?;
-        let latest: HashMap<(String, String), String> = wprs_format::browse(&self.store.data, "")?
-            .into_iter()
-            .map(|item| ((item.repo_id, item.id), item.release.version))
-            .collect();
+        let (list, latest) = (wprs_format::installed(&self.store.data)?, self.latest()?);
         let model = |record: &Installed| {
             let newest =
                 list.iter().filter(|i| i.id == record.id).all(|i| !newer(&i.version, &record.version));
             let available = latest.get(&(record.repo_id.clone(), record.id.clone()));
-            let update = available.filter(|v| newest && newer(v, &record.version)).cloned();
-            self.package_model(record, update)
+            let update = available.filter(|(_, v)| newest && newer(v, &record.version));
+            let (changes, update) = update.cloned().map_or((String::new(), None), |(c, v)| (c, Some(v)));
+            InstalledPackage { changes, ..self.package_model(record, update) }
         };
         reply(InstalledReply { model: MODEL, serial, packages: list.iter().map(model).collect() })
     }
@@ -216,6 +220,7 @@ impl Daemon {
             revoked,
             item,
             update,
+            changes: String::new(),
         }
     }
 }

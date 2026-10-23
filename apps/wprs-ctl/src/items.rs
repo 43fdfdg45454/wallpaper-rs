@@ -49,7 +49,7 @@ pub fn dimensions(width: Option<u32>, height: Option<u32>, duration_ms: Option<u
 }
 
 pub fn details(reply: ItemDetails) -> String {
-    let i = reply.item;
+    let (package, i) = (reply.item.package.clone(), reply.item);
     let presets = reply.presets.into_iter().map(|p| {
         let value = [p.value.fit.map(|f| f.to_string()), p.value.background].into_iter().flatten();
         format!("{} ({})", p.name, value.collect::<Vec<_>>().join(" "))
@@ -72,7 +72,7 @@ pub fn details(reply: ItemDetails) -> String {
         ("used", i.used_at.map(|at| format!("{} ({} times)", time(at), i.use_count))),
         ("missing", i.missing.then(|| "true".into())),
         ("error", i.error),
-        ("package", i.package.map(|p| format!("{} {} ({}, {})", p.id, p.version, p.kind, p.license))),
+        ("package", package.as_ref().map(|p| format!("{} {} ({}, {})", p.id, p.version, p.kind, p.license))),
         ("installed", reply.installed.map(|p| format!("{} from {}", p.version, prefix(&p.repo_id)))),
         ("revoked", reply.revoked.map(|r| text(&r))),
         ("credit", credit),
@@ -80,7 +80,10 @@ pub fn details(reply: ItemDetails) -> String {
         ("playlists", Some(list(reply.playlists.iter().map(|p| &p.name))).filter(|p| !p.is_empty())),
         ("thumb", reply.thumb.map(|t| t.display().to_string())),
     ];
-    show::lines(fields.into_iter().filter_map(|(key, value)| Some((key, value?))))
+    let about = reply.about.as_ref().map(|a| crate::about::fields(a, package.as_ref())).unwrap_or_default();
+    let fields = fields.into_iter().chain(about).filter(|(_, v)| v.as_ref().is_some_and(|v| !v.is_empty()));
+    show::lines(fields.filter_map(|(key, value)| Some((key, value?))))
+        + &reply.about.as_ref().map(crate::about::texts).unwrap_or_default()
 }
 
 pub fn tags(reply: TagsReply) -> String {

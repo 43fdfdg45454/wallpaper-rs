@@ -37,7 +37,7 @@ Kirigami.InlineMessage {
 
     visible: ask.inputs.length > 0
     type: Kirigami.MessageType.Information
-    text: [daemon.tr("The scene %1 asks for your permission:", ask.title)].concat(ask.inputs.map(input => explained[input].join(": "))).join("\n")
+    text: [daemon.tr("The scene %1 asks for your permission:", String(ask.title).replace(/</g, "‹").replace(/>/g, "›"))].concat(ask.inputs.map(input => explained[input].join(": "))).join("\n")
     actions: [
         Kirigami.Action {
             text: consent.daemon.tr("Allow")

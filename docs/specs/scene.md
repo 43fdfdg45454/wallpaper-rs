@@ -1,10 +1,11 @@
 # Scene format
 
-A scene package is a `.wpak` package (see `repo.md` for repositories) whose manifest has
-`"kind": "scene"` and `"entry": "scene.json"`. The scene lists its assets by package path; every
-path must be in the package. `wprs-ctl pack build` and every reader check the scene: unknown
-fields, broken references and out-of-range values are refused with the JSON path of the field,
-such as `/layers/2/effects/0/params/radius is 300, expected 0..=128`. The model lives in
+A scene package is a `.wpak` package (see `package.md` for packages and their manifest, `repo.md`
+for repositories) whose manifest has `"kind": "scene"` and `"entry": "scene.json"`. The scene
+lists its assets by package path; every path must be in the package. `wprs-ctl pack build` and
+every reader check the scene: unknown fields, broken references and out-of-range values are refused
+with the JSON path of the field, such as `/layers/2/effects/0/params/radius is 300, expected
+0..=128`. The model lives in
 `crates/wprs-scene`; `wprs-ctl scene bench <file.wpak>` renders a package offscreen and reports
 what each frame costs.
 
@@ -149,7 +150,7 @@ fn uv_nudge(uv: vec2<f32>) -> vec2<f32> {
 | `uses` | `time`, `cursor`, `audio`: the scene keeps rendering while time runs, the pointer moves or sound plays; otherwise the effect costs nothing after its first frame |
 | `pace` | when a time effect changes: `{ "rate": "<float parameter>" }` (that many times a second), `{ "sweep": ["<speed>", "<gap>", "<phase>"] }` (a band crosses the layer once every `1 + gap` turns and waits off it in between) or `"outside"` (only while the pointer is off the output); the scene then sleeps until the picture changes |
 | `mask_mode` | `mix` (default) blends the result with the input by the mask; with `strength` the shader scales itself by `mask_at(uv)`, as distortions should |
-| `params` | at most 16 of `float`, `vec2`, `color`, `bool`, `texture` and `lut`, with `id`, `default`, `min`, `max` and `uses`, an input needed only while the parameter is not zero (a `follow` flag needs the pointer only when set, a `vec2` while either part is not zero); parameter *n* is `param(nu)`, in `.x`, `.xy` or `.rgba` (linear) |
+| `params` | at most 16 of `float`, `vec2`, `color`, `bool`, `texture` and `lut`, with `id`, `default`, `min`, `max` and `uses` (`time`, `cursor`, `clicks` or `audio`; clicks come with the pointer), an input needed only while the parameter is not zero (a `follow` flag needs the pointer only when set, a `vec2` while either part is not zero); parameter *n* is `param(nu)`, in `.x`, `.xy` or `.rgba` (linear) |
 | `passes` | `{ "entry", "scale", "inputs", "output" }`; `scale` is a fraction of the layer size, and lower quality levels shrink every pass but the last; `inputs` (default `["previous"]`) name `previous`, `input`, `source` (the layer before its effects), `mask`, `pass:N`, `state` or `asset:<texture parameter>`, bound to `input_tex` and then `aux0` to `aux3` |
 | `cost` | `{ "taps", "passes", "scale" }`; taps × passes × scale² units, light up to 1, medium up to 6, heavy above |
 | `fuse` | `uv` or `color` for single-pass effects, see below |
@@ -303,14 +304,18 @@ refer to them by id. Each has a `type` and `label`, `help`, `group`, `visible_if
 | `file` | `accept` | absolute path of an image chosen by the user, or `null` |
 | `group`, `label` | | presentation only |
 
-`presets` is a list of `{ "id", "label", "values" }`; a preset cannot set a `file` property.
-Values are changed through `GetSceneProperties`, `SetSceneProperty`, `ApplyScenePreset` and
-`ResetSceneProperties` (`dbus.md`) or `wprs-ctl prop`, and stored in `config.toml`. Labels and
-help are text or `{ "<language>": text }`. `group` names a property of type `group`, under which
-the property is listed; `visible_if` (`{ "<other id>": value }`) hides it while another property
-has a different value; `order` sorts properties and groups. The app shows these forms under *Scene
-settings* for each screen on its Settings page. The scenes in the `scenes/` folder of the
-repository are examples of this format, dedicated to the public domain.
+`presets` is a list of `{ "id", "label", "values" }`; a preset cannot set a `file` property. Values
+are changed through `GetSceneProperties`, `SetSceneProperty`, `ApplyScenePreset` and
+`ResetSceneProperties` (`dbus.md`) or `wprs-ctl prop`, and stored in `config.toml`. A stored value
+whose property no longer exists, changed its type or falls outside its range after an update of the
+package is ignored for the default, with a warning in the log, in `GetSceneProperties` (`warnings`)
+and in `wprs-ctl prop ls`. Labels and help are text or `{ "<language>": text }`, and in
+`wallpaper-rs.wpak/2` also `"@key"` of the manifest's `strings`; ids and limits depend on the
+manifest version (`package.md`). `group` names a property of type `group`, under which the property
+is listed; `visible_if` (`{ "<other id>": value }`) hides it while another property has a different
+value; `order` sorts properties and groups. The app shows these forms under *Scene settings* for
+each screen on its Settings page. The scenes in the `scenes/` folder of the repository are examples
+of this format, dedicated to the public domain.
 
 ## Inputs
 
@@ -322,7 +327,8 @@ script sources, layer overrides and timeline commands). A scene only renders aga
 uses. The pointer follows the reported position with a critically damped spring that settles in
 about 0.15 s and returns to the center when the pointer leaves the screen. Audio and the pointer
 need the user's grant for the scene (`dbus.md`, `Inputs1`), which the app and the tray ask for once
-when such a scene is shown.
+when such a scene is shown; a `wallpaper-rs.wpak/2` manifest declares them in `inputs`
+(`package.md`).
 
 ## Scripts
 
@@ -349,9 +355,11 @@ export function update({ time }) {
 }
 ```
 
-`engine` has `time` and `dt`, `props.get(id)` the user properties, `audio` `bands(16 | 32 | 64,
-"left" | "right" | "average")`, `bass`, `mid`, `treble`, `level` and `beat`, `input.cursor` `x`, `y`,
-`inside` and `buttons`. `scene.layer(id)` overrides `position`, `scale`, `rotation`, `opacity`,
-`visible`, `color` and `text` for the next frame, and `timeline(id)` has `play()`, `pause()`,
-`reverse()` and `seek(t)`. `Math.random` follows `clock.seed`. A scene whose scripts mention `audio`
-or `cursor` uses that input as if a value were bound to it, so it still needs the user's grant.
+`engine` has `time`, `dt` and `locale` (the language picked among the package's languages, as for
+its texts, in lowercase, or `""` when it declares none), `props.get(id)` the user properties,
+`audio` `bands(16 | 32 | 64, "left" | "right" | "average")`, `bass`, `mid`, `treble`, `level` and
+`beat`, `input.cursor` `x`, `y`, `inside` and `buttons`. `scene.layer(id)` overrides `position`,
+`scale`, `rotation`, `opacity`, `visible`, `color` and `text` for the next frame, and `timeline(id)`
+has `play()`, `pause()`, `reverse()` and `seek(t)`. `Math.random` follows `clock.seed`. A scene
+whose scripts mention `audio` or `cursor` uses that input as if a value were bound to it, so it
+still needs the user's grant.

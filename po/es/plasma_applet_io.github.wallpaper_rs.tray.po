@@ -128,6 +128,17 @@ msgstr "%1 de %2"
 
 #: integrations/plasma-tray/contents/ui/ScreenRow.qml
 #, kde-format
+msgid "Flashes or shows fast patterns; you allowed it"
+msgstr "Destella o muestra patrones rápidos; lo has permitido"
+
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "Flashes or shows fast patterns that can trigger seizures"
+msgstr ""
+"Destella o muestra patrones rápidos que pueden provocar crisis epilépticas"
+
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
 msgid "Next"
 msgstr "Siguiente"
 
@@ -155,6 +166,13 @@ msgstr "Añadir a favoritos"
 #, kde-format
 msgid "Images and videos"
 msgstr "Imágenes y vídeos"
+
+#: integrations/plasma-tray/contents/ui/Thumbnail.qml
+#, kde-format
+msgid "Mature content: click the picture to always show this package"
+msgstr ""
+"Contenido para adultos: haz clic en la imagen para mostrar siempre este "
+"paquete"
 
 #: integrations/plasma-tray/contents/ui/main.qml
 #, kde-format

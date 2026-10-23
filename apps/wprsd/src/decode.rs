@@ -66,9 +66,12 @@ pub fn video(path: &Path) -> Result<Picture, Problem> {
 }
 
 pub fn package(path: &Path) -> Result<Picture, Problem> {
-    let mut package: Package<_> = wprs_format::open(path, &wprs_format::Limits::default())?;
+    let mut package: Package<_> = match wprs_format::open(path, &wprs_format::Limits::default()) {
+        Err(e @ wprs_format::Error::Newer(_)) => return Ok(newer(path, e.to_string())),
+        package => package?,
+    };
     let manifest = package.manifest.clone();
-    let preview = manifest.preview.as_ref().map(|p| bytes(package.read_file(p)?)).transpose()?;
+    let preview = manifest.thumbnail().map(|p| bytes(package.read_file(p)?)).transpose()?;
     let entry = package.read_file(&manifest.entry);
     let entry = match manifest.kind {
         PackageKind::Scene => {
@@ -85,4 +88,9 @@ pub fn package(path: &Path) -> Result<Picture, Problem> {
         }
     };
     Ok(Picture { image: preview.or(entry.image), ..entry })
+}
+
+fn newer(path: &Path, error: String) -> Picture {
+    let image = wprs_format::thumbnail(path).ok().flatten().and_then(|b| bytes(b).ok());
+    Picture { meta: Meta { error: Some(error), ..Meta::default() }, image, failure: None }
 }

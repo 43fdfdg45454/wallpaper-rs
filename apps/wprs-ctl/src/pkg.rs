@@ -145,17 +145,28 @@ pub fn browse(page: BrowsePage) -> String {
     let count = range(page.offset, page.packages.len(), page.total);
     let rows = page.packages.into_iter().map(|p| {
         let installed = list(&p.installed) + if p.update { " (update available)" } else { "" };
-        vec![prefix(&p.repo_id), p.id, p.version, p.kind, installed, p.title]
+        let flashing = (p.photosensitive == Some(true)).then_some("photosensitive");
+        let content = list([p.content.as_deref().or(Some("unrated")), flashing].into_iter().flatten());
+        vec![prefix(&p.repo_id), p.id, p.version, p.kind, content, installed, p.title]
     });
-    let head = ["REPO", "ID", "VERSION", "KIND", "INSTALLED", "TITLE"];
+    let head = ["REPO", "ID", "VERSION", "KIND", "CONTENT", "INSTALLED", "TITLE"];
     show::lines([("query", page.query), ("packages", count)]) + &table(&head, rows)
 }
 
 pub fn installed(reply: InstalledReply) -> String {
+    let notes: String = reply
+        .packages
+        .iter()
+        .filter(|p| p.update.is_some() && !p.changes.is_empty())
+        .map(|p| {
+            let new = p.update.as_deref().unwrap_or_default();
+            format!("\nWhat's new in {} {new}:\n{}\n", p.id, wprs_core::markup::plain(&p.changes))
+        })
+        .collect();
     let rows = reply.packages.into_iter().map(|p| {
         let (item, size) = (p.item.as_deref().map_or("-".into(), short), bytes(p.size));
         let (update, revoked) = (p.update.unwrap_or("-".into()), p.revoked.map_or("-".into(), |r| text(&r)));
         vec![prefix(&p.repo_id), p.id, p.version, size, item, update, revoked]
     });
-    table(&["REPO", "ID", "VERSION", "SIZE", "ITEM", "UPDATE", "REVOKED"], rows)
+    table(&["REPO", "ID", "VERSION", "SIZE", "ITEM", "UPDATE", "REVOKED"], rows) + &notes
 }

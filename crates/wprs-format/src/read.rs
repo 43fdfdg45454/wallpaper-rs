@@ -1,5 +1,8 @@
+use crate::features::{self, Facts, facts};
 use crate::validate::{extension, within};
-use crate::{Error, FileEntry, Kind, Limits, MANIFEST, Manifest, Result, check_path, ensure, validate};
+use crate::{
+    Error, FileEntry, Kind, Limits, MANIFEST, Manifest, Result, check_path, ensure, media, require, validate,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File, FileType, OpenOptions};
 use std::io::{self, BufReader, Read, Seek, Write};
@@ -10,11 +13,13 @@ use zip::{CompressionMethod, ZipArchive};
 
 const MAX_MANIFEST: u64 = 1 << 20;
 const MAX_SCENE: u64 = 8 << 20;
+const MAX_THUMBNAIL: u64 = 16 << 20;
 
 #[derive(Debug)]
 pub struct Package<R> {
     pub manifest: Manifest,
     pub entries: Vec<FileEntry>,
+    pub facts: Facts,
     archive: ZipArchive<R>,
 }
 
@@ -42,16 +47,45 @@ pub fn read<R: Read + Seek>(reader: R, limits: &Limits) -> Result<Package<R>> {
         entries.push(FileEntry { path, size, compressed_size, symlink: false });
     }
     ensure(entries.iter().any(|e| e.path == MANIFEST), || Error::Missing(MANIFEST.into()))?;
-    let mut bytes = Vec::new();
-    archive.by_name(MANIFEST)?.take(MAX_MANIFEST + 1).read_to_end(&mut bytes)?;
-    within("manifest size", bytes.len() as u64, MAX_MANIFEST)?;
-    let manifest = Manifest::from_json(&bytes)?;
+    let manifest = manifest(&mut archive)?;
     validate(&manifest, &entries, limits)?;
-    let mut package = Package { manifest, entries, archive };
-    if package.manifest.kind == Kind::Scene {
-        package.scene()?;
+    let mut package = Package { manifest, entries, facts: Facts::default(), archive };
+    let scene = (package.manifest.kind == Kind::Scene).then(|| package.scene()).transpose()?;
+    let size = match package.manifest.kind {
+        Kind::Image => package.head(&package.manifest.entry.clone(), 1 << 16)?,
+        _ => Vec::new(),
+    };
+    let size = media::probe(&size).map(|m| [m.width, m.height]);
+    package.facts = facts(&package.manifest, scene.as_ref(), size);
+    if package.manifest.v2() {
+        features::check(&package.manifest, &package.facts)?;
+        package.previews()?;
     }
     Ok(package)
+}
+
+pub fn peek(path: impl AsRef<Path>) -> Result<Manifest> {
+    manifest(&mut ZipArchive::new(BufReader::new(File::open(path)?))?)
+}
+
+pub fn thumbnail(path: impl AsRef<Path>) -> Result<Option<Vec<u8>>> {
+    let mut archive = ZipArchive::new(BufReader::new(File::open(path)?))?;
+    let value: serde_json::Value = serde_json::from_slice(&raw(&mut archive, MANIFEST, MAX_MANIFEST)?)?;
+    let name = value.pointer("/previews/thumbnail").or_else(|| value.get("preview")).and_then(|v| v.as_str());
+    let Some(name) = name else { return Ok(None) };
+    check_path(name)?;
+    raw(&mut archive, name, MAX_THUMBNAIL).map(Some)
+}
+
+fn raw<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str, max: u64) -> Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    archive.by_name(name)?.take(max + 1).read_to_end(&mut bytes)?;
+    within("file size", bytes.len() as u64, max)?;
+    Ok(bytes)
+}
+
+fn manifest<R: Read + Seek>(archive: &mut ZipArchive<R>) -> Result<Manifest> {
+    Manifest::from_json(&raw(archive, MANIFEST, MAX_MANIFEST)?)
 }
 
 impl<R: Read + Seek> Package<R> {
@@ -105,6 +139,34 @@ impl<R: Read + Seek> Package<R> {
             out.extend(parsed.get(&asset.path).map(|lut| (id.clone(), lut.clone())));
         }
         Ok(out)
+    }
+
+    fn previews(&mut self) -> Result<()> {
+        let previews = self.manifest.previews.clone().unwrap_or_default();
+        let wanted = [
+            ("previews.thumbnail", previews.thumbnail, 1024, 0),
+            ("previews.animated", previews.animated, 640, 15),
+        ];
+        for (field, path, side, seconds) in wanted {
+            let Some(path) = path else { continue };
+            let found = media::probe(&self.read_file(&path)?);
+            let ext = extension(&path).unwrap_or_default().replace("jpg", "jpeg");
+            let long = |m: &media::Media| seconds == 0 || m.duration_ms <= seconds * 1000;
+            let fits = found.is_some_and(|m| m.format == ext && m.width.max(m.height) <= side && long(&m));
+            let most = if seconds > 0 { format!(" and {seconds} s") } else { String::new() };
+            require(
+                fits,
+                field,
+                &format!("{path:?} must be a {ext} image of at most {side} pixels a side{most}"),
+            )?;
+        }
+        Ok(())
+    }
+
+    fn head(&mut self, path: &str, max: u64) -> Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.archive.by_name(path)?.take(max).read_to_end(&mut data)?;
+        Ok(data)
     }
 
     pub fn read_file(&mut self, path: &str) -> Result<Vec<u8>> {

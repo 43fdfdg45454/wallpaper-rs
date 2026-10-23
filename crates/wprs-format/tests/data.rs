@@ -9,8 +9,8 @@ use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::Duration;
 use wprs_format::{
-    Error, Fetch, FileFetch, Kind, Limits, add_repo, install, installed, open, preview, publish, repos,
-    update_repo,
+    Error, Fetch, FileFetch, Kind, Limits, add_repo, browse, install, installed, open, preview, publish,
+    repos, update_repo,
 };
 
 struct Signal(Sender<()>);
@@ -147,4 +147,44 @@ fn previews_are_capped_verified_and_private() {
     fs::write(&published, b"RIFF\0\0\0\0WEBQ").unwrap();
     assert!(matches!(fetch(DAWN, "1.0.0", "flipped"), Err(Error::Mismatch(_))));
     assert_eq!(files(&cache), ["dawn"]);
+}
+
+#[test]
+fn version_two_metadata_reaches_the_catalog() {
+    let repo = Repo::new();
+    let old = serde_json::to_value(repo.add(DAWN, "1.0.0").release).unwrap();
+    let keys: Vec<&String> = old.as_object().unwrap().keys().collect();
+    assert_eq!(
+        keys,
+        [
+            "authors",
+            "description",
+            "kind",
+            "license",
+            "manifest_sha256",
+            "preview",
+            "published",
+            "sha256",
+            "size",
+            "tags",
+            "title",
+            "version"
+        ]
+    );
+    let added = repo.add_v2(DUSK, "2.0.0").release;
+    assert_eq!((added.title_in(&["es_ES".into()]), added.title_in(&[])), ("Tormenta".into(), "Storm".into()));
+    let content = added.content.as_ref().unwrap();
+    assert_eq!((content.rating.as_str(), content.mature()), ("mature", true));
+    assert_eq!(
+        (added.photosensitive, added.facets.clone()),
+        (Some(true), ["android", "landscape", "localized", "photosensitive"].map(String::from).to_vec())
+    );
+    let animated = added.animated.clone().unwrap();
+    assert!(repo.dir.join(format!("previews/{}.gif", animated.sha256)).is_file());
+    repo.publish(NOW);
+    add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap();
+    let found = browse(&repo.data, "tormenta").unwrap();
+    assert_eq!(found.iter().map(|i| (i.id.as_str(), &i.release)).collect::<Vec<_>>(), [(DUSK, &added)]);
+    assert_eq!(browse(&repo.data, "").unwrap().len(), 2);
+    install(&repo.data, &FileFetch, DUSK, NOW, false, false).unwrap();
 }

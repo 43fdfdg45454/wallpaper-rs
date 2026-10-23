@@ -98,7 +98,7 @@ pub async fn asking(
     action: impl Future<Output = zbus::Result<()>>,
 ) -> Result<()> {
     let since = client.daemon.serial().await?;
-    action.await?;
+    action.await.map_err(wprs_client::explain)?;
     if let Ok(asks) = asks(client, output, since).await {
         asks.iter().for_each(|ask| eprintln!("{}", show::clean(ask)));
     }

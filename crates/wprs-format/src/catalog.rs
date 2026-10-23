@@ -3,8 +3,8 @@ use crate::repo::at;
 use crate::store::{json, place, write};
 use crate::validate::{extension, within};
 use crate::{
-    Error, KeyRevocation, Limits, Listing, MANIFEST, Package, Preview, Reason, Release, Result, Revocation,
-    Root, SIGNATURE, ensure, open, require, sha256, sha256_file, verify_package,
+    Error, KeyRevocation, Limits, Listing, MANIFEST, Needs, Package, Preview, Rated, Reason, Release, Result,
+    Revocation, Root, SIGNATURE, ensure, open, require, sha256, sha256_file, verify_package,
 };
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
@@ -106,25 +106,37 @@ fn signer(
 
 fn release(package: &mut Opened, dir: &Path, wpak: &Path, size: u64, now: i64) -> Result<Release> {
     let manifest_sha256 = sha256(&package.read_file(MANIFEST)?[..])?;
-    let manifest = package.manifest.clone();
-    let preview = manifest.preview.as_deref().map(|path| -> Result<Preview> {
+    let manifest = package.manifest.localized();
+    let mut copy = |path: Option<&String>| -> Result<Option<Preview>> {
+        let Some(path) = path else { return Ok(None) };
         let bytes = package.read_file(path)?;
         let (sha256, ext) = (sha256(&bytes[..])?, extension(path).unwrap_or_default());
         write(&dir.join("previews").join(format!("{sha256}.{ext}")), &bytes, false)?;
-        Ok(Preview { sha256, size: bytes.len() as u64, ext })
-    });
+        Ok(Some(Preview { sha256, size: bytes.len() as u64, ext }))
+    };
+    let (preview, animated) = (copy(manifest.thumbnail())?, copy(manifest.animated())?);
+    let v2 = manifest.v2().then_some(&manifest);
+    let facets = if manifest.v2() { package.facts.facets.clone() } else { Vec::new() };
     Ok(Release {
-        version: manifest.version,
+        version: manifest.version.clone(),
         kind: manifest.kind,
-        title: manifest.title,
-        description: manifest.description,
-        tags: manifest.tags,
-        license: manifest.license,
-        authors: manifest.authors,
+        title: manifest.title.clone(),
+        description: manifest.description.clone(),
+        tags: manifest.tags.clone(),
+        license: manifest.license.clone(),
+        authors: manifest.authors.clone(),
         size,
         sha256: sha256_file(wpak)?,
         manifest_sha256,
-        preview: preview.transpose()?,
+        preview,
         published: at(now)?,
+        schema: v2.map(|m| m.schema.clone()).unwrap_or_default(),
+        default_locale: manifest.default_locale.clone(),
+        changes: manifest.changes.clone(),
+        content: manifest.content.as_ref().map(Rated::from),
+        photosensitive: manifest.photosensitive,
+        requires: v2.and_then(|m| m.requires.as_ref()).map(Needs::from),
+        facets,
+        animated,
     })
 }

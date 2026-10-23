@@ -119,19 +119,19 @@ notices per hour. Sync writes: 60 per minute per device.
 
 ## Repository
 
-`/repo/<path>` serves the tree of `docs/specs/repo.md`: `root/<N>.json[.minisig]`,
-`entry/latest`, `entry/<N>.json[.minisig]`, `index/<sha256>.json`, `revoked/<sha256>.json`,
-`previews/<sha256>.<ext>` and `packages/<id>/<version>.wpak`. `entry/latest` is `no-cache`;
-everything else is immutable. A package that moderators removed or revoked answers `410`, and its
-preview is deleted unless a release still listed uses it.
-The share URL is `repository.url` of the discovery document
+`/repo/<path>` serves the tree of `docs/specs/repo.md`: `root/<N>.json[.minisig]`, `entry/latest`,
+`entry/<N>.json[.minisig]`, `details/<N>.json[.minisig]`, `index/<sha256>.json`,
+`revoked/<sha256>.json`, `previews/<sha256>.<ext>` and `packages/<id>/<version>.wpak`.
+`entry/latest` is `no-cache`; everything else is immutable. A package that moderators removed or
+revoked answers `410`, and its preview is deleted unless a release still listed uses it. The share
+URL is `repository.url` of the discovery document
 (`https://example.org/repo/?fingerprint=…&repo_id=…`).
 
-Only the online key signs on the server, and only entries: an approval adds the package with
-`wprs_format::add`, a removal or revocation calls `wprs_format::revoke`, and a background job
-calls `wprs_format::publish` with a lifetime of `WPRS_ENTRY_DAYS` after changes and at least
-every `WPRS_RESIGN_HOURS`. Packages are either unsigned (when the root does not require author
-signatures) or signed by an author key that the root lists and the uploader registered.
+Only the online key signs on the server, and only entries and their details: an approval adds the
+package with `wprs_format::add`, a removal or revocation calls `wprs_format::revoke`, and a
+background job calls `wprs_format::publish` with a lifetime of `WPRS_ENTRY_DAYS` after changes and
+at least every `WPRS_RESIGN_HOURS`. Packages are either unsigned (when the root does not require
+author signatures) or signed by an author key that the root lists and the uploader registered.
 
 Clients must treat the catalog API as hints and resolve `(id, version, sha256, size)` against
 the verified shards before installing.
@@ -140,7 +140,7 @@ the verified shards before installing.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/v1/catalog?q=&kind=&cursor=&limit=` | — | Newest published packages; `q` matches title, description, tags and id; `kind` is `image`, `video` or `scene`; `limit` 1 to 100 (24) |
+| GET | `/api/v1/catalog?q=&kind=&content=&facet=&cursor=&limit=` | — | Newest published packages; `q` matches title, description, tags and id; `kind` is `image`, `video` or `scene`; `content` is `general` or `unrated` (packages of the first manifest version); `facet` is one facet the package must have; `limit` 1 to 100 (24) |
 | GET | `/api/v1/packages/{id}` | — | Latest version plus `versions: [string]` |
 | GET | `/api/v1/packages/{id}/versions` | — | `{items: [item]}` |
 | POST | `/api/v1/packages/{id}/reports` | — | `{category: copyright\|illegal\|malware\|mature\|spam\|other, details}` → `201 {case}` |
@@ -151,9 +151,13 @@ title, description and tags of published versions, kept up to date by triggers: 
 with at least 3 characters must appear as a substring, in any case and with or without accents;
 a `q` without such a word matches tags that start with it.
 
-Item: `{id, version, kind, title, description, license, tags, authors, size, sha256,
-published_at, owner, thumbnail, download}` (`thumbnail` and `download` are paths). The list
-answer is `{items, next_cursor}` with `Link: <…>; rel="next"` when there is more.
+Item: `{id, version, kind, title, description, license, tags, authors, size, sha256, published_at,
+owner, thumbnail, download, content, photosensitive, facets}` (`thumbnail` and `download` are paths;
+`content` and `photosensitive` are `null` for packages of the first manifest version). Titles and
+descriptions are those of the package's default language. The web catalog filters by rating and
+facet as well, shows the description with its markup (as written for packages of the first manifest
+version) and a warning on the page of a photosensitive package. The list answer is `{items,
+next_cursor}` with `Link: <…>; rel="next"` when there is more.
 
 ## Accounts
 
@@ -232,8 +236,9 @@ Status: `{id, state, errors: [string], package, version}` with `state` one of `o
 Validation runs `wprs-server validate` in a child process limited to 1 GiB of address space
 and 60 s of CPU, two at a time. It opens the package with `wprs_format::open` (strict ZIP
 profile and manifest rules), verifies `manifest.json.minisig` against the uploader's author
-keys that the root also lists (required when the root demands signatures), and decodes the
-preview image (PNG, JPEG, WebP, GIF or BMP, at most 16384 px) into a JPEG thumbnail. The
+keys that the root also lists (required when the root demands signatures), refuses packages rated
+`mature` (`this server does not accept mature content`), and decodes the
+thumbnail (`previews.thumbnail`, or `preview` in the first manifest version) (PNG, JPEG, WebP, GIF or BMP, at most 16384 px) into a JPEG thumbnail. The
 server then checks the licence list, that the id belongs to the uploader (the first uploader
 owns it) and that the version is newer than every earlier one. Accepted versions wait for
 review unless `WPRS_AUTO_PUBLISH` publishes them.

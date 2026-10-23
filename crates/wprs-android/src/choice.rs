@@ -43,7 +43,8 @@ fn seed() -> u32 {
 pub(crate) fn turn(lib: &mut Library, playlist: &str, turn: Turn, on_battery: bool) -> Result<bool, Error> {
     let now = Utc::now();
     let rules = lib.playlist(playlist)?.rules;
-    let resolved = lib.resolve(playlist, now.timestamp(), on_battery, &HashSet::new())?;
+    let flashing: HashSet<String> = lib.unconfirmed_flashing()?.into_iter().collect();
+    let resolved = lib.resolve(playlist, now.timestamp(), on_battery, &flashing)?;
     let id = resolved.playlist.id.clone();
     let stored = lib.rotation(OUTPUT)?.filter(|row| row.playlist == id);
     let mut row = stored.clone().unwrap_or_else(|| {
@@ -77,7 +78,15 @@ fn chosen(lib: &Library, preview: bool) -> Result<Option<String>, Error> {
         Some(Choice::Playlist(playlist)) => {
             match lib.rotation(OUTPUT)?.filter(|row| row.playlist == playlist) {
                 Some(row) => row.current,
-                None => lib.playlist_items(&playlist, now())?.into_iter().find(|i| !i.missing).map(|i| i.uid),
+                None => {
+                    let shown = |i: &wprs_library::Item| {
+                        !i.package.as_ref().is_some_and(|p| p.asks("photosensitive"))
+                    };
+                    lib.playlist_items(&playlist, now())?
+                        .into_iter()
+                        .find(|i| !i.missing && shown(i))
+                        .map(|i| i.uid)
+                }
             }
         }
     })

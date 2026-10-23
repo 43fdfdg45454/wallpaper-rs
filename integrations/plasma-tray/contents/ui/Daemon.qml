@@ -22,6 +22,7 @@ QtObject {
             "Library1.Thumbnail": "(su)",
             "Library1.GetItem": "(s)",
             "Library1.SetFavorite": "(asb)",
+            "Library1.Confirm": "(ass)",
             "Playlists1.Next": "(s)",
             "Profiles1.Activate": "(s)"
         })

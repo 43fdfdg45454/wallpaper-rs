@@ -81,6 +81,14 @@ QtObject {
         return backend.path(String(url));
     }
 
+    function markup(text) {
+        return backend.markup(text ?? "");
+    }
+
+    function plain(text) {
+        return backend.plain(text ?? "");
+    }
+
     function time(seconds) {
         return seconds ? new Date(seconds * 1000).toLocaleString(Qt.locale(), Locale.ShortFormat) : "";
     }

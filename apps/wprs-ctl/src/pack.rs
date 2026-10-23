@@ -5,8 +5,8 @@ use serde_json::json;
 use std::fs;
 use std::path::{Path, PathBuf};
 use wprs_format::{
-    Limits, MANIFEST, Manifest, build, fingerprint, open, public_key, sha256_file, sign_source,
-    verify_package,
+    Limits, MANIFEST, Manifest, build, features, fill, fingerprint, open, public_key, sha256_file,
+    sign_source, verify_package,
 };
 
 #[derive(Subcommand, Debug)]
@@ -24,6 +24,24 @@ pub enum Pack {
         dir: PathBuf,
         #[arg(long, help = "Secret key file of the author")]
         key: PathBuf,
+    },
+    #[command(about = "Explain what a package folder or file needs, uses and declares")]
+    Check {
+        path: PathBuf,
+        #[arg(long, help = "Print the result as JSON")]
+        json: bool,
+    },
+    #[command(about = "Turn a wallpaper-rs.wpak/1 package folder into wallpaper-rs.wpak/2")]
+    Upgrade {
+        dir: PathBuf,
+        #[arg(long, value_parser = ["general", "mature"], help = "Who the package suits")]
+        rating: String,
+        #[arg(long = "reason", value_parser = ["sexual", "violence", "gore", "language"], help = "Why it is mature")]
+        reasons: Vec<String>,
+        #[arg(long, action = clap::ArgAction::Set, help = "true when it flashes or shows fast patterns")]
+        photosensitive: bool,
+        #[arg(long = "derived-from", value_name = "AUTHOR", help = "Author of a work it is based on")]
+        derived_from: Vec<String>,
     },
     #[command(about = "Check packages and, with --key, their author signature")]
     Validate {
@@ -46,6 +64,9 @@ pub fn run(command: Pack) -> Result<()> {
                     format!("{}-{}.wpak", manifest.id, manifest.version).into()
                 }
             };
+            for added in fill(&dir)? {
+                eprintln!("requires.features += {added} ({})", features::explain(&added));
+            }
             let (sha256, size) = (build(&dir, &out, &Limits::default())?, fs::metadata(&out)?.len());
             match json {
                 true => println!("{}", json!({"path": out, "sha256": sha256, "size": size})),
@@ -53,6 +74,10 @@ pub fn run(command: Pack) -> Result<()> {
             }
         }
         Pack::Sign { dir, key } => println!("{}", sign_source(&dir, &signer(&key)?)?),
+        Pack::Check { path, json } => crate::facts::check(&path, json)?,
+        Pack::Upgrade { dir, rating, reasons, photosensitive, derived_from } => {
+            crate::facts::upgraded(&dir, &rating, &reasons, photosensitive, &derived_from)?
+        }
         Pack::Validate { files, keys, json } => {
             let keys = keys.iter().map(|k| key_text(k)).collect::<Result<Vec<_>>>()?;
             let keys =

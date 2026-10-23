@@ -163,7 +163,8 @@ fn store_key(path: &Path, secret: &str) -> anyhow::Result<()> {
 
 pub async fn serve(State(app): St, Route(path): Route<String>) -> Res<Response> {
     let parts: Vec<&str> = path.split('/').collect();
-    let public = matches!(parts[0], "root" | "entry" | "index" | "revoked" | "previews" | "packages");
+    let public =
+        matches!(parts[0], "root" | "entry" | "details" | "index" | "revoked" | "previews" | "packages");
     let clean = |s: &&str| {
         !s.is_empty()
             && !s.starts_with('.')

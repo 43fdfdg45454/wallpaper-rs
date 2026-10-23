@@ -22,7 +22,7 @@ Kirigami.Page {
     }
 
     function exercise() {
-        tools.inspect(library.uid(0));
+        tools.exercise(library.uid(0));
     }
 
     title: App.tr("Library")

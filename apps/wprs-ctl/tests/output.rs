@@ -88,6 +88,30 @@ fn item_details_list_only_what_is_set() {
 }
 
 #[test]
+fn package_details_add_their_metadata() {
+    let mut item = item();
+    item["package"]["content"] = json!("mature");
+    item["package"]["photosensitive"] = json!(true);
+    item["package"]["confirmed"] = json!(["photosensitive"]);
+    let about = json!({"schema": "wallpaper-rs.wpak/2", "title": "Dawn", "description": "Hills at **dusk**.\n\n- one",
+        "changes": "", "authors": ["Jo"], "license": "CC0-1.0", "content": "mature", "descriptors": ["violence"],
+        "photosensitive": true, "origin": "derived",
+        "derived_from": [{"author": "Ana", "title": "Harbor", "url": null, "license": null}],
+        "credits": [{"paths": ["a.png"], "license": "CC0-1.0", "attribution": "Bo", "url": null}],
+        "links": [{"kind": "homepage", "url": "https://example.org"}], "inputs": ["pointer"],
+        "features": [{"name": "inputs.pointer", "why": "follows the pointer"}], "languages": ["en", "es"]});
+    let details = reply(json!({"item": item, "thumb": null, "presets": [], "credit": null, "revoked": null,
+        "playlists": [], "installed": null, "about": about}));
+    let shown = items::details(parse(&details).unwrap());
+    let tail = "package = org.example.dawn 1.0.0 (image, CC0-1.0)\ncontent = mature (violence)\n\
+        mature shown = false\nphotosensitive = yes, allowed\norigin = derived from Harbor by Ana\nauthors = Jo\n\
+        credits = a.png: Bo (CC0-1.0)\nlinks = homepage https://example.org\ninputs = pointer\n\
+        needs = inputs.pointer (follows the pointer)\nlanguages = en, es\nschema = wallpaper-rs.wpak/2\n\n\
+        Description:\nHills at dusk.\n\n• one\n";
+    assert!(shown.ends_with(tail), "{shown}");
+}
+
+#[test]
 fn sources_and_tags_are_tables() {
     let folder = json!({"uid": "01J9Z0X9Z6Q7X4F3K5E1V0S001", "path": "/srv/example/pictures", "recursive": true,
         "scanned_at": null, "error": null, "items": 120, "provider": null});
@@ -186,13 +210,14 @@ fn providers_and_repositories_show_their_state() {
     let package = json!({"repo_id": REPO, "repo_name": "Example wallpapers", "id": "org.example.dawn",
         "author": null, "version": "1.1.0", "kind": "image", "title": "Sky at dawn", "description": "", "tags": [],
         "license": "CC0-1.0", "authors": [], "size": 1024, "published": 0, "preview": true,
-        "versions": ["1.0.0", "1.1.0"], "installed": ["1.0.0"], "update": true});
+        "versions": ["1.0.0", "1.1.0"], "installed": ["1.0.0"], "update": true, "content": "general",
+        "photosensitive": true});
     let page = reply(json!({"query": "dawn", "total": 1, "offset": 0, "packages": [package]}));
     assert_eq!(
         pkg::browse(parse(&page).unwrap()),
         "query = dawn\npackages = 1 of 1\n\
-         REPO      ID                VERSION  KIND   INSTALLED                 TITLE\n\
-         01234567  org.example.dawn  1.1.0    image  1.0.0 (update available)  Sky at dawn\n"
+         REPO      ID                VERSION  KIND   CONTENT                  INSTALLED                 TITLE\n\
+         01234567  org.example.dawn  1.1.0    image  general, photosensitive  1.0.0 (update available)  Sky at dawn\n"
     );
     assert_eq!(
         pkg::installed(parse(&reply(json!({"packages": [installed()]}))).unwrap()),

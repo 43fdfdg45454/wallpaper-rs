@@ -6,7 +6,7 @@ pub type Values = BTreeMap<String, Json>;
 
 const MAX_TEXT: usize = 1024;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Text {
     Plain(String),
@@ -175,6 +175,14 @@ impl Property {
         }
     }
 
+    fn kept(&self, value: &Json) -> Option<Json> {
+        let inside = match (&self.control, value.as_f64()) {
+            (Control::Slider { min, max, .. }, Some(v)) => (*min..=*max).contains(&v),
+            _ => true,
+        };
+        self.value(value).ok().filter(|_| inside)
+    }
+
     pub fn kind(&self) -> &'static str {
         match self.control {
             Control::Color { .. } => "color",
@@ -220,10 +228,22 @@ pub fn check_presets(props: &BTreeMap<String, Property>, presets: &[Preset]) -> 
 
 pub fn effective(props: &BTreeMap<String, Property>, layers: &[&Values]) -> Values {
     let pick = |(id, prop): (&String, &Property)| {
-        let set = layers.iter().find_map(|values| prop.value(values.get(id)?).ok());
+        let set = layers.iter().find_map(|values| prop.kept(values.get(id)?));
         (id.clone(), set.unwrap_or_else(|| prop.default_value()))
     };
     props.iter().map(pick).collect()
+}
+
+pub fn stale(props: &BTreeMap<String, Property>, layers: &[&Values]) -> Vec<String> {
+    let why = |(id, value): (&String, &Json)| match props.get(id) {
+        None => Some(format!("{id} no longer exists")),
+        Some(prop) if prop.kept(value).is_none() => Some(format!("{id} no longer accepts {value}")),
+        _ => None,
+    };
+    let mut found: Vec<String> = layers.iter().flat_map(|values| values.iter()).filter_map(why).collect();
+    found.sort();
+    found.dedup();
+    found.into_iter().map(|w| format!("{w}; the default is used")).collect()
 }
 
 fn is_zero(v: &i32) -> bool {

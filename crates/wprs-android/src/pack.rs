@@ -24,6 +24,7 @@ static LOADED: Mutex<Vec<(Stamp, Weak<Pack>)>> = Mutex::new(Vec::new());
 
 pub(crate) struct Pack {
     pub(crate) id: String,
+    pub(crate) locale: Option<String>,
     pub(crate) scene: Arc<Scene>,
     pub(crate) properties: BTreeMap<String, Property>,
     pub(crate) presets: Vec<Preset>,
@@ -35,7 +36,7 @@ fn open(path: &Path) -> Result<Package<BufReader<fs::File>>, Error> {
     let package = wprs_format::open(path, &wprs_format::Limits::default())?;
     match package.manifest.kind {
         Kind::Scene => Ok(package),
-        _ => Err(Error::Scene(format!("{} is not a scene package", package.manifest.title))),
+        _ => Err(Error::Scene(format!("{} is not a scene package", package.manifest.title_in(&[])))),
     }
 }
 
@@ -55,8 +56,17 @@ fn decode(bytes: Vec<u8>) -> Result<RgbaImage, Error> {
 pub(crate) fn check(path: &Path) -> Result<Preview, Error> {
     let mut package = open(path)?;
     let [width, height] = package.scene()?.canvas.size;
-    let preview = package.manifest.preview.clone().map(|p| package.read_file(&p)).transpose()?;
+    let preview = package.manifest.thumbnail().cloned().map(|p| package.read_file(&p)).transpose()?;
     Ok((preview.and_then(|bytes| decode(bytes).ok()), Some((width, height))))
+}
+
+pub(crate) fn about(path: &Path, languages: &[String]) -> Option<wprs_core::model::About> {
+    let mut about = wprs_format::peek(path).ok()?.about(languages);
+    if about.schema != wprs_format::SCHEMA_V1 {
+        about.description = wprs_core::markup::plain(&about.description);
+        about.changes = wprs_core::markup::plain(&about.changes);
+    }
+    Some(about)
 }
 
 pub(crate) fn folder(path: &Path) -> Result<PathBuf, Error> {
@@ -93,7 +103,10 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
             decoded.insert(asset.path.clone(), Arc::clone(&picture));
             let bytes = |i: &Arc<RgbaImage>| u64::from(i.width()) * u64::from(i.height()) * 4;
             if decoded.values().map(bytes).sum::<u64>() > DECODED {
-                return Err(Error::Scene(format!("the images of {} are too large", package.manifest.title)));
+                return Err(Error::Scene(format!(
+                    "the images of {} are too large",
+                    package.manifest.title_in(&[])
+                )));
             }
             assets.images.insert(id.clone(), picture);
         } else if FONTS.contains(&kind.as_str()) {
@@ -108,9 +121,10 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         }
     }
     assets.luts.extend(package.luts(&scene)?);
-    let m = package.manifest;
-    let (id, properties, presets, scene) = (m.id, m.properties, m.presets, Arc::new(scene));
-    let pack = Arc::new(Pack { id, scene, properties, presets, assets, videos });
+    let m = package.manifest.localized();
+    let (id, locale, scene) = (m.id, m.default_locale, Arc::new(scene));
+    let pack =
+        Arc::new(Pack { id, locale, scene, properties: m.properties, presets: m.presets, assets, videos });
     loaded.push((stamp, Arc::downgrade(&pack)));
     Ok(pack)
 }

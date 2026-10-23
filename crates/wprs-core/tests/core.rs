@@ -90,7 +90,9 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 14);
+    assert_eq!(c.options().len(), 15);
+    c.set_option("library.hide_mature", "true").unwrap();
+    assert!(c.library.hide_mature);
     c.set_option("models.allow_download", "false").unwrap();
     c.set_option("playback.software_parallax", "true").unwrap();
     assert!(!c.models.allow_download && c.playback.sanitized().software_parallax);

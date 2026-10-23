@@ -1,13 +1,19 @@
-use crate::{Error, Preset, Property, Result, require};
+use crate::meta::{Content, Credit, Input, Links, Origin, Previews, Requires};
+use crate::{Error, Needs, Preset, Property, Result, Text, features};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
 
-pub const SCHEMA: &str = "wallpaper-rs.wpak/1";
+pub const SCHEMA: &str = "wallpaper-rs.wpak/2";
+pub const SCHEMA_V1: &str = "wallpaper-rs.wpak/1";
+const PREFIX: &str = "wallpaper-rs.wpak/";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub type Strings = BTreeMap<String, BTreeMap<String, String>>;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
+    #[default]
     Image,
     Video,
     Scene,
@@ -23,32 +29,67 @@ impl fmt::Display for Kind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
     pub schema: String,
     pub id: String,
     pub version: String,
-    pub title: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub description: String,
+    pub title: Text,
+    #[serde(default, skip_serializing_if = "Text::is_empty")]
+    pub description: Text,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub changes: Option<Text>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_locale: Option<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub strings: Strings,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub authors: Vec<String>,
     pub license: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub credits: Vec<Credit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<Origin>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<Content>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub photosensitive: Option<bool>,
     pub kind: Kind,
     pub entry: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preview: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previews: Option<Previews>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub links: Option<Links>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub requires: Option<Requires>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub inputs: Vec<Input>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub properties: BTreeMap<String, Property>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub presets: Vec<Preset>,
 }
 
+#[derive(Deserialize)]
+struct Header {
+    schema: String,
+    #[serde(default)]
+    requires: Needs,
+}
+
 impl Manifest {
     pub fn from_json(bytes: &[u8]) -> Result<Self> {
+        let header: Header = serde_json::from_slice(bytes)?;
+        let major = header.schema.strip_prefix(PREFIX).and_then(|n| n.parse::<u32>().ok());
+        if let Some(major) = major.filter(|m| *m > 2) {
+            return Err(Error::Newer(format!("manifest version {major}")));
+        }
+        features::supported(header.requires.engine.as_deref(), &header.requires.features)?;
         Ok(serde_json::from_slice(bytes)?)
     }
 
@@ -56,66 +97,19 @@ impl Manifest {
         Ok(serde_json::to_string_pretty(self)?)
     }
 
-    pub fn check(&self) -> Result<()> {
-        require(self.schema == SCHEMA, "schema", "expected wallpaper-rs.wpak/1")?;
-        require(valid_id(&self.id), "id", "expected a lowercase reverse-DNS name like org.example.name")?;
-        require(semver::Version::parse(&self.version).is_ok(), "version", "expected a semantic version")?;
-        require(within(&self.title, 128), "title", "expected 1 to 128 characters")?;
-        require(self.authors.iter().all(|a| within(a, 128)), "authors", "expected 1 to 128 characters each")?;
-        require(valid_license(&self.license), "license", "expected an SPDX license expression")?;
-        let tags = self.tags.len() <= 32 && self.tags.iter().all(|t| within(t, 32));
-        require(tags, "tags", "expected at most 32 tags of 1 to 32 characters")?;
-        require(
-            self.properties.len() <= 64 && self.presets.len() <= 32,
-            "properties",
-            "too many properties or presets",
-        )?;
-        self.properties.iter().try_for_each(|(name, property)| {
-            let field = format!("properties.{name}");
-            require(valid_name(name), &field, "expected a lowercase identifier")?;
-            property.check().map_err(|reason| Error::Invalid { field, reason })
-        })?;
-        wprs_scene::check_presets(&self.properties, &self.presets)
-            .map_err(|reason| Error::Invalid { field: "presets".into(), reason })
+    pub fn v2(&self) -> bool {
+        self.schema == SCHEMA
     }
-}
 
-fn within(text: &str, max: usize) -> bool {
-    !text.trim().is_empty() && text.chars().count() <= max
-}
+    pub fn thumbnail(&self) -> Option<&String> {
+        self.previews.as_ref().and_then(|p| p.thumbnail.as_ref()).or(self.preview.as_ref())
+    }
 
-fn valid_name(name: &str) -> bool {
-    name.len() <= 63
-        && name.starts_with(|c: char| c.is_ascii_lowercase())
-        && name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
-}
+    pub fn animated(&self) -> Option<&String> {
+        self.previews.as_ref().and_then(|p| p.animated.as_ref())
+    }
 
-pub(crate) fn valid_id(id: &str) -> bool {
-    id.len() <= 255 && id.split('.').count() >= 2 && id.split('.').all(valid_name)
-}
-
-#[derive(Clone, Copy, PartialEq)]
-enum Next {
-    Operand,
-    Exception,
-    Operator { with: bool },
-}
-
-fn valid_license(expr: &str) -> bool {
-    let spaced = expr.replace('(', " ( ").replace(')', " ) ");
-    let end = spaced.split_whitespace().try_fold((Next::Operand, 0usize), |(next, depth), token| {
-        match (token, next) {
-            ("(", Next::Operand) => Some((Next::Operand, depth + 1)),
-            (")", Next::Operator { .. }) if depth > 0 => Some((Next::Operator { with: false }, depth - 1)),
-            ("AND" | "OR", Next::Operator { .. }) => Some((Next::Operand, depth)),
-            ("WITH", Next::Operator { with: true }) => Some((Next::Exception, depth)),
-            ("(" | ")" | "AND" | "OR" | "WITH", _) | (_, Next::Operator { .. }) => None,
-            (id, _) => {
-                let id = id.strip_suffix('+').unwrap_or(id);
-                let valid = id.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | ':'));
-                (valid && !id.is_empty()).then_some((Next::Operator { with: next == Next::Operand }, depth))
-            }
-        }
-    });
-    matches!(end, Some((Next::Operator { .. }, 0)))
+    pub fn features(&self) -> &[String] {
+        self.requires.as_ref().map_or(&[], |r| &r.features)
+    }
 }

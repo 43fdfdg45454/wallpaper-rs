@@ -11,6 +11,9 @@ export const engine = Object.freeze({
     get dt() {
         return state.frame.dt;
     },
+    get locale() {
+        return state.locale;
+    },
 });
 
 export const props = Object.freeze({ get: (id) => state.frame.props[id] });

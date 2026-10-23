@@ -1,32 +1,27 @@
 use rusqlite::Connection;
 use serde_json::json;
-use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::ops::ControlFlow;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
-use wprs_format::{Limits, Manifest, SCHEMA};
+use wprs_format::{Limits, Manifest, SCHEMA_V1};
 use wprs_library::{Error, Library, Meta, Rotation, Rules, SCHEMA_VERSION, ScanReport};
 
 const NOW: i64 = 1_700_000_000;
 
 fn package(dir: &Path, version: &str, tags: &[&str], pixels: &str) -> PathBuf {
     let manifest = Manifest {
-        schema: SCHEMA.into(),
+        schema: SCHEMA_V1.into(),
         id: "org.example.calm".into(),
         version: version.into(),
         title: "Calm Water".into(),
-        description: String::new(),
-        authors: Vec::new(),
         license: "CC0-1.0".into(),
         kind: wprs_format::Kind::Image,
         entry: "image.png".into(),
-        preview: None,
         tags: tags.iter().map(ToString::to_string).collect(),
-        properties: BTreeMap::new(),
-        presets: Vec::new(),
+        ..Default::default()
     };
     let source = dir.join(format!("source-{version}"));
     fs::create_dir_all(&source).unwrap();

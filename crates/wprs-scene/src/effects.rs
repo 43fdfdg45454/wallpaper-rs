@@ -52,6 +52,7 @@ pub struct Descriptor {
 pub enum Use {
     Time,
     Cursor,
+    Clicks,
     Audio,
 }
 

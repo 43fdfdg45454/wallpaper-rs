@@ -278,7 +278,8 @@ fn items_resolve_from_uids_unique_suffixes_and_paths() {
 fn query_keys_describe_every_key() {
     let Fixture { library, .. } = fixture();
     let keys = query_keys();
-    assert_eq!(keys.len(), 15);
+    assert_eq!(keys.len(), 17);
+    assert!(keys.contains(&("content", "general, mature or unrated")));
     assert!(keys.contains(&("in", "a manual playlist uid or name")));
     assert!(keys.contains(&(
         "sort",

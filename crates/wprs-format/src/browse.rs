@@ -1,6 +1,6 @@
 use crate::client::snapshots;
 use crate::store::Snapshot;
-use crate::{Listing, Release, Result, installed};
+use crate::{Listing, Release, Result, Text, installed};
 use semver::Version;
 use serde::Serialize;
 use std::path::Path;
@@ -50,7 +50,11 @@ pub(crate) fn newer(a: &str, b: &str) -> bool {
 }
 
 fn matches(query: &str, id: &str, release: &Release) -> bool {
-    let lists = release.tags.iter().chain(&release.authors).map(String::as_str);
-    let fields = [id, &release.title, &release.description].into_iter().chain(lists);
+    let texts = [&release.title, &release.description].into_iter().flat_map(|t| match t {
+        Text::Plain(text) => vec![text.as_str()],
+        Text::Localized(map) => map.values().map(String::as_str).collect(),
+    });
+    let lists = release.tags.iter().chain(&release.authors).chain(&release.facets).map(String::as_str);
+    let fields = [id].into_iter().chain(texts).chain(lists);
     query.is_empty() || fields.map(str::to_lowercase).any(|f| f.contains(query))
 }

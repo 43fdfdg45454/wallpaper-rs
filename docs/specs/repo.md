@@ -11,7 +11,7 @@ generation and signing behind the `sign` feature).
 | Role | Signs | Threshold | Default lifetime |
 |------|-------|-----------|------------------|
 | `root` | `root/<N>.json` | t of n, 1 to 8 keys | 365 days (30 to 1096) |
-| `online` | `entry/<N>.json` | 1 | 7 days, at most `policy.entry_max_days` (1 to 90, default 14) |
+| `online` | `entry/<N>.json`, `details/<N>.json` | 1 | 7 days, at most `policy.entry_max_days` (1 to 90, default 14) |
 | author | `manifest.json` inside a package | 1 | no expiry; revoked through `revoked` |
 
 - A key is identified by its fingerprint: lowercase hex SHA-256 of the 32 Ed25519 public key
@@ -26,8 +26,8 @@ one block verifies with stock minisign tools.
 - Every block must parse and carry the same trusted comment, or the whole file is rejected.
 - Each block is tried against every key of the role; the threshold counts distinct key
   fingerprints, never blocks.
-- Trusted comments bind role, version and repository:
-  `wpak-repo root <N> <repo_id>`, `wpak-repo entry <N> <repo_id>`, and
+- Trusted comments bind role, version and repository: `wpak-repo root <N> <repo_id>`,
+  `wpak-repo entry <N> <repo_id>`, `wpak-repo details <N> <repo_id>`, and
   `wpak manifest <id> <version>` for package authors.
 
 ## Layout
@@ -36,6 +36,7 @@ one block verifies with stock minisign tools.
 root/<N>.json, root/<N>.json.minisig    immutable, never deleted
 entry/<N>.json, entry/<N>.json.minisig  immutable
 entry/latest                            "<N>\n", unsigned hint, the only mutable file
+details/<N>.json, details/<N>.json.minisig  immutable, only when a second-version release exists
 index/<sha256>.json                     shards, immutable
 revoked/<sha256>.json                   revocations, immutable
 previews/<sha256>.<ext>                 preview images copied from packages
@@ -56,8 +57,10 @@ Mirrors copy immutable files first and `entry/latest` last.
 
 ## Formats
 
-All metadata is compact JSON with fixed field order; unknown fields are rejected. Times are
-RFC 3339 UTC (`2027-01-15T08:00:00Z`).
+All metadata is compact JSON with fixed field order; unknown fields are rejected, except in
+`details/<N>.json` and in the releases of `wpak-repo-shard/2.0`, whose readers ignore fields and
+values they do not know (also inside `content` and `requires`; an unknown rating counts as
+`mature`). Times are RFC 3339 UTC (`2027-01-15T08:00:00Z`).
 
 `root/<N>.json` (at most 512 KiB):
 
@@ -84,7 +87,22 @@ the first `shard_bits` bits of SHA-256 of its id, so every id appears once in th
 Ids follow the manifest rules; versions are canonical SemVer, unique and ascending. A release
 holds `version`, `kind`, `title`, `description`, `tags`, `license`, `authors`, `size`,
 `sha256` (whole `.wpak`), `manifest_sha256`, `preview` (`{sha256, size, ext}` or `null`) and
-`published`.
+`published`. These shards hold only the releases of first-version packages (`package.md`), byte
+for byte as before, so versions of wallpaper-rs that do not know the second version keep reading
+the repository and never see packages they cannot open; a package with no such release is left
+out of them.
+
+When a release of a `wallpaper-rs.wpak/2` package exists, `details/<N>.json` (at most 128 KiB,
+signed by the `online` threshold like the entry) holds `format` (`wpak-repo-details/1.0`),
+`repo_id`, `version` (= `N`), `entry` (SHA-256 of the bytes of `entry/<N>.json`) and `shards`:
+exactly as many `{sha256, size}` as the entry, pointing at `index/<sha256>.json` shards of format
+`wpak-repo-shard/2.0`. They have the same layout and every release of every package; a release of
+a second-version package adds `schema`, its `default_locale`, `changes`, `content`,
+`photosensitive`, `requires`, the `facets` the repository computed and `animated` (the animated
+preview, like `preview`), so that clients can filter before downloading; `title`, `description`
+and `changes` are then text or `{language: text}` with every `@key` resolved. Clients that know
+this format read these shards instead of the entry's; when no base serves the details, they read
+the first-version shards.
 
 `revoked/<sha256>.json`: `format` (`wpak-repo-revoked/1.0`), `repo_id`, `packages`
 (`[{id, versions, reason, message}]`, `"*"` revokes every version) and `keys`
@@ -107,7 +125,7 @@ checked by hand with `minisign -Vm manifest.json -p author.pub`.
 | Sign a package source before building it | `sign_source(dir, signer)` |
 | Add a package (validated, signature checked against root authors, preview copied) | `add(dir, wpak, author, now)` |
 | Revoke a package version or a key, or withdraw the revocation of a version | `revoke(dir, id, version, reason, message)`, `revoke_key(dir, fingerprint, reason)`, `unrevoke(dir, id, version)` |
-| Write shards, revocations and the next entry; repeat before expiry | `publish(dir, online, lifetime_days, now)` |
+| Write shards, revocations, the next entry and its details; repeat before expiry | `publish(dir, online, lifetime_days, now)` |
 | Replace keys or policy: write `root/<N+1>.json`, then sign with the old and the new root threshold, then publish with the current online key | `rotate_root(dir, settings, now)`, `sign_root`, `publish` |
 | Check a tree as a client would, without storing anything | `verify(fetch, url_or_dir, now)` |
 
@@ -131,13 +149,15 @@ cancelled transfer (`io::ErrorKind::Interrupted`) stops at once without trying f
    newer entries.
 6. The entry must meet the `online` threshold, pin the current root by version and hash, have
    a valid lifetime, a timestamp not older than the last one and not more than 24 hours after
-   `T`. The same version with different bytes is an equivocation.
+   `T`. The same version with different bytes is an equivocation. `details/<N>.json` of the same
+   version, when a base has it, must meet the `online` threshold and pin that entry by version and
+   hash.
 7. If `expires ≤ T` the repository is stale: it is shown as such, installs need confirmation
    and revocations still apply. `repos(data, now)` recomputes staleness and expiry warnings at
    every call with the same `T`, so listings and installs agree.
-8. Fetch every shard and the revocation list not already cached, cut at the declared size,
-   check size and SHA-256, then parse them strictly.
-9. Store root, entry, shards and revocations, then `state.json`; drop unreferenced shards.
+8. Fetch every shard (those of the details when present) and the revocation list not already
+   cached, cut at the declared size, check size and SHA-256, then parse them.
+9. Store root, entry, details, shards and revocations, then `state.json`; drop unreferenced shards.
 10. Apply revocations to installed packages and list available updates (newer SemVer, not
     revoked).
 
@@ -164,6 +184,7 @@ release from the bases in order, cut at the signed size, checks SHA-256 and writ
 <data>/repos/<repo_id>/state.json             versions, hashes, max_timestamp, online keys, stale
 <data>/repos/<repo_id>/root.json[.minisig]    current verified root
 <data>/repos/<repo_id>/entry.json[.minisig]   current verified entry
+<data>/repos/<repo_id>/details.json[.minisig] its verified details, when the repository has them
 <data>/repos/<repo_id>/blobs/<sha256>.json    verified shards and revocations
 <data>/packages/<id>/<version>.wpak           installed packages
 <data>/installed.json                         origin, hash, signer and revocation of each package

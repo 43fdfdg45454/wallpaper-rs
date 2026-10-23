@@ -50,9 +50,13 @@ impl Daemon {
 
     pub fn scene_properties(&self, output: &str) -> Result<String> {
         let (output, pack) = self.scene_on(output)?;
-        let values = pack.values(&self.state().config.scene_values(&output, &pack.id));
-        let languages = wprs_core::locale::languages();
-        let (fields, preset_labels) = wprs_scene::form(&pack.properties, &pack.presets, &values, &languages);
+        let (values, warnings) = {
+            let st = self.state();
+            let stored = st.config.scene_values(&output, &pack.id);
+            (pack.values(&stored), pack.stale(&stored))
+        };
+        let (fields, preset_labels) =
+            wprs_scene::form(&pack.properties, &pack.presets, &values, &pack.languages);
         let properties = pack.properties.iter().map(|(k, p)| (k.clone(), json(p))).collect();
         let presets = pack.presets.iter().map(json).collect();
         let (package, title, serial) = (pack.id.clone(), pack.title.clone(), self.changes.serial());
@@ -67,6 +71,7 @@ impl Daemon {
             presets,
             fields,
             preset_labels,
+            warnings,
         })
     }
 
@@ -98,7 +103,7 @@ impl Daemon {
             preset
                 .values
                 .iter()
-                .filter_map(|(k, v)| Some((k.clone(), stored(v)?)))
+                .filter_map(|(k, v)| Some((k.clone(), stored(&pack.properties.get(k)?.value(v).ok()?)?)))
                 .for_each(|(k, v)| drop(values.insert(k, v)))
         })
     }

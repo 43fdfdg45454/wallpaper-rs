@@ -1,0 +1,152 @@
+use crate::locale::{has, valid_key, valid_tag};
+use crate::meta::{Content, Credit, Links, Origin};
+use crate::names::{clean, safe, valid_id, valid_license, valid_name, valid_property, within};
+use crate::{Error, Manifest, Result, SCHEMA, SCHEMA_V1, Text, markup, require};
+use std::collections::HashSet;
+use wprs_scene::Control;
+
+const MAX_STRINGS: usize = 512 << 10;
+const FIRST: &str =
+    "schema id version title description authors license kind entry preview tags properties presets";
+
+type Rule<'a> = (&'a str, bool, &'a str);
+
+impl Manifest {
+    pub fn check(&self) -> Result<()> {
+        let schema = [SCHEMA, SCHEMA_V1].contains(&self.schema.as_str());
+        let tags = self.tags.len() <= 32 && self.tags.iter().all(|t| within(t, 32));
+        apply(&[
+            ("schema", schema, "expected wallpaper-rs.wpak/2"),
+            ("id", valid_id(&self.id), "expected a lowercase reverse-DNS name like org.example.name"),
+            ("version", semver::Version::parse(&self.version).is_ok(), "expected a semantic version"),
+            ("authors", self.authors.iter().all(|a| within(a, 128)), "expected 1 to 128 characters each"),
+            ("license", valid_license(&self.license), "expected an SPDX license expression"),
+            ("tags", tags, "expected at most 32 tags of 1 to 32 characters"),
+        ])?;
+        if self.v2() { self.check_v2() } else { self.check_v1() }?;
+        self.properties.iter().try_for_each(|(name, property)| {
+            let field = format!("properties.{name}");
+            let valid = if self.v2() { valid_property(name) } else { valid_name(name) };
+            require(valid, &field, "expected a letter followed by letters, digits or _")?;
+            property.check().map_err(|reason| Error::Invalid { field, reason })
+        })?;
+        wprs_scene::check_presets(&self.properties, &self.presets)
+            .map_err(|reason| Error::Invalid { field: "presets".into(), reason })
+    }
+
+    fn check_v1(&self) -> Result<()> {
+        let plain = matches!((&self.title, &self.description), (Text::Plain(_), Text::Plain(_)));
+        let json = serde_json::to_value(self).unwrap_or_default();
+        let newer = json.as_object().is_some_and(|o| o.keys().any(|k| !FIRST.split(' ').any(|f| f == k)));
+        let limits = self.properties.len() <= 64 && self.presets.len() <= 32;
+        apply(&[
+            ("schema", plain && !newer, "localized texts and the newer fields need wallpaper-rs.wpak/2"),
+            ("title", within(&self.pick(&self.title, &[]), 128), "expected 1 to 128 characters"),
+            ("properties", limits, "too many properties or presets"),
+        ])
+    }
+
+    fn check_v2(&self) -> Result<()> {
+        let (content, origin) = (self.content.as_ref(), self.origin.as_ref());
+        let credits = self.credits.len() <= 64 && self.credits.iter().all(Credit::valid);
+        let mut lower = HashSet::new();
+        let unique = self.properties.keys().all(|id| lower.insert(id.to_lowercase()));
+        let combo = |c: &Control| matches!(c, Control::Combo { options, .. } if options.len() > 64);
+        let options = !self.properties.values().any(|p| combo(&p.control));
+        let limits = self.properties.len() <= 256 && self.presets.len() <= 64;
+        let plain = self.authors.iter().chain(&self.tags).all(|t| safe(t));
+        apply(&[
+            ("authors", plain, "authors and tags have no < or >"),
+            ("content", content.is_some(), "is required: a rating of general or mature and its reasons"),
+            (
+                "content.descriptors",
+                content.is_none_or(Content::valid),
+                "lists each reason once, one at least for mature",
+            ),
+            ("photosensitive", self.photosensitive.is_some(), "is required: true when the package flashes"),
+            ("origin", origin.is_some(), "is required: original, or derived with the works it comes from"),
+            (
+                "origin.derived_from",
+                origin.is_none_or(Origin::valid),
+                "derived packages credit 1 to 64 works by author, without < or >",
+            ),
+            ("preview", self.preview.is_none(), "is called previews.thumbnail in wallpaper-rs.wpak/2"),
+            (
+                "credits",
+                credits,
+                "at most 64, each with 1 to 256 paths, an SPDX license and an attribution without < or >",
+            ),
+            (
+                "links",
+                self.links.as_ref().is_none_or(Links::valid),
+                "expected https:// addresses of 512 characters at most",
+            ),
+            ("properties", limits, "at most 256 properties and 64 presets"),
+            (
+                "properties",
+                unique && options,
+                "ids differ in more than case and combos have 64 options at most",
+            ),
+        ])?;
+        self.check_texts()
+    }
+
+    fn check_texts(&self) -> Result<()> {
+        let tables = self.strings.values();
+        let size: usize = tables.clone().flat_map(|t| t.iter()).map(|(k, v)| k.len() + v.len()).sum();
+        let keys = tables.clone().all(|t| t.len() <= 2048 && t.keys().all(|k| valid_key(k)));
+        let values = tables.flat_map(|t| t.values()).all(|v| clean(v, 8000, true));
+        let languages = self.strings.len() <= 64 && self.strings.keys().all(|l| valid_tag(l));
+        let default = self.default_locale.as_deref();
+        let localized = self.texts().iter().any(|(_, t)| matches!(t, Text::Localized(_)));
+        let needed = default.is_some() || (self.strings.is_empty() && !localized);
+        apply(&[
+            ("strings", languages, "at most 64 languages named like en or pt-BR"),
+            (
+                "strings",
+                keys && size <= MAX_STRINGS,
+                "at most 2048 keys of [A-Za-z0-9_.-] per language, 512 KiB",
+            ),
+            ("strings", values, "texts of at most 8000 characters without control characters"),
+            ("default_locale", default.is_none_or(valid_tag), "expected a language such as en or pt-BR"),
+            ("default_locale", needed, "is required with strings or localized texts"),
+        ])?;
+        self.texts().into_iter().try_for_each(|(field, text)| self.check_text(&field, text))
+    }
+
+    fn check_text(&self, field: &str, text: &Text) -> Result<()> {
+        let (max, lines) = match field {
+            "title" => (128, false),
+            "description" => (8000, true),
+            "changes" => (2000, true),
+            _ => (1024, true),
+        };
+        let default = self.default_locale.as_deref();
+        if let Some(key) = self.key(text) {
+            let known = default.and_then(|d| self.strings.get(d)).is_some_and(|t| t.contains_key(key));
+            require(known, field, &format!("@{key} is not in the strings of the default language"))?;
+        }
+        let values = match self.resolve(text) {
+            Text::Plain(t) => vec![t],
+            Text::Localized(map) => {
+                let named = map.keys().all(|l| valid_tag(l)) && default.is_none_or(|d| has(&map, d));
+                require(named, field, "needs a text in the default language and languages like en or pt-BR")?;
+                map.into_values().collect()
+            }
+        };
+        let marked = ["description", "changes"].contains(&field);
+        values.iter().try_for_each(|value| {
+            let ok = clean(value, max, lines) && (field != "title" || !value.trim().is_empty());
+            require(ok, field, &format!("expected at most {max} characters without control characters"))?;
+            require(marked || safe(value), field, "plain texts have no < or >")?;
+            match marked {
+                true => markup::check(value).map_err(|reason| Error::Invalid { field: field.into(), reason }),
+                false => Ok(()),
+            }
+        })
+    }
+}
+
+fn apply(rules: &[Rule]) -> Result<()> {
+    rules.iter().try_for_each(|(field, ok, reason)| require(*ok, field, reason))
+}

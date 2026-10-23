@@ -16,7 +16,7 @@ fn sources(source: &str) -> Vec<(String, String)> {
 }
 
 fn load(source: &str) -> Script {
-    Script::load(&sources(source), 7, Limits::default()).unwrap()
+    Script::load(&sources(source), 7, "en", Limits::default()).unwrap()
 }
 
 fn layer(outputs: &ScriptOutputs, id: &str) -> LayerOverride {
@@ -34,7 +34,7 @@ fn scripts_read_inputs_and_write_layer_fields() {
             moon.visible = input.cursor.inside;
             moon.position = [input.cursor.x + engine.dt * 0, input.cursor.y];
             moon.color = [audio.bass, 0, 0, 1];
-            moon.text = `${audio.bands(16).length} ${audio.beat} ${input.cursor.buttons}`;
+            moon.text = `${audio.bands(16).length} ${audio.beat} ${input.cursor.buttons} ${engine.locale}`;
             timeline("intro").seek(2);
             timeline("intro").play();
             return time * 2;
@@ -47,7 +47,7 @@ fn scripts_read_inputs_and_write_layer_fields() {
         opacity: Some(0.5),
         visible: Some(true),
         color: Some([0.25, 0.0, 0.0, 1.0]),
-        text: Some("16 true 1".into()),
+        text: Some("16 true 1 en".into()),
         ..LayerOverride::default()
     };
     assert_eq!(layer(&out, "moon"), moon);
@@ -66,7 +66,7 @@ fn every_file_of_a_scene_runs_in_order() {
         ("c.js", "import { scene } from 'wprs'; scene.layer('x').text = 'loaded';"),
     ];
     let files: Vec<_> = files.iter().map(|(p, s)| (p.to_string(), s.to_string())).collect();
-    let mut script = Script::load(&files, 1, Limits::default()).unwrap();
+    let mut script = Script::load(&files, 1, "en", Limits::default()).unwrap();
     let out = update(&mut script, 0.0).unwrap();
     let x = LayerOverride { opacity: Some(1.0), visible: Some(false), ..LayerOverride::default() };
     assert_eq!((layer(&out, "x"), out.values.get("b.js")), (x, Some(&Value::Bool(false))));
@@ -82,7 +82,7 @@ fn runaway_scripts_are_stopped_and_then_disabled() {
         assert!(start.elapsed() < Duration::from_millis(500), "{:?}", start.elapsed());
     }
     assert_eq!(update(&mut script, 0.0), Err(Error::Disabled));
-    let looping = Script::load(&sources("for (;;) {}"), 1, Limits::default()).err();
+    let looping = Script::load(&sources("for (;;) {}"), 1, "en", Limits::default()).err();
     assert_eq!(looping, Some(Error::Timeout(Duration::from_millis(100))));
 }
 
@@ -125,7 +125,7 @@ fn scripts_have_no_way_out() {
     assert_eq!(layer(&update(&mut script, 0.0).unwrap(), "a").text, Some(String::new()));
     for source in ["import * as fs from 'fs';", "import * as os from 'os';", "import x from './other.js';"] {
         assert!(
-            matches!(Script::load(&sources(source), 1, Limits::default()), Err(Error::Script(_))),
+            matches!(Script::load(&sources(source), 1, "en", Limits::default()), Err(Error::Script(_))),
             "{source}"
         );
     }
@@ -138,7 +138,7 @@ fn scripts_have_no_way_out() {
 fn random_numbers_follow_the_seed() {
     let source = "export function update() { return Math.random(); }";
     let values = |seed| {
-        let mut script = Script::load(&sources(source), seed, Limits::default()).unwrap();
+        let mut script = Script::load(&sources(source), seed, "en", Limits::default()).unwrap();
         (0..3).map(|t| update(&mut script, t as f64).unwrap().values["main.js"].clone()).collect::<Vec<_>>()
     };
     assert_eq!(values(1), values(1));

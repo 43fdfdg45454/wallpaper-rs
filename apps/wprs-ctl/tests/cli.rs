@@ -72,6 +72,10 @@ fn library_and_preset_commands_parse() {
         ("lib rate 4 R1AB2C X9Y8Z7", r#"Lib(Rate { rating: 4, items: ["R1AB2C", "X9Y8Z7"] })"#.into()),
         ("lib fav R1AB2C --off", r#"Lib(Fav { items: ["R1AB2C"], off: true })"#.into()),
         (
+            "lib confirm photosensitive R1AB2C",
+            r#"Lib(Confirm { what: "photosensitive", items: ["R1AB2C"] })"#.into(),
+        ),
+        (
             "lib tag R1AB2C --add sea --add blue --remove old",
             r#"Lib(Tag { items: ["R1AB2C"], add: ["sea", "blue"], remove: ["old"] })"#.into(),
         ),
@@ -183,6 +187,11 @@ fn operator_commands_parse() {
             r#"Pack(Build { dir: "src", out: Some("out.wpak"), json: true })"#,
         ),
         ("pack sign src --key author.key", r#"Pack(Sign { dir: "src", key: "author.key" })"#),
+        ("pack check src --json", r#"Pack(Check { path: "src", json: true })"#),
+        (
+            "pack upgrade src --rating mature --reason gore --photosensitive true --derived-from Ana",
+            r#"Pack(Upgrade { dir: "src", rating: "mature", reasons: ["gore"], photosensitive: true, derived_from: ["Ana"] })"#,
+        ),
         (
             "pack validate a.wpak b.wpak --key author.pub",
             r#"Pack(Validate { files: ["a.wpak", "b.wpak"], keys: ["author.pub"], json: false })"#,
