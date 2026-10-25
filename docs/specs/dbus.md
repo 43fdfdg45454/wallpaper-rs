@@ -883,8 +883,8 @@ Deletes a preset; configuration sections that used it keep their fit and backgro
 Providers download wallpapers from online services into a cache folder,
 `~/.cache/wallpaper-rs/providers/<id>/` (`0700`), that is a library source; playlists use their
 items through the library (for example `Playlists1.Create(name, "source:<source uid>")`). Kinds
-are `bing`, `apod`, `wikimedia`, `wallhaven`, `webdav`, `nextcloud` and `immich`; their options,
-defaults, contacted hosts and secrets are listed in `GetSchema().providers`. Local folders are
+are `bing`, `apod`, `wikimedia`, `wallhaven`, `motionbgs`, `webdav`, `nextcloud` and `immich`;
+their options, defaults, contacted hosts and secrets are listed in `GetSchema().providers`. Local folders are
 `Library1` sources, not providers. Provider ids match `^[a-z][a-z0-9_-]{0,31}$`.
 
 Secrets (passwords and API keys) are written only by `Add` and `SetSecret`, to the Secret

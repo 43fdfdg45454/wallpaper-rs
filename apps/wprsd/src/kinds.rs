@@ -5,7 +5,9 @@ use std::collections::BTreeMap;
 use std::net::IpAddr;
 use std::str::FromStr;
 use wprs_core::model::{Field, FieldKind, ProviderKind};
-use wprs_providers::{Apod, Bing, Immich, Provider, Secret, Wallhaven, WebDav, WikimediaPotd, client};
+use wprs_providers::{
+    Apod, Bing, Immich, MotionBgs, Provider, Secret, Wallhaven, WebDav, WikimediaPotd, client,
+};
 
 pub type Options = BTreeMap<String, String>;
 pub type Entry = (ProviderKind, Options, Options);
@@ -117,6 +119,7 @@ fn checked(field: &Field, value: &str) -> Result<String> {
         (_, "categories" | "purity") => (bits(), "three digits, each 0 or 1".into()),
         (_, "atleast") => (value.is_empty() || size(), "WIDTHxHEIGHT or nothing".into()),
         (_, "market" | "album") => (word(), "letters, digits and -".into()),
+        (_, "tag") => (value.is_empty() || word(), "letters, digits and - or nothing".into()),
         (_, "folder") => (plain && !value.split('/').any(|s| s == ".."), "a folder path".into()),
         _ => (plain && (!field.required || !value.is_empty()), "a short text".into()),
     };
@@ -191,6 +194,12 @@ pub fn build(kind: &str, o: &Options, secret: Option<&str>) -> wprs_providers::R
             api_key: secret.map(Secret::from),
             ..Wallhaven::new()?
         }),
+        "motionbgs" => Box::new(MotionBgs {
+            tag: some("tag").map(|tag| tag.to_ascii_lowercase()),
+            uhd: text("uhd") == "true",
+            pages: number(o, "pages"),
+            ..MotionBgs::new(client()?)
+        }),
         "webdav" => {
             Box::new(WebDav { allow_plain_http: plain, ..WebDav::new(text("url"), text("user"), key)? })
         }
@@ -237,6 +246,13 @@ mod tests {
         assert!(refused("bing", &[("base", "x")]).contains("no option base"));
         assert!(refused("webdav", &[("url", "https://example.org/dav")]).contains("needs the option user"));
         assert!(refused("wallhaven", &[("purity", "123")]).contains("three digits"));
+        assert!(refused("motionbgs", &[("tag", "../admin")]).contains("letters, digits and -"));
+        assert!(refused("motionbgs", &[("pages", "11")]).contains("from 1 to 10"));
+        let motion = effective(&kind_of("motionbgs").unwrap(), &options(&[("tag", "rain")])).unwrap();
+        assert_eq!(
+            (motion["tag"].as_str(), motion["uhd"].as_str(), motion["pages"].as_str()),
+            ("rain", "true", "1")
+        );
         for url in
             ["https://me:pw@example.org/dav", "https://example.org/dav?token=1", "https://example.org/#x"]
         {

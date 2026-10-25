@@ -1,6 +1,6 @@
 use wiremock::matchers::{header, path, query_param_is_missing};
 use wiremock::{Mock, MockServer, Request, ResponseTemplate};
-use wprs_providers::{Apod, Bing, Cache, Item, Media, Provider, Wallhaven, WikimediaPotd, client};
+use wprs_providers::{Apod, Bing, Cache, Item, Media, MotionBgs, Provider, Wallhaven, WikimediaPotd, client};
 
 type Pairs = &'static [(&'static str, &'static str)];
 
@@ -114,4 +114,61 @@ async fn wallhaven_searches_with_filters_and_sends_the_key_as_a_header() {
     assert_eq!(items[0].id, "wallhaven-94x38z");
     assert_eq!(items[0].url, "https://w.wallhaven.cc/full/94/wallhaven-94x38z.jpg");
     assert_eq!(items[1].attribution.as_deref(), Some("https://wallhaven.cc/w/ze1p56"));
+}
+
+#[tokio::test]
+async fn motionbgs_pages_through_a_tag_and_downloads_the_best_available_video() {
+    let server = MockServer::start().await;
+    let html = |body: &str| ResponseTemplate::new(200).set_body_raw(body, "text/html; charset=utf-8");
+    let first = Mock::given(path("/tag:rain/")).respond_with(html(include_str!("fixtures/motionbgs.html")));
+    first.expect(2).mount(&server).await;
+    let second =
+        Mock::given(path("/tag:rain/2/")).respond_with(html(include_str!("fixtures/motionbgs-2.html")));
+    second.expect(1).mount(&server).await;
+    Mock::given(path("/tag:rain/3/")).respond_with(ResponseTemplate::new(404)).expect(1).mount(&server).await;
+    let video =
+        Mock::given(path("/dl/4k/10239/")).respond_with(ResponseTemplate::new(200).set_body_bytes(*b"mp4"));
+    video.expect(1).mount(&server).await;
+
+    let motion = MotionBgs {
+        base: server.uri(),
+        tag: Some("rain".into()),
+        pages: 5,
+        ..MotionBgs::new(client().unwrap())
+    };
+    let items = motion.list().await.unwrap();
+    let found: Vec<_> = items.iter().map(|item| (item.id.as_str(), item.title.as_str())).collect();
+    assert_eq!(
+        found,
+        [
+            ("motionbgs-10239", "Rainy Night Ride"),
+            ("motionbgs-599", "Black Lamborghini in the Rain"),
+            ("motionbgs-9951", "Walter & Jesse in the Rain"),
+            ("motionbgs-9963", "Tokyo Midnight Rain"),
+        ]
+    );
+    assert!(items.iter().all(|item| item.media == Media::Video));
+    assert_eq!(items[0].url, format!("{}/dl/4k/10239/", server.uri()));
+    assert_eq!(items[1].url, format!("{}/dl/hd/599/", server.uri()));
+    assert_eq!(items[0].attribution, Some(format!("{}/rainy-night-ride", server.uri())));
+
+    let hd = MotionBgs { uhd: false, pages: 1, ..motion.clone() }.list().await;
+    assert!(hd.unwrap().iter().all(|item| item.url.contains("/dl/hd/")));
+
+    let dir = tempfile::tempdir().unwrap();
+    let stored = motion.fetch(&items[0], &Cache::new(dir.path(), 1 << 20).unwrap()).await.unwrap();
+    assert_eq!(
+        (stored.extension().unwrap().to_str(), std::fs::read(&stored).unwrap()),
+        (Some("mp4"), b"mp4".to_vec())
+    );
+}
+
+#[tokio::test]
+async fn motionbgs_lists_the_4k_page_without_a_tag() {
+    let server = MockServer::start().await;
+    let page =
+        ResponseTemplate::new(200).set_body_raw(include_str!("fixtures/motionbgs-2.html"), "text/html");
+    Mock::given(path("/4k/")).respond_with(page).expect(1).mount(&server).await;
+    let motion = MotionBgs { base: server.uri(), ..MotionBgs::new(client().unwrap()) };
+    assert_eq!(motion.list().await.unwrap().len(), 2);
 }

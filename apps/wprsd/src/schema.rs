@@ -137,6 +137,13 @@ pub fn providers() -> Vec<ProviderKind> {
             ],
         ),
         provider(
+            "motionbgs",
+            &["motionbgs.com"],
+            DAY,
+            None,
+            vec![clearable(text("tag", "")), flag("uhd", true), int("pages", 1, 1.0, 10.0)],
+        ),
+        provider(
             "webdav",
             &[],
             3600.0,
@@ -203,7 +210,7 @@ mod tests {
         let known: Vec<String> = Config::default().options().into_keys().collect();
         assert_eq!(keys.iter().collect::<std::collections::BTreeSet<_>>(), known.iter().collect());
         assert!(schema.options.iter().all(|f| !f.default.is_null()));
-        assert_eq!(schema.providers.len(), 7);
+        assert_eq!(schema.providers.len(), 8);
         assert!(schema.query.iter().any(|q| q.key == "sort"));
     }
 }

@@ -17,7 +17,7 @@ use wprs_core::model::{Credit, JobKind, SourceScan, SyncOutput, SyncReport};
 use wprs_library::{ScanReport, Source};
 use wprs_providers::{Cache, Item, Provider};
 
-const PUBLIC: [&str; 4] = ["bing", "apod", "wikimedia", "wallhaven"];
+const PUBLIC: [&str; 5] = ["bing", "apod", "wikimedia", "wallhaven", "motionbgs"];
 
 #[derive(Default)]
 pub struct Fetched {
