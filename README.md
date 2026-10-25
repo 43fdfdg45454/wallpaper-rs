@@ -957,8 +957,8 @@ misma pausa.
   proveedor si le toca su sincronización automática; la comprobación diaria de los repositorios
   (`repos.auto_refresh`) empieza 10 minutos después. Un repositorio solo puede redirigir a su propia
   dirección y a las réplicas que declara en su raíz firmada.
-- Los proveedores de fondos en línea (Bing, APOD, Wikimedia, Wallhaven, WebDAV/Nextcloud, Immich)
-  solo se usan si los configuras. Los servicios públicos se usan siempre por HTTPS; todos llevan un
+- Los proveedores de fondos en línea (Bing, APOD, Wikimedia, Wallhaven, MotionBGS,
+  WebDAV/Nextcloud, Immich) solo se usan si los configuras. Los servicios públicos se usan siempre por HTTPS; todos llevan un
   User-Agent genérico (`wallpaper-rs/<versión>`), sin cookies ni cabecera Referer, y las claves de API
   y contraseñas solo se envían al servidor configurado. Se guardan en el llavero del sistema
   (Secret Service) y en ningún otro sitio: ni en la configuración, ni en los registros, ni en la

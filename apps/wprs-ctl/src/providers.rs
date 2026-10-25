@@ -25,7 +25,7 @@ pub enum Provider {
     Add {
         #[arg(help = "Provider id: a lowercase letter, then lowercase letters, digits, - or _")]
         id: String,
-        #[arg(help = "bing, apod, wikimedia, wallhaven, webdav, nextcloud or immich")]
+        #[arg(help = "bing, apod, wikimedia, wallhaven, motionbgs, webdav, nextcloud or immich")]
         kind: String,
         #[arg(value_name = "KEY=VALUE", help = "Options of the kind; see wprs-ctl schema")]
         options: Vec<String>,
