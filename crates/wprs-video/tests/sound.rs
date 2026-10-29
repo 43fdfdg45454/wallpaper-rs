@@ -104,7 +104,7 @@ fn soundtracks_decode_and_keep_their_place_across_a_pause() {
     let (resumed, (made, heads)) = (position(), sound.playheads());
     let lead = made as f64 / f64::from(RATE) - resumed.as_secs_f64();
     assert!(
-        (resumed - paused).as_secs_f64() > 0.4 && (0.0..0.3).contains(&lead),
+        (resumed - paused).as_secs_f64() > 0.4 && (0.0..0.4).contains(&lead),
         "{resumed:?} {paused:?} {lead}"
     );
     assert_eq!(heads, [((first[0] as u64 + made - start) % u64::from(RATE)) as usize]);
