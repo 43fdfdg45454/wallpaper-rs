@@ -1,7 +1,7 @@
 use image::codecs::jpeg::JpegEncoder;
 use image::{GrayImage, ImageEncoder, Luma, Rgba, RgbaImage};
 use std::path::PathBuf;
-use wprs_render::decode_image;
+use wprs_render::{Pictures, SceneAssets, decode_image};
 
 struct TempFile(PathBuf);
 
@@ -57,4 +57,49 @@ fn downscales_oversized_images_once() {
 fn reports_undecodable_files() {
     let file = TempFile::new("garbage.png", b"not an image at all");
     assert!(decode_image(&file.0, 4096).is_err());
+}
+
+#[test]
+fn animations_with_a_huge_canvas_are_refused_before_any_frame() {
+    let mut gif = Vec::new();
+    let frame = image::Frame::new(RgbaImage::from_pixel(1, 1, Rgba([255, 0, 0, 255])));
+    image::codecs::gif::GifEncoder::new(&mut gif).encode_frame(frame).unwrap();
+    assert_eq!(wprs_render::animation(&gif).map(|(a, _)| a.dimensions()).ok(), Some((1, 1)));
+    gif[6..10].copy_from_slice(&[0xff; 4]);
+    assert!(wprs_render::animation(&gif).is_err());
+    let canvas =
+        [&b"VP8X"[..], &10u32.to_le_bytes(), &[2, 0, 0, 0], &[0xff, 0x3f, 0], &[0xff, 0x3f, 0]].concat();
+    let anim = [&b"ANIM"[..], &6u32.to_le_bytes(), &[0; 6]].concat();
+    let size = (4 + canvas.len() + anim.len()) as u32;
+    let webp = [&b"RIFF"[..], &size.to_le_bytes(), b"WEBP", &canvas, &anim].concat();
+    assert!(wprs_render::animation(&webp).is_err());
+}
+
+#[test]
+fn ids_that_share_an_animated_picture_decode_it_once_and_all_play() {
+    let mut gif = Vec::new();
+    let mut encoder = image::codecs::gif::GifEncoder::new(&mut gif);
+    for (color, ms) in [([255, 0, 0, 255], 100), ([0, 0, 255, 255], 300)] {
+        let image = RgbaImage::from_pixel(4, 2, Rgba(color));
+        let delay = image::Delay::from_numer_denom_ms(ms, 1);
+        encoder.encode_frame(image::Frame::from_parts(image, 0, 0, delay)).unwrap();
+    }
+    drop(encoder);
+    let asset: wprs_scene::Asset = serde_json::from_str(r#"{ "path": "a.gif", "animated": true }"#).unwrap();
+    let (mut assets, mut pictures, mut reads) = (SceneAssets::default(), Pictures::default(), 0);
+    for id in ["one", "two"] {
+        let read = || -> Result<_, image::ImageError> {
+            reads += 1;
+            Ok(gif.clone())
+        };
+        let total =
+            pictures.add((&mut assets, id, &asset), read, |b| Ok(image::load_from_memory(&b)?.into_rgba8()));
+        assert_eq!(total.unwrap(), 8 * 2 * 4);
+    }
+    assert_eq!(reads, 1);
+    assert_eq!(
+        (assets.sheets.get("one"), assets.sheets.get("two")),
+        (Some(&vec![0.1, 0.3]), Some(&vec![0.1, 0.3]))
+    );
+    assert!(std::sync::Arc::ptr_eq(&assets.images["one"], &assets.images["two"]));
 }

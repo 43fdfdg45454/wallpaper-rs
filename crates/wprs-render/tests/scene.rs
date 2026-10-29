@@ -1,4 +1,5 @@
 mod effects;
+mod looks;
 
 use image::{Rgba, RgbaImage};
 use serde_json::{Value, json};
@@ -32,9 +33,16 @@ struct Shot {
 
 impl Shot {
     fn new(r: &Renderer, canvas: Value, layers: Value, images: &[(&str, Arc<RgbaImage>)]) -> Shot {
-        let mut text = json!({ "schema": SCHEMA, "canvas": canvas, "layers": layers });
-        text["assets"] =
-            images.iter().map(|(id, _)| (id.to_string(), json!({ "path": format!("{id}.png") }))).collect();
+        let assets = images.iter().map(|(id, _)| (id.to_string(), json!({ "path": format!("{id}.png") })));
+        Shot::with(
+            r,
+            json!({ "canvas": canvas, "layers": layers, "assets": assets.collect::<Value>() }),
+            images,
+        )
+    }
+
+    fn with(r: &Renderer, mut text: Value, images: &[(&str, Arc<RgbaImage>)]) -> Shot {
+        text["schema"] = json!(SCHEMA);
         let props: BTreeMap<String, Property> =
             serde_json::from_value(json!({ "tone": { "type": "color", "default": "#00ff00" } })).unwrap();
         let scene = Scene::load(&text.to_string(), &props).unwrap();

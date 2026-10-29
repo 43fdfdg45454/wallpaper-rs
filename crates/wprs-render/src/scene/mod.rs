@@ -2,24 +2,31 @@ mod chains;
 mod draw;
 mod effects;
 mod encode;
+mod fonts;
 mod item;
 mod load;
+mod mips;
 mod paint;
 mod pipes;
 mod pool;
+mod poster;
+mod sampling;
 mod state;
 mod swarm;
 mod text;
 mod view;
+mod woff2;
 
 use crate::texture::{GpuImage, gpu_image};
 use crate::{RenderError, Renderer};
+pub use fonts::{MAX_FONT, font};
 use image::RgbaImage;
 use item::{Rect, frame_data, linear};
 use paint::Painter;
 pub(crate) use pipes::Pipes;
 use pipes::{Mode, Shader};
 use pool::Tex;
+pub(crate) use sampling::layout;
 use std::collections::HashMap;
 use std::sync::Arc;
 pub use view::SceneView;
@@ -61,6 +68,7 @@ pub struct SceneAssets {
     pub images: HashMap<String, Arc<RgbaImage>>,
     pub fonts: HashMap<String, Arc<Vec<u8>>>,
     pub luts: HashMap<String, Arc<Lut>>,
+    pub sheets: HashMap<String, Vec<f32>>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -116,6 +124,7 @@ impl Renderer {
             0,
             bytemuck::bytes_of(&frame_data(runtime, frame, size, view.srgb, quality)),
         );
+        self.shrunk(view, frame, screen);
         let texts = self.rasters(view, frame, screen);
         if let Some(swarms) = view.swarms.as_mut() {
             self.scoped(|| swarms.run(self, runtime, frame, quality))??;
@@ -124,6 +133,7 @@ impl Renderer {
             pool,
             caches,
             images,
+            samplings,
             texts: rasters,
             target,
             uniform,
@@ -149,6 +159,7 @@ impl Renderer {
             caches,
             states,
             images,
+            samplings,
             luts,
             texts: &texts,
             videos,

@@ -1,11 +1,11 @@
-use super::item::{Item, Rect, channel, gradient, invert, ndc, premultiplied, rows, shape};
+use super::item::{Item, Rect, channel, gradient, invert, ndc, premultiplied, rows, scale_of, shape, toned};
 use super::paint::{Painter, Target};
 use super::pipes::Mode;
 use super::{Op, Src};
-use wprs_scene::{Affine, Blend, Content, Mask, SpectrumStyle};
+use wprs_scene::{Affine, Blend, Content, Layout, Mask, SpectrumStyle, Wrapping};
 
 impl Painter<'_, '_, '_> {
-    fn content(&mut self, i: usize, opacity: f32) -> Option<(&'static str, Item, Src)> {
+    fn content(&mut self, i: usize, opacity: f32, size: [f32; 2]) -> Option<(&'static str, Item, Src)> {
         let frame = self.frame;
         let d = &frame.draws[i];
         let srgb = self.srgb;
@@ -16,7 +16,17 @@ impl Painter<'_, '_, '_> {
                 let (images, videos) = (self.images, self.videos);
                 let video = videos.iter().find(|(id, _)| id == asset).map(|(_, v)| *v);
                 let found = video.or_else(|| images.get(asset.as_ref()).map(|(i, _)| i))?;
-                Some(("fs_texture", item, self.ext(found)))
+                let (rect, s) = self.cell(i);
+                let natural = self.natural(i).unwrap_or(size);
+                let wrap = s.filter(|_| video.is_none()).map_or(Wrapping::Clamp, |s| s.wrap);
+                let tiles = match wrap {
+                    Wrapping::Clamp => [1.0; 2],
+                    _ => [0, 1].map(|k| size[k] / natural[k].max(1e-3)),
+                };
+                let nearest = s.is_some_and(|s| s.nearest) && video.is_none();
+                (item.uv, item.color) = (rect, toned(d.tint, d.brightness, srgb, opacity));
+                item.shape = [1.0 + wrap as u8 as f32, f32::from(u8::from(nearest)), tiles[0], tiles[1]];
+                Some(("fs_picture", item, self.ext(found)))
             }
             Content::Text { color, .. } => {
                 let texts = self.texts;
@@ -68,7 +78,14 @@ impl Painter<'_, '_, '_> {
             return self.particles(i, target, (opacity, blend, mask), atop);
         }
         let Some((size, quad)) = self.geometry(i) else { return };
-        let Some((entry, mut item, src)) = self.content(i, opacity) else { return };
+        let Some((entry, mut item, src)) = self.content(i, opacity, size) else { return };
+        let b = self.frame.draws[i].brightness;
+        if !matches!(self.frame.draws[i].content, Content::Image { .. } | Content::Video { .. }) {
+            [&mut item.color, &mut item.stroke]
+                .into_iter()
+                .for_each(|c| c[..3].iter_mut().for_each(|v| *v *= b));
+            item.stop_colors.iter_mut().for_each(|c| c[..3].iter_mut().for_each(|v| *v *= b));
+        }
         let m = self.local(i, size);
         let [x0, y0, x1, y1] = quad;
         let Some(bounds) = Rect::around([[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map(|p| m.apply(p)))
@@ -80,20 +97,51 @@ impl Painter<'_, '_, '_> {
         (item.m0, item.m1) = ndc(target.rect, m);
         let masked = self.mask(&mut item, (i, mask), m, size, target);
         let (mode, back) = self.blend(&mut item, blend, bounds, target, atop);
+        if let Some(mut backing) = self.backing(i, m, size, opacity, target) {
+            (backing.mask_info, backing.channel, backing.mask_m0, backing.mask_m1, backing.mask_shape) =
+                (item.mask_info, item.channel, item.mask_m0, item.mask_m1, item.mask_shape);
+            let slot = self.pool.push(&backing);
+            let tex = [Src::White, masked, back];
+            self.ops.push(Op::Draw { target: target.src, entry: "fs_shape", mode, slot, tex });
+        }
         let slot = self.pool.push(&item);
         self.ops.push(Op::Draw { target: target.src, entry, mode, slot, tex: [src, masked, back] });
+    }
+
+    fn backing(&self, i: usize, m: Affine, size: [f32; 2], opacity: f32, target: Target) -> Option<Item> {
+        let d = &self.frame.draws[i];
+        let Content::Text { layout: Layout { backing: Some((color, _, radius)), padding, .. }, .. } =
+            &d.content
+        else {
+            return None;
+        };
+        let inner = [0, 1].map(|k| (size[k] - 2.0 * padding).max(1.0));
+        let box_m = m
+            .then(Affine::translate([padding / size[0], padding / size[1]]))
+            .then(Affine::scale([inner[0] / size[0], inner[1] / size[1]]));
+        let px = 2.0 / scale_of(self.screen.then(d.world)).max(1e-6);
+        let [ex, ey] = [px / inner[0], px / inner[1]];
+        let mut item = Item {
+            quad: [-ex, -ey, 1.0 + ex, 1.0 + ey],
+            color: toned(*color, d.brightness, self.srgb, opacity),
+            size: [inner[0], inner[1], 0.0, 0.0],
+            shape: [0.0, radius.min(inner[0].min(inner[1]) / 2.0), 0.0, 0.0],
+            place: [inner[0] / 2.0, inner[1] / 2.0, 0.0, 0.0],
+            style: [0.0, 1.0, 0.0, 0.0],
+            ..Item::default()
+        };
+        (item.m0, item.m1) = ndc(target.rect, box_m);
+        Some(item)
     }
 
     pub(crate) fn composite(&mut self, i: usize, src: Src, rect: Rect, target: Target, atop: bool) {
         let frame = self.frame;
         let d = &frame.draws[i];
         let Some(bounds) = rect.pixels(target.rect) else { return };
-        let mut item = Item {
-            quad: [0.0, 0.0, 1.0, 1.0],
-            uv: [0.0, 0.0, 1.0, 1.0],
-            color: [d.opacity; 4],
-            ..Item::default()
-        };
+        let group = matches!(d.content, Content::Group { .. });
+        let color = if group { toned(d.tint, d.brightness, self.srgb, d.opacity) } else { [d.opacity; 4] };
+        let mut item =
+            Item { quad: [0.0, 0.0, 1.0, 1.0], uv: [0.0, 0.0, 1.0, 1.0], color, ..Item::default() };
         (item.m0, item.m1) = ndc(target.rect, rect.affine());
         let (m, size) = self
             .geometry(i)
@@ -150,7 +198,8 @@ impl Painter<'_, '_, '_> {
         let frame = self.frame;
         let texture = frame.draws[i].mask_texture.as_deref();
         let to_local = invert(m).then(Affine::translate([target.rect.x, target.rect.y]));
-        item.mask_info = [1.0, f32::from(u8::from(mask.invert)), mask.feather, 0.0];
+        let weak = 1.0 - frame.draws[i].mask_strength;
+        item.mask_info = [1.0, f32::from(u8::from(mask.invert)), mask.feather, weak];
         item.channel = channel(mask.channel, mask.texture.is_some());
         let images = self.images;
         let (affine, src) = if let Some(id) = texture {

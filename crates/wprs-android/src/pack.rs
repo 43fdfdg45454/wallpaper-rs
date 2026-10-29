@@ -7,14 +7,15 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError, Weak};
 use std::time::SystemTime;
 use wprs_format::{Kind, Package};
-use wprs_render::SceneAssets;
+use wprs_render::{Pictures, SceneAssets};
 use wprs_scene::{Preset, Property, Scene};
 
 const IMAGES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
-const FONTS: [&str; 2] = ["ttf", "otf"];
+const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
 const VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
 const DECODED: u64 = 256 << 20;
 const SCENES: &str = "scenes";
+const POSTER: u32 = 512;
 
 type Stamp = (PathBuf, Option<SystemTime>, u64);
 type Preview = (Option<RgbaImage>, Option<(u32, u32)>);
@@ -51,9 +52,18 @@ fn decode(bytes: Vec<u8>) -> Result<RgbaImage, Error> {
 
 pub(crate) fn check(path: &Path) -> Result<Preview, Error> {
     let mut package = open(path)?;
-    let [width, height] = package.scene()?.canvas.size;
+    let scene = package.scene()?;
+    let [width, height] = scene.canvas.size;
     let preview = package.manifest.thumbnail().cloned().map(|p| package.read_file(&p)).transpose()?;
-    Ok((preview.and_then(|bytes| decode(bytes).ok()), Some((width, height))))
+    let preview = preview.and_then(|bytes| decode(bytes).ok()).or_else(|| drawn(&mut package, &scene));
+    Ok((preview, Some((width, height))))
+}
+
+fn drawn(package: &mut Package<BufReader<fs::File>>, scene: &Scene) -> Option<RgbaImage> {
+    let assets = SceneAssets::read(scene, |path| package.read_file(path).map_err(|e| e.to_string())).ok()?;
+    let props = wprs_scene::effective(&package.manifest.properties, &[]);
+    let clock = (crate::stage::wall(), package.manifest.default_locale.as_deref().unwrap_or_default());
+    wprs_render::Renderer::new().ok()?.poster(scene, &assets, &props, clock, POSTER).ok()
 }
 
 pub(crate) fn about(path: &Path, languages: &[String]) -> Option<wprs_core::model::About> {
@@ -96,23 +106,17 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
     }
     let mut package = open(path)?;
     let scene = package.scene()?;
-    let (mut assets, mut videos, mut decoded) = (SceneAssets::default(), Vec::new(), BTreeMap::new());
+    let (mut assets, mut videos, mut decoded) = (SceneAssets::default(), Vec::new(), Pictures::default());
     for (id, asset) in &scene.assets {
         let kind = extension(&asset.path);
         if IMAGES.contains(&kind.as_str()) {
-            let picture = match decoded.get(&asset.path) {
-                Some(picture) => Arc::clone(picture),
-                None => Arc::new(decode(package.read_file(&asset.path)?)?),
-            };
-            decoded.insert(asset.path.clone(), Arc::clone(&picture));
-            let bytes = |i: &Arc<RgbaImage>| u64::from(i.width()) * u64::from(i.height()) * 4;
-            if decoded.values().map(bytes).sum::<u64>() > DECODED {
+            let read = || Ok(package.read_file(&asset.path)?);
+            if decoded.add::<Error>((&mut assets, id, asset), read, decode)? > DECODED {
                 return Err(Error::Scene(format!(
                     "the images of {} are too large",
                     package.manifest.title_in(&[])
                 )));
             }
-            assets.images.insert(id.clone(), picture);
         } else if FONTS.contains(&kind.as_str()) {
             assets.fonts.insert(id.clone(), Arc::new(package.read_file(&asset.path)?));
         } else if VIDEOS.contains(&kind.as_str()) {

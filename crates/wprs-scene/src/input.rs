@@ -3,7 +3,7 @@ use serde_json::Value as Json;
 use std::collections::BTreeMap;
 
 pub const BANDS: usize = 64;
-const SETTLE: f32 = 0.15;
+pub(crate) const SETTLE: f32 = 0.15;
 const FADE: f32 = 0.25;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,6 +58,8 @@ pub enum TimelineCommand {
     Pause,
     Seek(f32),
     Reverse,
+    Stop,
+    Speed(f32),
 }
 
 impl Default for AudioFrame {
@@ -93,7 +95,11 @@ impl PointerState {
     }
 
     pub fn follow(&self, pos: Option<[f32; 2]>, buttons: u8, dt: f32) -> PointerState {
-        let (target, dt, omega) = (pos.unwrap_or([0.5; 2]), dt.clamp(0.0, 0.1), 4.0 / SETTLE);
+        self.follow_in(pos, buttons, dt, SETTLE)
+    }
+
+    pub fn follow_in(&self, pos: Option<[f32; 2]>, buttons: u8, dt: f32, settle: f32) -> PointerState {
+        let (target, dt, omega) = (pos.unwrap_or([0.5; 2]), dt.clamp(0.0, 0.1), 4.0 / settle.max(1e-3));
         let x = omega * dt;
         let decay = 1.0 / (1.0 + x + 0.48 * x * x + 0.235 * x * x * x);
         let (goal, fade) = (f32::from(u8::from(pos.is_some())), dt / FADE);

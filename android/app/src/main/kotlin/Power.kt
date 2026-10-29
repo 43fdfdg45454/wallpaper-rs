@@ -1,5 +1,6 @@
 package io.github.wallpaper_rs
 
+import android.animation.ValueAnimator
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -63,6 +64,7 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
             battery?.getBooleanExtra(BatteryManager.EXTRA_BATTERY_LOW, false) == true,
             power.currentThermalStatus,
             headroom,
+            !ValueAnimator.areAnimatorsEnabled(),
         )
         powered.intValue++
         Render.post { Wallpaper.wake() }

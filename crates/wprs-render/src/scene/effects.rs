@@ -35,7 +35,8 @@ impl Painter<'_, '_, '_> {
         let images = self.images;
         let mask = e.mask_texture.as_deref().and_then(|id| images.get(id));
         let mask = mask.map_or(Src::White, |(image, _)| self.ext(image));
-        let (mask_m0, mask_m1) = rows(layer_uv);
+        let (mut mask_m0, mask_m1) = rows(layer_uv);
+        mask_m0[3] = 1.0 - e.mask_strength;
         let fx = Fx {
             slots: e.slots,
             texel: [0.0; 4],

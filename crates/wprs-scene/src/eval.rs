@@ -2,22 +2,52 @@ use crate::input::LayerOverride;
 use crate::resolve::Context;
 use crate::wake::wakes;
 use crate::{
-    Affine, Align, Blend, Color, Descriptor, EffectUse, Gradient, Kind, Layer, Mask, ParamKind, Quality,
-    Shape, Spectrum, Wake, descriptor, fusion,
+    Affine, Align, Blend, Color, Descriptor, EffectUse, Gradient, Kind, Layer, Layout, Mask, ParamKind,
+    Quality, Shape, Spectrum, Wake, descriptor, fusion,
 };
 use std::borrow::Cow;
 use std::ops::Range;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Content<'a> {
-    Group { clip: bool },
-    Image { asset: Cow<'a, str>, size: Option<[f32; 2]> },
-    Video { asset: Cow<'a, str>, size: Option<[f32; 2]> },
-    Text { text: Cow<'a, str>, font: Option<&'a str>, size: f32, color: Color, align: Align },
-    Shape { shape: Shape, fill: Option<Color>, gradient: Option<&'a Gradient>, stroke: Option<(Color, f32)> },
-    Spectrum { spectrum: &'a Spectrum, color: Color },
-    Solid { color: Color, size: [f32; 2] },
-    Particles { system: &'a str },
+    Group {
+        clip: bool,
+    },
+    Image {
+        asset: Cow<'a, str>,
+        size: Option<[f32; 2]>,
+        frame: Option<u32>,
+    },
+    Video {
+        asset: Cow<'a, str>,
+        size: Option<[f32; 2]>,
+    },
+    Text {
+        text: Cow<'a, str>,
+        font: Option<&'a str>,
+        fallback: &'a [String],
+        size: f32,
+        color: Color,
+        align: Align,
+        layout: Layout,
+    },
+    Shape {
+        shape: Shape,
+        fill: Option<Color>,
+        gradient: Option<&'a Gradient>,
+        stroke: Option<(Color, f32)>,
+    },
+    Spectrum {
+        spectrum: &'a Spectrum,
+        color: Color,
+    },
+    Solid {
+        color: Color,
+        size: [f32; 2],
+    },
+    Particles {
+        system: &'a str,
+    },
     Adjustment,
 }
 
@@ -28,6 +58,7 @@ pub struct EffectDraw<'a> {
     pub slots: [[f32; 4]; 16],
     pub mask: Option<&'a Mask>,
     pub mask_texture: Option<Cow<'a, str>>,
+    pub mask_strength: f32,
     pub scale: f32,
     pub reach: f32,
     pub chain: usize,
@@ -44,6 +75,9 @@ pub struct Draw<'a> {
     pub blend: Blend,
     pub mask: Option<&'a Mask>,
     pub mask_texture: Option<Cow<'a, str>>,
+    pub mask_strength: f32,
+    pub tint: Color,
+    pub brightness: f32,
     pub effects: Range<usize>,
     pub content: Content<'a>,
     pub dynamic: bool,
@@ -74,48 +108,32 @@ pub(crate) fn walk<'a>(
     for layer in layers.iter().filter(|l| l.flat()) {
         let set = cx.script.layers.get(&layer.id).unwrap_or(&none);
         let outer = cx.wake.replace(Wake::Idle);
-        let visible = set.visible.unwrap_or_else(|| layer.visible.get(cx));
-        let opacity = set.opacity.unwrap_or_else(|| layer.opacity.get(cx)).clamp(0.0, 1.0);
-        let (shown, at) = (visible && opacity > 0.0, frame.draws.len());
+        let place = cx.place(layer, parent);
+        let (shown, at) = (place.visible && place.opacity > 0.0, frame.draws.len());
         if shown || cx.mattes.contains(&layer.id) {
-            emit(cx, layer, set, parent, opacity, quality, frame, canvas);
+            emit(cx, layer, set, place, quality, frame, canvas);
             frame.draws[at].hidden = !shown;
         }
         cx.wake.set(outer.min(cx.wake.get()));
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn emit<'a>(
     cx: &Context,
     layer: &'a Layer,
     set: &LayerOverride,
-    parent: Affine,
-    opacity: f32,
+    place: crate::kin::Place,
     quality: Quality,
     frame: &mut Frame<'a>,
     canvas: [f32; 2],
 ) {
-    let t = &layer.transform;
-    let view = frame.view;
-    let base = layer.anchor.map_or([0.0; 2], |a| {
-        let [fx, fy] = a.fraction();
-        [view[0] + fx * view[2], view[1] + fy * view[3]]
-    });
-    let free = layer.anchor.is_some() || matches!(layer.kind, Kind::Group { .. } | Kind::Adjustment { .. });
-    let center = if free { [0.0; 2] } else { [canvas[0] / 2.0, canvas[1] / 2.0] };
-    let position = set.position.unwrap_or_else(|| t.position.as_ref().map_or(center, |p| p.get(cx).0));
-    if !layer.parallax.is_zero() && cx.pointer.moving() {
-        cx.note(Wake::Frame);
-    }
-    let shift = cx.pointer.smooth.map(|s| s - 0.5);
-    let at = [0, 1].map(|i| base[i] + position[i] + shift[i] * layer.parallax.0[i] * canvas[i]);
-    let local = Affine::translate(at)
-        .then(Affine::rotate(set.rotation.unwrap_or_else(|| t.rotation.get(cx))))
-        .then(Affine::skew(t.skew.get(cx).0))
-        .then(Affine::scale(set.scale.unwrap_or_else(|| t.scale.get(cx).0)));
-    let origin = t.origin.or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5; 2]);
-    let content = content(cx, layer, set, canvas);
+    let (t, opacity) = (&layer.transform, place.opacity);
+    let valign = match &layer.kind {
+        Kind::Text(text) => text.valign.unwrap_or_default().fraction(),
+        _ => 0.5,
+    };
+    let origin = t.origin.or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5, valign]);
+    let content = content(cx, layer, set, canvas, quality);
     let playing = matches!(&content, Content::Image { asset, .. } if cx.playing.contains(asset.as_ref()));
     let start = frame.effects.len();
     let runs = if layer.effects.len() > 1 { fusion(&layer.effects) } else { Vec::new() };
@@ -138,20 +156,43 @@ fn emit<'a>(
             _ => None,
         });
         let (textures, mask_texture) = (textures.collect(), masked(cx, mask));
-        let draw =
-            EffectDraw { descriptor: d, effect, slots, mask, mask_texture, scale, reach, chain, textures };
+        let mask_strength = strength(cx, mask);
+        let draw = EffectDraw {
+            descriptor: d,
+            effect,
+            slots,
+            mask,
+            mask_texture,
+            mask_strength,
+            scale,
+            reach,
+            chain,
+            textures,
+        };
         frame.effects.push(draw);
     }
     let effects = start..frame.effects.len();
     let group = matches!(layer.kind, Kind::Group { .. });
+    let painted = match &layer.kind {
+        Kind::Image { color, .. } | Kind::Video { color, .. } | Kind::Particles { color, .. } => {
+            color.as_ref()
+        }
+        Kind::Group { color, .. } => color.as_ref(),
+        _ => None,
+    };
+    let tint = set.color.map(Color).filter(|_| painted.is_some() || group).or(painted.map(|c| c.get(cx)));
+    let tint = tint.unwrap_or(Color([1.0; 4]));
+    let brightness = layer.brightness.as_ref().map_or(1.0, |b| b.get(cx).clamp(0.0, 16.0));
+    let toned = tint != Color([1.0; 4]) || brightness != 1.0;
     let isolate = !effects.is_empty()
         || !layer.blend.fixed()
         || layer.mask.is_some()
         || layer.cache
-        || (group && opacity < 1.0);
+        || (group && (opacity < 1.0 || toned));
     let index = frame.draws.len();
-    let world = parent.then(local);
+    let world = place.world;
     let (blend, mask) = (layer.blend, layer.mask.as_ref());
+    let mask_strength = strength(cx, mask);
     let draw = Draw {
         layer,
         end: index + 1,
@@ -161,6 +202,9 @@ fn emit<'a>(
         blend,
         mask,
         mask_texture: masked(cx, mask),
+        mask_strength,
+        tint,
+        brightness,
         effects,
         content,
         dynamic: false,
@@ -179,11 +223,21 @@ fn emit<'a>(
     (draw.end, draw.dynamic) = (end, moving || children);
 }
 
-fn content<'a>(cx: &Context, layer: &'a Layer, set: &LayerOverride, canvas: [f32; 2]) -> Content<'a> {
+fn content<'a>(
+    cx: &Context,
+    layer: &'a Layer,
+    set: &LayerOverride,
+    canvas: [f32; 2],
+    quality: Quality,
+) -> Content<'a> {
     let tint = |c: Color| set.color.map_or(c, Color);
     match &layer.kind {
         Kind::Group { clip, .. } => Content::Group { clip: *clip },
-        Kind::Image { image, size, .. } => Content::Image { asset: named(cx, image), size: *size },
+        Kind::Image { image, size, playback, .. } => {
+            let asset = named(cx, image);
+            let frame = crate::sheet::frame(cx, &asset, playback.as_ref(), quality);
+            Content::Image { asset, size: *size, frame }
+        }
         Kind::Video { video, size, .. } => Content::Video { asset: named(cx, video), size: *size },
         Kind::Text(t) => {
             let text = match (&set.text, &t.text) {
@@ -194,9 +248,16 @@ fn content<'a>(cx: &Context, layer: &'a Layer, set: &LayerOverride, canvas: [f32
             Content::Text {
                 text,
                 font: t.font.as_deref(),
+                fallback: &t.fallback,
                 size: t.size,
                 color: tint(t.color.get(cx)),
                 align: t.align,
+                layout: Layout {
+                    wrap: t.wrap,
+                    line_height: t.line_height,
+                    padding: t.padding.unwrap_or(0.0),
+                    backing: t.background.as_ref().map(|b| (b.color.get(cx), b.padding, b.radius)),
+                },
             }
         }
         Kind::Shape { shape, fill, gradient, stroke } => Content::Shape {
@@ -219,6 +280,10 @@ fn content<'a>(cx: &Context, layer: &'a Layer, set: &LayerOverride, canvas: [f32
             Content::Adjustment
         }
     }
+}
+
+fn strength(cx: &Context, mask: Option<&Mask>) -> f32 {
+    mask.and_then(|m| m.strength.as_ref()).map_or(1.0, |s| s.get(cx).clamp(0.0, 1.0))
 }
 
 fn masked<'a>(cx: &Context, mask: Option<&'a Mask>) -> Option<Cow<'a, str>> {

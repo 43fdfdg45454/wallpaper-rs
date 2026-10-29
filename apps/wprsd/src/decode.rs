@@ -5,6 +5,8 @@ use std::path::Path;
 use wprs_format::{Kind as PackageKind, Package, Platform, features};
 use wprs_library::Meta;
 
+const POSTER: u32 = 1024;
+
 pub struct Picture {
     pub meta: Meta,
     pub image: Option<DynamicImage>,
@@ -74,9 +76,16 @@ pub fn package(path: &Path) -> Result<Picture, Problem> {
     let entry = package.read_file(&manifest.entry);
     let entry = match manifest.kind {
         PackageKind::Scene => {
-            let [width, height] = package.scene()?.canvas.size.map(Some);
-            let failure = preview.is_none().then(|| "no preview".to_owned());
-            return Ok(Picture { meta: Meta { width, height, ..Meta::default() }, image: preview, failure });
+            let scene = package.scene()?;
+            let [width, height] = scene.canvas.size.map(Some);
+            let (image, failure) = match preview {
+                Some(image) => (Some(image), None),
+                None => match poster(&mut package, &scene, &manifest) {
+                    Ok(image) => (Some(image), None),
+                    Err(e) => (None, Some(format!("no preview: {e}"))),
+                },
+            };
+            return Ok(Picture { meta: Meta { width, height, ..Meta::default() }, image, failure });
         }
         PackageKind::Web | PackageKind::Preset | PackageKind::Assets => {
             return Ok(Picture { meta: Meta::default(), image: preview, failure: None });
@@ -95,4 +104,24 @@ pub fn package(path: &Path) -> Result<Picture, Problem> {
 fn newer(path: &Path, error: String) -> Picture {
     let image = wprs_format::thumbnail(path).ok().flatten().and_then(|b| bytes(b).ok());
     Picture { meta: Meta { error: Some(error), ..Meta::default() }, image, failure: None }
+}
+
+fn poster(
+    package: &mut Package<BufReader<File>>,
+    scene: &wprs_scene::Scene,
+    manifest: &wprs_format::Manifest,
+) -> Result<DynamicImage, String> {
+    thread_local! {
+        static GPU: Option<wprs_render::Renderer> = wprs_render::Renderer::new().ok();
+    }
+    let assets =
+        wprs_render::SceneAssets::read(scene, |path| package.read_file(path).map_err(|e| e.to_string()))?;
+    let props = wprs_scene::effective(&manifest.properties, &[]);
+    GPU.with(|gpu| {
+        let gpu = gpu.as_ref().ok_or("no graphics device")?;
+        let lang = manifest.locale_in(&wprs_core::locale::languages());
+        gpu.poster(scene, &assets, &props, (crate::zone::wall(), &lang), POSTER)
+            .map(DynamicImage::ImageRgba8)
+            .map_err(|e| e.to_string())
+    })
 }

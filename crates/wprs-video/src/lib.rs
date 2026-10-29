@@ -1,5 +1,6 @@
 mod audio;
 mod bus;
+mod feed;
 mod mix;
 mod pipewire;
 mod player;
@@ -8,10 +9,10 @@ mod sound;
 mod still;
 mod video_sink;
 
-pub use mix::{Clip, Mix, RATE, Track};
+pub use mix::{Clip, Mix, RATE, Source, Track};
 pub use player::Player;
 pub use probe::probe;
-pub use sound::{Bank, Soundtrack, decode};
+pub use sound::{Bank, Soundtrack, decode, probe as probe_sound};
 pub use still::{Still, still};
 
 use gstreamer as gst;

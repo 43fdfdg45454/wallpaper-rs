@@ -21,7 +21,7 @@ pub(crate) struct Raised {
 }
 
 #[derive(Default)]
-pub(crate) struct Tilted(u64, bool);
+pub(crate) struct Tilted(u64, bool, bool);
 
 pub(crate) struct Look {
     pub(crate) fit: Fit,
@@ -34,9 +34,10 @@ impl Tilted {
     pub(crate) fn rate(&mut self, preview: bool) -> u32 {
         let generation = store::generation();
         if self.0 != generation {
-            *self = Tilted(generation, tilt::wanted(preview));
+            *self = Tilted(generation, tilt::wanted(preview), tilt::scene(preview));
         }
-        tilt::rate(self.1, Power::now(), preview)
+        let power = Power::now();
+        tilt::rate(self.1 && !(self.2 && power.still), power, preview)
     }
 }
 

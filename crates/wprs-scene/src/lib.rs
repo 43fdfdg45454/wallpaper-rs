@@ -5,12 +5,14 @@ mod asset;
 mod blend;
 mod bones;
 mod budget;
+mod calendar;
 mod canvas;
 mod catalog;
 mod chain;
 mod clip;
 mod content;
 mod cube;
+mod cue;
 mod custom;
 mod deep;
 mod easing;
@@ -23,6 +25,7 @@ mod fx;
 mod gltf;
 mod hooks;
 mod input;
+mod kin;
 mod kinds;
 mod layer;
 mod lens;
@@ -31,6 +34,7 @@ mod links;
 mod look;
 mod media;
 mod mpeg;
+mod oklab;
 mod particles;
 mod poses;
 mod probe;
@@ -44,6 +48,7 @@ mod runtime;
 mod schema;
 mod scripting;
 mod shader;
+mod sheet;
 mod signal;
 mod sound;
 mod stage;
@@ -52,6 +57,7 @@ mod typeset;
 mod uses;
 mod validate;
 mod value;
+mod voice;
 mod wake;
 
 pub use adopt::Files;
@@ -60,6 +66,7 @@ pub use animate::Animate;
 pub use asset::{Asset, COLLECTIONS, Filter, MAX_FRAMES, Wrapping};
 pub use blend::{BLENDS, Blend};
 pub use budget::Budget;
+pub use calendar::format as format_time;
 pub use canvas::{BlendSpace, Canvas, Clock};
 pub use catalog::{described, drawn, newer_params, reserved, undrawn};
 pub use chain::{CHAIN_ENTRY, effect_source, fusion};
@@ -69,6 +76,7 @@ pub use clip::{
 };
 pub use content::{Align, EffectUse, Gradient, Mask, MaskChannel, Shape, Spectrum, SpectrumStyle, Stroke};
 pub use cube::{Lut, LutError, MAX_LUT_BYTES, MAX_LUT_SIZE, MAX_LUT_TOTAL};
+pub use cue::{Course, Fired, MAX_FIRED};
 pub use custom::{
     CONTRACT, EffectFiles, MAX_EFFECT_FILES, MAX_GRID, MAX_INPUTS, MAX_OPTIONS, MAX_PARAMS, MAX_TARGETS,
     MAX_VARIANTS, MAX_WGSL, MAX_WGSL_TOTAL,
@@ -124,10 +132,11 @@ pub use scripting::{
 pub use signal::{CLOCKS, Gain, Hearing, Reduce, Smooth};
 pub use sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice};
 pub use timeline::{Event, Handles, Key, Loop, Timeline, local, sample};
-pub use typeset::{Backing, Glyphs, MAX_FALLBACK, Outline, Shadow, TextLayer, Valign, Wrap};
+pub use typeset::{Backing, Glyphs, Layout, MAX_FALLBACK, Outline, Shadow, TextLayer, Valign, Wrap};
 pub use uses::{Uses, needs, source, tells_time, variants};
 pub use validate::Issue;
 pub use value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2, Vec3};
+pub use voice::{Playlist, Spot, Walk};
 pub use wake::Wake;
 
 use schemars::JsonSchema;

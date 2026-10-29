@@ -30,6 +30,9 @@ impl State {
         if std::mem::replace(&mut self.motion.calm, calm) != calm {
             self.restill();
         }
+        for output in self.outputs.values_mut() {
+            output.dirty |= output.shown.scene.as_mut().is_some_and(|scene| scene.calm(calm));
+        }
     }
 
     pub(super) fn restill(&mut self) {

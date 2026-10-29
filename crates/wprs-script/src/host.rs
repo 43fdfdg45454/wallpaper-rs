@@ -12,6 +12,10 @@ const RETRY: Duration = Duration::from_millis(100);
 
 type Reply = Result<ScriptOutputs, Error>;
 
+unsafe extern "C" {
+    fn tzset();
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum Request {
@@ -28,7 +32,7 @@ enum Request {
 
 pub fn serve() -> std::io::Result<()> {
     crate::sandbox()?;
-    let (mut script, mut out) = (None, std::io::stdout().lock());
+    let (mut script, mut out, mut zone) = (None, std::io::stdout().lock(), String::new());
     for line in std::io::stdin().lock().lines() {
         let reply: Reply = match serde_json::from_str(&line?) {
             Ok(Request::Load { sources, seed, locale, labels }) => {
@@ -38,10 +42,17 @@ pub fn serve() -> std::io::Result<()> {
                     ScriptOutputs::default()
                 })
             }
-            Ok(Request::Frame(frame)) => match &mut script {
-                Some(script) => script.update_json(&frame.to_string()),
-                None => Err(Error::Disabled),
-            },
+            Ok(Request::Frame(frame)) => {
+                if let Some(rule) = frame["zone"].as_str().filter(|z| !z.is_empty() && *z != zone) {
+                    zone = rule.to_owned();
+                    unsafe { std::env::set_var("TZ", &zone) };
+                    unsafe { tzset() };
+                }
+                match &mut script {
+                    Some(script) => script.update_json(&frame.to_string()),
+                    None => Err(Error::Disabled),
+                }
+            }
             Err(e) => Err(Error::Host(e.to_string())),
         };
         writeln!(out, "{}", serde_json::to_string(&reply)?)?;

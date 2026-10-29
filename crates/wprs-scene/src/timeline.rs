@@ -73,6 +73,7 @@ pub(crate) struct Playhead {
     pub(crate) t: f32,
     pub(crate) playing: bool,
     pub(crate) reversed: bool,
+    pub(crate) rate: f32,
 }
 
 pub fn local(t: f32, d: f32, mode: Loop) -> f32 {
@@ -92,32 +93,63 @@ pub fn local(t: f32, d: f32, mode: Loop) -> f32 {
 pub fn sample<T: Animate>(keys: &[Key<T>], t: f32) -> T {
     let i = keys.partition_point(|k| k.t <= t);
     match (i.checked_sub(1).map(|i| &keys[i]), keys.get(i)) {
-        (Some(a), Some(b)) => a.v.lerp(&b.v, a.ease.apply((t - a.t) / (b.t - a.t).max(1e-6))),
+        (Some(a), Some(b)) => {
+            curve(a, b, t).unwrap_or_else(|| a.v.lerp(&b.v, a.ease.apply((t - a.t) / (b.t - a.t).max(1e-6))))
+        }
         (Some(k), None) | (None, Some(k)) => k.v.clone(),
         (None, None) => T::default(),
     }
 }
 
+fn curve<T: Animate>(a: &Key<T>, b: &Key<T>, t: f32) -> Option<T> {
+    let (out, back) = (a.handles.and_then(|h| h.out), b.handles.and_then(|h| h.before));
+    let (([v0, ..], n), ([v1, ..], _)) = (a.v.comps(), b.v.comps());
+    if n != 1 || (out.is_none() && back.is_none()) {
+        return None;
+    }
+    let third = [(b.t - a.t) / 3.0, (v1 - v0) / 3.0];
+    let ([dt0, dv0], [dt1, dv1]) = (out.unwrap_or(third), back.unwrap_or(third));
+    let at = |p: [f32; 4], s: f32| {
+        let r = 1.0 - s;
+        r * r * r * p[0] + 3.0 * r * r * s * p[1] + 3.0 * r * s * s * p[2] + s * s * s * p[3]
+    };
+    let xs = [a.t, a.t + dt0, b.t - dt1, b.t];
+    let (mut lo, mut hi) = (0.0, 1.0);
+    for _ in 0..24 {
+        let mid = (lo + hi) / 2.0;
+        (lo, hi) = if at(xs, mid) < t { (mid, hi) } else { (lo, mid) };
+    }
+    let v = at([v0, v0 + dv0, v1 - dv1, v1], (lo + hi) / 2.0);
+    Some(a.v.with_comps([v, 0.0, 0.0, 0.0]))
+}
+
 impl Timeline {
+    pub(crate) fn origin(&self, rate: f32) -> f32 {
+        if rate < 0.0 { 0.0 } else { -self.delay }
+    }
+
     pub(crate) fn start(&self) -> Playhead {
         Playhead {
-            t: -self.delay,
+            t: self.origin(self.speed),
             playing: self.autoplay && self.trigger.as_deref().is_none_or(|t| t == "start"),
             reversed: false,
+            rate: self.speed,
         }
     }
 
     pub(crate) fn advance(&self, head: &mut Playhead, dt: f32) {
         if head.playing {
-            head.t += dt * self.speed * if head.reversed { -1.0 } else { 1.0 };
+            let back = head.reversed != (head.rate < 0.0);
+            head.t += dt * head.rate.abs() * if back { -1.0 } else { 1.0 };
             let done =
-                self.repeat == Loop::Once && (head.t >= self.length() || (head.reversed && head.t <= 0.0));
+                self.repeat == Loop::Once && if back { head.t <= 0.0 } else { head.t >= self.length() };
             head.playing &= !done;
         }
     }
 
     pub(crate) fn position(&self, head: &Playhead) -> f32 {
-        local(head.t.max(0.0), self.length(), self.repeat)
+        let t = if head.reversed != (head.rate < 0.0) { head.t } else { head.t.max(0.0) };
+        local(t, self.length(), self.repeat)
     }
 
     pub fn length(&self) -> f32 {

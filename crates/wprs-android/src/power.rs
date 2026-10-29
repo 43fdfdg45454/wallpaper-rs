@@ -25,6 +25,7 @@ pub(crate) struct Power {
     pub(crate) low: bool,
     pub(crate) thermal: i32,
     pub(crate) headroom: f32,
+    pub(crate) still: bool,
 }
 
 impl Power {
@@ -38,7 +39,8 @@ impl Power {
 }
 
 impl Power {
-    const BATTERY: Power = Power { charging: false, saver: false, low: false, thermal: 0, headroom: 0.0 };
+    const BATTERY: Power =
+        Power { charging: false, saver: false, low: false, thermal: 0, headroom: 0.0, still: false };
 
     fn paused(self) -> bool {
         self.saver || (self.low && !self.charging) || self.thermal >= CRITICAL

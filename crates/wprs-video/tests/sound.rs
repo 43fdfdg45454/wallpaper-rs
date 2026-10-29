@@ -1,54 +1,109 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use wprs_scene::Voice;
-use wprs_video::{Bank, Clip, Mix, RATE, Soundtrack, Track, decode};
+use wprs_scene::{Order, Playlist, Voice};
+use wprs_video::{Bank, Clip, Mix, RATE, Soundtrack, Source, Track, decode, probe_sound};
 
-const ON: Voice = Voice { play: true, volume: 1.0, pan: 0.0 };
+const ON: Voice = Voice { play: true, volume: 1.0, pan: 0.0, at: 0.0 };
+const SECOND: f64 = RATE as f64;
 
-fn mix(track: Track, clip: Clip) -> Mix {
+fn track(lengths: &[f64], repeat: bool) -> Track {
+    let list = Playlist { lengths: lengths.to_vec(), repeat, ..Playlist::default() };
+    Track { list, fade_in: 0.0, fade_out: 0.02 }
+}
+
+fn mix(track: Track, clips: Vec<Clip>) -> Mix {
     let mut mix = Mix::new(&[track]);
-    mix.load(0, Arc::new(clip));
+    clips.into_iter().enumerate().for_each(|(i, c)| mix.load(0, i, Source::Memory(Arc::new(c))));
     mix
 }
 
 fn run(mix: &mut Mix, frames: usize) -> Vec<[i16; 2]> {
     let mut out = vec![0u8; frames * 4];
-    mix.fill(&mut out);
-    out.as_chunks::<4>()
-        .0
-        .iter()
-        .map(|f| [i16::from_le_bytes([f[0], f[1]]), i16::from_le_bytes([f[2], f[3]])])
-        .collect()
+    for chunk in out.chunks_mut(480 * 4) {
+        mix.fill(chunk);
+    }
+    let pairs = out.as_chunks::<4>().0.iter();
+    pairs.map(|f| [i16::from_le_bytes([f[0], f[1]]), i16::from_le_bytes([f[2], f[3]])]).collect()
 }
 
-fn half(frames: usize) -> Clip {
-    Clip { channels: 1, samples: vec![16_384; frames] }
+fn flat(value: i16, frames: usize) -> Clip {
+    Clip { channels: 1, samples: vec![value; frames] }
+}
+
+fn ramp(seconds: f64) -> Clip {
+    Clip { channels: 1, samples: (0..(seconds * SECOND) as usize).map(|i| (i / 8) as i16).collect() }
 }
 
 #[test]
 fn the_mix_fades_pans_loops_and_ends_one_shots() {
-    let looped = Track { repeat: true, fade_in: 0.0, fade_out: 0.02 };
-    let mut sound = mix(looped, half(480));
+    let mut sound = mix(track(&[0.01], true), vec![flat(16_384, 480)]);
     assert!(run(&mut sound, 100).iter().all(|f| *f == [0, 0]), "silent until it plays");
-    sound.set(&[ON]);
+    sound.set(&[ON], sound.frames as f64);
     assert_eq!(run(&mut sound, 1000)[999], [16_383, 16_383]);
-    assert_eq!((sound.playheads(), sound.frames), (vec![1000 % 480], 1100));
-    sound.set(&[Voice { pan: 1.0, ..ON }]);
-    assert_eq!(run(&mut sound, 10)[9], [0, 16_383]);
-    sound.set(&[Voice { play: false, ..ON }]);
+    sound.set(&[Voice { pan: 1.0, ..ON }], sound.frames as f64);
+    assert_eq!(run(&mut sound, 1000)[999], [0, 16_383], "pans glide");
+    sound.set(&[Voice { play: false, ..ON }], 0.0);
     let tail = run(&mut sound, 1000);
-    assert!(tail[0][0] > 8_000 && tail[500][0] < 8_000 && tail[970] == [0, 0], "fades out over 20 ms");
-    assert_eq!(sound.playheads(), [0]);
-    let mut shot = mix(Track::default(), Clip { channels: 2, samples: [100, -100].repeat(480) });
-    shot.set(&[ON]);
+    assert!(tail[0][1] > 8_000 && tail[500][1] < 8_000 && tail[970] == [0, 0], "fades out over 20 ms");
+    let mut shot = mix(track(&[0.01], false), vec![Clip { channels: 2, samples: [100, -100].repeat(480) }]);
+    shot.set(&[ON], 0.0);
     let first = run(&mut shot, 2000);
     assert!(first[479][0] > 0 && first[479][1] < 0 && first[480..].iter().all(|f| *f == [0, 0]));
-    assert!(run(&mut shot, 100).iter().all(|f| *f == [0, 0]), "a one-shot stays ended while it plays");
-    shot.set(&[Voice { play: false, ..ON }]);
+    assert!(shot.quiet(), "an ended one-shot is quiet");
+    shot.set(&[Voice { play: false, ..ON }], 0.0);
     run(&mut shot, 1);
-    shot.set(&[ON]);
-    assert!(run(&mut shot, 10)[9][0] > 0, "and starts again once it was stopped");
+    shot.set(&[ON], shot.frames as f64);
+    assert!(run(&mut shot, 10)[9][0] > 0, "and starts again from where the scene says");
+}
+
+#[test]
+fn lanes_follow_the_time_of_the_scene() {
+    let mut sound = mix(track(&[1.0], true), vec![ramp(1.0)]);
+    sound.set(&[ON], 0.0);
+    run(&mut sound, 4800);
+    assert_eq!(sound.playheads(), [4800.0]);
+    sound.set(&[Voice { at: 0.12, ..ON }], 0.0);
+    let heard = run(&mut sound, 2000);
+    assert_eq!(sound.playheads(), [0.12 * SECOND + 2000.0 + 4800.0], "a late lane jumps to the scene");
+    assert!((heard[1999][0] - ((0.12 * SECOND) as i16 + 6799) / 8).abs() <= 1, "{:?}", heard[1999]);
+    let step = heard.windows(2).map(|w| (w[1][0] - w[0][0]).abs()).max();
+    assert!(step < Some(16), "the jump fades out and back in: {step:?}");
+    sound.set(&[Voice { at: 13_560.0 / SECOND, ..ON }], 6800.0);
+    run(&mut sound, 10);
+    assert_eq!(sound.playheads(), [12_570.0], "small drifts are left alone");
+    sound.set(&[Voice { at: 2.25, ..ON }], sound.frames as f64);
+    let looped = run(&mut sound, 1000);
+    assert!(
+        (looped[999][0] - (0.25 * SECOND + 999.0) as i16 / 8).abs() <= 1,
+        "loops re-align: {:?}",
+        looped[999]
+    );
+}
+
+#[test]
+fn lists_play_in_order_with_pauses_and_end() {
+    let list =
+        Playlist { lengths: vec![0.01, 0.02], pause: [0.01, 0.01], repeat: false, ..Playlist::default() };
+    let track = Track { list, fade_in: 0.0, fade_out: 0.0 };
+    let mut sound = mix(track, vec![flat(8_000, 480), flat(-8_000, 960)]);
+    sound.set(&[ON], 0.0);
+    let out = run(&mut sound, 3000);
+    let at = |ms: usize| out[ms * 48 + 24][0].signum();
+    assert_eq!([at(0), at(5), at(15), at(25), at(35), at(45)], [1, 1, 0, -1, -1, 0]);
+    let random = Playlist {
+        lengths: vec![0.01, 0.01],
+        order: Order::Random,
+        repeat: true,
+        seed: 3,
+        ..Playlist::default()
+    };
+    let mut sound =
+        mix(Track { list: random, ..Track::default() }, vec![flat(8_000, 480), flat(-8_000, 480)]);
+    sound.set(&[ON], 0.0);
+    let out = run(&mut sound, 4800);
+    let signs: Vec<i16> = (0..10).map(|i| out[i * 480 + 240][0].signum()).collect();
+    assert!(signs.windows(2).all(|w| w[0] != w[1]), "{signs:?}");
 }
 
 fn wav(dir: &Path, seconds: u32) -> PathBuf {
@@ -56,10 +111,30 @@ fn wav(dir: &Path, seconds: u32) -> PathBuf {
     let head = [&b"RIFF"[..], &(36 + bytes).to_le_bytes(), b"WAVEfmt ", &16u32.to_le_bytes(), &[1, 0, 1, 0]];
     let format =
         [&RATE.to_le_bytes()[..], &(RATE * 2).to_le_bytes(), &[2, 0, 16, 0], b"data", &bytes.to_le_bytes()];
-    let tone = (0..RATE * seconds).flat_map(|i| (((i % 96) as i16 - 48) * 200).to_le_bytes());
-    let path = dir.join(format!("tone-{seconds}.wav"));
+    let tone = (0..RATE * seconds).flat_map(|i| ((i / 8) as i16).to_le_bytes());
+    let path = dir.join(format!("ramp-{seconds}.wav"));
     std::fs::write(&path, [head.concat(), format.concat(), tone.collect()].concat()).unwrap();
     path
+}
+
+fn mp3(dir: &Path) -> Option<PathBuf> {
+    use gstreamer::prelude::*;
+    gstreamer::init().ok()?;
+    let path = dir.join("tone.mp3");
+    let line = format!(
+        "audiotestsrc num-buffers=100 samplesperbuffer=1152 ! audio/x-raw,rate=48000,channels=1 ! audioconvert ! lamemp3enc target=bitrate cbr=true bitrate=96 ! filesink location={}",
+        path.display()
+    );
+    let pipeline = gstreamer::parse::launch(&line).ok()?;
+    pipeline.set_state(gstreamer::State::Playing).ok()?;
+    let bus = pipeline.bus()?;
+    bus.timed_pop_filtered(gstreamer::ClockTime::from_seconds(10), &[gstreamer::MessageType::Eos])?;
+    pipeline.set_state(gstreamer::State::Null).ok()?;
+    Some(path)
+}
+
+fn required(e: impl std::fmt::Display) {
+    assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "sound required: {e}");
 }
 
 fn wait(mut done: impl FnMut() -> bool) -> bool {
@@ -71,41 +146,69 @@ fn wait(mut done: impl FnMut() -> bool) -> bool {
 }
 
 #[test]
-fn soundtracks_decode_and_keep_their_place_across_a_pause() {
+fn sounds_decode_from_wav_and_mp3_and_long_ones_stream() {
     let dir = tempfile::tempdir().unwrap();
-    let file = wav(dir.path(), 1);
+    let file = wav(dir.path(), 3);
     let clip = match decode(&file, usize::MAX) {
         Ok(clip) => clip,
-        Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "sound required: {e}"),
+        Err(e) => return required(e),
     };
-    assert_eq!((clip.channels, clip.frames()), (1, RATE as usize));
+    assert_eq!((clip.channels, clip.frames()), (1, 3 * RATE as usize));
     assert!(decode(&dir.path().join("missing.ogg"), usize::MAX).is_err());
     let over = decode(&file, RATE as usize / 2).unwrap_err().to_string();
     assert!(over.contains("longer than 0.5 s"), "the decoded length is capped: {over}");
-    let track = Track { repeat: true, ..Track::default() };
-    let bank = Bank::new(vec![file]);
-    let sound = Soundtrack::open(&bank, &[(Some(0), track)], &[ON], 0.0, |_| {}).unwrap();
+    assert_eq!(probe_sound(&file).unwrap(), 3.0);
+    match mp3(dir.path()) {
+        Some(mp3) => {
+            let frames = decode(&mp3, usize::MAX).unwrap().frames() as f64 / SECOND;
+            assert!((2.3..2.5).contains(&frames), "{frames}");
+        }
+        None => required("no MP3 encoder"),
+    }
+    let mut sound = Mix::new(&[track(&[3.0], true)]);
+    sound.load(0, 0, Source::Stream(Arc::new(file)));
+    sound.set(&[Voice { at: 2.0, ..ON }], 0.0);
+    let mut heard = Vec::new();
+    assert!(
+        wait(|| {
+            heard = run(&mut sound, 480);
+            heard[479][0] != 0
+        }),
+        "the stream never played"
+    );
+    let at = sound.playheads()[0] as i64 - 1;
+    assert!((i64::from(heard[479][0]) - at / 8).abs() <= 2, "{at} {:?}", heard[479]);
+    sound.set(&[Voice { at: 0.5, ..ON }], sound.frames as f64);
+    assert!(
+        wait(|| run(&mut sound, 480)[479][0] < 4000 && run(&mut sound, 480)[479][0] > 0),
+        "it did not seek back"
+    );
+}
+
+#[test]
+fn soundtracks_play_soon_and_keep_their_place_across_a_pause() {
+    let dir = tempfile::tempdir().unwrap();
+    let bank = Bank::new(vec![(wav(dir.path(), 1), false)]);
+    let sound = match Soundtrack::open(&bank, &[(vec![Some(0)], track(&[1.0], true))], &[ON], 0.0, |_| {}) {
+        Ok(sound) => sound,
+        Err(e) => return required(e),
+    };
     sound.set_playing(true);
     let position = || sound.position().unwrap_or_default();
-    assert!(wait(|| position() > Duration::from_millis(100)), "the soundtrack did not start");
-    assert!(wait(|| sound.playheads().1[0] > 0), "the clip did not load");
-    let (start, first) = sound.playheads();
-    std::thread::sleep(Duration::from_millis(500));
+    assert!(wait(|| position() > Duration::from_millis(300)), "the soundtrack did not start");
+    let latency = sound.latency().unwrap();
+    assert!(latency < Duration::from_millis(100), "{latency:?}");
     sound.set_playing(false);
     std::thread::sleep(Duration::from_millis(300));
     let (paused, frames) = (position(), sound.playheads().0);
-    std::thread::sleep(Duration::from_millis(600));
+    std::thread::sleep(Duration::from_millis(500));
     assert!(
         position() - paused < Duration::from_millis(50) && sound.playheads().0 == frames,
         "it kept playing"
     );
     sound.set_playing(true);
-    std::thread::sleep(Duration::from_millis(600));
-    let (resumed, (made, heads)) = (position(), sound.playheads());
-    let lead = made as f64 / f64::from(RATE) - resumed.as_secs_f64();
-    assert!(
-        (resumed - paused).as_secs_f64() > 0.4 && (0.0..0.4).contains(&lead),
-        "{resumed:?} {paused:?} {lead}"
-    );
-    assert_eq!(heads, [((first[0] as u64 + made - start) % u64::from(RATE)) as usize]);
+    std::thread::sleep(Duration::from_millis(500));
+    let (made, heads) = sound.playheads();
+    assert!((position() - paused).as_secs_f64() > 0.3, "it did not resume");
+    assert!((heads[0] - made as f64).abs() < 1.0, "the lane kept the scene time: {heads:?} {made}");
 }

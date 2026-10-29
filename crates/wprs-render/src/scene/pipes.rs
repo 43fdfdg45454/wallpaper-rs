@@ -1,4 +1,5 @@
 use super::chains::{Shelf, lock};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use wgpu::{BindGroupLayout, BlendComponent as C, BlendFactor as F, BlendOperation, TextureFormat};
@@ -34,7 +35,9 @@ pub(crate) struct Pipes {
     pub(crate) fx: BindGroupLayout,
     pub(crate) sampler: wgpu::Sampler,
     pub(crate) wrap: wgpu::Sampler,
+    pub(crate) near: wgpu::Sampler,
     pub(crate) created: AtomicU32,
+    pub(crate) shrinks: Mutex<HashMap<TextureFormat, wgpu::RenderPipeline>>,
 }
 
 fn entry(binding: u32, ty: wgpu::BindingType) -> wgpu::BindGroupLayoutEntry {
@@ -83,27 +86,35 @@ impl Pipes {
             .chain((1..=6).map(flat))
             .chain([entry(7, texture(Dim::D3))])
             .collect();
-        let filter = wgpu::FilterMode::Linear;
-        let sampler_of = |address_mode| {
+        let sampler_of = |address_mode, filter| {
             device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("wprs-scene sampler"),
                 address_mode_u: address_mode,
                 address_mode_v: address_mode,
                 mag_filter: filter,
                 min_filter: filter,
+                mipmap_filter: wgpu::MipmapFilterMode::Linear,
                 ..Default::default()
             })
         };
+        let (linear, clamp) = (wgpu::FilterMode::Linear, wgpu::AddressMode::ClampToEdge);
         Pipes {
             composite: module(device, format!("{FRAME_WGSL}\n{}", include_str!("scene.wgsl"))),
             shelf: Arc::default(),
-            frame: layout(&[entry(0, uniform(false)), entry(1, sampler), entry(2, uniform(true))]),
+            frame: layout(&[
+                entry(0, uniform(false)),
+                entry(1, sampler),
+                entry(2, uniform(true)),
+                entry(3, sampler),
+            ]),
             textures: layout(&[flat(0), flat(1), flat(2)]),
             fx_frame: layout(&[entry(0, uniform(false)), entry(1, sampler), entry(2, sampler)]),
             fx: layout(&fx),
-            sampler: sampler_of(wgpu::AddressMode::ClampToEdge),
-            wrap: sampler_of(wgpu::AddressMode::Repeat),
+            sampler: sampler_of(clamp, linear),
+            wrap: sampler_of(wgpu::AddressMode::Repeat, linear),
+            near: sampler_of(clamp, wgpu::FilterMode::Nearest),
             created: AtomicU32::new(0),
+            shrinks: Mutex::default(),
         }
     }
 

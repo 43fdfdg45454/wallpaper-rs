@@ -1,12 +1,13 @@
+use crate::cue::Fired;
 use crate::eval::{Frame, walk};
 use crate::input::{AudioFrame, PointerState, ScriptOutputs, TimelineCommand};
 use crate::particles::{Swarm, plan};
 use crate::resolve::Context;
 use crate::timeline::Playhead;
 use crate::uses::{self, Uses};
-use crate::{Affine, Layer, Quality, Scene, Timeline, Values, Voice, Wake};
+use crate::{Affine, Layer, Quality, Scene, Timeline, Values, Wake};
 use std::cell::{Cell, Ref, RefCell};
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
 const MAX_STEP: f64 = 0.1;
@@ -18,16 +19,29 @@ pub struct Runtime {
     props: Values,
     audio: AudioFrame,
     pointer: PointerState,
+    glide: PointerState,
+    glided: f64,
+    tilt: [f32; 2],
+    still: bool,
+    homes: HashMap<String, String>,
+    sheets: BTreeMap<String, Vec<f32>>,
     script: ScriptOutputs,
     wall: f64,
+    lang: String,
     t: f64,
     dt: f32,
     stirred: [f64; 2],
     beat: f64,
-    timelines: Vec<(Timeline, Playhead)>,
+    pub(crate) timelines: Vec<(Timeline, Playhead)>,
+    pub(crate) fired: Vec<Fired>,
+    pub(crate) listened: BTreeSet<String>,
+    pub(crate) onsets: Vec<Option<f64>>,
+    pub(crate) gates: RefCell<Vec<Option<f64>>>,
+    pub(crate) lists: Vec<crate::Playlist>,
     mattes: BTreeSet<String>,
     playing: BTreeSet<String>,
     memo: RefCell<HashMap<usize, [f32; 4]>>,
+    places: RefCell<HashMap<usize, crate::kin::Place>>,
     wake: Cell<Wake>,
     uses: [Uses; 4],
     limit: Option<Uses>,
@@ -45,28 +59,47 @@ impl Runtime {
         let wake = Cell::new(Wake::Frame);
         let fresh = || std::time::UNIX_EPOCH.elapsed().map_or(0, |d| d.as_nanos() as u64 ^ d.as_secs() << 32);
         let (seed, size) = (scene.clock.seed.unwrap_or_else(fresh), scene.canvas.size);
+        let homes = crate::kin::homes(&scene);
         let swarms = RefCell::new(scene.particles.values().map(|s| Swarm::new(s, seed, size)).collect());
-        Runtime {
+        let listened = crate::voice::listened(&scene, true, true);
+        let onsets = crate::voice::onsets(&scene);
+        let gates = RefCell::new(vec![None; onsets.len()]);
+        let mut runtime = Runtime {
             scene,
             seed,
             props,
             audio,
             pointer,
+            glide: pointer,
+            glided: 0.0,
+            tilt: [0.0; 2],
+            still: false,
+            homes,
+            sheets: BTreeMap::new(),
             script,
             wall: 0.0,
+            lang: String::new(),
             t: 0.0,
             dt: 0.0,
             stirred: [f64::NEG_INFINITY; 2],
             beat: f64::NEG_INFINITY,
             timelines,
+            fired: Vec::new(),
+            listened,
+            onsets,
+            gates,
+            lists: Vec::new(),
             mattes,
             playing: BTreeSet::new(),
             memo,
+            places: RefCell::default(),
             wake,
             uses,
             limit: None,
             swarms,
-        }
+        };
+        runtime.set_lengths(BTreeMap::new());
+        runtime
     }
 
     pub fn declare(&mut self, allowed: Uses) {
@@ -121,9 +154,12 @@ impl Runtime {
         self.timelines.iter_mut().for_each(|(tl, head)| *head = tl.start());
         (self.t, self.stirred, self.beat) = (0.0, [f64::NEG_INFINITY; 2], f64::NEG_INFINITY);
         self.swarms.get_mut().iter_mut().for_each(Swarm::restart);
+        (self.onsets, self.gates) =
+            (crate::voice::onsets(&self.scene), RefCell::new(vec![None; self.onsets.len()]));
         while self.t < t {
             self.advance((t - self.t).min(MAX_STEP));
         }
+        self.fired.clear();
     }
 
     pub fn restart_particles(&mut self) {
@@ -135,15 +171,23 @@ impl Runtime {
         loop {
             let step = left.min(MAX_STEP);
             (self.t, self.dt, left) = (self.t + step, step as f32, left - step);
-            self.timelines.iter_mut().for_each(|(tl, head)| tl.advance(head, step as f32));
+            self.tick(step as f32);
             if left <= 0.0 {
                 return;
             }
         }
     }
 
-    pub fn set_wall(&mut self, seconds: f64) {
-        self.wall = seconds;
+    pub fn set_wall(&mut self, local: f64) {
+        self.wall = local;
+    }
+
+    pub fn wall(&self) -> f64 {
+        self.wall
+    }
+
+    pub fn set_language(&mut self, lang: &str) {
+        self.lang = lang.to_owned();
     }
 
     pub fn set_props(&mut self, props: Values) -> bool {
@@ -176,8 +220,31 @@ impl Runtime {
         if pointer.moving() || pointer.buttons & !self.pointer.buttons != 0 {
             self.stirred[0] = self.t;
         }
-        self.pointer = pointer;
+        let delay = self.scene.canvas.parallax.as_ref().map_or(crate::input::SETTLE, |g| g.delay);
+        let dt = (self.t - self.glided).clamp(0.0, MAX_STEP) as f32;
+        self.glide = match delay == crate::input::SETTLE {
+            true => pointer,
+            false => self.glide.follow_in(pointer.pos, pointer.buttons, dt, delay),
+        };
+        (self.pointer, self.glided) = (pointer, self.t);
         changed
+    }
+
+    pub fn set_tilt(&mut self, tilt: [f32; 2]) -> bool {
+        let tilt = tilt.map(|v| v.clamp(-1.0, 1.0));
+        let changed =
+            !self.still && self.scene.tilts() && (0..2).any(|i| (tilt[i] - self.tilt[i]).abs() > 1e-4);
+        self.tilt = tilt;
+        changed
+    }
+
+    pub fn set_reduced_motion(&mut self, still: bool) -> bool {
+        let moves = self.scene.layers().any(|l| !l.parallax.is_zero());
+        moves && std::mem::replace(&mut self.still, still) != still
+    }
+
+    pub fn set_sheet(&mut self, asset: &str, durations: Vec<f32>) {
+        self.sheets.insert(asset.to_owned(), durations);
     }
 
     pub fn set_script(&mut self, outputs: ScriptOutputs) -> bool {
@@ -188,6 +255,8 @@ impl Runtime {
                 TimelineCommand::Pause => head.playing = false,
                 TimelineCommand::Seek(t) => head.t = t.clamp(0.0, tl.length()),
                 TimelineCommand::Reverse => (head.playing, head.reversed) = (true, !head.reversed),
+                TimelineCommand::Stop => (head.t, head.playing, head.reversed) = (0.0, false, false),
+                TimelineCommand::Speed(rate) => head.rate = rate.clamp(-100.0, 100.0),
             }
         }
         let changed = outputs != self.script;
@@ -204,23 +273,37 @@ impl Runtime {
     }
 
     fn trigger(&mut self, matches: impl Fn(&str) -> bool) {
-        let fired = self.timelines.iter_mut().filter(|(tl, _)| tl.trigger.as_deref().is_some_and(&matches));
-        fired.for_each(|(tl, head)| *head = Playhead { t: -tl.delay, playing: true, reversed: false });
+        self.trigger_late(matches, 0.0);
     }
 
-    pub fn voices(&self) -> (Vec<Voice>, Wake) {
-        let cx = self.context();
-        let voices = self.scene.sounds().map(|s| s.voice(&cx)).collect();
-        (voices, cx.wake.get())
+    pub(crate) fn trigger_late(&mut self, matches: impl Fn(&str) -> bool, late: f32) -> Vec<usize> {
+        let mut started = Vec::new();
+        for (i, (tl, head)) in self.timelines.iter_mut().enumerate() {
+            if tl.trigger.as_deref().is_some_and(&matches) {
+                *head = Playhead {
+                    t: tl.origin(head.rate) + late * head.rate,
+                    playing: true,
+                    reversed: false,
+                    ..*head
+                };
+                started.push(i);
+            }
+        }
+        let t = self.t - f64::from(late);
+        let sounds = self.scene.sounds().map(|s| s.play_on.as_deref().is_some_and(&matches));
+        self.onsets.iter_mut().zip(sounds).filter(|(_, on)| *on).for_each(|(onset, _)| *onset = Some(t));
+        started
     }
 
-    fn context(&self) -> Context<'_> {
+    pub(crate) fn context(&self) -> Context<'_> {
         Context {
             t: self.t as f32,
             dt: self.dt,
             calm: self.stirred.map(|s| (self.t - s) as f32),
             beat: self.since_beat(),
             wall: self.wall,
+            step: f64::from(self.scene.clock.step.unwrap_or(60.0)).max(1.0),
+            lang: &self.lang,
             audio: &self.audio,
             pointer: &self.pointer,
             script: &self.script,
@@ -230,18 +313,30 @@ impl Runtime {
             playing: &self.playing,
             memo: &self.memo,
             wake: Cell::new(Wake::Idle),
+            scene: &self.scene,
+            homes: &self.homes,
+            places: {
+                self.places.borrow_mut().clear();
+                &self.places
+            },
+            view: [0.0; 4],
+            canvas: self.scene.canvas.size.map(|v| v as f32),
+            glide: &self.glide,
+            tilt: if self.still { [0.0; 2] } else { self.tilt },
+            still: self.still,
+            sheets: &self.sheets,
         }
     }
 
     pub fn frame(&self, view: [f32; 4], quality: Quality) -> Frame<'_> {
-        let cx = self.context();
+        let cx = Context { view, ..self.context() };
         let canvas = self.scene.canvas.size.map(|v| v as f32);
         let (draws, effects, background) = (Vec::new(), Vec::new(), self.scene.canvas.background);
         let (time, wake) = (self.t as f32, Wake::Idle);
         let mut frame = Frame { draws, effects, time, view, background, quality, wake };
         walk(&cx, &self.scene.layers, Affine::IDENTITY, quality, &mut frame, canvas);
         plan(&self.swarms, &self.scene, &cx, &frame, quality, self.t);
-        frame.wake = cx.wake.get();
+        frame.wake = cx.wake.get().min(self.cue_wake());
         self.wake.set(frame.wake);
         frame
     }

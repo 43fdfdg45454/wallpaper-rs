@@ -59,6 +59,7 @@ pub struct Voice {
     pub play: bool,
     pub volume: f32,
     pub pan: f32,
+    pub at: f64,
 }
 
 impl Sound {
@@ -74,7 +75,7 @@ impl Sound {
 
     pub(crate) fn voice(&self, cx: &Context) -> Voice {
         let (volume, pan) = (self.volume.get(cx).clamp(0.0, 1.0), self.pan.get(cx).clamp(-1.0, 1.0));
-        Voice { play: self.play.get(cx), volume, pan }
+        Voice { play: self.play.get(cx), volume, pan, at: 0.0 }
     }
 }
 

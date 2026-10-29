@@ -1,7 +1,7 @@
 use super::pipes::Pipes;
 use super::pool::{Pool, Tex};
 use super::state::volume;
-use super::{Image, SceneAssets, SceneStats, SceneView, item::FrameData, swarm, text};
+use super::{Image, SceneAssets, SceneStats, SceneView, item::FrameData, swarm};
 use crate::texture::{gpu_image, texture};
 use crate::{RenderError, Renderer};
 use image::RgbaImage;
@@ -60,6 +60,8 @@ impl Renderer {
                 view.images.insert(id.clone(), shown.unwrap_or_else(|| self.picture(scene, id, image)));
                 view.sources.insert(id.clone(), image.clone());
             }
+            view.samplings = super::sampling::samplings(scene, assets);
+            self.mipmap(&mut view.images, &view.samplings);
             view.caches.clear();
             if particles {
                 let looks = (view.format, view.srgb);
@@ -114,8 +116,10 @@ impl Renderer {
             };
             let usage = wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST;
             let size = std::mem::size_of::<FrameData>() as u64;
-            let (images, pool) =
+            let (mut images, pool) =
                 (assets.images.iter().map(upload).collect(), Pool::new(&self.device, &self.queue, format));
+            let samplings = super::sampling::samplings(scene, assets);
+            self.mipmap(&mut images, &samplings);
             let swarms =
                 swarm::Swarms::new(self, (scene, props), assets, &images, &pool.white.view, (format, srgb));
             let sources = assets.images.clone();
@@ -125,8 +129,9 @@ impl Renderer {
                 srgb,
                 format,
                 images,
+                samplings,
                 sources,
-                fonts: text::Fonts::new(&assets.fonts),
+                fonts: super::fonts::Fonts::new(scene, &assets.fonts),
                 texts: HashMap::new(),
                 pool,
                 caches: HashMap::new(),

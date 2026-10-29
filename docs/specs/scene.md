@@ -35,7 +35,8 @@ what each frame costs.
 - `clock.max_fps` caps the frame rate (`1..=240`, or `"display"`, also `0`, to follow the refresh
   rate of each output for motion that gains from it; default 60), `poster_time` is the instant
   shown where motion is not wanted or where the device cannot run the scene even at its lowest
-  quality level, `seed` feeds procedural effects; `"seed": null` picks a new seed each time the
+  quality level, and the one drawn as the library thumbnail of a package without a preview picture (with clocks and
+dates at the local time it is drawn), `seed` feeds procedural effects; `"seed": null` picks a new seed each time the
   scene starts, so its random patterns differ every time (`fresh_seed`, which every platform runs).
 - `assets` maps at most 256 ids (`[a-z0-9_]{1,32}`) to `{ "path", "linear", "atlas" }`. Images
   (PNG, JPEG, WebP, GIF, BMP), fonts (TTF, OTF), videos (WebM, MP4, MKV, stored uncompressed),
@@ -53,7 +54,7 @@ its thumbnail and details in the library. Scenes without them read and draw as b
 
 | `canvas` field | Meaning | Feature |
 |----------------|---------|---------|
-| `parallax` | `{ "amount" (0 to 4, default 1), "delay" (0 to 2 s, default 0.15), "pointer" (0 to 1, default 1), "gyro" }`: how far and how softly layers with a `parallax` follow the pointer, how much the pointer counts and whether the tilt of the phone moves them too; `pointer: 0` needs no pointer | `parallax2` |
+| `parallax` | `{ "amount" (0 to 4, default 1), "delay" (0 to 2 s, default 0.15), "pointer" (0 to 1, default 1), "gyro" }`: how far and how softly layers with a `parallax` follow the pointer, how much the pointer counts and whether the tilt of the phone moves them too (on Android, through the same motion sensors as picture parallax, only while the scene is shown); `pointer: 0` needs no pointer; a layer moves by its `parallax` times the canvas size times `amount` times the offset of the pointer from the middle (−0.5 to 0.5) times `pointer`, plus half the tilt; where the system asks for reduced motion, layers stay in place and neither the pointer nor the tilt moves them | `parallax2` |
 | `camera` | `{ "center", "zoom" (0.1 to 10), "rotation", "shake" }` moves, zooms and turns the whole scene as one transform without extra passes; `shake` is `{ "enabled", "amplitude" (0 to 1000 px), "roughness" (0 to 1), "speed" (0 to 60 Hz) }`, turned off where motion is reduced and at the lowest quality level; all of them may be bound | `camera` |
 | `bloom` | `{ "threshold" (0 to 4), "strength" (0 to 8), "radius" (0 to 128 px), "tint", "hdr": { "threshold" (0 to 16), "strength" (0 to 8) } }`, a glow of the bright parts drawn after everything else; `hdr` is used only at the highest quality levels on mains power | `bloom` |
 | `hdr`, `tonemap` | `hdr: true` keeps colors brighter than white in 16-bit intermediate images, and `tonemap` (`none`, `aces` or `agx`, only with `hdr`) maps them to the screen | `hdr` |
@@ -69,14 +70,21 @@ The scene may also set `audio: { "attack" (0.001 to 2 s), "release" (0.01 to 10 
 | Asset field | Meaning | Feature |
 |-------------|---------|---------|
 | `filter` | `linear` or `nearest` (sharp pixels) sampling of a picture | `texture_options` |
-| `wrap` | `clamp`, `repeat` or `mirror` outside the picture | `texture_options` |
-| `mipmaps` | `true` or `false` overrides whether smaller copies are made for pictures drawn smaller than they are | `texture_options` |
+| `wrap` | `clamp`, `repeat` or `mirror` outside the picture: with `repeat` or `mirror`, an `image` layer whose `size` is larger than the picture (or than one frame of a sheet) fills it with copies at the picture's own size instead of stretching it | `texture_options` |
+| `mipmaps` | `true` or `false` overrides whether smaller copies are made for pictures drawn smaller than they are; by default they are made once, the first time a picture is drawn at less than three quarters of its size | `texture_options` |
 | `atlas`, `rects` | a sprite sheet as `[rows, columns]` of equal cells (as for particles) or as at most 256 `[x, y, width, height]` rectangles in pixels, not both | `animated_textures` with the fields below |
 | `frames` | how many cells play (1 to the number of cells, at most 256) | `animated_textures` |
 | `fps`, `durations` | 0.1 to 120 frames a second, or one duration per frame (0.001 to 60 s), not both | `animated_textures` |
-| `animated` | `true` plays the frames of an animated GIF or WebP with their own durations | `animated_textures` |
+| `animated` | `true` plays the frames of an animated GIF or WebP with their own durations (at most 256 frames and 64 MiB once decoded; a frame shorter than 20 ms lasts 100 ms, as in browsers) | `animated_textures` |
 | `face` | which font of a `.ttc` or `.otc` collection (0 to 255) | `fonts2` |
 | `media` | `current` or `previous`: the cover of what the media player plays now or played before, usable wherever a picture is; `path` is then the picture shown while nothing plays | `media_info` |
+
+An `image` layer that shows a sheet plays its frames on the scene clock, so that every layer showing
+the same sheet at the same rate shows the same frame; its `playback` sets the rate, the range, whether
+it loops and the frame (`layer_playback`, which no platform runs yet, so a package that uses it is
+refused). A sheet without `fps` or `durations` shows its first frame. The scene asks for a frame only when the next frame of a shown
+sheet is due, never while the layer is hidden, and the lowest quality level shows the first frame of
+the range without moving.
 
 Fonts may also be TrueType or OpenType collections (`.ttc`, `.otc`) and compressed `.woff2` files
 (`fonts2`). Videos may be used as masks, effect textures and the picture of a spot light
@@ -140,7 +148,7 @@ B and S swapped), `phoenix` min(B, S) − max(B, S) + 1, `average` (B + S) / 2 a
 |-------------|---------|---------|
 | `brightness` | 0 to 16 (default 1), multiplies the color of the layer; above 1 it only shows with `canvas.hdr` | `layer_color` |
 | `color` | on `image`, `video`, `particles` and `group` layers, a color that multiplies the layer (white by default); a group applies it to its children together | `layer_color` |
-| `parent` | the id of another drawn layer whose transform moves, turns and scales this one without changing the drawing order; chains go at most 8 deep and never back to themselves | `parent` |
+| `parent` | the id of another drawn layer whose transform moves, turns and scales this one without changing the drawing order; the position of the layer is then relative to the position of its parent, in its turned and scaled frame (at the parent's position by default), instead of to its group; chains go at most 8 deep and never back to themselves | `parent` |
 | `inherit` | what follows the parent: `transform`, `visible` and `opacity` (default `transform` and `visible`), only with `parent` | `parent` |
 | `transform.tilt` | `[x, y]` degrees (−89 to 89) of tilt in depth, seen with `canvas.perspective` | `tilt` |
 | `transform.z` | pixels towards the viewer (−100000 to 100000) | `tilt` |
@@ -161,8 +169,8 @@ A `text` layer also takes these fields:
 | Field | Meaning | Feature |
 |-------|---------|---------|
 | `fallback` | at most 8 more fonts (asset ids or system families) tried in order for characters `font` lacks; only `sans-serif`, `serif` and `monospace` are sure to exist, and content never sees the list of installed fonts | `fonts2` |
-| `valign` | `top`, `center` (default) or `bottom` | `text_layout` |
-| `wrap` | `{ "width" (1 to 16384 px), "lines" (1 to 1000), "ellipsis" }` breaks lines at that width, keeps at most `lines` of them and ends a cut text with an ellipsis | `text_layout` |
+| `valign` | `top`, `center` (default) or `bottom`: which edge of the text stays at the layer position while lines come and go (the vertical part of the default `origin`) | `text_layout` |
+| `wrap` | `{ "width" (1 to 16384 px), "lines" (1 to 1000), "ellipsis" }` breaks lines at that width (after spaces and hyphens, between the letters of Chinese, Japanese and Korean, and inside a word longer than the line), keeps at most `lines` of them and ends a cut text with an ellipsis; `align` then works within that width | `text_layout` |
 | `line_height` | 0.5 to 4 times the size | `text_layout` |
 | `background` | `{ "color", "padding": [x, y], "radius" }`, a box behind the text | `text_layout` |
 | `padding` | 0 to 1024 px of margin around the text for its effects | `text_layout` |
@@ -173,6 +181,13 @@ A `text` layer also takes these fields:
 | `render` | `auto` (default), `raster` or `sdf`, which draws from a distance field so that the size can change without drawing the letters again | `text_styles` with `sdf` |
 
 Outline, shadow, blur and letter spacing may be bound like other values.
+
+A text is laid out again only when its text, size on screen or layout changes; its color, the color of
+its background and its position never lay it out again. Each character comes from the first font of
+`font` and `fallback` that has it, then from the system `sans-serif`; letters are placed one after
+another with the kerning of their font, without joining or reordering them, so scripts that need
+shaping (Arabic, Indic scripts) or right-to-left text do not show correctly yet. A font file is at most
+32 MiB, also once a `.woff2` is unpacked; a font that cannot be read is replaced by the system one.
 
 ### Lights
 
@@ -270,15 +285,20 @@ one source:
 Non-literal values accept `scale`, `offset`, `clamp: [min, max]`, `invert` and `smooth` (seconds).
 Easings are `linear`, `step`, `hold`, `in_`, `out_` or `in_out_` followed by `sine`, `quad`,
 `cubic`, `quart`, `quint`, `expo`, `circ`, `back`, `elastic` or `bounce`, or a cubic Bézier
-`[x1, y1, x2, y2]`. Colors interpolate per channel.
+`[x1, y1, x2, y2]`. Colors interpolate in the OKLab space, lightness, chroma and hue apart, the hue
+along the shorter way round, so that red to green passes through orange and not through a dark
+olive, and a grey takes the hue of the other end.
 
-`timelines` (at most 64) have `id`, `duration`, `loop` (`once`, `repeat`, `pingpong`), `speed`,
-`delay`, `autoplay` and `trigger` (`start`, `beat` or `prop:<id>`, which also fires when the
+`timelines` (at most 64) have `id`, `duration`, `loop` (`once`, `repeat`, `pingpong`), `speed`
+(−100 to 100; below zero the timeline runs backwards from its start without `delay`, so a loop
+plays from its end and one that plays `once` ends at once), `delay`, `autoplay` and `trigger` (`start`, `beat` or `prop:<id>`, which also fires when the
 `button` setting `id` is pressed). Instead of `duration` (seconds), a timeline may count `frames`
 at `fps` (1 to 240) frames a second, both together and never with `duration`; keys stay in
 seconds (`timeline_frames`, which every platform runs). `wrap: true`, only on a timeline that loops
 with `repeat`, blends the values from their last key back to their first one before the loop
-starts again (`timeline_wrap`, refused until the engine draws it). The scene
+starts again: the stretch from the last key to the first key of the next pass is one more segment
+with the easing of the last key, so a value with keys at 1 s and 3 s on a 4 s timeline goes from
+the last value back to the first between 3 s and 5 s (`timeline_wrap`, which every platform runs). The scene
 clock only runs while the output is shown and active, keeps real time while a still scene waits
 (up to ten minutes between frames, in steps of at most 0.1 s), and never catches up after a pause.
 
@@ -286,19 +306,22 @@ Newer values add these forms, each with its feature:
 
 | Form | Example | Feature |
 |------|---------|---------|
-| Keyframe handles | `[2, 1, { "in": [0.5, 0], "out": [0.5, 0.2] }]`: Bézier handles in time and value around a key of a number, the time of each within the neighbouring segment | `tangents` |
+| Keyframe handles | `[2, 1, { "in": [0.5, 0], "out": [0.5, 0.2] }]`: Bézier handles in time and value around a key of a number, the time of each within the neighbouring segment; `out: [dt, dv]` is the point (t + dt, v + dv) and `in: [dt, dv]` the point (t − dt, v − dv), so equal handles make a smooth key and `dv: 0` a flat one; a side without a handle points a third of the way to the next key | `tangents` |
 | Parts on their own | `{ "x": { "keys": [[0, 0], [2, 100]] }, "y": { "cursor": "y", "scale": 100 } }` for a position, `r`, `g`, `b`, `a` for a color; each part is a value of its own and a missing part is that of `base`, or 0 (alpha 1) | `tracks` |
 | Relative | `{ "keys": [[0, 0], [1, 30]], "base": 120 }` adds the animation to `base` (numbers, positions and colors, part by part) | `relative_values` |
-| Time as a number | `{ "clock": "day" }` from 0 at midnight to almost 1 before the next; also `hour`, `minute`, `second`, `weekday` and `month`; a value that follows `day` changes at most once a minute, or every `clock.step` seconds (1 to 3600) | `clock_values` |
-| Dates | `{ "date": "EEEE d MMMM yyyy" }` (text only) with `yyyy`, `yy`, `MMMM`, `MMM`, `MM`, `M`, `dd`, `d`, `EEEE`, `EEE`, `D` (day of the year) and `w` (week) besides the tokens of a clock, names in the language of the package; a text without seconds or minutes changes at midnight. A `clock` text keeps only the tokens of the time, and every other letter stays as written | `clock_dates` |
+| Time as a number | `{ "clock": "day" }` from 0 at midnight to almost 1 before the next; also `hour` (0 to 23), `minute` and `second` (0 to 59), `weekday` (1 for Monday to 7 for Sunday) and `month` (1 to 12), all in local time; a value that follows `day` changes at most once a minute, or every `clock.step` seconds (1 to 3600), and the others when they change | `clock_values` |
+| Dates | `{ "date": "EEEE d 'de' MMMM yyyy" }` (text only) with `yyyy`, `yy`, `MMMM`, `MMM`, `MM`, `M`, `dd`, `d`, `EEEE`, `EEE`, `D` (day of the year) and `w` (ISO week) besides the tokens of a clock, names in the language of the package (English or Spanish, English for the others); text between single quotes stays as written and `''` writes a quote; a text without hours, minutes or seconds changes at midnight. A `clock` text keeps only the tokens of the time, and every other letter stays as written | `clock_dates` |
 | Frequency ranges | `{ "audio": [0, 3], "of": 16, "reduce": "max" }` follows bands 0 to 3 of 16 (`of` is 16, 32 or 64, default 64, also for a single band) and takes their `mean` (default) or `max` | `audio_ranges` |
 | Shaping | `bounds: [a, b]` maps a value to (x − a) / (b − a) clamped to 0 to 1, `exponent` (0.1 to 10) raises it, both before `scale` and `offset`; `smooth: { "up", "down" }` rises and falls at different speeds | `shaping` |
 | Layer as texture | `{ "layer": "<id>" }` for a `texture` or `mask` parameter of an effect: the layer is drawn on its own (even with `visible: false`) and fed to the effect; layers may not feed themselves through other layers, masks or groups | `layer_textures` |
 
 Timelines may name `events`, at most 64 `{ "t", "name" }` with `t` within the duration and names
-of `[a-z0-9_]{1,32}`; each fires once per pass, also when a frame skips over it. A `trigger` or a
-`play_on` of `event:<name>` starts on it, and scripts receive it (`timeline_events`). Clips of meshes
-and models name events the same way.
+of `[a-z0-9_]{1,32}`; each fires once per pass, also when a frame skips over it (on a `pingpong`
+timeline once each way), in the order of their time. A `trigger` or a `play_on` of `event:<name>`
+starts on it, as if it had started at the very moment of the event even when the frame came later,
+so its own events up to that frame, those at 0 included, fire in the same frame, and scripts receive it (`timeline_events`, which every platform runs). A still scene wakes for the
+next event only when a trigger, a sound or a script that the platform runs listens to its name. Clips of meshes and models
+name events the same way.
 
 Triggers may also be `click:<layer>`, `enter:<layer>` and `leave:<layer>` for a layer that is
 `solid` or has `hit` bones, evaluated without scripts (`layer_events`; `click:` needs the `clicks`
@@ -522,14 +545,24 @@ together, and `gradient` parameters are pictures of one row read from left to ri
 A `sound` layer plays a sound asset: `.ogg` (Vorbis or Opus), `.opus`, `.flac` or `.wav`, mono or
 stereo, sampled at 8 to 192 kHz, at most 8 MiB and 60 s long, and at most 180 s for all the sounds
 of a scene together; the package reader checks the headers and the daemon stops decoding a sound
-that goes on longer than its header says. A scene has at most 8 sound layers, which mix together.
+that goes on longer than its header says (an MP3 without a length in its header may last up to the
+60 s). A scene has at most 8 sound layers, which mix together.
+
+Sound follows the time of the scene. Each layer knows how long ago the scene started it: since the
+scene started for a `play` that is always on, since the key that turned it on for `play` keyframes
+(on a looping timeline, since the start of the pass), since the trigger for `play_on`, and since it
+turned on for the rest. The sound plays at that point of its clip or of its list, so a loop that
+drifts more than 60 ms from the scene jumps back in step with a 5 ms fade, a scene that resumes
+plays from where its timelines are, and a sound started again starts over. About 50 ms pass between
+the scene and the speaker (the soundtrack asks PipeWire for 20 ms periods and keeps about 20 ms
+queued).
 
 | Field | Meaning |
 |-------|---------|
 | `loop` | `true` (default) repeats the sound without a gap; `false` plays it once each time `play` turns on |
-| `play` | starts the sound when it turns on and stops it when it turns off (default `true`); a sound starts from its beginning |
-| `volume` | `0` to `1` (default `1`) |
-| `pan` | `-1` (left) to `1` (right), default `0` |
+| `play` | starts the sound when it turns on and stops it when it turns off (default `true`); the sound plays from the point the scene says, see above |
+| `volume` | `0` to `1` (default `1`); changes glide over 20 ms, so keyframed curves sound smooth |
+| `pan` | `-1` (left) to `1` (right), default `0`, gliding like `volume` |
 | `fade_in`, `fade_out` | seconds (`0` to `60`) the sound takes to rise when it starts and to fall when it stops |
 
 Newer sound layers may also use (`sound2`):
@@ -544,7 +577,14 @@ Newer sound layers may also use (`sound2`):
 | `play_on` | a trigger (`start`, `beat`, `prop:<id>` or `event:<name>`) that starts the sound, always under the user's volume and mute |
 
 A layer has either `sound` or `sounds`. With `loop: false`, `sequence` plays the list once and
-`random` one clip each time it starts.
+`random` one clip each time it starts. `random` never plays the same clip twice in a row when the
+list has more than one, and the clips and pauses it picks follow the scene seed, so the same scene
+with a fixed `clock.seed` plays the same order. A streamed sound is decoded a little ahead of where
+it plays, and the next streamed clip of a list starts decoding 1.5 s before its turn, so lists and
+loops of long sounds play without gaps; nothing of a stream is kept once it has played. `play_on`
+starts the sound again each time its trigger fires; `play` still mutes it while it is off. The
+desktop plays these sounds; Android plays scenes without sound (`sound` and `sound2` are left out
+there).
 
 `play`, `volume` and `pan` may be literals or follow a user property or keyframes on the scene
 clock, which a timeline triggered by a property or a beat can drive; they never follow the audio
@@ -807,7 +847,13 @@ pressed since the last frame,
 `audio` `bands(16 | 32 | 64, "left" | "right" | "average")`, `bass`, `mid`, `treble`, `level` and
 `beat`, `input.cursor` `x`, `y`, `inside` and `buttons`. `scene.layer(id)` overrides `position`,
 `scale`, `rotation`, `opacity`, `visible`, `color` and `text` for the next frame, and `timeline(id)`
-has `play()`, `pause()`, `reverse()` and `seek(t)`. `Math.random` follows `clock.seed`. In a
+has `play()`, `pause()`, `reverse()` and `seek(t)`; engines that run `timeline_events` also give it
+the parts of the newer interface listed below (`speed`, `stop()`, `time`, `duration`, `playing` and
+`on(name, handler)` for its events and `ended`), which first-version scripts may use too. `Math.random` follows `clock.seed`.
+`engine.daytime` goes from 0 at local midnight to almost 1, `Date` uses the local time zone of the
+computer (also after it changes, without reading any file), and `time.format(pattern, date)` writes the
+date (`date` or now) with the tokens of `date` values in the language of `engine.locale`, such as
+`time.format("EEEE d 'de' MMMM")`. In a
 first-version package a scene whose scripts mention `audio` or `cursor` uses that input as if a value
 were bound to it, so it still needs the user's grant; second-version packages use what their scripts
 declare.
@@ -838,7 +884,8 @@ outputs or monitors), `engine.device` (`desktop` or `mobile`), `engine.mode` (`w
 `input.cursor.screen` (output pixels) and `input.cursor.left`; reading the evaluated `position`,
 `scale`, `rotation`, `opacity`, `visible`, `color`, `parallax`, `size` and `name` of a layer and
 writing `skew`, `origin`, `parallax`, `parent`, `size`, `font` and `align`; `layer.world`,
-`layer.children` and `layer.setParent(id, keep)`; and `timeline(id).speed`, `stop()`, `time`,
+`layer.children` and `layer.setParent(id, keep)`; and `timeline(id).speed` (−100 to 100; below zero
+the timeline runs backwards like after `reverse()`, and one that plays `once` ends at its start), `stop()`, `time`,
 `duration`, `playing` and the event `ended`. `clock.seed: null` gives `Math.random` a new seed on
 every start. Scripts never see paths, device names, the battery or the list of fonts.
 
@@ -867,11 +914,28 @@ draws today.
 | a flat color layer | a `solid` layer |
 | an orthographic projection of a given size and the user's alignment | `canvas.size` and `canvas.fit` (`fill` covers the screen) |
 | a parent that moves a layer without grouping it | `parent` and `inherit` |
+| a layer color and a brightness above 1 | `color` and `brightness` (with `canvas.hdr`, so that light above white is kept) |
+| a texture without mipmaps, with sharp pixels or repeated outside its edges | the asset's `mipmaps`, `filter: nearest` and `wrap` |
+| a sprite sheet or an animated GIF that plays by itself | the asset's `atlas` or `rects` with `fps` or `durations`, or `animated: true` |
+| a text with a maximum width and number of rows, vertical alignment or an opaque background | `wrap` (`width`, `lines`, `ellipsis`), `valign`, `line_height`, `background` and `padding` of the text |
+| a font collection | the `.ttc` asset with `face` |
+| a clock or a date written by a script | `{ "clock" }` and `{ "date" }` values, which wake the scene only when the text changes |
+| the time of day used as a number | `{ "clock": "day" }`, or `engine.daytime` in scripts |
+| keyframes with Bézier handles, or each axis animated on its own | keys with `{ "in", "out" }` and `{ "x", "y" }` or `{ "r", "g", "b", "a" }` parts |
+| an animation added to the value it starts from | `base` of the value |
+| camera parallax with an amount, a delay and a share for the pointer, and a depth per axis | `canvas.parallax` and `parallax: [x, y]` of the layers |
 | the blending of a material or of particles | the layer's `blend` |
 | colors mixed as encoded values | `canvas.blend_space: srgb` |
 | an effect mask painted in an editor | the effect's `mask`, a `linear` picture |
 | several properties moved by one animation | the same `timeline` on each value |
 | an animation that counts frames | `frames` and `fps` of the timeline |
+| a looping animation that blends its end into its start | `wrap: true` on a `repeat` timeline |
+| named moments of an animation that show layers, play sounds or start other animations | `events` of the timeline, and `trigger` or `play_on` of `event:<name>`; scripts get them through `timelineEvent` |
+| a script that changes the rate of an animation, stops it or reads the frame it is on | `timeline(id).speed`, `stop()`, `time` and `duration` (a frame is `time` × `fps`), and `on("ended", …)` |
+| a sound object with several files played in turn or at random, with silences between them | `sounds` with `mode` and `pause` |
+| background music, a whole song or MP3 files | `.mp3` assets, and `stream: true` for anything longer than 60 s |
+| a sound played by an animation event | `play_on: "event:<name>"` |
+| a text measured in points | `size` in pixels, points × 4 / 3 |
 | a texture chosen with a checkbox or a list | `{ "prop", "map" }` of a `bool` or `combo` property |
 | a texture the user replaces | a `file` property with `default_asset` |
 | shader variants chosen before compiling | `options` of a package effect |

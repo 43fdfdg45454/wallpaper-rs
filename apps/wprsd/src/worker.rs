@@ -160,8 +160,16 @@ mod tests {
             80
         );
         let scene = package(dir.path(), "scene", "scene.json", None);
-        let response = handle(&Request { path: scene.clone(), kind: Kind::Package, thumbs: vec![] });
-        assert_eq!((response.meta.error.as_deref(), response.failure.as_deref()), (None, Some("no preview")));
+        let thumbs = vec![(256, dir.path().join("drawn.jpg"))];
+        let response = handle(&Request { path: scene.clone(), kind: Kind::Package, thumbs });
+        match response.failure {
+            None => {
+                let drawn = image::open(dir.path().join("drawn.jpg")).unwrap().into_rgb8();
+                assert_eq!((drawn.width(), drawn.height(), response.meta.color), (64, 32, Some(0xff0000)));
+                assert!(drawn.pixels().all(|p| p[0] > 240 && p[1] < 16 && p[2] < 16), "the scene is drawn");
+            }
+            Some(e) => assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
+        }
         assert!(crate::apply::materialize(&scene, &blob.with_file_name("scene")).is_err());
         std::fs::create_dir(dir.path().join("second")).unwrap();
         let shown = package(&dir.path().join("second"), "scene", "scene.json", Some("preview.png"));

@@ -1,12 +1,14 @@
 use super::power::Power;
 use super::slot::PlayerSlot;
 use super::{Reel, SceneInput, SceneSpec};
-use chrono::Timelike;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView, log_allowed};
-use wprs_scene::{PointerState, Quality, Runtime, ScriptApi, ScriptOutputs, Uses, Values, Voice, Wake};
+use wprs_scene::{
+    Course, Fired, MAX_FIRED, PointerState, Quality, Runtime, ScriptApi, ScriptOutputs, Uses, Values, Voice,
+    Wake,
+};
 use wprs_script::{Error, Frame, Host};
 
 const SCRIPT_HOST: &str = "/proc/self/exe";
@@ -32,6 +34,9 @@ pub(super) struct SceneState {
     pub(super) heard: Option<Instant>,
     exposed: Values,
     pressed: Vec<String>,
+    fired: Vec<Fired>,
+    courses: Vec<Course>,
+    zone: (i64, String),
     restock: bool,
 }
 
@@ -39,15 +44,13 @@ fn after(seconds: f64) -> Duration {
     Duration::try_from_secs_f64(seconds.clamp(0.0, 86_400.0)).unwrap_or_default()
 }
 
-fn wall() -> f64 {
-    let now = chrono::Utc::now().with_timezone(&crate::zone::Zone);
-    f64::from(now.num_seconds_from_midnight()) + f64::from(now.nanosecond() % 1_000_000_000) / 1e9
-}
-
 impl SceneState {
     pub(super) fn new(spec: SceneSpec, power: Power) -> SceneState {
         let mut runtime = Runtime::new(spec.pack.scene.clone(), spec.values.clone());
         spec.pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
+        runtime.set_language(&spec.pack.locale);
+        spec.pack.assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
+        runtime.set_lengths(spec.pack.lengths.clone());
         runtime.set_playing(spec.clips.iter().map(|(asset, _)| asset.clone()).collect());
         let still = spec.hold.is_some() || power.still(&runtime);
         match spec.hold {
@@ -90,6 +93,9 @@ impl SceneState {
             heard,
             exposed,
             pressed: Vec::new(),
+            fired: Vec::new(),
+            courses: Vec::new(),
+            zone: (i64::MIN, String::new()),
             restock: false,
         };
         scene.uses = scene.needs(quality);
@@ -128,6 +134,10 @@ impl SceneState {
 
     pub(super) fn playing(&self) -> bool {
         self.moving || self.host.is_some()
+    }
+
+    pub(super) fn calm(&mut self, calm: bool) -> bool {
+        self.runtime.set_reduced_motion(calm)
     }
 
     pub(super) fn press(&mut self, id: &str) {
@@ -173,10 +183,25 @@ impl SceneState {
     }
 
     pub(super) fn script(&mut self) -> Option<ScriptOutputs> {
+        let fresh = self.runtime.take_fired();
+        let room = MAX_FIRED.saturating_sub(self.fired.len());
+        self.fired.extend(fresh.into_iter().take(room));
         let rt = &self.runtime;
+        rt.fill_playbacks(&mut self.courses);
+        let minute = rt.wall().div_euclid(60.0) as i64;
+        if self.zone.0 != minute {
+            self.zone = (minute, crate::zone::posix());
+        }
         let (time, dt, props, audio, pointer) = (rt.time(), rt.dt(), &self.exposed, rt.audio(), rt.pointer());
         let actions = &std::mem::take(&mut self.pressed);
-        match self.host.as_mut()?.update(&Frame { time, dt, props, audio, pointer, actions }) {
+        let (wall, zone, timelines, fired) =
+            (rt.wall(), self.zone.1.as_str(), self.courses.as_slice(), &self.fired);
+        let frame = Frame { time, dt, props, audio, pointer, actions, wall, zone, timelines, fired };
+        let sent = self.host.as_mut()?.update(&frame);
+        if !matches!(sent, Ok(None)) {
+            self.fired.clear();
+        }
+        match sent {
             Ok(outputs) => outputs,
             Err(Error::Disabled) => {
                 tracing::warn!(
@@ -218,7 +243,7 @@ impl SceneState {
         let p = self.pointer;
         let pointer = self.runtime.pointer().follow(p.pos, p.buttons, dt as f32);
         self.runtime.set_pointer(pointer);
-        self.runtime.set_wall(wall());
+        self.runtime.set_wall(crate::zone::wall());
         let (quality, uses) = (power.quality(&self.runtime), self.uses);
         if quality != self.quality {
             (self.quality, self.uses) = (quality, self.needs(quality));
@@ -276,6 +301,13 @@ impl SceneState {
         }
         self.tick = active.then_some(now);
         dt
+    }
+
+    pub(super) fn tracks(&self) -> Vec<wprs_video::Track> {
+        let sounds = self.spec.pack.scene.sounds();
+        let fades = |s: &wprs_scene::Sound| (s.fade_in, s.fade_out);
+        let lists = self.runtime.playlists().iter().cloned().zip(sounds.map(fades));
+        lists.map(|(list, (fade_in, fade_out))| wprs_video::Track { list, fade_in, fade_out }).collect()
     }
 
     pub(super) fn hold(&mut self) {

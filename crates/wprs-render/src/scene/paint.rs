@@ -1,5 +1,6 @@
 use super::item::{Rect, invert, scale_of, shape};
 use super::pool::{BUDGET, Pool, Tex};
+use super::sampling::Sampling;
 use super::state::Sim;
 use super::{Cached, Image, Op, Src};
 use crate::{GpuImage, Renderer};
@@ -16,6 +17,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) caches: &'p mut HashMap<usize, Cached>,
     pub(crate) states: &'p mut HashMap<usize, Sim>,
     pub(crate) images: &'a HashMap<String, Image>,
+    pub(crate) samplings: &'a HashMap<String, Sampling>,
     pub(crate) luts: &'a [(String, Tex)],
     pub(crate) texts: &'a HashMap<usize, (&'a GpuImage, [f32; 2])>,
     pub(crate) videos: &'a [(&'a str, &'a GpuImage)],
@@ -91,11 +93,8 @@ impl<'a> Painter<'a, '_, '_> {
         let d = &frame.draws[i];
         let unit = [0.0, 0.0, 1.0, 1.0];
         match &d.content {
-            Content::Image { asset, size } | Content::Video { asset, size } => {
-                let found = self.videos.iter().find(|(id, _)| id == asset);
-                let natural = found.map(|(_, v)| [v.size().0 as f32, v.size().1 as f32]);
-                let natural = natural.or_else(|| self.images.get(asset.as_ref()).map(|(_, size)| *size));
-                Some((size.or(natural)?, unit))
+            Content::Image { size, .. } | Content::Video { size, .. } => {
+                Some((size.or(self.natural(i))?, unit))
             }
             Content::Text { .. } => Some((self.texts.get(&i)?.1, unit)),
             Content::Solid { size, .. } => Some((*size, unit)),
@@ -109,6 +108,30 @@ impl<'a> Painter<'a, '_, '_> {
             }
             _ => None,
         }
+    }
+
+    pub(crate) fn cell(&self, i: usize) -> ([f32; 4], Option<&'a Sampling>) {
+        let frame = self.frame;
+        let (asset, cell) = match &frame.draws[i].content {
+            Content::Image { asset, frame, .. } => (asset, *frame),
+            Content::Video { asset, .. } => (asset, None),
+            _ => return ([0.0, 0.0, 1.0, 1.0], None),
+        };
+        let found = self.samplings.get(asset.as_ref());
+        let rect = cell.and_then(|c| found?.cells.get(c as usize).copied());
+        (rect.unwrap_or([0.0, 0.0, 1.0, 1.0]), found)
+    }
+
+    pub(crate) fn natural(&self, i: usize) -> Option<[f32; 2]> {
+        let frame = self.frame;
+        let (Content::Image { asset, .. } | Content::Video { asset, .. }) = &frame.draws[i].content else {
+            return None;
+        };
+        let found = self.videos.iter().find(|(id, _)| id == asset);
+        let natural = found.map(|(_, v)| [v.size().0 as f32, v.size().1 as f32]);
+        let [w, h] = natural.or_else(|| self.images.get(asset.as_ref()).map(|(_, size)| *size))?;
+        let rect = self.cell(i).0;
+        Some([w * rect[2], h * rect[3]])
     }
 
     pub(crate) fn local(&self, i: usize, size: [f32; 2]) -> Affine {
@@ -191,6 +214,7 @@ impl<'a> Painter<'a, '_, '_> {
                 Content::Adjustment => self.adjust(i, target),
                 Content::Group { clip: inner } => {
                     let plain = !inner && d.opacity >= 1.0 && d.blend == Blend::Normal && d.mask.is_none();
+                    let plain = plain && d.tint == wprs_scene::Color([1.0; 4]) && d.brightness == 1.0;
                     if plain && d.effects.is_empty() && !d.layer.cache {
                         self.list(i + 1..d.end, target, false);
                     } else if let Some((src, rect)) = self.isolate(i) {

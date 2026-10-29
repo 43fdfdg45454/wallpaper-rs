@@ -7,7 +7,9 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use wprs_format::{Limits, MANIFEST, SIGNATURE, sha256_file};
-use wprs_scene::{Clip, Lut, MAX_ASSETS, MAX_LUT_BYTES, MAX_SOUND_BYTES, MAX_SOUND_TOTAL};
+use wprs_scene::{
+    Clip, Lut, MAX_ASSETS, MAX_LUT_BYTES, MAX_SOUND_SECONDS, MAX_SOUND_TOTAL, MAX_STREAM_BYTES,
+};
 
 const DECODED: u64 = 512 << 20;
 
@@ -19,8 +21,8 @@ fn paths<'a>(doc: &'a Value, kind: &str) -> Vec<&'a str> {
 
 fn seconds(file: &Path) -> Result<f32> {
     let size = fs::metadata(file)?.len();
-    ensure!(size <= MAX_SOUND_BYTES, "a sound may have at most {} MiB", MAX_SOUND_BYTES >> 20);
-    Ok(Clip::probe(&file.to_string_lossy(), &fs::read(file)?).map_err(|e| anyhow!("the sound {e}"))?.seconds)
+    ensure!(size <= MAX_STREAM_BYTES, "a sound may have at most {} MiB", MAX_STREAM_BYTES >> 20);
+    Ok(Clip::read(&file.to_string_lossy(), &fs::read(file)?).map_err(|e| anyhow!("the sound {e}"))?.seconds)
 }
 
 fn pixels(file: &Path) -> Result<u64> {
@@ -37,9 +39,10 @@ pub fn check(dir: &Path, doc: &Value, file: &Path) -> Result<()> {
     ensure!(count < MAX_ASSETS, "a scene has at most {MAX_ASSETS} assets");
     match kind {
         "sound" => {
+            let held = |s: f32| if s > MAX_SOUND_SECONDS { 0.0 } else { s };
             let others =
-                paths(doc, "sound").iter().map(|p| seconds(&dir.join(p)).unwrap_or(0.0)).sum::<f32>();
-            let total = others + seconds(file)?;
+                paths(doc, "sound").iter().map(|p| held(seconds(&dir.join(p)).unwrap_or(0.0))).sum::<f32>();
+            let total = others + held(seconds(file)?);
             ensure!(total <= MAX_SOUND_TOTAL, "the sounds of a scene may last {MAX_SOUND_TOTAL} s together");
         }
         "image" => {

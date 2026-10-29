@@ -101,9 +101,10 @@ pub fn power<'a>(
     low: jboolean,
     thermal: jint,
     headroom: jfloat,
+    still: jboolean,
 ) {
     on(&mut env, |_| {
-        Power { charging, saver, low, thermal, headroom }.set();
+        Power { charging, saver, low, thermal, headroom, still }.set();
         Ok(())
     })
 }

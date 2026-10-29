@@ -616,6 +616,32 @@ no los dibuja, el escritorio y el teléfono rechazan la escena con el mismo avis
 reproduce las escenas sin sonido, solo omite el sonido nuevo). `docs/specs/scene.md` describe cada
 campo y sus límites.
 
+El escritorio y el teléfono ya dibujan de esa lista el tinte y el brillo de capa, el padre de
+transformación, las máscaras con intensidad, los ajustes del paralaje (el teléfono también con su
+inclinación, con los mismos sensores que el paralaje de las fotos y solo mientras se ve la escena),
+el filtrado nítido, la repetición, el espejo y los mipmaps de las texturas (estos se crean una sola
+vez, cuando una imagen se dibuja a menos de tres cuartos de su tamaño), las hojas de sprites y los GIF
+o WebP animados (el siguiente fotograma solo se pide cuando toca y nunca con la capa oculta), el texto
+con ajuste de línea, número de líneas con puntos suspensivos, interlineado, alineación vertical, caja
+de fondo y margen, las colecciones de fuentes, `woff2` y las fuentes de respaldo, las curvas con
+manejadores, la animación por componente y relativa, y la hora y la fecha como valores, con los
+nombres de meses y días en inglés o en español. Los colores de los fotogramas clave se mezclan en
+OKLab por el camino de tono más corto. Los scripts leen además la hora del día (`engine.daytime`),
+usan en `Date` la zona horaria del equipo aunque cambie, sin leer ningún archivo, y escriben fechas
+con `time.format`.
+
+También dibujan los eventos con nombre de las líneas de tiempo (cada uno salta una vez por pasada,
+aunque un fotograma se lo salte, y arranca otras líneas de tiempo o sonidos sin despertar la escena
+antes de tiempo) y el cierre de los bucles, que mezcla la última clave con la primera. Los scripts
+cambian la velocidad de una línea de tiempo, la paran, leen su tiempo, su duración y si sigue en marcha,
+y reciben sus eventos y su final. El escritorio toca las capas de sonido completas: MP3, varios archivos
+en orden o al azar con pausas, sonidos largos de hasta diez minutos leídos en flujo sin cargarlos
+enteros y sonidos disparados por eventos, con el volumen y el paso de un lado a otro suavizados. El
+sonido sigue el tiempo de la escena: los bucles se vuelven a alinear, al reanudar suena donde dice la
+línea de tiempo y la latencia baja de unos 160 ms a unos 50 ms. El teléfono sigue reproduciendo las
+escenas sin sonido. Una escena sin imagen de vista previa recibe una miniatura dibujada a partir de la
+propia escena en su momento de póster.
+
 El formato describe también las escenas más avanzadas: capas `mesh` que deforman una imagen con un
 esqueleto (glTF binario con huesos y pesos), con clips y capas de animación, cinemática inversa
 hacia un punto, el cursor, un hueso u otra capa, física de muelles y cuerdas con viento, reglas que

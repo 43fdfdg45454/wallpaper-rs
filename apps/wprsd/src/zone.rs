@@ -1,12 +1,17 @@
 use chrono::{Datelike, FixedOffset, Local, MappedLocalTime, NaiveDate, NaiveDateTime, NaiveTime};
 use chrono::{Offset, TimeZone, Timelike, Utc};
 use jiff::tz::AmbiguousOffset;
-use std::sync::{PoisonError, RwLock};
+use std::sync::{Mutex, PoisonError, RwLock};
 
 static NAMED: RwLock<Option<jiff::tz::TimeZone>> = RwLock::new(None);
 
 #[derive(Debug, Clone, Copy)]
 pub struct Zone;
+
+pub fn wall() -> f64 {
+    let now = Utc::now().with_timezone(&Zone);
+    now.naive_local().and_utc().timestamp() as f64 + f64::from(now.nanosecond() % 1_000_000_000) / 1e9
+}
 
 pub fn follow(name: &str) {
     match jiff::tz::TimeZone::get(name) {
@@ -73,6 +78,50 @@ impl TimeZone for Zone {
     }
 }
 
+fn clock(seconds: i64) -> String {
+    let s = seconds.unsigned_abs();
+    format!("{:02}:{:02}:{:02}", s / 3600, s / 60 % 60, s % 60)
+}
+
+fn offset(east: i32) -> String {
+    let (sign, s) = (if east > 0 { '-' } else { '+' }, east.unsigned_abs());
+    format!(
+        "<{}{:02}{:02}>{sign}{}",
+        if east < 0 { '-' } else { '+' },
+        s / 3600,
+        s / 60 % 60,
+        clock(i64::from(east))
+    )
+}
+
+pub fn posix_at(zone: &jiff::tz::TimeZone, now: jiff::Timestamp) -> String {
+    let here = zone.to_offset_info(now);
+    let east = here.offset().seconds();
+    let year = now.as_second() + 400 * 86_400;
+    let soon: Vec<_> = zone.following(now).take_while(|t| t.timestamp().as_second() < year).take(2).collect();
+    let [a, b] = soon.as_slice() else { return offset(east) };
+    let (std, dst, on, off) = match here.dst().is_dst() {
+        false => (east, a.offset().seconds(), a.timestamp(), b.timestamp()),
+        true => (a.offset().seconds(), east, b.timestamp(), a.timestamp()),
+    };
+    let when = |t: jiff::Timestamp, east: i32| {
+        let local = t.as_second() + i64::from(east);
+        let start = chrono::DateTime::from_timestamp(local, 0).map_or(0, |d| d.ordinal0());
+        format!("{start}/{}", clock(local.rem_euclid(86_400)))
+    };
+    format!("{}{},{},{}", offset(std), offset(dst), when(on, std), when(off, dst))
+}
+
+pub fn posix() -> String {
+    static RULE: Mutex<(i64, String)> = Mutex::new((i64::MIN, String::new()));
+    let now = jiff::Timestamp::now();
+    let mut rule = RULE.lock().unwrap_or_else(PoisonError::into_inner);
+    if rule.0 != now.as_second() / 60 {
+        *rule = (now.as_second() / 60, posix_at(&named().unwrap_or_else(jiff::tz::TimeZone::system), now));
+    }
+    rule.1.clone()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,5 +140,12 @@ mod tests {
         assert_eq!(at_local(&zone, &at(8, 3, 2, 30)), MappedLocalTime::None);
         assert_eq!(at_local(&zone, &at(1, 11, 1, 30)), MappedLocalTime::Ambiguous(hours(-4), hours(-5)));
         assert_eq!(at_local(&zone, &at(1, 6, 9, 0)), MappedLocalTime::Single(hours(-4)));
+        let winter = jiff::Timestamp::from_second(at(15, 1, 12, 0).and_utc().timestamp()).unwrap();
+        let summer = jiff::Timestamp::from_second(at(15, 7, 12, 0).and_utc().timestamp()).unwrap();
+        let rule = "<-0500>+05:00:00<-0400>+04:00:00,66/02:00:00,304/02:00:00";
+        assert_eq!(posix_at(&zone, winter), rule);
+        assert!(posix_at(&zone, summer).starts_with("<-0500>+05:00:00<-0400>+04:00:00,"));
+        let fixed = jiff::tz::TimeZone::fixed(jiff::tz::offset(3));
+        assert_eq!(posix_at(&fixed, winter), "<+0300>-03:00:00");
     }
 }

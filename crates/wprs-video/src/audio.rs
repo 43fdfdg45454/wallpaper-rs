@@ -100,7 +100,7 @@ impl Audio {
         let sinks = |o: &Outputs| o.1 <= now && o.0.devices().iter().any(|d| d.has_classes("Audio/Sink"));
         if self.outputs.take_if(|o| sinks(o)).is_some() {
             tracing::info!("an audio output appeared, the video plays with sound");
-            self.rebuild(playbin, bus, pipewire::sink());
+            self.rebuild(playbin, bus, pipewire::sink(None));
         }
     }
 

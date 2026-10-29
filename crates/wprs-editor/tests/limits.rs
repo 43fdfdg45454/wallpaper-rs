@@ -65,6 +65,9 @@ fn imports_stop_at_the_limits_of_the_format_and_leave_nothing_behind() {
     }
     let error = import(&mut project, &wav(root.path(), "s3.wav", 20)).unwrap_err().to_string();
     assert!(error.contains("180 s"), "{error}");
+    import(&mut project, &wav(root.path(), "song.wav", 240)).unwrap();
+    let error = import(&mut project, &wav(root.path(), "opera.wav", 700)).unwrap_err().to_string();
+    assert!(error.contains("600 s"), "{error}");
     import(&mut project, &bmp(root.path(), "a.bmp", 9000)).unwrap();
     let error = import(&mut project, &bmp(root.path(), "b.bmp", 9000)).unwrap_err().to_string();
     assert!(error.contains("512 MiB"), "{error}");
@@ -72,7 +75,7 @@ fn imports_stop_at_the_limits_of_the_format_and_leave_nothing_behind() {
     let taken = json!({"import": {"file": root.path().join("c.png"), "id": "a"}});
     let error = project.act(&serde_json::from_value(taken).unwrap()).unwrap_err().to_string();
     assert!(error.contains("the asset a exists"), "{error}");
-    assert_eq!(assets(&dir), ["a.bmp", "s0.wav", "s1.wav", "s2.wav"]);
+    assert_eq!(assets(&dir), ["a.bmp", "s0.wav", "s1.wav", "s2.wav", "song.wav"]);
     let many: Value = (0..256).map(|n| (format!("x{n}"), json!({"path": "assets/a.bmp"}))).collect();
     project
         .act(&serde_json::from_value(json!({"set": {"pointer": "/scene/assets", "value": many}})).unwrap())

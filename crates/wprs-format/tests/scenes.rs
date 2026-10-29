@@ -49,8 +49,7 @@ fn scenes_name_their_newer_features_and_engines_refuse_what_they_cannot_draw() {
     assert_eq!(
         desktop.to_string(),
         "this package needs a newer version of wallpaper-rs: it uses the features blend_modes2 (mixes layers with \
-         the newer blend modes), lights (lights its layers) and sound2 (plays MP3 or long sounds, lists of sounds \
-         or sounds started by events)"
+         the newer blend modes) and lights (lights its layers)"
     );
     let phone =
         features::playable(&package.manifest, &package.facts, Platform::Android).unwrap_err().to_string();

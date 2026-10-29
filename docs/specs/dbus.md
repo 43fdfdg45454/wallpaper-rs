@@ -691,7 +691,10 @@ with another case changes the spelling. `NotFound` for an unknown `from`.
 Returns the path of the item's thumbnail of `size` (`256`, `512` or `1024`, else
 `InvalidArgs`), making it first when it is not cached, ahead of every other thumbnail work.
 `Failed` with the reason when it cannot be made or takes more than 20 s; a decoding problem also
-sets the item's `error`. A scene package without preview returns `Failed` (`no preview`). A
+sets the item's `error`. A scene package without preview gets a thumbnail drawn from the scene at
+its `poster_time`, with the default values of its settings, the local time at which it is drawn and
+the language of the package, in the decoding process; it returns
+`Failed` (`no preview: …`) only when no graphics device can draw it. A
 package that needs a newer wallpaper-rs keeps that `error` and still gets the thumbnail of its
 preview. The library reads every package again once after the daemon is upgraded.
 

@@ -30,7 +30,7 @@ impl Player {
         playbin.set_property_from_str("flags", if audio { "video+audio+soft-volume" } else { "video" });
         playbin.set_property("volume", options.volume.clamp(0.0, 1.0));
         playbin.set_property("mute", options.muted);
-        let piped = audio.then(pipewire::sink).flatten();
+        let piped = audio.then(|| pipewire::sink(None)).flatten();
         piped.iter().for_each(|sink| playbin.set_property("audio-sink", sink));
         let tempo = (audio && options.cut.speed != 100).then(|| make("scaletempo").ok()).flatten();
         tempo.iter().for_each(|tempo| playbin.set_property("audio-filter", tempo));

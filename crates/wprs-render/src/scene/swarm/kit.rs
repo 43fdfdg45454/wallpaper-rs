@@ -76,7 +76,7 @@ impl Painter<'_, '_, '_> {
             }
             return;
         }
-        let (r, screen) = (self.r, self.screen);
+        let (r, screen, srgb) = (self.r, self.screen, self.srgb);
         let Some(swarms) = self.swarms.as_deref_mut() else { return };
         let Some(index) = swarms.kits.iter().position(|k| k.id == system) else { return };
         let mode = mode(blend, atop);
@@ -84,6 +84,13 @@ impl Painter<'_, '_, '_> {
         let [w, h] = swarms.canvas;
         let kit = &swarms.kits[index];
         let mut look = kit.look;
+        if d.tint != wprs_scene::Color([1.0; 4]) || d.brightness != 1.0 {
+            let [r, g, b, _] = d.tint.0;
+            let [r, g, b, _] =
+                super::super::item::toned(wprs_scene::Color([r, g, b, 1.0]), d.brightness, srgb, 1.0);
+            let tint = [r, g, b, d.tint.0[3]];
+            look.colors.iter_mut().for_each(|c| (0..4).for_each(|k| c[k] *= tint[k]));
+        }
         let m = screen.then(d.world).then(Affine::translate([-d.origin[0] * w, -d.origin[1] * h]));
         (look.m0, look.m1) = ndc(target.rect, m);
         (look.tint[0], look.trail[1]) = (opacity, swarms.quality.trail(kit.trail) as f32 * STEP);

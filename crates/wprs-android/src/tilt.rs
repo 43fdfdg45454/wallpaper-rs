@@ -78,8 +78,14 @@ pub(crate) fn goal(offset: f32, now: Instant) -> [f32; 2] {
 }
 
 pub(crate) fn wanted(preview: bool) -> bool {
-    let shown = choice::shown(preview).filter(|shown| !shown.video && !shown.scene);
-    shown.is_some_and(|shown| depth::raised(&shown.path).is_some())
+    choice::shown(preview).is_some_and(|shown| match shown.scene {
+        true => crate::pack::load(&shown.path).is_ok_and(|pack| pack.scene.tilts()),
+        false => !shown.video && depth::raised(&shown.path).is_some(),
+    })
+}
+
+pub(crate) fn scene(preview: bool) -> bool {
+    choice::shown(preview).is_some_and(|shown| shown.scene)
 }
 
 pub(crate) fn rate(wanted: bool, power: Power, preview: bool) -> u32 {

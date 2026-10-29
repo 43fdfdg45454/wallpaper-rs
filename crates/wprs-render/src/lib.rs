@@ -1,6 +1,7 @@
 mod adapter;
 #[cfg(test)]
 mod allocations;
+mod animation;
 mod bind;
 mod color;
 mod decode;
@@ -22,6 +23,7 @@ mod surface;
 mod texture;
 mod yuv;
 
+pub use animation::{MAX_ANIMATION, Pictures, animation};
 pub use decode::{
     decode_image, decode_limited, decode_reduced, decode_unoriented, decoded_size, image_size, needed_edge,
     picture_limits, thumbnails,
@@ -35,7 +37,7 @@ pub use exported::Exported;
 pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};
 pub use readback::TargetLimits;
-pub use scene::{SceneAssets, SceneStats, SceneView};
+pub use scene::{MAX_FONT, SceneAssets, SceneStats, SceneView, font};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};

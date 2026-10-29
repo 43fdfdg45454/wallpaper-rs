@@ -127,6 +127,10 @@ impl Pool {
                     false => wgpu::BindingResource::Sampler(&pipes.wrap),
                 };
                 list.push(wgpu::BindGroupEntry { binding: 2, resource });
+                if items {
+                    let near = wgpu::BindingResource::Sampler(&pipes.near);
+                    list.push(wgpu::BindGroupEntry { binding: 3, resource: near });
+                }
                 list
             };
             let group = |layout, items| {

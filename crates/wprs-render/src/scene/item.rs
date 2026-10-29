@@ -155,6 +155,11 @@ pub(crate) fn premultiplied(Color([r, g, b, a]): Color, srgb: bool, opacity: f32
     [conv(r) * a, conv(g) * a, conv(b) * a, a]
 }
 
+pub(crate) fn toned(tint: Color, brightness: f32, srgb: bool, opacity: f32) -> [f32; 4] {
+    let [r, g, b, a] = premultiplied(tint, srgb, opacity);
+    [r * brightness, g * brightness, b * brightness, a]
+}
+
 pub(crate) fn channel(channel: Option<MaskChannel>, texture: bool) -> [f32; 4] {
     match channel.unwrap_or(if texture { MaskChannel::Luminance } else { MaskChannel::A }) {
         MaskChannel::R => [1.0, 0.0, 0.0, 0.0],

@@ -6,6 +6,14 @@ use serde::{Deserialize, Serialize};
 
 pub const MAX_FALLBACK: usize = 8;
 
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Layout {
+    pub wrap: Option<Wrap>,
+    pub line_height: Option<f32>,
+    pub padding: f32,
+    pub backing: Option<(Color, [f32; 2], f32)>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TextLayer {
@@ -111,6 +119,12 @@ pub struct Shadow {
     #[serde(default = "soft")]
     #[schemars(extend("x-unit" = "px", "x-range" = [0, 64]))]
     pub blur: Value<f32>,
+}
+
+impl Valign {
+    pub fn fraction(self) -> f32 {
+        self as u8 as f32 / 2.0
+    }
 }
 
 impl TextLayer {

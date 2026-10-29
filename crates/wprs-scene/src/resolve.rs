@@ -1,11 +1,12 @@
 use crate::animate::Animate;
 use crate::input::{AudioFrame, PointerState, ScriptOutputs};
-use crate::timeline::{Loop, Playhead, local, sample};
+use crate::kin::Place;
+use crate::timeline::{Loop, Playhead, local};
 use crate::value::{AudioChannel, Axis, Band, Binding, Level, Value};
-use crate::{Timeline, Values, Wake};
+use crate::{Scene, Timeline, Values, Wake};
 use serde_json::Value as Json;
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 pub(crate) struct Context<'a> {
     pub(crate) t: f32,
@@ -13,6 +14,8 @@ pub(crate) struct Context<'a> {
     pub(crate) calm: [f32; 2],
     pub(crate) beat: f32,
     pub(crate) wall: f64,
+    pub(crate) step: f64,
+    pub(crate) lang: &'a str,
     pub(crate) audio: &'a AudioFrame,
     pub(crate) pointer: &'a PointerState,
     pub(crate) script: &'a ScriptOutputs,
@@ -22,6 +25,15 @@ pub(crate) struct Context<'a> {
     pub(crate) playing: &'a BTreeSet<String>,
     pub(crate) memo: &'a RefCell<HashMap<usize, [f32; 4]>>,
     pub(crate) wake: Cell<Wake>,
+    pub(crate) scene: &'a Scene,
+    pub(crate) homes: &'a HashMap<String, String>,
+    pub(crate) places: &'a RefCell<HashMap<usize, Place>>,
+    pub(crate) view: [f32; 4],
+    pub(crate) canvas: [f32; 2],
+    pub(crate) glide: &'a PointerState,
+    pub(crate) tilt: [f32; 2],
+    pub(crate) still: bool,
+    pub(crate) sheets: &'a BTreeMap<String, Vec<f32>>,
 }
 
 impl Context<'_> {
@@ -61,48 +73,24 @@ impl Context<'_> {
         audio.or(cursor)
     }
 
-    fn clock(&self, pattern: &str) -> String {
-        let s = self.wall.rem_euclid(86_400.0) as u32;
-        let (h, m, sec) = (s / 3600, s / 60 % 60, s % 60);
-        let step = if pattern.contains('s') { 1.0 } else { 60.0 };
-        self.note(Wake::At(step - self.wall.rem_euclid(step)));
-        let h12 = if h % 12 == 0 { 12 } else { h % 12 };
-        let tokens = [
-            ("HH", format!("{h:02}")),
-            ("H", h.to_string()),
-            ("hh", format!("{h12:02}")),
-            ("h", h12.to_string()),
-        ];
-        let more = [
-            ("mm", format!("{m:02}")),
-            ("m", m.to_string()),
-            ("ss", format!("{sec:02}")),
-            ("s", sec.to_string()),
-        ];
-        let mut out = String::new();
-        let mut rest = pattern;
-        'outer: while !rest.is_empty() {
-            for (token, text) in
-                tokens.iter().chain(&more).chain(&[("a", if h < 12 { "AM" } else { "PM" }.into())])
-            {
-                if let Some(tail) = rest.strip_prefix(token) {
-                    (out, rest) = (out + text, tail);
-                    continue 'outer;
-                }
-            }
-            let c = rest.chars().next().unwrap_or_default();
-            out.push(c);
-            rest = &rest[c.len_utf8()..];
-        }
-        out
+    fn clock(&self, pattern: &str, dates: bool) -> String {
+        let (text, wake) = crate::calendar::format(pattern, self.wall, self.lang, dates);
+        wake.into_iter().for_each(|at| self.note(Wake::At(at)));
+        text
     }
 
-    fn keys_time(&self, b: &Binding<impl Sized>, end: f32) -> f32 {
+    fn time_of_day(&self, name: &str) -> f32 {
+        let (value, at) = crate::calendar::number(name, self.wall, self.step);
+        self.note(Wake::At(at));
+        value
+    }
+
+    pub(crate) fn keys_time(&self, b: &Binding<impl Sized>, end: f32) -> f32 {
         if let Some(id) = &b.timeline {
             let Some((tl, head)) = self.timelines.iter().find(|(tl, _)| &tl.id == id) else { return 0.0 };
             if head.playing {
-                self.note(if head.t < 0.0 {
-                    Wake::At(f64::from(-head.t / tl.speed.abs().max(1e-3)))
+                self.note(if head.t < 0.0 && head.reversed == (head.rate < 0.0) {
+                    Wake::At(f64::from(-head.t / head.rate.abs().max(1e-3)))
                 } else {
                     Wake::Frame
                 });
@@ -124,7 +112,8 @@ impl<T: Animate> Value<T> {
             Value::Bound(b) => b,
         };
         let id = b.prop.as_ref().filter(|_| b.keys.is_none())?;
-        Some(shaped(b, prop(b, id, props?)))
+        let value = shaped(b, prop(b, id, props?));
+        Some(b.base.as_ref().map_or_else(|| value.clone(), |base| added(base, &value)))
     }
 
     pub(crate) fn get(&self, cx: &Context) -> T {
@@ -132,18 +121,34 @@ impl<T: Animate> Value<T> {
             Value::Fixed(v) => return v.clone(),
             Value::Bound(b) => b,
         };
-        let raw = if let Some(keys) = &b.keys {
-            sample(keys, cx.keys_time(b, keys.last().map_or(0.0, |k| k.t)))
+        let raw = if b.tracked() {
+            let base = b.base.clone().unwrap_or_default();
+            let (mut parts, _) = base.parts();
+            for (name, track) in b.tracks() {
+                let i = ["x", "y", "r", "g", "b", "a"].iter().position(|n| *n == name).unwrap_or(0);
+                track.iter().for_each(|v| parts[if i < 2 { i } else { i - 2 }] = v.get(cx));
+            }
+            base.with_parts(parts)
+        } else if let Some(keys) = &b.keys {
+            crate::cue::wrapped(keys, cx.keys_time(b, keys.last().map_or(0.0, |k| k.t)), cx.wrap(b))
         } else if let Some(id) = &b.prop {
             prop(b, id, cx.props)
         } else if let Some(pattern) = &b.clock {
-            T::from_text(cx.clock(pattern)).unwrap_or_default()
+            match T::from_signal(0.0).is_some() && crate::CLOCKS.contains(&pattern.as_str()) {
+                true => T::from_signal(cx.time_of_day(pattern)).unwrap_or_default(),
+                false => T::from_text(cx.clock(pattern, false)).unwrap_or_default(),
+            }
+        } else if let Some(pattern) = &b.date {
+            T::from_text(cx.clock(pattern, true)).unwrap_or_default()
         } else if let Some(path) = &b.script {
             cx.script.values.get(path).and_then(T::from_json).unwrap_or_default()
         } else {
             cx.signal(b).and_then(T::from_signal).unwrap_or_default()
         };
-        let value = shaped(b, raw);
+        let value = match b.base.as_ref().filter(|_| !b.tracked()) {
+            Some(base) => added(base, &shaped(b, raw)),
+            None => shaped(b, raw),
+        };
         let Some(tau) = b.smooth.and_then(crate::Smooth::seconds) else { return value };
         let (comps, n) = value.comps();
         let mut memo = cx.memo.borrow_mut();
@@ -167,6 +172,12 @@ fn shaped<T: Animate>(b: &Binding<T>, raw: T) -> T {
     let (mut comps, n) = raw.comps();
     comps[..n].iter_mut().for_each(|c| *c = b.modify(*c));
     if n == 0 { raw } else { raw.with_comps(comps) }
+}
+
+fn added<T: Animate>(base: &T, value: &T) -> T {
+    let ((mut parts, n), (more, _)) = (base.parts(), value.parts());
+    parts[..n].iter_mut().zip(more).for_each(|(p, m)| *p += m);
+    base.with_parts(parts)
 }
 
 pub(crate) fn key(value: &Json) -> String {

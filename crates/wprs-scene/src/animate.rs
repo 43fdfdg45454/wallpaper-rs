@@ -20,6 +20,12 @@ pub trait Animate: Clone + PartialEq + Default {
     fn with_comps(&self, _: [f32; 4]) -> Self {
         self.clone()
     }
+    fn parts(&self) -> ([f32; 4], usize) {
+        self.comps()
+    }
+    fn with_parts(&self, parts: [f32; 4]) -> Self {
+        self.with_comps(parts)
+    }
 }
 
 impl Animate for f32 {
@@ -90,7 +96,13 @@ impl Animate for Vec3 {
 
 impl Animate for Color {
     fn lerp(&self, to: &Color, f: f32) -> Color {
-        Color(std::array::from_fn(|i| self.0[i].lerp(&to.0[i], f)))
+        crate::oklab::mix(*self, *to, f)
+    }
+    fn parts(&self) -> ([f32; 4], usize) {
+        (self.0, 4)
+    }
+    fn with_parts(&self, parts: [f32; 4]) -> Color {
+        Color(parts)
     }
     fn from_json(v: &Json) -> Option<Color> {
         serde_json::from_value(v.clone()).ok()
@@ -128,6 +140,18 @@ impl Animate for Param {
             Param::Number(_) => Param::Number(c[0]),
             Param::Vec2(_) => Param::Vec2([c[0], c[1]]),
             other => other.clone(),
+        }
+    }
+    fn parts(&self) -> ([f32; 4], usize) {
+        match self {
+            Param::Color(c) => c.parts(),
+            other => other.comps(),
+        }
+    }
+    fn with_parts(&self, parts: [f32; 4]) -> Param {
+        match self {
+            Param::Color(_) => Param::Color(Color(parts)),
+            other => other.with_comps(parts),
         }
     }
 }

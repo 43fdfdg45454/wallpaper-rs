@@ -15,7 +15,7 @@ use wprs_scene::{Control, Scene, Uses, Values};
 use wprs_video::Bank;
 
 const IMAGES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
-const FONTS: [&str; 2] = ["ttf", "otf"];
+const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
 const VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
 const DECODED: u64 = 512 << 20;
 
@@ -28,6 +28,7 @@ pub struct ScenePack {
     pub videos: Vec<(String, Reel)>,
     pub sounds: Vec<(String, PathBuf)>,
     pub clips: Bank,
+    pub lengths: BTreeMap<String, f32>,
     pub scripts: Vec<(String, String)>,
     pub labels: Json,
     pub inputs: Option<Uses>,
@@ -57,12 +58,24 @@ impl ScenePack {
             videos,
             sounds,
             clips,
+            lengths: BTreeMap::new(),
             scripts,
             labels,
             inputs: None,
             key,
         }
     }
+}
+
+pub(crate) fn streamed(scene: &Scene, id: &str) -> bool {
+    scene.sounds().any(|s| s.stream && s.clips().any(|c| c == id))
+}
+
+pub(crate) fn bank(scene: &Scene, sounds: &[(String, PathBuf)]) -> (Bank, BTreeMap<String, f32>) {
+    let files = sounds.iter().map(|(id, path)| (path.clone(), streamed(scene, id))).collect();
+    let probed =
+        sounds.iter().filter_map(|(id, path)| Some((id.clone(), wprs_video::probe_sound(path).ok()?)));
+    (Bank::new(files), probed.collect())
 }
 
 pub(crate) fn listens(scene: &Scene, scripts: &[(String, String)]) -> bool {
@@ -98,26 +111,20 @@ impl Daemon {
         );
         let scene = package.scene()?;
         let (mut assets, mut videos, mut sounds) = (SceneAssets::default(), Vec::new(), Vec::new());
-        let mut decoded: BTreeMap<String, Arc<RgbaImage>> = BTreeMap::new();
+        let mut decoded = wprs_render::Pictures::default();
         for (id, asset) in &scene.assets {
             let ext = kind(&asset.path);
             if IMAGES.contains(&ext.as_str()) {
-                let picture = match decoded.get(&asset.path) {
-                    Some(picture) => picture.clone(),
-                    None => Arc::new(image(package.read_file(&asset.path)?)?),
-                };
-                decoded.insert(asset.path.clone(), picture.clone());
-                let bytes = |i: &Arc<RgbaImage>| u64::from(i.width()) * u64::from(i.height()) * 4;
-                let total: u64 = decoded.values().map(bytes).sum();
+                let read = || Ok(package.read_file(&asset.path)?);
+                let total = decoded.add::<anyhow::Error>((&mut assets, id, asset), read, image)?;
                 anyhow::ensure!(
                     total <= DECODED,
                     "the images of {} are too large once decoded",
                     wpak.display()
                 );
-                assets.images.insert(id.clone(), picture);
             } else if FONTS.contains(&ext.as_str()) {
                 assets.fonts.insert(id.clone(), Arc::new(package.read_file(&asset.path)?));
-            } else if VIDEOS.contains(&ext.as_str()) || scene.sounds().any(|s| s.sound == *id) {
+            } else if VIDEOS.contains(&ext.as_str()) || scene.sounds().any(|s| s.clips().any(|c| c == id)) {
                 let blob = self.blob(wpak, stamp.0, stamp.1).with_extension(format!("{id}.{ext}"));
                 if !blob.is_file() {
                     let dir = blob.parent().unwrap_or(Path::new("."));
@@ -144,7 +151,7 @@ impl Daemon {
         let languages = m.languages(&wprs_core::locale::languages());
         let properties = scene.properties(&m.properties, &crate::words::volume());
         let labels = wprs_scene::labels(&properties, &languages);
-        let clips = Bank::new(sounds.iter().map(|(_, path)| path.clone()).collect());
+        let (clips, lengths) = bank(&scene, &sounds);
         let (id, version, title, presets) =
             (m.id.clone(), m.version.clone(), m.title.pick(&languages), m.presets);
         let (path, inputs) = (wpak.to_owned(), package.manifest.declared());
@@ -161,6 +168,7 @@ impl Daemon {
             videos,
             sounds,
             clips,
+            lengths,
             scripts,
             labels,
             inputs,

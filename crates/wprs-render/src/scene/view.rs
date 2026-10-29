@@ -1,7 +1,7 @@
 use super::chains::Lease;
 use super::pool::{Pool, Tex};
 use super::state::Sim;
-use super::{Cached, Image, SceneStats, swarm, text};
+use super::{Cached, Image, SceneStats, fonts, swarm};
 use crate::texture::GpuImage;
 use image::RgbaImage;
 use std::collections::HashMap;
@@ -16,8 +16,9 @@ pub struct SceneView {
     pub(super) srgb: bool,
     pub(super) format: Format,
     pub(super) images: HashMap<String, Image>,
+    pub(super) samplings: HashMap<String, super::sampling::Sampling>,
     pub(super) sources: HashMap<String, Arc<RgbaImage>>,
-    pub(super) fonts: text::Fonts,
+    pub(super) fonts: fonts::Fonts,
     pub(super) texts: HashMap<u64, (GpuImage, [f32; 2], u64)>,
     pub(super) pool: Pool,
     pub(super) caches: HashMap<usize, Cached>,

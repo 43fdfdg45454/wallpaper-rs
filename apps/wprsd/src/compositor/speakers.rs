@@ -86,11 +86,15 @@ impl State {
             if self.speakers.get(&path).is_some_and(|s| !Arc::ptr_eq(&s.pack, &scene.spec.pack)) {
                 self.speakers.remove(&path);
             }
-            let silent = scene.voices.iter().all(|v| !v.play || v.volume <= 0.0);
+            let ended =
+                self.speakers.get(&path).and_then(|s| s.track.as_ref()).is_some_and(Soundtrack::quiet);
+            let silent = ended || scene.voices.iter().all(|v| !v.play || v.volume <= 0.0);
             let speaker = match self.speakers.entry(path) {
                 Entry::Occupied(entry) => entry.into_mut(),
                 Entry::Vacant(_) if !live || silent => continue,
-                Entry::Vacant(entry) => entry.insert(Speaker::open(&scene.spec.pack, &scene.voices, volume)),
+                Entry::Vacant(entry) => {
+                    entry.insert(Speaker::open(&scene.spec.pack, &scene.voices, &scene.tracks(), volume))
+                }
             };
             speaker.output = name;
             speaker.quiet = silent.then(|| speaker.quiet.unwrap_or(now));
@@ -128,13 +132,13 @@ impl State {
 }
 
 impl Speaker {
-    fn open(pack: &Arc<ScenePack>, voices: &[Voice], volume: f64) -> Speaker {
+    fn open(pack: &Arc<ScenePack>, voices: &[Voice], tracks: &[Track], volume: f64) -> Speaker {
         let sounds: Vec<_> = pack.scene.sounds().collect();
-        let lanes: Vec<(Option<usize>, Track)> = (sounds.iter())
-            .map(|s| {
-                let file = pack.sounds.iter().position(|(id, _)| *id == s.sound);
-                let track = Track { repeat: s.repeat, fade_in: s.fade_in, fade_out: s.fade_out };
-                (file.filter(|_| s.play != Value::Fixed(false)), track)
+        let file = |id: &str| pack.sounds.iter().position(|(sound, _)| sound == id);
+        let lanes: Vec<(Vec<Option<usize>>, Track)> = (sounds.iter().zip(tracks))
+            .map(|(s, track)| {
+                let silent = s.play == Value::Fixed(false);
+                (s.clips().map(|id| file(id).filter(|_| !silent)).collect(), track.clone())
             })
             .collect();
         let failed = |event| {

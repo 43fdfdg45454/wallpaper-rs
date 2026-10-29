@@ -4,14 +4,19 @@ use gstreamer::prelude::*;
 pub(crate) const SINK: &str = "wprs-audio";
 const FIXED_POOL: (u32, u32) = (1, 2);
 
-pub(crate) fn sink() -> Option<gst::Element> {
+pub(crate) fn sink(latency: Option<&str>) -> Option<gst::Element> {
     let factory = gst::ElementFactory::find("pipewiresink")?;
     let version = factory.plugin().map(|p| p.version()).unwrap_or_default();
     if !fixed_pool(&version) {
         tracing::info!(%version, "the PipeWire GStreamer plugin is older than 1.2, using the default audio output");
         return None;
     }
-    let props = gst::Structure::builder("props").field("media.role", "Movie").build();
+    let props = gst::Structure::builder("props").field("media.role", "Movie");
+    let props = match latency {
+        Some(latency) => props.field("node.latency", latency),
+        None => props,
+    }
+    .build();
     let sink = factory.create().name(SINK).build().ok()?;
     sink.set_property("client-name", "wallpaper-rs");
     sink.set_property("stream-properties", props);

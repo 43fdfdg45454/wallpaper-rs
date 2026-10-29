@@ -14,7 +14,8 @@ fn main() -> ExitCode {
         },
         _ => {}
     }
-    let tests: [(&str, fn()); 5] = [
+    let tests: [(&str, fn()); 6] = [
+        ("scripts_tell_the_local_time_of_the_computer", scripts_tell_the_local_time_of_the_computer),
         ("the_sandbox_blocks_files_network_and_processes", the_sandbox_blocks_files_network_and_processes),
         ("the_host_runs_scripts_in_another_process", the_host_runs_scripts_in_another_process),
         ("runaway_scripts_in_the_host_are_stopped", runaway_scripts_in_the_host_are_stopped),
@@ -68,6 +69,10 @@ fn drive(host: &mut Host, until: impl Fn(&Result<Option<ScriptOutputs>, Error>) 
             audio: &audio,
             pointer: &pointer,
             actions: &[],
+            wall: 20_755.0 * 86_400.0 + 43_200.0,
+            zone: "<+0300>-03:00:00",
+            timelines: &[],
+            fired: &[],
         };
         let call = Instant::now();
         let result = host.update(&frame);
@@ -99,6 +104,18 @@ fn the_host_runs_scripts_in_another_process() {
     });
 }
 
+fn scripts_tell_the_local_time_of_the_computer() {
+    let source = "import { engine, scene, time } from 'wprs'; const a = scene.layer('a'); \
+        export function update() { const d = new Date(Date.UTC(2026, 9, 29, 9)); \
+        a.text = `${d.getHours()} ${time.format('EEEE HH:mm')} ${time.format('H', d)} ${engine.daytime}`; }";
+    let mut host = host(&["--script-host"], source);
+    drive(&mut host, |r| {
+        let told = |o: &ScriptOutputs| o.layers.get("a").and_then(|a| a.text.clone());
+        let text = r.as_ref().ok().and_then(|o| o.as_ref().and_then(told));
+        text.is_some_and(|t| t == "12 jueves 12:00 12 0.5")
+    });
+}
+
 fn runaway_scripts_in_the_host_are_stopped() {
     let mut host = host(&["--script-host"], "export function update() { for (;;) {} }");
     drive(&mut host, |r| matches!(r, Err(Error::Timeout(_))));
@@ -122,6 +139,17 @@ fn a_host_that_hangs_is_killed_and_then_disabled() {
 
 fn drive_once(host: &mut Host) -> Result<(), Error> {
     let (props, audio, pointer) = (Values::new(), AudioFrame::default(), PointerState::default());
-    host.update(&Frame { time: 0.0, dt: 0.0, props: &props, audio: &audio, pointer: &pointer, actions: &[] })
-        .map(drop)
+    host.update(&Frame {
+        time: 0.0,
+        dt: 0.0,
+        props: &props,
+        audio: &audio,
+        pointer: &pointer,
+        actions: &[],
+        wall: 0.0,
+        zone: "",
+        timelines: &[],
+        fired: &[],
+    })
+    .map(drop)
 }

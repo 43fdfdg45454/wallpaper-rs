@@ -66,7 +66,7 @@ fn from_layer(p: vec2<f32>) -> vec2<f32> {
 
 fn mask_at(uv: vec2<f32>) -> f32 {
     let m = dot(sample(mask_tex, layer_uv(uv)), fx.channel);
-    return mix(m, 1.0 - m, fx.info.x);
+    return mix(mix(m, 1.0 - m, fx.info.x), 1.0, fx.mask_m0.w);
 }
 
 fn asset_at(t: texture_2d<f32>, uv: vec2<f32>) -> vec4<f32> {

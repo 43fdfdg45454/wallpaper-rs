@@ -1,9 +1,7 @@
 use crate::editing::dimensions;
 use anyhow::{Context, Result};
 use clap::Subcommand;
-use image::RgbaImage;
 use serde_json::json;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -37,31 +35,8 @@ fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAsse
     let mut package =
         open(path, &Limits::default()).with_context(|| format!("cannot open {}", path.display()))?;
     let scene = package.scene()?;
-    let mut assets = SceneAssets::default();
-    let mut decoded: HashMap<String, Arc<RgbaImage>> = HashMap::new();
-    for (id, asset) in &scene.assets {
-        let ext = Path::new(&asset.path)
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or_default()
-            .to_ascii_lowercase();
-        match ext.as_str() {
-            "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" => {
-                let image = match decoded.get(&asset.path) {
-                    Some(image) => image.clone(),
-                    None => Arc::new(image::load_from_memory(&package.read_file(&asset.path)?)?.into_rgba8()),
-                };
-                decoded.insert(asset.path.clone(), image.clone());
-                let total: u64 =
-                    decoded.values().map(|i| u64::from(i.width()) * u64::from(i.height()) * 4).sum();
-                anyhow::ensure!(total <= 512 << 20, "the images of the scene are too large once decoded");
-                assets.images.insert(id.clone(), image);
-            }
-            "ttf" | "otf" => drop(assets.fonts.insert(id.clone(), Arc::new(package.read_file(&asset.path)?))),
-            _ => {}
-        }
-    }
-    assets.luts.extend(package.luts(&scene)?);
+    let assets = SceneAssets::read(&scene, |path| package.read_file(path).map_err(|e| e.to_string()))
+        .map_err(anyhow::Error::msg)?;
     let values = effective(&package.manifest.properties, &[]);
     Ok((scene, values, assets))
 }
@@ -99,6 +74,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         ((size.0 as f32 * scale).round().max(1.0) as u32, (size.1 as f32 * scale).round().max(1.0) as u32);
     let cost = scene.cost(quality);
     let mut runtime = Runtime::new(Arc::new(scene), values);
+    assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
     let mut view = r.scene_view(&runtime.scene, &assets, runtime.props())?;
     view.profile_particles(true);
     let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);

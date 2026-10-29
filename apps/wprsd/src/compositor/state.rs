@@ -194,6 +194,7 @@ impl State {
         let scene = match &content {
             Content::Scene(s) => {
                 let mut scene = SceneState::new(s.clone(), self.power);
+                scene.calm(self.motion.calm);
                 resume.into_iter().for_each(|time| scene.resume(time));
                 Some(scene)
             }

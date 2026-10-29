@@ -27,7 +27,7 @@ object Native {
 
     external fun detach(engine: Long)
 
-    external fun power(charging: Boolean, saver: Boolean, low: Boolean, thermal: Int, headroom: Float)
+    external fun power(charging: Boolean, saver: Boolean, low: Boolean, thermal: Int, headroom: Float, still: Boolean)
 
     external fun moving(): Boolean
 

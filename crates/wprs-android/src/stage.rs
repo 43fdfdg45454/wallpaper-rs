@@ -10,7 +10,7 @@ use wprs_scene::{Budget, Content, Quality, Runtime, Tier, Wake};
 const SLACK_NS: i64 = 2_000_000;
 const LISTEN_MS: i64 = 250;
 const QUIET_MS: i64 = 2_000;
-const MAX_STEP: f64 = 0.25;
+const MAX_GAP: f64 = 600.0;
 const DAY_MS: f64 = 86_400_000.0;
 
 static LEVEL: AtomicU32 = AtomicU32::new(0);
@@ -42,15 +42,18 @@ pub(crate) fn level() -> Option<[String; 2]> {
     Some([format!("T{}", level / 4), format!("Q{}", level % 4)])
 }
 
-fn wall() -> f64 {
+pub(crate) fn wall() -> f64 {
     let now = chrono::Local::now();
-    f64::from(now.num_seconds_from_midnight()) + f64::from(now.nanosecond() % 1_000_000_000) / 1e9
+    now.naive_local().and_utc().timestamp() as f64 + f64::from(now.nanosecond() % 1_000_000_000) / 1e9
 }
 
 impl Stage {
     pub(crate) fn new(uid: String, pack: Arc<Pack>) -> Stage {
         let mut runtime = Runtime::new(Arc::clone(&pack.scene), props::values(&pack));
         pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
+        runtime.set_language(pack.locale.as_deref().unwrap_or_default());
+        runtime.set_listeners(false, false);
+        pack.assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
         let granted = props::granted(&pack.id);
         let (view, quality, tick, due, touch) = (None, Quality::Q3, None, None, (None, 0, false));
         Stage {
@@ -122,8 +125,7 @@ impl Stage {
             self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
         }
         let still = cap == 0 || self.heavy;
-        let dt =
-            self.tick.filter(|_| !still).map_or(0.0, |t| ((nanos - t) as f64 / 1e9).clamp(0.0, MAX_STEP));
+        let dt = self.tick.filter(|_| !still).map_or(0.0, |t| ((nanos - t) as f64 / 1e9).clamp(0.0, MAX_GAP));
         self.tick = (!still).then_some(nanos);
         self.runtime.advance(dt);
         let [listens, feels] = self.wants();
@@ -137,12 +139,22 @@ impl Stage {
         let heard = hears && self.runtime.set_audio(hearing::frame());
         let pointer = self.runtime.pointer().follow(self.touch.0, self.touch.1, dt as f32);
         let felt = feels && self.runtime.set_pointer(pointer);
+        let calmed = self.runtime.set_reduced_motion(power.still);
+        let tipped = self.runtime.set_tilt(crate::tilt::goal(0.5, std::time::Instant::now()));
         self.runtime.set_wall(wall());
         let quality = budget.quality(&self.runtime).min(power.ceiling());
         LEVEL.store(1 + tier as u32 * 4 + quality as u32, Relaxed);
         let fps = if still { 0 } else { budget.fps(&self.runtime, quality, 0) };
         let due = self.due.is_some_and(|due| nanos >= due - SLACK_NS) || std::mem::take(&mut self.touch.2);
-        if !(force || due || heard || felt || quality != self.quality || self.view.is_none()) {
+        if !(force
+            || due
+            || heard
+            || felt
+            || tipped
+            || calmed
+            || quality != self.quality
+            || self.view.is_none())
+        {
             let left = self.due.map(|due| ((due - nanos) / 1_000_000).max(1));
             let delay = left.unwrap_or(idle);
             return Ok(Shot { image: None, fps: self.fps, delay });

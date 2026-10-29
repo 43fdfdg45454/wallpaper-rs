@@ -1,4 +1,5 @@
 /target
+target-ci/
 /dist
 /integrations/*/contents/locale
 /packaging/flatpak/cargo-sources.json

@@ -84,8 +84,18 @@ impl Script {
         })));
         let context = Context::full(&runtime).map_err(failed)?;
         let empty = (Values::new(), AudioFrame::default(), PointerState::default());
-        let frame =
-            Frame { time: 0.0, dt: 0.0, props: &empty.0, audio: &empty.1, pointer: &empty.2, actions: &[] };
+        let frame = Frame {
+            time: 0.0,
+            dt: 0.0,
+            props: &empty.0,
+            audio: &empty.1,
+            pointer: &empty.2,
+            actions: &[],
+            wall: 0.0,
+            zone: "",
+            timelines: &[],
+            fired: &[],
+        };
         let (frame, labels) = (frame.json(), labels.to_string());
         let random = format!("Math.random = {RANDOM}({})", seed as u32 | 1);
         let (state, updates) = clock.run(&context, limits.load, |ctx| {
@@ -94,6 +104,8 @@ impl Script {
             state.set("locale", locale)?;
             state.set("labels", ctx.json_parse(labels)?)?;
             state.set("out", outputs(ctx)?)?;
+            let format = |p: String, s: f64, l: String| wprs_scene::format_time(&p, s, &l, true).0;
+            state.set("format", Function::new(ctx.clone(), format)?)?;
             ctx.globals().set("__wprs", state.clone())?;
             ctx.eval::<(), _>(random)?;
             Module::import(ctx, "wprs")?.finish::<()>()?;
@@ -103,6 +115,10 @@ impl Script {
                 done.finish::<()>()?;
                 let update: Option<Function> = module.get("update")?;
                 updates.extend(update.map(|f| (path.clone(), Persistent::save(ctx, f))));
+                if let Some(heard) = module.get::<_, Option<Function>>("timelineEvent")? {
+                    let listeners: Array = state.get("listeners")?;
+                    listeners.set(listeners.len(), heard)?;
+                }
             }
             Ok((Persistent::save(ctx, state), updates))
         })?;
@@ -117,14 +133,12 @@ impl Script {
         if self.failures >= MAX_FAILURES {
             return Err(Error::Disabled);
         }
-        if self.updates.is_empty() {
-            return Ok(ScriptOutputs::default());
-        }
         let (state, updates) = (self.state.clone(), self.updates.clone());
         let text = self.clock.run(&self.context, self.limits.update, |ctx| {
             let (state, frame, out) = (state.restore(ctx)?, ctx.json_parse(frame)?, outputs(ctx)?);
             state.set("out", out.clone())?;
             state.set("frame", frame.clone())?;
+            state.get::<_, Function>("dispatch")?.call::<_, ()>((frame.clone(),))?;
             let values = Object::new(ctx.clone())?;
             for (path, update) in updates {
                 let value: rquickjs::Value = update.restore(ctx)?.call((frame.clone(),))?;

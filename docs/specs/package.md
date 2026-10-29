@@ -244,29 +244,29 @@ Effects and parameters that the format describes but the engine does not draw ye
 the same once they are drawn, so that older versions keep refusing them.
 
 The fields of `scene.json` that came after the first version name these features (`scene.md` says
-what each field does). They are all refused on both platforms until the engine draws them, except
-`timeline_frames` and `fresh_seed`, which both run, and that the phone, which plays scenes without
-sound and without scripts, plays a scene with `sound2` silently and leaves out `scripts2`,
-`script_layers`, `script_geometry` and `script_storage` with its scripts:
+what each field does). Each one is refused on a platform until its engine draws it, and the table
+says which ones run today; the phone, which plays scenes without sound and without scripts, plays a
+scene with `sound2` silently and leaves out `scripts2`, `script_layers`, `script_geometry` and
+`script_storage` with its scripts:
 
 | Feature | The scene | Desktop | Android |
 |---------|-----------|---------|---------|
 | `blend_modes2` | uses a blend mode after `luminosity` (`linear_burn` … `negation`) | refused | refused |
-| `layer_color` | sets `brightness` on a layer or `color` on a picture, video, particles or group layer | refused | refused |
-| `parent` | sets `parent` or `inherit` on a layer | refused | refused |
+| `layer_color` | sets `brightness` on a layer or `color` on a picture, video, particles or group layer | runs | runs |
+| `parent` | sets `parent` or `inherit` on a layer | runs | runs |
 | `tilt` | sets `transform.tilt`, `transform.z` or `canvas.perspective` | refused | refused |
-| `mask_strength` | sets `strength` on a mask | refused | refused |
+| `mask_strength` | sets `strength` on a mask | runs | runs |
 | `layer_textures` | feeds a layer into an effect texture with `{ "layer" }` | refused | refused |
 | `video_textures` | uses a video asset as a mask, an effect texture or the picture of a light | refused | refused |
 | `layer_playback` | sets `playback` on a picture or video layer | refused | refused |
-| `texture_options` | sets `filter`, `wrap` or `mipmaps` on an asset | refused | refused |
-| `animated_textures` | sets `frames`, `fps`, `durations`, `rects` or `animated` on an asset | refused | refused |
-| `text_layout` | sets `valign`, `wrap`, `line_height`, `background` or `padding` on a text | refused | refused |
+| `texture_options` | sets `filter`, `wrap` or `mipmaps` on an asset | runs | runs |
+| `animated_textures` | sets `frames`, `fps`, `durations`, `rects` or `animated` on an asset | runs | runs |
+| `text_layout` | sets `valign`, `wrap`, `line_height`, `background` or `padding` on a text | runs | runs |
 | `text_styles` | sets `letter_spacing`, `outline`, `shadow`, `blur` or `render: sdf` on a text | refused | refused |
-| `fonts2` | uses ttc, otc or woff2 fonts, `face` or `fallback` | refused | refused |
-| `sound2` | plays MP3, `sounds` lists, `mode`, `pause`, `stream` or `play_on` | refused | without |
+| `fonts2` | uses ttc, otc or woff2 fonts, `face` or `fallback` | runs | runs |
+| `sound2` | plays MP3, `sounds` lists, `mode`, `pause`, `stream` or `play_on` | runs | without |
 | `camera` | sets `canvas.camera` | refused | refused |
-| `parallax2` | sets `canvas.parallax` or a parallax with two different parts | refused | refused |
+| `parallax2` | sets `canvas.parallax` or a parallax with two different parts | runs | runs |
 | `bloom` | sets `canvas.bloom` | refused | refused |
 | `hdr` | sets `canvas.hdr` or `canvas.tonemap` | refused | refused |
 | `keep_frame` | sets `canvas.clear` to `false` | refused | refused |
@@ -276,15 +276,15 @@ sound and without scripts, plays a scene with `sound2` silently and leaves out `
 | `lighting2d` | sets `lighting` on a layer | refused | refused |
 | `ambient_light` | sets `canvas.ambient` or `canvas.sky` | refused | refused |
 | `capture` | sets `size` or `redraw` on an adjustment layer | refused | refused |
-| `timeline_events` | names `events` of a timeline or triggers on `event:<name>` | refused | refused |
+| `timeline_events` | names `events` of a timeline or triggers on `event:<name>` | runs | runs |
 | `timeline_frames` | gives the length of a timeline in `frames` at `fps` | runs | runs |
-| `timeline_wrap` | sets `wrap` on a looping timeline | refused | refused |
+| `timeline_wrap` | sets `wrap` on a looping timeline | runs | runs |
 | `fresh_seed` | sets `clock.seed` to `null`, a new seed every start | runs | runs |
-| `tangents` | gives keyframes `{ "in", "out" }` handles | refused | refused |
-| `tracks` | animates the parts of a position or a color on their own (`x`, `y`, `r`, `g`, `b`, `a`) | refused | refused |
-| `relative_values` | adds a value to `base` | refused | refused |
-| `clock_values` | follows `{ "clock": "day" }` and the like with a number | refused | refused |
-| `clock_dates` | writes dates with a `date` text | refused | refused |
+| `tangents` | gives keyframes `{ "in", "out" }` handles | runs | runs |
+| `tracks` | animates the parts of a position or a color on their own (`x`, `y`, `r`, `g`, `b`, `a`) | runs | runs |
+| `relative_values` | adds a value to `base` | runs | runs |
+| `clock_values` | follows `{ "clock": "day" }` and the like with a number | runs | runs |
+| `clock_dates` | writes dates with a `date` text | runs | runs |
 | `audio_ranges` | follows a range of bands (`audio: [lo, hi]`, `of`, `reduce`) | refused | refused |
 | `shaping` | sets `bounds`, `exponent` or `smooth: { "up", "down" }` | refused | refused |
 | `audio_response` | sets the scene `audio` block | refused | refused |

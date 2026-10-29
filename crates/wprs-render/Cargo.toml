@@ -11,6 +11,8 @@ wprs-core.workspace = true
 wprs-scene.workspace = true
 ab_glyph.workspace = true
 fontdb.workspace = true
+woff2-patched.workspace = true
+brotli-decompressor.workspace = true
 wgpu.workspace = true
 pollster.workspace = true
 bytemuck.workspace = true
@@ -26,4 +28,5 @@ ash.workspace = true
 rustix.workspace = true
 
 [dev-dependencies]
+brotli.workspace = true
 serde_json.workspace = true

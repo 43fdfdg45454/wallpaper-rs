@@ -10,8 +10,10 @@ use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
 use wprs_format::{Kind, Manifest, Platform, check_path, features, valid_id};
 use wprs_render::SceneAssets;
-use wprs_scene::{Clip, Lut, MAX_LUT_BYTES, MAX_LUT_TOTAL, MAX_SOUND_BYTES, MAX_SOUND_TOTAL, Scene};
-use wprs_video::Bank;
+use wprs_scene::{
+    Clip, Lut, MAX_LUT_BYTES, MAX_LUT_TOTAL, MAX_SOUND_BYTES, MAX_SOUND_TOTAL, MAX_STREAM_BYTES,
+    MAX_STREAM_SECONDS, MAX_STREAM_TOTAL, Scene,
+};
 
 const LIFE: Duration = Duration::from_secs(60);
 const MAX_DOCUMENT: usize = 9 << 20;
@@ -58,11 +60,22 @@ impl Daemon {
             Ok(found)
         };
         let (mut assets, mut videos, mut sounds) = (SceneAssets::default(), Vec::new(), Vec::new());
-        let (mut decoded, mut seconds, mut tables) = (0u64, 0f32, 0u64);
+        let (mut decoded, mut seconds, mut streamed, mut tables) = (0u64, 0f32, 0f32, 0u64);
         for (id, asset) in &scene.assets {
             let (path, ext) = (file(&asset.path)?, kind(&asset.path));
             let size = std::fs::metadata(&path)?.len();
             match ext.as_str() {
+                "gif" | "webp" if asset.animated => {
+                    let (atlas, durations) = wprs_render::animation(&std::fs::read(&path)?)
+                        .map_err(|e| invalid(format!("{} {e}", asset.path)))?;
+                    decoded += u64::from(atlas.width()) * u64::from(atlas.height()) * 4;
+                    ensure!(
+                        decoded <= DECODED,
+                        invalid("the images of the scene are too large once decoded")
+                    );
+                    assets.sheets.insert(id.clone(), durations);
+                    assets.images.insert(id.clone(), Arc::new(atlas));
+                }
                 "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" => {
                     let image = self.load_image(&path, std::fs::metadata(&path)?.modified().ok(), None)?;
                     decoded += u64::from(image.width()) * u64::from(image.height()) * 4;
@@ -72,7 +85,9 @@ impl Daemon {
                     );
                     assets.images.insert(id.clone(), image);
                 }
-                "ttf" | "otf" => drop(assets.fonts.insert(id.clone(), Arc::new(std::fs::read(&path)?))),
+                "ttf" | "otf" | "ttc" | "otc" | "woff2" => {
+                    drop(assets.fonts.insert(id.clone(), Arc::new(std::fs::read(&path)?)))
+                }
                 "webm" | "mp4" | "mkv" => videos.push((id.clone(), Reel::plain(path))),
                 "cube" => {
                     ensure!(size <= MAX_LUT_BYTES as u64, invalid(format!("{} is too large", asset.path)));
@@ -81,12 +96,23 @@ impl Daemon {
                     ensure!(tables <= MAX_LUT_TOTAL as u64, invalid("the color tables are too large"));
                     assets.luts.insert(id.clone(), Arc::new(lut));
                 }
-                _ if scene.sounds().any(|s| s.sound == *id) => {
-                    ensure!(size <= MAX_SOUND_BYTES, invalid(format!("{} is too large", asset.path)));
-                    let clip = Clip::probe(&asset.path, &std::fs::read(&path)?)
-                        .map_err(|e| invalid(format!("{} {e}", asset.path)))?;
-                    seconds += clip.seconds;
-                    ensure!(seconds <= MAX_SOUND_TOTAL, invalid("the sounds of the scene last too long"));
+                _ if scene.sounds().any(|s| s.clips().any(|c| c == id)) => {
+                    let stream = crate::scenes::streamed(&scene, id);
+                    let most = if stream { MAX_STREAM_BYTES } else { MAX_SOUND_BYTES };
+                    ensure!(size <= most, invalid(format!("{} is too large", asset.path)));
+                    let probed = match stream {
+                        true => wprs_video::probe_sound(&path).map_err(|e| e.to_string()),
+                        false => Clip::probe(&asset.path, &std::fs::read(&path)?).map(|c| c.seconds),
+                    };
+                    let length = probed.map_err(|e| invalid(format!("{} {e}", asset.path)))?;
+                    let (total, limit) = if stream {
+                        (&mut streamed, MAX_STREAM_TOTAL as f32)
+                    } else {
+                        (&mut seconds, MAX_SOUND_TOTAL)
+                    };
+                    *total += if stream { size as f32 } else { length };
+                    ensure!(*total <= limit, invalid("the sounds of the scene are too long or too large"));
+                    ensure!(length <= MAX_STREAM_SECONDS, invalid(format!("{} lasts too long", asset.path)));
                     sounds.push((id.clone(), path));
                 }
                 _ => {}
@@ -103,7 +129,7 @@ impl Daemon {
         let (locale, languages) = (m.locale_in(&user), m.languages(&user));
         let properties = scene.properties(&m.properties, &crate::words::volume());
         let labels = wprs_scene::labels(&properties, &languages);
-        let clips = Bank::new(sounds.iter().map(|(_, path)| path.clone()).collect());
+        let (clips, lengths) = crate::scenes::bank(&scene, &sounds);
         let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
         let (path, presets) = (dir.clone(), m.presets);
         let props = Props { path, id, version, title, kind: "scene", languages, properties, presets };
@@ -121,6 +147,7 @@ impl Daemon {
             videos,
             sounds,
             clips,
+            lengths,
             scripts,
             labels,
             inputs,

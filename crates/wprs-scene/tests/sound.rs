@@ -84,7 +84,7 @@ fn timelines_and_properties_start_and_stop_sounds() {
     assert_eq!((voices[0].volume, voices[0].pan, wake), (1.0, 0.0, Wake::Frame));
     let toggled = scene(json!([{ "id": "s", "type": "sound", "sound": "wind", "play": { "prop": "soft" } }]));
     let mut runtime = Runtime::new(Arc::new(toggled), effective(&props(), &[]));
-    assert_eq!(runtime.voices(), (vec![Voice { play: true, volume: 1.0, pan: 0.0 }], Wake::Idle));
+    assert_eq!(runtime.voices(), (vec![Voice { play: true, volume: 1.0, pan: 0.0, at: 0.0 }], Wake::Idle));
     runtime.set_props(effective(&props(), &[&BTreeMap::from([("soft".into(), json!(false))])]));
     assert!(!runtime.voices().0[0].play);
     assert_eq!(runtime.frame([0.0, 0.0, 100.0, 50.0], Quality::Q3).draws.len(), 0);

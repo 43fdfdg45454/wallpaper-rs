@@ -1,6 +1,8 @@
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
-use wprs_scene::{AudioFrame, LayerOverride, PointerState, ScriptOutputs, TimelineCommand};
+use wprs_scene::{
+    AudioFrame, Course, Fired, LayerOverride, PointerState, ScriptOutputs, TimelineCommand, Values,
+};
 use wprs_script::{Error, Frame, Limits, Script};
 
 fn update(script: &mut Script, time: f64) -> Result<ScriptOutputs, Error> {
@@ -8,7 +10,18 @@ fn update(script: &mut Script, time: f64) -> Result<ScriptOutputs, Error> {
     let audio = AudioFrame { bass: 0.25, beat: true, ..AudioFrame::default() };
     let pointer =
         PointerState { pos: Some([0.25, 0.75]), buttons: 1, inside: true, ..PointerState::default() };
-    script.update(&Frame { time, dt: 0.016, props: &props, audio: &audio, pointer: &pointer, actions: &[] })
+    script.update(&Frame {
+        time,
+        dt: 0.016,
+        props: &props,
+        audio: &audio,
+        pointer: &pointer,
+        actions: &[],
+        wall: 0.0,
+        zone: "",
+        timelines: &[],
+        fired: &[],
+    })
 }
 
 fn sources(source: &str) -> Vec<(String, String)> {
@@ -66,8 +79,18 @@ fn scripts_read_labels_colors_and_presses() {
     let mut script = Script::load(&sources(source), 1, ("en", &labels), Limits::default()).unwrap();
     let props = [("mood".to_string(), json!(2)), ("tint".into(), json!("#ff000080"))].into();
     let (audio, pointer, actions) = (AudioFrame::default(), PointerState::default(), ["again".to_string()]);
-    let frame =
-        Frame { time: 0.0, dt: 0.0, props: &props, audio: &audio, pointer: &pointer, actions: &actions };
+    let frame = Frame {
+        time: 0.0,
+        dt: 0.0,
+        props: &props,
+        audio: &audio,
+        pointer: &pointer,
+        actions: &actions,
+        wall: 0.0,
+        zone: "",
+        timelines: &[],
+        fired: &[],
+    };
     let out = script.update(&frame).unwrap();
     let text = layer(&out, "sky").text.unwrap();
     assert_eq!(text, format!("Storm 1 {} true undefined", 128.0 / 255.0));
@@ -164,4 +187,41 @@ fn random_numbers_follow_the_seed() {
     };
     assert_eq!(values(1), values(1));
     assert_ne!(values(1), values(2));
+}
+
+#[test]
+fn scripts_steer_timelines_and_hear_their_events() {
+    let source = r#"import { scene, timeline } from "wprs";
+        const intro = timeline("intro");
+        let heard = [];
+        intro.on("ended", (e) => heard.push(`end ${e.timeline}`));
+        export function timelineEvent(e) { heard.push(`${e.name}@${e.t}`); }
+        export function update() {
+            intro.speed = intro.speed * 2;
+            if (!intro.playing) intro.stop();
+            scene.layer("t").text = `${intro.time}/${intro.duration} ${heard.join(",")}`;
+        }"#;
+    let mut script = Script::load(&sources(source), 1, ("en", &json!({})), Limits::default()).unwrap();
+    let (props, audio, pointer) = (Values::new(), AudioFrame::default(), PointerState::default());
+    let course = Course { id: "intro".into(), time: 1.5, duration: 4.0, playing: false, speed: 1.5 };
+    let fired = [
+        Fired { timeline: "intro".into(), name: Some("bell".into()), t: 1.0 },
+        Fired { timeline: "intro".into(), name: None, t: 4.0 },
+    ];
+    let frame = Frame {
+        time: 0.0,
+        dt: 0.0,
+        props: &props,
+        audio: &audio,
+        pointer: &pointer,
+        actions: &[],
+        wall: 0.0,
+        zone: "",
+        timelines: std::slice::from_ref(&course),
+        fired: &fired,
+    };
+    let out = script.update(&frame).unwrap();
+    assert_eq!(layer(&out, "t").text.unwrap(), "1.5/4 bell@1,end intro");
+    let sent = [("intro".to_string(), TimelineCommand::Speed(3.0)), ("intro".into(), TimelineCommand::Stop)];
+    assert_eq!(out.timelines, sent);
 }

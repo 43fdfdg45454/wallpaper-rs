@@ -29,6 +29,7 @@ struct Out {
 @group(0) @binding(0) var<uniform> frame: Frame;
 @group(0) @binding(1) var samp: sampler;
 @group(0) @binding(2) var<uniform> item: Item;
+@group(0) @binding(3) var near: sampler;
 @group(1) @binding(0) var src_tex: texture_2d<f32>;
 @group(1) @binding(1) var mask_tex: texture_2d<f32>;
 @group(1) @binding(2) var back_tex: texture_2d<f32>;
@@ -98,7 +99,7 @@ fn mask_value(in: Out) -> f32 {
         let d = sdf(item.mask_shape.x, at - item.mask_shape.zw * 0.5, item.mask_shape.zw, vec3<f32>(item.mask_shape.y, 0.5, 0.0));
         m = 1.0 - smoothstep(-item.mask_info.z, item.mask_info.z + 1.0, d);
     }
-    return mix(m, 1.0 - m, item.mask_info.y);
+    return mix(mix(m, 1.0 - m, item.mask_info.y), 1.0, item.mask_info.w);
 }
 
 fn lum(c: vec3<f32>) -> f32 {
@@ -181,7 +182,35 @@ fn finish(src: vec4<f32>, in: Out) -> vec4<f32> {
 
 @fragment
 fn fs_texture(in: Out) -> @location(0) vec4<f32> {
-    var t = textureSample(src_tex, samp, item.uv.xy + in.uv * item.uv.zw);
+    return finish(styled(textureSample(src_tex, samp, item.uv.xy + in.uv * item.uv.zw)) * item.color, in);
+}
+
+fn wrapped(u: vec2<f32>) -> vec2<f32> {
+    if item.shape.x > 2.5 {
+        return 1.0 - abs(1.0 - (u - 2.0 * floor(u * 0.5)));
+    }
+    if item.shape.x > 1.5 {
+        return fract(u);
+    }
+    return clamp(u, vec2<f32>(0.0), vec2<f32>(1.0));
+}
+
+@fragment
+fn fs_picture(in: Out) -> @location(0) vec4<f32> {
+    let tiles = in.uv * item.shape.zw;
+    let room = 0.5 / max(vec2<f32>(textureDimensions(src_tex)) * item.uv.zw, vec2<f32>(1.0));
+    let at = item.uv.xy + clamp(wrapped(tiles), room, 1.0 - room) * item.uv.zw;
+    let dx = dpdx(tiles * item.uv.zw);
+    let dy = dpdy(tiles * item.uv.zw);
+    var t = textureSampleGrad(src_tex, samp, at, dx, dy);
+    if item.shape.y > 0.5 {
+        t = textureSampleGrad(src_tex, near, at, dx, dy);
+    }
+    return finish(styled(t) * item.color, in);
+}
+
+fn styled(sampled: vec4<f32>) -> vec4<f32> {
+    var t = sampled;
     if item.mode.y > 0.5 {
         t = vec4<f32>(decode(t.rgb), t.a);
     }
@@ -191,7 +220,7 @@ fn fs_texture(in: Out) -> @location(0) vec4<f32> {
     if item.size.z > 0.5 {
         t = vec4<f32>(t.rgb * t.a, t.a);
     }
-    return finish(t * item.color, in);
+    return t;
 }
 
 @fragment

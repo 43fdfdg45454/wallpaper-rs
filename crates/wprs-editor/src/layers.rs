@@ -70,8 +70,8 @@ pub fn asset_kind(path: &str) -> &'static str {
     match ext.as_str() {
         "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" => "image",
         "webm" | "mp4" | "mkv" => "video",
-        "ogg" | "opus" | "flac" | "wav" => "sound",
-        "ttf" | "otf" => "font",
+        "ogg" | "opus" | "flac" | "wav" | "mp3" => "sound",
+        "ttf" | "otf" | "ttc" | "otc" | "woff2" => "font",
         "cube" => "lut",
         _ => "other",
     }
