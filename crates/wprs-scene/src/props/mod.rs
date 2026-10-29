@@ -49,6 +49,8 @@ pub struct Property {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-ref" = "icon"))]
     pub icon: Option<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub quality: BTreeMap<crate::Quality, Json>,
     #[serde(flatten)]
     pub control: Control,
 }
@@ -106,7 +108,16 @@ pub enum Control {
         #[serde(default = "minute")]
         #[schemars(extend("x-unit" = "s", "x-range" = [10, 86400]))]
         every: u32,
+        #[serde(default, skip_serializing_if = "is_one")]
+        mode: Mode,
+        #[serde(default = "thousand", skip_serializing_if = "is_thousand")]
+        #[schemars(extend("x-range" = [1, 1000]))]
+        max_files: u32,
+        #[serde(default, skip_serializing_if = "is_zero_depth")]
+        #[schemars(extend("x-range" = [0, 2]))]
+        recursive: u8,
     },
+    Shortcut {},
     Button {},
     Group {
         #[serde(default, skip_serializing_if = "Not::not")]
@@ -114,6 +125,14 @@ pub enum Control {
     },
     Label {},
     Divider {},
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode {
+    #[default]
+    One,
+    All,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
@@ -163,4 +182,20 @@ fn is_zero(v: &f64) -> bool {
 
 fn minute() -> u32 {
     60
+}
+
+fn thousand() -> u32 {
+    1000
+}
+
+fn is_thousand(v: &u32) -> bool {
+    *v == 1000
+}
+
+fn is_one(m: &Mode) -> bool {
+    *m == Mode::One
+}
+
+fn is_zero_depth(v: &u8) -> bool {
+    *v == 0
 }

@@ -13,7 +13,9 @@ type Tables = HashMap<String, HashMap<String, String>>;
 
 fn tables() -> Tables {
     let mut out = Tables::new();
-    for (file, text) in qml_files().into_iter().filter(|(n, _)| n.ends_with("Words.qml") || n == "Labels.qml")
+    let more = ["Labels.qml", "SceneValues.qml", "SceneEffects.qml"];
+    for (file, text) in
+        qml_files().into_iter().filter(|(n, _)| n.ends_with("Words.qml") || more.contains(&n.as_str()))
     {
         for block in text.split("readonly property var ").skip(1) {
             let Some((name, body)) = block.split_once(": ({").filter(|(n, _)| !n.contains(' ')) else {
@@ -71,7 +73,9 @@ fn menus(words: &Words) -> Vec<(String, Option<String>)> {
     }
     let types = branches(&PROPERTY).iter().filter_map(|b| b.pointer("/properties/type/const")?.as_str());
     out.extend(types.map(|t| (t.into(), words.label(t, ""))));
-    out.extend(wprs_format::features::REGISTRY.map(|(f, _)| (f.into(), words.get("L.features", f))));
+    out.extend(
+        wprs_format::features::REGISTRY.iter().map(|(f, _, _)| ((*f).into(), words.get("L.features", f))),
+    );
     out
 }
 
@@ -117,11 +121,18 @@ fn explore(doc: &Value, pointer: &str, seen: &mut BTreeSet<String>, shown: &mut 
             ("group" | "list", true) => vec![field.value.clone()],
             _ => Vec::new(),
         };
-        let bound = (field.bindable && seen.insert("bound".into())).then(|| json!({"audio": "bass"}));
+        let bound = (field.bindable && !seen.contains("bound")).then(|| json!({"audio": "bass"}));
         for value in samples.into_iter().chain(bound).filter(|v| !v.is_null()) {
             let mut copy = doc.clone();
             if apply(&mut copy, &set(doc, &field.pointer, value.clone())).is_ok() {
+                let before = shown.len();
                 explore(&copy, &field.pointer, seen, shown);
+                let inner = format!("{}/", field.pointer);
+                if value.get("audio").is_some()
+                    && shown[before..].iter().any(|f| f.pointer.starts_with(&inner))
+                {
+                    seen.insert("bound".into());
+                }
                 let items = value.as_array().map_or(0, Vec::len);
                 (0..items).for_each(|i| explore(&copy, &format!("{}/{i}", field.pointer), seen, shown));
             }

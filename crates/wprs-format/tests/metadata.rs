@@ -34,10 +34,11 @@ fn a_full_manifest_roundtrips() {
         license: "CC0-1.0".into(),
         attribution: "Jo Doe".into(),
         url: Some("https://example.org/jo".into()),
+        source: None,
     }];
     full.links = Some(Links { homepage: Some("https://example.org".into()), ..Links::default() });
     full.inputs = vec![Input::Audio, Input::Network];
-    full.requires = Some(Requires { engine: None, features: vec!["inputs.audio".into()] });
+    full.requires = Some(Requires { features: vec!["inputs.audio".into()], ..Default::default() });
     full.check().unwrap();
     assert_eq!(Manifest::from_json(full.to_json().unwrap().as_bytes()).unwrap(), full);
 }
@@ -69,6 +70,7 @@ fn origin_credits_and_links_are_checked() {
         license: license.into(),
         attribution: "Jo".into(),
         url: None,
+        source: None,
     };
     assert_eq!(field(with(|m| m.credits = vec![credit("not spdx!")])), "credits");
     for url in ["http://example.org", "https://", "https://a b.org", "ftp://example.org"] {
@@ -86,6 +88,7 @@ fn plain_texts_cannot_carry_markup() {
         license: "CC0-1.0".into(),
         attribution: image.into(),
         url: None,
+        source: None,
     };
     assert_eq!(field(with(|m| m.credits = vec![credit])), "credits");
     let derived = |a: Ancestor| {

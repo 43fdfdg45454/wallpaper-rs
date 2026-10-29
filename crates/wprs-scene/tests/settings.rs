@@ -147,7 +147,7 @@ fn features_name_what_older_versions_cannot_read() {
     let used = |id: &str| props[id].features();
     assert_eq!(
         (used("speed"), used("photos"), used("photo")),
-        (vec!["properties2"], vec!["folder"], vec!["properties2", "user_videos"])
+        (vec!["properties2"], vec!["properties2", "folder"], vec!["properties2", "user_videos"])
     );
     let plain: BTreeMap<String, Property> = serde_json::from_str(include_str!("props.json")).unwrap();
     assert!(plain.values().all(|p| p.features().is_empty()));

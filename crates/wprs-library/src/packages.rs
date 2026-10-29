@@ -6,7 +6,8 @@ use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
-use wprs_format::{Limits, Manifest, Text};
+use wprs_format::features::playable;
+use wprs_format::{Limits, Manifest, Platform, Text};
 
 #[derive(Serialize, Deserialize)]
 struct Titles {
@@ -18,8 +19,12 @@ pub(crate) fn package(db: &Connection, id: i64, kind: Kind, path: &Path) -> Resu
     if kind != Kind::Package {
         return Ok(None);
     }
-    let (manifest, facets, error) = match wprs_format::open(path, &Limits::default()) {
-        Ok(package) => (Some(package.manifest), Some(package.facts.facets.join(" ")), None),
+    let read = wprs_format::open(path, &Limits::default()).and_then(|mut p| p.look_at_videos().map(|()| p));
+    let (manifest, facets, error) = match read {
+        Ok(package) => {
+            let refused = playable(&package.manifest, &package.facts, Platform::here()).err();
+            (Some(package.manifest), Some(package.facts.facets.join(" ")), refused.map(|e| e.to_string()))
+        }
         Err(e) => (None, None, Some(e.to_string())),
     };
     let m = manifest.as_ref();

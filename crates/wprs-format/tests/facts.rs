@@ -10,8 +10,8 @@ use std::fs;
 use std::io::Cursor;
 use std::path::Path;
 use wprs_format::{
-    Content, Error, Input, Kind, Limits, Manifest, Origin, OriginKind, Previews, Rating, build, features,
-    fill, media, open, read, rename_json, upgrade, upgrade_json,
+    Content, Error, Input, Kind, Limits, Manifest, Origin, Previews, Rating, build, features, fill, media,
+    open, read, rename_json, upgrade, upgrade_json,
 };
 
 const SCENE: &str = r##"{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [3840, 1600]},
@@ -79,9 +79,10 @@ fn build_fills_required_features_and_checks_inputs() {
     build(&src, &out, &Limits::default()).unwrap();
     let package = open(&out, &Limits::default()).unwrap();
     assert_eq!(package.manifest.features(), ["inputs.audio", "inputs.media"]);
-    let facets = ["1440p", "android", "animated", "audio", "landscape", "media", "ultrawide"];
+    let facets = ["1440p", "android", "animated", "audio", "desktop", "landscape", "ultrawide"];
     assert_eq!(package.facts.facets, facets);
-    assert!(features::warnings(&package.manifest, &package.facts).is_empty());
+    let unused = ["inputs declares media but nothing in the package uses it"];
+    assert_eq!(features::warnings(&package.manifest, &package.facts), unused);
     fs::write(src.join("manifest.json.minisig"), "stale").unwrap();
     source(&src, &manifest);
     assert!(matches!(fill(&src), Err(Error::Invalid { field, .. }) if field == "requires.features"));
@@ -94,23 +95,23 @@ fn readers_check_features_and_previews() {
     let load = |m: &Manifest, preview: &[u8]| {
         read(Cursor::new(package(m, &[("preview.png", preview)])), &Limits::default())
     };
-    assert_eq!(load(&manifest, &png).unwrap().facts.facets, ["android"]);
+    assert_eq!(load(&manifest, &png).unwrap().facts.facets, ["android", "desktop"]);
     let listed = ["inputs.audio", "inputs.network", "inputs.pointer"].map(String::from).to_vec();
-    let requires = Some(wprs_format::Requires { engine: None, features: listed });
+    let requires = Some(wprs_format::Requires { features: listed, ..Default::default() });
     let inputs = vec![Input::Audio, Input::Pointer, Input::Network];
     let claims = Manifest { inputs, requires, ..manifest.clone() };
     let claimed = load(&claims, &png).unwrap();
-    assert_eq!(claimed.facts.facets, ["android", "network"]);
-    assert_eq!(features::warnings(&claimed.manifest, &claimed.facts).len(), 2);
+    assert_eq!(claimed.facts.facets, ["android", "desktop"]);
+    assert_eq!(features::warnings(&claimed.manifest, &claimed.facts).len(), 3);
     let json = manifest.to_json().unwrap();
     let files = archive(&[
         ("manifest.json", json.as_bytes()),
         ("image.png", &image(1080, 1920, ImageFormat::Png)),
         ("preview.png", &png),
     ]);
-    let facets = ["1080p", "android", "portrait"];
+    let facets = ["1080p", "android", "desktop", "portrait"];
     assert_eq!(read(Cursor::new(files), &Limits::default()).unwrap().facts.facets, facets);
-    manifest.requires = Some(wprs_format::Requires { engine: None, features: vec!["sound".into()] });
+    manifest.requires = Some(wprs_format::Requires { features: vec!["sound".into()], ..Default::default() });
     let found = load(&manifest, &png).unwrap();
     assert_eq!(features::warnings(&found.manifest, &found.facts).len(), 1);
     for preview in
@@ -137,7 +138,7 @@ fn upgrade_converts_a_version_one_source() {
     source(&src, &Manifest { preview: Some("preview.png".into()), ..v1(Kind::Scene) });
     fs::write(src.join("manifest.json.minisig"), "stale").unwrap();
     let content = Content { rating: Rating::General, descriptors: Vec::new() };
-    let origin = Origin { kind: OriginKind::Original, derived_from: Vec::new() };
+    let origin = Origin::default();
     let (upgraded, _) = upgrade(&src, content.clone(), false, origin.clone()).unwrap();
     assert_eq!(
         (upgraded.inputs.as_slice(), upgraded.features()),
@@ -173,6 +174,12 @@ fn released_example_scenes_upgrade_into_valid_packages() {
         let dir = tmp.path().join(&name);
         copy(&root.join(&name), &dir);
         fs::write(dir.join("manifest.json"), manifest.to_string()).unwrap();
+        let mut scene: Value = serde_json::from_slice(&fs::read(dir.join("scene.json")).unwrap()).unwrap();
+        let known = |layer: &Value| {
+            layer["image"]["prop"].as_str().is_none_or(|p| manifest["properties"].get(p).is_some())
+        };
+        scene["layers"].as_array_mut().unwrap().retain(known);
+        fs::write(dir.join("scene.json"), scene.to_string()).unwrap();
         let content = Content { rating: Rating::General, descriptors: Vec::new() };
         let (upgraded, renames) = upgrade(&dir, content, false, Origin::by(&[])).unwrap();
         let localized = manifest.to_string().contains(r#""es":"#);

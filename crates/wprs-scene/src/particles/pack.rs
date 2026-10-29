@@ -27,11 +27,14 @@ impl Sim {
         for (e, em) in s.emitters.iter().take(MAX_EMITTERS).enumerate() {
             (b.shapes[e], b.emitters[2 * e]) = match em.shape {
                 EmitShape::Point([x, y]) => (0, [x, y, 0.0, 0.0]),
-                EmitShape::Box([p, q]) => (1, [p[0], p[1], q[0], q[1]]),
-                EmitShape::Circle { center: [x, y], radius, inner } => (2, [x, y, radius, inner]),
+                EmitShape::Box(a) => (1, [a.from[0], a.from[1], a.to[0], a.to[1]]),
+                EmitShape::Circle { center: [x, y], ref radius, ref inner, .. } => {
+                    (2, [x, y, radius.0, inner.0])
+                }
                 EmitShape::Line([p, q]) => (3, [p[0], p[1], q[0], q[1]]),
                 EmitShape::Edge => (4, [0.0; 4]),
                 EmitShape::Mask { .. } => (5, [0.0; 4]),
+                EmitShape::Layer(_) | EmitShape::Around(_) | EmitShape::Between(_) => (0, [0.0; 4]),
             };
         }
         let i = &s.init;
@@ -41,15 +44,16 @@ impl Sim {
             [i.rotation[0], i.rotation[1], i.spin[0], i.spin[1]],
             [i.frame[0], i.frame[1], 0.0, 0.0],
         ];
-        b.colors = i.color.map(|c| c.0);
+        b.colors = i.color.ends.map(|c| c.0);
         for (k, c) in s.collide.iter().take(MAX_COLLIDERS).enumerate() {
-            let ([kind, x, y, z], w) = match c.bounds {
+            let ([kind, x, y, z], w) = match &c.bounds {
                 Surface::Canvas => ([1.0, 0.0, 0.0, 0.0], 0.0),
-                Surface::Plane { point: [x, y], normal: [u, v] } => {
+                &Surface::Plane { point: [x, y], normal: [u, v] } => {
                     let l = u.hypot(v).max(1e-6);
                     ([2.0, x, y, u / l], v / l)
                 }
-                Surface::Circle { center: [x, y], radius } => ([3.0, x, y, radius], 0.0),
+                &Surface::Circle { center: [x, y], radius, .. } => ([3.0, x, y, radius], 0.0),
+                Surface::Box { .. } | Surface::Segment { .. } | Surface::Layer { .. } => ([0.0; 4], 0.0),
             };
             b.colliders[2 * k] = [kind, x, y, z];
             b.colliders[2 * k + 1] = [w, c.bounce, c.friction, f32::from(u8::from(c.kill))];

@@ -1,6 +1,6 @@
 use crate::Color;
 use crate::resolve::key;
-use crate::value::{Param, Vec2};
+use crate::value::{Param, Vec2, Vec3};
 use serde_json::Value as Json;
 
 pub trait Animate: Clone + PartialEq + Default {
@@ -73,6 +73,18 @@ impl Animate for Vec2 {
     }
     fn with_comps(&self, c: [f32; 4]) -> Vec2 {
         Vec2([c[0], c[1]])
+    }
+}
+
+impl Animate for Vec3 {
+    fn lerp(&self, to: &Vec3, f: f32) -> Vec3 {
+        Vec3(std::array::from_fn(|i| self.0[i].lerp(&to.0[i], f)))
+    }
+    fn from_json(v: &Json) -> Option<Vec3> {
+        serde_json::from_value(v.clone()).ok()
+    }
+    fn from_signal(x: f32) -> Option<Vec3> {
+        Some(Vec3([x; 3]))
     }
 }
 

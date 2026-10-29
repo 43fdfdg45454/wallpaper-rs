@@ -10,6 +10,8 @@ use std::path::Path;
 use wprs_library::Kind;
 use wprs_sync::{Doc, Hlc, Kept, Replica, Secrets, SyncKey, View};
 
+mod refused;
+
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures");
 
 fn ask(request: Value) -> Value {
@@ -115,6 +117,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     relief(&green);
     records();
     scenes();
+    refused::packages_the_phone_cannot_play_are_refused();
     unreadable();
 }
 
@@ -444,7 +447,7 @@ fn scenes() {
     };
     assert_eq!(
         [lacks("Orbits"), lacks("Snowfall"), lacks("Pulse")],
-        [json!(["scripts"]), json!(["sound"]), json!([])]
+        [json!(["scripts", "user_videos"]), json!(["folder", "sound"]), json!([])]
     );
     assert!(
         about["about"]["description"].as_str().unwrap().contains("\n\nDestella con el ritmo y"),

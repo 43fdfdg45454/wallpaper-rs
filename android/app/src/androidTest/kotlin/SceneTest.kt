@@ -140,6 +140,43 @@ class SceneTest {
         assertEquals(listOf("folder"), Item(ask("item", "uid" to uid) as JSONObject).lacks)
     }
 
+    @Test
+    fun pagesTheEngineCannotDrawAreRefused() {
+        val dir = File(storage(), "pages/page").apply { mkdirs() }
+        File(dir, "index.html").writeText("<!doctype html><title>Page</title>")
+        File(dir, "manifest.json").writeText(PAGE_MANIFEST)
+        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
+        assertTrue(reply.getString("error").contains("needs a newer version of wallpaper-rs: it uses the feature web"))
+    }
+
+    @Test
+    fun scenesWithLightsAreRefusedUntilTheEngineDrawsThem() {
+        val dir = File(storage(), "lamps/lamp").apply { mkdirs() }
+        File(dir, "scene.json").writeText(LAMP_SCENE)
+        File(dir, "manifest.json").writeText(LAMP_MANIFEST)
+        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
+        assertTrue(reply.getString("error").contains("it uses the feature lights (lights its layers)"))
+    }
+
+    @Test
+    fun scenesWithModelsAreRefusedUntilTheEngineDrawsThem() {
+        val dir = File(storage(), "stages/stage").apply { mkdirs() }
+        File(dir, "scene.json").writeText(STAGE_SCENE)
+        File(dir, "manifest.json").writeText(STAGE_MANIFEST)
+        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
+        assertTrue(reply.getString("error").contains("camera3d (moves a 3D camera) and model3d (shows 3D models)"))
+    }
+
+    @Test
+    fun scenesWithEffectsTheEngineDoesNotDrawAreRefused() {
+        val dir = File(storage(), "shafts/shafts").apply { mkdirs() }
+        File(dir, "scene.json").writeText(SHAFTS_SCENE)
+        File(dir, "manifest.json").writeText(SHAFTS_MANIFEST)
+        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
+        val named = "effect.blur.blend (sets blend on the blur effect) and effect.light_shafts (uses the light_shafts effect)"
+        assertTrue(reply.getString("error").contains(named))
+    }
+
     private fun find(title: String): String {
         val query = JSONObject().put("op", "items").put("query", "kind:scene")
         val items = JSONArray(Native.library(query.toString()))
@@ -174,6 +211,26 @@ class SceneTest {
             "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["folder", "properties2"] },
             "properties": { "mood": { "type": "combo", "default": 1, "options": [1, 2] }, "again": { "type": "button" },
                             "token": { "type": "text", "secret": true }, "photos": { "type": "folder" } } }"""
+        const val PAGE_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.page", "version": "1.0.0",
+            "title": "Page", "license": "CC0-1.0", "kind": "web", "entry": "index.html", "origin": { "kind": "original" },
+            "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["web"] } }"""
+        const val LAMP_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
+            "layers": [{ "id": "lamp", "type": "light", "light": "spot", "cone": [10, 30] }] }"""
+        const val LAMP_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.lamp", "version": "1.0.0",
+            "title": "Lamp", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+            "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["lights"] } }"""
+        const val STAGE_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] }, "camera3d": { "fov": 50 },
+            "layers": [{ "id": "stage", "type": "group", "space": "3d", "layers": [] }] }"""
+        const val STAGE_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.stage", "version": "1.0.0",
+            "title": "Stage", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+            "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["camera3d", "model3d"] } }"""
+        const val SHAFTS_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
+            "layers": [{ "id": "fill", "type": "solid", "color": "#ffffff",
+                         "effects": [{ "effect": "light_shafts" }, { "effect": "blur", "params": { "blend": "screen" } }] }] }"""
+        const val SHAFTS_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.shafts", "version": "1.0.0",
+            "title": "Shafts", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+            "content": { "rating": "general" }, "photosensitive": false,
+            "requires": { "features": ["effect.blur.blend", "effect.light_shafts"] } }"""
         const val FLASH_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
             "layers": [{ "id": "fill", "type": "solid", "color": "#ffffff" }] }"""
         const val FLASH_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.flash", "version": "1.0.0",

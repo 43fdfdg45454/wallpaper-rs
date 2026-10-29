@@ -83,10 +83,21 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                         "folder" -> R.string.lacks_folder
                         "user_videos" -> R.string.lacks_user_videos
                         "video_properties" -> R.string.lacks_video_properties
+                        "gpu" -> R.string.lacks_gpu
+                        "display2" -> R.string.lacks_display2
+                        "accent" -> R.string.lacks_accent
+                        "folder2" -> R.string.lacks_folder2
+                        "spanned_scenes" -> R.string.lacks_spanned_scenes
+                        "sound2" -> R.string.lacks_sound2
+                        "scripts2" -> R.string.lacks_scripts2
+                        "script_layers" -> R.string.lacks_script_layers
+                        "script_geometry" -> R.string.lacks_script_geometry
+                        "script_storage" -> R.string.lacks_script_storage
+                        "rgb" -> R.string.lacks_rgb
                         else -> null
                     }
                 }.map { stringResource(it) }
-                Note(notes.joinToString(" "))
+                if (notes.isNotEmpty()) Note(notes.joinToString(" "))
             }
             if (picture) {
                 Framing(main, uid, state)

@@ -2,6 +2,41 @@ use crate::{Manifest, Text};
 use std::collections::{BTreeMap, BTreeSet};
 use wprs_scene::{Choice, Control, tag};
 
+pub const LOCALE: &str = "locale/";
+pub const MAX_LOCALE_FILE: u64 = 512 << 10;
+pub(crate) const MAX_STRINGS: usize = 512 << 10;
+pub(crate) const LANGUAGES: &str =
+    "at most 64 languages named like en or pt-BR, each in strings or in locale/<language>.json";
+pub(crate) const KEYS: &str = "at most 2048 keys of [A-Za-z0-9_.-] per language, 512 KiB";
+const UNREAD: &str = "stays an ordinary file; list locale_files in requires.features to read its texts";
+pub(crate) const ENGINE_KEYS: &str = "keys that start with wprs. name texts of the engine";
+
+pub const ENGINE: [(&str, &str, &str); 10] = [
+    ("accent_color", "Accent color", "Color de acento"),
+    ("background_color", "Background color", "Color de fondo"),
+    ("brightness", "Brightness", "Brillo"),
+    ("color", "Color", "Color"),
+    ("density", "Density", "Densidad"),
+    ("opacity", "Opacity", "Opacidad"),
+    ("quality", "Quality", "Calidad"),
+    ("size", "Size", "Tamaño"),
+    ("speed", "Speed", "Velocidad"),
+    ("volume", "Volume", "Volumen"),
+];
+
+pub fn engine(key: &str) -> Option<Text> {
+    let (_, en, es) = ENGINE.iter().find(|(k, ..)| key.strip_prefix("wprs.") == Some(*k))?;
+    Some(Text::Localized(BTreeMap::from([("en".into(), en.to_string()), ("es".into(), es.to_string())])))
+}
+
+fn language(path: &str) -> &str {
+    path.strip_prefix(LOCALE).and_then(|n| n.strip_suffix(".json")).unwrap_or_default()
+}
+
+pub fn locale_file(path: &str) -> bool {
+    path.strip_prefix(LOCALE).is_some_and(|n| n.ends_with(".json") && !n.contains('/'))
+}
+
 impl Manifest {
     pub fn key<'a>(&self, text: &'a Text) -> Option<&'a str> {
         match text {
@@ -12,9 +47,53 @@ impl Manifest {
 
     pub fn resolve(&self, text: &Text) -> Text {
         let Some(key) = self.key(text) else { return text.clone() };
-        let found =
-            self.strings.iter().filter_map(|(lang, table)| Some((lang.clone(), table.get(key)?.clone())));
+        if let Some(found) = engine(key) {
+            return found;
+        }
+        let tables = self.strings.iter().chain(&self.string_files);
+        let found = tables.filter_map(|(lang, table)| Some((lang.clone(), table.get(key)?.clone())));
         Text::Localized(found.collect())
+    }
+
+    pub fn table(&self, language: &str) -> Option<&BTreeMap<String, String>> {
+        let mut tables = self.strings.iter().chain(&self.string_files);
+        tables.find(|(l, _)| tag(l) == tag(language)).map(|(_, t)| t)
+    }
+
+    fn reads_files(&self) -> bool {
+        self.v2() && self.features().iter().any(|f| f == "locale_files")
+    }
+
+    pub fn read_strings(
+        &mut self,
+        names: impl IntoIterator<Item = String>,
+        mut read: impl FnMut(&str) -> crate::Result<Vec<u8>>,
+    ) -> crate::Result<()> {
+        if !self.reads_files() {
+            return Ok(());
+        }
+        let mut names: Vec<String> = names.into_iter().filter(|n| locale_file(n)).collect();
+        names.sort();
+        crate::require(names.len() + self.strings.len() <= 64, "strings", LANGUAGES)?;
+        let mut total = size(self.strings.values());
+        for name in names {
+            let language = language(&name).to_owned();
+            let field = format!("{LOCALE}{language}.json");
+            let table = serde_json::from_slice::<BTreeMap<String, String>>(&read(&name)?)
+                .map_err(|e| crate::Error::Invalid { field: field.clone(), reason: e.to_string() })?;
+            let known = valid_tag(&language) && !self.string_files.contains_key(&language);
+            crate::require(known, &field, "expected one file per language named like locale/pt-BR.json")?;
+            total += size([&table]);
+            crate::require(total <= MAX_STRINGS, "strings", KEYS)?;
+            self.string_files.insert(language, table);
+        }
+        Ok(())
+    }
+
+    pub fn unread_texts(&self, names: impl IntoIterator<Item = String>) -> Vec<String> {
+        let skipped = self.v2() && !self.reads_files();
+        let named = names.into_iter().filter(|n| skipped && locale_file(n) && valid_tag(language(n)));
+        named.map(|n| format!("{n} {UNREAD}")).collect()
     }
 
     pub fn languages(&self, user: &[String]) -> Vec<String> {
@@ -35,7 +114,8 @@ impl Manifest {
     }
 
     pub fn locales(&self) -> BTreeSet<String> {
-        let mut found: BTreeSet<String> = self.strings.keys().map(|l| tag(l)).collect();
+        let names = self.strings.keys().chain(self.string_files.keys());
+        let mut found: BTreeSet<String> = names.map(|l| tag(l)).collect();
         for text in self.texts().into_iter().map(|(_, t)| t) {
             if let Text::Localized(map) = text {
                 found.extend(map.keys().map(|l| tag(l)));
@@ -101,6 +181,10 @@ pub fn valid_tag(name: &str) -> bool {
 
 pub(crate) fn valid_key(key: &str) -> bool {
     (1..=64).contains(&key.len()) && key.bytes().all(|b| b.is_ascii_alphanumeric() || b"_.-".contains(&b))
+}
+
+pub(crate) fn size<'a>(tables: impl IntoIterator<Item = &'a BTreeMap<String, String>>) -> usize {
+    tables.into_iter().flat_map(|t| t.iter()).map(|(k, v)| k.len() + v.len()).sum()
 }
 
 pub(crate) fn has(map: &BTreeMap<String, String>, locale: &str) -> bool {

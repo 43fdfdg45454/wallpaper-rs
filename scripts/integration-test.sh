@@ -377,7 +377,8 @@ cat >"$WORK/storm/manifest.json" <<'STORM'
 {"schema": "wallpaper-rs.wpak/2", "id": "org.example.storm", "version": "1.0.0", "default_locale": "en",
  "title": {"en": "Storm", "es": "Tormenta"}, "description": "Lightning over **the sea**.", "license": "CC0-1.0",
  "kind": "image", "entry": "image.png", "previews": {"thumbnail": "preview.png"}, "origin": {"kind": "original"},
- "content": {"rating": "mature", "descriptors": ["violence"]}, "photosensitive": true}
+ "content": {"rating": "mature", "descriptors": ["violence"]}, "photosensitive": true,
+ "display": {"background": "#ff0000"}}
 STORM
 ctl pack check "$WORK/storm" | grep -q '^rating = mature (violence)$' || fail "pack check: $(ctl pack check "$WORK/storm")"
 ctl pack build "$WORK/storm" -o "$WORK/import/storm.wpak" >/dev/null
@@ -395,7 +396,11 @@ grep -q "photosensitive epilepsy.*lib confirm photosensitive" <(tr '\n' ' ' <"$W
   fail "photosensitivity warning: $(cat "$WORK/flash.err")"
 ctl lib show "$storm" | grep -q '^photosensitive = yes, asks before it is shown$' || fail "lib show: $(ctl lib show "$storm")"
 ctl lib confirm photosensitive "$storm" && ctl lib apply "$storm" -o TEST-7
-expect "s['outputs']['TEST-7']['item']" "$storm"
+expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['background']" "('$storm', '#000000')"
+ctl background '#102030' -o TEST-7 && ctl lib apply "$storm" -o TEST-7
+ctl lib apply "$harbour" -o TEST-7
+expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['background']" "('$harbour', '#102030')"
+ctl lib apply "$storm" -o TEST-7
 mkdir -p "$WORK/flash" && cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/flash/preview.png"
 echo '{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32]}, "layers": [{"id": "fill", "type": "solid", "color": "#ffffff"}]}' >"$WORK/flash/scene.json"
 flash() {
@@ -852,8 +857,11 @@ if ctl prop press flash -o TEST-11 2>/dev/null; then fail "a button was pressed 
 ctl prop set mood 2 -o TEST-11 && shown "$s11" 0 255 0
 ctl prop press flash -o TEST-11 && shown "$s11" 255 255 255
 png "$scene/red.png" ff0000
-ctl prop set photo "$scene/red.png" -o TEST-11 && shown "$s11" 255 0 0
-ctl prop set photo "$ROOT/tests/fixtures/magenta-64x32.webm" -o TEST-11 && shown "$s11" 208 32 96
+(cd "$scene" && ctl prop set photo red.png -o TEST-11) && shown "$s11" 255 0 0
+[ "$(ctl prop get photo -o TEST-11)" = "\"$(realpath "$scene/red.png")\"" ] || fail "a relative path was kept: $(ctl prop ls -o TEST-11)"
+(cd "$ROOT/tests" && ctl prop set photo fixtures/magenta-64x32.webm -o TEST-11) && shown "$s11" 208 32 96
+(cd "$scene" && cp red.png 2024 && ctl prop set photo 2024 -o TEST-11) && shown "$s11" 255 0 0
+(cd "$ROOT/tests" && ctl prop set photo '"fixtures/magenta-64x32.webm"' -o TEST-11) && shown "$s11" 208 32 96
 ctl prop set photo null -o TEST-11 && shown "$s11" 0 255 0
 if printf 'hunter2\n' | ctl prop set key -o TEST-11 2>"$WORK/key.err"; then fail "a secret was stored without a keyring"; fi
 grep -q "no Secret Service is available" "$WORK/key.err" || fail "secret message: $(cat "$WORK/key.err")"
@@ -911,6 +919,21 @@ shown "$s15" 0 255 0
 if ctl scene set "$draft" /scene/canvas/size/0 0 && ctl scene preview "$draft" -o preview:1 2>/dev/null; then
   fail "an invalid scene was previewed"
 fi
+ctl scene undo "$draft"
+ctl scene set "$draft" /scene/layers/0/blend linear_burn
+if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with a newer blend mode was previewed"; fi
+grep -q "blend_modes2" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
+ctl scene undo "$draft"
+ctl scene set "$draft" /scene/layers/0/solid '{"alpha": 0.5}'
+if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with layer events was previewed"; fi
+grep -q "layer_events" <<<"$refused" || fail "the refused preview did not name layer_events: $refused"
+ctl scene undo "$draft"
+ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "light_shafts"}]'
+if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with an effect not drawn yet was previewed"; fi
+grep -q "effect.light_shafts" <<<"$refused" || fail "the refused preview did not name effect.light_shafts: $refused"
+ctl scene undo "$draft"
+ctl scene set "$draft" /scene/clock '{"seed": null}'
+ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a fresh seed was not previewed"
 ctl scene undo "$draft"
 "$BIN/probe" "$s15" 4 --hold >"$WORK/edit-frames.out" 2>&1 & counter=$!; pids+=("$counter")
 sleep 1

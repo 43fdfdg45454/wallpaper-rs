@@ -1,5 +1,5 @@
 use crate::easing::FAMILIES;
-use crate::{Ease, Key, Property, Scene, Text};
+use crate::{Ease, Handles, Key, Property, Scene, Text};
 use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde_json::{Value as Json, json};
 use std::borrow::Cow;
@@ -46,7 +46,8 @@ impl<T: JsonSchema> JsonSchema for Key<T> {
 
     fn json_schema(generator: &mut SchemaGenerator) -> Schema {
         let (value, ease) = (generator.subschema_for::<T>(), generator.subschema_for::<Ease>());
-        let items = json!([{"type": "number", "minimum": 0}, value, ease]);
+        let curve = json!({"anyOf": [ease, generator.subschema_for::<Handles>()]});
+        let items = json!([{"type": "number", "minimum": 0}, value, curve]);
         json_schema!({"type": "array", "prefixItems": items, "minItems": 2, "maxItems": 3, "x-key": true})
     }
 }

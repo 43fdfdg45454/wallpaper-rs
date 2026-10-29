@@ -1,25 +1,31 @@
-use crate::features::{self, Facts, facts};
+use crate::Facts;
+use crate::contents::{binaries, preset_files, sounds};
+use crate::features::{self, facts};
+use crate::locale::{MAX_LOCALE_FILE, locale_file};
 use crate::validate::{extension, within};
 use crate::{
-    Error, FileEntry, Kind, Limits, MANIFEST, Manifest, Result, check_path, ensure, media, validate,
+    Error, FileEntry, Kind, Limits, MANIFEST, Manifest, PresetFile, Result, check_path, ensure, media,
+    validate,
 };
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fs::{self, File, FileType, OpenOptions};
 use std::io::{self, BufReader, Read, Seek, Write};
 use std::path::Path;
 use std::sync::Arc;
-use wprs_scene::{Clip, Lut, MAX_LUT_BYTES, MAX_LUT_TOTAL, MAX_SOUND_BYTES, MAX_SOUND_TOTAL, Scene};
+use wprs_scene::{Lut, MAX_LUT_BYTES, MAX_LUT_TOTAL, Scene};
 use zip::{CompressionMethod, ZipArchive};
 
 const MAX_MANIFEST: u64 = 1 << 20;
 const MAX_SCENE: u64 = 8 << 20;
 const MAX_THUMBNAIL: u64 = 16 << 20;
+const MAX_PRESET: u64 = 256 << 10;
 
 #[derive(Debug)]
 pub struct Package<R> {
     pub manifest: Manifest,
     pub entries: Vec<FileEntry>,
     pub facts: Facts,
+    videos: Vec<String>,
     archive: ZipArchive<R>,
 }
 
@@ -48,17 +54,27 @@ pub fn read<R: Read + Seek>(reader: R, limits: &Limits) -> Result<Package<R>> {
     }
     ensure(entries.iter().any(|e| e.path == MANIFEST), || Error::Missing(MANIFEST.into()))?;
     let raw = raw(&mut archive, MANIFEST, MAX_MANIFEST)?;
-    let manifest = Manifest::from_json(&raw)?;
+    let manifest = strings(&mut archive, Manifest::from_json(&raw)?)?;
     validate(&manifest, &entries, limits)?;
-    let mut package = Package { manifest, entries, facts: Facts::default(), archive };
-    let scene = (package.manifest.kind == Kind::Scene).then(|| package.scene()).transpose()?;
+    let mut package = Package { manifest, entries, facts: Facts::default(), videos: Vec::new(), archive };
+    let scene = matches!(package.manifest.kind, Kind::Scene | Kind::Assets)
+        .then(|| package.scene_text())
+        .transpose()?;
+    let (scene, text) = scene.unzip();
     let size = match package.manifest.kind {
         Kind::Image => package.head(&package.manifest.entry.clone(), 1 << 16)?,
+        Kind::Preset => package.preset().map(|_| Vec::new())?,
+        Kind::Web => {
+            let entries = package.entries.clone();
+            binaries(&entries, |path| package.head(path, 4)).map(|()| Vec::new())?
+        }
         _ => Vec::new(),
     };
     let size = media::probe(&size).map(|m| [m.width, m.height]);
     package.facts = facts(&package.manifest, scene.as_ref(), size);
-    package.facts.features.extend(Manifest::newer_spelling(&raw).map(|_| "properties2".to_owned()));
+    let newer = Manifest::newer_names(&raw, text.as_deref(), &package.facts.features);
+    package.facts.features.extend(newer);
+    package.videos = media::videos(&package.manifest, scene.as_ref());
     if package.manifest.v2() {
         features::check(&package.manifest, &package.facts)?;
         package.previews()?;
@@ -87,37 +103,54 @@ fn raw<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str, max: u64) -> Res
 }
 
 fn manifest<R: Read + Seek>(archive: &mut ZipArchive<R>) -> Result<Manifest> {
-    Manifest::from_json(&raw(archive, MANIFEST, MAX_MANIFEST)?)
+    let manifest = Manifest::from_json(&raw(archive, MANIFEST, MAX_MANIFEST)?)?;
+    strings(archive, manifest)
+}
+
+fn strings<R: Read + Seek>(archive: &mut ZipArchive<R>, mut manifest: Manifest) -> Result<Manifest> {
+    let names = archive.file_names().filter_map(|n| n.ok().filter(|n| locale_file(n)).map(String::from));
+    let names: Vec<String> = names.collect();
+    manifest.read_strings(names, |name| {
+        within("file size", archive.by_name(name)?.size(), MAX_LOCALE_FILE)?;
+        raw(archive, name, MAX_LOCALE_FILE)
+    })?;
+    Ok(manifest)
 }
 
 impl<R: Read + Seek> Package<R> {
     pub fn scene(&mut self) -> Result<Scene> {
+        self.scene_text().map(|(scene, _)| scene)
+    }
+
+    fn scene_text(&mut self) -> Result<(Scene, String)> {
         let entry = self.manifest.entry.clone();
         let size = self.entries.iter().find(|e| e.path == entry).map_or(0, |e| e.size);
         within("scene size", size, MAX_SCENE)?;
         let text = String::from_utf8(self.read_file(&entry)?)
             .map_err(|_| invalid("scene.json is not UTF-8".into()))?;
-        let scene = Scene::load(&text, &self.manifest.properties).map_err(|e| invalid(e.to_string()))?;
+        let mut scene = Scene::load(&text, &self.manifest.properties).map_err(|e| invalid(e.to_string()))?;
         let missing =
             scene.paths().into_iter().find(|p| !self.entries.iter().any(|e| e.path == *p)).map(String::from);
         missing.map_or(Ok(()), |path| Err(Error::Missing(path)))?;
-        self.sounds(&scene)?;
-        Ok(scene)
+        let entries = self.entries.clone();
+        sounds(&scene, &entries, |path, edge| match edge {
+            Some(edge) => self.ends(path, edge).and_then(|(head, tail)| match tail {
+                Some(tail) => Ok((head, tail)),
+                None => Ok((self.read_file(path)?, Vec::new())),
+            }),
+            None => Ok((self.read_file(path)?, Vec::new())),
+        })?;
+        let props = self.manifest.properties.clone();
+        scene.adopt(&props, Entries(self)).map_err(|e| invalid(e.to_string()))?;
+        Ok((scene, text))
     }
 
-    fn sounds(&mut self, scene: &Scene) -> Result<()> {
-        let paths: BTreeSet<&str> =
-            scene.sounds().filter_map(|s| scene.assets.get(&s.sound)).map(|a| a.path.as_str()).collect();
-        let mut total = 0.0;
-        for path in paths {
-            let size = self.entries.iter().find(|e| e.path == path).map_or(0, |e| e.size);
-            within("sound size", size, MAX_SOUND_BYTES)?;
-            let clip = Clip::probe(&self.read_file(path)?)
-                .map_err(|reason| Error::Invalid { field: path.into(), reason })?;
-            total += clip.seconds;
-            within("length of the sounds in seconds", total.ceil() as u64, MAX_SOUND_TOTAL as u64)?;
-        }
-        Ok(())
+    pub fn preset(&mut self) -> Result<PresetFile> {
+        let entry = self.manifest.entry.clone();
+        let size = self.entries.iter().find(|e| e.path == entry).map_or(0, |e| e.size);
+        within("preset size", size, MAX_PRESET)?;
+        let preset = PresetFile::parse(&self.read_file(&entry)?, &self.manifest)?;
+        preset_files(&preset, &self.entries).map(|()| preset)
     }
 
     pub fn luts(&mut self, scene: &Scene) -> Result<Vec<(String, Arc<Lut>)>> {
@@ -152,6 +185,26 @@ impl<R: Read + Seek> Package<R> {
         Ok(())
     }
 
+    pub fn look_at_videos(&mut self) -> Result<()> {
+        for path in self.videos.clone() {
+            let (head, tail) = self.ends(&path, media::EDGE)?;
+            if media::hdr(&head) || tail.is_some_and(|t| media::hdr(&t)) {
+                media::mark(&mut self.facts, &path);
+            }
+        }
+        Ok(())
+    }
+
+    fn ends(&mut self, path: &str, edge: u64) -> Result<(Vec<u8>, Option<Vec<u8>>)> {
+        let head = self.head(path, edge)?;
+        let Ok(mut file) = self.archive.by_name_seek(path) else { return Ok((head, None)) };
+        let size = file.seek(io::SeekFrom::End(0))?;
+        file.seek(io::SeekFrom::Start(size.saturating_sub(edge).max(edge)))?;
+        let mut tail = Vec::new();
+        file.read_to_end(&mut tail)?;
+        Ok((head, Some(tail)))
+    }
+
     fn head(&mut self, path: &str, max: u64) -> Result<Vec<u8>> {
         let mut data = Vec::new();
         self.archive.by_name(path)?.take(max).read_to_end(&mut data)?;
@@ -171,6 +224,23 @@ impl<R: Read + Seek> Package<R> {
         let mut file = self.archive.by_name(path)?;
         let copied = io::copy(&mut file.by_ref().take(size.saturating_add(1)), out)?;
         ensure(copied == *size, || Error::SizeMismatch(path.clone()))
+    }
+}
+
+struct Entries<'a, R>(&'a mut Package<R>);
+
+impl<R: Read + Seek> wprs_scene::Files for Entries<'_, R> {
+    type Error = Error;
+
+    fn read(&mut self, path: &str, max: usize) -> Result<Vec<u8>> {
+        self.head(path, max, usize::MAX).map(|(bytes, _)| bytes)
+    }
+
+    fn head(&mut self, path: &str, max: usize, keep: usize) -> Result<(Vec<u8>, u64)> {
+        let size = self.0.entries.iter().find(|e| e.path == path).map_or(0, |e| e.size);
+        within("scene file size", size, max as u64)?;
+        let whole = keep as u64 >= size;
+        Ok((if whole { self.0.read_file(path)? } else { self.0.head(path, keep as u64)? }, size))
     }
 }
 

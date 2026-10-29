@@ -19,6 +19,9 @@ pub struct Mask {
     pub channel: Option<MaskChannel>,
     pub invert: bool,
     pub feather: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-range" = [0, 1]))]
+    pub strength: Option<Value<f32>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -36,6 +39,8 @@ pub enum MaskChannel {
 pub struct EffectUse {
     #[schemars(extend("x-ref" = "effect"))]
     pub effect: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     #[serde(default = "shown")]
     pub enabled: Value<bool>,
     #[serde(default, deserialize_with = "mask", skip_serializing_if = "Option::is_none")]

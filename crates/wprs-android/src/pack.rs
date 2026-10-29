@@ -31,10 +31,12 @@ pub(crate) struct Pack {
     pub(crate) presets: Vec<Preset>,
     pub(crate) assets: SceneAssets,
     pub(crate) videos: Vec<(String, PathBuf)>,
+    pub(crate) inputs: Option<wprs_scene::Uses>,
 }
 
 fn open(path: &Path) -> Result<Package<BufReader<fs::File>>, Error> {
     let package = wprs_format::open(path, &wprs_format::Limits::default())?;
+    wprs_format::features::playable(&package.manifest, &package.facts, wprs_format::Platform::Android)?;
     match package.manifest.kind {
         Kind::Scene => Ok(package),
         _ => Err(Error::Scene(format!("{} is not a scene package", package.manifest.title_in(&[])))),
@@ -130,10 +132,10 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         }
     }
     assets.luts.extend(package.luts(&scene)?);
-    let m = package.manifest.localized();
+    let (m, inputs) = (package.manifest.localized(), package.manifest.declared());
     let (id, version, locale, scene) = (m.id, m.version, m.default_locale, Arc::new(scene));
     let (properties, presets) = (m.properties, m.presets);
-    let pack = Arc::new(Pack { id, version, locale, scene, properties, presets, assets, videos });
+    let pack = Arc::new(Pack { id, version, locale, scene, properties, presets, assets, videos, inputs });
     loaded.push((stamp, Arc::downgrade(&pack)));
     Ok(pack)
 }

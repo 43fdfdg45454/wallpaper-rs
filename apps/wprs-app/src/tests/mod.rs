@@ -199,7 +199,8 @@ fn package_texts_render_as_plain_text() {
         let name = name.display();
         let tips = text.lines().map(str::trim_start).filter(|l| l.contains("ToolTip.text:"));
         tips.for_each(|tip| assert!(!shown(tip), "{name}: {tip}"));
-        let kinds = [".Label {", "Kirigami.Heading {", "QQC2.Switch {", "QQC2.CheckBox {"];
+        let kinds =
+            [".Label {", "Kirigami.Heading {", "QQC2.Switch {", "QQC2.CheckBox {", "QQC2.ItemDelegate {"];
         for (at, kind) in kinds.iter().flat_map(|k| text.match_indices(k)) {
             let block = &text[at..];
             let mut depth = 0;

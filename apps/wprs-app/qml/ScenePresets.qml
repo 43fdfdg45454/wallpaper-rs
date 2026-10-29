@@ -42,12 +42,32 @@ ColumnLayout {
 
     RowLayout {
         QQC2.ComboBox {
+            id: chooser
+
             visible: count > 0
             model: (presets.props.preset_labels ?? []).concat(presets.saved)
             textRole: "label"
             valueRole: "value"
             displayText: presets.daemon.tr("Presets")
             onActivated: presets.daemon.act("ApplyScenePreset", [presets.output, currentValue])
+
+            delegate: QQC2.ItemDelegate {
+                id: preset
+
+                required property var modelData
+                required property int index
+
+                width: ListView.view?.width ?? implicitWidth
+                text: modelData.label
+                highlighted: chooser.highlightedIndex === index
+
+                contentItem: QQC2.Label {
+                    text: preset.text
+                    color: preset.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                }
+            }
         }
 
         QQC2.Button {

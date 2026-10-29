@@ -237,7 +237,8 @@ Validation runs `wprs-server validate` in a child process limited to 1 GiB of ad
 and 60 s of CPU, two at a time. It opens the package with `wprs_format::open` (strict ZIP
 profile and manifest rules), verifies `manifest.json.minisig` against the uploader's author
 keys that the root also lists (required when the root demands signatures), refuses packages rated
-`mature` (`this server does not accept mature content`), and decodes the
+`mature` (`this server does not accept mature content`), `imported` packages and provider packages
+under other licenses than those `package.md` allows them, and decodes the
 thumbnail (`previews.thumbnail`, or `preview` in the first manifest version) (PNG, JPEG, WebP, GIF or BMP, at most 16384 px) into a JPEG thumbnail. The
 server then checks the licence list, that the id belongs to the uploader (the first uploader
 owns it) and that the version is newer than every earlier one. Accepted versions wait for

@@ -12,6 +12,7 @@
       "effects": [{ "effect": "clouds", "enabled": { "prop": "clouds" },
                     "params": { "color": "#c9d6e8", "shade": "#4f6380", "opacity": 0.55, "coverage": 0.5, "size": 460,
                                 "speed": [18, 0], "height": 0.7 } }] },
+    { "id": "photo", "type": "image", "image": { "prop": "photos" }, "size": [1920, 1080], "opacity": 0.8 },
     { "id": "moon", "type": "shape", "shape": { "ellipse": { "size": [130, 130] } }, "fill": "#f4f1e6", "transform": { "position": [1480, 220] } },
     { "id": "halo", "type": "shape", "shape": { "ellipse": { "size": [760, 760] } }, "blend": "add", "transform": { "position": [1480, 220] },
       "gradient": { "radial": true, "from": [0.5, 0.5], "to": [1, 0.5], "stops": [[0, "#cfe0ff50"], [0.3, "#cfe0ff1b"], [0.65, "#cfe0ff03"], [1, "#cfe0ff00"]] } },

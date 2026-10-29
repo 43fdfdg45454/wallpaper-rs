@@ -18,8 +18,16 @@ pub enum Loop {
 #[serde(deny_unknown_fields)]
 pub struct Timeline {
     pub id: String,
+    #[serde(default, skip_serializing_if = "is_zero")]
     #[schemars(extend("x-unit" = "s"))]
     pub duration: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-range" = [1, 240]))]
+    pub fps: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frames: Option<u32>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub wrap: bool,
     #[serde(default, rename = "loop")]
     pub repeat: Loop,
     #[serde(default = "one")]
@@ -31,6 +39,25 @@ pub struct Timeline {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-ref" = "trigger"))]
     pub trigger: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub events: Vec<Event>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Event {
+    #[schemars(extend("x-unit" = "s"))]
+    pub t: f32,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct Handles {
+    #[serde(rename = "in", skip_serializing_if = "Option::is_none")]
+    pub before: Option<[f32; 2]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out: Option<[f32; 2]>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,6 +65,7 @@ pub struct Key<T> {
     pub t: f32,
     pub v: T,
     pub ease: Ease,
+    pub handles: Option<Handles>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -83,24 +111,33 @@ impl Timeline {
         if head.playing {
             head.t += dt * self.speed * if head.reversed { -1.0 } else { 1.0 };
             let done =
-                self.repeat == Loop::Once && (head.t >= self.duration || (head.reversed && head.t <= 0.0));
+                self.repeat == Loop::Once && (head.t >= self.length() || (head.reversed && head.t <= 0.0));
             head.playing &= !done;
         }
     }
 
     pub(crate) fn position(&self, head: &Playhead) -> f32 {
-        local(head.t.max(0.0), self.duration, self.repeat)
+        local(head.t.max(0.0), self.length(), self.repeat)
+    }
+
+    pub fn length(&self) -> f32 {
+        match (self.frames, self.fps) {
+            (Some(frames), Some(fps)) if self.duration == 0.0 && fps > 0.0 => frames as f32 / fps,
+            _ => self.duration,
+        }
     }
 }
 
 impl<T: Serialize> Serialize for Key<T> {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        let plain = self.ease == Ease::default();
+        let plain = self.ease == Ease::default() && self.handles.is_none();
         let mut tuple = s.serialize_tuple(if plain { 2 } else { 3 })?;
         tuple.serialize_element(&self.t)?;
         tuple.serialize_element(&self.v)?;
-        if !plain {
-            tuple.serialize_element(&self.ease)?;
+        match &self.handles {
+            Some(handles) => tuple.serialize_element(handles)?,
+            None if !plain => tuple.serialize_element(&self.ease)?,
+            None => {}
         }
         tuple.end()
     }
@@ -113,13 +150,23 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Key<T> {
         enum Repr<T> {
             Plain((f32, T)),
             Eased((f32, T, Ease)),
+            Handled((f32, T, Handles)),
         }
         match Repr::deserialize(d) {
-            Ok(Repr::Plain((t, v))) => Ok(Key { t, v, ease: Ease::default() }),
-            Ok(Repr::Eased((t, v, ease))) => Ok(Key { t, v, ease }),
-            Err(_) => Err(de::Error::custom("a key is [time, value] or [time, value, easing]")),
+            Ok(Repr::Plain((t, v))) => Ok(Key { t, v, ease: Ease::default(), handles: None }),
+            Ok(Repr::Eased((t, v, ease))) => Ok(Key { t, v, ease, handles: None }),
+            Ok(Repr::Handled((t, v, handles))) => {
+                Ok(Key { t, v, ease: Ease::default(), handles: Some(handles) })
+            }
+            Err(_) => Err(de::Error::custom(
+                "a key is [time, value], [time, value, easing] or [time, value, { \"in\", \"out\" }]",
+            )),
         }
     }
+}
+
+fn is_zero(v: &f32) -> bool {
+    *v == 0.0
 }
 
 fn one() -> f32 {

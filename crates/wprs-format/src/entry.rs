@@ -1,6 +1,7 @@
 use crate::repo::hex64;
 use crate::{
-    DETAILED_FORMAT, Error, Result, Revoked, Root, SHARD_FORMAT, Shard, Time, ensure, require, sha256,
+    DETAILED_FORMAT, Error, KINDS_FORMAT, Result, Revoked, Root, SHARD_FORMAT, Shard, Time, ensure, require,
+    sha256,
 };
 use chrono::TimeDelta;
 use serde::{Deserialize, Serialize};
@@ -30,6 +31,8 @@ pub struct Details {
     pub version: u64,
     pub entry: String,
     pub shards: Vec<Blob>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub kinds: Vec<Blob>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,7 +72,9 @@ impl Details {
     pub fn check(&self, entry: &Entry, entry_sha256: &str) -> Result<()> {
         let own = self.format == DETAILS_FORMAT && self.repo_id == entry.repo_id;
         let pinned = self.version == entry.version && self.entry == entry_sha256;
-        let shards = self.shards.len() == entry.shards.len() && self.shards.iter().all(|b| hex64(&b.sha256));
+        let kinds = self.kinds.is_empty() || self.kinds.len() == entry.shards.len();
+        let blobs = self.shards.iter().chain(&self.kinds).all(|b| hex64(&b.sha256));
+        let shards = self.shards.len() == entry.shards.len() && kinds && blobs;
         require(own && pinned && shards, "details", "does not match the entry it extends")
     }
 }
@@ -82,7 +87,21 @@ impl Blob {
 }
 
 pub(crate) fn shards<'a>(entry: &'a Entry, details: Option<&'a Details>) -> (&'static str, &'a [Blob]) {
-    details.map_or((SHARD_FORMAT, &entry.shards), |d| (DETAILED_FORMAT, &d.shards))
+    match details {
+        Some(d) if !d.kinds.is_empty() => (KINDS_FORMAT, &d.kinds),
+        Some(d) => (DETAILED_FORMAT, &d.shards),
+        None => (SHARD_FORMAT, &entry.shards),
+    }
+}
+
+pub(crate) fn kept<'a>(entry: &'a Entry, details: Option<&'a Details>) -> impl Iterator<Item = &'a Blob> {
+    let older = details.filter(|d| !d.kinds.is_empty()).map_or(&[][..], |d| &d.shards);
+    shards(entry, details).1.iter().chain(older)
+}
+
+pub(crate) fn cold(details: Option<&Details>, blobs: &BTreeMap<String, Vec<u8>>) -> Option<Details> {
+    let details = details.filter(|d| d.kinds.iter().any(|b| !blobs.contains_key(&b.sha256)))?;
+    Some(Details { kinds: Vec::new(), ..details.clone() })
 }
 
 pub(crate) fn contents(
@@ -94,7 +113,7 @@ pub(crate) fn contents(
     let get = |blob: &Blob| blobs.get(&blob.sha256).ok_or_else(|| Error::Missing(blob.sha256.clone()));
     let (format, list) = shards(entry, details);
     let shards = list.iter().enumerate().map(|(index, blob)| {
-        let shard: Shard = serde_json::from_slice(get(blob)?)?;
+        let shard = Shard::parse(get(blob)?)?;
         shard.check(format, repo_id, index, entry.shard_bits).map(|()| shard)
     });
     let shards = shards.collect::<Result<Vec<_>>>()?;

@@ -8,6 +8,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_core::Fit;
+use wprs_core::config::parse_hex_color;
 use wprs_core::dbus::error::UNCONFIRMED;
 use wprs_core::model::PresetValue;
 use wprs_library::{Kind, Library};
@@ -48,11 +49,11 @@ pub enum Media {
 }
 
 pub fn materialize(wpak: &Path, blob: &Path) -> anyhow::Result<bool> {
-    let mut package = wprs_format::open(wpak, &wprs_format::Limits::default())?;
+    let mut package = crate::decode::open(wpak)?;
     let video = match package.manifest.kind {
         wprs_format::Kind::Image => false,
         wprs_format::Kind::Video => true,
-        wprs_format::Kind::Scene => anyhow::bail!("scene packages are not files"),
+        kind => anyhow::bail!("{kind} packages are not files"),
     };
     if !blob.is_file() {
         let dir = blob.parent().unwrap_or(Path::new("."));
@@ -64,11 +65,23 @@ pub fn materialize(wpak: &Path, blob: &Path) -> anyhow::Result<bool> {
     Ok(video)
 }
 
-fn author_fit(path: &Path) -> Option<Fit> {
+pub type Look = (Option<Fit>, Option<[u8; 3]>);
+
+fn display(path: &Path) -> wprs_format::Display {
     let package = Kind::detect(path) == Some(Kind::Package);
-    let manifest =
-        package.then(|| wprs_format::open(path, &wprs_format::Limits::default()).ok()).flatten()?.manifest;
-    manifest.display.and_then(|d| d.fit)
+    let manifest = package.then(|| wprs_format::peek(path).ok()).flatten();
+    manifest.and_then(|m| m.display).unwrap_or_default()
+}
+
+pub fn author(path: &Path) -> Look {
+    let display = display(path);
+    let span = display.span == Some(wprs_format::Span::AllOutputs);
+    (display.fit.or(span.then_some(Fit::Span)), display.background.as_deref().and_then(parse_hex_color))
+}
+
+pub fn look((fit, background): Look, author: impl FnOnce() -> Look) -> (Fit, [u8; 3]) {
+    let (by_fit, by_background) = if fit.is_some() && background.is_some() { (None, None) } else { author() };
+    (fit.or(by_fit).unwrap_or_default(), background.or(by_background).unwrap_or_default())
 }
 
 impl Daemon {
@@ -88,8 +101,7 @@ impl Daemon {
         }
         let revoked = self.state().installed.iter().any(|i| i.path == path && i.revoked.is_some());
         anyhow::ensure!(!revoked, "the package is revoked");
-        let kind = wprs_format::open(&path, &wprs_format::Limits::default())?.manifest.kind;
-        if kind == wprs_format::Kind::Scene {
+        if wprs_format::peek(&path)?.kind == wprs_format::Kind::Scene {
             return self.scene_pack(&path).map(Media::Scene);
         }
         let meta = std::fs::metadata(&path)?;
@@ -136,7 +148,7 @@ impl Daemon {
             }
             None => (fit, None, None),
         };
-        let fit = fit.or_else(|| author_fit(&item.path));
+        let fit = fit.or_else(|| display(&item.path).fit);
         let _decoded = self.check_media(&item.path)?;
         self.change_output(&output, |c| {
             c.set_image(&output, item.path.clone(), fit);
@@ -197,5 +209,38 @@ impl Daemon {
         if changed {
             self.changes.changed("state", Vec::new());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_author_look_fills_only_what_the_user_left_open() {
+        let author = || (Some(Fit::Span), Some([255, 0, 0]));
+        assert_eq!(look((None, None), author), (Fit::Span, [255, 0, 0]));
+        assert_eq!(look((None, Some([1, 2, 3])), author), (Fit::Span, [1, 2, 3]));
+        assert_eq!(look((Some(Fit::Center), None), author), (Fit::Center, [255, 0, 0]));
+        assert_eq!(look((Some(Fit::Center), Some([1, 2, 3])), || unreachable!()), (Fit::Center, [1, 2, 3]));
+        assert_eq!(look((None, None), || (None, None)), (Fit::default(), [0, 0, 0]));
+    }
+
+    #[test]
+    fn the_author_look_reads_only_the_manifest() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("source");
+        std::fs::create_dir(&source).unwrap();
+        let png = image::RgbaImage::from_pixel(8, 8, image::Rgba([0, 0, 255, 255]));
+        ["image.png", "preview.png"].iter().for_each(|name| png.save(source.join(name)).unwrap());
+        let manifest = serde_json::json!({"schema": wprs_format::SCHEMA, "id": "org.example.look", "version": "1.0.0",
+            "title": "Look", "license": "CC0-1.0", "kind": "image", "entry": "image.png", "content": {"rating": "general"},
+            "photosensitive": false, "origin": {"kind": "original"}, "previews": {"thumbnail": "preview.png"},
+            "requires": {"features": ["flip"]}, "display": {"flip": "horizontal", "background": "#ff0000"}});
+        std::fs::write(source.join("manifest.json"), manifest.to_string()).unwrap();
+        let wpak = dir.path().join("look.wpak");
+        wprs_format::build(&source, &wpak, &wprs_format::Limits::default()).unwrap();
+        assert!(crate::decode::open(&wpak).is_err());
+        assert_eq!(author(&wpak), (None, Some([255, 0, 0])));
     }
 }

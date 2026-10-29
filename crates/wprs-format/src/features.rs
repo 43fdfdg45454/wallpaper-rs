@@ -1,53 +1,102 @@
-use crate::{Error, Input, Kind, Manifest, Result, Scene, ensure, require};
+use crate::{Error, Facts, Manifest, Platform, Result, ensure, require};
 use semver::{Prerelease, Version, VersionReq};
-use std::collections::BTreeSet;
-use wprs_scene::{Uses, descriptor, needs, source, tells_time};
+use wprs_scene::{described, drawn, newer_params};
 
-pub const REGISTRY: [(&str, &str); 11] = [
-    ("inputs.audio", "reacts to the sound playing on the computer"),
-    ("inputs.pointer", "follows the pointer"),
-    ("inputs.clicks", "reacts to clicks"),
-    ("inputs.media", "shows what the media player plays"),
-    ("inputs.network", "connects to the network"),
-    ("scripts", "runs scene scripts"),
-    ("sound", "plays sound"),
-    ("properties2", "has settings of the newer kinds"),
-    ("folder", "shows pictures from a folder the user chooses"),
-    ("user_videos", "plays videos the user chooses"),
-    ("video_properties", "sets how its video plays"),
+pub use crate::facts::{BUILTIN, check, facts, warnings};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Support {
+    Runs,
+    Without,
+    Refused,
+}
+
+use Support::{Refused as No, Runs as Yes, Without};
+
+pub use crate::scenery::SCENE;
+
+pub const REGISTRY: &[(&str, &str, [Support; 2])] = &[
+    ("inputs.audio", "reacts to the sound playing on the computer", [Yes, Yes]),
+    ("inputs.pointer", "follows the pointer", [Yes, Yes]),
+    ("inputs.clicks", "reacts to clicks", [Yes, Yes]),
+    ("inputs.media", "shows what the media player plays", [Yes, Yes]),
+    ("inputs.network", "connects to the network", [Yes, Yes]),
+    ("scripts", "runs scene scripts", [Yes, Without]),
+    ("sound", "plays sound", [Yes, Without]),
+    ("properties2", "has settings of the newer kinds", [Yes, Yes]),
+    ("folder", "shows pictures from a folder the user chooses", [Yes, Without]),
+    ("user_videos", "plays videos the user chooses", [Yes, Without]),
+    ("video_properties", "sets how its video plays", [Yes, Without]),
+    ("web", "is a web page", [No, No]),
+    ("preset", "sets the values of another package", [No, No]),
+    ("assets", "holds resources for other packages", [No, No]),
+    ("packages", "needs other packages", [No, No]),
+    ("gpu", "says what graphics card it needs", [Without, Without]),
+    ("platforms", "names the devices it is made for", [Yes, Yes]),
+    ("locale_files", "keeps its texts in a file per language", [Yes, Yes]),
+    ("engine_strings", "names texts the engine translates", [Yes, Yes]),
+    ("newer_keys", "writes newer settings with their default values", [Yes, Yes]),
+    ("origin2", "says that it was imported or where it was downloaded from", [Yes, Yes]),
+    ("credits2", "credits files to the package they come from", [Yes, Yes]),
+    ("display2", "sets the color around its picture or spreads over every screen", [Yes, Without]),
+    ("accent", "suggests an accent color for the desktop", [Without, Without]),
+    ("flip", "shows its picture or video mirrored", [No, No]),
+    ("playback2", "limits its frame rate, starts muted or plays once", [No, No]),
+    ("shortcut", "opens what the user chooses when clicked", [No, No]),
+    ("folder2", "reads the subfolders of a chosen folder or fewer of its files", [Yes, Without]),
+    ("folder_lists", "lets its scripts or page list a chosen folder", [No, No]),
+    ("quality_settings", "changes its settings when the device saves power", [No, No]),
+    ("ktx2", "uses compressed textures in the KTX2 format", [No, No]),
+    ("avif", "uses pictures in the AVIF format", [No, No]),
+    ("spanned_scenes", "spreads its scene over every screen", [No, Without]),
 ];
 
-pub const PROFILES: [(&str, &[&str]); 1] =
-    [("android", &["scripts", "sound", "folder", "user_videos", "video_properties"])];
+const RELEASED: &str = "inputs.audio inputs.pointer inputs.clicks inputs.media inputs.network scripts sound \
+    properties2 folder user_videos video_properties";
 
-const DETECTED: [Input; 3] = [Input::Audio, Input::Pointer, Input::Clicks];
-
-const EFFECTS: &str = "bloom blur blur_motion blur_radial chroma_key chromatic_aberration clouds color_adjust \
-    color_lut crt depth_parallax dissolve edges film_grain flow glitch god_rays iris \
-    lens_distort perspective pixelate posterize reflection scroll shake shine sway tilt_shift \
-    twirl vignette water_rings water_ripple waves";
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Facts {
-    pub features: BTreeSet<String>,
-    pub inputs: BTreeSet<Input>,
-    pub facets: Vec<String>,
-    pub found: Vec<(Input, String)>,
-    pub notes: Vec<String>,
+pub(crate) fn released(name: &str) -> bool {
+    RELEASED.split_whitespace().any(|n| n == name)
 }
 
 fn builtin_first(id: &str) -> bool {
-    EFFECTS.split_whitespace().any(|e| e == id)
+    BUILTIN.split_whitespace().any(|e| e == id)
+}
+
+pub fn all() -> impl Iterator<Item = &'static (&'static str, &'static str, [Support; 2])> {
+    REGISTRY.iter().chain(SCENE)
+}
+
+fn entry(name: &str) -> Option<&'static (&'static str, &'static str, [Support; 2])> {
+    all().find(|(n, ..)| *n == name)
+}
+
+fn effect(name: &str) -> Option<(&str, Option<&str>)> {
+    let rest = name.strip_prefix("effect.")?;
+    let (id, param) = rest.split_once('.').map_or((rest, None), |(id, p)| (id, Some(p)));
+    let known = match param {
+        None => !builtin_first(id) && described(id).is_some(),
+        Some(p) => builtin_first(id) && newer_params(id).any(|d| d.id == p),
+    };
+    known.then_some((id, param))
 }
 
 pub fn known(name: &str) -> bool {
-    let effect = |id: &str| !builtin_first(id) && descriptor(id).is_some();
-    REGISTRY.iter().any(|(n, _)| *n == name) || name.strip_prefix("effect.").is_some_and(effect)
+    entry(name).is_some() || effect(name).is_some()
 }
 
 pub fn explain(name: &str) -> String {
-    let found = REGISTRY.iter().find(|(n, _)| *n == name).map(|(_, why)| why.to_string());
-    found.unwrap_or_else(|| format!("uses the {} effect", name.trim_start_matches("effect.")))
+    let found = entry(name).map(|(_, why, _)| why.to_string());
+    found.unwrap_or_else(|| match effect(name) {
+        Some((id, Some(param))) => format!("sets {param} on the {id} effect"),
+        _ => format!("uses the {} effect", name.trim_start_matches("effect.")),
+    })
+}
+
+pub const CHOSEN: [&str; 1] = ["locale_files"];
+
+pub fn support(platform: Platform, name: &str) -> Support {
+    let effect = effect(name).map(|(id, param)| if drawn(id, param) { Yes } else { No });
+    entry(name).map_or(effect.unwrap_or(No), |(.., on)| on[platform as usize])
 }
 
 pub(crate) fn supported(engine: Option<&str>, features: &[String]) -> Result<()> {
@@ -63,101 +112,27 @@ pub(crate) fn supported(engine: Option<&str>, features: &[String]) -> Result<()>
 }
 
 pub fn lacks<'a>(profile: &str, features: impl IntoIterator<Item = &'a String>) -> Vec<String> {
-    let missing = PROFILES.iter().find(|(name, _)| *name == profile).map_or(&[][..], |(_, m)| *m);
-    features.into_iter().filter(|f| missing.contains(&f.as_str())).cloned().collect()
+    with(profile, Without, features)
 }
 
-pub fn facts(manifest: &Manifest, scene: Option<&Scene>, size: Option<[u32; 2]>) -> Facts {
-    let uses = scene.map(needs).unwrap_or_default();
-    let detected = [(uses.audio, Input::Audio), (uses.cursor, Input::Pointer), (uses.clicks, Input::Clicks)];
-    let inputs: BTreeSet<Input> = detected.into_iter().filter_map(|(on, i)| on.then_some(i)).collect();
-    let declared = manifest.inputs.iter().chain(&inputs).map(|i| format!("inputs.{}", i.name()));
-    let sound = scene.is_some_and(|s| s.sounds().next().is_some());
-    let effects = scene.into_iter().flat_map(|s| s.layers().flat_map(|l| &l.effects));
-    let effects = effects.filter(|e| !builtin_first(&e.effect)).map(|e| format!("effect.{}", e.effect));
-    let mut features: BTreeSet<String> = declared.chain(effects).collect();
-    let video = manifest.playback.is_some() || manifest.display.is_some();
-    let used = [(uses.scripts, "scripts"), (sound, "sound"), (video, "video_properties")];
-    features.extend(used.iter().filter(|(on, _)| *on).map(|(_, n)| n.to_string()));
-    features.extend(manifest.properties.values().flat_map(|p| p.features()).map(String::from));
-    let author = manifest.inputs.iter().filter(|i| !DETECTED.contains(i));
-    let mut facets: Vec<String> = inputs.iter().chain(author).map(|i| i.name().to_owned()).collect();
-    let customizable = video || manifest.properties.values().any(|p| p.holds_value() || p.kind() == "button");
-    let clock = scene.is_some_and(tells_time);
-    let flags = [
-        (sound, "sound"),
-        (uses.scripts, "scripts"),
-        (customizable, "customizable"),
-        (clock, "clock"),
-        (manifest.photosensitive == Some(true), "photosensitive"),
-        (manifest.locales().len() > 1, "localized"),
-        (manifest.kind == Kind::Scene || manifest.kind == Kind::Video, "animated"),
-    ];
-    facets.extend(flags.into_iter().filter(|(on, _)| *on).map(|(_, n)| n.to_owned()));
-    let runs = PROFILES.iter().filter(|(name, _)| lacks(name, &features).is_empty());
-    facets.extend(runs.map(|(name, _)| name.to_string()));
-    let size = scene.map(|s| s.canvas.size).or(size);
-    facets.extend(size.into_iter().flat_map(shape));
-    facets.sort();
-    facets.dedup();
-    let missing = |i: &&Input| manifest.v2() && !manifest.inputs.contains(i);
-    let found =
-        scene.map_or(Vec::new(), |s| inputs.iter().filter(missing).map(|i| (*i, place(s, *i))).collect());
-    Facts { features, inputs, facets, found, notes: Vec::new() }
+pub fn refused<'a>(profile: &str, features: impl IntoIterator<Item = &'a String>) -> Vec<String> {
+    with(profile, No, features)
 }
 
-fn place(scene: &Scene, input: Input) -> String {
-    let pick: fn(&Uses) -> bool = match input {
-        Input::Audio => |u| u.audio,
-        Input::Clicks => |u| u.clicks,
-        _ => |u| u.cursor,
-    };
-    source(scene, pick).unwrap_or_else(|| "/".into())
+fn with<'a>(profile: &str, kind: Support, features: impl IntoIterator<Item = &'a String>) -> Vec<String> {
+    let Some(platform) = Platform::ALL.into_iter().find(|p| p.name() == profile) else { return Vec::new() };
+    features.into_iter().filter(|f| support(platform, f) == kind).cloned().collect()
 }
 
-fn shape([w, h]: [u32; 2]) -> Vec<String> {
-    const SIZES: [(&str, u32, u32); 6] = [
-        ("8k", 7680, 4320),
-        ("5k", 5120, 2880),
-        ("4k", 3840, 2160),
-        ("1440p", 2560, 1440),
-        ("1080p", 1920, 1080),
-        ("720p", 1280, 720),
-    ];
-    let (long, short) = (w.max(h), w.min(h));
-    let orient = match w.cmp(&h) {
-        std::cmp::Ordering::Greater => "landscape",
-        std::cmp::Ordering::Less => "portrait",
-        std::cmp::Ordering::Equal => "square",
-    };
-    let size = SIZES.iter().find(|(_, a, b)| long >= *a && short >= *b).map(|(n, ..)| *n);
-    let wide = (long as f32 / short.max(1) as f32 >= 2.2).then_some("ultrawide");
-    [Some(orient), size, wide].into_iter().flatten().map(String::from).collect()
-}
-
-pub fn check(manifest: &Manifest, facts: &Facts) -> Result<()> {
-    if let Some(missing) = facts.inputs.iter().find(|i| !manifest.inputs.contains(i)) {
-        let at = facts.found.iter().find(|(i, _)| i == missing).map_or("/", |(_, at)| at.as_str());
-        let reason = format!("the scene uses {0} at {at} of scene.json; add \"{0}\"", missing.name());
-        return Err(Error::Invalid { field: "inputs".into(), reason });
+pub fn playable(manifest: &Manifest, facts: &Facts, platform: Platform) -> Result<()> {
+    let allowed = manifest.platforms.is_empty() || manifest.platforms.contains(&platform);
+    let names: Vec<&str> = manifest.platforms.iter().map(|p| p.title()).collect();
+    ensure(allowed, || Error::Elsewhere(names.join(" and ")))?;
+    let missing = refused(platform.name(), &facts.features);
+    let named: Vec<String> = missing.iter().map(|f| format!("{f} ({})", explain(f))).collect();
+    match named.as_slice() {
+        [] => Ok(()),
+        [one] => Err(Error::Newer(format!("the feature {one}"))),
+        [rest @ .., last] => Err(Error::Newer(format!("the features {} and {last}", rest.join(", ")))),
     }
-    let listed = manifest.features();
-    match facts.features.iter().find(|f| !listed.contains(f)) {
-        Some(f) => Err(Error::Invalid {
-            field: "requires.features".into(),
-            reason: format!("add {f:?} ({}); pack build fills this list", explain(f)),
-        }),
-        None => Ok(()),
-    }
-}
-
-pub fn warnings(manifest: &Manifest, facts: &Facts) -> Vec<String> {
-    let unused = manifest.features().iter().filter(|f| !facts.features.contains(*f));
-    let inputs = manifest.inputs.iter().filter(|i| !facts.inputs.contains(i) && DETECTED.contains(i));
-    let inputs = inputs.map(|i| format!("inputs declares {} but nothing in the package uses it", i.name()));
-    unused
-        .map(|f| format!("requires.features lists {f}, which the package does not use"))
-        .chain(inputs)
-        .chain(facts.notes.iter().cloned())
-        .collect()
 }

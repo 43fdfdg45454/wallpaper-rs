@@ -1,17 +1,28 @@
 use crate::effects::{Descriptor, Fuse, Output, Pace, ParamDef, ParamKind, PassDef, SLOTS, Solve, Use};
 use crate::value::Param;
-use crate::{Class, Color, Quality};
+use crate::{Blend, Class, Color, MAX_PARAMS, Quality};
+
+impl ParamKind {
+    pub fn asset(self) -> bool {
+        matches!(self, ParamKind::Texture | ParamKind::Lut | ParamKind::Mask)
+    }
+}
 
 impl ParamDef {
     pub fn accepts(&self, value: &Param) -> bool {
-        matches!(
-            (self.kind, value),
-            (ParamKind::Float, Param::Number(_))
-                | (ParamKind::Vec2, Param::Vec2(_) | Param::Number(_))
-                | (ParamKind::Color, Param::Color(_))
-                | (ParamKind::Bool, Param::Bool(_))
-                | (ParamKind::Texture | ParamKind::Lut, Param::Text(_))
-        )
+        match (self.kind, value) {
+            (ParamKind::Int, Param::Number(n)) => n.fract() == 0.0,
+            (ParamKind::Enum, Param::Number(n)) => self.values.iter().any(|e| e.value == *n),
+            (ParamKind::Blend, Param::Text(name)) => Blend::named(name).is_some(),
+            (kind, value) => matches!(
+                (kind, value),
+                (ParamKind::Float, Param::Number(_))
+                    | (ParamKind::Vec2 | ParamKind::Position, Param::Vec2(_) | Param::Number(_))
+                    | (ParamKind::Color, Param::Color(_))
+                    | (ParamKind::Bool, Param::Bool(_))
+                    | (ParamKind::Texture | ParamKind::Lut | ParamKind::Mask, Param::Text(_))
+            ),
+        }
     }
 
     pub fn named<'a>(&'a self, e: &'a crate::EffectUse) -> Option<&'a str> {
@@ -24,16 +35,21 @@ impl ParamDef {
     pub fn slot(&self, value: &Param) -> [f32; 4] {
         let clamp = |v: f32| v.clamp(self.min.unwrap_or(f32::MIN), self.max.unwrap_or(f32::MAX));
         match (self.kind, value) {
-            (ParamKind::Float, Param::Number(v)) => [clamp(*v), 0.0, 0.0, 0.0],
-            (ParamKind::Vec2, Param::Number(v)) => [clamp(*v), clamp(*v), 0.0, 0.0],
-            (ParamKind::Vec2, Param::Vec2([x, y])) => [clamp(*x), clamp(*y), 0.0, 0.0],
+            (ParamKind::Float | ParamKind::Int | ParamKind::Enum, Param::Number(v)) => {
+                [clamp(*v), 0.0, 0.0, 0.0]
+            }
+            (ParamKind::Vec2 | ParamKind::Position, Param::Number(v)) => [clamp(*v), clamp(*v), 0.0, 0.0],
+            (ParamKind::Vec2 | ParamKind::Position, Param::Vec2([x, y])) => [clamp(*x), clamp(*y), 0.0, 0.0],
+            (ParamKind::Blend, Param::Text(name)) => {
+                [Blend::named(name).map_or(0.0, |b| b as u8 as f32), 0.0, 0.0, 0.0]
+            }
             (ParamKind::Color, Param::Color(Color([r, g, b, a]))) => {
                 let [r, g, b] = [r, g, b]
                     .map(|c| if *c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) });
                 [r, g, b, *a]
             }
             (ParamKind::Bool, Param::Bool(b)) => [f32::from(*b), 0.0, 0.0, 0.0],
-            (ParamKind::Texture | ParamKind::Lut, _) => [0.0; 4],
+            (ParamKind::Texture | ParamKind::Lut | ParamKind::Mask, _) => [0.0; 4],
             _ => self.slot(&self.default),
         }
     }
@@ -49,11 +65,18 @@ impl Descriptor {
         d.wgsl = wgsl.into();
         if d.passes.is_empty() && d.fuse.is_some() {
             let inputs = vec!["previous".into()];
+            let entry = format!("fs_{}", d.id);
+            let (target, copy, blend, vertex, grid) = Default::default();
             d.passes.push(PassDef {
-                entry: format!("fs_{}", d.id),
+                entry,
                 scale: 1.0,
                 inputs,
                 output: Output::Next,
+                target,
+                copy,
+                blend,
+                vertex,
+                grid,
             });
         }
         Ok(d)
@@ -129,27 +152,22 @@ impl Descriptor {
         let unit = |s: f32| s > 0.0 && s <= 1.0;
         let kind = |name: &str, kind| self.param(name).is_some_and(|i| self.params[i].kind == kind);
         fail(valid(id), "the id must match [a-z0-9_]{1,32}".into());
-        fail(self.params.len() <= SLOTS, format!("more than {SLOTS} parameters"));
+        fail(self.params.len() <= MAX_PARAMS, format!("more than {MAX_PARAMS} parameters"));
         for (i, p) in self.params.iter().enumerate() {
             fail(valid(&p.id) && self.param(&p.id) == Some(i), format!("{} is not a unique id", p.id));
             fail(p.accepts(&p.default), format!("the default of {} does not fit its type", p.id));
             fail(p.min.zip(p.max).is_none_or(|(lo, hi)| lo <= hi), format!("{} has min above max", p.id));
         }
-        fail(!self.passes.is_empty(), "no passes".into());
+        let layered = self.stage == crate::effects::Stage::Layer;
+        fail(
+            self.passes.is_empty() != layered,
+            "a layer effect needs passes, a material or particle shader has none".into(),
+        );
         for (n, pass) in self.passes.iter().enumerate() {
             fail(unit(pass.scale), format!("pass {n} has a scale outside (0, 1]"));
             fail(pass.output == Output::Next || stateful, format!("pass {n} writes a missing state"));
-            for input in &pass.inputs {
-                let known = match input.split_once(':') {
-                    Some(("pass", k)) => k.parse::<usize>().is_ok_and(|k| k < n),
-                    Some(("asset", p)) => kind(p, ParamKind::Texture),
-                    Some(_) => false,
-                    None => {
-                        ["previous", "input", "source", "mask"].contains(&input.as_str())
-                            || (input == "state" && stateful)
-                    }
-                };
-                fail(known, format!("pass {n} reads the unknown input {input}"));
+            for input in pass.inputs.iter().chain(&pass.copy) {
+                fail(self.input(n, input), format!("pass {n} reads the unknown input {input}"));
             }
         }
         fail(self.reach.as_deref().is_none_or(|r| kind(r, ParamKind::Float)), "reach is no float".into());
@@ -181,7 +199,22 @@ impl Descriptor {
             self.solve.is_none() || corners,
             "a homography needs four vec2 corners, three free slots and no fuse".into(),
         );
+        found.extend(self.extended().into_iter().map(|p| format!("{id}: {p}")));
         found
+    }
+
+    pub(crate) fn input(&self, n: usize, input: &str) -> bool {
+        let kind = |name: &str, kind| self.param(name).is_some_and(|i| self.params[i].kind == kind);
+        match input.split_once(':') {
+            Some(("pass", k)) => k.parse::<usize>().is_ok_and(|k| k < n),
+            Some(("asset", p)) => kind(p, ParamKind::Texture) || kind(p, ParamKind::Mask),
+            Some(("target", t)) => self.targets.contains_key(t),
+            Some(_) => false,
+            None => {
+                ["previous", "input", "source", "mask", "backdrop"].contains(&input)
+                    || (input == "state" && self.state.is_some())
+            }
+        }
     }
 }
 

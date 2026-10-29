@@ -56,7 +56,7 @@ impl Props {
 
 impl Daemon {
     pub fn video_props(&self, path: &Path) -> anyhow::Result<Arc<Props>> {
-        let m = wprs_format::open(path, &wprs_format::Limits::default())?.manifest.localized();
+        let m = crate::decode::open(path)?.manifest.localized();
         anyhow::ensure!(m.kind == wprs_format::Kind::Video, "{} is not a video package", path.display());
         let languages = m.languages(&wprs_core::locale::languages());
         let item = |lib: &wprs_library::Library| lib.item(&lib.resolve_item(&path.to_string_lossy())?);
@@ -78,7 +78,7 @@ impl Daemon {
     }
 
     pub fn package_props(&self, path: &Path) -> anyhow::Result<Arc<Props>> {
-        match wprs_format::open(path, &wprs_format::Limits::default())?.manifest.kind {
+        match crate::decode::open(path)?.manifest.kind {
             wprs_format::Kind::Scene => Ok(self.scene_pack(path)?.props.clone()),
             _ => self.video_props(path),
         }

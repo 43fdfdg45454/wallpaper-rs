@@ -69,14 +69,18 @@ impl Config {
         let content = (self.outputs.get(output))
             .filter(|o| o.image.is_some() || o.playlist.is_some())
             .unwrap_or(&self.default);
+        let (fit, background) = self.chosen(output);
         Resolved {
             image: content.image.clone().filter(|_| content.playlist.is_none()),
             playlist: content.playlist.clone(),
-            fit: self.pick(output, |o| o.fit).unwrap_or_default(),
-            background: self
-                .pick(output, |o| o.background.as_deref().and_then(parse_hex_color))
-                .unwrap_or_default(),
+            fit: fit.unwrap_or_default(),
+            background: background.unwrap_or_default(),
         }
+    }
+
+    pub fn chosen(&self, output: &str) -> (Option<Fit>, Option<[u8; 3]>) {
+        let background = self.pick(output, |o| o.background.as_deref().and_then(parse_hex_color));
+        (self.pick(output, |o| o.fit), background)
     }
 
     fn pick<T>(&self, output: &str, field: impl Fn(&OutputConfig) -> Option<T>) -> Option<T> {

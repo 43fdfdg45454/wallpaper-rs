@@ -21,13 +21,16 @@ fn modified(path: &Path) -> anyhow::Result<Option<SystemTime>> {
 impl Daemon {
     pub fn configure_output(&self, output: &str) -> Option<Arc<RgbaImage>> {
         let _order = lock(&ORDER);
-        let (size, resolved, uploaded, refresh) = {
+        let (size, mut resolved, chosen, uploaded, refresh) = {
             let st = self.state();
             let info = st.outputs.get(output)?;
-            (info.size, st.config.resolve(output), info.uploaded.clone(), st.refresh(output))
+            let (resolved, chosen) = (st.config.resolve(output), st.config.chosen(output));
+            (info.size, resolved, chosen, info.uploaded.clone(), st.refresh(output))
         };
         let (image, mut transition) =
-            self.playlist_media(output, resolved.playlist).unwrap_or((resolved.image, None));
+            self.playlist_media(output, resolved.playlist.take()).unwrap_or((resolved.image.take(), None));
+        let shown = image.as_deref().map(|p| crate::apply::look(chosen, || crate::apply::author(p)));
+        (resolved.fit, resolved.background) = shown.unwrap_or((resolved.fit, resolved.background));
         let draft = self.state().drafts.get(output).map(|d| (d.pack.clone(), d.hold));
         if draft.is_some() {
             transition = Some(Duration::ZERO);

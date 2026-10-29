@@ -1,4 +1,5 @@
-use crate::{Kind, Scene, descriptor};
+use crate::{Kind, Scene};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -10,7 +11,9 @@ pub enum Tier {
     T3,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize, JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum Quality {
     Q0,
@@ -117,13 +120,13 @@ impl Quality {
 impl Scene {
     pub fn cost(&self, quality: Quality) -> f32 {
         let effects = self.layers().flat_map(|l| &l.effects).filter_map(|e| {
-            let d = descriptor(&e.effect)?;
+            let d = self.effect(&e.effect)?;
             let scale = quality.effect_scale(d.class(), e.optional)? * d.scale_at(quality);
             let scale = if d.passes.len() > 1 { scale } else { 1.0 };
             Some(d.units() * scale * scale)
         });
         let particles = self.layers().filter_map(|l| match &l.kind {
-            Kind::Particles { system } => self.particles.get(system),
+            Kind::Particles { system, .. } => self.particles.get(system),
             _ => None,
         });
         let canvas = self.canvas.size;

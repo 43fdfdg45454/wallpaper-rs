@@ -1,8 +1,11 @@
 mod common;
 
-use common::v2;
+use common::{archive, v2};
 use std::collections::BTreeMap;
-use wprs_format::{Control, Error, Kind, Manifest, Property, Text, markup};
+use std::io::Cursor;
+use wprs_format::{
+    Control, Error, Kind, Limits, MANIFEST, Manifest, Property, Requires, Text, markup, peek, read,
+};
 
 fn map(pairs: &[(&str, &str)]) -> Text {
     Text::Localized(pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect())
@@ -114,4 +117,43 @@ fn markup_is_a_small_safe_subset() {
     assert_eq!(markup::html("[x](javascript:alert(1))"), "<p>[x](javascript:alert(1))</p>");
     assert_eq!(markup::plain("ñandú *ágil*"), "ñandú ágil");
     assert_eq!(markup::verbatim("A *plain* <text>\n\nby me"), "<p>A *plain* &lt;text&gt;</p><p>by me</p>");
+}
+
+#[test]
+fn language_files_are_counted_and_measured_before_they_are_read() {
+    let mut declared = localized();
+    declared.requires = Some(Requires { features: vec!["locale_files".into()], ..Requires::default() });
+    let json = declared.to_json().unwrap();
+    let stops = |files: Vec<(String, Vec<u8>)>, wanted: &str| {
+        let more: Vec<(&str, &[u8])> = files.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
+        let bytes = archive(&[&[(MANIFEST, json.as_bytes())][..], &more].concat());
+        let fault = read(Cursor::new(bytes.clone()), &Limits::default()).map(drop).unwrap_err().to_string();
+        assert!(fault.contains(wanted), "{fault}");
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.wpak"), bytes).unwrap();
+        let peeked = peek(dir.path().join("a.wpak")).map(drop).unwrap_err().to_string();
+        assert!(peeked.contains(wanted), "{peeked}");
+    };
+    let broken = |name: String| (name, b"[".to_vec());
+    stops((0..63).map(|i| broken(format!("locale/l{i}.json"))).collect(), "at most 64 languages");
+    let large =
+        |name: &str| (format!("locale/{name}.json"), format!("{{\"k\": \"{}\"}}", "a".repeat(300 << 10)));
+    let files = [large("aa"), large("ab")].map(|(n, t)| (n, t.into_bytes())).into_iter();
+    stops(files.chain([broken("locale/ac.json".into())]).collect(), "512 KiB");
+}
+
+#[test]
+fn texts_of_the_engine_need_no_strings() {
+    let mut m = localized();
+    m.properties.get_mut("speed").unwrap().label = Some("@wprs.speed".into());
+    m.check().unwrap();
+    let label = m.localized().properties["speed"].label.clone().unwrap();
+    assert_eq!(label, map(&[("en", "Speed"), ("es", "Velocidad")]));
+    let facts = wprs_format::features::facts(&m, None, None);
+    assert!(facts.features.contains("engine_strings"), "{:?}", facts.features);
+    m.properties.get_mut("speed").unwrap().label = Some("@wprs.warp".into());
+    assert_eq!(field(&m), "properties.speed.label");
+    let mut own = localized();
+    own.strings.get_mut("en").unwrap().insert("wprs.speed".into(), "Mine".into());
+    assert_eq!(field(&own), "strings");
 }

@@ -297,7 +297,11 @@ sus propiedades y sus preajustes, que se guardan en la misma configuración que 
 preajustes propios se guardan, se renombran y se borran ahí, y se exportan e importan como archivo,
 los botones de la escena funcionan y los textos secretos quedan sellados por el almacén de claves de
 Android. Las carpetas, los vídeos que elige el usuario y los ajustes de reproducción de los paquetes
-de vídeo no se usan en el teléfono, y la página del paquete lo avisa. El nivel de calidad sale de la
+de vídeo no se usan en el teléfono, y la página del paquete lo avisa, igual que de todo lo que el
+teléfono omite: la tarjeta gráfica que pide, el color alrededor de la imagen y la extensión sobre
+varias pantallas, el color de acento, las subcarpetas, los sonidos nuevos, los scripts que usan la
+interfaz nueva (capas, geometría y almacenamiento) y la iluminación RGB. Un paquete hecho solo para
+el escritorio se rechaza con ese aviso, traducido. El nivel de calidad sale de la
 clase del teléfono (básica con poca memoria o sin sombreadores de cálculo, alta si el fabricante
 declara una clase de rendimiento de Android 13 o posterior, media en el resto) y de la batería: con
 batería baja un nivel, y con calor baja más. Una escena demasiado pesada para el teléfono se queda
@@ -313,8 +317,9 @@ pulsar *Mostrar igualmente*. Un paquete fotosensible no se previsualiza ni se pu
 hasta aceptar el aviso de que destella o muestra patrones rápidos que pueden provocar crisis a
 personas con epilepsia fotosensible; las listas lo saltan mientras tanto. Cada decisión se recuerda
 por paquete. La biblioteca y la página de un paquete muestran su título y su descripción en el
-idioma del teléfono, y la página avisa si sus scripts, sus sonidos, sus carpetas, los vídeos que se
-eligen o sus ajustes de vídeo no funcionan en él.
+idioma del teléfono, y la página avisa de cada parte que no funciona en él, de sus scripts y sus
+sonidos a sus carpetas, los vídeos que se eligen, sus ajustes de vídeo y las funciones nuevas que
+omite.
 
 *Reaccionar al sonido* y *Reaccionar al tacto* solo aparecen en las escenas que los usan y se
 activan escena a escena. El sonido se lee con el visualizador de Android, que da un espectro de
@@ -514,28 +519,108 @@ no lo aplica, un perfil no lo pone (la pantalla muestra el motivo) y las listas 
 página *Ajustes* de la app y la bandeja avisan en la pantalla que lo muestra. La búsqueda filtra
 por clasificación y por facetas que se calculan del propio paquete: las entradas que usa la escena
 (`facet:audio`, `facet:pointer`, `facet:clicks`), el tamaño (`facet:4k`), `facet:photosensitive`,
-`facet:android` si funciona entero en el teléfono, etc. Solo `media` y `network` salen de lo que
-declara el autor en sus entradas, porque nada en el paquete muestra ese uso:
+`facet:android` si funciona entero en el teléfono, etc. Las páginas web toman sus facetas de las
+entradas que declaran; en los demás paquetes todas, `media` incluida, salen de lo que usan:
 
 ```sh
 wprs-ctl lib show 1R1AB2                     # clasificación, origen, créditos, idiomas y descripción
 wprs-ctl lib search 'content:general facet:audio'
 wprs-ctl lib confirm photosensitive 1R1AB2   # permitir un paquete fotosensible
 wprs-ctl lib confirm mature 1R1AB2           # dejar de difuminar su miniatura
-wprs-ctl pack check fondo/                   # qué necesita, qué usa y qué declara un paquete
+wprs-ctl pack check fondo/                   # qué necesita, usa y declara, y si lo reproducen el escritorio y el teléfono
 wprs-ctl pack upgrade fondo/ --rating general --photosensitive false   # pasar a la versión 2
 ```
+
+Además de imágenes, vídeos y escenas, el formato describe páginas web (`web`: una página de entrada,
+un script que se carga antes que los suyos, un almacenamiento local de 5 MiB como mucho que nunca se
+sincroniza, y hasta 8 orígenes `https` a los que puede llegar si das permiso de red, con la API
+`window.wprs` para recibir ajustes, sonido, pausa y carpetas), preajustes publicados aparte (`preset`:
+dependen de un paquete base por id y rango de versiones y solo llevan valores y sus imágenes o
+vídeos), paquetes de recursos que otros autores copian en sus escenas (`assets`, con créditos que
+nombran el paquete de origen), dependencias entre paquetes (`requires.packages`), los dispositivos
+para los que está hecho (`platforms`), textos en un archivo por idioma (`locale/<idioma>.json`),
+paquetes importados para uso personal (nunca se publican) o descargados de un proveedor (con su
+crédito y una licencia libre), el color de acento que propone al escritorio, el color alrededor de
+la imagen, la extensión sobre todas las pantallas, el volteo, el límite de fotogramas, el inicio en
+silencio y la reproducción única. Cada función tiene un nombre en `requires.features`, y el
+escritorio y el teléfono dicen si la ejecutan, si reproducen el paquete sin ella o si lo rechazan
+con «necesita una versión más nueva de wallpaper-rs» antes de dibujar nada; en esta versión
+rechazan las páginas web, los preajustes y recursos publicados aparte, las dependencias, el volteo,
+el límite de fotogramas, el silencio y la repetición del autor, los atajos, los valores por nivel de
+calidad, las listas completas de carpetas y las texturas KTX2 y AVIF. `wprs-ctl pack check` dice qué
+hace cada plataforma con un paquete y `docs/specs/package.md` describe el formato entero.
+
+Las escenas también describen ya todo lo que un autor puede querer rehacer a mano: 15 modos de fusión
+más (`linear_burn` … `negation`), tinte y brillo de capa, padre de transformación sin cambiar el orden
+de dibujo, inclinación en profundidad con perspectiva, máscaras con intensidad, capas que alimentan
+efectos, vídeos como máscara o textura, control de reproducción, hojas de sprites y GIF o WebP
+animados, filtrado, repetición y mipmaps de texturas, texto con ajuste de línea, alineación vertical,
+caja de fondo, contorno, sombra y desenfoque, colecciones de fuentes (`ttc`, `otc`, `woff2`) y
+fuentes de respaldo, sonido en MP3, listas de sonidos en orden o al azar con pausas, sonidos largos
+en flujo y disparados por eventos, cámara con zoom, giro y sacudida, ajustes del paralaje (también
+con la inclinación del teléfono), resplandor de escena, HDR con mapeo de tonos, fotogramas que se dibujan
+sobre el anterior, luces puntuales, focos, tubos y direccionales con volumen y proyección,
+iluminación 2D con mapas de normales y luz ambiente, captura de una región, eventos con nombre en
+las líneas de tiempo, curvas con manejadores, animación por componente y relativa, la hora y la fecha
+como valores, rangos de frecuencias con límites y exponente, y efectos propios del paquete en WGSL
+con pasadas, objetivos, variantes, hasta 8 texturas y 24 parámetros, comprobados al leer el paquete
+contra el contrato de su preludio. Cada uno tiene su nombre en `requires.features`; mientras el motor
+no los dibuja, el escritorio y el teléfono rechazan la escena con el mismo aviso (el teléfono, que
+reproduce las escenas sin sonido, solo omite el sonido nuevo). `docs/specs/scene.md` describe cada
+campo y sus límites.
+
+El formato describe también las escenas más avanzadas: capas `mesh` que deforman una imagen con un
+esqueleto (glTF binario con huesos y pesos), con clips y capas de animación, cinemática inversa
+hacia un punto, el cursor, un hueso u otra capa, física de muelles y cuerdas con viento, reglas que
+cambian el padre de un hueso, formas de mezcla y expresiones, partes con orden y recorte, y huesos
+que reciben el puntero; capas `model` con modelos glTF, materiales metálico-rugosos (también pelo,
+follaje, croma o shaders de material del paquete), grupos 3D con profundidad compartida, cámara 3D
+con recorridos y sombras de las luces; capas sujetas a huesos o puntos de un modelo; sistemas de
+partículas en espacio de mundo con puntos de control, ajustes por capa, sistemas hijos, perspectiva,
+emisión desde una capa, alrededor o entre puntos, inicializadores con exponente, HSV, paleta,
+velocidad vectorial, turbulencia, ruido fractal y reasignación, operadores que oscilan, limitan,
+frenan, mantienen distancias o forman bandadas con ventanas de vida, colisiones con cajas, segmentos
+y capas, y renderizadores de cuerda, estelas largas, recorte, orientación, luz, refracción y shaders
+propios; la declaración de lo que usa cada script (eventos, partes de la interfaz, parámetros,
+plantillas de capas y reservas de geometría); valores, carátulas y disparadores del reproductor
+multimedia; capas que reciben clics del puntero; escenas extendidas sobre todas las pantallas; y
+salida a la iluminación RGB con su permiso. Los modelos se leen al abrir el paquete y cada hueso,
+animación, parte o material que nombra la escena se comprueba contra ellos. Las entradas de un
+paquete de la versión 2 salen solo de lo que declara: también las de sus scripts, que ya no se
+adivinan por su texto. Todo tiene su nombre en `requires.features` y, mientras el motor no lo dibuja,
+el escritorio y el teléfono rechazan la escena con el aviso de versión más nueva (el teléfono, que no
+ejecuta scripts ni tiene iluminación RGB ni varias pantallas, solo omite esas partes).
+
+También están descritos los efectos que el motor aún no dibuja: haces de luz, tinte, mezcla de
+texturas y por degradado, revelar con el puntero, desplazamiento por mapa, cáusticas, destellos,
+fuego, giro, transformación, pulso, contraste local, estela de movimiento, VHS, fluidos, destello de
+lente y chisporroteo eléctrico, y los parámetros nuevos de efectos que ya existen (el modo estrella y
+direccional de los rayos de luz, el desfase por píxel de las ondas, el modo doble del balanceo, la
+fusión del desenfoque y del grano, etc.). Se validan como los integrados, el editor de escenas los
+muestra y se nombran `effect.<id>` y `effect.<id>.<parámetro>`: el escritorio y el teléfono rechazan
+con el mismo aviso los que no dibujan, y los nombres no cambian cuando se dibujen. Las líneas de
+tiempo pueden medirse en fotogramas (`frames` y `fps`, que ya funciona en las dos plataformas) y
+enlazar el final de un bucle con su principio (`wrap`, rechazado mientras el motor no lo dibuje), y
+`"seed": null` da a una escena una semilla nueva cada vez que empieza. Un paquete con un vídeo HDR
+recibe la faceta `hdr` y `wprs-ctl pack check` avisa de que se verá con colores normales, quizá
+apagados. Los clientes de repositorios se saltan las versiones de un tipo de paquete que no conocen
+en vez de dejar de leer el índice. La tabla de perfiles (qué hacen el escritorio y el teléfono con
+cada función) está en `docs/specs/package.md`, y `docs/specs/scene.md` termina con una guía para
+rehacer a mano una escena hecha con otro programa: dónde va cada parte en el formato y cómo pasar
+las funciones de HLSL y GLSL a WGSL.
 
 `wprs-ctl pack build` calcula las funciones del motor que usa el paquete (`requires.features`) y las
 escribe en el manifiesto; si un paquete pide una función o una versión que este wallpaper-rs no
 conoce, dice que hace falta una versión más nueva (en el escritorio, con su miniatura). Las
 versiones publicadas antes de la versión 2 del manifiesto no abren sus paquetes, pero siguen leyendo
-los repositorios que los tienen: solo ven en ellos los de la primera versión. El validador comprueba
+los repositorios que los tienen: solo ven en ellos los de la primera versión. Las páginas web, los
+preajustes y los paquetes de recursos van solo en los índices nuevos del repositorio, que esas
+versiones no leen, así que no los ven. El validador comprueba
 que las entradas declaradas incluyan las que la escena puede usar con cualquier valor de sus
 propiedades y dice dónde las usa. Después de actualizar wallpaper-rs, la biblioteca vuelve a leer
 una vez sus paquetes, así que los que pedían una versión más nueva empiezan a funcionar y los
-anteriores reciben sus facetas. En el teléfono, la página de un paquete avisa si sus scripts o sus
-sonidos no funcionan allí.
+anteriores reciben sus facetas. En el teléfono, la página de un paquete avisa de lo que no funciona
+allí.
 
 ## Servidor propio
 
@@ -700,16 +785,20 @@ sustituyen una imagen, un vídeo, una máscara o la textura de unas partículas 
 reiniciar la escena. Cada propiedad puede mostrarse o activarse según las demás con condiciones
 como `mood == 2 || speed > 1.5`, de un lenguaje pequeño que se comprueba al validar el paquete y
 que no ejecuta código. Los scripts nunca ven las rutas de los archivos elegidos. Una carpeta solo
-se lee mientras la escena se ve. Mientras una pantalla comparte los valores con las demás, lo que
+se lee mientras la escena se ve, puede incluir hasta dos niveles de subcarpetas y limitar cuántos
+archivos usa; `wprs-ctl prop set` acepta rutas relativas a la carpeta actual. El formato también
+describe atajos que el usuario elige para abrir con un clic y valores que cambian con el nivel de
+calidad. Mientras una pantalla comparte los valores con las demás, lo que
 se cambia en ella cambia en todas. Un paquete de vídeo ofrece velocidad (sin cambiar el tono ni
 dibujar más fotogramas), el tramo que se repite, volumen propio, zoom y posición, con los valores
 por defecto que elige el autor, y se aplican sin volver a empezar el vídeo.
 
 La carpeta `scenes/` guarda cinco escenas de ejemplo de dominio público (CC0):
 capas, modos de fusión, máscaras, línea de tiempo y profundidad que sigue al puntero o una órbita
-lenta con un mapa calculado a partir de sus formas (`dusk`), partículas, efectos y el sonido del
-viento (`snowfall`), análisis del sonido (`pulse`), puntero y el sonido del agua (`pond`) y un
-script (`orbits`). `scripts/ambient-sounds.sh` sintetiza esos dos sonidos (ruido filtrado y gotas,
+lenta con un mapa calculado a partir de sus formas (`dusk`), partículas, efectos, el sonido del
+viento y las imágenes de una carpeta que elijas tras la nieve (`snowfall`), análisis del sonido
+(`pulse`), puntero y el sonido del agua (`pond`) y un script con una imagen o un vídeo de fondo que
+eliges (`orbits`). `scripts/ambient-sounds.sh` sintetiza esos dos sonidos (ruido filtrado y gotas,
 también CC0) y los guarda como Ogg Vorbis.
 
 Las escenas pueden tener sonido propio: capas `sound` con sonidos Ogg Vorbis, Opus, FLAC o WAV del
@@ -771,7 +860,9 @@ otra página no cierra un editor con cambios sin guardar.
   `assets/` y reduce la miniatura si pasa de 1024 píxeles o de 1 MiB), enlaces, etiquetas, idioma
   por defecto y las entradas que puede pedir. Las entradas que usa la escena se marcan solas y no se
   pueden quitar, y `requires.features` se calcula en cada cambio como en `wprs-ctl pack build`:
-  nunca se escribe a mano; las entradas que añadió el editor se van cuando nada las usa. Una escena
+  nunca se escribe a mano; las entradas que añadió el editor se van cuando nada las usa. Como
+  `wprs-ctl pack check`, *Problemas* dice si el escritorio y el teléfono la rechazan o la reproducen
+  sin alguna función. Una escena
   nueva toma como idioma por defecto el del escritorio. Un manifiesto de la primera versión ofrece
   *Actualizar*, que hace lo mismo que `wprs-ctl pack upgrade` (fija el idioma por defecto y cambia
   `velocidad-nieve` por `velocidad_nieve` también en la escena) pero no adivina la clasificación,

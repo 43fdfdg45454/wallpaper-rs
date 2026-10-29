@@ -17,8 +17,10 @@ pub fn fields(about: &About, package: Option<&PackageInfo>) -> Vec<(&'static str
     };
     let works = list(about.derived_from.iter().map(work));
     let origin = about.origin.clone().map(|o| if works.is_empty() { o } else { format!("{o} from {works}") });
-    let credits =
-        about.credits.iter().map(|c| format!("{}: {} ({})", list(&c.paths), c.attribution, c.license));
+    let source = |c: &wprs_core::model::PackageCredit| c.source.as_ref().map(|s| format!(" from {s}"));
+    let credits = about.credits.iter().map(|c| {
+        format!("{}: {} ({}){}", list(&c.paths), c.attribution, c.license, source(c).unwrap_or_default())
+    });
     let needs = about.features.iter().map(|f| format!("{} ({})", f.name, f.why));
     vec![
         ("content", package.is_some().then_some(content)),
@@ -28,11 +30,15 @@ pub fn fields(about: &About, package: Option<&PackageInfo>) -> Vec<(&'static str
         ),
         ("photosensitive", flashing),
         ("origin", origin),
+        ("provider", about.provider.clone()),
+        ("source", about.source_url.clone()),
         ("authors", Some(list(&about.authors))),
         ("credits", Some(list(credits))),
         ("links", Some(list(about.links.iter().map(|l| format!("{} {}", l.kind, l.url))))),
         ("inputs", Some(list(&about.inputs))),
         ("needs", Some(list(needs))),
+        ("made for", Some(list(&about.platforms))),
+        ("needs packages", Some(list(&about.packages))),
         ("languages", Some(list(&about.languages))),
         ("schema", Some(about.schema.clone())),
     ]

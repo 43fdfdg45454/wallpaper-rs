@@ -1,9 +1,10 @@
 use crate::cli::{JSON, OUTPUT};
 use crate::propsets::{self, PropPreset};
 use crate::show::{self, table};
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, ensure};
 use clap::Subcommand;
 use serde_json::Value;
+use std::path::{Path, PathBuf};
 use wprs_client::Client;
 use wprs_core::model::SceneProperties;
 
@@ -22,9 +23,8 @@ pub enum Prop {
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
-    #[command(
-        about = "Set a setting; the value is JSON or plain text such as #ff8800, asked for when left out"
-    )]
+    #[command(about = "Set a setting to JSON or plain text such as #ff8800, asked for when left out; \
+        file and folder settings take a path, which may be relative to the current folder")]
     Set {
         id: String,
         #[arg(allow_negative_numbers = true)]
@@ -61,6 +61,16 @@ pub fn value(text: &str) -> String {
     }
 }
 
+pub fn path(text: &str, base: &Path) -> Result<String> {
+    let text = serde_json::from_str::<String>(text).unwrap_or_else(|_| text.to_owned());
+    ensure!(!text.trim().is_empty(), "a file or folder setting takes a path or null");
+    let found = match Path::new(&text).is_absolute() {
+        true => PathBuf::from(&text),
+        false => std::fs::canonicalize(base.join(&text)).with_context(|| format!("cannot find {text}"))?,
+    };
+    Ok(Value::String(found.to_string_lossy().into_owned()).to_string())
+}
+
 pub async fn run(client: &Client, command: Prop) -> Result<()> {
     let daemon = &client.daemon;
     match command {
@@ -76,7 +86,15 @@ pub async fn run(client: &Client, command: Prop) -> Result<()> {
                 Some(text) => text,
                 None => crate::input::secret(&format!("{id}: "), false)?,
             };
-            daemon.set_scene_property(&output, &id, &value(&text)).await?
+            let reply: SceneProperties = wprs_client::parse(&daemon.get_scene_properties(&output).await?)?;
+            let chosen =
+                reply.fields.iter().any(|f| f.key == id && ["file", "folder"].contains(&f.kind.as_str()));
+            let text = if chosen && text.trim() != "null" {
+                path(&text, &std::env::current_dir()?)?
+            } else {
+                value(&text)
+            };
+            daemon.set_scene_property(&output, &id, &text).await?
         }
         Prop::Reset { output } => daemon.reset_scene_properties(&output).await?,
         Prop::Press { id, output } => daemon.press_scene_button(&output, &id).await?,

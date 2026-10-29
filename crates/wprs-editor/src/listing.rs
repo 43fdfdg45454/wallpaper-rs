@@ -37,9 +37,8 @@ pub fn values(doc: &Value, prop: &Value) -> Vec<(Value, String)> {
 pub fn ordered(doc: &Value) -> Vec<String> {
     let all = doc["manifest"]["properties"].as_object().into_iter().flatten();
     let rough = |p: &Value| {
-        let (label, help, icon, visible_if, enabled_if) = Default::default();
         let (group, order) = (p["group"].as_str().map(String::from), p["order"].as_f64().unwrap_or(0.0));
-        Property { label, help, group, visible_if, enabled_if, order, icon, control: Control::Divider {} }
+        Property { group, order, ..Property::new(Control::Divider {}) }
     };
     let props: BTreeMap<String, Property> = all.map(|(id, p)| (id.clone(), rough(p))).collect();
     let mut list: Vec<_> = props.iter().collect();

@@ -301,3 +301,15 @@ fn forms_order_localize_and_hide_properties() {
     let visible = |key: &str| fields.iter().any(|f| f.key == key && f.visible);
     assert_eq!(["a", "b", "c", "d"].map(visible), [true, true, true, false]);
 }
+
+#[test]
+fn declared_inputs_limit_what_a_scene_receives() {
+    let layers = json!([{ "id": "glow", "type": "solid", "color": "#ffffff", "size": [10, 10],
+        "opacity": { "audio": "bass" }, "parallax": 0.5 }]);
+    let mut rt = runtime(&scene(layers));
+    assert!(rt.uses().audio && rt.uses().cursor);
+    rt.declare(Uses { audio: false, cursor: true, clicks: false, scripts: true, media: false });
+    assert!(!rt.uses().audio && rt.uses().cursor && !rt.uses_at(Quality::Q0).audio);
+    let loud = AudioFrame { bass: 1.0, silent: false, ..AudioFrame::default() };
+    assert!(!rt.set_audio(loud), "an input the package did not declare never wakes it");
+}

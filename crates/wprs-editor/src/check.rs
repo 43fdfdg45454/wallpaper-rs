@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::Path;
-use wprs_format::{Error, FileEntry, Limits, Manifest, Property, SIGNATURE, validate};
+use wprs_format::{Error, FileEntry, Limits, Property, SIGNATURE, validate};
 use wprs_scene::{Layer, Scene, System, Timeline};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -63,9 +63,12 @@ fn pointer(doc: &Value, path: &str) -> String {
 }
 
 pub fn check(doc: &Value) -> Vec<Problem> {
+    review(doc, None)
+}
+
+pub fn review(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
     let mut out = Vec::new();
-    let props: BTreeMap<String, Property> = match serde_json::from_value::<Manifest>(doc["manifest"].clone())
-    {
+    let props: BTreeMap<String, Property> = match crate::meta::read(doc, dir) {
         Ok(manifest) => {
             if manifest.kind != wprs_format::Kind::Scene {
                 out.push(problem("/manifest/kind", "the kind of a scene package is scene"));
@@ -82,13 +85,21 @@ pub fn check(doc: &Value) -> Vec<Problem> {
     };
     match serde_json::from_value::<Scene>(doc["scene"].clone()) {
         Err(e) => out.push(problem(locate(&doc["scene"]), e)),
-        Ok(scene) => out.extend(scene.validate(&props).into_iter().map(|issue| {
-            let text = issue.to_string();
-            let path = text.split_whitespace().next().filter(|p| p.starts_with('/')).unwrap_or("");
-            problem(pointer(doc, path), text)
-        })),
+        Ok(mut scene) => {
+            let unread = dir.and_then(|d| crate::cache::read_files(&mut scene, d)).into_iter();
+            let issues = unread.chain(scene.validate(&props)).map(|issue| {
+                let text = issue.to_string();
+                let path = text.split_whitespace().next().filter(|p| p.starts_with('/')).unwrap_or("");
+                problem(pointer(doc, path.trim_end_matches(':')), text)
+            });
+            issues.for_each(|p| {
+                if !out.contains(&p) {
+                    out.push(p)
+                }
+            });
+        }
     }
-    out.extend(crate::meta::problems(doc));
+    out.extend(crate::meta::problems(doc, dir));
     out
 }
 
@@ -102,7 +113,7 @@ pub fn check_files(dir: &Path, doc: &Value) -> Vec<Problem> {
             out.push(problem(format!("/scene/assets/{id}/path"), format!("{path} is not in the folder")));
         }
     }
-    if let Ok(manifest) = serde_json::from_value::<Manifest>(doc["manifest"].clone()) {
+    if let Ok(manifest) = crate::meta::read(doc, Some(dir)) {
         let entries: Vec<FileEntry> = found
             .iter()
             .map(|(path, size)| FileEntry {

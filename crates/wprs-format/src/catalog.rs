@@ -3,8 +3,8 @@ use crate::repo::at;
 use crate::store::{json, place, write};
 use crate::validate::{extension, within};
 use crate::{
-    Error, KeyRevocation, Limits, Listing, MANIFEST, Needs, Package, Preview, Rated, Reason, Release, Result,
-    Revocation, Root, SIGNATURE, ensure, open, require, sha256, sha256_file, verify_package,
+    Error, KeyRevocation, Kind, Limits, Listing, MANIFEST, Needs, Package, Preview, Rated, Reason, Release,
+    Result, Revocation, Root, SIGNATURE, ensure, open, require, sha256, sha256_file, verify_package,
 };
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
@@ -42,6 +42,8 @@ pub fn add(dir: &Path, wpak: &Path, author: Option<&str>, now: i64) -> Result<Ad
     let size = fs::metadata(wpak)?.len();
     within("package size", size, root.policy.max_package_size)?;
     let mut package = open(wpak, &Limits::default())?;
+    package.manifest.publishable()?;
+    package.look_at_videos()?;
     let author = signer(&mut package, &root, author, &catalog.keys)?;
     let (id, version) = (package.manifest.id.clone(), package.manifest.version.clone());
     let added = Added { id: id.clone(), author, release: release(&mut package, dir, wpak, size, now)? };
@@ -117,6 +119,7 @@ fn release(package: &mut Opened, dir: &Path, wpak: &Path, size: u64, now: i64) -
     let (preview, animated) = (copy(manifest.thumbnail())?, copy(manifest.animated())?);
     let v2 = manifest.v2().then_some(&manifest);
     let facets = if manifest.v2() { package.facts.facets.clone() } else { Vec::new() };
+    let base = (manifest.kind == Kind::Preset).then(|| package.preset().map(|p| p.base.id)).transpose()?;
     Ok(Release {
         version: manifest.version.clone(),
         kind: manifest.kind,
@@ -138,5 +141,7 @@ fn release(package: &mut Opened, dir: &Path, wpak: &Path, size: u64, now: i64) -
         requires: v2.and_then(|m| m.requires.as_ref()).map(Needs::from),
         facets,
         animated,
+        platforms: manifest.platforms.iter().map(|p| p.name().to_owned()).collect(),
+        base,
     })
 }

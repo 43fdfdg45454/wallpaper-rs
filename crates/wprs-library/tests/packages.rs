@@ -1,11 +1,11 @@
 use rusqlite::Connection;
+use serde_json::json;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use tempfile::TempDir;
 use wprs_format::{
-    Content, Descriptor, Kind, Limits, Manifest, Origin, OriginKind, Previews, Rating, SCHEMA, SCHEMA_V1,
-    Text,
+    Content, Descriptor, Kind, Limits, Manifest, Origin, Previews, Rating, SCHEMA, SCHEMA_V1, Text,
 };
 use wprs_library::{Error, Library};
 
@@ -33,7 +33,7 @@ fn build(root: &Path, name: &str, rating: Option<Rating>, flashing: bool, title:
         entry: "image.png".into(),
         content,
         photosensitive: v2.then_some(flashing),
-        origin: v2.then(|| Origin { kind: OriginKind::Original, derived_from: Vec::new() }),
+        origin: v2.then(Origin::default),
         previews: v2.then(|| Previews { thumbnail: Some("preview.png".into()), animated: None }),
         tags: if v2 { Vec::new() } else { vec!["sea".into(), "<img src=x>".into()] },
         ..Default::default()
@@ -68,7 +68,10 @@ fn rated_packages_are_searchable_and_confirmed_once_per_package() {
     assert_eq!((info.content.as_deref(), info.photosensitive), (Some("mature"), Some(true)));
     assert_eq!(
         (info.facets, info.confirmed),
-        (["android", "landscape", "photosensitive"].map(String::from).to_vec(), Vec::<String>::new())
+        (
+            ["android", "desktop", "landscape", "photosensitive"].map(String::from).to_vec(),
+            Vec::<String>::new()
+        )
     );
     assert_eq!(library.unconfirmed_flashing().unwrap(), std::slice::from_ref(&storm.uid));
     library.confirm(&[&storm.uid], "photosensitive").unwrap();
@@ -120,10 +123,43 @@ fn packages_are_read_again_after_an_upgrade_and_titles_follow_the_language() {
     let package = item.package.unwrap();
     assert_eq!(
         (item.meta.error, package.content.as_deref(), package.facets),
-        (None, Some("general"), ["android", "landscape", "localized"].map(String::from).to_vec())
+        (None, Some("general"), ["android", "desktop", "landscape", "localized"].map(String::from).to_vec())
     );
     assert!(["Storm", "Tormenta"].contains(&item.title.as_str()), "{}", item.title);
     library.set_title(&uid, "Mine").unwrap();
     let mut items = vec![library.item(&uid).unwrap()];
     assert_eq!(title(&library, &["es"], &mut items), "Mine");
+}
+
+#[test]
+fn packages_this_device_cannot_show_keep_their_details_and_say_why() {
+    let dir = TempDir::new().unwrap();
+    let root = dir.path().join("pictures");
+    build(&root, "phone", Some(Rating::General), false, "Phone".into());
+    build(&root, "mirror", Some(Rating::General), false, "Mirror".into());
+    let edit = |name: &str, change: fn(&mut serde_json::Value)| {
+        let source = dir.path().join(name);
+        let mut manifest: serde_json::Value =
+            serde_json::from_slice(&fs::read(source.join("manifest.json")).unwrap()).unwrap();
+        change(&mut manifest);
+        fs::write(source.join("manifest.json"), manifest.to_string()).unwrap();
+        wprs_format::build(&source, root.join(format!("{name}.wpak")), &Limits::default()).unwrap();
+    };
+    edit("phone", |m| {
+        (m["platforms"], m["requires"]) = (json!(["android"]), json!({"features": ["platforms"]}))
+    });
+    edit("mirror", |m| {
+        (m["display"], m["requires"]) =
+            (json!({"flip": "horizontal"}), json!({"features": ["display2", "flip"]}))
+    });
+    let mut library = Library::open(dir.path().join("library.db")).unwrap();
+    let source = library.add_folder(&root, true).unwrap();
+    library.scan(&source, NOW).unwrap();
+    let found = |title: &str| library.search(title, NOW, 0, 1).unwrap().remove(0);
+    let (phone, mirror) = (found("Phone"), found("Mirror"));
+    assert_eq!(phone.meta.error.as_deref(), Some("this package is made for Android only"));
+    assert_eq!(phone.package.unwrap().facets, ["android", "landscape"]);
+    let error = mirror.meta.error.unwrap();
+    assert!(error.contains("needs a newer version") && error.contains("flip (shows its picture"), "{error}");
+    assert_eq!(mirror.package.unwrap().id, "org.example.mirror");
 }

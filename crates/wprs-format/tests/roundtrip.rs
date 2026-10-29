@@ -163,10 +163,12 @@ fn sounds_are_checked_when_a_scene_is_built_or_read() {
     assert_eq!(open(&out, &Limits::default()).unwrap().scene().unwrap().sounds().count(), 1);
     for (bytes, reason) in [(wav(61), "at most 60 s"), (b"not a sound".to_vec(), "is not an Ogg Vorbis")] {
         fs::write(src.join("assets/rain.wav"), bytes).unwrap();
-        let refused = build(&src, &out, &Limits::default());
-        assert!(
-            matches!(&refused, Err(Error::Invalid { reason: r, .. }) if r.contains(reason)),
-            "{refused:?}"
-        );
+        for refused in [build(&src, &out, &Limits::default()).map(drop), wprs_format::inspect(&src).map(drop)]
+        {
+            assert!(
+                matches!(&refused, Err(Error::Invalid { reason: r, .. }) if r.contains(reason)),
+                "{refused:?}"
+            );
+        }
     }
 }

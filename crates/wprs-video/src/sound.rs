@@ -52,7 +52,7 @@ pub fn decode(path: &Path, budget: usize) -> Result<Clip, Error> {
     crate::init()?;
     let uri = local_uri(path)?;
     let header = std::fs::read(path).map_err(|e| Error::Decode(e.to_string()))?;
-    let probed = wprs_scene::Clip::probe(&header).map_err(Error::Decode)?;
+    let probed = wprs_scene::Clip::probe(&path.to_string_lossy(), &header).map_err(Error::Decode)?;
     let frames = ((probed.seconds.min(MAX_SOUND_SECONDS) + MARGIN) * RATE as f32) as usize;
     let decoder = gst::ElementFactory::make("uridecodebin").property("uri", uri).build();
     let decoder = decoder.map_err(|_| Error::MissingElement("uridecodebin"))?;

@@ -1,5 +1,5 @@
-use super::{Follow, System, is_zero};
-use crate::validate::Check;
+use super::seed::Remap;
+use super::{Follow, Handle, is_zero};
 use crate::value::{Value, Vec2};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -9,6 +9,15 @@ use serde::{Deserialize, Serialize};
 pub enum Target {
     Point([f32; 2]),
     Follow(Follow),
+    Control(Handle),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Falloff {
+    Constant,
+    Linear,
+    InverseSquare,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -20,20 +29,128 @@ pub enum Force {
     Turbulence {
         strength: Value<f32>,
         scale: f32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        speed: Option<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        time_scale: Option<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        mask: Option<[f32; 2]>,
     },
     Attractor {
         target: Target,
         strength: Value<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(extend("x-unit" = "px"))]
+        radius: Option<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        falloff: Option<Falloff>,
     },
     Vortex {
         center: Target,
         strength: Value<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(extend("x-unit" = "px"))]
+        radius: Option<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        falloff: Option<Falloff>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        inner: Option<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        outer: Option<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ring: Option<Ring>,
     },
     Orbit {
         center: Target,
         strength: Value<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(extend("x-unit" = "px"))]
+        radius: Option<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        falloff: Option<Falloff>,
     },
     Noise(Value<f32>),
+    Oscillate(Oscillate),
+    Cap(Value<f32>),
+    Torque(Value<f32>),
+    SpinDrag(Value<f32>),
+    SlowNear(SlowNear),
+    KeepDistance(KeepDistance),
+    KeepBetween(KeepBetween),
+    Boids(Boids),
+    Remap(Remap),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Ring {
+    #[schemars(extend("x-unit" = "px"))]
+    pub radius: f32,
+    #[schemars(extend("x-unit" = "px"))]
+    pub width: f32,
+    pub pull: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Wobble {
+    Position,
+    Alpha,
+    Size,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Oscillate {
+    pub what: Wobble,
+    #[schemars(extend("x-unit" = "Hz"))]
+    pub freq: [f32; 2],
+    pub scale: [f32; 2],
+    #[serde(default)]
+    pub phase: [f32; 2],
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mask: Option<[f32; 2]>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SlowNear {
+    pub target: Target,
+    #[schemars(extend("x-unit" = "px"))]
+    pub inner: f32,
+    #[schemars(extend("x-unit" = "px"))]
+    pub outer: f32,
+    #[schemars(extend("x-range" = [0, 1]))]
+    pub factor: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct KeepDistance {
+    pub target: Target,
+    #[schemars(extend("x-unit" = "px"))]
+    pub distance: f32,
+    pub strength: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct KeepBetween {
+    pub from: Target,
+    pub to: Target,
+    pub strength: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Boids {
+    #[schemars(extend("x-unit" = "px"))]
+    pub radius: f32,
+    pub separation: f32,
+    pub alignment: f32,
+    pub cohesion: f32,
+    #[schemars(extend("x-unit" = "px/s"))]
+    pub max_speed: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -46,52 +163,36 @@ pub struct Collider {
     pub friction: f32,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub kill: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub stick: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum Surface {
     Canvas,
-    Plane { point: [f32; 2], normal: [f32; 2] },
-    Circle { center: [f32; 2], radius: f32 },
-}
-
-impl Check<'_> {
-    pub(super) fn forces(&mut self, p: &str, s: &System) {
-        for (k, force) in s.forces.iter().enumerate() {
-            let q = format!("{p}/forces/{k}");
-            match force {
-                Force::Gravity(v) => self.value(&q, v),
-                Force::Drag(v) | Force::Noise(v) => self.value(&q, v),
-                Force::Turbulence { strength, scale } => {
-                    self.value(&format!("{q}/strength"), strength);
-                    self.range(&format!("{q}/scale"), *scale, 1e-6, 1.0);
-                }
-                Force::Attractor { target: t, strength }
-                | Force::Vortex { center: t, strength }
-                | Force::Orbit { center: t, strength } => {
-                    self.value(&format!("{q}/strength"), strength);
-                    if let Target::Point(at) = t {
-                        self.place(&q, *at);
-                    }
-                }
-            }
-        }
-        for (k, c) in s.collide.iter().enumerate() {
-            let q = format!("{p}/collide/{k}");
-            self.range(&format!("{q}/bounce"), c.bounce, 0.0, 1.0);
-            self.range(&format!("{q}/friction"), c.friction, 0.0, 1.0);
-            match c.bounds {
-                Surface::Canvas => {}
-                Surface::Plane { point, normal } => {
-                    self.place(&q, point);
-                    self.range(&format!("{q}/bounds/plane/normal"), normal[0].hypot(normal[1]), 1e-6, 1e6);
-                }
-                Surface::Circle { center, radius } => {
-                    self.place(&q, center);
-                    self.range(&format!("{q}/bounds/circle/radius"), radius, 1e-3, 1e5);
-                }
-            }
-        }
-    }
+    Plane {
+        point: [f32; 2],
+        normal: [f32; 2],
+    },
+    Circle {
+        center: [f32; 2],
+        radius: f32,
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        inside: bool,
+    },
+    Box {
+        from: [f32; 2],
+        to: [f32; 2],
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        inside: bool,
+    },
+    Segment {
+        from: [f32; 2],
+        to: [f32; 2],
+    },
+    Layer {
+        #[schemars(extend("x-ref" = "layer"))]
+        id: String,
+    },
 }

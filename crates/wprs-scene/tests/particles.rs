@@ -75,14 +75,18 @@ fn systems_are_validated_against_their_limits() {
         [range(&format!("{p}/capacity"), 0.0, 1.0, 200_000.0)]
     );
     assert_eq!(
-        issues(with(sparks(), json!({ "prewarm": 20 }))),
-        [range(&format!("{p}/prewarm"), 20.0, 0.0, 10.0)]
+        issues(with(sparks(), json!({ "prewarm": 40 }))),
+        [range(&format!("{p}/prewarm"), 40.0, 0.0, 30.0)]
     );
     let life = with(sparks(), json!({ "init": { "life": [3, 1] } }));
     assert_eq!(issues(life), [range(&format!("{p}/init/life/1"), 1.0, 3.0, 600.0)]);
     let five = Json::Array(vec![json!({ "shape": "edge", "rate": 1 }); 5]);
-    let too_many = Issue::TooMany { path: format!("{p}/emitters"), count: 5, max: 4 };
-    assert_eq!(issues(with(sparks(), json!({ "emitters": five }))), [too_many]);
+    let wide =
+        Scene::from_json(&scene(with(sparks(), json!({ "emitters": five, "prewarm": 20 })), true)).unwrap();
+    assert!(wide.validate(&props()).is_empty() && wide.features().contains("particles2"));
+    let nine = Json::Array(vec![json!({ "shape": "edge", "rate": 1 }); 9]);
+    let too_many = Issue::TooMany { path: format!("{p}/emitters"), count: 9, max: 8 };
+    assert_eq!(issues(with(sparks(), json!({ "emitters": nine }))), [too_many]);
     let bouncy = with(sparks(), json!({ "collide": [{ "bounds": "canvas", "bounce": 2 }] }));
     assert_eq!(issues(bouncy), [range(&format!("{p}/collide/0/bounce"), 2.0, 0.0, 1.0)]);
     let gone = Issue::Unknown { path: format!("{p}/render/texture"), what: "asset", id: "gone".into() };
@@ -95,9 +99,9 @@ fn systems_are_validated_against_their_limits() {
     assert_eq!(issues(curve), [Issue::Unsorted(format!("{p}/render/size_over_life"))]);
     let mut big = Scene::from_json(&scene(sparks(), true)).unwrap();
     let huge: System = serde_json::from_value(with(sparks(), json!({ "capacity": 150_000 }))).unwrap();
-    big.particles.extend((0..8).map(|i| (format!("s{i}"), huge.clone())));
+    big.particles.extend((0..32).map(|i| (format!("s{i}"), huge.clone())));
     let found = big.validate(&props());
-    assert_eq!(found[0], Issue::TooMany { path: "/particles".into(), count: 9, max: 8 });
+    assert_eq!(found[0], Issue::TooMany { path: "/particles".into(), count: 33, max: 32 });
     assert!(matches!(&found[1], Issue::Range { path, value, .. } if path == "/particles" && *value > 1e6));
     let textured = with(
         sparks(),
@@ -303,4 +307,28 @@ fn layers_drawing_one_system_share_its_budget() {
     let eight = Bake::new(&s, "dots", Tier::T0, true, |_| None).unwrap();
     assert_eq!((one.alloc, eight.alloc), (1500, 250));
     assert!(eight.size < one.size, "{} {}", eight.size, one.size);
+}
+
+#[test]
+fn ranges_of_births_and_emitter_shapes_may_be_bound() {
+    let loud = json!({ "audio": "bass", "scale": 8.0 });
+    let circle = json!({ "circle": { "center": [100, 50], "radius": loud, "inner": 2 } });
+    let bound = with(sparks(), json!({ "emitters": [{ "shape": circle, "rate": 10 }] }));
+    let mut init = bound["init"].clone();
+    init["size"] = json!([2, loud]);
+    init["life"] = json!([0.5, { "keys": [[0, 1], [2, 2]] }, 2]);
+    let text = scene(with(bound, json!({ "init": init })), true);
+    let parsed = Scene::from_json(&text).unwrap();
+    let found = parsed.validate(&props());
+    assert!(found.is_empty(), "{found:?}");
+    assert!(parsed.features().contains("particle_values") && needs(&parsed).audio);
+    let system = &parsed.particles["dots"];
+    assert_eq!((system.init.size.ends, system.init.life.exponent), ([2.0, 0.0], Some(2.0)));
+    let written: Json = serde_json::to_value(&parsed).unwrap();
+    assert_eq!(written["particles"]["dots"]["init"]["size"], json!([2.0, loud]));
+    assert_eq!(written["particles"]["dots"]["emitters"][0]["shape"]["circle"]["radius"], loud);
+    let plain = Scene::from_json(&scene(sparks(), true)).unwrap();
+    assert!(!plain.features().contains("particle_values") && !needs(&plain).audio);
+    let colored = with(sparks(), json!({ "init": { "color": [{ "audio": "bass" }, "#ffffff"] } }));
+    assert!(matches!(&issues(colored)[..], [Issue::Type(p)] if p.ends_with("/init/color")));
 }

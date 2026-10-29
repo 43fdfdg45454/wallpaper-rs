@@ -1,5 +1,7 @@
 use crate::validate::extension;
-use crate::{Result, require};
+use crate::{Facts, Kind, Manifest, Result, Scene, require};
+
+pub(crate) const EDGE: u64 = 4 << 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Media {
@@ -83,6 +85,10 @@ fn jpeg(data: &[u8]) -> Option<(u32, u32)> {
     }
 }
 
+pub fn shown(extension: &str) -> bool {
+    ["png", "jpg", "jpeg", "webp", "gif", "bmp", "webm", "mp4", "mkv"].contains(&extension)
+}
+
 pub fn preview(animated: bool, path: &str, data: &[u8]) -> Result<()> {
     let (field, side, seconds) =
         if animated { ("previews.animated", 640, 15) } else { ("previews.thumbnail", 1024, 0) };
@@ -91,4 +97,34 @@ pub fn preview(animated: bool, path: &str, data: &[u8]) -> Result<()> {
     let fits = probe(data).is_some_and(|m| m.format == ext && m.width.max(m.height) <= side && long(&m));
     let most = if seconds > 0 { format!(" and {seconds} s") } else { String::new() };
     require(fits, field, &format!("{path:?} must be a {ext} image of at most {side} pixels a side{most}"))
+}
+
+pub fn hdr(data: &[u8]) -> bool {
+    let tone = |t: u16| t == 16 || t == 18;
+    let boxed = data.windows(12).any(|w| {
+        &w[..4] == b"colr"
+            && matches!(&w[4..8], b"nclx" | b"nclc")
+            && tone(u16::from_be_bytes([w[10], w[11]]))
+    });
+    let tagged = data.windows(4).any(|w| w[..3] == [0x55, 0xba, 0x81] && tone(u16::from(w[3])));
+    boxed || data.starts_with(&[0x1a, 0x45, 0xdf, 0xa3]) && tagged
+}
+
+pub(crate) fn videos(manifest: &Manifest, scene: Option<&Scene>) -> Vec<String> {
+    let video = |p: &String| extension(p).is_some_and(|e| ["webm", "mp4", "mkv"].contains(&e.as_str()));
+    let entry = (manifest.kind == Kind::Video).then(|| manifest.entry.clone());
+    let assets = scene.into_iter().flat_map(|s| s.assets.values().map(|a| a.path.clone()));
+    let mut found: Vec<String> = entry.into_iter().chain(assets).filter(video).collect();
+    found.sort();
+    found.dedup();
+    found.truncate(16);
+    found
+}
+
+pub(crate) fn mark(facts: &mut Facts, path: &str) {
+    facts.facets.extend((!facts.facets.iter().any(|f| f == "hdr")).then(|| "hdr".to_owned()));
+    facts.facets.sort();
+    facts
+        .notes
+        .push(format!("{path} is an HDR video, which plays with standard colors and may look washed out"));
 }

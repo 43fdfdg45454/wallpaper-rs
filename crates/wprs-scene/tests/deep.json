@@ -1,0 +1,127 @@
+{
+  "schema": "wallpaper-rs.scene/1",
+  "canvas": { "size": [1920, 1080], "wind": [20, 0] },
+  "camera3d": {
+    "fov": 45, "near": 0.1, "far": 500, "eye": [0, 1, 6], "center": [0, 1, 0],
+    "paths": [{ "id": "orbit", "ease": "in_out_sine", "loop": true,
+                "keys": [{ "t": 0, "eye": [0, 1, 6], "center": [0, 1, 0] },
+                         { "t": 8, "eye": [6, 1, 0], "center": [0, 1, 0], "up": [0, 1, 0], "fov": 50 }] }],
+    "order": "random", "fade": { "to": "cross", "duration": 1 }
+  },
+  "assets": {
+    "fox": { "path": "models/fox.glb" },
+    "robot": { "path": "models/robot.glb" },
+    "skin": { "path": "skin.png" },
+    "spark": { "path": "spark.png" },
+    "drops": { "path": "drops.png", "linear": true },
+    "cover": { "path": "nothing.png", "media": "current" }
+  },
+  "effects": {
+    "glass": { "descriptor": "effects/glass.json", "wgsl": "effects/glass.wgsl" },
+    "sparkle": { "descriptor": "effects/sparkle.json", "wgsl": "effects/sparkle.wgsl" }
+  },
+  "layers": [
+    { "id": "fox", "type": "mesh", "mesh": "fox", "texture": "skin", "color": "#ffeedd", "size": [600, 900],
+      "parts": { "arm": { "order": 2, "clip_to": "body" }, "body": { "visible": true } },
+      "depth": { "scale": 2, "cull": true },
+      "clips": [{ "id": "idle", "animation": "idle", "from": 0, "to": 2, "events": [{ "t": 1, "name": "step" }] },
+                { "id": "wave", "animation": "wave", "loop": "once" }],
+      "animations": [{ "clip": "idle" }, { "clip": "wave", "weight": 0.5, "additive": true, "blend_in": 0.2, "bones": ["arm"] }],
+      "ik": [{ "chain": ["arm", "hand"], "target": "cursor", "limits": { "arm": [-90, 90] }, "bend": "counterclockwise" }],
+      "physics": [{ "bone": "hair", "mode": "rope", "stiffness": 0.3, "wind": 0.8, "rotation": [-45, 45] }],
+      "rules": [{ "bone": "sword", "parent": "hand", "weight": { "keys": [[0, 0], [1, 1]] } }],
+      "shapes": { "smile": 0.5, "blink": { "keys": [[0, 0], [0.1, 1], [0.2, 0]], "loop": "repeat" } },
+      "expressions": { "smile": { "mouth_open": 0.3, "cheeks": 1 } },
+      "hit": ["head"], "solid": { "alpha": 0.5 } },
+    { "id": "badge", "type": "image", "image": "cover",
+      "attach": { "layer": "fox", "bone": "hand", "offset": [10, 0], "inherit": ["position", "rotation"] } },
+    { "id": "stage", "type": "group", "space": "3d", "layers": [
+      { "id": "robot", "type": "model", "model": "robot", "position": [0, 0, 0], "scale": 1.5,
+        "rotation": { "keys": [[0, [0, 0, 0]], [10, [0, 360, 0]]] },
+        "materials": {
+          "metal": { "shader": "pbr", "params": { "metallic": 0.9, "roughness": 0.2 }, "cast_shadows": true, "cull": "back" },
+          "hair": { "shader": "fur", "params": { "layers": 12, "length": 4 }, "double_sided": true, "blend": "mask" },
+          "glass": { "shader": "glass", "emissive": "#00ffff", "receive_shadows": true, "depth_write": false }
+        },
+        "root_motion": true, "env": "skin",
+        "clips": [{ "id": "walk" }], "animations": [{ "clip": "walk", "rate": 1.5 }] },
+      { "id": "sun", "type": "light", "light": "directional", "shadows": true },
+      { "id": "label", "type": "text", "text": { "media": "title" }, "color": { "media": "text" }, "depth_test": true }
+    ] },
+    { "id": "show", "type": "particles", "system": "fireworks",
+      "instance": { "alpha": 0.8, "size": 2, "speed": 1.5, "brightness": 2, "color": "#ffccaa", "points": [[100, 100]] },
+      "render": { "texture": "spark", "orient": "velocity" } },
+    { "id": "pulse", "type": "solid", "color": "#ffffff",
+      "opacity": { "script": "scripts/game.js", "fn": "pulse", "params": { "speed": 2 } },
+      "effects": [{ "effect": "blur", "name": "soft" }] },
+    { "id": "lights", "type": "adjustment", "size": [640, 160], "rgb": true }
+  ],
+  "particles": {
+    "fireworks": {
+      "capacity": 2000, "prewarm": 20, "space": "world", "lock": ["count"],
+      "points": [{ "at": [960, 540] }, { "follow": "cursor" }, { "at": { "keys": [[0, [0, 0]], [4, [1920, 0]]] }, "angle": 45 }],
+      "perspective": { "focal": 800 },
+      "emitters": [
+        { "shape": { "box": { "from": [0, 0], "to": [100, 100], "inner": [50, 50], "at": "p1" } }, "rate": 50,
+          "duration": 5, "delay": 1, "periodic": { "on": [1, 2], "off": [0.5, 3] }, "max_per_step": 1, "audio_gate": true },
+        { "shape": { "circle": { "center": [0, 0], "radius": 50, "scale": [2, 1], "sign": [1, 0], "at": "p2" } }, "rate": 10 },
+        { "shape": { "layer": { "id": "fox", "threshold": 0.4, "color": true, "inherit": true, "jitter": 2, "refresh": "on_change" } }, "rate": 10 },
+        { "shape": { "around": { "at": "p0", "count": 12, "radius": 100, "speed": 30, "mode": "mirror" } }, "rate": 10 },
+        { "shape": { "between": { "from": "p0", "to": "cursor", "count": 20, "arc": { "amount": 0.5 }, "taper": { "size": 0.2 } } }, "rate": 10 }
+      ],
+      "init": {
+        "life": [1, 3, 2], "alpha": [0.5, 1], "color": ["#ffffff", "#ff8800", 0.5],
+        "palette": { "colors": ["#ff0000", "#00ff00"], "noise": [0.1, 0, 0] },
+        "velocity": [[-10, -50], [10, -100], 1.5], "radial": [0, 20], "inherit": { "from": "p1", "speed": [0.5, 1] },
+        "turbulent": { "forward": 90, "scale": 0.5, "audio": "bass" }, "offset_noise": { "distance": 5, "octaves": 3 },
+        "depth": [-200, 200], "depth_speed": [0, 10],
+        "remap": [{ "input": "daytime", "in": [0, 1], "output": "color", "out": [0, 1], "wave": "sine" },
+                  { "input": "distance:p1", "in": [0, 500], "output": "size", "out": [2, 0.5], "op": "mul", "clamp_out": true }]
+      },
+      "forces": [
+        { "gravity": [0, 98], "window": [0, 0.1, 0.8, 1] },
+        { "attractor": { "target": "p1", "strength": 200, "radius": 300, "falloff": "linear" } },
+        { "vortex": { "center": [960, 540], "strength": 50, "inner": 10, "outer": 400, "ring": { "radius": 200, "width": 40, "pull": 2 } } },
+        { "turbulence": { "strength": 20, "scale": 0.01, "speed": 2, "time_scale": 0.5, "mask": [1, 0] } },
+        { "oscillate": { "what": "alpha", "freq": [0.5, 2], "scale": [0.2, 0.6], "phase": [0, 1] } },
+        { "cap": 400 }, { "torque": 10 }, { "spin_drag": 0.5 },
+        { "slow_near": { "target": "cursor", "inner": 10, "outer": 100, "factor": 0.2 } },
+        { "keep_distance": { "target": "p0", "distance": 300, "strength": 1 } },
+        { "keep_between": { "from": "p0", "to": "p1", "strength": 0.5 } },
+        { "boids": { "radius": 30, "separation": 1, "alignment": 0.5, "cohesion": 0.5, "max_speed": 200 } },
+        { "remap": { "input": "age", "in": [0, 1], "output": "alpha", "out": [1, 0] } }
+      ],
+      "collide": [
+        { "bounds": { "box": { "from": [0, 0], "to": [1920, 1080], "inside": true } }, "bounce": 0.5 },
+        { "bounds": { "segment": { "from": [0, 900], "to": [1920, 1000] } }, "stick": true },
+        { "bounds": { "layer": { "id": "fox" } }, "kill": true },
+        { "bounds": { "circle": { "center": [960, 540], "radius": 100, "inside": true } } }
+      ],
+      "render": {
+        "texture": "spark", "frames": "life", "cycles": 3, "brightness": 4, "cutout": [0.2, 0.8, 1],
+        "stretch": { "time": 0.1, "min": 2, "max": 40 }, "rope": { "subdivide": 3, "width": 6 },
+        "trail": { "length": 32, "width": 0.5, "segments": 16, "textured": true },
+        "orient": "fixed", "angle": 90, "normal": "drops", "lit": true, "refract": { "normal": "drops", "amount": 0.3 },
+        "shader": "sparkle"
+      },
+      "children": [{ "system": "embers", "on": "death", "probability": 0.5, "max": 100, "offset": [0, -5], "angle": 15,
+                     "scale": 0.5, "points_from": true, "inherit": ["color", "velocity"] }]
+    },
+    "embers": { "capacity": 500, "emitters": [{ "shape": { "point": [0, 0] } }],
+                "children": [{ "system": "smoke", "on": "follow", "follow_inherit": true, "inherit": ["size"] }] },
+    "smoke": { "capacity": 100, "emitters": [{ "shape": "edge" }] }
+  },
+  "timelines": [
+    { "id": "pop", "duration": 1, "trigger": "click:fox" },
+    { "id": "hello", "duration": 1, "trigger": "enter:fox" },
+    { "id": "song", "duration": 2, "trigger": "media:track" },
+    { "id": "stride", "duration": 1, "trigger": "event:step" }
+  ],
+  "scripts": [
+    { "path": "scripts/game.js", "events": ["init", "update", "click", "enter", "timelineEvent", "mediaPlayback"],
+      "uses": ["audio", "timers", "storage", "layers", "geometry", "effects", "math", "console", "shortcuts"],
+      "params": { "speed": { "type": "number", "default": 1, "min": 0, "max": 10 }, "tint": { "type": "color", "default": "#ff0000" } } }
+  ],
+  "templates": { "bar": { "id": "bar", "type": "solid", "color": "#ffffff", "size": [10, 100] } },
+  "pools": { "waves": { "type": "mesh", "max": 8, "max_vertices": 4096, "texture": "skin" } }
+}

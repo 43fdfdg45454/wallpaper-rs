@@ -1,12 +1,13 @@
 use crate::arrange;
 use crate::keys::{Key, keyframe};
 use crate::layers::{children, clean, find, parent, system, taken, template, unique, walk};
-use crate::ops::{Op, set};
+use crate::ops::{Op, apply, set};
 use anyhow::{Result, anyhow, ensure};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::collections::BTreeSet;
 use std::path::PathBuf;
-use wprs_format::{Descriptor, Rating};
+use wprs_format::{Descriptor, Rating, features};
 
 pub const EDITOR: &str = "/scene/ext/editor";
 
@@ -208,23 +209,43 @@ pub fn solo(doc: &Value) -> Option<&str> {
     doc.pointer(&format!("{EDITOR}/solo")).and_then(Value::as_str)
 }
 
-fn computed(pointer: &str) -> Result<()> {
-    let typed = pointer.starts_with("/manifest/requires/features");
-    ensure!(!typed, "requires.features is computed from what the package uses");
+fn computed(doc: &Value, ops: &[Op]) -> Result<()> {
+    const AT: &str = "/manifest/requires/features";
+    if !ops.iter().flat_map(Op::paths).any(|p| p.starts_with(AT)) {
+        return Ok(());
+    }
+    let names = |d: &Value| -> Option<BTreeSet<String>> {
+        match d.pointer(AT) {
+            None => Some(BTreeSet::new()),
+            Some(list) => list.as_array()?.iter().map(|v| v.as_str().map(String::from)).collect(),
+        }
+    };
+    let mut probe = doc.clone();
+    let chosen = apply(&mut probe, ops).ok().and_then(|_| Some((names(doc)?, names(&probe)?)));
+    let only = |(old, new): (BTreeSet<String>, BTreeSet<String>)| {
+        old.symmetric_difference(&new).all(|f| features::CHOSEN.contains(&f.as_str()))
+    };
+    ensure!(
+        chosen.is_some_and(only),
+        "requires.features is computed from what the package uses, except locale_files"
+    );
     Ok(())
 }
 
 pub fn plan(doc: &Value, action: &Action) -> Result<Vec<Op>> {
-    if let Action::Set { pointer, .. }
-    | Action::Add { pointer, .. }
-    | Action::Remove { pointer }
-    | Action::Translate { pointer, .. } = action
+    let ops = steps(doc, action)?;
+    if let Action::Set { .. }
+    | Action::Add { .. }
+    | Action::Remove { .. }
+    | Action::Translate { .. }
+    | Action::Move { .. } = action
     {
-        computed(pointer)?;
+        computed(doc, &ops)?;
     }
-    if let Action::Move { from, to } = action {
-        computed(from).and(computed(to))?;
-    }
+    Ok(ops)
+}
+
+fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
     Ok(match action {
         Action::Set { pointer, value } => set(doc, pointer, value.clone()),
         Action::Add { pointer, value } => vec![Op::Add { path: pointer.clone(), value: value.clone() }],

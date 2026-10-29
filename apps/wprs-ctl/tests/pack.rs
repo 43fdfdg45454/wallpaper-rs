@@ -51,7 +51,30 @@ fn check_explains_what_a_package_needs_and_upgrade_rates_it() {
             &serde_json::json!(["inputs.audio"])
         )
     );
+    std::fs::create_dir(src.join("locale")).unwrap();
+    std::fs::write(src.join("locale/fr.json"), r#"{"Good morning": "Bonjour"}"#).unwrap();
     let built = tmp.path().join("beat.wpak");
-    ok(&["pack", "build", path, "-o", built.to_str().unwrap()]);
+    let out = run(&["pack", "build", path, "-o", built.to_str().unwrap()]);
+    let said = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        out.status.success() && said.starts_with("note: locale/fr.json ") && !said.contains("+="),
+        "{said}"
+    );
     assert!(ok(&["pack", "check", built.to_str().unwrap()]).contains("rating = mature (violence)"));
+}
+
+#[test]
+fn paths_of_file_and_folder_settings_become_absolute() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = tmp.path().canonicalize().unwrap();
+    std::fs::create_dir_all(base.join("2024/pics")).unwrap();
+    let path = |text: &str| wprs_ctl::props::path(text, &base).unwrap();
+    let quoted = |p: &Path| serde_json::to_string(p.to_str().unwrap()).unwrap();
+    assert_eq!(path("2024"), quoted(&base.join("2024")));
+    assert_eq!(path(r#""2024/pics""#), quoted(&base.join("2024/pics")));
+    assert_eq!(path("/srv/a b.png"), r#""/srv/a b.png""#);
+    assert!(wprs_ctl::props::path("missing.png", &base).is_err());
+    for empty in ["", " ", r#""""#, r#"" ""#] {
+        assert!(wprs_ctl::props::path(empty, &base).is_err(), "{empty:?}");
+    }
 }

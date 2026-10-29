@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tempfile::TempDir;
 use wprs_format::{
-    Content, Descriptor, Fetch, Limits, Manifest, Origin, OriginKind, Previews, Rating, SCHEMA, SCHEMA_V1,
+    Content, Descriptor, Fetch, Limits, Manifest, Origin, Previews, Rating, SCHEMA, SCHEMA_V1,
 };
 use wprs_server::{App, Config};
 
@@ -140,7 +140,7 @@ pub fn package_v2(dir: &Path, id: &str, version: &str, rating: Rating) -> PathBu
         previews: Some(Previews { thumbnail: Some("preview.png".into()), animated: None }),
         content: Some(Content { rating, descriptors }),
         photosensitive: Some(true),
-        origin: Some(Origin { kind: OriginKind::Original, derived_from: Vec::new() }),
+        origin: Some(Origin::default()),
         ..manifest(id, version)
     };
     build(dir, manifest)

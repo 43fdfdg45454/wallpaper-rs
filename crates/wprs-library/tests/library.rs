@@ -196,7 +196,7 @@ fn packages_are_described_by_their_manifest() {
         license: "CC0-1.0".into(),
         content: None,
         photosensitive: None,
-        facets: vec!["android".into()],
+        facets: vec!["android".into(), "desktop".into()],
         confirmed: Vec::new(),
     };
     assert_eq!((calm.title.as_str(), calm.package), ("Calm Water", Some(info)));

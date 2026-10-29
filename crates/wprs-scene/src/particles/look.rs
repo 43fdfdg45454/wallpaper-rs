@@ -1,4 +1,4 @@
-use super::{MAX_CURVE, is_zero};
+use super::MAX_CURVE;
 use crate::validate::Check;
 use crate::{Color, Value};
 use schemars::JsonSchema;
@@ -28,10 +28,35 @@ pub struct Render {
     pub size_over_life: Vec<[f32; 2]>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub color_over_life: Vec<(f32, Color)>,
-    #[serde(skip_serializing_if = "is_zero")]
-    pub stretch: f32,
+    #[serde(skip_serializing_if = "Stretch::is_off")]
+    pub stretch: Stretch,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trail: Option<Trail>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-range" = [0, 16]))]
+    pub brightness: Option<Value<f32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cutout: Option<[f32; 3]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-range" = [1, 64]))]
+    pub cycles: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rope: Option<Rope>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orient: Option<Orient>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-unit" = "°"))]
+    pub angle: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "image"))]
+    pub normal: Option<String>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub lit: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refract: Option<Refract>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "material"))]
+    pub shader: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -39,11 +64,108 @@ pub struct Render {
 pub struct Trail {
     pub length: u32,
     pub width: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub segments: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-range" = [0, 7]))]
+    pub subdivide: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uv_scale: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uv_scroll: Option<f32>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub textured: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(from = "Stretching", into = "Stretching")]
+pub struct Stretch {
+    pub time: f32,
+    pub min: Option<f32>,
+    pub max: Option<f32>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+enum Stretching {
+    Time(f32),
+    Range(Span),
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+struct Span {
+    #[serde(default)]
+    time: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    min: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    max: Option<f32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct Rope {
+    #[schemars(extend("x-range" = [0, 7]))]
+    pub subdivide: u32,
+    #[schemars(extend("x-unit" = "px"))]
+    pub width: f32,
+    pub uv_scale: f32,
+    pub uv_scroll: f32,
+    pub smooth: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Orient {
+    Screen,
+    Velocity,
+    Fixed,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Refract {
+    #[schemars(extend("x-ref" = "image"))]
+    pub normal: String,
+    #[schemars(extend("x-range" = [0, 1]))]
+    pub amount: f32,
+}
+
+impl From<Stretching> for Stretch {
+    fn from(s: Stretching) -> Self {
+        match s {
+            Stretching::Time(time) => Stretch { time, min: None, max: None },
+            Stretching::Range(Span { time, min, max }) => Stretch { time, min, max },
+        }
+    }
+}
+
+impl From<Stretch> for Stretching {
+    fn from(s: Stretch) -> Self {
+        match (s.min, s.max) {
+            (None, None) => Stretching::Time(s.time),
+            (min, max) => Stretching::Range(Span { time: s.time, min, max }),
+        }
+    }
+}
+
+impl Stretch {
+    fn is_off(&self) -> bool {
+        *self == Stretch::default()
+    }
+}
+
+impl Default for Rope {
+    fn default() -> Self {
+        Rope { subdivide: 2, width: 4.0, uv_scale: 1.0, uv_scroll: 0.0, smooth: true }
+    }
 }
 
 impl Default for Render {
     fn default() -> Self {
         let (texture, frames, trail, size_over_life, color_over_life) = Default::default();
+        let (brightness, cutout, cycles, rope, orient, angle, normal, refract, shader) = Default::default();
         Render {
             texture,
             frames,
@@ -51,8 +173,18 @@ impl Default for Render {
             mix: false,
             size_over_life,
             color_over_life,
-            stretch: 0.0,
+            stretch: Stretch::default(),
             trail,
+            brightness,
+            cutout,
+            cycles,
+            rope,
+            orient,
+            angle,
+            normal,
+            lit: false,
+            refract,
+            shader,
         }
     }
 }
@@ -79,12 +211,12 @@ fn curve(keys: &[(f32, [f32; 4])], t: f32) -> [f32; 4] {
 }
 
 impl Check<'_> {
-    pub(super) fn render(&mut self, p: &str, r: &Render) {
+    pub(crate) fn render(&mut self, p: &str, r: &Render) {
         if let Some(texture) = &r.texture {
             self.named(&format!("{p}/render/texture"), texture);
         }
         self.range(&format!("{p}/render/fps"), r.fps, 0.0, 240.0);
-        self.range(&format!("{p}/render/stretch"), r.stretch, 0.0, 10.0);
+        self.range(&format!("{p}/render/stretch"), r.stretch.time, 0.0, 10.0);
         let sizes = r.size_over_life.iter().map(|k| k[0]);
         let colors = r.color_over_life.iter().map(|k| k.0);
         for (name, times) in
@@ -102,8 +234,9 @@ impl Check<'_> {
             self.color(&format!("{p}/render/color_over_life/{k}/1"), *c);
         }
         if let Some(t) = &r.trail {
-            self.range(&format!("{p}/render/trail/length"), t.length as f32, 1.0, 16.0);
+            self.range(&format!("{p}/render/trail/length"), t.length as f32, 1.0, 64.0);
             self.range(&format!("{p}/render/trail/width"), t.width, 0.0, 1.0);
         }
+        self.render2(&format!("{p}/render"), r);
     }
 }

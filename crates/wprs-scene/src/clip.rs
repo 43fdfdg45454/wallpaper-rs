@@ -1,7 +1,11 @@
 pub const MAX_SOUND_BYTES: u64 = 8 << 20;
 pub const MAX_SOUND_SECONDS: f32 = 60.0;
 pub const MAX_SOUND_TOTAL: f32 = 180.0;
-const FORMATS: [&str; 4] = ["ogg", "opus", "flac", "wav"];
+pub const MAX_STREAM_BYTES: u64 = 32 << 20;
+pub const MAX_STREAM_SECONDS: f32 = 600.0;
+pub const MAX_STREAM_TOTAL: u64 = 64 << 20;
+pub const MAX_CLIPS: usize = 16;
+const FORMATS: [&str; 5] = ["ogg", "opus", "flac", "wav", "mp3"];
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Clip {
@@ -15,11 +19,25 @@ pub fn playable(path: &str) -> bool {
 }
 
 impl Clip {
-    pub fn probe(bytes: &[u8]) -> Result<Clip, String> {
-        let (rate, channels, frames) = wav(bytes)
-            .or_else(|| flac(bytes))
-            .or_else(|| ogg(bytes))
-            .ok_or("is not an Ogg Vorbis, Opus, FLAC or WAV sound")?;
+    pub fn probe(name: &str, bytes: &[u8]) -> Result<Clip, String> {
+        let clip = Clip::read(name, bytes)?;
+        match clip.seconds > MAX_SOUND_SECONDS {
+            true => Err(format!("lasts {:.1} s, at most {MAX_SOUND_SECONDS} s are allowed", clip.seconds)),
+            false => Ok(clip),
+        }
+    }
+
+    pub fn read(name: &str, bytes: &[u8]) -> Result<Clip, String> {
+        Clip::sample(name, bytes, bytes, bytes.len() as u64)
+    }
+
+    pub fn sample(name: &str, head: &[u8], tail: &[u8], size: u64) -> Result<Clip, String> {
+        let mp3 = name.rsplit_once('.').is_some_and(|(_, ext)| ext.eq_ignore_ascii_case("mp3"));
+        let (rate, channels, frames) = wav(head, size)
+            .or_else(|| flac(head))
+            .or_else(|| ogg(head, tail))
+            .or_else(|| mp3.then(|| crate::mpeg::mp3(head, size)).flatten())
+            .ok_or("is not an Ogg Vorbis, Opus, FLAC or WAV sound, or an MP3 sound named .mp3")?;
         if !(1..=2).contains(&channels) {
             return Err(format!("has {channels} channels, expected mono or stereo"));
         }
@@ -27,8 +45,8 @@ impl Clip {
             return Err(format!("is sampled at {rate} Hz, expected 8000 to 192000 Hz"));
         }
         let seconds = frames as f32 / rate as f32;
-        if seconds > MAX_SOUND_SECONDS {
-            return Err(format!("lasts {seconds:.1} s, at most {MAX_SOUND_SECONDS} s are allowed"));
+        if seconds > MAX_STREAM_SECONDS {
+            return Err(format!("lasts {seconds:.1} s, at most {MAX_STREAM_SECONDS} s are allowed"));
         }
         Ok(Clip { rate, channels, seconds })
     }
@@ -39,14 +57,14 @@ fn le(bytes: &[u8], at: usize, len: usize) -> Option<u64> {
     Some(field.iter().rev().fold(0, |v, &b| v << 8 | u64::from(b)))
 }
 
-fn wav(b: &[u8]) -> Option<(u32, u32, u64)> {
+fn wav(b: &[u8], total: u64) -> Option<(u32, u32, u64)> {
     (b.get(..4)? == b"RIFF" && b.get(8..12)? == b"WAVE").then_some(())?;
     let (mut at, mut format, mut data) = (12usize, None, None);
     while let (Some(id), Some(size)) = (b.get(at..at + 4), le(b, at + 4, 4)) {
         let body = at + 8;
         match id {
             b"fmt " => format = Some((le(b, body + 4, 4)?, le(b, body + 2, 2)?, le(b, body + 8, 4)?)),
-            b"data" => data = Some(size.min(b.len().saturating_sub(body) as u64)),
+            b"data" => data = Some(size.min(total.saturating_sub(body as u64))),
             _ => {}
         }
         at = body.checked_add(usize::try_from(size + (size & 1)).ok()?)?;
@@ -62,7 +80,7 @@ fn flac(b: &[u8]) -> Option<(u32, u32, u64)> {
     (frames > 0).then_some(((info >> 44) as u32, ((info >> 41) & 7) as u32 + 1, frames))
 }
 
-fn ogg(b: &[u8]) -> Option<(u32, u32, u64)> {
+fn ogg(b: &[u8], tail: &[u8]) -> Option<(u32, u32, u64)> {
     (b.get(..4)? == b"OggS").then_some(())?;
     let packet = b.get(27 + usize::from(*b.get(26)?)..)?;
     let (rate, channels, skip) = if packet.starts_with(b"\x01vorbis") {
@@ -74,14 +92,14 @@ fn ogg(b: &[u8]) -> Option<(u32, u32, u64)> {
     };
     let serial = le(b, 14, 4)?;
     let page = |at: usize| {
-        let page = &b[at..];
+        let page = &tail[at..];
         (page.starts_with(b"OggS") && le(page, 14, 4) == Some(serial)).then_some(())?;
         let segments = 27 + usize::from(*page.get(26)?);
         let body: usize = page.get(27..segments)?.iter().map(|&s| usize::from(s)).sum();
         (u64::from(crc(page.get(..segments + body)?)) == le(page, 22, 4)?).then_some(())?;
         Some((le(page, 6, 8)?, page[5] & 4 != 0)).filter(|(granule, _)| *granule != u64::MAX)
     };
-    let mut pages = (0..=b.len().saturating_sub(27)).rev().filter_map(page);
+    let mut pages = (0..=tail.len().saturating_sub(27)).rev().filter_map(page);
     let (last, _) = pages.clone().find(|(_, end)| *end).or_else(|| pages.next())?;
     Some((rate as u32, u32::from(channels), last.saturating_sub(skip)))
 }

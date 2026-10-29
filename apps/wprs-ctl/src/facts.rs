@@ -2,12 +2,18 @@ use crate::show::{self, list, text};
 use anyhow::Result;
 use serde_json::{Value, json};
 use std::path::Path;
-use wprs_format::{Content, Error, Facts, Limits, Manifest, Origin, features, inspect, open, upgrade};
+use wprs_format::{
+    Content, Error, Facts, Limits, Manifest, Origin, Platform, features, inspect, open, upgrade,
+};
 
 pub fn check(path: &Path, json: bool) -> Result<()> {
     let (manifest, facts) = match path.is_dir() {
         true => inspect(path)?,
-        false => open(path, &Limits::default()).map(|p| (p.manifest, p.facts))?,
+        false => {
+            let mut package = open(path, &Limits::default())?;
+            package.look_at_videos()?;
+            (package.manifest, package.facts)
+        }
     };
     match features::check(&manifest, &facts) {
         Err(Error::Invalid { field, .. }) if field == "requires.features" => {}
@@ -17,6 +23,12 @@ pub fn check(path: &Path, json: bool) -> Result<()> {
     let listed = manifest.features();
     let missing = facts.features.iter().filter(|f| manifest.v2() && !listed.contains(f));
     let why = |f: &String| json!({"name": f, "why": features::explain(f)});
+    let plays = |p: Platform| {
+        let refused = features::playable(&manifest, &facts, p).err().map(|e| e.to_string());
+        json!({"refused": refused, "without": features::lacks(p.name(), &facts.features)})
+    };
+    let platforms: serde_json::Map<String, Value> =
+        Platform::ALL.into_iter().map(|p| (p.name().to_owned(), plays(p))).collect();
     let report = json!({
         "path": path, "schema": manifest.schema, "id": manifest.id, "version": manifest.version,
         "kind": manifest.kind, "title": manifest.title_in(&wprs_core::locale::languages()),
@@ -26,7 +38,7 @@ pub fn check(path: &Path, json: bool) -> Result<()> {
         "inputs": manifest.inputs.iter().map(|i| i.name()).collect::<Vec<_>>(),
         "features": facts.features.iter().map(why).collect::<Vec<_>>(), "declared": listed,
         "missing": missing.map(why).collect::<Vec<_>>(),
-        "facets": facts.facets, "languages": manifest.locales(),
+        "facets": facts.facets, "languages": manifest.locales(), "platforms": platforms,
         "warnings": features::warnings(&manifest, &facts),
     });
     match json {
@@ -43,6 +55,13 @@ fn human(manifest: &Manifest, facts: &Facts, report: &Value) -> String {
     let needs = |key: &str| list(report[key].as_array().into_iter().flatten().map(named));
     let flag = |on: Option<bool>| on.map_or("unknown", |on| if on { "yes" } else { "no" }).to_string();
     let rating = report["rating"].as_str().unwrap_or("unrated").to_string();
+    let plays = |on: &Value| match (on["refused"].as_str(), on["without"].as_array()) {
+        (Some(reason), _) => format!("refused: {reason}"),
+        (None, Some(without)) if !without.is_empty() => {
+            format!("plays without {}", list(without.iter().filter_map(Value::as_str)))
+        }
+        _ => "plays".into(),
+    };
     let reasons = Some(words("reasons")).filter(|r| !r.is_empty()).map(|r| format!(" ({r})"));
     let head = format!("ok {} {} {} ({})\n", manifest.kind, manifest.id, manifest.version, manifest.schema);
     let pairs = [
@@ -54,6 +73,8 @@ fn human(manifest: &Manifest, facts: &Facts, report: &Value) -> String {
         ("needs", needs("features")),
         ("build adds", needs("missing")),
         ("facets", list(&facts.facets)),
+        ("desktop", plays(&report["platforms"]["desktop"])),
+        ("android", plays(&report["platforms"]["android"])),
         ("languages", words("languages")),
     ];
     let shown = pairs.into_iter().filter(|(_, v)| !v.is_empty());

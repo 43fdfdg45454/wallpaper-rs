@@ -177,7 +177,10 @@ fn version_two_metadata_reaches_the_catalog() {
     assert_eq!((content.rating.as_str(), content.mature()), ("mature", true));
     assert_eq!(
         (added.photosensitive, added.facets.clone()),
-        (Some(true), ["android", "landscape", "localized", "photosensitive"].map(String::from).to_vec())
+        (
+            Some(true),
+            ["android", "desktop", "landscape", "localized", "photosensitive"].map(String::from).to_vec()
+        )
     );
     let animated = added.animated.clone().unwrap();
     assert!(repo.dir.join(format!("previews/{}.gif", animated.sha256)).is_file());

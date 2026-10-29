@@ -114,7 +114,13 @@ class Main : ComponentActivity() {
         }
     }
 
-    fun toast(text: String) = Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+    fun toast(text: String) = Toast.makeText(this, told(text), Toast.LENGTH_LONG).show()
+
+    private fun told(text: String) = when {
+        text.startsWith(NEWER) -> getString(R.string.refused_newer)
+        text.startsWith(ELSEWHERE) -> getString(R.string.refused_elsewhere)
+        else -> text
+    }
 
     private fun active() = Wallpaper.live > 0 || WallpaperManager.getInstance(this).let { manager ->
         val lock = if (Build.VERSION.SDK_INT >= 34) manager.getWallpaperInfo(WallpaperManager.FLAG_LOCK) else null
@@ -176,4 +182,6 @@ class Main : ComponentActivity() {
 }
 
 private const val EDITS = 30L
+private const val NEWER = "this package needs a newer version of wallpaper-rs"
+private const val ELSEWHERE = "this package is made for "
 private const val REFRESH = 10

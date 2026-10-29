@@ -1,99 +1,12 @@
+use crate::probe::Probe;
 use crate::validate::{Check, Issue};
-use crate::value::{Band, Param, Value, Vec2};
-use crate::{Color, Ease, Kind, Layer, MAX_DEPTH, MAX_EFFECTS, Mask, ParamKind, Shape, descriptor};
+use crate::value::{Param, Value, Vec2};
+use crate::{Kind, Layer, MAX_DEPTH, MAX_EFFECTS, Mask, ParamKind, Shape};
 use std::collections::HashMap;
 
-pub(crate) trait Probe: Sized {
-    const TEXT: bool = false;
-    fn probe(_: &mut Check, _: &str, _: &Self) {}
-}
-
-impl Probe for f32 {
-    fn probe(c: &mut Check, path: &str, v: &f32) {
-        c.range(path, *v, -1e6, 1e6);
-    }
-}
-
-impl Probe for bool {}
-
-impl Probe for String {
-    const TEXT: bool = true;
-}
-
-impl Probe for Vec2 {
-    fn probe(c: &mut Check, path: &str, v: &Vec2) {
-        v.0.iter().enumerate().for_each(|(i, x)| c.range(&format!("{path}/{i}"), *x, -1e6, 1e6));
-    }
-}
-
-impl Probe for Color {
-    fn probe(c: &mut Check, path: &str, v: &Color) {
-        c.color(path, *v);
-    }
-}
-
-impl Probe for Param {
-    fn probe(c: &mut Check, path: &str, v: &Param) {
-        match v {
-            Param::Number(n) => f32::probe(c, path, n),
-            Param::Vec2(v) => Vec2::probe(c, path, &Vec2(*v)),
-            Param::Color(color) => c.color(path, *color),
-            Param::Bool(_) | Param::Text(_) => {}
-        }
-    }
-}
-
 impl Check<'_> {
-    pub(crate) fn value<T: Probe>(&mut self, path: &str, value: &Value<T>) {
-        let b = match value {
-            Value::Fixed(v) => return T::probe(self, path, v),
-            Value::Bound(b) => b,
-        };
-        if b.sources() != 1 {
-            self.issues.push(Issue::Source(path.into()));
-        }
-        if let Some(id) = &b.prop {
-            self.property(path, id, false);
-        }
-        let misplaced = (b.map.is_some() && b.prop.is_none()) || (b.clock.is_some() && !T::TEXT);
-        if misplaced || (T::TEXT && (b.audio.is_some() || b.cursor.is_some())) {
-            self.issues.push(Issue::Type(path.into()));
-        }
-        if let Some(keys) = &b.keys {
-            self.keys_sorted(&format!("{path}/keys"), keys.iter().map(|k| k.t));
-            for (i, k) in keys.iter().enumerate() {
-                T::probe(self, &format!("{path}/keys/{i}/1"), &k.v);
-                let Ease::Bezier(curve) = k.ease else { continue };
-                for (j, v) in curve.into_iter().enumerate() {
-                    let [lo, hi] = if j % 2 == 0 { [0.0, 1.0] } else { [-1e3, 1e3] };
-                    self.range(&format!("{path}/keys/{i}/2/{j}"), v, lo, hi);
-                }
-            }
-        }
-        if let Some(id) = &b.timeline {
-            self.known(
-                &format!("{path}/timeline"),
-                "timeline",
-                id,
-                self.scene.timelines.iter().any(|t| &t.id == id),
-            );
-        }
-        if let Some(Band::Index(i)) = b.audio {
-            self.range(&format!("{path}/audio"), i as f32, 0.0, 63.0);
-        }
-        for (name, v) in [("scale", b.scale), ("offset", b.offset)] {
-            v.into_iter().for_each(|v| self.range(&format!("{path}/{name}"), v, -1e6, 1e6));
-        }
-        if let Some([lo, hi]) = b.clamp {
-            self.range(&format!("{path}/clamp/0"), lo, -1e6, 1e6);
-            self.range(&format!("{path}/clamp/1"), hi, lo, 1e6);
-        }
-        if let Some(tau) = b.smooth {
-            self.range(&format!("{path}/smooth"), tau, 0.0, 60.0);
-        }
-    }
-
     fn texture(&mut self, path: &str, id: &str, lut: bool) {
+        self.moving(&Value::Fixed(id.into()));
         let cube = self.scene.assets.get(id).map(|a| a.path.to_lowercase().ends_with(".cube"));
         self.known(path, "asset", id, cube.is_some());
         if cube.is_some_and(|cube| cube != lut) {
@@ -117,31 +30,41 @@ impl Check<'_> {
 
     pub(crate) fn layers(&mut self, base: &str, layers: &[Layer], depth: usize) {
         for (i, layer) in layers.iter().enumerate() {
-            let p = format!("{base}/{i}");
-            if depth > MAX_DEPTH {
-                self.issues.push(Issue::Depth(p.clone()));
-                continue;
-            }
-            self.value(&format!("{p}/opacity"), &layer.opacity);
-            if let Value::Fixed(o) = layer.opacity {
-                self.range(&format!("{p}/opacity"), o, 0.0, 1.0);
-            }
-            self.value(&format!("{p}/visible"), &layer.visible);
-            let t = &layer.transform;
-            t.position.iter().for_each(|v| self.value(&format!("{p}/transform/position"), v));
-            self.value(&format!("{p}/transform/scale"), &t.scale);
-            self.value(&format!("{p}/transform/rotation"), &t.rotation);
-            self.value(&format!("{p}/transform/skew"), &t.skew);
-            t.origin.iter().for_each(|o| Vec2::probe(self, &format!("{p}/transform/origin"), &Vec2(*o)));
-            self.range(&format!("{p}/parallax"), layer.parallax, -10.0, 10.0);
-            if let Some(mask) = &layer.mask {
-                self.mask(&format!("{p}/mask"), mask);
-            }
-            self.effects(&p, layer);
-            self.kind(&p, &layer.kind, depth);
-            if let Kind::Sound(sound) = &layer.kind {
-                self.sound(&p, layer, sound);
-            }
+            self.layer(&format!("{base}/{i}"), layer, depth);
+        }
+    }
+
+    pub(crate) fn layer(&mut self, p: &str, layer: &Layer, depth: usize) {
+        if depth > MAX_DEPTH {
+            return self.issues.push(Issue::Depth(p.into()));
+        }
+        self.value(&format!("{p}/opacity"), &layer.opacity);
+        if let Value::Fixed(o) = layer.opacity {
+            self.range(&format!("{p}/opacity"), o, 0.0, 1.0);
+        }
+        self.value(&format!("{p}/visible"), &layer.visible);
+        let t = &layer.transform;
+        t.position.iter().for_each(|v| self.value(&format!("{p}/transform/position"), v));
+        self.value(&format!("{p}/transform/scale"), &t.scale);
+        self.value(&format!("{p}/transform/rotation"), &t.rotation);
+        self.value(&format!("{p}/transform/skew"), &t.skew);
+        t.origin.iter().for_each(|o| Vec2::probe(self, &format!("{p}/transform/origin"), &Vec2(*o)));
+        for (i, v) in layer.parallax.0.into_iter().enumerate() {
+            self.range(&format!("{p}/parallax/{i}"), v, -10.0, 10.0);
+        }
+        if let Some(mask) = &layer.mask {
+            self.mask(&format!("{p}/mask"), mask);
+        }
+        self.fields(p, layer);
+        self.hooks(p, layer);
+        self.effects(p, layer);
+        self.kind(p, &layer.kind, depth);
+        match &layer.kind {
+            Kind::Sound(sound) => self.sound(p, layer, sound),
+            Kind::Light(light) => self.light(p, layer, light),
+            Kind::Mesh(mesh) => self.mesh(p, layer, mesh),
+            Kind::Model(model) => self.model(p, layer, model),
+            _ => {}
         }
     }
 
@@ -156,33 +79,41 @@ impl Check<'_> {
                     self.issues.push(Issue::EffectMask(format!("{e}/mask")));
                 }
             }
-            let Some(d) = descriptor(&effect.effect) else {
-                self.known(&format!("{e}/effect"), "effect", &effect.effect, false);
+            let scene = self.scene;
+            let Some(d) = scene.effect(&effect.effect) else {
+                let declared = scene.effects.contains_key(&effect.effect);
+                self.known(&format!("{e}/effect"), "effect", &effect.effect, declared);
                 continue;
             };
+            if !d.stage.is_layer() {
+                self.issues.push(Issue::Type(format!("{e}/effect")));
+            }
+            self.variants(&e, d, effect);
             for (id, value) in &effect.params {
                 let path = format!("{e}/params/{id}");
+                if d.options.iter().any(|o| &o.id == id) {
+                    continue;
+                }
                 let Some(def) = d.params.iter().find(|p| &p.id == id) else {
                     self.known(&path, "parameter", id, false);
                     continue;
                 };
                 self.value(&path, value);
-                let asset = matches!(def.kind, ParamKind::Texture | ParamKind::Lut);
+                let lut = def.kind == ParamKind::Lut;
                 match value {
                     Value::Fixed(v) if !def.accepts(v) => self.issues.push(Issue::Type(path)),
                     Value::Fixed(Param::Number(n)) => {
                         self.range(&path, *n, def.min.unwrap_or(f32::MIN), def.max.unwrap_or(f32::MAX))
                     }
-                    Value::Fixed(Param::Text(id)) => self.texture(&path, id, def.kind == ParamKind::Lut),
-                    Value::Bound(b) if asset => {
+                    Value::Fixed(Param::Text(id)) if def.kind.asset() => self.texture(&path, id, lut),
+                    Value::Bound(b) if b.layer.is_some() => self.fed(&path, def, b),
+                    Value::Bound(b) if def.kind.asset() => {
                         match (&b.map, b.prop.as_ref().and_then(|p| self.props.get(p))) {
                             (Some(map), _) => map.iter().for_each(|(k, v)| match v {
-                                Param::Text(id) => {
-                                    self.texture(&format!("{path}/map/{k}"), id, def.kind == ParamKind::Lut)
-                                }
+                                Param::Text(id) => self.texture(&format!("{path}/map/{k}"), id, lut),
                                 _ => self.issues.push(Issue::Type(format!("{path}/map/{k}"))),
                             }),
-                            (None, Some(p)) if def.kind == ParamKind::Texture && p.kind() == "file" => {}
+                            (None, Some(p)) if def.kind != ParamKind::Lut && p.kind() == "file" => {}
                             _ => self.issues.push(Issue::Type(path)),
                         }
                     }
@@ -194,17 +125,19 @@ impl Check<'_> {
 
     fn kind(&mut self, p: &str, kind: &Kind, depth: usize) {
         match kind {
-            Kind::Group { layers, .. } => self.layers(&format!("{p}/layers"), layers, depth + 1),
-            Kind::Image { image: named, size } | Kind::Video { video: named, size } => {
+            Kind::Group { layers, color, .. } => {
+                self.tint(p, color.as_ref());
+                self.layers(&format!("{p}/layers"), layers, depth + 1)
+            }
+            Kind::Image { image: named, size, color, playback }
+            | Kind::Video { video: named, size, color, playback } => {
                 let field = if matches!(kind, Kind::Image { .. }) { "image" } else { "video" };
                 self.named(&format!("{p}/{field}"), named);
                 self.size(&format!("{p}/size"), *size);
+                self.tint(p, color.as_ref());
+                playback.iter().for_each(|b| self.playback(&format!("{p}/playback"), b));
             }
-            Kind::Text { text, size, color, .. } => {
-                self.value(&format!("{p}/text"), text);
-                self.value(&format!("{p}/color"), color);
-                self.range(&format!("{p}/size"), *size, 1.0, 1024.0);
-            }
+            Kind::Text(t) => self.text(p, t),
             Kind::Shape { shape, fill, gradient, stroke } => {
                 self.shape(&format!("{p}/shape"), shape);
                 fill.iter().for_each(|f| self.value(&format!("{p}/fill"), f));
@@ -222,12 +155,18 @@ impl Check<'_> {
                     self.range(&format!("{p}/stroke/width"), s.width, 0.0, 1e4);
                 }
             }
-            Kind::Particles { system } => self.known(
-                &format!("{p}/system"),
-                "particle system",
-                system,
-                self.scene.particles.contains_key(system),
-            ),
+            Kind::Particles { system, color, instance, render } => {
+                let known = self.scene.particles.get(system);
+                self.known(&format!("{p}/system"), "particle system", system, known.is_some());
+                self.tint(p, color.as_ref());
+                if let Some(r) = render {
+                    self.uses(true, "particles2");
+                    self.render(p, r);
+                }
+                if let Some(i) = instance {
+                    self.instance(&format!("{p}/instance"), i, known);
+                }
+            }
             Kind::Spectrum(s) => {
                 if ![16, 32, 64].contains(&s.bands) {
                     self.issues.push(Issue::Range {
@@ -245,7 +184,15 @@ impl Check<'_> {
                 self.value(&format!("{p}/color"), color);
                 self.size(&format!("{p}/size"), *size);
             }
-            Kind::Adjustment {} | Kind::Sound(_) => {}
+            Kind::Adjustment { size, redraw, .. } => {
+                let [w, h] = self.scene.canvas.size.map(|v| 2.0 * v as f32);
+                if let Some([x, y]) = size {
+                    self.range(&format!("{p}/size/0"), *x, 1.0, w);
+                    self.range(&format!("{p}/size/1"), *y, 1.0, h);
+                }
+                self.uses(size.is_some() || *redraw, "capture");
+            }
+            Kind::Sound(_) | Kind::Light(_) | Kind::Mesh(_) | Kind::Model(_) => {}
         }
     }
 
@@ -292,15 +239,23 @@ impl Check<'_> {
         }
         if let Some(texture) = &mask.texture {
             self.named(&format!("{path}/texture"), texture);
+            self.moving(texture);
         }
         if let Some(id) = &mask.layer {
-            let drawn = self.scene.layer(id).is_some_and(|l| !matches!(l.kind, Kind::Sound(_)));
+            let drawn = self.scene.layer(id).is_some_and(Layer::drawn);
             self.known(&format!("{path}/layer"), "layer", id, drawn);
         }
         if let Some(shape) = &mask.shape {
             self.shape(&format!("{path}/shape"), shape);
         }
         self.range(&format!("{path}/feather"), mask.feather, 0.0, 1e4);
+        if let Some(strength) = &mask.strength {
+            self.uses(true, "mask_strength");
+            self.value(&format!("{path}/strength"), strength);
+            if let Value::Fixed(v) = strength {
+                self.range(&format!("{path}/strength"), *v, 0.0, 1.0);
+            }
+        }
     }
 
     pub(crate) fn masks(&mut self) {

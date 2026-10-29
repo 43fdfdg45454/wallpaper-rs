@@ -6,6 +6,7 @@
   "layers": [
     { "id": "space", "type": "shape", "shape": { "rect": { "size": [1920, 1080] } },
       "gradient": { "radial": true, "from": [0.5, 0.5], "to": [1, 1], "stops": [[0, "#18204a"], [1, "#04050f"]] } },
+    { "id": "backdrop", "type": "image", "image": { "prop": "backdrop" }, "size": [1920, 1080], "opacity": 0.5 },
     { "id": "paths", "type": "group", "opacity": 0.35, "layers": [
       { "id": "r1", "type": "shape", "shape": { "ring": { "size": [420, 176], "width": 2 } }, "fill": "#9fb4ff" },
       { "id": "r2", "type": "shape", "shape": { "ring": { "size": [660, 277], "width": 2 } }, "fill": "#9fb4ff" },

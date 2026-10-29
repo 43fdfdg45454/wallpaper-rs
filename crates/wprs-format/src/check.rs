@@ -1,11 +1,11 @@
-use crate::locale::{has, valid_key, valid_tag};
-use crate::meta::{Content, Credit, Links, Origin};
+use crate::locale::{ENGINE_KEYS as ENGINE, KEYS, LANGUAGES, MAX_STRINGS, has, size, valid_key, valid_tag};
+use crate::meta::{Content, Credit, Links};
 use crate::names::{clean, safe, valid_id, valid_license, valid_name, valid_property, within};
+use crate::origin::Origin;
 use crate::{Display, Error, Kind, Manifest, Playback, Result, SCHEMA, SCHEMA_V1, Text, markup, require};
 use std::collections::HashSet;
-use wprs_scene::Control;
+use wprs_scene::{Control, tag};
 
-const MAX_STRINGS: usize = 512 << 10;
 const FIRST: &str =
     "schema id version title description authors license kind entry preview tags properties presets";
 const NEEDED: [(&str, &str); 4] = [
@@ -30,6 +30,7 @@ impl Manifest {
             ("tags", tags, "expected at most 32 tags of 1 to 32 characters"),
         ])?;
         if self.v2() { self.check_v2() } else { self.check_v1() }?;
+        self.check_kind()?;
         self.check_properties()
     }
 
@@ -67,11 +68,13 @@ impl Manifest {
         let json = serde_json::to_value(self).unwrap_or_default();
         let newer = json.as_object().is_some_and(|o| o.keys().any(|k| !FIRST.split(' ').any(|f| f == k)));
         let limits = self.properties.len() <= 64 && self.presets.len() <= 32;
+        let kind = matches!(self.kind, Kind::Image | Kind::Video | Kind::Scene);
         let older =
             |p: &wprs_scene::Property| p.features().iter().all(|f| *f == "user_videos" && p.kind() == "file");
         let kinds = self.properties.values().all(older);
         apply(&[
             ("schema", plain && !newer, "localized texts and the newer fields need wallpaper-rs.wpak/2"),
+            ("kind", kind, "web, preset and assets packages need wallpaper-rs.wpak/2"),
             ("title", within(&self.pick(&self.title, &[]), 128), "expected 1 to 128 characters"),
             ("properties", limits, "too many properties or presets"),
             ("properties", kinds, "the newer kinds and fields of properties need wallpaper-rs.wpak/2"),
@@ -92,7 +95,6 @@ impl Manifest {
             _ => true,
         };
         let accepted = self.properties.values().all(|p| accept(&p.control));
-        let video = self.kind == Kind::Video || (self.playback.is_none() && self.display.is_none());
         let limits = self.properties.len() <= 256 && self.presets.len() <= 64;
         let plain = self.authors.iter().chain(&self.tags).all(|t| safe(t));
         if let Some(missing) = self.missing().into_iter().next() {
@@ -108,7 +110,13 @@ impl Manifest {
             (
                 "origin.derived_from",
                 origin.is_none_or(Origin::valid),
-                "derived packages credit 1 to 64 works by author, without < or >",
+                "derived packages credit 1 to 64 works by author without < or >, original ones none",
+            ),
+            (
+                "origin.provider",
+                origin.is_none_or(Origin::sourced),
+                "provider packages name their provider with a name of [a-z0-9-], https:// addresses and a \
+                credit without < or >; others name none",
             ),
             ("preview", self.preview.is_none(), "is called previews.thumbnail in wallpaper-rs.wpak/2"),
             (
@@ -123,16 +131,15 @@ impl Manifest {
             ),
             ("properties", limits, "at most 256 properties and 64 presets"),
             ("properties", accepted, "files and folders accept image, video or both"),
-            ("playback", video, "playback and display apply to video packages only"),
             (
                 "playback",
                 self.playback.as_ref().is_none_or(Playback::valid),
-                "speed is 0.1 to 4, start and end 0 to 3600 s with end after start, volume 0 to 1",
+                "speed is 0.1 to 4, start and end 0 to 3600 s with end after start, volume 0 to 1, max_fps 1 to 240",
             ),
             (
                 "display",
                 self.display.as_ref().is_none_or(Display::valid),
-                "zoom is 1 to 8 and position two numbers of -1 to 1",
+                "zoom is 1 to 8, position two numbers of -1 to 1 and colors #rrggbb",
             ),
             (
                 "properties",
@@ -144,19 +151,19 @@ impl Manifest {
     }
 
     fn check_texts(&self) -> Result<()> {
-        let tables = self.strings.values();
-        let size: usize = tables.clone().flat_map(|t| t.iter()).map(|(k, v)| k.len() + v.len()).sum();
+        let tables = self.strings.values().chain(self.string_files.values());
+        let size = size(tables.clone());
         let keys = tables.clone().all(|t| t.len() <= 2048 && t.keys().all(|k| valid_key(k)));
+        let own = tables.clone().flat_map(|t| t.keys()).all(|k| !k.starts_with("wprs."));
         let values = tables.flat_map(|t| t.values()).all(|v| clean(v, 8000, true));
-        let languages = self.strings.len() <= 64 && self.strings.keys().all(|l| valid_tag(l));
+        let names = self.strings.keys().chain(self.string_files.keys());
+        let once = self.string_files.keys().all(|l| !self.strings.keys().any(|s| tag(s) == tag(l)));
+        let languages = names.clone().count() <= 64 && names.clone().all(|l| valid_tag(l)) && once;
         let default = self.default_locale.as_deref();
         apply(&[
-            ("strings", languages, "at most 64 languages named like en or pt-BR"),
-            (
-                "strings",
-                keys && size <= MAX_STRINGS,
-                "at most 2048 keys of [A-Za-z0-9_.-] per language, 512 KiB",
-            ),
+            ("strings", languages, LANGUAGES),
+            ("strings", keys && size <= MAX_STRINGS, KEYS),
+            ("strings", own, ENGINE),
             ("strings", values, "texts of at most 8000 characters without control characters"),
             ("default_locale", default.is_none_or(valid_tag), "expected a language such as en or pt-BR"),
         ])?;
@@ -171,8 +178,12 @@ impl Manifest {
             _ => (1024, true),
         };
         let default = self.default_locale.as_deref();
+        if let Some(key) = self.key(text).filter(|k| k.starts_with("wprs.")) {
+            let reason = format!("@{key} is not a text of the engine");
+            return require(crate::locale::engine(key).is_some(), field, &reason);
+        }
         if let Some(key) = self.key(text) {
-            let known = default.and_then(|d| self.strings.get(d)).is_some_and(|t| t.contains_key(key));
+            let known = default.and_then(|d| self.table(d)).is_some_and(|t| t.contains_key(key));
             require(known, field, &format!("@{key} is not in the strings of the default language"))?;
         }
         let values: Vec<(String, String)> = match self.resolve(text) {

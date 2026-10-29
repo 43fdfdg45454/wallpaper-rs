@@ -37,6 +37,7 @@ impl Property {
             enabled_if,
             order: 0.0,
             icon: None,
+            quality: BTreeMap::new(),
             control,
         }
     }
@@ -80,6 +81,23 @@ impl Property {
             }
             (Control::File { .. } | Control::Folder { .. }, Json::Null) => Ok(Json::Null),
             (Control::File { .. } | Control::Folder { .. }, Json::String(s)) if path(s) => Ok(json!(s)),
+            (Control::Shortcut {}, Json::Null) => Ok(Json::Null),
+            (Control::Shortcut {}, Json::Object(map)) => {
+                let target = map.iter().next().filter(|_| map.len() == 1);
+                let app = |s: &str| {
+                    (1..=255).contains(&s.len())
+                        && s.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
+                };
+                let fits = target.is_some_and(|(kind, v)| match (kind.as_str(), v.as_str()) {
+                    ("uri", Some(s)) => {
+                        s.starts_with("https://") && s.len() <= 2048 && !s.chars().any(char::is_control)
+                    }
+                    ("file" | "folder", Some(s)) => path(s),
+                    ("app", Some(s)) => app(s),
+                    _ => false,
+                });
+                fits.then(|| value.clone()).ok_or_else(|| "must be {uri}, {file}, {folder} or {app}".into())
+            }
             (Control::Button {} | Control::Group { .. } | Control::Label {} | Control::Divider {}, _) => {
                 Err("takes no value".into())
             }
@@ -104,6 +122,7 @@ impl Property {
             Control::Text { .. } => "text",
             Control::File { .. } => "file",
             Control::Folder { .. } => "folder",
+            Control::Shortcut {} => "shortcut",
             Control::Button {} => "button",
             Control::Group { .. } => "group",
             Control::Label {} => "label",
@@ -121,7 +140,10 @@ impl Property {
     pub fn personal(&self) -> bool {
         matches!(
             self.control,
-            Control::File { .. } | Control::Folder { .. } | Control::Text { secret: true, .. }
+            Control::File { .. }
+                | Control::Folder { .. }
+                | Control::Shortcut {}
+                | Control::Text { secret: true, .. }
         )
     }
 

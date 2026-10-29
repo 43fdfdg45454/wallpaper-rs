@@ -1,4 +1,4 @@
-use crate::names::{safe, valid_license, within};
+use crate::names::{safe, valid_id, valid_license, within};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -28,33 +28,6 @@ pub struct Content {
     pub descriptors: Vec<Descriptor>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum OriginKind {
-    Original,
-    Derived,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Origin {
-    pub kind: OriginKind,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub derived_from: Vec<Ancestor>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Ancestor {
-    pub author: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub url: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub license: Option<String>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Credit {
@@ -63,6 +36,15 @@ pub struct Credit {
     pub attribution: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<Source>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Source {
+    pub id: String,
+    pub version: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -87,40 +69,6 @@ pub struct Previews {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-ref" = "animated"))]
     pub animated: Option<String>,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Requires {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub engine: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    #[schemars(extend("x-computed" = true))]
-    pub features: Vec<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum Input {
-    Audio,
-    Pointer,
-    Clicks,
-    Media,
-    Network,
-}
-
-impl Input {
-    pub const ALL: [Input; 5] = [Input::Audio, Input::Pointer, Input::Clicks, Input::Media, Input::Network];
-
-    pub fn name(self) -> &'static str {
-        match self {
-            Input::Audio => "audio",
-            Input::Pointer => "pointer",
-            Input::Clicks => "clicks",
-            Input::Media => "media",
-            Input::Network => "network",
-        }
-    }
 }
 
 impl Rating {
@@ -150,35 +98,16 @@ impl Content {
     }
 }
 
-impl Origin {
-    pub fn by(authors: &[String]) -> Origin {
-        let ancestor =
-            |author: &String| Ancestor { author: author.clone(), title: None, url: None, license: None };
-        let kind = if authors.is_empty() { OriginKind::Original } else { OriginKind::Derived };
-        Origin { kind, derived_from: authors.iter().map(ancestor).collect() }
-    }
-
-    pub(crate) fn valid(&self) -> bool {
-        let count = (self.kind == OriginKind::Derived) == !self.derived_from.is_empty();
-        let valid = |a: &Ancestor| {
-            within(&a.author, 128)
-                && safe(&a.author)
-                && a.title.as_deref().is_none_or(|t| within(t, 128) && safe(t))
-                && a.url.as_deref().is_none_or(https)
-                && a.license.as_deref().is_none_or(valid_license)
-        };
-        count && self.derived_from.len() <= 64 && self.derived_from.iter().all(valid)
-    }
-}
-
 impl Credit {
     pub(crate) fn valid(&self) -> bool {
+        let source = |s: &Source| valid_id(&s.id) && semver::Version::parse(&s.version).is_ok();
         (1..=256).contains(&self.paths.len())
             && valid_license(&self.license)
             && within(&self.attribution, 256)
             && safe(&self.attribution)
             && self.paths.iter().all(|p| safe(p))
             && self.url.as_deref().is_none_or(https)
+            && self.source.as_ref().is_none_or(source)
     }
 }
 

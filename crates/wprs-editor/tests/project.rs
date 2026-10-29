@@ -92,3 +92,59 @@ fn assets_are_imported_within_limits_and_packages_build() {
     let error = build(&mut project, &out, None).unwrap_err().to_string();
     assert!(error.starts_with("/scene/layers/1/opacity:"), "{error}");
 }
+
+#[test]
+fn language_files_and_package_effects_belong_to_the_package() {
+    let root = tempfile::tempdir().unwrap();
+    state();
+    let dir = root.path().join("tide");
+    let mut project =
+        Project::create(&dir, starter("empty", "org.example.tide", "Tide", "en").unwrap()).unwrap();
+    fs::create_dir(dir.join("locale")).unwrap();
+    fs::write(dir.join("locale/en.json"), json!({"title": "Tide"}).to_string()).unwrap();
+    let descriptor = json!({"id": "ripple", "passes": [{"entry": "fs_ripple"}], "cost": {},
+        "options": [{"id": "taps", "values": [1, 2], "default": 1}]});
+    fs::write(dir.join("assets/ripple.json"), descriptor.to_string()).unwrap();
+    let wgsl = "override taps: i32 = 1;\n@fragment\nfn fs_ripple(in: VertexOut) -> @location(0) vec4<f32> {\n    return tap(in.uv) * f32(taps);\n}\n";
+    fs::write(dir.join("assets/ripple.wgsl"), wgsl).unwrap();
+    act(&mut project, json!({"set": {"pointer": "/manifest/title", "value": "@title"}}));
+    let effects = json!({"ripple": {"descriptor": "assets/ripple.json", "wgsl": "assets/ripple.wgsl"}});
+    act(&mut project, json!({"set": {"pointer": "/scene/effects", "value": effects}}));
+    let layers =
+        json!([{"id": "sea", "type": "solid", "color": "#103050", "effects": [{"effect": "ripple"}]}]);
+    act(&mut project, json!({"set": {"pointer": "/scene/layers", "value": layers}}));
+    let listed = |p: &Project| p.doc["manifest"]["requires"]["features"].clone();
+    assert_eq!(listed(&project), json!(["custom_effects", "effect_options"]));
+    let unread = problems(&project.dir, &project.doc);
+    assert!(unread.iter().any(|p| p.warning && p.message.starts_with("locale/en.json ")), "{unread:?}");
+    let typed = json!({"add": {"pointer": "/manifest/requires/features/-", "value": "rgb"}});
+    assert!(project.act(&serde_json::from_value::<Action>(typed).unwrap()).is_err());
+    act(&mut project, json!({"add": {"pointer": "/manifest/requires/features/-", "value": "locale_files"}}));
+    assert_eq!(listed(&project), json!(["custom_effects", "effect_options", "locale_files"]));
+    act(&mut project, json!({"set": {"pointer": "/scene/layers/0/opacity", "value": 0.5}}));
+    assert_eq!(listed(&project), json!(["custom_effects", "effect_options", "locale_files"]));
+    project.save().unwrap();
+    let found = problems(&project.dir, &project.doc);
+    let (manifest, facts) = wprs_format::inspect(&project.dir).unwrap();
+    let checked = wprs_format::Platform::ALL.map(|p| {
+        let refused = wprs_format::features::playable(&manifest, &facts, p).unwrap_err();
+        (true, format!("{}: refused: {refused}", p.name()))
+    });
+    assert_eq!(
+        found.iter().map(|p| (p.warning, p.message.clone())).collect::<Vec<_>>(),
+        checked,
+        "as pack check"
+    );
+    assert_eq!(prune(&project.dir, &project.doc).unwrap(), Vec::<String>::new());
+    assert!(dir.join("assets/ripple.wgsl").is_file() && dir.join("assets/ripple.json").is_file());
+    build(&mut project, &root.path().join("tide.wpak"), None).unwrap();
+    let shader = dir.join("assets/ripple.wgsl");
+    let modified = fs::metadata(&shader).unwrap().modified().unwrap();
+    fs::write(&shader, format!("{:<1$}", "fn broken(", wgsl.len())).unwrap();
+    fs::File::options().write(true).open(&shader).unwrap().set_modified(modified).unwrap();
+    let unchanged = problems(&project.dir, &project.doc);
+    assert_eq!(unchanged, found, "files are read again only when they change");
+    fs::write(dir.join("assets/ripple.wgsl"), "fn broken(").unwrap();
+    let broken = problems(&project.dir, &project.doc);
+    assert!(broken.iter().any(|p| p.pointer == "/scene/effects/ripple" && !p.warning), "{broken:?}");
+}

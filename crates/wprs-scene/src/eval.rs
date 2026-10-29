@@ -71,7 +71,7 @@ pub(crate) fn walk<'a>(
     canvas: [f32; 2],
 ) {
     let none = LayerOverride::default();
-    for layer in layers.iter().filter(|l| !matches!(l.kind, Kind::Sound(_))) {
+    for layer in layers.iter().filter(|l| l.flat()) {
         let set = cx.script.layers.get(&layer.id).unwrap_or(&none);
         let outer = cx.wake.replace(Wake::Idle);
         let visible = set.visible.unwrap_or_else(|| layer.visible.get(cx));
@@ -102,14 +102,14 @@ fn emit<'a>(
         let [fx, fy] = a.fraction();
         [view[0] + fx * view[2], view[1] + fy * view[3]]
     });
-    let free = layer.anchor.is_some() || matches!(layer.kind, Kind::Group { .. } | Kind::Adjustment {});
+    let free = layer.anchor.is_some() || matches!(layer.kind, Kind::Group { .. } | Kind::Adjustment { .. });
     let center = if free { [0.0; 2] } else { [canvas[0] / 2.0, canvas[1] / 2.0] };
     let position = set.position.unwrap_or_else(|| t.position.as_ref().map_or(center, |p| p.get(cx).0));
-    if layer.parallax != 0.0 && cx.pointer.moving() {
+    if !layer.parallax.is_zero() && cx.pointer.moving() {
         cx.note(Wake::Frame);
     }
     let shift = cx.pointer.smooth.map(|s| s - 0.5);
-    let at = [0, 1].map(|i| base[i] + position[i] + shift[i] * layer.parallax * canvas[i]);
+    let at = [0, 1].map(|i| base[i] + position[i] + shift[i] * layer.parallax.0[i] * canvas[i]);
     let local = Affine::translate(at)
         .then(Affine::rotate(set.rotation.unwrap_or_else(|| t.rotation.get(cx))))
         .then(Affine::skew(t.skew.get(cx).0))
@@ -183,20 +183,20 @@ fn content<'a>(cx: &Context, layer: &'a Layer, set: &LayerOverride, canvas: [f32
     let tint = |c: Color| set.color.map_or(c, Color);
     match &layer.kind {
         Kind::Group { clip, .. } => Content::Group { clip: *clip },
-        Kind::Image { image, size } => Content::Image { asset: named(cx, image), size: *size },
-        Kind::Video { video, size } => Content::Video { asset: named(cx, video), size: *size },
-        Kind::Text { text, font, size, color, align } => {
-            let text = match (&set.text, text) {
+        Kind::Image { image, size, .. } => Content::Image { asset: named(cx, image), size: *size },
+        Kind::Video { video, size, .. } => Content::Video { asset: named(cx, video), size: *size },
+        Kind::Text(t) => {
+            let text = match (&set.text, &t.text) {
                 (Some(t), _) => Cow::Owned(t.clone()),
                 (None, crate::Value::Fixed(t)) => Cow::Borrowed(t.as_str()),
                 (None, bound) => Cow::Owned(bound.get(cx)),
             };
             Content::Text {
                 text,
-                font: font.as_deref(),
-                size: *size,
-                color: tint(color.get(cx)),
-                align: *align,
+                font: t.font.as_deref(),
+                size: t.size,
+                color: tint(t.color.get(cx)),
+                align: t.align,
             }
         }
         Kind::Shape { shape, fill, gradient, stroke } => Content::Shape {
@@ -214,8 +214,10 @@ fn content<'a>(cx: &Context, layer: &'a Layer, set: &LayerOverride, canvas: [f32
         Kind::Solid { color, size } => {
             Content::Solid { color: tint(color.get(cx)), size: size.unwrap_or(canvas) }
         }
-        Kind::Particles { system } => Content::Particles { system },
-        Kind::Adjustment {} | Kind::Sound(_) => Content::Adjustment,
+        Kind::Particles { system, .. } => Content::Particles { system },
+        Kind::Adjustment { .. } | Kind::Sound(_) | Kind::Light(_) | Kind::Mesh(_) | Kind::Model(_) => {
+            Content::Adjustment
+        }
     }
 }
 

@@ -21,6 +21,7 @@ impl Manifest {
             license: c.license.clone(),
             attribution: c.attribution.clone(),
             url: c.url.clone(),
+            source: c.source.as_ref().map(|s| format!("{} {}", s.id, s.version)),
         };
         let links = self.links.iter().flat_map(|l| l.all());
         let links = links.filter_map(|(kind, url)| Some(Link { kind: kind.into(), url: url?.clone() }));
@@ -42,6 +43,11 @@ impl Manifest {
             inputs: self.inputs.iter().map(|i| i.name().into()).collect(),
             features: self.features().iter().map(feature).collect(),
             languages: self.locales().into_iter().collect(),
+            provider: origin.and_then(|o| o.provider.as_ref()).map(|p| p.credit.clone()),
+            source_url: origin.and_then(|o| o.source_url.clone()),
+            platforms: self.platforms.iter().map(|p| p.name().into()).collect(),
+            packages: self.dependencies().iter().map(|d| format!("{} {}", d.id, d.version)).collect(),
+            refused: features::refused(crate::Platform::here().name(), self.features()),
         }
     }
 }

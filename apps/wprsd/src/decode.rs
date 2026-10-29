@@ -1,8 +1,9 @@
 use image::metadata::Orientation;
 use image::{DynamicImage, ImageDecoder, ImageReader, Limits, RgbaImage};
-use std::io::{BufRead, Cursor, Seek, Write};
+use std::fs::File;
+use std::io::{BufRead, BufReader, Cursor, Seek, Write};
 use std::path::Path;
-use wprs_format::{Kind as PackageKind, Package};
+use wprs_format::{Kind as PackageKind, Package, Platform, features};
 use wprs_library::Meta;
 
 pub struct Picture {
@@ -65,9 +66,17 @@ pub fn video(path: &Path) -> Result<Picture, Problem> {
     Ok(Picture { meta: Meta { duration_ms, audio, ..picture.meta }, ..picture })
 }
 
+pub fn open(path: &Path) -> wprs_format::Result<Package<BufReader<File>>> {
+    let package = wprs_format::open(path, &wprs_format::Limits::default())?;
+    features::playable(&package.manifest, &package.facts, Platform::Desktop)?;
+    Ok(package)
+}
+
 pub fn package(path: &Path) -> Result<Picture, Problem> {
-    let mut package: Package<_> = match wprs_format::open(path, &wprs_format::Limits::default()) {
-        Err(e @ wprs_format::Error::Newer(_)) => return Ok(newer(path, e.to_string())),
+    let mut package: Package<_> = match open(path) {
+        Err(e @ (wprs_format::Error::Newer(_) | wprs_format::Error::Elsewhere(_))) => {
+            return Ok(newer(path, e.to_string()));
+        }
         package => package?,
     };
     let manifest = package.manifest.clone();
@@ -78,6 +87,9 @@ pub fn package(path: &Path) -> Result<Picture, Problem> {
             let [width, height] = package.scene()?.canvas.size.map(Some);
             let failure = preview.is_none().then(|| "no preview".to_owned());
             return Ok(Picture { meta: Meta { width, height, ..Meta::default() }, image: preview, failure });
+        }
+        PackageKind::Web | PackageKind::Preset | PackageKind::Assets => {
+            return Ok(Picture { meta: Meta::default(), image: preview, failure: None });
         }
         PackageKind::Image => Picture::of(bytes(entry?)?),
         PackageKind::Video => {

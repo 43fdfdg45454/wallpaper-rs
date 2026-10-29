@@ -26,7 +26,7 @@ ColumnLayout {
     function crumb(part, i) {
         const rows = i === 2 && parts[0] === "manifest" ? page.view[parts[1]] : undefined;
         const found = Array.isArray(rows) ? rows.find(row => row.pointer === "/" + parts.slice(0, 3).join("/")) : undefined;
-        return found?.label ?? SceneWords.label(part);
+        return found?.label ?? SceneWords.label(part, "/" + parts.slice(0, i + 1).join("/"));
     }
 
     function shift(by) {

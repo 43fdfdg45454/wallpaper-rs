@@ -99,13 +99,15 @@ fn package_details_add_their_metadata() {
         "derived_from": [{"author": "Ana", "title": "Harbor", "url": null, "license": null}],
         "credits": [{"paths": ["a.png"], "license": "CC0-1.0", "attribution": "Bo", "url": null}],
         "links": [{"kind": "homepage", "url": "https://example.org"}], "inputs": ["pointer"],
-        "features": [{"name": "inputs.pointer", "why": "follows the pointer"}], "languages": ["en", "es"]});
+        "features": [{"name": "inputs.pointer", "why": "follows the pointer"}], "languages": ["en", "es"],
+        "source_url": "https://example.org/harbor"});
     let details = reply(json!({"item": item, "thumb": null, "presets": [], "credit": null, "revoked": null,
         "playlists": [], "installed": null, "about": about}));
     let shown = items::details(parse(&details).unwrap());
     let tail = "package = org.example.dawn 1.0.0 (image, CC0-1.0)\ncontent = mature (violence)\n\
-        mature shown = false\nphotosensitive = yes, allowed\norigin = derived from Harbor by Ana\nauthors = Jo\n\
-        credits = a.png: Bo (CC0-1.0)\nlinks = homepage https://example.org\ninputs = pointer\n\
+        mature shown = false\nphotosensitive = yes, allowed\norigin = derived from Harbor by Ana\n\
+        source = https://example.org/harbor\nauthors = Jo\ncredits = a.png: Bo (CC0-1.0)\n\
+        links = homepage https://example.org\ninputs = pointer\n\
         needs = inputs.pointer (follows the pointer)\nlanguages = en, es\nschema = wallpaper-rs.wpak/2\n\n\
         Description:\nHills at dusk.\n\n• one\n";
     assert!(shown.ends_with(tail), "{shown}");

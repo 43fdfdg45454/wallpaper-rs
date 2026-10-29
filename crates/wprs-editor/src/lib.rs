@@ -1,6 +1,7 @@
 pub mod actions;
 pub mod arrange;
 pub mod assets;
+mod cache;
 pub mod canvas;
 pub mod check;
 pub mod forms;

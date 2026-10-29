@@ -1,13 +1,13 @@
 {
   "schema": "wallpaper-rs.wpak/2",
   "id": "io.github.wallpaper_rs.example.orbits",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "default_locale": "en",
   "title": { "en": "Orbits", "es": "Órbitas" },
   "description": { "en": "Planets moved by a *scene script* around a glowing sun, with a clock in the corner.",
                    "es": "Planetas que un *script de escena* mueve alrededor de un sol brillante, con un reloj en la esquina." },
-  "changes": { "en": "Describes itself in English and Spanish and declares its rating and what it needs.",
-              "es": "Se describe en inglés y en español y declara su clasificación y lo que necesita." },
+  "changes": { "en": "Shows a picture or a video you choose behind the planets.",
+              "es": "Muestra una imagen o un vídeo que elijas tras los planetas." },
   "authors": ["wallpaper-rs contributors"],
   "license": "CC0-1.0",
   "origin": { "kind": "original" },
@@ -17,10 +17,14 @@
   "entry": "scene.json",
   "previews": { "thumbnail": "preview.jpg" },
   "tags": ["example", "space", "script"],
-  "requires": { "features": ["scripts"] },
+  "requires": { "features": ["scripts", "user_videos"] },
   "properties": {
     "speed": { "type": "slider", "min": 0, "max": 4, "step": 0.25, "default": 1, "unit": "×",
                "label": { "en": "Speed", "es": "Velocidad" } },
-    "clock": { "type": "bool", "order": 1, "default": true, "label": { "en": "Clock", "es": "Reloj" } }
+    "clock": { "type": "bool", "order": 1, "default": true, "label": { "en": "Clock", "es": "Reloj" } },
+    "backdrop": { "type": "file", "order": 2, "accept": ["image", "video"],
+                  "label": { "en": "Picture or video behind", "es": "Imagen o vídeo de fondo" },
+                  "help": { "en": "Shows a picture or a video you choose behind the planets.",
+                            "es": "Muestra una imagen o un vídeo que elijas tras los planetas." } }
   }
 }

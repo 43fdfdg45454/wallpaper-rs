@@ -28,6 +28,19 @@
     <string name="lacks_folder">Pictures from a folder you choose are not shown on the phone.</string>
     <string name="lacks_user_videos">Videos you choose do not play on the phone.</string>
     <string name="lacks_video_properties">Its video plays without its speed, part and framing settings on the phone.</string>
+    <string name="lacks_gpu">The phone does not check the graphics card it asks for.</string>
+    <string name="lacks_display2">Its color around the picture and its spreading over every screen are not used on the phone.</string>
+    <string name="lacks_accent">Its accent color is not used on the phone.</string>
+    <string name="lacks_folder2">Subfolders and the limit on the files of a folder you choose are not used on the phone.</string>
+    <string name="lacks_spanned_scenes">Its scene is not spread over several screens on the phone.</string>
+    <string name="lacks_sound2">Its MP3 or long sounds, lists of sounds and sounds started by events do not play on the phone.</string>
+    <string name="lacks_scripts2">Its scripts that use the newer script interface do not run on the phone.</string>
+    <string name="lacks_script_layers">Layers its scripts add are not shown on the phone.</string>
+    <string name="lacks_script_geometry">Shapes its scripts build are not shown on the phone.</string>
+    <string name="lacks_script_storage">Its scripts keep no data on the phone.</string>
+    <string name="lacks_rgb">Its colors are not sent to RGB lighting on the phone.</string>
+    <string name="refused_newer">This package needs a newer version of wallpaper-rs.</string>
+    <string name="refused_elsewhere">This package is made for the desktop only.</string>
     <string name="cancel">Cancel</string>
     <string name="size" translatable="false">%1$d × %2$d</string>
     <string name="duration" translatable="false">%1$d:%2$02d</string>

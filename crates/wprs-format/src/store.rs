@@ -1,4 +1,4 @@
-use crate::entry::{contents, shards};
+use crate::entry::{cold, contents, kept};
 use crate::repo::hex64;
 use crate::{Details, Entry, Error, Result, Revoked, Root, Shard, require};
 use serde::de::DeserializeOwned;
@@ -134,12 +134,18 @@ pub(crate) fn load(data: &Path, repo_id: &str) -> Result<Snapshot> {
             .map(Some)?,
     };
     let value = details.as_ref().map(|d: &Doc<Details>| &d.value);
-    let blobs = shards(&entry.value, value).1.iter().chain([&entry.value.revoked]).map(|blob| {
-        let bytes = fs::read(dir.join("blobs").join(format!("{}.json", blob.sha256)))?;
-        blob.matches(&bytes).map(|()| (blob.sha256.clone(), bytes))
+    let blobs = kept(&entry.value, value).chain([&entry.value.revoked]).map(|blob| {
+        match fs::read(dir.join("blobs").join(format!("{}.json", blob.sha256))) {
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+            bytes => {
+                let bytes = bytes?;
+                blob.matches(&bytes).map(|()| Some((blob.sha256.clone(), bytes)))
+            }
+        }
     });
-    let blobs = blobs.collect::<Result<BTreeMap<_, _>>>()?;
-    let (shards, revoked) = contents(&entry.value, value, repo_id, &blobs)?;
+    let blobs = blobs.filter_map(Result::transpose).collect::<Result<BTreeMap<_, _>>>()?;
+    let older = cold(value, &blobs);
+    let (shards, revoked) = contents(&entry.value, older.as_ref().or(value), repo_id, &blobs)?;
     let state = json(&dir.join("state.json"))?;
     Ok(Snapshot { state, root, entry, details, blobs, shards, revoked })
 }

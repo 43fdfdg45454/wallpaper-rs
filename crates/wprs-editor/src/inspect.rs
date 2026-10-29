@@ -6,7 +6,7 @@ use crate::schema::{MANIFEST, PROPERTY, at, branches, choose, deref, fits, prope
 use crate::texts::rows;
 use serde::Serialize;
 use serde_json::{Value, json};
-use wprs_scene::{ParamKind, builtin, descriptor, easings};
+use wprs_scene::{ParamKind, builtin, described, easings};
 
 const SOURCES: [&str; 6] = ["keys", "prop", "audio", "cursor", "clock", "script"];
 const HIDDEN: [&str; 4] = ["type", "layers", "id", "schema"];
@@ -79,6 +79,12 @@ impl Walk<'_> {
         if optional {
             (schema, name) = deref(self.root, list.iter().find(|b| b["type"] != "null").unwrap_or(schema));
         }
+        let probe = if current.is_null() { &f.default } else { &current };
+        let scalar = probe.is_array() || probe.is_number() || probe.is_boolean();
+        let untyped = schema.get("type").is_none() && !name.starts_with("Value_for_") && scalar;
+        if untyped && !branches(schema).is_empty() && !tagged(self.root, schema) {
+            (schema, name) = deref(self.root, choose(self.root, schema, probe));
+        }
         if name.starts_with("Value_for_") {
             f.bindable = true;
             f.source = SOURCES.iter().find(|s| current.get(**s).is_some()).map_or("", |s| *s).into();
@@ -90,7 +96,8 @@ impl Walk<'_> {
         };
         let reference = meta["x-ref"].as_str();
         let all: Vec<&Value> = branches(schema).iter().map(|b| deref(self.root, b).0).collect();
-        let banded = all.iter().all(|b| b.get("enum").is_some() || b["type"] == "integer");
+        let banded =
+            all.iter().all(|b| b.get("enum").is_some() || b["type"] == "integer" || b["type"] == "array");
         let listed = all.iter().find_map(|b| b["enum"].as_array().cloned()).filter(|_| banded);
         let named: Vec<Value> = all.iter().filter_map(|b| b.get("const").cloned()).collect();
         let counted =
@@ -192,7 +199,7 @@ impl Walk<'_> {
                 continue;
             }
             let path = format!("{pointer}/{}", escape(&key));
-            match (key.as_str(), value["effect"].as_str().and_then(descriptor)) {
+            match (key.as_str(), value["effect"].as_str().and_then(described)) {
                 ("params", Some(d)) => d.params.iter().for_each(|p| self.param(p, value, &path, depth)),
                 _ => self.field(&meta, value.get(&key), path, &key, depth),
             }
@@ -209,10 +216,23 @@ impl Walk<'_> {
             ParamKind::Vec2 => ("vec2", None),
             ParamKind::Color => ("color", None),
             ParamKind::Bool => ("bool", None),
-            ParamKind::Texture => ("ref:image", Some("image")),
+            ParamKind::Texture | ParamKind::Mask => ("ref:image", Some("image")),
             ParamKind::Lut => ("ref:lut", Some("lut")),
+            ParamKind::Int => ("integer", None),
+            ParamKind::Enum | ParamKind::Blend => ("enum", None),
+            ParamKind::Position => ("vec2", None),
+        };
+        let listed = match p.kind {
+            ParamKind::Blend => {
+                wprs_scene::BLENDS.iter().filter_map(|b| serde_json::to_value(b).ok()).collect()
+            }
+            _ => p.values.iter().map(|e| json!(e.value)).collect(),
         };
         let range = p.min.zip(p.max).map_or(Value::Null, |(a, b)| json!([a, b]));
+        let languages = wprs_core::locale::languages();
+        let label = |e: &wprs_scene::Entry| wprs_scene::Text::Localized(e.label.clone()).pick(&languages);
+        let labeled = p.kind == ParamKind::Enum && p.values.iter().all(|e| !e.label.is_empty());
+        let names = if labeled { p.values.iter().map(label).collect() } else { Vec::new() };
         let source =
             SOURCES.iter().find(|s| current.is_some_and(|c| c.get(**s).is_some())).map_or("", |s| *s);
         self.out.push(Field {
@@ -222,11 +242,12 @@ impl Walk<'_> {
             value: current.cloned().unwrap_or_default(),
             default: serde_json::to_value(&p.default).unwrap_or_default(),
             set: current.is_some(),
-            options: reference.map(|r| candidates(self.doc, r, base)).unwrap_or_default(),
+            options: reference.map(|r| candidates(self.doc, r, base)).unwrap_or(listed),
             range,
             bindable: reference.is_none(),
             source: source.into(),
             depth,
+            names,
             ..Field::default()
         });
     }
@@ -299,6 +320,7 @@ pub fn fields(doc: &Value, pointer: &str) -> Vec<Field> {
         ),
     }
     crate::forms::extend(doc, pointer, &mut walk.out);
+    walk.out.retain(|f| crate::meta::applies(doc, &f.pointer));
     walk.out.iter_mut().for_each(|f| adjust(doc, f));
     walk.out
 }

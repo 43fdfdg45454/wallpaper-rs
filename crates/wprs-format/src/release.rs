@@ -1,5 +1,5 @@
 use crate::repo::hex64;
-use crate::{Content, Kind, Requires, Text, Time};
+use crate::{Content, Dependency, Kind, Requires, Text, Time};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
@@ -33,6 +33,10 @@ pub struct Release {
     pub facets: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub animated: Option<Preview>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub platforms: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -55,6 +59,16 @@ pub struct Needs {
     pub engine: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub features: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub packages: Vec<Wanted>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Wanted {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub version: String,
 }
 
 impl Rated {
@@ -72,7 +86,9 @@ impl From<&Content> for Rated {
 
 impl From<&Requires> for Needs {
     fn from(requires: &Requires) -> Needs {
-        Needs { engine: requires.engine.clone(), features: requires.features.clone() }
+        let wanted = |d: &Dependency| Wanted { id: d.id.clone(), version: d.version.clone() };
+        let packages = requires.packages.iter().map(wanted).collect();
+        Needs { engine: requires.engine.clone(), features: requires.features.clone(), packages }
     }
 }
 

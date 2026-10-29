@@ -7,9 +7,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 use wprs_format::{
-    Added, Content, Descriptor, Fetch, FileFetch, Keypair, Kind, Limits, Manifest, Origin, OriginKind,
-    Previews, Published, Rating, SCHEMA, SCHEMA_V1, Settings, Signer, Text, add, build, init, keygen,
-    publish, sign_root, sign_source,
+    Added, Content, Descriptor, Fetch, FileFetch, Keypair, Kind, Limits, Manifest, Origin, Previews,
+    Published, Rating, SCHEMA, SCHEMA_V1, Settings, Signer, Text, add, build, init, keygen, publish,
+    sign_root, sign_source,
 };
 
 pub const NOW: i64 = 1_800_000_000;
@@ -99,7 +99,7 @@ impl Repo {
             changes: Some("- Darker clouds".into()),
             content: Some(Content { rating: Rating::Mature, descriptors: vec![Descriptor::Violence] }),
             photosensitive: Some(true),
-            origin: Some(Origin { kind: OriginKind::Original, derived_from: Vec::new() }),
+            origin: Some(Origin::default()),
             preview: None,
             previews: Some(Previews {
                 thumbnail: Some("preview.png".into()),
@@ -111,6 +111,31 @@ impl Repo {
         fs::write(src.join("image.png"), picture(image::ImageFormat::Png)).unwrap();
         fs::write(src.join("preview.png"), picture(image::ImageFormat::Png)).unwrap();
         fs::write(src.join("loop.gif"), picture(image::ImageFormat::Gif)).unwrap();
+        sign_source(&src, &signer(&self.author)).unwrap();
+        let out = self.tmp.path().join(format!("{id}-{version}.wpak"));
+        build(&src, &out, &Limits::default()).unwrap();
+        add(&self.dir, &out, Some("studio"), NOW).unwrap()
+    }
+
+    pub fn add_page(&self, id: &str, version: &str) -> Added {
+        let src = self.tmp.path().join(format!("web-{id}-{version}"));
+        fs::create_dir_all(&src).unwrap();
+        let manifest = Manifest {
+            schema: SCHEMA.into(),
+            kind: Kind::Web,
+            entry: "index.html".into(),
+            content: Some(Content { rating: Rating::General, descriptors: Vec::new() }),
+            photosensitive: Some(false),
+            origin: Some(Origin::default()),
+            preview: None,
+            previews: Some(Previews { thumbnail: Some("preview.png".into()), animated: None }),
+            ..manifest(id, version)
+        };
+        let mut json = serde_json::to_value(manifest).unwrap();
+        json["requires"] = serde_json::json!({ "features": ["web"] });
+        fs::write(src.join("manifest.json"), json.to_string()).unwrap();
+        fs::write(src.join("index.html"), "<!doctype html>").unwrap();
+        fs::write(src.join("preview.png"), picture(image::ImageFormat::Png)).unwrap();
         sign_source(&src, &signer(&self.author)).unwrap();
         let out = self.tmp.path().join(format!("{id}-{version}.wpak"));
         build(&src, &out, &Limits::default()).unwrap();

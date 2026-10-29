@@ -14,6 +14,7 @@ const MAX_GAP: f64 = 600.0;
 
 pub struct Runtime {
     pub scene: Arc<Scene>,
+    pub seed: u64,
     props: Values,
     audio: AudioFrame,
     pointer: PointerState,
@@ -29,6 +30,7 @@ pub struct Runtime {
     memo: RefCell<HashMap<usize, [f32; 4]>>,
     wake: Cell<Wake>,
     uses: [Uses; 4],
+    limit: Option<Uses>,
     swarms: RefCell<Vec<Swarm>>,
 }
 
@@ -41,10 +43,12 @@ impl Runtime {
         holds(&scene.layers, &targets, &mut mattes);
         let (audio, pointer, script, memo) = Default::default();
         let wake = Cell::new(Wake::Frame);
-        let (seed, size) = (scene.clock.seed, scene.canvas.size);
+        let fresh = || std::time::UNIX_EPOCH.elapsed().map_or(0, |d| d.as_nanos() as u64 ^ d.as_secs() << 32);
+        let (seed, size) = (scene.clock.seed.unwrap_or_else(fresh), scene.canvas.size);
         let swarms = RefCell::new(scene.particles.values().map(|s| Swarm::new(s, seed, size)).collect());
         Runtime {
             scene,
+            seed,
             props,
             audio,
             pointer,
@@ -60,8 +64,13 @@ impl Runtime {
             memo,
             wake,
             uses,
+            limit: None,
             swarms,
         }
+    }
+
+    pub fn declare(&mut self, allowed: Uses) {
+        self.limit = Some(allowed);
     }
 
     pub fn uses(&self) -> Uses {
@@ -69,7 +78,11 @@ impl Runtime {
     }
 
     pub fn uses_at(&self, quality: Quality) -> Uses {
-        self.uses[quality as usize]
+        let found = self.uses[quality as usize];
+        let Some(limit) = self.limit else { return found };
+        let (audio, cursor, clicks) =
+            (found.audio && limit.audio, found.cursor && limit.cursor, found.clicks && limit.clicks);
+        Uses { audio, cursor, clicks, media: found.media && limit.media, ..found }
     }
 
     pub fn since_beat(&self) -> f32 {
@@ -173,7 +186,7 @@ impl Runtime {
             match *command {
                 TimelineCommand::Play => (head.playing, head.reversed) = (true, false),
                 TimelineCommand::Pause => head.playing = false,
-                TimelineCommand::Seek(t) => head.t = t.clamp(0.0, tl.duration),
+                TimelineCommand::Seek(t) => head.t = t.clamp(0.0, tl.length()),
                 TimelineCommand::Reverse => (head.playing, head.reversed) = (true, !head.reversed),
             }
         }

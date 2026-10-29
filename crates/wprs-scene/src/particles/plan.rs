@@ -10,6 +10,7 @@ impl Swarm {
         let aim = |t: &Target| match t {
             Target::Point([x, y]) => [*x, *y, 1.0],
             Target::Follow(_) => [cursor[0], cursor[1], f32::from(u8::from(p.inside))],
+            Target::Control(_) => [0.0; 3],
         };
         let q = quality.particles();
         let start = self.clock.is_none();
@@ -32,17 +33,18 @@ impl Swarm {
                 let [x, y, on] = aim(t);
                 [kind, x, y, k * on]
             };
-            self.base.forces[f] = match force {
+            self.base.forces[f] = match &force.force {
                 Force::Gravity(g) => {
                     let [x, y] = g.get(cx).0;
                     [1.0, x, y, 0.0]
                 }
                 Force::Drag(k) => [2.0, k.get(cx), 0.0, 0.0],
-                Force::Turbulence { strength, scale } => [3.0, strength.get(cx), *scale, 0.0],
-                Force::Attractor { target, strength } => pull(4.0, target, strength.get(cx)),
-                Force::Vortex { center, strength } => pull(5.0, center, strength.get(cx)),
-                Force::Orbit { center, strength } => pull(6.0, center, strength.get(cx)),
+                Force::Turbulence { strength, scale, .. } => [3.0, strength.get(cx), *scale, 0.0],
+                Force::Attractor { target, strength, .. } => pull(4.0, target, strength.get(cx)),
+                Force::Vortex { center, strength, .. } => pull(5.0, center, strength.get(cx)),
+                Force::Orbit { center, strength, .. } => pull(6.0, center, strength.get(cx)),
                 Force::Noise(k) => [7.0, k.get(cx), 0.0, 0.0],
+                _ => [0.0; 4],
             };
         }
         self.base.ids[3] = ((s.capacity as f32 * q) as u32).clamp(1, s.capacity.max(1));

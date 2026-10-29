@@ -49,6 +49,16 @@ pub fn fits(root: &Value, schema: &Value, value: &Value) -> bool {
     if !types.is_empty() && !types.iter().any(|t| *t == named || (*t == "number" && named == "integer")) {
         return false;
     }
+    let n = value.as_array().map(|l| l.len() as u64);
+    let bound = |key: &str| schema[key].as_u64().zip(n);
+    if bound("minItems").is_some_and(|(m, n)| n < m) || bound("maxItems").is_some_and(|(m, n)| n > m) {
+        return false;
+    }
+    let item = |i: usize| schema["prefixItems"].get(i).or(schema.get("items").filter(|s| s.is_object()));
+    let mut items = value.as_array().into_iter().flatten().enumerate();
+    if !items.all(|(i, v)| item(i).is_none_or(|s| fits(root, s, v))) {
+        return false;
+    }
     if let (Some(props), Some(object)) = (schema["properties"].as_object(), value.as_object()) {
         let tag = props.iter().find(|(_, p)| p.get("const").is_some());
         if let Some((key, p)) = tag {
@@ -85,8 +95,14 @@ pub fn properties(root: &Value, schema: &Value, value: &Value) -> Map<String, Va
 }
 
 pub fn child<'a>(root: &'a Value, schema: &'a Value, token: &str, value: &Value) -> Option<Value> {
-    let (base, _) = deref(root, schema);
-    let chosen = if base["properties"].is_object() { base } else { deref(root, choose(root, base, value)).0 };
+    let (mut chosen, _) = deref(root, schema);
+    while !chosen["properties"].is_object() && !branches(chosen).is_empty() {
+        let next = deref(root, choose(root, chosen, value)).0;
+        if std::ptr::eq(next, chosen) {
+            break;
+        }
+        chosen = next;
+    }
     if let Some(p) = properties(root, chosen, value).get(token) {
         return Some(p.clone());
     }

@@ -93,27 +93,63 @@ fn named(node: &Value, keys: &mut BTreeSet<String>, values: &mut BTreeSet<String
 
 #[test]
 fn the_scene_editor_has_words_for_every_field_value_and_effect() {
-    let facades = qml_files()
-        .into_iter()
-        .filter(|(name, _)| ["SceneWords.qml", "ManifestWords.qml"].contains(&name.as_str()));
-    let words: String = facades.map(|(_, text)| text).collect();
-    assert!(words.contains("ManifestWords.words[text]"), "SceneWords.qml falls back to ManifestWords.qml");
-    let (mut keys, mut values) = (BTreeSet::new(), BTreeSet::new());
+    let file = |wanted: &str| qml_files().into_iter().find(|(name, _)| name == wanted).unwrap().1;
+    let (words, manifest) = (file("SceneWords.qml"), file("ManifestWords.qml"));
+    assert!(words.contains("ManifestWords.words"), "SceneWords.qml falls back to ManifestWords.qml");
+    let scene = [words, file("SceneValues.qml"), file("SceneEffects.qml")].concat();
+    let (mut keys, mut values, mut theirs) = (BTreeSet::new(), BTreeSet::new(), BTreeSet::new());
     named(&wprs_scene::schema(), &mut keys, &mut values);
-    named(&wprs_scene::property_schema(), &mut keys, &mut values);
-    named(&wprs_format::manifest_schema(), &mut keys, &mut values);
-    for effect in wprs_scene::builtin() {
+    named(&wprs_scene::property_schema(), &mut theirs, &mut values);
+    named(&wprs_format::manifest_schema(), &mut theirs, &mut values);
+    for effect in wprs_scene::builtin().iter().chain(wprs_scene::undrawn()) {
         keys.insert(effect.id.clone());
-        keys.extend(effect.params.iter().map(|p| p.id.clone()));
+        let full = wprs_scene::described(&effect.id).unwrap_or(effect);
+        keys.extend(full.params.iter().map(|p| p.id.clone()));
     }
     let easings = wprs_scene::easings();
     let curves = easings.iter().map(|e| e.rsplit('_').next().unwrap_or_default().to_owned());
     values.retain(|v| !easings.contains(v));
-    let wanted: BTreeSet<String> = keys.into_iter().chain(values).chain(curves).collect();
-    let missing: Vec<&String> =
-        wanted.iter().filter(|k| !words.contains(&format!("\"{k}\": App.tr("))).collect();
-    assert!(missing.is_empty(), "SceneWords.qml and ManifestWords.qml have no words for {missing:?}");
+    let word = |text: &str, k: &String| text.contains(&format!("\"{k}\": App.tr("));
+    let missing: Vec<&String> = keys.iter().filter(|k| !word(&scene, k)).collect();
+    assert!(missing.is_empty(), "the scene words have no words for {missing:?}");
+    let either = theirs.iter().chain(&values).cloned().chain(curves).collect::<BTreeSet<_>>();
+    let missing: Vec<&String> = either.iter().filter(|k| !word(&scene, k) && !word(&manifest, k)).collect();
+    assert!(missing.is_empty(), "the scene and manifest words have no words for {missing:?}");
+    for (context, wanted) in [("assets", "Texture edges"), ("timelines", "Blend end into start")] {
+        assert!(scene.contains(&format!("\"{context}.wrap\": App.tr(\"{wanted}\")")), "{context}.wrap");
+    }
     for source in ["keys", "prop", "audio", "cursor", "clock", "script"] {
-        assert!(words.contains(&format!("\"{source}\": App.tr(")), "{source}");
+        assert!(scene.contains(&format!("\"{source}\": App.tr(")), "{source}");
+    }
+}
+
+#[test]
+fn every_feature_has_a_translated_explanation() {
+    let labels =
+        qml_files().into_iter().find(|(name, _)| name == "Labels.qml").map(|(_, text)| text).unwrap();
+    for (name, why, _) in wprs_format::features::all() {
+        assert!(
+            labels.contains(&format!("\"{name}\": App.tr(\"{why}\")")),
+            "Labels.qml explains {name} otherwise"
+        );
+    }
+    assert!(
+        labels.contains("App.tr(\"sets %1 on the %2 effect\")")
+            && labels.contains("App.tr(\"uses the %1 effect\")")
+    );
+    assert!(
+        labels.contains("SceneWords.effect(parts[0])") && labels.contains(".arg(SceneWords.label(parts[1]))")
+    );
+}
+
+#[test]
+fn combo_choices_show_the_keyboard_highlight_and_draw_labels_as_plain_text() {
+    for (name, text) in qml_files().into_iter().filter(|(_, text)| text.contains("ComboBox")) {
+        let delegates = text.matches("delegate: QQC2.ItemDelegate").count();
+        assert_eq!(text.matches(".highlightedIndex === index").count(), delegates, "{name}");
+        let drawn =
+            text.matches("contentItem: QQC2.Label").count() + text.matches("contentItem: RowLayout").count();
+        assert!(text.matches("textFormat: Text.PlainText").count() >= drawn, "{name}");
+        assert_eq!(text.matches("Kirigami.Theme.highlightedTextColor").count(), drawn, "{name}");
     }
 }

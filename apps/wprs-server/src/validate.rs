@@ -37,6 +37,8 @@ pub fn check(wpak: &Path, keys: &[String], require_signature: bool, thumb: &Path
         let _ = setrlimit(resource, Rlimit { current: Some(value), maximum: Some(value) });
     }
     let mut package = wprs_format::open(wpak, &Limits::default())?;
+    package.manifest.publishable()?;
+    package.look_at_videos()?;
     let pairs = keys
         .iter()
         .map(|k| Ok((fingerprint(k)?, public_key(k)?)))

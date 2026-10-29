@@ -49,7 +49,7 @@ pub(super) fn kit(
     let look = Look {
         tint: [1.0, flag(srgb), bake.size, flag(image.is_some())],
         atlas: [atlas[1] as f32, atlas[0] as f32, frames, r.fps],
-        trail: [r.stretch, 0.0, r.trail.as_ref().map_or(1.0, |t| t.width), flag(r.mix)],
+        trail: [r.stretch.time, 0.0, r.trail.as_ref().map_or(1.0, |t| t.width), flag(r.mix)],
         sizes: std::array::from_fn(|i| std::array::from_fn(|j| sizes[i * 4 + j])),
         colors: colors.map(tone),
         ..Zeroable::zeroed()

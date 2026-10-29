@@ -1,22 +1,46 @@
 mod bake;
+mod checks;
+mod children;
 mod cloud;
+mod control;
+mod drawn;
 mod emit;
 mod forces;
+mod instance;
 mod look;
 mod motion;
+mod ops;
 mod pack;
 mod plan;
+mod pulls;
 mod rules;
+mod seed;
+mod shapes;
 mod spawn;
+mod spread;
+mod starts;
 mod swarm;
 
 pub use bake::{Bake, CPU_PARTICLES, MAX_POINTS};
+pub use children::{Child, Inheritable, MAX_CHILDREN, Moment};
 pub use cloud::{Census, Cloud, Particle};
-pub use emit::{Burst, Cue, EmitShape, Emitter, Follow, Init};
-pub use forces::{Collider, Force, Surface, Target};
-pub use look::{Frames, Render, Trail};
+pub use control::{ControlPoint, Handle, MAX_CONTROL, Periodic, Perspective, Placement};
+pub use emit::{Burst, Cue, Emitter, Follow, Init};
+pub use forces::{
+    Boids, Collider, Falloff, Force, KeepBetween, KeepDistance, Oscillate, Ring, SlowNear, Surface, Target,
+    Wobble,
+};
+pub use instance::{Instance, Tunable};
+pub use look::{Frames, Orient, Refract, Render, Rope, Stretch, Trail};
+pub use ops::Operator;
 pub use pack::Sim;
 pub(crate) use plan::plan;
+pub use seed::{
+    Carry, Hsv, MAX_PALETTE, MAX_REMAPS, OffsetNoise, Palette, REMAP_INPUTS, Remap, RemapOp, RemapOutput,
+    Turbulent, Wave,
+};
+pub use shapes::{Area, Around, Between, Bow, EmitShape, Refresh, Source, Sweep, Taper};
+pub use spread::{Num, Spread};
 pub use swarm::{STEP, SUBSTEPS, Swarm};
 
 use schemars::JsonSchema;
@@ -28,6 +52,10 @@ pub const MAX_COLLIDERS: usize = 4;
 pub const MAX_CURVE: usize = 64;
 pub const MAX_PREWARM: f32 = 10.0;
 pub const MAX_RATE: f32 = 1e5;
+pub const MAX_EMITTERS2: usize = 8;
+pub const MAX_FORCES2: usize = 16;
+pub const MAX_COLLIDERS2: usize = 8;
+pub const MAX_PREWARM2: f32 = 30.0;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -41,25 +69,57 @@ pub struct System {
     #[serde(default)]
     pub init: Init,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub forces: Vec<Force>,
+    pub forces: Vec<Operator>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub collide: Vec<Collider>,
     #[serde(default)]
     pub render: Render,
+    #[serde(default, skip_serializing_if = "is_local")]
+    pub space: Placement,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub perspective: Option<Perspective>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub points: Vec<ControlPoint>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<Child>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lock: Vec<Tunable>,
 }
 
 impl System {
     pub fn listens(&self) -> (bool, bool, bool) {
         let cue = |c| self.emitters.iter().any(|e| e.burst.as_ref().is_some_and(|b| b.on == Some(c)));
-        let target = |t: &Target| matches!(t, Target::Follow(_));
-        let follows = self.forces.iter().any(|f| match f {
+        let pointer = cue(Cue::Click) || self.targets().any(|t| matches!(t, Target::Follow(_)));
+        let pointer = pointer || self.emitters.iter().any(|e| e.follow.is_some());
+        let pointer = pointer || self.points.iter().any(|p| p.follow.is_some());
+        let gated = self.emitters.iter().any(|e| e.audio_gate);
+        let heard = self.init.turbulent.is_some_and(|t| t.audio.is_some());
+        let remaps = self.init.remap.iter().chain(self.forces.iter().filter_map(|f| match &f.force {
+            Force::Remap(r) => Some(r),
+            _ => None,
+        }));
+        let remaps: Vec<&str> = remaps.map(|r| r.input.as_str()).collect();
+        let audio = gated || heard || remaps.iter().any(|i| i.starts_with("audio:"));
+        let pointer = pointer || remaps.iter().any(|i| i.starts_with("cursor:"));
+        (cue(Cue::Beat) || audio, pointer, cue(Cue::Click))
+    }
+
+    pub fn targets(&self) -> impl Iterator<Item = &Target> {
+        let forces = self.forces.iter().flat_map(|f| match &f.force {
             Force::Attractor { target: t, .. }
             | Force::Vortex { center: t, .. }
-            | Force::Orbit { center: t, .. } => target(t),
-            _ => false,
+            | Force::Orbit { center: t, .. }
+            | Force::SlowNear(SlowNear { target: t, .. })
+            | Force::KeepDistance(KeepDistance { target: t, .. }) => vec![t],
+            Force::KeepBetween(k) => vec![&k.from, &k.to],
+            _ => vec![],
         });
-        let pointer = cue(Cue::Click) || follows || self.emitters.iter().any(|e| e.follow.is_some());
-        (cue(Cue::Beat), pointer, cue(Cue::Click))
+        let shapes = self.emitters.iter().flat_map(|e| match &e.shape {
+            EmitShape::Around(a) => a.at.iter().collect(),
+            EmitShape::Between(b) => vec![&b.from, &b.to],
+            _ => vec![],
+        });
+        forces.chain(shapes).chain(self.init.inherit.iter().map(|c| &c.from))
     }
 
     pub fn overdraw(&self, canvas: [u32; 2]) -> f32 {
@@ -72,4 +132,8 @@ impl System {
 
 fn is_zero(v: &f32) -> bool {
     *v == 0.0
+}
+
+fn is_local(v: &Placement) -> bool {
+    *v == Placement::Local
 }

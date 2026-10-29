@@ -77,7 +77,8 @@ fn validation_names_the_broken_field() {
         [range("/layers/0/opacity", 2.0, 0.0, 1.0)]
     );
     assert_eq!(
-        issues(|s| s.layers[1].kind = Kind::Video { video: Value::Fixed("gone".into()), size: None }),
+        issues(|s| s.layers[1].kind =
+            Kind::Video { video: Value::Fixed("gone".into()), size: None, color: None, playback: None }),
         [unknown("/layers/1/video", "asset", "gone")]
     );
     assert_eq!(
@@ -115,9 +116,15 @@ fn validation_names_the_broken_field() {
         let found = issues(|s| s.layers[0].effects[0].mask = Some(mask));
         assert_eq!(found, [Issue::EffectMask("/layers/0/effects/0/mask".into())]);
     }
-    let deep = (0..9).fold(Layer::new("leaf", Kind::Adjustment {}), |inner, i| {
-        Layer::new(format!("g{i}"), Kind::Group { layers: vec![inner], clip: false })
-    });
+    let deep = (0..9).fold(
+        Layer::new("leaf", Kind::Adjustment { size: None, redraw: false, rgb: false }),
+        |inner, i| {
+            Layer::new(
+                format!("g{i}"),
+                Kind::Group { layers: vec![inner], clip: false, color: None, space: None },
+            )
+        },
+    );
     assert_eq!(issues(|s| s.layers = vec![deep]), [Issue::Depth("/layers/0".repeat(9))]);
     let unsorted = SAMPLE.replace("[[0, 0], [10, 360]]", "[[10, 360], [0, 0]]");
     let found = Scene::from_json(&unsorted).unwrap().validate(&props());
@@ -138,7 +145,7 @@ fn validation_names_the_broken_field() {
     let chain: Vec<Layer> = (0..2000)
         .map(|i| Layer {
             mask: Some(Mask { layer: Some(format!("l{}", i + 1)), ..Mask::default() }),
-            ..Layer::new(format!("l{i}"), Kind::Adjustment {})
+            ..Layer::new(format!("l{i}"), Kind::Adjustment { size: None, redraw: false, rgb: false })
         })
         .collect();
     let started = std::time::Instant::now();
@@ -152,10 +159,15 @@ fn validation_names_the_broken_field() {
         Scene::from_json(&triggered).unwrap().validate(&props()),
         [unknown("/timelines/0/trigger", "property", "nothing")]
     );
+    let tapped = SAMPLE.replace("\"autoplay\": true", "\"trigger\": \"tap:sky\"");
+    assert_eq!(
+        Scene::from_json(&tapped).unwrap().validate(&props()),
+        [unknown("/timelines/0/trigger", "trigger", "tap:sky")]
+    );
     let clicked = SAMPLE.replace("\"autoplay\": true", "\"trigger\": \"click:sky\"");
     assert_eq!(
         Scene::from_json(&clicked).unwrap().validate(&props()),
-        [unknown("/timelines/0/trigger", "trigger", "click:sky")]
+        [unknown("/timelines/0/trigger", "layer that takes clicks", "sky")]
     );
 }
 

@@ -1,3 +1,4 @@
+use crate::locale::locale_file;
 use crate::{Error, Kind, Manifest, Result, ensure, require};
 use std::collections::HashSet;
 use std::path::Path;
@@ -9,9 +10,17 @@ const MAX_PATH: usize = 255;
 const RATIO_FLOOR: u64 = 1 << 20;
 const IMAGES: &[&str] = &["png", "jpg", "jpeg", "webp", "avif", "gif", "bmp", "ktx2"];
 const VIDEOS: &[&str] = &["webm", "mp4", "mkv"];
-const SCENES: &[&str] =
-    &["json", "wgsl", "js", "gltf", "glb", "bin", "ogg", "opus", "flac", "mp3", "wav", "ttf", "otf", "cube"];
+const SCENES: &[&str] = &[
+    "json", "wgsl", "js", "gltf", "glb", "bin", "ogg", "opus", "flac", "mp3", "wav", "ttf", "otf", "ttc",
+    "otc", "woff2", "cube",
+];
+const PAGES: &[&str] = &[
+    "html", "htm", "js", "mjs", "css", "json", "wasm", "svg", "hdr", "exr", "ogg", "opus", "flac", "mp3",
+    "wav", "ttf", "otf", "woff", "woff2", "glb", "gltf", "bin", "obj", "mtl", "fbx", "basis", "glsl", "vert",
+    "frag", "wgsl", "csv", "xml",
+];
 const COMMON: &[&str] = &["txt"];
+const DATA: &[&str] = &["json"];
 const THUMBNAILS: &[&str] = &["png", "jpg", "jpeg", "webp"];
 const ANIMATED: &[&str] = &["gif", "webp"];
 
@@ -54,6 +63,7 @@ pub fn validate(manifest: &Manifest, files: &[FileEntry], limits: &Limits) -> Re
         ensure(!file.symlink, || Error::Symlink(file.path.clone()))?;
         ensure(seen.insert(file.path.to_lowercase()), || Error::Duplicate(file.path.clone()))?;
         let allowed = [MANIFEST, SIGNATURE].contains(&file.path.as_str())
+            || (manifest.v2() && locale_file(&file.path))
             || extension(&file.path).is_some_and(|e| allows(manifest.kind, &e));
         ensure(allowed, || Error::Extension { path: file.path.clone(), kind: manifest.kind })?;
         within("file size", file.size, limits.max_file_size)?;
@@ -67,8 +77,10 @@ pub fn validate(manifest: &Manifest, files: &[FileEntry], limits: &Limits) -> Re
     let entry_types = match manifest.kind {
         Kind::Image => IMAGES,
         Kind::Video => VIDEOS,
-        Kind::Scene => &["json"],
+        Kind::Scene | Kind::Preset | Kind::Assets => DATA,
+        Kind::Web => &["html", "htm"],
     };
+    let web = manifest.web.clone().unwrap_or_default();
     let (thumbs, limit) = if manifest.v2() { (THUMBNAILS, 1 << 20) } else { (IMAGES, u64::MAX) };
     let previews = manifest.previews.clone().unwrap_or_default();
     let referenced = [
@@ -76,6 +88,7 @@ pub fn validate(manifest: &Manifest, files: &[FileEntry], limits: &Limits) -> Re
         ("preview", manifest.preview.as_ref(), IMAGES, u64::MAX),
         ("previews.thumbnail", previews.thumbnail.as_ref(), thumbs, limit),
         ("previews.animated", previews.animated.as_ref(), ANIMATED, 8 << 20),
+        ("web.preload", web.preload.as_ref(), &["js", "mjs"], u64::MAX),
     ];
     referenced.into_iter().try_for_each(|(field, path, types, max)| {
         let Some(path) = path else { return Ok(()) };
@@ -110,7 +123,9 @@ fn allows(kind: Kind, extension: &str) -> bool {
     let groups: &[&[&str]] = match kind {
         Kind::Image => &[IMAGES, COMMON],
         Kind::Video => &[IMAGES, VIDEOS, COMMON],
-        Kind::Scene => &[IMAGES, VIDEOS, SCENES, COMMON],
+        Kind::Scene | Kind::Assets => &[IMAGES, VIDEOS, SCENES, COMMON],
+        Kind::Web => &[IMAGES, VIDEOS, PAGES, COMMON],
+        Kind::Preset => &[IMAGES, VIDEOS, DATA, COMMON],
     };
     groups.iter().any(|group| group.contains(&extension))
 }

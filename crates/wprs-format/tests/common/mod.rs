@@ -3,7 +3,7 @@
 use image::{ImageFormat, RgbImage};
 use std::io::{Cursor, Write};
 use wprs_format::{
-    Content, FileEntry, Kind, MANIFEST, Manifest, Origin, OriginKind, Previews, Rating, SCHEMA, SCHEMA_V1,
+    Content, FileEntry, Kind, MANIFEST, Manifest, Origin, Previews, Rating, SCHEMA, SCHEMA_V1,
 };
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
@@ -15,6 +15,9 @@ pub fn manifest(kind: Kind) -> Manifest {
         Kind::Image => "image.png",
         Kind::Video => "loop.webm",
         Kind::Scene => "scene.json",
+        Kind::Web => "index.html",
+        Kind::Preset => "preset.json",
+        Kind::Assets => "assets.json",
     };
     Manifest {
         schema: SCHEMA_V1.into(),
@@ -39,7 +42,7 @@ pub fn v2(kind: Kind) -> Manifest {
         previews: Some(Previews { thumbnail: Some("preview.png".into()), animated: None }),
         content: Some(Content { rating: Rating::General, descriptors: Vec::new() }),
         photosensitive: Some(false),
-        origin: Some(Origin { kind: OriginKind::Original, derived_from: Vec::new() }),
+        origin: Some(Origin::default()),
         ..manifest(kind)
     }
 }

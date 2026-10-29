@@ -43,8 +43,81 @@ pub struct Descriptor {
     pub pace: Option<Pace>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub quality: BTreeMap<Quality, Tune>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub targets: BTreeMap<String, RenderTarget>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub options: Vec<Variant>,
+    #[serde(default, skip_serializing_if = "Stage::is_layer")]
+    pub stage: Stage,
     #[serde(skip)]
     pub wgsl: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Stage {
+    #[default]
+    Layer,
+    Material,
+    Particle,
+}
+
+impl Stage {
+    pub fn is_layer(&self) -> bool {
+        *self == Stage::Layer
+    }
+
+    pub fn function(self) -> Option<(&'static str, &'static str)> {
+        match self {
+            Stage::Layer => None,
+            Stage::Material => Some(("material", "Surface")),
+            Stage::Particle => Some(("particle", "Sprite")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RenderTarget {
+    #[serde(default = "full")]
+    pub scale: f32,
+    #[serde(default)]
+    pub format: Texel,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Texel {
+    #[default]
+    Rgba8,
+    Rgba16f,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Variant {
+    pub id: String,
+    pub values: Vec<Param>,
+    pub default: Param,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub when_bound: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Entry {
+    pub value: f32,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub label: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PassBlend {
+    Replace,
+    Normal,
+    Add,
+    Multiply,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -94,6 +167,11 @@ pub enum ParamKind {
     Bool,
     Texture,
     Lut,
+    Int,
+    Enum,
+    Blend,
+    Position,
+    Mask,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -109,11 +187,22 @@ pub struct ParamDef {
     pub max: Option<f32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uses: Option<Use>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub label: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub help: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub values: Vec<Entry>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channels: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paint: Option<Param>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PassDef {
+    #[serde(default)]
     pub entry: String,
     #[serde(default = "full")]
     pub scale: f32,
@@ -121,6 +210,16 @@ pub struct PassDef {
     pub inputs: Vec<String>,
     #[serde(default)]
     pub output: Output,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blend: Option<PassBlend>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertex: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grid: Option<[u32; 2]>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -167,7 +266,7 @@ impl Default for State {
     }
 }
 
-static EXTRA: RwLock<Vec<&'static Descriptor>> = RwLock::new(Vec::new());
+pub(crate) static EXTRA: RwLock<Vec<&'static Descriptor>> = RwLock::new(Vec::new());
 
 pub fn builtin() -> &'static [Descriptor] {
     static BUILTIN: OnceLock<Vec<Descriptor>> = OnceLock::new();

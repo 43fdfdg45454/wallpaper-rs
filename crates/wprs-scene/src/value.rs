@@ -1,3 +1,4 @@
+use crate::signal::{Reduce, Smooth};
 use crate::timeline::{Key, Loop};
 use crate::{Color, Issue};
 use schemars::JsonSchema;
@@ -37,6 +38,8 @@ pub struct Binding<T> {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub clock: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub script: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scale: Option<f32>,
@@ -45,16 +48,51 @@ pub struct Binding<T> {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub clamp: Option<[f32; 2]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub smooth: Option<f32>,
+    pub smooth: Option<Smooth>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub invert: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "layer"))]
+    pub layer: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base: Option<T>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub of: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reduce: Option<Reduce>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounds: Option<[f32; 2]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-range" = [0.1, 10]))]
+    pub exponent: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<Track>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y: Option<Track>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub r: Option<Track>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub g: Option<Track>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub b: Option<Track>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub a: Option<Track>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media: Option<crate::Media>,
+    #[serde(default, rename = "fn", skip_serializing_if = "Option::is_none")]
+    pub call: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub params: Option<BTreeMap<String, Param>>,
 }
+
+pub type Track = Box<Value<f32>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum Band {
     Index(u32),
     Named(Level),
+    Range([u32; 2]),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -94,6 +132,32 @@ pub struct Vec2(pub [f32; 2]);
 enum Vec2Repr {
     One(f32),
     Two([f32; 2]),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(from = "Vec3Repr", into = "[f32; 3]")]
+pub struct Vec3(pub [f32; 3]);
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(untagged)]
+enum Vec3Repr {
+    One(f32),
+    Three([f32; 3]),
+}
+
+impl From<Vec3Repr> for Vec3 {
+    fn from(repr: Vec3Repr) -> Self {
+        Vec3(match repr {
+            Vec3Repr::One(v) => [v; 3],
+            Vec3Repr::Three(v) => v,
+        })
+    }
+}
+
+impl From<Vec3> for [f32; 3] {
+    fn from(v: Vec3) -> Self {
+        v.0
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -176,8 +240,18 @@ impl<T> Value<T> {
 impl<T> Binding<T> {
     pub fn sources(&self) -> usize {
         let present = [self.prop.is_some(), self.keys.is_some(), self.audio.is_some(), self.cursor.is_some()];
-        let more = [self.clock.is_some(), self.script.is_some()];
-        present.into_iter().chain(more).filter(|p| *p).count()
+        let more = [self.clock.is_some(), self.script.is_some(), self.layer.is_some(), self.tracked()];
+        let last = [self.media.is_some(), self.date.is_some()];
+        present.into_iter().chain(more).chain(last).filter(|p| *p).count()
+    }
+
+    pub fn tracks(&self) -> [(&'static str, Option<&Value<f32>>); 6] {
+        let [x, y, r, g, b, a] = [&self.x, &self.y, &self.r, &self.g, &self.b, &self.a].map(|t| t.as_deref());
+        [("x", x), ("y", y), ("r", r), ("g", g), ("b", b), ("a", a)]
+    }
+
+    pub fn tracked(&self) -> bool {
+        self.tracks().iter().any(|(_, t)| t.is_some())
     }
 
     pub(crate) fn modify(&self, x: f32) -> f32 {

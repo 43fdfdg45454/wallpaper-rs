@@ -1,9 +1,12 @@
-use crate::meta::{Content, Credit, Input, Links, Origin, Previews, Requires};
-use crate::video::{Display, Playback};
-use crate::{Error, Needs, Preset, Property, Result, Text, features};
+use crate::meta::{Content, Credit, Links, Previews};
+use crate::needs::{Input, Permissions, Platform, Requires};
+use crate::origin::Origin;
+use crate::video::Playback;
+use crate::web::Web;
+use crate::{Display, Error, Needs, Preset, Property, Result, Text, features};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use wprs_scene::Control;
 
@@ -20,15 +23,35 @@ pub enum Kind {
     Image,
     Video,
     Scene,
+    Web,
+    Preset,
+    Assets,
+}
+
+impl Kind {
+    pub fn name(self) -> &'static str {
+        match self {
+            Kind::Image => "image",
+            Kind::Video => "video",
+            Kind::Scene => "scene",
+            Kind::Web => "web",
+            Kind::Preset => "preset",
+            Kind::Assets => "assets",
+        }
+    }
+
+    pub fn shown(self) -> bool {
+        !matches!(self, Kind::Preset | Kind::Assets)
+    }
+
+    pub fn first(self) -> bool {
+        matches!(self, Kind::Image | Kind::Video | Kind::Scene)
+    }
 }
 
 impl fmt::Display for Kind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Kind::Image => "image",
-            Kind::Video => "video",
-            Kind::Scene => "scene",
-        })
+        f.write_str(self.name())
     }
 }
 
@@ -50,6 +73,9 @@ pub struct Manifest {
     pub default_locale: Option<String>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub strings: Strings,
+    #[serde(skip)]
+    #[schemars(skip)]
+    pub string_files: Strings,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub authors: Vec<String>,
     pub license: String,
@@ -78,7 +104,13 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub requires: Option<Requires>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub platforms: Vec<Platform>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub inputs: Vec<Input>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub permissions: Option<Permissions>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub web: Option<Web>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub playback: Option<Playback>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -101,6 +133,17 @@ struct Header {
 pub fn newer_spelling(manifest: &serde_json::Value) -> Option<String> {
     let properties = manifest.get("properties")?.as_object()?;
     properties.iter().find(|(_, p)| !wprs_scene::legacy(p)).map(|(id, _)| id.clone())
+}
+
+pub fn newer_names(
+    manifest: &serde_json::Value,
+    scene: impl FnOnce() -> bool,
+    features: &BTreeSet<String>,
+) -> Vec<String> {
+    let alone = manifest["schema"] == SCHEMA && features.iter().all(|f| features::released(f));
+    let keys = alone && (wprs_scene::newer_manifest_keys(manifest) || scene());
+    let names = [(newer_spelling(manifest).is_some(), "properties2"), (keys, "newer_keys")];
+    names.into_iter().filter(|(on, _)| *on).map(|(_, name)| name.to_owned()).collect()
 }
 
 pub fn manifest_schema() -> serde_json::Value {
@@ -136,8 +179,10 @@ impl Manifest {
         Ok(manifest)
     }
 
-    pub(crate) fn newer_spelling(bytes: &[u8]) -> Option<String> {
-        newer_spelling(&serde_json::from_slice(bytes).ok()?)
+    pub(crate) fn newer_names(raw: &[u8], scene: Option<&str>, features: &BTreeSet<String>) -> Vec<String> {
+        let parsed = |text: &str| serde_json::from_str(text).is_ok_and(|v| wprs_scene::newer_scene_keys(&v));
+        let scene = || scene.is_some_and(parsed);
+        serde_json::from_slice(raw).map_or(Vec::new(), |m| newer_names(&m, scene, features))
     }
 
     pub fn to_json(&self) -> Result<String> {

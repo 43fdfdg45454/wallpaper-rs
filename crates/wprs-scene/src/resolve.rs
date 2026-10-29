@@ -43,6 +43,7 @@ impl Context<'_> {
             Band::Named(Level::Treble) => a.treble,
             Band::Named(Level::Level) => a.level,
             Band::Named(Level::Beat) => f32::from(a.beat),
+            Band::Range(_) => 0.0,
         });
         if audio.is_some() && !a.silent {
             self.note(Wake::Frame);
@@ -143,7 +144,7 @@ impl<T: Animate> Value<T> {
             cx.signal(b).and_then(T::from_signal).unwrap_or_default()
         };
         let value = shaped(b, raw);
-        let Some(tau) = b.smooth.filter(|tau| *tau > 0.0) else { return value };
+        let Some(tau) = b.smooth.and_then(crate::Smooth::seconds) else { return value };
         let (comps, n) = value.comps();
         let mut memo = cx.memo.borrow_mut();
         let last = memo.entry(&**b as *const Binding<T> as usize).or_insert(comps);

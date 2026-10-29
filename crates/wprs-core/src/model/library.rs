@@ -37,11 +37,28 @@ model! {
         pub inputs: Vec<String>,
         pub features: Vec<Feature>,
         pub languages: Vec<String>,
+        #[serde(default)]
+        pub provider: Option<String>,
+        #[serde(default)]
+        pub source_url: Option<String>,
+        #[serde(default)]
+        pub platforms: Vec<String>,
+        #[serde(default)]
+        pub packages: Vec<String>,
+        #[serde(default)]
+        pub refused: Vec<String>,
     }
 
     pub struct Work { pub author: String, pub title: Option<String>, pub url: Option<String>, pub license: Option<String> }
 
-    pub struct PackageCredit { pub paths: Vec<String>, pub license: String, pub attribution: String, pub url: Option<String> }
+    pub struct PackageCredit {
+        pub paths: Vec<String>,
+        pub license: String,
+        pub attribution: String,
+        pub url: Option<String>,
+        #[serde(default)]
+        pub source: Option<String>,
+    }
 
     pub struct Link { pub kind: String, pub url: String }
 

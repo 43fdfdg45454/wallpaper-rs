@@ -49,7 +49,8 @@ fn wall() -> f64 {
 
 impl Stage {
     pub(crate) fn new(uid: String, pack: Arc<Pack>) -> Stage {
-        let runtime = Runtime::new(Arc::clone(&pack.scene), props::values(&pack));
+        let mut runtime = Runtime::new(Arc::clone(&pack.scene), props::values(&pack));
+        pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
         let granted = props::granted(&pack.id);
         let (view, quality, tick, due, touch) = (None, Quality::Q3, None, None, (None, 0, false));
         Stage {

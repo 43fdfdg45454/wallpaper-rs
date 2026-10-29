@@ -120,9 +120,12 @@ Kirigami.OverlayDrawer {
                 }
 
                 QQC2.Label {
+                    readonly property var made: drawer.details.about?.platforms ?? []
+                    readonly property bool elsewhere: made.length > 0 && !made.includes("desktop") && !!drawer.item.error
+                    readonly property var refused: drawer.item.error ? drawer.details.about?.refused ?? [] : []
                     Kirigami.FormData.label: App.tr("Problem:")
                     visible: text !== ""
-                    text: drawer.item.missing ? App.tr("The file is missing") : drawer.item.error ?? ""
+                    text: drawer.item.missing ? App.tr("The file is missing") : elsewhere ? App.tr("This package is made for %1 only").arg(made.map(Labels.value).join(", ")) : refused.length > 0 ? App.tr("This package needs a newer version of wallpaper-rs: it %1").arg(refused.map(Labels.feature).join(", ")) : drawer.item.error ?? ""
                     textFormat: Text.PlainText
                     color: Kirigami.Theme.negativeTextColor
                 }

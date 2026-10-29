@@ -141,4 +141,41 @@ mod tests {
         let response = handle(&Request { path: shown, kind: Kind::Package, thumbs: vec![] });
         assert_eq!((response.meta.error, response.failure, response.meta.width), (None, None, Some(64)));
     }
+
+    mod table {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures/features.rs"));
+    }
+
+    #[test]
+    fn packages_the_desktop_cannot_draw_keep_their_preview_and_say_why() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut cases = table::cases();
+        cases.push(("effects".into(), table::effects()));
+        for (name, case) in &cases {
+            let wpak = table::build(name, case, dir.path()).unwrap_or_else(|e| panic!("{name}: {e}"));
+            let facts = wprs_format::open(&wpak, &wprs_format::Limits::default()).unwrap().facts.features;
+            let refused = wprs_format::features::refused("desktop", &facts);
+            let thumbs = vec![(256, dir.path().join(format!("{name}.jpg")))];
+            let response = handle(&Request { path: wpak.clone(), kind: Kind::Package, thumbs });
+            let error = response.meta.error.unwrap_or_default();
+            assert_eq!(response.written, [256], "{name}");
+            let materialized = crate::apply::materialize(&wpak, &dir.path().join(format!("{name}.blob")));
+            if refused.is_empty() {
+                assert!(error.is_empty(), "{name}: {error}");
+                let failed = materialized.err().map(|e| e.to_string()).unwrap_or_default();
+                assert!(!failed.contains("needs a newer version"), "{name}: {failed}");
+                continue;
+            }
+            assert!(
+                error.starts_with("this package needs a newer version of wallpaper-rs"),
+                "{name}: {error}"
+            );
+            for feature in &refused {
+                let why = format!("{feature} ({})", wprs_format::features::explain(feature));
+                assert!(error.contains(&why), "{name}: {error}");
+            }
+            let refused = materialized.unwrap_err().to_string();
+            assert!(refused.contains("needs a newer version"), "{refused}");
+        }
+    }
 }

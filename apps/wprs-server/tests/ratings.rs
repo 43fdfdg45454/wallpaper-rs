@@ -45,7 +45,7 @@ async fn mature_uploads_are_refused_and_the_catalog_filters_by_rating_and_facet(
     assert!(ids("?content=mature").await.is_empty());
     let (_, dusk) = server.json(Method::GET, "/api/v1/packages/org.example.dusk", &Who::Nobody, None).await;
     assert_eq!((&dusk["content"], &dusk["photosensitive"]), (&json!("general"), &json!(true)), "{dusk}");
-    assert_eq!(dusk["facets"], json!(["android", "landscape", "photosensitive"]));
+    assert_eq!(dusk["facets"], json!(["android", "desktop", "landscape", "photosensitive"]));
     let page = server.call(Method::GET, "/packages/org.example.dusk", &Who::Nobody).send().await.unwrap();
     assert!(page.text().await.unwrap().contains("flashing lights"));
     let (status, _) = server.json(Method::POST, "/api/v1/admin/repo/publish", &admin, None).await;

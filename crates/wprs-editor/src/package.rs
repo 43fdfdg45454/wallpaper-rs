@@ -1,4 +1,4 @@
-use crate::check::{check, check_files};
+use crate::check::{check_files, review};
 use crate::project::Project;
 use anyhow::{Context, Result, bail, ensure};
 use serde_json::{Value, json};
@@ -10,7 +10,7 @@ use wprs_format::{
 };
 
 pub fn problems(dir: &Path, doc: &Value) -> Vec<crate::Problem> {
-    let mut all = check(doc);
+    let mut all = review(doc, Some(dir));
     for p in check_files(dir, doc) {
         if !all.iter().any(|q| q.message == p.message) {
             all.push(p);
@@ -84,7 +84,11 @@ fn derived(original: &Manifest) -> Origin {
         license: Some(original.license.clone()),
     };
     let earlier = original.origin.iter().flat_map(|o| o.derived_from.iter().cloned()).take(63);
-    Origin { kind: OriginKind::Derived, derived_from: earlier.chain([ancestor]).collect() }
+    Origin {
+        kind: OriginKind::Derived,
+        derived_from: earlier.chain([ancestor]).collect(),
+        ..Origin::default()
+    }
 }
 
 pub fn signer(key: &Path, password: Option<String>) -> Result<Signer> {

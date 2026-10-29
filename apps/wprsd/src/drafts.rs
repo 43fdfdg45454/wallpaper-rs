@@ -8,7 +8,7 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
-use wprs_format::{Kind, Manifest, check_path, valid_id};
+use wprs_format::{Kind, Manifest, Platform, check_path, features, valid_id};
 use wprs_render::SceneAssets;
 use wprs_scene::{Clip, Lut, MAX_LUT_BYTES, MAX_LUT_TOTAL, MAX_SOUND_BYTES, MAX_SOUND_TOTAL, Scene};
 use wprs_video::Bank;
@@ -43,6 +43,8 @@ impl Daemon {
         ensure!(manifest.kind == Kind::Scene, invalid("the manifest is not a scene manifest"));
         let scene = Scene::load(&doc["scene"].to_string(), &manifest.properties)
             .map_err(|e| invalid(e.to_string()))?;
+        let facts = features::facts(&manifest, Some(&scene), None);
+        features::playable(&manifest, &facts, Platform::Desktop).map_err(|e| invalid(e.to_string()))?;
         let dir = std::fs::canonicalize(dir).with_context(|| format!("cannot find {}", dir.display()))?;
         let file = |path: &str| -> Result<PathBuf> {
             check_path(path).map_err(|e| invalid(e.to_string()))?;
@@ -80,7 +82,7 @@ impl Daemon {
                 }
                 _ if scene.sounds().any(|s| s.sound == *id) => {
                     ensure!(size <= MAX_SOUND_BYTES, invalid(format!("{} is too large", asset.path)));
-                    let clip = Clip::probe(&std::fs::read(&path)?)
+                    let clip = Clip::probe(&asset.path, &std::fs::read(&path)?)
                         .map_err(|e| invalid(format!("{} {e}", asset.path)))?;
                     seconds += clip.seconds;
                     ensure!(seconds <= MAX_SOUND_TOTAL, invalid("the sounds of the scene last too long"));
@@ -95,7 +97,7 @@ impl Daemon {
             Ok((s.path.clone(), text))
         });
         let scripts = scripts.collect::<Result<Vec<_>>>()?;
-        let m = manifest.localized();
+        let (m, inputs) = (manifest.localized(), manifest.declared());
         let user = wprs_core::locale::languages();
         let (locale, languages) = (m.locale_in(&user), m.languages(&user));
         let properties = scene.properties(&m.properties, &crate::words::volume());
@@ -105,7 +107,19 @@ impl Daemon {
         let (path, presets) = (dir.clone(), m.presets);
         let props = Props { path, id, version, title, kind: "scene", languages, properties, presets };
         let (props, scene) = (Arc::new(props), Arc::new(scene));
-        Ok(ScenePack { path: dir, props, locale, scene, assets, videos, sounds, clips, scripts, labels })
+        Ok(ScenePack {
+            path: dir,
+            props,
+            locale,
+            scene,
+            assets,
+            videos,
+            sounds,
+            clips,
+            scripts,
+            labels,
+            inputs,
+        })
     }
 
     pub fn preview_scene(

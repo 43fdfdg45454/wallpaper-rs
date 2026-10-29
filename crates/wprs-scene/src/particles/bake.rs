@@ -24,7 +24,7 @@ impl Bake {
         let s = scene.particles.get(id)?;
         let draws = |id: &str| {
             let draws =
-                scene.layers().filter(|l| matches!(&l.kind, Kind::Particles { system } if system == id));
+                scene.layers().filter(|l| matches!(&l.kind, Kind::Particles { system, .. } if system == id));
             draws.count().max(1) as u64
         };
         let total: u64 = scene.particles.iter().map(|(id, s)| u64::from(s.capacity) * draws(id)).sum();
@@ -45,7 +45,7 @@ impl Bake {
             for y in (0..ih as usize).step_by(stride) {
                 for x in (0..iw as usize).step_by(stride) {
                     let alpha = rgba.get((y * iw as usize + x) * 4 + 3).copied().unwrap_or(0);
-                    if f32::from(alpha) / 255.0 > *threshold {
+                    if f32::from(alpha) / 255.0 > threshold.0 {
                         bake.points.push([at(x, iw, w), at(y, ih, h)]);
                     }
                 }

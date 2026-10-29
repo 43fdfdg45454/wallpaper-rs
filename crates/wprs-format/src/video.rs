@@ -1,3 +1,4 @@
+use crate::display::FrameRate;
 use crate::{Control, Manifest, Property, Text};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -19,18 +20,12 @@ pub struct Playback {
     pub end: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub volume: Option<f64>,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Display {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "Option<String>", extend("enum" = ["fill", "fit", "stretch", "center"]))]
-    pub fit: Option<wprs_core::Fit>,
+    pub max_fps: Option<FrameRate>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub zoom: Option<f64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub position: Option<[f64; 2]>,
+    pub muted: Option<bool>,
+    #[serde(default, rename = "loop", skip_serializing_if = "Option::is_none")]
+    pub repeat: Option<bool>,
 }
 
 fn within(value: Option<f64>, min: f64, max: f64) -> bool {
@@ -45,13 +40,11 @@ impl Playback {
             && within(self.end, 0.0, MAX_START)
             && ends
             && within(self.volume, 0.0, 1.0)
+            && self.max_fps.is_none_or(FrameRate::valid)
     }
-}
 
-impl Display {
-    pub(crate) fn valid(&self) -> bool {
-        let [x, y] = self.position.map_or([None; 2], |p| p.map(Some));
-        within(self.zoom, 1.0, 8.0) && within(x, -1.0, 1.0) && within(y, -1.0, 1.0)
+    pub(crate) fn newer(&self) -> bool {
+        self.max_fps.is_some() || self.muted.is_some() || self.repeat.is_some()
     }
 }
 

@@ -55,7 +55,7 @@ ColumnLayout {
             Kirigami.FormData.label: App.tr("Origin:")
             visible: !!about.info.origin
             Layout.maximumWidth: Kirigami.Units.gridUnit * 14
-            text: [Labels.value(about.info.origin)].concat(about.works).join("\n")
+            text: [Labels.value(about.info.origin)].concat(about.works, about.info.provider ?? [], about.info.source_url ?? []).join("\n")
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
         }
@@ -71,7 +71,7 @@ ColumnLayout {
             Kirigami.FormData.label: App.tr("Credits:")
             visible: text !== ""
             Layout.maximumWidth: Kirigami.Units.gridUnit * 14
-            text: (about.info.credits ?? []).map(c => c.paths.join(", ") + ": " + c.attribution + " (" + c.license + ")").join("\n")
+            text: (about.info.credits ?? []).map(c => c.paths.join(", ") + ": " + c.attribution + " (" + c.license + ")" + (c.source ? " · " + c.source : "")).join("\n")
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
         }
@@ -88,6 +88,22 @@ ColumnLayout {
             visible: text !== ""
             Layout.maximumWidth: Kirigami.Units.gridUnit * 14
             text: (about.info.features ?? []).map(f => Labels.feature(f.name)).join("\n")
+            textFormat: Text.PlainText
+            wrapMode: Text.Wrap
+        }
+
+        QQC2.Label {
+            Kirigami.FormData.label: App.tr("Made for:")
+            visible: text !== ""
+            text: about.words(about.info.platforms)
+            textFormat: Text.PlainText
+        }
+
+        QQC2.Label {
+            Kirigami.FormData.label: App.tr("Needs packages:")
+            visible: text !== ""
+            Layout.maximumWidth: Kirigami.Units.gridUnit * 14
+            text: (about.info.packages ?? []).join("\n")
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
         }

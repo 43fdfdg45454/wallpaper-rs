@@ -86,7 +86,9 @@ fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
     let (mut fields, presets) = wprs_scene::form(&props, &pack.presets, &values, &languages);
     let filled = saved::filled(pack);
     fields.iter_mut().for_each(|f| f.filled = filled.contains(&f.key));
-    let uses = Runtime::new(Arc::clone(&pack.scene), values).uses();
+    let mut runtime = Runtime::new(Arc::clone(&pack.scene), values);
+    pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
+    let uses = runtime.uses();
     let [audio, touch] = granted(&pack.id);
     Ok(json!({
         "fields": fields, "presets": presets, "scripts": uses.scripts, "sounds": sounds, "saved": saved::listed(pack)?,

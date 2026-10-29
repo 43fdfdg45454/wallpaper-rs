@@ -16,7 +16,8 @@ const STORED: &[&str] = &[
 pub fn build(source: impl AsRef<Path>, out: impl AsRef<Path>, limits: &Limits) -> Result<String> {
     let source = source.as_ref();
     crate::fill(source)?;
-    let manifest = Manifest::from_json(&fs::read(source.join(MANIFEST))?)?;
+    let manifest =
+        crate::source::with_strings(source, Manifest::from_json(&fs::read(source.join(MANIFEST))?)?)?;
     let mut files = Vec::new();
     collect(source, "", &mut files)?;
     files.sort_by(|a, b| (a.path != MANIFEST, &a.path).cmp(&(b.path != MANIFEST, &b.path)));

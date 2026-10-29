@@ -1,0 +1,58 @@
+{
+  "schema": "wallpaper-rs.scene/1",
+  "canvas": {
+    "size": [1920, 1080],
+    "parallax": { "amount": 1.5, "delay": 0.3, "pointer": 0.5, "gyro": true },
+    "camera": { "center": [960, 540], "zoom": 1.2, "rotation": { "keys": [[0, 0], [4, 10]] },
+                "shake": { "amplitude": 6, "roughness": 0.4, "speed": 2 } },
+    "bloom": { "threshold": 0.9, "strength": 1.5, "radius": 24, "tint": "#ffeedd", "hdr": { "threshold": 2, "strength": 1 } },
+    "hdr": true, "tonemap": "aces", "clear": false, "perspective": 1200, "ambient": "#202030", "sky": "#304060"
+  },
+  "clock": { "max_fps": 30, "step": 5 },
+  "audio": { "attack": 0.05, "release": 0.5, "gain": "fixed" },
+  "assets": {
+    "sky": { "path": "sky.png", "filter": "nearest", "wrap": "repeat", "mipmaps": true },
+    "run": { "path": "run.png", "atlas": [2, 4], "frames": 6, "fps": 12 },
+    "walk": { "path": "walk.webp", "rects": [[0, 0, 32, 32], [32, 0, 32, 32]], "durations": [0.1, 0.2] },
+    "cat": { "path": "cat.gif", "animated": true },
+    "normals": { "path": "normals.png", "linear": true },
+    "serif": { "path": "fonts/serif.ttc", "face": 1 },
+    "sans": { "path": "fonts/sans.woff2" },
+    "rain": { "path": "rain.webm" },
+    "theme": { "path": "theme.mp3" },
+    "wind": { "path": "wind.ogg" }
+  },
+  "effects": { "ripple": { "descriptor": "effects/ripple.json", "wgsl": "effects/ripple.wgsl" } },
+  "layers": [
+    { "id": "sky", "type": "image", "image": "sky", "blend": "linear_burn", "brightness": 1.5, "color": "#ffcc88",
+      "parallax": [0.1, 0.02], "transform": { "tilt": [10, -5], "z": 40 },
+      "lighting": { "normal": "normals", "roughness": 0.3, "emissive": 2 }, "mask": { "texture": "rain", "strength": 0.5 } },
+    { "id": "runner", "type": "image", "image": "run", "parent": "sky", "inherit": ["transform", "visible"],
+      "playback": { "rate": 2, "frame": { "keys": [[0, 0], [1, 5]] } } },
+    { "id": "clip", "type": "video", "video": "rain", "color": "#88aaff",
+      "playback": { "rate": 0.5, "start": 1, "end": 4, "loop": false } },
+    { "id": "title", "type": "text", "text": "Hello", "font": "serif", "fallback": ["sans", "serif"], "valign": "bottom",
+      "wrap": { "width": 600, "lines": 2, "ellipsis": true }, "line_height": 1.2,
+      "background": { "color": "#00000080", "padding": [12, 6], "radius": 8 }, "padding": 16, "letter_spacing": 2,
+      "outline": { "color": "#000000", "width": 2 }, "shadow": { "offset": [3, 3], "blur": 4 }, "blur": 1, "render": "sdf" },
+    { "id": "date", "type": "text", "text": { "date": "EEEE d MMMM yyyy" } },
+    { "id": "lamp", "type": "light", "light": "spot", "color": "#ffddaa", "intensity": 3, "radius": 800, "cone": [20, 40],
+      "volumetric": { "density": 0.3, "samples": 16 }, "texture": "rain", "transform": { "position": [400, 200], "rotation": 30 } },
+    { "id": "tube", "type": "light", "light": "tube", "length": 300 },
+    { "id": "zoom", "type": "adjustment", "size": [400, 300], "redraw": true },
+    { "id": "music", "type": "sound", "sounds": ["theme", "wind"], "mode": "random", "pause": [2, 8], "stream": true,
+      "play_on": "event:drop" },
+    { "id": "glow", "type": "solid", "color": "#ff000080",
+      "opacity": { "keys": [[0, 0, { "out": [0.5, 1] }], [2, 1, { "in": [0.5, 0] }]], "timeline": "intro", "base": 0.2 },
+      "transform": { "position": { "x": { "keys": [[0, 0], [2, 100]] }, "y": { "cursor": "y", "scale": 100 } },
+                     "rotation": { "clock": "day", "scale": 360 } },
+      "effects": [{ "effect": "depth_parallax", "params": { "depth": { "layer": "sky" } } }, { "effect": "ripple" }] },
+    { "id": "bars", "type": "solid", "color": "#ffffff",
+      "opacity": { "audio": [0, 3], "of": 16, "reduce": "max", "bounds": [0.2, 0.8], "exponent": 2,
+                   "smooth": { "up": 0.05, "down": 0.4 } } }
+  ],
+  "timelines": [
+    { "id": "intro", "duration": 4, "events": [{ "t": 2, "name": "drop" }] },
+    { "id": "outro", "duration": 1, "trigger": "event:drop" }
+  ]
+}

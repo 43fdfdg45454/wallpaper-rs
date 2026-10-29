@@ -37,8 +37,10 @@ Kirigami.Dialog {
             displayText: currentValue ? Labels.value(currentValue) : App.tr("Keep")
             delegate: QQC2.ItemDelegate {
                 required property string modelData
+                required property int index
 
                 text: modelData ? Labels.value(modelData) : App.tr("Keep")
+                highlighted: fit.highlightedIndex === index
             }
         }
 

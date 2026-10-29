@@ -66,10 +66,22 @@ impl Property {
             Control::Text { secret: true, default, .. } => {
                 need(default.is_empty(), "a secret text has no default")?
             }
-            Control::Folder { every, .. } => {
-                need((10..=86_400).contains(every), "every must be 10 to 86400 seconds")?
+            Control::Folder { every, max_files, recursive, .. } => {
+                need((10..=86_400).contains(every), "every must be 10 to 86400 seconds")?;
+                need((1..=1000).contains(max_files), "max_files must be 1 to 1000")?;
+                need(*recursive <= 2, "recursive must be 0 to 2 levels")?
             }
             _ => {}
+        }
+        let tuned = matches!(self.control, Control::Slider(_) | Control::Combo { .. } | Control::Bool { .. });
+        need(tuned || self.quality.is_empty(), "only sliders, combos and flags change with quality")?;
+        for (level, value) in &self.quality {
+            self.value(value).map_err(|e| {
+                format!(
+                    "quality.{} {e}",
+                    serde_json::to_value(level).unwrap_or_default().as_str().unwrap_or_default()
+                )
+            })?;
         }
         let valued = matches!(
             self.control,

@@ -7,6 +7,7 @@ use std::collections::BTreeSet;
 
 pub const SHARD_FORMAT: &str = "wpak-repo-shard/1.0";
 pub const DETAILED_FORMAT: &str = "wpak-repo-shard/2.0";
+pub const KINDS_FORMAT: &str = "wpak-repo-shard/3.0";
 pub const REVOKED_FORMAT: &str = "wpak-repo-revoked/1.0";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,6 +63,23 @@ pub enum Reason {
 }
 
 impl Shard {
+    pub fn parse(bytes: &[u8]) -> Result<Shard> {
+        let mut shard: serde_json::Value = serde_json::from_slice(bytes)?;
+        let known = |r: &serde_json::Value| {
+            r["kind"].as_str().is_none_or(|k| serde_json::from_value::<crate::Kind>(k.into()).is_ok())
+        };
+        if let Some(packages) = shard["packages"].as_array_mut() {
+            packages.retain_mut(|p| match p["versions"].as_array_mut() {
+                Some(v) if v.iter().any(|r| !known(r)) => {
+                    v.retain(known);
+                    !v.is_empty()
+                }
+                _ => true,
+            });
+        }
+        Ok(serde_json::from_value(shard)?)
+    }
+
     pub fn check(&self, format: &str, repo_id: &str, index: usize, bits: u8) -> Result<()> {
         let own = self.format == format && self.repo_id == repo_id && self.shard == index;
         require(own, "shard", "does not match its place in the entry")?;

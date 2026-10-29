@@ -1,13 +1,13 @@
 {
   "schema": "wallpaper-rs.wpak/2",
   "id": "io.github.wallpaper_rs.example.snowfall",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "default_locale": "en",
   "title": { "en": "Snowfall", "es": "Nevada" },
   "description": { "en": "Snow drifting over pines in moonlight, with particles, drifting clouds, light rays, a vignette, film grain and the sound of the wind.",
                    "es": "Nieve que cae sobre pinos a la luz de la luna, con partículas, nubes a la deriva, rayos de luz, viñeta, grano de película y el sonido del viento." },
-  "changes": { "en": "Describes itself in English and Spanish and declares its rating and what it needs.",
-              "es": "Se describe en inglés y en español y declara su clasificación y lo que necesita." },
+  "changes": { "en": "Shows the pictures of a folder you choose behind the snow.",
+              "es": "Muestra las imágenes de una carpeta que elijas tras la nieve." },
   "authors": ["wallpaper-rs contributors"],
   "license": "CC0-1.0",
   "credits": [{ "paths": ["assets/wind.ogg"], "license": "CC0-1.0", "attribution": "wallpaper-rs contributors" }],
@@ -18,7 +18,7 @@
   "entry": "scene.json",
   "previews": { "thumbnail": "preview.jpg" },
   "tags": ["example", "winter", "particles", "sound"],
-  "requires": { "features": ["sound"] },
+  "requires": { "features": ["folder", "properties2", "sound"] },
   "properties": {
     "density": { "type": "slider", "min": 10, "max": 120, "step": 5, "integer": true, "default": 80,
                  "label": { "en": "Snowflakes per second", "es": "Copos por segundo" } },
@@ -28,7 +28,11 @@
                           { "value": "gale", "label": { "en": "Gale", "es": "Ventisca" } }] },
     "clouds": { "type": "bool", "order": 2, "default": true, "label": { "en": "Clouds", "es": "Nubes" } },
     "volume": { "type": "slider", "order": 3, "min": 0, "max": 100, "step": 5, "integer": true, "default": 100,
-                "label": { "en": "Wind volume", "es": "Volumen del viento" } }
+                "label": { "en": "Wind volume", "es": "Volumen del viento" } },
+    "photos": { "type": "folder", "order": 4, "accept": ["image"], "pick": "sequence", "every": 600,
+                "label": { "en": "Pictures behind the snow", "es": "Imágenes tras la nieve" },
+                "help": { "en": "Shows the pictures of a folder you choose behind the falling snow, a new one every ten minutes.",
+                          "es": "Muestra las imágenes de una carpeta que elijas tras la nieve que cae, una nueva cada diez minutos." } }
   },
   "presets": [
     { "id": "blizzard", "label": { "en": "Blizzard", "es": "Tormenta de nieve" }, "values": { "density": 120, "wind": "gale" } },

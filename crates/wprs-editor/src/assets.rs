@@ -20,7 +20,7 @@ fn paths<'a>(doc: &'a Value, kind: &str) -> Vec<&'a str> {
 fn seconds(file: &Path) -> Result<f32> {
     let size = fs::metadata(file)?.len();
     ensure!(size <= MAX_SOUND_BYTES, "a sound may have at most {} MiB", MAX_SOUND_BYTES >> 20);
-    Ok(Clip::probe(&fs::read(file)?).map_err(|e| anyhow!("the sound {e}"))?.seconds)
+    Ok(Clip::probe(&file.to_string_lossy(), &fs::read(file)?).map_err(|e| anyhow!("the sound {e}"))?.seconds)
 }
 
 fn pixels(file: &Path) -> Result<u64> {
@@ -134,6 +134,9 @@ pub fn used(doc: &Value) -> BTreeSet<String> {
     used.extend(assets.filter_map(|(_, a)| a["path"].as_str().map(String::from)));
     let scripts = doc.pointer("/scene/scripts").and_then(Value::as_array).into_iter().flatten();
     used.extend(scripts.filter_map(|s| s["path"].as_str().map(String::from)));
+    let effects = doc.pointer("/scene/effects").and_then(Value::as_object).into_iter().flatten();
+    let effects = effects.flat_map(|(_, e)| [&e["descriptor"], &e["wgsl"]]);
+    used.extend(effects.filter_map(Value::as_str).map(String::from));
     used
 }
 
@@ -155,8 +158,9 @@ pub fn files(dir: &Path) -> Vec<(String, u64)> {
 }
 
 pub fn unused(dir: &Path, doc: &Value) -> Vec<String> {
-    let used = used(doc);
-    files(dir).into_iter().map(|(path, _)| path).filter(|p| !used.contains(p) && p != SIGNATURE).collect()
+    let (used, v2) = (used(doc), doc["manifest"]["schema"] == wprs_format::SCHEMA);
+    let kept = |p: &String| used.contains(p) || p == SIGNATURE || (v2 && wprs_format::locale_file(p));
+    files(dir).into_iter().map(|(path, _)| path).filter(|p| !kept(p)).collect()
 }
 
 pub fn prune(dir: &Path, doc: &Value) -> Result<Vec<String>> {

@@ -11,7 +11,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_render::SceneAssets;
-use wprs_scene::{Control, Scene, Values};
+use wprs_scene::{Control, Scene, Uses, Values};
 use wprs_video::Bank;
 
 const IMAGES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
@@ -30,6 +30,7 @@ pub struct ScenePack {
     pub clips: Bank,
     pub scripts: Vec<(String, String)>,
     pub labels: Json,
+    pub inputs: Option<Uses>,
 }
 
 pub type Extra = (Vec<(String, Arc<RgbaImage>)>, Vec<(String, Reel)>);
@@ -57,6 +58,7 @@ impl ScenePack {
             clips,
             scripts,
             labels,
+            inputs: None,
         }
     }
 }
@@ -80,7 +82,7 @@ impl Daemon {
         if let Some(pack) = cached {
             return Ok(pack);
         }
-        let mut package = wprs_format::open(wpak, &wprs_format::Limits::default())?;
+        let mut package = crate::decode::open(wpak)?;
         anyhow::ensure!(
             package.manifest.kind == wprs_format::Kind::Scene,
             "{} is not a scene package",
@@ -137,7 +139,7 @@ impl Daemon {
         let clips = Bank::new(sounds.iter().map(|(_, path)| path.clone()).collect());
         let (id, version, title, presets) =
             (m.id.clone(), m.version.clone(), m.title.pick(&languages), m.presets);
-        let path = wpak.to_owned();
+        let (path, inputs) = (wpak.to_owned(), package.manifest.declared());
         let props =
             Props { path: path.clone(), id, version, title, kind: "scene", languages, properties, presets };
         let (scene, props) = (Arc::new(scene), Arc::new(props));
@@ -152,6 +154,7 @@ impl Daemon {
             clips,
             scripts,
             labels,
+            inputs,
         });
         let mut st = self.state();
         st.scenes.retain(|_, (_, weak)| weak.strong_count() > 0);
@@ -176,12 +179,10 @@ impl Daemon {
                 _ => vec![chosen.to_owned()],
             };
             let file = match prop.control {
-                Control::Folder { pick, every, .. } => {
-                    match crate::picks::pick(Path::new(chosen), prop, pick, every) {
-                        Some(file) => file,
-                        None => continue,
-                    }
-                }
+                Control::Folder { .. } => match crate::picks::pick(Path::new(chosen), prop) {
+                    Some(file) => file,
+                    None => continue,
+                },
                 _ => PathBuf::from(chosen),
             };
             if wprs_video::is_video(&file) {

@@ -1,5 +1,6 @@
-use crate::meta::{Content, Origin};
+use crate::meta::Content;
 use crate::names::valid_property;
+use crate::origin::Origin;
 use crate::source::facts_of;
 use crate::{Kind, MANIFEST, Manifest, Result, SCHEMA, SCHEMA_V1, SIGNATURE, Text, check_path, require};
 use serde_json::{Value, json};
@@ -129,7 +130,7 @@ pub fn upgrade(
     let facts = facts_of(source, &manifest, &bytes, scene.as_ref().map(Value::to_string))?;
     manifest.inputs = facts.inputs.into_iter().collect();
     let features = facts.features.into_iter().collect::<Vec<_>>();
-    manifest.requires = (!features.is_empty()).then_some(crate::Requires { engine: None, features });
+    manifest.requires = (!features.is_empty()).then_some(crate::Requires { features, ..Default::default() });
     if let (Some(path), Some(scene)) = (entry.filter(|_| !renames.is_empty()), &scene) {
         fs::write(path, serde_json::to_string_pretty(scene)? + "\n")?;
     }

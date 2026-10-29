@@ -1,6 +1,6 @@
 use crate::actions::{locked, solo};
 use crate::canvas::gizmos;
-use crate::check::{Problem, check};
+use crate::check::{Problem, review};
 use crate::layers::{KINDS, asset_kind, walk};
 use crate::ops::escape;
 use crate::project::Project;
@@ -59,10 +59,14 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
         .collect();
     let timelines = doc["scene"]["timelines"].as_array().into_iter().flatten().enumerate();
     let timelines: Vec<Value> = timelines
-        .map(|(i, t)| json!({"id": t["id"], "duration": t["duration"], "loop": t["loop"], "pointer": format!("/scene/timelines/{i}")}))
+        .map(|(i, t)| {
+            let counted = t["frames"].as_f64().zip(t["fps"].as_f64()).map(|(n, fps)| json!(n / fps.max(1.0)));
+            let duration = t.get("duration").cloned().or(counted).unwrap_or_default();
+            json!({"id": t["id"], "duration": duration, "loop": t["loop"], "pointer": format!("/scene/timelines/{i}")})
+        })
         .collect();
     let length = timelines.iter().filter_map(|t| t["duration"].as_f64()).fold(10.0, f64::max);
-    let mut problems = check(doc);
+    let mut problems = review(doc, Some(&project.dir));
     problems.extend(
         files
             .iter()

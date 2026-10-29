@@ -58,10 +58,25 @@ Loader {
     Component {
         id: computed
 
-        QQC2.Label {
-            text: App.tr("Filled from what the package uses: %1").arg(meta.list.map(name => Labels.feature(name)).join(", ") || App.tr("nothing"))
-            wrapMode: Text.Wrap
-            color: Kirigami.Theme.disabledTextColor
+        ColumnLayout {
+            QQC2.Label {
+                Layout.fillWidth: true
+                text: App.tr("Filled from what the package uses: %1").arg(meta.list.map(name => Labels.feature(name)).join(", ") || App.tr("nothing"))
+                wrapMode: Text.Wrap
+                color: Kirigami.Theme.disabledTextColor
+            }
+
+            Repeater {
+                model: meta.host.field.options
+
+                delegate: QQC2.CheckBox {
+                    required property var modelData
+
+                    text: Labels.feature(modelData)
+                    checked: meta.list.includes(modelData)
+                    onToggled: meta.host.commit(checked ? meta.list.concat([modelData]) : meta.list.filter(item => item !== modelData))
+                }
+            }
         }
     }
 

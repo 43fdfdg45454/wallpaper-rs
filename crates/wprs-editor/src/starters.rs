@@ -80,7 +80,7 @@ pub fn starter(name: &str, id: &str, title: &str, locale: &str) -> Result<Value>
         scene["particles"] = particles;
     }
     let mut doc = json!({"manifest": manifest, "scene": scene});
-    let ops = sync(&doc, &Default::default());
+    let ops = sync(&doc, &Default::default(), None);
     apply(&mut doc, &ops)?;
     Ok(doc)
 }

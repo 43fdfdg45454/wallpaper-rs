@@ -1,71 +1,140 @@
+mod adopt;
 mod affine;
 mod animate;
+mod asset;
+mod blend;
+mod bones;
 mod budget;
+mod canvas;
+mod catalog;
 mod chain;
 mod clip;
 mod content;
 mod cube;
+mod custom;
+mod deep;
 mod easing;
 mod effects;
 mod eval;
+mod fields;
+mod figure;
 mod form;
 mod fx;
+mod gltf;
+mod hooks;
 mod input;
+mod kinds;
 mod layer;
+mod lens;
+mod light;
+mod links;
+mod look;
+mod media;
+mod mpeg;
 mod particles;
+mod poses;
+mod probe;
 mod props;
 mod quality;
+mod released;
 mod resolve;
+mod rig;
 mod rules;
 mod runtime;
 mod schema;
+mod scripting;
+mod shader;
+mod signal;
 mod sound;
+mod stage;
 mod timeline;
+mod typeset;
 mod uses;
 mod validate;
 mod value;
 mod wake;
 
+pub use adopt::Files;
 pub use affine::Affine;
 pub use animate::Animate;
+pub use asset::{Asset, COLLECTIONS, Filter, MAX_FRAMES, Wrapping};
+pub use blend::{BLENDS, Blend};
 pub use budget::Budget;
+pub use canvas::{BlendSpace, Canvas, Clock};
+pub use catalog::{described, drawn, newer_params, reserved, undrawn};
 pub use chain::{CHAIN_ENTRY, effect_source, fusion};
-pub use clip::{Clip, MAX_SOUND_BYTES, MAX_SOUND_SECONDS, MAX_SOUND_TOTAL, playable};
+pub use clip::{
+    Clip, MAX_CLIPS, MAX_SOUND_BYTES, MAX_SOUND_SECONDS, MAX_SOUND_TOTAL, MAX_STREAM_BYTES,
+    MAX_STREAM_SECONDS, MAX_STREAM_TOTAL, playable,
+};
 pub use content::{Align, EffectUse, Gradient, Mask, MaskChannel, Shape, Spectrum, SpectrumStyle, Stroke};
 pub use cube::{Lut, LutError, MAX_LUT_BYTES, MAX_LUT_SIZE, MAX_LUT_TOTAL};
+pub use custom::{
+    CONTRACT, EffectFiles, MAX_EFFECT_FILES, MAX_GRID, MAX_INPUTS, MAX_OPTIONS, MAX_PARAMS, MAX_TARGETS,
+    MAX_VARIANTS, MAX_WGSL, MAX_WGSL_TOTAL,
+};
 pub use easing::Ease;
 pub use effects::{
-    Cost, Descriptor, FRAME_WGSL, Fuse, MaskMode, Output, PRELUDE, Pace, ParamDef, ParamKind, PassDef,
-    RELIEF_WGSL, SLOTS, Solve, State, Tune, Use, builtin, descriptor, register,
+    Cost, Descriptor, Entry, FRAME_WGSL, Fuse, MaskMode, Output, PRELUDE, Pace, ParamDef, ParamKind,
+    PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage, State, Texel, Tune, Use, Variant,
+    builtin, descriptor, register,
 };
 pub use eval::{Content, Draw, EffectDraw, Frame};
+pub use figure::{
+    Attach, Coverage, Cull, Follows, MATERIALS, MAX_FIGURES, MAX_SHADOWS, Material, MeshDepth, MeshLayer,
+    MeshPart, ModelLayer, Space,
+};
 pub use form::{form, labels, order};
+pub use gltf::{
+    EXTENSIONS, MAX_BONES, MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODEL_JSON, MAX_MODEL_PARTS,
+    MAX_MODELS_JSON, MAX_MORPHS, MAX_NODES, MAX_TRIANGLES, ModelFile,
+};
 pub use input::{AudioFrame, BANDS, LayerOverride, PointerState, ScriptOutputs, TimelineCommand};
-pub use layer::{Anchor, Blend, Kind, Layer, Transform};
+pub use layer::{Anchor, Inherit, Kind, Layer, Parallax, Solid, Transform};
+pub use lens::{Camera3d, CameraKey, CameraPath, Fade, FadeTo, MAX_PATHS, PathOrder};
+pub use light::{Beam, Light, Lighting, MAX_LIGHTS, Volumetric};
+pub use look::{Bloom, Camera, Glare, Glide, Playback, Shake, Tonemap};
+pub use media::{Cover, MEDIA_TRIGGERS, Media, Reading};
 pub use particles::{
-    Bake, Burst, CPU_PARTICLES, Census, Cloud, Collider, Cue, EmitShape, Emitter, Follow, Force, Frames,
-    Init, MAX_COLLIDERS, MAX_CURVE, MAX_EMITTERS, MAX_FORCES, MAX_POINTS, MAX_PREWARM, Particle, Render,
-    STEP, SUBSTEPS, Sim, Surface, Swarm, System, Target, Trail,
+    Area, Around, Bake, Between, Boids, Bow, Burst, CPU_PARTICLES, Carry, Census, Child, Cloud, Collider,
+    ControlPoint, Cue, EmitShape, Emitter, Falloff, Follow, Force, Frames, Handle, Hsv, Inheritable, Init,
+    Instance, KeepBetween, KeepDistance, MAX_CHILDREN, MAX_COLLIDERS, MAX_COLLIDERS2, MAX_CONTROL, MAX_CURVE,
+    MAX_EMITTERS, MAX_EMITTERS2, MAX_FORCES, MAX_FORCES2, MAX_PALETTE, MAX_POINTS, MAX_PREWARM, MAX_PREWARM2,
+    MAX_REMAPS, Moment, OffsetNoise, Operator, Orient, Oscillate, Palette, Particle, Periodic, Perspective,
+    Placement, REMAP_INPUTS, Refract, Refresh, Remap, RemapOp, RemapOutput, Render, Ring, Rope, STEP,
+    SUBSTEPS, Sim, SlowNear, Source, Spread, Stretch, Surface, Swarm, Sweep, System, Taper, Target, Trail,
+    Tunable, Turbulent, Wave, Wobble,
 };
 pub use props::{
-    Choice, Condition, Control, Expr, ICONS, Pick, Preset, Property, Slider, Text, Values, check_presets,
-    cycle, effective, exposed, icon, legacy, rename, stale, tag,
+    Choice, Condition, Control, Expr, ICONS, Mode, Pick, Preset, Property, Slider, Text, Values,
+    check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag,
 };
 pub use quality::{Class, Quality, Tier};
+pub use released::{newer_manifest_keys, newer_scene_keys};
+pub use rig::{
+    AnimClip, AnimLayer, Bend, Body, BonePhysics, BoneRule, IkChain, MAX_ANIMATION_LAYERS, MAX_BODIES,
+    MAX_CHAIN, MAX_CHAINS, MAX_CLIPS_PER_MODEL, MAX_EXPRESSIONS, Reach, Rig,
+};
 pub use runtime::Runtime;
 pub use schema::{easings, property_schema, schema};
-pub use sound::{MAX_SOUNDS, Sound, VOLUME, Voice};
-pub use timeline::{Key, Loop, Timeline, local, sample};
+pub use scripting::{
+    MAX_POOL_LAYERS, MAX_POOL_VERTICES, MAX_POOLS, MAX_SCRIPT_PARAMS, MAX_SCRIPTS2, MAX_TEMPLATES, ParamType,
+    Pool, PoolKind, Script, ScriptApi, ScriptEvent, ScriptParam,
+};
+pub use signal::{CLOCKS, Gain, Hearing, Reduce, Smooth};
+pub use sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice};
+pub use timeline::{Event, Handles, Key, Loop, Timeline, local, sample};
+pub use typeset::{Backing, Glyphs, MAX_FALLBACK, Outline, Shadow, TextLayer, Valign, Wrap};
 pub use uses::{Uses, needs, source, tells_time, variants};
 pub use validate::Issue;
-pub use value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2};
+pub use value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2, Vec3};
 pub use wake::Wake;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 use std::collections::{BTreeMap, BTreeSet};
-use wprs_core::Fit;
+use std::sync::Arc;
 
 pub const SCHEMA: &str = "wallpaper-rs.scene/1";
 pub const MAX_SIZE: u32 = 16_384;
@@ -73,11 +142,13 @@ pub const MAX_LAYERS: usize = 256;
 pub const MAX_DEPTH: usize = 8;
 pub const MAX_EFFECTS: usize = 16;
 pub const MAX_SYSTEMS: usize = 8;
+pub const MAX_SYSTEMS2: usize = 32;
 pub const MAX_PARTICLES: u32 = 200_000;
 pub const MAX_TIMELINES: usize = 64;
 pub const MAX_KEYS: usize = 256;
 pub const MAX_SCRIPTS: usize = 16;
 pub const MAX_ASSETS: usize = 256;
+pub const MAX_EVENTS: usize = 64;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SceneError {
@@ -90,54 +161,6 @@ pub enum SceneError {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(try_from = "value::ColorRepr", into = "[f32; 4]")]
 pub struct Color(pub [f32; 4]);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum BlendSpace {
-    #[default]
-    Linear,
-    Srgb,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Canvas {
-    pub size: [u32; 2],
-    #[serde(default)]
-    #[schemars(schema_with = "schema::fit")]
-    pub fit: Fit,
-    #[serde(default)]
-    pub background: Color,
-    #[serde(default)]
-    pub blend_space: BlendSpace,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(default, deny_unknown_fields)]
-pub struct Clock {
-    #[serde(with = "wprs_core::settings::fps")]
-    #[schemars(schema_with = "schema::fps")]
-    pub max_fps: u32,
-    #[schemars(extend("x-unit" = "s"))]
-    pub poster_time: f32,
-    pub seed: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Asset {
-    pub path: String,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub linear: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub atlas: Option<[u32; 2]>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Script {
-    pub path: String,
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -157,7 +180,23 @@ pub struct Scene {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scripts: Vec<Script>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub effects: BTreeMap<String, EffectFiles>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio: Option<Hearing>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub camera3d: Option<Camera3d>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub templates: BTreeMap<String, Layer>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub pools: BTreeMap<String, Pool>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub ext: BTreeMap<String, Json>,
+    #[serde(skip)]
+    #[schemars(skip)]
+    pub loaded: BTreeMap<String, Arc<Descriptor>>,
+    #[serde(skip)]
+    #[schemars(skip)]
+    pub models: BTreeMap<String, Arc<ModelFile>>,
 }
 
 impl Default for Color {
@@ -166,28 +205,32 @@ impl Default for Color {
     }
 }
 
-impl Default for Clock {
-    fn default() -> Self {
-        Clock { max_fps: 60, poster_time: 0.0, seed: 0 }
-    }
-}
-
 impl Scene {
     pub fn new(size: [u32; 2]) -> Scene {
-        let canvas =
-            Canvas { size, fit: Fit::Fill, background: Color::default(), blend_space: BlendSpace::Linear };
-        let (assets, layers, particles, timelines, scripts, ext) = Default::default();
+        let (assets, layers, particles, timelines, scripts, effects, audio, ext, loaded) = Default::default();
+        let (camera3d, templates, pools, models) = Default::default();
         Scene {
             schema: SCHEMA.into(),
-            canvas,
+            canvas: Canvas::new(size),
             clock: Clock::default(),
             assets,
             layers,
             particles,
             timelines,
             scripts,
+            effects,
+            audio,
+            camera3d,
+            templates,
+            pools,
             ext,
+            loaded,
+            models,
         }
+    }
+
+    pub fn effect(&self, id: &str) -> Option<&Descriptor> {
+        self.loaded.get(id).map(|d| &**d).or_else(|| described(id).filter(|_| !self.effects.contains_key(id)))
     }
 
     pub fn from_json(text: &str) -> Result<Scene, SceneError> {
@@ -223,6 +266,7 @@ impl Scene {
 
     pub fn paths(&self) -> BTreeSet<&str> {
         let assets = self.assets.values().map(|a| a.path.as_str());
-        assets.chain(self.scripts.iter().map(|s| s.path.as_str())).collect()
+        let effects = self.effects.values().flat_map(|f| [f.descriptor.as_str(), f.wgsl.as_str()]);
+        assets.chain(self.scripts.iter().map(|s| s.path.as_str())).chain(effects).collect()
     }
 }

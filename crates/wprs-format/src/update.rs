@@ -1,4 +1,4 @@
-use crate::entry::{contents, shards};
+use crate::entry::{contents, kept};
 use crate::fetch::{bases, first, get};
 use crate::store::{Doc, Snapshot, State};
 use crate::{Anchor, Details, Entry, Error, Fetch, Result, Root, comment, ensure, require, sha256};
@@ -40,8 +40,8 @@ pub(crate) fn refresh(
     let entry =
         first(&bases, |base| run.entry(&root, base))?.ok_or_else(|| Error::Missing("entry".into()))?;
     let details = first(&bases, |base| run.details(&root, &entry, base))?;
-    let list = shards(&entry.value, details.as_ref().map(|d| &d.value)).1;
-    let wanted = list.iter().map(|b| ("index", b)).chain([("revoked", &entry.value.revoked)]);
+    let list = kept(&entry.value, details.as_ref().map(|d| &d.value));
+    let wanted = list.map(|b| ("index", b)).chain([("revoked", &entry.value.revoked)]);
     let blobs = wanted.map(|(dir, blob)| {
         if let Some(bytes) = cache.get(&blob.sha256).filter(|b| blob.matches(b).is_ok()) {
             return Ok((blob.sha256.clone(), bytes.clone()));

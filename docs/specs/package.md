@@ -13,7 +13,15 @@ described in `scene.md`. An author signs the exact bytes of `manifest.json` into
 |--------|---------|-------------|
 | `image` | png, jpg, jpeg, webp, avif, gif, bmp or ktx2 | images, txt |
 | `video` | webm, mp4 or mkv | images, videos, txt |
-| `scene` | `scene.json` | images, videos, json, wgsl, js, gltf, glb, bin, ogg, opus, flac, mp3, wav, ttf, otf, cube, txt |
+| `scene` | `scene.json` | images, videos, json, wgsl, js, gltf, glb, bin, ogg, opus, flac, mp3, wav, ttf, otf, ttc, otc, woff2, cube, txt |
+| `web` | an html or htm page, usually `index.html` | images (also svg, hdr and exr), videos, html, htm, js, mjs, css, json, wasm, ogg, opus, flac, mp3, wav, ttf, otf, woff, woff2, glb, gltf, bin, obj, mtl, fbx, basis, glsl, vert, frag, wgsl, csv, xml, txt |
+| `preset` | `preset.json` | images, videos, json, txt |
+| `assets` | a scene document such as `assets.json` | as `scene` |
+
+Every kind may also carry `locale/<language>.json` (see "Languages"). No kind admits programs or
+libraries (exe, dll, so, sh, bat, AppImage and the like are refused by their extension), and a
+`.wasm` file must start with the WebAssembly signature. `image`, `video` and `scene` exist since the
+first version; `web`, `preset` and `assets` need the second.
 
 ## Versions
 
@@ -59,16 +67,20 @@ releases where they look (`repo.md`).
 | `changes` | 2 | notes of this version, at most 2000 characters, with the markup below |
 | `default_locale`, `strings` | 2 | see "Languages" |
 | `authors`, `license`, `tags` | 1, 2 | authors of 1 to 128 characters, an SPDX expression, at most 32 tags of 1 to 32 characters; in *2* authors and tags have no `<` or `>` |
+| `platforms` | 2 | `[desktop, android]`, each once: the devices the package is made for, see "Platforms" |
 | `content` | 2, required | `{rating: general \| mature, descriptors: [sexual, violence, gore, language]}`; `mature` names at least one reason, each once |
 | `photosensitive` | 2, required | `true` when the package flashes or shows fast patterns that can trigger seizures |
-| `origin` | 2, required | `{kind: original}` for a work made for wallpaper-rs, or `{kind: derived, derived_from: [{author, title?, url?, license?}]}` for one remade by hand from 1 to 64 other works, crediting their authors (authors and titles without `<` or `>`) |
-| `credits` | 2 | at most 64 `{paths, license, attribution, url?}`: who made which files (a path ending in `/` names a folder) under which SPDX license; paths and attribution have no `<` or `>` |
+| `origin` | 2, required | `{kind: original}` for a work made for wallpaper-rs, `{kind: derived, derived_from: [{author, title?, url?, license?}]}` for one remade by hand from 1 to 64 other works, crediting their authors (authors and titles without `<` or `>`), `{kind: imported}` for a conversion kept for personal use, or `{kind: provider, provider: {name, item_url, credit, terms_url?}}` for a picture or video downloaded from an online source; any kind may add `source_url`, see "Origin" |
+| `credits` | 2 | at most 64 `{paths, license, attribution, url?, source?}`: who made which files (a path ending in `/` names a folder) under which SPDX license, and `source: {id, version}` when they were copied from an `assets` package; paths and attribution have no `<` or `>` |
 | `links` | 2 | `{homepage, source, support, donate}`, each optional, `https://` and at most 512 characters |
 | `preview` | 1 | an image of the package |
 | `previews` | 2 | `{thumbnail, animated}`: png, jpg or webp of at most 1024 px a side and 1 MiB; gif or webp of at most 640 px, 15 s and 8 MiB; the file must be what its extension says |
-| `requires` | 2 | `{engine: "<SemVer requirement>", features: [..]}`, see "Features" |
+| `requires` | 2 | `{engine: "<SemVer requirement>", features: [..], packages: [{id, version}], gpu: any \| compute}`, see "Features" and "Dependencies" |
 | `inputs` | 2 | `[audio, pointer, clicks, media, network]`, see "Inputs" |
-| `playback`, `display` | 2, `video` only | how the video plays by default, see "Video settings" |
+| `permissions` | 2, `web` and `scene` | `{network: {allow: [..]}, rgb}`: `network` for web pages only, see "Web pages"; `rgb` see "RGB lighting" |
+| `web` | 2, `web` only | `{preload, background, storage_kib}`, see "Web pages" |
+| `playback` | 2, `video` and `web` | how the content plays by default, see "Display and playback" |
+| `display` | 2 | how a picture or video is placed and the accent it suggests, see "Display and playback" |
 | `properties`, `presets` | 1, 2 | user properties (`scene.md`): in *1* at most 64 with ids `[a-z][a-z0-9_-]{0,62}` of the types `color`, `slider` with `step`, `bool`, `combo` of texts, `text`, `file`, `group` and `label`; in *2* at most 256 with ids `[A-Za-z][A-Za-z0-9_]{0,63}` that differ in more than case, combos of at most 64 options, files and folders that accept `image`, `video` or both, and every newer type and field; at most 32 presets in *1*, 64 in *2*, for scenes and videos |
 
 ```json
@@ -88,7 +100,28 @@ releases where they look (`repo.md`).
 }
 ```
 
-## Video settings
+## Display and playback
+
+`display` takes `fit` (`fill`, `fit`, `stretch`, `center`, `tile` or `span`: the placement used when
+a picture or video is applied without one), `background` (`#rrggbb`, the color around a picture or
+video that does not cover the screen, used when it is applied without one), `span` (`per-output`,
+or `all-outputs` to spread over every screen: it is then applied with `span` unless the user chooses
+another placement) and `flip` (`none`, `horizontal` or `vertical`) for `image` and `video` packages,
+and `zoom` (1 to 8) and `position` (two numbers of -1 to 1) for videos. Scenes may also set `span`,
+only to `all-outputs`, since drawing on each screen needs no key: it asks to draw one canvas across every screen, each output showing its part with the
+transform of its monitor; engines that cannot do that yet refuse such a scene with
+`spanned_scenes`, and the phone, which has one screen, shows it there. `accent` suggests an accent
+color for the desktop, `#rrggbb` or `{"prop": "<id>"}` of a color property, in any kind but
+`assets`; no engine passes it to the desktop yet, so both platforms play such a package without
+`accent` and say so.
+
+`playback` takes `speed` (0.1 to 4), `start` and `end` (0 to 3600 s, `end` after `start`) and
+`volume` (0 to 1) for videos, and `max_fps` (1 to 240, or `display` to follow the screen), `muted`
+(it starts without sound) and `loop` (`false` plays it once and keeps the last frame) for videos
+and web pages, whose page also takes `volume`. A setting the user makes always wins, and the frame
+rate never exceeds what the user, the screen, the battery and the quality level allow.
+
+### Video settings
 
 A video package offers the same settings everywhere, which the user changes per screen or for every
 screen like the properties of a scene (`GetSceneProperties`, `wprs-ctl prop`): `speed` (0.1 to 4
@@ -105,9 +138,7 @@ author gives their defaults in the second version:
   "requires": { "features": ["video_properties"] } }
 ```
 
-`playback` takes `speed` (0.1 to 4), `start` and `end` (0 to 3600 s, `end` after `start`) and
-`volume` (0 to 1); `display` takes `fit` (the placement used when the video is applied without one),
-`zoom` (1 to 8) and `position` (two numbers of -1 to 1). Presets of a video package set these ids.
+Presets of a video package set these ids.
 Once the length of the video is known, `start` stays at least half a second before its end; a part
 that plays nothing, such as a `start` past the end of the file, loops the whole video instead.
 Speed and frame rate are independent: a faster video draws no more frames per second than the
@@ -132,13 +163,29 @@ Both decisions are kept once per package id (`Library1.Confirm`,
 
 `inputs` declares what the package may ask the user for: the sound playing on the computer
 (`audio`), the pointer (`pointer`), clicks (`clicks`), what the media player plays (`media`) and the
-network (`network`). Declaring is no grant: each input is still allowed by the user per package,
-when it is used. For scenes the validator computes the inputs that the scene can use with any value
-of its properties and presets (audio and pointer bindings, spectra, beat triggers, parallax,
-particles that follow the pointer or burst on clicks, effect parameters such as the clicks of
-`water_ripple`) and refuses a manifest that does not declare them, naming the missing one and the
-first place of `scene.json` that uses it (`the scene uses audio at /layers/2/effects/0 of
-scene.json; add "audio"`).
+network (`network`, which only web pages use; other kinds that declare it get a warning). Declaring
+is no grant: each input is still allowed by the user per package, when it is used. For scenes the
+validator computes the inputs that the scene can use with any value of its properties and presets
+(audio and pointer bindings, spectra, beat triggers, parallax, particles that follow the pointer
+or burst on clicks, effect parameters such as the clicks of `water_ripple`) and refuses a manifest
+that does not declare them, naming the missing one and the first place of `scene.json` that uses
+it (`the scene uses audio at /layers/2/effects/0 of scene.json; add "audio"`).
+Newer scenes are computed the same way: inverse kinematics and particle control points that follow the pointer, `enter:` and `leave:` triggers ask for `pointer`; `click:`
+triggers for `clicks`; `media` values, cover assets and `media:` triggers for `media`. Scene scripts
+declare in `scene.json` the parts of the script interface they use and the events they handle
+(`scene.md`, "Scripts"), so their inputs are computed from that declaration rather than guessed from
+their text. A second-version package receives only what it declares: the sound for `audio`, the
+pointer for `pointer` or `clicks`, clicks for `clicks` and the media player for `media`, whatever its
+scenes, scripts or page would read; first-version scenes keep the older guess from the words of
+their scripts. Web pages always declare their inputs, and their facets come from that list.
+
+### RGB lighting
+
+`permissions.rgb: true` says that the package may send colors to keyboards, mice and other RGB
+lighting: a web page through `window.wprs.rgb.setImage`, a scene through an `adjustment` layer with
+`rgb: true` (`scene.md`), which the validator requires to be declared. Like the inputs it is no
+grant: the user allows it per package. Both name the `rgb` feature, which the desktop refuses until
+it can send colors and the phone, which has no such lighting, leaves out.
 
 ## Features
 
@@ -150,21 +197,235 @@ fills the list before signing); readers refuse a package that uses a feature it 
 and `wprs-ctl pack check` explains each one and warns about listed features the package does not
 use.
 
-| Feature | The package |
-|---------|-------------|
-| `inputs.audio`, `inputs.pointer`, `inputs.clicks`, `inputs.media`, `inputs.network` | declares or uses that input |
-| `scripts` | runs scene scripts |
-| `sound` | plays sound layers |
-| `properties2` | has settings of the newer kinds or fields: sliders without `step` or with `decimals`, `editable` or `log`, combos of numbers or flags or with icons, `secret` texts, `button`, `divider`, collapsed groups, icons, fractional `order`, `visible_if` expressions, `enabled_if` and `default_asset`, or settings written in a way the first version cannot read (a field it does not know, even with its default value, a missing `default` of a text or `accept` of a file, or an `order` such as `2.0`) |
-| `folder` | shows pictures from a folder the user chooses |
-| `user_videos` | lets the user choose videos for its files or folders |
-| `video_properties` | sets `playback` or `display` |
-| `effect.<id>` | uses a built-in effect that older versions do not have; `pack build` and `pack check` name the ones a package needs |
+Each feature also says what each platform does with it: the desktop and the Android app either run
+it, play the package without it (and its page on the phone says so), or refuse the package with
+`this package needs a newer version of wallpaper-rs: it uses the feature web (is a web page)`
+before drawing anything, so that nothing is drawn wrongly or silently left out. The library still
+lists a refused package with its thumbnail, title and that reason, and reads it again after an
+update of wallpaper-rs. `wprs-ctl pack check` prints what each platform does.
 
-Each profile states what it runs. The desktop runs every feature above; the Android app runs every
-one except `scripts`, `sound`, `folder`, `user_videos` and `video_properties`: such packages play
-there without their scripts, sounds, chosen folders and videos and playback settings, their page on
-the phone says so, and only packages that run fully on the phone get the facet `android`.
+| Feature | The package | Desktop | Android |
+|---------|-------------|---------|---------|
+| `inputs.audio`, `inputs.pointer`, `inputs.clicks`, `inputs.media`, `inputs.network` | declares or uses that input | runs | runs |
+| `scripts` | runs scene scripts | runs | without |
+| `sound` | plays sound layers | runs | without |
+| `properties2` | has settings of the newer kinds or fields: sliders without `step` or with `decimals`, `editable` or `log`, combos of numbers or flags or with icons, `secret` texts, `button`, `divider`, `folder`, `shortcut`, collapsed groups, icons, fractional `order`, `visible_if` expressions, `enabled_if` and `default_asset`, or settings written in a way the first version cannot read (a field it does not know, even with its default value, a missing `default` of a text or `accept` of a file, or an `order` such as `2.0`) | runs | runs |
+| `folder` | shows pictures from a folder the user chooses | runs | without |
+| `folder2` | reads the subfolders of a chosen folder (`recursive`) or fewer of its files (`max_files`) | runs | without |
+| `folder_lists` | lets its scripts or page list a chosen folder (`mode: all`) | refused | refused |
+| `user_videos` | lets the user choose videos for its files or folders | runs | without |
+| `shortcut` | has a `shortcut` property | refused | refused |
+| `quality_settings` | has properties with `quality` values | refused | refused |
+| `video_properties` | sets `playback` or `display` of a video | runs | without |
+| `playback2` | sets `max_fps`, `muted` or `loop`, or `playback` of a web page | refused | refused |
+| `display2` | sets `display` of a picture, or its `background` or `span` | runs | without |
+| `flip` | sets `display.flip` to `horizontal` or `vertical` | refused | refused |
+| `accent` | sets `display.accent` | without | without |
+| `web` | is a web page (`kind: web`) | refused | refused |
+| `preset` | sets the values of another package (`kind: preset`) | refused | refused |
+| `assets` | holds resources for other packages (`kind: assets`) | refused | refused |
+| `packages` | lists `requires.packages` | refused | refused |
+| `gpu` | sets `requires.gpu` | without | without |
+| `platforms` | sets `platforms` | runs | runs |
+| `locale_files` | keeps texts in `locale/<language>.json` | runs | runs |
+| `engine_strings` | names a text of the engine, `"@wprs.<key>"` | runs | runs |
+| `newer_keys` | writes a key of the manifest or of `scene.json` that the released versions do not know, whatever its value (`null`, `[]` and `{}` included), while no other feature already tells them to update, so that they say that they need an update instead of calling the package broken | runs | runs |
+| `origin2` | is `imported` or from a `provider`, or sets `origin.source_url` | runs | runs |
+| `credits2` | credits files to the package they come from (`credits[].source`) | runs | runs |
+| `ktx2` | uses KTX2 textures | refused | refused |
+| `avif` | uses AVIF pictures | refused | refused |
+| `spanned_scenes` | sets `display.span` of a scene to `all-outputs` | refused | without |
+| `rgb` | sets `permissions.rgb` or sends colors to RGB lighting from a scene | refused | without |
+| `effect.<id>` | uses a built-in effect that older versions do not have; `pack build` and `pack check` name the ones a package needs | runs once drawn, refused before | as on the desktop |
+| `effect.<id>.<parameter>` | sets a parameter that an older version of a built-in effect does not have | runs once drawn, refused before | as on the desktop |
+
+Effects and parameters that the format describes but the engine does not draw yet (the list is in
+"Effects not drawn yet" of `scene.md`) are refused by every platform with these names, which stay
+the same once they are drawn, so that older versions keep refusing them.
+
+The fields of `scene.json` that came after the first version name these features (`scene.md` says
+what each field does). They are all refused on both platforms until the engine draws them, except
+`timeline_frames` and `fresh_seed`, which both run, and that the phone, which plays scenes without
+sound and without scripts, plays a scene with `sound2` silently and leaves out `scripts2`,
+`script_layers`, `script_geometry` and `script_storage` with its scripts:
+
+| Feature | The scene | Desktop | Android |
+|---------|-----------|---------|---------|
+| `blend_modes2` | uses a blend mode after `luminosity` (`linear_burn` … `negation`) | refused | refused |
+| `layer_color` | sets `brightness` on a layer or `color` on a picture, video, particles or group layer | refused | refused |
+| `parent` | sets `parent` or `inherit` on a layer | refused | refused |
+| `tilt` | sets `transform.tilt`, `transform.z` or `canvas.perspective` | refused | refused |
+| `mask_strength` | sets `strength` on a mask | refused | refused |
+| `layer_textures` | feeds a layer into an effect texture with `{ "layer" }` | refused | refused |
+| `video_textures` | uses a video asset as a mask, an effect texture or the picture of a light | refused | refused |
+| `layer_playback` | sets `playback` on a picture or video layer | refused | refused |
+| `texture_options` | sets `filter`, `wrap` or `mipmaps` on an asset | refused | refused |
+| `animated_textures` | sets `frames`, `fps`, `durations`, `rects` or `animated` on an asset | refused | refused |
+| `text_layout` | sets `valign`, `wrap`, `line_height`, `background` or `padding` on a text | refused | refused |
+| `text_styles` | sets `letter_spacing`, `outline`, `shadow`, `blur` or `render: sdf` on a text | refused | refused |
+| `fonts2` | uses ttc, otc or woff2 fonts, `face` or `fallback` | refused | refused |
+| `sound2` | plays MP3, `sounds` lists, `mode`, `pause`, `stream` or `play_on` | refused | without |
+| `camera` | sets `canvas.camera` | refused | refused |
+| `parallax2` | sets `canvas.parallax` or a parallax with two different parts | refused | refused |
+| `bloom` | sets `canvas.bloom` | refused | refused |
+| `hdr` | sets `canvas.hdr` or `canvas.tonemap` | refused | refused |
+| `keep_frame` | sets `canvas.clear` to `false` | refused | refused |
+| `lights` | has `light` layers | refused | refused |
+| `volumetric_lights` | sets `volumetric` on a light | refused | refused |
+| `light_textures` | sets `texture` on a spot light | refused | refused |
+| `lighting2d` | sets `lighting` on a layer | refused | refused |
+| `ambient_light` | sets `canvas.ambient` or `canvas.sky` | refused | refused |
+| `capture` | sets `size` or `redraw` on an adjustment layer | refused | refused |
+| `timeline_events` | names `events` of a timeline or triggers on `event:<name>` | refused | refused |
+| `timeline_frames` | gives the length of a timeline in `frames` at `fps` | runs | runs |
+| `timeline_wrap` | sets `wrap` on a looping timeline | refused | refused |
+| `fresh_seed` | sets `clock.seed` to `null`, a new seed every start | runs | runs |
+| `tangents` | gives keyframes `{ "in", "out" }` handles | refused | refused |
+| `tracks` | animates the parts of a position or a color on their own (`x`, `y`, `r`, `g`, `b`, `a`) | refused | refused |
+| `relative_values` | adds a value to `base` | refused | refused |
+| `clock_values` | follows `{ "clock": "day" }` and the like with a number | refused | refused |
+| `clock_dates` | writes dates with a `date` text | refused | refused |
+| `audio_ranges` | follows a range of bands (`audio: [lo, hi]`, `of`, `reduce`) | refused | refused |
+| `shaping` | sets `bounds`, `exponent` or `smooth: { "up", "down" }` | refused | refused |
+| `audio_response` | sets the scene `audio` block | refused | refused |
+| `custom_effects` | brings effects of its own (`effects`) | refused | refused |
+| `effect_options` | brings effects with `options` | refused | refused |
+| `vertex_effects` | brings effects with a `vertex` stage | refused | refused |
+| `mesh` | has `mesh` layers, with their parts, depth, clips and animation layers | refused | refused |
+| `ik` | sets `ik` chains on a mesh or model | refused | refused |
+| `bone_physics` | sets `physics` on a mesh or model, or `canvas.wind` | refused | refused |
+| `bone_rules` | sets `rules` on a mesh or model | refused | refused |
+| `blend_shapes` | sets `shapes` or `expressions` on a mesh or model | refused | refused |
+| `attach` | sets `attach` on a layer | refused | refused |
+| `model3d` | has `model` layers or groups with `space: 3d` | refused | refused |
+| `material_shaders` | shades a model with `fur`, `foliage`, `chroma` or a material shader of its own | refused | refused |
+| `camera3d` | sets `camera3d` | refused | refused |
+| `shadows` | sets `shadows` on a light, or `cast_shadows` or `receive_shadows` on a material | refused | refused |
+| `particles2` | moves particles in world space, with control points, per-layer `instance` or `render`, emitter timing, newer emitter shapes, initializers and forces, operator windows, render `brightness`, `cycles` or a stretch range, or beyond the older limits (8 systems, 4 emitters, 8 forces, 4 colliders, 10 s of prewarm) | refused | refused |
+| `particle_children` | sets `children` on a system | refused | refused |
+| `particle_depth` | sets `perspective`, `init.depth` or `init.depth_speed` | refused | refused |
+| `particle_lighting` | sets `render.lit`, `render.normal` or `render.refract` | refused | refused |
+| `particle_layers` | emits from a `layer` or collides with one | refused | refused |
+| `particle_fields` | uses `turbulent`, `offset_noise`, `remap`, `around`, `between`, `keep_distance` or `keep_between` | refused | refused |
+| `particle_values` | binds an end of an `init` range or a field of an emitter shape | refused | refused |
+| `particle_collisions` | collides with a `box`, a `segment` or the inside of a circle, or sets `stick` | refused | refused |
+| `boids` | sets the `boids` force | refused | refused |
+| `particle_ropes` | sets `render.rope` or trails longer than 16 steps or with `segments`, `subdivide`, `uv_scale`, `uv_scroll` or `textured` | refused | refused |
+| `particle_looks` | sets `render.cutout`, `render.orient` or `render.angle` | refused | refused |
+| `particle_shaders` | sets `render.shader` | refused | refused |
+| `scripts2` | has more than 16 script modules, modules that declare newer events, parts or `params`, values with `fn` or `params`, or named effect uses | refused | without |
+| `script_layers` | has `templates` or scripts that use `layers` | refused | without |
+| `script_geometry` | has `pools` or scripts that use `geometry` | refused | without |
+| `script_storage` | has scripts that use `storage` | refused | without |
+| `layer_events` | sets `solid: { "alpha" }`, `hit` bones, `click:`, `enter:` or `leave:` triggers or scripts that handle pointer events | refused | refused |
+| `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | refused | refused |
+
+## Profiles
+
+Each platform is a profile: a column of the tables above that says, for every feature, whether that
+platform runs it, plays the package without it or refuses the package. The registry in
+`crates/wprs-format` (`features::all()`, `features::support`) holds both columns, and every reader
+uses it: the desktop daemon and library, `wprs-ctl`, the app, repositories and the server (which
+compute facets with it) and the Android app. A package is refused on a platform when any of
+its features is refused there, with every such feature and its reason in one message; the features
+a platform leaves out are listed on the package's page there; and the facets `desktop` and
+`android` name the platforms that run a package whole. The package limits of the first part of this
+page are the same on both platforms. The tests build one small package per feature
+(`tests/fixtures/features.json`) and run it through `pack build`, the desktop daemon and the Android
+library, so that a feature without its package, or a package that reaches an engine that cannot
+draw it, fails them.
+
+## Platforms
+
+`platforms` lists the devices a package is made for, `desktop`, `android` or both, and can only
+narrow where it plays: a package made for the phone only is refused on the desktop with `this
+package is made for android only`, and the reverse. Facets name each platform that runs the
+package fully (no feature refused or left out) and that its `platforms` allows, so that `facet:android`
+finds what plays whole on the phone. Repositories copy `platforms` into the release.
+
+## Dependencies
+
+`requires.packages` lists at most 16 other packages, each `{id, version}` with a SemVer requirement
+such as `^1.2`, that a package needs installed; it cannot name the package itself or one id twice.
+`requires.gpu` is `any` (the default) or `compute` for packages that cannot draw without compute
+shaders, so that the app can warn before applying them where they run in software; no engine
+checks it yet, so both platforms play such a package without `gpu` and say so. Repositories copy
+`requires` into the release.
+
+## Origin
+
+An `imported` package is a conversion for personal use: it installs and plays locally, but
+`wprs-ctl repo add` and the server never publish it. A `provider` package names where its picture
+or video comes from: `name` (`[a-z0-9-]`, at most 32), `item_url` and `terms_url` (`https://`),
+and the `credit` that is always shown with it; it is published only under `CC0-1.0`, `CC-PDM-1.0`,
+`CC-PDDC`, `CC-BY-2.0`, `CC-BY-3.0` or `CC-BY-4.0`, alone or in an `OR` of them. `source_url` is
+the `https://` page of the original work. Clients show the origin, the provider's credit and the
+packages that credited files come from with the details of the package.
+
+## Web pages
+
+A `web` package shows its entry page in an isolated web view, without network unless allowed:
+
+```json
+{ "kind": "web", "entry": "index.html", "inputs": ["audio", "pointer", "network"],
+  "web": { "preload": "compat.js", "background": "#000000", "storage_kib": 512 },
+  "permissions": { "network": { "allow": ["https://api.example.org"] } },
+  "playback": { "max_fps": "display", "volume": 0.5 },
+  "requires": { "features": ["inputs.audio", "inputs.network", "inputs.pointer", "playback2", "web"] } }
+```
+
+`web.preload` is a `.js` or `.mjs` file of the package run at the start of the page, before its own
+scripts; `web.background` (`#rrggbb`) shows while the page loads; `web.storage_kib` (0 to 5120,
+default 0) is the local storage the page may keep: none without it, and what it keeps stays on
+the device, is never synced and goes away with the package or a *Clear data*. `permissions.network.allow`
+lists at most 8 `https://` origins (`https://host` or `https://host:port`, lowercase, without a
+path), the only places the page may reach once the user allows the network; a page that lists any
+declares `network` in `inputs`, and only then. Pages receive their settings through `window.wprs`:
+
+| Member | What the page gets |
+|--------|--------------------|
+| `properties`, `onProperties(cb)` | the values of every property when it loads, then only the changed ones; colors as `#rrggbb[aa]` and `{r, g, b, a}` from 0 to 1, combos with their value and `label` |
+| `fps`, `onSettings(cb)` | the frame rate it may draw at, and `{fps, quality, locale}` when they change: the quality level (0 to 3) and the language picked among those of the package |
+| `onPause(cb)` | `true` while it is hidden or paused, when animation frames stop too |
+| `onAudio(cb)` | 64 bands per channel while `audio` is allowed, silence otherwise |
+| `onMedia(cb)` | what the media player plays while `media` is allowed, `{enabled: false}` otherwise |
+| `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | tokens `wpak-user://<prop>/…` for the files of a chosen folder, and the ones added and removed; never their paths |
+| `onAction(cb)` | the id of a pressed `button` property |
+| `openShortcut(prop)` | opens what the user chose for a `shortcut` property, only inside a real click and at most once a second |
+| `rgb.setImage(bytes, w, h)` | sends RGBA pixels of at most 64 × 16 to the RGB lighting of the computer, at most 30 times a second, only with `permissions.rgb` and once the user allows it for the package |
+
+Nothing reaches the page without the input it needs, and a page never sees paths, device names,
+the battery or the list of fonts.
+
+## Presets
+
+A `preset` package carries values for another package, its base, and the pictures or videos those
+values name; it is published, versioned and credited on its own:
+
+```json
+{ "kind": "preset", "entry": "preset.json",
+  "requires": { "features": ["packages", "preset"], "packages": [{ "id": "org.example.dusk", "version": "^1.2" }] } }
+```
+
+```json
+{ "base": { "id": "org.example.dusk", "version": "^1.2" },
+  "values": { "tint": "#3d5aff", "speed": 0.4 }, "files": { "photo": "assets/photo.webp" } }
+```
+
+`preset.json` (at most 256 KiB) names the base, which `requires.packages` lists with the same
+version requirement, at most 256 `values` and `files` by property id (an id is in one of them only),
+and the files are pictures or videos of the package. A preset package has no properties, presets
+or inputs of its own; values that the installed base does not know, of another type or out of range
+are left out with a warning, like the values of a preset of the base. Repositories copy the id of
+the base into the release (`base`), so that clients can list the presets of a package.
+
+## Shared resources
+
+An `assets` package offers parts of scenes for other authors: its entry is a scene document
+(`scene.md`) whose layers, particle systems, scripts, effects (`effects`, see "Package effects" in
+`scene.md`) and assets are the parts it offers, with their own files. It is never shown as a wallpaper. An author copies what they use into their own package
+and credits it with `credits[].source`, so that the package works without the shared one and the
+license of every file stays written.
 
 ## Languages
 
@@ -177,6 +438,21 @@ tags without case: the user's languages in order (each as given, then its base l
 then `pt`), then `default_locale`, then `en`, then the first one; `zh-chs`, `zh-cn` and `zh-sg`
 read as `zh-Hans`, and `zh-cht`, `zh-tw`, `zh-hk` and `zh-mo` as `zh-Hant`. Control characters
 (except line breaks in long texts) and byte order marks are refused.
+
+The strings of a language can also live in `locale/<language>.json`, a map from key to text of at
+most 512 KiB, which the package lists with the feature `locale_files`; a language is either in
+`strings` or in its file, never both, and the limits above count both. Readers merge the files with
+`strings` and keep them apart when they write the manifest back. Packages and source folders read these files
+as texts only when they list `locale_files`; without it a `locale/*.json` file is an ordinary file
+of the package, as it was before, so released packages and their folders that keep data of their
+own there keep working and build as they did. The author chooses the feature: `pack build` never
+adds it, and `pack build`, `pack check` and the editor note each `locale/<language>.json` that stays
+an ordinary file.
+
+A few common labels are texts of the engine, which every reader knows in its languages: `"@wprs.<key>"`
+with `accent_color`, `background_color`, `brightness`, `color`, `density`, `opacity`, `quality`,
+`size`, `speed` or `volume` (`engine_strings`). They need no `strings`, and keys of `strings` or of
+the language files may not start with `wprs.`.
 
 ## Markup
 
@@ -195,11 +471,19 @@ or `>`.
 Repositories, the library and the server compute facets from the package itself, so that authors
 cannot lie: the inputs the scene uses (`audio`, `pointer`, `clicks`), `sound`, `scripts`, `clock` (a
 text shows the time), `customizable` (it has properties to change), `photosensitive`, `localized`
-(more than one language), `animated` (scenes and videos), `android` (it runs fully on the phone),
-the orientation (`landscape`, `portrait`, `square`), `ultrawide` from a 2.2 ratio and the size
-(`720p`, `1080p`, `1440p`, `4k`, `5k`, `8k`) of scenes and images. Only `media` and `network` come
-from `inputs` as the author declares them, since nothing in a package shows that use; an `audio`,
-`pointer` or `clicks` input the scene cannot use gets a warning and no facet. Searches filter by
+(more than one language), `animated` (scenes, videos and web pages), `desktop` and `android` (it
+runs fully there, see "Platforms"), the orientation (`landscape`, `portrait`, `square`),
+`ultrawide` from a 2.2 ratio and the size (`720p`, `1080p`, `1440p`, `4k`, `5k`, `8k`) of scenes
+and images, and `hdr` when a video of the package (its entry, or a video asset of its scene) writes
+the PQ or HLG transfer in its colour description (the `colr` box of MP4 or the colour elements of
+Matroska and WebM). Such a video plays with standard colors, so it may look washed out until the
+engine maps HDR tones; `wprs-ctl pack check` warns about it. Readers look for it only when they
+record facets (adding to a repository, indexing the library, the server and `pack check`), never
+when they open a package to show it. The inputs of a web page come from its manifest as declared;
+for the other kinds every input, `media` included, comes from what the package uses, and an
+`audio`, `pointer`, `clicks`, `media` or `network` input that nothing uses gets a warning and no
+facet. Since only web pages use `network`, released second-version packages that declare it
+elsewhere get that warning and keep working. Searches filter by
 them (`facet:audio`, `facet:4k`) and by rating (`content:general`, `content:mature`,
 `content:unrated`). Tags stay free; these lowercase slugs are recommended for genres: `abstract`,
 `anime`, `animals`, `cars`, `cityscape`, `fantasy`, `games`, `minimal`, `mountains`, `music`,

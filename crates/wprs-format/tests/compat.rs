@@ -3,7 +3,10 @@ mod fixture;
 use fixture::{DAWN, DUSK, NOW, Repo, files};
 use serde::Deserialize;
 use std::fs;
-use wprs_format::{DETAILED_FORMAT, Entry, Error, FileFetch, Kind, Shard, Time, add_repo, browse};
+use wprs_format::{
+    DETAILED_FORMAT, Details, Entry, Error, FileFetch, KINDS_FORMAT, Kind, Shard, Time, add_repo, browse,
+    repos, update_repo,
+};
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -138,4 +141,116 @@ fn releases_from_later_publishers_still_parse() {
     let content = release.content.as_ref().unwrap();
     assert!(content.mature() && content.descriptors == ["drugs"]);
     assert_eq!(release.requires.as_ref().unwrap().features, ["meshes"]);
+}
+
+#[test]
+fn clients_skip_releases_of_kinds_they_do_not_know() {
+    let release = |version: &str, kind: &str| {
+        format!(
+            r#"{{"version":"{version}","kind":"{kind}","title":"Sky","description":"","tags":[],"license":"CC0-1.0",
+            "authors":[],"size":1,"sha256":"{0}","manifest_sha256":"{0}","preview":null,"published":"2027-01-15T08:00:00Z",
+            "schema":"wallpaper-rs.wpak/2","requires":{{"features":["hologram"]}}}}"#,
+            "b".repeat(64)
+        )
+    };
+    let listing = |id: &str, versions: &[String]| {
+        format!(r#"{{"id":"{id}","author":null,"versions":[{}]}}"#, versions.join(","))
+    };
+    let packages = [
+        listing(DAWN, &[release("1.0.0", "image"), release("2.0.0", "hologram")]),
+        listing(DUSK, &[release("1.0.0", "hologram")]),
+    ];
+    let shard = format!(
+        r#"{{"format":"{DETAILED_FORMAT}","repo_id":"{}","shard":0,"packages":[{}]}}"#,
+        "a".repeat(64),
+        packages.join(",")
+    );
+    assert!(serde_json::from_str::<Shard>(&shard).is_err());
+    let read = Shard::parse(shard.as_bytes()).unwrap();
+    read.check(DETAILED_FORMAT, &"a".repeat(64), 0, 0).unwrap();
+    let ids: Vec<(&str, usize)> = read.packages.iter().map(|p| (p.id.as_str(), p.versions.len())).collect();
+    assert_eq!(ids, [(DAWN, 1)]);
+    let empty = shard.replace(&listing(DUSK, &[release("1.0.0", "hologram")]), &listing(DUSK, &[]));
+    assert!(Shard::parse(empty.as_bytes()).unwrap().check(DETAILED_FORMAT, &"a".repeat(64), 0, 0).is_err());
+}
+
+#[derive(Deserialize)]
+struct ReleasedShard {
+    format: String,
+    packages: Vec<ReleasedListing>,
+}
+
+#[derive(Deserialize)]
+struct ReleasedListing {
+    id: String,
+    versions: Vec<ReleasedKind>,
+}
+
+#[derive(Deserialize)]
+struct ReleasedKind {
+    kind: ReleasedKinds,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum ReleasedKinds {
+    Image,
+    Video,
+    Scene,
+}
+
+#[test]
+fn released_clients_never_see_kinds_they_cannot_read() {
+    let repo = Repo::new();
+    repo.add_v2(DUSK, "2.0.0");
+    repo.add_page(DAWN, "1.0.0");
+    repo.publish(NOW);
+    let details: Details =
+        serde_json::from_slice(&fs::read(repo.dir.join("details/1.json")).unwrap()).unwrap();
+    let read =
+        |blob: &wprs_format::Blob| fs::read(repo.dir.join(format!("index/{}.json", blob.sha256))).unwrap();
+    let mut seen = Vec::new();
+    for blob in &details.shards {
+        let shard: ReleasedShard = serde_json::from_slice(&read(blob)).unwrap();
+        assert_eq!(shard.format, DETAILED_FORMAT);
+        seen.extend(
+            shard
+                .packages
+                .into_iter()
+                .flat_map(|l| l.versions.into_iter().map(move |r| (l.id.clone(), r.kind))),
+        );
+    }
+    assert_eq!(seen, [(DUSK.to_string(), ReleasedKinds::Image)]);
+    let every = details.kinds.iter().map(|b| Shard::parse(&read(b)).unwrap());
+    assert!(every.clone().all(|s| s.format == KINDS_FORMAT));
+    assert_eq!(every.map(|s| s.packages.len()).sum::<usize>(), 2);
+    add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap();
+    let mut found: Vec<_> =
+        browse(&repo.data, "").unwrap().into_iter().map(|f| (f.id, f.release.kind)).collect();
+    found.sort_by(|a, b| a.0.cmp(&b.0));
+    assert_eq!(found, [(DAWN.to_string(), Kind::Web), (DUSK.to_string(), Kind::Image)]);
+}
+
+#[test]
+fn caches_kept_by_released_clients_still_work_both_ways() {
+    let repo = Repo::new();
+    repo.add_v2(DUSK, "2.0.0");
+    repo.add_page(DAWN, "1.0.0");
+    repo.publish(NOW);
+    let details: Details =
+        serde_json::from_slice(&fs::read(repo.dir.join("details/1.json")).unwrap()).unwrap();
+    let id = add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap().repo_id;
+    let blobs = repo.data.join("repos").join(&id).join("blobs");
+    let cached =
+        |list: &[wprs_format::Blob]| list.iter().all(|b| blobs.join(format!("{}.json", b.sha256)).exists());
+    assert!(cached(&details.shards) && cached(&details.kinds));
+    details.kinds.iter().for_each(|b| fs::remove_file(blobs.join(format!("{}.json", b.sha256))).unwrap());
+    assert_eq!(repos(&repo.data, NOW).unwrap()[0].repo_id, id);
+    let kinds = |found: Vec<wprs_format::Item>| found.into_iter().map(|f| f.release.kind).collect::<Vec<_>>();
+    assert_eq!(kinds(browse(&repo.data, "").unwrap()), [Kind::Image]);
+    update_repo(&repo.data, &FileFetch, &id, NOW + 10).unwrap();
+    assert!(cached(&details.shards) && cached(&details.kinds));
+    let mut found = kinds(browse(&repo.data, "").unwrap());
+    found.sort_by_key(|k| format!("{k:?}"));
+    assert_eq!(found, [Kind::Image, Kind::Web]);
 }

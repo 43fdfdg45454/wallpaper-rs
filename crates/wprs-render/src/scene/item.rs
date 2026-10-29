@@ -215,7 +215,7 @@ pub(crate) fn frame_data(
         beat: f32::from(u8::from(audio.beat)),
         srgb: f32::from(u8::from(srgb)),
         quality: quality as u8 as f32,
-        seed: (runtime.scene.clock.seed % 65_536) as f32,
+        seed: (runtime.seed % 65_536) as f32,
         buttons: f32::from(pointer.buttons),
         inside: f32::from(u8::from(pointer.inside)),
         since_beat: runtime.since_beat(),

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView, log_allowed};
-use wprs_scene::{PointerState, Quality, Runtime, ScriptOutputs, Uses, Values, Voice, Wake};
+use wprs_scene::{PointerState, Quality, Runtime, ScriptApi, ScriptOutputs, Uses, Values, Voice, Wake};
 use wprs_script::{Error, Frame, Host};
 
 const SCRIPT_HOST: &str = "/proc/self/exe";
@@ -47,6 +47,7 @@ fn wall() -> f64 {
 impl SceneState {
     pub(super) fn new(spec: SceneSpec, power: Power) -> SceneState {
         let mut runtime = Runtime::new(spec.pack.scene.clone(), spec.values.clone());
+        spec.pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
         runtime.set_playing(spec.clips.iter().map(|(asset, _)| asset.clone()).collect());
         let still = spec.hold.is_some() || power.still(&runtime);
         match spec.hold {
@@ -57,13 +58,17 @@ impl SceneState {
             }
             None => {}
         }
-        let (scripts, seed) = (&spec.pack.scripts, runtime.scene.clock.seed);
+        let (scripts, seed) = (&spec.pack.scripts, runtime.seed);
         let named = (spec.pack.locale.as_str(), &spec.pack.labels);
         let host = (!still && runtime.uses().scripts)
             .then(|| Host::new(SCRIPT_HOST, &["--script-host"], scripts, seed, named));
         let exposed = wprs_scene::exposed(&spec.pack.props.properties, &spec.values);
-        let read = |word| scripts.iter().any(|(_, source)| source.contains(word));
-        let (reads, quality) = ((read("audio"), read("cursor")), power.quality(&runtime));
+        let declares =
+            |api| spec.pack.scene.scripts.iter().any(|s: &wprs_scene::Script| s.uses.contains(&api));
+        let read = |word, api| declares(api) || scripts.iter().any(|(_, source)| source.contains(word));
+        let reads = (read("audio", ScriptApi::Audio), read("cursor", ScriptApi::Pointer));
+        let reads = spec.pack.inputs.map_or(reads, |u| (reads.0 && u.audio, reads.1 && u.cursor));
+        let (reads, quality) = (reads, power.quality(&runtime));
         let (view, tick, pointer, calm, error, due, uses) = Default::default();
         let (moving, voices, heard) = (!still, Vec::new(), None);
         let mut scene = SceneState {
@@ -342,5 +347,30 @@ mod tests {
         assert!(time > 1.0 && state.update(turned));
         state.render(&renderer, ((16, 9), 60), power, &players, true, at(3)).unwrap();
         assert!(state.view.is_some() && state.runtime.time() > time, "the scene restarted");
+    }
+
+    #[test]
+    fn declared_inputs_without_scripts_wait_for_what_the_scene_binds() {
+        let scene = Scene::from_json(include_str!("../../../../scenes/dusk/scene.json")).unwrap();
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../scenes/dusk/manifest.json")).unwrap();
+        let properties = serde_json::from_value(manifest["properties"].clone()).unwrap();
+        let mut pack = ScenePack::bare(scene, properties, Vec::new());
+        pack.inputs = Some(Uses { cursor: true, scripts: true, ..Uses::default() });
+        let pack = Arc::new(pack);
+        let power = Power { tier: Tier::T3, on_battery: false, max_fps: 0 };
+        let follows = |depth: &str| {
+            let mut values = pack.props.values(&[]);
+            values.insert("depth".into(), serde_json::json!(depth));
+            let spec =
+                SceneSpec { values, pack: pack.clone(), extra: Vec::new(), clips: Vec::new(), hold: None };
+            let mut state = SceneState::new(spec, power);
+            let pointer = PointerState { pos: Some([0.5, 0.5]), inside: true, ..PointerState::default() };
+            let moved = state.input(SceneInput::Pointer(String::new(), pointer));
+            (state.uses().cursor, state.uses().audio, moved)
+        };
+        assert_eq!(follows("pointer"), (true, false, true));
+        assert_eq!(follows("orbit"), (false, false, false));
+        assert_eq!(follows("off"), (false, false, false));
     }
 }

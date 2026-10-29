@@ -59,8 +59,19 @@ fn files_and_folders_accept_images_and_videos_only() {
 
 #[test]
 fn video_packages_set_how_their_video_plays() {
-    let playback = Playback { speed: Some(1.5), start: Some(2.0), end: Some(8.0), volume: Some(0.4) };
-    let display = Display { fit: Some(wprs_core::Fit::Fit), zoom: Some(2.0), position: Some([0.5, -0.25]) };
+    let playback = Playback {
+        speed: Some(1.5),
+        start: Some(2.0),
+        end: Some(8.0),
+        volume: Some(0.4),
+        ..Default::default()
+    };
+    let display = Display {
+        fit: Some(wprs_core::Fit::Fit),
+        zoom: Some(2.0),
+        position: Some([0.5, -0.25]),
+        ..Default::default()
+    };
     let video =
         Manifest { playback: Some(playback.clone()), display: Some(display.clone()), ..v2(Kind::Video) };
     video.check().unwrap();

@@ -25,7 +25,7 @@ ColumnLayout {
     function name(option) {
         if (field.widget === "ref:language")
             return ManifestWords.language(option);
-        if (["enum", "variant", "ref:effect"].includes(field.widget))
+        if (["variant", "ref:effect"].includes(field.widget) || (field.widget === "enum" && !(field.names ?? []).length))
             return SceneWords.value(option);
         return (field.names ?? [])[field.options.indexOf(option)] || (field.widget === "ref:trigger" ? SceneWords.label(option) : String(option));
     }

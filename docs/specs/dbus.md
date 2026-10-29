@@ -610,6 +610,11 @@ with the texts in the user's language: `description` and `changes` keep their ma
 clients render without loading anything remote, opening a link only after a click and a
 confirmation, except the description of a first-version package (`schema` is
 `wallpaper-rs.wpak/1`), which is plain text shown as written. Every other text is plain.
+`provider` is the credit of the online source it comes from, `platforms` the devices it is made
+for, `packages` the packages it needs (`<id> <version requirement>`) and a credit's `source` the
+package its files come from (`<id> <version>`). A package this device cannot play keeps its
+details, with the reason in `error` (`this package needs a newer version of wallpaper-rs: it uses
+…` or `this package is made for … only`).
 
 ### `SetTitle(s uid, s title)`
 
@@ -1801,10 +1806,13 @@ struct About {
     schema: String, title: String, description: String, changes: String, authors: Vec<String>,
     license: String, content: Option<String>, descriptors: Vec<String>, photosensitive: Option<bool>,
     origin: Option<String>, derived_from: Vec<Work>, credits: Vec<PackageCredit>, links: Vec<Link>,
-    inputs: Vec<String>, features: Vec<Feature>, languages: Vec<String>,
+    inputs: Vec<String>, features: Vec<Feature>, languages: Vec<String>, provider: Option<String>,
+    source_url: Option<String>, platforms: Vec<String>, packages: Vec<String>,
 }
 struct Work { author: String, title: Option<String>, url: Option<String>, license: Option<String> }
-struct PackageCredit { paths: Vec<String>, license: String, attribution: String, url: Option<String> }
+struct PackageCredit {
+    paths: Vec<String>, license: String, attribution: String, url: Option<String>, source: Option<String>,
+}
 struct Link { kind: String, url: String }
 struct Feature { name: String, why: String }
 struct Item {

@@ -5,8 +5,11 @@ mod build;
 mod catalog;
 mod check;
 mod client;
+mod contents;
+mod display;
 mod download;
 mod entry;
+mod facts;
 pub mod features;
 mod fetch;
 mod index;
@@ -18,11 +21,14 @@ mod manifest;
 pub mod media;
 mod meta;
 mod names;
+mod needs;
+mod origin;
 #[cfg(feature = "sign")]
 mod publish;
 mod read;
 mod release;
 mod repo;
+mod scenery;
 mod settings;
 mod sign;
 mod source;
@@ -32,6 +38,7 @@ mod upgrade;
 mod validate;
 pub mod values;
 mod video;
+mod web;
 
 #[cfg(feature = "sign")]
 pub use admin::sign_root;
@@ -40,34 +47,38 @@ pub use browse::{Item, browse};
 pub use build::{build, sha256, sha256_file};
 pub use catalog::{Added, add, revoke, revoke_key, unrevoke};
 pub use client::{Outcome, RepoInfo, Update, add_repo, remove_repo, repos, update_repo, verify};
+pub use display::{Accent, Display, Flip, Follow, FrameRate, Span};
 pub use download::preview;
 pub use entry::{Blob, DETAILS_FORMAT, Details, ENTRY_FORMAT, Entry, Pin};
-pub use features::Facts;
+pub use facts::Facts;
 pub use fetch::{Anchor, Fetch, FileFetch};
 pub use index::{
-    DETAILED_FORMAT, KeyRevocation, Listing, REVOKED_FORMAT, Reason, Revocation, Revoked, SHARD_FORMAT,
-    Shard, shard_of,
+    DETAILED_FORMAT, KINDS_FORMAT, KeyRevocation, Listing, REVOKED_FORMAT, Reason, Revocation, Revoked,
+    SHARD_FORMAT, Shard, shard_of,
 };
 pub use install::{Installed, install, installed, remove};
 #[cfg(feature = "sign")]
 pub use keys::{Keypair, Signer, keygen, sign_source};
-pub use locale::valid_tag;
-pub use manifest::{Kind, Manifest, SCHEMA, SCHEMA_V1, Strings, manifest_schema, newer_spelling};
-pub use meta::{
-    Ancestor, Content, Credit, Descriptor, Input, Links, Origin, OriginKind, Previews, Rating, Requires,
+pub use locale::{LOCALE, locale_file, valid_tag};
+pub use manifest::{
+    Kind, Manifest, SCHEMA, SCHEMA_V1, Strings, manifest_schema, newer_names, newer_spelling,
 };
+pub use meta::{Content, Credit, Descriptor, Links, Previews, Rating, Source};
 pub use names::valid_id;
+pub use needs::{Dependency, Gpu, Input, Network, Permissions, Platform, Requires, origin};
+pub use origin::{Ancestor, Origin, OriginKind, PROVIDER_LICENSES, Provider};
 #[cfg(feature = "sign")]
 pub use publish::{Published, publish};
 pub use read::{Package, extract, open, peek, read, thumbnail};
-pub use release::{Needs, Preview, Rated, Release};
+pub use release::{Needs, Preview, Rated, Release, Wanted};
 pub use repo::{Author, Key, Policy, ROOT_FORMAT, Role, Roles, Root, Time, comment};
 pub use settings::{Settings, settings};
 pub use sign::{fingerprint, manifest_comment, public_key, threshold, verify_blocks, verify_package};
-pub use source::{fill, inspect};
+pub use source::{Folder, fill, inspect, locale_names, with_strings};
 pub use upgrade::{Renames, rename_json, upgrade, upgrade_json};
 pub use validate::{FileEntry, Limits, MANIFEST, SIGNATURE, check_path, validate};
-pub use video::{Display, Playback, VIDEO_PROPERTIES};
+pub use video::{Playback, VIDEO_PROPERTIES};
+pub use web::{PresetFile, Web};
 pub use wprs_core::markup;
 pub use wprs_scene::{Choice, Condition, Control, Preset, Property, Scene, Slider, Text};
 
@@ -125,6 +136,8 @@ pub enum Error {
     Exists(String),
     #[error("this package needs a newer version of wallpaper-rs: it uses {0}")]
     Newer(String),
+    #[error("this package is made for {0} only")]
+    Elsewhere(String),
 }
 
 pub(crate) fn ensure(ok: bool, error: impl FnOnce() -> Error) -> Result<()> {

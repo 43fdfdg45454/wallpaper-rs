@@ -25,7 +25,8 @@ pub enum Pack {
         #[arg(long, help = "Secret key file of the author")]
         key: PathBuf,
     },
-    #[command(about = "Explain what a package folder or file needs, uses and declares")]
+    #[command(about = "Explain what a package folder or file needs, uses and declares, and whether the \
+        desktop and the phone play it, play it without some features or refuse it")]
     Check {
         path: PathBuf,
         #[arg(long, help = "Print the result as JSON")]
@@ -57,13 +58,11 @@ pub enum Pack {
 pub fn run(command: Pack) -> Result<()> {
     match command {
         Pack::Build { dir, out, json } => {
-            let out = match out {
-                Some(out) => out,
-                None => {
-                    let manifest = Manifest::from_json(&fs::read(dir.join(MANIFEST))?)?;
-                    format!("{}-{}.wpak", manifest.id, manifest.version).into()
-                }
-            };
+            let manifest = Manifest::from_json(&fs::read(dir.join(MANIFEST))?)?;
+            let out = out.unwrap_or_else(|| format!("{}-{}.wpak", manifest.id, manifest.version).into());
+            for note in manifest.unread_texts(wprs_format::locale_names(&dir)) {
+                eprintln!("note: {note}");
+            }
             for added in fill(&dir)? {
                 eprintln!("requires.features += {added} ({})", features::explain(&added));
             }

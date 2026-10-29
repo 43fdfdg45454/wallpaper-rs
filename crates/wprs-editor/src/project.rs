@@ -162,12 +162,13 @@ impl Project {
     }
 
     fn commit(&mut self, label: &str, ops: Vec<Op>, gesture: bool) -> Result<Vec<Op>> {
-        if ops.is_empty() || cancels(&self.doc, &ops) {
+        let dir = Some(self.dir.as_path());
+        if ops.is_empty() || cancels(&self.doc, &ops, dir) {
             return Ok(Vec::new());
         }
-        let before = detected(&self.doc);
+        let before = detected(&self.doc, dir);
         let mut done = self.history.record(&mut self.doc, label, ops, now(), gesture)?;
-        let follow = sync(&self.doc, &before);
+        let follow = sync(&self.doc, &before, dir);
         if !follow.is_empty() {
             done.extend(self.history.extend(&mut self.doc, follow)?);
         }
@@ -175,7 +176,7 @@ impl Project {
     }
 
     pub fn settle(&mut self) -> Result<bool> {
-        let follow = sync(&self.doc, &Default::default());
+        let follow = sync(&self.doc, &Default::default(), Some(&self.dir));
         if follow.is_empty() || self.dirty() || self.pending.is_some() {
             return Ok(false);
         }

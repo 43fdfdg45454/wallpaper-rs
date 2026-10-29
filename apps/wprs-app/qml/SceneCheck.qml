@@ -50,7 +50,7 @@ QtObject {
         if (!field("inputs").value.includes("pointer") || !field("inputs").fixed.includes("pointer"))
             throw new Error("an input the scene uses was dropped");
         page.editor.select("/manifest/requires");
-        if (field("features").widget !== "computed" || !field("features").value.includes("inputs.media"))
+        if (field("features").widget !== "computed" || !field("features").value.includes("inputs.media") || !field("features").options.includes("locale_files"))
             throw new Error("the features do not follow the inputs");
         page.run("set", {
                 "pointer": "/manifest/schema",
