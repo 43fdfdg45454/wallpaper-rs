@@ -329,7 +329,12 @@ forest_thumb=$(bus Library1 RequestThumbnails asu 1 "$forest" 512 | out "d[0]['$
 serial=$(busctl --user --json=short get-property io.github.wallpaper_rs.Daemon /io/github/wallpaper_rs/Daemon \
   io.github.wallpaper_rs.Daemon1 Serial | out "d")
 bus Library1 SetTitle ss "$dunes" "Dunes at noon" >/dev/null
-bus Daemon1 WaitChanged tu "$serial" 5000 | out "d[1]" | grep -q library || fail "WaitChanged missed the library change"
+seen=$(for _ in 1 2 3 4 5 6; do
+  r=$(bus Daemon1 WaitChanged tu "$serial" 5000); topics=$(echo "$r" | out "d[1]"); echo "$topics"
+  case $topics in *library*) break ;; esac
+  serial=$(echo "$r" | out "d[0]")
+done)
+grep -q library <<<"$seen" || fail "WaitChanged missed the library change: $seen"
 refused "remove the file or the folder" Library1 Remove asb 1 "$forest" false
 rm "$pics/forest.png"
 job=$(bus Library1 Rescan s "" | out "d[0]")
