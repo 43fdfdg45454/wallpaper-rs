@@ -1,7 +1,7 @@
-use super::{Control, Grants, Hub, View, Wake};
+use super::{Bound, Control, Grants, Hub, View, Wake};
 use crate::compositor::lock;
+use crate::error::{Result, invalid, not_found};
 use std::collections::{BTreeMap, BTreeSet};
-use std::io;
 use std::path::Path;
 use std::sync::Mutex;
 use tokio::sync::watch;
@@ -18,45 +18,99 @@ impl View {
 }
 
 impl Control {
+    pub(crate) fn granted(&self, scene: &str, key: &str) -> BTreeSet<Input> {
+        [Input::Audio, Input::Pointer].into_iter().filter(|input| self.has(scene, key, *input)).collect()
+    }
+
+    pub(crate) fn has(&self, scene: &str, key: &str, input: Input) -> bool {
+        let keys = self.grants.get(scene).filter(|_| !key.is_empty());
+        keys.and_then(|keys| keys.get(key)).is_some_and(|inputs| inputs.contains(&input))
+    }
+
     pub(crate) fn allows(&self, output: &str, input: Input) -> bool {
         let still = input == Input::Pointer && self.parallax.contains(output);
         still
             || self.shown.get(output).is_some_and(|need| {
                 let declared = if input == Input::Audio { need.audio } else { need.pointer };
-                declared && self.grants.get(&need.scene).is_some_and(|g| g.contains(&input))
+                declared && self.has(&need.scene, &need.key, input)
             })
+    }
+
+    pub(crate) fn package(&self, scene: &str, key: Option<&str>) -> Result<(String, String)> {
+        let shown = self.shown.values().filter(|s| s.scene == scene && !s.key.is_empty());
+        let found: BTreeMap<_, _> =
+            shown.filter(|s| key.is_none_or(|k| k == s.key)).map(|s| (s.key.as_str(), s)).collect();
+        match found.values().collect::<Vec<_>>()[..] {
+            [s] => Ok((s.key.clone(), if s.title.is_empty() { s.scene.clone() } else { s.title.clone() })),
+            [] => Err(not_found(format!(
+                "{scene} is not shown; inputs are granted to the scene package that is shown"
+            ))),
+            _ => Err(invalid(format!(
+                "more than one package with the id {scene} is shown; grant the input to one of them with GrantPackage"
+            ))),
+        }
     }
 
     pub(crate) fn wants(&self, input: Input) -> BTreeSet<String> {
         let wanted = |output: &&String| {
             let view = self.views.get(*output).copied().unwrap_or_default();
-            self.allows(output, input) && view.active && (input == Input::Audio || !view.covered)
+            self.allows(output, input) && view.active && !view.covered
         };
         self.shown.keys().chain(&self.parallax).filter(wanted).cloned().collect()
     }
 }
 
 impl Hub {
-    pub(super) fn new((grants, declined): (Grants, Grants), wake: Wake, changed: Wake) -> Hub {
+    pub(crate) fn new((grants, declined): (Bound, Grants), wake: Wake, changed: Wake) -> Hub {
         let control = Mutex::new(Control { grants, declined, ..Control::default() });
         let tracking = watch::Sender::new(false);
         let (switch, audio, pointers, moved, poke) = Default::default();
         Hub { control, tracking, switch, audio, pointers, moved, poke, wake, changed }
     }
 
-    pub(crate) fn set_grant(&self, path: &Path, scene: &str, input: Input, granted: bool) -> io::Result<()> {
+    pub(crate) fn grant(&self, path: &Path, scene: &str, key: &str, input: Input) -> anyhow::Result<()> {
+        self.decide(path, scene, Some(key), (input, true))
+    }
+
+    pub(crate) fn decline(&self, path: &Path, scene: &str, key: &str, input: Input) -> anyhow::Result<()> {
+        self.decide(path, scene, Some(key), (input, false))
+    }
+
+    pub(crate) fn revoke(&self, path: &Path, scene: &str, input: Input) -> anyhow::Result<()> {
+        self.decide(path, scene, None, (input, false))
+    }
+
+    pub(crate) fn changed(&self) {
+        (self.changed)()
+    }
+
+    fn decide(
+        &self,
+        path: &Path,
+        scene: &str,
+        key: Option<&str>,
+        (input, granted): (Input, bool),
+    ) -> anyhow::Result<()> {
         let switch = lock(&self.switch);
         let (mut grants, mut declined) = {
             let control = lock(&self.control);
+            if let Some(key) = key.filter(|_| granted) {
+                control.package(scene, Some(key))?;
+            }
             (control.grants.clone(), control.declined.clone())
         };
-        let (changed, decided) =
-            (toggle(&mut grants, scene, input, granted), toggle(&mut declined, scene, input, !granted));
+        let bound = grants.entry(scene.to_owned()).or_default();
+        let changed = match key {
+            Some(key) => toggle(bound, key, input, granted),
+            None => bound.clone().keys().fold(false, |c, key| toggle(bound, key, input, false) | c),
+        };
+        grants.retain(|_, keys| !keys.is_empty());
+        let decided = toggle(&mut declined, scene, input, !granted);
         if changed {
-            crate::inputs1::save(path, &grants)?;
+            super::save(path, &grants)?;
         }
         if decided {
-            crate::inputs1::save(&crate::inputs1::declined_path(path), &declined)?;
+            super::save(&super::declined_path(path), &declined)?;
         }
         if !changed && !decided {
             return Ok(());

@@ -19,6 +19,8 @@ pub struct Response {
     pub written: Vec<u32>,
     pub failure: Option<String>,
     pub missing: bool,
+    #[serde(skip)]
+    pub retry: bool,
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -41,10 +43,15 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 fn handle(request: &Request) -> Response {
+    let edge = request.thumbs.iter().map(|(size, _)| *size).max().unwrap_or(256);
     let picture = match request.kind {
-        Kind::Image => {
-            ImageReader::open(&request.path).map_err(Problem::from).and_then(decode).map(Picture::of)
-        }
+        Kind::Image => match wprs_render::decode_reduced(&request.path, edge) {
+            Some((image, (width, height))) => {
+                let meta = Meta { width: Some(width), height: Some(height), ..Meta::default() };
+                Ok(Picture { meta, image: Some(image), failure: None })
+            }
+            None => ImageReader::open(&request.path).map_err(Problem::from).and_then(decode).map(Picture::of),
+        },
         Kind::Video => video(&request.path),
         Kind::Package => package(&request.path),
     };
@@ -58,10 +65,10 @@ fn handle(request: &Request) -> Response {
             if let Some(image) = image {
                 meta.color = Some(wprs_render::palette(&image).colors.first().copied().unwrap_or_default());
                 if let Err(e) = wprs_render::thumbnails(image, &request.thumbs, &mut written) {
-                    return Response { meta, written, failure: Some(e.to_string()), missing: false };
+                    return Response { meta, written, failure: Some(e.to_string()), ..Response::default() };
                 }
             }
-            Response { meta, written, failure, missing: false }
+            Response { meta, written, failure, ..Response::default() }
         }
     }
 }
@@ -94,6 +101,26 @@ mod tests {
         std::fs::write(&junk, b"not an image").unwrap();
         let junk = handle(&Request { path: junk, kind: Kind::Image, thumbs: vec![] });
         assert!(!junk.missing && junk.meta.error.is_some());
+        let jpeg = dir.path().join("large.jpg");
+        image::RgbImage::from_pixel(2400, 1200, image::Rgb([0, 255, 0])).save(&jpeg).unwrap();
+        let thumbs = vec![(256, dir.path().join("j256.jpg"))];
+        let large = handle(&Request { path: jpeg, kind: Kind::Image, thumbs });
+        assert_eq!((large.meta.width, large.meta.height, large.written), (Some(2400), Some(1200), vec![256]));
+        let thumb = image::open(dir.path().join("j256.jpg")).unwrap();
+        assert_eq!((thumb.width(), thumb.height()), (256, 128));
+        for (frame, side) in [(0xc2, 60000u16), (0xc0, 30000)] {
+            let mut bytes = std::fs::read(dir.path().join("j256.jpg")).unwrap();
+            let at = bytes.windows(2).position(|m| m == [0xff, 0xc0]).unwrap();
+            bytes[at + 1] = frame;
+            bytes[at + 5..at + 9].copy_from_slice(&[side.to_be_bytes(), side.to_be_bytes()].concat());
+            let huge = dir.path().join("huge.jpg");
+            std::fs::write(&huge, bytes).unwrap();
+            let start = std::time::Instant::now();
+            let thumbs = vec![(256, dir.path().join("h.jpg"))];
+            let huge = handle(&Request { path: huge, kind: Kind::Image, thumbs });
+            assert!(huge.meta.error.is_some() && huge.written.is_empty(), "a {side} px JPEG was decoded");
+            assert!(start.elapsed() < std::time::Duration::from_secs(2), "{:?}", start.elapsed());
+        }
     }
 
     fn package(dir: &Path, kind: &str, entry: &str, preview: Option<&str>) -> PathBuf {

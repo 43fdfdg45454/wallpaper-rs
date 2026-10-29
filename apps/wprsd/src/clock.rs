@@ -6,6 +6,7 @@ use std::os::fd::OwnedFd;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 use zbus::fdo::PropertiesProxy;
+use zbus::names::InterfaceName;
 use zbus::proxy::CacheProperties;
 
 const TIMEDATE: &str = "org.freedesktop.timedate1";
@@ -45,17 +46,27 @@ fn follow_jumps(daemon: Weak<Daemon>) -> std::io::Result<()> {
 async fn follow_zone(daemon: Arc<Daemon>) -> zbus::Result<()> {
     let system = zbus::Connection::system().await?;
     let proxy = PropertiesProxy::builder(&system).destination(TIMEDATE).path("/org/freedesktop/timedate1");
-    let mut changes =
-        proxy.cache_properties(CacheProperties::No).build().await?.receive_properties_changed().await?;
+    let props = proxy.cache_properties(CacheProperties::No).build().await?;
+    let mut changes = props.receive_properties_changed().await?;
+    let interface = InterfaceName::from_static_str_unchecked(TIMEDATE);
     while let Some(change) = changes.next().await {
-        let zone = |a: zbus::fdo::PropertiesChangedArgs<'_>| {
-            a.changed_properties().contains_key("Timezone")
-                || a.invalidated_properties().contains(&"Timezone")
-        };
-        if change.args().is_ok_and(zone) {
-            tokio::time::sleep(ZONE_SETTLES).await;
-            daemon.rotations.retime();
+        let Ok(args) = change.args() else { continue };
+        let given = args.changed_properties().get("Timezone").and_then(|v| <&str>::try_from(v).ok());
+        let given = given.map(String::from);
+        if given.is_none() && !args.invalidated_properties().contains(&"Timezone") {
+            continue;
         }
+        let name = match given {
+            Some(name) => Some(name),
+            None => {
+                props.get(interface.clone(), "Timezone").await.ok().and_then(|v| String::try_from(v).ok())
+            }
+        };
+        match name.filter(|name| !name.is_empty()) {
+            Some(name) => crate::zone::follow(&name),
+            None => tokio::time::sleep(ZONE_SETTLES).await,
+        }
+        daemon.rotations.retime();
     }
     Ok(())
 }

@@ -30,7 +30,7 @@ fn covering(states: &[u8]) -> bool {
 }
 
 impl State {
-    fn cover_outputs(&mut self) {
+    pub(crate) fn cover_outputs(&mut self) {
         for screen in &mut self.screens {
             let covered = self.toplevels.values().any(|t| t.covering && t.outputs.contains(&screen.output));
             if std::mem::replace(&mut screen.toplevel, covered) != covered {

@@ -10,6 +10,10 @@ model! {
         pub pointer: bool,
         #[serde(default)]
         pub title: String,
+        #[serde(default)]
+        pub key: String,
+        #[serde(default)]
+        pub granted: BTreeSet<Input>,
     }
 
     pub struct InputsReply {
@@ -23,6 +27,10 @@ model! {
         pub parallax: BTreeSet<String>,
         #[serde(default)]
         pub declined: BTreeMap<String, BTreeSet<Input>>,
+        #[serde(default)]
+        pub asking: BTreeMap<String, BTreeSet<Input>>,
+        #[serde(default)]
+        pub quiet: BTreeMap<String, BTreeSet<Input>>,
     }
 }
 

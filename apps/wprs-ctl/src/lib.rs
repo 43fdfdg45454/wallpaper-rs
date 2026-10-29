@@ -38,7 +38,7 @@ pub use cli::{Cli, Command};
 use clap::Parser;
 use std::fmt;
 use std::process::ExitCode;
-use wprs_client::explain;
+use wprs_client::{error_name, explain};
 
 #[derive(Debug)]
 pub struct Usage(pub String);
@@ -71,5 +71,9 @@ pub fn main() -> ExitCode {
     let Err(error) = result else { return ExitCode::SUCCESS };
     let error = error.downcast::<zbus::Error>().map_or_else(|e| e, explain);
     eprintln!("Error: {}", show::clean(&format!("{error:#}")));
-    ExitCode::from(if error.is::<Usage>() { 2 } else { 1 })
+    ExitCode::from(if misused(&error) { 2 } else { 1 })
+}
+
+fn misused(error: &anyhow::Error) -> bool {
+    error.is::<Usage>() || error_name(error) == Some("org.freedesktop.DBus.Error.InvalidArgs")
 }

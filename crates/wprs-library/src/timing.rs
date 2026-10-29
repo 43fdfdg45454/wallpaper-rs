@@ -22,25 +22,35 @@ fn local<Tz: TimeZone>(tz: &Tz, day: NaiveDate, time: NaiveTime) -> Option<DateT
         .map(|t| t.to_utc())
 }
 
-pub(crate) fn next_due<Tz: TimeZone>(rules: &Rules, after: DateTime<Utc>, tz: &Tz) -> Option<DateTime<Utc>> {
+fn timed<Tz: TimeZone>(rules: &Rules, after: DateTime<Utc>, tz: &Tz) -> Option<DateTime<Utc>> {
     let mut times = rules.at.clone();
     times.sort();
     let today = after.with_timezone(tz).date_naive();
-    let timed = days(rules, today)
-        .flat_map(|d| times.iter().filter_map(move |t| local(tz, d, *t)))
-        .find(|t| *t > after);
-    let every = TimeDelta::from_std(rules.interval).ok().filter(|d| !d.is_zero()).map(|d| after + d);
-    let every = every.and_then(|due| match days(rules, due.with_timezone(tz).date_naive()).next() {
-        Some(day) if day == due.with_timezone(tz).date_naive() => Some(due),
-        day => day.and_then(|day| local(tz, day, NaiveTime::MIN)),
-    });
-    timed.into_iter().chain(every).min()
+    days(rules, today).flat_map(|d| times.iter().filter_map(move |t| local(tz, d, *t))).find(|t| *t > after)
 }
 
-fn retimed<Tz: TimeZone>(rules: &Rules, old: Option<i64>, now: DateTime<Utc>, tz: &Tz) -> Option<i64> {
-    let every = TimeDelta::from_std(rules.interval).ok().filter(|d| !d.is_zero());
-    let kept = old.filter(|at| every.is_some_and(|d| *at <= (now + d).timestamp()));
-    kept.into_iter().chain(next_due(rules, now, tz).map(|t| t.timestamp())).min()
+fn every<Tz: TimeZone>(rules: &Rules, from: DateTime<Utc>, tz: &Tz) -> Option<DateTime<Utc>> {
+    let due = TimeDelta::from_std(rules.interval).ok().filter(|d| !d.is_zero()).map(|d| from + d)?;
+    match days(rules, due.with_timezone(tz).date_naive()).next() {
+        Some(day) if day == due.with_timezone(tz).date_naive() => Some(due),
+        day => day.and_then(|day| local(tz, day, NaiveTime::MIN)),
+    }
+}
+
+pub(crate) fn next_due<Tz: TimeZone>(rules: &Rules, after: DateTime<Utc>, tz: &Tz) -> Option<DateTime<Utc>> {
+    timed(rules, after, tz).into_iter().chain(every(rules, after, tz)).min()
+}
+
+fn retimed<Tz: TimeZone>(
+    rules: &Rules,
+    (since, next_at): (Option<DateTime<Utc>>, Option<i64>),
+    now: DateTime<Utc>,
+    tz: &Tz,
+) -> Option<i64> {
+    let interval = TimeDelta::from_std(rules.interval).unwrap_or_default();
+    let started = next_at.and_then(|at| DateTime::from_timestamp(at, 0)).map(|at| at - interval);
+    let from = since.into_iter().chain(started).max().filter(|at| *at <= now).unwrap_or(now);
+    timed(rules, now, tz).into_iter().chain(every(rules, from, tz)).min().map(|t| t.timestamp())
 }
 
 pub fn rotate<Tz: TimeZone>(
@@ -71,9 +81,10 @@ pub fn rotate<Tz: TimeZone>(
         None => {}
     }
     if step.is_some() || turn.start || row.next_at.is_none() {
+        row.state.restart(now);
         row.next_at = next_due(rules, now, tz).map(|t| t.timestamp());
     } else if turn.retime {
-        row.next_at = retimed(rules, row.next_at, now, tz);
+        row.next_at = retimed(rules, (row.state.since(), row.next_at), now, tz);
     }
     row.current = row.state.index(list).map(|i| uids[i].clone());
     step.is_some()
@@ -254,6 +265,8 @@ mod tests {
         let retime = |rules: &Rules, next_at: &str, tz: FixedOffset| {
             let mut row =
                 Rotation { next_at: Some(at(next_at).timestamp()), current: Some("a".into()), ..row() };
+            let since = rules.interval.as_secs() as i64;
+            row.state.restart(Utc.timestamp_opt(row.next_at.unwrap() - since.max(1800), 0).unwrap());
             let turn = Turn { live: true, retime: true, ..Turn::default() };
             let switched = rotate(&mut row, Some(&resolved.uids), &resolved, rules, turn, now, &tz);
             (switched, Utc.timestamp_opt(row.next_at.unwrap(), 0).unwrap().to_rfc3339())
@@ -267,5 +280,54 @@ mod tests {
         assert_eq!(retime(&half, "2026-10-21T05:10:00Z", east), (false, "2026-10-21T05:10:00+00:00".into()));
         assert_eq!(retime(&half, "2026-10-22T05:10:00Z", east), (false, "2026-10-21T05:30:00+00:00".into()));
         assert_eq!(retime(&half, "2026-10-21T04:50:00Z", east), (true, "2026-10-21T05:30:00+00:00".into()));
+        let both = rules(serde_json::json!({"interval": "1h", "at": ["09:00"]}));
+        let mut row = Rotation { current: Some("a".into()), ..row() };
+        let live = Turn { live: true, ..Turn::default() };
+        rotate(
+            &mut row,
+            Some(&resolved.uids),
+            &resolved,
+            &both,
+            Turn { start: true, ..live },
+            at("2026-10-21T08:30:00Z"),
+            &Utc,
+        );
+        assert_eq!(row.next_at, Some(at("2026-10-21T09:00:00Z").timestamp()));
+        let moved = Turn { retime: true, ..live };
+        let switched = rotate(
+            &mut row,
+            Some(&resolved.uids),
+            &resolved,
+            &both,
+            moved,
+            at("2026-10-21T08:40:00Z"),
+            &east,
+        );
+        assert_eq!((switched, row.next_at), (false, Some(at("2026-10-21T09:30:00Z").timestamp())));
+        let back = rotate(
+            &mut row,
+            Some(&resolved.uids),
+            &resolved,
+            &both,
+            moved,
+            at("2026-10-21T08:45:00Z"),
+            &west,
+        );
+        assert_eq!((back, row.next_at), (false, Some(at("2026-10-21T09:30:00Z").timestamp())));
+    }
+
+    #[test]
+    fn a_position_saved_before_its_last_start_does_not_switch_at_once() {
+        let (resolved, now) = (list(&["a", "b"], Order::Sequential), at("2026-10-21T05:00:00Z"));
+        let mut row = Rotation {
+            next_at: Some(at("2026-10-21T05:20:00Z").timestamp()),
+            current: Some("a".into()),
+            ..row()
+        };
+        row.state.restart(at("2026-10-18T05:00:00Z"));
+        let turn = Turn { live: true, retime: true, ..Turn::default() };
+        let east = FixedOffset::east_opt(3 * 3600).unwrap();
+        let switched = rotate(&mut row, Some(&resolved.uids), &resolved, &Rules::default(), turn, now, &east);
+        assert_eq!((switched, row.next_at), (false, Some(at("2026-10-21T05:20:00Z").timestamp())));
     }
 }

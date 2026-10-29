@@ -2,7 +2,7 @@ use crate::dmabuf::{self, Allocate, Dmabuf};
 use crate::frame::write_into;
 use crate::memfd;
 use crate::params::{self, Modifier};
-use crate::shared::{Shared, Slot, lock};
+use crate::shared::{Due, Shared, Slot, lock};
 use pipewire as pw;
 use pw::spa;
 use std::cell::{Cell, RefCell};
@@ -21,6 +21,8 @@ pub fn listen(
     (width, height): (u32, u32),
 ) -> Result<pw::stream::StreamListener<()>, pw::Error> {
     let (output, stride, gpu) = (output.to_owned(), width * 4, shared.gpu.get().cloned());
+    let timelines = shared.timelines.get().cloned();
+    let synced = timelines.is_some();
     let (fixed, spares) = (Rc::new(Cell::new(None)), Rc::new(RefCell::new(Vec::new())));
     let (on_param, on_add, on_remove, frames) = (slot.clone(), slot.clone(), slot.clone(), slot.clone());
     let (chosen, kept, allocator, changed) = (fixed.clone(), spares.clone(), gpu.clone(), shared.clone());
@@ -55,6 +57,7 @@ pub fn listen(
                 (Modifier::Choice(list), Some(gpu), _) => {
                     fixate(gpu, &on_param, (width, height), &list, &mut spares.borrow_mut())
                 }
+                (_, _, Some(_)) if synced && fixed.get().is_some() => params::synced(width, height),
                 (_, _, Some(_)) => vec![params::buffers(width, height, fixed.get().is_some())],
             };
             let mut pods: Vec<&spa::pod::Pod> =
@@ -78,9 +81,16 @@ pub fn listen(
             let spare = kept.borrow_mut().pop().filter(|d| d.modifier == modifier);
             let made = spare.or_else(|| gpu.allocate(width, height, &[modifier]));
             let mut pool = lock(&on_add.pool);
-            match made.is_some_and(|d| unsafe { dmabuf::add(buffer, d, height, &mut pool) }) {
-                true => drop(on_add.frame().take()),
-                false => {
+            match made.and_then(|d| unsafe { dmabuf::add(buffer, d, height, &mut pool) }) {
+                Some(index) => {
+                    drop(on_add.frame().take());
+                    let fenced =
+                        timelines.as_ref().map(|drm| unsafe { dmabuf::fence(buffer, drm, &mut pool, index) });
+                    if let Some(Err(e)) = fenced {
+                        tracing::warn!("cannot add explicit synchronization to a stream buffer: {e}");
+                    }
+                }
+                None => {
                     tracing::warn!(
                         "cannot allocate a GPU stream buffer, recreating the stream in shared memory"
                     );
@@ -93,13 +103,16 @@ pub fn listen(
             memfd::remove(buffer);
         })
         .process(move |stream, _| {
-            let starved = dmabuf::process(stream, &frames).unwrap_or_else(|| {
-                let dirty = frames.dirty.load(SeqCst);
-                let Some(mut buffer) = dirty.then(|| stream.dequeue_buffer()).flatten() else { return false };
-                frames.dirty.store(false, SeqCst);
-                let frame = frames.frame();
-                write_into(buffer.datas_mut(), frame.as_deref(), width, height);
-                frame.is_none()
+            let starved = dmabuf::process(stream, &frames).unwrap_or_else(|| match frames.due() {
+                Due::Missing => true,
+                Due::Sent => false,
+                Due::Ready(frame) => {
+                    if let (Some(mut buffer), Some(frame)) = (stream.dequeue_buffer(), frame.as_deref()) {
+                        frames.dirty.store(false, SeqCst);
+                        write_into(buffer.datas_mut(), frame, width, height);
+                    }
+                    false
+                }
             });
             changed.changed.fetch_or(starved, SeqCst);
         })

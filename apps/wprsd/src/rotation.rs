@@ -1,6 +1,6 @@
 use crate::compositor::lock;
 use crate::daemon::{Daemon, State};
-use crate::error::Error;
+use crate::error::{Error, Result};
 use crate::timing::{Turn, rotate};
 use crate::zone::Zone;
 use chrono::Utc;
@@ -24,9 +24,12 @@ pub struct Playing {
     pub transition: Option<Duration>,
 }
 
+type Lists = HashMap<String, Vec<String>>;
+
 #[derive(Default)]
 pub struct Rotations {
-    lists: Mutex<HashMap<String, Vec<String>>>,
+    pub(crate) lists: Mutex<Lists>,
+    pub(crate) unsaved: Mutex<Vec<Rotation>>,
     due: Mutex<Option<i64>>,
     retime: AtomicBool,
     pub wake: Notify,
@@ -65,11 +68,13 @@ fn unresolved(uid: &str, error: &str) -> Playing {
     Playing { playlist, item: None, path: None, error: Some(error.into()), transition: None }
 }
 
-impl Rotations {
-    pub fn known(&self, keys: &[String]) {
-        lock(&self.lists).extend(keys.iter().map(|key| (key.clone(), Vec::new())));
-    }
+pub fn newest(stored: Vec<Rotation>, unsaved: &[Rotation]) -> Vec<Rotation> {
+    let same = |a: &Rotation, b: &Rotation| a.output == b.output && a.playlist == b.playlist;
+    let kept = stored.into_iter().filter(|r| !unsaved.iter().any(|u| same(r, u)));
+    kept.chain(unsaved.iter().cloned()).collect()
+}
 
+impl Rotations {
     pub fn retime(&self) {
         self.retime.store(true, Ordering::Relaxed);
         self.wake.notify_one();
@@ -121,9 +126,17 @@ impl Daemon {
     }
 
     pub fn show(&self, act: Act<'_>) -> Option<i64> {
-        let (changed, due) = self.sync(act);
+        self.show_after(act, || Ok(())).unwrap_or_default()
+    }
+
+    pub fn show_after(&self, act: Act<'_>, before: impl FnOnce() -> Result<()>) -> Result<Option<i64>> {
+        let (changed, due) = {
+            let mut lists = lock(&self.rotations.lists);
+            before()?;
+            self.synced(&mut lists, act)
+        };
         changed.iter().for_each(|o| drop(self.configure_output(o)));
-        due
+        Ok(due)
     }
 
     fn read(
@@ -148,10 +161,14 @@ impl Daemon {
     }
 
     fn sync(&self, act: Act<'_>) -> (Vec<String>, Option<i64>) {
-        let mut lists = lock(&self.rotations.lists);
+        self.synced(&mut lock(&self.rotations.lists), act)
+    }
+
+    fn synced(&self, lists: &mut Lists, act: Act<'_>) -> (Vec<String>, Option<i64>) {
         let (now, retime) = (Utc::now(), self.rotations.retime.swap(false, Ordering::Relaxed));
         let ((assigned, on_battery), before) = (self.fingerprint(), self.state().playing.clone());
-        let (rows, found) = self.read(&assigned, on_battery, now.timestamp());
+        let (stored, found) = self.read(&assigned, on_battery, now.timestamp());
+        let rows = newest(stored.clone(), &lock(&self.rotations.unsaved));
         let mut groups: BTreeMap<String, (String, Vec<(String, bool)>)> = BTreeMap::new();
         for (output, uid, active) in assigned {
             let synced = matches!(found.get(&uid), Some(Ok((info, _))) if info.rules.synced);
@@ -167,8 +184,9 @@ impl Daemon {
                     continue;
                 }
             };
-            let stored = rows.iter().find(|r| r.output == key && r.playlist == uid).cloned();
-            let mut row = stored.clone().unwrap_or_else(|| {
+            let ours = |r: &&Rotation| r.output == key && r.playlist == uid;
+            let (saved, kept) = (stored.iter().find(ours), rows.iter().find(ours).cloned());
+            let mut row = kept.unwrap_or_else(|| {
                 let state = PlaylistState::new(seed());
                 Rotation { output: key.clone(), playlist: uid.clone(), state, next_at: None, current: None }
             });
@@ -183,7 +201,7 @@ impl Daemon {
             let last = lists.get(&key).map(Vec::as_slice);
             let switched = rotate(&mut row, last, resolved, &info.rules, turn, now, &Zone);
             lists.insert(key, resolved.uids.clone());
-            if stored.as_ref() != Some(&row) {
+            if saved != Some(&row) {
                 saves.push(row.clone());
             }
             due = due.into_iter().chain(row.next_at.filter(|_| live && !resolved.uids.is_empty())).min();
@@ -219,7 +237,10 @@ impl Daemon {
                 saves.iter().try_for_each(|row| lib.save_rotation(row))?;
                 used.iter().try_for_each(|(item, output)| lib.mark_used(item, output, now.timestamp()))
             });
-            saved.unwrap_or_else(|e| tracing::warn!("cannot save the playlist position: {e}"));
+            if let Err(e) = &saved {
+                tracing::warn!("cannot save the playlist position; it is kept until it can be saved: {e}");
+            }
+            *lock(&self.rotations.unsaved) = if saved.is_ok() { Vec::new() } else { saves };
         }
         let moved = |o: &String| {
             before.get(o).map(|p| (&p.path, p.transition)) != Some((&playing[o].path, playing[o].transition))
@@ -236,5 +257,25 @@ impl Daemon {
             self.changes.changed("library", used.into_iter().map(|(item, _)| item).collect());
         }
         (changed, due)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_position_that_could_not_be_saved_is_used_instead_of_the_stored_one() {
+        let row = |output: &str, next_at: i64| Rotation {
+            output: output.into(),
+            playlist: "P".into(),
+            state: PlaylistState::new(1),
+            next_at: Some(next_at),
+            current: None,
+        };
+        let stored = vec![row("DP-1", 100), row("DP-2", 100)];
+        let merged = newest(stored, &[row("DP-1", 200), row("HDMI-A-1", 300)]);
+        let seen: Vec<(&str, Option<i64>)> = merged.iter().map(|r| (r.output.as_str(), r.next_at)).collect();
+        assert_eq!(seen, [("DP-2", Some(100)), ("DP-1", Some(200)), ("HDMI-A-1", Some(300))]);
     }
 }

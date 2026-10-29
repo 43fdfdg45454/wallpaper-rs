@@ -1,10 +1,10 @@
 use crate::cli::Wait;
 use crate::daemon::job;
-use crate::input::confirm;
+use crate::input::{confirm, typed};
 use crate::show::{self, bytes, table, text, when};
 use anyhow::{Result, bail};
 use futures_util::TryFutureExt;
-use std::io::{self, BufRead, IsTerminal};
+use std::io::{self, IsTerminal};
 use std::time::Duration;
 use wprs_client::{Client, explain, parse};
 use wprs_core::model::{AccountReply, JobReply, JobState};
@@ -73,7 +73,7 @@ pub async fn approve(client: &Client, code: &str, yes: bool, wait: &Wait) -> Res
             ("requested", requested)
         ])
     );
-    if !yes && !confirm("Approve this device?")? {
+    if !yes && !confirm("Approve this device?").await? {
         bail!("not approved");
     }
     job(client, sync.approve(code).map_ok(|id| ((), id)), wait).await
@@ -95,8 +95,7 @@ pub async fn join(client: &Client, device: &str, wait: &Wait) -> Result<()> {
             match io::stdin().is_terminal() {
                 true => {
                     eprint!("Type the code that {device} shows, or nothing to stop: ");
-                    let mut typed = String::new();
-                    io::stdin().lock().read_line(&mut typed)?;
+                    let typed = typed().await?;
                     if typed.trim().is_empty() {
                         client.daemon.cancel_job(id).await.map_err(explain)?;
                         bail!("the key was not taken");
@@ -132,8 +131,7 @@ pub async fn share(client: &Client, device: &str, wait: &Wait) -> Result<()> {
         return Ok(());
     }
     eprint!("Type the code that {device} shows, or nothing to stop: ");
-    let mut typed = String::new();
-    io::stdin().lock().read_line(&mut typed)?;
+    let typed = typed().await?;
     if typed.trim().is_empty() {
         bail!("the key was not shared");
     }

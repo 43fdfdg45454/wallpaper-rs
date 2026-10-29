@@ -100,6 +100,7 @@ impl Daemon {
             self.changes.changed("profiles", Vec::new());
             return Ok(());
         }
+        let _packages = crate::compositor::lock(&crate::packages::PACKAGES);
         let profile = model(self.store.read(|lib| lib.profile(key.trim()))?, None);
         let found = self.store.read(|lib| {
             let found = profile.outputs.iter().map(|(name, o)| {

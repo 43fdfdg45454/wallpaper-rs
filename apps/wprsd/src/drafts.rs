@@ -26,6 +26,7 @@ pub(crate) struct Draft {
     pub(crate) pack: Arc<ScenePack>,
     pub(crate) hold: Option<f64>,
     document: String,
+    trusted: bool,
     at: Instant,
 }
 
@@ -34,7 +35,7 @@ fn kind(path: &str) -> String {
 }
 
 impl Daemon {
-    fn draft_pack(&self, dir: &Path, document: &str) -> Result<ScenePack> {
+    fn draft_pack(&self, dir: &Path, document: &str, trusted: bool) -> Result<ScenePack> {
         let doc: Value = serde_json::from_str(document).map_err(|e| invalid(e.to_string()))?;
         let manifest: Manifest =
             serde_json::from_value(doc["manifest"].clone()).map_err(|e| invalid(e.to_string()))?;
@@ -106,6 +107,10 @@ impl Daemon {
         let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
         let (path, presets) = (dir.clone(), m.presets);
         let props = Props { path, id, version, title, kind: "scene", languages, properties, presets };
+        let key = match crate::scenes::listens(&scene, &scripts) {
+            true => crate::inputs::draft_key(&dir, document, &scripts, trusted),
+            false => String::new(),
+        };
         let (props, scene) = (Arc::new(props), Arc::new(scene));
         Ok(ScenePack {
             path: dir,
@@ -119,6 +124,7 @@ impl Daemon {
             scripts,
             labels,
             inputs,
+            key,
         })
     }
 
@@ -126,7 +132,7 @@ impl Daemon {
         self: &Arc<Self>,
         output: &str,
         dir: &Path,
-        document: &str,
+        (document, trusted): (&str, bool),
         time: f64,
     ) -> Result<()> {
         let outputs: Vec<String> = match output.trim() {
@@ -144,9 +150,9 @@ impl Daemon {
                     .state()
                     .drafts
                     .values()
-                    .find(|d| d.document == document && d.pack.path == dir)
+                    .find(|d| d.document == document && d.pack.path == dir && d.trusted == trusted)
                     .map(|d| d.pack.clone());
-                Some(found.map_or_else(|| self.draft_pack(&dir, document).map(Arc::new), Ok)?)
+                Some(found.map_or_else(|| self.draft_pack(&dir, document, trusted).map(Arc::new), Ok)?)
             }
         };
         let started = {
@@ -155,8 +161,8 @@ impl Daemon {
             for output in &outputs {
                 match &pack {
                     Some(pack) => {
-                        let draft =
-                            Draft { pack: pack.clone(), hold, document: document.into(), at: Instant::now() };
+                        let (pack, document, at) = (pack.clone(), document.into(), Instant::now());
+                        let draft = Draft { pack, hold, document, trusted, at };
                         started |= st.drafts.insert(output.clone(), draft).is_none();
                     }
                     None => drop(st.drafts.remove(output)),

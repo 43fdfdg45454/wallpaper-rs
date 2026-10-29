@@ -28,6 +28,14 @@ impl PlaylistState {
         self.cycle
     }
 
+    pub fn since(&self) -> Option<DateTime<Utc>> {
+        self.since
+    }
+
+    pub fn restart(&mut self, now: DateTime<Utc>) {
+        self.since = Some(now);
+    }
+
     pub fn index(&self, playlist: &Playlist) -> Option<usize> {
         let len = playlist.items.len();
         (len > 0).then(|| match playlist.order {

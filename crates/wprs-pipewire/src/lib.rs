@@ -10,6 +10,7 @@ mod pool;
 mod shared;
 mod state;
 mod stream;
+mod syncobj;
 
 use pipewire as pw;
 use shared::{Shared, Slot};

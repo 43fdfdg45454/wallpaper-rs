@@ -67,3 +67,43 @@ fn every_documented_member_exists_and_the_reverse() {
         assert_eq!(documented, served, "{name}");
     }
 }
+
+#[test]
+fn qml_signal_handlers_take_every_argument_or_none() {
+    let served = [
+        introspect(&Service(Weak::new())),
+        introspect(&Library(Weak::new())),
+        introspect(&Repos(Weak::new())),
+    ];
+    let signals: Vec<(String, usize)> = (served.iter().flat_map(|xml| members(xml)))
+        .filter_map(|m| {
+            let (name, args) = m.strip_prefix("Signal `")?.split_once('(')?;
+            Some((name.to_owned(), args.trim_end_matches(")`").split(", ").filter(|a| !a.is_empty()).count()))
+        })
+        .collect();
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+    let mut checked = 0;
+    for dir in ["integrations/plasma-tray", "integrations/plasma-wallpaper", "apps/wprs-app/qml"] {
+        let files = walk(&std::path::Path::new(root).join(dir));
+        for text in files.iter().filter_map(|f| std::fs::read_to_string(f).ok()) {
+            for handler in text.split("function dbus").skip(1) {
+                let (name, rest) = handler.split_once('(').unwrap();
+                let count =
+                    rest.split(')').next().unwrap().split(',').filter(|a| !a.trim().is_empty()).count();
+                if let Some((_, wanted)) = signals.iter().find(|(signal, _)| signal == name) {
+                    assert!(count == 0 || count == *wanted, "dbus{name} takes {count} of {wanted} arguments");
+                    checked += 1;
+                }
+            }
+        }
+    }
+    assert!(checked >= 4, "only {checked} handlers found");
+}
+
+fn walk(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let entries = std::fs::read_dir(dir).into_iter().flatten().flatten().map(|e| e.path());
+    entries
+        .flat_map(|p| if p.is_dir() { walk(&p) } else { vec![p] })
+        .filter(|p| p.extension().is_some_and(|e| e == "qml"))
+        .collect()
+}

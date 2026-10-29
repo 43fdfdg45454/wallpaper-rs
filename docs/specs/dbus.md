@@ -19,13 +19,16 @@ replacement. A second daemon checks the name before initializing the GPU and Pip
 at once with an error saying that another wprsd owns it.
 
 A panic in any thread of the daemon, a lost GPU device, a GPU that stops responding or a Wayland
-protocol error from the compositor makes the daemon exit with status 70; the user unit restarts
+protocol error from the compositor makes the daemon exit with status 70 at once, without running the
+exit handlers of the libraries it uses (a GPU driver that stopped answering cannot hang it there),
+and the end of the display server connection with status 0 the same way; the user unit restarts
 it (`Restart=on-failure`, at most 5 starts in 60 s) and clients get their streams again through
 `RequestStream`. Only the methods that change what is shown (`Library1.Apply`,
 `Playlists1.Start`, `Stop`, `Next` and `Previous`, `Profiles1.Activate` and the `Daemon1` methods
 that change something) need the renderer: while it is not running they return `Failed` (`the
 renderer stopped after an error; restart wprsd`) and change nothing. Every other method keeps
-working.
+working. Debug builds started with `WPRS_RENDER_STOP=1` stop their renderer on `SIGUSR2`, so tests
+can check this.
 
 The daemon opens network connections only to the providers, repositories and the sync server
 the user added (including the signed mirrors of a repository, the only hosts a repository request
@@ -76,7 +79,8 @@ Every error carries a readable English message.
 | `io.github.wallpaper_rs.Error.Stale` | A repository's signed index expired; retry with `allow_stale = true` after asking the user |
 | `io.github.wallpaper_rs.Error.Conflict` | A playlist edit by index found other entries than expected: `the playlist changed; reload it` |
 | `io.github.wallpaper_rs.Error.Newer` | A package needs a newer wallpaper-rs: a newer manifest version, a `requires.engine` this version does not meet or a feature of `requires.features` it does not know (see `package.md`) |
-| `io.github.wallpaper_rs.Error.Unconfirmed` | `Apply` of a photosensitive package the user has not allowed yet (`this wallpaper flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy; the user has not allowed it yet`); ask, then call `Confirm(uids, "photosensitive")` and apply again |
+| `io.github.wallpaper_rs.Error.Unconfirmed` | `Apply` of a photosensitive package the user has not allowed yet (`this wallpaper flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy; the user has not allowed it yet`); ask, then call `Confirm(uids, "photosensitive")` and apply again. `Grant`/`GrantPackage` from a caller that must be confirmed: the user is asked in a desktop notification; treat it as pending, not as a failure |
+| `org.freedesktop.DBus.Error.AccessDenied` | `Grant`/`GrantPackage` while the same question rests after the user answered *Not now*, closed the notification or left it unanswered (ten minutes, listed in `GetInputs().quiet`), or with no notification service to ask; `SetPointer` from a caller that may not report the pointer |
 
 If `library.db` cannot be opened (for example because a newer build wrote it), the daemon still
 renders, `GetState().library_error` holds the reason and every `Library1`, `Playlists1` and
@@ -97,8 +101,12 @@ A stream exists while at least one claim holds it. Claims are kept per output an
   the caller; there is at most one per output. `ReleaseStream` from a client without a claim on
   that output removes the held claim.
 - When a client leaves the bus (`NameOwnerChanged` with an empty new owner), all its claims are
-  removed, even if it never called `ReleaseStream`.
+  removed, even if it never called `ReleaseStream`, and the outputs that use the `span` fit are placed
+  again without the streams that went away.
 - The stream is destroyed when its last claim is removed.
+- A name that the daemon shows on its own layer-shell or X11 surface (see below) is not a stream:
+  `RequestStream` and `HoldStream` return `InvalidArgs` for it. When such a screen appears with the
+  name of an existing stream, that stream is closed and its claims are dropped.
 
 Coverage is also tracked per claimant. An output counts as covered only when every claimant
 reports it covered. `SetOutputCovered` from a client without a claim applies to the held claim.
@@ -115,25 +123,41 @@ are named after the compositor's output names or the RandR monitor names and app
 `GetState` like streams, with one claim owned by the daemon: `ReleaseStream` and
 `SetOutputCovered` do not apply to them. They count as covered while the compositor stops
 sending frame callbacks, while an active fullscreen or maximized window is on them, on Hyprland
-while their workspace has a fullscreen window, or in X11 while a window shown on the current
-desktop is fullscreen or maximized on them; `pause.when_covered` then pauses their video as for
-streams. In X11, still images also become the root window background (`_XROOTPMAP_ID` and
+while their workspace has a fullscreen window, on COSMIC while its overlap notices
+(`zcosmic_overlap_notify_v1`) show windows that, with the panels that reserve space, cover the whole
+surface, or in X11 while a window shown on the current desktop is fullscreen or maximized on them,
+while the windows shown on the current desktop cover the monitor together (tiled windows) or while
+the desktop window is fully obscured (`VisibilityNotify`, without a compositing manager);
+`pause.when_covered` then pauses their video as for streams. In X11, still images also become the root window background (`_XROOTPMAP_ID` and
 `ESETROOT_PMAP_ID`).
 
 An output that appears, changes or disappears is applied once it has stayed the same for 0.5 s: an
 output that the compositor reports twice, removes and adds back, or announces for a moment with a
 zero size keeps its wallpaper, its playback and a single surface; a layer surface without a size
-is shown only once the compositor gives it one. When the compositor closes the connection the
+is shown only once the compositor gives it one. A new surface reports its own coverage at once, so
+a screen that comes back is never left covered by a notice about the surface it replaced. When the
+compositor closes the layer surface of an output that stays connected, the daemon creates it again,
+at most three times a minute for each output; a fourth close within the minute waits until that
+minute has passed and then creates it again. When the compositor closes the connection the
 daemon exits with status 0; a protocol error ends it with status 70 so that the user unit starts
 it again. In X11, an exposed desktop window is drawn again from the last frame, so a paused video
 stays paused. The desktop windows are managed by the window manager when it announces
 `_NET_WM_WINDOW_TYPE_DESKTOP` in `_NET_SUPPORTED`, and are *override-redirect* windows kept at
-the bottom otherwise; the daemon replaces them when a window manager starts or stops.
+the bottom otherwise; the daemon replaces them when a window manager starts or stops. The desktop
+window of another program, such as the icons of a file manager, stays above the wallpaper: the
+daemon asks the window manager to stack its own windows below it (`_NET_RESTACK_WINDOW`, three times
+in 10 s at most for each pair), and an opaque one that fills a monitor covers it. Without a window
+manager, when another program keeps its own window at the bottom, the daemon lowers its windows
+again three times in 10 s at most and then leaves the bottom to that window. When the root window
+changes size, the root background is painted again.
 
 ## Frame rate
 
-Every output knows the refresh rate of its screen: layer-shell outputs take it from the current
-mode of their `wl_output`, X11 outputs from the RandR mode of their CRTCs (the fastest when a
+Every output knows the refresh rate of its screen: layer-shell outputs take it from the presentation
+feedback of their surface (`wp_presentation`, asked for once after the surface is created or changes,
+and again when the current mode changes its rate, which drops the rate measured in the old mode)
+when the compositor gives a refresh period, and from the current mode of their `wl_output` otherwise,
+X11 outputs from the RandR mode of their CRTCs (the fastest when a
 monitor spans several) and streams from the current mode of the `wl_output` with the same name
 while the daemon is connected to the Wayland compositor, which on Plasma is KWin's own output
 information. With variable refresh the mode gives the highest rate. An output never renders more
@@ -152,7 +176,14 @@ often than the lowest of:
 A fade between two wallpapers runs at 60 frames per second on mains power, or faster when the
 rate above is higher, never above a known refresh rate; on battery it keeps the rate above.
 Videos play at their own frame rate and drop the frames above the rate of the fastest output that
-shows them, never repeating one. Nothing is rendered while nothing changes, whatever the rate.
+shows them, never repeating one. Nothing is rendered while nothing changes, whatever the rate. A
+frame that cannot be drawn is tried again 1 s later, then after twice as long each time up to once a
+minute, until it is drawn or the picture, the size or the surface changes, which is drawn at once.
+
+The renderer uses Vulkan and opens OpenGL ES through EGL only when Vulkan offers no adapter or only a
+software one (`WGPU_BACKEND` chooses one instead). A swapchain that the driver reports as
+suboptimal is configured again, with the present modes and formats it offers then, right after the
+frame it gave.
 
 ## Stream buffers
 
@@ -166,6 +197,11 @@ Each stream offers its consumers two formats, in this order:
    choose one and announces the format again with that modifier fixed. The buffers are then
    `SPA_DATA_DmaBuf`, one plane each, with the offset and stride of the plane in their chunk.
 2. Shared memory: the same format without a modifier, one memfd per buffer mapped from offset 0.
+
+A consumer never gets a placeholder picture: until a frame has been drawn into shared memory (for
+example right after GPU memory was used, or when a stream is made again in shared memory) nothing is
+sent and the output renders at once. The picture kept for shared memory is freed while no consumer
+streams the output.
 
 With GPU memory, each frame is drawn straight into one of the 4 to 8 stream buffers: the CPU
 neither reads it back nor copies it, and a video frame is uploaded to the GPU once and leaves in
@@ -188,6 +224,13 @@ The stream uses shared memory, without any action from the consumer, when:
   consumer shared memory; a failure for a fifth or later buffer recreates the stream in shared
   memory. The stream then offers shared memory only, and new streams of that output do too for a
   minute.
+
+With `WPRS_SYNCOBJ=1`, when a DRM render node offers timeline synchronization objects, the GPU
+buffers also offer explicit synchronization to consumers and PipeWire versions that support it
+(`SPA_META_SyncTimeline`, two `SyncObj` blocks after the image): the daemon signals the acquire point
+of a buffer once its frame is finished and draws into it again only after the consumer signalled its
+release point, at once when the consumer did not schedule one, or after one second. Otherwise the
+buffers rely on the implicit synchronization of DMA-BUFs.
 
 GPU memory stays in use on battery, since it only removes work. All consumers of one stream share
 its buffers: the first consumer decides their kind, a consumer that links later receives the same
@@ -249,7 +292,8 @@ See "Streams and claims".
 Tells the daemon where the screen of `output` sits, for the `span` fit and the per-screen crops of
 edits (see "Edits and spanning"). `x`, `y`, `width` and `height` are its logical position and
 size in the desktop layout, `scale` its device pixel ratio (`0.1` to `16`), `px_per_mm` its
-density in physical pixels per millimetre (`0` when unknown) and `identity` the maker, model and
+density in physical pixels per millimetre (`0` when unknown; a density that is not a number or is
+outside `0` to `1000` counts as unknown and the rest is kept) and `identity` the maker, model and
 serial number of the monitor (at most 256 bytes, no control characters). The desktop
 integration calls it after every successful `RequestStream`; layer-shell outputs take the same
 values from `wl_output` and `xdg_output`, and X11 outputs from RandR. `NotFound` when `output`
@@ -416,7 +460,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `pause.when_covered` | pause while a maximized or fullscreen window covers the output | `true` |
 | `pause.on_battery` | pause while running on battery | `true` |
 | `pause.when_locked` | pause while the screen is locked; whatever it says, videos are muted and scenes play no sound while it is locked | `true` |
-| `library.watch` | rescan folder sources when files in them change, one scan per source at most every 5 s | `true` |
+| `library.watch` | rescan folder sources when files in them change (a new file once it is written, a hard or symbolic link, a moved, renamed or removed folder), one scan per source at most every 5 s; a change during a scan of the same source starts another scan after it | `true` |
 | `library.thumb_cache_mb` | `64` to `8192`, size of the thumbnail cache | `512` |
 | `library.hide_mature` | leave packages rated `mature` out of `Search` (unless the query has its own `content:` filter; `SearchPage.query` stays the one given) and `Browse`; a change emits `library` and `repos` | `false` |
 | `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
@@ -669,7 +713,9 @@ missing, has an `error` (invalid packages), or is a revoked package, and `Unconf
 is a photosensitive package the user has not confirmed: clients warn that it flashes or shows
 fast patterns that can trigger seizures, and apply it only after the user agrees. The item's path,
 the effective fit and background and the preset uid (as a label) are written to the affected
-configuration sections, and the use is recorded once per affected connected output. Image and
+configuration sections, and the use is recorded once per affected connected output; when the
+library cannot record it (a full disk, a locked database), the item stays shown, the call
+succeeds and the daemon logs a warning. Image and
 video packages show their entry: it is copied once to `~/.cache/wallpaper-rs/blobs/`. Scene
 packages are rendered live (see "Scenes"); the videos they contain are copied there once.
 
@@ -701,13 +747,19 @@ daemon and needs no client:
 - When the wall clock is set or the time zone changes (`org.freedesktop.timedate1` reports a new
   `Timezone`; in the Flatpak, whose `/etc/localtime` keeps the zone the sandbox started with, the
   daemon follows `/run/host/monitor/timezone` instead), the next `at` time is computed again at
-  once; an interval keeps its next switch unless the clock moved back past it, and an overdue
-  switch happens once.
+  once in the new zone, from the zone name the signal carries; an interval keeps counting from
+  the last switch (or start, also one recorded by an older version that kept only the next switch
+  time) unless the clock moved back past it, so a playlist with both an
+  interval and `at` times never switches at an `at` time of the old zone, and an overdue switch
+  happens once.
 - While a `scan`, `import`, `analyze` or `provider_sync` job runs, library changes resolve the
   playlists shown at most once every 3 seconds.
 - Each output has its own position (`synced = false`), or every output showing the playlist
   shares one (`synced = true`) and shows the same item. Positions are kept in the library, so a
-  restart shows the same item (`resume = true`) or the next one (`resume = false`).
+  restart shows the same item (`resume = true`) or the next one (`resume = false`). A position
+  that cannot be saved (a full disk, a locked library) is kept in memory and saved with the next
+  change, so later library changes never switch the playlist again. `Start` moves a playlist
+  with `resume = false` exactly one item, and `SetRule` waits for a switch in progress.
 - Adding, removing or reordering items, or a scan, never changes the item shown; if that item
   is gone, the item at its position is shown. Shuffled playlists never repeat an item within a
   cycle.
@@ -792,7 +844,8 @@ Assigns the playlist to `output` (`""` = every output, clearing the wallpapers a
 single outputs), writes it as `playlist` of that configuration section and clears its `image`
 and `preset`, then shows the current or first item at once (the next one with `resume = false`)
 and restarts the interval. `Failed` (`the playlist has no items to show`) when nothing is
-playable; nothing changes then.
+playable; nothing changes then. The assignment and the first switch happen together, so a
+playlist with `resume = false` moves exactly one item.
 
 ### `Stop(s output)`
 
@@ -829,7 +882,8 @@ known does not end a hold. The choice also survives a restart of the daemon: the
 with `Activate` (or cleared with `""`) and the connected outputs and power source at that moment
 are kept in `~/.local/share/wallpaper-rs/profile-hold.json` (`0600`) until the outputs or the
 power source differ from them. A moment without any output, as while the daemon starts, does not
-end the hold.
+end the hold. A manual `Activate` and an automatic activation never overlap: an automatic one
+that was about to start when the user chose a profile waits, then sees the hold and does nothing.
 
 ### `List() → (s json)`
 
@@ -902,8 +956,12 @@ Only `Add` with a secret, `SetSecret`, `ForgetSecret`, `Set` of `url`, `server` 
 then return `KeyringUnavailable` (`unlock the keyring and try again`) without storing or
 deleting anything. Clients call `Add` and `SetSecret` with a timeout of 120 s. A Secret Service
 that does not answer gives `KeyringUnavailable` (`the keyring did not answer in time`) after
-10 s for lookups (`List` then reports `has_secret = false`, and scheduled syncs wait for their
-next due time) and after 100 s for writes, deletions and reads that may prompt.
+10 s for lookups and after 100 s for writes, deletions and reads that may prompt; after a lookup
+times out, the lookups of the next 60 s fail at once, so scheduled syncs never wait for it again
+and wait for their next due time. `List` waits at most 1 s for the keyring: a provider whose
+lookup has not answered by then is listed with the last answer the daemon saw in this session,
+or with `has_secret = false` and state `locked` when there is none, and `Changed("providers")`
+follows if the late answer differs.
 
 URL options (`url`, `server`) must be `https://`, or `http://` to this computer; any other
 `http://` URL needs the option `allow_plain_http = true`, given explicitly. URLs with user
@@ -947,7 +1005,8 @@ is deleted when that needs no unlock prompt; when the keyring is locked, `Add` r
 item) or to unlock the keyring and add the provider again. `InvalidArgs` for an invalid id,
 an unknown kind, option or value, a missing required option, an option named like a secret
 (`password`, `api_key`, `token`, `secret`), a refused URL, or a secret given to a kind without
-one; `Exists` for a taken id.
+one; `Exists` for a taken id, also while another `Add` of the same id is running (the second call
+never touches the keyring).
 
 ### `Set(s id, s key, s value)`
 
@@ -1044,7 +1103,9 @@ versions relink the same item, keeping its title, tags, rating, presets and play
 ### `Uninstall(s id, s version)`
 
 Uninstalls one version, or every version for `version = ""`. `Failed` when one of them is shown
-on an output. When the version linked to the library item goes, the item moves to the newest
+on an output. `Uninstall`, `Library1.Apply`, `Profiles1.Activate` and the last step of an `install`
+job never run at the same time, so an item is never shown after its package is removed, and an
+install whose package was removed meanwhile fails instead of leaving an item without its file. When the version linked to the library item goes, the item moves to the newest
 remaining version, or is removed with its thumbnails when none remains.
 
 ### `ListInstalled() → (s json)`
@@ -1062,8 +1123,14 @@ package, no preview, or a failed download or check).
 ## `io.github.wallpaper_rs.Inputs1`
 
 Scenes may follow the sound that plays and the pointer. Both inputs are off for every scene until
-the user grants them to that scene; grants are kept per scene package id in
-`~/.local/share/wallpaper-rs/inputs.json` (mode `0600`) and can be revoked at any time. A scene
+the user grants them to that scene; grants are kept in `~/.local/share/wallpaper-rs/inputs.json`
+(mode `0600`) per scene package id and per package: the signing key of a package installed from a
+repository (`key:<fingerprint>`, so its updates keep the grant), the SHA-256 of the file of any other
+package (`sha256:<hex>`) or, for a scene previewed from a folder, the SHA-256 of the folder path
+(`folder:<hex>`) when the app or `wprs-ctl` (identified as for `Grant`) asked for the preview, so
+that edits keep the grant, and the SHA-256 of the folder path, the document and the script sources
+(`draft:<hex>`) when another caller did. Another package with the same id never inherits a grant, and the grants written by
+older versions, kept by id only, are asked for again. Grants can be revoked at any time. A scene
 never follows the sound it plays itself: sound layers cannot take their values from the analysis. A
 still image whose depth parallax has `source` `pointer` (see "Edits and spanning") also uses the
 pointer: choosing that source for that image is the user's consent, so it needs no grant, and it
@@ -1073,8 +1140,8 @@ An input is on only while an output shows a scene that declares it and holds the
 pointer parallax image that moves: not under reduced motion, nor with software rendering unless
 `playback.software_parallax` is set), the screen is unlocked (whatever `pause.when_locked`
 says) and that output is active (not paused, and not covered while `pause.when_covered` holds);
-the pointer also stops while the output is covered. Revoking, locking, pausing or hiding the
-scene or image stops it at once.
+both inputs also stop while the output is covered, whatever `pause.when_covered` says. Revoking,
+locking, pausing, covering or hiding the scene or image stops it at once.
 
 - Audio: the daemon captures the monitor of the default output device through a PipeWire
   stream named "wallpaper-rs audio analysis" (desktop microphone indicators may show it) and
@@ -1091,28 +1158,67 @@ scene or image stops it at once.
 
 ### `Grant(s scene, s input)`
 
-Lets the scene with package id `scene` use `input`, `audio` or `pointer`, whenever it is shown.
-`InvalidArgs` for another input or a malformed id (1 to 255 characters of `a-z`, `0-9`, `.`,
-`_`, `-`). Granting twice changes nothing.
+Lets the scene package with id `scene` that an output shows now use `input`, `audio` or `pointer`,
+whenever it is shown. A package that already has the input gets it again at once, from any caller
+and without asking. `InvalidArgs` for another input or a malformed id (1 to 255 characters of
+`a-z`, `0-9`, `.`, `_`, `-`) and while the outputs show more than one package with that id (other
+versions, signers or files), which `GrantPackage` tells apart; `NotFound` while no output shows a
+scene with that id. Granting twice changes nothing.
+
+Only the app, the tray and `wprs-ctl` grant at once: the daemon reads the executable of the calling
+process (from the process id that the bus gives) and accepts the `wprs-ctl` and `wprs-app` next to
+its own executable and the Plasma shell that runs the tray, a system file found on `PATH`. For any
+other caller, and for every caller of the Flatpak, where the daemon cannot see the processes outside
+its sandbox, it asks the user in a desktop notification (`org.freedesktop.Notifications`) with
+*Allow* and *Not now*, returns `Unconfirmed` (`the user is asked in a notification; the input is
+granted once allowed`) and applies the answer when it comes to the package the notification named:
+*Allow* grants it while an output still shows it, *Not now* records the decline as `Revoke` does
+but takes the input back only from the package the notification named, never from another package
+with the same id, and a notification closed or left unanswered for two minutes changes nothing. The
+notification carries the icon and desktop entry `io.github.wallpaper_rs` and asks whether to let
+the scene, named by its title, use the input, whoever asked. `Changed("inputs")` follows when a
+question opens, when it ends (answered, closed or unanswered) and when its quiet time ends, and
+`GetInputs` lists the open questions in `asking` and the resting ones in `quiet`. Only the notification
+service can answer, and one question per scene and input is open at a time; after *Not now*, a
+closed notification or no answer, the same question is not asked again for ten minutes, and callers
+get `AccessDenied` meanwhile. An input the user declined is asked for again, since only an explicit
+`Grant` asks, and *Allow* clears the decline. A caller gets `AccessDenied` when no notification
+service can ask.
+
+### `GrantPackage(s scene, s key, s input)`
+
+`Grant` for the package with id `scene` bound to `key`, the `key` of an entry of `shown` in
+`GetInputs`: another package with the same id, shown on another output or applied after the client
+read `shown`, never gets the grant. Callers are treated as for `Grant`. `NotFound` while no output
+shows that package.
 
 ### `Revoke(s scene, s input)`
 
 Takes `input` back from `scene` and stops it at once if that scene was using it. It also records
 that the user declined `input` for `scene`, in `inputs-declined.json` next to `inputs.json` (mode
-`0600`), so that clients stop asking; `Grant` clears that record.
+`0600`), so that clients stop asking; `Grant` and `GrantPackage` clear that record.
 
-Clients ask once per scene: when `shown` lists an input that the scene has neither been granted
-nor declined, whether the scene was applied from a client, a playlist or `wprs-ctl`, the app and
+Clients ask once per scene: when `shown` lists an input that is neither in its `granted` nor
+declined for the scene, whether the scene was applied from a client, a playlist or `wprs-ctl`, the app and
 the tray explain what is captured and that nothing is stored or sent, and offer *Allow*
-(`Grant`) or *Not now* (`Revoke`); the scene settings show the same hint with these actions until
-the user decides. `wprs-ctl lib apply`, `playlist start`, `next` and `prev` follow the same rule:
-once the daemon lists the inputs of the scene they showed in `shown`, they print the
-`wprs-ctl input grant` command for each input that is neither granted nor declined.
+(`GrantPackage` with the `key` of that output) or *Not now* (`Revoke`); while the notification
+asks (`asking`), they say so instead of showing an error, and while the question rests (`quiet`)
+they say that the notification was closed and keep *Allow* off until it can be asked again. The
+scene settings show the same hint with these actions until the user decides, and their switch for
+each input says the same while the notification asks or the question rests. `wprs-ctl lib apply`, `playlist start`, `next` and `prev` follow
+the same rule: once the daemon lists the inputs of the scene they showed in `shown`, they print the
+`wprs-ctl input grant` command for each input that is neither granted nor declined, with `-o` and
+the output when another output shows another package with the same id.
 
 ### `GetInputs() → (s json)`
 
-An `InputsReply`: the grants, the declined inputs (`declined`), the scenes that declare inputs on
-each output with their `title`, the outputs whose
+An `InputsReply`: the grants by package id (`grants`, for released clients: the inputs granted to
+the packages with that id that the outputs show, or, while none is shown, every input granted to
+some package with that id), the declined inputs (`declined`), the questions open in a desktop
+notification (`asking`) and the ones that rest after the user answered *Not now*, closed the
+notification or left it unanswered (`quiet`), both by package id, the scenes that declare inputs on each output with their
+`title`, the package they are bound to (`key`) and the inputs granted to that very package
+(`granted`, what clients check before asking), the outputs whose
 parallax image follows the pointer (`parallax`), whether audio is being captured (`capturing`)
 and whether the pointer is being followed (`tracking`).
 
@@ -1120,7 +1226,11 @@ and whether the pointer is being followed (`tracking`).
 
 The pointer position in logical desktop coordinates, as sent by the KWin script. It is placed
 on the output whose `SetOutputInfo` geometry contains it when that output follows the pointer, and
-ignored otherwise.
+ignored otherwise. Only the KWin script of the daemon and `wprs-ctl` (identified as for `Grant`,
+so not inside the Flatpak) may call it: the connection that owns `org.kde.KWin` counts while the
+daemon has its script loaded and, outside the Flatpak, only when it runs a system `kwin_wayland` or
+`kwin_x11` (owned by root and not writable by others). Other callers, the app and the Plasma shell
+included, get `AccessDenied`.
 
 ## `io.github.wallpaper_rs.Sync1`
 
@@ -1452,7 +1562,10 @@ changes a page request only raises the window. `wprs-app --page <name>` and the 
 *Settings* (`settings`) make the same request. The tray offers *Open wallpaper-rs* (`Activate`)
 and *Settings…* (`ActivateAction("settings")`) unless `ListActivatableNames` lists the daemon but
 not the app and the app is not running: the Flatpak ships no app, so there the tray says that the
-other settings are changed with `wprs-ctl`.
+other settings are changed with `wprs-ctl`. When the bus answers that it does not know the app
+(`ServiceUnknown`, as with dbus-broker, which does not watch for new service files, right after an
+install by `install.sh`), the tray asks it to read its configuration again (`ReloadConfig`) and
+tries once more; `install.sh` and `uninstall.sh` ask for that reload themselves.
 
 ## Edits and spanning
 
@@ -1571,7 +1684,11 @@ configuration that cannot be read counts as `false`, also when a setting change 
 Exposure, white balance, contrast, saturation, vignette and blur work in linear light, curves and
 overlays (with their `opacity`) in sRGB. The GPU renders an edit once, at the size the output
 needs, and dithers the result; nothing is rendered again while the image, the edit and the output
-stay the same.
+stay the same. Outputs that show the same image with the same edit and depth map (the per-screen
+crops of `outputs` and the screens of a `span`) share one copy on the GPU when they need about the
+same size, no more than twice it, and a larger copy made for one of them replaces the smaller ones.
+JPEG images larger than needed are decoded at 1/2, 1/4 or 1/8 of their size and then reduced, and so
+are the thumbnails of the library.
 `wprs-ctl edit export` renders with the same code at the size of the edited image, or at `--size`
 after cropping the edited image to that shape.
 
@@ -1658,7 +1775,7 @@ for every `Changed` signal. Topics and their `ids`:
 | `providers` | Providers change | provider ids |
 | `repos` | Repositories or installed packages change | repository ids, or `[]` |
 | `jobs` | A job is created or finishes | job ids as decimal strings |
-| `inputs` | A grant or a decline changes, an output starts or stops showing a scene that declares inputs, or audio capture or the pointer feed starts or stops | `[]` |
+| `inputs` | A grant or a decline changes, a question in a desktop notification opens, ends or stops resting, an output starts or stops showing a scene that declares inputs, or audio capture or the pointer feed starts or stops | `[]` |
 | `account` | The sync server, this device's link or the sync state change | `[]` |
 
 Per topic, the first change emits `Changed` at once and opens a 250 ms window; changes inside the
@@ -1680,7 +1797,8 @@ returns `(Serial, [])` on timeout.
 
 Job ids start at 1 for every daemon run and are never reused in a run; clients notice a restart
 of the daemon through `NameOwnerChanged`. Starting a job whose kind and target equal a queued or
-running job returns that job's id (`import` jobs are never merged). Library jobs (`scan`,
+running job returns that job's id (`import` jobs are never merged, and a `scan` only joins a queued
+scan, never a running one, so a change made while a folder is scanned is seen by the next scan). Library jobs (`scan`,
 `import`, `analyze`) run one at a time, repository jobs (`repo_add`, `repo_refresh`, `install`)
 run one at a time, at most two `provider_sync` jobs download at once, `account`, `account_sync`
 and `upload` jobs run one at a time, and so do `link` jobs; a job waiting for its
@@ -1715,16 +1833,23 @@ BLAKE3 hash of `"<item path>\0<mtime>\0<size>"`; a changed file gets a new key. 
 `0700` and files `0600`. Clients only get paths from the daemon and open them read-only.
 
 Only an isolated worker process (`wprsd --worker`, at the lowest CPU and I/O priority) decodes
-files: images with size limits, EXIF orientation applied and the first frame of animations;
+files: images with size limits (at most 32768 pixels a side and 1 GiB of memory, the same limits
+under which the renderer, the app and `wprs-ctl` show and edit a picture; a baseline JPEG of up to
+300 million pixels is decoded at a reduced scale, a progressive one only while the coefficients it
+keeps need at most 512 MiB), EXIF orientation applied and the first frame of animations;
 videos at 10 % of their duration (between 1 s and 30 s); packages from their preview, else from
 their image or video entry. The same run measures the item (dimensions, duration, audio,
 dominant color) or records why it cannot be decoded. At most `max(1, min(4, cores / 2))` files
-are decoded in parallel, each within 15 s, and a worker exits after 30 s without work. Requests
-waiting in `Thumbnail` come first, then `RequestThumbnails`, then background analysis.
+are decoded in parallel, each within 15 s plus 1 s for every MiB of the file (at most 120 s), and
+a worker exits after 30 s without work. A file whose decoding takes longer or stops the worker is
+not marked as broken: it stays unanalyzed, background analysis leaves it until the daemon starts
+again (or the file changes), and `Thumbnail` keeps trying it when asked. Requests waiting in
+`Thumbnail` come first, then `RequestThumbnails`, then background analysis.
 
 Every returned path has its modification time refreshed. When the cache grows beyond
 `library.thumb_cache_mb`, the oldest files are deleted until it is below 90 % of the limit.
-Removing items deletes their thumbnails of every size.
+Removing items deletes their thumbnails of every size, also those a worker finishes after the item
+was removed or its file changed.
 
 ## JSON model
 
@@ -1915,11 +2040,12 @@ struct Update { repo_id: String, id: String, installed: String, available: Strin
 struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
 
 enum Input { Audio, Pointer }
-struct SceneInputs { scene: String, audio: bool, pointer: bool, title: String }
+struct SceneInputs { scene: String, audio: bool, pointer: bool, title: String, key: String, granted: Vec<Input> }
 struct InputsReply {
     model: u32, serial: u64, capturing: bool, tracking: bool,
     grants: BTreeMap<String, Vec<Input>>, shown: BTreeMap<String, SceneInputs>, parallax: Vec<String>,
-    declined: BTreeMap<String, Vec<Input>>,
+    declined: BTreeMap<String, Vec<Input>>, asking: BTreeMap<String, Vec<Input>>,
+    quiet: BTreeMap<String, Vec<Input>>,
 }
 enum AccountState { Unlinked, Linking, NeedsKey, Ready, Paused, Error }
 struct AccountDevice {

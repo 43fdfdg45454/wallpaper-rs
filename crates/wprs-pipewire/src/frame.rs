@@ -40,24 +40,15 @@ impl VideoFrame {
     }
 }
 
-pub fn write_into(datas: &mut [Data], frame: Option<&VideoFrame>, width: u32, height: u32) {
+pub fn write_into(datas: &mut [Data], frame: &VideoFrame, width: u32, height: u32) {
     let Some(data) = datas.first_mut() else { return };
     let stride = width * 4;
-    let written = data.data().map_or(0, |dst| match frame {
-        Some(frame) => copy_frame(frame, dst, width, height),
-        None => fill_black(dst, (stride * height) as usize),
-    });
+    let written = data.data().map_or(0, |dst| copy_frame(frame, dst, width, height));
     tracing::trace!(written, data_type = ?data.type_(), "process: frame queued");
     let chunk = data.chunk_mut();
     *chunk.offset_mut() = 0;
     *chunk.stride_mut() = stride as i32;
     *chunk.size_mut() = written as u32;
-}
-
-fn fill_black(dst: &mut [u8], len: usize) -> usize {
-    let len = dst.len().min(len);
-    dst[..len].as_chunks_mut::<4>().0.fill([0, 0, 0, 255]);
-    len
 }
 
 fn copy_frame(frame: &VideoFrame<impl AsRef<[u8]>>, dst: &mut [u8], width: u32, height: u32) -> usize {
@@ -103,13 +94,6 @@ mod tests {
     #[test]
     fn refuses_short_destination() {
         assert_eq!(copy_frame(&frame(4, 4, 1), &mut [0u8; 10], 4, 4), 0);
-    }
-
-    #[test]
-    fn fills_whole_pixels_with_opaque_black() {
-        let mut dst = [1u8; 11];
-        assert_eq!(fill_black(&mut dst, 32), 11);
-        assert_eq!(dst, [0, 0, 0, 255, 0, 0, 0, 255, 1, 1, 1]);
     }
 
     #[test]

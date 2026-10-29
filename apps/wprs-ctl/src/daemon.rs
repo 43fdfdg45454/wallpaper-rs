@@ -167,7 +167,10 @@ fn options(state: &str, filter: Option<&str>, json: bool) -> Result<()> {
     let state: Value = serde_json::from_str(state)?;
     let options = state["options"].as_object().context("the daemon did not report its settings")?;
     if let Some(key) = filter.filter(|key| !options.contains_key(*key)) {
-        bail!("unknown setting '{key}'; the settings are {}", show::list(options.keys()));
+        return Err(crate::usage(format!(
+            "unknown setting '{key}'; the settings are {}",
+            show::list(options.keys())
+        )));
     }
     let shown = options.iter().filter(|(key, _)| filter.is_none_or(|f| key.as_str() == f));
     match json {

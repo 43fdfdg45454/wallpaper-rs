@@ -51,6 +51,23 @@ EOF
 }
 check() { wait_for 10 shows "$@" || { shows "$@"; fail "$1 does not show ${*:2}"; }; }
 pixmap() { xprop -root "$1" | awk '/# 0x/ {print $NF}'; }
+lower() {
+  python3 - "${DISPLAY#:}" "$1" "$2" <<'LOWER'
+import socket, struct, sys, time
+x = socket.socket(socket.AF_UNIX)
+x.connect(f"/tmp/.X11-unix/X{sys.argv[1]}")
+x.sendall(struct.pack("<cxHHHHxx", b"l", 11, 0, 0, 0))
+head = x.recv(8)
+left = struct.unpack("<H", head[6:8])[0] * 4
+while left > 0:
+    left -= len(x.recv(left))
+for _ in range(int(sys.argv[3])):
+    x.sendall(struct.pack("<BxHIHxxI", 12, 4, int(sys.argv[2]), 0x40, 1))
+    time.sleep(0.05)
+x.sendall(struct.pack("<BxH", 43, 1))
+x.recv(32)
+LOWER
+}
 rooted() { [ -n "$(pixmap _XROOTPMAP_ID)" ]; }
 
 eval "$(dbus-launch --sh-syntax)"
@@ -113,10 +130,24 @@ expect "s['outputs']['DP-1']['covered']" True
 expect "s['outputs']['DP-1']['playing']" False
 expect "s['outputs']['DP-2']['playing']" True
 xprop -id "$window" -remove _NET_WM_STATE
+expect "s['outputs']['DP-1']['covered']" True
+xdotool windowsize "$window" 320 360
 expect "s['outputs']['DP-1']['covered']" False
 expect "s['outputs']['DP-1']['playing']" True
+xprop -root -remove _NET_CLIENT_LIST_STACKING
+xdotool windowsize "$window" 640 720
+expect "s['outputs']['DP-1']['covered']" True
 kill "$xev"
-echo "fullscreen pause checks passed"
+expect "s['outputs']['DP-1']['covered']" False
+echo "fullscreen and hidden window pause checks passed"
+
+xev -geometry 200x200+700+100 -name bottom >"$WORK/bottom.log" 2>&1 & bottom=$!; pids+=("$bottom")
+low=$(timeout 10 xdotool search --sync --name '^bottom$' | head -n 1)
+lower "$low" 30
+wait_for 10 grep -q "keeps its window at the bottom" "$WORK/wprsd.log" || fail "the daemon fought another window for the bottom"
+[ "$(grep -c "keeps its window at the bottom" "$WORK/wprsd.log")" = 1 ] || fail "the daemon kept fighting for the bottom"
+kill "$bottom"
+echo "bottom window checks passed"
 
 ctl pause && expect "s['outputs']['DP-2']['playing']" False
 opened=$(grep -c "video opened" "$WORK/wprsd.log")
@@ -157,6 +188,26 @@ wait_for 10 desks yes || fail "the wallpaper window is not override-redirect wit
 openbox --sm-disable >"$WORK/openbox.log" 2>&1 & wm=$!; pids+=("$wm")
 wait_for 30 desks no || fail "the window manager did not get the wallpaper window"
 check "$full" "0.5,0.1,$green" "0.02,0.02,$blue"
+xev -geometry 1280x720+0+0 -name icons >"$WORK/icons.log" 2>&1 & icons=$!; pids+=("$icons")
+desktop=$(timeout 10 xdotool search --sync --name '^icons$' | head -n 1)
+xdotool windowunmap --sync "$desktop"
+xprop -id "$desktop" -f _NET_WM_WINDOW_TYPE 32a -set _NET_WM_WINDOW_TYPE _NET_WM_WINDOW_TYPE_DESKTOP
+xdotool windowmap "$desktop"
+below() {
+  local ours
+  mapfile -t ours < <(xdotool search --class '^wprsd$')
+  xprop -root _NET_CLIENT_LIST_STACKING | python3 -c "import sys
+order = [int(w, 16) for w in sys.stdin.read().split('#')[1].replace(',', ' ').split()]
+ours = [int(w) for w in sys.argv[2:]]
+sys.exit(not all(order.index(o) < order.index(int(sys.argv[1])) for o in ours))" "$desktop" "${ours[@]}"
+}
+wait_for 10 below || fail "the wallpaper stayed above the desktop icons: $(xprop -root _NET_CLIENT_LIST_STACKING)"
+xdotool search --class '^wprsd$' windowraise %@ && sleep 1
+wait_for 10 below || fail "a raised wallpaper stayed above the desktop icons: $(xprop -root _NET_CLIENT_LIST_STACKING)"
+expect "s['outputs']['screen']['covered']" True
+kill "$icons"
+expect "s['outputs']['screen']['covered']" False
+echo "desktop icon window checks passed"
 kill "$wm"
 wait "$wm" 2>/dev/null || true
 wait_for 30 desks yes || fail "the wallpaper window was not taken back from the window manager"

@@ -56,11 +56,14 @@ impl Daemon {
             return Err(failed("the playlist has no items to show"));
         }
         let uid = resolved.playlist.id;
-        self.update_config(|c| {
-            c.set_playlist(&output, uid.clone());
-            Ok(())
-        })?;
-        self.show(Act::Start(&uid, &output));
+        let assign = || {
+            let assigned = self.update_config(|c| {
+                c.set_playlist(&output, uid.clone());
+                Ok(())
+            });
+            assigned.map_err(Error::from)
+        };
+        self.show_after(Act::Start(&uid, &output), assign)?;
         self.changes.changed("playlists", vec![uid]);
         Ok(())
     }

@@ -38,7 +38,7 @@ impl OutputHandler for State {
 
 impl LayerShellHandler for State {
     fn closed(&mut self, _: &Connection, _: &Queue, layer: &LayerSurface) {
-        self.remove(|s| s.parts.layer == *layer)
+        State::closed(self, |s| s.parts.layer == *layer)
     }
 
     fn configure(

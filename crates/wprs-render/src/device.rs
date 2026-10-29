@@ -30,20 +30,6 @@ impl Renderer {
         Self::with_display(None)
     }
 
-    pub fn with_display(display: Option<Display>) -> Result<Self, RenderError> {
-        let mut desc = wgpu::InstanceDescriptor::new_without_display_handle_from_env();
-        desc.backends = wgpu::Backends::from_env().unwrap_or(wgpu::Backends::VULKAN | wgpu::Backends::GL);
-        desc.display = display;
-        let options = wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::LowPower,
-            ..Default::default()
-        };
-        let instance = wgpu::Instance::new(desc);
-        let adapter = pollster::block_on(instance.request_adapter(&options))
-            .map_err(|e| RenderError::NoAdapter(e.to_string()))?;
-        Self::with_adapter(instance, adapter)
-    }
-
     pub fn with_adapter(instance: wgpu::Instance, adapter: wgpu::Adapter) -> Result<Self, RenderError> {
         let offered = adapter.limits();
         let required_limits = wgpu::Limits {

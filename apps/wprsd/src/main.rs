@@ -1,9 +1,11 @@
 mod account;
 mod apply;
 mod bus;
+mod callers;
 mod changes;
 mod clock;
 mod compositor;
+mod confirm;
 mod controls;
 mod daemon;
 mod decode;
@@ -116,7 +118,11 @@ fn skip_vulkan_device_selection_layer() {
 
 pub(crate) fn fatal(reason: &str) -> ! {
     tracing::error!("{reason}; exiting so that the service manager restarts the daemon");
-    std::process::exit(70)
+    quit(70)
+}
+
+pub(crate) fn quit(status: i32) -> ! {
+    unsafe { libc::_exit(status) }
 }
 
 #[tokio::main]
@@ -176,6 +182,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
     tokio::spawn(playback::run(daemon.clone()));
     tokio::spawn(picks::run(daemon.clone()));
     tokio::spawn(profiles1::follow(daemon.clone(), known));
+    if cfg!(debug_assertions) && std::env::var_os("WPRS_RENDER_STOP").is_some() {
+        let (daemon, mut stop) = (daemon.clone(), signal(SignalKind::user_defined2())?);
+        tokio::spawn(async move { stop.recv().await.map(|()| daemon.compositor.stop()) });
+    }
     let mut terminate = signal(SignalKind::terminate())?;
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {}
@@ -184,4 +194,39 @@ async fn run(args: Args) -> anyhow::Result<()> {
     tracing::info!("shutting down");
     inputs::stop(&connection).await;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    extern "C" fn hang() {
+        std::thread::sleep(Duration::from_secs(600));
+    }
+
+    #[test]
+    fn a_fatal_error_exits_at_once_even_when_exit_handlers_hang() {
+        if std::env::var_os("WPRS_FATAL_CHILD").is_some() {
+            unsafe { libc::atexit(hang) };
+            super::fatal("a test failure");
+        }
+        let name = "tests::a_fatal_error_exits_at_once_even_when_exit_handlers_hang";
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", name, "--nocapture"])
+            .env("WPRS_FATAL_CHILD", "1")
+            .spawn()
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(20);
+        let status = loop {
+            match child.try_wait().unwrap() {
+                Some(status) => break status,
+                None if Instant::now() > deadline => {
+                    child.kill().unwrap();
+                    panic!("the daemon hung while exiting");
+                }
+                None => std::thread::sleep(Duration::from_millis(20)),
+            }
+        };
+        assert_eq!(status.code(), Some(70));
+    }
 }

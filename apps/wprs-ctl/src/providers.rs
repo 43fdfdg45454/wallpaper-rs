@@ -68,8 +68,8 @@ pub async fn run(client: &Client, command: Provider) -> Result<()> {
             let schema: Schema = parse(&client.daemon.get_schema().await?)?;
             let kinds = || list(schema.providers.iter().map(|p| &p.kind));
             let known = schema.providers.iter().find(|p| p.kind == kind);
-            let known =
-                known.with_context(|| format!("unknown provider kind {kind}; the kinds are {}", kinds()))?;
+            let unknown = || Usage(format!("unknown provider kind {kind}; the kinds are {}", kinds()));
+            let known = known.ok_or_else(unknown)?;
             let mut options = pairs(&options)?;
             options.keys().try_for_each(|key| public(key))?;
             if allow_plain_http {
@@ -92,7 +92,7 @@ pub async fn run(client: &Client, command: Provider) -> Result<()> {
         }
         Provider::Secret { id, secret_stdin } => {
             let secret = secret(&format!("secret of {id}: "), secret_stdin)?;
-            ensure!(!secret.is_empty(), "the secret is empty");
+            ensure!(!secret.is_empty(), Usage("the secret is empty".into()));
             patient(providers.set_secret(&id, &secret)).await?
         }
         Provider::ForgetSecret { id } => providers.forget_secret(&id).await?,
@@ -116,7 +116,7 @@ fn ask(field: &SecretField, id: &str, kind: &str, stdin: bool) -> Result<String>
     let optional = if field.required { "" } else { " (empty for none)" };
     let secret = secret(&format!("{} of {id}{optional}: ", field.name.replace('_', " ")), stdin)?;
     let hint = format!("{kind} needs its {}; use --no-secret to add it without one", field.name);
-    ensure!(!field.required || !secret.is_empty(), hint);
+    ensure!(!field.required || !secret.is_empty(), Usage(hint));
     Ok(secret)
 }
 

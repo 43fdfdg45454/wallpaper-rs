@@ -9,6 +9,7 @@ use wprs_render::{Dmabufs, Renderer};
 use zbus::fdo;
 
 pub(crate) const HELD: &str = "";
+pub(crate) const SURFACE: &str = "surface";
 
 #[derive(Default)]
 pub(crate) struct Claim {
@@ -55,6 +56,15 @@ impl Allocate for Gpu {
     }
 }
 
+pub(crate) fn timelines(exporter: &wprs_pipewire::Exporter) {
+    if std::env::var("WPRS_SYNCOBJ").is_ok_and(|v| v == "1") {
+        tracing::info!(
+            available = exporter.use_timelines(),
+            "explicit synchronization of GPU stream buffers"
+        );
+    }
+}
+
 pub(crate) fn gpu_buffers(renderer: &Renderer) -> Option<Arc<dyn Allocate>> {
     let wanted = std::env::var("WPRS_DMABUF").unwrap_or_default();
     let flaky = cfg!(debug_assertions) && wanted == "emulate-flaky";
@@ -84,6 +94,11 @@ impl Daemon {
     pub fn claim(&self, output: &str, client: &str, size: (u32, u32), reply: Reply) -> fdo::Result<String> {
         let output = self.check_request(output, size.0, size.1)?;
         let mut st = self.state();
+        if st.outputs.get(&output).is_some_and(|info| info.claims.contains_key(SURFACE)) {
+            let shown =
+                format!("wprsd shows the screen {output} on its own surface; name the stream differently");
+            return Err(fdo::Error::InvalidArgs(shown));
+        }
         let (requested, size) = (size, crate::pixels::fit(size, st.real_pixels(&output)));
         let info = st.outputs.entry(output.clone()).or_default();
         (info.size, info.requested) = (size, requested);
@@ -109,10 +124,13 @@ impl Daemon {
         let held =
             |(name, info): (&String, &OutputInfo)| info.claims.contains_key(client).then(|| name.clone());
         let outputs: Vec<String> = st.outputs.iter().filter_map(held).collect();
-        if !outputs.is_empty() {
-            tracing::debug!(client, "a client left the bus");
+        if outputs.is_empty() {
+            return Ok(());
         }
-        outputs.iter().try_for_each(|output| self.unclaim(&mut st, output, client, u32::MAX))
+        tracing::debug!(client, "a client left the bus");
+        outputs.iter().try_for_each(|output| self.unclaim(&mut st, output, client, u32::MAX))?;
+        self.respan(st);
+        Ok(())
     }
 
     pub fn unclaim(&self, st: &mut State, output: &str, client: &str, count: u32) -> anyhow::Result<()> {

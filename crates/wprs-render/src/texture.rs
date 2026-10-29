@@ -15,11 +15,19 @@ impl GpuImage {
     pub fn size(&self) -> (u32, u32) {
         (self.texture.width(), self.texture.height())
     }
+
+    pub fn same(&self, other: &GpuImage) -> bool {
+        self.id == other.id
+    }
 }
 
 impl Renderer {
     pub fn upload(&self, image: &RgbaImage, fit: Fit, target: (u32, u32)) -> Result<GpuImage, RenderError> {
         self.upload_placed(image, UvRect::compute(fit, image.dimensions(), target), target)
+    }
+
+    pub fn upload_size(&self, image: (u32, u32), uv: UvRect, target: (u32, u32)) -> (u32, u32) {
+        crate::decode::scaled_size(image, crate::decode::shown(image, uv, target), self.max_edge())
     }
 
     pub fn upload_placed(

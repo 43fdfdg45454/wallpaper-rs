@@ -1,4 +1,6 @@
 use crate::compositor::lock;
+use crate::worker::Response;
+use std::collections::HashSet;
 use std::fs::{self, File};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
@@ -43,6 +45,7 @@ pub struct Thumbs {
     queue: Mutex<Vec<Task>>,
     ready: Condvar,
     used: AtomicU64,
+    later: Mutex<HashSet<String>>,
 }
 
 pub fn key(path: &Path, mtime: i64, size: u64) -> String {
@@ -52,7 +55,7 @@ pub fn key(path: &Path, mtime: i64, size: u64) -> String {
 impl Thumbs {
     pub fn new(cache: &Path) -> Self {
         let (queue, ready, used) = (Mutex::default(), Condvar::new(), AtomicU64::new(0));
-        Self { root: cache.join("thumbs"), queue, ready, used }
+        Self { root: cache.join("thumbs"), queue, ready, used, later: Mutex::default() }
     }
 
     pub fn path(&self, item: &Item, size: u32) -> PathBuf {
@@ -67,6 +70,20 @@ impl Thumbs {
 
     pub fn remove(&self, item: &Item) {
         SIZES.iter().for_each(|size| drop(fs::remove_file(self.path(item, *size))));
+    }
+
+    pub fn settle(&self, item: &Item, now: Option<&Item>, response: &Response) -> bool {
+        let same = now.is_some_and(|n| n.path == item.path && n.mtime == item.mtime && n.size == item.size);
+        if !same {
+            self.remove(item);
+        } else if response.retry {
+            lock(&self.later).insert(key(&item.path, item.mtime, item.size));
+        }
+        !same
+    }
+
+    pub fn later(&self, item: &Item) -> bool {
+        lock(&self.later).contains(&key(&item.path, item.mtime, item.size))
     }
 
     pub fn queue(&self, item: Item, req: Req) {
@@ -155,6 +172,29 @@ mod tests {
         assert_eq!(key, expected);
         assert_eq!(key.len(), 64);
         assert_ne!(super::key(Path::new("/pictures/a.png"), 1_700_000_001, 42), key);
+    }
+
+    #[test]
+    fn thumbnails_of_removed_or_changed_items_go_and_failed_decodes_wait() {
+        let dir = tempfile::tempdir().unwrap();
+        let picture = dir.path().join("a.png");
+        fs::write(&picture, b"png").unwrap();
+        let mut lib = wprs_library::Library::open_in_memory().unwrap();
+        let uid = lib.import_file(&picture, 1).unwrap();
+        let item = lib.item(&uid).unwrap();
+        let thumbs = Thumbs::new(dir.path());
+        let written = || {
+            let path = thumbs.path(&item, 256);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, b"jpg").unwrap();
+            path
+        };
+        let (path, retry) = (written(), Response { retry: true, ..Response::default() });
+        assert!(!thumbs.later(&item) && !thumbs.settle(&item, Some(&item), &retry));
+        assert!(path.exists() && thumbs.later(&item));
+        assert!(thumbs.settle(&item, None, &Response::default()) && !path.exists());
+        let (path, changed) = (written(), Item { mtime: item.mtime + 1, ..item.clone() });
+        assert!(thumbs.settle(&item, Some(&changed), &Response::default()) && !path.exists());
     }
 
     #[test]

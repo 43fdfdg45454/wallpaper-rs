@@ -83,10 +83,14 @@ pub fn modifier(param: &Pod) -> Modifier {
     }
 }
 
-pub fn buffers(width: u32, height: u32, dmabuf: bool) -> Vec<u8> {
+pub const META_TIMELINE: u32 = 9;
+pub const DATA_SYNCOBJ: u32 = 5;
+const BUFFERS_META_TYPE: u32 = 7;
+
+fn buffer_object(width: u32, height: u32, dmabuf: bool) -> Object {
     let stride = (width * 4) as i32;
     let kind = 1 << if dmabuf { spa::sys::SPA_DATA_DmaBuf } else { spa::sys::SPA_DATA_MemFd };
-    serialize(object!(
+    object!(
         SpaTypes::ObjectParamBuffers,
         ParamType::Buffers,
         int_property(spa::sys::SPA_PARAM_BUFFERS_buffers, ChoiceEnum::Range { default: 4, min: 4, max: 8 }),
@@ -97,7 +101,37 @@ pub fn buffers(width: u32, height: u32, dmabuf: bool) -> Vec<u8> {
             spa::sys::SPA_PARAM_BUFFERS_dataType,
             ChoiceEnum::Flags { default: kind, flags: vec![kind] }
         ),
-    ))
+    )
+}
+
+pub fn buffers(width: u32, height: u32, dmabuf: bool) -> Vec<u8> {
+    serialize(buffer_object(width, height, dmabuf))
+}
+
+pub fn synced(width: u32, height: u32) -> Vec<Vec<u8>> {
+    let mut timed = buffer_object(width, height, true);
+    let flags = |bits: i32| {
+        Value::Choice(ChoiceValue::Int(Choice(
+            ChoiceFlags::empty(),
+            ChoiceEnum::Flags { default: bits, flags: vec![bits] },
+        )))
+    };
+    let kinds = (1 << spa::sys::SPA_DATA_DmaBuf) | (1 << DATA_SYNCOBJ);
+    for property in &mut timed.properties {
+        match property.key {
+            spa::sys::SPA_PARAM_BUFFERS_blocks => property.value = Value::Int(3),
+            spa::sys::SPA_PARAM_BUFFERS_dataType => property.value = flags(kinds),
+            _ => {}
+        }
+    }
+    timed.properties.push(Property::new(BUFFERS_META_TYPE, flags(1 << META_TIMELINE)));
+    let meta = object!(
+        SpaTypes::ObjectParamMeta,
+        ParamType::Meta,
+        Property::new(spa::sys::SPA_PARAM_META_type, Value::Id(spa::utils::Id(META_TIMELINE))),
+        Property::new(spa::sys::SPA_PARAM_META_size, Value::Int(24)),
+    );
+    vec![serialize(timed), serialize(meta), buffers(width, height, true)]
 }
 
 #[cfg(test)]
@@ -136,6 +170,21 @@ mod tests {
             assert_eq!(value(spa::sys::SPA_PARAM_BUFFERS_buffers), choice(count));
             assert_eq!(value(spa::sys::SPA_PARAM_BUFFERS_dataType), choice(kind));
         }
+    }
+
+    #[test]
+    fn explicit_sync_is_offered_before_the_plain_gpu_buffers() {
+        let [timed, meta, plain] = &synced(64, 64)[..] else { panic!("three parameters") };
+        let value =
+            |bytes: &[u8], key| object(bytes).properties.into_iter().find(|p| p.key == key).map(|p| p.value);
+        assert_eq!(value(timed, spa::sys::SPA_PARAM_BUFFERS_blocks), Some(Value::Int(3)));
+        assert!(value(timed, BUFFERS_META_TYPE).is_some() && value(plain, BUFFERS_META_TYPE).is_none());
+        assert_eq!(value(plain, spa::sys::SPA_PARAM_BUFFERS_blocks), Some(Value::Int(1)));
+        assert_eq!(
+            value(meta, spa::sys::SPA_PARAM_META_type),
+            Some(Value::Id(spa::utils::Id(META_TIMELINE)))
+        );
+        assert!([timed, meta, plain].iter().all(|bytes| Pod::from_bytes(bytes).is_some()));
     }
 
     #[test]

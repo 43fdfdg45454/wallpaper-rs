@@ -77,7 +77,7 @@ echo "===== the tray offers the app only where it is installed"
 services=$WORK/services
 mkdir -p "$services"
 cp "$HOME/.local/share/dbus-1/services/io.github.wallpaper_rs.Daemon.service" "$services/"
-printf '<busconfig><listen>unix:dir=%s</listen><auth>EXTERNAL</auth><servicedir>%s</servicedir><policy context="default"><allow send_destination="*"/><allow receive_sender="*"/><allow own="*"/></policy></busconfig>\n' \
+printf '<busconfig><listen>unix:dir=%s</listen><auth>EXTERNAL</auth><servicedir>%s</servicedir><policy context="default"><allow send_destination="*"/><allow receive_sender="*"/><allow own="*"/><deny send_destination="org.freedesktop.DBus" send_interface="org.freedesktop.DBus" send_member="ReloadConfig"/></policy></busconfig>\n' \
   "$WORK" "$services" >"$WORK/bus.conf"
 dbus-daemon --nofork --print-address --config-file="$WORK/bus.conf" >"$WORK/bus.address" &
 private=$!
@@ -86,6 +86,8 @@ session=$DBUS_SESSION_BUS_ADDRESS
 DBUS_SESSION_BUS_ADDRESS=$(head -n 1 "$WORK/bus.address")
 probe flatpak true 'Qt.quit()'
 qml flatpak || fail "the tray offered the app where only the daemon is installed"
+printf 'import QtQuick\nimport "file://%s"\nDaemon {\n    onActionErrorChanged: Qt.quit()\n    Component.onCompleted: openApp("")\n}\n' "$ui" >"$WORK/unopened.qml"
+qml unopened || fail "the tray said nothing when the bus could not reload its services to open the app"
 cp "$HOME/.local/share/dbus-1/services/io.github.wallpaper_rs.service" "$services/"
 wait_for 10 activatable io.github.wallpaper_rs || fail "the private bus did not list the app"
 probe installed false 'Qt.quit()'

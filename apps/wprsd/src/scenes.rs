@@ -31,6 +31,7 @@ pub struct ScenePack {
     pub scripts: Vec<(String, String)>,
     pub labels: Json,
     pub inputs: Option<Uses>,
+    pub key: String,
 }
 
 pub type Extra = (Vec<(String, Arc<RgbaImage>)>, Vec<(String, Reel)>);
@@ -45,7 +46,7 @@ impl ScenePack {
         let (path, id, version, title, languages, presets) = Default::default();
         let props =
             Arc::new(Props { path, id, version, title, kind: "scene", languages, properties, presets });
-        let (path, locale, assets, videos, clips, scripts) = Default::default();
+        let (path, locale, assets, videos, clips, scripts, key) = Default::default();
         let labels = Json::Object(Default::default());
         ScenePack {
             path,
@@ -59,8 +60,15 @@ impl ScenePack {
             scripts,
             labels,
             inputs: None,
+            key,
         }
     }
+}
+
+pub(crate) fn listens(scene: &Scene, scripts: &[(String, String)]) -> bool {
+    let uses = wprs_scene::needs(scene);
+    let read = |word| scripts.iter().any(|(_, source)| source.contains(word));
+    uses.audio || uses.cursor || read("audio") || read("cursor")
 }
 
 fn kind(path: &str) -> String {
@@ -140,6 +148,7 @@ impl Daemon {
         let (id, version, title, presets) =
             (m.id.clone(), m.version.clone(), m.title.pick(&languages), m.presets);
         let (path, inputs) = (wpak.to_owned(), package.manifest.declared());
+        let key = if listens(&scene, &scripts) { self.package_key(wpak, &meta)? } else { String::new() };
         let props =
             Props { path: path.clone(), id, version, title, kind: "scene", languages, properties, presets };
         let (scene, props) = (Arc::new(scene), Arc::new(props));
@@ -155,6 +164,7 @@ impl Daemon {
             scripts,
             labels,
             inputs,
+            key,
         });
         let mut st = self.state();
         st.scenes.retain(|_, (_, weak)| weak.strong_count() > 0);

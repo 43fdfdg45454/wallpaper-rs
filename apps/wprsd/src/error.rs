@@ -24,6 +24,10 @@ pub fn not_found(message: impl Into<String>) -> Error {
     Error::Named(error::NOT_FOUND, message.into())
 }
 
+pub fn denied(message: impl Into<String>) -> Error {
+    Error::Fdo(fdo::Error::AccessDenied(message.into()))
+}
+
 impl Error {
     pub fn parts(&self) -> (String, String) {
         match self {

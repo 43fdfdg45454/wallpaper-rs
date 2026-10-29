@@ -1,29 +1,34 @@
+use crate::Event;
+use crate::cover::{covers, rationed};
 use crate::x11::{Atoms, Rect, X11};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::time::{Duration, Instant};
 use x11rb::errors::{ConnectionError, ReplyOrIdError};
-use x11rb::protocol::xproto::{AtomEnum, ChangeWindowAttributesAux, ConnectionExt as _, EventMask, MapState};
+use x11rb::protocol::xproto::{
+    AtomEnum, ChangeWindowAttributesAux, ConnectionExt as _, EventMask, GetPropertyReply, MapState,
+};
 
 const EVERY_DESKTOP: u32 = u32::MAX;
+const LOWERED: usize = 3;
+const LOWERED_WITHIN: Duration = Duration::from_secs(10);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct Client {
+    pub(crate) window: u32,
     area: Rect,
     shown: bool,
     full: bool,
+    desktop: bool,
+    opaque: bool,
 }
 
 pub(crate) fn relevant(a: &Atoms, atom: u32) -> bool {
     [a._NET_CLIENT_LIST_STACKING, a._NET_CURRENT_DESKTOP, a._NET_WM_STATE, a._NET_WM_DESKTOP].contains(&atom)
 }
 
-pub(crate) fn clients(
-    x: &X11,
-    ours: &[u32],
-    watched: &mut HashSet<u32>,
-) -> Result<Vec<Client>, ReplyOrIdError> {
+pub(crate) fn clients(x: &X11, watched: &mut HashSet<u32>) -> Result<Vec<Client>, ReplyOrIdError> {
     let (c, a) = (&x.conn, &x.atoms);
-    let mut windows = x.property(x.root, a._NET_CLIENT_LIST_STACKING)?;
-    windows.retain(|w| !ours.contains(w));
+    let windows = x.property(x.root, a._NET_CLIENT_LIST_STACKING)?;
     let current = x.property(x.root, a._NET_CURRENT_DESKTOP)?.first().copied();
     let listen = ChangeWindowAttributesAux::new().event_mask(EventMask::PROPERTY_CHANGE);
     for window in windows.iter().filter(|w| !watched.contains(w)) {
@@ -33,8 +38,9 @@ pub(crate) fn clients(
     let asked = windows.iter().map(|&w| {
         let state = c.get_property(false, w, a._NET_WM_STATE, AtomEnum::ATOM, 0, 64)?;
         let desktop = c.get_property(false, w, a._NET_WM_DESKTOP, AtomEnum::CARDINAL, 0, 1)?;
+        let kind = c.get_property(false, w, a._NET_WM_WINDOW_TYPE, AtomEnum::ATOM, 0, 16)?;
         let origin = c.translate_coordinates(w, x.root, 0, 0)?;
-        Ok((state, desktop, c.get_window_attributes(w)?, c.get_geometry(w)?, origin))
+        Ok((w, state, desktop, kind, c.get_window_attributes(w)?, c.get_geometry(w)?, origin))
     });
     let asked = asked.collect::<Result<Vec<_>, ConnectionError>>()?;
     let marks = [
@@ -43,16 +49,22 @@ pub(crate) fn clients(
         a._NET_WM_STATE_MAXIMIZED_HORZ,
         a._NET_WM_STATE_HIDDEN,
     ];
-    let read = asked.into_iter().filter_map(|(state, desktop, attributes, geometry, origin)| {
-        let states: Vec<u32> = state.reply().ok()?.value32().map(Iterator::collect).unwrap_or_default();
-        let desktop = desktop.reply().ok()?.value32().and_then(|mut v| v.next());
-        let viewable = attributes.reply().ok()?.map_state == MapState::VIEWABLE;
-        let (geometry, origin) = (geometry.reply().ok()?, origin.reply().ok()?);
-        let (x, y, width, height) = (origin.dst_x, origin.dst_y, geometry.width, geometry.height);
-        let area = Rect { x: x.into(), y: y.into(), width: width.into(), height: height.into() };
-        let (full, hidden) = status(&states, marks);
-        Some(Client { area, shown: shown(viewable, hidden, desktop, current), full })
-    });
+    let atoms =
+        |reply: GetPropertyReply| -> Vec<u32> { reply.value32().map(Iterator::collect).unwrap_or_default() };
+    let read =
+        asked.into_iter().filter_map(|(window, state, desktop, kind, attributes, geometry, origin)| {
+            let states = atoms(state.reply().ok()?);
+            let desktop = desktop.reply().ok()?.value32().and_then(|mut v| v.next());
+            let desktop_window =
+                kind.reply().ok().is_some_and(|k| atoms(k).contains(&a._NET_WM_WINDOW_TYPE_DESKTOP));
+            let viewable = attributes.reply().ok()?.map_state == MapState::VIEWABLE;
+            let (geometry, origin) = (geometry.reply().ok()?, origin.reply().ok()?);
+            let (x, y, width, height) = (origin.dst_x, origin.dst_y, geometry.width, geometry.height);
+            let area = Rect { x: x.into(), y: y.into(), width: width.into(), height: height.into() };
+            let (full, hidden) = status(&states, marks);
+            let shown = shown(viewable, hidden, desktop, current);
+            Some(Client { window, area, shown, full, desktop: desktop_window, opaque: geometry.depth != 32 })
+        });
     Ok(read.collect())
 }
 
@@ -66,7 +78,79 @@ fn shown(viewable: bool, hidden: bool, desktop: Option<u32>, current: Option<u32
 }
 
 pub(crate) fn covered(screen: Rect, clients: &[Client]) -> bool {
-    clients.iter().any(|c| c.shown && c.full && screen.holds(c.area.center()))
+    let shown = || clients.iter().filter(|c| c.shown);
+    let full = shown().any(|c| !c.desktop && c.full && screen.holds(c.area.center()));
+    let tiles: Vec<Rect> = shown().filter(|c| !c.desktop).map(|c| c.area).collect();
+    let icons = shown().filter(|c| c.desktop && c.opaque).any(|c| covers(screen, &[c.area]));
+    full || icons || covers(screen, &tiles)
+}
+
+fn above(ours: &[u32], clients: &[Client]) -> Vec<(u32, u32)> {
+    let mut pairs = Vec::new();
+    for (i, icons) in
+        clients.iter().enumerate().filter(|(_, c)| c.desktop && c.shown && !ours.contains(&c.window))
+    {
+        let higher = clients[i..].iter().filter(|c| ours.contains(&c.window));
+        pairs.extend(higher.map(|ours| (ours.window, icons.window)));
+    }
+    pairs
+}
+
+#[derive(Default)]
+pub(crate) struct Rations {
+    fights: HashMap<u32, Vec<Instant>>,
+    restacked: HashMap<(u32, u32), Vec<Instant>>,
+}
+
+impl Rations {
+    pub(crate) fn lower_for(&mut self, window: u32) -> bool {
+        let history = self.fights.entry(window).or_default();
+        let allowed = rationed(history, Instant::now(), LOWERED, LOWERED_WITHIN);
+        if !allowed && history.len() == LOWERED {
+            tracing::info!("another program keeps its window at the bottom; the wallpaper stays above it");
+            history.push(Instant::now());
+        }
+        allowed
+    }
+
+    pub(crate) fn forget(&mut self, window: u32) {
+        self.fights.remove(&window);
+    }
+
+    pub(crate) fn restack(
+        &mut self,
+        x: &X11,
+        ours: &[u32],
+        clients: &[Client],
+    ) -> Result<(), ReplyOrIdError> {
+        for (mine, icons) in above(ours, clients) {
+            let tries = self.restacked.entry((mine, icons)).or_default();
+            if rationed(tries, Instant::now(), LOWERED, LOWERED_WITHIN) {
+                tracing::debug!("keeping the wallpaper below the desktop icons");
+                x.restack_below(mine, icons)?;
+            }
+        }
+        self.restacked
+            .retain(|(mine, icons), _| ours.contains(mine) && clients.iter().any(|c| c.window == *icons));
+        Ok(())
+    }
+}
+
+pub(crate) fn notices(
+    screens: impl Iterator<Item = (u32, String)>,
+    exposed: &HashSet<u32>,
+    resized: bool,
+) -> Vec<Event> {
+    let mut events = Vec::new();
+    for (window, name) in screens {
+        if resized {
+            events.push(Event::Backdrop(name.clone()));
+        }
+        if exposed.contains(&window) {
+            events.push(Event::Exposed(name));
+        }
+    }
+    events
 }
 
 #[cfg(test)]
@@ -76,7 +160,7 @@ mod tests {
     const MARKS: [u32; 4] = [1, 2, 3, 4];
 
     fn client(x: i32, width: u32, shown: bool, full: bool) -> Client {
-        Client { area: Rect { x, y: 0, width, height: 720 }, shown, full }
+        Client { area: Rect { x, y: 0, width, height: 720 }, shown, full, ..Client::default() }
     }
 
     #[test]
@@ -98,7 +182,7 @@ mod tests {
     }
 
     #[test]
-    fn a_monitor_is_covered_by_a_shown_full_window_centered_on_it() {
+    fn a_monitor_is_covered_by_a_full_window_or_by_windows_that_tile_it() {
         let left = Rect { x: 0, y: 0, width: 640, height: 720 };
         let right = Rect { x: 640, ..left };
         let clients =
@@ -106,6 +190,34 @@ mod tests {
         assert!(covered(left, &clients) && !covered(right, &clients));
         assert!(covered(right, &[client(400, 1000, true, true)]));
         assert!(!covered(left, &[client(400, 1000, true, true)]));
+        assert!(covered(right, &[client(640, 320, true, false), client(960, 320, true, false)]));
+        assert!(!covered(right, &[client(640, 320, true, false), client(960, 320, false, false)]));
         assert!(!covered(left, &[]));
+    }
+
+    #[test]
+    fn desktop_icon_windows_cover_when_opaque_and_stay_above_ours() {
+        let screen = Rect { x: 0, y: 0, width: 640, height: 720 };
+        let icons = |opaque| Client { window: 7, desktop: true, opaque, ..client(0, 640, true, false) };
+        assert!(covered(screen, &[icons(true)]) && !covered(screen, &[icons(false)]));
+        let ours = Client { window: 3, ..client(0, 640, true, false) };
+        assert_eq!(above(&[3], &[icons(true), ours]), [(3, 7)]);
+        assert!(above(&[3], &[ours, icons(true)]).is_empty());
+    }
+
+    #[test]
+    fn a_larger_or_smaller_root_paints_the_root_background_again() {
+        let screens = || [(5, "DP-1".to_owned()), (6, "DP-2".to_owned())].into_iter();
+        let names = |events: Vec<Event>| -> Vec<String> {
+            let name = |e: Event| match e {
+                Event::Backdrop(n) => format!("backdrop {n}"),
+                Event::Exposed(n) => format!("exposed {n}"),
+                _ => String::new(),
+            };
+            events.into_iter().map(name).collect()
+        };
+        assert!(notices(screens(), &HashSet::new(), false).is_empty());
+        assert_eq!(names(notices(screens(), &HashSet::from([6]), false)), ["exposed DP-2"]);
+        assert_eq!(names(notices(screens(), &HashSet::new(), true)), ["backdrop DP-1", "backdrop DP-2"]);
     }
 }

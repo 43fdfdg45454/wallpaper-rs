@@ -47,3 +47,35 @@ msgstr "Posición vertical"
 #: apps/wprsd/src/words.rs
 msgid "0 plays to the end"
 msgstr "Con 0 se reproduce hasta el final"
+
+#: apps/wprsd/src/words.rs
+msgid "Allow"
+msgstr "Permitir"
+
+#: apps/wprsd/src/words.rs
+msgid "Not now"
+msgstr "Ahora no"
+
+#: apps/wprsd/src/words.rs
+msgid "Let a scene follow the sound?"
+msgstr "¿Dejar que una escena siga el sonido?"
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"Let “%1” follow the sound that plays? The sound is turned into levels on "
+"this computer; nothing is recorded, kept or sent."
+msgstr ""
+"¿Dejar que «%1» siga el sonido que suena? El sonido se convierte en niveles "
+"en este equipo; no se graba, no se guarda y no se envía."
+
+#: apps/wprsd/src/words.rs
+msgid "Let a scene follow the pointer?"
+msgstr "¿Dejar que una escena siga el puntero?"
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"Let “%1” follow the pointer? Only its latest position over the screen "
+"reaches the scene, and it is never kept."
+msgstr ""
+"¿Dejar que «%1» siga el puntero? A la escena solo llega su última posición "
+"sobre la pantalla, y nunca se guarda."

@@ -32,6 +32,7 @@ pub struct Remote {
     pub keyring: OnceLock<Keyring>,
     pub health: Mutex<HashMap<String, Health>>,
     pub syncing: Mutex<HashSet<String>>,
+    pub adding: Mutex<HashSet<String>>,
     pub credits: Mutex<HashMap<PathBuf, Credit>>,
     pub poke: Notify,
     pub repo_errors: Mutex<HashMap<String, String>>,

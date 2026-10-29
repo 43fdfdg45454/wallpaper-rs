@@ -1,9 +1,12 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use tokio::sync::watch;
 
 const KWIN: &str = "org.kde.KWin";
 const SCRIPT: &str = "io.github.wallpaper_rs.pointer";
 const SCRIPT_FILE: &str = "wallpaper-rs/kwin-pointer/contents/code/main.js";
+
+pub(super) static LOADED: AtomicBool = AtomicBool::new(false);
 
 fn script() -> Option<PathBuf> {
     let system = std::env::var_os("XDG_DATA_DIRS").unwrap_or_else(|| "/usr/local/share:/usr/share".into());
@@ -26,7 +29,10 @@ pub(crate) async fn kwin(connection: &zbus::Connection, on: bool) -> anyhow::Res
 pub(crate) async fn follow(connection: zbus::Connection, mut tracking: watch::Receiver<bool>) {
     loop {
         let on = *tracking.borrow_and_update();
-        match kwin(&connection, on).await {
+        LOADED.store(false, SeqCst);
+        let done = kwin(&connection, on).await;
+        LOADED.store(on && done.is_ok(), SeqCst);
+        match done {
             Ok(()) => tracing::debug!(on, "KWin pointer script"),
             Err(e) if on => tracing::info!("no pointer position from KWin: {e:#}"),
             Err(e) => tracing::debug!("cannot unload the KWin pointer script: {e:#}"),

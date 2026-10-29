@@ -38,7 +38,7 @@ PlasmoidItem {
         path: "/io/github/wallpaper_rs/Daemon"
         iface: "io.github.wallpaper_rs.Daemon1"
 
-        function dbusChanged(topic, ids) {
+        function dbusChanged(topic, ids, serial) {
             root.daemon.refresh(String(topic));
             root.daemon.updated(String(topic), Array.from(ids));
         }

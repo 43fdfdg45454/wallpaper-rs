@@ -10,8 +10,7 @@ rust-version.workspace = true
 wprs-core.workspace = true
 pipewire.workspace = true
 rustix.workspace = true
+libc.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
-[dev-dependencies]
-libc.workspace = true

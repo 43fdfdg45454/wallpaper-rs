@@ -83,7 +83,7 @@ pub async fn run(client: &Client, command: Files) -> Result<()> {
             }
             if stop {
                 eprintln!("{STOP}");
-                if !yes && !confirm("Delete these files from the server?")? {
+                if !yes && !confirm("Delete these files from the server?").await? {
                     bail!("nothing was deleted");
                 }
             }
@@ -109,7 +109,7 @@ pub async fn escrow(client: &Client, remove: bool, yes: bool, wait: &Wait) -> Re
     let passphrase = match remove {
         true => {
             eprintln!("Without the escrow, only a device that holds the sync key can give it to a new one.");
-            if !yes && !confirm("Delete the escrow from the server?")? {
+            if !yes && !confirm("Delete the escrow from the server?").await? {
                 bail!("the escrow was kept");
             }
             Zeroizing::new(String::new())

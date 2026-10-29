@@ -17,6 +17,7 @@ QtObject {
             "Daemon1.SetVolume": "(d)",
             "Daemon1.SetMuted": "(b)",
             "Inputs1.Grant": "(ss)",
+            "Inputs1.GrantPackage": "(sss)",
             "Inputs1.Revoke": "(ss)",
             "Inputs1.GetInputs": "()",
             "Library1.Thumbnail": "(su)",
@@ -41,7 +42,7 @@ QtObject {
             "member": member,
             "signature": signatures[iface + "." + member] ?? "()",
             "arguments": args
-        }, onReply, reply => onError(reply?.error?.message || i18n("The wallpaper-rs daemon is not running")));
+        }, onReply, reply => onError(reply?.error?.message || i18n("The wallpaper-rs daemon is not running"), String(reply?.error?.name ?? "")));
     }
 
     function query(member, args, iface, onReply, onError) {
@@ -51,9 +52,17 @@ QtObject {
         }, onError ?? (() => {}));
     }
 
-    function act(member, args, iface) {
+    function act(member, args, iface, onDone, onError) {
         actionError = "";
-        call(member, args, iface ?? "Daemon1", () => {}, error => daemon.actionError = error);
+        call(member, args, iface ?? "Daemon1", onDone ?? (() => {}), (message, name) => {
+            if (onError)
+                onError({
+                    "name": name,
+                    "message": message
+                });
+            else
+                daemon.actionError = message;
+        });
     }
 
     function refresh(topic) {
@@ -71,7 +80,7 @@ QtObject {
             findApp();
     }
 
-    function bus(member, args, onReply) {
+    function bus(member, args, onReply, onError) {
         send({
             "service": "org.freedesktop.DBus",
             "path": "/org/freedesktop/DBus",
@@ -79,7 +88,7 @@ QtObject {
             "member": member,
             "signature": args.length ? "(s)" : "()",
             "arguments": args
-        }, onReply, () => {});
+        }, onReply, onError ?? (() => {}));
     }
 
     function findApp() {
@@ -93,7 +102,7 @@ QtObject {
         });
     }
 
-    function openApp(page) {
+    function openApp(page, again) {
         send({
             "service": "io.github.wallpaper_rs",
             "path": "/io/github/wallpaper_rs",
@@ -101,7 +110,13 @@ QtObject {
             "member": page ? "ActivateAction" : "Activate",
             "signature": page ? "(sava{sv})" : "(a{sv})",
             "arguments": page ? [page, [], {}] : [{}]
-        }, () => {}, reply => daemon.actionError = reply?.error?.message || i18n("wallpaper-rs could not be opened"));
+        }, () => {}, reply => {
+            const failed = () => daemon.actionError = reply?.error?.message || i18n("wallpaper-rs could not be opened");
+            if (!again && String(reply?.error?.name ?? "").endsWith(".ServiceUnknown"))
+                bus("ReloadConfig", [], () => daemon.openApp(page, true), failed);
+            else
+                failed();
+        });
     }
 
     function tr(text, first, second, third) {

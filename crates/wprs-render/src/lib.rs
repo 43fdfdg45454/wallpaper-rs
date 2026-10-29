@@ -1,3 +1,4 @@
+mod adapter;
 #[cfg(test)]
 mod allocations;
 mod bind;
@@ -21,7 +22,10 @@ mod surface;
 mod texture;
 mod yuv;
 
-pub use decode::{decode_image, image_size, needed_edge, thumbnails};
+pub use decode::{
+    decode_image, decode_limited, decode_reduced, decode_unoriented, decoded_size, image_size, needed_edge,
+    picture_limits, thumbnails,
+};
 pub use device::{Display, Renderer};
 #[cfg(target_os = "linux")]
 pub use dmabuf::{Dmabuf, Dmabufs};

@@ -103,10 +103,16 @@ before=$(ticks); sleep 2
 echo "idle check passed"
 
 ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
+if ctl stream HEADLESS-1 160 90 2>"$WORK/stream.err"; then fail "a stream took the name of a screen"; fi
+grep -q "on its own surface" "$WORK/stream.err" || fail "stream named like a screen: $(cat "$WORK/stream.err")"
 
+ctl stream HEADLESS-3 160 90 >/dev/null
 swaymsg -q create_output
 expect "sorted(s['outputs'])" "['HEADLESS-1', 'HEADLESS-2', 'HEADLESS-3']"
+wait_for 10 grep -q "closing a stream named after a screen" "$WORK/wprsd.log" || fail "the stream of a new screen was kept"
+expect "[s['outputs']['HEADLESS-3'][k] for k in ('width', 'height', 'clients')]" "[480, 270, 1]"
 expect "[s['outputs'][o]['refresh'] for o in ('HEADLESS-1', 'HEADLESS-3')]" "[60, 120]"
+grep -q "presented without a refresh rate" "$WORK/wprsd.log" || fail "no presentation feedback"
 check HEADLESS-3 "0.5,0.5,$green" "0.02,0.02,$blue"
 swaymsg -q output HEADLESS-3 unplug
 expect "sorted(s['outputs'])" "['HEADLESS-1', 'HEADLESS-2']"
@@ -128,7 +134,7 @@ foot >"$WORK/foot.log" 2>&1 & foot=$!; pids+=("$foot")
 expect "s['outputs']['HEADLESS-1']['covered']" True
 expect "s['outputs']['HEADLESS-1']['playing']" False
 expect "s['outputs']['HEADLESS-2']['playing']" True
-kill "$foot"
+swaymsg -q output HEADLESS-1 disable && kill "$foot" && swaymsg -q output HEADLESS-1 enable
 expect "s['outputs']['HEADLESS-1']['covered']" False
 expect "s['outputs']['HEADLESS-1']['playing']" True
 echo "fullscreen pause checks passed"

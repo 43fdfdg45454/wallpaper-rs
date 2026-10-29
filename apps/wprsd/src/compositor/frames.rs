@@ -12,6 +12,8 @@ use wprs_pipewire::{Exporter, Grant, VideoFrame};
 use wprs_render::{Exported, RenderError, Renderer, log_allowed};
 
 const TRANSITION_FPS: u32 = 60;
+const RETRY: Duration = Duration::from_secs(1);
+const RETRY_MAX: Duration = Duration::from_secs(60);
 
 type Shared<'a> = (&'a Renderer, &'a Exporter, &'a HashMap<Reel, PlayerSlot>, Power, Option<u32>);
 
@@ -22,8 +24,16 @@ fn interval(output: &Output, power: Power) -> Duration {
     Duration::from_secs(1) / if output.fading() { fading } else { output.fps(power) }
 }
 
+fn backoff(failed: u32) -> Duration {
+    match failed {
+        0 => Duration::ZERO,
+        n => (RETRY * 2u32.pow((n - 1).min(6))).min(RETRY_MAX),
+    }
+}
+
 fn deadline(output: &Output, open: bool, power: Power, now: Instant) -> Option<Instant> {
-    (output.dirty && open).then(|| output.last_render.map_or(now, |t| t + interval(output, power)))
+    let wait = interval(output, power).max(backoff(output.failed));
+    (output.dirty && open).then(|| output.last_render.map_or(now, |t| t + wait))
 }
 
 impl State {
@@ -68,6 +78,7 @@ impl State {
                 output.dirty = true;
             }
             output.dirty |= shared.1.starved(name);
+            output.unwatched(streaming);
             if deadline(output, output.open(streaming), self.power, now).is_none_or(|at| at > now) {
                 continue;
             }
@@ -82,7 +93,8 @@ impl State {
                     if log_allowed(&FAILURES) {
                         tracing::error!(output = name, "render failed: {e:#}");
                     }
-                    output.dirty = false;
+                    (output.failed, output.last_render) = (output.failed.saturating_add(1), Some(now));
+                    tracing::debug!(output = name, retry = ?backoff(output.failed), "drawing again later");
                 }
             }
         }
@@ -142,7 +154,7 @@ fn draw(
     }
     written??;
     output.missing_frame = output.shown.content.video().is_some() && shown.image.is_none();
-    output.last_render = Some(now);
+    (output.last_render, output.failed) = (Some(now), 0);
     output.fade = output.fade.take().filter(|_| progress < 1.0);
     output.dirty = output.fading();
     output.stale = output.missing_frame || output.fade.is_some();
@@ -192,6 +204,45 @@ mod tests {
         let every = |fps: u32| Duration::from_secs(1) / fps;
         let fades = [fade(20, false), fade(0, false), fade(144, false), fade(144, true)];
         assert_eq!(fades, [every(20), every(60), every(144), every(30)]);
+    }
+
+    #[test]
+    fn a_failed_draw_is_tried_again_later_and_less_often() {
+        let color = || Shown {
+            content: Content::Color,
+            fit: Fit::Stretch,
+            background: [0; 3],
+            image: None,
+            transition: None,
+            uv: None,
+            relief: None,
+            scene: None,
+        };
+        let (power, now) = (Power { tier: Tier::T3, on_battery: false, max_fps: 0 }, Instant::now());
+        let mut output = Output::new((16, 9), color(), Sink::Stream(None), 60);
+        (output.failed, output.last_render) = (1, Some(now));
+        assert_eq!(deadline(&output, true, power, now), Some(now + RETRY));
+        output.failed = 3;
+        assert_eq!(deadline(&output, true, power, now), Some(now + RETRY * 4));
+        output.failed = 40;
+        assert_eq!(deadline(&output, true, power, now), Some(now + RETRY_MAX));
+        output.failed = 0;
+        assert_eq!(deadline(&output, true, power, now), Some(now + Duration::from_secs(1) / 60));
+        output.failed = 7;
+        let red = Shown { background: [255, 0, 0], ..color() };
+        output.show(red, (16, 9), false);
+        assert_eq!(
+            deadline(&output, true, power, now),
+            Some(now + Duration::from_secs(1) / 60),
+            "a new picture waited for the retries of the old one"
+        );
+        let Ok(renderer) = Renderer::new() else { return };
+        output.sink = Sink::Stream(Some(renderer.create_target(16, 9).unwrap()));
+        (output.stale, output.dirty) = (false, false);
+        output.unwatched(true);
+        assert!(matches!(output.sink, Sink::Stream(Some(_))));
+        output.unwatched(false);
+        assert!(matches!(output.sink, Sink::Stream(None)), "a stream nobody watches kept its target");
     }
 
     #[test]

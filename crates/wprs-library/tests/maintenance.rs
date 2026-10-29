@@ -84,7 +84,10 @@ fn scans_commit_in_batches_report_progress_and_stop_when_cancelled() {
         ControlFlow::Continue(())
     };
     assert_eq!(library.scan_with(&source, NOW, &mut record).unwrap().added, 300);
-    assert_eq!(calls, [(256, 300), (300, 300)]);
+    assert_eq!(calls.last(), Some(&(300, 300)));
+    let steps: Vec<u32> =
+        calls.iter().scan(0, |at, (done, _)| Some(done - std::mem::replace(at, *done))).collect();
+    assert!(steps.iter().all(|n| (1..=256).contains(n)), "{steps:?}");
     fs::remove_file(root.join("b000.png")).unwrap();
     (0..100).for_each(|n| fs::write(root.join(format!("a{n:03}.png")), format!("a{n}")).unwrap());
     let cancelled = library.scan_with(&source, NOW, &mut |_, _| ControlFlow::Break(()));
@@ -170,4 +173,22 @@ fn unanalyzed_items_are_present_ones_without_metadata_oldest_first() {
     library.check_loose(NOW).unwrap();
     let titles = |limit| library.unanalyzed(limit).unwrap().into_iter().map(|i| i.title).collect::<Vec<_>>();
     assert_eq!((titles(10), titles(1)), (vec!["d".to_string(), "f".into()], vec!["d".into()]));
+}
+
+#[test]
+fn opening_the_library_again_keeps_the_locks_of_the_open_connections() {
+    use std::os::unix::fs::MetadataExt;
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("library.db");
+    let mut first = Library::open(&path).unwrap();
+    first.add_folder(dir.path(), false).unwrap();
+    let inode = format!(":{} ", fs::metadata(&path).unwrap().ino());
+    let held = || {
+        let locks = fs::read_to_string("/proc/locks").unwrap();
+        let ours = format!(" {} ", std::process::id());
+        locks.lines().any(|line| line.contains(&ours) && line.contains(&inode))
+    };
+    assert!(held());
+    let _second = Library::open(&path).unwrap();
+    assert!(held());
 }

@@ -26,7 +26,7 @@ impl Desk {
         let managed = x.managed();
         let background = if managed { BackPixmap::NONE } else { BackPixmap::PARENT_RELATIVE };
         let aux = CreateWindowAux::new().override_redirect(u32::from(!managed)).background_pixmap(background);
-        let aux = aux.event_mask(EventMask::EXPOSURE);
+        let aux = aux.event_mask(EventMask::EXPOSURE | EventMask::VISIBILITY_CHANGE);
         let (depth, visual, class) = (COPY_DEPTH_FROM_PARENT, COPY_FROM_PARENT, WindowClass::INPUT_OUTPUT);
         c.create_window(depth, window, x.root, 0, 0, 1, 1, 0, class, visual, &aux)?;
         let desk = Self { x: x.clone(), window };

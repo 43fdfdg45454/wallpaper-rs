@@ -57,7 +57,10 @@ impl Bus {
             service.serve_at(OBJECT_PATH, Daemon(log.clone())).serve_at(OBJECT_PATH, Library(log.clone()));
         let service =
             service.serve_at(OBJECT_PATH, Providers(log.clone())).serve_at(OBJECT_PATH, Repos(log.clone()));
-        let service = service.serve_at(OBJECT_PATH, Playlists(log.clone()));
+        let service = service
+            .serve_at(OBJECT_PATH, Playlists(log.clone()))
+            .serve_at(OBJECT_PATH, Profiles(log.clone()))
+            .serve_at(OBJECT_PATH, Inputs(log.clone()));
         Bus { daemon, address, log, _service: service.build().await.unwrap(), _dir: dir }
     }
 
@@ -102,6 +105,7 @@ enum Failure {
     ZBus(zbus::Error),
     NotFound(String),
     Stale(String),
+    Unconfirmed(String),
 }
 
 struct Daemon(Log);
@@ -127,6 +131,11 @@ impl Daemon {
         signal(bus, "JobFinished", &(job, "cancelled", "", "cancelled")).await;
     }
 
+    fn set_option(&self, key: String, value: String) -> zbus::fdo::Result<()> {
+        self.0.push(format!("SetOption {key} {value}"));
+        Err(zbus::fdo::Error::InvalidArgs(format!("invalid value {value:?} for {key}")))
+    }
+
     fn get_schema(&self) -> String {
         let immich = json!({"kind": "immich", "hosts": [], "options": [],
             "secret": {"name": "api_key", "required": true}});
@@ -142,8 +151,10 @@ struct Library(Log);
 impl Library {
     fn resolve(&self, refs: Vec<String>) -> Result<Vec<String>, Failure> {
         self.0.push(format!("Resolve {}", refs.join(" ")));
-        let find =
-            |r: &String| UIDS.iter().find(|uid| uid.ends_with(&r.to_uppercase())).map(|uid| uid.to_string());
+        let find = |r: &String| match r.ends_with(".png") {
+            true => Some(UIDS[2].to_string()),
+            false => UIDS.iter().find(|uid| uid.ends_with(&r.to_uppercase())).map(|uid| uid.to_string()),
+        };
         let found =
             refs.iter().map(|r| find(r).ok_or_else(|| Failure::NotFound(format!("no item matches \"{r}\""))));
         found.collect()
@@ -204,6 +215,46 @@ impl Playlists {
 
     fn remove_entries(&self, playlist: String, indexes: Vec<u32>, expected: Vec<String>) {
         self.0.push(format!("RemoveEntries {playlist} {indexes:?} {expected:?}"));
+    }
+}
+
+struct Profiles(Log);
+
+#[zbus::interface(name = "io.github.wallpaper_rs.Profiles1")]
+impl Profiles {
+    fn list_presets(&self, item: String) -> String {
+        self.0.push(format!("ListPresets {item}"));
+        let preset = |uid: &str, name: &str| json!({"uid": uid, "item": item, "name": name, "value": {"fit": "fit", "background": null}});
+        let presets = [preset(UIDS[3], "Dim: late"), preset(UIDS[4], "late")];
+        json!({"model": 1, "serial": 9, "item": item, "presets": presets}).to_string()
+    }
+
+    fn delete_preset(&self, preset: String) {
+        self.0.push(format!("DeletePreset {preset}"));
+    }
+}
+
+struct Inputs(Log);
+
+#[zbus::interface(name = "io.github.wallpaper_rs.Inputs1")]
+impl Inputs {
+    fn get_inputs(&self) -> String {
+        let shown = |key: &str, granted: &[&str]| {
+            json!({"scene": "org.example.sea", "audio": true, "pointer": false, "title": "Sea", "key": key,
+                "granted": granted})
+        };
+        let shown = json!({"DP-1": shown("key:signer", &["audio"]), "DP-2": shown("sha256:other", &[])});
+        json!({"model": 1, "serial": 9, "capturing": true, "tracking": false,
+            "grants": {"org.example.sea": ["audio"]}, "shown": shown, "parallax": [], "declined": {}})
+        .to_string()
+    }
+
+    fn grant_package(&self, scene: String, key: String, input: String) -> Result<(), Failure> {
+        self.0.push(format!("GrantPackage {scene} {key} {input}"));
+        match key.as_str() {
+            "sha256:other" => Err(Failure::Unconfirmed("the user is asked in a notification".into())),
+            _ => Ok(()),
+        }
     }
 }
 
@@ -344,7 +395,7 @@ async fn provider_secrets_come_from_stdin_and_never_from_arguments() {
     let options = r#"{"allow_plain_http": "true", "server": "https://photos.example.org"}"#;
     assert!(bus.log.has(&format!("Add photos immich {options} [s3cret]")));
     let (code, _, err) = bus.fed(&add, "");
-    assert!(code == 1 && err.contains("immich needs its api_key; use --no-secret"), "{err}");
+    assert!(code == 2 && err.contains("immich needs its api_key; use --no-secret"), "{err}");
     assert_eq!(bus.ctl(&[&add[..], &["--no-secret"]].concat()).0, 0);
     assert!(bus.log.has(&format!("Add photos immich {options} []")));
     let (code, _, err) = bus.fed(&[&add[..], &["api_key=s3cret"]].concat(), "s3cret\n");
@@ -361,7 +412,7 @@ async fn playlist_rows_far_apart_are_read_before_removal() {
     let expected = format!("{:?}", [UIDS[1], UIDS[3], UIDS[0]]);
     assert!(bus.log.has(&format!("RemoveEntries Mine [551, 3, 550] {expected}")));
     let (code, _, err) = bus.ctl(&["playlist", "remove-at", "Mine", "600"]);
-    assert_eq!((code, err.as_str()), (1, "Error: the playlist has no entry 600\n"));
+    assert_eq!((code, err.as_str()), (2, "Error: the playlist has no entry 600\n"));
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -373,4 +424,94 @@ async fn an_upgrade_tries_every_repository_before_failing_on_stale_ones() {
     assert!(bus.log.has("Install fedcba9876543210/org.example.dusk false false"));
     let (code, out, _) = bus.ctl(&["pkg", "upgrade", "--allow-stale"]);
     assert_eq!((code, out.as_str()), (0, "5\n5\n"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn arguments_refused_after_connecting_are_usage_errors() {
+    let bus = Bus::start().await;
+    let (code, _, err) = bus.ctl(&["config", "playback.max_fps", "999"]);
+    assert_eq!((code, err.as_str()), (2, "Error: invalid value \"999\" for playback.max_fps\n"));
+    assert!(bus.log.has("SetOption playback.max_fps 999"));
+    let (code, _, err) = bus.ctl(&["provider", "add", "photos", "nosuch"]);
+    assert!(code == 2 && err.contains("unknown provider kind nosuch; the kinds are immich"), "{err}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_preset_of_a_file_with_colons_in_its_path_is_found() {
+    let bus = Bus::start().await;
+    let dir = tempfile::tempdir().unwrap();
+    let picture = dir.path().join("a:b.png");
+    std::fs::write(&picture, b"").unwrap();
+    let (code, _, err) = bus.ctl(&["preset", "rm", &format!("{}:Dim: late", picture.display())]);
+    assert_eq!(code, 0, "{err}");
+    assert!(bus.log.has(&format!("Resolve {}", picture.display())));
+    assert!(bus.log.has(&format!("ListPresets {}", UIDS[2])));
+    assert!(bus.log.has(&format!("DeletePreset {}", UIDS[3])));
+    assert_eq!(bus.ctl(&["preset", "rm", &format!("{}:late", picture.display())]).0, 0);
+    assert!(bus.log.has(&format!("DeletePreset {}", UIDS[4])));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ctrl_c_stops_the_stale_question_after_waiting() {
+    let bus = Bus::start().await;
+    let command = format!("{} pkg install org.example.dawn --wait", env!("CARGO_BIN_EXE_wprs-ctl"));
+    let mut child = Command::new("script")
+        .args(["-qfec", &command, "/dev/null"])
+        .env("DBUS_SESSION_BUS_ADDRESS", &bus.address)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("script is installed");
+    let (shown, mut stdout) = (Arc::new(Mutex::new(Vec::new())), child.stdout.take().unwrap());
+    let reader = shown.clone();
+    std::thread::spawn(move || {
+        let mut chunk = [0; 512];
+        while let Ok(n @ 1..) = std::io::Read::read(&mut stdout, &mut chunk) {
+            reader.lock().unwrap().extend_from_slice(&chunk[..n]);
+        }
+    });
+    let text = || String::from_utf8_lossy(&shown.lock().unwrap()).into_owned();
+    let start = Instant::now();
+    while !text().contains("Install anyway?") {
+        assert!(start.elapsed() < Duration::from_secs(10), "no question: {}", text());
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    child.stdin.as_mut().unwrap().write_all(b"\x03").unwrap();
+    let start = Instant::now();
+    let status = loop {
+        match child.try_wait().unwrap() {
+            Some(status) => break status,
+            None if start.elapsed() > Duration::from_secs(10) => {
+                child.kill().ok();
+                panic!("Ctrl-C did not stop the question: {}", text());
+            }
+            None => tokio::time::sleep(Duration::from_millis(20)).await,
+        }
+    };
+    assert_eq!(status.code(), Some(1), "{}", text());
+    assert!(text().contains("stopped without an answer"), "{}", text());
+    assert!(!bus.log.has("Install org.example.dawn true"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_grant_names_one_package_and_the_status_shows_what_each_screen_may_use() {
+    let bus = Bus::start().await;
+    let grant =
+        |output: &[&str]| bus.ctl(&[&["input", "grant", "org.example.sea", "audio"][..], output].concat());
+    let (code, _, err) = grant(&[]);
+    assert!(code == 2 && err.contains("choose one with --output (DP-1, DP-2)"), "{err}");
+    assert!(!bus.log.has("GrantPackage"));
+    assert_eq!(grant(&["-o", "DP-1"]), (0, String::new(), String::new()));
+    assert!(bus.log.has("GrantPackage org.example.sea key:signer audio"));
+    let (code, out, err) = grant(&["--output", "DP-2"]);
+    assert_eq!((code, out.as_str()), (0, ""), "{err}");
+    assert!(err.contains("Asked in a desktop notification") && !err.contains("Error"), "{err}");
+    let (code, _, err) = grant(&["-o", "DP-3"]);
+    assert!(code == 1 && err.contains("DP-3 does not show org.example.sea"), "{err}");
+    let (code, out, _) = bus.ctl(&["input", "status"]);
+    assert_eq!(code, 0);
+    assert!(out.contains("DP-1 shows org.example.sea using audio (allowed: audio)\n"), "{out}");
+    assert!(out.contains("DP-2 shows org.example.sea using audio (allowed: none)\n"), "{out}");
+    assert!(out.contains("granted to some version or signer of org.example.sea: audio\n"), "{out}");
 }

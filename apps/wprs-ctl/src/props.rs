@@ -1,6 +1,7 @@
 use crate::cli::{JSON, OUTPUT};
 use crate::propsets::{self, PropPreset};
 use crate::show::{self, table};
+use crate::usage;
 use anyhow::{Context, Result, ensure};
 use clap::Subcommand;
 use serde_json::Value;
@@ -77,8 +78,10 @@ pub async fn run(client: &Client, command: Prop) -> Result<()> {
         Prop::Ls { output, json } => show::reply(daemon.get_scene_properties(&output).await?, json, list)?,
         Prop::Get { id, output } => {
             let reply: SceneProperties = wprs_client::parse(&daemon.get_scene_properties(&output).await?)?;
-            let found =
-                reply.values.get(&id).with_context(|| format!("{} has no setting {id}", reply.package))?;
+            let found = reply
+                .values
+                .get(&id)
+                .ok_or_else(|| usage(format!("{} has no setting {id}", reply.package)))?;
             println!("{found}");
         }
         Prop::Set { id, value: text, output } => {

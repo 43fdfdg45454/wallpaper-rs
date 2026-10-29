@@ -1,7 +1,9 @@
+use crate::compositor::lock;
 use crate::error::{Error, Result};
 use futures_util::StreamExt;
 use std::collections::HashMap;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use wprs_core::dbus::error::KEYRING_UNAVAILABLE;
 use zbus::proxy::CacheProperties;
 use zbus::{ObjectPath, OwnedObjectPath, OwnedVariant, Variant};
@@ -14,6 +16,7 @@ const COLLECTIONS: [&str; 2] =
 const WAIT: Duration = Duration::from_secs(20);
 const LOOKUP: Duration = Duration::from_secs(10);
 const WRITE: Duration = Duration::from_secs(100);
+const SILENCE: Duration = Duration::from_secs(60);
 const ABSENT: &str = "no Secret Service is available to store the secret";
 const SLOW: &str = "the keyring did not answer in time";
 
@@ -76,6 +79,8 @@ pub struct Keyring {
     lookup: Duration,
     write: Duration,
     kind: (&'static str, &'static str),
+    silent: Arc<Mutex<Option<Instant>>>,
+    known: Arc<Mutex<HashMap<String, bool>>>,
 }
 
 fn unavailable(message: impl Into<String>) -> Error {
@@ -92,7 +97,8 @@ async fn bounded<T>(limit: Duration, work: impl Future<Output = Result<T>>) -> R
 
 impl Keyring {
     pub fn new(bus: zbus::Connection) -> Self {
-        Keyring { bus, lookup: LOOKUP, write: WRITE, kind: (SCHEMA, "provider") }
+        let (silent, known) = (Arc::default(), Arc::default());
+        Keyring { bus, lookup: LOOKUP, write: WRITE, kind: (SCHEMA, "provider"), silent, known }
     }
 
     pub fn server(bus: zbus::Connection) -> Self {
@@ -100,7 +106,25 @@ impl Keyring {
     }
 
     pub fn properties(&self) -> Self {
-        Keyring { kind: ("io.github.wallpaper_rs.Property", "property"), ..Keyring::new(self.bus.clone()) }
+        let kind = ("io.github.wallpaper_rs.Property", "property");
+        Keyring { kind, silent: self.silent.clone(), ..Keyring::new(self.bus.clone()) }
+    }
+
+    pub fn known(&self, id: &str) -> Option<bool> {
+        lock(&self.known).get(id).copied()
+    }
+
+    fn remember(&self, id: &str, stored: bool) {
+        lock(&self.known).insert(id.to_owned(), stored);
+    }
+
+    async fn asked<T>(&self, work: impl Future<Output = Result<T>>) -> Result<T> {
+        if lock(&self.silent).is_some_and(|until| Instant::now() < until) {
+            return Err(unavailable(SLOW));
+        }
+        let answer = tokio::time::timeout(self.lookup, work).await;
+        *lock(&self.silent) = answer.is_err().then(|| Instant::now() + SILENCE);
+        answer.unwrap_or_else(|_| Err(unavailable(SLOW)))
     }
 
     fn attributes<'a>(&self, id: &'a str) -> HashMap<&'a str, &'a str> {
@@ -116,13 +140,17 @@ impl Keyring {
     }
 
     pub async fn has(&self, id: &str) -> Result<bool> {
-        let found =
-            tokio::time::timeout(self.lookup, self.search(id)).await.map_err(|_| unavailable(SLOW))?;
-        Ok(found.is_ok_and(|(open, locked)| !open.is_empty() || !locked.is_empty()))
+        let found = self.asked(async { Ok(self.search(id).await) }).await?;
+        let stored = found.is_ok_and(|(open, locked)| !open.is_empty() || !locked.is_empty());
+        self.remember(id, stored);
+        Ok(stored)
     }
 
     pub async fn read(&self, id: &str, prompt: bool) -> Result<Stored> {
-        bounded(if prompt { self.write } else { self.lookup }, self.fetch(id, prompt)).await
+        match prompt {
+            true => bounded(self.write, self.fetch(id, prompt)).await,
+            false => self.asked(self.fetch(id, prompt)).await,
+        }
     }
 
     async fn fetch(&self, id: &str, prompt: bool) -> Result<Stored> {
@@ -147,7 +175,9 @@ impl Keyring {
     }
 
     pub async fn store(&self, id: &str, secret: &str) -> Result<()> {
-        bounded(self.write, self.create(id, secret)).await
+        bounded(self.write, self.create(id, secret)).await?;
+        self.remember(id, true);
+        Ok(())
     }
 
     async fn create(&self, id: &str, secret: &str) -> Result<()> {
@@ -179,7 +209,9 @@ impl Keyring {
             }
             Ok(())
         })
-        .await
+        .await?;
+        self.remember(id, false);
+        Ok(())
     }
 
     pub async fn discard(&self, id: &str) -> Result<bool> {

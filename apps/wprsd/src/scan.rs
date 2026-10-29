@@ -136,11 +136,15 @@ impl Daemon {
         let (mut tried, mut analyzed, mut failed) = (HashSet::new(), 0, 0);
         let mut total = self.store.read(|lib| lib.unanalyzed(u32::MAX))?.len() as u64;
         loop {
-            let found = self.store.read(|lib| lib.unanalyzed(tried.len() as u32 + 256))?;
-            let batch: Vec<Item> =
-                found.into_iter().filter(|i| tried.insert(i.uid.clone())).take(256).collect();
-            if batch.is_empty() {
-                break;
+            let limit = tried.len() as u32 + 256;
+            let found = self.store.read(|lib| lib.unanalyzed(limit))?;
+            let more = found.len() as u32 == limit;
+            let fresh = |i: &Item| tried.insert(i.uid.clone()) && !self.thumbs.later(i);
+            let batch: Vec<Item> = found.into_iter().filter(fresh).take(256).collect();
+            match (batch.is_empty(), more) {
+                (true, true) => continue,
+                (true, false) => break,
+                _ => {}
             }
             total = total.max(tried.len() as u64);
             let (tx, rx) = std::sync::mpsc::channel();

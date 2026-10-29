@@ -17,6 +17,8 @@ use wprs_providers::HttpFetch;
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
+pub const PREVIEW: &str = "preview-";
+
 fn text(path: PathBuf) -> String {
     path.to_string_lossy().into_owned()
 }
@@ -86,7 +88,7 @@ impl Daemon {
             return Some(dest);
         }
         let item = Item {
-            uid: format!("preview-{}", NEXT.fetch_add(1, Ordering::Relaxed)),
+            uid: format!("{PREVIEW}{}", NEXT.fetch_add(1, Ordering::Relaxed)),
             source: None,
             kind: Kind::Image,
             path: download.clone(),

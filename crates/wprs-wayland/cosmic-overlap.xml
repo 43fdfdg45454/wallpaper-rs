@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="cosmic_overlap_notify_unstable_v1">
+  <copyright>
+    Copytight © 2024 Victoria Brekenfeld
+
+    Permission to use, copy, modify, distribute, and sell this
+    software and its documentation for any purpose is hereby granted
+    without fee, provided that the above copyright notice appear in
+    all copies and that both that copyright notice and this permission
+    notice appear in supporting documentation, and that the name of
+    the copyright holders not be used in advertising or publicity
+    pertaining to distribution of the software without specific,
+    written prior permission.  The copyright holders make no
+    representations about the suitability of this software for any
+    purpose.  It is provided "as is" without express or implied
+    warranty.
+
+    THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS
+    SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+    FITNESS, IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+    AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+    ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+    THIS SOFTWARE.
+  </copyright>
+
+  <interface name="zcosmic_overlap_notify_v1" version="1">
+
+    <request name="notify_on_overlap">
+      <arg name="overlap_notification" type="new_id" interface="zcosmic_overlap_notification_v1"/>
+      <arg name="layer_surface" type="object" interface="zwlr_layer_surface_v1"/>
+    </request>
+  </interface>
+
+  <interface name="zcosmic_overlap_notification_v1" version="1">
+
+    <event name="toplevel_enter">
+      <arg name="toplevel" type="object" interface="ext_foreign_toplevel_handle_v1"/>
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+      <arg name="width" type="int"/>
+      <arg name="height" type="int"/>
+    </event>
+
+    <event name="toplevel_leave">
+      <arg name="toplevel" type="object" interface="ext_foreign_toplevel_handle_v1"/>
+    </event>
+
+    <event name="layer_enter">
+      <arg name="identifier" type="string"/>
+      <arg name="namespace" type="string"/>
+      <arg name="exclusive" type="uint"/>
+      <arg name="layer" type="uint" enum="zwlr_layer_shell_v1.layer"/>
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+      <arg name="width" type="int"/>
+      <arg name="height" type="int"/>
+    </event>
+
+    <event name="layer_leave">
+      <arg name="identifier" type="string"/>
+    </event>
+
+    <request name="destroy" type="destructor">
+    </request>
+  </interface>
+</protocol>

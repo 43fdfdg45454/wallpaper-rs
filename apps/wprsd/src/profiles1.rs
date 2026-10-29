@@ -1,3 +1,4 @@
+use crate::compositor::lock;
 use crate::daemon::Daemon;
 use crate::error::Result;
 use crate::playlists1::library;
@@ -5,12 +6,14 @@ use crate::profiles::auto;
 use std::collections::{BTreeSet, HashMap};
 use std::io::Write;
 use std::path::Path;
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 use wprs_core::model::ProfileAuto;
 
 const HOLD: &str = "profile-hold.json";
 const POWER_WAIT: Duration = Duration::from_secs(5);
+
+static CHOICE: Mutex<()> = Mutex::new(());
 
 type Conditions = (BTreeSet<String>, bool);
 type Hold = (Option<String>, Conditions);
@@ -35,7 +38,9 @@ impl Profiles {
     }
 
     async fn activate(&self, profile: String) -> Result<()> {
-        library(&self.0)?.render(move |d| d.activate(&profile).map(|()| d.hold(true))).await
+        let chosen =
+            move |d: &Arc<Daemon>| choose(|| Ok(Some(profile)), |p| d.activate(p).map(|()| d.hold(true)));
+        library(&self.0)?.render(chosen).await
     }
 
     async fn rename(&self, profile: String, name: String) -> Result<()> {
@@ -85,19 +90,24 @@ fn holds(dir: &Path, active: Option<&str>, now: &Conditions) -> bool {
     let Some((profile, kept)) = held(dir) else { return false };
     let same = profile.as_deref() == active && kept == *now;
     if !same && !now.0.is_empty() {
-        keep(dir, None).unwrap_or_else(|e| tracing::warn!("cannot forget the profile chosen by hand: {e}"));
+        keep(dir, None)
+            .unwrap_or_else(|e| tracing::warn!(error = %e, "cannot forget the profile chosen by hand"));
     }
     same
 }
 
-fn keep(dir: &Path, hold: Option<Hold>) -> std::io::Result<()> {
+fn keep(dir: &Path, hold: Option<Hold>) -> std::result::Result<(), std::io::ErrorKind> {
     let path = dir.join(HOLD);
-    let Some(hold) = hold else { return if path.exists() { std::fs::remove_file(path) } else { Ok(()) } };
-    crate::store::private_dir(dir)?;
-    let mut file = tempfile::Builder::new().prefix(".tmp-").tempfile_in(dir)?;
-    file.write_all(&serde_json::to_vec(&hold)?)?;
-    file.persist(path)?;
-    Ok(())
+    let Some(hold) = hold else {
+        return if path.exists() { std::fs::remove_file(path).map_err(|e| e.kind()) } else { Ok(()) };
+    };
+    let write = || {
+        crate::store::private_dir(dir)?;
+        let mut file = tempfile::Builder::new().prefix(".tmp-").tempfile_in(dir)?;
+        file.write_all(&serde_json::to_vec(&hold)?)?;
+        file.persist(path).map(drop).map_err(|e| e.error)
+    };
+    write().map_err(|e: std::io::Error| e.kind())
 }
 
 impl Daemon {
@@ -105,31 +115,47 @@ impl Daemon {
         let profile = self.state().config.profile.clone();
         let hold = manual.then(|| (profile, conditions(self)));
         keep(&self.store.data, hold)
-            .unwrap_or_else(|e| tracing::warn!("cannot remember the profile chosen by hand: {e}"));
+            .unwrap_or_else(|e| tracing::warn!(error = %e, "cannot remember the profile chosen by hand"));
     }
 }
 
-fn pick(daemon: &Daemon, now: &Conditions) -> Result<()> {
-    let (outputs, on_battery) = now;
-    let active = daemon.state().config.profile.clone();
-    if holds(&daemon.store.data, active.as_deref(), now) {
-        return Ok(());
+fn automatic(
+    dir: &Path,
+    active: Option<&str>,
+    now: &Conditions,
+    profiles: &[wprs_library::Profile],
+) -> Option<String> {
+    if holds(dir, active, now) {
+        return None;
     }
-    let met = |p: &wprs_library::Profile| {
+    let (outputs, on_battery) = now;
+    let met = |p: &&wprs_library::Profile| {
         let ProfileAuto { outputs: wanted, on_battery: battery } = auto(&p.auto);
         (wanted.is_some() || battery.is_some())
             && wanted.is_none_or(|w| w.into_iter().collect::<BTreeSet<_>>() == *outputs)
             && battery.is_none_or(|b| b == *on_battery)
     };
-    let Some(best) = daemon.store.read(|lib| lib.profiles())?.into_iter().find(met) else {
-        return Ok(());
+    profiles.iter().find(met).map(|p| p.uid.clone()).filter(|uid| active != Some(uid.as_str()))
+}
+
+fn choose(
+    decide: impl FnOnce() -> Result<Option<String>>,
+    apply: impl FnOnce(&str) -> Result<()>,
+) -> Result<()> {
+    let _choice = lock(&CHOICE);
+    decide()?.map_or(Ok(()), |profile| apply(&profile))
+}
+
+fn pick(daemon: &Daemon, now: &Conditions) -> Result<()> {
+    let decide = || {
+        let active = daemon.state().config.profile.clone();
+        let profiles = daemon.store.read(|lib| lib.profiles())?;
+        Ok(automatic(&daemon.store.data, active.as_deref(), now, &profiles))
     };
-    if active.as_ref() == Some(&best.uid) {
-        return Ok(());
-    }
-    tracing::info!("activating the profile whose conditions are met");
-    tracing::debug!(profile = best.name, "automatic activation");
-    daemon.activate(&best.uid).map(|()| daemon.hold(false))
+    choose(decide, |best| {
+        tracing::info!("activating the profile whose conditions are met");
+        daemon.activate(best).map(|()| daemon.hold(false))
+    })
 }
 
 fn conditions(daemon: &Daemon) -> Conditions {
@@ -183,5 +209,54 @@ mod tests {
         assert!(!holds(dir.path(), Some("P"), &(docked.0.clone(), true)));
         assert!(!holds(dir.path(), Some("P"), &docked));
         keep(dir.path(), None).unwrap();
+    }
+
+    #[test]
+    fn a_failed_hold_reports_no_path() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join(HOLD)).unwrap();
+        let docked = (BTreeSet::from(["DP-1".to_owned()]), false);
+        let failed = keep(dir.path(), Some((Some("P".into()), docked))).unwrap_err();
+        let shown = failed.to_string();
+        assert!(!shown.contains(&*dir.path().to_string_lossy()) && !shown.contains(".tmp-"), "{shown}");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn an_automatic_choice_waits_for_a_choice_by_hand_and_keeps_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let docked = (BTreeSet::from(["DP-1".to_owned()]), false);
+        let auto = serde_json::json!({"outputs": ["DP-1"]});
+        let profile = |uid: &str, auto| wprs_library::Profile {
+            uid: uid.into(),
+            name: uid.into(),
+            outputs: serde_json::json!({}),
+            options: serde_json::json!({}),
+            auto,
+            priority: 0,
+        };
+        let profiles = vec![profile("DOCK", auto), profile("HAND", serde_json::json!({}))];
+        assert_eq!(automatic(dir.path(), Some("HAND"), &docked, &profiles).as_deref(), Some("DOCK"));
+        let (path, hold, (started, applying)) =
+            (dir.path().to_owned(), docked.clone(), std::sync::mpsc::channel());
+        let by_hand = std::thread::spawn(move || {
+            let applied = |_: &str| {
+                started.send(()).unwrap();
+                std::thread::sleep(std::time::Duration::from_millis(200));
+                keep(&path, Some((Some("HAND".into()), hold)))
+                    .map_err(|e| crate::error::failed(format!("{e:?}")))
+            };
+            choose(|| Ok(Some("HAND".into())), applied)
+        });
+        applying.recv().unwrap();
+        let mut chosen = None;
+        let decide = || Ok(automatic(dir.path(), Some("HAND"), &docked, &profiles));
+        let remember = |p: &str| {
+            chosen = Some(p.to_owned());
+            Ok(())
+        };
+        choose(decide, remember).unwrap();
+        by_hand.join().unwrap().unwrap();
+        assert_eq!(chosen, None, "an automatic choice replaced a choice made by hand meanwhile");
     }
 }

@@ -269,3 +269,26 @@ async fn a_keyring_that_does_not_answer_times_out() {
     assert_eq!(unavailable_with(keyring.discard("photos").await.map(drop)), SLOW);
     assert!(started.elapsed() < Duration::from_secs(5));
 }
+
+#[tokio::test]
+async fn after_a_lookup_times_out_the_next_ones_fail_at_once_and_answers_are_remembered() {
+    let bus = Bus::start();
+    let vault = Shared::default();
+    let _service = serve(&bus, &vault).await;
+    let lookup = Duration::from_millis(300);
+    let keyring = Keyring { lookup, ..Keyring::new(bus.connect().await) };
+    keyring.store("photos", "s3cret").await.unwrap();
+    assert_eq!((keyring.known("photos"), keyring.known("album")), (Some(true), None));
+    vault.lock().unwrap().hang = true;
+    assert_eq!(unavailable_with(keyring.has("album").await.map(drop)), SLOW);
+    let started = std::time::Instant::now();
+    assert_eq!(unavailable_with(keyring.has("photos").await.map(drop)), SLOW);
+    assert_eq!(unavailable_with(keyring.read("photos", false).await.map(drop)), SLOW);
+    assert_eq!(unavailable_with(keyring.properties().has("photos").await.map(drop)), SLOW);
+    assert!(started.elapsed() < Duration::from_millis(100));
+    vault.lock().unwrap().hang = false;
+    *keyring.silent.lock().unwrap() = None;
+    assert!(!keyring.has("album").await.unwrap() && keyring.known("album") == Some(false));
+    keyring.delete("photos").await.unwrap();
+    assert_eq!(keyring.known("photos"), Some(false));
+}

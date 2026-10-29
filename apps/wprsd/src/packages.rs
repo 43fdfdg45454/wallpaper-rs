@@ -7,9 +7,11 @@ use crate::repos::{fetcher, newer};
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use wprs_core::model::{InstalledPackage, InstalledReply, JobKind, MODEL};
 use wprs_format::{Fetch, Installed};
+
+pub(crate) static PACKAGES: Mutex<()> = Mutex::new(());
 
 struct Dry;
 
@@ -119,6 +121,13 @@ impl Daemon {
                 }
             };
             let _turn = d.jobs.wait_turn(JobKind::Scan);
+            let _packages = lock(&PACKAGES);
+            if !record.path.is_file() {
+                return Err(failed(format!(
+                    "{} {} was uninstalled while it was installed",
+                    record.id, record.version
+                )));
+            }
             let uid = d.link(&record)?;
             tracing::info!(repo = &record.repo_id[..8], "package installed");
             d.reload_installed();
@@ -155,6 +164,7 @@ impl Daemon {
 
     pub fn uninstall(&self, id: &str, version: &str) -> Result<()> {
         self.library_ready()?;
+        let _packages = lock(&PACKAGES);
         let data = &self.store.data;
         let all = wprs_format::installed(data)?;
         let gone: Vec<&Installed> =

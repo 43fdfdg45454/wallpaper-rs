@@ -1,5 +1,5 @@
 use crate::usage;
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use percent_encoding::percent_decode_str;
 use std::collections::HashMap;
 use std::io::{self, BufRead, IsTerminal};
@@ -69,14 +69,28 @@ pub fn password(twice: bool) -> Result<String> {
     Ok(password)
 }
 
-pub fn confirm(question: &str) -> Result<bool> {
+pub async fn confirm(question: &str) -> Result<bool> {
     if !io::stdin().is_terminal() {
         return Ok(false);
     }
     eprint!("{question} [y/N] ");
-    let mut line = String::new();
-    io::stdin().lock().read_line(&mut line)?;
+    let line = typed().await?;
     Ok(matches!(line.trim().to_ascii_lowercase().as_str(), "y" | "yes"))
+}
+
+pub async fn typed() -> Result<String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    std::thread::spawn(move || {
+        let mut line = String::new();
+        tx.send(io::stdin().lock().read_line(&mut line).map(|_| line))
+    });
+    tokio::select! {
+        line = rx => Ok(line.context("the terminal closed")??),
+        _ = tokio::signal::ctrl_c() => {
+            eprintln!();
+            bail!("stopped without an answer")
+        }
+    }
 }
 
 pub fn now() -> Result<i64> {

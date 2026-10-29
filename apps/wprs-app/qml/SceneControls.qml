@@ -11,23 +11,38 @@ ColumnLayout {
     property var props: ({})
     property var inputs: ({})
     property var folded: ({})
+    property string problem: ""
     readonly property string packageId: props.package ?? ""
     readonly property var uses: (inputs.shown ?? {})[output] ?? {}
-    readonly property var granted: (inputs.grants ?? {})[packageId] ?? []
+    readonly property var granted: uses.granted ?? []
     readonly property var fields: (props.fields ?? []).filter(field => field.visible && !scene.closed(field.group))
 
     function load() {
         daemon.query("GetSceneProperties", [output], "Daemon1", reply => {
-            const fresh = Object.assign({}, scene.folded);
-            (reply.fields ?? []).filter(f => f.kind === "group" && !((reply.package + "/" + f.key) in fresh)).forEach(f => fresh[reply.package + "/" + f.key] = f.collapsed);
-            scene.folded = fresh;
-            scene.props = reply;
-        }, () => scene.props = ({}));
+                const fresh = Object.assign({}, scene.folded);
+                (reply.fields ?? []).filter(f => f.kind === "group" && !((reply.package + "/" + f.key) in fresh)).forEach(f => fresh[reply.package + "/" + f.key] = f.collapsed);
+                scene.folded = fresh;
+                scene.props = reply;
+            }, () => scene.props = ({}));
         daemon.query("GetInputs", [], "Inputs1", reply => scene.inputs = reply);
     }
 
     function closed(group) {
         return group !== "" && folded[packageId + "/" + group] === true;
+    }
+
+    function listed(map, input) {
+        return ((map ?? {})[uses.scene] ?? []).includes(input);
+    }
+
+    function decide(input, allow) {
+        problem = "";
+        const failed = error => {
+            if (!String(error.name).endsWith(".Unconfirmed") && !scene.listed(scene.inputs.quiet, input))
+                scene.problem = error.message;
+            scene.load();
+        };
+        daemon.act(allow ? "GrantPackage" : "Revoke", allow ? [uses.scene, uses.key, input] : [uses.scene, input], "Inputs1", () => scene.load(), failed);
     }
 
     function set(key, value) {
@@ -59,6 +74,13 @@ ColumnLayout {
         output: scene.output
     }
 
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        visible: scene.problem !== ""
+        type: Kirigami.MessageType.Error
+        text: scene.problem
+    }
+
     Repeater {
         model: [["audio", scene.daemon.tr("Follow the sound that plays"), scene.daemon.tr("The sound is turned into levels on this computer while the scene is shown; nothing is recorded, kept or sent, and the desktop may show a microphone indicator.")], ["pointer", scene.daemon.tr("Follow the pointer"), scene.daemon.tr("Only the latest pointer position over this screen reaches the scene; positions are never kept and keys are never read.")]].filter(input => scene.uses[input[0]] === true)
 
@@ -66,13 +88,33 @@ ColumnLayout {
             id: input
 
             required property var modelData
+            readonly property bool asking: scene.listed(scene.inputs.asking, modelData[0])
+            readonly property bool quiet: scene.listed(scene.inputs.quiet, modelData[0])
 
             Layout.fillWidth: true
 
+            Connections {
+                target: scene
+
+                function onInputsChanged() {
+                    toggle.checked = Qt.binding(() => scene.granted.includes(input.modelData[0]));
+                }
+            }
+
             QQC2.Switch {
+                id: toggle
+
                 text: input.modelData[1]
                 checked: scene.granted.includes(input.modelData[0])
-                onToggled: checked ? scene.daemon.act("Grant", [scene.packageId, input.modelData[0]], "Inputs1") : scene.daemon.act("Revoke", [scene.packageId, input.modelData[0]], "Inputs1")
+                enabled: !input.asking && (!input.quiet || checked)
+                onToggled: scene.decide(input.modelData[0], checked)
+            }
+
+            QQC2.Label {
+                Layout.fillWidth: true
+                visible: input.asking || input.quiet
+                text: input.asking ? scene.daemon.tr("Confirm it in the desktop notification.") : scene.daemon.tr("The notification was closed without an answer; try again in a few minutes.")
+                wrapMode: Text.Wrap
             }
 
             QQC2.Label {

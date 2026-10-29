@@ -13,7 +13,7 @@ pub async fn apply(client: &Client, uid: &str, output: &str, fit: &str, preset: 
         Err(e) if error_name(&e) == Some(UNCONFIRMED) => {
             eprintln!("{FLASHING}");
             anyhow::ensure!(
-                confirm("Show it anyway? You will not be asked again for this package.")?,
+                confirm("Show it anyway? You will not be asked again for this package.").await?,
                 "not applied; run wprs-ctl lib confirm photosensitive {uid} to allow it"
             );
             lib.confirm(&[uid], "photosensitive").await?;

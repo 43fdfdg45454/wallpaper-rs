@@ -18,7 +18,20 @@ impl Presentation {
 pub struct Surface {
     surface: wgpu::Surface<'static>,
     config: wgpu::SurfaceConfiguration,
+    presentation: Presentation,
     slots: Vec<Slot>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Got {
+    Fresh,
+    Stale,
+    Busy,
+    Outdated,
+}
+
+fn steps(got: Got) -> (bool, bool) {
+    (matches!(got, Got::Fresh | Got::Stale), matches!(got, Got::Stale | Got::Outdated))
 }
 
 impl Surface {
@@ -60,10 +73,31 @@ impl Renderer {
         presentation: Presentation,
     ) -> Result<Surface, RenderError> {
         self.check_surface(width, height)?;
-        let failed = RenderError::Surface;
         if !self.gpu.is_surface_supported(&surface) {
-            return Err(failed(format!("{} cannot present to this surface", self.adapter())));
+            return Err(RenderError::Surface(format!("{} cannot present to this surface", self.adapter())));
         }
+        let config = self.surface_config(&surface, (width, height), presentation)?;
+        self.scoped(|| surface.configure(&self.device, &config))?;
+        Ok(Surface { surface, config, presentation, slots: Vec::new() })
+    }
+
+    fn renew(&self, target: &mut Surface) -> Result<(), RenderError> {
+        let size = (target.config.width, target.config.height);
+        let config = self.surface_config(&target.surface, size, target.presentation)?;
+        if config.format != target.config.format {
+            target.slots.clear();
+        }
+        target.config = config;
+        self.scoped(|| target.surface.configure(&self.device, &target.config))
+    }
+
+    fn surface_config(
+        &self,
+        surface: &wgpu::Surface<'static>,
+        (width, height): (u32, u32),
+        presentation: Presentation,
+    ) -> Result<wgpu::SurfaceConfiguration, RenderError> {
+        let failed = RenderError::Surface;
         let caps = surface.get_capabilities(&self.gpu);
         let format = surface_format(&caps.formats, presentation.format)
             .ok_or_else(|| failed("no surface format".into()))?;
@@ -79,8 +113,7 @@ impl Renderer {
             alpha_mode: if opaque { CompositeAlphaMode::Opaque } else { CompositeAlphaMode::Auto },
             view_formats: Vec::new(),
         };
-        self.scoped(|| surface.configure(&self.device, &config))?;
-        Ok(Surface { surface, config, slots: Vec::new() })
+        Ok(config)
     }
 
     pub fn present_layers(
@@ -95,15 +128,20 @@ impl Renderer {
             (target.config.width, target.config.height) = (width, height);
             self.scoped(|| target.surface.configure(&self.device, &target.config))?;
         }
-        let frame = match target.surface.get_current_texture() {
-            Acquired::Success(frame) | Acquired::Suboptimal(frame) => frame,
-            Acquired::Timeout | Acquired::Occluded => return Ok(false),
-            Acquired::Outdated => {
-                self.scoped(|| target.surface.configure(&self.device, &target.config))?;
-                return Ok(false);
-            }
+        let (frame, got) = match target.surface.get_current_texture() {
+            Acquired::Success(frame) => (Some(frame), Got::Fresh),
+            Acquired::Suboptimal(frame) => (Some(frame), Got::Stale),
+            Acquired::Timeout | Acquired::Occluded => (None, Got::Busy),
+            Acquired::Outdated => (None, Got::Outdated),
             Acquired::Lost => return Err(RenderError::Surface("the surface was lost".into())),
             Acquired::Validation => return Err(RenderError::Gpu("cannot acquire a surface texture".into())),
+        };
+        let (draw, renew) = steps(got);
+        let Some(frame) = frame.filter(|_| draw) else {
+            if renew {
+                self.renew(target)?;
+            }
+            return Ok(false);
         };
         let view = frame.texture.create_view(&Default::default());
         self.scoped(|| {
@@ -114,6 +152,9 @@ impl Renderer {
         .inspect_err(|_| target.slots.clear())?;
         before_present();
         self.queue.present(frame);
+        if renew {
+            self.renew(target)?;
+        }
         Ok(true)
     }
 
@@ -133,6 +174,14 @@ mod tests {
         assert_eq!(present_mode(&[PresentMode::Immediate, PresentMode::Fifo], false), PresentMode::Immediate);
         assert_eq!(present_mode(&[PresentMode::Fifo], false), PresentMode::Fifo);
         assert_eq!(present_mode(&[PresentMode::Mailbox, PresentMode::Fifo], true), PresentMode::Fifo);
+    }
+
+    #[test]
+    fn a_suboptimal_swapchain_is_drawn_once_then_configured_again() {
+        assert_eq!(steps(Got::Fresh), (true, false));
+        assert_eq!(steps(Got::Stale), (true, true));
+        assert_eq!(steps(Got::Outdated), (false, true));
+        assert_eq!(steps(Got::Busy), (false, false));
     }
 
     #[test]

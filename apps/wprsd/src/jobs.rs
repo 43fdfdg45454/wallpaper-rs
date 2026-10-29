@@ -45,6 +45,15 @@ fn active(job: &Job) -> bool {
     matches!(job.state, JobState::Queued | JobState::Running)
 }
 
+fn joins(job: &Job, kind: JobKind, target: &str) -> bool {
+    let fresh = match kind {
+        JobKind::Import => false,
+        JobKind::Scan => job.state == JobState::Queued,
+        _ => active(job),
+    };
+    fresh && job.kind == kind && job.target == target
+}
+
 impl Jobs {
     pub fn new() -> Self {
         let runtime = tokio::runtime::Handle::current();
@@ -138,8 +147,7 @@ impl Daemon {
     {
         let id = {
             let mut list = lock(&self.jobs.list);
-            let same = |e: &&Entry| e.job.kind == kind && e.job.target == target && active(&e.job);
-            if let Some(e) = list.iter().find(same).filter(|_| kind != JobKind::Import) {
+            if let Some(e) = list.iter().find(|e| joins(&e.job, kind, target)) {
                 return e.job.id;
             }
             let id = self.jobs.next.fetch_add(1, Ordering::Relaxed);
@@ -247,5 +255,15 @@ mod tests {
         tokio::time::timeout(Duration::from_secs(2), waiter).await.unwrap().unwrap();
         lock(&jobs.list).push(entry(3, JobKind::Analyze));
         assert!(active(&jobs.list()[0]) && jobs.scanning());
+    }
+
+    #[test]
+    fn a_change_during_a_running_scan_gets_a_scan_of_its_own() {
+        let (running, mut queued) = (entry(1, JobKind::Scan).job, entry(2, JobKind::Scan).job);
+        queued.state = JobState::Queued;
+        assert!(!joins(&running, JobKind::Scan, "") && joins(&queued, JobKind::Scan, ""));
+        assert!(!joins(&queued, JobKind::Scan, "other") && !joins(&queued, JobKind::Import, ""));
+        let install = entry(3, JobKind::Install).job;
+        assert!(joins(&install, JobKind::Install, "") && !joins(&install, JobKind::Analyze, ""));
     }
 }

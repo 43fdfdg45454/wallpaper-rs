@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-23 00:00+0000\n"
+"POT-Creation-Date: 2026-10-29 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -42,6 +42,17 @@ msgstr ""
 #, kde-format
 msgid "The scene %1 asks for your permission:"
 msgstr "La escena %1 te pide permiso:"
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+msgid "Confirm it in the desktop notification."
+msgstr "Confírmalo en la notificación del escritorio."
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+msgid ""
+"The notification was closed without an answer; try again in a few minutes."
+msgstr ""
+"La notificación se cerró sin respuesta; vuelve a intentarlo dentro de unos "
+"minutos."
 
 #: integrations/plasma-tray/contents/ui/Consent.qml
 msgid "Allow"

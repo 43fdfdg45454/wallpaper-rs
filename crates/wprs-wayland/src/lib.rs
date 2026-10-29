@@ -1,4 +1,6 @@
 mod backdrop;
+mod cosmic;
+mod cover;
 mod desk;
 mod handlers;
 mod hyprland;
@@ -6,6 +8,7 @@ mod modes;
 mod monitors;
 mod pacer;
 mod pointer;
+mod presented;
 mod scale;
 mod stacking;
 mod state;
@@ -17,10 +20,12 @@ pub use modes::watch_modes;
 pub use pacer::Pacer;
 pub use window::{Display, Window};
 
+use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use smithay_client_toolkit::reexports::client::globals::{GlobalList, registry_queue_init};
 use smithay_client_toolkit::reexports::client::{Connection, DispatchError, EventQueue};
 use state::State;
 use std::sync::Arc;
+use std::time::Instant;
 use wayland_backend::client::WaylandError;
 use x11::X11;
 
@@ -31,6 +36,7 @@ pub enum Event {
     Covered(String, Cover, bool),
     Pointer(String, Option<[f32; 2]>, u8),
     Exposed(String),
+    Backdrop(String),
     Lost(String),
     Failed(String),
 }
@@ -40,6 +46,7 @@ pub enum Cover {
     Starved,
     Toplevel,
     Hyprland,
+    Overlap,
 }
 
 pub(crate) type Sink = Arc<dyn Fn(Event) + Send + Sync>;
@@ -91,14 +98,41 @@ impl Session {
         hyprland::watch(sink);
         std::thread::Builder::new().name("wprs-wayland".into()).spawn(move || {
             let error = loop {
-                if let Err(e) = queue.blocking_dispatch(&mut state) {
+                let retry = state.retry_at();
+                if let Err(e) = dispatch(&mut queue, &mut state, retry) {
                     break e;
                 }
+                state.reopen();
             };
             (state.sink)(ended(error))
         })?;
         Ok(())
     }
+}
+
+fn dispatch<S>(
+    queue: &mut EventQueue<S>,
+    state: &mut S,
+    until: Option<Instant>,
+) -> Result<usize, DispatchError> {
+    let Some(at) = until else { return queue.blocking_dispatch(state) };
+    let dispatched = queue.dispatch_pending(state)?;
+    if dispatched > 0 {
+        return Ok(dispatched);
+    }
+    queue.flush()?;
+    if let Some(guard) = queue.prepare_read() {
+        let wait = Timespec::try_from(at.saturating_duration_since(Instant::now())).unwrap_or_default();
+        let fd = guard.connection_fd();
+        let ready = poll(&mut [PollFd::new(&fd, PollFlags::IN | PollFlags::ERR)], Some(&wait));
+        if ready.is_ok_and(|n| n > 0) {
+            match guard.read() {
+                Err(WaylandError::Io(e)) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+                read => drop(read?),
+            }
+        }
+    }
+    queue.dispatch_pending(state)
 }
 
 fn ended(error: DispatchError) -> Event {
@@ -129,5 +163,15 @@ mod tests {
         let io = |kind| DispatchError::Backend(WaylandError::Io(std::io::Error::from(kind)));
         assert!(matches!(ended(io(std::io::ErrorKind::BrokenPipe)), Event::Lost(_)));
         assert!(matches!(ended(io(std::io::ErrorKind::InvalidData)), Event::Failed(_)));
+    }
+
+    #[test]
+    fn a_pending_retry_wakes_the_session_without_any_event() {
+        let (ours, _compositor) = std::os::unix::net::UnixStream::pair().unwrap();
+        let mut queue = Connection::from_socket(ours).unwrap().new_event_queue::<()>();
+        let at = Instant::now() + std::time::Duration::from_millis(50);
+        assert_eq!(dispatch(&mut queue, &mut (), Some(at)).unwrap(), 0);
+        assert!(Instant::now() >= at, "the session woke before the retry was due");
+        assert_eq!(dispatch(&mut queue, &mut (), Some(at)).unwrap(), 0, "a due retry waited");
     }
 }

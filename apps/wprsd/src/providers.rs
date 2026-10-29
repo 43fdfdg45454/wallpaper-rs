@@ -4,13 +4,16 @@ use crate::error::{Error, Result, invalid, not_found};
 use crate::items::reply;
 use crate::jobs::now;
 use crate::kinds::{Options, effective, entry, hosts, kind_of, table};
-use crate::remote::{check_secret, last_sync, needs_secret};
+use crate::remote::{check_secret, claim, last_sync, needs_secret};
 use crate::store::private_dir;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
+use tokio::time::{Duration, Instant};
 use wprs_core::dbus::error::{EXISTS, NEEDS_SECRET};
 use wprs_core::model::{JobKind, MODEL, Provider, ProviderState, ProvidersReply};
 use zeroize::Zeroizing;
+
+const LIST_WAIT: Duration = Duration::from_secs(1);
 
 fn trimmed(options: HashMap<String, String>) -> Options {
     options.into_iter().map(|(key, value)| (key, value.trim().to_owned())).collect()
@@ -33,16 +36,30 @@ impl Daemon {
             let (d, id) = (self.clone(), id.clone());
             tokio::spawn(async move { d.has_secret(&id, kind.as_deref()).await })
         };
-        let checks: Vec<_> = entries.iter().map(check).collect();
+        let (checks, until) = (entries.iter().map(check).collect::<Vec<_>>(), Instant::now() + LIST_WAIT);
         let mut providers = Vec::new();
-        for ((id, value), check) in entries.into_iter().zip(checks) {
-            let has_secret = matches!(check.await, Ok(Ok(true)));
+        for ((id, value), mut check) in entries.into_iter().zip(checks) {
+            let known = || self.keyring().ok().and_then(|k| k.known(&id));
+            let has_secret = match tokio::time::timeout_at(until, &mut check).await {
+                Ok(Ok(Ok(found))) => Some(found),
+                Ok(_) => known(),
+                Err(_) => {
+                    let (d, shown, id) = (self.clone(), known(), id.clone());
+                    tokio::spawn(async move {
+                        if check.await.is_ok_and(|found| found.ok() != shown) {
+                            d.changes.changed("providers", vec![id]);
+                        }
+                    });
+                    shown
+                }
+            };
             providers.push(self.run(move |d| Ok::<_, Error>(d.describe(&id, &value, has_secret))).await?);
         }
         reply(ProvidersReply { model: MODEL, serial, providers })
     }
 
-    fn describe(&self, id: &str, value: &toml::Value, has_secret: bool) -> Provider {
+    fn describe(&self, id: &str, value: &toml::Value, found: Option<bool>) -> Provider {
+        let has_secret = found.unwrap_or_default();
         let kind = value.get("kind").and_then(toml::Value::as_str).unwrap_or_default().to_owned();
         let source = self.provider_source(id);
         let query = |uid: &str| format!("source:{uid} missing:no");
@@ -79,11 +96,12 @@ impl Daemon {
             Ok(parsed) => parsed,
             Err(message) => return Provider { last_error: Some(message), ..provider },
         };
-        let missing = known.secret.as_ref().is_some_and(|s| s.required) && !has_secret;
+        let required = known.secret.as_ref().is_some_and(|s| s.required);
+        let (missing, silent) = (required && found == Some(false), required && found.is_none());
         provider.state = match () {
             () if job.is_some() => ProviderState::Syncing,
             () if missing || rejected => ProviderState::NeedsSecret,
-            () if locked => ProviderState::Locked,
+            () if locked || silent => ProviderState::Locked,
             () if provider.last_error.is_some() => ProviderState::Error,
             () => ProviderState::Idle,
         };
@@ -106,9 +124,10 @@ impl Daemon {
             known.secret.as_ref().ok_or_else(|| invalid(format!("{kind} takes no secret")))?;
             check_secret(&secret)?;
         }
-        let taken = self.state().config.providers.contains_key(&id);
-        if taken {
-            return Err(Error::Named(EXISTS, format!("provider {id:?} already exists")));
+        let exists = || Error::Named(EXISTS, format!("provider {id:?} already exists"));
+        let _adding = claim(&self.remote.adding, &id).ok_or_else(exists)?;
+        if self.state().config.providers.contains_key(&id) {
+            return Err(exists());
         }
         self.library_ready()?;
         if !secret.is_empty() {

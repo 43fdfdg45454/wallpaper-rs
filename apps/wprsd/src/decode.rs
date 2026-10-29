@@ -1,5 +1,4 @@
-use image::metadata::Orientation;
-use image::{DynamicImage, ImageDecoder, ImageReader, Limits, RgbaImage};
+use image::{DynamicImage, ImageReader, RgbaImage};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Cursor, Seek, Write};
 use std::path::Path;
@@ -39,16 +38,7 @@ impl Picture {
 }
 
 pub fn decode<R: BufRead + Seek>(reader: ImageReader<R>) -> Result<DynamicImage, Problem> {
-    let mut reader = reader.with_guessed_format()?;
-    let mut limits = Limits::default();
-    (limits.max_image_width, limits.max_image_height, limits.max_alloc) =
-        (Some(1 << 15), Some(1 << 15), Some(1 << 30));
-    reader.limits(limits);
-    let mut decoder = reader.into_decoder()?;
-    let orientation = decoder.orientation().unwrap_or(Orientation::NoTransforms);
-    let mut image = DynamicImage::from_decoder(decoder)?;
-    image.apply_orientation(orientation);
-    Ok(image)
+    Ok(wprs_render::decode_limited(reader, wprs_render::picture_limits())?)
 }
 
 fn bytes(data: Vec<u8>) -> Result<DynamicImage, Problem> {

@@ -1,40 +1,16 @@
+use crate::callers::{Caller, caller};
 use crate::compositor::lock;
 use crate::daemon::Daemon;
-use crate::error::{Result, failed, invalid};
-use crate::inputs::{Grants, Hub, View, hub};
+use crate::error::{Result, denied, failed, invalid};
+use crate::inputs::{Control, Grants, Hub, View, declined_path, grants_path, hub, load, load_bound};
 use crate::items::reply;
 use crate::streams::OutputInfo;
-use std::collections::BTreeMap;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Weak};
 use wprs_core::model::{Input, InputsReply, MODEL};
+use zbus::message::Header;
 
 pub struct Inputs(pub Weak<Daemon>);
-
-fn grants_path(daemon: &Daemon) -> PathBuf {
-    daemon.store.data.join("inputs.json")
-}
-
-pub(crate) fn declined_path(grants: &Path) -> PathBuf {
-    grants.with_file_name("inputs-declined.json")
-}
-
-pub(crate) fn load(path: &Path) -> Grants {
-    let Ok(bytes) = std::fs::read(path) else { return Grants::new() };
-    serde_json::from_slice(&bytes).unwrap_or_else(|e| {
-        tracing::warn!("ignoring unreadable input permissions: {e}");
-        Grants::new()
-    })
-}
-
-pub(crate) fn save(path: &Path, value: &impl serde::Serialize) -> std::io::Result<()> {
-    let dir = path.parent().unwrap_or(Path::new("."));
-    crate::store::private_dir(dir)?;
-    let mut file = tempfile::Builder::new().prefix(".tmp-").tempfile_in(dir)?;
-    file.write_all(&serde_json::to_vec_pretty(value)?)?;
-    file.persist(path).map(drop).map_err(|e| e.error)
-}
 
 pub(crate) fn scene_id(scene: &str) -> Result<&str> {
     let valid = |c: char| c.is_ascii_lowercase() || c.is_ascii_digit() || "._-".contains(c);
@@ -44,7 +20,7 @@ pub(crate) fn scene_id(scene: &str) -> Result<&str> {
 
 pub(crate) fn start(daemon: &Arc<Daemon>, connection: zbus::Connection) {
     let path = grants_path(daemon);
-    crate::inputs::start(daemon, connection, (load(&path), load(&declined_path(&path))));
+    crate::inputs::start(daemon, connection, (load_bound(&path), load(&declined_path(&path))));
 }
 
 impl Daemon {
@@ -65,23 +41,73 @@ impl Inputs {
         Ok((self.0.upgrade().ok_or_else(stopping)?, hub().ok_or_else(stopping)?))
     }
 
-    async fn set(&self, scene: String, input: String, granted: bool) -> Result<()> {
+    async fn give(
+        &self,
+        call: (&zbus::Connection, &Header<'_>),
+        scene: &str,
+        key: Option<&str>,
+        input: &str,
+    ) -> Result<()> {
         let (d, hub) = self.parts()?;
-        let input =
-            Input::parse(&input).ok_or_else(|| invalid(format!("{input} is not audio or pointer")))?;
-        let scene = scene_id(&scene)?.to_owned();
-        d.run(move |d| hub.set_grant(&grants_path(d), &scene, input, granted)).await
+        let (input, scene) = (parse(input)?, scene_id(scene)?.to_owned());
+        let (key, title) = lock(&hub.control).package(&scene, key)?;
+        if !matches!(caller(call.0, call.1).await, Caller::Ctl | Caller::Ours) {
+            if lock(&hub.control).has(&scene, &key, input) {
+                return Ok(());
+            }
+            return crate::confirm::grant(call.0, hub.clone(), grants_path(&d), (scene, key, title), input)
+                .await;
+        }
+        d.run(move |d| hub.grant(&grants_path(d), &scene, &key, input)).await
     }
+}
+
+pub(crate) fn reported(control: &Control) -> Grants {
+    let reported = |(id, keys): (&String, &Grants)| {
+        let shown: Vec<&str> = control
+            .shown
+            .values()
+            .filter(|s| s.scene == *id && !s.key.is_empty())
+            .map(|s| s.key.as_str())
+            .collect();
+        let keys = keys.iter().filter(|(key, _)| shown.is_empty() || shown.contains(&key.as_str()));
+        let inputs: BTreeSet<Input> = keys.flat_map(|(_, inputs)| inputs).copied().collect();
+        (!inputs.is_empty()).then(|| (id.clone(), inputs))
+    };
+    control.grants.iter().filter_map(reported).collect()
+}
+
+fn parse(input: &str) -> Result<Input> {
+    Input::parse(input).ok_or_else(|| invalid(format!("{input} is not audio or pointer")))
 }
 
 #[zbus::interface(name = "io.github.wallpaper_rs.Inputs1")]
 impl Inputs {
-    async fn grant(&self, scene: String, input: String) -> Result<()> {
-        self.set(scene, input, true).await
+    async fn grant(
+        &self,
+        scene: String,
+        input: String,
+        #[zbus(header)] header: Header<'_>,
+        #[zbus(connection)] bus: &zbus::Connection,
+    ) -> Result<()> {
+        self.give((bus, &header), &scene, None, &input).await
+    }
+
+    async fn grant_package(
+        &self,
+        scene: String,
+        key: String,
+        input: String,
+        #[zbus(header)] header: Header<'_>,
+        #[zbus(connection)] bus: &zbus::Connection,
+    ) -> Result<()> {
+        self.give((bus, &header), &scene, Some(&key), &input).await
     }
 
     async fn revoke(&self, scene: String, input: String) -> Result<()> {
-        self.set(scene, input, false).await
+        let (d, hub) = self.parts()?;
+        let (input, scene) = (parse(&input)?, scene_id(&scene)?.to_owned());
+        d.run(move |d| hub.revoke(&grants_path(d), &scene, input)).await
     }
 
     #[zbus(out_args("json"))]
@@ -89,12 +115,42 @@ impl Inputs {
         let (d, hub) = self.parts()?;
         let (serial, tracking) = (d.changes.serial(), *hub.tracking.borrow());
         let control = lock(&hub.control);
-        let (grants, shown, capturing) = (control.grants.clone(), control.shown.clone(), control.capturing);
-        let (parallax, declined) = (control.parallax.clone(), control.declined.clone());
-        reply(InputsReply { model: MODEL, serial, capturing, tracking, grants, shown, parallax, declined })
+        let grants = reported(&control);
+        let mut shown = control.shown.clone();
+        shown.values_mut().for_each(|s| s.granted = control.granted(&s.scene, &s.key));
+        let (parallax, declined, capturing) =
+            (control.parallax.clone(), control.declined.clone(), control.capturing);
+        drop(control);
+        let (asking, quiet) = crate::confirm::questions();
+        reply(InputsReply {
+            model: MODEL,
+            serial,
+            capturing,
+            tracking,
+            grants,
+            shown,
+            parallax,
+            declined,
+            asking,
+            quiet,
+        })
     }
 
-    async fn set_pointer(&self, x: i32, y: i32) -> Result<()> {
+    async fn set_pointer(
+        &self,
+        x: i32,
+        y: i32,
+        #[zbus(header)] header: Header<'_>,
+        #[zbus(connection)] bus: &zbus::Connection,
+    ) -> Result<()> {
+        if !crate::callers::reports_pointer(caller(bus, &header).await) {
+            return Err(denied(match crate::flatpak::app_id() {
+                Some(_) => {
+                    "only the KWin script of wprsd reports the pointer: inside the Flatpak, wprs-ctl cannot be told apart from other programs"
+                }
+                None => "only the KWin script of wprsd and wprs-ctl report the pointer",
+            }));
+        }
         self.parts()?.1.set_pointer(x.into(), y.into());
         Ok(())
     }

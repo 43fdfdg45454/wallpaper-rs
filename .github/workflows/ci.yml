@@ -77,7 +77,7 @@ jobs:
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-pipewire gstreamer1.0-tools \
             mesa-vulkan-drivers libvulkan1 \
-            pipewire pipewire-bin wireplumber dbus-x11 \
+            pipewire pipewire-bin wireplumber dbus-x11 gnome-keyring \
             shellcheck qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools gettext
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
@@ -130,6 +130,7 @@ jobs:
         run: |
           cargo build --locked -p wprsd -p wprs-ctl
           cargo build --locked -p wprs-pipewire --example probe
+          cargo build --locked -p wprsd --example timedate
           cp target/debug/examples/probe target/debug/probe
           scripts/integration-test.sh target/debug
 

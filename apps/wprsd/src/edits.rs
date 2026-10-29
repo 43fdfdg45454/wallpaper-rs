@@ -34,6 +34,10 @@ pub(crate) fn spans(st: &State) -> bool {
     st.outputs.keys().any(|o| !crate::drafts::virtual_output(o) && st.config.resolve(o).fit == Fit::Span)
 }
 
+fn density(px_per_mm: f64) -> f64 {
+    if (0.0..=1000.0).contains(&px_per_mm) { px_per_mm } else { 0.0 }
+}
+
 pub(crate) fn screen_of(window: &Window) -> Screen {
     let (((x, y), (mm, _), identity), ((width, height), scale)) = (window.placement(), window.geometry());
     let px_per_mm = if mm > 0 { f64::from(window.size().0) / f64::from(mm) } else { 0.0 };
@@ -97,11 +101,12 @@ impl Daemon {
         }
     }
 
-    pub fn set_screen(&self, output: &str, screen: Screen) -> anyhow::Result<()> {
+    pub fn set_screen(&self, output: &str, mut screen: Screen) -> anyhow::Result<()> {
         let output = output_name(output)?;
-        let fine = (0.1..=16.0).contains(&screen.scale) && (0.0..=1000.0).contains(&screen.px_per_mm);
+        screen.px_per_mm = density(screen.px_per_mm);
+        let fine = (0.1..=16.0).contains(&screen.scale);
         if !fine || screen.identity.len() > 256 || screen.identity.chars().any(char::is_control) {
-            return Err(invalid("invalid scale, density or identity").into());
+            return Err(invalid("invalid scale or identity").into());
         }
         let changed = {
             let mut st = self.state();
@@ -201,5 +206,14 @@ fn read(fd: &OwnedFd, daemon: &Weak<Daemon>) {
         let Some(daemon) = daemon.upgrade() else { return };
         tracing::debug!("an edit file changed");
         daemon.configure_all();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn densities_that_cannot_be_used_count_as_unknown() {
+        let read = [4.5, 0.0, -1.0, f64::NAN, f64::INFINITY, 1e9].map(super::density);
+        assert_eq!(read, [4.5, 0.0, 0.0, 0.0, 0.0, 0.0]);
     }
 }

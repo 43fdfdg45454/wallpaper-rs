@@ -1,5 +1,5 @@
 use crate::desk::Desk;
-use crate::stacking::{clients, covered, relevant};
+use crate::stacking::{Rations, clients, covered, notices, relevant};
 use crate::x11::{Rect, X11};
 use crate::{Cover, Event, Sink};
 use std::collections::{HashMap, HashSet};
@@ -9,7 +9,7 @@ use x11rb::connection::Connection as _;
 use x11rb::errors::{ReplyError, ReplyOrIdError};
 use x11rb::protocol::Event as Received;
 use x11rb::protocol::randr::{self, ModeFlag, ModeInfo, MonitorInfo};
-use x11rb::protocol::xproto::ConnectionExt as _;
+use x11rb::protocol::xproto::{ConnectionExt as _, Visibility};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Monitor {
@@ -23,6 +23,7 @@ struct Screen {
     monitor: Monitor,
     desk: Arc<Desk>,
     covered: bool,
+    hidden: bool,
 }
 
 struct Watch {
@@ -31,10 +32,15 @@ struct Watch {
     screens: Vec<Screen>,
     clients: HashSet<u32>,
     check: Option<u32>,
+    root: (u16, u16),
+    rations: Rations,
 }
 
 pub(crate) fn start(x: Arc<X11>, sink: Sink) -> anyhow::Result<()> {
-    let mut watch = Watch { x, sink, screens: Vec::new(), clients: HashSet::new(), check: None };
+    let setup = &x.conn.setup().roots[x.screen];
+    let root = (setup.width_in_pixels, setup.height_in_pixels);
+    let (screens, clients, check, rations) = Default::default();
+    let mut watch = Watch { x, sink, screens, clients, check, root, rations };
     std::thread::Builder::new().name("wprs-x11".into()).spawn(move || {
         let Err(error) = watch.run();
         (watch.sink)(Event::Lost(error.to_string()))
@@ -57,21 +63,38 @@ impl Watch {
             }
             let (x, first) = (self.x.clone(), self.x.conn.wait_for_event()?);
             let more = std::iter::from_fn(|| x.conn.poll_for_event().transpose());
-            let (a, mut exposed) = (&x.atoms, HashSet::new());
+            let (a, mut exposed, mut resized) = (&x.atoms, HashSet::new(), false);
             (monitors, stacking, manager) = (false, false, false);
             for event in std::iter::once(Ok(first)).chain(more) {
                 match event? {
                     Received::RandrScreenChangeNotify(_) | Received::RandrNotify(_) => monitors = true,
-                    Received::ConfigureNotify(e) if e.window == x.root => monitors = true,
+                    Received::ConfigureNotify(e) if e.window == x.root => {
+                        monitors = true;
+                        resized |=
+                            std::mem::replace(&mut self.root, (e.width, e.height)) != (e.width, e.height);
+                    }
                     Received::ConfigureNotify(e) => {
                         let theirs = self.screens.iter().all(|s| s.desk.window != e.window);
-                        if !x.managed() && theirs && e.above_sibling == x11rb::NONE {
+                        if !x.managed()
+                            && theirs
+                            && e.above_sibling == x11rb::NONE
+                            && self.rations.lower_for(e.window)
+                        {
                             self.screens.iter().try_for_each(|s| s.desk.lower())?;
                         }
                         stacking = true;
                     }
+                    Received::VisibilityNotify(e) => {
+                        let hidden = e.state == Visibility::FULLY_OBSCURED;
+                        let screen = self.screens.iter_mut().find(|s| s.desk.window == e.window);
+                        screen.into_iter().for_each(|s| s.hidden = hidden);
+                        stacking = true;
+                    }
                     Received::MapNotify(_) | Received::UnmapNotify(_) => stacking = true,
-                    Received::DestroyNotify(e) => manager |= self.check == Some(e.window),
+                    Received::DestroyNotify(e) => {
+                        self.rations.forget(e.window);
+                        manager |= self.check == Some(e.window);
+                    }
                     Received::PropertyNotify(e)
                         if [a._NET_SUPPORTING_WM_CHECK, a._NET_SUPPORTED].contains(&e.atom) =>
                     {
@@ -82,8 +105,8 @@ impl Watch {
                     _ => {}
                 }
             }
-            let shown = self.screens.iter().filter(|s| exposed.contains(&s.desk.window));
-            shown.for_each(|s| (self.sink)(Event::Exposed(s.monitor.name.clone())));
+            let named = self.screens.iter().map(|s| (s.desk.window, s.monitor.name.clone()));
+            notices(named, &exposed, resized).into_iter().for_each(|event| (self.sink)(event));
         }
     }
 
@@ -119,7 +142,8 @@ impl Watch {
                 None => {
                     let desk = Arc::new(Desk::new(&self.x, monitor.area)?);
                     tracing::info!(output = monitor.name, "desktop window created");
-                    let screen = Screen { monitor: monitor.clone(), desk: desk.clone(), covered: false };
+                    let (covered, hidden) = (false, false);
+                    let screen = Screen { monitor: monitor.clone(), desk: desk.clone(), covered, hidden };
                     self.screens.push(screen);
                     desk
                 }
@@ -132,9 +156,11 @@ impl Watch {
 
     fn stacking(&mut self) -> Result<(), ReplyOrIdError> {
         let ours: Vec<u32> = self.screens.iter().map(|s| s.desk.window).collect();
-        let clients = clients(&self.x, &ours, &mut self.clients)?;
+        let mut clients = clients(&self.x, &mut self.clients)?;
+        self.rations.restack(&self.x, &ours, &clients)?;
+        clients.retain(|c| !ours.contains(&c.window));
         for screen in &mut self.screens {
-            let now = covered(screen.monitor.area, &clients);
+            let now = covered(screen.monitor.area, &clients) || screen.hidden;
             if std::mem::replace(&mut screen.covered, now) != now {
                 (self.sink)(Event::Covered(screen.monitor.name.clone(), Cover::Toplevel, now));
             }

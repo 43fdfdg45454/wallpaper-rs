@@ -4,6 +4,7 @@ mod iio;
 mod motion;
 mod output;
 mod parallax;
+mod pictures;
 mod players;
 mod power;
 mod scene;
@@ -190,6 +191,7 @@ enum Command {
     Attach(String, Window),
     Frame(String),
     Repaint(String),
+    Backdrop(String),
     SetActive(String, bool, bool),
     Settings(Settings),
     Calm(bool),
@@ -235,6 +237,10 @@ impl Compositor {
 
     pub fn repainter(&self) -> impl Fn(&str) + Send + Sync + 'static {
         self.relay(Command::Repaint)
+    }
+
+    pub fn backdropper(&self) -> impl Fn(&str) + Send + Sync + 'static {
+        self.relay(Command::Backdrop)
     }
 
     fn relay(&self, command: fn(String) -> Command) -> impl Fn(&str) + Send + Sync + 'static {
@@ -291,6 +297,10 @@ impl Compositor {
 
     pub fn status(&self) -> BTreeMap<String, OutputStatus> {
         lock(&self.status).clone()
+    }
+
+    pub fn stop(&self) {
+        let _ = self.tx.send(Command::Quit);
     }
 
     pub fn running(&self) -> bool {

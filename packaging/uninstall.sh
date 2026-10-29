@@ -19,6 +19,8 @@ rm -f "$PREFIX/bin/wprsd" "$PREFIX/bin/wprs-ctl" "$PREFIX/bin/wprs-app" \
   "$DATA_HOME/applications/io.github.wallpaper_rs.desktop" \
   "$DATA_HOME/icons/hicolor/scalable/apps/io.github.wallpaper_rs.svg"
 rm -rf "$DATA_HOME/wallpaper-rs/kwin-pointer" "$DATA_HOME/wallpaper-rs/examples"
+dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+  org.freedesktop.DBus.ReloadConfig >/dev/null 2>&1 || true
 if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
   systemctl --user daemon-reload
 fi

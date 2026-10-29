@@ -1,15 +1,17 @@
 use crate::db::{ensure, row_id, rows, uid, unique};
 use crate::import::{upsert, utf8};
 use crate::{Error, Kind, Library, Result};
-use rusqlite::params;
+use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 const BATCH: usize = 256;
+const SPAN: Duration = Duration::from_secs(1);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Source {
@@ -56,6 +58,16 @@ impl Library {
         now: i64,
         progress: &mut dyn FnMut(u32, u32) -> ControlFlow<()>,
     ) -> Result<ScanReport> {
+        self.scan_within(uid, now, progress, SPAN)
+    }
+
+    fn scan_within(
+        &mut self,
+        uid: &str,
+        now: i64,
+        progress: &mut dyn FnMut(u32, u32) -> ControlFlow<()>,
+        span: Duration,
+    ) -> Result<ScanReport> {
         let id = row_id(&self.db, "source", uid)?;
         let sql = "SELECT uri, recursive FROM sources WHERE id = ?1";
         let (root, recursive): (String, bool) =
@@ -67,18 +79,15 @@ impl Library {
             return Err(e.into());
         }
         files.sort();
-        let (mut report, mut seen, mut done, total) =
-            (ScanReport::default(), HashSet::new(), 0, files.len() as u32);
-        for batch in files.chunks(BATCH) {
-            let tx = self.db.transaction()?;
-            let id = row_id(&tx, "source", uid)?;
-            for file in batch {
-                seen.extend(skip_file(upsert(&tx, Some(id), file, now, &mut report))?);
-            }
-            tx.commit()?;
-            done += batch.len() as u32;
-            ensure(progress(done, total).is_continue(), || Error::Cancelled)?;
-        }
+        let (mut report, mut seen, total) = (ScanReport::default(), HashSet::new(), files.len() as u32);
+        let source = row_id(&self.db, "source", uid)?;
+        let mut store = |tx: &Connection, file: &PathBuf| {
+            seen.extend(skip_file(upsert(tx, Some(source), file, now, &mut report))?);
+            Ok(())
+        };
+        batches(&mut self.db, &files, span, &mut store, &mut |done| {
+            ensure(progress(done as u32, total).is_continue(), || Error::Cancelled)
+        })?;
         let tx = self.db.transaction()?;
         let id = row_id(&tx, "source", uid)?;
         tx.execute("UPDATE sources SET scanned_at = ?2, error = NULL WHERE id = ?1", params![id, now])?;
@@ -93,22 +102,46 @@ impl Library {
     }
 
     pub fn check_loose(&mut self, now: i64) -> Result<ScanReport> {
-        let tx = self.db.transaction()?;
         let sql = "SELECT id, path, missing FROM items WHERE source_id IS NULL";
-        let loose: Vec<(i64, String, bool)> = rows(&tx, sql, [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
+        let loose: Vec<(i64, String, bool)> =
+            rows(&self.db, sql, [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
         let mut report = ScanReport::default();
-        for (id, path, missing) in loose {
-            let path = Path::new(&path);
+        let mut check = |tx: &Connection, (id, path, missing): &(i64, String, bool)| {
+            let path = Path::new(path);
             if path.is_file() && Kind::detect(path).is_some() {
-                skip_file(upsert(&tx, None, path, now, &mut report))?;
+                skip_file(upsert(tx, None, path, now, &mut report))?;
             } else if !missing {
                 tx.execute("UPDATE items SET missing = 1 WHERE id = ?1", [id])?;
                 report.missing += 1;
             }
-        }
-        tx.commit()?;
+            Ok(())
+        };
+        batches(&mut self.db, &loose, SPAN, &mut check, &mut |_| Ok(()))?;
         Ok(report)
     }
+}
+
+fn batches<T>(
+    db: &mut Connection,
+    list: &[T],
+    span: Duration,
+    work: &mut dyn FnMut(&Connection, &T) -> Result<()>,
+    done: &mut dyn FnMut(usize) -> Result<()>,
+) -> Result<()> {
+    let mut finished = 0;
+    while finished < list.len() {
+        let (tx, started) = (db.transaction()?, Instant::now());
+        for item in list[finished..].iter().take(BATCH) {
+            work(&tx, item)?;
+            finished += 1;
+            if started.elapsed() >= span {
+                break;
+            }
+        }
+        tx.commit()?;
+        done(finished)?;
+    }
+    Ok(())
 }
 
 fn skip_file<T>(result: Result<T>) -> Result<Option<T>> {
@@ -130,4 +163,28 @@ fn walk(dir: &Path, recursive: bool, files: &mut Vec<PathBuf>) -> io::Result<()>
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_slow_batch_is_committed_before_its_time_runs_out() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("pictures");
+        fs::create_dir_all(&root).unwrap();
+        (0..5).for_each(|n| fs::write(root.join(format!("{n}.png")), n.to_string()).unwrap());
+        let mut library = Library::open(dir.path().join("library.db")).unwrap();
+        let source = library.add_folder(&root, false).unwrap();
+        let other = Library::open(dir.path().join("library.db")).unwrap();
+        other.db.busy_timeout(Duration::ZERO).unwrap();
+        let mut calls = Vec::new();
+        let mut record = |done, _| {
+            calls.push((done, other.db.execute_batch("BEGIN IMMEDIATE; COMMIT").is_ok()));
+            ControlFlow::Continue(())
+        };
+        library.scan_within(&source, 1, &mut record, Duration::ZERO).unwrap();
+        assert_eq!(calls, (1..=5).map(|n| (n, true)).collect::<Vec<_>>());
+    }
 }

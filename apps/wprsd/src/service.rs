@@ -1,4 +1,5 @@
 use crate::bus::client;
+use crate::callers::{Caller, caller};
 use crate::daemon::Daemon;
 use crate::error::{Result, failed};
 use crate::items::reply;
@@ -92,12 +93,21 @@ impl Service {
         self.d()?.run(move |d| d.preview_edit(&path, &edit_json)).await
     }
 
-    async fn preview_scene(&self, output: String, dir: String, document: String, time: f64) -> Result<()> {
+    async fn preview_scene(
+        &self,
+        output: String,
+        dir: String,
+        document: String,
+        time: f64,
+        #[zbus(header)] header: Header<'_>,
+        #[zbus(connection)] bus: &zbus::Connection,
+    ) -> Result<()> {
         let dir = PathBuf::from(dir);
         if !dir.is_absolute() {
             return Err(InvalidArgs(format!("{} is not an absolute path", dir.display())).into());
         }
-        self.d()?.run(move |d| d.preview_scene(&output, &dir, &document, time)).await
+        let trusted = matches!(caller(bus, &header).await, Caller::Ctl | Caller::Ours);
+        self.d()?.run(move |d| d.preview_scene(&output, &dir, (&document, trusted), time)).await
     }
 
     async fn set_wallpaper(&self, path: String, output: String, fit: String) -> Result<()> {

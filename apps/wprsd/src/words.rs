@@ -23,3 +23,27 @@ pub fn video() -> [String; 8] {
         (tr("Zoom"), tr("Horizontal position"), tr("Vertical position"), tr("0 plays to the end"));
     [speed, start, stop, volume, zoom, across, down, end]
 }
+
+pub fn answers() -> (String, String) {
+    (tr("Allow"), tr("Not now"))
+}
+
+pub fn request(title: &str, audio: bool) -> (String, String) {
+    let safe = |c| match c {
+        '<' => '‹',
+        '>' => '›',
+        '&' => '＆',
+        c => c,
+    };
+    let title: String = title.chars().map(safe).collect();
+    match audio {
+        true => (
+            tr("Let a scene follow the sound?"),
+            tr("Let “%1” follow the sound that plays? The sound is turned into levels on this computer; nothing is recorded, kept or sent.").replace("%1", &title),
+        ),
+        false => (
+            tr("Let a scene follow the pointer?"),
+            tr("Let “%1” follow the pointer? Only its latest position over the screen reaches the scene, and it is never kept.").replace("%1", &title),
+        ),
+    }
+}

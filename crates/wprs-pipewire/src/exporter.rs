@@ -31,6 +31,11 @@ impl Exporter {
         let _ = self.shared.gpu.set(gpu);
     }
 
+    pub fn use_timelines(&self) -> bool {
+        let drm = crate::syncobj::Drm::open();
+        drm.is_some_and(|drm| self.shared.timelines.set(drm).is_ok())
+    }
+
     pub fn lease(&self, output: &str) -> Grant {
         let Some(slot) = self.shared.slot(output) else { return Grant::Copy };
         let mut pool = lock(&slot.pool);

@@ -1,7 +1,6 @@
 use crate::{CACHE_BYTES, MODEL, Map, Places, normalize, tensor, write};
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use image::metadata::Orientation;
-use image::{DynamicImage, ImageDecoder, ImageReader, RgbImage};
+use image::{ImageReader, RgbImage};
 use ort::environment::Environment;
 use ort::session::Session;
 use ort::value::Tensor;
@@ -79,11 +78,9 @@ impl Estimator {
 }
 
 pub fn decode(path: &Path) -> Result<RgbImage> {
-    let reader = ImageReader::open(path)?.with_guessed_format()?;
-    let mut decoder =
-        reader.into_decoder().with_context(|| format!("{} is not a picture", path.display()))?;
-    let orientation = decoder.orientation().unwrap_or(Orientation::NoTransforms);
-    let mut image = DynamicImage::from_decoder(decoder)?;
+    let (mut image, orientation) =
+        wprs_render::decode_unoriented(ImageReader::open(path)?, wprs_render::picture_limits())
+            .with_context(|| format!("{} is not a picture", path.display()))?;
     if image.width().max(image.height()) > MAX_EDGE {
         image = image.thumbnail(MAX_EDGE, MAX_EDGE);
     }

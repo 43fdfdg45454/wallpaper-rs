@@ -145,7 +145,7 @@ pub async fn run(client: &Client, command: Server) -> Result<()> {
         Server::Link { name, plaintext, wait } => {
             if plaintext {
                 eprintln!("{PLAINTEXT}");
-                if io::stdin().is_terminal() && !confirm("Link without end-to-end encryption?")? {
+                if io::stdin().is_terminal() && !confirm("Link without end-to-end encryption?").await? {
                     bail!("not linked");
                 }
             }
@@ -171,7 +171,7 @@ pub async fn run(client: &Client, command: Server) -> Result<()> {
         Server::Rotate { wait } => job(client, sync.rotate().map_ok(|id| ((), id)), &wait).await?,
         Server::Reset { yes, wait } => {
             eprintln!("{RESET}");
-            if !yes && !confirm("Reset the synced data of the account?")? {
+            if !yes && !confirm("Reset the synced data of the account?").await? {
                 bail!("nothing was reset");
             }
             job(client, sync.reset().map_ok(|id| ((), id)), &wait).await?

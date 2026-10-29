@@ -1,5 +1,6 @@
 use super::motion::Motion;
-use super::output::{Output, Raised, Shown, Sink};
+use super::output::{Output, Shown, Sink};
+use super::pictures::{self, Developed, Made, Pictures};
 use super::power::Power;
 use super::scene::SceneState;
 use super::slot::PlayerSlot;
@@ -11,10 +12,9 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Instant;
-use wprs_core::edit::Edit;
-use wprs_core::{Fit, UvRect};
+use wprs_core::Fit;
 use wprs_pipewire::Exporter;
-use wprs_render::{GpuImage, Renderer, decode_image, needed_edge};
+use wprs_render::Renderer;
 use wprs_wayland::Window;
 
 pub(super) struct State {
@@ -31,6 +31,7 @@ pub(super) struct State {
     pub(super) power: Power,
     pub(super) speakers: BTreeMap<PathBuf, Speaker>,
     pub(super) locked: bool,
+    pictures: Pictures,
 }
 
 impl State {
@@ -60,6 +61,7 @@ impl State {
             power,
             speakers,
             locked,
+            pictures: Pictures::default(),
         }
     }
 
@@ -108,11 +110,13 @@ impl State {
             Command::Remove(output) => {
                 super::feed::declare(&output, None);
                 drop((self.outputs.remove(&output), self.windows.remove(&output)));
+                self.pictures.prune(&self.outputs);
                 self.follow(&output);
             }
             Command::Attach(output, window) => self.attach(output, window),
             Command::Frame(output) => self.frame_done(&output),
             Command::Repaint(output) => self.repaint(&output),
+            Command::Backdrop(output) => self.backdrop_again(&output),
             Command::SetActive(output, active, covered) => {
                 self.outputs.get_mut(&output).into_iter().for_each(|o| o.covered = covered);
                 if let Some(o) = self.outputs.get_mut(&output).filter(|o| o.active != active) {
@@ -206,40 +210,27 @@ impl State {
                 self.outputs.insert(name.clone(), Output::new(size, shown, sink, refresh));
             }
         }
+        self.pictures.prune(&self.outputs);
         self.follow(&name);
     }
 
     fn upload(
-        &self,
+        &mut self,
         output: &str,
         picture: &Picture,
         pixels: Option<Arc<RgbaImage>>,
         fit: Fit,
         size: (u32, u32),
-    ) -> Option<(GpuImage, UvRect, Option<Raised>)> {
-        let (file, edit, max) = (&picture.file, picture.edit.as_deref(), self.renderer.max_edge());
-        let edge = || needed_edge(file, edit, &picture.place, (fit, size), max);
-        let pixels = pixels.map_or_else(|| decode_image(file, edge()).map(Arc::new), Ok);
-        let depth = picture.depth.as_ref().map(|d| &*d.map);
-        let shown = pixels.map_err(anyhow::Error::from).and_then(|p| {
-            let (moving, edit) = (edit.and_then(Edit::moving), edit.filter(|e| e.develops()));
-            let frame = edit.map_or(p.dimensions(), |e| e.geometry.frame(p.dimensions()));
-            let uv = picture.place.uv(fit, frame, size);
-            let image = match edit {
-                Some(edit) => {
-                    self.renderer.develop(&p, edit, depth, self.renderer.develop_size(frame, uv, size))?
-                }
-                None => self.renderer.upload_placed(&p, uv, size)?,
-            };
-            let relief = match (moving, depth) {
-                (Some(parallax), Some(map)) if !uv.repeat => {
-                    Some((self.renderer.upload_depth(map, edit)?, parallax.clone()))
-                }
-                _ => None,
-            };
-            Ok((image, uv, relief))
-        });
-        shown.inspect_err(|e| tracing::warn!(output, "cannot show the image: {e}")).ok()
+    ) -> Option<Made> {
+        let decoded = pixels.as_deref().map(RgbaImage::dimensions);
+        if let Some(shared) = self.pictures.shared(&self.renderer, picture, decoded, (fit, size)) {
+            return Some(shared);
+        }
+        let made = pictures::develop(&self.renderer, output, picture, pixels, (fit, size))?;
+        let developed =
+            Developed { look: pictures::look(picture), image: made.0.clone(), relief: made.2.clone() };
+        self.pictures.keep(developed, &mut self.outputs);
+        Some(made)
     }
 
     fn apply_settings(&mut self, settings: Settings) {

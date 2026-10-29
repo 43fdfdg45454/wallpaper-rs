@@ -1,8 +1,9 @@
 use crate::cli::JSON;
-use crate::input::{one, pairs};
+use crate::input::{one, pairs, path_arg};
 use crate::show::{self, list, short, table};
 use anyhow::{Context, Result};
 use clap::Subcommand;
+use std::path::Path;
 use wprs_client::{Client, parse};
 use wprs_core::model::{PresetsReply, Profile as Model, ProfileReply, ProfilesReply};
 
@@ -111,7 +112,7 @@ pub async fn preset(client: &Client, command: Preset) -> Result<()> {
             println!("{}", profiles.save_preset(&item, &name, pairs(&values)?).await?)
         }
         Preset::Rm { preset } => {
-            let uid = match preset.split_once(':') {
+            let uid = match named(&preset) {
                 Some((item, name)) => {
                     let item = scope(client, item).await?;
                     let reply: PresetsReply = parse(&profiles.list_presets(&item).await?)?;
@@ -126,6 +127,12 @@ pub async fn preset(client: &Client, command: Preset) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn named(text: &str) -> Option<(&str, &str)> {
+    let splits: Vec<_> = text.match_indices(':').map(|(i, _)| (&text[..i], &text[i + 1..])).collect();
+    let file = |item: &str| path_arg(item).is_ok_and(|path| Path::new(&path).is_file());
+    splits.iter().rev().find(|(item, _)| file(item)).or(splits.first()).copied()
 }
 
 async fn scope(client: &Client, item: &str) -> Result<String> {

@@ -183,6 +183,7 @@ pub trait Repos1 {
 )]
 pub trait Inputs1 {
     fn grant(&self, scene: &str, input: &str) -> Result<()>;
+    fn grant_package(&self, scene: &str, key: &str, input: &str) -> Result<()>;
     fn revoke(&self, scene: &str, input: &str) -> Result<()>;
     fn get_inputs(&self) -> Result<String>;
     fn set_pointer(&self, x: i32, y: i32) -> Result<()>;

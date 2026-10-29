@@ -1,6 +1,5 @@
 use crate::{Error, store};
-use image::metadata::Orientation;
-use image::{DynamicImage, ImageDecoder, ImageReader, Limits, RgbaImage};
+use image::{ImageReader, Limits, RgbaImage};
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::{BufReader, Cursor};
@@ -44,16 +43,10 @@ fn open(path: &Path) -> Result<Package<BufReader<fs::File>>, Error> {
 }
 
 fn decode(bytes: Vec<u8>) -> Result<RgbaImage, Error> {
-    let mut reader = ImageReader::new(Cursor::new(bytes)).with_guessed_format()?;
     let mut limits = Limits::default();
     (limits.max_image_width, limits.max_image_height, limits.max_alloc) =
         (Some(1 << 14), Some(1 << 14), Some(1 << 28));
-    reader.limits(limits);
-    let mut decoder = reader.into_decoder()?;
-    let orientation = decoder.orientation().unwrap_or(Orientation::NoTransforms);
-    let mut image = DynamicImage::from_decoder(decoder)?;
-    image.apply_orientation(orientation);
-    Ok(image.into_rgba8())
+    Ok(wprs_render::decode_limited(ImageReader::new(Cursor::new(bytes)), limits)?.into_rgba8())
 }
 
 pub(crate) fn check(path: &Path) -> Result<Preview, Error> {

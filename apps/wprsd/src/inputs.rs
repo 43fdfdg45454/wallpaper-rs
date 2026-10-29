@@ -1,6 +1,8 @@
 mod hub;
+mod keys;
 mod kwin;
 mod parallax;
+mod store;
 #[cfg(test)]
 mod tests;
 
@@ -15,13 +17,16 @@ use wprs_core::model::{Input, SceneInputs};
 use wprs_scene::{AudioFrame, PointerState};
 use wprs_wayland::Window;
 
+pub(crate) use keys::{Keys, draft_key};
 pub(crate) use parallax::{pointer_over, relief};
+pub(crate) use store::{declined_path, grants_path, load, load_bound, save};
 
 const PACE: Duration = Duration::from_millis(16);
 
 static HUB: OnceLock<Arc<Hub>> = OnceLock::new();
 
 pub(crate) type Grants = BTreeMap<String, BTreeSet<Input>>;
+pub(crate) type Bound = BTreeMap<String, Grants>;
 type Wake = Arc<dyn Fn() + Send + Sync>;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -33,7 +38,7 @@ pub(crate) struct View {
 
 #[derive(Default)]
 pub(crate) struct Control {
-    pub(crate) grants: Grants,
+    pub(crate) grants: Bound,
     pub(crate) declined: Grants,
     pub(crate) shown: BTreeMap<String, SceneInputs>,
     pub(crate) parallax: BTreeSet<String>,
@@ -65,7 +70,7 @@ pub(crate) fn hub() -> Option<&'static Arc<Hub>> {
     HUB.get()
 }
 
-pub(crate) fn start(daemon: &Arc<Daemon>, connection: zbus::Connection, grants: (Grants, Grants)) {
+pub(crate) fn start(daemon: &Arc<Daemon>, connection: zbus::Connection, grants: (Bound, Grants)) {
     let weak = Arc::downgrade(daemon);
     let changed = move || weak.upgrade().into_iter().for_each(|d| d.changes.changed("inputs", vec![]));
     let wake = Arc::new(daemon.compositor.waker());
@@ -101,9 +106,10 @@ async fn pace(hub: Arc<Hub>) {
     }
 }
 
-pub(crate) fn needs(output: &str, (scene, title): (&str, &str), audio: bool, pointer: bool) {
+pub(crate) fn needs(output: &str, (scene, title, key): (&str, &str, &str), audio: bool, pointer: bool) {
     let Some(hub) = hub() else { return };
-    let need = SceneInputs { scene: scene.into(), audio, pointer, title: title.into() };
+    let (scene, title, key, granted) = (scene.into(), title.into(), key.into(), BTreeSet::new());
+    let need = SceneInputs { scene, audio, pointer, title, key, granted };
     let mut control = lock(&hub.control);
     let changed = match audio || pointer {
         true => control.shown.insert(output.into(), need.clone()) != Some(need),
@@ -114,6 +120,10 @@ pub(crate) fn needs(output: &str, (scene, title): (&str, &str), audio: bool, poi
         hub.poke.notify_one();
         (hub.changed)();
     }
+}
+
+pub(crate) fn kwin_script_loaded() -> bool {
+    kwin::LOADED.load(std::sync::atomic::Ordering::SeqCst)
 }
 
 pub(crate) fn audio() -> AudioFrame {

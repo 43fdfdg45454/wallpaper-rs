@@ -81,12 +81,14 @@ impl State {
             Sink::Surface(screen) if screen.window.same_surface(&window) => {
                 let moved = (screen.window.geometry(), screen.window.placement())
                     != (window.geometry(), window.placement());
-                (screen.window, screen.fresh) = (window, screen.fresh || moved);
+                let retimed = screen.window.hz() != window.hz();
+                (screen.window, screen.fresh) = (window, screen.fresh || moved || retimed);
                 output.dirty |= moved;
+                output.failed = if moved { 0 } else { output.failed };
             }
             sink => {
                 window.report(Cover::Starved, false);
-                (*sink, output.dirty) = (Sink::Surface(Screen::new(window)), true);
+                (*sink, output.dirty, output.failed) = (Sink::Surface(Screen::new(window)), true, 0);
             }
         }
     }
@@ -101,6 +103,13 @@ impl State {
     pub(super) fn repaint(&mut self, name: &str) {
         let shown = |o: &&mut super::output::Output| matches!(o.sink, Sink::Surface(_)) && o.animated();
         self.outputs.get_mut(name).filter(shown).into_iter().for_each(|o| o.dirty = true);
+    }
+
+    pub(super) fn backdrop_again(&mut self, name: &str) {
+        let Some(output) = self.outputs.get_mut(name).filter(|o| !o.animated()) else { return };
+        if let Sink::Surface(screen) = &mut output.sink {
+            (screen.painted, screen.due) = (None, Some(Instant::now()));
+        }
     }
 
     pub(super) fn starvation(&self) -> impl Iterator<Item = Instant> + '_ {

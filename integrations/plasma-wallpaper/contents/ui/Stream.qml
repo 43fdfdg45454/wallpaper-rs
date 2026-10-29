@@ -10,7 +10,7 @@ Item {
     readonly property string output: Screen.name
     readonly property real ratio: Window.window?.devicePixelRatio || Screen.devicePixelRatio
     readonly property size pixels: Qt.size(Math.max(1, Math.round(width * ratio)), Math.max(1, Math.round(height * ratio)))
-    readonly property var place: [Screen.virtualX, Screen.virtualY, Screen.width, Screen.height, ratio, Screen.pixelDensity * ratio, [Screen.manufacturer, Screen.model, Screen.serialNumber].filter(part => part).join(" ")]
+    readonly property var place: [Screen.virtualX, Screen.virtualY, Screen.width, Screen.height, ratio, Number.isFinite(Screen.pixelDensity) ? Screen.pixelDensity * ratio : 0, [Screen.manufacturer, Screen.model, Screen.serialNumber].filter(part => part).join(" ")]
     readonly property bool wanted: output !== "" && width > 0 && height > 0
     readonly property bool broken: error !== "" || (view.item?.state ?? 0) <= PipeWire.PipeWireSourceItem.Unconnected
     readonly property bool streaming: view.item?.state === PipeWire.PipeWireSourceItem.Streaming

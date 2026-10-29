@@ -19,6 +19,9 @@ tar xzf release.tar.gz
 cd wallpaper-rs-*-linux
 ./install.sh 2>&1 | tee "$OUT/install.log"
 cd "$WORK"
+dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+  org.freedesktop.DBus.ListActivatableNames | grep -q '"io.github.wallpaper_rs"' ||
+  { echo "FAIL: the session bus cannot start the app right after the install"; exit 1; }
 
 pids=()
 cleanup() {

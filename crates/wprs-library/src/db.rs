@@ -25,7 +25,9 @@ impl Library {
         if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty() && !p.exists()) {
             DirBuilder::new().recursive(true).mode(0o700).create(parent)?;
         }
-        OpenOptions::new().create(true).append(true).mode(0o600).open(path)?;
+        if !path.exists() {
+            OpenOptions::new().create_new(true).append(true).mode(0o600).open(path)?;
+        }
         let library = Self::setup(Connection::open(path)?)?;
         for suffix in ["", "-wal", "-shm"] {
             let mut file = path.as_os_str().to_owned();

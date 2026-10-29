@@ -1,6 +1,7 @@
-use super::{Control, Grants, Hub, View, pace};
+use super::{Bound, Control, Grants, Hub, View, pace};
 use crate::compositor::lock;
-use crate::inputs1::{load, scene_id};
+use crate::inputs::{load, load_bound};
+use crate::inputs1::scene_id;
 use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering::SeqCst};
@@ -21,63 +22,123 @@ fn mode(path: &std::path::Path) -> u32 {
     std::fs::metadata(path).unwrap().permissions().mode() & 0o777
 }
 
+fn scene(scene: &str, key: &str, audio: bool, pointer: bool) -> SceneInputs {
+    let (scene, key, title, granted) = (scene.into(), key.into(), String::new(), Default::default());
+    SceneInputs { scene, audio, pointer, title, key, granted }
+}
+
+fn bound(key: &str, inputs: &[Input]) -> Bound {
+    Bound::from([(SEA.into(), Grants::from([(key.into(), inputs.iter().copied().collect())]))])
+}
+
+fn showing(hub: &Hub, output: &str, key: &str) {
+    lock(&hub.control).shown.insert(output.into(), scene(SEA, key, true, true));
+}
+
 #[test]
 fn permissions_are_stored_privately_and_can_be_revoked() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("data").join("inputs.json");
     let hub = hub(Arc::default());
-    hub.set_grant(&path, SEA, Input::Audio, true).unwrap();
-    hub.set_grant(&path, SEA, Input::Pointer, true).unwrap();
-    assert_eq!(load(&path), Grants::from([(SEA.into(), [Input::Audio, Input::Pointer].into())]));
+    assert!(
+        hub.grant(&path, SEA, "sha256:aa", Input::Audio).is_err(),
+        "granted to a scene that is not shown"
+    );
+    showing(&hub, "DP-1", "sha256:aa");
+    hub.grant(&path, SEA, "sha256:aa", Input::Audio).unwrap();
+    hub.grant(&path, SEA, "sha256:aa", Input::Pointer).unwrap();
+    assert_eq!(load_bound(&path), bound("sha256:aa", &[Input::Audio, Input::Pointer]));
     assert_eq!((mode(&path), mode(path.parent().unwrap())), (0o600, 0o700));
-    hub.set_grant(&path, SEA, Input::Audio, false).unwrap();
-    assert_eq!(load(&path), Grants::from([(SEA.into(), [Input::Pointer].into())]));
-    hub.set_grant(&path, SEA, Input::Pointer, false).unwrap();
-    hub.set_grant(&path, SEA, Input::Pointer, false).unwrap();
-    assert_eq!((load(&path), std::fs::read_to_string(&path).unwrap()), (Grants::new(), "{}".into()));
+    hub.revoke(&path, SEA, Input::Audio).unwrap();
+    assert_eq!(load_bound(&path), bound("sha256:aa", &[Input::Pointer]));
+    hub.revoke(&path, SEA, Input::Pointer).unwrap();
+    hub.revoke(&path, SEA, Input::Pointer).unwrap();
+    assert_eq!((load_bound(&path), std::fs::read_to_string(&path).unwrap()), (Bound::new(), "{}".into()));
     std::fs::write(&path, "not json").unwrap();
-    assert_eq!(load(&path), Grants::new());
+    assert_eq!(load_bound(&path), Bound::new());
+}
+
+#[test]
+fn a_package_with_the_same_id_does_not_inherit_its_grants() {
+    let dir = tempfile::tempdir().unwrap();
+    let (path, hub) = (dir.path().join("inputs.json"), hub(Arc::default()));
+    showing(&hub, "DP-1", "key:signer");
+    assert_eq!(lock(&hub.control).package(SEA, None).unwrap().0, "key:signer");
+    hub.grant(&path, SEA, "key:signer", Input::Audio).unwrap();
+    showing(&hub, "DP-2", "sha256:other");
+    assert!(lock(&hub.control).package(SEA, None).is_err(), "a bare id chose one of two packages");
+    assert!(hub.grant(&path, SEA, "sha256:gone", Input::Pointer).is_err(), "granted to a package not shown");
+    hub.grant(&path, SEA, "key:signer", Input::Pointer).unwrap();
+    let control = lock(&hub.control);
+    assert!(control.allows("DP-1", Input::Audio) && !control.allows("DP-2", Input::Audio));
+    assert_eq!(control.granted(SEA, "key:signer"), [Input::Audio, Input::Pointer].into());
+    assert_eq!(control.granted(SEA, "sha256:other"), Default::default());
+    drop(control);
+    std::fs::write(
+        &path,
+        format!(r#"{{"{SEA}": ["audio"], "org.example.lake": {{"sha256:aa": ["pointer"]}}}}"#),
+    )
+    .unwrap();
+    let kept = Bound::from([(
+        "org.example.lake".into(),
+        Grants::from([("sha256:aa".into(), [Input::Pointer].into())]),
+    )]);
+    assert_eq!(load_bound(&path), kept, "grants of an older version are asked for again");
 }
 
 #[test]
 fn declining_is_remembered_until_the_input_is_granted() {
     let dir = tempfile::tempdir().unwrap();
     let (path, hub) = (dir.path().join("inputs.json"), hub(Arc::default()));
-    let declined = crate::inputs1::declined_path(&path);
-    hub.set_grant(&path, SEA, Input::Audio, false).unwrap();
+    let declined = crate::inputs::declined_path(&path);
+    hub.revoke(&path, SEA, Input::Audio).unwrap();
     assert_eq!(load(&declined), Grants::from([(SEA.into(), [Input::Audio].into())]));
     assert_eq!((lock(&hub.control).declined.clone(), mode(&declined)), (load(&declined), 0o600));
-    hub.set_grant(&path, SEA, Input::Audio, true).unwrap();
+    showing(&hub, "DP-1", "sha256:aa");
+    hub.grant(&path, SEA, "sha256:aa", Input::Audio).unwrap();
     assert_eq!(load(&declined), Grants::new());
-    assert_eq!(load(&path), Grants::from([(SEA.into(), [Input::Audio].into())]));
+    assert_eq!(load_bound(&path), bound("sha256:aa", &[Input::Audio]));
 }
 
 #[test]
-fn inputs_need_a_shown_active_scene_with_permission() {
+fn a_declined_question_spares_the_twins_and_old_clients_see_the_shown_package() {
+    let dir = tempfile::tempdir().unwrap();
+    let (path, hub) = (dir.path().join("inputs.json"), hub(Arc::default()));
+    let reported = || crate::inputs1::reported(&lock(&hub.control));
+    showing(&hub, "DP-1", "key:signer");
+    hub.grant(&path, SEA, "key:signer", Input::Audio).unwrap();
+    showing(&hub, "DP-1", "sha256:twin");
+    assert_eq!(reported(), Grants::new(), "a twin was reported as allowed");
+    hub.decline(&path, SEA, "sha256:twin", Input::Audio).unwrap();
+    assert_eq!(load_bound(&path), bound("key:signer", &[Input::Audio]), "the decline revoked a twin");
+    assert_eq!(lock(&hub.control).declined, Grants::from([(SEA.into(), [Input::Audio].into())]));
+    showing(&hub, "DP-1", "key:signer");
+    assert_eq!(reported(), Grants::from([(SEA.into(), [Input::Audio].into())]));
+    lock(&hub.control).shown.clear();
+    assert_eq!(reported(), Grants::from([(SEA.into(), [Input::Audio].into())]), "a grant was hidden");
+}
+
+#[test]
+fn inputs_need_a_shown_active_uncovered_scene_with_permission() {
     let view = View { active: true, covered: false, rect: None };
     let mut control = Control::default();
     let on = |c: &Control, input| !c.wants(input).is_empty();
-    control.shown.insert(
-        "DP-1".into(),
-        SceneInputs { scene: SEA.into(), audio: true, pointer: true, title: String::new() },
-    );
+    control.shown.insert("DP-1".into(), scene(SEA, "sha256:aa", true, true));
     control.views.insert("DP-1".into(), view);
     assert!(!on(&control, Input::Audio) && !on(&control, Input::Pointer), "off by default");
-    control.grants.insert("org.example.other".into(), [Input::Audio, Input::Pointer].into());
+    let lake = Grants::from([("sha256:aa".into(), [Input::Audio, Input::Pointer].into())]);
+    control.grants.insert("org.example.lake".into(), lake);
     assert!(!on(&control, Input::Audio), "granted to another scene");
-    control.grants.insert(SEA.into(), [Input::Audio].into());
+    control.grants.extend(bound("sha256:aa", &[Input::Audio]));
     assert!(on(&control, Input::Audio) && !on(&control, Input::Pointer));
-    control.grants.insert(SEA.into(), [Input::Audio, Input::Pointer].into());
+    control.grants.extend(bound("sha256:aa", &[Input::Audio, Input::Pointer]));
     control.views.insert("DP-1".into(), View { covered: true, ..view });
-    assert!(on(&control, Input::Audio) && !on(&control, Input::Pointer), "covered screens get no pointer");
+    assert!(!on(&control, Input::Audio) && !on(&control, Input::Pointer), "covered screens get nothing");
     control.views.insert("DP-1".into(), View { active: false, ..view });
     assert!(!on(&control, Input::Audio) && !on(&control, Input::Pointer), "paused screens get nothing");
     control.views.clear();
     assert!(!on(&control, Input::Audio), "an output that is not shown");
-    control.shown.insert(
-        "DP-2".into(),
-        SceneInputs { scene: "org.example.lake".into(), audio: true, pointer: true, title: String::new() },
-    );
+    control.shown.insert("DP-2".into(), scene("org.example.lake", "sha256:bb", true, true));
     assert!(control.allows("DP-1", Input::Audio) && control.allows("DP-1", Input::Pointer));
     assert!(
         !control.allows("DP-2", Input::Audio) && !control.allows("DP-3", Input::Audio),
@@ -90,15 +151,9 @@ fn only_outputs_whose_scene_declares_the_pointer_follow_it() {
     let view = View { active: true, covered: false, rect: Some([0.0, 0.0, 100.0, 100.0]) };
     let hub = hub(Arc::default());
     let mut control = lock(&hub.control);
-    control.grants.insert(SEA.into(), [Input::Audio, Input::Pointer].into());
-    control.shown.insert(
-        "DP-1".into(),
-        SceneInputs { scene: SEA.into(), audio: true, pointer: false, title: String::new() },
-    );
-    control.shown.insert(
-        "DP-2".into(),
-        SceneInputs { scene: SEA.into(), audio: false, pointer: true, title: String::new() },
-    );
+    control.grants.extend(bound("sha256:aa", &[Input::Audio, Input::Pointer]));
+    control.shown.insert("DP-1".into(), scene(SEA, "sha256:aa", true, false));
+    control.shown.insert("DP-2".into(), scene(SEA, "sha256:aa", false, true));
     control.views.extend(["DP-1", "DP-2", "DP-3"].map(|o| (o.to_string(), view)));
     assert_eq!(control.wants(Input::Pointer), ["DP-2".to_string()].into());
     control.followed = control.wants(Input::Pointer);

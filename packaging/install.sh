@@ -10,6 +10,13 @@ UNIT_DIR=$CONFIG_HOME/systemd/user
 DBUS_DIR=$DATA_HOME/dbus-1/services
 APP_ID=io.github.wallpaper_rs
 EXAMPLES=1
+reload_bus() {
+  dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+    org.freedesktop.DBus.ReloadConfig >/dev/null 2>&1 ||
+    busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig \
+      >/dev/null 2>&1 ||
+    echo "the session bus learns about wallpaper-rs at the next login"
+}
 for arg in "$@"; do
   case $arg in
     --no-examples) EXAMPLES=0 ;;
@@ -33,6 +40,7 @@ mkdir -p "$DATA_HOME/applications"
 sed "s|@BINDIR@|$BINDIR|g" "$HERE/packaging/dbus/$APP_ID.service" >"$DBUS_DIR/$APP_ID.service"
 sed "s|@BINDIR@|$BINDIR|g" "$HERE/packaging/desktop/$APP_ID.desktop" >"$DATA_HOME/applications/$APP_ID.desktop"
 install -Dm644 "$HERE/packaging/icons/$APP_ID.svg" "$DATA_HOME/icons/hicolor/scalable/apps/$APP_ID.svg"
+reload_bus
 
 echo "Installing the KWin pointer script, loaded only while a scene follows the pointer"
 install -d -m700 "$DATA_HOME/wallpaper-rs"

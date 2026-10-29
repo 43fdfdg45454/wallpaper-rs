@@ -18,9 +18,24 @@ pub struct Slot {
     pub pool: Mutex<Pool>,
 }
 
+pub enum Due<'a> {
+    Missing,
+    Sent,
+    Ready(MutexGuard<'a, Option<Arc<VideoFrame>>>),
+}
+
 impl Slot {
     pub fn frame(&self) -> MutexGuard<'_, Option<Arc<VideoFrame>>> {
         lock(&self.frame)
+    }
+
+    pub fn due(&self) -> Due<'_> {
+        let frame = self.frame();
+        match (frame.is_some(), self.dirty.load(SeqCst)) {
+            (false, _) => Due::Missing,
+            (true, false) => Due::Sent,
+            (true, true) => Due::Ready(frame),
+        }
     }
 
     pub fn replace(&self, frame: Arc<VideoFrame>) -> bool {
@@ -50,6 +65,7 @@ pub struct Shared {
     pub recreated: Mutex<Vec<String>>,
     pub notify: OnceLock<Notify>,
     pub gpu: OnceLock<Arc<dyn Allocate>>,
+    pub timelines: OnceLock<Arc<crate::syncobj::Drm>>,
 }
 
 impl Shared {
@@ -100,6 +116,19 @@ mod tests {
         assert!(slot.write(&borrowed(&[4u8; 16])));
         assert_eq!(slot.frame().as_ref().map(|f| f.data.as_ptr()), retained);
         assert!(slot.dirty.load(SeqCst));
+    }
+
+    #[test]
+    fn nothing_is_sent_before_the_first_real_frame() {
+        let slot = Slot::default();
+        slot.dirty.store(true, SeqCst);
+        assert!(matches!(slot.due(), Due::Missing), "a placeholder frame would be sent");
+        slot.write(&borrowed(&[5u8; 16]));
+        assert!(
+            matches!(slot.due(), Due::Ready(frame) if frame.as_ref().is_some_and(|f| f.data == [5u8; 16]))
+        );
+        slot.dirty.store(false, SeqCst);
+        assert!(matches!(slot.due(), Due::Sent));
     }
 
     #[test]

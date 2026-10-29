@@ -10,7 +10,7 @@ chmod 700 "$XDG_RUNTIME_DIR"
 
 pids=()
 cleanup() {
-  for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
+  for p in "${pids[@]}"; do kill -CONT "$p" 2>/dev/null || true; kill "$p" 2>/dev/null || true; done
   if [ -n "${DBUS_SESSION_BUS_PID:-}" ]; then kill "$DBUS_SESSION_BUS_PID" 2>/dev/null || true; fi
   if [ "${status:-1}" != 0 ]; then
     for f in "$WORK"/*.log; do echo "== $f"; tail -n 40 "$f"; done
@@ -33,7 +33,13 @@ expect() {
 }
 fail() { echo "FAIL: $*"; exit 1; }
 
-eval "$(dbus-launch --sh-syntax)"
+bus_conf() {
+  printf '<busconfig><type>session</type><listen>unix:dir=%s</listen><auth>EXTERNAL</auth><policy context="default">
+    <allow send_destination="*" eavesdrop="true"/><allow eavesdrop="true"/><allow own="*"/></policy></busconfig>' "$WORK" >"$1"
+}
+bus_conf "$WORK/session.conf"
+{ read -r DBUS_SESSION_BUS_ADDRESS; read -r DBUS_SESSION_BUS_PID; } < <(dbus-daemon --config-file="$WORK/session.conf" --fork --print-address=1 --print-pid=1)
+export DBUS_SESSION_BUS_ADDRESS DBUS_SESSION_BUS_PID
 pipewire >"$WORK/pipewire.log" 2>&1 & pids+=($!)
 wait_for 10 test -S "$XDG_RUNTIME_DIR/pipewire-0"
 wireplumber >"$WORK/wireplumber.log" 2>&1 & pids+=($!)
@@ -280,6 +286,11 @@ finished() { [ "$(reply "r['job']['state']" Daemon1 GetJob t "$1")" = "done" ]; 
 idle() { [ "$(reply "len([j for j in r['jobs'] if j['state'] in ('queued', 'running')])" Daemon1 ListJobs)" = 0 ]; }
 signalled() { grep -A4 "member=$1" "$WORK/library-signals.log" | grep -q "$2"; }
 refused() { if bus "${@:2}" >"$WORK/refused.out" 2>&1; then fail "accepted: $*"; fi; grep -q "$1" "$WORK/refused.out" || fail "$*: $(cat "$WORK/refused.out")"; }
+denied() {
+  if dbus-send --session --print-reply --dest=io.github.wallpaper_rs.Daemon /io/github/wallpaper_rs/Daemon \
+    "io.github.wallpaper_rs.$2" "${@:3}" >"$WORK/denied.out" 2>&1; then fail "accepted: $*"; fi
+  grep -q "$1" "$WORK/denied.out" || fail "$*: $(cat "$WORK/denied.out")"
+}
 
 pics=$WORK/pictures
 mkdir -p "$pics/videos" "$pics/.hidden" "$WORK/import"
@@ -706,9 +717,13 @@ if [ "$(id -u)" != 0 ]; then
 fi
 ctl release TEST-8 && expect "list(s['outputs'])" "[]"
 cp "$ROOT/tests/fixtures/bands-640x180.png" "$WORK/bands.png"
-read -r _ _ _ left < <(ctl stream TEST-9 160 90)
+"$BIN/wprs-ctl" stream TEST-9 160 90 --wait >"$WORK/span.out" 2>&1 & spanned=$!; pids+=("$spanned")
+wait_for 10 grep -q serial "$WORK/span.out" || fail "span claim: $(cat "$WORK/span.out")"
+read -r _ _ _ left <"$WORK/span.out"
 read -r _ _ _ right < <(ctl stream TEST-10 160 90)
 ctl screen TEST-9 --pos 0,0 --size 160x90 --density 4 --identity "Maker Model 9"
+ctl screen TEST-10 --pos 160,0 --size 160x90 --density inf
+expect "s['outputs']['TEST-10']['screen']['px_per_mm'], s['outputs']['TEST-10']['screen']['x']" "(0.0, 160)"
 ctl screen TEST-10 --pos 160,0 --size 160x90 --density 4
 ctl set "$WORK/bands.png" --fit fill
 shown "$left" 0 255 0 && shown "$right" 0 255 0
@@ -721,7 +736,8 @@ ctl edit crop "$WORK/bands.png" 0.7,0,0.3,1 --output TEST-10
 shown "$right" 0 0 255
 ctl edit reset "$WORK/bands.png"
 shown "$left" 255 0 0 && shown "$right" 0 0 255
-ctl release TEST-9
+kill -KILL "$spanned"
+wait "$spanned" 2>/dev/null || true
 shown "$right" 0 255 0
 ctl release TEST-10 && expect "list(s['outputs'])" "[]"
 echo "edit and span checks passed"
@@ -985,20 +1001,14 @@ echo "scene editor preview checks passed"
 sea=org.example.sea
 inputs() { ctl input status --json | python3 -c "import json, sys; r = json.load(sys.stdin); print(eval(sys.argv[1]))" "$1"; }
 [ "$(inputs "r['grants'], r['capturing'], r['tracking']")" = "({}, False, False)" ] || fail "inputs start on"
-ctl input grant "$sea" audio && ctl input grant "$sea" pointer && ctl input grant "$sea" audio
-[ "$(inputs "r['grants']")" = "{'$sea': ['audio', 'pointer']}" ] || fail "grants: $(ctl input status --json)"
-[ "$(stat -c %a "$XDG_DATA_HOME/wallpaper-rs/inputs.json")" = 600 ] || fail "inputs.json is not private"
-[ "$(inputs "r['capturing'], r['tracking']")" = "(False, False)" ] || fail "a grant alone started an input"
+if ctl input grant "$sea" audio 2>"$WORK/grant.err"; then fail "an input was granted to a scene that is not shown"; fi
+grep -q "is not shown" "$WORK/grant.err" || fail "grant before showing: $(cat "$WORK/grant.err")"
 ctl input pointer 10 10 && ctl input pointer -10 -10
 ctl input status | grep -qx "audio capture: off" || fail "status: $(ctl input status)"
 refused "is not audio or pointer" Inputs1 Grant ss "$sea" camera
 refused "is not a scene package id" Inputs1 Grant ss "Not A Scene" audio
 refused "Signature mismatch" Inputs1 SetPointer dd 1 1
-ctl input revoke "$sea" audio
-[ "$(inputs "r['grants']")" = "{'$sea': ['pointer']}" ] || fail "revoke: $(ctl input status --json)"
-ctl input revoke "$sea" pointer && ctl input revoke "$sea" pointer
-[ "$(inputs "r['grants'], r['capturing'], r['tracking']")" = "({}, False, False)" ] || fail "inputs after revoking"
-grep -q "$sea" "$XDG_DATA_HOME/wallpaper-rs/inputs.json" && fail "a revoked grant was kept"
+denied "only the KWin script of wprsd and wprs-ctl report the pointer" Inputs1.SetPointer int32:1 int32:1
 echo "input permission checks passed"
 python3 - "$scene" "$ROOT/tests/fixtures/green-64x32.png" <<'PACKAGE'
 import json, sys, zipfile
@@ -1013,6 +1023,7 @@ def package(name, scene, files):
         for path, text in files.items():
             out.writestr(path, text)
 package("sea", {"layers": [{"id": "bars", "type": "spectrum", "size": [64, 32], "bands": 16}]}, {})
+package("twin", {"layers": [{"id": "bars", "type": "spectrum", "size": [64, 32], "bands": 32}]}, {})
 tint = "import { scene } from 'wprs';\nexport function update() { scene.layer('tint').color = [1, 0, 0, 1]; }\n"
 package("spin", {"layers": [{"id": "tint", "type": "solid", "color": "#0000ff"}],
                  "scripts": [{"path": "scripts/tint.js"}]}, {"scripts/tint.js": tint})
@@ -1023,8 +1034,24 @@ imported() {
   wait_for 20 finished "$job" || fail "import of $1: $(bus Daemon1 GetJob t "$job")"
   reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job"
 }
-sea_uid=$(imported "$scene/sea.wpak") && spin_uid=$(imported "$scene/spin.wpak")
-analysing() { pw-dump 2>/dev/null | grep -q '"media.name": "wallpaper-rs audio analysis"'; }
+python3 - "$scene/twin.wpak" <<'TWIN'
+import json, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as old:
+    files = {name: old.read(name) for name in old.namelist()}
+manifest = json.loads(files["manifest.json"])
+manifest["id"] = "org.example.sea"
+files["manifest.json"] = json.dumps(manifest)
+with zipfile.ZipFile(sys.argv[1], "w") as out:
+    for name, data in files.items():
+        out.writestr(name, data)
+TWIN
+sea_uid=$(imported "$scene/sea.wpak") && spin_uid=$(imported "$scene/spin.wpak") && twin_uid=$(imported "$scene/twin.wpak")
+analysing() {
+  local dump
+  dump=$(pw-dump 2>/dev/null) || return 1
+  grep -q '"media.name": "wallpaper-rs audio analysis"' <<<"$dump"
+}
+silent() { ! analysing; }
 reads() { [ "$(inputs "$1")" = "$2" ]; }
 read -r _ _ _ s12 < <(ctl stream TEST-12 160 90)
 ctl lib apply "$sea_uid" -o TEST-12
@@ -1033,12 +1060,48 @@ wait_for 10 reads "r['shown']['TEST-12']['audio'], r['shown']['TEST-12']['scene'
 sleep 1
 [ "$(inputs "r['capturing']")" = False ] || fail "audio was captured without permission"
 if analysing; then fail "an audio stream exists without permission"; fi
-ctl input grant "$sea" audio
+denied "nothing can ask the user\\|is asked in a notification" Inputs1.Grant string:"$sea" string:audio
+[ "$(inputs "r['grants']")" = "{}" ] || fail "another program granted an input: $(ctl input status --json)"
+ctl input grant "$sea" audio && ctl input grant "$sea" pointer && ctl input grant "$sea" audio
+[ "$(inputs "r['grants'], r['shown']['TEST-12']['granted']")" = "({'$sea': ['audio', 'pointer']}, ['audio', 'pointer'])" ] ||
+  fail "grants: $(ctl input status --json)"
+dbus-send --session --print-reply --dest=io.github.wallpaper_rs.Daemon /io/github/wallpaper_rs/Daemon \
+  io.github.wallpaper_rs.Inputs1.Grant string:"$sea" string:audio >/dev/null ||
+  fail "granting an allowed input again was refused or asked"
+[ "$(stat -c %a "$XDG_DATA_HOME/wallpaper-rs/inputs.json")" = 600 ] || fail "inputs.json is not private"
+grep -q '"sha256:' "$XDG_DATA_HOME/wallpaper-rs/inputs.json" || fail "a grant is not tied to the package"
 wait_for 10 reads "r['capturing']" True || fail "no audio capture with the permission: $(ctl input status --json)"
 wait_for 10 analysing || fail "no PipeWire stream for the audio analysis"
+ctl config pause.when_covered false && ctl covered TEST-12 true
+wait_for 10 reads "r['capturing']" False || fail "the sound of a covered screen was captured"
+ctl covered TEST-12 false && ctl config pause.when_covered true
+wait_for 10 reads "r['capturing']" True || fail "the capture did not come back when the screen was shown"
+ctl lib apply "$twin_uid" -o TEST-12
+wait_for 10 reads "r['shown']['TEST-12']['granted'], r['capturing']" "([], False)" ||
+  fail "another package with the same id used the grant: $(ctl input status --json)"
+ctl lib apply "$sea_uid" -o TEST-12
+wait_for 10 reads "r['capturing']" True || fail "the grant was lost: $(ctl input status --json)"
+ctl stream TEST-13 160 90 >/dev/null
+ctl lib apply "$twin_uid" -o TEST-13 2>"$WORK/twin.err"
+wait_for 10 reads "r['shown']['TEST-13']['scene'], r['shown']['TEST-13']['granted']" "('$sea', [])" ||
+  fail "the twin on a second screen: $(ctl input status --json)"
+grep -q "wprs-ctl input grant $sea audio -o TEST-13" "$WORK/twin.err" || fail "twin hint: $(cat "$WORK/twin.err")"
+if ctl input grant "$sea" audio 2>"$WORK/grant.err"; then fail "a bare id chose one of two packages"; fi
+grep -q "choose one with --output (TEST-12, TEST-13)" "$WORK/grant.err" || fail "two packages: $(cat "$WORK/grant.err")"
+refused "more than one package with the id $sea" Inputs1 Grant ss "$sea" audio
+refused "is not shown" Inputs1 GrantPackage sss "$sea" sha256:00 audio
+ctl input grant "$sea" audio -o TEST-12
+[ "$(inputs "r['shown']['TEST-12']['granted'], r['shown']['TEST-13']['granted']")" = "(['audio', 'pointer'], [])" ] ||
+  fail "granting one package reached its twin: $(ctl input status --json)"
+ctl input status | grep -q "^TEST-13 shows $sea using .* (allowed: none)$" || fail "status: $(ctl input status)"
+ctl input grant "$sea" audio -o TEST-13
+[ "$(inputs "r['shown']['TEST-13']['granted']")" = "['audio']" ] || fail "grant -o: $(ctl input status --json)"
+ctl release TEST-13
+ctl input revoke "$sea" pointer && ctl input revoke "$sea" pointer
+[ "$(inputs "r['grants']")" = "{'$sea': ['audio']}" ] || fail "revoke: $(ctl input status --json)"
 ctl lib apply "$spin_uid" -o TEST-12
 wait_for 10 reads "r['capturing'], list(r['shown'])" "(False, [])" || fail "the capture outlived its scene"
-wait_for 10 sh -c "! pw-dump 2>/dev/null | grep -q 'wallpaper-rs audio analysis'" || fail "the audio stream was kept"
+wait_for 10 silent || fail "the audio stream was kept"
 shown "$s12" 255 0 0
 expect "s['outputs']['TEST-12']['kind'], s['outputs']['TEST-12']['error']" "('scene', None)"
 consume "$s12" && sleep 2
@@ -1046,7 +1109,9 @@ idle=$(ticks) && sleep 2 && idle=$(($(ticks) - idle)) && leave
 [ "$idle" -lt 8 ] || fail "the daemon used $idle ticks in 2 s while a watched scripted scene stayed the same"
 ctl release TEST-12 && expect "list(s['outputs'])" "[]"
 ctl input revoke "$sea" audio
-bus Library1 Remove asb 2 "$sea_uid" "$spin_uid" false >/dev/null
+[ "$(inputs "r['grants'], r['capturing'], r['tracking']")" = "({}, False, False)" ] || fail "inputs after revoking"
+grep -q "$sea" "$XDG_DATA_HOME/wallpaper-rs/inputs.json" && fail "a revoked grant was kept"
+bus Library1 Remove asb 3 "$sea_uid" "$spin_uid" "$twin_uid" false >/dev/null
 echo "audio and script scene checks passed"
 examples=$XDG_DATA_HOME/wallpaper-rs/examples
 mkdir -p "$examples"
@@ -1246,8 +1311,8 @@ ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
 green="buffers 4 center bgra \[0, 255, 0, 255\]"
 retry 10 sh -c "'$BIN/probe' $gpu 3 --dmabuf | grep -q 'type DmaBuf modifier 0x0 $green'" ||
   fail "no frame in GPU memory: $("$BIN/probe" "$gpu" 3 --dmabuf 2>&1)"
-retry 10 sh -c "'$BIN/probe' $gpu 3 | grep -q 'type MemFd $green'" ||
-  fail "no shared memory fallback: $("$BIN/probe" "$gpu" 3 2>&1)"
+first=$("$BIN/probe" "$gpu" 3 2>&1)
+grep -q "type MemFd $green" <<<"$first" || fail "the first frame in shared memory after GPU memory: $first"
 "$BIN/probe" "$gpu" 5 --dmabuf --late | grep -q "type DmaBuf" || fail "a late GPU memory consumer waited"
 ctl set "$ROOT/tests/fixtures/magenta-64x32.webm" --fit stretch
 "$BIN/probe" "$gpu" 4 --dmabuf --hold >"$WORK/gpu.out" & held=$!
@@ -1268,6 +1333,156 @@ expect "${output}['buffers']" memfd
 wait "$held" || fail "no frame after a failed GPU allocation: $(cat "$WORK/flaky.out")"
 grep -q "type MemFd $green" "$WORK/flaky.out" || fail "the consumer got no shared memory: $(cat "$WORK/flaky.out")"
 echo "GPU allocation fallback passed"
+
+kill "$daemon"
+wait "$daemon" 2>/dev/null || true
+bus_conf "$WORK/system.conf"
+{ read -r system; read -r system_pid; } < <(dbus-daemon --config-file="$WORK/system.conf" --fork --print-address=1 --print-pid=1)
+pids+=("$system_pid")
+mkfifo "$WORK/zone"
+DBUS_SYSTEM_BUS_ADDRESS=$system "$BIN/examples/timedate" <"$WORK/zone" >"$WORK/timedate.out" 2>&1 & pids+=($!)
+exec 7>"$WORK/zone"
+wait_for 10 grep -q ready "$WORK/timedate.out" || fail "the time zone service did not start: $(cat "$WORK/timedate.out")"
+TZ=UTC DBUS_SYSTEM_BUS_ADDRESS=$system RUST_LOG=$log "$BIN/wprsd" >"$WORK/robust.log" 2>&1 & daemon=$!; pids+=("$daemon")
+wait_for 30 ctl state || fail "the daemon with a system bus did not start"
+echo Etc/UTC >&7
+clock=$WORK/clock && mkdir -p "$clock"
+png "$clock/a.png" ff0000 && png "$clock/b.png" 00ff00 && png "$clock/c.png" 0000ff
+clock_source=$(ctl lib add "$clock" --wait | sed -n 1p)
+mapfile -t tones < <(ctl lib search "source:$clock_source sort:title" --json | js "'\n'.join(i['uid'] for i in r['items'])")
+[ "${#tones[@]}" = 3 ] || fail "the clock pictures: ${tones[*]}"
+ctl stream TEST-8 160 90 >/dev/null
+ctl playlist new Clock >/dev/null && ctl playlist add Clock "${tones[@]}"
+at=$(date -u -d '+30 min' +%H:%M)
+ctl playlist rule Clock interval 1h && ctl playlist rule Clock at "$at"
+started=$(date +%s)
+ctl playlist start Clock -o TEST-8
+timed=$(python3 -c "import datetime as d, sys; n = d.datetime.now(d.timezone.utc); h, m = map(int, sys.argv[1].split(':'))
+t = n.replace(hour=h, minute=m, second=0, microsecond=0); print(int((t + d.timedelta(days=t <= n)).timestamp()))" "$at")
+next_at() { field "s['outputs']['TEST-8']['playlist']['next_at']"; }
+[ "$(next_at)" = "$timed" ] || fail "the switch at $at UTC is due at $(next_at), not $timed"
+echo Etc/GMT-5 >&7
+hourly() { local n; n=$(next_at); [ "$n" -ge $((started + 3600)) ] && [ "$n" -le $((started + 3610)) ]; }
+wait_for 10 hourly || fail "after a zone change the next switch is $(next_at), not an hour after $started"
+echo Etc/UTC >&7
+timely() { [ "$(next_at)" = "$timed" ]; }
+wait_for 10 timely || fail "back in the first zone the next switch is $(next_at), not $timed"
+echo "time and zone checks passed"
+ctl playlist rule Clock resume false
+position() { field "s['outputs']['TEST-8']['playlist']['position']"; }
+for _ in 1 2 3 4; do
+  before=$(position) && ctl playlist start Clock -o TEST-8 && sleep 0.3
+  [ "$(position)" = $(((before + 1) % 3)) ] || fail "a start moved the playlist from $before to $(position)"
+done
+ctl stream TEST-9 160 90 >/dev/null
+ctl playlist start Clock
+for flag in true false true false; do
+  ctl playlist rule Clock synced "$flag" & ruled=$!
+  ctl next & stepped=$!
+  wait "$ruled" || fail "a rule change failed while the playlist moved"
+  wait "$stepped" || fail "a step failed while a rule changed"
+done
+ctl playlist rule Clock synced true && ctl next
+expect "s['outputs']['TEST-9']['item'] == s['outputs']['TEST-8']['item'] in ($(printf "'%s'," "${tones[@]}"))" True
+ctl release TEST-9
+echo "playlist start and rule race checks passed"
+python3 - "$XDG_DATA_HOME/wallpaper-rs/library.db" >"$WORK/locked.out" <<'LOCK' & locker=$!; pids+=("$locker")
+import sqlite3, sys, time
+db = sqlite3.connect(sys.argv[1], isolation_level=None)
+db.execute("BEGIN EXCLUSIVE")
+print("locked", flush=True)
+time.sleep(8)
+db.execute("COMMIT")
+LOCK
+wait_for 10 grep -q locked "$WORK/locked.out" || fail "the library could not be locked"
+ctl lib apply "${tones[2]}" -o TEST-8 || fail "a wallpaper that was shown was reported as failed"
+expect "s['outputs']['TEST-8']['item']" "${tones[2]}"
+wait "$locker"
+grep -q "its use was not recorded" "$WORK/robust.log" || fail "the failed library write was not reported"
+echo "a shown wallpaper whose use cannot be recorded passed"
+many=$WORK/many && mkdir -p "$many"
+for n in $(seq 300); do cp "$ROOT/tests/fixtures/green-64x32.png" "$many/p$n.png" && printf '%s' "$n" >>"$many/p$n.png"; done
+many_source=$(ctl lib add "$many" --wait | sed -n 1p)
+counted() { ctl lib search "source:$many_source $1" --json | js "r['total']"; }
+found() { [ "$(counted "$1")" = 1 ]; }
+[ "$(counted "")" = 300 ] || fail "lib add --wait returned before its scan ended: $(counted "")"
+ctl lib scan "$many_source" >/dev/null
+cp "$ROOT/tests/fixtures/green-64x32.png" "$many/zz-late.png"
+wait_for 30 found zz-late || fail "a file written during a scan was lost"
+cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/elsewhere.png" && ln "$WORK/elsewhere.png" "$many/linked.png"
+wait_for 30 found linked || fail "a hard link was not noticed"
+ctl lib unsource "$many_source"
+echo "scan wait and folder watch checks passed"
+keyring() { busctl --user status org.freedesktop.secrets >/dev/null 2>&1; }
+unlock() {
+  printf 'keyring-word' | gnome-keyring-daemon --unlock --components=secrets --foreground >>"$WORK/keyring.log" 2>&1 &
+  kr=$! && pids+=("$kr")
+  wait_for 10 keyring || fail "the keyring did not start"
+}
+secretly() { ctl provider ls --json | jq_ "[(p['state'], p['has_secret']) for p in r['providers'] if p['id'] == '$1']"; }
+unlock
+printf 'first\n' | ctl provider add twin webdav url=https://dav.example.org/a user=me refresh=0s --secret-stdin >/dev/null 2>&1 & one=$!
+printf 'second\n' | ctl provider add twin webdav url=https://dav.example.org/a user=me refresh=0s --secret-stdin >/dev/null 2>&1 & two=$!
+added=0
+if wait "$one"; then added=$((added + 1)); fi
+if wait "$two"; then added=$((added + 1)); fi
+[ "$added" = 1 ] || fail "$added of two adds of the same provider succeeded"
+[ "$(secretly twin)" = "[('idle', True)]" ] || fail "the provider added twice lost its secret: $(secretly twin)"
+kill -STOP "$kr"
+since=$(date +%s%N)
+[ "$(secretly twin)" = "[('idle', True)]" ] || fail "a silent keyring changed the provider: $(secretly twin)"
+[ $(($(date +%s%N) - since)) -lt 3000000000 ] || fail "listing providers waited for a silent keyring"
+kill -CONT "$kr"
+kill "$kr"
+wait "$kr" 2>/dev/null || true
+keyring && fail "the keyring did not stop"
+ctl provider rm twin
+unlock
+ctl provider add twin webdav url=https://dav.example.org/a user=me refresh=0s --no-secret >/dev/null
+[ "$(secretly twin)" = "[('needs_secret', False)]" ] || fail "an orphan secret reached a new provider: $(secretly twin)"
+ctl provider rm twin
+kill "$kr"
+wait "$kr" 2>/dev/null || true
+echo "keyring and orphan secret checks passed"
+repo=$(ctl remote add "http://127.0.0.1:$port/$anchor" --wait --json | jq_ "r['output']['repo_id']")
+ctl stream TEST-12 160 90 >/dev/null
+dawn() { ctl pkg ls --json | jq_ "len([p for p in r['packages'] if p['id'] == 'org.example.dawn'])"; }
+for _ in 1 2 3; do
+  item=$(ctl pkg install org.example.dawn --wait --json | jq_ "r['output']['item']")
+  ctl lib apply "$item" -o TEST-12 >/dev/null 2>&1 & applying=$!
+  ctl pkg uninstall org.example.dawn >/dev/null 2>&1 & removing=$!
+  wait "$applying" || true
+  wait "$removing" || true
+  showing=$(field "'org.example.dawn' in (s['outputs']['TEST-12']['image'] or '')")
+  [ "$(dawn)$showing" = 1True ] || [ "$(dawn)$showing" = 0False ] ||
+    fail "uninstall and apply raced into $(dawn) packages while the output shows it: $showing"
+  ctl set "$ROOT/tests/fixtures/green-64x32.png" -o TEST-12
+  [ "$(dawn)" = 0 ] || ctl pkg uninstall org.example.dawn
+  ctl pkg install org.example.dawn >/dev/null & installing=$!
+  ctl pkg uninstall org.example.dawn >/dev/null 2>&1 & removing=$!
+  wait "$installing" || true
+  wait "$removing" || true
+  wait_for 30 idle || fail "jobs did not finish: $(bus Daemon1 ListJobs)"
+  [ "$(dawn)" = "$(ctl lib search 'kind:package dawn' --json | jq_ "r['total']")" ] ||
+    fail "install and uninstall raced into $(dawn) packages and $(ctl lib search 'kind:package dawn')"
+  [ "$(dawn)" = 0 ] || ctl pkg uninstall org.example.dawn
+done
+ctl release TEST-12 && ctl release TEST-8
+ctl remote rm "${repo:0:8}"
+echo "install, uninstall and apply race checks passed"
+
+kill "$daemon"
+wait "$daemon" 2>/dev/null || true
+WPRS_RENDER_STOP=1 RUST_LOG=$log "$BIN/wprsd" >"$WORK/stopped.log" 2>&1 & daemon=$!; pids+=("$daemon")
+wait_for 30 ctl state || fail "the daemon did not start again"
+sleep 1
+kill -USR2 "$daemon"
+guarded() { ! ctl pause 2>"$WORK/guard.out" && grep -q "the renderer stopped after an error; restart wprsd" "$WORK/guard.out"; }
+wait_for 10 guarded || fail "a change was accepted without a renderer: $(cat "$WORK/guard.out")"
+if ctl set "$ROOT/tests/fixtures/green-64x32.png" 2>/dev/null; then fail "a wallpaper was set without a renderer"; fi
+{ ctl lib search "" && ctl playlist ls && ctl provider ls && ctl state; } >/dev/null || fail "the library stopped with the renderer"
+kill -0 "$daemon" || fail "the daemon exited with its renderer"
+echo "renderer guard checks passed"
 
 status=0
 echo "integration test passed"

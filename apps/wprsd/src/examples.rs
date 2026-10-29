@@ -28,7 +28,7 @@ impl Daemon {
             Ok::<_, wprs_library::Error>((gone, added))
         });
         let Ok((gone, added)) = changed else { return false };
-        if let Err(e) = crate::inputs1::save(&record, &found) {
+        if let Err(e) = crate::inputs::save(&record, &found) {
             tracing::warn!(error = %e.kind(), "cannot record the example scenes offered");
             tracing::debug!("{e}");
         }

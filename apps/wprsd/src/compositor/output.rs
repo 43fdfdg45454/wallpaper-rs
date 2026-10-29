@@ -77,13 +77,14 @@ pub(super) struct Output {
     pub(super) moving: bool,
     pub(super) refresh: u32,
     pub(super) covered: bool,
+    pub(super) failed: u32,
 }
 
 impl Output {
     pub(super) fn new(size: (u32, u32), shown: Shown, sink: Sink, refresh: u32) -> Self {
         let (fade, last_render) = (None, None);
         let (active, dirty, missing_frame, stale, moving) = (true, true, false, true, false);
-        let (offset, covered) = ([0.0; 2], false);
+        let (offset, covered, failed) = ([0.0; 2], false, 0);
         Self {
             size,
             shown,
@@ -98,6 +99,16 @@ impl Output {
             moving,
             refresh,
             covered,
+            failed,
+        }
+    }
+
+    pub(super) fn unwatched(&mut self, streaming: bool) {
+        if let Sink::Stream(target) = &mut self.sink
+            && !streaming
+            && !self.stale
+        {
+            *target = None;
         }
     }
 
@@ -121,7 +132,7 @@ impl Output {
         {
             *target = None;
         }
-        (self.dirty, self.stale) = (true, true);
+        (self.dirty, self.stale, self.failed) = (true, true, 0);
     }
 
     pub(super) fn open(&self, streaming: bool) -> bool {

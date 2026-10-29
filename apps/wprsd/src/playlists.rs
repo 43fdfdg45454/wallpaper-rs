@@ -1,3 +1,4 @@
+use crate::compositor::lock;
 use crate::daemon::Daemon;
 use crate::error::{Error, Result, failed, invalid};
 use crate::items::{MAX_UIDS, limited, merged, reply};
@@ -107,11 +108,15 @@ impl Daemon {
         key: &str,
         change: impl FnOnce(&mut Library, PlaylistInfo) -> Result<Vec<String>>,
     ) -> Result<()> {
-        let (uid, keys) = self.store.write(|lib| {
-            let info = lib.playlist(key)?;
-            Ok::<_, Error>((info.uid.clone(), change(lib, info)?))
-        })?;
-        self.rotations.known(&keys);
+        let uid = {
+            let mut lists = lock(&self.rotations.lists);
+            let (uid, keys) = self.store.write(|lib| {
+                let info = lib.playlist(key)?;
+                Ok::<_, Error>((info.uid.clone(), change(lib, info)?))
+            })?;
+            lists.extend(keys.into_iter().map(|key| (key, Vec::new())));
+            uid
+        };
         self.changes.changed("playlists", vec![uid]);
         self.show(Act::Check);
         Ok(())
@@ -156,6 +161,7 @@ impl Daemon {
         let showing = self.showing();
         self.edit_playlist(key, |lib, mut info| {
             let rules = set_rule(&info.rules, rule, value)?;
+            lock(&self.rotations.unsaved).retain(|r| r.playlist != info.uid);
             let (migrate, reorder) = (rules.synced != info.rules.synced, rules.order != info.rules.order);
             info.rules = rules;
             lib.update_playlist(&info)?;

@@ -123,6 +123,7 @@ impl Daemon {
 
     pub fn apply(&self, uid: &str, output: &str, fit: &str, preset: &str) -> Result<()> {
         let (output, fit) = (target_output(output)?, parse_fit(fit)?);
+        let _packages = crate::compositor::lock(&crate::packages::PACKAGES);
         let (item, preset) =
             self.store.read(|lib| Ok::<_, Error>((lib.item(uid)?, find_preset(lib, uid, preset)?)))?;
         if item.missing {
@@ -167,8 +168,10 @@ impl Daemon {
             .filter(|o| output.is_empty() || **o == output)
             .cloned()
             .collect();
-        self.store.write(|lib| shown.iter().try_for_each(|o| lib.mark_used(uid, o, now())))?;
-        self.changes.changed("library", vec![uid.to_owned()]);
+        match self.store.write(|lib| shown.iter().try_for_each(|o| lib.mark_used(uid, o, now()))) {
+            Ok(()) => self.changes.changed("library", vec![uid.to_owned()]),
+            Err(e) => tracing::warn!("the wallpaper is shown, but its use was not recorded: {e}"),
+        }
         Ok(())
     }
 

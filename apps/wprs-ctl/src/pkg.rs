@@ -124,7 +124,7 @@ async fn install(
             let question = format!("Repository {name} is stale (its signed index expired). Install anyway?");
             let yes = match asked.get(&repo) {
                 Some(yes) => *yes,
-                None => confirm(&question)?,
+                None => confirm(&question).await?,
             };
             asked.insert(repo, yes);
             if yes { job(client, start(true), wait).await } else { Err(e) }

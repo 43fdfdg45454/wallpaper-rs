@@ -1,5 +1,6 @@
 use crate::dmabuf::Image;
 use crate::shared::{Slot, lock};
+use crate::syncobj::{Fences, sync_meta};
 use pipewire::sys::pw_buffer;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -23,6 +24,7 @@ struct Buffer {
     state: Use,
     raw: Raw,
     sent: u64,
+    fences: Option<Fences>,
 }
 
 #[derive(Default)]
@@ -75,7 +77,7 @@ impl Pool {
     }
 
     pub fn insert(&mut self, image: Image, buffer: *mut pw_buffer) -> usize {
-        self.buffers.push(Some(Buffer { image, state: Use::Out, raw: Raw(buffer), sent: 0 }));
+        self.buffers.push(Some(Buffer { image, state: Use::Out, raw: Raw(buffer), sent: 0, fences: None }));
         self.active = true;
         self.buffers.len() - 1
     }
@@ -99,9 +101,20 @@ impl Pool {
         *self = Self { failed: self.failed, epoch: self.epoch + 1, ..Self::default() };
     }
 
+    pub fn fence(&mut self, index: usize, fences: Fences) {
+        if let Some(Some(buffer)) = self.buffers.get_mut(index) {
+            buffer.fences = Some(fences);
+        }
+    }
+
     pub fn returned(&mut self, index: usize) {
-        if self.state(index) == Some(Use::Out) {
-            self.set(index, Use::Held);
+        if self.state(index) != Some(Use::Out) {
+            return;
+        }
+        self.set(index, Use::Held);
+        let Some(Some(buffer)) = self.buffers.get_mut(index) else { return };
+        if let Some(fences) = buffer.fences.as_mut() {
+            fences.returned(unsafe { sync_meta(buffer.raw.0) }.as_deref());
         }
     }
 
@@ -109,6 +122,7 @@ impl Pool {
         let (index, buffer) = (self.buffers.iter().enumerate())
             .filter_map(|(i, b)| Some((i, b.as_ref()?)))
             .filter(|(i, b)| b.state == Use::Held && Some(*i) != self.latest)
+            .filter(|(_, b)| b.fences.as_ref().is_none_or(Fences::free))
             .min_by_key(|(_, b)| b.sent)?;
         let image = buffer.image.clone();
         self.set(index, Use::Leased);
@@ -131,6 +145,9 @@ impl Pool {
         self.sent += 1;
         let (sent, buffer) = (self.sent, self.buffers.get_mut(index)?.as_mut()?);
         (buffer.state, buffer.sent) = (Use::Out, sent);
+        if let Some(fences) = buffer.fences.as_mut() {
+            fences.sent(unsafe { sync_meta(buffer.raw.0) });
+        }
         self.latest = Some(index);
         Some(buffer.raw.0)
     }
@@ -143,6 +160,8 @@ impl Pool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::params::META_TIMELINE;
+    use crate::syncobj::{SyncMeta, Timeline, UNSCHEDULED_RELEASE};
 
     fn pool(count: usize) -> (Arc<Slot>, Vec<pw_buffer>) {
         let slot = Arc::new(Slot::default());
@@ -200,6 +219,60 @@ mod tests {
         drop(stale);
         let pool = lock(&slot.pool);
         assert!(pool.buffers.is_empty() && !pool.active && pool.epoch == 1);
+    }
+
+    struct Fake(Arc<std::sync::atomic::AtomicU64>);
+
+    impl Timeline for Fake {
+        fn signal(&self, point: u64) -> std::io::Result<()> {
+            self.0.store(point, std::sync::atomic::Ordering::SeqCst);
+            Ok(())
+        }
+
+        fn reached(&self) -> std::io::Result<u64> {
+            Ok(self.0.load(std::sync::atomic::Ordering::SeqCst))
+        }
+    }
+
+    #[test]
+    fn a_buffer_is_drawn_into_again_only_after_its_release_point() {
+        use pipewire::spa::sys::{spa_buffer, spa_meta};
+        use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
+        let (slot, mut raw) = pool(2);
+        let blank = SyncMeta::default;
+        let metas: Vec<*mut SyncMeta> = (0..2).map(|_| Box::into_raw(Box::new(blank()))).collect();
+        let spa_metas: Vec<*mut spa_meta> = (metas.iter())
+            .map(|&m| Box::into_raw(Box::new(spa_meta { type_: META_TIMELINE, size: 24, data: m.cast() })))
+            .collect();
+        let null = std::ptr::null_mut();
+        let spa: Vec<*mut spa_buffer> = (spa_metas.iter())
+            .map(|&m| Box::into_raw(Box::new(spa_buffer { n_metas: 1, n_datas: 0, metas: m, datas: null })))
+            .collect();
+        let (acquired, released) = (Arc::new(AtomicU64::new(0)), Arc::new(AtomicU64::new(0)));
+        for (i, buffer) in raw.iter_mut().enumerate() {
+            buffer.buffer = spa[i];
+            let fences = Fences::new(Box::new(Fake(acquired.clone())), Box::new(Fake(released.clone())));
+            lock(&slot.pool).fence(i, fences);
+        }
+        present(lease(&slot).expect("a free buffer"));
+        lock(&slot.pool).next(false);
+        let sent = unsafe { &*metas[0] };
+        assert_eq!((sent.acquire, sent.release, sent.flags), (1, 1, UNSCHEDULED_RELEASE));
+        assert_eq!(acquired.load(SeqCst), 1, "the frame was not marked finished");
+        present(lease(&slot).expect("the other buffer"));
+        lock(&slot.pool).next(false);
+        let first = metas[0];
+        unsafe { (*first).flags = 0 };
+        lock(&slot.pool).returned(0);
+        assert!(lease(&slot).is_none(), "a buffer the consumer still reads was drawn into");
+        released.store(1, SeqCst);
+        assert_eq!(lease(&slot).map(|l| l.index), Some(0));
+        drop(slot);
+        for pointer in spa {
+            drop(unsafe { Box::from_raw(pointer) });
+        }
+        spa_metas.into_iter().for_each(|m| drop(unsafe { Box::from_raw(m) }));
+        metas.into_iter().for_each(|m| drop(unsafe { Box::from_raw(m) }));
     }
 
     #[test]

@@ -4,7 +4,7 @@ use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 use std::sync::{Arc, Mutex};
 use x11rb::connection::{Connection as _, RequestConnection as _};
-use x11rb::errors::ReplyError;
+use x11rb::errors::{ReplyError, ReplyOrIdError};
 use x11rb::protocol::randr::{self, NotifyMask};
 use x11rb::protocol::xproto::*;
 use x11rb::xcb_ffi::XCBConnection;
@@ -15,7 +15,7 @@ x11rb::atom_manager! {
         _NET_WM_DESKTOP, _NET_WM_WINDOW_TYPE, _NET_WM_WINDOW_TYPE_DESKTOP, _NET_WM_STATE,
         _NET_WM_STATE_BELOW, _NET_WM_STATE_STICKY, _NET_WM_STATE_SKIP_TASKBAR, _NET_WM_STATE_SKIP_PAGER,
         _NET_WM_STATE_FULLSCREEN, _NET_WM_STATE_MAXIMIZED_VERT, _NET_WM_STATE_MAXIMIZED_HORZ,
-        _NET_WM_STATE_HIDDEN, _XROOTPMAP_ID, ESETROOT_PMAP_ID,
+        _NET_WM_STATE_HIDDEN, _NET_RESTACK_WINDOW, _XROOTPMAP_ID, ESETROOT_PMAP_ID,
     }
 }
 
@@ -35,6 +35,25 @@ impl Rect {
 
     pub(crate) fn center(&self) -> (i32, i32) {
         (self.x + self.width as i32 / 2, self.y + self.height as i32 / 2)
+    }
+
+    pub(crate) fn right(&self) -> i32 {
+        self.x + self.width as i32
+    }
+
+    pub(crate) fn bottom(&self) -> i32 {
+        self.y + self.height as i32
+    }
+
+    pub(crate) fn within(&self, area: Rect) -> Option<Rect> {
+        let (x, y) = (self.x.max(area.x), self.y.max(area.y));
+        let (right, bottom) = (self.right().min(area.right()), self.bottom().min(area.bottom()));
+        (right > x && bottom > y).then(|| Rect {
+            x,
+            y,
+            width: (right - x) as u32,
+            height: (bottom - y) as u32,
+        })
     }
 }
 
@@ -85,6 +104,23 @@ impl X11 {
         let alive = wm.filter(|&w| self.property(w, check).is_ok_and(|v| v.first() == Some(&w)));
         let desktops = self.property(self.root, a._NET_SUPPORTED)?.contains(&a._NET_WM_WINDOW_TYPE_DESKTOP);
         Ok((alive.is_some() && desktops, alive))
+    }
+
+    pub(crate) fn restack_below(&self, window: Window, sibling: Window) -> Result<(), ReplyOrIdError> {
+        let (c, below) = (&self.conn, 1);
+        match self.managed() {
+            true => {
+                let data = [2, sibling, below, 0, 0];
+                let message = ClientMessageEvent::new(32, window, self.atoms._NET_RESTACK_WINDOW, data);
+                let mask = EventMask::SUBSTRUCTURE_REDIRECT | EventMask::SUBSTRUCTURE_NOTIFY;
+                c.send_event(false, self.root, mask, message)?;
+            }
+            false => drop(c.configure_window(
+                window,
+                &ConfigureWindowAux::new().sibling(sibling).stack_mode(StackMode::BELOW),
+            )?),
+        }
+        Ok(c.flush()?)
     }
 
     pub(crate) fn property(&self, window: Window, atom: Atom) -> Result<Vec<u32>, ReplyError> {

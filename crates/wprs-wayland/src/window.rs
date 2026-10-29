@@ -8,6 +8,7 @@ use raw_window_handle::{DisplayHandle, HandleError, HasDisplayHandle, HasWindowH
 use raw_window_handle::{WaylandDisplayHandle, WaylandWindowHandle};
 use smithay_client_toolkit::compositor::{FrameCallbackData, Region};
 use smithay_client_toolkit::reexports::client::{Connection, Proxy, QueueHandle};
+use smithay_client_toolkit::reexports::protocols::wp::presentation_time::client::wp_presentation::WpPresentation;
 use smithay_client_toolkit::reexports::protocols::wp::{
     fractional_scale::v1::client as fractional, viewporter,
 };
@@ -23,6 +24,7 @@ pub(crate) struct Parts {
     pub(crate) viewport: Option<WpViewport>,
     pub(crate) fractional: Option<WpFractionalScaleV1>,
     pub(crate) empty: Option<Region>,
+    pub(crate) presentation: Option<WpPresentation>,
 }
 
 impl Drop for Parts {
@@ -89,7 +91,9 @@ impl Window {
     }
 
     pub fn apply(&self) {
-        let (Native::Layer(parts, ..), (width, height)) = (&self.native, self.logical) else { return };
+        let (Native::Layer(parts, qh), (width, height)) = (&self.native, self.logical) else { return };
+        let surface = parts.layer.wl_surface();
+        parts.presentation.iter().for_each(|p| drop(p.feedback(surface, qh, surface.clone())));
         match &parts.viewport {
             Some(viewport) => viewport.set_destination(width as i32, height as i32),
             None => parts.layer.wl_surface().set_buffer_scale((self.scale / UNIT) as i32),

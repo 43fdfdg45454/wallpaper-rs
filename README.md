@@ -73,8 +73,11 @@ cd wallpaper-rs-*-x86_64-linux
 Instala todo en tu directorio personal: binarios en `~/.local/bin`, servicio de usuario de
 systemd, activación por D-Bus, la app de escritorio (con su lanzador e icono), el plugin de fondo
 y el icono de la bandeja de Plasma. Funciona también en distribuciones con
-sistema de archivos inmutable. Para desinstalar: `./uninstall.sh` (añade `--purge` para borrar
-también la configuración).
+sistema de archivos inmutable. `install.sh` pide al bus de sesión que relea sus servicios, para que
+la bandeja abra la app sin volver a iniciar sesión, también con dbus-broker, que no vigila los
+servicios nuevos; si aun así el bus no conoce la app, la bandeja le pide que relea sus servicios y lo intenta
+otra vez, y si tampoco así se abre, lo dice. Para
+desinstalar: `./uninstall.sh` (añade `--purge` para borrar también la configuración).
 
 Después, en Plasma: clic derecho en el escritorio → *Configurar escritorio y fondo de
 pantalla* → tipo de fondo **wallpaper-rs**. Con escala fraccional y Qt anterior a 6.11, el plugin
@@ -136,7 +139,11 @@ las escenas y permite capturar el sonido solo para las escenas con permiso (no h
 PulseAudio), el socket de Wayland, solo para leer la resolución de cada pantalla (el daemon no abre
 ventanas), el nombre D-Bus del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
 Service) para las contraseñas y claves de los proveedores, KWin para cargar el script del puntero
-solo mientras una escena con permiso o un paralaje que sigue al puntero lo usa, lectura de
+solo mientras una escena con permiso o un paralaje que sigue al puntero lo usa, las notificaciones
+del escritorio, solo para preguntarte antes de dar a una escena el sonido o el puntero (dentro del
+Flatpak el daemon no puede ver qué programa se lo pide, así que siempre pregunta así: la app, la
+bandeja y `wprs-ctl input grant` avisan de que la pregunta está en la notificación, y la posición del puntero
+solo la acepta del script de KWin), lectura de
 Imágenes, Vídeos y Descargas, y red. La red solo se usa para los proveedores de fondos y los
 repositorios que añadas tú. Los cambios de zona horaria llegan sin permisos, por el fichero que
 Flatpak actualiza en el sandbox. Para usar fondos de otra carpeta:
@@ -177,8 +184,12 @@ de protocolo, `wprsd` sale con estado 70 y el servicio de usuario lo arranca de 
 
 Los vídeos se pausan cuando una ventana tapa la pantalla: el compositor deja de pedir fotogramas
 al fondo, una ventana activa a pantalla completa o maximizada lo confirma y, en Hyprland, también
-su IPC. El Flatpak no sirve en estos escritorios: no dejan usar `wlr-layer-shell` ni la
-información de ventanas a las aplicaciones aisladas.
+su IPC; en COSMIC, sus avisos de solapamiento, cuando las ventanas, junto con los paneles, cubren
+todo el fondo. Una pantalla que vuelve a conectarse no se queda tapada por un aviso de la superficie
+anterior, y si el compositor cierra la superficie del fondo con la pantalla conectada, `wprsd` la
+vuelve a crear: tres veces por minuto como mucho, y si la cierra más veces, la crea otra vez en
+cuanto pasa ese minuto. El Flatpak no sirve en estos escritorios: no dejan usar `wlr-layer-shell`
+ni la información de ventanas a las aplicaciones aisladas.
 
 ## Sesiones X11
 
@@ -187,9 +198,16 @@ escritorio debajo de todas las demás (si el gestor de ventanas no las coloca, u
 *override-redirect* que se mantiene al fondo) y dibuja en ella con la GPU. Los monitores se llaman
 como en `xrandr --listmonitors` y se siguen al conectarlos o quitarlos. Con imágenes fijas también
 pone el fondo de la ventana raíz (`_XROOTPMAP_ID` y `ESETROOT_PMAP_ID`) para los compositores y las
-terminales con transparencia, y los vídeos se pausan cuando una ventana del escritorio actual está a
-pantalla completa o maximizada en ese monitor según EWMH. Se arranca con `wprsd &` en `~/.xinitrc`,
-antes del gestor de ventanas, o desde el arranque automático de este; con el servicio de usuario,
+terminales con transparencia (y lo vuelve a pintar si la ventana raíz cambia de tamaño), y los
+vídeos se pausan cuando una ventana del escritorio actual está a pantalla completa o maximizada en
+ese monitor según EWMH, cuando varias ventanas en mosaico lo cubren entre todas o, sin compositor,
+cuando el servidor avisa de que la ventana del fondo quedó tapada del todo. La ventana de escritorio
+de otro programa, como la de los iconos de un gestor de archivos, queda siempre por encima del fondo
+(y, si es opaca, la pantalla cuenta como tapada), y sin gestor de ventanas `wprsd` deja de disputar
+el fondo de la pila a otro programa que mantiene allí su ventana después de bajar las suyas tres
+veces en 10 s. Se arranca
+con `wprsd &` en `~/.xinitrc`, antes del gestor de ventanas, o desde el arranque automático de
+este; con el servicio de usuario,
 `systemctl --user import-environment DISPLAY && systemctl --user restart wprsd`. Si el gestor de
 ventanas arranca después que `wprsd` (o se cierra), las ventanas pasan solas a ser ventanas de
 escritorio gestionadas (o *override-redirect*). Cuando una ventana deja de tapar el fondo, se dibuja
@@ -356,13 +374,17 @@ wprs-ctl reload                                 # releer la configuración
 ```
 
 Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile` y `span` (una imagen sobre todas las
-pantallas, con su tamaño físico y los marcos entre ellas). Ajustes: transición (`fade` o
-`none` y su duración), fotogramas por segundo y cuándo pausar (ventana encima, batería,
+pantallas, con su tamaño físico y los marcos entre ellas). Las pantallas que muestran la misma
+imagen con la misma edición, como las de `span` o las que tienen su propio recorte, comparten una
+sola copia en la GPU, y los JPEG grandes se decodifican directamente a un tamaño reducido.
+Ajustes: transición (`fade` o `none` y su duración), fotogramas por segundo y cuándo pausar
+(ventana encima, batería,
 bloqueo). Un ajuste desconocido termina con error y muestra la lista de ajustes válidos.
 
 `playback.max_fps` vale `display` por defecto (*Igual que la pantalla* en la app):
-con corriente cada pantalla se dibuja como mucho a su frecuencia de refresco (la del modo de
-`wl_output`, la de RandR en X11 o, en Plasma, la que da KWin) y con batería a 30 fotogramas por
+con corriente cada pantalla se dibuja como mucho a su frecuencia de refresco (la que da el
+compositor al presentar cada superficie o la del modo de `wl_output`, la de RandR en X11 o, en
+Plasma, la que da KWin) y con batería a 30 fotogramas por
 segundo; un número fija el tope (`wprs-ctl config playback.max_fps 60`). Salvo en los vídeos, la
 GPU pone su propio límite: el render por software se queda en 24 (15 con batería), una GPU
 integrada en 60 (30 con batería) salvo escenas ligeras con corriente, y una dedicada sigue a la
@@ -376,7 +398,10 @@ los búferes del stream, sin leer el fotograma de vuelta ni copiarlo con la CPU,
 Si algo falta (OpenGL, render por software, un consumidor sin DMA-BUF), el stream usa memoria
 compartida sin intervención; `WPRS_DMABUF=0` en el entorno del daemon la fuerza y `WPRS_DMABUF=1`
 pide memoria de la GPU también con render por software. `wprs-ctl state` muestra el tipo de búfer
-de cada pantalla (`buffers`: `dmabuf` o `memfd`).
+de cada pantalla (`buffers`: `dmabuf` o `memfd`). Con `WPRS_SYNCOBJ=1` en el entorno del daemon,
+los búferes de la GPU ofrecen además sincronización explícita (syncobj) a los consumidores y
+versiones de PipeWire que la admiten; es experimental y está apagada por defecto, así que sin esa
+variable los búferes se sincronizan solo de forma implícita.
 
 La configuración vive en `~/.config/wallpaper-rs/config.toml` y solo la puede leer su usuario.
 Si se edita a mano, los valores fuera de rango se corrigen al leerla. Si tiene un error de
@@ -401,16 +426,38 @@ wprs-ctl provider add diario bing               # una fuente en línea
 wprs-ctl remote add 'https://example.org/repo/?fingerprint=…'
 wprs-ctl pkg install org.example.dawn --wait    # instalar un paquete de un repositorio
 wprs-ctl jobs | watch | schema                  # trabajos, cambios en vivo, claves válidas
-wprs-ctl input grant org.example.dawn audio     # dejar que una escena siga el sonido
+wprs-ctl input grant org.example.dawn audio     # dejar que la escena que se ve siga el sonido (-o elige pantalla)
 wprs-ctl input status                           # permisos y si se captura el sonido o el puntero
 ```
 
 Las consultas aceptan `--json` e imprimen la respuesta del daemon tal cual; sin él muestran
 tablas para leer, no para scripts. Lo que lanza un trabajo imprime su número y termina; con
 `--wait` muestra el progreso y el resultado, y Ctrl-C deja de esperar sin parar el trabajo
-(`wprs-ctl cancel <n>` lo para). Las contraseñas y claves de los proveedores se piden sin eco o
-se leen de la primera línea de la entrada con `--secret-stdin`; nunca van en la orden. Códigos
-de salida: 0 bien, 1 error, 2 uso incorrecto.
+(`wprs-ctl cancel <n>` lo para); en una pregunta (como instalar desde un repositorio caducado),
+Ctrl-C la deja sin respuesta y no cambia nada. Las contraseñas y claves de los proveedores se piden
+sin eco o se leen de la primera línea de la entrada con `--secret-stdin`; nunca van en la orden.
+`wprs-ctl input grant` da el permiso al paquete que se ve con ese id; si varias pantallas muestran
+paquetes distintos con el mismo id, `-o` elige la pantalla, y si el daemon pregunta en una
+notificación (en el Flatpak, siempre), lo avisa y termina bien: la escena recibe la entrada cuando
+la permites allí. Códigos de salida: 0 bien, 1 error, 2 uso incorrecto, también cuando es el
+daemon quien rechaza un argumento (un ajuste o una regla que no existe, un valor fuera de rango).
+`wprs-ctl preset rm` acepta rutas con `:` (`~/fotos/a:b.png:Noche`).
+
+La biblioteca vigila sus carpetas, también los enlaces duros y simbólicos y las carpetas movidas o
+borradas, y un cambio durante el escaneo de una carpeta trae otro escaneo al terminar. Un archivo
+que el decodificador tarda demasiado en leer (15 s más 1 s por MiB, 2 min como mucho) o que lo hace
+caer no queda
+marcado como roto: se vuelve a intentar al arrancar el daemon o cuando cambia. Si la biblioteca no
+puede guardar algo (disco lleno, base de datos bloqueada), el fondo aplicado se queda y la posición
+de una lista se guarda en cuanto se pueda, sin avanzar otra vez. En una lista con intervalo y horas
+fijas, un cambio de zona horaria recalcula las horas en la zona nueva y el intervalo sigue contando
+desde el último cambio. Si el llavero no responde, `wprs-ctl provider ls` espera como mucho 1 s y
+muestra el proveedor como bloqueado hasta que el llavero conteste; durante el minuto siguiente,
+nada vuelve a esperarlo. Una imagen se decodifica con límites de tamaño (32768 píxeles de lado y
+1 GiB de memoria), los mismos en la biblioteca, el daemon, la app y `wprs-ctl`, así que una foto
+que tiene miniatura también se puede poner de fondo; una foto JPEG de hasta 300 megapíxeles se
+decodifica directamente a un tamaño reducido, y una cabecera que promete un tamaño enorme se
+rechaza al momento en vez de llenar la memoria.
 
 Las ediciones no tocan la imagen: se guardan en `<imagen>.wprs.json` a su lado (o en
 `~/.local/share/wallpaper-rs/edits/` si la carpeta no se puede escribir), las aplica la GPU y el
@@ -938,15 +985,14 @@ wprs-ctl scene apply mar -o DP-1                        # añadirla a la bibliot
 
 Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
 libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev qt6-base-dev qt6-declarative-dev`. Para las
-pruebas: `mesa-vulkan-drivers pipewire wireplumber dbus-x11 gstreamer1.0-plugins-base
+pruebas: `mesa-vulkan-drivers pipewire wireplumber dbus-x11 gnome-keyring gstreamer1.0-plugins-base
 gstreamer1.0-plugins-good gstreamer1.0-pipewire gstreamer1.0-tools`, `sway grim foot` para la de
-Sway, `xvfb x11-utils x11-xserver-utils xdotool imagemagick openbox` para la de X11 y
-`gnome-keyring` para la del servidor.
+Sway y `xvfb x11-utils x11-xserver-utils xdotool imagemagick openbox` para la de X11.
 
 ```sh
 cargo test --workspace                   # pruebas unitarias, de render y de vídeo
 cargo build -p wprs-pipewire --example probe
-cargo build -p wprsd -p wprs-ctl
+cargo build -p wprsd -p wprs-ctl && cargo build -p wprsd --example timedate
 cp target/debug/examples/probe target/debug/
 scripts/integration-test.sh target/debug # D-Bus + PipeWire + daemon de punta a punta
 scripts/sway-test.sh target/debug        # superficies layer-shell en un Sway sin pantalla
@@ -1075,17 +1121,32 @@ misma pausa.
   repositorios que añadas tú, y sus registros no incluyen rutas, nombres de archivo, servidores
   propios ni el modelo de GPU salvo con `RUST_LOG=debug`.
 - Ninguna escena oye el sonido ni sigue el puntero sin tu permiso, que se da y se retira por escena
-  desde la app o `wprs-ctl input grant|revoke <escena> audio|pointer`. Cuando se aplica
+  desde la app, la bandeja o `wprs-ctl input grant|revoke <escena> audio|pointer` mientras la
+  escena se ve. El permiso queda atado al paquete que se veía: a la clave que firma un paquete
+  instalado desde un repositorio (sus actualizaciones lo conservan) o al contenido exacto de
+  cualquier otro (en la vista previa del editor, a la carpeta del borrador si la pide la app o
+  `wprs-ctl`, o a su contenido exacto si la pide otro programa), así que otro paquete con el mismo id no lo hereda, ni siquiera si se ve a la vez en
+  otra pantalla (entonces `wprs-ctl input grant` pide `-o` con la pantalla, y la app y la bandeja
+  dan el permiso al paquete de la pantalla que preguntan); los permisos guardados por versiones
+  anteriores, que solo tenían el id, se vuelven a preguntar. Si otro programa lo pide por D-Bus, el
+  daemon no lo da: te pregunta con una notificación del escritorio de wallpaper-rs que nombra la
+  escena, solo cuenta tu respuesta en ella y solo la aplica a ese paquete (*Ahora no* tampoco quita
+  el permiso a otros paquetes con el mismo id); si respondes *Ahora no*, la cierras o no contestas,
+  esa pregunta no vuelve hasta diez minutos después, y la app, la bandeja y `wprs-ctl input status`
+  lo indican; pasado ese rato, un permiso que rechazaste se puede volver a pedir igual. Pedir un
+  permiso que ya está dado no pregunta nada. Tampoco acepta posiciones del puntero de nadie salvo del
+  script de KWin que él mismo carga (fuera del Flatpak, solo si lo envía un `kwin_wayland` o
+  `kwin_x11` del sistema) y de `wprs-ctl`. Cuando se aplica
   una escena que los pide sin permiso, desde donde sea (la app, la bandeja, una lista o `wprs-ctl`),
   la app y la bandeja preguntan una vez por escena qué permitir, explicando qué se capta y que nada
   se guarda ni se envía, y sus ajustes muestran un aviso con el botón *Permitir* hasta que decides;
   *Ahora no* se recuerda y no vuelve a preguntar. `wprs-ctl lib apply`, `playlist start`, `next` y
   `prev` imprimen la orden exacta para darlo. Aun con permiso, la captura del sonido (un stream de
   PipeWire llamado «wallpaper-rs audio analysis», que puede encender el indicador de micrófono) y el
-  seguimiento del puntero solo funcionan mientras se ve una escena que los usa, y se paran al pausar
-  o bloquear la pantalla. Al taparla se para el puntero, y también el sonido si está activa la pausa
-  al tapar, como viene por defecto. Del sonido solo se calculan bandas y niveles en memoria: no se
-  guarda, no se registra y no sale del equipo. Del puntero solo se guarda en memoria la última
+  seguimiento del puntero solo funcionan mientras se ve una escena que los usa, y se paran al pausar,
+  tapar o bloquear la pantalla, aunque la pausa al tapar esté desactivada. Del sonido solo se
+  calculan bandas y niveles en memoria: no se guarda, no se registra y no sale del equipo. Del
+  puntero solo se guarda en memoria la última
   posición, y nunca se leen las teclas. Una imagen cuyo paralaje sigue al puntero lo usa con las
   mismas reglas, porque elegir esa fuente es el permiso. En Android, el permiso del micrófono se pide
   la primera vez que se activa *Reaccionar al sonido* en una escena, y solo se escucha mientras se ve

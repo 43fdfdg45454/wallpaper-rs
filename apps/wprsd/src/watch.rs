@@ -106,9 +106,11 @@ pub async fn screen_lock(connection: zbus::Connection, daemon: Arc<Daemon>) {
 pub async fn clients(mut vanished: NameOwnerChangedStream, daemon: Arc<Daemon>) {
     while let Some(signal) = vanished.next().await {
         let Ok(args) = signal.args() else { continue };
-        if args.new_owner().is_none()
-            && let Err(e) = daemon.drop_client(args.name())
-        {
+        if args.new_owner().is_some() {
+            continue;
+        }
+        crate::callers::forget(args.name());
+        if let Err(e) = daemon.drop_client(args.name()) {
             tracing::warn!("cannot release the streams of a client that left: {e:#}");
         }
     }

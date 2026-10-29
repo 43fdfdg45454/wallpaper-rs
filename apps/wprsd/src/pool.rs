@@ -11,6 +11,11 @@ use std::time::Duration;
 
 const IDLE: Duration = Duration::from_secs(30);
 const PER_FILE: Duration = Duration::from_secs(15);
+const MOST: Duration = Duration::from_secs(120);
+
+fn patience(size: u64) -> Duration {
+    (PER_FILE + Duration::from_secs(size >> 20)).min(MOST)
+}
 
 struct Worker {
     child: Child,
@@ -36,13 +41,13 @@ impl Worker {
         Ok(Worker { child, stdin, lines })
     }
 
-    fn ask(&mut self, request: &Request) -> Result<Response, String> {
+    fn ask(&mut self, request: &Request, patience: Duration) -> Result<Response, String> {
         let line = serde_json::to_string(request).map_err(|e| e.to_string())?;
         writeln!(self.stdin, "{line}").map_err(|_| "the decoder stopped".to_owned())?;
-        match self.lines.recv_timeout(PER_FILE) {
+        match self.lines.recv_timeout(patience) {
             Ok(line) => serde_json::from_str(&line).map_err(|_| "the decoder sent an invalid reply".into()),
             Err(RecvTimeoutError::Timeout) => {
-                Err(format!("decoding took longer than {} s", PER_FILE.as_secs()))
+                Err(format!("decoding took longer than {} s", patience.as_secs()))
             }
             Err(RecvTimeoutError::Disconnected) => Err("the decoder stopped on this file".into()),
         }
@@ -85,7 +90,7 @@ fn slot(thumbs: &Thumbs, daemon: &Weak<Daemon>) {
             (false, false) => {
                 Response { missing: true, failure: Some("the file is missing".into()), ..Response::default() }
             }
-            (false, true) => run(&mut worker, &request),
+            (false, true) => run(&mut worker, &request, patience(task.item.size)),
         };
         match daemon.upgrade() {
             Some(daemon) => daemon.thumbnailed(task, response),
@@ -94,7 +99,7 @@ fn slot(thumbs: &Thumbs, daemon: &Weak<Daemon>) {
     }
 }
 
-fn run(worker: &mut Option<Worker>, request: &Request) -> Response {
+fn run(worker: &mut Option<Worker>, request: &Request, patience: Duration) -> Response {
     for (_, path) in &request.thumbs {
         path.parent().map(private_dir).transpose().ok();
     }
@@ -103,26 +108,29 @@ fn run(worker: &mut Option<Worker>, request: &Request) -> Response {
             Ok(spawned) => *worker = Some(spawned),
             Err(e) => {
                 let failure = Some(format!("cannot start the decoder: {e}"));
-                return Response { failure, ..Response::default() };
+                return Response { failure, retry: true, ..Response::default() };
             }
         }
     }
-    match worker.as_mut().map(|w| w.ask(request)) {
+    match worker.as_mut().map(|w| w.ask(request, patience)) {
         Some(Ok(response)) => response,
         failed => {
             *worker = None;
-            let error = failed.and_then(Result::err).unwrap_or_default();
-            Response {
-                meta: wprs_library::Meta { error: Some(error), ..Default::default() },
-                ..Response::default()
-            }
+            let failure = failed.and_then(Result::err);
+            Response { failure, retry: true, ..Response::default() }
         }
     }
 }
 
 impl Daemon {
-    pub fn thumbnailed(&self, task: Task, response: Response) {
+    pub fn thumbnailed(&self, task: Task, mut response: Response) {
         let Task { item, reqs } = task;
+        let now = || self.store.read(|lib| lib.item(&item.uid)).ok();
+        let library = !item.uid.starts_with(crate::previews::PREVIEW);
+        if library && self.thumbs.settle(&item, now().as_ref(), &response) {
+            response =
+                Response { failure: Some("the item was removed or changed".into()), ..Response::default() };
+        }
         let meta = &response.meta;
         let fresh = item.meta.width.is_none() && item.meta.duration_ms.is_none() && item.meta.error.is_none();
         let known = meta.width.is_some() || meta.duration_ms.is_some() || meta.error.is_some();
@@ -138,7 +146,7 @@ impl Daemon {
         self.thumbs.added(bytes, self.state().config.library.thumb_cache_mb);
         let reason = response.failure.clone().or_else(|| meta.error.clone());
         let reason = reason.unwrap_or_else(|| "no thumbnail could be made".into());
-        let analyzed = !response.missing && meta.error.is_none();
+        let analyzed = known && !response.missing && meta.error.is_none();
         for req in reqs {
             let path = paths.clone().find(|(size, _)| *size == req.size()).map(|(_, p)| p);
             match req {
@@ -150,5 +158,24 @@ impl Daemon {
                 Req::Analyze(tx) => drop(tx.send(analyzed)),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_decoder_that_stops_leaves_the_file_to_try_again() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("a.png");
+        std::fs::write(&path, b"png").unwrap();
+        let request = Request { path, kind: wprs_library::Kind::Image, thumbs: Vec::new() };
+        let mut worker = None;
+        let response = run(&mut worker, &request, Duration::from_secs(5));
+        assert!(response.retry && response.meta.error.is_none() && response.failure.is_some());
+        assert!(worker.is_none());
+        let limits = (patience(0), patience(40 << 20), patience(1 << 40));
+        assert_eq!(limits, (PER_FILE, Duration::from_secs(55), MOST));
     }
 }
