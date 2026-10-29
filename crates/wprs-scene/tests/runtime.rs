@@ -235,7 +235,7 @@ fn properties_check_and_clamp_values() {
             "soft no longer accepts \"yes\"; the default is used"
         ]
     );
-    let tier = Tier::detect(true, false);
+    let tier = Tier::detect(&wprs_scene::Gpu { software: true, compute: true, ..Default::default() });
     assert_eq!((tier, tier.max_fps(true, 60, None), tier.quality(false)), (Tier::T0, 15, Quality::Q0));
     let sample = Scene::from_json(include_str!("sample.json")).unwrap();
     assert!(sample.cost(Quality::Q0) < sample.cost(Quality::Q3));

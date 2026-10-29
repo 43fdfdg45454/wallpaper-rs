@@ -208,7 +208,7 @@ mod tests {
         let pack = Arc::new(ScenePack::bare(scene, Default::default(), sounds));
         let spec =
             SceneSpec { values: Default::default(), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
-        SceneState::new(spec, super::super::power::Power { tier: Tier::T3, on_battery: false, max_fps: 30 })
+        SceneState::new(spec, super::super::power::Power::new(Tier::T3, false, 30))
     }
 
     #[test]

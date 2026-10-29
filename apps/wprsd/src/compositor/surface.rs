@@ -20,6 +20,10 @@ impl Screen {
         Self { surface: None, window, pacer: Pacer::default(), fresh: true, painted: None, due: None }
     }
 
+    pub(super) fn settled(&self) -> bool {
+        self.surface.is_some() && !self.fresh
+    }
+
     pub(super) fn ready(&self) -> bool {
         self.pacer.ready()
     }
@@ -102,7 +106,11 @@ impl State {
 
     pub(super) fn repaint(&mut self, name: &str) {
         let shown = |o: &&mut super::output::Output| matches!(o.sink, Sink::Surface(_)) && o.animated();
-        self.outputs.get_mut(name).filter(shown).into_iter().for_each(|o| o.dirty = true);
+        self.outputs
+            .get_mut(name)
+            .filter(shown)
+            .into_iter()
+            .for_each(|o| (o.dirty, o.composed) = (true, None));
     }
 
     pub(super) fn backdrop_again(&mut self, name: &str) {
@@ -133,7 +141,7 @@ impl State {
             if let Sink::Surface(screen) = &mut output.sink
                 && screen.due.is_some_and(|due| due <= now)
                 && let Err(e) = screen.backdrop(
-                    &self.renderer,
+                    self.renderer,
                     &[output.shown.layer(&self.players, 1.0, moved, output.size)],
                     now,
                 )

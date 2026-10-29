@@ -10,7 +10,7 @@ use std::io::{Cursor, Write};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use wprs_render::SceneAssets;
+use wprs_render::{Pixels, SceneAssets};
 use wprs_scene::{Control, Scene, Uses, Values};
 use wprs_video::Bank;
 
@@ -35,7 +35,7 @@ pub struct ScenePack {
     pub key: String,
 }
 
-pub type Extra = (Vec<(String, Arc<RgbaImage>)>, Vec<(String, Reel)>);
+pub type Extra = (Vec<(String, Arc<Pixels>)>, Vec<(String, Reel)>);
 
 #[cfg(test)]
 impl ScenePack {
@@ -140,6 +140,12 @@ impl Daemon {
             }
         }
         assets.luts.extend(package.luts(&scene)?);
+        let file = wpak.to_owned();
+        assets.reloadable(&scene, move || {
+            std::fs::metadata(&file).ok().filter(|m| (m.mtime(), m.len()) == stamp)?;
+            let mut package = crate::decode::open(&file).ok()?;
+            Some(move |path: &str| package.read_file(path).map_err(|e| e.to_string()))
+        });
         let mut scripts = Vec::new();
         for script in &scene.scripts {
             let source = String::from_utf8(package.read_file(&script.path)?)
@@ -186,6 +192,22 @@ impl Daemon {
         self.load_image(path, std::fs::metadata(path)?.modified().ok(), None)
     }
 
+    pub(crate) fn scene_pixels(&self, file: &Path) -> anyhow::Result<Arc<Pixels>> {
+        let modified = std::fs::metadata(file)?.modified().ok();
+        let cached =
+            self.state().pixels.get(file).filter(|(m, _)| *m == modified).and_then(|(_, w)| w.upgrade());
+        if let Some(pixels) = cached {
+            return Ok(pixels);
+        }
+        let (path, edge) = (file.to_owned(), self.compositor.max_edge());
+        let reload = move || wprs_render::decode_image(&path, edge).ok();
+        let pixels = Pixels::reloadable(self.scene_file(&file.to_string_lossy())?, reload);
+        let mut st = self.state();
+        st.pixels.retain(|_, (_, weak)| weak.strong_count() > 0);
+        st.pixels.insert(file.to_owned(), (modified, Arc::downgrade(&pixels)));
+        Ok(pixels)
+    }
+
     pub fn scene_extra(&self, pack: &ScenePack, values: &Values) -> Extra {
         let (mut images, mut reels) = (Vec::new(), Vec::new());
         for (id, prop) in &pack.props.properties {
@@ -207,7 +229,7 @@ impl Daemon {
                 reels.extend(keys.into_iter().map(|key| (key, Reel::plain(file.clone()))));
                 continue;
             }
-            match self.scene_file(&file.to_string_lossy()) {
+            match self.scene_pixels(&file) {
                 Ok(decoded) => images.extend(keys.into_iter().map(|key| (key, decoded.clone()))),
                 Err(e) => {
                     tracing::warn!("cannot use the file chosen for a scene property: {}", e.root_cause());

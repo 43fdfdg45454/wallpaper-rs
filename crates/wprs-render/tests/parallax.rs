@@ -5,8 +5,8 @@ use wprs_render::{DepthMap, Layer, Relief, Renderer};
 const W: u32 = 64;
 const H: u32 = 32;
 
-fn renderer() -> Option<Renderer> {
-    match Renderer::new() {
+fn renderer() -> Option<&'static Renderer> {
+    match Renderer::shared() {
         Ok(r) => Some(r),
         Err(e) if std::env::var_os("WPRS_REQUIRE_GPU").is_none() => {
             eprintln!("skipping GPU test: {e}");
@@ -67,8 +67,8 @@ fn the_foreground_hides_the_background_it_moves_over() {
     let Some(r) = renderer() else { return };
     let inside = |x: u32, y: u32| (24..40).contains(&x) && (8..24).contains(&y);
     let square = scene(inside, inside);
-    let still = draw(&r, &square, 0.0, 0.0, 16);
-    let moved = draw(&r, &square, 8.0, 0.0, 16);
+    let still = draw(r, &square, 0.0, 0.0, 16);
+    let moved = draw(r, &square, 8.0, 0.0, 16);
     assert!(near(at(&still, 43), ground(43)), "{:?}", at(&still, 43));
     assert!(near(at(&moved, 43), WHITE), "{:?}", at(&moved, 43));
     for x in [10, 50] {
@@ -81,10 +81,10 @@ fn the_focus_depth_stays_still() {
     let Some(r) = renderer() else { return };
     let inside = |x: u32, y: u32| (24..40).contains(&x) && (8..24).contains(&y);
     let square = scene(inside, inside);
-    let near_still = draw(&r, &square, 8.0, 1.0, 16);
+    let near_still = draw(r, &square, 8.0, 1.0, 16);
     assert!(near(at(&near_still, 32), WHITE) && near(at(&near_still, 25), WHITE));
     assert!(near(at(&near_still, 10), ground(18)), "{:?}", at(&near_still, 10));
-    let far_still = draw(&r, &square, 8.0, 0.0, 16);
+    let far_still = draw(r, &square, 8.0, 0.0, 16);
     assert!(near(at(&far_still, 10), ground(10)) && near(at(&far_still, 60), ground(60)));
 }
 
@@ -92,8 +92,8 @@ fn the_focus_depth_stays_still() {
 fn one_step_shifts_while_sixteen_steps_find_thin_walls() {
     let Some(r) = renderer() else { return };
     let bar = scene(|x, _| (30..32).contains(&x), |x, _| (28..34).contains(&x));
-    let marched = draw(&r, &bar, 16.0, 0.0, 16);
-    let shifted = draw(&r, &bar, 16.0, 0.0, 1);
+    let marched = draw(r, &bar, 16.0, 0.0, 16);
+    let shifted = draw(r, &bar, 16.0, 0.0, 1);
     assert!(near(at(&marched, 40), WHITE), "{:?}", at(&marched, 40));
     assert!(near(at(&shifted, 40), ground(40)), "{:?}", at(&shifted, 40));
     assert!(near(at(&marched, 47), WHITE) && near(at(&shifted, 47), WHITE));

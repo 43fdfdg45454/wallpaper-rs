@@ -25,9 +25,12 @@ pub(crate) struct Context<'a> {
     pub(crate) playing: &'a BTreeSet<String>,
     pub(crate) memo: &'a RefCell<HashMap<usize, [f32; 4]>>,
     pub(crate) wake: Cell<Wake>,
+    pub(crate) pace: Cell<u32>,
     pub(crate) scene: &'a Scene,
     pub(crate) homes: &'a HashMap<String, String>,
     pub(crate) places: &'a RefCell<HashMap<usize, Place>>,
+    pub(crate) motion: &'a RefCell<HashMap<usize, Motion>>,
+    pub(crate) now: f64,
     pub(crate) view: [f32; 4],
     pub(crate) canvas: [f32; 2],
     pub(crate) glide: &'a PointerState,
@@ -36,8 +39,30 @@ pub(crate) struct Context<'a> {
     pub(crate) sheets: &'a BTreeMap<String, Vec<f32>>,
 }
 
+pub(crate) type Motion = ([f32; 2], f64, [f32; 2]);
+
 impl Context<'_> {
+    pub(crate) fn velocity(&self, key: usize, at: [f32; 2]) -> [f32; 2] {
+        let mut motion = self.motion.borrow_mut();
+        let (last, then, v) = motion.get(&key).copied().unwrap_or((at, self.now, [0.0; 2]));
+        let dt = (self.now - then) as f32;
+        let v = match dt {
+            dt if dt.abs() < 1e-4 => v,
+            dt if (0.0..1.0).contains(&dt) => [(at[0] - last[0]) / dt, (at[1] - last[1]) / dt],
+            _ => [0.0; 2],
+        };
+        motion.insert(key, (at, self.now, v));
+        v
+    }
+
     pub(crate) fn note(&self, wake: Wake) {
+        self.paced(wake, None);
+    }
+
+    pub(crate) fn paced(&self, wake: Wake, fps: Option<u32>) {
+        if wake == Wake::Frame {
+            self.pace.set(self.pace.get().max(fps.unwrap_or(u32::MAX)));
+        }
         self.wake.set(self.wake.get().min(wake));
     }
 

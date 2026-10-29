@@ -7,8 +7,8 @@ use wprs_render::{DepthMap, Layer, Relief, Renderer};
 const W: u32 = 64;
 const H: u32 = 32;
 
-fn renderer() -> Option<Renderer> {
-    match Renderer::new() {
+fn renderer() -> Option<&'static Renderer> {
+    match Renderer::shared() {
         Ok(r) => Some(r),
         Err(e) if std::env::var_os("WPRS_REQUIRE_GPU").is_none() => {
             eprintln!("skipping GPU test: {e}");

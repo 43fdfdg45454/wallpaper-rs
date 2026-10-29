@@ -17,6 +17,38 @@ pub(crate) fn level(n: u32) -> wgpu::TextureViewDescriptor<'static> {
 }
 
 impl Pipes {
+    pub(crate) fn shrinker(&self, device: &Device, format: TextureFormat) -> wgpu::RenderPipeline {
+        let mut shrinks = self.shrinks.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let made = shrinks.entry(format).or_insert_with(|| {
+            super::pipes::compiled(1);
+            let module = super::pipes::module(device, SHRINK.into());
+            let state = |entry| (Some(entry), Default::default());
+            let ((vs, vo), (fs, fo)) = (state("vs"), state("fs"));
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("wprs-scene mipmaps"),
+                layout: None,
+                vertex: wgpu::VertexState {
+                    module: &module,
+                    entry_point: vs,
+                    compilation_options: vo,
+                    buffers: &[],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &module,
+                    entry_point: fs,
+                    compilation_options: fo,
+                    targets: &[Some(format.into())],
+                }),
+                primitive: Default::default(),
+                depth_stencil: None,
+                multisample: Default::default(),
+                multiview_mask: None,
+                cache: None,
+            })
+        });
+        made.clone()
+    }
+
     pub(crate) fn shrink(
         &self,
         device: &Device,
@@ -25,36 +57,7 @@ impl Pipes {
         to: &TextureView,
         format: TextureFormat,
     ) {
-        let pipeline = {
-            let mut shrinks = self.shrinks.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-            shrinks
-                .entry(format)
-                .or_insert_with(|| {
-                    let module = super::pipes::module(device, SHRINK.into());
-                    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                        label: Some("wprs-scene mipmaps"),
-                        layout: None,
-                        vertex: wgpu::VertexState {
-                            module: &module,
-                            entry_point: Some("vs"),
-                            compilation_options: Default::default(),
-                            buffers: &[],
-                        },
-                        fragment: Some(wgpu::FragmentState {
-                            module: &module,
-                            entry_point: Some("fs"),
-                            compilation_options: Default::default(),
-                            targets: &[Some(format.into())],
-                        }),
-                        primitive: Default::default(),
-                        depth_stencil: None,
-                        multisample: Default::default(),
-                        multiview_mask: None,
-                        cache: None,
-                    })
-                })
-                .clone()
-        };
+        let pipeline = self.shrinker(device, format);
         let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &pipeline.get_bind_group_layout(0),

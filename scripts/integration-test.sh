@@ -96,6 +96,8 @@ result=$("$BIN/probe" "$serial" 10 --dmabuf)
 grep -q "type \(MemFd\|DmaBuf\) .*center bgra \[0, 255, 0, 255\]" <<<"$result" || fail "DMA-BUF consumer: $result"
 case $(field "s['adapter']") in
   llvmpipe*) grep -q "type MemFd" <<<"$result" || fail "software rendering exported GPU memory: $result" ;;
+  *"(Vulkan)") grep -q "type DmaBuf modifier 0x0 .*center bgra \[0, 255, 0, 255\]" <<<"$result" ||
+    fail "the GPU sent no linear frame in GPU memory: $result" ;;
 esac
 
 read -r _ _ _ serial_again < <("$BIN/wprs-ctl" stream TEST-1 320 180)
@@ -301,7 +303,7 @@ cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/import/sunset.png"
 dbus-monitor --session "type='signal',interface='io.github.wallpaper_rs.Daemon1'" \
   "type='signal',interface='io.github.wallpaper_rs.Library1'" >"$WORK/library-signals.log" 2>&1 & pids+=($!)
 sleep 0.5
-[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(15, 7, [256, 512, 1024])" ] ||
+[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(16, 7, [256, 512, 1024])" ] ||
   fail "schema: $(bus Daemon1 GetSchema)"
 read -r source job < <(bus Library1 AddSource sb "$pics" true | out "' '.join(map(str, d))")
 wait_for 20 finished "$job" || fail "scan job: $(bus Daemon1 GetJob t "$job")"
@@ -432,6 +434,29 @@ expect "s['outputs']['TEST-7']['item'], 'use the profile again' in (s['outputs']
 ctl profile off && ctl profile rm "$stormy"
 ctl lib apply "$storm" -o TEST-7
 expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['error']" "('$storm', None)"
+mkdir -p "$WORK/blink" && cp "$WORK/flash/preview.png" "$WORK/blink/preview.png"
+cat >"$WORK/blink/scene.json" <<'BLINK'
+{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32], "background": "#000000"},
+ "timelines": [{"id": "blink", "duration": 0.1, "loop": "repeat"}],
+ "layers": [{"id": "fill", "type": "solid", "color": "#ffffff",
+   "opacity": {"timeline": "blink", "keys": [[0, 0], [0.05, 1], [0.1, 0]]}}]}
+BLINK
+sed 's/"org.example.flash2"/"org.example.blink"/' "$WORK/flash/manifest.json" >"$WORK/blink/manifest.json"
+ctl pack build "$WORK/blink" -o "$WORK/import/blink.wpak" >/dev/null
+job=$(bus Library1 Import asb 1 "$WORK/import/blink.wpak" false | out "d[0]")
+wait_for 20 finished "$job" || fail "blinking scene import: $(bus Daemon1 GetJob t "$job")"
+blink=$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")
+ctl lib confirm photosensitive "$blink" && ctl lib apply "$blink" -o TEST-7 && consume "$serial7"
+calmed() { [ -n "$(field "s['outputs']['TEST-7']['flashes']")" ]; }
+sleep 2
+if calmed; then fail "the flash guard acted while it was off: $(ctl state)"; fi
+ctl config playback.flash_guard true
+wait_for 20 calmed || fail "the flash guard let a scene flash ten times a second: $(ctl state)"
+ctl config playback.flash_guard false
+expect "s['outputs']['TEST-7']['flashes']" ""
+leave && bus Library1 Remove asb 1 "$blink" false >/dev/null
+ctl lib apply "$storm" -o TEST-7
+echo "flash guard checks passed"
 bus Library1 Remove asb 1 "$flashing" false >/dev/null
 [ "$(reply "r['item']['package']['confirmed'], r['about']['content'], r['about']['descriptors']" Library1 GetItem s "$storm")" = \
   "(['photosensitive'], 'mature', ['violence'])" ] || fail "rated details: $(ctl lib show "$storm" --json)"

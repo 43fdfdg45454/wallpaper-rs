@@ -55,7 +55,7 @@ pub(super) fn kit(
         ..Zeroable::zeroed()
     };
     let trail = r.trail.as_ref().map_or(0, |t| t.length.min(bake.trail));
-    let texture = image.map_or_else(|| white.clone(), |(i, _)| i.view.clone());
+    let texture = image.map_or_else(|| white.clone(), |i| i.0.view.clone());
     Kit { id: id.into(), bake, look, trail, texture }
 }
 
@@ -71,10 +71,7 @@ impl Painter<'_, '_, '_> {
         let d = &frame.draws[i];
         let Content::Particles { system } = d.content else { return };
         if mask.is_some() || !blend.fixed() {
-            if let Some((src, rect)) = self.isolate(i) {
-                self.composite(i, src, rect, target, atop);
-            }
-            return;
+            return self.apart(i, target, atop);
         }
         let (r, screen, srgb) = (self.r, self.screen, self.srgb);
         let Some(swarms) = self.swarms.as_deref_mut() else { return };

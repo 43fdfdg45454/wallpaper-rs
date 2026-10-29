@@ -129,7 +129,9 @@ fn on_battery(max_fps: u32) -> u32 {
 }
 
 fn caps() {
-    power::caps(on_battery(config().playback.max_fps), chosen(CHARGER).parse().unwrap_or(60));
+    let config = config();
+    power::caps(on_battery(config.playback.max_fps), chosen(CHARGER).parse().unwrap_or(60));
+    power::guard(config.playback.flash_guard);
 }
 
 pub(crate) fn look() -> Look {

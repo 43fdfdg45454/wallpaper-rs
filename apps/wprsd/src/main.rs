@@ -178,6 +178,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
     tokio::spawn(watch::screen_lock(connection.clone(), daemon.clone()));
     tokio::spawn(watch::properties(connection.clone(), daemon.clone()));
     tokio::spawn(watch::motion(connection.clone(), daemon.clone()));
+    tokio::spawn(watch::saver(daemon.clone()));
     tokio::spawn(bus::announce_streams(connection.clone(), daemon.clone()));
     tokio::spawn(playback::run(daemon.clone()));
     tokio::spawn(picks::run(daemon.clone()));

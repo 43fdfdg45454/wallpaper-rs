@@ -15,7 +15,7 @@ impl Painter<'_, '_, '_> {
             Content::Image { asset, .. } | Content::Video { asset, .. } => {
                 let (images, videos) = (self.images, self.videos);
                 let video = videos.iter().find(|(id, _)| id == asset).map(|(_, v)| *v);
-                let found = video.or_else(|| images.get(asset.as_ref()).map(|(i, _)| i))?;
+                let found = video.or_else(|| images.get(asset.as_ref()).map(|i| &i.0))?;
                 let (rect, s) = self.cell(i);
                 let natural = self.natural(i).unwrap_or(size);
                 let wrap = s.filter(|_| video.is_none()).map_or(Wrapping::Clamp, |s| s.wrap);
@@ -29,9 +29,8 @@ impl Painter<'_, '_, '_> {
                 Some(("fs_picture", item, self.ext(found)))
             }
             Content::Text { color, .. } => {
-                let texts = self.texts;
                 item.color = premultiplied(*color, srgb, opacity);
-                Some(("fs_texture", item, self.ext(texts.get(&i)?.0)))
+                Some(("fs_texture", item, self.ext(self.text(i)?.0)))
             }
             Content::Solid { color, .. } => {
                 item.color = premultiplied(*color, srgb, opacity);
@@ -106,6 +105,8 @@ impl Painter<'_, '_, '_> {
         }
         let slot = self.pool.push(&item);
         self.ops.push(Op::Draw { target: target.src, entry, mode, slot, tex: [src, masked, back] });
+        self.release(masked);
+        self.release(back);
     }
 
     fn backing(&self, i: usize, m: Affine, size: [f32; 2], opacity: f32, target: Target) -> Option<Item> {
@@ -156,6 +157,8 @@ impl Painter<'_, '_, '_> {
             slot,
             tex: [src, masked, back],
         });
+        self.release(masked);
+        self.release(back);
     }
 
     pub(crate) fn adjust(&mut self, i: usize, target: Target) {
@@ -184,6 +187,10 @@ impl Painter<'_, '_, '_> {
             slot,
             tex: [out, Src::White, Src::Clear],
         });
+        self.release(copy);
+        if out != copy {
+            self.release(out);
+        }
     }
 
     fn mask(
@@ -203,7 +210,7 @@ impl Painter<'_, '_, '_> {
         item.channel = channel(mask.channel, mask.texture.is_some());
         let images = self.images;
         let (affine, src) = if let Some(id) = texture {
-            let image = images.get(id).map(|(image, _)| image);
+            let image = images.get(id).map(|image| &image.0);
             (to_local, image.map_or(Src::White, |image| self.ext(image)))
         } else if let Some(id) = &mask.layer {
             item.mask_info[0] = 2.0;

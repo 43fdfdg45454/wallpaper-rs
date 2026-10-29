@@ -64,7 +64,7 @@ impl State {
     pub(super) fn take_video_frames(&mut self) {
         let now = Instant::now();
         for (reel, slot) in &mut self.players {
-            if slot.receive(&reel.path, &self.renderer, now) {
+            if slot.receive(&reel.path, self.renderer, now) {
                 let wants = |o: &Output| o.uses_video(reel) && (o.active || o.missing_frame);
                 self.outputs.values_mut().filter(|o| wants(o)).for_each(|o| o.dirty = true);
             }
@@ -86,23 +86,24 @@ impl State {
             let running = scene || slot.is_some_and(|s| s.playing && s.player.is_some());
             let watched = o.active && o.watched(self.exporter.is_streaming(name));
             let playing = watched && running && error.is_none();
-            (kind, playing, error, self.moves(o), o.fps(self.power), self.sound(name, o))
+            let flashes = o.shown.scene.as_ref().map_or("", SceneState::flashes);
+            (kind, playing, error, self.moves(o), o.fps(self.power), self.sound(name, o), flashes)
         };
         let mut published = lock(&self.status);
         let unchanged = published.len() == self.outputs.len()
             && self.outputs.iter().all(|(name, o)| {
-                let (kind, playing, error, parallax, fps, sound) = status(name, o);
+                let (kind, playing, error, parallax, fps, sound, flashes) = status(name, o);
                 let same = |s: &OutputStatus| {
-                    let now = (kind, playing, &error, parallax, fps, sound);
-                    (s.kind, s.playing, &s.error, s.parallax, s.fps, s.sound) == now
+                    let now = (kind, playing, &error, parallax, fps, sound, flashes);
+                    (s.kind, s.playing, &s.error, s.parallax, s.fps, s.sound, s.flashes) == now
                 };
                 published.get(name).is_some_and(same)
             });
         if !unchanged {
             let entry = |(name, o): (&String, &Output)| {
-                let (kind, playing, error, parallax, fps, sound) = status(name, o);
+                let (kind, playing, error, parallax, fps, sound, flashes) = status(name, o);
                 let frames = published.get(name).map_or(0, |s| s.frames);
-                (name.clone(), OutputStatus { kind, playing, error, parallax, frames, fps, sound })
+                (name.clone(), OutputStatus { kind, playing, error, parallax, frames, fps, sound, flashes })
             };
             let fresh = self.outputs.iter().map(entry).collect();
             let old = std::mem::replace(&mut *published, fresh);

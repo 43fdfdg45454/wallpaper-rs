@@ -36,6 +36,8 @@ pub(crate) struct Fx {
     pub(crate) mask_m1: [f32; 4],
     pub(crate) info: [f32; 4],
     pub(crate) area: [f32; 4],
+    pub(crate) clip: [f32; 4],
+    pub(crate) velocity: [f32; 4],
 }
 
 #[repr(C)]
@@ -86,6 +88,10 @@ impl Rect {
             [o.x + o.w, o.y + o.h],
         ])
         .unwrap_or(self)
+    }
+
+    pub(crate) fn meets(self, o: Rect) -> bool {
+        self.x < o.x + o.w && o.x < self.x + self.w && self.y < o.y + o.h && o.y < self.y + self.h
     }
 
     pub(crate) fn grow(self, by: f32) -> Rect {

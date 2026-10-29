@@ -93,6 +93,7 @@
     <string name="model_terms">%1$s (%2$s) comes from %3$s under the %4$s license (%5$s). Depth maps are then made on this phone, and your pictures never leave it.</string>
     <string name="downloads_off">Downloading the depth model is turned off in Settings</string>
     <string name="allow_download">Allow downloading the depth model</string>
+    <string name="flash_guard">Slow down or stop wallpapers that flash more than three times a second</string>
     <string name="depth_model">Depth model (%s)</string>
     <string name="delete_model">Delete</string>
     <string name="diagnostics">Diagnostics</string>

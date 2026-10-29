@@ -171,6 +171,11 @@ impl Descriptor {
             }
         }
         fail(self.reach.as_deref().is_none_or(|r| kind(r, ParamKind::Float)), "reach is no float".into());
+        fail(self.min_fps.is_none_or(|f| (1..=240).contains(&f)), "min_fps is outside 1..=240".into());
+        fail(
+            self.velocity.as_deref().is_none_or(|v| kind(v, ParamKind::Bool)),
+            "velocity names no bool".into(),
+        );
         let paced = match &self.pace {
             Some(Pace::Rate(id)) => vec![id],
             Some(Pace::Sweep(ids)) => ids.iter().collect(),

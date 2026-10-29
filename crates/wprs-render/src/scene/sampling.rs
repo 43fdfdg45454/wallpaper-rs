@@ -1,8 +1,9 @@
 use super::item::{invert, scale_of};
-use super::{Image, SceneAssets};
+use super::{Image, Pixels, SceneAssets};
 use crate::Renderer;
 use crate::texture::gpu_image;
 use std::collections::HashMap;
+use std::sync::Arc;
 use wgpu::TextureUsages as U;
 use wprs_scene::{Affine, Content, Filter, Frame, Scene, Wrapping};
 
@@ -28,7 +29,7 @@ pub(crate) fn layout(frames: usize) -> (u32, u32) {
 
 pub(crate) fn samplings(scene: &Scene, assets: &SceneAssets) -> HashMap<String, Sampling> {
     let one = |(id, a): (&String, &wprs_scene::Asset)| {
-        let size = assets.images.get(id).map_or([1.0; 2], |i| [i.width() as f32, i.height() as f32]);
+        let size = assets.images.get(id).map_or([1.0; 2], |i| [i.size().0 as f32, i.size().1 as f32]);
         let cells = match (&a.rects[..], a.atlas, assets.sheets.get(id).filter(|_| a.animated)) {
             (_, _, Some(d)) => {
                 let (rows, columns) = layout(d.len());
@@ -46,14 +47,18 @@ pub(crate) fn samplings(scene: &Scene, assets: &SceneAssets) -> HashMap<String, 
 }
 
 impl Renderer {
-    pub(crate) fn mipped(&self, image: &Image) -> Image {
-        let (source, natural) = image;
+    fn mipped(&self, image: &Image, pixels: Option<&Arc<Pixels>>) -> Image {
+        let (source, natural) = &**image;
         let (w, h) = source.size();
         let levels = 32 - w.max(h).leading_zeros();
+        let format = source.texture.format();
+        let flags = [format == wgpu::TextureFormat::Rgba8Unorm, true];
         if levels <= 1 || source.texture.mip_level_count() > 1 {
             return image.clone();
         }
-        let format = source.texture.format();
+        if let Some(found) = pixels.and_then(|p| self.uploaded(p, flags)) {
+            return found;
+        }
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("wprs-scene mipmaps"),
             size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
@@ -75,13 +80,20 @@ impl Renderer {
             pipes.shrink(&self.device, &mut encoder, &from, &to, format);
         }
         self.queue.submit([encoder.finish()]);
-        (gpu_image(texture), *natural)
+        let made = Arc::new((gpu_image(texture), *natural));
+        pixels.into_iter().for_each(|p| self.keep(p, flags, &made));
+        made
     }
 
-    pub(crate) fn mipmap(&self, images: &mut HashMap<String, Image>, sampling: &HashMap<String, Sampling>) {
+    pub(crate) fn mipmap(
+        &self,
+        images: &mut HashMap<String, Image>,
+        sampling: &HashMap<String, Sampling>,
+        sources: &HashMap<String, Arc<Pixels>>,
+    ) {
         for id in sampling.iter().filter(|(_, s)| s.mipmaps == Some(true)).map(|(id, _)| id) {
             if let Some(image) = images.get(id) {
-                let mipped = self.mipped(image);
+                let mipped = self.mipped(image, sources.get(id));
                 images.insert(id.clone(), mipped);
             }
         }
@@ -91,16 +103,17 @@ impl Renderer {
         for d in &frame.draws {
             let Content::Image { asset, size, frame: cell } = &d.content else { continue };
             let s = view.samplings.get(asset.as_ref());
-            let Some((image, natural)) = view.images.get(asset.as_ref()) else { continue };
-            if s.is_some_and(|s| s.mipmaps.is_some()) || image.texture.mip_level_count() > 1 {
+            let Some(image) = view.images.get(asset.as_ref()) else { continue };
+            let (gpu, natural) = &**image;
+            if s.is_some_and(|s| s.mipmaps.is_some()) || gpu.texture.mip_level_count() > 1 {
                 continue;
             }
             let rect = cell.and_then(|c| s?.cells.get(c as usize).copied()).unwrap_or([0.0, 0.0, 1.0, 1.0]);
             let shown = size.unwrap_or([natural[0] * rect[2], natural[1] * rect[3]]);
-            let texels = (image.size().0 as f32 * rect[2]) * (image.size().1 as f32 * rect[3]);
+            let texels = (gpu.size().0 as f32 * rect[2]) * (gpu.size().1 as f32 * rect[3]);
             let pixels = scale_of(screen.then(d.world)).powi(2) * shown[0] * shown[1];
             if pixels < 0.5625 * texels && invert(d.world).0 != [0.0; 6] {
-                let mipped = self.mipped(&(image.clone(), *natural));
+                let mipped = self.mipped(image, view.sources.get(asset.as_ref()));
                 view.images.insert(asset.to_string(), mipped);
             }
         }

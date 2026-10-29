@@ -10,6 +10,7 @@ use std::path::Path;
 use wprs_library::Kind;
 use wprs_sync::{Doc, Hlc, Kept, Replica, Secrets, SyncKey, View};
 
+mod calm;
 mod refused;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures");
@@ -565,6 +566,7 @@ fn scenes() {
     assert!(pack::load(&bad).is_err());
     saved_settings();
     cued();
+    calm::calmed();
     power::device(false, 0);
 }
 
@@ -601,7 +603,7 @@ fn cued() {
     if let Some(r) = renderer() {
         let mut draw = |nanos: i64| {
             let shot =
-                stage.render(&r, ((64, 32), nanos, 60), (power, wprs_scene::Tier::T3), &[], true).unwrap();
+                stage.render(r, ((64, 32), nanos, 60), (power, wprs_scene::Tier::T3), &[], true).unwrap();
             (shot.fps, shot.delay)
         };
         assert_eq!(draw(0), (0, 3_000), "the phone sleeps past events only scripts would hear");
@@ -679,8 +681,8 @@ fn saved_settings() {
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }
 
-fn renderer() -> Option<wprs_render::Renderer> {
-    match wprs_render::Renderer::new() {
+fn renderer() -> Option<&'static wprs_render::Renderer> {
+    match wprs_render::Renderer::shared() {
         Ok(r) => Some(r),
         Err(e) if std::env::var_os("WPRS_REQUIRE_GPU").is_none() => {
             eprintln!("skipping the scene render: {e}");

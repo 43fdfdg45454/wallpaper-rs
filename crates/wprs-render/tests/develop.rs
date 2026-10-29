@@ -3,8 +3,8 @@ use serde_json::json;
 use wprs_core::{Edit, Fit, UvRect};
 use wprs_render::{Layer, Renderer};
 
-fn renderer() -> Option<Renderer> {
-    match Renderer::new() {
+fn renderer() -> Option<&'static Renderer> {
+    match Renderer::shared() {
         Ok(r) => Some(r),
         Err(e) if std::env::var_os("WPRS_REQUIRE_GPU").is_none() => {
             eprintln!("skipping GPU test: {e}");
@@ -65,7 +65,7 @@ fn neutral_edits_keep_every_pixel() {
     let image =
         RgbaImage::from_fn(32, 16, |x, y| Rgba([(x * 8) as u8, (y * 16) as u8, 200 - (x * 3) as u8, 255]));
     let neutral = op(json!({"type": "white_balance", "temperature": 6504, "tint": 0}));
-    let out = develop(&r, &image, &neutral, (32, 16));
+    let out = develop(r, &image, &neutral, (32, 16));
     for (x, y) in [(0, 0), (31, 15), (7, 9), (20, 3)] {
         expect(at(&out, x, y), at(&image, x, y));
     }
@@ -75,7 +75,7 @@ fn neutral_edits_keep_every_pixel() {
 fn point_operations_follow_their_formulas() {
     let Some(r) = renderer() else { return };
     let check = |color: [u8; 3], kind: serde_json::Value, want: [u8; 3]| {
-        let out = develop(&r, &flat(color), &op(kind.clone()), (8, 8));
+        let out = develop(r, &flat(color), &op(kind.clone()), (8, 8));
         assert!(near(at(&out, 4, 4), want), "{kind}: got {:?}, expected {want:?}", at(&out, 4, 4));
     };
     let gray = linear(100);
@@ -94,11 +94,11 @@ fn point_operations_follow_their_formulas() {
     check([200, 100, 50], over("soft_light"), [181, 100, 64]);
     check([200, 100, 50], over("color"), [95, 121, 151]);
     let warm =
-        develop(&r, &flat([128; 3]), &op(json!({"type": "white_balance", "temperature": 3000})), (8, 8));
+        develop(r, &flat([128; 3]), &op(json!({"type": "white_balance", "temperature": 3000})), (8, 8));
     let [red, _, blue] = at(&warm, 4, 4);
     assert!(blue > red + 40, "a low temperature cools the picture: {:?}", at(&warm, 4, 4));
     let tinted = develop(
-        &r,
+        r,
         &flat([128; 3]),
         &op(json!({"type": "white_balance", "temperature": 6504, "tint": 60})),
         (8, 8),
@@ -111,7 +111,7 @@ fn point_operations_follow_their_formulas() {
 fn vignette_darkens_the_corners_only() {
     let Some(r) = renderer() else { return };
     let kind = json!({"type": "vignette", "amount": -1, "midpoint": 0.3, "roundness": 0, "feather": 0.5});
-    let out = develop(&r, &flat([200; 3]), &op(kind), (32, 16));
+    let out = develop(r, &flat([200; 3]), &op(kind), (32, 16));
     expect(at(&out, 16, 8), [200; 3]);
     assert!(at(&out, 0, 0)[0] < 60, "corner {:?}", at(&out, 0, 0));
 }
@@ -122,7 +122,7 @@ fn masks_limit_where_an_operation_applies() {
     let masked = |mask: serde_json::Value| {
         let value =
             json!({"ops": [{"id": "dark", "type": "exposure", "ev": -5, "mask": "m"}], "masks": {"m": mask}});
-        develop(&r, &flat([200; 3]), &edit(value), (32, 32))
+        develop(r, &flat([200; 3]), &edit(value), (32, 32))
     };
     let dark = encoded(linear(200) / 32.0);
     let out = masked(json!({"type": "linear", "from": [0.0, 0.5], "to": [1.0, 0.5]}));
@@ -150,7 +150,7 @@ fn geometry_rotates_flips_and_crops() {
         Rgba([r, g, b, 255])
     });
     let corners = |geometry: serde_json::Value, size: (u32, u32)| {
-        let out = develop(&r, &image, &edit(json!({"geometry": geometry})), size);
+        let out = develop(r, &image, &edit(json!({"geometry": geometry})), size);
         let (w, h) = (size.0 - 2, size.1 - 2);
         [(1, 1), (w, 1), (1, h), (w, h)].map(|(x, y)| at(&out, x, y))
     };
@@ -173,16 +173,16 @@ fn blur_softens_edges_and_keeps_flat_areas() {
     let Some(r) = renderer() else { return };
     let image = RgbaImage::from_fn(64, 32, |x, _| Rgba(if x < 32 { [0, 0, 0, 255] } else { [255; 4] }));
     let blur = op(json!({"type": "blur", "radius": 100}));
-    let out = develop(&r, &image, &blur, (64, 32));
+    let out = develop(r, &image, &blur, (64, 32));
     let edge = at(&out, 31, 16)[0];
     assert!((20..235).contains(&edge), "edge {edge}");
     expect(at(&out, 1, 16), [0; 3]);
     expect(at(&out, 62, 16), [255; 3]);
-    let flat = develop(&r, &flat([90, 160, 30]), &op(json!({"type": "blur", "radius": 200})), (64, 64));
+    let flat = develop(r, &flat([90, 160, 30]), &op(json!({"type": "blur", "radius": 200})), (64, 64));
     expect(at(&flat, 32, 32), [90, 160, 30]);
     let value = json!({"ops": [{"id": "b", "type": "blur", "radius": 100, "mask": "left"}, {"id": "e", "type": "exposure", "ev": 0}],
         "masks": {"left": {"type": "linear", "from": [0.4, 0.5], "to": [0.3, 0.5]}}});
-    let masked = develop(&r, &image, &edit(value), (64, 32));
+    let masked = develop(r, &image, &edit(value), (64, 32));
     expect(at(&masked, 33, 16), [255; 3]);
 }
 

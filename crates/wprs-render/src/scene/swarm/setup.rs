@@ -4,7 +4,7 @@ use crate::Renderer;
 use crate::scene::{Image, SceneAssets};
 use std::collections::HashMap;
 use wgpu::ShaderStages as S;
-use wprs_scene::{Bake, Blend, EmitShape, Kind, Quality, Scene, Sim, Tier, Values};
+use wprs_scene::{Bake, Blend, EmitShape, Kind, Quality, Scene, Sim, Values};
 
 pub(crate) fn sprites(scene: &Scene, props: &Values) -> Vec<Option<String>> {
     scene.particles.values().map(|s| s.render.texture.as_ref().and_then(|t| t.settled(Some(props)))).collect()
@@ -33,7 +33,7 @@ impl Swarms {
         if drawn.is_empty() || scene.particles.is_empty() {
             return None;
         }
-        let (tier, gpu) = (Tier::detect(r.software(), r.discrete()), compute(r) && !r.software());
+        let (tier, gpu) = (r.tier(), compute(r) && !r.software());
         let layout = |entries: &[wgpu::BindGroupLayoutEntry]| {
             let label = Some("wprs-scene particles");
             r.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { label, entries })
@@ -57,7 +57,12 @@ impl Swarms {
             ]),
             layout(&[entry(0, S::FRAGMENT, texture)]),
         ];
-        let pixels = |id: &str| assets.images.get(id).map(|i| (i.width(), i.height(), i.as_raw().as_slice()));
+        let masks = scene.particles.values().flat_map(|s| &s.emitters).filter_map(|e| match &e.shape {
+            EmitShape::Mask { texture, .. } => Some((texture.as_str(), assets.images.get(texture)?.image()?)),
+            _ => None,
+        });
+        let masks: HashMap<&str, std::sync::Arc<image::RgbaImage>> = masks.collect();
+        let pixels = |id: &str| masks.get(id).map(|i| (i.width(), i.height(), i.as_raw().as_slice()));
         let sprites = sprites(scene, props);
         let kits = scene.particles.iter().zip(&sprites).filter_map(|((id, s), sprite)| {
             let sprite = sprite.as_deref().map(|t| (t, images.get(t)));

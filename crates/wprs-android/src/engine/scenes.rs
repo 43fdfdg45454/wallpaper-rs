@@ -70,7 +70,7 @@ impl Engine {
         let (Some(stage), Some((gpu, surface))) = (self.stage.as_mut(), self.target.as_mut()) else {
             return Ok(None);
         };
-        let tier = power::tier(gpu.renderer.software(), gpu.renderer.compute());
+        let tier = power::tier(gpu.renderer.software(), gpu.renderer.compute()).min(gpu.renderer.tier());
         let pack = Arc::clone(&stage.pack);
         let videos = self.clips.frames(&gpu.renderer, gpu.epoch, &pack.videos);
         let shot =

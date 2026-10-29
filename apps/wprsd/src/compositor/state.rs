@@ -18,7 +18,7 @@ use wprs_render::Renderer;
 use wprs_wayland::Window;
 
 pub(super) struct State {
-    pub(super) renderer: Renderer,
+    pub(super) renderer: &'static Renderer,
     pub(super) exporter: Arc<Exporter>,
     pub(super) settings: Settings,
     pub(super) outputs: BTreeMap<String, Output>,
@@ -31,12 +31,13 @@ pub(super) struct State {
     pub(super) power: Power,
     pub(super) speakers: BTreeMap<PathBuf, Speaker>,
     pub(super) locked: bool,
+    pub(super) felt: Option<Instant>,
     pictures: Pictures,
 }
 
 impl State {
     pub(super) fn new(
-        renderer: Renderer,
+        renderer: &'static Renderer,
         exporter: Arc<Exporter>,
         settings: Settings,
         tx: mpsc::Sender<Command>,
@@ -44,8 +45,7 @@ impl State {
     ) -> Self {
         let (outputs, players, windows) = (BTreeMap::new(), HashMap::new(), HashMap::new());
         let (on_status, motion) = (Box::new(|_| {}), Motion::new(renderer.software()));
-        let tier = wprs_scene::Tier::detect(renderer.software(), renderer.discrete());
-        let power = Power { tier, on_battery: false, max_fps: settings.max_fps };
+        let power = Power::new(renderer.tier(), false, settings.max_fps);
         let (speakers, locked) = (BTreeMap::new(), false);
         Self {
             renderer,
@@ -61,6 +61,7 @@ impl State {
             power,
             speakers,
             locked,
+            felt: None,
             pictures: Pictures::default(),
         }
     }
@@ -98,6 +99,7 @@ impl State {
             self.start_fades();
             self.check_starvation();
             self.move_reliefs();
+            self.feel(Instant::now());
             self.render_due();
             self.sync_sounds();
             self.publish_status();
@@ -130,6 +132,10 @@ impl State {
             Command::Calm(calm) => self.calm(calm),
             Command::Power(on_battery) => {
                 self.power.on_battery = on_battery;
+                self.outputs.values_mut().filter(|o| o.shown.scene.is_some()).for_each(|o| o.dirty = true);
+            }
+            Command::Saver(saver) => {
+                self.power.saver = saver;
                 self.outputs.values_mut().filter(|o| o.shown.scene.is_some()).for_each(|o| o.dirty = true);
             }
             Command::Locked(locked) => {
@@ -195,6 +201,7 @@ impl State {
             Content::Scene(s) => {
                 let mut scene = SceneState::new(s.clone(), self.power);
                 scene.calm(self.motion.calm);
+                scene.guard(self.settings.flash_guard);
                 resume.into_iter().for_each(|time| scene.resume(time));
                 Some(scene)
             }
@@ -224,10 +231,10 @@ impl State {
         size: (u32, u32),
     ) -> Option<Made> {
         let decoded = pixels.as_deref().map(RgbaImage::dimensions);
-        if let Some(shared) = self.pictures.shared(&self.renderer, picture, decoded, (fit, size)) {
+        if let Some(shared) = self.pictures.shared(self.renderer, picture, decoded, (fit, size)) {
             return Some(shared);
         }
-        let made = pictures::develop(&self.renderer, output, picture, pixels, (fit, size))?;
+        let made = pictures::develop(self.renderer, output, picture, pixels, (fit, size))?;
         let developed =
             Developed { look: pictures::look(picture), image: made.0.clone(), relief: made.2.clone() };
         self.pictures.keep(developed, &mut self.outputs);
@@ -237,6 +244,7 @@ impl State {
     fn apply_settings(&mut self, settings: Settings) {
         let old = std::mem::replace(&mut self.settings, settings);
         self.power.max_fps = settings.max_fps;
+        self.outputs.values_mut().for_each(|o| o.guard(settings.flash_guard));
         if old.software_parallax != settings.software_parallax && self.motion.software {
             self.restill();
         }

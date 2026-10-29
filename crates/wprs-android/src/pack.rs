@@ -63,7 +63,7 @@ fn drawn(package: &mut Package<BufReader<fs::File>>, scene: &Scene) -> Option<Rg
     let assets = SceneAssets::read(scene, |path| package.read_file(path).map_err(|e| e.to_string())).ok()?;
     let props = wprs_scene::effective(&package.manifest.properties, &[]);
     let clock = (crate::stage::wall(), package.manifest.default_locale.as_deref().unwrap_or_default());
-    wprs_render::Renderer::new().ok()?.poster(scene, &assets, &props, clock, POSTER).ok()
+    wprs_render::Renderer::shared().ok()?.poster(scene, &assets, &props, clock, POSTER).ok()
 }
 
 pub(crate) fn about(path: &Path, languages: &[String]) -> Option<wprs_core::model::About> {
@@ -129,6 +129,12 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         }
     }
     assets.luts.extend(package.luts(&scene)?);
+    let (file, kept) = (path.to_owned(), stamp.clone());
+    assets.reloadable(&scene, move || {
+        self::stamp(&file).ok().filter(|now| *now == kept)?;
+        let mut package = open(&file).ok()?;
+        Some(move |path: &str| package.read_file(path).map_err(|e| e.to_string()))
+    });
     let (m, inputs) = (package.manifest.localized(), package.manifest.declared());
     let (id, version, locale, scene) = (m.id, m.version, m.default_locale, Arc::new(scene));
     let (properties, presets) = (m.properties, m.presets);

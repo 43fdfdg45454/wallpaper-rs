@@ -1,5 +1,4 @@
 use super::{B, CHUNK, SIM, SceneView, Store, Swarms, buffer, module};
-use crate::readback::GPU_TIMEOUT;
 use crate::{RenderError, Renderer};
 use wgpu::util::DeviceExt;
 use wprs_scene::{Census, Cloud, Sim};
@@ -93,9 +92,7 @@ impl Renderer {
             let mut encoder = self.device.create_command_encoder(&Default::default());
             encoder.copy_buffer_to_buffer(&store.particles, 0, &staging, 0, size);
             let done = self.queue.submit([encoder.finish()]);
-            staging.slice(..).map_async(wgpu::MapMode::Read, |_| {});
-            let wait = wgpu::PollType::Wait { submission_index: Some(done), timeout: Some(GPU_TIMEOUT) };
-            self.device.poll(wait).map_err(|e| RenderError::DeviceLost(e.to_string()))?;
+            self.map(&staging.slice(..), &Default::default(), done)?;
             let data =
                 staging.slice(..).get_mapped_range().map_err(|e| RenderError::Readback(e.to_string()))?;
             out.push((kit.id.clone(), Census::of(bytemuck::cast_slice(&data))));

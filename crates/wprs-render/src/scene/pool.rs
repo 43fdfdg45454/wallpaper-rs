@@ -14,10 +14,12 @@ pub(crate) struct Tex {
     pub(crate) id: u64,
 }
 
+pub(crate) type Key = [u64; 8];
+
 pub(crate) struct Pool {
     free: Vec<(Tex, u64)>,
-    pub(crate) busy: Vec<Tex>,
-    groups: HashMap<Vec<u64>, (BindGroup, u64)>,
+    pub(crate) busy: Vec<(Tex, bool, u64)>,
+    groups: HashMap<Key, (BindGroup, u64)>,
     pub(crate) data: Vec<u8>,
     buffer: Option<wgpu::Buffer>,
     frame_group: Option<(BindGroup, BindGroup)>,
@@ -76,16 +78,36 @@ impl Pool {
             return None;
         }
         self.bytes += bytes(size, format);
+        let fits = |t: &Tex| t.size() == size && t.texture.format() == format;
+        if let Some(i) = self.busy.iter().position(|(t, used, _)| !used && fits(t)) {
+            (self.busy[i].1, self.busy[i].2) = (true, self.frame);
+            return Some(i);
+        }
+        let tex = self.take(device, size, format);
+        self.busy.push((tex, true, self.frame));
+        Some(self.busy.len() - 1)
+    }
+
+    pub(crate) fn release(&mut self, i: usize) {
+        if let Some((tex, used, _)) = self.busy.get_mut(i).filter(|(_, used, _)| *used) {
+            *used = false;
+            self.bytes -= tex.bytes();
+        }
+    }
+
+    pub(crate) fn take(&mut self, device: &wgpu::Device, size: (u32, u32), format: TextureFormat) -> Tex {
         let found = self.free.iter().position(|(t, _)| t.size() == size && t.texture.format() == format);
-        let tex = match found {
+        match found {
             Some(i) => self.free.remove(i).0,
             None => {
                 self.created += 1;
                 Tex::new(device, size, format)
             }
-        };
-        self.busy.push(tex);
-        Some(self.busy.len() - 1)
+        }
+    }
+
+    pub(crate) fn give(&mut self, tex: Tex) {
+        self.free.push((tex, self.frame));
     }
 
     pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
@@ -161,7 +183,9 @@ impl Pool {
         fx: bool,
         views: &[(u64, &wgpu::TextureView)],
     ) -> BindGroup {
-        let key: Vec<u64> = std::iter::once(u64::from(fx)).chain(views.iter().map(|(id, _)| *id)).collect();
+        let mut key = [0; 8];
+        key[0] = u64::from(fx);
+        views.iter().zip(&mut key[1..]).for_each(|((id, _), k)| *k = *id);
         if let Some((group, used)) = self.groups.get_mut(&key) {
             *used = self.frame;
             return group.clone();
@@ -184,8 +208,12 @@ impl Pool {
 
     pub(crate) fn end_frame(&mut self) {
         let frame = self.frame;
-        self.free.extend(self.busy.drain(..).map(|t| (t, frame)));
-        self.free.sort_by_key(|(_, used)| std::cmp::Reverse(*used));
+        self.busy.iter_mut().for_each(|slot| slot.1 = false);
+        if self.busy.iter().any(|(.., used)| frame - used >= KEEP_FRAMES) {
+            let idle = self.busy.extract_if(.., |(.., used)| frame - *used >= KEEP_FRAMES);
+            self.free.extend(idle.map(|(t, _, used)| (t, used)));
+        }
+        self.free.sort_unstable_by_key(|(t, used)| (std::cmp::Reverse(*used), t.id));
         let (mut kept, mut gone) = (0, Vec::new());
         self.free.retain(|(t, used)| {
             kept += t.bytes();
@@ -195,7 +223,7 @@ impl Pool {
             }
             keep
         });
-        let stale = |key: &Vec<u64>| key[1..].iter().any(|id| gone.contains(id));
+        let stale = |key: &Key| key[1..].iter().any(|id| *id != 0 && gone.contains(id));
         self.groups.retain(|key, (_, used)| frame - *used < KEEP_FRAMES && !stale(key));
         self.data.clear();
         (self.frame, self.bytes) = (frame + 1, 0);
@@ -203,6 +231,7 @@ impl Pool {
 
     pub(crate) fn trim(&mut self) {
         self.free.clear();
+        self.busy.clear();
         self.groups.clear();
     }
 

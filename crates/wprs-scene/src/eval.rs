@@ -63,6 +63,7 @@ pub struct EffectDraw<'a> {
     pub reach: f32,
     pub chain: usize,
     pub textures: Vec<(&'static str, String)>,
+    pub velocity: [f32; 2],
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -135,6 +136,9 @@ fn emit<'a>(
     let origin = t.origin.or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5, valign]);
     let content = content(cx, layer, set, canvas, quality);
     let playing = matches!(&content, Content::Image { asset, .. } if cx.playing.contains(asset.as_ref()));
+    if playing || matches!(layer.kind, Kind::Video { .. }) {
+        cx.pace.set(u32::MAX);
+    }
     let start = frame.effects.len();
     let runs = if layer.effects.len() > 1 { fusion(&layer.effects) } else { Vec::new() };
     let mut paced = false;
@@ -143,7 +147,7 @@ fn emit<'a>(
         let Some(scale) = quality.effect_scale(d.class(), effect.optional) else { continue };
         let slots = d.pack(|id| d.setting(quality, id, effect.params.get(id).map(|v| v.get(cx))));
         let wake = wakes(d, &slots, cx);
-        (paced, _) = (paced || matches!(wake, Wake::At(_)), cx.note(wake));
+        (paced, _) = (paced || matches!(wake, Wake::At(_)), cx.paced(wake, d.min_fps));
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
         let (mask, scale) = (effect.mask.as_ref(), scale * d.scale_at(quality));
         let chain = runs.iter().find(|r| r.start == i).map_or(1, |r| r.len());
@@ -157,6 +161,13 @@ fn emit<'a>(
         });
         let (textures, mask_texture) = (textures.collect(), masked(cx, mask));
         let mask_strength = strength(cx, mask);
+        let follows = d.velocity.as_ref().and_then(|v| d.param(v)).is_some_and(|i| slots[i][0] != 0.0);
+        let key = std::ptr::from_ref(effect) as usize;
+        let velocity =
+            if follows { cx.velocity(key, [place.world.0[4], place.world.0[5]]) } else { [0.0; 2] };
+        if velocity != [0.0; 2] {
+            cx.note(Wake::Frame);
+        }
         let draw = EffectDraw {
             descriptor: d,
             effect,
@@ -168,6 +179,7 @@ fn emit<'a>(
             reach,
             chain,
             textures,
+            velocity,
         };
         frame.effects.push(draw);
     }

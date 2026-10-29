@@ -59,6 +59,8 @@ model! {
         pub sound: String,
         #[serde(default)]
         pub shown_fit: Fit,
+        #[serde(default)]
+        pub flashes: String,
     }
 
     #[derive(Copy, Eq, Hash)]

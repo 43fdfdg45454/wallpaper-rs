@@ -2,7 +2,6 @@ use super::pipes::{Key, Mode, Pipes, Shader, module};
 use crate::Renderer;
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use wgpu::{ShaderModule, TextureFormat};
 use wprs_scene::{CHAIN_ENTRY, Descriptor, Output, Scene, descriptor, effect_source, fusion};
@@ -40,17 +39,16 @@ impl Pipes {
         &self,
         device: &wgpu::Device,
         chain: impl Iterator<Item = &'d Descriptor> + Clone,
-        hold: bool,
+        lease: Option<&mut Lease>,
     ) -> u64 {
-        let mut h = DefaultHasher::new();
-        chain.clone().for_each(|d| d.id.hash(&mut h));
-        let key = h.finish();
+        let key = digest(chain.clone().map(|d| d.id.as_str()));
         let mut shelf = lock(&self.shelf);
-        if hold {
+        if let Some(lease) = lease.filter(|l| !l.0.contains(&key)) {
             *shelf.held.entry(key).or_default() += 1;
+            lease.0.push(key);
         }
         shelf.modules.entry(key).or_insert_with(|| {
-            self.created.fetch_add(1, Ordering::Relaxed);
+            super::pipes::compiled(1);
             module(device, effect_source(&chain.collect::<Vec<_>>()))
         });
         key
@@ -63,30 +61,35 @@ impl Pipes {
         format: TextureFormat,
         state: TextureFormat,
     ) -> Lease {
-        let base = self.chain(device, std::iter::empty::<&Descriptor>(), false);
+        let mut lease = Lease(Vec::new(), self.shelf.clone());
+        let base = self.chain(device, std::iter::empty::<&Descriptor>(), Some(&mut lease));
         let _ = self.get(device, Shader::Fx(base, "fs_mask_mix"), Mode::Replace, format);
-        let mut held = Vec::new();
         for layer in scene.layers() {
             for d in layer.effects.iter().filter_map(|e| descriptor(&e.effect)) {
-                let key = self.chain(device, std::iter::once(d), false);
+                let key = self.chain(device, std::iter::once(d), Some(&mut lease));
                 for pass in &d.passes {
                     let target = if pass.output == Output::State { state } else { format };
                     let _ = self.get(device, Shader::Fx(key, &pass.entry), Mode::Replace, target);
                 }
             }
             for run in fusion(&layer.effects) {
-                let key =
-                    self.chain(device, layer.effects[run].iter().filter_map(|e| descriptor(&e.effect)), true);
+                let chain = layer.effects[run].iter().filter_map(|e| descriptor(&e.effect));
+                let key = self.chain(device, chain, Some(&mut lease));
                 let _ = self.get(device, Shader::Fx(key, CHAIN_ENTRY), Mode::Replace, format);
-                held.push(key);
             }
         }
-        Lease(held, self.shelf.clone())
+        lease
     }
 }
 
+fn digest<'a>(ids: impl Iterator<Item = &'a str>) -> u64 {
+    let mut h = DefaultHasher::new();
+    ids.for_each(|id| id.hash(&mut h));
+    h.finish()
+}
+
 impl Renderer {
-    pub fn effect_shaders(&self) -> usize {
-        lock(&self.pipes().shelf).modules.len()
+    pub fn effect_shader(&self, chain: &[&str]) -> bool {
+        lock(&self.pipes().shelf).modules.contains_key(&digest(chain.iter().copied()))
     }
 }

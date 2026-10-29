@@ -1,6 +1,7 @@
 {
   "id": "waves",
   "name": { "en": "Waves" },
+  "min_fps": 30,
   "uses": ["time"],
   "mask_mode": "strength",
   "params": [

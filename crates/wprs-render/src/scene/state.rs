@@ -1,6 +1,6 @@
-use super::Src;
 use super::paint::Painter;
 use super::pool::Tex;
+use super::{Op, Src};
 use crate::texture::next_id;
 use wprs_scene::{EffectDraw, ParamKind};
 
@@ -38,9 +38,11 @@ impl Painter<'_, '_, '_> {
     pub(crate) fn sim(&mut self, key: usize, size: (u32, u32)) -> usize {
         let (device, format, frame) = (&self.r.device, self.state_format, self.pool.frame);
         if self.states.get(&key).is_none_or(|s| s.tex[0].size() != size) {
-            let tex = [Tex::new(device, size, format), Tex::new(device, size, format)];
+            let old = self.states.remove(&key).into_iter().flat_map(|s| s.tex);
+            old.for_each(|t| self.pool.give(t));
+            let tex = [self.pool.take(device, size, format), self.pool.take(device, size, format)];
             self.states.insert(key, Sim { tex, front: 0, used: frame, clock: None, owed: 0.0 });
-            self.pool.created += 2;
+            self.ops.extend([0, 1].map(|side| Op::Clear(Src::State(key, side), [0.0; 4])));
         }
         let sim = self.states.get_mut(&key).expect("inserted above");
         sim.used = frame;
@@ -68,7 +70,7 @@ impl Painter<'_, '_, '_> {
         let (images, luts) = (self.images, self.luts);
         match kind {
             ParamKind::Lut => luts.iter().position(|(name, _)| name == id).map(Src::Lut),
-            _ => images.get(id).map(|(image, _)| self.ext(image)),
+            _ => images.get(id).map(|image| self.ext(&image.0)),
         }
     }
 

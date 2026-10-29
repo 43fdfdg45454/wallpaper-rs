@@ -74,7 +74,7 @@ pub(crate) fn gpu_buffers(renderer: &Renderer) -> Option<Arc<dyn Allocate>> {
         "1" | "on" => true,
         _ => emulate || !renderer.software(),
     };
-    let gpu = on.then(|| renderer.dmabufs(emulate)).flatten();
+    let gpu = on.then(|| renderer.dmabufs(emulate && renderer.software())).flatten();
     tracing::debug!(wanted = on, available = gpu.is_some(), "streams in GPU memory");
     gpu.map(|gpu| Arc::new(Gpu(gpu, flaky.then(AtomicU64::default))) as Arc<dyn Allocate>)
 }

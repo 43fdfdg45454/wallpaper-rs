@@ -4,23 +4,30 @@ use super::state::Sim;
 use super::{Cached, Op, SceneStats, Src};
 use crate::{GpuImage, Renderer};
 use std::collections::HashMap;
-use wgpu::{BindGroup, RenderPipeline, TextureFormat as Format};
+use wgpu::{BindGroup, TextureFormat as Format};
 
 pub(crate) struct Sources<'a> {
     pub(crate) caches: &'a HashMap<usize, Cached>,
     pub(crate) states: &'a HashMap<usize, Sim>,
     pub(crate) luts: &'a [(String, Tex)],
-    pub(crate) exts: &'a [&'a GpuImage],
+    pub(crate) exts: &'a [GpuImage],
     pub(crate) canvas: &'a Tex,
     pub(crate) output: &'a GpuImage,
     pub(crate) swarms: Option<&'a super::swarm::Swarms>,
+    pub(crate) scissor: Option<[u32; 4]>,
 }
 
 impl Sources<'_> {
+    fn clip(&self, pass: &mut wgpu::RenderPass<'_>, target: Src) {
+        if let Some([x, y, w, h]) = self.scissor.filter(|_| target == Src::Canvas) {
+            pass.set_scissor_rect(x, y, w, h);
+        }
+    }
+
     fn get(&self, pool: &Pool, src: Src) -> (u64, wgpu::TextureView, wgpu::Texture) {
         let tex = |t: &Tex| (t.id, t.view.clone(), t.texture.clone());
         match src {
-            Src::Pool(i) => tex(&pool.busy[i]),
+            Src::Pool(i) => tex(&pool.busy[i].0),
             Src::Ext(i) => (self.exts[i].id, self.exts[i].view.clone(), self.exts[i].texture.clone()),
             Src::Cache(k) => self.caches.get(&k).map_or_else(|| tex(&pool.clear), |c| tex(&c.tex)),
             Src::White => tex(&pool.white),
@@ -34,12 +41,14 @@ impl Sources<'_> {
         }
     }
 
-    fn group(&self, r: &Renderer, pool: &mut Pool, fx: bool, tex: &[Src]) -> BindGroup {
-        let views: Vec<(u64, wgpu::TextureView)> =
-            tex.iter().map(|s| self.get(pool, *s)).map(|(id, v, _)| (id, v)).collect();
-        let refs: Vec<(u64, &wgpu::TextureView)> = views.iter().map(|(id, v)| (*id, v)).collect();
+    pub(crate) fn group(&self, r: &Renderer, pool: &mut Pool, fx: bool, tex: &[Src]) -> BindGroup {
+        let views: [(u64, wgpu::TextureView); 7] = std::array::from_fn(|k| {
+            let (id, view, _) = self.get(pool, tex[k.min(tex.len() - 1)]);
+            (id, view)
+        });
+        let refs: [(u64, &wgpu::TextureView); 7] = std::array::from_fn(|k| (views[k].0, &views[k].1));
         let pipes = r.scene.get().expect("created with the view");
-        pool.group(&r.device, if fx { &pipes.fx } else { &pipes.textures }, fx, &refs)
+        pool.group(&r.device, if fx { &pipes.fx } else { &pipes.textures }, fx, &refs[..tex.len()])
     }
 }
 
@@ -98,6 +107,7 @@ impl Renderer {
                 Op::Particles { target, system, slot, mode } => {
                     let view = src.get(pool, *target).1;
                     let mut pass = pass(&mut encoder, &view, wgpu::LoadOp::Load);
+                    src.clip(&mut pass, *target);
                     src.swarms.iter().for_each(|s| s.draw(&mut pass, *system, *slot, *mode));
                     (stats.passes, stats.draws, k) = (stats.passes + 1, stats.draws + 1, k + 1);
                 }
@@ -110,28 +120,21 @@ impl Renderer {
                         }
                         _ => wgpu::LoadOp::Load,
                     };
-                    let mut calls: Vec<(RenderPipeline, BindGroup, u32)> = Vec::new();
-                    let format = src.get(pool, target).2.format();
+                    let (_, view, texture) = src.get(pool, target);
+                    let mut pass = pass(&mut encoder, &view, load);
+                    src.clip(&mut pass, target);
                     while let Some(Op::Draw { target: t, entry, mode, slot, tex }) = ops.get(k) {
                         if *t != target {
                             break;
                         }
-                        calls.push((
-                            pipes.get(&self.device, Shader::Scene(entry), *mode, format),
-                            src.group(self, pool, false, tex),
-                            *slot,
-                        ));
-                        k += 1;
-                    }
-                    let view = src.get(pool, target).1;
-                    let mut pass = pass(&mut encoder, &view, load);
-                    for (pipeline, group, slot) in &calls {
-                        pass.set_pipeline(pipeline);
+                        let pipeline = pipes.get(&self.device, Shader::Scene(entry), *mode, texture.format());
+                        pass.set_pipeline(&pipeline);
                         pass.set_bind_group(0, &frame.0, &[*slot]);
-                        pass.set_bind_group(1, group, &[]);
+                        pass.set_bind_group(1, &src.group(self, pool, false, tex), &[]);
                         pass.draw(0..4, 0..1);
+                        (stats.draws, k) = (stats.draws + 1, k + 1);
                     }
-                    (stats.passes, stats.draws) = (stats.passes + 1, stats.draws + calls.len() as u32);
+                    stats.passes += 1;
                 }
             }
         }
@@ -139,8 +142,10 @@ impl Renderer {
             let pipeline =
                 pipes.get(&self.device, Shader::Scene("fs_texture"), Mode::Replace, Format::Rgba8UnormSrgb);
             let group = src.group(self, pool, false, &[Src::Canvas, Src::White, Src::Clear]);
-            let mut pass =
-                pass(&mut encoder, &src.output.view, wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT));
+            let load =
+                src.scissor.map_or(wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT), |_| wgpu::LoadOp::Load);
+            let mut pass = pass(&mut encoder, &src.output.view, load);
+            src.clip(&mut pass, Src::Canvas);
             pass.set_pipeline(&pipeline);
             pass.set_bind_group(0, &frame.0, &[slot]);
             pass.set_bind_group(1, &group, &[]);

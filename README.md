@@ -376,7 +376,10 @@ wprs-ctl reload                                 # releer la configuración
 Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile` y `span` (una imagen sobre todas las
 pantallas, con su tamaño físico y los marcos entre ellas). Las pantallas que muestran la misma
 imagen con la misma edición, como las de `span` o las que tienen su propio recorte, comparten una
-sola copia en la GPU, y los JPEG grandes se decodifican directamente a un tamaño reducido.
+sola copia en la GPU, y los JPEG grandes se decodifican directamente a un tamaño reducido. Con una
+escena pasa lo mismo: cada imagen del paquete se sube una vez y la usan todas las pantallas que la
+muestran, la copia decodificada sale de la memoria en cuanto está en la GPU, los sombreadores se
+compilan al cargar la escena y un fotograma estable no crea recursos ni reserva memoria propia.
 Ajustes: transición (`fade` o `none` y su duración), fotogramas por segundo y cuándo pausar
 (ventana encima, batería,
 bloqueo). Un ajuste desconocido termina con error y muestra la lista de ajustes válidos.
@@ -392,9 +395,33 @@ pantalla hasta 240 (60 con batería). Los vídeos se quedan en 30 con `display` 
 software y nunca pasan de sus propios fotogramas, nada se dibuja si nada cambia y `wprs-ctl state`
 muestra la frecuencia (`refresh`) y el tope (`fps`) de cada pantalla.
 
+Las escenas calculan antes de dibujar cuánto cuesta cada fotograma: cuentan sus efectos, las capas
+que se dibujan aparte y las mezclas que copian el fondo, cada una por la parte de la pantalla que
+ocupa, y eligen el nivel de calidad más alto que cabe en la GPU. Las GPU integradas antiguas (Intel
+HD y UHD, las APU de AMD con Vega y similares) y los equipos con menos de 4 GiB de memoria tienen un
+nivel intermedio propio. Con batería o con el perfil de ahorro de energía de power-profiles-daemon
+las escenas bajan de nivel y de fotogramas; si un sensor del sistema dice que la GPU o la CPU están
+cerca de su temperatura crítica, bajan más hasta que se enfrían. Cuando el escritorio pide reducir
+el movimiento (`reduced-motion` del portal de ajustes), las escenas se quedan quietas en su
+fotograma de muestra y solo se redibujan una vez por minuto para que los relojes sigan en hora. Los
+efectos lentos, como las nubes o las ondas, declaran a cuántos fotogramas por segundo se ven bien y
+una escena que solo se mueve por ellos no pasa de ahí. Cada fotograma redibuja solo la parte de la
+pantalla que cambió y, si nada cambió, no dibuja nada. Los desenfoques y las deformaciones ya no
+oscurecen los bordes derecho e inferior, y el desenfoque de movimiento puede seguir la velocidad de
+su capa (`follow`).
+
+Para quien es sensible a los destellos, `playback.flash_guard` (*Frenar o detener los fondos que
+destellan más de tres veces por segundo* en la página *Ajustes* de la app, que el botón *Ajustes…*
+de la bandeja abre, `wprs-ctl config playback.flash_guard true` y un interruptor en los ajustes del
+teléfono) mide el brillo de cada fotograma de las escenas y, si una destella más de tres veces por
+segundo, la reproduce más despacio o la detiene; `wprs-ctl state` lo indica en `flashes`. Está apagado por
+defecto porque cuesta una pequeña lectura de la GPU por fotograma.
+
 Los streams llevan cada fotograma en memoria de la GPU (DMA-BUF) cuando el controlador Vulkan
 puede exportarla y el consumidor (KPipeWire en Plasma) importarla: el daemon dibuja directamente en
 los búferes del stream, sin leer el fotograma de vuelta ni copiarlo con la CPU, también con batería.
+Donde la GPU no puede dibujar en el formato que pide el consumidor, como las imágenes lineales en
+las GPU de NVIDIA, dibuja en una textura propia y la copia en la GPU al búfer del stream.
 Si algo falta (OpenGL, render por software, un consumidor sin DMA-BUF), el stream usa memoria
 compartida sin intervención; `WPRS_DMABUF=0` en el entorno del daemon la fuerza y `WPRS_DMABUF=1`
 pide memoria de la GPU también con render por software. `wprs-ctl state` muestra el tipo de búfer
@@ -840,6 +867,7 @@ wprs-ctl prop preset save Noche -o DP-1      # guarda los valores actuales como 
 wprs-ctl prop preset export Noche -f noche.json -o DP-1
 wprs-ctl prop preset import noche.json --save Noche -o HDMI-A-1
 wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon
+wprs-ctl scene bench escena.wpak --screens 2   # carga, primer fotograma y memoria con dos pantallas
 ```
 
 En la página *Ajustes* de la app, el botón *Ajustes de la escena* (o *Ajustes del vídeo*) de cada

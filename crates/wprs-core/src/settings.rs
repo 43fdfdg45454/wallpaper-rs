@@ -11,11 +11,12 @@ pub struct Playback {
     #[serde(with = "fps")]
     pub max_fps: u32,
     pub software_parallax: bool,
+    pub flash_guard: bool,
 }
 
 impl Default for Playback {
     fn default() -> Self {
-        Self { volume: 0.5, muted: true, max_fps: fps::DISPLAY, software_parallax: false }
+        Self { volume: 0.5, muted: true, max_fps: fps::DISPLAY, software_parallax: false, flash_guard: false }
     }
 }
 
@@ -58,6 +59,7 @@ impl Playback {
             muted: self.muted,
             max_fps: self.max_fps.min(Self::MAX_FPS),
             software_parallax: self.software_parallax,
+            flash_guard: self.flash_guard,
         }
     }
 }

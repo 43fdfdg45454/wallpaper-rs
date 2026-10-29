@@ -170,6 +170,9 @@ often than the lowest of:
   on battery) or, on mains power, the rate above for a scene whose estimated cost at that rate
   fits their budget, dedicated GPUs the rate above (60 on battery);
 - for scenes, their `clock.max_fps` (`display` follows the refresh rate) and the quality level;
+- for scenes on battery or with power saving, 30, and while the GPU or CPU is hot, 30 or 15 (see
+  "Cost and frame rate" in `scene.md`), and for scenes whose only motion comes from effects with a
+  `min_fps`, the highest of those;
 - for parallax images with software rendering, 15;
 - for videos with `display` and software rendering, 30.
 
@@ -211,6 +214,14 @@ consumer has given it back. The daemon releases the image to external use and wa
 finish the frame before it queues the buffer. When the consumer still holds every other buffer,
 the frame is skipped and tried again one frame later.
 
+The stream offers every single-plane layout (modifier) of the format that the driver can export:
+first those the GPU can draw into, then those it can only copy into, such as linear images on
+NVIDIA GPUs. A buffer in a layout of the second kind gets its frame drawn into a texture of the
+daemon and copied on the GPU, which still avoids any read back. Linear buffers are placed in
+memory the CPU can map where the GPU has it, so consumers that cannot import GPU memory may still
+read them; the consumer's list decides which layout is used, and linear is the one that works
+between different GPUs, such as a desktop on an integrated GPU and the daemon on a discrete one.
+
 The stream uses shared memory, without any action from the consumer, when:
 
 - the renderer is not Vulkan (the GLES backend), or the driver cannot export such images through
@@ -237,7 +248,7 @@ its buffers: the first consumer decides their kind, a consumer that links later 
 buffers, and the kind is chosen again once all consumers have left. `GetState` shows the kind of
 buffers of each output in `buffers`. Debug builds also accept `WPRS_DMABUF=emulate`, which
 exports the Vulkan memory of software rendering as memfds marked as DMA-BUFs, so that tests can
-follow the whole path with lavapipe, and `WPRS_DMABUF=emulate-flaky`, where every second
+follow the whole path with lavapipe (with a GPU it turns streams in GPU memory on, as `1` does), and `WPRS_DMABUF=emulate-flaky`, where every second
 allocation fails.
 
 ## `io.github.wallpaper_rs.Daemon1`
@@ -455,6 +466,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `playback.muted` | `true`, `false`, for videos and scenes with sound | `true` |
 | `playback.max_fps` | `1` to `240`, or `display` (also `0`) for the refresh rate of each output on mains power and 30 on battery (see "Frame rate") | `display` |
 | `playback.software_parallax` | move depth parallax images even when the GPU is emulated on the CPU (such as llvmpipe), with 8 steps at 15 frames per second at most | `false` |
+| `playback.flash_guard` | measure the brightness of every scene frame and slow down, or stop, a scene that flashes more than three times a second (see "Cost and frame rate" in `scene.md`); it costs a small read back from the GPU per frame | `false` |
 | `transition.kind` | `fade`, `none` | `fade` |
 | `transition.duration_ms` | `0` to `10000` | `600` |
 | `pause.when_covered` | pause while a maximized or fullscreen window covers the output | `true` |
@@ -1867,6 +1879,8 @@ output since it appeared. `refresh` is the refresh rate of its screen in Hz (`0`
 and `fps` the most frames per second it renders now (see "Frame rate"). `buffers` is `"dmabuf"`
 or `"memfd"` while a consumer streams the output, and `""` otherwise (see "Stream buffers").
 `sound` is `""`, `"off"`, `"playing"`, `"paused"` or `"elsewhere"` (see "Scene sound").
+`flashes` is `""`, or `"slowed"` or `"paused"` once `playback.flash_guard` slowed or stopped the
+scene of that output.
 
 ```rust
 struct State {
@@ -1881,7 +1895,7 @@ struct OutputState {
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
     edited: bool, screen: Option<Screen>, parallax: bool, frames: u64, refresh: u32, fps: u32,
-    buffers: String, sound: String, shown_fit: Fit,
+    buffers: String, sound: String, shown_fit: Fit, flashes: String,
 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
 enum Shown { Color, Image, Video, Scene }

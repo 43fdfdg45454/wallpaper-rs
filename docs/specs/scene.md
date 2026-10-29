@@ -7,7 +7,8 @@ every reader check the scene: unknown fields, broken references and out-of-range
 with the JSON path of the field, such as `/layers/2/effects/0/params/radius is 300, expected
 0..=128`. The model lives in
 `crates/wprs-scene`; `wprs-ctl scene bench <file.wpak>` renders a package offscreen and reports
-what each frame costs.
+what each frame costs, how long the scene takes to load and draw its first frame, and the GPU and
+main memory it holds (`--screens 2` shows it on two screens at once).
 
 ```json
 {
@@ -86,6 +87,13 @@ refused). A sheet without `fps` or `durations` shows its first frame. The scene 
 sheet is due, never while the layer is hidden, and the lowest quality level shows the first frame of
 the range without moving.
 
+Each picture is decoded once and uploaded once per GPU, and every screen that shows the scene
+draws from that one texture. Once a picture is on the GPU its decoded copy leaves main memory; the
+engine reads it again from the package only when no screen holds the texture any more. Every
+shader and pipeline a scene needs is built when the scene loads, never during a frame, and a frame
+hands the textures of a finished layer to the next layer that needs one of the same size, so a
+steady frame creates nothing and makes no allocations of its own.
+
 Fonts may also be TrueType or OpenType collections (`.ttc`, `.otc`) and compressed `.woff2` files
 (`fonts2`). Videos may be used as masks, effect textures and the picture of a spot light
 (`video_textures`); sounds may also be MP3 (see "Sound"). KTX2 textures are accepted by the package
@@ -100,6 +108,45 @@ entries for all the models of a scene and more than 2 000 000 triangles, and rea
 (bones), meshes (parts), materials, blend shapes (`extras.targetNames`, or `shape_<n>`) and
 animations with their length, against which every name the scene gives is checked. Unnamed
 elements are called `node_<n>`, `mesh_<n>`, `material_<n>` and `animation_<n>`.
+
+## Cost and frame rate
+
+The engine estimates what each frame of a scene costs before it draws it, without the GPU. A unit
+is one full-screen pass that reads one texel per pixel. Each layer adds the units of its effects
+(taps × passes × scale², at the size the quality level gives them), one unit when it is drawn
+apart (effects, masks, `cache`, blend modes that are not `normal`, `add`, `multiply` or `screen`)
+and two more when its blend mode copies what lies below it, all multiplied by the share of the
+canvas the layer covers (its `size`, or the canvas when it has none, times a fixed `scale`).
+Particles add their overdraw, and every frame costs 1.5 units for composing and copying. The
+quality level is the highest whose cost fits the budget of the device: 4, 8, 16 or 40 units for
+the tiers of software rendering or GPUs without compute shaders, older integrated and phone GPUs
+(Intel HD and UHD, AMD Vega and other older APUs, Mali-G up to G710, Adreno 5xx and 6xx, or less
+than 4 GiB of memory), newer integrated GPUs and discrete GPUs. A scene over budget at the lowest
+level stays at `poster_time`.
+
+On battery the level drops one step and the rate is capped at 30 frames per second (15 with
+software rendering); power saving (the `power-saver` profile on Linux, battery saver on Android)
+drops one step more. A GPU or CPU within 20 °C of its critical temperature (95 °C when its driver
+reports none) drops one level and caps the rate at 30; within 10 °C, or once the system starts
+throttling it, it falls to the lowest level and 15 frames per second. Other sensors, such as
+drives, memory or network cards, do not count, and GPUs whose driver exposes no sensor are not read. Where the system asks for
+reduced motion, the scene stays at `poster_time`: parallax, camera shake and timelines stop, and
+the frame is drawn again only once a minute, so that clocks and dates stay right.
+
+Each frame redraws only what changed: the layers that moved, appeared, disappeared or changed,
+both where they were and where they are, plus adjustment layers with effects that read around a
+pixel when a change reaches them. When that covers less than half of the screen, the rest of the
+previous frame is kept; when nothing changed, nothing is drawn, and on the desktop the frame is not
+composed onto the screen or sent to a stream either, unless a stream would otherwise go without
+frames. Layer masks that use other layers redraw everything.
+
+Where the user turns on `playback.flash_guard`, the engine measures the brightness of each frame on
+a 32 × 18 grid. A flash is a pair of opposite changes of at least 10 % of the full brightness, the
+darker side below 80 %, in at least a thirty-sixth of the grid at once (about a quarter of the
+central field of view); when a scene flashes more than three times a second, it plays slower until
+it flashes at most three times, down to a quarter of its speed, and if it still flashes faster it
+stops at its current frame. The guard measures every frame that changed, reading the grid back from
+the GPU one frame later so that drawing never waits for it; it is off by default.
 
 ## Layers
 
@@ -358,7 +405,14 @@ orbit (`orbit`, which also takes over while the pointer is away), searching its 
 parts slide over far ones without tearing; `overscan` enlarges the layer to keep its edges out of
 sight. Still images with a depth map move with the same search. `glitch` stays still until
 `bursts` or `beat` is set (a beat keeps it on for `length` seconds), and `film_grain` only changes
-over time with an `fps` above zero.
+over time with an `fps` above zero. `blur_motion` streaks along `angle` for `length` pixels, or,
+with `follow`, along the way the layer moved: its speed in canvas pixels per second times
+`shutter` seconds, at most `length` pixels; the scene draws one more frame once the layer stops so
+that the streak goes away.
+
+Blurs and distortions treat the edges of the screen like the edges of the picture: a layer that
+reaches past the screen, or fills it, keeps the color of its outermost visible pixels instead of
+fading into the empty space around it, on all four sides.
 
 ### Writing an effect
 
@@ -390,6 +444,8 @@ fn uv_nudge(uv: vec2<f32>) -> vec2<f32> {
 | `params` | at most 16 of `float`, `vec2`, `color`, `bool`, `texture` and `lut`, with `id`, `default`, `min`, `max` and `uses` (`time`, `cursor`, `clicks` or `audio`; clicks come with the pointer), an input needed only while the parameter is not zero (a `follow` flag needs the pointer only when set, a `vec2` while either part is not zero); parameter *n* is `param(nu)`, in `.x`, `.xy` or `.rgba` (linear) |
 | `passes` | `{ "entry", "scale", "inputs", "output" }`; `scale` is a fraction of the layer size, and lower quality levels shrink every pass but the last; `inputs` (default `["previous"]`) name `previous`, `input`, `source` (the layer before its effects), `mask`, `pass:N`, `state` or `asset:<texture parameter>`, bound to `input_tex` and then `aux0` to `aux3` |
 | `cost` | `{ "taps", "passes", "scale" }`; taps × passes × scale² units, light up to 1, medium up to 6, heavy above |
+| `min_fps` | 1 to 240: the frame rate at which the effect still looks smooth; while the only things that move in a scene are effects that declare it, the scene runs at the highest of their `min_fps` instead of the full rate (never above the usual limits) |
+| `velocity` | a `bool` parameter that, when set, gives the shader the speed of the layer in `fx.velocity.xy` (canvas pixels per second) and keeps the scene drawing while it moves |
 | `fuse` | `uv` or `color` for single-pass effects, see below |
 | `reach` | a float parameter, in pixels, by which the effect grows the layer bounds |
 | `state` | `{ "scale", "settle" }`, persistent textures for simulations, see below |
@@ -408,8 +464,10 @@ Every shader starts from one prelude. `frame` holds `time`, `dt`, `resolution`, 
 `screen_uv(uv)`, `to_linear`, `from_linear`, `straight`, `oklab`, `from_oklab`, `gauss`, `hash`,
 `hash2`, `noise1`, `value_noise`, `gradient_noise`, `fbm(p, octaves)`, `bayer(pixel)` and
 `relief(depth, sampler, uv, shift, focus, steps)`, the depth search of `depth_parallax`.
-`fx.texel` is the size of the first input, `fx.info.z` the pass index and `fx.area` the effect
-rectangle in output pixels. Effects may not declare bindings of their own.
+`fx.texel` is the size of the first input, `fx.info.z` the pass index, `fx.area` the effect
+rectangle in output pixels, `fx.clip` the part of it that is on the screen (as fractions, where
+`sample` and `tap` stop reading) and `fx.velocity` the speed of the layer when the descriptor
+names a `velocity` parameter. Effects may not declare bindings of their own.
 
 An effect with `fuse` defines `fn uv_<id>(uv) -> vec2<f32>`, where its output reads its input, or
 `fn color_<id>(color, uv) -> vec4<f32>` on premultiplied colors, and gets the single pass
@@ -520,6 +578,7 @@ together, and `gradient` parameters are pictures of one row read from left to ri
 | Effect | Newer parameters |
 |--------|------------------|
 | `blur` | `blend`, `amount` (0 to 1) |
+| `blur_motion` | `follow`, `shutter` (0 to 0.5 s), both drawn already |
 | `chromatic_aberration` | `mode` (0 expansion, 1 directional, 2 radial, 3 barrel), `angle` (−360 to 360) |
 | `film_grain` | `mono`, `bias` (−1 to 1, towards dark or bright parts), `blend` |
 | `flow` | `noise` (a built-in flow field when no map is given), `phase` |
@@ -533,6 +592,9 @@ together, and `gradient` parameters are pictures of one row read from left to ri
 | `twirl` | `aspect` (0.1 to 10), `inner`, `noise` (0 to 1), `repeat` |
 | `water_ripple` | `perspective` (0 to 1), `reflection`, `tint`, `walls` (a picture where the water stays still), `speed` (0 to 4) |
 | `waves` | `count` (1 or 2), `angle2` (−360 to 360), `perspective` (0 to 1), `phase` |
+
+A newer parameter that is drawn already still names its feature, so that older engines refuse a
+package that sets it with the newer-version message instead of an unknown parameter.
 
 ## Sound
 

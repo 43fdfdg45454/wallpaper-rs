@@ -1,6 +1,7 @@
 {
   "id": "flow",
   "name": { "en": "Flow" },
+  "min_fps": 30,
   "mask_mode": "strength",
   "params": [
     { "id": "map", "type": "texture", "default": "" },

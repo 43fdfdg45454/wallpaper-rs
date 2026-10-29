@@ -2,26 +2,23 @@ use super::pipes::Pipes;
 use super::pool::{Pool, Tex};
 use super::state::volume;
 use super::{Image, SceneAssets, SceneStats, SceneView, item::FrameData, swarm};
-use crate::texture::{gpu_image, texture};
 use crate::{RenderError, Renderer};
-use image::RgbaImage;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use wgpu::{TextureFormat as Format, TextureUsages as Usage};
 use wprs_scene::{BlendSpace, Lut, ParamKind, Scene, Values, descriptor};
 
+fn linear(scene: &Scene, id: &str) -> bool {
+    scene.assets.get(id).is_some_and(|a| a.linear)
+}
+
+fn mips(scene: &Scene, id: &str) -> Option<bool> {
+    scene.assets.get(id).and_then(|a| a.mipmaps)
+}
+
 impl Renderer {
     pub(crate) fn pipes(&self) -> &Pipes {
         self.scene.get_or_init(|| Pipes::new(&self.device))
-    }
-
-    fn picture(&self, scene: &Scene, id: &str, image: &RgbaImage) -> Image {
-        let linear = scene.assets.get(id).is_some_and(|a| a.linear);
-        let prepared = crate::decode::scaled(image, 1.0, self.max_edge());
-        let (w, h) = prepared.dimensions();
-        let format = if linear { Format::Rgba8Unorm } else { Format::Rgba8UnormSrgb };
-        let gpu = gpu_image(texture(self, prepared.as_raw(), (w, h), w * 4, format));
-        (gpu, [image.width() as f32, image.height() as f32])
     }
 
     pub fn refresh_scene(
@@ -30,6 +27,7 @@ impl Renderer {
         (scene, props): (&Scene, &Values),
         assets: &SceneAssets,
     ) -> Result<bool, RenderError> {
+        view.marks.clear();
         let same = |id: &String| match (view.sources.get(id), assets.images.get(id)) {
             (Some(was), Some(now)) => Arc::ptr_eq(was, now),
             (was, now) => was.is_none() && now.is_none(),
@@ -48,32 +46,25 @@ impl Renderer {
         }
         self.scoped(|| {
             for id in &changed {
-                let Some(image) = assets.images.get(id) else {
-                    view.images.remove(id);
-                    view.sources.remove(id);
-                    continue;
-                };
-                let linear = |other: &String| scene.assets.get(other).is_some_and(|a| a.linear);
-                let twin =
-                    view.sources.iter().find(|(k, p)| Arc::ptr_eq(p, image) && linear(k) == linear(id));
-                let shown = twin.and_then(|(k, _)| view.images.get(k).cloned());
-                view.images.insert(id.clone(), shown.unwrap_or_else(|| self.picture(scene, id, image)));
-                view.sources.insert(id.clone(), image.clone());
+                let upload = |p| self.upload_pixels(p, linear(scene, id), mips(scene, id));
+                let found = assets.images.get(id).and_then(|p| Some((p, upload(p)?)));
+                view.images.remove(id);
+                view.sources.remove(id);
+                if let Some((pixels, image)) = found {
+                    view.images.insert(id.clone(), image);
+                    view.sources.insert(id.clone(), pixels.clone());
+                }
             }
             view.samplings = super::sampling::samplings(scene, assets);
-            self.mipmap(&mut view.images, &view.samplings);
-            view.caches.clear();
+            self.mipmap(&mut view.images, &view.samplings, &view.sources);
+            let pool = &mut view.pool;
+            view.caches.drain().for_each(|(_, c)| pool.give(c.tex));
             if particles {
                 let looks = (view.format, view.srgb);
-                view.swarms = swarm::Swarms::new(
-                    self,
-                    (scene, props),
-                    assets,
-                    &view.images,
-                    &view.pool.white.view,
-                    looks,
-                );
+                view.swarms =
+                    swarm::Swarms::new(self, (scene, props), assets, &view.images, &pool.white.view, looks);
             }
+            changed.iter().filter_map(|id| assets.images.get(id)).for_each(|p| p.release());
         })?;
         Ok(true)
     }
@@ -96,14 +87,11 @@ impl Renderer {
         let state_format = if usable { Format::Rgba16Float } else { format };
         self.scoped(|| {
             let lease = self.pipes().prepare(&self.device, scene, format, state_format);
-            let mut shared: HashMap<(*const RgbaImage, bool), Image> = HashMap::new();
-            let upload = |(id, image): (&String, &Arc<RgbaImage>)| {
-                let linear = scene.assets.get(id).is_some_and(|a| a.linear);
-                let image = shared
-                    .entry((Arc::as_ptr(image), linear))
-                    .or_insert_with(|| self.picture(scene, id, image));
-                (id.clone(), image.clone())
+            self.pipes().warm(&self.device, scene, format, srgb);
+            let upload = |(id, p): (&String, &Arc<_>)| {
+                Some((id.clone(), self.upload_pixels(p, linear(scene, id), mips(scene, id))?))
             };
+            let mut images: HashMap<String, Image> = assets.images.iter().filter_map(upload).collect();
             let mut used = HashSet::new();
             for e in scene.layers().flat_map(|l| &l.effects) {
                 let params = descriptor(&e.effect).into_iter().flat_map(|d| &d.params);
@@ -116,13 +104,13 @@ impl Renderer {
             };
             let usage = wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST;
             let size = std::mem::size_of::<FrameData>() as u64;
-            let (mut images, pool) =
-                (assets.images.iter().map(upload).collect(), Pool::new(&self.device, &self.queue, format));
+            let pool = Pool::new(&self.device, &self.queue, format);
             let samplings = super::sampling::samplings(scene, assets);
-            self.mipmap(&mut images, &samplings);
+            let sources = assets.images.clone();
+            self.mipmap(&mut images, &samplings, &sources);
             let swarms =
                 swarm::Swarms::new(self, (scene, props), assets, &images, &pool.white.view, (format, srgb));
-            let sources = assets.images.clone();
+            assets.images.values().for_each(|p| p.release());
             SceneView {
                 fit: scene.canvas.fit,
                 canvas: scene.canvas.size,
@@ -153,6 +141,9 @@ impl Renderer {
                 stats: SceneStats::default(),
                 swarms,
                 _lease: lease,
+                scratch: Default::default(),
+                marks: Vec::new(),
+                stamp: 0,
             }
         })
     }

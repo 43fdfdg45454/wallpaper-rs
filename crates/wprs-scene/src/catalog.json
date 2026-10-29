@@ -4,6 +4,10 @@
       { "id": "blend", "type": "blend", "default": "normal" },
       { "id": "amount", "type": "float", "default": 1, "min": 0, "max": 1 }
     ],
+    "blur_motion": [
+      { "id": "follow", "type": "bool", "default": false },
+      { "id": "shutter", "type": "float", "default": 0.05, "min": 0, "max": 0.5 }
+    ],
     "chromatic_aberration": [
       { "id": "mode", "type": "enum", "default": 0, "values": [
         { "value": 0, "label": { "en": "Expansion", "es": "Expansión" } }, { "value": 1, "label": { "en": "Directional", "es": "Direccional" } },

@@ -144,6 +144,7 @@ impl Daemon {
                 fps: s.fps,
                 buffers: self.exporter.buffers(name).into(),
                 sound: s.sound.into(),
+                flashes: s.flashes.into(),
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)

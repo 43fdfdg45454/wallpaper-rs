@@ -13,6 +13,7 @@ mod draw;
 mod export;
 #[cfg(target_os = "linux")]
 mod exported;
+mod luma;
 mod palette;
 mod parallax;
 mod readback;
@@ -34,10 +35,11 @@ pub use dmabuf::{Dmabuf, Dmabufs};
 pub use draw::Target;
 #[cfg(target_os = "linux")]
 pub use exported::Exported;
+pub use luma::Meter;
 pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};
 pub use readback::TargetLimits;
-pub use scene::{MAX_FONT, SceneAssets, SceneStats, SceneView, font};
+pub use scene::{MAX_FONT, Pixels, SceneAssets, SceneStats, SceneView, font};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
@@ -48,7 +50,7 @@ pub use yuv::{Planes, Yuv};
 
 const LOG_PERIOD: Duration = Duration::from_secs(5);
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum RenderError {
     #[error("no compatible GPU adapter found: {0}")]
     NoAdapter(String),

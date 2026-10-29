@@ -1,6 +1,7 @@
-use super::SceneAssets;
+use super::{Pixels, SceneAssets};
 use crate::{Layer, RenderError, Renderer};
 use image::RgbaImage;
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use wprs_core::Fit;
@@ -11,6 +12,11 @@ const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
 const DECODED: u64 = 512 << 20;
 
 type Failure = Box<dyn std::error::Error + Send + Sync>;
+
+fn still(bytes: Vec<u8>) -> Result<RgbaImage, Failure> {
+    let reader = image::ImageReader::new(std::io::Cursor::new(bytes));
+    Ok(crate::decode_limited(reader, crate::picture_limits())?.into_rgba8())
+}
 
 impl SceneAssets {
     pub fn read(
@@ -23,9 +29,6 @@ impl SceneAssets {
             let ext = Path::new(&asset.path).extension().and_then(|e| e.to_str()).unwrap_or_default();
             let ext = ext.to_ascii_lowercase();
             if PICTURES.contains(&ext.as_str()) {
-                let reader = |bytes| image::ImageReader::new(std::io::Cursor::new(bytes));
-                let still =
-                    |bytes| Ok(crate::decode_limited(reader(bytes), crate::picture_limits())?.into_rgba8());
                 let total = decoded
                     .add::<Failure>((&mut assets, id, asset), || Ok(read(&asset.path)?), still)
                     .map_err(|e| e.to_string())?;
@@ -40,6 +43,30 @@ impl SceneAssets {
             }
         }
         Ok(assets)
+    }
+
+    pub fn reloadable<R: FnMut(&str) -> Result<Vec<u8>, String>>(
+        &mut self,
+        scene: &Scene,
+        open: impl Fn() -> Option<R> + Send + Sync + 'static,
+    ) {
+        let (open, mut made) = (Arc::new(open), HashMap::new());
+        for (id, pixels) in &mut self.images {
+            let Some(asset) = scene.assets.get(id) else { continue };
+            let (path, animated, open) = (asset.path.clone(), asset.animated, open.clone());
+            let reload = move || {
+                let bytes = open()?(&path).ok()?;
+                if animated {
+                    crate::animation(&bytes).ok().map(|(atlas, _)| atlas)
+                } else {
+                    still(bytes).ok()
+                }
+            };
+            let fresh = made.entry(Arc::as_ptr(pixels)).or_insert_with(|| {
+                pixels.image().map_or_else(|| pixels.clone(), |image| Pixels::reloadable(image, reload))
+            });
+            *pixels = fresh.clone();
+        }
     }
 }
 

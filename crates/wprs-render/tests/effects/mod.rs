@@ -3,7 +3,7 @@ use serde_json::{Map, Value, json};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use wprs_core::Fit;
-use wprs_render::{Layer, Renderer, SceneAssets, SceneStats, SceneView};
+use wprs_render::{Layer, Pixels, Renderer, SceneAssets, SceneStats, SceneView};
 use wprs_scene::{Descriptor, Lut, PointerState, Quality, Runtime, SCHEMA, Scene, Values, register};
 
 include!(concat!(env!("OUT_DIR"), "/effect_tests.rs"));
@@ -23,7 +23,7 @@ pub struct Fx {
 }
 
 pub struct Run {
-    r: Renderer,
+    r: &'static Renderer,
     pub runtime: Runtime,
     pub view: SceneView,
     quality: Quality,
@@ -74,7 +74,7 @@ impl Fx {
 
     pub fn image(mut self, id: &str, image: RgbaImage, linear: bool) -> Fx {
         self.assets.insert(id.into(), json!({ "path": format!("{id}.png"), "linear": linear }));
-        self.files.images.insert(id.into(), Arc::new(image));
+        self.files.images.insert(id.into(), Pixels::new(image));
         self
     }
 
@@ -99,7 +99,7 @@ impl Fx {
         let text = json!({ "schema": SCHEMA, "canvas": canvas, "assets": assets, "layers": layers });
         let scene = Scene::load(&text.to_string(), &BTreeMap::new()).unwrap_or_else(|e| panic!("{e}"));
         let mut files = self.files;
-        files.images.insert("src".into(), Arc::new(self.input));
+        files.images.insert("src".into(), Pixels::new(self.input));
         let view = r.scene_view(&scene, &files, &Values::new()).unwrap();
         Some(Run { r, runtime: Runtime::new(Arc::new(scene), Values::new()), view, quality: self.quality })
     }
@@ -114,8 +114,13 @@ impl Run {
         self.shot_at((W, H))
     }
 
-    pub fn shot_at(&mut self, (w, h): (u32, u32)) -> Shot {
-        let frame = self.runtime.frame(self.view.view((w, h)), self.quality);
+    pub fn shot_at(&mut self, size: (u32, u32)) -> Shot {
+        self.shot_edited(size, |_| {})
+    }
+
+    pub fn shot_edited(&mut self, (w, h): (u32, u32), edit: impl FnOnce(&mut wprs_scene::Frame)) -> Shot {
+        let mut frame = self.runtime.frame(self.view.view((w, h)), self.quality);
+        edit(&mut frame);
         let image =
             self.r.render_scene(&mut self.view, &self.runtime, &frame, (w, h), self.quality, &[]).unwrap();
         let (mut target, mut pixels) = (self.r.create_target(w, h).unwrap(), Vec::new());

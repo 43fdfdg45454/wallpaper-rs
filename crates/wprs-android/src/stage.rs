@@ -4,8 +4,8 @@ use crate::{hearing, props, saved};
 use chrono::Timelike;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
-use wprs_render::{GpuImage, RenderError, Renderer, SceneView};
-use wprs_scene::{Budget, Content, Quality, Runtime, Tier, Wake};
+use wprs_render::{GpuImage, Meter, RenderError, Renderer, SceneView};
+use wprs_scene::{Budget, Content, FlashGuard, Quality, Runtime, Tier, Wake};
 
 const SLACK_NS: i64 = 2_000_000;
 const LISTEN_MS: i64 = 250;
@@ -14,6 +14,13 @@ const MAX_GAP: f64 = 600.0;
 const DAY_MS: f64 = 86_400_000.0;
 
 static LEVEL: AtomicU32 = AtomicU32::new(0);
+static CALMING: AtomicU32 = AtomicU32::new(0);
+
+pub(crate) fn flashes() -> &'static str {
+    ["", "slowed", "paused"][CALMING.load(Relaxed).min(2) as usize]
+}
+
+type Guarded = (FlashGuard, Vec<f32>, i64, Option<Meter>);
 
 pub(crate) struct Stage {
     pub(crate) uid: String,
@@ -29,6 +36,8 @@ pub(crate) struct Stage {
     due: Option<i64>,
     touch: (Option<[f32; 2]>, u8, bool),
     restock: bool,
+    calmed: bool,
+    guard: Option<Box<Guarded>>,
 }
 
 pub(crate) struct Shot<'a> {
@@ -70,6 +79,8 @@ impl Stage {
             due,
             touch,
             restock: false,
+            calmed: false,
+            guard: None,
         }
     }
 
@@ -119,15 +130,25 @@ impl Stage {
         videos: &[(&str, &GpuImage)],
         force: bool,
     ) -> Result<Shot<'a>, RenderError> {
-        let budget = Budget { tier, on_battery: !power.charging, max_fps: cap.max(1) };
+        let budget = Budget::new(tier, !power.charging, cap.max(1));
         self.heavy = budget.still(&self.runtime);
         if self.heavy && !std::mem::replace(&mut self.posed, true) {
             self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
         }
-        let still = cap == 0 || self.heavy;
+        let calm = power.still && !self.heavy;
+        if std::mem::replace(&mut self.calmed, calm) != calm && calm {
+            self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
+        }
+        if crate::power::guarded() != self.guard.is_some() {
+            self.guard =
+                crate::power::guarded().then(|| Box::new((FlashGuard::default(), Vec::new(), nanos, None)));
+            CALMING.store(0, Relaxed);
+        }
+        let speed = self.guard.as_ref().map_or(1.0, |g| g.0.speed());
+        let still = cap == 0 || self.heavy || calm || speed == 0.0;
         let dt = self.tick.filter(|_| !still).map_or(0.0, |t| ((nanos - t) as f64 / 1e9).clamp(0.0, MAX_GAP));
         self.tick = (!still).then_some(nanos);
-        self.runtime.advance(dt);
+        self.runtime.advance(dt * speed);
         let [listens, feels] = self.wants();
         let listens = listens && power.moving() && !still;
         let hears = listens && hearing::live();
@@ -173,6 +194,7 @@ impl Stage {
         let playing =
             power.moving() && frame.draws.iter().any(|d| matches!(d.content, Content::Video { .. }));
         let wake = match frame.wake {
+            wake if calm => self.runtime.calmed(wake),
             _ if still => Wake::Idle,
             _ if playing => Wake::Frame,
             wake => wake,
@@ -185,7 +207,20 @@ impl Stage {
         };
         self.due = (delay > 0 && wake != Wake::Idle).then_some(nanos + delay * 1_000_000);
         self.fps = if wake == Wake::Frame { fps } else { 0 };
-        let image = r.render_scene(view, &self.runtime, &frame, (inner[0], inner[1]), quality, videos)?;
+        r.render_scene(view, &self.runtime, &frame, (inner[0], inner[1]), quality, videos)?;
+        let view: &'a SceneView = view;
+        let image = view.image().expect("rendered above");
+        if let Some((guard, luma, start, meter)) = self.guard.as_deref_mut() {
+            let changed = (view.stats().damage > 0).then_some(image);
+            if r.luma(meter.get_or_insert_with(|| r.meter()), changed, luma)? {
+                let calming = match guard.watch((nanos - *start) as f64 / 1e9, luma) {
+                    wprs_scene::Calming::Steady => 0,
+                    wprs_scene::Calming::Slowed(_) => 1,
+                    wprs_scene::Calming::Paused => 2,
+                };
+                CALMING.store(calming, Relaxed);
+            }
+        }
         Ok(Shot { image: Some(image), fps: self.fps, delay })
     }
 

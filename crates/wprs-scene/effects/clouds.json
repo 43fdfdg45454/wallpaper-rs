@@ -1,6 +1,7 @@
 {
   "id": "clouds",
   "name": { "en": "Clouds and fog" },
+  "min_fps": 20,
   "uses": ["time"],
   "params": [
     { "id": "color", "type": "color", "default": "#ffffff" },

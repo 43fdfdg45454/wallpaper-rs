@@ -6,6 +6,8 @@ struct Fx {
     mask_m1: vec4<f32>,
     info: vec4<f32>,
     area: vec4<f32>,
+    clip: vec4<f32>,
+    velocity: vec4<f32>,
 };
 
 struct VertexOut {
@@ -45,7 +47,9 @@ fn px(v: f32) -> vec2<f32> {
 }
 
 fn sample(t: texture_2d<f32>, uv: vec2<f32>) -> vec4<f32> {
-    return textureSampleLevel(t, samp, uv, 0.0);
+    let half = 0.5 / vec2<f32>(textureDimensions(t));
+    let lo = fx.clip.xy + half;
+    return textureSampleLevel(t, samp, clamp(uv, lo, max(fx.clip.zw - half, lo)), 0.0);
 }
 
 fn tap(uv: vec2<f32>) -> vec4<f32> {
@@ -65,12 +69,12 @@ fn from_layer(p: vec2<f32>) -> vec2<f32> {
 }
 
 fn mask_at(uv: vec2<f32>) -> f32 {
-    let m = dot(sample(mask_tex, layer_uv(uv)), fx.channel);
+    let m = dot(textureSampleLevel(mask_tex, samp, layer_uv(uv), 0.0), fx.channel);
     return mix(mix(m, 1.0 - m, fx.info.x), 1.0, fx.mask_m0.w);
 }
 
 fn asset_at(t: texture_2d<f32>, uv: vec2<f32>) -> vec4<f32> {
-    return sample(t, layer_uv(uv));
+    return textureSampleLevel(t, samp, layer_uv(uv), 0.0);
 }
 
 fn cursor_uv() -> vec2<f32> {

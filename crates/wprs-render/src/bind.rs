@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn bind_groups_and_uniforms_persist_until_the_layer_changes() {
-        let r = match Renderer::new() {
+        let r = match Renderer::shared() {
             Ok(r) => r,
             Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
         };

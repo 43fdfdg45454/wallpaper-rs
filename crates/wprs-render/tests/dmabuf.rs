@@ -9,8 +9,8 @@ fn color(background: [u8; 3]) -> Layer<'static> {
 }
 
 #[test]
-fn frames_are_drawn_straight_into_exported_memory() {
-    let r = match Renderer::new() {
+fn frames_reach_exported_memory_in_the_layout_the_consumer_reads() {
+    let r = match Renderer::shared() {
         Ok(r) => r,
         Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
     };
@@ -22,9 +22,11 @@ fn frames_are_drawn_straight_into_exported_memory() {
     assert!(buffer.stride >= 70 * 4 && buffer.size >= buffer.offset + buffer.stride * 30);
     assert!(dmabufs.allocate(70, 30, &[u64::MAX - 1]).is_err());
     r.render_exported(&buffer.image, &[color([0, 255, 0])]).unwrap();
-    if !r.software() {
-        return;
-    }
+    let buffer = match r.software() {
+        true => buffer,
+        false => dmabufs.allocate(70, 30, &[0]).expect("every GPU exports linear frames, drawn or copied"),
+    };
+    r.render_exported(&buffer.image, &[color([0, 255, 0])]).unwrap();
     let len = buffer.size as usize;
     let map =
         unsafe { mmap(std::ptr::null_mut(), len, ProtFlags::READ, MapFlags::SHARED, &buffer.fd, 0) }.unwrap();

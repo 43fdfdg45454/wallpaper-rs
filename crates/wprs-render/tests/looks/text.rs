@@ -74,11 +74,11 @@ fn texts_wrap_cut_align_and_sit_on_their_box() {
     let shot = |text: Value| {
         let scene = json!({ "canvas": canvas("#000000"), "assets": { "f": { "path": "f.ttc", "face": 1 } },
             "layers": [text] });
-        let mut shot = Shot::with(&r, scene.clone(), &[]);
+        let mut shot = Shot::with(r, scene.clone(), &[]);
         let fonts = [("f".to_string(), Arc::new(collection(&ttf)))].into();
         let assets = SceneAssets { fonts, ..Default::default() };
         shot.view = r.scene_view(&shot.runtime.scene, &assets, shot.runtime.props()).unwrap();
-        shot.pixels(&r)
+        shot.pixels(r)
     };
     let words = |more: Value| {
         let mut t = json!({ "id": "t", "type": "text", "text": "wide words wrap here", "font": "f", "size": 8,
@@ -122,8 +122,8 @@ fn texts_lay_out_like_their_reference_image() {
     ]);
     let scene =
         json!({ "canvas": canvas("#000000"), "assets": { "b": { "path": "b.ttf" } }, "layers": layers });
-    let mut shot = Shot::with(&r, scene, &[]);
+    let mut shot = Shot::with(r, scene, &[]);
     let assets = SceneAssets { fonts: [("b".to_string(), Arc::new(boxes()))].into(), ..Default::default() };
     shot.view = r.scene_view(&shot.runtime.scene, &assets, shot.runtime.props()).unwrap();
-    looks_like("text", &shot.pixels(&r));
+    looks_like("text", &shot.pixels(r));
 }

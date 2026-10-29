@@ -42,7 +42,11 @@ pub struct Runtime {
     playing: BTreeSet<String>,
     memo: RefCell<HashMap<usize, [f32; 4]>>,
     places: RefCell<HashMap<usize, crate::kin::Place>>,
+    motion: RefCell<HashMap<usize, crate::resolve::Motion>>,
     wake: Cell<Wake>,
+    pace: Cell<u32>,
+    sizes: Cell<(usize, usize)>,
+    costs: Cell<(usize, [Option<f32>; 4])>,
     uses: [Uses; 4],
     limit: Option<Uses>,
     swarms: RefCell<Vec<Swarm>>,
@@ -93,7 +97,11 @@ impl Runtime {
             playing: BTreeSet::new(),
             memo,
             places: RefCell::default(),
+            motion: RefCell::default(),
             wake,
+            pace: Cell::new(u32::MAX),
+            sizes: Cell::default(),
+            costs: Cell::default(),
             uses,
             limit: None,
             swarms,
@@ -140,6 +148,28 @@ impl Runtime {
 
     pub fn dt(&self) -> f32 {
         self.dt
+    }
+
+    pub fn cost(&self, quality: Quality) -> f32 {
+        let at = Arc::as_ptr(&self.scene) as usize;
+        let (kept, mut costs) = self.costs.get();
+        costs = if kept == at { costs } else { [None; 4] };
+        let cost = *costs[quality as usize].get_or_insert_with(|| self.scene.cost(quality));
+        self.costs.set((at, costs));
+        cost
+    }
+
+    pub fn calmed(&self, wake: Wake) -> Wake {
+        let minute = 60.0 - self.wall.rem_euclid(60.0);
+        match wake {
+            Wake::Frame => Wake::At(minute),
+            Wake::At(at) => Wake::At(at.max(minute)),
+            Wake::Idle => Wake::Idle,
+        }
+    }
+
+    pub fn pace(&self) -> u32 {
+        self.pace.get().max(1)
     }
 
     pub fn wake(&self) -> Wake {
@@ -313,12 +343,15 @@ impl Runtime {
             playing: &self.playing,
             memo: &self.memo,
             wake: Cell::new(Wake::Idle),
+            pace: Cell::new(0),
             scene: &self.scene,
             homes: &self.homes,
             places: {
                 self.places.borrow_mut().clear();
                 &self.places
             },
+            motion: &self.motion,
+            now: self.t,
             view: [0.0; 4],
             canvas: self.scene.canvas.size.map(|v| v as f32),
             glide: &self.glide,
@@ -331,12 +364,16 @@ impl Runtime {
     pub fn frame(&self, view: [f32; 4], quality: Quality) -> Frame<'_> {
         let cx = Context { view, ..self.context() };
         let canvas = self.scene.canvas.size.map(|v| v as f32);
-        let (draws, effects, background) = (Vec::new(), Vec::new(), self.scene.canvas.background);
+        let (draws, effects) =
+            (Vec::with_capacity(self.sizes.get().0), Vec::with_capacity(self.sizes.get().1));
+        let background = self.scene.canvas.background;
         let (time, wake) = (self.t as f32, Wake::Idle);
         let mut frame = Frame { draws, effects, time, view, background, quality, wake };
         walk(&cx, &self.scene.layers, Affine::IDENTITY, quality, &mut frame, canvas);
         plan(&self.swarms, &self.scene, &cx, &frame, quality, self.t);
         frame.wake = cx.wake.get().min(self.cue_wake());
+        self.pace.set(if frame.wake == Wake::Frame { cx.pace.get() } else { u32::MAX });
+        self.sizes.set((frame.draws.len(), frame.effects.len()));
         self.wake.set(frame.wake);
         frame
     }

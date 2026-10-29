@@ -1,6 +1,7 @@
 {
   "id": "water_rings",
   "name": { "en": "Water rings" },
+  "min_fps": 30,
   "mask_mode": "strength",
   "params": [
     { "id": "amplitude", "type": "float", "default": 4, "min": 0, "max": 128, "uses": "time" },

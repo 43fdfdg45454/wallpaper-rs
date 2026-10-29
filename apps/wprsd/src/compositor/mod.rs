@@ -1,5 +1,6 @@
 mod feed;
 mod frames;
+mod guard;
 mod iio;
 mod motion;
 mod output;
@@ -55,7 +56,7 @@ pub struct Movie {
 pub struct SceneSpec {
     pub pack: Arc<ScenePack>,
     pub values: Values,
-    pub extra: Vec<(String, Arc<RgbaImage>)>,
+    pub extra: Vec<(String, Arc<wprs_render::Pixels>)>,
     pub clips: Vec<(String, Reel)>,
     pub hold: Option<f64>,
 }
@@ -172,6 +173,7 @@ pub struct Settings {
     pub volume: f64,
     pub muted: bool,
     pub software_parallax: bool,
+    pub flash_guard: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
@@ -183,6 +185,7 @@ pub struct OutputStatus {
     pub frames: u64,
     pub fps: u32,
     pub sound: &'static str,
+    pub flashes: &'static str,
 }
 
 enum Command {
@@ -196,6 +199,7 @@ enum Command {
     Settings(Settings),
     Calm(bool),
     Power(bool),
+    Saver(bool),
     Locked(bool),
     Press(String, String),
     Wake,
@@ -211,7 +215,7 @@ pub struct Compositor {
 
 impl Compositor {
     pub fn start(
-        renderer: Renderer,
+        renderer: &'static Renderer,
         exporter: Arc<Exporter>,
         settings: Settings,
         on_status: impl Fn(Vec<String>) + Send + 'static,
@@ -285,6 +289,10 @@ impl Compositor {
 
     pub fn set_power(&self, on_battery: bool) {
         self.send(Command::Power(on_battery))
+    }
+
+    pub fn set_saver(&self, saver: bool) {
+        self.send(Command::Saver(saver))
     }
 
     pub fn set_locked(&self, locked: bool) {

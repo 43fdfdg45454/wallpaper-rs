@@ -111,6 +111,11 @@ impl Daemon {
         self.changes.changed("state", Vec::new());
     }
 
+    pub fn set_saver(&self, saver: bool) {
+        self.compositor.set_saver(saver);
+        tracing::debug!(saver, "power saving changed");
+    }
+
     pub fn set_locked(&self, locked: bool) {
         self.state().locked = locked;
         self.compositor.set_locked(locked);

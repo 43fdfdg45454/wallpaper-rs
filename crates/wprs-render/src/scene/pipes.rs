@@ -1,6 +1,6 @@
 use super::chains::{Shelf, lock};
+use std::cell::Cell;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use wgpu::{BindGroupLayout, BlendComponent as C, BlendFactor as F, BlendOperation, TextureFormat};
 use wgpu::{ShaderModule, TextureViewDimension as Dim};
@@ -8,7 +8,18 @@ use wprs_scene::FRAME_WGSL;
 
 pub(crate) const STRIDE: u64 = 512;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+thread_local! {
+    static COMPILED: Cell<u32> = const { Cell::new(0) };
+}
+
+pub(crate) fn compiled(more: u32) -> u32 {
+    COMPILED.with(|n| {
+        n.set(n.get().wrapping_add(more));
+        n.get()
+    })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub(crate) enum Mode {
     Normal,
     Add,
@@ -36,7 +47,6 @@ pub(crate) struct Pipes {
     pub(crate) sampler: wgpu::Sampler,
     pub(crate) wrap: wgpu::Sampler,
     pub(crate) near: wgpu::Sampler,
-    pub(crate) created: AtomicU32,
     pub(crate) shrinks: Mutex<HashMap<TextureFormat, wgpu::RenderPipeline>>,
 }
 
@@ -113,7 +123,6 @@ impl Pipes {
             sampler: sampler_of(clamp, linear),
             wrap: sampler_of(wgpu::AddressMode::Repeat, linear),
             near: sampler_of(clamp, wgpu::FilterMode::Nearest),
-            created: AtomicU32::new(0),
             shrinks: Mutex::default(),
         }
     }
@@ -174,7 +183,7 @@ impl Pipes {
             cache: None,
         });
         shelf.cache.insert(key, pipeline.clone());
-        self.created.fetch_add(1, Ordering::Relaxed);
+        compiled(1);
         pipeline
     }
 }

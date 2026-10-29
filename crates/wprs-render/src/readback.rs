@@ -1,11 +1,14 @@
 use crate::draw::Target;
 use crate::{RenderError, Renderer};
+use std::sync::Arc;
+use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering::Relaxed;
 use std::time::Duration;
 
 pub(crate) const GPU_TIMEOUT: Duration = Duration::from_secs(10);
-const MAPPED: u8 = 1;
-const FAILED: u8 = 2;
+pub(crate) type Mapped = AtomicU8;
+pub(crate) const MAPPED: u8 = 1;
+pub(crate) const FAILED: u8 = 2;
 pub(crate) const MAX_READBACK_BYTES: u64 = 256 << 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,6 +38,10 @@ impl Renderer {
         self.limits
     }
 
+    pub fn gpu_memory(&self) -> Option<u64> {
+        self.device.generate_allocator_report().map(|r| r.total_allocated_bytes)
+    }
+
     pub fn finish(&self) -> Result<(), RenderError> {
         let wait = wgpu::PollType::Wait { submission_index: None, timeout: Some(GPU_TIMEOUT) };
         self.device.poll(wait).map(drop).map_err(|e| RenderError::DeviceLost(e.to_string()))
@@ -44,22 +51,36 @@ impl Renderer {
         self.limits.check(width, height)
     }
 
+    pub(crate) fn map(
+        &self,
+        slice: &wgpu::BufferSlice<'_>,
+        state: &Arc<AtomicU8>,
+        done: wgpu::SubmissionIndex,
+    ) -> Result<(), RenderError> {
+        let flag = state.clone();
+        state.store(0, Relaxed);
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            flag.store(if r.is_ok() { MAPPED } else { FAILED }, Relaxed)
+        });
+        let wait = wgpu::PollType::Wait { submission_index: Some(done), timeout: Some(GPU_TIMEOUT) };
+        self.device.poll(wait).map_err(|e| RenderError::DeviceLost(e.to_string()))?;
+        let start = std::time::Instant::now();
+        while state.load(Relaxed) == 0 && start.elapsed() < GPU_TIMEOUT {
+            self.device.poll(wgpu::PollType::Poll).map_err(|e| RenderError::DeviceLost(e.to_string()))?;
+            std::thread::yield_now();
+        }
+        let mapped = state.load(Relaxed) == MAPPED;
+        mapped.then_some(()).ok_or_else(|| RenderError::Readback("cannot map the readback buffer".into()))
+    }
+
     pub(crate) fn read<R>(
         &self,
         target: &Target,
         done: wgpu::SubmissionIndex,
         read: impl FnOnce(u32, u32, u32, &[u8]) -> R,
     ) -> Result<R, RenderError> {
-        let (state, slice) = (target.mapped.clone(), target.readback.slice(..));
-        state.store(0, Relaxed);
-        slice.map_async(wgpu::MapMode::Read, move |r| {
-            state.store(if r.is_ok() { MAPPED } else { FAILED }, Relaxed)
-        });
-        let wait = wgpu::PollType::Wait { submission_index: Some(done), timeout: Some(GPU_TIMEOUT) };
-        self.device.poll(wait).map_err(|e| RenderError::DeviceLost(e.to_string()))?;
-        if target.mapped.load(Relaxed) != MAPPED {
-            return Err(RenderError::Readback("cannot map the readback buffer".into()));
-        }
+        let slice = target.readback.slice(..);
+        self.map(&slice, &target.mapped, done)?;
         let (width, height) = target.size();
         let value = slice.get_mapped_range().map(|view| read(width, height, padded_row_bytes(width), &view));
         target.readback.unmap();

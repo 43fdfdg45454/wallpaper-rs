@@ -2526,6 +2526,11 @@ msgid "Depth parallax with software rendering"
 msgstr "Paralaje de profundidad con renderizado por software"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+msgid "Slow down or stop wallpapers that flash more than three times a second"
+msgstr ""
+"Frenar o detener los fondos que destellan más de tres veces por segundo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
 msgid "Transition"
 msgstr "Transición"
 
@@ -5923,6 +5928,10 @@ msgstr "Formas de mezcla"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Color shift"
 msgstr "Desfase de color"
+
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Shutter (s)"
+msgstr "Obturación (s)"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Side"

@@ -19,18 +19,23 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) images: &'a HashMap<String, Image>,
     pub(crate) samplings: &'a HashMap<String, Sampling>,
     pub(crate) luts: &'a [(String, Tex)],
-    pub(crate) texts: &'a HashMap<usize, (&'a GpuImage, [f32; 2])>,
+    pub(crate) texts: &'a [(usize, u64)],
+    pub(crate) rasters: &'a HashMap<u64, (GpuImage, [f32; 2], u64)>,
     pub(crate) videos: &'a [(&'a str, &'a GpuImage)],
-    pub(crate) exts: Vec<&'a GpuImage>,
+    pub(crate) exts: &'p mut Vec<GpuImage>,
     pub(crate) screen: Affine,
     pub(crate) stage: Affine,
     pub(crate) full: Rect,
+    pub(crate) clip: Option<Rect>,
+    pub(crate) moment: u64,
     pub(crate) srgb: bool,
     pub(crate) format: wgpu::TextureFormat,
     pub(crate) state_format: wgpu::TextureFormat,
-    pub(crate) ops: Vec<Op>,
+    pub(crate) ops: &'p mut Vec<Op>,
     pub(crate) reused: u32,
-    pub(crate) kept: Vec<usize>,
+    pub(crate) kept: &'p mut Vec<usize>,
+    pub(crate) outputs: &'p mut Vec<Src>,
+    pub(crate) lease: &'p mut super::chains::Lease,
     pub(crate) swarms: Option<&'p mut super::swarm::Swarms>,
 }
 
@@ -50,21 +55,33 @@ impl Write for Hashing {
 }
 
 impl<'a> Painter<'a, '_, '_> {
-    pub(crate) fn ext(&mut self, image: &'a GpuImage) -> Src {
-        self.exts.push(image);
+    pub(crate) fn ext(&mut self, image: &GpuImage) -> Src {
+        self.exts.push(image.clone());
         Src::Ext(self.exts.len() - 1)
+    }
+
+    pub(crate) fn text(&self, i: usize) -> Option<(&'a GpuImage, [f32; 2])> {
+        let rasters = self.rasters;
+        let at = self.texts.binary_search_by_key(&i, |(i, _)| *i).ok()?;
+        rasters.get(&self.texts[at].1).map(|(image, size, _)| (image, *size))
     }
 
     pub(crate) fn acquire(&mut self, size: (u32, u32)) -> Option<Src> {
         self.pool.acquire(&self.r.device, size, self.format).map(Src::Pool)
     }
 
+    pub(crate) fn release(&mut self, src: Src) {
+        if let Src::Pool(i) = src {
+            self.pool.release(i);
+        }
+    }
+
     fn cache(&mut self, id: usize, key: u64, size: (u32, u32)) {
         let tex = match self.caches.remove(&id) {
             Some(c) if c.tex.size() == size => c.tex,
-            _ => {
-                self.pool.created += 1;
-                Tex::new(&self.r.device, size, self.format)
+            old => {
+                old.into_iter().for_each(|c| self.pool.give(c.tex));
+                self.pool.take(&self.r.device, size, self.format)
             }
         };
         self.caches.insert(id, Cached { key, tex });
@@ -75,13 +92,13 @@ impl<'a> Painter<'a, '_, '_> {
         for d in &self.frame.draws[range] {
             let effects = &self.frame.effects[d.effects.clone()];
             let fields = (d.end, d.world, d.origin, d.opacity, d.blend, &d.content, d.mask, d.hidden);
-            let _ = write!(h, "{:p}{fields:?}{:?}", d.layer, d.mask_texture);
+            let looks = (d.tint, d.brightness, d.mask_strength, d.isolate);
+            let _ = write!(h, "{:p}{fields:?}{looks:?}{:?}", d.layer, d.mask_texture);
             for e in effects {
-                let _ = write!(
-                    h,
-                    "{}{:?}{}{:?}{:?}",
-                    e.descriptor.id, e.slots, e.scale, e.mask_texture, e.textures
-                );
+                let (id, slots, scale, mask) =
+                    (&e.descriptor.id, e.slots, e.scale, (e.mask, &e.mask_texture));
+                let rest = (e.mask_strength, e.reach, e.chain, &e.textures, e.velocity);
+                let _ = write!(h, "{:p}{id}{slots:?}{scale}{mask:?}{rest:?}", e.effect);
             }
         }
         let _ = write!(h, "{extra:?}");
@@ -96,7 +113,7 @@ impl<'a> Painter<'a, '_, '_> {
             Content::Image { size, .. } | Content::Video { size, .. } => {
                 Some((size.or(self.natural(i))?, unit))
             }
-            Content::Text { .. } => Some((self.texts.get(&i)?.1, unit)),
+            Content::Text { .. } => Some((self.text(i)?.1, unit)),
             Content::Solid { size, .. } => Some((*size, unit)),
             Content::Spectrum { spectrum, .. } => Some((spectrum.size, unit)),
             Content::Particles { .. } => Some((self.swarms.as_ref()?.canvas, unit)),
@@ -129,7 +146,7 @@ impl<'a> Painter<'a, '_, '_> {
         };
         let found = self.videos.iter().find(|(id, _)| id == asset);
         let natural = found.map(|(_, v)| [v.size().0 as f32, v.size().1 as f32]);
-        let [w, h] = natural.or_else(|| self.images.get(asset.as_ref()).map(|(_, size)| *size))?;
+        let [w, h] = natural.or_else(|| self.images.get(asset.as_ref()).map(|image| image.1))?;
         let rect = self.cell(i).0;
         Some([w * rect[2], h * rect[3]])
     }
@@ -180,8 +197,13 @@ impl<'a> Painter<'a, '_, '_> {
             static_end = i;
         }
         let root = Target { src: canvas, rect: self.full };
+        let (origin, size) =
+            self.clip.map_or(([0, 0], self.full.size()), |c| ([c.x as u32, c.y as u32], c.size()));
         if static_end == 0 {
-            self.ops.push(Op::Clear(canvas, background));
+            match self.clip {
+                Some(_) => self.fill(canvas, background),
+                None => self.ops.push(Op::Clear(canvas, background)),
+            }
         } else {
             let key = self.digest(0..static_end, (self.full, background.map(f64::to_bits)));
             if self.caches.get(&0).is_none_or(|c| c.key != key) {
@@ -192,13 +214,7 @@ impl<'a> Painter<'a, '_, '_> {
                 self.reused += 1;
             }
             self.kept.push(0);
-            self.ops.push(Op::Copy {
-                from: Src::Cache(0),
-                to: canvas,
-                origin: [0, 0],
-                size: self.full.size(),
-                at: [0, 0],
-            });
+            self.ops.push(Op::Copy { from: Src::Cache(0), to: canvas, origin, size, at: origin });
         }
         self.list(static_end..draws.len(), root, false);
     }
@@ -211,24 +227,21 @@ impl<'a> Painter<'a, '_, '_> {
             let atop = clip && i > range.start;
             match &d.content {
                 _ if d.hidden => {}
+                Content::Group { .. } if self.plain(i) => self.list(i + 1..d.end, target, false),
+                _ if self.skip(i, target) => {}
                 Content::Adjustment => self.adjust(i, target),
-                Content::Group { clip: inner } => {
-                    let plain = !inner && d.opacity >= 1.0 && d.blend == Blend::Normal && d.mask.is_none();
-                    let plain = plain && d.tint == wprs_scene::Color([1.0; 4]) && d.brightness == 1.0;
-                    if plain && d.effects.is_empty() && !d.layer.cache {
-                        self.list(i + 1..d.end, target, false);
-                    } else if let Some((src, rect)) = self.isolate(i) {
-                        self.composite(i, src, rect, target, atop);
-                    }
-                }
-                _ if !d.effects.is_empty() || d.layer.cache => {
-                    if let Some((src, rect)) = self.isolate(i) {
-                        self.composite(i, src, rect, target, atop);
-                    }
-                }
+                Content::Group { .. } => self.apart(i, target, atop),
+                _ if !d.effects.is_empty() || d.layer.cache => self.apart(i, target, atop),
                 _ => self.direct(i, target, (d.opacity, d.blend, d.mask), atop),
             }
             i = d.end;
+        }
+    }
+
+    pub(crate) fn apart(&mut self, i: usize, target: Target, atop: bool) {
+        if let Some((src, rect)) = self.isolate(i) {
+            self.composite(i, src, rect, target, atop);
+            self.release(src);
         }
     }
 
@@ -253,18 +266,22 @@ impl<'a> Painter<'a, '_, '_> {
         let layer = self.geometry(i).map_or(rect.affine(), |(size, _)| self.local(i, size));
         let uv = invert(layer).then(rect.affine());
         let out = self.effects(i, src, rect, uv);
+        if out != src {
+            self.release(src);
+        }
         let room = self.caches.values().map(|c| c.tex.bytes()).sum::<u64>() < BUDGET;
         let Some(key) = key.filter(|_| room) else { return Some((out, rect)) };
         let size = self.size_of(out);
         self.cache(id, key, size);
         self.kept.push(id);
         self.ops.push(Op::Copy { from: out, to: Src::Cache(id), origin: [0, 0], size, at: [0, 0] });
+        self.release(out);
         Some((Src::Cache(id), rect))
     }
 
     pub(crate) fn size_of(&self, src: Src) -> (u32, u32) {
         match src {
-            Src::Pool(i) => self.pool.busy[i].size(),
+            Src::Pool(i) => self.pool.busy[i].0.size(),
             Src::Ext(i) => self.exts[i].size(),
             Src::Cache(k) => self.caches.get(&k).map_or((1, 1), |c| c.tex.size()),
             Src::State(k, side) => self.states.get(&k).map_or((1, 1), |s| s.tex[side].size()),

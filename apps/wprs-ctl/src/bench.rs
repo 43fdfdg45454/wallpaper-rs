@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use wprs_format::{Limits, open};
 use wprs_render::{Renderer, SceneAssets};
-use wprs_scene::{Quality, Runtime, Tier, Wake, effective};
+use wprs_scene::{Quality, Runtime, Wake, effective};
 
 const WARMUP: usize = 10;
 
@@ -24,6 +24,8 @@ pub enum SceneCommand {
         fps: u32,
         #[arg(long, value_parser = ["q0", "q1", "q2", "q3"], help = "Quality level; picked like the daemon when omitted")]
         quality: Option<String>,
+        #[arg(long, default_value_t = 1, help = "Number of screens that show the scene at once")]
+        screens: usize,
         #[arg(long, help = "Print the report as JSON")]
         json: bool,
     },
@@ -35,8 +37,13 @@ fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAsse
     let mut package =
         open(path, &Limits::default()).with_context(|| format!("cannot open {}", path.display()))?;
     let scene = package.scene()?;
-    let assets = SceneAssets::read(&scene, |path| package.read_file(path).map_err(|e| e.to_string()))
+    let mut assets = SceneAssets::read(&scene, |path| package.read_file(path).map_err(|e| e.to_string()))
         .map_err(anyhow::Error::msg)?;
+    let file = path.to_owned();
+    assets.reloadable(&scene, move || {
+        let mut package = open(&file, &Limits::default()).ok()?;
+        Some(move |path: &str| package.read_file(path).map_err(|e| e.to_string()))
+    });
     let values = effective(&package.manifest.properties, &[]);
     Ok((scene, values, assets))
 }
@@ -55,16 +62,16 @@ fn ms_of(value: &serde_json::Value, unit: &str) -> String {
 }
 
 pub fn run(command: SceneCommand) -> Result<()> {
-    let (path, frames, size, fps, quality, json) = match command {
-        SceneCommand::Bench { path, frames, size, fps, quality, json } => {
-            (path, frames, size, fps, quality, json)
+    let (path, frames, size, fps, quality, screens, json) = match command {
+        SceneCommand::Bench { path, frames, size, fps, quality, screens, json } => {
+            (path, frames, size, fps, quality, screens.clamp(1, 16), json)
         }
         SceneCommand::Author(command) => return crate::authoring::run(command),
     };
     let size = dimensions(&size)?;
     let (scene, values, assets) = load(&path)?;
     let r = Renderer::new()?;
-    let tier = Tier::detect(r.software(), r.discrete());
+    let tier = r.tier();
     let quality = match quality.as_deref() {
         Some(q) => serde_json::from_value(json!(q))?,
         None => Quality::fit(&scene, tier, tier.quality(false)),
@@ -75,7 +82,14 @@ pub fn run(command: SceneCommand) -> Result<()> {
     let cost = scene.cost(quality);
     let mut runtime = Runtime::new(Arc::new(scene), values);
     assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
+    let start = Instant::now();
+    let mut others = Vec::new();
+    for _ in 1..screens {
+        others.push(r.scene_view(&runtime.scene, &assets, runtime.props())?);
+    }
     let mut view = r.scene_view(&runtime.scene, &assets, runtime.props())?;
+    let load_ms = start.elapsed().as_secs_f64() * 1e3;
+    drop(assets);
     view.profile_particles(true);
     let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);
     let (mut sim, mut steps, mut compiled) = (Vec::new(), 0, 0);
@@ -98,6 +112,9 @@ pub fn run(command: SceneCommand) -> Result<()> {
         let frame = runtime.frame(view.view(inner), quality);
         eval.push(start.elapsed().as_secs_f64() * 1e6);
         let start = Instant::now();
+        for other in &mut others {
+            r.render_scene(other, &runtime, &frame, inner, quality, &[])?;
+        }
         r.render_scene(&mut view, &runtime, &frame, inner, quality, &[])?;
         r.finish()?;
         render.push(start.elapsed().as_secs_f64() * 1e3);
@@ -111,6 +128,12 @@ pub fn run(command: SceneCommand) -> Result<()> {
     let steady = frames.saturating_sub(WARMUP).max(1);
     let stats = view.stats();
     let alive: u32 = r.census(&view)?.iter().map(|(_, c)| c.alive).sum();
+    let first_ms = render.first().copied().unwrap_or(0.0);
+    let gpu_mib = r.gpu_memory().map_or(-1.0, |b| b as f64 / 1048576.0);
+    let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
+    let rss =
+        status.lines().find_map(|l| l.strip_prefix("VmRSS:")).and_then(|v| v.trim().strip_suffix(" kB"));
+    let rss_mib = rss.and_then(|kb| kb.trim().parse::<f64>().ok()).map_or(-1.0, |kb| kb / 1024.0);
     let engine = view.gpu_particles().map_or("none", |gpu| if gpu { "gpu" } else { "cpu" });
     let particles = json!({
         "engine": engine, "slots": stats.particles, "alive": alive, "steps": steps, "sim_ms": spread(sim),
@@ -120,7 +143,8 @@ pub fn run(command: SceneCommand) -> Result<()> {
         "render_size": [inner.0, inner.1], "frames": frames, "needed": needed, "cost_units": cost,
         "eval_us": spread(eval), "render_ms": spread(render), "passes": stats.passes, "draws": stats.draws,
         "textures": stats.textures, "cached": stats.reused, "created_after_warmup": created,
-        "compiled_after_warmup": compiled,
+        "compiled_after_warmup": compiled, "screens": screens, "load_ms": load_ms, "first_ms": first_ms,
+        "gpu_mib": gpu_mib, "rss_mib": rss_mib,
         "particles": particles,
     });
     if json {
@@ -138,6 +162,10 @@ pub fn run(command: SceneCommand) -> Result<()> {
     );
     println!("frames       {frames}, {needed} needed by the scheduler, estimated cost {cost:.2} units");
     println!("evaluation   {}\nrender       {}", ms("eval_us", "µs"), ms("render_ms", "ms"));
+    println!(
+        "start        {load_ms:.1} ms to load, {first_ms:.1} ms for the first frame of {screens} screens"
+    );
+    println!("memory       {gpu_mib:.1} MiB on the GPU, {rss_mib:.1} MiB resident");
     println!(
         "last frame   {} passes, {} draws, {} pooled textures, {} cached parts",
         stats.passes, stats.draws, stats.textures, stats.reused

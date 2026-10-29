@@ -8,7 +8,7 @@ use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use wprs_core::edit::Edit;
@@ -21,11 +21,10 @@ const THROTTLE: Duration = Duration::from_millis(40);
 static DRAWN: AtomicU64 = AtomicU64::new(0);
 
 pub struct Picture {
-    renderer: Renderer,
+    renderer: &'static Renderer,
     image: RgbaImage,
     file: PathBuf,
     depth: Mutex<Option<(String, Arc<Map>)>>,
-    lost: Arc<AtomicBool>,
 }
 
 pub fn trouble(e: &anyhow::Error) -> &'static str {
@@ -39,14 +38,12 @@ pub fn trouble(e: &anyhow::Error) -> &'static str {
 impl Picture {
     pub fn open(file: &Path) -> Result<Self> {
         let image = decode_image(file, 2 * EDGE)?;
-        let (renderer, lost) = (Renderer::new()?, Arc::new(AtomicBool::new(false)));
-        let flag = lost.clone();
-        renderer.on_device_lost(move |_| flag.store(true, Ordering::Relaxed));
-        Ok(Self { renderer, image, file: file.to_owned(), depth: Mutex::default(), lost })
+        let renderer = Renderer::shared()?;
+        Ok(Self { renderer, image, file: file.to_owned(), depth: Mutex::default() })
     }
 
     pub fn lost(&self) -> bool {
-        self.lost.load(Ordering::Relaxed)
+        self.renderer.lost()
     }
 
     fn depth(&self, edit: &Edit) -> Option<Arc<Map>> {

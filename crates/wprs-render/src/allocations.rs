@@ -38,7 +38,7 @@ unsafe impl GlobalAlloc for Counted {
 #[global_allocator]
 static COUNTED: Counted = Counted;
 
-fn allocations(work: impl FnOnce()) -> u64 {
+pub(crate) fn allocations(work: impl FnOnce()) -> u64 {
     let before = ALLOCATIONS.with(Cell::get);
     work();
     ALLOCATIONS.with(Cell::get) - before
@@ -46,7 +46,7 @@ fn allocations(work: impl FnOnce()) -> u64 {
 
 #[test]
 fn steady_frames_allocate_nothing_beyond_the_gpu_calls_they_make() {
-    let r = match Renderer::new() {
+    let r = match Renderer::shared() {
         Ok(r) => r,
         Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
     };

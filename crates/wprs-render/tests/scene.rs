@@ -6,13 +6,13 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use wprs_core::Fit;
-use wprs_render::{Layer, Renderer, SceneAssets, SceneView};
+use wprs_render::{Layer, Pixels, Renderer, SceneAssets, SceneView};
 use wprs_scene::{AudioFrame, Property, Quality, Runtime, SCHEMA, Scene, effective};
 
 const SIZE: (u32, u32) = (100, 50);
 
-fn renderer() -> Option<Renderer> {
-    match Renderer::new() {
+fn renderer() -> Option<&'static Renderer> {
+    match Renderer::shared() {
         Ok(r) => Some(r),
         Err(e) if std::env::var_os("WPRS_REQUIRE_GPU").is_none() => {
             eprintln!("skipping GPU test: {e}");
@@ -22,8 +22,8 @@ fn renderer() -> Option<Renderer> {
     }
 }
 
-fn halves(left: [u8; 4], right: [u8; 4]) -> Arc<RgbaImage> {
-    Arc::new(RgbaImage::from_fn(100, 50, |x, _| Rgba(if x < 50 { left } else { right })))
+fn halves(left: [u8; 4], right: [u8; 4]) -> Arc<Pixels> {
+    Pixels::new(RgbaImage::from_fn(100, 50, |x, _| Rgba(if x < 50 { left } else { right })))
 }
 
 struct Shot {
@@ -32,7 +32,7 @@ struct Shot {
 }
 
 impl Shot {
-    fn new(r: &Renderer, canvas: Value, layers: Value, images: &[(&str, Arc<RgbaImage>)]) -> Shot {
+    fn new(r: &Renderer, canvas: Value, layers: Value, images: &[(&str, Arc<Pixels>)]) -> Shot {
         let assets = images.iter().map(|(id, _)| (id.to_string(), json!({ "path": format!("{id}.png") })));
         Shot::with(
             r,
@@ -41,7 +41,7 @@ impl Shot {
         )
     }
 
-    fn with(r: &Renderer, mut text: Value, images: &[(&str, Arc<RgbaImage>)]) -> Shot {
+    fn with(r: &Renderer, mut text: Value, images: &[(&str, Arc<Pixels>)]) -> Shot {
         text["schema"] = json!(SCHEMA);
         let props: BTreeMap<String, Property> =
             serde_json::from_value(json!({ "tone": { "type": "color", "default": "#00ff00" } })).unwrap();
@@ -106,8 +106,8 @@ fn layers_compose_in_place() {
         { "id": "half", "type": "solid", "color": "#ffffff", "opacity": 0.5, "size": [10, 10], "transform": { "position": [80, 10] } }
     ]);
     let mut shot =
-        Shot::new(&r, canvas("#000000"), layers, &[("rb", halves([255, 0, 0, 255], [0, 0, 255, 255]))]);
-    let pixels = shot.pixels(&r);
+        Shot::new(r, canvas("#000000"), layers, &[("rb", halves([255, 0, 0, 255], [0, 0, 255, 255]))]);
+    let pixels = shot.pixels(r);
     check(
         &pixels,
         &[
@@ -134,14 +134,14 @@ fn blend_modes_and_blend_spaces() {
     ];
     for (mode, expected) in modes {
         let layers = json!([{ "id": "s", "type": "solid", "color": "#ff0000", "blend": mode, "size": [50, 50], "transform": { "position": [75, 25] } }]);
-        let pixels = Shot::new(&r, canvas("#808080"), layers, &[]).pixels(&r);
+        let pixels = Shot::new(r, canvas("#808080"), layers, &[]).pixels(r);
         assert!(near(at(&pixels, 75, 25), expected, 4), "{mode}: {:?}", at(&pixels, 75, 25));
         assert!(near(at(&pixels, 25, 25), [128, 128, 128], 2), "{mode} backdrop");
     }
     let fade = |space: &str| {
         let layers = json!([{ "id": "s", "type": "solid", "color": "#ffffff", "opacity": 0.5 }]);
         let canvas = json!({ "size": [100, 50], "background": "#000000", "blend_space": space });
-        at(&Shot::new(&r, canvas, layers, &[]).pixels(&r), 50, 25)
+        at(&Shot::new(r, canvas, layers, &[]).pixels(r), 50, 25)
     };
     assert!(near(fade("linear"), [188, 188, 188], 2) && near(fade("srgb"), [128, 128, 128], 2));
 }
@@ -154,7 +154,7 @@ fn masks_cut_layers() {
         { "id": "round", "type": "solid", "color": "#00ff00", "size": [50, 50], "transform": { "position": [75, 25] }, "mask": { "shape": { "ellipse": { "size": [30, 30] } } } }
     ]);
     let pixels =
-        Shot::new(&r, canvas("#000000"), layers, &[("lr", halves([255; 4], [0, 0, 0, 255]))]).pixels(&r);
+        Shot::new(r, canvas("#000000"), layers, &[("lr", halves([255; 4], [0, 0, 0, 255]))]).pixels(r);
     check(
         &pixels,
         &[((10, 25), [255, 0, 0]), ((40, 25), [0, 0, 0]), ((75, 25), [0, 255, 0]), ((53, 3), [0, 0, 0])],
@@ -165,7 +165,7 @@ fn masks_cut_layers() {
               "transform": { "position": [75, 25] }, "visible": visible },
             { "id": "inverse", "type": "solid", "color": "#0000ff", "mask": { "layer": "round", "invert": true } }
         ]);
-        let pixels = Shot::new(&r, canvas("#000000"), layers, &[]).pixels(&r);
+        let pixels = Shot::new(r, canvas("#000000"), layers, &[]).pixels(r);
         check(&pixels, &[((75, 25), matte), ((10, 25), [0, 0, 255]), ((53, 3), [0, 0, 255])]);
     }
 }
@@ -175,19 +175,19 @@ fn effects_render_their_passes() {
     let Some(r) = renderer() else { return };
     let rb = || halves([255, 0, 0, 255], [0, 0, 255, 255]);
     let gray = json!([{ "id": "s", "type": "solid", "color": "#ff0000", "effects": [{ "effect": "color_adjust", "params": { "saturation": 0 } }] }]);
-    check(&Shot::new(&r, canvas("#000000"), gray, &[]).pixels(&r), &[((50, 25), [127, 127, 127])]);
+    check(&Shot::new(r, canvas("#000000"), gray, &[]).pixels(r), &[((50, 25), [127, 127, 127])]);
     let blur = json!([{ "id": "i", "type": "image", "image": "rb", "size": [100, 50], "effects": [{ "effect": "blur", "params": { "radius": 12 } }] }]);
-    let pixels = Shot::new(&r, canvas("#000000"), blur, &[("rb", rb())]).pixels(&r);
+    let pixels = Shot::new(r, canvas("#000000"), blur, &[("rb", rb())]).pixels(r);
     let [red, _, blue] = at(&pixels, 50, 25);
     assert!(red > 60 && blue > 60 && red < 250 && blue < 250, "blurred edge {:?}", at(&pixels, 50, 25));
     check(&pixels, &[((25, 25), [255, 0, 0]), ((75, 25), [0, 0, 255])]);
     let waves = json!([{ "id": "i", "type": "image", "image": "rb", "size": [100, 50],
         "effects": [{ "effect": "waves", "params": { "amplitude": 10, "frequency": 1, "speed": 0, "direction": 90 } }] }]);
-    let pixels = Shot::new(&r, canvas("#000000"), waves, &[("rb", rb())]).pixels(&r);
+    let pixels = Shot::new(r, canvas("#000000"), waves, &[("rb", rb())]).pixels(r);
     check(&pixels, &[((55, 12), [255, 0, 0]), ((45, 37), [0, 0, 255]), ((25, 25), [255, 0, 0])]);
     let glow = json!([{ "id": "s", "type": "solid", "color": "#ffffff", "size": [10, 10],
         "effects": [{ "effect": "bloom", "params": { "threshold": 0.5, "intensity": 2, "radius": 8 } }] }]);
-    let pixels = Shot::new(&r, canvas("#000000"), glow, &[]).pixels(&r);
+    let pixels = Shot::new(r, canvas("#000000"), glow, &[]).pixels(r);
     assert!(at(&pixels, 58, 25)[0] > 20 && at(&pixels, 50, 25) == [255; 3], "{:?}", at(&pixels, 58, 25));
     check(&pixels, &[((5, 5), [0, 0, 0])]);
 }
@@ -200,18 +200,18 @@ fn groups_isolate_and_spectra_follow_audio() {
         { "id": "b", "type": "solid", "color": "#0000ff", "size": [60, 50], "transform": { "position": [70, 25] } }
     ] }]);
     check(
-        &Shot::new(&r, canvas("#000000"), layers, &[]).pixels(&r),
+        &Shot::new(r, canvas("#000000"), layers, &[]).pixels(r),
         &[((10, 25), [188, 0, 0]), ((50, 25), [0, 0, 188]), ((90, 25), [0, 0, 188])],
     );
     let bars = json!([{ "id": "s", "type": "spectrum", "size": [100, 50], "bands": 16, "gap": 0.0, "color": "#ffffff" }]);
-    let mut shot = Shot::new(&r, canvas("#000000"), bars, &[]);
-    check(&shot.pixels(&r), &[((3, 25), [0, 0, 0])]);
+    let mut shot = Shot::new(r, canvas("#000000"), bars, &[]);
+    check(&shot.pixels(r), &[((3, 25), [0, 0, 0])]);
     let mut audio = AudioFrame { silent: false, ..AudioFrame::default() };
     audio.average[..4].fill(1.0);
     audio.average[4..8].fill(0.5);
     assert!(shot.runtime.set_audio(audio));
     check(
-        &shot.pixels(&r),
+        &shot.pixels(r),
         &[
             ((3, 25), [255, 255, 255]),
             ((9, 12), [0, 0, 0]),
@@ -232,11 +232,11 @@ fn static_parts_are_cached_and_steady_frames_create_nothing() {
           "transform": { "position": [80, 25], "scale": { "keys": [[0, 1], [10, 1.4]], "loop": "pingpong" } } }
     ]);
     let mut shot =
-        Shot::new(&r, canvas("#000000"), layers, &[("rb", halves([255, 0, 0, 255], [0, 0, 255, 255]))]);
-    let first = shot.pixels(&r);
+        Shot::new(r, canvas("#000000"), layers, &[("rb", halves([255, 0, 0, 255], [0, 0, 255, 255]))]);
+    let first = shot.pixels(r);
     assert!(shot.view.stats().created > 0);
     shot.runtime.seek(1.25);
-    let second = shot.pixels(&r);
+    let second = shot.pixels(r);
     let stats = shot.view.stats();
     assert_eq!((stats.created, stats.reused), (0, 1), "{stats:?}");
     assert!(stats.passes >= 1 && stats.draws >= 2, "{stats:?}");
@@ -249,7 +249,7 @@ fn static_parts_are_cached_and_steady_frames_create_nothing() {
     assert!(!fonts || text > 10, "text pixels {text}");
     for t in [2.5, 5.0, 7.5] {
         shot.runtime.seek(t);
-        shot.pixels(&r);
+        shot.pixels(r);
         assert_eq!(shot.view.stats().created, 0, "growing layer at {t} s");
     }
 }
@@ -264,13 +264,13 @@ fn a_view_swaps_only_a_changed_image() {
     let layers = json!([{ "id": "img", "type": "image", "image": "photo", "size": [100, 50] }]);
     let (red, blue) =
         (halves([255, 0, 0, 255], [255, 0, 0, 255]), halves([0, 0, 255, 255], [0, 0, 255, 255]));
-    let mut shot = Shot::new(&r, canvas("#000000"), layers, &[("photo", red.clone())]);
-    check(&shot.pixels(&r), &[((50, 25), [255, 0, 0])]);
+    let mut shot = Shot::new(r, canvas("#000000"), layers, &[("photo", red.clone())]);
+    check(&shot.pixels(r), &[((50, 25), [255, 0, 0])]);
     let scene = shot.runtime.scene.clone();
     let assets = |image| SceneAssets { images: [("photo".to_string(), image)].into(), ..Default::default() };
     let mut swap =
         |image| r.refresh_scene(&mut shot.view, (&scene, shot.runtime.props()), &assets(image)).unwrap();
     assert!(!swap(red));
     assert!(swap(blue));
-    check(&shot.pixels(&r), &[((50, 25), [0, 0, 255])]);
+    check(&shot.pixels(r), &[((50, 25), [0, 0, 255])]);
 }

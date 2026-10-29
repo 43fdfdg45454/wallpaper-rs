@@ -1,6 +1,7 @@
 {
   "id": "shine",
   "name": { "en": "Shine" },
+  "min_fps": 30,
   "mask_mode": "strength",
   "params": [
     { "id": "angle", "type": "float", "default": 30, "min": -360, "max": 360 },

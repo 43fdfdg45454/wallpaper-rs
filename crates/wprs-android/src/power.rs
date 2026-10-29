@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicI32, AtomicU32, Ordering::Relaxed};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering::Relaxed};
 use wprs_scene::{Quality, Tier};
 
 const CHARGING_FPS: u32 = 60;
@@ -15,6 +15,15 @@ const HIGH_CLASS: i32 = 33;
 
 static CAPS: [AtomicU32; 2] = [AtomicU32::new(BATTERY_FPS), AtomicU32::new(CHARGING_FPS)];
 static CLASS: AtomicI32 = AtomicI32::new(0);
+static GUARD: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn guard(on: bool) {
+    GUARD.store(on, Relaxed);
+}
+
+pub(crate) fn guarded() -> bool {
+    GUARD.load(Relaxed)
+}
 
 static POWER: std::sync::Mutex<Power> = std::sync::Mutex::new(Power::BATTERY);
 

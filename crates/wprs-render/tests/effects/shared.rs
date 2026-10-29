@@ -138,17 +138,21 @@ fn fused_chains_are_compiled_with_the_view() {
 }
 
 #[test]
-fn the_last_view_of_a_fused_chain_frees_its_shader() {
-    let Some(Run { r, runtime, view, .. }) = Fx::chain(json!([{ "effect": "shine" }, { "effect": "vignette" }])).run()
-    else {
-        return;
-    };
-    let held = r.effect_shaders();
+fn the_last_view_of_an_effect_frees_its_shaders() {
+    for id in ["probe_free_a", "probe_free_b"] {
+        let wgsl = format!("fn color_{id}(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {{ return color * 0.5; }}");
+        probe(json!({ "id": id, "fuse": "color" }), &wgsl);
+    }
+    let both = ["probe_free_a", "probe_free_b"];
+    let chain = json!([{ "effect": both[0] }, { "effect": both[1] }]);
+    let Some(Run { r, runtime, view, .. }) = Fx::chain(chain).run() else { return };
+    let held = || [&both[..], &both[..1], &both[1..]].map(|ids| r.effect_shader(ids));
+    assert_eq!(held(), [true; 3]);
     let again = r.scene_view(&runtime.scene, &SceneAssets::default(), runtime.props()).unwrap();
     drop(view);
-    assert_eq!(r.effect_shaders(), held, "another view still draws the chain");
+    assert_eq!(held(), [true; 3], "another view still draws the effects");
     drop(again);
-    assert_eq!(r.effect_shaders(), held - 1);
+    assert_eq!(held(), [false; 3], "the shaders outlived the last view");
 }
 
 #[test]
@@ -156,6 +160,7 @@ fn every_built_in_effect_renders_with_its_defaults() {
     for d in wprs_scene::builtin() {
         let Some(mut run) = Fx::new(&d.id, json!({})).run() else { return };
         let out = run.shot();
+        assert_eq!(run.stats().compiled, 0, "{} compiled a shader while drawing", d.id);
         assert!(run.stats().passes >= d.passes.len() as u32, "{} ran {} passes", d.id, run.stats().passes);
         assert!(out.mean().iter().any(|m| *m > 8.0), "{} drew nothing", d.id);
     }

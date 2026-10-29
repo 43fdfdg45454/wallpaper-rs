@@ -1,0 +1,124 @@
+use super::item::Rect;
+use super::paint::Painter;
+use std::ops::Range;
+use wprs_scene::{Blend, Color, Content, Fuse, Layer};
+
+const MOVING: u64 = u64::MAX;
+const MOST: f32 = 0.5;
+
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum Reach {
+    Own,
+    Around,
+    Matte,
+}
+
+pub(crate) type Mark = (usize, u64, Option<Rect>, Reach);
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) enum Damage {
+    Full,
+    Part(Rect),
+    Clean,
+}
+
+impl Painter<'_, '_, '_> {
+    pub(crate) fn plain(&self, i: usize) -> bool {
+        let d = &self.frame.draws[i];
+        let plain = matches!(d.content, Content::Group { clip: false }) && d.opacity >= 1.0;
+        let plain = plain && d.blend == Blend::Normal && d.mask.is_none() && d.effects.is_empty();
+        plain && d.tint == Color([1.0; 4]) && d.brightness == 1.0 && !d.layer.cache
+    }
+
+    fn marks(&self, range: Range<usize>, out: &mut Vec<Mark>) {
+        let mut i = range.start;
+        while i < range.end {
+            let d = &self.frame.draws[i];
+            if self.plain(i) && !d.hidden {
+                self.marks(i + 1..d.end, out);
+            } else {
+                let pointwise = |e: &wprs_scene::EffectDraw<'_>| {
+                    e.descriptor.fuse == Some(Fuse::Color) && e.descriptor.reach.is_none()
+                };
+                let effects = &self.frame.effects[d.effects.clone()];
+                let reach = match &d.content {
+                    _ if d.mask.is_some_and(|m| m.layer.is_some()) => Reach::Matte,
+                    Content::Adjustment if !effects.iter().all(pointwise) => Reach::Around,
+                    _ => Reach::Own,
+                };
+                let video =
+                    self.frame.draws[i..d.end].iter().any(|d| matches!(d.content, Content::Video { .. }));
+                let moment = if d.dynamic { self.moment } else { 0 };
+                let key = if video { MOVING } else { self.digest(i..d.end, (d.hidden, moment)) };
+                let rect = if d.hidden { None } else { self.extent(i) };
+                out.push((std::ptr::from_ref::<Layer>(d.layer) as usize, key, rect, reach));
+            }
+            i = d.end;
+        }
+    }
+
+    pub(crate) fn damage(&self, old: &[Mark], new: &mut Vec<Mark>, fresh: bool) -> Damage {
+        new.clear();
+        self.marks(0..self.frame.draws.len(), new);
+        if fresh || old.is_empty() {
+            return Damage::Full;
+        }
+        let mut found: Option<Rect> = None;
+        let full = self.full;
+        let add = |found: &mut Option<Rect>, r: Option<Rect>| {
+            if let Some(r) = r.and_then(|r| r.pixels(full)) {
+                *found = Some(found.map_or(r, |f| f.union(r)));
+            }
+        };
+        for &(id, key, rect, reach) in new.iter() {
+            match old.iter().find(|m| m.0 == id) {
+                Some(&(_, k, r, _)) if k == key && k != MOVING && r == rect => {
+                    let near = |f: Rect| rect.is_some_and(|r| r.meets(f));
+                    if reach == Reach::Around && found.is_some_and(near) {
+                        add(&mut found, rect);
+                    }
+                }
+                Some(&(.., r, _)) => {
+                    add(&mut found, r);
+                    add(&mut found, rect);
+                }
+                None => add(&mut found, rect),
+            }
+        }
+        old.iter().filter(|m| !new.iter().any(|n| n.0 == m.0)).for_each(|m| add(&mut found, m.2));
+        let mattes = new.iter().any(|m| m.3 == Reach::Matte);
+        match found.and_then(|r| r.pixels(self.full)) {
+            None => Damage::Clean,
+            Some(_) if mattes => Damage::Full,
+            Some(r) if r.w * r.h > MOST * self.full.w * self.full.h => Damage::Full,
+            Some(r) => Damage::Part(r),
+        }
+    }
+
+    pub(crate) fn skip(&mut self, i: usize, target: super::paint::Target) -> bool {
+        let Some(clip) = self.clip.filter(|_| target.src == super::Src::Canvas) else { return false };
+        let d = &self.frame.draws[i];
+        if self.extent(i).is_some_and(|r| r.meets(clip)) {
+            return false;
+        }
+        let ids = self.frame.draws[i..d.end].iter().map(|d| std::ptr::from_ref::<Layer>(d.layer) as usize);
+        self.kept.extend(ids);
+        true
+    }
+}
+
+impl Painter<'_, '_, '_> {
+    pub(crate) fn fill(&mut self, target: super::Src, color: [f64; 4]) {
+        let full = [0.0, 0.0, 1.0, 1.0];
+        let color = color.map(|c| c as f32);
+        let mut item = super::item::Item { quad: full, uv: full, color, ..Default::default() };
+        (item.m0, item.m1) = super::item::ndc(self.full, self.full.affine());
+        let slot = self.pool.push(&item);
+        let (entry, mode, tex) = (
+            "fs_texture",
+            super::pipes::Mode::Replace,
+            [super::Src::White, super::Src::White, super::Src::Clear],
+        );
+        self.ops.push(super::Op::Draw { target, entry, mode, slot, tex });
+    }
+}

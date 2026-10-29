@@ -111,14 +111,10 @@ fn poster(
     scene: &wprs_scene::Scene,
     manifest: &wprs_format::Manifest,
 ) -> Result<DynamicImage, String> {
-    thread_local! {
-        static GPU: Option<wprs_render::Renderer> = wprs_render::Renderer::new().ok();
-    }
     let assets =
         wprs_render::SceneAssets::read(scene, |path| package.read_file(path).map_err(|e| e.to_string()))?;
     let props = wprs_scene::effective(&manifest.properties, &[]);
-    GPU.with(|gpu| {
-        let gpu = gpu.as_ref().ok_or("no graphics device")?;
+    wprs_render::Renderer::shared().map_err(|_| "no graphics device".to_owned()).and_then(|gpu| {
         let lang = manifest.locale_in(&wprs_core::locale::languages());
         gpu.poster(scene, &assets, &props, (crate::zone::wall(), &lang), POSTER)
             .map(DynamicImage::ImageRgba8)

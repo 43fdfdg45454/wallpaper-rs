@@ -57,7 +57,7 @@ pub fn animation(bytes: &[u8]) -> Result<(RgbaImage, Vec<f32>), ImageError> {
 }
 
 #[derive(Default)]
-pub struct Pictures(HashMap<String, (Arc<RgbaImage>, Option<Vec<f32>>)>);
+pub struct Pictures(HashMap<String, (Arc<crate::Pixels>, Option<Vec<f32>>)>);
 
 impl Pictures {
     pub fn add<E: From<ImageError>>(
@@ -75,13 +75,13 @@ impl Pictures {
                     true => animation(&bytes).map(|(atlas, durations)| (atlas, Some(durations)))?,
                     false => (still(bytes)?, None),
                 };
-                self.0.entry(key).or_insert((Arc::new(image), sheet)).clone()
+                self.0.entry(key).or_insert((crate::Pixels::new(image), sheet)).clone()
             }
         };
         if let Some(durations) = sheet {
             assets.sheets.insert(id.to_owned(), durations);
         }
         assets.images.insert(id.to_owned(), image);
-        Ok(self.0.values().map(|(i, _)| u64::from(i.width()) * u64::from(i.height()) * 4).sum())
+        Ok(self.0.values().map(|(i, _)| u64::from(i.size().0) * u64::from(i.size().1) * 4).sum())
     }
 }

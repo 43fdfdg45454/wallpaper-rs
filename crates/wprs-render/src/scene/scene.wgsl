@@ -29,7 +29,6 @@ struct Out {
 @group(0) @binding(0) var<uniform> frame: Frame;
 @group(0) @binding(1) var samp: sampler;
 @group(0) @binding(2) var<uniform> item: Item;
-@group(0) @binding(3) var near: sampler;
 @group(1) @binding(0) var src_tex: texture_2d<f32>;
 @group(1) @binding(1) var mask_tex: texture_2d<f32>;
 @group(1) @binding(2) var back_tex: texture_2d<f32>;
@@ -204,7 +203,8 @@ fn fs_picture(in: Out) -> @location(0) vec4<f32> {
     let dy = dpdy(tiles * item.uv.zw);
     var t = textureSampleGrad(src_tex, samp, at, dx, dy);
     if item.shape.y > 0.5 {
-        t = textureSampleGrad(src_tex, near, at, dx, dy);
+        let size = vec2<f32>(textureDimensions(src_tex));
+        t = textureLoad(src_tex, vec2<i32>(min(floor(at * size), size - 1.0)), 0);
     }
     return finish(styled(t) * item.color, in);
 }

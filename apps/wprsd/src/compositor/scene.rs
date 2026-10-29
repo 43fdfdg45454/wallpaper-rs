@@ -38,6 +38,8 @@ pub(super) struct SceneState {
     courses: Vec<Course>,
     zone: (i64, String),
     restock: bool,
+    hushed: bool,
+    guard: Option<Box<super::guard::Guard>>,
 }
 
 fn after(seconds: f64) -> Duration {
@@ -97,6 +99,8 @@ impl SceneState {
             courses: Vec::new(),
             zone: (i64::MIN, String::new()),
             restock: false,
+            hushed: false,
+            guard: None,
         };
         scene.uses = scene.needs(quality);
         scene
@@ -123,7 +127,7 @@ impl SceneState {
     }
 
     pub(super) fn resume(&mut self, time: f64) {
-        if !self.still {
+        if !self.still && !self.hushed {
             self.runtime.seek(time);
         }
     }
@@ -137,7 +141,26 @@ impl SceneState {
     }
 
     pub(super) fn calm(&mut self, calm: bool) -> bool {
-        self.runtime.set_reduced_motion(calm)
+        let parallax = self.runtime.set_reduced_motion(calm);
+        if std::mem::replace(&mut self.hushed, calm) == calm {
+            return parallax;
+        }
+        if calm && !self.still {
+            self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
+        }
+        true
+    }
+
+    pub(super) fn guard(&mut self, on: bool) -> bool {
+        let changed = on != self.guard.is_some();
+        if changed {
+            self.guard = on.then(|| super::guard::Guard::new(Instant::now()));
+        }
+        changed
+    }
+
+    pub(super) fn flashes(&self) -> &'static str {
+        self.guard.as_ref().map_or("", |g| g.label())
     }
 
     pub(super) fn press(&mut self, id: &str) {
@@ -163,6 +186,9 @@ impl SceneState {
     }
 
     pub(super) fn input(&mut self, input: SceneInput) -> bool {
+        if self.guard.as_ref().is_some_and(|g| g.speed() == 0.0) {
+            return false;
+        }
         match input {
             SceneInput::Audio(_, audio) => {
                 let last = self.runtime.audio();
@@ -221,6 +247,10 @@ impl SceneState {
         }
     }
 
+    pub(super) fn clean(&self) -> bool {
+        self.view.as_ref().is_some_and(|v| v.stats().damage == 0)
+    }
+
     pub(super) fn image(&self) -> Option<&GpuImage> {
         self.view.as_ref().and_then(SceneView::image)
     }
@@ -273,13 +303,19 @@ impl SceneState {
             .filter_map(|(id, reel, _)| Some((id, players.get(reel)?.texture.as_ref()?)))
             .collect();
         renderer.render_scene(view, &self.runtime, &frame, inner, quality, &videos)?;
+        if let Some(guard) = self.guard.as_mut() {
+            let image = view.image().filter(|_| view.stats().damage > 0);
+            guard.watch(renderer, image, now, &self.spec.pack.props.id)?;
+        }
         let interval = Duration::from_secs(1) / power.fps(&self.runtime, quality, refresh);
+        let stopped = self.guard.as_ref().is_some_and(|g| g.speed() == 0.0);
         let wake = match self.host {
-            _ if self.still => Wake::Idle,
+            _ if self.still || stopped => Wake::Idle,
             Some(_) if self.calm < CALM => Wake::Frame,
             Some(_) => frame.wake.min(Wake::At(POLL)),
             None => frame.wake,
         };
+        let wake = if self.hushed { self.runtime.calmed(wake) } else { wake };
         self.calm = self.calm.saturating_add(1);
         self.moving = wake == Wake::Frame;
         self.due = match wake {
@@ -296,8 +332,8 @@ impl SceneState {
 
     fn step(&mut self, active: bool, now: Instant) -> f64 {
         let dt = self.tick.filter(|_| active).map_or(0.0, |t| now.saturating_duration_since(t).as_secs_f64());
-        if active && !self.still {
-            self.runtime.advance(dt);
+        if active && !self.still && !self.hushed {
+            self.runtime.advance(dt * self.guard.as_ref().map_or(1.0, |g| g.speed()));
         }
         self.tick = active.then_some(now);
         dt
@@ -349,7 +385,7 @@ mod tests {
 
     #[test]
     fn new_media_of_the_same_scene_keep_its_clock_and_view() {
-        let renderer = match Renderer::new() {
+        let renderer = match Renderer::shared() {
             Ok(renderer) => renderer,
             Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
         };
@@ -365,19 +401,19 @@ mod tests {
             clips: Vec::new(),
             hold: None,
         };
-        let extra = vec![("photo".to_string(), Arc::new(image::RgbaImage::new(2, 2)))];
+        let extra = vec![("photo".to_string(), wprs_render::Pixels::new(image::RgbaImage::new(2, 2)))];
         let turned = SceneSpec { extra, ..spec.clone() };
         let (old, new) = (Content::Scene(spec.clone()), Content::Scene(turned.clone()));
         assert!(old.same_source(&new) && !old.same_look(&new));
-        let power = Power { tier: Tier::T3, on_battery: false, max_fps: 0 };
+        let power = Power::new(Tier::T3, false, 0);
         let (mut state, players, start) = (SceneState::new(spec, power), HashMap::new(), Instant::now());
         let at = |s: u64| start + Duration::from_secs(s);
         for s in [0, 2] {
-            state.render(&renderer, ((16, 9), 60), power, &players, true, at(s)).unwrap();
+            state.render(renderer, ((16, 9), 60), power, &players, true, at(s)).unwrap();
         }
         let time = state.runtime.time();
         assert!(time > 1.0 && state.update(turned));
-        state.render(&renderer, ((16, 9), 60), power, &players, true, at(3)).unwrap();
+        state.render(renderer, ((16, 9), 60), power, &players, true, at(3)).unwrap();
         assert!(state.view.is_some() && state.runtime.time() > time, "the scene restarted");
     }
 
@@ -390,7 +426,7 @@ mod tests {
         let mut pack = ScenePack::bare(scene, properties, Vec::new());
         pack.inputs = Some(Uses { cursor: true, scripts: true, ..Uses::default() });
         let pack = Arc::new(pack);
-        let power = Power { tier: Tier::T3, on_battery: false, max_fps: 0 };
+        let power = Power::new(Tier::T3, false, 0);
         let follows = |depth: &str| {
             let mut values = pack.props.values(&[]);
             values.insert("depth".into(), serde_json::json!(depth));

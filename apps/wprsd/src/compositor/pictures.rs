@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn screens_that_show_the_same_picture_share_one_texture() {
-        let renderer = match wprs_render::Renderer::new() {
+        let renderer = match wprs_render::Renderer::shared() {
             Ok(renderer) => renderer,
             Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
         };
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn a_second_screen_finds_the_texture_made_from_a_reduced_decode() {
-        let renderer = match wprs_render::Renderer::new() {
+        let renderer = match wprs_render::Renderer::shared() {
             Ok(renderer) => renderer,
             Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
         };
@@ -184,7 +184,7 @@ mod tests {
         let picture =
             Picture { file, modified: None, pixels: None, edit: None, place: Place::Fit, depth: None };
         let screen = (Fit::Fill, (192, 108));
-        let made = develop(&renderer, "A", &picture, None, screen).expect("a texture");
+        let made = develop(renderer, "A", &picture, None, screen).expect("a texture");
         assert_eq!(made.0.size(), (192, 128), "the picture was not decoded at the size the screen needs");
         let mut pictures = Pictures::default();
         pictures.keep(
@@ -192,10 +192,10 @@ mod tests {
             &mut BTreeMap::new(),
         );
         let found =
-            pictures.shared(&renderer, &picture, None, screen).expect("the second screen made its own copy");
+            pictures.shared(renderer, &picture, None, screen).expect("the second screen made its own copy");
         assert!(found.0.same(&made.0));
         let decoded = Some((192, 128));
-        assert!(pictures.shared(&renderer, &picture, decoded, screen).is_some_and(|f| f.0.same(&made.0)));
-        assert!(pictures.shared(&renderer, &picture, Some((300, 200)), (Fit::Fit, (600, 400))).is_none());
+        assert!(pictures.shared(renderer, &picture, decoded, screen).is_some_and(|f| f.0.same(&made.0)));
+        assert!(pictures.shared(renderer, &picture, Some((300, 200)), (Fit::Fit, (600, 400))).is_none());
     }
 }

@@ -1,6 +1,7 @@
 {
   "id": "sway",
   "name": { "en": "Sway" },
+  "min_fps": 30,
   "mask_mode": "strength",
   "params": [
     { "id": "amplitude", "type": "float", "default": 6, "min": 0, "max": 256, "uses": "time" },

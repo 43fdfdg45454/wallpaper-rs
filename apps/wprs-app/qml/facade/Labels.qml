@@ -7,6 +7,7 @@ QtObject {
             "playback.muted": App.tr("Muted"),
             "playback.max_fps": App.tr("Frames per second"),
             "playback.software_parallax": App.tr("Depth parallax with software rendering"),
+            "playback.flash_guard": App.tr("Slow down or stop wallpapers that flash more than three times a second"),
             "transition.kind": App.tr("Transition"),
             "transition.duration_ms": App.tr("Transition length (ms)"),
             "pause.when_covered": App.tr("Pause when a window covers the screen"),

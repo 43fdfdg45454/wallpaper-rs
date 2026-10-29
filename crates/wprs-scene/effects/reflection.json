@@ -1,6 +1,7 @@
 {
   "id": "reflection",
   "name": { "en": "Reflection" },
+  "min_fps": 30,
   "mask_mode": "strength",
   "params": [
     { "id": "line", "type": "float", "default": 0.6, "min": 0, "max": 1 },

@@ -26,6 +26,7 @@ pub(crate) struct State {
     pub(crate) config_error: Option<String>,
     pub(crate) outputs: HashMap<String, OutputInfo>,
     pub(crate) images: HashMap<PathBuf, (Option<SystemTime>, Weak<RgbaImage>)>,
+    pub(crate) pixels: HashMap<PathBuf, (Option<SystemTime>, Weak<wprs_render::Pixels>)>,
     pub(crate) user_paused: bool,
     pub(crate) on_battery: bool,
     pub(crate) locked: bool,
@@ -82,13 +83,14 @@ impl Daemon {
             }
             None => tracing::debug!(path = %config_path.display(), "configuration loaded"),
         }
-        let renderer = Renderer::with_display(display).context("cannot initialize the GPU renderer")?;
+        let renderer =
+            Renderer::with_display(display).context("cannot initialize the GPU renderer")?.install();
         let adapter = renderer.adapter().to_owned();
         tracing::info!("renderer ready");
         tracing::debug!(adapter, "GPU adapter");
         let changes = Changes::new();
         let exporter = Arc::new(Exporter::start().context("cannot connect to PipeWire")?);
-        crate::streams::gpu_buffers(&renderer).into_iter().for_each(|gpu| exporter.use_dmabuf(gpu));
+        crate::streams::gpu_buffers(renderer).into_iter().for_each(|gpu| exporter.use_dmabuf(gpu));
         crate::streams::timelines(&exporter);
         let compositor =
             Compositor::start(renderer, exporter.clone(), settings(&config), changes.notifier())?;
@@ -173,7 +175,8 @@ pub(crate) fn settings(config: &Config) -> Settings {
     let playback = config.playback.sanitized();
     let transition = config.transition.duration();
     let (max_fps, volume, muted) = (playback.max_fps, playback.volume, playback.muted);
-    Settings { transition, max_fps, volume, muted, software_parallax: playback.software_parallax }
+    let (software_parallax, flash_guard) = (playback.software_parallax, playback.flash_guard);
+    Settings { transition, max_fps, volume, muted, software_parallax, flash_guard }
 }
 
 pub(crate) fn output_name(output: &str) -> fdo::Result<String> {

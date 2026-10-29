@@ -162,8 +162,8 @@ impl Renderer {
         view: &mut SceneView,
         frame: &Frame<'_>,
         screen: Affine,
-    ) -> Vec<(usize, u64)> {
-        let mut found = Vec::new();
+        found: &mut Vec<(usize, u64)>,
+    ) {
         for (i, d) in frame.draws.iter().enumerate() {
             let Content::Text { text, font, size, align, fallback, layout, .. } = &d.content else {
                 continue;
@@ -194,6 +194,5 @@ impl Renderer {
                 found.push((i, key));
             }
         }
-        found
     }
 }

@@ -74,11 +74,11 @@ impl Daemon {
                         invalid("the images of the scene are too large once decoded")
                     );
                     assets.sheets.insert(id.clone(), durations);
-                    assets.images.insert(id.clone(), Arc::new(atlas));
+                    assets.images.insert(id.clone(), wprs_render::Pixels::new(atlas));
                 }
                 "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" => {
-                    let image = self.load_image(&path, std::fs::metadata(&path)?.modified().ok(), None)?;
-                    decoded += u64::from(image.width()) * u64::from(image.height()) * 4;
+                    let image = self.scene_pixels(&path)?;
+                    decoded += u64::from(image.size().0) * u64::from(image.size().1) * 4;
                     ensure!(
                         decoded <= DECODED,
                         invalid("the images of the scene are too large once decoded")

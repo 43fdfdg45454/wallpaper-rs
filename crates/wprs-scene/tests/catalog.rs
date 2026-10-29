@@ -24,6 +24,44 @@ fn values_of_described_parameters_are_named_in_english_and_spanish() {
     assert!(labels.len() > 20 && labels.iter().all(|l| l.contains_key("en") && l.contains_key("es")));
 }
 
+const BASE: &str = "bloom: threshold intensity radius knee; blur: radius; blur_motion: angle length samples;
+    blur_radial: center strength samples follow; chroma_key: key tolerance softness spill;
+    chromatic_aberration: amount center; clouds: color shade opacity coverage softness size speed warp octaves height;
+    color_adjust: exposure contrast saturation hue; color_lut: lut intensity; crt: curvature pitch scan phosphor vignette glow;
+    depth_parallax: depth strength focus steps overscan follow orbit; dissolve: progress size edge glow;
+    edges: strength threshold width color sketch paper; film_grain: amount size fps; flow: map strength speed direction;
+    glitch: bursts beat length rows threshold shift split jitter speed;
+    god_rays: source threshold density decay exposure color samples follow; iris: range follow center saccades rate;
+    lens_distort: k1 k2 fit center; perspective: top_left top_right bottom_right bottom_left; pixelate: size hex;
+    posterize: levels dither; reflection: line opacity fade amplitude frequency speed; scroll: speed;
+    shake: strength speed direction; shine: angle width softness intensity color speed gap phase;
+    sway: amplitude speed stiffness spread swing angle pivot; tilt_shift: focus width softness angle radius depth;
+    twirl: angle radius center; vignette: intensity radius softness roundness center color;
+    water_rings: amplitude wavelength speed falloff center; water_ripple: strength damping radius cursor click beat specular;
+    waves: amplitude frequency speed direction";
+
+#[test]
+fn parameters_added_to_built_in_effects_are_declared_as_newer() {
+    let base: BTreeMap<&str, Vec<&str>> = BASE
+        .split(';')
+        .filter_map(|e| e.split_once(':'))
+        .map(|(id, params)| (id.trim(), params.split_whitespace().collect()))
+        .collect();
+    assert_eq!(base.len(), 33);
+    for b in builtin() {
+        let Some(known) = base.get(b.id.as_str()) else { continue };
+        for p in &b.params {
+            let newer = newer_params(&b.id).any(|n| n.id == p.id);
+            assert!(
+                known.contains(&p.id.as_str()) || newer,
+                "{}.{} needs an entry in catalog.json",
+                b.id,
+                p.id
+            );
+        }
+    }
+}
+
 #[test]
 fn described_effects_are_complete_and_drawn_only_with_a_shader() {
     assert!(undrawn().len() >= 18);

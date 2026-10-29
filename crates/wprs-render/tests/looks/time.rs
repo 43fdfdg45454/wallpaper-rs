@@ -10,21 +10,21 @@ fn wrapped_timelines_and_events_move_what_is_drawn() {
     let fade = json!([{ "id": "f", "type": "solid", "color": "#ffffff", "size": [100, 50],
         "opacity": { "timeline": "w", "keys": [[0, 1], [2, 0]] } }]);
     let mut wrapped = Shot::with(
-        &r,
+        r,
         timed(json!([{ "id": "w", "duration": 4, "loop": "repeat", "wrap": true }]), fade),
         &[],
     );
     wrapped.runtime.advance(3.0);
-    check(&wrapped.pixels(&r), &[((50, 25), [188, 188, 188])]);
+    check(&wrapped.pixels(r), &[((50, 25), [188, 188, 188])]);
     let moved = json!([{ "id": "b", "type": "solid", "color": "#ff0000", "size": [20, 50],
         "transform": { "position": { "timeline": "go", "keys": [[0, [10, 25]], [1, [90, 25]]] } } }]);
     let tls = json!([{ "id": "clock", "duration": 2, "events": [{ "t": 1, "name": "start" }] },
                      { "id": "go", "duration": 1, "trigger": "event:start" }]);
-    let mut shot = Shot::with(&r, timed(tls, moved), &[]);
+    let mut shot = Shot::with(r, timed(tls, moved), &[]);
     shot.runtime.advance(0.9);
-    check(&shot.pixels(&r), &[((10, 25), [255, 0, 0]), ((90, 25), [0, 0, 0])]);
+    check(&shot.pixels(r), &[((10, 25), [255, 0, 0]), ((90, 25), [0, 0, 0])]);
     shot.runtime.advance(1.2);
-    check(&shot.pixels(&r), &[((10, 25), [0, 0, 0]), ((90, 25), [255, 0, 0])]);
+    check(&shot.pixels(r), &[((10, 25), [0, 0, 0]), ((90, 25), [255, 0, 0])]);
 }
 
 #[test]

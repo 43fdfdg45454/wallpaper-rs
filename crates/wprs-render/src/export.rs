@@ -1,4 +1,4 @@
-use crate::readback::{GPU_TIMEOUT, copy_rows, padded_row_bytes};
+use crate::readback::{copy_rows, padded_row_bytes};
 use crate::texture::GpuImage;
 use crate::{RenderError, Renderer};
 use image::RgbaImage;
@@ -24,9 +24,7 @@ impl Renderer {
         encoder.copy_texture_to_buffer(image.texture.as_image_copy(), copy, image.texture.size());
         let done = self.scoped(|| self.queue.submit([encoder.finish()]))?;
         let slice = buffer.slice(..);
-        slice.map_async(wgpu::MapMode::Read, |_| {});
-        let wait = wgpu::PollType::Wait { submission_index: Some(done), timeout: Some(GPU_TIMEOUT) };
-        self.device.poll(wait).map_err(|e| RenderError::DeviceLost(e.to_string()))?;
+        self.map(&slice, &Default::default(), done)?;
         let mut pixels = Vec::new();
         let view = slice.get_mapped_range().map_err(|e| RenderError::Readback(e.to_string()))?;
         copy_rows(&view, &mut pixels, width, height, stride);

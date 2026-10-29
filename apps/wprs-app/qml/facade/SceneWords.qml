@@ -376,6 +376,7 @@ QtObject {
             "shape": App.tr("Shape"),
             "shapes": App.tr("Blend shapes"),
             "shift": App.tr("Color shift"),
+            "shutter": App.tr("Shutter (s)"),
             "side": App.tr("Side"),
             "sides": App.tr("Sides"),
             "sign": App.tr("Sign"),

@@ -2,8 +2,8 @@ use image::{Rgba, RgbaImage};
 use wprs_core::Fit;
 use wprs_render::{GpuImage, Layer, Planes, Renderer, TargetLimits};
 
-fn renderer() -> Option<Renderer> {
-    match Renderer::new() {
+fn renderer() -> Option<&'static Renderer> {
+    match Renderer::shared() {
         Ok(r) => Some(r),
         Err(e) if std::env::var_os("WPRS_REQUIRE_GPU").is_none() => {
             eprintln!("skipping GPU test: {e}");
@@ -37,7 +37,7 @@ fn close(a: [u8; 3], b: [u8; 3]) -> bool {
 #[test]
 fn background_only() {
     let Some(r) = renderer() else { return };
-    let pixels = draw(&r, None, Fit::Fill, [10, 120, 250], (33, 17));
+    let pixels = draw(r, None, Fit::Fill, [10, 120, 250], (33, 17));
     assert_eq!(pixels.len(), 33 * 17 * 4);
     assert!(close(rgb(&pixels, 33, 0, 0), [10, 120, 250]));
     assert!(close(rgb(&pixels, 33, 32, 16), [10, 120, 250]));
@@ -49,7 +49,7 @@ fn readback_strips_row_padding_and_keeps_row_order() {
     let Some(r) = renderer() else { return };
     let img = RgbaImage::from_fn(2, 2, |_, y| Rgba(if y == 0 { [255, 0, 0, 255] } else { [0, 0, 255, 255] }));
     for width in [1, 63, 64, 65, 100] {
-        let pixels = draw(&r, Some(&img), Fit::Stretch, [0, 0, 0], (width, 4));
+        let pixels = draw(r, Some(&img), Fit::Stretch, [0, 0, 0], (width, 4));
         assert_eq!(pixels.len(), width as usize * 4 * 4);
         assert!((0..width).all(|x| close(rgb(&pixels, width, x, 0), [255, 0, 0])), "width {width}");
         assert!((0..width).all(|x| close(rgb(&pixels, width, x, 3), [0, 0, 255])), "width {width}");
@@ -114,7 +114,7 @@ fn target_limits_count_padded_rows() {
 fn fit_letterboxes_with_background() {
     let Some(r) = renderer() else { return };
     let img = RgbaImage::from_pixel(10, 10, Rgba([255, 0, 0, 255]));
-    let pixels = draw(&r, Some(&img), Fit::Fit, [0, 0, 255], (40, 20));
+    let pixels = draw(r, Some(&img), Fit::Fit, [0, 0, 255], (40, 20));
     assert!(close(rgb(&pixels, 40, 20, 10), [255, 0, 0]));
     assert!(close(rgb(&pixels, 40, 2, 10), [0, 0, 255]));
     assert!(close(rgb(&pixels, 40, 37, 10), [0, 0, 255]));
@@ -124,7 +124,7 @@ fn fit_letterboxes_with_background() {
 fn fill_covers_the_target() {
     let Some(r) = renderer() else { return };
     let img = RgbaImage::from_fn(20, 10, |x, _| Rgba(if x < 10 { [0, 255, 0, 255] } else { [255; 4] }));
-    let pixels = draw(&r, Some(&img), Fit::Fill, [0, 0, 0], (64, 32));
+    let pixels = draw(r, Some(&img), Fit::Fill, [0, 0, 0], (64, 32));
     assert!(close(rgb(&pixels, 64, 4, 16), [0, 255, 0]));
     assert!(close(rgb(&pixels, 64, 60, 16), [255, 255, 255]));
     assert!(close(rgb(&pixels, 64, 4, 0), [0, 255, 0]));

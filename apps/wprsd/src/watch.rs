@@ -17,6 +17,28 @@ trait UPower {
 }
 
 #[zbus::proxy(
+    interface = "org.freedesktop.UPower.PowerProfiles",
+    default_service = "org.freedesktop.UPower.PowerProfiles",
+    default_path = "/org/freedesktop/UPower/PowerProfiles"
+)]
+trait Profiles {
+    #[zbus(property)]
+    fn active_profile(&self) -> zbus::Result<String>;
+}
+
+#[zbus::proxy(
+    interface = "net.hadess.PowerProfiles",
+    default_service = "net.hadess.PowerProfiles",
+    default_path = "/net/hadess/PowerProfiles"
+)]
+trait OlderProfiles {
+    #[zbus(property)]
+    fn active_profile(&self) -> zbus::Result<String>;
+}
+
+const SAVER: &str = "power-saver";
+
+#[zbus::proxy(
     interface = "org.freedesktop.ScreenSaver",
     default_service = "org.freedesktop.ScreenSaver",
     default_path = "/org/freedesktop/ScreenSaver"
@@ -82,6 +104,31 @@ pub async fn battery(daemon: Arc<Daemon>, known: tokio::sync::oneshot::Sender<()
     };
     if let Err(e) = follow.await {
         tracing::info!("power source unknown, battery pause disabled: {e}");
+    }
+}
+
+pub async fn saver(daemon: Arc<Daemon>) {
+    let follow = async {
+        let system = zbus::Connection::system().await?;
+        let newer = ProfilesProxy::new(&system).await?;
+        if let Ok(profile) = newer.active_profile().await {
+            daemon.set_saver(profile == SAVER);
+            let mut changes = newer.receive_active_profile_changed().await;
+            while let Some(change) = changes.next().await {
+                change.get().await.map(|p| daemon.set_saver(p == SAVER)).ok();
+            }
+            return zbus::Result::Ok(());
+        }
+        let older = OlderProfilesProxy::new(&system).await?;
+        daemon.set_saver(older.active_profile().await? == SAVER);
+        let mut changes = older.receive_active_profile_changed().await;
+        while let Some(change) = changes.next().await {
+            change.get().await.map(|p| daemon.set_saver(p == SAVER)).ok();
+        }
+        zbus::Result::Ok(())
+    };
+    if let Err(e) = follow.await {
+        tracing::debug!("power profile unknown, scenes ignore power saving: {e}");
     }
 }
 

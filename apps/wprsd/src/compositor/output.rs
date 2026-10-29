@@ -63,6 +63,8 @@ pub(super) enum Sink {
     Surface(Screen),
 }
 
+type Composed = (u64, (u32, u32), Option<([u32; 2], u32)>);
+
 pub(super) struct Output {
     pub(super) size: (u32, u32),
     pub(super) shown: Shown,
@@ -77,6 +79,7 @@ pub(super) struct Output {
     pub(super) moving: bool,
     pub(super) refresh: u32,
     pub(super) covered: bool,
+    pub(super) composed: Option<Composed>,
     pub(super) failed: u32,
 }
 
@@ -100,6 +103,7 @@ impl Output {
             refresh,
             covered,
             failed,
+            composed: None,
         }
     }
 
@@ -110,6 +114,10 @@ impl Output {
         {
             *target = None;
         }
+    }
+
+    pub(super) fn guard(&mut self, on: bool) {
+        self.dirty |= self.shown.scene.as_mut().is_some_and(|s| s.guard(on));
     }
 
     pub(super) fn fps(&self, power: Power) -> u32 {
@@ -132,7 +140,20 @@ impl Output {
         {
             *target = None;
         }
-        (self.dirty, self.stale, self.failed) = (true, true, 0);
+        (self.dirty, self.stale, self.failed, self.composed) = (true, true, 0, None);
+    }
+
+    pub(super) fn unchanged(&mut self, moved: Option<([f32; 2], u32)>, starved: bool) -> bool {
+        let scene = self.shown.scene.as_ref().filter(|_| self.fade.is_none());
+        let shift = moved.filter(|_| self.shown.relief.is_some()).map(|(o, s)| (o.map(f32::to_bits), s));
+        let key = scene.and_then(SceneState::image).map(|i| (i.id(), self.size, shift));
+        let clean = !self.stale && scene.is_some_and(SceneState::clean);
+        let settled = match &self.sink {
+            Sink::Surface(screen) => screen.settled(),
+            Sink::Stream(_) => !starved,
+        };
+        let same = key.is_some() && std::mem::replace(&mut self.composed, key) == key;
+        same && clean && settled
     }
 
     pub(super) fn open(&self, streaming: bool) -> bool {

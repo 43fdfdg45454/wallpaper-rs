@@ -11,6 +11,7 @@ mod catalog;
 mod chain;
 mod clip;
 mod content;
+mod cost;
 mod cube;
 mod cue;
 mod custom;
@@ -20,6 +21,7 @@ mod effects;
 mod eval;
 mod fields;
 mod figure;
+mod flash;
 mod form;
 mod fx;
 mod gltf;
@@ -52,6 +54,7 @@ mod sheet;
 mod signal;
 mod sound;
 mod stage;
+mod tier;
 mod timeline;
 mod typeset;
 mod uses;
@@ -65,7 +68,7 @@ pub use affine::Affine;
 pub use animate::Animate;
 pub use asset::{Asset, COLLECTIONS, Filter, MAX_FRAMES, Wrapping};
 pub use blend::{BLENDS, Blend};
-pub use budget::Budget;
+pub use budget::{Budget, Heat};
 pub use calendar::format as format_time;
 pub use canvas::{BlendSpace, Canvas, Clock};
 pub use catalog::{described, drawn, newer_params, reserved, undrawn};
@@ -92,6 +95,7 @@ pub use figure::{
     Attach, Coverage, Cull, Follows, MATERIALS, MAX_FIGURES, MAX_SHADOWS, Material, MeshDepth, MeshLayer,
     MeshPart, ModelLayer, Space,
 };
+pub use flash::{Calming, FLASH_GRID, FlashGuard, SAFE_FLASHES};
 pub use form::{form, labels, order};
 pub use gltf::{
     EXTENSIONS, MAX_BONES, MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODEL_JSON, MAX_MODEL_PARTS,
@@ -117,7 +121,7 @@ pub use props::{
     Choice, Condition, Control, Expr, ICONS, Mode, Pick, Preset, Property, Slider, Text, Values,
     check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag,
 };
-pub use quality::{Class, Quality, Tier};
+pub use quality::{Class, Quality};
 pub use released::{newer_manifest_keys, newer_scene_keys};
 pub use rig::{
     AnimClip, AnimLayer, Bend, Body, BonePhysics, BoneRule, IkChain, MAX_ANIMATION_LAYERS, MAX_BODIES,
@@ -131,6 +135,7 @@ pub use scripting::{
 };
 pub use signal::{CLOCKS, Gain, Hearing, Reduce, Smooth};
 pub use sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice};
+pub use tier::{Gpu, Tier};
 pub use timeline::{Event, Handles, Key, Loop, Timeline, local, sample};
 pub use typeset::{Backing, Glyphs, Layout, MAX_FALLBACK, Outline, Shadow, TextLayer, Valign, Wrap};
 pub use uses::{Uses, needs, source, tells_time, variants};

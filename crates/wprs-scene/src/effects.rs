@@ -36,6 +36,10 @@ pub struct Descriptor {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reach: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_fps: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub velocity: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state: Option<State>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub solve: Option<Solve>,

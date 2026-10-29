@@ -23,8 +23,8 @@ fn scenes() -> Vec<PathBuf> {
     dirs
 }
 
-fn renderer() -> Option<Renderer> {
-    match Renderer::new() {
+fn renderer() -> Option<&'static Renderer> {
+    match Renderer::shared() {
         Ok(r) => Some(r),
         Err(e) if std::env::var_os("WPRS_REQUIRE_GPU").is_none() => {
             eprintln!("skipping the GPU part: {e}");
@@ -87,7 +87,7 @@ fn example_scenes_pack_small_render_and_rest() {
         let mut assets = SceneAssets::default();
         for (id, asset) in pictures {
             let data = image::load_from_memory(&package.read_file(&asset.path).unwrap()).unwrap();
-            assets.images.insert(id.clone(), Arc::new(data.into_rgba8()));
+            assets.images.insert(id.clone(), wprs_render::Pixels::new(data.into_rgba8()));
         }
         let Some(r) = &r else { continue };
         let fresh = || Runtime::new(scene.clone(), effective(&manifest.properties, &[]));

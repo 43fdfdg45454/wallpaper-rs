@@ -54,6 +54,15 @@ class SceneTest {
     }
 
     @Test
+    fun theFlashGuardIsOffUntilChosen() {
+        assertEquals("false", Native.setting("playback.flash_guard", null))
+        assertEquals("true", Native.setting("playback.flash_guard", "true"))
+        show("Pulse")
+        assertTrue(waitFor { frames.get() > 0 })
+        assertEquals("false", Native.setting("playback.flash_guard", "false"))
+    }
+
+    @Test
     fun silentSoundScenesDrawOnce() {
         show("Pulse")
         assertTrue(waitFor { frames.get() > 0 })

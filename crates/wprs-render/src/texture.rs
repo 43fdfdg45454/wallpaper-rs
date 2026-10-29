@@ -16,6 +16,10 @@ impl GpuImage {
         (self.texture.width(), self.texture.height())
     }
 
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
     pub fn same(&self, other: &GpuImage) -> bool {
         self.id == other.id
     }

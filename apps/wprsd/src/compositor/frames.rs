@@ -71,7 +71,7 @@ impl State {
     pub(super) fn render_due(&mut self) {
         let (now, limits, transition) =
             (Instant::now(), self.relief_limits(), self.settings.transition.as_secs_f32());
-        let shared = (&self.renderer, &*self.exporter, &self.players, self.power, limits);
+        let shared = (self.renderer, &*self.exporter, &self.players, self.power, limits);
         for (name, output) in &mut self.outputs {
             let streaming = shared.1.is_streaming(name);
             if output.active && output.shown.scene.as_ref().and_then(|s| s.due).is_some_and(|at| at <= now) {
@@ -117,6 +117,7 @@ fn draw(
     {
         super::feed::declare(name, Some(scene));
     }
+    let unchanged = output.unchanged(moved, exporter.starved(name));
     let progress = output.progress(now, output.shown.transition.map_or(transition, |d| d.as_secs_f32()));
     let opacity = if output.fade.is_some() { smoothstep(progress) } else { 1.0 };
     let shown = output.shown.layer(players, opacity, moved, output.size);
@@ -124,6 +125,7 @@ fn draw(
     let layers = [from.unwrap_or(shown), shown];
     let layers = &layers[usize::from(from.is_none())..];
     let written = match &mut output.sink {
+        _ if unchanged => Ok(Ok(())),
         Sink::Stream(target) => match exporter.lease(name) {
             Grant::Buffer(lease) => {
                 *target = None;
@@ -166,7 +168,7 @@ fn draw(
             screen.backdrop(renderer, &[output.shown.layer(players, 1.0, moved, output.size)], now)?
         }
     }
-    Ok(true)
+    Ok(!unchanged)
 }
 
 #[cfg(test)]
@@ -199,7 +201,7 @@ mod tests {
         let fade = |refresh, on_battery| {
             let mut output = Output::new((16, 9), color(), Sink::Stream(None), refresh);
             output.fade = Some((color(), Some(Instant::now())));
-            interval(&output, Power { tier: Tier::T3, on_battery, max_fps: 0 })
+            interval(&output, Power::new(Tier::T3, on_battery, 0))
         };
         let every = |fps: u32| Duration::from_secs(1) / fps;
         let fades = [fade(20, false), fade(0, false), fade(144, false), fade(144, true)];
@@ -218,7 +220,7 @@ mod tests {
             relief: None,
             scene: None,
         };
-        let (power, now) = (Power { tier: Tier::T3, on_battery: false, max_fps: 0 }, Instant::now());
+        let (power, now) = (Power::new(Tier::T3, false, 0), Instant::now());
         let mut output = Output::new((16, 9), color(), Sink::Stream(None), 60);
         (output.failed, output.last_render) = (1, Some(now));
         assert_eq!(deadline(&output, true, power, now), Some(now + RETRY));
@@ -236,7 +238,7 @@ mod tests {
             Some(now + Duration::from_secs(1) / 60),
             "a new picture waited for the retries of the old one"
         );
-        let Ok(renderer) = Renderer::new() else { return };
+        let Ok(renderer) = Renderer::shared() else { return };
         output.sink = Sink::Stream(Some(renderer.create_target(16, 9).unwrap()));
         (output.stale, output.dirty) = (false, false);
         output.unwatched(true);
@@ -247,7 +249,7 @@ mod tests {
 
     #[test]
     fn a_scene_that_follows_the_display_asks_for_120_fps_on_a_120_hz_stream() {
-        let renderer = match Renderer::new() {
+        let renderer = match Renderer::shared() {
             Ok(renderer) => renderer,
             Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
         };
@@ -267,17 +269,54 @@ mod tests {
             };
             let mut output = Output::new((16, 9), shown, Sink::Stream(None), 120);
             let scene = output.shown.scene.as_mut().expect("a scene");
-            scene
-                .render(&renderer, (output.size, output.refresh), power, &HashMap::new(), true, now)
-                .unwrap();
+            scene.render(renderer, (output.size, output.refresh), power, &HashMap::new(), true, now).unwrap();
             let due = scene.due.map(|at| at - now);
             output.last_render = Some(now);
             (due, deadline(&output, true, power, now).map(|at| at - now))
         };
         let every = |fps: u32| Some(Duration::from_secs(1) / fps);
-        let mains = Power { tier: Tier::T3, on_battery: false, max_fps: 0 };
+        let mains = Power::new(Tier::T3, false, 0);
         assert_eq!(cadence(mains), (every(120), every(120)));
         assert_eq!(cadence(Power { on_battery: true, ..mains }), (every(30), every(30)));
         assert_eq!(cadence(Power { max_fps: 60, ..mains }), (every(60), every(60)));
+    }
+
+    #[test]
+    fn a_scene_frame_that_changed_nothing_is_not_composed_again() {
+        let renderer = match Renderer::shared() {
+            Ok(renderer) => renderer,
+            Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
+        };
+        let (power, now) = (Power::new(Tier::T3, false, 60), Instant::now());
+        let text = r##"{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [32, 18] },
+          "timelines": [{ "id": "t", "duration": 4, "loop": "repeat" }],
+          "layers": [{ "id": "card", "type": "solid", "color": "#4060ff", "size": [16, 9],
+            "transform": { "rotation": { "timeline": "t", "keys": [[0, 0], [4, 360]] } } }] }"##;
+        let pack = Arc::new(ScenePack::bare(Scene::from_json(text).unwrap(), Default::default(), Vec::new()));
+        let spec =
+            SceneSpec { values: Default::default(), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
+        let (content, fit, background) = (Content::Scene(spec.clone()), Fit::Stretch, [0; 3]);
+        let (image, transition, uv, relief, scene) =
+            (None, None, None, None, Some(SceneState::new(spec, power)));
+        let shown = Shown { content, fit, background, image, transition, uv, relief, scene };
+        let mut output = Output::new((16, 9), shown, Sink::Stream(None), 60);
+        let frame = |output: &mut Output, starved: bool, at: Instant| {
+            let scene = output.shown.scene.as_mut().expect("a scene");
+            scene.render(renderer, (output.size, 60), power, &HashMap::new(), true, at).unwrap();
+            output.unchanged(None, starved)
+        };
+        let later = now + Duration::from_millis(100);
+        assert!(!frame(&mut output, false, now), "the first frame of a scene was not composed");
+        output.stale = false;
+        assert!(frame(&mut output, false, now), "a frame that changed nothing was composed again");
+        assert!(!frame(&mut output, false, later), "a moving frame was skipped");
+        assert!(!frame(&mut output, true, later), "a starved stream got no frame");
+        output.composed = None;
+        assert!(!frame(&mut output, false, later), "a repaint was skipped");
+        assert!(frame(&mut output, false, later));
+        let (image, transition, uv, relief, scene) = (None, None, None, None, None);
+        let color = Shown { content: Content::Color, fit, background, image, transition, uv, relief, scene };
+        output.fade = Some((color, None));
+        assert!(!frame(&mut output, false, later), "a fade was skipped");
     }
 }

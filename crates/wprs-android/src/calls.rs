@@ -122,7 +122,7 @@ pub fn diagnostics<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> JString<'a> {
         let report = json!({
             "gpu": gpu::adapter(), "backend": settings::chosen(BACKEND), "frames": frames, "fps": fps,
             "cap": power.fps(false), "charging": power.charging, "saver": power.saver, "thermal": power.thermal,
-            "tier": tier, "quality": quality,
+            "tier": tier, "quality": quality, "flashes": stage::flashes(),
         });
         Ok(env.new_string(report.to_string())?)
     })
