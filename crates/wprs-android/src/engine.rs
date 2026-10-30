@@ -59,6 +59,8 @@ impl Engine {
         let kept = parked::take(preview);
         let (stage, image, raised, epoch) =
             kept.map_or((None, None, None, 0), |k| (k.stage, k.image, k.raised, k.epoch));
+        let chosen = choice::shown(preview).map(|shown| shown.uid);
+        let image = image.filter(|(key, _)| chosen.as_ref() == Some(&key.item));
         let (target, fading, checked, rate, failures) = (None, None, (epoch, 0, (0, 0)), 0, 0);
         let (offset, shown, dirty, presented, video, look) = (0.5, 0.5, true, 0, false, settings::look());
         Self {
