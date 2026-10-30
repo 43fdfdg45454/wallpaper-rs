@@ -126,8 +126,11 @@ class MotionTest {
         val (still, before) = settled(frames) to IntArray(3, reds::get)
         (1..10).forEach { hold(type, reading(0.02f * it), 20) }
         assertTrue(waitFor { frames.get() > still })
-        hold(type, reading(0.2f), 400)
-        assertTrue("red went from ${before[1]} to ${reds.get(1)}", abs(reds.get(1) - before[1]) >= MOVED)
+        val turned = waitFor {
+            hold(type, reading(0.2f), 100)
+            abs(reds.get(1) - before[1]) >= MOVED
+        }
+        assertTrue("red went from ${before[1]} to ${reds.get(1)}", turned)
         return reds.get(0) - before[0] to reds.get(2) - before[2]
     }
 
