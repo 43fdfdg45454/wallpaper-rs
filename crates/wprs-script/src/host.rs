@@ -1,6 +1,7 @@
 use crate::wire::{receive, send};
 use crate::{Encoder, Error, Frame, Limits, MAX_FAILURES, Script, Setup};
 use std::io::BufReader;
+use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -74,17 +75,19 @@ pub struct Host {
     failures: u32,
     retry: Instant,
     encoder: Encoder,
+    progress: (u64, u64),
 }
 
 impl Host {
     pub fn new(program: impl Into<PathBuf>, args: &[&str], setup: &Setup) -> Host {
         let load = serde_json::to_vec(setup).unwrap_or_default();
         let command = (program.into(), args.iter().map(|a| a.to_string()).collect());
-        Host { command, load, running: None, failures: 0, retry: Instant::now(), encoder: Encoder::default() }
+        let (retry, encoder) = (Instant::now(), Encoder::default());
+        Host { command, load, running: None, failures: 0, retry, encoder, progress: (0, 0) }
     }
 
-    pub fn waiting(&self) -> bool {
-        self.running.is_some()
+    pub fn progress(&self) -> (u64, u64) {
+        self.progress
     }
 
     pub fn update(&mut self, frame: &Frame) -> Result<Option<ScriptOutputs>, Error> {
@@ -96,6 +99,7 @@ impl Host {
                 Ok(running) => {
                     self.running = Some(running);
                     self.encoder.reset();
+                    self.progress.1 = self.progress.0;
                 }
                 Err(e) => return self.fail(&e.to_string()),
             }
@@ -109,6 +113,7 @@ impl Host {
         };
         let outcome = outcome.and_then(|reply| {
             if reply.is_some() {
+                self.progress = (self.progress.0 + 1, self.progress.0);
                 running.since = Instant::now();
                 let input = match &mut running.input {
                     Some(input) => input,
@@ -137,8 +142,13 @@ impl Host {
 
     fn spawn(&self) -> std::io::Result<Running> {
         let (program, args) = &self.command;
-        let mut child =
-            Command::new(program).args(args).stdin(Stdio::piped()).stdout(Stdio::piped()).spawn()?;
+        let mut command = Command::new(program);
+        command.args(args).stdin(Stdio::piped()).stdout(Stdio::piped());
+        let orphaned = || match unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) } {
+            0 => Ok(()),
+            _ => Err(std::io::Error::last_os_error()),
+        };
+        let mut child = unsafe { command.pre_exec(orphaned) }.spawn()?;
         let (Some(mut input), Some(output)) = (child.stdin.take(), child.stdout.take()) else {
             return Err(std::io::Error::other("no pipes to the script host"));
         };

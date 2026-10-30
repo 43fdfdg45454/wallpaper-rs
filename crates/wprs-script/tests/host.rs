@@ -86,6 +86,8 @@ fn the_host_runs_scripts_in_another_process() {
         };
         r.as_ref().is_ok_and(|o| o.as_ref().is_some_and(turned))
     });
+    let (frames, replies) = host.progress();
+    assert!(frames >= 2 && replies + 1 == frames, "{frames} frames, {replies} replies");
 }
 
 fn scripts_tell_the_local_time_of_the_computer() {

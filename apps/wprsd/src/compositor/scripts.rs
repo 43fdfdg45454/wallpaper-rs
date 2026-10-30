@@ -68,6 +68,10 @@ impl Link {
         Ok(s.last.clone().filter(|_| fresh))
     }
 
+    pub(super) fn progress(&self) -> (u64, u64) {
+        lock(&self.shared).host.progress()
+    }
+
     #[cfg(test)]
     pub(super) fn shares(&self) -> usize {
         Arc::strong_count(&self.shared)

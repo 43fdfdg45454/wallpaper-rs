@@ -31,6 +31,7 @@ pub(super) struct SceneState {
     host: Option<Link>,
     calm: u32,
     answered: bool,
+    awaiting: u64,
     timer: f64,
     sent: (Values, [f32; 4], [u32; 2], u32),
     pub(super) console: std::collections::VecDeque<String>,
@@ -91,6 +92,7 @@ impl SceneState {
             host: None,
             calm,
             answered: false,
+            awaiting: 0,
             timer: f64::INFINITY,
             sent: (Values::new(), [0.0; 4], [1, 1], 60),
             console: Default::default(),
@@ -288,12 +290,23 @@ impl SceneState {
             touches: &[],
         };
         let inside = rt.pointer().inside;
-        let sent = self.host.as_mut()?.poll(output, inside, frame);
-        if eventful {
-            self.calm = 0;
-            self.sent.0 = self.exposed.clone();
+        let link = self.host.as_mut()?;
+        let before = link.progress().0;
+        let sent = link.poll(output, inside, frame);
+        let frames = link.progress().0;
+        match frames > before {
+            true => {
+                self.fired.clear();
+                if eventful {
+                    (self.calm, self.awaiting, self.sent.0) = (0, frames, self.exposed.clone());
+                }
+            }
+            false => {
+                let mut kept = actions;
+                kept.append(&mut self.pressed);
+                self.pressed = kept;
+            }
         }
-        self.fired.clear();
         match sent {
             Ok(Some(mut outputs)) => {
                 self.answered = true;
@@ -412,9 +425,10 @@ impl SceneState {
             left if left.is_finite() => Wake::At(left.max(0.0)),
             _ => Wake::Idle,
         };
-        let wake = match self.host {
+        let wake = match &self.host {
             _ if self.still || stopped => Wake::Idle,
-            Some(_) if !self.answered || self.calm < if busy { CALM } else { SETTLE } => Wake::Frame,
+            Some(h) if !self.answered || h.progress().1 < self.awaiting => Wake::Frame,
+            Some(_) if self.calm < if busy { CALM } else { SETTLE } => Wake::Frame,
             Some(_) if busy => frame.wake.min(Wake::At(POLL)).min(timer),
             Some(_) => frame.wake.min(timer),
             None => frame.wake,
