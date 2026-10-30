@@ -54,8 +54,11 @@ fn frames_timed_on_the_cpu_only_charge_past_a_second() {
 }
 
 impl Clock {
-    pub(crate) fn again(&mut self, r: &Renderer, ops: &[super::super::Op]) -> Timing {
-        drop(self.collect());
-        self.start(r, ops, false, true)
+    pub(crate) fn again(&mut self, r: &Renderer, ops: &[super::super::Op]) -> (Timing, u64) {
+        let (stamps, timed) = (&mut self.stamps, &mut self.timed);
+        let read = crate::allocations::allocations(|| {
+            stamps.iter_mut().for_each(|s| s.collect(timed, |_, _| {}));
+        });
+        (self.start(r, ops, false, true), read)
     }
 }

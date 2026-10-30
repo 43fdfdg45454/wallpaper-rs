@@ -81,7 +81,7 @@ fn replay(r: &Renderer, view: &mut SceneView, ops: &[Op], data: &[u8]) -> u64 {
         sets: &scratch.sets,
     };
     let pipes = r.pipes();
-    let timing = clock.again(r, ops);
+    let (timing, read) = clock.again(r, ops);
     let spent = allocations(|| {
         r.queue.write_buffer(uniform, 0, &data[..size_of::<super::item::FrameData>()]);
         pool.upload(&r.device, &r.queue, pipes, uniform);
@@ -89,7 +89,7 @@ fn replay(r: &Renderer, view: &mut SceneView, ops: &[Op], data: &[u8]) -> u64 {
         r.scoped(|| r.encode_scene(pool, &sources, ops, None, clock, (*id, 0))).unwrap();
     });
     r.finish().unwrap();
-    spent
+    read + spent
 }
 
 fn measure(r: &Renderer, scene: Scene) -> (SceneView, Runtime, [u64; 3], u32) {
