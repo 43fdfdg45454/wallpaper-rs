@@ -10,7 +10,15 @@ state.dispatch = ({ events }) => {
     }
 };
 
+state.particles = {};
+state.finish = () => {
+    for (const [id, own] of Object.entries(state.particles)) {
+        Object.assign((state.out.particles[id] ??= {}), { instance: own.instance, points: own.points });
+    }
+};
+
 const fields = ["position", "scale", "rotation", "opacity", "visible", "color", "text"];
+const tunables = ["alpha", "size", "count", "speed", "life", "time_scale", "brightness", "color"];
 const channels = ["left", "right", "average"];
 
 export const engine = Object.freeze({
@@ -125,5 +133,48 @@ export function timeline(id) {
         set speed(rate) {
             send({ speed: Number(rate) });
         },
+    });
+}
+
+export function particles(id) {
+    id = String(id);
+    const own = (state.particles[id] ??= { playing: true, instance: {}, points: {} });
+    const send = (command) => void ((state.out.particles[id] ??= {}).commands ??= []).push(command);
+    const whole = (n, lo, hi, what) => {
+        n = Math.floor(Number(n));
+        if (!(n >= lo && n <= hi)) throw new RangeError(`${what} takes ${lo} to ${hi}`);
+        return n;
+    };
+    return Object.freeze({
+        play() {
+            own.playing = true;
+            send("play");
+        },
+        pause() {
+            own.playing = false;
+            send("pause");
+        },
+        stop() {
+            own.playing = false;
+            send("stop");
+        },
+        get playing() {
+            return own.playing;
+        },
+        emit: (n) => send({ emit: whole(n, 1, 1000, "emit") }),
+        point(n, at) {
+            own.points[whole(n, 0, 7, "point")] = [Number(at[0]), Number(at[1])];
+        },
+        instance: new Proxy(
+            {},
+            {
+                get: (_, key) => own.instance[key],
+                set(_, key, value) {
+                    if (!tunables.includes(key)) throw new TypeError(`${String(key)} is not an instance field`);
+                    own.instance[key] = key === "color" ? Array.from(value, Number) : Number(value);
+                    return true;
+                },
+            },
+        ),
     });
 }

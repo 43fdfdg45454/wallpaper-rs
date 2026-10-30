@@ -37,6 +37,37 @@ pub struct ScriptOutputs {
     pub values: BTreeMap<String, Json>,
     pub layers: BTreeMap<String, LayerOverride>,
     pub timelines: Vec<(String, TimelineCommand)>,
+    pub particles: BTreeMap<String, ParticleControl>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ParticleControl {
+    pub commands: Vec<ParticleCommand>,
+    pub instance: Tuning,
+    pub points: BTreeMap<u8, [f32; 2]>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ParticleCommand {
+    Play,
+    Pause,
+    Stop,
+    Emit(u32),
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Tuning {
+    pub alpha: Option<f32>,
+    pub size: Option<f32>,
+    pub count: Option<f32>,
+    pub speed: Option<f32>,
+    pub life: Option<f32>,
+    pub time_scale: Option<f32>,
+    pub brightness: Option<f32>,
+    pub color: Option<[f32; 4]>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -123,6 +154,9 @@ impl PointerState {
 
 impl ScriptOutputs {
     pub fn is_empty(&self) -> bool {
-        self.values.is_empty() && self.layers.is_empty() && self.timelines.is_empty()
+        self.values.is_empty()
+            && self.layers.is_empty()
+            && self.timelines.is_empty()
+            && self.particles.is_empty()
     }
 }

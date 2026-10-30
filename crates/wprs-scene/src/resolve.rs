@@ -37,6 +37,7 @@ pub(crate) struct Context<'a> {
     pub(crate) tilt: [f32; 2],
     pub(crate) still: bool,
     pub(crate) sheets: &'a BTreeMap<String, Vec<f32>>,
+    pub(crate) flocks: &'a [crate::particles::Flock],
 }
 
 pub(crate) type Motion = ([f32; 2], f64, [f32; 2]);

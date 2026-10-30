@@ -7,7 +7,7 @@ use crate::validate::{Check, Issue};
 use crate::value::{Binding, Param};
 use crate::{Kind, Layer, MAX_SCRIPTS, Solid};
 
-const BASIC: [ScriptApi; 3] = [ScriptApi::Audio, ScriptApi::Pointer, ScriptApi::Clicks];
+const BASIC: [ScriptApi; 4] = [ScriptApi::Audio, ScriptApi::Pointer, ScriptApi::Clicks, ScriptApi::Particles];
 
 fn identifier(name: &str) -> bool {
     let mut chars = name.chars();
@@ -36,6 +36,7 @@ impl Check<'_> {
             }
             let newer = s.events.iter().any(|e| e.newer()) || s.uses.iter().any(|u| !BASIC.contains(u));
             self.uses(newer || !s.params.is_empty(), "scripts2");
+            self.uses(s.wants(ScriptApi::Particles), "particles2");
             self.uses(s.wants(ScriptApi::Storage), "script_storage");
             self.uses(s.wants(ScriptApi::Layers), "script_layers");
             self.uses(s.wants(ScriptApi::Geometry), "script_geometry");

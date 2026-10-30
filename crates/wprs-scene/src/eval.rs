@@ -47,6 +47,8 @@ pub enum Content<'a> {
     },
     Particles {
         system: &'a str,
+        flock: usize,
+        size: f32,
     },
     Adjustment,
 }
@@ -198,6 +200,21 @@ fn emit<'a>(
     let tint = set.color.map(Color).filter(|_| painted.is_some() || group).or(painted.map(|c| c.get(cx)));
     let tint = tint.unwrap_or(Color([1.0; 4]));
     let brightness = layer.brightness.as_ref().map_or(1.0, |b| b.get(cx).clamp(0.0, 16.0));
+    let tuned = match &layer.kind {
+        Kind::Particles { system, render, .. } => cx.scene.particles.get(system).map(|s| {
+            let glow = render.as_deref().unwrap_or(&s.render).brightness.as_ref();
+            (crate::particles::tuned(cx, Some(layer), s), glow.map_or(1.0, |b| b.get(cx).clamp(0.0, 16.0)))
+        }),
+        _ => None,
+    };
+    let (opacity, tint, brightness) = match tuned {
+        Some((t, glow)) => {
+            let c = t.color.unwrap_or([1.0; 4]);
+            let tint = Color(std::array::from_fn(|i| tint.0[i] * c[i]));
+            (opacity * t.alpha, tint, brightness * t.brightness * glow)
+        }
+        None => (opacity, tint, brightness),
+    };
     let toned = tint != Color([1.0; 4]) || brightness != 1.0;
     let isolate = !effects.is_empty()
         || !layer.blend.fixed()
@@ -290,7 +307,16 @@ fn content<'a>(
         Kind::Solid { color, size } => {
             Content::Solid { color: tint(color.get(cx)), size: size.unwrap_or(canvas) }
         }
-        Kind::Particles { system, .. } => Content::Particles { system },
+        Kind::Particles { system, .. } => {
+            let index = cx.scene.particles.keys().position(|k| k == system).unwrap_or(usize::MAX);
+            let flock = crate::particles::flock_of(cx.flocks, index, &layer.id);
+            let size = cx
+                .scene
+                .particles
+                .get(system)
+                .map_or(1.0, |s| crate::particles::tuned(cx, Some(layer), s).size);
+            Content::Particles { system, flock, size }
+        }
         Kind::Adjustment { .. } | Kind::Sound(_) | Kind::Light(_) | Kind::Mesh(_) | Kind::Model(_) => {
             Content::Adjustment
         }

@@ -150,6 +150,14 @@ impl Scene {
         c.figures();
         let total: u64 = self.particles.values().map(|s| u64::from(s.capacity)).sum();
         c.range("/particles", total as f32, 0.0, MAX_PARTICLES as f32);
+        let flocks = crate::particles::flocks(self);
+        let systems: Vec<_> = self.particles.values().collect();
+        let parts = flocks.iter().flat_map(|f| &f.parts);
+        c.count("/particles", parts.clone().count(), crate::particles::MAX_PARTS);
+        let flocked: u64 = parts.map(|p| u64::from(systems[p.system].capacity)).sum();
+        if flocked > total {
+            c.range("/particles", flocked as f32, 0.0, MAX_PARTICLES as f32);
+        }
         for (id, system) in &self.particles {
             c.id(&format!("/particles/{id}"), id);
             c.system(&format!("/particles/{id}"), system);

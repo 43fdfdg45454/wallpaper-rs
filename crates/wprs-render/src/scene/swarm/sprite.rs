@@ -1,4 +1,4 @@
-use super::{B, LOOK, Look, Swarms, buffer};
+use super::{B, LOOK, Look, PARTICLE, Swarms, buffer};
 use crate::Renderer;
 use crate::scene::pipes::{Mode, blend};
 
@@ -11,11 +11,10 @@ impl Swarms {
         let desc =
             wgpu::PipelineLayoutDescriptor { label: None, bind_group_layouts: &layouts, immediate_size: 0 };
         let layout = r.device.create_pipeline_layout(&desc);
-        let attributes =
-            wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4];
+        let attributes = wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4];
         let step_mode = wgpu::VertexStepMode::Instance;
         let buffers =
-            [Some(wgpu::VertexBufferLayout { array_stride: 64, step_mode, attributes: &attributes })];
+            [Some(wgpu::VertexBufferLayout { array_stride: PARTICLE, step_mode, attributes: &attributes })];
         let target = wgpu::ColorTargetState { blend: blend(mode), ..self.format.into() };
         let (module, compilation_options) = (&self.module, wgpu::PipelineCompilationOptions::default());
         let pipeline = r.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -73,17 +72,21 @@ impl Swarms {
         self.looked.iter().for_each(|(buffer, _)| r.queue.write_buffer(buffer, 0, &self.bytes));
     }
 
-    pub(crate) fn draw(&self, pass: &mut wgpu::RenderPass<'_>, system: usize, slot: u32, mode: Mode) {
-        let store = self.stores.get(system).and_then(Option::as_ref);
-        let (Some(store), Some((_, group)), Some(pipeline)) =
-            (store, &self.looked, self.pipelines.get(&mode))
+    pub(crate) fn draw(&self, pass: &mut wgpu::RenderPass<'_>, flock: usize, slot: u32, mode: Mode) {
+        let flight = self.flights.get(flock).and_then(Option::as_ref);
+        let (Some(flight), Some((_, group)), Some(pipeline), Some(herd)) =
+            (flight, &self.looked, self.pipelines.get(&mode), self.herds.get(flock))
         else {
             return;
         };
         pass.set_pipeline(pipeline);
-        pass.set_bind_group(0, group, &[slot]);
-        pass.set_bind_group(1, &store.tex, &[]);
-        pass.set_vertex_buffer(0, store.particles.slice(..));
-        pass.draw(0..4, 0..self.kits[system].bake.alloc);
+        let first = (u64::from(slot) / LOOK) as usize;
+        for (p, store) in flight.stores.iter().enumerate() {
+            let Some(kit) = self.kitted.get(first + p).and_then(|k| self.kits.get(*k)) else { continue };
+            pass.set_bind_group(0, group, &[slot + (p as u64 * LOOK) as u32]);
+            pass.set_bind_group(1, &kit.tex, &[]);
+            pass.set_vertex_buffer(0, store.particles.slice(..));
+            pass.draw(0..4, 0..herd.bake.allocs[p]);
+        }
     }
 }

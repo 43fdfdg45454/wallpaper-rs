@@ -1,13 +1,26 @@
 use super::kit::{Look, kit};
-use super::{Swarms, compute, entry, mode, module, storage, uniform};
+use super::{B, Herd, SIM, Swarms, buffer, compute, entry, mode, module, storage, uniform};
 use crate::Renderer;
 use crate::scene::{Image, SceneAssets};
 use std::collections::HashMap;
 use wgpu::ShaderStages as S;
-use wprs_scene::{Bake, Blend, EmitShape, Kind, Quality, Scene, Sim, Values};
+use wprs_scene::{Bake, Blend, EmitShape, Kind, Placement, Quality, Render, Scene, Values, flocks};
+
+pub(crate) fn renders(scene: &Scene) -> Vec<(usize, Option<String>, &Render)> {
+    let own = scene.layers().filter_map(|l| match &l.kind {
+        Kind::Particles { system, render: Some(r), .. } => {
+            Some((scene.particles.keys().position(|k| k == system)?, Some(l.id.clone()), &**r))
+        }
+        _ => None,
+    });
+    scene.particles.values().enumerate().map(|(i, s)| (i, None, &s.render)).chain(own).collect()
+}
 
 pub(crate) fn sprites(scene: &Scene, props: &Values) -> Vec<Option<String>> {
-    scene.particles.values().map(|s| s.render.texture.as_ref().and_then(|t| t.settled(Some(props)))).collect()
+    renders(scene)
+        .into_iter()
+        .map(|(_, _, r)| r.texture.as_ref().and_then(|t| t.settled(Some(props))))
+        .collect()
 }
 
 impl Swarms {
@@ -42,14 +55,13 @@ impl Swarms {
         let sample_type = wgpu::TextureSampleType::Float { filterable: true };
         let (view_dimension, c) = (wgpu::TextureViewDimension::D2, S::COMPUTE);
         let texture = wgpu::BindingType::Texture { sample_type, view_dimension, multisampled: false };
-        let rw = [0, 1, 2].map(|b| entry(b, c, storage(false)));
         let layouts = [
             layout(&[
-                rw[0],
-                rw[1],
-                rw[2],
+                entry(0, c, storage(false)),
+                entry(1, c, storage(false)),
+                entry(2, c, storage(true)),
                 entry(3, c, storage(true)),
-                entry(4, c, uniform(size_of::<Sim>())),
+                entry(4, c, uniform(size_of::<wprs_scene::Sim>())),
             ]),
             layout(&[
                 entry(0, S::VERTEX_FRAGMENT, uniform(size_of::<Look>())),
@@ -57,6 +69,7 @@ impl Swarms {
             ]),
             layout(&[entry(0, S::FRAGMENT, texture)]),
         ];
+        debug_assert!(size_of::<wprs_scene::Sim>() as u64 <= SIM);
         let masks = scene.particles.values().flat_map(|s| &s.emitters).filter_map(|e| match &e.shape {
             EmitShape::Mask { texture, .. } => Some((texture.as_str(), assets.images.get(texture)?.image()?)),
             _ => None,
@@ -64,13 +77,19 @@ impl Swarms {
         let masks: HashMap<&str, std::sync::Arc<image::RgbaImage>> = masks.collect();
         let pixels = |id: &str| masks.get(id).map(|i| (i.width(), i.height(), i.as_raw().as_slice()));
         let sprites = sprites(scene, props);
-        let kits = scene.particles.iter().zip(&sprites).filter_map(|((id, s), sprite)| {
+        let kits = renders(scene).into_iter().zip(&sprites).map(|((system, layer, render), sprite)| {
             let sprite = sprite.as_deref().map(|t| (t, images.get(t)));
-            Some(kit(id, s, Bake::new(scene, id, tier, !gpu, pixels)?, scene, sprite, white, srgb))
+            kit(r, &layouts[2], (system, layer), render, scene, sprite, white, srgb)
+        });
+        let systems: Vec<_> = scene.particles.values().collect();
+        let herds = flocks(scene).into_iter().enumerate().filter_map(|(i, f)| {
+            let world = systems[f.system].space == Placement::World;
+            Some(Herd { bake: Bake::new(scene, i, tier, !gpu, pixels)?, world })
         });
         let filter = wgpu::FilterMode::Linear;
         let sampler =
             wgpu::SamplerDescriptor { mag_filter: filter, min_filter: filter, ..Default::default() };
+        let none = buffer(r, 16, B::STORAGE);
         let mut swarms = Swarms {
             canvas: scene.canvas.size.map(|v| v as f32),
             steps: 0,
@@ -78,9 +97,11 @@ impl Swarms {
             created: 0,
             gpu,
             profile: false,
+            trail: tier.trail(),
             kits: kits.collect(),
+            herds: herds.collect(),
             sprites,
-            stores: Vec::new(),
+            flights: Vec::new(),
             marks: Vec::new(),
             module: module(r, include_str!("sprite.wgsl")),
             layouts,
@@ -89,9 +110,11 @@ impl Swarms {
             format,
             sampler: r.device.create_sampler(&sampler),
             looks: Vec::new(),
+            kitted: Vec::new(),
             looked: None,
             bytes: Vec::new(),
             quality: Quality::Q3,
+            none,
         };
         swarms.prepare(r, gpu);
         drawn.into_iter().chain([&Blend::Normal]).for_each(|b| swarms.pipeline(r, mode(*b, false)));

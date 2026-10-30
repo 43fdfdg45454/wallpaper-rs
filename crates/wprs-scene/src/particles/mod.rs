@@ -4,7 +4,10 @@ mod children;
 mod cloud;
 mod control;
 mod drawn;
+mod drive;
 mod emit;
+mod feed;
+mod flock;
 mod forces;
 mod instance;
 mod look;
@@ -12,6 +15,7 @@ mod motion;
 mod ops;
 mod pack;
 mod plan;
+mod points;
 mod pulls;
 mod rules;
 mod seed;
@@ -20,12 +24,16 @@ mod spawn;
 mod spread;
 mod starts;
 mod swarm;
+mod tune;
 
 pub use bake::{Bake, CPU_PARTICLES, MAX_POINTS};
 pub use children::{Child, Inheritable, MAX_CHILDREN, Moment};
 pub use cloud::{Census, Cloud, Particle};
 pub use control::{ControlPoint, Handle, MAX_CONTROL, Periodic, Perspective, Placement};
 pub use emit::{Burst, Cue, Emitter, Follow, Init};
+pub use feed::MAX_EMIT;
+pub(crate) use flock::flock_of;
+pub use flock::{Flock, MAX_DEPTH, MAX_PARTS, Part, flocks};
 pub use forces::{
     Boids, Collider, Falloff, Force, KeepBetween, KeepDistance, Oscillate, Ring, SlowNear, Surface, Target,
     Wobble,
@@ -33,7 +41,7 @@ pub use forces::{
 pub use instance::{Instance, Tunable};
 pub use look::{Frames, Orient, Refract, Render, Rope, Stretch, Trail};
 pub use ops::Operator;
-pub use pack::Sim;
+pub use pack::{EVENT, MAX_HATCH, PARTICLE_EVENTS, Sim};
 pub(crate) use plan::plan;
 pub use seed::{
     Carry, Hsv, MAX_PALETTE, MAX_REMAPS, OffsetNoise, Palette, REMAP_INPUTS, Remap, RemapOp, RemapOutput,
@@ -41,7 +49,8 @@ pub use seed::{
 };
 pub use shapes::{Area, Around, Between, Bow, EmitShape, Refresh, Source, Sweep, Taper};
 pub use spread::{Num, Spread};
-pub use swarm::{STEP, SUBSTEPS, Swarm};
+pub use swarm::{Play, STEP, SUBSTEPS, Swarm, WARM, WARM_WORK};
+pub(crate) use tune::tuned;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

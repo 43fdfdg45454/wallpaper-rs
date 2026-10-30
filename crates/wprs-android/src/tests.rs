@@ -11,6 +11,7 @@ use wprs_library::Kind;
 use wprs_sync::{Doc, Hlc, Kept, Replica, Secrets, SyncKey, View};
 
 mod calm;
+mod flight;
 mod refused;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures");
@@ -567,6 +568,7 @@ fn scenes() {
     saved_settings();
     cued();
     calm::calmed();
+    flight::flown();
     power::device(false, 0);
 }
 

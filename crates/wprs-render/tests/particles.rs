@@ -131,7 +131,7 @@ fn a_trimmed_view_starts_its_particles_again() {
         run.view.trim();
         run.runtime.restart_particles();
         run.frame(r, 0.0);
-        assert_eq!((run.view.stats().steps, run.view.stats().particles), (60, 1500), "gpu {gpu}");
+        assert_eq!((run.view.stats().steps, run.view.stats().particles), (15, 1500), "gpu {gpu}");
         assert!(run.census(r).alive.abs_diff(warm) <= warm / 50, "{warm} {:?}", run.census(r));
     }
 }

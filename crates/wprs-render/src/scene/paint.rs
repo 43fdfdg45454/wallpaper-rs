@@ -166,6 +166,11 @@ impl<'a> Painter<'a, '_, '_> {
     pub(crate) fn local(&self, i: usize, size: [f32; 2]) -> Affine {
         let frame = self.frame;
         let d = &frame.draws[i];
+        if let Content::Particles { flock, .. } = d.content
+            && self.swarms.as_ref().is_some_and(|s| s.world(flock))
+        {
+            return self.screen.then(Affine::scale(size));
+        }
         let shift = Affine::translate([-d.origin[0] * size[0], -d.origin[1] * size[1]]);
         self.screen.then(d.world).then(shift).then(Affine::scale(size))
     }

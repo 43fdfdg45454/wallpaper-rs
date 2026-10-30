@@ -1,9 +1,10 @@
 use super::mode;
+use crate::Renderer;
 use crate::scene::item::{linear, ndc};
 use crate::scene::paint::{Painter, Target};
 use crate::scene::{Image, Op};
 use bytemuck::{Pod, Zeroable};
-use wprs_scene::{Affine, Bake, Blend, Content, Frames, Mask, STEP, Scene, System};
+use wprs_scene::{Affine, Blend, Content, Frames, Mask, Render, STEP, Scene};
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -13,32 +14,35 @@ pub(super) struct Look {
     pub(super) tint: [f32; 4],
     pub(super) atlas: [f32; 4],
     pub(super) trail: [f32; 4],
+    pub(super) shade: [f32; 4],
     pub(super) sizes: [[f32; 4]; 16],
     pub(super) colors: [[f32; 4]; 64],
 }
 
 pub(super) struct Kit {
     pub(super) id: String,
-    pub(super) bake: Bake,
+    pub(super) system: usize,
+    pub(super) layer: Option<String>,
     pub(super) look: Look,
     pub(super) trail: u32,
-    pub(super) texture: wgpu::TextureView,
+    pub(super) tex: wgpu::BindGroup,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn kit(
-    id: &str,
-    s: &System,
-    bake: Bake,
+    r: &Renderer,
+    layout: &wgpu::BindGroupLayout,
+    (system, layer): (usize, Option<String>),
+    render: &Render,
     scene: &Scene,
     sprite: Option<(&str, Option<&Image>)>,
     white: &wgpu::TextureView,
     srgb: bool,
 ) -> Kit {
-    let (sizes, colors) = s.render.luts();
-    let r = &s.render;
+    let (sizes, colors) = render.luts();
     let atlas = sprite.and_then(|(t, _)| scene.assets.get(t)?.atlas).unwrap_or([1, 1]);
     let image = sprite.and_then(|(_, image)| image);
-    let frames = match r.frames {
+    let frames = match render.frames {
         None => 0.0,
         Some(Frames::Time) => 1.0,
         Some(Frames::Life) => 2.0,
@@ -46,17 +50,28 @@ pub(super) fn kit(
     };
     let tone = |c: [f32; 4]| if srgb { c } else { [linear(c[0]), linear(c[1]), linear(c[2]), c[3]] };
     let flag = |b: bool| f32::from(u8::from(b));
+    let stretch = render.stretch;
     let look = Look {
-        tint: [1.0, flag(srgb), bake.size, flag(image.is_some())],
-        atlas: [atlas[1] as f32, atlas[0] as f32, frames, r.fps],
-        trail: [r.stretch.time, 0.0, r.trail.as_ref().map_or(1.0, |t| t.width), flag(r.mix)],
+        tint: [1.0, flag(srgb), 1.0, flag(image.is_some())],
+        atlas: [atlas[1] as f32, atlas[0] as f32, frames, render.fps],
+        trail: [stretch.time, 0.0, render.trail.as_ref().map_or(1.0, |t| t.width), flag(render.mix)],
+        shade: [
+            1.0,
+            render.cycles.unwrap_or(1) as f32,
+            stretch.min.unwrap_or(0.0),
+            stretch.max.unwrap_or(1e9),
+        ],
         sizes: std::array::from_fn(|i| std::array::from_fn(|j| sizes[i * 4 + j])),
         colors: colors.map(tone),
         ..Zeroable::zeroed()
     };
-    let trail = r.trail.as_ref().map_or(0, |t| t.length.min(bake.trail));
-    let texture = image.map_or_else(|| white.clone(), |i| i.0.view.clone());
-    Kit { id: id.into(), bake, look, trail, texture }
+    let trail = render.trail.as_ref().map_or(0, |t| t.length);
+    let view = image.map_or(white, |i| &i.0.view);
+    let entries = [wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(view) }];
+    let tex =
+        r.device.create_bind_group(&wgpu::BindGroupDescriptor { label: None, layout, entries: &entries });
+    let id = scene.particles.keys().nth(system).cloned().unwrap_or_default();
+    Kit { id, system, layer, look, trail, tex }
 }
 
 impl Painter<'_, '_, '_> {
@@ -69,30 +84,43 @@ impl Painter<'_, '_, '_> {
     ) {
         let frame = self.frame;
         let d = &frame.draws[i];
-        let Content::Particles { system } = d.content else { return };
+        let Content::Particles { flock, size, .. } = d.content else { return };
         if mask.is_some() || !blend.fixed() {
             return self.apart(i, target, atop);
         }
         let (r, screen, srgb) = (self.r, self.screen, self.srgb);
         let Some(swarms) = self.swarms.as_deref_mut() else { return };
-        let Some(index) = swarms.kits.iter().position(|k| k.id == system) else { return };
         let mode = mode(blend, atop);
         swarms.pipeline(r, mode);
+        let Some(herd) = swarms.herds.get(flock) else { return };
         let [w, h] = swarms.canvas;
-        let kit = &swarms.kits[index];
-        let mut look = kit.look;
-        if d.tint != wprs_scene::Color([1.0; 4]) || d.brightness != 1.0 {
-            let [r, g, b, _] = d.tint.0;
-            let [r, g, b, _] =
-                super::super::item::toned(wprs_scene::Color([r, g, b, 1.0]), d.brightness, srgb, 1.0);
-            let tint = [r, g, b, d.tint.0[3]];
-            look.colors.iter_mut().for_each(|c| (0..4).for_each(|k| c[k] *= tint[k]));
-        }
-        let m = screen.then(d.world).then(Affine::translate([-d.origin[0] * w, -d.origin[1] * h]));
-        (look.m0, look.m1) = ndc(target.rect, m);
-        (look.tint[0], look.trail[1]) = (opacity, swarms.quality.trail(kit.trail) as f32 * STEP);
+        let m = match herd.world {
+            true => screen,
+            false => screen.then(d.world).then(Affine::translate([-d.origin[0] * w, -d.origin[1] * h])),
+        };
+        let tinted = d.tint != wprs_scene::Color([1.0; 4]) || d.brightness != 1.0;
+        let [cr, cg, cb, _] = d.tint.0;
+        let toned = crate::scene::item::toned(wprs_scene::Color([cr, cg, cb, 1.0]), d.brightness, srgb, 1.0);
+        let tint = [toned[0], toned[1], toned[2], d.tint.0[3]];
         let slot = (swarms.looks.len() as u64 * super::LOOK) as u32;
-        swarms.looks.push(look);
-        self.ops.push(Op::Particles { target: target.src, system: index, slot, mode });
+        for (p, system) in herd.bake.systems.iter().enumerate() {
+            let own = (p == 0).then_some(d.layer.id.as_str());
+            let found = |layer: Option<&str>| {
+                swarms.kits.iter().position(|k| k.system == *system && k.layer.as_deref() == layer)
+            };
+            let Some(k) = own.and_then(|l| found(Some(l))).or_else(|| found(None)) else { continue };
+            let kit = &swarms.kits[k];
+            let mut look = kit.look;
+            if tinted {
+                look.colors.iter_mut().for_each(|c| (0..4).for_each(|j| c[j] *= tint[j]));
+            }
+            (look.m0, look.m1) = ndc(target.rect, m);
+            look.tint[0] = opacity;
+            look.tint[2] = herd.bake.sizes[p] * size;
+            look.trail[1] = swarms.quality.trail(kit.trail.min(swarms.trail)) as f32 * STEP;
+            swarms.looks.push(look);
+            swarms.kitted.push(k);
+        }
+        self.ops.push(Op::Particles { target: target.src, system: flock, slot, mode });
     }
 }

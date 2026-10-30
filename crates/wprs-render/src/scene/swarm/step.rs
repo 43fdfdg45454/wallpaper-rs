@@ -1,7 +1,10 @@
+use super::store::fresh;
 use super::{CHUNK, SIM, Swarms};
 use crate::{RenderError, Renderer};
-use std::time::Instant;
-use wprs_scene::{Content, Draw, Frame, Quality, Runtime, Sim};
+use std::time::{Duration, Instant};
+use wprs_scene::{Cloud, Content, Draw, Frame, PARTICLE_EVENTS, Quality, Runtime, Sim};
+
+const CUT: Duration = Duration::from_millis(200);
 
 impl Swarms {
     pub(crate) fn run(
@@ -14,58 +17,92 @@ impl Swarms {
         let start = Instant::now();
         (self.steps, self.created, self.quality) = (0, 0, quality);
         self.looks.clear();
-        for i in 0..self.kits.len() {
-            let id = self.kits[i].id.as_str();
+        self.kitted.clear();
+        for i in 0..self.herds.len() {
             let shown =
-                |d: &Draw| !d.hidden && matches!(d.content, Content::Particles { system } if system == id);
+                |d: &Draw| !d.hidden && matches!(d.content, Content::Particles { flock, .. } if flock == i);
             let Some(swarm) = runtime.swarm(i).filter(|_| frame.draws.iter().any(shown)) else { continue };
-            if self.stores[i].is_none() {
-                self.stores[i] = Some(self.store(r, i));
+            if self.flights[i].is_none() {
+                self.flights[i] = Some(self.flight(r, i));
                 self.created += 1;
             }
             let mark = std::mem::replace(&mut self.marks[i], (swarm.stamp, swarm.epoch));
-            let (kit, Some(store)) = (&self.kits[i], &mut self.stores[i]) else { continue };
+            let (bake, Some(flight)) = (&self.herds[i].bake, &mut self.flights[i]) else { continue };
             if mark == (swarm.stamp, swarm.epoch) {
                 continue;
             }
-            let reset = mark.1 != swarm.epoch;
-            self.steps += swarm.steps.len() as u32;
-            if let Some(cloud) = &mut store.cloud {
+            let (reset, parts, count) = (mark.1 != swarm.epoch, bake.allocs.len(), swarm.count());
+            self.steps += count as u32;
+            if !flight.clouds.is_empty() {
                 if reset {
-                    cloud.clear();
+                    flight.clouds.iter_mut().for_each(Cloud::clear);
                 }
-                swarm.steps.iter().for_each(|s| cloud.step(&kit.bake.apply(s), &kit.bake.points));
-                r.queue.write_buffer(&store.particles, 0, bytemuck::cast_slice(&cloud.particles));
+                let mut sims = vec![Sim::default(); parts];
+                for j in 0..count {
+                    if start.elapsed() > CUT {
+                        break;
+                    }
+                    (0..parts).for_each(|p| sims[p] = bake.apply(p, swarm.sim(j, p)));
+                    Cloud::brood(&mut flight.clouds, &sims, &bake.hosts, &bake.points);
+                }
+                for (store, cloud) in flight.stores.iter().zip(&flight.clouds) {
+                    r.queue.write_buffer(&store.particles, 0, bytemuck::cast_slice(&cloud.particles));
+                }
                 continue;
             }
-            let (Some((dead, top, sims, group)), Some([simulate, emit])) = (&store.gpu, &self.compute) else {
-                continue;
-            };
+            let Some([simulate, emit, settle]) = &self.compute else { continue };
             if reset {
-                let free: Vec<u32> = (0..kit.bake.alloc).collect();
-                r.queue.write_buffer(dead, 0, bytemuck::cast_slice(&free));
-                r.queue.write_buffer(top, 0, bytemuck::bytes_of(&(kit.bake.alloc as i32)));
-            }
-            for (n, chunk) in swarm.steps.chunks(CHUNK).enumerate() {
-                self.bytes.clear();
-                self.bytes.resize(chunk.len() * SIM as usize, 0);
-                for (bytes, step) in self.bytes.chunks_mut(SIM as usize).zip(chunk) {
-                    bytes[..size_of::<Sim>()].copy_from_slice(bytemuck::bytes_of(&kit.bake.apply(step)));
+                for (p, store) in flight.stores.iter().enumerate() {
+                    let state = fresh(bake.allocs[p], bake.states[p]);
+                    store
+                        .gpu
+                        .iter()
+                        .for_each(|g| r.queue.write_buffer(&g.0, 0, bytemuck::cast_slice(&state)));
                 }
-                r.queue.write_buffer(sims, 0, &self.bytes);
+            }
+            for (n, first) in (0..count).step_by(CHUNK).enumerate() {
+                let steps = first..(first + CHUNK).min(count);
+                for (p, store) in flight.stores.iter().enumerate() {
+                    self.bytes.clear();
+                    self.bytes.resize(steps.len() * SIM as usize, 0);
+                    for (bytes, j) in self.bytes.chunks_mut(SIM as usize).zip(steps.clone()) {
+                        bytes[..size_of::<Sim>()]
+                            .copy_from_slice(bytemuck::bytes_of(&bake.apply(p, swarm.sim(j, p))));
+                    }
+                    store.gpu.iter().for_each(|g| r.queue.write_buffer(&g.1, 0, &self.bytes));
+                }
                 let mut encoder = r.device.create_command_encoder(&Default::default());
                 if reset && n == 0 {
-                    encoder.clear_buffer(&store.particles, 0, None);
+                    flight.stores.iter().for_each(|s| encoder.clear_buffer(&s.particles, 0, None));
                 }
                 let mut pass = encoder.begin_compute_pass(&Default::default());
-                for (j, step) in chunk.iter().enumerate() {
-                    pass.set_bind_group(0, group, &[j as u32 * SIM as u32]);
-                    pass.set_pipeline(simulate);
-                    pass.dispatch_workgroups(kit.bake.alloc.div_ceil(64), 1, 1);
-                    let births = kit.bake.apply(step).births[3];
-                    if births > 0 {
-                        pass.set_pipeline(emit);
-                        pass.dispatch_workgroups(births.div_ceil(64), 1, 1);
+                for (k, j) in steps.enumerate() {
+                    let offset = [k as u32 * SIM as u32];
+                    for (p, store) in flight.stores.iter().enumerate() {
+                        let Some((_, _, group)) = &store.gpu else { continue };
+                        let sim = bake.apply(p, swarm.sim(j, p));
+                        pass.set_bind_group(0, group, &offset);
+                        pass.set_pipeline(simulate);
+                        pass.dispatch_workgroups(bake.allocs[p].div_ceil(64), 1, 1);
+                        let threads = match sim.mode[0] {
+                            0 => sim.total(),
+                            1 | 2 => PARTICLE_EVENTS,
+                            _ => sim.mode[3],
+                        };
+                        if threads > 0 {
+                            pass.set_pipeline(emit);
+                            pass.dispatch_workgroups(threads.div_ceil(64), 1, 1);
+                        }
+                    }
+                    for (p, store) in flight.stores.iter().enumerate() {
+                        let Some((_, _, group)) =
+                            store.gpu.as_ref().filter(|_| swarm.sim(j, p).mode[1] & 2 != 0)
+                        else {
+                            continue;
+                        };
+                        pass.set_bind_group(0, group, &offset);
+                        pass.set_pipeline(settle);
+                        pass.dispatch_workgroups(1, 1, 1);
                     }
                 }
                 drop(pass);

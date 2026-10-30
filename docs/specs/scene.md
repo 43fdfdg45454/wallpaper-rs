@@ -964,6 +964,66 @@ sets it, and every other name must be one of `points`. Targets and centers of fo
 | render `lit`, `normal`, `refract` | lit by the scene lights with a normal map; `{ "normal", "amount" }` bends what is behind | `particle_lighting` |
 | render `shader` | a package effect with `stage: "particle"` | `particle_shaders` |
 
+The newer fields behave as follows.
+
+- **World space.** A `world` system moves in canvas pixels: the transform of its layer places,
+  turns and scales particles, their speed and their shapes when they are born, and they are drawn
+  without it, so moving the layer afterwards leaves them where they are. Gravity and the other
+  forces act along the directions of the canvas, and targets, colliders and control points of the
+  layer move with it. Each layer that draws a `world` system moves particles of its own.
+- **Control points.** `at` is in pixels of the layer, or of the canvas with `space: world`; a point
+  that follows the cursor goes back to the center of the canvas when the pointer leaves. A shape
+  with `at` is drawn around that point, turned by its `angle`. The `points` of a layer's `instance`
+  and the `point(n, [x, y])` of scripts move points `p0` to `p7` for that layer.
+- **Shapes.** `inner` cuts a box of that size out of the middle of a `box`, which births fill evenly.
+  `scale` stretches a `circle` into an ellipse and `sign` keeps its positive (1) or negative (−1)
+  half along x and along y.
+- **Starting values.** A range `[min, max, exponent]` picks `min + (max − min) · u^exponent`.
+  `alpha` replaces the alpha of the color. `hsv` picks the hue in degrees (with `steps`, one of that
+  many hues from one end of the range to the other), the saturation and the value from 0 to 1;
+  `palette` picks one of its colors and moves its hue by up to `noise[0]` half turns and its
+  saturation and value by up to `noise[1]` and `noise[2]`. `radial` adds a speed away from the center
+  of the shape (the center of the canvas for `edge` and `mask`, the direction of `angle` for a
+  `point`), and `inherit` adds the velocity of the pointer or of a control point, times a number
+  picked from `speed`.
+- **Forces.** `window` fades a force in between its first two fractions of the life and out between
+  the last two. `attractor`, `vortex` and `orbit` weaken with distance as the inverse square, the
+  inverse and not at all by default; with a `radius` they do nothing beyond it and weaken as
+  `1 − d / radius` (`linear`) or its square (`inverse_square`). A `vortex` with `inner` and `outer`
+  turns fully inside `inner` and fades out at `outer`, and its `ring` pulls particles toward a circle
+  of that `radius` with `pull`, fully at `width` pixels away. `turbulence` scrolls its noise `speed`
+  pixels per second to the right, changes it `time_scale` times as fast and scales its x and y by
+  `mask`. `oscillate` picks a frequency, a scale and a phase for each particle and moves it around
+  where it would be without drifting (x and y a quarter of a turn apart, scaled by `mask`), fades its
+  alpha by up to the scale or grows and shrinks its size by that fraction. `cap` limits the speed,
+  `torque` adds degrees per second to the spin each second, `spin_drag` slows the spin and
+  `slow_near` multiplies the speed every 1/60 s by `factor` near its target, fading to no effect
+  between `inner` and `outer`.
+- **Emitters.** `delay` and `duration` count from the start of the system or from the last
+  `play()`; a finished emitter, with no particle alive, lets the scene sleep. `periodic` alternates
+  emission and pause for times picked from the seed. One-time bursts fire whenever the emitter
+  starts: at first, after its `delay`, at each `periodic` window and after `play()`. `max_per_step`
+  keeps the rest of the births for the next steps.
+- **Children.** `static` children emit on their own around the origin of their parent. `spawn` and
+  `death` children start the one-time bursts of their emitters (one particle when they have none, at
+  most 1000) where each particle is born or dies, in the same step, and `follow` children are born
+  `rate` times a second at each living particle, ride along with it unless their system is `world`,
+  and die with it. Shapes of children are placed around the particle, moved by `offset` and turned
+  by `angle`; `scale` also scales their sizes. `probability` is drawn once per particle and `max`
+  limits the children born in a step; at most 1024 births and 1024 deaths of a system start children
+  in a step. `points_from` takes the control points of the parent.
+- **Instances.** `alpha`, `size`, `brightness` and `color` multiply the look of the layer; `count` is
+  the fraction of births and slots it keeps, `speed` and `life` multiply the starting speed and life
+  and `time_scale` the speed of its time. A layer whose `instance` sets `count`, `speed`, `life`,
+  `time_scale` or `points` moves particles of its own; the others share them. A system may `lock`
+  what layers and scripts may not change.
+- **Looks.** `render.brightness` multiplies the color with the brightness of the layer, `cycles`
+  repeats the frames over the life and the `stretch` range limits how long a particle is drawn along
+  its motion, in pixels.
+- **Limits.** A scene simulates at most 64 systems, counting children and layers with particles of
+  their own, and their capacities share the 200 000 particles. `prewarm` runs in steps of 1/15 s,
+  at most 30 million particle steps, and stops after 200 ms when particles run on the CPU.
+
 A `particles` layer may also set `instance` (`alpha`, `size`, `count`, `speed`, `life`, `time_scale`,
 `brightness`, `color` and `points`, which may be bound and multiply or move what the system does for
 that layer only, unless the system locks them) and a `render` of its own that replaces the one of
@@ -1145,7 +1205,7 @@ without reading its text. At most 64 modules (more than 16 name `scripts2`), eac
 | Field | Meaning |
 |-------|---------|
 | `events` | the functions the module exports and the events it handles, each once: `init` (once, before the first frame, with the module's `params`), `update` (each frame; the only one older engines call), `destroy`, `resize` (the canvas or the screen changed), `properties` (the user changed settings), `settings` (language, frame rate or quality changed), `timelineEvent` (`{ timeline, name, t }` of timeline and clip events), the pointer events of `solid` layers and `hit` bones `click`, `down`, `up` (input `clicks`), `enter`, `leave` and `move` (input `pointer`), delivered with `scene.layer(id).on(event, handler)` with the layer, local and canvas positions and the touched bone, and `mediaStatus`, `mediaPlayback`, `mediaProperties`, `mediaThumbnail` and `mediaTimeline` (input `media`) |
-| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `media` (the `media` object and its colors, input `media`), `timers` (`setTimeout` and `setInterval` on the scene clock, at most once a frame and never under 16 ms), `storage` (`storage.get`, `set`, `delete` and `clear` per output or package, 64 KiB of JSON kept on the device only, removed with the package; `script_storage`), `layers` (`scene.spawn(template, …)`, `destroy`, `scene.order` and `scene.layers()`, at most 256 dynamic layers; `script_layers`), `geometry` (`scene.mesh(pool)` with `create`, `update` and `destroy`, at most 1 MiB of vertices a frame; needs `pools`; `script_geometry`), `effects` (`layer.effect(index or name)` with `enabled`, `set` and `reset`), `particles` (`particles(layer)` with `play`, `pause`, `stop`, `emit(n)` and `instance`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`), `animations` (texture frames, video playback, mesh and model clips, bones, shapes and attachments of layers), `camera` (`scene.camera`, `camera3d`, `parallax` and `background`), `math` (the `wprs/math` module of vectors, matrices, `smoothstep`, `mix` and color conversions), `shortcuts` (`openShortcut(prop)`, only inside a click), `console` (`console.log` and the like, limited, shown by the editor) and `shared` (values shared between modules and relative `import` of other modules of the package) |
+| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `media` (the `media` object and its colors, input `media`), `timers` (`setTimeout` and `setInterval` on the scene clock, at most once a frame and never under 16 ms), `storage` (`storage.get`, `set`, `delete` and `clear` per output or package, 64 KiB of JSON kept on the device only, removed with the package; `script_storage`), `layers` (`scene.spawn(template, …)`, `destroy`, `scene.order` and `scene.layers()`, at most 256 dynamic layers; `script_layers`), `geometry` (`scene.mesh(pool)` with `create`, `update` and `destroy`, at most 1 MiB of vertices a frame; needs `pools`; `script_geometry`), `effects` (`layer.effect(index or name)` with `enabled`, `set` and `reset`), `particles` (`particles(layer)` with `play`, `pause` (no births, particles keep moving), `stop` (removes them until `play`), `playing`, `emit(n)` (1 to 1000) and `point(n, [x, y])`, and the `instance` fields `alpha`, `size`, `count`, `speed`, `life`, `time_scale`, `brightness` and `color`, which last until changed; it names `particles2` and gives each particles layer particles of its own), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`), `animations` (texture frames, video playback, mesh and model clips, bones, shapes and attachments of layers), `camera` (`scene.camera`, `camera3d`, `parallax` and `background`), `math` (the `wprs/math` module of vectors, matrices, `smoothstep`, `mix` and color conversions), `shortcuts` (`openShortcut(prop)`, only inside a click), `console` (`console.log` and the like, limited, shown by the editor) and `shared` (values shared between modules and relative `import` of other modules of the package) |
 | `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}` |
 
 Any event but `update`, any part but `audio`, `pointer` and `clicks`, and `params` name `scripts2`;

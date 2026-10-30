@@ -132,7 +132,10 @@ pub use guard::guarded;
 pub use helper::{
     CHECK_CPU, CHECK_MEMORY, CHECK_SHADER, launch_checks_from_here, serve_check, serve_check_with,
 };
-pub use input::{AudioFrame, BANDS, LayerOverride, PointerState, ScriptOutputs, TimelineCommand};
+pub use input::{
+    AudioFrame, BANDS, LayerOverride, ParticleCommand, ParticleControl, PointerState, ScriptOutputs,
+    TimelineCommand, Tuning,
+};
 pub use layer::{Anchor, Inherit, Kind, Layer, Parallax, Solid, Transform};
 pub use lens::{Camera3d, CameraKey, CameraPath, Fade, FadeTo, MAX_PATHS, PathOrder};
 pub use light::{Beam, Light, Lighting, MAX_LIGHTS, Volumetric};
@@ -144,13 +147,14 @@ pub use memory::MAX_MEMORY;
 pub use outside::{CHECK_WALL, Checker, UNCHECKED, check_out_of_process, checker, helper_runs, set_checker};
 pub use particles::{
     Area, Around, Bake, Between, Boids, Bow, Burst, CPU_PARTICLES, Carry, Census, Child, Cloud, Collider,
-    ControlPoint, Cue, EmitShape, Emitter, Falloff, Follow, Force, Frames, Handle, Hsv, Inheritable, Init,
-    Instance, KeepBetween, KeepDistance, MAX_CHILDREN, MAX_COLLIDERS, MAX_COLLIDERS2, MAX_CONTROL, MAX_CURVE,
-    MAX_EMITTERS, MAX_EMITTERS2, MAX_FORCES, MAX_FORCES2, MAX_PALETTE, MAX_POINTS, MAX_PREWARM, MAX_PREWARM2,
-    MAX_REMAPS, Moment, OffsetNoise, Operator, Orient, Oscillate, Palette, Particle, Periodic, Perspective,
-    Placement, REMAP_INPUTS, Refract, Refresh, Remap, RemapOp, RemapOutput, Render, Ring, Rope, STEP,
-    SUBSTEPS, Sim, SlowNear, Source, Spread, Stretch, Surface, Swarm, Sweep, System, Taper, Target, Trail,
-    Tunable, Turbulent, Wave, Wobble,
+    ControlPoint, Cue, EVENT, EmitShape, Emitter, Falloff, Flock, Follow, Force, Frames, Handle, Hsv,
+    Inheritable, Init, Instance, KeepBetween, KeepDistance, MAX_CHILDREN, MAX_COLLIDERS, MAX_COLLIDERS2,
+    MAX_CONTROL, MAX_CURVE, MAX_DEPTH as MAX_GENERATIONS, MAX_EMIT, MAX_EMITTERS, MAX_EMITTERS2, MAX_FORCES,
+    MAX_FORCES2, MAX_HATCH, MAX_PALETTE, MAX_PARTS, MAX_POINTS, MAX_PREWARM, MAX_PREWARM2, MAX_REMAPS,
+    Moment, OffsetNoise, Operator, Orient, Oscillate, PARTICLE_EVENTS, Palette, Part, Particle, Periodic,
+    Perspective, Placement, Play, REMAP_INPUTS, Refract, Refresh, Remap, RemapOp, RemapOutput, Render, Ring,
+    Rope, STEP, SUBSTEPS, Sim, SlowNear, Source, Spread, Stretch, Surface, Swarm, Sweep, System, Taper,
+    Target, Trail, Tunable, Turbulent, WARM, WARM_WORK, Wave, Wobble, flocks,
 };
 pub use props::{
     Choice, Condition, Control, Expr, ICONS, Mode, Pick, Preset, Property, Slider, Text, Values,

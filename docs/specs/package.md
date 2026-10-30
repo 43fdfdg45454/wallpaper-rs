@@ -304,8 +304,8 @@ scene with `sound2` silently and leaves out `scripts2`, `script_layers`, `script
 | `material_shaders` | shades a model with `fur`, `foliage`, `chroma` or a material shader of its own | refused | refused |
 | `camera3d` | sets `camera3d` | refused | refused |
 | `shadows` | sets `shadows` on a light, or `cast_shadows` or `receive_shadows` on a material | refused | refused |
-| `particles2` | moves particles in world space, with control points, per-layer `instance` or `render`, emitter timing, newer emitter shapes, initializers and forces, operator windows, render `brightness`, `cycles` or a stretch range, or beyond the older limits (8 systems, 4 emitters, 8 forces, 4 colliders, 10 s of prewarm) | refused | refused |
-| `particle_children` | sets `children` on a system | refused | refused |
+| `particles2` | moves particles in world space, with control points, per-layer `instance` or `render`, scripts that use `particles`, emitter timing, newer emitter shapes, initializers and forces, operator windows, render `brightness`, `cycles` or a stretch range, or beyond the older limits (8 systems, 4 emitters, 8 forces, 4 colliders, 10 s of prewarm) | runs | runs |
+| `particle_children` | sets `children` on a system | runs | runs |
 | `particle_depth` | sets `perspective`, `init.depth` or `init.depth_speed` | refused | refused |
 | `particle_lighting` | sets `render.lit`, `render.normal` or `render.refract` | refused | refused |
 | `particle_layers` | emits from a `layer` or collides with one | refused | refused |

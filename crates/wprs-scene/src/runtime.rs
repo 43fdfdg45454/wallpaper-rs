@@ -1,7 +1,7 @@
 use crate::cue::Fired;
 use crate::eval::{Frame, walk};
 use crate::input::{AudioFrame, PointerState, ScriptOutputs, TimelineCommand};
-use crate::particles::{Swarm, plan};
+use crate::particles::{Flock, Swarm, System, flocks, plan};
 use crate::resolve::Context;
 use crate::timeline::Playhead;
 use crate::uses::{self, Uses};
@@ -50,6 +50,7 @@ pub struct Runtime {
     uses: [Uses; 4],
     limit: Option<Uses>,
     swarms: RefCell<Vec<Swarm>>,
+    flocks: Vec<Flock>,
 }
 
 impl Runtime {
@@ -70,7 +71,9 @@ impl Runtime {
         let fresh = || std::time::UNIX_EPOCH.elapsed().map_or(0, |d| d.as_nanos() as u64 ^ d.as_secs() << 32);
         let (seed, size) = (scene.clock.seed.unwrap_or_else(fresh), scene.canvas.size);
         let homes = crate::kin::homes(&scene);
-        let swarms = RefCell::new(scene.particles.values().map(|s| Swarm::new(s, seed, size)).collect());
+        let flocks = flocks(&scene);
+        let systems: Vec<&System> = scene.particles.values().collect();
+        let swarms = RefCell::new(flocks.iter().map(|f| Swarm::new(&systems, f, seed, size)).collect());
         let listened = crate::voice::listened(&scene, true, true);
         let onsets = crate::voice::onsets(&scene);
         let gates = RefCell::new(vec![None; onsets.len()]);
@@ -111,6 +114,7 @@ impl Runtime {
             uses,
             limit: None,
             swarms,
+            flocks,
         };
         runtime.set_lengths(BTreeMap::new());
         runtime
@@ -180,6 +184,10 @@ impl Runtime {
 
     pub fn wake(&self) -> Wake {
         self.wake.get()
+    }
+
+    pub fn flocks(&self) -> &[Flock] {
+        &self.flocks
     }
 
     pub fn swarm(&self, system: usize) -> Option<Ref<'_, Swarm>> {
@@ -301,6 +309,18 @@ impl Runtime {
                 TimelineCommand::Speed(rate) => head.rate = rate.clamp(-100.0, 100.0),
             }
         }
+        for (layer, control) in &outputs.particles {
+            let system = self.scene.layer(layer).and_then(|l| match &l.kind {
+                crate::Kind::Particles { system, .. } => {
+                    self.scene.particles.keys().position(|k| k == system)
+                }
+                _ => None,
+            });
+            let at = system.map(|s| crate::particles::flock_of(&self.flocks, s, layer));
+            if let Some(swarm) = at.and_then(|i| self.swarms.get_mut().get_mut(i)) {
+                control.commands.iter().for_each(|c| swarm.command(*c));
+            }
+        }
         let changed = outputs != self.script;
         self.script = outputs;
         changed
@@ -370,6 +390,7 @@ impl Runtime {
             tilt: if self.still { [0.0; 2] } else { self.tilt },
             still: self.still,
             sheets: &self.sheets,
+            flocks: &self.flocks,
         }
     }
 
@@ -382,7 +403,7 @@ impl Runtime {
         let (time, wake) = (self.t as f32, Wake::Idle);
         let mut frame = Frame { draws, effects, time, view, background, quality, wake };
         walk(&cx, &self.scene.layers, Affine::IDENTITY, quality, &mut frame, canvas);
-        plan(&self.swarms, &self.scene, &cx, &frame, quality, self.t);
+        plan(&self.swarms, (&self.scene, &self.flocks), &cx, &frame, quality, self.t);
         frame.wake = cx.wake.get().min(self.cue_wake());
         self.pace.set(if frame.wake == Wake::Frame { cx.pace.get() } else { u32::MAX });
         self.sizes.set((frame.draws.len(), frame.effects.len()));

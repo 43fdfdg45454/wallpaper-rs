@@ -11,17 +11,26 @@ use crate::Renderer;
 use kit::{Kit, Look};
 use std::collections::HashMap;
 use wgpu::{BindGroup, BindGroupLayout, Buffer, BufferUsages as B, ShaderStages as S};
-use wprs_scene::{Blend, Cloud, Quality};
+use wprs_scene::{Bake, Blend, Cloud, Quality};
 
-const CHUNK: usize = 32;
-const SIM: u64 = 768;
+const CHUNK: usize = 16;
+const SIM: u64 = 2560;
 const LOOK: u64 = 1536;
+const PARTICLE: u64 = 80;
 
 struct Store {
     particles: Buffer,
-    gpu: Option<(Buffer, Buffer, Buffer, BindGroup)>,
-    cloud: Option<Cloud>,
-    tex: BindGroup,
+    gpu: Option<(Buffer, Buffer, BindGroup)>,
+}
+
+struct Flight {
+    stores: Vec<Store>,
+    clouds: Vec<Cloud>,
+}
+
+struct Herd {
+    bake: Bake,
+    world: bool,
 }
 
 pub(crate) struct Swarms {
@@ -31,20 +40,24 @@ pub(crate) struct Swarms {
     pub(crate) created: u32,
     gpu: bool,
     profile: bool,
+    trail: u32,
     kits: Vec<Kit>,
+    herds: Vec<Herd>,
     pub(crate) sprites: Vec<Option<String>>,
-    stores: Vec<Option<Store>>,
+    flights: Vec<Option<Flight>>,
     marks: Vec<(u64, u32)>,
     module: wgpu::ShaderModule,
     layouts: [BindGroupLayout; 3],
-    compute: Option<[wgpu::ComputePipeline; 2]>,
+    compute: Option<[wgpu::ComputePipeline; 3]>,
     pipelines: HashMap<Mode, wgpu::RenderPipeline>,
     format: wgpu::TextureFormat,
     sampler: wgpu::Sampler,
     looks: Vec<Look>,
+    kitted: Vec<usize>,
     looked: Option<(Buffer, BindGroup)>,
     bytes: Vec<u8>,
     quality: Quality,
+    none: Buffer,
 }
 
 fn entry(binding: u32, visibility: S, ty: wgpu::BindingType) -> wgpu::BindGroupLayoutEntry {
@@ -73,7 +86,11 @@ fn module(r: &Renderer, wgsl: &str) -> wgpu::ShaderModule {
 }
 
 pub(super) fn compute(r: &Renderer) -> bool {
-    r.gpu.get_downlevel_capabilities().flags.contains(wgpu::DownlevelFlags::COMPUTE_SHADERS)
+    let flags = r.gpu.get_downlevel_capabilities().flags;
+    let limits = r.device.limits();
+    flags.contains(wgpu::DownlevelFlags::COMPUTE_SHADERS)
+        && limits.max_storage_buffers_per_shader_stage >= 4
+        && limits.max_uniform_buffer_binding_size >= SIM
 }
 
 fn mode(blend: Blend, atop: bool) -> Mode {
@@ -99,5 +116,11 @@ impl SceneView {
 
     pub fn profile_particles(&mut self, on: bool) {
         self.swarms.iter_mut().for_each(|s| s.profile = on);
+    }
+}
+
+impl Swarms {
+    pub(crate) fn world(&self, flock: usize) -> bool {
+        self.herds.get(flock).is_some_and(|h| h.world)
     }
 }

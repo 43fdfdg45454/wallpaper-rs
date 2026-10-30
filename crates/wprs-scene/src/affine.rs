@@ -33,6 +33,16 @@ impl Affine {
         Affine([1.0, y.to_radians().tan(), x.to_radians().tan(), 1.0, 0.0, 0.0])
     }
 
+    pub fn inverse(self) -> Affine {
+        let [a, b, c, d, e, f] = self.0;
+        let det = a * d - b * c;
+        if det.abs() < 1e-12 {
+            return Affine::IDENTITY;
+        }
+        let [a, b, c, d] = [d / det, -b / det, -c / det, a / det];
+        Affine([a, b, c, d, -(a * e + c * f), -(b * e + d * f)])
+    }
+
     pub fn apply(self, [x, y]: [f32; 2]) -> [f32; 2] {
         let [a, b, c, d, e, f] = self.0;
         [a * x + c * y + e, b * x + d * y + f]

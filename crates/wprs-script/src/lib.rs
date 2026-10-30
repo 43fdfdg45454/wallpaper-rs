@@ -146,6 +146,7 @@ impl Script {
                     values.set(path, value)?;
                 }
             }
+            state.get::<_, Function>("finish")?.call::<_, ()>(())?;
             out.set("values", values)?;
             ctx.json_stringify(out)?.map(|s| s.to_string()).transpose().map(Option::unwrap_or_default)
         });
@@ -162,5 +163,6 @@ fn outputs<'js>(ctx: &Ctx<'js>) -> rquickjs::Result<Object<'js>> {
     let out = Object::new(ctx.clone())?;
     out.set("layers", Object::new(ctx.clone())?)?;
     out.set("timelines", Array::new(ctx.clone())?)?;
+    out.set("particles", Object::new(ctx.clone())?)?;
     Ok(out)
 }

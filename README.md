@@ -739,6 +739,23 @@ adivinan por su texto. Todo tiene su nombre en `requires.features` y, mientras e
 el escritorio y el teléfono rechazan la escena con el aviso de versión más nueva (el teléfono, que no
 ejecuta scripts ni tiene iluminación RGB ni varias pantallas, solo omite esas partes).
 
+De las partículas nuevas, el escritorio y el teléfono ya dibujan, igual en la GPU que en la CPU, el
+espacio de mundo (las partículas nacen con la posición, el giro y la escala de su capa y después no
+la siguen), hasta ocho puntos de control movidos por valores, el cursor, la capa o los scripts, las
+cajas huecas y las elipses o medios círculos con un punto de anclaje, la duración, el retardo, la
+emisión por ventanas aleatorias, el tope de una partícula por paso y la espera a que suene algo, los
+inicializadores con exponente, alfa propio, HSV, paleta, velocidad vectorial, velocidad hacia fuera
+y velocidad heredada del cursor o de un punto, los operadores con ventanas de vida (oscilar posición,
+alfa o tamaño, limitar la velocidad, par y freno de giro, frenar cerca de un punto, alcance y caída
+de atractores, vórtices con anillo y turbulencia con desplazamiento y máscara), los sistemas hijos
+estáticos, al nacer, al morir o que siguen a cada partícula (dos generaciones como mucho), los ajustes
+por capa (alfa, tamaño, cantidad, velocidad, vida, ritmo, brillo, color y puntos, con bloqueo en el
+sistema), el brillo, los ciclos y el estiramiento acotado del dibujo, y el control desde scripts con
+`particles(capa)`: `play`, `pause`, `stop`, `playing`, `emit(n)`, `point(n, [x, y])` e `instance`.
+Una escena simula como mucho 64 sistemas contando hijos y capas con partículas propias, dentro de
+las 200 000 partículas, y el precalentamiento llega a 30 s en pasos de 1/15 s. Lo demás de la lista
+anterior sigue pidiendo una versión más nueva.
+
 También están descritos los efectos que el motor aún no dibuja: mezcla por degradado, revelar con
 el puntero, desplazamiento por mapa, cáusticas, destellos, fuego, giro, transformación, pulso,
 contraste local, estela de movimiento, VHS, fluidos, destello de lente y chisporroteo eléctrico, y

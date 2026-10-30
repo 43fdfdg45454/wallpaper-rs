@@ -57,9 +57,9 @@ pub const SCENE: &[(&str, &str, [Support; 2])] = &[
     (
         "particles2",
         "moves particles in world space, with control points, timing or richer settings",
-        [No, No],
+        [Yes, Yes],
     ),
-    ("particle_children", "spawns particles from other particles", [No, No]),
+    ("particle_children", "spawns particles from other particles", [Yes, Yes]),
     ("particle_depth", "gives its particles depth", [No, No]),
     ("particle_lighting", "lights or refracts its particles", [No, No]),
     ("particle_layers", "emits or stops particles with the shape of a layer", [No, No]),

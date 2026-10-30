@@ -4,6 +4,7 @@ struct Look {
     tint: vec4<f32>,
     atlas: vec4<f32>,
     trail: vec4<f32>,
+    shade: vec4<f32>,
     sizes: array<vec4<f32>, 16>,
     colors: array<vec4<f32>, 64>,
 };
@@ -41,6 +42,7 @@ fn vs_particle(
     @location(1) b: vec4<f32>,
     @location(2) c: vec4<f32>,
     @location(3) color: vec4<f32>,
+    @location(4) e: vec4<f32>,
 ) -> Sprite {
     var out: Sprite;
     out.position = vec4<f32>(2.0, 2.0, 2.0, 1.0);
@@ -48,13 +50,15 @@ fn vs_particle(
         return out;
     }
     let t = clamp(b.x / b.y, 0.0, 1.0);
-    let size = b.z * curve(t) * look.tint.z;
+    let size = b.z * curve(t) * look.tint.z * e.w;
     let corner = vec2<f32>(f32(v & 1u), f32(v >> 1u));
     let speed = length(a.zw);
-    let tail = (look.trail.x + look.trail.y) * speed;
+    let turned = look.shade.z > 0.0 && look.shade.z == look.shade.w;
+    let stretch = select(clamp(look.trail.x * speed, look.shade.z, look.shade.w), 0.0, turned || speed <= 0.0);
+    let tail = stretch + look.trail.y * speed;
     var axis = vec2<f32>(cos(radians(b.w)), sin(radians(b.w)));
     var width = size;
-    if tail > 0.0 {
+    if (tail > 0.0 || turned) && speed > 0.0 {
         axis = a.zw / speed;
         width = size * select(1.0, look.trail.z, look.trail.y > 0.0);
     }
@@ -67,7 +71,7 @@ fn vs_particle(
     let tone = mix(look.colors[i], look.colors[i + 1u], x - f32(i));
     let base = select(vec4<f32>(decode(color.rgb), color.a), color, look.tint.y > 0.5);
     let fade = select(1.0, corner.x, look.trail.y > 0.0);
-    out.color = base * tone * vec4<f32>(1.0, 1.0, 1.0, look.tint.x * fade);
+    out.color = base * tone * vec4<f32>(vec3<f32>(look.shade.x), look.tint.x * fade * e.z);
     let n = max(look.atlas.x * look.atlas.y, 1.0);
     var f = c.y;
     switch u32(look.atlas.z) {
@@ -75,7 +79,7 @@ fn vs_particle(
             f = c.y + b.x * look.atlas.w;
         }
         case 2u: {
-            f = min(c.y + t * n, n - 0.001);
+            f = select(min(c.y + t * n, n - 0.001), c.y + fract(t * look.shade.y) * n, look.shade.y > 1.0);
         }
         case 3u: {
             f = floor(c.z * n);

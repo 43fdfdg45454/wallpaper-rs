@@ -38,14 +38,14 @@ fn runtime(text: &str) -> Runtime {
 
 fn run(text: &str, frames: usize, quality: Quality) -> Cloud {
     let mut rt = runtime(text);
-    let bake = Bake::new(&rt.scene, "dots", Tier::T3, false, |_| None).unwrap();
-    let (mut cloud, mut stamp) = (Cloud::new(bake.alloc), 0);
+    let bake = Bake::new(&rt.scene, 0, Tier::T3, false, |_| None).unwrap();
+    let (mut cloud, mut stamp) = (Cloud::new(bake.allocs[0]), 0);
     for _ in 0..frames {
         rt.advance(1.0 / 30.0);
         rt.frame(VIEW, quality);
         let swarm = rt.swarm(0).unwrap();
         if std::mem::replace(&mut stamp, swarm.stamp) != swarm.stamp {
-            swarm.steps.iter().for_each(|s| cloud.step(&bake.apply(s), &bake.points));
+            swarm.steps.iter().for_each(|s| cloud.step(&bake.apply(0, s), &bake.points));
         }
     }
     cloud
@@ -187,7 +187,7 @@ fn the_scheduler_knows_when_particles_live() {
     let mut rt = runtime(&scene(cued, true));
     assert_eq!((rt.uses().audio, rt.uses().cursor), (true, true));
     rt.frame(VIEW, Quality::Q3);
-    assert_eq!(rt.swarm(0).unwrap().steps[0].births[3], 0);
+    assert_eq!(rt.swarm(0).unwrap().steps[0].total(), 0);
     assert!(rt.set_audio(AudioFrame { beat: true, silent: false, ..AudioFrame::default() }));
     rt.set_pointer(PointerState {
         pos: Some([0.5, 0.5]),
@@ -199,21 +199,22 @@ fn the_scheduler_knows_when_particles_live() {
     rt.advance(1.0 / 60.0);
     rt.frame(VIEW, Quality::Q3);
     let step = rt.swarm(0).unwrap().steps[0];
-    assert_eq!((step.births[0], step.births[1], step.emitters[3]), (7, 10, [100.0, 50.0, 0.0, 0.0]));
+    assert_eq!((step.births[0], step.births[1], step.emitters[7]), (7, 10, [100.0, 50.0, 0.0, 0.0]));
 }
 
 #[test]
 fn budgets_follow_the_device_tier_and_masks_place_particles() {
     let big = with(sparks(), json!({ "capacity": 8000, "init": { "size": [40, 60] } }));
     let s = Scene::from_json(&scene(big, true)).unwrap();
-    let bake = |tier, cpu| Bake::new(&s, "dots", tier, cpu, |_| None).unwrap();
+    let bake = |tier, cpu| Bake::new(&s, 0, tier, cpu, |_| None).unwrap();
     assert_eq!(
-        [bake(Tier::T0, true).alloc, bake(Tier::T2, true).alloc, bake(Tier::T2, false).alloc],
+        [bake(Tier::T0, true).allocs[0], bake(Tier::T2, true).allocs[0], bake(Tier::T2, false).allocs[0]],
         [2000, 5000, 8000]
     );
     let (t0, t3) = (bake(Tier::T0, true), bake(Tier::T3, false));
-    assert!(t0.size < t3.size && t3.size < 1.0, "{} {}", t0.size, t3.size);
-    assert!(8000.0 * (50.0 * t3.size).powi(2) <= 6.0 * 200.0 * 100.0 * 1.01);
+    let (small, large) = (t0.sizes[0], t3.sizes[0]);
+    assert!(small < large && large < 1.0, "{small} {large}");
+    assert!(8000.0 * (50.0 * large).powi(2) <= 6.0 * 200.0 * 100.0 * 1.01);
     assert_eq!((t0.trail, t3.trail, Quality::Q2.trail(8), Quality::Q1.trail(8)), (0, 16, 4, 0));
     let masked = with(
         sparks(),
@@ -222,12 +223,11 @@ fn budgets_follow_the_device_tier_and_masks_place_particles() {
     );
     let rt = runtime(&scene(masked, true));
     let left: Vec<u8> = (0..64).flat_map(|i| [255, 255, 255, if i % 8 < 4 { 255 } else { 0 }]).collect();
-    let bake =
-        Bake::new(&rt.scene, "dots", Tier::T3, true, |id| (id == "dot").then_some((8, 8, left.as_slice())))
-            .unwrap();
+    let bake = Bake::new(&rt.scene, 0, Tier::T3, true, |id| (id == "dot").then_some((8, 8, left.as_slice())))
+        .unwrap();
     rt.frame(VIEW, Quality::Q3);
-    let mut cloud = Cloud::new(bake.alloc);
-    rt.swarm(0).unwrap().steps.iter().for_each(|s| cloud.step(&bake.apply(s), &bake.points));
+    let mut cloud = Cloud::new(bake.allocs[0]);
+    rt.swarm(0).unwrap().steps.iter().for_each(|s| cloud.step(&bake.apply(0, s), &bake.points));
     let census = Census::of(&cloud.particles);
     assert!(census.alive == 300 && census.max[0] <= 100.0 && census.min[0] >= 0.0, "{census:?}");
 }
@@ -250,7 +250,7 @@ fn timed_bursts_keep_their_beat_while_the_scene_sleeps() {
         wake = rt.frame(VIEW, Quality::Q3).wake;
         let swarm = rt.swarm(0).unwrap();
         if std::mem::replace(&mut stamp, swarm.stamp) != swarm.stamp
-            && swarm.steps.iter().any(|s| s.births[3] > 0)
+            && swarm.steps.iter().any(|s| s.total() > 0)
         {
             bursts.push(t);
         }
@@ -293,7 +293,7 @@ fn extreme_systems_neither_overflow_nor_panic() {
     for _ in 0..3 {
         rt.advance(0.5);
         rt.frame(VIEW, Quality::Q3);
-        assert!(rt.swarm(0).unwrap().steps.iter().all(|s| s.births[0] <= s.births[3] && s.births[3] <= 300));
+        assert!(rt.swarm(0).unwrap().steps.iter().all(|s| s.births[0] <= s.total() && s.total() <= 300));
     }
 }
 
@@ -301,12 +301,12 @@ fn extreme_systems_neither_overflow_nor_panic() {
 fn layers_drawing_one_system_share_its_budget() {
     let big = with(sparks(), json!({ "capacity": 1500, "init": { "size": [40, 60] } }));
     let mut s = Scene::from_json(&scene(big, true)).unwrap();
-    let one = Bake::new(&s, "dots", Tier::T0, true, |_| None).unwrap();
+    let one = Bake::new(&s, 0, Tier::T0, true, |_| None).unwrap();
     let layer = s.layers[0].clone();
     s.layers.extend((1..8).map(|i| Layer { id: format!("p{i}"), ..layer.clone() }));
-    let eight = Bake::new(&s, "dots", Tier::T0, true, |_| None).unwrap();
-    assert_eq!((one.alloc, eight.alloc), (1500, 250));
-    assert!(eight.size < one.size, "{} {}", eight.size, one.size);
+    let eight = Bake::new(&s, 0, Tier::T0, true, |_| None).unwrap();
+    assert_eq!((one.allocs[0], eight.allocs[0]), (1500, 250));
+    assert!(eight.sizes[0] < one.sizes[0], "{:?} {:?}", eight.sizes, one.sizes);
 }
 
 #[test]
