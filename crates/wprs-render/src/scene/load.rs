@@ -50,6 +50,7 @@ impl Renderer {
                 let found = assets.images.get(id).and_then(|p| Some((p, upload(p)?)));
                 view.images.remove(id);
                 view.sources.remove(id);
+                view.covers.remove(id);
                 if let Some((pixels, image)) = found {
                     view.images.insert(id.clone(), image);
                     view.sources.insert(id.clone(), pixels.clone());
@@ -155,6 +156,8 @@ impl Renderer {
                 id,
                 paints: self.paints(scene),
                 clock: super::clock::Clock::new(self),
+                hitboxes: Default::default(),
+                covers: HashMap::new(),
             }
         })
         .inspect_err(|_| super::flight::forget(id))

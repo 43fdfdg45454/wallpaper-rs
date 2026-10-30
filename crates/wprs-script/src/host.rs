@@ -12,15 +12,6 @@ const PATIENCE: Duration = Duration::from_millis(250);
 const RETRY: Duration = Duration::from_millis(100);
 const GRACE: Duration = Duration::from_millis(50);
 
-unsafe extern "C" {
-    fn tzset();
-}
-
-pub(crate) fn set_zone(rule: &str) {
-    unsafe { std::env::set_var("TZ", rule) };
-    unsafe { tzset() };
-}
-
 pub fn serve() -> std::io::Result<()> {
     crate::sandbox()?;
     let (mut input, mut out) = (std::io::stdin().lock(), std::io::stdout().lock());

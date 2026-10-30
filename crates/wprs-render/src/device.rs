@@ -104,6 +104,10 @@ impl Renderer {
         &self.instance
     }
 
+    pub fn timestamps(&self) -> bool {
+        self.device.features().contains(wgpu::Features::TIMESTAMP_QUERY)
+    }
+
     pub fn adapter(&self) -> &str {
         &self.adapter
     }

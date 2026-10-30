@@ -164,7 +164,8 @@ Both decisions are kept once per package id (`Library1.Confirm`,
 `inputs` declares what the package may ask the user for: the sound playing on the computer
 (`audio`), the pointer (`pointer`), clicks (`clicks`), what the media player plays (`media`) and the
 network (`network`, which only web pages use; other kinds that declare it get a warning). Declaring
-is no grant: each input is still allowed by the user per package, when it is used. For scenes the
+is no grant: each input is still allowed by the user per package, when it is used, and clicks also
+per screen (`dbus.md`, `SetClicks`); keys never reach a package. For scenes the
 validator computes the inputs that the scene can use with any value of its properties and presets
 (audio and pointer bindings, spectra, beat triggers, parallax, particles that follow the pointer
 or burst on clicks, effect parameters such as the clicks of `water_ripple`) and refuses a manifest
@@ -207,7 +208,7 @@ update of wallpaper-rs. `wprs-ctl pack check` prints what each platform does.
 | Feature | The package | Desktop | Android |
 |---------|-------------|---------|---------|
 | `inputs.audio`, `inputs.pointer`, `inputs.clicks`, `inputs.media`, `inputs.network` | declares or uses that input | runs | runs |
-| `scripts` | runs scene scripts | runs | without |
+| `scripts` | runs scene scripts | runs | runs |
 | `sound` | plays sound layers | runs | without |
 | `properties2` | has settings of the newer kinds or fields: sliders without `step` or with `decimals`, `editable` or `log`, combos of numbers or flags or with icons, `secret` texts, `button`, `divider`, `folder`, `shortcut`, collapsed groups, icons, fractional `order`, `visible_if` expressions, `enabled_if` and `default_asset`, or settings written in a way the first version cannot read (a field it does not know, even with its default value, a missing `default` of a text or `accept` of a file, or an `order` such as `2.0`) | runs | runs |
 | `folder` | shows pictures from a folder the user chooses | runs | without |
@@ -246,8 +247,9 @@ the same once they are drawn, so that older versions keep refusing them. `effect
 
 The fields of `scene.json` that came after the first version name these features (`scene.md` says
 what each field does). Each one is refused on a platform until its engine draws it, and the table
-says which ones run today; the phone, which plays scenes without sound and without scripts, plays a
-scene with `sound2` silently and leaves out `scripts2` and every `script_` feature with its scripts:
+says which ones run today; the phone, which runs scene scripts in a thread of their own but plays no
+scene sound, plays a scene with `sound2` silently, runs `scripts2` and `script_layers`, and leaves out
+the other `script_` features, which change nothing there:
 
 | Feature | The scene | Desktop | Android |
 |---------|-----------|---------|---------|
@@ -315,16 +317,16 @@ scene with `sound2` silently and leaves out `scripts2` and every `script_` featu
 | `particle_ropes` | sets `render.rope` or trails longer than 16 steps or with `segments`, `subdivide`, `uv_scale`, `uv_scroll` or `textured` | refused | refused |
 | `particle_looks` | sets `render.cutout`, `render.orient` or `render.angle` | refused | refused |
 | `particle_shaders` | sets `render.shader` | refused | refused |
-| `scripts2` | has more than 16 script modules, modules that declare newer events, parts or `params`, values with `fn` or `params`, or named effect uses | runs | without |
-| `script_layers` | has `templates` or scripts that use `layers` | runs | without |
+| `scripts2` | has more than 16 script modules, modules that declare newer events, parts or `params`, values with `fn` or `params`, or named effect uses | runs | runs |
+| `script_layers` | has `templates` or scripts that use `layers` | runs | runs |
 | `script_geometry` | has `pools` or scripts that use `geometry` | refused | without |
 | `script_storage` | has scripts that use `storage` | refused | without |
-| `script_sounds` | has scripts that use `sounds` | refused | without |
+| `script_sounds` | has scripts that use `sounds` | runs | without |
 | `script_animations` | has scripts that use `animations` | refused | without |
 | `script_camera` | has scripts that use `camera` | refused | without |
 | `script_shortcuts` | has scripts that use `shortcuts` | refused | without |
 | `script_hierarchy` | has scripts that use `hierarchy` | refused | without |
-| `layer_events` | sets `solid: { "alpha" }`, `hit` bones, `click:`, `enter:` or `leave:` triggers or scripts that handle pointer events | refused | refused |
+| `layer_events` | sets `solid: { "alpha" }`, `hit` bones, `click:`, `enter:` or `leave:` triggers or scripts that handle pointer events | runs | runs |
 | `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | refused | refused |
 
 ## Profiles

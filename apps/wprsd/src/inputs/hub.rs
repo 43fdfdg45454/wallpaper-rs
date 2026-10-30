@@ -7,7 +7,7 @@ use std::sync::Mutex;
 use tokio::sync::watch;
 use wprs_audio::Capture;
 use wprs_core::model::Input;
-use wprs_scene::PointerState;
+use wprs_scene::{PointerState, Press};
 
 impl View {
     pub(super) fn place(&self, x: f64, y: f64) -> Option<[f32; 2]> {
@@ -19,7 +19,7 @@ impl View {
 
 impl Control {
     pub(crate) fn granted(&self, scene: &str, key: &str) -> BTreeSet<Input> {
-        [Input::Audio, Input::Pointer].into_iter().filter(|input| self.has(scene, key, *input)).collect()
+        Input::ALL.into_iter().filter(|input| self.has(scene, key, *input)).collect()
     }
 
     pub(crate) fn has(&self, scene: &str, key: &str, input: Input) -> bool {
@@ -31,7 +31,11 @@ impl Control {
         let still = input == Input::Pointer && self.parallax.contains(output);
         still
             || self.shown.get(output).is_some_and(|need| {
-                let declared = if input == Input::Audio { need.audio } else { need.pointer };
+                let declared = match input {
+                    Input::Audio => need.audio,
+                    Input::Pointer => need.pointer,
+                    Input::Clicks => need.clicks && self.views.get(output).is_some_and(|v| v.clicks),
+                };
                 declared && self.has(&need.scene, &need.key, input)
             })
     }
@@ -64,8 +68,8 @@ impl Hub {
     pub(crate) fn new((grants, declined): (Bound, Grants), wake: Wake, changed: Wake) -> Hub {
         let control = Mutex::new(Control { grants, declined, ..Control::default() });
         let tracking = watch::Sender::new(false);
-        let (switch, audio, pointers, moved, poke) = Default::default();
-        Hub { control, tracking, switch, audio, pointers, moved, poke, wake, changed }
+        let (switch, audio, pointers, presses, moved, poke) = Default::default();
+        Hub { control, tracking, switch, audio, pointers, presses, moved, poke, wake, changed }
     }
 
     pub(crate) fn grant(&self, path: &Path, scene: &str, key: &str, input: Input) -> anyhow::Result<()> {
@@ -130,7 +134,9 @@ impl Hub {
         if let Some(views) = views {
             control.views = views;
         }
-        let (audio, followed) = (!control.wants(Input::Audio).is_empty(), control.wants(Input::Pointer));
+        let (audio, pointed) = (!control.wants(Input::Audio).is_empty(), control.wants(Input::Pointer));
+        let followed: BTreeSet<String> =
+            pointed.iter().cloned().chain(control.wants(Input::Clicks)).collect();
         let flips: Vec<_> = (control.windows.iter())
             .filter(|(output, _)| control.followed.contains(*output) != followed.contains(*output))
             .map(|(output, window)| (window.clone(), followed.contains(output)))
@@ -140,9 +146,12 @@ impl Hub {
         flips.into_iter().for_each(|(window, on)| window.track_pointer(on));
         if refollowed {
             lock(&self.pointers).retain(|output, _| followed.contains(output));
-            let on = !followed.is_empty();
-            self.tracking.send_if_modified(|was| std::mem::replace(was, on) != on);
-            tracing::info!(outputs = followed.len(), "pointer feed");
+            lock(&self.presses).retain(|output, _| followed.contains(output));
+        }
+        let on = !pointed.is_empty();
+        let tracked = self.tracking.send_if_modified(|was| std::mem::replace(was, on) != on);
+        if refollowed || tracked {
+            tracing::info!(outputs = followed.len(), tracked = on, "pointer feed");
         }
         let switched = audio != switch.audio;
         if switched {
@@ -158,27 +167,44 @@ impl Hub {
             tracing::info!(on = switch.capture.is_some(), "audio capture");
         }
         drop(switch);
-        if refollowed || switched {
+        if refollowed || tracked || switched {
             (self.changed)()
         }
+    }
+
+    pub(crate) fn touch(&self, output: &str) -> (PointerState, Vec<Press>, [bool; 2]) {
+        let control = lock(&self.control);
+        let allowed = [control.allows(output, Input::Pointer), control.allows(output, Input::Clicks)];
+        drop(control);
+        let state = lock(&self.pointers).get(output).copied().unwrap_or_default();
+        let presses = lock(&self.presses).remove(output).filter(|_| allowed[1]).unwrap_or_default();
+        let state = match allowed {
+            [true, clicks] => PointerState { buttons: if clicks { state.buttons } else { 0 }, ..state },
+            _ => PointerState::default(),
+        };
+        (state, presses, allowed)
     }
 
     pub(crate) fn set_pointer(&self, x: f64, y: f64) {
         let control = lock(&self.control);
         let followed = control.views.iter().filter(|(output, _)| control.followed.contains(*output));
+        let pointers = lock(&self.pointers);
         let place = |(output, view): (&String, &View)| {
-            let pos = view.place(x, y);
-            (output.clone(), PointerState { pos, inside: pos.is_some(), ..PointerState::default() })
+            let (pos, buttons) = (view.place(x, y), pointers.get(output).map_or(0, |p| p.buttons));
+            (output.clone(), PointerState { pos, buttons, inside: pos.is_some(), ..PointerState::default() })
         };
         let states: Vec<_> = followed.map(place).collect();
-        drop(control);
+        drop((pointers, control));
         self.store(states);
     }
 
     pub(super) fn store(&self, states: impl IntoIterator<Item = (String, PointerState)>) {
         let control = lock(&self.control);
-        let (mut pointers, mut moved) = (lock(&self.pointers), false);
+        let (mut pointers, mut presses, mut moved) = (lock(&self.pointers), lock(&self.presses), false);
         for (output, state) in states.into_iter().filter(|(output, _)| control.followed.contains(output)) {
+            if pointers.get(&output).map_or(0, |p| p.buttons) != state.buttons {
+                super::pressed(&mut presses, &output, &state);
+            }
             moved |= pointers.insert(output, state) != Some(state);
         }
         if moved {

@@ -76,6 +76,8 @@ object Native {
     external fun trim()
 
     external fun retry()
+
+    external fun finish()
 }
 
 object Render {

@@ -146,5 +146,10 @@ pub(crate) fn apply<'js>(ctx: &Ctx<'js>, state: &Object<'js>, bytes: &[u8]) -> R
         touches.set(i, t)?;
     }
     frame.set("touches", touches)?;
+    let sounds = Array::new(ctx.clone())?;
+    for i in 0..c.u16()? {
+        sounds.set(i, c.str()?)?;
+    }
+    frame.set("sounds", sounds)?;
     Ok(zone)
 }

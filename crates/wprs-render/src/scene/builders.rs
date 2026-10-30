@@ -20,15 +20,21 @@ pub(crate) fn keep(thread: JoinHandle<()>, stop: Arc<AtomicBool>) {
     builders.push((thread, stop));
 }
 
-pub fn finish_builds(code: i32) {
+pub fn stop_builds() -> bool {
     let builders = std::mem::take(&mut *lock());
     builders.iter().for_each(|(_, stop)| stop.store(true, Relaxed));
     let until = Instant::now() + BOUND;
     while builders.iter().any(|(t, _)| !t.is_finished()) && Instant::now() < until {
         std::thread::sleep(Duration::from_millis(5));
     }
-    if builders.iter().all(|(t, _)| t.is_finished()) {
-        return builders.into_iter().for_each(|(t, _)| drop(t.join()));
+    let done = builders.iter().all(|(t, _)| t.is_finished());
+    builders.into_iter().filter(|(t, _)| t.is_finished()).for_each(|(t, _)| drop(t.join()));
+    done
+}
+
+pub fn finish_builds(code: i32) {
+    if stop_builds() {
+        return;
     }
     tracing::warn!("a package shader is still building; exiting without waiting for the driver");
     drop(std::io::stdout().flush());

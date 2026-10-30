@@ -56,6 +56,8 @@ pub(crate) struct State {
     pub(crate) seat: SeatState,
     pub(crate) pointer: Option<ThemedPointer>,
     pub(crate) buttons: u8,
+    pub(crate) touch: Option<smithay_client_toolkit::reexports::client::protocol::wl_touch::WlTouch>,
+    pub(crate) touching: Option<(i32, String, [f32; 2])>,
     pub(crate) shm: Shm,
     pub(crate) compositor: CompositorState,
     layers: LayerShell,
@@ -84,6 +86,8 @@ impl State {
             seat: SeatState::new(globals, qh),
             pointer: None,
             buttons: 0,
+            touch: None,
+            touching: None,
             shm: Shm::bind(globals, qh)?,
             compositor: CompositorState::bind(globals, qh)?,
             layers: LayerShell::bind(globals, qh)?,
@@ -123,7 +127,8 @@ impl State {
         tracing::info!(output = name, "layer surface created");
         let overlaps = crate::cosmic::watch(self.overlap.as_ref(), &layer, qh);
         let presentation = self.presentation.clone();
-        let parts = Arc::new(Parts { layer, viewport, fractional, empty, presentation });
+        let wanted = Default::default();
+        let parts = Arc::new(Parts { layer, viewport, fractional, empty, presentation, wanted });
         let (name, integer, fractional, rate) = (name.clone(), info.scale_factor, None, Rate::default());
         let screen = Screen {
             output,

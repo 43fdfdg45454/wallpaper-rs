@@ -120,6 +120,7 @@ impl State {
             Command::Attach(output, window) => self.attach(output, window),
             Command::Frame(output) => self.frame_done(&output),
             Command::Repaint(output) => self.repaint(&output),
+            Command::Region(output) => self.region(&output),
             Command::Backdrop(output) => self.backdrop_again(&output),
             Command::SetActive(output, active, covered) => {
                 self.outputs.get_mut(&output).into_iter().for_each(|o| o.covered = covered);

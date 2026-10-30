@@ -1,10 +1,13 @@
 use crate::Event;
 use crate::state::State;
+use smithay_client_toolkit::reexports::client::protocol::wl_surface::WlSurface;
+use smithay_client_toolkit::reexports::client::protocol::wl_touch::WlTouch;
 use smithay_client_toolkit::reexports::client::protocol::{wl_pointer::WlPointer, wl_seat::WlSeat};
 use smithay_client_toolkit::reexports::client::{Connection, QueueHandle};
 use smithay_client_toolkit::seat::pointer::{
     CursorIcon, PointerEvent, PointerEventKind, PointerHandler, ThemeSpec,
 };
+use smithay_client_toolkit::seat::touch::TouchHandler;
 use smithay_client_toolkit::seat::{Capability, SeatHandler, SeatState};
 use smithay_client_toolkit::shell::WaylandSurface;
 use smithay_client_toolkit::shm::{Shm, ShmHandler};
@@ -28,16 +31,21 @@ impl SeatHandler for State {
             let theme = ThemeSpec::default();
             self.pointer = self.seat.get_pointer_with_theme::<_, ()>(qh, &seat, shm, cursor, theme).ok();
         }
+        if capability == Capability::Touch && self.touch.is_none() {
+            self.touch = self.seat.get_touch(qh, &seat).ok();
+        }
     }
 
     fn remove_capability(&mut self, _: &Connection, _: &Queue, _: WlSeat, capability: Capability) {
-        if capability == Capability::Pointer {
-            self.pointer = None;
+        match capability {
+            Capability::Pointer => self.pointer = None,
+            Capability::Touch => (self.touch, self.touching) = (None, None),
+            _ => {}
         }
     }
 
     fn remove_seat(&mut self, _: &Connection, _: &Queue, _: WlSeat) {
-        (self.pointer, self.buttons) = (None, 0);
+        (self.pointer, self.buttons, self.touch, self.touching) = (None, 0, None, None);
     }
 }
 
@@ -82,6 +90,64 @@ impl PointerHandler for State {
             };
             (self.sink)(Event::Pointer(screen.name.clone(), pos, self.buttons));
         }
+    }
+}
+
+impl State {
+    fn placed(&self, surface: &WlSurface, (x, y): (f64, f64)) -> Option<(String, [f32; 2])> {
+        let screen = self.screens.iter().find(|s| s.parts.layer.wl_surface() == surface)?;
+        let (width, height) = screen.logical.unwrap_or((1, 1));
+        Some((screen.name.clone(), [(x / f64::from(width)) as f32, (y / f64::from(height)) as f32]))
+    }
+
+    fn lift(&mut self) {
+        if let Some((_, name, at)) = self.touching.take() {
+            (self.sink)(Event::Pointer(name.clone(), Some(at), 0));
+            (self.sink)(Event::Pointer(name, None, 0));
+        }
+    }
+}
+
+impl TouchHandler for State {
+    fn down(
+        &mut self,
+        _: &Connection,
+        _: &Queue,
+        _: &WlTouch,
+        _: u32,
+        _: u32,
+        s: WlSurface,
+        id: i32,
+        at: (f64, f64),
+    ) {
+        let Some((name, at)) = self.placed(&s, at).filter(|_| self.touching.is_none()) else { return };
+        self.touching = Some((id, name.clone(), at));
+        (self.sink)(Event::Pointer(name.clone(), Some(at), 0));
+        (self.sink)(Event::Pointer(name, Some(at), 1));
+    }
+
+    fn up(&mut self, _: &Connection, _: &Queue, _: &WlTouch, _: u32, _: u32, id: i32) {
+        if self.touching.as_ref().is_some_and(|t| t.0 == id) {
+            self.lift();
+        }
+    }
+
+    fn motion(&mut self, _: &Connection, _: &Queue, _: &WlTouch, _: u32, id: i32, at: (f64, f64)) {
+        let Some((_, name, _)) = self.touching.clone().filter(|t| t.0 == id) else { return };
+        let surface =
+            self.screens.iter().find(|s| s.name == name).map(|s| s.parts.layer.wl_surface().clone());
+        if let Some((_, at)) = surface.and_then(|s| self.placed(&s, at)) {
+            self.touching = Some((id, name.clone(), at));
+            (self.sink)(Event::Pointer(name, Some(at), 1));
+        }
+    }
+
+    fn shape(&mut self, _: &Connection, _: &Queue, _: &WlTouch, _: i32, _: f64, _: f64) {}
+
+    fn orientation(&mut self, _: &Connection, _: &Queue, _: &WlTouch, _: i32, _: f64) {}
+
+    fn cancel(&mut self, _: &Connection, _: &Queue, _: &WlTouch) {
+        self.lift();
     }
 }
 

@@ -36,6 +36,8 @@ pub struct SceneView {
     pub(super) id: usize,
     pub(super) paints: Vec<(String, String, Image)>,
     pub(super) clock: super::clock::Clock,
+    pub(super) hitboxes: wprs_scene::Hitboxes,
+    pub(super) covers: HashMap<String, Option<Arc<wprs_scene::AlphaMap>>>,
 }
 
 impl Drop for SceneView {

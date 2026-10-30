@@ -10,7 +10,7 @@ pub(super) fn declare(output: &str, scene: Option<&SceneState>) {
     let pack = scene.map(|s| &s.spec.pack);
     let named = pack.map(|p| (p.props.id.as_str(), p.props.title.as_str(), p.key.as_str()));
     let uses = scene.map(SceneState::uses).unwrap_or_default();
-    inputs::needs(output, named.unwrap_or_default(), uses.audio, uses.cursor);
+    inputs::needs(output, named.unwrap_or_default(), [uses.audio, uses.cursor, uses.clicks]);
 }
 
 struct Live {
@@ -22,7 +22,7 @@ struct Live {
 
 impl State {
     fn feed(&mut self, input: SceneInput) {
-        let (SceneInput::Audio(name, _) | SceneInput::Pointer(name, _) | SceneInput::Script(name, _)) =
+        let (SceneInput::Audio(name, _) | SceneInput::Pointer(name, ..) | SceneInput::Script(name, _)) =
             &input;
         if let Some(o) = self.outputs.get_mut(name) {
             let changed = o.shown.scene.as_mut().is_some_and(|scene| scene.input(input));
@@ -49,8 +49,8 @@ impl State {
                 self.feed(SceneInput::Audio(live.name.clone(), Box::new(audio)));
             }
             if live.uses.cursor {
-                let pointer = inputs::pointer(&live.name);
-                self.feed(SceneInput::Pointer(live.name.clone(), pointer));
+                let (pointer, presses, allowed) = inputs::touch(&live.name);
+                self.feed(SceneInput::Pointer(live.name.clone(), pointer, presses, allowed));
             }
             let mode = match live.name.starts_with("preview:") {
                 true => Mode::Editor,

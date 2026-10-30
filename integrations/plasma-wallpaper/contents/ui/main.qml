@@ -29,4 +29,8 @@ WallpaperItem {
     Coverage {
         id: coverage
     }
+
+    Taps {
+        anchors.fill: parent
+    }
 }

@@ -1,5 +1,6 @@
-use std::io::{Read, Result, Write};
+use std::io::Result;
 
+#[cfg(not(target_os = "android"))]
 pub(crate) const MAX_MESSAGE: usize = 4 << 20;
 
 pub(crate) struct Wire(pub(crate) Vec<u8>);
@@ -113,14 +114,16 @@ impl<'a> Cursor<'a> {
     }
 }
 
-pub(crate) fn send(out: &mut impl Write, tag: u8, body: &[u8]) -> Result<()> {
+#[cfg(not(target_os = "android"))]
+pub(crate) fn send(out: &mut impl std::io::Write, tag: u8, body: &[u8]) -> Result<()> {
     out.write_all(&((body.len() + 1) as u32).to_le_bytes())?;
     out.write_all(&[tag])?;
     out.write_all(body)?;
     out.flush()
 }
 
-pub(crate) fn receive(input: &mut impl Read, into: &mut Vec<u8>) -> Result<Option<u8>> {
+#[cfg(not(target_os = "android"))]
+pub(crate) fn receive(input: &mut impl std::io::Read, into: &mut Vec<u8>) -> Result<Option<u8>> {
     let mut size = [0; 4];
     match input.read_exact(&mut size) {
         Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),

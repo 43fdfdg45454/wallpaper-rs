@@ -102,6 +102,9 @@ fun Settings(main: Main) {
                 stringResource(R.string.scene_level, report.optString("tier"), report.optString("quality"))
                     .takeIf { report.optString("tier").isNotEmpty() },
                 stringResource(R.string.particles_cpu).takeIf { report.optString("particles") == "cpu" },
+                stringResource(R.string.scripts_stopped).takeIf { report.optString("scripts") == "off" },
+                stringResource(R.string.script_stopped).takeIf { report.optString("scripts") == "stopped" },
+                stringResource(if (report.optBoolean("stamps")) R.string.timed_gpu else R.string.timed_wait).takeIf { report.has("stamps") },
             ).plus(
                 report.optJSONArray("left_out").let { left ->
                     (0 until (left?.length() ?: 0)).map {

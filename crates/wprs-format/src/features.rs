@@ -21,7 +21,7 @@ pub const REGISTRY: &[(&str, &str, [Support; 2])] = &[
     ("inputs.clicks", "reacts to clicks", [Yes, Yes]),
     ("inputs.media", "shows what the media player plays", [Yes, Yes]),
     ("inputs.network", "connects to the network", [Yes, Yes]),
-    ("scripts", "runs scene scripts", [Yes, Without]),
+    ("scripts", "runs scene scripts", [Yes, Yes]),
     ("sound", "plays sound", [Yes, Without]),
     ("properties2", "has settings of the newer kinds", [Yes, Yes]),
     ("folder", "shows pictures from a folder the user chooses", [Yes, Without]),

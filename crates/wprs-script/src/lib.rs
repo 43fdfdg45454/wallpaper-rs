@@ -1,16 +1,23 @@
 mod apply;
 mod clock;
 mod frame;
+#[cfg(not(target_os = "android"))]
 mod host;
+mod local;
 mod modules;
+#[cfg(not(target_os = "android"))]
 mod sandbox;
 mod setup;
 mod wire;
 
-pub use frame::{Encoder, Frame, Mode, Touch};
+pub use frame::{Encoder, Frame, Mode};
+#[cfg(not(target_os = "android"))]
 pub use host::{Host, serve};
+pub use local::Local;
+#[cfg(not(target_os = "android"))]
 pub use sandbox::enter as sandbox;
 pub use setup::{Setup, Source};
+pub use wprs_scene::{Touch, TouchKind};
 
 use clock::{Clock, cpu};
 use modules::Modules;
@@ -112,6 +119,7 @@ impl Script {
         Ok(Script { state, context, clock, limits, failures: 0, started: false, last, encoder, zone: false })
     }
 
+    #[cfg(not(target_os = "android"))]
     pub(crate) fn following_zone(self) -> Script {
         Script { zone: true, ..self }
     }
@@ -125,7 +133,7 @@ impl Script {
         let text = self.clock.run(&self.context, budget, |ctx| {
             let state = state.restore(ctx)?;
             if let Some(rule) = apply::apply(ctx, &state, frame)?.filter(|z| zone && !z.is_empty()) {
-                host::set_zone(&rule);
+                clock::set_zone(&rule);
             }
             let out: Object = state.get::<_, Function>("tick")?.call(())?;
             let text = ctx.json_stringify(out)?.map(|s| s.to_string()).transpose()?.unwrap_or_default();

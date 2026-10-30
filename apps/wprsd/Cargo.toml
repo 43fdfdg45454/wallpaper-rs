@@ -46,5 +46,6 @@ base64.workspace = true
 
 [dev-dependencies]
 roxmltree.workspace = true
+smithay-client-toolkit.workspace = true
 wprs-format = { workspace = true, features = ["sign"] }
 wiremock.workspace = true

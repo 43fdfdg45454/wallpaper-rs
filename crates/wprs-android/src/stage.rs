@@ -1,3 +1,4 @@
+use crate::acting::{Acting, Sent};
 use crate::pack::Pack;
 use crate::power::{Power, delay_ms};
 use crate::{hearing, props, saved};
@@ -5,7 +6,7 @@ use chrono::Timelike;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering::Relaxed};
 use std::sync::{Arc, Mutex, PoisonError};
 use wprs_render::{GpuImage, Meter, RenderError, Renderer, SceneView};
-use wprs_scene::{Budget, Content, FlashGuard, Quality, Runtime, Tier, Wake};
+use wprs_scene::{Budget, Content, FlashGuard, MAX_PRESSES, Press, Quality, Runtime, Tier, Wake};
 
 const SLACK_NS: i64 = 2_000_000;
 const LISTEN_MS: i64 = 250;
@@ -32,6 +33,13 @@ pub(crate) fn retry() {
     RETRIES.fetch_add(1, Relaxed);
 }
 
+pub(crate) fn finish() {
+    if !wprs_render::stop_builds() {
+        log::warn!("a package shader is still building while the wallpaper closes");
+    }
+    wprs_scene::end_trials();
+}
+
 pub(crate) fn flashes() -> &'static str {
     ["", "slowed", "paused"][CALMING.load(Relaxed).min(2) as usize]
 }
@@ -52,7 +60,10 @@ pub(crate) struct Stage {
     pub(crate) pack: Arc<Pack>,
     runtime: Runtime,
     view: Option<SceneView>,
-    granted: [bool; 2],
+    granted: [bool; 3],
+    acting: Acting,
+    presses: Vec<Press>,
+    rect: [f32; 4],
     posed: bool,
     heavy: bool,
     quality: Quality,
@@ -87,16 +98,20 @@ impl Stage {
         let mut runtime = Runtime::new(Arc::clone(&pack.scene), props::values(&pack));
         pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
         runtime.set_language(pack.locale.as_deref().unwrap_or_default());
-        runtime.set_listeners(false, false);
+        runtime.set_listeners(true, false);
         pack.assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
         let granted = props::granted(&pack.id);
         let (view, quality, tick, due, touch) = (None, Quality::Q3, None, None, (None, 0, false));
+        let acting = Acting::new(&pack, &runtime);
         Stage {
             uid,
             pack,
             runtime,
             view,
             granted,
+            acting,
+            presses: Vec::new(),
+            rect: [0.0; 4],
             posed: false,
             heavy: false,
             quality,
@@ -117,24 +132,40 @@ impl Stage {
         self.restock |= changed;
         let pressed = saved::pressed(&self.pack.id);
         pressed.iter().for_each(|key| self.runtime.press(key));
+        self.acting.actions.extend(pressed.iter().cloned());
         self.touch.2 |= changed || !pressed.is_empty();
+    }
+
+    #[cfg(test)]
+    pub(crate) fn runtime(&self) -> &Runtime {
+        &self.runtime
     }
 
     pub(crate) fn wants(&self) -> [bool; 2] {
         let uses = self.runtime.uses_at(self.quality);
-        [uses.audio && self.granted[0], uses.cursor && self.granted[1]]
+        let (moves, taps) = self.allowed();
+        [uses.audio && self.granted[0], moves || taps]
+    }
+
+    fn allowed(&self) -> (bool, bool) {
+        let uses = self.runtime.uses_at(self.quality);
+        (uses.cursor && self.granted[1], uses.clicks && self.granted[2])
     }
 
     pub(crate) fn plays(&self) -> bool {
         !self.heavy && !self.pack.videos.is_empty()
     }
 
-    pub(crate) fn touch(&mut self, at: Option<[f32; 2]>) -> bool {
-        let wanted = self.wants()[1];
-        if wanted {
-            self.touch = (at, u8::from(at.is_some()), true);
+    pub(crate) fn touch(&mut self, at: [f32; 2], down: bool) -> bool {
+        let (moves, taps) = self.allowed();
+        let buttons = u8::from(down);
+        if taps && buttons != self.touch.1 && self.presses.len() < MAX_PRESSES {
+            self.presses.push(Press { at: Some(at), buttons });
         }
-        wanted
+        if moves || taps {
+            self.touch = (down.then_some(at), buttons, true);
+        }
+        moves || taps
     }
 
     pub(crate) fn hide(&mut self) {
@@ -177,6 +208,7 @@ impl Stage {
         self.tick = (!still).then_some(nanos);
         self.runtime.advance(dt * speed);
         let [listens, feels] = self.wants();
+        let allowed = self.allowed();
         let listens = listens && power.moving() && !still;
         let hears = listens && hearing::live();
         let idle = match () {
@@ -187,6 +219,15 @@ impl Stage {
         let heard = hears && self.runtime.set_audio(hearing::frame());
         let pointer = self.runtime.pointer().follow(self.touch.0, self.touch.1, dt as f32);
         let felt = feels && self.runtime.set_pointer(pointer);
+        let sent = Sent {
+            properties: &self.pack.properties,
+            view: self.rect,
+            screen: [size.0, size.1],
+            fps: self.fps,
+            quality: self.quality as u8,
+            listens: hears,
+        };
+        let acted = !still && self.acting.step(&mut self.runtime, sent);
         let calmed = self.runtime.set_reduced_motion(power.still);
         let tipped = self.runtime.set_tilt(crate::tilt::goal(0.5, std::time::Instant::now()));
         self.runtime.set_wall(wall());
@@ -205,6 +246,7 @@ impl Stage {
             || due
             || heard
             || felt
+            || acted
             || tipped
             || calmed
             || quality != self.quality
@@ -224,14 +266,19 @@ impl Stage {
             self.view = Some(r.scene_view(&self.pack.scene, &self.pack.assets, self.runtime.props())?);
         }
         let view = self.view.as_mut().expect("created above");
-        let frame = self.runtime.frame(view.view((inner[0], inner[1])), quality);
+        self.rect = view.view((inner[0], inner[1]));
+        let presses = std::mem::take(&mut self.presses);
+        if self.runtime.point(view.hitboxes(), self.rect, &presses, allowed) {
+            self.acting.touched(&mut self.runtime);
+        }
+        let frame = self.runtime.frame(self.rect, quality);
         let playing =
             power.moving() && frame.draws.iter().any(|d| matches!(d.content, Content::Video { .. }));
         let wake = match frame.wake {
             wake if calm => self.runtime.calmed(wake),
             _ if still => Wake::Idle,
             _ if playing => Wake::Frame,
-            wake => wake,
+            wake => self.acting.wake(wake, &self.runtime),
         };
         let interval = delay_ms(fps);
         let delay = match wake {

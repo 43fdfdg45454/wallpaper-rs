@@ -1,4 +1,4 @@
-use crate::desk::Desk;
+use crate::desk::{Desk, Felt, felt};
 use crate::stacking::{Rations, clients, covered, notices, relevant};
 use crate::x11::{Rect, X11};
 use crate::{Cover, Event, Sink};
@@ -24,6 +24,7 @@ struct Screen {
     desk: Arc<Desk>,
     covered: bool,
     hidden: bool,
+    buttons: u8,
 }
 
 struct Watch {
@@ -102,12 +103,36 @@ impl Watch {
                     }
                     Received::PropertyNotify(e) => stacking |= relevant(a, e.atom),
                     Received::Expose(e) if e.count == 0 => drop(exposed.insert(e.window)),
-                    _ => {}
+                    other => self.feel(felt(&other)),
                 }
             }
             let named = self.screens.iter().map(|s| (s.desk.window, s.monitor.name.clone()));
             notices(named, &exposed, resized).into_iter().for_each(|event| (self.sink)(event));
         }
+    }
+
+    fn feel(&mut self, felt: Option<Felt>) {
+        let window = match &felt {
+            Some(Felt::At(w, _) | Felt::Button(w, ..) | Felt::Left(w)) => *w,
+            None => return,
+        };
+        let Some(screen) = self.screens.iter_mut().find(|s| s.desk.window == window) else { return };
+        let place = |[x, y]: [i16; 2]| {
+            let Rect { width, height, .. } = screen.monitor.area;
+            Some([f32::from(x) / width.max(1) as f32, f32::from(y) / height.max(1) as f32])
+        };
+        let pos = match felt {
+            Some(Felt::At(_, at)) => place(at),
+            Some(Felt::Button(_, at, bit, down)) => {
+                screen.buttons = if down { screen.buttons | bit } else { screen.buttons & !bit };
+                place(at)
+            }
+            _ => {
+                screen.buttons = 0;
+                None
+            }
+        };
+        (self.sink)(Event::Pointer(screen.monitor.name.clone(), pos, screen.buttons));
     }
 
     fn manager(&mut self) -> Result<(), ReplyOrIdError> {
@@ -143,7 +168,8 @@ impl Watch {
                     let desk = Arc::new(Desk::new(&self.x, monitor.area)?);
                     tracing::info!(output = monitor.name, "desktop window created");
                     let (covered, hidden) = (false, false);
-                    let screen = Screen { monitor: monitor.clone(), desk: desk.clone(), covered, hidden };
+                    let screen =
+                        Screen { monitor: monitor.clone(), desk: desk.clone(), covered, hidden, buttons: 0 };
                     self.screens.push(screen);
                     desk
                 }

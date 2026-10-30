@@ -14,16 +14,18 @@ Kirigami.InlineMessage {
     readonly property string asked: [ask.scene, ask.key].concat(ask.inputs).join(" ")
     readonly property var explained: ({
             "audio": [daemon.tr("Follow the sound that plays"), daemon.tr("The sound is turned into levels on this computer while the scene is shown; nothing is recorded, kept or sent, and the desktop may show a microphone indicator.")],
-            "pointer": [daemon.tr("Follow the pointer"), daemon.tr("Only the latest pointer position over this screen reaches the scene; positions are never kept and keys are never read.")]
+            "pointer": [daemon.tr("Follow the pointer"), daemon.tr("Only the latest pointer position over this screen reaches the scene; positions are never kept and keys are never read.")],
+            "clicks": [daemon.tr("Take clicks and taps"), daemon.tr("Only real clicks and taps on the wallpaper of this screen reach the scene; they are never kept and keys are never read.")]
         })
     readonly property var ask: {
         const shown = inputs.shown ?? {};
         const decided = (map, scene, input) => ((map ?? {})[scene] ?? []).includes(input);
         const open = (s, input) => s[input] === true && !(s.granted ?? []).includes(input) && !decided(inputs.declined, s.scene, input);
         for (const name of Object.keys(shown).filter(name => consent.output === "" || name === consent.output)) {
-            const list = ["audio", "pointer"].filter(input => open(shown[name], input));
+            const list = ["audio", "pointer", "clicks"].filter(input => open(shown[name], input));
             if (list.length > 0)
                 return {
+                    "screen": name,
                     "scene": shown[name].scene,
                     "key": shown[name].key ?? "",
                     "title": shown[name].title || shown[name].scene,
@@ -31,6 +33,7 @@ Kirigami.InlineMessage {
                 };
         }
         return {
+            "screen": "",
             "scene": "",
             "key": "",
             "title": "",
@@ -45,6 +48,8 @@ Kirigami.InlineMessage {
     function answer(allow) {
         problem = "";
         ask.inputs.forEach(input => daemon.act(allow ? "GrantPackage" : "Revoke", allow ? [ask.scene, ask.key, input] : [ask.scene, input], "Inputs1", () => {}, error => consent.failed(error)));
+        if (allow && ask.inputs.includes("clicks") && !(inputs.clicks ?? []).includes(ask.screen))
+            daemon.act("SetClicks", [ask.screen, true], "Inputs1", () => {}, error => consent.failed(error));
     }
 
     function failed(error) {

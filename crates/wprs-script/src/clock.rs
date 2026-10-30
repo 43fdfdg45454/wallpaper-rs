@@ -34,3 +34,12 @@ pub(crate) fn cpu() -> Duration {
     unsafe { libc::clock_gettime(libc::CLOCK_THREAD_CPUTIME_ID, &mut t) };
     Duration::new(t.tv_sec as u64, t.tv_nsec as u32)
 }
+
+unsafe extern "C" {
+    fn tzset();
+}
+
+pub(crate) fn set_zone(rule: &str) {
+    unsafe { std::env::set_var("TZ", rule) };
+    unsafe { tzset() };
+}

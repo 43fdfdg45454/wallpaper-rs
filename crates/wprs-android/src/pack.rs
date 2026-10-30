@@ -32,6 +32,8 @@ pub(crate) struct Pack {
     pub(crate) assets: SceneAssets,
     pub(crate) videos: Vec<(String, PathBuf)>,
     pub(crate) inputs: Option<wprs_scene::Uses>,
+    pub(crate) scripts: Vec<(String, String)>,
+    pub(crate) labels: serde_json::Value,
 }
 
 fn open(path: &Path) -> Result<Package<BufReader<fs::File>>, Error> {
@@ -135,10 +137,32 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         let mut package = open(&file).ok()?;
         Some(move |path: &str| package.read_file(path).map_err(|e| e.to_string()))
     });
+    let mut scripts = Vec::new();
+    for script in &scene.scripts {
+        let text = String::from_utf8(package.read_file(&script.path)?);
+        let text = text.map_err(|_| Error::Scene(format!("{} is not UTF-8 text", script.path)))?;
+        scripts.push((script.path.clone(), text));
+    }
+    if scripts.iter().map(|(_, s)| s.len()).sum::<usize>() > wprs_scene::MAX_SCRIPT_BYTES {
+        return Err(Error::Scene("the scene scripts take more than 1 MiB".into()));
+    }
     let (m, inputs) = (package.manifest.localized(), package.manifest.declared());
+    let labels = wprs_scene::labels(&m.properties, &m.default_locale.iter().cloned().collect::<Vec<_>>());
     let (id, version, locale, scene) = (m.id, m.version, m.default_locale, Arc::new(scene));
     let (properties, presets) = (m.properties, m.presets);
-    let pack = Arc::new(Pack { id, version, locale, scene, properties, presets, assets, videos, inputs });
+    let pack = Arc::new(Pack {
+        id,
+        version,
+        locale,
+        scene,
+        properties,
+        presets,
+        assets,
+        videos,
+        inputs,
+        scripts,
+        labels,
+    });
     loaded.push((stamp, Arc::downgrade(&pack)));
     Ok(pack)
 }

@@ -22,7 +22,6 @@
     <string name="mature_warning">Este fondo tiene contenido para adultos.</string>
     <string name="flashing_warning">Este fondo destella o muestra patrones rápidos que pueden provocar crisis a personas con epilepsia fotosensible.</string>
     <string name="show_anyway">Mostrar igualmente</string>
-    <string name="lacks_scripts">Sus scripts de escena no se ejecutan en el teléfono.</string>
     <string name="lacks_sound">Sus sonidos no suenan en el teléfono.</string>
     <string name="lacks_folder">Las imágenes de una carpeta que elijas no se muestran en el teléfono.</string>
     <string name="lacks_user_videos">Los vídeos que elijas no se reproducen en el teléfono.</string>
@@ -33,8 +32,6 @@
     <string name="lacks_folder2">Las subcarpetas y el límite de archivos de una carpeta que elijas no se usan en el teléfono.</string>
     <string name="lacks_spanned_scenes">Su escena no se extiende sobre varias pantallas en el teléfono.</string>
     <string name="lacks_sound2">Sus sonidos MP3 o largos, sus listas de sonidos y los sonidos que inician los eventos no suenan en el teléfono.</string>
-    <string name="lacks_scripts2">Sus scripts que usan la interfaz de scripts más nueva no se ejecutan en el teléfono.</string>
-    <string name="lacks_script_layers">Las capas que añaden sus scripts no se muestran en el teléfono.</string>
     <string name="lacks_script_geometry">Las formas que construyen sus scripts no se muestran en el teléfono.</string>
     <string name="lacks_script_storage">Sus scripts no guardan datos en el teléfono.</string>
     <string name="lacks_script_sounds">Sus scripts no reproducen ni paran sonidos en el teléfono.</string>
@@ -152,7 +149,6 @@
     <string name="react_sound">Reaccionar al sonido</string>
     <string name="react_touch">Reaccionar al tacto</string>
     <string name="microphone_needed">Para reaccionar al sonido hace falta el permiso del micrófono</string>
-    <string name="scripts_off">Los scripts de esta escena no se ejecutan en el teléfono</string>
     <string name="sounds_off">Los sonidos de esta escena no se reproducen en el teléfono</string>
     <string name="presets">Preajustes</string>
     <string name="reset">Restablecer</string>
@@ -180,6 +176,11 @@
     <string name="reason_memory">sus texturas de estado ocuparían demasiada memoria</string>
     <string name="reason_textures">sus texturas ocuparían demasiada memoria</string>
     <string name="scene_level">Escenas: clase de dispositivo %1$s, nivel %2$s</string>
+    <string name="react_taps">Reaccionar a los toques</string>
+    <string name="scripts_stopped">Los scripts de esta escena fallaron demasiadas veces y están apagados; la escena sigue sin ellos</string>
+    <string name="script_stopped">Un script de esta escena falló y se detuvo; la escena sigue sin él</string>
+    <string name="timed_gpu">Los efectos de los paquetes se cronometran en la GPU</string>
+    <string name="timed_wait">Los efectos de los paquetes se cronometran esperando a la GPU</string>
     <string name="particles_cpu">Sus partículas se mueven en el procesador, así que se muestran menos</string>
     <string name="strength">Intensidad</string>
     <string name="focus">Enfoque</string>

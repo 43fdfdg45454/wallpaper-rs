@@ -1,6 +1,7 @@
 #![cfg_attr(not(target_os = "android"), allow(dead_code))]
 
 mod account;
+mod acting;
 mod apply;
 #[cfg(target_os = "android")]
 mod bridge;

@@ -126,6 +126,7 @@ fn api(name: &str) -> Option<ScriptApi> {
         "setTimeout" | "setInterval" | "clearTimeout" | "clearInterval" => ScriptApi::Timers,
         "console" => ScriptApi::Console,
         "shared" => ScriptApi::Shared,
+        "sound" => ScriptApi::Sounds,
         _ => return None,
     })
 }

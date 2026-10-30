@@ -17,6 +17,7 @@ wprs-format.workspace = true
 wprs-library.workspace = true
 wprs-render.workspace = true
 wprs-scene.workspace = true
+wprs-script.workspace = true
 wprs-schedule.workspace = true
 wprs-sync.workspace = true
 anyhow.workspace = true
@@ -34,6 +35,7 @@ toml.workspace = true
 zeroize.workspace = true
 
 [target.'cfg(target_os = "android")'.dependencies]
+rquickjs-sys = { workspace = true, features = ["bindgen"] }
 wgpu.workspace = true
 pollster.workspace = true
 jni.workspace = true

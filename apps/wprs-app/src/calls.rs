@@ -136,6 +136,7 @@ calls! {
         GrantPackage grant_package(scene: str, key: str, input: str);
         Revoke revoke(scene: str, input: str);
         GetInputs get_inputs() json;
+        SetClicks set_clicks(output: str, on: bool);
     }
     Sync1 sync {
         AddServer add_server(url: str);

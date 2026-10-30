@@ -1,5 +1,5 @@
 use crate::wire::Wire;
-use wprs_scene::{AudioFrame, Course, Extent, Fired, LayerRead, PointerState, Values};
+use wprs_scene::{AudioFrame, Course, Extent, Fired, LayerRead, PointerState, Touch, Values};
 
 static NO_PROPS: Values = Values::new();
 static IDLE: PointerState = PointerState {
@@ -21,14 +21,6 @@ pub enum Mode {
     Preview,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Touch {
-    pub layer: String,
-    pub kind: u8,
-    pub local: [f32; 2],
-    pub scene: [f32; 2],
-}
-
 pub struct Frame<'a> {
     pub time: f64,
     pub dt: f32,
@@ -47,6 +39,7 @@ pub struct Frame<'a> {
     pub fired: &'a [Fired],
     pub reads: &'a [(String, LayerRead)],
     pub touches: &'a [Touch],
+    pub sounds: &'a [String],
 }
 
 impl Frame<'static> {
@@ -69,6 +62,7 @@ impl Frame<'static> {
             fired: &[],
             reads: &[],
             touches: &[],
+            sounds: &[],
         }
     }
 }
@@ -134,7 +128,11 @@ impl Encoder {
         }
         w.u16(f.touches.len());
         for t in f.touches {
-            w.str(&t.layer).u8(t.kind).f32s(&t.local).f32s(&t.scene);
+            w.str(&t.layer).u8(t.kind as u8).f32s(&t.local).f32s(&t.scene);
+        }
+        w.u16(f.sounds.len());
+        for id in f.sounds {
+            w.str(id);
         }
         self.buf = std::mem::take(&mut w.0);
         &self.buf

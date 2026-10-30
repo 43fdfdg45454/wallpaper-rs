@@ -123,9 +123,17 @@ pub fn diagnostics<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> JString<'a> {
             "gpu": gpu::adapter(), "backend": settings::chosen(BACKEND), "frames": frames, "fps": fps,
             "cap": power.fps(false), "charging": power.charging, "saver": power.saver, "thermal": power.thermal,
             "tier": tier, "quality": quality, "flashes": stage::flashes(), "left_out": stage::left_out(),
-            "particles": stage::particles(),
+            "particles": stage::particles(), "scripts": crate::acting::scripts(), "stamps": gpu::stamps(),
         });
         Ok(env.new_string(report.to_string())?)
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn finish<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) {
+    on(&mut env, |_| {
+        crate::stage::finish();
+        Ok(())
     })
 }
 

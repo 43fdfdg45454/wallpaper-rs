@@ -8,8 +8,8 @@ use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView, log_allowed};
 use wprs_scene::{
-    Course, Fired, LayerRead, MAX_FIRED, PointerState, Quality, Runtime, ScriptOutputs, Uses, Values, Voice,
-    Wake,
+    Course, Fired, LayerRead, MAX_FIRED, MAX_PRESSES, PointerState, Press, Quality, Runtime, ScriptOutputs,
+    Touch, Uses, Values, Voice, Wake,
 };
 use wprs_script::{Error, Frame, Mode, Setup};
 
@@ -28,6 +28,9 @@ pub(super) struct SceneState {
     view: Option<SceneView>,
     tick: Option<Instant>,
     pointer: PointerState,
+    presses: Vec<Press>,
+    allowed: [bool; 2],
+    touches: Vec<Touch>,
     host: Option<Link>,
     calm: u32,
     answered: bool,
@@ -89,6 +92,9 @@ impl SceneState {
             view,
             tick,
             pointer,
+            presses: Vec::new(),
+            allowed: [false; 2],
+            touches: Vec::new(),
             host: None,
             calm,
             answered: false,
@@ -228,9 +234,13 @@ impl SceneState {
                 self.runtime.set_audio(*audio);
                 heard
             }
-            SceneInput::Pointer(_, pointer) => {
+            SceneInput::Pointer(_, pointer, presses, allowed) => {
                 let moved = std::mem::replace(&mut self.pointer, pointer) != pointer;
-                moved && self.uses.cursor
+                let room = MAX_PRESSES.saturating_sub(self.presses.len());
+                let pressed = !presses.is_empty();
+                self.presses.extend(presses.into_iter().take(room));
+                self.allowed = allowed;
+                (moved || pressed) && self.uses.cursor
             }
             SceneInput::Script(_, outputs) => {
                 let changed = self.runtime.set_script(*outputs);
@@ -264,9 +274,11 @@ impl SceneState {
         let reads: Vec<(String, LayerRead)> =
             rt.script_watch().iter().filter_map(|id| Some((id.clone(), rt.read(id)?))).collect();
         let actions = std::mem::take(&mut self.pressed);
+        let (touches, sounds) = (std::mem::take(&mut self.touches), rt.sounds_playing());
         let (view, screen, fps) = (self.sent.1, self.sent.2, self.sent.3);
         let eventful = !self.fired.is_empty()
             || !actions.is_empty()
+            || !touches.is_empty()
             || self.timer <= rt.time()
             || self.sent.0 != self.exposed;
         let audio = (self.reads.0 && self.uses.audio).then(|| rt.audio());
@@ -287,7 +299,8 @@ impl SceneState {
             timelines: &self.courses,
             fired: &self.fired,
             reads: &reads,
-            touches: &[],
+            touches: &touches,
+            sounds: &sounds,
         };
         let inside = rt.pointer().inside;
         let link = self.host.as_mut()?;
@@ -305,6 +318,10 @@ impl SceneState {
                 let mut kept = actions;
                 kept.append(&mut self.pressed);
                 self.pressed = kept;
+                let mut held = touches;
+                held.append(&mut self.touches);
+                held.truncate(wprs_scene::MAX_TOUCHES);
+                self.touches = held;
             }
         }
         match sent {
@@ -401,7 +418,14 @@ impl SceneState {
             self.view = Some(view);
         }
         let view = self.view.as_mut().expect("created above");
-        let frame = self.runtime.frame(view.view(inner), quality);
+        let rect = view.view(inner);
+        let presses = std::mem::take(&mut self.presses);
+        if self.uses.cursor && self.runtime.point(view.hitboxes(), rect, &presses, self.allowed.into()) {
+            self.calm = 0;
+            let room = wprs_scene::MAX_TOUCHES.saturating_sub(self.touches.len());
+            self.touches.extend(self.runtime.take_touches().into_iter().take(room));
+        }
+        let frame = self.runtime.frame(rect, quality);
         let videos: Vec<(&str, &GpuImage)> = self
             .spec
             .reels()
@@ -584,7 +608,7 @@ mod tests {
                 SceneSpec { values, pack: pack.clone(), extra: Vec::new(), clips: Vec::new(), hold: None };
             let mut state = SceneState::new(spec, power);
             let pointer = PointerState { pos: Some([0.5, 0.5]), inside: true, ..PointerState::default() };
-            let moved = state.input(SceneInput::Pointer(String::new(), pointer));
+            let moved = state.input(SceneInput::Pointer(String::new(), pointer, Vec::new(), [true; 2]));
             (state.uses().cursor, state.uses().audio, moved)
         };
         assert_eq!(follows("pointer"), (true, false, true));

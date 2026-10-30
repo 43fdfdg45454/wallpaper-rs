@@ -188,6 +188,7 @@ pub trait Inputs1 {
     fn revoke(&self, scene: &str, input: &str) -> Result<()>;
     fn get_inputs(&self) -> Result<String>;
     fn set_pointer(&self, x: i32, y: i32) -> Result<()>;
+    fn set_clicks(&self, output: &str, on: bool) -> Result<()>;
 }
 
 #[proxy(

@@ -26,12 +26,13 @@ pub(crate) fn start(daemon: &Arc<Daemon>, connection: zbus::Connection) {
 impl Daemon {
     pub(crate) fn views(&self) -> BTreeMap<String, View> {
         let st = self.state();
-        let view = |info: &OutputInfo| View {
+        let view = |name: &String, info: &OutputInfo| View {
             active: st.active(info) && !st.locked,
             covered: info.covered(),
             rect: info.screen.as_ref().map(|s| [s.x.into(), s.y.into(), s.width.into(), s.height.into()]),
+            clicks: st.config.clicks(name),
         };
-        st.outputs.iter().map(|(name, info)| (name.clone(), view(info))).collect()
+        st.outputs.iter().map(|(name, info)| (name.clone(), view(name, info))).collect()
     }
 }
 
@@ -78,7 +79,7 @@ pub(crate) fn reported(control: &Control) -> Grants {
 }
 
 fn parse(input: &str) -> Result<Input> {
-    Input::parse(input).ok_or_else(|| invalid(format!("{input} is not audio or pointer")))
+    Input::parse(input).ok_or_else(|| invalid(format!("{input} is not audio, pointer or clicks")))
 }
 
 #[zbus::interface(name = "io.github.wallpaper_rs.Inputs1")]
@@ -120,6 +121,8 @@ impl Inputs {
         shown.values_mut().for_each(|s| s.granted = control.granted(&s.scene, &s.key));
         let (parallax, declined, capturing) =
             (control.parallax.clone(), control.declined.clone(), control.capturing);
+        let clicks = control.views.iter().filter(|(_, v)| v.clicks).map(|(name, _)| name.clone()).collect();
+        let clicking = control.wants(Input::Clicks);
         drop(control);
         let (asking, quiet) = crate::confirm::questions();
         reply(InputsReply {
@@ -133,7 +136,48 @@ impl Inputs {
             declined,
             asking,
             quiet,
+            clicks,
+            clicking,
         })
+    }
+
+    async fn set_clicks(
+        &self,
+        output: String,
+        on: bool,
+        #[zbus(header)] header: Header<'_>,
+        #[zbus(connection)] bus: &zbus::Connection,
+    ) -> Result<()> {
+        let (d, _) = self.parts()?;
+        if on && !matches!(caller(bus, &header).await, Caller::Ctl | Caller::Ours) {
+            return Err(denied("only the app, the tray and wprs-ctl let clicks reach a wallpaper"));
+        }
+        let set = move |c: &mut wprs_core::Config| {
+            c.set_clicks(output.trim(), on);
+            Ok(())
+        };
+        d.run(move |d| d.update_config(set)).await
+    }
+
+    async fn touch(
+        &self,
+        output: String,
+        x: f64,
+        y: f64,
+        buttons: u32,
+        #[zbus(header)] header: Header<'_>,
+        #[zbus(connection)] bus: &zbus::Connection,
+    ) -> Result<()> {
+        if caller(bus, &header).await != Caller::Ours || crate::flatpak::app_id().is_some() {
+            return Err(denied("only the Plasma wallpaper of wprsd reports clicks"));
+        }
+        if !lock(&self.parts()?.1.control).wants(Input::Clicks).contains(&output) {
+            return Err(denied(format!("{output} does not take clicks now")));
+        }
+        let inside = [x, y].iter().all(|v| (0.0..=1.0).contains(v));
+        let pos = inside.then_some([x as f32, y as f32]);
+        crate::inputs::surface_pointer(&output, pos, buttons.min(255) as u8);
+        Ok(())
     }
 
     async fn set_pointer(

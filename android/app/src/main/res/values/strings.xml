@@ -23,7 +23,6 @@
     <string name="mature_warning">This wallpaper has mature content.</string>
     <string name="flashing_warning">This wallpaper flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy.</string>
     <string name="show_anyway">Show anyway</string>
-    <string name="lacks_scripts">Its scene scripts do not run on the phone.</string>
     <string name="lacks_sound">Its sounds do not play on the phone.</string>
     <string name="lacks_folder">Pictures from a folder you choose are not shown on the phone.</string>
     <string name="lacks_user_videos">Videos you choose do not play on the phone.</string>
@@ -34,8 +33,6 @@
     <string name="lacks_folder2">Subfolders and the limit on the files of a folder you choose are not used on the phone.</string>
     <string name="lacks_spanned_scenes">Its scene is not spread over several screens on the phone.</string>
     <string name="lacks_sound2">Its MP3 or long sounds, lists of sounds and sounds started by events do not play on the phone.</string>
-    <string name="lacks_scripts2">Its scripts that use the newer script interface do not run on the phone.</string>
-    <string name="lacks_script_layers">Layers its scripts add are not shown on the phone.</string>
     <string name="lacks_script_geometry">Shapes its scripts build are not shown on the phone.</string>
     <string name="lacks_script_storage">Its scripts keep no data on the phone.</string>
     <string name="lacks_script_sounds">Its scripts do not play or stop sounds on the phone.</string>
@@ -157,7 +154,6 @@
     <string name="react_sound">React to sound</string>
     <string name="react_touch">React to touch</string>
     <string name="microphone_needed">Reacting to sound needs the microphone permission</string>
-    <string name="scripts_off">The scripts of this scene do not run on the phone</string>
     <string name="sounds_off">The sounds of this scene do not play on the phone</string>
     <string name="presets">Presets</string>
     <string name="reset">Reset</string>
@@ -185,6 +181,11 @@
     <string name="reason_memory">its state textures would take too much memory</string>
     <string name="reason_textures">its textures would take too much memory</string>
     <string name="scene_level">Scenes: device class %1$s, level %2$s</string>
+    <string name="react_taps">React to taps</string>
+    <string name="scripts_stopped">The scripts of this scene failed too often and are off; the scene goes on without them</string>
+    <string name="script_stopped">A script of this scene failed and stopped; the scene goes on without it</string>
+    <string name="timed_gpu">Package effects are timed on the GPU</string>
+    <string name="timed_wait">Package effects are timed by waiting for the GPU</string>
     <string name="particles_cpu">Its particles run on the processor, so fewer of them are shown</string>
     <string name="strength">Intensity</string>
     <string name="focus">Focus</string>

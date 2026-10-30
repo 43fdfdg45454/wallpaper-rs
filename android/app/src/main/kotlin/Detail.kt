@@ -78,7 +78,6 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
             item?.lacks?.takeIf { it.isNotEmpty() }?.let { lacks ->
                 val notes = lacks.mapNotNull { lack ->
                     when (lack) {
-                        "scripts" -> R.string.lacks_scripts
                         "sound" -> R.string.lacks_sound
                         "folder" -> R.string.lacks_folder
                         "user_videos" -> R.string.lacks_user_videos
@@ -89,8 +88,6 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                         "folder2" -> R.string.lacks_folder2
                         "spanned_scenes" -> R.string.lacks_spanned_scenes
                         "sound2" -> R.string.lacks_sound2
-                        "scripts2" -> R.string.lacks_scripts2
-                        "script_layers" -> R.string.lacks_script_layers
                         "script_geometry" -> R.string.lacks_script_geometry
                         "script_storage" -> R.string.lacks_script_storage
                         "script_sounds" -> R.string.lacks_script_sounds

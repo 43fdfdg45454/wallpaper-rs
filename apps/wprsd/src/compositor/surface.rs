@@ -81,6 +81,7 @@ impl State {
             self.windows.insert(name, window);
             return;
         };
+        window.take_input();
         match &mut output.sink {
             Sink::Surface(screen) if screen.window.same_surface(&window) => {
                 let moved = (screen.window.geometry(), screen.window.placement())
@@ -111,6 +112,15 @@ impl State {
             .filter(shown)
             .into_iter()
             .for_each(|o| (o.dirty, o.composed) = (true, None));
+    }
+
+    pub(super) fn region(&mut self, name: &str) {
+        let windows = self.windows.get(name).into_iter();
+        let screens = self.outputs.get(name).into_iter().filter_map(|o| match &o.sink {
+            Sink::Surface(screen) => Some(&screen.window),
+            Sink::Stream(_) => None,
+        });
+        windows.chain(screens).for_each(Window::take_input);
     }
 
     pub(super) fn backdrop_again(&mut self, name: &str) {

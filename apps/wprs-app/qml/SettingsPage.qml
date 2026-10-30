@@ -109,7 +109,7 @@ Kirigami.ScrollablePage {
             QQC2.Label {
                 Layout.maximumWidth: Kirigami.Units.gridUnit * 30
                 wrapMode: Text.Wrap
-                text: [App.tr("A scene follows the sound that plays or the pointer only after you allow it for that scene, and only while it is shown. The sound is turned into levels on this computer and never recorded, kept or sent; pointer positions are never kept."), page.inputs.capturing ? App.tr("A scene is following the sound now.") : "", page.inputs.tracking ? App.tr("A scene is following the pointer now.") : "", Object.keys(page.grants).length ? "" : App.tr("No scene has been allowed yet.")].filter(t => t).join("\n")
+                text: [App.tr("A scene follows the sound that plays or the pointer, or takes clicks, only after you allow it for that scene, and only while it is shown; clicks also have to be turned on for each screen in its scene settings. The sound is turned into levels on this computer and never recorded, kept or sent; pointer positions and clicks are never kept."), page.inputs.capturing ? App.tr("A scene is following the sound now.") : "", page.inputs.tracking ? App.tr("A scene is following the pointer now.") : "", Object.keys(page.grants).length ? "" : App.tr("No scene has been allowed yet.")].filter(t => t).join("\n")
             }
 
             Repeater {

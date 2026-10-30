@@ -972,8 +972,7 @@ if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene w
 grep -q "tilt" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/solid '{"alpha": 0.5}'
-if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with layer events was previewed"; fi
-grep -q "layer_events" <<<"$refused" || fail "the refused preview did not name layer_events: $refused"
+ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with solid layers was not previewed"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "glitter"}]'
 if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with an effect not drawn yet was previewed"; fi
@@ -1039,7 +1038,7 @@ if ctl input grant "$sea" audio 2>"$WORK/grant.err"; then fail "an input was gra
 grep -q "is not shown" "$WORK/grant.err" || fail "grant before showing: $(cat "$WORK/grant.err")"
 ctl input pointer 10 10 && ctl input pointer -10 -10
 ctl input status | grep -qx "audio capture: off" || fail "status: $(ctl input status)"
-refused "is not audio or pointer" Inputs1 Grant ss "$sea" camera
+refused "is not audio, pointer or clicks" Inputs1 Grant ss "$sea" camera
 refused "is not a scene package id" Inputs1 Grant ss "Not A Scene" audio
 refused "Signature mismatch" Inputs1 SetPointer dd 1 1
 denied "only the KWin script of wprsd and wprs-ctl report the pointer" Inputs1.SetPointer int32:1 int32:1
@@ -1239,11 +1238,12 @@ grep -q "wprs-ctl input grant $lilies pointer" "$WORK/hint.err" ||
 wait_for 10 reads "r['shown']['TEST-15']['title'], r['declined'].get('$lilies')" "('Pond', None)" ||
   fail "the scene asking for the pointer was not declared: $(ctl input status --json)"
 ctl input revoke "$lilies" pointer
-[ "$(inputs "r['declined'].get('$lilies')")" = "['pointer']" ] || fail "not now was forgotten"
+ctl input revoke "$lilies" clicks
+[ "$(inputs "r['declined'].get('$lilies')")" = "['pointer', 'clicks']" ] || fail "not now was forgotten"
 ctl lib apply "$pond" -o TEST-15 2>"$WORK/hint.err"
 [ ! -s "$WORK/hint.err" ] || fail "a declined scene asked again: $(cat "$WORK/hint.err")"
 ctl input grant "$lilies" pointer
-[ "$(inputs "r['declined'].get('$lilies')")" = None ] || fail "a grant kept the decline"
+[ "$(inputs "r['declined'].get('$lilies')")" = "['clicks']" ] || fail "a grant kept the decline"
 ctl input revoke "$lilies" pointer && ctl mute
 leave && ctl release TEST-15 && ctl release TEST-16 && expect "list(s['outputs'])" "[]"
 kill "$pulse" && { wait "$pulse" 2>/dev/null || true; }

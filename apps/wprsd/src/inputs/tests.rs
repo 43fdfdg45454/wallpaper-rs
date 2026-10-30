@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering::SeqCst};
 use std::time::{Duration, Instant};
 use wprs_core::model::{Input, SceneInputs};
-use wprs_scene::PointerState;
+use wprs_scene::{MAX_PRESSES, PointerState, Press};
 
 const SEA: &str = "org.example.sea";
 
@@ -24,7 +24,7 @@ fn mode(path: &std::path::Path) -> u32 {
 
 fn scene(scene: &str, key: &str, audio: bool, pointer: bool) -> SceneInputs {
     let (scene, key, title, granted) = (scene.into(), key.into(), String::new(), Default::default());
-    SceneInputs { scene, audio, pointer, title, key, granted }
+    SceneInputs { scene, audio, pointer, clicks: false, title, key, granted }
 }
 
 fn bound(key: &str, inputs: &[Input]) -> Bound {
@@ -120,7 +120,7 @@ fn a_declined_question_spares_the_twins_and_old_clients_see_the_shown_package() 
 
 #[test]
 fn inputs_need_a_shown_active_uncovered_scene_with_permission() {
-    let view = View { active: true, covered: false, rect: None };
+    let view = View { active: true, covered: false, rect: None, clicks: false };
     let mut control = Control::default();
     let on = |c: &Control, input| !c.wants(input).is_empty();
     control.shown.insert("DP-1".into(), scene(SEA, "sha256:aa", true, true));
@@ -148,7 +148,7 @@ fn inputs_need_a_shown_active_uncovered_scene_with_permission() {
 
 #[test]
 fn only_outputs_whose_scene_declares_the_pointer_follow_it() {
-    let view = View { active: true, covered: false, rect: Some([0.0, 0.0, 100.0, 100.0]) };
+    let view = View { active: true, covered: false, rect: Some([0.0, 0.0, 100.0, 100.0]), clicks: false };
     let hub = hub(Arc::default());
     let mut control = lock(&hub.control);
     control.grants.extend(bound("sha256:aa", &[Input::Audio, Input::Pointer]));
@@ -167,7 +167,7 @@ fn only_outputs_whose_scene_declares_the_pointer_follow_it() {
 
 #[test]
 fn positions_are_placed_on_the_screen_under_the_pointer() {
-    let view = View { active: true, covered: false, rect: Some([100.0, 0.0, 200.0, 100.0]) };
+    let view = View { active: true, covered: false, rect: Some([100.0, 0.0, 200.0, 100.0]), clicks: false };
     assert_eq!(view.place(150.0, 50.0), Some([0.25, 0.5]));
     assert_eq!([view.place(99.0, 50.0), view.place(300.0, 50.0), view.place(150.0, -1.0)], [None; 3]);
     let hidden =
@@ -199,4 +199,35 @@ async fn pointer_moves_wake_the_renderer_at_most_sixty_times_a_second() {
     hub.store([("DP-1".into(), PointerState { pos: Some([0.5, 0.25]), ..PointerState::default() })]);
     tokio::time::sleep(Duration::from_millis(40)).await;
     assert_eq!(wakes.load(SeqCst), woken + 1, "the last move always wakes");
+}
+
+#[test]
+fn clicks_reach_a_scene_only_on_screens_that_take_them_and_with_the_grant() {
+    let view = View { active: true, covered: false, rect: Some([0.0, 0.0, 100.0, 100.0]), clicks: false };
+    let hub = hub(Arc::default());
+    let mut control = lock(&hub.control);
+    control.grants.extend(bound("sha256:aa", &[Input::Pointer]));
+    control.shown.insert("DP-1".into(), SceneInputs { clicks: true, ..scene(SEA, "sha256:aa", false, true) });
+    control.views.insert("DP-1".into(), view);
+    assert!(control.allows("DP-1", Input::Pointer) && !control.allows("DP-1", Input::Clicks));
+    control.grants.extend(bound("sha256:aa", &[Input::Pointer, Input::Clicks]));
+    assert!(!control.allows("DP-1", Input::Clicks), "a screen that does not take clicks gave them");
+    control.views.insert("DP-1".into(), View { clicks: true, ..view });
+    assert_eq!(control.wants(Input::Clicks), ["DP-1".to_string()].into());
+    control.followed = control.wants(Input::Clicks);
+    drop(control);
+    let at = |buttons| {
+        ("DP-1".to_string(), PointerState { pos: Some([0.5; 2]), buttons, ..PointerState::default() })
+    };
+    hub.store([at(0), at(1), at(1), at(0)]);
+    hub.set_pointer(20.0, 30.0);
+    let (state, presses, allowed) = hub.touch("DP-1");
+    let pressed = |b| Press { at: Some([0.5; 2]), buttons: b };
+    assert_eq!((presses, allowed), (vec![pressed(1), pressed(0)], [true, true]));
+    assert_eq!((state.pos, state.buttons), (Some([0.2, 0.3]), 0));
+    hub.store((0..40).map(|i| at(i % 2)));
+    assert_eq!(hub.touch("DP-1").1.len(), MAX_PRESSES, "presses were not bounded");
+    hub.store([at(1)]);
+    lock(&hub.control).views.insert("DP-1".into(), view);
+    assert_eq!(hub.touch("DP-1"), (PointerState { buttons: 0, ..at(1).1 }, Vec::new(), [true, false]));
 }

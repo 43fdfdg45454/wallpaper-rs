@@ -271,7 +271,7 @@ pub(crate) mod tests {
 
     fn show(hub: &Hub, scene: &str, output: &str, key: &str) {
         let (scene, key, title, granted) = (scene.into(), key.into(), "Asked".into(), Default::default());
-        let shown = SceneInputs { scene, audio: true, pointer: false, title, key, granted };
+        let shown = SceneInputs { scene, audio: true, pointer: false, clicks: false, title, key, granted };
         lock(&hub.control).shown.insert(output.into(), shown);
     }
 

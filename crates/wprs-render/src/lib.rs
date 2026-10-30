@@ -43,7 +43,7 @@ pub use parallax::{DepthMap, Relief};
 pub use readback::TargetLimits;
 pub use scene::{
     MAX_FONT, MAX_SCENE_BUILD, Pixels, SceneAssets, SceneStats, SceneView, drawn_effects, finish_builds,
-    font, retry_effects, set_build_timeout, set_gpu_budget, stop_effects,
+    font, retry_effects, set_build_timeout, set_gpu_budget, stop_builds, stop_effects,
 };
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};

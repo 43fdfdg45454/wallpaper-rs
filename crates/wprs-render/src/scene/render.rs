@@ -118,6 +118,11 @@ impl Renderer {
             more: super::stops::frame(runtime),
             backdrop: None,
         };
+        if frame.draws.iter().any(|d| !d.layer.solid.is_off()) {
+            v.hitboxes = painter.hitboxes(&v.sources, &mut v.covers);
+        } else if !v.hitboxes.0.is_empty() {
+            v.hitboxes = Default::default();
+        }
         let c = frame.background.0;
         let background = if srgb { c } else { [linear(c[0]), linear(c[1]), linear(c[2]), c[3]] };
         let stamp = {

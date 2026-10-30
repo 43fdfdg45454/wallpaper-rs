@@ -110,6 +110,7 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Inputs1", "Revoke", "input revoke", &["SCENE", "INPUT"]),
     ("Inputs1", "GetInputs", "input status", &[]),
     ("Inputs1", "SetPointer", "input pointer", &["X", "Y"]),
+    ("Inputs1", "SetClicks", "input clicks", &["--output", "STATE"]),
     ("Sync1", "AddServer", "server add", &["URL"]),
     ("Sync1", "Link", "server link", &["--name", "--plaintext"]),
     ("Sync1", "PreviewCode", "server approve", &["CODE"]),

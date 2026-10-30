@@ -240,13 +240,18 @@ struct Inputs(Log);
 impl Inputs {
     fn get_inputs(&self) -> String {
         let shown = |key: &str, granted: &[&str]| {
-            json!({"scene": "org.example.sea", "audio": true, "pointer": false, "title": "Sea", "key": key,
+            json!({"scene": "org.example.sea", "audio": true, "pointer": false, "clicks": true, "title": "Sea", "key": key,
                 "granted": granted})
         };
         let shown = json!({"DP-1": shown("key:signer", &["audio"]), "DP-2": shown("sha256:other", &[])});
         json!({"model": 1, "serial": 9, "capturing": true, "tracking": false,
-            "grants": {"org.example.sea": ["audio"]}, "shown": shown, "parallax": [], "declined": {}})
+            "grants": {"org.example.sea": ["audio"]}, "shown": shown, "parallax": [], "declined": {},
+            "clicks": ["DP-1"], "clicking": []})
         .to_string()
+    }
+
+    fn set_clicks(&self, output: String, on: bool) {
+        self.0.push(format!("SetClicks [{output}] {on}"));
     }
 
     fn grant_package(&self, scene: String, key: String, input: String) -> Result<(), Failure> {
@@ -511,7 +516,14 @@ async fn a_grant_names_one_package_and_the_status_shows_what_each_screen_may_use
     assert!(code == 1 && err.contains("DP-3 does not show org.example.sea"), "{err}");
     let (code, out, _) = bus.ctl(&["input", "status"]);
     assert_eq!(code, 0);
-    assert!(out.contains("DP-1 shows org.example.sea using audio (allowed: audio)\n"), "{out}");
-    assert!(out.contains("DP-2 shows org.example.sea using audio (allowed: none)\n"), "{out}");
+    assert!(out.contains("DP-1 shows org.example.sea using audio, clicks (allowed: audio)\n"), "{out}");
+    assert!(out.contains("DP-2 shows org.example.sea using audio, clicks (allowed: none)\n"), "{out}");
+    assert!(out.contains("clicks reach the wallpaper on: DP-1\ntaking clicks now: none\n"), "{out}");
+    assert_eq!(bus.ctl(&["input", "clicks", "on", "-o", "DP-2"]).0, 0);
+    assert_eq!(bus.ctl(&["input", "clicks", "off"]).0, 0);
+    assert!(bus.log.has("SetClicks [DP-2] true") && bus.log.has("SetClicks [] false"));
+    assert_eq!(grant(&["-o", "DP-1"]).0, 0);
+    let (code, _, err) = bus.ctl(&["input", "grant", "org.example.sea", "clicks", "-o", "DP-1"]);
+    assert!(code == 0 && bus.log.has("GrantPackage org.example.sea key:signer clicks"), "{err}");
     assert!(out.contains("granted to some version or signer of org.example.sea: audio\n"), "{out}");
 }

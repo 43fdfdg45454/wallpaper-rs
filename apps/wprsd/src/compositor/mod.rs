@@ -66,7 +66,7 @@ pub struct SceneSpec {
 #[derive(Debug, Clone)]
 pub enum SceneInput {
     Audio(String, Box<AudioFrame>),
-    Pointer(String, PointerState),
+    Pointer(String, PointerState, Vec<wprs_scene::Press>, [bool; 2]),
     Script(String, Box<ScriptOutputs>),
 }
 
@@ -199,6 +199,7 @@ enum Command {
     Attach(String, Window),
     Frame(String),
     Repaint(String),
+    Region(String),
     Backdrop(String),
     SetActive(String, bool, bool),
     Settings(Settings),
@@ -247,6 +248,10 @@ impl Compositor {
 
     pub fn repainter(&self) -> impl Fn(&str) + Send + Sync + 'static {
         self.relay(Command::Repaint)
+    }
+
+    pub fn regioner(&self) -> impl Fn(&str) + Send + Sync + 'static {
+        self.relay(Command::Region)
     }
 
     pub fn backdropper(&self) -> impl Fn(&str) + Send + Sync + 'static {

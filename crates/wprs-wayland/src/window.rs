@@ -25,6 +25,7 @@ pub(crate) struct Parts {
     pub(crate) fractional: Option<WpFractionalScaleV1>,
     pub(crate) empty: Option<Region>,
     pub(crate) presentation: Option<WpPresentation>,
+    pub(crate) wanted: std::sync::Mutex<Option<bool>>,
 }
 
 impl Drop for Parts {
@@ -118,10 +119,24 @@ impl Window {
     }
 
     pub fn track_pointer(&self, on: bool) {
+        match &self.native {
+            Native::Layer(parts, _) => {
+                *parts.wanted.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(on);
+                (self.sink)(Event::Input(self.name.clone()));
+            }
+            Native::X11(desk) => desk.track(on),
+        }
+    }
+
+    pub fn take_input(&self) {
         let Native::Layer(parts, _) = &self.native else { return };
+        let Some(on) = parts.wanted.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take() else {
+            return;
+        };
         let region = parts.empty.as_ref().filter(|_| !on).map(Region::wl_region);
         parts.layer.wl_surface().set_input_region(region);
         self.commit();
+        tracing::debug!(output = self.name, on, "pointer input of the background");
     }
 
     pub fn report(&self, cover: Cover, covered: bool) {

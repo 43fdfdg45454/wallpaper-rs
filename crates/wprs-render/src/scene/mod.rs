@@ -10,6 +10,7 @@ mod fed;
 mod flight;
 mod fonts;
 mod held;
+mod hits;
 mod item;
 mod limit;
 mod load;
@@ -40,7 +41,7 @@ mod woff2;
 
 use crate::Renderer;
 use crate::texture::GpuImage;
-pub use builders::finish_builds;
+pub use builders::{finish_builds, stop_builds};
 pub use clock::set_gpu_budget;
 pub use flight::drawn_effects;
 pub use fonts::{MAX_FONT, font};

@@ -82,7 +82,7 @@ ColumnLayout {
     }
 
     Repeater {
-        model: [["audio", scene.daemon.tr("Follow the sound that plays"), scene.daemon.tr("The sound is turned into levels on this computer while the scene is shown; nothing is recorded, kept or sent, and the desktop may show a microphone indicator.")], ["pointer", scene.daemon.tr("Follow the pointer"), scene.daemon.tr("Only the latest pointer position over this screen reaches the scene; positions are never kept and keys are never read.")]].filter(input => scene.uses[input[0]] === true)
+        model: [["audio", scene.daemon.tr("Follow the sound that plays"), scene.daemon.tr("The sound is turned into levels on this computer while the scene is shown; nothing is recorded, kept or sent, and the desktop may show a microphone indicator.")], ["pointer", scene.daemon.tr("Follow the pointer"), scene.daemon.tr("Only the latest pointer position over this screen reaches the scene; positions are never kept and keys are never read.")], ["clicks", scene.daemon.tr("Take clicks and taps"), scene.daemon.tr("Only real clicks and taps on the wallpaper of this screen reach the scene; they are never kept and keys are never read.")]].filter(input => scene.uses[input[0]] === true)
 
         delegate: ColumnLayout {
             id: input
@@ -123,6 +123,26 @@ ColumnLayout {
                 wrapMode: Text.Wrap
                 font: Kirigami.Theme.smallFont
                 color: Kirigami.Theme.disabledTextColor
+            }
+        }
+    }
+
+    QQC2.Switch {
+        id: screenClicks
+
+        visible: scene.uses.clicks === true
+        text: scene.daemon.tr("Let clicks and taps on this screen reach its wallpaper")
+        checked: (scene.inputs.clicks ?? []).includes(scene.output)
+        onToggled: scene.daemon.act("SetClicks", [scene.output, checked], "Inputs1", () => scene.load(), error => {
+                scene.problem = error.message;
+                scene.load();
+            })
+
+        Connections {
+            target: scene
+
+            function onInputsChanged() {
+                screenClicks.checked = Qt.binding(() => (scene.inputs.clicks ?? []).includes(scene.output));
             }
         }
     }

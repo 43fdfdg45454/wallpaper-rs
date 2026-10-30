@@ -242,7 +242,7 @@ B and S swapped), `phoenix` min(B, S) − max(B, S) + 1, `average` (B + S) / 2 a
 | adjustment `size` | `[width, height]` in pixels (at most twice the canvas): only that rectangle around the layer position is captured, and `redraw: true` draws what was captured again with the transform of the layer, as a magnifier or a mirror | `capture` |
 | adjustment `rgb` | `true` sends what the layer captures, shrunk to at most 64 × 16, to the RGB lighting of the computer, at most 30 times a second; the manifest must set `permissions.rgb` (`package.md`) | `rgb` |
 | `attach` | `{ "layer", "bone" \| "point", "offset": [x, y], "inherit" }`: follows a bone or a node of a `mesh` or `model` layer instead of a `parent`; `inherit` lists `position`, `rotation` and `scale` (all by default); a layer may not follow itself, through other attachments either | `attach` |
-| `solid` | `true` or `{ "alpha" (0 to 1) }`: the layer takes the pointer for `click:`, `enter:` and `leave:` triggers and script pointer events, over its box or, with `alpha`, only where it is at least that opaque; layers are tested from the top down | `layer_events` with `alpha` |
+| `solid` | `true` or `{ "alpha" (0 to 1) }`: the layer takes the pointer for `click:`, `enter:` and `leave:` triggers and script pointer events, over its box or, with `alpha`, only where it is at least that opaque (pictures by the alpha of their pixels, the other kinds by their color and opacity); a solid group takes the pointer over the boxes of its layers; layers are tested from the top down, as they were drawn in the last frame, with their transforms, parents and parallax, and hidden layers never take it | `layer_events` with `alpha` |
 | `depth_test` | inside a group with `space: 3d`, a flat layer hides behind the models in front of it instead of covering them | `model3d` |
 
 ### Text
@@ -416,7 +416,11 @@ name events the same way.
 
 Triggers may also be `click:<layer>`, `enter:<layer>` and `leave:<layer>` for a layer that is
 `solid` or has `hit` bones, evaluated without scripts (`layer_events`; `click:` needs the `clicks`
-input, the others `pointer`), and `media:play`, `media:pause`, `media:track` (a new track) or
+input, the others `pointer`): a click is a press and a release of any button both on the layer,
+which keeps the pointer from the press until the release (so dragging off it and letting go is no
+click), and `enter`/`leave` follow the topmost solid layer under the pointer. They also start sounds
+whose `play_on` names them. Pointer events never make extra frames: they are worked out when the
+scene draws a frame for the pointer it already follows, and a still pointer makes none. And `media:play`, `media:pause`, `media:track` (a new track) or
 `media:cover` (a new cover) (`media_info`, input `media`).
 
 `media` values follow what the media player of the computer plays, only while the scene is shown,
@@ -1175,22 +1179,27 @@ Audio analysis, the pointer and script outputs reach the renderer as plain struc
 `wprs-scene`: `AudioFrame` (64 bands per channel and their average, `bass`, `mid`, `treble`,
 `level`, `beat`, `silent`; all zero while audio is off), `PointerState` (position, smoothed
 position, velocity, buttons, `inside`, in fractions of the screen) and `ScriptOutputs` (values of
-script sources, layer and effect overrides, copies of templates and their order, timeline and
-particle commands, the next timer, console lines and stopped modules). A scene only renders again for an input it
+script sources, layer and effect overrides, copies of templates and their order, timeline,
+particle and sound commands, the next timer, console lines and stopped modules), with the presses
+(`Press`: a place and the buttons held after it, at most 16 between two frames) that the scene
+turns into pointer events of its `solid` layers (`Touch`). A scene only renders again for an input it
 uses. The pointer follows the reported position with a critically damped spring that settles in
 about 0.15 s and returns to the center when the pointer leaves the screen. Audio and the pointer
 need the user's grant for the scene (`dbus.md`, `Inputs1`), which the app and the tray ask for once
 when such a scene is shown; a `wallpaper-rs.wpak/2` manifest declares them in `inputs`
 (`package.md`), and a scene of such a package receives only the inputs its manifest declares. What
 the media player plays (`media` values, cover assets, `media:` triggers and scripts that declare
-it) is the `media` input, and clicks on `solid` layers the `clicks` input.
+it) is the `media` input, and clicks on `solid` layers the `clicks` input. Clicks are off on every
+screen until the user turns them on for that screen as well as granting them to the package, they
+come only from the compositor or the desktop (never from another program), and keys never reach a
+scene. On phones a tap on the home screen is a click, with the package's *React to taps* switch.
 
 ## Scripts
 
 `scripts` lists at most 64 JavaScript modules of the package (`{ "path": "scripts/spin.js" }`; more
 than 16 name `scripts2`), each path once, at most 1 MiB together: `pack build`, every reader and the
-engine refuse more. All the modules of a scene share one process, also when several screens show the
-scene with the same settings: it has no files, network or other processes, 32 MiB of memory, a
+engine refuse more. On the computer all the modules of a scene share one process, also when several
+screens show the scene with the same settings, and on phones one thread: it has no files, network or other processes, 32 MiB of memory, a
 256 KiB stack, 100 ms to load and to run the first frame, and 4 ms of CPU per frame for all the
 modules together. Results reach the next frame, so a slow script never holds up rendering, and what
 a frame sends to the scripts is written in place: numbers and the 64 bands of each channel go as
@@ -1248,7 +1257,8 @@ export const sway = (value, { params }) => Math.sin(scene.layer("tree").rotation
 | `time` | `format(pattern, date)`: the date (`date` or now) with the tokens of `date` values in the language of `engine.locale`, such as `time.format("EEEE d 'de' MMMM")`; `Date` uses the local time zone of the computer, also after it changes, without reading any file |
 | `props` | `get(id)` (a chosen file or folder reads `"wpak-user://<id>"`, never its path, and `null` while none is chosen), `all()`, `label(id)` (the label of the chosen option of a combo in that language), `color(id)` (`{ r, g, b, a }` from 0 to 1) and `pressed(id)` (a button was pressed since the last frame); scripts never write settings |
 | `audio` | `bass`, `mid`, `treble`, `level`, `beat`, `bands(16 \| 32 \| 64, "left" \| "right" \| "average")` (a new array) and `buffers(16 \| 32 \| 64)`: `{ left, right, average }` as `Float32Array`s that the engine fills in place before each frame |
-| `input` | `cursor`: `x`, `y` (fractions of the screen), `inside`, `buttons`, `left`, `scene` (canvas pixels) and `screen` (screen pixels) |
+| `input` | `cursor`: `x`, `y` (fractions of the screen), `inside`, `buttons`, `left`, `scene` (canvas pixels) and `screen` (screen pixels); `buttons` and `left` stay 0 without the `clicks` input |
+| `sound(id)` | a sound layer of the scene (`uses: ["sounds"]`, `script_sounds`): `play()` (from where `pause()` left it, or from the start), `pause()`, `stop()` (back to the start), `playing` and `volume` (0 to 1, multiplied by the volume of the layer and the user's). The first call takes the sound over from its `play_on`; the layer's own `play` and the user's mute still silence it. Phones play no scene sounds, so there the calls change nothing |
 | `scene` | `layer(id)`, `layers()` (the ids of the top-level layers in drawing order), `spawn(template, options)`, `destroy(id)` and `order(id, index)` |
 | `timeline(id)` | `play()`, `pause()`, `reverse()`, `stop()`, `seek(t)`, `speed` (−100 to 100; below zero the timeline runs backwards like after `reverse()`, and one that plays `once` ends at its start), `time`, `duration`, `playing` and `on(name, handler)` for its events and `ended` |
 | `particles(layer)` | `play`, `pause` (no births, particles keep moving), `stop` (removes them until `play`), `playing`, `emit(n)` (1 to 1000), `point(n, [x, y])` and the `instance` fields `alpha`, `size`, `count`, `speed`, `life`, `time_scale`, `brightness` and `color`, which last until changed |
@@ -1267,7 +1277,12 @@ vectors, colors also `{ r, g, b, a }` or `"#rrggbb"`, and `scale` and `parallax`
 engine bounds what it receives: positions and sizes to 100000 pixels, scales to 1000, `skew` to
 ±89°, `origin` and `parallax` to ±10, `opacity` and colors to 0..1, texts to 4096 characters and their
 points to 1..2048, and fonts to the fonts the scene names or `sans-serif`, `serif` and `monospace`.
-`layer.on(event, handler)` handles the pointer events of the layer (see the declarations).
+`layer.on(event, handler)` handles the pointer events of the layer (see the declarations): each
+handler gets `{ type, layer, local, scene }`, `local` in pixels of the layer from its top left corner
+(of the group for a solid group) and `scene` in canvas pixels. `enter`, `leave` and `move` follow
+the topmost solid layer under the pointer; `down` goes to that layer, which then takes `move` and
+`up` until every button is released, also off it, and `click` follows an `up` on the layer that took
+the `down`. They reach the scripts in the next frame, at most 64 a frame.
 
 `layer.effect(index or name)` controls one effect of the layer: `enabled`, `set(parameter, value)`
 (numbers, vectors, colors, switches and blend modes, checked against the effect's description and
@@ -1305,7 +1320,9 @@ a module whose functions throw in three frames in a row stops alone, with its ti
 screen reports "A script of this scene stopped and the scene goes on without it: <module>: <error>"
 in the language of the desktop, as does `wprs-ctl status`. A module that does not load stops the same
 way. A frame that runs out of time or memory fails as a whole, and after three such frames in a row
-the scripts of the scene are off and the screen says so; the scene keeps drawing without them.
+the scripts of the scene are off and the screen says so; the scene keeps drawing without them. On
+phones the scripts run in a thread of their own with the same limits, and the diagnostics of the app
+say when a module stopped or the scripts are off.
 
 ### Script declarations
 

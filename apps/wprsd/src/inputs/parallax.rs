@@ -54,7 +54,8 @@ mod tests {
     #[test]
     fn a_pointer_parallax_follows_the_pointer_without_a_grant() {
         let hub = Hub::new(Default::default(), Arc::new(|| {}), Arc::new(|| {}));
-        let view = |x| View { active: true, covered: false, rect: Some([x, 0.0, 100.0, 50.0]) };
+        let view =
+            |x| View { active: true, covered: false, rect: Some([x, 0.0, 100.0, 50.0]), clicks: false };
         let views = |covered| {
             let right = View { covered, ..view(100.0) };
             Some(BTreeMap::from([("DP-1".to_owned(), view(0.0)), ("DP-2".to_owned(), right)]))

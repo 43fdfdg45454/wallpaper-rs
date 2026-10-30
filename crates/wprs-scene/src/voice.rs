@@ -134,6 +134,8 @@ impl Runtime {
                 true => edge(s, &cx, t).or(*gate).or(Some(t)),
             };
             let onset = if s.play_on.is_some() { self.onsets[i].filter(|_| gate.is_some()) } else { *gate };
+            let onset = self.played.taken(i).map_or(onset, |k| k.since.filter(|_| voice.play));
+            voice.volume *= self.played.volume(i);
             voice.at = onset.map_or(0.0, |o| (t - o).max(0.0));
             let list = &lists[i];
             if voice.play && !list.repeat && list.lengths.iter().all(|l| *l > 0.0) {
@@ -145,6 +147,7 @@ impl Runtime {
             voice.play &= onset.is_some();
             voices.push(voice);
         }
+        *self.played.heard.borrow_mut() = voices.iter().map(|v| v.play).collect();
         (voices, cx.wake.get().min(self.cue_wake()))
     }
 }

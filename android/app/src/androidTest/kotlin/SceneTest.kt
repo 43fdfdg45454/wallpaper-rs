@@ -210,6 +210,29 @@ class SceneTest {
         assertTrue(JSONObject(Native.diagnostics()).optString("particles") in listOf("gpu", "cpu"))
     }
 
+    @Test
+    fun scriptsRunAndTapsReachTheScene() = runBlocking {
+        val dir = File(storage(), "taps/taps").apply { mkdirs() }
+        File(dir, "scene.json").writeText(TAPS_SCENE)
+        File(dir, "tap.js").writeText(TAPS_SCRIPT)
+        File(dir, "manifest.json").writeText(TAPS_MANIFEST)
+        val reply = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(reply, reply.startsWith("["))
+        val uid = show("Taps")
+        assertTrue(waitFor { frames.get() > 0 })
+        val form = ask("scene", "uid" to uid, "languages" to listOf("en")) as JSONObject
+        assertTrue(form.getJSONObject("uses").getBoolean("taps") && !form.getJSONObject("granted").getBoolean("taps"))
+        ask("grant", "uid" to uid, "input" to "taps", "on" to true)
+        Render.call { painter.refresh() }
+        val before = settled(frames)
+        Render.call {
+            painter.touch(SIDE / 4f, SIDE / 2f, true)
+            painter.touch(SIDE / 4f, SIDE / 2f, false)
+        }
+        assertTrue(quiet(frames) > before)
+        assertEquals("", JSONObject(Native.diagnostics()).optString("scripts"))
+    }
+
     private fun find(title: String): String {
         val query = JSONObject().put("op", "items").put("query", "kind:scene")
         val items = JSONArray(Native.library(query.toString()))
@@ -232,6 +255,18 @@ class SceneTest {
     private companion object {
         const val SIDE = 64
         const val FRAMES = 3
+        const val TAPS_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 64] },
+            "scripts": [{ "path": "tap.js", "events": ["init", "click"], "uses": ["layers", "clicks"] }],
+            "timelines": [{ "id": "light", "duration": 0.5, "autoplay": false, "trigger": "click:button" }],
+            "layers": [{ "id": "button", "type": "solid", "color": "#2040c0", "size": [32, 64], "solid": true, "transform": { "position": [16, 32] } },
+                { "id": "lamp", "type": "solid", "color": "#ffffff", "size": [32, 64], "transform": { "position": [48, 32] },
+                  "opacity": { "timeline": "light", "keys": [[0, 0], [0.5, 1]] } }] }"""
+        const val TAPS_SCRIPT = """import { scene } from "wprs";
+export function init() { scene.layer("button").on("click", () => { scene.layer("lamp").color = "#ff0000"; }); }
+"""
+        const val TAPS_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.taps", "version": "1.0.0",
+            "title": "Taps", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+            "content": { "rating": "general" }, "photosensitive": false, "inputs": ["pointer", "clicks"] }"""
         const val CLIP_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
             "assets": { "clip": { "path": "clip.webm" } }, "layers": [{ "id": "clip", "type": "video", "video": "clip" }] }"""
         const val CLIP_MANIFEST = """{ "schema": "wallpaper-rs.wpak/1", "id": "org.example.clip", "version": "1.0.0",

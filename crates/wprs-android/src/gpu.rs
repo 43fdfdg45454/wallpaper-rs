@@ -67,6 +67,10 @@ pub(crate) fn reset() {
     LOST.store(true, Relaxed);
 }
 
+pub(crate) fn stamps() -> bool {
+    lock().as_ref().is_some_and(|gpu| gpu.renderer.timestamps())
+}
+
 pub(crate) fn adapter() -> String {
     ADAPTER.lock().unwrap_or_else(PoisonError::into_inner).clone()
 }

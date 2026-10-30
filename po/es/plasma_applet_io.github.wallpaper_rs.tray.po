@@ -39,6 +39,18 @@ msgstr ""
 "pantalla; las posiciones nunca se guardan y las teclas nunca se leen."
 
 #: integrations/plasma-tray/contents/ui/Consent.qml
+msgid "Take clicks and taps"
+msgstr "Recibir clics y toques"
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+msgid ""
+"Only real clicks and taps on the wallpaper of this screen reach the scene; "
+"they are never kept and keys are never read."
+msgstr ""
+"Solo llegan a la escena los clics y toques reales sobre el fondo de esta "
+"pantalla; nunca se guardan y nunca se leen las teclas."
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
 #, kde-format
 msgid "The scene %1 asks for your permission:"
 msgstr "La escena %1 te pide permiso:"

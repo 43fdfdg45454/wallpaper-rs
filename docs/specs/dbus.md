@@ -1152,8 +1152,8 @@ package, no preview, or a failed download or check).
 
 ## `io.github.wallpaper_rs.Inputs1`
 
-Scenes may follow the sound that plays and the pointer. Both inputs are off for every scene until
-the user grants them to that scene; grants are kept in `~/.local/share/wallpaper-rs/inputs.json`
+Scenes may follow the sound that plays and the pointer, and take clicks and taps. Every input is off
+for every scene until the user grants it to that scene; grants are kept in `~/.local/share/wallpaper-rs/inputs.json`
 (mode `0600`) per scene package id and per package: the signing key of a package installed from a
 repository (`key:<fingerprint>`, so its updates keep the grant), the SHA-256 of the file of any other
 package (`sha256:<hex>`) or, for a scene previewed from a folder, the SHA-256 of the folder path
@@ -1180,15 +1180,28 @@ locking, pausing, covering or hiding the scene or image stops it at once.
   and scenes and scripts only get the bands and levels. A scene without the grant gets silence
   even while another output's scene is listening. The stream is destroyed when no scene needs it.
 - Pointer: on layer-shell outputs only the background of an output whose scene or parallax image
-  uses the pointer accepts pointer events, showing the default cursor, so other backgrounds never
-  take desktop clicks; in Plasma the daemon loads a KWin script that reports
-  `workspace.cursorPos` with `SetPointer`, at most 60 times per second and only while the
-  pointer moves, and unloads it when no scene or parallax image needs it. Keys are never read,
-  and positions are neither kept nor logged: each output only has the latest one.
+  uses the pointer, or whose scene takes clicks, accepts pointer and touch events, showing the
+  default cursor, so other backgrounds never take desktop clicks; the render thread applies that
+  input region with its next commit, so it never commits the surface in the middle of a frame. On
+  X11 the desktop window of such an output takes the pointer the same way (its input shape and
+  its pointer events are on only then), and events that another program sent (`SendEvent`) are
+  ignored. In Plasma the daemon loads a KWin script that reports `workspace.cursorPos` with
+  `SetPointer`, at most 60 times per second and only while the pointer moves, and unloads it when
+  no scene or parallax image needs the pointer. Keys are never read, and positions are neither
+  kept nor logged: each output only has the latest one.
+- Clicks: presses and releases of the left, right, middle, back and forward buttons and taps on a
+  touch screen (a tap is a press of the left button). They reach a scene only on an output that
+  takes clicks (`SetClicks`, off for every output by default), when the scene declares them
+  (`clicks:` triggers, pointer events of scripts on `solid` layers, effects that use the buttons)
+  and its package holds the `clicks` grant. They come from the compositor on layer-shell and X11
+  and from the Plasma wallpaper on Plasma (`Touch`), never from another program: there is no
+  method to send clicks. At most 16 presses wait for the next frame of each output and they are
+  dropped when the output stops taking clicks. Opening what the user chose for a `shortcut`
+  property only ever happens inside one of these clicks.
 
 ### `Grant(s scene, s input)`
 
-Lets the scene package with id `scene` that an output shows now use `input`, `audio` or `pointer`,
+Lets the scene package with id `scene` that an output shows now use `input`, `audio`, `pointer` or `clicks`,
 whenever it is shown. A package that already has the input gets it again at once, from any caller
 and without asking. `InvalidArgs` for another input or a malformed id (1 to 255 characters of
 `a-z`, `0-9`, `.`, `_`, `-`) and while the outputs show more than one package with that id (other
@@ -1250,7 +1263,25 @@ notification or left it unanswered (`quiet`), both by package id, the scenes tha
 `title`, the package they are bound to (`key`) and the inputs granted to that very package
 (`granted`, what clients check before asking), the outputs whose
 parallax image follows the pointer (`parallax`), whether audio is being captured (`capturing`)
-and whether the pointer is being followed (`tracking`).
+and whether the pointer is being followed (`tracking`), the outputs that take clicks (`clicks`, the
+setting of `SetClicks`) and the ones whose scene takes them now (`clicking`).
+
+### `SetClicks(s output, b on)`
+
+Lets clicks and taps on `output` reach its wallpaper, or stops them; an empty `output` sets every
+output and drops the setting of each one. The setting is kept in `config.toml` (`clicks` of
+`[outputs.<name>]` or `[default]`) and is off until the user turns it on. Only the app, the tray and
+`wprs-ctl` (identified as for `Grant`) may turn it on; other callers get `AccessDenied`, and anyone
+may turn it off. A scene still needs the `clicks` grant of its package.
+
+### `Touch(s output, d x, d y, u buttons)`
+
+A press or a release on the wallpaper of `output` in Plasma, at `x`, `y` in fractions of the
+output, with the buttons held after it (bit 0 left, 1 right, 2 middle). Only the Plasma shell that
+runs the wallpaper plugin may call it (identified as for `Grant`, so never inside the Flatpak), and
+only while the output is in `clicking`; other callers get `AccessDenied`. The plugin listens to the
+pointer handlers of its own item, which take the clicks and taps the desktop leaves to the
+wallpaper.
 
 ### `SetPointer(i x, i y)`
 
@@ -2076,13 +2107,15 @@ struct InstalledReply { model: u32, serial: u64, packages: Vec<InstalledPackage>
 struct Update { repo_id: String, id: String, installed: String, available: String, changes: String }
 struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
 
-enum Input { Audio, Pointer }
-struct SceneInputs { scene: String, audio: bool, pointer: bool, title: String, key: String, granted: Vec<Input> }
+enum Input { Audio, Pointer, Clicks }
+struct SceneInputs {
+    scene: String, audio: bool, pointer: bool, clicks: bool, title: String, key: String, granted: Vec<Input>,
+}
 struct InputsReply {
     model: u32, serial: u64, capturing: bool, tracking: bool,
     grants: BTreeMap<String, Vec<Input>>, shown: BTreeMap<String, SceneInputs>, parallax: Vec<String>,
     declined: BTreeMap<String, Vec<Input>>, asking: BTreeMap<String, Vec<Input>>,
-    quiet: BTreeMap<String, Vec<Input>>,
+    quiet: BTreeMap<String, Vec<Input>>, clicks: Vec<String>, clicking: Vec<String>,
 }
 enum AccountState { Unlinked, Linking, NeedsKey, Ready, Paused, Error }
 struct AccountDevice {

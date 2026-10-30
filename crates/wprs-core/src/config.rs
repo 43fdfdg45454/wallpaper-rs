@@ -16,6 +16,8 @@ pub struct OutputConfig {
     pub background: Option<String>,
     pub playlist: Option<String>,
     pub preset: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clicks: Option<bool>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub scenes: BTreeMap<String, BTreeMap<String, toml::Value>>,
 }
@@ -112,6 +114,14 @@ impl Config {
             parse_hex_color(color).ok_or_else(|| format!("invalid color '{color}', expected #rrggbb"))?;
         self.section(output, |o| o.background = None).background = Some(format!("#{r:02x}{g:02x}{b:02x}"));
         Ok(())
+    }
+
+    pub fn clicks(&self, output: &str) -> bool {
+        self.pick(output, |o| o.clicks).unwrap_or(false)
+    }
+
+    pub fn set_clicks(&mut self, output: &str, on: bool) {
+        self.section(output, |o| o.clicks = None).clicks = Some(on);
     }
 
     fn section(&mut self, output: &str, clear: impl FnMut(&mut OutputConfig)) -> &mut OutputConfig {

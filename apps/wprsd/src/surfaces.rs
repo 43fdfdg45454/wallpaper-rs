@@ -34,12 +34,13 @@ fn placed(event: &Event) -> Option<&str> {
 pub fn start(session: Session, daemon: Arc<Daemon>) -> anyhow::Result<()> {
     let (tx, rx) = mpsc::channel();
     let (frame, repaint) = (daemon.compositor.framer(), daemon.compositor.repainter());
-    let backdrop = daemon.compositor.backdropper();
+    let (backdrop, region) = (daemon.compositor.backdropper(), daemon.compositor.regioner());
     session.start(move |event| match event {
         Event::Frame(output) => frame(&output),
         Event::Exposed(output) => repaint(&output),
         Event::Backdrop(output) => backdrop(&output),
         Event::Pointer(output, pos, buttons) => crate::inputs::surface_pointer(&output, pos, buttons),
+        Event::Input(output) => region(&output),
         event => drop(tx.send(event)),
     })?;
     let follow = move || {
@@ -112,7 +113,11 @@ impl Daemon {
             Event::Failed(reason) => {
                 crate::fatal(&format!("the display server reported an error ({reason})"))
             }
-            Event::Frame(_) | Event::Exposed(_) | Event::Backdrop(_) | Event::Pointer(..) => Ok(()),
+            Event::Frame(_)
+            | Event::Exposed(_)
+            | Event::Backdrop(_)
+            | Event::Pointer(..)
+            | Event::Input(_) => Ok(()),
         }
     }
 }

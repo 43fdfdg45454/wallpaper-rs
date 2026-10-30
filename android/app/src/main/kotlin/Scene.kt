@@ -70,7 +70,9 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
         if (uses?.optBoolean("touch") == true) {
             Toggle(stringResource(R.string.react_touch), granted?.optBoolean("touch") == true) { grant("touch", it) }
         }
-        if (form.optBoolean("scripts")) Text(stringResource(R.string.scripts_off), Modifier.padding(16.dp, 4.dp), style = small)
+        if (uses?.optBoolean("taps") == true) {
+            Toggle(stringResource(R.string.react_taps), granted?.optBoolean("taps") == true) { grant("taps", it) }
+        }
         if (form.optBoolean("sounds")) Text(stringResource(R.string.sounds_off), Modifier.padding(16.dp, 4.dp), style = small)
         val saved = options(form.optJSONArray("saved"))
         val presets = options(form.optJSONArray("presets")) + saved

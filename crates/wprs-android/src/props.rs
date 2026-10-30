@@ -72,9 +72,9 @@ fn grants() -> Grants {
     read.and_then(|bytes| serde_json::from_slice(&bytes).ok()).unwrap_or_default()
 }
 
-pub(crate) fn granted(id: &str) -> [bool; 2] {
+pub(crate) fn granted(id: &str) -> [bool; 3] {
     let grants = grants();
-    [Input::Audio, Input::Pointer].map(|input| grants.get(id).is_some_and(|g| g.contains(&input)))
+    Input::ALL.map(|input| grants.get(id).is_some_and(|g| g.contains(&input)))
 }
 
 fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
@@ -89,10 +89,11 @@ fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
     let mut runtime = Runtime::new(Arc::clone(&pack.scene), values);
     pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
     let uses = runtime.uses();
-    let [audio, touch] = granted(&pack.id);
+    let [audio, touch, taps] = granted(&pack.id);
     Ok(json!({
         "fields": fields, "presets": presets, "scripts": uses.scripts, "sounds": sounds, "saved": saved::listed(pack)?,
-        "uses": { "audio": uses.audio, "touch": uses.cursor }, "granted": { "audio": audio, "touch": touch },
+        "uses": { "audio": uses.audio, "touch": uses.cursor, "taps": uses.clicks },
+        "granted": { "audio": audio, "touch": touch, "taps": taps },
     }))
 }
 
@@ -129,7 +130,8 @@ fn grant(pack: &Pack, input: &str, on: bool) -> Result<(), Error> {
     let input = match input {
         "audio" => Input::Audio,
         "touch" => Input::Pointer,
-        _ => return Err(Error::Scene(format!("{input} is not audio or touch"))),
+        "taps" => Input::Clicks,
+        _ => return Err(Error::Scene(format!("{input} is not audio, touch or taps"))),
     };
     let mut grants = grants();
     let inputs = grants.entry(pack.id.clone()).or_default();

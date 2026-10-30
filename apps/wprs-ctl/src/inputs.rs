@@ -40,6 +40,14 @@ pub enum Inputs {
         #[arg(long, help = JSON)]
         json: bool,
     },
+    #[command(
+        about = "Let clicks and taps on a screen reach its wallpaper, for packages allowed the clicks input; off by default"
+    )]
+    Clicks {
+        state: Switch,
+        #[arg(short, long, help = "The screen; every screen when left out")]
+        output: Option<String>,
+    },
     #[command(about = "Report the pointer position in logical desktop coordinates")]
     Pointer {
         #[arg(allow_hyphen_values = true)]
@@ -53,6 +61,13 @@ pub enum Inputs {
 pub enum Kind {
     Audio,
     Pointer,
+    Clicks,
+}
+
+#[derive(ValueEnum, Clone, Copy, Debug)]
+pub enum Switch {
+    On,
+    Off,
 }
 
 impl Kind {
@@ -60,6 +75,7 @@ impl Kind {
         match self {
             Kind::Audio => Input::Audio.as_str(),
             Kind::Pointer => Input::Pointer.as_str(),
+            Kind::Clicks => Input::Clicks.as_str(),
         }
     }
 }
@@ -73,6 +89,9 @@ pub async fn run(client: &Client, command: Inputs) -> Result<()> {
         Inputs::Revoke { scene, input } => inputs.revoke(&scene, input.name()).await?,
         Inputs::Status { json } => show::reply(inputs.get_inputs().await?, json, status)?,
         Inputs::Pointer { x, y } => inputs.set_pointer(x, y).await?,
+        Inputs::Clicks { state, output } => {
+            inputs.set_clicks(output.as_deref().unwrap_or_default(), matches!(state, Switch::On)).await?
+        }
     }
     Ok(())
 }
@@ -125,7 +144,9 @@ fn status(reply: InputsReply) -> String {
     };
     lines.extend(reply.quiet.iter().map(quiet));
     lines.extend(reply.shown.iter().map(|(output, shown)| {
-        let used = [(shown.audio, Input::Audio), (shown.pointer, Input::Pointer)].into_iter();
+        let used =
+            [(shown.audio, Input::Audio), (shown.pointer, Input::Pointer), (shown.clicks, Input::Clicks)];
+        let used = used.into_iter();
         let used: BTreeSet<Input> = used.filter_map(|(on, input)| on.then_some(input)).collect();
         format!(
             "{output} shows {} using {} (allowed: {})",
@@ -136,11 +157,15 @@ fn status(reply: InputsReply) -> String {
     }));
     let follows = |output: &String| format!("{output} shows an image whose parallax follows the pointer");
     lines.extend(reply.parallax.iter().map(follows));
+    let screens = |set: &BTreeSet<String>| if set.is_empty() { "none".to_owned() } else { list(set.iter()) };
+    lines.push(format!("clicks reach the wallpaper on: {}", screens(&reply.clicks)));
+    lines.push(format!("taking clicks now: {}", screens(&reply.clicking)));
     lines.join("\n") + "\n"
 }
 
 const AUDIO: &str = "the sound that plays (turned into levels on this computer, never recorded or sent)";
 const POINTER: &str = "the pointer (only its latest position over the screen, never kept)";
+const CLICKS: &str = "clicks and taps on the screen (only real ones, never kept; keys are never read)";
 const SLOW: &str = "its particles run on the processor, so fewer of them are shown";
 const SETTLE: Duration = Duration::from_secs(1);
 
@@ -191,12 +216,20 @@ async fn asks(client: &Client, output: &str, mut serial: u64) -> Result<BTreeSet
     let shown = reply.shown.iter().filter(|(name, _)| ours(name));
     let asks = shown.flat_map(|(name, s)| {
         let title = if s.title.is_empty() { &s.scene } else { &s.title };
-        let used = [(s.audio, Input::Audio, AUDIO), (s.pointer, Input::Pointer, POINTER)];
+        let used = [
+            (s.audio, Input::Audio, AUDIO),
+            (s.pointer, Input::Pointer, POINTER),
+            (s.clicks, Input::Clicks, CLICKS),
+        ];
         let decided = move |input: Input| s.granted.contains(&input) || declined(&s.scene, input);
         let open = used.into_iter().filter(move |(on, input, _)| *on && !decided(*input));
         let output = if twins(s) { format!(" -o {name}") } else { String::new() };
+        let screen = !reply.clicks.contains(name.as_str());
         open.map(move |(_, input, what)| {
-            let grant = format!("wprs-ctl input grant {} {}{output}", s.scene, input.as_str());
+            let mut grant = format!("wprs-ctl input grant {} {}{output}", s.scene, input.as_str());
+            if input == Input::Clicks && screen {
+                grant += &format!(" && wprs-ctl input clicks on -o {name}");
+            }
             format!("{title} follows {what} once you allow it: {grant}")
         })
     });

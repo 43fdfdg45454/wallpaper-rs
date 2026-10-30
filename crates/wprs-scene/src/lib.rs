@@ -31,6 +31,7 @@ mod fx;
 mod gltf;
 mod guard;
 mod helper;
+mod hitbox;
 mod hoist;
 mod hooks;
 mod input;
@@ -52,6 +53,8 @@ mod oklab;
 mod outside;
 mod package;
 mod particles;
+mod played;
+mod pointing;
 mod poses;
 mod probe;
 mod props;
@@ -135,9 +138,10 @@ pub use guard::guarded;
 pub use helper::{
     CHECK_CPU, CHECK_MEMORY, CHECK_SHADER, launch_checks_from_here, serve_check, serve_check_with,
 };
+pub use hitbox::{AlphaMap, Hitbox, Hitboxes};
 pub use input::{
     AudioFrame, BANDS, LayerOverride, ParticleCommand, ParticleControl, PointerState, ScriptOutputs,
-    TimelineCommand, Tuning,
+    SoundCommand, SoundControl, TimelineCommand, Tuning,
 };
 pub use layer::{Anchor, Inherit, Kind, Layer, Parallax, Solid, Transform};
 pub use lens::{Camera3d, CameraKey, CameraPath, Fade, FadeTo, MAX_PATHS, PathOrder};
@@ -160,6 +164,7 @@ pub use particles::{
     Surface, Swarm, Sweep, System, Taper, Target, Trail, Tunable, Turbulent, WARM, WARM_WORK, Wave, Wobble,
     bin, flocks, largest, mark, stacked,
 };
+pub use pointing::{MAX_PRESSES, MAX_TOUCHES, Press, Touch, TouchKind};
 pub use props::{
     Choice, Condition, Control, Expr, ICONS, Mode, Pick, Preset, Property, Slider, Text, Values,
     check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag,

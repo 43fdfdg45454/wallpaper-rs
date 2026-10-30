@@ -28,6 +28,8 @@ pub struct Runtime {
     sheets: BTreeMap<String, Vec<f32>>,
     pub(crate) script: ScriptOutputs,
     pub(crate) spawned: Vec<(String, Box<Layer>)>,
+    pub(crate) pointing: crate::pointing::Pointing,
+    pub(crate) played: crate::played::Played,
     wall: f64,
     lang: String,
     t: f64,
@@ -97,6 +99,8 @@ impl Runtime {
             sheets: BTreeMap::new(),
             script,
             spawned: Vec::new(),
+            pointing: Default::default(),
+            played: Default::default(),
             wall: 0.0,
             lang: String::new(),
             t: 0.0,
@@ -212,6 +216,7 @@ impl Runtime {
             self.advance((t - self.t).min(MAX_STEP));
         }
         self.fired.clear();
+        self.played = Default::default();
     }
 
     pub fn restart_particles(&mut self) {
@@ -312,6 +317,7 @@ impl Runtime {
 
     pub fn set_script(&mut self, outputs: ScriptOutputs) -> bool {
         let outputs = outputs.bounded(&self.scene);
+        self.play_sounds(&outputs.sounds);
         for (id, command) in &outputs.timelines {
             let Some((tl, head)) = self.timelines.iter_mut().find(|(tl, _)| &tl.id == id) else { continue };
             match *command {

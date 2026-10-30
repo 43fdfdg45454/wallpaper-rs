@@ -35,6 +35,7 @@ pub enum Event {
     Frame(String),
     Covered(String, Cover, bool),
     Pointer(String, Option<[f32; 2]>, u8),
+    Input(String),
     Exposed(String),
     Backdrop(String),
     Lost(String),

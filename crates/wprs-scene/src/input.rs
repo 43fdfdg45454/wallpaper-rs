@@ -41,6 +41,7 @@ pub struct ScriptOutputs {
     pub layers: BTreeMap<String, LayerOverride>,
     pub timelines: Vec<(String, TimelineCommand)>,
     pub particles: BTreeMap<String, ParticleControl>,
+    pub sounds: BTreeMap<String, SoundControl>,
     pub effects: BTreeMap<String, Vec<crate::EffectControl>>,
     pub spawned: Vec<(String, String)>,
     pub order: Option<Vec<String>>,
@@ -57,6 +58,21 @@ pub struct ParticleControl {
     pub commands: Vec<ParticleCommand>,
     pub instance: Tuning,
     pub points: BTreeMap<u8, [f32; 2]>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SoundControl {
+    pub commands: Vec<SoundCommand>,
+    pub volume: Option<f32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SoundCommand {
+    Play,
+    Pause,
+    Stop,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -194,6 +210,7 @@ impl ScriptOutputs {
             && self.layers.is_empty()
             && self.timelines.is_empty()
             && self.particles.is_empty()
+            && self.sounds.is_empty()
             && self.effects.is_empty()
             && self.spawned.is_empty()
             && self.order.is_none()

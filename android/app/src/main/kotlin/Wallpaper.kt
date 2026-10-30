@@ -18,6 +18,11 @@ class Wallpaper : WallpaperService() {
 
     override fun onCreateEngine(): Engine = Scene()
 
+    override fun onDestroy() {
+        Render.call { Native.finish() }
+        super.onDestroy()
+    }
+
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         Render.post {

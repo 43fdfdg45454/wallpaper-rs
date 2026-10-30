@@ -27,13 +27,14 @@ state.frame = {
     events: [],
     reads: {},
     touches: [],
+    sounds: [],
 };
 Object.assign(state, { buffers: {}, once: false, fresh: false, loading: "" });
 
 const records = new Map();
 const [timers, handles, spawned, watched] = [new Map(), new Map(), new Map(), new Set()];
 const [listeners, sites, pending, stopped, top] = [[], [], [], [], [...setup.top]];
-const [handlers, touchers, overrides, controls, store, particleState] = [{}, {}, {}, {}, {}, {}];
+const [handlers, touchers, overrides, controls, store, particleState, soundState] = [{}, {}, {}, {}, {}, {}, {}];
 let [current, out, timerId, spawnCount, ordered, started, lastTime, second, lines] = [null, null, 0, 0, false, false, 0, -1, 0];
 const seen = { screen: "", settings: "", props: {} };
 
@@ -467,6 +468,31 @@ export function particles(id) {
     });
 }
 
+export function sound(id) {
+    need("sounds");
+    id = String(id);
+    const own = (soundState[id] ??= { volume: 1, asked: null });
+    const send = (command) => {
+        ((out.sounds[id] ??= {}).commands ??= []).push(command);
+        own.asked = command === "play";
+    };
+    return Object.freeze({
+        play: () => send("play"),
+        pause: () => send("pause"),
+        stop: () => send("stop"),
+        get playing() {
+            return own.asked ?? state.frame.sounds.includes(id);
+        },
+        get volume() {
+            return own.volume;
+        },
+        set volume(v) {
+            if (!Number.isFinite(Number(v))) throw new TypeError("volume takes a number from 0 to 1");
+            own.volume = Math.min(1, Math.max(0, Number(v)));
+        },
+    });
+}
+
 const each = (name, ...args) => {
     for (const mod of records.values()) if (typeof mod.ns?.[name] === "function") guard(mod, mod.ns[name], ...args);
 };
@@ -528,7 +554,8 @@ function lifecycleEvents(f) {
 
 state.tick = () => {
     const f = state.frame;
-    out = { values: {}, layers: overrides, timelines: [], particles: {}, effects: {}, spawned: [], watch: [], busy: false, console: [], stopped };
+    out = { values: {}, layers: overrides, timelines: [], particles: {}, sounds: {}, effects: {}, spawned: [], watch: [], busy: false, console: [], stopped };
+    for (const own of Object.values(soundState)) own.asked = null;
     if (f.time < lastTime) for (const t of timers.values()) t.due -= lastTime - f.time;
     lastTime = f.time;
     lifecycleEvents(f);
@@ -555,6 +582,7 @@ state.tick = () => {
     for (const [id, own] of Object.entries(particleState)) {
         Object.assign((out.particles[id] ??= {}), { instance: own.instance, points: own.points });
     }
+    for (const [id, own] of Object.entries(soundState)) (out.sounds[id] ??= {}).volume = own.volume;
     out.effects = Object.fromEntries(Object.entries(controls).map(([id, list]) => [id, Object.values(list)]));
     out.spawned = [...spawned];
     if (ordered) out.order = [...top];
@@ -568,7 +596,7 @@ state.tick = () => {
         if (mod.failures >= 3) stop(mod, mod.error);
     }
     out.console = pending.splice(0);
-    state.once = out.timelines.length > 0 || out.console.length > 0 || Object.values(out.particles).some((p) => p.commands?.length);
+    state.once = out.timelines.length > 0 || out.console.length > 0 || Object.values(out.particles).some((p) => p.commands?.length) || Object.values(out.sounds).some((p) => p.commands?.length);
     return out;
 };
 

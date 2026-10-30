@@ -20,6 +20,7 @@ QtObject {
             "Inputs1.GrantPackage": "(sss)",
             "Inputs1.Revoke": "(ss)",
             "Inputs1.GetInputs": "()",
+            "Inputs1.SetClicks": "(sb)",
             "Library1.Thumbnail": "(su)",
             "Library1.GetItem": "(s)",
             "Library1.SetFavorite": "(asb)",

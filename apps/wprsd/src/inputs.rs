@@ -14,7 +14,7 @@ use std::time::Duration;
 use tokio::sync::{Notify, watch};
 use wprs_audio::{Audio, Capture};
 use wprs_core::model::{Input, SceneInputs};
-use wprs_scene::{AudioFrame, PointerState};
+use wprs_scene::{AudioFrame, MAX_PRESSES, PointerState, Press};
 use wprs_wayland::Window;
 
 pub(crate) use keys::{Keys, draft_key};
@@ -34,6 +34,7 @@ pub(crate) struct View {
     pub(crate) active: bool,
     pub(crate) covered: bool,
     pub(crate) rect: Option<[f64; 4]>,
+    pub(crate) clicks: bool,
 }
 
 #[derive(Default)]
@@ -60,6 +61,7 @@ pub(crate) struct Hub {
     switch: Mutex<Switch>,
     audio: Mutex<Audio>,
     pointers: Mutex<BTreeMap<String, PointerState>>,
+    presses: Mutex<BTreeMap<String, Vec<Press>>>,
     moved: Notify,
     poke: Notify,
     wake: Wake,
@@ -106,12 +108,16 @@ async fn pace(hub: Arc<Hub>) {
     }
 }
 
-pub(crate) fn needs(output: &str, (scene, title, key): (&str, &str, &str), audio: bool, pointer: bool) {
+pub(crate) fn needs(
+    output: &str,
+    (scene, title, key): (&str, &str, &str),
+    [audio, pointer, clicks]: [bool; 3],
+) {
     let Some(hub) = hub() else { return };
     let (scene, title, key, granted) = (scene.into(), title.into(), key.into(), BTreeSet::new());
-    let need = SceneInputs { scene, audio, pointer, title, key, granted };
+    let need = SceneInputs { scene, audio, pointer, clicks, title, key, granted };
     let mut control = lock(&hub.control);
-    let changed = match audio || pointer {
+    let changed = match audio || pointer || clicks {
         true => control.shown.insert(output.into(), need.clone()) != Some(need),
         false => control.shown.remove(output).is_some(),
     };
@@ -134,13 +140,6 @@ pub(crate) fn hears(output: &str) -> bool {
     hub().is_some_and(|hub| lock(&hub.control).allows(output, Input::Audio))
 }
 
-pub(crate) fn pointer(output: &str) -> PointerState {
-    let Some(hub) = hub().filter(|hub| lock(&hub.control).allows(output, Input::Pointer)) else {
-        return PointerState::default();
-    };
-    lock(&hub.pointers).get(output).copied().unwrap_or_default()
-}
-
 pub(crate) fn window(output: &str, window: Option<Window>) {
     let Some(hub) = hub() else { return };
     let mut control = lock(&hub.control);
@@ -155,9 +154,20 @@ pub(crate) fn window(output: &str, window: Option<Window>) {
     }
 }
 
+pub(crate) fn touch(output: &str) -> (PointerState, Vec<Press>, [bool; 2]) {
+    hub().map(|hub| hub.touch(output)).unwrap_or_default()
+}
+
 pub(crate) fn surface_pointer(output: &str, pos: Option<[f32; 2]>, buttons: u8) {
     if let Some(hub) = hub() {
         let state = PointerState { pos, buttons, inside: pos.is_some(), ..PointerState::default() };
         hub.store([(output.to_owned(), state)]);
+    }
+}
+
+fn pressed(presses: &mut BTreeMap<String, Vec<Press>>, output: &str, state: &PointerState) {
+    let list = presses.entry(output.to_owned()).or_default();
+    if list.len() < MAX_PRESSES {
+        list.push(Press { at: state.pos, buttons: state.buttons });
     }
 }

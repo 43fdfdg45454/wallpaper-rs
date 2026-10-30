@@ -3,7 +3,7 @@ mod common;
 use common::{at, load, staged, text};
 use serde_json::json;
 use wprs_scene::{AudioFrame, Extent, LayerRead, PointerState, Values, script_key};
-use wprs_script::{Frame, Mode, Touch};
+use wprs_script::{Frame, Mode, Touch, TouchKind};
 
 fn spin_scene() -> serde_json::Value {
     let params = json!({ "speed": { "type": "number", "default": 1, "min": 0, "max": 10 } });
@@ -309,7 +309,8 @@ fn the_cursor_and_layer_touches_reach_scripts() {
     );
     let pointer =
         PointerState { pos: Some([0.5, 0.25]), buttons: 1, inside: true, ..PointerState::default() };
-    let touches = [Touch { layer: "button".into(), kind: 0, local: [1.0, 2.0], scene: [3.0, 4.0] }];
+    let touches =
+        [Touch { layer: "button".into(), kind: TouchKind::Click, local: [1.0, 2.0], scene: [3.0, 4.0] }];
     let frame = Frame {
         pointer: &pointer,
         view: [100.0, 0.0, 200.0, 100.0],

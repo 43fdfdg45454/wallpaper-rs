@@ -584,6 +584,18 @@ msgstr ""
 "A la escena solo le llega la última posición del puntero sobre esta "
 "pantalla; las posiciones nunca se guardan y las teclas nunca se leen."
 
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid "Take clicks and taps"
+msgstr "Recibir clics y toques"
+
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid ""
+"Only real clicks and taps on the wallpaper of this screen reach the scene; "
+"they are never kept and keys are never read."
+msgstr ""
+"Solo llegan a la escena los clics y toques reales sobre el fondo de esta "
+"pantalla; nunca se guardan y nunca se leen las teclas."
+
 #: apps/wprs-app/qml/Consent.qml
 msgid "The scene %1 asks for your permission:"
 msgstr "La escena %1 te pide permiso:"
@@ -2059,6 +2071,10 @@ msgstr ""
 "Ids de otras propiedades, números, 'textos', true y false con == != < <= > "
 ">= && || ! y paréntesis, como mood == 2 || speed > 1.5"
 
+#: apps/wprs-app/qml/SceneControls.qml
+msgid "Let clicks and taps on this screen reach its wallpaper"
+msgstr "Dejar que los clics y toques de esta pantalla lleguen a su fondo"
+
 #: apps/wprs-app/qml/SceneEntry.qml
 msgid "Stored in the keyring"
 msgstr "Guardado en el depósito de claves"
@@ -2509,15 +2525,17 @@ msgstr "Permisos de las escenas"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid ""
-"A scene follows the sound that plays or the pointer only after you allow it "
-"for that scene, and only while it is shown. The sound is turned into levels "
-"on this computer and never recorded, kept or sent; pointer positions are "
-"never kept."
+"A scene follows the sound that plays or the pointer, or takes clicks, only "
+"after you allow it for that scene, and only while it is shown; clicks also "
+"have to be turned on for each screen in its scene settings. The sound is "
+"turned into levels on this computer and never recorded, kept or sent; "
+"pointer positions and clicks are never kept."
 msgstr ""
-"Una escena solo sigue el sonido que se reproduce o el puntero después de que "
-"lo permitas para esa escena, y solo mientras se muestra. El sonido se "
-"convierte en niveles en este equipo y nunca se graba, se guarda ni se envía; "
-"las posiciones del puntero nunca se guardan."
+"Una escena sigue el sonido que suena o el puntero, o recibe clics, solo "
+"después de que lo permitas para esa escena y solo mientras se ve; los clics "
+"además hay que encenderlos en cada pantalla, en los ajustes de su escena. El "
+"sonido se convierte en niveles en este equipo y nunca se graba, se guarda ni "
+"se envía; las posiciones del puntero y los clics nunca se guardan."
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "A scene is following the sound now."

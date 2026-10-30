@@ -119,6 +119,9 @@ impl ScriptOutputs {
             list.truncate(MAX_EFFECTS);
             !list.is_empty()
         });
+        let sounds = std::mem::take(&mut self.sounds).into_iter().filter(|(id, _)| id.len() <= 64);
+        self.sounds = sounds.take(crate::MAX_SOUNDS).collect();
+        self.sounds.values_mut().for_each(|c| c.commands.truncate(8));
         self.console.truncate(MAX_CONSOLE);
         self.stopped.truncate(64);
         self.wake = self.wake.filter(|w| w.is_finite()).map(|w| w.clamp(0.0, 86_400.0));

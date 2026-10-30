@@ -10,6 +10,7 @@ use std::path::Path;
 use wprs_library::Kind;
 use wprs_sync::{Doc, Hlc, Kept, Replica, Secrets, SyncKey, View};
 
+mod acting;
 mod calm;
 mod flight;
 mod looks;
@@ -457,7 +458,7 @@ fn scenes() {
     };
     assert_eq!(
         [lacks("Orbits"), lacks("Snowfall"), lacks("Pulse")],
-        [json!(["scripts", "user_videos"]), json!(["folder", "sound"]), json!([])]
+        [json!(["user_videos"]), json!(["folder", "sound"]), json!([])]
     );
     assert!(
         about["about"]["description"].as_str().unwrap().contains("\n\nDestella con el ritmo y"),
@@ -568,6 +569,7 @@ fn scenes() {
     assert!(pack::load(&bad).is_err());
     saved_settings();
     cued();
+    acting::scripted();
     calm::calmed();
     flight::flown();
     looks::drawn();
@@ -583,9 +585,8 @@ fn cued() {
         { "id": "fade", "duration": 1, "trigger": "event:go" },
         { "id": "wave", "duration": 2, "loop": "repeat", "wrap": true, "autoplay": false }]);
     let text = json!({ "schema": wprs_scene::SCHEMA, "canvas": { "size": [64, 32] }, "layers": layers,
-        "timelines": timelines, "scripts": [{ "path": "cued.js" }] });
+        "timelines": timelines });
     fs::write(source.path().join("scene.json"), text.to_string()).unwrap();
-    fs::write(source.path().join("cued.js"), "import { scene } from \"wprs\";\n").unwrap();
     let manifest = json!({ "schema": wprs_format::SCHEMA, "id": "org.example.cued", "version": "1.0.0", "title": "Cued",
         "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "content": { "rating": "general" },
         "photosensitive": false, "origin": { "kind": "original" },
@@ -610,7 +611,7 @@ fn cued() {
                 stage.render(r, ((64, 32), nanos, 60), (power, wprs_scene::Tier::T3), &[], true).unwrap();
             (shot.fps, shot.delay)
         };
-        assert_eq!(draw(0), (0, 3_000), "the phone sleeps past events only scripts would hear");
+        assert_eq!(draw(0), (0, 3_000), "the phone sleeps past events nothing hears");
         assert!(draw(3_050_000_000).0 > 0, "the event starts the fade after a long sleep");
         assert_eq!(draw(4_500_000_000), (0, 0), "and the scene rests once it ends");
     }

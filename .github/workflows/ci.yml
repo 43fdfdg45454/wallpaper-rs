@@ -165,7 +165,7 @@ jobs:
 
       - name: Layer-shell surfaces on a headless Sway
         run: |
-          cargo build --locked -p wprsd -p wprs-ctl
+          cargo build --locked -p wprsd -p wprs-ctl --bins --example pointer
           scripts/sway-test.sh target/debug
 
   x11:

@@ -317,8 +317,9 @@ los botones de la escena funcionan y los textos secretos quedan sellados por el 
 Android. Las carpetas, los vídeos que elige el usuario y los ajustes de reproducción de los paquetes
 de vídeo no se usan en el teléfono, y la página del paquete lo avisa, igual que de todo lo que el
 teléfono omite: la tarjeta gráfica que pide, el color alrededor de la imagen y la extensión sobre
-varias pantallas, el color de acento, las subcarpetas, los sonidos nuevos, los scripts que usan la
-interfaz nueva (capas, geometría y almacenamiento) y la iluminación RGB. Un paquete hecho solo para
+varias pantallas, el color de acento, las subcarpetas, los sonidos nuevos, lo que los scripts aún no
+pueden hacer en ningún sitio o no tiene sentido en el teléfono (geometría, almacenamiento, sonidos)
+y la iluminación RGB. Un paquete hecho solo para
 el escritorio se rechaza con ese aviso, traducido. El nivel de calidad sale de la
 clase del teléfono (básica con poca memoria o sin sombreadores de cálculo, alta si el fabricante
 declara una clase de rendimiento de Android 13 o posterior, media en el resto) y de la batería: con
@@ -326,26 +327,34 @@ batería baja un nivel, y con calor baja más. Una escena demasiado pesada para 
 quieta en su fotograma de muestra. Cada escena dibuja a sus propios fotogramas por segundo, como
 mucho a los de los ajustes, solo mientras algo cambia y nunca mientras no se ve. Los vídeos dentro
 de una escena los decodifica el hardware y se copian a la GPU fotograma a fotograma, sin sonido, y
-se pausan si la escena se queda quieta. Los scripts de las escenas no se ejecutan en el teléfono: la
-escena se ve sin lo que mueven. Sus sonidos tampoco suenan en el teléfono, así que su volumen no
-aparece entre las propiedades.
+se pausan si la escena se queda quieta. Los scripts de las escenas se ejecutan en el teléfono como en
+el escritorio, en un hilo propio con los mismos límites (QuickJS sin archivos ni red, 32 MiB de
+memoria y 4 ms por fotograma); si uno falla tres veces seguidas se detiene y la escena sigue sin él,
+y el diagnóstico de *Ajustes* lo dice. Sus sonidos no suenan en el teléfono, así que su volumen no
+aparece entre las propiedades. El diagnóstico también dice si los efectos de los paquetes se
+cronometran con marcas de tiempo de la GPU o esperando a que termine, y al cerrarse el fondo el
+teléfono termina las compilaciones de sombreadores y limpia sus marcas de prueba, para que un cierre
+normal no cuente como un efecto que colgó la GPU.
 
 Las miniaturas de los paquetes para adultos salen difuminadas y su página no los muestra hasta
 pulsar *Mostrar igualmente*. Un paquete fotosensible no se previsualiza ni se puede usar como fondo
 hasta aceptar el aviso de que destella o muestra patrones rápidos que pueden provocar crisis a
 personas con epilepsia fotosensible; las listas lo saltan mientras tanto. Cada decisión se recuerda
 por paquete. La biblioteca y la página de un paquete muestran su título y su descripción en el
-idioma del teléfono, y la página avisa de cada parte que no funciona en él, de sus scripts y sus
-sonidos a sus carpetas, los vídeos que se eligen, sus ajustes de vídeo y las funciones nuevas que
+idioma del teléfono, y la página avisa de cada parte que no funciona en él, de sus sonidos a sus
+carpetas, los vídeos que se eligen, sus ajustes de vídeo y las funciones nuevas que
 omite.
 
-*Reaccionar al sonido* y *Reaccionar al tacto* solo aparecen en las escenas que los usan y se
-activan escena a escena. El sonido se lee con el visualizador de Android, que da un espectro de
+*Reaccionar al sonido*, *Reaccionar al tacto* y *Reaccionar a los toques* solo aparecen en las
+escenas que los usan y se activan escena a escena; empiezan apagados. El sonido se lee con el visualizador de Android, que da un espectro de
 poca resolución de lo que suena en el teléfono; Android pide el permiso del micrófono la primera vez
 que se activa y muestra su indicador mientras escucha. Solo escucha mientras se ve una escena con
 ese permiso, y solo calcula bandas en memoria. Tras dos segundos de silencio deja de leerlo hasta que
 algo empieza a sonar; si un reproductor sigue activo en silencio, lo mira cada dos segundos. El tacto
-son los toques sobre el fondo en la pantalla de inicio, también solo en las escenas con ese permiso.
+es la posición del dedo sobre el fondo en la pantalla de inicio, que la escena sigue como el puntero,
+y los toques son los clics del teléfono: un toque sobre una capa `solid` arranca sus líneas de tiempo
+`click:` y llega a sus scripts. Solo cuentan los toques reales sobre la pantalla de inicio (la de
+bloqueo no da ninguno), y solo en las escenas con ese permiso.
 
 Solo se dibuja cuando cambia algo y nunca mientras el fondo no se ve: con una imagen fija no hay
 ningún fotograma más. El fundido y el desplazamiento al pasar de página en el lanzador van como
@@ -455,6 +464,7 @@ wprs-ctl pkg install org.example.dawn --wait    # instalar un paquete de un repo
 wprs-ctl jobs | watch | schema                  # trabajos, cambios en vivo, claves válidas
 wprs-ctl input grant org.example.dawn audio     # dejar que la escena que se ve siga el sonido (-o elige pantalla)
 wprs-ctl input status                           # permisos y si se captura el sonido o el puntero
+wprs-ctl input clicks on -o DP-1                # dejar que los clics de esa pantalla lleguen a su fondo
 ```
 
 Las consultas aceptan `--json` e imprimen la respuesta del daemon tal cual; sin él muestran
@@ -466,7 +476,10 @@ sin eco o se leen de la primera línea de la entrada con `--secret-stdin`; nunca
 `wprs-ctl input grant` da el permiso al paquete que se ve con ese id; si varias pantallas muestran
 paquetes distintos con el mismo id, `-o` elige la pantalla, y si el daemon pregunta en una
 notificación (en el Flatpak, siempre), lo avisa y termina bien: la escena recibe la entrada cuando
-la permites allí. Códigos de salida: 0 bien, 1 error, 2 uso incorrecto, también cuando es el
+la permites allí. Los clics y toques necesitan dos permisos: el del paquete (`wprs-ctl input grant
+<escena> clicks`) y el de la pantalla (`wprs-ctl input clicks on|off [-o pantalla]`, sin `-o` todas),
+que empieza apagado en todas; la app los ofrece en los ajustes de la escena de cada pantalla y la
+bandeja al preguntar por el permiso. Códigos de salida: 0 bien, 1 error, 2 uso incorrecto, también cuando es el
 daemon quien rechaza un argumento (un ajuste o una regla que no existe, un valor fuera de rango).
 `wprs-ctl preset rm` acepta rutas con `:` (`~/fotos/a:b.png:Noche`).
 
@@ -731,14 +744,17 @@ frenan, mantienen distancias o forman bandadas con ventanas de vida, colisiones 
 y capas, y renderizadores de cuerda, estelas largas, recorte, orientación, luz, refracción y shaders
 propios; la declaración de lo que usa cada script (eventos, partes de la interfaz, parámetros,
 plantillas de capas y reservas de geometría); valores, carátulas y disparadores del reproductor
-multimedia; capas que reciben clics del puntero; escenas extendidas sobre todas las pantallas; y
+multimedia; escenas extendidas sobre todas las pantallas; y
 salida a la iluminación RGB con su permiso. Los modelos se leen al abrir el paquete y cada hueso,
 animación, parte o material que nombra la escena se comprueba contra ellos. Las entradas de un
 paquete de la versión 2 salen solo de lo que declara: también las de sus scripts, que ya no se
 adivinan por su texto; un script de la versión 1 que no declara nada usa el sonido o el puntero solo
 si importa `audio` o `input` de `wprs`, nunca porque esas palabras salgan en un comentario. Todo tiene su nombre en `requires.features` y, mientras el motor no lo dibuja,
 el escritorio y el teléfono rechazan la escena con el aviso de versión más nueva (el teléfono, que no
-ejecuta scripts ni tiene iluminación RGB ni varias pantallas, solo omite esas partes).
+reproduce sonidos de escena ni tiene iluminación RGB ni varias pantallas, solo omite esas partes).
+Las capas `solid` ya reciben el puntero: `click:`, `enter:` y `leave:` arrancan líneas de tiempo y
+sonidos sin scripts, y los scripts reciben los eventos de cada capa; los scripts también reproducen,
+pausan y paran las capas de sonido.
 
 De las partículas nuevas, el escritorio y el teléfono ya dibujan, igual en la GPU que en la CPU, el
 espacio de mundo (las partículas nacen con la posición, el giro y la escala de su capa y después no
@@ -956,8 +972,8 @@ wprs-ctl scene bench escena.wpak --screens 2   # carga, primer fotograma y memor
 En la página *Ajustes* de la app, el botón *Ajustes de la escena* (o *Ajustes del vídeo*) de cada
 pantalla cambia sus propiedades al momento, aplica sus preajustes, guarda, renombra y borra los
 propios, copia y pega los ajustes o los exporta e importa como un archivo pequeño, decide si la
-pantalla comparte sus valores con las demás y da o retira el permiso de sonido y de puntero. Los
-preajustes propios son del paquete (siguen tras actualizarlo) y viajan con la sincronización.
+pantalla comparte sus valores con las demás, da o retira el permiso de sonido, de puntero y de
+clics y enciende o apaga los clics de esa pantalla. Los preajustes propios son del paquete (siguen tras actualizarlo) y viajan con la sincronización.
 
 Los autores describen sus propiedades en el manifiesto (`docs/specs/scene.md`): colores con
 transparencia, deslizadores con paso, decimales, unidades, escala logarítmica y casilla para
@@ -1130,7 +1146,8 @@ wprs-ctl scene apply mar -o DP-1                        # añadirla a la bibliot
 ### Guía para autores de scripts
 
 Un script es un módulo JavaScript del paquete que la escena nombra en `scripts` (como mucho 64 y 1 MiB
-entre todos). Todos los de una escena comparten un proceso aislado, también cuando varias pantallas
+entre todos). En el ordenador todos los de una escena comparten un proceso aislado, y en el teléfono
+un hilo, también cuando varias pantallas
 muestran la misma escena con los mismos ajustes, con 32 MiB de memoria y 4 ms de CPU por fotograma
 para todos juntos (100 ms para cargar y para el primer fotograma). Lo que devuelven llega al
 fotograma siguiente, así que un script lento nunca frena el dibujo. `docs/specs/scene.md` describe la
@@ -1156,6 +1173,19 @@ interfaz completa; lo esencial:
   fracciones, en píxeles del lienzo y de la pantalla y el botón izquierdo; `engine` da el tamaño del
   lienzo y de la pantalla, la orientación, el idioma, la calidad, los fotogramas por segundo y si es
   fondo, pantalla de bloqueo o editor. El sonido y el puntero siguen necesitando su permiso.
+- **Puntero y clics**: una capa con `"solid": true` (o `{"alpha": 0.5}` para contar solo donde es
+  bastante opaca) recibe el puntero. Sin scripts, una línea de tiempo con `"trigger": "click:boton"`,
+  `"enter:boton"` o `"leave:boton"` arranca al hacer clic, entrar o salir, y un sonido con ese
+  `play_on` suena. Con scripts, `scene.layer("boton").on("click", (e) => …)` recibe `{type, layer,
+  local, scene}` para `click`, `down`, `up`, `enter`, `leave` y `move`; la capa que recibe `down` se
+  queda el puntero hasta soltar, aunque salga de ella, así que arrastrar es seguir `move` entre `down`
+  y `up`, y un clic solo cuenta si se suelta sobre la misma capa. Se declara en `events` y la escena
+  pide las entradas `pointer` y `clicks`: el usuario las permite por paquete y, los clics, también
+  por pantalla, donde empiezan apagados. En el teléfono un toque es un clic.
+- **Sonido**: con `uses: ["sounds"]`, `sound("campana")` controla una capa de sonido con `play()`,
+  `pause()`, `stop()`, `playing` y `volume`, de 0 a 1 y por debajo del volumen general, que también
+  la silencia. La primera llamada se queda el sonido aunque tuviera `play_on`. El teléfono no
+  reproduce sonidos de escena, así que allí esas llamadas no hacen nada.
 - **Tiempo y depuración**: `setTimeout` y `setInterval` siguen el reloj de la escena (como mucho 64,
   una vez por fotograma y nunca por debajo de 16 ms) y devuelven una función para cancelarlos;
   `console.log` y sus hermanas escriben en el registro y en el editor, como mucho 20 líneas por
@@ -1174,7 +1204,7 @@ interfaz completa; lo esencial:
   tiempo o su memoria tres fotogramas seguidos, se apagan y la escena sigue sin ellos.
 
 ```js
-import { scene, audio, console } from "wprs";
+import { scene, audio, sound, console } from "wprs";
 import { smoothstep } from "wprs/math";
 
 const bandas = audio.buffers(32);
@@ -1182,6 +1212,7 @@ const barras = [];
 
 export function init() {
   for (let i = 0; i < 32; i++) barras.push(scene.spawn("barra", { position: [40 + i * 60, 900] }));
+  scene.layer("tambor").on("click", () => sound("golpe").play());
   console.log("barras listas");
 }
 
@@ -1329,9 +1360,14 @@ misma pausa.
 - El servicio de systemd solo puede abrir conexiones de red (IPv4 e IPv6) para los proveedores y
   repositorios que añadas tú, y sus registros no incluyen rutas, nombres de archivo, servidores
   propios ni el modelo de GPU salvo con `RUST_LOG=debug`.
-- Ninguna escena oye el sonido ni sigue el puntero sin tu permiso, que se da y se retira por escena
-  desde la app, la bandeja o `wprs-ctl input grant|revoke <escena> audio|pointer` mientras la
-  escena se ve. El permiso queda atado al paquete que se veía: a la clave que firma un paquete
+- Ninguna escena oye el sonido, sigue el puntero ni recibe clics sin tu permiso, que se da y se
+  retira por escena desde la app, la bandeja o `wprs-ctl input grant|revoke <escena>
+  audio|pointer|clicks` mientras la escena se ve. Los clics, además, están apagados en todas las
+  pantallas hasta que los enciendes en una (`wprs-ctl input clicks on -o <pantalla>`, o en la app), y
+  solo llegan los reales: los del compositor en Sway y demás escritorios con `wlr-layer-shell`
+  (también los toques de una pantalla táctil), los de X11 que no manda otro programa con `SendEvent`
+  y, en Plasma, los que el escritorio deja al fondo, que el plugin de fondo envía y el daemon solo
+  acepta de él. Ningún programa puede inyectar clics por D-Bus. El permiso queda atado al paquete que se veía: a la clave que firma un paquete
   instalado desde un repositorio (sus actualizaciones lo conservan) o al contenido exacto de
   cualquier otro (en la vista previa del editor, a la carpeta del borrador si la pide la app o
   `wprs-ctl`, o a su contenido exacto si la pide otro programa), así que otro paquete con el mismo id no lo hereda, ni siquiera si se ve a la vez en
@@ -1356,7 +1392,7 @@ misma pausa.
   tapar o bloquear la pantalla, aunque la pausa al tapar esté desactivada. Del sonido solo se
   calculan bandas y niveles en memoria: no se guarda, no se registra y no sale del equipo. Del
   puntero solo se guarda en memoria la última
-  posición, y nunca se leen las teclas. Una imagen cuyo paralaje sigue al puntero lo usa con las
+  posición, de los clics solo los que esperan al siguiente fotograma, y nunca se leen las teclas. Una imagen cuyo paralaje sigue al puntero lo usa con las
   mismas reglas, porque elegir esa fuente es el permiso. En Android, el permiso del micrófono se pide
   la primera vez que se activa *Reaccionar al sonido* en una escena, y solo se escucha mientras se ve
   una escena que lo usa y tiene ese permiso.

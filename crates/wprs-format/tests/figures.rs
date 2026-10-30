@@ -111,7 +111,7 @@ fn declared_script_parts_and_media_become_inputs() {
     let phone =
         features::playable(&package.manifest, &package.facts, Platform::Android).unwrap_err().to_string();
     assert!(phone.contains("media_info") && !phone.contains("scripts2"), "{phone}");
-    assert_eq!(features::lacks("android", &package.facts.features), ["scripts", "scripts2"]);
+    assert!(features::lacks("android", &package.facts.features).is_empty(), "the phone runs scripts");
 }
 
 #[test]
