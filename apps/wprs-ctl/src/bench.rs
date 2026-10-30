@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use wprs_format::{Limits, open};
 use wprs_render::{Renderer, SceneAssets};
-use wprs_scene::{Quality, Runtime, Wake, effective};
+use wprs_scene::{Quality, Runtime, Spare, Wake, effective};
 
 const WARMUP: usize = 10;
 
@@ -71,7 +71,8 @@ pub fn run(command: SceneCommand) -> Result<()> {
     let size = dimensions(&size)?;
     let (scene, values, assets) = load(&path)?;
     let r = Renderer::new()?;
-    let tier = r.tier();
+    let calibrated = r.calibrate(wprs_core::gpu_tier().as_deref());
+    let (tier, unit_ms) = (r.tier(), calibrated.unit_ms);
     let quality = match quality.as_deref() {
         Some(q) => serde_json::from_value(json!(q))?,
         None => Quality::fit(&scene, tier, tier.quality(false)),
@@ -91,7 +92,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
     view.profile_particles(true);
     let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);
     let (mut sim, mut steps, mut compiled, mut gpu) = (Vec::new(), 0, 0, Vec::new());
-    let mut wake = Wake::Frame;
+    let (mut wake, mut spare) = (Wake::Frame, Spare::default());
     let mut since = Duration::ZERO;
     let step = Duration::from_secs(1) / fps.max(1);
     for i in 0..frames.max(1) {
@@ -108,7 +109,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         since = if due { Duration::ZERO } else { since };
         inner = view.inner(&r, size, quality);
         let start = Instant::now();
-        let frame = runtime.frame(view.view(inner), quality);
+        let frame = runtime.frame_in(std::mem::take(&mut spare), view.view(inner), quality);
         eval.push(start.elapsed().as_secs_f64() * 1e6);
         let start = Instant::now();
         for other in &mut others {
@@ -118,6 +119,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         r.finish()?;
         render.push(start.elapsed().as_secs_f64() * 1e3);
         wake = frame.wake;
+        spare = frame.spare();
         if i >= WARMUP {
             let s = view.stats();
             (created, steps, compiled) = (created + s.created, steps + s.steps, compiled + s.compiled);
@@ -139,7 +141,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         "engine": engine, "slots": stats.particles, "alive": alive, "steps": steps, "sim_ms": spread(sim),
     });
     let report = json!({
-        "path": path, "adapter": r.adapter(), "tier": tier, "quality": quality, "size": [size.0, size.1],
+        "path": path, "adapter": r.adapter(), "tier": tier, "unit_ms": unit_ms, "quality": quality, "size": [size.0, size.1],
         "render_size": [inner.0, inner.1], "frames": frames, "needed": needed, "cost_units": cost,
         "eval_us": spread(eval), "render_ms": spread(render), "gpu_ms": spread(gpu), "passes": stats.passes, "draws": stats.draws,
         "textures": stats.textures, "cached": stats.reused, "created_after_warmup": created,
@@ -153,8 +155,9 @@ pub fn run(command: SceneCommand) -> Result<()> {
     }
     let ms = |key: &str, unit: &str| ms_of(&report[key], unit);
     println!(
-        "adapter      {}\ntier         {tier:?}, quality {quality:?}, {}x{} rendered at {}x{}",
+        "adapter      {}\ntier         {tier:?} ({}), quality {quality:?}, {}x{} rendered at {}x{}",
         r.adapter(),
+        if unit_ms > 0.0 { format!("{unit_ms:.3} ms a unit") } else { "from its model".into() },
         size.0,
         size.1,
         inner.0,

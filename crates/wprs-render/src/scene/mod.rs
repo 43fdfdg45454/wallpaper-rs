@@ -155,22 +155,18 @@ impl Renderer {
         swarm::compute(self)
     }
 
-    pub fn tier(&self) -> wprs_scene::Tier {
-        *self.tier.get_or_init(|| self.detect())
-    }
-
-    fn detect(&self) -> wprs_scene::Tier {
+    pub(crate) fn gpu_class(&self) -> wprs_scene::Gpu<'_> {
         let meminfo = std::fs::read_to_string("/proc/meminfo").unwrap_or_default();
         let total = meminfo
             .lines()
             .find_map(|l| l.strip_prefix("MemTotal:")?.trim().strip_suffix(" kB")?.parse().ok());
-        wprs_scene::Tier::detect(&wprs_scene::Gpu {
-            name: &self.gpu.get_info().name,
+        wprs_scene::Gpu {
+            name: &self.name,
             software: self.software(),
             discrete: self.discrete(),
             compute: self.compute(),
             max_texture: self.device.limits().max_texture_dimension_2d,
             memory_mib: total.map_or(0, |kib: u64| kib / 1024),
-        })
+        }
     }
 }

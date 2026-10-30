@@ -21,6 +21,10 @@ pub fn stopped_effects() -> Option<PathBuf> {
     Some(dirs::cache_dir()?.join("wallpaper-rs").join("stopped-effects"))
 }
 
+pub fn gpu_tier() -> Option<PathBuf> {
+    Some(dirs::state_dir()?.join("wallpaper-rs").join("gpu-tier.json"))
+}
+
 impl Config {
     pub fn default_path() -> Result<PathBuf, ConfigError> {
         Ok(dirs::config_dir().ok_or(ConfigError::NoConfigDir)?.join("wallpaper-rs").join("config.toml"))

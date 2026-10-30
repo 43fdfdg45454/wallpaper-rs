@@ -176,6 +176,15 @@
     <string name="reason_memory">sus texturas de estado ocuparían demasiada memoria</string>
     <string name="reason_textures">sus texturas ocuparían demasiada memoria</string>
     <string name="scene_level">Escenas: clase de dispositivo %1$s, nivel %2$s</string>
+    <string name="tier_measured">Clase de dispositivo medida en esta GPU</string>
+    <string name="tier_detected">Clase de dispositivo tomada del modelo de la GPU</string>
+    <string name="level_reason">Nivel rebajado: %1$s</string>
+    <string name="level_device">es lo que permite la clase del dispositivo</string>
+    <string name="level_cost">la escena pesa demasiado para esta GPU en un nivel más alto</string>
+    <string name="level_battery">el teléfono no se está cargando</string>
+    <string name="level_saver">el ahorro de energía está activado</string>
+    <string name="level_heat">el teléfono está caliente</string>
+    <string name="level_slow">sus fotogramas tardaban demasiado en la GPU</string>
     <string name="react_taps">Reaccionar a los toques</string>
     <string name="scripts_stopped">Los scripts de esta escena fallaron demasiadas veces y están apagados; la escena sigue sin ellos</string>
     <string name="script_stopped">Un script de esta escena falló y se detuvo; la escena sigue sin él</string>

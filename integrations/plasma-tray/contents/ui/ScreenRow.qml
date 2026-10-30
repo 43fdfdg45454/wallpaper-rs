@@ -124,6 +124,16 @@ ColumnLayout {
                 color: Kirigami.Theme.disabledTextColor
             }
 
+            PlasmaComponents3.Label {
+                Layout.fillWidth: true
+                visible: !!row.info.quality
+                text: row.info.quality ? row.reasons.level(row.info, row.daemon.current) : ""
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+                font: Kirigami.Theme.smallFont
+                color: Kirigami.Theme.disabledTextColor
+            }
+
             PlasmaComponents3.Switch {
                 Layout.fillWidth: true
                 visible: row.daemon.inputs.shown?.[row.name]?.clicks === true

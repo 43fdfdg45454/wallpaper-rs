@@ -181,6 +181,15 @@
     <string name="reason_memory">its state textures would take too much memory</string>
     <string name="reason_textures">its textures would take too much memory</string>
     <string name="scene_level">Scenes: device class %1$s, level %2$s</string>
+    <string name="tier_measured">Device class measured on this GPU</string>
+    <string name="tier_detected">Device class taken from the GPU model</string>
+    <string name="level_reason">Level lowered: %1$s</string>
+    <string name="level_device">this is what the device class allows</string>
+    <string name="level_cost">the scene is too heavy for this GPU at a higher level</string>
+    <string name="level_battery">the phone is not charging</string>
+    <string name="level_saver">power saving is on</string>
+    <string name="level_heat">the phone is warm</string>
+    <string name="level_slow">its frames took too long on the GPU</string>
     <string name="react_taps">React to taps</string>
     <string name="scripts_stopped">The scripts of this scene failed too often and are off; the scene goes on without them</string>
     <string name="script_stopped">A script of this scene failed and stopped; the scene goes on without it</string>

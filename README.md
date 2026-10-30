@@ -266,8 +266,8 @@ La pestaña *Ajustes* elige cómo se ajustan las imágenes que no tienen ajuste 
 los fotogramas por segundo con batería (30, 15 o 10) y con el cargador (60 o 30), cuándo cambian los
 colores del sistema y los gráficos (automático, Vulkan u OpenGL ES). Debajo, el diagnóstico muestra
 la GPU, los fotogramas dibujados y por segundo, el límite que se aplica en ese momento, el estado de
-carga, ahorro de energía y temperatura y, con una escena, la clase del teléfono y el nivel de
-calidad. *Licencias* muestra los textos de ONNX Runtime, de los componentes que incluye y del modelo
+carga, ahorro de energía y temperatura y, con una escena, la clase del teléfono (y si se midió en su
+GPU), el nivel de calidad y por qué bajó. *Licencias* muestra los textos de ONNX Runtime, de los componentes que incluye y del modelo
 de profundidad.
 
 Los vídeos (MP4, MOV, 3GP, WebM o MKV) los decodifica el hardware del teléfono directamente sobre
@@ -322,8 +322,11 @@ pueden hacer en ningún sitio o no tiene sentido en el teléfono (geometría, al
 y la iluminación RGB. Un paquete hecho solo para
 el escritorio se rechaza con ese aviso, traducido. El nivel de calidad sale de la
 clase del teléfono (básica con poca memoria o sin sombreadores de cálculo, alta si el fabricante
-declara una clase de rendimiento de Android 13 o posterior, media en el resto) y de la batería: con
-batería baja un nivel, y con calor baja más. Una escena demasiado pesada para el teléfono se queda
+declara una clase de rendimiento de Android 13 o posterior, media en el resto, ajustada con la misma
+medida corta que en el escritorio y guardada en los archivos de la app) y de la batería: con
+batería baja un nivel, y con calor baja más; si los fotogramas tardan demasiado en la GPU baja otro,
+y solo vuelve a subir con el cargador puesto y el teléfono frío. El motor de la escena sigue vivo
+cuando el sistema cambia la superficie del fondo, así que no se vuelve a cargar ni compilar. Una escena demasiado pesada para el teléfono se queda
 quieta en su fotograma de muestra. Cada escena dibuja a sus propios fotogramas por segundo, como
 mucho a los de los ajustes, solo mientras algo cambia y nunca mientras no se ve. Los vídeos dentro
 de una escena los decodifica el hardware y se copian a la GPU fotograma a fotograma, sin sonido, y
@@ -388,7 +391,8 @@ imagen con la misma edición, como las de `span` o las que tienen su propio reco
 sola copia en la GPU, y los JPEG grandes se decodifican directamente a un tamaño reducido. Con una
 escena pasa lo mismo: cada imagen del paquete se sube una vez y la usan todas las pantallas que la
 muestran, la copia decodificada sale de la memoria en cuanto está en la GPU, los sombreadores se
-compilan al cargar la escena y un fotograma estable no crea recursos ni reserva memoria propia.
+compilan al cargar la escena y un fotograma estable no crea recursos ni reserva memoria propia,
+tampoco al evaluar la escena, que reutiliza las listas del fotograma anterior.
 Ajustes: transición (`fade` o `none` y su duración), fotogramas por segundo y cuándo pausar
 (ventana encima, batería,
 bloqueo). Un ajuste desconocido termina con error y muestra la lista de ajustes válidos.
@@ -408,7 +412,15 @@ Las escenas calculan antes de dibujar cuánto cuesta cada fotograma: cuentan sus
 que se dibujan aparte y las mezclas que copian el fondo, cada una por la parte de la pantalla que
 ocupa, y eligen el nivel de calidad más alto que cabe en la GPU. Las GPU integradas antiguas (Intel
 HD y UHD, las APU de AMD con Vega y similares) y los equipos con menos de 4 GiB de memoria tienen un
-nivel intermedio propio. Con batería o con el perfil de ahorro de energía de power-profiles-daemon
+nivel intermedio propio. La primera vez que se usa una tarjeta gráfica con un driver, un render
+corto de unos 300 ms mide cuánto tarda y ajusta su clase, que se guarda en
+`~/.local/state/wallpaper-rs/gpu-tier.json` y se vuelve a medir solo si cambian la tarjeta o el
+driver. Mientras la escena se mueve, el tiempo que pasa cada fotograma en la GPU guía la calidad:
+si durante 2 s pasa de la mitad del intervalo entre fotogramas (de una cuarta parte con batería),
+baja un nivel, y si durante 15 s no llega a la mitad de eso, vuelve a subir, nunca con batería ni
+por encima de lo que permiten la clase, la batería y la temperatura. `wprs-ctl state` (`tier`,
+`tier_measured`, y `quality` y `quality_reason` en cada pantalla), la app y la bandeja muestran la
+clase medida, el nivel y por qué bajó. Con batería o con el perfil de ahorro de energía de power-profiles-daemon
 las escenas bajan de nivel y de fotogramas; si un sensor del sistema dice que la GPU o la CPU están
 cerca de su temperatura crítica, bajan más hasta que se enfrían. Cuando el escritorio pide reducir
 el movimiento (`reduced-motion` del portal de ajustes), las escenas se quedan quietas en su
@@ -1167,7 +1179,9 @@ entre todos). En el ordenador todos los de una escena comparten un proceso aisla
 un hilo, también cuando varias pantallas
 muestran la misma escena con los mismos ajustes, con 32 MiB de memoria y 4 ms de CPU por fotograma
 para todos juntos (100 ms para cargar y para el primer fotograma). Lo que devuelven llega al
-fotograma siguiente, así que un script lento nunca frena el dibujo. `docs/specs/scene.md` describe la
+fotograma siguiente, así que un script lento nunca frena el dibujo, y solo viaja lo que cambió:
+cada campo que un script escribe se compara con el que ya tenía, sin pasar la salida entera a texto
+en cada fotograma, y un fotograma sin cambios no envía nada. `docs/specs/scene.md` describe la
 interfaz completa; lo esencial:
 
 - **Ciclo de vida**: el módulo exporta las funciones que necesita: `init(ctx)` en el primer

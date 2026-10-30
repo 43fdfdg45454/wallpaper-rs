@@ -1,4 +1,4 @@
-import { state, setup, channels, records, timers, pending, stopped, record, guard, stop } from "wprs:core";
+import { state, setup, channels, records, timers, pending, stopped, record, guard, stop, dirty, touched, SECTIONS } from "wprs:core";
 import { engine } from "wprs:base";
 import { own, layer, touches } from "wprs:layers";
 import { handlers, particleState, soundState } from "wprs:media";
@@ -7,6 +7,16 @@ const lifecycle = ["init", "update", "destroy", "resize", "properties", "setting
 const [listeners, sites] = [[], []];
 const seen = { screen: "", fps: -1, quality: -1, props: {} };
 let [lastTime, legacy] = [0, null];
+const last = { values: undefined, busy: undefined, wake: undefined, loud: {}, once: [] };
+const plain = (v) => (v !== null && typeof v === "object" && typeof v.toJSON === "function" ? v.toJSON() : v);
+const kept = (v) => ((v = plain(v)) === null || typeof v !== "object" ? v : Array.isArray(v) ? v.map(kept) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, kept(x)])));
+const same = (a, b) => {
+    a = plain(a);
+    if (Object.is(a, b)) return true;
+    if (a === null || b === null || typeof a !== "object" || typeof b !== "object" || Array.isArray(a) !== Array.isArray(b)) return false;
+    const keys = Object.keys(a);
+    return keys.length === Object.keys(b).length && keys.every((k) => k in b && same(a[k], b[k]));
+};
 
 const each = (name, ...args) => {
     for (const mod of records.values()) if (!mod.first && typeof mod.ns?.[name] === "function") guard(mod, mod.ns[name], ...args);
@@ -71,7 +81,7 @@ function lifecycleEvents(f) {
     } else {
         if (screen !== seen.screen) each("resize", { screen: [...f.screen], canvas: [...setup.canvas] });
         if (state.fresh) {
-            const changed = Object.fromEntries(Object.entries(f.props).filter(([k, v]) => JSON.stringify(seen.props[k]) !== JSON.stringify(v)));
+            const changed = Object.fromEntries(Object.entries(f.props).filter(([k, v]) => !same(v, seen.props[k])));
             if (Object.keys(changed).length) each("properties", changed);
         }
     }
@@ -81,7 +91,8 @@ function lifecycleEvents(f) {
 
 state.tick = () => {
     const f = state.frame;
-    const out = (state.out = { values: {}, layers: own.overrides, timelines: [], particles: {}, sounds: {}, effects: {}, spawned: [], watch: [], busy: false, console: [], stopped });
+    const out = (state.out = { timelines: [], particles: {}, sounds: {} });
+    const [values, run] = [{}, { busy: false }];
     [legacy, own.once] = [null, {}];
     for (const s of Object.values(soundState)) s.asked = null;
     if (f.time < lastTime) for (const t of timers.values()) t.due -= lastTime - f.time;
@@ -95,37 +106,60 @@ state.tick = () => {
     events(f);
     for (const mod of records.values()) {
         if (typeof mod.ns?.update !== "function" || mod.stopped) continue;
-        out.busy = true;
+        run.busy = true;
         const value = guard(mod, mod.ns.update, mod.first ? old(f) : f);
-        if (value !== undefined) out.values[mod.path] = value;
+        if (value !== undefined) values[mod.path] = value;
     }
     for (const s of sites) {
         if (typeof s.fns.update === "function" && !s.mod.stopped) {
-            out.busy = true;
+            run.busy = true;
             const value = guard(s.mod, s.fns.update, s.value, s.ctx);
             if (value !== undefined) s.value = value;
         }
-        if (s.value !== null && s.value !== undefined) out.values[s.key] = s.value;
+        if (s.value !== null && s.value !== undefined) values[s.key] = s.value;
     }
-    for (const [id, p] of Object.entries(particleState)) Object.assign((out.particles[id] ??= {}), { instance: p.instance, points: p.points });
-    for (const [id, s] of Object.entries(soundState)) (out.sounds[id] ??= {}).volume = s.volume;
-    const once = Object.entries(own.once);
-    if (once.length) out.layers = { ...own.overrides, ...Object.fromEntries(once.map(([id, o]) => [id, { ...own.overrides[id], ...o }])) };
-    out.effects = Object.fromEntries(Object.entries(own.controls).map(([id, list]) => [id, Object.values(list)]));
-    out.spawned = [...own.spawned];
-    if (own.ordered) out.order = [...own.top];
-    out.watch = [...own.watched];
     let soon = Infinity;
     for (const t of timers.values()) soon = Math.min(soon, t.due - f.time);
-    if (soon !== Infinity) out.wake = Math.max(0, soon);
+    run.wake = soon === Infinity ? null : Math.max(0, soon);
     for (const mod of records.values()) {
         mod.failures = mod.failed ? mod.failures + 1 : 0;
         mod.failed = false;
         if (mod.failures >= 3) stop(mod, mod.error);
     }
-    out.console = pending.splice(0);
-    state.once = out.timelines.length > 0 || out.console.length > 0 || Object.values(out.particles).some((p) => p.commands?.length) || Object.values(out.sounds).some((p) => p.commands?.length);
-    return out;
+    const lines = pending.splice(0);
+    if (!same(values, last.values)) [last.values] = [kept(values), dirty.add("values")];
+    for (const k of ["busy", "wake"]) if (!Object.is(run[k], last[k])) [last[k]] = [run[k], dirty.add(k)];
+    const commands = (list) => Object.values(list).some((p) => p.commands?.length);
+    const loud = { timelines: out.timelines.length > 0, console: lines.length > 0, particles: commands(out.particles), sounds: commands(out.sounds) };
+    for (const id of [...last.once, ...Object.keys(own.once)]) touched.add(id);
+    last.once = Object.keys(own.once);
+    for (const k of Object.keys(loud)) if (loud[k] || last.loud[k]) dirty.add(k);
+    last.loud = loud;
+    if (!dirty.size && !touched.size) return null;
+    const layer = (id) => (own.once[id] ? { ...own.overrides[id], ...own.once[id] } : own.overrides[id]) ?? null;
+    const made = {
+        values: () => values,
+        layers: () => Object.fromEntries([...new Set([...Object.keys(own.overrides), ...last.once])].map((id) => [id, layer(id)]).filter(([, v]) => v)),
+        timelines: () => out.timelines,
+        particles: () => Object.assign(out.particles, Object.fromEntries(Object.entries(particleState).map(([id, p]) => [id, { ...out.particles[id], instance: p.instance, points: p.points }]))),
+        sounds: () => Object.assign(out.sounds, Object.fromEntries(Object.entries(soundState).map(([id, s]) => [id, { ...out.sounds[id], volume: s.volume }]))),
+        effects: () => Object.fromEntries(Object.entries(own.controls).map(([id, list]) => [id, Object.values(list)])),
+        spawned: () => [...own.spawned],
+        order: () => (own.ordered ? [...own.top] : null),
+        watch: () => [...own.watched],
+        wake: () => run.wake,
+        busy: () => run.busy,
+        console: () => lines,
+        stopped: () => stopped,
+    };
+    const changed = Object.fromEntries([...dirty].map((k) => [k, made[k]()]));
+    if (touched.size && !dirty.has("layers")) changed.layer_edits = Object.fromEntries([...touched].map((id) => [id, layer(id)]));
+    [dirty, touched].forEach((set) => set.clear());
+    return changed;
+};
+
+state.forget = () => {
+    for (const k of SECTIONS) dirty.add(k);
 };
 
 state.destroy = () => {

@@ -71,6 +71,10 @@ pub(crate) fn stamps() -> bool {
     lock().as_ref().is_some_and(|gpu| gpu.renderer.timestamps())
 }
 
+pub(crate) fn measured() -> bool {
+    lock().as_ref().is_some_and(|gpu| gpu.renderer.calibration().is_some_and(|c| c.measured()))
+}
+
 pub(crate) fn adapter() -> String {
     ADAPTER.lock().unwrap_or_else(PoisonError::into_inner).clone()
 }
@@ -174,6 +178,7 @@ fn create(
         return Err(RenderError::NoAdapter(format!("{} ({:?}) is blocked", info.name, info.backend)));
     }
     let renderer = Renderer::with_adapter(instance, adapter)?;
+    renderer.calibrate(crate::store::dir().ok().map(|dir| dir.join("gpu-tier.json")).as_deref());
     let surface = renderer.configure_surface(surface, size, Presentation::MOBILE)?;
     Ok((renderer, surface))
 }

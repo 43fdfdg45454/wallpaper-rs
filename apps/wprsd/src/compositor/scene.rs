@@ -1,3 +1,4 @@
+mod level;
 mod polling;
 #[cfg(test)]
 mod tests;
@@ -11,8 +12,8 @@ use std::time::{Duration, Instant};
 use wprs_core::Region;
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView};
 use wprs_scene::{
-    Course, Fired, LayerRead, MAX_PRESSES, PointerState, Press, Quality, Runtime, Touch, Uses, Values, Voice,
-    Wake,
+    Course, Fired, Governor, LayerRead, MAX_PRESSES, PointerState, Press, Quality, Runtime, Spare, Touch,
+    Uses, Values, Voice, Wake, Why,
 };
 
 const CALM: u32 = 30;
@@ -57,6 +58,10 @@ pub(super) struct SceneState {
     hushed: bool,
     guard: Option<Box<super::guard::Guard>>,
     pub(super) damage: Option<Region>,
+    spare: Spare,
+    governor: Governor,
+    why: Why,
+    samples: u64,
 }
 
 fn after(seconds: f64) -> Duration {
@@ -83,7 +88,7 @@ impl SceneState {
         let exposed = wprs_scene::exposed(&spec.pack.props.properties, &spec.values);
         let [audio, cursor] = wprs_scene::script_inputs(&spec.pack.scene, &spec.pack.scripts);
         let reads = spec.pack.inputs.map_or((audio, cursor), |u| (audio && u.audio, cursor && u.cursor));
-        let (reads, quality) = (reads, power.quality(&runtime));
+        let (reads, (quality, why)) = (reads, power.level(&runtime));
         let (view, tick, pointer, calm, error, due, uses) = Default::default();
         let (moving, voices, heard) = (!still, Vec::new(), None);
         let mut scene = SceneState {
@@ -124,6 +129,10 @@ impl SceneState {
             hushed: false,
             guard: None,
             damage: None,
+            spare: Spare::default(),
+            governor: Governor::default(),
+            why,
+            samples: 0,
         };
         scene.uses = scene.needs(quality);
         scene
@@ -284,7 +293,7 @@ impl SceneState {
         let pointer = self.runtime.pointer().follow(p.pos, p.buttons, dt as f32);
         self.runtime.set_pointer(pointer);
         self.runtime.set_wall(crate::zone::wall());
-        let (quality, uses) = (power.quality(&self.runtime), self.uses);
+        let (quality, uses) = (self.level(power), self.uses);
         if quality != self.quality {
             (self.quality, self.uses) = (quality, self.needs(quality));
         }
@@ -309,7 +318,7 @@ impl SceneState {
             let room = wprs_scene::MAX_TOUCHES.saturating_sub(self.touches.len());
             self.touches.extend(self.runtime.take_touches().into_iter().take(room));
         }
-        let frame = self.runtime.frame(rect, quality);
+        let frame = self.runtime.frame_in(std::mem::take(&mut self.spare), rect, quality);
         let videos: Vec<(&str, &GpuImage)> = self
             .spec
             .reels()
@@ -325,7 +334,7 @@ impl SceneState {
             let image = view.image().filter(|_| view.stats().damage > 0);
             guard.watch(renderer, image, now, &self.spec.pack.props.id)?;
         }
-        let fps = power.fps(&self.runtime, quality, refresh);
+        let (fps, timed) = (power.fps(&self.runtime, quality, refresh), view.gpu_time());
         let interval = Duration::from_secs(1) / fps;
         self.sent = (std::mem::take(&mut self.sent.0), frame.view, [size.0, size.1], fps);
         let stopped = self.guard.as_ref().is_some_and(|g| g.speed() == 0.0);
@@ -343,6 +352,7 @@ impl SceneState {
             None => frame.wake,
         };
         let wake = if self.hushed { self.runtime.calmed(wake) } else { wake };
+        self.spare = frame.spare();
         self.calm = self.calm.saturating_add(1);
         self.moving = wake == Wake::Frame;
         self.due = match wake {
@@ -353,6 +363,7 @@ impl SceneState {
         if self.due.is_none() {
             view.trim();
         }
+        self.judge(timed, power, fps, now);
         self.listen(interval, now);
         Ok(uses != self.uses)
     }

@@ -54,11 +54,15 @@ impl Tier {
             _ if modest => Tier::T1,
             _ => Tier::T2,
         };
+        base.min(Tier::cap(gpu))
+    }
+
+    pub(crate) fn cap(gpu: &Gpu<'_>) -> Tier {
         let below = |v: u64, limit: u64| v > 0 && v < limit;
         match () {
             _ if below(gpu.memory_mib, 2048) => Tier::T0,
-            _ if below(gpu.memory_mib, 4096) || below(u64::from(gpu.max_texture), 8192) => base.min(Tier::T1),
-            _ => base,
+            _ if below(gpu.memory_mib, 4096) || below(u64::from(gpu.max_texture), 8192) => Tier::T1,
+            _ => Tier::T3,
         }
     }
 

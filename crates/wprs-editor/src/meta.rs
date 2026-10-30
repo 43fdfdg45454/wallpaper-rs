@@ -132,7 +132,12 @@ pub fn cancels(doc: &Value, ops: &[Op], dir: Option<&Path>) -> bool {
 }
 
 fn at(field: &str) -> String {
-    if field.starts_with("inputs") { "/manifest/inputs" } else { "/manifest/requires/features" }.into()
+    match field {
+        f if f.starts_with("inputs") => "/manifest/inputs",
+        f if f.starts_with("the scene costs") => "/scene/layers",
+        _ => "/manifest/requires/features",
+    }
+    .into()
 }
 
 pub fn problems(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {

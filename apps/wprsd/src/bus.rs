@@ -146,6 +146,8 @@ impl Daemon {
                 sound: s.sound.into(),
                 flashes: s.flashes.into(),
                 particles: s.particles.into(),
+                quality: s.quality.into(),
+                quality_reason: s.quality_reason.into(),
                 left_out: s.left_out,
                 console: s.console,
             };
@@ -157,6 +159,8 @@ impl Daemon {
             model: MODEL,
             version: wprs_core::VERSION.into(),
             adapter: self.adapter.clone(),
+            tier: self.tier.0.into(),
+            tier_measured: self.tier.1,
             config: st.config_path.clone(),
             config_error: st.config_error.clone(),
             library_error: self.store.error.clone(),

@@ -30,6 +30,7 @@ pub(crate) struct Clock {
     timed: Vec<(u64, bool, f64)>,
     pub(crate) gpu_ms: f64,
     pub(crate) fresh: bool,
+    pub(crate) samples: u64,
 }
 
 impl Clock {
@@ -37,7 +38,7 @@ impl Clock {
         let queries = r.device.features().contains(wgpu::Features::TIMESTAMP_QUERY);
         let judge = judge::Judge::new(r.tier());
         let (plan, timed) = (plan::Plan::new(), Vec::new());
-        Clock { stamps: None, queries, frame: 0, judge, plan, timed, gpu_ms: 0.0, fresh: false }
+        Clock { stamps: None, queries, frame: 0, judge, plan, timed, gpu_ms: 0.0, fresh: false, samples: 0 }
     }
 
     pub(crate) fn start(&mut self, r: &Renderer, ops: &[super::Op], trial: bool, drawn: bool) -> Timing {
@@ -80,16 +81,16 @@ impl Clock {
     pub(crate) fn collect(&mut self) -> Vec<(u64, String)> {
         let Some(stamps) = self.stamps.as_mut() else { return Vec::new() };
         let (judge, now, mut charged) = (&mut self.judge, std::time::Instant::now(), Vec::new());
-        let (gpu, fresh) = (&mut self.gpu_ms, &mut self.fresh);
+        let (gpu, fresh, samples) = (&mut self.gpu_ms, &mut self.fresh, &mut self.samples);
         stamps.collect(&mut self.timed, |runs, whole, wide| {
-            (*gpu, *fresh) = (whole, true);
+            (*gpu, *fresh, *samples) = (whole, true, *samples + 1);
             charged.extend(judge.frame(runs, (Some(whole), wide), now));
         });
         charged
     }
 
     pub(crate) fn watched(&mut self, keys: &[u64], ms: f64) -> Vec<(u64, String)> {
-        (self.gpu_ms, self.fresh) = (ms, true);
+        (self.gpu_ms, self.fresh, self.samples) = (ms, true, self.samples + 1);
         self.judge.watched(keys, ms)
     }
 }

@@ -73,6 +73,7 @@ pub struct Encoder {
     props: Option<Values>,
     zone: Option<String>,
     audio: Option<AudioFrame>,
+    pub(crate) resend: bool,
 }
 
 impl Encoder {
@@ -134,6 +135,7 @@ impl Encoder {
         for id in f.sounds {
             w.str(id);
         }
+        w.flag(std::mem::take(&mut self.resend));
         self.buf = std::mem::take(&mut w.0);
         &self.buf
     }

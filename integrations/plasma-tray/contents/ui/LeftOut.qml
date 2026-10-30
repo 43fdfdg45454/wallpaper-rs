@@ -24,4 +24,19 @@ QtObject {
             return line
         return i18n("The effect %1 was left out: %2", line.slice(head.length, at), found[1])
     }
+
+    function level(info, state) {
+        const reasons = {
+            "device": i18n("the most this graphics card allows"),
+            "cost": i18n("lowered because the scene is heavy for this graphics card"),
+            "battery": i18n("lowered on battery"),
+            "saver": i18n("lowered while saving power"),
+            "heat": i18n("lowered while the computer is hot"),
+            "slow": i18n("lowered because its frames took too long on the graphics card")
+        }
+        const quality = i18n("Quality %1 of 3", info.quality.slice(1))
+        const tier = String(state?.tier ?? "").slice(1)
+        const card = !tier ? "" : state.tier_measured ? i18n("graphics card class %1 of 3, measured", tier) : i18n("graphics card class %1 of 3, from its model", tier)
+        return [reasons[info.quality_reason] ? quality + ": " + reasons[info.quality_reason] : quality, card].filter(t => t).join(" · ")
+    }
 }

@@ -36,6 +36,8 @@ pub struct Renderer {
     pub(crate) yuv: OnceLock<crate::yuv::Converter>,
     pub(crate) luma: OnceLock<crate::luma::Luma>,
     pub(crate) tier: OnceLock<wprs_scene::Tier>,
+    pub(crate) calibration: OnceLock<wprs_scene::Calibration>,
+    pub(crate) name: String,
     pub(crate) uploads: crate::scene::Uploads,
     pub(crate) lost: crate::lost::Lost,
 }
@@ -93,6 +95,8 @@ impl Renderer {
             yuv: OnceLock::new(),
             luma: OnceLock::new(),
             tier: OnceLock::new(),
+            calibration: OnceLock::new(),
+            name: info.name.clone(),
             uploads: Default::default(),
             lost,
             device,

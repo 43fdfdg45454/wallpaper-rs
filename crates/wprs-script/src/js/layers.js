@@ -1,4 +1,4 @@
-import { state, setup, MAX, owner, need } from "wprs:core";
+import { state, setup, MAX, owner, need, dirty, touched, put } from "wprs:core";
 import { fields, convert, copy, paramValue } from "wprs:values";
 
 export const touches = ["click", "enter", "leave", "move", "down", "up"];
@@ -11,7 +11,7 @@ const info = (id) => {
     const [head, ...rest] = id.split(".");
     return own.spawned.has(head) ? setup.templates[[own.spawned.get(head), ...rest].join(".")] : undefined;
 };
-const watch = (id) => void (own.watched.size < MAX.watched && own.watched.add(id));
+const watch = (id) => void (own.watched.size < MAX.watched && !own.watched.has(id) && own.watched.add(id) && dirty.add("watch"));
 const sized = (template) => {
     if (!sizes.has(template)) sizes.set(template, Object.keys(setup.templates).filter((k) => k === template || k.startsWith(`${template}.`)).length);
     return sizes.get(template);
@@ -23,6 +23,7 @@ function effect(id, which) {
     const at = typeof which === "number" ? Math.trunc(which) : list.findIndex((e) => e.name === String(which));
     const e = list[at];
     if (!e) throw new RangeError(`${id} has no effect ${which}`);
+    if (!own.controls[id]?.[at]) dirty.add("effects");
     const control = ((own.controls[id] ??= {})[at] ??= { at, params: {}, reset: 0 });
     return Object.freeze({
         index: at,
@@ -32,16 +33,17 @@ function effect(id, which) {
             return control.enabled ?? true;
         },
         set enabled(on) {
-            control.enabled = Boolean(on);
+            if (put(control, "enabled", Boolean(on))) dirty.add("effects");
         },
         get: (param) => copy(control.params[param]),
         set(param, value) {
             const def = e.params[param];
             if (!def) throw new TypeError(`${e.effect} has no parameter ${param}`);
-            control.params[param] = paramValue(def, value, param);
+            if (put(control.params, param, paramValue(def, value, param))) dirty.add("effects");
         },
         reset() {
             control.reset += 1;
+            dirty.add("effects");
         },
     });
 }
@@ -60,6 +62,7 @@ export function layer(id, watching = true) {
             return info(id)?.initial;
         },
         reset(key) {
+            if (own.overrides[id] && (key === undefined || key in own.overrides[id])) touched.add(id);
             if (key === undefined) delete own.overrides[id];
             else delete own.overrides[id]?.[key];
         },
@@ -78,7 +81,7 @@ export function layer(id, watching = true) {
                 return copy(own.overrides[id]?.[key] ?? state.frame.reads[id]?.[key]);
             },
             set(v) {
-                (own.overrides[id] ??= {})[key] = convert[key](v);
+                if (put((own.overrides[id] ??= {}), key, convert[key](v))) touched.add(id);
             },
         });
     }
@@ -106,6 +109,7 @@ export const scene = Object.freeze({
         own.size += sized(template);
         own.top.splice(options.at === undefined ? own.top.length : spot(options.at), 0, id);
         own.ordered ||= options.at !== undefined;
+        ["spawned", "order"].forEach((k) => dirty.add(k));
         const made = layer(id);
         for (const key of fields) if (options[key] !== undefined) made[key] = options[key];
         return made;
@@ -118,8 +122,10 @@ export const scene = Object.freeze({
         own.spawned.delete(id);
         own.top.splice(own.top.indexOf(id), 1);
         const mine = (k) => k === id || k.startsWith(`${id}.`);
+        for (const k of Object.keys(own.overrides)) if (mine(k)) touched.add(k);
         for (const map of [own.overrides, own.controls, own.touchers]) for (const k of Object.keys(map)) if (mine(k)) delete map[k];
         for (const k of [...own.handles.keys()]) if (mine(k)) [own.handles.delete(k), own.watched.delete(k)];
+        ["effects", "spawned", "order", "watch"].forEach((k) => dirty.add(k));
     },
     order(id, index) {
         need("layers");
@@ -128,5 +134,6 @@ export const scene = Object.freeze({
         own.top.splice(from, 1);
         own.top.splice(spot(index), 0, String(id));
         own.ordered = true;
+        dirty.add("order");
     },
 });

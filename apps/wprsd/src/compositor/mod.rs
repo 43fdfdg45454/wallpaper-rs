@@ -189,6 +189,8 @@ pub struct OutputStatus {
     pub sound: &'static str,
     pub flashes: &'static str,
     pub particles: &'static str,
+    pub quality: &'static str,
+    pub quality_reason: &'static str,
     pub left_out: Vec<String>,
     pub console: Vec<String>,
 }

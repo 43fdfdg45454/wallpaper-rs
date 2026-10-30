@@ -17,11 +17,13 @@ mod flock;
 mod forces;
 mod hatch;
 mod instance;
+mod lineage;
 mod look;
 mod motion;
 mod ops;
 mod pace;
 mod pack;
+mod place;
 mod plan;
 mod points;
 mod pulls;
@@ -33,7 +35,9 @@ mod spread;
 mod stack;
 mod starts;
 mod steer;
+mod strokes;
 mod swarm;
+mod sweeps;
 mod tone;
 mod tune;
 mod wave;
@@ -51,7 +55,7 @@ pub(crate) use flock::flock_of;
 pub use flock::{Flock, MAX_DEPTH, MAX_PARTS, Part, flocks};
 pub use forces::{Falloff, Force, Target};
 pub use instance::{Instance, Tunable};
-pub use look::{Frames, Orient, Refract, Render, Rope, Stack, Stretch, Trail};
+pub use look::{Frames, Orient, Refract, Render, Stack};
 pub use ops::Operator;
 pub use pack::{EVENT, MAX_HATCH, PARTICLE_EVENTS, Sim};
 pub(crate) use plan::plan;
@@ -59,11 +63,13 @@ pub use seed::{
     Carry, Hsv, MAX_PALETTE, MAX_REMAPS, OffsetNoise, Palette, REMAP_INPUTS, Remap, RemapOp, RemapOutput,
     Turbulent, Wave,
 };
-pub use shapes::{Area, Around, Between, Bow, EmitShape, Refresh, Source, Sweep, Taper};
+pub use shapes::{Area, EmitShape, Refresh, Source};
 pub use spread::{Num, Spread};
 pub use stack::{bin, largest, stacked};
 pub use steer::{Boids, KeepBetween, KeepDistance, Oscillate, Ring, SlowNear, Wobble};
+pub use strokes::{Rope, Stretch, Trail};
 pub use swarm::{Play, STEP, SUBSTEPS, Swarm, WARM, WARM_WORK};
+pub use sweeps::{Around, Between, Bow, Sweep, Taper};
 pub(crate) use tune::tuned;
 
 use schemars::JsonSchema;

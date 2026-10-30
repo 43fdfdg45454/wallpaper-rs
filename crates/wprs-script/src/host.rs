@@ -1,5 +1,5 @@
 use crate::wire::{receive, send};
-use crate::{Encoder, Error, Frame, Limits, MAX_FAILURES, Script, Setup};
+use crate::{Encoder, Error, Frame, Limits, MAX_FAILURES, Script, Setup, patched};
 use std::io::BufReader;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
@@ -67,6 +67,7 @@ pub struct Host {
     retry: Instant,
     encoder: Encoder,
     progress: (u64, u64),
+    kept: ScriptOutputs,
 }
 
 impl Host {
@@ -74,7 +75,8 @@ impl Host {
         let load = serde_json::to_vec(setup).unwrap_or_default();
         let command = (program.into(), args.iter().map(|a| a.to_string()).collect());
         let (retry, encoder) = (Instant::now(), Encoder::default());
-        Host { command, load, running: None, failures: 0, retry, encoder, progress: (0, 0) }
+        let kept = ScriptOutputs::default();
+        Host { command, load, running: None, failures: 0, retry, encoder, progress: (0, 0), kept }
     }
 
     pub fn progress(&self) -> (u64, u64) {
@@ -90,6 +92,7 @@ impl Host {
                 Ok(running) => {
                     self.running = Some(running);
                     self.encoder.reset();
+                    self.kept = ScriptOutputs::default();
                     self.progress.1 = self.progress.0;
                 }
                 Err(e) => return self.fail(&e.to_string()),
@@ -118,7 +121,8 @@ impl Host {
             Err(why) => self.fail(why),
             Ok(None) | Ok(Some((0, _))) => Ok(None),
             Ok(Some((1, body))) => {
-                serde_json::from_slice(&body).map(Some).map_err(|e| Error::Script(e.to_string()))
+                let text = String::from_utf8_lossy(&body);
+                patched(&mut self.kept, &text, &mut self.encoder).map(|()| Some(self.kept.clone()))
             }
             Ok(Some((_, body))) => match serde_json::from_slice(&body) {
                 Ok(Error::Disabled) => {

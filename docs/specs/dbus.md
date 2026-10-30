@@ -1778,9 +1778,11 @@ the scene canvas, transitions and claims as other wallpapers.
 - The frame rate is the lowest of `playback.max_fps`, the scene's `clock.max_fps`, the quality
   level and the GPU class, as described in "Frame rate"; a scene with `clock.max_fps = "display"`
   follows the refresh rate of each output.
-- The quality level follows the GPU class and the power source: on battery or on a software
-  renderer heavy effects run at a lower resolution or not at all when the scene marks them
-  `optional`, and the scene itself renders at 0.75 or 0.5 of the output size.
+- The quality level follows the GPU class (measured once per graphics card and driver), the power
+  source and the GPU time of the frames: on battery, on a software renderer or when frames take too
+  long, heavy effects run at a lower resolution or not at all when the scene marks them `optional`,
+  and the scene itself renders at 0.75 or 0.5 of the output size. `GetState().outputs[x].quality`
+  and `quality_reason` tell the level and why.
 - An output that is not active (paused, covered, locked or paused on battery, see
   `SetOption`) or whose stream has no consumer renders nothing and its scene clock stops; it
   continues where it stopped, without catching up.
@@ -1930,14 +1932,22 @@ or `"memfd"` while a consumer streams the output, and `""` otherwise (see "Strea
 `sound` is `""`, `"off"`, `"playing"`, `"paused"` or `"elsewhere"` (see "Scene sound").
 `flashes` is `""`, or `"slowed"` or `"paused"` once `playback.flash_guard` slowed or stopped the
 scene of that output. `left_out` lists the package effects the scene of that output plays without,
-as `the effect <id> was left out: <reason>`; it is a note, not a failure. `console` holds, only for
+as `the effect <id> was left out: <reason>`; it is a note, not a failure. `particles` is `"gpu"`
+or `"cpu"` for a scene with particles, and `""` otherwise. `quality` is the quality level the scene
+of that output draws at (`"q0"` to `"q3"`, `""` for other content) and `quality_reason` why:
+`"full"` (the highest), `"device"` (the most its graphics card class allows), `"cost"` (the scene is
+too heavy for the card at a higher level), `"battery"`, `"saver"` (power saving), `"heat"` or
+`"slow"` (its frames took too long on the GPU); see "Cost and frame rate" in `scene.md`. `tier` is
+the class of the graphics card, `"t0"` to `"t3"`, and `tier_measured` whether a short measured
+render set it rather than the model of the card alone. `console` holds, only for
 the `preview:` outputs of the scene editor, the last 50 lines its scripts wrote with `console`, as
 `<level> <module>: <text>`; other outputs leave it empty so that scripts that write often never wake
 the bus.
 
 ```rust
 struct State {
-    model: u32, version: String, adapter: String, config: PathBuf, config_error: Option<String>,
+    model: u32, version: String, adapter: String, tier: String, tier_measured: bool, config: PathBuf,
+    config_error: Option<String>,
     library_error: Option<String>, serial: u64, paused: bool, on_battery: bool, locked: bool,
     volume: f64, muted: bool, profile: Option<Uid>, jobs: u32,
     options: BTreeMap<String, Value>,
@@ -1949,7 +1959,7 @@ struct OutputState {
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
     edited: bool, screen: Option<Screen>, parallax: bool, frames: u64, refresh: u32, fps: u32,
     buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
-    console: Vec<String>,
+    particles: String, quality: String, quality_reason: String, console: Vec<String>,
 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
 enum Shown { Color, Image, Video, Scene }

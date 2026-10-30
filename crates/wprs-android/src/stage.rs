@@ -6,13 +6,16 @@ use chrono::Timelike;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering::Relaxed};
 use std::sync::{Arc, Mutex, PoisonError};
 use wprs_render::{GpuImage, Meter, RenderError, Renderer, SceneView};
-use wprs_scene::{Budget, Content, FlashGuard, MAX_PRESSES, Press, Quality, Runtime, Tier, Wake};
+use wprs_scene::{
+    Budget, Content, FlashGuard, Governor, MAX_PRESSES, Press, Quality, Runtime, Spare, Tier, Wake, Why,
+};
 
 const SLACK_NS: i64 = 2_000_000;
 const LISTEN_MS: i64 = 250;
 const QUIET_MS: i64 = 2_000;
 const MAX_GAP: f64 = 600.0;
 const DAY_MS: f64 = 86_400_000.0;
+const PHONE_SHARE: f32 = 0.25;
 
 static LEVEL: AtomicU32 = AtomicU32::new(0);
 static CALMING: AtomicU32 = AtomicU32::new(0);
@@ -75,6 +78,9 @@ pub(crate) struct Stage {
     calmed: bool,
     guard: Option<Box<Guarded>>,
     retried: u64,
+    spare: Spare,
+    governor: Governor,
+    samples: u64,
 }
 
 pub(crate) struct Shot<'a> {
@@ -83,9 +89,10 @@ pub(crate) struct Shot<'a> {
     pub(crate) delay: i64,
 }
 
-pub(crate) fn level() -> Option<[String; 2]> {
+pub(crate) fn level() -> Option<[String; 3]> {
     let level = LEVEL.load(Relaxed).checked_sub(1)?;
-    Some([format!("T{}", level / 4), format!("Q{}", level % 4)])
+    let why = Why::ALL.get(level as usize % 8)?.name();
+    Some([format!("T{}", level / 32), format!("Q{}", level / 8 % 4), why.into()])
 }
 
 pub(crate) fn wall() -> f64 {
@@ -123,6 +130,9 @@ impl Stage {
             calmed: false,
             guard: None,
             retried: RETRIES.load(Relaxed),
+            spare: Spare::default(),
+            governor: Governor::default(),
+            samples: 0,
         }
     }
 
@@ -235,8 +245,10 @@ impl Stage {
         let calmed = self.runtime.set_reduced_motion(power.still);
         let tipped = self.runtime.set_tilt(crate::tilt::goal(0.5, std::time::Instant::now()));
         self.runtime.set_wall(wall());
-        let quality = budget.quality(&self.runtime).min(power.ceiling());
-        LEVEL.store(1 + tier as u32 * 4 + quality as u32, Relaxed);
+        let (ceiling, why) = budget.level(&self.runtime);
+        let ceiling = if power.ceiling() < ceiling { (power.ceiling(), Why::Heat) } else { (ceiling, why) };
+        let (quality, why) = self.governor.level(ceiling);
+        LEVEL.store(1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32, Relaxed);
         let fps = if still { 0 } else { budget.fps(&self.runtime, quality, 0) };
         let retried = RETRIES.load(Relaxed);
         if std::mem::replace(&mut self.retried, retried) != retried {
@@ -274,7 +286,7 @@ impl Stage {
         if self.runtime.point(view.hitboxes(), self.rect, &presses, allowed) {
             self.acting.touched(&mut self.runtime);
         }
-        let frame = self.runtime.frame(self.rect, quality);
+        let frame = self.runtime.frame_in(std::mem::take(&mut self.spare), self.rect, quality);
         let playing =
             power.moving() && frame.draws.iter().any(|d| matches!(d.content, Content::Video { .. }));
         let wake = match frame.wake {
@@ -292,6 +304,13 @@ impl Stage {
         self.due = (delay > 0 && wake != Wake::Idle).then_some(nanos + delay * 1_000_000);
         self.fps = if wake == Wake::Frame { fps } else { 0 };
         let rendered = r.render_scene(view, &self.runtime, &frame, inner, quality, videos).map(drop);
+        self.spare = frame.spare();
+        let (samples, gpu_ms) = view.gpu_time();
+        if std::mem::replace(&mut self.samples, samples) != samples && !still {
+            let budget_ms = 1000.0 / fps.max(1) as f32 * PHONE_SHARE;
+            let raises = power.charging && power.ceiling() == Quality::Q3;
+            self.governor.feed(std::time::Instant::now(), gpu_ms as f32, budget_ms, ceiling.0, raises);
+        }
         ENGINE.store(view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }), Relaxed);
         let mut left = LEFT.lock().unwrap_or_else(PoisonError::into_inner);
         if left.0 != view.left_key() {

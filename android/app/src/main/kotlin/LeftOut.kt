@@ -22,3 +22,13 @@ fun leftOutReason(reason: String): String {
     val text = stringResource(found.second)
     return if (text.startsWith(found.first)) reason else text
 }
+
+fun levelReason(reason: String): Int? = when (reason) {
+    "device" -> R.string.level_device
+    "cost" -> R.string.level_cost
+    "battery" -> R.string.level_battery
+    "saver" -> R.string.level_saver
+    "heat" -> R.string.level_heat
+    "slow" -> R.string.level_slow
+    else -> null
+}

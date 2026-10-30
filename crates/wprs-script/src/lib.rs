@@ -67,7 +67,7 @@ pub struct Script {
     limits: Limits,
     failures: u32,
     started: bool,
-    last: String,
+    outputs: ScriptOutputs,
     encoder: Encoder,
     zone: bool,
 }
@@ -117,8 +117,18 @@ impl Script {
             state.get::<_, Function>("start")?.call::<_, ()>((roots,))?;
             Ok(Persistent::save(ctx, state))
         })?;
-        let (last, encoder) = (String::new(), Encoder::default());
-        Ok(Script { state, context, clock, limits, failures: 0, started: false, last, encoder, zone: false })
+        let (outputs, encoder) = (ScriptOutputs::default(), Encoder::default());
+        Ok(Script {
+            state,
+            context,
+            clock,
+            limits,
+            failures: 0,
+            started: false,
+            outputs,
+            encoder,
+            zone: false,
+        })
     }
 
     #[cfg(not(target_os = "android"))]
@@ -130,37 +140,41 @@ impl Script {
         if self.failures >= MAX_FAILURES {
             return Err(Error::Disabled);
         }
-        let (state, zone) = (self.state.clone(), self.zone);
+        let (state, zone, behind) = (self.state.clone(), self.zone, self.failures > 0);
         let budget = if self.started { self.limits.update } else { self.limits.load };
         let text = self.clock.run(&self.context, budget, |ctx| {
             let state = state.restore(ctx)?;
+            if behind {
+                state.get::<_, Function>("forget")?.call::<_, ()>(())?;
+            }
             if let Some(rule) = apply::apply(ctx, &state, frame)?.filter(|z| zone && !z.is_empty()) {
                 clock::set_zone(&rule);
             }
-            let out: Object = state.get::<_, Function>("tick")?.call(())?;
-            let text = ctx.json_stringify(out)?.map(|s| s.to_string()).transpose()?.unwrap_or_default();
-            Ok((text, state.get::<_, bool>("once")?))
+            let out: Option<Object> = state.get::<_, Function>("tick")?.call(())?;
+            match out {
+                Some(out) => ctx.json_stringify(out)?.map(|s| s.to_string()).transpose(),
+                None => Ok(None),
+            }
         });
         self.started = true;
-        let text = text.and_then(|(t, once)| match t.len() > MAX_OUTPUT {
-            true => Err(Error::Script(format!("the script outputs take more than {} KiB", MAX_OUTPUT >> 10))),
-            false => Ok((t, once)),
+        let text = text.and_then(|t| match t {
+            Some(t) if t.len() > MAX_OUTPUT => {
+                Err(Error::Script(format!("the script outputs take more than {} KiB", MAX_OUTPUT >> 10)))
+            }
+            t => Ok(t),
         });
         self.failures = if text.is_ok() { 0 } else { self.failures + 1 };
-        let (text, once) = text?;
-        if text == self.last && !once {
-            return Ok(None);
-        }
-        self.last = text.clone();
-        Ok(Some(text))
+        text
     }
 
     pub fn update(&mut self, frame: &Frame) -> Result<ScriptOutputs, Error> {
         let mut encoder = std::mem::take(&mut self.encoder);
         let ran = self.run(encoder.encode(frame));
         self.encoder = encoder;
-        ran?;
-        serde_json::from_str(&self.last).map_err(|e| Error::Script(format!("invalid value: {e}")))
+        if let Some(text) = ran? {
+            patched(&mut self.outputs, &text, &mut self.encoder)?;
+        }
+        Ok(self.outputs.clone())
     }
 
     pub fn destroy(&mut self) {
@@ -169,4 +183,11 @@ impl Script {
             state.restore(ctx)?.get::<_, Function>("destroy")?.call::<_, ()>(())
         });
     }
+}
+
+pub(crate) fn patched(outputs: &mut ScriptOutputs, text: &str, encoder: &mut Encoder) -> Result<(), Error> {
+    outputs.patch(text).map_err(|e| {
+        encoder.resend = true;
+        Error::Script(format!("invalid value: {e}"))
+    })
 }

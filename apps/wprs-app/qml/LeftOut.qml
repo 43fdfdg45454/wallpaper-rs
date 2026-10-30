@@ -26,4 +26,19 @@ QtObject {
             return line
         return daemon.tr("The effect %1 was left out: %2").arg(line.slice(head.length, at)).arg(found[1])
     }
+
+    function level(info, state) {
+        const reasons = {
+            "device": daemon.tr("the most this graphics card allows"),
+            "cost": daemon.tr("lowered because the scene is heavy for this graphics card"),
+            "battery": daemon.tr("lowered on battery"),
+            "saver": daemon.tr("lowered while saving power"),
+            "heat": daemon.tr("lowered while the computer is hot"),
+            "slow": daemon.tr("lowered because its frames took too long on the graphics card")
+        }
+        const quality = daemon.tr("Quality %1 of 3").arg(info.quality.slice(1))
+        const tier = String(state?.tier ?? "").slice(1)
+        const card = !tier ? "" : state.tier_measured ? daemon.tr("graphics card class %1 of 3, measured").arg(tier) : daemon.tr("graphics card class %1 of 3, from its model").arg(tier)
+        return [reasons[info.quality_reason] ? quality + ": " + reasons[info.quality_reason] : quality, card].filter(t => t).join(" · ")
+    }
 }

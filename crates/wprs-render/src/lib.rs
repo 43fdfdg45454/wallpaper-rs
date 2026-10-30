@@ -5,6 +5,7 @@ mod animation;
 #[cfg(target_os = "linux")]
 mod barrier;
 mod bind;
+mod calibrate;
 mod color;
 mod damaged;
 mod decode;

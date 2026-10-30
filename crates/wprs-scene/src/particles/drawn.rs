@@ -1,4 +1,4 @@
-use super::Render;
+use super::{MAX_CURVE, Render};
 use crate::effects::Stage;
 use crate::validate::{Check, Issue};
 
@@ -66,5 +66,36 @@ impl Check<'_> {
         if scene.loaded.get(id).is_some_and(|d| d.stage != stage) {
             self.issues.push(Issue::Type(path.into()));
         }
+    }
+}
+
+impl Check<'_> {
+    pub(crate) fn render(&mut self, p: &str, r: &Render) {
+        if let Some(texture) = &r.texture {
+            self.named(&format!("{p}/render/texture"), texture);
+        }
+        self.range(&format!("{p}/render/fps"), r.fps, 0.0, 240.0);
+        self.range(&format!("{p}/render/stretch"), r.stretch.time, 0.0, 10.0);
+        let sizes = r.size_over_life.iter().map(|k| k[0]);
+        let colors = r.color_over_life.iter().map(|k| k.0);
+        for (name, times) in
+            [("size_over_life", sizes.collect::<Vec<_>>()), ("color_over_life", colors.collect())]
+        {
+            let q = format!("{p}/render/{name}");
+            self.count(&q, times.len(), MAX_CURVE);
+            self.keys_sorted(&q, times.iter().copied());
+            times.iter().for_each(|t| self.range(&q, *t, 0.0, 1.0));
+        }
+        r.size_over_life
+            .iter()
+            .for_each(|k| self.range(&format!("{p}/render/size_over_life"), k[1], 0.0, 100.0));
+        for (k, (_, c)) in r.color_over_life.iter().enumerate() {
+            self.color(&format!("{p}/render/color_over_life/{k}/1"), *c);
+        }
+        if let Some(t) = &r.trail {
+            self.range(&format!("{p}/render/trail/length"), t.length as f32, 1.0, 64.0);
+            self.range(&format!("{p}/render/trail/width"), t.width, 0.0, 1.0);
+        }
+        self.render2(&format!("{p}/render"), r);
     }
 }

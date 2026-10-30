@@ -59,6 +59,7 @@ pub struct Daemon {
     pub(crate) streams_changed: Arc<Notify>,
     pub(crate) props: watch::Sender<Props>,
     pub(crate) adapter: String,
+    pub(crate) tier: (&'static str, bool),
     pub(crate) store: Store,
     pub(crate) changes: Changes,
     pub(crate) jobs: Jobs,
@@ -86,8 +87,10 @@ impl Daemon {
         let renderer =
             Renderer::with_display(display).context("cannot initialize the GPU renderer")?.install();
         let adapter = renderer.adapter().to_owned();
+        let calibrated = renderer.calibrate(wprs_core::gpu_tier().as_deref());
+        let tier = (["t0", "t1", "t2", "t3"][calibrated.tier as usize], calibrated.measured());
         tracing::info!("renderer ready");
-        tracing::debug!(adapter, "GPU adapter");
+        tracing::debug!(adapter, tier = tier.0, unit_ms = calibrated.unit_ms, "GPU adapter");
         let changes = Changes::new();
         let exporter = Arc::new(Exporter::start().context("cannot connect to PipeWire")?);
         crate::streams::gpu_buffers(renderer).into_iter().for_each(|gpu| exporter.use_dmabuf(gpu));
@@ -112,6 +115,7 @@ impl Daemon {
             streams_changed,
             props,
             adapter,
+            tier,
             store,
             changes,
             jobs,

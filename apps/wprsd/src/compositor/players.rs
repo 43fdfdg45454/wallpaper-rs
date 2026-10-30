@@ -89,6 +89,7 @@ impl State {
             let playing = watched && running && !stops;
             let flashes = o.shown.scene.as_ref().map_or("", SceneState::flashes);
             let particles = o.shown.scene.as_ref().map_or("", SceneState::particles);
+            let quality = o.shown.scene.as_ref().map_or(("", ""), SceneState::quality);
             (
                 kind,
                 playing,
@@ -96,7 +97,7 @@ impl State {
                 self.moves(o),
                 o.fps(self.power),
                 self.sound(name, o),
-                (flashes, particles),
+                (flashes, particles, quality),
             )
         };
         let mut published = lock(&self.status);
@@ -114,7 +115,7 @@ impl State {
                         s.parallax,
                         s.fps,
                         s.sound,
-                        (s.flashes, s.particles),
+                        (s.flashes, s.particles, (s.quality, s.quality_reason)),
                         &s.left_out[..],
                     ) == now
                 };
@@ -122,7 +123,9 @@ impl State {
             });
         if !unchanged {
             let entry = |(name, o): (&String, &Output)| {
-                let (kind, playing, error, parallax, fps, sound, (flashes, particles)) = status(name, o);
+                let (kind, playing, error, parallax, fps, sound, (flashes, particles, quality)) =
+                    status(name, o);
+                let (quality, quality_reason) = quality;
                 let frames = published.get(name).map_or(0, |s| s.frames);
                 let (left_out, console) = (left(o).to_vec(), console(name, o).cloned().collect());
                 let status = OutputStatus {
@@ -135,6 +138,8 @@ impl State {
                     sound,
                     flashes,
                     particles,
+                    quality,
+                    quality_reason,
                     left_out,
                     console,
                 };

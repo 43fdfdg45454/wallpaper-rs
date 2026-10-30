@@ -128,3 +128,30 @@ fn a_small_moving_layer_damages_only_its_box_on_the_screen() {
     let both = state.damage.expect("still partial");
     assert!(both.x <= region.x && both.width > region.width, "damage adds up until it is composed");
 }
+
+#[test]
+fn slow_gpu_frames_lower_the_reported_quality_and_say_why() {
+    let renderer = match Renderer::shared() {
+        Ok(renderer) => renderer,
+        Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
+    };
+    let scene = Scene::from_json(include_str!("../../../../../scenes/snowfall/scene.json")).unwrap();
+    let manifest: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../../scenes/snowfall/manifest.json")).unwrap();
+    let properties = serde_json::from_value(manifest["properties"].clone()).unwrap();
+    let pack = Arc::new(ScenePack::bare(scene, properties, Vec::new()));
+    let spec =
+        SceneSpec { values: pack.props.values(&[]), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
+    let (mains, battery) = (Power::new(Tier::T3, false, 0), Power::new(Tier::T3, true, 0));
+    assert_eq!(SceneState::new(spec.clone(), battery).quality(), ("q2", "battery"));
+    let (mut state, players, start) = (SceneState::new(spec, mains), HashMap::new(), Instant::now());
+    assert_eq!(state.quality(), ("q3", "full"));
+    state.render(renderer, ((16, 9), 60), mains, &players, true, start).unwrap();
+    let mut at = start;
+    for sample in 1..=200 {
+        at += Duration::from_millis(16);
+        state.judge((sample, 50.0), mains, 60, at);
+    }
+    state.render(renderer, ((16, 9), 60), mains, &players, true, at).unwrap();
+    assert_eq!(state.quality(), ("q2", "slow"));
+}

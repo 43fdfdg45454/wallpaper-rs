@@ -3,7 +3,7 @@ use crate::allocations::allocations;
 use crate::{Pixels, Renderer};
 use image::{Rgba, RgbaImage};
 use std::sync::Arc;
-use wprs_scene::{Budget, Quality, Runtime, Scene, Tier, Values};
+use wprs_scene::{Budget, Quality, Runtime, Scene, Spare, Tier, Values};
 
 pub(crate) const SCENE: &str = r##"{ "schema": "wallpaper-rs.scene/1",
   "canvas": { "size": [320, 180], "background": "#102030" },
@@ -54,14 +54,16 @@ pub(crate) fn assets() -> SceneAssets {
     SceneAssets { images: images.into(), ..Default::default() }
 }
 
-fn frame(r: &Renderer, view: &mut SceneView, runtime: &mut Runtime) -> [u64; 2] {
+fn frame(r: &Renderer, view: &mut SceneView, runtime: &mut Runtime, spare: &mut Spare) -> [u64; 2] {
     runtime.advance(1.0 / 30.0);
     let mut frame = None;
-    let evaluated = allocations(|| frame = Some(runtime.frame(view.view((320, 180)), Quality::Q3)));
+    let kept = std::mem::take(spare);
+    let evaluated = allocations(|| frame = Some(runtime.frame_in(kept, view.view((320, 180)), Quality::Q3)));
     let frame = frame.expect("evaluated above");
     let spent = allocations(|| {
         r.render_scene(view, runtime, &frame, (320, 180), Quality::Q3, &[]).unwrap();
     });
+    *spare = frame.spare();
     r.finish().unwrap();
     [evaluated, spent]
 }
@@ -95,11 +97,12 @@ fn replay(r: &Renderer, view: &mut SceneView, ops: &[Op], data: &[u8]) -> u64 {
 fn measure(r: &Renderer, scene: Scene) -> (SceneView, Runtime, [i64; 2], u32) {
     let mut runtime = Runtime::new(Arc::new(scene), Values::new());
     let mut view = r.scene_view(&runtime.scene, &assets(), runtime.props()).unwrap();
-    (0..8).for_each(|_| _ = frame(r, &mut view, &mut runtime));
-    let (mut extra, mut passes, mut evaluated) = (Vec::new(), 0, 0);
+    let mut spare = Spare::default();
+    (0..8).for_each(|_| _ = frame(r, &mut view, &mut runtime, &mut spare));
+    let (mut extra, mut passes, mut evaluated) = (Vec::new(), 0, Vec::new());
     for _ in 0..9 {
-        let [eval, spent] = frame(r, &mut view, &mut runtime);
-        evaluated = evaluated.max(eval as i64);
+        let [eval, spent] = frame(r, &mut view, &mut runtime, &mut spare);
+        evaluated.push(eval as i64);
         passes = view.stats().passes;
         let ops = view.scratch.ops.clone();
         let slot = |op: &Op| match op {
@@ -112,7 +115,8 @@ fn measure(r: &Renderer, scene: Scene) -> (SceneView, Runtime, [i64; 2], u32) {
         view.pool.data.clear();
     }
     extra.sort_unstable();
-    (view, runtime, [extra[extra.len() / 2], evaluated], passes)
+    evaluated.sort_unstable();
+    (view, runtime, [extra[extra.len() / 2], evaluated[evaluated.len() / 2]], passes)
 }
 
 #[test]
@@ -124,7 +128,7 @@ fn steady_scene_frames_allocate_nothing_beyond_their_gpu_calls() {
     let (mut view, runtime, [extra, evaluated], passes) =
         measure(r, Scene::load(SCENE, &Default::default()).unwrap());
     assert!(passes >= 5 && view.stats().created == 0, "{:?}", view.stats());
-    assert!(evaluated <= 3, "evaluating a steady frame made {evaluated} allocations");
+    assert_eq!(evaluated, 0, "evaluating a steady frame allocated");
     let power = Budget { heat: wprs_scene::Heat::Warm, ..Budget::new(Tier::T1, false, 0) };
     let schedule = || {
         let quality = power.quality(&runtime);
@@ -172,7 +176,7 @@ fn steady_package_effect_frames_allocate_nothing_beyond_their_gpu_calls() {
     let (view, _, [extra, evaluated], passes) = measure(r, scene);
     assert!(view.left_out().is_empty(), "{:?}", view.left_out());
     assert!(passes >= 4 && view.stats().created == 0, "{passes} {:?}", view.stats());
-    assert!(evaluated <= 3, "evaluating a steady frame made {evaluated} allocations");
+    assert_eq!(evaluated, 0, "evaluating a steady frame allocated");
     assert!(extra <= 0, "a steady frame made {extra} allocations more than its GPU calls alone");
 }
 
@@ -183,7 +187,7 @@ fn a_loaded_scene_draws_its_first_frames_without_compiling() {
     let mut runtime = Runtime::new(Arc::new(scene), Values::new());
     let mut view = r.scene_view(&runtime.scene, &assets(), runtime.props()).unwrap();
     for _ in 0..3 {
-        frame(r, &mut view, &mut runtime);
+        frame(r, &mut view, &mut runtime, &mut Spare::default());
         assert_eq!(view.stats().compiled, 0, "{:?}", view.stats());
     }
 }

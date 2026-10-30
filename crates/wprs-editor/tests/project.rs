@@ -171,3 +171,20 @@ fn scripts_that_declare_nothing_are_problems_when_they_use_the_newer_interface()
     let found = problems(&project.dir, &project.doc);
     assert!(found.iter().all(|p| p.pointer != "/scene/scripts/0"), "{found:?}");
 }
+
+#[test]
+fn scenes_too_heavy_for_older_gpus_at_the_middle_level_get_a_warning() {
+    let root = tempfile::tempdir().unwrap();
+    state();
+    let dir = root.path().join("haze");
+    let mut project =
+        Project::create(&dir, starter("parallax", "org.example.haze", "Haze", "en").unwrap()).unwrap();
+    let light = problems(&project.dir, &project.doc);
+    assert!(!light.iter().any(|p| p.message.contains("older integrated")), "{light:?}");
+    let blur = |i: usize| json!({"id": format!("b{i}"), "type": "adjustment", "effects": [{"effect": "blur", "params": {"radius": 30}}]});
+    let layers: Vec<Value> = (0..8).map(blur).collect();
+    act(&mut project, json!({"set": {"pointer": "/scene/layers", "value": layers}}));
+    let heavy = problems(&project.dir, &project.doc);
+    let warned = heavy.iter().find(|p| p.message.contains("older integrated and phone GPUs"));
+    assert!(warned.is_some_and(|p| p.warning && p.pointer == "/scene/layers"), "{heavy:?}");
+}

@@ -9,6 +9,10 @@ model! {
         pub model: u32,
         pub version: String,
         pub adapter: String,
+        #[serde(default)]
+        pub tier: String,
+        #[serde(default)]
+        pub tier_measured: bool,
         pub config: PathBuf,
         pub config_error: Option<String>,
         pub library_error: Option<String>,
@@ -65,6 +69,10 @@ model! {
         pub left_out: Vec<String>,
         #[serde(default)]
         pub particles: String,
+        #[serde(default)]
+        pub quality: String,
+        #[serde(default)]
+        pub quality_reason: String,
         #[serde(default)]
         pub console: Vec<String>,
     }

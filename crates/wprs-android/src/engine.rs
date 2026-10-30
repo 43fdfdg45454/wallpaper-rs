@@ -12,7 +12,10 @@ use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use wprs_core::Fit;
 use wprs_render::{GpuImage, RenderError, Surface};
 
+mod parked;
 mod scenes;
+
+pub(crate) use parked::forget;
 
 pub(crate) static FRAMES: AtomicU64 = AtomicU64::new(0);
 
@@ -53,16 +56,19 @@ fn size(width: i32, height: i32) -> (u32, u32) {
 impl Engine {
     pub(crate) fn open(window: NativeWindow, preview: bool) -> Self {
         let size = size(window.width(), window.height());
-        let (target, image, fading, checked, rate, failures) = (None, None, None, (0, 0, (0, 0)), 0, 0);
+        let kept = parked::take(preview);
+        let (stage, image, raised, epoch) =
+            kept.map_or((None, None, None, 0), |k| (k.stage, k.image, k.raised, k.epoch));
+        let (target, fading, checked, rate, failures) = (None, None, (epoch, 0, (0, 0)), 0, 0);
         let (offset, shown, dirty, presented, video, look) = (0.5, 0.5, true, 0, false, settings::look());
         Self {
             target,
             image,
             fading,
-            raised: None,
+            raised,
             framed: None,
             crop: None,
-            stage: None,
+            stage,
             clips: Clips::default(),
             tilted: Tilted::default(),
             checked,
@@ -158,9 +164,14 @@ impl Engine {
 
     fn frame(&mut self, nanos: i64, fps: u32, power: Power) -> Result<(u32, i64), RenderError> {
         if self.target.as_ref().is_none_or(|(gpu, _)| !gpu.current()) {
-            (self.target, self.image, self.fading, self.raised, self.dirty) = (None, None, None, None, true);
-            self.checked = (0, 0, (0, 0));
-            self.target = Some(gpu::open(&self.window, self.size)?);
+            (self.target, self.fading, self.dirty) = (None, None, true);
+            let opened = gpu::open(&self.window, self.size)?;
+            if std::mem::replace(&mut self.checked.0, 0) != opened.0.epoch {
+                (self.image, self.raised, self.checked) = (None, None, (0, 0, (0, 0)));
+            } else {
+                self.checked = (opened.0.epoch, 0, (0, 0));
+            }
+            self.target = Some(opened);
         }
         let epoch = self.target.as_ref().map_or(0, |(gpu, _)| gpu.epoch);
         let check = (epoch, store::generation(), self.size);

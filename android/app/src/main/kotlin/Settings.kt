@@ -101,6 +101,9 @@ fun Settings(main: Main) {
                 stringResource(R.string.power, yes("charging"), yes("saver"), report.optInt("thermal")),
                 stringResource(R.string.scene_level, report.optString("tier"), report.optString("quality"))
                     .takeIf { report.optString("tier").isNotEmpty() },
+                stringResource(if (report.optBoolean("measured")) R.string.tier_measured else R.string.tier_detected)
+                    .takeIf { report.optString("tier").isNotEmpty() },
+                levelReason(report.optString("reason"))?.let { stringResource(R.string.level_reason, stringResource(it)) },
                 stringResource(R.string.particles_cpu).takeIf { report.optString("particles") == "cpu" },
                 stringResource(R.string.scripts_stopped).takeIf { report.optString("scripts") == "off" },
                 stringResource(R.string.script_stopped).takeIf { report.optString("scripts") == "stopped" },

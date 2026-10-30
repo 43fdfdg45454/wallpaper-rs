@@ -25,11 +25,15 @@ state.frame = {
     touches: [],
     sounds: [],
 };
-Object.assign(state, { buffers: {}, once: false, fresh: false, loading: "", started: false, out: null });
+Object.assign(state, { buffers: {}, fresh: false, loading: "", started: false, out: null });
 
 export const records = new Map();
 export const timers = new Map();
 export const [pending, stopped] = [[], []];
+export const SECTIONS = ["values", "layers", "timelines", "particles", "sounds", "effects", "spawned", "order", "watch", "wake", "busy", "console", "stopped"];
+export const [dirty, touched] = [new Set(SECTIONS), new Set()];
+const equal = (a, b) => Object.is(a, b) || (Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => Object.is(x, b[i])));
+export const put = (target, key, value) => !equal(target[key], value) && ((target[key] = value), true);
 const first = new Set(setup.first ?? []);
 let [current, second, lines] = [null, -1, 0];
 
@@ -87,5 +91,6 @@ export function stop(mod, why) {
     if (mod.stopped) return;
     mod.stopped = true;
     stopped.push(plain(`${mod.path}: ${why}`));
+    dirty.add("stopped");
     for (const [id, t] of timers) if (t.owner === mod) timers.delete(id);
 }

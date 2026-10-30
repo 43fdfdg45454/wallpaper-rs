@@ -3,6 +3,7 @@ use crate::eval::{Frame, walk};
 use crate::input::{AudioFrame, PointerState, ScriptOutputs, TimelineCommand};
 use crate::particles::{Flock, Swarm, System, flocks, plan};
 use crate::resolve::Context;
+use crate::spare::Spare;
 use crate::timeline::Playhead;
 use crate::uses::{self, Uses};
 use crate::{Affine, Layer, Quality, Scene, Timeline, Values, Wake};
@@ -415,10 +416,15 @@ impl Runtime {
     }
 
     pub fn frame(&self, view: [f32; 4], quality: Quality) -> Frame<'_> {
+        self.frame_in(Spare::default(), view, quality)
+    }
+
+    pub fn frame_in(&self, spare: Spare, view: [f32; 4], quality: Quality) -> Frame<'_> {
         let cx = Context { view, ..self.context() };
         let canvas = self.scene.canvas.size.map(|v| v as f32);
-        let (draws, effects) =
-            (Vec::with_capacity(self.sizes.get().0), Vec::with_capacity(self.sizes.get().1));
+        let (mut draws, mut effects) = spare.lists();
+        draws.reserve(self.sizes.get().0);
+        effects.reserve(self.sizes.get().1);
         let background = self.scene.canvas.background;
         let (time, wake) = (self.t as f32, Wake::Idle);
         let mut frame = Frame { draws, effects, time, view, background, quality, wake };

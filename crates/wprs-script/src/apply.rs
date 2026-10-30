@@ -1,5 +1,5 @@
 use crate::wire::Cursor;
-use rquickjs::{Array, Ctx, Object, Result, TypedArray};
+use rquickjs::{Array, Ctx, Function, Object, Result, TypedArray};
 use wprs_scene::BANDS;
 
 const MODES: [&str; 5] = ["wallpaper", "lockscreen", "screensaver", "editor", "preview"];
@@ -151,5 +151,8 @@ pub(crate) fn apply<'js>(ctx: &Ctx<'js>, state: &Object<'js>, bytes: &[u8]) -> R
         sounds.set(i, c.str()?)?;
     }
     frame.set("sounds", sounds)?;
+    if c.flag()? {
+        state.get::<_, Function>("forget")?.call::<_, ()>(())?;
+    }
     Ok(zone)
 }

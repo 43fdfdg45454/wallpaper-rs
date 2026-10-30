@@ -313,3 +313,19 @@ fn declared_inputs_limit_what_a_scene_receives() {
     let loud = AudioFrame { bass: 1.0, silent: false, ..AudioFrame::default() };
     assert!(!rt.set_audio(loud), "an input the package did not declare never wakes it");
 }
+
+#[test]
+fn a_spare_frame_hands_its_lists_to_the_next_one() {
+    let shown = json!([{ "id": "a", "type": "solid", "color": "#ff0000", "size": [10, 10],
+        "effects": [{ "effect": "blur", "params": { "radius": 2 } }],
+        "transform": { "position": { "keys": [[0, [10, 10]], [2, [90, 40]]] } } }]);
+    let mut rt = runtime(&scene(shown));
+    let first = rt.frame(VIEW, Quality::Q3);
+    let lists = (first.draws.as_ptr() as usize, first.effects.as_ptr() as usize);
+    let spare = first.spare();
+    rt.advance(0.5);
+    let again = rt.frame_in(spare, VIEW, Quality::Q3);
+    assert_eq!((again.draws.as_ptr() as usize, again.effects.as_ptr() as usize), lists);
+    assert_eq!(again, rt.frame(VIEW, Quality::Q3));
+    assert_eq!((again.draws.len(), again.effects.len()), (1, 1));
+}

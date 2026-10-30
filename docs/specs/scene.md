@@ -92,7 +92,8 @@ draws from that one texture. Once a picture is on the GPU its decoded copy leave
 engine reads it again from the package only when no screen holds the texture any more. Every
 shader and pipeline a scene needs is built when the scene loads, never during a frame, and a frame
 hands the textures of a finished layer to the next layer that needs one of the same size, so a
-steady frame creates nothing and makes no allocations of its own.
+steady frame creates nothing and makes no allocations of its own. Evaluating a frame allocates
+nothing either: `Runtime::frame_in` takes the lists of the previous frame back (`Frame::spare`).
 
 Fonts may also be TrueType or OpenType collections (`.ttc`, `.otc`) and compressed `.woff2` files
 (`fonts2`). Videos may be used as masks, effect textures and the picture of a spot light
@@ -134,6 +135,31 @@ or 40 units for the tiers of software rendering or GPUs without compute shaders,
 and phone GPUs (Intel HD and UHD, AMD Vega and other older APUs, Mali-G up to G710, Adreno 5xx and
 6xx, or less than 4 GiB of memory), newer integrated GPUs and discrete GPUs. A scene over budget at the lowest
 level stays at `poster_time`.
+
+The tier starts from the model of the graphics card, as above. The first time a program renders
+scenes with a graphics card and driver, it times a short render: frames of 16 passes over a
+1920×1080 target, each reading a texture of that size, for about 300 ms, and the time of a unit is
+taken from the fastest quarter of the frames. A unit of at most 0.2 ms gives the tier of discrete
+GPUs, 0.5 ms that of newer integrated GPUs, 2 ms that of older integrated and phone GPUs, and slower
+ones the lowest tier; the measure raises the tier of the model by one step at most, lowers it as far
+as it shows, and less than 4 GiB of memory or textures smaller than 8192 pixels still cap it.
+Software rendering and GPUs without compute shaders keep the lowest tier without a measure. The
+result is kept in `gpu-tier.json` in the state folder (`$XDG_STATE_HOME/wallpaper-rs/`, shared by
+the daemon and `wprs-ctl scene bench`) or in the files of the phone, with the name, ids and backend
+of the adapter and the version of its driver, and it is measured again when any of them changes.
+`GetState().tier` (`"t0"` to `"t3"`) and `tier_measured` tell the result, and the phone lists it
+among its diagnostics.
+
+While a scene plays, the GPU time of its frames (measured as described below) moves the quality
+level: when their average (an exponential average over the measured frames, started again after
+more than a second without one) stays above the GPU budget for 2 seconds, the level goes one step
+down; when it stays under half of the budget for 15 seconds, one step back up, never above the
+level that the tier, the cost, the power source and the temperature allow, and never on battery,
+with power saving or while the GPU or CPU is warm (on phones, only while charging and cool). The
+budget is half of the frame interval on mains power and a quarter on battery, with power saving and
+on phones. Two changes are at least 5 seconds apart. `GetState().outputs[x].quality` and
+`quality_reason` tell the level and why it is below the highest; the app, the tray and the phone
+show both, translated.
 
 Every view of a scene also holds a hard budget, whatever the quality level: each effect use, built
 in or packaged, does its units (at the highest level, four times for an effect with a `state`, which
@@ -1232,7 +1258,11 @@ screens show the scene with the same settings, and on phones one thread: it has 
 256 KiB stack, 100 ms to load and to run the first frame, and 4 ms of CPU per frame for all the
 modules together. Results reach the next frame, so a slow script never holds up rendering, and what
 a frame sends to the scripts is written in place: numbers and the 64 bands of each channel go as
-they are, the user settings only when they change. Modules that declare something (see "Script
+they are, the user settings only when they change. What the scripts send back is not compared as
+text: each layer field, effect setting, particle or sound control a script writes is compared with
+the value it holds, and only the parts that changed (single layers, or the values the modules
+returned, compared in depth) go back, so a frame in which nothing changed sends nothing; after a
+frame that failed everything is sent again. Modules that declare something (see "Script
 declarations") get that frame object itself; a module that declares nothing gets a new copy of it
 on every call, with plain arrays for the bands, as engines always gave it.
 

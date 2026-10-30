@@ -1358,6 +1358,42 @@ msgstr "sus texturas ocuparían demasiada memoria"
 msgid "The effect %1 was left out: %2"
 msgstr "Se omitió el efecto %1: %2"
 
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "the most this graphics card allows"
+msgstr "lo máximo que permite esta tarjeta gráfica"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "lowered because the scene is heavy for this graphics card"
+msgstr "rebajada porque la escena pesa demasiado para esta tarjeta gráfica"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "lowered on battery"
+msgstr "rebajada con batería"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "lowered while saving power"
+msgstr "rebajada mientras se ahorra energía"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "lowered while the computer is hot"
+msgstr "rebajada mientras el equipo está caliente"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "lowered because its frames took too long on the graphics card"
+msgstr "rebajada porque sus fotogramas tardaban demasiado en la tarjeta gráfica"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "Quality %1 of 3"
+msgstr "Calidad %1 de 3"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "graphics card class %1 of 3, measured"
+msgstr "tarjeta gráfica de clase %1 de 3, medida"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "graphics card class %1 of 3, from its model"
+msgstr "tarjeta gráfica de clase %1 de 3, según su modelo"
+
 #: apps/wprs-app/qml/LibraryPage.qml apps/wprs-app/qml/Main.qml
 msgid "Library"
 msgstr "Biblioteca"

@@ -29,6 +29,7 @@ mod flash;
 mod form;
 mod fx;
 mod gltf;
+mod governor;
 mod guard;
 mod helper;
 mod hitbox;
@@ -46,6 +47,7 @@ mod links;
 mod look;
 mod loops;
 mod measure;
+mod measured;
 mod media;
 mod memory;
 mod mpeg;
@@ -53,6 +55,7 @@ mod oklab;
 mod outside;
 mod package;
 mod particles;
+mod patch;
 mod played;
 mod pointing;
 mod poses;
@@ -75,6 +78,7 @@ mod sheet;
 mod signal;
 mod sites;
 mod sound;
+mod spare;
 mod spawn;
 mod spend;
 mod spill;
@@ -135,6 +139,7 @@ pub use gltf::{
     EXTENSIONS, MAX_BONES, MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODEL_JSON, MAX_MODEL_PARTS,
     MAX_MODELS_JSON, MAX_MORPHS, MAX_NODES, MAX_TRIANGLES, ModelFile,
 };
+pub use governor::{Governor, Why};
 pub use guard::guarded;
 pub use helper::{
     CHECK_CPU, CHECK_MEMORY, CHECK_SHADER, launch_checks_from_here, serve_check, serve_check_with,
@@ -150,6 +155,7 @@ pub use light::{Beam, Light, Lighting, MAX_LIGHTS, Volumetric};
 pub use look::{Bloom, Camera, Glare, Glide, Playback, Shake, Tonemap};
 pub use loops::{MAX_INLINED, MAX_LOOP, MAX_OPS, MAX_SHADER_NODES, MAX_WORK};
 pub use measure::MAX_BUILD;
+pub use measured::{Calibration, calibrate};
 pub use media::{Cover, MEDIA_TRIGGERS, Media, Reading};
 pub use memory::MAX_MEMORY;
 pub use outside::{CHECK_WALL, Checker, UNCHECKED, check_out_of_process, checker, helper_runs, set_checker};
@@ -191,6 +197,7 @@ pub use shape::{MAX_ARGUMENTS, MAX_BRACKETS, MAX_OPERANDS};
 pub use signal::{CLOCKS, Gain, HEARD, Hearing, Reduce, SPLITS, Smooth, center, ease, edge, levels};
 pub use sites::{Site, script_inputs, script_key, sites};
 pub use sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice};
+pub use spare::Spare;
 pub use spend::{MAX_STATEFUL, Spend, over};
 pub use strikes::{STOPPED, end_trials, forgive_strikes, keep_strikes, strike, struck, tried, trying};
 pub use tier::{Gpu, Tier};
@@ -340,7 +347,10 @@ impl Scene {
     }
 
     pub fn layer(&self, id: &str) -> Option<&Layer> {
-        self.layers().find(|l| l.id == id)
+        fn find<'a>(layers: &'a [Layer], id: &str) -> Option<&'a Layer> {
+            layers.iter().find_map(|l| if l.id == id { Some(l) } else { find(l.children(), id) })
+        }
+        find(&self.layers, id)
     }
 
     pub fn paths(&self) -> BTreeSet<&str> {

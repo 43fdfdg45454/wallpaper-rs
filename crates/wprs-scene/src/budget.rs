@@ -45,14 +45,7 @@ impl Budget {
     }
 
     pub fn quality(&self, runtime: &Runtime) -> Quality {
-        let start = self.tier.quality(self.strained());
-        let start = if self.saver { start.lower() } else { start };
-        let fitted = Quality::fitting(|q| runtime.cost(q), self.tier, start);
-        match self.heat {
-            Heat::Cool => fitted,
-            Heat::Warm => fitted.lower(),
-            Heat::Hot => Quality::Q0,
-        }
+        self.level(runtime).0
     }
 
     pub fn still(&self, runtime: &Runtime) -> bool {
