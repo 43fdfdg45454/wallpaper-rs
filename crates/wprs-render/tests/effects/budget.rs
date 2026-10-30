@@ -70,8 +70,8 @@ fn a_heavy_package_on_a_tiny_adjustment_layer_costs_the_whole_target_and_is_left
 }
 
 #[test]
-fn many_adjustment_layers_of_light_effects_stop_at_the_scene_budget() {
-    let json = json!({ "id": "lt", "cost": {}, "passes": [{ "entry": "fs_lt" }] });
+fn many_adjustment_layers_of_effects_stop_at_the_scene_budget() {
+    let json = json!({ "id": "lt", "cost": { "taps": 16 }, "passes": [{ "entry": "fs_lt" }] });
     let wgsl = "@fragment fn fs_lt(in: VertexOut) -> @location(0) vec4<f32> { return tap(in.uv); }";
     let Some(mut run) = packaged(&json, wgsl, adjustments(250, 16, "lt")) else { return };
     drawn_fast(&mut run);
