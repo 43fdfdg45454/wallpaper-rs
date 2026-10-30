@@ -415,6 +415,20 @@ jobs:
           emulator-boot-timeout: 900
           script: android/gradlew -p android connectedDebugAndroidTest -Pabis=x86_64
 
+      - name: Failing instrumentation tests
+        if: failure()
+        run: scripts/android-failures.sh
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        if: failure()
+        with:
+          name: android-tests-report
+          path: |
+            android/app/build/reports/androidTests
+            android/app/build/outputs/androidTest-results
+          if-no-files-found: ignore
+          retention-days: 7
+
   rpm:
     name: Fedora package
     needs: [version, package]
