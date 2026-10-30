@@ -1,5 +1,5 @@
 use crate::bus::client;
-use crate::callers::{Caller, caller};
+use crate::callers::caller;
 use crate::daemon::Daemon;
 use crate::error::{Result, failed};
 use crate::items::reply;
@@ -106,7 +106,7 @@ impl Service {
         if !dir.is_absolute() {
             return Err(InvalidArgs(format!("{} is not an absolute path", dir.display())).into());
         }
-        let trusted = matches!(caller(bus, &header).await, Caller::Ctl | Caller::Ours);
+        let trusted = caller(bus, &header).await.trusted();
         self.d()?.run(move |d| d.preview_scene(&output, &dir, (&document, trusted), time)).await
     }
 

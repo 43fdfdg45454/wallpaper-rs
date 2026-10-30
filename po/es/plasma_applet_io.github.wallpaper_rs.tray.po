@@ -217,6 +217,11 @@ msgstr "Sus partículas se mueven en el procesador, así que se muestran menos"
 
 #: integrations/plasma-tray/contents/ui/ScreenRow.qml
 #, kde-format
+msgid "Let clicks and taps on this screen reach its wallpaper"
+msgstr "Dejar que los clics y toques de esta pantalla lleguen a su fondo"
+
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
 msgid "Flashes or shows fast patterns; you allowed it"
 msgstr "Destella o muestra patrones rápidos; lo has permitido"
 

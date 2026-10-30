@@ -189,6 +189,7 @@ impl State {
             && let Some(scene) = o.shown.scene.as_mut()
         {
             o.dirty |= scene.update(new.clone());
+            scene.link(&mut self.scripts);
             super::feed::declare(&name, Some(scene));
             o.shown.content = spec.content;
             return;

@@ -119,7 +119,7 @@ impl Renderer {
             backdrop: None,
         };
         if frame.draws.iter().any(|d| !d.layer.solid.is_off()) {
-            v.hitboxes = painter.hitboxes(&v.sources, &mut v.covers);
+            painter.hitboxes(&v.sources, &mut v.covers, &mut v.hitboxes);
         } else if !v.hitboxes.0.is_empty() {
             v.hitboxes = Default::default();
         }

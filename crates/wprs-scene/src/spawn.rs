@@ -1,5 +1,5 @@
 use crate::scripted::{Extent, LayerRead};
-use crate::{Kind, Layer, LayerOverride, ParamKind, Runtime, ScriptOutputs};
+use crate::{Kind, Layer, LayerOverride, MAX_LAYERS, MAX_SPAWNED, ParamKind, Runtime, ScriptOutputs};
 use std::collections::HashMap;
 
 const SCRIPTED: [ParamKind; 8] = [
@@ -12,6 +12,10 @@ const SCRIPTED: [ParamKind; 8] = [
     ParamKind::Bool,
     ParamKind::Blend,
 ];
+
+fn flat(layer: &Layer) -> usize {
+    1 + layer.children().iter().map(flat).sum::<usize>()
+}
 
 fn renamed(layer: &mut Layer, id: &str) {
     layer.id = id.to_owned();
@@ -27,7 +31,12 @@ impl Runtime {
     pub(crate) fn adopt(&mut self, mut outputs: ScriptOutputs) -> bool {
         let mut kept: HashMap<String, (String, Box<Layer>)> =
             std::mem::take(&mut self.spawned).into_iter().map(|(t, l)| (l.id.clone(), (t, l))).collect();
+        let mut room = (MAX_LAYERS + MAX_SPAWNED).saturating_sub(self.scene.layers().count());
         for (id, template) in &outputs.spawned {
+            let Some(size) = self.scene.templates.get(template).map(flat).filter(|n| *n <= room) else {
+                continue;
+            };
+            room -= size;
             let old = kept.remove(id).filter(|(t, _)| t == template);
             let made = old.or_else(|| {
                 let mut layer = Box::new(self.scene.templates.get(template)?.clone());
@@ -35,6 +44,10 @@ impl Runtime {
                 Some((template.clone(), layer))
             });
             self.spawned.extend(made);
+        }
+        outputs.spawned.retain(|(id, _)| self.spawned.iter().any(|(_, l)| l.id == *id));
+        if outputs.spawned != self.script.spawned {
+            self.costs.set((0, [None; 4]));
         }
         for (id, list) in outputs.effects.iter_mut() {
             let Some(layer) = self.layer(id) else {
@@ -60,6 +73,23 @@ impl Runtime {
 
     pub fn script_watch(&self) -> &[String] {
         &self.script.watch
+    }
+
+    pub fn fill_reads(&self, out: &mut Vec<(String, LayerRead)>) {
+        let mut n = 0;
+        for (id, read) in self.script.watch.iter().filter_map(|id| Some((id, self.read(id)?))) {
+            match out.get_mut(n) {
+                Some(slot) => {
+                    if slot.0 != *id {
+                        slot.0.clone_from(id);
+                    }
+                    slot.1 = read;
+                }
+                None => out.push((id.clone(), read)),
+            }
+            n += 1;
+        }
+        out.truncate(n);
     }
 
     pub fn script_busy(&self) -> bool {

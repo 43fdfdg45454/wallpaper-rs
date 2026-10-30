@@ -42,12 +42,14 @@ pub(super) fn scripted() {
     let mut clock = 0;
     let mut until = |stage: &mut Stage, done: &dyn Fn(&Stage) -> bool| {
         let end = std::time::Instant::now() + std::time::Duration::from_secs(5);
-        while !done(stage) && std::time::Instant::now() < end {
+        loop {
             clock += 50_000_000;
             stage.render(r, ((64, 32), clock, 60), (power, wprs_scene::Tier::T3), &[], true).unwrap();
+            if done(stage) || std::time::Instant::now() >= end {
+                return done(stage);
+            }
             std::thread::sleep(std::time::Duration::from_millis(5));
         }
-        done(stage)
     };
     let note = |stage: &Stage| stage.runtime().read("note").and_then(|n| n.text).unwrap_or_default();
     let lit = |stage: &Stage| stage.runtime().read("lamp").map_or(0.0, |l| l.opacity);
@@ -62,6 +64,11 @@ pub(super) fn scripted() {
     assert!(stage.touch([0.5, 0.75], true) && stage.touch([0.5, 0.75], false));
     assert!(until(&mut stage, &|s| note(s) == "taps 1"), "the tap did not reach the script");
     assert!(until(&mut stage, &|s| lit(s) > 0.9), "the tap did not start the click: timeline");
+    assert!(stage.touch([0.5, 0.75], true) && until(&mut stage, &|_| true));
+    assert!(stage.touch([0.25, 0.5], true) && until(&mut stage, &|_| true));
+    assert_eq!(stage.runtime().pointer().pos, None, "taps alone let the scene follow the finger");
+    assert!(stage.touch([0.25, 0.5], false));
+    assert!(until(&mut stage, &|s| note(s) == "taps 2"), "a tap held over two frames did not click");
     assert_eq!(crate::acting::scripts(), "");
     let looping = built("loop", "export function update() { for (;;) {} }\n");
     let path = library::with(|lib| Ok(lib.item(&looping)?.path)).unwrap();

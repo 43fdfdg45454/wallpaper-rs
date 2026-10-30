@@ -52,7 +52,7 @@ impl Inputs {
         let (d, hub) = self.parts()?;
         let (input, scene) = (parse(input)?, scene_id(scene)?.to_owned());
         let (key, title) = lock(&hub.control).package(&scene, key)?;
-        if !matches!(caller(call.0, call.1).await, Caller::Ctl | Caller::Ours) {
+        if !caller(call.0, call.1).await.trusted() {
             if lock(&hub.control).has(&scene, &key, input) {
                 return Ok(());
             }
@@ -149,7 +149,7 @@ impl Inputs {
         #[zbus(connection)] bus: &zbus::Connection,
     ) -> Result<()> {
         let (d, _) = self.parts()?;
-        if on && !matches!(caller(bus, &header).await, Caller::Ctl | Caller::Ours) {
+        if on && !caller(bus, &header).await.trusted() {
             return Err(denied("only the app, the tray and wprs-ctl let clicks reach a wallpaper"));
         }
         let set = move |c: &mut wprs_core::Config| {
@@ -168,13 +168,17 @@ impl Inputs {
         #[zbus(header)] header: Header<'_>,
         #[zbus(connection)] bus: &zbus::Connection,
     ) -> Result<()> {
-        if caller(bus, &header).await != Caller::Ours || crate::flatpak::app_id().is_some() {
+        if caller(bus, &header).await != Caller::Shell || crate::flatpak::app_id().is_some() {
             return Err(denied("only the Plasma wallpaper of wprsd reports clicks"));
         }
-        if !lock(&self.parts()?.1.control).wants(Input::Clicks).contains(&output) {
+        let hub = self.parts()?.1;
+        if !lock(&hub.control).wants(Input::Clicks).contains(&output) {
             return Err(denied(format!("{output} does not take clicks now")));
         }
         let inside = [x, y].iter().all(|v| (0.0..=1.0).contains(v));
+        if inside && hub.away(&output) {
+            return Err(denied(format!("the pointer is not on {output}")));
+        }
         let pos = inside.then_some([x as f32, y as f32]);
         crate::inputs::surface_pointer(&output, pos, buttons.min(255) as u8);
         Ok(())

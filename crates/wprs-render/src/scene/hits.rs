@@ -26,9 +26,10 @@ impl Painter<'_, '_, '_> {
         i: usize,
         (layer, solid, frame): Named,
         (sources, covers): (&Sources, &mut Covers),
-    ) -> Option<Hitbox> {
+        (out, n): (&mut Vec<Hitbox>, &mut usize),
+    ) {
         let d = &self.frame.draws[i];
-        let (size, _) = self.geometry(i).filter(|_| !d.hidden)?;
+        let Some((size, _)) = self.geometry(i).filter(|_| !d.hidden) else { return };
         let place = d.world.then(Affine::translate([-d.origin[0] * size[0], -d.origin[1] * size[1]]));
         let to_box = Affine::scale([1.0 / size[0].max(1e-3), 1.0 / size[1].max(1e-3)]).then(place.inverse());
         let threshold = match solid {
@@ -46,20 +47,29 @@ impl Painter<'_, '_, '_> {
         let made = |a: &str| sources.get(a).and_then(|p| coverage(p));
         let asset = asset.filter(|_| threshold.is_some());
         let coverage = asset.and_then(|a| covers.entry(a.to_owned()).or_insert_with(|| made(a)).clone());
-        Some(Hitbox {
-            layer: layer.to_owned(),
+        let made = Hitbox {
+            layer: String::new(),
             to_box,
             to_local: frame.unwrap_or(place).inverse(),
             cell: self.cell(i).0,
             alpha: d.opacity * d.tint.0[3] * shade,
             threshold,
             coverage,
-        })
+        };
+        match out.get_mut(*n) {
+            Some(slot) => {
+                let mut name = std::mem::take(&mut slot.layer);
+                name.clear();
+                name.push_str(layer);
+                *slot = Hitbox { layer: name, ..made };
+            }
+            None => out.push(Hitbox { layer: layer.to_owned(), ..made }),
+        }
+        *n += 1;
     }
 
-    pub(crate) fn hitboxes(&self, sources: &Sources, covers: &mut Covers) -> Hitboxes {
-        let draws = &self.frame.draws;
-        let mut boxes = Vec::new();
+    pub(crate) fn hitboxes(&self, sources: &Sources, covers: &mut Covers, boxes: &mut Hitboxes) {
+        let (draws, mut n) = (&self.frame.draws, 0);
         for (i, d) in draws.iter().enumerate().filter(|(_, d)| !d.layer.solid.is_off() && !d.hidden) {
             let (id, solid) = (d.layer.id.as_str(), d.layer.solid);
             match d.content {
@@ -67,13 +77,13 @@ impl Painter<'_, '_, '_> {
                     let inner =
                         (i + 1..d.end).filter(|j| !matches!(draws[*j].content, Content::Group { .. }));
                     for j in inner {
-                        boxes.extend(self.hitbox(j, (id, solid, Some(d.world)), (sources, covers)));
+                        self.hitbox(j, (id, solid, Some(d.world)), (sources, covers), (&mut boxes.0, &mut n));
                     }
                 }
-                _ => boxes.extend(self.hitbox(i, (id, solid, None), (sources, covers))),
+                _ => self.hitbox(i, (id, solid, None), (sources, covers), (&mut boxes.0, &mut n)),
             }
         }
-        Hitboxes(boxes)
+        boxes.0.truncate(n);
     }
 }
 

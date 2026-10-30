@@ -23,6 +23,7 @@ import org.junit.runner.RunWith
 class SceneTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val frames = AtomicInteger()
+    private val lamp = AtomicInteger()
     private val thread = HandlerThread("scene").apply { start() }
     private val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
     private val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
@@ -33,7 +34,11 @@ class SceneTest {
         storage()
         examples(context)
         reader.setOnImageAvailableListener({ source ->
-            source.acquireLatestImage()?.close()
+            source.acquireLatestImage()?.use { image ->
+                val plane = image.planes[0]
+                val at = SIDE / 2 * plane.rowStride + SIDE * 3 / 4 * plane.pixelStride
+                lamp.set((plane.buffer.get(at).toInt() and 0xff shl 8) or (plane.buffer.get(at + 1).toInt() and 0xff))
+            }
             frames.incrementAndGet()
         }, Handler(thread.looper))
     }
@@ -224,13 +229,22 @@ class SceneTest {
         assertTrue(form.getJSONObject("uses").getBoolean("taps") && !form.getJSONObject("granted").getBoolean("taps"))
         ask("grant", "uid" to uid, "input" to "taps", "on" to true)
         Render.call { painter.refresh() }
-        val before = settled(frames)
-        Render.call {
-            painter.touch(SIDE / 4f, SIDE / 2f, true)
-            painter.touch(SIDE / 4f, SIDE / 2f, false)
-        }
-        assertTrue(quiet(frames) > before)
+        settled(frames)
+        val red = { lamp.get() shr 8 }
+        val green = { lamp.get() and 0xff }
+        tap(SIDE * 3 / 4f)
+        quiet(frames)
+        assertTrue("a tap beside the button lit the lamp: ${lamp.get()}", red() < 64)
+        tap(SIDE / 4f)
+        assertTrue("the tap did not reach the script and the timeline: ${lamp.get()}", waitFor { red() > 192 && green() < 64 })
         assertEquals("", JSONObject(Native.diagnostics()).optString("scripts"))
+    }
+
+    private fun tap(x: Float) {
+        val before = frames.get()
+        Render.call { painter.touch(x, SIDE / 2f, true) }
+        assertTrue(waitFor { frames.get() > before })
+        Render.call { painter.touch(x, SIDE / 2f, false) }
     }
 
     private fun find(title: String): String {

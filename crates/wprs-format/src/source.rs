@@ -81,6 +81,9 @@ pub(crate) fn facts_of(
     let mut scene = scene.transpose().map_err(invalid)?;
     if let Some(scene) = scene.as_mut() {
         scripts(scene, &files)?;
+        if let Some((i, reason)) = scene.undeclared(|path| fs::read_to_string(source.join(path)).ok()) {
+            return Err(Error::Invalid { field: format!("/scripts/{i}"), reason });
+        }
         sounds(scene, &files, |path, edge| match edge {
             Some(edge) => ends(&source.join(path), edge),
             None => Ok((fs::read(source.join(path))?, Vec::new())),

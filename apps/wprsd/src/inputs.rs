@@ -62,6 +62,7 @@ pub(crate) struct Hub {
     audio: Mutex<Audio>,
     pointers: Mutex<BTreeMap<String, PointerState>>,
     presses: Mutex<BTreeMap<String, Vec<Press>>>,
+    reported: Mutex<BTreeMap<String, bool>>,
     moved: Notify,
     poke: Notify,
     wake: Wake,

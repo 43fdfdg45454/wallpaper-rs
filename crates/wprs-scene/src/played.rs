@@ -65,8 +65,26 @@ impl Runtime {
     }
 
     pub fn sounds_playing(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        self.fill_sounds(&mut out);
+        out
+    }
+
+    pub fn fill_sounds(&self, out: &mut Vec<String>) {
         let heard = self.played.heard.borrow();
-        let ids = self.sound_ids().into_iter().zip(heard.iter());
-        ids.filter(|(_, on)| **on).map(|(id, _)| id.to_owned()).collect()
+        if !heard.iter().any(|on| *on) {
+            return out.clear();
+        }
+        let ids = self.sound_ids().into_iter().zip(heard.iter()).filter(|(_, on)| **on);
+        let mut n = 0;
+        for (id, _) in ids {
+            match out.get_mut(n) {
+                Some(kept) if kept == id => {}
+                Some(kept) => id.clone_into(kept),
+                None => out.push(id.to_owned()),
+            }
+            n += 1;
+        }
+        out.truncate(n);
     }
 }

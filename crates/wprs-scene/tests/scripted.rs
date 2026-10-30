@@ -53,8 +53,28 @@ fn templates_become_layers_in_the_order_scripts_give() {
     }));
     let many = (0..300).map(|i| (format!("b{i}"), "bar".to_string())).collect();
     rt.set_script(ScriptOutputs { spawned: many, ..ScriptOutputs::default() });
-    assert_eq!(rt.spawned().count(), MAX_SPAWNED);
-    assert!(rt.layer("b255.fill").is_some() && rt.layer("b256").is_none());
+    assert_eq!(rt.spawned().count(), (MAX_LAYERS + MAX_SPAWNED - 2) / 2);
+    assert!(rt.layer("b254.fill").is_some() && rt.layer("b255").is_none());
+}
+
+#[test]
+fn big_templates_are_refused_and_copies_stop_at_the_layer_limit() {
+    let children = |n: usize| -> Vec<serde_json::Value> {
+        (0..n).map(|i| json!({ "id": format!("c{i}"), "type": "solid", "color": "#ffffff" })).collect()
+    };
+    let doc = |n: usize| {
+        json!({ "schema": SCHEMA, "canvas": { "size": [10, 10] },
+            "templates": { "big": { "id": "big", "type": "group", "layers": children(n) } } })
+        .to_string()
+    };
+    let error = Scene::load(&doc(2000), &Default::default()).unwrap_err().to_string();
+    assert!(error.contains("/templates/big/layers"), "{error}");
+    let scene = Scene::load(&doc(199), &Default::default()).unwrap();
+    let mut rt = Runtime::new(Arc::new(scene), Values::new());
+    let many = (0..256).map(|i| (format!("b{i}"), "big".to_string())).collect();
+    rt.set_script(ScriptOutputs { spawned: many, ..ScriptOutputs::default() });
+    assert_eq!(rt.spawned().count(), 2);
+    assert_eq!(rt.spawned().map(|l| l.children().len() + 1).sum::<usize>(), 400);
 }
 
 #[test]
@@ -122,6 +142,8 @@ fn scripts_declare_their_inputs_by_what_they_import() {
     "#;
     assert_eq!(imported(source), [ScriptApi::Timers, ScriptApi::Particles, ScriptApi::Math]);
     assert_eq!(imported("import * as w from 'wprs'"), [ScriptApi::Audio, ScriptApi::Pointer]);
+    assert_eq!(imported("import { f } from './lib.js'"), [ScriptApi::Shared]);
+    assert_eq!(imported("import './lib.js'; import('./x.js');"), [ScriptApi::Shared]);
     assert_eq!(
         imported("import { audio as a, input } from \"wprs\""),
         [ScriptApi::Audio, ScriptApi::Pointer]
@@ -186,4 +208,75 @@ fn templates_only_copy_what_scripts_can_draw() {
     let shape =
         json!({ "id": "t", "type": "shape", "shape": { "rect": { "size": [2, 2] } }, "fill": "#ffffff" });
     assert!(Scene::load(&text(shape), &Default::default()).is_ok());
+}
+
+#[test]
+fn modules_that_declare_nothing_are_held_to_the_first_interface() {
+    let first = r#"import { scene, audio as a } from "wprs";
+        // import { shared } from "wprs"; setTimeout(f);
+        const text = "console.log";
+        export function update(f) { return f.console + other.setTimeout; }
+        export const helper = 1;"#;
+    assert!(beyond_first(first).is_empty(), "{:?}", beyond_first(first));
+    let newer = r#"import { shared, console as c } from "wprs";
+        import { Vec2 } from "wprs/math";
+        import "./lib.js";
+        export { x } from "./x.js";
+        export async function init() { setTimeout(() => {}, 1); }
+        const resize = 1;
+        export { resize as settings };"#;
+    assert_eq!(
+        beyond_first(newer),
+        [
+            "console",
+            "imports of ./x.js",
+            "imports of other modules",
+            "imports of wprs/math",
+            "its init export",
+            "its settings export",
+            "setTimeout",
+            "shared"
+        ]
+    );
+    let scene = Scene::from_json(
+        &json!({ "schema": SCHEMA, "canvas": { "size": [10, 10] },
+            "scripts": [{ "path": "a.js" }, { "path": "b.js", "uses": ["timers"] }, { "path": "c.js" }],
+            "layers": [{ "id": "l", "type": "solid", "color": "#ffffff", "opacity": { "script": "c.js", "fn": "f" } }] })
+        .to_string(),
+    )
+    .unwrap();
+    assert_eq!(scene.first_interface(), ["a.js"]);
+    let read =
+        |text: &'static str| move |path: &str| Some(if path == "a.js" { text } else { newer }.to_owned());
+    assert_eq!(scene.undeclared(read(first)), None);
+    let (at, message) = scene.undeclared(read("import { shared } from 'wprs';")).unwrap();
+    assert_eq!(
+        (at, message.as_str()),
+        (0, "a.js declares nothing in scene.json but uses shared; declare its events and uses")
+    );
+}
+
+#[test]
+fn copies_of_templates_count_in_the_cost_of_the_scene() {
+    let template =
+        json!({ "id": "glow", "type": "solid", "color": "#ffffff", "effects": [{ "effect": "blur" }] });
+    let mut rt = runtime(json!({ "templates": { "glow": template } }));
+    let alone = rt.cost(Quality::Q3);
+    let many = (0..10).map(|i| (format!("g{i}"), "glow".to_string())).collect();
+    rt.set_script(ScriptOutputs { spawned: many, ..ScriptOutputs::default() });
+    assert!(rt.cost(Quality::Q3) > alone + 9.0, "{} {alone}", rt.cost(Quality::Q3));
+    rt.set_script(ScriptOutputs::default());
+    assert_eq!(rt.cost(Quality::Q3), alone);
+}
+
+#[test]
+fn console_lines_reach_clients_as_plain_text() {
+    let rt = runtime(json!({}));
+    let console = vec!["log a.js: <b>x</b>\n<img src=\"h\">\u{1b}[31m".to_string(), "x".repeat(600)];
+    let stopped = vec!["a.js: Error\r\nmore".to_string()];
+    let out = ScriptOutputs { console, stopped, ..ScriptOutputs::default() }.bounded(&rt.scene);
+    assert_eq!(out.console[0], "log a.js: <b>x</b> <img src=\"h\"> [31m");
+    assert_eq!((out.console[1].len(), out.stopped[0].as_str()), (MAX_LINE, "a.js: Error  more"));
+    assert_eq!(plain_line("a\nb\u{7}c"), "a b c");
+    assert_eq!(plain_line(&"é".repeat(600)).chars().count(), MAX_LINE);
 }

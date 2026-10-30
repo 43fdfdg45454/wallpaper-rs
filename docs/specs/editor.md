@@ -53,7 +53,7 @@ undo and redo walk through, the undone ones marked.
 | `keyframe` | `pointer`, `time`, optional `value` (the current value when omitted), `ease`, `timeline`, `remove` | `keyframe DIR POINTER TIME [VALUE]` |
 | `import` | `file`, optional `id`; copies the file into `assets/` and declares the asset | `import DIR FILE` |
 | `import_effect` | `descriptor`, optional `wgsl` (the `.wgsl` file beside the descriptor when omitted); checks the effect as a package reader does, copies both files to `effects/<id>.json` and `effects/<id>.wgsl` and declares or replaces `effects.<id>` of the scene | `import-effect DIR DESCRIPTOR [--wgsl FILE]` |
-| `import_script` | `file`, a `.js` module; copies it to `scripts/<name>` and declares or replaces its entry in `scripts` with the `events` it exports or handles with `on` and the `uses` it imports or calls (`spawn` and `order`, `effect`, `console`), refusing scripts that would take the scene past 1 MiB or 64 modules; the author checks what was proposed | `import-script DIR FILE` |
+| `import_script` | `file`, a `.js` module; copies it to `scripts/<name>` and declares or replaces its entry in `scripts` with the `events` it exports or handles with `on` and the `uses` it imports or calls (`spawn` and `order`, `effect`, `console`, `shared` also for imports of other modules), never its `params`, which are written by hand, refusing scripts that would take the scene past 1 MiB or 64 modules; the author checks what was proposed | `import-script DIR FILE` |
 | `translate` | `pointer` to a text of the manifest, `language`, `text` (an empty or missing one removes that language), `add` (adds a language the text lacks, starting from the text in the default language, and leaves one it has alone) | `translate DIR POINTER LANGUAGE TEXT`, `--remove` or `--add` |
 | `thumbnail` | `file`, `animated`; copies a picture into `assets/` as `previews.thumbnail` or `previews.animated` (`preview` in a first-version manifest) | `thumbnail DIR FILE [--animated]` |
 | `upgrade` | optional `rating`, `reasons`, `photosensitive`, `derived_from`; moves a first-version manifest to `wallpaper-rs.wpak/2` | `upgrade DIR [--rating R] [--reason R] [--photosensitive B] [--derived-from A]` |
@@ -199,8 +199,9 @@ edited by hand may lack them: a missing input is an error and a missing feature 
 `build` and `apply` first record the step `sync` that fills them and save. Problems also cover the
 rules of `features::check` and its warnings (a declared `audio`, `pointer`, `clicks`, `media` or
 `network` input that nothing uses), the verdict of `wprs-ctl pack check` for each platform that
-refuses the package or plays it without a feature (a warning at `/manifest/requires/features`), and
-previews over their size, format or length. Every field that version 2 requires and is missing is a
+refuses the package or plays it without a feature (a warning at `/manifest/requires/features`), a
+script that declares nothing but uses more than the first interface (an error at its entry of
+`/scene/scripts`), and previews over their size, format or length. Every field that version 2 requires and is missing is a
 problem of its own, listed together. Locale files, effect shaders and `.glb` models are read again
 only when their size or modification time changes, so editing a value never reads them.
 

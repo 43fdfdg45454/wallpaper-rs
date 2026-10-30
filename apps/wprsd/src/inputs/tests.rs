@@ -163,6 +163,9 @@ fn only_outputs_whose_scene_declares_the_pointer_follow_it() {
     let pointers = lock(&hub.pointers).clone();
     assert_eq!(pointers.keys().collect::<Vec<_>>(), ["DP-2"]);
     assert_eq!((pointers["DP-2"].pos, pointers["DP-2"].inside), (Some([0.5, 0.25]), true));
+    assert!(!hub.away("DP-2") && !hub.away("DP-3"), "a screen without reports refused clicks");
+    hub.set_pointer(150.0, 25.0);
+    assert!(hub.away("DP-2"), "clicks were taken on a screen the pointer is not on");
 }
 
 #[test]

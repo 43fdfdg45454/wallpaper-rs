@@ -4,16 +4,19 @@ use std::time::{Duration, Instant};
 use wprs_scene::ScriptOutputs;
 
 const PATIENCE: Duration = Duration::from_millis(250);
+const SLOW: u32 = 20;
 
-type Reply = Result<Option<String>, Error>;
+type Reply = (Result<Option<String>, Error>, Vec<u8>);
 
 pub struct Local {
     frames: Sender<Vec<u8>>,
     replies: Receiver<Reply>,
     encoder: Encoder,
     waiting: Option<Instant>,
+    replied: u64,
     failures: u32,
     progress: (u64, u64),
+    first: Duration,
 }
 
 impl Local {
@@ -24,18 +27,23 @@ impl Local {
         let work = move || {
             let mut script = match Script::load(&setup, limits) {
                 Ok(script) => script,
-                Err(e) => return drop(outbox.send(Err(e))),
+                Err(e) => return drop(outbox.send((Err(e), Vec::new()))),
             };
-            while let Ok(frame) = inbox.recv() {
-                if outbox.send(script.run(&frame)).is_err() {
-                    break;
+            if outbox.send((Ok(None), Vec::new())).is_ok() {
+                while let Ok(frame) = inbox.recv() {
+                    let reply = script.run(&frame);
+                    if outbox.send((reply, frame)).is_err() {
+                        break;
+                    }
                 }
             }
             script.destroy();
         };
         let spawned = std::thread::Builder::new().name("wprs-script".into()).spawn(work);
         let failures = if spawned.is_ok() { 0 } else { MAX_FAILURES };
-        Local { frames, replies, encoder: Encoder::default(), waiting: None, failures, progress: (0, 0) }
+        let first = (limits.load * SLOW).max(PATIENCE);
+        let (encoder, waiting, progress) = (Encoder::default(), Some(Instant::now()), (0, 0));
+        Local { frames, replies, encoder, waiting, replied: 0, failures, progress, first }
     }
 
     pub fn progress(&self) -> (u64, u64) {
@@ -46,17 +54,29 @@ impl Local {
         if self.failures >= MAX_FAILURES {
             return Err(Error::Disabled);
         }
+        let patience = if self.replied < 2 { self.first } else { PATIENCE };
         let reply = match (self.waiting, self.replies.try_recv()) {
-            (_, Ok(reply)) => Some(reply),
-            (Some(at), Err(TryRecvError::Empty)) if at.elapsed() > PATIENCE => {
-                self.failures = MAX_FAILURES;
-                return Err(Error::Host("no answer within 250 ms".into()));
+            (_, Ok((reply, buf))) => {
+                self.encoder.buf = buf;
+                self.replied += 1;
+                Some(reply)
+            }
+            (Some(at), Err(TryRecvError::Empty)) if at.elapsed() > patience => {
+                (self.failures, self.waiting) = (self.failures + 1, Some(Instant::now()));
+                return Err(match self.failures >= MAX_FAILURES {
+                    true => Error::Disabled,
+                    false => Error::Host(format!("no answer within {} ms", patience.as_millis())),
+                });
             }
             (Some(_), Err(TryRecvError::Empty)) => return Ok(None),
             (_, Err(TryRecvError::Disconnected)) | (None, Err(TryRecvError::Empty)) => None,
         };
+        if let Some(Ok(_)) = reply {
+            self.failures = 0;
+        }
         self.progress = (self.progress.0 + 1, self.progress.0);
-        if self.frames.send(self.encoder.encode(frame).to_vec()).is_err() {
+        self.encoder.encode(frame);
+        if self.frames.send(std::mem::take(&mut self.encoder.buf)).is_err() {
             self.failures = MAX_FAILURES;
             return Err(match reply {
                 Some(Err(e)) => e,

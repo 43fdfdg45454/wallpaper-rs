@@ -1194,8 +1194,9 @@ locking, pausing, covering or hiding the scene or image stops it at once.
   takes clicks (`SetClicks`, off for every output by default), when the scene declares them
   (`clicks:` triggers, pointer events of scripts on `solid` layers, effects that use the buttons)
   and its package holds the `clicks` grant. They come from the compositor on layer-shell and X11
-  and from the Plasma wallpaper on Plasma (`Touch`), never from another program: there is no
-  method to send clicks. At most 16 presses wait for the next frame of each output and they are
+  and on Plasma from the wallpaper plugin through `Touch`, which only the Plasma shell may call, so
+  other programs cannot send clicks; code that runs inside the Plasma shell could, and the daemon
+  bounds it as `Touch` says. At most 16 presses wait for the next frame of each output and they are
   dropped when the output stops taking clicks. Opening what the user chose for a `shortcut`
   property only ever happens inside one of these clicks.
 
@@ -1278,10 +1279,12 @@ may turn it off. A scene still needs the `clicks` grant of its package.
 
 A press or a release on the wallpaper of `output` in Plasma, at `x`, `y` in fractions of the
 output, with the buttons held after it (bit 0 left, 1 right, 2 middle). Only the Plasma shell that
-runs the wallpaper plugin may call it (identified as for `Grant`, so never inside the Flatpak), and
-only while the output is in `clicking`; other callers get `AccessDenied`. The plugin listens to the
-pointer handlers of its own item, which take the clicks and taps the desktop leaves to the
-wallpaper.
+runs the wallpaper plugin may call it (identified as for `Grant`, so never inside the Flatpak; the app
+and `wprs-ctl` may not), only while the output is in `clicking` and, while the KWin script reports
+the pointer, only for the output the pointer is on; other callers get `AccessDenied`. The plugin
+listens to the pointer handlers of its own item, which take the clicks and taps the desktop leaves
+to the wallpaper. The daemon cannot tell the plugin from other code running in the Plasma shell,
+such as another applet, so it bounds what that code can send instead of ruling it out.
 
 ### `SetPointer(i x, i y)`
 

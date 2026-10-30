@@ -65,6 +65,7 @@ mod resolve;
 mod rig;
 mod rules;
 mod runtime;
+mod scan;
 mod schema;
 mod scripted;
 mod scripting;
@@ -176,10 +177,11 @@ pub use rig::{
     MAX_CHAIN, MAX_CHAINS, MAX_CLIPS_PER_MODEL, MAX_EXPRESSIONS, Reach, Rig,
 };
 pub use runtime::Runtime;
+pub use scan::{beyond_first, imported};
 pub use schema::{easings, property_schema, schema};
 pub use scripted::{
-    EffectControl, Extent, LayerRead, MAX_CONSOLE, MAX_SCRIPT_BYTES, MAX_SCRIPT_TEXT, MAX_SPAWNED,
-    MAX_WATCHED,
+    EffectControl, Extent, LayerRead, MAX_CONSOLE, MAX_LINE, MAX_SCRIPT_BYTES, MAX_SCRIPT_TEXT, MAX_SPAWNED,
+    MAX_WATCHED, plain_line,
 };
 pub use scripting::{
     MAX_POOL_LAYERS, MAX_POOL_VERTICES, MAX_POOLS, MAX_SCRIPT_PARAMS, MAX_SCRIPTS2, MAX_TEMPLATES, ParamType,
@@ -187,7 +189,7 @@ pub use scripting::{
 };
 pub use shape::{MAX_ARGUMENTS, MAX_BRACKETS, MAX_OPERANDS};
 pub use signal::{CLOCKS, Gain, HEARD, Hearing, Reduce, SPLITS, Smooth, center, ease, edge, levels};
-pub use sites::{Site, imported, script_inputs, script_key, sites};
+pub use sites::{Site, script_inputs, script_key, sites};
 pub use sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice};
 pub use spend::{MAX_STATEFUL, Spend, over};
 pub use strikes::{STOPPED, end_trials, forgive_strikes, keep_strikes, strike, struck, tried, trying};

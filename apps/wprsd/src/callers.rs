@@ -12,8 +12,15 @@ const KWIN: &str = "org.kde.KWin";
 pub(crate) enum Caller {
     Ctl,
     Ours,
+    Shell,
     Compositor,
     Other,
+}
+
+impl Caller {
+    pub(crate) fn trusted(self) -> bool {
+        matches!(self, Caller::Ctl | Caller::Ours | Caller::Shell)
+    }
 }
 
 static KNOWN: LazyLock<Mutex<HashMap<String, Caller>>> = LazyLock::new(Default::default);
@@ -66,7 +73,7 @@ fn ours() -> Vec<(PathBuf, Caller)> {
     let tools = dir.into_iter().flat_map(|dir| tools.map(|(name, caller)| (dir.join(name), caller)));
     let path = std::env::var_os("PATH").unwrap_or_default();
     let shell = std::env::split_paths(&path).map(|dir| dir.join("plasmashell")).find(|p| system(p));
-    tools.chain(shell.map(|shell| (shell, Caller::Ours))).collect()
+    tools.chain(shell.map(|shell| (shell, Caller::Shell))).collect()
 }
 
 fn of(pid: u32, trusted: &[(PathBuf, Caller)]) -> Caller {
@@ -94,6 +101,7 @@ mod tests {
         assert!(
             !reports_pointer(Caller::Ours) && !reports_pointer(Caller::Other) && reports_pointer(Caller::Ctl)
         );
+        assert!(!reports_pointer(Caller::Shell) && Caller::Shell.trusted() && !Caller::Compositor.trusted());
         assert!(
             !reports_pointer(Caller::Compositor),
             "a compositor was trusted before its script was loaded"

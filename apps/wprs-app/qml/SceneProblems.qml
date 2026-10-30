@@ -55,6 +55,7 @@ ColumnLayout {
 
                 width: ListView.view.width
                 text: modelData
+                textFormat: Text.PlainText
                 font.family: "monospace"
                 elide: Text.ElideRight
                 color: modelData.startsWith("error ") ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor

@@ -50,7 +50,7 @@ pub struct Runtime {
     wake: Cell<Wake>,
     pace: Cell<u32>,
     sizes: Cell<(usize, usize)>,
-    costs: Cell<(usize, [Option<f32>; 4])>,
+    pub(crate) costs: Cell<(usize, [Option<f32>; 4])>,
     uses: [Uses; 4],
     limit: Option<Uses>,
     swarms: RefCell<Vec<Swarm>>,
@@ -176,7 +176,9 @@ impl Runtime {
         let at = Arc::as_ptr(&self.scene) as usize;
         let (kept, mut costs) = self.costs.get();
         costs = if kept == at { costs } else { [None; 4] };
-        let cost = *costs[quality as usize].get_or_insert_with(|| self.scene.cost(quality));
+        let cost = *costs[quality as usize].get_or_insert_with(|| {
+            self.scene.cost(quality) + self.scene.copies_cost(self.spawned(), quality)
+        });
         self.costs.set((at, costs));
         cost
     }

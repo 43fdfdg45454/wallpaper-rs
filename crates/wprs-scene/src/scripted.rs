@@ -7,6 +7,7 @@ pub const MAX_WATCHED: usize = 64;
 pub const MAX_SCRIPT_BYTES: usize = 1 << 20;
 pub const MAX_SCRIPT_TEXT: usize = 4096;
 pub const MAX_CONSOLE: usize = 20;
+pub const MAX_LINE: usize = 512;
 const GENERIC_FONTS: [&str; 3] = ["sans-serif", "serif", "monospace"];
 const FONT_FILES: [&str; 5] = [".ttf", ".otf", ".ttc", ".otc", ".woff2"];
 
@@ -74,6 +75,10 @@ impl LayerOverride {
     }
 }
 
+pub fn plain_line(text: &str) -> String {
+    text.chars().take(MAX_LINE).map(|c| if c.is_control() { ' ' } else { c }).collect()
+}
+
 impl Scene {
     pub fn known_font(&self, name: &str) -> bool {
         let texts = self.drawable().filter_map(|l| match &l.kind {
@@ -124,6 +129,7 @@ impl ScriptOutputs {
         self.sounds.values_mut().for_each(|c| c.commands.truncate(8));
         self.console.truncate(MAX_CONSOLE);
         self.stopped.truncate(64);
+        self.console.iter_mut().chain(&mut self.stopped).for_each(|line| *line = plain_line(line));
         self.wake = self.wake.filter(|w| w.is_finite()).map(|w| w.clamp(0.0, 86_400.0));
         self
     }

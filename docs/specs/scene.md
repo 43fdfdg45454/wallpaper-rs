@@ -1203,11 +1203,14 @@ screens show the scene with the same settings, and on phones one thread: it has 
 256 KiB stack, 100 ms to load and to run the first frame, and 4 ms of CPU per frame for all the
 modules together. Results reach the next frame, so a slow script never holds up rendering, and what
 a frame sends to the scripts is written in place: numbers and the 64 bands of each channel go as
-they are, the user settings only when they change.
+they are, the user settings only when they change. Modules that declare something (see "Script
+declarations") get that frame object itself; a module that declares nothing gets a new copy of it
+on every call, with plain arrays for the bands, as engines always gave it.
 
 ### Lifecycle
 
-A module may export these functions; the engine calls each one inside the time of a frame:
+A module may export these functions; the engine calls each one inside the time of a frame. A module
+that declares nothing only gets `update` and `timelineEvent`:
 
 | Export | When |
 |--------|------|
@@ -1262,12 +1265,13 @@ export const sway = (value, { params }) => Math.sin(scene.layer("tree").rotation
 | `scene` | `layer(id)`, `layers()` (the ids of the top-level layers in drawing order), `spawn(template, options)`, `destroy(id)` and `order(id, index)` |
 | `timeline(id)` | `play()`, `pause()`, `reverse()`, `stop()`, `seek(t)`, `speed` (−100 to 100; below zero the timeline runs backwards like after `reverse()`, and one that plays `once` ends at its start), `time`, `duration`, `playing` and `on(name, handler)` for its events and `ended` |
 | `particles(layer)` | `play`, `pause` (no births, particles keep moving), `stop` (removes them until `play`), `playing`, `emit(n)` (1 to 1000), `point(n, [x, y])` and the `instance` fields `alpha`, `size`, `count`, `speed`, `life`, `time_scale`, `brightness` and `color`, which last until changed |
-| `shared` | an object shared by all the modules of the scene, at most 256 values, strings and arrays of at most 65536 items; modules may also `import` each other with relative paths (`./lib/bands.js`), among the files of `scripts` |
+| `shared` | an object shared by all the modules of the scene: at most 256 values, each a frozen copy of what was set (numbers, strings, booleans, arrays, typed arrays and objects of them, at most 65536 items and 32 levels in all), so a value changes by setting it again; getters, functions and other prototypes are refused; modules may also `import` each other with relative paths (`./lib/bands.js`), among the files of `scripts` |
 | `setTimeout(fn, ms)`, `setInterval(fn, ms)` | timers on the scene clock: they return a function that cancels them (`clearTimeout` and `clearInterval` call it), run at the start of a frame, at most once a frame each, without making up for missed periods and never under 16 ms; at most 64 wait at once, they wait while the scene is paused, and the scene sleeps until the next one |
 | `console` | `log`, `info`, `warn`, `error` and `debug`: at most 20 lines a second of at most 512 characters, to the log of the engine at debug level and to the editor |
 
-`scene.layer(id)` returns the same handle every time; the first 64 layers a script asks for report
-their evaluated values every frame. Reading `position`, `scale`, `rotation`, `skew`, `origin`,
+`scene.layer(id)` returns the same handle every time; the first 64 layers a script reads, or asks
+for while it loads or in `init`, report their evaluated values every frame (a layer read for the
+first time later reads what the script wrote until the next frame). Reading `position`, `scale`, `rotation`, `skew`, `origin`,
 `opacity`, `visible`, `color`, `parallax`, `size` (the box of pictures, videos, solids and spectra,
 the points of a text), `text`, `font` or `align` gives what the script wrote, or else the value the
 scene evaluated at the last frame; `id`, `name`, `type` and `initial` (the layer as `scene.json` writes
@@ -1291,13 +1295,17 @@ with `state` keeps) and `index`, `name` and `effect`. What a script sets lasts u
 inputs of the scene count every effect of a scene whose scripts use `effects` as shown.
 
 `templates` maps at most 64 ids to layers that scripts with `layers` copy into the scene, validated
-like the other layers (`script_layers`); a template id may not be the id of a layer, and templates are
-pictures, texts, shapes, solids, spectra and groups of them. `scene.spawn(template, options)` adds a
+like the other layers (`script_layers`); a template id may not be the id of a layer, a template holds
+at most 256 layers with its children, and templates are pictures, texts, shapes, solids, spectra and
+groups of them. `scene.spawn(template, options)` adds a
 copy on top of the layers (or at `options.at`, 0 being the bottom) with the id `options.id` (letters,
 digits, `_` and `-`, at most 64) or `<template>_<n>`, sets the fields `options` names and returns its
 handle; the children of a copied group are `<id>.<child>`. `destroy()` removes it, `scene.order(id,
-index)` moves a top-level layer, and at most 256 copies live at once. Copies count as layers of the
-scene for the inputs it uses and are drawn with the same resources as the other layers.
+index)` moves a top-level layer, and at most 256 copies live at once, and only while the layers of
+the scene and of every copy, children included, are at most 512: `spawn` throws past that and the
+engine drops what goes beyond it. Copies count as layers of the scene for the inputs it uses and for
+its cost, and are drawn with the same resources as the other layers: pictures share the texture of
+their asset and equal texts one raster.
 
 The `wprs/math` module, written for this engine, has `Vec2`, `Vec3` and `Vec4` (`add`, `sub`, `mul`,
 `div`, `min`, `max`, `clamp`, `scale`, `negate`, `abs`, `floor`, `ceil`, `round`, `dot`, `length`,
@@ -1335,14 +1343,22 @@ module's exports, imports and calls.
 |-------|---------|
 | `events` | the functions the module exports and the events it handles, each once: the lifecycle above (`update` is the only one older engines call), the pointer events of `solid` layers and `hit` bones `click`, `down`, `up` (input `clicks`), `enter`, `leave` and `move` (input `pointer`), delivered with `scene.layer(id).on(event, handler)` as `{ type, layer, local, scene }` with the touched bone, and `mediaStatus`, `mediaPlayback`, `mediaProperties`, `mediaThumbnail` and `mediaTimeline` (input `media`) |
 | `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, and parts that engines run later: `media` (the `media` object and its colors, input `media`; `media_info`), `storage` (`storage.get`, `set`, `delete` and `clear` per output or package, 64 KiB of JSON kept on the device only, removed with the package; `script_storage`), `geometry` (`scene.mesh(pool)` with `create`, `update` and `destroy`, at most 1 MiB of vertices a frame; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (texture frames, video playback, mesh and model clips, bones, shapes and attachments; `script_animations`), `camera` (`scene.camera`, `camera3d`, `parallax` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, only inside a click; `script_shortcuts`) and `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) |
-| `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}` |
+| `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}`. They live only here: the module does not export them and `scene import-script` does not propose them |
 
 Any event but `update`, any part but `audio`, `pointer` and `clicks`, and `params` name `scripts2`;
 handling pointer events needs a `solid` layer or `hit` bones. A module that declares something must
 declare `timers`, `layers` and `effects` to use them: the engine refuses the call otherwise. A module
-that declares nothing gets the first interface and its inputs are those of what it imports from
-`wprs`: `audio` the sound and `input` the pointer, never words that only appear in its comments or
-texts. Effect uses may carry a `name` (`[a-z0-9_]{1,32}`, unique in their layer) by which scripts find
+that declares nothing, and that no value binds with `fn` or `params`, gets the first interface, the
+same on every engine: `engine` (`time`, `dt`, `locale`, `daytime`), `time`, `props` (`get`, `label`,
+`pressed`, `color`), `audio` (`bands` and the levels), `input.cursor` (`x`, `y`, `inside`,
+`buttons`), `scene.layer(id)` with `position`, `scale`, `rotation`, `opacity`, `visible`, `color`
+and `text` (a write lasts for the frame it is made in, as engines always did, and reading gives
+what the module wrote in that frame), `timeline` and `particles`, and only `update` and
+`timelineEvent` are called. `pack build`, `pack check` and the editor refuse such a module when it
+imports anything else from `wprs`, imports `wprs/math` or another module, uses `console` or the
+timers, or exports `init`, `destroy`, `resize`, `properties` or `settings`, and the engine refuses
+those imports and calls. Its inputs are those of what it imports from `wprs`: `audio` the sound and
+`input` the pointer, never words that only appear in its comments or texts. Effect uses may carry a `name` (`[a-z0-9_]{1,32}`, unique in their layer) by which scripts find
 them (`scripts2`). `pools` maps at most 16 ids to `{ "type": "mesh", "max" (1 to 256 shapes),
 "max_vertices" (3 to 65536), "texture" }`, the shapes scripts with `geometry` may build
 (`script_geometry`).

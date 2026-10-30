@@ -188,3 +188,37 @@ fn hostile_package_shaders_are_refused_without_crashing_the_reader() {
         assert!(fault.contains(problem), "{fault}");
     }
 }
+
+#[test]
+fn scripts_that_declare_nothing_must_keep_to_the_first_interface() {
+    let source = tempfile::tempdir().unwrap();
+    let png = image(16, 16, ImageFormat::Png);
+    let write = |name: &str, data: &[u8]| std::fs::write(source.path().join(name), data).unwrap();
+    let staged = |mut declared: Value, features: &[&str]| {
+        declared["path"] = json!("game.js");
+        let more = json!({ "scripts": [declared] });
+        write(
+            "scene.json",
+            scene(json!([{ "id": "sky", "type": "image", "image": "sky" }]), more).as_bytes(),
+        );
+        write("manifest.json", manifest(features).to_json().unwrap().as_bytes());
+        wprs_format::inspect(source.path())
+    };
+    [("preview.png", png.as_slice()), ("sky.png", &png)].iter().for_each(|(n, d)| write(n, d));
+    write("game.js", b"import { shared, console } from 'wprs'; export function init() { shared.n = 1; console.log(engine); }");
+    let refused = staged(json!({}), &["scripts"]).map(drop).unwrap_err().to_string();
+    assert!(
+        refused.contains("/scripts/0") && refused.contains("console, its init export, shared"),
+        "{refused}"
+    );
+    let (_, facts) =
+        staged(json!({ "events": ["init"], "uses": ["shared", "console"] }), &["scripts", "scripts2"])
+            .unwrap();
+    assert!(facts.features.contains("scripts2"), "{:?}", facts.features);
+    write(
+        "game.js",
+        b"import { props } from 'wprs'; export function update(f) { return props.get('a') + f.time; }",
+    );
+    let (_, facts) = staged(json!({}), &["scripts"]).unwrap();
+    assert!(!facts.features.contains("scripts2"), "{:?}", facts.features);
+}

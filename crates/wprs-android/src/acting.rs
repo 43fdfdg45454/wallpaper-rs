@@ -36,6 +36,9 @@ pub(crate) struct Acting {
     awaiting: u64,
     timer: Option<f64>,
     exposed: Option<Values>,
+    props: Option<Values>,
+    reads: Vec<(String, LayerRead)>,
+    sounds: Vec<String>,
 }
 
 impl Acting {
@@ -47,6 +50,10 @@ impl Acting {
             Local::new(&setup, Limits::default())
         });
         Acting { local, ..Acting::default() }
+    }
+
+    pub(crate) fn reprops(&mut self) {
+        self.props = None;
     }
 
     pub(crate) fn touched(&mut self, runtime: &mut Runtime) {
@@ -61,18 +68,18 @@ impl Acting {
         self.fired.extend(runtime.take_fired().into_iter().take(room));
         runtime.fill_playbacks(&mut self.courses);
         let rt = &*runtime;
-        let reads: Vec<(String, LayerRead)> =
-            rt.script_watch().iter().filter_map(|id| Some((id.clone(), rt.read(id)?))).collect();
-        let (props, sounds) = (wprs_scene::exposed(sent.properties, rt.props()), rt.sounds_playing());
+        rt.fill_reads(&mut self.reads);
+        rt.fill_sounds(&mut self.sounds);
+        let props = &*self.props.get_or_insert_with(|| wprs_scene::exposed(sent.properties, rt.props()));
         let timer = self.timer.is_some_and(|t| t <= rt.time());
         let quiet = self.fired.is_empty() && self.actions.is_empty() && self.touches.is_empty();
-        let eventful = !quiet || timer || self.exposed.as_ref() != Some(&props);
+        let eventful = !quiet || timer || self.exposed.as_ref() != Some(props);
         let frame = Frame {
             time: rt.time(),
             dt: rt.dt(),
             wall: rt.wall(),
             zone: "",
-            props: &props,
+            props,
             actions: &self.actions,
             audio: sent.listens.then(|| rt.audio()),
             pointer: rt.pointer(),
@@ -83,9 +90,9 @@ impl Acting {
             quality: sent.quality,
             timelines: &self.courses,
             fired: &self.fired,
-            reads: &reads,
+            reads: &self.reads,
             touches: &self.touches,
-            sounds: &sounds,
+            sounds: &self.sounds,
         };
         let before = local.progress().0;
         let answer = local.update(&frame);
@@ -94,7 +101,8 @@ impl Acting {
             self.actions.clear();
             self.touches.clear();
             if eventful {
-                (self.calm, self.awaiting, self.exposed) = (0, local.progress().0, Some(props));
+                (self.calm, self.awaiting) = (0, local.progress().0);
+                self.exposed.clone_from(&self.props);
             }
         }
         match answer {

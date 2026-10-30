@@ -145,3 +145,18 @@ fn scripts_play_pause_stop_and_turn_down_sound_layers() {
     rt.advance(11.0);
     assert!(!voice(&rt).play && rt.sounds_playing().is_empty(), "a sound that plays once kept playing");
 }
+
+#[test]
+fn clicks_without_the_pointer_span_frames() {
+    let timelines = json!([{ "id": "on", "duration": 1, "autoplay": false, "trigger": "click:a" }]);
+    let mut rt = runtime(json!({ "scripts": [{ "path": "a.js" }], "timelines": timelines }));
+    rt.set_pointer(PointerState::default());
+    let mut frame = |presses: &[Press]| {
+        rt.point(&boxes(), VIEW, presses, (false, true));
+        rt.take_touches().iter().map(|t| format!("{:?} {}", t.kind, t.layer)).collect::<Vec<_>>()
+    };
+    assert_eq!(frame(&[at(15.0, 15.0, 1)]), ["Down a"]);
+    assert_eq!(frame(&[]), Vec::<String>::new(), "a frame without presses released the button");
+    assert_eq!(frame(&[at(15.0, 15.0, 0)]), ["Up a", "Click a"]);
+    assert!(rt.playbacks().iter().any(|c| c.id == "on" && c.playing));
+}

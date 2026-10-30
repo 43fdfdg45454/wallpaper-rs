@@ -5,7 +5,7 @@ use crate::scripting::{
 };
 use crate::validate::{Check, Issue};
 use crate::value::{Binding, Param};
-use crate::{Kind, Layer, MAX_SCRIPTS, Solid};
+use crate::{Kind, Layer, MAX_LAYERS, MAX_SCRIPTS, Solid};
 
 const LIFECYCLE: [&str; 7] =
     ["init", "update", "destroy", "resize", "properties", "settings", "timelineEvent"];
@@ -79,8 +79,9 @@ impl Check<'_> {
             if scene.layer(id).is_some() {
                 self.issues.push(Issue::DuplicateId(p.clone()));
             }
-            let mut inner = vec![layer];
+            let (mut inner, mut flat) = (vec![layer], 0);
             while let Some(l) = inner.pop() {
+                flat += 1;
                 inner.extend(l.children());
                 let copied = matches!(
                     l.kind,
@@ -95,6 +96,7 @@ impl Check<'_> {
                     self.issues.push(Issue::Type(format!("{p}/type")));
                 }
             }
+            self.count(&format!("{p}/layers"), flat, MAX_LAYERS);
             self.layer(&p, layer, 1);
         }
         self.count("/pools", scene.pools.len(), MAX_POOLS);

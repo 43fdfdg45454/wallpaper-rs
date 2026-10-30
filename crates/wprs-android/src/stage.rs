@@ -129,6 +129,9 @@ impl Stage {
     pub(crate) fn refresh(&mut self) {
         self.granted = props::granted(&self.pack.id);
         let changed = self.runtime.set_props(props::values(&self.pack));
+        if changed {
+            self.acting.reprops();
+        }
         self.restock |= changed;
         let pressed = saved::pressed(&self.pack.id);
         pressed.iter().for_each(|key| self.runtime.press(key));
@@ -163,7 +166,7 @@ impl Stage {
             self.presses.push(Press { at: Some(at), buttons });
         }
         if moves || taps {
-            self.touch = (down.then_some(at), buttons, true);
+            self.touch = (down.then_some(at).filter(|_| moves), buttons, true);
         }
         moves || taps
     }
@@ -217,7 +220,8 @@ impl Stage {
             _ => 0,
         };
         let heard = hears && self.runtime.set_audio(hearing::frame());
-        let pointer = self.runtime.pointer().follow(self.touch.0, self.touch.1, dt as f32);
+        let buttons = if allowed.0 && allowed.1 { self.touch.1 } else { 0 };
+        let pointer = self.runtime.pointer().follow(self.touch.0, buttons, dt as f32);
         let felt = feels && self.runtime.set_pointer(pointer);
         let sent = Sent {
             properties: &self.pack.properties,

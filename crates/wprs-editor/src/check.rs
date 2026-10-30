@@ -144,6 +144,11 @@ pub fn check_files(dir: &Path, doc: &Value) -> Vec<Problem> {
             warning: true,
         });
     }
+    let scene = serde_json::from_value::<Scene>(doc["scene"].clone()).ok();
+    let read = |path: &str| std::fs::read_to_string(dir.join(path)).ok();
+    if let Some((i, message)) = scene.and_then(|s| s.undeclared(read)) {
+        out.push(Problem { pointer: format!("/scene/scripts/{i}"), message, warning: false });
+    }
     let unused = unused(dir, doc).into_iter().map(|path| Problem {
         pointer: "/scene/assets".into(),
         message: format!("{path} is not used by the scene but goes into the package"),

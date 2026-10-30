@@ -151,3 +151,23 @@ fn language_files_and_package_effects_belong_to_the_package() {
     let broken = problems(&project.dir, &project.doc);
     assert!(broken.iter().any(|p| p.pointer == "/scene/effects/ripple" && !p.warning), "{broken:?}");
 }
+
+#[test]
+fn scripts_that_declare_nothing_are_problems_when_they_use_the_newer_interface() {
+    let root = tempfile::tempdir().unwrap();
+    state();
+    let dir = root.path().join("orbit");
+    let mut project =
+        Project::create(&dir, starter("empty", "org.example.orbit", "Orbit", "en").unwrap()).unwrap();
+    fs::create_dir(dir.join("scripts")).unwrap();
+    fs::write(dir.join("scripts/a.js"), "import { shared } from 'wprs'; export function update() {}")
+        .unwrap();
+    act(&mut project, json!({"set": {"pointer": "/scene/scripts", "value": [{"path": "scripts/a.js"}]}}));
+    let found = problems(&project.dir, &project.doc);
+    let at =
+        found.iter().find(|p| p.pointer == "/scene/scripts/0").expect("the undeclared script is a problem");
+    assert!(!at.warning && at.message.contains("uses shared"), "{at:?}");
+    act(&mut project, json!({"set": {"pointer": "/scene/scripts/0/uses", "value": ["shared"]}}));
+    let found = problems(&project.dir, &project.doc);
+    assert!(found.iter().all(|p| p.pointer != "/scene/scripts/0"), "{found:?}");
+}

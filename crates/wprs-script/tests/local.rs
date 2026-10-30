@@ -118,3 +118,20 @@ fn a_script_thread_answers_frames_and_turns_off_when_it_hangs() {
     let mut local = Local::new(&broken, Limits::default());
     assert!(answer(&mut local, &Frame::at(0.0)).is_ok_and(|out| !out.stopped.is_empty()));
 }
+
+#[test]
+fn a_slow_load_within_its_budget_keeps_the_scripts_on() {
+    let slow = setup(
+        json!({ "layers": [{ "id": "a", "type": "text", "text": "", "size": 10, "font": "serif" }] }),
+        &[(
+            "main.js",
+            r#"import { scene } from "wprs";
+            const start = Date.now();
+            while (Date.now() - start < 300) {}
+            export function update(f) { scene.layer("a").text = `t ${f.time}`; }"#,
+        )],
+    );
+    let mut local = Local::new(&slow, Limits { load: Duration::from_millis(400), ..Limits::default() });
+    let out = answer(&mut local, &Frame::at(1.0)).expect("a load slower than 250 ms turned the scripts off");
+    assert_eq!(text(&out, "a"), "t 1");
+}

@@ -79,7 +79,9 @@ impl Script {
         let runtime = Runtime::new().map_err(failed)?;
         runtime.set_memory_limit(limits.memory);
         runtime.set_max_stack_size(limits.stack);
-        let modules = Modules(setup.sources.iter().cloned().collect());
+        let (sources, first) =
+            (setup.sources.iter().cloned().collect(), setup.first.iter().cloned().collect());
+        let modules = Modules { sources, first };
         runtime.set_loader(modules.clone(), modules);
         let clock = Clock { deadline: Rc::default(), fired: Rc::default() };
         let (deadline, fired) = (clock.deadline.clone(), clock.fired.clone());
@@ -154,8 +156,10 @@ impl Script {
     }
 
     pub fn update(&mut self, frame: &Frame) -> Result<ScriptOutputs, Error> {
-        let bytes = self.encoder.encode(frame).to_vec();
-        self.run(&bytes)?;
+        let mut encoder = std::mem::take(&mut self.encoder);
+        let ran = self.run(encoder.encode(frame));
+        self.encoder = encoder;
+        ran?;
         serde_json::from_str(&self.last).map_err(|e| Error::Script(format!("invalid value: {e}")))
     }
 

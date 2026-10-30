@@ -135,6 +135,7 @@ fn layers_read_their_values_and_keep_what_scripts_write() {
                 a.color = "#ff0000"; a.scale = 2;
                 scene.layer("b").text = `${a.position} ${a.rotation} ${a.visible} ${a.opacity} ${a.text} ${a.skew}`;
             }
+            if (n === 2) scene.layer("c").position[0];
             if (n === 3) a.reset("size");
             try { a.align = "middle"; } catch (e) { scene.layer("b").text = e.message; }
         }"##,
@@ -160,8 +161,9 @@ fn layers_read_their_values_and_keep_what_scripts_write() {
         (Some("serif"), Some([1.0, 0.0, 0.0, 1.0]), Some([2.0, 2.0]))
     );
     assert_eq!(text(&first, "b"), "align takes left, center or right");
-    assert_eq!(first.watch, ["a", "b"]);
-    script.update(&Frame { reads: &reads, ..Frame::at(0.1) }).unwrap();
+    assert_eq!(first.watch, ["a"], "a layer that is only written is not read back");
+    let second = script.update(&Frame { reads: &reads, ..Frame::at(0.1) }).unwrap();
+    assert_eq!(second.watch, ["a", "c"]);
     let third = script.update(&Frame { reads: &reads, ..Frame::at(0.2) }).unwrap();
     assert_eq!((third.layers["a"].size, third.layers["a"].skew), (None, Some([5.0, 0.0])));
 }
@@ -370,4 +372,46 @@ fn modules_only_use_the_parts_they_declare() {
     let out = at(&mut staged(scene, &[("main.js", source)]), 0.0).unwrap();
     let refused = "main.js uses layers without declaring it in scene.json | main.js uses effects without declaring it in scene.json | ok";
     assert_eq!(text(&out, "a"), refused);
+}
+
+#[test]
+fn shared_values_are_copied_frozen_and_counted_however_they_are_set() {
+    let source = r#"import { shared, scene } from "wprs";
+        const errors = [];
+        const kept = [1, 2];
+        shared.kept = kept;
+        kept.push(3);
+        const tries = [
+            () => { shared.list = []; shared.list.push(1); },
+            () => { shared.f = () => 1; },
+            () => { shared.deep = { a: new Array(70000).fill(0) }; },
+            () => { for (let i = 0; i < 300; i++) Object.defineProperty(shared, `k${i}`, { value: i, enumerable: true }); },
+            () => Object.defineProperty(shared, "k0", { get: () => 1 }),
+            () => Object.setPrototypeOf(shared, null),
+        ];
+        for (const f of tries) { try { f(); } catch (e) { errors.push(e.name); } }
+        export function update() { scene.layer("a").text = `${errors} ${Object.keys(shared).length} ${shared.kept.length} ${shared.list.length}`; }"#;
+    let mut script = load(source);
+    let out = at(&mut script, 0.0).unwrap();
+    assert!(out.stopped.is_empty(), "{:?}", out.stopped);
+    assert_eq!(text(&out, "a"), "TypeError,TypeError,RangeError,RangeError,TypeError,TypeError 256 2 0");
+}
+
+#[test]
+fn copies_of_templates_stay_within_the_layer_limit() {
+    let children: Vec<_> =
+        (0..100).map(|i| json!({ "id": format!("t{i}"), "type": "solid", "color": "#ffffff" })).collect();
+    let scene = json!({
+        "scripts": [{ "path": "main.js", "uses": ["layers"] }],
+        "templates": { "big": { "id": "big", "type": "group", "layers": children } },
+        "layers": [{ "id": "info", "type": "text", "text": "", "size": 10 }]
+    });
+    let source = r#"import { scene } from "wprs";
+        let made = 0, error = "";
+        try { for (;;) { scene.spawn("big"); made += 1; } } catch (e) { error = e.message; }
+        export function update() { scene.layer("info").text = `${made} ${error}`; }"#;
+    let mut script = staged(scene, &[("main.js", source)]);
+    let out = at(&mut script, 0.0).unwrap();
+    assert_eq!(text(&out, "info"), "5 the scene and the layers added to it hold at most 512 layers");
+    assert_eq!(out.spawned.len(), 5);
 }

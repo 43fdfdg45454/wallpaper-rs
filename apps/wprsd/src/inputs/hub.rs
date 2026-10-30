@@ -68,8 +68,8 @@ impl Hub {
     pub(crate) fn new((grants, declined): (Bound, Grants), wake: Wake, changed: Wake) -> Hub {
         let control = Mutex::new(Control { grants, declined, ..Control::default() });
         let tracking = watch::Sender::new(false);
-        let (switch, audio, pointers, presses, moved, poke) = Default::default();
-        Hub { control, tracking, switch, audio, pointers, presses, moved, poke, wake, changed }
+        let (switch, audio, pointers, presses, reported, moved, poke) = Default::default();
+        Hub { control, tracking, switch, audio, pointers, presses, reported, moved, poke, wake, changed }
     }
 
     pub(crate) fn grant(&self, path: &Path, scene: &str, key: &str, input: Input) -> anyhow::Result<()> {
@@ -149,6 +149,9 @@ impl Hub {
             lock(&self.presses).retain(|output, _| followed.contains(output));
         }
         let on = !pointed.is_empty();
+        if !on {
+            lock(&self.reported).clear();
+        }
         let tracked = self.tracking.send_if_modified(|was| std::mem::replace(was, on) != on);
         if refollowed || tracked {
             tracing::info!(outputs = followed.len(), tracked = on, "pointer feed");
@@ -170,6 +173,10 @@ impl Hub {
         if refollowed || tracked || switched {
             (self.changed)()
         }
+    }
+
+    pub(crate) fn away(&self, output: &str) -> bool {
+        lock(&self.reported).get(output) == Some(&false)
     }
 
     pub(crate) fn touch(&self, output: &str) -> (PointerState, Vec<Press>, [bool; 2]) {
@@ -195,6 +202,7 @@ impl Hub {
         };
         let states: Vec<_> = followed.map(place).collect();
         drop((pointers, control));
+        *lock(&self.reported) = states.iter().map(|(output, state)| (output.clone(), state.inside)).collect();
         self.store(states);
     }
 

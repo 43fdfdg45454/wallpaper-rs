@@ -108,7 +108,8 @@ impl Runtime {
         let now = Press { at: self.pointer().pos, buttons: self.pointer().buttons };
         let p = &mut self.pointing;
         let before = p.touches.len();
-        presses.iter().take(MAX_PRESSES).chain([&now]).for_each(|press| p.step(boxes, view, *press, allowed));
+        let now = allowed.0.then_some(&now);
+        presses.iter().take(MAX_PRESSES).chain(now).for_each(|press| p.step(boxes, view, *press, allowed));
         let fired = std::mem::take(&mut p.fired);
         let touched = p.touches.len() > before;
         if self.scene.scripts.is_empty() {

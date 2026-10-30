@@ -479,7 +479,7 @@ notificación (en el Flatpak, siempre), lo avisa y termina bien: la escena recib
 la permites allí. Los clics y toques necesitan dos permisos: el del paquete (`wprs-ctl input grant
 <escena> clicks`) y el de la pantalla (`wprs-ctl input clicks on|off [-o pantalla]`, sin `-o` todas),
 que empieza apagado en todas; la app los ofrece en los ajustes de la escena de cada pantalla y la
-bandeja al preguntar por el permiso. Códigos de salida: 0 bien, 1 error, 2 uso incorrecto, también cuando es el
+bandeja en cada pantalla cuya escena los pide. Códigos de salida: 0 bien, 1 error, 2 uso incorrecto, también cuando es el
 daemon quien rechaza un argumento (un ajuste o una regla que no existe, un valor fuera de rango).
 `wprs-ctl preset rm` acepta rutas con `:` (`~/fotos/a:b.png:Noche`).
 
@@ -1161,13 +1161,15 @@ interfaz completa; lo esencial:
 - **Un valor, una función**: `{"script": "scripts/olas.js", "fn": "vaiven", "params": {"velocidad":
   2}}` llama cada fotograma a `vaiven(valor, ctx)` con lo que devolvió la vez anterior y `ctx.path`,
   `ctx.layer` y `ctx.params`; un mismo módulo sirve así a muchas propiedades. Los `params` se declaran
-  en la entrada del script con tipo, valor por defecto y límites.
+  solo en la entrada del script en `scene.json`, con tipo, valor por defecto y límites: el módulo no
+  los exporta y `wprs-ctl scene import-script` no los propone, así que se escriben a mano.
 - **Capas**: `scene.layer(id)` lee la posición, la escala, el giro, la opacidad, el color, el tamaño,
   el texto y lo demás tal como la escena los evaluó, y escribe esos campos, que duran hasta que el
   script los cambie o llame a `reset()`. `layer.effect("nombre")` apaga un efecto, cambia sus
   parámetros dentro de su rango o vacía lo que guarda. Con plantillas (`templates`),
-  `scene.spawn("barra", {position: [x, y]})` crea hasta 256 capas, `destroy()` las quita y
-  `scene.order(id, índice)` las reordena: así se hacen los visualizadores.
+  `scene.spawn("barra", {position: [x, y]})` crea hasta 256 copias, que con las capas de la escena y
+  las de dentro de cada copia suman como mucho 512 (una plantilla tiene como mucho 256), `destroy()`
+  las quita y `scene.order(id, índice)` las reordena: así se hacen los visualizadores.
 - **Datos de entrada**: `audio.buffers(32)` devuelve las bandas izquierda, derecha y media en
   `Float32Array` que el motor rellena solas en cada fotograma; `input.cursor` da la posición en
   fracciones, en píxeles del lienzo y de la pantalla y el botón izquierdo; `engine` da el tamaño del
@@ -1189,15 +1191,20 @@ interfaz completa; lo esencial:
 - **Tiempo y depuración**: `setTimeout` y `setInterval` siguen el reloj de la escena (como mucho 64,
   una vez por fotograma y nunca por debajo de 16 ms) y devuelven una función para cancelarlos;
   `console.log` y sus hermanas escriben en el registro y en el editor, como mucho 20 líneas por
-  segundo. `shared` guarda valores comunes a todos los módulos, que también se importan entre sí con
-  rutas relativas (`import { media } from "./lib/media.js"`).
+  segundo. `shared` guarda valores comunes a todos los módulos (una copia congelada de lo que se
+  asigna: para cambiarlo se asigna otra vez), que también se importan entre sí con rutas relativas
+  (`import { media } from "./lib/media.js"`).
 - **Matemáticas**: `wprs/math` trae `Vec2`, `Vec3`, `Vec4`, `Mat3` y `Mat4` con sus operaciones
   (producto, inversa, descomposición, reflejo, proyección…), `smoothstep`, `mix`, `remap`, ángulos y
   `rgbToHsv` y `hsvToRgb`.
 - **Declarar lo que se usa**: cada entrada de `scripts` lista sus `events` y sus `uses`; un módulo
   que declara algo solo puede usar los temporizadores, las capas creadas y los efectos si los
   declara, y `pack build` deduce de ahí las funciones nuevas que pide el paquete, para que un motor
-  más viejo avise en vez de ejecutarlo mal.
+  más viejo avise en vez de ejecutarlo mal. Un módulo que no declara nada recibe la primera
+  interfaz, igual en todos los motores: `update(frame)` con un `frame` nuevo cada vez, `engine`,
+  `time`, `props`, `audio`, `input`, `scene.layer`, `timeline` y `particles`; si importa algo más,
+  exporta `init` u otras funciones del ciclo de vida o usa `console` o los temporizadores, `pack
+  build`, `pack check` y el editor lo rechazan y el motor no se lo da.
 - **Errores**: una función que lanza un error lo escribe en la consola y el resto sigue; un módulo
   que falla tres fotogramas seguidos se detiene solo, con sus temporizadores, y la escena sigue sin
   él con un aviso traducido en la app, la bandeja y `wprs-ctl status`. Si los scripts agotan su
@@ -1367,7 +1374,10 @@ misma pausa.
   solo llegan los reales: los del compositor en Sway y demás escritorios con `wlr-layer-shell`
   (también los toques de una pantalla táctil), los de X11 que no manda otro programa con `SendEvent`
   y, en Plasma, los que el escritorio deja al fondo, que el plugin de fondo envía y el daemon solo
-  acepta de él. Ningún programa puede inyectar clics por D-Bus. El permiso queda atado al paquete que se veía: a la clave que firma un paquete
+  acepta del intérprete de Plasma (ni de la app ni de `wprs-ctl`) y, mientras el script de KWin
+  informa del puntero, solo en la pantalla donde está. Ningún otro programa puede inyectar clics por
+  D-Bus; el daemon no distingue el plugin de otro código que corra dentro de Plasma, como otro
+  applet, y por eso lo acota en vez de impedirlo. El permiso queda atado al paquete que se veía: a la clave que firma un paquete
   instalado desde un repositorio (sus actualizaciones lo conservan) o al contenido exacto de
   cualquier otro (en la vista previa del editor, a la carpeta del borrador si la pide la app o
   `wprs-ctl`, o a su contenido exacto si la pide otro programa), así que otro paquete con el mismo id no lo hereda, ni siquiera si se ve a la vez en

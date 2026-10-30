@@ -124,6 +124,17 @@ ColumnLayout {
                 color: Kirigami.Theme.disabledTextColor
             }
 
+            PlasmaComponents3.Switch {
+                Layout.fillWidth: true
+                visible: row.daemon.inputs.shown?.[row.name]?.clicks === true
+                text: i18n("Let clicks and taps on this screen reach its wallpaper")
+                checked: (row.daemon.inputs.clicks ?? []).includes(row.name)
+                onToggled: {
+                    row.daemon.act("SetClicks", [row.name, checked], "Inputs1");
+                    checked = Qt.binding(() => (row.daemon.inputs.clicks ?? []).includes(row.name));
+                }
+            }
+
             PlasmaComponents3.Label {
                 Layout.fillWidth: true
                 visible: row.pkg.photosensitive === true
