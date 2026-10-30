@@ -70,6 +70,7 @@ dependencies {
 val cargo = tasks.register<Exec>("cargo") {
     workingDir = workspace
     environment("CARGO_ENCODED_RUSTFLAGS", remaps.joinToString("\u001f") { (from, to) -> "--remap-path-prefix=$from=$to" })
+    environment("CFLAGS", remaps.joinToString(" ") { (from, to) -> "-ffile-prefix-map=$from=$to" })
     commandLine(
         listOf("cargo", "ndk") + abis.flatMap { listOf("-t", it) } +
             listOf("-P", "31", "-o", rustLibs, "build", "-p", "wprs-android", "--release", "--locked"),

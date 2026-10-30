@@ -9,7 +9,7 @@ ColumnLayout {
 
     required property var page
     readonly property var problems: page.view.problems ?? []
-    readonly property var console: App.state.outputs?.[page.editor.output]?.console ?? []
+    readonly property var scriptLines: App.state.outputs?.[page.editor.output]?.console ?? []
 
     Kirigami.Heading {
         level: 4
@@ -37,17 +37,17 @@ ColumnLayout {
 
     Kirigami.Heading {
         level: 4
-        visible: panel.console.length > 0
+        visible: panel.scriptLines.length > 0
         text: App.tr("Script console")
     }
 
     QQC2.ScrollView {
         Layout.fillWidth: true
         Layout.preferredHeight: Kirigami.Units.gridUnit * 6
-        visible: panel.console.length > 0
+        visible: panel.scriptLines.length > 0
 
         ListView {
-            model: panel.console
+            model: panel.scriptLines
             clip: true
 
             delegate: QQC2.Label {
