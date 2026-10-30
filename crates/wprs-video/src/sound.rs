@@ -21,7 +21,6 @@ const SOURCE: &str = "appsrc://";
 pub struct Soundtrack {
     pipe: Pipe,
     mix: Arc<Mutex<Mix>>,
-    delay: Mutex<Option<Duration>>,
 }
 
 impl Soundtrack {
@@ -61,7 +60,7 @@ impl Soundtrack {
         }
         let shared = crate::Shared { latency: Some(LATENCY), ..Default::default() };
         let pipe = Pipe::start(playbin, (SOURCE.into(), shared), Arc::new(sink), true)?;
-        Ok(Soundtrack { pipe, mix, delay: Mutex::default() })
+        Ok(Soundtrack { pipe, mix })
     }
 
     pub fn set(&self, voices: &[Voice]) {
@@ -78,20 +77,10 @@ impl Soundtrack {
     }
 
     pub fn delay(&self) -> Duration {
-        let mut known = lock(&self.delay);
-        if let Some(delay) = *known {
-            return delay;
-        }
-        let playbin = &self.pipe.playbin;
-        let mut query = gst::query::Latency::new();
-        if playbin.current_state() != gst::State::Playing || !playbin.query(&mut query) {
-            return Duration::ZERO;
-        }
-        let sink = playbin.property::<Option<gst::Element>>("audio-sink");
-        let piped = sink.is_some_and(|s| s.name() == pipewire::SINK);
-        let delay = Duration::from(query.result().1) + if piped { QUANTUM } else { Duration::ZERO };
-        tracing::debug!(?delay, "scene sound output delay");
-        *known.insert(delay)
+        let bin = self.pipe.playbin.downcast_ref::<gst::Bin>();
+        let mut elements = bin.into_iter().flat_map(|b| b.iterate_recurse().into_iter().flatten());
+        let piped = elements.any(|e| e.factory().is_some_and(|f| f.name() == "pipewiresink"));
+        if piped { QUANTUM } else { Duration::ZERO }
     }
 
     pub fn quiet(&self) -> bool {

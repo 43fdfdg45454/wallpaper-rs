@@ -30,12 +30,22 @@ pub mod error {
     pub const NEWER: &str = "io.github.wallpaper_rs.Error.Newer";
     pub const UNCONFIRMED: &str = "io.github.wallpaper_rs.Error.Unconfirmed";
 
+    const SILENT: &str = "failed without giving a reason";
+
     pub fn reason(name: &str, message: &str) -> String {
         let short = name.rsplit('.').next().unwrap_or_default();
         match (message.trim(), short) {
-            ("", "") => "failed without giving a reason".into(),
-            ("", short) => format!("failed without giving a reason ({short})"),
+            ("", "") => SILENT.into(),
+            ("", short) => format!("{SILENT} ({short})"),
             (message, _) => message.into(),
+        }
+    }
+
+    pub fn silent(message: &str) -> Option<&str> {
+        match message.trim().strip_prefix(SILENT) {
+            Some("") => Some(""),
+            Some(rest) => rest.strip_prefix(" (")?.strip_suffix(')'),
+            None => message.trim().is_empty().then_some(""),
         }
     }
 }

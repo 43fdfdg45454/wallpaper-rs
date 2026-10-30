@@ -1,3 +1,4 @@
+use crate::outputs::Outputs;
 use crate::pipewire::{self, SINK};
 use crate::{Cut, Shared, lock};
 use gstreamer as gst;
@@ -25,16 +26,6 @@ fn seek(playbin: &gst::Element, at: gst::ClockTime, cut: Cut, flags: gst::SeekFl
     };
     if let Err(e) = sought {
         tracing::debug!("cannot seek the video: {e}");
-    }
-}
-
-const PROVIDERS: [&str; 2] = ["pipewiredeviceprovider", "pulsedeviceprovider"];
-
-struct Outputs(Option<gst::DeviceProvider>, Instant);
-
-impl Drop for Outputs {
-    fn drop(&mut self) {
-        self.0.iter().for_each(gst::DeviceProvider::stop);
     }
 }
 
@@ -68,6 +59,11 @@ impl Audio {
     pub(crate) fn seek(&self, playbin: &gst::Element, at: gst::ClockTime, exact: bool) {
         let flags = if exact { gst::SeekFlags::ACCURATE } else { gst::SeekFlags::KEY_UNIT };
         self.jump(playbin, at, gst::SeekFlags::FLUSH | flags);
+    }
+
+    pub(crate) fn unstick(&mut self, playbin: &gst::Element, at: gst::ClockTime) {
+        self.seek(playbin, at, false);
+        self.restart = Some(at);
     }
 
     fn jump(&self, playbin: &gst::Element, at: gst::ClockTime, flags: gst::SeekFlags) {
@@ -105,15 +101,12 @@ impl Audio {
 
     pub(crate) fn wait(&self) -> Option<gst::ClockTime> {
         let now = Instant::now();
-        let look = self.outputs.as_ref().map(|o| if o.0.is_some() { o.1.max(now + RETRY) } else { o.1 });
-        let at = self.hold.into_iter().chain(look).min()?;
+        let at = self.hold.into_iter().chain(self.outputs.as_ref().and_then(Outputs::wait)).min()?;
         Some(gst::ClockTime::from_mseconds(at.saturating_duration_since(now).as_millis() as u64))
     }
 
     pub(crate) fn tick(&mut self, playbin: &gst::Element, bus: &gst::Bus) {
-        let now = Instant::now();
-        let sinks = |p: &gst::DeviceProvider| p.devices().iter().any(|d| d.has_classes("Audio/Sink"));
-        if self.outputs.take_if(|o| o.1 <= now && o.0.as_ref().is_none_or(sinks)).is_some() {
+        if self.outputs.take_if(|o| o.ready(Instant::now())).is_some() {
             tracing::info!("trying the audio output again");
             self.rebuild(playbin, bus, pipewire::sink(self.shared.latency));
         }
@@ -129,9 +122,7 @@ impl Audio {
         }
         tracing::info!("no audio output, the picture goes on without sound until one appears");
         self.delay = (self.delay * 2).clamp(RETRY, RETRY_MAX);
-        let started = |p: &gst::DeviceProvider| p.start().is_ok();
-        let provider = PROVIDERS.iter().find_map(|n| gst::DeviceProviderFactory::by_name(n).filter(started));
-        self.outputs = Some(Outputs(provider, Instant::now() + self.delay));
+        self.outputs = Some(Outputs::watch(bus, Instant::now() + self.delay));
         let silent = gst::ElementFactory::make("fakesink").property("sync", true).build().ok();
         self.rebuild(playbin, bus, silent);
     }
@@ -178,5 +169,37 @@ mod tests {
         assert_eq!(spins(Some((1, now, SPINS - 1)), 1), SPINS);
         assert_eq!(spins(Some((1, now, 2)), 2), 0);
         assert_eq!(spins(Some((1, now - SPIN * 3, 2)), 1), 0);
+    }
+
+    #[test]
+    fn a_stuck_pause_ends_on_the_exact_frame_after_its_key_frame_seek() {
+        let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures/magenta-64x32.webm");
+        let uri = crate::init().and_then(|()| crate::local_uri(std::path::Path::new(fixture)));
+        let (playbin, sink) = (crate::make("playbin"), crate::make("fakesink"));
+        let (Ok(uri), Ok(playbin), Ok(sink)) = (uri, playbin, sink) else {
+            return assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "video playback required");
+        };
+        playbin.set_property("uri", uri);
+        playbin.set_property_from_str("flags", "video");
+        playbin.set_property("video-sink", sink);
+        let bus = playbin.bus().expect("playbin has a bus");
+        let settled = || {
+            let kinds = [gst::MessageType::AsyncDone, gst::MessageType::Error];
+            let message = bus.timed_pop_filtered(gst::ClockTime::from_seconds(10), &kinds);
+            message.is_some_and(|m| matches!(m.view(), gst::MessageView::AsyncDone(_)))
+        };
+        playbin.set_state(gst::State::Paused).unwrap();
+        assert!(settled(), "the video did not open");
+        let (mut audio, at) = (Audio::default(), gst::ClockTime::from_mseconds(500));
+        audio.unstick(&playbin, at);
+        assert!(settled() && audio.holding(), "the key frame seek did not settle");
+        let early = playbin.query_position::<gst::ClockTime>();
+        audio.settled(&playbin);
+        assert!(settled() && !audio.holding(), "the exact seek did not settle");
+        audio.settled(&playbin);
+        let exact = playbin.query_position::<gst::ClockTime>();
+        playbin.set_state(gst::State::Null).unwrap();
+        assert_eq!((early, exact), (Some(gst::ClockTime::ZERO), Some(at)), "only key frame 0 is before it");
+        assert_eq!(audio.shared.seeks.load(Ordering::Relaxed), 2);
     }
 }

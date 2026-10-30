@@ -82,22 +82,28 @@ fn honours_rotation_tags() {
         assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "{why}");
         return eprintln!("skipping rotation test: {why}");
     }
-    let (tx, rx) = mpsc::channel();
-    let options = Options {
-        max_size: (1920, 1080),
-        max_fps: 30,
-        volume: 0.0,
-        muted: true,
-        cut: Cut::default(),
-        zero_copy: false,
-    };
-    let player = Player::open(&path, options, move |e| drop(tx.send(e)));
-    let first = rx.recv_timeout(Duration::from_secs(10));
-    drop(player);
+    wprs_video::accept_dmabuf(vec![0]);
+    let firsts = [false, true].map(|zero_copy| {
+        let (tx, rx) = mpsc::channel();
+        let (max_size, cut) = ((1920, 1080), Cut::default());
+        let options = Options { max_size, max_fps: 30, volume: 0.0, muted: true, cut, zero_copy };
+        let player = Player::open(&path, options, move |e| drop(tx.send(e)));
+        let first = rx.recv_timeout(Duration::from_secs(10));
+        drop(player);
+        first
+    });
     let _ = std::fs::remove_file(&path);
-    match first {
-        Ok(wprs_video::Event::Frame(frame)) => assert_eq!((frame.width, frame.height), (32, 64)),
-        other => panic!("no rotated frame: {other:?}"),
+    for (first, zero_copy) in firsts.into_iter().zip([false, true]) {
+        let size = |f: &wprs_video::Frame| match f.dmabuf() {
+            Some(shared) if shared.turn % 2 == 1 => (f.height, f.width),
+            _ => (f.width, f.height),
+        };
+        match first {
+            Ok(wprs_video::Event::Frame(frame)) => {
+                assert_eq!(size(&frame), (32, 64), "zero copy {zero_copy}")
+            }
+            other => panic!("no rotated frame with zero copy {zero_copy}: {other:?}"),
+        }
     }
 }
 

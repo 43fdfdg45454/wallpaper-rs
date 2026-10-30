@@ -97,11 +97,11 @@ fn deliver(
     let turn = if shares { dmabuf::turn(appsink.static_pad("sink")) } else { 0 };
     let frame = match shared {
         true => shared_frame(&sample, turn),
-        false => to_frame(&sample).filter(|_| turn == 0),
+        false => to_frame(&sample, turn),
     };
     match frame {
         Some(frame) => sink(Event::Frame(frame)),
-        None if shared || turn != 0 => sink(Event::Error(crate::UNSHARED.into())),
+        None if shared => sink(Event::Error(crate::UNSHARED.into())),
         None => {}
     }
     Ok(gst::FlowSuccess::Ok)
@@ -113,7 +113,7 @@ fn shared_frame(sample: &gst::Sample, turn: u8) -> Option<Frame> {
     Some(Frame { width, height, stride: 0, pts, pixels: Pixels::Shared { shared, _held: buffer } })
 }
 
-fn to_frame(sample: &gst::Sample) -> Option<Frame> {
+fn to_frame(sample: &gst::Sample, turn: u8) -> Option<Frame> {
     let info = gst_video::VideoInfo::from_caps(sample.caps()?).ok()?;
     let buffer = sample.buffer_owned()?;
     let pts = buffer.pts().map(|t| Duration::from_nanos(t.nseconds()));
@@ -121,6 +121,13 @@ fn to_frame(sample: &gst::Sample) -> Option<Frame> {
     let stride = u32::try_from(*info.stride().first()?).ok()?;
     let offset = *info.offset().first()?;
     let (width, height) = (info.width(), info.height());
-    let complete = buffer.len() >= offset + stride as usize * height as usize;
-    complete.then_some(Frame { width, height, stride, pts, pixels: Pixels::Mapped(offset, buffer) })
+    if buffer.len() < offset + stride as usize * height as usize {
+        return None;
+    }
+    if turn == 0 {
+        return Some(Frame { width, height, stride, pts, pixels: Pixels::Mapped(offset, buffer) });
+    }
+    let (width, height, pixels) = dmabuf::turned(&buffer[offset..], (width, height, stride as usize), turn);
+    let buffer = gst::Buffer::from_mut_slice(pixels).into_mapped_buffer_readable().ok()?;
+    Some(Frame { width, height, stride: width * 4, pts, pixels: Pixels::Mapped(0, buffer) })
 }

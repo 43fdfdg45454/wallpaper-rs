@@ -4,6 +4,7 @@ mod bus;
 mod dmabuf;
 mod feed;
 mod mix;
+mod outputs;
 mod pipewire;
 mod player;
 mod probe;

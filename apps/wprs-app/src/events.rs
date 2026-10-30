@@ -14,6 +14,14 @@ fn q(text: &str) -> QString {
     QString::from(text)
 }
 
+pub(crate) fn told(message: String, tr: impl Fn(&str) -> String) -> String {
+    match wprs_core::dbus::error::silent(&message) {
+        Some("") => tr(SILENT),
+        Some(short) => format!("{} ({short})", tr(SILENT)),
+        None => message,
+    }
+}
+
 impl Backend {
     pub fn event(mut self: Pin<&mut Self>, event: Event) {
         match event {
@@ -48,8 +56,7 @@ impl Backend {
                 self.job_progress(job, done, total);
             }
             Event::Finished(job, state, name, message) => {
-                let silent = state == "failed" && message.trim().is_empty();
-                let message = if silent { crate::tr::tr(SILENT) } else { message };
+                let message = if state == "failed" { told(message, crate::tr::tr) } else { message };
                 if state == "failed" {
                     self.as_mut().set_last_error(q(&message));
                 }
@@ -68,8 +75,11 @@ impl Backend {
             let reply = bus::call("Daemon1", member, Vec::new()).await;
             qt.queue(move |mut this| match (member, reply) {
                 ("ListJobs", Ok(json)) => {
-                    let jobs = wprs_client::parse::<JobsReply>(&json).map(|r| r.jobs);
-                    this.as_mut().rust_mut().list = jobs.unwrap_or_default();
+                    let mut jobs = wprs_client::parse::<JobsReply>(&json).map(|r| r.jobs).unwrap_or_default();
+                    for error in jobs.iter_mut().filter_map(|j| j.error.as_mut()) {
+                        error.message = told(std::mem::take(&mut error.message), crate::tr::tr);
+                    }
+                    this.as_mut().rust_mut().list = jobs;
                     this.show_jobs();
                 }
                 ("GetSchema", Ok(json)) => this.set_schema(q(&json)),

@@ -90,5 +90,8 @@ fn decoded_frames_are_read_in_place_from_shared_memory() {
     let upright = look(1, (64, 64));
     assert_eq!(upright.dimensions(), (32, 64));
     assert!(level(&upright, 16, 8) > 245 && level(&upright, 16, 56) < 10, "a rotated video is not rotated");
+    let mirrored = [5, 7].map(|turn| look(turn, (64, 64)));
+    let tops = mirrored.each_ref().map(|image| (level(image, 16, 8) > 245, level(image, 16, 56) > 245));
+    assert_eq!(tops, [(false, true), (true, false)], "mirrored and rotated videos turn like videoflip");
     assert_eq!(look(0, (16, 16)).dimensions(), (16, 8), "a large video is not fitted to its screen");
 }

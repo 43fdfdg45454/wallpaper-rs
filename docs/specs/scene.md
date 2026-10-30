@@ -917,8 +917,8 @@ timeline that is paused or has ended keeps playing on, and jumps back to the tim
 again; a timeline started late or sought starts its sounds at its position, not from zero. The
 engine re-aligns playing sounds with the scene once a second. About 50 ms pass between the scene and
 the speaker (the soundtrack asks PipeWire for 20 ms periods and keeps about 20 ms queued); positions
-are counted from what the speaker plays, with the delay the audio output reports, so the queue does
-not shift sounds.
+are counted from the playing position of the audio output, plus one 20 ms PipeWire period when the
+sound goes to PipeWire, so the queue does not shift sounds.
 
 | Field | Meaning |
 |-------|---------|

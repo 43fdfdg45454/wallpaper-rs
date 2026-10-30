@@ -98,7 +98,7 @@ pub(crate) fn watch_bus(
             }
             pausing = pausing.filter(|_| !wanted);
             if pausing.take_if(|at| *at <= Instant::now()).is_some() {
-                unstick(&playbin, &audio);
+                unstick(&playbin, &mut audio);
             }
             audio.tick(&playbin, bus);
         }
@@ -144,12 +144,12 @@ fn apply_wanted_state(playbin: &gst::Element, playing: bool) -> Result<bool, gst
     playbin.set_state(wanted).map(|_| !playing)
 }
 
-fn unstick(playbin: &gst::Element, audio: &Audio) {
+fn unstick(playbin: &gst::Element, audio: &mut Audio) {
     let (_, current, pending) = playbin.state(gst::ClockTime::ZERO);
     let settled = pending == gst::State::VoidPending && current == gst::State::Paused;
     if let Some(at) = playbin.query_position().filter(|_| !settled) {
-        tracing::debug!("the pause did not settle, finishing it at the nearest key frame");
-        audio.seek(playbin, at, false);
+        tracing::debug!("the pause did not settle, finishing it at a key frame and then on the exact frame");
+        audio.unstick(playbin, at);
     }
 }
 

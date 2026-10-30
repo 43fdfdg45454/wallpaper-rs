@@ -70,3 +70,24 @@ fn a_silent_scene_wakes_the_loop_on_its_clock_before_any_speaker_exists() {
     assert_eq!(ticks(&outputs, chosen(true)).collect::<Vec<_>>(), [now + tick]);
     assert_eq!(ticks(&outputs, chosen(false)).count(), 0, "a paused scene sleeps");
 }
+
+#[test]
+fn a_playing_speaker_whose_scene_clock_stands_still_wakes_once_a_second() {
+    let (scene, start) = (delayed(), Instant::now());
+    let (pack, voices) = (scene.spec.pack.clone(), scene.voices.clone());
+    let mut speaker = Speaker {
+        pack,
+        output: "A".into(),
+        track: None,
+        playing: true,
+        volume: 1.0,
+        voices: voices.clone(),
+        fade: Duration::ZERO,
+        quiet: None,
+        synced: start,
+    };
+    for second in 1..4 {
+        assert_eq!(speaker.due(), Some(start + RESYNC * second));
+        speaker.follow(&voices, start + RESYNC * second);
+    }
+}

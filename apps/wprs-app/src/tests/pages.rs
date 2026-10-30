@@ -111,5 +111,12 @@ async fn page_requests_reach_the_window_even_before_it_listens() {
 fn a_job_that_fails_without_a_reason_is_told_in_the_users_language() {
     let silent = crate::events::SILENT;
     assert!(read("qml/StatusBar.qml").contains(&format!("|| App.tr(\"{silent}\")")));
-    assert!(crate::tr::catalog(&["es".to_owned()]).get(silent).is_some_and(|t| t != silent));
+    let spanish = crate::tr::catalog(&["es".to_owned()]);
+    let es = |text: &str| spanish.get(text).cloned().unwrap_or_else(|| text.to_owned());
+    assert_ne!(es(silent), silent);
+    let told =
+        |name: &str, message: &str| crate::events::told(wprs_core::dbus::error::reason(name, message), es);
+    assert_eq!(told("org.freedesktop.DBus.Error.Failed", ""), format!("{} (Failed)", es(silent)));
+    assert_eq!(told("", " "), es(silent));
+    assert_eq!(told("org.freedesktop.DBus.Error.Failed", "disk full"), "disk full");
 }

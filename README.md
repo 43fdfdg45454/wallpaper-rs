@@ -523,8 +523,8 @@ Las consultas aceptan `--json` e imprimen la respuesta del daemon tal cual; sin 
 tablas para leer, no para scripts. Lo que lanza un trabajo imprime su número y termina; con
 `--wait` muestra el progreso y el resultado, y Ctrl-C deja de esperar sin parar el trabajo
 (`wprs-ctl cancel <n>` lo para). Un trabajo que falla siempre dice por qué: si el error no trae
-descripción, el daemon envía `failed without giving a reason` con el nombre del error, y la app y
-el teléfono muestran un motivo en tu idioma; en una pregunta (como instalar desde un repositorio caducado),
+descripción, el daemon envía `failed without giving a reason` con el nombre del error, la app lo
+muestra en tu idioma y el teléfono da también un motivo traducido; en una pregunta (como instalar desde un repositorio caducado),
 Ctrl-C la deja sin respuesta y no cambia nada. Las contraseñas y claves de los proveedores se piden
 sin eco o se leen de la primera línea de la entrada con `--secret-stdin`; nunca van en la orden.
 `wprs-ctl input grant` da el permiso al paquete que se ve con ese id; si varias pantallas muestran
@@ -1086,7 +1086,8 @@ los vídeos; el teléfono no reproduce el sonido de las escenas. Cada capa suena
 el tiempo de la escena: una capa que empieza con una línea de tiempo arranca en la posición de esa
 línea (no desde cero), vuelve a empezar con cada vuelta de la línea, sigue sonando si la línea se
 para y salta a donde está la línea al reanudarla; el daemon vuelve a alinear el sonido con la escena
-cada segundo y descuenta el retardo que informa la salida de audio. Si la salida de audio falla o no
+cada segundo contando desde la posición que reproduce la salida de audio, más un ciclo de PipeWire
+de 20 ms cuando el sonido va a PipeWire. Si la salida de audio falla o no
 hay ninguna (también con el plugin de PipeWire viejo), la escena y los vídeos siguen sin sonido y lo
 recuperan solos cuando aparece una salida. `install.sh` las instala en
 `~/.local/share/wallpaper-rs/examples` (`--no-examples` las omite), el RPM en el paquete opcional

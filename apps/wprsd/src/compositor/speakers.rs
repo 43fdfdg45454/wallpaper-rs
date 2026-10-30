@@ -84,7 +84,8 @@ impl State {
             let interval = Duration::from_secs(1) / o.fps(power);
             let Some(scene) = o.shown.scene.as_mut() else { continue };
             let resync = self.speakers.get(&path).is_some_and(|s| s.playing && s.synced + RESYNC <= now);
-            if live && (resync || scene.heard.is_some_and(|at| at <= now)) {
+            let heard = live && (resync || scene.heard.is_some_and(|at| at <= now));
+            if heard {
                 scene.hear(interval, now);
             }
             if self.speakers.get(&path).is_some_and(|s| !Arc::ptr_eq(&s.pack, &scene.spec.pack)) {
@@ -103,12 +104,10 @@ impl State {
             speaker.output = name;
             speaker.quiet = silent.then(|| speaker.quiet.unwrap_or(now));
             let playing = live && !speaker.faded(now);
-            let track = speaker.track.as_ref();
-            if speaker.voices != scene.voices {
-                track.iter().for_each(|t| t.set(&scene.voices));
-                speaker.voices.clone_from(&scene.voices);
-                speaker.synced = now;
+            if heard || speaker.voices != scene.voices {
+                speaker.follow(&scene.voices, now);
             }
+            let track = speaker.track.as_ref();
             if speaker.volume != volume {
                 track.iter().for_each(|t| t.set_volume(volume));
                 speaker.volume = volume;
@@ -158,6 +157,14 @@ impl Speaker {
         let (pack, output, voices) = (pack.clone(), String::new(), voices.to_vec());
         let synced = Instant::now();
         Speaker { pack, output, track, playing: false, volume, voices, fade, quiet: None, synced }
+    }
+
+    fn follow(&mut self, voices: &[Voice], now: Instant) {
+        if self.voices != voices {
+            self.track.iter().for_each(|t| t.set(voices));
+            self.voices = voices.to_vec();
+        }
+        self.synced = now;
     }
 
     fn faded(&self, now: Instant) -> bool {

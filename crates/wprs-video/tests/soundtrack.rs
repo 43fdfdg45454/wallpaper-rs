@@ -52,12 +52,19 @@ fn required(e: impl std::fmt::Display) {
     assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "sound required: {e}");
 }
 
-fn wait(mut done: impl FnMut() -> bool) -> bool {
-    let deadline = Instant::now() + Duration::from_secs(10);
-    while !done() && Instant::now() < deadline {
+fn wait(done: impl FnMut() -> bool) -> bool {
+    within(Duration::from_secs(10), done).is_some()
+}
+
+fn within(limit: Duration, mut done: impl FnMut() -> bool) -> Option<Duration> {
+    let start = Instant::now();
+    while !done() {
+        if start.elapsed() > limit {
+            return None;
+        }
         std::thread::sleep(Duration::from_millis(20));
     }
-    done()
+    Some(start.elapsed())
 }
 
 #[test]
@@ -101,7 +108,7 @@ fn sounds_decode_from_wav_and_mp3_and_long_ones_stream() {
 }
 
 #[test]
-fn soundtracks_play_soon_and_keep_their_place_across_a_pause() {
+fn soundtracks_stay_near_the_speaker_and_pause_and_resume_promptly() {
     let dir = tempfile::tempdir().unwrap();
     let bank = Bank::new(vec![(wav(dir.path(), 1), false)]);
     let sound = match Soundtrack::open(&bank, &[(vec![Some(0)], track(&[1.0], true))], &[ON], 0.0, |_| {}) {
@@ -112,27 +119,32 @@ fn soundtracks_play_soon_and_keep_their_place_across_a_pause() {
     let position = || sound.position().unwrap_or_default();
     assert!(wait(|| position() > Duration::from_millis(300)), "the soundtrack did not start");
     let mut leads = Vec::new();
-    let settled = wait(|| {
+    let settled = within(Duration::from_secs(1), || {
         leads.push(sound.latency().unwrap_or(Duration::MAX));
         leads.len() >= 5 && median(&leads[leads.len() - 5..]) < Duration::from_millis(100)
     });
-    assert!(settled, "the soundtrack decodes too far ahead: {leads:?}");
+    assert!(settled.is_some(), "the soundtrack decodes too far ahead: {leads:?}");
+    let asked = Instant::now();
     sound.set_playing(false);
-    let mut last = (position(), sound.playheads().0);
-    assert!(
-        wait(|| {
-            std::thread::sleep(Duration::from_millis(100));
-            let now = (position(), sound.playheads().0);
-            std::mem::replace(&mut last, now) == now
-        }),
-        "the soundtrack never paused"
-    );
+    let (mut last, mut moved) = ((position(), sound.playheads().0), asked);
+    let stopped = within(Duration::from_secs(2), || {
+        std::thread::sleep(Duration::from_millis(30));
+        let now = (position(), sound.playheads().0);
+        if std::mem::replace(&mut last, now) != now {
+            moved = Instant::now();
+        }
+        moved.elapsed() >= Duration::from_millis(300)
+    });
+    let took = moved - asked;
+    assert!(stopped.is_some() && took < Duration::from_millis(500), "the pause took {took:?}");
     let (paused, frames) = last;
-    std::thread::sleep(Duration::from_millis(300));
-    let moved = position().saturating_sub(paused);
-    assert!(moved < Duration::from_millis(20) && sound.playheads().0 == frames, "it kept playing: {moved:?}");
+    let crept = position().saturating_sub(paused);
+    assert!(crept < Duration::from_millis(20) && sound.playheads().0 == frames, "it kept playing: {crept:?}");
+    let resumed = Instant::now();
     sound.set_playing(true);
-    assert!(wait(|| position() > paused + Duration::from_millis(300)), "it did not resume");
+    let played = within(Duration::from_secs(2), || position() > paused + Duration::from_millis(300));
+    let late = played.map(|_| resumed.elapsed().saturating_sub(Duration::from_millis(300)));
+    assert!(late.is_some_and(|late| late < Duration::from_millis(700)), "it resumed {late:?} late");
     let (made, heads) = sound.playheads();
     assert!((heads[0] - made as f64).abs() < 1.0, "the lane kept the scene time: {heads:?} {made}");
 }

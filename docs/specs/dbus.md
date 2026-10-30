@@ -200,8 +200,8 @@ them into RGBA on the GPU with the colour matrix and range of the stream, applie
 tag and reduces the frame to the largest output that shows it, and keeps the decoder buffer until
 the next frame arrives. No CPU copy happens per frame. Software decoders, other formats (10-bit
 video), devices without `VK_EXT_external_memory_dma_buf` and `VK_EXT_image_drm_format_modifier`
-(lavapipe, OpenGL) and any failed import use the copy path: the frame is converted and scaled in
-system memory and uploaded. A failure switches the video to the copy path once and for good.
+(lavapipe, OpenGL) and any failed import use the copy path: the frame is converted, scaled and
+turned by its orientation tag in system memory and uploaded, without opening the video again. A failure switches the video to the copy path once and for good.
 `WPRS_ZERO_COPY=0` in the environment of the daemon forces the copy path. Per driver: Intel (iHD)
 and AMD (radeonsi) VA-API export NV12 DMA-BUFs; with GStreamer 1.24, NVIDIA offers no DMA-BUF from
 NVDEC (CUDA or OpenGL memory) nor from its VA-API driver (system memory), so its videos are copied,
@@ -622,9 +622,8 @@ Progress of a running job, at most 4 times per second per job; `total = 0` means
 
 A job ended. `state` is `done`, `failed` or `cancelled`; `error_name` and `message` are empty
 unless the job failed. A cancelled job has `message = "cancelled"`. A failed job never has an
-empty `message` (see "Errors"); clients that still get one, from an older daemon, show a
-translated reason of their own (the app, the phone) or `failed without giving a reason`
-(`wprs-ctl`).
+empty `message` (see "Errors"); the app shows that reason, and an empty message from an older
+daemon, in the user's language, and `wprs-ctl` prints `failed without giving a reason`.
 
 ## `io.github.wallpaper_rs.Library1`
 
@@ -1869,9 +1868,9 @@ package up to 180.5 s; a sound that goes on longer is not played.
   offset of the timeline position since the key that turned it on, starts again with every turn of
   a repeating timeline, keeps running when the timeline is paused or ends, and jumps back to the
   timeline when it plays again. The daemon re-aligns every playing layer with the scene clock once a
-  second, and a layer more than 60 ms away ducks for 5 ms and jumps. Positions count the delay of
-  the audio output: the samples queued in the pipeline, the latency that its sink reports and, for
-  `pipewiresink`, one 20 ms PipeWire cycle.
+  second, and a layer more than 60 ms away ducks for 5 ms and jumps. Positions count from the
+  playing position of the audio output, whose clock leaves out what its sink still holds, plus one
+  20 ms PipeWire cycle (the period the soundtrack asks for) when the sound goes to `pipewiresink`.
 - When the audio output fails (no device, a sound server that went away, also with a PipeWire
   GStreamer plugin older than 1.2), the scene and the videos go on silent, and the output is tried
   again once a PipeWire or PulseAudio device provider lists an audio sink, after 1 s and then twice
