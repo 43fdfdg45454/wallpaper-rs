@@ -15,6 +15,7 @@ pub use edit::Edit;
 pub use fit::{Fit, UvRect};
 pub use layout::{Layout, Place, Screen};
 pub use settings::{Library, Models, Pause, Playback, Repos, Transition, TransitionKind};
+pub use store::stopped_effects;
 
 pub const VERSION: &str = match option_env!("WPRS_VERSION") {
     Some(v) if !v.is_empty() => v,

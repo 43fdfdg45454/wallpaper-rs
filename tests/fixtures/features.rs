@@ -61,7 +61,7 @@ pub fn build(name: &str, case: &Value, dir: &Path) -> wprs_format::Result<PathBu
 }
 
 pub fn effects() -> Value {
-    let used = wprs_scene::undrawn().iter().map(|d| json!({ "effect": d.id }));
+    let used = newer_effects().map(|id| json!({ "effect": id }));
     let built = wprs_scene::builtin().iter().filter(|d| wprs_scene::newer_params(&d.id).next().is_some());
     let set = built.map(|d| {
         let params: Map<String, Value> = wprs_scene::newer_params(&d.id)
@@ -72,4 +72,10 @@ pub fn effects() -> Value {
     let layer = |(i, e): (usize, Value)| json!({ "id": format!("e{i}"), "type": "image", "image": "sky", "effects": [e] });
     let layers: Vec<Value> = used.chain(set).enumerate().map(layer).collect();
     json!({ "manifest": { "inputs": ["audio", "pointer", "clicks"] }, "scene": { "layers": layers } })
+}
+
+pub fn newer_effects() -> impl Iterator<Item = &'static str> {
+    let first = |id: &str| wprs_format::features::BUILTIN.split_whitespace().any(|b| b == id);
+    let newer = wprs_scene::builtin().iter().filter(move |d| !first(&d.id));
+    wprs_scene::undrawn().iter().chain(newer).map(|d| d.id.as_str())
 }

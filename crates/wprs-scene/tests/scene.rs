@@ -113,9 +113,13 @@ fn validation_names_the_broken_field() {
         Mask { layer: Some("disc".into()), ..Mask::default() },
         Mask { shape: Some(Shape::Ellipse { size: [4.0, 4.0] }), ..Mask::default() },
     ] {
-        let found = issues(|s| s.layers[0].effects[0].mask = Some(mask));
-        assert_eq!(found, [Issue::EffectMask("/layers/0/effects/0/mask".into())]);
+        assert!(issues(|s| s.layers[0].effects[0].mask = Some(mask)).is_empty());
     }
+    let own = issues(|s| {
+        let layer = Some(s.layers[0].id.clone());
+        s.layers[0].effects[0].mask = Some(Mask { layer, ..Mask::default() });
+    });
+    assert_eq!(own, [Issue::Circle("/layers/0/effects".into())]);
     let deep = (0..9).fold(
         Layer::new("leaf", Kind::Adjustment { size: None, redraw: false, rgb: false }),
         |inner, i| {

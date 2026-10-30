@@ -86,5 +86,18 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
         "property_kinds": crate::props::PROPERTY_KINDS, "timelines": timelines, "tracks": tracks, "length": length, "systems": systems,
         "history": {"done": done, "undone": undone}, "dirty": project.dirty(), "recoverable": project.pending.is_some(),
         "kinds": KINDS, "starters": STARTERS, "easings": wprs_scene::easings(),
-        "effects": wprs_scene::builtin().iter().map(|d| d.id.as_str()).collect::<Vec<_>>()})
+        "effects": wprs_scene::builtin().iter().map(|d| d.id.as_str()).chain(own(doc)).collect::<Vec<_>>(),
+        "effect_names": names(project)})
+}
+
+fn names(project: &Project) -> serde_json::Map<String, Value> {
+    let languages = wprs_core::locale::languages();
+    let named = project.effects().into_values().filter(|d| !d.name.is_empty());
+    named
+        .map(|d| (d.id.clone(), json!(wprs_scene::Text::Localized(d.name.clone()).pick(&languages))))
+        .collect()
+}
+
+fn own(doc: &Value) -> impl Iterator<Item = &str> {
+    doc["scene"]["effects"].as_object().into_iter().flat_map(|o| o.keys().map(String::as_str))
 }

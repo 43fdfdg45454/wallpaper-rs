@@ -30,10 +30,11 @@ impl Painter<'_, '_, '_> {
         plain && d.tint == Color([1.0; 4]) && d.brightness == 1.0 && !d.layer.cache
     }
 
-    fn marks(&self, range: Range<usize>, out: &mut Vec<Mark>) {
+    fn marks(&mut self, range: Range<usize>, out: &mut Vec<Mark>) {
         let mut i = range.start;
         while i < range.end {
-            let d = &self.frame.draws[i];
+            let frame = self.frame;
+            let d = &frame.draws[i];
             if self.plain(i) && !d.hidden {
                 self.marks(i + 1..d.end, out);
             } else {
@@ -43,13 +44,16 @@ impl Painter<'_, '_, '_> {
                 let effects = &self.frame.effects[d.effects.clone()];
                 let reach = match &d.content {
                     _ if d.mask.is_some_and(|m| m.layer.is_some()) => Reach::Matte,
+                    _ if effects.iter().any(|e| e.descriptor.below()) => Reach::Matte,
+                    _ if self.feeds(i..d.end).next().is_some() => Reach::Matte,
                     Content::Adjustment if !effects.iter().all(pointwise) => Reach::Around,
                     _ => Reach::Own,
                 };
                 let video =
                     self.frame.draws[i..d.end].iter().any(|d| matches!(d.content, Content::Video { .. }));
-                let moment = if d.dynamic { self.moment } else { 0 };
-                let key = if video { MOVING } else { self.digest(i..d.end, (d.hidden, moment)) };
+                let (fed, moving) = self.feeding(i..d.end);
+                let moment = if d.dynamic || moving { self.moment } else { 0 };
+                let key = if video { MOVING } else { self.digest(i..d.end, (d.hidden, moment, fed)) };
                 let rect = if d.hidden { None } else { self.extent(i) };
                 out.push((std::ptr::from_ref::<Layer>(d.layer) as usize, key, rect, reach));
             }
@@ -57,7 +61,7 @@ impl Painter<'_, '_, '_> {
         }
     }
 
-    pub(crate) fn damage(&self, old: &[Mark], new: &mut Vec<Mark>, fresh: bool) -> Damage {
+    pub(crate) fn damage(&mut self, old: &[Mark], new: &mut Vec<Mark>, fresh: bool) -> Damage {
         new.clear();
         self.marks(0..self.frame.draws.len(), new);
         if fresh || old.is_empty() {

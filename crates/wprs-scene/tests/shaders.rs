@@ -59,7 +59,9 @@ fn packaged(change: impl FnOnce(&mut Json), wgsl: &str) -> Result<Descriptor, St
 fn package_effects_compile_against_the_contract_and_report_what_they_read() {
     let d = packaged(|_| (), WGSL).unwrap_or_else(|e| panic!("{e}"));
     assert!(d.uses.contains(&Use::Time) && d.uses.contains(&Use::Audio) && !d.uses.contains(&Use::Cursor));
-    assert!(d.newer() && builtin().iter().all(|b| !b.newer()));
+    let mut first =
+        builtin().iter().filter(|b| !["tint", "blend_texture", "light_shafts"].contains(&b.id.as_str()));
+    assert!(d.newer() && first.all(|b| !b.newer()));
     assert_eq!(d.params[2].slot(&Param::Text("linear_burn".into()))[0], Blend::LinearBurn as u8 as f32);
     assert!(d.params[1].accepts(&Param::Number(1.0)) && !d.params[1].accepts(&Param::Number(2.0)));
     assert!(!d.params[0].accepts(&Param::Number(1.5)) && d.params[3].accepts(&Param::Vec2([0.2, 0.8])));
@@ -115,7 +117,7 @@ fn descriptors_check_their_new_fields() {
     let many: Vec<Json> =
         (0..25).map(|i| json!({ "id": format!("p{i}"), "type": "float", "default": 0 })).collect();
     let cases = [
-        (pass(json!({ "entry": "fs_a", "copy": "previous" })), "needs either an entry or a copy"),
+        (pass(json!({ "entry": "fs_a", "copy": "previous" })), "needs either an entry, a copy or a swap"),
         (pass(json!({ "entry": "fs_a", "target": "nowhere" })), "writes an unknown target"),
         (pass(json!({ "entry": "fs_a", "grid": [8, 8] })), "needs a vertex entry and a grid"),
         (pass(json!({ "entry": "fs_a", "vertex": "vs_a", "grid": [65, 8] })), "a grid of 1 to 64"),
@@ -194,6 +196,26 @@ fn scenes_adopt_their_package_effects_and_check_their_uses() {
         fault,
         "invalid scene: /layers/0/effects/0/params needs 10 variants of its shader, at most 8 are allowed"
     );
+    let mut waiting = descriptor();
+    waiting["options"][0]["values"] = json!([1, 2, 3, 4, 5]);
+    waiting["options"][0]["default"] = json!(1);
+    let mut both = scene(json!([{ "effect": "ripple",
+        "params": { "taps": { "prop": "q" }, "paint": { "prop": "t", "map": { "false": "a", "true": "a" } } } }]));
+    let files = |path: &str, _: usize| {
+        Ok::<_, &str>(if path.ends_with("json") { waiting.to_string() } else { WGSL.into() }.into_bytes())
+    };
+    let fault = both.adopt(&props, files).unwrap_err().to_string();
+    assert!(fault.ends_with("needs 10 variants of its shader, at most 8 are allowed"), "{fault}");
+    let d = packaged(|_| (), WGSL).unwrap();
+    let fed: EffectUse =
+        serde_json::from_value(json!({ "effect": "ripple", "params": { "paint": { "layer": "sky" } } }))
+            .unwrap();
+    assert_eq!((d.variant(&fed, |_| None), d.variants(&fed).unwrap()), (1 << 4, vec![1 << 4]));
+    let painted: EffectUse =
+        serde_json::from_value(json!({ "effect": "ripple", "params": { "paint": "a" } })).unwrap();
+    assert_eq!(d.variants(&painted).unwrap(), vec![1 << 4]);
+    let plain: EffectUse = serde_json::from_value(json!({ "effect": "ripple" })).unwrap();
+    assert_eq!((d.variant(&plain, |_| None), d.variants(&plain).unwrap()), (0, vec![0]));
     let mut gone = scene(json!([{ "effect": "ripple" }]));
     let files = |_: &str, _: usize| Err::<Vec<u8>, _>("no such file");
     assert!(
@@ -224,6 +246,8 @@ fn the_contract_compiles_and_names_its_helpers() {
         "fn band_left(",
         "fn band_right(",
         "fn band_of(",
+        "fn band_left_of(",
+        "fn band_right_of(",
         "fn layer_color(",
         "fn layer_alpha(",
         "fn parallax(",

@@ -6,7 +6,6 @@ use crate::stack::{Plan, plan};
 use crate::texture::{GpuImage, create_texture, gpu_image, texture};
 use crate::{RenderError, Renderer};
 use image::RgbaImage;
-use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{BindingResource as Resource, CommandEncoder as Encoder, TextureFormat as Format};
 use wgpu::{TextureUsages as Usage, TextureView};
 use wprs_core::{Edit, UvRect};
@@ -161,9 +160,8 @@ impl Renderer {
         target: &wgpu::Texture,
     ) {
         let usage = wgpu::BufferUsages::UNIFORM;
-        let label = Some("wprs-render develop params");
-        let buffer =
-            self.device.create_buffer_init(&BufferInitDescriptor { label, contents: uniform, usage });
+        let label = "wprs-render develop params";
+        let buffer = crate::filled::filled((&self.device, &self.queue), label, uniform, usage);
         let textures = views.iter().map(|v| Resource::TextureView(v));
         let resources = std::iter::once(buffer.as_entire_binding())
             .chain(textures)
@@ -172,8 +170,11 @@ impl Renderer {
             .enumerate()
             .map(|(i, resource)| wgpu::BindGroupEntry { binding: i as u32, resource })
             .collect();
-        let group =
-            self.device.create_bind_group(&wgpu::BindGroupDescriptor { label, layout, entries: &entries });
+        let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(label),
+            layout,
+            entries: &entries,
+        });
         let ops =
             wgpu::Operations { load: wgpu::LoadOp::Clear(wgpu::Color::BLACK), store: wgpu::StoreOp::Store };
         let view = view(target);

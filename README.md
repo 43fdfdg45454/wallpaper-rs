@@ -638,10 +638,58 @@ iluminación 2D con mapas de normales y luz ambiente, captura de una región, ev
 las líneas de tiempo, curvas con manejadores, animación por componente y relativa, la hora y la fecha
 como valores, rangos de frecuencias con límites y exponente, y efectos propios del paquete en WGSL
 con pasadas, objetivos, variantes, hasta 8 texturas y 24 parámetros, comprobados al leer el paquete
-contra el contrato de su preludio. Cada uno tiene su nombre en `requires.features`; mientras el motor
-no los dibuja, el escritorio y el teléfono rechazan la escena con el mismo aviso (el teléfono, que
-reproduce las escenas sin sonido, solo omite el sonido nuevo). `docs/specs/scene.md` describe cada
-campo y sus límites.
+contra el contrato de su preludio. Cada uno tiene su nombre en `requires.features`, y el escritorio
+y el teléfono rechazan con el mismo aviso una escena que use alguno que su motor aún no dibuja (el
+teléfono, que reproduce las escenas sin sonido, solo omite el sonido nuevo). `docs/specs/scene.md`
+describe cada campo y sus límites.
+
+El escritorio y el teléfono ya dibujan también los efectos propios del paquete. Cada uno es un
+descriptor JSON y un shader WGSL con hasta 16 pasadas que escriben en la siguiente textura o en
+objetivos con nombre a su escala (en 8 o 16 bits por canal), los copian, los intercambian para
+alternar entre dos (ping-pong), acumulan con fusión por pasada (reemplazar, normal, sumar o
+multiplicar), deforman la capa con un shader de vértice sobre una rejilla de hasta 64 × 64 celdas y
+leen hasta 8 texturas con su tamaño. Un efecto con `compose` lee la capa ya dibujada sobre lo que
+hay debajo y su resultado sustituye esa zona. Las variantes (`options`, constantes `override` de
+WGSL) se compilan todas al cargar la escena, nunca a mitad de un fotograma, y los parámetros y las
+variantes salen como controles en el editor. El shader recibe además la hora del día, el tiempo del
+fotograma, el puntero y su posición anterior, el tamaño de la pantalla, el espectro de 16, 32 o 64
+bandas, mezclado o por canal, el paralaje y el color y la opacidad de la capa, con funciones de
+ayuda propias (rotación, gris, HSV y los modos de fusión). Una máscara sin imagen toma su color de
+`paint`, y una textura puede usar las genéricas `white`, `black`, `noise` o `normal_flat`. Como el
+shader viene del paquete, naga lo comprueba antes de que llegue al driver: sin enlaces propios, con
+todos los recursos acotados, con bucles de contador entero que avanzan un paso fijo hasta un
+límite fijo sin desbordarse, expresiones de como mucho 256 operaciones de profundidad, como mucho
+1 048 576 operaciones por píxel, 32 768 operaciones de largo contando cada llamada entera y 16 KiB
+de variables por píxel. El shader se compila en hilos aparte con un plazo de 10 segundos. Si el
+driver lo rechaza o no termina a tiempo, la capa se dibuja sin el efecto y la app, la bandeja,
+`wprs-ctl state` y los diagnósticos del teléfono lo anotan, sin tratarlo como un fallo. Antes de
+comprobar o compilar un efecto por primera vez cada programa lo anota como «a prueba» y borra la
+nota cuando termina o cuando pasan sus primeros fotogramas; una nota que deja un proceso caído o
+colgado cuenta como un fallo, igual que una GPU que se detiene, y con dos el efecto queda fuera
+(lo recuerda por el hash del efecto, así que una versión nueva vuelve a probarse). *Probar de
+nuevo* en la app, en los diagnósticos del teléfono o `wprs-ctl retry-effects` lo prueban otra vez.
+Cada pasada, cada lectura de textura y cada operación del shader cuentan en el coste de la escena
+aunque el descriptor diga menos, y
+`wprs-ctl pack check`, `pack build` y el editor avisan cuando una escena no cabe con calidad 2 en
+una GPU integrada antigua o de teléfono. `docs/specs/scene.md` explica cómo pasar un shader de HLSL
+o GLSL a WGSL, con una tabla de equivalencias.
+
+Las dos plataformas componen ya las capas con los 32 modos de fusión: a los 17 de siempre se suman
+`linear_burn`, `linear_dodge`, `darker_color`, `lighter_color`, `vivid_light`, `linear_light`,
+`pin_light`, `hard_mix`, `subtract`, `divide`, `reflect`, `glow`, `phoenix`, `average` y `negation`,
+con fórmulas publicadas por canal que el motor, los efectos integrados y los del paquete comparten.
+Una capa, aunque esté oculta, puede alimentar la textura de un efecto con `{ "layer": "<id>" }`: se
+dibuja aparte y entra alineada con la pantalla, de modo que cada punto del efecto lee el punto de la
+otra capa que tiene encima, y solo se vuelve a dibujar cuando esa capa cambia. Las máscaras de los
+efectos aceptan también una capa o una forma, con inversión, difuminado e intensidad, como las de
+las capas, y una pasada puede leer `backdrop`, lo que ya hay dibujado bajo la capa, tanto en los
+efectos integrados como en los del paquete. Hay tres efectos integrados nuevos: `tint` tiñe la capa
+con un color y un modo de fusión o la colorea conservando su luminosidad, `blend_texture` mezcla
+otra imagen o una capa con un modo de fusión, desplazada y repetida, y `light_shafts` dibuja haces
+de luz propios, en paralelo, desde un punto o desde una esquina, de un color o con un degradado, y
+solo pide fotogramas mientras su velocidad no es cero. Cada capa que alimenta un efecto y cada máscara
+dibujada cuentan en el coste de la escena. `docs/specs/scene.md` incluye una tabla de equivalencias
+con los efectos de otros programas y cómo convertir sus parámetros.
 
 El escritorio y el teléfono ya dibujan de esa lista el tinte y el brillo de capa, el padre de
 transformación, las máscaras con intensidad, los ajustes del paralaje (el teléfono también con su
@@ -691,12 +739,12 @@ adivinan por su texto. Todo tiene su nombre en `requires.features` y, mientras e
 el escritorio y el teléfono rechazan la escena con el aviso de versión más nueva (el teléfono, que no
 ejecuta scripts ni tiene iluminación RGB ni varias pantallas, solo omite esas partes).
 
-También están descritos los efectos que el motor aún no dibuja: haces de luz, tinte, mezcla de
-texturas y por degradado, revelar con el puntero, desplazamiento por mapa, cáusticas, destellos,
-fuego, giro, transformación, pulso, contraste local, estela de movimiento, VHS, fluidos, destello de
-lente y chisporroteo eléctrico, y los parámetros nuevos de efectos que ya existen (el modo estrella y
-direccional de los rayos de luz, el desfase por píxel de las ondas, el modo doble del balanceo, la
-fusión del desenfoque y del grano, etc.). Se validan como los integrados, el editor de escenas los
+También están descritos los efectos que el motor aún no dibuja: mezcla por degradado, revelar con
+el puntero, desplazamiento por mapa, cáusticas, destellos, fuego, giro, transformación, pulso,
+contraste local, estela de movimiento, VHS, fluidos, destello de lente y chisporroteo eléctrico, y
+los parámetros nuevos de efectos que ya existen (el modo estrella y direccional de los rayos de luz,
+el desfase por píxel de las ondas, el modo doble del balanceo, la fusión del desenfoque y del grano,
+etc.). Se validan como los integrados, el editor de escenas los
 muestra y se nombran `effect.<id>` y `effect.<id>.<parámetro>`: el escritorio y el teléfono rechazan
 con el mismo aviso los que no dibujan, y los nombres no cambian cuando se dibujen. Las líneas de
 tiempo pueden medirse en fotogramas (`frames` y `fps`, que ya funciona en las dos plataformas) y
@@ -990,7 +1038,12 @@ otra página no cierra un editor con cambios sin guardar.
   partículas, un vídeo o un color) muestra la propiedad que lo guía y una fila por opción para
   elegir su variante. `requires.features` sigue a los tipos y campos nuevos que se usan.
 - **Recursos**: importa imágenes, vídeos, sonidos, fuentes y tablas `.cube` dentro de los límites
-  del formato y borra los archivos que la escena ya no usa.
+  del formato y borra los archivos que la escena ya no usa. *Importar un efecto…* (`wprs-ctl scene
+  import-effect`) copia un efecto propio, su descriptor y su shader WGSL (junto a él o elegido aparte,
+  como `--wgsl`), a `effects/`, lo comprueba como al leer el paquete y dice qué cambiar si no pasa;
+  después se añade a las capas como los integrados, con su nombre en tu idioma, y sus parámetros
+  salen en el inspector con su etiqueta y su ayuda en tu idioma, sus límites, las imágenes o capas
+  que pueden leer y sus variantes, enlazables a propiedades, fotogramas clave o scripts.
 - **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
   capa o el campo afectado.
 

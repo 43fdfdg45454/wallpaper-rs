@@ -1,10 +1,11 @@
 use super::item::{Fx, Rect, channel, rows, scale_of};
 use super::paint::Painter;
-use super::pipes::Shader;
-use super::{Op, Src};
-use wprs_scene::{Affine, CHAIN_ENTRY, Descriptor, EffectDraw, MaskMode, Output, ParamKind};
+use super::pipes::{Mode, Shader};
+use super::{Fill, Op, Src};
+use wprs_scene::{Affine, CHAIN_ENTRY, Descriptor, EffectDraw, MaskMode, Output, ParamKind, descriptor};
 
-const EMPTY: [Src; 7] = [Src::Clear, Src::White, Src::Clear, Src::Clear, Src::Clear, Src::Clear, Src::Void];
+pub(crate) const EMPTY: [Src; 7] =
+    [Src::Clear, Src::White, Src::Clear, Src::Clear, Src::Clear, Src::Clear, Src::Void];
 
 impl Painter<'_, '_, '_> {
     fn pass(
@@ -16,9 +17,36 @@ impl Painter<'_, '_, '_> {
         tex: [Src; 7],
         fx: Fx,
     ) -> Src {
+        let Some((target, slot)) = self.place(rect, out, scale, tex[0], fx) else { return tex[0] };
+        let mut all = [Src::Clear; 11];
+        all[..7].copy_from_slice(&tex);
+        let (more, mode, load, vertices, tex) = (None, Mode::Replace, false, 3, self.set(all));
+        self.ops.push(Op::Effect(Fill { target, shader, slot, tex, more, mode, load, vertices }));
+        target
+    }
+
+    pub(crate) fn set(&mut self, tex: [Src; 11]) -> u32 {
+        self.sets.push(tex);
+        self.sets.len() as u32 - 1
+    }
+
+    pub(crate) fn bare(&mut self, entry: &'static str, rect: Rect, tex: [Src; 7], fx: Fx) -> Src {
+        let lease = Some(&mut *self.lease);
+        let plain = self.r.pipes().chain(&self.r.device, std::iter::empty::<&Descriptor>(), lease);
+        self.pass(Shader::Fx(plain, entry), rect, None, 1.0, tex, fx)
+    }
+
+    pub(crate) fn place(
+        &mut self,
+        rect: Rect,
+        out: Option<Src>,
+        scale: f32,
+        first: Src,
+        fx: Fx,
+    ) -> Option<(Src, u32)> {
         let size = ((rect.w * scale).ceil().max(1.0) as u32, (rect.h * scale).ceil().max(1.0) as u32);
-        let Some(out) = out.or_else(|| self.acquire(size)) else { return tex[0] };
-        let (w, h) = self.size_of(tex[0]);
+        let out = out.or_else(|| self.acquire(size))?;
+        let (w, h) = self.size_of(first);
         let px = scale_of(self.screen) * w as f32 / rect.w.max(1.0);
         let f = self.full;
         let (x0, y0) = (((f.x - rect.x) / rect.w).max(0.0), ((f.y - rect.y) / rect.h).max(0.0));
@@ -30,12 +58,10 @@ impl Painter<'_, '_, '_> {
             clip: [x0, y0, x1.max(x0), y1.max(y0)],
             ..fx
         };
-        let slot = self.pool.push(&fx);
-        self.ops.push(Op::Effect { target: out, shader, slot, tex });
-        out
+        Some((out, self.pool.push(&fx)))
     }
 
-    fn base(&mut self, e: &EffectDraw<'_>, layer_uv: Affine) -> (Fx, Src) {
+    pub(crate) fn base(&mut self, e: &EffectDraw<'_>, layer_uv: Affine) -> (Fx, Src) {
         let images = self.images;
         let mask = e.mask_texture.as_deref().and_then(|id| images.get(id));
         let mask = mask.map_or(Src::White, |image| self.ext(&image.0));
@@ -61,10 +87,12 @@ impl Painter<'_, '_, '_> {
         let (mut current, mut k) = (input, 0);
         while k < list.len() {
             let n = list[k].chain.clamp(1, list.len() - k);
-            let next = match n {
-                1 => self.effect(&list[k], input, current, rect, layer_uv),
-                _ => self.chain(&list[k..k + n], current, rect, layer_uv),
-            };
+            let n = if list[k..k + n].iter().any(|e| self.cut(i, e)) { 1 } else { n };
+            if self.cut(i, &list[k]) {
+                k += 1;
+                continue;
+            }
+            let next = self.step(i, &list[k..k + n], (input, current), rect, layer_uv);
             if current != input && current != next {
                 self.release(current);
             }
@@ -73,7 +101,7 @@ impl Painter<'_, '_, '_> {
         current
     }
 
-    fn chain(&mut self, list: &[EffectDraw<'_>], input: Src, rect: Rect, layer_uv: Affine) -> Src {
+    pub(crate) fn chain(&mut self, list: &[EffectDraw<'_>], input: Src, rect: Rect, layer_uv: Affine) -> Src {
         let key =
             self.r.pipes().chain(&self.r.device, list.iter().map(|e| e.descriptor), Some(&mut *self.lease));
         let (mut fx, _) = self.base(&list[0], layer_uv);
@@ -88,24 +116,39 @@ impl Painter<'_, '_, '_> {
         self.pass(Shader::Fx(key, CHAIN_ENTRY), rect, None, 1.0, tex, fx)
     }
 
-    fn effect(&mut self, e: &EffectDraw<'_>, source: Src, current: Src, rect: Rect, layer_uv: Affine) -> Src {
-        let d: &'static Descriptor = e.descriptor;
+    pub(crate) fn effect(
+        &mut self,
+        i: usize,
+        e: &EffectDraw<'_>,
+        source: Src,
+        current: Src,
+        rect: Rect,
+        layer_uv: Affine,
+    ) -> Src {
+        let Some(d) = descriptor(&e.descriptor.id) else { return current };
         let key = self.r.pipes().chain(&self.r.device, std::iter::once(d), Some(&mut *self.lease));
+        let fed = self.fed(i, e, rect, layer_uv);
         let (fx, mask) = self.base(e, layer_uv);
+        let mask = fed.mask.unwrap_or(mask);
         let lut = self.lut(e);
         let tune = d.scale_at(self.frame.quality);
-        let sim = d.state.map(|s| {
-            let side = |v: f32| (v * s.scale * tune).ceil().max(1.0) as u32;
-            let (id, size) = (std::ptr::from_ref(e.effect) as usize, (side(rect.w), side(rect.h)));
-            self.sim(id, size);
-            (id, size, self.ticks(id, self.frame.time))
-        });
+        let sim = match d.state {
+            Some(s) => {
+                let side = |v: f32| (v * s.scale * tune).ceil().max(1.0) as u32;
+                let Some(sim) = self.state(i, e, (side(rect.w), side(rect.h))) else {
+                    fed.all().for_each(|s| self.release(s));
+                    return current;
+                };
+                Some(sim)
+            }
+            None => None,
+        };
         let (base, mut previous, last) = (self.outputs.len(), current, d.passes.len() - 1);
         for (n, pass) in d.passes.iter().enumerate() {
             let state = pass.output == Output::State;
             let runs = sim.filter(|_| state).map_or(1, |(.., ticks)| ticks);
             for k in 0..runs {
-                let front = sim.map(|(id, size, _)| (id, self.sim(id, size)));
+                let front = sim.map(|(id, ..)| (id, self.front(id)));
                 let mut tex = [Src::Clear, mask, Src::Clear, Src::Clear, Src::Clear, Src::Clear, lut];
                 for (at, name) in [0, 2, 3, 4, 5].into_iter().zip(&pass.inputs) {
                     tex[at] = match name.as_str() {
@@ -113,12 +156,13 @@ impl Painter<'_, '_, '_> {
                         "input" => current,
                         "source" => source,
                         "mask" => mask,
+                        "backdrop" => self.backdrop.unwrap_or(Src::Clear),
                         "state" => front.map_or(Src::Clear, |(id, side)| Src::State(id, side)),
                         other => match other.split_once(':') {
                             Some(("pass", k)) => {
                                 k.parse().ok().and_then(|k: usize| self.outputs[base..].get(k).copied())
                             }
-                            Some(("asset", p)) => self.asset(e, p, ParamKind::Texture),
+                            Some(("asset", p)) => fed.get(p).or_else(|| self.asset(e, p, ParamKind::Texture)),
                             _ => None,
                         }
                         .unwrap_or(Src::Clear),
@@ -137,14 +181,9 @@ impl Painter<'_, '_, '_> {
             self.outputs.push(previous);
         }
         if d.mask_mode == MaskMode::Mix && e.mask.is_some() {
-            let plain = self.r.pipes().chain(
-                &self.r.device,
-                std::iter::empty::<&Descriptor>(),
-                Some(&mut *self.lease),
-            );
             let mut tex = EMPTY;
             (tex[0], tex[1], tex[2]) = (previous, mask, current);
-            previous = self.pass(Shader::Fx(plain, "fs_mask_mix"), rect, None, 1.0, tex, fx);
+            previous = self.bare("fs_mask_mix", rect, tex, fx);
         }
         while self.outputs.len() > base {
             let out = self.outputs.pop().expect("longer than base");
@@ -152,6 +191,7 @@ impl Painter<'_, '_, '_> {
                 self.release(out);
             }
         }
+        fed.all().filter(|s| *s != previous).for_each(|s| self.release(s));
         previous
     }
 }

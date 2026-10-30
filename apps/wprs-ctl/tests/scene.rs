@@ -359,3 +359,27 @@ fn the_scene_commands_of_the_readme_work_as_written() {
         json!({"en": "Speed", "es": "Velocidad"})
     );
 }
+
+#[test]
+fn package_effects_are_imported_from_the_command_line() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    ok(dir, &["scene", "new", "snow", "--from", "empty", "--title", "Snow"]);
+    let descriptor = json!({ "id": "dim", "cost": {}, "passes": [{ "entry": "fs_dim" }] });
+    std::fs::write(dir.join("dim.json"), descriptor.to_string()).unwrap();
+    std::fs::write(
+        dir.join("dim.wgsl"),
+        "@fragment fn fs_dim(in: VertexOut) -> @location(0) vec4<f32> { return tap(in.uv) * 0.5; }",
+    )
+    .unwrap();
+    ok(dir, &["scene", "import-effect", "snow", "dim.json"]);
+    assert_eq!(show(dir, "/scene/effects/dim/wgsl"), "effects/dim.wgsl");
+    std::fs::write(
+        dir.join("dim.wgsl"),
+        "@fragment fn fs_other(in: VertexOut) -> @location(0) vec4<f32> { return tap(in.uv); }",
+    )
+    .unwrap();
+    assert!(
+        fails(dir, &["scene", "import-effect", "snow", "dim.json"]).contains("has no entry point fs_dim")
+    );
+}

@@ -1,7 +1,6 @@
 use crate::validate::{Check, Issue};
 use crate::value::Value;
 use crate::{Descriptor, EffectUse, MAX_EFFECT_FILES, MAX_EVENTS, MAX_FRAMES, MAX_VARIANTS, Timeline};
-use std::collections::BTreeSet;
 
 pub(crate) const IMAGES: [&str; 8] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif", "ktx2"];
 pub(crate) const VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
@@ -150,6 +149,7 @@ impl Check<'_> {
         for d in scene.loaded.values() {
             self.uses(!d.options.is_empty(), "effect_options");
             self.uses(d.passes.iter().any(|p| p.vertex.is_some()), "vertex_effects");
+            self.uses(d.newest(), "custom_effects2");
         }
     }
 
@@ -180,34 +180,23 @@ impl Check<'_> {
     }
 
     pub(crate) fn variants(&mut self, e: &str, d: &Descriptor, effect: &EffectUse) {
-        let mut combos = 1usize;
         for o in &d.options {
             let path = format!("{e}/params/{}", o.id);
             let Some(value) = effect.params.get(&o.id) else { continue };
             self.value(&path, value);
-            let count = match value {
-                Value::Fixed(v) if o.values.contains(v) => 1,
-                Value::Bound(b) if b.prop.is_some() => match &b.map {
-                    Some(map) if map.values().all(|v| o.values.contains(v)) => map
-                        .values()
-                        .map(|v| serde_json::to_string(v).unwrap_or_default())
-                        .collect::<BTreeSet<_>>()
-                        .len(),
-                    Some(_) => {
+            match value {
+                Value::Fixed(v) if o.values.contains(v) => {}
+                Value::Bound(b) if b.prop.is_some() => {
+                    if b.map.as_ref().is_some_and(|map| !map.values().all(|v| o.values.contains(v))) {
                         self.issues.push(Issue::Type(format!("{path}/map")));
-                        1
                     }
-                    None => o.values.len(),
-                },
-                _ => {
-                    self.issues.push(Issue::Type(path));
-                    1
                 }
-            };
-            combos = combos.saturating_mul(count);
+                _ => self.issues.push(Issue::Type(path)),
+            }
         }
-        if combos > MAX_VARIANTS {
-            self.issues.push(Issue::Variants { path: format!("{e}/params"), count: combos });
+        let count = d.combinations(effect);
+        if count > MAX_VARIANTS {
+            self.issues.push(Issue::Variants { path: format!("{e}/params"), count });
         }
     }
 }

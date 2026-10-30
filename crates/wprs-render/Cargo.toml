@@ -13,7 +13,7 @@ ab_glyph.workspace = true
 fontdb.workspace = true
 woff2-patched.workspace = true
 brotli-decompressor.workspace = true
-wgpu.workspace = true
+wgpu = { workspace = true, features = ["naga-ir"] }
 pollster.workspace = true
 bytemuck.workspace = true
 half.workspace = true
@@ -22,6 +22,7 @@ jpeg-decoder.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+libc.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 ash.workspace = true
@@ -30,3 +31,4 @@ rustix.workspace = true
 [dev-dependencies]
 brotli.workspace = true
 serde_json.workspace = true
+tempfile.workspace = true

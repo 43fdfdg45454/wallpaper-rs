@@ -2,6 +2,9 @@ use crate::effects::{Descriptor, Fuse, Output, Pace, ParamDef, ParamKind, PassDe
 use crate::value::Param;
 use crate::{Blend, Class, Color, MAX_PARAMS, Quality};
 
+const READS: f32 = 4.0;
+const OPS: f32 = 512.0;
+
 impl ParamKind {
     pub fn asset(self) -> bool {
         matches!(self, ParamKind::Texture | ParamKind::Lut | ParamKind::Mask)
@@ -66,7 +69,7 @@ impl Descriptor {
         if d.passes.is_empty() && d.fuse.is_some() {
             let inputs = vec!["previous".into()];
             let entry = format!("fs_{}", d.id);
-            let (target, copy, blend, vertex, grid) = Default::default();
+            let (target, copy, blend, vertex, grid, swap) = Default::default();
             d.passes.push(PassDef {
                 entry,
                 scale: 1.0,
@@ -77,13 +80,14 @@ impl Descriptor {
                 blend,
                 vertex,
                 grid,
+                swap,
             });
         }
         Ok(d)
     }
 
-    pub fn pack<'a>(&'a self, value: impl Fn(&'a str) -> Option<Param>) -> [[f32; 4]; SLOTS] {
-        let mut slots = [[0.0; 4]; SLOTS];
+    pub fn pack<'a>(&'a self, value: impl Fn(&'a str) -> Option<Param>) -> [[f32; 4]; MAX_PARAMS] {
+        let mut slots = [[0.0; 4]; MAX_PARAMS];
         for (slot, def) in slots.iter_mut().zip(&self.params) {
             *slot = def.slot(&value(&def.id).unwrap_or_else(|| def.default.clone()));
         }
@@ -99,7 +103,12 @@ impl Descriptor {
     }
 
     pub fn units(&self) -> f32 {
-        self.cost.taps * self.cost.passes as f32 * self.cost.scale * self.cost.scale
+        let declared = self.cost.taps * self.cost.passes as f32 * self.cost.scale * self.cost.scale;
+        let side =
+            |p: &PassDef| p.target.as_ref().and_then(|t| self.targets.get(t)).map_or(p.scale, |t| t.scale);
+        let drawn = self.passes.iter().filter(|p| p.swap.is_none());
+        let floor = drawn.map(|p| side(p).powi(2) * crate::measure::spread(p)).sum::<f32>();
+        if self.key == 0 { declared } else { declared.max(floor).max(self.reads / READS).max(self.ops / OPS) }
     }
 
     pub fn class(&self) -> Class {

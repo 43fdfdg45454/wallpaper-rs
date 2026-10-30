@@ -36,6 +36,16 @@ const MAIN: &str = "qrc:/qt/qml/io/github/wallpaper_rs/app/qml/Main.qml";
 const STYLE: &str = "org.kde.desktop";
 
 fn main() -> ExitCode {
+    wprs_scene::serve_check();
+    wprs_scene::check_out_of_process(true);
+    wprs_core::stopped_effects().inspect(|p| wprs_scene::keep_strikes(p));
+    let code = start();
+    wprs_scene::end_trials();
+    wprs_render::finish_builds(if code == ExitCode::SUCCESS { 0 } else { 1 });
+    code
+}
+
+fn start() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("--version" | "-V") => println!("wprs-app {}", wprs_core::VERSION),

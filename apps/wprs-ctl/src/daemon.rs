@@ -24,6 +24,7 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Config { key: Some(key), value: Some(value), .. } => daemon.set_option(&key, &value).await?,
         Command::Config { key, json, .. } => options(&daemon.get_state().await?, key.as_deref(), json)?,
         Command::Reload => daemon.reload().await?,
+        Command::RetryEffects => daemon.retry_effects().await?,
         Command::State { .. } => println!("{}", daemon.get_state().await?),
         Command::Pause => daemon.set_paused(true).await?,
         Command::Resume => daemon.set_paused(false).await?,

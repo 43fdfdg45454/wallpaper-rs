@@ -66,7 +66,8 @@ fn example_scenes_pack_small_render_and_rest() {
         let out = dir.path().join(format!("{name}.wpak"));
         let (declared, facts) = inspect(&source).unwrap();
         assert_eq!(declared.features(), facts.features.iter().cloned().collect::<Vec<_>>(), "{name}");
-        assert!(features::warnings(&declared, &facts).is_empty(), "{name}");
+        let warned = features::warnings(&declared, &facts);
+        assert!(warned.iter().all(|w| w.contains("older integrated and phone GPUs")), "{name}: {warned:?}");
         build(&source, &out, &Limits::default()).unwrap_or_else(|e| panic!("{name}: {e}"));
         total += std::fs::metadata(&out).unwrap().len();
         let mut package = open(&out, &Limits::default()).unwrap();

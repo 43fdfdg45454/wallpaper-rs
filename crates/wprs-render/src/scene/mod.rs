@@ -1,23 +1,38 @@
+mod build;
+mod builders;
 mod chains;
+mod clock;
 mod damage;
 mod draw;
 mod effects;
 mod encode;
+mod fed;
+mod flight;
 mod fonts;
+mod held;
 mod item;
+mod limit;
 mod load;
+mod make;
 mod mips;
+mod own;
+mod packages;
 mod paint;
 mod pipes;
 mod pool;
 mod poster;
+mod ready;
 mod render;
 mod sampling;
+mod sources;
 mod state;
 #[cfg(test)]
 mod steady;
+mod stops;
 mod swarm;
 mod text;
+mod timed;
+mod under;
 mod uploads;
 mod view;
 mod warm;
@@ -25,13 +40,18 @@ mod woff2;
 
 use crate::Renderer;
 use crate::texture::GpuImage;
+pub use builders::finish_builds;
+pub use clock::set_gpu_budget;
+pub use flight::drawn_effects;
 pub use fonts::{MAX_FONT, font};
+pub use packages::{MAX_SCENE_BUILD, set_build_timeout};
 pub(crate) use pipes::Pipes;
 use pipes::{Mode, Shader};
 use pool::Tex;
 pub(crate) use sampling::layout;
 use std::collections::HashMap;
 use std::sync::Arc;
+pub use stops::{retry_effects, stop_effects};
 pub use uploads::Pixels;
 pub(crate) use uploads::Uploads;
 pub use view::SceneView;
@@ -57,8 +77,20 @@ pub(crate) enum Op {
     Clear(Src, [f64; 4]),
     Copy { from: Src, to: Src, origin: [u32; 2], size: (u32, u32), at: [u32; 2] },
     Draw { target: Src, entry: &'static str, mode: Mode, slot: u32, tex: [Src; 3] },
-    Effect { target: Src, shader: Shader, slot: u32, tex: [Src; 7] },
+    Effect(Fill),
     Particles { target: Src, system: usize, slot: u32, mode: Mode },
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct Fill {
+    pub(crate) target: Src,
+    pub(crate) shader: Shader,
+    pub(crate) slot: u32,
+    pub(crate) tex: u32,
+    pub(crate) more: Option<u32>,
+    pub(crate) mode: Mode,
+    pub(crate) load: bool,
+    pub(crate) vertices: u32,
 }
 
 pub(crate) struct Cached {
@@ -74,6 +106,11 @@ pub(crate) struct Scratch {
     outputs: Vec<Src>,
     texts: Vec<(usize, u64)>,
     marks: Vec<damage::Mark>,
+    drawn: Vec<u64>,
+    sets: Vec<[Src; 11]>,
+    made: Vec<Src>,
+    isolated: Vec<(usize, Option<(Src, item::Rect)>)>,
+    chains: Vec<Option<(u64, bool)>>,
 }
 
 pub(crate) type Image = Arc<(GpuImage, [f32; 2])>;
@@ -98,6 +135,7 @@ pub struct SceneStats {
     pub particles: u32,
     pub sim_us: u32,
     pub damage: u32,
+    pub in_flight: u32,
 }
 
 impl Renderer {
@@ -114,6 +152,10 @@ impl Renderer {
     }
 
     pub fn tier(&self) -> wprs_scene::Tier {
+        *self.tier.get_or_init(|| self.detect())
+    }
+
+    fn detect(&self) -> wprs_scene::Tier {
         let meminfo = std::fs::read_to_string("/proc/meminfo").unwrap_or_default();
         let total = meminfo
             .lines()

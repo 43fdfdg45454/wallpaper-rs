@@ -2,8 +2,8 @@ use crate::input::LayerOverride;
 use crate::resolve::Context;
 use crate::wake::wakes;
 use crate::{
-    Affine, Align, Blend, Color, Descriptor, EffectUse, Gradient, Kind, Layer, Layout, Mask, ParamKind,
-    Quality, Shape, Spectrum, Wake, descriptor, fusion,
+    Affine, Align, Blend, Color, Descriptor, EffectUse, Gradient, Kind, Layer, Layout, MAX_PARAMS, Mask,
+    Quality, Shape, Spectrum, Wake, fusion,
 };
 use std::borrow::Cow;
 use std::ops::Range;
@@ -53,17 +53,18 @@ pub enum Content<'a> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EffectDraw<'a> {
-    pub descriptor: &'static Descriptor,
+    pub descriptor: &'a Descriptor,
     pub effect: &'a EffectUse,
-    pub slots: [[f32; 4]; 16],
+    pub slots: [[f32; 4]; MAX_PARAMS],
     pub mask: Option<&'a Mask>,
     pub mask_texture: Option<Cow<'a, str>>,
     pub mask_strength: f32,
     pub scale: f32,
     pub reach: f32,
     pub chain: usize,
-    pub textures: Vec<(&'static str, String)>,
+    pub textures: Vec<(&'a str, String)>,
     pub velocity: [f32; 2],
+    pub variant: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -98,7 +99,7 @@ pub struct Frame<'a> {
 }
 
 pub(crate) fn walk<'a>(
-    cx: &Context,
+    cx: &Context<'a>,
     layers: &'a [Layer],
     parent: Affine,
     quality: Quality,
@@ -120,7 +121,7 @@ pub(crate) fn walk<'a>(
 }
 
 fn emit<'a>(
-    cx: &Context,
+    cx: &Context<'a>,
     layer: &'a Layer,
     set: &LayerOverride,
     place: crate::kin::Place,
@@ -143,7 +144,7 @@ fn emit<'a>(
     let runs = if layer.effects.len() > 1 { fusion(&layer.effects) } else { Vec::new() };
     let mut paced = false;
     for (i, effect) in layer.effects.iter().enumerate() {
-        let Some(d) = descriptor(&effect.effect).filter(|_| effect.enabled.get(cx)) else { continue };
+        let Some(d) = cx.scene.shader(&effect.effect).filter(|_| effect.enabled.get(cx)) else { continue };
         let Some(scale) = quality.effect_scale(d.class(), effect.optional) else { continue };
         let slots = d.pack(|id| d.setting(quality, id, effect.params.get(id).map(|v| v.get(cx))));
         let wake = wakes(d, &slots, cx);
@@ -151,7 +152,7 @@ fn emit<'a>(
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
         let (mask, scale) = (effect.mask.as_ref(), scale * d.scale_at(quality));
         let chain = runs.iter().find(|r| r.start == i).map_or(1, |r| r.len());
-        let textures = d.params.iter().filter(|p| matches!(p.kind, ParamKind::Texture | ParamKind::Lut));
+        let textures = d.params.iter().filter(|p| p.kind.asset());
         let textures = textures.filter_map(|p| match (effect.params.get(&p.id)?, p.id.as_str()) {
             (bound @ crate::Value::Bound(_), id) => match bound.get(cx) {
                 crate::Param::Text(name) => Some((id, name)),
@@ -168,7 +169,9 @@ fn emit<'a>(
         if velocity != [0.0; 2] {
             cx.note(Wake::Frame);
         }
+        let variant = d.variant(effect, |id| effect.params.get(id).map(|v| v.get(cx)));
         let draw = EffectDraw {
+            variant,
             descriptor: d,
             effect,
             slots,

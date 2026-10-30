@@ -76,6 +76,7 @@ impl State {
             let slot = o.shown.content.video().and_then(|p| self.players.get(p));
             let scene_error = o.shown.scene.as_ref().and_then(|s| s.error.as_ref());
             let error = slot.and_then(|s| s.error.as_ref()).or(scene_error).cloned();
+            let stops = error.is_some();
             let kind = match o.shown.content {
                 Content::Color => "color",
                 Content::Image(_) => "image",
@@ -85,7 +86,7 @@ impl State {
             let scene = o.shown.scene.as_ref().is_some_and(SceneState::playing);
             let running = scene || slot.is_some_and(|s| s.playing && s.player.is_some());
             let watched = o.active && o.watched(self.exporter.is_streaming(name));
-            let playing = watched && running && error.is_none();
+            let playing = watched && running && !stops;
             let flashes = o.shown.scene.as_ref().map_or("", SceneState::flashes);
             (kind, playing, error, self.moves(o), o.fps(self.power), self.sound(name, o), flashes)
         };
@@ -93,9 +94,11 @@ impl State {
         let unchanged = published.len() == self.outputs.len()
             && self.outputs.iter().all(|(name, o)| {
                 let (kind, playing, error, parallax, fps, sound, flashes) = status(name, o);
+                let left = left(o);
                 let same = |s: &OutputStatus| {
-                    let now = (kind, playing, &error, parallax, fps, sound, flashes);
-                    (s.kind, s.playing, &s.error, s.parallax, s.fps, s.sound, s.flashes) == now
+                    let now = (kind, playing, &error, parallax, fps, sound, flashes, left);
+                    (s.kind, s.playing, &s.error, s.parallax, s.fps, s.sound, s.flashes, &s.left_out[..])
+                        == now
                 };
                 published.get(name).is_some_and(same)
             });
@@ -103,7 +106,11 @@ impl State {
             let entry = |(name, o): (&String, &Output)| {
                 let (kind, playing, error, parallax, fps, sound, flashes) = status(name, o);
                 let frames = published.get(name).map_or(0, |s| s.frames);
-                (name.clone(), OutputStatus { kind, playing, error, parallax, frames, fps, sound, flashes })
+                let left_out = left(o).to_vec();
+                (
+                    name.clone(),
+                    OutputStatus { kind, playing, error, parallax, frames, fps, sound, flashes, left_out },
+                )
             };
             let fresh = self.outputs.iter().map(entry).collect();
             let old = std::mem::replace(&mut *published, fresh);
@@ -116,4 +123,8 @@ impl State {
             (self.on_status)(changed);
         }
     }
+}
+
+fn left(o: &Output) -> &[String] {
+    o.shown.scene.as_ref().map_or(&[], |s| &s.left)
 }

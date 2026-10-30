@@ -2882,8 +2882,6 @@ checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
 [[package]]
 name = "naga"
 version = "30.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a616d2fb8c89516ac2723a581f69d6c18576046bed761bd6b305e5618e6ae130"
 dependencies = [
  "arrayvec",
  "bit-set",
@@ -6225,6 +6223,7 @@ dependencies = [
  "half",
  "image",
  "jpeg-decoder",
+ "libc",
  "pollster",
  "rustix",
  "serde_json",
@@ -6242,11 +6241,13 @@ name = "wprs-scene"
 version = "0.3.0"
 dependencies = [
  "bytemuck",
+ "libc",
  "naga",
  "schemars 1.2.3",
  "serde",
  "serde_json",
  "sha2 0.11.1",
+ "tempfile",
  "thiserror 2.0.21",
  "wprs-core",
 ]
@@ -6304,6 +6305,7 @@ dependencies = [
  "tracing-subscriber",
  "wiremock",
  "wprs-format",
+ "wprs-scene",
 ]
 
 [[package]]

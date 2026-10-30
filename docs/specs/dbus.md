@@ -487,6 +487,18 @@ Only the changed key is validated. Unknown keys and invalid or out-of-range valu
 Re-reads the configuration file and applies it. If the file is invalid, the current
 configuration stays, `config_error` is set and the call returns `Failed`.
 
+### `RetryEffects()`
+
+Draws again the package effects left out because they stopped the GPU or the program while they
+were checked, built or drawn, took too long to build, were refused by the driver or took more GPU
+time a frame than the device allows (see "Package effects" in `scene.md`): it forgets the strikes in
+`stopped-effects` in the cache folder and builds again every scene that left an effect out, so those
+effects are built and measured again.
+Library packages whose `error` says their shader is not checked again, or could not be checked
+because the helper that checks it crashed or ran out of memory or time, are read again, and
+`Changed` names them under the `library` topic. `wprs-ctl retry-effects` and the Try again button
+next to a left-out effect in the app call it.
+
 ### `GetState() → (s json)`
 
 A `State` document (see "JSON model"). It never waits for the library: the library item, preset,
@@ -787,6 +799,9 @@ daemon and needs no client:
   `skip_videos_on_battery`. If a playlist has nothing to show, the output
   keeps its last picture, or shows its background color with the reason in
   `GetState().outputs[x].error`.
+- A scene that plays without one of its package effects, because the graphics driver refused it or
+  the GPU stopped while drawing it, keeps `playing`, leaves `error` empty and lists every effect
+  left out, with the reason, in `GetState().outputs[x].left_out`.
 - `GetState().outputs[x]` reports the `item` shown and `playlist` (`uid`, `name`, `position` in
   the cycle, `count` of playable items, `next_at`). Every shown item is recorded in `History`.
 
@@ -1880,7 +1895,8 @@ and `fps` the most frames per second it renders now (see "Frame rate"). `buffers
 or `"memfd"` while a consumer streams the output, and `""` otherwise (see "Stream buffers").
 `sound` is `""`, `"off"`, `"playing"`, `"paused"` or `"elsewhere"` (see "Scene sound").
 `flashes` is `""`, or `"slowed"` or `"paused"` once `playback.flash_guard` slowed or stopped the
-scene of that output.
+scene of that output. `left_out` lists the package effects the scene of that output plays without,
+as `the effect <id> was left out: <reason>`; it is a note, not a failure.
 
 ```rust
 struct State {
@@ -1895,7 +1911,7 @@ struct OutputState {
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
     edited: bool, screen: Option<Screen>, parallax: bool, frames: u64, refresh: u32, fps: u32,
-    buffers: String, sound: String, shown_fit: Fit, flashes: String,
+    buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
 enum Shown { Color, Image, Video, Scene }

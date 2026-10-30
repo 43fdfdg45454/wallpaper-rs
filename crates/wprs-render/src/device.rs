@@ -1,14 +1,14 @@
+use crate::RenderError;
 use crate::develop::Developer;
 use crate::readback::{MAX_READBACK_BYTES, TargetLimits};
 use crate::shader::{Pairs, bind_group_layout, module};
 use crate::texture::{GpuImage, create_image};
-use crate::{RenderError, log_allowed};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock, PoisonError};
+use std::sync::atomic::Ordering;
+use std::sync::{Mutex, OnceLock, PoisonError};
 
 pub type Display = Box<dyn wgpu::wgt::WgpuHasDisplayHandle>;
 
-fn ready<F: Future>(work: F) -> F::Output {
+pub(crate) fn ready<F: Future>(work: F) -> F::Output {
     let mut work = std::pin::pin!(work);
     let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
     match work.as_mut().poll(&mut cx) {
@@ -16,7 +16,6 @@ fn ready<F: Future>(work: F) -> F::Output {
         std::task::Poll::Pending => pollster::block_on(work),
     }
 }
-type Lost = Arc<(AtomicBool, Mutex<Option<Box<dyn Fn(String) + Send>>>)>;
 static SHARED: Mutex<Option<&'static Renderer>> = Mutex::new(None);
 
 pub struct Renderer {
@@ -35,8 +34,9 @@ pub struct Renderer {
     pub(crate) scene: OnceLock<crate::scene::Pipes>,
     pub(crate) yuv: OnceLock<crate::yuv::Converter>,
     pub(crate) luma: OnceLock<crate::luma::Luma>,
+    pub(crate) tier: OnceLock<wprs_scene::Tier>,
     pub(crate) uploads: crate::scene::Uploads,
-    lost: Lost,
+    pub(crate) lost: crate::lost::Lost,
 }
 
 impl Renderer {
@@ -51,25 +51,16 @@ impl Renderer {
             max_buffer_size: offered.max_buffer_size,
             ..wgpu::Limits::downlevel_defaults()
         };
-        let descriptor =
-            wgpu::DeviceDescriptor { label: Some("wprs-render"), required_limits, ..Default::default() };
+        let required_features = adapter.features() & wgpu::Features::TIMESTAMP_QUERY;
+        let descriptor = wgpu::DeviceDescriptor {
+            label: Some("wprs-render"),
+            required_limits,
+            required_features,
+            ..Default::default()
+        };
         let (device, queue) = pollster::block_on(adapter.request_device(&descriptor))
             .map_err(|e| RenderError::Device(e.to_string()))?;
-        let lost: Lost = Arc::default();
-        let flag = lost.clone();
-        device.set_device_lost_callback(move |reason, message| {
-            if reason != wgpu::DeviceLostReason::Destroyed {
-                flag.0.store(true, Ordering::Relaxed);
-                let call = flag.1.lock().unwrap_or_else(PoisonError::into_inner);
-                call.iter().for_each(|call| call(format!("{reason:?}: {message}")));
-            }
-        });
-        static GPU_ERRORS: AtomicU64 = AtomicU64::new(0);
-        device.on_uncaptured_error(Arc::new(|e| {
-            if log_allowed(&GPU_ERRORS) {
-                tracing::error!("GPU error: {e}");
-            }
-        }));
+        let lost = crate::lost::watch(&device);
         let granted = device.limits();
         let limits = TargetLimits {
             max_edge: granted.max_texture_dimension_2d,
@@ -99,6 +90,7 @@ impl Renderer {
             scene: OnceLock::new(),
             yuv: OnceLock::new(),
             luma: OnceLock::new(),
+            tier: OnceLock::new(),
             uploads: Default::default(),
             lost,
             device,
@@ -146,6 +138,10 @@ impl Renderer {
         let validation = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
         let value = work();
         let failure = [validation.pop(), memory.pop()].into_iter().find_map(ready);
+        if let Some(e) = failure.as_ref().filter(|e| crate::lost::broken(e)) {
+            crate::lost::lose(&self.lost, format!("the device stopped working: {e}"));
+            return Err(RenderError::DeviceLost(e.to_string()));
+        }
         failure.map_or(Ok(value), |e| Err(RenderError::Gpu(e.to_string())))
     }
 }

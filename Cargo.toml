@@ -23,6 +23,7 @@ members = [
     "apps/wprs-app",
     "apps/wprs-server",
 ]
+exclude = ["vendor/naga"]
 
 [workspace.package]
 version = "0.3.0"
@@ -128,6 +129,9 @@ chacha20poly1305 = "0.11"
 hkdf = "0.13"
 hmac = "0.13"
 hpke = { version = "0.14.1", default-features = false, features = ["alloc", "x25519", "chacha", "hkdfsha2", "getrandom"] }
+
+[patch.crates-io]
+naga = { path = "vendor/naga" }
 
 [profile.dev]
 debug = "line-tables-only"

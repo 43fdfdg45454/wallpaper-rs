@@ -44,7 +44,7 @@ impl Renderer {
 
     pub fn finish(&self) -> Result<(), RenderError> {
         let wait = wgpu::PollType::Wait { submission_index: None, timeout: Some(GPU_TIMEOUT) };
-        self.device.poll(wait).map(drop).map_err(|e| RenderError::DeviceLost(e.to_string()))
+        self.polled(wait)
     }
 
     pub fn check_target(&self, width: u32, height: u32) -> Result<(), RenderError> {
@@ -63,10 +63,10 @@ impl Renderer {
             flag.store(if r.is_ok() { MAPPED } else { FAILED }, Relaxed)
         });
         let wait = wgpu::PollType::Wait { submission_index: Some(done), timeout: Some(GPU_TIMEOUT) };
-        self.device.poll(wait).map_err(|e| RenderError::DeviceLost(e.to_string()))?;
+        self.polled(wait)?;
         let start = std::time::Instant::now();
         while state.load(Relaxed) == 0 && start.elapsed() < GPU_TIMEOUT {
-            self.device.poll(wgpu::PollType::Poll).map_err(|e| RenderError::DeviceLost(e.to_string()))?;
+            self.polled(wgpu::PollType::Poll)?;
             std::thread::yield_now();
         }
         let mapped = state.load(Relaxed) == MAPPED;

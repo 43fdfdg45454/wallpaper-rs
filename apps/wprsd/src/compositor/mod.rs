@@ -12,6 +12,7 @@ mod scene;
 mod slot;
 mod speakers;
 mod state;
+pub(crate) mod stops;
 mod surface;
 
 use crate::fatal;
@@ -186,6 +187,7 @@ pub struct OutputStatus {
     pub fps: u32,
     pub sound: &'static str,
     pub flashes: &'static str,
+    pub left_out: Vec<String>,
 }
 
 enum Command {
@@ -202,6 +204,7 @@ enum Command {
     Saver(bool),
     Locked(bool),
     Press(String, String),
+    Retry,
     Wake,
     Quit,
 }
@@ -220,7 +223,7 @@ impl Compositor {
         settings: Settings,
         on_status: impl Fn(Vec<String>) + Send + 'static,
     ) -> std::io::Result<Self> {
-        renderer.on_device_lost(|reason| fatal(&format!("the GPU device was lost ({reason})")));
+        renderer.on_device_lost(|reason| stops::lost(&format!("the GPU device was lost ({reason})")));
         let limits = renderer.limits();
         let (tx, rx) = mpsc::channel();
         let status = Arc::new(Mutex::new(BTreeMap::new()));
@@ -301,6 +304,10 @@ impl Compositor {
 
     pub fn press(&self, output: &str, id: &str) {
         self.send(Command::Press(output.into(), id.into()))
+    }
+
+    pub fn retry_effects(&self) {
+        self.send(Command::Retry)
     }
 
     pub fn status(&self) -> BTreeMap<String, OutputStatus> {

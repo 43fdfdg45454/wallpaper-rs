@@ -32,8 +32,6 @@ pub enum Issue {
     Depth(String),
     #[error("{0} masks itself through other layers")]
     Cycle(String),
-    #[error("{0} must be a texture: effects take texture masks, layer and shape masks go on the layer")]
-    EffectMask(String),
     #[error("invalid color {0:?}, expected #rrggbb or #rrggbbaa")]
     Color(String),
     #[error(

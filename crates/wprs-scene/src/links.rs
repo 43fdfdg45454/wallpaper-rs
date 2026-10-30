@@ -33,21 +33,16 @@ impl Check<'_> {
         }
         let mut edges: HashMap<&str, Vec<&str>> = HashMap::new();
         for l in scene.layers() {
-            let fed = l
-                .effects
-                .iter()
-                .flat_map(|e| e.params.values())
-                .filter_map(|v| v.binding()?.layer.as_deref());
-            let fed: Vec<&str> = fed.collect();
-            self.uses(!fed.is_empty(), "layer_textures");
+            self.uses(fed(l).next().is_some(), "layer_textures");
+            let fed: Vec<&str> = fed(l).chain(matted(l)).collect();
             let to = edges.entry(l.id.as_str()).or_default();
             to.extend(l.mask.as_ref().and_then(|m| m.layer.as_deref()));
             to.extend(l.children().iter().map(|c| c.id.as_str()));
             to.extend(fed);
         }
         for (path, id) in &paths {
-            let fed = scene.layer(id).into_iter().flat_map(|l| &l.effects).flat_map(|e| e.params.values());
-            let mut stack: Vec<&str> = fed.filter_map(|v| v.binding()?.layer.as_deref()).collect();
+            let mut stack: Vec<&str> =
+                scene.layer(id).into_iter().flat_map(|l| fed(l).chain(matted(l))).collect();
             let mut seen = std::collections::HashSet::new();
             while let Some(at) = stack.pop() {
                 if at == *id {
@@ -60,4 +55,16 @@ impl Check<'_> {
             }
         }
     }
+}
+
+pub(crate) fn reads(l: &Layer) -> impl Iterator<Item = &str> {
+    fed(l).chain(matted(l)).chain(l.mask.as_ref().and_then(|m| m.layer.as_deref()))
+}
+
+fn fed(l: &Layer) -> impl Iterator<Item = &str> {
+    l.effects.iter().flat_map(|e| e.params.values()).filter_map(|v| v.binding()?.layer.as_deref())
+}
+
+fn matted(l: &Layer) -> impl Iterator<Item = &str> {
+    l.effects.iter().filter_map(|e| e.mask.as_ref()?.layer.as_deref())
 }

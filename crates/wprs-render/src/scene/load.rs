@@ -85,9 +85,15 @@ impl Renderer {
             (false, false) => Format::Rgba8UnormSrgb,
         };
         let state_format = if usable { Format::Rgba16Float } else { format };
+        let id = super::stops::view();
+        let mut cut = std::collections::BTreeMap::new();
+        let (ledger, trimmed) = super::limit::Ledger::new(scene, self.tier(), &mut cut);
+        let built = trimmed.as_ref().unwrap_or(scene);
         self.scoped(|| {
-            let lease = self.pipes().prepare(&self.device, scene, format, state_format);
-            self.pipes().warm(&self.device, scene, format, srgb);
+            let mut lease = self.pipes().prepare(&self.device, built, format, state_format);
+            let mut refused = self.own_pipes(built, [format, state_format], &mut lease, id);
+            refused.extend(cut);
+            self.pipes().warm(&self.device, built, format, srgb);
             let upload = |(id, p): (&String, &Arc<_>)| {
                 Some((id.clone(), self.upload_pixels(p, linear(scene, id), mips(scene, id))?))
             };
@@ -104,7 +110,8 @@ impl Renderer {
             };
             let usage = wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST;
             let size = std::mem::size_of::<FrameData>() as u64;
-            let pool = Pool::new(&self.device, &self.queue, format);
+            let mut pool = Pool::new(&self.device, &self.queue, format);
+            pool.ledger = ledger;
             let samplings = super::sampling::samplings(scene, assets);
             let sources = assets.images.clone();
             self.mipmap(&mut images, &samplings, &sources);
@@ -141,10 +148,15 @@ impl Renderer {
                 stats: SceneStats::default(),
                 swarms,
                 _lease: lease,
+                refused,
                 scratch: Default::default(),
                 marks: Vec::new(),
                 stamp: 0,
+                id,
+                paints: self.paints(scene),
+                clock: super::clock::Clock::new(self),
             }
         })
+        .inspect_err(|_| super::flight::forget(id))
     }
 }

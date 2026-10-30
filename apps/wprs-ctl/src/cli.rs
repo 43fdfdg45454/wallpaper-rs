@@ -85,6 +85,8 @@ pub enum Command {
     },
     #[command(about = "Re-read the configuration file")]
     Reload,
+    #[command(about = "Draw again the effects left out after they stopped the graphics card or a program")]
+    RetryEffects,
     #[command(about = "Print the daemon state as JSON")]
     State {
         #[arg(long, help = "Accepted for symmetry: the state is always JSON")]

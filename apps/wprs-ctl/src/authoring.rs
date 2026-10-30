@@ -90,6 +90,16 @@ fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> {
         Author::Import { dir, file, id } => {
             (dir, Action::Import { file: fs::canonicalize(&file).unwrap_or(file), id })
         }
+        Author::ImportEffect { dir, descriptor, wgsl } => {
+            let wgsl = wgsl.map(|w| fs::canonicalize(&w).unwrap_or(w));
+            (
+                dir,
+                Action::ImportEffect {
+                    descriptor: fs::canonicalize(&descriptor).unwrap_or(descriptor),
+                    wgsl,
+                },
+            )
+        }
         Author::Translate { dir, pointer, language, text, add, .. } => {
             (dir, Action::Translate { pointer, language, text, add })
         }
@@ -172,7 +182,10 @@ pub fn run(command: Author) -> Result<()> {
         Author::Fields { dir, pointer } => {
             println!(
                 "{}",
-                serde_json::to_string_pretty(&inspect::fields(&Project::open(&dir)?.doc, &pointer))?
+                serde_json::to_string_pretty(&{
+                    let project = Project::open(&dir)?;
+                    inspect::fields_own(&project.doc, &pointer, &project.effects())
+                })?
             );
         }
         Author::Prune { dir } => {

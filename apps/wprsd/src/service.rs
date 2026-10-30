@@ -182,6 +182,10 @@ impl Service {
         self.d()?.render(|d| d.reload()).await
     }
 
+    async fn retry_effects(&self) -> Result<()> {
+        self.d()?.render(|d| d.retry_effects()).await
+    }
+
     #[zbus(out_args("json"))]
     async fn get_state(&self) -> Result<String> {
         Ok(self.d()?.state_json())
@@ -315,7 +319,7 @@ mod tests {
             methods.map(|m| m.split('(').next().unwrap_or_default().to_owned()).collect()
         };
         let daemon = "request_stream hold_stream release_stream set_output_covered set_wallpaper set_background \
-            press_scene_button set_option reload set_paused set_volume set_muted";
+            press_scene_button set_option reload retry_effects set_paused set_volume set_muted";
         assert_eq!(guarded(include_str!("service.rs")), daemon.split_whitespace().collect::<Vec<_>>());
         assert_eq!(guarded(include_str!("library1.rs")), ["apply"]);
         assert_eq!(guarded(include_str!("playlists1.rs")), ["start", "stop", "next", "previous"]);

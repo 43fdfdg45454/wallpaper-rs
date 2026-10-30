@@ -34,7 +34,7 @@ fn load(manifest: &Manifest, files: &[(&str, &[u8])]) -> Result<Package<Cursor<V
 #[test]
 fn scenes_name_their_newer_features_and_engines_refuse_what_they_cannot_draw() {
     let layers = json!([
-        { "id": "sky", "type": "image", "image": "sky", "blend": "linear_burn" },
+        { "id": "sky", "type": "image", "image": "sky", "blend": "linear_burn", "transform": { "tilt": [10, 0] } },
         { "id": "lamp", "type": "light", "light": "point", "intensity": 2 },
         { "id": "rain", "type": "sound", "sound": "rain", "stream": true }
     ]);
@@ -42,21 +42,18 @@ fn scenes_name_their_newer_features_and_engines_refuse_what_they_cannot_draw() {
         scene(layers, json!({ "assets": { "sky": { "path": "sky.png" }, "rain": { "path": "rain.wav" } } }));
     let wav = [&b"RIFF\0\0\0\0WAVEfmt \x10\0\0\0\x01\0\x01\0\x40\x1f\0\0\x80\x3e\0\0\x02\0\x10\0data\x80\x3e\0\0"[..], &[0; 16_000]].concat();
     let files: [(&str, &[u8]); 2] = [("scene.json", text.as_bytes()), ("rain.wav", &wav)];
-    let all = ["blend_modes2", "lights", "sound", "sound2"];
+    let all = ["blend_modes2", "lights", "sound", "sound2", "tilt"];
     let package = load(&manifest(&all), &files).unwrap();
     assert_eq!(package.facts.features.iter().collect::<Vec<_>>(), all);
     let desktop = features::playable(&package.manifest, &package.facts, Platform::Desktop).unwrap_err();
     assert_eq!(
         desktop.to_string(),
-        "this package needs a newer version of wallpaper-rs: it uses the features blend_modes2 (mixes layers with \
-         the newer blend modes) and lights (lights its layers)"
+        "this package needs a newer version of wallpaper-rs: it uses the features lights (lights its layers) and \
+         tilt (tilts layers in depth)"
     );
     let phone =
         features::playable(&package.manifest, &package.facts, Platform::Android).unwrap_err().to_string();
-    assert!(
-        phone.contains("blend_modes2") && phone.contains("lights") && !phone.contains("sound2"),
-        "{phone}"
-    );
+    assert!(phone.contains("tilt") && phone.contains("lights") && !phone.contains("blend_modes2"), "{phone}");
     assert_eq!(features::lacks("android", &package.facts.features), ["sound", "sound2"]);
     assert!(package.facts.facets.iter().all(|f| f != "desktop" && f != "android"));
     let unlisted = load(&manifest(&["sound", "sound2"]), &files).map(drop).unwrap_err().to_string();
@@ -155,4 +152,39 @@ fn streamed_sounds_are_measured_before_they_are_read() {
     }
     let fault = wprs_format::inspect(dir.path()).map(drop).unwrap_err().to_string();
     assert!(fault.contains("size of the streamed sounds"), "{fault}");
+}
+
+#[test]
+fn hostile_package_shaders_are_refused_without_crashing_the_reader() {
+    let effects = json!({ "effects": { "ripple": { "descriptor": "effects/ripple.json", "wgsl": "effects/ripple.wgsl" } } });
+    let text = scene(
+        json!([{ "id": "sky", "type": "image", "image": "sky", "effects": [{ "effect": "ripple" }] }]),
+        effects,
+    );
+    let descriptor =
+        json!({ "id": "ripple", "passes": [{ "entry": "fs_ripple" }], "cost": { "taps": 1 } }).to_string();
+    let chain = format!("let a = in.uv.x; let b = a{}; return vec4<f32>(b);", "+a".repeat(20000));
+    let array =
+        "var a: array<vec4<f32>, 262144>; let i = u32(in.position.x); a[i] = tap(in.uv); return a[i / 2u];";
+    let looped = format!(
+        "var m = mat4x4<f32>(tap(in.uv), tap(in.uv), tap(in.uv), tap(in.uv)); let n = m * 0.999;
+         for (var i = 0u; i < 6u; i++) {{ for (var j = 0u; j < 1024u; j++) {{ {} }} }} return m[0];",
+        "m = m * n;".repeat(400)
+    );
+    let cases =
+        [(chain, "operations deep"), (array.into(), "KiB in variables"), (looped, "operations a pixel")];
+    for (body, problem) in cases {
+        let wgsl = format!("@fragment fn fs_ripple(in: VertexOut) -> @location(0) vec4<f32> {{ {body} }}");
+        let (text, descriptor) = (text.clone(), descriptor.clone());
+        let read = std::thread::Builder::new().stack_size(2 << 20).spawn(move || {
+            let files: Vec<(&str, &[u8])> = vec![
+                ("scene.json", text.as_bytes()),
+                ("effects/ripple.json", descriptor.as_bytes()),
+                ("effects/ripple.wgsl", wgsl.as_bytes()),
+            ];
+            load(&manifest(&["custom_effects"]), &files).and_then(|mut p| p.scene()).map(drop)
+        });
+        let fault = read.unwrap().join().expect("the reader returns").unwrap_err().to_string();
+        assert!(fault.contains(problem), "{fault}");
+    }
 }

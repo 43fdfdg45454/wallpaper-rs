@@ -2,7 +2,6 @@ use crate::parallax::zoom;
 use crate::texture::GpuImage;
 use crate::{Layer, Renderer};
 use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt;
 use wprs_core::{Fit, UvRect};
 
 #[repr(C)]
@@ -50,11 +49,10 @@ impl Renderer {
         let (image, depth) = (layer.image.unwrap_or(&self.placeholder), relief.map(|r| r.depth));
         let key = (image.id, uv.repeat, depth.map(|d| d.id));
         let Some(slot) = slots.get_mut(index) else {
-            let uniform = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("wprs-render params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            });
+            let usage = wgpu::BufferUsages::UNIFORM;
+            let devices = (&self.device, &self.queue);
+            let uniform =
+                crate::filled::filled(devices, "wprs-render params", bytemuck::bytes_of(&params), usage);
             let group = self.group(&uniform, image, uv.repeat, depth);
             return slots.push(Slot { uniform, params, group, key });
         };

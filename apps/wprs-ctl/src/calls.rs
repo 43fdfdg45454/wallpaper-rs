@@ -38,6 +38,7 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Daemon1", "PressSceneButton", "prop press", &["--output", "ID"]),
     ("Daemon1", "ShareSceneValues", "prop share", &["--output", "--own"]),
     ("Daemon1", "Reload", "reload", &[]),
+    ("Daemon1", "RetryEffects", "retry-effects", &[]),
     ("Daemon1", "GetState", "state", &[]),
     ("Daemon1", "GetSchema", "schema", &[]),
     ("Daemon1", "WaitChanged", "wait", &["--serial", "--timeout"]),

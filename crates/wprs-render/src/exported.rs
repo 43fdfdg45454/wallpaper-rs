@@ -112,7 +112,7 @@ impl Renderer {
         });
         let done = done.inspect_err(|_| slots.clear())?;
         let wait = wgpu::PollType::Wait { submission_index: Some(done), timeout: Some(GPU_TIMEOUT) };
-        self.device.poll(wait).map(drop).map_err(|e| RenderError::DeviceLost(e.to_string()))
+        self.polled(wait)
     }
 
     fn barrier(&self, image: vk::Image, release: bool, copy: bool) -> wgpu::CommandBuffer {

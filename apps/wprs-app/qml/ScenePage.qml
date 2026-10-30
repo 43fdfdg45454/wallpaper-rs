@@ -20,6 +20,7 @@ Kirigami.Page {
     property string notice
     property real clock: editor.time
     readonly property var view: JSON.parse(editor.view || "{}")
+    onViewChanged: SceneWords.own = view.effect_names ?? ({})
     readonly property var fields: JSON.parse(editor.fields || "[]")
 
     function run(action, args, gesture) {

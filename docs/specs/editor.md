@@ -52,6 +52,7 @@ undo and redo walk through, the undone ones marked.
 | `lock`, `solo` | `id` and `locked`; `id`, or nothing to end the solo | `lock`, `solo` |
 | `keyframe` | `pointer`, `time`, optional `value` (the current value when omitted), `ease`, `timeline`, `remove` | `keyframe DIR POINTER TIME [VALUE]` |
 | `import` | `file`, optional `id`; copies the file into `assets/` and declares the asset | `import DIR FILE` |
+| `import_effect` | `descriptor`, optional `wgsl` (the `.wgsl` file beside the descriptor when omitted); checks the effect as a package reader does, copies both files to `effects/<id>.json` and `effects/<id>.wgsl` and declares or replaces `effects.<id>` of the scene | `import-effect DIR DESCRIPTOR [--wgsl FILE]` |
 | `translate` | `pointer` to a text of the manifest, `language`, `text` (an empty or missing one removes that language), `add` (adds a language the text lacks, starting from the text in the default language, and leaves one it has alone) | `translate DIR POINTER LANGUAGE TEXT`, `--remove` or `--add` |
 | `thumbnail` | `file`, `animated`; copies a picture into `assets/` as `previews.thumbnail` or `previews.animated` (`preview` in a first-version manifest) | `thumbnail DIR FILE [--animated]` |
 | `upgrade` | optional `rating`, `reasons`, `photosensitive`, `derived_from`; moves a first-version manifest to `wallpaper-rs.wpak/2` | `upgrade DIR [--rating R] [--reason R] [--photosensitive B] [--derived-from A]` |
@@ -131,7 +132,11 @@ kind, asset kind, language and computed feature in the language of the desktop; 
 the schema gains one without a name, and another walks the inspector of every starting point with
 every layer kind, variant and list item and fails when an option or a shown value has no Spanish
 translation or a raw JSON field holds a plain text. Effect parameters come from the descriptor of
-the effect. Problems and refused actions show the message of the validator and of the editor, the
+the effect, with its `label` as `title` and its `help` as `help` (a tooltip) in the language of the
+desktop; a `texture` or `mask` parameter offers the image assets and every other layer, written as
+`{ "layer": "<id>" }`, and every entry of `options` is a field of its own, with its values as
+choices and bindable to a property. The outline adds `effect_names`, the `name` of each effect of
+the package in the language of the desktop. Problems and refused actions show the message of the validator and of the editor, the
 same English text that `wprs-ctl scene validate` and the commands print, under a translated
 heading; each problem leads to its field, whose name is translated. A field that may follow a
 source (keyframes, a user property, the sound analysis or the pointer) has

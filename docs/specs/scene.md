@@ -116,13 +116,49 @@ is one full-screen pass that reads one texel per pixel. Each layer adds the unit
 (taps × passes × scale², at the size the quality level gives them), one unit when it is drawn
 apart (effects, masks, `cache`, blend modes that are not `normal`, `add`, `multiply` or `screen`)
 and two more when its blend mode copies what lies below it, all multiplied by the share of the
-canvas the layer covers (its `size`, or the canvas when it has none, times a fixed `scale`).
-Particles add their overdraw, and every frame costs 1.5 units for composing and copying. The
-quality level is the highest whose cost fits the budget of the device: 4, 8, 16 or 40 units for
-the tiers of software rendering or GPUs without compute shaders, older integrated and phone GPUs
-(Intel HD and UHD, AMD Vega and other older APUs, Mali-G up to G710, Adreno 5xx and 6xx, or less
-than 4 GiB of memory), newer integrated GPUs and discrete GPUs. A scene over budget at the lowest
+canvas the layer is drawn over. That share is the area the effects actually cover, clipped to the
+canvas: an adjustment layer covers its whole target (the canvas, or its group, which an adjustment
+layer widens to the canvas) whatever `size` it declares; a group covers the bounding box of its
+layers, not the sum of their areas; any other layer covers the box around its `size` (an image or
+video without one, text, particles and lights count as the whole canvas) moved, turned, skewed and
+scaled by fixed transforms of its own and its groups, grown by the `reach` of its effects. A layer
+whose place can change while it plays (a bound or animated `position`, `rotation`, `skew` or
+`scale`, a `tilt`, an `anchor`, `parallax`, a `parent`, an `attach`, a bound `reach`, or any script
+in the scene) counts as the whole canvas. A
+layer that masks or feeds others adds one more unit times its share, once however many read it,
+since it is drawn on its own at most once a frame. Particles add their overdraw, and every frame costs 1.5 units for composing and copying. A scene
+that costs more at level `q2` than the 8 units of older integrated and phone GPUs gets a warning
+from `wprs-ctl pack check`, `pack build` and the scene editor, since those devices show it with
+fewer details. The quality level is the highest whose cost fits the budget of the device: 4, 8, 16
+or 40 units for the tiers of software rendering or GPUs without compute shaders, older integrated
+and phone GPUs (Intel HD and UHD, AMD Vega and other older APUs, Mali-G up to G710, Adreno 5xx and
+6xx, or less than 4 GiB of memory), newer integrated GPUs and discrete GPUs. A scene over budget at the lowest
 level stays at `poster_time`.
+
+Every view of a scene also holds a hard budget, whatever the quality level: each effect use, built
+in or packaged, does its units (at the highest level, four times for an effect with a `state`, which
+may run four steps a frame) times the share it covers times the megapixels drawn, at least half a
+unit, and the uses together may do at most 2 000, 4 000, 8 000 or 16 000 of those units a frame on
+the four tiers; at most 16 uses with a `state` may run in a scene. The engine adds the uses in the
+order of the layers, a group before its layers, and leaves out each use that does not fit with
+`the effect <id> on <layer> was left out: the effects of the scene would do more than <limit> units
+of work a frame on this GPU` (or `... the scene has more than 16 effects that keep a state`). When
+the scene loads, before it builds anything, it leaves out only the uses that cannot fit at any size
+(past the 16 stateful uses, or past the limit at half a unit each), so a package effect whose uses
+are all left out is never built; it counts the work whenever the size a view draws at changes, at
+that size and over the part of the canvas the screen shows, so a large canvas shown on a small
+output keeps the effects that fit there. The state textures of all uses together may hold at most
+512 MiB, beside the 512 MiB of textures a frame may borrow; a use whose state would go past it is
+left out with `its state textures would take the scene past 512 MiB`. A frame may borrow at most
+512 MiB of textures, or four full frames of the output if that is more, and a view holds at most
+1 GiB of textures in all, or its states, its cached layers and its target plus the frame's share
+and two full frames more if that is more (so an 8K output keeps its effects): before it makes
+another texture it drops the ones it used longest ago, then the cached layers this frame has not
+drawn, and a use whose texture still does not fit is left out with `its textures would take more
+than the <n> MiB of textures this view may hold` (or `... a frame may borrow`). Layers draw into textures
+whose sides grow in steps of an eighth of a power of two (at least 64 pixels), so a zooming layer
+reuses a few sizes. `wprs-ctl scene bench` prints these notes after its
+numbers.
 
 On battery the level drops one step and the rate is capped at 30 frames per second (15 with
 software rendering); power saving (the `power-saver` profile on Linux, battery saver on Android)
@@ -360,7 +396,7 @@ Newer values add these forms, each with its feature:
 | Dates | `{ "date": "EEEE d 'de' MMMM yyyy" }` (text only) with `yyyy`, `yy`, `MMMM`, `MMM`, `MM`, `M`, `dd`, `d`, `EEEE`, `EEE`, `D` (day of the year) and `w` (ISO week) besides the tokens of a clock, names in the language of the package (English or Spanish, English for the others); text between single quotes stays as written and `''` writes a quote; a text without hours, minutes or seconds changes at midnight. A `clock` text keeps only the tokens of the time, and every other letter stays as written | `clock_dates` |
 | Frequency ranges | `{ "audio": [0, 3], "of": 16, "reduce": "max" }` follows bands 0 to 3 of 16 (`of` is 16, 32 or 64, default 64, also for a single band) and takes their `mean` (default) or `max` | `audio_ranges` |
 | Shaping | `bounds: [a, b]` maps a value to (x − a) / (b − a) clamped to 0 to 1, `exponent` (0.1 to 10) raises it, both before `scale` and `offset`; `smooth: { "up", "down" }` rises and falls at different speeds | `shaping` |
-| Layer as texture | `{ "layer": "<id>" }` for a `texture` or `mask` parameter of an effect: the layer is drawn on its own (even with `visible: false`) and fed to the effect; layers may not feed themselves through other layers, masks or groups | `layer_textures` |
+| Layer as texture | `{ "layer": "<id>" }` for a `texture` or `mask` parameter of an effect: the layer is drawn on its own (even with `visible: false`) and fed to the effect aligned with the screen, so that each point of the effect reads the point of that layer above it, at the size the effect's layer has on the screen; it is drawn again only when that layer changes, and each one costs as much as a layer drawn on its own; layers may not feed themselves through other layers, masks or groups | `layer_textures` |
 
 Timelines may name `events`, at most 64 `{ "t", "name" }` with `t` within the duration and names
 of `[a-z0-9_]{1,32}`; each fires once per pass, also when a frame skips over it (on a `pingpong`
@@ -387,8 +423,11 @@ Texts are empty and colors those of the placeholder while nothing plays.
 An effect use is `{ "effect", "enabled", "mask", "params", "optional" }`. The built-in effects are
 the descriptors in `crates/wprs-scene/effects/`, which list every parameter with its type, range
 and default. `texture` parameters take the id of an image asset and `lut` parameters the id of a
-`.cube` asset, both as literals. The mask of an effect is a texture; layer and shape masks are
-refused there and belong on the layer. At lower quality levels (on battery, with software
+`.cube` asset, both as literals, and a `texture` parameter may also take a layer (`{ "layer" }`,
+see "Values"). The mask of an effect takes a texture, a layer or a shape, like the mask of a layer,
+with `channel`, `invert`, `feather` and `strength`; a layer or shape mask (`effect_masks`) is drawn
+over the box of the layer, so a shape is centered on it and sized in its pixels, and a layer masks
+the effect where it lies on the screen. At lower quality levels (on battery, with software
 rendering or when the frame budget is exceeded) medium and heavy effects run their inner passes at
 half or a quarter of their size, use the cheaper settings of their descriptor or are dropped,
 `optional` ones first; the pass that writes the result of an effect keeps its full size. An effect
@@ -413,6 +452,19 @@ that the streak goes away.
 Blurs and distortions treat the edges of the screen like the edges of the picture: a layer that
 reaches past the screen, or fills it, keeps the color of its outermost visible pixels instead of
 fading into the empty space around it, on all four sides.
+
+`tint` mixes `color` into the layer with a `blend` mode (multiply by default) by `amount` (0 to 1,
+times the alpha of the color), or with `mode: 1` colorizes it: the color takes the brightness of each
+point and `blend` does not apply. `blend_texture` blends `texture` (a picture or a layer) over the
+layer with `blend` by `amount` times the alpha of the texture, placed on the layer, moved by `offset`
+and repeated by `scale` (fractions of the layer); a layer may chain several, each one a pass, and the
+effect never makes the layer more opaque. `light_shafts` draws beams of its own, made of noise
+across their direction: `direction` 0 sends them along `angle` (degrees, 90 downwards), 1 from
+`center` and 2 from the corner of the layer nearest to `center`; `exponent` and `smoothness` (0 hard
+edges, 1 soft) shape them, `feather` fades their far end, `intensity` multiplies them and `color` or a
+`gradient` (read from the start of the beams to their end) colors them. They add light, so they also
+show on a transparent `solid` layer, and the scene only draws new frames for them while `speed` is
+not zero.
 
 ### Writing an effect
 
@@ -442,7 +494,7 @@ fn uv_nudge(uv: vec2<f32>) -> vec2<f32> {
 | `pace` | when a time effect changes: `{ "rate": "<float parameter>" }` (that many times a second), `{ "sweep": ["<speed>", "<gap>", "<phase>"] }` (a band crosses the layer once every `1 + gap` turns and waits off it in between) or `"outside"` (only while the pointer is off the output); the scene then sleeps until the picture changes |
 | `mask_mode` | `mix` (default) blends the result with the input by the mask; with `strength` the shader scales itself by `mask_at(uv)`, as distortions should |
 | `params` | at most 16 of `float`, `vec2`, `color`, `bool`, `texture` and `lut`, with `id`, `default`, `min`, `max` and `uses` (`time`, `cursor`, `clicks` or `audio`; clicks come with the pointer), an input needed only while the parameter is not zero (a `follow` flag needs the pointer only when set, a `vec2` while either part is not zero); parameter *n* is `param(nu)`, in `.x`, `.xy` or `.rgba` (linear) |
-| `passes` | `{ "entry", "scale", "inputs", "output" }`; `scale` is a fraction of the layer size, and lower quality levels shrink every pass but the last; `inputs` (default `["previous"]`) name `previous`, `input`, `source` (the layer before its effects), `mask`, `pass:N`, `state` or `asset:<texture parameter>`, bound to `input_tex` and then `aux0` to `aux3` |
+| `passes` | `{ "entry", "scale", "inputs", "output" }`; `scale` is a fraction of the layer size, and lower quality levels shrink every pass but the last; `inputs` (default `["previous"]`) name `previous`, `input`, `source` (the layer before its effects), `mask`, `pass:N`, `state`, `backdrop` (what is already drawn under the layer, which then draws on its own) or `asset:<texture parameter>`, bound to `input_tex` and then `aux0` to `aux3` |
 | `cost` | `{ "taps", "passes", "scale" }`; taps × passes × scale² units, light up to 1, medium up to 6, heavy above |
 | `min_fps` | 1 to 240: the frame rate at which the effect still looks smooth; while the only things that move in a scene are effects that declare it, the scene runs at the highest of their `min_fps` instead of the full rate (never above the usual limits) |
 | `velocity` | a `bool` parameter that, when set, gives the shader the speed of the layer in `fx.velocity.xy` (canvas pixels per second) and keeps the scene drawing while it moves |
@@ -524,23 +576,190 @@ and `life`. Package descriptors may also use:
 
 | Field | Meaning |
 |-------|---------|
-| `params` | at most 24; besides the kinds above, `int` (whole numbers), `enum` (with `values`: 1 to 64 `{ "value", "label" }`), `blend` (one of the 32 blend modes, given to the shader as its number in the order of the list), `position` (a point of the layer the editor lets the author place) and `mask` (a picture painted per channel, with `channels` 1, 3 or 4 and `paint`, the color or number unpainted parts have); every parameter may have a `label` and a `help` per language, of at most 256 characters |
+| `params` | at most 24; besides the kinds above, `int` (whole numbers), `enum` (with `values`: 1 to 64 `{ "value", "label" }`), `blend` (one of the 32 blend modes, given to the shader as its number in the order of the list), `position` (a point of the layer the editor lets the author place) and `mask` (a picture painted per channel, with `channels` 1, 3 or 4 and `paint`, the color or number a mask without a picture has); a `texture` or `mask` whose value names no asset but is `white`, `black`, `noise` or `normal_flat` reads that generic picture; every parameter may have a `label` and a `help` per language, of at most 256 characters |
 | `targets` | at most 8 named textures `{ "scale" (0 to 2 of the layer size), "format" }` with `rgba8` (default) or `rgba16f`, kept between passes of one frame |
 | `options` | at most 8 variants `{ "id", "values", "default", "when_bound" }`, each a WGSL `override` of the shader with 1 to 16 whole numbers or flags; a use sets them through `params`, as literals or bound to a property, and every combination it may need (at most 8 per use) is built when the scene loads, never during a frame; `when_bound` turns an option on while the named texture parameter has a picture |
-| pass `target` | writes the pass into that target instead of the next texture |
-| pass `copy` | a pass without a shader that copies one input (`"copy": "target:history"`) |
+| `compose` | `true` draws the layer over what lies below it first; the effect reads that picture as its input and its result replaces the layer's box on the scene |
+| pass `target` | writes the pass into that target instead of the next texture; targets start transparent each frame, so passes that write them with a `blend` add up |
+| pass `copy` | a pass without a shader that copies one input (`"copy": "target:history"`) into its output, resizing it when the sizes differ |
+| pass `swap` | a pass without a shader that exchanges two targets of the same scale and format (`"swap": ["front", "back"]`), for ping-pong passes |
 | pass `blend` | `replace`, `normal`, `add` or `multiply` onto its output, to accumulate without a copy |
 | pass `vertex`, `grid` | a vertex entry point and a grid of 1 to 64 cells a side over the layer, to bend it (`vertex_effects`) |
-| pass `inputs` | at most 9, also `backdrop` (what is already drawn under the layer, which then draws on its own), `target:<name>` and `asset:<mask parameter>` |
+| pass `inputs` | at most 9, also `backdrop` (what is already drawn under the layer, which then draws on its own), `target:<name>` and `asset:<mask parameter>`; they are bound to `input_tex` and then `aux0` to `aux7` |
+
+A package effect has at most 16 passes. Its shader is checked for the work it can do before anything
+reaches the graphics driver, on a thread of its own with a 64 MiB stack, so that no shader can
+exhaust the stack of the program that reads it. Before naga parses it, a scan of its text refuses
+an expression more than 256 operations deep (`a + a + ...`, unary signs, member accesses, indices
+that follow a bracket such as `a[0][0]`, `else if` chains and the brackets around them all count; a
+number ends before a `.` that a letter follows), more than 64 nested brackets of any kind and more
+than 4 096 arguments to calls and constructors in the whole shader; a `//` comment ends at every
+line break WGSL knows (`\n`, `\r`, vertical tab, form feed, U+0085, U+2028, U+2029) and the
+Unicode blank space WGSL allows counts as blank. The same limits hold again on the parsed shader,
+whatever its text: an expression more than 256 operations deep (a named `let` starts a new one),
+more than 64 nested blocks and more than 4 096 arguments and constructor parts are refused.
+Then: at most 32 768 expressions; every loop counts an `i32` or `u32`
+variable from a literal start to a limit that is a literal, a constant, an `override` with listed
+`options`, or `min(x, <literal>)`, steps it once in the loop's `continuing` part by a literal or a
+constant of at least 1 and never writes it elsewhere inside the loop (`for (var i = 0u; i < 16u;
+i++)` qualifies; float counters, steps that come from an `override` or `min`, `while` loops, `break
+if` and counters passed to functions or compared through a conversion do not); a conversion
+such as `u32(m)` in a start or a limit counts only when the value it converts is known and fits the
+new type unchanged, and `bitcast` never counts; the start, the limit and the value the counter has
+when the loop ends must fit its type, so `i >= 0u` counting down, `i <= 4294967295u` or
+`u32(-1i)` are refused; a loop runs at most 1 024 times. Every entry point is weighed in scalar
+operations a pixel, nested loops and called functions included: one per scalar of a value an
+expression computes, loads or stores and one per statement, a matrix product as rows × columns ×
+the shared size, `sin`, `exp`, `sqrt`, `normalize` and the like as four, an integer division or
+remainder as 32 and a float remainder as four per component, a texture read as 16 and
+a call as all of the function it calls; the statements of a loop before its condition count once
+more than its rounds, since they run once more. A read or a write at a computed index into a function or
+`private` array or matrix that the shader writes element by element or passes by pointer costs
+F × min(F, 1 024) / 32 more, where F is the size in bytes of all the arrays the shader indexes that
+way together (32 768 for 1 KiB): such arrays leave the registers, and a scattered access to them
+costs as much as thousands of operations; a read at a computed index into a `const`, into a
+variable only ever written whole, or into an array value costs as much as a texture read;
+a function never receives a pointer into a function variable or to an element picked that way. An
+entry point, and the `material` or `particle` function of a stage effect, may run at most 1 048 576
+operations a pixel, and may be at most 32 768 operations long once every call counts the whole
+function it calls again, since drivers copy called functions into their callers; the passes of an
+effect together, vertex entries included, are at most 131 072 operations long. Function and
+`private` variables, every array and structure value the shader computes (call results, loads,
+constructors and arguments included, all counted at once) and the deepest chain of calls may keep
+at most 8 KiB a pixel. The
+check is an early, readable refusal, not the only safeguard: the engine also builds every package
+shader with a hidden counter in each of its loops, so any loop stops after 1 024 rounds each time
+it starts, and every loop a pixel runs stops once the loops of that pixel have made 65 536 rounds
+together, whatever the check concluded. Option values must fit the type of their `override`.
+Targets are at most twice the layer size and never larger than the largest texture of the device,
+and parameters fill 24 slots (`param(0u)` to `param(23u)`). The descriptor's `cost` counts at least
+one unit for each pass that draws, times the square of its scale, nine times for a pass with a
+`grid` (twice for a grid of one cell), whose operations and texture reads count nine times too, one unit for every four texture reads its shader can make a pixel and one unit for
+every 512 operations, loops and the stage function of a `material` or `particle` effect included,
+whatever the descriptor says; its numbers must be finite and
+at least 0. A layer whose effects read `backdrop` adds two units for the copy, and four for a
+`compose` effect. The engine shrinks every triangle a vertex entry draws, around its middle, to at
+most three cells of the grid a side, so a grid that stretches its cells over the layer draws each
+pixel nine times on average at most; a vertex entry that bends the grid moves its cells freely.
+
+On the desktop, the daemon and its workers, the app with its editor, `wprs-ctl` and `wprs-server`
+run that check (the scan of the text, naga's parse and validation, the limits above and the rewrite
+that adds the loop counters) in a short-lived helper first: a copy of their own program
+(`/proc/self/exe`, so it still works after an upgrade replaced the file) started with the hidden
+argument `--wprs-check-shader` and an empty environment, which limits itself to 1 GiB of address
+space, 4 seconds of processor time and no core file (or the lower hard limits it inherited; when it
+cannot lower them it refuses with `the checker could not limit itself: <error>`) before it reads the id, the descriptor and the
+shader on its standard input, and answers with the hash of what it checked and its refusal, if any.
+It is killed after 10 seconds. The daemon's workers, which lower their own priority, start the
+helper from a thread that keeps the priority they started with. Only when the helper accepted exactly those files does the program
+check them again itself (which also gives the descriptor its measures), and only effects that passed
+that check are ever built for the graphics card. A refusal of the helper refuses the package with
+the same reason; a helper that crashes, runs out of memory or processor time, takes too long or
+does not start refuses it with `its shader could not be checked: the checker ...`, without a
+strike, since the program itself never ran the check. Verdicts are kept by a SHA-256 of the program
+version, the limits, the id, the descriptor and the shader, in memory and in `checked-effects`
+beside `stopped-effects` (lines `<hash> ok` or `<hash> refused <reason as a JSON string>`, the
+4 096 used last, rewritten under a lock and renamed into place, with up to 4 096 kept in memory), so the helper runs once for each version
+of an effect, when it is first read, and a new release checks every effect again; failures of the
+helper are kept nowhere, and the daemon reads the library packages they refused again when it starts
+and on `RetryEffects`. The phone keeps the check in its own process, bounded by the limits of naga's
+constant evaluation.
+
+The engine builds every pass and every variant a use may need when the scene loads, each inside an
+error scope of the graphics driver, on up to four threads beside the one that draws, and waits for
+them at most 10 seconds. The package shaders a scene builds may be at most 262 144 operations long
+together, each pass counted once for each variant built; the effects past that are left out. An
+effect the driver refuses, or whose shader is not built in time, is left out and the layer is drawn
+without it; so is every package effect drawn in a frame the driver rejects. Only the variants built
+then are drawn: an option value a property binding does not map draws the built variant of the
+lowest mapped value, and a use whose variant is missing is left out with `its shader was not built
+for these option values` instead of building on the thread that draws. A program that ends cleanly
+while a package shader still builds (the daemon on `SIGTERM`, its workers, the app, `wprs-ctl`)
+stops the other builds, waits at most a second for the driver and then exits at once, without the
+exit handlers that would race the driver.
+
+Each view keeps at most two frames on the GPU: before it sends a frame it waits for the one two frames
+back, at most 10 seconds. A frame still running after that leaves out the package effects of the
+frames of that view still on the GPU and of its trials, with `it kept the graphics card busy for more
+than 10 s`, counts a strike for each and fails with the GPU stopped. The engine also measures the GPU
+time of package effects: where the device can write timestamps it times each run of passes of one
+effect on every frame with package effects (32 runs a frame; a frame with more always times its
+first and its last run, takes turns among the others, and counts the whole time from the start of
+its first run to the end of its last, shared among the timed effects by their part of the timed
+time), and reads the times back when the frame has finished, without waiting for it;
+elsewhere it waits for the GPU before and after such a frame, every frame of a trial and every
+fifteenth frame after it, and counts the whole frame. When the package passes of a frame take more
+than 400, 60, 40 or 30 ms on the four tiers (a fifth more than a frame at 30 or 40 frames a second, so effects right at the limit are not left out by noise), the effects that take the most of it, until the rest
+fits, are left out with `it is too slow for this graphics card: a frame took <total> ms on it, <n> ms
+of them in this effect, and it allows <limit> ms` once that happened on three frames within 8
+seconds, cheap frames in between or not, or at once for a frame over four times the limit (and 100
+ms); without timestamps only a frame over a second (and four times the limit) leaves its package
+effects out. A slow effect is left out for as long as the program runs, also in its other views,
+and counts no strike: it may run well at another size or on another day. Only a frame that keeps
+the GPU busy for 10 s, a lost GPU or a crash counts strikes. The desktop reports it
+in `GetState().outputs[x].left_out` while the scene keeps playing, so the app, the tray and
+`wprs-ctl state` show `the effect <id> was left out: <reason>` as a note, and the phone lists it
+among its diagnostics.
+
+Package effects that stop the graphics card or the program count strikes, by a hash of their
+descriptor and shader, in `stopped-effects` in the cache folder of the desktop (the daemon, its
+workers, the app and `wprs-ctl` share it) or in the files of the phone. The newest 1024 effects
+with one strike are kept, and the newest 4096 blocked ones; single strikes never push out a blocked
+effect. Before a program checks a package shader for the first time (after the helper accepted it, so only its own check counts) it writes
+`<hash> trying <process>` there and removes the line once the check ends; before it builds the effect for a scene
+it writes the line again and removes it once the first three frames that follow have finished on the
+GPU, once a second has passed since the first one finished with no frame on the GPU (a still scene
+draws once), or once the scene stops drawing. Each process that writes such a line holds a lock on a file named
+after it in `stopped-effects.trials` beside the book for as long as it runs, so processes in other
+pid namespaces (separate sandboxes sharing the cache folder) see each other's trials alive. A line
+whose process no longer holds its lock counts as a strike the next time any of them reads the file,
+so a crash, an abort, an out-of-memory kill or a hang the user ends while an effect is checked,
+built or first drawn counts like a lost GPU. A clean exit (the daemon stopped or its display server
+gone, a worker, the app or `wprs-ctl` ending) removes the lines of the process first. A running
+process reads the file again whenever it changes, so a block set by another process holds at once.
+When the GPU stops (the device is lost, or runs out of memory, or a resource it made turns out
+invalid) while frames are in flight, the effects of the frames that had not finished count a
+strike, not those of outputs whose frames had (each frame is followed until the GPU reports it
+done); a shader still building after 10 seconds counts one too. An effect with
+two strikes is no longer checked (`its shader is not checked again`, so the package is refused) or
+built (`the graphics card or the program stopped twice while it built or drew this effect`); an
+effect that reaches two strikes while it is drawn is left out with `the graphics card or the
+program stopped while it drew this effect`. A single strike is forgotten after a day, since a
+suspend or a driver reset also stops the GPU. `wprs-ctl retry-effects`, `RetryEffects` on D-Bus, Try
+again next to the note in the app or Try the left-out effects again among the diagnostics of the
+phone forget them and draw the scenes again, building every effect that was left out (also those
+whose shader took too long to build, the driver refused or was too slow, which are measured
+again); library packages refused
+because a shader was not checked again are read again (also each time the daemon starts), and a
+refusal from the book is never kept in the cache of checked shaders. A new version of the effect has
+another hash and runs again.
+
+Layers with a `compose` effect or a pass that reads `backdrop`, built-in or not, and layers whose
+effects take a layer as texture or mask are drawn again whenever anything in the scene changes, since
+what lies below them or the layer they read is part of their picture. A layer that feeds others is
+drawn once a frame however many effects read it, and a change to it, hidden or not, or to a layer it
+reads in turn, redraws the layers that read it.
 
 The contract is the prelude above plus `aux4` to `aux7` (eight auxiliary textures in all), `PI`,
-`tex_size(i)` (size in pixels of `aux<i>`), `daytime()` (0 at midnight to 1), `parallax()` (the
-current parallax shift), `layer_color()` and `layer_alpha()` (the color and opacity of the layer),
-`band_left(i)` and `band_right(i)` (64 bands per channel), `band_of(i, n)` (band `i` of 16, 32 or
-64), `rotate2(v, degrees)`, `greyscale(rgb)`, `hsv(rgb)`, `from_hsv(hsv)` and `blend_mode(mode, b,
-s, amount)`, which blends straight colors with any of the blend modes. `CONTRACT` in
+`tex_size(i)` (size in pixels of `aux<i>`), `daytime()` (0 at midnight to 1, in steps of a
+minute), `parallax()` (the current parallax shift, before each layer's own depth), `cursor_last()`
+(the pointer one frame earlier, in fractions of the output), `grid_uv(i)` (the corner of the grid
+that vertex `i` of a pass with `grid` draws, six vertices a cell), `grid_position(uv)` (that point
+of the layer as a clip-space position), `layer_color()` (the tint of the layer times its
+brightness, linear) and `layer_alpha()` (its opacity),
+`band_left(i)` and `band_right(i)` (64 bands per channel), `band_of(i, n)`, `band_left_of(i, n)`
+and `band_right_of(i, n)` (band `i` of 16, 32 or 64, mixed or per channel), `rotate2(v, degrees)`, `greyscale(rgb)`, `hsv(rgb)`, `from_hsv(hsv)` and `blend_mode(mode, b,
+s, amount)`, which blends straight colors with any of the blend modes. A vertex entry point returns
+`VertexOut(position, uv)`, usually `VertexOut(grid_position(bent), grid_uv(i))`. `CONTRACT` in
 `crates/wprs-scene` holds it, and package shaders are checked against it whole. Package effects run
 the same WGSL on every platform.
+
+The scene editor imports an effect with its two files (`wprs-ctl scene import-effect <dir>
+<descriptor.json> [--wgsl <shader.wgsl>]`, or Import an effect in the app), copies them to
+`effects/<id>.json` and `effects/<id>.wgsl`, refuses them with the reason when they fail the checks
+above, and then lists the effect among the ones a layer can add. Its parameters become controls in
+the inspector with their localized `label`, sliders within `min` and `max`, choices for `enum` and
+`blend`, and may be bound to properties, keyframes or scripts like any parameter.
 
 ### Effects not drawn yet
 
@@ -557,7 +776,6 @@ together, and `gradient` parameters are pictures of one row read from left to ri
 | Effect | What it does | Parameters |
 |--------|--------------|------------|
 | `blend_gradient` | mixes in another picture through a gradient map | `texture`, `map` (textures), `progress`, `softness` (0 to 1) |
-| `blend_texture` | blends another picture, a layer or a video over the layer; a layer may chain up to six | `texture`, `blend`, `amount` (0 to 1), `offset` (−2 to 2), `scale` (0.01 to 16) |
 | `caustics` | moving light patterns of water | `color`, `scale` (0.1 to 16), `speed` (0 to 8, needs time), `strength` (0 to 4), `perspective` (0 to 1) |
 | `displace` | bends the layer by a normal or offset map, or by built-in noise without one | `map`, `mode` (0 normals, 1 offsets), `scale` (0.1 to 16), `strength` (0 to 256 px), `scroll` (−4 to 4, needs time while not zero), `ratio` (0.1 to 10) |
 | `electric` | thin crackling lines from two drifting noises | `color_a`, `color_b`, `bounds` (0 to 1), `scale` (0.1 to 16), `smoothness` (0 to 1), `speed` (0 to 8, needs time), `multiply` (0 to 8), `blend` |
@@ -565,12 +783,10 @@ together, and `gradient` parameters are pictures of one row read from left to ri
 | `fluid` | smoke, fire or liquid simulated over the layer and pushed by the pointer | `render` (0 gradient, 1 emitter color, 2 background color, 3 distortion), `gradient`, `color`, `velocity_decay`, `dye_decay` (0 to 1), `push` (0 to 8, needs the pointer while not zero), `source`, `source_angle` (−360 to 360), `source_strength` (0 to 64), `line_from`, `line_to`, `line_strength` (0 to 64), `blend`, `perspective` (0 to 1), `opaque` |
 | `glitter` | short sparkles in a grid of cells | `density` (0 to 1), `size` (0.5 to 16 px), `speed` (0 to 8, needs time), `color` |
 | `lens_flare` | ghosts and a halo along the line from a light to the center | `source`, `follow` (needs the pointer when set), `intensity` (0 to 4), `ghosts` (0 to 8), `halo` (0 to 1), `color` |
-| `light_shafts` | animated beams of light of their own shape and color | `direction` (0 linear, 1 radial, 2 corner), `angle` (−360 to 360), `center`, `color`, `gradient`, `exponent` (0.1 to 8), `intensity` (0 to 4), `feather`, `smoothness` (0 to 1), `speed` (−8 to 8, needs time while not zero) |
 | `local_contrast` | sharpens local contrast | `radius` (1 to 64 px), `amount` (0 to 4), `luma_only` |
 | `pulse` | makes brightness, color or opacity beat in time or with a band of sound | `what` (0 brightness, 1 color, 2 opacity), `speed` (0 to 16, needs time), `bounds` (0 to 4), `tint_low`, `tint_high`, `noise`, `noise_speed` (0 to 16), `phase`, `audio_band` (0 off, or a band 1 to 64 that needs sound) |
 | `reveal` | shows another picture through a shape that may follow the pointer | `texture`, `shape` (0 circle, 1 ellipse), `radius`, `softness` (0 to 1), `follow` (needs the pointer when set), `invert`, `center` |
 | `spin` | turns the part of the layer around a center | `center`, `angle` (−360 to 360), `speed` (−720 to 720 °/s, needs time while not zero), `radius` (0 to 2) |
-| `tint` | tints or colorizes the layer with a blend mode | `color`, `blend`, `amount` (0 to 1), `mode` (0 tint, 1 colorize, which keeps the brightness) |
 | `trail` | keeps fading copies of earlier frames, independent of the frame rate | `persistence` (0 to 0.99) |
 | `transform` | moves, scales, turns or skews the layer after the effects before it | `offset` (−2 to 2), `scale` (0.01 to 16), `angle` (−360 to 360), `skew` (−89 to 89), `pivot` |
 | `vhs` | a tracking line, noise and color fringes of a worn tape | `strength` (0 to 1), `speed` (0 to 8, needs time), `noise` (0 to 1), `aberration` (0 to 16 px) |
@@ -989,6 +1205,10 @@ draws today.
 | the blending of a material or of particles | the layer's `blend` |
 | colors mixed as encoded values | `canvas.blend_space: srgb` |
 | an effect mask painted in an editor | the effect's `mask`, a `linear` picture |
+| an effect masked by another layer or by a shape | the effect's `mask` with `layer` or `shape` |
+| an effect that reads what another layer draws | a `texture` parameter set to `{ "layer" }` |
+| an effect that copies what lies below the layer | a pass that reads `backdrop` |
+| blend modes such as linear light, pin light, hard mix or divide | `blend` of the layer, and `blend_mode()` in shaders |
 | several properties moved by one animation | the same `timeline` on each value |
 | an animation that counts frames | `frames` and `fps` of the timeline |
 | a looping animation that blends its end into its start | `wrap: true` on a `repeat` timeline |
@@ -1008,11 +1228,94 @@ draws today.
 | a 3D model in FBX or OBJ | a `model` layer with the model converted to `.glb` |
 | a wallpaper that runs a program | a `web` package exported with WebGL or WebAssembly; packages never run programs |
 
-Shaders are written in WGSL. HLSL and GLSL code ports with these equivalences: `mul(a, b)` → `b * a`
-for column vectors, `frac` → `fract`, `saturate(x)` → `clamp(x, 0.0, 1.0)`, `lerp` → `mix`,
-`fmod(a, b)` → `a - b * trunc(a / b)`, `ddx` and `ddy` (or `dFdx` and `dFdy`) → `dpdx` and `dpdy`,
-`float2` or `vec2` → `vec2<f32>`, a texture read → `sample(t, uv)` or `tap(uv)`, `#define` constants
-→ `const` or an `override` named by `options`, and the time, time of day, pointer and sound globals →
-`frame.time`, `daytime()`, `frame.cursor` and `band_left(i)` or `band_right(i)`. Package shaders
-declare no bindings of their own: the input, the mask and up to eight more textures come through
-`inputs` and `params`.
+### Effects with an equivalent
+
+Effects that other programs ship as built-ins become these effects. The built-in effects are written
+from scratch, with the parameters written here, so an imported value is converted rather than copied.
+Positions are fractions of the layer counted from the top left, angles are degrees that turn
+clockwise, and sizes are pixels of the layer unless the row says otherwise; a value given as a
+fraction of the picture becomes pixels when multiplied by the width of the layer, and an angle
+counted counterclockwise changes its sign.
+
+| The original effect | Built-in effect | Parameters to convert |
+|---------------------|-----------------|-----------------------|
+| a blur of the whole layer | `blur` | `radius` in pixels |
+| a blur away from a center | `blur_radial` | `center`, `strength` (0 to 1) |
+| a blur along a direction | `blur_motion` | `angle`, `length` in pixels |
+| a color made transparent | `chroma_key` | `key`, `tolerance`, `softness` |
+| edge detection | `edges` | `threshold`, `width` in pixels, `color` |
+| a fisheye or lens bulge | `lens_distort` | `k1` (above 0 bulges), `center` |
+| a four-point perspective | `perspective` | `top_left`, `top_right`, `bottom_right`, `bottom_left` |
+| a shake | `shake` | `strength` in pixels, `speed`, `direction` |
+| eyes that move | `iris` | `range` in pixels, `center` |
+| water that flows along a painted map | `flow` | `map` (a `linear` picture), `strength` in pixels, `speed` |
+| parallax from a depth map | `depth_parallax` | `depth` (a `linear` picture, bright is near), `strength` in pixels, `focus` |
+| a mirrored reflection | `reflection` | `line` (from the top), `opacity` |
+| drifting clouds | `clouds` | `size` and `speed` in pixels, `coverage` |
+| an opacity mask painted on the layer | the layer's `mask` | `texture`, `strength` |
+| foliage that sways | `sway` | `amplitude` in pixels, `pivot`, `speed` |
+| a line of light that crosses the layer again and again | `shine` | `angle`, `width` (fraction of the layer), `speed` (crossings a second), `gap` |
+| rays from the bright parts of the picture | `god_rays` | `source`, `exposure`, `decay` |
+| color fringes | `chromatic_aberration` | `amount` in pixels |
+| film grain | `film_grain` | `amount`, `size` in pixels |
+| a twirl | `twirl` | `angle`, `radius` in pixels, `center` |
+| a picture that scrolls | `scroll` | `speed` in layers a second |
+| water waves | `waves` | `amplitude` in pixels, `frequency` (waves across the layer), `speed`, `direction` |
+| ripples where the pointer touches water | `water_ripple` | `strength`, `radius` in pixels |
+| a tint with a blend mode | `tint` | `color`, `blend`, `amount` |
+| up to six pictures or layers blended with modes | `blend_texture`, one use each | `texture` (an asset or `{ "layer" }`), `blend`, `amount` |
+| animated beams of light | `light_shafts` | `direction`, `angle`, `center`, `color`, `gradient`, `exponent`, `intensity`, `feather`, `smoothness`, `speed` |
+
+A test reads this table and checks that every effect and parameter in it exists.
+
+### Porting a shader to WGSL
+
+Package shaders are written in WGSL and nothing else: the engine never compiles GLSL or HLSL. An
+effect of another program becomes one package effect: its passes, render targets and copies become
+`passes`, `targets`, `copy` and `swap`, its compile-time switches `options`, its uniforms `params`,
+and its fragment and vertex programs entry points of one `.wgsl` file. The rules of thumb:
+
+- Write one `@fragment` function per pass, `fn fs_<name>(in: VertexOut) -> @location(0)
+  vec4<f32>`, and return the color instead of writing `gl_FragColor` or an `out` variable. Colors
+  are premultiplied by alpha; `straight(c)` undoes it.
+- Coordinates go from (0, 0) at the top left to (1, 1) at the bottom right, in `in.uv`. Flip `y`
+  where the original counts from the bottom (`1.0 - uv.y`).
+- Move what the original computes per vertex but is affine (offsets, scales, rotations of the
+  coordinates) into the fragment entry point; keep a `vertex` entry with a `grid` only to bend the
+  layer itself.
+- Turn every `#ifdef`, `#if` or combo into an `override` with `options`, or into an `if` on a
+  parameter when it changes at run time, and every texture slot into an `inputs` entry and a
+  `texture` parameter.
+- Give every loop a literal limit: `for (var i = 0u; i < min(count, 32u); i++)`.
+
+| HLSL or GLSL | WGSL |
+|--------------|------|
+| `float`, `float2`, `vec3`, `half4`, `int2`, `bool` | `f32`, `vec2<f32>`, `vec3<f32>`, `vec4<f32>`, `vec2<i32>`, `bool` |
+| `float2x2`, `mat3` | `mat2x2<f32>`, `mat3x3<f32>` |
+| `mul(m, v)` in HLSL, `m * v` in GLSL | `v * m` for an HLSL matrix written by rows, `m * v` for a GLSL one |
+| `frac(x)` | `fract(x)` |
+| `saturate(x)` | `clamp(x, 0.0, 1.0)` |
+| `lerp(a, b, t)` | `mix(a, b, t)` |
+| `fmod(a, b)` (HLSL, truncated) | `a - b * trunc(a / b)` |
+| `mod(a, b)` (GLSL, floored) | `a - b * floor(a / b)` |
+| `atan2(y, x)`, GLSL `atan(y, x)` | `atan2(y, x)` |
+| `rsqrt`, `inversesqrt` | `inverseSqrt` |
+| `ddx`, `ddy`, `dFdx`, `dFdy` | `dpdx`, `dpdy` |
+| `tex2D(s, uv)`, `texture(s, uv)`, `texture2D` | `sample(aux0, uv)`, or `tap(uv)` for the layer itself |
+| `tex2Dlod`, `textureLod` | `textureSampleLevel(t, samp, uv, level)` |
+| `discard` / `clip(x)` | `discard` / `if x < 0.0 { discard; }` |
+| `static const`, `#define N 8` | `const N: u32 = 8u;` |
+| a uniform shown as a slider, color or point | a `float`, `color` or `position` parameter read with `param(n)` |
+| a combo or `#define` chosen before compiling | an `override` named by `options` |
+| the time and the time since the last frame | `frame.time`, `frame.dt` |
+| the time of day from 0 to 1 | `daytime()` |
+| the pointer and its previous position | `frame.cursor`, `cursor_last()`, or `cursor_uv()` on the layer |
+| the size of the screen and of a texture | `frame.resolution`, `tex_size(i)` and `fx.texel` |
+| 16, 32 or 64 bands of sound, per channel | `band_of(i, 16u)`, `band_left_of(i, 16u)`, `band_right_of(i, 32u)`, `band_left(i)`, `band_right(i)` |
+| the parallax shift | `parallax()` |
+| the layer's color and opacity | `layer_color()`, `layer_alpha()` |
+| greyscale, HSV, 2D rotation and blending helpers | `greyscale`, `hsv`, `from_hsv`, `rotate2`, `blend_mode` |
+
+Package shaders declare no bindings of their own: the input, the mask and up to eight more textures
+come through `inputs` and `params`. `wprs-ctl scene import-effect` checks the result the same way a
+package reader does and says what to change.

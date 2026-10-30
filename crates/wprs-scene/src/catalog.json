@@ -80,14 +80,6 @@
         { "id": "progress", "type": "float", "default": 0.5, "min": 0, "max": 1 },
         { "id": "softness", "type": "float", "default": 0.1, "min": 0, "max": 1 }],
       "passes": [{ "entry": "fs_blend_gradient", "inputs": ["previous", "asset:texture", "asset:map"] }] },
-    { "id": "blend_texture", "name": { "en": "Blend texture" }, "mask_mode": "strength",
-      "params": [
-        { "id": "texture", "type": "texture", "default": "" },
-        { "id": "blend", "type": "blend", "default": "multiply" },
-        { "id": "amount", "type": "float", "default": 1, "min": 0, "max": 1 },
-        { "id": "offset", "type": "vec2", "default": [0, 0], "min": -2, "max": 2 },
-        { "id": "scale", "type": "vec2", "default": [1, 1], "min": 0.01, "max": 16 }],
-      "passes": [{ "entry": "fs_blend_texture", "inputs": ["previous", "asset:texture"] }] },
     { "id": "caustics", "name": { "en": "Caustics" }, "mask_mode": "strength",
       "params": [
         { "id": "color", "type": "color", "default": "#cfefff" },
@@ -165,21 +157,6 @@
         { "id": "color", "type": "color", "default": "#ffffff" }],
       "passes": [{ "entry": "fs_lens_flare_bright", "scale": 0.5 }, { "entry": "fs_lens_flare", "inputs": ["input", "pass:0"] }],
       "cost": { "taps": 4, "passes": 2, "scale": 0.5 } },
-    { "id": "light_shafts", "name": { "en": "Light shafts" }, "mask_mode": "strength",
-      "params": [
-        { "id": "direction", "type": "enum", "default": 0, "values": [
-          { "value": 0, "label": { "en": "Linear", "es": "Lineal" } }, { "value": 1, "label": { "en": "Radial", "es": "Radial" } },
-          { "value": 2, "label": { "en": "Corner", "es": "Esquina" } }] },
-        { "id": "angle", "type": "float", "default": 30, "min": -360, "max": 360 },
-        { "id": "center", "type": "position", "default": [0.5, 0] },
-        { "id": "color", "type": "color", "default": "#fff2cc" },
-        { "id": "gradient", "type": "texture", "default": "" },
-        { "id": "exponent", "type": "float", "default": 1, "min": 0.1, "max": 8 },
-        { "id": "intensity", "type": "float", "default": 1, "min": 0, "max": 4 },
-        { "id": "feather", "type": "float", "default": 0.3, "min": 0, "max": 1 },
-        { "id": "smoothness", "type": "float", "default": 0.5, "min": 0, "max": 1 },
-        { "id": "speed", "type": "float", "default": 0.2, "min": -8, "max": 8, "uses": "time" }],
-      "fuse": "color" },
     { "id": "local_contrast", "name": { "en": "Local contrast" }, "mask_mode": "strength",
       "params": [
         { "id": "radius", "type": "float", "default": 8, "min": 1, "max": 64 },
@@ -221,14 +198,6 @@
         { "id": "speed", "type": "float", "default": 0, "min": -720, "max": 720, "uses": "time" },
         { "id": "radius", "type": "float", "default": 0.5, "min": 0, "max": 2 }],
       "fuse": "uv" },
-    { "id": "tint", "name": { "en": "Tint" }, "mask_mode": "strength",
-      "params": [
-        { "id": "color", "type": "color", "default": "#ff8800" },
-        { "id": "blend", "type": "blend", "default": "multiply" },
-        { "id": "amount", "type": "float", "default": 1, "min": 0, "max": 1 },
-        { "id": "mode", "type": "enum", "default": 0, "values": [
-          { "value": 0, "label": { "en": "Tint", "es": "Tinte" } }, { "value": 1, "label": { "en": "Colorize", "es": "Colorear" } }] }],
-      "fuse": "color" },
     { "id": "trail", "name": { "en": "Motion trail" },
       "params": [{ "id": "persistence", "type": "float", "default": 0.8, "min": 0, "max": 0.99 }],
       "state": { "scale": 1, "settle": 2 },

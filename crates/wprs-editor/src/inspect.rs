@@ -6,9 +6,14 @@ use crate::schema::{MANIFEST, PROPERTY, at, branches, choose, deref, fits, prope
 use crate::texts::rows;
 use serde::Serialize;
 use serde_json::{Value, json};
-use wprs_scene::{ParamKind, builtin, described, easings};
+use std::collections::BTreeMap;
+use std::sync::Arc;
+use wprs_scene::{Descriptor, builtin, described, easings};
 
-const SOURCES: [&str; 6] = ["keys", "prop", "audio", "cursor", "clock", "script"];
+pub type Own = BTreeMap<String, Arc<Descriptor>>;
+static NONE: Own = BTreeMap::new();
+
+pub(crate) const SOURCES: [&str; 6] = ["keys", "prop", "audio", "cursor", "clock", "script"];
 const HIDDEN: [&str; 4] = ["type", "layers", "id", "schema"];
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct Field {
@@ -30,9 +35,10 @@ pub struct Field {
     pub fixed: Vec<Value>,
     pub title: String,
     pub names: Vec<String>,
+    pub help: String,
 }
 
-fn candidates(doc: &Value, reference: &str, pointer: &str) -> Vec<Value> {
+pub(crate) fn candidates(doc: &Value, reference: &str, pointer: &str) -> Vec<Value> {
     if let Some(found) = crate::settings::candidates(doc, reference, pointer) {
         return found;
     }
@@ -46,13 +52,18 @@ fn candidates(doc: &Value, reference: &str, pointer: &str) -> Vec<Value> {
         "system" => keys("/scene/particles").unwrap_or_default(),
         "timeline" => ids("/scene/timelines").unwrap_or_default(),
         "language" => crate::meta::languages(doc),
-        "effect" => builtin().iter().map(|d| json!(d.id)).collect(),
+        "effect" => {
+            let own =
+                doc["scene"]["effects"].as_object().into_iter().flat_map(|o| o.keys().map(|k| json!(k)));
+            builtin().iter().map(|d| json!(d.id)).chain(own).collect()
+        }
         kind => assets_of(doc, kind).into_iter().map(|a| json!(a)).collect(),
     }
 }
 
 struct Walk<'a> {
     doc: &'a Value,
+    own: &'a Own,
     root: &'a Value,
     hidden: &'a [&'a str],
     order: &'a str,
@@ -199,57 +210,20 @@ impl Walk<'_> {
                 continue;
             }
             let path = format!("{pointer}/{}", escape(&key));
-            match (key.as_str(), value["effect"].as_str().and_then(described)) {
-                ("params", Some(d)) => d.params.iter().for_each(|p| self.param(p, value, &path, depth)),
+            let found = |id: &str| self.own.get(id).map(|d| &**d).or_else(|| described(id));
+            match (key.as_str(), value["effect"].as_str().and_then(found)) {
+                ("params", Some(d)) => {
+                    let params =
+                        d.params.iter().map(|p| crate::params::param(self.doc, p, value, &path, depth));
+                    let options = d.options.iter().map(|o| crate::params::option(o, value, &path, depth));
+                    self.out.extend(params.chain(options).collect::<Vec<_>>())
+                }
                 _ => self.field(&meta, value.get(&key), path, &key, depth),
             }
             if let Some(f) = self.out.get_mut(first) {
                 f.required = required.contains(&&json!(key)) || meta["x-required"] == true;
             }
         }
-    }
-
-    fn param(&mut self, p: &wprs_scene::ParamDef, value: &Value, base: &str, depth: usize) {
-        let current = value["params"].get(&p.id);
-        let (widget, reference) = match p.kind {
-            ParamKind::Float => ("number", None),
-            ParamKind::Vec2 => ("vec2", None),
-            ParamKind::Color => ("color", None),
-            ParamKind::Bool => ("bool", None),
-            ParamKind::Texture | ParamKind::Mask => ("ref:image", Some("image")),
-            ParamKind::Lut => ("ref:lut", Some("lut")),
-            ParamKind::Int => ("integer", None),
-            ParamKind::Enum | ParamKind::Blend => ("enum", None),
-            ParamKind::Position => ("vec2", None),
-        };
-        let listed = match p.kind {
-            ParamKind::Blend => {
-                wprs_scene::BLENDS.iter().filter_map(|b| serde_json::to_value(b).ok()).collect()
-            }
-            _ => p.values.iter().map(|e| json!(e.value)).collect(),
-        };
-        let range = p.min.zip(p.max).map_or(Value::Null, |(a, b)| json!([a, b]));
-        let languages = wprs_core::locale::languages();
-        let label = |e: &wprs_scene::Entry| wprs_scene::Text::Localized(e.label.clone()).pick(&languages);
-        let labeled = p.kind == ParamKind::Enum && p.values.iter().all(|e| !e.label.is_empty());
-        let names = if labeled { p.values.iter().map(label).collect() } else { Vec::new() };
-        let source =
-            SOURCES.iter().find(|s| current.is_some_and(|c| c.get(**s).is_some())).map_or("", |s| *s);
-        self.out.push(Field {
-            pointer: format!("{base}/{}", escape(&p.id)),
-            key: p.id.clone(),
-            widget: widget.into(),
-            value: current.cloned().unwrap_or_default(),
-            default: serde_json::to_value(&p.default).unwrap_or_default(),
-            set: current.is_some(),
-            options: reference.map(|r| candidates(self.doc, r, base)).unwrap_or(listed),
-            range,
-            bindable: reference.is_none(),
-            source: source.into(),
-            depth,
-            names,
-            ..Field::default()
-        });
     }
 }
 
@@ -282,7 +256,11 @@ fn array(root: &Value, meta: &Value, schema: &Value) -> String {
 }
 
 pub fn fields_at(doc: &Value, pointer: &str, time: f64) -> Vec<Field> {
-    let mut out = fields(doc, pointer);
+    fields_with(doc, pointer, time, &NONE)
+}
+
+pub fn fields_with(doc: &Value, pointer: &str, time: f64, own: &Own) -> Vec<Field> {
+    let mut out = fields_own(doc, pointer, own);
     for f in &mut out {
         f.shown = match f.source.as_str() {
             "keys" => value_at(&f.value, time),
@@ -295,6 +273,10 @@ pub fn fields_at(doc: &Value, pointer: &str, time: f64) -> Vec<Field> {
 }
 
 pub fn fields(doc: &Value, pointer: &str) -> Vec<Field> {
+    fields_own(doc, pointer, &NONE)
+}
+
+pub fn fields_own(doc: &Value, pointer: &str, own: &Own) -> Vec<Field> {
     let (Some((root, _)), Some(schema)) = (root_of(pointer), at(doc, pointer)) else { return Vec::new() };
     let value = doc.pointer(pointer).cloned().unwrap_or_default();
     let top = hidden(doc);
@@ -304,7 +286,7 @@ pub fn fields(doc: &Value, pointer: &str) -> Vec<Field> {
         _ if std::ptr::eq(root, &*PROPERTY) => (&HIDDEN, crate::settings::ORDER),
         _ => (&HIDDEN, ""),
     };
-    let mut walk = Walk { doc, root, hidden, order, out: Vec::new() };
+    let mut walk = Walk { doc, own, root, hidden, order, out: Vec::new() };
     let (mut resolved, _) = deref(root, &schema);
     if value.is_object() && !resolved["properties"].is_object() && resolved.get("oneOf").is_none() {
         resolved = deref(root, choose(root, resolved, &value)).0;

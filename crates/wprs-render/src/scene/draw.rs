@@ -94,7 +94,10 @@ impl Painter<'_, '_, '_> {
         };
         item.quad = quad;
         (item.m0, item.m1) = ndc(target.rect, m);
-        let masked = self.mask(&mut item, (i, mask), m, size, target);
+        let frame = self.frame;
+        let d = &frame.draws[i];
+        let masked =
+            self.mask(&mut item, (mask, d.mask_texture.as_deref(), d.mask_strength), m, size, target);
         let (mode, back) = self.blend(&mut item, blend, bounds, target, atop);
         if let Some(mut backing) = self.backing(i, m, size, opacity, target) {
             (backing.mask_info, backing.channel, backing.mask_m0, backing.mask_m1, backing.mask_shape) =
@@ -147,7 +150,8 @@ impl Painter<'_, '_, '_> {
         let (m, size) = self
             .geometry(i)
             .map_or((rect.affine(), [rect.w, rect.h]), |(size, _)| (self.local(i, size), size));
-        let masked = self.mask(&mut item, (i, d.mask), m, size, target);
+        let masked =
+            self.mask(&mut item, (d.mask, d.mask_texture.as_deref(), d.mask_strength), m, size, target);
         let (mode, back) = self.blend(&mut item, d.blend, bounds, target, atop);
         let slot = self.pool.push(&item);
         self.ops.push(Op::Draw {
@@ -164,11 +168,11 @@ impl Painter<'_, '_, '_> {
     pub(crate) fn adjust(&mut self, i: usize, target: Target) {
         let frame = self.frame;
         let d = &frame.draws[i];
-        if d.effects.is_empty() {
+        if d.effects.is_empty() || self.idle(i) {
             return;
         }
         let size = target.rect.size();
-        let Some(copy) = self.acquire(size) else { return };
+        let Some(copy) = self.hold(i, size) else { return };
         self.ops.push(Op::Copy { from: target.src, to: copy, origin: [0, 0], size, at: [0, 0] });
         let out = self.effects(i, copy, target.rect, invert(self.stage).then(target.rect.affine()));
         let mut item = Item {
@@ -193,19 +197,17 @@ impl Painter<'_, '_, '_> {
         }
     }
 
-    fn mask(
+    pub(crate) fn mask(
         &mut self,
         item: &mut Item,
-        (i, mask): (usize, Option<&Mask>),
+        (mask, texture, strength): (Option<&Mask>, Option<&str>, f32),
         m: Affine,
         size: [f32; 2],
         target: Target,
     ) -> Src {
         let Some(mask) = mask else { return Src::White };
-        let frame = self.frame;
-        let texture = frame.draws[i].mask_texture.as_deref();
         let to_local = invert(m).then(Affine::translate([target.rect.x, target.rect.y]));
-        let weak = 1.0 - frame.draws[i].mask_strength;
+        let weak = 1.0 - strength;
         item.mask_info = [1.0, f32::from(u8::from(mask.invert)), mask.feather, weak];
         item.channel = channel(mask.channel, mask.texture.is_some());
         let images = self.images;
@@ -214,7 +216,7 @@ impl Painter<'_, '_, '_> {
             (to_local, image.map_or(Src::White, |image| self.ext(image)))
         } else if let Some(id) = &mask.layer {
             item.mask_info[0] = 2.0;
-            let found = self.frame.draws.iter().position(|d| &d.layer.id == id).and_then(|j| self.isolate(j));
+            let found = self.frame.draws.iter().position(|d| &d.layer.id == id).and_then(|j| self.shared(j));
             let (src, r) = found.unwrap_or((Src::Clear, target.rect));
             let back = Affine([
                 1.0 / r.w,

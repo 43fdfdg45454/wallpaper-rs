@@ -19,7 +19,7 @@ fn effect(e: Json) -> Json {
 #[test]
 fn values_of_described_parameters_are_named_in_english_and_spanish() {
     let newer = builtin().iter().flat_map(|b| newer_params(&b.id));
-    let all = newer.chain(undrawn().iter().flat_map(|d| &d.params));
+    let all = newer.chain(undrawn().iter().chain(builtin()).flat_map(|d| &d.params));
     let labels: Vec<_> = all.flat_map(|p| &p.values).map(|e| &e.label).collect();
     assert!(labels.len() > 20 && labels.iter().all(|l| l.contains_key("en") && l.contains_key("es")));
 }
@@ -64,7 +64,10 @@ fn parameters_added_to_built_in_effects_are_declared_as_newer() {
 
 #[test]
 fn described_effects_are_complete_and_drawn_only_with_a_shader() {
-    assert!(undrawn().len() >= 18);
+    assert!(undrawn().len() >= 15);
+    for id in ["tint", "blend_texture", "light_shafts"] {
+        assert!(drawn(id, None) && descriptor(id).is_some_and(|d| d.problems().is_empty()), "{id}");
+    }
     for d in undrawn() {
         let problems: Vec<String> =
             d.problems().into_iter().filter(|p| !p.contains("a fused effect needs")).collect();
@@ -201,5 +204,32 @@ fn the_scene_reference_lists_every_described_effect_and_parameter() {
         let named = |l: &&str| l.split('|').nth(1).is_some_and(|c| c.contains(&format!("`{}`", b.id)));
         let row = section.lines().find(named).unwrap_or_else(|| panic!("{}", b.id));
         assert!(more.all(|p| row.contains(&format!("`{}`", p.id))), "{row}");
+    }
+}
+
+#[test]
+fn the_table_of_equivalent_effects_names_effects_and_parameters_that_exist() {
+    let doc = include_str!("../../../docs/specs/scene.md");
+    let table = doc.split("### Effects with an equivalent").nth(1).unwrap().split("###").next().unwrap();
+    let ticks = |cell: &str| cell.split('`').skip(1).step_by(2).map(String::from).collect::<Vec<_>>();
+    let rows: Vec<Vec<&str>> = table
+        .lines()
+        .filter(|l| l.starts_with("| ") && !l.contains("---"))
+        .map(|l| l.split('|').collect())
+        .skip(1)
+        .collect();
+    assert!(rows.len() >= 25, "{}", rows.len());
+    for row in rows {
+        let id = ticks(row[2]).remove(0);
+        let params: Vec<String> =
+            ticks(row[3]).into_iter().filter(|p| !p.contains(' ') && p != "linear").collect();
+        let known: Vec<String> = match id.as_str() {
+            "mask" => vec!["texture".into(), "strength".into()],
+            _ => {
+                described(&id).unwrap_or_else(|| panic!("{id}")).params.iter().map(|p| p.id.clone()).collect()
+            }
+        };
+        assert!(id == "mask" || drawn(&id, None), "{id}");
+        params.iter().for_each(|p| assert!(known.contains(p), "{id}.{p}"));
     }
 }

@@ -26,7 +26,7 @@ fn the_cost_counts_the_area_of_each_layer_and_blends_that_copy_the_backdrop() {
         scene(json!([solid("a", json!({ "size": [side, side], "effects": blur }))])).cost(Quality::Q3)
     };
     let (small, full) = (blurred(100), blurred(1000));
-    assert!((small - 1.57).abs() < 0.01 && (full - 8.5).abs() < 0.01, "small {small}, full {full}");
+    assert!((small - 1.594).abs() < 0.005 && (full - 8.5).abs() < 0.01, "small {small}, full {full}");
     let blended = |blend: &str| scene(json!([solid("a", json!({ "blend": blend }))])).cost(Quality::Q3);
     assert_eq!((blended("normal"), blended("overlay")), (1.5, 4.5));
     let half = scene(json!([solid("a", json!({ "blend": "overlay", "transform": { "scale": [0.5, 1] } }))]));

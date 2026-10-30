@@ -27,6 +27,7 @@ RowLayout {
     readonly property bool mature: pkg.content === "mature" && !confirmed.includes("mature")
     readonly property bool allowed: confirmed.includes("photosensitive")
 
+    LeftOut { id: reasons; daemon: row.daemon }
     function load() {
         const item = row.item;
         if (!item)
@@ -134,6 +135,26 @@ RowLayout {
             text: row.credit ? [row.credit.title, row.credit.attribution, row.credit.license].filter(t => t).join(" · ") : ""
             textFormat: Text.PlainText
             font: Kirigami.Theme.smallFont
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            visible: (row.info.left_out ?? []).length > 0
+
+            QQC2.Label {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                text: (row.info.left_out ?? []).map(l => reasons.text(l)).join("\n")
+                textFormat: Text.PlainText
+                color: Kirigami.Theme.disabledTextColor
+                font: Kirigami.Theme.smallFont
+            }
+
+            QQC2.ToolButton {
+                text: row.daemon.tr("Try again")
+                icon.name: "view-refresh"
+                onClicked: row.daemon.act("RetryEffects", [])
+            }
         }
 
         QQC2.Label {

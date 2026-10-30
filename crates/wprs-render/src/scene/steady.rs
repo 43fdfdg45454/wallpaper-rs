@@ -27,6 +27,26 @@ pub(crate) const SCENE: &str = r##"{ "schema": "wallpaper-rs.scene/1",
     { "id": "post", "type": "adjustment", "effects": [{ "effect": "vignette", "params": { "intensity": 0.4 } }] }
   ] }"##;
 
+const OWN: &str = r##"{ "schema": "wallpaper-rs.scene/1",
+  "canvas": { "size": [320, 180], "background": "#102030" },
+  "effects": { "smear": { "descriptor": "fx/smear.json", "wgsl": "fx/smear.wgsl" } },
+  "layers": [
+    { "id": "src", "type": "solid", "color": "#ff8040", "size": [80, 80], "visible": false,
+      "transform": { "position": { "keys": [[0, [100, 90]], [2, [220, 90]]], "loop": "pingpong" } } },
+    { "id": "back", "type": "solid", "color": "#203040", "size": [320, 180],
+      "effects": [{ "effect": "smear", "params": { "shape": { "layer": "src" }, "boost": 2 } }] }
+  ] }"##;
+
+const TRAIL: &str = r#"{ "id": "smear", "cost": {}, "params": [{ "id": "shape", "type": "texture", "default": "" }],
+  "targets": { "a": { "scale": 0.5 }, "b": { "scale": 0.5 } },
+  "options": [{ "id": "boost", "values": [1, 2], "default": 1 }],
+  "passes": [{ "entry": "fs_fill", "target": "a", "inputs": ["previous", "asset:shape"] }, { "swap": ["a", "b"] },
+             { "entry": "fs_show", "inputs": ["previous", "target:b"] }] }"#;
+
+const SHADER: &str = "override boost: i32 = 1;
+@fragment fn fs_fill(in: VertexOut) -> @location(0) vec4<f32> { return sample(aux0, in.uv) * f32(boost); }
+@fragment fn fs_show(in: VertexOut) -> @location(0) vec4<f32> { return tap(in.uv) + sample(aux0, in.uv) * 0.5; }";
+
 pub(crate) fn assets() -> SceneAssets {
     let photo = RgbaImage::from_fn(256, 256, |x, y| Rgba([x as u8, y as u8, (x ^ y) as u8, 255]));
     let sheet = RgbaImage::from_fn(64, 16, |x, _| Rgba([(x / 16 * 80) as u8, 0, 200, 255]));
@@ -47,28 +67,32 @@ fn frame(r: &Renderer, view: &mut SceneView, runtime: &mut Runtime) -> [u64; 2] 
 }
 
 fn replay(r: &Renderer, view: &mut SceneView, ops: &[Op], data: &[u8]) -> u64 {
-    let SceneView { pool, caches, states, luts, target, swarms, scratch, uniform, .. } = view;
+    let SceneView { pool, caches, states, luts, target, swarms, scratch, uniform, clock, id, .. } = view;
     let (canvas, output) = target.as_ref().unwrap();
-    let swarms = swarms.as_ref();
-    let sources =
-        encode::Sources { caches, states, luts, exts: &scratch.exts, canvas, output, swarms, scissor: None };
+    let sources = encode::Sources {
+        caches,
+        states,
+        luts,
+        exts: &scratch.exts,
+        canvas,
+        output,
+        swarms: swarms.as_ref(),
+        scissor: None,
+        sets: &scratch.sets,
+    };
     let pipes = r.pipes();
+    let timing = clock.again(r, ops);
     let spent = allocations(|| {
         r.queue.write_buffer(uniform, 0, &data[..size_of::<super::item::FrameData>()]);
         pool.upload(&r.device, &r.queue, pipes, uniform);
-        r.scoped(|| r.encode_scene(pool, &sources, ops, None)).unwrap();
+        let clock = (&*clock, timing);
+        r.scoped(|| r.encode_scene(pool, &sources, ops, None, clock, (*id, 0))).unwrap();
     });
     r.finish().unwrap();
     spent
 }
 
-#[test]
-fn steady_scene_frames_allocate_nothing_beyond_their_gpu_calls() {
-    let r = match Renderer::shared() {
-        Ok(r) => r,
-        Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
-    };
-    let scene = Scene::load(SCENE, &Default::default()).unwrap();
+fn measure(r: &Renderer, scene: Scene) -> (SceneView, Runtime, [u64; 3], u32) {
     let mut runtime = Runtime::new(Arc::new(scene), Values::new());
     let mut view = r.scene_view(&runtime.scene, &assets(), runtime.props()).unwrap();
     (0..8).for_each(|_| _ = frame(r, &mut view, &mut runtime));
@@ -78,14 +102,26 @@ fn steady_scene_frames_allocate_nothing_beyond_their_gpu_calls() {
         (ours, evaluated) = (ours.min(spent), evaluated.max(eval));
         passes = view.stats().passes;
         let ops = view.scratch.ops.clone();
-        let slot = |op: &Op| match *op {
-            Op::Draw { slot, .. } | Op::Effect { slot, .. } | Op::Particles { slot, .. } => slot as usize,
+        let slot = |op: &Op| match op {
+            Op::Draw { slot, .. } | Op::Particles { slot, .. } => *slot as usize,
+            Op::Effect(f) => f.slot.max(f.more.unwrap_or(0)) as usize,
             _ => 0,
         };
         view.pool.data.resize(ops.iter().map(slot).max().unwrap_or(0) + pipes::STRIDE as usize, 0);
         theirs = theirs.min(replay(r, &mut view, &ops, &[0; 1024]));
         view.pool.data.clear();
     }
+    (view, runtime, [ours, theirs, evaluated], passes)
+}
+
+#[test]
+fn steady_scene_frames_allocate_nothing_beyond_their_gpu_calls() {
+    let r = match Renderer::shared() {
+        Ok(r) => r,
+        Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
+    };
+    let (mut view, runtime, [ours, theirs, evaluated], passes) =
+        measure(r, Scene::load(SCENE, &Default::default()).unwrap());
     assert!(passes >= 5 && view.stats().created == 0, "{:?}", view.stats());
     assert!(evaluated <= 3, "evaluating a steady frame made {evaluated} allocations");
     let power = Budget { heat: wprs_scene::Heat::Warm, ..Budget::new(Tier::T1, false, 0) };
@@ -114,11 +150,29 @@ fn steady_scene_frames_allocate_nothing_beyond_their_gpu_calls() {
                 output,
                 swarms: swarms.as_ref(),
                 scissor: None,
+                sets: &scratch.sets,
             };
             drop(sources.group(r, pool, false, tex));
         }
     });
     assert_eq!(lookups, 0, "pipelines and bind groups of a steady frame were not all cached");
+}
+
+#[test]
+fn steady_package_effect_frames_allocate_nothing_beyond_their_gpu_calls() {
+    let Ok(r) = Renderer::shared() else { return };
+    let mut scene = Scene::load(OWN, &Default::default()).unwrap();
+    let files = |path: &str, _: usize| match path {
+        "fx/smear.json" => Ok(TRAIL.as_bytes().to_vec()),
+        "fx/smear.wgsl" => Ok(SHADER.as_bytes().to_vec()),
+        _ => Err("missing"),
+    };
+    scene.adopt(&Default::default(), files).unwrap();
+    let (view, _, [ours, theirs, evaluated], passes) = measure(r, scene);
+    assert!(view.left_out().is_empty(), "{:?}", view.left_out());
+    assert!(passes >= 4 && view.stats().created == 0, "{passes} {:?}", view.stats());
+    assert!(evaluated <= 3, "evaluating a steady frame made {evaluated} allocations");
+    assert!(ours <= theirs, "a steady frame made {ours} allocations, its GPU calls alone make {theirs}");
 }
 
 #[test]

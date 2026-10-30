@@ -29,7 +29,7 @@ pub(crate) struct Item {
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 pub(crate) struct Fx {
-    pub(crate) slots: [[f32; 4]; 16],
+    pub(crate) slots: [[f32; 4]; 24],
     pub(crate) texel: [f32; 4],
     pub(crate) channel: [f32; 4],
     pub(crate) mask_m0: [f32; 4],
@@ -103,11 +103,6 @@ impl Rect {
         let x1 = (self.x + self.w).min(bounds.x + bounds.w).ceil();
         let y1 = (self.y + self.h).min(bounds.y + bounds.h).ceil();
         (x1 > x0 && y1 > y0).then_some(Rect { x: x0, y: y0, w: x1 - x0, h: y1 - y0 })
-    }
-
-    pub(crate) fn bucket(self) -> Rect {
-        let up = |v: f32| (v / 64.0).ceil() * 64.0;
-        Rect { w: up(self.w), h: up(self.h), ..self }
     }
 
     pub(crate) fn size(self) -> (u32, u32) {

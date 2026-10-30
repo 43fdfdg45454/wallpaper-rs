@@ -102,6 +102,67 @@ msgstr "Sin perfil"
 msgid "Profile: %1"
 msgstr "Perfil: %1"
 
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "it is too slow for this graphics card"
+msgstr "es demasiado lento para esta tarjeta gráfica"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "it stopped the graphics card or the program twice"
+msgstr "detuvo dos veces la tarjeta gráfica o el programa"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid ""
+"the graphics card or the program stopped twice while it built or drew this "
+"effect"
+msgstr ""
+"la tarjeta gráfica o el programa se detuvo dos veces mientras preparaba o "
+"dibujaba este efecto"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "the graphics card or the program stopped while it drew this effect"
+msgstr ""
+"la tarjeta gráfica o el programa se detuvo mientras dibujaba este efecto"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "it kept the graphics card busy for too long"
+msgstr "mantuvo ocupada la tarjeta gráfica demasiado tiempo"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "its shader could not be checked"
+msgstr "no se pudo revisar su shader"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid ""
+"the effects of the scene would do more work than this graphics card allows"
+msgstr "la escena haría más trabajo del que permite esta tarjeta gráfica"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "the scene has more than 16 effects that keep a state"
+msgstr "la escena tiene más de 16 efectos que guardan un estado"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "its state textures would take too much memory"
+msgstr "sus texturas de estado ocuparían demasiada memoria"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "its textures would take too much memory"
+msgstr "sus texturas ocuparían demasiada memoria"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "The effect %1 was left out: %2"
+msgstr "Se omitió el efecto %1: %2"
+
 #: integrations/plasma-tray/contents/ui/Panel.qml
 #, kde-format
 msgid "No screen shows wallpaper-rs"

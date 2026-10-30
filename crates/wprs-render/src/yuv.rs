@@ -1,7 +1,6 @@
 use crate::shader::{bind_group_layout, module, pipeline};
 use crate::texture::{GpuImage, create_texture, gpu_image};
 use crate::{RenderError, Renderer};
-use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{BindingResource as Resource, TextureFormat as Format, TextureUsages as Usage};
 
 pub struct Planes<'a> {
@@ -76,10 +75,9 @@ impl Renderer {
             drawn | Usage::RENDER_ATTACHMENT,
         ));
         let contents: Vec<u8> = rows(bt709, full).iter().flatten().flat_map(|v| v.to_le_bytes()).collect();
-        let label = Some("wprs-render yuv rows");
+        let label = "wprs-render yuv rows";
         let usage = wgpu::BufferUsages::UNIFORM;
-        let buffer =
-            self.device.create_buffer_init(&BufferInitDescriptor { label, contents: &contents, usage });
+        let buffer = crate::filled::filled((&self.device, &self.queue), label, &contents, usage);
         let views = [&luma, &chroma].map(|t| t.create_view(&Default::default()));
         let resources = [
             buffer.as_entire_binding(),
@@ -91,8 +89,11 @@ impl Renderer {
             .map(|(i, resource)| wgpu::BindGroupEntry { binding: i as u32, resource })
             .collect();
         let layout = &self.converter().layout;
-        let group =
-            self.device.create_bind_group(&wgpu::BindGroupDescriptor { label, layout, entries: &entries });
+        let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(label),
+            layout,
+            entries: &entries,
+        });
         Yuv { key, luma, chroma, group, image }
     }
 

@@ -2,7 +2,7 @@ use super::damage::Damage;
 use super::item::{Item, Rect, frame_data, linear};
 use super::paint::Painter;
 use super::pool::{Pool, Tex};
-use super::{SceneStats, SceneView, Src, TEXT_FRAMES, encode, pipes};
+use super::{SceneStats, SceneView, Src, TEXT_FRAMES, encode, pipes, timed};
 use crate::texture::GpuImage;
 use crate::{RenderError, Renderer};
 use std::hash::{Hash, Hasher};
@@ -48,6 +48,7 @@ impl Renderer {
         videos: &[(&str, &GpuImage)],
     ) -> Result<&'v GpuImage, RenderError> {
         self.check_target(size.0, size.1)?;
+        self.judge(view, frame);
         let created = (view.pool.created, pipes::compiled(0));
         if view.target.as_ref().is_none_or(|(t, _)| t.size() != size) {
             retarget(self, view, size);
@@ -63,6 +64,12 @@ impl Renderer {
         s.kept.clear();
         s.outputs.clear();
         s.texts.clear();
+        s.drawn.clear();
+        s.sets.clear();
+        s.made.clear();
+        s.isolated.clear();
+        s.chains.clear();
+        s.chains.resize(frame.draws.len(), None);
         self.rasters(view, frame, screen, &mut scratch.texts);
         if let Some(swarms) = view.swarms.as_mut() {
             self.scoped(|| swarms.run(self, runtime, frame, quality))??;
@@ -101,6 +108,15 @@ impl Renderer {
             outputs: &mut scratch.outputs,
             lease: &mut v._lease,
             swarms: v.swarms.as_mut(),
+            refused: &mut v.refused,
+            drawn: &mut scratch.drawn,
+            sets: &mut scratch.sets,
+            made: &mut scratch.made,
+            isolated: &mut scratch.isolated,
+            chains: &mut scratch.chains,
+            paints: &v.paints,
+            more: super::stops::frame(runtime),
+            backdrop: None,
         };
         let c = frame.background.0;
         let background = if srgb { c } else { [linear(c[0]), linear(c[1]), linear(c[2]), c[3]] };
@@ -115,8 +131,10 @@ impl Renderer {
         if damage == Damage::Clean {
             let (steps, particles, sim_us) =
                 v.swarms.as_ref().map_or((0, 0, 0), |s| (s.steps, s.slots(), s.micros));
-            v.stats = SceneStats { steps, particles, sim_us, ..SceneStats::default() };
+            let in_flight = super::flight::flying(v.id);
+            v.stats = SceneStats { steps, particles, sim_us, in_flight, ..SceneStats::default() };
             v.pool.end_frame();
+            super::flight::idle(v.id);
             v.scratch = scratch;
             return Ok(&view.target.as_ref().expect("created above").1);
         }
@@ -127,6 +145,11 @@ impl Renderer {
         painter.run(Src::Canvas, background.map(f64::from));
         let clip = painter.clip;
         let reused = painter.reused;
+        let (trial, drawn) = (super::flight::trial(v.id), !scratch.drawn.is_empty());
+        let timing = v.clock.start(self, &scratch.ops, trial, drawn);
+        let serial = super::flight::sending(self, v.id, &scratch.drawn)
+            .map_err(|keys| timed::stuck(&mut v.refused, frame, keys))?;
+        let quiet = self.quiet(timing);
         let (pool, kept) = (&mut v.pool, &scratch.kept);
         v.caches.extract_if(|id, _| !kept.contains(id)).for_each(|(_, c)| pool.give(c.tex));
         let resolve = srgb.then(|| resolve(pool));
@@ -136,8 +159,22 @@ impl Renderer {
         let (caches, states, luts, swarms) = (&v.caches, &v.states, &v.luts, v.swarms.as_ref());
         let exts = &scratch.exts;
         let scissor = clip.map(|c| [c.x as u32, c.y as u32, c.w as u32, c.h as u32]);
-        let sources = encode::Sources { caches, states, luts, exts, canvas, output, swarms, scissor };
-        let mut counted = self.scoped(|| self.encode_scene(pool, &sources, &scratch.ops, resolve))?;
+        let sets = &scratch.sets;
+        let sources = encode::Sources { caches, states, luts, exts, canvas, output, swarms, scissor, sets };
+        let clock = (&v.clock, timing);
+        let encoded =
+            self.scoped(|| self.encode_scene(pool, &sources, &scratch.ops, resolve, clock, (v.id, serial)));
+        let index = encoded.as_ref().ok().map(|(_, index, _)| index.clone());
+        super::flight::sent(self, v.id, serial, index)
+            .map_err(|keys| timed::stuck(&mut v.refused, frame, keys))?;
+        if let Err(e) = &encoded {
+            let ids = frame.effects.iter().filter(|e| scratch.drawn.contains(&e.descriptor.key));
+            ids.for_each(|d| drop(v.refused.insert(d.descriptor.id.clone(), e.to_string())));
+        }
+        let (mut counted, index, at) = encoded?;
+        if quiet {
+            self.watch((&mut v.clock, &mut v.refused), frame, &scratch.drawn, (index, at));
+        }
         let painted = pool.frame;
         let old = |_: &usize, sim: &mut super::state::Sim| painted - sim.used >= TEXT_FRAMES;
         v.states.extract_if(old).for_each(|(_, sim)| sim.tex.into_iter().for_each(|t| pool.give(t)));
@@ -152,6 +189,7 @@ impl Renderer {
             (counted.created, counted.steps) = (counted.created + s.created, s.steps);
             (counted.particles, counted.sim_us) = (s.slots(), s.micros);
         }
+        counted.in_flight = super::flight::flying(v.id);
         v.stats = counted;
         v.scratch = scratch;
         Ok(&view.target.as_ref().expect("created above").1)

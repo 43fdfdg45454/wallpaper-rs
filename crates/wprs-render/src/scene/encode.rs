@@ -1,67 +1,25 @@
+use super::clock::{Clock, Timing};
 use super::pipes::{Mode, Shader};
-use super::pool::{Pool, Tex};
-use super::state::Sim;
-use super::{Cached, Op, SceneStats, Src};
-use crate::{GpuImage, Renderer};
-use std::collections::HashMap;
-use wgpu::{BindGroup, TextureFormat as Format};
+use super::pool::Pool;
+use super::{Op, SceneStats, Src};
+use crate::Renderer;
+use std::time::Instant;
+use wgpu::TextureFormat as Format;
 
-pub(crate) struct Sources<'a> {
-    pub(crate) caches: &'a HashMap<usize, Cached>,
-    pub(crate) states: &'a HashMap<usize, Sim>,
-    pub(crate) luts: &'a [(String, Tex)],
-    pub(crate) exts: &'a [GpuImage],
-    pub(crate) canvas: &'a Tex,
-    pub(crate) output: &'a GpuImage,
-    pub(crate) swarms: Option<&'a super::swarm::Swarms>,
-    pub(crate) scissor: Option<[u32; 4]>,
-}
-
-impl Sources<'_> {
-    fn clip(&self, pass: &mut wgpu::RenderPass<'_>, target: Src) {
-        if let Some([x, y, w, h]) = self.scissor.filter(|_| target == Src::Canvas) {
-            pass.set_scissor_rect(x, y, w, h);
-        }
-    }
-
-    fn get(&self, pool: &Pool, src: Src) -> (u64, wgpu::TextureView, wgpu::Texture) {
-        let tex = |t: &Tex| (t.id, t.view.clone(), t.texture.clone());
-        match src {
-            Src::Pool(i) => tex(&pool.busy[i].0),
-            Src::Ext(i) => (self.exts[i].id, self.exts[i].view.clone(), self.exts[i].texture.clone()),
-            Src::Cache(k) => self.caches.get(&k).map_or_else(|| tex(&pool.clear), |c| tex(&c.tex)),
-            Src::White => tex(&pool.white),
-            Src::Clear => tex(&pool.clear),
-            Src::Canvas => tex(self.canvas),
-            Src::State(k, side) => {
-                self.states.get(&k).map_or_else(|| tex(&pool.clear), |s| tex(&s.tex[side]))
-            }
-            Src::Lut(i) => tex(&self.luts[i].1),
-            Src::Void => tex(&pool.void),
-        }
-    }
-
-    pub(crate) fn group(&self, r: &Renderer, pool: &mut Pool, fx: bool, tex: &[Src]) -> BindGroup {
-        let views: [(u64, wgpu::TextureView); 7] = std::array::from_fn(|k| {
-            let (id, view, _) = self.get(pool, tex[k.min(tex.len() - 1)]);
-            (id, view)
-        });
-        let refs: [(u64, &wgpu::TextureView); 7] = std::array::from_fn(|k| (views[k].0, &views[k].1));
-        let pipes = r.scene.get().expect("created with the view");
-        pool.group(&r.device, if fx { &pipes.fx } else { &pipes.textures }, fx, &refs[..tex.len()])
-    }
-}
+pub(crate) use super::sources::Sources;
 
 fn pass<'e>(
     encoder: &'e mut wgpu::CommandEncoder,
     view: &wgpu::TextureView,
     load: wgpu::LoadOp<wgpu::Color>,
+    timestamp_writes: Option<wgpu::RenderPassTimestampWrites<'_>>,
 ) -> wgpu::RenderPass<'e> {
     let ops = wgpu::Operations { load, store: wgpu::StoreOp::Store };
     let attachment = wgpu::RenderPassColorAttachment { view, depth_slice: None, resolve_target: None, ops };
     encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("wprs-scene pass"),
         color_attachments: &[Some(attachment)],
+        timestamp_writes,
         ..Default::default()
     })
 }
@@ -73,7 +31,9 @@ impl Renderer {
         src: &Sources<'_>,
         ops: &[Op],
         resolve: Option<u32>,
-    ) -> SceneStats {
+        (clock, timing): (&Clock, Timing),
+        (view, serial): (usize, u64),
+    ) -> (SceneStats, wgpu::SubmissionIndex, Instant) {
         let pipes = self.scene.get().expect("created with the view");
         let mut encoder = self.device.create_command_encoder(&Default::default());
         let mut stats = SceneStats::default();
@@ -93,20 +53,35 @@ impl Renderer {
                     encoder.copy_texture_to_texture(place(&from, *origin), place(&to, *at), extent);
                     k += 1;
                 }
-                Op::Effect { target, shader, slot, tex } => {
-                    let (_, view, texture) = src.get(pool, *target);
-                    let pipeline = pipes.get(&self.device, *shader, Mode::Replace, texture.format());
-                    let group = src.group(self, pool, true, tex);
-                    let mut pass = pass(&mut encoder, &view, wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT));
-                    pass.set_pipeline(&pipeline);
-                    pass.set_bind_group(0, &frame.1, &[]);
-                    pass.set_bind_group(1, &group, &[*slot]);
-                    pass.draw(0..3, 0..1);
+                Op::Effect(f) => {
+                    let (_, view, texture) = src.get(pool, f.target);
+                    let pipeline = pipes.get(&self.device, f.shader, f.mode, texture.format());
+                    let writes = clock.writes(k);
+                    let tex = &src.sets[f.tex as usize];
+                    let group = match f.more {
+                        Some(_) => src.own(self, pool, tex),
+                        None => src.group(self, pool, true, &tex[..7]),
+                    };
+                    let load = if f.load {
+                        wgpu::LoadOp::Load
+                    } else {
+                        wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
+                    };
+                    let mut pass = pass(&mut encoder, &view, load, writes);
+                    if let Some(pipeline) = pipeline {
+                        pass.set_pipeline(&pipeline);
+                        pass.set_bind_group(0, &frame.1, &[]);
+                        match f.more {
+                            Some(more) => pass.set_bind_group(1, &group, &[f.slot, more]),
+                            None => pass.set_bind_group(1, &group, &[f.slot]),
+                        }
+                        pass.draw(0..f.vertices, 0..1);
+                    }
                     (stats.passes, stats.draws, k) = (stats.passes + 1, stats.draws + 1, k + 1);
                 }
                 Op::Particles { target, system, slot, mode } => {
                     let view = src.get(pool, *target).1;
-                    let mut pass = pass(&mut encoder, &view, wgpu::LoadOp::Load);
+                    let mut pass = pass(&mut encoder, &view, wgpu::LoadOp::Load, None);
                     src.clip(&mut pass, *target);
                     src.swarms.iter().for_each(|s| s.draw(&mut pass, *system, *slot, *mode));
                     (stats.passes, stats.draws, k) = (stats.passes + 1, stats.draws + 1, k + 1);
@@ -121,13 +96,17 @@ impl Renderer {
                         _ => wgpu::LoadOp::Load,
                     };
                     let (_, view, texture) = src.get(pool, target);
-                    let mut pass = pass(&mut encoder, &view, load);
+                    let mut pass = pass(&mut encoder, &view, load, None);
                     src.clip(&mut pass, target);
                     while let Some(Op::Draw { target: t, entry, mode, slot, tex }) = ops.get(k) {
                         if *t != target {
                             break;
                         }
                         let pipeline = pipes.get(&self.device, Shader::Scene(entry), *mode, texture.format());
+                        let Some(pipeline) = pipeline else {
+                            k += 1;
+                            continue;
+                        };
                         pass.set_pipeline(&pipeline);
                         pass.set_bind_group(0, &frame.0, &[*slot]);
                         pass.set_bind_group(1, &src.group(self, pool, false, tex), &[]);
@@ -138,13 +117,12 @@ impl Renderer {
                 }
             }
         }
-        if let Some(slot) = resolve {
-            let pipeline =
-                pipes.get(&self.device, Shader::Scene("fs_texture"), Mode::Replace, Format::Rgba8UnormSrgb);
+        let blit = |p| pipes.get(&self.device, Shader::Scene("fs_texture"), Mode::Replace, p);
+        if let Some((slot, pipeline)) = resolve.and_then(|slot| Some((slot, blit(Format::Rgba8UnormSrgb)?))) {
             let group = src.group(self, pool, false, &[Src::Canvas, Src::White, Src::Clear]);
             let load =
                 src.scissor.map_or(wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT), |_| wgpu::LoadOp::Load);
-            let mut pass = pass(&mut encoder, &src.output.view, load);
+            let mut pass = pass(&mut encoder, &src.output.view, load, None);
             src.clip(&mut pass, Src::Canvas);
             pass.set_pipeline(&pipeline);
             pass.set_bind_group(0, &frame.0, &[slot]);
@@ -152,7 +130,9 @@ impl Renderer {
             pass.draw(0..4, 0..1);
             (stats.passes, stats.draws) = (stats.passes + 1, stats.draws + 1);
         }
-        self.queue.submit([encoder.finish()]);
-        stats
+        clock.close(&mut encoder, timing);
+        encoder.on_submitted_work_done(move || super::flight::done(view, serial));
+        let at = Instant::now();
+        (stats, self.queue.submit([encoder.finish()]), at)
     }
 }

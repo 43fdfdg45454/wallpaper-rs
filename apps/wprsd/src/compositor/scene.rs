@@ -28,6 +28,8 @@ pub(super) struct SceneState {
     host: Option<Host>,
     calm: u32,
     pub(super) error: Option<String>,
+    pub(super) left: Vec<String>,
+    left_key: u64,
     pub(super) due: Option<Instant>,
     pub(super) moving: bool,
     pub(super) voices: Vec<Voice>,
@@ -89,6 +91,8 @@ impl SceneState {
             host,
             calm,
             error,
+            left: Vec::new(),
+            left_key: 0,
             due,
             moving,
             voices,
@@ -112,6 +116,12 @@ impl SceneState {
         }
         let uses = self.runtime.uses_at(quality);
         Uses { audio: uses.audio || self.reads.0, cursor: uses.cursor || self.reads.1, ..uses }
+    }
+
+    pub(super) fn retry(&mut self) {
+        if self.view.as_mut().is_some_and(SceneView::retry) {
+            self.view = None;
+        }
     }
 
     pub(super) fn pause(&mut self) {
@@ -302,7 +312,11 @@ impl SceneState {
             .reels()
             .filter_map(|(id, reel, _)| Some((id, players.get(reel)?.texture.as_ref()?)))
             .collect();
-        renderer.render_scene(view, &self.runtime, &frame, inner, quality, &videos)?;
+        let rendered = renderer.render_scene(view, &self.runtime, &frame, inner, quality, &videos).map(drop);
+        if view.left_key() != self.left_key {
+            (self.left, self.left_key) = (view.left_out(), view.left_key());
+        }
+        rendered?;
         if let Some(guard) = self.guard.as_mut() {
             let image = view.image().filter(|_| view.stats().damage > 0);
             guard.watch(renderer, image, now, &self.spec.pack.props.id)?;

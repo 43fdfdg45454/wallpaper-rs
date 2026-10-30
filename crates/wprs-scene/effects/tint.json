@@ -1,0 +1,20 @@
+{
+  "id": "tint",
+  "name": { "en": "Tint" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "color", "type": "color", "default": "#ff8800" },
+    { "id": "blend", "type": "blend", "default": "multiply" },
+    { "id": "amount", "type": "float", "default": 1, "min": 0, "max": 1 },
+    {
+      "id": "mode",
+      "type": "enum",
+      "default": 0,
+      "values": [
+        { "value": 0, "label": { "en": "Tint", "es": "Tinte" } },
+        { "value": 1, "label": { "en": "Colorize", "es": "Colorear" } }
+      ]
+    }
+  ],
+  "fuse": "color"
+}

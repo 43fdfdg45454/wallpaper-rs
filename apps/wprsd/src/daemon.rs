@@ -136,6 +136,13 @@ impl Daemon {
         self.changes.changed("state", Vec::new());
     }
 
+    pub fn retry_effects(self: &Arc<Self>) -> anyhow::Result<()> {
+        crate::compositor::stops::forgive();
+        self.compositor.retry_effects();
+        crate::compositor::stops::recheck(self);
+        Ok(())
+    }
+
     pub fn reload(&self) -> anyhow::Result<()> {
         let settings = {
             let mut st = self.state();

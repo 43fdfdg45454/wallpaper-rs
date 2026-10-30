@@ -75,9 +75,7 @@ impl Check<'_> {
             self.value(&format!("{e}/enabled"), &effect.enabled);
             if let Some(mask) = &effect.mask {
                 self.mask(&format!("{e}/mask"), mask);
-                if mask.layer.is_some() || mask.shape.is_some() {
-                    self.issues.push(Issue::EffectMask(format!("{e}/mask")));
-                }
+                self.uses(mask.layer.is_some() || mask.shape.is_some(), "effect_masks");
             }
             let scene = self.scene;
             let Some(d) = scene.effect(&effect.effect) else {

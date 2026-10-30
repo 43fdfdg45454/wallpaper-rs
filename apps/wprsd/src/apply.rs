@@ -177,6 +177,7 @@ impl Daemon {
 
     pub fn tidy(self: &Arc<Self>) {
         self.offer_examples();
+        crate::compositor::stops::recheck(self);
         if self.store.write(|lib| lib.reread()).is_ok_and(|n| n > 0) {
             self.library_changed(Vec::new());
         }

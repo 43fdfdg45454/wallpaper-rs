@@ -101,7 +101,19 @@ fun Settings(main: Main) {
                 stringResource(R.string.power, yes("charging"), yes("saver"), report.optInt("thermal")),
                 stringResource(R.string.scene_level, report.optString("tier"), report.optString("quality"))
                     .takeIf { report.optString("tier").isNotEmpty() },
+            ).plus(
+                report.optJSONArray("left_out").let { left ->
+                    (0 until (left?.length() ?: 0)).map {
+                        val effect = left!!.getJSONObject(it)
+                        stringResource(R.string.left_out, effect.optString("id"), leftOutReason(effect.optString("reason")))
+                    }
+                },
             ).forEach { Text(it, Modifier.padding(16.dp, 4.dp), style = MaterialTheme.typography.bodyMedium) }
+            if ((report.optJSONArray("left_out")?.length() ?: 0) > 0) {
+                TextButton({ change { Native.retry() } }, Modifier.padding(8.dp, 0.dp)) {
+                    Text(stringResource(R.string.retry_effects))
+                }
+            }
         }
         item { Header(stringResource(R.string.licenses)) }
         items(NOTICES) { ListItem(headlineContent = { Text(it) }, modifier = Modifier.clickable { notice = it }) }

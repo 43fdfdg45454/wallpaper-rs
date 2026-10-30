@@ -145,7 +145,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         "textures": stats.textures, "cached": stats.reused, "created_after_warmup": created,
         "compiled_after_warmup": compiled, "screens": screens, "load_ms": load_ms, "first_ms": first_ms,
         "gpu_mib": gpu_mib, "rss_mib": rss_mib,
-        "particles": particles,
+        "particles": particles, "left_out": view.left_out(),
     });
     if json {
         println!("{report}");
@@ -173,6 +173,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
     println!(
         "created      {created} GPU resources, {compiled} of them shaders, after {WARMUP} warm-up frames"
     );
+    view.left_out().iter().for_each(|note| println!("left out     {note}"));
     if engine != "none" {
         let per_frame = f64::from(steps) / steady as f64;
         println!(

@@ -150,6 +150,13 @@ impl State {
                     o.dirty = true;
                 }
             }
+            Command::Retry => {
+                super::stops::retry();
+                for o in self.outputs.values_mut() {
+                    o.shown.scene.iter_mut().for_each(SceneState::retry);
+                    o.dirty |= o.shown.scene.is_some();
+                }
+            }
             Command::Wake => {}
             Command::Quit => return false,
         }

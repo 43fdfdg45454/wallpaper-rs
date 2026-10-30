@@ -22,12 +22,19 @@ ColumnLayout {
         return Number.isFinite(parsed) ? parsed : fallback;
     }
 
+    function at(list, option) {
+        const key = JSON.stringify(option);
+        return list.findIndex(item => JSON.stringify(item) === key);
+    }
+
     function name(option) {
+        if (option !== null && typeof option === "object" && option.layer !== undefined)
+            return App.tr("Layer %1").arg(option.layer);
         if (field.widget === "ref:language")
             return ManifestWords.language(option);
         if (["variant", "ref:effect"].includes(field.widget) || (field.widget === "enum" && !(field.names ?? []).length))
             return SceneWords.value(option);
-        return (field.names ?? [])[field.options.indexOf(option)] || (field.widget === "ref:trigger" ? SceneWords.label(option) : String(option));
+        return (field.names ?? [])[at(field.options, option)] || (field.widget === "ref:trigger" ? SceneWords.label(option) : String(option));
     }
 
     Layout.leftMargin: field.depth * Kirigami.Units.largeSpacing
@@ -47,6 +54,12 @@ ColumnLayout {
             text: (input.field.title || SceneWords.label(input.field.key, input.field.pointer)) + (input.field.unit ? " (" + input.field.unit + ")" : "")
             font.bold: input.field.widget === "group" || input.field.widget === "variant"
             elide: Text.ElideRight
+            QQC2.ToolTip.text: input.field.help ?? ""
+            QQC2.ToolTip.visible: hint.hovered && (input.field.help ?? "") !== ""
+
+            HoverHandler {
+                id: hint
+            }
         }
 
         QQC2.ToolButton {
@@ -191,10 +204,10 @@ ColumnLayout {
         QQC2.ComboBox {
             readonly property bool variant: input.field.widget === "variant"
             readonly property var known: variant || input.field.required ? input.field.options : [null].concat(input.field.options)
-            readonly property var options: known.includes(input.value) || input.value === null ? known : known.concat([input.value])
+            readonly property var options: input.at(known, input.value) >= 0 || input.value === null ? known : known.concat([input.value])
 
             model: options.map(option => option === null ? App.tr("Not set") : input.name(option))
-            currentIndex: variant ? options.findIndex(option => Object.keys(input.field.value ?? {}).includes(option) || option === input.field.value) : options.indexOf(input.value)
+            currentIndex: variant ? options.findIndex(option => Object.keys(input.field.value ?? {}).includes(option) || option === input.field.value) : input.at(options, input.value)
             onActivated: index => {
                 if (options[index] === null)
                     input.page.run("remove", {

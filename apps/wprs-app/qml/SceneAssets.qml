@@ -49,6 +49,12 @@ ColumnLayout {
         }
 
         QQC2.ToolButton {
+            text: App.tr("Import an effect…")
+            icon.name: "special-effects-symbolic"
+            onClicked: shaders.open()
+        }
+
+        QQC2.ToolButton {
             text: App.tr("Remove unused files")
             icon.name: "edit-clear-all"
             onClicked: panel.page.editor.prune()
@@ -63,5 +69,24 @@ ColumnLayout {
         onAccepted: selectedFiles.forEach(file => panel.page.run("import", {
                         "file": App.path(file)
                     }))
+    }
+
+    FileDialog {
+        id: shaders
+
+        fileMode: FileDialog.OpenFiles
+        nameFilters: [App.tr("An effect descriptor, and its WGSL shader when it is not beside it") + " (*.json *.wgsl)"]
+        onAccepted: {
+            const paths = selectedFiles.map(file => App.path(file));
+            const descriptor = paths.find(path => path.endsWith(".json"));
+            const wgsl = paths.find(path => path.endsWith(".wgsl"));
+            if (descriptor)
+                panel.page.run("import_effect", wgsl ? {
+                        "descriptor": descriptor,
+                        "wgsl": wgsl
+                    } : {
+                        "descriptor": descriptor
+                    });
+        }
     }
 }

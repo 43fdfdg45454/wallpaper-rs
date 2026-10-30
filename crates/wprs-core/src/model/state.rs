@@ -61,6 +61,8 @@ model! {
         pub shown_fit: Fit,
         #[serde(default)]
         pub flashes: String,
+        #[serde(default)]
+        pub left_out: Vec<String>,
     }
 
     #[derive(Copy, Eq, Hash)]

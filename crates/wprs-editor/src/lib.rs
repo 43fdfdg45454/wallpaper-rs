@@ -14,12 +14,14 @@ pub mod meta;
 pub mod ops;
 pub mod outline;
 pub mod package;
+mod params;
 pub mod previews;
 pub mod project;
 pub mod props;
 pub mod references;
 pub mod schema;
 pub mod settings;
+pub mod shaders;
 pub mod starters;
 pub mod texts;
 

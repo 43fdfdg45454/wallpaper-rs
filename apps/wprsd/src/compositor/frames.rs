@@ -3,7 +3,6 @@ use super::power::Power;
 use super::slot::PlayerSlot;
 use super::state::State;
 use super::{Reel, lock};
-use crate::fatal;
 use anyhow::Context;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
@@ -152,7 +151,7 @@ fn draw(
         },
     };
     if let Err(RenderError::DeviceLost(reason)) = &written {
-        fatal(&format!("the GPU stopped responding ({reason})"));
+        super::stops::lost(&format!("the GPU stopped responding ({reason})"));
     }
     written??;
     output.missing_frame = output.shown.content.video().is_some() && shown.image.is_none();

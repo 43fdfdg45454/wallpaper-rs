@@ -163,3 +163,27 @@ fn packages_this_device_cannot_show_keep_their_details_and_say_why() {
     assert!(error.contains("needs a newer version") && error.contains("flip (shows its picture"), "{error}");
     assert_eq!(mirror.package.unwrap().id, "org.example.mirror");
 }
+
+#[test]
+fn packages_refused_by_the_strike_book_are_read_again_when_effects_are_retried() {
+    let dir = TempDir::new().unwrap();
+    let (db, root) = (dir.path().join("library.db"), dir.path().join("pictures"));
+    package(&root, "storm", None, false);
+    package(&root, "calm", None, false);
+    let mut library = Library::open(&db).unwrap();
+    let source = library.add_folder(&root, true).unwrap();
+    library.scan(&source, NOW).unwrap();
+    let blocked = "invalid scene: /effects/s: its shader is not checked again: it stopped the graphics card";
+    let other = "this package needs a newer version of wallpaper-rs";
+    let refuse = "UPDATE items SET error = ?1, pkg_id = NULL, title = 'storm' WHERE path LIKE '%storm%'";
+    let connection = Connection::open(&db).unwrap();
+    connection.execute(refuse, [blocked]).unwrap();
+    connection.execute("UPDATE items SET error = ?1 WHERE path LIKE '%calm%'", [other]).unwrap();
+    let storm = library.search("storm", NOW, 0, 10).unwrap().remove(0).uid;
+    assert_eq!(library.recheck("not checked again").unwrap(), std::slice::from_ref(&storm));
+    let item = library.item(&storm).unwrap();
+    assert_eq!((item.meta.error, item.package.map(|p| p.id)), (None, Some("org.example.storm".into())));
+    assert!(library.recheck("not checked again").unwrap().is_empty());
+    let calm = library.search("calm", NOW, 0, 10).unwrap().remove(0);
+    assert_eq!(calm.meta.error.as_deref(), Some(other), "only refusals from the book are read again");
+}

@@ -116,7 +116,8 @@ pub fn facts(manifest: &Manifest, scene: Option<&Scene>, size: Option<[u32; 2]>)
     let missing = |i: &&Input| manifest.v2() && !manifest.inputs.contains(i);
     let found =
         scene.map_or(Vec::new(), |s| inputs.iter().filter(missing).map(|i| (*i, place(s, *i))).collect());
-    Facts { features, inputs, facets, found, notes: Vec::new() }
+    let notes = scene.and_then(Scene::heavy).into_iter().collect();
+    Facts { features, inputs, facets, found, notes }
 }
 
 fn place(scene: &Scene, input: Input) -> String {

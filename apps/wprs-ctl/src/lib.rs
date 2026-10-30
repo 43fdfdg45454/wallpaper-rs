@@ -56,6 +56,9 @@ pub fn usage(message: impl Into<String>) -> anyhow::Error {
 }
 
 pub fn main() -> ExitCode {
+    wprs_scene::serve_check();
+    wprs_scene::check_out_of_process(true);
+    wprs_core::stopped_effects().inspect(|p| wprs_scene::keep_strikes(p));
     let result = match Cli::parse().command {
         Command::Pack(command) => pack::run(command),
         Command::Scene(command) => bench::run(command),
@@ -68,10 +71,16 @@ pub fn main() -> ExitCode {
             .map_err(anyhow::Error::from)
             .and_then(|runtime| runtime.block_on(daemon::run(command))),
     };
-    let Err(error) = result else { return ExitCode::SUCCESS };
+    wprs_scene::end_trials();
+    let Err(error) = result else {
+        wprs_render::finish_builds(0);
+        return ExitCode::SUCCESS;
+    };
     let error = error.downcast::<zbus::Error>().map_or_else(|e| e, explain);
     eprintln!("Error: {}", show::clean(&format!("{error:#}")));
-    ExitCode::from(if misused(&error) { 2 } else { 1 })
+    let code = if misused(&error) { 2 } else { 1 };
+    wprs_render::finish_builds(i32::from(code));
+    ExitCode::from(code)
 }
 
 fn misused(error: &anyhow::Error) -> bool {

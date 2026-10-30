@@ -1,6 +1,6 @@
 use crate::fx::live;
 use crate::resolve::Context;
-use crate::{Descriptor, Pace, SLOTS, Use};
+use crate::{Descriptor, MAX_PARAMS, Pace, Use};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Wake {
@@ -20,7 +20,7 @@ impl Wake {
     }
 }
 
-pub(crate) fn wakes(d: &Descriptor, slots: &[[f32; 4]; SLOTS], cx: &Context) -> Wake {
+pub(crate) fn wakes(d: &Descriptor, slots: &[[f32; 4]; MAX_PARAMS], cx: &Context) -> Wake {
     let gated = d.params.iter().zip(slots).filter(|(_, s)| live(**s)).filter_map(|(p, _)| p.uses);
     let settle = d.state.map_or(0.0, |s| s.settle);
     let wake = |u| match u {
@@ -32,7 +32,7 @@ pub(crate) fn wakes(d: &Descriptor, slots: &[[f32; 4]; SLOTS], cx: &Context) -> 
     d.uses.iter().copied().chain(gated).map(wake).fold(Wake::Idle, Wake::min)
 }
 
-fn pace(d: &Descriptor, slots: &[[f32; 4]; SLOTS], cx: &Context) -> Wake {
+fn pace(d: &Descriptor, slots: &[[f32; 4]; MAX_PARAMS], cx: &Context) -> Wake {
     let at = |id: &String| f64::from(d.param(id).map_or(0.0, |i| slots[i][0]));
     let t = f64::from(cx.t);
     match &d.pace {

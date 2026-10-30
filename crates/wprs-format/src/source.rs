@@ -94,7 +94,7 @@ pub(crate) fn facts_of(
     let mut found = facts(manifest, scene.as_ref(), size);
     let newer = Manifest::newer_names(raw, text.as_deref(), &found.features);
     found.features.extend(newer);
-    found.notes = scene.iter().flat_map(|s| uneven(source, s)).collect();
+    found.notes.extend(scene.iter().flat_map(|s| uneven(source, s)));
     found.notes.extend(manifest.unread_texts(locale_names(source)));
     for path in media::videos(manifest, scene.as_ref()) {
         let (head, tail) = ends(&source.join(&path), media::EDGE)?;

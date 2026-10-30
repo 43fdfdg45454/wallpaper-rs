@@ -1,5 +1,5 @@
 struct Fx {
-    slot: array<vec4<f32>, 16>,
+    slot: array<vec4<f32>, 24>,
     texel: vec4<f32>,
     channel: vec4<f32>,
     mask_m0: vec4<f32>,
@@ -112,4 +112,9 @@ fn from_linear(c: vec3<f32>) -> vec3<f32> {
 @fragment
 fn fs_mask_mix(in: VertexOut) -> @location(0) vec4<f32> {
     return mix(sample(aux0, in.uv), tap(in.uv), mask_at(in.uv));
+}
+
+@fragment
+fn fs_copy(in: VertexOut) -> @location(0) vec4<f32> {
+    return textureSampleLevel(input_tex, samp, in.uv, 0.0);
 }

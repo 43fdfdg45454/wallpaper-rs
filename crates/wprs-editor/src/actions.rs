@@ -91,6 +91,11 @@ pub enum Action {
         #[serde(default)]
         id: Option<String>,
     },
+    ImportEffect {
+        descriptor: PathBuf,
+        #[serde(default)]
+        wgsl: Option<PathBuf>,
+    },
     Translate {
         pointer: String,
         language: String,
@@ -153,7 +158,7 @@ pub enum Action {
     Redo {},
 }
 
-pub const ACTIONS: [&str; 26] = [
+pub const ACTIONS: [&str; 27] = [
     "set",
     "add",
     "remove",
@@ -169,6 +174,7 @@ pub const ACTIONS: [&str; 26] = [
     "solo",
     "keyframe",
     "import",
+    "import_effect",
     "translate",
     "thumbnail",
     "upgrade",
@@ -336,7 +342,8 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         Action::RemoveProperty { id } => crate::references::remove_property(doc, id)?,
         Action::Condition { id, enabled, text } => crate::references::condition(doc, id, *enabled, text)?,
         Action::AddPreset { id, label } => crate::props::add_preset(doc, id.as_deref(), label.as_deref())?,
-        Action::Import { .. } | Action::Thumbnail { .. } | Action::Undo {} | Action::Redo {} => Vec::new(),
+        Action::Import { .. } | Action::ImportEffect { .. } | Action::Thumbnail { .. } => Vec::new(),
+        Action::Undo {} | Action::Redo {} => Vec::new(),
     })
 }
 

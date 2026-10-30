@@ -128,6 +128,11 @@ pub(crate) fn open(window: &NativeWindow, size: (u32, u32)) -> Result<(Gpu, Surf
                 let epoch = EPOCH.fetch_add(1, Relaxed) + 1;
                 renderer.on_device_lost(move |reason| {
                     log::error!("the GPU device was lost: {reason}");
+                    let drawn = wprs_render::drawn_effects();
+                    if let Err(e) = wprs_scene::strike(&drawn) {
+                        log::warn!("cannot remember the effects drawn when the GPU stopped: {e}");
+                    }
+                    wprs_render::stop_effects(drawn);
                     LOST.fetch_or(EPOCH.load(Relaxed) == epoch, Relaxed);
                 });
                 let gpu = Gpu { renderer: Arc::new(renderer), epoch, vulkan };

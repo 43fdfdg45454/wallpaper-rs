@@ -122,9 +122,17 @@ pub fn diagnostics<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> JString<'a> {
         let report = json!({
             "gpu": gpu::adapter(), "backend": settings::chosen(BACKEND), "frames": frames, "fps": fps,
             "cap": power.fps(false), "charging": power.charging, "saver": power.saver, "thermal": power.thermal,
-            "tier": tier, "quality": quality, "flashes": stage::flashes(),
+            "tier": tier, "quality": quality, "flashes": stage::flashes(), "left_out": stage::left_out(),
         });
         Ok(env.new_string(report.to_string())?)
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn retry<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) {
+    on(&mut env, |_| {
+        stage::retry();
+        Ok(())
     })
 }
 

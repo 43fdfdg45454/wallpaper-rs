@@ -1296,6 +1296,56 @@ msgstr "Eliminar"
 msgid "New preset…"
 msgstr "Nuevo preajuste…"
 
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "it is too slow for this graphics card"
+msgstr "es demasiado lento para esta tarjeta gráfica"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "it stopped the graphics card or the program twice"
+msgstr "detuvo dos veces la tarjeta gráfica o el programa"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid ""
+"the graphics card or the program stopped twice while it built or drew this "
+"effect"
+msgstr ""
+"la tarjeta gráfica o el programa se detuvo dos veces mientras preparaba o "
+"dibujaba este efecto"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "the graphics card or the program stopped while it drew this effect"
+msgstr ""
+"la tarjeta gráfica o el programa se detuvo mientras dibujaba este efecto"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "it kept the graphics card busy for too long"
+msgstr "mantuvo ocupada la tarjeta gráfica demasiado tiempo"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "its shader could not be checked"
+msgstr "no se pudo revisar su shader"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid ""
+"the effects of the scene would do more work than this graphics card allows"
+msgstr "la escena haría más trabajo del que permite esta tarjeta gráfica"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "the scene has more than 16 effects that keep a state"
+msgstr "la escena tiene más de 16 efectos que guardan un estado"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "its state textures would take too much memory"
+msgstr "sus texturas de estado ocuparían demasiada memoria"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "its textures would take too much memory"
+msgstr "sus texturas ocuparían demasiada memoria"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "The effect %1 was left out: %2"
+msgstr "Se omitió el efecto %1: %2"
+
 #: apps/wprs-app/qml/LibraryPage.qml apps/wprs-app/qml/Main.qml
 msgid "Library"
 msgstr "Biblioteca"
@@ -1364,6 +1414,10 @@ msgid "Mature content: click the picture to always show this package"
 msgstr ""
 "Contenido para adultos: haz clic en la imagen para mostrar siempre este "
 "paquete"
+
+#: apps/wprs-app/qml/OutputRow.qml
+msgid "Try again"
+msgstr "Probar de nuevo"
 
 #: apps/wprs-app/qml/OutputRow.qml
 msgid "This picture has its own placement: %1"
@@ -1826,6 +1880,10 @@ msgid "Cannot write the file"
 msgstr "No se puede escribir el archivo"
 
 #: apps/wprs-app/qml/SceneAssets.qml
+msgid "Import an effect…"
+msgstr "Importar un efecto…"
+
+#: apps/wprs-app/qml/SceneAssets.qml
 msgid "Remove unused files"
 msgstr "Borrar los archivos sin usar"
 
@@ -1833,6 +1891,10 @@ msgstr "Borrar los archivos sin usar"
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid "Pictures, videos, sounds, fonts and color tables"
 msgstr "Imágenes, vídeos, sonidos, fuentes y tablas de color"
+
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "An effect descriptor, and its WGSL shader when it is not beside it"
+msgstr "Un descriptor de efecto y su shader WGSL cuando no está a su lado"
 
 #: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneInput.qml
 msgid "Follows %1"
@@ -2016,6 +2078,10 @@ msgstr "Mostrar"
 #: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/SceneLayers.qml
 msgid "Hide"
 msgstr "Ocultar"
+
+#: apps/wprs-app/qml/SceneInput.qml
+msgid "Layer %1"
+msgstr "Capa %1"
 
 #: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Default"
@@ -3152,6 +3218,10 @@ msgid "weakens masks"
 msgstr "atenúa máscaras"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+msgid "masks its effects with layers or shapes"
+msgstr "enmascara sus efectos con capas o formas"
+
+#: apps/wprs-app/qml/facade/Labels.qml
 msgid "feeds layers into effects"
 msgstr "pasa capas a los efectos"
 
@@ -3295,6 +3365,10 @@ msgstr "compila sus shaders de efectos en varias variantes"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "bends layers with its effect shaders"
 msgstr "deforma capas con sus shaders de efectos"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "runs effect shaders that use newer fields or helpers"
+msgstr "ejecuta shaders de efectos con campos o funciones de ayuda más nuevos"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "spreads its scene over every screen"

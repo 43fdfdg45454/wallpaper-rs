@@ -17,6 +17,10 @@ pub enum ConfigError {
     NoConfigDir,
 }
 
+pub fn stopped_effects() -> Option<PathBuf> {
+    Some(dirs::cache_dir()?.join("wallpaper-rs").join("stopped-effects"))
+}
+
 impl Config {
     pub fn default_path() -> Result<PathBuf, ConfigError> {
         Ok(dirs::config_dir().ok_or(ConfigError::NoConfigDir)?.join("wallpaper-rs").join("config.toml"))

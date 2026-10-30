@@ -36,6 +36,15 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) kept: &'p mut Vec<usize>,
     pub(crate) outputs: &'p mut Vec<Src>,
     pub(crate) lease: &'p mut super::chains::Lease,
+    pub(crate) refused: &'p mut std::collections::BTreeMap<String, String>,
+    pub(crate) drawn: &'p mut Vec<u64>,
+    pub(crate) sets: &'p mut Vec<[Src; 11]>,
+    pub(crate) more: super::stops::More,
+    pub(crate) made: &'p mut Vec<Src>,
+    pub(crate) isolated: &'p mut Vec<(usize, Option<(Src, Rect)>)>,
+    pub(crate) chains: &'p mut Vec<Option<(u64, bool)>>,
+    pub(crate) paints: &'a [(String, String, Image)],
+    pub(crate) backdrop: Option<Src>,
     pub(crate) swarms: Option<&'p mut super::swarm::Swarms>,
 }
 
@@ -67,11 +76,14 @@ impl<'a> Painter<'a, '_, '_> {
     }
 
     pub(crate) fn acquire(&mut self, size: (u32, u32)) -> Option<Src> {
-        self.pool.acquire(&self.r.device, size, self.format).map(Src::Pool)
+        self.borrow(size, self.format).map(Src::Pool)
     }
 
     pub(crate) fn release(&mut self, src: Src) {
-        if let Src::Pool(i) = src {
+        let shared = self.isolated.iter().any(|(_, found)| found.is_some_and(|(s, _)| s == src));
+        if let Src::Pool(i) = src
+            && !shared
+        {
             self.pool.release(i);
         }
     }
@@ -97,7 +109,7 @@ impl<'a> Painter<'a, '_, '_> {
             for e in effects {
                 let (id, slots, scale, mask) =
                     (&e.descriptor.id, e.slots, e.scale, (e.mask, &e.mask_texture));
-                let rest = (e.mask_strength, e.reach, e.chain, &e.textures, e.velocity);
+                let rest = (e.mask_strength, e.reach, e.chain, &e.textures, e.velocity, e.variant);
                 let _ = write!(h, "{:p}{id}{slots:?}{scale}{mask:?}{rest:?}", e.effect);
             }
         }
@@ -190,10 +202,16 @@ impl<'a> Painter<'a, '_, '_> {
     }
 
     pub(crate) fn run(&mut self, canvas: Src, background: [f64; 4]) {
-        let draws = &self.frame.draws;
-        let (mut static_end, mut i) = (0, 0);
+        self.spend();
+        let frame = self.frame;
+        let draws = &frame.draws;
+        let (mut static_end, mut i, mut fed) = (0, 0, 0u64);
         while i < draws.len() && !draws[i].dynamic {
-            i = draws[i].end;
+            let (key, moving) = self.feeding(i..draws[i].end);
+            if moving {
+                break;
+            }
+            (i, fed) = (draws[i].end, fed.rotate_left(7) ^ key);
             static_end = i;
         }
         let root = Target { src: canvas, rect: self.full };
@@ -205,7 +223,7 @@ impl<'a> Painter<'a, '_, '_> {
                 None => self.ops.push(Op::Clear(canvas, background)),
             }
         } else {
-            let key = self.digest(0..static_end, (self.full, background.map(f64::to_bits)));
+            let key = self.digest(0..static_end, (self.full, background.map(f64::to_bits), fed));
             if self.caches.get(&0).is_none_or(|c| c.key != key) {
                 self.cache(0, key, self.full.size());
                 self.ops.push(Op::Clear(Src::Cache(0), background));
@@ -217,9 +235,10 @@ impl<'a> Painter<'a, '_, '_> {
             self.ops.push(Op::Copy { from: Src::Cache(0), to: canvas, origin, size, at: origin });
         }
         self.list(static_end..draws.len(), root, false);
+        self.unshare();
     }
 
-    fn list(&mut self, range: Range<usize>, target: Target, clip: bool) {
+    pub(crate) fn list(&mut self, range: Range<usize>, target: Target, clip: bool) {
         let mut i = range.start;
         while i < range.end {
             let frame = self.frame;
@@ -239,6 +258,9 @@ impl<'a> Painter<'a, '_, '_> {
     }
 
     pub(crate) fn apart(&mut self, i: usize, target: Target, atop: bool) {
+        if self.reads_below(i) {
+            return self.beneath(i, target, atop);
+        }
         if let Some((src, rect)) = self.isolate(i) {
             self.composite(i, src, rect, target, atop);
             self.release(src);
@@ -250,13 +272,15 @@ impl<'a> Painter<'a, '_, '_> {
         let d = &frame.draws[i];
         let rect = self.extent(i)?.pixels(self.full)?.bucket();
         let id = d.layer as *const Layer as usize;
-        let key = (!d.dynamic).then(|| self.digest(i..d.end, (rect, self.srgb)));
+        let (fed, moving) = self.feeding(i..d.end);
+        let still = !d.dynamic && self.backdrop.is_none() && !moving;
+        let key = still.then(|| self.digest(i..d.end, (rect, self.srgb, fed)));
         if key.is_some() && self.caches.get(&id).map(|c| c.key) == key {
             self.reused += 1;
             self.kept.push(id);
             return Some((Src::Cache(id), rect));
         }
-        let src = self.acquire(rect.size())?;
+        let src = self.hold(i, rect.size())?;
         self.ops.push(Op::Clear(src, [0.0; 4]));
         let target = Target { src, rect };
         match d.content {

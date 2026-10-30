@@ -15,6 +15,7 @@ ColumnLayout {
     readonly property var playing: info.playlist ?? null
     readonly property string title: details.title || info.credit?.title || String(info.image ?? "").split("/").pop() || (item ? "" : i18n("Background color"))
     property string thumb
+    property LeftOut reasons: LeftOut {}
     property var details: ({})
     readonly property var pkg: details.package ?? {}
     readonly property var confirmed: pkg.confirmed ?? []
@@ -102,6 +103,16 @@ ColumnLayout {
                 elide: Text.ElideRight
                 font: Kirigami.Theme.smallFont
                 color: row.info.error ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
+            }
+
+            PlasmaComponents3.Label {
+                Layout.fillWidth: true
+                visible: (row.info.left_out ?? []).length > 0
+                text: (row.info.left_out ?? []).map(l => reasons.text(l)).join("\n")
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+                font: Kirigami.Theme.smallFont
+                color: Kirigami.Theme.disabledTextColor
             }
 
             PlasmaComponents3.Label {

@@ -241,7 +241,8 @@ update of wallpaper-rs. `wprs-ctl pack check` prints what each platform does.
 
 Effects and parameters that the format describes but the engine does not draw yet (the list is in
 "Effects not drawn yet" of `scene.md`) are refused by every platform with these names, which stay
-the same once they are drawn, so that older versions keep refusing them.
+the same once they are drawn, so that older versions keep refusing them. `effect.tint`,
+`effect.blend_texture` and `effect.light_shafts` run on both platforms.
 
 The fields of `scene.json` that came after the first version name these features (`scene.md` says
 what each field does). Each one is refused on a platform until its engine draws it, and the table
@@ -251,12 +252,13 @@ scene with `sound2` silently and leaves out `scripts2`, `script_layers`, `script
 
 | Feature | The scene | Desktop | Android |
 |---------|-----------|---------|---------|
-| `blend_modes2` | uses a blend mode after `luminosity` (`linear_burn` … `negation`) | refused | refused |
+| `blend_modes2` | uses a blend mode after `luminosity` (`linear_burn` … `negation`) | runs | runs |
 | `layer_color` | sets `brightness` on a layer or `color` on a picture, video, particles or group layer | runs | runs |
 | `parent` | sets `parent` or `inherit` on a layer | runs | runs |
 | `tilt` | sets `transform.tilt`, `transform.z` or `canvas.perspective` | refused | refused |
 | `mask_strength` | sets `strength` on a mask | runs | runs |
-| `layer_textures` | feeds a layer into an effect texture with `{ "layer" }` | refused | refused |
+| `effect_masks` | masks an effect with a `layer` or a `shape` | runs | runs |
+| `layer_textures` | feeds a layer into an effect texture with `{ "layer" }` | runs | runs |
 | `video_textures` | uses a video asset as a mask, an effect texture or the picture of a light | refused | refused |
 | `layer_playback` | sets `playback` on a picture or video layer | refused | refused |
 | `texture_options` | sets `filter`, `wrap` or `mipmaps` on an asset | runs | runs |
@@ -288,9 +290,10 @@ scene with `sound2` silently and leaves out `scripts2`, `script_layers`, `script
 | `audio_ranges` | follows a range of bands (`audio: [lo, hi]`, `of`, `reduce`) | refused | refused |
 | `shaping` | sets `bounds`, `exponent` or `smooth: { "up", "down" }` | refused | refused |
 | `audio_response` | sets the scene `audio` block | refused | refused |
-| `custom_effects` | brings effects of its own (`effects`) | refused | refused |
-| `effect_options` | brings effects with `options` | refused | refused |
-| `vertex_effects` | brings effects with a `vertex` stage | refused | refused |
+| `custom_effects` | brings effects of its own (`effects`) | runs | runs |
+| `effect_options` | brings effects with `options` | runs | runs |
+| `vertex_effects` | brings effects with a `vertex` stage | runs | runs |
+| `custom_effects2` | brings effects with `compose`, `swap`, `min_fps` or `velocity`, or whose shader calls `cursor_last`, `grid_uv`, `grid_position` or `fs_copy` | runs | runs |
 | `mesh` | has `mesh` layers, with their parts, depth, clips and animation layers | refused | refused |
 | `ik` | sets `ik` chains on a mesh or model | refused | refused |
 | `bone_physics` | sets `physics` on a mesh or model, or `canvas.wind` | refused | refused |

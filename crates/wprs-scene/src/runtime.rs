@@ -56,7 +56,13 @@ impl Runtime {
     pub fn new(scene: Arc<Scene>, props: Values) -> Runtime {
         let timelines = scene.timelines.iter().map(|tl| (tl.clone(), tl.start())).collect();
         let uses = uses::of(&scene, &props);
-        let targets = scene.layers().filter_map(|l| l.mask.as_ref()?.layer.clone()).collect();
+        let targets = scene.layers().flat_map(|l| {
+            let masks = l.mask.iter().chain(l.effects.iter().filter_map(|e| e.mask.as_ref()));
+            let fed =
+                l.effects.iter().flat_map(|e| e.params.values()).filter_map(|v| v.binding()?.layer.clone());
+            masks.filter_map(|m| m.layer.clone()).chain(fed)
+        });
+        let targets = targets.collect();
         let mut mattes = BTreeSet::new();
         holds(&scene.layers, &targets, &mut mattes);
         let (audio, pointer, script, memo) = Default::default();
@@ -214,6 +220,12 @@ impl Runtime {
 
     pub fn wall(&self) -> f64 {
         self.wall
+    }
+
+    pub fn parallax(&self) -> [f32; 2] {
+        let glide = self.scene.canvas.parallax.clone().unwrap_or_default();
+        let tilt = if glide.gyro && !self.still { self.tilt } else { [0.0; 2] };
+        [0, 1].map(|i| ((self.glide.smooth[i] - 0.5) * glide.pointer + tilt[i] * 0.5) * glide.amount)
     }
 
     pub fn set_language(&mut self, lang: &str) {

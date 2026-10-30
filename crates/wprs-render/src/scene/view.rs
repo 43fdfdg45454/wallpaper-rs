@@ -29,9 +29,19 @@ pub struct SceneView {
     pub(super) stats: SceneStats,
     pub(super) swarms: Option<swarm::Swarms>,
     pub(super) _lease: Lease,
+    pub(super) refused: std::collections::BTreeMap<String, String>,
     pub(super) scratch: super::Scratch,
     pub(super) marks: Vec<super::damage::Mark>,
     pub(super) stamp: u64,
+    pub(super) id: usize,
+    pub(super) paints: Vec<(String, String, Image)>,
+    pub(super) clock: super::clock::Clock,
+}
+
+impl Drop for SceneView {
+    fn drop(&mut self) {
+        super::flight::forget(self.id);
+    }
 }
 
 impl SceneView {
@@ -44,6 +54,38 @@ impl SceneView {
         let uv = UvRect::compute(fit, (self.canvas[0], self.canvas[1]), size);
         let [cw, ch] = self.canvas.map(|v| v as f32);
         [uv.offset[0] * cw, uv.offset[1] * ch, uv.scale[0] * cw, uv.scale[1] * ch]
+    }
+
+    pub fn left(&self) -> Vec<(String, String)> {
+        let short = |why: &String| {
+            why.lines()
+                .find(|l| !l.trim().is_empty())
+                .unwrap_or_default()
+                .chars()
+                .take(240)
+                .collect::<String>()
+        };
+        self.refused.iter().map(|(id, why)| (id.clone(), short(why))).collect()
+    }
+
+    pub fn left_out(&self) -> Vec<String> {
+        self.left().into_iter().map(|(id, why)| format!("the effect {id} was left out: {why}")).collect()
+    }
+
+    pub fn left_key(&self) -> u64 {
+        use std::hash::{DefaultHasher, Hash, Hasher};
+        let mut h = DefaultHasher::new();
+        self.refused.hash(&mut h);
+        if self.refused.is_empty() { 0 } else { h.finish() | 1 }
+    }
+
+    pub fn retry(&mut self) -> bool {
+        self.marks.clear();
+        let pool = &mut self.pool;
+        self.caches.drain().for_each(|(_, c)| pool.give(c.tex));
+        let again = !self.refused.is_empty();
+        self.refused.clear();
+        again
     }
 
     pub fn stats(&self) -> SceneStats {

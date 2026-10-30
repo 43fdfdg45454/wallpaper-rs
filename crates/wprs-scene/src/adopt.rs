@@ -47,6 +47,9 @@ fn compiled(id: &str, json: &str, wgsl: &str) -> Compiled {
         return found.clone();
     }
     let found = Descriptor::packaged(id, json, wgsl).map(Arc::new);
+    if found.as_ref().is_err_and(|e| e.contains(crate::STOPPED) || e.contains(crate::UNCHECKED)) {
+        return found;
+    }
     if cache.len() >= 64 {
         cache.clear();
     }

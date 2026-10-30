@@ -1,14 +1,19 @@
 use crate::Use;
-use naga::valid::{Capabilities, ValidationFlags, Validator};
+use naga::valid::{Capabilities, ModuleInfo, ValidationFlags, Validator};
 use naga::{Block, Expression, Function, Handle, Module, Statement, TypeInner};
 use std::collections::HashSet;
 
-const READS: [(&str, Use); 18] = [
+mod tree;
+
+const ROOM: usize = 64 << 20;
+
+const READS: [(&str, Use); 19] = [
     ("time", Use::Time),
     ("dt", Use::Time),
     ("daytime", Use::Time),
     ("cursor", Use::Cursor),
     ("cursor_delta", Use::Cursor),
+    ("cursor_last", Use::Cursor),
     ("inside", Use::Cursor),
     ("presence", Use::Cursor),
     ("parallax", Use::Cursor),
@@ -24,11 +29,21 @@ const READS: [(&str, Use); 18] = [
     ("bands_r", Use::Audio),
 ];
 
-pub(crate) fn compile(source: &str) -> Result<Module, String> {
+pub(crate) fn compile(source: &str) -> Result<(Module, ModuleInfo), String> {
+    crate::shape::shape(source)?;
     let module = naga::front::wgsl::parse_str(source).map_err(|e| e.emit_to_string(source))?;
     let mut validator = Validator::new(ValidationFlags::all(), Capabilities::default());
-    validator.validate(&module).map_err(|e| e.emit_to_string(source))?;
-    Ok(module)
+    let info = validator.validate(&module).map_err(|e| e.emit_to_string(source))?;
+    crate::shader::tree::tree(&module)?;
+    Ok((module, info))
+}
+
+pub(crate) fn roomy<T: Send>(work: impl FnOnce() -> Result<T, String> + Send) -> Result<T, String> {
+    std::thread::scope(|s| {
+        let thread = std::thread::Builder::new().name("wprs-shader".into()).stack_size(ROOM);
+        let worker = thread.spawn_scoped(s, work).map_err(|e| format!("cannot check its shader: {e}"))?;
+        worker.join().unwrap_or_else(|_| Err("its shader could not be checked".into()))
+    })
 }
 
 pub(crate) fn bindings(module: &Module) -> usize {
@@ -79,7 +94,7 @@ pub(crate) fn reads(module: &Module, entries: &[&str]) -> Vec<Use> {
     found
 }
 
-fn called(block: &Block, out: &mut Vec<Handle<Function>>) {
+pub(crate) fn called(block: &Block, out: &mut Vec<Handle<Function>>) {
     for statement in block.iter() {
         match statement {
             Statement::Call { function, .. } => out.push(*function),

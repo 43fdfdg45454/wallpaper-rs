@@ -1,9 +1,11 @@
 mod adopt;
 mod affine;
 mod animate;
+mod area;
 mod asset;
 mod blend;
 mod bones;
+mod book;
 mod budget;
 mod calendar;
 mod canvas;
@@ -12,6 +14,7 @@ mod chain;
 mod clip;
 mod content;
 mod cost;
+mod counter;
 mod cube;
 mod cue;
 mod custom;
@@ -19,29 +22,41 @@ mod deep;
 mod easing;
 mod effects;
 mod eval;
+mod fence;
 mod fields;
 mod figure;
 mod flash;
 mod form;
 mod fx;
 mod gltf;
+mod guard;
+mod helper;
+mod hoist;
 mod hooks;
 mod input;
+mod kept;
 mod kin;
 mod kinds;
 mod layer;
+mod ledger;
 mod lens;
 mod light;
 mod links;
 mod look;
+mod loops;
+mod measure;
 mod media;
+mod memory;
 mod mpeg;
 mod oklab;
+mod outside;
+mod package;
 mod particles;
 mod poses;
 mod probe;
 mod props;
 mod quality;
+mod reap;
 mod released;
 mod resolve;
 mod rig;
@@ -50,24 +65,36 @@ mod runtime;
 mod schema;
 mod scripting;
 mod shader;
+mod shape;
 mod sheet;
 mod signal;
 mod sound;
+mod spend;
+mod spill;
 mod stage;
+mod strikes;
+mod tally;
 mod tier;
 mod timeline;
+mod tokens;
+mod trials;
 mod typeset;
 mod uses;
 mod validate;
 mod value;
+mod variant;
+mod verdicts;
 mod voice;
 mod wake;
+mod weigh;
 
 pub use adopt::Files;
 pub use affine::Affine;
 pub use animate::Animate;
+pub use area::{Bounds, covered};
 pub use asset::{Asset, COLLECTIONS, Filter, MAX_FRAMES, Wrapping};
 pub use blend::{BLENDS, Blend};
+pub use book::{FORGIVEN, STRIKES};
 pub use budget::{Budget, Heat};
 pub use calendar::format as format_time;
 pub use canvas::{BlendSpace, Canvas, Clock};
@@ -81,14 +108,14 @@ pub use content::{Align, EffectUse, Gradient, Mask, MaskChannel, Shape, Spectrum
 pub use cube::{Lut, LutError, MAX_LUT_BYTES, MAX_LUT_SIZE, MAX_LUT_TOTAL};
 pub use cue::{Course, Fired, MAX_FIRED};
 pub use custom::{
-    CONTRACT, EffectFiles, MAX_EFFECT_FILES, MAX_GRID, MAX_INPUTS, MAX_OPTIONS, MAX_PARAMS, MAX_TARGETS,
-    MAX_VARIANTS, MAX_WGSL, MAX_WGSL_TOTAL,
+    CONTRACT, EffectFiles, MAX_EFFECT_FILES, MAX_GRID, MAX_INPUTS, MAX_OPTIONS, MAX_PARAMS, MAX_PASSES,
+    MAX_TARGETS, MAX_VARIANTS, MAX_WGSL, MAX_WGSL_TOTAL,
 };
 pub use easing::Ease;
 pub use effects::{
-    Cost, Descriptor, Entry, FRAME_WGSL, Fuse, MaskMode, Output, PRELUDE, Pace, ParamDef, ParamKind,
-    PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage, State, Texel, Tune, Use, Variant,
-    builtin, descriptor, register,
+    BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, Fuse, MaskMode, Output, PRELUDE, Pace, ParamDef,
+    ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage, State, Texel, Tune, Use,
+    Variant, builtin, descriptor, register,
 };
 pub use eval::{Content, Draw, EffectDraw, Frame};
 pub use figure::{
@@ -101,12 +128,20 @@ pub use gltf::{
     EXTENSIONS, MAX_BONES, MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODEL_JSON, MAX_MODEL_PARTS,
     MAX_MODELS_JSON, MAX_MORPHS, MAX_NODES, MAX_TRIANGLES, ModelFile,
 };
+pub use guard::guarded;
+pub use helper::{
+    CHECK_CPU, CHECK_MEMORY, CHECK_SHADER, launch_checks_from_here, serve_check, serve_check_with,
+};
 pub use input::{AudioFrame, BANDS, LayerOverride, PointerState, ScriptOutputs, TimelineCommand};
 pub use layer::{Anchor, Inherit, Kind, Layer, Parallax, Solid, Transform};
 pub use lens::{Camera3d, CameraKey, CameraPath, Fade, FadeTo, MAX_PATHS, PathOrder};
 pub use light::{Beam, Light, Lighting, MAX_LIGHTS, Volumetric};
 pub use look::{Bloom, Camera, Glare, Glide, Playback, Shake, Tonemap};
+pub use loops::{MAX_INLINED, MAX_LOOP, MAX_OPS, MAX_SHADER_NODES, MAX_WORK};
+pub use measure::MAX_BUILD;
 pub use media::{Cover, MEDIA_TRIGGERS, Media, Reading};
+pub use memory::MAX_MEMORY;
+pub use outside::{CHECK_WALL, Checker, UNCHECKED, check_out_of_process, checker, helper_runs, set_checker};
 pub use particles::{
     Area, Around, Bake, Between, Boids, Bow, Burst, CPU_PARTICLES, Carry, Census, Child, Cloud, Collider,
     ControlPoint, Cue, EmitShape, Emitter, Falloff, Follow, Force, Frames, Handle, Hsv, Inheritable, Init,
@@ -133,8 +168,11 @@ pub use scripting::{
     MAX_POOL_LAYERS, MAX_POOL_VERTICES, MAX_POOLS, MAX_SCRIPT_PARAMS, MAX_SCRIPTS2, MAX_TEMPLATES, ParamType,
     Pool, PoolKind, Script, ScriptApi, ScriptEvent, ScriptParam,
 };
+pub use shape::{MAX_ARGUMENTS, MAX_BRACKETS, MAX_OPERANDS};
 pub use signal::{CLOCKS, Gain, Hearing, Reduce, Smooth};
 pub use sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice};
+pub use spend::{MAX_STATEFUL, Spend, over};
+pub use strikes::{STOPPED, end_trials, forgive_strikes, keep_strikes, strike, struck, tried, trying};
 pub use tier::{Gpu, Tier};
 pub use timeline::{Event, Handles, Key, Loop, Timeline, local, sample};
 pub use typeset::{Backing, Glyphs, Layout, MAX_FALLBACK, Outline, Shadow, TextLayer, Valign, Wrap};
@@ -245,6 +283,13 @@ impl Scene {
 
     pub fn effect(&self, id: &str) -> Option<&Descriptor> {
         self.loaded.get(id).map(|d| &**d).or_else(|| described(id).filter(|_| !self.effects.contains_key(id)))
+    }
+
+    pub fn shader(&self, id: &str) -> Option<&Descriptor> {
+        self.loaded
+            .get(id)
+            .map(|d| &**d)
+            .or_else(|| descriptor(id).filter(|_| !self.effects.contains_key(id)))
     }
 
     pub fn from_json(text: &str) -> Result<Scene, SceneError> {

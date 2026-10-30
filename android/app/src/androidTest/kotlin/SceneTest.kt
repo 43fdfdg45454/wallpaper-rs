@@ -182,8 +182,20 @@ class SceneTest {
         File(dir, "scene.json").writeText(SHAFTS_SCENE)
         File(dir, "manifest.json").writeText(SHAFTS_MANIFEST)
         val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
-        val named = "effect.blur.blend (sets blend on the blur effect) and effect.light_shafts (uses the light_shafts effect)"
+        val named = "effect.blur.blend (sets blend on the blur effect) and effect.glitter (uses the glitter effect)"
         assertTrue(reply.getString("error").contains(named))
+    }
+
+    @Test
+    fun scenesThatMixLayersWithTheNewerModesAndEffectsDraw() {
+        val dir = File(storage(), "mixes/mixes").apply { mkdirs() }
+        File(dir, "scene.json").writeText(MIXES_SCENE)
+        File(dir, "manifest.json").writeText(MIXES_MANIFEST)
+        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
+        assertTrue(reply.optString("error").isEmpty())
+        show("Mixes")
+        assertTrue(waitFor { frames.get() > 0 })
+        assertEquals(settled(frames), quiet(frames))
     }
 
     private fun find(title: String): String {
@@ -235,11 +247,21 @@ class SceneTest {
             "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["camera3d", "model3d"] } }"""
         const val SHAFTS_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
             "layers": [{ "id": "fill", "type": "solid", "color": "#ffffff",
-                         "effects": [{ "effect": "light_shafts" }, { "effect": "blur", "params": { "blend": "screen" } }] }] }"""
+                         "effects": [{ "effect": "glitter" }, { "effect": "blur", "params": { "blend": "screen" } }] }] }"""
         const val SHAFTS_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.shafts", "version": "1.0.0",
             "title": "Shafts", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
             "content": { "rating": "general" }, "photosensitive": false,
-            "requires": { "features": ["effect.blur.blend", "effect.light_shafts"] } }"""
+            "requires": { "features": ["effect.blur.blend", "effect.glitter"] } }"""
+        const val MIXES_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] }, "layers": [
+            { "id": "spot", "type": "shape", "shape": { "ellipse": { "size": [20, 20] } }, "fill": "#00ff00", "visible": false },
+            { "id": "fill", "type": "solid", "color": "#ffffff", "blend": "linear_burn",
+              "effects": [{ "effect": "light_shafts", "params": { "speed": 0 } },
+                          { "effect": "tint", "mask": { "shape": { "ellipse": { "size": [30, 20] } } } },
+                          { "effect": "blend_texture", "params": { "texture": { "layer": "spot" } }, "mask": { "layer": "spot" } }] }] }"""
+        const val MIXES_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.mixes", "version": "1.0.0",
+            "title": "Mixes", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+            "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["blend_modes2",
+            "effect.blend_texture", "effect.light_shafts", "effect.tint", "effect_masks", "layer_textures"] } }"""
         const val FLASH_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
             "layers": [{ "id": "fill", "type": "solid", "color": "#ffffff" }] }"""
         const val FLASH_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.flash", "version": "1.0.0",

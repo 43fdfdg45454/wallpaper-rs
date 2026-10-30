@@ -1,6 +1,5 @@
 use super::{B, CHUNK, SIM, SceneView, Store, Swarms, buffer, module};
 use crate::{RenderError, Renderer};
-use wgpu::util::DeviceExt;
 use wprs_scene::{Census, Cloud, Sim};
 
 impl Swarms {
@@ -36,9 +35,7 @@ impl Swarms {
         let extra = if self.gpu { B::STORAGE } else { B::empty() };
         let particles = buffer(r, u64::from(alloc) * 64, B::VERTEX | B::COPY_DST | B::COPY_SRC | extra);
         let init = |contents: &[u8], usage| {
-            let desc =
-                wgpu::util::BufferInitDescriptor { label: Some("wprs-scene particles"), contents, usage };
-            r.device.create_buffer_init(&desc)
+            crate::filled::filled((&r.device, &r.queue), "wprs-scene particles", contents, usage)
         };
         let gpu = self.gpu.then(|| {
             let free: Vec<u32> = (0..alloc).collect();

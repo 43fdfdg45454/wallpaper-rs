@@ -126,10 +126,13 @@ fn language_files_and_package_effects_belong_to_the_package() {
     project.save().unwrap();
     let found = problems(&project.dir, &project.doc);
     let (manifest, facts) = wprs_format::inspect(&project.dir).unwrap();
-    let checked = wprs_format::Platform::ALL.map(|p| {
-        let refused = wprs_format::features::playable(&manifest, &facts, p).unwrap_err();
-        (true, format!("{}: refused: {refused}", p.name()))
-    });
+    let checked: Vec<(bool, String)> = wprs_format::Platform::ALL
+        .into_iter()
+        .filter_map(|p| {
+            let refused = wprs_format::features::playable(&manifest, &facts, p).err()?;
+            Some((true, format!("{}: refused: {refused}", p.name())))
+        })
+        .collect();
     assert_eq!(
         found.iter().map(|p| (p.warning, p.message.clone())).collect::<Vec<_>>(),
         checked,

@@ -2,8 +2,8 @@ use crate::pack::Pack;
 use crate::power::{Power, delay_ms};
 use crate::{hearing, props, saved};
 use chrono::Timelike;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering::Relaxed};
+use std::sync::{Arc, Mutex, PoisonError};
 use wprs_render::{GpuImage, Meter, RenderError, Renderer, SceneView};
 use wprs_scene::{Budget, Content, FlashGuard, Quality, Runtime, Tier, Wake};
 
@@ -15,9 +15,29 @@ const DAY_MS: f64 = 86_400_000.0;
 
 static LEVEL: AtomicU32 = AtomicU32::new(0);
 static CALMING: AtomicU32 = AtomicU32::new(0);
+static LEFT: Mutex<(u64, Vec<(String, String)>)> = Mutex::new((0, Vec::new()));
+static RETRIES: AtomicU64 = AtomicU64::new(0);
+
+pub(crate) fn retry() {
+    wprs_render::retry_effects();
+    if let Err(e) = wprs_scene::forgive_strikes() {
+        log::warn!("cannot forget the effects that stopped the GPU or the app: {e}");
+    }
+    match crate::library::with(|lib| Ok(lib.recheck(wprs_scene::STOPPED)?)) {
+        Ok(uids) if uids.is_empty() => {}
+        Ok(_) => crate::store::changed(),
+        Err(e) => log::warn!("cannot check the left-out packages again: {e}"),
+    }
+    RETRIES.fetch_add(1, Relaxed);
+}
 
 pub(crate) fn flashes() -> &'static str {
     ["", "slowed", "paused"][CALMING.load(Relaxed).min(2) as usize]
+}
+
+pub(crate) fn left_out() -> Vec<serde_json::Value> {
+    let left = LEFT.lock().unwrap_or_else(PoisonError::into_inner);
+    left.1.iter().map(|(id, reason)| serde_json::json!({ "id": id, "reason": reason })).collect()
 }
 
 type Guarded = (FlashGuard, Vec<f32>, i64, Option<Meter>);
@@ -38,6 +58,7 @@ pub(crate) struct Stage {
     restock: bool,
     calmed: bool,
     guard: Option<Box<Guarded>>,
+    retried: u64,
 }
 
 pub(crate) struct Shot<'a> {
@@ -81,6 +102,7 @@ impl Stage {
             restock: false,
             calmed: false,
             guard: None,
+            retried: RETRIES.load(Relaxed),
         }
     }
 
@@ -166,6 +188,13 @@ impl Stage {
         let quality = budget.quality(&self.runtime).min(power.ceiling());
         LEVEL.store(1 + tier as u32 * 4 + quality as u32, Relaxed);
         let fps = if still { 0 } else { budget.fps(&self.runtime, quality, 0) };
+        let retried = RETRIES.load(Relaxed);
+        if std::mem::replace(&mut self.retried, retried) != retried {
+            self.touch.2 = true;
+            if self.view.as_mut().is_some_and(SceneView::retry) {
+                self.view = None;
+            }
+        }
         let due = self.due.is_some_and(|due| nanos >= due - SLACK_NS) || std::mem::take(&mut self.touch.2);
         if !(force
             || due
@@ -207,7 +236,14 @@ impl Stage {
         };
         self.due = (delay > 0 && wake != Wake::Idle).then_some(nanos + delay * 1_000_000);
         self.fps = if wake == Wake::Frame { fps } else { 0 };
-        r.render_scene(view, &self.runtime, &frame, (inner[0], inner[1]), quality, videos)?;
+        let rendered =
+            r.render_scene(view, &self.runtime, &frame, (inner[0], inner[1]), quality, videos).map(drop);
+        let mut left = LEFT.lock().unwrap_or_else(PoisonError::into_inner);
+        if left.0 != view.left_key() {
+            *left = (view.left_key(), view.left());
+        }
+        drop(left);
+        rendered?;
         let view: &'a SceneView = view;
         let image = view.image().expect("rendered above");
         if let Some((guard, luma, start, meter)) = self.guard.as_deref_mut() {

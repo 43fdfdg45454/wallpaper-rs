@@ -1,0 +1,2 @@
+const W = array<f32, 5>(0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+@fragment fn fs_e(in: VertexOut) -> @location(0) vec4<f32> { var s = tap(in.uv) * W[0]; for (var i = 1; i < 5; i++) { let o = vec2<f32>(f32(i) * 0.002, 0.0); s += tap(in.uv + o) * W[i]; s += tap(in.uv - o) * W[i]; } return s; }

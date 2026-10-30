@@ -454,6 +454,9 @@ ctl config playback.flash_guard true
 wait_for 20 calmed || fail "the flash guard let a scene flash ten times a second: $(ctl state)"
 ctl config playback.flash_guard false
 expect "s['outputs']['TEST-7']['flashes']" ""
+expect "s['outputs']['TEST-7']['left_out']" "[]"
+ctl retry-effects || fail "retry-effects failed with a scene shown"
+expect "s['outputs']['TEST-7']['left_out']" "[]"
 leave && bus Library1 Remove asb 1 "$blink" false >/dev/null
 ctl lib apply "$storm" -o TEST-7
 echo "flash guard checks passed"
@@ -962,16 +965,22 @@ if ctl scene set "$draft" /scene/canvas/size/0 0 && ctl scene preview "$draft" -
 fi
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/blend linear_burn
-if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with a newer blend mode was previewed"; fi
-grep -q "blend_modes2" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
+ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a newer blend mode was not previewed"
+ctl scene undo "$draft"
+ctl scene set "$draft" /scene/layers/0/transform/tilt '[10, 0]'
+if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with tilted layers was previewed"; fi
+grep -q "tilt" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/solid '{"alpha": 0.5}'
 if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with layer events was previewed"; fi
 grep -q "layer_events" <<<"$refused" || fail "the refused preview did not name layer_events: $refused"
 ctl scene undo "$draft"
-ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "light_shafts"}]'
+ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "glitter"}]'
 if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with an effect not drawn yet was previewed"; fi
-grep -q "effect.light_shafts" <<<"$refused" || fail "the refused preview did not name effect.light_shafts: $refused"
+grep -q "effect.glitter" <<<"$refused" || fail "the refused preview did not name effect.glitter: $refused"
+ctl scene undo "$draft"
+ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "light_shafts", "params": {"speed": 0}}, {"effect": "tint", "mask": {"shape": {"ellipse": {"size": [40, 40]}}}}]'
+ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with the newer built-in effects was not previewed"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/clock '{"seed": null}'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a fresh seed was not previewed"

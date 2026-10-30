@@ -80,6 +80,10 @@ impl Tier {
         [4.0, 8.0, 16.0, 40.0][self as usize]
     }
 
+    pub fn ceiling(self) -> f32 {
+        [2_000.0, 4_000.0, 8_000.0, 16_000.0][self as usize]
+    }
+
     pub fn particles(self) -> u32 {
         [2_000, 10_000, 50_000, 200_000][self as usize]
     }

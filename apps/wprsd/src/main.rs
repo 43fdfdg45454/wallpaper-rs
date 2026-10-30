@@ -90,6 +90,8 @@ struct Args {
 }
 
 fn main() -> anyhow::Result<()> {
+    wprs_scene::serve_check();
+    wprs_scene::check_out_of_process(true);
     let args = Args::parse();
     if args.worker {
         return worker::run();
@@ -122,6 +124,9 @@ pub(crate) fn fatal(reason: &str) -> ! {
 }
 
 pub(crate) fn quit(status: i32) -> ! {
+    if status == 0 {
+        wprs_scene::end_trials();
+    }
     unsafe { libc::_exit(status) }
 }
 
@@ -134,6 +139,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
     if bus.name_has_owner(dbus::BUS_NAME.try_into()?).await? {
         return Err(taken());
     }
+    compositor::stops::restore();
     let session = present::select(args.backend, &bus).await?;
     let display = session.as_ref().map(|s| Box::new(s.display()) as wprs_render::Display);
     let daemon =
@@ -193,7 +199,9 @@ async fn run(args: Args) -> anyhow::Result<()> {
         _ = terminate.recv() => {}
     }
     tracing::info!("shutting down");
+    wprs_scene::end_trials();
     inputs::stop(&connection).await;
+    wprs_render::finish_builds(0);
     Ok(())
 }
 

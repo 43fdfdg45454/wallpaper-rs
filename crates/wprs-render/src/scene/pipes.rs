@@ -1,10 +1,10 @@
-use super::chains::{Shelf, lock};
+use super::chains::Shelf;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use wgpu::{BindGroupLayout, BlendComponent as C, BlendFactor as F, BlendOperation, TextureFormat};
 use wgpu::{ShaderModule, TextureViewDimension as Dim};
-use wprs_scene::FRAME_WGSL;
+use wprs_scene::{BLEND_WGSL, FRAME_WGSL};
 
 pub(crate) const STRIDE: u64 = 512;
 
@@ -33,17 +33,19 @@ pub(crate) enum Mode {
 pub(crate) enum Shader {
     Scene(&'static str),
     Fx(u64, &'static str),
+    Own(u64, u8, u32),
 }
 
 pub(crate) type Key = (Shader, Mode, TextureFormat);
 
 pub(crate) struct Pipes {
-    composite: ShaderModule,
+    pub(crate) composite: ShaderModule,
     pub(crate) shelf: Arc<Mutex<Shelf>>,
     pub(crate) frame: BindGroupLayout,
     pub(crate) textures: BindGroupLayout,
     pub(crate) fx_frame: BindGroupLayout,
     pub(crate) fx: BindGroupLayout,
+    pub(crate) own: BindGroupLayout,
     pub(crate) sampler: wgpu::Sampler,
     pub(crate) wrap: wgpu::Sampler,
     pub(crate) near: wgpu::Sampler,
@@ -96,6 +98,8 @@ impl Pipes {
             .chain((1..=6).map(flat))
             .chain([entry(7, texture(Dim::D3))])
             .collect();
+        let own: Vec<_> =
+            fx.iter().cloned().chain((8..=11).map(flat)).chain([entry(12, uniform(true))]).collect();
         let sampler_of = |address_mode, filter| {
             device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("wprs-scene sampler"),
@@ -109,7 +113,7 @@ impl Pipes {
         };
         let (linear, clamp) = (wgpu::FilterMode::Linear, wgpu::AddressMode::ClampToEdge);
         Pipes {
-            composite: module(device, format!("{FRAME_WGSL}\n{}", include_str!("scene.wgsl"))),
+            composite: module(device, format!("{FRAME_WGSL}\n{BLEND_WGSL}\n{}", include_str!("scene.wgsl"))),
             shelf: Arc::default(),
             frame: layout(&[
                 entry(0, uniform(false)),
@@ -120,71 +124,12 @@ impl Pipes {
             textures: layout(&[flat(0), flat(1), flat(2)]),
             fx_frame: layout(&[entry(0, uniform(false)), entry(1, sampler), entry(2, sampler)]),
             fx: layout(&fx),
+            own: layout(&own),
             sampler: sampler_of(clamp, linear),
             wrap: sampler_of(wgpu::AddressMode::Repeat, linear),
             near: sampler_of(clamp, wgpu::FilterMode::Nearest),
             shrinks: Mutex::default(),
         }
-    }
-
-    pub(crate) fn get(
-        &self,
-        device: &wgpu::Device,
-        shader: Shader,
-        mode: Mode,
-        format: TextureFormat,
-    ) -> wgpu::RenderPipeline {
-        let mut guard = lock(&self.shelf);
-        let shelf = &mut *guard;
-        let key = (shader, mode, format);
-        if let Some(found) = shelf.cache.get(&key) {
-            return found.clone();
-        }
-        let (module, entry, vertex, groups, strip) = match shader {
-            Shader::Scene(entry) => (&self.composite, entry, "vs_item", [&self.frame, &self.textures], true),
-            Shader::Fx(id, entry) => (
-                shelf.modules.get(&id).expect("created first"),
-                entry,
-                "vs_main",
-                [&self.fx_frame, &self.fx],
-                false,
-            ),
-        };
-        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("wprs-scene pipeline layout"),
-            bind_group_layouts: &[Some(groups[0]), Some(groups[1])],
-            immediate_size: 0,
-        });
-        let topology = if strip {
-            wgpu::PrimitiveTopology::TriangleStrip
-        } else {
-            wgpu::PrimitiveTopology::TriangleList
-        };
-        let target = wgpu::ColorTargetState { blend: blend(mode), ..format.into() };
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some(entry),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module,
-                entry_point: Some(vertex),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module,
-                entry_point: Some(entry),
-                compilation_options: Default::default(),
-                targets: &[Some(target)],
-            }),
-            primitive: wgpu::PrimitiveState { topology, ..Default::default() },
-            depth_stencil: None,
-            multisample: Default::default(),
-            multiview_mask: None,
-            cache: None,
-        });
-        shelf.cache.insert(key, pipeline.clone());
-        compiled(1);
-        pipeline
     }
 }
 

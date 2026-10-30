@@ -74,6 +74,8 @@ object Native {
     external fun diagnostics(): String
 
     external fun trim()
+
+    external fun retry()
 }
 
 object Render {

@@ -50,7 +50,10 @@ fn every_described_effect_and_newer_parameter_is_named_and_refused_until_it_is_d
     let dir = tempfile::tempdir().unwrap();
     let path = table::build("effects", &table::effects(), dir.path()).unwrap();
     let package = open(&path, &Limits::default()).unwrap();
-    let mut wanted: Vec<String> = wprs_scene::undrawn().iter().map(|d| format!("effect.{}", d.id)).collect();
+    let mut wanted: Vec<String> = table::newer_effects().map(|id| format!("effect.{id}")).collect();
+    assert!(
+        ["tint", "blend_texture", "light_shafts"].iter().all(|id| wanted.contains(&format!("effect.{id}")))
+    );
     for d in wprs_scene::builtin() {
         wanted.extend(wprs_scene::newer_params(&d.id).map(|p| format!("effect.{}.{}", d.id, p.id)));
     }

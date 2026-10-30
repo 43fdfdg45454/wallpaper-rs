@@ -10,7 +10,8 @@ use wprs_scene::{CHAIN_ENTRY, Descriptor, Output, Scene, descriptor, effect_sour
 pub(crate) struct Shelf {
     pub(crate) modules: HashMap<u64, ShaderModule>,
     pub(crate) cache: HashMap<Key, wgpu::RenderPipeline>,
-    held: HashMap<u64, usize>,
+    pub(crate) owned: HashMap<u64, Arc<Descriptor>>,
+    pub(crate) held: HashMap<u64, usize>,
 }
 
 pub(crate) struct Lease(Vec<u64>, Arc<Mutex<Shelf>>);
@@ -28,7 +29,10 @@ impl Drop for Lease {
             if *n == 0 {
                 shelf.held.remove(key);
                 shelf.modules.remove(key);
-                shelf.cache.retain(|(shader, ..), _| !matches!(shader, Shader::Fx(k, _) if k == key));
+                shelf.owned.remove(key);
+                shelf.cache.retain(
+                    |(shader, ..), _| !matches!(shader, Shader::Fx(k, _) | Shader::Own(k, ..) if k == key),
+                );
             }
         }
     }
@@ -52,6 +56,14 @@ impl Pipes {
             module(device, effect_source(&chain.collect::<Vec<_>>()))
         });
         key
+    }
+
+    pub(crate) fn hold(&self, key: u64, lease: &mut Lease) {
+        let mut shelf = lock(&self.shelf);
+        if !lease.0.contains(&key) {
+            *shelf.held.entry(key).or_default() += 1;
+            lease.0.push(key);
+        }
     }
 
     pub(crate) fn prepare(

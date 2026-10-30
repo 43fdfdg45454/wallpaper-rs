@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 
 QtObject {
+    property var own: ({})
     readonly property var words: ({
             "a": App.tr("Alpha"),
             "aberration": App.tr("Color fringes"),
@@ -498,7 +499,7 @@ QtObject {
     }
 
     function effect(id) {
-        return SceneEffects.effects[id] ?? label(id);
+        return own[id] ?? SceneEffects.effects[id] ?? label(id);
     }
 
     function easing(name) {
@@ -511,7 +512,7 @@ QtObject {
 
     function value(option) {
         const text = String(option ?? "");
-        return SceneValues.values[text] ?? ManifestWords.values[text] ?? SceneValues.kinds[text] ?? SceneEffects.effects[text] ?? (words[text] ? label(text) : easing(text));
+        return SceneValues.values[text] ?? ManifestWords.values[text] ?? SceneValues.kinds[text] ?? own[text] ?? SceneEffects.effects[text] ?? (words[text] ? label(text) : easing(text));
     }
 
     function binding(bound) {

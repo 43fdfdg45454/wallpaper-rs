@@ -6,11 +6,13 @@ use std::sync::{OnceLock, RwLock};
 
 pub const FRAME_WGSL: &str = include_str!("frame.wgsl");
 pub const RELIEF_WGSL: &str = include_str!("relief.wgsl");
+pub const BLEND_WGSL: &str = include_str!("blend.wgsl");
 pub const PRELUDE: &str = concat!(
     include_str!("frame.wgsl"),
     include_str!("prelude.wgsl"),
     include_str!("helpers.wgsl"),
-    include_str!("relief.wgsl")
+    include_str!("relief.wgsl"),
+    include_str!("blend.wgsl")
 );
 pub const SLOTS: usize = 16;
 const FILES: &[(&str, &str, &str)] = &include!(concat!(env!("OUT_DIR"), "/effects.rs"));
@@ -53,8 +55,18 @@ pub struct Descriptor {
     pub options: Vec<Variant>,
     #[serde(default, skip_serializing_if = "Stage::is_layer")]
     pub stage: Stage,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub compose: bool,
     #[serde(skip)]
     pub wgsl: String,
+    #[serde(skip)]
+    pub key: u64,
+    #[serde(skip)]
+    pub reads: f32,
+    #[serde(skip)]
+    pub ops: f32,
+    #[serde(skip)]
+    pub size: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -224,6 +236,8 @@ pub struct PassDef {
     pub vertex: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid: Option<[u32; 2]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub swap: Option<[String; 2]>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -267,6 +281,12 @@ impl Default for Cost {
 impl Default for State {
     fn default() -> Self {
         State { scale: 1.0, settle: 0.0 }
+    }
+}
+
+impl Descriptor {
+    pub fn below(&self) -> bool {
+        self.compose || self.passes.iter().any(|p| p.inputs.iter().any(|i| i == "backdrop"))
     }
 }
 

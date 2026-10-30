@@ -24,6 +24,7 @@ pub struct Response {
 }
 
 pub fn run() -> anyhow::Result<()> {
+    wprs_scene::launch_checks_from_here();
     let replies = unsafe {
         libc::setpriority(libc::PRIO_PROCESS, 0, 19);
         libc::syscall(libc::SYS_ioprio_set, 1, 0, 3 << 13);
@@ -32,6 +33,7 @@ pub fn run() -> anyhow::Result<()> {
         libc::dup2(2, 1);
         std::fs::File::from_raw_fd(replies)
     };
+    crate::compositor::stops::restore();
     let mut out = std::io::BufWriter::new(replies);
     for line in std::io::stdin().lock().lines() {
         let request: Request = serde_json::from_str(&line?)?;
@@ -39,6 +41,8 @@ pub fn run() -> anyhow::Result<()> {
         out.write_all(b"\n")?;
         out.flush()?;
     }
+    wprs_scene::end_trials();
+    wprs_render::finish_builds(0);
     Ok(())
 }
 

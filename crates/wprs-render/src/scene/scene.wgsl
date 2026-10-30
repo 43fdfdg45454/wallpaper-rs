@@ -101,71 +101,6 @@ fn mask_value(in: Out) -> f32 {
     return mix(mix(m, 1.0 - m, item.mask_info.y), 1.0, item.mask_info.w);
 }
 
-fn lum(c: vec3<f32>) -> f32 {
-    return dot(c, vec3<f32>(0.3, 0.59, 0.11));
-}
-
-fn clip_color(c: vec3<f32>) -> vec3<f32> {
-    let l = lum(c);
-    let n = min(c.r, min(c.g, c.b));
-    let x = max(c.r, max(c.g, c.b));
-    var o = c;
-    if n < 0.0 {
-        o = l + (o - l) * l / max(l - n, 1e-5);
-    }
-    if x > 1.0 {
-        o = l + (o - l) * (1.0 - l) / max(x - l, 1e-5);
-    }
-    return o;
-}
-
-fn set_lum(c: vec3<f32>, l: f32) -> vec3<f32> {
-    return clip_color(c + (l - lum(c)));
-}
-
-fn sat(c: vec3<f32>) -> f32 {
-    return max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
-}
-
-fn set_sat(c: vec3<f32>, s: f32) -> vec3<f32> {
-    let lo = min(c.r, min(c.g, c.b));
-    let range = sat(c);
-    return select(vec3<f32>(0.0), (c - lo) * s / range, range > 1e-5);
-}
-
-fn soft_light(b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
-    let d = select(sqrt(b), ((16.0 * b - 12.0) * b + 4.0) * b, b <= vec3<f32>(0.25));
-    return select(b + (2.0 * s - 1.0) * (d - b), b - (1.0 - 2.0 * s) * b * (1.0 - b), s <= vec3<f32>(0.5));
-}
-
-fn hard_light(b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
-    return select(1.0 - 2.0 * (1.0 - s) * (1.0 - b), 2.0 * s * b, s <= vec3<f32>(0.5));
-}
-
-fn mixed(mode: u32, b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
-    switch mode {
-        case 4u: { return max(b, s); }
-        case 5u: { return min(b, s); }
-        case 6u: { return hard_light(s, b); }
-        case 7u: { return soft_light(b, s); }
-        case 8u: { return hard_light(b, s); }
-        case 9u: { return abs(b - s); }
-        case 10u: { return b + s - 2.0 * b * s; }
-        case 11u: {
-            let dodge = min(vec3<f32>(1.0), b / max(1.0 - s, vec3<f32>(1e-5)));
-            return select(dodge, vec3<f32>(1.0), (s >= vec3<f32>(1.0)) & (b > vec3<f32>(0.0)));
-        }
-        case 12u: {
-            let burn = 1.0 - min(vec3<f32>(1.0), (1.0 - b) / max(s, vec3<f32>(1e-5)));
-            return select(burn, vec3<f32>(0.0), (s <= vec3<f32>(0.0)) & (b < vec3<f32>(1.0)));
-        }
-        case 13u: { return set_lum(set_sat(s, sat(b)), lum(b)); }
-        case 14u: { return set_lum(set_sat(b, sat(s)), lum(b)); }
-        case 15u: { return set_lum(s, lum(b)); }
-        default: { return set_lum(b, lum(s)); }
-    }
-}
-
 fn finish(src: vec4<f32>, in: Out) -> vec4<f32> {
     let c = src * mask_value(in);
     if item.mode.x < 3.5 {
@@ -174,7 +109,7 @@ fn finish(src: vec4<f32>, in: Out) -> vec4<f32> {
     let bd = textureSampleLevel(back_tex, samp, item.back.xy + in.position.xy * item.back.zw, 0.0);
     let cb = select(vec3<f32>(0.0), bd.rgb / bd.a, bd.a > 1e-5);
     let cs = select(vec3<f32>(0.0), c.rgb / c.a, c.a > 1e-5);
-    let blended = mixed(u32(item.mode.x + 0.5), cb, cs);
+    let blended = clamp(blend_pick(u32(item.mode.x + 0.5), cb, cs), vec3<f32>(0.0), vec3<f32>(1.0));
     let rgb = (1.0 - bd.a) * c.rgb + (1.0 - c.a) * bd.rgb + c.a * bd.a * blended;
     return vec4<f32>(rgb, c.a + bd.a - c.a * bd.a);
 }

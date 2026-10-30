@@ -3,7 +3,6 @@ use crate::shader::{bind_group_layout, module, pipeline};
 use crate::{GpuImage, RenderError, Renderer};
 use std::sync::Arc;
 use std::sync::atomic::Ordering::Relaxed;
-use wgpu::util::DeviceExt;
 use wprs_scene::FLASH_GRID;
 
 const ROW: u32 = 256;
@@ -25,16 +24,14 @@ pub struct Meter {
 }
 
 impl Luma {
-    fn new(device: &wgpu::Device) -> Luma {
+    fn new(devices: (&wgpu::Device, &wgpu::Queue)) -> Luma {
+        let device = devices.0;
         let layout = bind_group_layout(device, 1);
         let shader = module(device, include_str!("luma.wgsl"));
         let pipeline = pipeline(device, &layout, &shader, "fs_luma", FORMAT.into());
         let cells = [FLASH_GRID[0] as f32, FLASH_GRID[1] as f32, 0.0, 0.0];
-        let grid = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("wprs-render luma grid"),
-            contents: bytemuck::bytes_of(&cells),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
+        let usage = wgpu::BufferUsages::UNIFORM;
+        let grid = crate::filled::filled(devices, "wprs-render luma grid", bytemuck::bytes_of(&cells), usage);
         Luma { layout, pipeline, grid }
     }
 }
@@ -76,7 +73,7 @@ impl Renderer {
     }
 
     fn collect(&self, m: &mut Meter, out: &mut Vec<f32>) -> Result<bool, RenderError> {
-        self.device.poll(wgpu::PollType::Poll).map_err(|e| RenderError::DeviceLost(e.to_string()))?;
+        self.polled(wgpu::PollType::Poll)?;
         match m.state.load(Relaxed) {
             MAPPED => {}
             FAILED => {
@@ -97,7 +94,7 @@ impl Renderer {
     }
 
     fn measure(&self, m: &mut Meter, image: &GpuImage) -> Result<(), RenderError> {
-        let luma = self.luma.get_or_init(|| Luma::new(&self.device));
+        let luma = self.luma.get_or_init(|| Luma::new((&self.device, &self.queue)));
         if m.group.as_ref().is_none_or(|(id, _)| *id != image.id) {
             let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("wprs-render luma"),

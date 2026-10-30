@@ -73,6 +73,8 @@ enum Repo {
 }
 
 fn main() -> ExitCode {
+    wprs_scene::serve_check();
+    wprs_scene::check_out_of_process(true);
     let cli = Cli::parse();
     if let Some(Command::Validate { wpak, thumb, keys, require_signature }) = &cli.command {
         return match wprs_server::check(wpak, keys, *require_signature, thumb) {

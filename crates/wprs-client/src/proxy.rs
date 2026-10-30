@@ -43,6 +43,7 @@ pub trait Daemon1 {
     fn press_scene_button(&self, output: &str, id: &str) -> Result<()>;
     fn share_scene_values(&self, output: &str, shared: bool) -> Result<()>;
     fn reload(&self) -> Result<()>;
+    fn retry_effects(&self) -> Result<()>;
     fn get_state(&self) -> Result<String>;
     fn get_schema(&self) -> Result<String>;
     fn wait_changed(&self, serial: u64, timeout_ms: u32) -> Result<(u64, Vec<String>)>;

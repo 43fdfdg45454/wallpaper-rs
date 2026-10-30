@@ -24,6 +24,7 @@ pub(crate) fn prepare(files: &str) -> Result<(), Error> {
     }
     let dir = dir()?;
     [MEDIA, THUMBS].iter().try_for_each(|name| fs::create_dir_all(dir.join(name)))?;
+    wprs_scene::keep_strikes(&dir.join("stopped-effects"));
     settings::prepare()?;
     if let Ok((uid, _)) =
         File::open(dir.join(OLD[0])).map_err(Error::from).and_then(|mut f| store(&mut f, ""))

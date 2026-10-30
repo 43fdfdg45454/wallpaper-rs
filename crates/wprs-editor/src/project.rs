@@ -147,6 +147,9 @@ impl Project {
                 let (id, path) = crate::assets::import(&self.dir, &self.doc, file, id.as_deref())?;
                 crate::assets::adopt(&self.doc, &id, &path)?
             }
+            Action::ImportEffect { descriptor, wgsl } => {
+                crate::shaders::import(&self.dir, &self.doc, descriptor, wgsl.as_deref())?
+            }
             Action::Thumbnail { file, animated } => {
                 let path = crate::previews::store(&self.dir, &self.doc, file, *animated)?;
                 crate::previews::adopt(&self.doc, *animated, &path)?
@@ -154,6 +157,14 @@ impl Project {
             action => plan(&self.doc, action)?,
         };
         self.commit(&action.name(), ops, gesture)
+    }
+
+    pub fn effects(&self) -> crate::inspect::Own {
+        let Ok(mut scene) = serde_json::from_value::<wprs_scene::Scene>(self.doc["scene"].clone()) else {
+            return Default::default();
+        };
+        crate::cache::read_files(&mut scene, &self.dir);
+        scene.loaded
     }
 
     pub fn record(&mut self, label: &str, ops: Vec<Op>) -> Result<Vec<Op>> {

@@ -8,6 +8,7 @@ mod packages;
 mod playlists;
 mod profiles;
 mod query;
+mod recheck;
 mod resolve;
 mod rotation;
 mod rules;
