@@ -1,18 +1,21 @@
 use super::power::Power;
+use super::scripts::{Link, Scripts};
 use super::slot::PlayerSlot;
 use super::{Reel, SceneInput, SceneSpec};
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView, log_allowed};
 use wprs_scene::{
-    Course, Fired, MAX_FIRED, PointerState, Quality, Runtime, ScriptApi, ScriptOutputs, Uses, Values, Voice,
+    Course, Fired, LayerRead, MAX_FIRED, PointerState, Quality, Runtime, ScriptOutputs, Uses, Values, Voice,
     Wake,
 };
-use wprs_script::{Error, Frame, Host};
+use wprs_script::{Error, Frame, Mode, Setup};
 
-const SCRIPT_HOST: &str = "/proc/self/exe";
 const CALM: u32 = 30;
+const SETTLE: u32 = 3;
+const KEPT_LINES: usize = 50;
 const POLL: f64 = 0.5;
 
 pub(super) struct SceneState {
@@ -25,8 +28,12 @@ pub(super) struct SceneState {
     view: Option<SceneView>,
     tick: Option<Instant>,
     pointer: PointerState,
-    host: Option<Host>,
+    host: Option<Link>,
     calm: u32,
+    answered: bool,
+    timer: f64,
+    sent: (Values, [f32; 4], [u32; 2], u32),
+    pub(super) console: std::collections::VecDeque<String>,
     pub(super) error: Option<String>,
     pub(super) left: Vec<String>,
     left_key: u64,
@@ -65,16 +72,9 @@ impl SceneState {
             }
             None => {}
         }
-        let (scripts, seed) = (&spec.pack.scripts, runtime.seed);
-        let named = (spec.pack.locale.as_str(), &spec.pack.labels);
-        let host = (!still && runtime.uses().scripts)
-            .then(|| Host::new(SCRIPT_HOST, &["--script-host"], scripts, seed, named));
         let exposed = wprs_scene::exposed(&spec.pack.props.properties, &spec.values);
-        let declares =
-            |api| spec.pack.scene.scripts.iter().any(|s: &wprs_scene::Script| s.uses.contains(&api));
-        let read = |word, api| declares(api) || scripts.iter().any(|(_, source)| source.contains(word));
-        let reads = (read("audio", ScriptApi::Audio), read("cursor", ScriptApi::Pointer));
-        let reads = spec.pack.inputs.map_or(reads, |u| (reads.0 && u.audio, reads.1 && u.cursor));
+        let [audio, cursor] = wprs_scene::script_inputs(&spec.pack.scene, &spec.pack.scripts);
+        let reads = spec.pack.inputs.map_or((audio, cursor), |u| (audio && u.audio, cursor && u.cursor));
         let (reads, quality) = (reads, power.quality(&runtime));
         let (view, tick, pointer, calm, error, due, uses) = Default::default();
         let (moving, voices, heard) = (!still, Vec::new(), None);
@@ -88,8 +88,12 @@ impl SceneState {
             view,
             tick,
             pointer,
-            host,
+            host: None,
             calm,
+            answered: false,
+            timer: f64::INFINITY,
+            sent: (Values::new(), [0.0; 4], [1, 1], 60),
+            console: Default::default(),
             error,
             left: Vec::new(),
             left_key: 0,
@@ -150,6 +154,11 @@ impl SceneState {
         self.moving || self.host.is_some()
     }
 
+    #[cfg(test)]
+    pub(super) fn shares(&self) -> usize {
+        self.host.as_ref().map_or(0, Link::shares)
+    }
+
     pub(super) fn calm(&mut self, calm: bool) -> bool {
         let parallax = self.runtime.set_reduced_motion(calm);
         if std::mem::replace(&mut self.hushed, calm) == calm {
@@ -200,6 +209,9 @@ impl SceneState {
             (self.still, self.moving, changed) = (spec.hold.is_some(), spec.hold.is_none(), true);
         }
         (self.spec, self.uses) = (spec, self.needs(self.quality));
+        if changed {
+            self.calm = 0;
+        }
         changed || media
     }
 
@@ -219,14 +231,25 @@ impl SceneState {
                 moved && self.uses.cursor
             }
             SceneInput::Script(_, outputs) => {
-                let changed = self.runtime.set_script(outputs);
+                let changed = self.runtime.set_script(*outputs);
                 self.calm = if changed { 0 } else { self.calm };
                 changed
             }
         }
     }
 
-    pub(super) fn script(&mut self) -> Option<ScriptOutputs> {
+    pub(super) fn link(&mut self, scripts: &mut Scripts) {
+        if self.still || !self.runtime.uses().scripts || self.host.is_some() {
+            return;
+        }
+        let pack = &self.spec.pack;
+        let key = (Arc::as_ptr(pack) as usize, serde_json::to_string(&self.spec.values).unwrap_or_default());
+        let named = (pack.locale.as_str(), &pack.labels);
+        let setup = || Setup::new(&pack.scene, &pack.scripts, self.runtime.seed, named);
+        self.host = Some(super::scripts::link(scripts, key, setup));
+    }
+
+    pub(super) fn script(&mut self, output: &str, mode: Mode) -> Option<ScriptOutputs> {
         let fresh = self.runtime.take_fired();
         let room = MAX_FIRED.saturating_sub(self.fired.len());
         self.fired.extend(fresh.into_iter().take(room));
@@ -236,23 +259,54 @@ impl SceneState {
         if self.zone.0 != minute {
             self.zone = (minute, crate::zone::posix());
         }
-        let (time, dt, props, audio, pointer) = (rt.time(), rt.dt(), &self.exposed, rt.audio(), rt.pointer());
-        let actions = &std::mem::take(&mut self.pressed);
-        let (wall, zone, timelines, fired) =
-            (rt.wall(), self.zone.1.as_str(), self.courses.as_slice(), &self.fired);
-        let frame = Frame { time, dt, props, audio, pointer, actions, wall, zone, timelines, fired };
-        let sent = self.host.as_mut()?.update(&frame);
-        if !matches!(sent, Ok(None)) {
-            self.fired.clear();
+        let reads: Vec<(String, LayerRead)> =
+            rt.script_watch().iter().filter_map(|id| Some((id.clone(), rt.read(id)?))).collect();
+        let actions = std::mem::take(&mut self.pressed);
+        let (view, screen, fps) = (self.sent.1, self.sent.2, self.sent.3);
+        let eventful = !self.fired.is_empty()
+            || !actions.is_empty()
+            || self.timer <= rt.time()
+            || self.sent.0 != self.exposed;
+        let audio = (self.reads.0 && self.uses.audio).then(|| rt.audio());
+        let frame = || Frame {
+            time: rt.time(),
+            dt: rt.dt(),
+            wall: rt.wall(),
+            zone: self.zone.1.as_str(),
+            props: &self.exposed,
+            actions: &actions,
+            audio,
+            pointer: rt.pointer(),
+            view,
+            screen,
+            mode,
+            fps,
+            quality: self.quality as u8,
+            timelines: &self.courses,
+            fired: &self.fired,
+            reads: &reads,
+            touches: &[],
+        };
+        let inside = rt.pointer().inside;
+        let sent = self.host.as_mut()?.poll(output, inside, frame);
+        if eventful {
+            self.calm = 0;
+            self.sent.0 = self.exposed.clone();
         }
+        self.fired.clear();
         match sent {
-            Ok(outputs) => outputs,
+            Ok(Some(mut outputs)) => {
+                self.answered = true;
+                self.heard_script(&mut outputs);
+                Some(outputs)
+            }
+            Ok(None) => None,
             Err(Error::Disabled) => {
                 tracing::warn!(
                     scene = self.spec.pack.props.id,
                     "the scene scripts failed too often and are off"
                 );
-                (self.host, self.error) = (None, Some(Error::Disabled.to_string()));
+                (self.host, self.error) = (None, Some(crate::words::scripts_off()));
                 None
             }
             Err(e) => {
@@ -263,6 +317,26 @@ impl SceneState {
                 None
             }
         }
+    }
+
+    fn heard_script(&mut self, outputs: &mut ScriptOutputs) {
+        for line in outputs.console.drain(..) {
+            tracing::debug!(scene = self.spec.pack.props.id, "script {line}");
+            self.console.push_back(line);
+        }
+        while self.console.len() > KEPT_LINES {
+            self.console.pop_front();
+        }
+        let stopped = outputs.stopped.last().map(|why| crate::words::script_stopped(why));
+        if stopped.is_some() && stopped != self.error {
+            tracing::warn!(
+                scene = self.spec.pack.props.id,
+                "a scene script stopped: {}",
+                outputs.stopped.join("; ")
+            );
+            self.error = stopped;
+        }
+        self.timer = outputs.wake.map_or(f64::INFINITY, |w| self.runtime.time() + w);
     }
 
     pub(super) fn clean(&self) -> bool {
@@ -329,12 +403,20 @@ impl SceneState {
             let image = view.image().filter(|_| view.stats().damage > 0);
             guard.watch(renderer, image, now, &self.spec.pack.props.id)?;
         }
-        let interval = Duration::from_secs(1) / power.fps(&self.runtime, quality, refresh);
+        let fps = power.fps(&self.runtime, quality, refresh);
+        let interval = Duration::from_secs(1) / fps;
+        self.sent = (std::mem::take(&mut self.sent.0), frame.view, [size.0, size.1], fps);
         let stopped = self.guard.as_ref().is_some_and(|g| g.speed() == 0.0);
+        let busy = self.runtime.script_busy();
+        let timer = match self.timer - self.runtime.time() {
+            left if left.is_finite() => Wake::At(left.max(0.0)),
+            _ => Wake::Idle,
+        };
         let wake = match self.host {
             _ if self.still || stopped => Wake::Idle,
-            Some(_) if self.calm < CALM => Wake::Frame,
-            Some(_) => frame.wake.min(Wake::At(POLL)),
+            Some(_) if !self.answered || self.calm < if busy { CALM } else { SETTLE } => Wake::Frame,
+            Some(_) if busy => frame.wake.min(Wake::At(POLL)).min(timer),
+            Some(_) => frame.wake.min(timer),
             None => frame.wake,
         };
         let wake = if self.hushed { self.runtime.calmed(wake) } else { wake };
@@ -437,6 +519,38 @@ mod tests {
         assert!(time > 1.0 && state.update(turned));
         state.render(renderer, ((16, 9), 60), power, &players, true, at(3)).unwrap();
         assert!(state.view.is_some() && state.runtime.time() > time, "the scene restarted");
+    }
+
+    #[test]
+    fn screens_showing_one_scene_share_its_script_process() {
+        let scene = Scene::from_json(include_str!("../../../../scenes/orbits/scene.json")).unwrap();
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../scenes/orbits/manifest.json")).unwrap();
+        let properties = serde_json::from_value(manifest["properties"].clone()).unwrap();
+        let mut pack = ScenePack::bare(scene, properties, Vec::new());
+        pack.scripts = vec![(
+            "scripts/orbits.js".into(),
+            include_str!("../../../../scenes/orbits/scripts/orbits.js").into(),
+        )];
+        let pack = Arc::new(pack);
+        let power = Power::new(Tier::T3, false, 0);
+        let spec = |values: Values| SceneSpec {
+            values,
+            pack: pack.clone(),
+            extra: Vec::new(),
+            clips: Vec::new(),
+            hold: None,
+        };
+        let mut scripts = Scripts::default();
+        let mut states: Vec<SceneState> =
+            (0..3).map(|_| SceneState::new(spec(pack.props.values(&[])), power)).collect();
+        let mut other = pack.props.values(&[]);
+        other.insert("other".into(), serde_json::json!(1));
+        states.push(SceneState::new(spec(other), power));
+        states.iter_mut().for_each(|s| s.link(&mut scripts));
+        assert_eq!(states.iter().map(SceneState::shares).collect::<Vec<_>>(), [3, 3, 3, 1]);
+        states.truncate(1);
+        assert_eq!(states[0].shares(), 1);
     }
 
     #[test]

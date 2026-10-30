@@ -65,6 +65,8 @@ model! {
         pub left_out: Vec<String>,
         #[serde(default)]
         pub particles: String,
+        #[serde(default)]
+        pub console: Vec<String>,
     }
 
     #[derive(Copy, Eq, Hash)]

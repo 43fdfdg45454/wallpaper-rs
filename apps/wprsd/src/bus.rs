@@ -147,6 +147,7 @@ impl Daemon {
                 flashes: s.flashes.into(),
                 particles: s.particles.into(),
                 left_out: s.left_out,
+                console: s.console,
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)

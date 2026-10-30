@@ -76,7 +76,7 @@ impl Pipes {
         let mut lease = Lease(Vec::new(), self.shelf.clone());
         let base = self.chain(device, std::iter::empty::<&Descriptor>(), Some(&mut lease));
         let _ = self.get(device, Shader::Fx(base, "fs_mask_mix"), Mode::Replace, format);
-        for layer in scene.layers() {
+        for layer in scene.drawable() {
             for d in layer.effects.iter().filter_map(|e| descriptor(&e.effect)) {
                 let key = self.chain(device, std::iter::once(d), Some(&mut lease));
                 for pass in &d.passes {

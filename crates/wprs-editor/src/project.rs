@@ -150,6 +150,7 @@ impl Project {
             Action::ImportEffect { descriptor, wgsl } => {
                 crate::shaders::import(&self.dir, &self.doc, descriptor, wgsl.as_deref())?
             }
+            Action::ImportScript { file } => crate::scripts::import(&self.dir, &self.doc, file)?,
             Action::Thumbnail { file, animated } => {
                 let path = crate::previews::store(&self.dir, &self.doc, file, *animated)?;
                 crate::previews::adopt(&self.doc, *animated, &path)?

@@ -51,6 +51,7 @@ QtObject {
             "glow": App.tr("Glow"),
             "hard_light": App.tr("Hard light"),
             "hard_mix": App.tr("Hard mix"),
+            "hierarchy": App.tr("Parents of layers"),
             "hold": App.tr("Hold"),
             "init": App.tr("Started"),
             "inside": App.tr("Over the screen"),

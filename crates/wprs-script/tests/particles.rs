@@ -1,22 +1,11 @@
 use serde_json::json;
-use wprs_scene::{AudioFrame, ParticleCommand, PointerState, ScriptOutputs, Values};
-use wprs_script::{Frame, Limits, Script};
+mod common;
+
+use wprs_scene::{ParticleCommand, ScriptOutputs};
+use wprs_script::{Frame, Script};
 
 fn update(script: &mut Script) -> ScriptOutputs {
-    let (props, audio, pointer) = (Values::new(), AudioFrame::default(), PointerState::default());
-    let frame = Frame {
-        time: 1.0,
-        dt: 0.016,
-        props: &props,
-        audio: &audio,
-        pointer: &pointer,
-        actions: &[],
-        wall: 0.0,
-        zone: "",
-        timelines: &[],
-        fired: &[],
-    };
-    script.update(&frame).unwrap()
+    script.update(&Frame { dt: 0.016, ..Frame::at(1.0) }).unwrap()
 }
 
 #[test]
@@ -33,8 +22,7 @@ fn scripts_play_emit_and_tune_particles() {
             return sparks.playing;
         }
     "#;
-    let sources = vec![("main.js".to_string(), source.to_string())];
-    let mut script = Script::load(&sources, 7, ("en", &json!({})), Limits::default()).unwrap();
+    let mut script = common::load(source);
     let first = update(&mut script);
     let sparks = &first.particles["sparks"];
     assert_eq!(sparks.commands, [ParticleCommand::Pause, ParticleCommand::Emit(12)]);
@@ -61,22 +49,8 @@ fn particle_calls_are_bounded() {
         ("particles('a').instance.glow = 1", "glow is not an instance field"),
     ] {
         let source = format!("import {{ particles }} from \"wprs\";\nexport function update() {{ {call}; }}");
-        let sources = vec![("main.js".to_string(), source)];
-        let mut script = Script::load(&sources, 7, ("en", &json!({})), Limits::default()).unwrap();
-        let (props, audio, pointer) = (Values::new(), AudioFrame::default(), PointerState::default());
-        let frame = Frame {
-            time: 1.0,
-            dt: 0.016,
-            props: &props,
-            audio: &audio,
-            pointer: &pointer,
-            actions: &[],
-            wall: 0.0,
-            zone: "",
-            timelines: &[],
-            fired: &[],
-        };
-        let error = script.update(&frame).unwrap_err().to_string();
+        let out = update(&mut common::load(&source));
+        let error = out.console.join("\n");
         assert!(error.contains(message), "{call}: {error}");
     }
 }

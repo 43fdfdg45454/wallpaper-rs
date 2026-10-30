@@ -37,6 +37,11 @@
     <string name="lacks_script_layers">Las capas que añaden sus scripts no se muestran en el teléfono.</string>
     <string name="lacks_script_geometry">Las formas que construyen sus scripts no se muestran en el teléfono.</string>
     <string name="lacks_script_storage">Sus scripts no guardan datos en el teléfono.</string>
+    <string name="lacks_script_sounds">Sus scripts no reproducen ni paran sonidos en el teléfono.</string>
+    <string name="lacks_script_animations">Sus scripts no mueven imágenes, vídeos, clips ni huesos en el teléfono.</string>
+    <string name="lacks_script_camera">Sus scripts no mueven la cámara ni el paralaje en el teléfono.</string>
+    <string name="lacks_script_shortcuts">Sus scripts no abren atajos en el teléfono.</string>
+    <string name="lacks_script_hierarchy">Sus scripts no cambian los padres de las capas en el teléfono.</string>
     <string name="lacks_rgb">Sus colores no se envían a la iluminación RGB en el teléfono.</string>
     <string name="refused_newer">Este paquete necesita una versión más nueva de wallpaper-rs.</string>
     <string name="refused_elsewhere">Este paquete está hecho solo para el escritorio.</string>

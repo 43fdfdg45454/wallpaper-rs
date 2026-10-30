@@ -1896,7 +1896,10 @@ or `"memfd"` while a consumer streams the output, and `""` otherwise (see "Strea
 `sound` is `""`, `"off"`, `"playing"`, `"paused"` or `"elsewhere"` (see "Scene sound").
 `flashes` is `""`, or `"slowed"` or `"paused"` once `playback.flash_guard` slowed or stopped the
 scene of that output. `left_out` lists the package effects the scene of that output plays without,
-as `the effect <id> was left out: <reason>`; it is a note, not a failure.
+as `the effect <id> was left out: <reason>`; it is a note, not a failure. `console` holds, only for
+the `preview:` outputs of the scene editor, the last 50 lines its scripts wrote with `console`, as
+`<level> <module>: <text>`; other outputs leave it empty so that scripts that write often never wake
+the bus.
 
 ```rust
 struct State {
@@ -1912,6 +1915,7 @@ struct OutputState {
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
     edited: bool, screen: Option<Screen>, parallax: bool, frames: u64, refresh: u32, fps: u32,
     buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
+    console: Vec<String>,
 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
 enum Shown { Color, Image, Video, Scene }

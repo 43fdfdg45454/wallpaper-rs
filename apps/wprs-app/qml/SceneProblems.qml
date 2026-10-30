@@ -9,6 +9,7 @@ ColumnLayout {
 
     required property var page
     readonly property var problems: page.view.problems ?? []
+    readonly property var console: App.state.outputs?.[page.editor.output]?.console ?? []
 
     Kirigami.Heading {
         level: 4
@@ -30,6 +31,33 @@ ColumnLayout {
                 text: modelData.message
                 icon.name: modelData.warning ? "data-warning" : "data-error"
                 onClicked: panel.page.jump(modelData.pointer)
+            }
+        }
+    }
+
+    Kirigami.Heading {
+        level: 4
+        visible: panel.console.length > 0
+        text: App.tr("Script console")
+    }
+
+    QQC2.ScrollView {
+        Layout.fillWidth: true
+        Layout.preferredHeight: Kirigami.Units.gridUnit * 6
+        visible: panel.console.length > 0
+
+        ListView {
+            model: panel.console
+            clip: true
+
+            delegate: QQC2.Label {
+                required property string modelData
+
+                width: ListView.view.width
+                text: modelData
+                font.family: "monospace"
+                elide: Text.ElideRight
+                color: modelData.startsWith("error ") ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
             }
         }
     }

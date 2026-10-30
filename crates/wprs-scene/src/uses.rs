@@ -44,7 +44,7 @@ fn levels(scene: &Scene, props: Option<&Values>) -> [Uses; 4] {
     if let Some(root) = json.as_object_mut() {
         root.remove("audio");
     }
-    let listens = scene.layers().any(|l| matches!(l.kind, Kind::Spectrum(_)))
+    let listens = scene.drawable().any(|l| matches!(l.kind, Kind::Spectrum(_)))
         || scene.timelines.iter().any(|t| t.trigger.as_deref() == Some("beat"));
     let follows = scene.canvas.parallax.as_ref().is_none_or(|f| f.pointer > 0.0);
     let parallax = follows && scene.layers().any(|l| !l.parallax.is_zero());
@@ -112,12 +112,13 @@ pub fn tells_time(scene: &Scene) -> bool {
 }
 
 fn effects(scene: &Scene, quality: Quality, base: Uses, props: Option<&Values>) -> Uses {
-    let shown = |e: &EffectUse| e.enabled.settled(props) != Some(false);
+    let scripted = scene.scripts.iter().any(|s| s.wants(crate::ScriptApi::Effects));
+    let shown = |e: &EffectUse| scripted || e.enabled.settled(props) != Some(false);
     let drawn = |e: &&EffectUse| {
         scene.effect(&e.effect).filter(|d| shown(e) && quality.effect_scale(d.class(), e.optional).is_some())
     };
     let kept: Vec<_> =
-        scene.layers().flat_map(|l| &l.effects).filter_map(|e| Some((drawn(&e)?, e))).collect();
+        scene.drawable().flat_map(|l| &l.effects).filter_map(|e| Some((drawn(&e)?, e))).collect();
     let binds = |e: &EffectUse, key: &str| {
         let values = e.params.values().filter_map(|v| serde_json::to_value(v).ok());
         values.chain(serde_json::to_value(&e.enabled).ok()).any(|j| reads(&j, key))

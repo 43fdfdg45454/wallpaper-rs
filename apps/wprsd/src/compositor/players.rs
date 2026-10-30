@@ -104,6 +104,7 @@ impl State {
             && self.outputs.iter().all(|(name, o)| {
                 let (kind, playing, error, parallax, fps, sound, flashes) = status(name, o);
                 let left = left(o);
+                let lines = || console(name, o);
                 let same = |s: &OutputStatus| {
                     let now = (kind, playing, &error, parallax, fps, sound, flashes, left);
                     (
@@ -117,13 +118,13 @@ impl State {
                         &s.left_out[..],
                     ) == now
                 };
-                published.get(name).is_some_and(same)
+                published.get(name).is_some_and(|s| same(s) && s.console.iter().eq(lines()))
             });
         if !unchanged {
             let entry = |(name, o): (&String, &Output)| {
                 let (kind, playing, error, parallax, fps, sound, (flashes, particles)) = status(name, o);
                 let frames = published.get(name).map_or(0, |s| s.frames);
-                let left_out = left(o).to_vec();
+                let (left_out, console) = (left(o).to_vec(), console(name, o).cloned().collect());
                 let status = OutputStatus {
                     kind,
                     playing,
@@ -135,6 +136,7 @@ impl State {
                     flashes,
                     particles,
                     left_out,
+                    console,
                 };
                 (name.clone(), status)
             };
@@ -153,4 +155,9 @@ impl State {
 
 fn left(o: &Output) -> &[String] {
     o.shown.scene.as_ref().map_or(&[], |s| &s.left)
+}
+
+fn console<'a>(name: &str, o: &'a Output) -> impl Iterator<Item = &'a String> {
+    let shown = o.shown.scene.as_ref().filter(|_| name.starts_with("preview:"));
+    shown.into_iter().flat_map(|s| &s.console)
 }

@@ -13,6 +13,7 @@ pub(crate) struct Sim {
     pub(crate) used: u64,
     pub(crate) clock: Option<f32>,
     pub(crate) owed: f32,
+    pub(crate) reset: u32,
 }
 
 pub(crate) fn volume(device: &wgpu::Device, queue: &wgpu::Queue, size: u32, data: &[[f32; 3]]) -> Tex {
@@ -90,7 +91,7 @@ fn painted(paint: &Param) -> RgbaImage {
 impl Renderer {
     pub(crate) fn paints(&self, scene: &Scene) -> Vec<(String, String, Image)> {
         let mut out: Vec<(String, String, Image)> = Vec::new();
-        for e in scene.layers().chain(scene.templates.values()).flat_map(|l| &l.effects) {
+        for e in scene.drawable().flat_map(|l| &l.effects) {
             let Some(d) = scene.effect(&e.effect) else { continue };
             for p in d.params.iter().filter(|p| p.kind.asset() && p.kind != ParamKind::Lut) {
                 let mapped = match e.params.get(&p.id) {

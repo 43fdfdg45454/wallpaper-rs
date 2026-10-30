@@ -100,6 +100,9 @@ fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> {
                 },
             )
         }
+        Author::ImportScript { dir, file } => {
+            (dir, Action::ImportScript { file: fs::canonicalize(&file).unwrap_or(file) })
+        }
         Author::Translate { dir, pointer, language, text, add, .. } => {
             (dir, Action::Translate { pointer, language, text, add })
         }

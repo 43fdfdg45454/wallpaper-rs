@@ -735,7 +735,8 @@ multimedia; capas que reciben clics del puntero; escenas extendidas sobre todas 
 salida a la iluminación RGB con su permiso. Los modelos se leen al abrir el paquete y cada hueso,
 animación, parte o material que nombra la escena se comprueba contra ellos. Las entradas de un
 paquete de la versión 2 salen solo de lo que declara: también las de sus scripts, que ya no se
-adivinan por su texto. Todo tiene su nombre en `requires.features` y, mientras el motor no lo dibuja,
+adivinan por su texto; un script de la versión 1 que no declara nada usa el sonido o el puntero solo
+si importa `audio` o `input` de `wprs`, nunca porque esas palabras salgan en un comentario. Todo tiene su nombre en `requires.features` y, mientras el motor no lo dibuja,
 el escritorio y el teléfono rechazan la escena con el aviso de versión más nueva (el teléfono, que no
 ejecuta scripts ni tiene iluminación RGB ni varias pantallas, solo omite esas partes).
 
@@ -1078,8 +1079,12 @@ otra página no cierra un editor con cambios sin guardar.
   después se añade a las capas como los integrados, con su nombre en tu idioma, y sus parámetros
   salen en el inspector con su etiqueta y su ayuda en tu idioma, sus límites, las imágenes o capas
   que pueden leer y sus variantes, enlazables a propiedades, fotogramas clave o scripts.
+  *Importar un script…* (`wprs-ctl scene import-script`) copia un módulo `.js` a `scripts/` y
+  propone su declaración: los eventos que exporta o atiende con `on` y las partes de `wprs` que
+  importa o llama; conviene revisarla antes de publicar.
 - **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
-  capa o el campo afectado.
+  capa o el campo afectado. Debajo, la consola de los scripts muestra las últimas 50 líneas que
+  escribieron en la vista previa (`wprs-ctl state` las da en `console` de la salida `preview:`).
 
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado
@@ -1120,6 +1125,69 @@ wprs-ctl scene validate mar                             # problemas, cada uno co
 wprs-ctl scene preview mar -o DP-1 --time 2             # verla en el escritorio 60 s sin aplicarla
 wprs-ctl scene build mar --key autor.key                # firmar y crear el .wpak
 wprs-ctl scene apply mar -o DP-1                        # añadirla a la biblioteca y mostrarla
+```
+
+### Guía para autores de scripts
+
+Un script es un módulo JavaScript del paquete que la escena nombra en `scripts` (como mucho 64 y 1 MiB
+entre todos). Todos los de una escena comparten un proceso aislado, también cuando varias pantallas
+muestran la misma escena con los mismos ajustes, con 32 MiB de memoria y 4 ms de CPU por fotograma
+para todos juntos (100 ms para cargar y para el primer fotograma). Lo que devuelven llega al
+fotograma siguiente, así que un script lento nunca frena el dibujo. `docs/specs/scene.md` describe la
+interfaz completa; lo esencial:
+
+- **Ciclo de vida**: el módulo exporta las funciones que necesita: `init(ctx)` en el primer
+  fotograma, `update(frame)` en cada uno, `destroy()` al parar, `resize({screen, canvas})` al cambiar
+  o girar la pantalla, `properties(changed)` con los ajustes que cambian (todos al
+  empezar), `settings({language, fps, quality})` y `timelineEvent(e)`. Sin `update` el script solo
+  despierta por eventos y la escena no dibuja fotogramas de más.
+- **Un valor, una función**: `{"script": "scripts/olas.js", "fn": "vaiven", "params": {"velocidad":
+  2}}` llama cada fotograma a `vaiven(valor, ctx)` con lo que devolvió la vez anterior y `ctx.path`,
+  `ctx.layer` y `ctx.params`; un mismo módulo sirve así a muchas propiedades. Los `params` se declaran
+  en la entrada del script con tipo, valor por defecto y límites.
+- **Capas**: `scene.layer(id)` lee la posición, la escala, el giro, la opacidad, el color, el tamaño,
+  el texto y lo demás tal como la escena los evaluó, y escribe esos campos, que duran hasta que el
+  script los cambie o llame a `reset()`. `layer.effect("nombre")` apaga un efecto, cambia sus
+  parámetros dentro de su rango o vacía lo que guarda. Con plantillas (`templates`),
+  `scene.spawn("barra", {position: [x, y]})` crea hasta 256 capas, `destroy()` las quita y
+  `scene.order(id, índice)` las reordena: así se hacen los visualizadores.
+- **Datos de entrada**: `audio.buffers(32)` devuelve las bandas izquierda, derecha y media en
+  `Float32Array` que el motor rellena solas en cada fotograma; `input.cursor` da la posición en
+  fracciones, en píxeles del lienzo y de la pantalla y el botón izquierdo; `engine` da el tamaño del
+  lienzo y de la pantalla, la orientación, el idioma, la calidad, los fotogramas por segundo y si es
+  fondo, pantalla de bloqueo o editor. El sonido y el puntero siguen necesitando su permiso.
+- **Tiempo y depuración**: `setTimeout` y `setInterval` siguen el reloj de la escena (como mucho 64,
+  una vez por fotograma y nunca por debajo de 16 ms) y devuelven una función para cancelarlos;
+  `console.log` y sus hermanas escriben en el registro y en el editor, como mucho 20 líneas por
+  segundo. `shared` guarda valores comunes a todos los módulos, que también se importan entre sí con
+  rutas relativas (`import { media } from "./lib/media.js"`).
+- **Matemáticas**: `wprs/math` trae `Vec2`, `Vec3`, `Vec4`, `Mat3` y `Mat4` con sus operaciones
+  (producto, inversa, descomposición, reflejo, proyección…), `smoothstep`, `mix`, `remap`, ángulos y
+  `rgbToHsv` y `hsvToRgb`.
+- **Declarar lo que se usa**: cada entrada de `scripts` lista sus `events` y sus `uses`; un módulo
+  que declara algo solo puede usar los temporizadores, las capas creadas y los efectos si los
+  declara, y `pack build` deduce de ahí las funciones nuevas que pide el paquete, para que un motor
+  más viejo avise en vez de ejecutarlo mal.
+- **Errores**: una función que lanza un error lo escribe en la consola y el resto sigue; un módulo
+  que falla tres fotogramas seguidos se detiene solo, con sus temporizadores, y la escena sigue sin
+  él con un aviso traducido en la app, la bandeja y `wprs-ctl status`. Si los scripts agotan su
+  tiempo o su memoria tres fotogramas seguidos, se apagan y la escena sigue sin ellos.
+
+```js
+import { scene, audio, console } from "wprs";
+import { smoothstep } from "wprs/math";
+
+const bandas = audio.buffers(32);
+const barras = [];
+
+export function init() {
+  for (let i = 0; i < 32; i++) barras.push(scene.spawn("barra", { position: [40 + i * 60, 900] }));
+  console.log("barras listas");
+}
+
+export function update() {
+  barras.forEach((b, i) => (b.scale = [1, 0.1 + smoothstep(0, 1, bandas.average[i]) * 4]));
+}
 ```
 
 ## Desarrollo
@@ -1212,7 +1280,7 @@ misma pausa.
 | `crates/wprs-video` | Reproducción de vídeo en bucle y del sonido de las escenas con GStreamer |
 | `crates/wprs-wayland` | Superficies layer-shell y ventanas de escritorio X11, escala, ritmo y oclusión |
 | `crates/wprs-audio` | Captura del sonido con PipeWire y su análisis en bandas para las escenas, también a partir del espectro que da Android |
-| `crates/wprs-script` | Scripts de escena en JavaScript, aislados y con límites de CPU y memoria |
+| `crates/wprs-script` | Scripts de escena en JavaScript, aislados en un proceso por escena con límites de CPU y memoria, su módulo `wprs` y `wprs/math` |
 | `crates/wprs-sync` | Cifrado, relojes, fusión, protocolo, buzón y formato de los registros de la sincronización, compartidos por el escritorio y Android |
 | `crates/wprs-android` | Fondo animado de Android en Rust: JNI, GPU compartida, una superficie por fondo, biblioteca, listas, ajustes, escenas, paralaje, mapas de profundidad y sincronización con el servidor propio |
 | `apps/wprsd` | Daemon |
@@ -1292,8 +1360,10 @@ misma pausa.
   mismas reglas, porque elegir esa fuente es el permiso. En Android, el permiso del micrófono se pide
   la primera vez que se activa *Reaccionar al sonido* en una escena, y solo se escucha mientras se ve
   una escena que lo usa y tiene ese permiso.
-- Los scripts de las escenas se ejecutan en un proceso aparte, sin archivos, red ni otros
-  procesos, con límites de memoria y de CPU por fotograma.
+- Los scripts de las escenas se ejecutan en un proceso aparte por escena, sin archivos, red ni
+  otros procesos, con límites de memoria, de CPU por fotograma, de temporizadores, de capas creadas,
+  de líneas de consola y de valores compartidos, y nunca ven rutas, nombres de pantallas ni la
+  batería.
 - Con un servidor propio, los registros sincronizados salen cifrados con una clave que solo
   tienen tus equipos (en Android, guardada cifrada con una clave del almacén de claves del
   teléfono, que no sale de él); los identificadores de los paquetes se derivan de esa clave y el nombre de

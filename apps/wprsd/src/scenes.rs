@@ -80,8 +80,7 @@ pub(crate) fn bank(scene: &Scene, sounds: &[(String, PathBuf)]) -> (Bank, BTreeM
 
 pub(crate) fn listens(scene: &Scene, scripts: &[(String, String)]) -> bool {
     let uses = wprs_scene::needs(scene);
-    let read = |word| scripts.iter().any(|(_, source)| source.contains(word));
-    uses.audio || uses.cursor || read("audio") || read("cursor")
+    uses.audio || uses.cursor || wprs_scene::script_inputs(scene, scripts).contains(&true)
 }
 
 fn kind(path: &str) -> String {
@@ -152,6 +151,12 @@ impl Daemon {
                 .map_err(|_| anyhow::anyhow!("{} is not UTF-8 text", script.path))?;
             scripts.push((script.path.clone(), source));
         }
+        let total: usize = scripts.iter().map(|(_, s)| s.len()).sum();
+        anyhow::ensure!(
+            total <= wprs_scene::MAX_SCRIPT_BYTES,
+            "the scripts of {} take more than 1 MiB",
+            wpak.display()
+        );
         let m = package.manifest.localized();
         let locale = m.locale_in(&wprs_core::locale::languages());
         let languages = m.languages(&wprs_core::locale::languages());

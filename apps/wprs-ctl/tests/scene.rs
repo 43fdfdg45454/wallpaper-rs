@@ -383,3 +383,23 @@ fn package_effects_are_imported_from_the_command_line() {
         fails(dir, &["scene", "import-effect", "snow", "dim.json"]).contains("has no entry point fs_dim")
     );
 }
+
+#[test]
+fn scripts_are_imported_with_what_they_declare() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    ok(dir, &["scene", "new", "snow", "--from", "empty", "--title", "Snow"]);
+    let module = r#"import { scene, audio, setInterval } from "wprs";
+        import { Vec2 } from "wprs/math";
+        export function init(ctx) { scene.spawn("bar"); scene.layer("bar_1").on("click", () => {}); }
+        export const spin = (value, ctx) => value + 1;
+        export function update() {}"#;
+    std::fs::write(dir.join("bars.js"), module).unwrap();
+    ok(dir, &["scene", "import-script", "snow", "bars.js"]);
+    let entry = json!({ "path": "scripts/bars.js", "events": ["init", "update", "click"], "uses": ["audio", "timers", "layers", "math"] });
+    assert_eq!(show(dir, "/scene/scripts"), json!([entry]));
+    assert!(dir.join("snow/scripts/bars.js").is_file());
+    std::fs::write(dir.join("big.js"), " ".repeat((1 << 20) + 1)).unwrap();
+    assert!(fails(dir, &["scene", "import-script", "snow", "big.js"]).contains("1 MiB"));
+    assert!(fails(dir, &["scene", "import-script", "snow", "missing.js"]).contains("cannot read"));
+}

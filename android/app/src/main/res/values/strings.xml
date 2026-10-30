@@ -38,6 +38,11 @@
     <string name="lacks_script_layers">Layers its scripts add are not shown on the phone.</string>
     <string name="lacks_script_geometry">Shapes its scripts build are not shown on the phone.</string>
     <string name="lacks_script_storage">Its scripts keep no data on the phone.</string>
+    <string name="lacks_script_sounds">Its scripts do not play or stop sounds on the phone.</string>
+    <string name="lacks_script_animations">Its scripts do not drive pictures, videos, clips or bones on the phone.</string>
+    <string name="lacks_script_camera">Its scripts do not move the camera or the parallax on the phone.</string>
+    <string name="lacks_script_shortcuts">Its scripts open no shortcuts on the phone.</string>
+    <string name="lacks_script_hierarchy">Its scripts do not change the parents of layers on the phone.</string>
     <string name="lacks_rgb">Its colors are not sent to RGB lighting on the phone.</string>
     <string name="refused_newer">This package needs a newer version of wallpaper-rs.</string>
     <string name="refused_elsewhere">This package is made for the desktop only.</string>

@@ -20,6 +20,7 @@ pub mod project;
 pub mod props;
 pub mod references;
 pub mod schema;
+pub mod scripts;
 pub mod settings;
 pub mod shaders;
 pub mod starters;

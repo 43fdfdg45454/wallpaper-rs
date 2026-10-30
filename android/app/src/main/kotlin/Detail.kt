@@ -93,6 +93,11 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                         "script_layers" -> R.string.lacks_script_layers
                         "script_geometry" -> R.string.lacks_script_geometry
                         "script_storage" -> R.string.lacks_script_storage
+                        "script_sounds" -> R.string.lacks_script_sounds
+                        "script_animations" -> R.string.lacks_script_animations
+                        "script_camera" -> R.string.lacks_script_camera
+                        "script_shortcuts" -> R.string.lacks_script_shortcuts
+                        "script_hierarchy" -> R.string.lacks_script_hierarchy
                         "rgb" -> R.string.lacks_rgb
                         else -> null
                     }

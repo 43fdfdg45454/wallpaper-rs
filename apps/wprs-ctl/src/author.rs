@@ -201,6 +201,15 @@ pub enum Author {
         wgsl: Option<PathBuf>,
     },
     #[command(
+        about = "Copy a JavaScript module into the scripts of the folder and declare the events and parts it uses"
+    )]
+    ImportScript {
+        #[arg(help = DIR)]
+        dir: PathBuf,
+        #[arg(help = "The module, a .js file")]
+        file: PathBuf,
+    },
+    #[command(
         about = "Set the text of a title, description, change notes, label or option in one language; an empty language sets the plain text"
     )]
     Translate {

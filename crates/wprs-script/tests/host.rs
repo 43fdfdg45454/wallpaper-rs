@@ -1,7 +1,7 @@
 use std::process::{Command, ExitCode};
 use std::time::{Duration, Instant};
-use wprs_scene::{AudioFrame, PointerState, ScriptOutputs, Values};
-use wprs_script::{Error, Frame, Host};
+use wprs_scene::ScriptOutputs;
+use wprs_script::{Error, Frame, Host, Setup};
 
 fn main() -> ExitCode {
     match std::env::args().nth(1).as_deref() {
@@ -49,31 +49,15 @@ fn probe() -> ExitCode {
 }
 
 fn host(args: &[&str], source: &str) -> Host {
-    Host::new(
-        std::env::current_exe().unwrap(),
-        args,
-        &[("main.js".into(), source.into())],
-        3,
-        ("es", &serde_json::json!({})),
-    )
+    let setup = Setup { seed: 3, locale: "es".into(), ..Setup::plain(&[("main.js".into(), source.into())]) };
+    Host::new(std::env::current_exe().unwrap(), args, &setup)
 }
 
 fn drive(host: &mut Host, until: impl Fn(&Result<Option<ScriptOutputs>, Error>) -> bool) {
-    let (props, audio, pointer) = (Values::new(), AudioFrame::default(), PointerState::default());
     let start = Instant::now();
     for step in 0.. {
-        let frame = Frame {
-            time: step as f64,
-            dt: 0.016,
-            props: &props,
-            audio: &audio,
-            pointer: &pointer,
-            actions: &[],
-            wall: 20_755.0 * 86_400.0 + 43_200.0,
-            zone: "<+0300>-03:00:00",
-            timelines: &[],
-            fired: &[],
-        };
+        let wall = 20_755.0 * 86_400.0 + 43_200.0;
+        let frame = Frame { dt: 0.016, wall, zone: "<+0300>-03:00:00", ..Frame::at(step as f64) };
         let call = Instant::now();
         let result = host.update(&frame);
         assert!(call.elapsed() < Duration::from_millis(100), "an update took {:?}", call.elapsed());
@@ -123,9 +107,13 @@ fn runaway_scripts_in_the_host_are_stopped() {
 }
 
 fn scripts_that_do_not_load_are_disabled() {
-    let mut host = host(&["--script-host"], "export function update( {");
-    drive(&mut host, |r| matches!(r, Err(Error::Script(_))));
-    drive(&mut host, |r| matches!(r, Err(Error::Disabled)));
+    let mut broken = host(&["--script-host"], "export function update( {");
+    let stopped =
+        |o: &ScriptOutputs| o.stopped.iter().any(|s| s.starts_with("main.js: ") && s.contains("main.js:1:"));
+    drive(&mut broken, |r| r.as_ref().is_ok_and(|o| o.as_ref().is_some_and(stopped)));
+    let mut big = host(&["--script-host"], &" ".repeat((1 << 20) + 1));
+    drive(&mut big, |r| matches!(r, Err(Error::Script(e)) if e.contains("1 MiB")));
+    drive(&mut big, |r| matches!(r, Err(Error::Disabled)));
 }
 
 fn a_host_that_hangs_is_killed_and_then_disabled() {
@@ -138,18 +126,5 @@ fn a_host_that_hangs_is_killed_and_then_disabled() {
 }
 
 fn drive_once(host: &mut Host) -> Result<(), Error> {
-    let (props, audio, pointer) = (Values::new(), AudioFrame::default(), PointerState::default());
-    host.update(&Frame {
-        time: 0.0,
-        dt: 0.0,
-        props: &props,
-        audio: &audio,
-        pointer: &pointer,
-        actions: &[],
-        wall: 0.0,
-        zone: "",
-        timelines: &[],
-        fired: &[],
-    })
-    .map(drop)
+    host.update(&Frame::at(0.0)).map(drop)
 }

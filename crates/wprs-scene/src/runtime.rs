@@ -26,7 +26,8 @@ pub struct Runtime {
     still: bool,
     homes: HashMap<String, String>,
     sheets: BTreeMap<String, Vec<f32>>,
-    script: ScriptOutputs,
+    pub(crate) script: ScriptOutputs,
+    pub(crate) spawned: Vec<(String, Box<Layer>)>,
     wall: f64,
     lang: String,
     t: f64,
@@ -95,6 +96,7 @@ impl Runtime {
             homes,
             sheets: BTreeMap::new(),
             script,
+            spawned: Vec::new(),
             wall: 0.0,
             lang: String::new(),
             t: 0.0,
@@ -309,6 +311,7 @@ impl Runtime {
     }
 
     pub fn set_script(&mut self, outputs: ScriptOutputs) -> bool {
+        let outputs = outputs.bounded(&self.scene);
         for (id, command) in &outputs.timelines {
             let Some((tl, head)) = self.timelines.iter_mut().find(|(tl, _)| &tl.id == id) else { continue };
             match *command {
@@ -332,9 +335,7 @@ impl Runtime {
                 control.commands.iter().for_each(|c| swarm.command(*c));
             }
         }
-        let changed = outputs != self.script;
-        self.script = outputs;
-        changed
+        self.adopt(outputs)
     }
 
     pub fn set_playing(&mut self, assets: BTreeSet<String>) {
@@ -413,7 +414,10 @@ impl Runtime {
         let background = self.scene.canvas.background;
         let (time, wake) = (self.t as f32, Wake::Idle);
         let mut frame = Frame { draws, effects, time, view, background, quality, wake };
-        walk(&cx, &self.scene.layers, Affine::IDENTITY, quality, &mut frame, canvas);
+        match self.arranged() {
+            Some(top) => walk(&cx, top, Affine::IDENTITY, quality, &mut frame, canvas),
+            None => walk(&cx, &self.scene.layers, Affine::IDENTITY, quality, &mut frame, canvas),
+        }
         plan(&self.swarms, (&self.systems, &self.flocks), &cx, &frame, quality, self.t);
         frame.wake = cx.wake.get().min(self.cue_wake());
         self.pace.set(if frame.wake == Wake::Frame { cx.pace.get() } else { u32::MAX });

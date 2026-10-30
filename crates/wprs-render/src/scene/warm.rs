@@ -41,13 +41,14 @@ impl Pipes {
     pub(crate) fn warm(&self, device: &wgpu::Device, scene: &Scene, format: Format, srgb: bool) {
         let mut pairs = BTreeSet::from([("fs_texture", Mode::Normal), ("fs_texture", Mode::Replace)]);
         walk(&scene.layers, false, &mut pairs);
+        scene.templates.values().for_each(|t| walk(std::slice::from_ref(t), true, &mut pairs));
         for (e, m) in pairs {
             let _ = self.get(device, Shader::Scene(e), m, format);
         }
         if srgb {
             let _ = self.get(device, Shader::Scene("fs_texture"), Mode::Replace, Format::Rgba8UnormSrgb);
         }
-        if scene.layers().any(|l| matches!(l.kind, Kind::Image { .. })) {
+        if scene.drawable().any(|l| matches!(l.kind, Kind::Image { .. })) {
             let linear = scene.assets.values().any(|a| a.linear);
             let formats = [Some(Format::Rgba8UnormSrgb), linear.then_some(Format::Rgba8Unorm)];
             formats.into_iter().flatten().for_each(|f| drop(self.shrinker(device, f)));

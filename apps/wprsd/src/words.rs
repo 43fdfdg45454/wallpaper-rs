@@ -24,6 +24,14 @@ pub fn video() -> [String; 8] {
     [speed, start, stop, volume, zoom, across, down, end]
 }
 
+pub fn scripts_off() -> String {
+    tr("The scripts of this scene failed three times in a row and are off; the scene goes on without them.")
+}
+
+pub fn script_stopped(why: &str) -> String {
+    tr("A script of this scene stopped and the scene goes on without it: %1").replace("%1", why)
+}
+
 pub fn answers() -> (String, String) {
     (tr("Allow"), tr("Not now"))
 }

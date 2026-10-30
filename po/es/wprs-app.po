@@ -1888,6 +1888,10 @@ msgid "Import an effect…"
 msgstr "Importar un efecto…"
 
 #: apps/wprs-app/qml/SceneAssets.qml
+msgid "Import a script…"
+msgstr "Importar un script…"
+
+#: apps/wprs-app/qml/SceneAssets.qml
 msgid "Remove unused files"
 msgstr "Borrar los archivos sin usar"
 
@@ -1895,6 +1899,10 @@ msgstr "Borrar los archivos sin usar"
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid "Pictures, videos, sounds, fonts and color tables"
 msgstr "Imágenes, vídeos, sonidos, fuentes y tablas de color"
+
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "A JavaScript module of the scene"
+msgstr "Un módulo JavaScript de la escena"
 
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid "An effect descriptor, and its WGSL shader when it is not beside it"
@@ -2273,6 +2281,10 @@ msgstr "Problemas (%1)"
 #: apps/wprs-app/qml/SceneProblems.qml
 msgid "No problems"
 msgstr "Sin problemas"
+
+#: apps/wprs-app/qml/SceneProblems.qml
+msgid "Script console"
+msgstr "Consola de los scripts"
 
 #: apps/wprs-app/qml/SceneProperties.qml
 msgid "Add property"
@@ -3489,6 +3501,26 @@ msgid "lets its scripts keep data"
 msgstr "deja que sus scripts guarden datos"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+msgid "plays and stops its sounds from scripts"
+msgstr "reproduce y para sus sonidos desde scripts"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "drives pictures, videos, clips and bones from scripts"
+msgstr "mueve imágenes, vídeos, clips y huesos desde scripts"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "moves the camera or the parallax from scripts"
+msgstr "mueve la cámara o el paralaje desde scripts"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "opens what the user chooses from a script"
+msgstr "abre lo que elige el usuario desde un script"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "lets its scripts read and change the parents of layers"
+msgstr "deja que sus scripts lean y cambien los padres de las capas"
+
+#: apps/wprs-app/qml/facade/Labels.qml
 msgid "reacts to the pointer on its layers"
 msgstr "reacciona al puntero sobre sus capas"
 
@@ -4315,6 +4347,10 @@ msgstr "Luz fuerte"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Hard mix"
 msgstr "Mezcla dura"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Parents of layers"
+msgstr "Padres de las capas"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Hold"

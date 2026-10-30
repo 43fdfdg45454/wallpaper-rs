@@ -183,7 +183,8 @@ impl<T: Animate> Binding<T> {
         } else if let Some(pattern) = &b.date {
             T::from_text(cx.clock(pattern, true)).unwrap_or_default()
         } else if let Some(path) = &b.script {
-            cx.script.values.get(path).and_then(T::from_json).unwrap_or_default()
+            let key = b.per_binding().then(|| crate::script_key(path, b.call.as_deref(), b.params.as_ref()));
+            cx.script.values.get(key.as_deref().unwrap_or(path)).and_then(T::from_json).unwrap_or_default()
         } else {
             cx.signal(b).and_then(T::from_signal).unwrap_or_default()
         };

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-23 00:00+0000\n"
+"POT-Creation-Date: 2026-10-30 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -47,6 +47,18 @@ msgstr "Posición vertical"
 #: apps/wprsd/src/words.rs
 msgid "0 plays to the end"
 msgstr "Con 0 se reproduce hasta el final"
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"The scripts of this scene failed three times in a row and are off; the scene "
+"goes on without them."
+msgstr ""
+"Los scripts de esta escena fallaron tres veces seguidas y están apagados; la "
+"escena sigue sin ellos."
+
+#: apps/wprsd/src/words.rs
+msgid "A script of this scene stopped and the scene goes on without it: %1"
+msgstr "Un script de esta escena se detuvo y la escena sigue sin él: %1"
 
 #: apps/wprsd/src/words.rs
 msgid "Allow"

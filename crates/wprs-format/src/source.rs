@@ -1,6 +1,6 @@
 use crate::Facts;
 use crate::build::collect;
-use crate::contents::{Ends, binaries, preset_files, sounds};
+use crate::contents::{Ends, binaries, preset_files, scripts, sounds};
 use crate::features::facts;
 use crate::locale::{LOCALE, MAX_LOCALE_FILE};
 use crate::{Error, Kind, Limits, MANIFEST, Manifest, Result, SIGNATURE, Scene, media, require, validate};
@@ -80,6 +80,7 @@ pub(crate) fn facts_of(
     let invalid = |e: wprs_scene::SceneError| Error::Invalid { field: "scene".into(), reason: e.to_string() };
     let mut scene = scene.transpose().map_err(invalid)?;
     if let Some(scene) = scene.as_mut() {
+        scripts(scene, &files)?;
         sounds(scene, &files, |path, edge| match edge {
             Some(edge) => ends(&source.join(path), edge),
             None => Ok((fs::read(source.join(path))?, Vec::new())),

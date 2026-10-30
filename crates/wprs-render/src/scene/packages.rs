@@ -29,7 +29,7 @@ impl Renderer {
     ) -> Refused {
         let mut refused = Refused::new();
         let mut jobs: Vec<Job> = Vec::new();
-        let uses = scene.layers().chain(scene.templates.values()).flat_map(|l| &l.effects);
+        let uses = scene.drawable().flat_map(|l| &l.effects);
         for e in uses {
             let Some(d) = scene.loaded.get(&e.effect).filter(|_| !refused.contains_key(&e.effect)) else {
                 continue;

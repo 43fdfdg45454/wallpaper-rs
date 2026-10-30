@@ -1,6 +1,6 @@
-use crate::{Error, Frame, Limits, MAX_FAILURES, MAX_OUTPUT, Script, Source};
-use serde::{Deserialize, Serialize};
-use std::io::{BufRead, BufReader, Read, Write};
+use crate::wire::{receive, send};
+use crate::{Encoder, Error, Frame, Limits, MAX_FAILURES, Script, Setup};
+use std::io::BufReader;
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -9,93 +9,82 @@ use wprs_scene::ScriptOutputs;
 
 const PATIENCE: Duration = Duration::from_millis(250);
 const RETRY: Duration = Duration::from_millis(100);
-
-type Reply = Result<ScriptOutputs, Error>;
+const GRACE: Duration = Duration::from_millis(50);
 
 unsafe extern "C" {
     fn tzset();
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum Request {
-    Load {
-        sources: Vec<Source>,
-        seed: u64,
-        #[serde(default)]
-        locale: String,
-        #[serde(default)]
-        labels: serde_json::Value,
-    },
-    Frame(serde_json::Value),
+pub(crate) fn set_zone(rule: &str) {
+    unsafe { std::env::set_var("TZ", rule) };
+    unsafe { tzset() };
 }
 
 pub fn serve() -> std::io::Result<()> {
     crate::sandbox()?;
-    let (mut script, mut out, mut zone) = (None, std::io::stdout().lock(), String::new());
-    for line in std::io::stdin().lock().lines() {
-        let reply: Reply = match serde_json::from_str(&line?) {
-            Ok(Request::Load { sources, seed, locale, labels }) => {
-                let labels = if labels.is_object() { labels } else { serde_json::json!({}) };
-                Script::load(&sources, seed, (&locale, &labels), Limits::default()).map(|loaded| {
-                    script = Some(loaded);
-                    ScriptOutputs::default()
-                })
-            }
-            Ok(Request::Frame(frame)) => {
-                if let Some(rule) = frame["zone"].as_str().filter(|z| !z.is_empty() && *z != zone) {
-                    zone = rule.to_owned();
-                    unsafe { std::env::set_var("TZ", &zone) };
-                    unsafe { tzset() };
-                }
-                match &mut script {
-                    Some(script) => script.update_json(&frame.to_string()),
-                    None => Err(Error::Disabled),
-                }
-            }
-            Err(e) => Err(Error::Host(e.to_string())),
+    let (mut input, mut out) = (std::io::stdin().lock(), std::io::stdout().lock());
+    let (mut script, mut buf): (Option<Script>, Vec<u8>) = (None, Vec::new());
+    while let Some(tag) = receive(&mut input, &mut buf)? {
+        let reply = match tag {
+            b'L' => serde_json::from_slice::<Setup>(&buf)
+                .map_err(|e| Error::Host(e.to_string()))
+                .and_then(|setup| Script::load(&setup, Limits::default()))
+                .map(|loaded| script = Some(loaded.following_zone()))
+                .map(|()| None),
+            b'F' => script.as_mut().ok_or(Error::Disabled).and_then(|s| s.run(&buf)),
+            _ => Err(Error::Host("an unknown message".into())),
         };
-        writeln!(out, "{}", serde_json::to_string(&reply)?)?;
+        match reply {
+            Ok(None) => send(&mut out, 0, &[])?,
+            Ok(Some(text)) => send(&mut out, 1, text.as_bytes())?,
+            Err(e) => send(&mut out, 2, serde_json::to_string(&e)?.as_bytes())?,
+        }
     }
+    script.iter_mut().for_each(Script::destroy);
     Ok(())
 }
 
 struct Running {
-    child: Child,
+    child: Option<Child>,
     input: Option<ChildStdin>,
     handover: Receiver<ChildStdin>,
-    replies: Receiver<String>,
+    replies: Receiver<(u8, Vec<u8>)>,
     since: Instant,
 }
 
 impl Drop for Running {
     fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        self.input.take();
+        let Some(mut child) = self.child.take() else { return };
+        std::thread::spawn(move || {
+            let end = Instant::now() + GRACE;
+            while child.try_wait().is_ok_and(|done| done.is_none()) && Instant::now() < end {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            let _ = child.kill();
+            let _ = child.wait();
+        });
     }
 }
 
 pub struct Host {
     command: (PathBuf, Vec<String>),
-    load: String,
+    load: Vec<u8>,
     running: Option<Running>,
     failures: u32,
     retry: Instant,
+    encoder: Encoder,
 }
 
 impl Host {
-    pub fn new(
-        program: impl Into<PathBuf>,
-        args: &[&str],
-        sources: &[Source],
-        seed: u64,
-        (locale, labels): (&str, &serde_json::Value),
-    ) -> Host {
-        let load =
-            Request::Load { sources: sources.to_vec(), seed, locale: locale.into(), labels: labels.clone() };
-        let load = serde_json::to_string(&load).unwrap_or_default();
+    pub fn new(program: impl Into<PathBuf>, args: &[&str], setup: &Setup) -> Host {
+        let load = serde_json::to_vec(setup).unwrap_or_default();
         let command = (program.into(), args.iter().map(|a| a.to_string()).collect());
-        Host { command, load, running: None, failures: 0, retry: Instant::now() }
+        Host { command, load, running: None, failures: 0, retry: Instant::now(), encoder: Encoder::default() }
+    }
+
+    pub fn waiting(&self) -> bool {
+        self.running.is_some()
     }
 
     pub fn update(&mut self, frame: &Frame) -> Result<Option<ScriptOutputs>, Error> {
@@ -104,37 +93,45 @@ impl Host {
         }
         if self.running.is_none() && self.retry <= Instant::now() {
             match self.spawn() {
-                Ok(running) => self.running = Some(running),
+                Ok(running) => {
+                    self.running = Some(running);
+                    self.encoder.reset();
+                }
                 Err(e) => return self.fail(&e.to_string()),
             }
         }
         let Some(running) = &mut self.running else { return Ok(None) };
         let outcome = match running.replies.try_recv() {
-            Ok(line) => {
-                Ok(Some(serde_json::from_str(&line).unwrap_or_else(|e| Err(Error::Host(e.to_string())))))
-            }
+            Ok(reply) => Ok(Some(reply)),
             Err(TryRecvError::Empty) if running.since.elapsed() > PATIENCE => Err("no answer within 250 ms"),
             Err(TryRecvError::Empty) => Ok(None),
             Err(TryRecvError::Disconnected) => Err("it exited"),
         };
-        let outcome = outcome.and_then(|reply: Option<Reply>| {
+        let outcome = outcome.and_then(|reply| {
             if reply.is_some() {
                 running.since = Instant::now();
                 let input = match &mut running.input {
                     Some(input) => input,
                     empty => empty.insert(running.handover.recv().map_err(|_| "its input closed")?),
                 };
-                writeln!(input, "{{\"frame\":{}}}", frame.json()).map_err(|_| "its input closed")?;
+                send(input, b'F', self.encoder.encode(frame)).map_err(|_| "its input closed")?;
             }
             Ok(reply)
         });
         match outcome {
             Err(why) => self.fail(why),
-            Ok(Some(Err(Error::Disabled))) => {
-                self.failures = MAX_FAILURES;
-                Err(Error::Disabled)
+            Ok(None) | Ok(Some((0, _))) => Ok(None),
+            Ok(Some((1, body))) => {
+                serde_json::from_slice(&body).map(Some).map_err(|e| Error::Script(e.to_string()))
             }
-            Ok(reply) => reply.transpose(),
+            Ok(Some((_, body))) => match serde_json::from_slice(&body) {
+                Ok(Error::Disabled) => {
+                    self.failures = MAX_FAILURES;
+                    Err(Error::Disabled)
+                }
+                Ok(e) => Err(e),
+                Err(e) => Err(Error::Host(e.to_string())),
+            },
         }
     }
 
@@ -147,17 +144,16 @@ impl Host {
         };
         let (tx, replies) = mpsc::channel();
         std::thread::spawn(move || {
-            let (mut output, mut line) = (BufReader::new(output), String::new());
-            while (&mut output)
-                .take(4 * MAX_OUTPUT as u64)
-                .read_line(&mut line)
-                .is_ok_and(|_| line.ends_with('\n'))
-                && tx.send(std::mem::take(&mut line)).is_ok()
-            {}
+            let (mut output, mut buf) = (BufReader::new(output), Vec::new());
+            while let Ok(Some(tag)) = receive(&mut output, &mut buf) {
+                if tx.send((tag, std::mem::take(&mut buf))).is_err() {
+                    break;
+                }
+            }
         });
         let (load, (give, handover)) = (self.load.clone(), mpsc::channel());
-        std::thread::spawn(move || writeln!(input, "{load}").map(|()| give.send(input)));
-        Ok(Running { child, input: None, handover, replies, since: Instant::now() })
+        std::thread::spawn(move || send(&mut input, b'L', &load).map(|()| give.send(input)));
+        Ok(Running { child: Some(child), input: None, handover, replies, since: Instant::now() })
     }
 
     fn fail<T>(&mut self, why: &str) -> Result<T, Error> {

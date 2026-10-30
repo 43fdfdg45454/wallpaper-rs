@@ -65,6 +65,7 @@ pub enum ScriptApi {
     Shortcuts,
     Console,
     Shared,
+    Hierarchy,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

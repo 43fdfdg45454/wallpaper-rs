@@ -67,6 +67,7 @@ pub struct EffectDraw<'a> {
     pub textures: Vec<(&'a str, String)>,
     pub velocity: [f32; 2],
     pub variant: u32,
+    pub reset: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -102,15 +103,14 @@ pub struct Frame<'a> {
 
 pub(crate) fn walk<'a>(
     cx: &Context<'a>,
-    layers: &'a [Layer],
+    layers: impl IntoIterator<Item = &'a Layer>,
     parent: Affine,
     quality: Quality,
     frame: &mut Frame<'a>,
     canvas: [f32; 2],
 ) {
-    let none = LayerOverride::default();
-    for layer in layers.iter().filter(|l| l.flat()) {
-        let set = cx.script.layers.get(&layer.id).unwrap_or(&none);
+    for layer in layers.into_iter().filter(|l| l.flat()) {
+        let set = cx.script.layers.get(&layer.id).unwrap_or(&crate::input::UNSET);
         let outer = cx.wake.replace(Wake::Idle);
         let place = cx.place(layer, parent);
         let (shown, at) = (place.visible && place.opacity > 0.0, frame.draws.len());
@@ -125,7 +125,7 @@ pub(crate) fn walk<'a>(
 fn emit<'a>(
     cx: &Context<'a>,
     layer: &'a Layer,
-    set: &LayerOverride,
+    set: &'a LayerOverride,
     place: crate::kin::Place,
     quality: Quality,
     frame: &mut Frame<'a>,
@@ -136,7 +136,7 @@ fn emit<'a>(
         Kind::Text(text) => text.valign.unwrap_or_default().fraction(),
         _ => 0.5,
     };
-    let origin = t.origin.or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5, valign]);
+    let origin = set.origin.or(t.origin).or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5, valign]);
     let content = content(cx, layer, set, canvas, quality);
     let playing = matches!(&content, Content::Image { asset, .. } if cx.playing.contains(asset.as_ref()));
     if playing || matches!(layer.kind, Kind::Video { .. }) {
@@ -145,10 +145,17 @@ fn emit<'a>(
     let start = frame.effects.len();
     let runs = if layer.effects.len() > 1 { fusion(&layer.effects) } else { Vec::new() };
     let mut paced = false;
+    let controls = cx.script.effects.get(&layer.id);
     for (i, effect) in layer.effects.iter().enumerate() {
-        let Some(d) = cx.scene.shader(&effect.effect).filter(|_| effect.enabled.get(cx)) else { continue };
+        let ctl = controls.and_then(|list| list.iter().find(|c| c.at == i));
+        let on = ctl.and_then(|c| c.enabled).unwrap_or_else(|| effect.enabled.get(cx));
+        let Some(d) = cx.scene.shader(&effect.effect).filter(|_| on) else { continue };
         let Some(scale) = quality.effect_scale(d.class(), effect.optional) else { continue };
-        let slots = d.pack(|id| d.setting(quality, id, effect.params.get(id).map(|v| v.get(cx))));
+        let value = |id: &str| {
+            let set = ctl.and_then(|c| c.params.get(id).cloned());
+            set.or_else(|| effect.params.get(id).map(|v| v.get(cx)))
+        };
+        let slots = d.pack(|id| d.setting(quality, id, value(id)));
         let wake = wakes(d, &slots, cx);
         (paced, _) = (paced || matches!(wake, Wake::At(_)), cx.paced(wake, d.min_fps));
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
@@ -171,9 +178,10 @@ fn emit<'a>(
         if velocity != [0.0; 2] {
             cx.note(Wake::Frame);
         }
-        let variant = d.variant(effect, |id| effect.params.get(id).map(|v| v.get(cx)));
+        let variant = d.variant(effect, value);
         let draw = EffectDraw {
             variant,
+            reset: ctl.map_or(0, |c| c.reset),
             descriptor: d,
             effect,
             slots,
@@ -258,19 +266,23 @@ fn emit<'a>(
 fn content<'a>(
     cx: &Context,
     layer: &'a Layer,
-    set: &LayerOverride,
+    set: &'a LayerOverride,
     canvas: [f32; 2],
     quality: Quality,
 ) -> Content<'a> {
     let tint = |c: Color| set.color.map_or(c, Color);
+    let boxed = |size: Option<[f32; 2]>| match set.size {
+        Some(crate::Extent::Box(b)) => Some(b),
+        _ => size,
+    };
     match &layer.kind {
         Kind::Group { clip, .. } => Content::Group { clip: *clip },
         Kind::Image { image, size, playback, .. } => {
             let asset = named(cx, image);
             let frame = crate::sheet::frame(cx, &asset, playback.as_ref(), quality);
-            Content::Image { asset, size: *size, frame }
+            Content::Image { asset, size: boxed(*size), frame }
         }
-        Kind::Video { video, size, .. } => Content::Video { asset: named(cx, video), size: *size },
+        Kind::Video { video, size, .. } => Content::Video { asset: named(cx, video), size: boxed(*size) },
         Kind::Text(t) => {
             let text = match (&set.text, &t.text) {
                 (Some(t), _) => Cow::Owned(t.clone()),
@@ -279,11 +291,14 @@ fn content<'a>(
             };
             Content::Text {
                 text,
-                font: t.font.as_deref(),
+                font: set.font.as_deref().or(t.font.as_deref()),
                 fallback: &t.fallback,
-                size: t.size,
+                size: match set.size {
+                    Some(crate::Extent::Points(p)) => p,
+                    _ => t.size,
+                },
                 color: tint(t.color.get(cx)),
-                align: t.align,
+                align: set.align.unwrap_or(t.align),
                 layout: Layout {
                     wrap: t.wrap,
                     line_height: t.line_height,
@@ -305,7 +320,7 @@ fn content<'a>(
             Content::Spectrum { spectrum, color: tint(spectrum.color.get(cx)) }
         }
         Kind::Solid { color, size } => {
-            Content::Solid { color: tint(color.get(cx)), size: size.unwrap_or(canvas) }
+            Content::Solid { color: tint(color.get(cx)), size: boxed(*size).unwrap_or(canvas) }
         }
         Kind::Particles { system, .. } => {
             let index = cx.scene.particles.keys().position(|k| k == system).unwrap_or(usize::MAX);

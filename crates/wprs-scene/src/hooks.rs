@@ -7,6 +7,8 @@ use crate::validate::{Check, Issue};
 use crate::value::{Binding, Param};
 use crate::{Kind, Layer, MAX_SCRIPTS, Solid};
 
+const LIFECYCLE: [&str; 7] =
+    ["init", "update", "destroy", "resize", "properties", "settings", "timelineEvent"];
 const BASIC: [ScriptApi; 4] = [ScriptApi::Audio, ScriptApi::Pointer, ScriptApi::Clicks, ScriptApi::Particles];
 
 fn identifier(name: &str) -> bool {
@@ -40,6 +42,11 @@ impl Check<'_> {
             self.uses(s.wants(ScriptApi::Storage), "script_storage");
             self.uses(s.wants(ScriptApi::Layers), "script_layers");
             self.uses(s.wants(ScriptApi::Geometry), "script_geometry");
+            self.uses(s.wants(ScriptApi::Sounds), "script_sounds");
+            self.uses(s.wants(ScriptApi::Animations), "script_animations");
+            self.uses(s.wants(ScriptApi::Camera), "script_camera");
+            self.uses(s.wants(ScriptApi::Shortcuts), "script_shortcuts");
+            self.uses(s.wants(ScriptApi::Hierarchy), "script_hierarchy");
             self.uses(s.wants(ScriptApi::Media) || s.events.iter().any(|e| e.media()), "media_info");
             let touches = s.events.iter().any(|e| e.pointer() || e.clicks());
             self.uses(touches, "layer_events");
@@ -71,6 +78,22 @@ impl Check<'_> {
             self.id(&format!("{p}/id"), &layer.id);
             if scene.layer(id).is_some() {
                 self.issues.push(Issue::DuplicateId(p.clone()));
+            }
+            let mut inner = vec![layer];
+            while let Some(l) = inner.pop() {
+                inner.extend(l.children());
+                let copied = matches!(
+                    l.kind,
+                    Kind::Group { .. }
+                        | Kind::Image { .. }
+                        | Kind::Text(_)
+                        | Kind::Shape { .. }
+                        | Kind::Solid { .. }
+                        | Kind::Spectrum(_)
+                );
+                if !copied {
+                    self.issues.push(Issue::Type(format!("{p}/type")));
+                }
             }
             self.layer(&p, layer, 1);
         }
@@ -120,11 +143,14 @@ impl Check<'_> {
             return;
         }
         self.uses(true, "scripts2");
+        if b.call.is_none() {
+            self.issues.push(Issue::Type(format!("{path}/fn")));
+        }
         let Some(script) = &b.script else {
             return self.issues.push(Issue::Type(path.into()));
         };
         if let Some(name) = &b.call
-            && !identifier(name)
+            && (!identifier(name) || LIFECYCLE.contains(&name.as_str()))
         {
             self.issues.push(Issue::Type(format!("{path}/fn")));
         }

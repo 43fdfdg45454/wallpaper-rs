@@ -33,6 +33,7 @@ pub(super) struct State {
     pub(super) locked: bool,
     pub(super) felt: Option<Instant>,
     pictures: Pictures,
+    scripts: super::scripts::Scripts,
 }
 
 impl State {
@@ -63,6 +64,7 @@ impl State {
             locked,
             felt: None,
             pictures: Pictures::default(),
+            scripts: Default::default(),
         }
     }
 
@@ -207,6 +209,7 @@ impl State {
         let scene = match &content {
             Content::Scene(s) => {
                 let mut scene = SceneState::new(s.clone(), self.power);
+                scene.link(&mut self.scripts);
                 scene.calm(self.motion.calm);
                 scene.guard(self.settings.flash_guard);
                 resume.into_iter().for_each(|time| scene.resume(time));

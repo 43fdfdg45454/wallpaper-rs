@@ -40,8 +40,7 @@ impl Context<'_> {
         if let Some(found) = self.places.borrow().get(&key) {
             return *found;
         }
-        let none = LayerOverride::default();
-        let set = self.script.layers.get(&layer.id).unwrap_or(&none);
+        let set = self.script.layers.get(&layer.id).unwrap_or(&crate::input::UNSET);
         let by_id = |id: &String| {
             let found = self.scene.layer(id).filter(|_| depth < 2 * MAX_DEPTH);
             found.map(|l| self.placed(l, None, depth + 1))
@@ -74,16 +73,16 @@ impl Context<'_> {
             || matches!(layer.kind, Kind::Group { .. } | Kind::Adjustment { .. });
         let center = if free { [0.0; 2] } else { [canvas[0] / 2.0, canvas[1] / 2.0] };
         let position = set.position.unwrap_or_else(|| t.position.as_ref().map_or(center, |p| p.get(self).0));
-        let shift = self.shift(layer);
+        let shift = self.shift(set.parallax.unwrap_or(layer.parallax.0));
         let at = [0, 1].map(|i| base[i] + position[i] + shift[i] * canvas[i]);
         Affine::translate(at)
             .then(Affine::rotate(set.rotation.unwrap_or_else(|| t.rotation.get(self))))
-            .then(Affine::skew(t.skew.get(self).0))
+            .then(Affine::skew(set.skew.unwrap_or_else(|| t.skew.get(self).0)))
             .then(Affine::scale(set.scale.unwrap_or_else(|| t.scale.get(self).0)))
     }
 
-    fn shift(&self, layer: &Layer) -> [f32; 2] {
-        if layer.parallax.is_zero() || self.still {
+    fn shift(&self, depth: [f32; 2]) -> [f32; 2] {
+        if depth == [0.0; 2] || self.still {
             return [0.0; 2];
         }
         let glide = self.scene.canvas.parallax.clone().unwrap_or_default();
@@ -93,7 +92,7 @@ impl Context<'_> {
         }
         [0, 1].map(|i| {
             let offset = (self.glide.smooth[i] - 0.5) * glide.pointer + tilt[i] * 0.5;
-            offset * glide.amount * layer.parallax.0[i]
+            offset * glide.amount * depth[i]
         })
     }
 }

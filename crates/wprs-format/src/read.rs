@@ -1,5 +1,5 @@
 use crate::Facts;
-use crate::contents::{binaries, preset_files, sounds};
+use crate::contents::{binaries, preset_files, scripts, sounds};
 use crate::features::{self, facts};
 use crate::locale::{MAX_LOCALE_FILE, locale_file};
 use crate::validate::{extension, within};
@@ -133,6 +133,7 @@ impl<R: Read + Seek> Package<R> {
             scene.paths().into_iter().find(|p| !self.entries.iter().any(|e| e.path == *p)).map(String::from);
         missing.map_or(Ok(()), |path| Err(Error::Missing(path)))?;
         let entries = self.entries.clone();
+        scripts(&scene, &entries)?;
         sounds(&scene, &entries, |path, edge| match edge {
             Some(edge) => self.ends(path, edge).and_then(|(head, tail)| match tail {
                 Some(tail) => Ok((head, tail)),

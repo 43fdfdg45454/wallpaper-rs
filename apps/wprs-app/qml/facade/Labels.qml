@@ -233,6 +233,11 @@ QtObject {
             "script_layers": App.tr("lets its scripts add layers"),
             "script_geometry": App.tr("lets its scripts build shapes"),
             "script_storage": App.tr("lets its scripts keep data"),
+            "script_sounds": App.tr("plays and stops its sounds from scripts"),
+            "script_animations": App.tr("drives pictures, videos, clips and bones from scripts"),
+            "script_camera": App.tr("moves the camera or the parallax from scripts"),
+            "script_shortcuts": App.tr("opens what the user chooses from a script"),
+            "script_hierarchy": App.tr("lets its scripts read and change the parents of layers"),
             "layer_events": App.tr("reacts to the pointer on its layers"),
             "media_info": App.tr("shows the title, cover or progress of what the media player plays"),
             "rgb": App.tr("sends its colors to RGB lighting")

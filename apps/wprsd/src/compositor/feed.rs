@@ -4,6 +4,7 @@ use super::state::State;
 use crate::inputs;
 use std::time::Instant;
 use wprs_scene::{AudioFrame, Uses};
+use wprs_script::Mode;
 
 pub(super) fn declare(output: &str, scene: Option<&SceneState>) {
     let pack = scene.map(|s| &s.spec.pack);
@@ -51,9 +52,14 @@ impl State {
                 let pointer = inputs::pointer(&live.name);
                 self.feed(SceneInput::Pointer(live.name.clone(), pointer));
             }
+            let mode = match live.name.starts_with("preview:") {
+                true => Mode::Editor,
+                false if self.locked => Mode::Lockscreen,
+                false => Mode::Wallpaper,
+            };
             let scene = self.outputs.get_mut(&live.name).and_then(|o| o.shown.scene.as_mut());
-            if let Some(outputs) = scene.filter(|_| live.due).and_then(SceneState::script) {
-                self.feed(SceneInput::Script(live.name, outputs));
+            if let Some(outputs) = scene.filter(|_| live.due).and_then(|s| s.script(&live.name, mode)) {
+                self.feed(SceneInput::Script(live.name, Box::new(outputs)));
             }
         }
     }

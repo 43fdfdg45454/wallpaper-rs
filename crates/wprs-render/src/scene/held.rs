@@ -17,14 +17,14 @@ impl SceneView {
 impl Painter<'_, '_, '_> {
     pub(crate) fn state(&mut self, i: usize, e: &EffectDraw<'_>, size: (u32, u32)) -> Option<Held> {
         let id = std::ptr::from_ref(e.effect) as usize;
-        if let Err(why) = self.sim(id, size) {
+        if let Err(why) = self.sim(id, size, e.reset) {
             self.leave(i, e, why);
             return None;
         }
         Some((id, size, self.ticks(id, self.frame.time)))
     }
 
-    fn sim(&mut self, key: usize, size: (u32, u32)) -> Result<(), String> {
+    fn sim(&mut self, key: usize, size: (u32, u32), reset: u32) -> Result<(), String> {
         let (device, format, frame) = (&self.r.device, self.state_format, self.pool.frame);
         if self.states.get(&key).is_none_or(|s| s.tex[0].size() != size) {
             let others = self.states.iter().filter(|(k, _)| **k != key);
@@ -38,7 +38,11 @@ impl Painter<'_, '_, '_> {
             let old = self.states.remove(&key).into_iter().flat_map(|s| s.tex);
             old.for_each(|t| self.pool.give(t));
             let tex = [self.pool.take(device, size, format), self.pool.take(device, size, format)];
-            self.states.insert(key, Sim { tex, front: 0, used: frame, clock: None, owed: 0.0 });
+            self.states.insert(key, Sim { tex, front: 0, used: frame, clock: None, owed: 0.0, reset });
+            self.ops.extend([0, 1].map(|side| Op::Clear(Src::State(key, side), [0.0; 4])));
+        }
+        if let Some(sim) = self.states.get_mut(&key).filter(|s| s.reset != reset) {
+            sim.reset = reset;
             self.ops.extend([0, 1].map(|side| Op::Clear(Src::State(key, side), [0.0; 4])));
         }
         if let Some(sim) = self.states.get_mut(&key) {

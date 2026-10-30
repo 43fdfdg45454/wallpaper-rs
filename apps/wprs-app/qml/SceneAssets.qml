@@ -55,6 +55,12 @@ ColumnLayout {
         }
 
         QQC2.ToolButton {
+            text: App.tr("Import a script…")
+            icon.name: "text-x-script"
+            onClicked: modules.open()
+        }
+
+        QQC2.ToolButton {
             text: App.tr("Remove unused files")
             icon.name: "edit-clear-all"
             onClicked: panel.page.editor.prune()
@@ -69,6 +75,16 @@ ColumnLayout {
         onAccepted: selectedFiles.forEach(file => panel.page.run("import", {
                         "file": App.path(file)
                     }))
+    }
+
+    FileDialog {
+        id: modules
+
+        fileMode: FileDialog.OpenFile
+        nameFilters: [App.tr("A JavaScript module of the scene") + " (*.js)"]
+        onAccepted: panel.page.run("import_script", {
+                "file": App.path(selectedFile)
+            })
     }
 
     FileDialog {

@@ -30,6 +30,11 @@ pub(crate) const SOUND_EDGE: u64 = 1 << 20;
 
 pub(crate) type Ends = (Vec<u8>, Vec<u8>);
 
+pub(crate) fn scripts(scene: &Scene, entries: &[FileEntry]) -> Result<()> {
+    let total = scene.scripts.iter().map(|s| size(entries, &s.path)).sum();
+    within("size of the scene scripts", total, wprs_scene::MAX_SCRIPT_BYTES as u64)
+}
+
 pub(crate) fn sounds(
     scene: &Scene,
     entries: &[FileEntry],

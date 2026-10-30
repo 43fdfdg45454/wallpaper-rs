@@ -63,12 +63,15 @@ mod rig;
 mod rules;
 mod runtime;
 mod schema;
+mod scripted;
 mod scripting;
 mod shader;
 mod shape;
 mod sheet;
 mod signal;
+mod sites;
 mod sound;
+mod spawn;
 mod spend;
 mod spill;
 mod stage;
@@ -169,12 +172,17 @@ pub use rig::{
 };
 pub use runtime::Runtime;
 pub use schema::{easings, property_schema, schema};
+pub use scripted::{
+    EffectControl, Extent, LayerRead, MAX_CONSOLE, MAX_SCRIPT_BYTES, MAX_SCRIPT_TEXT, MAX_SPAWNED,
+    MAX_WATCHED,
+};
 pub use scripting::{
     MAX_POOL_LAYERS, MAX_POOL_VERTICES, MAX_POOLS, MAX_SCRIPT_PARAMS, MAX_SCRIPTS2, MAX_TEMPLATES, ParamType,
     Pool, PoolKind, Script, ScriptApi, ScriptEvent, ScriptParam,
 };
 pub use shape::{MAX_ARGUMENTS, MAX_BRACKETS, MAX_OPERANDS};
 pub use signal::{CLOCKS, Gain, HEARD, Hearing, Reduce, SPLITS, Smooth, center, ease, edge, levels};
+pub use sites::{Site, imported, script_inputs, script_key, sites};
 pub use sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice};
 pub use spend::{MAX_STATEFUL, Spend, over};
 pub use strikes::{STOPPED, end_trials, forgive_strikes, keep_strikes, strike, struck, tried, trying};

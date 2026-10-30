@@ -41,6 +41,14 @@ pub struct ScriptOutputs {
     pub layers: BTreeMap<String, LayerOverride>,
     pub timelines: Vec<(String, TimelineCommand)>,
     pub particles: BTreeMap<String, ParticleControl>,
+    pub effects: BTreeMap<String, Vec<crate::EffectControl>>,
+    pub spawned: Vec<(String, String)>,
+    pub order: Option<Vec<String>>,
+    pub watch: Vec<String>,
+    pub wake: Option<f64>,
+    pub busy: bool,
+    pub console: Vec<String>,
+    pub stopped: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -83,7 +91,29 @@ pub struct LayerOverride {
     pub visible: Option<bool>,
     pub color: Option<[f32; 4]>,
     pub text: Option<String>,
+    pub skew: Option<[f32; 2]>,
+    pub origin: Option<[f32; 2]>,
+    pub parallax: Option<[f32; 2]>,
+    pub size: Option<crate::Extent>,
+    pub font: Option<String>,
+    pub align: Option<crate::Align>,
 }
+
+pub(crate) static UNSET: LayerOverride = LayerOverride {
+    position: None,
+    scale: None,
+    rotation: None,
+    opacity: None,
+    visible: None,
+    color: None,
+    text: None,
+    skew: None,
+    origin: None,
+    parallax: None,
+    size: None,
+    font: None,
+    align: None,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -164,5 +194,8 @@ impl ScriptOutputs {
             && self.layers.is_empty()
             && self.timelines.is_empty()
             && self.particles.is_empty()
+            && self.effects.is_empty()
+            && self.spawned.is_empty()
+            && self.order.is_none()
     }
 }

@@ -9,6 +9,7 @@ mod pictures;
 mod players;
 mod power;
 mod scene;
+mod scripts;
 mod slot;
 mod speakers;
 mod state;
@@ -66,7 +67,7 @@ pub struct SceneSpec {
 pub enum SceneInput {
     Audio(String, Box<AudioFrame>),
     Pointer(String, PointerState),
-    Script(String, ScriptOutputs),
+    Script(String, Box<ScriptOutputs>),
 }
 
 #[derive(Clone)]
@@ -189,6 +190,7 @@ pub struct OutputStatus {
     pub flashes: &'static str,
     pub particles: &'static str,
     pub left_out: Vec<String>,
+    pub console: Vec<String>,
 }
 
 enum Command {

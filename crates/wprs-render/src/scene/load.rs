@@ -99,7 +99,7 @@ impl Renderer {
             };
             let mut images: HashMap<String, Image> = assets.images.iter().filter_map(upload).collect();
             let mut used = HashSet::new();
-            for e in scene.layers().flat_map(|l| &l.effects) {
+            for e in scene.drawable().flat_map(|l| &l.effects) {
                 let params = descriptor(&e.effect).into_iter().flat_map(|d| &d.params);
                 used.extend(params.filter(|p| p.kind == ParamKind::Lut).filter_map(|p| p.named(e)));
             }

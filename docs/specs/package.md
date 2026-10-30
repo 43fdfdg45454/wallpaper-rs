@@ -176,8 +176,8 @@ declare in `scene.json` the parts of the script interface they use and the event
 (`scene.md`, "Scripts"), so their inputs are computed from that declaration rather than guessed from
 their text. A second-version package receives only what it declares: the sound for `audio`, the
 pointer for `pointer` or `clicks`, clicks for `clicks` and the media player for `media`, whatever its
-scenes, scripts or page would read; first-version scenes keep the older guess from the words of
-their scripts. Web pages always declare their inputs, and their facets come from that list.
+scenes, scripts or page would read; in first-version scenes, scripts that declare nothing use the
+inputs of what they import from the `wprs` module (`audio` and `input`). Web pages always declare their inputs, and their facets come from that list.
 
 ### RGB lighting
 
@@ -247,8 +247,7 @@ the same once they are drawn, so that older versions keep refusing them. `effect
 The fields of `scene.json` that came after the first version name these features (`scene.md` says
 what each field does). Each one is refused on a platform until its engine draws it, and the table
 says which ones run today; the phone, which plays scenes without sound and without scripts, plays a
-scene with `sound2` silently and leaves out `scripts2`, `script_layers`, `script_geometry` and
-`script_storage` with its scripts:
+scene with `sound2` silently and leaves out `scripts2` and every `script_` feature with its scripts:
 
 | Feature | The scene | Desktop | Android |
 |---------|-----------|---------|---------|
@@ -316,10 +315,15 @@ scene with `sound2` silently and leaves out `scripts2`, `script_layers`, `script
 | `particle_ropes` | sets `render.rope` or trails longer than 16 steps or with `segments`, `subdivide`, `uv_scale`, `uv_scroll` or `textured` | refused | refused |
 | `particle_looks` | sets `render.cutout`, `render.orient` or `render.angle` | refused | refused |
 | `particle_shaders` | sets `render.shader` | refused | refused |
-| `scripts2` | has more than 16 script modules, modules that declare newer events, parts or `params`, values with `fn` or `params`, or named effect uses | refused | without |
-| `script_layers` | has `templates` or scripts that use `layers` | refused | without |
+| `scripts2` | has more than 16 script modules, modules that declare newer events, parts or `params`, values with `fn` or `params`, or named effect uses | runs | without |
+| `script_layers` | has `templates` or scripts that use `layers` | runs | without |
 | `script_geometry` | has `pools` or scripts that use `geometry` | refused | without |
 | `script_storage` | has scripts that use `storage` | refused | without |
+| `script_sounds` | has scripts that use `sounds` | refused | without |
+| `script_animations` | has scripts that use `animations` | refused | without |
+| `script_camera` | has scripts that use `camera` | refused | without |
+| `script_shortcuts` | has scripts that use `shortcuts` | refused | without |
+| `script_hierarchy` | has scripts that use `hierarchy` | refused | without |
 | `layer_events` | sets `solid: { "alpha" }`, `hit` bones, `click:`, `enter:` or `leave:` triggers or scripts that handle pointer events | refused | refused |
 | `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | refused | refused |
 
