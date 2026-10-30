@@ -912,9 +912,13 @@ scene started for a `play` that is always on, since the key that turned it on fo
 (on a looping timeline, since the start of the pass), since the trigger for `play_on`, and since it
 turned on for the rest. The sound plays at that point of its clip or of its list, so a loop that
 drifts more than 60 ms from the scene jumps back in step with a 5 ms fade, a scene that resumes
-plays from where its timelines are, and a sound started again starts over. About 50 ms pass between
-the scene and the speaker (the soundtrack asks PipeWire for 20 ms periods and keeps about 20 ms
-queued).
+plays from where its timelines are, and a sound started again starts over. A layer keyed on a
+timeline that is paused or has ended keeps playing on, and jumps back to the timeline when it plays
+again; a timeline started late or sought starts its sounds at its position, not from zero. The
+engine re-aligns playing sounds with the scene once a second. About 50 ms pass between the scene and
+the speaker (the soundtrack asks PipeWire for 20 ms periods and keeps about 20 ms queued); positions
+are counted from what the speaker plays, with the delay the audio output reports, so the queue does
+not shift sounds.
 
 | Field | Meaning |
 |-------|---------|

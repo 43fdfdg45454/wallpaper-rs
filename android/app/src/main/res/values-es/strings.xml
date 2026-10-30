@@ -91,6 +91,7 @@
     <string name="downloads_off">La descarga del modelo de profundidad está desactivada en Ajustes</string>
     <string name="allow_download">Permitir descargar el modelo de profundidad</string>
     <string name="flash_guard">Frenar o detener los fondos que destellan más de tres veces por segundo</string>
+    <string name="scene_capture">Dejar que las escenas reaccionen al sonido que suena</string>
     <string name="depth_model">Modelo de profundidad (%s)</string>
     <string name="delete_model">Borrar</string>
     <string name="diagnostics">Diagnóstico</string>

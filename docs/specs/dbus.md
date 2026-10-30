@@ -188,6 +188,27 @@ software one (`WGPU_BACKEND` chooses one instead). A swapchain that the driver r
 suboptimal is configured again, with the present modes and formats it offers then, right after the
 frame it gave.
 
+## Video decoding
+
+The player asks GStreamer for NV12 frames in DMA-BUF memory (`video/x-raw(memory:DMABuf)`,
+`format=DMA_DRM`) with every DRM format modifier that the Vulkan device can import as single-plane
+`R8` and `R8G8` sampled images, and for RGBA frames in system memory as the second choice. A hardware
+decoder that exports DMA-BUFs (VA-API on Intel and AMD) hands its frames over directly: the daemon
+imports the luma and chroma planes of each decoder buffer once (up to 16 buffers per video), turns
+them into RGBA on the GPU with the colour matrix and range of the stream, applies the orientation
+tag and reduces the frame to the largest output that shows it, and keeps the decoder buffer until
+the next frame arrives. No CPU copy happens per frame. Software decoders, other formats (10-bit
+video), devices without `VK_EXT_external_memory_dma_buf` and `VK_EXT_image_drm_format_modifier`
+(lavapipe, OpenGL) and any failed import use the copy path: the frame is converted and scaled in
+system memory and uploaded. A failure switches the video to the copy path once and for good.
+`WPRS_ZERO_COPY=0` in the environment of the daemon forces the copy path. Per driver: Intel (iHD)
+and AMD (radeonsi) VA-API export NV12 DMA-BUFs; with GStreamer 1.24, NVIDIA offers no DMA-BUF from
+NVDEC (CUDA or OpenGL memory) nor from its VA-API driver (system memory), so its videos are copied,
+although its Vulkan driver imports them.
+
+Pausing a video only pauses the pipeline: the frame on screen stays and nothing is decoded again.
+If the pause has not settled after 1 s, the player seeks to the nearest key frame to finish it.
+
 ## Stream buffers
 
 Each stream offers its consumers two formats, in this order:
@@ -467,6 +488,8 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `playback.max_fps` | `1` to `240`, or `display` (also `0`) for the refresh rate of each output on mains power and 30 on battery (see "Frame rate") | `display` |
 | `playback.software_parallax` | move depth parallax images even when the GPU is emulated on the CPU (such as llvmpipe), with 8 steps at 15 frames per second at most | `false` |
 | `playback.flash_guard` | measure the brightness of every scene frame and slow down, or stop, a scene that flashes more than three times a second (see "Cost and frame rate" in `scene.md`); it costs a small read back from the GPU per frame | `false` |
+| `playback.scene_sound` | let scenes play their sound layers (see "Scene sound"); `false` keeps every scene silent, whatever its permissions and volume, and leaves the sound of videos alone | `true` |
+| `playback.scene_capture` | let scenes that were granted `audio` follow the sound that plays (see "Inputs"); `false` closes the audio capture for every scene | `true` |
 | `transition.kind` | `fade`, `none` | `fade` |
 | `transition.duration_ms` | `0` to `10000` | `600` |
 | `pause.when_covered` | pause while a maximized or fullscreen window covers the output | `true` |
@@ -1170,8 +1193,10 @@ An input is on only while an output shows a scene that declares it and holds the
 pointer parallax image that moves: not under reduced motion, nor with software rendering unless
 `playback.software_parallax` is set), the screen is unlocked (whatever `pause.when_locked`
 says) and that output is active (not paused, and not covered while `pause.when_covered` holds);
-both inputs also stop while the output is covered, whatever `pause.when_covered` says. Revoking,
-locking, pausing, covering or hiding the scene or image stops it at once.
+both inputs also stop while the output is covered, whatever `pause.when_covered` says, and while
+a streamed output has no consumer (in Plasma, while the desktop is not shown). Revoking,
+locking, pausing, covering or hiding the scene or image stops it at once, and showing it again
+starts it again. `playback.scene_capture = false` turns audio off for every scene, granted or not.
 
 - Audio: the daemon captures the monitor of the default output device through a PipeWire
   stream named "wallpaper-rs audio analysis" (desktop microphone indicators may show it) and
@@ -1179,6 +1204,8 @@ locking, pausing, covering or hiding the scene or image stops it at once.
   Samples stay in memory only for that analysis: they are never stored, logged or sent anywhere,
   and scenes and scripts only get the bands and levels. A scene without the grant gets silence
   even while another output's scene is listening. The stream is destroyed when no scene needs it.
+  When the PipeWire connection breaks (PipeWire restarts), the capture connects again by itself
+  after 0.5 s, then twice as long each time up to 30 s; nothing wakes it while it is connected.
 - Pointer: on layer-shell outputs only the background of an output whose scene or parallax image
   uses the pointer, or whose scene takes clicks, accepts pointer and touch events, showing the
   default cursor, so other backgrounds never take desktop clicks; the render thread applies that
@@ -1804,7 +1831,8 @@ later pipelines of the same package reuse them, and they are freed when no outpu
 sound is decoded up to the length that its header gives plus 0.5 s, and all the sounds of a
 package up to 180.5 s; a sound that goes on longer is not played.
 
-- Scenes start muted like videos. Their sound plays only while `playback.muted` is `false` and the
+- Scenes start muted like videos. Their sound plays only while `playback.scene_sound` is `true`,
+  `playback.muted` is `false` and the
   stream volume, `playback.volume × volume / 100`, is above 0, where `volume` is the user property
   that every scene with sound has (a slider from 0 to 100 %, 100 by default, added to
   `GetSceneProperties` unless the manifest declares it as such a slider itself).
@@ -1823,6 +1851,17 @@ package up to 180.5 s; a sound that goes on longer is not played.
   clock. Values that change over time are read at the frame rate of the output, without rendering
   a frame while nothing visible changes; fades and volume changes are applied to every sample, and
   values that stay the same cost nothing.
+- A layer whose `play` follows a timeline plays from the place of that timeline: it starts at the
+  offset of the timeline position since the key that turned it on, starts again with every turn of
+  a repeating timeline, keeps running when the timeline is paused or ends, and jumps back to the
+  timeline when it plays again. The daemon re-aligns every playing layer with the scene clock once a
+  second, and a layer more than 60 ms away ducks for 5 ms and jumps. Positions count the delay of
+  the audio output: the samples queued in the pipeline, the latency that its sink reports and, for
+  `pipewiresink`, one 20 ms PipeWire cycle.
+- When the audio output fails (no device, a sound server that went away, also with a PipeWire
+  GStreamer plugin older than 1.2), the scene and the videos go on silent, and the output is tried
+  again once a PipeWire or PulseAudio device provider lists an audio sink, after 1 s and then twice
+  as long each time up to 60 s.
 - `GetState().outputs[x].sound` is `""` for content without sound layers, `"off"` while the sound
   is muted, has not started or every layer has stopped, `"playing"`, `"paused"`, or `"elsewhere"`
   when another output plays it.
@@ -1930,6 +1969,9 @@ output since it appeared. `refresh` is the refresh rate of its screen in Hz (`0`
 and `fps` the most frames per second it renders now (see "Frame rate"). `buffers` is `"dmabuf"`
 or `"memfd"` while a consumer streams the output, and `""` otherwise (see "Stream buffers").
 `sound` is `""`, `"off"`, `"playing"`, `"paused"` or `"elsewhere"` (see "Scene sound").
+`decode` is `"zero-copy"` when the video of that output reaches the GPU as a DMA-BUF that it reads
+in place, `"copy"` when its frames go through system memory, and `""` for content without video
+(see "Video decoding").
 `flashes` is `""`, or `"slowed"` or `"paused"` once `playback.flash_guard` slowed or stopped the
 scene of that output. `left_out` lists the package effects the scene of that output plays without,
 as `the effect <id> was left out: <reason>`; it is a note, not a failure. `particles` is `"gpu"`

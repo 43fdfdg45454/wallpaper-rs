@@ -58,7 +58,7 @@ mod tests {
             |x| View { active: true, covered: false, rect: Some([x, 0.0, 100.0, 50.0]), clicks: false };
         let views = |covered| {
             let right = View { covered, ..view(100.0) };
-            Some(BTreeMap::from([("DP-1".to_owned(), view(0.0)), ("DP-2".to_owned(), right)]))
+            Some((BTreeMap::from([("DP-1".to_owned(), view(0.0)), ("DP-2".to_owned(), right)]), false))
         };
         hub.update(views(false));
         assert!(!*hub.tracking.borrow(), "no image asks for the pointer");

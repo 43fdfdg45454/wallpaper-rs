@@ -519,7 +519,7 @@ msgstr "Mantener"
 msgid "Preset:"
 msgstr "Preajuste:"
 
-#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "None"
@@ -1380,7 +1380,8 @@ msgstr "rebajada mientras el equipo está caliente"
 
 #: apps/wprs-app/qml/LeftOut.qml
 msgid "lowered because its frames took too long on the graphics card"
-msgstr "rebajada porque sus fotogramas tardaban demasiado en la tarjeta gráfica"
+msgstr ""
+"rebajada porque sus fotogramas tardaban demasiado en la tarjeta gráfica"
 
 #: apps/wprs-app/qml/LeftOut.qml
 msgid "Quality %1 of 3"
@@ -2070,7 +2071,7 @@ msgstr "Reducir"
 msgid "Zoom in"
 msgstr "Ampliar"
 
-#: apps/wprs-app/qml/SceneCanvas.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/SceneCanvas.qml apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Fit"
 msgstr "Ajustar"
@@ -2293,7 +2294,7 @@ msgstr "Capas"
 msgid "Assets"
 msgstr "Recursos"
 
-#: apps/wprs-app/qml/ScenePage.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/ScenePage.qml apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Package"
 msgstr "Paquete"
@@ -2645,6 +2646,323 @@ msgstr "%1 MB"
 msgid "%1 KB"
 msgstr "%1 KB"
 
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Fill"
+msgstr "Rellenar"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Stretch"
+msgstr "Estirar"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Center"
+msgstr "Centrar"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Tile"
+msgstr "Mosaico"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Span"
+msgstr "Extender"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "In order"
+msgstr "En orden"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Shuffled"
+msgstr "Aleatorio"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Match the display"
+msgstr "Igual que la pantalla"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Fade"
+msgstr "Fundido"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Image"
+msgstr "Imagen"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Video"
+msgstr "Vídeo"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Scene"
+msgstr "Escena"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "the sound"
+msgstr "el sonido"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "the pointer"
+msgstr "el puntero"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "clicks"
+msgstr "los clics"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "what the media player plays"
+msgstr "lo que suena en el reproductor"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "the network"
+msgstr "la red"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "For everyone"
+msgstr "Para todos los públicos"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Mature"
+msgstr "Para adultos"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Not rated"
+msgstr "Sin clasificar"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "sexual content"
+msgstr "contenido sexual"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "violence"
+msgstr "violencia"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "gore"
+msgstr "sangre explícita"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "strong language"
+msgstr "lenguaje malsonante"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Original work"
+msgstr "Obra original"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Remade from another work"
+msgstr "Rehecho a partir de otra obra"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Imported for personal use"
+msgstr "Importado para uso personal"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Downloaded from an online source"
+msgstr "Descargado de una fuente en línea"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Desktop"
+msgstr "Escritorio"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Android"
+msgstr "Android"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Web page"
+msgstr "Página web"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Preset"
+msgstr "Preajuste"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Resources"
+msgstr "Recursos"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Home page"
+msgstr "Página principal"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Source"
+msgstr "Código fuente"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Support"
+msgstr "Ayuda"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Donate"
+msgstr "Donar"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Folder scan"
+msgstr "Análisis de carpetas"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Import"
+msgstr "Importación"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Analysis"
+msgstr "Análisis"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Provider sync"
+msgstr "Sincronización de proveedores"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Repository download"
+msgstr "Descarga de repositorio"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Repository refresh"
+msgstr "Actualización de repositorios"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Package install"
+msgstr "Instalación de paquete"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Server account"
+msgstr "Cuenta del servidor"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Device link"
+msgstr "Enlace de equipo"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Server sync"
+msgstr "Sincronización con el servidor"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Transfer with the server"
+msgstr "Transferencia con el servidor"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Not linked"
+msgstr "Sin enlazar"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Waiting for approval"
+msgstr "Esperando la aprobación"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Needs the sync key from another device"
+msgstr "Necesita la clave de sincronización de otro equipo"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Ready"
+msgstr "Listo"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Paused"
+msgstr "En pausa"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Queued"
+msgstr "En cola"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Running"
+msgstr "En curso"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Done"
+msgstr "Terminada"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Failed"
+msgstr "Fallida"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Cancelled"
+msgstr "Cancelada"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Idle"
+msgstr "Inactivo"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Syncing"
+msgstr "Sincronizando"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Keyring locked"
+msgstr "Depósito de claves bloqueado"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Error"
+msgstr "Error"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Needs its secret"
+msgstr "Necesita su secreto"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "The signing keys expire soon"
+msgstr "Las claves de firma caducan pronto"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "The signing keys expired: nothing can be installed or updated from it"
+msgstr ""
+"Las claves de firma han caducado: no se puede instalar ni actualizar nada "
+"desde él"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "The signed index expires soon"
+msgstr "El índice firmado caduca pronto"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "The signed index expired"
+msgstr "El índice firmado ha caducado"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Malware"
+msgstr "Software malicioso"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "License problem"
+msgstr "Problema de licencia"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Taken down"
+msgstr "Retirado"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Broken"
+msgstr "Dañado"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "Other reason"
+msgstr "Otro motivo"
+
 #: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Volume"
 msgstr "Volumen"
@@ -2665,6 +2983,14 @@ msgstr "Paralaje de profundidad con renderizado por software"
 msgid "Slow down or stop wallpapers that flash more than three times a second"
 msgstr ""
 "Frenar o detener los fondos que destellan más de tres veces por segundo"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Let scenes play their sounds"
+msgstr "Dejar que las escenas reproduzcan sus sonidos"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Let scenes react to the sound that plays"
+msgstr "Dejar que las escenas reaccionen al sonido que suena"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Transition"
@@ -2830,313 +3156,6 @@ msgstr "Clave de API"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Password"
 msgstr "Contraseña"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Fill"
-msgstr "Rellenar"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Stretch"
-msgstr "Estirar"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Center"
-msgstr "Centrar"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Tile"
-msgstr "Mosaico"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Span"
-msgstr "Extender"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
-msgid "In order"
-msgstr "En orden"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Shuffled"
-msgstr "Aleatorio"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Match the display"
-msgstr "Igual que la pantalla"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Fade"
-msgstr "Fundido"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Image"
-msgstr "Imagen"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Video"
-msgstr "Vídeo"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Scene"
-msgstr "Escena"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
-msgid "the sound"
-msgstr "el sonido"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
-msgid "the pointer"
-msgstr "el puntero"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "clicks"
-msgstr "los clics"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "what the media player plays"
-msgstr "lo que suena en el reproductor"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "the network"
-msgstr "la red"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "For everyone"
-msgstr "Para todos los públicos"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Mature"
-msgstr "Para adultos"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Not rated"
-msgstr "Sin clasificar"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "sexual content"
-msgstr "contenido sexual"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "violence"
-msgstr "violencia"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "gore"
-msgstr "sangre explícita"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "strong language"
-msgstr "lenguaje malsonante"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Original work"
-msgstr "Obra original"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Remade from another work"
-msgstr "Rehecho a partir de otra obra"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Imported for personal use"
-msgstr "Importado para uso personal"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Downloaded from an online source"
-msgstr "Descargado de una fuente en línea"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Desktop"
-msgstr "Escritorio"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Android"
-msgstr "Android"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Web page"
-msgstr "Página web"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Preset"
-msgstr "Preajuste"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Resources"
-msgstr "Recursos"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Home page"
-msgstr "Página principal"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Source"
-msgstr "Código fuente"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Support"
-msgstr "Ayuda"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Donate"
-msgstr "Donar"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Folder scan"
-msgstr "Análisis de carpetas"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Import"
-msgstr "Importación"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Analysis"
-msgstr "Análisis"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Provider sync"
-msgstr "Sincronización de proveedores"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Repository download"
-msgstr "Descarga de repositorio"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Repository refresh"
-msgstr "Actualización de repositorios"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Package install"
-msgstr "Instalación de paquete"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Server account"
-msgstr "Cuenta del servidor"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Device link"
-msgstr "Enlace de equipo"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Server sync"
-msgstr "Sincronización con el servidor"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Transfer with the server"
-msgstr "Transferencia con el servidor"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Not linked"
-msgstr "Sin enlazar"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Waiting for approval"
-msgstr "Esperando la aprobación"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Needs the sync key from another device"
-msgstr "Necesita la clave de sincronización de otro equipo"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Ready"
-msgstr "Listo"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Paused"
-msgstr "En pausa"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Queued"
-msgstr "En cola"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Running"
-msgstr "En curso"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Done"
-msgstr "Terminada"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Failed"
-msgstr "Fallida"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Cancelled"
-msgstr "Cancelada"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Idle"
-msgstr "Inactivo"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Syncing"
-msgstr "Sincronizando"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Keyring locked"
-msgstr "Depósito de claves bloqueado"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Error"
-msgstr "Error"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Needs its secret"
-msgstr "Necesita su secreto"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "The signing keys expire soon"
-msgstr "Las claves de firma caducan pronto"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "The signing keys expired: nothing can be installed or updated from it"
-msgstr ""
-"Las claves de firma han caducado: no se puede instalar ni actualizar nada "
-"desde él"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "The signed index expires soon"
-msgstr "El índice firmado caduca pronto"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "The signed index expired"
-msgstr "El índice firmado ha caducado"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Malware"
-msgstr "Software malicioso"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "License problem"
-msgstr "Problema de licencia"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Taken down"
-msgstr "Retirado"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Broken"
-msgstr "Dañado"
-
-#: apps/wprs-app/qml/facade/Labels.qml
-msgid "Other reason"
-msgstr "Otro motivo"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "reacts to the sound playing on the computer"

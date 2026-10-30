@@ -97,6 +97,11 @@ pub(crate) fn onsets(scene: &Scene) -> Vec<Option<f64>> {
     scene.sounds().map(|s| (s.play_on.as_deref() == Some("start")).then_some(0.0)).collect()
 }
 
+fn stopped(s: &Sound, cx: &Context) -> bool {
+    let id = s.play.binding().and_then(|b| b.timeline.as_ref());
+    id.is_some_and(|id| cx.timelines.iter().any(|(tl, head)| &tl.id == id && !head.playing))
+}
+
 fn edge(s: &Sound, cx: &Context, t: f64) -> Option<f64> {
     let b = s.play.binding()?;
     let keys = b.keys.as_ref()?;
@@ -131,6 +136,7 @@ impl Runtime {
             *gate = match voice.play {
                 false => None,
                 true if s.play == Value::Fixed(true) => Some(0.0),
+                true if stopped(s, &cx) && gate.is_some() => *gate,
                 true => edge(s, &cx, t).or(*gate).or(Some(t)),
             };
             let onset = if s.play_on.is_some() { self.onsets[i].filter(|_| gate.is_some()) } else { *gate };

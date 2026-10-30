@@ -45,7 +45,9 @@ impl Engine {
     pub(crate) fn inputs(&self) -> i32 {
         let [audio, touch] = self.stage.as_ref().map_or([false; 2], Stage::wants);
         let (moving, plays) = (Power::now().moving(), self.stage.as_ref().is_some_and(Stage::plays));
-        i32::from(audio && moving) | (i32::from(touch) << 1) | (i32::from(plays && moving) << 2)
+        i32::from(audio && moving && crate::power::hears())
+            | (i32::from(touch) << 1)
+            | (i32::from(plays && moving) << 2)
     }
 
     pub(crate) fn touch(&mut self, x: f32, y: f32, down: bool) -> bool {

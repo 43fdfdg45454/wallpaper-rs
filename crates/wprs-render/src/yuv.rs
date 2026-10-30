@@ -30,6 +30,45 @@ pub(crate) struct Converter {
     pipeline: wgpu::RenderPipeline,
 }
 
+const TURNS: [[f32; 4]; 8] = [
+    [1.0, 0.0, 0.0, 1.0],
+    [0.0, 1.0, -1.0, 0.0],
+    [-1.0, 0.0, 0.0, -1.0],
+    [0.0, -1.0, 1.0, 0.0],
+    [-1.0, 0.0, 0.0, 1.0],
+    [0.0, 1.0, 1.0, 0.0],
+    [1.0, 0.0, 0.0, -1.0],
+    [0.0, -1.0, -1.0, 0.0],
+];
+
+pub(crate) fn uniform(renderer: &Renderer, bt709: bool, full: bool, turn: u8) -> wgpu::Buffer {
+    let turn = TURNS[usize::from(turn) % TURNS.len()];
+    let values = rows(bt709, full).into_iter().chain([turn]).flatten();
+    let contents: Vec<u8> = values.flat_map(f32::to_le_bytes).collect();
+    let usage = wgpu::BufferUsages::UNIFORM;
+    crate::filled::filled((&renderer.device, &renderer.queue), "wprs-render yuv rows", &contents, usage)
+}
+
+pub(crate) fn group(
+    renderer: &Renderer,
+    rows: &wgpu::Buffer,
+    planes: [&wgpu::Texture; 2],
+) -> wgpu::BindGroup {
+    let views = planes.map(|t| t.create_view(&Default::default()));
+    let resources = [
+        rows.as_entire_binding(),
+        Resource::TextureView(&views[0]),
+        Resource::TextureView(&views[1]),
+        Resource::Sampler(&renderer.clamp),
+    ];
+    let entries: Vec<_> = (resources.into_iter().enumerate())
+        .map(|(i, resource)| wgpu::BindGroupEntry { binding: i as u32, resource })
+        .collect();
+    let layout = &renderer.converter().layout;
+    let label = Some("wprs-render yuv group");
+    renderer.device.create_bind_group(&wgpu::BindGroupDescriptor { label, layout, entries: &entries })
+}
+
 fn rows(bt709: bool, full: bool) -> [[f32; 4]; 3] {
     let (kr, kb) = if bt709 { (0.2126, 0.0722) } else { (0.299, 0.114) };
     let kg = 1.0 - kr - kb;
@@ -50,7 +89,7 @@ fn write(queue: &wgpu::Queue, texture: &wgpu::Texture, (data, stride): (&[u8], u
 }
 
 impl Renderer {
-    fn converter(&self) -> &Converter {
+    pub(crate) fn converter(&self) -> &Converter {
         self.yuv.get_or_init(|| {
             let layout = bind_group_layout(&self.device, 2);
             let shader = module(&self.device, include_str!("yuv.wgsl"));
@@ -74,26 +113,8 @@ impl Renderer {
             target,
             drawn | Usage::RENDER_ATTACHMENT,
         ));
-        let contents: Vec<u8> = rows(bt709, full).iter().flatten().flat_map(|v| v.to_le_bytes()).collect();
-        let label = "wprs-render yuv rows";
-        let usage = wgpu::BufferUsages::UNIFORM;
-        let buffer = crate::filled::filled((&self.device, &self.queue), label, &contents, usage);
-        let views = [&luma, &chroma].map(|t| t.create_view(&Default::default()));
-        let resources = [
-            buffer.as_entire_binding(),
-            Resource::TextureView(&views[0]),
-            Resource::TextureView(&views[1]),
-            Resource::Sampler(&self.clamp),
-        ];
-        let entries: Vec<_> = (resources.into_iter().enumerate())
-            .map(|(i, resource)| wgpu::BindGroupEntry { binding: i as u32, resource })
-            .collect();
-        let layout = &self.converter().layout;
-        let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some(label),
-            layout,
-            entries: &entries,
-        });
+        let rows = uniform(self, bt709, full, 0);
+        let group = group(self, &rows, [&luma, &chroma]);
         Yuv { key, luma, chroma, group, image }
     }
 
@@ -115,26 +136,28 @@ impl Renderer {
         self.scoped(|| {
             write(&self.queue, &yuv.luma, planes.luma);
             write(&self.queue, &yuv.chroma, planes.chroma);
-            let mut encoder = self.device.create_command_encoder(&Default::default());
-            let ops = wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                store: wgpu::StoreOp::Store,
-            };
-            let view = &yuv.image.view;
-            let attachment =
-                wgpu::RenderPassColorAttachment { view, depth_slice: None, resolve_target: None, ops };
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("wprs-render yuv pass"),
-                color_attachments: &[Some(attachment)],
-                ..Default::default()
-            });
-            pass.set_pipeline(&self.converter().pipeline);
-            pass.set_bind_group(0, &yuv.group, &[]);
-            pass.draw(0..3, 0..1);
-            drop(pass);
-            self.queue.submit([encoder.finish()]);
+            self.convert(&yuv.group, &yuv.image);
         })?;
         Ok(&yuv.image)
+    }
+
+    pub(crate) fn convert(&self, group: &wgpu::BindGroup, image: &GpuImage) {
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        let ops =
+            wgpu::Operations { load: wgpu::LoadOp::Clear(wgpu::Color::BLACK), store: wgpu::StoreOp::Store };
+        let view = &image.view;
+        let attachment =
+            wgpu::RenderPassColorAttachment { view, depth_slice: None, resolve_target: None, ops };
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("wprs-render yuv pass"),
+            color_attachments: &[Some(attachment)],
+            ..Default::default()
+        });
+        pass.set_pipeline(&self.converter().pipeline);
+        pass.set_bind_group(0, group, &[]);
+        pass.draw(0..3, 0..1);
+        drop(pass);
+        self.queue.submit([encoder.finish()]);
     }
 }
 

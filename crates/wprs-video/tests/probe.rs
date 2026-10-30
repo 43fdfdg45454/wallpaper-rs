@@ -25,8 +25,14 @@ fn probe_accepts_decodable_local_videos_only() {
     {
         assert!(matches!(probe(Path::new(remote)), Err(wprs_video::Error::NotLocal(_))), "{remote}");
         let (tx, _rx) = mpsc::channel();
-        let options =
-            Options { max_size: (64, 32), max_fps: 30, volume: 0.0, muted: true, cut: Cut::default() };
+        let options = Options {
+            max_size: (64, 32),
+            max_fps: 30,
+            volume: 0.0,
+            muted: true,
+            cut: Cut::default(),
+            zero_copy: false,
+        };
         assert!(Player::open(Path::new(remote), options, move |e| drop(tx.send(e))).is_err(), "{remote}");
     }
     assert!(started.elapsed() < Duration::from_secs(10));
@@ -77,8 +83,14 @@ fn honours_rotation_tags() {
         return eprintln!("skipping rotation test: {why}");
     }
     let (tx, rx) = mpsc::channel();
-    let options =
-        Options { max_size: (1920, 1080), max_fps: 30, volume: 0.0, muted: true, cut: Cut::default() };
+    let options = Options {
+        max_size: (1920, 1080),
+        max_fps: 30,
+        volume: 0.0,
+        muted: true,
+        cut: Cut::default(),
+        zero_copy: false,
+    };
     let player = Player::open(&path, options, move |e| drop(tx.send(e)));
     let first = rx.recv_timeout(Duration::from_secs(10));
     drop(player);

@@ -1,5 +1,7 @@
 mod audio;
+mod bank;
 mod bus;
+mod dmabuf;
 mod feed;
 mod mix;
 mod pipewire;
@@ -9,10 +11,12 @@ mod sound;
 mod still;
 mod video_sink;
 
+pub use bank::{Bank, decode, probe as probe_sound};
+pub use dmabuf::{Dmabuf, accept as accept_dmabuf};
 pub use mix::{Clip, Mix, RATE, Source, Track};
 pub use player::Player;
 pub use probe::probe;
-pub use sound::{Bank, Soundtrack, decode, probe as probe_sound};
+pub use sound::Soundtrack;
 pub use still::{Still, still};
 
 use gstreamer as gst;
@@ -22,6 +26,7 @@ use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Duration;
 
+pub const UNSHARED: &str = "cannot share this video frame with the GPU";
 pub const EXTENSIONS: [&str; 9] = ["mp4", "m4v", "webm", "mkv", "mov", "avi", "ogv", "mpg", "mpeg"];
 
 pub fn is_video(path: &Path) -> bool {
@@ -56,13 +61,28 @@ pub struct Frame {
     pub height: u32,
     pub stride: u32,
     pub pts: Option<Duration>,
-    offset: usize,
-    buffer: gst::MappedBuffer<gst::buffer::Readable>,
+    pixels: Pixels,
+}
+
+#[derive(Debug)]
+enum Pixels {
+    Mapped(usize, gst::MappedBuffer<gst::buffer::Readable>),
+    Shared { shared: Dmabuf, _held: gst::Buffer },
 }
 
 impl Frame {
     pub fn data(&self) -> &[u8] {
-        &self.buffer.as_slice()[self.offset..]
+        match &self.pixels {
+            Pixels::Mapped(offset, buffer) => &buffer.as_slice()[*offset..],
+            Pixels::Shared { .. } => &[],
+        }
+    }
+
+    pub fn dmabuf(&self) -> Option<&Dmabuf> {
+        match &self.pixels {
+            Pixels::Shared { shared, .. } => Some(shared),
+            Pixels::Mapped(..) => None,
+        }
     }
 }
 
@@ -78,6 +98,8 @@ type Sink = Arc<dyn Fn(Event) + Send + Sync>;
 pub(crate) struct Shared {
     pub(crate) cut: Arc<Mutex<Cut>>,
     pub(crate) seen: Arc<AtomicU64>,
+    pub(crate) seeks: Arc<AtomicU64>,
+    pub(crate) latency: Option<&'static str>,
 }
 
 pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -91,6 +113,7 @@ pub struct Options {
     pub volume: f64,
     pub muted: bool,
     pub cut: Cut,
+    pub zero_copy: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

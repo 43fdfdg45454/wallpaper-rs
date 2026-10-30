@@ -1,3 +1,4 @@
+mod control;
 mod hub;
 mod keys;
 mod kwin;
@@ -46,6 +47,7 @@ pub(crate) struct Control {
     pub(crate) views: BTreeMap<String, View>,
     pub(crate) followed: BTreeSet<String>,
     pub(crate) capturing: bool,
+    pub(crate) blocked: bool,
     windows: BTreeMap<String, Window>,
 }
 
@@ -92,7 +94,8 @@ pub(crate) async fn stop(connection: &zbus::Connection) {
 async fn follow(daemon: Arc<Daemon>, hub: Arc<Hub>) {
     let mut serial = daemon.changes.subscribe();
     loop {
-        let (views, task) = (daemon.views(), hub.clone());
+        let blocked = !daemon.state().config.playback.scene_capture;
+        let (views, task) = ((daemon.views(), blocked), hub.clone());
         let _ = tokio::task::spawn_blocking(move || task.update(Some(views))).await;
         tokio::select! {
             () = hub.poke.notified() => {}
@@ -127,6 +130,10 @@ pub(crate) fn needs(
         hub.poke.notify_one();
         (hub.changed)();
     }
+}
+
+pub(crate) fn poke() {
+    hub().into_iter().for_each(|hub| hub.poke.notify_one());
 }
 
 pub(crate) fn kwin_script_loaded() -> bool {

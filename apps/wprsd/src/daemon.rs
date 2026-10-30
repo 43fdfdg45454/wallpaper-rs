@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::SystemTime;
 use tokio::sync::{Notify, watch};
-use wprs_core::{Config, Models, dbus};
+use wprs_core::{Config, Models, Playback, dbus};
 use wprs_format::Installed;
 use wprs_pipewire::Exporter;
 use wprs_render::Renderer;
@@ -87,6 +87,7 @@ impl Daemon {
         let renderer =
             Renderer::with_display(display).context("cannot initialize the GPU renderer")?.install();
         let adapter = renderer.adapter().to_owned();
+        crate::streams::share_video(renderer);
         let calibrated = renderer.calibrate(wprs_core::gpu_tier().as_deref());
         let tier = (["t0", "t1", "t2", "t3"][calibrated.tier as usize], calibrated.measured());
         tracing::info!("renderer ready");
@@ -101,6 +102,7 @@ impl Daemon {
         let changed = streams_changed.clone();
         exporter.on_change(move || {
             wake();
+            crate::inputs::poke();
             changed.notify_one();
         })?;
         let installed = wprs_format::installed(&store.data).unwrap_or_default();
@@ -185,9 +187,8 @@ impl State {
 pub(crate) fn settings(config: &Config) -> Settings {
     let playback = config.playback.sanitized();
     let transition = config.transition.duration();
-    let (max_fps, volume, muted) = (playback.max_fps, playback.volume, playback.muted);
-    let (software_parallax, flash_guard) = (playback.software_parallax, playback.flash_guard);
-    Settings { transition, max_fps, volume, muted, software_parallax, flash_guard }
+    let Playback { max_fps, volume, muted, software_parallax, flash_guard, scene_sound, .. } = playback;
+    Settings { transition, max_fps, volume, muted, software_parallax, flash_guard, scene_sound }
 }
 
 pub(crate) fn output_name(output: &str) -> fdo::Result<String> {

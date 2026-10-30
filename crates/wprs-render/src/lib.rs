@@ -18,10 +18,14 @@ mod export;
 #[cfg(target_os = "linux")]
 mod exported;
 mod filled;
+#[cfg(target_os = "linux")]
+mod import;
 mod lost;
 mod luma;
 mod palette;
 mod parallax;
+#[cfg(target_os = "linux")]
+mod plane;
 mod readback;
 mod scene;
 mod shader;
@@ -42,6 +46,8 @@ pub use dmabuf::{Dmabuf, Dmabufs};
 pub use draw::Target;
 #[cfg(target_os = "linux")]
 pub use exported::Exported;
+#[cfg(target_os = "linux")]
+pub use import::{Imported, Shared};
 pub use luma::Meter;
 pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};

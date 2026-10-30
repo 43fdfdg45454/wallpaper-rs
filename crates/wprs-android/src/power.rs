@@ -16,9 +16,15 @@ const HIGH_CLASS: i32 = 33;
 static CAPS: [AtomicU32; 2] = [AtomicU32::new(BATTERY_FPS), AtomicU32::new(CHARGING_FPS)];
 static CLASS: AtomicI32 = AtomicI32::new(0);
 static GUARD: AtomicBool = AtomicBool::new(false);
+static HEARS: AtomicBool = AtomicBool::new(true);
 
-pub(crate) fn guard(on: bool) {
+pub(crate) fn guard(on: bool, hears: bool) {
     GUARD.store(on, Relaxed);
+    HEARS.store(hears, Relaxed);
+}
+
+pub(crate) fn hears() -> bool {
+    HEARS.load(Relaxed)
 }
 
 pub(crate) fn guarded() -> bool {

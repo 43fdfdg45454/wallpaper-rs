@@ -63,6 +63,23 @@ GridLayout {
         }
     }
 
+    Repeater {
+        model: [["playback.scene_sound", i18n("Let scenes play their sounds")], ["playback.scene_capture", i18n("Let scenes react to the sound that plays")]]
+
+        delegate: PlasmaComponents3.Switch {
+            required property var modelData
+
+            Layout.columnSpan: 2
+            Layout.fillWidth: true
+            text: modelData[1]
+            checked: (header.current.options ?? {})[modelData[0]] !== false
+            onToggled: {
+                header.daemon.act("SetOption", [modelData[0], checked ? "true" : "false"]);
+                checked = Qt.binding(() => (header.current.options ?? {})[modelData[0]] !== false);
+            }
+        }
+    }
+
     PlasmaComponents3.ComboBox {
         id: chooser
 

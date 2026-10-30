@@ -473,6 +473,21 @@ los búferes de la GPU ofrecen además sincronización explícita (syncobj) a lo
 versiones de PipeWire que la admiten; es experimental y está apagada por defecto, así que sin esa
 variable los búferes se sincronizan solo de forma implícita.
 
+Cuando el decodificador de vídeo por hardware entrega los fotogramas en memoria de la GPU (DMA-BUF en
+NV12, como VA-API en las GPU de Intel y AMD) y el controlador Vulkan puede importarlos con su
+modificador, el daemon los lee en su sitio: convierte el color, gira el vídeo si lo pide y lo reduce
+al tamaño de la pantalla en la GPU, sin pasar el fotograma por la memoria del sistema (cero copias
+con la CPU por fotograma, frente a tres en la ruta de copia: bajar el fotograma, convertirlo a RGBA y
+subirlo; con un vídeo 4K a 30 fps decodificado por VA-API en una iGPU de AMD, unos 0,3 ms de CPU
+por fotograma en vez de unos 16 ms). Si el decodificador es por software, si el formato o el modificador no se pueden importar
+o si la importación falla, el vídeo vuelve solo a la ruta de copia. En las GPU de NVIDIA, GStreamer
+1.24 no entrega DMA-BUF (NVDEC da memoria CUDA u OpenGL y el controlador VA-API sobre NVDEC solo
+memoria del sistema), así que allí los vídeos siguen copiándose, aunque la importación funciona; con
+lavapipe y OpenGL no hay importación. `wprs-ctl state` muestra la ruta elegida en `decode`
+(`zero-copy` o `copy`) y `WPRS_ZERO_COPY=0` en el entorno del daemon fuerza la copia. Pausar un vídeo
+lo detiene donde está, sin volver a decodificar desde el fotograma clave anterior: en un vídeo 4K
+con fotogramas clave cada 10 s, una pausa pasó de unos 2,3 s de CPU a menos de 20 ms.
+
 La configuración vive en `~/.config/wallpaper-rs/config.toml` y solo la puede leer su usuario.
 Si se edita a mano, los valores fuera de rango se corrigen al leerla. Si tiene un error de
 sintaxis, el daemon arranca con los valores por defecto y muestra el error en `wprs-ctl state`
@@ -1050,7 +1065,16 @@ bandeja o de cada pantalla que muestra una escena con sonido, y siguen el volume
 propiedad *Volumen* que aparece en los ajustes de cada escena con sonido. Solo suenan mientras la
 escena se ve en una pantalla activa y sin tapar (se pausan y siguen con ella al taparla, aunque la
 escena no se pause, al pausar o con batería, y se paran al quitarla), nunca con la pantalla
-bloqueada, y una escena que se ve en varias pantallas suena en una sola. `install.sh` las instala en
+bloqueada, y una escena que se ve en varias pantallas suena en una sola. `playback.scene_sound = false`
+(*Dejar que las escenas reproduzcan sus sonidos* en los ajustes de la app y en la bandeja, o
+`wprs-ctl config playback.scene_sound false`) calla el sonido de todas las escenas sin tocar el de
+los vídeos; el teléfono no reproduce el sonido de las escenas. Cada capa suena en el punto que marca
+el tiempo de la escena: una capa que empieza con una línea de tiempo arranca en la posición de esa
+línea (no desde cero), vuelve a empezar con cada vuelta de la línea, sigue sonando si la línea se
+para y salta a donde está la línea al reanudarla; el daemon vuelve a alinear el sonido con la escena
+cada segundo y descuenta el retardo que informa la salida de audio. Si la salida de audio falla o no
+hay ninguna (también con el plugin de PipeWire viejo), la escena y los vídeos siguen sin sonido y lo
+recuperan solos cuando aparece una salida. `install.sh` las instala en
 `~/.local/share/wallpaper-rs/examples` (`--no-examples` las omite), el RPM en el paquete opcional
 `wallpaper-rs-examples` y el Flatpak las incluye. Aparecen en la biblioteca y, si se quitan de
 ella, no vuelven.
@@ -1442,7 +1466,13 @@ misma pausa.
   `prev` imprimen la orden exacta para darlo. Aun con permiso, la captura del sonido (un stream de
   PipeWire llamado «wallpaper-rs audio analysis», que puede encender el indicador de micrófono) y el
   seguimiento del puntero solo funcionan mientras se ve una escena que los usa, y se paran al pausar,
-  tapar o bloquear la pantalla, aunque la pausa al tapar esté desactivada. Del sonido solo se
+  tapar o bloquear la pantalla, aunque la pausa al tapar esté desactivada, y cuando nadie mira el
+  stream de esa pantalla (en Plasma, cuando el escritorio no se ve). Si PipeWire se reinicia, la
+  captura vuelve a conectarse sola, primero a los 0,5 s y luego esperando el doble cada vez, hasta
+  30 s, sin despertar al equipo mientras está conectada. `playback.scene_capture = false`
+  (*Dejar que las escenas reaccionen al sonido que suena* en los ajustes de la app, la bandeja y el
+  teléfono, o `wprs-ctl config playback.scene_capture false`) bloquea la captura para todas las
+  escenas aunque tengan permiso. Del sonido solo se
   calculan bandas y niveles en memoria: no se guarda, no se registra y no sale del equipo. Del
   puntero solo se guarda en memoria la última
   posición, de los clics solo los que esperan al siguiente fotograma, y nunca se leen las teclas. Una imagen cuyo paralaje sigue al puntero lo usa con las

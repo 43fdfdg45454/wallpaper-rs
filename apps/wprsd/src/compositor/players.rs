@@ -90,6 +90,7 @@ impl State {
             let flashes = o.shown.scene.as_ref().map_or("", SceneState::flashes);
             let particles = o.shown.scene.as_ref().map_or("", SceneState::particles);
             let quality = o.shown.scene.as_ref().map_or(("", ""), SceneState::quality);
+            let decode = slot.map_or("", |s| s.decode);
             (
                 kind,
                 playing,
@@ -97,7 +98,7 @@ impl State {
                 self.moves(o),
                 o.fps(self.power),
                 self.sound(name, o),
-                (flashes, particles, quality),
+                (flashes, particles, quality, decode),
             )
         };
         let mut published = lock(&self.status);
@@ -115,7 +116,7 @@ impl State {
                         s.parallax,
                         s.fps,
                         s.sound,
-                        (s.flashes, s.particles, (s.quality, s.quality_reason)),
+                        (s.flashes, s.particles, (s.quality, s.quality_reason), s.decode),
                         &s.left_out[..],
                     ) == now
                 };
@@ -123,7 +124,7 @@ impl State {
             });
         if !unchanged {
             let entry = |(name, o): (&String, &Output)| {
-                let (kind, playing, error, parallax, fps, sound, (flashes, particles, quality)) =
+                let (kind, playing, error, parallax, fps, sound, (flashes, particles, quality, decode)) =
                     status(name, o);
                 let (quality, quality_reason) = quality;
                 let frames = published.get(name).map_or(0, |s| s.frames);
@@ -140,6 +141,7 @@ impl State {
                     particles,
                     quality,
                     quality_reason,
+                    decode,
                     left_out,
                     console,
                 };

@@ -8,7 +8,7 @@ const FRAME: Duration = Duration::from_millis(60);
 
 fn play(cut: Cut, max_fps: u32) -> Option<(Player, Receiver<Event>)> {
     let (tx, rx) = mpsc::channel();
-    let options = Options { max_size: (64, 32), max_fps, volume: 0.0, muted: true, cut };
+    let options = Options { max_size: (64, 32), max_fps, volume: 0.0, muted: true, cut, zero_copy: false };
     let opened = Player::open(Path::new(FIXTURE), options, move |event| drop(tx.send(event)));
     match opened.map_err(|e| e.to_string()).and_then(|player| {
         match rx.recv_timeout(Duration::from_secs(10)) {

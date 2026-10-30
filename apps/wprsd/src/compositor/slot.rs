@@ -3,7 +3,7 @@ use std::path::Path;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
-use wprs_render::{GpuImage, Renderer, log_allowed};
+use wprs_render::{GpuImage, Imported, Renderer, Shared, log_allowed};
 use wprs_video::{Event, Frame, Options, Player};
 
 const RETRIES: u32 = 3;
@@ -27,14 +27,35 @@ pub(super) struct PlayerSlot {
     pub(super) max_size: (u32, u32),
     pub(super) fps: u32,
     pub(super) volume: u32,
+    pub(super) decode: &'static str,
     failures: u32,
     inbox: Arc<Inbox>,
+    shares: bool,
+    imported: Option<Imported>,
+    held: Option<Frame>,
 }
 
 impl PlayerSlot {
     pub(super) fn new((max_size, playing, fps, volume): Demand, open_at: Instant) -> Self {
         let (player, texture, error, inbox, due) = (None, None, None, Arc::default(), Some(open_at));
-        Self { player, texture, error, due, playing, max_size, fps, volume, failures: 0, inbox }
+        let (decode, shares, imported, held) =
+            ("", std::env::var_os("WPRS_ZERO_COPY").is_none_or(|v| v != "0"), None, None);
+        Self {
+            player,
+            texture,
+            error,
+            due,
+            playing,
+            max_size,
+            fps,
+            volume,
+            decode,
+            failures: 0,
+            inbox,
+            shares,
+            imported,
+            held,
+        }
     }
 
     pub(super) fn hush(&self, (settings, locked): (Settings, bool)) {
@@ -84,7 +105,8 @@ impl PlayerSlot {
         let (max_size, max_fps, cut, path) = (self.max_size, self.fps, reel.cut, &reel.path);
         let (volume, muted) = (loudness(settings.volume, self.volume), settings.muted || self.volume == 0);
         let (inbox, tx) = (self.inbox.clone(), tx.clone());
-        let opened = Player::open(path, Options { max_size, max_fps, volume, muted, cut }, move |event| {
+        let options = Options { max_size, max_fps, volume, muted, cut, zero_copy: self.shares };
+        let opened = Player::open(path, options, move |event| {
             let first = match event {
                 Event::Frame(frame) => lock(&inbox.frame).replace(frame).is_none(),
                 Event::Error(e) => lock(&inbox.error).replace(e).is_none(),
@@ -106,19 +128,37 @@ impl PlayerSlot {
 
     pub(super) fn receive(&mut self, path: &Path, renderer: &Renderer, now: Instant) -> bool {
         let (frame, error) = (lock(&self.inbox.frame).take(), lock(&self.inbox.error).take());
-        let uploaded = frame.is_some_and(|frame| self.upload(path, renderer, &frame));
-        if let Some(error) = error {
-            self.fail(path, error, now);
+        let uploaded = frame.is_some_and(|frame| self.upload(path, renderer, frame, now));
+        match error {
+            Some(error) if error == wprs_video::UNSHARED && self.shares => self.copy_instead(now),
+            Some(error) => self.fail(path, error, now),
+            None => {}
         }
         uploaded
     }
 
-    fn upload(&mut self, path: &Path, renderer: &Renderer, frame: &Frame) -> bool {
+    fn upload(&mut self, path: &Path, renderer: &Renderer, frame: Frame, now: Instant) -> bool {
         let (data, w, h, stride) = (frame.data(), frame.width, frame.height, frame.stride);
-        let uploaded = match &mut self.texture {
-            Some(texture) => renderer.update_rgba(texture, data, w, h, stride),
-            None => renderer.upload_rgba(data, w, h, stride).map(|t| drop(self.texture.replace(t))),
+        let uploaded = match (frame.dmabuf(), &mut self.texture) {
+            (Some(shared), _) => {
+                let (modifier, bt709, full, turn) = (shared.modifier, shared.bt709, shared.full, shared.turn);
+                let planes = shared.planes();
+                let wanted = Shared { size: (w, h), modifier, planes, bt709, full, turn, fit: self.max_size };
+                let image = renderer.convert_shared(&mut self.imported, &wanted).cloned();
+                image.map(|image| drop(self.texture.replace(image)))
+            }
+            (None, Some(texture)) if self.decode == "copy" => {
+                renderer.update_rgba(texture, data, w, h, stride)
+            }
+            (None, _) => renderer.upload_rgba(data, w, h, stride).map(|t| drop(self.texture.replace(t))),
         };
+        let shared = frame.dmabuf().is_some();
+        if uploaded.is_ok() {
+            self.imported = self.imported.take().filter(|_| shared);
+            (self.decode, self.held) = (if shared { "zero-copy" } else { "copy" }, shared.then_some(frame));
+        } else if shared {
+            self.copy_instead(now);
+        }
         let Err(e) = uploaded else {
             (self.error, self.failures) = (None, 0);
             self.due = self.due.filter(|_| self.player.is_none());
@@ -130,6 +170,11 @@ impl PlayerSlot {
             tracing::debug!(path = %path.display(), "video with frames that cannot be uploaded");
         }
         false
+    }
+
+    fn copy_instead(&mut self, now: Instant) {
+        tracing::info!("the GPU cannot read the decoded video frames in place, copying them instead");
+        (self.shares, self.player, self.imported, self.held, self.due) = (false, None, None, None, Some(now));
     }
 
     fn fail(&mut self, path: &Path, error: String, now: Instant) {

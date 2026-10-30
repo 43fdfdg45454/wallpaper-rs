@@ -48,15 +48,24 @@ fn the_tray_leaves_every_advanced_setting_to_the_settings_page() {
         .collect();
     let settings = shown_by("SettingsPage");
     assert!(settings.contains("App.outputs.concat([\"\"])"));
-    for call in
-        ["SetOption", "SetBackground", "Start", "Stop", "Previous", "GetSceneProperties", "Every screen"]
-    {
+    for call in ["SetBackground", "Start", "Stop", "Previous", "GetSceneProperties", "Every screen"] {
         let quoted = format!("\"{call}\"");
         assert!(!tray.contains(&quoted) && settings.contains(&quoted), "{call}");
     }
-    for call in
-        ["SetPaused", "SetMuted", "SetVolume", "Activate", "Next", "SetWallpaper", "SetFavorite", "Confirm"]
-    {
+    let options: Vec<&str> = tray.split("\"playback.").skip(1).filter_map(|s| s.split('"').next()).collect();
+    assert_eq!(options, ["scene_sound", "scene_capture"], "the tray sets only the scene audio switches");
+    assert!(settings.contains("\"SetOption\""));
+    for call in [
+        "SetPaused",
+        "SetMuted",
+        "SetOption",
+        "SetVolume",
+        "Activate",
+        "Next",
+        "SetWallpaper",
+        "SetFavorite",
+        "Confirm",
+    ] {
         assert!(tray.contains(&format!("act(\"{call}\"")), "{call}");
     }
 }

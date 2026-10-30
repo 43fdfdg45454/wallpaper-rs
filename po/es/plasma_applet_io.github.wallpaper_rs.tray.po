@@ -106,6 +106,16 @@ msgstr "Silenciar"
 
 #: integrations/plasma-tray/contents/ui/Header.qml
 #, kde-format
+msgid "Let scenes play their sounds"
+msgstr "Dejar que las escenas reproduzcan sus sonidos"
+
+#: integrations/plasma-tray/contents/ui/Header.qml
+#, kde-format
+msgid "Let scenes react to the sound that plays"
+msgstr "Dejar que las escenas reaccionen al sonido que suena"
+
+#: integrations/plasma-tray/contents/ui/Header.qml
+#, kde-format
 msgid "No profile"
 msgstr "Sin perfil"
 
@@ -203,7 +213,8 @@ msgstr "rebajada mientras el equipo está caliente"
 #: integrations/plasma-tray/contents/ui/LeftOut.qml
 #, kde-format
 msgid "lowered because its frames took too long on the graphics card"
-msgstr "rebajada porque sus fotogramas tardaban demasiado en la tarjeta gráfica"
+msgstr ""
+"rebajada porque sus fotogramas tardaban demasiado en la tarjeta gráfica"
 
 #: integrations/plasma-tray/contents/ui/LeftOut.qml
 #, kde-format

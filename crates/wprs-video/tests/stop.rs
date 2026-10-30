@@ -10,7 +10,14 @@ fn dropping_a_stuck_player_returns_in_time() {
     let (tx, rx) = mpsc::channel();
     let (release, stuck) = mpsc::channel::<()>();
     let stuck = Mutex::new(stuck);
-    let options = Options { max_size: (64, 32), max_fps: 60, volume: 0.0, muted: true, cut: Cut::default() };
+    let options = Options {
+        max_size: (64, 32),
+        max_fps: 60,
+        volume: 0.0,
+        muted: true,
+        cut: Cut::default(),
+        zero_copy: false,
+    };
     let opened = Player::open(Path::new(FIXTURE), options, move |_| {
         let _ = tx.send(());
         let _ = stuck.lock().map(|stuck| stuck.recv());

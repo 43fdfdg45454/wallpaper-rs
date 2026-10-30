@@ -11,9 +11,7 @@ const GRACE: Duration = Duration::from_millis(500);
 const SPIN: Duration = Duration::from_millis(150);
 const SPINS: u8 = 3;
 
-pub(crate) fn seek(playbin: &gst::Element, at: gst::ClockTime, cut: Cut, flush: bool) {
-    let flags =
-        if flush { gst::SeekFlags::FLUSH } else { gst::SeekFlags::empty() } | gst::SeekFlags::ACCURATE;
+fn seek(playbin: &gst::Element, at: gst::ClockTime, cut: Cut, flags: gst::SeekFlags) {
     let sought = match cut.plain() {
         true => playbin.seek_simple(flags, at),
         false => {
@@ -30,12 +28,22 @@ pub(crate) fn seek(playbin: &gst::Element, at: gst::ClockTime, cut: Cut, flush: 
     }
 }
 
-struct Outputs(gst::DeviceProvider, Instant);
+const PROVIDERS: [&str; 2] = ["pipewiredeviceprovider", "pulsedeviceprovider"];
+
+struct Outputs(Option<gst::DeviceProvider>, Instant);
 
 impl Drop for Outputs {
     fn drop(&mut self) {
-        self.0.stop();
+        self.0.iter().for_each(gst::DeviceProvider::stop);
     }
+}
+
+pub(crate) fn from_output(src: &gst::Object) -> bool {
+    let sink = |o: &gst::Object| {
+        let factory = o.downcast_ref::<gst::Element>().and_then(|e| e.factory());
+        o.name() == SINK || factory.is_some_and(|f| f.klass().contains("Sink/Audio"))
+    };
+    std::iter::successors(Some(src.clone()), gst::Object::parent).any(|o| sink(&o))
 }
 
 #[derive(Default)]
@@ -57,8 +65,14 @@ impl Audio {
         Self { uri, cut, shared, fresh: true, ..Self::default() }
     }
 
-    pub(crate) fn seek(&self, playbin: &gst::Element, at: gst::ClockTime) {
-        seek(playbin, at, self.cut, true);
+    pub(crate) fn seek(&self, playbin: &gst::Element, at: gst::ClockTime, exact: bool) {
+        let flags = if exact { gst::SeekFlags::ACCURATE } else { gst::SeekFlags::KEY_UNIT };
+        self.jump(playbin, at, gst::SeekFlags::FLUSH | flags);
+    }
+
+    fn jump(&self, playbin: &gst::Element, at: gst::ClockTime, flags: gst::SeekFlags) {
+        self.shared.seeks.fetch_add(1, Ordering::Relaxed);
+        seek(playbin, at, self.cut, flags);
     }
 
     pub(crate) fn again(&mut self, playbin: &gst::Element, flush: bool) {
@@ -73,13 +87,14 @@ impl Audio {
             tracing::info!("nothing plays between the chosen start and the end, the whole video loops");
             (self.cut.start, self.cut.end) = (0, 0);
         }
-        seek(playbin, Cut::at(self.cut.start), self.cut, flush);
+        let flush = if flush { gst::SeekFlags::FLUSH } else { gst::SeekFlags::empty() };
+        self.jump(playbin, Cut::at(self.cut.start), flush | gst::SeekFlags::ACCURATE);
     }
 
     pub(crate) fn retarget(&mut self, playbin: &gst::Element) {
         (self.cut, self.mark) = (*lock(&self.shared.cut), None);
         if !self.fresh && self.restart.is_none() {
-            seek(playbin, Cut::at(self.cut.start), self.cut, true);
+            self.seek(playbin, Cut::at(self.cut.start), true);
         }
     }
 
@@ -90,39 +105,40 @@ impl Audio {
 
     pub(crate) fn wait(&self) -> Option<gst::ClockTime> {
         let now = Instant::now();
-        let look = self.outputs.as_ref().map(|o| o.1.max(now + RETRY));
+        let look = self.outputs.as_ref().map(|o| if o.0.is_some() { o.1.max(now + RETRY) } else { o.1 });
         let at = self.hold.into_iter().chain(look).min()?;
         Some(gst::ClockTime::from_mseconds(at.saturating_duration_since(now).as_millis() as u64))
     }
 
     pub(crate) fn tick(&mut self, playbin: &gst::Element, bus: &gst::Bus) {
         let now = Instant::now();
-        let sinks = |o: &Outputs| o.1 <= now && o.0.devices().iter().any(|d| d.has_classes("Audio/Sink"));
-        if self.outputs.take_if(|o| sinks(o)).is_some() {
-            tracing::info!("an audio output appeared, the video plays with sound");
-            self.rebuild(playbin, bus, pipewire::sink(None));
+        let sinks = |p: &gst::DeviceProvider| p.devices().iter().any(|d| d.has_classes("Audio/Sink"));
+        if self.outputs.take_if(|o| o.1 <= now && o.0.as_ref().is_none_or(sinks)).is_some() {
+            tracing::info!("trying the audio output again");
+            self.rebuild(playbin, bus, pipewire::sink(self.shared.latency));
         }
     }
 
     pub(crate) fn failed(&mut self, playbin: &gst::Element, bus: &gst::Bus, err: &gst::message::Error) {
-        tracing::debug!(details = err.debug().as_deref(), "PipeWire audio error");
+        tracing::debug!(details = err.debug().as_deref(), "audio output error");
+        let piped = playbin.property::<Option<gst::Element>>("audio-sink").is_some_and(|s| s.name() == SINK);
         let reached = err.error().message().starts_with("stream error");
-        if !reached && std::env::var_os("FLATPAK_ID").is_none() {
+        if piped && !reached && std::env::var_os("FLATPAK_ID").is_none() {
             tracing::info!("cannot reach PipeWire, using the default audio output");
             return self.rebuild(playbin, bus, None);
         }
-        tracing::info!("no audio output, the video plays without sound until one appears");
+        tracing::info!("no audio output, the picture goes on without sound until one appears");
         self.delay = (self.delay * 2).clamp(RETRY, RETRY_MAX);
-        let provider = gst::DeviceProviderFactory::by_name("pipewiredeviceprovider");
-        self.outputs =
-            provider.filter(|p| p.start().is_ok()).map(|p| Outputs(p, Instant::now() + self.delay));
+        let started = |p: &gst::DeviceProvider| p.start().is_ok();
+        let provider = PROVIDERS.iter().find_map(|n| gst::DeviceProviderFactory::by_name(n).filter(started));
+        self.outputs = Some(Outputs(provider, Instant::now() + self.delay));
         let silent = gst::ElementFactory::make("fakesink").property("sync", true).build().ok();
         self.rebuild(playbin, bus, silent);
     }
 
     pub(crate) fn settled(&mut self, playbin: &gst::Element) {
         if let Some(at) = self.restart.take() {
-            return self.seek(playbin, at);
+            return self.seek(playbin, at, true);
         }
         let piped = playbin.property::<Option<gst::Element>>("audio-sink").is_some_and(|s| s.name() == SINK);
         let fresh = std::mem::take(&mut self.fresh);

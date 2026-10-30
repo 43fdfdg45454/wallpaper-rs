@@ -96,6 +96,7 @@
     <string name="downloads_off">Downloading the depth model is turned off in Settings</string>
     <string name="allow_download">Allow downloading the depth model</string>
     <string name="flash_guard">Slow down or stop wallpapers that flash more than three times a second</string>
+    <string name="scene_capture">Let scenes react to the sound that plays</string>
     <string name="depth_model">Depth model (%s)</string>
     <string name="delete_model">Delete</string>
     <string name="diagnostics">Diagnostics</string>

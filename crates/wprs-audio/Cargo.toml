@@ -13,3 +13,4 @@ realfft.workspace = true
 [target.'cfg(not(target_os = "android"))'.dependencies]
 pipewire.workspace = true
 rtrb.workspace = true
+tracing.workspace = true

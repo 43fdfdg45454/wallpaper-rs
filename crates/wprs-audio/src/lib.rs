@@ -1,6 +1,8 @@
 mod analysis;
 #[cfg(not(target_os = "android"))]
 mod capture;
+#[cfg(not(target_os = "android"))]
+mod listen;
 
 pub use analysis::{Analyzer, WINDOW, db01, smooth};
 #[cfg(not(target_os = "android"))]

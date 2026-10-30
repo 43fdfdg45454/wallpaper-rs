@@ -4,7 +4,7 @@ set -euo pipefail
 BIN=$(realpath "${1:?usage: $0 <bin-dir>}")
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=$(mktemp -d /tmp/wprs-sway.XXXXXX)
-export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config
+export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config XDG_DATA_HOME=$WORK/data XDG_CACHE_HOME=$WORK/cache XDG_STATE_HOME=$WORK/state
 export WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_HEADLESS_OUTPUTS=2 WLR_LIBINPUT_NO_DEVICES=1
 unset WAYLAND_DISPLAY DISPLAY SWAYSOCK HYPRLAND_INSTANCE_SIGNATURE
 mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME"
@@ -53,9 +53,9 @@ EOF
 check() { wait_for 10 shows "$@" || { shows "$@"; fail "$1 does not show ${*:2}"; }; }
 
 eval "$(dbus-launch --sh-syntax)"
-pipewire >"$WORK/pipewire.log" 2>&1 & pids+=($!)
+pipewire >"$WORK/pipewire.log" 2>&1 & pipewire=$!; pids+=("$pipewire")
 wait_for 10 test -S "$XDG_RUNTIME_DIR/pipewire-0"
-wireplumber >"$WORK/wireplumber.log" 2>&1 & pids+=($!)
+wireplumber >"$WORK/wireplumber.log" 2>&1 & wireplumber=$!; pids+=("$wireplumber")
 
 cat >"$WORK/sway.conf" <<'EOF'
 xwayland disable
@@ -208,6 +208,43 @@ ctl input revoke org.example.clicks clicks
 wait_for 10 region false || fail "the background kept the pointer after the inputs were revoked"
 ctl input clicks off
 echo "real click, input region and cursor checks passed"
+
+mkdir -p "$WORK/hear"
+echo '{"schema": "wallpaper-rs.wpak/2", "id": "org.example.hear", "version": "1.0.0", "title": "Hear", "license": "CC0-1.0",
+ "kind": "scene", "entry": "scene.json", "content": {"rating": "general"}, "photosensitive": false,
+ "origin": {"kind": "original"}, "inputs": ["audio"]}' >"$WORK/hear/manifest.json"
+echo '{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 36]}, "layers": [{"id": "bars", "type": "spectrum", "size": [64, 36]}]}' \
+  >"$WORK/hear/scene.json"
+ctl pack build "$WORK/hear" -o "$WORK/hear.wpak" >/dev/null && ctl lib import "$WORK/hear.wpak" --wait >/dev/null
+speaker() {
+  pw-cli create-node adapter '{ factory.name=support.null-audio-sink node.name=wprs-sway-sink media.class=Audio/Sink
+    object.linger=true audio.position=[FL FR] }' >/dev/null
+}
+speaker
+ctl lib apply "$(ctl lib search kind:scene --json | python3 -c "import json, sys; print([i['uid'] for i in json.load(sys.stdin)['items'] if i['title'] == 'Hear'][0])")" -o HEADLESS-2
+ctl input grant org.example.hear audio -o HEADLESS-2
+capturing() { [ "$(ctl input status --json | python3 -c "import json, sys; print(json.load(sys.stdin)['capturing'])")" = "$1" ]; }
+analysing() {
+  local dump
+  dump=$(pw-dump 2>/dev/null) || return 1
+  grep -q '"media.name": "wallpaper-rs audio analysis"' <<<"$dump"
+}
+heard() { capturing True && analysing; }
+silent() { capturing False && ! analysing; }
+wait_for 10 heard || fail "no audio capture for the scene that asks for it: $(ctl input status)"
+ctl config playback.scene_capture false
+wait_for 10 silent || fail "the capture went on after it was turned off for every scene"
+ctl config playback.scene_capture true
+wait_for 10 heard || fail "the capture did not come back when it was allowed again"
+kill "$wireplumber" "$pipewire"
+wait "$wireplumber" "$pipewire" 2>/dev/null || true
+pipewire >"$WORK/pipewire-again.log" 2>&1 & pipewire=$!; pids+=("$pipewire")
+wireplumber >"$WORK/wireplumber-again.log" 2>&1 & pids+=($!)
+wait_for 10 speaker || fail "no audio output after PipeWire restarted"
+wait_for 30 analysing || fail "the capture did not reconnect after PipeWire restarted"
+capturing True || fail "the capture stopped when PipeWire restarted"
+grep -q "the audio capture is connected to PipeWire again" "$WORK/wprsd.log" || fail "the capture was opened again instead of reconnecting"
+echo "audio capture switch and PipeWire restart checks passed"
 
 kill "$wprsd"
 wait "$wprsd" || true

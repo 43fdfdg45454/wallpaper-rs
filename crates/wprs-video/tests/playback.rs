@@ -11,7 +11,8 @@ const WAIT: Duration = Duration::from_secs(5);
 
 fn play(path: &Path, max_size: (u32, u32)) -> Result<(Player, Receiver<Event>), wprs_video::Error> {
     let (tx, rx) = mpsc::channel();
-    let options = Options { max_size, max_fps: 60, volume: 0.0, muted: true, cut: Cut::default() };
+    let options =
+        Options { max_size, max_fps: 60, volume: 0.0, muted: true, cut: Cut::default(), zero_copy: false };
     Player::open(path, options, move |event| {
         let _ = tx.send(event);
     })
@@ -125,10 +126,12 @@ fn pausing_stops_frames() {
         next_frame(&rx, Duration::from_millis(20));
     }
     assert!(player.paused(), "the pause did not settle within 30 s");
+    assert_eq!(player.seeks(), 0, "pausing sought the video");
     let late = std::iter::from_fn(|| next_frame(&rx, Duration::from_millis(500))).take(10).count();
     assert!(late < 10 && next_frame(&rx, Duration::from_secs(1)).is_none(), "frames while paused");
     player.set_playing(true);
     assert!(next_frame(&rx, WAIT).is_some(), "no frames after resuming");
+    assert_eq!(player.seeks(), 0, "resuming sought the video");
     assert!(!player.audio_enabled());
 }
 
@@ -169,7 +172,14 @@ fn videos_with_sound_play_without_a_pipewire_audio_output() {
         "cannot encode a clip with sound"
     );
     let (tx, rx) = mpsc::channel();
-    let options = Options { max_size: (64, 32), max_fps: 30, volume: 0.5, muted: false, cut: Cut::default() };
+    let options = Options {
+        max_size: (64, 32),
+        max_fps: 30,
+        volume: 0.5,
+        muted: false,
+        cut: Cut::default(),
+        zero_copy: false,
+    };
     let player = Player::open(&clip, options, move |event| drop(tx.send(event))).unwrap();
     let first = next_frame(&rx, Duration::from_secs(10));
     let deadline = Instant::now() + Duration::from_millis(2500);

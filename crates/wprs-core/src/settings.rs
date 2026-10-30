@@ -12,11 +12,15 @@ pub struct Playback {
     pub max_fps: u32,
     pub software_parallax: bool,
     pub flash_guard: bool,
+    pub scene_sound: bool,
+    pub scene_capture: bool,
 }
 
 impl Default for Playback {
     fn default() -> Self {
-        Self { volume: 0.5, muted: true, max_fps: fps::DISPLAY, software_parallax: false, flash_guard: false }
+        let (volume, muted, max_fps) = (0.5, true, fps::DISPLAY);
+        let (software_parallax, flash_guard, scene_sound, scene_capture) = (false, false, true, true);
+        Self { volume, muted, max_fps, software_parallax, flash_guard, scene_sound, scene_capture }
     }
 }
 
@@ -56,10 +60,8 @@ impl Playback {
     pub fn sanitized(&self) -> Playback {
         Playback {
             volume: if self.volume.is_finite() { self.volume.clamp(0.0, 1.0) } else { 0.0 },
-            muted: self.muted,
             max_fps: self.max_fps.min(Self::MAX_FPS),
-            software_parallax: self.software_parallax,
-            flash_guard: self.flash_guard,
+            ..self.clone()
         }
     }
 }

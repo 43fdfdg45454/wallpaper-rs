@@ -2,6 +2,7 @@ struct Rows {
     r: vec4<f32>,
     g: vec4<f32>,
     b: vec4<f32>,
+    turn: vec4<f32>,
 }
 
 struct VertexOut {
@@ -23,8 +24,10 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VertexOut {
 
 @fragment
 fn fs_main(in: VertexOut) -> @location(0) vec4<f32> {
-    let c = textureSample(chroma, linear, in.uv).rg;
-    let yuv = vec4<f32>(textureSample(luma, linear, in.uv).r, c, 1.0);
+    let p = in.uv - vec2<f32>(0.5);
+    let uv = vec2<f32>(dot(rows.turn.xy, p), dot(rows.turn.zw, p)) + vec2<f32>(0.5);
+    let c = textureSample(chroma, linear, uv).rg;
+    let yuv = vec4<f32>(textureSample(luma, linear, uv).r, c, 1.0);
     let rgb = clamp(vec3<f32>(dot(rows.r, yuv), dot(rows.g, yuv), dot(rows.b, yuv)), vec3<f32>(0.0), vec3<f32>(1.0));
     let low = rgb <= vec3<f32>(0.04045);
     return vec4<f32>(select(pow((rgb + 0.055) / 1.055, vec3<f32>(2.4)), rgb / 12.92, low), 1.0);

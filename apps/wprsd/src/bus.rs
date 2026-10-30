@@ -148,6 +148,7 @@ impl Daemon {
                 particles: s.particles.into(),
                 quality: s.quality.into(),
                 quality_reason: s.quality_reason.into(),
+                decode: s.decode.into(),
                 left_out: s.left_out,
                 console: s.console,
             };

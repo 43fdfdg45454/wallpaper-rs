@@ -1,5 +1,4 @@
-use crate::audio::Audio;
-use crate::pipewire::SINK;
+use crate::audio::{Audio, from_output};
 use crate::{Error, Event, Shared, Sink};
 use gstreamer as gst;
 use gstreamer::glib::WeakRef;
@@ -11,6 +10,7 @@ use std::time::{Duration, Instant};
 
 const LOG_PERIOD: Duration = Duration::from_secs(5);
 const STOP_WAIT: Duration = Duration::from_secs(2);
+const STUCK: Duration = Duration::from_secs(1);
 
 pub(crate) struct Pipe {
     pub(crate) playbin: gst::Element,
@@ -24,7 +24,7 @@ impl Pipe {
         playbin: gst::Element,
         (uri, shared): (String, Shared),
         sink: Sink,
-        piped: bool,
+        audible: bool,
     ) -> Result<Pipe, Error> {
         let (stop, playing) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(true)));
         let bus = playbin.bus().expect("playbin has a bus");
@@ -39,7 +39,7 @@ impl Pipe {
             .map_err(Error::state)?;
         let pipe = Pipe { playbin, playing, stop, stopped };
         match pipe.playbin.set_state(gst::State::Paused) {
-            Err(_) if piped => {}
+            Err(_) if audible => {}
             started => drop(started.map_err(Error::state)?),
         }
         Ok(pipe)
@@ -84,22 +84,29 @@ pub(crate) fn watch_bus(
     playing: &AtomicBool,
     sink: &dyn Fn(Event),
 ) {
-    let (mut warned, mut audio) = (None::<Instant>, Audio::new(uri, shared));
+    let (mut warned, mut audio, mut pausing) = (None::<Instant>, Audio::new(uri, shared), None::<Instant>);
     while !stop.load(Ordering::Relaxed) {
         if let Some(playbin) = weak.upgrade() {
-            if !audio.holding()
-                && let Err(e) = apply_wanted_state(&playbin, playing.load(Ordering::Relaxed), &audio)
-                && warned.is_none_or(|t| t.elapsed() >= LOG_PERIOD)
-            {
-                warned = Some(Instant::now());
-                tracing::warn!("cannot change the video state: {e}");
+            let wanted = playing.load(Ordering::Relaxed);
+            match (!audio.holding()).then(|| apply_wanted_state(&playbin, wanted)) {
+                Some(Ok(true)) => pausing = Some(Instant::now() + STUCK),
+                Some(Err(e)) if warned.is_none_or(|t| t.elapsed() >= LOG_PERIOD) => {
+                    warned = Some(Instant::now());
+                    tracing::warn!("cannot change the video state: {e}");
+                }
+                _ => {}
+            }
+            pausing = pausing.filter(|_| !wanted);
+            if pausing.take_if(|at| *at <= Instant::now()).is_some() {
+                unstick(&playbin, &audio);
             }
             audio.tick(&playbin, bus);
         }
-        let Some(message) = bus.timed_pop(audio.wait()) else { continue };
+        let wait = pausing.map(|at| gst::ClockTime::from_mseconds(remaining(at)));
+        let Some(message) = bus.timed_pop(audio.wait().into_iter().chain(wait).min()) else { continue };
         let Some(playbin) = weak.upgrade() else { continue };
         match message.view() {
-            gst::MessageView::Error(err) if err.src().is_some_and(|s| s.name() == SINK) => {
+            gst::MessageView::Error(err) if err.src().is_some_and(from_output) => {
                 audio.failed(&playbin, bus, err)
             }
             gst::MessageView::Error(err) => {
@@ -127,20 +134,25 @@ pub(crate) fn watch_bus(
     }
 }
 
-fn apply_wanted_state(
-    playbin: &gst::Element,
-    playing: bool,
-    audio: &Audio,
-) -> Result<(), gst::StateChangeError> {
+fn apply_wanted_state(playbin: &gst::Element, playing: bool) -> Result<bool, gst::StateChangeError> {
     let wanted = if playing { gst::State::Playing } else { gst::State::Paused };
     let (_, current, pending) = playbin.state(gst::ClockTime::ZERO);
     let settled = pending == gst::State::VoidPending && current >= gst::State::Paused;
     if !settled || current == wanted {
-        return Ok(());
+        return Ok(false);
     }
-    playbin.set_state(wanted)?;
-    if let Some(at) = playbin.query_position().filter(|_| !playing) {
-        audio.seek(playbin, at);
+    playbin.set_state(wanted).map(|_| !playing)
+}
+
+fn unstick(playbin: &gst::Element, audio: &Audio) {
+    let (_, current, pending) = playbin.state(gst::ClockTime::ZERO);
+    let settled = pending == gst::State::VoidPending && current == gst::State::Paused;
+    if let Some(at) = playbin.query_position().filter(|_| !settled) {
+        tracing::debug!("the pause did not settle, finishing it at the nearest key frame");
+        audio.seek(playbin, at, false);
     }
-    Ok(())
+}
+
+fn remaining(at: Instant) -> u64 {
+    at.saturating_duration_since(Instant::now()).as_millis() as u64
 }

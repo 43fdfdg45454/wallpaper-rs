@@ -133,6 +133,7 @@ wait_for 5 shows_video || { echo "FAIL: video frame $("$BIN/probe" "$serial2" 10
 expect "${output}['playing']" False
 consume "$serial2"
 expect "${output}['playing']" True
+expect "${output}['decode']" copy
 
 ctl pause && expect "${output}['playing']" False && expect "s['paused']" True
 ctl resume && expect "${output}['playing']" True
@@ -303,7 +304,7 @@ cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/import/sunset.png"
 dbus-monitor --session "type='signal',interface='io.github.wallpaper_rs.Daemon1'" \
   "type='signal',interface='io.github.wallpaper_rs.Library1'" >"$WORK/library-signals.log" 2>&1 & pids+=($!)
 sleep 0.5
-[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(16, 7, [256, 512, 1024])" ] ||
+[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(18, 7, [256, 512, 1024])" ] ||
   fail "schema: $(bus Daemon1 GetSchema)"
 read -r source job < <(bus Library1 AddSource sb "$pics" true | out "' '.join(map(str, d))")
 wait_for 20 finished "$job" || fail "scan job: $(bus Daemon1 GetJob t "$job")"
@@ -1087,6 +1088,8 @@ analysing() {
 silent() { ! analysing; }
 reads() { [ "$(inputs "$1")" = "$2" ]; }
 read -r _ _ _ s12 < <(ctl stream TEST-12 160 90)
+watch12() { "$BIN/probe" "$s12" 120 --hold >/dev/null 2>&1 & watcher=$!; pids+=("$watcher"); }
+watch12
 ctl lib apply "$sea_uid" -o TEST-12
 wait_for 10 reads "r['shown']['TEST-12']['audio'], r['shown']['TEST-12']['scene']" "(True, '$sea')" ||
   fail "the audio scene was not declared: $(ctl input status --json)"
@@ -1109,6 +1112,15 @@ ctl config pause.when_covered false && ctl covered TEST-12 true
 wait_for 10 reads "r['capturing']" False || fail "the sound of a covered screen was captured"
 ctl covered TEST-12 false && ctl config pause.when_covered true
 wait_for 10 reads "r['capturing']" True || fail "the capture did not come back when the screen was shown"
+kill "$watcher"
+wait_for 10 reads "r['capturing']" False || fail "the sound of a screen nobody watches was captured"
+watch12
+wait_for 10 reads "r['capturing']" True || fail "the capture did not come back when the screen was watched"
+ctl config playback.scene_capture false
+wait_for 10 reads "r['capturing']" False || fail "the capture went on after it was turned off for every scene"
+wait_for 10 silent || fail "the analysis stream outlived the switch"
+ctl config playback.scene_capture true
+wait_for 10 reads "r['capturing']" True || fail "the capture did not come back when it was allowed again"
 ctl lib apply "$twin_uid" -o TEST-12
 wait_for 10 reads "r['shown']['TEST-12']['granted'], r['capturing']" "([], False)" ||
   fail "another package with the same id used the grant: $(ctl input status --json)"
@@ -1211,6 +1223,10 @@ expect "s['outputs']['TEST-15']['particles'] in ('cpu', 'gpu')" "True"
 if grep -q "particles run on the processor" "$WORK/apply.err"; then expect "s['outputs']['TEST-15']['particles']" "cpu"; fi
 ctl volume 50 && speakers "('playing', '')"
 wait_for 10 heard 1 || fail "no audio stream while the scene with sound is shown"
+ctl config playback.scene_sound false && speakers "('off', '')"
+wait_for 10 heard 0 || fail "the scene sound went on after it was turned off for every scene"
+ctl config playback.scene_sound true && speakers "('playing', '')"
+wait_for 10 heard 1 || fail "the scene sound did not come back when it was allowed again"
 ctl pause && speakers "('paused', '')"
 heard 1 || fail "a paused scene closed its audio stream"
 ctl resume && speakers "('playing', '')"
@@ -1230,6 +1246,11 @@ ctl mute && speakers "('off', 'off')"
 wait_for 10 heard 0 || fail "muting kept the audio stream"
 ctl unmute
 wait_for 10 heard 1 || fail "unmuting did not bring the sound back"
+kill "$pulse" && { wait "$pulse" 2>/dev/null || true; }
+wait_for 10 heard 0 || fail "the sound stream outlived its audio output"
+expect "s['outputs']['TEST-15']['error'], s['outputs']['TEST-15']['playing']" "(None, True)"
+pipewire -c "$WORK/pulse.conf" >"$WORK/pulse-again.log" 2>&1 & pulse=$!; pids+=("$pulse")
+wait_for 30 heard 1 || fail "the scene sound did not come back when an audio output appeared"
 ctl lib apply "$dusk" -o TEST-15 && ctl lib apply "$dusk" -o TEST-16 && speakers "('', '')"
 wait_for 10 heard 0 || fail "the audio stream outlived its scene"
 ctl lib apply "$pond" -o TEST-15 2>"$WORK/hint.err"

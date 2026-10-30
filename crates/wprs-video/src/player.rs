@@ -13,6 +13,7 @@ pub struct Player {
     tempo: bool,
     shared: Shared,
     max_fps: u32,
+    zero_copy: bool,
 }
 
 impl Player {
@@ -35,8 +36,13 @@ impl Player {
         let tempo = (audio && options.cut.speed != 100).then(|| make("scaletempo").ok()).flatten();
         tempo.iter().for_each(|tempo| playbin.set_property("audio-filter", tempo));
         let shared = Shared { cut: Arc::new(options.cut.into()), ..Shared::default() };
-        let (video_sink, size, rate) = video_sink::build(options, sink.clone(), shared.seen.clone())?;
+        let (video_sink, size, rate, zero_copy) =
+            video_sink::build(options, sink.clone(), shared.seen.clone())?;
         playbin.set_property("video-sink", &video_sink);
+        if zero_copy {
+            let flags = if audio { "video+audio+soft-volume+native-video" } else { "video+native-video" };
+            playbin.set_property_from_str("flags", flags);
+        }
         let (again, cut) = (uri.clone(), shared.cut.clone());
         if !audio {
             playbin.connect("about-to-finish", false, move |args| {
@@ -46,9 +52,9 @@ impl Player {
                 None
             });
         }
-        let pipe = Pipe::start(playbin, (uri, shared.clone()), sink, piped.is_some())?;
+        let pipe = Pipe::start(playbin, (uri, shared.clone()), sink, audio)?;
         let (tempo, max_fps) = (tempo.is_some(), options.max_fps);
-        Ok(Self { pipe, size, rate, audio, tempo, shared, max_fps })
+        Ok(Self { pipe, size, rate, audio, tempo, shared, max_fps, zero_copy })
     }
 
     pub fn set_cut(&mut self, cut: Cut) -> bool {
@@ -72,7 +78,7 @@ impl Player {
     }
 
     pub fn set_max_size(&self, max_size: (u32, u32)) {
-        self.size.set_property("caps", video_sink::size_caps(max_size));
+        self.size.set_property("caps", video_sink::size_caps(max_size, self.zero_copy));
     }
 
     pub fn set_max_fps(&mut self, max_fps: u32) {
@@ -83,6 +89,10 @@ impl Player {
     pub fn set_volume(&self, volume: f64, muted: bool) {
         self.pipe.playbin.set_property("volume", volume.clamp(0.0, 1.0));
         self.pipe.playbin.set_property("mute", muted);
+    }
+
+    pub fn seeks(&self) -> u64 {
+        self.shared.seeks.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     pub fn audio_enabled(&self) -> bool {

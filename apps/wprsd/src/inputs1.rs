@@ -2,10 +2,9 @@ use crate::callers::{Caller, caller};
 use crate::compositor::lock;
 use crate::daemon::Daemon;
 use crate::error::{Result, denied, failed, invalid};
-use crate::inputs::{Control, Grants, Hub, View, declined_path, grants_path, hub, load, load_bound};
+use crate::inputs::{Control, Grants, Hub, declined_path, grants_path, hub, load, load_bound};
 use crate::items::reply;
-use crate::streams::OutputInfo;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::sync::{Arc, Weak};
 use wprs_core::model::{Input, InputsReply, MODEL};
 use zbus::message::Header;
@@ -21,19 +20,6 @@ pub(crate) fn scene_id(scene: &str) -> Result<&str> {
 pub(crate) fn start(daemon: &Arc<Daemon>, connection: zbus::Connection) {
     let path = grants_path(daemon);
     crate::inputs::start(daemon, connection, (load_bound(&path), load(&declined_path(&path))));
-}
-
-impl Daemon {
-    pub(crate) fn views(&self) -> BTreeMap<String, View> {
-        let st = self.state();
-        let view = |name: &String, info: &OutputInfo| View {
-            active: st.active(info) && !st.locked,
-            covered: info.covered(),
-            rect: info.screen.as_ref().map(|s| [s.x.into(), s.y.into(), s.width.into(), s.height.into()]),
-            clicks: st.config.clicks(name),
-        };
-        st.outputs.iter().map(|(name, info)| (name.clone(), view(name, info))).collect()
-    }
 }
 
 impl Inputs {

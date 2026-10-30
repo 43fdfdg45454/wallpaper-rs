@@ -11,6 +11,7 @@ mod inputs;
 mod library;
 mod playlists;
 mod remote;
+mod schema;
 mod state;
 
 pub use account::*;
@@ -18,6 +19,7 @@ pub use inputs::*;
 pub use library::*;
 pub use playlists::*;
 pub use remote::*;
+pub use schema::*;
 pub use state::*;
 
 pub const MODEL: u32 = 1;

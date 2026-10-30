@@ -16,6 +16,7 @@ QtObject {
             "Daemon1.SetPaused": "(b)",
             "Daemon1.SetVolume": "(d)",
             "Daemon1.SetMuted": "(b)",
+            "Daemon1.SetOption": "(ss)",
             "Inputs1.Grant": "(ss)",
             "Inputs1.GrantPackage": "(sss)",
             "Inputs1.Revoke": "(ss)",

@@ -44,6 +44,7 @@ private val TOGGLES = listOf(
     Triple(R.string.video_sound, "playback.muted", "false" to "true"),
     Triple(R.string.allow_download, "models.allow_download", "true" to "false"),
     Triple(R.string.flash_guard, "playback.flash_guard", "true" to "false"),
+    Triple(R.string.scene_capture, "playback.scene_capture", "true" to "false"),
 )
 private val KEYS = CHOICES.map { it.second } + TOGGLES.map { it.second }
 private val NOTICES = listOf("onnxruntime", "onnxruntime-third-party-notices", "depth-anything-v2")

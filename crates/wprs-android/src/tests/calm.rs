@@ -39,5 +39,10 @@ pub(super) fn calmed() {
         settings::setting("playback.flash_guard", Some("false")).unwrap();
         assert!(!power::guarded());
     }
+    assert!(power::hears());
+    assert_eq!(settings::setting("playback.scene_capture", Some("false")).unwrap(), "false");
+    assert!(!power::hears(), "the switch did not stop the scenes from hearing");
+    settings::setting("playback.scene_capture", Some("true")).unwrap();
+    assert!(power::hears());
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }

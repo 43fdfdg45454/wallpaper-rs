@@ -65,6 +65,13 @@ pub(crate) fn timelines(exporter: &wprs_pipewire::Exporter) {
     }
 }
 
+pub(crate) fn share_video(renderer: &Renderer) {
+    let shareable = renderer.importable();
+    tracing::debug!(modifiers = shareable.len(), "video frames the GPU can read in place");
+    let off = std::env::var_os("WPRS_ZERO_COPY").is_some_and(|v| v == "0");
+    wprs_video::accept_dmabuf(if off { Vec::new() } else { shareable });
+}
+
 pub(crate) fn gpu_buffers(renderer: &Renderer) -> Option<Arc<dyn Allocate>> {
     let wanted = std::env::var("WPRS_DMABUF").unwrap_or_default();
     let flaky = cfg!(debug_assertions) && wanted == "emulate-flaky";

@@ -1,6 +1,5 @@
 use super::{Bound, Control, Grants, Hub, View, Wake};
 use crate::compositor::lock;
-use crate::error::{Result, invalid, not_found};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::sync::Mutex;
@@ -14,53 +13,6 @@ impl View {
         let [left, top, width, height] = self.rect.filter(|_| self.active && !self.covered)?;
         let at = [(x - left) / width, (y - top) / height];
         at.iter().all(|v| (0.0..1.0).contains(v)).then(|| at.map(|v| v as f32))
-    }
-}
-
-impl Control {
-    pub(crate) fn granted(&self, scene: &str, key: &str) -> BTreeSet<Input> {
-        Input::ALL.into_iter().filter(|input| self.has(scene, key, *input)).collect()
-    }
-
-    pub(crate) fn has(&self, scene: &str, key: &str, input: Input) -> bool {
-        let keys = self.grants.get(scene).filter(|_| !key.is_empty());
-        keys.and_then(|keys| keys.get(key)).is_some_and(|inputs| inputs.contains(&input))
-    }
-
-    pub(crate) fn allows(&self, output: &str, input: Input) -> bool {
-        let still = input == Input::Pointer && self.parallax.contains(output);
-        still
-            || self.shown.get(output).is_some_and(|need| {
-                let declared = match input {
-                    Input::Audio => need.audio,
-                    Input::Pointer => need.pointer,
-                    Input::Clicks => need.clicks && self.views.get(output).is_some_and(|v| v.clicks),
-                };
-                declared && self.has(&need.scene, &need.key, input)
-            })
-    }
-
-    pub(crate) fn package(&self, scene: &str, key: Option<&str>) -> Result<(String, String)> {
-        let shown = self.shown.values().filter(|s| s.scene == scene && !s.key.is_empty());
-        let found: BTreeMap<_, _> =
-            shown.filter(|s| key.is_none_or(|k| k == s.key)).map(|s| (s.key.as_str(), s)).collect();
-        match found.values().collect::<Vec<_>>()[..] {
-            [s] => Ok((s.key.clone(), if s.title.is_empty() { s.scene.clone() } else { s.title.clone() })),
-            [] => Err(not_found(format!(
-                "{scene} is not shown; inputs are granted to the scene package that is shown"
-            ))),
-            _ => Err(invalid(format!(
-                "more than one package with the id {scene} is shown; grant the input to one of them with GrantPackage"
-            ))),
-        }
-    }
-
-    pub(crate) fn wants(&self, input: Input) -> BTreeSet<String> {
-        let wanted = |output: &&String| {
-            let view = self.views.get(*output).copied().unwrap_or_default();
-            self.allows(output, input) && view.active && !view.covered
-        };
-        self.shown.keys().chain(&self.parallax).filter(wanted).cloned().collect()
     }
 }
 
@@ -128,11 +80,11 @@ impl Hub {
         Ok(())
     }
 
-    pub(crate) fn update(&self, views: Option<BTreeMap<String, View>>) {
+    pub(crate) fn update(&self, views: Option<(BTreeMap<String, View>, bool)>) {
         let mut switch = lock(&self.switch);
         let mut control = lock(&self.control);
-        if let Some(views) = views {
-            control.views = views;
+        if let Some((views, blocked)) = views {
+            (control.views, control.blocked) = (views, blocked);
         }
         let (audio, pointed) = (!control.wants(Input::Audio).is_empty(), control.wants(Input::Pointer));
         let followed: BTreeSet<String> =
