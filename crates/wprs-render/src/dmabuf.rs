@@ -119,8 +119,8 @@ impl Dmabufs {
             _ => Ok((0, size)),
         }
         .inspect_err(|_| destroy(Some(memory)))?;
-        let inner = copy.then(|| crate::exported::shared(&self.device, &self.copies, (width, height)));
-        let image = unsafe { Exported::adopt(&self.device, &hal, (image, memory), (width, height), inner) };
+        let copies = copy.then(|| self.copies.clone());
+        let image = unsafe { Exported::adopt(&self.device, &hal, (image, memory), (width, height), copies) };
         let narrow = |v: u64| u32::try_from(v).map_err(gpu);
         let (offset, stride) = (narrow(start + layout.offset)?, narrow(layout.row_pitch)?);
         Ok(Dmabuf { fd, modifier, offset, stride, size: narrow(size)?, image })

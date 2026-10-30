@@ -8,6 +8,7 @@ use wprs_scene::{Census, Quality, Runtime, SCHEMA, Scene, Values};
 
 mod families;
 mod looks;
+mod timed;
 
 const SIZE: (u32, u32) = (160, 80);
 

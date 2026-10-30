@@ -25,7 +25,7 @@ impl Painter<'_, '_, '_> {
         let d = &frame.draws[i];
         let compose = frame.effects[d.effects.clone()].iter().any(|e| e.descriptor.compose);
         let Some(rect) = self.extent(i).and_then(|r| r.pixels(self.full)) else { return };
-        let rect = if compose { rect } else { self.snug(rect) };
+        let rect = if compose { rect } else { rect.bucket() };
         let Some(back) = self.under(rect, target) else { return self.missed(i, None) };
         let outer = self.backdrop.replace(back);
         match compose.then(|| self.under(rect, target)).flatten() {

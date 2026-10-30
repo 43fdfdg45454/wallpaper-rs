@@ -1,4 +1,5 @@
 use super::is_zero;
+use crate::validate::Check;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -55,4 +56,23 @@ pub enum Surface {
 
 fn half() -> f32 {
     0.5
+}
+
+impl Check<'_> {
+    pub(super) fn collider(&mut self, q: &str, c: &Collider) {
+        self.range(&format!("{q}/bounce"), c.bounce, 0.0, 1.0);
+        self.range(&format!("{q}/friction"), c.friction, 0.0, 1.0);
+        match &c.bounds {
+            Surface::Plane { point, normal } => {
+                self.place(q, *point);
+                self.range(&format!("{q}/bounds/plane/normal"), normal[0].hypot(normal[1]), 1e-6, 1e6);
+            }
+            Surface::Circle { center, radius, .. } => {
+                self.place(q, *center);
+                self.range(&format!("{q}/bounds/circle/radius"), *radius, 1e-3, 1e5);
+            }
+            _ => {}
+        }
+        self.collider2(q, c);
+    }
 }

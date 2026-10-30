@@ -25,6 +25,8 @@ const SIM: u64 = 2560;
 const LOOK: u64 = 1536;
 const PARTICLE: u64 = 80;
 
+type Stamp = (Option<wgpu::QuerySet>, bool);
+
 struct Store {
     particles: Buffer,
     gpu: Option<(Buffer, Buffer, BindGroup)>,
@@ -77,6 +79,7 @@ pub(crate) struct Swarms {
     bytes: Vec<u8>,
     quality: Quality,
     none: Buffer,
+    stamp: Stamp,
 }
 
 pub(super) fn compute(r: &Renderer) -> bool {

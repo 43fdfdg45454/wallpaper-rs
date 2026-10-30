@@ -1,13 +1,7 @@
+use super::dispatch::fresh;
 use super::{B, CHUNK, Flight, PARTICLE, SIM, Store, Swarms, buffer, module};
 use crate::Renderer;
 use wprs_scene::{Cloud, Sim, Stack};
-
-pub(super) fn fresh(alloc: u32, size: u32) -> Vec<u32> {
-    let mut state = vec![0u32; size as usize];
-    state[0] = alloc;
-    state[4..4 + alloc as usize].iter_mut().enumerate().for_each(|(i, v)| *v = i as u32);
-    state
-}
 
 impl Swarms {
     pub(super) fn prepare(&mut self, r: &Renderer, gpu: bool) {

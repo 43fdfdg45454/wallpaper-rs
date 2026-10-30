@@ -66,3 +66,25 @@ impl Quality {
         quality
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Why {
+    #[default]
+    Full,
+    Device,
+    Cost,
+    Battery,
+    Saver,
+    Heat,
+    Slow,
+}
+
+impl Why {
+    pub const ALL: [Why; 7] =
+        [Why::Full, Why::Device, Why::Cost, Why::Battery, Why::Saver, Why::Heat, Why::Slow];
+
+    pub fn name(self) -> &'static str {
+        ["full", "device", "cost", "battery", "saver", "heat", "slow"][self as usize]
+    }
+}

@@ -148,7 +148,14 @@ impl Renderer {
             }),
             Damage::Clean => Some(wprs_core::Region::default()),
         };
-        if damage == Damage::Clean {
+        let clean = damage == Damage::Clean;
+        if let Some(swarms) = painter.swarms.as_deref_mut() {
+            let sim = if clean { super::clock::Sim::Off } else { v.clock.sim(self) };
+            let stamp = if let super::clock::Sim::Stamps(set) = &sim { Some(set) } else { None };
+            let stamped = self.scoped(|| swarms.run(self, runtime, frame, quality, stamp))??;
+            v.clock.simmed(self, sim, stamped);
+        }
+        if clean {
             let particles = painter.swarms.as_ref().map_or(0, |s| s.slots());
             let in_flight = super::flight::flying(v.id);
             let gpu_us = (v.clock.gpu_ms * 1000.0) as u32;
@@ -159,9 +166,6 @@ impl Renderer {
             return Ok(&view.target.as_ref().expect("created above").1);
         }
         v.trimmed = false;
-        if let Some(swarms) = painter.swarms.as_deref_mut() {
-            self.scoped(|| swarms.run(self, runtime, frame, quality))??;
-        }
         painter.clip = match damage {
             Damage::Part(rect) => Some(rect),
             _ => None,
@@ -214,7 +218,8 @@ impl Renderer {
             (counted.particles, counted.sim_us) = (s.slots(), s.micros);
         }
         counted.in_flight = super::flight::flying(v.id);
-        counted.gpu_us = (v.clock.gpu_ms * 1000.0) as u32;
+        (counted.gpu_us, counted.sim_gpu_us) =
+            ((v.clock.gpu_ms * 1000.0) as u32, (v.clock.sim_ms * 1000.0) as u32);
         v.stats = counted;
         v.scratch = scratch;
         Ok(&view.target.as_ref().expect("created above").1)

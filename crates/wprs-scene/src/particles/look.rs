@@ -1,5 +1,4 @@
-use super::MAX_CURVE;
-use super::{Rope, Stretch, Trail};
+use super::{Orient, Rope, Stack, Stretch, Trail};
 use crate::{Color, Value};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -10,16 +9,6 @@ pub enum Frames {
     Time,
     Life,
     Random,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Stack {
-    Newest,
-    Oldest,
-    Largest,
-    Smallest,
-    Lowest,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -71,14 +60,6 @@ pub struct Render {
     pub shader: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Orient {
-    Screen,
-    Velocity,
-    Fixed,
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Refract {
@@ -112,27 +93,6 @@ impl Default for Render {
             lit: false,
             refract,
             shader,
-        }
-    }
-}
-
-impl Render {
-    pub fn luts(&self) -> ([f32; MAX_CURVE], [[f32; 4]; MAX_CURVE]) {
-        let at = |i: usize| i as f32 / (MAX_CURVE - 1) as f32;
-        let sizes: Vec<(f32, [f32; 4])> = self.size_over_life.iter().map(|k| (k[0], [k[1]; 4])).collect();
-        let colors: Vec<(f32, [f32; 4])> = self.color_over_life.iter().map(|(t, c)| (*t, c.0)).collect();
-        (std::array::from_fn(|i| curve(&sizes, at(i))[0]), std::array::from_fn(|i| curve(&colors, at(i))))
-    }
-}
-
-fn curve(keys: &[(f32, [f32; 4])], t: f32) -> [f32; 4] {
-    let n = keys.partition_point(|k| k.0 <= t);
-    match (keys.get(n.wrapping_sub(1)), keys.get(n)) {
-        (None, None) => [1.0; 4],
-        (Some(a), None) | (None, Some(a)) => a.1,
-        (Some(a), Some(b)) => {
-            let f = (t - a.0) / (b.0 - a.0).max(1e-6);
-            std::array::from_fn(|k| a.1[k] + (b.1[k] - a.1[k]) * f)
         }
     }
 }

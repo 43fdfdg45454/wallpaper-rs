@@ -1,5 +1,4 @@
-use crate::{Budget, Heat, Quality, Runtime};
-use serde::Serialize;
+use crate::{Budget, Heat, Quality, Runtime, Why};
 use std::time::{Duration, Instant};
 
 const LOWER: Duration = Duration::from_secs(2);
@@ -7,28 +6,7 @@ const RAISE: Duration = Duration::from_secs(15);
 const APART: Duration = Duration::from_secs(5);
 const BREAK: Duration = Duration::from_secs(1);
 const WEIGHT: f32 = 0.2;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Why {
-    #[default]
-    Full,
-    Device,
-    Cost,
-    Battery,
-    Saver,
-    Heat,
-    Slow,
-}
-
-impl Why {
-    pub const ALL: [Why; 7] =
-        [Why::Full, Why::Device, Why::Cost, Why::Battery, Why::Saver, Why::Heat, Why::Slow];
-
-    pub fn name(self) -> &'static str {
-        ["full", "device", "cost", "battery", "saver", "heat", "slow"][self as usize]
-    }
-}
+const MOST: f32 = 16.0;
 
 impl Budget {
     pub fn level(&self, runtime: &Runtime) -> (Quality, Why) {
@@ -66,6 +44,8 @@ pub struct Governor {
     under: Option<Instant>,
     changed: Option<Instant>,
     steps: u8,
+    gains: [f32; 4],
+    gauge: Option<f32>,
 }
 
 impl Governor {
@@ -74,7 +54,14 @@ impl Governor {
         if lowered < ceiling { (lowered, Why::Slow) } else { (ceiling, why) }
     }
 
-    pub fn feed(&mut self, at: Instant, gpu_ms: f32, budget_ms: f32, ceiling: Quality, raises: bool) -> bool {
+    pub fn feed(
+        &mut self,
+        at: Instant,
+        gpu_ms: f32,
+        budget: impl Fn(Quality) -> f32,
+        ceiling: Quality,
+        raises: bool,
+    ) -> bool {
         let broken = self.last.is_none_or(|last| at.saturating_duration_since(last) > BREAK);
         self.ewma = if broken { gpu_ms } else { self.ewma + WEIGHT * (gpu_ms - self.ewma) };
         if broken {
@@ -82,9 +69,18 @@ impl Governor {
         }
         self.last = Some(at);
         let settled = self.changed.is_none_or(|c| at.saturating_duration_since(c) >= APART);
-        let lowest = self.level((ceiling, Why::Full)).0 == Quality::Q0;
-        let (slow, fast) =
-            (self.ewma > budget_ms && !lowest, self.ewma < budget_ms / 2.0 && self.steps > 0 && raises);
+        let steps = usize::from(self.steps);
+        if settled && let Some(peak) = self.gauge.take() {
+            let gain = (peak / self.ewma.max(f32::EPSILON)).clamp(1.0, MOST);
+            if let Some(g) = self.gains.get_mut(steps.wrapping_sub(1)) {
+                *g = gain;
+            }
+        }
+        let here = self.level((ceiling, Why::Full)).0;
+        let above = (1..steps).fold(ceiling, |q, _| q.lower());
+        let gain = self.gains.get(steps.wrapping_sub(1)).map_or(1.0, |g| g.max(1.0));
+        let slow = self.ewma > budget(here) && here > Quality::Q0;
+        let fast = steps > 0 && raises && self.ewma * gain < budget(above) / 2.0;
         let since = |mark: &mut Option<Instant>, on: bool| {
             *mark = if on { Some(mark.unwrap_or(at)) } else { None };
             mark.map(|m| at.saturating_duration_since(m))
@@ -95,6 +91,7 @@ impl Governor {
             _ if settled && under.is_some_and(|d| d >= RAISE) => -1,
             _ => return false,
         };
+        self.gauge = (step > 0).then_some(self.ewma);
         self.steps = self.steps.saturating_add_signed(step);
         (self.changed, self.over, self.under) = (Some(at), None, None);
         true

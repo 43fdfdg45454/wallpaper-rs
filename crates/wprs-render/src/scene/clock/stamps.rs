@@ -4,7 +4,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
 
 const BACKS: usize = 4;
-const BYTES: u64 = SLOTS as u64 * 16;
+const BYTES: u64 = SLOTS as u64 * 16 + 16;
+pub(crate) const SIM_AT: u32 = SLOTS as u32 * 2;
 const FREE: u8 = 0;
 const BUSY: u8 = 1;
 const READY: u8 = 2;
@@ -20,6 +21,7 @@ struct Back {
     state: Arc<AtomicU8>,
     runs: Vec<(u64, bool)>,
     wide: bool,
+    sim: bool,
 }
 
 pub(super) struct Stamps {
@@ -32,7 +34,7 @@ pub(super) struct Stamps {
 impl Stamps {
     pub(super) fn new(r: &Renderer) -> Stamps {
         let (label, size, mapped_at_creation) = (Some("wprs-scene clock"), BYTES, false);
-        let (ty, count) = (wgpu::QueryType::Timestamp, SLOTS as u32 * 2);
+        let (ty, count) = (wgpu::QueryType::Timestamp, SIM_AT + 2);
         let set = r.device.create_query_set(&wgpu::QuerySetDescriptor { label, ty, count });
         let buffer = |usage| {
             r.device.create_buffer(&wgpu::BufferDescriptor { label, size, usage, mapped_at_creation })
@@ -44,6 +46,7 @@ impl Stamps {
                 state: Arc::default(),
                 runs: Vec::new(),
                 wide: false,
+                sim: false,
             })
             .collect();
         Stamps { set, resolve, backs, period: f64::from(r.queue.get_timestamp_period()) }
@@ -53,9 +56,9 @@ impl Stamps {
         self.backs.iter().position(|b| b.state.load(Relaxed) == FREE)
     }
 
-    pub(super) fn take(&mut self, back: usize, runs: &mut Vec<(u64, bool)>, wide: bool) {
+    pub(super) fn take(&mut self, back: usize, runs: &mut Vec<(u64, bool)>, (wide, sim): (bool, bool)) {
         std::mem::swap(&mut self.backs[back].runs, runs);
-        self.backs[back].wide = wide;
+        (self.backs[back].wide, self.backs[back].sim) = (wide, sim);
     }
 
     pub(super) fn mark(&self, encoder: &mut wgpu::CommandEncoder, end: bool) {
@@ -70,10 +73,15 @@ impl Stamps {
 
     pub(super) fn close(&self, encoder: &mut wgpu::CommandEncoder, back: usize) {
         self.mark(encoder, true);
-        let Back { buffer, state, runs, .. } = &self.backs[back];
+        let Back { buffer, state, runs, sim, .. } = &self.backs[back];
         let queries = (runs.len() as u32 + 1) * 2;
         encoder.resolve_query_set(&self.set, 0..queries, &self.resolve, 0);
         encoder.copy_buffer_to_buffer(&self.resolve, 0, buffer, 0, u64::from(queries) * 8);
+        if *sim {
+            let at = u64::from(SIM_AT) * 8;
+            encoder.resolve_query_set(&self.set, SIM_AT..SIM_AT + 2, &self.resolve, at);
+            encoder.copy_buffer_to_buffer(&self.resolve, at, buffer, at, 16);
+        }
         state.store(BUSY, Relaxed);
         let flag = state.clone();
         encoder.map_buffer_on_submit(buffer, wgpu::MapMode::Read, .., move |done| {
@@ -84,7 +92,7 @@ impl Stamps {
     pub(super) fn collect(
         &mut self,
         out: &mut Vec<(u64, bool, f64)>,
-        mut each: impl FnMut(&[(u64, bool, f64)], f64, bool),
+        mut each: impl FnMut(&[(u64, bool, f64)], [f64; 2], bool),
     ) {
         let period = self.period;
         for back in &mut self.backs {
@@ -95,7 +103,8 @@ impl Stamps {
                         out.clear();
                         let runs = back.runs.iter().zip(times.iter().skip(1));
                         out.extend(runs.map(|(&(key, own), t)| (key, own, ms(t, period))));
-                        each(out, times.first().map_or(0.0, |t| ms(t, period)), back.wide);
+                        let at = |k: usize| times.get(k).map_or(0.0, |t| ms(t, period));
+                        each(out, [at(0), if back.sim { at(SLOTS) } else { 0.0 }], back.wide);
                     }
                     back.buffer.unmap();
                 }

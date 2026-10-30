@@ -363,7 +363,7 @@ impl SceneState {
         if self.due.is_none() {
             view.trim();
         }
-        self.judge(timed, power, fps, now);
+        self.judge(timed, power, refresh, now);
         self.listen(interval, now);
         Ok(uses != self.uses)
     }

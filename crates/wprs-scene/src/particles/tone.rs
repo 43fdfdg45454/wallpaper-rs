@@ -1,6 +1,6 @@
-use super::Sim;
 use super::motion::{bend, lerp, rand};
 use super::spawn::KEY;
+use super::{MAX_CURVE, Render, Sim};
 
 pub(super) fn tone(s: &Sim, id: u32) -> [f32; 4] {
     let r = |k: u32| rand(s.ids[0], id, k);
@@ -64,4 +64,25 @@ pub(super) fn unhsv([r, g, b]: [f32; 3]) -> [f32; 3] {
     let q = mix4([p[0], p[1], p[3], r], [r, p[1], p[2], p[0]], step(p[0], r));
     let d = q[0] - q[3].min(q[1]);
     [(q[2] + (q[3] - q[1]) / (6.0 * d + 1e-10)).abs(), d / (q[0] + 1e-10), q[0]]
+}
+
+impl Render {
+    pub fn luts(&self) -> ([f32; MAX_CURVE], [[f32; 4]; MAX_CURVE]) {
+        let at = |i: usize| i as f32 / (MAX_CURVE - 1) as f32;
+        let sizes: Vec<(f32, [f32; 4])> = self.size_over_life.iter().map(|k| (k[0], [k[1]; 4])).collect();
+        let colors: Vec<(f32, [f32; 4])> = self.color_over_life.iter().map(|(t, c)| (*t, c.0)).collect();
+        (std::array::from_fn(|i| curve(&sizes, at(i))[0]), std::array::from_fn(|i| curve(&colors, at(i))))
+    }
+}
+
+fn curve(keys: &[(f32, [f32; 4])], t: f32) -> [f32; 4] {
+    let n = keys.partition_point(|k| k.0 <= t);
+    match (keys.get(n.wrapping_sub(1)), keys.get(n)) {
+        (None, None) => [1.0; 4],
+        (Some(a), None) | (None, Some(a)) => a.1,
+        (Some(a), Some(b)) => {
+            let f = (t - a.0) / (b.0 - a.0).max(1e-6);
+            std::array::from_fn(|k| a.1[k] + (b.1[k] - a.1[k]) * f)
+        }
+    }
 }

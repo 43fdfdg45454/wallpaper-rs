@@ -1,6 +1,8 @@
-use super::Sim;
 use super::motion::{lerp, rand};
 use super::spawn::KEY;
+use super::{Num, Sim};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::f32::consts::TAU;
 
 pub(super) fn place(s: &Sim, e: usize, id: u32, points: &[[f32; 2]]) -> ([f32; 2], [f32; 2]) {
@@ -52,4 +54,35 @@ fn hollow(a: [f32; 4], b: [f32; 4], u: [f32; 2], pick: f32) -> [f32; 2] {
         at if at < 2.0 * row + side => [lerp(lo[0], lo[0] + band[0], u[0]), lerp(y[0], y[1], u[1])],
         _ => [lerp(hi[0] - band[0], hi[0], u[0]), lerp(y[0], y[1], u[1])],
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Refresh {
+    #[default]
+    Static,
+    OnChange,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Source {
+    #[schemars(extend("x-ref" = "layer"))]
+    pub id: String,
+    #[serde(default = "half")]
+    #[schemars(extend("x-range" = [0, 1]))]
+    pub threshold: Num,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub color: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub inherit: bool,
+    #[serde(default)]
+    #[schemars(extend("x-unit" = "px"))]
+    pub jitter: f32,
+    #[serde(default)]
+    pub refresh: Refresh,
+}
+
+pub(super) fn half() -> Num {
+    Num::from(0.5)
 }

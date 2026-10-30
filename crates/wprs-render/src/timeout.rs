@@ -47,6 +47,10 @@ impl Renderer {
         timeout_for(self.software(), cores())
     }
 
+    pub fn wait_limit(&self) -> Duration {
+        if crate::scene::hanging() { GPU_TIMEOUT } else { self.gpu_timeout() }
+    }
+
     pub fn render_scale(&self, size: (u32, u32)) -> f32 {
         scale_for(self.software(), cores(), size)
     }

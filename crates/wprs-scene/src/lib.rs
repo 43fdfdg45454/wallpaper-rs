@@ -139,7 +139,7 @@ pub use gltf::{
     EXTENSIONS, MAX_BONES, MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODEL_JSON, MAX_MODEL_PARTS,
     MAX_MODELS_JSON, MAX_MORPHS, MAX_NODES, MAX_TRIANGLES, ModelFile,
 };
-pub use governor::{Governor, Why};
+pub use governor::Governor;
 pub use guard::guarded;
 pub use helper::{
     CHECK_CPU, CHECK_MEMORY, CHECK_SHADER, launch_checks_from_here, serve_check, serve_check_with,
@@ -176,7 +176,7 @@ pub use props::{
     Choice, Condition, Control, Expr, ICONS, Mode, Pick, Preset, Property, Slider, Text, Values,
     check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag,
 };
-pub use quality::{Class, Quality};
+pub use quality::{Class, Quality, Why};
 pub use released::{newer_manifest_keys, newer_scene_keys};
 pub use rig::{
     AnimClip, AnimLayer, Bend, Body, BonePhysics, BoneRule, IkChain, MAX_ANIMATION_LAYERS, MAX_BODIES,

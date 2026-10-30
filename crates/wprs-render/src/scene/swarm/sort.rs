@@ -60,8 +60,8 @@ pub(super) fn sort(
     r: &Renderer,
     (sorts, height): (Option<&[wgpu::ComputePipeline; 3]>, f32),
     stores: &mut [Store],
-    clouds: &[Cloud],
-    allocs: &[u32],
+    (clouds, allocs): (&[Cloud], &[u32]),
+    stamp: &mut super::Stamp,
 ) {
     for (store, cloud) in stores.iter_mut().zip(clouds) {
         for st in &mut store.stacks {
@@ -74,6 +74,7 @@ pub(super) fn sort(
         return;
     };
     let mut encoder = r.device.create_command_encoder(&Default::default());
+    super::step::mark(stamp, &mut encoder, false);
     for (p, store) in stores.iter().enumerate() {
         for st in &store.stacks {
             let Some((bins, group)) = &st.gpu else { continue };
@@ -89,5 +90,6 @@ pub(super) fn sort(
             }
         }
     }
+    super::step::mark(stamp, &mut encoder, true);
     r.queue.submit([encoder.finish()]);
 }

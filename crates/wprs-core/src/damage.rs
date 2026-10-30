@@ -64,12 +64,23 @@ pub fn join(a: Option<Region>, b: Option<Region>) -> Option<Region> {
     Some(a?.union(b?))
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Ages {
     kept: VecDeque<(u64, Option<Region>)>,
+    id: u64,
+}
+
+impl Default for Ages {
+    fn default() -> Ages {
+        Ages { kept: VecDeque::new(), id: SERIAL.fetch_add(1, Relaxed) }
+    }
 }
 
 impl Ages {
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
     pub fn push(&mut self, damage: Option<Region>) -> u64 {
         let serial = SERIAL.fetch_add(1, Relaxed);
         self.kept.reserve_exact(KEPT.saturating_sub(self.kept.len()));
@@ -135,5 +146,6 @@ mod tests {
         let mut other = Ages::default();
         other.push(Some(at(0, 0, 1, 1)));
         assert_eq!(other.since(ages.serial()), None, "serials of another output never match");
+        assert_ne!(other.id(), ages.id());
     }
 }

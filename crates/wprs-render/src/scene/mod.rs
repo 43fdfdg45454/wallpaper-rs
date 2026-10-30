@@ -45,6 +45,7 @@ use crate::texture::GpuImage;
 pub use builders::{finish_builds, stop_builds};
 pub use clock::set_gpu_budget;
 pub use flight::drawn_effects;
+pub(crate) use flight::hanging;
 pub use fonts::{MAX_FONT, font};
 pub use packages::{MAX_SCENE_BUILD, set_build_timeout};
 pub(crate) use pipes::Pipes;
@@ -140,6 +141,7 @@ pub struct SceneStats {
     pub damage: u32,
     pub in_flight: u32,
     pub gpu_us: u32,
+    pub sim_gpu_us: u32,
 }
 
 impl Renderer {

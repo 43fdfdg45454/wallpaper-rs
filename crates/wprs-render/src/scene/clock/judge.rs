@@ -71,10 +71,7 @@ impl Judge {
         let mine = sum(&self.units, true);
         self.units.sort_by(|a, b| b.2.total_cmp(&a.2));
         self.over.retain(|(at, _)| now.saturating_duration_since(*at) < WINDOW);
-        let (mut rest, mut charged) = (total, Vec::new());
-        if total - mine > budget {
-            return charged;
-        }
+        let (mut rest, mut charged) = (mine, Vec::new());
         for &(key, _, ms) in self.units.iter().filter(|u| u.1) {
             if rest <= budget {
                 break;

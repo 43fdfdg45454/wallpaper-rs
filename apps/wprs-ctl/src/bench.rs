@@ -91,7 +91,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
     drop(assets);
     view.profile_particles(true);
     let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);
-    let (mut sim, mut steps, mut compiled, mut gpu) = (Vec::new(), 0, 0, Vec::new());
+    let (mut sim, mut steps, mut compiled, mut gpu, mut sim_gpu) = (Vec::new(), 0, 0, Vec::new(), Vec::new());
     let (mut wake, mut spare) = (Wake::Frame, Spare::default());
     let mut since = Duration::ZERO;
     let step = Duration::from_secs(1) / fps.max(1);
@@ -123,8 +123,9 @@ pub fn run(command: SceneCommand) -> Result<()> {
         if i >= WARMUP {
             let s = view.stats();
             (created, steps, compiled) = (created + s.created, steps + s.steps, compiled + s.compiled);
-            sim.push(f64::from(view.stats().sim_us) / 1e3);
-            gpu.push(f64::from(view.stats().gpu_us) / 1e3);
+            sim.push(f64::from(s.sim_us) / 1e3);
+            gpu.push(f64::from(s.gpu_us) / 1e3);
+            sim_gpu.push(f64::from(s.sim_gpu_us) / 1e3);
         }
     }
     let steady = frames.saturating_sub(WARMUP).max(1);
@@ -139,6 +140,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
     let engine = view.gpu_particles().map_or("none", |gpu| if gpu { "gpu" } else { "cpu" });
     let particles = json!({
         "engine": engine, "slots": stats.particles, "alive": alive, "steps": steps, "sim_ms": spread(sim),
+        "sim_gpu_ms": spread(sim_gpu),
     });
     let report = json!({
         "path": path, "adapter": r.adapter(), "tier": tier, "unit_ms": unit_ms, "quality": quality, "size": [size.0, size.1],
@@ -185,8 +187,9 @@ pub fn run(command: SceneCommand) -> Result<()> {
             stats.particles
         );
         println!(
-            "simulation   {} after {WARMUP} warm-up frames",
-            ms_of(&report["particles"]["sim_ms"], "ms")
+            "simulation   {}, {} of it on the GPU, after {WARMUP} warm-up frames",
+            ms_of(&report["particles"]["sim_ms"], "ms"),
+            ms_of(&report["particles"]["sim_gpu_ms"], "ms")
         );
     }
     Ok(())

@@ -415,10 +415,15 @@ HD y UHD, las APU de AMD con Vega y similares) y los equipos con menos de 4 GiB 
 nivel intermedio propio. La primera vez que se usa una tarjeta gráfica con un driver, un render
 corto de unos 300 ms mide cuánto tarda y ajusta su clase, que se guarda en
 `~/.local/state/wallpaper-rs/gpu-tier.json` y se vuelve a medir solo si cambian la tarjeta o el
-driver. Mientras la escena se mueve, el tiempo que pasa cada fotograma en la GPU guía la calidad:
-si durante 2 s pasa de la mitad del intervalo entre fotogramas (de una cuarta parte con batería),
-baja un nivel, y si durante 15 s no llega a la mitad de eso, vuelve a subir, nunca con batería ni
-por encima de lo que permiten la clase, la batería y la temperatura. `wprs-ctl state` (`tier`,
+driver. La medida mueve la clase un paso como mucho, y si la baja (un arranque con el equipo ocupado
+puede hacerlo) se repite en los arranques siguientes, hasta tres veces, y cuenta la mejor. Mientras
+la escena se mueve, el tiempo que pasa cada fotograma en la GPU, partículas incluidas, guía la
+calidad: si durante 2 s pasa de la mitad del intervalo entre fotogramas (de una cuarta parte con
+batería), baja un nivel, y solo vuelve a subir si, con lo que costaba el nivel de arriba, durante
+15 s no llegaría a la mitad del intervalo de ese nivel, así que una escena no salta entre dos
+niveles cuando el de abajo además dibuja menos fotogramas por segundo; nunca sube con batería ni
+por encima de lo que permiten la clase, la batería y la temperatura. Sin marcas de tiempo en la GPU
+mide uno de cada quince fotogramas esperando a la GPU. `wprs-ctl state` (`tier`,
 `tier_measured`, y `quality` y `quality_reason` en cada pantalla), la app y la bandeja muestran la
 clase medida, el nivel y por qué bajó. Con batería o con el perfil de ahorro de energía de power-profiles-daemon
 las escenas bajan de nivel y de fotogramas; si un sensor del sistema dice que la GPU o la CPU están
@@ -430,7 +435,8 @@ una escena que solo se mueve por ellos no pasa de ahí. Cada fotograma redibuja 
 pantalla que cambió y, si nada cambió, no dibuja nada; las partículas quietas y las escenas
 detenidas en un fotograma no cuentan como cambio. Con render por software cada escena se dibuja a
 como mucho un megapíxel por núcleo y se escala a la pantalla, la espera a la GPU llega hasta 60 s
-con pocos núcleos (los efectos de los paquetes siguen con 10 s para detectar cuelgues) y, si un
+con pocos núcleos (tras un fotograma con efectos de paquetes, también al componerlo, la espera sigue
+siendo de 10 s para detectar cuelgues) y, si un
 fotograma tarda más de un octavo de esa espera, la resolución baja por pasos y vuelve a subir cuando
 sobra tiempo, así que un fotograma pesado nunca se toma por una GPU colgada. Los desenfoques y las deformaciones ya no
 oscurecen los bordes derecho e inferior, y el desenfoque de movimiento puede seguir la velocidad de
@@ -447,7 +453,8 @@ Los streams llevan cada fotograma en memoria de la GPU (DMA-BUF) cuando el contr
 puede exportarla y el consumidor (KPipeWire en Plasma) importarla: el daemon dibuja directamente en
 los búferes del stream, sin leer el fotograma de vuelta ni copiarlo con la CPU, también con batería.
 Donde la GPU no puede dibujar en el formato que pide el consumidor, como las imágenes lineales en
-las GPU de NVIDIA, dibuja en una textura propia y la copia en la GPU al búfer del stream.
+las GPU de NVIDIA, dibuja en una textura propia de cada pantalla y la copia en la GPU al búfer del
+stream.
 El daemon compone y envía solo el rectángulo que cambió: en memoria de la GPU dibuja en cada búfer
 lo que cambió desde la última vez que lo usó, en memoria compartida lee de la GPU y copia solo esas
 filas, y los dos tipos de búfer llevan `SPA_META_VideoDamage` con lo que cambió desde el búfer
@@ -704,12 +711,13 @@ nota cuando termina o cuando pasan sus primeros fotogramas; una nota que deja un
 colgado cuenta como un fallo, igual que una GPU que se detiene, y con dos el efecto queda fuera
 (lo recuerda por el hash del efecto, así que una versión nueva vuelve a probarse). *Probar de
 nuevo* en la app, en los diagnósticos del teléfono o `wprs-ctl retry-effects` lo prueban otra vez.
-El motor mide en la GPU cada fotograma y cada efecto, también los integrados (`wprs-ctl scene bench`
-muestra el tiempo como `gpu`); un efecto de paquete solo queda fuera por lento cuando el fotograma
-cabría sin él, nunca por lo que cuestan las capas o los efectos integrados. Los destinos de los
-efectos de paquete se limpian en su primera pasada, las capas de ajuste leen lo que tienen debajo sin
-copiarlo y las capas que cubren toda la escena no se dibujan más grandes que ella: una pila de cuatro
-efectos de paquete a 4K cuesta entre un 5 y un 10 % menos.
+El motor mide en la GPU cada fotograma, cada efecto, también los integrados, y la simulación de las
+partículas (`wprs-ctl scene bench` muestra el tiempo como `gpu` y la parte de las partículas en la
+línea de la simulación); un efecto de paquete solo queda fuera por lento cuando los efectos de
+paquete de un fotograma pasan del límite por sí solos, nunca por lo que cuestan las capas o los
+efectos integrados, de eso se encarga el nivel de calidad. Los destinos de los efectos de paquete se
+limpian en su primera pasada y las capas de ajuste leen lo que tienen debajo sin copiarlo: una pila
+de cuatro efectos de paquete a 4K cuesta alrededor de un 10 % menos.
 Cada pasada, cada lectura de textura y cada operación del shader cuentan en el coste de la escena
 aunque el descriptor diga menos, y
 `wprs-ctl pack check`, `pack build` y el editor avisan cuando una escena no cabe con calidad 2 en

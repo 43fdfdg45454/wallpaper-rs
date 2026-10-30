@@ -51,14 +51,23 @@ fn the_whole_frame_is_shared_by_the_timed_effects_when_some_went_untimed() {
 }
 
 #[test]
-fn built_in_effects_are_timed_but_only_package_effects_that_tip_the_frame_are_charged() {
+fn package_effects_are_charged_for_their_own_time_never_for_what_the_rest_of_the_frame_costs() {
     let (mut judge, start) = (Judge::new(Tier::T3), Instant::now());
     let at = |k: u64| start + Duration::from_millis(k * 16);
     let slow = [(1, false, 50.0), (2, true, 5.0)];
     let none = (0..6u64).flat_map(|k| judge.frame(&slow, (Some(60.0), false), at(k)));
     assert_eq!(none.count(), 0, "a frame over budget without its package effects charges none of them");
-    let tipped = [(1, false, 20.0), (2, true, 25.0)];
-    let charged: Vec<_> = (6..9u64).flat_map(|k| judge.frame(&tipped, (Some(46.0), false), at(k))).collect();
+    let light = [(1, false, 25.0), (2, true, 10.0)];
+    let none = (6..12u64).flat_map(|k| judge.frame(&light, (Some(36.0), false), at(k)));
+    assert_eq!(none.count(), 0, "a package effect within the budget was charged for the built-in ones");
+    let heavy = [(1, false, 20.0), (2, true, 35.0)];
+    let charged: Vec<_> = (12..15u64).flat_map(|k| judge.frame(&heavy, (Some(56.0), false), at(k))).collect();
     assert!(charged.len() == 1 && charged[0].0 == 2, "{charged:?}");
-    assert!(charged[0].1.contains("46 ms on it, 25 ms"), "{charged:?}");
+    assert!(charged[0].1.contains("56 ms on it, 35 ms"), "{charged:?}");
+    let (mut judge, hung) = (Judge::new(Tier::T0), [(1, false, 450.0), (2, true, 3000.0)]);
+    let charged = judge.frame(&hung, (Some(3460.0), false), start);
+    assert!(
+        charged.len() == 1 && charged[0].0 == 2,
+        "a very slow effect waited for more frames: {charged:?}"
+    );
 }

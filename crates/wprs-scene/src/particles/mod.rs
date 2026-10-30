@@ -55,19 +55,20 @@ pub(crate) use flock::flock_of;
 pub use flock::{Flock, MAX_DEPTH, MAX_PARTS, Part, flocks};
 pub use forces::{Falloff, Force, Target};
 pub use instance::{Instance, Tunable};
-pub use look::{Frames, Orient, Refract, Render, Stack};
+pub use look::{Frames, Refract, Render};
 pub use ops::Operator;
 pub use pack::{EVENT, MAX_HATCH, PARTICLE_EVENTS, Sim};
+pub use place::{Refresh, Source};
 pub(crate) use plan::plan;
 pub use seed::{
     Carry, Hsv, MAX_PALETTE, MAX_REMAPS, OffsetNoise, Palette, REMAP_INPUTS, Remap, RemapOp, RemapOutput,
     Turbulent, Wave,
 };
-pub use shapes::{Area, EmitShape, Refresh, Source};
+pub use shapes::{Area, EmitShape};
 pub use spread::{Num, Spread};
-pub use stack::{bin, largest, stacked};
+pub use stack::{Stack, bin, largest, stacked};
 pub use steer::{Boids, KeepBetween, KeepDistance, Oscillate, Ring, SlowNear, Wobble};
-pub use strokes::{Rope, Stretch, Trail};
+pub use strokes::{Orient, Rope, Stretch, Trail};
 pub use swarm::{Play, STEP, SUBSTEPS, Swarm, WARM, WARM_WORK};
 pub use sweeps::{Around, Between, Bow, Sweep, Taper};
 pub(crate) use tune::tuned;

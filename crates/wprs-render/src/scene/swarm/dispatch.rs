@@ -1,9 +1,15 @@
 use super::step::CUT;
-use super::store::fresh;
 use super::{CHUNK, SIM, Swarms};
 use crate::{RenderError, Renderer};
 use std::time::Instant;
 use wprs_scene::{PARTICLE_EVENTS, Sim, Swarm};
+
+pub(super) fn fresh(alloc: u32, size: u32) -> Vec<u32> {
+    let mut state = vec![0u32; size as usize];
+    state[0] = alloc;
+    state[4..4 + alloc as usize].iter_mut().enumerate().for_each(|(i, v)| *v = i as u32);
+    state
+}
 
 impl Swarms {
     pub(super) fn dispatch(
@@ -34,6 +40,7 @@ impl Swarms {
                 store.gpu.iter().for_each(|g| r.queue.write_buffer(&g.1, 0, &self.bytes));
             }
             let mut encoder = r.device.create_command_encoder(&Default::default());
+            super::step::mark(&mut self.stamp, &mut encoder, false);
             if reset && n == 0 {
                 flight.stores.iter().for_each(|s| encoder.clear_buffer(&s.particles, 0, None));
             }
@@ -67,6 +74,7 @@ impl Swarms {
                 }
             }
             drop(pass);
+            super::step::mark(&mut self.stamp, &mut encoder, true);
             r.queue.submit([encoder.finish()]);
             if first + CHUNK < count {
                 r.finish()?;
@@ -75,7 +83,8 @@ impl Swarms {
                 }
             }
         }
-        super::sort::sort(r, (self.sorts.as_ref(), self.canvas[1]), &mut flight.stores, &[], &bake.allocs);
+        let sorts = (self.sorts.as_ref(), self.canvas[1]);
+        super::sort::sort(r, sorts, &mut flight.stores, (&[], &bake.allocs), &mut self.stamp);
         Ok(())
     }
 }

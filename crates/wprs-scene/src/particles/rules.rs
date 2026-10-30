@@ -90,21 +90,7 @@ impl Check<'_> {
             self.operator(&format!("{p}/forces/{k}"), o, s);
         }
         for (k, c) in s.collide.iter().enumerate() {
-            let q = format!("{p}/collide/{k}");
-            self.range(&format!("{q}/bounce"), c.bounce, 0.0, 1.0);
-            self.range(&format!("{q}/friction"), c.friction, 0.0, 1.0);
-            match &c.bounds {
-                super::Surface::Plane { point, normal } => {
-                    self.place(&q, *point);
-                    self.range(&format!("{q}/bounds/plane/normal"), normal[0].hypot(normal[1]), 1e-6, 1e6);
-                }
-                super::Surface::Circle { center, radius, .. } => {
-                    self.place(&q, *center);
-                    self.range(&format!("{q}/bounds/circle/radius"), *radius, 1e-3, 1e5);
-                }
-                _ => {}
-            }
-            self.collider2(&q, c);
+            self.collider(&format!("{p}/collide/{k}"), c);
         }
         self.render(p, &s.render);
         self.group(p, s);

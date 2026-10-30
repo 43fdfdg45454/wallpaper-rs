@@ -86,3 +86,11 @@ impl Default for Rope {
         Rope { subdivide: 2, width: 4.0, uv_scale: 1.0, uv_scroll: 0.0, smooth: true }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Orient {
+    Screen,
+    Velocity,
+    Fixed,
+}

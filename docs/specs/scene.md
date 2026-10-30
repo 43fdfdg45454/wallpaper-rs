@@ -141,23 +141,30 @@ scenes with a graphics card and driver, it times a short render: frames of 16 pa
 1920×1080 target, each reading a texture of that size, for about 300 ms, and the time of a unit is
 taken from the fastest quarter of the frames. A unit of at most 0.2 ms gives the tier of discrete
 GPUs, 0.5 ms that of newer integrated GPUs, 2 ms that of older integrated and phone GPUs, and slower
-ones the lowest tier; the measure raises the tier of the model by one step at most, lowers it as far
-as it shows, and less than 4 GiB of memory or textures smaller than 8192 pixels still cap it.
+ones the lowest tier; the measure moves the tier of the model by one step at most, up or down, and
+less than 4 GiB of memory or textures smaller than 8192 pixels still cap it.
 Software rendering and GPUs without compute shaders keep the lowest tier without a measure. The
 result is kept in `gpu-tier.json` in the state folder (`$XDG_STATE_HOME/wallpaper-rs/`, shared by
 the daemon and `wprs-ctl scene bench`) or in the files of the phone, with the name, ids and backend
 of the adapter and the version of its driver, and it is measured again when any of them changes.
+A measure that lowered the tier, which a busy start can cause, is taken again on the next starts,
+three times in all, and the fastest one counts (`runs` in the file).
 `GetState().tier` (`"t0"` to `"t3"`) and `tier_measured` tell the result, and the phone lists it
 among its diagnostics.
 
 While a scene plays, the GPU time of its frames (measured as described below) moves the quality
 level: when their average (an exponential average over the measured frames, started again after
 more than a second without one) stays above the GPU budget for 2 seconds, the level goes one step
-down; when it stays under half of the budget for 15 seconds, one step back up, never above the
+down; when the average, times the factor by which the level above was dearer (the average just
+before the step down divided by the one 5 seconds after it, between 1 and 16), stays under half of the budget of the
+level above for 15 seconds, one step back up, never above the
 level that the tier, the cost, the power source and the temperature allow, and never on battery,
 with power saving or while the GPU or CPU is warm (on phones, only while charging and cool). The
-budget is half of the frame interval on mains power and a quarter on battery, with power saving and
-on phones. Two changes are at least 5 seconds apart. `GetState().outputs[x].quality` and
+budget of a level is half of its frame interval on mains power and a quarter on battery, with power
+saving and on phones; since a lower level may also draw fewer frames a second, its budget is larger,
+and comparing the cost measured at the level above keeps a scene from bouncing between two levels.
+Two changes are at least 5 seconds apart. The quality only moves on devices that time their frames,
+which all do, with timestamps or by waiting (see below). `GetState().outputs[x].quality` and
 `quality_reason` tell the level and why it is below the highest; the app, the tray and the phone
 show both, translated.
 
@@ -183,8 +190,7 @@ another texture it drops the ones it used longest ago, then the cached layers th
 drawn, and a use whose texture still does not fit is left out with `its textures would take more
 than the <n> MiB of textures this view may hold` (or `... a frame may borrow`). Layers draw into textures
 whose sides grow in steps of an eighth of a power of two (at least 64 pixels), so a zooming layer
-reuses a few sizes; a layer that covers the whole canvas draws at its exact size, and its effects
-see the canvas as their whole input. The first pass that writes a target of a package effect clears
+reuses a few sizes. The first pass that writes a target of a package effect clears
 it as it draws instead of in a pass of its own, and an adjustment layer reads what is below it
 directly instead of a copy. `wprs-ctl scene bench` prints these notes after its
 numbers.
@@ -735,8 +741,9 @@ stops the other builds, waits at most a second for the driver and then exits at 
 exit handlers that would race the driver.
 
 Each view keeps at most two frames on the GPU: before it sends a frame it waits for the one two frames
-back. A frame with package effects, or of a view with effects on trial, may take at most 10 seconds;
-other frames, and every other wait for the GPU, may take 10 seconds on a GPU and, with software
+back. A frame with package effects, or of a view with effects on trial, may take at most 10 seconds,
+and so may every other wait for the GPU while such a frame was sent less than 20 seconds before and
+has not been seen to finish, such as composing it into a stream; other frames and waits may take 10 seconds on a GPU and, with software
 rendering, 10 seconds times 32 divided by the number of cores, between 10 and 60 seconds (20 with 16
 cores, 40 with 8, 60 with 4 or fewer; `LP_NUM_THREADS` counts when set). A frame with package effects still running after its
 limit leaves out the package effects of the
@@ -746,21 +753,24 @@ draws at most a megapixel per core (an 8K screen with two cores draws a 1080p fr
 when a measured frame takes more than an eighth of its limit the view draws the next ones at 70 % of
 the size, down to a quarter, growing back the same way once frames take less than a sixteenth of
 that, so a legitimate heavy frame never reaches the limit. The engine also measures the GPU time of
-every frame and of each effect: where the device can write timestamps it times the whole frame and
-each run of passes of one effect, built in or packaged, on every frame (31 runs a frame; a frame
+every frame and of each effect: where the device can write timestamps it times the whole frame, the
+particle simulation and sorting sent before it, and each run of passes of one effect, built in or
+packaged, on every frame (31 runs a frame; a frame
 with more takes turns among them, and then shares the time of the frame not spent in timed built-in
 effects among the timed package effects by their part of the timed time), and reads the times back
-when the frame has finished, without waiting for it; `wprs-ctl scene bench` shows the frame time as
-`gpu`. Elsewhere it waits for the GPU before and after a frame with package effects, every frame of
-a trial and every fifteenth frame after it, and counts the whole frame. When a frame takes more than
-400, 60, 40 or 30 ms on the four tiers (a fifth more than a frame at 30 or 40 frames a second, so
-effects right at the limit are not left out by noise) and the frame would fit without its package
-effects, the package effects that take the most of it, until the rest fits, are left out with `it is
+when the frame has finished, without waiting for it; the GPU time of a frame is the frame plus its
+particles, and `wprs-ctl scene bench` shows it as `gpu` and the particle part in its simulation line.
+Elsewhere it waits for the GPU before and after every fifteenth frame of a scene that draws (and
+around its particle simulation), every frame with package effects of a trial or while one of them is
+suspected, and counts the whole frame. When the package effects of a frame take more than 400, 60, 40
+or 30 ms on the four tiers on their own (a fifth more than a frame at 30 or 40 frames a second, so
+effects right at the limit are not left out by noise), the package effects that take the most of it,
+until the rest of their time fits, are left out with `it is
 too slow for this graphics card: a frame took <total> ms on it, <n> ms of them in this effect, and it
 allows <limit> ms` once that happened on three frames within 8 seconds, cheap frames in between or
-not, or at once for a frame over four times the limit (and 100 ms). Built-in effects are timed but
-never left out, and a frame that is over the limit without its package effects leaves none of them
-out: the quality level is what makes it fit. Without timestamps only a frame over a second (and four
+not, or at once for an effect over four times the limit (and 100 ms), whatever the rest of the frame
+costs. Built-in effects are timed but never left out, and what layers and built-in effects cost never
+counts against a package effect: the quality level is what makes such a frame fit. Without timestamps only a frame over a second (and four
 times the limit) leaves its package effects out. A slow effect is left out for as long as the program runs, also in its other views,
 and counts no strike: it may run well at another size or on another day. Only a frame that keeps
 the GPU busy for 10 s, a lost GPU or a crash counts strikes. The desktop reports it

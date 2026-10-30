@@ -63,6 +63,12 @@ pub fn drawn_effects() -> Vec<u64> {
     all
 }
 
+pub(crate) fn hanging() -> bool {
+    let f = flight();
+    let fresh = |s: &Sent| s.at.elapsed() < STALE && !s.keys.is_empty();
+    f.views.iter().any(|v| !v.pending.is_empty() || v.sent.iter().any(fresh))
+}
+
 pub(crate) fn building(key: u64, on: bool) {
     let mut f = flight();
     f.building.retain(|k| *k != key);

@@ -93,6 +93,7 @@ impl Swarms {
             sprites,
             flights: Vec::new(),
             marks: Vec::new(),
+            stamp: (None, false),
             module: module(r, concat!(include_str!("sprite.wgsl"), "\n", include_str!("ribbon.wgsl"))),
             layouts,
             compute: None,

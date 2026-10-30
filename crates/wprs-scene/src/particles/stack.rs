@@ -1,4 +1,16 @@
-use super::{Particle, Render, Stack, System};
+use super::{Particle, Render, System};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Stack {
+    Newest,
+    Oldest,
+    Largest,
+    Smallest,
+    Lowest,
+}
 
 pub fn bin(p: &Particle, kind: Stack, size: f32, height: f32) -> u32 {
     let t = (p.age / p.life).clamp(0.0, 1.0);

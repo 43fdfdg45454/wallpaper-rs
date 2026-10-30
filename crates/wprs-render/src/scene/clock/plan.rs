@@ -1,5 +1,9 @@
 use super::super::pipes::Shader;
 use super::super::{Fill, Op};
+use super::stamps::Stamps;
+use super::{Clock, WATCH};
+use crate::Renderer;
+use std::time::Instant;
 
 pub(super) const SLOTS: usize = 32;
 
@@ -48,5 +52,30 @@ impl Plan {
             marks[end].1 = Some(slot * 2 + 1);
             runs.push((key, own));
         }
+    }
+}
+
+pub(crate) enum Sim {
+    Off,
+    Stamps(wgpu::QuerySet),
+    Watch(Instant),
+}
+
+impl Clock {
+    pub(crate) fn sim(&mut self, r: &Renderer) -> Sim {
+        if !self.queries {
+            let watch = (self.frame + 1).is_multiple_of(WATCH) && r.drained();
+            return if watch { Sim::Watch(Instant::now()) } else { Sim::Off };
+        }
+        let stamps = self.stamps.get_or_insert_with(|| Stamps::new(r));
+        stamps.free().map_or(Sim::Off, |_| Sim::Stamps(stamps.set.clone()))
+    }
+
+    pub(crate) fn simmed(&mut self, r: &Renderer, sim: Sim, stamped: bool) {
+        self.sim = match sim {
+            Sim::Off => (false, 0.0),
+            Sim::Stamps(_) => (stamped, 0.0),
+            Sim::Watch(at) => (false, if r.drained() { at.elapsed().as_secs_f64() * 1000.0 } else { 0.0 }),
+        };
     }
 }

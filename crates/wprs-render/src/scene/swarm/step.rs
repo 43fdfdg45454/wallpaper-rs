@@ -1,4 +1,5 @@
-use super::Swarms;
+use super::super::clock::SIM_AT;
+use super::{Stamp, Swarms};
 use crate::{RenderError, Renderer};
 use std::time::{Duration, Instant};
 use wprs_scene::{Cloud, Content, Draw, Frame, Quality, Runtime, Sim};
@@ -12,8 +13,10 @@ impl Swarms {
         runtime: &Runtime,
         frame: &Frame<'_>,
         quality: Quality,
-    ) -> Result<(), RenderError> {
+        stamp: Option<&wgpu::QuerySet>,
+    ) -> Result<bool, RenderError> {
         let start = Instant::now();
+        self.stamp = (stamp.cloned(), false);
         (self.steps, self.created, self.quality) = (0, 0, quality);
         self.looks.clear();
         self.kitted.clear();
@@ -54,8 +57,8 @@ impl Swarms {
                     r,
                     (self.sorts.as_ref(), self.canvas[1]),
                     &mut flight.stores,
-                    &flight.clouds,
-                    &bake.allocs,
+                    (&flight.clouds, &bake.allocs),
+                    &mut self.stamp,
                 );
                 continue;
             }
@@ -65,6 +68,19 @@ impl Swarms {
             r.finish()?;
         }
         self.micros = start.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
-        Ok(())
+        Ok(std::mem::take(&mut self.stamp).1)
     }
+}
+
+pub(super) fn mark((set, begun): &mut Stamp, encoder: &mut wgpu::CommandEncoder, end: bool) {
+    let Some(query_set) = set.as_ref().filter(|_| end || !*begun) else { return };
+    *begun |= !end;
+    let at = Some(SIM_AT + u32::from(end));
+    let (beginning_of_pass_write_index, end_of_pass_write_index) = if end { (None, at) } else { (at, None) };
+    let timestamp_writes = Some(wgpu::ComputePassTimestampWrites {
+        query_set,
+        beginning_of_pass_write_index,
+        end_of_pass_write_index,
+    });
+    drop(encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes }));
 }

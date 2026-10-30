@@ -49,8 +49,12 @@ impl Renderer {
     }
 
     pub(super) fn quiet(&self, timing: Timing) -> bool {
+        timing == Timing::Watch && self.drained()
+    }
+
+    pub(super) fn drained(&self) -> bool {
         let wait = wgpu::PollType::Wait { submission_index: None, timeout: Some(GPU_TIMEOUT) };
-        timing == Timing::Watch && matches!(self.poll(wait), crate::lost::Polled::Done)
+        matches!(self.poll(wait), crate::lost::Polled::Done)
     }
 
     pub(super) fn watch(

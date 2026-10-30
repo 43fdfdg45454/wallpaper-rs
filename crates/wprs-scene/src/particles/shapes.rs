@@ -1,4 +1,5 @@
-use super::{Around, Between, Handle, Num};
+use super::place::half;
+use super::{Around, Between, Handle, Num, Source};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -75,35 +76,4 @@ impl From<Area> for AreaRepr {
             (inner, at) => AreaRepr::Full(Room { from: a.from, to: a.to, inner, at }),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Refresh {
-    #[default]
-    Static,
-    OnChange,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Source {
-    #[schemars(extend("x-ref" = "layer"))]
-    pub id: String,
-    #[serde(default = "half")]
-    #[schemars(extend("x-range" = [0, 1]))]
-    pub threshold: Num,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub color: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub inherit: bool,
-    #[serde(default)]
-    #[schemars(extend("x-unit" = "px"))]
-    pub jitter: f32,
-    #[serde(default)]
-    pub refresh: Refresh,
-}
-
-fn half() -> Num {
-    Num::from(0.5)
 }
