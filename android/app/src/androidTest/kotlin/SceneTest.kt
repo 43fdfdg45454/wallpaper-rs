@@ -191,8 +191,8 @@ class SceneTest {
         val dir = File(storage(), "mixes/mixes").apply { mkdirs() }
         File(dir, "scene.json").writeText(MIXES_SCENE)
         File(dir, "manifest.json").writeText(MIXES_MANIFEST)
-        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
-        assertTrue(reply.optString("error").isEmpty())
+        val reply = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(reply, reply.startsWith("["))
         show("Mixes")
         assertTrue(waitFor { frames.get() > 0 })
         assertEquals(settled(frames), quiet(frames))
