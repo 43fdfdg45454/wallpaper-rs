@@ -20,6 +20,7 @@ pub fn one() -> MutexGuard<'static, ()> {
     let one = ONE.lock().unwrap_or_else(PoisonError::into_inner);
     wprs_render::set_gpu_budget(None);
     wprs_render::set_build_timeout(Duration::from_secs(10));
+    wprs_render::retry_effects();
     one
 }
 

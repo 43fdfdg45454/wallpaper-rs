@@ -27,7 +27,10 @@ fn slow_effects_are_left_out_for_the_run_without_a_strike_and_never_queue_up() {
         left.len() == 1 && left[0].contains("busy") && left[0].contains("too slow for this graphics card"),
         "{left:?}"
     );
-    assert!(!left[0].contains("stopped") && left[0].contains("ms on it") && left[0].contains("allows 2 ms"));
+    assert!(
+        !left[0].contains("stopped") && left[0].contains("ms on it") && left[0].contains("allows 2 ms"),
+        "{left:?}"
+    );
     assert_eq!(lines(&path, key, "1"), 0, "{}", std::fs::read_to_string(&path).unwrap_or_default());
     r.finish().unwrap();
     let fast = (0..3).map(|_| draw(r, &mut shown, size)).max().unwrap();
