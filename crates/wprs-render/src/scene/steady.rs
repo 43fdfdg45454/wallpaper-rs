@@ -92,14 +92,14 @@ fn replay(r: &Renderer, view: &mut SceneView, ops: &[Op], data: &[u8]) -> u64 {
     read + spent
 }
 
-fn measure(r: &Renderer, scene: Scene) -> (SceneView, Runtime, [u64; 3], u32) {
+fn measure(r: &Renderer, scene: Scene) -> (SceneView, Runtime, [i64; 2], u32) {
     let mut runtime = Runtime::new(Arc::new(scene), Values::new());
     let mut view = r.scene_view(&runtime.scene, &assets(), runtime.props()).unwrap();
     (0..8).for_each(|_| _ = frame(r, &mut view, &mut runtime));
-    let (mut ours, mut theirs, mut passes, mut evaluated) = (u64::MAX, u64::MAX, 0, 0);
-    for _ in 0..6 {
+    let (mut extra, mut passes, mut evaluated) = (Vec::new(), 0, 0);
+    for _ in 0..9 {
         let [eval, spent] = frame(r, &mut view, &mut runtime);
-        (ours, evaluated) = (ours.min(spent), evaluated.max(eval));
+        evaluated = evaluated.max(eval as i64);
         passes = view.stats().passes;
         let ops = view.scratch.ops.clone();
         let slot = |op: &Op| match op {
@@ -108,10 +108,11 @@ fn measure(r: &Renderer, scene: Scene) -> (SceneView, Runtime, [u64; 3], u32) {
             _ => 0,
         };
         view.pool.data.resize(ops.iter().map(slot).max().unwrap_or(0) + pipes::STRIDE as usize, 0);
-        theirs = theirs.min(replay(r, &mut view, &ops, &[0; 1024]));
+        extra.push(spent as i64 - replay(r, &mut view, &ops, &[0; 1024]) as i64);
         view.pool.data.clear();
     }
-    (view, runtime, [ours, theirs, evaluated], passes)
+    extra.sort_unstable();
+    (view, runtime, [extra[extra.len() / 2], evaluated], passes)
 }
 
 #[test]
@@ -120,7 +121,7 @@ fn steady_scene_frames_allocate_nothing_beyond_their_gpu_calls() {
         Ok(r) => r,
         Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
     };
-    let (mut view, runtime, [ours, theirs, evaluated], passes) =
+    let (mut view, runtime, [extra, evaluated], passes) =
         measure(r, Scene::load(SCENE, &Default::default()).unwrap());
     assert!(passes >= 5 && view.stats().created == 0, "{:?}", view.stats());
     assert!(evaluated <= 3, "evaluating a steady frame made {evaluated} allocations");
@@ -131,7 +132,7 @@ fn steady_scene_frames_allocate_nothing_beyond_their_gpu_calls() {
     };
     schedule();
     assert_eq!(allocations(schedule), 0, "choosing the quality and rate of a steady frame allocated");
-    assert!(ours <= theirs, "a steady frame made {ours} allocations, its GPU calls alone make {theirs}");
+    assert!(extra <= 0, "a steady frame made {extra} allocations more than its GPU calls alone");
     let draws: Vec<Op> =
         view.scratch.ops.iter().copied().filter(|op| matches!(op, Op::Draw { .. })).collect();
     let lookups = allocations(|| {
@@ -168,11 +169,11 @@ fn steady_package_effect_frames_allocate_nothing_beyond_their_gpu_calls() {
         _ => Err("missing"),
     };
     scene.adopt(&Default::default(), files).unwrap();
-    let (view, _, [ours, theirs, evaluated], passes) = measure(r, scene);
+    let (view, _, [extra, evaluated], passes) = measure(r, scene);
     assert!(view.left_out().is_empty(), "{:?}", view.left_out());
     assert!(passes >= 4 && view.stats().created == 0, "{passes} {:?}", view.stats());
     assert!(evaluated <= 3, "evaluating a steady frame made {evaluated} allocations");
-    assert!(ours <= theirs, "a steady frame made {ours} allocations, its GPU calls alone make {theirs}");
+    assert!(extra <= 0, "a steady frame made {extra} allocations more than its GPU calls alone");
 }
 
 #[test]
