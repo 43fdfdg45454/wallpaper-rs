@@ -255,6 +255,8 @@ impl<T> Binding<T> {
     }
 
     pub(crate) fn modify(&self, x: f32) -> f32 {
+        let x = self.bounds.map_or(x, |[a, b]| ((x - a) / (b - a).max(f32::EPSILON)).clamp(0.0, 1.0));
+        let x = self.exponent.map_or(x, |e| x.abs().powf(e).copysign(x));
         let x = if self.invert { 1.0 - x } else { x };
         let x = x * self.scale.unwrap_or(1.0) + self.offset.unwrap_or(0.0);
         self.clamp.map_or(x, |[lo, hi]| x.clamp(lo, hi.max(lo)))

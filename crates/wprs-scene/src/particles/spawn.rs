@@ -120,6 +120,16 @@ fn tone(s: &Sim, id: u32) -> [f32; 4] {
             let rgb = hsv([h, sa, va]);
             [rgb[0], rgb[1], rgb[2], c[3]]
         }
+        3 => {
+            let (n, u) = ((t[1][3] as usize).clamp(1, 8), bend(r(9), i[8][2]));
+            let at = |k: usize| t[if k < 4 { 0 } else { 2 }][k % 4];
+            let mut c = s.colors[0];
+            for k in (1..n).filter(|k| u >= at(k - 1)) {
+                let f = ((u - at(k - 1)) / (at(k) - at(k - 1)).max(1e-6)).min(1.0);
+                c = std::array::from_fn(|j| lerp(s.colors[k - 1][j], s.colors[k][j], f));
+            }
+            c
+        }
         _ => {
             let u = bend(r(9), i[8][2]);
             std::array::from_fn(|j| lerp(s.colors[0][j], s.colors[1][j], u))

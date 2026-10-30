@@ -18,6 +18,7 @@ pub struct Runtime {
     pub seed: u64,
     props: Values,
     audio: AudioFrame,
+    heard: f64,
     pointer: PointerState,
     glide: PointerState,
     glided: f64,
@@ -82,6 +83,7 @@ impl Runtime {
             seed,
             props,
             audio,
+            heard: 0.0,
             pointer,
             glide: pointer,
             glided: 0.0,
@@ -252,6 +254,11 @@ impl Runtime {
     }
 
     pub fn set_audio(&mut self, audio: AudioFrame) -> bool {
+        let dt = (self.t - std::mem::replace(&mut self.heard, self.t)).clamp(0.0, 1.0) as f32;
+        let audio = match self.scene.audio {
+            Some(h) => h.hear(&self.audio, audio, dt),
+            None => audio,
+        };
         let beat = audio.beat && !self.audio.beat;
         let changed = self.uses().audio && audio != self.audio && !(audio.silent && self.audio.silent);
         if !audio.silent {

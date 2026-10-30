@@ -51,6 +51,7 @@ impl Swarm {
             let room = Room::new(cx, lent.unwrap_or(s), (anchor, to_sim), ends, layer.filter(|_| k == 0));
             let sim = &mut self.frames[k];
             *sim = self.bases[k];
+            super::bound::bound(sim, s, cx);
             sim.ids[3] = ((s.capacity as f32 * share) as u32).clamp(1, s.capacity.max(1));
             sim.init[0][0] *= tune.life;
             sim.init[0][1] *= tune.life;

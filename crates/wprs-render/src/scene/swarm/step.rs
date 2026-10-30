@@ -47,7 +47,17 @@ impl Swarms {
                 }
                 for (store, cloud) in flight.stores.iter().zip(&flight.clouds) {
                     r.queue.write_buffer(&store.particles, 0, bytemuck::cast_slice(&cloud.particles));
+                    if let Some(trail) = store.trail.as_ref().filter(|_| !cloud.trail.is_empty()) {
+                        r.queue.write_buffer(trail, 0, bytemuck::cast_slice(&cloud.trail));
+                    }
                 }
+                super::sort::sort(
+                    r,
+                    (self.sorts.as_ref(), self.canvas[1]),
+                    &flight.stores,
+                    &flight.clouds,
+                    &bake.allocs,
+                );
                 continue;
             }
             let Some([simulate, emit, settle]) = &self.compute else { continue };
@@ -108,6 +118,7 @@ impl Swarms {
                 drop(pass);
                 r.queue.submit([encoder.finish()]);
             }
+            super::sort::sort(r, (self.sorts.as_ref(), self.canvas[1]), &flight.stores, &[], &bake.allocs);
         }
         if self.profile {
             r.finish()?;

@@ -215,7 +215,11 @@ fn budgets_follow_the_device_tier_and_masks_place_particles() {
     let (small, large) = (t0.sizes[0], t3.sizes[0]);
     assert!(small < large && large < 1.0, "{small} {large}");
     assert!(8000.0 * (50.0 * large).powi(2) <= 6.0 * 200.0 * 100.0 * 1.01);
-    assert_eq!((t0.trail, t3.trail, Quality::Q2.trail(8), Quality::Q1.trail(8)), (0, 16, 4, 0));
+    assert_eq!(
+        (Tier::T0.trail(), Tier::T3.trail(), Quality::Q2.trail(8), Quality::Q1.trail(8)),
+        (0, 16, 4, 0)
+    );
+    assert_eq!((t0.trails[0], t3.trails[0]), (0, 0), "no trail is kept for a render without one");
     let masked = with(
         sparks(),
         json!({ "emitters": [{ "shape": { "mask": { "texture": "dot" } }, "burst": { "count": 300 } }],

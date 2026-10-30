@@ -141,6 +141,7 @@ fn status(reply: InputsReply) -> String {
 
 const AUDIO: &str = "the sound that plays (turned into levels on this computer, never recorded or sent)";
 const POINTER: &str = "the pointer (only its latest position over the screen, never kept)";
+const SLOW: &str = "its particles run on the processor, so fewer of them are shown";
 const SETTLE: Duration = Duration::from_secs(1);
 
 pub async fn asking(
@@ -173,6 +174,17 @@ async fn asks(client: &Client, output: &str, mut serial: u64) -> Result<BTreeSet
         serial = now;
     }
     let reply: InputsReply = parse(&client.inputs.get_inputs().await?)?;
+    let mut after: State = parse(&client.daemon.get_state().await?)?;
+    let unseen = |s: &State| {
+        s.outputs.iter().any(|(n, o)| ours(n) && scene(o) && o.frames == 0 && o.particles.is_empty())
+    };
+    let deadline = Instant::now() + SETTLE;
+    while let Some(left) = deadline.checked_duration_since(Instant::now()).filter(|_| unseen(&after)) {
+        client.daemon.wait_changed(after.serial, left.as_millis().min(100) as u32).await?;
+        after = parse(&client.daemon.get_state().await?)?;
+    }
+    let slow = after.outputs.iter().filter(|(name, o)| ours(name) && o.particles == "cpu");
+    let slow = slow.map(|(name, _)| format!("{name}: {SLOW}"));
     let declined =
         |scene: &String, input: Input| reply.declined.get(scene).is_some_and(|set| set.contains(&input));
     let twins = |s: &SceneInputs| reply.shown.values().any(|o| o.scene == s.scene && o.key != s.key);
@@ -188,5 +200,5 @@ async fn asks(client: &Client, output: &str, mut serial: u64) -> Result<BTreeSet
             format!("{title} follows {what} once you allow it: {grant}")
         })
     });
-    Ok(asks.collect())
+    Ok(asks.chain(slow).collect())
 }

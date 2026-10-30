@@ -756,6 +756,23 @@ Una escena simula como mucho 64 sistemas contando hijos y capas con partículas 
 las 200 000 partículas, y el precalentamiento llega a 30 s en pasos de 1/15 s. Lo demás de la lista
 anterior sigue pidiendo una versión más nueva.
 
+También dibujan las estelas con historial (cada partícula guarda sus últimas posiciones, hasta 16
+pasos de 1/60 s, y deja una cinta que se estrecha y se apaga con el color y el tamaño que tenía en
+cada punto; 4, 8 o 16 pasos según la clase de equipo, menos o ninguno en los niveles de calidad
+bajos y ninguno con render por software), el orden de dibujo (`render.order`: las más nuevas, las
+más viejas, las más grandes, las más pequeñas o las más bajas encima, en 256 escalones), los choques
+contra la parte opaca de una imagen (`collide` con `mask`, convertida al cargar en un campo de
+distancias de hasta 16 384 celdas), el color inicial en degradado (`init.gradient`, hasta 8
+paradas), las hojas de sprites con rectángulos de distinto tamaño, y los extremos de los rangos
+iniciales y el radio de los círculos enlazados a valores, que se leen en cada fotograma. Los enlaces
+de sonido toman rangos de bandas en 16, 32 o 64 (`audio: [0, 3]`, `of`, `reduce: mean | max`) de un
+canal, límites (`bounds`), exponente y suavizado distinto al subir y al bajar (`smooth: { up, down }`),
+también para el cursor, las propiedades y los scripts, y una escena puede fijar con `audio` su ataque,
+su caída y si sigue el volumen del sistema (`gain: fixed`) o se ajusta sola (`auto`). Cuando las
+partículas pasan al procesador, el estado de la pantalla lo dice (`"particles": "cpu"`) y la
+aplicación, la bandeja, `wprs-ctl` al mostrar la escena y los ajustes del teléfono avisan de que se
+muestran menos.
+
 También están descritos los efectos que el motor aún no dibuja: mezcla por degradado, revelar con
 el puntero, desplazamiento por mapa, cáusticas, destellos, fuego, giro, transformación, pulso,
 contraste local, estela de movimiento, VHS, fluidos, destello de lente y chisporroteo eléctrico, y

@@ -3,7 +3,7 @@ use crate::input::{AudioFrame, PointerState, ScriptOutputs};
 use crate::kin::Place;
 use crate::timeline::{Loop, Playhead, local};
 use crate::value::{AudioChannel, Axis, Band, Binding, Level, Value};
-use crate::{Scene, Timeline, Values, Wake};
+use crate::{BANDS, Reduce, Scene, Timeline, Values, Wake};
 use serde_json::Value as Json;
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -74,14 +74,24 @@ impl Context<'_> {
             AudioChannel::Left => &a.left,
             AudioChannel::Right => &a.right,
         };
+        let of = b.of.unwrap_or(BANDS as u32).clamp(1, BANDS as u32) as usize;
+        let group = |lo: u32, hi: u32| {
+            let a = (lo as usize * BANDS / of).min(BANDS - 1);
+            let z = ((hi.max(lo) as usize + 1) * BANDS / of).clamp(a + 1, BANDS);
+            let it = bands[a..z].iter().copied();
+            match b.reduce.unwrap_or_default() {
+                Reduce::Max => it.fold(0.0, f32::max),
+                Reduce::Mean => it.sum::<f32>() / (z - a) as f32,
+            }
+        };
         let audio = b.audio.map(|band| match band {
-            Band::Index(i) => bands.get(i as usize).copied().unwrap_or(0.0),
+            Band::Index(i) => group(i, i),
+            Band::Range([lo, hi]) => group(lo, hi),
             Band::Named(Level::Bass) => a.bass,
             Band::Named(Level::Mid) => a.mid,
             Band::Named(Level::Treble) => a.treble,
             Band::Named(Level::Level) => a.level,
             Band::Named(Level::Beat) => f32::from(a.beat),
-            Band::Range(_) => 0.0,
         });
         if audio.is_some() && !a.silent {
             self.note(Wake::Frame);
@@ -143,10 +153,16 @@ impl<T: Animate> Value<T> {
     }
 
     pub(crate) fn get(&self, cx: &Context) -> T {
-        let b = match self {
-            Value::Fixed(v) => return v.clone(),
-            Value::Bound(b) => b,
-        };
+        match self {
+            Value::Fixed(v) => v.clone(),
+            Value::Bound(b) => b.eval(cx),
+        }
+    }
+}
+
+impl<T: Animate> Binding<T> {
+    pub(crate) fn eval(&self, cx: &Context) -> T {
+        let b = self;
         let raw = if b.tracked() {
             let base = b.base.clone().unwrap_or_default();
             let (mut parts, _) = base.parts();
@@ -175,12 +191,12 @@ impl<T: Animate> Value<T> {
             Some(base) => added(base, &shaped(b, raw)),
             None => shaped(b, raw),
         };
-        let Some(tau) = b.smooth.and_then(crate::Smooth::seconds) else { return value };
+        let times = b.smooth.map(crate::Smooth::times).filter(|t| t.iter().any(|v| *v > 0.0));
+        let Some([up, down]) = times else { return value };
         let (comps, n) = value.comps();
         let mut memo = cx.memo.borrow_mut();
-        let last = memo.entry(&**b as *const Binding<T> as usize).or_insert(comps);
-        let k = 1.0 - (-cx.dt / tau).exp();
-        last[..n].iter_mut().zip(&comps).for_each(|(l, c)| *l += (c - *l) * k);
+        let last = memo.entry(std::ptr::from_ref(b).addr()).or_insert(comps);
+        last[..n].iter_mut().zip(&comps).for_each(|(l, c)| *l = crate::ease(*l, *c, cx.dt, up, down));
         if last[..n].iter().zip(&comps).any(|(l, c)| (l - c).abs() > 1e-3) {
             cx.note(Wake::Frame);
         }

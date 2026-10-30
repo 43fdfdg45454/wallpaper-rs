@@ -10,8 +10,19 @@ impl Check<'_> {
             self.uses(true, "particles2");
             self.spread(&format!("{p}/alpha"), a, 0.0, 1.0);
         }
-        if i.hsv.is_some() && i.palette.is_some() {
+        let colored = [i.hsv.is_some(), i.palette.is_some(), !i.gradient.is_empty()];
+        if colored.iter().filter(|c| **c).count() > 1 {
             self.issues.push(Issue::Type(format!("{p}/palette")));
+        }
+        if !i.gradient.is_empty() {
+            self.uses(true, "particles2");
+            let q = format!("{p}/gradient");
+            self.count(&q, i.gradient.len(), super::MAX_STOPS);
+            self.keys_sorted(&q, i.gradient.iter().map(|k| k.0));
+            for (k, (t, c)) in i.gradient.iter().enumerate() {
+                self.range(&format!("{q}/{k}/0"), *t, 0.0, 1.0);
+                self.color(&format!("{q}/{k}/1"), *c);
+            }
         }
         if let Some(h) = &i.hsv {
             self.uses(true, "particles2");

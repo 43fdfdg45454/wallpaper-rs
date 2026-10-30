@@ -366,6 +366,14 @@ one source:
 | Media player | `{ "media": "title" }` (`media_info`, see below) |
 
 Non-literal values accept `scale`, `offset`, `clamp: [min, max]`, `invert` and `smooth` (seconds).
+Audio values go from 0 to 1: each of the 64 bands per channel (40 Hz to 16 kHz, spaced evenly in
+pitch) is its level in decibels above −70 dB, relative to the loudest band of the last seconds, so
+that quiet and loud music both fill the range (`gain: "fixed"` measures it from full scale instead);
+`bass`, `mid` and `treble` average the bands below 250 Hz, up to 4 kHz and above, `level` is the
+loudness of the whole sound and `beat` is 1 on a beat. Values rise within 20 ms and fall within
+200 ms unless the scene sets `audio`. The order is `bounds`, `exponent`, `invert`, `scale`,
+`offset`, `clamp` and then `smooth`; `bounds` and `exponent` also shape properties, the pointer and
+scripts, and an `exponent` keeps the sign of negative values.
 Easings are `linear`, `step`, `hold`, `in_`, `out_` or `in_out_` followed by `sine`, `quad`,
 `cubic`, `quart`, `quint`, `expo`, `circ`, `back`, `elastic` or `bounce`, or a cubic Bézier
 `[x1, y1, x2, y2]`. Colors interpolate in the OKLab space, lightness, chroma and hue apart, the hue
@@ -923,7 +931,9 @@ are drawn smaller where they would cover the screen more than 1, 1.5, 3 or 6 tim
 are limited to 0, 4, 8 or 16 steps. Lower quality levels let only 75 %, 50 % or 25 % of the
 particles be born and halve or drop trails. `wprs-ctl scene bench` reports where particles run,
 their slots, how many are alive at the end, the steps per frame and the simulation time after the
-warm-up frames.
+warm-up frames. When they run on the processor, the state of the output says `"particles": "cpu"`
+(`"gpu"` otherwise) and the app, the tray, `wprs-ctl` after showing the scene and the settings of
+the phone say so, because fewer of them are shown.
 
 ### Newer particle fields
 
@@ -948,6 +958,7 @@ sets it, and every other name must be one of `points`. Targets and centers of fo
 | shape `between` | `{ "from", "to", "count", "span", "mode", "arc": { "amount", "side" }, "taper": { "position", "speed", "size" } }` births along a line or arc between two points | `particle_fields` |
 | `init` ranges | each range may add an exponent `[min, max, exponent]` (0.1 to 10) that leans the pick to one end; `color` too | `particles2` |
 | `init.alpha`, `hsv`, `palette` | an opacity range of its own; `{ "hue": [0, 360], "steps", "sat", "val" }`; or `{ "colors" (1 to 10), "noise": [h, s, v] }` (not both), which replace `color` | `particles2` |
+| `init.gradient` | at most 8 `[t, color]` stops in order, read at a random place (leaned by the exponent of `color`) and replacing `color`; not with `hsv` or `palette` | `particles2` |
 | `init.velocity`, `radial`, `inherit` | `[[vx0, vy0], [vx1, vy1], exponent?]` replacing `speed` and `angle`; a speed away from the center of the shape; `{ "from" (cursor or control point), "speed": [min, max] }` | `particles2` |
 | `init.turbulent`, `offset_noise`, `remap` | turbulent starting velocity `{ "forward", "scale", "noise_speed", "offset", "speed", "phase", "audio" }`; a fractal offset of the birth `{ "distance", "scale", "sign", "octaves" (1 to 6), "noise_scale", "noise_speed" }`; at most 8 `{ "input", "in", "clamp_in", "output", "out", "clamp_out", "op", "wave" }` that map `daytime`, `runtime`, `life`, `age`, `speed`, `random`, `distance:pN`, `audio:<band>` or `cursor:x\|y` onto `size`, `alpha`, `color`, `speed`, `life`, `rotation`, `spin` or `frame` with `set`, `mul`, `add` or `sub` and an optional `sine` or `noise` wave | `particle_fields` |
 | `perspective`, `init.depth`, `init.depth_speed` | `{ "focal" (1 to 100000 px) }` and depth ranges in pixels, which need `perspective` | `particle_depth` |
@@ -955,10 +966,12 @@ sets it, and every other name must be one of `points`. Targets and centers of fo
 | forces | `{ "oscillate": { "what": "position" \| "alpha" \| "size", "freq", "scale", "phase", "mask" } }`, `{ "cap": speed }`, `{ "torque": k }`, `{ "spin_drag": k }`, `{ "slow_near": { "target", "inner", "outer", "factor" } }`; `attractor`, `vortex` and `orbit` take `radius` and `falloff` (`constant`, `linear`, `inverse_square`), `vortex` also `inner`, `outer` and `ring: { "radius", "width", "pull" }`, `turbulence` also `speed`, `time_scale` and `mask` | `particles2` |
 | forces | `{ "keep_distance": { "target", "distance", "strength" } }`, `{ "keep_between": { "from", "to", "strength" } }`, `{ "remap": { … } }` applied every step (input `age` too) | `particle_fields` |
 | force `boids` | `{ "radius", "separation", "alignment", "cohesion", "max_speed" }` flocking, for systems of at most 8192 particles | `boids` |
+| collider `mask` | `{ "mask": { "texture", "threshold" } }`, the part of an image stretched over the canvas whose alpha is above `threshold` (0.5 by default), which particles bounce off or die on | `particles2` |
 | colliders | `{ "box": { "from", "to", "inside" } }`, `{ "segment": { "from", "to" } }`, `circle` with `inside`, and `stick: true` | `particle_collisions` |
 | collider `layer` | `{ "layer": { "id" } }`, the opaque shape of a layer | `particle_layers` |
 | `children` | at most 4 `{ "system", "on": "static" \| "spawn" \| "death" \| "follow", "probability", "max", "offset", "angle", "scale" (0 to 100), "points_from", "inherit", "follow_inherit" }`: other systems born with or from each particle, at most two levels deep and never back to themselves; `inherit` copies `color`, `size`, `alpha` or `velocity`, every step with `follow_inherit` on `follow` children; a collider that `kill`s counts as a death | `particle_children` |
 | render `brightness`, `cycles`, `stretch` | 0 to 16, may be bound; repeats the frames that many times per life (1 to 64, with `frames: life`); `stretch` may be `{ "time", "min", "max" }` in pixels, and `min` equal to `max` only turns a sprite along its motion | `particles2` |
+| render `order` | `newest`, `oldest`, `largest`, `smallest` or `lowest`: the particles drawn on top; others are drawn in no set order | `particles2` |
 | render `rope`, `trail` | `{ "subdivide" (0 to 7), "width", "uv_scale", "uv_scroll", "smooth" }` joins particles in birth order; trails of up to 64 steps with `segments`, `subdivide`, `uv_scale`, `uv_scroll` and `textured` | `particle_ropes` |
 | render `cutout`, `orient`, `angle` | `[start, end, opacity]` remaps the alpha of the texture; `screen`, `velocity` or `fixed` with `angle` | `particle_looks` |
 | render `lit`, `normal`, `refract` | lit by the scene lights with a normal map; `{ "normal", "amount" }` bends what is behind | `particle_lighting` |
@@ -1020,6 +1033,24 @@ The newer fields behave as follows.
 - **Looks.** `render.brightness` multiplies the color with the brightness of the layer, `cycles`
   repeats the frames over the life and the `stretch` range limits how long a particle is drawn along
   its motion, in pixels.
+- **Frames.** A texture whose asset has `rects` draws each frame from its own rectangle, so frames
+  may differ in size; an animated picture is split into its own frames the same way.
+- **Gradients.** `init.gradient` picks a color between the two stops around a random place and the
+  first or last color outside them.
+- **Trails.** `render.trail` keeps the last `length` positions of each particle, one per 1/60 s
+  step, and draws a ribbon through them that is `width` times as wide as the particle was there and
+  fades to nothing at its end, with the color and size the particle had there. It holds 16 bytes
+  per particle and step, at most 16 steps (4, 8 or 16 by device class, none with software rendering
+  or on the CPU of the weakest devices, half of them or none at lower quality levels) and at most
+  1 048 576 points per system. A layer with a `render` of its own draws as many of the kept
+positions as its own `trail` asks for, or none.
+- **Order.** `render.order` draws the particles from the bottom up in 256 steps of age, size or
+  height, which matters with the `normal` blend; it costs a pass over the particles after each
+  step that moved them.
+- **Masks.** A `mask` collider turns the image into a field of distances, at most 16 384 cells over
+  the canvas (the image itself when it is smaller), and pushes particles out of the opaque part
+  along it, at the place where they went in. It works on world and local systems alike, in pixels
+  of the canvas, and reads the image once when the scene loads.
 - **Limits.** A scene simulates at most 64 systems, counting children and layers with particles of
   their own, and their capacities share the 200 000 particles. `prewarm` runs in steps of 1/15 s,
   at most 30 million particle steps, and stops after 200 ms when particles run on the CPU.
@@ -1029,10 +1060,11 @@ A `particles` layer may also set `instance` (`alpha`, `size`, `count`, `speed`, 
 that layer only, unless the system locks them) and a `render` of its own that replaces the one of
 the system (`particles2`). Each end of the `init` ranges of numbers (`life`, `speed`, `angle`,
 `size`, `rotation`, `spin`, `frame`, `alpha`, `radial`, `depth`, `depth_speed`) and the numbers of
-emitter shapes (`radius` and `inner` of `circle`, `threshold` of `mask` and `layer`, `arc`, `radius`
-and `speed` of `around`, `span` of `between`) may be bound like any value, for instance
-`"size": [2, { "audio": "bass", "scale": 8 }]` (`particle_values`); colors and velocities stay
-literal. Births may also follow the sound or the pointer through the `rate` of the emitter, the
+emitter shapes (`radius` and `inner` of `circle`, `threshold` of `layer`, `arc`, `radius` and
+`speed` of `around`, `span` of `between`) may be bound like any value, for instance
+`"size": [2, { "audio": "bass", "scale": 8 }]` (`particle_values`), and are read every frame and
+kept within the limits of the field; colors, velocities and the `threshold` of `mask`, read when the
+scene loads, stay literal. Births may also follow the sound or the pointer through the `rate` of the emitter, the
 `instance` multipliers of the layer or control points.
 ## User properties and presets
 

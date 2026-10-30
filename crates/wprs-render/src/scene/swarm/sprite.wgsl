@@ -5,6 +5,7 @@ struct Look {
     atlas: vec4<f32>,
     trail: vec4<f32>,
     shade: vec4<f32>,
+    extra: vec4<f32>,
     sizes: array<vec4<f32>, 16>,
     colors: array<vec4<f32>, 64>,
 };
@@ -19,6 +20,13 @@ struct Sprite {
 @group(0) @binding(0) var<uniform> look: Look;
 @group(0) @binding(1) var samp: sampler;
 @group(1) @binding(0) var sprite: texture_2d<f32>;
+@group(1) @binding(1) var<uniform> rects: array<vec4<f32>, 256>;
+
+struct Ribbon {
+    @builtin(position) position: vec4<f32>,
+    @location(0) color: vec4<f32>,
+    @location(1) across: f32,
+};
 
 fn curve(t: f32) -> f32 {
     let x = t * 63.0;
@@ -54,24 +62,20 @@ fn vs_particle(
     let corner = vec2<f32>(f32(v & 1u), f32(v >> 1u));
     let speed = length(a.zw);
     let turned = look.shade.z > 0.0 && look.shade.z == look.shade.w;
-    let stretch = select(clamp(look.trail.x * speed, look.shade.z, look.shade.w), 0.0, turned || speed <= 0.0);
-    let tail = stretch + look.trail.y * speed;
+    let tail = select(clamp(look.trail.x * speed, look.shade.z, look.shade.w), 0.0, turned || speed <= 0.0);
     var axis = vec2<f32>(cos(radians(b.w)), sin(radians(b.w)));
-    var width = size;
     if (tail > 0.0 || turned) && speed > 0.0 {
         axis = a.zw / speed;
-        width = size * select(1.0, look.trail.z, look.trail.y > 0.0);
     }
     let along = mix(-0.5 * size - tail, 0.5 * size, corner.x);
-    let p = vec3<f32>(a.xy + axis * along + vec2<f32>(-axis.y, axis.x) * (corner.y - 0.5) * width, 1.0);
+    let p = vec3<f32>(a.xy + axis * along + vec2<f32>(-axis.y, axis.x) * (corner.y - 0.5) * size, 1.0);
     out.position = vec4<f32>(dot(look.m0.xyz, p), dot(look.m1.xyz, p), 0.0, 1.0);
     out.uv = corner;
     let x = t * 63.0;
     let i = min(u32(x), 62u);
     let tone = mix(look.colors[i], look.colors[i + 1u], x - f32(i));
     let base = select(vec4<f32>(decode(color.rgb), color.a), color, look.tint.y > 0.5);
-    let fade = select(1.0, corner.x, look.trail.y > 0.0);
-    out.color = base * tone * vec4<f32>(vec3<f32>(look.shade.x), look.tint.x * fade * e.z);
+    out.color = base * tone * vec4<f32>(vec3<f32>(look.shade.x), look.tint.x * e.z);
     let n = max(look.atlas.x * look.atlas.y, 1.0);
     var f = c.y;
     switch u32(look.atlas.z) {
@@ -91,6 +95,11 @@ fn vs_particle(
 }
 
 fn cell(f: f32, uv: vec2<f32>) -> vec4<f32> {
+    if look.extra.x > 0.5 {
+        let r = rects[min(u32(f), 255u)];
+        let edge = min(0.5 / vec2<f32>(textureDimensions(sprite)), r.zw * 0.5);
+        return textureSample(sprite, samp, r.xy + clamp(uv * r.zw, edge, r.zw - edge));
+    }
     let cols = max(look.atlas.x, 1.0);
     let at = vec2<f32>(f % cols, floor(f / cols));
     return textureSample(sprite, samp, (at + uv) / vec2<f32>(cols, max(look.atlas.y, 1.0)));
@@ -104,5 +113,48 @@ fn fs_particle(in: Sprite) -> @location(0) vec4<f32> {
     }
     let disc = vec4<f32>(1.0, 1.0, 1.0, 1.0 - smoothstep(0.5, 1.0, length(in.uv * 2.0 - 1.0)));
     let c = select(disc, s, look.tint.w > 0.5) * in.color;
+    return vec4<f32>(c.rgb * c.a, c.a);
+}
+
+@vertex
+fn vs_trail(
+    @builtin(vertex_index) v: u32,
+    @builtin(instance_index) n: u32,
+    @location(0) a: vec2<f32>,
+    @location(1) sa: vec2<f32>,
+    @location(2) ca: vec4<f32>,
+    @location(3) b: vec2<f32>,
+    @location(4) sb: vec2<f32>,
+    @location(5) cb: vec4<f32>,
+) -> Ribbon {
+    var out: Ribbon;
+    out.position = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+    let k = max(u32(look.extra.z), 1u);
+    let j = n % k;
+    let d = b - a;
+    let l = length(d);
+    if f32(j + 1u) >= look.extra.y || sa.x <= 0.0 || sb.x <= 0.0 || l <= 1e-4 {
+        return out;
+    }
+    let corner = vec2<f32>(f32(v & 1u), f32(v >> 1u));
+    let far = corner.x > 0.5;
+    let s = select(sa, sb, far);
+    let c = select(ca, cb, far);
+    let width = s.x * curve(s.y) * look.tint.z * look.extra.w;
+    let p = vec3<f32>(select(a, b, far) + vec2<f32>(-d.y, d.x) / l * (corner.y - 0.5) * width, 1.0);
+    out.position = vec4<f32>(dot(look.m0.xyz, p), dot(look.m1.xyz, p), 0.0, 1.0);
+    let x = s.y * 63.0;
+    let i = min(u32(x), 62u);
+    let tone = mix(look.colors[i], look.colors[i + 1u], x - f32(i));
+    let base = select(vec4<f32>(decode(c.rgb), c.a), c, look.tint.y > 0.5);
+    let fade = 1.0 - (f32(j) + corner.x) / max(look.extra.y - 1.0, 1.0);
+    out.color = base * tone * vec4<f32>(vec3<f32>(look.shade.x), look.tint.x * fade);
+    out.across = corner.y;
+    return out;
+}
+
+@fragment
+fn fs_trail(in: Ribbon) -> @location(0) vec4<f32> {
+    let c = in.color * vec4<f32>(1.0, 1.0, 1.0, 1.0 - smoothstep(0.6, 1.0, abs(in.across * 2.0 - 1.0)));
     return vec4<f32>(c.rgb * c.a, c.a);
 }

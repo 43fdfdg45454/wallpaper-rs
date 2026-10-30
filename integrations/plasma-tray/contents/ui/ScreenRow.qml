@@ -117,6 +117,15 @@ ColumnLayout {
 
             PlasmaComponents3.Label {
                 Layout.fillWidth: true
+                visible: row.info.particles === "cpu"
+                text: i18n("Its particles run on the processor, so fewer of them are shown")
+                wrapMode: Text.Wrap
+                font: Kirigami.Theme.smallFont
+                color: Kirigami.Theme.disabledTextColor
+            }
+
+            PlasmaComponents3.Label {
+                Layout.fillWidth: true
                 visible: row.pkg.photosensitive === true
                 text: row.allowed ? i18n("Flashes or shows fast patterns; you allowed it") : i18n("Flashes or shows fast patterns that can trigger seizures")
                 wrapMode: Text.Wrap

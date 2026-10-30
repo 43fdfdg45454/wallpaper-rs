@@ -5,6 +5,7 @@ use crate::validate::{Check, Issue};
 impl Check<'_> {
     pub(super) fn render2(&mut self, p: &str, r: &Render) {
         let wide = r.brightness.is_some()
+            || r.order.is_some()
             || r.cycles.is_some()
             || r.stretch.min.is_some()
             || r.stretch.max.is_some();

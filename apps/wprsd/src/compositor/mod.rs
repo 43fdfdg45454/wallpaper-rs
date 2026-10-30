@@ -187,6 +187,7 @@ pub struct OutputStatus {
     pub fps: u32,
     pub sound: &'static str,
     pub flashes: &'static str,
+    pub particles: &'static str,
     pub left_out: Vec<String>,
 }
 

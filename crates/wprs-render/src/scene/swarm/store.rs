@@ -1,5 +1,6 @@
 use super::{B, CHUNK, Flight, PARTICLE, SIM, SceneView, Store, Swarms, buffer, module};
 use crate::{RenderError, Renderer};
+use wprs_scene::Stack;
 use wprs_scene::{Census, Cloud, Sim};
 
 pub(super) fn fresh(alloc: u32, size: u32) -> Vec<u32> {
@@ -34,6 +35,9 @@ impl Swarms {
                 })
             }));
         }
+        if gpu && self.sorts.is_none() && self.kits.iter().any(|k| k.order.is_some()) {
+            self.sorts = Some(self.sorting(r));
+        }
         self.flights = (0..self.herds.len()).map(|i| Some(self.flight(r, i))).collect();
         self.marks.resize(self.herds.len(), (0, 0));
     }
@@ -52,8 +56,8 @@ impl Swarms {
             let particles =
                 buffer(r, u64::from(*alloc) * PARTICLE, B::VERTEX | B::COPY_DST | B::COPY_SRC | extra);
             let gpu = self.gpu.then(|| {
-                let state =
-                    init(bytemuck::cast_slice(&fresh(*alloc, bake.states[p])), B::STORAGE | B::COPY_DST);
+                let state = fresh(*alloc, bake.states[p]);
+                let state = init(bytemuck::cast_slice(&state), B::STORAGE | B::COPY_DST | B::VERTEX);
                 let sims = buffer(r, CHUNK as u64 * SIM, B::UNIFORM | B::COPY_DST);
                 let size = wgpu::BufferSize::new(size_of::<Sim>() as u64);
                 let sim =
@@ -69,7 +73,20 @@ impl Swarms {
                 let group = r.device.create_bind_group(&desc);
                 (state, sims, group)
             });
-            stores.push(Store { particles, gpu });
+            let k = u64::from(bake.trails[p]);
+            let trail =
+                (!self.gpu && k > 0).then(|| buffer(r, u64::from(*alloc) * k * 16, B::VERTEX | B::COPY_DST));
+            let mut orders: Vec<(Stack, f32)> = Vec::new();
+            for (o, size) in self.kits.iter().filter(|k| k.system == bake.systems[p]).filter_map(|k| k.order)
+            {
+                match orders.iter_mut().find(|(e, _)| *e == o) {
+                    Some(e) => e.1 = e.1.max(size),
+                    None => orders.push((o, size)),
+                }
+            }
+            let stacks =
+                orders.into_iter().map(|(o, size)| self.stacked(r, (&particles, *alloc), o, size)).collect();
+            stores.push(Store { particles, gpu, trail, stacks });
         }
         let clouds = if self.gpu { Vec::new() } else { bake.allocs.iter().map(|a| Cloud::new(*a)).collect() };
         Flight { stores, clouds }

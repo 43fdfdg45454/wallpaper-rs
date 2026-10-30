@@ -169,6 +169,14 @@ impl SceneState {
         changed
     }
 
+    pub(super) fn particles(&self) -> &'static str {
+        match self.view.as_ref().and_then(SceneView::gpu_particles) {
+            Some(true) => "gpu",
+            Some(false) => "cpu",
+            None => "",
+        }
+    }
+
     pub(super) fn flashes(&self) -> &'static str {
         self.guard.as_ref().map_or("", |g| g.label())
     }

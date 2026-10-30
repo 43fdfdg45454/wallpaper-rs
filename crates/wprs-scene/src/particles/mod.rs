@@ -1,4 +1,5 @@
 mod bake;
+mod bound;
 mod checks;
 mod children;
 mod cloud;
@@ -7,6 +8,7 @@ mod drawn;
 mod drive;
 mod emit;
 mod feed;
+mod field;
 mod flock;
 mod forces;
 mod instance;
@@ -22,16 +24,18 @@ mod seed;
 mod shapes;
 mod spawn;
 mod spread;
+mod stack;
 mod starts;
 mod swarm;
 mod tune;
 
-pub use bake::{Bake, CPU_PARTICLES, MAX_POINTS};
+pub use bake::{Bake, CPU_PARTICLES, MAX_POINTS, MAX_TRAIL};
 pub use children::{Child, Inheritable, MAX_CHILDREN, Moment};
-pub use cloud::{Census, Cloud, Particle};
+pub use cloud::{Census, Cloud, Particle, mark};
 pub use control::{ControlPoint, Handle, MAX_CONTROL, Periodic, Perspective, Placement};
-pub use emit::{Burst, Cue, Emitter, Follow, Init};
+pub use emit::{Burst, Cue, Emitter, Follow, Init, MAX_STOPS};
 pub use feed::MAX_EMIT;
+pub use field::MAX_FIELD;
 pub(crate) use flock::flock_of;
 pub use flock::{Flock, MAX_DEPTH, MAX_PARTS, Part, flocks};
 pub use forces::{
@@ -39,7 +43,7 @@ pub use forces::{
     Wobble,
 };
 pub use instance::{Instance, Tunable};
-pub use look::{Frames, Orient, Refract, Render, Rope, Stretch, Trail};
+pub use look::{Frames, Orient, Refract, Render, Rope, Stack, Stretch, Trail};
 pub use ops::Operator;
 pub use pack::{EVENT, MAX_HATCH, PARTICLE_EVENTS, Sim};
 pub(crate) use plan::plan;
@@ -49,6 +53,7 @@ pub use seed::{
 };
 pub use shapes::{Area, Around, Between, Bow, EmitShape, Refresh, Source, Sweep, Taper};
 pub use spread::{Num, Spread};
+pub use stack::{bin, largest, stacked};
 pub use swarm::{Play, STEP, SUBSTEPS, Swarm, WARM, WARM_WORK};
 pub(crate) use tune::tuned;
 

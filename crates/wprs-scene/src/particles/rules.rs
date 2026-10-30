@@ -53,6 +53,9 @@ impl Check<'_> {
                     let known = self.scene.assets.contains_key(texture);
                     self.known(&format!("{q}/shape/mask/texture"), "asset", texture, known);
                     self.num(&format!("{q}/shape/mask/threshold"), threshold, 0.0, 1.0);
+                    if threshold.1.is_some() {
+                        self.issues.push(Issue::Type(format!("{q}/shape/mask/threshold")));
+                    }
                     vec![]
                 }
                 _ => vec![],

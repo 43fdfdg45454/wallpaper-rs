@@ -101,6 +101,7 @@ fun Settings(main: Main) {
                 stringResource(R.string.power, yes("charging"), yes("saver"), report.optInt("thermal")),
                 stringResource(R.string.scene_level, report.optString("tier"), report.optString("quality"))
                     .takeIf { report.optString("tier").isNotEmpty() },
+                stringResource(R.string.particles_cpu).takeIf { report.optString("particles") == "cpu" },
             ).plus(
                 report.optJSONArray("left_out").let { left ->
                     (0 until (left?.length() ?: 0)).map {

@@ -1206,7 +1206,10 @@ ctl mute && ctl lib apply "$snow" -o TEST-15 2>"$WORK/apply.err" && consume "$s1
 speakers "('off', '')"
 sleep 1
 heard 0 || fail "a muted scene opened an audio stream"
-if [ -s "$WORK/apply.err" ]; then fail "a scene without inputs printed a hint: $(cat "$WORK/apply.err")"; fi
+grep -v "^TEST-15: its particles run on the processor, so fewer of them are shown$" "$WORK/apply.err" >"$WORK/hints.err" || true
+if [ -s "$WORK/hints.err" ]; then fail "a scene without inputs printed a hint: $(cat "$WORK/hints.err")"; fi
+expect "s['outputs']['TEST-15']['particles'] in ('cpu', 'gpu')" "True"
+if grep -q "particles run on the processor" "$WORK/apply.err"; then expect "s['outputs']['TEST-15']['particles']" "cpu"; fi
 ctl volume 50 && speakers "('playing', '')"
 wait_for 10 heard 1 || fail "no audio stream while the scene with sound is shown"
 ctl pause && speakers "('paused', '')"

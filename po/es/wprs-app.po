@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 00:00+0000\n"
+"POT-Creation-Date: 2026-10-30 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -1418,6 +1418,10 @@ msgstr ""
 #: apps/wprs-app/qml/OutputRow.qml
 msgid "Try again"
 msgstr "Probar de nuevo"
+
+#: apps/wprs-app/qml/OutputRow.qml
+msgid "Its particles run on the processor, so fewer of them are shown"
+msgstr "Sus partículas se mueven en el procesador, así que se muestran menos"
 
 #: apps/wprs-app/qml/OutputRow.qml
 msgid "This picture has its own placement: %1"
@@ -4325,6 +4329,10 @@ msgid "Inverse square"
 msgstr "Inverso del cuadrado"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Largest on top"
+msgstr "Las más grandes encima"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Pointer leaves"
 msgstr "Sale el puntero"
 
@@ -4360,6 +4368,10 @@ msgstr "Luz lineal"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Local"
 msgstr "Local"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Lowest on top"
+msgstr "Las más bajas encima"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Luminance"
@@ -4411,8 +4423,16 @@ msgid "Negation"
 msgstr "Negación"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Newest on top"
+msgstr "Las más nuevas encima"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Number"
 msgstr "Número"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Oldest on top"
+msgstr "Las más viejas encima"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "When it changes"
@@ -4512,6 +4532,10 @@ msgstr "Atajos"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Sine"
 msgstr "Sinusoidal"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Smallest on top"
+msgstr "Las más pequeñas encima"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "On birth"

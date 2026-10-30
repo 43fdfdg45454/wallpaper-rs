@@ -23,6 +23,7 @@ pub struct Sim {
     pub forces: [[f32; 4]; 64],
     pub colliders: [[f32; 4]; 16],
     pub hatch: [[f32; 4]; 2],
+    pub trail: [u32; 4],
 }
 
 impl Default for Sim {
@@ -127,6 +128,15 @@ impl Sim {
             self.init[9][3] = 1.0;
             self.tones[0] = [h.hue[0], h.hue[1], h.sat[0], h.sat[1]];
             self.tones[1] = [h.val[0], h.val[1], h.steps.unwrap_or(0) as f32, 0.0];
+        }
+        if !i.gradient.is_empty() {
+            self.init[9][3] = 3.0;
+            let n = i.gradient.len().min(super::MAX_STOPS);
+            for (k, (t, c)) in i.gradient.iter().take(n).enumerate() {
+                self.colors[k] = c.0;
+                self.tones[if k < 4 { 0 } else { 2 }][k % 4] = *t;
+            }
+            self.tones[1][3] = n as f32;
         }
         if let Some(p) = &i.palette {
             self.init[9][3] = 2.0;

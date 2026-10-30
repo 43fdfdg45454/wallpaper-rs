@@ -12,6 +12,16 @@ pub enum Frames {
     Random,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Stack {
+    Newest,
+    Oldest,
+    Largest,
+    Smallest,
+    Lowest,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct Render {
@@ -40,6 +50,8 @@ pub struct Render {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-range" = [1, 64]))]
     pub cycles: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order: Option<Stack>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rope: Option<Rope>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -178,6 +190,7 @@ impl Default for Render {
             brightness,
             cutout,
             cycles,
+            order: None,
             rope,
             orient,
             angle,

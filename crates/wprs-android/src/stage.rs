@@ -15,6 +15,7 @@ const DAY_MS: f64 = 86_400_000.0;
 
 static LEVEL: AtomicU32 = AtomicU32::new(0);
 static CALMING: AtomicU32 = AtomicU32::new(0);
+static ENGINE: AtomicU32 = AtomicU32::new(0);
 static LEFT: Mutex<(u64, Vec<(String, String)>)> = Mutex::new((0, Vec::new()));
 static RETRIES: AtomicU64 = AtomicU64::new(0);
 
@@ -33,6 +34,10 @@ pub(crate) fn retry() {
 
 pub(crate) fn flashes() -> &'static str {
     ["", "slowed", "paused"][CALMING.load(Relaxed).min(2) as usize]
+}
+
+pub(crate) fn particles() -> &'static str {
+    ["", "gpu", "cpu"][ENGINE.load(Relaxed).min(2) as usize]
 }
 
 pub(crate) fn left_out() -> Vec<serde_json::Value> {
@@ -238,6 +243,7 @@ impl Stage {
         self.fps = if wake == Wake::Frame { fps } else { 0 };
         let rendered =
             r.render_scene(view, &self.runtime, &frame, (inner[0], inner[1]), quality, videos).map(drop);
+        ENGINE.store(view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }), Relaxed);
         let mut left = LEFT.lock().unwrap_or_else(PoisonError::into_inner);
         if left.0 != view.left_key() {
             *left = (view.left_key(), view.left());

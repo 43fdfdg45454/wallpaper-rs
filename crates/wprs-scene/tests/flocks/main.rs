@@ -6,6 +6,7 @@ use wprs_scene::*;
 mod births;
 mod drives;
 mod kin;
+mod looks;
 mod spaces;
 mod timing;
 
@@ -40,7 +41,11 @@ struct Fly {
 
 impl Fly {
     fn new(rt: Runtime) -> Fly {
-        let bake = Bake::new(&rt.scene, 0, Tier::T3, false, |_| None).unwrap();
+        Fly::with(rt, |_| None)
+    }
+
+    fn with<'a>(rt: Runtime, image: impl Fn(&str) -> Option<(u32, u32, &'a [u8])>) -> Fly {
+        let bake = Bake::new(&rt.scene, 0, Tier::T3, false, image).unwrap();
         let clouds = bake.allocs.iter().map(|a| Cloud::new(*a)).collect();
         Fly { rt, bake, clouds, stamp: 0, epoch: 0, births: 0 }
     }

@@ -175,6 +175,7 @@
     <string name="reason_memory">sus texturas de estado ocuparían demasiada memoria</string>
     <string name="reason_textures">sus texturas ocuparían demasiada memoria</string>
     <string name="scene_level">Escenas: clase de dispositivo %1$s, nivel %2$s</string>
+    <string name="particles_cpu">Sus partículas se mueven en el procesador, así que se muestran menos</string>
     <string name="strength">Intensidad</string>
     <string name="focus">Enfoque</string>
     <string name="still_saver">Quieto mientras el ahorro de energía está activado</string>

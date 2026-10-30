@@ -195,4 +195,15 @@ pub enum Surface {
         #[schemars(extend("x-ref" = "layer"))]
         id: String,
     },
+    Mask {
+        #[schemars(extend("x-ref" = "image"))]
+        texture: String,
+        #[serde(default = "half")]
+        #[schemars(extend("x-range" = [0, 1]))]
+        threshold: f32,
+    },
+}
+
+fn half() -> f32 {
+    0.5
 }

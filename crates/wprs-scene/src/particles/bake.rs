@@ -1,9 +1,10 @@
 use super::pack::{EVENT, PARTICLE_EVENTS};
-use super::{EmitShape, Flock, MAX_EMITTERS2, Sim, System, flocks};
+use super::{Flock, MAX_EMITTERS2, Moment, Sim, System, flocks};
 use crate::{Kind, Scene, Tier};
 
 pub const CPU_PARTICLES: u32 = 5_000;
 pub const MAX_POINTS: usize = 4096;
+pub const MAX_TRAIL: u32 = 1 << 20;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Bake {
@@ -12,16 +13,32 @@ pub struct Bake {
     pub states: Vec<u32>,
     pub hosts: Vec<Option<usize>>,
     pub systems: Vec<usize>,
-    pub trail: u32,
     pub points: Vec<[f32; 2]>,
+    pub trails: Vec<u32>,
+    pub marks: Vec<u32>,
+    fields: Vec<[[f32; 4]; super::MAX_COLLIDERS2]>,
+    asked: Vec<u32>,
+    makes: Vec<u32>,
+    ons: Vec<Option<Moment>>,
     ranges: Vec<[[f32; 4]; MAX_EMITTERS2]>,
     links: Vec<[u32; 4]>,
 }
 
-fn layout(alloc: u32, makes: u32) -> ([u32; 3], u32) {
+fn layout(alloc: u32, makes: u32, trail: u32) -> ([u32; 4], u32) {
     let events = if makes & 3 != 0 { 2 * PARTICLE_EVENTS * EVENT as u32 } else { 0 };
     let mirror = if makes & 4 != 0 { alloc * EVENT as u32 } else { 0 };
-    ([alloc, alloc + PARTICLE_EVENTS * EVENT as u32, alloc + events], 4 + alloc + events + mirror)
+    let marks = alloc + events + mirror;
+    ([alloc, alloc + PARTICLE_EVENTS * EVENT as u32, alloc + events, marks], 4 + marks + alloc * trail * 4)
+}
+
+fn asked(scene: &Scene, id: &str, s: &System) -> u32 {
+    let own = scene.layers().filter_map(|l| match &l.kind {
+        Kind::Particles { system, render: Some(r), .. } if system == id => Some(&**r),
+        _ => None,
+    });
+    let longest =
+        std::iter::once(&s.render).chain(own).filter_map(|r| r.trail.as_ref()).map(|t| t.length).max();
+    longest.unwrap_or(0).min(16)
 }
 
 impl Bake {
@@ -46,8 +63,9 @@ impl Bake {
             |f: &Flock| f.parts.iter().map(|p| u64::from(systems[p.system].capacity)).sum::<u64>() * draws(f);
         let total: u64 = all.iter().map(weight).sum();
         let cap = u64::from(if cpu { tier.particles().min(CPU_PARTICLES) } else { tier.particles() });
-        let mut bake = Bake { trail: tier.trail(), ..Bake::default() };
+        let mut bake = Bake::default();
         let [w, h] = scene.canvas.size.map(|v| v as f32);
+        let on = |s: &System, m| s.children.iter().any(|c| c.on == m);
         for part in &f.parts {
             let s = systems[part.system];
             let alloc =
@@ -57,46 +75,39 @@ impl Bake {
             bake.allocs.push(alloc);
             bake.sizes.push((tier.overdraw() / spread.max(1e-9)).sqrt().min(1.0));
             bake.hosts.push(part.host);
+            bake.ons.push(part.on);
             bake.systems.push(part.system);
-            let mut ranges = [[0.0; 4]; MAX_EMITTERS2];
-            for (e, em) in s.emitters.iter().take(MAX_EMITTERS2).enumerate() {
-                let EmitShape::Mask { texture, threshold } = &em.shape else { continue };
-                let Some((iw, ih, rgba)) = image(texture) else { continue };
-                let stride = ((iw as f32 * ih as f32 / MAX_POINTS as f32).sqrt().ceil() as usize).max(1);
-                let start = bake.points.len();
-                let at = |v: usize, n: u32, side: f32| (v as f32 + stride as f32 / 2.0) / n as f32 * side;
-                for y in (0..ih as usize).step_by(stride) {
-                    for x in (0..iw as usize).step_by(stride) {
-                        let alpha = rgba.get((y * iw as usize + x) * 4 + 3).copied().unwrap_or(0);
-                        if f32::from(alpha) / 255.0 > threshold.0 {
-                            bake.points.push([at(x, iw, w), at(y, ih, h)]);
-                        }
-                    }
-                }
-                let cell = [stride as f32 / iw as f32 * w, stride as f32 / ih as f32 * h];
-                ranges[e] = [start as f32, (bake.points.len() - start) as f32, cell[0], cell[1]];
-            }
-            bake.ranges.push(ranges);
+            bake.asked.push(asked(scene, ids[part.system], s));
+            bake.makes.push(
+                [Moment::Spawn, Moment::Death, Moment::Follow]
+                    .iter()
+                    .zip([1, 2, 4])
+                    .map(|(m, b)| if on(s, *m) { b } else { 0 })
+                    .sum(),
+            );
+            bake.fields.push(super::field::fields(s, &image, [w, h], &mut bake.points));
+            bake.ranges.push(super::field::shapes(s, &image, [w, h], &mut bake.points));
         }
-        let makes = |s: &System| {
-            let on = |m| s.children.iter().any(|c| c.on == m);
-            u32::from(on(super::Moment::Spawn))
-                + 2 * u32::from(on(super::Moment::Death))
-                + 4 * u32::from(on(super::Moment::Follow))
-        };
-        let shapes: Vec<_> =
-            f.parts.iter().zip(&bake.allocs).map(|(p, a)| layout(*a, makes(systems[p.system]))).collect();
-        for (k, part) in f.parts.iter().enumerate() {
-            let ([spawn, death, mirror], size) = shapes[k];
-            let host = part.host.map_or(0, |h| match part.on {
-                Some(super::Moment::Spawn) => shapes[h].0[0],
-                Some(super::Moment::Death) => shapes[h].0[1],
+        bake.retrail(tier);
+        Some(bake)
+    }
+
+    pub fn retrail(&mut self, tier: Tier) {
+        let n = self.allocs.len();
+        let cap = |k: usize| MAX_TRAIL / self.allocs[k].max(1);
+        self.trails = (0..n).map(|k| self.asked[k].min(tier.trail()).min(cap(k))).collect();
+        let shapes: Vec<_> = (0..n).map(|k| layout(self.allocs[k], self.makes[k], self.trails[k])).collect();
+        (self.links, self.states, self.marks) = Default::default();
+        for (k, ([spawn, death, mirror, marks], size)) in shapes.iter().enumerate() {
+            let host = self.hosts[k].map_or(0, |h| match self.ons[k] {
+                Some(Moment::Spawn) => shapes[h].0[0],
+                Some(Moment::Death) => shapes[h].0[1],
                 _ => shapes[h].0[2],
             });
-            bake.links.push([spawn, death, mirror, host]);
-            bake.states.push(size);
+            self.links.push([*spawn, *death, *mirror, host]);
+            self.states.push(*size);
+            self.marks.push(*marks);
         }
-        Some(bake)
     }
 
     pub fn alloc(&self) -> u32 {
@@ -110,6 +121,12 @@ impl Bake {
         out.ids[3] = sim.ids[3].min(alloc);
         out.links = self.links[part];
         out.mode[3] = self.hosts[part].map_or(0, |h| self.allocs[h]);
+        out.trail = [self.marks[part], self.trails[part], 0, 0];
+        for (k, f) in self.fields[part].iter().enumerate() {
+            if out.colliders[2 * k][0] == 4.0 {
+                out.colliders[2 * k] = *f;
+            }
+        }
         if sim.mode[0] != 0 {
             return out;
         }

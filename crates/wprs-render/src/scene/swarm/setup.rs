@@ -1,10 +1,12 @@
 use super::kit::{Look, kit};
-use super::{B, Herd, SIM, Swarms, buffer, compute, entry, mode, module, storage, uniform};
+use super::{B, Herd, SIM, Swarms, buffer, compute, entry, mode, module, plain, storage, uniform};
 use crate::Renderer;
 use crate::scene::{Image, SceneAssets};
 use std::collections::HashMap;
 use wgpu::ShaderStages as S;
-use wprs_scene::{Bake, Blend, EmitShape, Kind, Placement, Quality, Render, Scene, Values, flocks};
+use wprs_scene::{
+    Bake, Blend, EmitShape, Kind, Placement, Quality, Render, Scene, Surface, System, Values, flocks,
+};
 
 pub(crate) fn renders(scene: &Scene) -> Vec<(usize, Option<String>, &Render)> {
     let own = scene.layers().filter_map(|l| match &l.kind {
@@ -23,12 +25,22 @@ pub(crate) fn sprites(scene: &Scene, props: &Values) -> Vec<Option<String>> {
         .collect()
 }
 
+fn masks(s: &System) -> impl Iterator<Item = &str> {
+    let shapes = s.emitters.iter().filter_map(|e| match &e.shape {
+        EmitShape::Mask { texture, .. } => Some(texture.as_str()),
+        _ => None,
+    });
+    let walls = s.collide.iter().filter_map(|c| match &c.bounds {
+        Surface::Mask { texture, .. } => Some(texture.as_str()),
+        _ => None,
+    });
+    shapes.chain(walls)
+}
+
 impl Swarms {
     pub(crate) fn uses(&self, scene: &Scene, id: &str) -> bool {
-        let masked = |s: &wprs_scene::System| {
-            s.emitters.iter().any(|e| matches!(&e.shape, EmitShape::Mask { texture, .. } if texture == id))
-        };
-        self.sprites.iter().flatten().any(|s| s == id) || scene.particles.values().any(masked)
+        self.sprites.iter().flatten().any(|s| s == id)
+            || scene.particles.values().flat_map(masks).any(|m| m == id)
     }
 
     pub(crate) fn new(
@@ -55,6 +67,7 @@ impl Swarms {
         let sample_type = wgpu::TextureSampleType::Float { filterable: true };
         let (view_dimension, c) = (wgpu::TextureViewDimension::D2, S::COMPUTE);
         let texture = wgpu::BindingType::Texture { sample_type, view_dimension, multisampled: false };
+        let rects = plain(4096);
         let layouts = [
             layout(&[
                 entry(0, c, storage(false)),
@@ -67,19 +80,25 @@ impl Swarms {
                 entry(0, S::VERTEX_FRAGMENT, uniform(size_of::<Look>())),
                 entry(1, S::FRAGMENT, filtering),
             ]),
-            layout(&[entry(0, S::FRAGMENT, texture)]),
+            layout(&[entry(0, S::FRAGMENT, texture), entry(1, S::FRAGMENT, rects)]),
+            layout(&[
+                entry(0, c, storage(true)),
+                entry(1, c, storage(false)),
+                entry(2, c, storage(false)),
+                entry(3, c, plain(16)),
+            ]),
         ];
         debug_assert!(size_of::<wprs_scene::Sim>() as u64 <= SIM);
-        let masks = scene.particles.values().flat_map(|s| &s.emitters).filter_map(|e| match &e.shape {
-            EmitShape::Mask { texture, .. } => Some((texture.as_str(), assets.images.get(texture)?.image()?)),
-            _ => None,
-        });
+        let masks = scene.particles.values().flat_map(masks);
+        let masks = masks.filter_map(|t| Some((t, assets.images.get(t)?.image()?)));
         let masks: HashMap<&str, std::sync::Arc<image::RgbaImage>> = masks.collect();
+        let cells = crate::scene::sampling::samplings(scene, assets);
         let pixels = |id: &str| masks.get(id).map(|i| (i.width(), i.height(), i.as_raw().as_slice()));
         let sprites = sprites(scene, props);
         let kits = renders(scene).into_iter().zip(&sprites).map(|((system, layer, render), sprite)| {
+            let frames = sprite.as_ref().and_then(|t| cells.get(t)).map_or(&[][..], |c| &c.cells[..]);
             let sprite = sprite.as_deref().map(|t| (t, images.get(t)));
-            kit(r, &layouts[2], (system, layer), render, scene, sprite, white, srgb)
+            kit(r, &layouts[2], (system, layer), render, scene, (sprite, frames), white, srgb)
         });
         let systems: Vec<_> = scene.particles.values().collect();
         let herds = flocks(scene).into_iter().enumerate().filter_map(|(i, f)| {
@@ -97,7 +116,6 @@ impl Swarms {
             created: 0,
             gpu,
             profile: false,
-            trail: tier.trail(),
             kits: kits.collect(),
             herds: herds.collect(),
             sprites,
@@ -107,6 +125,8 @@ impl Swarms {
             layouts,
             compute: None,
             pipelines: HashMap::new(),
+            ribbons: HashMap::new(),
+            sorts: None,
             format,
             sampler: r.device.create_sampler(&sampler),
             looks: Vec::new(),

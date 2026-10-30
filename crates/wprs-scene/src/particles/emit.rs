@@ -5,6 +5,8 @@ use crate::value::Value;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub const MAX_STOPS: usize = 8;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Emitter {
@@ -72,6 +74,8 @@ pub struct Init {
     pub hsv: Option<Hsv>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub palette: Option<Palette>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub gradient: Vec<(f32, Color)>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-unit" = "px/s"))]
     pub velocity: Option<Spread<[f32; 2]>>,
@@ -114,6 +118,7 @@ impl Default for Init {
             alpha,
             hsv,
             palette,
+            gradient: Vec::new(),
             velocity,
             radial,
             inherit,

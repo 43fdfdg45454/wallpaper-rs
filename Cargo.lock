@@ -6241,6 +6241,7 @@ name = "wprs-scene"
 version = "0.3.0"
 dependencies = [
  "bytemuck",
+ "half",
  "libc",
  "naga",
  "schemars 1.2.3",

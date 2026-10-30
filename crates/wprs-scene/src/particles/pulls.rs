@@ -24,6 +24,11 @@ impl Check<'_> {
                     self.issues.push(Issue::Type(format!("{q}/bounds")));
                 }
             }
+            Surface::Mask { texture, threshold } => {
+                self.uses(true, "particles2");
+                self.picture(&format!("{q}/bounds/mask/texture"), texture);
+                self.range(&format!("{q}/bounds/mask/threshold"), *threshold, 0.0, 1.0);
+            }
             Surface::Layer { id } => {
                 self.uses(true, "particle_layers");
                 let drawn = self.scene.layer(id).is_some_and(crate::Layer::drawn);

@@ -108,6 +108,19 @@ fn tone(id: u32) -> vec4<f32> {
             v.z = clamp(v.z + (rand(id, KEY + 7u) - 0.5) * 2.0 * t[2].z, 0.0, 1.0);
             return vec4<f32>(hsv(v), c.a);
         }
+        case 3u: {
+            let n = u32(clamp(t[1].w, 1.0, 8.0));
+            let u = bend(rand(id, 9u), i[8].z);
+            var c = sim.colors[0];
+            for (var k = 1u; k < n; k++) {
+                let a = sim.tones[(k - 1u) / 4u * 2u][(k - 1u) % 4u];
+                let b = sim.tones[k / 4u * 2u][k % 4u];
+                if u >= a {
+                    c = mix(sim.colors[k - 1u], sim.colors[k], min((u - a) / max(b - a, 1e-6), 1.0));
+                }
+            }
+            return c;
+        }
         default: {
             return mix(sim.colors[0], sim.colors[1], bend(rand(id, 9u), i[8].z));
         }

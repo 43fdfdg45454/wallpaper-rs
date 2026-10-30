@@ -3,10 +3,11 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use wprs_core::Fit;
-use wprs_render::{Layer, Renderer, SceneAssets, SceneView};
+use wprs_render::{Layer, Pixels, Renderer, SceneAssets, SceneView};
 use wprs_scene::{Census, Quality, Runtime, SCHEMA, Scene, Values};
 
 mod families;
+mod looks;
 
 const SIZE: (u32, u32) = (160, 80);
 
@@ -28,10 +29,21 @@ struct Run {
 
 impl Run {
     fn new(r: &Renderer, systems: Value, layers: Value, gpu: bool) -> Option<Run> {
+        Run::with(r, (systems, layers, json!({})), Vec::new(), gpu)
+    }
+
+    fn with(
+        r: &Renderer,
+        (systems, layers, assets): (Value, Value, Value),
+        images: Vec<(&str, Arc<Pixels>)>,
+        gpu: bool,
+    ) -> Option<Run> {
         let canvas = json!({ "size": [SIZE.0, SIZE.1], "background": "#000000" });
-        let text = json!({ "schema": SCHEMA, "canvas": canvas, "layers": layers, "particles": systems });
+        let text = json!({ "schema": SCHEMA, "canvas": canvas, "layers": layers, "particles": systems, "assets": assets });
         let scene = Scene::load(&text.to_string(), &BTreeMap::new()).unwrap_or_else(|e| panic!("{e}"));
-        let mut view = r.scene_view(&scene, &SceneAssets::default(), &Values::new()).unwrap();
+        let images = images.into_iter().map(|(id, p)| (id.to_string(), p)).collect();
+        let mut view =
+            r.scene_view(&scene, &SceneAssets { images, ..Default::default() }, &Values::new()).unwrap();
         if !view.set_gpu_particles(r, gpu) {
             eprintln!("skipping: no compute shaders on {}", r.adapter());
             return None;

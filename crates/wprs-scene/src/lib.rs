@@ -149,12 +149,13 @@ pub use particles::{
     Area, Around, Bake, Between, Boids, Bow, Burst, CPU_PARTICLES, Carry, Census, Child, Cloud, Collider,
     ControlPoint, Cue, EVENT, EmitShape, Emitter, Falloff, Flock, Follow, Force, Frames, Handle, Hsv,
     Inheritable, Init, Instance, KeepBetween, KeepDistance, MAX_CHILDREN, MAX_COLLIDERS, MAX_COLLIDERS2,
-    MAX_CONTROL, MAX_CURVE, MAX_DEPTH as MAX_GENERATIONS, MAX_EMIT, MAX_EMITTERS, MAX_EMITTERS2, MAX_FORCES,
-    MAX_FORCES2, MAX_HATCH, MAX_PALETTE, MAX_PARTS, MAX_POINTS, MAX_PREWARM, MAX_PREWARM2, MAX_REMAPS,
-    Moment, OffsetNoise, Operator, Orient, Oscillate, PARTICLE_EVENTS, Palette, Part, Particle, Periodic,
-    Perspective, Placement, Play, REMAP_INPUTS, Refract, Refresh, Remap, RemapOp, RemapOutput, Render, Ring,
-    Rope, STEP, SUBSTEPS, Sim, SlowNear, Source, Spread, Stretch, Surface, Swarm, Sweep, System, Taper,
-    Target, Trail, Tunable, Turbulent, WARM, WARM_WORK, Wave, Wobble, flocks,
+    MAX_CONTROL, MAX_CURVE, MAX_DEPTH as MAX_GENERATIONS, MAX_EMIT, MAX_EMITTERS, MAX_EMITTERS2, MAX_FIELD,
+    MAX_FORCES, MAX_FORCES2, MAX_HATCH, MAX_PALETTE, MAX_PARTS, MAX_POINTS, MAX_PREWARM, MAX_PREWARM2,
+    MAX_REMAPS, MAX_STOPS, MAX_TRAIL, Moment, OffsetNoise, Operator, Orient, Oscillate, PARTICLE_EVENTS,
+    Palette, Part, Particle, Periodic, Perspective, Placement, Play, REMAP_INPUTS, Refract, Refresh, Remap,
+    RemapOp, RemapOutput, Render, Ring, Rope, STEP, SUBSTEPS, Sim, SlowNear, Source, Spread, Stack, Stretch,
+    Surface, Swarm, Sweep, System, Taper, Target, Trail, Tunable, Turbulent, WARM, WARM_WORK, Wave, Wobble,
+    bin, flocks, largest, mark, stacked,
 };
 pub use props::{
     Choice, Condition, Control, Expr, ICONS, Mode, Pick, Preset, Property, Slider, Text, Values,
@@ -173,7 +174,7 @@ pub use scripting::{
     Pool, PoolKind, Script, ScriptApi, ScriptEvent, ScriptParam,
 };
 pub use shape::{MAX_ARGUMENTS, MAX_BRACKETS, MAX_OPERANDS};
-pub use signal::{CLOCKS, Gain, Hearing, Reduce, Smooth};
+pub use signal::{CLOCKS, Gain, HEARD, Hearing, Reduce, SPLITS, Smooth, center, ease, edge, levels};
 pub use sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice};
 pub use spend::{MAX_STATEFUL, Spend, over};
 pub use strikes::{STOPPED, end_trials, forgive_strikes, keep_strikes, strike, struck, tried, trying};

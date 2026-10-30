@@ -1,6 +1,7 @@
 mod kit;
 mod setup;
 pub(crate) use setup::sprites;
+mod sort;
 mod sprite;
 mod step;
 mod store;
@@ -11,7 +12,7 @@ use crate::Renderer;
 use kit::{Kit, Look};
 use std::collections::HashMap;
 use wgpu::{BindGroup, BindGroupLayout, Buffer, BufferUsages as B, ShaderStages as S};
-use wprs_scene::{Bake, Blend, Cloud, Quality};
+use wprs_scene::{Bake, Blend, Cloud, Quality, Stack};
 
 const CHUNK: usize = 16;
 const SIM: u64 = 2560;
@@ -21,6 +22,15 @@ const PARTICLE: u64 = 80;
 struct Store {
     particles: Buffer,
     gpu: Option<(Buffer, Buffer, BindGroup)>,
+    trail: Option<Buffer>,
+    stacks: Vec<Stacked>,
+}
+
+struct Stacked {
+    order: Stack,
+    size: f32,
+    sorted: Buffer,
+    gpu: Option<(Buffer, BindGroup)>,
 }
 
 struct Flight {
@@ -40,16 +50,17 @@ pub(crate) struct Swarms {
     pub(crate) created: u32,
     gpu: bool,
     profile: bool,
-    trail: u32,
     kits: Vec<Kit>,
     herds: Vec<Herd>,
     pub(crate) sprites: Vec<Option<String>>,
     flights: Vec<Option<Flight>>,
     marks: Vec<(u64, u32)>,
     module: wgpu::ShaderModule,
-    layouts: [BindGroupLayout; 3],
+    layouts: [BindGroupLayout; 4],
     compute: Option<[wgpu::ComputePipeline; 3]>,
+    sorts: Option<[wgpu::ComputePipeline; 3]>,
     pipelines: HashMap<Mode, wgpu::RenderPipeline>,
+    ribbons: HashMap<Mode, wgpu::RenderPipeline>,
     format: wgpu::TextureFormat,
     sampler: wgpu::Sampler,
     looks: Vec<Look>,
@@ -72,6 +83,11 @@ fn storage(read_only: bool) -> wgpu::BindingType {
 fn uniform(size: usize) -> wgpu::BindingType {
     let (ty, min_binding_size) = (wgpu::BufferBindingType::Uniform, wgpu::BufferSize::new(size as u64));
     wgpu::BindingType::Buffer { ty, has_dynamic_offset: true, min_binding_size }
+}
+
+fn plain(size: u64) -> wgpu::BindingType {
+    let (ty, min_binding_size) = (wgpu::BufferBindingType::Uniform, wgpu::BufferSize::new(size));
+    wgpu::BindingType::Buffer { ty, has_dynamic_offset: false, min_binding_size }
 }
 
 fn buffer(r: &Renderer, size: u64, usage: B) -> Buffer {
@@ -112,6 +128,13 @@ impl SceneView {
         let Some(swarms) = self.swarms.as_mut().filter(|_| compute(r) || !gpu) else { return false };
         swarms.prepare(r, gpu);
         true
+    }
+
+    pub fn set_particle_trails(&mut self, r: &Renderer, tier: wprs_scene::Tier) {
+        if let Some(swarms) = self.swarms.as_mut() {
+            swarms.herds.iter_mut().for_each(|h| h.bake.retrail(tier));
+            swarms.prepare(r, swarms.gpu);
+        }
     }
 
     pub fn profile_particles(&mut self, on: bool) {

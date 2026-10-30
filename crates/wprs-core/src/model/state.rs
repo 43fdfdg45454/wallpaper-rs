@@ -63,6 +63,8 @@ model! {
         pub flashes: String,
         #[serde(default)]
         pub left_out: Vec<String>,
+        #[serde(default)]
+        pub particles: String,
     }
 
     #[derive(Copy, Eq, Hash)]

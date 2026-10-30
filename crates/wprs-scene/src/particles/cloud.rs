@@ -53,6 +53,7 @@ pub struct Cloud {
     pub(super) died: Vec<Event>,
     pub(super) mirror: Vec<Event>,
     pub(super) hatched: u32,
+    pub trail: Vec<[u32; 4]>,
 }
 
 impl Event {
@@ -102,9 +103,20 @@ impl Cloud {
             self.mirror = vec![Event::default(); n];
         }
         let mirror = host.map_or(&[][..], |h| h.mirror.as_slice());
+        let k = s.trail[1] as usize;
+        if self.trail.len() != n * k {
+            self.trail = vec![[0; 4]; n * k];
+        }
         for (i, p) in self.particles.iter_mut().enumerate().filter(|(_, p)| p.age < p.life) {
             let prev = p.pos;
-            simulate(p, s, mirror);
+            simulate(p, s, mirror, points);
+            if let Some(h) = self.trail.get_mut(i * k..(i + 1) * k).filter(|_| k > 0) {
+                h.copy_within(..k - 1, 1);
+                h[0] = mark(p);
+                if p.age >= p.life {
+                    h.iter_mut().for_each(|e| e[2] = 0);
+                }
+            }
             if makes & 4 != 0 {
                 self.mirror[i] = Event::of(p, i, prev);
             }
@@ -142,6 +154,15 @@ impl Cloud {
         }
         true
     }
+}
+
+pub fn mark(p: &Particle) -> [u32; 4] {
+    let half = |v: f32| u32::from(half::f16::from_f32(v).to_bits());
+    let byte = |c: f32| (c.clamp(0.0, 1.0) * 255.0).round_ties_even() as u32;
+    let c = [p.color[0], p.color[1], p.color[2], p.color[3] * p.look[0]];
+    let packed = c.iter().enumerate().map(|(i, c)| byte(*c) << (8 * i)).sum();
+    let t = (p.age / p.life).min(1.0);
+    [p.pos[0].to_bits(), p.pos[1].to_bits(), half(p.size * p.look[1]) | half(t) << 16, packed]
 }
 
 impl Census {

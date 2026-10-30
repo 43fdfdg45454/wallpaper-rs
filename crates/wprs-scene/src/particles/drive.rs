@@ -80,6 +80,7 @@ pub(super) fn colliders(sim: &mut Sim, s: &System, frame: Affine) {
                 let [x, y] = frame.apply(*center);
                 ([3.0, x, y, radius * grow], 0.0)
             }
+            Surface::Mask { .. } => ([4.0, 0.0, 0.0, 0.0], 0.0),
             Surface::Box { .. } | Surface::Segment { .. } | Surface::Layer { .. } => (NONE, 0.0),
         };
         sim.colliders[2 * k] = [kind, x, y, z];

@@ -180,6 +180,7 @@
     <string name="reason_memory">its state textures would take too much memory</string>
     <string name="reason_textures">its textures would take too much memory</string>
     <string name="scene_level">Scenes: device class %1$s, level %2$s</string>
+    <string name="particles_cpu">Its particles run on the processor, so fewer of them are shown</string>
     <string name="strength">Intensity</string>
     <string name="focus">Focus</string>
     <string name="still_saver">Still while battery saver is on</string>

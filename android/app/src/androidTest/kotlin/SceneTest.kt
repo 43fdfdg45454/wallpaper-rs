@@ -198,6 +198,18 @@ class SceneTest {
         assertEquals(settled(frames), quiet(frames))
     }
 
+    @Test
+    fun particlesWithTrailsOrdersGradientsAndSoundRangesDrawAndTellTheirPath() {
+        val dir = File(storage(), "rains/rain").apply { mkdirs() }
+        File(dir, "scene.json").writeText(RAIN_SCENE)
+        File(dir, "manifest.json").writeText(RAIN_MANIFEST)
+        val reply = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(reply, reply.startsWith("["))
+        show("Rain")
+        assertTrue(waitFor { frames.get() > FRAMES })
+        assertTrue(JSONObject(Native.diagnostics()).optString("particles") in listOf("gpu", "cpu"))
+    }
+
     private fun find(title: String): String {
         val query = JSONObject().put("op", "items").put("query", "kind:scene")
         val items = JSONArray(Native.library(query.toString()))
@@ -262,6 +274,18 @@ class SceneTest {
             "title": "Mixes", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
             "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["blend_modes2",
             "effect.blend_texture", "effect.light_shafts", "effect.tint", "effect_masks", "layer_textures"] } }"""
+        const val RAIN_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
+            "audio": { "attack": 0.05, "release": 0.3, "gain": "fixed" },
+            "particles": { "rain": { "capacity": 60, "seed": 3, "emitters": [{ "shape": { "box": { "from": [4, 0], "to": [60, 4] } }, "rate": 60 }],
+                "init": { "life": [2, 2], "speed": [0, 0], "size": [3, 3], "gradient": [[0, "#ff0000"], [1, "#0000ff"]] },
+                "forces": [{ "gravity": [0, 200] }], "collide": [{ "bounds": "canvas", "bounce": 0.2 }],
+                "render": { "order": "newest", "trail": { "length": 6, "width": 0.5 } } } },
+            "layers": [{ "id": "rain", "type": "particles", "system": "rain",
+                "opacity": { "audio": [0, 3], "of": 16, "bounds": [0.1, 0.9], "exponent": 2, "smooth": { "up": 0.05, "down": 0.5 }, "offset": 0.5 } }] }"""
+        const val RAIN_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.rain", "version": "1.0.0",
+            "title": "Rain", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+            "content": { "rating": "general" }, "photosensitive": false, "inputs": ["audio"],
+            "requires": { "features": ["audio_ranges", "audio_response", "inputs.audio", "particles2", "shaping"] } }"""
         const val FLASH_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
             "layers": [{ "id": "fill", "type": "solid", "color": "#ffffff" }] }"""
         const val FLASH_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.flash", "version": "1.0.0",

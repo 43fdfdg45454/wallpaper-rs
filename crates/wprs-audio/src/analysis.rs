@@ -2,11 +2,9 @@ use realfft::num_complex::Complex;
 use realfft::{RealFftPlanner, RealToComplex};
 use std::f32::consts::TAU;
 use std::sync::Arc;
-use wprs_scene::{AudioFrame, BANDS};
+use wprs_scene::{AudioFrame, BANDS, SPLITS, center, edge, levels};
 
 pub const WINDOW: usize = 2048;
-const RANGE: (f32, f32) = (40.0, 16_000.0);
-const SPLITS: (f32, f32) = (250.0, 4_000.0);
 const FLOOR_DB: f32 = -70.0;
 const ATTACK: f32 = 0.02;
 const RELEASE: f32 = 0.2;
@@ -17,10 +15,7 @@ const SILENT_AFTER: f32 = 2.0;
 const STALE: f32 = 0.1;
 const LOCKOUT: f32 = 0.12;
 
-pub fn smooth(v: f32, target: f32, dt: f32, up: f32, down: f32) -> f32 {
-    let tau = if target > v { up } else { down };
-    v + (target - v) * (1.0 - (-dt / tau).exp())
-}
+pub use wprs_scene::ease as smooth;
 
 pub fn db01(power: f32, floor_db: f32) -> f32 {
     ((10.0 * power.max(1e-12).log10() - floor_db) / -floor_db).clamp(0.0, 1.0)
@@ -35,7 +30,6 @@ pub struct Analyzer {
     spectrum: Vec<Complex<f32>>,
     scratch: Vec<Complex<f32>>,
     bands: [(usize, usize, f32); BANDS],
-    centers: [f32; BANDS],
     rate: u32,
     raw: [[f32; BANDS]; 2],
     last: [f32; BANDS],
@@ -56,7 +50,7 @@ impl Analyzer {
         let hann = (0..WINDOW).map(|i| 0.5 - 0.5 * (TAU * i as f32 / WINDOW as f32).cos()).collect();
         let (input, spectrum, scratch) =
             (fft.make_input_vec(), fft.make_output_vec(), fft.make_scratch_vec());
-        let (bands, centers) = layout(rate, WINDOW);
+        let bands = layout(rate, WINDOW);
         let (raw, last, frame) = ([[0.0; BANDS]; 2], [0.0; BANDS], AudioFrame::default());
         let history = [vec![0.0; WINDOW], vec![0.0; WINDOW]];
         let quiet = SILENT_AFTER;
@@ -69,7 +63,6 @@ impl Analyzer {
             spectrum,
             scratch,
             bands,
-            centers,
             rate,
             raw,
             last,
@@ -87,7 +80,7 @@ impl Analyzer {
 
     pub fn set_rate(&mut self, rate: u32) {
         if rate != self.rate && rate > 0 {
-            ((self.bands, self.centers), self.rate) = (layout(rate, WINDOW), rate);
+            (self.bands, self.rate) = (layout(rate, WINDOW), rate);
         }
     }
 
@@ -106,7 +99,7 @@ impl Analyzer {
             return;
         }
         let bin = |k: usize| power.get(k).copied().filter(|p| p.is_finite()).unwrap_or(0.0).clamp(0.0, 1.0);
-        let bands = layout(rate, window).0.map(|band| level(band, bin));
+        let bands = layout(rate, window).map(|band| level(band, bin));
         let total = (0..power.len()).map(bin).sum::<f32>() / 2.0;
         (self.raw, self.power, self.given, self.fresh) = ([bands; 2], total.min(1.0), true, true);
     }
@@ -128,7 +121,9 @@ impl Analyzer {
         let (f, mut flux) = (&mut self.frame, 0.0);
         for b in 0..BANDS {
             let [l, r] = self.raw.map(|c| db01(c[b] / self.peak, FLOOR_DB));
-            if fresh && self.centers[b] < SPLITS.0 {
+            (f.raw[0][b], f.raw[1][b]) = (l, r);
+            (f.loud[0][b], f.loud[1][b]) = (db01(self.raw[0][b], FLOOR_DB), db01(self.raw[1][b], FLOOR_DB));
+            if fresh && center(b) < SPLITS[0] {
                 flux += ((l + r) / 2.0 - self.last[b]).max(0.0);
             }
             if fresh {
@@ -138,13 +133,9 @@ impl Analyzer {
             f.right[b] = smooth(f.right[b], r, dt, ATTACK, RELEASE);
             f.average[b] = (f.left[b] + f.right[b]) / 2.0;
         }
-        let mean = |lo: f32, hi: f32| {
-            let within = (0..BANDS).filter(|&b| (lo..hi).contains(&self.centers[b]));
-            let (sum, n) = within.fold((0.0, 0), |(s, n), b| (s + f.average[b], n + 1));
-            sum / n.max(1) as f32
-        };
-        (f.bass, f.mid, f.treble) = (mean(0.0, SPLITS.0), mean(SPLITS.0, SPLITS.1), mean(SPLITS.1, f32::MAX));
-        f.level = smooth(f.level, db01(self.power, FLOOR_DB), dt, ATTACK, RELEASE);
+        [f.bass, f.mid, f.treble] = levels(&f.average);
+        f.loudness = db01(self.power, FLOOR_DB);
+        f.level = smooth(f.level, f.loudness, dt, ATTACK, RELEASE);
         let (avg, var) = self.flux;
         f.beat = fresh && flux > 0.05 && flux > avg + 1.5 * var.sqrt() && self.since_beat >= LOCKOUT;
         if fresh {
@@ -175,13 +166,12 @@ fn level((lo, hi, f): (usize, usize, f32), power: impl Fn(usize) -> f32) -> f32 
     }
 }
 
-fn layout(rate: u32, window: usize) -> ([(usize, usize, f32); BANDS], [f32; BANDS]) {
+fn layout(rate: u32, window: usize) -> [(usize, usize, f32); BANDS] {
     let bin = rate as f32 / window as f32;
-    let edge = |i: usize| RANGE.0 * (RANGE.1 / RANGE.0).powf(i as f32 / BANDS as f32);
     let band = |i: usize| {
         let (lo, hi) = (edge(i) / bin, edge(i + 1) / bin);
         let (a, b, middle) = (lo.ceil() as usize, hi.ceil() as usize, (lo + hi) / 2.0);
         if a < b { (a, b, 0.0) } else { (middle as usize, middle as usize, middle.fract()) }
     };
-    (std::array::from_fn(band), std::array::from_fn(|i| (edge(i) * edge(i + 1)).sqrt()))
+    std::array::from_fn(band)
 }

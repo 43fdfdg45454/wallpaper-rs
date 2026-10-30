@@ -134,3 +134,13 @@ fn a_spectrum_lands_in_the_same_bands_as_samples() {
     analyzer.push_spectrum(&[f32::NAN; 3], 0);
     assert!(analyzer.update(0.5).average.iter().all(|v| v.is_finite()));
 }
+
+#[test]
+fn fixed_gain_keeps_the_volume_and_auto_gain_hides_it() {
+    let (mut loud, mut quiet) = (Signal::new(48_000), Signal::new(48_000));
+    let (a, b) = (loud.play(0.5, sine).pop().unwrap(), quiet.play(0.5, |t| sine(t) * 0.01).pop().unwrap());
+    assert!(a.raw[0][KHZ_BAND] > 0.85 && b.raw[0][KHZ_BAND] > 0.85, "{:?} {:?}", a.raw[0], b.raw[0]);
+    assert!(a.loud[0][KHZ_BAND] > b.loud[0][KHZ_BAND] + 0.2, "{:?} {:?}", a.loud[0], b.loud[0]);
+    assert!(a.loudness > b.loudness && (a.loudness - a.level).abs() < 0.05);
+    assert_eq!(loudest(&b.loud[1]), KHZ_BAND);
+}

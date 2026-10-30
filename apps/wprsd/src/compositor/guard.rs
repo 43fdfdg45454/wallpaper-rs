@@ -72,10 +72,15 @@ mod tests {
     use wprs_scene::{SCHEMA, Scene, Tier};
 
     fn state(layers: serde_json::Value, poster: f32) -> SceneState {
+        staged(layers, json!({}), poster)
+    }
+
+    fn staged(layers: serde_json::Value, particles: serde_json::Value, poster: f32) -> SceneState {
         let timelines = [json!({ "id": "blink", "duration": 0.1, "loop": "repeat" })];
         let clock = json!({ "max_fps": 60, "poster_time": poster });
         let canvas = json!({ "size": [32, 18], "background": "#000000" });
-        let text = json!({ "schema": SCHEMA, "canvas": canvas, "clock": clock, "timelines": timelines, "layers": layers });
+        let text = json!({ "schema": SCHEMA, "canvas": canvas, "clock": clock, "timelines": timelines, "layers": layers,
+            "particles": particles });
         let pack = Arc::new(ScenePack::bare(
             Scene::from_json(&text.to_string()).unwrap(),
             Default::default(),
@@ -89,6 +94,22 @@ mod tests {
     fn blinking() -> serde_json::Value {
         let opacity = json!({ "timeline": "blink", "keys": [[0, 0], [0.05, 1], [0.1, 0]] });
         json!([{ "id": "flash", "type": "solid", "color": "#ffffff", "opacity": opacity }])
+    }
+
+    #[test]
+    fn the_state_says_where_particles_run() {
+        let Ok(renderer) = Renderer::shared() else {
+            return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required");
+        };
+        let dust = json!({ "dust": { "capacity": 50, "emitters": [{ "shape": { "point": [16, 9] }, "rate": 30 }] } });
+        let mut scene = staged(json!([{ "id": "dust", "type": "particles", "system": "dust" }]), dust, 0.0);
+        let mut plain = state(blinking(), 0.0);
+        assert_eq!((scene.particles(), plain.particles()), ("", ""));
+        let (power, at) = (Power::new(Tier::T3, false, 60), Instant::now());
+        scene.render(renderer, ((32, 18), 60), power, &HashMap::new(), true, at).unwrap();
+        plain.render(renderer, ((32, 18), 60), power, &HashMap::new(), true, at).unwrap();
+        let path = if renderer.compute() && !renderer.software() { "gpu" } else { "cpu" };
+        assert_eq!((scene.particles(), plain.particles()), (path, ""));
     }
 
     #[test]

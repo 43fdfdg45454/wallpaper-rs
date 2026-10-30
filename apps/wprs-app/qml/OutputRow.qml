@@ -159,6 +159,15 @@ RowLayout {
 
         QQC2.Label {
             Layout.fillWidth: true
+            visible: row.info.particles === "cpu"
+            wrapMode: Text.Wrap
+            text: row.daemon.tr("Its particles run on the processor, so fewer of them are shown")
+            color: Kirigami.Theme.disabledTextColor
+            font: Kirigami.Theme.smallFont
+        }
+
+        QQC2.Label {
+            Layout.fillWidth: true
             visible: (row.info.shown_fit ?? row.info.fit) !== row.info.fit
             wrapMode: Text.Wrap
             text: row.daemon.tr("This picture has its own placement: %1", row.daemon.value(row.info.shown_fit ?? ""))

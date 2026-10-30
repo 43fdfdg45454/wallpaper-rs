@@ -145,6 +145,7 @@ impl Daemon {
                 buffers: self.exporter.buffers(name).into(),
                 sound: s.sound.into(),
                 flashes: s.flashes.into(),
+                particles: s.particles.into(),
                 left_out: s.left_out,
             };
             crate::rotation::overlay(&st, name, &mut state);

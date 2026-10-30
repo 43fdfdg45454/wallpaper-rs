@@ -18,6 +18,9 @@ pub struct AudioFrame {
     pub level: f32,
     pub beat: bool,
     pub silent: bool,
+    pub raw: [[f32; BANDS]; 2],
+    pub loud: [[f32; BANDS]; 2],
+    pub loudness: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -107,6 +110,9 @@ impl Default for AudioFrame {
             level: 0.0,
             beat: false,
             silent: true,
+            raw: [zero; 2],
+            loud: [zero; 2],
+            loudness: 0.0,
         }
     }
 }

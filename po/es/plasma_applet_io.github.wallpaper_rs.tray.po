@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 00:00+0000\n"
+"POT-Creation-Date: 2026-10-30 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -197,6 +197,11 @@ msgstr "Color de fondo"
 #, kde-format
 msgid "%1 of %2"
 msgstr "%1 de %2"
+
+#: integrations/plasma-tray/contents/ui/ScreenRow.qml
+#, kde-format
+msgid "Its particles run on the processor, so fewer of them are shown"
+msgstr "Sus partículas se mueven en el procesador, así que se muestran menos"
 
 #: integrations/plasma-tray/contents/ui/ScreenRow.qml
 #, kde-format

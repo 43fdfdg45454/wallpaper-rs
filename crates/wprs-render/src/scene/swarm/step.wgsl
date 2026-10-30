@@ -130,11 +130,21 @@ fn simulate(@builtin(global_invocation_id) gid: vec3<u32>) {
                 let r = length(d);
                 hit(&p, select(vec2<f32>(0.0, -1.0), d / r, r > 1e-6), a.w - r, b);
             }
+            case 4u: {
+                let g = field(a, p.pos);
+                if g.w > 0.5 {
+                    let l = length(g.yz);
+                    hit(&p, select(vec2<f32>(0.0, -1.0), g.yz / l, l > 1e-6), -g.x, b);
+                }
+            }
             default: {}
         }
     }
     if (sim.mode.y & 4u) != 0u {
         record(sim.links.z, i, p, i, prev);
+    }
+    if sim.trail.y > 0u {
+        mark(i, p);
     }
     if p.age >= p.life {
         state.data[u32(atomicAdd(&state.head[0], 1))] = i;

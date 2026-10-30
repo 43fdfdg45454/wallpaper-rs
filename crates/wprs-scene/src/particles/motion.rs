@@ -36,7 +36,7 @@ fn wobble(p: &Particle, s: &Sim, k: usize, a: f32) -> [f32; 3] {
     [amp * turn.sin(), amp * (turn + TAU / 4.0).sin(), amp]
 }
 
-pub(super) fn simulate(p: &mut Particle, s: &Sim, mirror: &[Event]) {
+pub(super) fn simulate(p: &mut Particle, s: &Sim, mirror: &[Event], points: &[[f32; 2]]) {
     let dt = s.clock[0];
     if s.mode[0] == 3 {
         follow(p, s, mirror);
@@ -143,6 +143,12 @@ pub(super) fn simulate(p: &mut Particle, s: &Sim, mirror: &[Event]) {
                 let r = (d[0] * d[0] + d[1] * d[1]).sqrt();
                 let n = if r > 1e-6 { [d[0] / r, d[1] / r] } else { [0.0, -1.0] };
                 hit(p, n, a[3] - r, b);
+            }
+            4 => {
+                if let Some((d, g)) = super::field::sample(points, a, [w, h], p.pos) {
+                    let l = g[0].hypot(g[1]);
+                    hit(p, if l > 1e-6 { [g[0] / l, g[1] / l] } else { [0.0, -1.0] }, -d, b);
+                }
             }
             _ => {}
         }
