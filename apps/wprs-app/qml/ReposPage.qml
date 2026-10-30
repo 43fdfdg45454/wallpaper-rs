@@ -14,9 +14,11 @@ Kirigami.Page {
 
     function load() {
         App.query("List", [], "Repos1", reply => {
+            if (!page)
+                return;
             page.repos = reply.repos;
             page.error = "";
-        }, error => page.error = error.message);
+        }, error => page && (page.error = error.message));
     }
 
     function exercise() {

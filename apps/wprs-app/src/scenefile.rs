@@ -99,7 +99,7 @@ impl Drop for SceneEditorRust {
         if output.is_empty() && !shown {
             return;
         }
-        bus::spawn(async move {
+        bus::farewell(async move {
             if shown {
                 bus::call("Daemon1", "PreviewScene", vec![json!(""), json!(dir), json!(""), json!(0.0)])
                     .await

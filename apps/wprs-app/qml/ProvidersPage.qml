@@ -12,9 +12,11 @@ Kirigami.ScrollablePage {
 
     function load() {
         App.query("List", [], "Providers1", reply => {
+            if (!page)
+                return;
             page.providers = reply.providers;
             page.error = "";
-        }, error => page.error = error.message);
+        }, error => page && (page.error = error.message));
     }
 
     function exercise() {

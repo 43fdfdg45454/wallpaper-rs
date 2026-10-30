@@ -155,10 +155,10 @@ async fn install(path: String, output: String) -> Result<String, String> {
         serde_json::from_str::<Value>(&reply).ok().and_then(|r| r[0].as_u64()).ok_or("no import job")?;
     loop {
         match events.recv().await {
-            Ok(Event::Finished(id, state, _, error)) if id == job && state != "done" => return Err(error),
-            Ok(Event::Finished(id, ..)) if id == job => break,
-            Ok(_) => {}
-            Err(_) => return Err("the daemon stopped answering".into()),
+            Some(Event::Finished(id, state, _, error)) if id == job && state != "done" => return Err(error),
+            Some(Event::Finished(id, ..)) if id == job => break,
+            Some(_) => {}
+            None => return Err("the daemon stopped answering".into()),
         }
     }
     let reply = bus::call("Daemon1", "GetJob", vec![json!(job)]).await.map_err(message)?;

@@ -34,12 +34,14 @@ use wprs_core::dbus::APP_ID;
 
 const MAIN: &str = "qrc:/qt/qml/io/github/wallpaper_rs/app/qml/Main.qml";
 const STYLE: &str = "org.kde.desktop";
+const CHECK_TIME: std::time::Duration = std::time::Duration::from_secs(240);
 
 fn main() -> ExitCode {
     wprs_scene::serve_check();
     wprs_scene::check_out_of_process(true);
     wprs_core::stopped_effects().inspect(|p| wprs_scene::keep_strikes(p));
     let code = start();
+    bus::part(std::time::Duration::from_secs(2));
     wprs_scene::end_trials();
     wprs_render::finish_builds(if code == ExitCode::SUCCESS { 0 } else { 1 });
     code
@@ -109,14 +111,26 @@ fn check() -> ExitCode {
         command.stderr(Stdio::piped()).spawn()
     });
     let Ok(mut child) = child else { return ExitCode::FAILURE };
+    let (stderr, id) = (child.stderr.take().unwrap(), child.id());
+    let (done, waited) = std::sync::mpsc::channel();
+    let watch = std::thread::spawn(move || {
+        let late = waited.recv_timeout(CHECK_TIME).is_err();
+        if late {
+            eprintln!("wprs-app: the QML check did not finish within {} s", CHECK_TIME.as_secs());
+            child.kill().ok();
+        }
+        (child.wait(), late)
+    });
     let mut problems = 0;
-    for line in BufReader::new(child.stderr.take().unwrap()).lines().map_while(Result::ok) {
+    for line in BufReader::new(stderr).lines().map_while(Result::ok) {
         eprintln!("{line}");
         problems +=
             usize::from([".qml", "QQmlApplicationEngine", "call failed"].iter().any(|p| line.contains(p)));
     }
-    let status = child.wait();
-    std::fs::remove_dir_all(std::env::temp_dir().join(format!("wprs-app-check-{}", child.id()))).ok();
+    done.send(()).ok();
+    let (status, late) = watch.join().unwrap_or((Err(std::io::ErrorKind::Other.into()), true));
+    problems += usize::from(late);
+    std::fs::remove_dir_all(std::env::temp_dir().join(format!("wprs-app-check-{id}"))).ok();
     std::fs::remove_dir_all(&state).ok();
     match status {
         Ok(status) if status.success() && problems == 0 => ExitCode::SUCCESS,

@@ -61,12 +61,56 @@ impl ItemModel {
                         bus::publish(Event::Error(e.message));
                     }
                 }
-                if std::mem::take(&mut model.as_mut().rust_mut().dirty) {
-                    model.refresh();
-                }
+                model.settle();
             })
             .ok();
         });
+    }
+
+    pub fn update(mut self: Pin<&mut Self>) {
+        let Some((iface, member, query)) = self.source.clone() else { return };
+        let mut uids = std::mem::take(&mut self.as_mut().rust_mut().touched);
+        uids.sort();
+        uids.dedup();
+        let (generation, qt) = (self.generation, self.qt_thread());
+        self.as_mut().rust_mut().updating = true;
+        bus::spawn(async move {
+            let picked =
+                pages((iface, member, format!("{query} uid:{}", uids.join(","))), 0, uids.len() as u32);
+            let (found, total) = (picked.await, pages((iface, member, query), 0, 0).await);
+            qt.queue(move |mut model| {
+                model.as_mut().rust_mut().updating = false;
+                if model.generation != generation {
+                    return;
+                }
+                match (found, total) {
+                    (Ok(found), Ok(total)) => model.as_mut().patched(&uids, found.items, total.total),
+                    _ => model.as_mut().rust_mut().dirty = true,
+                }
+                model.settle();
+            })
+            .ok();
+        });
+    }
+
+    fn patched(mut self: Pin<&mut Self>, uids: &[String], found: Vec<ItemSummary>, total: u32) {
+        let Some(edits) = self.grid.patch(uids, found) else {
+            self.as_mut().rust_mut().dirty = true;
+            return;
+        };
+        let set = edits.into_iter().filter_map(|edit| self.as_mut().edit(edit)).collect();
+        self.as_mut().changed(set);
+        self.as_mut().rust_mut().grid.total = total;
+        self.as_mut().set_total(total as i32);
+        self.as_mut().summary();
+        self.thumbs();
+    }
+
+    fn thumbs(self: Pin<&mut Self>) {
+        if let Some((first, last)) = self.range.filter(|(first, last)| last >= first && self.sent.is_empty())
+        {
+            self.visible(first, last);
+        }
     }
 
     fn page(mut self: Pin<&mut Self>, offset: u32, page: Page) {
@@ -95,10 +139,10 @@ impl ItemModel {
         self.as_mut().set_error(QString::default());
         self.as_mut().set_loading(false);
         self.as_mut().summary();
-        if let Some((first, last)) = self.range.filter(|(first, last)| last >= first && self.sent.is_empty())
-        {
-            self.visible(first, last);
+        if offset == 0 {
+            self.as_mut().reloaded();
         }
+        self.thumbs();
     }
 
     fn edit(mut self: Pin<&mut Self>, edit: Edit) -> Option<usize> {

@@ -21,7 +21,7 @@ pub fn page(name: Option<&str>) -> Option<&'static str> {
 
 pub fn start(uris: Vec<String>, page: Option<&str>) -> Option<ExitCode> {
     if let Some(page) = page {
-        bus::request(page);
+        bus::request(page, None);
     }
     if bus::checking() {
         set_link(Ok(Daemon::Fixtures));
@@ -50,7 +50,11 @@ pub fn start(uris: Vec<String>, page: Option<&str>) -> Option<ExitCode> {
 }
 
 pub async fn pass_on(conn: &Connection, uris: Vec<String>, page: Option<&str>) -> zbus::Result<()> {
-    let (data, to) = (HashMap::<&str, Variant>::new(), (Some(APP_ID), APP_PATH, Some(APPLICATION)));
+    let to = (Some(APP_ID), APP_PATH, Some(APPLICATION));
+    let names = [("activation-token", "XDG_ACTIVATION_TOKEN"), ("desktop-startup-id", "DESKTOP_STARTUP_ID")];
+    let found = names.map(|(key, var)| (key, std::env::var(var).ok().filter(|v| !v.is_empty())));
+    let data: HashMap<&str, Variant> =
+        found.into_iter().filter_map(|(key, value)| Some((key, Variant::from(value?)))).collect();
     if !uris.is_empty() {
         conn.call_method(to.0, to.1, to.2, "Open", &(&uris, &data)).await?;
     }
@@ -126,26 +130,32 @@ pub fn path(uri: &str) -> Option<String> {
 
 pub struct Application;
 
+fn token(data: &HashMap<String, OwnedVariant>) -> Option<String> {
+    let found = ["activation-token", "desktop-startup-id"].into_iter().filter_map(|key| data.get(key));
+    found.filter_map(|v| <&str>::try_from(&**v).ok()).find(|v| !v.is_empty()).map(String::from)
+}
+
 #[zbus::interface(name = "org.freedesktop.Application")]
 impl Application {
-    fn activate(&self, _platform_data: HashMap<String, OwnedVariant>) {
-        publish(Event::Activate(String::new()));
+    fn activate(&self, platform_data: HashMap<String, OwnedVariant>) {
+        publish(Event::Activate(String::new(), token(&platform_data)));
     }
 
-    fn open(&self, uris: Vec<String>, _platform_data: HashMap<String, OwnedVariant>) {
+    fn open(&self, uris: Vec<String>, platform_data: HashMap<String, OwnedVariant>) {
         spawn(open(uris));
-        publish(Event::Activate(String::new()));
+        publish(Event::Activate(String::new(), token(&platform_data)));
     }
 
     fn activate_action(
         &self,
         name: String,
         _parameter: Vec<OwnedVariant>,
-        _platform_data: HashMap<String, OwnedVariant>,
+        platform_data: HashMap<String, OwnedVariant>,
     ) {
+        let token = token(&platform_data);
         match page(Some(&name)) {
-            Some(page) => bus::request(page),
-            None => publish(Event::Activate(String::new())),
+            Some(page) => bus::request(page, token),
+            None => publish(Event::Activate(String::new(), token)),
         }
     }
 }

@@ -16,7 +16,7 @@ Item {
     Kirigami.Dialog {
         id: secret
 
-        title: App.tr("Secret of %1").arg(dialogs.provider.id)
+        title: App.tr("Secret of %1", dialogs.provider.id)
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
         onAccepted: {
             App.setSecret(dialogs.provider.id, password.text);
@@ -37,7 +37,7 @@ Item {
         readonly property var fields: dialogs.kind.options ?? []
         readonly property string key: fields[keys.currentIndex]?.key ?? ""
 
-        title: App.tr("Change an option of %1").arg(dialogs.provider.id)
+        title: App.tr("Change an option of %1", dialogs.provider.id)
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
         onOpened: value.text = dialogs.provider.options[key] ?? ""
         onAccepted: App.act("Set", [dialogs.provider.id, key, value.text], "Providers1")
@@ -68,7 +68,7 @@ Item {
     Kirigami.Dialog {
         id: remover
 
-        title: App.tr("Remove %1").arg(dialogs.provider.id)
+        title: App.tr("Remove %1", dialogs.provider.id)
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
         onAccepted: App.act("Remove", [dialogs.provider.id, purge.checked], "Providers1")
 

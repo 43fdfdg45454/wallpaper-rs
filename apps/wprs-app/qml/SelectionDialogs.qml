@@ -15,6 +15,16 @@ Item {
     readonly property alias remover: remover
     readonly property alias renamer: renamer
     readonly property alias rater: rater
+    readonly property alias allower: allower
+
+    Kirigami.PromptDialog {
+        id: allower
+
+        title: App.tr("Allow these wallpapers?")
+        subtitle: App.tr("They flash or show fast patterns that can trigger seizures in people with photosensitive epilepsy. Allow them only if that is safe for whoever sees your screens; screens and playlists may then show them without asking again.")
+        standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
+        onAccepted: App.act("Confirm", [dialogs.owner.uids, "photosensitive"], "Library1")
+    }
 
     Kirigami.Dialog {
         id: importer
@@ -51,7 +61,7 @@ Item {
 
         title: App.tr("Add to playlist")
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
-        onOpened: App.query("List", [], "Playlists1", reply => dialogs.owner.playlists = reply.playlists.filter(p => p.query === null))
+        onOpened: App.query("List", [], "Playlists1", reply => dialogs && (dialogs.owner.playlists = reply.playlists.filter(p => p.query === null)))
         onAccepted: App.act("AddItems", [chooser.currentValue, dialogs.owner.uids], "Playlists1")
 
         QQC2.ComboBox {
@@ -94,7 +104,7 @@ Item {
 
         ColumnLayout {
             QQC2.Label {
-                text: App.tr("Items to remove: %1").arg(dialogs.owner.uids.length)
+                text: App.tr("Items to remove: %1", dialogs.owner.uids.length)
             }
 
             QQC2.CheckBox {

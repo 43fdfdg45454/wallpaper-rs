@@ -21,9 +21,9 @@ Item {
 
     function refresh() {
         DBus.SessionBus.asyncCall(message("GetInputs", "()", []), reply => {
-                const text = String(reply.value ?? "");
-                taps.taking = text.startsWith("{") && (JSON.parse(text).clicking ?? []).includes(taps.output);
-            }, () => taps.taking = false);
+            const text = String(reply.value ?? "");
+            taps.taking = text.startsWith("{") && (JSON.parse(text).clicking ?? []).includes(taps.output);
+        }, () => taps.taking = false);
     }
 
     function send(point, buttons) {

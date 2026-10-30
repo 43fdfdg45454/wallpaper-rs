@@ -14,10 +14,10 @@ ColumnLayout {
 
     function put(language, text) {
         host.page.run("translate", {
-                "pointer": field.pointer,
-                "language": language,
-                "text": text
-            });
+            "pointer": field.pointer,
+            "language": language,
+            "text": text
+        });
     }
 
     Repeater {
@@ -49,7 +49,7 @@ ColumnLayout {
                 }
             }
 
-            QQC2.TextArea {
+            Area {
                 Layout.fillWidth: true
                 visible: texts.multiline
                 text: row.text
@@ -94,10 +94,10 @@ ColumnLayout {
             enabled: /^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8}){0,3}$/.test(tag.text)
             onClicked: {
                 texts.host.page.run("translate", {
-                        "pointer": texts.field.pointer,
-                        "language": tag.text,
-                        "add": true
-                    });
+                    "pointer": texts.field.pointer,
+                    "language": tag.text,
+                    "add": true
+                });
                 tag.clear();
             }
         }

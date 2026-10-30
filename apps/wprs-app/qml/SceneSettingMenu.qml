@@ -11,7 +11,7 @@ Item {
     property var row: ({})
     property var scripts: []
     readonly property var groups: (page.view.properties ?? []).filter(p => p.type === "group" && p.id !== row.id)
-    readonly property string named: scripts.length ? App.tr("These scripts name it and are not rewritten: %1").arg(scripts.join(", ")) : ""
+    readonly property string named: scripts.length ? App.tr("These scripts name it and are not rewritten: %1", scripts.join(", ")) : ""
 
     function show(item, data) {
         row = data;
@@ -36,9 +36,9 @@ Item {
     function rename(to) {
         const selected = under(row.pointer) ? page.editor.selected : "";
         page.run("rename_property", {
-                "id": row.id,
-                "to": to
-            });
+            "id": row.id,
+            "to": to
+        });
         if (selected && page.editor.error === "")
             page.editor.select("/manifest/properties/" + to + selected.slice(row.pointer.length));
     }
@@ -46,8 +46,8 @@ Item {
     function remove() {
         const selected = under(row.pointer);
         page.run("remove_property", {
-                "id": row.id
-            });
+            "id": row.id
+        });
         if (selected && page.editor.error === "")
             page.editor.select("/manifest");
     }

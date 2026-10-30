@@ -16,7 +16,7 @@ Row {
             required property int index
 
             icon.name: index < stars.rating ? "rating" : "rating-unrated"
-            text: App.tr("Stars: %1").arg(index + 1)
+            text: App.tr("Stars: %1", index + 1)
             display: QQC2.AbstractButton.IconOnly
             onClicked: stars.rated(index + 1 === stars.rating ? 0 : index + 1)
         }

@@ -7,12 +7,8 @@ use serde::Serialize;
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
-use wprs_core::config::parse_hex_color;
 use wprs_core::model::{MODEL, Profile, ProfileAuto, ProfileOutput, ProfileReply, ProfilesReply};
 use wprs_core::{Config, OutputConfig};
-
-const HELD: &str = "the profile left out a wallpaper that flashes or shows fast patterns that can trigger \
-    seizures in people with photosensitive epilepsy; allow it, then use the profile again";
 
 pub fn stored(value: impl Serialize) -> Value {
     fn strip(value: Value) -> Value {
@@ -34,7 +30,7 @@ pub fn auto(value: &Value) -> ProfileAuto {
     serde_json::from_value(value.clone()).unwrap_or(ProfileAuto { outputs: None, on_battery: None })
 }
 
-fn model(p: wprs_library::Profile, active: Option<&String>) -> Profile {
+pub(crate) fn model(p: wprs_library::Profile, active: Option<&String>) -> Profile {
     let (outputs, options) = (serde_json::from_value(p.outputs), serde_json::from_value(p.options));
     let (active, auto) = (active == Some(&p.uid), auto(&p.auto));
     let (outputs, options) = (outputs.unwrap_or_default(), options.unwrap_or_default());
@@ -89,79 +85,6 @@ impl Daemon {
         })?;
         self.changes.changed("profiles", vec![uid.clone()]);
         Ok(uid)
-    }
-
-    pub fn activate(&self, key: &str) -> Result<()> {
-        if key.trim().is_empty() {
-            self.update_config(|c| {
-                c.profile = None;
-                Ok(())
-            })?;
-            self.changes.changed("profiles", Vec::new());
-            return Ok(());
-        }
-        let _packages = crate::compositor::lock(&crate::packages::PACKAGES);
-        let profile = model(self.store.read(|lib| lib.profile(key.trim()))?, None);
-        let found = self.store.read(|lib| {
-            let found = profile.outputs.iter().map(|(name, o)| {
-                let content = match (&o.item, &o.path, &o.playlist) {
-                    (Some(uid), ..) => {
-                        lib.item(uid).ok().filter(|i| !i.missing).map(|i| (Some(i.path), None))
-                    }
-                    (_, Some(path), _) => Some((Some(path.clone()), None)),
-                    (.., Some(uid)) => lib.playlist(uid).ok().map(|p| (None, Some(p.uid))),
-                    _ => Some((None, None)),
-                };
-                let image = content.as_ref().and_then(|(image, _)| image.as_ref()?.to_str());
-                let item = image.and_then(|path| lib.item(&lib.resolve_item(path).ok()?).ok());
-                let flashing = item.and_then(|i| i.package).is_some_and(|p| p.asks("photosensitive"));
-                let preset = o.preset.clone().filter(|u| lib.preset(u).is_ok());
-                (name.clone(), content.filter(|_| !flashing), preset, flashing)
-            });
-            Ok::<_, Error>(found.collect::<Vec<_>>())
-        })?;
-        let (revoked, mut sections, mut held) = (self.revoked(), BTreeMap::new(), HashMap::new());
-        for (name, content, preset, flashing) in found {
-            let usable = |(image, _): &(Option<PathBuf>, Option<String>)| {
-                image.as_ref().is_none_or(|p| !revoked.contains(p) && self.check_media(p).is_ok())
-            };
-            let content = content.filter(usable);
-            if content.is_none() {
-                tracing::warn!(
-                    output = name,
-                    "skipped a profile entry whose item, file or playlist is not usable"
-                );
-            }
-            if flashing {
-                held.insert(name.clone(), HELD.to_string());
-            }
-            let Some((image, playlist)) = content.or_else(|| name.is_empty().then_some((None, None))) else {
-                continue;
-            };
-            let o = &profile.outputs[&name];
-            let background = o.background.as_deref().and_then(parse_hex_color);
-            let background = background.map(|[r, g, b]| format!("#{r:02x}{g:02x}{b:02x}"));
-            sections.insert(
-                name,
-                OutputConfig { image, playlist, fit: o.fit, background, preset, ..Default::default() },
-            );
-        }
-        self.update_config(|c| {
-            sections.iter_mut().for_each(|(name, section)| section.scenes = c.scene_section(name).clone());
-            (c.default, c.profile) = (sections.remove("").unwrap_or_default(), Some(profile.uid.clone()));
-            c.outputs = sections;
-            for (key, value) in profile.options.iter().filter(|(key, _)| *key != DOWNLOADS) {
-                if let Err(e) = c.set_option(key, value) {
-                    tracing::warn!(key, "skipped a profile setting: {e}");
-                }
-            }
-            Ok(())
-        })?;
-        self.state().held = held;
-        self.configure_all();
-        self.watch_sources();
-        self.changes.changed("profiles", vec![profile.uid]);
-        Ok(())
     }
 
     pub fn edit_profile(

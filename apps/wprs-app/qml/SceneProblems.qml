@@ -13,7 +13,7 @@ ColumnLayout {
 
     Kirigami.Heading {
         level: 4
-        text: panel.problems.length ? App.tr("Problems (%1)").arg(panel.problems.length) : App.tr("No problems")
+        text: panel.problems.length ? App.tr("Problems (%1)", panel.problems.length) : App.tr("No problems")
     }
 
     QQC2.ScrollView {

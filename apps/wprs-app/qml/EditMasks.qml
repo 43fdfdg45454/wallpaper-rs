@@ -54,9 +54,9 @@ ColumnLayout {
                 checkable: false
                 onClicked: tool.pick(modelData)
                 onRemoved: tool.page.run("mask", {
-                        "name": modelData,
-                        "spec": "none"
-                    })
+                    "name": modelData,
+                    "spec": "none"
+                })
             }
         }
     }

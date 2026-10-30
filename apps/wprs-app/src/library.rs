@@ -1,9 +1,12 @@
 use crate::bus::{self, Event};
+use crate::diff;
 use crate::grid::{self, Grid};
 use crate::items::qobject::ItemModel;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use std::pin::Pin;
+
+const MAX_TOUCHED: usize = 500;
 
 pub type Source = (&'static str, &'static str, String);
 
@@ -17,8 +20,12 @@ pub struct ItemModelRust {
     pub removable: bool,
     pub imported: bool,
     pub favorite: bool,
+    pub flashing: bool,
     pub grid: Grid,
     pub source: Option<Source>,
+    pub asked: Option<Source>,
+    pub touched: Vec<String>,
+    pub updating: bool,
     pub generation: u64,
     pub fresh: bool,
     pub dirty: bool,
@@ -47,7 +54,11 @@ impl ItemModel {
                     self.as_mut().rust_mut().grid.stale(&ids);
                     self.as_mut().rust_mut().sent.clear();
                 }
-                self.refresh();
+                let searched = self.source.as_ref().is_some_and(|s| s.1 == "Search" && diff::steady(&s.2));
+                match topic == "library" && searched && (1..=MAX_TOUCHED).contains(&ids.len()) {
+                    true => self.touch(ids),
+                    false => self.refresh(),
+                }
             }
             Event::Link(Ok(())) => {
                 self.as_mut().rust_mut().sent.clear();
@@ -67,19 +78,42 @@ impl ItemModel {
     }
 
     fn open(mut self: Pin<&mut Self>, source: Source) {
-        if self.source.as_ref() == Some(&source) {
+        if self.asked.as_ref() == Some(&source) {
             return self.refresh();
         }
         let mut this = self.as_mut().rust_mut();
-        (this.fresh, this.dirty, this.generation, this.source) =
-            (true, false, this.generation + 1, Some(source));
+        let other = this.asked.as_ref().is_none_or(|a| (a.0, a.1) != (source.0, source.1));
+        (this.fresh, this.dirty, this.generation) =
+            (other || this.grid.rows.is_empty(), false, this.generation + 1);
+        (this.asked, this.source, this.touched) = (Some(source.clone()), Some(source), Vec::new());
         self.fetch(0);
     }
 
     pub fn refresh(mut self: Pin<&mut Self>) {
-        match self.loading {
+        match self.loading || self.updating {
             true => self.as_mut().rust_mut().dirty = true,
             false => self.fetch(0),
         }
+    }
+
+    fn touch(mut self: Pin<&mut Self>, uids: Vec<String>) {
+        self.as_mut().rust_mut().touched.extend(uids);
+        if !self.loading && !self.updating {
+            self.update();
+        }
+    }
+
+    pub fn settle(mut self: Pin<&mut Self>) {
+        if std::mem::take(&mut self.as_mut().rust_mut().dirty) {
+            self.as_mut().rust_mut().touched.clear();
+            self.refresh();
+        } else if !self.touched.is_empty() {
+            self.update();
+        }
+    }
+
+    pub fn row(&self, uid: &QString) -> i32 {
+        let uid = uid.to_string();
+        self.grid.rows.iter().position(|r| r.item.uid == uid).map_or(-1, |i| i as i32)
     }
 }

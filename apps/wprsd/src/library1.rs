@@ -108,7 +108,10 @@ impl Library {
                 limited(&uids, crate::items::MAX_UIDS)?;
                 let changed = d.store.write(|lib| lib.confirm(&strs(&uids), &what))?;
                 d.changes.changed("library", changed);
-                Ok::<_, Error>(())
+                match what == "photosensitive" && d.compositor.running() {
+                    true => crate::choice::unhold(d),
+                    false => Ok::<_, Error>(()),
+                }
             })
             .await
     }

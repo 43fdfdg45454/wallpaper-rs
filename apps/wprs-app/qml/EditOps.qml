@@ -82,8 +82,8 @@ ColumnLayout {
                     display: QQC2.AbstractButton.IconOnly
                     icon.name: "edit-delete"
                     onClicked: list.page.run("reset", {
-                            "ids": [op.id]
-                        })
+                        "ids": [op.id]
+                    })
                 }
             }
 
@@ -95,7 +95,7 @@ ColumnLayout {
 
             QQC2.ComboBox {
                 Layout.fillWidth: true
-                model: [App.tr("Whole picture")].concat(list.masks.map(name => App.tr("Mask %1").arg(name)))
+                model: [App.tr("Whole picture")].concat(list.masks.map(name => App.tr("Mask %1", name)))
                 currentIndex: list.masks.indexOf(op.mask ?? "") + 1
                 onActivated: index => list.set(op.id, "mask", index > 0 ? list.masks[index - 1] : "null")
             }

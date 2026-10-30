@@ -75,7 +75,7 @@ Kirigami.Card {
 
         QQC2.Label {
             Kirigami.FormData.label: App.tr("Items:")
-            text: App.tr("%1 (cache: %2)").arg(card.provider.items).arg(App.bytes(card.provider.cache_bytes))
+            text: App.tr("%1 (cache: %2)", card.provider.items, App.bytes(card.provider.cache_bytes))
         }
 
         QQC2.Label {

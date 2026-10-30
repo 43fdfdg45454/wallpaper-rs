@@ -111,7 +111,11 @@ QtObject {
             "iface": "org.freedesktop.Application",
             "member": page ? "ActivateAction" : "Activate",
             "signature": page ? "(sava{sv})" : "(a{sv})",
-            "arguments": page ? [page, [], {}] : [{}]
+            "arguments": page ? [page, [],
+                {}
+            ] : [
+                {}
+            ]
         }, () => {}, reply => {
             const failed = () => daemon.actionError = reply?.error?.message || i18n("wallpaper-rs could not be opened");
             if (!again && String(reply?.error?.name ?? "").endsWith(".ServiceUnknown"))

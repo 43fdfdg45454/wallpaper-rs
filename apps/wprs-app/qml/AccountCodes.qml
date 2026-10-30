@@ -21,7 +21,7 @@ Item {
     function share(target) {
         codes.device = target;
         digits.text = "";
-        App.query("ShareKey", [target.id], "Sync1", reply => codes.comparing = reply[0]);
+        App.query("ShareKey", [target.id], "Sync1", reply => codes && (codes.comparing = reply[0]));
         sharer.open();
     }
 
@@ -35,7 +35,7 @@ Item {
                 text: App.tr("Look up")
                 icon.name: "search"
                 visible: codes.lookup === 0
-                onTriggered: App.query("PreviewCode", [approval.text.trim()], "Sync1", reply => codes.lookup = reply[0])
+                onTriggered: App.query("PreviewCode", [approval.text.trim()], "Sync1", reply => codes && (codes.lookup = reply[0]))
             },
             Kirigami.Action {
                 text: App.tr("This is my device: approve")
@@ -71,7 +71,7 @@ Item {
                 Layout.fillWidth: true
                 visible: codes.found?.state === "done"
                 wrapMode: Text.Wrap
-                text: App.tr("A device on %1 running %2 asked for this code at %3.").arg(codes.found?.output?.platform ?? "").arg(codes.found?.output?.client || App.tr("unnamed software")).arg(App.time(Math.floor((codes.found?.output?.requested_at ?? 0) / 1000)))
+                text: App.tr("A device on %1 running %2 asked for this code at %3.", codes.found?.output?.platform ?? "", codes.found?.output?.client || App.tr("unnamed software"), App.time(Math.floor((codes.found?.output?.requested_at ?? 0) / 1000)))
             }
 
             QQC2.Label {
@@ -87,7 +87,7 @@ Item {
     Kirigami.Dialog {
         id: sharer
 
-        title: App.tr("Share the sync key with %1").arg(codes.other)
+        title: App.tr("Share the sync key with %1", codes.other)
         standardButtons: Kirigami.Dialog.Cancel
         customFooterActions: [
             Kirigami.Action {
@@ -110,7 +110,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 24
                 wrapMode: Text.Wrap
-                text: codes.shown ? App.tr("This computer shows %1. Type the code that %2 shows: the key leaves only when both match.").arg(codes.shown).arg(codes.other) : codes.compared?.state === "failed" ? codes.compared.error.message : App.tr("Waiting for %1: choose this computer there to get the key.").arg(codes.other)
+                text: codes.shown ? App.tr("This computer shows %1. Type the code that %2 shows: the key leaves only when both match.", codes.shown, codes.other) : codes.compared?.state === "failed" ? codes.compared.error.message : App.tr("Waiting for %1: choose this computer there to get the key.", codes.other)
             }
 
             QQC2.TextField {

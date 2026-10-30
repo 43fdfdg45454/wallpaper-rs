@@ -32,6 +32,7 @@ pub mod qobject {
         #[qproperty(bool, removable)]
         #[qproperty(bool, imported)]
         #[qproperty(bool, favorite)]
+        #[qproperty(bool, flashing)]
         type ItemModel = super::ItemModelRust;
 
         #[qinvokable]
@@ -46,6 +47,10 @@ pub mod qobject {
         fn selection(self: &ItemModel) -> QString;
         #[qinvokable]
         fn uid(self: &ItemModel, row: i32) -> QString;
+        #[qinvokable]
+        fn row(self: &ItemModel, uid: &QString) -> i32;
+        #[qsignal]
+        fn reloaded(self: Pin<&mut ItemModel>);
         #[cxx_override]
         fn data(self: &ItemModel, index: &QModelIndex, role: i32) -> QVariant;
         #[cxx_override]

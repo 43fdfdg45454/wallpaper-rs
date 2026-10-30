@@ -24,7 +24,7 @@ ColumnLayout {
         id: debounce
 
         interval: 250
-        onTriggered: App.query("Search", [query.text, 0, 0], "Library1", reply => editor.matches = reply.total, () => editor.matches = -1)
+        onTriggered: App.query("Search", [query.text, 0, 0], "Library1", reply => editor && (editor.matches = reply.total), () => editor && (editor.matches = -1))
     }
 
     Kirigami.FormLayout {
@@ -51,7 +51,7 @@ ColumnLayout {
 
             QQC2.Label {
                 visible: editor.matches >= 0 && query.text !== ""
-                text: App.tr("Matches: %1").arg(editor.matches)
+                text: App.tr("Matches: %1", editor.matches)
             }
 
             QQC2.Button {
@@ -92,7 +92,7 @@ ColumnLayout {
             delegate: QQC2.Button {
                 required property string modelData
 
-                Kirigami.FormData.label: App.tr("Playing on %1:").arg(modelData)
+                Kirigami.FormData.label: App.tr("Playing on %1:", modelData)
                 text: App.tr("Stop")
                 icon.name: "media-playback-stop"
                 onClicked: App.act("Stop", [modelData], "Playlists1")

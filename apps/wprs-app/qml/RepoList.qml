@@ -32,14 +32,14 @@ QQC2.ScrollView {
 
             Kirigami.Heading {
                 level: 4
-                text: modelData.name + " · " + App.tr("Packages: %1").arg(modelData.packages)
+                text: modelData.name + " · " + App.tr("Packages: %1", modelData.packages)
                 textFormat: Text.PlainText
             }
 
             QQC2.Label {
                 Layout.fillWidth: true
                 wrapMode: Text.WrapAnywhere
-                text: [App.tr("Contacts: %1").arg(modelData.hosts.join(", ")), App.tr("Keys: %1").arg(modelData.fingerprints.join(", ")), App.tr("Last check: %1").arg(App.time(modelData.checked))].join("\n")
+                text: [App.tr("Contacts: %1", modelData.hosts.join(", ")), App.tr("Keys: %1", modelData.fingerprints.join(", ")), App.tr("Last check: %1", App.time(modelData.checked))].join("\n")
                 textFormat: Text.PlainText
             }
 

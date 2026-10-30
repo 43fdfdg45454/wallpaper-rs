@@ -34,8 +34,8 @@ ColumnLayout {
                     text: App.tr("Remove")
                     display: QQC2.AbstractButton.IconOnly
                     onClicked: panel.page.run("remove", {
-                            "pointer": row.modelData.pointer
-                        })
+                        "pointer": row.modelData.pointer
+                    })
                 }
             }
         }
@@ -73,8 +73,8 @@ ColumnLayout {
         fileMode: FileDialog.OpenFiles
         nameFilters: [App.tr("Pictures, videos, sounds, fonts and color tables") + " (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.webm *.mp4 *.mkv *.ogg *.opus *.flac *.wav *.ttf *.otf *.cube)"]
         onAccepted: selectedFiles.forEach(file => panel.page.run("import", {
-                        "file": App.path(file)
-                    }))
+                "file": App.path(file)
+            }))
     }
 
     FileDialog {
@@ -83,8 +83,8 @@ ColumnLayout {
         fileMode: FileDialog.OpenFile
         nameFilters: [App.tr("A JavaScript module of the scene") + " (*.js)"]
         onAccepted: panel.page.run("import_script", {
-                "file": App.path(selectedFile)
-            })
+            "file": App.path(selectedFile)
+        })
     }
 
     FileDialog {
@@ -98,11 +98,11 @@ ColumnLayout {
             const wgsl = paths.find(path => path.endsWith(".wgsl"));
             if (descriptor)
                 panel.page.run("import_effect", wgsl ? {
-                        "descriptor": descriptor,
-                        "wgsl": wgsl
-                    } : {
-                        "descriptor": descriptor
-                    });
+                    "descriptor": descriptor,
+                    "wgsl": wgsl
+                } : {
+                    "descriptor": descriptor
+                });
         }
     }
 }

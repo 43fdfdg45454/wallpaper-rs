@@ -11,7 +11,7 @@ ColumnLayout {
 
     function load() {
         if (output.currentValue)
-            App.query("History", [output.currentValue, 100], "Playlists1", reply => history.entries = reply.entries);
+            App.query("History", [output.currentValue, 100], "Playlists1", reply => history && (history.entries = reply.entries));
     }
 
     Component.onCompleted: load()

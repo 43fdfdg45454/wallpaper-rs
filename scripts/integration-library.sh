@@ -136,7 +136,9 @@ ctl lib confirm photosensitive "$flashing" && ctl lib apply "$flashing" -o TEST-
 stormy=$(ctl profile save Stormy --no-options)
 flash org.example.flash2
 ctl profile use "$stormy"
-expect "s['outputs']['TEST-7']['item'], 'use the profile again' in (s['outputs']['TEST-7']['error'] or '')" "(None, True)"
+expect "s['outputs']['TEST-7']['item'], 'once you allow it' in (s['outputs']['TEST-7']['error'] or '')" "(None, True)"
+ctl lib confirm photosensitive "$flashing"
+expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['error']" "('$flashing', None)"
 ctl profile off && ctl profile rm "$stormy"
 ctl lib apply "$storm" -o TEST-7
 expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['error']" "('$storm', None)"

@@ -19,7 +19,7 @@ ColumnLayout {
         })
 
     function load() {
-        App.query("List", [], "Providers1", reply => shared.providers = reply.providers.filter(p => !!(App.schema.providers ?? []).find(k => k.kind === p.kind)?.secret));
+        App.query("List", [], "Providers1", reply => shared && (shared.providers = reply.providers.filter(p => !!(App.schema.providers ?? []).find(k => k.kind === p.kind)?.secret)));
     }
 
     Component.onCompleted: load()
@@ -50,7 +50,7 @@ ColumnLayout {
             QQC2.Label {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                text: App.tr("%1 at %2, key %3").arg(modelData.name).arg(modelData.url).arg((modelData.fingerprints[0] ?? "").slice(0, 16))
+                text: App.tr("%1 at %2, key %3", modelData.name, modelData.url, (modelData.fingerprints[0] ?? "").slice(0, 16))
             }
 
             QQC2.Button {
@@ -79,7 +79,7 @@ ColumnLayout {
         delegate: QQC2.CheckBox {
             required property var modelData
 
-            text: App.tr("Sync the secret of %1 with my devices, end-to-end encrypted").arg(modelData.id)
+            text: App.tr("Sync the secret of %1 with my devices, end-to-end encrypted", modelData.id)
             checked: (shared.account?.secrets ?? []).includes(modelData.id)
             onToggled: App.act("ShareSecret", [modelData.id, checked], "Sync1")
         }

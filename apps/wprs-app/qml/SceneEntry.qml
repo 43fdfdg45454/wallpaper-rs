@@ -35,7 +35,7 @@ ColumnLayout {
         }
     }
 
-    QQC2.TextArea {
+    Area {
         Layout.fillWidth: true
         visible: entry.kind === "text" && entry.modelData.multiline && !entry.secret
         text: entry.text

@@ -17,7 +17,7 @@ ColumnLayout {
     signal rename(string name)
 
     function load() {
-        App.query("ListTags", [], "Library1", reply => filters.tags = reply.tags);
+        App.query("ListTags", [], "Library1", reply => filters && (filters.tags = reply.tags));
     }
 
     function start(query) {

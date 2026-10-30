@@ -15,7 +15,7 @@ ColumnLayout {
         })
 
     function load() {
-        App.query("ListFiles", [], "Sync1", reply => files.reply = reply);
+        App.query("ListFiles", [], "Sync1", reply => files && (files.reply = reply));
     }
 
     function state(file) {
@@ -44,7 +44,7 @@ ColumnLayout {
     QQC2.Label {
         Layout.fillWidth: true
         wrapMode: Text.Wrap
-        text: App.tr("Your own wallpapers that come from no repository, end-to-end encrypted: %1 of %2 used on the server.").arg(App.bytes(files.account?.files_bytes ?? 0)).arg(App.bytes(files.account?.files_quota_bytes ?? 0))
+        text: App.tr("Your own wallpapers that come from no repository, end-to-end encrypted: %1 of %2 used on the server.", App.bytes(files.account?.files_bytes ?? 0), App.bytes(files.account?.files_quota_bytes ?? 0))
     }
 
     Repeater {
@@ -56,7 +56,7 @@ ColumnLayout {
             QQC2.Label {
                 Layout.fillWidth: true
                 elide: Text.ElideMiddle
-                text: App.tr("Folder %1").arg(modelData)
+                text: App.tr("Folder %1", modelData)
             }
 
             QQC2.Button {
@@ -115,7 +115,7 @@ ColumnLayout {
 
         property var file: ({})
 
-        title: App.tr("Remove %1 from the server").arg(dropper.file.name ?? "")
+        title: App.tr("Remove %1 from the server", dropper.file.name ?? "")
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
         onAccepted: App.act("ShareFiles", [[dropper.file.shared ? dropper.file.item : dropper.file.id], false], "Sync1")
 

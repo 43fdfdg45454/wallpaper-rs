@@ -170,7 +170,7 @@ QtObject {
     function feature(name) {
         const parts = String(name).replace(/^effect\./, "").split(".");
         const effect = SceneWords.effect(parts[0]);
-        const used = parts.length > 1 ? App.tr("sets %1 on the %2 effect").arg(SceneWords.label(parts[1])).arg(effect) : App.tr("uses the %1 effect").arg(effect);
+        const used = parts.length > 1 ? App.tr("sets %1 on the %2 effect", SceneWords.label(parts[1]), effect) : App.tr("uses the %1 effect", effect);
         return features[name] ?? used;
     }
 

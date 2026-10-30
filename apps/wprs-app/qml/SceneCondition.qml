@@ -21,10 +21,10 @@ ColumnLayout {
             if (text === condition.shown || condition.problem !== "")
                 return;
             condition.host.page.run("condition", {
-                    "id": condition.host.field.pointer.split("/")[3],
-                    "enabled": condition.host.field.key === "enabled_if",
-                    "text": text
-                });
+                "id": condition.host.field.pointer.split("/")[3],
+                "enabled": condition.host.field.key === "enabled_if",
+                "text": text
+            });
         }
 
         QQC2.ToolTip.text: App.tr("Ids of other properties, numbers, 'texts', true and false with == != < <= > >= && || ! and parentheses, such as mood == 2 || speed > 1.5")

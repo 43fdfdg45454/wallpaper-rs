@@ -44,7 +44,7 @@ Kirigami.ApplicationWindow {
     }
 
     function loadInputs() {
-        App.query("GetInputs", [], "Inputs1", reply => root.inputs = reply);
+        App.query("GetInputs", [], "Inputs1", reply => root && (root.inputs = reply));
     }
 
     function showPage(index, properties) {
@@ -77,58 +77,8 @@ Kirigami.ApplicationWindow {
         text: App.backend.banner
         visible: text !== ""
     }
-    globalDrawer: Kirigami.GlobalDrawer {
-        collapsible: true
-        actions: [
-            Kirigami.Action {
-                text: App.tr("Library")
-                icon.name: "folder-pictures"
-                checked: root.current === 0
-                onTriggered: root.showPage(0)
-            },
-            Kirigami.Action {
-                text: App.tr("Scenes")
-                icon.name: "draw-freehand"
-                checked: root.current === 7
-                onTriggered: root.showPage(7)
-            },
-            Kirigami.Action {
-                text: App.tr("Playlists")
-                icon.name: "view-media-playlist"
-                checked: root.current === 1
-                onTriggered: root.showPage(1)
-            },
-            Kirigami.Action {
-                text: App.tr("Profiles and presets")
-                icon.name: "video-display"
-                checked: root.current === 2
-                onTriggered: root.showPage(2)
-            },
-            Kirigami.Action {
-                text: App.tr("Providers")
-                icon.name: "internet-services"
-                checked: root.current === 3
-                onTriggered: root.showPage(3)
-            },
-            Kirigami.Action {
-                text: App.tr("Repositories")
-                icon.name: "package-x-generic"
-                checked: root.current === 4
-                onTriggered: root.showPage(4)
-            },
-            Kirigami.Action {
-                text: App.tr("Settings")
-                icon.name: "configure"
-                checked: root.current === 5
-                onTriggered: root.showPage(5)
-            },
-            Kirigami.Action {
-                text: App.tr("Account")
-                icon.name: "folder-cloud"
-                checked: root.current === 6
-                onTriggered: root.showPage(6)
-            }
-        ]
+    globalDrawer: Navigation {
+        host: root
     }
 
     Connections {
@@ -225,49 +175,7 @@ Kirigami.ApplicationWindow {
         ScenePage {}
     }
 
-    Timer {
-        property int step: 0
-        property var opened: null
-        property bool edited: false
-
-        function keeps(page) {
-            const shown = root.pageStack.currentItem;
-            root.activate(page);
-            if (root.pageStack.currentItem !== shown)
-                throw new Error("a request for the " + page + " page replaced the page shown");
-        }
-
-        interval: 300
-        repeat: true
-        running: App.checking
-        onTriggered: {
-            const at = step++;
-            if (at < root.pages.length) {
-                root.showPage(at);
-                keeps(root.names[at]);
-            } else if (at === root.pages.length) {
-                return App.query("GetItem", [""], "Library1", reply => {
-                    App.edit(reply.item);
-                    opened = root.pageStack.currentItem;
-                });
-            } else if (opened?.editor?.ready !== true || root.pageStack.currentItem !== opened) {
-                if (at < root.pages.length + 50)
-                    return;
-                stop();
-                Qt.quit();
-                throw new Error("the image editor did not open");
-            } else if (!edited) {
-                edited = true;
-            } else {
-                stop();
-                Qt.quit();
-                if (opened.editor.dirty !== true)
-                    throw new Error("the editor has no unsaved edits to keep");
-                return keeps("settings");
-            }
-            const page = root.pageStack.currentItem;
-            if (page.exercise)
-                page.exercise();
-        }
+    Tour {
+        host: root
     }
 }

@@ -85,3 +85,28 @@ impl Grid {
         }
     }
 }
+
+pub fn steady(query: &str) -> bool {
+    let sorts = query
+        .split_whitespace()
+        .filter_map(|t| t.to_ascii_lowercase().strip_prefix("sort:").map(String::from));
+    sorts.into_iter().all(|s| ["added", "added-", "random"].contains(&s.as_str()) || s.starts_with("random:"))
+}
+
+impl Grid {
+    pub fn patch(&self, uids: &[String], found: Vec<ItemSummary>) -> Option<Vec<Edit>> {
+        let loaded: HashSet<&str> = self.rows.iter().map(|r| r.item.uid.as_str()).collect();
+        if found.iter().any(|item| !loaded.contains(item.uid.as_str())) {
+            return None;
+        }
+        let mut edits = Vec::new();
+        for (i, row) in self.rows.iter().enumerate().rev().filter(|(_, r)| uids.contains(&r.item.uid)) {
+            match found.iter().find(|item| item.uid == row.item.uid) {
+                Some(item) if *item != row.item => edits.insert(0, Edit::Set(i, Box::new(item.clone()))),
+                Some(_) => {}
+                None => edits.push(Edit::Remove(i, i + 1)),
+            }
+        }
+        Some(edits)
+    }
+}

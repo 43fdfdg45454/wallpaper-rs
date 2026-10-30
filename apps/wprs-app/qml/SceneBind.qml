@@ -12,22 +12,22 @@ QQC2.ToolButton {
 
     function bound(source) {
         page.run("set", {
-                "pointer": field.pointer,
-                "value": source
-            });
+            "pointer": field.pointer,
+            "value": source
+        });
     }
 
     function key(remove) {
         page.run("keyframe", {
-                "pointer": field.pointer,
-                "time": page.editor.time,
-                "value": remove ? undefined : (field.shown ?? field.default),
-                "remove": remove
-            });
+            "pointer": field.pointer,
+            "time": page.editor.time,
+            "value": remove ? undefined : (field.shown ?? field.default),
+            "remove": remove
+        });
     }
 
     text: field.source === "keys" ? (here ? "◆" : "◈") : (field.source ? "⛓" : "◇")
-    QQC2.ToolTip.text: field.source ? App.tr("Follows %1").arg(SceneWords.binding(field.value)) : App.tr("Fixed value")
+    QQC2.ToolTip.text: field.source ? App.tr("Follows %1", SceneWords.binding(field.value)) : App.tr("Fixed value")
     QQC2.ToolTip.visible: hovered
     onClicked: menu.popup()
 
@@ -69,8 +69,8 @@ QQC2.ToolButton {
 
                     text: modelData.label
                     onTriggered: bind.bound({
-                            "prop": modelData.id
-                        })
+                        "prop": modelData.id
+                    })
                 }
             }
         }
@@ -86,8 +86,8 @@ QQC2.ToolButton {
 
                     text: modelData[1]
                     onTriggered: bind.bound({
-                            "audio": modelData[0]
-                        })
+                        "audio": modelData[0]
+                    })
                 }
             }
         }
@@ -103,8 +103,8 @@ QQC2.ToolButton {
 
                     text: modelData[1]
                     onTriggered: bind.bound({
-                            "cursor": modelData[0]
-                        })
+                        "cursor": modelData[0]
+                    })
                 }
             }
         }

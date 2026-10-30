@@ -1,8 +1,10 @@
 mod account;
+mod activate;
 mod apply;
 mod bus;
 mod callers;
 mod changes;
+mod choice;
 mod clock;
 mod compositor;
 mod confirm;

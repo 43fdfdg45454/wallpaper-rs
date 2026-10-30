@@ -96,7 +96,8 @@ fn the_scene_editor_has_words_for_every_field_value_and_effect() {
     let file = |wanted: &str| qml_files().into_iter().find(|(name, _)| name == wanted).unwrap().1;
     let (words, manifest) = (file("SceneWords.qml"), file("ManifestWords.qml"));
     assert!(words.contains("ManifestWords.words"), "SceneWords.qml falls back to ManifestWords.qml");
-    let scene = [words, file("SceneValues.qml"), file("SceneEffects.qml")].concat();
+    let more = ["SceneTerms.qml", "SceneNames.qml", "SceneLabels.qml", "SceneValues.qml", "SceneEffects.qml"];
+    let scene = [words].into_iter().chain(more.map(file)).collect::<String>();
     let (mut keys, mut values, mut theirs) = (BTreeSet::new(), BTreeSet::new(), BTreeSet::new());
     named(&wprs_scene::schema(), &mut keys, &mut values);
     named(&wprs_scene::property_schema(), &mut theirs, &mut values);
@@ -133,12 +134,10 @@ fn every_feature_has_a_translated_explanation() {
             "Labels.qml explains {name} otherwise"
         );
     }
+    assert!(labels.contains("App.tr(\"sets %1 on the %2 effect\", SceneWords.label(parts[1]), effect)"));
     assert!(
-        labels.contains("App.tr(\"sets %1 on the %2 effect\")")
-            && labels.contains("App.tr(\"uses the %1 effect\")")
-    );
-    assert!(
-        labels.contains("SceneWords.effect(parts[0])") && labels.contains(".arg(SceneWords.label(parts[1]))")
+        labels.contains("App.tr(\"uses the %1 effect\", effect)")
+            && labels.contains("SceneWords.effect(parts[0])")
     );
 }
 

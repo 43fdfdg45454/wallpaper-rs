@@ -65,11 +65,14 @@ impl ItemModel {
     pub fn summary(mut self: Pin<&mut Self>) {
         let all = |f: fn(&ItemSummary) -> bool| self.grid.selected().all(f);
         let flags = (all(|i| i.removable), all(|i| i.imported), all(|i| i.favorite));
+        let flashing =
+            self.grid.selected().any(|i| i.package.as_ref().is_some_and(|p| p.asks("photosensitive")));
         let count = self.grid.selected().count() as i32;
         self.as_mut().set_selected(count);
         self.as_mut().set_removable(flags.0);
         self.as_mut().set_imported(flags.1);
         self.as_mut().set_favorite(flags.2);
+        self.as_mut().set_flashing(flashing);
     }
 
     pub fn selection(&self) -> QString {

@@ -23,8 +23,8 @@ ColumnLayout {
         text: App.tr("Move the picture in depth")
         checked: tool.moving
         onToggled: tool.page.run("parallax", {
-                "off": !checked
-            })
+            "off": !checked
+        })
     }
 
     QQC2.ComboBox {
@@ -38,7 +38,7 @@ ColumnLayout {
     QQC2.ComboBox {
         Layout.fillWidth: true
         enabled: tool.moving
-        model: tool.steps.map(n => n === 1 ? App.tr("Fastest: shift only") : App.tr("%1 steps").arg(n))
+        model: tool.steps.map(n => n === 1 ? App.tr("Fastest: shift only") : App.tr("%1 steps", n))
         currentIndex: Math.max(0, tool.steps.indexOf(tool.parallax.steps))
         onActivated: index => tool.send("steps", tool.steps[index])
     }

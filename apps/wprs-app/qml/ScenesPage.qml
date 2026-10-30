@@ -18,9 +18,10 @@ Kirigami.ScrollablePage {
 
     title: App.tr("Scenes")
     Component.onCompleted: App.query("Search", ["kind:scene", 0, 200], "Library1", reply => {
-            if (page)
-                page.scenes = (reply?.items ?? []).filter(item => String(item.path ?? "").endsWith(".wpak"));
-        })
+        if (!page)
+            return;
+        page.scenes = (reply?.items ?? []).filter(item => String(item.path ?? "").endsWith(".wpak"));
+    })
 
     SceneEditor {
         id: helper

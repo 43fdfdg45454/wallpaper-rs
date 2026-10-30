@@ -12,7 +12,7 @@ ColumnLayout {
     property var pkg: null
     readonly property bool styled: info.schema === "wallpaper-rs.wpak/2"
     readonly property bool asks: !!pkg && pkg.photosensitive === true && !(pkg.confirmed ?? []).includes("photosensitive")
-    readonly property var works: (info.derived_from ?? []).map(w => w.title ? App.tr("%1 by %2").arg(w.title).arg(w.author) : w.author)
+    readonly property var works: (info.derived_from ?? []).map(w => w.title ? App.tr("%1 by %2", w.title, w.author) : w.author)
 
     function words(list) {
         return (list ?? []).map(Labels.value).join(", ");

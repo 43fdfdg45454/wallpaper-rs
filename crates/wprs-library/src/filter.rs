@@ -23,7 +23,8 @@ const ORIENTATIONS: [(&str, &str); 3] = [
     ("square", "i.width = i.height"),
 ];
 const FACETED: &str = "' ' || i.facets || ' ' LIKE '% ' || ? || ' %'";
-const KEYS: [(&str, &str); 17] = [
+const MAX_UIDS: usize = 500;
+const KEYS: [(&str, &str); 18] = [
     ("tag", "a tag name"),
     ("kind", "image, video, package or scene"),
     ("fav", "nothing, yes or no"),
@@ -41,6 +42,7 @@ const KEYS: [(&str, &str); 17] = [
     ("content", "general, mature or unrated"),
     ("facet", "a package facet such as audio, pointer, sound, customizable, photosensitive or 4k"),
     ("sort", "added, title, rating, used, random or random:<seed>, with a - suffix for descending"),
+    ("uid", "up to 500 item uids separated by commas"),
 ];
 
 pub fn query_keys() -> &'static [(&'static str, &'static str)] {
@@ -66,7 +68,14 @@ fn parse(key: &str, value: &str, now: i64) -> Option<(String, Vec<Value>)> {
     let int = |n: i64| vec![Value::Integer(n)];
     let text = |text: &str| vec![Value::Text(text.into())];
     let (sql, params) = match key {
-        "tag" | "in" | "source" | "audio" | "facet" if value.is_empty() => return None,
+        "tag" | "in" | "source" | "audio" | "facet" | "uid" if value.is_empty() => return None,
+        "uid" => {
+            let uids: Vec<Value> =
+                value.split(',').filter(|u| !u.is_empty()).map(|u| Value::Text(u.into())).collect();
+            let marks = vec!["?"; uids.len()].join(", ");
+            (uids.len() <= MAX_UIDS).then_some(())?;
+            (format!("i.uid IN ({marks})"), uids)
+        }
         "facet" => (FACETED.into(), text(&lower)),
         "content" if lower == "unrated" => ("i.kind = 'package' AND i.content IS NULL".into(), vec![]),
         "content" if ["general", "mature"].contains(&lower.as_str()) => {

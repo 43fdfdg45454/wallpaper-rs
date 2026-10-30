@@ -27,11 +27,11 @@ ColumnLayout {
     }
 
     function imported(text) {
-        daemon.query("ImportSceneValues", [output, text, ""], "Daemon1", reply => presets.notice = (reply[0] ?? []).join("\n"), error => presets.notice = error.message);
+        daemon.query("ImportSceneValues", [output, text, ""], "Daemon1", reply => presets && (presets.notice = (reply[0] ?? []).join("\n")), error => presets && (presets.notice = error.message));
     }
 
     function exported(done) {
-        daemon.query("ExportSceneValues", [output, ""], "Daemon1", reply => done(reply[0]), error => presets.notice = error.message);
+        daemon.query("ExportSceneValues", [output, ""], "Daemon1", reply => done(reply[0]), error => presets && (presets.notice = error.message));
     }
 
     TextEdit {

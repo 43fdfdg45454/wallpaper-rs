@@ -17,12 +17,12 @@ RowLayout {
     QQC2.Label {
         Layout.fillWidth: true
         elide: Text.ElideRight
-        text: [row.device.label ?? row.device.name, row.device.label ? row.device.name : "", row.device.current ? App.tr("this computer") : App.tr("seen %1").arg(App.time(row.device.seen_at) || "–")].filter(t => t).join(" · ")
+        text: [row.device.label ?? row.device.name, row.device.label ? row.device.name : "", row.device.current ? App.tr("this computer") : App.tr("seen %1", App.time(row.device.seen_at) || "–")].filter(t => t).join(" · ")
     }
 
     QQC2.Label {
         visible: row.code !== ""
-        text: App.tr("This computer shows %1. Type the code that device shows:").arg(row.code)
+        text: App.tr("This computer shows %1. Type the code that device shows:", row.code)
     }
 
     QQC2.TextField {

@@ -519,6 +519,10 @@ wprs-ctl input status                           # permisos y si se captura el so
 wprs-ctl input clicks on -o DP-1                # dejar que los clics de esa pantalla lleguen a su fondo
 ```
 
+La biblioteca de la app pide de nuevo solo los elementos que nombra cada cambio (con `uid:`, que
+también acepta `wprs-ctl lib search 'uid:<uid>,<uid>'` con uids completos), y al cambiar o repetir una búsqueda
+conserva la selección y la posición de los elementos que siguen en ella.
+
 Las consultas aceptan `--json` e imprimen la respuesta del daemon tal cual; sin él muestran
 tablas para leer, no para scripts. Lo que lanza un trabajo imprime su número y termina; con
 `--wait` muestra el progreso y el resultado, y Ctrl-C deja de esperar sin parar el trabajo
@@ -664,8 +668,10 @@ mostrarlas (en los detalles de la app o con un clic o el teclado en la miniatura
 pantalla, en la página *Ajustes* de la app o en la bandeja), y *Ocultar el contenido para adultos*
 (`library.hide_mature`) los saca de las búsquedas y de los repositorios. Antes de aplicar un
 paquete fotosensible, la app y `wprs-ctl` avisan y piden confirmación una sola vez por paquete, y
-la app también lo permite desde sus detalles con *Permitir este fondo…*; hasta entonces el daemon
-no lo aplica, un perfil no lo pone (la pantalla muestra el motivo) y las listas lo saltan. La
+la app también lo permite desde sus detalles con *Permitir este fondo…* o para varios elementos
+seleccionados a la vez con *Permitir estos fondos…*; hasta entonces el daemon no lo aplica, un
+perfil no lo pone (la pantalla muestra el motivo y el perfil lo pone en cuanto lo permites) y las
+listas lo saltan. La
 página *Ajustes* de la app y la bandeja avisan en la pantalla que lo muestra. La búsqueda filtra
 por clasificación y por facetas que se calculan del propio paquete: las entradas que usa la escena
 (`facet:audio`, `facet:pointer`, `facet:clicks`), el tamaño (`facet:4k`), `facet:photosensitive`,
@@ -1333,6 +1339,10 @@ scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
 scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
 target/debug/wprs-app --check            # carga todo el QML de la app y falla ante cualquier aviso
 ```
+
+`wprs-app --check` recorre cada página con datos de prueba, abre los detalles de un elemento, el
+editor de imágenes y el de escenas, y falla ante cualquier aviso del QML o si no termina en 240 s.
+Los archivos QML siguen el formato de `qmlformat` de Qt 6.12.
 
 APK de Android (con el SDK, el NDK 28 o posterior y `cargo install cargo-ndk`):
 

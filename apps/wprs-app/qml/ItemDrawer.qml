@@ -32,16 +32,17 @@ Kirigami.OverlayDrawer {
     function load(first) {
         const uid = drawer.uid;
         App.query("GetItem", [uid], "Library1", reply => {
+            if (!drawer)
+                return;
             if (drawer.uid !== uid)
                 return;
             drawer.details = reply;
             if (first)
-                App.query("Thumbnail", [uid, 1024], "Library1", path => {
-                    if (drawer.uid === uid)
-                        drawer.preview = path[0];
-                });
+                App.query("Thumbnail", [uid, 1024], "Library1", path => drawer && drawer.uid === uid && (drawer.preview = path[0] ?? ""), () => {});
             if (reply.installed)
                 App.query("List", [], "Repos1", list => {
+                    if (!drawer)
+                        return;
                     if (drawer.uid === uid)
                         drawer.repo = list.repos.find(repo => repo.repo_id === reply.installed.repo_id)?.name ?? "";
                 });
@@ -102,65 +103,9 @@ Kirigami.OverlayDrawer {
                 }
             }
 
-            Kirigami.FormLayout {
+            ItemFacts {
                 Layout.fillWidth: true
-
-                QQC2.Label {
-                    Kirigami.FormData.label: App.tr("Kind:")
-                    text: [Labels.value(drawer.item.package?.kind === "scene" ? "scene" : drawer.item.kind), drawer.item.width ? drawer.item.width + "×" + drawer.item.height : ""].filter(t => t).join(" · ")
-                    textFormat: Text.PlainText
-                }
-
-                QQC2.Label {
-                    Kirigami.FormData.label: App.tr("File:")
-                    Layout.maximumWidth: Kirigami.Units.gridUnit * 14
-                    text: drawer.item.path ?? ""
-                    textFormat: Text.PlainText
-                    wrapMode: Text.WrapAnywhere
-                }
-
-                QQC2.Label {
-                    readonly property var made: drawer.details.about?.platforms ?? []
-                    readonly property bool elsewhere: made.length > 0 && !made.includes("desktop") && !!drawer.item.error
-                    readonly property var refused: drawer.item.error ? drawer.details.about?.refused ?? [] : []
-                    Kirigami.FormData.label: App.tr("Problem:")
-                    visible: text !== ""
-                    text: drawer.item.missing ? App.tr("The file is missing") : elsewhere ? App.tr("This package is made for %1 only").arg(made.map(Labels.value).join(", ")) : refused.length > 0 ? App.tr("This package needs a newer version of wallpaper-rs: it %1").arg(refused.map(Labels.feature).join(", ")) : drawer.item.error ?? ""
-                    textFormat: Text.PlainText
-                    color: Kirigami.Theme.negativeTextColor
-                }
-
-                QQC2.Label {
-                    Kirigami.FormData.label: App.tr("Package:")
-                    visible: !!drawer.item.package
-                    text: drawer.item.package ? [drawer.item.package.id, drawer.item.package.version, drawer.item.package.license].join(" · ") : ""
-                    textFormat: Text.PlainText
-                }
-
-                QQC2.Label {
-                    Kirigami.FormData.label: App.tr("Installed from:")
-                    visible: !!drawer.details.installed
-                    Layout.maximumWidth: Kirigami.Units.gridUnit * 14
-                    text: drawer.details.installed ? [drawer.repo || drawer.details.installed.repo_id.slice(0, 8), drawer.details.installed.signer ? App.tr("signed by %1").arg(drawer.details.installed.signer) : ""].filter(t => t).join("\n") : ""
-                    textFormat: Text.PlainText
-                    wrapMode: Text.WrapAnywhere
-                }
-
-                QQC2.Label {
-                    Kirigami.FormData.label: App.tr("Revoked:")
-                    visible: !!drawer.details.revoked
-                    text: Labels.value(drawer.details.revoked)
-                    textFormat: Text.PlainText
-                    color: Kirigami.Theme.negativeTextColor
-                }
-
-                QQC2.Label {
-                    Kirigami.FormData.label: App.tr("Credit:")
-                    visible: !!drawer.credit
-                    text: drawer.credit ? [drawer.credit.title, drawer.credit.attribution, drawer.credit.license, drawer.credit.link].filter(t => t).join("\n") : ""
-                    textFormat: Text.PlainText
-                    wrapMode: Text.Wrap
-                }
+                host: drawer
             }
 
             PackageAbout {

@@ -92,16 +92,18 @@ async fn page_requests_reach_the_window_even_before_it_listens() {
     let mut events = bus::events();
     pass_on(&other, Vec::new(), Some("library")).await.unwrap();
     pass_on(&other, Vec::new(), None).await.unwrap();
-    let unknown = ("nope", Vec::<Variant>::new(), HashMap::<&str, Variant>::new());
+    let token = HashMap::from([("activation-token", Variant::from("t1"))]);
+    let unknown = ("nope", Vec::<Variant>::new(), token);
     let iface = Some("org.freedesktop.Application");
     other.call_method(Some(APP_ID), APP_PATH, iface, "ActivateAction", &unknown).await.unwrap();
     let mut pages = Vec::new();
     while pages.len() < 3 {
-        if let Event::Activate(page) = events.recv().await.unwrap() {
-            pages.push(page);
+        if let Some(Event::Activate(page, token)) = events.recv().await {
+            pages.push((page, token));
         }
     }
-    assert_eq!(pages, ["library", "", ""]);
+    let told = |page: &str, token: Option<&str>| (page.to_owned(), token.map(String::from));
+    assert_eq!(pages, [told("library", None), told("", None), told("", Some("t1"))]);
     assert_eq!(bus::requested().as_deref(), Some("library"));
     daemon.kill().ok();
     daemon.wait().ok();
@@ -119,4 +121,15 @@ fn a_job_that_fails_without_a_reason_is_told_in_the_users_language() {
     assert_eq!(told("org.freedesktop.DBus.Error.Failed", ""), format!("{} (Failed)", es(silent)));
     assert_eq!(told("", " "), es(silent));
     assert_eq!(told("org.freedesktop.DBus.Error.Failed", "disk full"), "disk full");
+}
+
+#[test]
+fn a_burst_of_events_reaches_every_listener() {
+    let mut events = bus::events();
+    (0..5000).for_each(|i| bus::publish(Event::Error(format!("burst {i}"))));
+    let mut seen = 0;
+    while let Ok(event) = events.try_recv() {
+        seen += usize::from(matches!(event, Event::Error(m) if m.starts_with("burst ")));
+    }
+    assert_eq!(seen, 5000);
 }

@@ -33,12 +33,12 @@ msgstr ""
 "Quien te envía un código intenta entrar en tu cuenta."
 
 #: apps/wprs-app/qml/AccountCodes.qml
-msgid "A device on %1 running %2 asked for this code at %3."
-msgstr "Un equipo con %1 y %2 pidió este código el %3."
-
-#: apps/wprs-app/qml/AccountCodes.qml
 msgid "unnamed software"
 msgstr "un programa sin nombre"
+
+#: apps/wprs-app/qml/AccountCodes.qml
+msgid "A device on %1 running %2 asked for this code at %3."
+msgstr "Un equipo con %1 y %2 pidió este código el %3."
 
 #: apps/wprs-app/qml/AccountCodes.qml
 msgid "Share the sync key with %1"
@@ -479,6 +479,10 @@ msgstr "Añadir a favoritos"
 #: apps/wprs-app/qml/Actions.qml
 msgid "Rate…"
 msgstr "Valorar…"
+
+#: apps/wprs-app/qml/Actions.qml
+msgid "Allow these wallpapers…"
+msgstr "Permitir estos fondos…"
 
 #: apps/wprs-app/qml/Actions.qml
 msgid "Sync the files to my devices"
@@ -2245,14 +2249,14 @@ msgstr "Sacar del grupo"
 msgid "One per line"
 msgstr "Uno por línea"
 
-#: apps/wprs-app/qml/SceneMeta.qml
-msgid "Filled from what the package uses: %1"
-msgstr "Se calcula a partir de lo que usa el paquete: %1"
-
 #
 #: apps/wprs-app/qml/SceneMeta.qml
 msgid "nothing"
 msgstr "nada"
+
+#: apps/wprs-app/qml/SceneMeta.qml
+msgid "Filled from what the package uses: %1"
+msgstr "Se calcula a partir de lo que usa el paquete: %1"
 
 #: apps/wprs-app/qml/SceneMeta.qml
 msgid "No picture"
@@ -2474,6 +2478,21 @@ msgstr "Abrir una carpeta de escena…"
 #: apps/wprs-app/qml/ScenesPage.qml
 msgid "Edit a copy of a scene from the library"
 msgstr "Editar una copia de una escena de la biblioteca"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid "Allow these wallpapers?"
+msgstr "¿Permitir estos fondos?"
+
+#: apps/wprs-app/qml/SelectionDialogs.qml
+msgid ""
+"They flash or show fast patterns that can trigger seizures in people with "
+"photosensitive epilepsy. Allow them only if that is safe for whoever sees "
+"your screens; screens and playlists may then show them without asking again."
+msgstr ""
+"Destellan o muestran patrones rápidos que pueden provocar crisis a personas "
+"con epilepsia fotosensible. Permítelos solo si es seguro para quien vea tus "
+"pantallas; después las pantallas y las listas podrán mostrarlos sin volver a "
+"preguntar."
 
 #: apps/wprs-app/qml/SelectionDialogs.qml
 msgid "Import files"

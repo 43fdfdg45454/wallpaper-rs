@@ -20,7 +20,7 @@ Kirigami.FormLayout {
 
     QQC2.Label {
         Kirigami.FormData.label: App.tr("This computer:")
-        text: summary.account.device ? App.tr("%1, named %2 for your devices").arg(summary.account.device).arg(summary.account.label) : "–"
+        text: summary.account.device ? App.tr("%1, named %2 for your devices", summary.account.device, summary.account.label) : "–"
     }
 
     QQC2.Label {
@@ -35,20 +35,20 @@ Kirigami.FormLayout {
 
     QQC2.Label {
         Kirigami.FormData.label: App.tr("Storage:")
-        text: App.tr("%1 of %2").arg(App.bytes(summary.account.used_bytes ?? 0)).arg(App.bytes(summary.account.quota_bytes ?? 0))
+        text: App.tr("%1 of %2", App.bytes(summary.account.used_bytes ?? 0), App.bytes(summary.account.quota_bytes ?? 0))
     }
 
     QQC2.Label {
         Kirigami.FormData.label: App.tr("Skipped records:")
         visible: (summary.account.quarantined ?? 0) > 0
-        text: App.tr("%1 records cannot be decrypted with this key and are skipped").arg(summary.account.quarantined ?? 0)
+        text: App.tr("%1 records cannot be decrypted with this key and are skipped", summary.account.quarantined ?? 0)
         wrapMode: Text.Wrap
     }
 
     QQC2.Label {
         Kirigami.FormData.label: App.tr("Waiting changes:")
         visible: (summary.account.unapplied ?? 0) > 0
-        text: App.tr("%1 changes from other devices cannot be applied here yet; they are tried again at every sync").arg(summary.account.unapplied ?? 0)
+        text: App.tr("%1 changes from other devices cannot be applied here yet; they are tried again at every sync", summary.account.unapplied ?? 0)
         wrapMode: Text.Wrap
     }
 

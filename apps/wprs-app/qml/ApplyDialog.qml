@@ -19,6 +19,8 @@ Kirigami.Dialog {
         dialog.flashing = false;
         dialog.known = false;
         App.query("GetItem", [uid], "Library1", reply => {
+            if (!dialog)
+                return;
             if (dialog.uid !== uid)
                 return;
             const pkg = reply.item.package;
@@ -26,7 +28,7 @@ Kirigami.Dialog {
             dialog.known = true;
         });
         for (const item of [uid, ""])
-            App.query("ListPresets", [item], "Profiles1", reply => dialog.presets = dialog.presets.concat(reply.presets));
+            App.query("ListPresets", [item], "Profiles1", reply => dialog && (dialog.presets = dialog.presets.concat(reply.presets)));
         open();
     }
 

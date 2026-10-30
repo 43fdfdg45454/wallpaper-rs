@@ -9,7 +9,7 @@ ColumnLayout {
     property var playlists: []
 
     function load() {
-        App.query("List", [], "Playlists1", reply => screens.playlists = reply.playlists);
+        App.query("List", [], "Playlists1", reply => screens && (screens.playlists = reply.playlists));
     }
 
     Component.onCompleted: load()

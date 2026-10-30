@@ -91,7 +91,7 @@ ColumnLayout {
 
         selectedColor: tool.overlay.color ?? "black"
         onAccepted: tool.page.run("overlay", {
-                "color": selectedColor.toString()
-            })
+            "color": selectedColor.toString()
+        })
     }
 }

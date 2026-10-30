@@ -19,14 +19,14 @@ QtObject {
         if (page.editor.selected !== "/manifest/properties/weather" || !page.fields.some(f => f.key === "options"))
             fail("the inspector stayed on the old id after a rename");
         page.run("set", {
-                "pointer": "/scene/layers/0/visible",
-                "value": {
-                    "prop": "weather",
-                    "map": {
-                        "option_1": true
-                    }
+            "pointer": "/scene/layers/0/visible",
+            "value": {
+                "prop": "weather",
+                "map": {
+                    "option_1": true
                 }
-            });
+            }
+        });
         panel.tools.row = page.view.properties.find(p => p.id === "weather");
         panel.tools.remove();
         if (!page.editor.error.includes("/scene/layers/0/visible") || page.editor.selected !== "/manifest/properties/weather")

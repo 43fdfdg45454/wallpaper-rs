@@ -12,7 +12,7 @@ ColumnLayout {
     readonly property var updates: packages.filter((p, i) => p.update && packages.findIndex(q => q.id === p.id) === i)
 
     function load() {
-        App.query("ListInstalled", [], "Repos1", reply => installed.packages = reply.packages);
+        App.query("ListInstalled", [], "Repos1", reply => installed && (installed.packages = reply.packages));
     }
 
     Component.onCompleted: load()
@@ -52,7 +52,7 @@ ColumnLayout {
 
                     QQC2.Label {
                         Layout.fillWidth: true
-                        text: row.modelData.id + " " + row.modelData.version + (row.modelData.revoked ? " · " + App.tr("revoked: %1").arg(Labels.value(row.modelData.revoked)) : "")
+                        text: row.modelData.id + " " + row.modelData.version + (row.modelData.revoked ? " · " + App.tr("revoked: %1", Labels.value(row.modelData.revoked)) : "")
                         textFormat: Text.PlainText
                         color: row.modelData.revoked ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
                         elide: Text.ElideRight
@@ -61,7 +61,7 @@ ColumnLayout {
                     QQC2.Label {
                         Layout.fillWidth: true
                         visible: !!row.modelData.update && text !== ""
-                        text: row.modelData.changes ? App.tr("What's new: %1").arg(App.plain(row.modelData.changes)) : ""
+                        text: row.modelData.changes ? App.tr("What's new: %1", App.plain(row.modelData.changes)) : ""
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                         font: Kirigami.Theme.smallFont
@@ -70,7 +70,7 @@ ColumnLayout {
 
                 QQC2.Button {
                     visible: !!row.modelData.update
-                    text: App.tr("Update to %1").arg(row.modelData.update ?? "")
+                    text: App.tr("Update to %1", row.modelData.update ?? "")
                     onClicked: installed.installer.install(row.modelData.repo_id + "/" + row.modelData.id)
                 }
 

@@ -42,7 +42,7 @@ Loader {
     Component {
         id: lines
 
-        QQC2.TextArea {
+        Area {
             readonly property string joined: meta.list.join("\n")
 
             text: joined
@@ -61,7 +61,7 @@ Loader {
         ColumnLayout {
             QQC2.Label {
                 Layout.fillWidth: true
-                text: App.tr("Filled from what the package uses: %1").arg(meta.list.map(name => Labels.feature(name)).join(", ") || App.tr("nothing"))
+                text: App.tr("Filled from what the package uses: %1", meta.list.map(name => Labels.feature(name)).join(", ") || App.tr("nothing"))
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor
             }
@@ -101,9 +101,9 @@ Loader {
 
                 nameFilters: [App.tr("Pictures") + (meta.animated ? " (*.gif *.webp)" : " (*.png *.jpg *.jpeg *.webp *.gif)")]
                 onAccepted: meta.host.page.run("thumbnail", {
-                        "file": App.path(selectedFile),
-                        "animated": meta.animated
-                    })
+                    "file": App.path(selectedFile),
+                    "animated": meta.animated
+                })
             }
         }
     }

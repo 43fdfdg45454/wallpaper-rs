@@ -19,9 +19,11 @@ ColumnLayout {
 
     function search() {
         App.query("Browse", [field.text, 0, 200], "Repos1", reply => {
+            if (!browse)
+                return;
             browse.packages = reply.packages;
             browse.total = reply.total;
-            App.query("RequestPreviews", [reply.packages.filter(p => p.preview).map(browse.spec)], "Repos1", found => browse.previews = Object.assign({}, browse.previews, found[0]));
+            App.query("RequestPreviews", [reply.packages.filter(p => p.preview).map(browse.spec)], "Repos1", found => browse && (browse.previews = Object.assign({}, browse.previews, found[0])));
         });
     }
 
@@ -52,7 +54,7 @@ ColumnLayout {
 
     QQC2.Label {
         visible: browse.total > browse.packages.length
-        text: App.tr("Showing %1 of %2 packages; refine the search to see others.").arg(browse.packages.length).arg(browse.total)
+        text: App.tr("Showing %1 of %2 packages; refine the search to see others.", browse.packages.length, browse.total)
     }
 
     QQC2.ScrollView {
@@ -100,7 +102,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
                         textFormat: Text.PlainText
-                        text: [row.modelData.content ? App.plain(row.modelData.description) : row.modelData.description, row.modelData.authors.join(", ") + " · " + row.modelData.license + " · " + App.bytes(row.modelData.size), row.modelData.id + " · " + row.modelData.repo_name, row.modelData.installed.length > 0 ? App.tr("Installed: %1").arg(row.modelData.installed.join(", ")) : "", row.modelData.update && row.modelData.changes ? App.tr("What's new: %1").arg(App.plain(row.modelData.changes)) : "", row.veiled ? App.tr("Mature content: click the picture to show it") : ""].filter(t => t).join("\n")
+                        text: [row.modelData.content ? App.plain(row.modelData.description) : row.modelData.description, row.modelData.authors.join(", ") + " · " + row.modelData.license + " · " + App.bytes(row.modelData.size), row.modelData.id + " · " + row.modelData.repo_name, row.modelData.installed.length > 0 ? App.tr("Installed: %1", row.modelData.installed.join(", ")) : "", row.modelData.update && row.modelData.changes ? App.tr("What's new: %1", App.plain(row.modelData.changes)) : "", row.veiled ? App.tr("Mature content: click the picture to show it") : ""].filter(t => t).join("\n")
                     }
 
                     QQC2.Label {

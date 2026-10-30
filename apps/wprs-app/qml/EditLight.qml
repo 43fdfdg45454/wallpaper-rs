@@ -75,7 +75,7 @@ ColumnLayout {
         icon.name: "edit-reset"
         enabled: tool.owned.length > 0
         onClicked: tool.page.run("reset", {
-                "ids": tool.owned
-            })
+            "ids": tool.owned
+        })
     }
 }

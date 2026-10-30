@@ -11,9 +11,9 @@ QtObject {
     readonly property Backend backend: Backend {
         onReplied: (tag, json) => app.settle(tag, 0, JSON.parse(json))
         onFailed: (tag, name, message) => app.settle(tag, 1, {
-                    "name": name,
-                    "message": message
-                })
+                "name": name,
+                "message": message
+            })
         onChanged: (topic, ids) => app.updated(topic, JSON.parse(ids))
     }
     readonly property var state: JSON.parse(backend.state || "{}")
@@ -43,7 +43,7 @@ QtObject {
     }
 
     function query(member, args, iface, onReply, onError) {
-        backend.call(remember(onReply, onError), iface ?? "Daemon1", member, JSON.stringify(args));
+        backend.call(remember(onReply, onError), iface ?? "Daemon1", member, JSON.stringify(args), !!onError);
     }
 
     function act(member, args, iface, onDone, onError) {
@@ -74,8 +74,9 @@ QtObject {
         return backend.readText(String(url));
     }
 
-    function tr(text, first, second, third) {
-        return [first, second, third].filter(arg => arg !== undefined).reduce((out, arg) => out.arg(arg), backend.tr(text));
+    function tr(text) {
+        const args = arguments;
+        return backend.tr(text).replace(/%([1-9])/g, (mark, n) => n < args.length ? String(args[n]) : mark);
     }
 
     function field(key) {
@@ -107,6 +108,6 @@ QtObject {
     }
 
     function bytes(count) {
-        return count >= 1048576 ? tr("%1 MB").arg(Math.round(count / 1048576)) : tr("%1 KB").arg(Math.ceil(count / 1024));
+        return count >= 1048576 ? tr("%1 MB", Math.round(count / 1048576)) : tr("%1 KB", Math.ceil(count / 1024));
     }
 }

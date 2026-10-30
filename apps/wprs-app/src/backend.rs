@@ -18,7 +18,14 @@ pub mod qobject {
         type Backend = super::BackendRust;
 
         #[qinvokable]
-        fn call(self: Pin<&mut Backend>, tag: &QString, iface: &QString, member: &QString, args: &QString);
+        fn call(
+            self: Pin<&mut Backend>,
+            tag: &QString,
+            iface: &QString,
+            member: &QString,
+            args: &QString,
+            handled: bool,
+        );
         #[qinvokable]
         fn add_provider(
             self: Pin<&mut Backend>,
@@ -87,7 +94,6 @@ use qobject::Backend;
 use serde_json::Value;
 use std::io::Read;
 use std::pin::Pin;
-use wprs_client::Error;
 use wprs_core::model::Job;
 
 #[derive(Default)]
@@ -110,9 +116,16 @@ impl cxx_qt::Initialize for Backend {
 }
 
 impl Backend {
-    pub fn call(self: Pin<&mut Self>, tag: &QString, iface: &QString, member: &QString, args: &QString) {
+    pub fn call(
+        self: Pin<&mut Self>,
+        tag: &QString,
+        iface: &QString,
+        member: &QString,
+        args: &QString,
+        handled: bool,
+    ) {
         let (iface, member, args) = (iface.to_string(), member.to_string(), args.to_string());
-        self.run(tag, async move {
+        self.run(tag, handled, async move {
             let args: Vec<Value> = serde_json::from_str(&args).map_err(|e| invalid(e.to_string()))?;
             if carries_secret(&iface, &member, &args) {
                 return Err(invalid("use setSecret, addProvider or passphrase"));
@@ -155,30 +168,5 @@ impl Backend {
 
     pub fn plain(&self, text: &QString) -> QString {
         QString::from(&wprs_core::markup::plain(&text.to_string()))
-    }
-
-    pub fn run(
-        self: Pin<&mut Self>,
-        tag: &QString,
-        task: impl Future<Output = Result<String, Error>> + Send + 'static,
-    ) {
-        let (qt, tag) = (self.qt_thread(), tag.to_string());
-        bus::spawn(async move {
-            let result = task.await;
-            qt.queue(move |mut this| match result {
-                Ok(json) => {
-                    this.as_mut().set_last_error(QString::default());
-                    this.replied(QString::from(&tag), QString::from(&json));
-                }
-                Err(e) => {
-                    if this.checking {
-                        eprintln!("call failed: {}", e.message);
-                    }
-                    this.as_mut().set_last_error(QString::from(&e.message));
-                    this.failed(QString::from(&tag), QString::from(&e.name), QString::from(&e.message));
-                }
-            })
-            .ok();
-        });
     }
 }

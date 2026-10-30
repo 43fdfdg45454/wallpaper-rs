@@ -13,8 +13,8 @@ Kirigami.ScrollablePage {
     readonly property var grants: inputs.grants ?? {}
 
     function load() {
-        App.query("ListSources", [], "Library1", reply => page.sources = reply.sources);
-        App.query("GetInputs", [], "Inputs1", reply => page.inputs = reply);
+        App.query("ListSources", [], "Library1", reply => page && (page.sources = reply.sources));
+        App.query("GetInputs", [], "Inputs1", reply => page && (page.inputs = reply));
     }
 
     title: App.tr("Settings")
@@ -73,7 +73,7 @@ Kirigami.ScrollablePage {
                     required property var modelData
 
                     QQC2.Label {
-                        text: [modelData.path, modelData.recursive ? "" : App.tr("without subfolders"), modelData.provider ?? "", App.tr("Items: %1").arg(modelData.items)].filter(t => t).join(" · ")
+                        text: [modelData.path, modelData.recursive ? "" : App.tr("without subfolders"), modelData.provider ?? "", App.tr("Items: %1", modelData.items)].filter(t => t).join(" · ")
                         color: modelData.error ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
                     }
 
@@ -131,7 +131,7 @@ Kirigami.ScrollablePage {
                             required property string modelData
 
                             icon.name: "dialog-cancel"
-                            text: App.tr("Stop using %1").arg(Labels.value(modelData))
+                            text: App.tr("Stop using %1", Labels.value(modelData))
                             onClicked: App.act("Revoke", [grant.modelData, modelData], "Inputs1")
                         }
                     }
@@ -145,7 +145,7 @@ Kirigami.ScrollablePage {
 
             QQC2.Label {
                 Kirigami.FormData.label: App.tr("Version:")
-                text: [App.state.version, App.state.adapter, App.tr("data model %1").arg(App.state.model ?? "")].filter(t => t).join(" · ")
+                text: [App.state.version, App.state.adapter, App.tr("data model %1", App.state.model ?? "")].filter(t => t).join(" · ")
             }
 
             QQC2.Label {

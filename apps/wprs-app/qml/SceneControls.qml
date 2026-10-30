@@ -19,12 +19,14 @@ ColumnLayout {
 
     function load() {
         daemon.query("GetSceneProperties", [output], "Daemon1", reply => {
-                const fresh = Object.assign({}, scene.folded);
-                (reply.fields ?? []).filter(f => f.kind === "group" && !((reply.package + "/" + f.key) in fresh)).forEach(f => fresh[reply.package + "/" + f.key] = f.collapsed);
-                scene.folded = fresh;
-                scene.props = reply;
-            }, () => scene.props = ({}));
-        daemon.query("GetInputs", [], "Inputs1", reply => scene.inputs = reply);
+            if (!scene)
+                return;
+            const fresh = Object.assign({}, scene.folded);
+            (reply.fields ?? []).filter(f => f.kind === "group" && !((reply.package + "/" + f.key) in fresh)).forEach(f => fresh[reply.package + "/" + f.key] = f.collapsed);
+            scene.folded = fresh;
+            scene.props = reply;
+        }, () => scene && (scene.props = ({})));
+        daemon.query("GetInputs", [], "Inputs1", reply => scene && (scene.inputs = reply));
     }
 
     function closed(group) {
@@ -42,7 +44,7 @@ ColumnLayout {
                 scene.problem = error.message;
             scene.load();
         };
-        daemon.act(allow ? "GrantPackage" : "Revoke", allow ? [uses.scene, uses.key, input] : [uses.scene, input], "Inputs1", () => scene.load(), failed);
+        daemon.act(allow ? "GrantPackage" : "Revoke", allow ? [uses.scene, uses.key, input] : [uses.scene, input], "Inputs1", () => scene && scene.load(), failed);
     }
 
     function set(key, value) {
@@ -133,10 +135,12 @@ ColumnLayout {
         visible: scene.uses.clicks === true
         text: scene.daemon.tr("Let clicks and taps on this screen reach its wallpaper")
         checked: (scene.inputs.clicks ?? []).includes(scene.output)
-        onToggled: scene.daemon.act("SetClicks", [scene.output, checked], "Inputs1", () => scene.load(), error => {
-                scene.problem = error.message;
-                scene.load();
-            })
+        onToggled: scene.daemon.act("SetClicks", [scene.output, checked], "Inputs1", () => scene && scene.load(), error => {
+            if (!scene)
+                return;
+            scene.problem = error.message;
+            scene.load();
+        })
 
         Connections {
             target: scene

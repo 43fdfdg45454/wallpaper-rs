@@ -64,7 +64,7 @@ QQC2.ToolBar {
 
         QQC2.ToolButton {
             icon.name: "view-process-system"
-            text: bar.active.length > 0 ? App.tr("Jobs: %1").arg(bar.active.length) : App.tr("Jobs")
+            text: bar.active.length > 0 ? App.tr("Jobs: %1", bar.active.length) : App.tr("Jobs")
             onClicked: jobs.open()
         }
     }

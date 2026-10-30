@@ -83,7 +83,7 @@ ColumnLayout {
 
         title: saved.daemon.tr("Name the imported preset")
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
-        onAccepted: saved.daemon.query("ImportSceneValues", [saved.output, saved.text, name.text], "Daemon1", reply => saved.notice((reply[0] ?? []).join("\n")), error => saved.notice(error.message))
+        onAccepted: saved.daemon.query("ImportSceneValues", [saved.output, saved.text, name.text], "Daemon1", reply => saved && saved.notice((reply[0] ?? []).join("\n")), error => saved && saved.notice(error.message))
 
         QQC2.TextField {
             id: name
@@ -98,7 +98,7 @@ ColumnLayout {
         fileMode: FileDialog.SaveFile
         defaultSuffix: "json"
         nameFilters: [saved.daemon.tr("Settings") + " (*.json)"]
-        onAccepted: saved.daemon.query("ExportSceneValues", [saved.output, saved.chosen], "Daemon1", reply => saved.notice(saved.daemon.writeText(selectedFile, reply[0]) ? "" : saved.daemon.tr("Cannot write the file")), error => saved.notice(error.message))
+        onAccepted: saved.daemon.query("ExportSceneValues", [saved.output, saved.chosen], "Daemon1", reply => saved && saved.notice(saved.daemon.writeText(selectedFile, reply[0]) ? "" : saved.daemon.tr("Cannot write the file")), error => saved && saved.notice(error.message))
     }
 
     FileDialog {

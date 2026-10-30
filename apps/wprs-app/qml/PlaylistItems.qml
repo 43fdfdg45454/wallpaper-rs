@@ -13,6 +13,8 @@ ColumnLayout {
 
     function edit(member, args) {
         App.act(member, [uid].concat(args), "Playlists1", null, error => {
+            if (!notice)
+                return;
             if (error.name === App.conflict) {
                 notice.visible = true;
                 entries.load();
@@ -39,7 +41,7 @@ ColumnLayout {
         Layout.fillWidth: true
 
         QQC2.TabButton {
-            text: App.tr("Items (%1)").arg(items.total)
+            text: App.tr("Items (%1)", items.total)
         }
 
         QQC2.TabButton {

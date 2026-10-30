@@ -689,7 +689,9 @@ changes and `InvalidArgs` is returned when an item is a package installed from a
 
 A `SearchPage`. Free text matches the start of words in titles, tags and paths; `key:value`
 filters (listed in `GetSchema().query`), `-` negates and quotes group words. `sort:` orders the
-results (newest first by default). `limit` is `0..=500`; `0` returns only `total`.
+results (newest first by default). `uid:` keeps up to 500 items named by their uids, separated by
+commas, which lets a client ask again for the items a `library` change names. `limit` is
+`0..=500`; `0` returns only `total`.
 
 The query is normalized first and `SearchPage.query` echoes it: `in:<name>` becomes `in:<uid>`
 (`in:` takes a manual playlist; a smart or unknown playlist returns `InvalidArgs`), and a bare
@@ -786,7 +788,9 @@ every version and copy of the package keeps it. `what` is `mature` (clients stop
 thumbnails of a package rated `mature`) or `photosensitive` (`Apply` and playlists may show it);
 anything else returns `InvalidArgs`, an unknown uid `NotFound`. Items that are no packages are
 accepted and change nothing. `PackageInfo.confirmed` lists the decisions, and the `library` change
-names every item that shares a package id with these items.
+names every item that shares a package id with these items. Allowing `photosensitive` while the
+active profile left a screen out for that reason (`OutputState.error`) activates the profile again,
+so the screen shows the package without another `Profiles1.Activate`.
 
 ### Signal `ThumbnailReady(s uid, u size, s path)`
 
@@ -1660,6 +1664,10 @@ and exits.
 | `Activate(a{sv} platform_data)` | raises the window |
 | `Open(as uris, a{sv} platform_data)` | imports the `file://` URIs and absolute paths into the library, then raises the window |
 | `ActivateAction(s name, av parameter, a{sv} platform_data)` | `library`, `playlists`, `profiles`, `providers`, `repos`, `settings` or `account` opens that page, also in an app the bus starts for this call; any other name only raises the window |
+
+`platform_data` may carry `activation-token` (or `desktop-startup-id`): the app hands it to the
+compositor when it raises the window, so that Wayland lets it take the focus. A second `wprs-app`
+passes its own `XDG_ACTIVATION_TOKEN` and `DESKTOP_STARTUP_ID` that way.
 
 A request for the page already shown keeps it as it is, and while the image editor has unsaved
 changes a page request only raises the window. `wprs-app --page <name>` and the launcher action

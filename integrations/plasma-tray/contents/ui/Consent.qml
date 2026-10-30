@@ -47,9 +47,9 @@ Kirigami.InlineMessage {
 
     function answer(allow) {
         problem = "";
-        ask.inputs.forEach(input => daemon.act(allow ? "GrantPackage" : "Revoke", allow ? [ask.scene, ask.key, input] : [ask.scene, input], "Inputs1", () => {}, error => consent.failed(error)));
+        ask.inputs.forEach(input => daemon.act(allow ? "GrantPackage" : "Revoke", allow ? [ask.scene, ask.key, input] : [ask.scene, input], "Inputs1", () => {}, error => consent && consent.failed(error)));
         if (allow && ask.inputs.includes("clicks") && !(inputs.clicks ?? []).includes(ask.screen))
-            daemon.act("SetClicks", [ask.screen, true], "Inputs1", () => {}, error => consent.failed(error));
+            daemon.act("SetClicks", [ask.screen, true], "Inputs1", () => {}, error => consent && consent.failed(error));
     }
 
     function failed(error) {

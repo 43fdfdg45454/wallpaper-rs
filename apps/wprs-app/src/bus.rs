@@ -7,8 +7,7 @@ use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::{LazyLock, Mutex};
 use tokio::runtime::Runtime;
-use tokio::sync::broadcast::error::RecvError;
-use tokio::sync::{broadcast, watch};
+use tokio::sync::{mpsc, watch};
 use wprs_client::{Client, Error};
 use wprs_core::model::Header;
 
@@ -29,13 +28,16 @@ pub enum Event {
     Finished(u64, String, String, String),
     Thumb(String, u32, String),
     Preview(String, String),
-    Activate(String),
+    Activate(String, Option<String>),
     Error(String),
 }
 
+type Listener = Box<dyn Fn(Event) -> bool + Send>;
+
 struct Bus {
     rt: Runtime,
-    events: broadcast::Sender<Event>,
+    listeners: Mutex<Vec<Listener>>,
+    farewells: Mutex<Vec<tokio::task::JoinHandle<()>>>,
     link: watch::Sender<Option<Result<Daemon, String>>>,
     seen: Mutex<HashMap<String, u64>>,
     page: Mutex<Option<String>>,
@@ -43,7 +45,8 @@ struct Bus {
 
 static BUS: LazyLock<Bus> = LazyLock::new(|| Bus {
     rt: tokio::runtime::Builder::new_multi_thread().worker_threads(1).enable_all().build().unwrap(),
-    events: broadcast::channel(256).0,
+    listeners: Mutex::default(),
+    farewells: Mutex::default(),
     link: watch::channel(None).0,
     seen: Mutex::default(),
     page: Mutex::default(),
@@ -61,26 +64,50 @@ pub fn spawn(task: impl Future<Output = ()> + Send + 'static) {
     BUS.rt.spawn(task);
 }
 
-pub fn publish(event: Event) {
-    BUS.events.send(event).ok();
+pub fn farewell(task: impl Future<Output = ()> + Send + 'static) {
+    let mut farewells = BUS.farewells.lock().unwrap();
+    farewells.retain(|task| !task.is_finished());
+    farewells.push(BUS.rt.spawn(task));
 }
 
-pub fn request(page: &str) {
+pub fn part(wait: std::time::Duration) {
+    let tasks = std::mem::take(&mut *BUS.farewells.lock().unwrap());
+    let all = async {
+        for task in tasks {
+            task.await.ok();
+        }
+    };
+    BUS.rt.block_on(async move { tokio::time::timeout(wait, all).await.ok() });
+}
+
+pub fn publish(event: Event) {
+    tell(&mut BUS.listeners.lock().unwrap(), event);
+}
+
+fn tell(listeners: &mut Vec<Listener>, event: Event) {
+    listeners.retain(|send| send(event.clone()));
+}
+
+pub fn request(page: &str, token: Option<String>) {
     *BUS.page.lock().unwrap() = Some(page.to_owned());
-    publish(Event::Activate(page.to_owned()));
+    publish(Event::Activate(page.to_owned(), token));
 }
 
 pub fn requested() -> Option<String> {
     BUS.page.lock().unwrap().take()
 }
 
-pub fn events() -> broadcast::Receiver<Event> {
-    BUS.events.subscribe()
+pub fn events() -> mpsc::UnboundedReceiver<Event> {
+    let (tx, rx) = mpsc::unbounded_channel();
+    BUS.listeners.lock().unwrap().push(Box::new(move |event| tx.send(event).is_ok()));
+    rx
 }
 
 pub fn set_link(link: Result<Daemon, String>) {
-    publish(Event::Link(link.as_ref().map(|_| ()).map_err(Clone::clone)));
+    let mut listeners = BUS.listeners.lock().unwrap();
+    let event = Event::Link(link.as_ref().map(|_| ()).map_err(Clone::clone));
     BUS.link.send_replace(Some(link));
+    tell(&mut listeners, event);
 }
 
 pub fn saw(topic: &str, serial: u64) {
@@ -132,21 +159,10 @@ pub fn url(path: &str) -> String {
 }
 
 pub fn listen<T: Threading + 'static>(qt: CxxQtThread<T>, handle: fn(Pin<&mut T>, Event)) {
-    let mut events = events();
+    let mut listeners = BUS.listeners.lock().unwrap();
     let link = BUS.link.borrow().as_ref().map(|link| link.as_ref().map(|_| ()).map_err(Clone::clone));
     if let Some(link) = link {
         qt.queue(move |this| handle(this, Event::Link(link))).ok();
     }
-    spawn(async move {
-        loop {
-            let event = match events.recv().await {
-                Ok(event) => event,
-                Err(RecvError::Lagged(_)) => continue,
-                Err(RecvError::Closed) => break,
-            };
-            if qt.queue(move |this| handle(this, event)).is_err() {
-                break;
-            }
-        }
-    });
+    listeners.push(Box::new(move |event| qt.queue(move |this| handle(this, event)).is_ok()));
 }

@@ -95,7 +95,7 @@ ColumnLayout {
         visible: canvas.editor.picture !== "" && canvas.editor.trouble !== ""
         type: Kirigami.MessageType.Warning
         showCloseButton: false
-        text: App.tr("The picture shown is not up to date. %1").arg(canvas.troubles[canvas.editor.trouble] ?? "")
+        text: App.tr("The picture shown is not up to date. %1", canvas.troubles[canvas.editor.trouble] ?? "")
     }
 
     Kirigami.InlineMessage {

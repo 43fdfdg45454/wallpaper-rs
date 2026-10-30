@@ -13,10 +13,12 @@ Kirigami.ScrollablePage {
 
     function load() {
         App.query("List", [], "Profiles1", reply => {
+            if (!page)
+                return;
             page.profiles = reply.profiles;
             page.active = reply.active ?? "";
         });
-        App.query("ListPresets", [""], "Profiles1", reply => page.presets = reply.presets);
+        App.query("ListPresets", [""], "Profiles1", reply => page && (page.presets = reply.presets));
     }
 
     title: App.tr("Profiles and presets")

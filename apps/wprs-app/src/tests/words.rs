@@ -13,7 +13,14 @@ type Tables = HashMap<String, HashMap<String, String>>;
 
 fn tables() -> Tables {
     let mut out = Tables::new();
-    let more = ["Labels.qml", "SceneValues.qml", "SceneEffects.qml"];
+    let more = [
+        "Labels.qml",
+        "SceneValues.qml",
+        "SceneEffects.qml",
+        "SceneTerms.qml",
+        "SceneNames.qml",
+        "SceneLabels.qml",
+    ];
     for (file, text) in
         qml_files().into_iter().filter(|(n, _)| n.ends_with("Words.qml") || more.contains(&n.as_str()))
     {
@@ -28,6 +35,7 @@ fn tables() -> Tables {
                     text.trim_end_matches(',').strip_suffix("\")")?.into(),
                 ))
             });
+            let name = if name == "early" { "words" } else { name };
             out.entry(format!("{}.{name}", &file[..1])).or_default().extend(rows);
         }
     }

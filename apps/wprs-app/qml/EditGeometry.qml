@@ -19,7 +19,7 @@ ColumnLayout {
                 "text": ratio
             }))).concat(App.outputs.map(name => ({
                 "value": App.state.outputs[name].width + ":" + App.state.outputs[name].height,
-                "text": App.tr("Screen %1").arg(name)
+                "text": App.tr("Screen %1", name)
             })))
 
     function turn(rotate, straighten, flip) {
@@ -52,8 +52,8 @@ ColumnLayout {
         text: App.tr("Use the whole picture")
         icon.name: "transform-crop"
         onClicked: tool.page.run("crop", {
-                "rect": "none"
-            })
+            "rect": "none"
+        })
     }
 
     QQC2.Label {
@@ -70,8 +70,8 @@ ColumnLayout {
         valueRole: "value"
         currentIndex: Math.max(0, indexOfValue(tool.page.edit.fit ?? "none"))
         onActivated: tool.page.run("fit", {
-                "mode": currentValue
-            })
+            "mode": currentValue
+        })
     }
 
     RowLayout {

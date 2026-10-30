@@ -8,10 +8,22 @@ Kirigami.Page {
     id: page
 
     property string query
+    property string anchor
     readonly property int cell: Kirigami.Units.gridUnit * 10
 
     function search() {
+        const columns = Math.max(1, Math.floor(grid.width / page.cell));
+        anchor = library.uid(Math.max(0, Math.floor(grid.contentY / page.cell)) * columns);
         library.search(filters.text, filters.kind, filters.favorite, filters.tag);
+    }
+
+    function keep() {
+        const row = anchor ? library.row(anchor) : -1;
+        if (row >= 0)
+            grid.positionViewAtIndex(row, GridView.Beginning);
+        else if (anchor)
+            grid.positionViewAtBeginning();
+        anchor = "";
     }
 
     function look() {
@@ -51,6 +63,7 @@ Kirigami.Page {
                 id: library
 
                 size: grid.Screen.devicePixelRatio > 1 ? 512 : 256
+                onReloaded: page.keep()
             }
             delegate: Tile {
                 width: page.cell

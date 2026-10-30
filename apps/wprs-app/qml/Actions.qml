@@ -68,6 +68,15 @@ Item {
             }
         },
         Kirigami.Action {
+            text: App.tr("Allow these wallpapers…")
+            icon.name: "dialog-ok-apply"
+            visible: tools.items.flashing
+            onTriggered: {
+                tools.take();
+                dialogs.allower.open();
+            }
+        },
+        Kirigami.Action {
             text: App.tr("Sync the files to my devices")
             icon.name: "folder-cloud"
             enabled: tools.items.selected > 0
@@ -95,7 +104,11 @@ Item {
     }
 
     function exercise(uid) {
+        if (!uid)
+            throw new Error("the library shows no item to open");
         inspect(uid);
+        if (!drawer.visible)
+            throw new Error("the item drawer did not open");
         apply.show(uid);
     }
 

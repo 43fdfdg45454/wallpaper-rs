@@ -8,6 +8,8 @@ Item {
     function install(spec, stale, downgrade) {
         const flags = [stale === true, downgrade === true];
         App.act("Install", [spec].concat(flags), "Repos1", null, error => {
+            if (!installer)
+                return;
             if (error.name === App.stale)
                 installer.ask(staleness, [spec, true, flags[1]]);
             else if (error.name === App.invalidArgs && error.message.includes("downgrade"))

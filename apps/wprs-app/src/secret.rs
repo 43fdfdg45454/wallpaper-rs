@@ -19,7 +19,7 @@ impl Backend {
     ) {
         let (id, kind, options) = (id.to_string(), kind.to_string(), options.to_string());
         let secret = Zeroizing::new(secret.to_string());
-        self.run(tag, async move {
+        self.run(tag, false, async move {
             let options: HashMap<String, String> =
                 serde_json::from_str(&options).map_err(|e| invalid(e.to_string()))?;
             let options = options.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
@@ -32,7 +32,7 @@ impl Backend {
 
     pub fn set_secret(self: Pin<&mut Self>, tag: &QString, id: &QString, secret: &QString) {
         let (id, secret) = (id.to_string(), Zeroizing::new(secret.to_string()));
-        self.run(tag, async move {
+        self.run(tag, false, async move {
             match bus::daemon().await? {
                 Daemon::Bus(c) => keyring(c.providers.set_secret(&id, &secret)).await,
                 Daemon::Fixtures => Ok(fixture("Providers1", "SetSecret")),
@@ -51,7 +51,7 @@ impl Backend {
     ) {
         let (output, key) = (output.to_string(), key.to_string());
         let value = Zeroizing::new(serde_json::Value::String(secret.to_string()).to_string());
-        self.run(tag, async move {
+        self.run(tag, false, async move {
             match bus::daemon().await? {
                 Daemon::Bus(c) => keyring(c.daemon.set_scene_property(&output, &key, &value)).await,
                 Daemon::Fixtures => Ok(fixture("Daemon1", "SetSceneProperty")),
@@ -61,7 +61,7 @@ impl Backend {
 
     pub fn passphrase(self: Pin<&mut Self>, tag: &QString, member: &QString, passphrase: &QString) {
         let (member, passphrase) = (member.to_string(), Zeroizing::new(passphrase.to_string()));
-        self.run(tag, async move {
+        self.run(tag, false, async move {
             match (bus::daemon().await?, member.as_str()) {
                 (Daemon::Bus(c), "SetEscrow") => keyring(c.sync.set_escrow(&passphrase)).await,
                 (Daemon::Bus(c), "Restore") => keyring(c.sync.restore(&passphrase)).await,

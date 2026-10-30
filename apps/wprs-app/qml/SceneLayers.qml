@@ -14,9 +14,9 @@ ColumnLayout {
     readonly property var shown: {
         const out = [];
         const visit = parent => layers.filter(layer => layer.pointer.replace(/\/\d+$/, "") === parent).reverse().forEach(layer => {
-                    out.push(layer);
-                    visit(layer.pointer + "/layers");
-                });
+                out.push(layer);
+                visit(layer.pointer + "/layers");
+            });
         visit("/scene/layers");
         return out;
     }
@@ -149,10 +149,10 @@ ColumnLayout {
                         text: SceneWords.kind(modelData) + (enabled ? "" : " (" + App.tr("import a file of this kind first") + ")")
                         icon.name: panel.icon(modelData)
                         onTriggered: panel.page.run("add_layer", {
-                                "kind": modelData,
-                                "name": SceneWords.kind(modelData),
-                                "into": panel.current?.type === "group" ? panel.current.id : undefined
-                            })
+                            "kind": modelData,
+                            "name": SceneWords.kind(modelData),
+                            "into": panel.current?.type === "group" ? panel.current.id : undefined
+                        })
                     }
                 }
             }
@@ -169,8 +169,8 @@ ColumnLayout {
                 display: QQC2.AbstractButton.IconOnly
                 enabled: panel.current !== null && (modelData[0] !== "ungroup" || panel.current.type === "group")
                 onClicked: panel.page.run(modelData[0], {
-                        "id": panel.current.id
-                    })
+                    "id": panel.current.id
+                })
             }
         }
 
@@ -183,8 +183,8 @@ ColumnLayout {
             enabled: panel.current !== null
             onClicked: {
                 panel.page.run("group", {
-                        "ids": [panel.current.id].concat(panel.page.picked.filter(id => id !== panel.current.id))
-                    });
+                    "ids": [panel.current.id].concat(panel.page.picked.filter(id => id !== panel.current.id))
+                });
                 panel.page.picked = [];
             }
         }

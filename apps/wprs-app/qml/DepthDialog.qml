@@ -45,7 +45,7 @@ Kirigami.Dialog {
                 required property var modelData
 
                 Layout.fillWidth: true
-                text: App.tr("%1: %2 from %3, license %4").arg(modelData.title).arg(modelData.size).arg(modelData.hosts).arg(modelData.license)
+                text: App.tr("%1: %2 from %3, license %4", modelData.title, modelData.size, modelData.hosts, modelData.license)
                 wrapMode: Text.Wrap
             }
         }

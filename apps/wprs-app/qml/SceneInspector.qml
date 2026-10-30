@@ -32,9 +32,9 @@ ColumnLayout {
     function shift(by) {
         const to = list + "/" + (index + by);
         page.run("move", {
-                "from": pointer,
-                "to": to
-            });
+            "from": pointer,
+            "to": to
+        });
         page.editor.select(to);
     }
 
@@ -42,18 +42,20 @@ ColumnLayout {
         const list = pointer + "/effects";
         if (node.effects > 0)
             page.run("add", {
-                    "pointer": list + "/-",
-                    "value": {
-                        "effect": id
-                    }
-                });
+                "pointer": list + "/-",
+                "value": {
+                    "effect": id
+                }
+            });
         else
             page.run("set", {
-                    "pointer": list,
-                    "value": [{
-                            "effect": id
-                        }]
-                });
+                "pointer": list,
+                "value": [
+                    {
+                        "effect": id
+                    }
+                ]
+            });
     }
 
     Kirigami.Heading {
@@ -121,8 +123,8 @@ ColumnLayout {
             display: QQC2.AbstractButton.IconOnly
             onClicked: {
                 inspector.page.run("remove", {
-                        "pointer": inspector.pointer
-                    });
+                    "pointer": inspector.pointer
+                });
                 inspector.page.editor.select(inspector.up);
             }
         }

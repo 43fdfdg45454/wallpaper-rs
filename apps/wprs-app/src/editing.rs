@@ -122,7 +122,7 @@ impl Drop for EditorRust {
         self.drawn.take().map(std::fs::remove_file);
         if self.shown {
             let path = self.file.to_string_lossy().into_owned();
-            bus::spawn(async move {
+            bus::farewell(async move {
                 bus::call("Daemon1", "PreviewEdit", vec![json!(path), json!("")]).await.ok();
             });
         }

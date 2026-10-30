@@ -18,9 +18,9 @@ Item {
         while (properties.some(p => p.id.toLowerCase() === kind + "_" + n))
             n++;
         page.run("add_property", {
-                "kind": kind,
-                "id": kind + "_" + n
-            });
+            "kind": kind,
+            "id": kind + "_" + n
+        });
         if (properties.some(p => p.id === kind + "_" + n))
             page.editor.select("/manifest/properties/" + kind + "_" + n);
     }
@@ -116,8 +116,8 @@ Item {
                                 onClicked: {
                                     panel.page.editor.select("/manifest");
                                     panel.page.run("remove", {
-                                            "pointer": preset.modelData.pointer
-                                        });
+                                        "pointer": preset.modelData.pointer
+                                    });
                                 }
                             }
                         }

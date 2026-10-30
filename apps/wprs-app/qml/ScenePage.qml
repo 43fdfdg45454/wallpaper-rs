@@ -12,9 +12,9 @@ Kirigami.Page {
     property string heading
     property string source
     property alias editor: editor
-    property alias tabs: side
+    property alias tabs: panel.tabs
     property alias builder: builder
-    property alias settings: settings
+    property alias settings: panel.settings
     property string spot
     property var picked: []
     property string notice
@@ -33,9 +33,9 @@ Kirigami.Page {
             "time": editor.time
         } : {};
         run(keyed ? "keyframe" : "set", Object.assign(args, {
-                    "pointer": pointer,
-                    "value": value
-                }), gesture);
+            "pointer": pointer,
+            "value": value
+        }), gesture);
     }
 
     function jump(pointer) {
@@ -45,7 +45,7 @@ Kirigami.Page {
         spot = pointer;
     }
 
-    title: App.tr("Scene: %1").arg(view.title ?? "")
+    title: App.tr("Scene: %1", view.title ?? "")
     padding: 0
     Component.onCompleted: {
         if (starter)
@@ -54,8 +54,8 @@ Kirigami.Page {
             editor.open(folder, source);
         if (App.checking)
             Qt.createComponent("SceneCheck.qml").createObject(page, {
-                    "page": page
-                }).exercise();
+                "page": page
+            }).exercise();
     }
     actions: [
         Kirigami.Action {
@@ -124,40 +124,8 @@ Kirigami.Page {
         }
     }
 
-    header: ColumnLayout {
-        spacing: 0
-
-        Kirigami.InlineMessage {
-            Layout.fillWidth: true
-            type: Kirigami.MessageType.Error
-            text: editor.error
-            visible: text !== ""
-        }
-
-        Kirigami.InlineMessage {
-            Layout.fillWidth: true
-            type: Kirigami.MessageType.Positive
-            text: page.notice
-            visible: text !== ""
-            showCloseButton: true
-        }
-
-        Kirigami.InlineMessage {
-            Layout.fillWidth: true
-            type: Kirigami.MessageType.Warning
-            text: App.tr("This folder has unsaved changes from an earlier session.")
-            visible: page.view.recoverable === true
-            actions: [
-                Kirigami.Action {
-                    text: App.tr("Recover")
-                    onTriggered: editor.recover(true)
-                },
-                Kirigami.Action {
-                    text: App.tr("Discard")
-                    onTriggered: editor.recover(false)
-                }
-            ]
-        }
+    header: SceneNotes {
+        page: page
     }
 
     RowLayout {
@@ -165,52 +133,13 @@ Kirigami.Page {
         enabled: editor.ready
         spacing: 0
 
-        ColumnLayout {
+        SceneSide {
+            id: panel
+
             Layout.preferredWidth: Kirigami.Units.gridUnit * 14
             Layout.fillWidth: false
             Layout.fillHeight: true
-
-            QQC2.TabBar {
-                id: side
-
-                Layout.fillWidth: true
-                Layout.minimumWidth: 0
-                Layout.preferredWidth: 0
-
-                QQC2.TabButton {
-                    text: App.tr("Layers")
-                }
-
-                QQC2.TabButton {
-                    text: App.tr("Assets")
-                }
-
-                QQC2.TabButton {
-                    text: App.tr("Package")
-                }
-            }
-
-            StackLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.minimumWidth: 0
-                Layout.preferredWidth: 0
-                currentIndex: side.currentIndex
-
-                SceneLayers {
-                    page: page
-                }
-
-                SceneAssets {
-                    page: page
-                }
-
-                SceneProperties {
-                    id: settings
-
-                    page: page
-                }
-            }
+            page: page
         }
 
         ColumnLayout {

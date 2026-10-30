@@ -15,11 +15,13 @@ Kirigami.Page {
 
     function load() {
         App.query("List", [], "Playlists1", reply => {
+            if (!page)
+                return;
             page.playlists = reply.playlists;
             page.error = "";
             if (!page.playlist && page.playlists.length > 0)
                 page.current = page.playlists[0].uid;
-        }, error => page.error = error.message);
+        }, error => page && (page.error = error.message));
     }
 
     title: App.tr("Playlists")
@@ -96,7 +98,7 @@ Kirigami.Page {
         title: App.tr("New playlist")
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
         onOpened: smart.text = page.query
-        onAccepted: App.act("Create", [name.text, smart.text], "Playlists1", reply => page.current = reply[0])
+        onAccepted: App.act("Create", [name.text, smart.text], "Playlists1", reply => page && (page.current = reply[0]))
 
         Kirigami.FormLayout {
             QQC2.TextField {

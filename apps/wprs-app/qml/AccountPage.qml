@@ -16,16 +16,20 @@ Kirigami.ScrollablePage {
 
     function load() {
         App.query("GetStatus", [], "Sync1", reply => {
-                page.account = reply.account;
-                page.error = "";
-            }, error => page.error = error.message);
+            if (!page)
+                return;
+            page.account = reply.account;
+            page.error = "";
+        }, error => page && (page.error = error.message));
     }
 
     function link(name, plaintext) {
         App.query("Link", [name, plaintext], "Sync1", reply => {
-                page.code = reply[0];
-                page.address = reply[1];
-            });
+            if (!page)
+                return;
+            page.code = reply[0];
+            page.address = reply[1];
+        });
     }
 
     function exercise() {
@@ -113,7 +117,7 @@ Kirigami.ScrollablePage {
             Layout.fillWidth: true
             visible: page.code !== "" && page.phase === "linking"
             type: Kirigami.MessageType.Information
-            text: App.tr("Open %1 and enter the code %2, or approve it on a linked computer.").arg(page.address).arg(page.code)
+            text: App.tr("Open %1 and enter the code %2, or approve it on a linked computer.", page.address, page.code)
         }
 
         Kirigami.InlineMessage {

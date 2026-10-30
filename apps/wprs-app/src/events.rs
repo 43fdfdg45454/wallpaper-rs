@@ -4,8 +4,10 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use serde_json::json;
 use std::pin::Pin;
+use wprs_client::Error;
 use wprs_core::model::JobsReply;
 
+pub(crate) const TOKEN: &str = "XDG_ACTIVATION_TOKEN";
 pub(crate) const SILENT: &str = "The job failed without giving a reason";
 const TOPICS: [&str; 9] =
     ["state", "library", "playlists", "profiles", "providers", "repos", "jobs", "inputs", "account"];
@@ -64,7 +66,12 @@ impl Backend {
             }
             Event::Thumb(uid, size, path) => self.thumbnail_ready(q(&uid), size, q(&path)),
             Event::Preview(spec, path) => self.preview_ready(q(&spec), q(&path)),
-            Event::Activate(page) => self.activated(q(&page)),
+            Event::Activate(page, token) => {
+                if let Some(token) = token {
+                    unsafe { std::env::set_var(TOKEN, token) };
+                }
+                self.activated(q(&page))
+            }
             Event::Error(message) => self.set_last_error(q(&message)),
         }
     }
@@ -94,5 +101,36 @@ impl Backend {
     fn show_jobs(self: Pin<&mut Self>) {
         let jobs = serde_json::to_string(&self.list).unwrap_or_default();
         self.set_jobs(q(&jobs));
+    }
+}
+
+impl Backend {
+    pub fn run(
+        self: Pin<&mut Self>,
+        tag: &QString,
+        handled: bool,
+        task: impl Future<Output = Result<String, Error>> + Send + 'static,
+    ) {
+        let (qt, tag) = (self.qt_thread(), tag.to_string());
+        bus::spawn(async move {
+            let result = task.await;
+            qt.queue(move |mut this| match result {
+                Ok(json) => {
+                    this.as_mut().set_last_error(QString::default());
+                    this.replied(QString::from(&tag), QString::from(&json));
+                }
+                Err(e) if handled => {
+                    this.failed(QString::from(&tag), QString::from(&e.name), QString::from(&e.message))
+                }
+                Err(e) => {
+                    if *this.checking() {
+                        eprintln!("call failed: {}", e.message);
+                    }
+                    this.as_mut().set_last_error(QString::from(&e.message));
+                    this.failed(QString::from(&tag), QString::from(&e.name), QString::from(&e.message));
+                }
+            })
+            .ok();
+        });
     }
 }

@@ -23,7 +23,9 @@ Kirigami.Page {
         editor.preview(false);
         editor.run("set", '{"changes": ["ev=0.3", "vibrance=12"]}');
         editor.run("crop", '{"aspect": "16:9", "rotate": 90}');
-        editor.run("crop", JSON.stringify({"output": App.outputs[0] ?? "DP-1"}));
+        editor.run("crop", JSON.stringify({
+            "output": App.outputs[0] ?? "DP-1"
+        }));
         editor.run("curve", '{"points": ["0,0", "0.5,0.6", "1,1"]}');
         editor.run("overlay", '{"mask": "radial:0.5,0.5,0.3,0.3", "opacity": 0.5}');
         editor.run("mask", '{"name": "sky", "spec": "luminance:0,0.4"}');
@@ -34,7 +36,7 @@ Kirigami.Page {
         editor.preview(true);
     }
 
-    title: App.tr("Edit %1").arg(item.title || String(item.path ?? "").split("/").pop())
+    title: App.tr("Edit %1", item.title || String(item.path ?? "").split("/").pop())
     padding: 0
     Component.onCompleted: editor.open(item.path ?? "", item.width ?? 0, item.height ?? 0)
     actions: [
