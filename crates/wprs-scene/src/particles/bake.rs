@@ -119,6 +119,7 @@ impl Bake {
         let alloc = self.allocs[part];
         out.counts[0] = alloc;
         out.ids[3] = sim.ids[3].min(alloc);
+        out.mode[2] = sim.mode[2].min(out.ids[3]);
         out.links = self.links[part];
         out.mode[3] = self.hosts[part].map_or(0, |h| self.allocs[h]);
         out.trail = [self.marks[part], self.trails[part], 0, 0];

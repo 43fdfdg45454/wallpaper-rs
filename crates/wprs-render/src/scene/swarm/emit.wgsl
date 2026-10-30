@@ -85,6 +85,9 @@ fn hatch(ev: Event) {
             count = u32(sim.rates[e / 4u][e % 4u] * sim.clock.x + r);
         }
         for (var b = 0u; b < min(count, MAX_HATCH); b++) {
+            if atomicLoad(&state.head[0]) <= i32(sim.counts.x - sim.ids.w) {
+                return;
+            }
             if u32(atomicAdd(&state.head[3], 1)) >= sim.mode.z {
                 return;
             }

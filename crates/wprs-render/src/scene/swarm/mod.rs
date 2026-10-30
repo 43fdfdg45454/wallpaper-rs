@@ -1,4 +1,6 @@
+mod binds;
 mod kit;
+mod paint;
 mod setup;
 pub(crate) use setup::sprites;
 mod sort;
@@ -9,9 +11,10 @@ mod store;
 use super::SceneView;
 use super::pipes::Mode;
 use crate::Renderer;
+use binds::{buffer, module};
 use kit::{Kit, Look};
 use std::collections::HashMap;
-use wgpu::{BindGroup, BindGroupLayout, Buffer, BufferUsages as B, ShaderStages as S};
+use wgpu::{BindGroup, BindGroupLayout, Buffer, BufferUsages as B};
 use wprs_scene::{Bake, Blend, Cloud, Quality, Stack};
 
 const CHUNK: usize = 16;
@@ -31,11 +34,13 @@ struct Stacked {
     size: f32,
     sorted: Buffer,
     gpu: Option<(Buffer, BindGroup)>,
+    cpu: Vec<wprs_scene::Particle>,
 }
 
 struct Flight {
     stores: Vec<Store>,
     clouds: Vec<Cloud>,
+    sims: Vec<wprs_scene::Sim>,
 }
 
 struct Herd {
@@ -69,36 +74,6 @@ pub(crate) struct Swarms {
     bytes: Vec<u8>,
     quality: Quality,
     none: Buffer,
-}
-
-fn entry(binding: u32, visibility: S, ty: wgpu::BindingType) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry { binding, visibility, ty, count: None }
-}
-
-fn storage(read_only: bool) -> wgpu::BindingType {
-    let ty = wgpu::BufferBindingType::Storage { read_only };
-    wgpu::BindingType::Buffer { ty, has_dynamic_offset: false, min_binding_size: None }
-}
-
-fn uniform(size: usize) -> wgpu::BindingType {
-    let (ty, min_binding_size) = (wgpu::BufferBindingType::Uniform, wgpu::BufferSize::new(size as u64));
-    wgpu::BindingType::Buffer { ty, has_dynamic_offset: true, min_binding_size }
-}
-
-fn plain(size: u64) -> wgpu::BindingType {
-    let (ty, min_binding_size) = (wgpu::BufferBindingType::Uniform, wgpu::BufferSize::new(size));
-    wgpu::BindingType::Buffer { ty, has_dynamic_offset: false, min_binding_size }
-}
-
-fn buffer(r: &Renderer, size: u64, usage: B) -> Buffer {
-    let label = Some("wprs-scene particles");
-    r.device.create_buffer(&wgpu::BufferDescriptor { label, size, usage, mapped_at_creation: false })
-}
-
-fn module(r: &Renderer, wgsl: &str) -> wgpu::ShaderModule {
-    let source = wgpu::ShaderSource::Wgsl(wgsl.into());
-    r.device
-        .create_shader_module(wgpu::ShaderModuleDescriptor { label: Some("wprs-scene particles"), source })
 }
 
 pub(super) fn compute(r: &Renderer) -> bool {

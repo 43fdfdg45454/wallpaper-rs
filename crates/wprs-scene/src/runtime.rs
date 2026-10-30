@@ -52,6 +52,7 @@ pub struct Runtime {
     limit: Option<Uses>,
     swarms: RefCell<Vec<Swarm>>,
     flocks: Vec<Flock>,
+    systems: Vec<System>,
 }
 
 impl Runtime {
@@ -73,8 +74,10 @@ impl Runtime {
         let (seed, size) = (scene.clock.seed.unwrap_or_else(fresh), scene.canvas.size);
         let homes = crate::kin::homes(&scene);
         let flocks = flocks(&scene);
-        let systems: Vec<&System> = scene.particles.values().collect();
-        let swarms = RefCell::new(flocks.iter().map(|f| Swarm::new(&systems, f, seed, size)).collect());
+        let systems: Vec<System> = scene.particles.values().cloned().collect();
+        let work = flocks.iter().flat_map(|f| &f.parts).map(|p| u64::from(systems[p.system].capacity)).sum();
+        let swarms =
+            RefCell::new(flocks.iter().map(|f| Swarm::new(&systems, f, (seed, work), size)).collect());
         let listened = crate::voice::listened(&scene, true, true);
         let onsets = crate::voice::onsets(&scene);
         let gates = RefCell::new(vec![None; onsets.len()]);
@@ -117,6 +120,7 @@ impl Runtime {
             limit: None,
             swarms,
             flocks,
+            systems,
         };
         runtime.set_lengths(BTreeMap::new());
         runtime
@@ -410,7 +414,7 @@ impl Runtime {
         let (time, wake) = (self.t as f32, Wake::Idle);
         let mut frame = Frame { draws, effects, time, view, background, quality, wake };
         walk(&cx, &self.scene.layers, Affine::IDENTITY, quality, &mut frame, canvas);
-        plan(&self.swarms, (&self.scene, &self.flocks), &cx, &frame, quality, self.t);
+        plan(&self.swarms, (&self.systems, &self.flocks), &cx, &frame, quality, self.t);
         frame.wake = cx.wake.get().min(self.cue_wake());
         self.pace.set(if frame.wake == Wake::Frame { cx.pace.get() } else { u32::MAX });
         self.sizes.set((frame.draws.len(), frame.effects.len()));

@@ -1,0 +1,58 @@
+use super::mode;
+use crate::scene::Op;
+use crate::scene::item::ndc;
+use crate::scene::paint::{Painter, Target};
+use wprs_scene::{Affine, Blend, Content, Mask};
+
+impl Painter<'_, '_, '_> {
+    pub(crate) fn particles(
+        &mut self,
+        i: usize,
+        target: Target,
+        (opacity, blend, mask): (f32, Blend, Option<&Mask>),
+        atop: bool,
+    ) {
+        let frame = self.frame;
+        let d = &frame.draws[i];
+        let Content::Particles { flock, size, .. } = d.content else { return };
+        if mask.is_some() || !blend.fixed() {
+            return self.apart(i, target, atop);
+        }
+        let (r, screen, srgb) = (self.r, self.screen, self.srgb);
+        let Some(swarms) = self.swarms.as_deref_mut() else { return };
+        let mode = mode(blend, atop);
+        swarms.pipeline(r, mode);
+        let Some(herd) = swarms.herds.get(flock) else { return };
+        let [w, h] = swarms.canvas;
+        let m = match herd.world {
+            true => screen,
+            false => screen.then(d.world).then(Affine::translate([-d.origin[0] * w, -d.origin[1] * h])),
+        };
+        let tinted = d.tint != wprs_scene::Color([1.0; 4]) || d.brightness != 1.0;
+        let [cr, cg, cb, _] = d.tint.0;
+        let toned = crate::scene::item::toned(wprs_scene::Color([cr, cg, cb, 1.0]), d.brightness, srgb, 1.0);
+        let tint = [toned[0], toned[1], toned[2], d.tint.0[3]];
+        let slot = (swarms.looks.len() as u64 * super::LOOK) as u32;
+        for (p, system) in herd.bake.systems.iter().enumerate() {
+            let own = (p == 0).then_some(d.layer.id.as_str());
+            let found = |layer: Option<&str>| {
+                swarms.kits.iter().position(|k| k.system == *system && k.layer.as_deref() == layer)
+            };
+            let Some(k) = own.and_then(|l| found(Some(l))).or_else(|| found(None)) else { continue };
+            let kit = &swarms.kits[k];
+            let mut look = kit.look;
+            if tinted {
+                look.colors.iter_mut().for_each(|c| (0..4).for_each(|j| c[j] *= tint[j]));
+            }
+            (look.m0, look.m1) = ndc(target.rect, m);
+            look.tint[0] = opacity;
+            look.tint[2] = herd.bake.sizes[p] * size;
+            let trail = herd.bake.trails[p];
+            look.extra[1] = swarms.quality.trail(kit.trail.min(trail)) as f32;
+            look.extra[2] = trail as f32;
+            swarms.looks.push(look);
+            swarms.kitted.push(k);
+        }
+        self.ops.push(Op::Particles { target: target.src, system: flock, slot, mode });
+    }
+}

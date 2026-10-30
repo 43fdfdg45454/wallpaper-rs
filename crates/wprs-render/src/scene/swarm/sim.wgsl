@@ -98,26 +98,6 @@ fn record(base: u32, i: u32, p: Particle, slot: u32, prev: vec2<f32>) {
     }
 }
 
-fn field(a: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
-    let size = a.zw;
-    let f = pos / sim.clock.zw * size - 0.5;
-    if !(f.x > -0.5 && f.y > -0.5 && f.x < size.x - 0.5 && f.y < size.y - 0.5) {
-        return vec4<f32>(0.0);
-    }
-    let c0 = clamp(floor(f), vec2<f32>(0.0), size - 1.0);
-    let c1 = min(c0 + 1.0, size - 1.0);
-    let uv = clamp(f - c0, vec2<f32>(0.0), vec2<f32>(1.0));
-    let start = u32(a.y);
-    let d00 = points[start + u32(c0.y * size.x + c0.x)].x;
-    let d10 = points[start + u32(c0.y * size.x + c1.x)].x;
-    let d01 = points[start + u32(c1.y * size.x + c0.x)].x;
-    let d11 = points[start + u32(c1.y * size.x + c1.x)].x;
-    let d = lerp(lerp(d00, d10, uv.x), lerp(d01, d11, uv.x), uv.y);
-    let gx = lerp(d10 - d00, d11 - d01, uv.y) * size.x / sim.clock.z;
-    let gy = lerp(d01 - d00, d11 - d10, uv.x) * size.y / sim.clock.w;
-    return vec4<f32>(d, gx, gy, 1.0);
-}
-
 fn mark(i: u32, p: Particle) {
     let k = sim.trail.y;
     let o = sim.trail.x + i * k * 4u;

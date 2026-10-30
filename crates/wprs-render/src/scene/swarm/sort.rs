@@ -52,23 +52,21 @@ impl Swarms {
             let group = r.device.create_bind_group(&desc);
             (bins, group)
         });
-        Stacked { order, size, sorted, gpu }
+        Stacked { order, size, sorted, gpu, cpu: Vec::new() }
     }
 }
 
 pub(super) fn sort(
     r: &Renderer,
     (sorts, height): (Option<&[wgpu::ComputePipeline; 3]>, f32),
-    stores: &[Store],
+    stores: &mut [Store],
     clouds: &[Cloud],
     allocs: &[u32],
 ) {
-    for (p, store) in stores.iter().enumerate() {
-        for st in &store.stacks {
-            if let Some(cloud) = clouds.get(p) {
-                let order = stacked(&cloud.particles, st.order, st.size, height);
-                r.queue.write_buffer(&st.sorted, 0, bytemuck::cast_slice(&order));
-            }
+    for (store, cloud) in stores.iter_mut().zip(clouds) {
+        for st in &mut store.stacks {
+            stacked(&cloud.particles, (st.order, st.size, height), &mut st.cpu);
+            r.queue.write_buffer(&st.sorted, 0, bytemuck::cast_slice(&st.cpu));
         }
     }
     let Some(pipelines) = sorts.filter(|_| clouds.is_empty() && stores.iter().any(|s| !s.stacks.is_empty()))

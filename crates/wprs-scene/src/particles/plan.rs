@@ -1,16 +1,14 @@
-use super::points::{Room, bare, turn};
+use super::aim::Aim;
+use super::points::{Room, bare};
 use super::tune::tuned;
-use super::{
-    Cue, EmitShape, Flock, MAX_EMITTERS2, MAX_HATCH, MAX_PREWARM2, MAX_RATE, Moment, Placement, STEP, Swarm,
-    System, WARM, WARM_WORK,
-};
+use super::{Flock, MAX_PREWARM2, Moment, Placement, STEP, Swarm, System, WARM};
 use crate::resolve::Context;
-use crate::{Affine, Content, Draw, Frame, Quality, Scene};
+use crate::{Affine, Content, Draw, Frame, Quality};
 use std::cell::RefCell;
 
 impl Swarm {
-    fn plan(&mut self, systems: &[&System], flock: &Flock, cx: &Context, now: f64, d: &Draw, q: Quality) {
-        let (root, canvas, view, p) = (systems[flock.system], cx.canvas, cx.view, cx.pointer);
+    fn plan(&mut self, systems: &[System], flock: &Flock, cx: &Context, now: f64, d: &Draw, q: Quality) {
+        let (root, canvas, view, p) = (&systems[flock.system], cx.canvas, cx.view, cx.pointer);
         let layer = flock.layer.as_ref().map(|_| d.layer);
         let lift = d.world.then(Affine::translate([-d.origin[0] * canvas[0], -d.origin[1] * canvas[1]]));
         let world = root.space == Placement::World;
@@ -23,11 +21,12 @@ impl Swarm {
         let tune = tuned(cx, layer, root);
         let share = q.particles() * tune.count;
         self.scale = f64::from(tune.time_scale);
-        let mut frames: Vec<Affine> = Vec::with_capacity(flock.parts.len());
+        let mut frames = std::mem::take(&mut self.places);
+        frames.clear();
         let me = std::ptr::from_ref(self).addr();
         for (k, part) in flock.parts.iter().enumerate() {
-            let s = systems[part.system];
-            let host = part.host.map(|h| (h, systems[flock.parts[h].system]));
+            let s = &systems[part.system];
+            let host = part.host.map(|h| (h, &systems[flock.parts[h].system]));
             let link = host.and_then(|(_, h)| h.children.get(part.link));
             let frame = match (host, link) {
                 (Some((h, hs)), Some(c)) => {
@@ -67,74 +66,20 @@ impl Swarm {
                 };
                 (sim.init[9][0], sim.init[9][1]) = (v[0], v[1]);
             }
-            let mut counts = [0u32; MAX_EMITTERS2];
-            for (e, em) in s.emitters.iter().take(MAX_EMITTERS2).enumerate() {
-                let rate = em.rate.get(cx);
-                let gated = em.audio_gate && cx.audio.silent;
-                let rate = if rate > 0.0 && !gated { rate.min(MAX_RATE) * share } else { 0.0 };
-                self.feeds[k][e].rate = rate;
-                let at = match &em.shape {
-                    EmitShape::Box(a) => a.at,
-                    EmitShape::Circle { at, .. } => *at,
-                    _ => None,
-                };
-                let mut place = frame;
-                if let Some(h) = at {
-                    let n = usize::from(h.0);
-                    place = if hatched {
-                        let c = s.points.get(n).and_then(|c| c.angle.as_ref());
-                        let turned = Affine::rotate(c.map_or(0.0, |a| a.get(cx)));
-                        frame.then(Affine::translate(room_local(s, h.0, cx))).then(turned)
-                    } else {
-                        let [px, py, angle] = room.points[n];
-                        let turned = Affine::rotate(angle - turn(frame));
-                        Affine::translate([px, py]).then(bare(frame)).then(turned)
-                    };
-                }
-                let mut motion = [place.0[4], place.0[5], 0.0, 0.0];
-                if em.follow.is_some() {
-                    (motion[0], motion[1]) = (motion[0] + cursor[0], motion[1] + cursor[1]);
-                    place = bare(place);
-                    (motion[2], motion[3]) = (drift[0] * em.inherit, drift[1] * em.inherit);
-                }
-                let [a, b, c, d, ..] = place.0;
-                sim.emitters[4 * e + 2] = [a, b, c, d];
-                sim.emitters[4 * e + 3] = motion;
-                sim.rates[e] = rate;
-                let once = em.burst.as_ref().filter(|b| b.every.is_none() && b.on.is_none());
-                counts[e] = once.map_or(0, |b| b.count);
-                let Some(b) = em.burst.as_ref().filter(|_| !hatched && !gated) else { continue };
-                let fired = match b.on {
-                    Some(Cue::Beat) => cx.audio.beat && !self.beat,
-                    Some(Cue::Click) => p.buttons != 0 && self.buttons == 0,
-                    None => false,
-                };
-                let f = &mut self.feeds[k][e];
-                f.pending = f.pending.saturating_add(if fired && f.on { b.count } else { 0 });
-            }
-            if hatched {
-                if counts.iter().all(|c| *c == 0) {
-                    counts[0] = 1;
-                }
-                let mut total = 0u32;
-                for (e, n) in counts.iter().enumerate() {
-                    total = total.saturating_add(*n).min(MAX_HATCH);
-                    sim.births[e] = total;
-                }
-                self.feeds[k].iter_mut().for_each(|f| f.rate = 0.0);
-            }
+            let aim = Aim { frame, room: &room, hatched, cursor, drift, share };
+            self.aim(k, s, cx, &aim);
+            let sim = &mut self.frames[k];
             super::drive::forces(sim, s, &room, cx);
             super::drive::colliders(sim, s, anchor);
         }
+        self.places = frames;
         (self.beat, self.buttons) = (cx.audio.beat, p.buttons);
         let due = self.due(systems, flock);
         let (n, dt) = match self.clock {
             None => {
                 let warm = root.prewarm.clamp(0.0, MAX_PREWARM2);
-                let total: u64 = flock.parts.iter().map(|p| u64::from(systems[p.system].capacity)).sum();
-                let cap = (WARM_WORK / total.max(1)).max(1) as usize;
                 match warm > 0.0 {
-                    true => (((warm / WARM).round() as usize).clamp(1, cap), WARM),
+                    true => (((warm / WARM).round() as usize).clamp(1, self.warm), WARM),
                     false => (1, STEP),
                 }
             }
@@ -151,26 +96,20 @@ impl Swarm {
     }
 }
 
-fn room_local(s: &System, k: u8, cx: &Context) -> [f32; 2] {
-    let at = s.points.get(usize::from(k)).and_then(|p| p.at.as_ref());
-    at.map_or([0.0; 2], |v| v.get(cx).0)
-}
-
 pub(crate) fn plan(
     swarms: &RefCell<Vec<Swarm>>,
-    (scene, flocks): (&Scene, &[Flock]),
+    (systems, flocks): (&[System], &[Flock]),
     cx: &Context,
     frame: &Frame,
     quality: Quality,
     now: f64,
 ) {
-    let systems: Vec<&System> = scene.particles.values().collect();
     let mut swarms = swarms.borrow_mut();
     for (i, (flock, swarm)) in flocks.iter().zip(swarms.iter_mut()).enumerate() {
         let shown =
             |d: &&Draw| !d.hidden && matches!(d.content, Content::Particles { flock: f, .. } if f == i);
         if let Some(d) = frame.draws.iter().find(shown) {
-            swarm.plan(&systems, flock, cx, now, d, quality);
+            swarm.plan(systems, flock, cx, now, d, quality);
         }
     }
 }

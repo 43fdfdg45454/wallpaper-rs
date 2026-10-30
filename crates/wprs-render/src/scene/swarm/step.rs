@@ -37,13 +37,13 @@ impl Swarms {
                 if reset {
                     flight.clouds.iter_mut().for_each(Cloud::clear);
                 }
-                let mut sims = vec![Sim::default(); parts];
+                flight.sims.resize(parts, Sim::default());
                 for j in 0..count {
                     if start.elapsed() > CUT {
                         break;
                     }
-                    (0..parts).for_each(|p| sims[p] = bake.apply(p, swarm.sim(j, p)));
-                    Cloud::brood(&mut flight.clouds, &sims, &bake.hosts, &bake.points);
+                    (0..parts).for_each(|p| flight.sims[p] = bake.apply(p, swarm.sim(j, p)));
+                    Cloud::brood(&mut flight.clouds, &flight.sims, &bake.hosts, &bake.points);
                 }
                 for (store, cloud) in flight.stores.iter().zip(&flight.clouds) {
                     r.queue.write_buffer(&store.particles, 0, bytemuck::cast_slice(&cloud.particles));
@@ -54,7 +54,7 @@ impl Swarms {
                 super::sort::sort(
                     r,
                     (self.sorts.as_ref(), self.canvas[1]),
-                    &flight.stores,
+                    &mut flight.stores,
                     &flight.clouds,
                     &bake.allocs,
                 );
@@ -117,8 +117,20 @@ impl Swarms {
                 }
                 drop(pass);
                 r.queue.submit([encoder.finish()]);
+                if first + CHUNK < count {
+                    r.finish()?;
+                    if start.elapsed() > CUT {
+                        break;
+                    }
+                }
             }
-            super::sort::sort(r, (self.sorts.as_ref(), self.canvas[1]), &flight.stores, &[], &bake.allocs);
+            super::sort::sort(
+                r,
+                (self.sorts.as_ref(), self.canvas[1]),
+                &mut flight.stores,
+                &[],
+                &bake.allocs,
+            );
         }
         if self.profile {
             r.finish()?;

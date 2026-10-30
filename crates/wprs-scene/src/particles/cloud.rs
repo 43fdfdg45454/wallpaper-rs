@@ -1,7 +1,8 @@
 use super::Sim;
+use super::census::mark;
+use super::hatch::Event;
 use super::motion::simulate;
 use super::pack::PARTICLE_EVENTS;
-use super::spawn::{hatch, spawn};
 use bytemuck::{Pod, Zeroable};
 
 #[repr(C)]
@@ -22,29 +23,6 @@ pub struct Particle {
     pub look: [f32; 2],
 }
 
-#[repr(C)]
-#[derive(Debug, Clone, Copy, Default, PartialEq, Pod, Zeroable)]
-pub struct Event {
-    pub pos: [f32; 2],
-    pub vel: [f32; 2],
-    pub color: [f32; 4],
-    pub size: f32,
-    pub rot: f32,
-    pub id: u32,
-    pub slot: u32,
-    pub prev: [f32; 2],
-    pub alive: u32,
-    pub pad: u32,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct Census {
-    pub alive: u32,
-    pub min: [f32; 2],
-    pub max: [f32; 2],
-    pub mean: [f32; 2],
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct Cloud {
     pub particles: Vec<Particle>,
@@ -54,14 +32,6 @@ pub struct Cloud {
     pub(super) mirror: Vec<Event>,
     pub(super) hatched: u32,
     pub trail: Vec<[u32; 4]>,
-}
-
-impl Event {
-    pub(super) fn of(p: &Particle, slot: usize, prev: [f32; 2]) -> Event {
-        let (pos, vel, color, size, rot, id) = (p.pos, p.vel, p.color, p.size, p.rot, p.id);
-        let (slot, alive) = (slot as u32, u32::from(p.age < p.life));
-        Event { pos, vel, color, size, rot, id, slot, prev, alive, pad: 0 }
-    }
 }
 
 impl Cloud {
@@ -127,24 +97,15 @@ impl Cloud {
                 }
             }
         }
-        match (s.mode[0], host) {
-            (0, _) => (0..s.total()).for_each(|k| {
-                let e = (0..7).find(|e| k < s.births[*e]).unwrap_or(7);
-                let p = spawn(s, e, s.ids[1].wrapping_add(k), points, None);
-                self.place(s, p);
-            }),
-            (1, Some(h)) => h.spawned.iter().for_each(|ev| hatch(self, s, ev, points)),
-            (2, Some(h)) => h.died.iter().for_each(|ev| hatch(self, s, ev, points)),
-            (3, Some(h)) => {
-                h.mirror.iter().filter(|ev| ev.alive != 0).for_each(|ev| hatch(self, s, ev, points))
-            }
-            _ => {}
-        }
+        self.breed(s, host, points);
+    }
+
+    pub(super) fn full(&self, s: &Sim) -> bool {
+        self.free.len() <= s.counts[0].saturating_sub(s.ids[3]) as usize
     }
 
     pub(super) fn place(&mut self, s: &Sim, p: Particle) -> bool {
-        let floor = s.counts[0].saturating_sub(s.ids[3]) as usize;
-        if self.free.len() <= floor {
+        if self.full(s) {
             return false;
         }
         let slot = self.free.pop().unwrap_or_default() as usize;
@@ -153,43 +114,5 @@ impl Cloud {
             self.spawned.push(Event::of(&p, slot, p.pos));
         }
         true
-    }
-}
-
-pub fn mark(p: &Particle) -> [u32; 4] {
-    let half = |v: f32| u32::from(half::f16::from_f32(v).to_bits());
-    let byte = |c: f32| (c.clamp(0.0, 1.0) * 255.0).round_ties_even() as u32;
-    let c = [p.color[0], p.color[1], p.color[2], p.color[3] * p.look[0]];
-    let packed = c.iter().enumerate().map(|(i, c)| byte(*c) << (8 * i)).sum();
-    let t = (p.age / p.life).min(1.0);
-    [p.pos[0].to_bits(), p.pos[1].to_bits(), half(p.size * p.look[1]) | half(t) << 16, packed]
-}
-
-impl Census {
-    pub fn of(particles: &[Particle]) -> Census {
-        let mut c = Census { min: [f32::MAX; 2], max: [f32::MIN; 2], ..Census::default() };
-        let mut sum = [0.0f64; 2];
-        for p in particles.iter().filter(|p| p.age < p.life) {
-            c.alive += 1;
-            for (i, (sum, at)) in sum.iter_mut().zip(p.pos).enumerate() {
-                (c.min[i], c.max[i], *sum) = (c.min[i].min(at), c.max[i].max(at), *sum + f64::from(at));
-            }
-        }
-        c.mean = sum.map(|v| (v / f64::from(c.alive.max(1))) as f32);
-        c
-    }
-
-    pub fn join(parts: &[Census]) -> Census {
-        let mut c = Census { min: [f32::MAX; 2], max: [f32::MIN; 2], ..Census::default() };
-        let mut sum = [0.0f64; 2];
-        for p in parts.iter().filter(|p| p.alive > 0) {
-            c.alive += p.alive;
-            for (i, sum) in sum.iter_mut().enumerate() {
-                (c.min[i], c.max[i]) = (c.min[i].min(p.min[i]), c.max[i].max(p.max[i]));
-                *sum += f64::from(p.mean[i]) * f64::from(p.alive);
-            }
-        }
-        c.mean = sum.map(|v| (v / f64::from(c.alive.max(1))) as f32);
-        c
     }
 }

@@ -1,9 +1,9 @@
-use super::kit::{Look, kit};
-use super::{B, Herd, SIM, Swarms, buffer, compute, entry, mode, module, plain, storage, uniform};
+use super::binds::layouts;
+use super::kit::kit;
+use super::{B, Herd, SIM, Swarms, buffer, compute, mode, module};
 use crate::Renderer;
 use crate::scene::{Image, SceneAssets};
 use std::collections::HashMap;
-use wgpu::ShaderStages as S;
 use wprs_scene::{
     Bake, Blend, EmitShape, Kind, Placement, Quality, Render, Scene, Surface, System, Values, flocks,
 };
@@ -59,35 +59,7 @@ impl Swarms {
             return None;
         }
         let (tier, gpu) = (r.tier(), compute(r) && !r.software());
-        let layout = |entries: &[wgpu::BindGroupLayoutEntry]| {
-            let label = Some("wprs-scene particles");
-            r.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { label, entries })
-        };
-        let filtering = wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering);
-        let sample_type = wgpu::TextureSampleType::Float { filterable: true };
-        let (view_dimension, c) = (wgpu::TextureViewDimension::D2, S::COMPUTE);
-        let texture = wgpu::BindingType::Texture { sample_type, view_dimension, multisampled: false };
-        let rects = plain(4096);
-        let layouts = [
-            layout(&[
-                entry(0, c, storage(false)),
-                entry(1, c, storage(false)),
-                entry(2, c, storage(true)),
-                entry(3, c, storage(true)),
-                entry(4, c, uniform(size_of::<wprs_scene::Sim>())),
-            ]),
-            layout(&[
-                entry(0, S::VERTEX_FRAGMENT, uniform(size_of::<Look>())),
-                entry(1, S::FRAGMENT, filtering),
-            ]),
-            layout(&[entry(0, S::FRAGMENT, texture), entry(1, S::FRAGMENT, rects)]),
-            layout(&[
-                entry(0, c, storage(true)),
-                entry(1, c, storage(false)),
-                entry(2, c, storage(false)),
-                entry(3, c, plain(16)),
-            ]),
-        ];
+        let layouts = layouts(r);
         debug_assert!(size_of::<wprs_scene::Sim>() as u64 <= SIM);
         let masks = scene.particles.values().flat_map(masks);
         let masks = masks.filter_map(|t| Some((t, assets.images.get(t)?.image()?)));
@@ -121,7 +93,7 @@ impl Swarms {
             sprites,
             flights: Vec::new(),
             marks: Vec::new(),
-            module: module(r, include_str!("sprite.wgsl")),
+            module: module(r, concat!(include_str!("sprite.wgsl"), "\n", include_str!("ribbon.wgsl"))),
             layouts,
             compute: None,
             pipelines: HashMap::new(),

@@ -84,3 +84,27 @@ fn families_are_bounded() {
         "{issues:?}"
     );
 }
+
+fn crowded() -> Json {
+    let point = json!({ "shape": { "point": [0, 0] }, "rate": 100000 });
+    json!({
+        "a": { "capacity": 5000, "emitters": [{ "shape": { "point": [100, 50] }, "rate": 100000 }],
+            "init": { "life": [100, 100], "speed": [0, 0] }, "children": [{ "system": "b", "on": "follow" }] },
+        "b": { "capacity": 10, "emitters": vec![point; 8], "init": { "life": [100, 100], "speed": [0, 0] } }
+    })
+}
+
+#[test]
+fn children_without_room_cost_nothing() {
+    let mut fly = Fly::of(crowded());
+    let (start, mut slowest) = (std::time::Instant::now(), std::time::Duration::ZERO);
+    for _ in 0..4 {
+        let at = std::time::Instant::now();
+        fly.frame(1.0 / 30.0);
+        slowest = slowest.max(at.elapsed());
+    }
+    assert!(slowest.as_millis() < 300, "{slowest:?} in {:?}", start.elapsed());
+    assert!(fly.alive(0).len() > 4000 && fly.alive(1).len() == 10);
+    let sim = fly.bake.apply(1, fly.rt.swarm(0).unwrap().sim(0, 1));
+    assert_eq!(sim.mode[2], 10, "a child never hatches more than its room");
+}

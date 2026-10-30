@@ -78,13 +78,17 @@ fn orders_put_the_chosen_particles_last() {
         ..Particle::default()
     };
     let all = [at(0.9, 1.0, 80.0), at(0.1, 4.0, 10.0), Particle::default(), at(0.5, 2.0, 50.0)];
-    let ages = |kind| stacked(&all, kind, 4.0, 100.0).iter().map(|p| p.age).collect::<Vec<_>>();
+    let mut out = vec![at(2.0, 9.0, 0.0); 9];
+    let mut ages = |kind| {
+        stacked(&all, (kind, 4.0, 100.0), &mut out);
+        out.iter().map(|p| p.age).collect::<Vec<_>>()
+    };
     assert_eq!(ages(Stack::Newest), [0.9, 0.5, 0.1, 0.0]);
     assert_eq!(ages(Stack::Oldest), [0.1, 0.5, 0.9, 0.0]);
     assert_eq!(ages(Stack::Largest), [0.9, 0.5, 0.1, 0.0]);
     assert_eq!(ages(Stack::Smallest), [0.1, 0.5, 0.9, 0.0]);
     assert_eq!(ages(Stack::Lowest), [0.1, 0.5, 0.9, 0.0]);
-    assert!(stacked(&all, Stack::Lowest, 4.0, 100.0)[3].life == 0.0);
+    assert!(out[3].life == 0.0 && out.len() == 4);
 }
 
 #[test]

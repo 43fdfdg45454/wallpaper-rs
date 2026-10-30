@@ -52,21 +52,6 @@ fn wobble(p: Particle, k: u32, a: f32) -> vec3<f32> {
     return vec3<f32>(amp * sin(turn), amp * sin(turn + TAU / 4.0), amp);
 }
 
-fn hit(p: ptr<function, Particle>, n: vec2<f32>, depth: f32, b: vec4<f32>) {
-    if depth <= 0.0 {
-        return;
-    }
-    if b.w > 0.5 {
-        (*p).age = (*p).life;
-        return;
-    }
-    (*p).pos += n * depth;
-    let vn = dot((*p).vel, n);
-    if vn < 0.0 {
-        (*p).vel = ((*p).vel - n * vn) * (1.0 - b.z) - n * vn * b.y;
-    }
-}
-
 fn follow(p: ptr<function, Particle>) {
     let o = 4u + sim.links.w + (*p).host.x * 16u;
     if (*p).host.x >= sim.mode.w || host[o + 10u] != (*p).host.y || host[o + 14u] == 0u {

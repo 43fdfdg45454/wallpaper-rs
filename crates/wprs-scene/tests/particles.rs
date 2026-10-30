@@ -180,6 +180,20 @@ fn the_scheduler_knows_when_particles_live() {
         "{:?}",
         rt.wake()
     );
+    let long = json!({ "prop": "depth", "scale": 25 });
+    let shrinking = json!({ "capacity": 10, "emitters": [{ "shape": { "point": [10, 10] }, "burst": { "count": 10 } }],
+        "init": { "life": [long, long] } });
+    let mut rt = runtime(&scene(shrinking, true));
+    rt.frame(VIEW, Quality::Q3);
+    let mut values = rt.props().clone();
+    values.insert("depth".into(), json!(0.02));
+    rt.set_props(values);
+    let mut wake = || {
+        rt.advance(1.0 / 15.0);
+        rt.frame(VIEW, Quality::Q3).wake
+    };
+    let wakes: Vec<Wake> = (0..160).map(|_| wake()).collect();
+    assert!(wakes[..148].iter().all(|w| *w == Wake::Frame) && wakes[152..].iter().all(|w| *w == Wake::Idle));
     let cued = json!({ "capacity": 50, "emitters": [
         { "shape": { "point": [10, 10] }, "burst": { "count": 7, "on": "beat" } },
         { "shape": { "point": [90, 10] }, "burst": { "count": 3, "on": "click" }, "follow": "cursor" }

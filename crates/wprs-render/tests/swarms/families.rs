@@ -87,3 +87,26 @@ fn families_agree_on_gpu_and_cpu() {
         assert!((g.mean[i] - c.mean[i]).abs() < 4.0, "mean {g:?} {c:?}");
     }
 }
+
+#[test]
+fn children_without_room_stay_cheap_on_both_paths() {
+    let Some(r) = renderer() else { return };
+    let point = json!({ "shape": { "point": [0, 0] }, "rate": 100000 });
+    let systems = json!({
+        "a": { "capacity": 5000, "emitters": [{ "shape": { "point": [80, 40] }, "rate": 100000 }],
+            "init": { "life": [100, 100], "speed": [0, 0] }, "children": [{ "system": "b", "on": "follow" }] },
+        "b": { "capacity": 10, "emitters": vec![point; 8], "init": { "life": [100, 100], "speed": [0, 0] } }
+    });
+    let layers = json!([{ "id": "a", "type": "particles", "system": "a" }]);
+    for gpu in [true, false] {
+        let Some(mut run) = Run::new(r, systems.clone(), layers.clone(), gpu) else { return };
+        run.frame(r, 1.0 / 30.0);
+        for _ in 0..2 {
+            let at = std::time::Instant::now();
+            run.frame(r, 1.0 / 30.0);
+            assert!(at.elapsed().as_millis() < 1000, "gpu {gpu}: {:?}", at.elapsed());
+        }
+        let (all, slots) = (run.census(r)[0], run.view.stats().particles);
+        assert!(all.alive == slots && slots > 1000, "gpu {gpu}: {all:?} in {slots}");
+    }
+}

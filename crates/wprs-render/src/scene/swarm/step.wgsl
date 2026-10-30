@@ -112,34 +112,7 @@ fn simulate(@builtin(global_invocation_id) gid: vec3<u32>) {
     p.rot += p.spin * dt;
     p.age += dt;
     p.look = look;
-    for (var k = 0u; k < min(sim.counts.w, 8u); k++) {
-        let a = sim.colliders[k * 2u];
-        let b = sim.colliders[k * 2u + 1u];
-        switch u32(a.x) {
-            case 1u: {
-                hit(&p, vec2<f32>(1.0, 0.0), -p.pos.x, b);
-                hit(&p, vec2<f32>(-1.0, 0.0), p.pos.x - sim.clock.z, b);
-                hit(&p, vec2<f32>(0.0, 1.0), -p.pos.y, b);
-                hit(&p, vec2<f32>(0.0, -1.0), p.pos.y - sim.clock.w, b);
-            }
-            case 2u: {
-                hit(&p, vec2<f32>(a.w, b.x), -dot(p.pos - a.yz, vec2<f32>(a.w, b.x)), b);
-            }
-            case 3u: {
-                let d = p.pos - a.yz;
-                let r = length(d);
-                hit(&p, select(vec2<f32>(0.0, -1.0), d / r, r > 1e-6), a.w - r, b);
-            }
-            case 4u: {
-                let g = field(a, p.pos);
-                if g.w > 0.5 {
-                    let l = length(g.yz);
-                    hit(&p, select(vec2<f32>(0.0, -1.0), g.yz / l, l > 1e-6), -g.x, b);
-                }
-            }
-            default: {}
-        }
-    }
+    collide(&p);
     if (sim.mode.y & 4u) != 0u {
         record(sim.links.z, i, p, i, prev);
     }

@@ -6,10 +6,9 @@ use crate::input::ParticleCommand;
 pub const MAX_EMIT: u32 = 1000;
 
 impl Swarm {
-    pub(super) fn step(&mut self, systems: &[&System], flock: &Flock, dt: f32) {
-        let mut fresh = vec![false; flock.parts.len()];
+    pub(super) fn step(&mut self, systems: &[System], flock: &Flock, dt: f32) {
         for (k, part) in flock.parts.iter().enumerate() {
-            let s = systems[part.system];
+            let s = &systems[part.system];
             let mut sim = self.frames[k];
             let (first, count) = (self.bases[k].ids[1], self.bases[k].ids[2]);
             (sim.clock[0], sim.clock[1], sim.ids[1], sim.ids[2]) = (dt, self.sim as f32, first, count);
@@ -51,12 +50,11 @@ impl Swarm {
                 }
                 sim.births[s.emitters.len().min(MAX_EMITTERS2)..].fill(total);
                 self.bases[k].ids[1] = first.wrapping_add(total);
-                fresh[k] = total > 0;
             }
+            self.outlive(k, &sim, sim.total() > 0);
             self.steps.push(sim);
         }
         self.sim += f64::from(dt);
-        fresh.iter().enumerate().filter(|(_, f)| **f).for_each(|(k, _)| self.born[k] = self.sim);
     }
 
     pub fn command(&mut self, c: ParticleCommand) {

@@ -15,7 +15,8 @@ impl Swarms {
         self.gpu = gpu;
         if gpu && self.compute.is_none() {
             let parts = [include_str!("sim.wgsl"), include_str!("shape.wgsl"), include_str!("emit.wgsl")];
-            let rest = [include_str!("simulate.wgsl"), include_str!("step.wgsl")];
+            let rest =
+                [include_str!("simulate.wgsl"), include_str!("collide.wgsl"), include_str!("step.wgsl")];
             let module = module(r, &parts.into_iter().chain(rest).collect::<Vec<_>>().join("\n"));
             let layouts = [Some(&self.layouts[0])];
             let desc = wgpu::PipelineLayoutDescriptor {
@@ -89,7 +90,7 @@ impl Swarms {
             stores.push(Store { particles, gpu, trail, stacks });
         }
         let clouds = if self.gpu { Vec::new() } else { bake.allocs.iter().map(|a| Cloud::new(*a)).collect() };
-        Flight { stores, clouds }
+        Flight { stores, clouds, sims: Vec::new() }
     }
 
     pub(crate) fn trim(&mut self) {

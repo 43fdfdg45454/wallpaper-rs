@@ -1053,7 +1053,8 @@ positions as its own `trail` asks for, or none.
   of the canvas, and reads the image once when the scene loads.
 - **Limits.** A scene simulates at most 64 systems, counting children and layers with particles of
   their own, and their capacities share the 200 000 particles. `prewarm` runs in steps of 1/15 s,
-  at most 30 million particle steps, and stops after 200 ms when particles run on the CPU.
+  at most 30 million particle steps for the whole scene, and stops once it takes more than 200 ms.
+  A child never starts more particles in a step than it has room for.
 
 A `particles` layer may also set `instance` (`alpha`, `size`, `count`, `speed`, `life`, `time_scale`,
 `brightness`, `color` and `points`, which may be bound and multiply or move what the system does for

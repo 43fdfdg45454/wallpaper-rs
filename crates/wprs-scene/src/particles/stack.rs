@@ -13,11 +13,18 @@ pub fn bin(p: &Particle, kind: Stack, size: f32, height: f32) -> u32 {
     ((k * 256.0) as u32).min(255)
 }
 
-pub fn stacked(particles: &[Particle], kind: Stack, size: f32, height: f32) -> Vec<Particle> {
-    let mut out: Vec<Particle> = particles.iter().filter(|p| p.age < p.life).copied().collect();
-    out.sort_by_key(|p| bin(p, kind, size, height));
+pub fn stacked(particles: &[Particle], (kind, size, height): (Stack, f32, f32), out: &mut Vec<Particle>) {
+    let live =
+        || particles.iter().filter(|p| p.age < p.life).map(|p| (bin(p, kind, size, height) as usize, p));
+    let mut at = [0usize; 257];
+    live().for_each(|(b, _)| at[b + 1] += 1);
+    (1..at.len()).for_each(|i| at[i] += at[i - 1]);
     out.resize(particles.len(), Particle::default());
-    out
+    out[at[256]..].fill(Particle::default());
+    for (b, p) in live() {
+        out[at[b]] = *p;
+        at[b] += 1;
+    }
 }
 
 pub fn largest(s: &System, r: &Render) -> f32 {
