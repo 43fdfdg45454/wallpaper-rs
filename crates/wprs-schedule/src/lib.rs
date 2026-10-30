@@ -1,3 +1,4 @@
+mod history;
 mod playlist;
 mod rule;
 mod solar;

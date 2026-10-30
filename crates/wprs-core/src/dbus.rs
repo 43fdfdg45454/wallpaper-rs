@@ -29,4 +29,13 @@ pub mod error {
     pub const CONFLICT: &str = "io.github.wallpaper_rs.Error.Conflict";
     pub const NEWER: &str = "io.github.wallpaper_rs.Error.Newer";
     pub const UNCONFIRMED: &str = "io.github.wallpaper_rs.Error.Unconfirmed";
+
+    pub fn reason(name: &str, message: &str) -> String {
+        let short = name.rsplit('.').next().unwrap_or_default();
+        match (message.trim(), short) {
+            ("", "") => "failed without giving a reason".into(),
+            ("", short) => format!("failed without giving a reason ({short})"),
+            (message, _) => message.into(),
+        }
+    }
 }

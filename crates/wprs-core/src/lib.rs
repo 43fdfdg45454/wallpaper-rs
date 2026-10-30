@@ -3,6 +3,7 @@ pub mod damage;
 pub mod dbus;
 pub mod edit;
 pub mod fit;
+mod keep;
 pub mod layout;
 pub mod locale;
 pub mod markup;

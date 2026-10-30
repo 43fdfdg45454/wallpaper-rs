@@ -6,6 +6,7 @@ use serde_json::json;
 use std::pin::Pin;
 use wprs_core::model::JobsReply;
 
+pub(crate) const SILENT: &str = "The job failed without giving a reason";
 const TOPICS: [&str; 9] =
     ["state", "library", "playlists", "profiles", "providers", "repos", "jobs", "inputs", "account"];
 
@@ -47,6 +48,8 @@ impl Backend {
                 self.job_progress(job, done, total);
             }
             Event::Finished(job, state, name, message) => {
+                let silent = state == "failed" && message.trim().is_empty();
+                let message = if silent { crate::tr::tr(SILENT) } else { message };
                 if state == "failed" {
                     self.as_mut().set_last_error(q(&message));
                 }

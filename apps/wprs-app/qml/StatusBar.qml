@@ -117,7 +117,7 @@ QQC2.ToolBar {
                     QQC2.Label {
                         Layout.fillWidth: true
                         visible: !!job.modelData.error
-                        text: job.modelData.error?.message ?? ""
+                        text: job.modelData.error?.message || App.tr("The job failed without giving a reason")
                         color: Kirigami.Theme.negativeTextColor
                         wrapMode: Text.Wrap
                     }

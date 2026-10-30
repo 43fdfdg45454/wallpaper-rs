@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="devices">Dispositivos</string>
+    <string name="sync_intro">Enlaza este teléfono con tu propio servidor de wallpaper-rs para compartir la biblioteca, las listas y los ajustes con tus ordenadores. Nada sale del teléfono hasta que añadas un servidor.</string>
+    <string name="server">Dirección del servidor</string>
+    <string name="add_server">Añadir servidor</string>
+    <string name="server_named">Servidor: %s</string>
+    <string name="phone_label">Nombre de este teléfono</string>
+    <string name="this_phone">Teléfono</string>
+    <string name="plain_text">Permitir sincronizar sin cifrado de extremo a extremo</string>
+    <string name="link">Enlazar este teléfono</string>
+    <string name="approve_here">Aprueba este código en un ordenador ya enlazado o en %s:</string>
+    <string name="this_device">Este teléfono: %1$s (%2$s)</string>
+    <string name="needs_key">Para leer los datos sincronizados, este teléfono necesita la clave de sincronización de un dispositivo que la tenga.</string>
+    <string name="get_key">Obtener la clave</string>
+    <string name="share_key">Compartir la clave</string>
+    <string name="waiting_join">Esperando a %s: allí, comparte la clave de sincronización con este teléfono.</string>
+    <string name="waiting_share">Esperando a %s: allí, elige obtener la clave de este teléfono.</string>
+    <string name="waiting_key">Esperando la clave de %s.</string>
+    <string name="compare">Este teléfono muestra %1$s. Escribe el código que muestra %2$s: la clave solo pasa si los dos coinciden.</string>
+    <string name="digits">Los 6 dígitos que muestra ese dispositivo</string>
+    <string name="confirm">Confirmar</string>
+    <string name="key_received">La clave de sincronización llegó de %s</string>
+    <string name="key_sent">La clave de sincronización se envió a %s</string>
+    <string name="last_sync">Última sincronización: %s</string>
+    <string name="never_synced">Aún sin sincronizar</string>
+    <string name="encrypted">Cifrado de extremo a extremo</string>
+    <string name="not_encrypted">Sin cifrado de extremo a extremo: el servidor puede leer los datos sincronizados</string>
+    <string name="sync_now">Sincronizar ahora</string>
+    <string name="pause_sync">Pausar la sincronización</string>
+    <string name="mobile_data">Sincronizar también con datos móviles</string>
+    <string name="approve_device">Aprobar un dispositivo</string>
+    <string name="approve_warning">Aprueba solo un código que muestre en pantalla tu propio dispositivo nuevo. Quien te envía un código intenta entrar en tu cuenta.</string>
+    <string name="device_code">Código del dispositivo nuevo</string>
+    <string name="look_up">Buscar</string>
+    <string name="approve">Es mi dispositivo: aprobar</string>
+    <string name="asked">Un dispositivo con %1$s y %2$s pidió este código el %3$s.</string>
+    <string name="unnamed">un programa sin nombre</string>
+    <string name="approved">Dispositivo aprobado</string>
+    <string name="remove_server">Quitar el servidor</string>
+    <string name="remove_server_question">¿Quitar el servidor? Este teléfono deja de sincronizar y el servidor lo olvida. La biblioteca de este teléfono se queda.</string>
+    <string name="conflict">%1$s (conflicto)</string>
+</resources>

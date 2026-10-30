@@ -2626,6 +2626,10 @@ msgstr "Tareas"
 msgid "No jobs"
 msgstr "No hay tareas"
 
+#: apps/wprs-app/qml/StatusBar.qml
+msgid "The job failed without giving a reason"
+msgstr "El trabajo falló sin dar ningún motivo"
+
 #: apps/wprs-app/qml/Tile.qml
 msgid "Mature content: open the details to show it"
 msgstr "Contenido para adultos: abre los detalles para mostrarlo"

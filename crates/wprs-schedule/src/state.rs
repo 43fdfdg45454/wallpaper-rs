@@ -1,3 +1,4 @@
+use crate::history::Shown;
 use crate::playlist::{Order, Playlist};
 use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
@@ -7,17 +8,21 @@ use std::path::Path;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlaylistState {
     seed: u32,
-    cycle: u32,
-    position: usize,
+    pub(crate) cycle: u32,
+    pub(crate) position: usize,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    anchor: Option<(u32, usize)>,
+    pub(crate) anchor: Option<(u32, usize)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    since: Option<DateTime<Utc>>,
+    pub(crate) since: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) behind: Vec<Shown>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) ahead: Vec<Shown>,
 }
 
 impl PlaylistState {
     pub fn new(seed: u32) -> Self {
-        Self { seed, cycle: 0, position: 0, anchor: None, since: None }
+        Self { seed, cycle: 0, position: 0, anchor: None, since: None, behind: Vec::new(), ahead: Vec::new() }
     }
 
     pub fn position(&self) -> u32 {
@@ -49,6 +54,9 @@ impl PlaylistState {
     }
 
     pub fn advance<'a>(&mut self, playlist: &'a Playlist, now: DateTime<Utc>) -> Option<&'a Path> {
+        if let Some(path) = self.travel(playlist, true, now) {
+            return path;
+        }
         if self.position + 1 >= playlist.items.len() {
             self.cycle = self.cycle.wrapping_add(1);
             self.position = 0;
@@ -60,6 +68,9 @@ impl PlaylistState {
     }
 
     pub fn back<'a>(&mut self, playlist: &'a Playlist, now: DateTime<Utc>) -> Option<&'a Path> {
+        if let Some(path) = self.travel(playlist, false, now) {
+            return path;
+        }
         let len = playlist.items.len();
         match self.position.min(len) {
             0 if self.cycle == 0 || len == 0 => return self.current(playlist),

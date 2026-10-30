@@ -106,3 +106,10 @@ async fn page_requests_reach_the_window_even_before_it_listens() {
     daemon.kill().ok();
     daemon.wait().ok();
 }
+
+#[test]
+fn a_job_that_fails_without_a_reason_is_told_in_the_users_language() {
+    let silent = crate::events::SILENT;
+    assert!(read("qml/StatusBar.qml").contains(&format!("|| App.tr(\"{silent}\")")));
+    assert!(crate::tr::catalog(&["es".to_owned()]).get(silent).is_some_and(|t| t != silent));
+}

@@ -1,11 +1,14 @@
+mod batch;
 mod db;
 mod edits;
 mod entries;
 mod filter;
 mod import;
 mod items;
+mod loose;
 mod packages;
 mod playlists;
+mod probe;
 mod profiles;
 mod query;
 mod recheck;

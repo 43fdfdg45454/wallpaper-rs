@@ -82,3 +82,14 @@ fn refusals_are_told_in_the_language_of_the_phone() {
         }
     }
 }
+
+#[test]
+fn an_error_without_text_is_told_with_a_translated_reason() {
+    let main = include_str!("../../../../android/app/src/main/kotlin/Main.kt");
+    assert!(main.contains("text.isBlank() -> getString(R.string.failed_without_reason)"));
+    let res = concat!(env!("CARGO_MANIFEST_DIR"), "/../../android/app/src/main/res");
+    for v in ["values", "values-es"] {
+        let text = std::fs::read_to_string(format!("{res}/{v}/strings.xml")).unwrap();
+        assert!(text.contains("<string name=\"failed_without_reason\">"), "no reason in {v}");
+    }
+}

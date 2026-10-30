@@ -65,7 +65,8 @@ repository refresh starts 10 minutes later.
 
 ## Errors
 
-Every error carries a readable English message.
+Every error carries a readable English message. An error raised without a description carries
+`failed without giving a reason (<Name>)`, with the last part of its error name.
 
 | Error name | When |
 |------------|------|
@@ -620,7 +621,10 @@ Progress of a running job, at most 4 times per second per job; `total = 0` means
 ### Signal `JobFinished(t job, s state, s error_name, s message)`
 
 A job ended. `state` is `done`, `failed` or `cancelled`; `error_name` and `message` are empty
-unless the job failed. A cancelled job has `message = "cancelled"`.
+unless the job failed. A cancelled job has `message = "cancelled"`. A failed job never has an
+empty `message` (see "Errors"); clients that still get one, from an older daemon, show a
+translated reason of their own (the app, the phone) or `failed without giving a reason`
+(`wprs-ctl`).
 
 ## `io.github.wallpaper_rs.Library1`
 
@@ -652,7 +656,10 @@ provider id.
 ### `Rescan(s source) → (t job)`
 
 Starts a `scan` job. `source = ""` scans every source in one job and then checks the items that
-belong to no source (imported files and packages), so that deleted files become `missing`.
+belong to no source (imported files and packages), so that deleted files become `missing`. Files
+are read (metadata, quick hash, package manifest) outside any database transaction; their changes
+are then written in short transactions of at most 256 files, and a file whose size, time and
+place did not change is not written at all, so other writers never wait for file reads.
 
 ### `Import(as paths, b copy) → (t job)`
 
@@ -722,7 +729,9 @@ Sets or clears the favorite flag of every item.
 ### `SetTags(as uids, as add, as remove)`
 
 For every item, adds the tags of `add` and then removes those of `remove`, in one transaction.
-Tag names compare without case; the first spelling stored is kept.
+Tag names compare without case; the first spelling stored is kept. A tag removed from an item that
+had it stays removed when the package brings it again (a changed file, a new version or a
+relink); adding it again lifts that. Removing the item forgets it.
 
 ### `ListTags() → (s json)`
 
@@ -731,7 +740,8 @@ A `TagsReply`: every tag in use with its item count.
 ### `RenameTag(s from, s to)`
 
 Renames a tag; if `to` exists (without regard to case) the two merge. Renaming to the same name
-with another case changes the spelling. `NotFound` for an unknown `from`.
+with another case changes the spelling. Packages of the renamed items no longer bring `from` back.
+`NotFound` for an unknown `from`.
 
 ### `Thumbnail(s uid, u size) → (s path)`
 
@@ -743,7 +753,8 @@ its `poster_time`, with the default values of its settings, the local time at wh
 the language of the package, in the decoding process; it returns
 `Failed` (`no preview: …`) only when no graphics device can draw it. A
 package that needs a newer wallpaper-rs keeps that `error` and still gets the thumbnail of its
-preview. The library reads every package again once after the daemon is upgraded.
+preview. The library reads every package again once after the daemon is upgraded, on its own
+connection and in short transactions like a scan.
 
 ### `RequestThumbnails(as uids, u size) → (a{ss} paths)`
 
@@ -914,7 +925,10 @@ without playlist.
 ### `Previous(s output)`
 
 Goes one step back on `output`, like `Next`: from the first item of a shuffle cycle to the last
-item of the previous cycle; at the very start nothing changes.
+item of the previous cycle; at the very start nothing changes. A shuffled playlist keeps the last
+32 items it showed and the last 32 it stepped back over, with their place in the shuffle, so
+`Previous` and then `Next` show exactly the items shown before, in order, also after the list
+changed or wprsd restarted; an item that left the list is skipped.
 
 ### `History(s output, u limit) → (s json)`
 
@@ -2203,7 +2217,11 @@ cached thumbnail paths; an item's path appears only in `GetItem` and in `GetStat
 `~/.config/wallpaper-rs/config.toml` is written atomically with mode `0600`; the directory is
 created with mode `0700`. If the file is a symbolic link, the link is kept and its target is
 replaced. Values out of range are clamped when the file is read and invalid colors fall back to
-the default color, with a warning naming the key.
+the default color, with a warning naming the key. Saving keeps the user's file: its comments,
+blank lines, key order (also within `[providers.*]`) and value spelling stay, only changed
+values are rewritten (keeping their trailing comments), removed keys go with the comments above
+them and new tables are added at the end. A file that does not parse, or whose merged form would
+not read back as the same configuration, is written fresh.
 
 If the file cannot be parsed at startup, the daemon starts with the default configuration and
 reports the error in `GetState().config_error` (`null` when the file is fine), as

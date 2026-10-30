@@ -30,14 +30,13 @@ pub fn denied(message: impl Into<String>) -> Error {
 
 impl Error {
     pub fn parts(&self) -> (String, String) {
-        match self {
-            Error::Fdo(e) => (
-                zbus::DBusError::name(e).to_string(),
-                zbus::DBusError::description(e).unwrap_or_default().into(),
-            ),
-            Error::Named(name, message) => ((*name).into(), message.clone()),
-            Error::Cancelled => (String::new(), "cancelled".into()),
-        }
+        let (name, message) = match self {
+            Error::Fdo(e) => (zbus::DBusError::name(e).to_string(), zbus::DBusError::description(e)),
+            Error::Named(name, message) => ((*name).into(), Some(message.as_str())),
+            Error::Cancelled => return (String::new(), "cancelled".into()),
+        };
+        let message = error::reason(&name, message.unwrap_or_default());
+        (name, message)
     }
 }
 
@@ -126,5 +125,19 @@ impl From<wprs_sync::Error> for Error {
             wprs_sync::Error::Invalid(message) => invalid(message),
             e => failed(e.to_string()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn errors_without_a_description_still_give_a_reason() {
+        let blank = [failed(""), Error::Named(error::NOT_FOUND, " ".into()), failed("disk full")];
+        let parts: Vec<_> = blank.iter().map(|e| e.parts().1).collect();
+        let none = "failed without giving a reason";
+        assert_eq!(parts, [format!("{none} (Failed)"), format!("{none} (NotFound)"), "disk full".into()]);
+        assert_eq!(Error::Cancelled.parts(), (String::new(), "cancelled".into()));
     }
 }

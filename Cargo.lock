@@ -5051,6 +5051,7 @@ dependencies = [
  "indexmap 2.14.2",
  "toml_datetime",
  "toml_parser",
+ "toml_writer",
  "winnow",
 ]
 
@@ -6118,6 +6119,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "toml",
+ "toml_edit",
  "tracing",
 ]
 

@@ -1,14 +1,13 @@
 use crate::daemon::Daemon;
 use crate::error::{Error, Result, failed, invalid, not_found};
 use crate::jobs::now;
+use crate::look::display;
 use crate::store::private_dir;
-use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_core::Fit;
-use wprs_core::config::parse_hex_color;
 use wprs_core::dbus::error::UNCONFIRMED;
 use wprs_core::model::PresetValue;
 use wprs_library::{Kind, Library};
@@ -63,25 +62,6 @@ pub fn materialize(wpak: &Path, blob: &Path) -> anyhow::Result<bool> {
         file.persist(blob)?;
     }
     Ok(video)
-}
-
-pub type Look = (Option<Fit>, Option<[u8; 3]>);
-
-fn display(path: &Path) -> wprs_format::Display {
-    let package = Kind::detect(path) == Some(Kind::Package);
-    let manifest = package.then(|| wprs_format::peek(path).ok()).flatten();
-    manifest.and_then(|m| m.display).unwrap_or_default()
-}
-
-pub fn author(path: &Path) -> Look {
-    let display = display(path);
-    let span = display.span == Some(wprs_format::Span::AllOutputs);
-    (display.fit.or(span.then_some(Fit::Span)), display.background.as_deref().and_then(parse_hex_color))
-}
-
-pub fn look((fit, background): Look, author: impl FnOnce() -> Look) -> (Fit, [u8; 3]) {
-    let (by_fit, by_background) = if fit.is_some() && background.is_some() { (None, None) } else { author() };
-    (fit.or(by_fit).unwrap_or_default(), background.or(by_background).unwrap_or_default())
 }
 
 impl Daemon {
@@ -173,78 +153,5 @@ impl Daemon {
             Err(e) => tracing::warn!("the wallpaper is shown, but its use was not recorded: {e}"),
         }
         Ok(())
-    }
-
-    pub fn tidy(self: &Arc<Self>) {
-        self.offer_examples();
-        crate::compositor::stops::recheck(self);
-        if self.store.write(|lib| lib.reread()).is_ok_and(|n| n > 0) {
-            self.library_changed(Vec::new());
-        }
-        self.thumbs.prune(u64::from(self.state().config.library.thumb_cache_mb) << 20);
-        let packages = self.store.read(|lib| lib.search("kind:package", now(), 0, u32::MAX));
-        let Ok(packages) = packages else { return };
-        let kept: HashSet<PathBuf> = packages.iter().map(|i| self.blob(&i.path, i.mtime, i.size)).collect();
-        let blobs = std::fs::read_dir(self.store.cache.join("blobs")).into_iter().flatten().flatten();
-        let base = |e: &std::fs::DirEntry| {
-            e.path().with_file_name(e.file_name().to_string_lossy().split('.').next().unwrap_or_default())
-        };
-        blobs.filter(|e| !kept.contains(&base(e))).for_each(|e| drop(std::fs::remove_file(e.path())));
-        if self.store.read(|lib| lib.unanalyzed(1)).is_ok_and(|found| !found.is_empty()) {
-            self.analyze_job();
-        }
-    }
-
-    pub fn refresh_items(&self) {
-        let paths: Vec<PathBuf> = {
-            let st = self.state();
-            let sections = std::iter::once(&st.config.default).chain(st.config.outputs.values());
-            sections.filter_map(|s| s.image.clone()).collect()
-        };
-        let find = |lib: &Library| -> Result<HashMap<PathBuf, String>> {
-            let uid = |p: &PathBuf| Some((p.clone(), lib.resolve_item(p.to_str()?).ok()?));
-            Ok(paths.iter().filter_map(uid).collect())
-        };
-        let found = self.store.read(find).unwrap_or_default();
-        let changed = {
-            let mut st = self.state();
-            std::mem::replace(&mut st.items, found) != st.items
-        };
-        if changed {
-            self.changes.changed("state", Vec::new());
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_author_look_fills_only_what_the_user_left_open() {
-        let author = || (Some(Fit::Span), Some([255, 0, 0]));
-        assert_eq!(look((None, None), author), (Fit::Span, [255, 0, 0]));
-        assert_eq!(look((None, Some([1, 2, 3])), author), (Fit::Span, [1, 2, 3]));
-        assert_eq!(look((Some(Fit::Center), None), author), (Fit::Center, [255, 0, 0]));
-        assert_eq!(look((Some(Fit::Center), Some([1, 2, 3])), || unreachable!()), (Fit::Center, [1, 2, 3]));
-        assert_eq!(look((None, None), || (None, None)), (Fit::default(), [0, 0, 0]));
-    }
-
-    #[test]
-    fn the_author_look_reads_only_the_manifest() {
-        let dir = tempfile::tempdir().unwrap();
-        let source = dir.path().join("source");
-        std::fs::create_dir(&source).unwrap();
-        let png = image::RgbaImage::from_pixel(8, 8, image::Rgba([0, 0, 255, 255]));
-        ["image.png", "preview.png"].iter().for_each(|name| png.save(source.join(name)).unwrap());
-        let manifest = serde_json::json!({"schema": wprs_format::SCHEMA, "id": "org.example.look", "version": "1.0.0",
-            "title": "Look", "license": "CC0-1.0", "kind": "image", "entry": "image.png", "content": {"rating": "general"},
-            "photosensitive": false, "origin": {"kind": "original"}, "previews": {"thumbnail": "preview.png"},
-            "requires": {"features": ["flip"]}, "display": {"flip": "horizontal", "background": "#ff0000"}});
-        std::fs::write(source.join("manifest.json"), manifest.to_string()).unwrap();
-        let wpak = dir.path().join("look.wpak");
-        wprs_format::build(&source, &wpak, &wprs_format::Limits::default()).unwrap();
-        assert!(crate::decode::open(&wpak).is_err());
-        assert_eq!(author(&wpak), (None, Some([255, 0, 0])));
     }
 }

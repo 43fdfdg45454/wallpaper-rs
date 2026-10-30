@@ -1,5 +1,7 @@
+use crate::batch::{SPAN, batches};
 use crate::db::{ensure, row_id, rows, uid, unique};
-use crate::import::{upsert, utf8};
+use crate::import::utf8;
+use crate::probe::{Probe, probe, store};
 use crate::{Error, Kind, Library, Result};
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
@@ -8,10 +10,7 @@ use std::fs;
 use std::io;
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
-
-const BATCH: usize = 256;
-const SPAN: Duration = Duration::from_secs(1);
+use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Source {
@@ -80,12 +79,13 @@ impl Library {
         }
         files.sort();
         let (mut report, mut seen, total) = (ScanReport::default(), HashSet::new(), files.len() as u32);
-        let source = row_id(&self.db, "source", uid)?;
-        let mut store = |tx: &Connection, file: &PathBuf| {
-            seen.extend(skip_file(upsert(tx, Some(source), file, now, &mut report))?);
+        let source = Some(row_id(&self.db, "source", uid)?);
+        let mut look = |db: &Connection, file: &PathBuf| skip_file(probe(db, file, source));
+        let mut keep = |tx: &Connection, mut found: Probe| {
+            seen.extend(skip_file(store(tx, source, &mut found, now, &mut report))?);
             Ok(())
         };
-        batches(&mut self.db, &files, span, &mut store, &mut |done| {
+        batches(&mut self.db, &files, span, &mut look, &mut keep, &mut |done| {
             ensure(progress(done as u32, total).is_continue(), || Error::Cancelled)
         })?;
         let tx = self.db.transaction()?;
@@ -100,51 +100,9 @@ impl Library {
         tx.commit()?;
         Ok(report)
     }
-
-    pub fn check_loose(&mut self, now: i64) -> Result<ScanReport> {
-        let sql = "SELECT id, path, missing FROM items WHERE source_id IS NULL";
-        let loose: Vec<(i64, String, bool)> =
-            rows(&self.db, sql, [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
-        let mut report = ScanReport::default();
-        let mut check = |tx: &Connection, (id, path, missing): &(i64, String, bool)| {
-            let path = Path::new(path);
-            if path.is_file() && Kind::detect(path).is_some() {
-                skip_file(upsert(tx, None, path, now, &mut report))?;
-            } else if !missing {
-                tx.execute("UPDATE items SET missing = 1 WHERE id = ?1", [id])?;
-                report.missing += 1;
-            }
-            Ok(())
-        };
-        batches(&mut self.db, &loose, SPAN, &mut check, &mut |_| Ok(()))?;
-        Ok(report)
-    }
 }
 
-fn batches<T>(
-    db: &mut Connection,
-    list: &[T],
-    span: Duration,
-    work: &mut dyn FnMut(&Connection, &T) -> Result<()>,
-    done: &mut dyn FnMut(usize) -> Result<()>,
-) -> Result<()> {
-    let mut finished = 0;
-    while finished < list.len() {
-        let (tx, started) = (db.transaction()?, Instant::now());
-        for item in list[finished..].iter().take(BATCH) {
-            work(&tx, item)?;
-            finished += 1;
-            if started.elapsed() >= span {
-                break;
-            }
-        }
-        tx.commit()?;
-        done(finished)?;
-    }
-    Ok(())
-}
-
-fn skip_file<T>(result: Result<T>) -> Result<Option<T>> {
+pub(crate) fn skip_file<T>(result: Result<T>) -> Result<Option<T>> {
     match result {
         Err(Error::Io(_) | Error::Invalid(..)) => Ok(None),
         other => other.map(Some),

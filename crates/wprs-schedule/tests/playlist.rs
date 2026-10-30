@@ -149,3 +149,35 @@ fn states_saved_without_newer_fields_still_load() {
     let state: PlaylistState = serde_json::from_str(r#"{"seed": 5, "cycle": 2, "position": 1}"#).unwrap();
     assert_eq!((state.cycle(), state.position()), (2, 1));
 }
+
+#[test]
+fn going_back_in_a_shuffle_replays_the_exact_order_both_ways_across_cycles_and_list_changes() {
+    let (p, mut state) = (playlist(5, Order::Shuffle), PlaylistState::new(9));
+    let shown = sequence(&mut state, &p, 12);
+    let step = |state: &mut PlaylistState, p: &Playlist, forward: bool| {
+        if forward {
+            state.advance(p, t0())
+        } else {
+            state.back(p, t0())
+        };
+        state.index(p).unwrap()
+    };
+    let back: Vec<usize> = (0..11).map(|_| step(&mut state, &p, false)).collect();
+    assert_eq!(back, shown[..11].iter().rev().copied().collect::<Vec<_>>());
+    let again: Vec<usize> = (0..11).map(|_| step(&mut state, &p, true)).collect();
+    assert_eq!(again, shown[1..]);
+    let mut grown = playlist(7, Order::Shuffle);
+    grown.items.rotate_left(2);
+    let at = grown.items.iter().position(|i| Some(i.as_path()) == state.current(&p)).unwrap();
+    state.seek(&grown, at);
+    let mut state: PlaylistState = serde_json::from_value(serde_json::to_value(&state).unwrap()).unwrap();
+    let path = |state: &PlaylistState, p: &Playlist| state.current(p).unwrap().to_path_buf();
+    let earlier: Vec<PathBuf> =
+        (0..3).map(|_| (step(&mut state, &grown, false), path(&state, &grown)).1).collect();
+    assert_eq!(earlier, shown[8..11].iter().rev().map(|i| p.items[*i].clone()).collect::<Vec<_>>());
+    for _ in 0..40 {
+        state.advance(&grown, t0());
+    }
+    let kept = serde_json::to_value(&state).unwrap();
+    assert_eq!((kept["behind"].as_array().unwrap().len(), kept.get("ahead")), (32, None));
+}

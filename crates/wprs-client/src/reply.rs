@@ -39,8 +39,7 @@ pub fn explain(error: zbus::Error) -> anyhow::Error {
             format!("wprsd is not running ({BUS_NAME} is not on the session bus)")
         }
         _ if older(&name) => format!("wprsd is older than this client; {MATCH}"),
-        _ if message.is_empty() => name.clone(),
-        _ => message,
+        _ => wprs_core::dbus::error::reason(&name, &message),
     };
     Error { name, message }.into()
 }

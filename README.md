@@ -491,7 +491,10 @@ con fotogramas clave cada 10 s, una pausa pasó de unos 2,3 s de CPU a menos de 
 La configuración vive en `~/.config/wallpaper-rs/config.toml` y solo la puede leer su usuario.
 Si se edita a mano, los valores fuera de rango se corrigen al leerla. Si tiene un error de
 sintaxis, el daemon arranca con los valores por defecto y muestra el error en `wprs-ctl state`
-(`config_error`); el archivo roto se copia a `config.toml.broken` antes de guardar otro.
+(`config_error`); el archivo roto se copia a `config.toml.broken` antes de guardar otro. Al
+guardar un cambio (desde la app, la bandeja, `wprs-ctl config` o el teléfono) el archivo conserva
+sus comentarios, sus líneas en blanco, el orden de las claves (también dentro de cada proveedor) y
+cómo están escritos los valores: solo se reescribe lo que cambió.
 
 Para pruebas, `wprs-ctl stream <salida> <ancho> <alto>` crea un flujo que sigue vivo al salir
 la orden y `wprs-ctl release <salida>` lo destruye. Con `--wait`, el flujo dura lo que dure la
@@ -519,7 +522,9 @@ wprs-ctl input clicks on -o DP-1                # dejar que los clics de esa pan
 Las consultas aceptan `--json` e imprimen la respuesta del daemon tal cual; sin él muestran
 tablas para leer, no para scripts. Lo que lanza un trabajo imprime su número y termina; con
 `--wait` muestra el progreso y el resultado, y Ctrl-C deja de esperar sin parar el trabajo
-(`wprs-ctl cancel <n>` lo para); en una pregunta (como instalar desde un repositorio caducado),
+(`wprs-ctl cancel <n>` lo para). Un trabajo que falla siempre dice por qué: si el error no trae
+descripción, el daemon envía `failed without giving a reason` con el nombre del error, y la app y
+el teléfono muestran un motivo en tu idioma; en una pregunta (como instalar desde un repositorio caducado),
 Ctrl-C la deja sin respuesta y no cambia nada. Las contraseñas y claves de los proveedores se piden
 sin eco o se leen de la primera línea de la entrada con `--secret-stdin`; nunca van en la orden.
 `wprs-ctl input grant` da el permiso al paquete que se ve con ese id; si varias pantallas muestran
@@ -533,7 +538,16 @@ daemon quien rechaza un argumento (un ajuste o una regla que no existe, un valor
 `wprs-ctl preset rm` acepta rutas con `:` (`~/fotos/a:b.png:Noche`).
 
 La biblioteca vigila sus carpetas, también los enlaces duros y simbólicos y las carpetas movidas o
-borradas, y un cambio durante el escaneo de una carpeta trae otro escaneo al terminar. Un archivo
+borradas, y un cambio durante el escaneo de una carpeta trae otro escaneo al terminar. El escaneo
+lee los archivos (tamaño, huella rápida y manifiesto de los paquetes) fuera de la base de datos y
+guarda los cambios en tandas cortas, sin escribir los archivos que no cambiaron, así que lo que
+cambias en la app o la bandeja no espera a que termine de leer: al revisar 1500 archivos sueltos de
+1 MiB que cambiaron, otra escritura esperó como mucho 18 ms en vez de 0,73 s, y si no cambió
+ninguno la revisión ya no escribe nada (12 ms en vez de 51 ms). Una etiqueta que quitas de un
+paquete no vuelve cuando el archivo cambia o llega otra versión (sí si la añades otra vez), y al
+renombrar una etiqueta el nombre viejo tampoco vuelve. En una lista aleatoria, *Anterior* y después
+*Siguiente* repiten exactamente lo que se mostró, en orden (se recuerdan los últimos 32 fondos),
+también después de cambiar la lista o reiniciar el daemon. Un archivo
 que el decodificador tarda demasiado en leer (15 s más 1 s por MiB, 2 min como mucho) o que lo hace
 caer no queda
 marcado como roto: se vuelve a intentar al arrancar el daemon o cuando cambia. Si la biblioteca no

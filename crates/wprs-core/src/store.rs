@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::keep::keep;
 use std::io::Write;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
@@ -44,7 +45,11 @@ impl Config {
     }
 
     pub fn save(&self, path: &Path) -> Result<(), ConfigError> {
-        write_private(path, toml::to_string_pretty(self)?.as_bytes())
+        let fresh = toml::to_string_pretty(self)?;
+        let read = |text: &str| toml::from_str::<Config>(text).ok();
+        let kept = std::fs::read_to_string(path).ok().and_then(|old| keep(&old, &fresh));
+        let kept = kept.filter(|text| read(text).is_some_and(|c| Some(c) == read(&fresh)));
+        write_private(path, kept.as_deref().unwrap_or(&fresh).as_bytes())
     }
 
     pub fn backup_broken(path: &Path) -> Result<PathBuf, ConfigError> {

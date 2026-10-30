@@ -1,6 +1,6 @@
 use crate::db::{ensure, item_ids, label, remove, row_id, rows};
 use crate::items::{Item, SELECT_ITEMS, item_in, item_row};
-use crate::tags::{TAG_LENGTH, tag_item};
+use crate::tags::{TAG_LENGTH, tag_item, untag_item};
 use crate::{Error, Library, Result};
 use rusqlite::types::ToSql;
 use rusqlite::{OptionalExtension, params};
@@ -43,14 +43,12 @@ impl Library {
     pub fn retag(&mut self, uids: &[&str], add: &[&str], remove: &[&str]) -> Result<()> {
         let (add, remove) = (tags(add)?, tags(remove)?);
         let tx = self.db.transaction()?;
-        let untag =
-            "DELETE FROM item_tags WHERE item_id = ?1 AND tag_id = (SELECT id FROM tags WHERE name = ?2)";
         for id in item_ids(&tx, uids)? {
             for tag in &add {
                 tag_item(&tx, id, tag)?;
             }
             for tag in &remove {
-                tx.execute(untag, params![id, tag])?;
+                untag_item(&tx, id, tag)?;
             }
         }
         Ok(tx.commit()?)
@@ -63,7 +61,8 @@ impl Library {
             tx.query_row("SELECT id FROM tags WHERE name = ?1", [name], |r| r.get::<_, i64>(0)).optional()
         };
         let id = find(from.trim())?.ok_or_else(|| Error::NotFound("tag", from.into()))?;
-        let target = find(to)?.filter(|other| *other != id);
+        let found = find(to)?;
+        let target = found.filter(|other| *other != id);
         let items: Vec<i64> =
             rows(&tx, "SELECT item_id FROM item_tags WHERE tag_id = ?1", [id], |r| r.get(0))?;
         if let Some(target) = target {
@@ -72,8 +71,13 @@ impl Library {
         } else {
             tx.execute("UPDATE tags SET name = ?2 WHERE id = ?1", params![id, to])?;
         }
+        let refused = "INSERT OR IGNORE INTO untagged(item_id, name) VALUES (?1, ?2)";
         for item in &items {
             tx.execute("UPDATE items SET title = title WHERE id = ?1", [item])?;
+            tx.execute("DELETE FROM untagged WHERE item_id = ?1 AND name = ?2", params![item, to])?;
+            if found != Some(id) {
+                tx.execute(refused, params![item, from.trim()])?;
+            }
         }
         tx.commit()?;
         Ok(items.len() as u32)

@@ -72,7 +72,8 @@ impl Client {
         });
         let finished = self.daemon.receive_job_finished().await?.filter_map(|s| {
             let a = s.args().ok()?;
-            let error = Error { name: a.error_name.into(), message: a.message.into() };
+            let message = wprs_core::dbus::error::reason(a.error_name, a.message);
+            let error = Error { name: a.error_name.into(), message };
             Some(Event::Finished(a.job, (a.state != "done").then_some(error)))
         });
         let (mut events, mut start) = (pin!(join(join(progressed, finished), lost)), pin!(start));

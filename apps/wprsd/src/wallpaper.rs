@@ -29,7 +29,7 @@ impl Daemon {
         };
         let (image, mut transition) =
             self.playlist_media(output, resolved.playlist.take()).unwrap_or((resolved.image.take(), None));
-        let shown = image.as_deref().map(|p| crate::apply::look(chosen, || crate::apply::author(p)));
+        let shown = image.as_deref().map(|p| crate::look::look(chosen, || crate::look::author(p)));
         (resolved.fit, resolved.background) = shown.unwrap_or((resolved.fit, resolved.background));
         let draft = self.state().drafts.get(output).map(|d| (d.pack.clone(), d.hold));
         if draft.is_some() {

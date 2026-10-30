@@ -23,6 +23,7 @@ mod jobs;
 mod keyring;
 mod kinds;
 mod library1;
+mod look;
 mod packages;
 mod picks;
 mod pixels;
@@ -48,6 +49,7 @@ mod sceneprops;
 mod scenes;
 mod scenevalues;
 mod schema;
+mod serve;
 mod service;
 #[cfg(test)]
 mod spec;
@@ -57,6 +59,7 @@ mod surfaces;
 mod sync;
 mod sync1;
 mod thumbs;
+mod tidy;
 mod timing;
 mod wallpaper;
 mod watch;
@@ -64,29 +67,24 @@ mod words;
 mod worker;
 mod zone;
 
-use anyhow::Context;
 use clap::Parser;
 use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::signal::unix::{SignalKind, signal};
 use tracing_subscriber::EnvFilter;
-use wprs_core::{Config, dbus};
-use zbus::fdo::{DBusProxy, RequestNameFlags};
 
 #[derive(Parser)]
 #[command(
     version = wprs_core::VERSION,
     about = "Renders wallpapers and shows them through PipeWire streams, layer-shell surfaces or X11 windows"
 )]
-struct Args {
+pub(crate) struct Args {
     #[arg(long, help = "Configuration file to use instead of the default one")]
-    config: Option<PathBuf>,
+    pub(crate) config: Option<PathBuf>,
     #[arg(long, hide = true)]
     worker: bool,
     #[arg(long, hide = true)]
     script_host: bool,
     #[arg(long, value_enum, default_value = "auto", help = "How wallpapers reach the desktop")]
-    backend: present::Backend,
+    pub(crate) backend: present::Backend,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -109,7 +107,7 @@ fn main() -> anyhow::Result<()> {
         let thread = std::thread::current();
         fatal(&format!("thread {} {info}", thread.name().unwrap_or("unnamed")))
     }));
-    run(args)
+    serve::run(args)
 }
 
 fn skip_vulkan_device_selection_layer() {
@@ -128,81 +126,6 @@ pub(crate) fn quit(status: i32) -> ! {
         wprs_scene::end_trials();
     }
     unsafe { libc::_exit(status) }
-}
-
-#[tokio::main]
-async fn run(args: Args) -> anyhow::Result<()> {
-    let config_path = args.config.map_or_else(Config::default_path, Ok)?;
-    let connection = zbus::Connection::session().await.context("cannot connect to the session bus")?;
-    let bus = DBusProxy::new(&connection).await?;
-    let taken = || anyhow::anyhow!("another wprsd already owns {} on the session bus", dbus::BUS_NAME);
-    if bus.name_has_owner(dbus::BUS_NAME.try_into()?).await? {
-        return Err(taken());
-    }
-    compositor::stops::restore();
-    let session = present::select(args.backend, &bus).await?;
-    let display = session.as_ref().map(|s| Box::new(s.display()) as wprs_render::Display);
-    let daemon =
-        Arc::new(tokio::task::spawn_blocking(move || daemon::Daemon::new(config_path, display)).await??);
-    let vanished = bus.receive_name_owner_changed_with_args(&[(2, "")]).await?;
-    tokio::spawn(watch::clients(vanished, daemon.clone()));
-    let server = connection.object_server();
-    let weak = Arc::downgrade(&daemon);
-    server.at(dbus::OBJECT_PATH, service::Service(weak.clone())).await?;
-    server.at(dbus::OBJECT_PATH, library1::Library(weak.clone())).await?;
-    server.at(dbus::OBJECT_PATH, playlists1::Playlists(weak.clone())).await?;
-    server.at(dbus::OBJECT_PATH, profiles1::Profiles(weak.clone())).await?;
-    server.at(dbus::OBJECT_PATH, providers1::Providers(weak.clone())).await?;
-    server.at(dbus::OBJECT_PATH, inputs1::Inputs(weak.clone())).await?;
-    server.at(dbus::OBJECT_PATH, repos1::Repos(weak.clone())).await?;
-    server.at(dbus::OBJECT_PATH, sync1::Sync(weak)).await?;
-    tokio::spawn(changes::emit(connection.clone(), daemon.clone()));
-    inputs1::start(&daemon, connection.clone());
-    pool::start(&daemon);
-    folders::start(&daemon);
-    remote::start(&daemon, connection.clone());
-    account::start(&daemon, connection.clone());
-    edits::start(&daemon);
-    tokio::task::spawn_blocking({
-        let daemon = daemon.clone();
-        move || daemon.tidy()
-    });
-    let flags = RequestNameFlags::DO_NOT_QUEUE;
-    connection.request_name_with_flags(dbus::BUS_NAME, flags).await.map_err(|e| match e {
-        zbus::Error::NameTaken => taken(),
-        e => e.into(),
-    })?;
-    tracing::info!("serving {} on the session bus", dbus::BUS_NAME);
-    match session {
-        Some(session) => surfaces::start(session, daemon.clone())?,
-        None if std::env::var_os("WAYLAND_DISPLAY").is_some() => pixels::follow_modes(&daemon),
-        None => {}
-    }
-    tokio::spawn(flatpak::request_background(connection.clone()));
-    let (power, known) = tokio::sync::oneshot::channel();
-    tokio::spawn(watch::battery(daemon.clone(), power));
-    tokio::spawn(watch::screen_lock(connection.clone(), daemon.clone()));
-    tokio::spawn(watch::properties(connection.clone(), daemon.clone()));
-    tokio::spawn(watch::motion(connection.clone(), daemon.clone()));
-    tokio::spawn(watch::saver(daemon.clone()));
-    tokio::spawn(bus::announce_streams(connection.clone(), daemon.clone()));
-    tokio::spawn(playback::run(daemon.clone()));
-    tokio::spawn(picks::run(daemon.clone()));
-    tokio::spawn(profiles1::follow(daemon.clone(), known));
-    if cfg!(debug_assertions) && std::env::var_os("WPRS_RENDER_STOP").is_some() {
-        let (daemon, mut stop) = (daemon.clone(), signal(SignalKind::user_defined2())?);
-        tokio::spawn(async move { stop.recv().await.map(|()| daemon.compositor.stop()) });
-    }
-    let mut terminate = signal(SignalKind::terminate())?;
-    tokio::select! {
-        _ = tokio::signal::ctrl_c() => {}
-        _ = terminate.recv() => {}
-    }
-    tracing::info!("shutting down");
-    wprs_scene::end_trials();
-    inputs::stop(&connection).await;
-    wprs_render::finish_builds(0);
-    Ok(())
 }
 
 #[cfg(test)]

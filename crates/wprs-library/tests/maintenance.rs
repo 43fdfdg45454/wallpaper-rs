@@ -123,7 +123,7 @@ fn loose_items_become_missing_when_their_file_goes_and_return_with_it() {
 }
 
 #[test]
-fn relinking_keeps_the_item_and_its_user_data_and_merges_package_tags() {
+fn relinking_keeps_the_item_its_user_data_and_tag_deletions_and_adds_new_package_tags() {
     let dir = TempDir::new().unwrap();
     let mut library = Library::open(dir.path().join("library.db")).unwrap();
     let old = package(dir.path(), "1.2.0", &["water"], "old pixels");
@@ -146,7 +146,7 @@ fn relinking_keeps_the_item_and_its_user_data_and_merges_package_tags() {
     );
     assert_eq!(
         (item.package.unwrap().version, item.tags, item.meta),
-        ("1.3.0".into(), vec!["mine".into(), "night".into(), "water".into()], Meta::default())
+        ("1.3.0".into(), vec!["mine".into(), "night".into()], Meta::default())
     );
     assert_eq!(library.playlist_items(&list, NOW).unwrap()[0].uid, uid);
     assert_eq!(library.presets(Some(&uid)).unwrap().len(), 1);

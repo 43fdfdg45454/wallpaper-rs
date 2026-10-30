@@ -1,6 +1,7 @@
+use crate::batch::{SPAN, batches};
 use crate::db::{ensure, printable, rows};
 use crate::items::{Item, PackageInfo, item_in};
-use crate::tags::{TAG_LENGTH, tag_item};
+use crate::tags::{TAG_LENGTH, offer_tag};
 use crate::{Error, Kind, Library, Result};
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
@@ -15,23 +16,31 @@ struct Titles {
     texts: BTreeMap<String, String>,
 }
 
-pub(crate) fn package(db: &Connection, id: i64, kind: Kind, path: &Path) -> Result<Option<Manifest>> {
-    if kind != Kind::Package {
-        return Ok(None);
-    }
+pub(crate) struct Reading {
+    pub(crate) manifest: Option<Manifest>,
+    facets: Option<String>,
+    error: Option<String>,
+}
+
+pub(crate) fn read_package(kind: Kind, path: &Path) -> Option<Reading> {
+    (kind == Kind::Package).then_some(())?;
     let read = wprs_format::open(path, &Limits::default()).and_then(|mut p| p.look_at_videos().map(|()| p));
-    let (manifest, facets, error) = match read {
+    Some(match read {
         Ok(package) => {
             let refused = playable(&package.manifest, &package.facts, Platform::here()).err();
-            (Some(package.manifest), Some(package.facts.facets.join(" ")), refused.map(|e| e.to_string()))
+            let (facets, error) = (Some(package.facts.facets.join(" ")), refused.map(|e| e.to_string()));
+            Reading { manifest: Some(package.manifest), facets, error }
         }
-        Err(e) => (None, None, Some(e.to_string())),
-    };
-    let m = manifest.as_ref();
+        Err(e) => Reading { manifest: None, facets: None, error: Some(e.to_string()) },
+    })
+}
+
+pub(crate) fn store_package(db: &Connection, id: i64, reading: &Reading) -> Result<()> {
+    let m = reading.manifest.as_ref();
     let (pkg_id, version) = (m.map(|m| &m.id), m.map(|m| &m.version));
     let (pkg_type, license) = (m.map(|m| m.kind.to_string()), m.map(|m| &m.license));
     let content = m.and_then(|m| m.content.as_ref()).map(|c| c.rating.name());
-    let (flashing, read) = (m.and_then(|m| m.photosensitive), wprs_core::VERSION);
+    let (flashing, read, facets) = (m.and_then(|m| m.photosensitive), wprs_core::VERSION, &reading.facets);
     let titles = m.and_then(|m| match m.resolve(&m.title) {
         Text::Localized(texts) if texts.len() > 1 => {
             serde_json::to_string(&Titles { default: m.default_locale.clone(), texts }).ok()
@@ -40,33 +49,37 @@ pub(crate) fn package(db: &Connection, id: i64, kind: Kind, path: &Path) -> Resu
     });
     let sql = "UPDATE items SET error = ?2, pkg_id = ?3, pkg_version = ?4, pkg_type = ?5, license = ?6, \
         content = ?7, photosensitive = ?8, facets = ?9, pkg_read = ?10, titles = ?11 WHERE id = ?1";
+    let error = &reading.error;
     let values =
         params![id, error, pkg_id, version, pkg_type, license, content, flashing, facets, read, titles];
     db.execute(sql, values)?;
     let usable = |tag: &&String| printable(tag.trim(), TAG_LENGTH) && !tag.contains(['<', '>']);
     for tag in m.iter().flat_map(|m| &m.tags).filter(usable) {
-        tag_item(db, id, tag)?;
+        offer_tag(db, id, tag)?;
     }
-    Ok(manifest)
+    Ok(())
 }
 
 impl Library {
     pub fn reread(&mut self) -> Result<u32> {
-        let tx = self.db.transaction()?;
         let sql = "SELECT id, path, pkg_id IS NULL AND error IS NOT NULL FROM items \
             WHERE kind = 'package' AND missing = 0 AND pkg_read IS NOT ?1";
         let found: Vec<(i64, String, bool)> =
-            rows(&tx, sql, [wprs_core::VERSION], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
-        for (id, path, unread) in &found {
-            let path = Path::new(path);
-            let Some(manifest) = package(&tx, *id, Kind::Package, path)?.filter(|_| *unread) else {
-                continue;
-            };
+            rows(&self.db, sql, [wprs_core::VERSION], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
+        let mut read = |_: &Connection, (id, path, unread): &(i64, String, bool)| {
+            Ok(read_package(Kind::Package, Path::new(path))
+                .map(|reading| (*id, path.clone(), *unread, reading)))
+        };
+        let mut store = |tx: &Connection, (id, path, unread, reading): (i64, String, bool, Reading)| {
+            store_package(tx, id, &reading)?;
+            let Some(manifest) = reading.manifest.filter(|_| unread) else { return Ok(()) };
+            let path = Path::new(&path);
             let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
             let title = manifest.title_in(&wprs_core::locale::languages());
-            tx.execute("UPDATE items SET title = ?2 WHERE id = ?1 AND title = ?3", params![id, title, stem])?;
-        }
-        tx.commit()?;
+            let sql = "UPDATE items SET title = ?2 WHERE id = ?1 AND title = ?3";
+            tx.execute(sql, params![id, title, stem]).map(drop).map_err(Into::into)
+        };
+        batches(&mut self.db, &found, SPAN, &mut read, &mut store, &mut |_| Ok(()))?;
         Ok(found.len() as u32)
     }
 

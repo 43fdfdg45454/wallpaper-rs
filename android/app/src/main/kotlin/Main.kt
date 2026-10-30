@@ -117,6 +117,7 @@ class Main : ComponentActivity() {
     fun toast(text: String) = Toast.makeText(this, told(text), Toast.LENGTH_LONG).show()
 
     private fun told(text: String) = when {
+        text.isBlank() -> getString(R.string.failed_without_reason)
         text.startsWith(NEWER) -> getString(R.string.refused_newer)
         text.startsWith(ELSEWHERE) -> getString(R.string.refused_elsewhere)
         else -> text
