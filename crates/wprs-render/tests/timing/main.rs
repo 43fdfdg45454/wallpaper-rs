@@ -5,6 +5,7 @@ mod exits;
 mod hostile;
 mod slow;
 mod spans;
+mod stack;
 mod variants;
 
 use hostile::{Shown, entry};

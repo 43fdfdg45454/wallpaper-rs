@@ -1,7 +1,10 @@
 mod binds;
+mod census;
+mod dispatch;
 mod kit;
 mod paint;
 mod setup;
+mod show;
 pub(crate) use setup::sprites;
 mod sort;
 mod sprite;

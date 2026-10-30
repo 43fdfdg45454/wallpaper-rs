@@ -123,13 +123,15 @@ fn draw(
     let from = output.fade.as_ref().map(|(from, _)| from.layer(players, 1.0, moved, output.size));
     let layers = [from.unwrap_or(shown), shown];
     let layers = &layers[usize::from(from.is_none())..];
+    let damage = output.damage();
     let written = match &mut output.sink {
         _ if unchanged => Ok(Ok(())),
         Sink::Stream(target) => match exporter.lease(name) {
-            Grant::Buffer(lease) => {
+            Grant::Buffer(mut lease) => {
                 *target = None;
+                (lease.damage, _) = (damage, output.ages.push(damage));
                 let image = lease.image.downcast_ref::<Exported>().context("foreign stream buffer")?;
-                renderer.render_exported(image, layers).map(|()| exporter.present(lease))
+                renderer.render_exported(image, layers, &output.ages).map(|()| exporter.present(lease))
             }
             Grant::Wait => {
                 output.last_render = Some(now);
@@ -140,8 +142,9 @@ fn draw(
                     Some(target) => target,
                     empty => empty.insert(renderer.create_target(output.size.0, output.size.1)?),
                 };
-                renderer.render_layers_with(target, layers, |w, h, s, d| {
-                    exporter.write_frame(name, VideoFrame { width: w, height: h, stride: s, data: d })
+                output.ages.push(damage);
+                renderer.render_damaged(target, layers, &output.ages, |w, h, s, damage, data| {
+                    exporter.write_damage(name, VideoFrame { width: w, height: h, stride: s, data }, damage)
                 })
             }
         },
@@ -155,6 +158,7 @@ fn draw(
     }
     written??;
     output.missing_frame = output.shown.content.video().is_some() && shown.image.is_none();
+    output.shown.scene.iter_mut().for_each(|s| s.damage = Some(Default::default()));
     (output.last_render, output.failed) = (Some(now), 0);
     output.fade = output.fade.take().filter(|_| progress < 1.0);
     output.dirty = output.fading();

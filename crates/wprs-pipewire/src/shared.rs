@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError, RwLock};
 use std::time::Instant;
+use wprs_core::{Ages, Region};
 
 type Notify = Box<dyn Fn() + Send + Sync>;
 
@@ -16,6 +17,7 @@ pub struct Slot {
     pub dirty: AtomicBool,
     pub started: Mutex<Option<Instant>>,
     pub pool: Mutex<Pool>,
+    pub ages: Mutex<Ages>,
 }
 
 pub enum Due<'a> {
@@ -39,17 +41,33 @@ impl Slot {
     }
 
     pub fn replace(&self, frame: Arc<VideoFrame>) -> bool {
-        let _old = self.frame().replace(frame);
+        let mut held = self.frame();
+        let _old = held.replace(frame);
+        lock(&self.ages).push(None);
+        drop(held);
         self.dirty.store(true, SeqCst);
         self.streaming.load(SeqCst)
     }
 
-    pub fn write(&self, src: &VideoFrame<&[u8]>) -> bool {
+    pub fn write(&self, src: &VideoFrame<&[u8]>, damage: Option<Region>) -> bool {
         let mut frame = self.frame();
-        match frame.as_mut().and_then(Arc::get_mut) {
-            Some(retained) => retained.assign(src),
-            None => *frame = Some(Arc::new(VideoFrame::copy_of(src))),
-        }
+        let same = |f: &VideoFrame| (f.width, f.height) == (src.width, src.height);
+        let damage = damage.filter(|_| frame.as_deref().is_some_and(same));
+        let patched = match (frame.as_mut().and_then(Arc::get_mut), damage) {
+            (Some(retained), Some(r)) => {
+                retained.patch(src, r);
+                Some(r)
+            }
+            (Some(retained), None) => {
+                retained.assign(src);
+                None
+            }
+            (None, _) => {
+                *frame = Some(Arc::new(VideoFrame::copy_of(src)));
+                None
+            }
+        };
+        lock(&self.ages).push(patched);
         drop(frame);
         self.dirty.store(true, SeqCst);
         self.streaming.load(SeqCst)
@@ -110,10 +128,10 @@ mod tests {
     #[test]
     fn writes_reuse_the_retained_buffer_and_wake_only_when_streaming() {
         let (slot, pixels) = (Slot::default(), [3u8; 16]);
-        assert!(!slot.write(&borrowed(&pixels)));
+        assert!(!slot.write(&borrowed(&pixels), None));
         let retained = slot.frame().as_ref().map(|f| f.data.as_ptr());
         slot.streaming.store(true, SeqCst);
-        assert!(slot.write(&borrowed(&[4u8; 16])));
+        assert!(slot.write(&borrowed(&[4u8; 16]), None));
         assert_eq!(slot.frame().as_ref().map(|f| f.data.as_ptr()), retained);
         assert!(slot.dirty.load(SeqCst));
     }
@@ -123,7 +141,7 @@ mod tests {
         let slot = Slot::default();
         slot.dirty.store(true, SeqCst);
         assert!(matches!(slot.due(), Due::Missing), "a placeholder frame would be sent");
-        slot.write(&borrowed(&[5u8; 16]));
+        slot.write(&borrowed(&[5u8; 16]), None);
         assert!(
             matches!(slot.due(), Due::Ready(frame) if frame.as_ref().is_some_and(|f| f.data == [5u8; 16]))
         );
@@ -136,7 +154,7 @@ mod tests {
         let slot = Slot::default();
         let pushed = Arc::new(VideoFrame { width: 2, height: 2, stride: 8, data: vec![1u8; 16] });
         slot.replace(pushed.clone());
-        slot.write(&borrowed(&[2u8; 16]));
+        slot.write(&borrowed(&[2u8; 16]), None);
         assert!(pushed.data.iter().all(|&b| b == 1));
         assert!(slot.frame().as_ref().is_some_and(|f| f.data == [2u8; 16]));
     }

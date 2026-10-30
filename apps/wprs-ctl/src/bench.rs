@@ -76,9 +76,6 @@ pub fn run(command: SceneCommand) -> Result<()> {
         Some(q) => serde_json::from_value(json!(q))?,
         None => Quality::fit(&scene, tier, tier.quality(false)),
     };
-    let scale = quality.render_scale();
-    let inner =
-        ((size.0 as f32 * scale).round().max(1.0) as u32, (size.1 as f32 * scale).round().max(1.0) as u32);
     let cost = scene.cost(quality);
     let mut runtime = Runtime::new(Arc::new(scene), values);
     assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
@@ -88,11 +85,12 @@ pub fn run(command: SceneCommand) -> Result<()> {
         others.push(r.scene_view(&runtime.scene, &assets, runtime.props())?);
     }
     let mut view = r.scene_view(&runtime.scene, &assets, runtime.props())?;
+    let mut inner = view.inner(&r, size, quality);
     let load_ms = start.elapsed().as_secs_f64() * 1e3;
     drop(assets);
     view.profile_particles(true);
     let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);
-    let (mut sim, mut steps, mut compiled) = (Vec::new(), 0, 0);
+    let (mut sim, mut steps, mut compiled, mut gpu) = (Vec::new(), 0, 0, Vec::new());
     let mut wake = Wake::Frame;
     let mut since = Duration::ZERO;
     let step = Duration::from_secs(1) / fps.max(1);
@@ -108,6 +106,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         };
         needed += usize::from(due);
         since = if due { Duration::ZERO } else { since };
+        inner = view.inner(&r, size, quality);
         let start = Instant::now();
         let frame = runtime.frame(view.view(inner), quality);
         eval.push(start.elapsed().as_secs_f64() * 1e6);
@@ -123,6 +122,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
             let s = view.stats();
             (created, steps, compiled) = (created + s.created, steps + s.steps, compiled + s.compiled);
             sim.push(f64::from(view.stats().sim_us) / 1e3);
+            gpu.push(f64::from(view.stats().gpu_us) / 1e3);
         }
     }
     let steady = frames.saturating_sub(WARMUP).max(1);
@@ -141,7 +141,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
     let report = json!({
         "path": path, "adapter": r.adapter(), "tier": tier, "quality": quality, "size": [size.0, size.1],
         "render_size": [inner.0, inner.1], "frames": frames, "needed": needed, "cost_units": cost,
-        "eval_us": spread(eval), "render_ms": spread(render), "passes": stats.passes, "draws": stats.draws,
+        "eval_us": spread(eval), "render_ms": spread(render), "gpu_ms": spread(gpu), "passes": stats.passes, "draws": stats.draws,
         "textures": stats.textures, "cached": stats.reused, "created_after_warmup": created,
         "compiled_after_warmup": compiled, "screens": screens, "load_ms": load_ms, "first_ms": first_ms,
         "gpu_mib": gpu_mib, "rss_mib": rss_mib,
@@ -162,6 +162,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
     );
     println!("frames       {frames}, {needed} needed by the scheduler, estimated cost {cost:.2} units");
     println!("evaluation   {}\nrender       {}", ms("eval_us", "µs"), ms("render_ms", "ms"));
+    println!("gpu          {}", ms("gpu_ms", "ms"));
     println!(
         "start        {load_ms:.1} ms to load, {first_ms:.1} ms for the first frame of {screens} screens"
     );

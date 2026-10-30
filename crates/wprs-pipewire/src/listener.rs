@@ -1,8 +1,7 @@
 use crate::dmabuf::{self, Allocate, Dmabuf};
-use crate::frame::write_into;
-use crate::memfd;
 use crate::params::{self, Modifier};
 use crate::shared::{Due, Shared, Slot, lock};
+use crate::{damage, memfd};
 use pipewire as pw;
 use pw::spa;
 use std::cell::{Cell, RefCell};
@@ -26,6 +25,8 @@ pub fn listen(
     let (fixed, spares) = (Rc::new(Cell::new(None)), Rc::new(RefCell::new(Vec::new())));
     let (on_param, on_add, on_remove, frames) = (slot.clone(), slot.clone(), slot.clone(), slot.clone());
     let (chosen, kept, allocator, changed) = (fixed.clone(), spares.clone(), gpu.clone(), shared.clone());
+    let seen = Rc::new(RefCell::new(damage::Seen::default()));
+    let forgot = seen.clone();
     stream
         .add_local_listener::<()>()
         .state_changed(move |stream, _, old, new| {
@@ -57,8 +58,12 @@ pub fn listen(
                 (Modifier::Choice(list), Some(gpu), _) => {
                     fixate(gpu, &on_param, (width, height), &list, &mut spares.borrow_mut())
                 }
-                (_, _, Some(_)) if synced && fixed.get().is_some() => params::synced(width, height),
-                (_, _, Some(_)) => vec![params::buffers(width, height, fixed.get().is_some())],
+                (_, _, Some(_)) if synced && fixed.get().is_some() => {
+                    params::synced(width, height).into_iter().chain([params::damage()]).collect()
+                }
+                (_, _, Some(_)) => {
+                    vec![params::buffers(width, height, fixed.get().is_some()), params::damage()]
+                }
             };
             let mut pods: Vec<&spa::pod::Pod> =
                 pods.iter().filter_map(|b| spa::pod::Pod::from_bytes(b)).collect();
@@ -99,17 +104,25 @@ pub fn listen(
             }
         })
         .remove_buffer(move |_, _, buffer| unsafe {
+            forgot.borrow_mut().forget(buffer);
             dmabuf::remove(buffer, &mut lock(&on_remove.pool));
             memfd::remove(buffer);
         })
         .process(move |stream, _| {
-            let starved = dmabuf::process(stream, &frames).unwrap_or_else(|| match frames.due() {
+            let size = (width, height);
+            let starved = dmabuf::process(stream, &frames, size).unwrap_or_else(|| match frames.due() {
                 Due::Missing => true,
                 Due::Sent => false,
                 Due::Ready(frame) => {
-                    if let (Some(mut buffer), Some(frame)) = (stream.dequeue_buffer(), frame.as_deref()) {
+                    let buffer = unsafe { stream.dequeue_raw_buffer() };
+                    if let (false, Some(frame)) = (buffer.is_null(), frame.as_deref()) {
                         frames.dirty.store(false, SeqCst);
-                        write_into(buffer.datas_mut(), frame, width, height);
+                        let (ages, mut seen) = (lock(&frames.ages), seen.borrow_mut());
+                        let held = seen.swap(buffer, ages.serial());
+                        unsafe { damage::write(buffer, frame, size, ages.since(held)) };
+                        unsafe { damage::mark(buffer, ages.since(seen.sent), size) };
+                        seen.sent = ages.serial();
+                        unsafe { stream.queue_raw_buffer(buffer) };
                     }
                     false
                 }

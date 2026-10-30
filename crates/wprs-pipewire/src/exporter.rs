@@ -2,6 +2,7 @@ use crate::shared::{Slot, lock};
 use crate::{Allocate, Command, Error, Exporter, Grant, Lease, Reply, StreamInfo, VideoFrame};
 use std::sync::Arc;
 use std::sync::atomic::Ordering::SeqCst;
+use wprs_core::Region;
 
 impl Exporter {
     pub fn ensure_stream(&self, output: &str, width: u32, height: u32, reply: Reply) {
@@ -23,8 +24,17 @@ impl Exporter {
     }
 
     pub fn write_frame(&self, output: &str, frame: VideoFrame<&[u8]>) -> Result<(), Error> {
+        self.write_damage(output, frame, None)
+    }
+
+    pub fn write_damage(
+        &self,
+        output: &str,
+        frame: VideoFrame<&[u8]>,
+        damage: Option<Region>,
+    ) -> Result<(), Error> {
         check(&frame)?;
-        self.wake(self.shared.with_slot(output, |slot| slot.write(&frame)))
+        self.wake(self.shared.with_slot(output, |slot| slot.write(&frame, damage)))
     }
 
     pub fn use_dmabuf(&self, gpu: Arc<dyn Allocate>) {

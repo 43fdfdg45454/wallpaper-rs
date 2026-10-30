@@ -1,3 +1,4 @@
+mod damage;
 mod dmabuf;
 mod exporter;
 mod frame;

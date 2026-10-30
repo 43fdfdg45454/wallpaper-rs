@@ -36,6 +36,7 @@ impl Renderer {
     ) -> (SceneStats, wgpu::SubmissionIndex, Instant) {
         let pipes = self.scene.get().expect("created with the view");
         let mut encoder = self.device.create_command_encoder(&Default::default());
+        clock.open(&mut encoder, timing);
         let mut stats = SceneStats::default();
         let frame = pool.frame_groups().clone();
         let mut k = 0;

@@ -1,7 +1,7 @@
 #![cfg(target_os = "linux")]
 
 use rustix::mm::{MapFlags, ProtFlags, mmap, munmap};
-use wprs_core::Fit;
+use wprs_core::{Ages, Fit, Region};
 use wprs_render::{Layer, Renderer};
 
 fn color(background: [u8; 3]) -> Layer<'static> {
@@ -21,12 +21,17 @@ fn frames_reach_exported_memory_in_the_layout_the_consumer_reads() {
     assert!(dmabufs.modifiers().contains(&buffer.modifier));
     assert!(buffer.stride >= 70 * 4 && buffer.size >= buffer.offset + buffer.stride * 30);
     assert!(dmabufs.allocate(70, 30, &[u64::MAX - 1]).is_err());
-    r.render_exported(&buffer.image, &[color([0, 255, 0])]).unwrap();
+    let mut ages = Ages::default();
+    let mut draw = |image: &wprs_render::Exported, background, damage| {
+        ages.push(damage);
+        r.render_exported(image, &[color(background)], &ages).unwrap()
+    };
+    draw(&buffer.image, [0, 255, 0], None);
     let buffer = match r.software() {
         true => buffer,
         false => dmabufs.allocate(70, 30, &[0]).expect("every GPU exports linear frames, drawn or copied"),
     };
-    r.render_exported(&buffer.image, &[color([0, 255, 0])]).unwrap();
+    draw(&buffer.image, [0, 255, 0], None);
     let len = buffer.size as usize;
     let map =
         unsafe { mmap(std::ptr::null_mut(), len, ProtFlags::READ, MapFlags::SHARED, &buffer.fd, 0) }.unwrap();
@@ -36,7 +41,10 @@ fn frames_reach_exported_memory_in_the_layout_the_consumer_reads() {
         [bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]]
     };
     assert_eq!([at(0, 0), at(69, 29)], [[0, 255, 0, 255]; 2]);
-    r.render_exported(&buffer.image, &[color([255, 0, 0])]).unwrap();
+    draw(&buffer.image, [255, 0, 0], None);
     assert_eq!([at(35, 0), at(0, 29)], [[0, 0, 255, 255]; 2]);
+    draw(&buffer.image, [0, 0, 255], Some(Region { x: 10, y: 5, width: 20, height: 10 }));
+    assert_eq!([at(15, 8), at(29, 14)], [[255, 0, 0, 255]; 2], "the damage was not drawn");
+    assert_eq!([at(0, 0), at(30, 8), at(15, 15)], [[0, 0, 255, 255]; 3], "pixels outside the damage changed");
     unsafe { munmap(map, len) }.unwrap();
 }

@@ -4,6 +4,7 @@ use crate::syncobj::{Fences, sync_meta};
 use pipewire::sys::pw_buffer;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use wprs_core::Region;
 
 const RETRY_GPU: Duration = Duration::from_secs(60);
 
@@ -37,6 +38,7 @@ pub struct Pool {
     ready: Option<usize>,
     epoch: u64,
     sent: u64,
+    damage: Option<Region>,
 }
 
 pub enum Grant {
@@ -51,6 +53,7 @@ pub struct Lease {
     epoch: u64,
     pub(crate) shown: bool,
     pub image: Image,
+    pub damage: Option<Region>,
 }
 
 impl Lease {
@@ -61,7 +64,7 @@ impl Lease {
 
 impl Drop for Lease {
     fn drop(&mut self) {
-        lock(&self.slot.pool).finish(self.index, self.epoch, self.shown);
+        lock(&self.slot.pool).finish(self.index, self.epoch, self.shown, self.damage);
     }
 }
 
@@ -126,12 +129,15 @@ impl Pool {
             .min_by_key(|(_, b)| b.sent)?;
         let image = buffer.image.clone();
         self.set(index, Use::Leased);
-        Some(Lease { slot: slot.clone(), index, epoch: self.epoch, shown: false, image })
+        Some(Lease { slot: slot.clone(), index, epoch: self.epoch, shown: false, image, damage: None })
     }
 
-    fn finish(&mut self, index: usize, epoch: u64, shown: bool) {
+    fn finish(&mut self, index: usize, epoch: u64, shown: bool, damage: Option<Region>) {
         if epoch != self.epoch || self.state(index) != Some(Use::Leased) {
             return;
+        }
+        if shown {
+            self.damage = wprs_core::damage::join(self.damage, damage);
         }
         if let Some(old) = shown.then(|| self.ready.replace(index)).flatten() {
             self.set(old, Use::Held);
@@ -139,7 +145,7 @@ impl Pool {
         self.set(index, if shown { Use::Ready } else { Use::Held });
     }
 
-    pub fn next(&mut self, resend: bool) -> Option<*mut pw_buffer> {
+    pub fn next(&mut self, resend: bool) -> Option<(*mut pw_buffer, Option<Region>)> {
         let again = self.latest.filter(|&i| resend && self.state(i) == Some(Use::Held));
         let index = self.ready.take().or(again)?;
         self.sent += 1;
@@ -149,7 +155,7 @@ impl Pool {
             fences.sent(unsafe { sync_meta(buffer.raw.0) });
         }
         self.latest = Some(index);
-        Some(buffer.raw.0)
+        Some((buffer.raw.0, self.damage.replace(Region::default())))
     }
 
     pub fn starved(&self) -> bool {
@@ -189,7 +195,7 @@ mod tests {
         assert!(lock(&slot.pool).starved());
         present(lease(&slot).expect("a free buffer"));
         assert!(!lock(&slot.pool).starved());
-        assert_eq!(lock(&slot.pool).next(false), Some(raw.as_ptr().cast_mut()));
+        assert_eq!(lock(&slot.pool).next(false), Some((raw.as_ptr().cast_mut(), None)));
         lock(&slot.pool).returned(0);
         let [a, b] = [lease(&slot), lease(&slot)].map(|l| l.expect("two free buffers"));
         assert_eq!((a.index, b.index), (1, 2));
@@ -202,18 +208,37 @@ mod tests {
         let pool = lock(&slot.pool);
         assert_eq!((pool.ready, pool.state(2)), (Some(1), Some(Use::Held)));
         drop(pool);
-        assert_eq!(lock(&slot.pool).next(true), Some(raw[1..].as_ptr().cast_mut()));
+        assert_eq!(lock(&slot.pool).next(true).map(|n| n.0), Some(raw[1..].as_ptr().cast_mut()));
         assert_eq!(lock(&slot.pool).next(false), None);
+    }
+
+    #[test]
+    fn a_sent_buffer_carries_the_damage_of_every_frame_shown_since_the_last_one() {
+        let (slot, _raw) = pool(3);
+        let at = |x| Some(Region { x, y: 0, width: 1, height: 1 });
+        let show = |damage| {
+            let mut lease = lease(&slot).expect("a free buffer");
+            lease.damage = damage;
+            present(lease);
+        };
+        show(at(1));
+        assert_eq!(lock(&slot.pool).next(false).map(|n| n.1), Some(None), "the first frame is whole");
+        show(at(4));
+        show(at(1));
+        let both = Some(Region { x: 1, y: 0, width: 4, height: 1 });
+        assert_eq!(lock(&slot.pool).next(false).map(|n| n.1), Some(both));
+        (0..3).for_each(|i| lock(&slot.pool).returned(i));
+        assert_eq!(lock(&slot.pool).next(true).map(|n| n.1), Some(Some(Region::default())));
     }
 
     #[test]
     fn keep_alives_resend_the_newest_frame_and_old_leases_expire() {
         let (slot, raw) = pool(2);
         present(lease(&slot).expect("a free buffer"));
-        let newest = lock(&slot.pool).next(false);
+        let newest = lock(&slot.pool).next(false).map(|n| n.0);
         assert_eq!(lock(&slot.pool).next(true), None);
         lock(&slot.pool).returned(0);
-        assert_eq!(lock(&slot.pool).next(true), newest);
+        assert_eq!(lock(&slot.pool).next(true), newest.map(|n| (n, Some(Region::default()))));
         let stale = lease(&slot).expect("the other buffer");
         (0..2).for_each(|i| lock(&slot.pool).remove(i, raw[i..].as_ptr().cast_mut()));
         drop(stale);

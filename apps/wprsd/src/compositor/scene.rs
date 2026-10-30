@@ -8,6 +8,7 @@ use super::slot::PlayerSlot;
 use super::{Reel, SceneInput, SceneSpec};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use wprs_core::Region;
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView};
 use wprs_scene::{
     Course, Fired, LayerRead, MAX_PRESSES, PointerState, Press, Quality, Runtime, Touch, Uses, Values, Voice,
@@ -55,6 +56,7 @@ pub(super) struct SceneState {
     restock: bool,
     hushed: bool,
     guard: Option<Box<super::guard::Guard>>,
+    pub(super) damage: Option<Region>,
 }
 
 fn after(seconds: f64) -> Duration {
@@ -121,6 +123,7 @@ impl SceneState {
             restock: false,
             hushed: false,
             guard: None,
+            damage: None,
         };
         scene.uses = scene.needs(quality);
         scene
@@ -285,11 +288,6 @@ impl SceneState {
         if quality != self.quality {
             (self.quality, self.uses) = (quality, self.needs(quality));
         }
-        let scale = quality.render_scale();
-        let inner = (
-            (size.0 as f32 * scale).round().max(1.0) as u32,
-            (size.1 as f32 * scale).round().max(1.0) as u32,
-        );
         if let Some(view) = self.view.as_mut().filter(|_| std::mem::take(&mut self.restock)) {
             let assets = assets(&self.spec);
             renderer.refresh_scene(view, (&self.spec.pack.scene, self.runtime.props()), &assets)?;
@@ -303,6 +301,7 @@ impl SceneState {
             self.view = Some(view);
         }
         let view = self.view.as_mut().expect("created above");
+        let inner = view.inner(renderer, size, quality);
         let rect = view.view(inner);
         let presses = std::mem::take(&mut self.presses);
         if self.uses.cursor && self.runtime.point(view.hitboxes(), rect, &presses, self.allowed.into()) {
@@ -321,6 +320,7 @@ impl SceneState {
             (self.left, self.left_key) = (view.left_out(), view.left_key());
         }
         rendered?;
+        self.damage = wprs_core::damage::join(self.damage, view.damage().map(|r| r.scaled(inner, size)));
         if let Some(guard) = self.guard.as_mut() {
             let image = view.image().filter(|_| view.stats().damage > 0);
             guard.watch(renderer, image, now, &self.spec.pack.props.id)?;

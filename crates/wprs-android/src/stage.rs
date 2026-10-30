@@ -261,8 +261,6 @@ impl Stage {
             return Ok(Shot { image: None, fps: self.fps, delay });
         }
         self.quality = quality;
-        let scale = quality.render_scale();
-        let inner = [size.0, size.1].map(|v| (v as f32 * scale).round().max(1.0) as u32);
         if let Some(view) = self.view.as_mut().filter(|_| std::mem::take(&mut self.restock)) {
             r.refresh_scene(view, (&self.pack.scene, self.runtime.props()), &self.pack.assets)?;
         }
@@ -270,7 +268,8 @@ impl Stage {
             self.view = Some(r.scene_view(&self.pack.scene, &self.pack.assets, self.runtime.props())?);
         }
         let view = self.view.as_mut().expect("created above");
-        self.rect = view.view((inner[0], inner[1]));
+        let inner = view.inner(r, size, quality);
+        self.rect = view.view(inner);
         let presses = std::mem::take(&mut self.presses);
         if self.runtime.point(view.hitboxes(), self.rect, &presses, allowed) {
             self.acting.touched(&mut self.runtime);
@@ -292,8 +291,7 @@ impl Stage {
         };
         self.due = (delay > 0 && wake != Wake::Idle).then_some(nanos + delay * 1_000_000);
         self.fps = if wake == Wake::Frame { fps } else { 0 };
-        let rendered =
-            r.render_scene(view, &self.runtime, &frame, (inner[0], inner[1]), quality, videos).map(drop);
+        let rendered = r.render_scene(view, &self.runtime, &frame, inner, quality, videos).map(drop);
         ENGINE.store(view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }), Relaxed);
         let mut left = LEFT.lock().unwrap_or_else(PoisonError::into_inner);
         if left.0 != view.left_key() {

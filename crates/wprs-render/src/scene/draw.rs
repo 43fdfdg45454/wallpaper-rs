@@ -171,10 +171,10 @@ impl Painter<'_, '_, '_> {
         if d.effects.is_empty() || self.idle(i) {
             return;
         }
-        let size = target.rect.size();
-        let Some(copy) = self.hold(i, size) else { return };
-        self.ops.push(Op::Copy { from: target.src, to: copy, origin: [0, 0], size, at: [0, 0] });
-        let out = self.effects(i, copy, target.rect, invert(self.stage).then(target.rect.affine()));
+        let out = self.effects(i, target.src, target.rect, invert(self.stage).then(target.rect.affine()));
+        if out == target.src {
+            return;
+        }
         let mut item = Item {
             quad: [0.0, 0.0, 1.0, 1.0],
             uv: [0.0, 0.0, 1.0, 1.0],
@@ -191,10 +191,7 @@ impl Painter<'_, '_, '_> {
             slot,
             tex: [out, Src::White, Src::Clear],
         });
-        self.release(copy);
-        if out != copy {
-            self.release(out);
-        }
+        self.release(out);
     }
 
     pub(crate) fn mask(

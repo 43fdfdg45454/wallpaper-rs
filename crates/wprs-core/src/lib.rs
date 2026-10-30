@@ -1,4 +1,5 @@
 pub mod config;
+pub mod damage;
 pub mod dbus;
 pub mod edit;
 pub mod fit;
@@ -11,6 +12,7 @@ pub mod settings;
 mod store;
 
 pub use config::{Config, ConfigError, OutputConfig, Resolved};
+pub use damage::{Ages, Region};
 pub use edit::Edit;
 pub use fit::{Fit, UvRect};
 pub use layout::{Layout, Place, Screen};

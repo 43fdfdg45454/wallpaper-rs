@@ -78,14 +78,15 @@ pub unsafe fn remove(buffer: *mut pw_buffer, pool: &mut Pool) {
     }
 }
 
-pub fn process(stream: &Stream, slot: &Slot) -> Option<bool> {
+pub fn process(stream: &Stream, slot: &Slot, size: (u32, u32)) -> Option<bool> {
     let mut pool = lock(&slot.pool);
     if !pool.active {
         return None;
     }
     let dequeue = || Some(unsafe { stream.dequeue_raw_buffer() }).filter(|b| !b.is_null());
     std::iter::from_fn(dequeue).for_each(|buffer| pool.returned(unsafe { (*buffer).user_data }.addr()));
-    if let Some(buffer) = pool.next(slot.dirty.swap(false, SeqCst)) {
+    if let Some((buffer, damage)) = pool.next(slot.dirty.swap(false, SeqCst)) {
+        unsafe { crate::damage::mark(buffer, damage, size) };
         unsafe { stream.queue_raw_buffer(buffer) };
     }
     Some(pool.starved())

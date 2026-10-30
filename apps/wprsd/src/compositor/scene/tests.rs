@@ -100,3 +100,31 @@ fn declared_inputs_without_scripts_wait_for_what_the_scene_binds() {
     assert_eq!(follows("orbit"), (false, false, false));
     assert_eq!(follows("off"), (false, false, false));
 }
+
+#[test]
+fn a_small_moving_layer_damages_only_its_box_on_the_screen() {
+    let renderer = match Renderer::shared() {
+        Ok(renderer) => renderer,
+        Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
+    };
+    let text = r##"{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [160, 90] },
+      "layers": [{ "id": "back", "type": "solid", "color": "#203040", "size": [160, 90] },
+        { "id": "dot", "type": "solid", "color": "#ffffff", "size": [8, 8],
+          "transform": { "position": { "keys": [[0, [120, 20]], [4, [140, 20]]] } } }] }"##;
+    let pack = Arc::new(ScenePack::bare(Scene::from_json(text).unwrap(), Default::default(), Vec::new()));
+    let spec =
+        SceneSpec { values: Default::default(), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
+    let power = Power::new(Tier::T3, false, 0);
+    let (mut state, players, start) = (SceneState::new(spec, power), HashMap::new(), Instant::now());
+    let at = |ms: u64| start + Duration::from_millis(ms);
+    state.render(renderer, ((320, 180), 60), power, &players, true, at(0)).unwrap();
+    assert_eq!(state.damage, None, "the first frame is whole");
+    state.damage = Some(Region::default());
+    state.render(renderer, ((320, 180), 60), power, &players, true, at(500)).unwrap();
+    let region = state.damage.expect("a partial frame");
+    assert!(region.x >= 220 && region.x + region.width <= 300, "{region:?}");
+    assert!(region.y >= 20 && region.y + region.height <= 60 && !region.is_empty(), "{region:?}");
+    state.render(renderer, ((320, 180), 60), power, &players, true, at(900)).unwrap();
+    let both = state.damage.expect("still partial");
+    assert!(both.x <= region.x && both.width > region.width, "damage adds up until it is composed");
+}

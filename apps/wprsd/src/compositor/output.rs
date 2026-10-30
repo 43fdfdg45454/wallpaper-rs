@@ -7,7 +7,7 @@ use super::{Content, Reel, Spec};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use wprs_core::edit::Parallax;
-use wprs_core::{Fit, UvRect};
+use wprs_core::{Ages, Fit, Region, UvRect};
 use wprs_render::{GpuImage, Layer, Relief, Target};
 use wprs_scene::Tier;
 
@@ -81,6 +81,7 @@ pub(super) struct Output {
     pub(super) covered: bool,
     pub(super) composed: Option<Composed>,
     pub(super) failed: u32,
+    pub(super) ages: Ages,
 }
 
 impl Output {
@@ -104,6 +105,7 @@ impl Output {
             covered,
             failed,
             composed: None,
+            ages: Ages::default(),
         }
     }
 
@@ -154,6 +156,11 @@ impl Output {
         };
         let same = key.is_some() && std::mem::replace(&mut self.composed, key) == key;
         same && clean && settled
+    }
+
+    pub(super) fn damage(&self) -> Option<Region> {
+        let plain = self.fade.is_none() && self.shown.relief.is_none() && self.shown.uv.is_none();
+        self.shown.scene.as_ref().filter(|_| plain && !self.stale)?.damage
     }
 
     pub(super) fn open(&self, streaming: bool) -> bool {

@@ -46,6 +46,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) paints: &'a [(String, String, Image)],
     pub(crate) backdrop: Option<Src>,
     pub(crate) swarms: Option<&'p mut super::swarm::Swarms>,
+    pub(crate) flocks: &'a [u64],
 }
 
 #[derive(Clone, Copy)]
@@ -275,7 +276,7 @@ impl<'a> Painter<'a, '_, '_> {
     pub(crate) fn isolate(&mut self, i: usize) -> Option<(Src, Rect)> {
         let frame = self.frame;
         let d = &frame.draws[i];
-        let rect = self.extent(i)?.pixels(self.full)?.bucket();
+        let rect = self.snug(self.extent(i)?.pixels(self.full)?);
         let id = d.layer as *const Layer as usize;
         let (fed, moving) = self.feeding(i..d.end);
         let still = !d.dynamic && self.backdrop.is_none() && !moving;
@@ -306,6 +307,10 @@ impl<'a> Painter<'a, '_, '_> {
         self.ops.push(Op::Copy { from: out, to: Src::Cache(id), origin: [0, 0], size, at: [0, 0] });
         self.release(out);
         Some((Src::Cache(id), rect))
+    }
+
+    pub(crate) fn snug(&self, rect: Rect) -> Rect {
+        if rect == self.full { rect } else { rect.bucket() }
     }
 
     pub(crate) fn size_of(&self, src: Src) -> (u32, u32) {

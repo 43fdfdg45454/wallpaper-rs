@@ -4,8 +4,9 @@ use std::time::Instant;
 
 const CAP: usize = 2;
 
-fn wait(r: &Renderer, index: wgpu::SubmissionIndex) -> bool {
-    let wait = wgpu::PollType::Wait { submission_index: Some(index), timeout: Some(GPU_TIMEOUT) };
+fn wait(r: &Renderer, index: wgpu::SubmissionIndex, hang: bool) -> bool {
+    let timeout = if hang { GPU_TIMEOUT } else { r.gpu_timeout() };
+    let wait = wgpu::PollType::Wait { submission_index: Some(index), timeout: Some(timeout) };
     !matches!(r.poll(wait), Polled::Timeout)
 }
 
@@ -20,7 +21,7 @@ fn stuck(view: usize) -> Vec<u64> {
 
 pub(crate) fn sending(device: &Renderer, view: usize, keys: &[u64]) -> Result<u64, Vec<u64>> {
     loop {
-        let (serial, index) = {
+        let (serial, index, hang) = {
             let mut f = flight();
             let v = f.view(view);
             if v.sent.len() < CAP {
@@ -31,10 +32,11 @@ pub(crate) fn sending(device: &Renderer, view: usize, keys: &[u64]) -> Result<u6
                 v.sent.push_back(sent);
                 return Ok(v.serial);
             }
-            (v.sent[0].serial, v.sent[0].index.clone())
+            let hang = !v.sent[0].keys.is_empty() || !v.pending.is_empty();
+            (v.sent[0].serial, v.sent[0].index.clone(), hang)
         };
         if let Some(index) = index
-            && !wait(device, index)
+            && !wait(device, index, hang)
         {
             return Err(stuck(view));
         }
@@ -60,7 +62,7 @@ pub(crate) fn sent(
         if !trial {
             return Ok(());
         }
-        if !wait(device, index) {
+        if !wait(device, index, true) {
             return Err(stuck(view));
         }
     }

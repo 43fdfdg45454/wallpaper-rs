@@ -43,7 +43,7 @@ impl Renderer {
     }
 
     pub fn finish(&self) -> Result<(), RenderError> {
-        let wait = wgpu::PollType::Wait { submission_index: None, timeout: Some(GPU_TIMEOUT) };
+        let wait = wgpu::PollType::Wait { submission_index: None, timeout: Some(self.gpu_timeout()) };
         self.polled(wait)
     }
 
@@ -62,10 +62,11 @@ impl Renderer {
         slice.map_async(wgpu::MapMode::Read, move |r| {
             flag.store(if r.is_ok() { MAPPED } else { FAILED }, Relaxed)
         });
-        let wait = wgpu::PollType::Wait { submission_index: Some(done), timeout: Some(GPU_TIMEOUT) };
+        let timeout = self.gpu_timeout();
+        let wait = wgpu::PollType::Wait { submission_index: Some(done), timeout: Some(timeout) };
         self.polled(wait)?;
         let start = std::time::Instant::now();
-        while state.load(Relaxed) == 0 && start.elapsed() < GPU_TIMEOUT {
+        while state.load(Relaxed) == 0 && start.elapsed() < timeout {
             self.polled(wgpu::PollType::Poll)?;
             std::thread::yield_now();
         }

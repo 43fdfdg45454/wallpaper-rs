@@ -66,7 +66,7 @@ impl Painter<'_, '_, '_> {
         let (fx, mask) = self.base(e, uv);
         let mask = fed.mask.unwrap_or(mask);
         let lut = self.lut(e);
-        let made = self.made.len();
+        let (made, start) = (self.made.len(), self.ops.len());
         let side = |v: f32, s: f32| (v * s * e.scale).ceil().max(1.0) as u32;
         let sim = d.state.map(|s| self.state(i, e, (side(rect.w, s.scale), side(rect.h, s.scale))));
         if sim.is_some_and(|s| s.is_none()) || !self.targets(d, rect, e.scale) {
@@ -109,8 +109,8 @@ impl Painter<'_, '_, '_> {
                 let Some((target, slot)) = self.place(rect, out, scale.clamp(0.05, 1.0), tex[0], fx) else {
                     break;
                 };
-                previous =
-                    self.record(d, (n, pass), target, slot, tex, (&mut more, e.variant, written.is_some()));
+                let load = written.is_some_and(|w| !self.unclear(w, start));
+                previous = self.record(d, (n, pass), target, slot, tex, (&mut more, e.variant, load));
                 if let Some((id, _)) = front.filter(|_| state) {
                     self.flip(id);
                 }
@@ -188,6 +188,20 @@ impl Painter<'_, '_, '_> {
         let tex = self.set(tex);
         self.ops.push(Op::Effect(Fill { target, shader, slot, tex, more, mode, load, vertices }));
         target
+    }
+
+    fn unclear(&mut self, target: Src, from: usize) -> bool {
+        let fresh = |op: &Op| matches!(op, Op::Clear(t, _) if *t == target);
+        let Some(at) = self.ops[from..].iter().position(fresh).map(|k| from + k) else { return false };
+        let used = self.ops[at + 1..].iter().any(|op| match op {
+            Op::Effect(f) => f.target == target || self.sets[f.tex as usize].contains(&target),
+            Op::Clear(..) => false,
+            _ => true,
+        });
+        if !used {
+            self.ops.remove(at);
+        }
+        !used
     }
 
     fn targets(&mut self, d: &Descriptor, rect: Rect, scale: f32) -> bool {

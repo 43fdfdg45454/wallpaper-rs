@@ -20,7 +20,7 @@ pub fn set_gpu_budget(limit: Option<Duration>) {
 pub(super) struct Judge {
     budget: f64,
     over: VecDeque<(Instant, u64)>,
-    units: Vec<(u64, f64)>,
+    units: Vec<(u64, bool, f64)>,
 }
 
 impl Judge {
@@ -47,25 +47,35 @@ impl Judge {
 
     pub(super) fn frame(
         &mut self,
-        runs: &[(u64, f64)],
-        whole: Option<f64>,
+        runs: &[(u64, bool, f64)],
+        (whole, wide): (Option<f64>, bool),
         now: Instant,
     ) -> Vec<(u64, String)> {
         let budget = self.budget();
         self.units.clear();
-        for (key, ms) in runs {
-            match self.units.iter_mut().find(|u| u.0 == *key) {
-                Some(unit) => unit.1 += ms,
-                None => self.units.push((*key, *ms)),
+        for &(key, own, ms) in runs {
+            match self.units.iter_mut().find(|u| u.0 == key) {
+                Some(unit) => unit.2 += ms,
+                None => self.units.push((key, own, ms)),
             }
         }
-        let timed: f64 = self.units.iter().map(|u| u.1).sum();
-        let total = whole.filter(|_| timed > 0.0).map_or(timed, |w| w.max(timed));
-        self.units.iter_mut().for_each(|u| u.1 *= total / timed.max(f64::MIN_POSITIVE));
-        self.units.sort_by(|a, b| b.1.total_cmp(&a.1));
+        let sum = |units: &[(u64, bool, f64)], own: bool| {
+            units.iter().filter(|u| u.1 == own).map(|u| u.2).sum::<f64>()
+        };
+        let (mine, theirs) = (sum(&self.units, true), sum(&self.units, false));
+        let total = whole.map_or(mine + theirs, |w| w.max(mine + theirs));
+        if wide && mine > 0.0 {
+            let k = (total - theirs).max(mine) / mine;
+            self.units.iter_mut().filter(|u| u.1).for_each(|u| u.2 *= k);
+        }
+        let mine = sum(&self.units, true);
+        self.units.sort_by(|a, b| b.2.total_cmp(&a.2));
         self.over.retain(|(at, _)| now.saturating_duration_since(*at) < WINDOW);
         let (mut rest, mut charged) = (total, Vec::new());
-        for &(key, ms) in &self.units {
+        if total - mine > budget {
+            return charged;
+        }
+        for &(key, _, ms) in self.units.iter().filter(|u| u.1) {
             if rest <= budget {
                 break;
             }

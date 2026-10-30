@@ -4,6 +4,10 @@ use crate::Renderer;
 use std::time::{Duration, Instant};
 use wprs_scene::Tier;
 
+fn own(runs: &[(u64, f64)]) -> Vec<(u64, bool, f64)> {
+    runs.iter().map(|&(key, ms)| (key, true, ms)).collect()
+}
+
 fn keys(charged: Vec<(u64, String)>) -> Vec<u64> {
     let mut keys: Vec<u64> = charged.into_iter().map(|c| c.0).collect();
     keys.sort_unstable();
@@ -16,18 +20,25 @@ fn only_the_effects_that_keep_frames_over_budget_are_charged_within_a_window() {
     let (mut judge, start) = (Judge::new(Tier::T3), Instant::now());
     let at = |ms: u64| start + Duration::from_millis(ms);
     let frame = [(1, 30.0), (2, 5.0), (3, 0.5), (4, 0.5)];
-    assert!(judge.frame(&frame, None, at(0)).is_empty() && judge.frame(&frame, None, at(16)).is_empty());
-    let charged = judge.frame(&frame, None, at(32));
+    assert!(
+        judge.frame(&own(&frame), (None, false), at(0)).is_empty()
+            && judge.frame(&own(&frame), (None, false), at(16)).is_empty()
+    );
+    let charged = judge.frame(&own(&frame), (None, false), at(32));
     assert_eq!(keys(charged.clone()), [1]);
     assert!(
         charged[0].1.contains("36 ms on it, 30 ms") && charged[0].1.contains("allows 30 ms"),
         "{charged:?}"
     );
     let both = [(5, 25.0), (5, 25.0), (6, 35.0)];
-    judge.frame(&both, None, at(48));
-    judge.frame(&both, None, at(64));
-    assert_eq!(keys(judge.frame(&both, None, at(80))), [5, 6]);
-    assert_eq!(judge.frame(&[(7, 150.0)], None, at(96)).len(), 1, "a frame over 4 budgets counts at once");
+    judge.frame(&own(&both), (None, false), at(48));
+    judge.frame(&own(&both), (None, false), at(64));
+    assert_eq!(keys(judge.frame(&own(&both), (None, false), at(80))), [5, 6]);
+    assert_eq!(
+        judge.frame(&own(&[(7, 150.0)]), (None, false), at(96)).len(),
+        1,
+        "a frame over 4 budgets counts at once"
+    );
 }
 
 #[test]
@@ -36,11 +47,12 @@ fn cheap_frames_in_between_do_not_clear_the_count() {
     let mut charged = Vec::new();
     for k in 0..12u64 {
         let ms = if k % 2 == 0 { 90.0 } else { 0.0 };
-        charged.extend(judge.frame(&[(9, ms)], None, start + Duration::from_millis(k * 300)));
+        charged.extend(judge.frame(&own(&[(9, ms)]), (None, false), start + Duration::from_millis(k * 300)));
     }
     assert_eq!(keys(charged), [9], "slow frames between cheap ones add up");
     let mut judge = Judge::new(Tier::T3);
-    let spaced = (0..6u64).flat_map(|k| judge.frame(&[(9, 90.0)], None, start + Duration::from_secs(k * 5)));
+    let spaced = (0..6u64)
+        .flat_map(|k| judge.frame(&own(&[(9, 90.0)]), (None, false), start + Duration::from_secs(k * 5)));
     assert!(spaced.count() == 0, "a few slow frames far apart are forgiven");
 }
 
@@ -57,7 +69,7 @@ impl Clock {
     pub(crate) fn again(&mut self, r: &Renderer, ops: &[super::super::Op]) -> (Timing, u64) {
         let (stamps, timed) = (&mut self.stamps, &mut self.timed);
         let read = crate::allocations::allocations(|| {
-            stamps.iter_mut().for_each(|s| s.collect(timed, |_, _| {}));
+            stamps.iter_mut().for_each(|s| s.collect(timed, |_, _, _| {}));
         });
         (self.start(r, ops, false, true), read)
     }

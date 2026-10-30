@@ -157,7 +157,10 @@ another texture it drops the ones it used longest ago, then the cached layers th
 drawn, and a use whose texture still does not fit is left out with `its textures would take more
 than the <n> MiB of textures this view may hold` (or `... a frame may borrow`). Layers draw into textures
 whose sides grow in steps of an eighth of a power of two (at least 64 pixels), so a zooming layer
-reuses a few sizes. `wprs-ctl scene bench` prints these notes after its
+reuses a few sizes; a layer that covers the whole canvas draws at its exact size, and its effects
+see the canvas as their whole input. The first pass that writes a target of a package effect clears
+it as it draws instead of in a pass of its own, and an adjustment layer reads what is below it
+directly instead of a copy. `wprs-ctl scene bench` prints these notes after its
 numbers.
 
 On battery the level drops one step and the rate is capped at 30 frames per second (15 with
@@ -174,7 +177,22 @@ both where they were and where they are, plus adjustment layers with effects tha
 pixel when a change reaches them. When that covers less than half of the screen, the rest of the
 previous frame is kept; when nothing changed, nothing is drawn, and on the desktop the frame is not
 composed onto the screen or sent to a stream either, unless a stream would otherwise go without
-frames. Layer masks that use other layers redraw everything.
+frames. Layer masks that use other layers redraw everything. Particles count as changed only when
+their simulation took a step, so a held scene or particles at rest leave the damage to what moves,
+and a view whose memory was freed while the scene stood still stays clean until something changes,
+when it redraws everything.
+
+On the desktop the damage of the scene, grown by a pixel for filtering and scaled to the output,
+also limits what is composed and sent. A PipeWire stream in shared memory composes and reads back
+only that rectangle and copies into each buffer the rectangles of every frame it missed (a buffer
+older than the last eight frames, or one that was never drawn, gets everything); a stream in GPU
+memory draws into each buffer only what changed since that buffer was last drawn, keeping the rest
+of its pixels between frames. Both kinds of buffer carry `SPA_META_VideoDamage` with the rectangle
+that changed since the previous buffer sent (a resent frame carries none), for consumers that read
+it. Transitions, parallax and framed scenes compose the whole frame. Screens drawn through the
+graphics API (Wayland and X11 surfaces, the phone) still compose every frame whole, because the
+API exposes neither the age of the buffer it hands out nor a partial present; the scene behind
+them keeps redrawing only what changed.
 
 Where the user turns on `playback.flash_guard`, the engine measures the brightness of each frame on
 a 32 × 18 grid. A flash is a pair of opposite changes of at least 10 % of the full brightness, the
@@ -691,22 +709,33 @@ stops the other builds, waits at most a second for the driver and then exits at 
 exit handlers that would race the driver.
 
 Each view keeps at most two frames on the GPU: before it sends a frame it waits for the one two frames
-back, at most 10 seconds. A frame still running after that leaves out the package effects of the
+back. A frame with package effects, or of a view with effects on trial, may take at most 10 seconds;
+other frames, and every other wait for the GPU, may take 10 seconds on a GPU and, with software
+rendering, 10 seconds times 32 divided by the number of cores, between 10 and 60 seconds (20 with 16
+cores, 40 with 8, 60 with 4 or fewer; `LP_NUM_THREADS` counts when set). A frame with package effects still running after its
+limit leaves out the package effects of the
 frames of that view still on the GPU and of its trials, with `it kept the graphics card busy for more
-than 10 s`, counts a strike for each and fails with the GPU stopped. The engine also measures the GPU
-time of package effects: where the device can write timestamps it times each run of passes of one
-effect on every frame with package effects (32 runs a frame; a frame with more always times its
-first and its last run, takes turns among the others, and counts the whole time from the start of
-its first run to the end of its last, shared among the timed effects by their part of the timed
-time), and reads the times back when the frame has finished, without waiting for it;
-elsewhere it waits for the GPU before and after such a frame, every frame of a trial and every
-fifteenth frame after it, and counts the whole frame. When the package passes of a frame take more
-than 400, 60, 40 or 30 ms on the four tiers (a fifth more than a frame at 30 or 40 frames a second, so effects right at the limit are not left out by noise), the effects that take the most of it, until the rest
-fits, are left out with `it is too slow for this graphics card: a frame took <total> ms on it, <n> ms
-of them in this effect, and it allows <limit> ms` once that happened on three frames within 8
-seconds, cheap frames in between or not, or at once for a frame over four times the limit (and 100
-ms); without timestamps only a frame over a second (and four times the limit) leaves its package
-effects out. A slow effect is left out for as long as the program runs, also in its other views,
+than 10 s`, counts a strike for each and fails with the GPU stopped. With software rendering a scene
+draws at most a megapixel per core (an 8K screen with two cores draws a 1080p frame, scaled up), and
+when a measured frame takes more than an eighth of its limit the view draws the next ones at 70 % of
+the size, down to a quarter, growing back the same way once frames take less than a sixteenth of
+that, so a legitimate heavy frame never reaches the limit. The engine also measures the GPU time of
+every frame and of each effect: where the device can write timestamps it times the whole frame and
+each run of passes of one effect, built in or packaged, on every frame (31 runs a frame; a frame
+with more takes turns among them, and then shares the time of the frame not spent in timed built-in
+effects among the timed package effects by their part of the timed time), and reads the times back
+when the frame has finished, without waiting for it; `wprs-ctl scene bench` shows the frame time as
+`gpu`. Elsewhere it waits for the GPU before and after a frame with package effects, every frame of
+a trial and every fifteenth frame after it, and counts the whole frame. When a frame takes more than
+400, 60, 40 or 30 ms on the four tiers (a fifth more than a frame at 30 or 40 frames a second, so
+effects right at the limit are not left out by noise) and the frame would fit without its package
+effects, the package effects that take the most of it, until the rest fits, are left out with `it is
+too slow for this graphics card: a frame took <total> ms on it, <n> ms of them in this effect, and it
+allows <limit> ms` once that happened on three frames within 8 seconds, cheap frames in between or
+not, or at once for a frame over four times the limit (and 100 ms). Built-in effects are timed but
+never left out, and a frame that is over the limit without its package effects leaves none of them
+out: the quality level is what makes it fit. Without timestamps only a frame over a second (and four
+times the limit) leaves its package effects out. A slow effect is left out for as long as the program runs, also in its other views,
 and counts no strike: it may run well at another size or on another day. Only a frame that keeps
 the GPU busy for 10 s, a lost GPU or a crash counts strikes. The desktop reports it
 in `GetState().outputs[x].left_out` while the scene keeps playing, so the app, the tray and

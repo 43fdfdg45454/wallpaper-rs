@@ -415,7 +415,12 @@ el movimiento (`reduced-motion` del portal de ajustes), las escenas se quedan qu
 fotograma de muestra y solo se redibujan una vez por minuto para que los relojes sigan en hora. Los
 efectos lentos, como las nubes o las ondas, declaran a cuántos fotogramas por segundo se ven bien y
 una escena que solo se mueve por ellos no pasa de ahí. Cada fotograma redibuja solo la parte de la
-pantalla que cambió y, si nada cambió, no dibuja nada. Los desenfoques y las deformaciones ya no
+pantalla que cambió y, si nada cambió, no dibuja nada; las partículas quietas y las escenas
+detenidas en un fotograma no cuentan como cambio. Con render por software cada escena se dibuja a
+como mucho un megapíxel por núcleo y se escala a la pantalla, la espera a la GPU llega hasta 60 s
+con pocos núcleos (los efectos de los paquetes siguen con 10 s para detectar cuelgues) y, si un
+fotograma tarda más de un octavo de esa espera, la resolución baja por pasos y vuelve a subir cuando
+sobra tiempo, así que un fotograma pesado nunca se toma por una GPU colgada. Los desenfoques y las deformaciones ya no
 oscurecen los bordes derecho e inferior, y el desenfoque de movimiento puede seguir la velocidad de
 su capa (`follow`).
 
@@ -431,6 +436,12 @@ puede exportarla y el consumidor (KPipeWire en Plasma) importarla: el daemon dib
 los búferes del stream, sin leer el fotograma de vuelta ni copiarlo con la CPU, también con batería.
 Donde la GPU no puede dibujar en el formato que pide el consumidor, como las imágenes lineales en
 las GPU de NVIDIA, dibuja en una textura propia y la copia en la GPU al búfer del stream.
+El daemon compone y envía solo el rectángulo que cambió: en memoria de la GPU dibuja en cada búfer
+lo que cambió desde la última vez que lo usó, en memoria compartida lee de la GPU y copia solo esas
+filas, y los dos tipos de búfer llevan `SPA_META_VideoDamage` con lo que cambió desde el búfer
+anterior para los consumidores que lo leen. Un reloj pequeño sobre una imagen 4K copia así unos 55 KiB por
+fotograma en vez de 32 MiB. Las superficies de Wayland y X11 y el teléfono siguen componiendo el
+fotograma entero, porque la API gráfica no dice qué contiene cada búfer de la pantalla.
 Si algo falta (OpenGL, render por software, un consumidor sin DMA-BUF), el stream usa memoria
 compartida sin intervención; `WPRS_DMABUF=0` en el entorno del daemon la fuerza y `WPRS_DMABUF=1`
 pide memoria de la GPU también con render por software. `wprs-ctl state` muestra el tipo de búfer
@@ -681,6 +692,12 @@ nota cuando termina o cuando pasan sus primeros fotogramas; una nota que deja un
 colgado cuenta como un fallo, igual que una GPU que se detiene, y con dos el efecto queda fuera
 (lo recuerda por el hash del efecto, así que una versión nueva vuelve a probarse). *Probar de
 nuevo* en la app, en los diagnósticos del teléfono o `wprs-ctl retry-effects` lo prueban otra vez.
+El motor mide en la GPU cada fotograma y cada efecto, también los integrados (`wprs-ctl scene bench`
+muestra el tiempo como `gpu`); un efecto de paquete solo queda fuera por lento cuando el fotograma
+cabría sin él, nunca por lo que cuestan las capas o los efectos integrados. Los destinos de los
+efectos de paquete se limpian en su primera pasada, las capas de ajuste leen lo que tienen debajo sin
+copiarlo y las capas que cubren toda la escena no se dibujan más grandes que ella: una pila de cuatro
+efectos de paquete a 4K cuesta entre un 5 y un 10 % menos.
 Cada pasada, cada lectura de textura y cada operación del shader cuentan en el coste de la escena
 aunque el descriptor diga menos, y
 `wprs-ctl pack check`, `pack build` y el editor avisan cuando una escena no cabe con calidad 2 en

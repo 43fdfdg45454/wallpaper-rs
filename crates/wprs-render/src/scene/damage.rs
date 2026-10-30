@@ -52,13 +52,26 @@ impl Painter<'_, '_, '_> {
                 let video =
                     self.frame.draws[i..d.end].iter().any(|d| matches!(d.content, Content::Video { .. }));
                 let (fed, moving) = self.feeding(i..d.end);
-                let moment = if d.dynamic || moving { self.moment } else { 0 };
-                let key = if video { MOVING } else { self.digest(i..d.end, (d.hidden, moment, fed)) };
+                let (ticking, flocks) = self.ticking(i..d.end);
+                let moment = if ticking || moving { self.moment } else { 0 };
+                let key = if video { MOVING } else { self.digest(i..d.end, (d.hidden, moment, fed, flocks)) };
                 let rect = if d.hidden { None } else { self.extent(i) };
                 out.push((std::ptr::from_ref::<Layer>(d.layer) as usize, key, rect, reach));
             }
             i = d.end;
         }
+    }
+
+    fn ticking(&self, range: Range<usize>) -> (bool, u64) {
+        let plain = |d: &wprs_scene::Draw<'_>| d.effects.is_empty();
+        self.frame.draws[range].iter().fold((false, 0), |(ticking, flocks), d| match d.content {
+            Content::Particles { flock, .. } if plain(d) => {
+                let stamp = self.flocks.get(flock).copied().unwrap_or(u64::MAX);
+                (ticking, flocks.rotate_left(9) ^ stamp)
+            }
+            Content::Group { .. } if plain(d) => (ticking, flocks),
+            _ => (ticking || d.dynamic, flocks),
+        })
     }
 
     pub(crate) fn damage(&mut self, old: &[Mark], new: &mut Vec<Mark>, fresh: bool) -> Damage {

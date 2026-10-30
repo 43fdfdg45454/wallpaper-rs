@@ -33,6 +33,9 @@ pub struct SceneView {
     pub(super) scratch: super::Scratch,
     pub(super) marks: Vec<super::damage::Mark>,
     pub(super) stamp: u64,
+    pub(super) trimmed: bool,
+    pub(super) region: Option<wprs_core::Region>,
+    pub(super) shrink: (f32, u32),
     pub(super) id: usize,
     pub(super) paints: Vec<(String, String, Image)>,
     pub(super) clock: super::clock::Clock,
@@ -95,10 +98,14 @@ impl SceneView {
     }
 
     pub fn trim(&mut self) {
-        self.marks.clear();
+        self.trimmed = true;
         self.pool.trim();
         self.states.clear();
         self.swarms.iter_mut().for_each(swarm::Swarms::trim);
+    }
+
+    pub fn damage(&self) -> Option<wprs_core::Region> {
+        self.region
     }
 
     pub fn image(&self) -> Option<&GpuImage> {

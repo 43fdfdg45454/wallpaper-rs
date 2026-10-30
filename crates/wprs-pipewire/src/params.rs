@@ -108,6 +108,17 @@ pub fn buffers(width: u32, height: u32, dmabuf: bool) -> Vec<u8> {
     serialize(buffer_object(width, height, dmabuf))
 }
 
+pub fn damage() -> Vec<u8> {
+    let one = size_of::<spa::sys::spa_meta_region>() as i32;
+    let most = one * crate::damage::REGIONS as i32;
+    serialize(object!(
+        SpaTypes::ObjectParamMeta,
+        ParamType::Meta,
+        Property::new(spa::sys::SPA_PARAM_META_type, Value::Id(spa::utils::Id(crate::damage::META_DAMAGE))),
+        int_property(spa::sys::SPA_PARAM_META_size, ChoiceEnum::Range { default: most, min: one, max: most }),
+    ))
+}
+
 pub fn synced(width: u32, height: u32) -> Vec<Vec<u8>> {
     let mut timed = buffer_object(width, height, true);
     let flags = |bits: i32| {
@@ -151,8 +162,10 @@ mod tests {
 
     #[test]
     fn pods_are_valid() {
-        let all =
-            [formats(1920, 1080, &[0, 7], Some(7)), vec![buffers(1920, 1080, false), buffers(8, 8, true)]];
+        let all = [
+            formats(1920, 1080, &[0, 7], Some(7)),
+            vec![buffers(1920, 1080, false), buffers(8, 8, true), damage()],
+        ];
         for bytes in all.iter().flatten() {
             assert!(Pod::from_bytes(bytes).is_some());
             assert_eq!(bytes.len() % 8, 0);
@@ -170,6 +183,16 @@ mod tests {
             assert_eq!(value(spa::sys::SPA_PARAM_BUFFERS_buffers), choice(count));
             assert_eq!(value(spa::sys::SPA_PARAM_BUFFERS_dataType), choice(kind));
         }
+    }
+
+    #[test]
+    fn damage_is_asked_for_as_an_array_of_up_to_sixteen_rectangles() {
+        let object = object(&damage());
+        let value = |key| object.properties.iter().find(|p| p.key == key).map(|p| p.value.clone());
+        assert_eq!(value(spa::sys::SPA_PARAM_META_type), Some(Value::Id(spa::utils::Id(3))));
+        let size = ChoiceEnum::Range { default: 256, min: 16, max: 256 };
+        let choice = Value::Choice(ChoiceValue::Int(Choice(ChoiceFlags::empty(), size)));
+        assert_eq!(value(spa::sys::SPA_PARAM_META_size), Some(choice));
     }
 
     #[test]

@@ -4,6 +4,7 @@ use crate::texture::create_texture;
 use crate::{Layer, RenderError, Renderer};
 use std::sync::Arc;
 use std::sync::atomic::AtomicU8;
+use wprs_core::Region;
 
 pub(crate) const TARGET_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 
@@ -13,6 +14,7 @@ pub struct Target {
     pub(crate) readback: wgpu::Buffer,
     pub(crate) mapped: Arc<AtomicU8>,
     pub(crate) slots: Vec<Slot>,
+    pub(crate) drawn: u64,
 }
 
 impl Target {
@@ -39,14 +41,15 @@ impl Renderer {
                 mapped_at_creation: false,
             });
             let view = texture.create_view(&Default::default());
-            Target { texture, view, readback, mapped: Arc::default(), slots: Vec::new() }
+            Target { texture, view, readback, mapped: Arc::default(), slots: Vec::new(), drawn: 0 }
         })
     }
 
     pub fn draw_layers(&self, target: &mut Target, layers: &[Layer<'_>]) -> Result<(), RenderError> {
         let size = target.size();
+        target.drawn = 0;
         self.scoped(|| {
-            let encoder = self.encode(&target.view, &mut target.slots, layers, size, TARGET_FORMAT);
+            let encoder = self.encode(&target.view, &mut target.slots, layers, size, TARGET_FORMAT, None);
             self.queue.submit([encoder.finish()]);
         })
         .inspect_err(|_| target.slots.clear())
@@ -69,9 +72,10 @@ impl Renderer {
         layers: &[Layer<'_>],
         read: impl FnOnce(u32, u32, u32, &[u8]) -> R,
     ) -> Result<R, RenderError> {
+        target.drawn = 0;
         let rendered = self.scoped(|| {
             let size = target.size();
-            let mut encoder = self.encode(&target.view, &mut target.slots, layers, size, TARGET_FORMAT);
+            let mut encoder = self.encode(&target.view, &mut target.slots, layers, size, TARGET_FORMAT, None);
             let layout = wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(padded_row_bytes(size.0)),
@@ -92,6 +96,7 @@ impl Renderer {
         layers: &[Layer<'_>],
         size: (u32, u32),
         format: wgpu::TextureFormat,
+        clip: Option<Region>,
     ) -> wgpu::CommandEncoder {
         let visible = || layers.iter().filter(|l| l.opacity > 0.0);
         visible().enumerate().for_each(|(i, layer)| self.bind(slots, i, layer, size));
@@ -99,8 +104,12 @@ impl Renderer {
         let flat = self.layers.get(&self.device, format);
         let deep = slots.iter().any(Slot::deep).then(|| self.reliefs().get(&self.device, format));
         let mut encoder = self.device.create_command_encoder(&Default::default());
-        let ops =
-            wgpu::Operations { load: wgpu::LoadOp::Clear(wgpu::Color::BLACK), store: wgpu::StoreOp::Store };
+        let clip = clip.map(|c| c.within(size)).filter(|c| !c.covers(size));
+        if clip.is_some_and(Region::is_empty) {
+            return encoder;
+        }
+        let load = clip.map_or(wgpu::LoadOp::Clear(wgpu::Color::BLACK), |_| wgpu::LoadOp::Load);
+        let ops = wgpu::Operations { load, store: wgpu::StoreOp::Store };
         let attachment =
             wgpu::RenderPassColorAttachment { view, depth_slice: None, resolve_target: None, ops };
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -108,6 +117,9 @@ impl Renderer {
             color_attachments: &[Some(attachment)],
             ..Default::default()
         });
+        if let Some(c) = clip {
+            pass.set_scissor_rect(c.x, c.y, c.width, c.height);
+        }
         for (i, (slot, layer)) in slots.iter().zip(visible()).enumerate() {
             let fading = i > 0 && layer.opacity < 1.0;
             let [opaque, blended] = deep.as_ref().filter(|_| slot.deep()).unwrap_or(&flat);

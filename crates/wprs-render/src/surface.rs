@@ -146,7 +146,7 @@ impl Renderer {
         let view = frame.texture.create_view(&Default::default());
         self.scoped(|| {
             let format = target.config.format;
-            let encoder = self.encode(&view, &mut target.slots, layers, (width, height), format);
+            let encoder = self.encode(&view, &mut target.slots, layers, (width, height), format, None);
             self.queue.submit([encoder.finish()]);
         })
         .inspect_err(|_| target.slots.clear())?;

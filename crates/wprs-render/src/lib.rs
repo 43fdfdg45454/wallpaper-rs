@@ -2,8 +2,11 @@ mod adapter;
 #[cfg(test)]
 mod allocations;
 mod animation;
+#[cfg(target_os = "linux")]
+mod barrier;
 mod bind;
 mod color;
+mod damaged;
 mod decode;
 mod develop;
 mod device;
@@ -24,6 +27,7 @@ mod shader;
 mod stack;
 mod surface;
 mod texture;
+mod timeout;
 mod yuv;
 
 pub use animation::{MAX_ANIMATION, Pictures, animation};

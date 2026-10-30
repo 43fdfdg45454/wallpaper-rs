@@ -25,6 +25,7 @@ mod poster;
 mod ready;
 mod render;
 mod sampling;
+mod sized;
 mod sources;
 mod state;
 #[cfg(test)]
@@ -112,6 +113,7 @@ pub(crate) struct Scratch {
     made: Vec<Src>,
     isolated: Vec<(usize, Option<(Src, item::Rect)>)>,
     chains: Vec<Option<(u64, bool)>>,
+    flocks: Vec<u64>,
 }
 
 pub(crate) type Image = Arc<(GpuImage, [f32; 2])>;
@@ -137,15 +139,16 @@ pub struct SceneStats {
     pub sim_us: u32,
     pub damage: u32,
     pub in_flight: u32,
+    pub gpu_us: u32,
 }
 
 impl Renderer {
     pub fn software(&self) -> bool {
-        self.gpu.get_info().device_type == wgpu::DeviceType::Cpu
+        self.kind == wgpu::DeviceType::Cpu
     }
 
     pub fn discrete(&self) -> bool {
-        self.gpu.get_info().device_type == wgpu::DeviceType::DiscreteGpu
+        self.kind == wgpu::DeviceType::DiscreteGpu
     }
 
     pub fn compute(&self) -> bool {

@@ -3,53 +3,50 @@ use super::super::{Fill, Op};
 
 pub(super) const SLOTS: usize = 32;
 
-fn own(op: &Op) -> Option<u64> {
+fn timed(op: &Op) -> Option<(u64, bool)> {
     match op {
-        Op::Effect(Fill { shader: Shader::Own(key, ..), .. }) => Some(*key),
+        Op::Effect(Fill { shader: Shader::Own(key, ..), .. }) => Some((*key, true)),
+        Op::Effect(Fill { shader: Shader::Fx(key, _), .. }) => Some((*key, false)),
         _ => None,
     }
 }
 
 pub(super) struct Plan {
     pub(super) marks: Vec<(Option<u32>, Option<u32>)>,
-    pub(super) runs: Vec<u64>,
-    pub(super) whole: bool,
-    spans: Vec<(usize, usize, u64)>,
+    pub(super) runs: Vec<(u64, bool)>,
+    pub(super) wide: bool,
+    spans: Vec<(usize, usize, u64, bool)>,
 }
 
 impl Plan {
     pub(super) fn new() -> Plan {
-        Plan { marks: Vec::new(), runs: Vec::new(), whole: false, spans: Vec::new() }
+        Plan { marks: Vec::new(), runs: Vec::new(), wide: false, spans: Vec::new() }
     }
 
     pub(super) fn plan(&mut self, ops: &[Op], turn: u64) {
-        let Plan { marks, runs, whole, spans } = self;
+        let Plan { marks, runs, wide, spans } = self;
         marks.clear();
         runs.clear();
         spans.clear();
         marks.resize(ops.len(), (None, None));
         for (k, op) in ops.iter().enumerate() {
-            let Some(key) = own(op) else { continue };
+            let Some((key, own)) = timed(op) else { continue };
             match spans.last_mut() {
                 Some(last) if last.1 + 1 == k && last.2 == key => last.1 = k,
-                _ => spans.push((k, k, key)),
+                _ => spans.push((k, k, key, own)),
             }
         }
-        let n = spans.len();
-        let wide = n > SLOTS;
-        *whole = wide;
-        let lo = usize::from(wide);
-        let (m, take) = (n - 2 * lo, SLOTS - 2 * lo);
-        let first = if wide { (turn as usize).wrapping_mul(take) % m } else { 0 };
-        let wrap = (first + take).saturating_sub(m).min(first);
-        let last = (first + take).min(m);
-        let rotated = (0..wrap).chain(first..last).map(|k| k + lo);
-        let ends = |at: usize| wide.then_some(at);
-        for (slot, at) in ends(0).into_iter().chain(rotated).chain(ends(n.wrapping_sub(1))).enumerate() {
-            let (begin, end, key) = spans[at];
-            marks[begin].0 = Some(slot as u32 * 2);
-            marks[end].1 = Some(slot as u32 * 2 + 1);
-            runs.push(key);
+        let (n, room) = (spans.len(), SLOTS - 1);
+        *wide = n > room && spans.iter().any(|s| s.3);
+        let first = if n > room { (turn as usize).wrapping_mul(room) % n } else { 0 };
+        let wrap = (first + room).saturating_sub(n).min(first);
+        let picked = (0..wrap).chain(first..(first + room).min(n));
+        for (slot, at) in picked.enumerate() {
+            let (begin, end, key, own) = spans[at];
+            let slot = slot as u32 + 1;
+            marks[begin].0 = Some(slot * 2);
+            marks[end].1 = Some(slot * 2 + 1);
+            runs.push((key, own));
         }
     }
 }

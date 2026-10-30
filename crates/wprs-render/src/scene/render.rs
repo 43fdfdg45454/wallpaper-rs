@@ -49,6 +49,7 @@ impl Renderer {
     ) -> Result<&'v GpuImage, RenderError> {
         self.check_target(size.0, size.1)?;
         self.judge(view, frame);
+        view.pace(self);
         let created = (view.pool.created, pipes::compiled(0));
         if view.target.as_ref().is_none_or(|(t, _)| t.size() != size) {
             retarget(self, view, size);
@@ -70,10 +71,9 @@ impl Renderer {
         s.isolated.clear();
         s.chains.clear();
         s.chains.resize(frame.draws.len(), None);
+        s.flocks.clear();
+        s.flocks.extend((0..).map_while(|i| runtime.swarm(i).map(|w| w.stamp ^ u64::from(w.epoch) << 40)));
         self.rasters(view, frame, screen, &mut scratch.texts);
-        if let Some(swarms) = view.swarms.as_mut() {
-            self.scoped(|| swarms.run(self, runtime, frame, quality))??;
-        }
         let v = &mut *view;
         let (srgb, format, state_format) = (v.srgb, v.format, v.state_format);
         let full = Rect { x: 0.0, y: 0.0, w: size.0 as f32, h: size.1 as f32 };
@@ -117,6 +117,7 @@ impl Renderer {
             paints: &v.paints,
             more: super::stops::frame(runtime),
             backdrop: None,
+            flocks: &scratch.flocks,
         };
         if frame.draws.iter().any(|d| !d.layer.solid.is_off()) {
             painter.hitboxes(&v.sources, &mut v.covers, &mut v.hitboxes);
@@ -132,16 +133,34 @@ impl Renderer {
         };
         let damage =
             painter.damage(&v.marks, &mut scratch.marks, std::mem::replace(&mut v.stamp, stamp) != stamp);
+        let damage = match damage {
+            Damage::Part(_) if v.trimmed => Damage::Full,
+            damage => damage,
+        };
         std::mem::swap(&mut v.marks, &mut scratch.marks);
+        v.region = match damage {
+            Damage::Full => None,
+            Damage::Part(r) => Some(wprs_core::Region {
+                x: r.x as u32,
+                y: r.y as u32,
+                width: r.w as u32,
+                height: r.h as u32,
+            }),
+            Damage::Clean => Some(wprs_core::Region::default()),
+        };
         if damage == Damage::Clean {
-            let (steps, particles, sim_us) =
-                v.swarms.as_ref().map_or((0, 0, 0), |s| (s.steps, s.slots(), s.micros));
+            let particles = painter.swarms.as_ref().map_or(0, |s| s.slots());
             let in_flight = super::flight::flying(v.id);
-            v.stats = SceneStats { steps, particles, sim_us, in_flight, ..SceneStats::default() };
+            let gpu_us = (v.clock.gpu_ms * 1000.0) as u32;
+            v.stats = SceneStats { particles, in_flight, gpu_us, ..SceneStats::default() };
             v.pool.end_frame();
             super::flight::idle(v.id);
             v.scratch = scratch;
             return Ok(&view.target.as_ref().expect("created above").1);
+        }
+        v.trimmed = false;
+        if let Some(swarms) = painter.swarms.as_deref_mut() {
+            self.scoped(|| swarms.run(self, runtime, frame, quality))??;
         }
         painter.clip = match damage {
             Damage::Part(rect) => Some(rect),
@@ -195,6 +214,7 @@ impl Renderer {
             (counted.particles, counted.sim_us) = (s.slots(), s.micros);
         }
         counted.in_flight = super::flight::flying(v.id);
+        counted.gpu_us = (v.clock.gpu_ms * 1000.0) as u32;
         v.stats = counted;
         v.scratch = scratch;
         Ok(&view.target.as_ref().expect("created above").1)
