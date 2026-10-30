@@ -308,7 +308,8 @@ impl Stage {
         let (samples, gpu_ms) = view.gpu_time();
         if std::mem::replace(&mut self.samples, samples) != samples && !still {
             let runtime = &self.runtime;
-            let budget_ms = |q| 1000.0 / budget.fps(runtime, q, 0).max(1) as f32 * PHONE_SHARE;
+            let budget_ms =
+                |q| (1000.0 / budget.fps(runtime, q, 0).max(1) as f32 * PHONE_SHARE, runtime.cost(q));
             let raises = power.charging && power.ceiling() == Quality::Q3;
             self.governor.feed(std::time::Instant::now(), gpu_ms as f32, budget_ms, ceiling.0, raises);
         }

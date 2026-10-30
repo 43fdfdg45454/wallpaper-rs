@@ -15,7 +15,8 @@ impl SceneState {
             return;
         }
         let runtime = &self.runtime;
-        let budget = |q| 1000.0 / power.fps(runtime, q, refresh).max(1) as f32 * power.gpu_share();
+        let budget =
+            |q| (1000.0 / power.fps(runtime, q, refresh).max(1) as f32 * power.gpu_share(), runtime.cost(q));
         let ceiling = power.level(runtime).0;
         if self.governor.feed(now, gpu_ms as f32, budget, ceiling, power.raises()) {
             let level = self.governor.level((ceiling, self.why)).0;

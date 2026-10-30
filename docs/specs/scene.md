@@ -156,9 +156,13 @@ While a scene plays, the GPU time of its frames (measured as described below) mo
 level: when their average (an exponential average over the measured frames, started again after
 more than a second without one) stays above the GPU budget for 2 seconds, the level goes one step
 down; when the average, times the factor by which the level above was dearer (the average just
-before the step down divided by the one 5 seconds after it, between 1 and 16), stays under half of the budget of the
-level above for 15 seconds, one step back up, never above the
-level that the tier, the cost, the power source and the temperature allow, and never on battery,
+before the step down divided by the one 5 seconds after it, between 1 and 16, and at most one and a
+half times the ratio between the estimated costs of the two levels, so a burst of load that ends
+right after the step down does not count), stays under half of the budget of the level above for 15
+seconds, one step back up. When only that factor holds the level down, the level above is tried again
+after a minute. A level that has to come back down within 30 seconds of a raise doubles both waits,
+up to four times, and every raise that holds for 30 seconds halves them again. The level never goes
+above the one that the tier, the cost, the power source and the temperature allow, and never rises on battery,
 with power saving or while the GPU or CPU is warm (on phones, only while charging and cool). The
 budget of a level is half of its frame interval on mains power and a quarter on battery, with power
 saving and on phones; since a lower level may also draw fewer frames a second, its budget is larger,

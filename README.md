@@ -421,7 +421,11 @@ la escena se mueve, el tiempo que pasa cada fotograma en la GPU, partículas inc
 calidad: si durante 2 s pasa de la mitad del intervalo entre fotogramas (de una cuarta parte con
 batería), baja un nivel, y solo vuelve a subir si, con lo que costaba el nivel de arriba, durante
 15 s no llegaría a la mitad del intervalo de ese nivel, así que una escena no salta entre dos
-niveles cuando el de abajo además dibuja menos fotogramas por segundo; nunca sube con batería ni
+niveles cuando el de abajo además dibuja menos fotogramas por segundo. Cuánto más caro se toma el
+nivel de arriba nunca pasa de una vez y media lo que estima el modelo de costes, para que una carga breve
+justo antes de bajar no deje la escena abajo, y si solo eso la retiene, a los 60 s prueba otra vez
+el nivel de arriba; cada vez que tiene que volver a bajar en menos de 30 s, las esperas se duplican
+(hasta cuatro veces) y se acortan otra vez cuando una subida se mantiene. Nunca sube con batería ni
 por encima de lo que permiten la clase, la batería y la temperatura. Sin marcas de tiempo en la GPU
 mide uno de cada quince fotogramas esperando a la GPU. `wprs-ctl state` (`tier`,
 `tier_measured`, y `quality` y `quality_reason` en cada pantalla), la app y la bandeja muestran la

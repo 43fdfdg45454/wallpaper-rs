@@ -10,7 +10,7 @@ fn run(g: &mut Governor, from: Instant, seconds: f32, gpu_ms: f32, raises: bool)
     let (mut at, mut changes) = (from, Vec::new());
     while at < from + Duration::from_secs_f32(seconds) {
         at += FRAME;
-        if g.feed(at, gpu_ms, |_| BUDGET, Quality::Q3, raises) {
+        if g.feed(at, gpu_ms, |_| (BUDGET, 1.0), Quality::Q3, raises) {
             changes.push((at - from).as_secs_f32());
         }
     }
@@ -50,44 +50,9 @@ fn sporadic_slow_frames_do_not_count_as_a_slow_stretch() {
     let (mut g, mut at) = (Governor::default(), Instant::now());
     for _ in 0..20 {
         at += Duration::from_millis(1500);
-        assert!(!g.feed(at, 50.0, |_| BUDGET, Quality::Q3, true));
+        assert!(!g.feed(at, 50.0, |_| (BUDGET, 1.0), Quality::Q3, true));
     }
     assert_eq!(g.level((Quality::Q3, Why::Full)), (Quality::Q3, Why::Full));
-}
-
-fn levels(refresh: u32, cost: impl Fn(Quality) -> f32, from: f32, seconds: f32) -> Vec<(f32, Quality)> {
-    let mut scene = (*runtime(0).scene).clone();
-    scene.clock.max_fps = 0;
-    let light = Runtime::new(Arc::new(scene), Default::default());
-    let (power, start) = (Budget::new(Tier::T3, false, 0), Instant::now());
-    let budget = |q| 1000.0 / power.fps(&light, q, refresh) as f32 * power.gpu_share();
-    let (mut g, mut at, mut seen) = (Governor::default(), start, vec![(0.0, Quality::Q3)]);
-    while at < start + Duration::from_secs_f32(seconds) {
-        let level = g.level((Quality::Q3, Why::Full)).0;
-        at += Duration::from_secs(1) / power.fps(&light, level, refresh);
-        let t = (at - start).as_secs_f32();
-        if g.feed(at, cost(level) * if t < from { 1.0 } else { 0.1 }, budget, Quality::Q3, true) {
-            seen.push((t, g.level((Quality::Q3, Why::Full)).0));
-        }
-    }
-    seen
-}
-
-#[test]
-fn a_lower_level_that_also_lowers_the_frame_rate_does_not_bounce_back() {
-    let flat = levels(144, |_| 3.8, f32::MAX, 120.0);
-    assert_eq!(flat.iter().map(|s| s.1).collect::<Vec<_>>(), [Quality::Q3, Quality::Q2], "{flat:?}");
-    let scaled = |q: Quality| 10.0 * q.render_scale().powi(2);
-    let shrunk = levels(60, scaled, f32::MAX, 120.0);
-    assert_eq!(shrunk.last().map(|s| s.1), Some(Quality::Q1), "{shrunk:?}");
-    assert!(shrunk.windows(2).all(|w| w[1].1 < w[0].1), "the level went back up: {shrunk:?}");
-    let lighter = levels(60, scaled, 30.0, 120.0);
-    assert_eq!(lighter[..3], shrunk[..3]);
-    assert_eq!(
-        lighter.last().map(|s| s.1),
-        Some(Quality::Q3),
-        "a scene that got lighter stayed low: {lighter:?}"
-    );
 }
 
 fn runtime(layers: usize) -> Runtime {

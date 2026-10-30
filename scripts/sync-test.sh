@@ -10,6 +10,12 @@ mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 pids=()
 cleanup() {
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
+  for _ in $(seq 50); do
+    alive=0
+    for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive=1; done
+    [ "$alive" = 0 ] && break
+    sleep 0.1
+  done
   if [ "${status:-1}" != 0 ]; then
     for f in "$WORK"/*.log; do echo "== $f"; tail -n 40 "$f"; done
   fi
