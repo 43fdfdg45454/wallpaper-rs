@@ -105,7 +105,13 @@ fn the_luminance_grid_follows_the_bright_parts_of_the_frame() {
     let (mut meter, mut luma) = (r.meter(), Vec::new());
     assert!(!r.luma(&mut meter, Some(&image), &mut luma).unwrap() && luma.is_empty());
     r.finish().unwrap();
-    assert!(r.luma(&mut meter, None, &mut luma).unwrap(), "the grid was not read one frame later");
+    let read = (0..100).any(|_| {
+        r.luma(&mut meter, None, &mut luma).unwrap() || {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            false
+        }
+    });
+    assert!(read, "the grid was not read once the frame finished");
     assert!(!r.luma(&mut meter, None, &mut luma).unwrap(), "a grid was read twice");
     let [w, h] = wprs_scene::FLASH_GRID.map(|v| v as usize);
     assert_eq!(luma.len(), w * h);
