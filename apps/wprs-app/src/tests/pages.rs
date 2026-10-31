@@ -133,3 +133,16 @@ fn a_burst_of_events_reaches_every_listener() {
     }
     assert_eq!(seen, 5000);
 }
+
+#[test]
+fn previews_are_stopped_before_the_app_exits() {
+    use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
+    let stopped = std::sync::Arc::new(AtomicBool::new(false));
+    let told = stopped.clone();
+    bus::farewell(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        told.store(true, SeqCst);
+    });
+    bus::part(std::time::Duration::from_secs(10));
+    assert!(stopped.load(SeqCst), "the app left before it told the daemon");
+}
