@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="webs">Páginas web</string>
+    <string name="web_privacy">Privacidad</string>
+    <string name="web_notice">Este fondo web usa %1$s. Puedes restringir cada cosa en su página.</string>
+    <string name="web_zone">tu zona horaria</string>
+    <string name="web_language">tu idioma</string>
+    <string name="web_gpu">el modelo de tu chip gráfico</string>
+    <string name="web_storage">datos que guarda en este teléfono</string>
+    <string name="web_network">la red, para llegar a los sitios que nombra</string>
+    <string name="web_and">%1$s y %2$s</string>
+    <string name="web_show_zone">Dejar que vea la zona horaria</string>
+    <string name="web_show_language">Dejar que vea el idioma</string>
+    <string name="web_show_gpu">Dejar que vea el modelo del chip gráfico</string>
+    <string name="web_show_storage">Dejar que guarde datos en este teléfono</string>
+    <string name="web_reach">Dejar que llegue a los sitios que nombra</string>
+    <string name="web_clear">Borrar datos</string>
+    <string name="web_cleared">Sus datos están borrados</string>
+</resources>

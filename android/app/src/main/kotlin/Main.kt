@@ -32,6 +32,7 @@ class Main : ComponentActivity() {
     val videos by lazy { Videos(applicationContext) }
     val tilt by lazy { Tilt(applicationContext) }
     val hearing by lazy { Hearing(applicationContext) }
+    val pages by lazy { Pages(applicationContext) }
     private val power by lazy { Power(applicationContext) }
     private val scope = MainScope()
     private val heard by lazy { Heard(this, scope) }
@@ -100,6 +101,7 @@ class Main : ComponentActivity() {
 
     fun changed(edit: Boolean = true) {
         revision.intValue++
+        runCatching { Pages.forget() }
         Render.post { Wallpaper.reload(false) }
         if (edit) Sync.soon(this, EDITS)
     }
@@ -150,6 +152,7 @@ class Main : ComponentActivity() {
             else -> true
         }
         if (!played) Native.library(JSONObject().put("op", "remove").put("uids", JSONArray(listOf(uid))).toString())
+        notice(strings(item.optJSONArray("exposes")))?.let { told -> runOnUiThread { toast(told) } }
         return played
     }
 

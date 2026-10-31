@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
@@ -54,6 +55,7 @@ private val FILTERS = listOf(
     R.string.images to "kind:image",
     R.string.videos to "kind:video",
     R.string.scenes to SCENES,
+    R.string.webs to "kind:web",
     R.string.favorites to "fav:",
 )
 
@@ -84,7 +86,7 @@ fun Library(main: Main, open: (String) -> Unit) = Box(Modifier.fillMaxSize()) {
         Choices(null, FILTERS.map { (label, query) -> query to stringResource(label) }, kind) { chosen ->
             filter = FILTERS.indexOfFirst { it.second == chosen }
         }
-        if (kind == SCENES) Row(Modifier.padding(horizontal = 8.dp), Arrangement.spacedBy(8.dp)) {
+        if (kind == SCENES || kind == "kind:web") Row(Modifier.padding(horizontal = 8.dp), Arrangement.spacedBy(8.dp)) {
             TextButton(main::examples) { Text(stringResource(R.string.examples)) }
             TextButton(main::openPackage) { Text(stringResource(R.string.open_package)) }
         }
@@ -118,7 +120,7 @@ fun Thumb(item: Item, modifier: Modifier = Modifier, picked: Boolean = false) {
         if (item.flashing) Icon(Icons.Default.Warning, stringResource(R.string.flashing), Modifier.align(Alignment.TopEnd).padding(4.dp), Color.White)
         val corner = Modifier.align(Alignment.BottomStart).padding(4.dp)
         if (item.video) Icon(Icons.Default.PlayArrow, null, corner, Color.White)
-        if (item.scene) Icon(Icons.Default.Star, null, corner, Color.White)
+        if (item.scene) Icon(if (item.web) Icons.Default.Menu else Icons.Default.Star, null, corner, Color.White)
         if (picked) Icon(Icons.Default.CheckCircle, null, Modifier.align(Alignment.TopStart).padding(4.dp), MaterialTheme.colorScheme.primary)
     }
 }

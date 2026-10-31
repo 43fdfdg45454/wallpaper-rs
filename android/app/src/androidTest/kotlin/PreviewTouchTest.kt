@@ -29,7 +29,7 @@ class PreviewTouchTest : SceneBase() {
         Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
         val uid = show(TITLE)
         assertTrue(waitFor { frames.get() > 0 })
-        val feel = Feel().apply { painter = this@PreviewTouchTest.painter }
+        val feel = Feel(Pages(context)).apply { painter = this@PreviewTouchTest.painter }
         assertFalse("a preview without permission keeps its touches for the page", press(feel, MotionEvent.ACTION_DOWN, SIDE / 4f))
         ask("grant", "uid" to uid, "input" to "taps", "on" to true)
         Render.call { painter.refresh() }

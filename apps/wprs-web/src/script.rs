@@ -3,8 +3,7 @@ use crate::state::{all, engine, live, send};
 use serde_json::{Value, json};
 use wprs_web::FromWeb;
 
-const API: &str = include_str!("api.js");
-const MASK: &str = include_str!("mask.js");
+const POST: &str = "(m) => window.webkit.messageHandlers.wprs.postMessage(JSON.stringify(m))";
 const MAX_SAID: u32 = 200;
 
 pub fn source(view: u32) -> Vec<String> {
@@ -18,10 +17,9 @@ pub fn source(view: u32) -> Vec<String> {
             "settings": {"fps": s.fps, "quality": s.quality, "locale": s.locale, "volume": s.volume},
         })
     });
-    let api = API.replace("__WPRS_INIT__", &init.to_string());
-    let mut scripts = vec![api];
+    let mut scripts = vec![wprs_format::page::api(&init, POST)];
     if engine.start.mask_gpu {
-        scripts.push(MASK.into());
+        scripts.push(wprs_format::page::MASK.into());
     }
     scripts
 }

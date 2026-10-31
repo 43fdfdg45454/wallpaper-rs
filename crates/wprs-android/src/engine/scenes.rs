@@ -58,6 +58,9 @@ impl Engine {
     }
 
     pub(crate) fn inputs(&self) -> i32 {
+        if let Some(handle) = self.paged {
+            return self.page_inputs(handle);
+        }
         let [audio, touch] = self.stage.as_ref().map_or([false; 2], Stage::wants);
         let films = self.film.is_some() || self.reels().iter().any(|(id, _)| id.starts_with('\0'));
         let (moving, plays) = (Power::now().moving(), films || self.stage.as_ref().is_some_and(Stage::plays));

@@ -217,7 +217,7 @@ the folder changed, and the stored value is the path of that copy.
 | `properties2` | has settings of the newer kinds or fields: sliders without `step` or with `decimals`, `editable` or `log`, combos of numbers or flags or with icons, `secret` texts, `button`, `divider`, `folder`, `shortcut`, collapsed groups, icons, fractional `order`, `visible_if` expressions, `enabled_if` and `default_asset`, or settings written in a way the first version cannot read (a field it does not know, even with its default value, a missing `default` of a text or `accept` of a file, or an `order` such as `2.0`) | runs | runs |
 | `folder` | shows pictures from a folder the user chooses | runs | runs |
 | `folder2` | reads the subfolders of a chosen folder (`recursive`) or fewer of its files (`max_files`) | runs | runs |
-| `folder_lists` | lets its page list a chosen folder (`mode: all` in a `web` package) | runs | refused |
+| `folder_lists` | lets its page list a chosen folder (`mode: all` in a `web` package) | runs | runs |
 | `script_folders` | lets its scene scripts list a chosen folder (`mode: all` in other kinds) | refused | refused |
 | `user_videos` | lets the user choose videos for its files or folders | runs | runs |
 | `shortcut` | has a `shortcut` property | refused | refused |
@@ -227,7 +227,7 @@ the folder changed, and the stored value is the path of that copy.
 | `display2` | sets `display` of a picture, or its `background` or `span` | runs | without |
 | `flip` | sets `display.flip` to `horizontal` or `vertical` | refused | refused |
 | `accent` | sets `display.accent` | without | without |
-| `web` | is a web page (`kind: web`, see `web.md`) | runs | refused |
+| `web` | is a web page (`kind: web`, see `web.md`) | runs | runs |
 | `preset` | sets the values of another package (`kind: preset`) | refused | refused |
 | `assets` | holds resources for other packages (`kind: assets`) | refused | refused |
 | `packages` | lists `requires.packages` | refused | refused |
@@ -405,7 +405,7 @@ declares `network` in `inputs`, and only then. Pages receive their settings thro
 | `onAudio(cb)` | 64 bands per channel while `audio` is allowed, silence otherwise |
 | pointer and clicks | real DOM events while `pointer` is allowed, and clicks only from real clicks on screens where clicks are on, for packages allowed `clicks` |
 | `onMedia(cb)` | what the media player plays while `media` is allowed, `{enabled: false}` otherwise |
-| `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | tokens `wpak-user://<prop>/…` for the files of a chosen folder, and the ones added and removed; never their paths |
+| `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | opaque addresses (`wpak-user://<prop>/…` on the desktop, `https://<host>/:user/<prop>/…` on the phone) for the files of a chosen folder, and the ones added and removed; never their paths |
 | `onAction(cb)` | the id of a pressed `button` property |
 | `openShortcut(prop)` | opens what the user chose for a `shortcut` property, only inside a real click and at most once a second |
 | `rgb.setImage(bytes, w, h)` | sends RGBA pixels of at most 64 × 16 to the RGB lighting of the computer, at most 30 times a second, only with `permissions.rgb` and once the user allows it for the package |

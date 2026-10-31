@@ -1985,7 +1985,7 @@ the scene canvas, transitions and claims as other wallpapers.
 - Example scenes are packages in `wallpaper-rs/examples/` under `$XDG_DATA_HOME` or a folder of
   `$XDG_DATA_DIRS`. The daemon adds each one to the library once, when it starts and on a
   `Rescan` of every source; an example removed from the library is not added again, and the
-  item of an example whose file was uninstalled is removed. `kind:scene` finds scene packages.
+  item of an example whose file was uninstalled is removed. `kind:scene` finds scene packages and `kind:web` web packages.
 
 ## Scene sound
 

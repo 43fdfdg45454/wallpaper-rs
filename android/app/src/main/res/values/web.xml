@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="webs">Web pages</string>
+    <string name="web_privacy">Privacy</string>
+    <string name="web_notice">This web wallpaper uses %1$s. You can restrict each of them on its page.</string>
+    <string name="web_zone">your time zone</string>
+    <string name="web_language">your language</string>
+    <string name="web_gpu">the model of your graphics chip</string>
+    <string name="web_storage">data it keeps on this phone</string>
+    <string name="web_network">the network, to reach the sites it names</string>
+    <string name="web_and">%1$s and %2$s</string>
+    <string name="web_show_zone">Let it see the time zone</string>
+    <string name="web_show_language">Let it see the language</string>
+    <string name="web_show_gpu">Let it see the model of the graphics chip</string>
+    <string name="web_show_storage">Let it keep data on this phone</string>
+    <string name="web_reach">Let it reach the sites it names</string>
+    <string name="web_clear">Clear data</string>
+    <string name="web_cleared">Its data is cleared</string>
+</resources>

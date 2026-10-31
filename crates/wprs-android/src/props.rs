@@ -94,6 +94,10 @@ pub(crate) fn granted(id: &str) -> [bool; 3] {
         .map(|input| grants.get(id).is_some_and(|g| g.contains(&input)))
 }
 
+pub(crate) fn allows(id: &str, input: Input) -> bool {
+    grants().get(id).is_some_and(|g| g.contains(&input))
+}
+
 fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
     let values = values(pack);
     let sounds = pack.scene.sounds().next().is_some();
@@ -105,11 +109,13 @@ fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
     fields.iter_mut().for_each(|f| f.filled = filled.contains(&f.key));
     let mut runtime = Runtime::new(Arc::clone(&pack.scene), values);
     pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
-    let uses = runtime.uses();
+    let ran = runtime.uses();
     let [audio, touch, taps] = granted(&pack.id);
+    let uses = pack.web.as_ref().map_or([ran.audio, ran.cursor, ran.clicks], |w| w.uses);
     Ok(json!({
-        "fields": fields, "presets": presets, "scripts": uses.scripts, "sounds": sounds, "saved": saved::listed(pack)?,
-        "uses": { "audio": uses.audio, "touch": uses.cursor, "taps": uses.clicks },
+        "fields": fields, "presets": presets, "scripts": pack.web.is_none() && ran.scripts, "sounds": sounds,
+        "saved": saved::listed(pack)?, "web": crate::page::form(pack),
+        "uses": { "audio": uses[0], "touch": uses[1], "taps": uses[2] },
         "granted": { "audio": audio, "touch": touch, "taps": taps },
     }))
 }
@@ -149,6 +155,7 @@ fn grant(pack: &Pack, input: &str, on: bool) -> Result<(), Error> {
         "audio" => Input::Audio,
         "touch" => Input::Pointer,
         "taps" => Input::Clicks,
+        "network" if pack.web.as_ref().is_some_and(|w| !w.network.is_empty()) => Input::Network,
         _ => return Err(said("android.audio_touch_taps", "%1 is not audio, touch or taps", &[&input])),
     };
     let mut grants = grants();

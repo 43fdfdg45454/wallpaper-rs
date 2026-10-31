@@ -23,6 +23,14 @@ object Native {
 
     external fun video(engine: Long): String?
 
+    external fun page(engine: Long): String?
+
+    external fun serve(engine: Long, url: String): String
+
+    external fun heard(engine: Long, message: String): String?
+
+    external fun listen(engine: Long): String?
+
     external fun draw(engine: Long, nanos: Long, force: Boolean): Long
 
     external fun detach(engine: Long)

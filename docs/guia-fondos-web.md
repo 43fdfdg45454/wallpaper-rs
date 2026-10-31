@@ -107,6 +107,25 @@ Si de verdad la necesitas, declara los orígenes (hasta 8, `https://` sin ruta) 
 La página solo llega a esos orígenes y solo después de que el usuario lo permita; mientras tanto
 `fetch` falla. Evítala si puedes: un fondo sin red funciona en todas partes y no expone nada.
 
+## En el teléfono
+
+La app de Android muestra el mismo paquete con el WebView del sistema (el motor de Chrome que
+Android mantiene al día), con la misma interfaz `window.wprs`. Conviene tenerlo en cuenta:
+
+- La página vive en una dirección `https://…wpak.invalid/` y los archivos elegidos llegan como
+  `https://…/:user/<propiedad>/…` en lugar de `wpak-user://`: trátalos como direcciones opacas y usa
+  rutas relativas para tus archivos.
+- `requestAnimationFrame` va al ritmo que elige el usuario, pero las animaciones CSS y los vídeos van
+  al de la pantalla: para ahorrar batería anima con `requestAnimationFrame`.
+- El dedo es el puntero (`pointermove`, como un ratón que pasa por encima) si el usuario activa
+  *Reaccionar al tacto*, y un toque sin moverse es un `click` si activa *Reaccionar a los toques*.
+  Los toques llegan después del primer dibujo de la página.
+- El sonido de la página suena solo si el usuario activa el sonido de los vídeos; si no,
+  `wprs.volume` es 0.
+- `RTCPeerConnection` no existe y el `console` va a logcat (`adb logcat -s wprs`).
+- WebGL depende del teléfono: comprueba que `getContext("webgl")` no devuelve `null` y ten un dibujo
+  más sencillo para ese caso.
+
 ## Pasar una aplicación a fondo web
 
 wallpaper-rs nunca ejecuta programas de un paquete. Un fondo hecho como aplicación (un ejecutable

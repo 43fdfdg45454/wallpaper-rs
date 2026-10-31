@@ -27,7 +27,7 @@ impl Engine {
         if self.checked != check {
             let old = std::mem::replace(&mut self.checked, check).0;
             let (size, shown) = (self.size, choice::shown_on(self.preview, self.lock));
-            if shown.as_ref().is_some_and(|shown| shown.video) {
+            if shown.as_ref().is_some_and(|shown| shown.video || shown.web) {
                 (self.image, self.framed, self.crop) = (None, None, None);
                 return self.compose(nanos, fps, power);
             }

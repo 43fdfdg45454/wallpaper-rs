@@ -26,7 +26,10 @@ pub fn store<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, fd: jint, name: JStrin
         let mut source = File::from(unsafe { BorrowedFd::borrow_raw(fd) }.try_clone_to_owned()?);
         let (uid, kind) = store::store(&mut source, &name.try_to_string(env)?)?;
         let poster = store::poster_source(&uid)?;
-        Ok(env.new_string(json!({ "uid": uid, "kind": kind, "poster": poster }).to_string())?)
+        let package = library::with(|lib| Ok(lib.item(&uid)?.package))?;
+        let exposes = package.as_ref().map(crate::page::exposes).unwrap_or_default();
+        let stored = json!({ "uid": uid, "kind": kind, "poster": poster, "exposes": exposes });
+        Ok(env.new_string(stored.to_string())?)
     })
 }
 

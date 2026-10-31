@@ -21,6 +21,7 @@ error of the screen, instead of drawing nothing:
 | Ubuntu 24.04 (the CI runner) | WebKitGTK 2.52 only, no WPE | refused: `they need WPE WebKit 2.54 or newer, which is not installed` |
 | Flatpak (`org.kde.Platform`) | no WebKit in the runtime | refused with the same reason; `wprs-web` is in the bundle |
 | any, without the helper | — | refused: `the web helper wprs-web is not installed` |
+| Android (the app) | the system WebView | shown with it, see "On the phone" |
 
 The daemon finds the helper in `WPRS_WEB`, next to `wprsd` or in `PATH`, and runs
 `wprs-web --check` once to learn whether it can start (it prints the WebKit version, or why not).
@@ -123,3 +124,50 @@ run. The folder of a `folder` property is listed by the daemon (`max_files`, `re
 files and links left out, the same rules as scenes), checked again every 5 s while the page is
 shown and never while hidden; the helper serves only the listed files, opened without following
 links.
+
+## On the phone
+
+The Android app shows the same packages with the system WebView, the engine Android keeps up to
+date for every app, instead of `wprs-web`: packages never bring an engine, and the app starts no
+process of its own. The package, `window.wprs`, the privacy settings and the notice are the same;
+these are the differences:
+
+- **Drawing.** The page is laid out at the size of the wallpaper on a private virtual display whose
+  output is the wallpaper's own surface, so its frames reach the screen without copies. The change
+  to or from a page has no fade.
+- **Addresses.** The page lives at `https://<16 hex>.wpak.invalid/`, a host made from the package id
+  that never resolves, and every request goes through the app: it serves only the files the package
+  lists (never `manifest.json`), the interface at `/:wprs/api.js` (added to every HTML file, after
+  its doctype) and the files the user chose as `https://<host>/:user/<property>/<token>` instead of
+  `wpak-user://`. Both are opaque to the page. The content security policy is the one above with
+  `'self'` in place of the schemes of the desktop.
+- **Frame rate.** `requestAnimationFrame` is paced at the cap by the injected script; CSS animations
+  and videos run at the rate of the display.
+- **Lifecycle.** A page is visible while its screen is shown and the phone neither saves power, nor
+  runs low on battery, nor is very hot; otherwise the WebView is paused (`visibilityState` is
+  `"hidden"` and `onPause(true)` fires). After 5 minutes hidden it is closed and loads again when
+  shown. A renderer that crashes loads the page again, up to three times. Touches reach the page
+  only after its first paint.
+- **Sandbox.** Layers 1 to 4 are the same, enforced by intercepting every request. Network loads
+  are blocked in the WebView unless the package declares origins and the user allowed `network`,
+  and only those origins pass; cookies, service workers, safe browsing and the WebView's metrics
+  are off, and peer connections (WebRTC) are removed from the page and from the frames it reads
+  through `contentWindow` before any of its scripts run. A page that reaches a frame of its own
+  through `window[0]` could still build one: Android offers no switch to turn peer connections off.
+  The renderer runs in the WebView's isolated process.
+- **Privacy.** `hide_zone` and `hide_language` are applied by a script that runs before the page's:
+  `Date`, `Intl`, the `toLocale…` methods and `navigator.language` see UTC and `en-US` in the page
+  and its frames, not in workers. `hide_gpu` uses the same mask as the desktop. Kept storage is the
+  WebView's storage of the page's origin; *Clear data* and removing the last item of the package
+  move the page to a new origin and delete the old one, and a page that keeps nothing gets a new
+  origin each time it loads, deleted when it closes. The notice is shown on the page of the
+  package, above *Set as wallpaper*, in its *Privacy* section with one switch per item and *Clear
+  data*, and as a message after importing it.
+- **Inputs.** *React to touch* is the pointer (`pointermove` from the finger, as a mouse hover) and
+  *React to taps* the clicks: a tap that does not move becomes one real click. With both the page
+  gets the touches as they are. The lock screen gives none.
+- **Sound.** The page's own sound follows the phone's sound setting for videos: `wprs.volume` is 0,
+  and the page muted, unless video sound is on. `onAudio` reads the Visualizer of Android, as scenes
+  do, at most 30 times a second.
+- **Console.** `console` output and errors reach logcat (tag `wprs`, `page:`), at most 200 lines a
+  load.

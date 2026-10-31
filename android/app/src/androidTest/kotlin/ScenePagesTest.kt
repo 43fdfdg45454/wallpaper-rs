@@ -78,12 +78,19 @@ class ScenePagesTest : SceneBase() {
     }
 
     @Test
-    fun pagesTheEngineCannotDrawAreRefused() {
+    fun webPagesAreAddedAndShownAsPages() = runBlocking {
         val dir = File(storage(), "pages/page").apply { mkdirs() }
         File(dir, "index.html").writeText("<!doctype html><title>Page</title>")
         File(dir, "manifest.json").writeText(PAGE_MANIFEST)
-        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
-        assertTrue(reply.getString("error").contains("needs a newer version of wallpaper-rs: it uses the feature web"))
+        val uid = JSONArray(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())).getString(0)
+        val item = Item(ask("item", "uid" to uid) as JSONObject)
+        assertTrue(item.web && item.scene && item.lacks.isEmpty())
+        assertEquals(listOf("zone", "language", "gpu"), item.exposes)
+        assertTrue(context.notice(item.exposes)!!.contains("your time zone, your language and the model of your graphics chip"))
+        ask("remove", "uids" to listOf(uid))
+        val webs = JSONArray(Native.library(JSONObject().put("op", "items").put("query", "kind:web").toString()))
+        val lights = (0 until webs.length()).map(webs::getJSONObject).first { it.getString("title") == "Lights" }
+        assertEquals(listOf("zone", "language", "gpu", "storage"), Item(lights).exposes)
     }
 
     @Test

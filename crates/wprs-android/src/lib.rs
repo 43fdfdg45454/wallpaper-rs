@@ -34,6 +34,7 @@ mod listen;
 mod local;
 mod media;
 mod pack;
+mod page;
 mod pairing;
 mod power;
 mod private;

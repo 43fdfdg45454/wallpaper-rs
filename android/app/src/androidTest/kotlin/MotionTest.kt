@@ -40,7 +40,7 @@ class MotionTest {
     private val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
     private val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
     private val tilt = Tilt(blind(context))
-    private val painter = Painter(false, Videos(context), tilt, Hearing(context))
+    private val painter = Painter(false, Videos(context), tilt, Hearing(context), Pages(context))
     private var uid = ""
 
     @Before

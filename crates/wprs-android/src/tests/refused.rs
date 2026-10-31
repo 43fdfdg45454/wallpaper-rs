@@ -18,11 +18,12 @@ pub(super) fn packages_the_phone_cannot_play_are_refused() {
         let error = result.as_ref().err().map(ToString::to_string).unwrap_or_default();
         if refused.is_empty() {
             assert!(!error.contains("needs a newer version"), "{name}: {error}");
-            let shown = package.manifest.kind.first();
+            let kind = package.manifest.kind;
+            let shown = kind.first() || kind == wprs_format::Kind::Web;
             assert_eq!(result.is_ok(), shown, "{name}: {error}");
             stored += usize::from(shown);
             if let Ok((uid, _)) = result.as_ref()
-                && package.manifest.kind != wprs_format::Kind::Scene
+                && !matches!(kind, wprs_format::Kind::Scene | wprs_format::Kind::Web)
             {
                 kinds(uid, package.manifest.kind);
             }

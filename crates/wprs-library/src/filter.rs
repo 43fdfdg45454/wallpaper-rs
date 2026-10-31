@@ -84,7 +84,7 @@ fn parse(key: &str, value: &str, now: i64) -> Option<(String, Vec<Value>)> {
         "tag" => (TAGGED.into(), text(value)),
         "in" => (LISTED.into(), [text(value), text(value)].concat()),
         "source" => ("i.source_id = (SELECT id FROM sources WHERE uid = ?)".into(), text(value)),
-        "kind" if lower == "scene" => ("i.pkg_type = ?".into(), text("scene")),
+        "kind" if lower == "scene" || lower == "web" => ("i.pkg_type = ?".into(), text(&lower)),
         "kind" => ("i.kind = ?".into(), text(lower.parse::<Kind>().ok()?.as_str())),
         "fav" => ("i.favorite = ?".into(), int(flag(&lower)?)),
         "missing" => ("i.missing = ?".into(), int(flag(&lower)?)),

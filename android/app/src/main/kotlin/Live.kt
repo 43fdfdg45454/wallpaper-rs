@@ -12,12 +12,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
-class Feel : View.OnTouchListener {
+class Feel(private val pages: Pages) : View.OnTouchListener {
     @Volatile
     var on = false
     var painter: Painter? = null
 
     override fun onTouch(view: View?, event: MotionEvent): Boolean {
+        painter?.let { if (pages.press(it, event)) return true }
         val target = painter?.takeIf { on } ?: return false
         val (x, y, action) = Triple(event.x, event.y, event.actionMasked)
         Render.post { target.touch(x, y, action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) }
@@ -28,13 +29,13 @@ class Feel : View.OnTouchListener {
 
 @Composable
 fun Live(main: Main, vararg changes: Any?, modifier: Modifier = Modifier.fillMaxSize()) = Box(modifier) {
-    val feel = remember { Feel() }
-    val painter = remember { Painter(true, main.videos, main.tilt, main.hearing) { feel.on = it }.also { feel.painter = it } }
+    val feel = remember { Feel(main.pages) }
+    val painter = remember { Painter(true, main.videos, main.tilt, main.hearing, main.pages) { feel.on = it }.also { feel.painter = it } }
     LaunchedEffect(*changes) { Render.post(painter::refresh) }
-    AndroidView({ SurfaceView(it).apply { holder.addCallback(Preview(this, painter)); setOnTouchListener(feel) } }, Modifier.fillMaxSize())
+    AndroidView({ SurfaceView(it).apply { holder.addCallback(Preview(this, painter, main.pages)); setOnTouchListener(feel) } }, Modifier.fillMaxSize())
 }
 
-private class Preview(private val view: SurfaceView, private val painter: Painter) : SurfaceHolder.Callback {
+private class Preview(private val view: SurfaceView, private val painter: Painter, private val pages: Pages) : SurfaceHolder.Callback {
     override fun surfaceCreated(holder: SurfaceHolder) = Render.call {
         painter.attach(holder.surface)
         painter.show(true)
@@ -46,8 +47,8 @@ private class Preview(private val view: SurfaceView, private val painter: Painte
         painter.redraw()
     }
 
-    override fun surfaceDestroyed(holder: SurfaceHolder) = Render.call {
+    override fun surfaceDestroyed(holder: SurfaceHolder) = pages.drop(painter).let { _ -> Render.call {
         Wallpaper.previews -= painter
         painter.detach()
-    }
+    } }
 }

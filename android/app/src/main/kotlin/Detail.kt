@@ -104,7 +104,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                 Relief(main, uid, state)
             }
             if (item?.scene == false) Kept(main, uid)
-            item?.takeIf { it.scene && !it.flashes }?.let { shown ->
+            item?.takeIf { it.scene && !it.web && !it.flashes }?.let { shown ->
                 Toggle(stringResource(R.string.keep_moving), shown.moving) {
                     main.act { ask(if (it) "confirm" else "unconfirm", "uid" to uid, "what" to "motion") }
                 }
@@ -124,6 +124,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
             about(Modifier.heightIn(max = 360.dp))
             if (item?.scene == true) Scene(main, uid, Modifier.weight(1f))
         }
+        item?.exposes?.let { Exposes(it) }
         Row(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
             Button(main::setWallpaper, Modifier.weight(1f), enabled = ready && asks == null) { Text(stringResource(R.string.apply)) }
             val favorite = item?.favorite == true

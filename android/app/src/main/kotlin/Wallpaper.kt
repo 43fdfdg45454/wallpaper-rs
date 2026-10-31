@@ -12,6 +12,7 @@ class Wallpaper : WallpaperService() {
     private val videos = Videos(this)
     private val tilt by lazy { Tilt(this) }
     private val hearing by lazy { Hearing(this) }
+    private val pages by lazy { Pages(this) }
 
     override fun onCreate() {
         super.onCreate()
@@ -41,7 +42,7 @@ class Wallpaper : WallpaperService() {
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
-            painter = Painter(isPreview, videos, tilt, hearing) { on -> mainExecutor.execute { setTouchEventsEnabled(on) } }
+            painter = Painter(isPreview, videos, tilt, hearing, pages) { on -> mainExecutor.execute { setTouchEventsEnabled(on) } }
             if (!isPreview) live++
             if (!isPreview) screens[this] = flags()
             val lock = lock()
@@ -98,14 +99,15 @@ class Wallpaper : WallpaperService() {
             Render.post { painter.offset(if (xStep > 0f && xStep <= 1f) x else 0.5f) }
 
         override fun onTouchEvent(event: MotionEvent) {
+            if (pages.press(painter, event)) return
             val (x, y, action) = Triple(event.x, event.y, event.actionMasked)
             Render.post { painter.touch(x, y, action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) }
         }
 
-        override fun onSurfaceDestroyed(holder: SurfaceHolder) = Render.call {
+        override fun onSurfaceDestroyed(holder: SurfaceHolder) = pages.drop(painter).let { _ -> Render.call {
             scenes -= this
             painter.detach()
-        }
+        } }
 
         override fun onComputeColors(): WallpaperColors? = colors
 

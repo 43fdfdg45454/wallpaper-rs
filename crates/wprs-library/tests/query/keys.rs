@@ -5,7 +5,7 @@ use wprs_library::{Error, query_keys};
 fn every_key_filters_items() {
     let Fixture { library, source, .. } = fixture();
     let source_query = format!("source:{source}");
-    let cases: [(&str, &[&str]); 48] = [
+    let cases: [(&str, &[&str]); 49] = [
         ("", &["café", "forest", "night", "ocean waves", "square"]),
         ("waves", &["ocean waves"]),
         ("oce wav", &["ocean waves"]),
@@ -20,6 +20,7 @@ fn every_key_filters_items() {
         ("kind:image", &["café", "ocean waves", "square"]),
         ("kind:package", &[]),
         ("kind:scene", &[]),
+        ("kind:web", &[]),
         ("fav:", &["café"]),
         ("fav:no", &["forest", "night", "ocean waves", "square"]),
         ("rating:>=4", &["café", "night"]),

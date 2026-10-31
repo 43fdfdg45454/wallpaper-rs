@@ -33,9 +33,10 @@ pub(crate) fn media(item: &wprs_library::Item) -> Result<(PathBuf, &'static str)
     let kind = match (item.kind, item.package.as_ref().map(|p| p.kind.as_str())) {
         (wprs_library::Kind::Video, _) | (_, Some("video")) => "video",
         (wprs_library::Kind::Package, Some("image")) | (wprs_library::Kind::Image, _) => "image",
+        (_, Some("web")) => "web",
         _ => "scene",
     };
-    match item.kind == wprs_library::Kind::Package && kind != "scene" {
+    match item.kind == wprs_library::Kind::Package && !matches!(kind, "scene" | "web") {
         true => Ok((entry(&item.path)?, kind)),
         false => Ok((item.path.clone(), kind)),
     }

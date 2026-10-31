@@ -42,6 +42,7 @@ pub(crate) struct Shown {
     pub(crate) path: PathBuf,
     pub(crate) video: bool,
     pub(crate) scene: bool,
+    pub(crate) web: bool,
 }
 
 pub(crate) fn pick(choice: Option<Choice>) {
@@ -125,7 +126,8 @@ pub(crate) fn shown(preview: bool) -> Option<Shown> {
 pub(crate) fn shown_on(preview: bool, lock: bool) -> Option<Shown> {
     let item = with(|lib| chosen(lib, preview, lock)?.map(|uid| Ok(lib.item(&uid)?)).transpose()).ok()??;
     let (path, kind) = crate::pack::media(&item).inspect_err(|e| log::warn!("{e}")).ok()?;
-    Some(Shown { video: kind == "video", scene: kind == "scene", uid: item.uid, path })
+    let (video, scene, web) = (kind == "video", kind == "scene", kind == "web");
+    Some(Shown { video, scene, web, uid: item.uid, path })
 }
 
 pub(crate) fn colors(preview: bool, lock: bool) -> Result<Option<[i32; 4]>, Error> {

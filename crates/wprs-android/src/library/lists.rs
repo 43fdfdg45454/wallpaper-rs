@@ -2,13 +2,17 @@ use super::known;
 use crate::{Error, settings, store};
 use serde_json::{Value, json};
 use std::collections::HashSet;
-use wprs_library::Library;
+use wprs_library::{Item, Library};
 
 pub(super) fn remove(lib: &mut Library, uids: &[String], now: i64) -> Result<Value, Error> {
     let refs = known(lib, uids);
     let hashes = lib.hashed()?.into_iter().filter(|(i, _)| refs.contains(&i.uid.as_str()));
     let removed: Vec<String> = hashes.map(|(_, hash)| wprs_sync::removed_blob(&hash)).collect();
     let items = lib.remove_items(&refs)?;
+    let pages = items.iter().filter_map(|i| i.package.as_ref()).filter(|p| p.kind == "web");
+    for package in pages.filter(|p| lib.copies(&p.id).is_ok_and(|n| n == 0)) {
+        crate::page::clear(&package.id)?;
+    }
     crate::state::forget(removed, now * 1000)?;
     items.iter().try_for_each(store::forget)?;
     let gone =
@@ -41,4 +45,18 @@ pub(super) fn add(lib: &mut Library, playlist: &str, items: &[String]) -> Result
     let mut seen = HashSet::new();
     let fresh: Vec<&str> = known(lib, items).into_iter().filter(|i| seen.insert(*i) && !listed(i)).collect();
     Ok(json!(lib.add_to_playlist(playlist, &fresh)?))
+}
+
+pub(super) fn listed(items: Vec<Item>) -> Result<Value, Error> {
+    let listed = items.into_iter().map(|item| {
+        let exposes = item.package.as_ref().map(crate::page::exposes);
+        let thumb = store::thumb_file(&item.uid, "jpg").ok().filter(|path| path.is_file());
+        let mut value = serde_json::to_value(item)?;
+        if let Some(exposes) = exposes {
+            value["package"]["exposes"] = json!(exposes);
+        }
+        value["thumb"] = json!(thumb);
+        Ok(value)
+    });
+    listed.collect::<Result<_, Error>>().map(Value::Array)
 }

@@ -102,8 +102,6 @@ pub fn changed(old: &Map<String, Value>, new: &Map<String, Value>) -> Map<String
 }
 
 pub fn token(prop: &str, salt: &[u8; 32], path: &std::path::Path) -> String {
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or_default().to_ascii_lowercase();
-    let ext: String = ext.chars().filter(char::is_ascii_alphanumeric).take(8).collect();
     let hash = blake3::keyed_hash(salt, path.as_os_str().as_encoded_bytes()).to_hex();
-    format!("{USER_SCHEME}://{prop}/{}.{ext}", &hash[..16])
+    format!("{USER_SCHEME}://{prop}/{}", wprs_format::page::token_name(path, &hash))
 }

@@ -16,6 +16,7 @@ use wprs_render::{GpuImage, Surface};
 mod fade;
 
 use fade::Fading;
+mod paged;
 mod parked;
 mod picture;
 mod scenes;
@@ -50,6 +51,7 @@ pub(crate) struct Engine {
     rate: u32,
     failures: u32,
     video: bool,
+    paged: Option<i64>,
     film: Option<PathBuf>,
     direct: Option<PathBuf>,
     handover: bool,
@@ -94,6 +96,7 @@ impl Engine {
             rate,
             failures,
             video,
+            paged: None,
             film: None,
             direct: None,
             handover: false,
@@ -120,15 +123,15 @@ impl Engine {
         let pans = self.look.fit == Fit::Fill && self.offset != self.shown;
         let tilts = self.stage.as_mut().is_some_and(|stage| stage.offset(self.offset));
         let pictured = self.stage.is_none() && (pans || self.raised.is_some());
-        !self.video && (tilts || pictured) && Power::now().moving()
+        !self.video && self.paged.is_none() && (tilts || pictured) && Power::now().moving()
     }
 
     pub(crate) fn parallax(&mut self) -> u32 {
-        if self.video { 0 } else { self.tilted.rate(self.preview, self.lock) }
+        if self.video || self.paged.is_some() { 0 } else { self.tilted.rate(self.preview, self.lock) }
     }
 
     pub(crate) fn draw(&mut self, nanos: i64, force: bool) -> Result<i64, Error> {
-        if self.video {
+        if self.video || self.paged.is_some() {
             return Ok(0);
         }
         let power = Power::now();

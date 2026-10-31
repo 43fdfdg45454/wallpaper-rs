@@ -39,19 +39,23 @@ pub(crate) struct Pack {
     pub(crate) inputs: Option<wprs_scene::Uses>,
     pub(crate) scripts: Vec<(String, String)>,
     pub(crate) labels: serde_json::Value,
+    pub(crate) web: Option<crate::page::Web>,
 }
 
 fn open(path: &Path) -> Result<Package<BufReader<fs::File>>, Error> {
     let package = wprs_format::open(path, &wprs_format::Limits::default())?;
     wprs_format::features::playable(&package.manifest, &package.facts, wprs_format::Platform::Android)?;
     match package.manifest.kind {
-        kind if kind.first() => Ok(package),
+        kind if kind.first() || kind == Kind::Web => Ok(package),
         kind => Err(said("android.not_shown", "%1 packages are not wallpapers", &[&kind])),
     }
 }
 
 fn scene(path: &Path) -> Result<Package<BufReader<fs::File>>, Error> {
-    let package = open(path)?;
+    scene_of(open(path)?)
+}
+
+fn scene_of(package: Package<BufReader<fs::File>>) -> Result<Package<BufReader<fs::File>>, Error> {
     match package.manifest.kind {
         Kind::Scene => Ok(package),
         _ => Err(said(
@@ -90,7 +94,13 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
     if let Some(pack) = loaded.iter().find(|(s, _)| *s == stamp).and_then(|(_, weak)| weak.upgrade()) {
         return Ok(pack);
     }
-    let mut package = scene(path)?;
+    let mut package = open(path)?;
+    if crate::page::is_web(&package) {
+        let pack = Arc::new(crate::page::pack(&mut package, path)?);
+        loaded.push((stamp, Arc::downgrade(&pack)));
+        return Ok(pack);
+    }
+    let mut package = scene_of(package)?;
     let mut scene = package.scene()?;
     if scene.layers().any(|layer| !layer.parallax.is_zero()) {
         scene.canvas.parallax.get_or_insert_with(Default::default).gyro = true;
@@ -150,6 +160,7 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         inputs,
         scripts,
         labels,
+        web: None,
     });
     loaded.push((stamp, Arc::downgrade(&pack)));
     Ok(pack)

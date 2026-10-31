@@ -27,7 +27,7 @@ class RenderTest {
     private val thread = HandlerThread("reader").apply { start() }
     private val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
     private val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
-    private val painter = Painter(false, Videos(context), Tilt(blind(context)), Hearing(context))
+    private val painter = Painter(false, Videos(context), Tilt(blind(context)), Hearing(context), Pages(context))
 
     @Before
     fun attach() {

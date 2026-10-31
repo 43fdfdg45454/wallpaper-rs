@@ -25,26 +25,6 @@ pub fn package(start: &Start) -> Result<(HashSet<String>, Option<String>), Strin
     Ok((entries, preload))
 }
 
-fn decode(path: &str) -> Option<String> {
-    let bytes = path.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        match bytes[i] {
-            b'%' => {
-                let hex = std::str::from_utf8(bytes.get(i + 1..i + 3)?).ok()?;
-                out.push(u8::from_str_radix(hex, 16).ok()?);
-                i += 3;
-            }
-            b => {
-                out.push(b);
-                i += 1;
-            }
-        }
-    }
-    String::from_utf8(out).ok()
-}
-
 enum Found {
     Packed(PathBuf, String),
     User(PathBuf),
@@ -55,7 +35,7 @@ fn find(uri: &str) -> Option<Found> {
     let uri = uri.split(['?', '#']).next()?;
     if let Some(rest) = uri.strip_prefix("wpak://") {
         let (id, path) = rest.split_once('/')?;
-        let path = decode(path)?;
+        let path = wprs_format::page::decoded(path)?;
         let path = if path.is_empty() { engine.start.entry.clone() } else { path };
         let fine =
             id == engine.start.id && engine.entries.contains(&path) && !path.starts_with("manifest.json");

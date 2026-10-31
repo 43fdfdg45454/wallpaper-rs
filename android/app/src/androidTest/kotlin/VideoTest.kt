@@ -27,7 +27,7 @@ class VideoTest {
 
     private inner class Screen {
         val frames = AtomicInteger()
-        val painter = Painter(false, videos, tilt, Hearing(context))
+        val painter = Painter(false, videos, tilt, Hearing(context), Pages(context))
         val reader: ImageReader =
             ImageReader.newInstance(SIDE, SIDE, ImageFormat.PRIVATE, 3, HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE)
 

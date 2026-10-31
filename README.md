@@ -393,13 +393,14 @@ importa un mapa hecho en el escritorio, el PNG de 16 bits que guarda junto a la 
 `foto.jpg.depth.png`), si tiene la misma proporción. En *Ajustes*, *Permitir descargar el modelo de
 profundidad* (`models.allow_download`) bloquea la descarga, y ahí mismo se puede borrar el modelo.
 
-El filtro *Escenas* de la biblioteca tiene *Añadir las escenas de ejemplo*, que instala las cinco
-escenas que trae el APK (las mismas que el escritorio), y *Abrir un paquete*, que importa un
-`.wpak` con el selector de documentos de Android. Se admiten los tres tipos de paquete que son un
-fondo, como en el escritorio: los de imagen se muestran como una foto más (con su ajuste, su
-encuadre, su edición y su paralaje), los de vídeo como un vídeo más y los de escena con el motor
-de escenas; los de página web, de preajustes y de recursos se rechazan con un aviso, igual que en
-el escritorio. La imagen o el vídeo del paquete se extrae al importarlo, por partes y sin cargarlo
+Los filtros *Escenas* y *Páginas web* de la biblioteca tienen *Añadir las escenas de ejemplo*, que
+instala las cinco escenas y la página web *Luces* que trae el APK (los mismos ejemplos que el
+escritorio), y *Abrir un paquete*, que importa un `.wpak` con el selector de documentos de Android.
+Se admiten los cuatro tipos de paquete que son un fondo, como en el escritorio: los de imagen se
+muestran como una foto más (con su ajuste, su encuadre, su edición y su paralaje), los de vídeo como
+un vídeo más, los de escena con el motor de escenas y los de página web con el WebView del sistema
+(ver «Fondos web»); los de preajustes y de recursos se rechazan con un aviso, igual que en el
+escritorio. La imagen o el vídeo del paquete se extrae al importarlo, por partes y sin cargarlo
 entero en memoria, a los archivos de la app y se borra con el paquete. Las escenas se dibujan con el mismo motor que el
 escritorio: capas, efectos, partículas (en la GPU si admite sombreadores de cálculo y, si no, en la
 CPU con menos partículas), textos, líneas de tiempo y propiedades. La página de una escena muestra
@@ -452,7 +453,7 @@ idioma del teléfono, y la página avisa de cada parte que no funciona en él, d
 ajustes de vídeo y las funciones nuevas que omite.
 
 *Reaccionar al sonido*, *Reaccionar al tacto* y *Reaccionar a los toques* solo aparecen en las
-escenas que los usan y se activan escena a escena; empiezan apagados. El sonido se lee con el visualizador de Android, que da un espectro de
+escenas y las páginas web que los usan y se activan paquete a paquete; empiezan apagados. El sonido se lee con el visualizador de Android, que da un espectro de
 poca resolución de lo que suena en el teléfono; Android pide el permiso del micrófono la primera vez
 que se activa y muestra su indicador mientras escucha. Solo escucha mientras se ve una escena con
 ese permiso, y solo calcula bandas en memoria. Tras dos segundos de silencio deja de leerlo hasta que
@@ -896,9 +897,9 @@ la imagen, la extensión sobre todas las pantallas, el volteo, el límite de fot
 silencio y la reproducción única. Cada función tiene un nombre en `requires.features`, y el
 escritorio y el teléfono dicen si la ejecutan, si reproducen el paquete sin ella o si lo rechazan
 con «necesita una versión más nueva de wallpaper-rs» antes de dibujar nada; en esta versión
-rechazan las páginas web, los preajustes y recursos publicados aparte, las dependencias, el volteo,
-el límite de fotogramas, el silencio y la repetición del autor, los atajos, los valores por nivel de
-calidad, las listas completas de carpetas y las texturas KTX2 y AVIF. `wprs-ctl pack check` dice qué
+rechazan los preajustes y recursos publicados aparte, las dependencias, el volteo, el límite de
+fotogramas, el silencio y la repetición del autor, los atajos, los valores por nivel de calidad, las
+listas de carpetas desde los scripts de escena y las texturas KTX2 y AVIF. `wprs-ctl pack check` dice qué
 hace cada plataforma con un paquete y `docs/specs/package.md` describe el formato entero.
 
 Las escenas también describen ya todo lo que un autor puede querer rehacer a mano: 15 modos de fusión
@@ -1116,6 +1117,24 @@ borra solo al quitar el paquete. Los permisos de sonido, puntero y clics son los
 las escenas: los clics solo llegan desde clics reales en las pantallas donde los activas. Una página
 oculta deja de dibujar al momento y, tras 5 minutos oculta, se detiene su proceso y queda su último
 fotograma. El ejemplo *Luces* (`scenes/lights`) es una página web.
+
+En el teléfono los mismos paquetes se muestran con el WebView del sistema, el motor que Android
+mantiene al día para todas las apps, dibujado directamente sobre el fondo sin copias. La página ve
+la misma interfaz y tiene las mismas restricciones: solo lee sus archivos y los que eliges (la app
+sirve cada petición), no llega a la red salvo que la declare y la permitas, no tiene cookies,
+ventanas, diálogos, descargas ni permisos, y se le quitan las conexiones entre pares (WebRTC) antes
+de que corran sus scripts. Su página en la app avisa, encima de *Usar como fondo*, de lo que
+usa (zona horaria, idioma, modelo del chip gráfico y datos que guarda en el teléfono), y su sección
+*Privacidad* tiene un interruptor para cada cosa, otro para la red si la declara y *Borrar datos*;
+el mismo aviso sale al importarla. Ocultar la zona horaria y el idioma lo hace un script que corre
+antes que los de la página (en ella y sus marcos, no en sus workers). *Reaccionar al tacto* le da
+el puntero y *Reaccionar a los toques* los clics, solo desde toques reales y solo en la pantalla de
+inicio; su sonido sigue el ajuste de sonido de los vídeos. Se pausa al dejar de verse, con el ahorro
+de energía, con poca batería o con el teléfono muy caliente, se cierra tras 5 minutos oculta y
+`requestAnimationFrame` va como mucho a los fotogramas por segundo del teléfono; el cambio a una
+página o desde ella no tiene fundido. En un emulador, *Luces* dibuja 30 fotogramas por segundo con
+el límite de 30, una página fija no gasta nada después de su primer fotograma y una página oculta
+no dibuja ni usa el procesador.
 
 ## Servidor propio
 
@@ -1734,7 +1753,11 @@ en un contenedor de Arch con `wpewebkit`, la prueba del auxiliar (`apps/wprs-web
 la interfaz `window.wprs`, el límite de FPS, la pausa, que la página no llega a la red, a otros
 paquetes ni a archivos del equipo) y `scripts/web-test.sh` con el servicio, `wprs-ctl` y una
 página de color. En Ubuntu, `scripts/integration-test.sh` comprueba que el fondo se rechaza con su
-motivo. `WPRS_REQUIRE_WEB=1` hace que ambas fallen si falta el motor.
+motivo. `WPRS_REQUIRE_WEB=1` hace que ambas fallen si falta el motor. En el teléfono,
+`WebPageTest` (pruebas instrumentadas en el emulador) muestra una página de prueba con el WebView y
+comprueba sus valores, el color que dibuja, la pausa, el límite de fotogramas, lo que oculta cada
+ajuste de privacidad, el borrado de sus datos, los archivos elegidos, los clics solo con permiso y
+que no llega a la red, a otros paquetes ni a archivos del teléfono.
 
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre
@@ -1790,8 +1813,9 @@ misma pausa.
   (Secret Service) y en ningún otro sitio: ni en la configuración, ni en los registros, ni en la
   línea de órdenes. `http://` sin cifrar a otro equipo solo se permite con `allow_plain_http`.
 - Los fondos web no tienen red salvo que la declaren y la permitas; lo que ven de ti (zona horaria,
-  idioma, tarjeta gráfica y sus datos guardados) se avisa en la app, la bandeja y `wprs-ctl`, y
-  puedes ocultarlo por fondo.
+  idioma, tarjeta gráfica y sus datos guardados) se avisa en la app, la bandeja, `wprs-ctl` y el
+  teléfono, y puedes ocultarlo por fondo. En el teléfono el WebView va con sus métricas y la
+  navegación segura apagadas.
 - El modelo de profundidad y ONNX Runtime solo se descargan si lo pides y aceptas su tamaño,
   licencia y servidores; llevan el mismo User-Agent genérico, sin cabecera Referer ni redirecciones
   de HTTPS a HTTP, se verifican con SHA-256 y los mapas se calculan en el equipo, en un proceso

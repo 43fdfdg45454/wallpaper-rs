@@ -27,6 +27,7 @@ mod names;
 mod needs;
 mod online;
 mod origin;
+pub mod page;
 #[cfg(feature = "sign")]
 mod publish;
 mod read;

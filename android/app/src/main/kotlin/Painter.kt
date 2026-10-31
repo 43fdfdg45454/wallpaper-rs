@@ -4,15 +4,20 @@ import android.app.WallpaperColors
 import android.graphics.Color
 import android.view.Surface
 import org.json.JSONArray
+import org.json.JSONObject
 
 class Painter(
     private val preview: Boolean,
     private val videos: Videos,
     private val tilt: Tilt,
     private val hearing: Hearing,
+    private val pages: Pages,
     private val touchable: (Boolean) -> Unit = {},
 ) {
-    private var handle = 0L
+    var handle = 0L
+        private set
+    private var page: JSONObject? = null
+    private var size = 1 to 1
     private var video: String? = null
     private var clips = emptyList<String>()
     private var hears = false
@@ -20,6 +25,7 @@ class Painter(
     private val handover = Runnable { refresh() }
     private val frames = Frames { nanos ->
         if (hears) hearing.poll()
+        if (page != null) return@Frames listen()
         Native.draw(handle, nanos, false).also { if (it < 0L) Render.handler.post(handover) else if (it == 0L && playing) follow() }
     }
 
@@ -32,6 +38,7 @@ class Painter(
     var playing = false
         private set
 
+    @Volatile
     var surface: Surface? = null
         private set
 
@@ -50,6 +57,14 @@ class Painter(
         }
         video = uri
         clip(wanted)
+        val spec = Native.page(handle)?.let(::JSONObject)
+        if (page != null && spec == null) pages.leave(this)
+        page = spec
+        if (spec != null) {
+            frames.stop()
+            pages.show(this, surface, spec, size, shown && Native.moving())
+            return follow()
+        }
         if (uri == null) return wake()
         frames.stop()
         videos.join(uri, this)
@@ -65,7 +80,9 @@ class Painter(
 
     fun resize(width: Int, height: Int, rotation: Int) {
         tilt.rotation = rotation
+        size = width to height
         Native.resize(handle, width, height)
+        if (page != null) refresh()
     }
 
     fun redraw() = Native.draw(handle, System.nanoTime(), true).let { if (shown) frames.schedule(it) }
@@ -73,6 +90,7 @@ class Painter(
     fun show(visible: Boolean) {
         shown = visible
         Native.visible(handle, visible)
+        if (page != null) pages.visible(this, visible && Native.moving())
         follow()
         val uri = video
         when {
@@ -83,6 +101,7 @@ class Painter(
     }
 
     fun wake() {
+        if (page != null) pages.visible(this, shown && Native.moving())
         follow()
         val uri = video
         if (uri != null) videos.update(uri) else if (shown) frames.start()
@@ -106,6 +125,8 @@ class Painter(
 
     fun detach() {
         frames.stop()
+        if (page != null) pages.leave(this)
+        page = null
         tilt.follow(this, 0)
         hearing.follow(this, false)
         clips.forEach { videos.leave(key(it), this) }
@@ -143,6 +164,12 @@ class Painter(
         if (touch != touches) touchable(touch)
         touches = touch
         tilt.follow(this, if (shown && video == null) Native.parallax(handle) else 0)
+        if (page != null && hears) frames.start()
+    }
+
+    private fun listen(): Long {
+        Native.listen(handle)?.let { pages.tell(this, it) }
+        return if (hears) AUDIO_MS else 0L
     }
 
     private fun color(argb: Int) = if (argb == 0) null else Color.valueOf(argb)
@@ -152,5 +179,6 @@ class Painter(
         const val TOUCH = 2
         const val CLIPS = 4
         const val FILE = "file://"
+        const val AUDIO_MS = 33L
     }
 }

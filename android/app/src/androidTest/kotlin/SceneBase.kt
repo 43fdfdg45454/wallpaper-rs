@@ -23,7 +23,7 @@ abstract class SceneBase {
     protected val thread = HandlerThread("scene").apply { start() }
     protected val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
     protected val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
-    protected val painter = Painter(false, Videos(context), Tilt(context), Hearing(context))
+    protected val painter = Painter(false, Videos(context), Tilt(context), Hearing(context), Pages(context))
 
     @Before
     fun prepare() {

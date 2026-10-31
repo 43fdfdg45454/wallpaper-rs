@@ -64,6 +64,7 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
     val small = MaterialTheme.typography.bodySmall
     val chooser = rememberChooser(main, uid)
     Column(modifier.verticalScroll(rememberScrollState())) {
+        WebPrivacy(main, uid, form.optJSONObject("web"))
         val (uses, granted) = form.optJSONObject("uses") to form.optJSONObject("granted")
         if (uses?.optBoolean("audio") == true) Toggle(stringResource(R.string.react_sound), granted?.optBoolean("audio") == true) { on ->
             if (on && main.checkSelfPermission(RECORD_AUDIO) != PERMISSION_GRANTED) microphone.launch(RECORD_AUDIO) else grant("audio", on)

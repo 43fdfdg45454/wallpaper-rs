@@ -12,6 +12,7 @@ mod cued;
 mod flight;
 mod frames;
 mod looks;
+mod pages;
 mod records;
 mod refused;
 mod relief;
@@ -134,6 +135,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     tilted::scenes_follow_the_phone();
     chosen::chosen_files_and_folders();
     refused::packages_the_phone_cannot_play_are_refused();
+    pages::pages_are_served_from_their_package_only();
     unreadable();
 }
 

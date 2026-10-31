@@ -34,6 +34,8 @@ class Item(json: JSONObject) {
     private val packed = pack?.optString("kind")
     val video = json.getString("kind") == "video" || packed == "video"
     val scene = json.getString("kind") == "package" && packed != "video" && packed != "image"
+    val web = packed == "web"
+    val exposes = strings(pack?.optJSONArray("exposes"))
     val thumb: String? = if (json.isNull("thumb")) null else json.getString("thumb")
     val width = json.optInt("width")
     val height = json.optInt("height")

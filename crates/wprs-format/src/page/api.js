@@ -1,7 +1,6 @@
 (() => {
   const init = __WPRS_INIT__;
-  const channel = window.webkit.messageHandlers.wprs;
-  const post = (message) => channel.postMessage(JSON.stringify(message));
+  const post = __WPRS_POST__;
   const handlers = { properties: [], settings: [], pause: [], audio: [], files: new Map(), action: [] };
   const waiting = new Map();
   let asked = 0;

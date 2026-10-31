@@ -5,9 +5,11 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::{Mutex, PoisonError};
-use wprs_library::{Item, Library, PlaylistInfo, Rules};
+use wprs_library::{Library, PlaylistInfo, Rules};
 
 mod lists;
+
+use lists::listed;
 
 const DATABASE: &str = "library.db";
 
@@ -32,6 +34,8 @@ enum Request {
     Item { uid: String, languages: Option<Vec<String>> },
     Confirm { uid: String, what: String },
     Unconfirm { uid: String, what: String },
+    ClearData { uid: String },
+    Cleared,
     Thumb { uid: String },
     Favorite { uids: Vec<String>, favorite: bool },
     Remove { uids: Vec<String> },
@@ -85,6 +89,7 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
             | Request::Playlists
             | Request::Entries { .. }
             | Request::Current
+            | Request::Cleared
     );
     let value = match request {
         Request::Items { query, languages } => {
@@ -117,6 +122,12 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
             store::changed();
             Value::Null
         }
+        Request::ClearData { uid } => {
+            let package = lib.item(&uid)?.package;
+            package.filter(|p| p.kind == "web").map_or(Ok(()), |p| crate::page::clear(&p.id))?;
+            Value::Null
+        }
+        Request::Cleared => crate::page::cleared()?,
         Request::Thumb { uid } => json!(store::thumb(lib, &lib.item(&uid)?)?),
         Request::Favorite { uids, favorite } => json!(lib.set_favorite_many(&known(lib, &uids), favorite)?),
         Request::Remove { uids } => lists::remove(lib, &uids, now)?,
@@ -180,14 +191,4 @@ pub(crate) fn drop_playlist(lib: &mut Library, playlist: &str) -> Result<(), Err
         })?;
     }
     Ok(())
-}
-
-fn listed(items: Vec<Item>) -> Result<Value, Error> {
-    let listed = items.into_iter().map(|item| {
-        let thumb = store::thumb_file(&item.uid, "jpg").ok().filter(|path| path.is_file());
-        let mut value = serde_json::to_value(item)?;
-        value["thumb"] = json!(thumb);
-        Ok(value)
-    });
-    listed.collect::<Result<_, Error>>().map(Value::Array)
 }
