@@ -45,7 +45,7 @@ impl Daemon {
         if key.starts_with("library.") {
             self.watch_sources();
         }
-        if key == "library.hide_mature" {
+        if key == "library.hide_mature" || key == "library.show_mature" {
             self.library_changed(Vec::new());
             self.changes.changed("repos", Vec::new());
         }

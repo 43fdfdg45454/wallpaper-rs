@@ -37,7 +37,13 @@ pub enum Server {
         #[command(flatten)]
         wait: Wait,
     },
-    #[command(about = "Show the device that waits for a code, then approve it after you confirm")]
+    #[command(
+        about = "Show the device that waits for a code, then approve it after you confirm",
+        long_about = "Show the device that waits for a code, then approve it after you confirm. Approving \
+                      asks for the password of the account, read from standard input when it is not a \
+                      terminal; an account that signs in through single sign-on approves on the /link page \
+                      of the server instead."
+    )]
     Approve {
         code: String,
         #[arg(long, help = "Approve without asking; only for a code shown on your own screen")]
@@ -107,7 +113,10 @@ pub enum Server {
         stop: bool,
     },
     #[command(
-        about = "Store the sync key on the server, locked with a passphrase, for when no device is left"
+        about = "Store the sync key on the server, locked with a passphrase, for when no device is left",
+        long_about = "Store the sync key on the server, locked with a passphrase, for when no device is \
+                      left. After a device is revoked the escrow is stale: set a new, different \
+                      passphrase, since the revoked device may know the old one, which is refused."
     )]
     Escrow {
         #[arg(long, help = "Delete the escrow from the server")]

@@ -19,7 +19,7 @@ docker compose exec wprs wprs-server repo init --name "Example wallpapers"
 | `migrate` | Apply database migrations and exit |
 | `healthcheck` | Exit 0 when `GET /healthz` on the local port answers 200 (the image `HEALTHCHECK`) |
 | `setup-token` | Print a one-time token (24 h) that creates an administrator at `/setup` |
-| `repo init --name N [--require-author-signature]` | Create the repository: a root key and an online key. The root secret key is printed once and never stored |
+| `repo init --name N [--require-author-signature] [--online-authors]` | Create the repository: a root key and an online key. The root secret key is printed once and never stored. `--online-authors` lets accounts register author keys online (below) |
 | `repo import DIR [--online-key FILE]` | Import `root/<N>.json` files signed offline (and `catalog.json` the first time) plus the online key |
 | `repo status`, `repo publish` | Show the repository and its share URL; sign and publish now |
 | `backup [DIR]` | Snapshot the database with `VACUUM INTO`, copy the blobs, thumbnails and complete private files that the snapshot names (a file deleted meanwhile takes a new snapshot, up to three times; files missing from two snapshots in a row are listed as `missing` in the manifest with a warning), the withdrawn packages, the keys and the repository; default `DIR` is `<data>/backups/<UTC time>`, removed again when the backup fails |
@@ -101,8 +101,10 @@ tmp/ logs/ backups/
   device, `p` personal) or the session cookie of the web site. The server stores SHA-256 of
   tokens and sessions only; revocation is immediate.
 - Scopes: `catalog:read`, `upload`, `sync`, `devices`, `mod`, `admin`. Device tokens get
-  `upload sync devices`. Personal tokens are created on the web site; `mod` and
-  `admin` need the role and expire within 90 days. Web sessions have every scope of the role.
+  `upload sync`: only account sessions (and personal tokens given `devices`) manage devices; the
+  migration to this version took `devices` away from device tokens issued before. Personal tokens
+  are created on the web site; `mod` and `admin` need the role and expire within 90 days. Web
+  sessions have every scope of the role.
 - Roles: `user`, `trusted`, `moderator`, `admin`.
 - Requests with a cookie and an unsafe method must be same-origin (`Sec-Fetch-Site` and
   `Origin` are checked); bearer requests are exempt.
@@ -131,7 +133,8 @@ notices per hour. Sync writes: 60 per minute per device.
 
 `/repo/<path>` serves the tree of `docs/specs/repo.md`: `root/<N>.json[.minisig]`, `entry/latest`,
 `entry/<N>.json[.minisig]`, `details/<N>.json[.minisig]`, `index/<sha256>.json`,
-`revoked/<sha256>.json`, `previews/<sha256>.<ext>` and `packages/<id>/<version>.wpak`.
+`revoked/<sha256>.json`, `authors/<sha256>.json`, `previews/<sha256>.<ext>` and
+`packages/<id>/<version>.wpak`.
 `entry/latest` is `no-cache`; everything else is immutable. A package that moderators removed or
 revoked answers `410`, and its preview is deleted unless a release still listed uses it. The share
 URL is `repository.url` of the discovery document
@@ -141,7 +144,21 @@ Only the online key signs on the server, and only entries and their details: an 
 package with `wprs_format::add`, a removal or revocation calls `wprs_format::revoke`, and a
 background job calls `wprs_format::publish` with a lifetime of `WPRS_ENTRY_DAYS` after changes and
 at least every `WPRS_RESIGN_HOURS`. Packages are either unsigned (when the root does not require
-author signatures) or signed by an author key that the root lists and the uploader registered.
+author signatures) or signed by an author key that the uploader registered and that the root lists
+or, in a repository created with `--online-authors`, that the online authors file lists.
+
+### Online authors
+
+With `--online-authors` the root sets `policy.authors = "online"`. Every account is the author
+`u<account id>`; the keys it registers at `/api/v1/me/author-keys` go into the operator catalog and
+into `authors/<sha256>.json`, which the next entry pins (`docs/specs/repo.md`). A new key for
+packages already published needs a rotation signed by an earlier key of the account:
+`wprs-ctl pack rotate-key OLD.key NEW.pub --author u<id>` prints the signature, and
+`POST /api/v1/me/author-keys/rotate` (or the form of `/account`) stores it with the new key. Clients
+trust, for each package, the key that signed the first version they installed and accept a later
+version only from that key or a key that a chain of rotations reaches; authors that the root lists
+keep priority over online ones with the same id. So whoever steals the online key can list new
+authors and new packages, but not update a package that a client already installed.
 
 Clients must treat the catalog API as hints and resolve `(id, version, sha256, size)` against
 the verified shards before installing.
@@ -150,7 +167,7 @@ the verified shards before installing.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/v1/catalog?q=&kind=&content=&facet=&cursor=&limit=` | — | Newest published packages; `q` matches title, description, tags and id; `kind` is `image`, `video` or `scene`; `content` is `general` or `unrated` (packages of the first manifest version); `facet` is one facet the package must have; `limit` 1 to 100 (24) |
+| GET | `/api/v1/catalog?q=&kind=&content=&facet=&cursor=&limit=` | — | Newest published packages that the moderators did not hide; `q` matches title, description, tags and id; `kind` is `image`, `video` or `scene`; `content` is `general`, `mature` or `unrated` (packages of the first manifest version); `facet` is one facet the package must have (`mature` included); `limit` 1 to 100 (24) |
 | GET | `/api/v1/packages/{id}` | — | Latest version plus `versions: [string]` |
 | GET | `/api/v1/packages/{id}/versions` | — | `{items: [item]}` |
 | POST | `/api/v1/packages/{id}/reports` | — | `{category: copyright\|illegal\|malware\|mature\|spam\|other, details}` → `201 {case}` |
@@ -162,11 +179,13 @@ with at least 3 characters must appear as a substring, in any case and with or w
 a `q` without such a word matches tags that start with it.
 
 Item: `{id, version, kind, title, description, license, tags, authors, size, sha256, published_at,
-owner, thumbnail, download, content, photosensitive, facets}` (`thumbnail` and `download` are paths;
-`content` and `photosensitive` are `null` for packages of the first manifest version). Titles and
+owner, thumbnail, download, content, photosensitive, facets, hidden}` (`thumbnail` and `download` are
+paths; `content` and `photosensitive` are `null` for packages of the first manifest version; `hidden`
+is the moderators' reason, or `null`, and only `/api/v1/packages/…` answers hidden packages). Titles and
 descriptions are those of the package's default language. The web catalog filters by rating and
 facet as well, shows the description with its markup (as written for packages of the first manifest
-version) and a warning on the page of a photosensitive package. The list answer is `{items,
+version), a warning on the page of a photosensitive package and the previews of mature packages
+blurred until the visitor selects them, one package at a time, without JavaScript. The list answer is `{items,
 next_cursor}` with `Link: <…>; rel="next"` when there is more.
 
 ## Accounts
@@ -183,8 +202,9 @@ next_cursor}` with `Link: <…>; rel="next"` when there is more.
 | GET, POST | `/api/v1/me/tokens` | any, session | List; create `{name, scopes: "upload sync", days?}` → `201 {id, token, scopes, expires_at}` (shown once) |
 | DELETE | `/api/v1/me/tokens/{id}` | session | Revoke a personal token |
 | GET | `/api/v1/me/devices` | any | `{items: [{id, name, platform, enc_key, sig_key, created_at, seen_at}]}` |
-| DELETE | `/api/v1/me/devices/{id}` | `devices` | Revoke a device, its tokens, its mailbox and its event stream; asks for a key rotation |
+| DELETE | `/api/v1/me/devices/{id}` | `devices`, or the device itself | Revoke a device, its tokens, its mailbox and its event stream; asks for a key rotation |
 | GET, POST | `/api/v1/me/author-keys` | any, `upload` | List; add `{public_key}` (minisign public key file or line) → `201 {fingerprint}` |
+| POST | `/api/v1/me/author-keys/rotate` | `upload` | `{from, public_key, signature}`: hand an online author over from a registered key to a new one → `201 {fingerprint}` |
 | DELETE | `/api/v1/me/author-keys/{fingerprint}` | `upload` | Remove |
 | GET | `/api/v1/me/packages` | `upload` | `{items: [{package, version, title, state, created_at, published_at, decision, statement}], uploads: [{id, state, errors, created_at}]}` |
 
@@ -212,10 +232,13 @@ For devices without a keyboard or accounts without a password (RFC 8628 style):
    `{device_code, user_code: "BCDF-GHJK", verification_uri, verification_uri_complete, interval: 5, expires_in: 600}`.
 2. The device shows `user_code` (and a QR code of `verification_uri_complete`).
 3. The user approves at `/link`, or another device calls
-   `POST /api/v1/auth/device/approve {user_code, approve: true|false}` (scope `devices`). Before
-   that, `POST /api/v1/auth/device/preview {user_code}` (scope `devices`) answers what the pending
-   request sent, `{platform, client, requested_at, expires_at}`, and never an address; `/link`
-   shows the same with the warning to approve only a code shown on the user's own screen.
+   `POST /api/v1/auth/device/approve {user_code, approve: true|false, password}`: a session or a
+   token with `devices` approves without `password`; a device token needs the password of the
+   account (checked like a sign-in, `401 bad_credentials` when wrong), so a stolen device token
+   cannot add devices, and an account without a password approves at `/link`. Before that,
+   `POST /api/v1/auth/device/preview {user_code}` (`devices`, or any device token) answers what the
+   pending request sent, `{platform, client, requested_at, expires_at}`, and never an address;
+   `/link` shows the same with the warning to approve only a code shown on the user's own screen.
 4. The device polls `POST /api/v1/auth/device/token {device_code}` no faster than `interval`.
    Answers `400` with `code` `authorization_pending`, `slow_down` (add 5 s), `expired_token`,
    `access_denied` or `invalid_grant`, or `200` with the device token.
@@ -246,8 +269,9 @@ Status: `{id, state, errors: [string], package, version}` with `state` one of `o
 Validation runs `wprs-server validate` in a child process limited to 1 GiB of address space
 and 60 s of CPU, two at a time. It opens the package with `wprs_format::open` (strict ZIP
 profile and manifest rules), verifies `manifest.json.minisig` against the uploader's author
-keys that the root also lists (required when the root demands signatures), refuses packages rated
-`mature` (`this server does not accept mature content`), `imported` packages and provider packages
+keys that the root also lists, or every registered key of the uploader with online authors (required
+when the root demands signatures), keeps the rating of packages rated `mature` (`content` and the
+facet `mature`), refuses `imported` packages and provider packages
 under other licenses than those `package.md` allows them, and decodes the
 thumbnail (`previews.thumbnail`, or `preview` in the first manifest version) (PNG, JPEG, WebP, GIF or BMP, at most 16384 px) into a JPEG thumbnail. The
 server then checks the licence list, that the id belongs to the uploader (the first uploader
@@ -262,6 +286,9 @@ review unless `WPRS_AUTO_PUBLISH` publishes them.
 | POST | `/api/v1/mod/cases/{id}/decision` | moderator | `{decision, statement, reason?, strike?}` |
 | GET, POST | `/api/v1/mod/blocklist` | moderator | List; add `{sha256, reason}` |
 | DELETE | `/api/v1/mod/blocklist/{sha256}` | moderator | Remove |
+| GET | `/api/v1/mod/hidden` | moderator | Hidden packages: `{items: [{id, reason, hidden_at}]}` |
+| POST | `/api/v1/mod/hidden` | moderator | `{id, reason}` (at least 10 characters) hides a package → `{id, hidden: true}` |
+| DELETE | `/api/v1/mod/hidden/{id}` | moderator | Shows it again → `{id, hidden: false}` |
 | GET | `/api/v1/mod/audit` | admin | Last 500 actions |
 | GET, POST | `/api/v1/admin/invites` | admin | List; create `{role, uses?, days?}` → `201 {id, code, url, …}` |
 | DELETE | `/api/v1/admin/invites/{id}` | admin | Revoke |
@@ -278,7 +305,14 @@ answer `410`), `revoke` (published → revoked with `reason` `malware`, `license
 the revocation is withdrawn with `wprs_format::unrevoke`) and `dismiss`. Removing or revoking
 moves the package file, and the thumbnail unless another pending or published version uses it,
 out of the public tree into `held/`, kept for `WPRS_TAKEDOWN_DAYS` (also in backups); `restore`
-answers `409 deleted` after that. Nobody approves, restores or dismisses a case of their own
+answers `409 deleted` after that. Hiding takes every version of a package out of the catalog, its search and the web site's lists,
+without revoking anything: `/packages/{id}` and the package API still answer with the reason, the
+repository keeps serving the files and marks the releases `hidden` in the second-version shards, so
+clients leave the package out of browsing unless it is installed and keep installing and updating
+it for whoever has it. Versions uploaded later stay hidden. `/mod` lists hidden packages and hides
+or shows them, `wprs-ctl moderate --server URL hide ID --reason …`, `unhide ID` and `hidden` do the
+same with a personal token that has the `mod` scope (`WPRS_SERVER_TOKEN`). Every change is audited.
+Nobody approves, restores or dismisses a case of their own
 upload (`403`); restrictive decisions on one's own upload are allowed. Restrictive decisions need a `statement` of at least 10
 characters, which the uploader sees in `/api/v1/me/packages`. `strike: true` adds a strike;
 three strikes within a year suspend uploads. Every decision is audited. Cases come from
@@ -299,10 +333,10 @@ Sync stores the latest state of each item per account. The server never interpre
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/v1/sync/state` | device | `{seq, min_seq, epoch, encrypted, key_id, rotate, used_bytes, quota_bytes, warning, escrow, files_bytes, files_quota_bytes}` (`escrow` tells whether one is stored); `404 sync_not_set_up` before setup |
+| GET | `/api/v1/sync/state` | device | `{seq, min_seq, epoch, encrypted, key_id, rotate, used_bytes, quota_bytes, warning, escrow, files_bytes, files_quota_bytes, format}` (`escrow` tells whether one is stored, `format` is the newest sync format that wrote to the account); `404 sync_not_set_up` before setup |
 | POST | `/api/v1/sync/setup` | device | `{encrypted: true, key_id?}` (default) or `{encrypted: false, confirm_plaintext: true, key_id?}` → `201` state |
 | GET | `/api/v1/sync/changes?since=&limit=` | device | `{seq, min_seq, epoch, more, changes: [{collection, item, seq, epoch, device, deleted, payload}]}`; `410 resync` when `0 < since < min_seq` or `since > seq` |
-| POST | `/api/v1/sync/changes` | device | `{epoch, changes: [{collection, item, base, deleted, payload}]}` (at most 500) → `{seq, results}` |
+| POST | `/api/v1/sync/changes` | device | `{epoch, format, changes: [{collection, item, base, deleted, payload}]}` (at most 500) → `{seq, results}`; `409 client_too_old` when `format` (0 when missing) is below the account's |
 | POST | `/api/v1/sync/epoch` | device | Key epochs, below → state |
 | POST | `/api/v1/sync/reset` | `sync` | `{confirm: "reset"}` deletes every record, private file and escrow → `204` |
 | GET, PUT | `/api/v1/sync/escrow` | device | `{escrow: base64 \| null}`, at most 4 KiB, only with encryption |
@@ -323,6 +357,13 @@ incomplete files are deleted after 7 days. When the server holds fewer bytes of 
 server never sees, and name them with a keyed hash so that one account stores identical files once
 (see `Sync1` in `dbus.md`). Payloads are base64, at most 256 KiB each; a tombstone is `deleted: true` without
 payload and is purged after 180 days, which raises `min_seq`.
+
+Sync format: clients send the version of the record format they write (`format`, 1 in this
+version). The account keeps the highest one that wrote to it and refuses writes of a lower one with
+`409 client_too_old`, so a device with an old version never uploads old item names or records
+without the fields it does not know; it keeps reading until it is updated, and clients show a
+translated message. Records keep the fields and top-level keys that a version does not know when it
+merges them.
 
 Writes use optimistic concurrency per item. `base` is the `seq` of the item the client last saw
 (0 for a new item). A matching base is stored with `seq = head + 1` and answers
@@ -372,7 +413,20 @@ Recovery escrow (optional): `PUT /api/v1/sync/escrow` stores `SK` and `K_id` sea
 XChaCha20-Poly1305 under a key that Argon2id (256 MiB, 3 passes) derives from a passphrase of at
 least 20 characters; the escrow names its costs, salt and epoch, and the server cannot open it but
 can try passphrases offline (format in `Sync1.SetEscrow` of `dbus.md`). A device without any other
-device left links, fetches the escrow and opens it with the passphrase.
+device left links, fetches the escrow and opens it with the passphrase. A revoked device may know
+the passphrase, so after a revocation the escrow is left at its old epoch (stale): clients say so
+and refuse the old passphrase when it is set again, by trying it on the stored escrow.
+
+Deletions: removing a library item on a device (an imported or private file, or the last version of
+a package) writes a record whose deletion clock is newer than its fields; the other devices remove
+the item too (an item of a watched folder whose file is still there stays), and never upload it
+again unless it was added after the deletion. A deletion record older than 90 days becomes a
+server tombstone (`deleted: true`), which the server purges after 180 days.
+
+What item names reveal: library items are named with the keyed hash `K_id`, which survives key
+rotations. A device that once held `K_id`, a revoked one included, and holds the same file or knows
+the package can compute its name and see that the account stores it. Clients explain this where
+private files are shared.
 
 Key rotation: a device makes `SK'`, starts the next epoch with its `key_id`, re-encrypts and
 uploads every record with the new epoch, finishes the epoch, and sends `SK'` through the mailbox

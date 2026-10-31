@@ -5,6 +5,7 @@ use crate::db::one;
 use crate::error::{Problem, Res};
 use crate::net::{Client, LOGIN};
 use crate::pages::local;
+use crate::sso::http;
 use crate::{App, Router, St};
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, header};
@@ -12,16 +13,12 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
 use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
 use openidconnect::{
-    AsyncHttpClient, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointMaybeSet, EndpointNotSet,
-    EndpointSet, HttpRequest, HttpResponse, IssuerUrl, Nonce, PkceCodeChallenge, PkceCodeVerifier,
-    RedirectUrl, TokenResponse,
+    AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointMaybeSet, EndpointNotSet, EndpointSet,
+    IssuerUrl, Nonce, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, TokenResponse,
 };
 use rusqlite::params;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::future::Future;
-use std::io;
-use std::pin::Pin;
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -48,34 +45,7 @@ const FRESH: Duration = Duration::from_secs(3600);
 #[derive(Default)]
 pub struct Oidc {
     flows: Mutex<HashMap<String, Flow>>,
-    found: Mutex<Option<(CoreProviderMetadata, Instant)>>,
-}
-
-pub struct Http(reqwest::Client);
-
-impl<'c> AsyncHttpClient<'c> for Http {
-    type Error = io::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<HttpResponse, io::Error>> + Send + 'c>>;
-
-    fn call(&'c self, request: HttpRequest) -> Self::Future {
-        Box::pin(async move {
-            let request = reqwest::Request::try_from(request).map_err(io::Error::other)?;
-            let response = self.0.execute(request).await.map_err(io::Error::other)?;
-            let mut out = axum::http::Response::builder().status(response.status());
-            for (name, value) in response.headers() {
-                out = out.header(name, value);
-            }
-            out.body(response.bytes().await.map_err(io::Error::other)?.to_vec()).map_err(io::Error::other)
-        })
-    }
-}
-
-fn http() -> Res<Http> {
-    let client = reqwest::Client::builder()
-        .user_agent("wprs-server")
-        .redirect(reqwest::redirect::Policy::none())
-        .timeout(Duration::from_secs(10));
-    Ok(Http(client.build().map_err(Problem::internal)?))
+    pub(crate) found: Mutex<Option<(CoreProviderMetadata, Instant)>>,
 }
 
 pub fn routes() -> Router {

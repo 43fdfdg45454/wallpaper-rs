@@ -3,7 +3,6 @@ use crate::creds::{digest, hex, random};
 use crate::db::{DAY, audit, changed, now, rows};
 use crate::error::{Input, Problem, Res, require};
 use crate::jobs::republish;
-use crate::moderation::open_cases;
 use crate::web::{page, text};
 use crate::{Reply, Router, St};
 use axum::Json;
@@ -25,7 +24,6 @@ pub fn routes() -> Router {
         .route("/api/v1/admin/repo", get(repo))
         .route("/api/v1/admin/repo/publish", post(publish))
         .route("/api/v1/admin/transparency", get(transparency))
-        .route("/mod", get(moderation))
         .route("/admin", get(administration))
 }
 
@@ -137,50 +135,12 @@ async fn transparency(State(app): St, auth: Auth) -> Res<Response> {
     Ok(([(header::CONTENT_TYPE, "text/csv; charset=utf-8")], csv).into_response())
 }
 
-fn choose(name: &str, label: &str, options: &[&str], chosen: &str) -> Markup {
+pub fn choose(name: &str, label: &str, options: &[&str], chosen: &str) -> Markup {
     html! {
         select name=(name) aria-label=(label) {
             @for o in options { option value=(o) selected[*o == chosen] { (o) } }
         }
     }
-}
-
-async fn moderation(State(app): St, auth: Option<Auth>) -> Res<Response> {
-    let Some(auth) = auth.filter(|a| a.role >= Role::Moderator) else {
-        return Ok(Redirect::to("/login?next=/mod").into_response());
-    };
-    let cases = app.db.run(|c| open_cases(c)).await?;
-    let decisions = ["approve", "reject", "remove", "revoke", "restore", "dismiss"];
-    let reasons = ["other", "malware", "license", "takedown", "broken"];
-    let body = html! {
-        @if cases.is_empty() { p { "No open cases." } }
-        @for case in &cases { section.card {
-            h2 { "Case " (case["id"]) ": " (text(case, "reason")) " · " (text(case, "title")) }
-            img width="320" src={ "/media/" (text(case, "sha256")) ".jpg" }
-                alt={ "Preview of " (text(case, "title")) };
-            dl {
-                dt { "Package" } dd { code { (text(case, "package")) " " (text(case, "version")) } }
-                dt { "State" } dd { (text(case, "state")) }
-                dt { "Uploaded by" } dd { (text(case, "uploader")) }
-                dt { "Details" } dd { (text(case, "detail")) }
-            }
-            form.stack method="post" action={ "/api/v1/mod/cases/" (case["id"]) "/decision?back=/mod" } {
-                label { "Decision" (choose("decision", "Decision", &decisions, "approve")) }
-                label { "Reason sent to the author (required to reject, remove or revoke)"
-                    textarea name="statement" rows="3" {} }
-                label { "Revocation reason" (choose("reason", "Revocation reason", &reasons, "other")) }
-                label { input type="checkbox" name="strike" value="true"; "Give the uploader a strike" }
-                button { "Decide" }
-            }
-        } }
-        h2 { "Blocklist" }
-        form method="post" action="/api/v1/mod/blocklist?back=/mod" {
-            label { "SHA-256 of a .wpak" input name="sha256" required pattern="[0-9a-f]{64}"; }
-            label { "Reason" input name="reason" required; }
-            button { "Block" }
-        }
-    };
-    Ok(page(&app, Some(&auth), "Moderation queue", body).into_response())
 }
 
 async fn administration(State(app): St, auth: Option<Auth>) -> Res<Response> {

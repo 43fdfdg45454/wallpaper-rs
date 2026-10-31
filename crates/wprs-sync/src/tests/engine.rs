@@ -18,6 +18,7 @@ impl Server {
     pub fn write(&self, key: &Key, base: i64, doc: &Doc) -> Outcome {
         let mut records = self.records.borrow_mut();
         match records.get(key) {
+            Some((seq, current)) if current.is_cleared() && doc.is_cleared() => Outcome::Ok(*seq),
             Some((seq, current)) if *seq != base => Outcome::Conflict(Some((*seq, current.clone()))),
             None if base != 0 => Outcome::Conflict(None),
             _ => {
@@ -81,6 +82,10 @@ impl Device {
     }
 
     pub async fn sync(&mut self, server: &Server, ms: u64) -> Synced {
+        self.sync_by(server, ms, rules).await
+    }
+
+    pub async fn sync_by(&mut self, server: &Server, ms: u64, rules: fn(&str) -> Rules) -> Synced {
         let now = self.clock.tick(ms, self.name);
         let synced = crate::sync(&server, &mut self.replica, &self.local, rules, &now).await.unwrap();
         for (key, view) in synced.applied.clone() {

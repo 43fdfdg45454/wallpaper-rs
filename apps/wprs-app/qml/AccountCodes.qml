@@ -41,8 +41,9 @@ Item {
                 text: App.tr("This is my device: approve")
                 icon.name: "dialog-ok-apply"
                 visible: codes.found?.state === "done"
+                enabled: password.text.length > 0
                 onTriggered: {
-                    App.act("Approve", [approval.text.trim()], "Sync1");
+                    App.passphrase("ApproveDevice", approval.text.trim() + "\n" + password.text);
                     approver.close();
                 }
             }
@@ -50,6 +51,7 @@ Item {
         onClosed: {
             codes.lookup = 0;
             approval.text = "";
+            password.text = "";
         }
 
         ColumnLayout {
@@ -65,6 +67,21 @@ Item {
 
                 readOnly: codes.lookup !== 0
                 placeholderText: "BCDF-GHJK"
+            }
+
+            Kirigami.PasswordField {
+                id: password
+
+                Layout.fillWidth: true
+                visible: codes.found?.state === "done"
+                placeholderText: App.tr("Password of the account")
+            }
+
+            QQC2.Label {
+                Layout.fillWidth: true
+                visible: codes.found?.state === "done"
+                wrapMode: Text.Wrap
+                text: App.tr("Approving asks for the password of the account. An account that signs in through single sign-on approves on the account page of the server.")
             }
 
             QQC2.Label {

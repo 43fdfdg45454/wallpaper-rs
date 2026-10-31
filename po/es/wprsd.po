@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 00:00+0000\n"
+"POT-Creation-Date: 2026-10-31 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -15,6 +15,22 @@ msgstr ""
 #: apps/wprsd/src/words.rs
 msgid "%1 (conflict)"
 msgstr "%1 (conflicto)"
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"This account is synced by a newer version of wallpaper-rs: update it on this "
+"computer to keep syncing."
+msgstr ""
+"Esta cuenta se sincroniza con una versión más nueva de wallpaper-rs: "
+"actualízalo en este equipo para seguir sincronizando."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"This is the recovery passphrase from before a device was revoked, and that "
+"device may know it: choose a new, different passphrase."
+msgstr ""
+"Esta es la frase de recuperación de antes de revocar un dispositivo, y ese "
+"dispositivo puede conocerla: elige una frase nueva y distinta."
 
 #: apps/wprsd/src/words.rs
 msgid "Volume"

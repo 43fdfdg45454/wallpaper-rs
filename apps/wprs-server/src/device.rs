@@ -1,6 +1,6 @@
-use crate::auth::{Auth, DEVICE_SCOPES};
+use crate::auth::DEVICE_SCOPES;
 use crate::creds::{self, digest, hex, random};
-use crate::db::{MINUTE, changed, now, rows};
+use crate::db::{MINUTE, now};
 use crate::error::{Input, Problem, Res, require};
 use crate::net::{Client, LOGIN};
 use crate::{Reply, Router, St};
@@ -18,8 +18,8 @@ pub fn routes() -> Router {
     Router::new()
         .route("/api/v1/auth/device/start", post(start))
         .route("/api/v1/auth/device/token", post(token))
-        .route("/api/v1/auth/device/approve", post(approve))
-        .route("/api/v1/auth/device/preview", post(preview))
+        .route("/api/v1/auth/device/approve", post(crate::approval::approve))
+        .route("/api/v1/auth/device/preview", post(crate::approval::preview))
 }
 
 #[derive(Deserialize)]
@@ -147,50 +147,4 @@ async fn token(State(app): St, Input(p): Input<Poll>) -> Reply {
             }
         })
         .await
-}
-
-#[derive(Deserialize)]
-struct Approve {
-    user_code: String,
-    #[serde(default = "yes")]
-    approve: bool,
-}
-
-fn yes() -> bool {
-    true
-}
-
-pub fn user_code(text: &str) -> Res<String> {
-    let letters: String = text.chars().filter(char::is_ascii_alphanumeric).collect::<String>().to_uppercase();
-    require(letters.len() == 8, "user_code: the 8 letters shown on the new device")?;
-    Ok(format!("{}-{}", &letters[..4], &letters[4..]))
-}
-
-pub fn pending_device(c: &Connection, code: &str) -> Res<Value> {
-    let sql = "SELECT platform, client, created_at AS requested_at, expires_at FROM device_codes \
-               WHERE user_code = ?1 AND state = 'pending' AND expires_at > ?2";
-    rows(c, sql, params![code, now()])?.pop().ok_or_else(|| Problem::missing("pending code"))
-}
-
-#[derive(Deserialize)]
-struct Preview {
-    user_code: String,
-}
-
-async fn preview(State(app): St, auth: Auth, Input(p): Input<Preview>) -> Reply {
-    auth.scope("devices")?;
-    let code = user_code(&p.user_code)?;
-    Ok(Json(app.db.run(move |c| pending_device(c, &code)).await?))
-}
-
-async fn approve(State(app): St, auth: Auth, Input(a): Input<Approve>) -> Reply {
-    auth.scope("devices")?;
-    let code = user_code(&a.user_code)?;
-    let state = if a.approve { "approved" } else { "denied" };
-    let sql = "UPDATE device_codes SET state = ?2, user_id = ?3 WHERE user_code = ?1 AND state = 'pending' \
-               AND expires_at > ?4";
-    app.db
-        .run(move |c| changed(c.execute(sql, params![code, state, auth.user, now()])?, "pending code"))
-        .await?;
-    Ok(Json(json!({"approved": a.approve})))
 }

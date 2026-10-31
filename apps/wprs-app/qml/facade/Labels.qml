@@ -18,6 +18,7 @@ QtObject {
             "library.watch": App.tr("Watch library folders for changes"),
             "library.thumb_cache_mb": App.tr("Thumbnail cache (MB)"),
             "library.hide_mature": App.tr("Hide mature content"),
+            "library.show_mature": App.tr("Show mature content without blur"),
             "repos.auto_refresh": App.tr("Refresh repositories every day"),
             "layout.bezel_mm": App.tr("Screen frame width for spanning (mm)"),
             "models.allow_download": App.tr("Allow downloading the depth model"),

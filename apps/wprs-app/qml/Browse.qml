@@ -69,7 +69,7 @@ ColumnLayout {
                 id: row
 
                 required property var modelData
-                readonly property bool veiled: modelData.content === "mature" && !browse.shown[modelData.id]
+                readonly property bool veiled: modelData.content === "mature" && !browse.shown[modelData.id] && !App.unveiled
 
                 width: ListView.view.width
 

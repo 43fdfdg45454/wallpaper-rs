@@ -116,11 +116,12 @@ pub struct Library {
     pub watch: bool,
     pub thumb_cache_mb: u32,
     pub hide_mature: bool,
+    pub show_mature: bool,
 }
 
 impl Default for Library {
     fn default() -> Self {
-        Self { watch: true, thumb_cache_mb: 512, hide_mature: false }
+        Self { watch: true, thumb_cache_mb: 512, hide_mature: false, show_mature: false }
     }
 }
 

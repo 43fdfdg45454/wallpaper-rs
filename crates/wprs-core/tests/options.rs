@@ -22,14 +22,15 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 18);
+    assert_eq!(c.options().len(), 19);
     assert!(!c.playback.flash_guard && c.playback.scene_sound && c.playback.scene_capture);
     c.set_option("playback.scene_capture", "false").unwrap();
     assert!(!c.playback.sanitized().scene_capture && c.playback.scene_sound);
     c.set_option("playback.flash_guard", "true").unwrap();
     assert!(c.playback.sanitized().flash_guard);
     c.set_option("library.hide_mature", "true").unwrap();
-    assert!(c.library.hide_mature);
+    c.set_option("library.show_mature", "true").unwrap();
+    assert!(c.library.hide_mature && c.library.show_mature);
     c.set_option("models.allow_download", "false").unwrap();
     c.set_option("playback.software_parallax", "true").unwrap();
     assert!(!c.models.allow_download && c.playback.sanitized().software_parallax);

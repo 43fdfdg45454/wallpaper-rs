@@ -17,6 +17,14 @@ pub struct Policy {
     authors: Vec<String>,
     #[arg(long, num_args = 0..=1, default_missing_value = "true", value_name = "BOOL")]
     require_author_signature: Option<bool>,
+    #[arg(
+        long,
+        num_args = 0..=1,
+        default_missing_value = "true",
+        value_name = "BOOL",
+        help = "Let authors register online: clients trust per package the key that signed its first version"
+    )]
+    online_authors: Option<bool>,
     #[arg(long, value_name = "DAYS", help = "Lifetime of the new root [default: 365]")]
     root_days: Option<u32>,
     #[arg(long, value_name = "DAYS", help = "Longest lifetime of a signed index; 14 in a new repository")]
@@ -39,6 +47,7 @@ impl Policy {
         s.authors.extend(authors);
         s.root_threshold = self.threshold.unwrap_or(s.root_threshold);
         s.require_author_signature = self.require_author_signature.unwrap_or(s.require_author_signature);
+        s.online_authors = self.online_authors.unwrap_or(s.online_authors);
         s.root_days = self.root_days.unwrap_or(s.root_days);
         s.entry_max_days = self.entry_max_days.unwrap_or(s.entry_max_days);
         s.max_package_size = self.max_package_size.unwrap_or(s.max_package_size);

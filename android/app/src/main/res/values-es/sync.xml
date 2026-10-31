@@ -40,4 +40,9 @@
     <string name="remove_server">Quitar el servidor</string>
     <string name="remove_server_question">¿Quitar el servidor? Este teléfono deja de sincronizar y el servidor lo olvida. La biblioteca de este teléfono se queda.</string>
     <string name="conflict">%1$s (conflicto)</string>
+    <string name="account_password">Contraseña de la cuenta</string>
+    <string name="approve_password">Para aprobar hace falta la contraseña de la cuenta. Una cuenta que entra con inicio de sesión único aprueba en la página de la cuenta del servidor.</string>
+    <string name="outdated">Esta cuenta se sincroniza con una versión más nueva de wallpaper-rs: actualiza la app para seguir sincronizando.</string>
+    <string name="recovery_revoked">Se revocó un dispositivo que puede conocer la frase de recuperación: en un ordenador, pon una frase de recuperación nueva y distinta.</string>
+    <string name="names_key">Los nombres de los elementos son hashes con clave. Un dispositivo que tuvo la clave de nombres y tiene el mismo archivo puede saber que esta cuenta lo guarda, aunque se haya revocado.</string>
 </resources>

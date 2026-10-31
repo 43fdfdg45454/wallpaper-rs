@@ -25,6 +25,7 @@ impl Daemon {
     pub fn account_sync_job(self: &Arc<Self>, prompt: bool) -> u64 {
         self.start_job(JobKind::AccountSync, "", move |d, _| {
             let result = d.cycle(prompt);
+            d.retry_later(result.as_ref().map_or(None, |v| v["unsent"].as_u64()));
             let error = result.as_ref().err().map(ToString::to_string);
             d.update(|s| {
                 s.last_sync = if error.is_none() { Some(now()) } else { s.last_sync };
@@ -83,6 +84,9 @@ impl Daemon {
         self.linked()?;
         let (api, mut secrets) = self.account_api(prompt)?;
         let state = self.current_key(&api, &mut secrets)?;
+        if state["format"].as_i64() > Some(wprs_sync::FORMAT) {
+            return Err(failed(crate::words::too_old()));
+        }
         let (owner, user, device, label, encrypted, epoch, before, mut kept) = {
             let s = self.saved();
             let before: BTreeSet<String> = match s.members.is_empty() {
@@ -106,6 +110,8 @@ impl Daemon {
         let session = Session::new(api.clone(), user, epoch, encrypted, key);
         let (mut replica, mut links, mut clock, present, mut legacy) = self.migrated(&ids);
         self.migrate(&session, &ids, &mut replica, &mut links, &mut legacy)?;
+        let removed = self.saved().removed.clone();
+        self.removals(&ids, &mut replica);
         secrets.join(&mut replica);
         let mut local = self.snapshot(&ids, &replica, &mut links, &present, &mut kept)?;
         if encrypted {
@@ -117,7 +123,7 @@ impl Daemon {
         let start = replica.bases.clone();
         let synced = block_on(wprs_sync::sync(&session, &mut replica, &local.views, rules, &now));
         let synced = synced.map_err(sync_error)?;
-        let mut applied = synced.applied;
+        let (mut applied, unsent) = (synced.applied, synced.left);
         applied.extend(arrived(&local, &replica, &applied, &start));
         let count = applied.len();
         let errors = self.apply_remote(&local, applied, &mut links, &replica, &mut kept);
@@ -157,6 +163,7 @@ impl Daemon {
             let base = |k: &String| replica.bases.get(k).or_else(|| secrets.records.get(k));
             s.quarantine.retain(|k, seq| base(k).is_none_or(|(base, _)| base < seq));
             (s.replica, s.links, s.clock, s.legacy, s.kept) = (replica, links, clock, legacy, kept);
+            s.removed.retain(|key, _| !removed.contains_key(key));
             (s.present, s.offers, s.unapplied) = (present, offers, unapplied);
             s.warning = state["warning"].as_str().map(String::from);
             (s.used_bytes, s.quota_bytes) = (number("used_bytes"), number("quota_bytes"));
@@ -187,6 +194,7 @@ impl Daemon {
             )));
         }
         let applied = count - errors.len();
-        Ok(json!({"applied": applied, "records": records, "quarantined": self.saved().quarantine.len()}))
+        let quarantined = self.saved().quarantine.len();
+        Ok(json!({"applied": applied, "records": records, "quarantined": quarantined, "unsent": unsent}))
     }
 }

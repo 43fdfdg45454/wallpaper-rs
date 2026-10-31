@@ -380,7 +380,7 @@ teléfono termina las compilaciones de sombreadores y limpia sus marcas de prueb
 normal no cuente como un efecto que colgó la GPU.
 
 Las miniaturas de los paquetes para adultos salen difuminadas y su página no los muestra hasta
-pulsar *Mostrar igualmente*. Un paquete fotosensible no se previsualiza ni se puede usar como fondo
+pulsar *Mostrar igualmente*, salvo que *Ajustes* muestre el contenido para adultos sin difuminar. Un paquete fotosensible no se previsualiza ni se puede usar como fondo
 hasta aceptar el aviso de que destella o muestra patrones rápidos que pueden provocar crisis a
 personas con epilepsia fotosensible; las listas lo saltan mientras tanto. Cada decisión se recuerda
 por paquete. La biblioteca y la página de un paquete muestran su título y su descripción en el
@@ -709,8 +709,8 @@ contraseña de una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
 La pestaña *Dispositivos* enlaza el teléfono con tu [servidor propio](#servidor-propio) con el
 mismo cliente en Rust que el escritorio, para compartir la biblioteca, las listas y los ajustes con
 tus ordenadores. Se escribe la dirección del servidor, *Enlazar este teléfono* muestra un código que
-se aprueba en un ordenador ya enlazado (`wprs-ctl server approve` o la página *Cuenta* de la app) o
-en la web del servidor, y después *Obtener la clave* trae la clave de sincronización de otro equipo
+se aprueba en un ordenador ya enlazado (`wprs-ctl server approve` o la página *Cuenta* de la app, con
+la contraseña de la cuenta) o en la web del servidor, y después *Obtener la clave* trae la clave de sincronización de otro equipo
 comparando seis cifras en las dos pantallas, como entre ordenadores. Desde el teléfono también se
 aprueba un equipo nuevo, tras ver qué sistema y qué programa piden el código, y se le comparte la
 clave. El token, la clave del teléfono y la de sincronización se guardan cifrados con una clave del
@@ -750,7 +750,9 @@ describen en inglés y en español, y `pulse` avisa de que destella con el ritmo
 La app y la bandeja difuminan las miniaturas de los paquetes para adultos hasta que decides
 mostrarlas (en los detalles de la app o con un clic o el teclado en la miniatura difuminada de una
 pantalla, en la página *Ajustes* de la app o en la bandeja), y *Ocultar el contenido para adultos*
-(`library.hide_mature`) los saca de las búsquedas y de los repositorios. Antes de aplicar un
+(`library.hide_mature`) los saca de las búsquedas y de los repositorios. *Mostrar el contenido para
+adultos sin difuminar* (`library.show_mature`, desactivado por defecto) deja de difuminarlas en la
+app, la bandeja y el teléfono. Antes de aplicar un
 paquete fotosensible, la app y `wprs-ctl` avisan y piden confirmación una sola vez por paquete, y
 la app también lo permite desde sus detalles con *Permitir este fondo…* o para varios elementos
 seleccionados a la vez con *Permitir estos fondos…*; hasta entonces el daemon no lo aplica, un
@@ -1001,8 +1003,24 @@ claves del repositorio y muestra una sola vez la clave raíz, que hay que guarda
 servidor; el servidor solo conserva la clave en línea, con la que vuelve a firmar el índice cada
 día (cada firma caduca a los 7). Desde *Administración* se crean invitaciones y desde *Cuenta*,
 tokens, dispositivos enlazados con un código y subidas de paquetes `.wpak` de las dos versiones del
-manifiesto. El servidor rechaza los paquetes para adultos, y su catálogo filtra por clasificación y
-por faceta y avisa en la página de un paquete fotosensible.
+manifiesto. El servidor acepta los paquetes para adultos que lo declaran en su manifiesto: llevan
+la etiqueta `mature` en el catálogo, en la búsqueda (`content=mature`, `facet=mature`) y en la API, y
+la web difumina sus miniaturas hasta que eliges verlas, una por paquete y sin JavaScript. El
+catálogo filtra por clasificación y por faceta y avisa en la página de un paquete fotosensible.
+
+Los moderadores pueden ocultar un paquete sin retirarlo, con un motivo que ve su autor: sale del
+catálogo y de la búsqueda, pero quien lo tiene instalado lo conserva y recibe sus actualizaciones.
+Se hace desde *Moderación* en la web, con la API o con
+`wprs-ctl moderate --server https://fondos.example.org hide org.example.fondo --reason "…"`
+(`unhide` lo vuelve a mostrar y `hidden` los lista), con un token personal con el permiso `mod` en
+`WPRS_SERVER_TOKEN`.
+
+Con `repo init --online-authors`, cada cuenta registra en *Cuenta* las claves con las que firma sus
+paquetes, sin pasar por la clave raíz. Cada cliente se fía de la clave que firmó la primera versión
+que instaló de cada paquete y solo acepta otra si la anterior la autorizó: `wprs-ctl pack rotate-key
+vieja.key nueva.pub --author u<id>` firma ese traspaso, que se guarda en *Cuenta*. Así, quien robe la
+clave en línea del servidor puede añadir autores y paquetes nuevos, pero no actualizar un paquete
+ya instalado. Los autores que lista la raíz tienen prioridad.
 
 El servidor construido así se identifica con la versión de `Cargo.toml` y el sufijo `-local`. Para
 que muestre la de una versión publicada, se construye desde su etiqueta:
@@ -1057,7 +1075,7 @@ El servicio de cada equipo se enlaza con el servidor desde *Cuenta* en la app o 
 ```sh
 wprs-ctl server add https://fondos.example.org
 wprs-ctl server link --name Escritorio          # muestra un código para /link o para:
-wprs-ctl server approve BCDF-GHJK                # … en un equipo ya enlazado, tras ver quién lo pide
+wprs-ctl server approve BCDF-GHJK                # … en un equipo ya enlazado, tras ver quién lo pide y con la contraseña
 wprs-ctl server join "Device 1" --wait           # equipo nuevo de una cuenta cifrada: muestra sus cifras y pide las del otro
 wprs-ctl server share "Device 2"                 # en el equipo con la clave: muestra sus cifras y pide las del otro
 wprs-ctl server status
@@ -1073,7 +1091,9 @@ wprs-ctl server restore                          # equipo nuevo sin ningún otro
 ```
 
 Aprueba solo un código que muestre la pantalla de tu propio equipo nuevo: quien te envía un código
-intenta entrar en tu cuenta. Las dos pantallas muestran el mismo número de seis cifras solo si
+intenta entrar en tu cuenta. Aprobar desde un equipo pide la contraseña de la cuenta, porque los
+tokens de los equipos ya no gestionan dispositivos: quien robe uno no puede añadir equipos ni
+revocar los demás (una cuenta con inicio de sesión único aprueba en `/link`). Las dos pantallas muestran el mismo número de seis cifras solo si
 nadie se ha colado entre los equipos, y en cada uno escribes las cifras del otro: la clave no sale
 ni se guarda hasta que coinciden en los dos; cada intento da una única oportunidad a quien lo
 intente. Al revocar un equipo, otro cambia la clave de sincronización y vuelve a cifrar todo, así
@@ -1097,12 +1117,29 @@ propios fondos (no los de un repositorio) suben cifrados por partes si eliges el
 carpeta; si se corta, la subida sigue donde se quedó, el mismo archivo se guarda una vez y los
 demás equipos lo descargan cuando lo pides. Si dos equipos cambian una lista de formas que no se
 pueden juntar, se conservan las dos: la otra queda como «Lista (conflicto)». Lo que una versión
-más antigua no entiende se le devuelve tal cual.
+más antigua no entiende se le devuelve tal cual, y el servidor recuerda la versión de formato más
+nueva que escribió en la cuenta: un equipo con una versión anterior deja de sincronizar y pide que
+lo actualices, en lugar de subir nombres viejos o registros sin los campos que no conoce.
+
+Borrar un elemento de la biblioteca en un equipo lo borra también en los demás (desinstalando el
+paquete), sin tocar sus archivos; un elemento de una carpeta vigilada cuyo archivo sigue ahí se
+queda, pero no vuelve a los demás. Los borrados se recuerdan 90 días y luego el servidor los purga.
+Si un cambio choca tres veces seguidas o la sincronización falla con cambios pendientes, se
+reintenta a los 30 s, 1, 2, 4 y 8 minutos y después cada 15, sin preguntar al servidor si no ha
+cambiado nada. Si un archivo propio no se puede subir (cuota llena o archivo desaparecido), los
+demás se suben igual y el error nombra cada uno que falló.
+
+Los nombres de los elementos en el servidor son hashes con una clave de nombres que no cambia al
+rotar la clave de sincronización: un equipo que la tuvo, aunque se haya revocado, y tenga el mismo
+archivo puede saber que tu cuenta lo guarda. La app, `wprs-ctl server --help` y el teléfono lo
+explican.
 
 Si temes perder todos los equipos, `server escrow` guarda la clave en el servidor cerrada con una
 frase (Argon2id, 256 MiB). Quien consiga una copia del servidor puede probar frases sin límite: usa
 varias palabras sin relación que no uses en ningún otro sitio. Tras revocar un equipo la frase deja
-de valer: guarda otra nueva, porque quien conocía la anterior podría abrir lo que se cierre con ella.
+de valer: la app, `wprs-ctl server status` y el teléfono lo dicen, y hay que guardar otra nueva y
+distinta, porque quien conocía la anterior podría abrir lo que se cierre con ella; la anterior se
+rechaza.
 
 Copias de seguridad: `docker compose exec wprs wprs-server backup` deja en
 `/data/backups/<fecha>` una instantánea coherente de la base de datos (`VACUUM INTO`) con los

@@ -1,7 +1,7 @@
 use crate::entry::{contents, kept};
 use crate::fetch::{bases, first, get};
 use crate::store::{Doc, Snapshot, State};
-use crate::{Anchor, Details, Entry, Error, Fetch, Result, Root, comment, ensure, require, sha256};
+use crate::{Anchor, Authors, Details, Entry, Error, Fetch, Result, Root, comment, ensure, require, sha256};
 use std::collections::BTreeMap;
 use std::io;
 
@@ -42,6 +42,7 @@ pub(crate) fn refresh(
     let details = first(&bases, |base| run.details(&root, &entry, base))?;
     let list = kept(&entry.value, details.as_ref().map(|d| &d.value));
     let wanted = list.map(|b| ("index", b)).chain([("revoked", &entry.value.revoked)]);
+    let wanted = wanted.chain(crate::authors::blob(&entry.value));
     let blobs = wanted.map(|(dir, blob)| {
         if let Some(bytes) = cache.get(&blob.sha256).filter(|b| blob.matches(b).is_ok()) {
             return Ok((blob.sha256.clone(), bytes.clone()));
@@ -56,6 +57,7 @@ pub(crate) fn refresh(
     let blobs = blobs.collect::<Result<BTreeMap<_, _>>>()?;
     let (shards, revoked) =
         contents(&entry.value, details.as_ref().map(|d| &d.value), &run.state.repo_id, &blobs)?;
+    let authors = Authors::parse(&entry.value, &run.state.repo_id, &blobs)?;
     let (mut state, timestamp) = (run.state, entry.value.timestamp.timestamp());
     state.root_version = root.value.version;
     state.entry_version = entry.value.version;
@@ -64,7 +66,7 @@ pub(crate) fn refresh(
     state.max_timestamp = state.max_timestamp.max(timestamp);
     state.stale = entry.value.expires.timestamp() <= run.t;
     state.checked = now;
-    Ok(Snapshot { state, root, entry, details, blobs, shards, revoked })
+    Ok(Snapshot { state, root, entry, details, blobs, shards, revoked, authors })
 }
 
 impl Run<'_> {

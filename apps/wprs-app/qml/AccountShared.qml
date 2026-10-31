@@ -15,7 +15,7 @@ ColumnLayout {
     readonly property var recovery: ({
             "off": App.tr("No recovery passphrase: if every device is lost, so is the synced data."),
             "current": App.tr("The server keeps the current sync key, locked with your recovery passphrase."),
-            "stale": App.tr("The server keeps an older sync key: set the recovery passphrase again.")
+            "stale": App.tr("A device that may know the recovery passphrase was revoked, so the server keeps an older sync key: set a new, different passphrase.")
         })
 
     function load() {

@@ -99,7 +99,11 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
         Request::Thumb { uid } => json!(store::thumb(lib, &lib.item(&uid)?)?),
         Request::Favorite { uids, favorite } => json!(lib.set_favorite_many(&known(lib, &uids), favorite)?),
         Request::Remove { uids } => {
-            let items = lib.remove_items(&known(lib, &uids))?;
+            let refs = known(lib, &uids);
+            let hashes = lib.hashed()?.into_iter().filter(|(i, _)| refs.contains(&i.uid.as_str()));
+            let removed: Vec<String> = hashes.map(|(_, hash)| wprs_sync::removed_blob(&hash)).collect();
+            let items = lib.remove_items(&refs)?;
+            crate::state::forget(removed, now * 1000)?;
             items.iter().try_for_each(store::forget)?;
             if items.iter().any(|item| shown.image.as_ref() == Some(&item.path)) {
                 settings::update(|config| {

@@ -35,12 +35,24 @@ pub struct Replica {
     pub bases: BTreeMap<Key, (i64, Doc)>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub held: BTreeMap<Key, (i64, Doc)>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub gone: BTreeMap<Key, u64>,
 }
 
 #[derive(Debug, Default)]
 pub struct Synced {
     pub applied: Vec<(Key, Option<View>)>,
     pub copies: Vec<(Key, View)>,
+    pub left: usize,
+}
+
+pub const LIFETIME_MS: u64 = 90 * 86_400_000;
+
+fn expired(replica: &Replica, now: &Hlc) -> Vec<(Key, i64, Doc)> {
+    let old = |doc: &Doc| doc.gone.as_ref().is_some_and(|g| g.0.saturating_add(LIFETIME_MS) < now.0);
+    let library = replica.bases.iter().filter(|(key, _)| key.starts_with("library/"));
+    let dead = library.filter(|(_, (_, doc))| doc.view().is_none() && !doc.is_cleared() && old(doc));
+    dead.map(|(key, (seq, _))| (key.clone(), *seq, Doc::cleared())).collect()
 }
 
 async fn pull(remote: &impl Remote, replica: &mut Replica) -> Result<BTreeMap<Key, Change>> {
@@ -86,11 +98,16 @@ pub async fn sync(
     let (mut work, mut applied, mut copies) = (local.clone(), BTreeMap::new(), Vec::new());
     let mut keys: BTreeSet<Key> =
         replica.bases.keys().chain(pending.keys()).chain(local.keys()).cloned().collect();
+    let (deleted, mut left) = (replica.gone.clone(), 0);
+    let rule = |key: &str| {
+        let mut rule = rules(key.split('/').next().unwrap_or_default());
+        rule.keep_absent &= !deleted.contains_key(key);
+        rule
+    };
     for _ in 0..3 {
         let mut pushes = Vec::new();
         for key in &keys {
-            let collection = key.split('/').next().unwrap_or_default();
-            let step = step(replica.bases.get(key), pending.get(key), work.get(key), rules(collection), now);
+            let step = step(replica.bases.get(key), pending.get(key), work.get(key), rule(key), now);
             if let Some(base) = step.base {
                 replica.bases.insert(key.clone(), base);
             }
@@ -104,6 +121,7 @@ pub async fn sync(
             pushes.extend(step.push.map(|(seq, doc)| (key.clone(), seq, doc)));
             copies.extend(step.copy.map(|view| (key.clone(), view)));
         }
+        left = 0;
         if pushes.is_empty() {
             break;
         }
@@ -118,11 +136,24 @@ pub async fn sync(
                         None => drop(replica.bases.remove(&key)),
                     }
                     keys.insert(key);
+                    left += 1;
                 }
             }
         }
     }
-    Ok(Synced { applied: applied.into_iter().collect(), copies })
+    let expired = expired(replica, now);
+    for ((key, _, doc), outcome) in expired.iter().zip(remote.push(&expired).await?) {
+        if let Outcome::Ok(seq) = outcome {
+            replica.bases.insert(key.clone(), (seq, doc.clone()));
+        }
+    }
+    let recorded = |key: &Key| replica.bases.get(key).is_some_and(|(_, doc)| doc.view().is_some());
+    let gone = std::mem::take(&mut replica.gone);
+    replica.gone = gone
+        .into_iter()
+        .filter(|(key, at)| at + LIFETIME_MS > now.0 && !work.contains_key(key) && recorded(key))
+        .collect();
+    Ok(Synced { applied: applied.into_iter().collect(), copies, left })
 }
 
 pub async fn rekey(remote: &impl Remote, epoch: i64) -> Result<usize> {

@@ -55,6 +55,14 @@ pub struct Policy {
     pub require_author_signature: bool,
     pub max_package_size: u64,
     pub entry_max_days: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authors: Option<String>,
+}
+
+impl Policy {
+    pub fn online(&self) -> bool {
+        self.authors.as_deref() == Some(crate::ONLINE)
+    }
 }
 
 impl Root {
@@ -82,6 +90,8 @@ impl Root {
             "root.mirrors",
             "expected at most 16 https:// or file:// URLs",
         )?;
+        let policy = self.policy.authors.as_deref().is_none_or(|a| ["root", crate::ONLINE].contains(&a));
+        require(policy, "root.policy", "authors must be root or online")?;
         require(
             (1..=90).contains(&self.policy.entry_max_days),
             "root.policy",
@@ -122,7 +132,7 @@ pub(crate) fn hex64(text: &str) -> bool {
     text.len() == 64 && text.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
-fn author_id(id: &str) -> bool {
+pub(crate) fn author_id(id: &str) -> bool {
     id.len() <= 32
         && id.starts_with(|c: char| c.is_ascii_lowercase())
         && id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-')

@@ -18,7 +18,7 @@ pub enum Role {
 
 pub const ROLES: [&str; 4] = ["user", "trusted", "moderator", "admin"];
 pub const SCOPES: [&str; 6] = ["catalog:read", "upload", "sync", "devices", "mod", "admin"];
-pub const DEVICE_SCOPES: &str = "upload sync devices";
+pub const DEVICE_SCOPES: &str = "upload sync";
 
 impl Role {
     pub fn parse(text: &str) -> Role {

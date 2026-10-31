@@ -16,10 +16,10 @@ use serde_json::{Value, json};
 
 const SELECT: &str = "SELECT v.id AS row, v.package_id AS id, v.version, v.kind, v.title, v.description, \
                       v.license, v.tags, v.authors, v.size, v.sha256, v.published_at, u.handle AS owner, \
-                      v.content, v.photosensitive, v.facets \
+                      v.content, v.photosensitive, v.facets, p.hidden \
                       FROM versions v JOIN packages p ON p.id = v.package_id \
                       LEFT JOIN users u ON u.id = p.owner_id";
-const NEWEST: &str = " WHERE v.state = 'published' AND v.id = (SELECT w.id FROM versions w \
+const NEWEST: &str = " WHERE v.state = 'published' AND p.hidden IS NULL AND v.id = (SELECT w.id FROM versions w \
                       WHERE w.package_id = v.package_id AND w.state = 'published' \
                       ORDER BY w.published_at DESC, w.id DESC LIMIT 1) \
                       AND (?1 = '' OR (?1 = 'm' AND v.id IN (SELECT rowid FROM search WHERE search MATCH ?2)) \

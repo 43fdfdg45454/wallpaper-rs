@@ -13,6 +13,18 @@ pub fn conflict(name: &str) -> String {
     tr("%1 (conflict)").replace("%1", name)
 }
 
+pub fn too_old() -> String {
+    tr(
+        "This account is synced by a newer version of wallpaper-rs: update it on this computer to keep syncing.",
+    )
+}
+
+pub fn same_passphrase() -> String {
+    tr(
+        "This is the recovery passphrase from before a device was revoked, and that device may know it: choose a new, different passphrase.",
+    )
+}
+
 pub fn volume() -> String {
     tr("Volume")
 }

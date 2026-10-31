@@ -11,11 +11,17 @@ pub struct Doc {
     pub fields: BTreeMap<String, (Value, Hlc)>,
     #[serde(rename = "g", default, skip_serializing_if = "Option::is_none")]
     pub gone: Option<Hlc>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
 }
 
 impl Doc {
     pub fn cleared() -> Doc {
-        Doc { fields: BTreeMap::new(), gone: Some(Hlc::default()) }
+        Doc { gone: Some(Hlc::default()), ..Doc::default() }
+    }
+
+    pub fn is_cleared(&self) -> bool {
+        self.fields.is_empty() && self.gone == Some(Hlc::default())
     }
 
     pub fn clock(&self) -> Hlc {
@@ -38,7 +44,9 @@ impl Doc {
                 fields.insert(key.clone(), field.clone());
             }
         }
-        Doc { fields, gone: self.gone.clone().max(theirs.gone.clone()) }
+        let mut extra = theirs.extra.clone();
+        extra.extend(self.extra.clone());
+        Doc { fields, gone: self.gone.clone().max(theirs.gone.clone()), extra }
     }
 
     pub fn stamp(base: Option<&Doc>, local: Option<&View>, weak: fn(&str) -> bool, now: &Hlc) -> Option<Doc> {

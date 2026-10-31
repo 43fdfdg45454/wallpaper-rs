@@ -3,9 +3,9 @@ use crate::catalog::Catalog;
 use crate::repo::at;
 use crate::store::{json, write};
 use crate::{
-    Blob, DETAILED_FORMAT, DETAILS_FORMAT, Details, ENTRY_FORMAT, Entry, KINDS_FORMAT, Listing, Pin,
-    REVOKED_FORMAT, Release, Result, Revoked, SHARD_FORMAT, Shard, Signer, Time, comment, require, sha256,
-    sha256_file, shard_of, status,
+    AUTHORS_FORMAT, Authors, Blob, DETAILED_FORMAT, DETAILS_FORMAT, Details, ENTRY_FORMAT, Entry,
+    KINDS_FORMAT, Listing, Pin, REVOKED_FORMAT, Release, Result, Revoked, SHARD_FORMAT, Shard, Signer, Time,
+    comment, require, sha256, sha256_file, shard_of, status,
 };
 use chrono::TimeDelta;
 use serde::Serialize;
@@ -31,6 +31,10 @@ pub fn publish(dir: &Path, signer: &Signer, lifetime_days: u32, now: i64) -> Res
     require(allowed, "lifetime", "must be between 1 day and the entry_max_days of the root")?;
     let catalog = Catalog::load(dir)?;
     let (packages, shard_bits) = (catalog.packages.len(), catalog.shard_bits);
+    let listed =
+        Authors { format: AUTHORS_FORMAT.into(), repo_id: repo_id.clone(), authors: catalog.authors.clone() };
+    let authors =
+        root.policy.online().then(|| put(dir, "authors", serde_json::to_vec(&listed)?)).transpose()?;
     let (shards, detailed, revoked) = blobs(dir, &repo_id, catalog)?;
     let last = fs::read_to_string(dir.join("entry/latest")).ok().and_then(|t| t.trim().parse::<u64>().ok());
     let previous: Option<Entry> = last.map(|n| json(&dir.join(format!("entry/{n}.json")))).transpose()?;
@@ -48,6 +52,7 @@ pub fn publish(dir: &Path, signer: &Signer, lifetime_days: u32, now: i64) -> Res
         shard_bits,
         shards,
         revoked,
+        authors,
     };
     entry.check(number, &repo_id, &root, &entry.root.sha256)?;
     let bytes = serde_json::to_vec(&entry)?;
@@ -68,22 +73,25 @@ pub fn publish(dir: &Path, signer: &Signer, lifetime_days: u32, now: i64) -> Res
 
 type Blobs = (Vec<Blob>, Option<(Vec<Blob>, Vec<Blob>)>, Blob);
 
+fn put(dir: &Path, kind: &str, bytes: Vec<u8>) -> Result<Blob> {
+    let sha256 = sha256(&bytes[..])?;
+    let path = dir.join(kind).join(format!("{sha256}.json"));
+    if !path.exists() {
+        write(&path, &bytes, false)?;
+    }
+    Ok(Blob { sha256, size: bytes.len() as u64 })
+}
+
 fn blobs(dir: &Path, repo_id: &str, catalog: Catalog) -> Result<Blobs> {
-    let put = |kind: &str, bytes: Vec<u8>| -> Result<Blob> {
-        let sha256 = sha256(&bytes[..])?;
-        let path = dir.join(kind).join(format!("{sha256}.json"));
-        if !path.exists() {
-            write(&path, &bytes, false)?;
-        }
-        Ok(Blob { sha256, size: bytes.len() as u64 })
-    };
+    let put = |kind: &str, bytes: Vec<u8>| put(dir, kind, bytes);
     let bits = catalog.shard_bits;
     let mut groups = vec![Vec::new(); 1 << bits];
     catalog.packages.iter().for_each(|l| groups[shard_of(&l.id, bits)].push(l));
     let shards = |format: &str, keep: fn(&Release) -> bool| {
         let shards = groups.iter().enumerate().map(|(shard, group)| {
             let packages = group.iter().filter_map(|l| {
-                let versions: Vec<_> = l.versions.iter().filter(|r| keep(r)).cloned().collect();
+                let shown = |r: &Release| Release { hidden: r.hidden && format != SHARD_FORMAT, ..r.clone() };
+                let versions: Vec<_> = l.versions.iter().filter(|r| keep(r)).map(shown).collect();
                 (!versions.is_empty()).then(|| Listing { versions, ..(*l).clone() })
             });
             let packages = packages.collect();
@@ -94,7 +102,7 @@ fn blobs(dir: &Path, repo_id: &str, catalog: Catalog) -> Result<Blobs> {
         shards.collect::<Result<Vec<_>>>()
     };
     let releases = || catalog.packages.iter().flat_map(|l| &l.versions);
-    let (newer, kinds) = (releases().any(|r| !r.first()), releases().any(|r| !r.kind.first()));
+    let (newer, kinds) = (releases().any(|r| !r.first() || r.hidden), releases().any(|r| !r.kind.first()));
     let detailed = newer.then(|| shards(DETAILED_FORMAT, |r| r.kind.first())).transpose()?;
     let kinds = kinds.then(|| shards(KINDS_FORMAT, |_| true)).transpose()?.unwrap_or_default();
     let detailed = detailed.map(|shards| (shards, kinds));

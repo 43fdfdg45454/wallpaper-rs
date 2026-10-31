@@ -86,6 +86,7 @@ ColumnLayout {
                     required property string info
                     required property bool missing
                     required property bool mature
+                    readonly property bool veiled: mature && !App.unveiled
 
                     width: list.width
                     contentItem: RowLayout {
@@ -107,8 +108,8 @@ ColumnLayout {
                                 source: row.thumb
                                 asynchronous: true
                                 fillMode: Image.PreserveAspectCrop
-                                sourceSize.width: row.mature ? 12 : width * 2
-                                sourceSize.height: row.mature ? 12 : height * 2
+                                sourceSize.width: row.veiled ? 12 : width * 2
+                                sourceSize.height: row.veiled ? 12 : height * 2
                             }
                         }
 

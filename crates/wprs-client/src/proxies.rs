@@ -24,6 +24,7 @@ pub trait Sync1 {
     fn link(&self, name: &str, plaintext: bool) -> Result<(String, String, u64)>;
     fn preview_code(&self, user_code: &str) -> Result<u64>;
     fn approve(&self, user_code: &str) -> Result<u64>;
+    fn approve_device(&self, user_code: &str, password: &str) -> Result<u64>;
     fn get_status(&self) -> Result<String>;
     fn sync_now(&self) -> Result<u64>;
     fn set_paused(&self, paused: bool) -> Result<()>;

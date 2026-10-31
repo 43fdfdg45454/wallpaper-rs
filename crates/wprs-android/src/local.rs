@@ -34,6 +34,9 @@ pub(crate) fn snapshot(
         let uids = local.items.entry(key.clone()).or_default();
         uids.push(item.uid.clone());
         let record = format!("library/{key}");
+        if wprs_sync::deleted_before(replica, &record, item.added_at) {
+            continue;
+        }
         match (uids.len(), base(&record)) {
             (1, Some(view)) if !present.contains(&key) => {
                 local.fresh.insert(key);
@@ -82,6 +85,7 @@ pub(crate) fn apply(
         let section = replica.bases.get(&key).is_none_or(|(_, doc)| kind(doc) == "section");
         let result = match (key.split_once('/').unwrap_or_default(), view) {
             (("library", item), Some(view)) => apply::item(local, &key, item, &view, kept),
+            (("library", item), None) => delete(local, item),
             (("playlists", _), view) => apply::playlist(local, &key, view, links, kept),
             (("settings", _), Some(view)) if section => options(&key, &view, kept),
             _ => continue,
@@ -95,6 +99,20 @@ pub(crate) fn apply(
         store::changed();
     }
     (done, failed)
+}
+
+fn delete(local: &Local, item: &str) -> Result<(), Error> {
+    let uids: Vec<&str> = local.items.get(item).into_iter().flatten().map(String::as_str).collect();
+    let shown = settings::config().resolve("").image;
+    let items = with(|lib| Ok::<_, Error>(lib.remove_items(&uids)?))?;
+    items.iter().try_for_each(store::forget)?;
+    match items.iter().any(|item| shown.as_ref() == Some(&item.path)) {
+        true => settings::update(|config| {
+            config.default.image = None;
+            Ok(())
+        }),
+        false => Ok(()),
+    }
 }
 
 fn options(key: &str, view: &View, kept: &mut Kept) -> Result<(), Error> {

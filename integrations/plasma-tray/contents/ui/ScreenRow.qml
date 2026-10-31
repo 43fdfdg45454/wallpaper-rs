@@ -19,7 +19,7 @@ ColumnLayout {
     property string animated
     readonly property var pkg: details.package ?? {}
     readonly property var confirmed: pkg.confirmed ?? []
-    readonly property bool mature: pkg.content === "mature" && !confirmed.includes("mature")
+    readonly property bool mature: pkg.content === "mature" && !confirmed.includes("mature") && daemon.current?.options?.["library.show_mature"] !== true
     readonly property bool allowed: confirmed.includes("photosensitive")
 
     function load() {

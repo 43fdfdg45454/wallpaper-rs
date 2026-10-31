@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use wprs_core::edit::{ACTIONS, Action};
 use wprs_ctl::{CALLS, Cli};
 
-const NOT_IN_CLI: &[&str] = &["Library1.RequestThumbnails", "Inputs1.Touch"];
+const NOT_IN_CLI: &[&str] = &["Library1.RequestThumbnails", "Inputs1.Touch", "Sync1.Approve"];
 
 fn documented(text: &str) -> Vec<(String, Vec<String>)> {
     let mut interface = None;

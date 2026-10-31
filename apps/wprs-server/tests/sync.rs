@@ -158,3 +158,23 @@ async fn plaintext_needs_confirmation_and_events_stream() {
     reset = server.json(Method::GET, "/api/v1/sync/state", &desk, None).await;
     assert_eq!(reset.0, StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn clients_older_than_the_newest_sync_format_of_the_account_cannot_upload() {
+    let server = start(&[]).await;
+    let admin = server.admin().await;
+    server.user(&admin, "ana", "user").await;
+    let ((desk, _), (old, _)) = (server.device("ana").await, server.device("ana").await);
+    server.json(Method::POST, "/api/v1/sync/setup", &desk, Some(json!({}))).await;
+    let change = |n: u8| json!([{"collection": "library", "item": item(n), "base": 0, "payload": sealed(n)}]);
+    assert_eq!(push(&server, &old, 0, change(1)).await.0, StatusCode::OK);
+    let newer = json!({"epoch": 0, "format": 1, "changes": change(2)});
+    let (status, _) = server.json(Method::POST, "/api/v1/sync/changes", &desk, Some(newer)).await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, refused) = push(&server, &old, 0, change(3)).await;
+    assert_eq!((status, refused["code"].as_str()), (StatusCode::CONFLICT, Some("client_too_old")));
+    let (_, state) = server.json(Method::GET, "/api/v1/sync/state", &old, None).await;
+    assert_eq!(state["format"], 1);
+    let (_, page) = server.json(Method::GET, "/api/v1/sync/changes?since=0", &old, None).await;
+    assert_eq!(page["changes"].as_array().unwrap().len(), 2);
+}

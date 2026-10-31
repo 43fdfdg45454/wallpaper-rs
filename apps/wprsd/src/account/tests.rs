@@ -120,3 +120,9 @@ fn shared_folders_leave_depth_maps_out() {
     let names = ["hills.jpg", "hills.jpg.depth.png", "x.PNG.DEPTH.PNG"];
     assert_eq!(names.map(shared), [true, false, false]);
 }
+
+#[test]
+fn waiting_changes_are_tried_again_later_and_later() {
+    let waits: Vec<u64> = (1..=8).map(|tries| super::watch::backoff(tries).as_secs()).collect();
+    assert_eq!(waits, [30, 60, 120, 240, 480, 900, 900, 900]);
+}

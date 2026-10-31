@@ -1,5 +1,6 @@
 mod about;
 mod admin;
+mod authors;
 mod broken;
 mod browse;
 mod build;
@@ -23,6 +24,7 @@ pub mod media;
 mod meta;
 mod names;
 mod needs;
+mod online;
 mod origin;
 #[cfg(feature = "sign")]
 mod publish;
@@ -45,9 +47,10 @@ mod web;
 #[cfg(feature = "sign")]
 pub use admin::sign_root;
 pub use admin::{RootStatus, init, rotate_root, status};
+pub use authors::{AUTHORS_FORMAT, Authors, ONLINE, OnlineAuthor, Rotation, Trusted, rotation_text};
 pub use browse::{Item, browse};
 pub use build::{build, sha256, sha256_file};
-pub use catalog::{Added, add, revoke, revoke_key, unrevoke};
+pub use catalog::{Added, add, hide, revoke, revoke_key, unrevoke};
 pub use client::{Outcome, RepoInfo, Update, add_repo, remove_repo, repos, update_repo, verify};
 pub use display::{Accent, Display, Flip, Follow, FrameRate, Span};
 pub use download::{preview, previews, release};
@@ -68,6 +71,9 @@ pub use manifest::{
 pub use meta::{Content, Credit, Descriptor, Links, Previews, Rating, Source};
 pub use names::valid_id;
 pub use needs::{Dependency, Gpu, Input, Network, Permissions, Platform, Requires, origin};
+#[cfg(feature = "sign")]
+pub use online::sign_rotation;
+pub use online::{anchors, drop_author_key, register_author, rotate_author};
 pub use origin::{Ancestor, Origin, OriginKind, PROVIDER_LICENSES, Provider};
 #[cfg(feature = "sign")]
 pub use publish::{Published, publish};

@@ -3,8 +3,9 @@ use crate::repo::at;
 use crate::store::{json, place, write};
 use crate::validate::{extension, within};
 use crate::{
-    Error, KeyRevocation, Kind, Limits, Listing, MANIFEST, Needs, Package, Preview, Rated, Reason, Release,
-    Result, Revocation, Root, SIGNATURE, ensure, open, require, sha256, sha256_file, verify_package,
+    Error, KeyRevocation, Kind, Limits, Listing, MANIFEST, Needs, OnlineAuthor, Package, Preview, Rated,
+    Reason, Release, Result, Revocation, Root, SIGNATURE, ensure, open, require, sha256, sha256_file,
+    verify_package,
 };
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
@@ -18,6 +19,8 @@ pub(crate) struct Catalog {
     pub packages: Vec<Listing>,
     pub revoked: Vec<Revocation>,
     pub keys: Vec<KeyRevocation>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub authors: Vec<OnlineAuthor>,
 }
 
 impl Catalog {
@@ -44,7 +47,7 @@ pub fn add(dir: &Path, wpak: &Path, author: Option<&str>, now: i64) -> Result<Ad
     let mut package = open(wpak, &Limits::default())?;
     package.manifest.publishable()?;
     package.look_at_videos()?;
-    let author = signer(&mut package, &root, author, &catalog.keys)?;
+    let author = signer(&mut package, &root, author, &catalog)?;
     let (id, version) = (package.manifest.id.clone(), package.manifest.version.clone());
     let added = Added { id: id.clone(), author, release: release(&mut package, dir, wpak, size, now)? };
     let index = catalog.packages.iter().position(|l| l.id == id).unwrap_or_else(|| {
@@ -59,7 +62,8 @@ pub fn add(dir: &Path, wpak: &Path, author: Option<&str>, now: i64) -> Result<Ad
     }
     let dest = dir.join("packages").join(&id).join(format!("{version}.wpak"));
     place(&dest, false, |file| Ok(io::copy(&mut File::open(wpak)?, file).map(drop)?))?;
-    listing.versions.push(added.release.clone());
+    let hidden = listing.versions.iter().any(|r| r.hidden);
+    listing.versions.push(Release { hidden, ..added.release.clone() });
     listing.versions.sort_by_key(|r| semver::Version::parse(&r.version).ok());
     catalog.packages.sort_by(|a, b| a.id.cmp(&b.id));
     catalog.save(dir)?;
@@ -79,6 +83,14 @@ pub fn unrevoke(dir: &Path, id: &str, version: &str) -> Result<()> {
     catalog.save(dir)
 }
 
+pub fn hide(dir: &Path, id: &str, hidden: bool) -> Result<()> {
+    let mut catalog = Catalog::load(dir)?;
+    let listing = catalog.packages.iter_mut().find(|l| l.id == id);
+    let listing = listing.ok_or_else(|| Error::NotFound(id.into()))?;
+    listing.versions.iter_mut().for_each(|r| r.hidden = hidden);
+    catalog.save(dir)
+}
+
 pub fn revoke_key(dir: &Path, fingerprint: &str, reason: Reason) -> Result<()> {
     let mut catalog = Catalog::load(dir)?;
     catalog.keys.push(KeyRevocation { fingerprint: fingerprint.into(), reason });
@@ -91,19 +103,26 @@ fn signer(
     package: &mut Opened,
     root: &Root,
     author: Option<&str>,
-    revoked: &[KeyRevocation],
+    catalog: &Catalog,
 ) -> Result<Option<String>> {
-    let candidates: Vec<_> = root.authors.iter().filter(|a| author.is_none_or(|id| id == a.id)).collect();
+    let revoked = &catalog.keys;
+    let wanted = |id: &str| author.is_none_or(|a| a == id);
+    let rooted =
+        root.authors.iter().filter(|a| wanted(&a.id)).map(|a| (a.id.clone(), root.author_keys(a, revoked)));
+    let online = catalog.authors.iter().filter(|a| root.policy.online() && wanted(&a.id));
+    let online = online
+        .filter(|a| root.authors.iter().all(|r| r.id != a.id))
+        .map(|a| (a.id.clone(), a.material(revoked)));
+    let candidates: Vec<_> = rooted.chain(online).collect();
     require(author.is_none() || !candidates.is_empty(), "author", "is not listed in the root")?;
     if !package.entries.iter().any(|e| e.path == SIGNATURE) {
         let optional = author.is_none() && !root.policy.require_author_signature;
         ensure(optional, || Error::Signature("the package must carry an author signature".into()))?;
         return Ok(None);
     }
-    let found =
-        candidates.into_iter().find(|a| verify_package(package, &root.author_keys(a, revoked)).is_ok());
+    let found = candidates.into_iter().find(|(_, keys)| verify_package(package, keys).is_ok());
     let found = found.ok_or_else(|| Error::Signature("no author key of this repository signed it".into()))?;
-    Ok(Some(found.id.clone()))
+    Ok(Some(found.0))
 }
 
 fn release(package: &mut Opened, dir: &Path, wpak: &Path, size: u64, now: i64) -> Result<Release> {
@@ -143,5 +162,6 @@ fn release(package: &mut Opened, dir: &Path, wpak: &Path, size: u64, now: i64) -
         animated,
         platforms: manifest.platforms.iter().map(|p| p.name().to_owned()).collect(),
         base,
+        hidden: false,
     })
 }

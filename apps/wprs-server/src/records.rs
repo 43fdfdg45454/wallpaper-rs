@@ -70,6 +70,8 @@ struct Change {
 #[derive(Deserialize)]
 struct Push {
     epoch: i64,
+    #[serde(default)]
+    format: i64,
     changes: Vec<Change>,
 }
 
@@ -161,6 +163,12 @@ async fn push(State(app): St, auth: Auth, Json(p): Json<Push>) -> Reply {
         if p.epoch != h.epoch {
             return Err(Problem::conflict("epoch_mismatch", format!("the current key epoch is {}", h.epoch)));
         }
+        if p.format < h.format {
+            let detail =
+                format!("this account is synced by a newer version (sync format {}): update", h.format);
+            return Err(Problem::new(StatusCode::CONFLICT, "client_too_old", detail));
+        }
+        h.format = p.format;
         let changes = p.changes.into_iter().zip(decoded);
         let results = changes
             .map(|(ch, payload)| apply(&tx, &mut h, user, &device, ch, payload))
@@ -169,8 +177,8 @@ async fn push(State(app): St, auth: Auth, Json(p): Json<Push>) -> Reply {
             return Err(Problem::new(StatusCode::PAYLOAD_TOO_LARGE, "quota", "the sync quota is full"));
         }
         tx.execute(
-            "UPDATE sync_heads SET seq = ?2, used_bytes = ?3 WHERE user_id = ?1",
-            params![user, h.seq, h.used],
+            "UPDATE sync_heads SET seq = ?2, used_bytes = ?3, format = ?4 WHERE user_id = ?1",
+            params![user, h.seq, h.used, h.format],
         )?;
         tx.commit()?;
         Ok((h.seq, results))

@@ -16,16 +16,38 @@ static BUSY: Mutex<()> = Mutex::new(());
 enum Request {
     Status,
     Cancel,
-    Pause { paused: bool },
-    Add { url: String },
-    Link { label: String, plaintext: bool },
+    Pause {
+        paused: bool,
+    },
+    Add {
+        url: String,
+    },
+    Link {
+        label: String,
+        plaintext: bool,
+    },
     Wait,
-    Join { device: String },
-    Share { device: String },
-    Confirm { code: String },
-    Preview { code: String },
-    Approve { code: String, approve: bool },
-    Sync { conflict: String },
+    Join {
+        device: String,
+    },
+    Share {
+        device: String,
+    },
+    Confirm {
+        code: String,
+    },
+    Preview {
+        code: String,
+    },
+    Approve {
+        code: String,
+        approve: bool,
+        #[serde(default)]
+        password: String,
+    },
+    Sync {
+        conflict: String,
+    },
     Remove,
 }
 
@@ -43,6 +65,7 @@ fn status() -> Value {
             "quarantined": s.quarantine.len(), "unapplied": s.unapplied.len(),
             "devices": s.peers.iter().map(device).collect::<Vec<_>>(), "link": link::shown(),
             "pairing": pairing::shown(), "network": settings::chosen(NETWORK), "active": s.active(),
+            "outdated": s.outdated, "recovery_stale": s.recovery_stale,
         })
     })
 }
@@ -78,8 +101,8 @@ fn run(request: Request) -> Result<Value, Error> {
             Request::Share { device } => pairing::share(&device).await,
             Request::Confirm { code } => pairing::confirm(&code).await,
             Request::Preview { code } => keys::device_code(&code, "preview", json!({})).await,
-            Request::Approve { code, approve } => {
-                keys::device_code(&code, "approve", json!({"approve": approve})).await
+            Request::Approve { code, approve, password } => {
+                keys::device_code(&code, "approve", json!({"approve": approve, "password": password})).await
             }
             Request::Sync { conflict } => cycle::sync(&conflict).await,
             Request::Remove => remove().await,

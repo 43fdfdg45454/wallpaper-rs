@@ -26,6 +26,9 @@ pub fn browse(data: &Path, query: &str) -> Result<Vec<Item>> {
             let open = available(&snap, listing);
             let Some(release) = open.last().filter(|r| matches(&query, &listing.id, r)) else { continue };
             let here = installed.iter().filter(|i| i.repo_id == snap.state.repo_id && i.id == listing.id);
+            if release.hidden && here.clone().next().is_none() {
+                continue;
+            }
             items.push(Item {
                 repo_id: snap.state.repo_id.clone(),
                 repo_name: snap.root.value.name.clone(),

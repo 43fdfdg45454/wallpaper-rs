@@ -48,6 +48,7 @@ class Main : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         Native.prepare(noBackupFilesDir.path)
+        Unveil.load()
         if (savedInstanceState == null) Sync.soon(this, 0)
         setContent { App(this) }
     }

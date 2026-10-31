@@ -65,7 +65,8 @@ pub fn step(
                 }
                 None => (mine.map_or_else(|| against.clone(), |m| m.merge(against)), None),
             };
-            let push = (merged != *theirs).then(|| (*seq, merged.clone()));
+            let settled = theirs.is_cleared() && merged.view().is_none();
+            let push = (merged != *theirs && !settled).then(|| (*seq, merged.clone()));
             (Some(merged), push, Some((*seq, against.clone())), copy)
         }
         None => (mine, stamped.map(|doc| (base.map_or(0, |b| b.0), doc)), base.cloned(), None),

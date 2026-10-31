@@ -2,6 +2,7 @@ use super::saved;
 use crate::daemon::Daemon;
 use crate::keyring::Keyring;
 use std::future::pending;
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 use tokio::sync::watch;
@@ -11,6 +12,29 @@ use wprs_sync::Parser;
 
 const EDITS: [&str; 5] = ["library", "playlists", "profiles", "repos", "providers"];
 const PERIOD: Duration = Duration::from_secs(900);
+const FIRST: Duration = Duration::from_secs(30);
+
+pub fn backoff(tries: u32) -> Duration {
+    FIRST.saturating_mul(1 << tries.saturating_sub(1).min(5)).min(PERIOD)
+}
+
+impl Daemon {
+    pub fn retry_later(self: &Arc<Self>, unsent: Option<u64>) {
+        let edited = self.account.edits.swap(false, Ordering::Relaxed);
+        if unsent == Some(0) || (unsent.is_none() && !edited) {
+            self.account.tries.store(0, Ordering::Relaxed);
+            return;
+        }
+        self.account.edits.store(true, Ordering::Relaxed);
+        let tries = self.account.tries.fetch_add(1, Ordering::Relaxed) + 1;
+        let (daemon, wait) = (Arc::downgrade(self), backoff(tries));
+        tracing::debug!(tries, "local changes are still waiting; trying again in {}s", wait.as_secs());
+        tokio::runtime::Handle::current().spawn(async move {
+            sleep(wait).await;
+            daemon.upgrade().into_iter().for_each(|d| d.account.wake.notify_one());
+        });
+    }
+}
 
 pub fn start(daemon: &Arc<Daemon>, bus: zbus::Connection) {
     daemon.account.keyring.set(Keyring::server(bus)).ok();
@@ -48,6 +72,9 @@ async fn schedule(daemon: Weak<Daemon>) {
             () = wake => false,
             () = edited(&mut changes, &daemon, &mut serial) => true,
         };
+        if edit {
+            d.account.edits.store(true, Ordering::Relaxed);
+        }
         sleep(Duration::from_secs(if edit { 5 } else { 0 })).await;
         if !d.saved().active() {
             continue;

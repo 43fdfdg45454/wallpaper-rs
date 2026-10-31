@@ -1,13 +1,6 @@
-use crate::St;
 use crate::config::Config;
 use crate::db::now;
-use crate::error::{Problem, Res};
 use anyhow::{Context, ensure};
-use axum::body::Body;
-use axum::extract::{Path as Route, State};
-use axum::http::{StatusCode, header};
-use axum::response::Response;
-use rusqlite::params;
 use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::fs::{self, DirBuilder, OpenOptions};
@@ -15,7 +8,6 @@ use std::io::{ErrorKind, Write};
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, PoisonError};
-use tokio_util::io::ReaderStream;
 use wprs_format::{
     Added, Entry, Keypair, Published, Reason, RootStatus, Settings, Signer, fingerprint, keygen, settings,
 };
@@ -64,6 +56,11 @@ impl Repo {
         Ok(())
     }
 
+    pub fn hide(&self, id: &str, hidden: bool) -> wprs_format::Result<()> {
+        let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
+        wprs_format::hide(&self.dir, id, hidden)
+    }
+
     pub fn restore(&self, id: &str, version: &str, held: &Path, now: i64) -> anyhow::Result<()> {
         let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
         let dest = self.dir.join("packages").join(id).join(format!("{version}.wpak"));
@@ -80,10 +77,29 @@ impl Repo {
         Ok(wprs_format::publish(&self.dir, &signer, days, now / 1000)?)
     }
 
-    pub fn authors(&self) -> Option<(Vec<String>, bool)> {
-        let settings = settings(&self.dir).ok()?;
-        let keys = settings.authors.into_values().flatten().filter_map(|k| fingerprint(&k).ok()).collect();
-        Some((keys, settings.require_author_signature))
+    pub fn authors(&self) -> Option<(Vec<String>, bool, bool)> {
+        let s = settings(&self.dir).ok()?;
+        let keys = s.authors.into_values().flatten().filter_map(|k| fingerprint(&k).ok()).collect();
+        Some((keys, s.require_author_signature, s.online_authors))
+    }
+
+    pub fn online(&self) -> bool {
+        self.authors().is_some_and(|(_, _, online)| online)
+    }
+
+    pub fn register(&self, user: i64, key: &str) -> wprs_format::Result<String> {
+        let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
+        wprs_format::register_author(&self.dir, &author(user), key)
+    }
+
+    pub fn rotate(&self, user: i64, from: &str, key: &str, sig: &str) -> wprs_format::Result<String> {
+        let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
+        wprs_format::rotate_author(&self.dir, &author(user), from, key, sig)
+    }
+
+    pub fn drop_key(&self, user: i64, fp: &str) -> wprs_format::Result<()> {
+        let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
+        wprs_format::drop_author_key(&self.dir, &author(user), fp)
     }
 
     pub fn info(&self, cfg: &Config) -> Option<Value> {
@@ -102,7 +118,11 @@ impl Repo {
     }
 }
 
-pub fn init(cfg: &Config, name: &str, require_signature: bool) -> anyhow::Result<Keypair> {
+pub fn author(user: i64) -> String {
+    format!("u{user}")
+}
+
+pub fn init(cfg: &Config, name: &str, require_signature: bool, open: bool) -> anyhow::Result<Keypair> {
     let repo = Repo::new(&cfg.data);
     ensure!(!repo.dir.join("root/1.json").exists(), "a repository already exists");
     let (root, online) = (keygen(None)?, keygen(None)?);
@@ -112,6 +132,7 @@ pub fn init(cfg: &Config, name: &str, require_signature: bool) -> anyhow::Result
         root_keys,
         online_keys,
         require_author_signature: require_signature,
+        online_authors: open,
         ..Settings::default()
     };
     wprs_format::init(&repo.dir, &settings, now() / 1000)?;
@@ -159,55 +180,4 @@ fn store_key(path: &Path, secret: &str) -> anyhow::Result<()> {
     DirBuilder::new().recursive(true).mode(0o700).create(path.parent().context("bad key path")?)?;
     let mut file = OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(path)?;
     Ok(file.write_all(secret.as_bytes())?)
-}
-
-pub async fn serve(State(app): St, Route(path): Route<String>) -> Res<Response> {
-    let parts: Vec<&str> = path.split('/').collect();
-    let public =
-        matches!(parts[0], "root" | "entry" | "details" | "index" | "revoked" | "previews" | "packages");
-    let clean = |s: &&str| {
-        !s.is_empty()
-            && !s.starts_with('.')
-            && s.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-+".contains(&b))
-    };
-    if !public || !parts.iter().all(clean) {
-        return Err(Problem::missing("file"));
-    }
-    if let ["packages", id, file] = parts[..] {
-        let (id, version) = (id.to_string(), file.trim_end_matches(".wpak").to_string());
-        let sql = "SELECT EXISTS (SELECT 1 FROM versions WHERE package_id = ?1 AND version = ?2 \
-                   AND state IN ('removed', 'revoked'))";
-        if app.db.run(move |c| Ok(c.query_row(sql, params![id, version], |r| r.get::<_, bool>(0))?)).await? {
-            return Err(Problem::new(StatusCode::GONE, "withdrawn", "this package version was withdrawn"));
-        }
-    }
-    let file = match tokio::fs::File::open(app.repo.dir.join(&path)).await {
-        Err(e) if e.kind() == ErrorKind::NotFound => return Err(Problem::missing("file")),
-        file => file?,
-    };
-    let meta = file.metadata().await?;
-    if !meta.is_file() {
-        return Err(Problem::missing("file"));
-    }
-    let kind = match path.rsplit('.').next().unwrap_or_default() {
-        "json" => "application/json",
-        "wpak" => "application/octet-stream",
-        "webp" | "png" | "gif" | "avif" | "bmp" => {
-            &format!("image/{}", path.rsplit('.').next().unwrap_or_default())
-        }
-        "jpg" | "jpeg" => "image/jpeg",
-        "minisig" | "latest" => "text/plain; charset=utf-8",
-        _ => "application/octet-stream",
-    };
-    let cache = if path == "entry/latest" { "no-cache" } else { "public, max-age=31536000, immutable" };
-    let mut response =
-        Response::builder().header(header::CONTENT_TYPE, kind).header(header::CACHE_CONTROL, cache);
-    response = response.header(header::CONTENT_LENGTH, meta.len());
-    if path.ends_with(".wpak") {
-        response = response.header(
-            header::CONTENT_DISPOSITION,
-            format!("attachment; filename=\"{}\"", parts[1..].join("-")),
-        );
-    }
-    response.body(Body::from_stream(ReaderStream::new(file))).map_err(Problem::internal)
 }

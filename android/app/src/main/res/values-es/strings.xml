@@ -141,4 +141,5 @@
         <item quantity="many">No se pueden abrir %d archivos</item>
         <item quantity="other">No se pueden abrir %d archivos</item>
     </plurals>
+    <string name="show_mature">Mostrar el contenido para adultos sin difuminar</string>
 </resources>

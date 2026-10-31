@@ -59,6 +59,8 @@ enum Repo {
         name: String,
         #[arg(long, help = "Accept only packages signed by an author the root lists")]
         require_author_signature: bool,
+        #[arg(long, help = "Let accounts register author keys online, trusted per package on first install")]
+        online_authors: bool,
     },
     #[command(about = "Import root files signed offline and, optionally, the online key")]
     Import {
@@ -116,9 +118,9 @@ fn run(command: Command) -> Result<String> {
         Command::Migrate => App::open(cfg).map(|_| "The database is up to date".into()),
         Command::Healthcheck => healthcheck(cfg.listen.port()).map(|()| String::new()),
         Command::SetupToken => runtime()?.block_on(App::open(cfg)?.setup_token()),
-        Command::Repo(Repo::Init { name, require_author_signature }) => {
+        Command::Repo(Repo::Init { name, require_author_signature, online_authors }) => {
             App::open(cfg.clone())?;
-            let root = wprs_server::init(&cfg, &name, require_author_signature)?;
+            let root = wprs_server::init(&cfg, &name, require_author_signature, online_authors)?;
             let status = wprs_server::status(&cfg)?;
             Ok(format!(
                 "Root key fingerprint: {}\n\

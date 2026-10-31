@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import java.text.DateFormat
 import java.util.Date
@@ -60,6 +61,7 @@ fun Pairing(main: Main, status: JSONObject, run: Run) {
 @Composable
 fun Approve(main: Main, run: Run, close: () -> Unit) {
     var code by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<JSONObject?>(null) }
     val approved = stringResource(R.string.approved)
     AlertDialog(
@@ -76,6 +78,11 @@ fun Approve(main: Main, run: Run, close: () -> Unit) {
                     val client = device.text("client")?.ifEmpty { null } ?: stringResource(R.string.unnamed)
                     val time = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(device.optLong("requested_at")))
                     Text(stringResource(R.string.asked, device.optString("platform"), client, time))
+                    OutlinedTextField(
+                        password, { password = it }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                        label = { Text(stringResource(R.string.account_password)) },
+                    )
+                    Text(stringResource(R.string.approve_password))
                 }
             }
         },
@@ -85,10 +92,10 @@ fun Approve(main: Main, run: Run, close: () -> Unit) {
             } else TextButton({
                 close()
                 run("") {
-                    account("approve", "code" to code, "approve" to true)
+                    account("approve", "code" to code, "approve" to true, "password" to password)
                     main.toast(approved)
                 }
-            }) { Text(stringResource(R.string.approve)) }
+            }, enabled = password.isNotEmpty()) { Text(stringResource(R.string.approve)) }
         },
         dismissButton = { TextButton(close) { Text(stringResource(R.string.cancel)) } },
     )

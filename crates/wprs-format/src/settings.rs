@@ -20,6 +20,8 @@ pub struct Settings {
     pub max_package_size: u64,
     pub mirrors: Vec<String>,
     pub shard_bits: u8,
+    #[serde(default)]
+    pub online_authors: bool,
 }
 
 impl Default for Settings {
@@ -36,6 +38,7 @@ impl Default for Settings {
             max_package_size: 1 << 30,
             mirrors: Vec::new(),
             shard_bits: 4,
+            online_authors: false,
         }
     }
 }
@@ -54,6 +57,7 @@ pub fn settings(dir: &Path) -> Result<Settings> {
         max_package_size: root.policy.max_package_size,
         mirrors: root.mirrors.clone(),
         shard_bits: Catalog::load(dir)?.shard_bits,
+        online_authors: root.policy.online(),
         ..Settings::default()
     })
 }
@@ -80,6 +84,7 @@ impl Settings {
             require_author_signature: self.require_author_signature,
             max_package_size: self.max_package_size,
             entry_max_days: self.entry_max_days,
+            authors: self.online_authors.then(|| crate::ONLINE.into()),
         };
         let (expires, repo_id) = (at(now)? + TimeDelta::days(self.root_days.into()), genesis.clone());
         let (format, name, mirrors) = (ROOT_FORMAT.into(), self.name.clone(), self.mirrors.clone());

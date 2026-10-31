@@ -144,6 +144,7 @@ calls! {
         Link link(name: str, plaintext: bool);
         PreviewCode preview_code(user_code: str);
         Approve approve(user_code: str);
+        ApproveDevice approve_device(user_code: str, password: str);
         GetStatus get_status() json;
         SyncNow sync_now();
         SetPaused set_paused(paused: bool);

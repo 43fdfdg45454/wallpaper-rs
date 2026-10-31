@@ -33,6 +33,12 @@ impl Sync {
         self.d()?.run(move |d| d.approve(&user_code)).await
     }
 
+    #[zbus(out_args("job"))]
+    async fn approve_device(&self, user_code: String, password: String) -> Result<u64> {
+        let password = Zeroizing::new(password);
+        self.d()?.run(move |d| d.approve_with(&user_code, password)).await
+    }
+
     #[zbus(out_args("json"))]
     async fn get_status(&self) -> Result<String> {
         self.d()?.run(|d| d.account_status()).await

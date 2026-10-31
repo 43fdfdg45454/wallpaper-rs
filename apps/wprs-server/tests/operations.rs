@@ -10,7 +10,7 @@ use wprs_server::{App, Config};
 #[tokio::test(flavor = "multi_thread")]
 async fn backup_and_restore_keep_accounts_packages_and_the_signed_index() {
     let server = start(&[("WPRS_AUTO_PUBLISH", "all")]).await;
-    wprs_server::init(&server.cfg, "Example wallpapers", false).unwrap();
+    wprs_server::init(&server.cfg, "Example wallpapers", false, false).unwrap();
     let admin = server.admin().await;
     let ana = server.user(&admin, "ana", "user").await;
     let status = upload(&server, &ana, &package(server.dir.path(), "org.example.dawn", "1.0.0")).await;

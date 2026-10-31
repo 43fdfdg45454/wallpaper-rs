@@ -6,16 +6,15 @@ use serde_json::json;
 use wprs_format::{Rating, add_repo, browse};
 
 #[tokio::test(flavor = "multi_thread")]
-async fn mature_uploads_are_refused_and_the_catalog_filters_by_rating_and_facet() {
+async fn mature_uploads_carry_their_label_and_the_catalog_filters_by_rating_and_facet() {
     let server = start(&[]).await;
-    wprs_server::init(&server.cfg, "Example wallpapers", false).unwrap();
+    wprs_server::init(&server.cfg, "Example wallpapers", false, false).unwrap();
     let admin = server.admin().await;
     let ana = server.user(&admin, "ana", "user").await;
-    let refused =
+    let night =
         upload(&server, &ana, &package_v2(server.dir.path(), "org.example.night", "1.0.0", Rating::Mature))
             .await;
-    assert_eq!(refused["state"], "failed", "{refused}");
-    assert!(refused["errors"][0].as_str().unwrap().contains("does not accept mature content"), "{refused}");
+    assert_eq!(night["state"], "pending_review", "{night}");
     upload(&server, &ana, &package_v2(server.dir.path(), "org.example.dusk", "1.0.0", Rating::General)).await;
     upload(&server, &ana, &package(server.dir.path(), "org.example.dawn", "1.0.0")).await;
     let (_, queue) = server.json(Method::GET, "/api/v1/mod/queue", &admin, None).await;
@@ -38,11 +37,30 @@ async fn mature_uploads_are_refused_and_the_catalog_filters_by_rating_and_facet(
                 .collect::<Vec<_>>()
         }
     };
-    assert_eq!(ids("").await, ["org.example.dawn", "org.example.dusk"]);
+    assert_eq!(ids("").await, ["org.example.dawn", "org.example.dusk", "org.example.night"]);
     assert_eq!(ids("?content=general").await, ["org.example.dusk"]);
     assert_eq!(ids("?content=unrated").await, ["org.example.dawn"]);
-    assert_eq!(ids("?facet=photosensitive").await, ["org.example.dusk"]);
-    assert!(ids("?content=mature").await.is_empty());
+    assert_eq!(ids("?facet=photosensitive").await, ["org.example.dusk", "org.example.night"]);
+    assert_eq!(ids("?content=mature").await, ["org.example.night"]);
+    assert_eq!(ids("?facet=mature&q=night").await, ["org.example.night"]);
+    let home = server.call(Method::GET, "/?content=mature", &Who::Nobody).send().await.unwrap();
+    let home = home.text().await.unwrap();
+    assert!(home.contains("class=\"veil\"") && home.contains("Mature content: select to show"), "{home}");
+    let page = server.call(Method::GET, "/packages/org.example.dusk", &Who::Nobody).send().await.unwrap();
+    assert!(!page.text().await.unwrap().contains("class=\"veil\""));
+    let hide = json!({"id": "org.example.dawn", "reason": "Shown by mistake in the catalog."});
+    let (status, _) = server.json(Method::POST, "/api/v1/mod/hidden", &admin, Some(hide.clone())).await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = server.json(Method::POST, "/api/v1/mod/hidden", &ana, Some(hide)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(ids("").await, ["org.example.dusk", "org.example.night"]);
+    assert_eq!(ids("?q=dawn").await, ["org.example.dusk", "org.example.night"]);
+    let (_, hidden) = server.json(Method::GET, "/api/v1/packages/org.example.dawn", &Who::Nobody, None).await;
+    assert_eq!(hidden["hidden"], "Shown by mistake in the catalog.", "{hidden}");
+    let (_, listed) = server.json(Method::GET, "/api/v1/mod/hidden", &admin, None).await;
+    assert_eq!(listed["items"][0]["id"], "org.example.dawn", "{listed}");
+    let (status, _) = server.json(Method::DELETE, "/api/v1/mod/hidden/org.example.night", &admin, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
     let (_, dusk) = server.json(Method::GET, "/api/v1/packages/org.example.dusk", &Who::Nobody, None).await;
     assert_eq!((&dusk["content"], &dusk["photosensitive"]), (&json!("general"), &json!(true)), "{dusk}");
     assert_eq!(dusk["facets"], json!(["android", "desktop", "landscape", "photosensitive"]));
@@ -59,5 +77,9 @@ async fn mature_uploads_are_refused_and_the_catalog_filters_by_rating_and_facet(
     });
     let found = found.await.unwrap();
     let rated: Vec<_> = found.iter().map(|i| (i.id.as_str(), i.release.photosensitive)).collect();
-    assert_eq!(rated, [("org.example.dawn", None), ("org.example.dusk", Some(true))]);
+    assert_eq!(rated, [("org.example.dusk", Some(true)), ("org.example.night", Some(true))]);
+    assert!(found[1].release.content.as_ref().is_some_and(|c| c.mature()));
+    let (status, _) = server.json(Method::DELETE, "/api/v1/mod/hidden/org.example.dawn", &admin, None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(ids("?q=dawn").await.len(), 3);
 }

@@ -57,7 +57,8 @@ pub fn fail(error: zbus::Error) -> Error {
 pub fn carries_secret(iface: &str, member: &str, args: &[Value]) -> bool {
     let at = |n: usize| args.get(n).and_then(Value::as_str).is_some_and(|s| !s.is_empty());
     let provider = iface.ends_with("Providers1") && (member == "SetSecret" || member == "Add" && at(3));
-    provider || iface.ends_with("Sync1") && ["SetEscrow", "Restore"].contains(&member) && at(0)
+    let approval = member == "ApproveDevice" && at(1);
+    provider || iface.ends_with("Sync1") && (["SetEscrow", "Restore"].contains(&member) && at(0) || approval)
 }
 
 pub fn fixture(iface: &str, member: &str) -> String {

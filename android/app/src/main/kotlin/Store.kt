@@ -41,8 +41,19 @@ class Item(json: JSONObject) {
     val lacks = json.optJSONArray("lacks")?.let { list -> List(list.length(), list::getString) }.orEmpty()
     private val pack = json.optJSONObject("package")
     private val confirmed = pack?.optJSONArray("confirmed")?.let { list -> List(list.length(), list::getString) }.orEmpty()
-    val mature = pack?.optString("content") == "mature" && "mature" !in confirmed
+    val mature = pack?.optString("content") == "mature" && "mature" !in confirmed && !Unveil.mature
     val flashing = pack?.optBoolean("photosensitive") == true && "photosensitive" !in confirmed
+}
+
+object Unveil {
+    const val KEY = "library.show_mature"
+
+    @Volatile
+    var mature = false
+
+    fun load() {
+        mature = runCatching { Native.setting(KEY, null) == "true" }.getOrDefault(false)
+    }
 }
 
 class Playlist(json: JSONObject) {

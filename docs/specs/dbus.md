@@ -514,6 +514,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `library.watch` | rescan folder sources when files in them change (a new file once it is written, a hard or symbolic link, a moved, renamed or removed folder), one scan per source at most every 5 s; a change during a scan of the same source starts another scan after it | `true` |
 | `library.thumb_cache_mb` | `64` to `8192`, size of the thumbnail cache | `512` |
 | `library.hide_mature` | leave packages rated `mature` out of `Search` (unless the query has its own `content:` filter; `SearchPage.query` stays the one given) and `Browse`; a change emits `library` and `repos` | `false` |
+| `library.show_mature` | show the previews of packages rated `mature` without blur; otherwise clients (app, tray, phone) blur them until the user confirms once per package with `Library1.Confirm`; a change emits `library` and `repos` | `false` |
 | `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
 | `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |
@@ -1181,7 +1182,8 @@ An install from it that starts while it is being removed ends `cancelled`.
 A `BrowsePage` of the packages offered, matched without case on id, title, description (in every
 language), tags, authors and facets, sorted by id then repository. `limit` is `0..=500`. Titles,
 descriptions and change notes come in the user's language; with `library.hide_mature`, packages
-rated `mature` are left out.
+rated `mature` are left out. Packages that the moderators of the repository hid are left out unless
+a version of them is installed; they can still be installed by id.
 
 ### `RequestPreviews(as specs) → (a{ss} paths)`
 
@@ -1536,7 +1538,17 @@ user's own new device shows, and ask for an explicit confirmation before `Approv
 
 ### `Approve(s user_code) → (t job)`
 
-Approves the code shown by a new device of the same account from this linked device.
+Approves the code shown by a new device of the same account from this linked device. Device tokens
+no longer manage devices, so servers of this version refuse it without the account password; use
+`ApproveDevice`.
+
+### `ApproveDevice(s user_code, s password) → (t job)`
+
+Like `Approve`, sending the password of the account with the request: the server checks it like a
+sign-in, so a stolen device token alone cannot add a device. The password goes only to the server,
+never to a file or a log. An account that signs in through single sign-on approves on the `/link`
+page of the server. Clients ask for the password after the user confirmed what `PreviewCode`
+showed.
 
 ### `GetStatus() → (s json)`
 
@@ -1547,11 +1559,25 @@ the key. `quarantined` counts the records skipped because they cannot be decrypt
 the received changes that wait to be applied. `offers` are repositories synced from other devices
 that wait for `ConfirmRepo`, `secrets` the providers whose secret is synced, `recovery` whether the
 server holds an escrow of the current key (`current`), of an older one (`stale`) or none (`off`),
-and `files_bytes` of `files_quota_bytes` the private files on the server.
+and `files_bytes` of `files_quota_bytes` the private files on the server. `stale` means that a
+device that may know the recovery passphrase was revoked: clients ask for a new, different
+passphrase, and `SetEscrow` refuses the old one.
 
 ### `SyncNow() → (t job)`
 
-Starts an `account_sync` job. `Failed` until this computer is linked and holds a sync key.
+Starts an `account_sync` job. `Failed` until this computer is linked and holds a sync key, and
+with a translated message when the account was synced by a newer sync format (`server.md`): this
+version then neither sends nor applies anything until it is updated.
+
+A sync sends every change in rounds; a change whose write conflicts three rounds in a row, or a
+cycle that fails while local changes wait, is tried again after 30 s, then 1, 2, 4 and 8 minutes
+and every 15 minutes, without contacting the server while nothing changed locally. The output
+counts in `unsent` the changes that still wait.
+
+Removing a library item here (`Library1.Remove`, or `Repos1.Uninstall` of the last version) sends
+its deletion; a deletion that arrives removes the item here, uninstalling a package, and leaves the
+files in place; an item of a watched folder whose file is still there stays, but is not sent again.
+Items added after a deletion sync again. Deletions are kept 90 days, then become server tombstones.
 
 ### `SetPaused(b paused)`
 
@@ -1643,7 +1669,8 @@ derived key stays in the Secret Service item of this server, so that after a `Ro
 device it seals the new key again; a different escrow on the server makes it forget that key, and
 so does a key change after a device left, because the revoked device may know the passphrase: set
 the escrow again then, with a new passphrase, since whoever knew the old one can open every escrow
-sealed with it. An empty passphrase deletes the escrow. Only on an encrypted account. Clients warn
+sealed with it. While `recovery` is `stale`, a passphrase that opens the escrow still on the server
+is refused (`InvalidArgs`, translated). An empty passphrase deletes the escrow. Only on an encrypted account. Clients warn
 that whoever holds a copy of the server's data can try passphrases without limit.
 
 ### `Restore(s passphrase) → (t job)`
@@ -1660,7 +1687,9 @@ Chooses private files: each target is an item uid or an absolute folder path (ev
 is chosen); with `share = false` an item or folder is unchosen, which removes its file from the
 server, and a target can also be the `id` of a file in `ListFiles` that is not on this computer.
 Returns the `files` job. Only on an encrypted account; `NotFound` for an unknown item, `InvalidArgs`
-for a missing folder.
+for a missing folder. A file that cannot be uploaded (the quota is full, or the file of a chosen
+item is missing) does not stop the others: the job uploads the rest and then fails with
+`<n> private files were not uploaded, the others were: <title>: <reason>; …`.
 
 ### `ListFiles() → (s json)`
 
@@ -1996,9 +2025,9 @@ while they wait for the library.
 | `repo_add` | `Repos1.Add` | repository URL without query | `0/0` | `Repo` |
 | `repo_refresh` | `Repos1.Refresh`, schedule | repository id, or `""` | `0/0` | `RefreshOutput` |
 | `install` | `Repos1.Install` | `repo_id/id@version` | bytes | `InstalledPackage` |
-| `account` | `Sync1.AddServer`, `PreviewCode`, `Approve`, `ConfirmShare`, `Rotate`, `Reset`, `SetEscrow` | server URL, `preview <code>`, `approve <code>`, `share <device id>`, `rotate`, `reset` or `escrow` | `0/0` | server answer, or `{recovery}` |
+| `account` | `Sync1.AddServer`, `PreviewCode`, `Approve`, `ApproveDevice`, `ConfirmShare`, `Rotate`, `Reset`, `SetEscrow` | server URL, `preview <code>`, `approve <code>`, `share <device id>`, `rotate`, `reset` or `escrow` | `0/0` | server answer, or `{recovery}` |
 | `link` | `Sync1.Link`, `Join`, `ShareKey`, `Restore` | `link`, `join <device id>`, `share <device>` or `restore` | `0/0` | `{device, encrypted, needs_key}`, `{from}`, `{device, code}` or `{epoch}` |
-| `account_sync` | `Sync1.SyncNow`, schedule | `""` | `0/0` | `{applied, records, quarantined}` |
+| `account_sync` | `Sync1.SyncNow`, schedule | `""` | `0/0` | `{applied, records, quarantined, unsent}` |
 | `upload` | `Sync1.Upload`, `ShareFiles`, `FetchFile`, after a sync with private files | random id, `files` or `fetch` | bytes, or segments for `fetch` | `UploadOutput`, `{uploaded}` or `{item}` |
 
 `CancelJob` drops a queued job; a running job stops at its next checkpoint (between scan

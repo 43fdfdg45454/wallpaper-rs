@@ -40,4 +40,9 @@
     <string name="remove_server">Remove server</string>
     <string name="remove_server_question">Remove the server? This phone stops syncing and the server forgets it. The library on this phone stays.</string>
     <string name="conflict">%1$s (conflict)</string>
+    <string name="account_password">Password of the account</string>
+    <string name="approve_password">Approving asks for the password of the account. An account that signs in through single sign-on approves on the account page of the server.</string>
+    <string name="outdated">This account is synced by a newer version of wallpaper-rs: update the app to keep syncing.</string>
+    <string name="recovery_revoked">A device that may know the recovery passphrase was revoked: on a computer, set a new, different recovery passphrase.</string>
+    <string name="names_key">Item names are keyed hashes. A device that once held the names key and has the same file can still tell that this account stores it, even after it is revoked.</string>
 </resources>

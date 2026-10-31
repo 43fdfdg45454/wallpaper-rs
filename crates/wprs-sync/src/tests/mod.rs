@@ -2,6 +2,7 @@ mod clash;
 mod crypto;
 mod engine;
 mod files;
+mod gone;
 mod merge;
 mod protocol;
 
@@ -18,7 +19,7 @@ pub fn at(ms: u64, device: &str) -> Hlc {
 
 pub fn doc(pairs: &[(&str, Value, u64)]) -> Doc {
     let fields = pairs.iter().map(|(key, value, ms)| (key.to_string(), (value.clone(), at(*ms, "a"))));
-    Doc { fields: fields.collect(), gone: None }
+    Doc { fields: fields.collect(), ..Doc::default() }
 }
 
 pub fn title(text: &str) -> View {

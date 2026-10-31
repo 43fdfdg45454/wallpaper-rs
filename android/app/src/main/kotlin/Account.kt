@@ -110,7 +110,10 @@ private fun Summary(main: Main, status: JSONObject, run: Run, approve: () -> Uni
             val time = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(last * 1000))
             Text(if (last > 0) stringResource(R.string.last_sync, time) else stringResource(R.string.never_synced))
             Text(stringResource(if (status.optBoolean("encrypted")) R.string.encrypted else R.string.not_encrypted))
-            listOfNotNull(status.text("last_error"), status.text("warning")).forEach {
+            if (status.optBoolean("encrypted")) Text(stringResource(R.string.names_key), style = MaterialTheme.typography.bodySmall)
+            val outdated = stringResource(R.string.outdated).takeIf { status.optBoolean("outdated") }
+            val revoked = stringResource(R.string.recovery_revoked).takeIf { status.optBoolean("recovery_stale") }
+            listOfNotNull(outdated ?: status.text("last_error"), status.text("warning"), revoked).forEach {
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -1,8 +1,12 @@
+use crate::authors::trust;
 use crate::broken::{scan, sound};
 use crate::browse::{available, listing, newer};
 use crate::download::package;
 use crate::store::{Snapshot, load, locked, optional, write};
-use crate::{Error, Fetch, Listing, Reason, Release, Result, ensure, require};
+use crate::{
+    Error, Fetch, KeyRevocation, Listing, OnlineAuthor, Reason, Release, Result, Trusted, anchors, ensure,
+    require,
+};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -58,7 +62,7 @@ pub fn install<F: Fetch>(
         return Ok(done.clone());
     }
     let path = data.join("packages").join(id).join(format!("{}.wpak", release.version));
-    let (tmp, signer) = package(fetch, &snap, listing, release, &path)?;
+    let (tmp, signer, online) = package(fetch, &snap, listing, release, &path)?;
     let (version, sha256, size) = (release.version.clone(), release.sha256.clone(), release.size);
     let (repo_id, id) = (repo_id.clone(), id.to_string());
     let done = Installed { repo_id, id, version, sha256, size, path, signer, revoked: None };
@@ -69,9 +73,12 @@ pub fn install<F: Fetch>(
         }
         require(!foreign(&list), "id", "is installed from another repository")?;
         still(data, &done)?;
+        let anchors = trusted(data, &done, online.as_ref(), &snap.revoked.keys)?;
         tmp.keep(&done.path)?;
         list.push(done.clone());
         save(data, &list)?;
+        anchors
+            .map_or(Ok(()), |a| write(&data.join("anchors.json"), &serde_json::to_vec_pretty(&a)?, true))?;
         Ok(done)
     })
 }
@@ -103,6 +110,20 @@ pub fn current(data: &Path, repo_id: &str, id: &str, version: &str) -> Result<In
         }
         still(data, &found).map(|()| found)
     })
+}
+
+fn trusted(
+    data: &Path,
+    done: &Installed,
+    online: Option<&OnlineAuthor>,
+    revoked: &[KeyRevocation],
+) -> Result<Option<Vec<Trusted>>> {
+    let (Some(author), Some(fp)) = (online, done.signer.as_deref()) else { return Ok(None) };
+    let key = author.keys.get(fp).map(|k| k.minisign.clone()).unwrap_or_default();
+    let new = Trusted { repo_id: done.repo_id.clone(), id: done.id.clone(), fingerprint: fp.into(), key };
+    let mut list = anchors(data)?;
+    trust(&mut list, new, author, revoked)?;
+    Ok(Some(list))
 }
 
 fn still(data: &Path, item: &Installed) -> Result<()> {

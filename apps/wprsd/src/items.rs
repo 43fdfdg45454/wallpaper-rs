@@ -166,14 +166,17 @@ impl Daemon {
             }
             () => None,
         };
-        let removed = self.store.write(|lib| {
+        let (removed, hashes) = self.store.write(|lib| {
             for item in refs.iter().map(|uid| lib.item(uid)).collect::<Result<Vec<_>, _>>()? {
                 if let Some(reason) = refused(&item) {
                     return Err(invalid(format!("item {} {reason}", item.uid)));
                 }
             }
-            Ok(lib.remove_items(&refs)?)
+            let hashes = lib.hashed()?.into_iter().filter(|(i, _)| refs.contains(&i.uid.as_str()));
+            let hashes: Vec<String> = hashes.map(|(_, hash)| crate::account::removed_blob(&hash)).collect();
+            Ok((lib.remove_items(&refs)?, hashes))
         })?;
+        self.forget_synced(hashes);
         self.forget_files(&removed);
         removed.iter().filter(|_| delete_files).for_each(|item| drop(std::fs::remove_file(&item.path)));
         self.library_changed(uids.to_vec());

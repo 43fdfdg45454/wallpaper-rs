@@ -115,7 +115,7 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Sync1", "AddServer", "server add", &["URL"]),
     ("Sync1", "Link", "server link", &["--name", "--plaintext"]),
     ("Sync1", "PreviewCode", "server approve", &["CODE"]),
-    ("Sync1", "Approve", "server approve", &["CODE"]),
+    ("Sync1", "ApproveDevice", "server approve", &["CODE", "prompt"]),
     ("Sync1", "GetStatus", "server status", &[]),
     ("Sync1", "SyncNow", "server sync", &[]),
     ("Sync1", "SetPaused", "server pause", &["=true"]),

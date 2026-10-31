@@ -18,6 +18,7 @@ QtObject {
     }
     readonly property var state: JSON.parse(backend.state || "{}")
     readonly property var schema: JSON.parse(backend.schema || "{}")
+    readonly property bool unveiled: state.options?.["library.show_mature"] === true
     readonly property var jobs: JSON.parse(backend.jobs || "[]")
     readonly property var outputs: Object.keys(state.outputs ?? {})
     readonly property bool checking: backend.checking

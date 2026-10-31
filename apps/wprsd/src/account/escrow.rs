@@ -41,6 +41,11 @@ impl Daemon {
             let (api, mut secrets) = d.account_api(true)?;
             let (user, saved) = d.mark();
             let epoch = secrets.epoch.unwrap_or(saved);
+            let stale = d.saved().recovery.is_some_and(|kept| kept != epoch);
+            let old = if stale && !passphrase.is_empty() { stored(&api)? } else { None };
+            if old.is_some_and(|old| unseal(&old, &passphrase, user).is_ok()) {
+                return Err(invalid(crate::words::same_passphrase()));
+            }
             let lock = match passphrase.is_empty() {
                 true => None,
                 false => Some(Lock::new(&passphrase, STRONG).map_err(sync_error)?),

@@ -84,6 +84,8 @@ pub struct Saved {
     pub files: Files,
     pub files_bytes: u64,
     pub files_quota: u64,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub removed: BTreeMap<String, i64>,
 }
 
 pub fn load(path: &Path) -> Saved {

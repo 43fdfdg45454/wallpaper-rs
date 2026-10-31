@@ -47,6 +47,13 @@ ColumnLayout {
         text: App.tr("Your own wallpapers that come from no repository, end-to-end encrypted: %1 of %2 used on the server.", App.bytes(files.account?.files_bytes ?? 0), App.bytes(files.account?.files_quota_bytes ?? 0))
     }
 
+    QQC2.Label {
+        Layout.fillWidth: true
+        wrapMode: Text.Wrap
+        opacity: 0.8
+        text: App.tr("Item names on the server are keyed hashes: a device that once held the names key and has the same file can still tell that this account stores it, even after it is revoked.")
+    }
+
     Repeater {
         model: files.reply.folders
 

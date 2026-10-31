@@ -52,6 +52,9 @@ impl Daemon {
             let uids = local.items.entry(key.clone()).or_default();
             uids.push(item.uid.clone());
             let record = format!("library/{key}");
+            if wprs_sync::deleted_before(replica, &record, item.added_at) {
+                continue;
+            }
             if files.stored.get(&item.uid).is_some_and(|s| s.done) && !opted(&files, &item.uid, &item.path) {
                 dropped.insert(key.clone());
             }

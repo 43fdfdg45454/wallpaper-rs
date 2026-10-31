@@ -21,6 +21,7 @@ pub mod keys;
 mod layering;
 pub mod library;
 pub mod models;
+pub mod moderate;
 pub mod pack;
 pub mod pkg;
 pub mod playlists;
@@ -69,6 +70,11 @@ pub fn main() -> ExitCode {
         Command::Repo(command) => repo::run(command),
         Command::Edit(command) => edit::run(command),
         Command::Models(command) => models::run(command),
+        Command::Moderate(command) => tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(anyhow::Error::from)
+            .and_then(|runtime| runtime.block_on(moderate::run(command))),
         command => tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()

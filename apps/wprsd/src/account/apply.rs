@@ -40,7 +40,10 @@ impl Daemon {
         for (key, view, kind) in applied {
             let (collection, item) = key.split_once('/').unwrap_or_default();
             let result = match (collection, kind.as_str()) {
-                ("library", _) => view.map_or(Ok(()), |view| self.apply_item(local, &key, item, &view, kept)),
+                ("library", _) => match view {
+                    Some(view) => self.apply_item(local, &key, item, &view, kept),
+                    None => self.delete_synced(local, item),
+                },
                 ("playlists", _) => self.apply_playlist(local, &key, view, links, kept),
                 ("settings", "preset") => self.apply_preset(local, &key, view, links, kept),
                 ("settings", "profile") => self.apply_profile(local, &key, view, links, kept),

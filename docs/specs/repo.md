@@ -13,6 +13,7 @@ generation and signing behind the `sign` feature).
 | `root` | `root/<N>.json` | t of n, 1 to 8 keys | 365 days (30 to 1096) |
 | `online` | `entry/<N>.json`, `details/<N>.json` | 1 | 7 days, at most `policy.entry_max_days` (1 to 90, default 14) |
 | author | `manifest.json` inside a package | 1 | no expiry; revoked through `revoked` |
+| online author | the same, listed in `authors/<sha256>.json` instead of the root | 1 | the same |
 
 - A key is identified by its fingerprint: lowercase hex SHA-256 of the 32 Ed25519 public key
   bytes (bytes 10..42 of the decoded minisign public key). The minisign key id is only a hint.
@@ -27,8 +28,9 @@ one block verifies with stock minisign tools.
 - Each block is tried against every key of the role; the threshold counts distinct key
   fingerprints, never blocks.
 - Trusted comments bind role, version and repository: `wpak-repo root <N> <repo_id>`,
-  `wpak-repo entry <N> <repo_id>`, `wpak-repo details <N> <repo_id>`, and
-  `wpak manifest <id> <version>` for package authors.
+  `wpak-repo entry <N> <repo_id>`, `wpak-repo details <N> <repo_id>`,
+  `wpak manifest <id> <version>` for package authors and `wpak-author-rotate <author> <from> <to>`
+  for the rotations of online authors (signed text and trusted comment alike).
 
 ## Layout
 
@@ -39,6 +41,7 @@ entry/latest                            "<N>\n", unsigned hint, the only mutable
 details/<N>.json, details/<N>.json.minisig  immutable, only when a second-version release exists
 index/<sha256>.json                     shards, immutable
 revoked/<sha256>.json                   revocations, immutable
+authors/<sha256>.json                   online authors, immutable, only with policy.authors = online
 previews/<sha256>.<ext>                 preview images copied from packages
 packages/<id>/<version>.wpak            packages, immutable once published
 catalog.json                            operator state, not used by clients
@@ -73,13 +76,14 @@ values they do not know (also inside `content` and `requires`; an unknown rating
 | `keys` | map of fingerprint to `{"minisign": "<base64 public key>"}`; fingerprints must match |
 | `roles` | `{"root": {keys, threshold}, "online": {keys, threshold}}` |
 | `authors` | `[{"id": "[a-z][a-z0-9_-]{0,31}", "keys": [fingerprint…]}]`, unique ids |
-| `policy` | `{require_author_signature, max_package_size, entry_max_days}` |
+| `policy` | `{require_author_signature, max_package_size, entry_max_days}` and, only when it is not the default `root`, `authors: "online"`; roots without it keep their bytes, and versions of wallpaper-rs before online authors refuse roots that set it |
 | `mirrors` | at most 16 `https://` or `file://` base URLs; `file://` mirrors are used only by clients that added the repository itself from a `file://` URL or a folder, and skipped for repositories fetched over the network |
 
 `entry/<N>.json` (at most 128 KiB): `format` (`wpak-repo-entry/1.0`), `repo_id`, `version`
 (= `N`), `timestamp`, `expires` (`0 < expires - timestamp ≤ entry_max_days`), `root`
 (`{version, sha256}` of the current root), `shard_bits` (0 to 8), `shards` (exactly
-`2^shard_bits` `{sha256, size}` in shard order) and `revoked` (`{sha256, size}`).
+`2^shard_bits` `{sha256, size}` in shard order), `revoked` (`{sha256, size}`) and, exactly when the
+root sets `policy.authors = "online"`, `authors` (`{sha256, size}` of the online authors file).
 
 `index/<sha256>.json`: `format` (`wpak-repo-shard/1.0`), `repo_id`, `shard` (its position) and
 `packages`: `[{id, author, versions: [release…]}]`. A package belongs to the shard given by
@@ -112,6 +116,17 @@ releases whose `kind` it does not know, and a package left with none, so that a 
 never stops it from reading the rest of the shard; the fields it does not know in a release are
 ignored, while the signed hashes still cover them.
 
+A release of the second-version shards may carry `hidden: true`: the moderators of the repository
+took the package out of browsing. Clients leave it out of `browse` unless a version is installed,
+and keep installing and updating it; first-version shards never carry it, and a repository with a
+hidden release always publishes details.
+
+`authors/<sha256>.json` (only with online authors): `format` (`wpak-repo-authors/1.0`), `repo_id`
+and `authors`: `[{id, keys: {fingerprint: {minisign}}, rotations: [{from, to, sig}]}]`, ids as in
+the root and unique, `to` listed in `keys`, `sig` a minisign block of the key `from` over
+`wpak-author-rotate <id> <from> <to>`. The entry signed by the `online` key pins it, so it is
+signed indirectly.
+
 `revoked/<sha256>.json`: `format` (`wpak-repo-revoked/1.0`), `repo_id`, `packages`
 (`[{id, versions, reason, message}]`, `"*"` revokes every version) and `keys`
 (`[{fingerprint, reason}]`). Reasons: `malware`, `license`, `takedown`, `broken`, `other`.
@@ -123,6 +138,21 @@ An author signs the exact bytes of `manifest.json`; the signature is stored in t
 `manifest.json.minisig` with the trusted comment `wpak manifest <id> <version>`. It can be
 checked by hand with `minisign -Vm manifest.json -p author.pub`.
 
+## Online authors
+
+A root with `policy.authors = "online"` lets authors register without a root ceremony, as a
+server with open registration needs. The authors that the root lists keep priority: an online
+author with the id of a root author is never used, and `register_author` refuses such ids and keys
+that belong to the root or to another author. Because the online key alone vouches for the
+authors file, the client trusts each package on first use: `install` records in
+`<data>/anchors.json` the fingerprint and public key that signed the first version it installed of
+`(repo_id, id)`, and accepts a later version (or another version installed again) only when the
+same key signed it or a chain of rotations from the anchored key reaches the new one, each signed
+by its `from` key and none from a revoked key; the anchor then moves to the new key. A package
+whose author is in the root needs no anchor. Whoever steals the online key can therefore publish new
+authors and new packages, but not update a package already installed; a stolen author key is
+revoked through `revoked`.
+
 ## Operator workflow
 
 | Step | Function |
@@ -133,6 +163,8 @@ checked by hand with `minisign -Vm manifest.json -p author.pub`.
 | Sign a package source before building it | `sign_source(dir, signer)` |
 | Add a package (validated, never `imported`, provider packages under their licenses only, signature checked against root authors, preview copied) | `add(dir, wpak, author, now)` |
 | Revoke a package version or a key, or withdraw the revocation of a version | `revoke(dir, id, version, reason, message)`, `revoke_key(dir, fingerprint, reason)`, `unrevoke(dir, id, version)` |
+| Hide every version of a package from browsing, or show it again | `hide(dir, id, hidden)` |
+| With online authors: register an author key, hand an author over to a new key, drop a key that no rotation names | `register_author(dir, id, key)`, `rotate_author(dir, id, from, key, sig)` with `sign_rotation(signer, id, key)`, `drop_author_key(dir, id, fingerprint)` |
 | Write shards, revocations, the next entry and its details; repeat before expiry | `publish(dir, online, lifetime_days, now)` |
 | Replace keys or policy: write `root/<N+1>.json`, then sign with the old and the new root threshold, then publish with the current online key | `rotate_root(dir, settings, now)`, `sign_root`, `publish` |
 | Check a tree as a client would, without storing anything | `verify(fetch, url_or_dir, now)` |
@@ -182,10 +214,11 @@ cancelled transfer (`io::ErrorKind::Interrupted`) stops at once without trying f
    `<data>/packages/<id>/`, cut at the declared size, and check size and SHA-256.
 4. Validate the package, check `id`, `version`, `kind`, `license` and `manifest_sha256` against
    the release, and check the author signature when the root requires it or the listing names
-   an author (key bound to that author in the root and not revoked).
+   an author (key bound to that author in the root, or in the online authors file when the root
+   allows them, and not revoked).
 5. Under the exclusive lock, re-read `installed.json` and the repository, check that it is still
-   there and that neither the version nor the signing key is revoked, then rename into place and
-   record it. `current(data, repo_id, id, version)` repeats that check for an installed record, so
+   there and that neither the version nor the signing key is revoked, check the anchor of an online
+   author (above), then rename into place and record it. `current(data, repo_id, id, version)` repeats that check for an installed record, so
    a caller can check again right before it activates the package.
 
 `preview(data, fetch, repo_id, id, version, dest)` downloads `previews/<sha256>.<ext>` of a
@@ -215,6 +248,7 @@ be rolled back either. When no address is left, `add_repo` with its URL repairs 
 <data>/repos/<repo_id>/blobs/<sha256>.json    verified shards and revocations
 <data>/packages/<id>/<version>.wpak           installed packages
 <data>/installed.json                         origin, hash, signer and revocation of each package
+<data>/anchors.json                           first signing key of each package of an online author
 <data>/.repos.lock                            flock serializing writers
 ```
 

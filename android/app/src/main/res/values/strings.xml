@@ -143,4 +143,5 @@
         <item quantity="one">%d file cannot be opened</item>
         <item quantity="other">%d files cannot be opened</item>
     </plurals>
+    <string name="show_mature">Show mature content without blur</string>
 </resources>

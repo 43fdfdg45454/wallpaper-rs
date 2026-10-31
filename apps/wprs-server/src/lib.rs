@@ -1,16 +1,22 @@
 mod account;
+mod account_page;
 mod admin;
+mod approval;
 mod auth;
+mod authors;
 mod backup;
 mod catalog;
 mod config;
 mod creds;
 mod db;
 mod device;
+mod discovery;
 mod error;
 mod files;
+mod hiding;
 mod http;
 mod jobs;
+mod layout;
 mod legal;
 mod mailbox;
 mod me;
@@ -19,9 +25,15 @@ mod net;
 #[cfg(feature = "oidc")]
 mod oidc;
 mod pages;
+mod policies;
 mod records;
 mod repo;
 mod review;
+mod served;
+#[cfg(all(test, feature = "oidc"))]
+mod signon;
+#[cfg(feature = "oidc")]
+mod sso;
 mod sync;
 #[cfg(test)]
 mod tests;

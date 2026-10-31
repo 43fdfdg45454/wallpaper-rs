@@ -1,7 +1,10 @@
 use crate::browse::listing;
 use crate::fetch::{bases, first};
 use crate::store::{Snapshot, Temp, load, locked, place};
-use crate::{Error, Fetch, Limits, Listing, MANIFEST, Release, Result, ensure, read, sha256, verify_package};
+use crate::{
+    Error, Fetch, Limits, Listing, MANIFEST, OnlineAuthor, Release, Result, ensure, read, sha256,
+    verify_package,
+};
 use std::fs::File;
 use std::io::{BufReader, Seek};
 use std::path::Path;
@@ -46,12 +49,12 @@ pub(crate) fn package(
     listing: &Listing,
     release: &Release,
     path: &Path,
-) -> Result<(Temp, Option<String>)> {
+) -> Result<(Temp, Option<String>, Option<OnlineAuthor>)> {
     let mut tmp = Temp::new(path, true)?;
     let remote = format!("packages/{}/{}.wpak", listing.id, release.version);
     verified(fetch, snap, &remote, release.size, &release.sha256, &mut tmp.file)?;
-    let signer = checked(&tmp.file, snap, listing, release)?;
-    Ok((tmp, signer))
+    let (signer, online) = checked(&tmp.file, snap, listing, release)?;
+    Ok((tmp, signer, online))
 }
 
 fn verified(
@@ -76,7 +79,9 @@ fn verified(
     Ok(file.rewind()?)
 }
 
-fn checked(file: &File, snap: &Snapshot, listing: &Listing, release: &Release) -> Result<Option<String>> {
+type Signed = (Option<String>, Option<OnlineAuthor>);
+
+fn checked(file: &File, snap: &Snapshot, listing: &Listing, release: &Release) -> Result<Signed> {
     let (root, id) = (&snap.root.value, &listing.id);
     let mut package = read(BufReader::new(file), &Limits::default())?;
     let digest = sha256(&package.read_file(MANIFEST)?[..])?;
@@ -85,9 +90,13 @@ fn checked(file: &File, snap: &Snapshot, listing: &Listing, release: &Release) -
         m.id == *id && m.version == release.version && m.kind == release.kind && m.license == release.license;
     ensure(same && digest == release.manifest_sha256, || Error::Mismatch(format!("manifest of {id}")))?;
     if !root.policy.require_author_signature && listing.author.is_none() {
-        return Ok(None);
+        return Ok((None, None));
     }
-    let author = listing.author.as_deref().and_then(|a| root.authors.iter().find(|x| x.id == a));
-    let author = author.ok_or_else(|| Error::Signature(format!("{id} has no author bound in the root")))?;
-    Ok(Some(verify_package(&mut package, &root.author_keys(author, &snap.revoked.keys))?))
+    let (name, revoked) = (listing.author.as_deref(), &snap.revoked.keys);
+    if let Some(author) = name.and_then(|a| root.authors.iter().find(|x| x.id == a)) {
+        return Ok((Some(verify_package(&mut package, &root.author_keys(author, revoked))?), None));
+    }
+    let online = name.filter(|_| root.policy.online()).and_then(|a| snap.authors.as_ref()?.find(a));
+    let author = online.ok_or_else(|| Error::Signature(format!("{id} has no author bound in the root")))?;
+    Ok((Some(verify_package(&mut package, &author.material(revoked))?), Some(author.clone())))
 }

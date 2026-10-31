@@ -41,6 +41,9 @@ pub(crate) struct Saved {
     pub(crate) quarantine: BTreeMap<String, i64>,
     pub(crate) kept: Kept,
     pub(crate) unapplied: BTreeMap<String, i64>,
+    pub(crate) removed: BTreeMap<String, i64>,
+    pub(crate) outdated: bool,
+    pub(crate) recovery_stale: bool,
 }
 
 impl Saved {
@@ -74,6 +77,13 @@ impl Saved {
             _ if self.last_error.is_some() => "error",
             _ => "ready",
         }
+    }
+}
+
+pub(crate) fn forget(removed: Vec<String>, at: i64) -> Result<(), Error> {
+    match read(|s| s.device.is_some()) {
+        true => update(|s| s.removed.extend(removed.into_iter().map(|r| (r, at)))),
+        false => Ok(()),
     }
 }
 

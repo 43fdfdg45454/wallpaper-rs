@@ -9,6 +9,7 @@ import android.security.keystore.KeyProperties
 import androidx.annotation.OptIn
 import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
+import androidx.work.BackoffPolicy
 import androidx.work.Configuration
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -80,7 +81,7 @@ class Syncer(context: Context, params: WorkerParameters) : Worker(context, param
         val request = JSONObject(mapOf("op" to "sync", "conflict" to applicationContext.getString(R.string.conflict, "%1")))
         val answer = JSONObject(Native.account(request.toString()))
         if (answer.optInt("applied") > 0) Render.post { Wallpaper.reload(false) }
-        return Result.success()
+        return if (answer.optInt("unsent") > 0) Result.retry() else Result.success()
     }
 }
 
@@ -99,7 +100,8 @@ object Sync {
 
     fun schedule(context: Context) = WorkManager.getInstance(context).run {
         if (active()) {
-            val request = PeriodicWorkRequest.Builder(Syncer::class.java, 1, TimeUnit.HOURS).setConstraints(constraints()).build()
+            val request = PeriodicWorkRequest.Builder(Syncer::class.java, 1, TimeUnit.HOURS).setConstraints(constraints())
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS).build()
             enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request)
         } else {
             cancelUniqueWork(PERIODIC)
@@ -112,6 +114,7 @@ object Sync {
         val request = OneTimeWorkRequest.Builder(Syncer::class.java)
             .setConstraints(constraints())
             .setInitialDelay(seconds, TimeUnit.SECONDS)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(SOON, ExistingWorkPolicy.KEEP, request)
     }

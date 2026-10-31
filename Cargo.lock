@@ -6556,6 +6556,7 @@ dependencies = [
  "futures-util",
  "image",
  "percent-encoding",
+ "reqwest",
  "rpassword",
  "serde",
  "serde_json",
@@ -6569,6 +6570,7 @@ dependencies = [
  "wprs-providers",
  "wprs-render",
  "wprs-scene",
+ "wprs-sync",
  "zbus",
  "zeroize",
 ]

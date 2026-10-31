@@ -1,6 +1,6 @@
 use crate::cli::Wait;
 use crate::daemon::job;
-use crate::input::{confirm, typed};
+use crate::input::{confirm, secret, typed};
 use crate::show::{self, bytes, table, text, when};
 use anyhow::{Result, bail};
 use futures_util::TryFutureExt;
@@ -9,6 +9,9 @@ use std::time::Duration;
 use wprs_client::{Client, explain, parse};
 use wprs_core::model::{AccountReply, JobReply, JobState};
 
+pub const NAMES: &str = "Item names on the server are keyed hashes: a device that once held the names key \
+                         and has the same file can still tell that the account stores it, even after it is \
+                         revoked.";
 const OWN: &str = "Approve only a code that your own new device shows on its screen: \
                    someone who sends you a code is trying to get into your account.";
 
@@ -40,7 +43,7 @@ pub fn status(reply: AccountReply) -> String {
         ("quarantined", a.quarantined.to_string()),
         ("not applied", a.unapplied.to_string()),
         ("comparison", comparison),
-        ("recovery", text(&a.recovery)),
+        ("recovery", recovery(text(&a.recovery))),
         ("shared secrets", if a.secrets.is_empty() { "-".into() } else { a.secrets.join(", ") }),
         ("private files", format!("{} of {}", bytes(a.files_bytes), bytes(a.files_quota_bytes))),
     ];
@@ -56,6 +59,15 @@ pub fn status(reply: AccountReply) -> String {
         vec![d.name, d.label.unwrap_or("-".into()), d.platform, when(d.seen_at), here.into()]
     });
     show::lines(pairs) + &show::lines(offers) + &table(&["DEVICE", "NAME", "PLATFORM", "SEEN", ""], rows)
+}
+
+fn recovery(state: String) -> String {
+    match state.as_str() {
+        "stale" => "stale: a device that may know the passphrase was revoked; set a new, different one \
+                    with wprs-ctl server escrow"
+            .into(),
+        _ => state,
+    }
 }
 
 pub async fn approve(client: &Client, code: &str, yes: bool, wait: &Wait) -> Result<()> {
@@ -76,7 +88,8 @@ pub async fn approve(client: &Client, code: &str, yes: bool, wait: &Wait) -> Res
     if !yes && !confirm("Approve this device?").await? {
         bail!("not approved");
     }
-    job(client, sync.approve(code).map_ok(|id| ((), id)), wait).await
+    let password = zeroize::Zeroizing::new(secret("Password of the account: ", false)?);
+    job(client, sync.approve_device(code, &password).map_ok(|id| ((), id)), wait).await
 }
 
 pub async fn join(client: &Client, device: &str, wait: &Wait) -> Result<()> {

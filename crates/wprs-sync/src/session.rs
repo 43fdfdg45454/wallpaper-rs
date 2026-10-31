@@ -72,7 +72,8 @@ impl Session {
     }
 
     async fn send(&self, batch: &[(String, i64, Doc)], changes: &[Value]) -> Result<Vec<Outcome>> {
-        let answer = self.api.post("/api/v1/sync/changes", json!({"epoch": self.epoch, "changes": changes}));
+        let body = json!({"epoch": self.epoch, "format": crate::FORMAT, "changes": changes});
+        let answer = self.api.post("/api/v1/sync/changes", body);
         let answer = answer.await?;
         let results = answer["results"].as_array().into_iter().flatten();
         let out: Vec<Outcome> = batch
@@ -118,8 +119,10 @@ impl Remote for Session {
         let mut changes = Vec::new();
         for (key, base, doc) in batch {
             let (collection, item) = split(key);
-            let payload = self.encode(key, doc)?;
-            changes.push(json!({"collection": collection, "item": item, "base": base, "payload": payload}));
+            changes.push(match doc.is_cleared() {
+                true => json!({"collection": collection, "item": item, "base": base, "deleted": true}),
+                false => json!({"collection": collection, "item": item, "base": base, "payload": self.encode(key, doc)?}),
+            });
         }
         let (mut groups, mut size) = (Vec::<(usize, usize)>::new(), 0);
         for (i, change) in changes.iter().enumerate() {

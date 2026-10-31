@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 00:00+0000\n"
+"POT-Creation-Date: 2026-10-31 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -451,6 +451,14 @@ msgstr "la raíz actual debe estar firmada del todo antes de rotarla"
 msgid "is not a root key of this or the previous root"
 msgstr "no es una clave raíz de esta raíz ni de la anterior"
 
+#: crates/wprs-format/src/authors.rs
+msgid "expected a wpak-repo-authors/1.0 of this repository"
+msgstr "se esperaba un wpak-repo-authors/1.0 de este repositorio"
+
+#: crates/wprs-format/src/authors.rs
+msgid "expected unique ids"
+msgstr "se esperaban identificadores únicos"
+
 #: crates/wprs-format/src/catalog.rs
 msgid "package size"
 msgstr "tamaño del paquete"
@@ -608,6 +616,12 @@ msgid "does not pin the current root"
 msgstr "no fija la raíz actual"
 
 #: crates/wprs-format/src/entry.rs
+msgid "must be listed exactly when the root lets authors register online"
+msgstr ""
+"debe figurar exactamente cuando la raíz deja que los autores se registren en "
+"línea"
+
+#: crates/wprs-format/src/entry.rs
 msgid "expected 2^shard_bits shards named by SHA-256"
 msgstr "se esperaban 2^shard_bits fragmentos nombrados por SHA-256"
 
@@ -662,6 +676,26 @@ msgstr "está instalado desde otro repositorio"
 #: crates/wprs-format/src/locale.rs
 msgid "expected one file per language named like locale/pt-BR.json"
 msgstr "se esperaba un archivo por idioma con nombres como locale/pt-BR.json"
+
+#: crates/wprs-format/src/online.rs
+msgid "does not let authors register online"
+msgstr "no deja que los autores se registren en línea"
+
+#: crates/wprs-format/src/online.rs
+msgid "expected a lowercase id of at most 32 characters"
+msgstr "se esperaba un identificador en minúsculas de 32 caracteres como mucho"
+
+#: crates/wprs-format/src/online.rs
+msgid "already belongs to another author"
+msgstr "ya pertenece a otro autor"
+
+#: crates/wprs-format/src/online.rs
+msgid "is bound in the root"
+msgstr "está ligado en la raíz"
+
+#: crates/wprs-format/src/online.rs
+msgid "an author holds at most 16 keys"
+msgstr "un autor tiene 16 claves como mucho"
 
 #: crates/wprs-format/src/publish.rs
 msgid "is not signed by enough root keys"
@@ -747,6 +781,10 @@ msgstr "se esperaban ids únicos en minúsculas con al menos una clave"
 #: crates/wprs-format/src/repo.rs
 msgid "expected at most 16 https:// or file:// URLs"
 msgstr "se esperaban como mucho 16 direcciones https:// o file://"
+
+#: crates/wprs-format/src/repo.rs
+msgid "authors must be root or online"
+msgstr "authors debe ser root u online"
 
 #: crates/wprs-format/src/repo.rs
 msgid "entry_max_days must be 1 to 90"

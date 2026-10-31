@@ -13,11 +13,12 @@ pub const MINUTE: i64 = 60_000;
 pub const HOUR: i64 = 60 * MINUTE;
 pub const DAY: i64 = 24 * HOUR;
 
-const MIGRATIONS: &[&str] = &[
+pub(crate) const MIGRATIONS: &[&str] = &[
     include_str!("../migrations/0001_init.sql"),
     include_str!("../migrations/0002_device_codes_and_key_epochs.sql"),
     include_str!("../migrations/0003_files.sql"),
     include_str!("../migrations/0004_package_facts.sql"),
+    include_str!("../migrations/0005_hidden_packages_and_sync_formats.sql"),
 ];
 
 pub fn now() -> i64 {

@@ -1,7 +1,9 @@
 mod apply;
 mod cycle;
 mod escrow;
+mod fetch;
 mod files;
+mod gone;
 mod keys;
 mod legacy;
 mod link;
@@ -27,6 +29,7 @@ mod watch;
 
 pub use watch::start;
 pub use wprs_sync::DOWNLOADS;
+pub use wprs_sync::{removed_blob, removed_package};
 
 use crate::compositor::lock;
 use crate::daemon::Daemon;
@@ -36,6 +39,7 @@ use saved::{Peer, Saved};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use tokio::sync::Notify;
 use wprs_core::model::JobKind;
@@ -50,6 +54,8 @@ pub struct Account {
     wake: Notify,
     restart: Notify,
     confirmed: Mutex<Option<(String, String)>>,
+    edits: AtomicBool,
+    tries: AtomicU32,
 }
 
 pub fn block_on<T>(work: impl Future<Output = T>) -> T {
@@ -57,7 +63,10 @@ pub fn block_on<T>(work: impl Future<Output = T>) -> T {
 }
 
 pub fn sync_error(e: wprs_sync::Error) -> Error {
-    e.into()
+    match e.code() == wprs_sync::TOO_OLD {
+        true => failed(crate::words::too_old()),
+        false => e.into(),
+    }
 }
 
 impl Daemon {

@@ -1,46 +1,19 @@
-use crate::auth::{Auth, Role};
+use crate::auth::Auth;
 use crate::catalog::{Search, details, search};
 use crate::db::one;
 use crate::error::{Problem, Res};
-use crate::{App, Router, St};
+use crate::layout::{STYLE, preview};
+pub use crate::layout::{layout, page};
+use crate::{Router, St};
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
-use maud::{DOCTYPE, Markup, PreEscaped, html};
+use maud::{Markup, PreEscaped, html};
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use serde_json::Value;
 use wprs_format::markup;
-
-const STYLE: &str = "
-:root{color-scheme:light dark;--fg:#1b1b1f;--bg:#fafafa;--muted:#55555f;--line:#c8c8d0;
---accent:#1d4ed8;--card:#fff}
-@media (prefers-color-scheme:dark){:root{--fg:#ececf1;--bg:#141418;--muted:#b4b4c0;--line:#3a3a44;
---accent:#93b4ff;--card:#1e1e24}}
-*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,sans-serif;color:var(--fg);background:var(--bg)}
-a{color:var(--accent)}
-a:focus,button:focus,input:focus,select:focus,textarea:focus{outline:3px solid var(--accent);
-outline-offset:2px}
-.skip{position:absolute;left:-999px}
-.skip:focus{left:8px;top:8px;background:var(--card);padding:8px}
-header,footer{border-bottom:1px solid var(--line);padding:8px 16px}
-footer{border-top:1px solid var(--line);border-bottom:0;margin-top:32px}
-nav{display:flex;flex-wrap:wrap;gap:16px;align-items:center}main{max-width:1100px;margin:0 auto;padding:16px}
-form{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin:8px 0}
-form.stack{flex-direction:column;align-items:stretch;max-width:560px}
-label{display:flex;flex-direction:column;gap:4px;font-weight:600}
-input,select,textarea,button{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:6px;
-background:var(--card);color:var(--fg)}button{cursor:pointer;font-weight:600}
-ul.grid{list-style:none;padding:0;display:grid;gap:16px;
-grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
-ul.grid li,section.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
-img{max-width:100%;height:auto;border-radius:6px}table{border-collapse:collapse;width:100%}
-th,td{text-align:left;border-bottom:1px solid var(--line);padding:6px;vertical-align:top}
-.warning{border-left:4px solid #c2410c;padding:4px 12px}
-.muted,small{color:var(--muted)}dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px}
-dd{margin:0;overflow-wrap:anywhere}
-";
 
 pub fn routes() -> Router {
     let style = || async {
@@ -61,55 +34,8 @@ fn joined(value: &Value) -> String {
     value.as_array().into_iter().flatten().filter_map(Value::as_str).collect::<Vec<_>>().join(", ")
 }
 
-pub fn page(app: &App, auth: Option<&Auth>, title: &str, body: Markup) -> Markup {
-    let account = html! {
-        @if let Some(a) = auth {
-            a href="/account" { "Account (" (a.handle) ")" }
-            @if a.role >= Role::Moderator { a href="/mod" { "Moderation" } }
-            @if a.role >= Role::Admin { a href="/admin" { "Administration" } }
-            form method="post" action="/logout" { button { "Sign out" } }
-        } @else {
-            a href="/login" { "Sign in" }
-        }
-    };
-    layout(app, Some(account), title, body)
-}
-
-pub fn layout(app: &App, account: Option<Markup>, title: &str, body: Markup) -> Markup {
-    html! {
-        (DOCTYPE)
-        html lang="en" {
-            head {
-                meta charset="utf-8";
-                meta name="viewport" content="width=device-width, initial-scale=1";
-                title { (title) " · " (app.cfg.name) }
-                link rel="stylesheet" href="/static/style.css";
-            }
-            body {
-                a.skip href="#main" { "Skip to content" }
-                header {
-                    nav aria-label="Site" {
-                        a href="/" { strong { (app.cfg.name) } }
-                        a href="/" { "Catalog" }
-                        @if let Some(a) = account { (a) }
-                    }
-                }
-                main id="main" { h1 { (title) } (body) }
-                footer {
-                    nav aria-label="Legal" {
-                        a href="/legal" { "Legal notice" }
-                        a href="/legal/terms" { "Terms" }
-                        a href="/legal/privacy" { "Privacy" }
-                        a href="/legal/content" { "Content policy" }
-                        a href="/legal/notice" { "Report content" }
-                    }
-                }
-            }
-        }
-    }
-}
-
-const FACETS: [&str; 7] = ["audio", "pointer", "sound", "customizable", "localized", "photosensitive", "4k"];
+const FACETS: [&str; 8] =
+    ["audio", "pointer", "sound", "customizable", "localized", "photosensitive", "mature", "4k"];
 
 async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Res<Markup> {
     let (q, kind, rating, facet) = (s.q.clone(), s.kind.clone(), s.content.clone(), s.facet.clone());
@@ -124,7 +50,7 @@ async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Re
             } }
             label { "Rating" select name="content" {
                 option value="" { "Any" }
-                @for r in ["general", "unrated"] { option value=(r) selected[rating == r] { (r) } }
+                @for r in ["general", "mature", "unrated"] { option value=(r) selected[rating == r] { (r) } }
             } }
             label { "With" select name="facet" {
                 option value="" { "Anything" }
@@ -134,9 +60,8 @@ async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Re
         }
         @if items.is_empty() { p { "Nothing found." } }
         ul.grid { @for i in &items { li {
-            a href={ "/packages/" (text(i, "id")) } {
-                img src=(text(i, "thumbnail")) alt="" width="320" loading="lazy"; br; (text(i, "title"))
-            }
+            (preview(text(i, "thumbnail"), "", 320, i["content"] == "mature"))
+            a href={ "/packages/" (text(i, "id")) } { (text(i, "title")) }
             br;
             small {
                 (text(i, "kind")) " · " (text(i, "license"))
@@ -160,7 +85,10 @@ async fn package(State(app): St, auth: Option<Auth>, Path(id): Path<String>) -> 
     let render = if latest["content"].is_null() { markup::verbatim } else { markup::html };
     let description = render(text(&latest, "description"));
     let body = html! {
-        img src=(text(&latest, "thumbnail")) alt={ "Preview of " (title) } width="640";
+        (preview(text(&latest, "thumbnail"), &format!("Preview of {title}"), 640, latest["content"] == "mature"))
+        @if let Some(reason) = latest["hidden"].as_str() {
+            p.warning { "The moderators took this wallpaper out of the catalog: " (reason) }
+        }
         @if latest["photosensitive"] == true {
             p.warning { "This wallpaper has flashing lights or patterns that can affect people with \
                 photosensitive epilepsy." }

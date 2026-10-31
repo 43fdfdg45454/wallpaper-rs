@@ -33,6 +33,18 @@ msgstr ""
 "Quien te envía un código intenta entrar en tu cuenta."
 
 #: apps/wprs-app/qml/AccountCodes.qml
+msgid "Password of the account"
+msgstr "Contraseña de la cuenta"
+
+#: apps/wprs-app/qml/AccountCodes.qml
+msgid ""
+"Approving asks for the password of the account. An account that signs in "
+"through single sign-on approves on the account page of the server."
+msgstr ""
+"Para aprobar hace falta la contraseña de la cuenta. Una cuenta que entra con "
+"inicio de sesión único aprueba en la página de la cuenta del servidor."
+
+#: apps/wprs-app/qml/AccountCodes.qml
 msgid "unnamed software"
 msgstr "un programa sin nombre"
 
@@ -206,6 +218,16 @@ msgstr ""
 "a extremo: %1 de %2 usados en el servidor."
 
 #: apps/wprs-app/qml/AccountFiles.qml
+msgid ""
+"Item names on the server are keyed hashes: a device that once held the names "
+"key and has the same file can still tell that this account stores it, even "
+"after it is revoked."
+msgstr ""
+"Los nombres de los elementos en el servidor son hashes con clave: un "
+"dispositivo que tuvo la clave de nombres y tiene el mismo archivo puede "
+"saber que esta cuenta lo guarda, aunque se haya revocado."
+
+#: apps/wprs-app/qml/AccountFiles.qml
 msgid "Folder %1"
 msgstr "Carpeta %1"
 
@@ -325,10 +347,13 @@ msgstr ""
 "de recuperación."
 
 #: apps/wprs-app/qml/AccountShared.qml
-msgid "The server keeps an older sync key: set the recovery passphrase again."
+msgid ""
+"A device that may know the recovery passphrase was revoked, so the server "
+"keeps an older sync key: set a new, different passphrase."
 msgstr ""
-"El servidor guarda una clave de sincronización anterior: vuelve a poner la "
-"frase de recuperación."
+"Se revocó un dispositivo que puede conocer la frase de recuperación, así que "
+"el servidor guarda una clave de sincronización anterior: pon una frase nueva "
+"y distinta."
 
 #: apps/wprs-app/qml/AccountShared.qml
 msgid "Repositories added on your other devices"
@@ -1861,7 +1886,8 @@ msgid ""
 "is never used and is deleted as soon as the keyring is unlocked."
 msgstr ""
 "Un secreto antiguo de un proveedor con este nombre sigue en el depósito de "
-"claves bloqueado; nunca se usa y se borra en cuanto se desbloquee el depósito."
+"claves bloqueado; nunca se usa y se borra en cuanto se desbloquee el "
+"depósito."
 
 #: apps/wprs-app/qml/ProviderCard.qml
 msgid "Contacts:"
@@ -3181,6 +3207,10 @@ msgstr "Caché de miniaturas (MB)"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Hide mature content"
 msgstr "Ocultar el contenido para adultos"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Show mature content without blur"
+msgstr "Mostrar el contenido para adultos sin difuminar"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Refresh repositories every day"

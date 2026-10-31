@@ -46,14 +46,9 @@ pub fn check(wpak: &Path, keys: &[String], require_signature: bool, thumb: &Path
     let pairs: Vec<(&str, &str)> = pairs.iter().map(|(fp, key)| (fp.as_str(), key.as_str())).collect();
     let signed = package.entries.iter().any(|e| e.path == SIGNATURE);
     ensure!(signed || !require_signature, "the repository only accepts packages signed by their author");
-    let unknown =
-        "the manifest signature matches no author key of your account that the repository root lists";
+    let unknown = "the manifest signature matches no author key of your account that the repository accepts";
     let signer = signed.then(|| verify_package(&mut package, &pairs).context(unknown)).transpose()?;
     let rating = package.manifest.content.as_ref().map(|c| c.rating);
-    ensure!(
-        rating != Some(Rating::Mature),
-        "this server does not accept mature content; see its content policy"
-    );
     let preview =
         package.manifest.thumbnail().cloned().context("the server needs a preview image in the package")?;
     let mut reader = ImageReader::new(Cursor::new(package.read_file(&preview)?)).with_guessed_format()?;
@@ -64,7 +59,11 @@ pub fn check(wpak: &Path, keys: &[String], require_signature: bool, thumb: &Path
     let image = reader.decode().context("the preview is not a PNG, JPEG, WebP, GIF or BMP image")?;
     JpegEncoder::new_with_quality(File::create(thumb)?, 80)
         .encode_image(&image.thumbnail(640, 640).to_rgb8())?;
-    let (m, facets) = (package.manifest.localized(), package.facts.facets);
+    let (m, mut facets) = (package.manifest.localized(), package.facts.facets);
+    if rating == Some(Rating::Mature) {
+        facets.push("mature".into());
+        facets.sort();
+    }
     let (title, description) = (m.title_in(&[]), m.pick(&m.description, &[]));
     Ok(Report {
         id: m.id,
@@ -93,7 +92,7 @@ pub async fn validate(app: &App, user: i64, wpak: &Path, thumb: &Path) -> Res<Re
     });
     let mut keys = keys.await?;
     let roots = app.repo.authors();
-    if let Some((root_keys, _)) = &roots {
+    if let Some((root_keys, _, false)) = &roots {
         keys.retain(|(fp, _)| root_keys.contains(fp));
     }
     let mut command = tokio::process::Command::new(&app.cfg.validator);
@@ -102,7 +101,7 @@ pub async fn validate(app: &App, user: i64, wpak: &Path, thumb: &Path) -> Res<Re
     for (_, key) in &keys {
         command.arg("--key").arg(key);
     }
-    if roots.is_some_and(|(_, require)| require) {
+    if roots.is_some_and(|(_, require, _)| require) {
         command.arg("--require-signature");
     }
     let run = tokio::time::timeout(Duration::from_secs(120), command.output()).await;

@@ -71,6 +71,7 @@ fn secrets_never_travel_through_the_generic_call() {
     assert!(carries_secret("Sync1", "SetEscrow", &[json!("copper lantern drifts over harbor")]));
     assert!(carries_secret("Sync1", "Restore", &[json!("copper lantern drifts over harbor")]));
     assert!(!carries_secret("Sync1", "SetEscrow", &[json!("")]));
+    assert!(carries_secret("Sync1", "ApproveDevice", &[json!("BCDF-GHJK"), json!("correct horse")]));
 }
 
 #[test]

@@ -65,7 +65,13 @@ impl Backend {
             match (bus::daemon().await?, member.as_str()) {
                 (Daemon::Bus(c), "SetEscrow") => keyring(c.sync.set_escrow(&passphrase)).await,
                 (Daemon::Bus(c), "Restore") => keyring(c.sync.restore(&passphrase)).await,
-                (Daemon::Fixtures, "SetEscrow" | "Restore") => Ok(fixture("Sync1", &member)),
+                (Daemon::Bus(c), "ApproveDevice") => {
+                    let (code, password) = passphrase.split_once('\n').unwrap_or((&passphrase, ""));
+                    keyring(c.sync.approve_device(code, password)).await
+                }
+                (Daemon::Fixtures, "SetEscrow" | "Restore" | "ApproveDevice") => {
+                    Ok(fixture("Sync1", &member))
+                }
                 _ => Err(invalid(format!("{member} takes no passphrase"))),
             }
         });

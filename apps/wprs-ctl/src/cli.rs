@@ -170,7 +170,11 @@ pub enum Command {
     Pkg(Pkg),
     #[command(subcommand, about = "Audio and pointer input of scenes: grants and state")]
     Input(Inputs),
-    #[command(subcommand, about = "The self-hosted server: link, end-to-end encrypted sync and uploads")]
+    #[command(
+        subcommand,
+        about = "The self-hosted server: link, end-to-end encrypted sync and uploads",
+        after_long_help = crate::account::NAMES
+    )]
     Server(Server),
     #[command(
         subcommand,
@@ -186,4 +190,8 @@ pub enum Command {
     Pack(Pack),
     #[command(subcommand, about = "Operate a package repository; needs no daemon")]
     Repo(Repo),
+    #[command(
+        about = "Moderate a self-hosted server with a personal token (WPRS_SERVER_TOKEN); needs no daemon"
+    )]
+    Moderate(crate::moderate::Moderate),
 }

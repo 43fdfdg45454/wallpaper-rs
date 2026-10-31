@@ -25,6 +25,17 @@ pub enum Pack {
         #[arg(long, help = "Secret key file of the author")]
         key: PathBuf,
     },
+    #[command(
+        about = "Sign the hand-over of an online author to a new key with the old key; prints the signature"
+    )]
+    RotateKey {
+        #[arg(help = "Secret key file that signed the earlier versions")]
+        old: PathBuf,
+        #[arg(help = "Public key file or line of the new key")]
+        new: String,
+        #[arg(long, help = "Author id that the repository shows for the account")]
+        author: String,
+    },
     #[command(about = "Explain what a package folder or file needs, uses and declares, and whether the \
         desktop and the phone play it, play it without some features or refuse it")]
     Check {
@@ -73,6 +84,9 @@ pub fn run(command: Pack) -> Result<()> {
             }
         }
         Pack::Sign { dir, key } => println!("{}", sign_source(&dir, &signer(&key)?)?),
+        Pack::RotateKey { old, new, author } => {
+            print!("{}", wprs_format::sign_rotation(&signer(&old)?, &author, &key_text(&new)?)?)
+        }
         Pack::Check { path, json } => crate::facts::check(&path, json)?,
         Pack::Upgrade { dir, rating, reasons, photosensitive, derived_from } => {
             crate::facts::upgraded(&dir, &rating, &reasons, photosensitive, &derived_from)?

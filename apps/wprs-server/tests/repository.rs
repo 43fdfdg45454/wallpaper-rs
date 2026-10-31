@@ -16,7 +16,7 @@ fn now() -> i64 {
 #[tokio::test(flavor = "multi_thread")]
 async fn upload_review_publish_and_install_with_a_verifying_client() {
     let server = start(&[]).await;
-    let root = wprs_server::init(&server.cfg, "Example wallpapers", false).unwrap();
+    let root = wprs_server::init(&server.cfg, "Example wallpapers", false, false).unwrap();
     let admin = server.admin().await;
     let ana = server.user(&admin, "ana", "user").await;
     let wpak = package(server.dir.path(), DAWN, "1.0.0");
@@ -127,7 +127,7 @@ async fn upload_review_publish_and_install_with_a_verifying_client() {
 #[tokio::test(flavor = "multi_thread")]
 async fn signatures_blocklist_and_web_uploads() {
     let server = start(&[("WPRS_AUTO_PUBLISH", "trusted")]).await;
-    wprs_server::init(&server.cfg, "Example wallpapers", false).unwrap();
+    wprs_server::init(&server.cfg, "Example wallpapers", false, false).unwrap();
     let admin = server.admin().await;
     let ana = server.user(&admin, "ana", "trusted").await;
     let key = keygen(None).unwrap();
@@ -140,7 +140,7 @@ async fn signatures_blocklist_and_web_uploads() {
     sign_source(&src, &wprs_format::Signer::new(&key.secret, None).unwrap()).unwrap();
     wprs_format::build(&src, &wpak, &wprs_format::Limits::default()).unwrap();
     let signed = upload(&server, &ana, &wpak).await;
-    assert!(signed["errors"][0].as_str().unwrap().contains("repository root"), "{signed}");
+    assert!(signed["errors"][0].as_str().unwrap().contains("that the repository accepts"), "{signed}");
     let plain = package(server.dir.path(), "org.example.dusk", "1.0.0");
     let sha = wprs_format::sha256_file(&plain).unwrap();
     let block = json!({"sha256": sha, "reason": "known copy"});

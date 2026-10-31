@@ -34,16 +34,17 @@ pub struct Head {
     pub rotate: bool,
     pub escrow: bool,
     pub files: i64,
+    pub format: i64,
 }
 
 pub fn head(c: &Connection, user: i64) -> Res<Head> {
     let sql = "SELECT seq, min_seq, epoch, encrypted, used_bytes, key_id, rotate, escrow IS NOT NULL, \
-               (SELECT COALESCE(SUM(size), 0) FROM sync_blobs b WHERE b.user_id = ?1) FROM sync_heads \
+               (SELECT COALESCE(SUM(size), 0) FROM sync_blobs b WHERE b.user_id = ?1), format FROM sync_heads \
                WHERE user_id = ?1";
     let read = |r: &Row| {
         let (seq, min_seq, epoch, encrypted, used) = (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?);
-        let (key_id, rotate, escrow, files) = (r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?);
-        Ok(Head { seq, min_seq, epoch, encrypted, used, key_id, rotate, escrow, files })
+        let (key_id, rotate, escrow, files, format) = (r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?, r.get(9)?);
+        Ok(Head { seq, min_seq, epoch, encrypted, used, key_id, rotate, escrow, files, format })
     };
     let unset = || Problem::new(StatusCode::NOT_FOUND, "sync_not_set_up", "set up sync first");
     c.query_row(sql, [user], read).optional()?.ok_or_else(unset)
@@ -55,7 +56,7 @@ fn describe(h: &Head, (quota, files_quota): (u64, u64)) -> Value {
     json!({
         "seq": seq, "min_seq": min_seq, "epoch": epoch, "encrypted": encrypted, "key_id": h.key_id,
         "rotate": h.rotate, "used_bytes": used, "quota_bytes": quota, "warning": warning,
-        "escrow": h.escrow, "files_bytes": h.files, "files_quota_bytes": files_quota,
+        "escrow": h.escrow, "files_bytes": h.files, "files_quota_bytes": files_quota, "format": h.format,
     })
 }
 

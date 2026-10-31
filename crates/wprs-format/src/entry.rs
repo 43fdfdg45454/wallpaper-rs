@@ -22,6 +22,8 @@ pub struct Entry {
     pub shard_bits: u8,
     pub shards: Vec<Blob>,
     pub revoked: Blob,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authors: Option<Blob>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -55,7 +57,13 @@ impl Entry {
         require(own, "entry.version", "does not match its file name or repository")?;
         let pin = Pin { version: root.version, sha256: root_sha256.into() };
         require(self.root == pin, "entry.root", "does not pin the current root")?;
-        let blobs = self.shards.iter().chain([&self.revoked]).all(|b| hex64(&b.sha256));
+        let blobs = self.shards.iter().chain([&self.revoked]).chain(&self.authors).all(|b| hex64(&b.sha256));
+        let online = self.authors.is_some() == root.policy.online();
+        require(
+            online,
+            "entry.authors",
+            "must be listed exactly when the root lets authors register online",
+        )?;
         let shards = self.shard_bits <= 8 && self.shards.len() == 1 << self.shard_bits;
         require(blobs && shards, "entry.shards", "expected 2^shard_bits shards named by SHA-256")?;
         let life = self.expires - self.timestamp;

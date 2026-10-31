@@ -5,6 +5,7 @@ mod engine;
 mod enroll;
 mod escrow;
 mod events;
+mod gone;
 mod hlc;
 mod kept;
 mod keys;
@@ -22,10 +23,11 @@ mod views;
 pub use api::{AGENT, Api, MAIL, PAGE, SMALL, check_url};
 pub use blob::{SEALED, SEGMENT, open_segment, seal_segment, sealed_size};
 pub use doc::{Doc, View};
-pub use engine::{Change, Key, Outcome, Page, Remote, Replica, Synced, rekey, sync};
+pub use engine::{Change, Key, LIFETIME_MS, Outcome, Page, Remote, Replica, Synced, rekey, sync};
 pub use enroll::{Poll, poll};
 pub use escrow::{Cost, Lock, MIN_PASSPHRASE, STRONG, escrow_epoch, unseal};
 pub use events::Parser;
+pub use gone::{deleted_before, removals, removed_blob, removed_package};
 pub use hlc::{Clock, Hlc, now_ms};
 pub use kept::{arrived, hold, keep, keep_name, playlist_rules, renamed, rules, text};
 pub use keys::{Ids, SyncKey};
@@ -69,6 +71,9 @@ impl From<serde_json::Error> for Error {
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+pub const FORMAT: i64 = 1;
+pub const TOO_OLD: &str = "client_too_old";
 
 pub fn random<const N: usize>() -> [u8; N] {
     let mut bytes = [0; N];

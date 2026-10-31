@@ -9,7 +9,7 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::{delete, get};
+use axum::routing::{delete, get, post};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -21,6 +21,7 @@ pub fn routes() -> Router {
         .route("/api/v1/me/tokens", get(|s: St, a: Auth| mine(s, a, "tokens")).post(new_token))
         .route("/api/v1/me/devices", get(|s: St, a: Auth| mine(s, a, "devices")))
         .route("/api/v1/me/author-keys", get(|s: St, a: Auth| mine(s, a, "keys")).post(new_key))
+        .route("/api/v1/me/author-keys/rotate", post(crate::authors::rotate))
         .route("/api/v1/me/{what}/{id}", delete(remove))
 }
 
@@ -124,8 +125,14 @@ async fn new_key(State(app): St, auth: Auth, Input(k): Input<NewKey>) -> Res<imp
     let fp = fingerprint.clone();
     let sql = "INSERT INTO author_keys (fingerprint, user_id, public_key, created_at) \
                VALUES (?1, ?2, ?3, ?4) ON CONFLICT DO NOTHING";
-    let added = app.db.run(move |c| Ok(c.execute(sql, params![fp, auth.user, key, now()])?)).await?;
+    let (user, public) = (auth.user, key.clone());
+    let added = app.db.run(move |c| Ok(c.execute(sql, params![fp, user, public, now()])?)).await?;
     require(added > 0, "this key is already registered")?;
+    if let Err(e) = crate::authors::publish(&app, user, Some(key), None).await {
+        let (sql, fp) = ("DELETE FROM author_keys WHERE fingerprint = ?1", fingerprint.clone());
+        app.db.run(move |c| Ok(c.execute(sql, [fp])?)).await?;
+        return Err(e);
+    }
     Ok((StatusCode::CREATED, Json(json!({"fingerprint": fingerprint}))))
 }
 
@@ -134,18 +141,23 @@ async fn remove(State(app): St, auth: Auth, Path((what, id)): Path<(String, Stri
         "tokens" => auth
             .browser()
             .map(|()| "DELETE FROM tokens WHERE id = ?1 AND user_id = ?2 AND device_id IS NULL")?,
+        "devices" if auth.device.as_deref() == Some(id.as_str()) => {
+            "DELETE FROM devices WHERE id = ?1 AND user_id = ?2"
+        }
         "devices" => auth.scope("devices").map(|()| "DELETE FROM devices WHERE id = ?1 AND user_id = ?2")?,
         "author-keys" => auth
             .scope("upload")
             .map(|()| "DELETE FROM author_keys WHERE fingerprint = ?1 AND user_id = ?2")?,
         _ => return Err(Problem::missing("collection")),
     };
-    let (user, gone) = (auth.user, vec![id.clone()]);
+    let (user, gone, key) = (auth.user, vec![id.clone()], (what == "author-keys").then(|| id.clone()));
     let epoch = app.db.run(move |c| {
         changed(c.execute(sql, params![id, user])?, "item")?;
         Ok(if what == "devices" { revoked(c, user)? } else { None })
     });
-    if let Some(epoch) = epoch.await? {
+    let epoch = epoch.await?;
+    crate::authors::publish(&app, user, None, key).await?;
+    if let Some(epoch) = epoch {
         app.hub.kick(&gone);
         app.hub.send(user, Note { event: "epoch", device: None, value: epoch });
     }

@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::Duration;
 use wprs_core::model::JobKind;
+use zeroize::Zeroizing;
 
 impl Daemon {
     fn device_code(
@@ -29,6 +30,11 @@ impl Daemon {
 
     pub fn approve(self: &Arc<Self>, code: &str) -> Result<u64> {
         self.device_code(code, "approve", "/api/v1/auth/device/approve", json!({"approve": true}))
+    }
+
+    pub fn approve_with(self: &Arc<Self>, code: &str, password: Zeroizing<String>) -> Result<u64> {
+        let body = json!({"approve": true, "password": password.as_str()});
+        self.device_code(code, "approve", "/api/v1/auth/device/approve", body)
     }
 
     pub fn preview_code(self: &Arc<Self>, code: &str) -> Result<u64> {
