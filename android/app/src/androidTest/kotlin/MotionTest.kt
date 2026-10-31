@@ -131,6 +131,7 @@ class MotionTest {
             abs(reds.get(1) - before[1]) >= MOVED
         }
         assertTrue("red went from ${before[1]} to ${reds.get(1)}", turned)
+        assertTrue("the picture kept moving", waitFor { frames.get().let { seen -> settled(frames) == seen } })
         return reds.get(0) - before[0] to reds.get(2) - before[2]
     }
 
