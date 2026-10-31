@@ -347,7 +347,7 @@ jobs:
           else
             echo "::warning::ANDROID_KEYSTORE is not set, so this APK is signed with a temporary debug key"
           fi
-          android/gradlew -p android assembleRelease lintRelease testReleaseUnitTest -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME"
+          android/gradlew -p android assembleRelease lintRelease testDebugUnitTest -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME"
 
       - name: Native libraries, 16 KB page alignment and no build paths
         run: |
