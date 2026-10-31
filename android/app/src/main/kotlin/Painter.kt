@@ -26,9 +26,10 @@ class Painter(
     private var clips = emptyList<String>()
     private var hears = false
     private var touches = false
+    private val handover = Runnable { refresh() }
     private val frames = Frames { nanos ->
         if (hears) hearing.poll()
-        Native.draw(handle, nanos, false).also { if (it == 0L && playing) follow() }
+        Native.draw(handle, nanos, false).also { if (it < 0L) Render.handler.post(handover) else if (it == 0L && playing) follow() }
     }
 
     var shown = false
@@ -51,9 +52,13 @@ class Painter(
 
     fun refresh() {
         val uri = Native.video(handle)
-        if (uri != video) video?.let { videos.leave(it, this) }
+        val wanted = wanted()
+        if (uri != video) {
+            if (uri != null) clips.firstOrNull { "file://$it" == uri }?.let { videos.adopt(key(it), uri) }
+            video?.let { old -> if (old.removePrefix(FILE) in wanted) videos.lend(old, key(old.removePrefix(FILE))) else videos.leave(old, this) }
+        }
         video = uri
-        clip()
+        clip(wanted)
         if (uri == null) return wake()
         frames.stop()
         videos.join(uri, this)
@@ -121,14 +126,16 @@ class Painter(
         surface = null
     }
 
-    private fun clip() {
-        val wanted = Native.clips(handle)?.let(::JSONArray)?.let { list -> List(list.length(), list::getString) }.orEmpty()
+    private fun wanted() = Native.clips(handle)?.let(::JSONArray)?.let { list -> List(list.length(), list::getString) }.orEmpty()
+
+    private fun clip(wanted: List<String>) {
+        val film = Native.film(handle)
         clips.filter { it !in wanted }.forEach { path ->
             videos.leave(key(path), this)
             Native.clip(handle, path, false)
         }
         wanted.filter { it !in clips }.forEach { path ->
-            Native.clip(handle, path, true)?.let { videos.clip(key(path), path, it, this) }
+            Native.clip(handle, path, true)?.let { videos.clip(key(path), path, it, this, path == film) }
         }
         clips = wanted
     }
@@ -153,6 +160,7 @@ class Painter(
         const val AUDIO = 1
         const val TOUCH = 2
         const val CLIPS = 4
+        const val FILE = "file://"
     }
 }
 

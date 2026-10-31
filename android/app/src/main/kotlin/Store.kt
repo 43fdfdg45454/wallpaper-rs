@@ -3,6 +3,9 @@ package io.github.wallpaper_rs
 import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.BitmapFactory
+import android.media.MediaCodecList
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.media.MediaMetadataRetriever.METADATA_KEY_DURATION
 import android.media.MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO
@@ -129,6 +132,17 @@ private suspend fun picture(item: Item): ImageBitmap? {
     val path = item.thumb ?: made() ?: poster(item.uid) { setDataSource(item.path) }?.let { made() }
     return path?.let { BitmapFactory.decodeFile(it)?.asImageBitmap() }?.also { thumbs.put(item.uid, it) }
 }
+
+fun playable(open: MediaExtractor.() -> Unit): Boolean = runCatching {
+    val extractor = MediaExtractor().apply(open)
+    try {
+        val codecs = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+        val formats = (0 until extractor.trackCount).map(extractor::getTrackFormat)
+        formats.filter { it.getString(MediaFormat.KEY_MIME).orEmpty().startsWith("video/") }.any { codecs.findDecoderForFormat(it) != null }
+    } finally {
+        extractor.release()
+    }
+}.getOrDefault(false)
 
 fun poster(uid: String, open: MediaMetadataRetriever.() -> Unit) = runCatching {
     MediaMetadataRetriever().use { retriever ->

@@ -328,13 +328,22 @@ mensaje y se muestran en el idioma del teléfono con las mismas traducciones que
 *Licencias* muestra los textos de ONNX Runtime, de los componentes que incluye y del modelo
 de profundidad.
 
-Los vídeos (MP4, MOV, 3GP, WebM o MKV) los decodifica el hardware del teléfono directamente sobre
-el fondo, sin pasar por la GPU ni copiar fotogramas, y se repiten en bucle. Se pausan en cuanto el
-fondo deja de verse y sueltan el decodificador si siguen ocultos más de 30 segundos; al volver
-siguen por donde iban. Si inicio y bloqueo muestran el mismo vídeo, comparten un solo reproductor.
-Van sin sonido salvo con *Reproducir el sonido de los vídeos*. Salvo con el ajuste *Estirar*, piden
-a Android que llenen la pantalla recortando los bordes; ese recorte lo hace el compositor del
-sistema, así que un teléfono que no lo respete los mostrará estirados.
+Los vídeos (MP4, MOV, 3GP, WebM o MKV) se repiten en bucle. Con el ajuste *Rellenar* o *Estirar*
+los decodifica el hardware del teléfono directamente sobre el fondo, sin pasar por la GPU ni copiar
+fotogramas; con *Rellenar* piden a Android que llenen la pantalla recortando los bordes, un recorte
+que hace el compositor del sistema, así que un teléfono que no lo respete los mostrará estirados.
+Con *Imagen completa* o *Centrar* se dibujan con la GPU, como los vídeos de las escenas (el hardware
+los decodifica y cada fotograma se copia a la GPU, como mucho a los fotogramas por segundo
+permitidos), con franjas del color de fondo alrededor. Se pausan en cuanto el fondo deja de verse y
+sueltan el decodificador si siguen ocultos más de 30 segundos; al volver siguen por donde iban. Si
+inicio y bloqueo muestran el mismo vídeo, comparten un solo reproductor. Van sin sonido salvo con
+*Reproducir el sonido de los vídeos*. El fundido entre fondos sirve entre todos los tipos: de una
+imagen, una escena o un vídeo a otro de cualquier tipo, el que sale y el que entra se mezclan; un
+vídeo entra o sale por la GPU durante el fundido y después vuelve a la ruta directa sin cortarse ni
+volver a empezar. Al añadir un vídeo, la app comprueba que el teléfono tiene un decodificador para
+su pista de vídeo y saca su primer fotograma, como el escritorio comprueba que GStreamer puede
+abrirlo; si no puede, no lo añade y lo cuenta en el aviso de los archivos que no se pudieron abrir.
+Los vídeos no se convierten al añadirlos: se reproducen tal cual.
 
 En la página de una imagen, *Moverse con el teléfono* activa el paralaje. Sigue el giro del teléfono
 con el sensor de rotación que no usa la brújula o, si no lo hay, con el normal: girarlo hacia un

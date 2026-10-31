@@ -23,11 +23,24 @@ class Videos(private val context: Context) {
         update()
     }
 
-    fun clip(key: String, path: String, surface: Surface, painter: Painter) =
-        videos.getOrPut(key) { Video("file://$path", surface) }.run {
+    fun clip(key: String, path: String, surface: Surface, painter: Painter, audible: Boolean = false) =
+        videos.getOrPut(key) { Video("file://$path", surface, audible) }.run {
+            if (fixed == null) fixed = surface
             if (painter !in viewers) viewers += painter
             update()
         }
+
+    fun adopt(key: String, uri: String) = videos.remove(key)?.let { video ->
+        video.detach()
+        video.fixed = null
+        videos[uri] = video
+    }
+
+    fun lend(uri: String, key: String) = videos.remove(uri)?.let { video ->
+        video.detach()
+        video.fixed = null
+        videos[key] = video
+    }
 
     fun leave(uri: String, painter: Painter) = videos[uri]?.run {
         viewers -= painter
@@ -54,7 +67,7 @@ class Videos(private val context: Context) {
             player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, muted).build()
     }
 
-    private inner class Video(private val uri: String, private val fixed: Surface? = null) : Player.Listener {
+    private inner class Video(private val uri: String, var fixed: Surface? = null, private val audible: Boolean = false) : Player.Listener {
         val viewers = mutableListOf<Painter>()
         var player: ExoPlayer? = null
         var output: Surface? = null
@@ -64,7 +77,8 @@ class Videos(private val context: Context) {
 
         fun update() {
             Render.cancel(idle)
-            val target = if (fixed != null) fixed.takeIf { viewers.any(Painter::playing) }
+            val reader = fixed
+            val target = if (reader != null) reader.takeIf { viewers.any(Painter::playing) }
             else viewers.lastOrNull { it.shown }?.surface?.takeIf { Native.moving() }
             val active = player
             when {
@@ -94,7 +108,7 @@ class Videos(private val context: Context) {
             player = ExoPlayer.Builder(context).setBandwidthMeter(Offline).setUsePlatformDiagnostics(false).build().apply {
                 addListener(this@Video)
                 repeatMode = Player.REPEAT_MODE_ONE
-                configure(this, fixed != null)
+                configure(this, fixed != null && !audible)
                 setVideoSurface(target)
                 setMediaItem(MediaItem.fromUri(uri), position)
                 prepare()

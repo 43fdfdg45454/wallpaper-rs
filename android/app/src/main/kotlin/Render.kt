@@ -53,6 +53,8 @@ object Native {
 
     external fun clips(engine: Long): String?
 
+    external fun film(engine: Long): String?
+
     external fun clip(engine: Long, path: String, open: Boolean): Surface?
 
     external fun depth(request: String): String

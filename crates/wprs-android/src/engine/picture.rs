@@ -1,3 +1,4 @@
+use super::fade::{Fading, Gone};
 use super::{Engine, FRAMES};
 use crate::framing;
 use crate::gpu::{self, Key};
@@ -27,7 +28,8 @@ impl Engine {
             let old = std::mem::replace(&mut self.checked, check).0;
             let (size, shown) = (self.size, choice::shown_on(self.preview, self.lock));
             if shown.as_ref().is_some_and(|shown| shown.video) {
-                return Ok((0, 0));
+                (self.image, self.framed, self.crop) = (None, None, None);
+                return self.compose(nanos, fps, power);
             }
             self.stage(shown.as_ref());
             if old != epoch {
@@ -58,14 +60,20 @@ impl Engine {
                 let loaded = wanted
                     .and_then(|(key, path, framed)| Some((key.clone(), gpu.texture(key, &path, &framed)?)));
                 let previous = std::mem::replace(&mut self.image, loaded);
-                let other = |old: &Key| self.image.as_ref().is_some_and(|(new, _)| new.item != old.item);
+                let scene = self.stage.is_some();
+                let other = |old: &Key| self.image.as_ref().map_or(scene, |(new, _)| new.item != old.item);
                 let fade =
                     previous.filter(|(old, _)| (old.epoch, old.size) == (gpu.epoch, size) && other(old));
-                let fades = fps > 0 && self.image.is_some() && !self.look.fade.is_zero();
-                self.fading = fade.filter(|_| fades).map(|(_, old)| (old, before, None));
+                let fades = fps > 0 && (self.image.is_some() || scene) && !self.look.fade.is_zero();
+                let fade = fade.filter(|_| fades && self.fading.is_none());
+                self.fading =
+                    fade.map(|(_, old)| Fading::new(Gone::Picture(old, before))).or(self.fading.take());
                 self.dirty = true;
                 gpu::trim();
             }
+        }
+        if self.fading.is_some() || self.film.is_some() {
+            return self.compose(nanos, fps, power);
         }
         if let Some(next) = self.shoot(nanos, fps, power)? {
             return Ok(next);
@@ -82,33 +90,20 @@ impl Engine {
             self.raised.as_mut().map(|r| r.step(self.offset, (nanos, fps), power.moving(), self.size));
         let (moved, tilting) = raised.unwrap_or_default();
         self.dirty |= moved;
-        let duration = self.look.fade.as_nanos().max(1) as f32;
-        let start = self.fading.as_mut().map(|(.., start)| *start.get_or_insert(nanos));
-        let progress = start.map_or(1.0, |start| ((nanos - start) as f32 / duration).clamp(0.0, 1.0));
-        if self.fading.is_some() && (fps == 0 || progress >= 1.0) {
-            (self.fading, self.dirty) = (None, true);
-            gpu::trim();
-        }
         let animating = |on: bool| if on { (fps, delay_ms(fps)) } else { (0, 0) };
-        if !self.dirty && self.fading.is_none() {
+        if !self.dirty {
             return Ok(animating(tilting));
         }
         let (fit, background, pan, size) = (self.look.fit, self.look.background, self.shown, self.size);
         let look = Seen { fit, background, pan, crop: self.crop };
         let current = self.image.as_ref().map(|(_, image)| image.as_ref());
         let raised = self.raised.as_ref().map(|raised| (raised, power.charging));
-        let layers = match &self.fading {
-            Some((old, (fit, crop), _)) => {
-                let was = Seen { fit: *fit, crop: *crop, ..look };
-                [layer(Some(old), 1.0, &was, size, None), layer(current, progress, &look, size, raised)]
-            }
-            None => [layer(current, 1.0, &look, size, raised), layer(None, 0.0, &look, size, None)],
-        };
+        let layers = [layer(current, 1.0, &look, size, raised)];
         self.dirty = !gpu.renderer.present_layers(surface, size, &layers, || {})?;
         if !self.dirty {
             self.presented = nanos;
             FRAMES.fetch_add(1, Relaxed);
         }
-        Ok(animating(self.fading.is_some() || tilting))
+        Ok(animating(tilting))
     }
 }

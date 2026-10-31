@@ -71,6 +71,14 @@ pub fn playback<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, active: jboolean) {
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn film<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong) -> JString<'a> {
+    on(&mut env, |env| match engine(handle, |e| Ok(e.film()))? {
+        Some(path) => Ok(env.new_string(path)?),
+        None => Ok(JString::default()),
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
 pub fn clips<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong) -> JString<'a> {
     on(&mut env, |env| match engine(handle, |e| Ok(e.clips()))? {
         Some(paths) => Ok(env.new_string(serde_json::to_string(&paths)?)?),

@@ -7,11 +7,15 @@ use crate::settings::{self, Look};
 use crate::stage::Stage;
 use crate::{Error, choice};
 use ndk::native_window::{FrameRateCompatibility, NativeWindow};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use wprs_core::Fit;
 use wprs_render::{GpuImage, Surface};
 
+mod fade;
+
+use fade::Fading;
 mod parked;
 mod picture;
 mod scenes;
@@ -23,8 +27,6 @@ pub(crate) static FRAMES: AtomicU64 = AtomicU64::new(0);
 const RETRY_MS: i64 = 50;
 const SLACK_NS: i64 = 2_000_000;
 const ATTEMPTS: u32 = 3;
-
-type Fading = (Arc<GpuImage>, (Fit, Option<[f32; 4]>), Option<i64>);
 
 pub(crate) struct Engine {
     target: Option<(Gpu, Surface)>,
@@ -48,6 +50,9 @@ pub(crate) struct Engine {
     rate: u32,
     failures: u32,
     video: bool,
+    film: Option<PathBuf>,
+    direct: Option<PathBuf>,
+    handover: bool,
     window: NativeWindow,
 }
 
@@ -87,23 +92,11 @@ impl Engine {
             rate,
             failures,
             video,
+            film: None,
+            direct: None,
+            handover: false,
             window,
         }
-    }
-
-    pub(crate) fn video(&mut self) -> Option<String> {
-        self.forget_old_gpu();
-        let uri = choice::shown_on(self.preview, self.lock).filter(|shown| shown.video);
-        let uri = uri.map(|shown| format!("file://{}", shown.path.display()));
-        if uri.is_some() {
-            self.hint(0);
-            (self.target, self.image, self.fading, self.raised, self.stage) = (None, None, None, None, None);
-            gpu::trim();
-        }
-        if self.video != uri.is_some() {
-            (self.video, self.checked, self.dirty) = (uri.is_some(), (0, 0, (0, 0)), true);
-        }
-        uri
     }
 
     pub(crate) fn screen(&mut self, lock: bool) {
@@ -147,6 +140,9 @@ impl Engine {
             log::warn!("{e}");
         });
         self.failures = if next.as_ref().is_ok_and(|_| !self.dirty) { 0 } else { self.failures + 1 };
+        if std::mem::take(&mut self.handover) {
+            return Ok(-1);
+        }
         let (hint, delay) = match next {
             Err(e) if self.failures >= ATTEMPTS => return Err(e.into()),
             result => result.unwrap_or((0, 0)),

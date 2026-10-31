@@ -1,8 +1,10 @@
+use super::fade::{Fading, Gone};
 use super::{Engine, FRAMES};
 use crate::Error;
 use crate::choice::{self, Shown};
 use crate::pack;
 use crate::power::{self, Power};
+use crate::settings;
 use crate::stage::Stage;
 use ndk::native_window::NativeWindow;
 use std::path::Path;
@@ -13,25 +15,35 @@ use wprs_render::{Layer, RenderError};
 
 impl Engine {
     pub(super) fn stage(&mut self, shown: Option<&Shown>) {
-        match shown.filter(|shown| shown.scene).map(|shown| (&shown.uid, pack::load(&shown.path))) {
+        let next = match shown.filter(|shown| shown.scene).map(|shown| (&shown.uid, pack::load(&shown.path)))
+        {
             Some((uid, Ok(pack))) => match self.stage.as_mut() {
-                Some(stage) if stage.uid == *uid && Arc::ptr_eq(&stage.pack, &pack) => stage.refresh(),
-                _ => self.stage = Some(Stage::new(uid.clone(), pack)),
+                Some(stage) if stage.uid == *uid && Arc::ptr_eq(&stage.pack, &pack) => {
+                    return stage.refresh();
+                }
+                _ => Some(Stage::new(uid.clone(), pack)),
             },
             Some((_, Err(e))) => {
                 log::warn!("cannot show the scene: {e}");
-                self.stage = None;
+                None
             }
-            None => self.stage = None,
+            None => None,
+        };
+        let old = std::mem::replace(&mut self.stage, next).filter(|old| old.image().is_some());
+        let fades = !settings::look().fade.is_zero() && shown.is_some() && self.fading.is_none();
+        if let Some(old) = old.filter(|_| fades) {
+            (self.fading, self.image) = (Some(Fading::new(Gone::Scene(Box::new(old)))), None);
         }
     }
 
     pub(crate) fn clips(&mut self) -> Option<Vec<String>> {
         let shown = choice::shown_on(self.preview, self.lock).filter(|shown| !shown.video);
-        self.stage(shown.as_ref());
-        let videos = self.stage.as_ref()?.videos();
+        if self.film.is_none() {
+            self.stage(shown.as_ref());
+        }
         let mut paths: Vec<String> =
-            videos.iter().filter_map(|(_, path)| path.to_str().map(String::from)).collect();
+            self.reels().iter().filter_map(|(_, path)| path.to_str().map(String::from)).collect();
+        paths.sort();
         paths.dedup();
         Some(paths)
     }
@@ -41,13 +53,14 @@ impl Engine {
             self.clips.close(path);
             return Ok(None);
         }
-        let wanted = self.stage.as_ref().is_some_and(|s| s.videos().iter().any(|(_, p)| p == path));
+        let wanted = self.reels().iter().any(|(_, p)| p == path);
         wanted.then(|| self.clips.open(path)).transpose()
     }
 
     pub(crate) fn inputs(&self) -> i32 {
         let [audio, touch] = self.stage.as_ref().map_or([false; 2], Stage::wants);
-        let (moving, plays) = (Power::now().moving(), self.stage.as_ref().is_some_and(Stage::plays));
+        let films = self.film.is_some() || self.reels().iter().any(|(id, _)| id.starts_with('\0'));
+        let (moving, plays) = (Power::now().moving(), films || self.stage.as_ref().is_some_and(Stage::plays));
         i32::from(audio && moving && crate::power::hears())
             | (i32::from(touch) << 1)
             | (i32::from(plays && moving) << 2)

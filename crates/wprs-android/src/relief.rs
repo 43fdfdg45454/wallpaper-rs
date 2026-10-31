@@ -23,6 +23,7 @@ pub(crate) struct Raised {
 #[derive(Default)]
 pub(crate) struct Tilted(u64, bool, bool);
 
+#[derive(Clone, Copy)]
 pub(crate) struct Look {
     pub(crate) fit: Fit,
     pub(crate) background: [u8; 3],

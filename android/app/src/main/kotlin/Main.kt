@@ -22,6 +22,7 @@ import kotlin.concurrent.thread
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
 
 class Main : ComponentActivity() {
@@ -138,9 +139,15 @@ class Main : ComponentActivity() {
     private fun store(uri: Uri): Boolean {
         val item = open(uri)?.use { Native.store(it.fd, name(uri)) }?.let(::JSONObject) ?: return false
         val uid = item.getString("uid")
-        if (item.getString("kind") == "video") open(uri)?.use { poster(uid) { setDataSource(it.fileDescriptor) } }
-        item.optString("poster").takeIf { !item.isNull("poster") && it.isNotEmpty() }?.let { file -> poster(uid) { setDataSource(file) } }
-        return true
+        val played = when {
+            item.getString("kind") == "video" -> open(uri)?.use { file ->
+                playable { setDataSource(file.fileDescriptor) } && poster(uid) { setDataSource(file.fileDescriptor) } != null
+            } == true
+            !item.isNull("poster") -> item.getString("poster").let { file -> playable { setDataSource(file) } && poster(uid) { setDataSource(file) } != null }
+            else -> true
+        }
+        if (!played) Native.library(JSONObject().put("op", "remove").put("uids", JSONArray(listOf(uid))).toString())
+        return played
     }
 
     private fun open(uri: Uri) = runCatching { contentResolver.openFileDescriptor(uri, "r") }.getOrNull()

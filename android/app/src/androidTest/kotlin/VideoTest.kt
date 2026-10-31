@@ -11,6 +11,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -91,6 +92,12 @@ class VideoTest {
         lock.show(true)
         assertTrue(lock.plays())
         assertTrue(home.stopped())
+    }
+
+    @Test
+    fun importsKeepOnlyVideosThePhoneDecodes() {
+        assertTrue(playable { setDataSource(fixture(CLIP).path) })
+        assertFalse(playable { setDataSource(still(Color.RED).path) })
     }
 
     private companion object {

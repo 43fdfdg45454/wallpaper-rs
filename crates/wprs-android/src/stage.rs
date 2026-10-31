@@ -128,6 +128,10 @@ impl Stage {
         !self.heavy && !self.extras.videos.is_empty()
     }
 
+    pub(crate) fn image(&self) -> Option<&GpuImage> {
+        self.view.as_ref()?.image()
+    }
+
     pub(crate) fn videos(&self) -> Arc<Vec<(String, PathBuf)>> {
         Arc::clone(&self.extras.videos)
     }
