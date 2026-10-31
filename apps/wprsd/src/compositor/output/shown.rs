@@ -8,23 +8,23 @@ use std::time::Duration;
 use wprs_core::{Fit, UvRect};
 use wprs_render::{GpuImage, Layer, Relief, Target};
 
-pub(crate) struct Shown {
-    pub(crate) content: Content,
-    pub(crate) fit: Fit,
-    pub(crate) background: [u8; 3],
-    pub(crate) image: Option<GpuImage>,
-    pub(crate) transition: Option<Duration>,
-    pub(crate) uv: Option<UvRect>,
-    pub(crate) relief: Option<Raised>,
-    pub(crate) scene: Option<SceneState>,
+pub(in crate::compositor) struct Shown {
+    pub(in crate::compositor) content: Content,
+    pub(in crate::compositor) fit: Fit,
+    pub(in crate::compositor) background: [u8; 3],
+    pub(in crate::compositor) image: Option<GpuImage>,
+    pub(in crate::compositor) transition: Option<Duration>,
+    pub(in crate::compositor) uv: Option<UvRect>,
+    pub(in crate::compositor) relief: Option<Raised>,
+    pub(in crate::compositor) scene: Option<SceneState>,
 }
 
 impl Shown {
-    pub(crate) fn matches(&self, spec: &Spec) -> bool {
+    pub(in crate::compositor) fn matches(&self, spec: &Spec) -> bool {
         self.content.same_look(&spec.content) && self.fit == spec.fit && self.background == spec.background
     }
 
-    pub(crate) fn layer<'a>(
+    pub(in crate::compositor) fn layer<'a>(
         &'a self,
         players: &'a HashMap<Reel, PlayerSlot>,
         opacity: f32,
@@ -53,7 +53,7 @@ impl Shown {
     }
 }
 
-pub(crate) enum Sink {
+pub(in crate::compositor) enum Sink {
     Stream(Option<Target>),
     Surface(Screen),
 }

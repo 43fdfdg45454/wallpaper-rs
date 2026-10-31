@@ -1,4 +1,5 @@
 use super::*;
+use zbus::fdo::Error::InvalidArgs;
 
 #[test]
 fn interface_name_matches_core_constant() {

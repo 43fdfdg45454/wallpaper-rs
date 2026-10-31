@@ -25,6 +25,10 @@ pub fn same_passphrase() -> String {
     )
 }
 
+pub fn flashing_moves() -> String {
+    tr("A package that flashes cannot keep moving when the desktop asks for reduced motion.")
+}
+
 pub fn volume() -> String {
     tr("Volume")
 }

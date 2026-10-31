@@ -806,8 +806,9 @@ Records a decision of the user about the packages of these items, once per packa
 every version and copy of the package keeps it. `what` is `mature` (clients stop blurring the
 thumbnails of a package rated `mature`), `photosensitive` (`Apply` and playlists may show it) or
 `motion` (the scene keeps moving while the desktop asks for reduced motion, for gentle scenes the
-user chose; every screen that shows a scene is configured again); anything else returns
-`InvalidArgs`, an unknown uid `NotFound`. Items that are no packages are
+user chose; every screen that shows a scene is configured again; `InvalidArgs` for a package marked
+`photosensitive`, and a choice recorded before a new version marked it so is ignored while it is);
+anything else returns `InvalidArgs`, an unknown uid `NotFound`. Items that are no packages are
 accepted and change nothing. `PackageInfo.confirmed` lists the decisions, and the `library` change
 names every item that shares a package id with these items. Allowing `photosensitive` while the
 active profile left a screen out for that reason (`OutputState.error`) gives that screen what the
@@ -1205,18 +1206,20 @@ without blur, in every version, until the repository is removed; clients show th
 Returns `{spec: path}` for the cached previews of `[repo/]id[@version]` specs (at most 500,
 keys as given) and queues the others; `PreviewReady` follows for each of them. A new call from
 the same sender replaces its queued requests. Previews are downloaded within their signed size
-and hash, re-encoded by the thumbnail worker to JPEG files of at most 1024 px in
+and hash, never when that size is over 16 MiB, re-encoded by the thumbnail worker to JPEG files of at most 1024 px in
 `~/.cache/wallpaper-rs/previews/`, and only the re-encoded file is handed out. Previews of older
 versions are cached the same way, named by their signed hash, and downloaded only once.
 
 ### `RequestAnimatedPreviews(as specs) → (a{ss} paths)`
 
 Like `RequestPreviews` for the animated previews (`previews.animated`, `animated` in `Browse`): the
-gif or webp file is downloaded within its signed size and hash, checked to be a picture of at most
+gif or webp file is downloaded within its signed size and hash, never when that size is over the
+8 MiB a package may carry, checked to be a picture of at most
 640 px a side and 15 s, and handed out as it is from `~/.cache/wallpaper-rs/previews/`, counted in
 `library.thumb_cache_mb` and removed with its repository. `PreviewReady` follows for each queued spec
 with the spec prefixed by `animated:`; a new call from the same sender replaces its queued animated
-requests only. Clients ask for them only on mains power and play them only while they are shown.
+requests only. Clients ask for one only on mains power, when the pointer or the focus is on its
+package, and play it only then.
 
 ### `Install(s spec, b allow_stale, b allow_downgrade) → (t job)`
 
@@ -1846,7 +1849,8 @@ that cannot be used is ignored with a warning.
   20 000 points in all), drawn into one map of at most 2048 pixels a side that keeps the whole
   width of very long pictures. Every mask takes `invert`. The `mask` action (`wprs-ctl edit mask`)
   adds one stroke to a brush mask with the spec `brush:RADIUS,HARDNESS:X,Y;X,Y;…` or
-  `erase:RADIUS,HARDNESS:X,Y;…`, creating the mask when it is not a brush yet; the app paints
+  `erase:RADIUS,HARDNESS:X,Y;…`, creating the mask when it is not a brush yet; its `invert`,
+  when given, also turns the brush mask over, and left out keeps it as it is; the app paints
   the same strokes on the picture. Any valid name can be a mask, such as
   `1`, `true` or `null`: `wprs-ctl edit set FILE ops.<id>.mask=<name>` gives it to an operation
   and an empty name takes it away.

@@ -101,6 +101,13 @@ impl Library {
     }
 
     pub fn confirm(&mut self, uids: &[&str], what: &str) -> Result<Vec<String>> {
+        let sql = "SELECT count(*) FROM items WHERE uid = ?1 AND photosensitive = 1";
+        for uid in uids.iter().filter(|_| what == "motion") {
+            let flashes = self.db.query_row(sql, [uid], |row| row.get::<_, i64>(0))? > 0;
+            ensure(!flashes, || {
+                Error::Invalid("motion", "a package that flashes cannot keep moving".into())
+            })?;
+        }
         self.decide(
             uids,
             what,
@@ -121,6 +128,12 @@ impl Library {
     pub fn decided(&self, pkg_id: &str, what: &str) -> Result<bool> {
         let sql = "SELECT count(*) FROM confirmations WHERE pkg_id = ?1 AND what = ?2";
         Ok(self.db.query_row(sql, params![pkg_id, what], |row| row.get::<_, i64>(0))? > 0)
+    }
+
+    pub fn moves(&self, pkg_id: &str) -> Result<bool> {
+        let sql = "SELECT count(*) FROM confirmations WHERE pkg_id = ?1 AND what = 'motion' \
+            AND NOT EXISTS (SELECT 1 FROM items WHERE pkg_id = ?1 AND photosensitive = 1)";
+        Ok(self.db.query_row(sql, [pkg_id], |row| row.get::<_, i64>(0))? > 0)
     }
 
     fn decide(&mut self, uids: &[&str], what: &str, sql: &str) -> Result<Vec<String>> {

@@ -24,6 +24,7 @@ const COMMON: &[&str] = &["txt"];
 const DATA: &[&str] = &["json"];
 const THUMBNAILS: &[&str] = &["png", "jpg", "jpeg", "webp"];
 const ANIMATED: &[&str] = &["gif", "webp"];
+pub(crate) const MAX_ANIMATED: u64 = 8 << 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Limits {
@@ -88,7 +89,7 @@ pub fn validate(manifest: &Manifest, files: &[FileEntry], limits: &Limits) -> Re
         ("entry", Some(&manifest.entry), entry_types, u64::MAX),
         ("preview", manifest.preview.as_ref(), IMAGES, u64::MAX),
         ("previews.thumbnail", previews.thumbnail.as_ref(), thumbs, limit),
-        ("previews.animated", previews.animated.as_ref(), ANIMATED, 8 << 20),
+        ("previews.animated", previews.animated.as_ref(), ANIMATED, MAX_ANIMATED),
         ("web.preload", web.preload.as_ref(), &["js", "mjs"], u64::MAX),
     ];
     referenced.into_iter().try_for_each(|(field, path, types, max)| {

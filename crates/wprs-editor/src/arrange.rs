@@ -85,7 +85,9 @@ pub fn ungroup(doc: &Value, id: &str) -> Result<Vec<Op>> {
         let layer = serde_json::from_value::<wprs_scene::Layer>(v.clone()).ok()?;
         serde_json::to_value(layer).ok()?.as_object().cloned()
     };
-    let own = normal(value).with_context(|| format!("the group {id} has problems; fix them first"))?;
+    let own = normal(value).with_context(|| {
+        said("editor.group_problems", "the group %1 has problems; fix them first", &[&id])
+    })?;
     let base = normal(&plain).unwrap_or_default();
     let own: Vec<&str> =
         own.iter().filter(|(k, v)| base.get(*k) != Some(*v)).map(|(k, _)| k.as_str()).collect();

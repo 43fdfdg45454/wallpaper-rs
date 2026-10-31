@@ -6,10 +6,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 #[derive(Debug, thiserror::Error)]
+#[error("{}", self.message())]
 pub enum SceneError {
-    #[error("invalid scene: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("invalid scene: {0}")]
     Invalid(Issue),
 }
 

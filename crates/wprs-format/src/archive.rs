@@ -7,7 +7,7 @@ use std::path::Path;
 use zip::ZipArchive;
 
 pub(crate) const MAX_MANIFEST: u64 = 1 << 20;
-const MAX_THUMBNAIL: u64 = 16 << 20;
+pub(crate) const MAX_THUMBNAIL: u64 = 16 << 20;
 
 pub fn peek(path: impl AsRef<Path>) -> Result<Manifest> {
     manifest(&mut ZipArchive::new(BufReader::new(File::open(path)?))?)

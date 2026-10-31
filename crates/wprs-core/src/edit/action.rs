@@ -69,7 +69,7 @@ pub enum Action {
         name: String,
         spec: String,
         #[serde(default)]
-        invert: bool,
+        invert: Option<bool>,
     },
     Order {
         ids: Vec<String>,

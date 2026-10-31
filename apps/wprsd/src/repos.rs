@@ -5,11 +5,14 @@ use crate::items::reply;
 use crate::jobs::{Ctl, now};
 use crate::kinds::{local, parse_url};
 use serde_json::Value;
+use settle::{Settled, settle, vanished};
 use std::sync::Arc;
 use wprs_core::dbus::error::{EXISTS, NEWER, STALE};
 use wprs_core::model::{JobKind, MODEL, RefreshOutput, Repo, RepoWarning, ReposReply, Update};
 use wprs_format::{Anchor, RepoInfo};
 use wprs_providers::HttpFetch;
+
+mod settle;
 
 impl From<wprs_format::Error> for Error {
     fn from(e: wprs_format::Error) -> Self {
@@ -103,7 +106,7 @@ impl Daemon {
     }
 
     fn gone(&self, id: &str) -> bool {
-        lock(&self.remote.removing).contains(id) || !self.store.data.join("repos").join(id).is_dir()
+        vanished(&lock(&self.remote.removing), &self.store.data, id)
     }
 
     pub fn add_repo(self: &Arc<Self>, url: &str) -> Result<u64> {
@@ -150,8 +153,8 @@ impl Daemon {
             let updated = ctl.check().and_then(|()| {
                 Ok(wprs_format::update_repo(&self.store.data, &fetcher(ctl, bases)?, &id, now())?)
             });
-            match updated {
-                Ok(outcome) => {
+            match settle(updated, || self.gone(&id)) {
+                Settled::Done(outcome) => {
                     lock(&self.remote.repo_errors).remove(&id);
                     let latest = self.latest().unwrap_or_default();
                     let update = |u: wprs_format::Update| Update {
@@ -168,12 +171,12 @@ impl Daemon {
                     out.revoked.extend(outcome.revoked.iter().map(|i| self.package_model(i, None)));
                     out.repos.push(self.repo_model(outcome.repo));
                 }
-                Err(Error::Cancelled) => {
+                Settled::Stopped => {
                     failure = Some(Error::Cancelled);
                     break;
                 }
-                Err(_) if self.gone(&id) => {}
-                Err(e) => {
+                Settled::Gone => {}
+                Settled::Failed(e) => {
                     tracing::warn!(repo = &id[..8], "repository refresh failed");
                     lock(&self.remote.repo_errors).insert(id.clone(), e.to_string());
                     failure = failure.or(Some(e)).filter(|_| !target.is_empty());

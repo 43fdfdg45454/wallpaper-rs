@@ -111,7 +111,7 @@ impl State {
         }
     }
 
-    pub(crate) fn hush(&self) {
+    pub(in crate::compositor) fn hush(&self) {
         let heard = (self.settings, self.locked);
         self.players.values().for_each(|slot| slot.hush(heard));
     }

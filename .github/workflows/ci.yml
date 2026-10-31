@@ -128,6 +128,9 @@ jobs:
       - name: Shell scripts
         run: shellcheck packaging/*.sh packaging/flatpak/*.sh scripts/*.sh
 
+      - name: File length
+        run: scripts/file-lengths.sh
+
       - name: QML syntax
         run: |
           for f in integrations/*/metadata.json; do python3 -c "import json, sys; json.load(open(sys.argv[1]))" "$f"; done

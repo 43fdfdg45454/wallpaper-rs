@@ -5,7 +5,7 @@ use wprs_render::{GpuImage, SceneView};
 use wprs_scene::MAX_PRESSES;
 
 impl SceneState {
-    pub(crate) fn update(&mut self, spec: SceneSpec) -> bool {
+    pub(in crate::compositor) fn update(&mut self, spec: SceneSpec) -> bool {
         let mut changed = self.runtime.set_props(spec.values.clone());
         let media = self.spec.media() != spec.media();
         if media {
@@ -26,7 +26,7 @@ impl SceneState {
         changed || media
     }
 
-    pub(crate) fn input(&mut self, input: SceneInput) -> bool {
+    pub(in crate::compositor) fn input(&mut self, input: SceneInput) -> bool {
         if self.guard.as_ref().is_some_and(|g| g.speed() == 0.0) {
             return false;
         }
@@ -53,15 +53,15 @@ impl SceneState {
         }
     }
 
-    pub(crate) fn clean(&self) -> bool {
+    pub(in crate::compositor) fn clean(&self) -> bool {
         self.view.as_ref().is_some_and(|v| v.stats().damage == 0)
     }
 
-    pub(crate) fn image(&self) -> Option<&GpuImage> {
+    pub(in crate::compositor) fn image(&self) -> Option<&GpuImage> {
         self.view.as_ref().and_then(SceneView::image)
     }
 
-    pub(crate) fn fps(&self, power: Power, refresh: u32) -> u32 {
+    pub(in crate::compositor) fn fps(&self, power: Power, refresh: u32) -> u32 {
         power.fps(&self.runtime, self.quality, refresh)
     }
 }

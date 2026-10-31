@@ -10,7 +10,7 @@ use wprs_scene::Tier;
 
 mod shown;
 
-pub(crate) use shown::{Shown, Sink};
+pub(super) use shown::{Shown, Sink};
 
 pub(super) type Raised = (GpuImage, Parallax);
 

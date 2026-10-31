@@ -58,7 +58,7 @@ pub(crate) struct Shot<'a> {
 }
 
 fn moves(id: &str) -> bool {
-    crate::library::with(|lib| Ok(lib.decided(id, "motion")?)).unwrap_or(false)
+    crate::library::with(|lib| Ok(lib.moves(id)?)).unwrap_or(false)
 }
 
 impl Stage {

@@ -232,6 +232,10 @@ msgid "%1 is not a group"
 msgstr "%1 no es un grupo"
 
 #: crates/wprs-editor/src/arrange.rs
+msgid "the group %1 has problems; fix them first"
+msgstr "el grupo %1 tiene problemas; corrígelos primero"
+
+#: crates/wprs-editor/src/arrange.rs
 msgid "the group %1 has its own %2; reset them before ungrouping"
 msgstr "el grupo %1 tiene su propio %2; restablécelo antes de desagrupar"
 
@@ -868,6 +872,10 @@ msgstr "dura %1 s y se permiten %2 s como mucho"
 msgid "length of the sounds in seconds"
 msgstr "duración de los sonidos en segundos"
 
+#: crates/wprs-format/src/download.rs
+msgid "preview size"
+msgstr "tamaño de la vista previa"
+
 #: crates/wprs-format/src/entry.rs
 msgid "does not match its file name or repository"
 msgstr "no coincide con su nombre de archivo ni con su repositorio"
@@ -1102,6 +1110,14 @@ msgstr "tamaño de la descarga"
 #: crates/wprs-format/src/index.rs
 msgid "does not match its place in the entry"
 msgstr "no coincide con su lugar en la entrada"
+
+#: crates/wprs-format/src/index.rs
+msgid "%1 is invalid, misplaced or repeated"
+msgstr "%1 no es válido, está fuera de lugar o está repetido"
+
+#: crates/wprs-format/src/index.rs
+msgid "%1 needs unique ascending valid releases"
+msgstr "%1 necesita versiones válidas, únicas y en orden ascendente"
 
 #: crates/wprs-format/src/index.rs
 msgid "expected a wpak-repo-revoked/1.0 of this repository"
@@ -1776,6 +1792,26 @@ msgstr "capa"
 msgid "target"
 msgstr "objetivo"
 
+#: crates/wprs-scene/src/cube.rs
+msgid "the LUT is larger than 16 MiB"
+msgstr "la LUT ocupa más de 16 MiB"
+
+#: crates/wprs-scene/src/cube.rs
+msgid "the LUT is not UTF-8 text"
+msgstr "la LUT no es texto UTF-8"
+
+#: crates/wprs-scene/src/cube.rs
+msgid "line %1 of the LUT is not valid"
+msgstr "la línea %1 de la LUT no es válida"
+
+#: crates/wprs-scene/src/cube.rs
+msgid "the LUT needs LUT_3D_SIZE between 2 and %1 before its data"
+msgstr "la LUT necesita LUT_3D_SIZE entre 2 y %1 antes de sus datos"
+
+#: crates/wprs-scene/src/cube.rs
+msgid "the LUT has %1 entries, expected %2"
+msgstr "la LUT tiene %1 entradas y se esperaban %2"
+
 #: crates/wprs-scene/src/deep.rs crates/wprs-scene/src/fields.rs
 #: crates/wprs-scene/src/particles/rules.rs crates/wprs-scene/src/rules.rs
 #: crates/wprs-scene/src/sound.rs crates/wprs-scene/src/validate.rs
@@ -1935,6 +1971,10 @@ msgstr "%1 necesita una duración o bien frames y fps"
 #: crates/wprs-scene/src/issue.rs
 msgid "%1 applies to timelines that loop with repeat only"
 msgstr "%1 solo se aplica a líneas de tiempo que se repiten con repeat"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "invalid scene: %1"
+msgstr "escena no válida: %1"
 
 #: crates/wprs-scene/src/particles/checks.rs
 msgid "control point"

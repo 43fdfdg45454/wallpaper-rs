@@ -1,6 +1,6 @@
 use super::*;
 
-pub(super) fn calmed() {
+fn blink(id: &str, photosensitive: bool) -> (String, std::path::PathBuf) {
     let source = tempfile::tempdir().unwrap();
     let opacity = json!({ "timeline": "blink", "keys": [[0, 0], [0.05, 1], [0.1, 0]] });
     let layers = json!([{ "id": "flash", "type": "solid", "color": "#ffffff", "opacity": opacity }]);
@@ -8,14 +8,20 @@ pub(super) fn calmed() {
         "clock": { "poster_time": 0.03 }, "layers": layers,
         "timelines": [{ "id": "blink", "duration": 0.1, "loop": "repeat" }] });
     fs::write(source.path().join("scene.json"), text.to_string()).unwrap();
-    let manifest = json!({ "schema": wprs_format::SCHEMA, "id": "org.example.blink", "version": "1.0.0", "title": "Blink",
+    let manifest = json!({ "schema": wprs_format::SCHEMA, "id": id, "version": "1.0.0", "title": "Blink",
         "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "content": { "rating": "general" },
-        "photosensitive": true, "origin": { "kind": "original" } });
+        "photosensitive": photosensitive, "origin": { "kind": "original" } });
     fs::write(source.path().join("manifest.json"), manifest.to_string()).unwrap();
     let built = source.path().join("blink.wpak");
     wprs_format::build(source.path(), &built, &wprs_format::Limits::default()).unwrap();
     let uid = store::store(&mut File::open(&built).unwrap(), "blink.wpak").unwrap().0;
     let path = library::with(|lib| Ok(lib.item(&uid)?.path)).unwrap();
+    (uid, path)
+}
+
+pub(super) fn calmed() {
+    let (uid, path) = blink("org.example.blink", true);
+    let (glow, glowing) = blink("org.example.glow", false);
     let power =
         power::Power { charging: true, saver: false, low: false, thermal: 0, headroom: 0.0, still: false };
     let still = power::Power { still: true, ..power };
@@ -27,11 +33,13 @@ pub(super) fn calmed() {
             let shot = shot.unwrap();
             assert!(shot.fps == 0 && (1..=60_000).contains(&shot.delay), "reduced motion kept moving");
         }
-        assert_eq!(ask(json!({ "op": "confirm", "uid": uid, "what": "motion" })), Value::Null);
-        let mut stage = Stage::new(uid.clone(), pack::load(&path).unwrap());
+        assert!(ask(json!({ "op": "confirm", "uid": uid, "what": "motion" }))["error"].is_string());
+        assert!(!Stage::new(uid.clone(), pack::load(&path).unwrap()).moving, "a flashing scene kept moving");
+        assert_eq!(ask(json!({ "op": "confirm", "uid": glow, "what": "motion" })), Value::Null);
+        let mut stage = Stage::new(glow.clone(), pack::load(&glowing).unwrap());
         let fps = stage.render(r, ((64, 32), 0, 60), (still, wprs_scene::Tier::T3), &[], true).unwrap().fps;
         assert!(stage.moving && fps > 0, "a scene allowed to move stayed still");
-        assert_eq!(ask(json!({ "op": "unconfirm", "uid": uid, "what": "motion" })), Value::Null);
+        assert_eq!(ask(json!({ "op": "unconfirm", "uid": glow, "what": "motion" })), Value::Null);
         stage.refresh();
         let at = ((64, 32), 1_000_000, 60);
         let fps = stage.render(r, at, (still, wprs_scene::Tier::T3), &[], true).unwrap().fps;
@@ -53,5 +61,5 @@ pub(super) fn calmed() {
     assert!(!power::hears(), "the switch did not stop the scenes from hearing");
     settings::setting("playback.scene_capture", Some("true")).unwrap();
     assert!(power::hears());
-    assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
+    assert_eq!(ask(json!({ "op": "remove", "uids": [uid, glow] })), Value::Null);
 }

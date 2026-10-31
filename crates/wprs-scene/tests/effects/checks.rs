@@ -25,6 +25,11 @@ fn lut_files_parse_within_limits() {
     }
     assert_eq!(Lut::parse(&[0xff, 0xfe]), Err(LutError::Text));
     assert_eq!(Lut::parse(&vec![b' '; MAX_LUT_BYTES + 1]), Err(LutError::TooLarge));
+    let es = wprs_core::message::tr_in(&["es_ES.UTF-8".into()]);
+    assert_eq!(LutError::Line(2).to_string(), "line 2 of the LUT is not valid");
+    assert_eq!(LutError::Count(7, 8).message().told(&es), "la LUT tiene 7 entradas y se esperaban 8");
+    let invalid = Scene::from_json(r#"{ "schema": "nope" }"#).unwrap_err().message();
+    assert!(invalid.told(&es).starts_with("escena no válida: "), "{}", invalid.told(&es));
 }
 
 #[test]

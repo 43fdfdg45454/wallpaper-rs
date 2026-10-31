@@ -91,7 +91,7 @@ pub fn check(dir: &Path, doc: &Value, file: &Path) -> Result<()> {
                 size <= MAX_LUT_BYTES as u64,
                 said("editor.color_table_may", "a color table may have at most 16 MiB", &[])
             );
-            Lut::parse(&fs::read(file)?).map_err(|e| anyhow!("{e}"))?;
+            Lut::parse(&fs::read(file)?).map_err(|e| e.message())?;
         }
         _ => {}
     }

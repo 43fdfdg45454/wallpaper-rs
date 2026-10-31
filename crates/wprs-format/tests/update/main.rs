@@ -10,6 +10,7 @@ use wprs_format::{
 };
 
 mod anchors;
+mod previews;
 mod shards;
 
 fn resign(repo: &Repo, path: &str, edit: impl FnOnce(&mut serde_json::Value)) {

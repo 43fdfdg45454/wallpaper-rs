@@ -120,7 +120,9 @@ fn action(command: Edits) -> Option<(PathBuf, Action)> {
         Edits::Overlay { path, color, blend, opacity, mask, id } => {
             (path, Action::Overlay { color: Some(color), blend, opacity, mask, id })
         }
-        Edits::Mask { path, name, spec, invert } => (path, Action::Mask { name, spec, invert }),
+        Edits::Mask { path, name, spec, invert } => {
+            (path, Action::Mask { name, spec, invert: invert.then_some(true) })
+        }
         Edits::Order { path, ids } => (path, Action::Order { ids }),
         Edits::Span { path, zoom, center } => (path, Action::Span { zoom, center }),
         Edits::Reset { path, ids } => (path, Action::Reset { ids }),

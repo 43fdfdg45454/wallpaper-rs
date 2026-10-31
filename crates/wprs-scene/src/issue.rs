@@ -128,6 +128,17 @@ impl Issue {
     }
 }
 
+impl crate::SceneError {
+    pub fn message(&self) -> Message {
+        match self {
+            crate::SceneError::Json(e) => said("scene.json", "invalid scene: %1", &[e]),
+            crate::SceneError::Invalid(issue) => {
+                said("scene.invalid", "invalid scene: %1", &[issue]).with(1, issue.message())
+            }
+        }
+    }
+}
+
 impl std::fmt::Display for Issue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.message().fmt(f)

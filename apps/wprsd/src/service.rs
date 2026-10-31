@@ -1,39 +1,19 @@
 use crate::bus::client;
 use crate::callers::caller;
 use crate::daemon::Daemon;
-use crate::error::{Result, failed};
+use crate::error::Result;
 use crate::items::reply;
 use crate::streams::HELD;
-use std::path::PathBuf;
-use std::sync::{Arc, Weak};
-use wprs_core::dbus::uri_scheme;
+use args::{absolute, local_path};
+use std::sync::Weak;
 use wprs_core::model::{JobReply, JobsReply, MODEL};
-use zbus::fdo::{self, Error::InvalidArgs};
+use zbus::fdo;
 use zbus::message::Header;
-use zbus::object_server::SignalEmitter;
+use zbus::object_server::SignalEmitter as Emit;
+
+mod args;
 
 pub struct Service(pub Weak<Daemon>);
-
-fn local_path(path: &str) -> fdo::Result<PathBuf> {
-    match uri_scheme(path) {
-        None => Ok(path.into()),
-        Some(scheme) if scheme.eq_ignore_ascii_case("file") => wprs_video::path_from_uri(path)
-            .ok_or_else(|| InvalidArgs(format!("{path} is not a local file URI"))),
-        Some(_) => Err(InvalidArgs(format!("{path} is not a local file"))),
-    }
-}
-
-impl Service {
-    fn d(&self) -> Result<Arc<Daemon>> {
-        self.0.upgrade().ok_or_else(|| failed("the daemon is stopping"))
-    }
-
-    fn props(&self) -> crate::daemon::Props {
-        self.0
-            .upgrade()
-            .map_or(crate::daemon::Props { paused: false, volume: 0.0, muted: true }, |d| *d.props.borrow())
-    }
-}
 
 #[zbus::interface(name = "io.github.wallpaper_rs.Daemon1")]
 impl Service {
@@ -95,10 +75,7 @@ impl Service {
     }
 
     async fn preview_edit(&self, path: String, edit_json: String) -> Result<()> {
-        let path = PathBuf::from(path);
-        if !path.is_absolute() {
-            return Err(InvalidArgs(format!("{} is not an absolute path", path.display())).into());
-        }
+        let path = absolute(path)?;
         self.d()?.run(move |d| d.preview_edit(&path, &edit_json)).await
     }
 
@@ -111,10 +88,7 @@ impl Service {
         #[zbus(header)] header: Header<'_>,
         #[zbus(connection)] bus: &zbus::Connection,
     ) -> Result<()> {
-        let dir = PathBuf::from(dir);
-        if !dir.is_absolute() {
-            return Err(InvalidArgs(format!("{} is not an absolute path", dir.display())).into());
-        }
+        let dir = absolute(dir)?;
         let trusted = caller(bus, &header).await.trusted();
         self.d()?.run(move |d| d.preview_scene(&output, &dir, (&document, trusted), time)).await
     }
@@ -277,31 +251,22 @@ impl Service {
 
     #[zbus(signal)]
     pub(crate) async fn stream_changed(
-        emitter: &SignalEmitter<'_>,
+        e: &Emit<'_>,
         output: &str,
         node_id: u32,
         serial: u64,
     ) -> zbus::Result<()>;
 
     #[zbus(signal)]
-    pub(crate) async fn changed(
-        emitter: &SignalEmitter<'_>,
-        topic: &str,
-        ids: Vec<String>,
-        serial: u64,
-    ) -> zbus::Result<()>;
+    pub(crate) async fn changed(e: &Emit<'_>, topic: &str, ids: Vec<String>, serial: u64)
+    -> zbus::Result<()>;
 
     #[zbus(signal)]
-    pub(crate) async fn job_progress(
-        emitter: &SignalEmitter<'_>,
-        job: u64,
-        done: u64,
-        total: u64,
-    ) -> zbus::Result<()>;
+    pub(crate) async fn job_progress(e: &Emit<'_>, job: u64, done: u64, total: u64) -> zbus::Result<()>;
 
     #[zbus(signal)]
     pub(crate) async fn job_finished(
-        emitter: &SignalEmitter<'_>,
+        e: &Emit<'_>,
         job: u64,
         state: &str,
         error_name: &str,

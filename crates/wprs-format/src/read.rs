@@ -88,9 +88,9 @@ impl<R: Read + Seek> Package<R> {
         let entry = self.manifest.entry.clone();
         let size = self.entries.iter().find(|e| e.path == entry).map_or(0, |e| e.size);
         within("scene size", size, MAX_SCENE)?;
-        let text = String::from_utf8(self.read_file(&entry)?)
-            .map_err(|_| invalid("scene.json is not UTF-8".into()))?;
-        let mut scene = Scene::load(&text, &self.manifest.properties).map_err(|e| invalid(e.to_string()))?;
+        let text =
+            String::from_utf8(self.read_file(&entry)?).map_err(|_| invalid("scene.json is not UTF-8"))?;
+        let mut scene = Scene::load(&text, &self.manifest.properties).map_err(|e| invalid(e.message()))?;
         let missing =
             scene.paths().into_iter().find(|p| !self.entries.iter().any(|e| e.path == *p)).map(String::from);
         missing.map_or(Ok(()), |path| Err(Error::Missing(path)))?;
@@ -127,7 +127,7 @@ impl<R: Read + Seek> Package<R> {
             let size = self.entries.iter().find(|e| e.path == asset.path).map_or(0, |e| e.size);
             within("LUT size", size, MAX_LUT_BYTES as u64)?;
             let lut = Lut::parse(&self.read_file(&asset.path)?)
-                .map_err(|e| Error::Invalid { field: asset.path.clone(), reason: e.to_string().into() })?;
+                .map_err(|e| Error::Invalid { field: asset.path.clone(), reason: e.message().into() })?;
             parsed.insert(asset.path.clone(), Arc::new(lut));
             within(
                 "LUT data",
@@ -194,6 +194,6 @@ impl<R: Read + Seek> Package<R> {
     }
 }
 
-fn invalid(reason: String) -> Error {
+fn invalid(reason: impl Into<crate::Refusal>) -> Error {
     Error::Invalid { field: "scene".into(), reason: reason.into() }
 }

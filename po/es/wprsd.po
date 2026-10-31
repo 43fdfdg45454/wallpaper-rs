@@ -33,6 +33,14 @@ msgstr ""
 "dispositivo puede conocerla: elige una frase nueva y distinta."
 
 #: apps/wprsd/src/words.rs
+msgid ""
+"A package that flashes cannot keep moving when the desktop asks for reduced "
+"motion."
+msgstr ""
+"Un paquete que destella no puede seguir en movimiento cuando el escritorio "
+"pide reducir el movimiento."
+
+#: apps/wprsd/src/words.rs
 msgid "Volume"
 msgstr "Volumen"
 

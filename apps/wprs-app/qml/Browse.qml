@@ -12,18 +12,16 @@ ColumnLayout {
     property int total
     property var previews: ({})
     property var moving: ({})
+    property var asked: ({})
     property var shown: ({})
     readonly property bool battery: App.state.on_battery ?? false
 
-    onBatteryChanged: {
-        if (!battery)
-            animate(packages);
-    }
-
-    function animate(list) {
-        const wanted = list.filter(p => p.animated && p.photosensitive !== true).map(browse.spec);
-        if (!battery && wanted.length > 0)
-            App.query("RequestAnimatedPreviews", [wanted], "Repos1", found => browse && (browse.moving = Object.assign({}, browse.moving, found[0])));
+    function animate(pkg) {
+        const wanted = browse.spec(pkg);
+        if (battery || !pkg.animated || pkg.photosensitive === true || browse.asked[wanted])
+            return;
+        browse.asked[wanted] = true;
+        App.query("RequestAnimatedPreviews", [[wanted]], "Repos1", found => browse && (browse.moving = Object.assign({}, browse.moving, found[0])));
     }
 
     function spec(pkg) {
@@ -37,7 +35,6 @@ ColumnLayout {
             browse.packages = reply.packages;
             browse.total = reply.total;
             App.query("RequestPreviews", [reply.packages.filter(p => p.preview).map(browse.spec)], "Repos1", found => browse && (browse.previews = Object.assign({}, browse.previews, found[0])));
-            browse.animate(reply.packages);
         });
     }
 
@@ -89,8 +86,13 @@ ColumnLayout {
 
                 required property var modelData
                 readonly property bool veiled: modelData.content === "mature" && !modelData.revealed && !browse.shown[modelData.repo_id + "/" + modelData.id] && !App.unveiled
+                readonly property bool wants: (pointer.hovered || version.activeFocus || install.activeFocus) && !veiled && !browse.battery && modelData.photosensitive !== true
 
                 width: ListView.view.width
+                onWantsChanged: {
+                    if (wants)
+                        browse.animate(modelData);
+                }
 
                 Image {
                     Layout.preferredWidth: Kirigami.Units.gridUnit * 8
@@ -100,11 +102,15 @@ ColumnLayout {
                     fillMode: Image.PreserveAspectCrop
                     sourceSize: row.veiled ? Qt.size(12, 12) : undefined
 
+                    HoverHandler {
+                        id: pointer
+                    }
+
                     AnimatedImage {
                         anchors.fill: parent
-                        visible: !row.veiled && status === AnimatedImage.Ready
-                        source: row.veiled || row.modelData.photosensitive === true ? "" : App.url(browse.moving[browse.spec(row.modelData)] ?? "")
-                        playing: visible && !browse.battery && browse.Window.visibility !== Window.Hidden
+                        visible: row.wants && status === AnimatedImage.Ready
+                        source: row.wants ? App.url(browse.moving[browse.spec(row.modelData)] ?? "") : ""
+                        playing: visible && browse.Window.visibility !== Window.Hidden
                         cache: false
                         fillMode: Image.PreserveAspectCrop
                     }
@@ -154,6 +160,8 @@ ColumnLayout {
                 }
 
                 QQC2.Button {
+                    id: install
+
                     text: row.modelData.update ? App.tr("Update") : App.tr("Install")
                     icon.name: "download"
                     onClicked: browse.installer.install(row.modelData.repo_id + "/" + row.modelData.id + "@" + version.currentText)

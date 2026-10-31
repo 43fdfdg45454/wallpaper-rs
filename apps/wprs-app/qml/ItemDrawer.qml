@@ -138,7 +138,7 @@ Kirigami.OverlayDrawer {
 
             QQC2.Switch {
                 Layout.fillWidth: true
-                visible: drawer.pkg?.kind === "scene"
+                visible: drawer.pkg?.kind === "scene" && drawer.pkg?.photosensitive !== true
                 text: App.tr("Keep moving when the desktop asks for reduced motion")
                 checked: (drawer.pkg?.confirmed ?? []).includes("motion")
                 onToggled: {

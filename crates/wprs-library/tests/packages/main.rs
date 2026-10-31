@@ -95,13 +95,17 @@ fn rated_packages_are_searchable_and_confirmed_once_per_package() {
     assert_eq!(library.item(copy).unwrap().package.unwrap().confirmed, ["mature", "photosensitive"]);
     assert_eq!(library.confirm(&[&storm.uid], "mature").unwrap(), both);
     let calm = library.search("content:unrated", NOW, 0, 1).unwrap().remove(0).uid;
-    assert_eq!(library.confirm(&[&calm, &calm], "mature").unwrap(), [calm]);
+    assert_eq!(library.confirm(&[&calm, &calm], "mature").unwrap(), std::slice::from_ref(&calm));
     let id = info_id(&library, &storm.uid);
-    assert!(!library.decided(&id, "motion").unwrap());
-    library.confirm(&[&storm.uid], "motion").unwrap();
-    assert!(library.decided(&id, "motion").unwrap());
+    assert!(matches!(library.confirm(&[&calm, &storm.uid], "motion"), Err(Error::Invalid("motion", _))));
+    assert!(!library.decided(&id, "motion").unwrap() && !library.moves(&id).unwrap());
+    let gentle = info_id(&library, &calm);
+    assert!(!library.decided(&gentle, "motion").unwrap());
+    library.confirm(&[&calm], "motion").unwrap();
+    assert!(library.decided(&gentle, "motion").unwrap() && library.moves(&gentle).unwrap());
+    assert_eq!(library.unconfirm(&[&calm], "motion").unwrap(), std::slice::from_ref(&calm));
+    assert!(!library.moves(&gentle).unwrap() && library.decided(&gentle, "mature").unwrap());
     assert_eq!(library.unconfirm(&[&storm.uid], "motion").unwrap(), both);
-    assert!(!library.decided(&id, "motion").unwrap() && library.decided(&id, "mature").unwrap());
     assert!(matches!(library.unconfirm(&["01NOPE"], "motion"), Err(Error::NotFound(..))));
 }
 

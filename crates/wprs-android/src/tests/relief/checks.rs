@@ -64,7 +64,7 @@ pub(super) fn masked(uid: &str, image: &Path) {
     assert!(framing::framed(uid, image, wprs_core::Fit::Fill, false).map.is_none());
 }
 
-pub(crate) fn heif_photos_get_maps() {
+pub(in crate::tests) fn heif_photos_get_maps() {
     let decode = |_: &Path, edge: u32| {
         Some(image::RgbaImage::from_pixel(edge.min(64), edge.min(32), image::Rgba([9; 4])))
     };

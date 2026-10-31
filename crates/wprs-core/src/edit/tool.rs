@@ -39,20 +39,24 @@ impl Edit {
     fn mask_for(&mut self, id: &str, spec: Option<String>) -> Result<Option<String>, Error> {
         match spec {
             Some(spec) if spec.contains(':') => {
-                self.shape(id, &spec, false)?;
+                self.shape(id, &spec, None)?;
                 Ok(Some(id.into()))
             }
             name => Ok(name),
         }
     }
 
-    pub(super) fn shape(&mut self, name: &str, spec: &str, invert: bool) -> Result<(), Error> {
+    pub(super) fn shape(&mut self, name: &str, spec: &str, invert: Option<bool>) -> Result<(), Error> {
         match (super::Stroke::parse(spec)?, self.masks.get_mut(name)) {
-            (Some(stroke), Some(Mask::Brush { strokes, .. })) => strokes.push(stroke),
+            (Some(stroke), Some(Mask::Brush { strokes, invert: own })) => {
+                strokes.push(stroke);
+                *own = invert.unwrap_or(*own);
+            }
             (Some(stroke), _) => {
+                let invert = invert.unwrap_or_default();
                 drop(self.masks.insert(name.into(), Mask::Brush { strokes: vec![stroke], invert }))
             }
-            (None, _) => drop(self.masks.insert(name.into(), Mask::parse(spec, invert)?)),
+            (None, _) => drop(self.masks.insert(name.into(), Mask::parse(spec, invert.unwrap_or_default())?)),
         }
         Ok(())
     }

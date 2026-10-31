@@ -69,7 +69,7 @@ impl Daemon {
                 let (extra, clips) = self.scene_extra(&pack, &values);
                 turn = crate::picks::next_turn(&pack.props.properties, &values);
                 shown_scene = Some(pack.clone());
-                let moving = self.store.read(|lib| lib.decided(&pack.props.id, "motion")).unwrap_or(false);
+                let moving = self.store.read(|lib| lib.moves(&pack.props.id)).unwrap_or(false);
                 (Content::Scene(SceneSpec { pack, values, extra, clips, hold, moving }), None)
             }
             Some(Ok(Media::Picture(file))) => {

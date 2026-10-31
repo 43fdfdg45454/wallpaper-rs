@@ -84,7 +84,7 @@ impl Content {
             _ => None,
         };
         let values = |c: &Content| match c {
-            Content::Scene(s) => Some((s.values.clone(), s.media(), s.hold)),
+            Content::Scene(s) => Some((s.values.clone(), s.media(), s.hold, s.moving)),
             _ => None,
         };
         let frame = |c: &Content| match c {

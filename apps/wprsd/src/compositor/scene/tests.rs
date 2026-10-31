@@ -31,6 +31,8 @@ fn new_media_of_the_same_scene_keep_its_clock_and_view() {
     let turned = SceneSpec { extra, ..spec.clone() };
     let (old, new) = (Content::Scene(spec.clone()), Content::Scene(turned.clone()));
     assert!(old.same_source(&new) && !old.same_look(&new));
+    let allowed = Content::Scene(SceneSpec { moving: true, ..spec.clone() });
+    assert!(old.same_source(&allowed) && !old.same_look(&allowed));
     let power = Power::new(Tier::T3, false, 0);
     let (mut state, players, start) = (SceneState::new(spec, power), HashMap::new(), Instant::now());
     let at = |s: u64| start + Duration::from_secs(s);

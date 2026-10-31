@@ -1,6 +1,8 @@
+use crate::archive::MAX_THUMBNAIL;
 use crate::browse::listing;
 use crate::fetch::{bases, first};
 use crate::store::{Snapshot, Temp, load, locked, place};
+use crate::validate::{MAX_ANIMATED, within};
 use crate::{
     Error, Fetch, Limits, Listing, MANIFEST, OnlineAuthor, Release, Result, ensure, read, sha256,
     verify_package,
@@ -17,7 +19,7 @@ pub fn preview<F: Fetch>(
     version: &str,
     dest: &Path,
 ) -> Result<bool> {
-    fetched(data, fetch, (repo_id, id, version), dest, |r| r.preview.as_ref())
+    fetched(data, fetch, (repo_id, id, version, MAX_THUMBNAIL), dest, |r| r.preview.as_ref())
 }
 
 pub fn animated<F: Fetch>(
@@ -28,18 +30,19 @@ pub fn animated<F: Fetch>(
     version: &str,
     dest: &Path,
 ) -> Result<bool> {
-    fetched(data, fetch, (repo_id, id, version), dest, |r| r.animated.as_ref())
+    fetched(data, fetch, (repo_id, id, version, MAX_ANIMATED), dest, |r| r.animated.as_ref())
 }
 
 fn fetched<F: Fetch>(
     data: &Path,
     fetch: &F,
-    (repo_id, id, version): (&str, &str, &str),
+    (repo_id, id, version, max): (&str, &str, &str, u64),
     dest: &Path,
     pick: impl Fn(&Release) -> Option<&crate::Preview>,
 ) -> Result<bool> {
     let snap = locked(data, false, || load(data, repo_id))?;
     let Some(preview) = pick(found(&snap, id, version)?) else { return Ok(false) };
+    within("preview size", preview.size, max)?;
     let remote = format!("previews/{}.{}", preview.sha256, preview.ext);
     place(dest, true, |file| verified(fetch, &snap, &remote, preview.size, &preview.sha256, file))?;
     Ok(true)

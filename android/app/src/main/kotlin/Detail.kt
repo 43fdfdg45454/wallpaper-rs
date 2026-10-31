@@ -104,7 +104,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                 Relief(main, uid, state)
             }
             if (item?.scene == false) Kept(main, uid)
-            item?.takeIf { it.scene }?.let { shown ->
+            item?.takeIf { it.scene && !it.flashes }?.let { shown ->
                 Toggle(stringResource(R.string.keep_moving), shown.moving) {
                     main.act { ask(if (it) "confirm" else "unconfirm", "uid" to uid, "what" to "motion") }
                 }

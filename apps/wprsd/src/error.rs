@@ -84,6 +84,7 @@ impl From<wprs_library::Error> for Error {
         match e {
             L::NotFound(..) => not_found(e.to_string()),
             L::Exists(..) => Error::Named(error::EXISTS, e.to_string()),
+            L::Invalid("motion", _) => invalid(crate::words::flashing_moves()),
             L::Invalid(..) | L::Query(..) => invalid(e.to_string()),
             L::Conflict => Error::Named(error::CONFLICT, e.to_string()),
             L::Cancelled => Error::Cancelled,

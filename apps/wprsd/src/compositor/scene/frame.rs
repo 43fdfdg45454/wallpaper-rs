@@ -8,7 +8,7 @@ use wprs_render::{GpuImage, RenderError, Renderer};
 use wprs_scene::Wake;
 
 impl SceneState {
-    pub(crate) fn render(
+    pub(in crate::compositor) fn render(
         &mut self,
         renderer: &Renderer,
         (size, refresh): ((u32, u32), u32),
@@ -107,18 +107,18 @@ impl SceneState {
         dt
     }
 
-    pub(crate) fn tracks(&self) -> Vec<wprs_video::Track> {
+    pub(in crate::compositor) fn tracks(&self) -> Vec<wprs_video::Track> {
         let sounds = self.spec.pack.scene.sounds();
         let fades = |s: &wprs_scene::Sound| (s.fade_in, s.fade_out);
         let lists = self.runtime.playlists().iter().cloned().zip(sounds.map(fades));
         lists.map(|(list, (fade_in, fade_out))| wprs_video::Track { list, fade_in, fade_out }).collect()
     }
 
-    pub(crate) fn hold(&mut self) {
+    pub(in crate::compositor) fn hold(&mut self) {
         self.tick = None;
     }
 
-    pub(crate) fn hear(&mut self, interval: Duration, now: Instant) {
+    pub(in crate::compositor) fn hear(&mut self, interval: Duration, now: Instant) {
         self.step(true, now);
         self.listen(interval, now);
     }

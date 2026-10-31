@@ -1,3 +1,5 @@
+use wprs_core::message::{Message, said};
+
 pub const MAX_LUT_SIZE: u32 = 65;
 pub const MAX_LUT_BYTES: usize = 16 << 20;
 pub const MAX_LUT_TOTAL: usize = 64 << 20;
@@ -9,17 +11,29 @@ pub struct Lut {
 }
 
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
+#[error("{}", self.message())]
 pub enum LutError {
-    #[error("the LUT is larger than 16 MiB")]
     TooLarge,
-    #[error("the LUT is not UTF-8 text")]
     Text,
-    #[error("line {0} of the LUT is not valid")]
     Line(usize),
-    #[error("the LUT needs LUT_3D_SIZE between 2 and {MAX_LUT_SIZE} before its data")]
     Size,
-    #[error("the LUT has {0} entries, expected {1}")]
     Count(usize, usize),
+}
+
+impl LutError {
+    pub fn message(&self) -> Message {
+        match self {
+            LutError::TooLarge => said("scene.lut_large", "the LUT is larger than 16 MiB", &[]),
+            LutError::Text => said("scene.lut_text", "the LUT is not UTF-8 text", &[]),
+            LutError::Line(n) => said("scene.lut_line", "line %1 of the LUT is not valid", &[n]),
+            LutError::Size => said(
+                "scene.lut_size",
+                "the LUT needs LUT_3D_SIZE between 2 and %1 before its data",
+                &[&MAX_LUT_SIZE],
+            ),
+            LutError::Count(n, m) => said("scene.lut_count", "the LUT has %1 entries, expected %2", &[n, m]),
+        }
+    }
 }
 
 impl Lut {

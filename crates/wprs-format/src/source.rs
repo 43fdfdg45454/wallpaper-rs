@@ -79,7 +79,7 @@ pub(crate) fn facts_of(
         _ => None,
     };
     let invalid =
-        |e: wprs_scene::SceneError| Error::Invalid { field: "scene".into(), reason: e.to_string().into() };
+        |e: wprs_scene::SceneError| Error::Invalid { field: "scene".into(), reason: e.message().into() };
     let mut scene = scene.transpose().map_err(invalid)?;
     if let Some(scene) = scene.as_mut() {
         scripts(scene, &files)?;

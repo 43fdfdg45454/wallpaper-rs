@@ -95,7 +95,7 @@ pub enum Edits {
         name: String,
         #[arg(help = MASK)]
         spec: String,
-        #[arg(long)]
+        #[arg(long, help = "Invert the mask; with a brush stroke, the whole brush mask")]
         invert: bool,
     },
     #[command(about = "Put operations first, in this order")]

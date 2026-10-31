@@ -150,6 +150,10 @@ fn brush_strokes_are_painted_and_erased_one_stroke_at_a_time() {
     let Mask::Brush { strokes, invert } = &e.masks["face"] else { panic!("{:?}", e.masks) };
     assert_eq!((strokes.len(), *invert, strokes[0].points.len()), (2, false, 2));
     assert!(!strokes[0].erase && strokes[1].erase && strokes[1].hardness == 1.0);
+    act(&mut e, json!({"mask": {"name": "face", "spec": "brush:0.05,0.5:0.4,0.4", "invert": true}})).unwrap();
+    act(&mut e, json!({"mask": {"name": "face", "spec": "erase:0.02,1:0.4,0.4"}})).unwrap();
+    let Mask::Brush { strokes, invert } = &e.masks["face"] else { panic!("{:?}", e.masks) };
+    assert_eq!((strokes.len(), *invert), (4, true));
     let before = e.clone();
     assert!(matches!(
         act(&mut e, json!({"mask": {"name": "face", "spec": "brush:0.04:0.4,0.3"}})),

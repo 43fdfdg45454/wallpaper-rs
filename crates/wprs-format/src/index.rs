@@ -1,9 +1,10 @@
 use crate::names::valid_id;
-use crate::{Release, Result, require};
+use crate::{Release, Result, ensure, refuse, require};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
+use wprs_core::message::said;
 
 pub const SHARD_FORMAT: &str = "wpak-repo-shard/1.0";
 pub const DETAILED_FORMAT: &str = "wpak-repo-shard/2.0";
@@ -86,10 +87,14 @@ impl Shard {
         let mut ids = BTreeSet::new();
         self.packages.iter().try_for_each(|p| {
             let placed = valid_id(&p.id) && shard_of(&p.id, bits) == index && ids.insert(&p.id);
-            require(placed, "shard.id", &format!("{:?} is invalid, misplaced or repeated", p.id))?;
+            let id = format!("{:?}", p.id);
+            let wrong = || said("format.shard_id", "%1 is invalid, misplaced or repeated", &[&id]);
+            ensure(placed, || refuse("shard.id", wrong()))?;
             let versions: Option<Vec<Version>> = p.versions.iter().map(Release::parse).collect();
             let sorted = versions.is_some_and(|v| !v.is_empty() && v.is_sorted_by(|a, b| a < b));
-            require(sorted, "shard.versions", &format!("{:?} needs unique ascending valid releases", p.id))
+            let unsorted =
+                || said("format.shard_versions", "%1 needs unique ascending valid releases", &[&id]);
+            ensure(sorted, || refuse("shard.versions", unsorted()))
         })
     }
 }

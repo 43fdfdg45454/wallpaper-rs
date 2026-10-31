@@ -7,7 +7,7 @@ use std::path::Path;
 
 mod checks;
 
-pub(crate) use checks::heif_photos_get_maps;
+pub(super) use checks::heif_photos_get_maps;
 use checks::masked;
 
 pub(super) fn relief(uid: &str) {

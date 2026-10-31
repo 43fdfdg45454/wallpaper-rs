@@ -541,7 +541,7 @@ fotograma de muestra y solo se redibujan una vez por minuto para que los relojes
 salvo las escenas a las que dejes seguir moviéndose (*Seguir en movimiento cuando el escritorio pide
 reducir el movimiento* en los detalles del paquete en la app, el mismo interruptor en su página del
 teléfono, `wprs-ctl lib confirm motion ELEMENTO` y `wprs-ctl lib unconfirm motion ELEMENTO` para
-volver atrás), pensado para escenas tranquilas. Los
+volver atrás), pensado para escenas tranquilas: no se ofrece para los paquetes fotosensibles. Los
 efectos lentos, como las nubes o las ondas, declaran a cuántos fotogramas por segundo se ven bien y
 una escena que solo se mueve por ellos no pasa de ahí. Cada fotograma redibuja solo la parte de la
 pantalla que cambió y, si nada cambió, no dibuja nada; las partículas quietas y las escenas
@@ -651,10 +651,10 @@ La vista previa animada de un paquete (`previews.animated`) se mueve en los deta
 en la miniatura de cada pantalla de la app y de la bandeja, y en la página del teléfono de un
 paquete que este no puede reproducir; solo mientras se ve, en el escritorio con el equipo
 enchufado y, si el paquete es para adultos o fotosensible, después de permitirlo. Al explorar los
-repositorios en la app también se mueven las vistas previas animadas de los paquetes que la tienen:
-se descargan solo con el equipo enchufado, dentro de su tamaño y su hash firmados, se guardan con
-las demás vistas previas y se borran con su repositorio; nunca se mueven las de un paquete
-fotosensible ni las que siguen difuminadas. `wprs-ctl pkg preview --animated PAQUETE` da la misma
+repositorios en la app también se mueve la vista previa animada del paquete que tiene el puntero o
+el foco: se descarga entonces y solo con el equipo enchufado, dentro de su tamaño y su hash firmados
+(nunca si pasa de los 8 MiB que admite un paquete), se guarda con las demás vistas previas y se
+borra con su repositorio; nunca se mueve la de un paquete fotosensible ni la que sigue difuminada. `wprs-ctl pkg preview --animated PAQUETE` da la misma
 ruta.
 
 La biblioteca de la app pide de nuevo solo los elementos que nombra cada cambio (con `uid:`, que
