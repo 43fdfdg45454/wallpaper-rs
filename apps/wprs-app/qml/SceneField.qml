@@ -135,45 +135,10 @@ ColumnLayout {
         }
     }
 
-    QQC2.ComboBox {
-        id: combo
-
+    SceneChoices {
         visible: field.kind === "combo"
-        Accessible.name: field.modelData.label
-        model: field.modelData.options
-        textRole: "label"
-        valueRole: "value"
-        currentIndex: (field.modelData.options ?? []).findIndex(option => option.value === field.modelData.value)
-        onActivated: field.edited(field.modelData.key, currentValue)
-
-        delegate: QQC2.ItemDelegate {
-            id: choice
-
-            required property var modelData
-            required property int index
-
-            width: ListView.view?.width ?? implicitWidth
-            text: modelData.label
-            icon.name: modelData.icon ?? ""
-            highlighted: combo.highlightedIndex === index
-
-            contentItem: RowLayout {
-                Kirigami.Icon {
-                    visible: choice.icon.name !== ""
-                    source: choice.icon.name
-                    implicitWidth: Kirigami.Units.iconSizes.small
-                    implicitHeight: implicitWidth
-                }
-
-                QQC2.Label {
-                    Layout.fillWidth: true
-                    text: choice.text
-                    color: choice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
-                    textFormat: Text.PlainText
-                    elide: Text.ElideRight
-                }
-            }
-        }
+        modelData: field.modelData
+        onEdited: (key, value) => field.edited(key, value)
     }
 
     QQC2.Button {

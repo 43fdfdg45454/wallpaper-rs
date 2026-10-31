@@ -113,6 +113,7 @@ fn package_texts_render_as_plain_text() {
             "OutputRow",
             "OutputControls",
             "SceneField",
+            "SceneChoices",
             "SceneEntry",
             "ScenePresets",
             "SavedPresets",

@@ -1216,7 +1216,7 @@ msgstr "Bajar"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/PlaylistItems.qml
 #: apps/wprs-app/qml/SceneAssets.qml apps/wprs-app/qml/SceneInput.qml
-#: apps/wprs-app/qml/SceneInspector.qml apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneInspector.qml apps/wprs-app/qml/SceneLayerTools.qml
 #: apps/wprs-app/qml/ScenePairs.qml apps/wprs-app/qml/SceneProperties.qml
 #: apps/wprs-app/qml/SceneSettingMenu.qml apps/wprs-app/qml/SettingsPage.qml
 msgid "Remove"
@@ -2414,43 +2414,43 @@ msgstr "Bloquear"
 msgid "Solo"
 msgstr "Solo"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Add layer"
 msgstr "Añadir una capa"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "import a file of this kind first"
 msgstr "importa antes un archivo de este tipo"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Duplicate"
 msgstr "Duplicar"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Ungroup"
 msgstr "Desagrupar"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Group the layers"
 msgstr "Agrupar"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Group the selected layer and the ones picked with Ctrl"
 msgstr "Agrupar la capa elegida y las marcadas con Ctrl"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Move into a group"
 msgstr "Meter en un grupo"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Raise"
 msgstr "Subir"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Lower"
 msgstr "Bajar"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Move out of the group"
 msgstr "Sacar del grupo"
 
