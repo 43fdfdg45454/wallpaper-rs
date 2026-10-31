@@ -45,6 +45,19 @@ fn late_samples_keep_the_rest_and_only_a_long_silence_starts_over() {
 }
 
 #[test]
+fn listening_again_after_a_hide_starts_over_from_where_the_phone_is() {
+    let start = Instant::now();
+    let at = |ms| start + Duration::from_millis(ms);
+    assert!(sense(Reading::Gravity([0.0, 0.0, 1.0]), 0, start));
+    assert!(sense(Reading::Gravity([0.1, 0.0, 0.995]), 0, at(20)));
+    assert!(goal(0.5, at(30))[0] > 0.35);
+    forget();
+    assert_eq!(goal(0.75, at(40)), [-0.5, 0.0], "a hidden wallpaper keeps no aim");
+    assert!(sense(Reading::Gravity([-0.2, 0.1, 0.97]), 0, at(1020)), "the first sample wakes it");
+    assert_eq!(goal(0.5, at(1030)), [0.0, 0.0], "and becomes the new rest");
+}
+
+#[test]
 fn the_phone_shifts_a_share_of_what_it_shows_and_zooms_to_hide_the_edges() {
     let parallax = Parallax::default();
     assert_eq!(shift([0.5, -0.5], 0.02, 0.5, 1.0), [0.03, -0.015]);

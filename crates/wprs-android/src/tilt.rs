@@ -85,6 +85,10 @@ fn feel(sensed: &mut Option<Sensed>, reading: Reading, rotation: i32, now: Insta
     wake
 }
 
+pub(crate) fn forget() {
+    *sensed() = None;
+}
+
 pub(crate) fn goal(offset: f32, now: Instant) -> [f32; 2] {
     aimed(sensed().as_ref(), offset, now)
 }

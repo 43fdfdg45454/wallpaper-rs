@@ -37,6 +37,8 @@ object Native {
 
     external fun turn(w: Float, x: Float, y: Float, z: Float, rotation: Int): Boolean
 
+    external fun still()
+
     external fun device(lowRam: Boolean, performance: Int)
 
     external fun screen(engine: Long, lock: Boolean)

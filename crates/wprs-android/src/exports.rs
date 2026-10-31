@@ -151,3 +151,11 @@ pub fn turn<'a>(
 ) -> jboolean {
     on(&mut env, |_| Ok(tilt::sense(Reading::Turn([w, x, y, z]), rotation, Instant::now())))
 }
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn still<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) {
+    on(&mut env, |_| {
+        tilt::forget();
+        Ok(())
+    })
+}

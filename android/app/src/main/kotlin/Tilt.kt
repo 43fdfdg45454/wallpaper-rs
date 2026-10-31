@@ -18,7 +18,7 @@ class Tilt(context: Context) : SensorEventListener {
         if (wanted > 0) rates[painter] = wanted.coerceAtMost(MAX_HZ) else rates -= painter
         val next = rates.values.maxOrNull() ?: 0
         if (next == rate || sensor == null) return
-        if (rate > 0) manager?.unregisterListener(this)
+        if (rate > 0) manager?.unregisterListener(this) else Native.still()
         rate = next
         if (rate > 0) manager?.registerListener(this, sensor, 1_000_000 / rate, Render.handler)
     }
