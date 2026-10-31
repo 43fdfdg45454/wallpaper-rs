@@ -54,7 +54,10 @@ fn files_and_folders_accept_images_and_videos_only() {
         with(v2(Kind::Scene), json!({ "photos": { "type": "folder", "accept": ["image", "video"] } }));
     let facts = features::facts(&folder, None, None);
     assert!(facts.features.contains("folder") && facts.features.contains("user_videos"));
-    assert_eq!(features::lacks("android", &facts.features), ["folder", "user_videos"]);
+    assert!(
+        features::lacks("android", &facts.features).is_empty(),
+        "the phone plays chosen files and folders"
+    );
 }
 
 #[test]

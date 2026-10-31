@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::time::{Duration, Instant, sleep_until};
-use wprs_scene::{Control, Pick, Property, Values};
+use wprs_scene::{Control, Property, Values};
 
 const IMAGES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
 const SCAN: usize = 10_000;
@@ -12,12 +12,6 @@ const KEPT: usize = 16;
 
 fn now() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs())
-}
-
-fn mix(mut x: u64) -> u64 {
-    x ^= x >> 33;
-    x = x.wrapping_mul(0xff51_afd7_ed55_8ccd);
-    x ^ (x >> 33)
 }
 
 type Listing = (Vec<(PathBuf, Option<SystemTime>)>, Vec<PathBuf>);
@@ -74,14 +68,8 @@ pub fn files(dir: &Path, prop: &Property) -> Vec<PathBuf> {
 }
 
 pub fn pick(dir: &Path, prop: &Property) -> Option<PathBuf> {
-    let Control::Folder { pick, every, .. } = prop.control else { return None };
     let files = files(dir, prop);
-    let turn = now() / u64::from(every.max(1));
-    let at = match pick {
-        Pick::Sequence => turn,
-        Pick::Random => mix(turn ^ files.len() as u64),
-    };
-    files.get((at % files.len().max(1) as u64) as usize).cloned()
+    files.get(prop.folder_turn(now(), files.len())?).cloned()
 }
 
 pub fn next_turn(props: &std::collections::BTreeMap<String, Property>, values: &Values) -> Option<Instant> {

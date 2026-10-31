@@ -26,6 +26,7 @@ mod palette;
 mod parallax;
 #[cfg(target_os = "linux")]
 mod plane;
+mod platform;
 mod readback;
 mod save;
 mod scene;
@@ -52,6 +53,7 @@ pub use import::{Imported, Shared};
 pub use luma::Meter;
 pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};
+pub use platform::{Platform, heif, set_platform_decoder};
 pub use readback::TargetLimits;
 pub use save::{FORMATS, save};
 pub use scene::{

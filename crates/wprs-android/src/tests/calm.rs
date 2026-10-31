@@ -35,7 +35,7 @@ pub(super) fn calmed() {
                 .render(r, ((64, 32), n * 1_000_000_000 / 60, 60), (power, wprs_scene::Tier::T3), &[], true)
                 .unwrap();
         }
-        assert_ne!(crate::stage::flashes(), "", "the guard let ten flashes a second through");
+        assert_ne!(crate::stage::report::flashes(), "", "the guard let ten flashes a second through");
         settings::setting("playback.flash_guard", Some("false")).unwrap();
         assert!(!power::guarded());
     }

@@ -83,6 +83,21 @@ class RenderTest {
         same(OTHER, seen[start])
     }
 
+    @Test
+    fun heicAndAvifPhotosDraw() = listOf("blue-64x32.heic", "blue-64x32.avif").forEach { name ->
+        assertEquals(name, IMAGE, install(fixture(name)))
+        val start = seen.size
+        Render.call {
+            Wallpaper.reload(false)
+            painter.show(true)
+            painter.wake()
+        }
+        assertTrue(name, waitFor { seen.size > start && near(OTHER, seen.last(), LOSSY) })
+    }
+
+    private fun near(expected: Int, drawn: Int, tolerance: Int) =
+        listOf(16, 8, 0).all { shift -> kotlin.math.abs((expected shr shift and 0xff) - (drawn shr shift and 0xff)) <= tolerance }
+
     private fun same(expected: Int, drawn: Int) = listOf(16, 8, 0).forEach { shift ->
         assertEquals((expected shr shift and 0xff).toFloat(), (drawn shr shift and 0xff).toFloat(), TOLERANCE)
     }
@@ -121,6 +136,7 @@ class RenderTest {
         const val CHOSEN = 0xffc86428.toInt()
         const val OTHER = 0xff2864c8.toInt()
         const val TOLERANCE = 3f
+        const val LOSSY = 16
     }
 }
 

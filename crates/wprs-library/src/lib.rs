@@ -40,7 +40,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::str::FromStr;
 
-const IMAGES: [&str; 7] = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "avif"];
+const IMAGES: [&str; 9] = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "avif", "heic", "heif"];
 const VIDEOS: [&str; 7] = ["mp4", "m4v", "webm", "mkv", "mov", "avi", "ogv"];
 const DEPTH_MAP: &str = ".depth.png";
 

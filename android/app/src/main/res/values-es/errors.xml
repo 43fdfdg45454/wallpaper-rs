@@ -19,6 +19,7 @@
     <string name="error_android_did_send_key">%1$s no envió la clave en 10 minutos; empieza de nuevo</string>
     <string name="error_android_download_off">La descarga del modelo está desactivada</string>
     <string name="error_android_exists">%1$s %2$s ya existe</string>
+    <string name="error_android_folder_nothing">La carpeta no tiene ninguna imagen ni ningún vídeo que se pueda usar</string>
     <string name="error_android_give_letters_shown">Escribe las 8 letras que muestra el dispositivo nuevo</string>
     <string name="error_android_images_too_large">Las imágenes de %1$s son demasiado grandes</string>
     <string name="error_android_io">Error de lectura o escritura: %1$s</string>
@@ -33,6 +34,7 @@
     <string name="error_android_no_device">No hay ningún dispositivo %1$s en el servidor</string>
     <string name="error_android_no_preset">No hay ningún preajuste %1$s</string>
     <string name="error_android_not_a_file">%1$s no es un paquete de imagen ni de vídeo</string>
+    <string name="error_android_not_accepted">%1$s no se puede usar para %2$s</string>
     <string name="error_android_not_found">No se encontró %1$s %2$s</string>
     <string name="error_android_not_shown">Los paquetes de tipo %1$s no son fondos</string>
     <string name="error_android_phone_already_holds">Este teléfono ya tiene la clave de sincronización</string>

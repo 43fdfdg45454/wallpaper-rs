@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 
 @Composable
-fun Field(field: JSONObject, folded: Boolean, fold: () -> Unit, set: (String, Any?) -> Unit, press: () -> Unit, secret: (String) -> Unit) {
+fun Field(field: JSONObject, folded: Boolean, fold: () -> Unit, set: (String, Any?) -> Unit, press: () -> Unit, pick: (Boolean) -> Unit, secret: (String) -> Unit) {
     val (key, label) = field.getString("key") to field.getString("label")
     val (value, enabled) = field.opt("value") to field.optBoolean("enabled", true)
     val padded = Modifier.fillMaxWidth().padding(16.dp, 4.dp)
@@ -80,6 +80,15 @@ fun Field(field: JSONObject, folded: Boolean, fold: () -> Unit, set: (String, An
         "button" -> OutlinedButton(press, Modifier.padding(16.dp, 4.dp), enabled = enabled) {
             icon(field.optString("icon"))?.let { Icon(it, null, Modifier.padding(end = 8.dp)) }
             Text(label)
+        }
+        "file", "folder" -> Row(padded, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.titleSmall)
+                val shown = (value as? String)?.takeIf { it.isNotEmpty() }?.let { if (field.getString("kind") == "folder") stringResource(R.string.folder_chosen) else stringResource(R.string.file_chosen) }
+                Text(shown ?: stringResource(R.string.nothing_chosen), style = MaterialTheme.typography.bodySmall)
+            }
+            TextButton({ pick(true) }, enabled = enabled) { Text(stringResource(R.string.choose_file)) }
+            if (value is String && value.isNotEmpty()) TextButton({ pick(false) }, enabled = enabled) { Text(stringResource(R.string.remove)) }
         }
         else -> Text(stringResource(R.string.not_on_phone, label), padded, style = MaterialTheme.typography.bodySmall)
     }

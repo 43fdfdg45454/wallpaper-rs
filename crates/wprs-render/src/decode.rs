@@ -1,11 +1,10 @@
-use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
 use image::metadata::Orientation;
 use image::{DynamicImage, GrayImage, ImageDecoder, ImageReader, Limits, RgbImage, RgbaImage};
 use jpeg_decoder::{CodingProcess, PixelFormat};
 use std::borrow::Cow;
 use std::io::{BufRead, BufReader, Seek};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use wprs_core::{Edit, Fit, Place, UvRect};
 
 const MAX_EDGE: u32 = 8192;
@@ -26,7 +25,10 @@ pub fn decode_image(path: &Path, max_edge: u32) -> image::ImageResult<RgbaImage>
     if let Some((image, _)) = decode_reduced(path, max_edge) {
         return Ok(image.into_rgba8());
     }
-    let (image, orientation) = decode_unoriented(ImageReader::open(path)?, picture_limits())?;
+    let (image, orientation) = match decode_unoriented(ImageReader::open(path)?, picture_limits()) {
+        Err(e) => return crate::platform::decode(path, max_edge.min(MAX_EDGE)).ok_or(e),
+        decoded => decoded?,
+    };
     let mut image = shrink(image, max_edge);
     image.apply_orientation(orientation);
     Ok(image.into_rgba8())
@@ -88,7 +90,11 @@ fn turned(orientation: Orientation) -> bool {
 }
 
 pub fn image_size(path: &Path) -> image::ImageResult<(u32, u32)> {
-    let mut decoder = ImageReader::open(path)?.with_guessed_format()?.into_decoder()?;
+    let decoder = ImageReader::open(path)?.with_guessed_format()?.into_decoder();
+    let mut decoder = match decoder {
+        Err(e) => return crate::platform::size(path).ok_or(e),
+        decoder => decoder?,
+    };
     let (w, h) = decoder.dimensions();
     let orientation = decoder.orientation().unwrap_or(Orientation::NoTransforms);
     Ok(if turned(orientation) { (h, w) } else { (w, h) })
@@ -175,87 +181,8 @@ pub(crate) fn scaled(img: &RgbaImage, factor: f32, max_edge: u32) -> Cow<'_, Rgb
     }
 }
 
-pub fn thumbnails(
-    mut image: DynamicImage,
-    thumbs: &[(u32, PathBuf)],
-    written: &mut Vec<u32>,
-) -> image::ImageResult<()> {
-    let mut thumbs = thumbs.to_vec();
-    thumbs.sort_by_key(|(size, _)| std::cmp::Reverse(*size));
-    for (size, dest) in thumbs {
-        if image.width().max(image.height()) > size {
-            image = image.resize(size, size, FilterType::Triangle);
-        }
-        let dir = dest.parent().unwrap_or(Path::new("."));
-        let mut file = tempfile::Builder::new().prefix(".tmp-").tempfile_in(dir)?;
-        image.to_rgb8().write_with_encoder(JpegEncoder::new_with_quality(&mut file, 85))?;
-        file.persist(&dest).map_err(|e| e.error)?;
-        written.push(size);
-    }
-    Ok(())
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod tests;
+mod thumbs;
 
-    #[test]
-    fn large_jpegs_are_decoded_at_a_reduced_scale_with_the_same_result_size() {
-        let dir = tempfile::tempdir().unwrap();
-        let (jpeg, png) = (dir.path().join("wide.jpg"), dir.path().join("wide.png"));
-        let image = RgbImage::from_fn(1600, 1200, |x, _| image::Rgb([(x % 256) as u8, 128, 0]));
-        image.save(&jpeg).unwrap();
-        image.save(&png).unwrap();
-        let (reduced, full) = decode_reduced(&jpeg, 300).expect("a reduced decode");
-        assert_eq!((reduced.width(), reduced.height(), full), (300, 225, (1600, 1200)));
-        assert!(decode_reduced(&jpeg, 1000).is_none() && decode_reduced(&png, 300).is_none());
-        assert_eq!(
-            decode_image(&jpeg, 300).unwrap().dimensions(),
-            decode_image(&png, 300).unwrap().dimensions()
-        );
-    }
-
-    fn huge_jpeg(dir: &Path, name: &str, progressive: bool, (width, height): (u16, u16)) -> PathBuf {
-        let mut bytes = Vec::new();
-        let image = RgbImage::from_pixel(16, 16, image::Rgb([9, 9, 9]));
-        image.write_with_encoder(JpegEncoder::new(&mut bytes)).unwrap();
-        let at = bytes.windows(2).position(|m| m == [0xff, 0xc0]).expect("a baseline frame header");
-        bytes[at + 1] = if progressive { 0xc2 } else { 0xc0 };
-        bytes[at + 5..at + 9].copy_from_slice(&[height.to_be_bytes(), width.to_be_bytes()].concat());
-        let path = dir.join(name);
-        std::fs::write(&path, bytes).unwrap();
-        path
-    }
-
-    #[test]
-    fn tiny_jpegs_that_claim_huge_sizes_are_refused_at_once() {
-        let dir = tempfile::tempdir().unwrap();
-        for (progressive, size) in
-            [(false, (60000, 60000)), (true, (60000, 60000)), (true, (12000, 10000)), (false, (40000, 3000))]
-        {
-            let path = huge_jpeg(dir.path(), "huge.jpg", progressive, size);
-            let start = std::time::Instant::now();
-            assert!(decode_reduced(&path, 3840).is_none(), "{size:?} was decoded at a reduced scale");
-            assert!(size.0 < 60000 || decode_image(&path, 3840).is_err(), "{size:?} was decoded");
-            assert!(
-                start.elapsed() < std::time::Duration::from_secs(2),
-                "{size:?} took {:?}",
-                start.elapsed()
-            );
-        }
-        let same = huge_jpeg(dir.path(), "same.jpg", false, (16, 16));
-        assert_eq!(decode_image(&same, 3840).unwrap().dimensions(), (16, 16));
-    }
-
-    #[test]
-    fn large_baseline_photos_are_decoded_at_a_reduced_scale() {
-        let dir = tempfile::tempdir().unwrap();
-        let photo = huge_jpeg(dir.path(), "photo.jpg", false, (16320, 12240));
-        let start = std::time::Instant::now();
-        let (reduced, full) = decode_reduced(&photo, 2040).expect("a reduced decode");
-        let bound = std::time::Duration::from_secs(if cfg!(debug_assertions) { 20 } else { 2 });
-        assert!(start.elapsed() < bound, "it took {:?}", start.elapsed());
-        assert_eq!(((reduced.width(), reduced.height()), full), ((2040, 1530), (16320, 12240)));
-        assert_eq!(decode_image(&photo, 3840).unwrap().width(), 3840);
-    }
-}
+pub use thumbs::thumbnails;

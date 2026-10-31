@@ -19,6 +19,7 @@
     <string name="error_android_did_send_key">%1$s did not send the key within 10 minutes; start again</string>
     <string name="error_android_download_off">Downloading the model is turned off</string>
     <string name="error_android_exists">%1$s %2$s already exists</string>
+    <string name="error_android_folder_nothing">The folder has no picture or video to use</string>
     <string name="error_android_give_letters_shown">Give the 8 letters shown on the new device</string>
     <string name="error_android_images_too_large">The images of %1$s are too large</string>
     <string name="error_android_io">I/O error: %1$s</string>
@@ -33,6 +34,7 @@
     <string name="error_android_no_device">No device %1$s on the server</string>
     <string name="error_android_no_preset">No preset %1$s</string>
     <string name="error_android_not_a_file">%1$s is not a picture or video package</string>
+    <string name="error_android_not_accepted">%1$s cannot be used for %2$s</string>
     <string name="error_android_not_found">%1$s %2$s not found</string>
     <string name="error_android_not_shown">%1$s packages are not wallpapers</string>
     <string name="error_android_phone_already_holds">This phone already holds the sync key</string>

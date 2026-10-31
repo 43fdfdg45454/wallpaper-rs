@@ -8,6 +8,7 @@ mod bridge;
 #[cfg(target_os = "android")]
 mod calls;
 mod choice;
+mod chosen;
 #[cfg(target_os = "android")]
 mod clips;
 mod cycle;
@@ -16,10 +17,13 @@ mod depth;
 mod engine;
 #[cfg(target_os = "android")]
 mod exports;
+mod extras;
 mod framing;
 #[cfg(target_os = "android")]
 mod gpu;
 mod hearing;
+#[cfg(target_os = "android")]
+mod heif;
 mod keys;
 mod library;
 mod link;

@@ -26,6 +26,8 @@ pub(crate) fn extension(path: &Path) -> Option<&'static str> {
     match header(path)? {
         [0x1a, 0x45, 0xdf, 0xa3, ..] => Some("mkv"),
         [b'P', b'K', 3, 4, ..] => Some("wpak"),
+        [_, _, _, _, b'f', b't', b'y', b'p', b'a', b'v', b'i', b'f' | b's', ..] => Some("avif"),
+        header @ [_, _, _, _, b'f', b't', b'y', b'p', ..] if !video(&header) => Some("heic"),
         header if video(&header) => Some("mp4"),
         header => image::guess_format(&header).ok()?.extensions_str().first().copied(),
     }
@@ -57,6 +59,8 @@ mod tests {
         for brand in [b"heic", b"avif", b"mif1"] {
             assert!(!video(&[b"\0\0\0\x1cftyp".as_slice(), brand].concat()), "{brand:?}");
         }
+        let still = |name| extension(&Path::new(FIXTURES).join(name));
+        assert_eq!([still("blue-64x32.heic"), still("blue-64x32.avif")], [Some("heic"), Some("avif")]);
         assert!(!video(b"\0\0\0\x18ftyp"));
         let zip = tempfile::NamedTempFile::new().unwrap();
         std::fs::write(zip.path(), b"PK\x03\x04\x14\0\0\0\0\0\0\0").unwrap();

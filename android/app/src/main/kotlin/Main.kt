@@ -45,7 +45,10 @@ class Main : ComponentActivity() {
         enableEdgeToEdge()
         Native.prepare(noBackupFilesDir.path)
         Unveil.load()
-        if (savedInstanceState == null) Sync.soon(this, 0)
+        if (savedInstanceState == null) {
+            Sync.soon(this, 0)
+            remirror()
+        }
         setContent { App(this) }
     }
 
@@ -142,7 +145,7 @@ class Main : ComponentActivity() {
 
     private fun open(uri: Uri) = runCatching { contentResolver.openFileDescriptor(uri, "r") }.getOrNull()
 
-    private fun name(uri: Uri) = runCatching {
+    fun name(uri: Uri) = runCatching {
         contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { row ->
             if (row.moveToFirst()) row.getString(0) else null
         }

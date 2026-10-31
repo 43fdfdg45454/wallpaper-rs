@@ -203,7 +203,11 @@ it, play the package without it (and its page on the phone says so), or refuse t
 `this package needs a newer version of wallpaper-rs: it uses the feature web (is a web page)`
 before drawing anything, so that nothing is drawn wrongly or silently left out. The library still
 lists a refused package with its thumbnail, title and that reason, and reads it again after an
-update of wallpaper-rs. `wprs-ctl pack check` prints what each platform does.
+update of wallpaper-rs. `wprs-ctl pack check` prints what each platform does. The Android app reads a chosen
+file or folder (`folder`, `folder2`, `user_videos`) through the system document picker: it copies
+the file, or the accepted files of the folder up to `max_files` and `recursive` levels deep, into
+its own storage, keeps the read permission of the folder and copies it again when the app opens and
+the folder changed, and the stored value is the path of that copy.
 
 | Feature | The package | Desktop | Android |
 |---------|-------------|---------|---------|
@@ -211,10 +215,10 @@ update of wallpaper-rs. `wprs-ctl pack check` prints what each platform does.
 | `scripts` | runs scene scripts | runs | runs |
 | `sound` | plays sound layers | runs | without |
 | `properties2` | has settings of the newer kinds or fields: sliders without `step` or with `decimals`, `editable` or `log`, combos of numbers or flags or with icons, `secret` texts, `button`, `divider`, `folder`, `shortcut`, collapsed groups, icons, fractional `order`, `visible_if` expressions, `enabled_if` and `default_asset`, or settings written in a way the first version cannot read (a field it does not know, even with its default value, a missing `default` of a text or `accept` of a file, or an `order` such as `2.0`) | runs | runs |
-| `folder` | shows pictures from a folder the user chooses | runs | without |
-| `folder2` | reads the subfolders of a chosen folder (`recursive`) or fewer of its files (`max_files`) | runs | without |
+| `folder` | shows pictures from a folder the user chooses | runs | runs |
+| `folder2` | reads the subfolders of a chosen folder (`recursive`) or fewer of its files (`max_files`) | runs | runs |
 | `folder_lists` | lets its scripts or page list a chosen folder (`mode: all`) | refused | refused |
-| `user_videos` | lets the user choose videos for its files or folders | runs | without |
+| `user_videos` | lets the user choose videos for its files or folders | runs | runs |
 | `shortcut` | has a `shortcut` property | refused | refused |
 | `quality_settings` | has properties with `quality` values | refused | refused |
 | `video_properties` | sets `playback` or `display` of a video | runs | without |

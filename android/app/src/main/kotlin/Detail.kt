@@ -79,13 +79,10 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                 val notes = lacks.mapNotNull { lack ->
                     when (lack) {
                         "sound" -> R.string.lacks_sound
-                        "folder" -> R.string.lacks_folder
-                        "user_videos" -> R.string.lacks_user_videos
                         "video_properties" -> R.string.lacks_video_properties
                         "gpu" -> R.string.lacks_gpu
                         "display2" -> R.string.lacks_display2
                         "accent" -> R.string.lacks_accent
-                        "folder2" -> R.string.lacks_folder2
                         "spanned_scenes" -> R.string.lacks_spanned_scenes
                         "sound2" -> R.string.lacks_sound2
                         "script_geometry" -> R.string.lacks_script_geometry

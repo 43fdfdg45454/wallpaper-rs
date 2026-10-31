@@ -91,7 +91,10 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         return Ok(pack);
     }
     let mut package = scene(path)?;
-    let scene = package.scene()?;
+    let mut scene = package.scene()?;
+    if scene.layers().any(|layer| !layer.parallax.is_zero()) {
+        scene.canvas.parallax.get_or_insert_with(Default::default).gyro = true;
+    }
     let (mut assets, mut videos, mut decoded) = (SceneAssets::default(), Vec::new(), Pictures::default());
     for (id, asset) in &scene.assets {
         let kind = extension(&asset.path);

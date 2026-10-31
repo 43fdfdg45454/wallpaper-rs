@@ -23,13 +23,10 @@
     <string name="flashing_warning">Este fondo destella o muestra patrones rápidos que pueden provocar crisis a personas con epilepsia fotosensible.</string>
     <string name="show_anyway">Mostrar igualmente</string>
     <string name="lacks_sound">Sus sonidos no suenan en el teléfono.</string>
-    <string name="lacks_folder">Las imágenes de una carpeta que elijas no se muestran en el teléfono.</string>
-    <string name="lacks_user_videos">Los vídeos que elijas no se reproducen en el teléfono.</string>
     <string name="lacks_video_properties">Su vídeo se reproduce en el teléfono sin sus ajustes de velocidad, tramo y encuadre.</string>
     <string name="lacks_gpu">El teléfono no comprueba la tarjeta gráfica que pide.</string>
     <string name="lacks_display2">Su color alrededor de la imagen y su extensión sobre todas las pantallas no se usan en el teléfono.</string>
     <string name="lacks_accent">Su color de acento no se usa en el teléfono.</string>
-    <string name="lacks_folder2">Las subcarpetas y el límite de archivos de una carpeta que elijas no se usan en el teléfono.</string>
     <string name="lacks_spanned_scenes">Su escena no se extiende sobre varias pantallas en el teléfono.</string>
     <string name="lacks_sound2">Sus sonidos MP3 o largos, sus listas de sonidos y los sonidos que inician los eventos no suenan en el teléfono.</string>
     <string name="lacks_script_geometry">Las formas que construyen sus scripts no se muestran en el teléfono.</string>

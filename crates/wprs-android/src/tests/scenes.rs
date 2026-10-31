@@ -37,7 +37,7 @@ pub(super) fn scenes() {
     };
     assert_eq!(
         [lacks("Orbits"), lacks("Snowfall"), lacks("Pulse")],
-        [json!(["user_videos"]), json!(["folder", "sound"]), json!([])]
+        [json!([]), json!(["sound"]), json!([])]
     );
     assert!(
         about["about"]["description"].as_str().unwrap().contains("\n\nDestella con el ritmo y"),

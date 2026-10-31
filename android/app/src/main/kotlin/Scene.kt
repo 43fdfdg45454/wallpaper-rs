@@ -62,6 +62,7 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
     val reading = rememberLauncherForActivityResult(OpenDocument()) { source -> source?.let { main.act { bring(read(it), "") } } }
     val keeping = rememberLauncherForActivityResult(OpenDocument()) { source -> source?.let { main.act(false) { imported = read(it) } } }
     val small = MaterialTheme.typography.bodySmall
+    val chooser = rememberChooser(main, uid)
     Column(modifier.verticalScroll(rememberScrollState())) {
         val (uses, granted) = form.optJSONObject("uses") to form.optJSONObject("granted")
         if (uses?.optBoolean("audio") == true) Toggle(stringResource(R.string.react_sound), granted?.optBoolean("audio") == true) { on ->
@@ -93,7 +94,8 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
         val folded = all.filter { it.getString("kind") == "group" && it.optBoolean("collapsed") != (it.getString("key") in flipped) }.map { it.getString("key") }
         all.filter { it.optBoolean("visible") && it.optString("group") !in folded }.forEach { field ->
             val key = field.getString("key")
-            Field(field, key in folded, { flipped = if (key in flipped) flipped - key else flipped + key }, set, { main.act { ask("press", "uid" to uid, "key" to key) } }) { text ->
+            val pick = { choose: Boolean -> if (choose) chooser(field) else main.act { main.unchoose(uid, key) }.let { } }
+            Field(field, key in folded, { flipped = if (key in flipped) flipped - key else flipped + key }, set, { main.act { ask("press", "uid" to uid, "key" to key) } }, pick) { text ->
                 main.act { ask("secret", "uid" to uid, "key" to key, "text" to text) }
             }
         }

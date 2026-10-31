@@ -122,7 +122,9 @@ impl Engine {
     pub(crate) fn offset(&mut self, x: f32) -> bool {
         self.offset = x.clamp(0.0, 1.0);
         let pans = self.look.fit == Fit::Fill && self.offset != self.shown;
-        !self.video && self.stage.is_none() && (pans || self.raised.is_some()) && Power::now().moving()
+        let tilts = self.stage.as_mut().is_some_and(|stage| stage.offset(self.offset));
+        let pictured = self.stage.is_none() && (pans || self.raised.is_some());
+        !self.video && (tilts || pictured) && Power::now().moving()
     }
 
     pub(crate) fn parallax(&mut self) -> u32 {

@@ -7,6 +7,7 @@ use wprs_library::Kind;
 
 mod acting;
 mod calm;
+mod chosen;
 mod cued;
 mod flight;
 mod frames;
@@ -17,6 +18,7 @@ mod relief;
 mod saved;
 mod scenes;
 mod screens;
+mod tilted;
 mod words;
 
 pub(super) const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures");
@@ -126,6 +128,8 @@ fn the_library_imports_rotates_and_keeps_settings() {
     scenes::scenes();
     screens::home_and_lock();
     screens::ruled_lists();
+    tilted::scenes_follow_the_phone();
+    chosen::chosen_files_and_folders();
     refused::packages_the_phone_cannot_play_are_refused();
     unreadable();
 }

@@ -39,7 +39,7 @@ pub(super) fn drawn() {
             assert!(stage.render(r, at, (power, wprs_scene::Tier::T3), &[], true).unwrap().fps > 0);
         }
         let path = if r.compute() && !r.software() { "gpu" } else { "cpu" };
-        assert_eq!(crate::stage::particles(), path);
+        assert_eq!(crate::stage::report::particles(), path);
     }
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }

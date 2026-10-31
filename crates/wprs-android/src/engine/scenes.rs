@@ -29,8 +29,11 @@ impl Engine {
     pub(crate) fn clips(&mut self) -> Option<Vec<String>> {
         let shown = choice::shown_on(self.preview, self.lock).filter(|shown| !shown.video);
         self.stage(shown.as_ref());
-        let videos = &self.stage.as_ref()?.pack.videos;
-        Some(videos.iter().filter_map(|(_, path)| path.to_str().map(String::from)).collect())
+        let videos = self.stage.as_ref()?.videos();
+        let mut paths: Vec<String> =
+            videos.iter().filter_map(|(_, path)| path.to_str().map(String::from)).collect();
+        paths.dedup();
+        Some(paths)
     }
 
     pub(crate) fn clip(&mut self, path: &Path, open: bool) -> Result<Option<NativeWindow>, Error> {
@@ -38,7 +41,7 @@ impl Engine {
             self.clips.close(path);
             return Ok(None);
         }
-        let wanted = self.stage.as_ref().is_some_and(|s| s.pack.videos.iter().any(|(_, p)| p == path));
+        let wanted = self.stage.as_ref().is_some_and(|s| s.videos().iter().any(|(_, p)| p == path));
         wanted.then(|| self.clips.open(path)).transpose()
     }
 
@@ -73,8 +76,9 @@ impl Engine {
             return Ok(None);
         };
         let tier = power::tier(gpu.renderer.software(), gpu.renderer.compute()).min(gpu.renderer.tier());
-        let pack = Arc::clone(&stage.pack);
-        let videos = self.clips.frames(&gpu.renderer, gpu.epoch, &pack.videos);
+        stage.turn();
+        let wanted = stage.videos();
+        let videos = self.clips.frames(&gpu.renderer, gpu.epoch, &wanted);
         let shot =
             stage.render(&gpu.renderer, (self.size, nanos, fps), (power, tier), &videos, self.dirty)?;
         let (hint, delay) = (shot.fps, shot.delay);
@@ -93,6 +97,7 @@ impl Engine {
                 FRAMES.fetch_add(1, Relaxed);
             }
         }
+        let delay = stage.until_turn(delay);
         if delay == 0 {
             stage.rest();
         }

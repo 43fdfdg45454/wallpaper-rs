@@ -1,7 +1,7 @@
 use crate::library::with;
 use crate::pack::{self, Pack};
 use crate::said;
-use crate::{Error, saved, settings, store};
+use crate::{Error, chosen, saved, settings, store};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
@@ -31,6 +31,12 @@ pub(crate) enum Request {
     Import { uid: String, text: String, name: String },
     Press { uid: String, key: String },
     Secret { uid: String, key: String, text: String },
+    Choose { uid: String, key: String, fd: i32, name: String },
+    Folder { uid: String, key: String, tree: String },
+    Folded { uid: String, key: String },
+    Unchoose { uid: String, key: String },
+    Mirrors,
+    Mirrored,
 }
 
 pub(crate) fn request(request: Request) -> Result<Value, Error> {
@@ -52,6 +58,15 @@ pub(crate) fn request(request: Request) -> Result<Value, Error> {
         Request::Import { uid, text, name } => Ok(json!(saved::import(&*scene(&uid)?, &text, &name)?)),
         Request::Press { uid, key } => done(saved::press(&*scene(&uid)?, &key)),
         Request::Secret { uid, key, text } => done(saved::secret(&*scene(&uid)?, &key, &text)),
+        Request::Choose { uid, key, fd, name } => chosen::file(&*scene(&uid)?, &key, fd, &name),
+        Request::Folder { uid, key, tree } => chosen::folder(&*scene(&uid)?, &key, &tree),
+        Request::Folded { uid, key } => chosen::folded(&*scene(&uid)?, &key),
+        Request::Unchoose { uid, key } => chosen::clear(&*scene(&uid)?, &key),
+        Request::Mirrors => Ok(chosen::mirrors()),
+        Request::Mirrored => {
+            store::changed();
+            Ok(Value::Null)
+        }
     }
 }
 

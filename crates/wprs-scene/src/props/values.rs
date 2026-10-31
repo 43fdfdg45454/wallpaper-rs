@@ -1,4 +1,4 @@
-use super::{Control, Property, Values};
+use super::{Control, Pick, Property, Values};
 use serde_json::{Value as Json, json};
 use std::collections::BTreeMap;
 
@@ -33,4 +33,22 @@ pub fn stale(props: &BTreeMap<String, Property>, layers: &[&Values]) -> Vec<Stri
     found.sort();
     found.dedup();
     found.into_iter().map(|w| format!("{w}; the default is used")).collect()
+}
+
+fn mix(mut x: u64) -> u64 {
+    x ^= x >> 33;
+    x = x.wrapping_mul(0xff51_afd7_ed55_8ccd);
+    x ^ (x >> 33)
+}
+
+impl Property {
+    pub fn folder_turn(&self, now: u64, count: usize) -> Option<usize> {
+        let Control::Folder { pick, every, .. } = self.control else { return None };
+        let turn = now / u64::from(every.max(1));
+        let at = match pick {
+            Pick::Sequence => turn,
+            Pick::Random => mix(turn ^ count as u64),
+        };
+        (count > 0).then(|| (at % count as u64) as usize)
+    }
 }

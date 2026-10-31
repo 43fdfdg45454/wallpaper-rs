@@ -48,4 +48,8 @@
     <string name="timed_gpu">Los efectos de los paquetes se cronometran en la GPU</string>
     <string name="timed_wait">Los efectos de los paquetes se cronometran esperando a la GPU</string>
     <string name="particles_cpu">Sus partículas se mueven en el procesador, así que se muestran menos</string>
+    <string name="folder_chosen">Hay una carpeta elegida</string>
+    <string name="file_chosen">Hay un archivo elegido</string>
+    <string name="nothing_chosen">Nada elegido: usa el suyo</string>
+    <string name="choose_file">Elegir</string>
 </resources>

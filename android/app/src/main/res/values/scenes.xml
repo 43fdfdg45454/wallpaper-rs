@@ -48,4 +48,8 @@
     <string name="timed_gpu">Package effects are timed on the GPU</string>
     <string name="timed_wait">Package effects are timed by waiting for the GPU</string>
     <string name="particles_cpu">Its particles run on the processor, so fewer of them are shown</string>
+    <string name="folder_chosen">A folder is chosen</string>
+    <string name="file_chosen">A file is chosen</string>
+    <string name="nothing_chosen">Nothing chosen: it uses its own</string>
+    <string name="choose_file">Choose</string>
 </resources>

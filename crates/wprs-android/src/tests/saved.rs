@@ -29,7 +29,7 @@ pub(super) fn saved_settings() {
     let form = |key: &str| ask(json!({ "op": "scene", "uid": uid, "languages": [] }))[key].clone();
     assert!(ask(json!({ "op": "press", "uid": uid, "key": "again" }))["error"].is_string());
     assert!(ask(json!({ "op": "press", "uid": uid, "key": "later" }))["error"].is_string());
-    assert_eq!(ask(json!({ "op": "item", "uid": uid }))["lacks"], json!(["folder"]));
+    assert_eq!(ask(json!({ "op": "item", "uid": uid }))["lacks"], json!([]));
     assert_eq!(ask(json!({ "op": "property", "uid": uid, "key": "mood", "value": 2 })), Value::Null);
     assert_eq!(ask(json!({ "op": "press", "uid": uid, "key": "again" })), Value::Null);
     assert_eq!(crate::saved::pressed("org.example.knobs"), ["again"]);

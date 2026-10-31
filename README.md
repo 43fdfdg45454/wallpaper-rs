@@ -299,7 +299,10 @@ vista previa del sistema para ponerlo allí. También se llega desde los fondos 
 OpenGL ES si Vulkan falla) con el mismo renderizador que el escritorio, y se recupera sola si el
 sistema le quita la GPU o la superficie. La edición hecha en el escritorio se aplica igual: el giro,
 el enderezado, el color y las máscaras, también las de profundidad, que seleccionan sobre el mapa de
-profundidad de la foto después del mismo giro y la misma orientación que el escritorio. Admite JPEG, PNG, WebP, GIF y BMP.
+profundidad de la foto después del mismo giro y la misma orientación que el escritorio. Admite JPEG, PNG, WebP, GIF y BMP y, con el
+decodificador del propio Android (`AImageDecoder`, sin librerías añadidas al APK), las fotos HEIC y
+AVIF de las cámaras; el escritorio aún no las muestra, así que en su biblioteca aparecen como
+imágenes que no se pueden abrir.
 
 La pestaña *Listas* crea listas de fondos que cambian solos cada 15 o 30 minutos, cada hora, cada 6
 horas, cada día o nunca, en orden o al azar y, si se quiere, saltando los vídeos con batería. Como en
@@ -374,10 +377,16 @@ CPU con menos partículas), textos, líneas de tiempo y propiedades. La página 
 sus propiedades y sus preajustes, que se guardan en la misma configuración que el escritorio; los
 preajustes propios se guardan, se renombran y se borran ahí, y se exportan e importan como archivo,
 los botones de la escena funcionan y los textos secretos quedan sellados por el almacén de claves de
-Android. Las carpetas, los vídeos que elige el usuario y los ajustes de reproducción de los paquetes
-de vídeo no se usan en el teléfono, y la página del paquete lo avisa, igual que de todo lo que el
-teléfono omite: la tarjeta gráfica que pide, el color alrededor de la imagen y la extensión sobre
-varias pantallas, el color de acento, las subcarpetas, los sonidos nuevos, lo que los scripts aún no
+Android. Las propiedades de archivo y de carpeta se eligen con el selector de documentos de
+Android: el archivo elegido (una imagen o, si la propiedad los admite, un vídeo) se copia a los
+archivos de la app, y de una carpeta se copian las imágenes y los vídeos que admite, con sus
+subcarpetas hasta la profundidad que pide y como mucho los archivos que pide. La app guarda el
+permiso de lectura de la carpeta y, cada vez que se abre, copia otra vez lo que cambió en ella;
+*Quitar* borra la copia y devuelve el permiso. Como en el escritorio, la escena muestra el archivo
+de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cambia mientras se ve.
+Los ajustes de reproducción de los paquetes de vídeo no se usan en el teléfono, y la página del
+paquete lo avisa, igual que de todo lo que el teléfono omite: la tarjeta gráfica que pide, el color
+alrededor de la imagen y la extensión sobre varias pantallas, el color de acento, los sonidos nuevos, lo que los scripts aún no
 pueden hacer en ningún sitio o no tiene sentido en el teléfono (geometría, almacenamiento, sonidos)
 y la iluminación RGB. Un paquete hecho solo para
 el escritorio se rechaza con ese aviso, traducido. El nivel de calidad sale de la
@@ -386,7 +395,10 @@ declara una clase de rendimiento de Android 13 o posterior, media en el resto, a
 medida corta que en el escritorio y guardada en los archivos de la app) y de la batería: con
 batería baja un nivel, y con calor baja más; si los fotogramas tardan demasiado en la GPU baja otro,
 y solo vuelve a subir con el cargador puesto y el teléfono frío. El motor de la escena sigue vivo
-cuando el sistema cambia la superficie del fondo, así que no se vuelve a cargar ni compilar. Una escena demasiado pesada para el teléfono se queda
+cuando el sistema cambia la superficie del fondo, así que no se vuelve a cargar ni compilar. Las capas con
+paralaje de una escena siguen la inclinación del teléfono con los mismos sensores que el paralaje de
+las fotos, aunque la escena no lo pida con `gyro`, y sin sensores, el paso de páginas del lanzador;
+con el ahorro de energía se quedan quietas. Una escena demasiado pesada para el teléfono se queda
 quieta en su fotograma de muestra. Cada escena dibuja a sus propios fotogramas por segundo, como
 mucho a los de los ajustes, solo mientras algo cambia y nunca mientras no se ve. Los vídeos dentro
 de una escena los decodifica el hardware y se copian a la GPU fotograma a fotograma, sin sonido, y
@@ -408,8 +420,7 @@ hasta aceptar el aviso de que destella o muestra patrones rápidos que pueden pr
 personas con epilepsia fotosensible; las listas lo saltan mientras tanto. Cada decisión se recuerda
 por paquete. La biblioteca y la página de un paquete muestran su título y su descripción en el
 idioma del teléfono, y la página avisa de cada parte que no funciona en él, de sus sonidos a sus
-carpetas, los vídeos que se eligen, sus ajustes de vídeo y las funciones nuevas que
-omite.
+ajustes de vídeo y las funciones nuevas que omite.
 
 *Reaccionar al sonido*, *Reaccionar al tacto* y *Reaccionar a los toques* solo aparecen en las
 escenas que los usan y se activan escena a escena; empiezan apagados. El sonido se lee con el visualizador de Android, que da un espectro de

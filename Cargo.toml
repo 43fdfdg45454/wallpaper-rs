@@ -113,6 +113,7 @@ smithay-client-toolkit = { version = "0.21.1", default-features = false, feature
 raw-window-handle = "0.6"
 jni = "0.22.4"
 ndk = { version = "0.9", default-features = false }
+ndk-sys = { version = "0.6.0", default-features = false }
 log = "0.4"
 wayland-backend = { version = "0.3", features = ["dlopen"] }
 wayland-scanner = "0.31"

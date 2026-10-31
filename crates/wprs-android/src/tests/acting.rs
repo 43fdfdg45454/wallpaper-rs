@@ -77,7 +77,7 @@ pub(super) fn scripted() {
         until(&mut stuck, &|_| crate::acting::scripts() == "off"),
         "a script that never returns kept running"
     );
-    crate::stage::finish();
+    crate::stage::report::finish();
     for uid in [uid, looping] {
         assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
     }

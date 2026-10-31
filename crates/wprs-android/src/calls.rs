@@ -127,12 +127,12 @@ pub fn diagnostics<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> JString<'a> {
         let elapsed = |at: Instant| now.duration_since(at).as_secs_f64().max(0.001);
         let fps = counted.map(|(at, before)| ((frames - before) as f64 / elapsed(at)).round());
         *counted = Some((now, frames));
-        let [tier, quality, reason] = stage::level().unwrap_or_default();
+        let [tier, quality, reason] = stage::report::level().unwrap_or_default();
         let report = json!({
             "gpu": gpu::adapter(), "backend": settings::chosen(BACKEND), "frames": frames, "fps": fps,
             "cap": power.fps(false), "charging": power.charging, "saver": power.saver, "thermal": power.thermal,
-            "tier": tier, "quality": quality, "reason": reason, "measured": gpu::measured(), "flashes": stage::flashes(), "left_out": stage::left_out(),
-            "particles": stage::particles(), "scripts": crate::acting::scripts(), "stamps": gpu::stamps(),
+            "tier": tier, "quality": quality, "reason": reason, "measured": gpu::measured(), "flashes": stage::report::flashes(), "left_out": stage::report::left_out(),
+            "particles": stage::report::particles(), "scripts": crate::acting::scripts(), "stamps": gpu::stamps(),
         });
         Ok(env.new_string(report.to_string())?)
     })
@@ -142,7 +142,7 @@ pub fn diagnostics<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> JString<'a> {
 pub fn finish<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) {
     on(&mut env, |_| {
         crate::engine::forget();
-        crate::stage::finish();
+        crate::stage::report::finish();
         Ok(())
     })
 }
@@ -150,7 +150,7 @@ pub fn finish<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) {
 #[jni_mangle("io.github.wallpaper_rs.Native")]
 pub fn retry<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) {
     on(&mut env, |_| {
-        stage::retry();
+        stage::report::retry();
         Ok(())
     })
 }

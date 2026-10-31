@@ -28,6 +28,7 @@ pub(crate) fn engine<T: Default>(
 #[jni_mangle("io.github.wallpaper_rs.Native")]
 pub fn prepare<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, files: JString<'a>) {
     if log::set_logger(&Logcat).is_ok() {
+        crate::heif::register();
         log::set_max_level(log::LevelFilter::Info);
         std::panic::set_hook(Box::new(|info| log::error!("{info}")));
     }
