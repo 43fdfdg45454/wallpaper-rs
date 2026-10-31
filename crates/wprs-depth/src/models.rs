@@ -41,7 +41,10 @@ pub const MODEL: Asset = Asset {
     file_sha256: "46c4e8eeda3a27f34701831b6a2ec7753d7b38779b215acb5633424703deed8f",
 };
 
-#[cfg(all(target_os = "linux", target_env = "gnu", any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[cfg(any(
+    target_os = "android",
+    all(target_os = "linux", target_env = "gnu", any(target_arch = "x86_64", target_arch = "aarch64"))
+))]
 const ORT: Asset = Asset {
     id: "onnxruntime",
     title: "ONNX Runtime 1.31.0",
@@ -84,10 +87,34 @@ pub const RUNTIME: Option<Asset> = Some(Asset {
     ..ORT
 });
 
-#[cfg(not(all(
-    target_os = "linux",
-    target_env = "gnu",
-    any(target_arch = "x86_64", target_arch = "aarch64")
+#[cfg(target_os = "android")]
+const AAR: Asset = Asset {
+    urls: &[
+        "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.31.0/onnxruntime-android-1.31.0.aar",
+    ],
+    bytes: 55_138_854,
+    sha256: "72683787a80d0608a3121b967d8e1239aef48286826661c953211626690540a7",
+    file: "libonnxruntime.so",
+    ..ORT
+};
+
+#[cfg(all(target_os = "android", target_arch = "aarch64"))]
+pub const RUNTIME: Option<Asset> = Some(Asset {
+    member: "jni/arm64-v8a/libonnxruntime.so",
+    file_sha256: "8005a741e57117b4d7b476417706c0e9af13cf1b89db47e60f0cbc56e1af91e0",
+    ..AAR
+});
+
+#[cfg(all(target_os = "android", target_arch = "x86_64"))]
+pub const RUNTIME: Option<Asset> = Some(Asset {
+    member: "jni/x86_64/libonnxruntime.so",
+    file_sha256: "068896846a7fe679cf780c1c532745286d9ef2e469f3dbde5bb9cf2c02095b18",
+    ..AAR
+});
+
+#[cfg(not(any(
+    all(target_os = "android", any(target_arch = "x86_64", target_arch = "aarch64")),
+    all(target_os = "linux", target_env = "gnu", any(target_arch = "x86_64", target_arch = "aarch64"))
 )))]
 pub const RUNTIME: Option<Asset> = None;
 

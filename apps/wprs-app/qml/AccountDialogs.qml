@@ -20,13 +20,22 @@ Item {
 
         title: App.tr("Add server")
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
-        onAccepted: App.act("AddServer", [url.text.trim()], "Sync1")
+        onAccepted: pin.text.trim() === "" ? App.act("AddServer", [url.text.trim()], "Sync1") : App.act("AddPinnedServer", [url.text.trim(), pin.text.trim()], "Sync1")
 
-        QQC2.TextField {
-            id: url
+        ColumnLayout {
+            QQC2.TextField {
+                id: url
 
-            implicitWidth: Kirigami.Units.gridUnit * 24
-            placeholderText: "https://wallpapers.example.org"
+                implicitWidth: Kirigami.Units.gridUnit * 24
+                placeholderText: "https://wallpapers.example.org"
+            }
+
+            QQC2.TextField {
+                id: pin
+
+                Layout.fillWidth: true
+                placeholderText: App.tr("Fingerprint of its own certificate, only for a server at home")
+            }
         }
     }
 

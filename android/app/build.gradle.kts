@@ -30,7 +30,12 @@ android {
             lines.first { it.startsWith("version = ") }.substringAfter('"').substringBefore('"')
         }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        ndk { abiFilters += abis }
+    }
+    splits.abi {
+        isEnable = true
+        reset()
+        include(*abis.toTypedArray())
+        isUniversalApk = abis.size > 1
     }
     val signing = if (keystore.isPresent) signingConfigs.create("release") {
         storeFile = file(keystore.get())
@@ -39,7 +44,12 @@ android {
         keyPassword = keystorePassword.get()
     } else signingConfigs.getByName("debug")
     buildTypes.getByName("debug") { signingConfig = signing }
-    buildTypes.getByName("release") { signingConfig = signing }
+    buildTypes.getByName("release") {
+        signingConfig = signing
+        isMinifyEnabled = true
+        isShrinkResources = true
+        proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "keep.pro")
+    }
     buildFeatures { compose = true }
     sourceSets.named("main") {
         jniLibs.directories += rustLibs
@@ -49,7 +59,7 @@ android {
     packaging {
         jniLibs {
             keepDebugSymbols += "**/*.so"
-            excludes += "**/libonnxruntime4j_jni.so"
+            excludes += (listOf("armeabi-v7a", "x86", "arm64-v8a", "x86_64", "riscv64") - abis).map { "lib/$it/**" }
             useLegacyPackaging = true
         }
     }
@@ -61,7 +71,6 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.icons)
     implementation(libs.media3.exoplayer)
-    implementation(libs.onnxruntime)
     implementation(libs.work.runtime)
     testImplementation(libs.junit)
     androidTestImplementation(libs.test.runner)

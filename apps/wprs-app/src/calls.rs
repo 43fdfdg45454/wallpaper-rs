@@ -142,6 +142,7 @@ calls! {
     }
     Sync1 sync {
         AddServer add_server(url: str);
+        AddPinnedServer add_pinned_server(url: str, fingerprint: str);
         Link link(name: str, plaintext: bool);
         PreviewCode preview_code(user_code: str);
         Approve approve(user_code: str);

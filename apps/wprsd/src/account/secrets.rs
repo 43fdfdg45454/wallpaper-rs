@@ -46,16 +46,22 @@ impl Daemon {
 
     pub async fn events(&self) -> Result<reqwest::Response> {
         let secrets = self.read_secrets(false).await?;
-        let url = self.saved().url.clone();
-        let api = Api::new(&url).map_err(super::sync_error)?.with_token(&secrets.token);
+        let (url, pin) = {
+            let saved = self.saved();
+            (saved.url.clone(), saved.pin.clone())
+        };
+        let api = Api::pinned(&url, pin.as_deref()).map_err(super::sync_error)?.with_token(&secrets.token);
         let opened = tokio::time::timeout(Duration::from_secs(30), api.events()).await;
         opened.map_err(|_| failed("the server event stream did not answer"))?.map_err(super::sync_error)
     }
 
     pub fn account_api(&self, prompt: bool) -> Result<(Api, Secrets)> {
         let secrets = self.secrets(prompt)?;
-        let url = self.saved().url.clone();
-        let api = Api::new(&url).map_err(super::sync_error)?.with_token(&secrets.token);
+        let (url, pin) = {
+            let saved = self.saved();
+            (saved.url.clone(), saved.pin.clone())
+        };
+        let api = Api::pinned(&url, pin.as_deref()).map_err(super::sync_error)?.with_token(&secrets.token);
         Ok((api, secrets))
     }
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="repos">Repositorios</string>
+    <string name="repo_offer">%1$s se añadió en otro equipo, con la clave %2$s.</string>
+    <string name="repo_add">Añadir</string>
+    <string name="repo_decline">Rechazar</string>
+    <string name="repo_packages">Paquetes: %1$d</string>
+    <string name="repo_url">Dirección del repositorio</string>
+    <string name="repo_add_url">Añadir el repositorio</string>
+    <string name="repo_browse">Explorar</string>
+    <string name="repo_search">Buscar paquetes</string>
+    <string name="repo_install">Instalar</string>
+    <string name="repo_installed">Instalado</string>
+</resources>

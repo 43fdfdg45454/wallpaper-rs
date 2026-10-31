@@ -17,8 +17,9 @@ docker compose exec wprs wprs-server repo init --name "Example wallpapers"
 |---------|--------|
 | `serve` (default) | Run the server; migrations run first |
 | `migrate` | Apply database migrations and exit |
-| `healthcheck` | Exit 0 when `GET /healthz` on the local port answers 200 (the image `HEALTHCHECK`) |
+| `healthcheck` | Exit 0 when `GET /healthz` on the local port answers 200 (the image `HEALTHCHECK`); with `WPRS_TLS=self-signed`, when the port accepts a connection |
 | `setup-token` | Print a one-time token (24 h) that creates an administrator at `/setup` |
+| `fingerprint` | Print the lowercase hex SHA-256 of the certificate served with `WPRS_TLS=self-signed`, making it first when there is none |
 | `repo init --name N [--require-author-signature] [--online-authors]` | Create the repository: a root key and an online key. The root secret key is printed once and never stored. `--online-authors` lets accounts register author keys online (below) |
 | `repo import DIR [--online-key FILE]` | Import `root/<N>.json` files signed offline (and `catalog.json` the first time) plus the online key |
 | `repo status`, `repo publish` | Show the repository and its share URL; sign and publish now |
@@ -71,6 +72,8 @@ reads the value of `NAME` from a file, for secrets.
 | `WPRS_NOTICE_DAYS` | `180` | Days a legal notice keeps the sender's name, email and signature (1 to 730) |
 | `WPRS_TAKEDOWN_DAYS` | `90` | Days a removed or revoked package stays in `held/` as evidence and for a counter-notice (1 to 3650) |
 | `WPRS_RATE_LIMITS` | `true` | In-memory rate limits |
+| `WPRS_TLS` | `off` | `self-signed` serves HTTPS itself with a certificate of its own, made on the first start in `tls/` (ECDSA P-256, valid for the host of `WPRS_PUBLIC_URL` and `localhost`); clients reach it only by its pinned fingerprint |
+| `WPRS_ADVERTISE` | `false` | Announce the server on the local network with mDNS as `_wprs._tcp`, instance `wallpaper-rs-<6 random hex digits>` drawn at every start, TXT `v=0`; nothing else about the server, the account or the devices is announced |
 | `WPRS_LOG` | `info` | Log filter |
 
 Logs go to standard output and never contain addresses, user agents, tokens, bodies or emails.
@@ -87,6 +90,7 @@ held/<sha256>.wpak   removed or revoked packages (and their previews) for WPRS_T
 private/<user>/<id>  end-to-end encrypted private files of each account
 repo/                the static repository (docs/specs/repo.md) built with wprs-format
 keys/online.key      online signing key (0600); the root key never lives here
+tls/cert.der, key.der  certificate and key of WPRS_TLS=self-signed (0600)
 tmp/ logs/ backups/
 ```
 
@@ -332,6 +336,13 @@ the sender's name, email and signature for `WPRS_NOTICE_DAYS`, then only its con
 ## Sync
 
 Sync stores the latest state of each item per account. The server never interprets payloads.
+
+On a local network without a public name, `WPRS_TLS=self-signed` and `WPRS_ADVERTISE=true` let
+a computer of the house run the server for its devices: the phone finds `_wprs._tcp` with the
+system's network service discovery, and every client refuses the certificate until the user
+gives its fingerprint (`wprs-server fingerprint`, also logged at start), compared once and pinned
+from then on for every request to that server, including the event stream. A pin replaces the
+check of the authorities and of the name, never the TLS handshake signatures.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|

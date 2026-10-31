@@ -13,6 +13,7 @@ pub enum Work {
     Generate,
     Adopt(PathBuf),
     Keep,
+    Remove,
     Install(PathBuf),
 }
 
@@ -98,6 +99,10 @@ fn act(places: &Places, target: &Target, work: Work, stop: &AtomicBool, report: 
             let found = places.find(image, sha, &target.depth).context("the image has no depth map yet")?;
             write(&read(&found)?, &beside(image))
         }
+        Work::Remove => match places.unmap(image, sha, &target.depth) {
+            0 => bail!("the image has no depth map"),
+            _ => Ok(()),
+        },
         Work::Install(file) => {
             let sha = sha256(&file)?;
             let asset = assets().into_iter().find(|a| a.sha256 == sha);

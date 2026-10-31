@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="depth_near">Near level</string>
+    <string name="depth_far">Far level</string>
+    <string name="depth_gamma">Curve</string>
+    <string name="depth_smooth">Smoothing (px)</string>
+    <string name="depth_dilate">Grow near edges (px)</string>
+    <string name="depth_remove">Remove the depth map</string>
+</resources>

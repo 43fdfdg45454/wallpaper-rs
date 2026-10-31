@@ -1,0 +1,2 @@
+-keep class io.github.wallpaper_rs.** { *; }
+-dontobfuscate

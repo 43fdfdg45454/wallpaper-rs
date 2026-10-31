@@ -33,6 +33,7 @@ pub mod providers;
 pub mod remote;
 pub mod repo;
 pub mod server;
+pub mod serving;
 pub mod show;
 mod steps;
 mod userprops;

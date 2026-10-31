@@ -5,7 +5,9 @@ use reqwest::{Method, Url};
 use serde_json::{Value, json};
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
-use wprs_sync::{AGENT, Api, DeviceKey, Poll, Secrets, SyncKey, check_url, encode, poll};
+use wprs_sync::{AGENT, Api, DeviceKey, Poll, Secrets, SyncKey, encode, poll};
+
+pub(crate) use crate::server::add;
 
 pub(crate) const PLATFORM: &str = "android";
 
@@ -37,29 +39,6 @@ pub(crate) fn cancel() {
     SHOWN.lock().unwrap_or_else(PoisonError::into_inner).take();
 }
 
-pub(crate) async fn add(url: &str) -> Result<Value, Error> {
-    let url = check_url(url)?;
-    if read(|s| s.device.is_some()) {
-        return Err(said(
-            "android.phone_linked_server",
-            "this phone is linked to a server; remove it first",
-            &[],
-        ));
-    }
-    let found = Api::new(&url)?.get("/.well-known/wprs-server").await?;
-    if !found["api"].as_array().is_some_and(|api| api.contains(&json!("v1"))) {
-        return Err(said(
-            "android.address_does_serve",
-            "this address does not serve a wallpaper-rs server",
-            &[],
-        ));
-    }
-    let name: String =
-        found["name"].as_str().unwrap_or_default().chars().filter(|c| !c.is_control()).take(128).collect();
-    update(|s| (s.url, s.name) = (url, name.clone()))?;
-    Ok(json!({"name": name, "registration": found["registration"]}))
-}
-
 pub(crate) async fn start(label: &str, plaintext: bool) -> Result<Value, Error> {
     let url = read(|s| s.url.clone());
     match () {
@@ -77,7 +56,7 @@ pub(crate) async fn start(label: &str, plaintext: bool) -> Result<Value, Error> 
             &[],
         ));
     }
-    let (key, api) = (DeviceKey::generate(), Api::new(&url)?);
+    let (key, api) = (DeviceKey::generate(), Api::pinned(&url, read(|s| s.pin.clone()).as_deref())?);
     let body = json!({"platform": PLATFORM, "enc_key": encode(&key.public()), "client": AGENT});
     let start = api.post("/api/v1/auth/device/start", body).await?;
     let text = |field: &str| start[field].as_str().unwrap_or_default().to_owned();

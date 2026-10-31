@@ -1,6 +1,6 @@
 use crate::cli::{Command, Wait};
 use crate::input::path_arg;
-use crate::{inputs, library, pkg, playlists, profiles, props, providers, remote, server, show};
+use crate::{inputs, library, pkg, playlists, profiles, props, providers, remote, serving, show};
 use anyhow::{Context, Result, bail};
 use futures_util::TryFutureExt;
 use serde_json::{Value, json};
@@ -80,7 +80,7 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Remote(command) => remote::run(client, command).await?,
         Command::Pkg(command) => pkg::run(client, command).await?,
         Command::Input(command) => inputs::run(client, command).await?,
-        Command::Server(command) => server::run(client, command).await?,
+        Command::Server(command) => serving::run(client, command).await?,
         Command::Pack(_)
         | Command::Repo(_)
         | Command::Edit(_)

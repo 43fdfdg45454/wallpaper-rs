@@ -18,6 +18,9 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["fs", "io-util"] }
 wprs-format.workspace = true
 
+[target.'cfg(target_os = "android")'.dependencies]
+webpki-root-certs.workspace = true
+
 [dev-dependencies]
 tempfile.workspace = true
 tokio-rustls.workspace = true

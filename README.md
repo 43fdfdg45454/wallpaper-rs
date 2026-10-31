@@ -255,11 +255,15 @@ otra vez el último fotograma, también con el vídeo en pausa, sin reiniciarlo.
 
 ## Android
 
-La misma página *Releases* trae `wallpaper-rs-android.apk`, un APK para Android 12 o posterior (64
-bits). Siempre se firma con la misma clave, así que cada versión se instala encima de la anterior y
-conserva el fondo elegido. Ábrelo en el teléfono (Android pedirá permitir la
-instalación desde esa app) o instálalo desde un ordenador con
-`adb install -r wallpaper-rs-android.apk`.
+La misma página *Releases* trae un APK para Android 12 o posterior (64 bits) por arquitectura:
+`wallpaper-rs-android-arm64-v8a.apk` para los teléfonos (unos 18 MB) y
+`wallpaper-rs-android-x86_64.apk` para los emuladores y algunas tabletas (unos 19 MB), más
+`wallpaper-rs-android.apk` con las dos (unos 31 MB) si no sabes cuál te toca. Antes un solo APK de
+83 MB llevaba las dos arquitecturas, ONNX Runtime dentro y el código de Kotlin sin reducir.
+Siempre se firman con la misma clave y la misma versión, así que cada versión se instala encima de
+la anterior, también si cambias de uno a otro, y conserva el fondo elegido. Ábrelo en el teléfono
+(Android pedirá permitir la instalación desde esa app) o instálalo desde un ordenador con
+`adb install -r wallpaper-rs-android-arm64-v8a.apk`.
 
 Para ponerlo de fondo, abre la app **wallpaper-rs**. La pestaña *Biblioteca* muestra las fotos y
 los vídeos añadidos con *Añadir*, que ofrece tres caminos: *Fotos y vídeos* abre el selector de fotos
@@ -267,8 +271,9 @@ de Android, *Elegir archivos* abre el selector de documentos para escoger varias
 cualquier carpeta, de la tarjeta o de una nube instalada, e *Importar una carpeta* añade las imágenes
 y los vídeos que hay dentro de una carpeta y de sus subcarpetas (5000 como mucho) mostrando cuántos
 lleva de cuántos. Todo se copia al almacenamiento privado de la app, así que no hace falta ningún
-permiso y la app no usa la red salvo para descargar el modelo de profundidad cuando lo pides y para
-tu servidor propio si lo añades. Un mismo archivo no se copia dos veces, y los que no se pueden abrir
+permiso y la app no usa la red salvo para descargar el modelo de profundidad cuando lo pides, para
+tu servidor propio y los repositorios que añades y, solo mientras escribes la dirección de un
+servidor, para buscar en la red local los que se anuncian. Un mismo archivo no se copia dos veces, y los que no se pueden abrir
 se cuentan en un solo aviso. Al tocar uno se abre su página, con una vista previa en vivo con la
 forma de la pantalla, sus medidas y duración, y los botones *Usar como fondo*, favorito, *Añadir a
 una lista* y *Quitar*.
@@ -326,7 +331,9 @@ GPU), el nivel de calidad y por qué bajó. Los avisos que vienen del motor (los
 paquete, de una propiedad, de la profundidad o de la sincronización) llevan un identificador de
 mensaje y se muestran en el idioma del teléfono con las mismas traducciones que el resto de la app.
 *Licencias* muestra los textos de ONNX Runtime, de los componentes que incluye y del modelo
-de profundidad.
+de profundidad. El diagnóstico dice también si la clase del teléfono se midió con marcas de
+tiempo de la GPU, que cuentan solo el trabajo de la GPU, o esperando a que termine, en los
+teléfonos que no las tienen; el escritorio mide igual.
 
 Los vídeos (MP4, MOV, 3GP, WebM o MKV) se repiten en bucle. Con el ajuste *Rellenar* o *Estirar*
 los decodifica el hardware del teléfono directamente sobre el fondo, sin pasar por la GPU ni copiar
@@ -363,12 +370,20 @@ nunca se para. El sensor solo se enciende mientras se ve un fondo con paralaje, 
 segundo permitidos (60 como mucho), y se apaga al taparlo. Con el teléfono quieto no se dibuja
 ningún fotograma, y con batería el sombreador da como mucho 8 pasos de profundidad.
 
-*Calcular un mapa de profundidad* usa el mismo modelo que el escritorio, Depth Anything V2 Small. La
-primera vez pide permiso para descargarlo y muestra su tamaño (99,1 MB), su licencia (Apache-2.0)
-y el servidor (github.com). La descarga lleva el User-Agent genérico del escritorio, se reanuda si
-se corta, se comprueba con su SHA-256 fijado y se guarda con el texto de su licencia al lado. El
-mapa se calcula en segundo plano en el propio teléfono con ONNX Runtime, que va dentro del APK sin
-su módulo de telemetría, y la foto no sale del teléfono. *Usar un archivo de mapa de profundidad*
+*Calcular un mapa de profundidad* usa el mismo modelo que el escritorio, Depth Anything V2 Small,
+con ONNX Runtime 1.31.0, que ya no va dentro del APK. La primera vez pide permiso para descargar los
+dos y muestra su tamaño (154,2 MB en total: 99,1 MB del modelo y 55,1 MB del paquete de ONNX Runtime
+para Android), sus licencias (Apache-2.0 y MIT) y los servidores (github.com y repo1.maven.org). Las
+descargas llevan el User-Agent genérico del escritorio, se reanudan si se cortan y se comprueban
+con su SHA-256 fijado; del paquete de ONNX Runtime solo se guarda la biblioteca de la arquitectura
+del teléfono (unos 34 MB en arm64-v8a), comprobada también con su propio SHA-256, de solo lectura
+y con el texto de su licencia al lado, y el paquete se borra. El mapa se calcula en segundo plano
+en el propio teléfono, con la telemetría de ONNX Runtime apagada, y la foto no sale del teléfono;
+*Cancelar* detiene la descarga o el cálculo en cuanto se pulsa, también a mitad del modelo. Con un
+mapa, la página muestra los mismos ajustes que el escritorio (`wprs-ctl edit depth`): nivel
+cercano y lejano, curva, suavizado y cuánto crecen los bordes cercanos, que cambian el paralaje y
+las máscaras de profundidad al soltarlos, y *Quitar el mapa de profundidad* borra el mapa calculado
+y el importado. *Usar un archivo de mapa de profundidad*
 importa un mapa hecho en el escritorio, el PNG de 16 bits que guarda junto a la imagen (por ejemplo
 `foto.jpg.depth.png`), si tiene la misma proporción. En *Ajustes*, *Permitir descargar el modelo de
 profundidad* (`models.allow_download`) bloquea la descarga, y ahí mismo se puede borrar el modelo.
@@ -440,7 +455,8 @@ algo empieza a sonar; si un reproductor sigue activo en silencio, lo mira cada d
 es la posición del dedo sobre el fondo en la pantalla de inicio, que la escena sigue como el puntero,
 y los toques son los clics del teléfono: un toque sobre una capa `solid` arranca sus líneas de tiempo
 `click:` y llega a sus scripts. Solo cuentan los toques reales sobre la pantalla de inicio (la de
-bloqueo no da ninguno), y solo en las escenas con ese permiso.
+bloqueo no da ninguno) y sobre la vista previa de la página de la escena, y solo en las escenas
+con ese permiso; sin él, tocar la vista previa no le llega a la escena.
 
 Solo se dibuja cuando cambia algo y nunca mientras el fondo no se ve: con una imagen fija no hay
 ningún fotograma más. El fundido y el desplazamiento al pasar de página en el lanzador van como
@@ -742,6 +758,7 @@ wprs-ctl edit depth generate foto.jpg                # mapa calculado aquí; Ctr
 wprs-ctl edit depth generate foto.jpg --device cuda --bench   # medir el modelo en la tarjeta gráfica
 wprs-ctl edit depth export foto.jpg mapa.png --adjusted --colour   # el mapa ajustado en falso color
 wprs-ctl edit depth foto.jpg --dilate 4 --smooth 2   # ajustar cerca, lejos, curva y bordes
+wprs-ctl edit depth remove foto.jpg                  # borrar el mapa calculado, el importado y el de al lado
 wprs-ctl edit parallax foto.jpg --source pointer --strength 0.02 --focus 0.3
 ```
 
@@ -773,6 +790,32 @@ y otra 30 segundos después de cada cambio; *Sincronizar ahora* la lanza al mome
 red. Mientras el teléfono no está enlazado, la app no prepara ninguna tarea ni toca la red al
 arrancar. *Pausar la sincronización* y *Quitar el servidor* (que pide al servidor que olvide el
 teléfono) están en la misma pestaña.
+
+Mientras la app está abierta, el teléfono escucha el canal de avisos del servidor (el mismo que
+usa el escritorio) y sincroniza en cuanto otro equipo guarda un cambio, sin esperar a la hora;
+al salir de la app cierra el canal, y en segundo plano no queda nada abierto ni ningún despertar
+nuevo. En la misma pestaña están las funciones de la cuenta que tiene el escritorio: la *Frase de
+recuperación* (guardarla, cambiarla o quitarla, con la misma custodia Argon2id que
+`wprs-ctl server escrow`, y en un teléfono nuevo sin ningún otro equipo *Recuperar la clave con la
+frase*), los *Archivos privados* (los fondos propios que otro equipo subió cifrados, con
+*Descargar* para añadirlos a la biblioteca del teléfono, y en la página de una imagen o un vídeo
+del teléfono *Guardar cifrado en el servidor*, que lo sube por partes cifradas igual que
+`wprs-ctl server files share`, y al desactivarlo se borra del servidor), las claves de proveedores
+que se sincronizan (el teléfono no usa proveedores, pero las guarda selladas por el almacén de
+claves y las muestra) y los *Repositorios*: los que se añaden en otro equipo llegan como
+propuesta con su clave y se añaden o se rechazan una vez, también se añade uno por su dirección,
+y *Explorar* busca sus paquetes y los instala en la biblioteca, comprobados con el índice firmado
+del repositorio; un paquete instalado así es el mismo elemento de la biblioteca en el teléfono y
+en el ordenador.
+
+Para sincronizar por la red de casa sin un dominio ni un certificado público, un ordenador puede
+servir `wprs-server` con su propio certificado (`WPRS_TLS=self-signed`) y anunciarse en la red
+(`WPRS_ADVERTISE=true`, ver [Servidor propio](#servidor-propio)). Mientras se escribe la
+dirección del servidor, la pestaña muestra los servidores que encuentra en esa red con el
+descubrimiento de servicios de Android. Un servidor con su propio certificado no se acepta a
+ciegas: la app muestra la huella SHA-256 de su certificado para compararla con la que da
+`wprs-server fingerprint` en el servidor, y solo si eliges *Confiar en él* la fija; desde entonces
+el teléfono solo habla con ese servidor si presenta ese mismo certificado, y la pestaña lo dice.
 
 ## Paquetes: clasificación, idiomas y créditos
 
@@ -1110,6 +1153,8 @@ lee el valor de un archivo, para los secretos:
 | `WPRS_LOG_CLIENTS` | `off` | IP en un registro de abusos: `off`, `prefix` o `full`; se borra a los `WPRS_LOG_CLIENTS_DAYS` días (7) |
 | `WPRS_NOTICE_DAYS` | `180` | Días que un aviso legal guarda el nombre, el correo y la firma de quien lo envía |
 | `WPRS_TAKEDOWN_DAYS` | `90` | Días que se guarda fuera de la vista pública un paquete retirado, como prueba y para una contranotificación |
+| `WPRS_TLS` | `off` | `self-signed`: sirve HTTPS con un certificado propio, que los clientes aceptan solo por su huella fijada |
+| `WPRS_ADVERTISE` | `false` | Anunciar el servidor en la red local por mDNS (`_wprs._tcp`) con un nombre al azar en cada arranque |
 
 La lista completa de variables y la API HTTP están en
 [`docs/specs/server.md`](docs/specs/server.md).
@@ -1120,6 +1165,7 @@ El servicio de cada equipo se enlaza con el servidor desde *Cuenta* en la app o 
 
 ```sh
 wprs-ctl server add https://fondos.example.org
+wprs-ctl server add https://192.168.1.10:8443 --fingerprint <huella>   # un servidor de casa con su propio certificado
 wprs-ctl server link --name Escritorio          # muestra un código para /link o para:
 wprs-ctl server approve BCDF-GHJK                # … en un equipo ya enlazado, tras ver quién lo pide y con la contraseña
 wprs-ctl server join "Device 1" --wait           # equipo nuevo de una cuenta cifrada: muestra sus cifras y pide las del otro
@@ -1202,6 +1248,25 @@ docker compose up -d
 La restauración comprueba las sumas y la integridad de la base de datos, firma un índice nuevo
 para que los clientes no vean una versión anterior y hace que cada dispositivo vuelva a descargar
 lo sincronizado.
+
+En una red de casa sin dominio, el servidor puede servir HTTPS él mismo con un certificado propio
+y anunciarse en la red local para que el teléfono lo encuentre:
+
+```sh
+WPRS_TLS=self-signed WPRS_ADVERTISE=true WPRS_LISTEN=0.0.0.0:8443 \
+  WPRS_PUBLIC_URL=https://192.168.1.10:8443 wprs-server serve
+wprs-server fingerprint                    # la huella SHA-256 del certificado, también en el registro
+wprs-ctl server add https://192.168.1.10:8443 --fingerprint <huella>
+```
+
+El certificado se crea en el primer arranque en `/data/tls` y se conserva. Los equipos y el
+teléfono lo aceptan solo por su huella, que se compara una vez y queda fijada: sin ella, `server
+add` falla y dice la huella que mostró el servidor; en la app se escribe en *Añadir servidor*, en
+el teléfono se confirma en un aviso, y `wprs-ctl server status` y la app la muestran. El anuncio
+(`_wprs._tcp` por mDNS) solo dice que hay un servidor de wallpaper-rs, con un nombre al azar que
+cambia en cada arranque, y nada de la cuenta ni de los equipos. Es la misma sincronización y el
+mismo cifrado de extremo a extremo que con un servidor público, solo que sin salir de la red de
+casa.
 
 Con dominio propio y certificado automático, Caddy delante:
 
@@ -1545,15 +1610,20 @@ APK de Android (con el SDK, el NDK 28 o posterior y `cargo install cargo-ndk`):
 ```sh
 rustup target add aarch64-linux-android x86_64-linux-android
 ANDROID_NDK_HOME=/ruta/al/ndk android/gradlew -p android assembleDebug
-adb install -r -d android/app/build/outputs/apk/debug/app-debug.apk
+adb install -r -d android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
 android/gradlew -p android connectedDebugAndroidTest -Pabis=x86_64  # pruebas en un emulador x86_64
 scripts/android-power.sh -o consumo.csv  # consumo, fps y memoria por escenario en el teléfono
-ANDROID_NDK_HOME=/ruta/al/ndk scripts/apk-check.sh android/app/build/outputs/apk/release/app-release.apk
+ANDROID_NDK_HOME=/ruta/al/ndk scripts/apk-check.sh android/app/build/outputs/apk/release/app-universal-release.apk
+WANT="arm64-v8a " scripts/apk-check.sh android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
 ```
 
-`scripts/apk-check.sh`, que la CI pasa al APK publicado, comprueba que trae las bibliotecas nativas
-de arm64-v8a y x86_64, que todas están alineadas a páginas de 16 KB, que el APK lo está para
-`zipalign` y que la biblioteca de Rust no guarda rutas del ordenador que la compiló.
+Gradle hace un APK por arquitectura (`app-arm64-v8a-…`, `app-x86_64-…`) y, con más de una, el
+universal (`app-universal-…`); el de release pasa por R8, que quita el código de las bibliotecas
+que no se usa y deja entero el de la app, que Rust llama por JNI. `scripts/apk-check.sh`, que la
+CI pasa a los tres APK publicados, comprueba que cada uno trae justo las arquitecturas que debe con
+su biblioteca de Rust, que no trae ONNX Runtime, que todas las bibliotecas están alineadas a
+páginas de 16 KB, que el APK lo está para `zipalign` y que la biblioteca de Rust no guarda rutas
+del ordenador que la compiló.
 
 `scripts/android-power.sh` recorre por adb los escenarios de consumo (imagen fija, desplazamiento,
 fondo tapado, pantalla apagada, ahorro de energía, temperatura alta, paralaje con el teléfono quieto
@@ -1634,7 +1704,7 @@ misma pausa.
 | `crates/wprs-audio` | Captura del sonido con PipeWire y su análisis en bandas para las escenas, también a partir del espectro que da Android |
 | `crates/wprs-script` | Scripts de escena en JavaScript, aislados en un proceso por escena con límites de CPU y memoria, su módulo `wprs` y `wprs/math` |
 | `crates/wprs-sync` | Cifrado, relojes, fusión, protocolo, buzón y formato de los registros de la sincronización, compartidos por el escritorio y Android |
-| `crates/wprs-android` | Fondo animado de Android en Rust: JNI, GPU compartida, una superficie por fondo, biblioteca, listas, ajustes, escenas, paralaje, mapas de profundidad y sincronización con el servidor propio |
+| `crates/wprs-android` | Fondo animado de Android en Rust: JNI, GPU compartida, una superficie por fondo, biblioteca, listas, ajustes, escenas, paralaje, mapas de profundidad, repositorios y sincronización con el servidor propio (archivos privados, frase de recuperación, avisos al instante y certificados fijados) |
 | `apps/wprsd` | Daemon |
 | `apps/wprs-ctl` | CLI |
 | `apps/wprs-app` | App de escritorio (Qt Quick y Kirigami sobre Rust con cxx-qt) |
@@ -1665,8 +1735,8 @@ misma pausa.
   licencia y servidores; llevan el mismo User-Agent genérico, sin cabecera Referer ni redirecciones
   de HTTPS a HTTP, se verifican con SHA-256 y los mapas se calculan en el equipo, en un proceso
   aparte. ONNX Runtime funciona con su telemetría desactivada: no guarda ningún identificador ni se
-  conecta a nadie. En Android, ONNX Runtime va dentro del APK sin el componente que arrancaba su
-  telemetría, y la app solo usa la red para descargar el modelo después de que lo aceptes.
+  conecta a nadie. En Android, ONNX Runtime se descarga junto con el modelo y solo después de que lo aceptes,
+  comprobado con su SHA-256, y se usa con la telemetría apagada.
   `models.allow_download` se queda en cada equipo y, si la configuración no se puede leer, cuenta
   como desactivado.
 - La configuración se escribe con permisos `0600` dentro de una carpeta `0700`: solo tu usuario

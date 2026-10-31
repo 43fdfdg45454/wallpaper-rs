@@ -1,5 +1,5 @@
 use crate::library::{now, with};
-use crate::{Error, apply, depth, settings, store};
+use crate::{Error, apply, depth, private, repos, settings, store};
 use std::collections::{BTreeMap, BTreeSet};
 use wprs_sync::{
     DEVICE_KEYS, Ids, Kept, Local, Replica, View, edit_fields, item_view, keep, kind, link, object, preserve,
@@ -27,9 +27,11 @@ pub(crate) fn snapshot(
         Ok((lib.hashed()?, lists.collect::<Result<Vec<_>, _>>()?))
     })?;
     let base = |key: &str| replica.bases.get(key).and_then(|(_, doc)| doc.view());
-    let mut local = Local::default();
+    let (mut local, files) = (Local::default(), crate::state::read(|s| s.files.clone()));
+    let from_repos = repos::installed();
     for (item, hash) in hashed {
-        let key = ids.blob(&hash);
+        let package = from_repos.get(&item.uid);
+        let key = package.map_or_else(|| ids.blob(&hash), |(repo, id)| ids.library(repo, id));
         local.keys.insert(item.uid.clone(), key.clone());
         let uids = local.items.entry(key.clone()).or_default();
         uids.push(item.uid.clone());
@@ -44,6 +46,8 @@ pub(crate) fn snapshot(
             }
             (1, old) => {
                 let mut view = item_view(&item);
+                let own = private::blob_field(&files, ids, &item, old.as_ref());
+                view.extend(own.filter(|_| item.kind != wprs_library::Kind::Package && package.is_none()));
                 view.extend(edit_fields(depth::shared(&item).as_ref(), old.as_ref()));
                 local.views.insert(record, view);
             }
@@ -56,7 +60,7 @@ pub(crate) fn snapshot(
     }
     local.views.extend(sections(&settings::config().options(), replica, ids, &device()));
     for (key, (_, doc)) in &replica.bases {
-        let shared = key.starts_with("repos/") || object(key, Some(doc));
+        let shared = object(key, Some(doc));
         let Some(view) = doc.view().filter(|_| shared && !local.views.contains_key(key)) else { continue };
         let unlinked = key.starts_with("playlists/") && !links.contains_key(key);
         if unlinked || !key.starts_with("playlists/") {
@@ -66,7 +70,10 @@ pub(crate) fn snapshot(
             local.unlinked.insert(key.clone());
         }
     }
-    preserve(&mut local.views, replica, kept, &BTreeSet::new());
+    repos::views(ids, replica, present, &mut local, kept)?;
+    private::unblob(&files, replica, &mut local);
+    let dropped = private::dropped(&files, &local);
+    preserve(&mut local.views, replica, kept, &dropped);
     Ok(local)
 }
 

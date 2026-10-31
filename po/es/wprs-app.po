@@ -105,6 +105,10 @@ msgid "Add server"
 msgstr "Añadir un servidor"
 
 #: apps/wprs-app/qml/AccountDialogs.qml
+msgid "Fingerprint of its own certificate, only for a server at home"
+msgstr "Huella de su propio certificado, solo para un servidor de casa"
+
+#: apps/wprs-app/qml/AccountDialogs.qml
 msgid "Link this computer"
 msgstr "Enlazar este equipo"
 
@@ -412,6 +416,14 @@ msgstr ""
 #: apps/wprs-app/qml/AccountSummary.qml
 msgid "Server:"
 msgstr "Servidor:"
+
+#: apps/wprs-app/qml/AccountSummary.qml
+msgid "Certificate:"
+msgstr "Certificado:"
+
+#: apps/wprs-app/qml/AccountSummary.qml
+msgid "its own, pinned by the fingerprint %1"
+msgstr "propio, fijado por la huella %1"
 
 #: apps/wprs-app/qml/AccountSummary.qml
 msgid "Account:"
@@ -854,6 +866,10 @@ msgstr "Importar un mapa…"
 #: apps/wprs-app/qml/EditDepth.qml
 msgid "Save next to the picture"
 msgstr "Guardar junto a la imagen"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Remove the map"
+msgstr "Quitar el mapa"
 
 #: apps/wprs-app/qml/EditDepth.qml
 msgid "Near level"

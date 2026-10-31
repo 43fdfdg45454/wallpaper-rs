@@ -1,12 +1,13 @@
 use crate::said;
 use crate::state::{CANCEL, Saved, api, linked, read, update};
-use crate::{Error, cycle, keys, link, pairing, settings, vault};
+use crate::{Error, cycle, escrow, keys, link, listen, pairing, private, repos, settings, vault};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::Mutex;
 use std::sync::atomic::Ordering::Relaxed;
 use std::time::Duration;
 use wprs_sync::Peer;
+use zeroize::Zeroizing;
 
 pub(crate) const NETWORK: &str = "sync_network";
 
@@ -22,6 +23,8 @@ enum Request {
     },
     Add {
         url: String,
+        #[serde(default)]
+        fingerprint: Option<String>,
     },
     Link {
         label: String,
@@ -50,6 +53,44 @@ enum Request {
         conflict: String,
     },
     Remove,
+    Escrow {
+        passphrase: String,
+    },
+    Restore {
+        passphrase: String,
+    },
+    Files,
+    ShareFiles {
+        targets: Vec<String>,
+        share: bool,
+    },
+    Fetch {
+        id: String,
+    },
+    Listen {
+        token: u64,
+    },
+    Hush {
+        token: u64,
+    },
+    Repos,
+    AddRepo {
+        url: String,
+    },
+    Offer {
+        repo: String,
+        add: bool,
+    },
+    RemoveRepo {
+        repo_id: String,
+    },
+    Browse {
+        query: String,
+    },
+    Install {
+        repo_id: String,
+        id: String,
+    },
 }
 
 fn status() -> Value {
@@ -66,7 +107,9 @@ fn status() -> Value {
             "quarantined": s.quarantine.len(), "unapplied": s.unapplied.len(),
             "devices": s.peers.iter().map(device).collect::<Vec<_>>(), "link": link::shown(),
             "pairing": pairing::shown(), "network": settings::chosen(NETWORK), "active": s.active(),
-            "outdated": s.outdated, "recovery_stale": s.recovery_stale,
+            "outdated": s.outdated, "recovery_stale": s.recovery_stale, "pin": s.pin,
+            "recovery": match (s.recovery, s.recovery_stale) { (None, _) => "off", (_, true) => "stale", _ => "current" },
+            "secrets": s.shared, "offers": s.offers.len(), "files": s.files.items.len(),
         })
     })
 }
@@ -87,6 +130,19 @@ fn run(request: Request) -> Result<Value, Error> {
             linked()?;
             return update(|s| s.paused = paused).map(|()| status());
         }
+        Request::Hush { token } => return Ok(json!(listen::hush(token))),
+        Request::Files => return Ok(private::list()),
+        Request::ShareFiles { targets, share } => return private::share(&targets, share),
+        Request::Repos => return repos::list(),
+        Request::AddRepo { url } => return repos::add(&url),
+        Request::Offer { repo, add } => return repos::confirm(&repo, add),
+        Request::RemoveRepo { repo_id } => return repos::remove(&repo_id),
+        Request::Browse { query } => return repos::browse(&query),
+        Request::Install { repo_id, id } => return repos::install(&repo_id, &id),
+        Request::Listen { token } => {
+            let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
+            return runtime.block_on(listen::listen(token));
+        }
         _ => {}
     }
     let _busy = BUSY.try_lock().map_err(|_| {
@@ -96,7 +152,7 @@ fn run(request: Request) -> Result<Value, Error> {
     let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
     runtime.block_on(async {
         match request {
-            Request::Add { url } => link::add(&url).await,
+            Request::Add { url, fingerprint } => link::add(&url, fingerprint.as_deref()).await,
             Request::Link { label, plaintext } => link::start(&label, plaintext).await,
             Request::Wait => link::wait().await,
             Request::Join { device } => pairing::join(&device).await,
@@ -108,7 +164,13 @@ fn run(request: Request) -> Result<Value, Error> {
             }
             Request::Sync { conflict } => cycle::sync(&conflict).await,
             Request::Remove => remove().await,
-            Request::Status | Request::Cancel | Request::Pause { .. } => Ok(Value::Null),
+            Request::Escrow { passphrase } => escrow::set(Zeroizing::new(passphrase)).await,
+            Request::Restore { passphrase } => escrow::restore(Zeroizing::new(passphrase)).await,
+            Request::Fetch { id } => {
+                let (api, secrets) = crate::state::api()?;
+                private::fetch(&api, &secrets, &id).await
+            }
+            _ => Ok(Value::Null),
         }
     })
 }

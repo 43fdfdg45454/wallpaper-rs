@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="recovery_title">Recovery passphrase</string>
+    <string name="recovery_off">The server keeps no recovery passphrase.</string>
+    <string name="recovery_current">The server keeps the sync key locked with a recovery passphrase.</string>
+    <string name="recovery_set">Set a passphrase</string>
+    <string name="recovery_remove">Remove it</string>
+    <string name="recovery_warning">Anyone with a copy of the server can try passphrases without limit: use several unrelated words that you use nowhere else, at least 20 characters.</string>
+    <string name="passphrase">Passphrase</string>
+    <string name="restore">Recover the key with the passphrase</string>
+    <string name="restoring">Opening the recovery escrow, which takes a while…</string>
+    <string name="secrets_shared">Provider keys synced: %1$s. The phone keeps them sealed by the Android keystore for the computers that use them.</string>
+    <string name="private_files">Private files</string>
+    <string name="private_none">No private files yet. Turn on Keep encrypted on the server in the page of a picture or a video.</string>
+    <string name="private_waiting">Waiting to be uploaded</string>
+    <string name="private_here">On this phone</string>
+    <string name="private_fetch">Download</string>
+    <string name="private_share">Keep encrypted on the server</string>
+    <string name="private_fetching">Downloading %1$s…</string>
+</resources>

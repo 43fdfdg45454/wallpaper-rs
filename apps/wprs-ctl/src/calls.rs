@@ -114,6 +114,7 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Inputs1", "SetPointer", "input pointer", &["X", "Y"]),
     ("Inputs1", "SetClicks", "input clicks", &["--output", "STATE"]),
     ("Sync1", "AddServer", "server add", &["URL"]),
+    ("Sync1", "AddPinnedServer", "server add", &["URL", "--fingerprint"]),
     ("Sync1", "Link", "server link", &["--name", "--plaintext"]),
     ("Sync1", "PreviewCode", "server approve", &["CODE"]),
     ("Sync1", "ApproveDevice", "server approve", &["CODE", "prompt"]),

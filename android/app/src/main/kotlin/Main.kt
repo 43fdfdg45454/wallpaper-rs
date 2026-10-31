@@ -34,6 +34,7 @@ class Main : ComponentActivity() {
     val hearing by lazy { Hearing(applicationContext) }
     private val power by lazy { Power(applicationContext) }
     private val scope = MainScope()
+    private val heard by lazy { Heard(this, scope) }
     private val pick = registerForActivityResult(PickMultipleVisualMedia()) { store(it) }
     private val files = registerForActivityResult(OpenMultipleDocuments()) { store(it) }
     private val folder = registerForActivityResult(OpenDocumentTree()) { uri -> uri?.let(::importFolder) }
@@ -56,9 +57,11 @@ class Main : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         power.show(this, true)
+        heard.start()
     }
 
     override fun onStop() {
+        heard.stop()
         power.show(this, false)
         super.onStop()
     }

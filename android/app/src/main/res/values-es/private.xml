@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="recovery_title">Frase de recuperación</string>
+    <string name="recovery_off">El servidor no guarda ninguna frase de recuperación.</string>
+    <string name="recovery_current">El servidor guarda la clave de sincronización cerrada con una frase de recuperación.</string>
+    <string name="recovery_set">Guardar una frase</string>
+    <string name="recovery_remove">Quitarla</string>
+    <string name="recovery_warning">Quien consiga una copia del servidor puede probar frases sin límite: usa varias palabras sin relación que no uses en ningún otro sitio, de 20 caracteres como mínimo.</string>
+    <string name="passphrase">Frase</string>
+    <string name="restore">Recuperar la clave con la frase</string>
+    <string name="restoring">Abriendo la custodia de la clave, que tarda un poco…</string>
+    <string name="secrets_shared">Claves de proveedores sincronizadas: %1$s. El teléfono las guarda selladas por el almacén de claves de Android para los ordenadores que las usan.</string>
+    <string name="private_files">Archivos privados</string>
+    <string name="private_none">Aún no hay archivos privados. Activa Guardar cifrado en el servidor en la página de una imagen o un vídeo.</string>
+    <string name="private_waiting">Esperando para subirse</string>
+    <string name="private_here">En este teléfono</string>
+    <string name="private_fetch">Descargar</string>
+    <string name="private_share">Guardar cifrado en el servidor</string>
+    <string name="private_fetching">Descargando %1$s…</string>
+</resources>

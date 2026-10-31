@@ -34,6 +34,8 @@ pub mod qobject {
         #[qinvokable]
         fn keep(self: Pin<&mut DepthMaps>);
         #[qinvokable]
+        fn forget(self: Pin<&mut DepthMaps>);
+        #[qinvokable]
         fn install(self: Pin<&mut DepthMaps>, file: &QString);
         #[qinvokable]
         fn view(self: Pin<&mut DepthMaps>, depth: &QString, colour: bool);
@@ -100,6 +102,10 @@ impl DepthMaps {
 
     pub fn keep(self: Pin<&mut Self>) {
         self.start(Work::Keep);
+    }
+
+    pub fn forget(self: Pin<&mut Self>) {
+        self.start(Work::Remove);
     }
 
     pub fn install(self: Pin<&mut Self>, file: &QString) {

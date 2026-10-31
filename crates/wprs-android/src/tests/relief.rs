@@ -8,13 +8,14 @@ use std::path::Path;
 pub(super) fn relief(uid: &str) {
     let deep = |request: Value| serde_json::from_str::<Value>(&depth::request(&request.to_string())).unwrap();
     let model = deep(json!({ "op": "model" }));
-    assert_eq!(
-        (&model["installed"], &model["allowed"], &model["size"]),
-        (&json!(false), &json!(true), &json!("99.1 MB"))
-    );
-    assert_eq!((&model["hosts"], &model["license"]), (&json!("github.com"), &json!("Apache-2.0")));
-    assert!(model["agent"].as_str().unwrap().starts_with("wallpaper-rs/"));
-    let part = Path::new(model["part"].as_str().unwrap());
+    assert_eq!((&model["installed"], &model["allowed"]), (&json!(false), &json!(true)));
+    let text = |key: &str| model[key].as_str().unwrap().to_owned();
+    assert!(text("size").ends_with(" MB") && text("title").starts_with("Depth Anything V2 Small"));
+    assert!(text("hosts").starts_with("github.com") && text("license").starts_with("Apache-2.0"));
+    let first = &model["files"][0];
+    assert!(first["agent"].as_str().unwrap().starts_with("wallpaper-rs/"));
+    assert_eq!(first["bytes"], json!(wprs_depth::MODEL.bytes));
+    let part = Path::new(first["part"].as_str().unwrap());
     fs::create_dir_all(part.parent().unwrap()).unwrap();
     fs::write(part, "not a model").unwrap();
     assert!(deep(json!({ "op": "install" }))["error"].as_str().unwrap().contains("SHA-256"));
@@ -61,8 +62,15 @@ pub(super) fn relief(uid: &str) {
         "a map keeps what changed while it was read"
     );
     let raise = depth::raised(&image).unwrap();
-    assert_eq!(depth::map(&raise).map(|map| map.dimensions()), Some((32, 16)));
+    assert_eq!(depth::maps::map(&raise).map(|map| map.dimensions()), Some((32, 16)));
+    levels(uid, &image, &deep);
     masked(uid, &image);
+    assert_eq!(deep(json!({ "op": "unmap", "uid": uid })), json!(1));
+    assert_eq!(
+        (state(), deep(json!({ "op": "unmap", "uid": uid }))),
+        ((json!(true), json!(false)), json!(0))
+    );
+    assert_eq!(import(32, 16), Value::Null);
     assert_eq!(deep(json!({ "op": "parallax", "uid": uid, "on": false })), Value::Null);
     assert!(depth::raised(&image).is_none());
     if let (Some(model), Ok(runtime)) =
@@ -85,6 +93,58 @@ pub(super) fn relief(uid: &str) {
     assert!(!fs::read_dir(store::dir().unwrap().join("depth")).is_ok_and(|mut maps| maps.next().is_some()));
 }
 
+fn levels(uid: &str, image: &Path, deep: &dyn Fn(Value) -> Value) {
+    let set = json!({ "op": "levels", "uid": uid, "near": 0.8, "far": 0.2, "gamma": 2.0, "smooth": 0, "dilate": 0 });
+    assert_eq!(deep(set), Value::Null);
+    let item = deep(json!({ "op": "item", "uid": uid }));
+    let read = |key: &str| item[key].as_f64().unwrap();
+    assert_eq!(
+        ["near", "far", "gamma", "smooth", "dilate"].map(read),
+        [0.8_f32 as f64, 0.2_f32 as f64, 2.0, 0.0, 0.0]
+    );
+    let level = depth::maps::map(&depth::raised(image).unwrap()).unwrap().get_pixel(0, 0)[0];
+    let expected = ((0.2 + 0.6 * (40_000.0_f32 / 65535.0).powf(2.0)) * 65535.0).round() as u16;
+    assert!(level.abs_diff(expected) <= 1, "the near, far and curve shape the map: {level} {expected}");
+    let wrong = deep(json!({ "op": "levels", "uid": uid, "gamma": 50.0 }));
+    assert!(wrong["error"].is_string(), "{wrong}");
+    assert_eq!(
+        deep(json!({ "op": "levels", "uid": uid, "near": 1.0, "far": 0.0, "gamma": 1.0 })),
+        Value::Null
+    );
+}
+
+#[test]
+fn cancelling_a_depth_map_answers_at_once() {
+    assert_eq!(depth::request(r#"{"op": "cancel"}"#), "true");
+    assert_eq!(depth::request(r#"{"op": "cancel"}"#), "false");
+}
+
+#[test]
+fn the_runtime_is_taken_from_its_archive_by_checksum() {
+    let dir = tempfile::tempdir().unwrap();
+    let (archive, library) = (dir.path().join("runtime.aar"), b"\x7fELF a library".to_vec());
+    let mut zip = zip::ZipWriter::new(File::create(&archive).unwrap());
+    zip.start_file("jni/x86_64/libonnxruntime.so", zip::write::SimpleFileOptions::default()).unwrap();
+    std::io::Write::write_all(&mut zip, &library).unwrap();
+    zip.finish().unwrap();
+    fs::write(dir.path().join("plain"), &library).unwrap();
+    let sha = wprs_depth::sha256(&dir.path().join("plain")).unwrap();
+    let asset = |file_sha256: &'static str| wprs_depth::Asset {
+        member: "jni/x86_64/libonnxruntime.so",
+        file_sha256,
+        ..wprs_depth::MODEL
+    };
+    let dest = dir.path().join("libonnxruntime.so");
+    let leak: &'static str = Box::leak(sha.into_boxed_str());
+    depth::model::unpack(&asset(leak), &archive, &dest).unwrap();
+    assert_eq!(fs::read(&dest).unwrap(), library);
+    assert!(fs::metadata(&dest).unwrap().permissions().readonly());
+    let other = dir.path().join("other.so");
+    assert!(depth::model::unpack(&asset("00"), &archive, &other).is_err() && !other.exists());
+    let member = wprs_depth::Asset { member: "jni/arm64-v8a/libonnxruntime.so", ..asset(leak) };
+    assert!(depth::model::unpack(&member, &archive, &other).is_err());
+}
+
 fn masked(uid: &str, image: &Path) {
     let edit = |value: Value| wprs_core::Edit::from_value(value).unwrap();
     let tinted = edit(json!({"version": 1, "geometry": {"rotate": 90},
@@ -98,7 +158,7 @@ fn masked(uid: &str, image: &Path) {
     .unwrap();
     let framed = framing::framed(uid, image, wprs_core::Fit::Fill, false);
     let develop = framed.develop.as_ref().unwrap();
-    let map = depth::masking(framed.map.as_ref().map(|(path, _)| path.as_path()), develop);
+    let map = depth::maps::masking(framed.map.as_ref().map(|(path, _)| path.as_path()), develop);
     assert_eq!(
         (develop.needs_depth(), develop.geometry.rotate, map.map(|m| m.dimensions())),
         (true, 90, Some((32, 16))),

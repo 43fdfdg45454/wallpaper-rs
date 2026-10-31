@@ -43,6 +43,11 @@
     <string name="account_password">Contraseña de la cuenta</string>
     <string name="approve_password">Para aprobar hace falta la contraseña de la cuenta. Una cuenta que entra con inicio de sesión único aprueba en la página de la cuenta del servidor.</string>
     <string name="outdated">Esta cuenta se sincroniza con una versión más nueva de wallpaper-rs: actualiza la app para seguir sincronizando.</string>
-    <string name="recovery_revoked">Se revocó un dispositivo que puede conocer la frase de recuperación: en un ordenador, pon una frase de recuperación nueva y distinta.</string>
     <string name="names_key">Los nombres de los elementos son hashes con clave. Un dispositivo que tuvo la clave de nombres y tiene el mismo archivo puede saber que esta cuenta lo guarda, aunque se haya revocado.</string>
+    <string name="cert_title">Certificado del servidor</string>
+    <string name="cert_question">Este servidor usa un certificado propio. Confía en él solo si esta huella es la que muestra el servidor con wprs-server fingerprint:</string>
+    <string name="cert_pinned">Certificado fijado por su huella %1$s</string>
+    <string name="lan_found">Servidores en esta red</string>
+    <string name="cert_trust">Confiar en él</string>
+    <string name="recovery_revoked">Se revocó un dispositivo que puede conocer la frase de recuperación: pon una frase de recuperación nueva y distinta.</string>
 </resources>

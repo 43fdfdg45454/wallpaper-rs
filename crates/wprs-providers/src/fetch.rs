@@ -39,6 +39,12 @@ impl HttpFetch {
             if follows(&declared(&known), a.previous(), a.url()) { redirect(a, false) } else { a.stop() }
         });
         let builder = Client::builder().user_agent(AGENT).referer(false).redirect(policy);
+        #[cfg(target_os = "android")]
+        let builder = builder.tls_certs_only(
+            webpki_root_certs::TLS_SERVER_ROOT_CERTS
+                .iter()
+                .filter_map(|der| reqwest::Certificate::from_der(der).ok()),
+        );
         let client = builder.connect_timeout(Duration::from_secs(10)).timeout(window).build()?;
         Ok(Self { client, cancel, window, origins })
     }

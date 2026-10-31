@@ -53,6 +53,14 @@ impl Places {
         write(&map, &own).map(|()| own)
     }
 
+    pub fn unmap(&self, image: &Path, sha256: &str, depth: &Depth) -> usize {
+        let maps = [self.own(sha256), self.generated(sha256, depth), Some(beside(image))];
+        maps.into_iter()
+            .flatten()
+            .filter(|map| !map.is_symlink() && std::fs::remove_file(map).is_ok())
+            .count()
+    }
+
     pub fn trim(&self, keep: &Path, limit: u64) -> Result<u64> {
         let entries = std::fs::read_dir(self.cache.join("depth"))?.flatten();
         let mut maps: Vec<(SystemTime, u64, PathBuf)> = entries

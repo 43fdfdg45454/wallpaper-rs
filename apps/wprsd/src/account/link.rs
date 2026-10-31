@@ -22,7 +22,8 @@ impl Daemon {
         if label.chars().count() > 64 || label.chars().any(char::is_control) {
             return Err(invalid("a device name has 1 to 64 printable characters"));
         }
-        let (key, api) = (DeviceKey::generate(), Api::new(&url).map_err(sync_error)?);
+        let pin = self.saved().pin.clone();
+        let (key, api) = (DeviceKey::generate(), Api::pinned(&url, pin.as_deref()).map_err(sync_error)?);
         let body = json!({"platform": "linux", "enc_key": encode(&key.public()), "client": AGENT});
         let start = block_on(api.post("/api/v1/auth/device/start", body)).map_err(sync_error)?;
         let text = |field: &str| start[field].as_str().unwrap_or_default().to_owned();

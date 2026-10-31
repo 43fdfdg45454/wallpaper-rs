@@ -39,6 +39,7 @@ impl Saved {
         };
         (!self.url.is_empty()).then(|| Account {
             url: self.url.clone(),
+            pin: self.pin.clone(),
             name: self.name.clone(),
             repo_id: self.repo_id.clone(),
             handle: self.handle.clone(),

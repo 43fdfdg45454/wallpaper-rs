@@ -51,7 +51,8 @@ impl Gpu {
         let image = match &framed.develop {
             Some(edit) => {
                 let frame = edit.geometry.frame(decoded.dimensions());
-                let map = crate::depth::masking(framed.map.as_ref().map(|(path, _)| path.as_path()), edit);
+                let map =
+                    crate::depth::maps::masking(framed.map.as_ref().map(|(path, _)| path.as_path()), edit);
                 r.develop(&decoded, edit, map.as_ref(), r.develop_size(frame, place(frame), key.size))
             }
             None => r.upload_placed(&decoded, place(decoded.dimensions()), key.size),
@@ -74,6 +75,10 @@ pub(crate) fn stamps() -> bool {
 
 pub(crate) fn measured() -> bool {
     lock().as_ref().is_some_and(|gpu| gpu.renderer.calibration().is_some_and(|c| c.measured()))
+}
+
+pub(crate) fn timed() -> bool {
+    lock().as_ref().is_some_and(|gpu| gpu.renderer.calibration().is_some_and(|c| c.stamped()))
 }
 
 pub(crate) fn adapter() -> String {

@@ -83,6 +83,7 @@ a server sync --wait >/dev/null
 ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
 named playlists "" | grep -q "After the phone" || fail "the phone did not read a record after the rotation"
 echo "phone rotation checks passed"
+source "$(dirname "$0")"/sync-pocket.sh
 
 b server remove --wipe
 a server sync --wait >/dev/null

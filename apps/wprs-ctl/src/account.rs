@@ -35,6 +35,7 @@ pub fn status(reply: AccountReply) -> String {
         ("device", device),
         ("state", text(&a.state)),
         ("encryption", encryption),
+        ("certificate", a.pin.map_or_else(|| "-".into(), |pin| format!("pinned, fingerprint {pin}"))),
         ("synced", when(a.last_sync)),
         ("records", a.records.to_string()),
         ("storage", storage),

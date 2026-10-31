@@ -3,15 +3,6 @@ package io.github.wallpaper_rs
 import android.app.WallpaperColors
 import android.graphics.Color
 import android.view.Surface
-import android.view.SurfaceHolder
-import android.view.SurfaceView
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
 import org.json.JSONArray
 
 class Painter(
@@ -161,30 +152,5 @@ class Painter(
         const val TOUCH = 2
         const val CLIPS = 4
         const val FILE = "file://"
-    }
-}
-
-@Composable
-fun Live(main: Main, vararg changes: Any?, modifier: Modifier = Modifier.fillMaxSize()) = Box(modifier) {
-    val painter = remember { Painter(true, main.videos, main.tilt, main.hearing) }
-    LaunchedEffect(*changes) { Render.post(painter::refresh) }
-    AndroidView({ SurfaceView(it).apply { holder.addCallback(Preview(this, painter)) } }, Modifier.fillMaxSize())
-}
-
-private class Preview(private val view: SurfaceView, private val painter: Painter) : SurfaceHolder.Callback {
-    override fun surfaceCreated(holder: SurfaceHolder) = Render.call {
-        painter.attach(holder.surface)
-        painter.show(true)
-        Wallpaper.previews += painter
-    }
-
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) = Render.call {
-        painter.resize(width, height, view.display?.rotation ?: 0)
-        painter.redraw()
-    }
-
-    override fun surfaceDestroyed(holder: SurfaceHolder) = Render.call {
-        Wallpaper.previews -= painter
-        painter.detach()
     }
 }

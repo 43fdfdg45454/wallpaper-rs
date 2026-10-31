@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="repos">Repositories</string>
+    <string name="repo_offer">%1$s was added on another device, with the key %2$s.</string>
+    <string name="repo_add">Add</string>
+    <string name="repo_decline">Decline</string>
+    <string name="repo_packages">Packages: %1$d</string>
+    <string name="repo_url">Repository address</string>
+    <string name="repo_add_url">Add the repository</string>
+    <string name="repo_browse">Explore</string>
+    <string name="repo_search">Search packages</string>
+    <string name="repo_install">Install</string>
+    <string name="repo_installed">Installed</string>
+</resources>

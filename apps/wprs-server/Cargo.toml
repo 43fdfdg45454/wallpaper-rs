@@ -22,8 +22,10 @@ futures-util.workspace = true
 getrandom.workspace = true
 image.workspace = true
 maud.workspace = true
+mdns-sd.workspace = true
 openidconnect = { workspace = true, optional = true }
 percent-encoding.workspace = true
+rcgen.workspace = true
 reqwest = { workspace = true, optional = true }
 rusqlite.workspace = true
 rustix = { workspace = true, features = ["process"] }
@@ -32,6 +34,7 @@ serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 tokio = { workspace = true, features = ["net", "fs", "io-util", "process"] }
+tokio-rustls = { workspace = true, features = ["aws-lc-rs"] }
 tokio-util.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

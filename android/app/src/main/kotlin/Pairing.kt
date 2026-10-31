@@ -104,12 +104,38 @@ fun Approve(main: Main, run: Run, close: () -> Unit) {
 @Composable
 fun Server(run: Run) = Column(Modifier.padding(16.dp), Arrangement.spacedBy(12.dp)) {
     var url by rememberSaveable { mutableStateOf("") }
+    var print by rememberSaveable { mutableStateOf<String?>(null) }
+    val add = { pin: String? ->
+        run("") {
+            try {
+                account("add", "url" to url.trim(), "fingerprint" to pin)
+            } catch (e: Refused) {
+                if (e.id != OWN_CERTIFICATE) throw e
+                print = e.args.firstOrNull()
+            }
+        }
+    }
     Text(stringResource(R.string.sync_intro))
     OutlinedTextField(url, { url = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.server)) }, singleLine = true)
-    Button({ run("") { account("add", "url" to url.trim()) } }, enabled = url.isNotBlank()) {
-        Text(stringResource(R.string.add_server))
+    Button({ add(null) }, enabled = url.isNotBlank()) { Text(stringResource(R.string.add_server)) }
+    Nearby { url = it }
+    print?.let { found ->
+        AlertDialog(
+            onDismissRequest = { print = null },
+            confirmButton = {
+                TextButton({
+                    print = null
+                    add(found)
+                }) { Text(stringResource(R.string.cert_trust)) }
+            },
+            dismissButton = { TextButton({ print = null }) { Text(stringResource(R.string.cancel)) } },
+            title = { Text(stringResource(R.string.cert_title)) },
+            text = { Text(stringResource(R.string.cert_question, found.chunked(4).joinToString(" "))) },
+        )
     }
 }
+
+private const val OWN_CERTIFICATE = "android.server_own_certificate"
 
 @Composable
 fun Link(status: JSONObject, run: Run) = Column(Modifier.padding(16.dp), Arrangement.spacedBy(12.dp)) {

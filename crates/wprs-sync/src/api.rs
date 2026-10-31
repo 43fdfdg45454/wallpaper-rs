@@ -26,7 +26,10 @@ fn invalid(message: &str) -> Error {
 }
 
 fn net(e: reqwest::Error) -> Error {
-    Error::Network(e.without_url().to_string())
+    match crate::pin::untrusted(&e) {
+        true => Error::Untrusted,
+        false => Error::Network(e.without_url().to_string()),
+    }
 }
 
 pub fn check_url(url: &str) -> Result<String> {
@@ -49,6 +52,10 @@ pub fn check_url(url: &str) -> Result<String> {
 
 impl Api {
     pub fn new(base: &str) -> Result<Api> {
+        Api::pinned(base, None)
+    }
+
+    pub fn pinned(base: &str, pin: Option<&str>) -> Result<Api> {
         let builder = reqwest::Client::builder().user_agent(AGENT).referer(false).redirect(Policy::none());
         #[cfg(target_os = "android")]
         let builder = builder.tls_certs_only(
@@ -56,6 +63,13 @@ impl Api {
                 .iter()
                 .filter_map(|der| reqwest::Certificate::from_der(der).ok()),
         );
+        let builder = match pin.filter(|p| !p.is_empty()) {
+            Some(pin) if crate::pin::valid_pin(pin) => {
+                builder.tls_backend_preconfigured(crate::pin::config(Some(pin))?)
+            }
+            Some(_) => return Err(invalid("a certificate fingerprint has 64 lowercase hex digits")),
+            None => builder,
+        };
         let http = builder.connect_timeout(Duration::from_secs(10)).build().map_err(net)?;
         Ok(Api { http, base: check_url(base)?, token: None })
     }

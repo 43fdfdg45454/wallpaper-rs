@@ -43,6 +43,11 @@
     <string name="account_password">Password of the account</string>
     <string name="approve_password">Approving asks for the password of the account. An account that signs in through single sign-on approves on the account page of the server.</string>
     <string name="outdated">This account is synced by a newer version of wallpaper-rs: update the app to keep syncing.</string>
-    <string name="recovery_revoked">A device that may know the recovery passphrase was revoked: on a computer, set a new, different recovery passphrase.</string>
     <string name="names_key">Item names are keyed hashes. A device that once held the names key and has the same file can still tell that this account stores it, even after it is revoked.</string>
+    <string name="cert_title">Server certificate</string>
+    <string name="cert_question">This server uses its own certificate. Trust it only if this fingerprint is the one the server shows with wprs-server fingerprint:\n\n%1$s</string>
+    <string name="cert_pinned">Certificate pinned by its fingerprint %1$s</string>
+    <string name="lan_found">Servers on this network</string>
+    <string name="cert_trust">Trust it</string>
+    <string name="recovery_revoked">A device that may know the recovery passphrase was revoked: set a new, different recovery passphrase.</string>
 </resources>

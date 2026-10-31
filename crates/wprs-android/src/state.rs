@@ -46,6 +46,12 @@ pub(crate) struct Saved {
     pub(crate) removed: BTreeMap<String, i64>,
     pub(crate) outdated: bool,
     pub(crate) recovery_stale: bool,
+    pub(crate) recovery: Option<i64>,
+    pub(crate) pin: Option<String>,
+    pub(crate) files: crate::private::Files,
+    pub(crate) offers: Vec<crate::repos::Offer>,
+    pub(crate) declined: BTreeSet<String>,
+    pub(crate) shared: Vec<String>,
 }
 
 impl Saved {
@@ -115,7 +121,8 @@ pub(crate) fn linked() -> Result<(), Error> {
 
 pub(crate) fn api() -> Result<(Api, Secrets), Error> {
     let secrets = vault::load()?;
-    Ok((Api::new(&read(|s| s.url.clone()))?.with_token(&secrets.token), secrets))
+    let (url, pin) = read(|s| (s.url.clone(), s.pin.clone()));
+    Ok((Api::pinned(&url, pin.as_deref())?.with_token(&secrets.token), secrets))
 }
 
 pub(crate) async fn pause(seconds: u64) -> Result<(), Error> {

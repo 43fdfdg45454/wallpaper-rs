@@ -56,7 +56,7 @@ pub(crate) fn raise(
     let motion =
         old.take().filter(|raised| key.as_ref().is_some_and(|k| k.1 == raised.key.1)).map(|r| r.motion);
     *old = key.and_then(|key| {
-        let map = depth::map(&key.2);
+        let map = depth::maps::map(&key.2);
         let flat = map.is_none();
         let map = map.unwrap_or_else(|| DepthMap::from_pixel(1, 1, Luma([u16::MAX])));
         let turned = key.3.clone().map(|geometry| Edit { geometry, ..Edit::default() });

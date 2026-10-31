@@ -2,7 +2,6 @@ use crate::{Gpu, Tier};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-const METHOD: u32 = 1;
 const RUNS: u32 = 3;
 const STEPS: [(f64, Tier); 3] = [(0.2, Tier::T3), (0.5, Tier::T2), (2.0, Tier::T1)];
 
@@ -34,6 +33,13 @@ impl Tier {
 }
 
 impl Calibration {
+    pub const FENCE: u32 = 1;
+    pub const STAMPS: u32 = 2;
+
+    pub fn stamped(&self) -> bool {
+        self.method == Calibration::STAMPS && self.measured()
+    }
+
     pub fn measured(&self) -> bool {
         self.unit_ms > 0.0
     }
@@ -54,12 +60,13 @@ pub fn calibrate(
     cache: Option<&Path>,
     (adapter, driver): (&str, &str),
     gpu: &Gpu<'_>,
+    method: u32,
     measure: impl FnOnce() -> Option<f64>,
 ) -> (Calibration, bool) {
     let made = |unit_ms: f64, runs: u32| Calibration {
         adapter: adapter.into(),
         driver: driver.into(),
-        method: METHOD,
+        method,
         tier: if unit_ms > 0.0 { Tier::calibrated(gpu, unit_ms) } else { Tier::detect(gpu) },
         unit_ms,
         runs,

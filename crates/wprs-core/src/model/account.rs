@@ -57,6 +57,7 @@ model! {
         pub files_bytes: u64,
         pub files_quota_bytes: u64,
         pub job: Option<u64>,
+        pub pin: Option<String>,
     }
 
     pub struct AccountReply { pub model: u32, pub serial: u64, pub account: Option<Account> }

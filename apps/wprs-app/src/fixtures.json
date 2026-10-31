@@ -46,6 +46,7 @@
  "Sync1.Rotate": [18],
  "Sync1.Reset": [19],
  "Sync1.AddServer": [13],
+ "Sync1.AddPinnedServer": [13],
  "Sync1.SyncNow": [14],
  "Sync1.Upload": [15],
  "Daemon1.ExportSceneValues": ["{\"format\": \"wpak-values/1\", \"package\": \"org.example.pond\", \"version\": \"1.0.0\", \"values\": {\"ripples\": 40}}"],

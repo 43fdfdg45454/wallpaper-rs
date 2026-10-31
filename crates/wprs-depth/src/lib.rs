@@ -5,6 +5,8 @@ mod files;
 mod infer;
 #[cfg(feature = "fetch")]
 mod install;
+#[cfg(feature = "infer")]
+mod made;
 pub mod models;
 mod process;
 mod store;
@@ -13,7 +15,9 @@ mod store;
 pub use fetch::{AGENT, Cancelled, allowed, download};
 pub use files::{beside, read, sha256, shape, write};
 #[cfg(feature = "infer")]
-pub use infer::{Bench, Device, Estimator, Stage, TELEMETRY, background, bench, decode, generate, threads};
+pub use infer::{Device, Estimator, Stage, Stopped, TELEMETRY, background, threads};
+#[cfg(feature = "infer")]
+pub use made::{Bench, bench, decode, generate, generate_until};
 pub use models::{Asset, MODEL, Part, RUNTIME};
 pub use process::{adjust, coloured, input_size, normalize, shrink, tensor};
 pub use store::CACHE_BYTES;

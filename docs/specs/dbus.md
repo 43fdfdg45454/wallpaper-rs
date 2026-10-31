@@ -1522,6 +1522,16 @@ Starts an `account` job that reads `/.well-known/wprs-server` and stores the ser
 when a server is already added; `InvalidArgs` for a refused address. The repository the server
 announces is remembered when its address has the origin of the server.
 
+### `AddPinnedServer(s url, s fingerprint) → (t job)`
+
+`AddServer` for a server with its own certificate (`wprs-server` with `WPRS_TLS=self-signed`):
+`fingerprint` is the SHA-256 of its certificate in hex (spaces and colons are ignored), as
+`wprs-server fingerprint` prints it. Every later request to the server, the event stream
+included, accepts only that certificate, whatever its name or issuer; `GetStatus` shows it in
+`pin`. `InvalidArgs` for a fingerprint without 64 hex digits. `AddServer` to such a server fails
+with a message that carries the fingerprint the server showed, so the user can compare it with
+the one on the server before adding it with this method.
+
 ### `Link(s name, b plaintext) → (s user_code, s verification_uri, t job)`
 
 Creates the key pair of this device, starts the device code flow with the platform, the public key
@@ -2033,7 +2043,7 @@ while they wait for the library.
 | `repo_add` | `Repos1.Add` | repository URL without query | `0/0` | `Repo` |
 | `repo_refresh` | `Repos1.Refresh`, schedule | repository id, or `""` | `0/0` | `RefreshOutput` |
 | `install` | `Repos1.Install` | `repo_id/id@version` | bytes | `InstalledPackage` |
-| `account` | `Sync1.AddServer`, `PreviewCode`, `Approve`, `ApproveDevice`, `ConfirmShare`, `Rotate`, `Reset`, `SetEscrow` | server URL, `preview <code>`, `approve <code>`, `share <device id>`, `rotate`, `reset` or `escrow` | `0/0` | server answer, or `{recovery}` |
+| `account` | `Sync1.AddServer`, `AddPinnedServer`, `PreviewCode`, `Approve`, `ApproveDevice`, `ConfirmShare`, `Rotate`, `Reset`, `SetEscrow` | server URL, `preview <code>`, `approve <code>`, `share <device id>`, `rotate`, `reset` or `escrow` | `0/0` | server answer, or `{recovery}` |
 | `link` | `Sync1.Link`, `Join`, `ShareKey`, `Restore` | `link`, `join <device id>`, `share <device>` or `restore` | `0/0` | `{device, encrypted, needs_key}`, `{from}`, `{device, code}` or `{epoch}` |
 | `account_sync` | `Sync1.SyncNow`, schedule | `""` | `0/0` | `{applied, records, quarantined, unsent}` |
 | `upload` | `Sync1.Upload`, `ShareFiles`, `FetchFile`, after a sync with private files | random id, `files` or `fetch` | bytes, or segments for `fetch` | `UploadOutput`, `{uploaded}` or `{item}` |
@@ -2305,7 +2315,7 @@ struct Account {
     records: u32, used_bytes: u64, quota_bytes: u64, devices: Vec<AccountDevice>,
     pairing: Option<Pairing>, quarantined: u32, unapplied: u32, offers: Vec<RepoOffer>,
     secrets: Vec<String>, recovery: Recovery, files_bytes: u64, files_quota_bytes: u64,
-    job: Option<u64>,
+    job: Option<u64>, pin: Option<String>,
 }
 struct AccountReply { model: u32, serial: u64, account: Option<Account> }
 struct PrivateFile { id: String, name: String, size: u64, item: Option<Uid>, shared: bool, stored: bool }

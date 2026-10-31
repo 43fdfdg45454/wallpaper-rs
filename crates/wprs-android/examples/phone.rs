@@ -6,6 +6,11 @@ fn main() {
     host::prepare(&dir).expect("the files dir cannot be used");
     for line in std::io::stdin().lock().lines().map_while(Result::ok) {
         let (area, rest) = line.split_once(' ').unwrap_or((&line, ""));
+        if area == "account" && rest.contains("\"listen\"") {
+            let rest = rest.to_owned();
+            std::thread::spawn(move || println!("{}", host::account(&rest)));
+            continue;
+        }
         let answer = match area {
             "account" => host::account(rest),
             "library" => host::library(rest),

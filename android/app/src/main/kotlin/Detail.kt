@@ -102,6 +102,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                 Framing(main, uid, state)
                 Relief(main, uid, state)
             }
+            if (item?.scene == false) Kept(main, uid)
         }
     }
     Column(Modifier.fillMaxSize()) {

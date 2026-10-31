@@ -22,6 +22,10 @@ pub enum Maps {
     #[command(about = "Use a picture as the depth map, saved next to the image; white is near")]
     Import { path: PathBuf, file: PathBuf },
     #[command(
+        about = "Delete the depth maps of the image: the estimated one, the imported one and the one next to it"
+    )]
+    Remove { path: PathBuf },
+    #[command(
         about = "Save the depth map as a 16-bit grey PNG; next to the image without a file, except with --adjusted or --colour, which need one"
     )]
     Export {
@@ -98,9 +102,10 @@ pub fn map(path: &Path, edit: &Edit) -> Result<Option<wprs_depth::Map>> {
 pub fn run(command: Maps) -> Result<()> {
     let places = Places::default();
     let (path, edit) = match &command {
-        Maps::Generate { path, .. } | Maps::Import { path, .. } | Maps::Export { path, .. } => {
-            (path, open(path)?)
-        }
+        Maps::Generate { path, .. }
+        | Maps::Import { path, .. }
+        | Maps::Export { path, .. }
+        | Maps::Remove { path } => (path, open(path)?),
     };
     let (sha, depth) = (key(path, &edit)?, edit.depth.clone().unwrap_or_default());
     let found = places.find(path, &sha, &depth);
@@ -111,6 +116,12 @@ pub fn run(command: Maps) -> Result<()> {
         Maps::Generate { force: false, .. } if found.is_some() => found,
         Maps::Generate { path, device, .. } => Some(generate(&places, &path, &sha, &depth, device.parse()?)?),
         Maps::Import { path, file } => Some(places.import(&file, &path, &sha)?),
+        Maps::Remove { path } => {
+            let removed = places.unmap(&path, &sha, &depth);
+            anyhow::ensure!(removed > 0, "the image has no depth map");
+            println!("{removed} depth maps removed");
+            None
+        }
         Maps::Export { path, file, adjusted, colour } => {
             let from = found.context("the image has no depth map; generate or import one first")?;
             let to = match file {

@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use wprs_scene::{Gpu, Tier, calibrate};
+use wprs_scene::{Calibration, Gpu, Tier, calibrate};
 
 const IRIS: Gpu = Gpu {
     name: "Intel(R) Iris(R) Xe Graphics",
@@ -30,22 +30,26 @@ fn a_calibration_is_kept_until_the_adapter_or_driver_changes() {
         measures.set(measures.get() + 1);
         Some(ms)
     };
-    let (first, fresh) = calibrate(Some(&path), ("iris", "mesa 26.1"), &IRIS, || measure(0.1));
+    let (first, fresh) =
+        calibrate(Some(&path), ("iris", "mesa 26.1"), &IRIS, Calibration::FENCE, || measure(0.1));
     assert!(fresh && first.measured() && first.tier == Tier::T3);
     first.keep(&path).unwrap();
-    let (again, fresh) = calibrate(Some(&path), ("iris", "mesa 26.1"), &IRIS, || measure(9.0));
+    let (again, fresh) =
+        calibrate(Some(&path), ("iris", "mesa 26.1"), &IRIS, Calibration::FENCE, || measure(9.0));
     assert_eq!((again, fresh, measures.get()), (first.clone(), false, 1));
-    let (newer, fresh) = calibrate(Some(&path), ("iris", "mesa 26.2"), &IRIS, || measure(0.4));
+    let (newer, fresh) =
+        calibrate(Some(&path), ("iris", "mesa 26.2"), &IRIS, Calibration::FENCE, || measure(0.4));
     assert_eq!((newer.tier, fresh, measures.get()), (Tier::T2, true, 2));
-    let (other, _) = calibrate(Some(&path), ("arc", "mesa 26.1"), &IRIS, || measure(0.4));
+    let (other, _) = calibrate(Some(&path), ("arc", "mesa 26.1"), &IRIS, Calibration::FENCE, || measure(0.4));
     assert_eq!((other.tier, measures.get()), (Tier::T2, 3));
     std::fs::write(&path, "{ broken").unwrap();
-    calibrate(Some(&path), ("iris", "mesa 26.1"), &IRIS, || measure(0.1));
+    calibrate(Some(&path), ("iris", "mesa 26.1"), &IRIS, Calibration::FENCE, || measure(0.1));
     assert_eq!(measures.get(), 4);
     let software = Gpu { software: true, ..IRIS };
-    let (slow, fresh) = calibrate(Some(&path), ("llvmpipe", "mesa"), &software, || measure(0.1));
+    let (slow, fresh) =
+        calibrate(Some(&path), ("llvmpipe", "mesa"), &software, Calibration::FENCE, || measure(0.1));
     assert_eq!((slow.tier, slow.measured(), fresh, measures.get()), (Tier::T0, false, false, 4));
-    let (failed, fresh) = calibrate(None, ("iris", "mesa"), &IRIS, || None);
+    let (failed, fresh) = calibrate(None, ("iris", "mesa"), &IRIS, Calibration::FENCE, || None);
     assert_eq!((failed.tier, failed.measured(), fresh), (Tier::detect(&IRIS), false, false));
 }
 
@@ -54,7 +58,7 @@ fn a_low_measure_is_taken_again_on_later_starts_and_the_best_one_kept() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("gpu-tier.json");
     let start = |ms: Option<f64>| {
-        let (found, fresh) = calibrate(Some(&path), ("iris", "mesa"), &IRIS, || ms);
+        let (found, fresh) = calibrate(Some(&path), ("iris", "mesa"), &IRIS, Calibration::FENCE, || ms);
         if fresh {
             found.keep(&path).unwrap();
         }
@@ -68,4 +72,15 @@ fn a_low_measure_is_taken_again_on_later_starts_and_the_best_one_kept() {
     std::fs::remove_file(&path).unwrap();
     [1.0, 1.1, 1.2].into_iter().for_each(|ms| _ = start(Some(ms)));
     assert_eq!(start(Some(0.1)), (Tier::T1, 3, false), "three slow measures settle it");
+}
+
+#[test]
+fn a_calibration_timed_by_the_fence_is_taken_again_with_gpu_timestamps() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("gpu-tier.json");
+    let (fence, _) = calibrate(Some(&path), ("iris", "mesa"), &IRIS, Calibration::FENCE, || Some(0.3));
+    fence.keep(&path).unwrap();
+    assert!(!fence.stamped());
+    let (stamped, fresh) = calibrate(Some(&path), ("iris", "mesa"), &IRIS, Calibration::STAMPS, || Some(0.1));
+    assert!(fresh && stamped.stamped() && stamped.unit_ms == 0.1);
 }

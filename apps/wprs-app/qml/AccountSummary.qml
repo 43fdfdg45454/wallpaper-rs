@@ -14,6 +14,13 @@ Kirigami.FormLayout {
     }
 
     QQC2.Label {
+        Kirigami.FormData.label: App.tr("Certificate:")
+        visible: (summary.account.pin ?? "") !== ""
+        text: App.tr("its own, pinned by the fingerprint %1", summary.account.pin ?? "")
+        wrapMode: Text.WrapAnywhere
+    }
+
+    QQC2.Label {
         Kirigami.FormData.label: App.tr("Account:")
         text: summary.account.handle ?? "–"
     }

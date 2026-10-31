@@ -123,6 +123,13 @@ ColumnLayout {
         onClicked: maps.keep()
     }
 
+    QQC2.Button {
+        text: App.tr("Remove the map")
+        icon.name: "edit-delete"
+        enabled: maps.map !== "" && !maps.busy
+        onClicked: maps.forget()
+    }
+
     Repeater {
         model: [["near", App.tr("Near level"), 0, 1, 0.01], ["far", App.tr("Far level"), 0, 1, 0.01], ["gamma", App.tr("Curve"), 0.2, 5, 0.05], ["smooth", App.tr("Smoothing (px)"), 0, 16, 1], ["dilate", App.tr("Grow near edges (px)"), 0, 16, 1]]
 

@@ -15,6 +15,7 @@ wprs-core.workspace = true
 wprs-depth = { workspace = true, features = ["infer"] }
 wprs-format.workspace = true
 wprs-library.workspace = true
+wprs-providers.workspace = true
 wprs-render.workspace = true
 wprs-scene.workspace = true
 wprs-script.workspace = true
@@ -33,6 +34,7 @@ thiserror.workspace = true
 tokio.workspace = true
 toml.workspace = true
 zeroize.workspace = true
+zip.workspace = true
 
 [target.'cfg(target_os = "android")'.dependencies]
 rquickjs-sys = { workspace = true, features = ["bindgen"] }

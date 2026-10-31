@@ -1,9 +1,7 @@
 use crate::link::PLATFORM;
 use crate::said;
 use crate::state::{api, linked, read, update};
-use crate::{Error, apply, keys, local, rotation, vault};
-use base64::Engine;
-use base64::prelude::BASE64_STANDARD as B64;
+use crate::{Error, apply, escrow, keys, local, private, repos, rotation, vault};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use wprs_sync::{Session, View, arrived, carry, encode, hold, now_ms, rules};
@@ -17,7 +15,10 @@ pub(crate) async fn sync(conflict: &str) -> Result<Value, Error> {
             &[],
         ));
     }
-    let result = cycle(conflict).await;
+    let mut result = cycle(conflict).await;
+    if result.as_ref().is_ok_and(|done| done["uploaded"].as_u64() > Some(0)) {
+        result = cycle(conflict).await;
+    }
     let (error, reply) =
         (result.as_ref().err().map(ToString::to_string), result.as_ref().err().map(Error::reply));
     update(|s| {
@@ -31,14 +32,8 @@ async fn cycle(conflict: &str) -> Result<Value, Error> {
     let (api, mut secrets) = api()?;
     let state = rotation::current(&api, &mut secrets).await?;
     let outdated = state["format"].as_i64() > Some(wprs_sync::FORMAT);
-    let escrow = match state["escrow"] == true {
-        true => api.get("/api/v1/sync/escrow").await.ok(),
-        false => None,
-    };
-    let sealed =
-        escrow.and_then(|e| B64.decode(e["escrow"].as_str()?).ok()).and_then(|b| wprs_sync::escrow_epoch(&b));
-    let stale = sealed.is_some_and(|epoch| Some(epoch) < state["epoch"].as_i64());
-    update(|s| (s.outdated, s.recovery_stale) = (outdated, stale))?;
+    update(|s| s.outdated = outdated)?;
+    escrow::keep(&api, &mut secrets, &state).await?;
     if outdated {
         return Err(said(
             "android.account_synced_newer",
@@ -95,7 +90,15 @@ async fn cycle(conflict: &str) -> Result<Value, Error> {
     let left =
         keys::refresh(&api).await.is_ok_and(|now| before.iter().any(|id| !now.iter().any(|p| &p.id == id)));
     keys::pins()?;
-    let mut present: BTreeSet<String> = local.items.into_keys().collect();
+    let here =
+        local.items.iter().filter_map(|(key, uids)| Some((key.clone(), uids.first()?.clone()))).collect();
+    let offers = repos::offers(&local, &replica);
+    let shared = secrets.records.values().filter_map(|(_, doc)| {
+        let view = doc.view().filter(|v| v.contains_key("secret"))?;
+        view.get("provider")?.as_str().map(String::from)
+    });
+    let shared: Vec<String> = shared.collect();
+    let mut present: BTreeSet<String> = local.items.into_keys().chain(local.repos).collect();
     present.retain(|key| !unapplied.contains_key(&format!("library/{key}")));
     let (mut fresh, mut broken) = (0, 0);
     update(|s| {
@@ -108,10 +111,15 @@ async fn cycle(conflict: &str) -> Result<Value, Error> {
         (s.present, s.unapplied) = (present, unapplied);
         s.removed.retain(|key, _| !saved.removed.contains_key(key));
         s.warning = state["warning"].as_str().map(String::from);
+        (s.files.here, s.offers, s.shared) = (here, offers, shared);
     })?;
     if encrypted && (state["rotate"] == true || left) {
         rotation::rotate(&api, &mut secrets).await?;
     }
+    let uploaded = match encrypted && !read(|s| s.files.idle()) {
+        true => private::transfer(&api, &secrets).await,
+        false => Ok(0),
+    };
     if fresh > 0 {
         return Err(said(
             "android.records_decrypted_sync",
@@ -126,5 +134,6 @@ async fn cycle(conflict: &str) -> Result<Value, Error> {
             &[&broken, &error],
         ));
     }
-    Ok(json!({"applied": changed + copied, "records": records, "unsent": unsent}))
+    let uploaded = uploaded?;
+    Ok(json!({"applied": changed + copied, "records": records, "unsent": unsent, "uploaded": uploaded}))
 }

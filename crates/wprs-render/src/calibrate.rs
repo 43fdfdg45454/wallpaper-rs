@@ -1,8 +1,73 @@
 use crate::{Layer, RenderError, Renderer};
 use std::path::Path;
+use std::sync::atomic::Ordering::Relaxed;
 use std::time::{Duration, Instant};
 use wprs_core::Fit;
 use wprs_scene::{Calibration, Tier};
+
+struct Stamps {
+    set: wgpu::QuerySet,
+    resolve: wgpu::Buffer,
+    read: wgpu::Buffer,
+    period: f64,
+}
+
+impl Stamps {
+    fn new(r: &Renderer) -> Stamps {
+        let ty = wgpu::QueryType::Timestamp;
+        let set = r.device.create_query_set(&wgpu::QuerySetDescriptor { label: None, ty, count: 2 });
+        let buffer = |usage| {
+            r.device.create_buffer(&wgpu::BufferDescriptor {
+                label: None,
+                size: 16,
+                usage,
+                mapped_at_creation: false,
+            })
+        };
+        let resolve = buffer(wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC);
+        let read = buffer(wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ);
+        Stamps { set, resolve, read, period: f64::from(r.queue.get_timestamp_period()) }
+    }
+
+    fn mark(&self, r: &Renderer, end: bool) -> wgpu::CommandEncoder {
+        let mut encoder = r.device.create_command_encoder(&Default::default());
+        let timestamp_writes = Some(wgpu::ComputePassTimestampWrites {
+            query_set: &self.set,
+            beginning_of_pass_write_index: (!end).then_some(0),
+            end_of_pass_write_index: end.then_some(1),
+        });
+        drop(encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes }));
+        encoder
+    }
+
+    fn time(
+        &self,
+        r: &Renderer,
+        target: &mut crate::Target,
+        layers: &[Layer<'_>],
+    ) -> Result<Option<f64>, RenderError> {
+        let size = target.size();
+        r.scoped(|| {
+            let drawn =
+                r.encode(&target.view, &mut target.slots, layers, size, crate::draw::TARGET_FORMAT, None);
+            let mut end = self.mark(r, true);
+            end.resolve_query_set(&self.set, 0..2, &self.resolve, 0);
+            end.copy_buffer_to_buffer(&self.resolve, 0, &self.read, 0, 16);
+            r.queue.submit([self.mark(r, false).finish(), drawn.finish(), end.finish()]);
+        })?;
+        let slice = self.read.slice(..);
+        let mapped = std::sync::Arc::new(std::sync::atomic::AtomicU8::new(0));
+        let flag = mapped.clone();
+        slice.map_async(wgpu::MapMode::Read, move |done| flag.store(1 + u8::from(done.is_ok()), Relaxed));
+        r.finish()?;
+        let ms = (mapped.load(Relaxed) == 2).then(|| slice.get_mapped_range().ok()).flatten().map(|data| {
+            let tick = |at: usize| u64::from_le_bytes(data[at..at + 8].try_into().unwrap_or_default());
+            tick(8).saturating_sub(tick(0)) as f64 * self.period / 1e6
+        });
+        self.read.unmap();
+        Ok(ms)
+    }
+}
 
 const SIZE: (u32, u32) = (1920, 1080);
 const PASSES: usize = 16;
@@ -26,8 +91,9 @@ impl Renderer {
             let adapter = format!("{} {:04x}:{:04x} {:?}", info.name, info.vendor, info.device, info.backend);
             let driver = format!("{} {}", info.driver, info.driver_info);
             let measure = || self.unit_ms(SIZE, PASSES).inspect_err(|e| tracing::warn!("{e}")).ok();
+            let method = if self.timestamps() { Calibration::STAMPS } else { Calibration::FENCE };
             let (found, fresh) =
-                wprs_scene::calibrate(cache, (&adapter, &driver), &self.gpu_class(), measure);
+                wprs_scene::calibrate(cache, (&adapter, &driver), &self.gpu_class(), method, measure);
             if let Some(path) = cache.filter(|_| fresh)
                 && let Err(e) = found.keep(path)
             {
@@ -55,11 +121,19 @@ impl Renderer {
         };
         let layers: Vec<Layer> = (0..passes.max(1)).map(layer).collect();
         let (start, mut times) = (Instant::now(), Vec::new());
+        let stamps = self.timestamps().then(|| Stamps::new(self));
         for i in 0..FRAMES + 2 {
             let at = Instant::now();
-            self.draw_layers(&mut target, &layers)?;
+            let gpu = match &stamps {
+                Some(stamps) => stamps.time(self, &mut target, &layers)?,
+                None => {
+                    self.draw_layers(&mut target, &layers)?;
+                    None
+                }
+            };
             self.finish()?;
-            times.extend((i >= 2).then(|| at.elapsed().as_secs_f64() * 1e3));
+            let wall = at.elapsed().as_secs_f64() * 1e3;
+            times.extend((i >= 2).then(|| gpu.filter(|ms| *ms > 0.0).unwrap_or(wall)));
             if times.len() >= 4 && start.elapsed() > SPAN {
                 break;
             }
@@ -79,5 +153,9 @@ mod tests {
         };
         let ms = r.unit_ms((64, 36), 2).unwrap();
         assert!(ms.is_finite() && ms > 0.0, "{ms}");
+        let method = r.calibrate(None).method;
+        let wanted =
+            if r.timestamps() { wprs_scene::Calibration::STAMPS } else { wprs_scene::Calibration::FENCE };
+        assert_eq!(method, wanted, "the calibration says how it was timed");
     }
 }

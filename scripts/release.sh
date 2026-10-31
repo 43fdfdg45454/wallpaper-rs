@@ -18,7 +18,7 @@ cp "$IN"/wallpaper-rs-*-x86_64-linux.tar.gz "$OUT/files/wallpaper-rs-x86_64-linu
 cp "$IN/wallpaper-rs.flatpak" "$IN/wallpaper-rs-aarch64.flatpak" "$OUT/files/"
 cp "$IN"/wallpaper-rs-[0-9]*.x86_64.rpm "$OUT/files/wallpaper-rs.x86_64.rpm"
 cp "$IN"/wallpaper-rs-examples-*.noarch.rpm "$OUT/files/wallpaper-rs-examples.noarch.rpm"
-cp "$IN/wallpaper-rs-android.apk" "$OUT/files/wallpaper-rs-android.apk"
+cp "$IN"/wallpaper-rs-android.apk "$IN"/wallpaper-rs-android-arm64-v8a.apk "$IN"/wallpaper-rs-android-x86_64.apk "$OUT/files/"
 mkdir "$OUT/src" && git archive HEAD | tar -x -C "$OUT/src"
 "$("$(dirname "$0")"/tools.sh syft "$OUT/tools")" scan "dir:$OUT/src" -q --source-name wallpaper-rs --source-version "$VERSION" \
   -o "spdx-json=$OUT/files/wallpaper-rs.spdx.json"

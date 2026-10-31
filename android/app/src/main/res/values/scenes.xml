@@ -52,4 +52,5 @@
     <string name="file_chosen">A file is chosen</string>
     <string name="nothing_chosen">Nothing chosen: it uses its own</string>
     <string name="choose_file">Choose</string>
+    <string name="tier_timed">The class was measured with GPU timestamps, without counting the wait for the processor.</string>
 </resources>

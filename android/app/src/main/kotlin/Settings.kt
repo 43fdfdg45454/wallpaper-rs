@@ -106,6 +106,7 @@ fun Settings(main: Main) {
                     .takeIf { report.optString("tier").isNotEmpty() },
                 stringResource(if (report.optBoolean("measured")) R.string.tier_measured else R.string.tier_detected)
                     .takeIf { report.optString("tier").isNotEmpty() },
+                stringResource(R.string.tier_timed).takeIf { report.optBoolean("timed") && report.optString("tier").isNotEmpty() },
                 levelReason(report.optString("reason"))?.let { stringResource(R.string.level_reason, stringResource(it)) },
                 stringResource(R.string.particles_cpu).takeIf { report.optString("particles") == "cpu" },
                 stringResource(R.string.scripts_stopped).takeIf { report.optString("scripts") == "off" },

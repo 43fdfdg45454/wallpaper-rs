@@ -16,6 +16,7 @@ mod files;
 mod hiding;
 mod http;
 mod jobs;
+pub mod lan;
 mod layout;
 mod legal;
 mod mailbox;
@@ -47,12 +48,12 @@ pub use records::SYNC_FORMAT;
 pub use repo::{import, init, status};
 pub use validate::check;
 
+use axum::serve::{Listener, ListenerExt};
 use rusqlite::params;
 use std::fs::DirBuilder;
 use std::net::SocketAddr;
 use std::os::unix::fs::DirBuilderExt;
 use std::sync::Arc;
-use tokio::net::TcpListener;
 use tokio::sync::{Mutex, Notify, Semaphore};
 
 type St = axum::extract::State<Arc<App>>;
@@ -106,7 +107,7 @@ impl App {
         http::router(self.clone())
     }
 
-    pub async fn serve(self: Arc<App>, listener: TcpListener) -> anyhow::Result<()> {
+    pub async fn serve<L: Listener<Addr = SocketAddr>>(self: Arc<App>, listener: L) -> anyhow::Result<()> {
         let admins = self.db.run(|c| {
             Ok(c.query_row("SELECT COUNT(*) FROM users WHERE role = 'admin'", [], |r| r.get::<_, i64>(0))?)
         });
@@ -120,6 +121,7 @@ impl App {
         }
         jobs::spawn(self.clone());
         let service = self.router().into_make_service_with_connect_info::<SocketAddr>();
+        let listener = listener.tap_io(|_| {});
         Ok(axum::serve(listener, service).with_graceful_shutdown(shutdown()).await?)
     }
 

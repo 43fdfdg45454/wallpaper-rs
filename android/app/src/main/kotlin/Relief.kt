@@ -34,7 +34,6 @@ fun Relief(main: Main, uid: String, state: JSONObject) {
     val context = LocalContext.current
     val busy = Depth.working.value
     var consent by remember { mutableStateOf<JSONObject?>(null) }
-    val library = context.applicationInfo.nativeLibraryDir + "/libonnxruntime.so"
     val off = stringResource(R.string.downloads_off)
     val open = rememberLauncherForActivityResult(OpenDocument()) { uri ->
         val file = uri?.let { runCatching { context.contentResolver.openFileDescriptor(it, "r") }.getOrNull() }
@@ -44,7 +43,7 @@ fun Relief(main: Main, uid: String, state: JSONObject) {
         main.act {
             val model = withContext(Dispatchers.IO) { depth("model") as JSONObject }
             when {
-                model.getBoolean("installed") -> Depth.make(uid, library)
+                model.getBoolean("installed") -> Depth.make(uid)
                 model.getBoolean("allowed") -> consent = model
                 else -> main.toast(off)
             }
@@ -69,11 +68,12 @@ fun Relief(main: Main, uid: String, state: JSONObject) {
         TextButton(make, enabled = busy == null) { Text(stringResource(again)) }
         TextButton({ open.launch(arrayOf(PNG)) }, enabled = busy == null) { Text(stringResource(R.string.import_map)) }
     }
+    if (state.optBoolean("map") && busy == null) Levels(main, uid, state)
     if (busy == uid) Row(Modifier.padding(horizontal = 16.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
         val share = Depth.progress.floatValue
         val bar = Modifier.weight(1f)
         if (share < 0f) LinearProgressIndicator(bar) else LinearProgressIndicator({ share }, bar)
-        if (share >= 0f) TextButton({ Depth.cancelled = true }) { Text(stringResource(R.string.cancel)) }
+        TextButton(Depth::cancel) { Text(stringResource(R.string.cancel)) }
     }
     Depth.failure.value?.takeIf { it.first == uid && busy == null }?.let { (_, error) -> Note(LocalContext.current.told(error).ifBlank { error.javaClass.simpleName }, MaterialTheme.colorScheme.error) }
     consent?.let { model ->
@@ -82,7 +82,7 @@ fun Relief(main: Main, uid: String, state: JSONObject) {
             confirmButton = {
                 TextButton({
                     consent = null
-                    Depth.make(uid, library)
+                    Depth.make(uid)
                 }) { Text(stringResource(R.string.download)) }
             },
             dismissButton = { TextButton({ consent = null }) { Text(stringResource(R.string.cancel)) } },
@@ -96,7 +96,7 @@ fun Relief(main: Main, uid: String, state: JSONObject) {
 }
 
 @Composable
-private fun Level(label: String, saved: Float, range: ClosedFloatingPointRange<Float>, save: (Float) -> Unit) = Column(Modifier.padding(horizontal = 16.dp)) {
+fun Level(label: String, saved: Float, range: ClosedFloatingPointRange<Float>, save: (Float) -> Unit) = Column(Modifier.padding(horizontal = 16.dp)) {
     var value by remember(saved) { mutableFloatStateOf(saved.coerceIn(range)) }
     Text(label, style = MaterialTheme.typography.bodyMedium)
     Slider(value, { value = it }, valueRange = range, onValueChangeFinished = { save(value) })

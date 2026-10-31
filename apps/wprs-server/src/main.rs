@@ -5,7 +5,7 @@ use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::Duration;
-use wprs_server::{App, Config};
+use wprs_server::{App, Config, lan};
 
 #[derive(Parser)]
 #[command(
@@ -27,6 +27,8 @@ enum Command {
     Healthcheck,
     #[command(about = "Print a new one-time token that creates an administrator at /setup")]
     SetupToken,
+    #[command(about = "Print the SHA-256 fingerprint of the certificate served with WPRS_TLS=self-signed")]
+    Fingerprint,
     #[command(subcommand, about = "Manage the signed package repository")]
     Repo(Repo),
     #[command(about = "Write a consistent snapshot of the database and every stored file")]
@@ -113,8 +115,21 @@ fn run(command: Command) -> Result<String> {
                 .await
                 .with_context(|| format!("cannot listen on {}", cfg.listen))?;
             tracing::info!("listening on {} for {}", cfg.listen, cfg.public_url);
-            App::open(cfg)?.serve(listener).await.map(|()| String::new())
+            let _announced = match lan::advertised()? {
+                true => Some(lan::advertise(cfg.listen.port())?),
+                false => None,
+            };
+            if !lan::wanted()? {
+                return App::open(cfg)?.serve(listener).await.map(|()| String::new());
+            }
+            let (cert, key) = lan::certificate(&cfg.data, &lan::host(&cfg.public_url))?;
+            tracing::info!("serving HTTPS with its own certificate, fingerprint {}", lan::fingerprint(&cert));
+            let tls = lan::tls(listener, lan::acceptor(cert, key)?)?;
+            App::open(cfg)?.serve(tls).await.map(|()| String::new())
         }),
+        Command::Fingerprint => {
+            Ok(lan::fingerprint(&lan::certificate(&cfg.data, &lan::host(&cfg.public_url))?.0))
+        }
         Command::Migrate => App::open(cfg).map(|_| "The database is up to date".into()),
         Command::Healthcheck => healthcheck(cfg.listen.port()).map(|()| String::new()),
         Command::SetupToken => runtime()?.block_on(App::open(cfg)?.setup_token()),
@@ -155,6 +170,9 @@ fn run(command: Command) -> Result<String> {
 fn healthcheck(port: u16) -> Result<()> {
     let address = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
     let mut stream = TcpStream::connect_timeout(&address, Duration::from_secs(3))?;
+    if lan::wanted()? {
+        return Ok(());
+    }
     stream.set_read_timeout(Some(Duration::from_secs(3)))?;
     stream.write_all(b"GET /healthz HTTP/1.0\r\nHost: localhost\r\n\r\n")?;
     let mut reply = String::new();

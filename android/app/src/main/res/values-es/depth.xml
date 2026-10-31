@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="depth_near">Nivel cercano</string>
+    <string name="depth_far">Nivel lejano</string>
+    <string name="depth_gamma">Curva</string>
+    <string name="depth_smooth">Suavizado (px)</string>
+    <string name="depth_dilate">Agrandar los bordes cercanos (px)</string>
+    <string name="depth_remove">Quitar el mapa de profundidad</string>
+</resources>

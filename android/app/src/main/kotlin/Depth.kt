@@ -20,15 +20,22 @@ object Depth {
     var cancelled = false
     private val worker = Executors.newSingleThreadExecutor { Thread(it, "wprs-depth") }
 
-    fun make(uid: String, library: String) = run(uid) {
+    fun make(uid: String) = run(uid) {
         val model = depth("model") as JSONObject
         if (!model.getBoolean("installed")) {
             if (!model.getBoolean("allowed")) throw Refused("downloading the model is turned off", "android.download_off")
-            fetch(model)
+            val files = model.getJSONArray("files")
+            repeat(files.length()) { fetch(files.getJSONObject(it)) }
             progress.floatValue = -1f
+            if (cancelled) return@run
             depth("install")
         }
-        depth("make", "uid" to uid, "library" to library)
+        depth("make", "uid" to uid)
+    }
+
+    fun cancel() {
+        cancelled = true
+        Thread { runCatching { depth("cancel") } }.start()
     }
 
     fun import(uid: String, file: ParcelFileDescriptor) =
@@ -47,13 +54,13 @@ object Depth {
         }
     }
 
-    private fun fetch(model: JSONObject) {
-        val urls = model.getJSONArray("urls")
-        val part = File(model.getString("part")).apply { parentFile?.mkdirs() }
+    private fun fetch(file: JSONObject) {
+        val urls = file.getJSONArray("urls")
+        val part = File(file.getString("part")).apply { parentFile?.mkdirs() }
         var failed = IOException("no address to download from")
         repeat(urls.length()) {
             try {
-                return get(urls.getString(it), part, model.getLong("bytes"), model.getString("agent"))
+                return get(urls.getString(it), part, file.getLong("bytes"), file.getString("agent"))
             } catch (e: IOException) {
                 failed = e
             }

@@ -128,7 +128,7 @@ pub(super) fn framing(green: &str, bands: &str) {
     deep(json!({ "op": "fit", "uids": [bands], "fit": null }));
     deep(json!({ "op": "parallax", "uid": green, "on": false }));
     assert_eq!(wanted(), [false, false]);
-    assert!(deep(json!({ "op": "make", "uid": green }))["error"].as_str().unwrap().contains("library"));
+    assert!(deep(json!({ "op": "make", "uid": green }))["error"].as_str().unwrap().contains("not installed"));
     assert_eq!(ask(json!({ "op": "favorite", "uids": [green, "gone"], "favorite": true })), Value::Null);
     assert!(
         library::with(|lib| Ok(lib.item(green)?.favorite)).unwrap(),

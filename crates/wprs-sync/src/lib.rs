@@ -11,6 +11,7 @@ mod kept;
 mod keys;
 mod mailbox;
 mod order;
+mod pin;
 mod plan;
 mod record;
 mod session;
@@ -33,6 +34,7 @@ pub use kept::{arrived, hold, keep, keep_name, playlist_rules, renamed, rules, t
 pub use keys::{Ids, SyncKey};
 pub use mailbox::{Letter, Peer, ack, devices, from, inbox, next, nonce, post};
 pub use order::{clash, positions};
+pub use pin::{fingerprint, peek, valid_pin};
 pub use plan::{Clash, Rules, Step, Winner, step};
 pub use record::{Context, open, pad, seal, unpad};
 pub use session::Session;
@@ -53,6 +55,10 @@ pub enum Error {
     Network(String),
     #[error("{0}")]
     Invalid(String),
+    #[error(
+        "the server's certificate is not trusted: check its fingerprint and add it with that fingerprint"
+    )]
+    Untrusted,
 }
 
 impl Error {

@@ -15,7 +15,12 @@ impl Sync {
 impl Sync {
     #[zbus(out_args("job"))]
     async fn add_server(&self, url: String) -> Result<u64> {
-        self.d()?.run(move |d| d.add_server(&url)).await
+        self.d()?.run(move |d| d.add_server(&url, None)).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn add_pinned_server(&self, url: String, fingerprint: String) -> Result<u64> {
+        self.d()?.run(move |d| d.add_server(&url, Some(&fingerprint))).await
     }
 
     #[zbus(out_args("user_code", "verification_uri", "job"))]

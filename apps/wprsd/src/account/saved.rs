@@ -45,6 +45,7 @@ pub struct Files {
 pub struct Saved {
     pub url: String,
     pub name: String,
+    pub pin: Option<String>,
     pub repo_url: Option<String>,
     pub repo_id: Option<String>,
     pub owner: Option<(String, i64)>,

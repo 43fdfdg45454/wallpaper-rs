@@ -1,19 +1,25 @@
 use crate::power::Power;
 use crate::said;
-use crate::{Error, framing, library, settings, store};
+use crate::{Error, framing, library, store};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::fs::{self, File};
+use std::fs::File;
 use std::os::fd::BorrowedFd;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 use std::time::SystemTime;
 use wprs_core::Fit;
 use wprs_core::edit::{self, Depth, Edit, Parallax, Source};
-use wprs_depth::{Device, MODEL, Map, Places, adjust, beside, read, shrink};
+use wprs_depth::{Device, Places};
 
-const AGENT: &str = concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION"));
+pub(crate) mod maps;
+pub(crate) mod model;
+
+pub(crate) use maps::{adopt, forget, raised, shared, stamped};
+
+static STOP: AtomicBool = AtomicBool::new(false);
 pub(crate) const EDITS: &str = "edits";
-const EDGE: u32 = 1024;
+pub(crate) const EDGE: u32 = 1024;
 
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
@@ -21,23 +27,59 @@ enum Request {
     Model,
     Install,
     Forget,
-    Make { uid: String, library: PathBuf },
-    Import { uid: String, fd: i32 },
-    Item { uid: String },
-    Parallax { uid: String, on: Option<bool>, strength: Option<f32>, focus: Option<f32> },
-    Fit { uids: Vec<String>, fit: Option<Fit> },
-    Frame { uid: String, pan: [f32; 2], zoom: f32, screen: [u32; 2], done: bool },
-    Unframe { uid: String },
+    Make {
+        uid: String,
+        library: Option<PathBuf>,
+    },
+    Cancel,
+    Unmap {
+        uid: String,
+    },
+    Levels {
+        uid: String,
+        near: Option<f32>,
+        far: Option<f32>,
+        gamma: Option<f32>,
+        smooth: Option<u32>,
+        dilate: Option<u32>,
+    },
+    Import {
+        uid: String,
+        fd: i32,
+    },
+    Item {
+        uid: String,
+    },
+    Parallax {
+        uid: String,
+        on: Option<bool>,
+        strength: Option<f32>,
+        focus: Option<f32>,
+    },
+    Fit {
+        uids: Vec<String>,
+        fit: Option<Fit>,
+    },
+    Frame {
+        uid: String,
+        pan: [f32; 2],
+        zoom: f32,
+        screen: [u32; 2],
+        done: bool,
+    },
+    Unframe {
+        uid: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Raise {
     pub(crate) parallax: Parallax,
     pub(crate) map: Option<(PathBuf, SystemTime)>,
-    depth: Depth,
+    pub(crate) depth: Depth,
 }
 
-fn places() -> Result<Places, Error> {
+pub(crate) fn places() -> Result<Places, Error> {
     let dir = store::dir()?.to_path_buf();
     Ok(Places { data: dir.clone(), cache: dir })
 }
@@ -87,45 +129,42 @@ pub(crate) fn request(text: &str) -> String {
 }
 
 fn answer(request: Request) -> Result<Value, Error> {
+    if let Request::Cancel = request {
+        return Ok(json!(!STOP.swap(true, Relaxed)));
+    }
     let places = places()?;
-    let part = places.file(&MODEL).with_added_extension("part");
-    let folder = part.parent().unwrap_or(&places.data);
     let image = |uid: &str| library::with(|lib| Ok(crate::pack::media(&lib.item(uid)?)?.0));
     Ok(match request {
-        Request::Model => json!({
-            "installed": places.installed(&MODEL).is_some(),
-            "allowed": settings::downloads(),
-            "title": MODEL.title, "size": format!("{:.1} MB", MODEL.bytes as f64 / 1e6),
-            "hosts": MODEL.hosts(), "license": MODEL.license, "license_url": MODEL.license_url,
-            "urls": MODEL.urls, "bytes": MODEL.bytes, "part": part, "agent": AGENT,
-        }),
-        Request::Install => {
-            if !settings::downloads() {
-                drop(fs::remove_file(&part));
-                Err(said("android.download_off", "downloading the model is turned off", &[]))?;
-            }
-            if wprs_depth::sha256(&part).ok().as_deref() != Some(MODEL.sha256) {
-                drop(fs::remove_file(&part));
-                let hosts = MODEL.hosts();
-                Err(said(
-                    "android.model_checksum",
-                    "the file from %1 has another SHA-256 and was deleted",
-                    &[&hosts],
-                ))?;
-            }
-            fs::write(folder.join("NOTICE.txt"), MODEL.notice())?;
-            fs::write(folder.join("LICENSE.txt"), MODEL.license_text)?;
-            fs::rename(&part, places.file(&MODEL))?;
-            Value::Null
-        }
-        Request::Forget => json!(fs::remove_dir_all(folder).is_ok()),
+        Request::Model => model::shown(&places),
+        Request::Install => model::install(&places)?,
+        Request::Forget => json!(model::forget(&places)),
         Request::Make { uid, library } => {
             let image = image(&uid)?;
             let edit = edited(&image)?;
+            STOP.store(false, Relaxed);
             wprs_depth::background();
             let (depth, sha) = (edit.depth.clone().unwrap_or_default(), &edit.source.sha256);
-            wprs_depth::generate(&places, (&image, sha), &depth, (Some(&library), Device::Cpu), &mut |_| {})?;
+            let runtime = (library.as_deref().filter(|l| l.is_file()), Device::Cpu);
+            let made =
+                wprs_depth::generate_until(&places, (&image, sha), &depth, runtime, &mut |_| {}, &STOP);
+            if made.as_ref().is_err_and(|e| e.is::<wprs_depth::Stopped>()) {
+                Err(said("android.depth_cancelled", "the depth map was cancelled", &[]))?;
+            }
+            made?;
             moving(&image)?
+        }
+        Request::Cancel => Value::Null,
+        Request::Unmap { uid } => {
+            let image = image(&uid)?;
+            let edit = edited(&image)?;
+            let removed = places.unmap(&image, &edit.source.sha256, &edit.depth.unwrap_or_default());
+            store::changed();
+            json!(removed)
+        }
+        Request::Levels { uid, near, far, gamma, smooth, dilate } => {
+            let levels = edit::Action::Depth { near, far, gamma, smooth, dilate, input: None };
+            change(&image(&uid)?, |edit| edit.act(levels).map_err(|e| Error::Setting(e.to_string())))?;
+            Value::Null
         }
         Request::Import { uid, fd } => {
             let image = image(&uid)?;
@@ -139,7 +178,9 @@ fn answer(request: Request) -> Result<Value, Error> {
             let image = image(&uid)?;
             let edit = loaded(&image)?;
             let p = edit.parallax.clone().unwrap_or_default();
+            let levels = edit.depth.clone().unwrap_or_default();
             json!({ "parallax": edit.moving().is_some(), "map": found(&image, &edit).is_some(),
+                "near": levels.near, "far": levels.far, "gamma": levels.gamma, "smooth": levels.smooth, "dilate": levels.dilate,
                 "strength": p.strength, "focus": p.focus, "fit": edit.fit, "base": edit.geometry.crop,
                 "crop": framing::draft(&uid).or_else(|| framing::own(&edit)), "paused": Power::now().stills() })
         }
@@ -151,46 +192,4 @@ fn answer(request: Request) -> Result<Value, Error> {
         Request::Frame { uid, pan, zoom, screen, done } => framing::frame(uid, pan, zoom, screen, done)?,
         Request::Unframe { uid } => framing::unframe(&image(&uid)?, &uid)?,
     })
-}
-
-pub(crate) fn shared(item: &wprs_library::Item) -> Option<Edit> {
-    let edits = store::dir().ok()?.join(EDITS);
-    let found = (item.kind == wprs_library::Kind::Image).then(|| edit::load(&item.path, &edits));
-    found?.ok()?.map(|(_, edit)| edit)
-}
-
-pub(crate) fn adopt(item: &wprs_library::Item, synced: Option<&Value>, keep: bool) -> Result<(), Error> {
-    if item.kind == wprs_library::Kind::Image
-        && edit::adopt(synced, &item.path, &store::dir()?.join(EDITS), keep).map_err(Error::Setting)?
-    {
-        store::changed();
-    }
-    Ok(())
-}
-
-pub(crate) fn stamped(image: &Path, edit: &Edit) -> Option<(PathBuf, SystemTime)> {
-    found(image, edit).and_then(|path| Some((path.clone(), fs::metadata(&path).ok()?.modified().ok()?)))
-}
-
-pub(crate) fn raised(image: &Path) -> Option<Raise> {
-    let edit = loaded(image).ok()?;
-    let parallax = edit.moving()?.clone();
-    Some(Raise { parallax, map: stamped(image, &edit), depth: edit.depth.unwrap_or_default() })
-}
-
-pub(crate) fn masking(map: Option<&Path>, edit: &Edit) -> Option<Map> {
-    Some(adjust(&shrink(read(map?).ok()?, EDGE), edit.depth.as_ref().unwrap_or(&Depth::default())))
-}
-
-pub(crate) fn map(raise: &Raise) -> Option<Map> {
-    let (path, _) = raise.map.as_ref()?;
-    Some(adjust(&shrink(read(path).ok()?, EDGE), &raise.depth))
-}
-
-pub(crate) fn forget(image: &Path) -> Result<(), Error> {
-    let (edit, places) = (loaded(image)?, places()?);
-    let sha = &edit.source.sha256;
-    let maps = [places.own(sha), places.generated(sha, &edit.depth.unwrap_or_default()), Some(beside(image))];
-    maps.into_iter().flatten().for_each(|map| drop(fs::remove_file(map)));
-    edit::remove(image, &store::dir()?.join(EDITS)).map(drop).map_err(Error::Setting)
 }

@@ -75,6 +75,9 @@ fun Account(main: Main) {
             else -> {
                 item { Summary(main, status, run) { approving = true } }
                 items(devices(status).filterNot { it.optBoolean("current") }) { Device(it, state == "needs_key", run) }
+                item { Recovery(status, run) }
+                item { PrivateFiles(main, status, run) }
+                item { Repos(main, status, run) }
             }
         }
         task?.takeIf { status.isNull("link") && status.isNull("pairing") }?.let { waiting ->
@@ -104,6 +107,7 @@ private fun Summary(main: Main, status: JSONObject, run: Run, approve: () -> Uni
     Column(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp)) {
         var removing by remember { mutableStateOf(false) }
         Text(stringResource(R.string.server_named, status.server()))
+        status.text("pin")?.let { Text(stringResource(R.string.cert_pinned, it.chunked(4).joinToString(" ")), style = MaterialTheme.typography.bodySmall) }
         Text(stringResource(R.string.this_device, status.optString("label"), status.optString("device")))
         if (status.optString("state") == "needs_key") Text(stringResource(R.string.needs_key)) else {
             val last = status.optLong("last_sync")

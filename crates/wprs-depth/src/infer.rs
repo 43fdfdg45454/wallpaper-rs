@@ -1,16 +1,15 @@
-use crate::{CACHE_BYTES, MODEL, Map, Places, normalize, tensor, write};
+use crate::{Map, normalize, tensor};
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use image::{ImageReader, RgbImage};
+use image::RgbImage;
 use ort::environment::Environment;
 use ort::ep::ExecutionProvider;
-use ort::session::Session;
+use ort::session::{RunOptions, Session};
 use ort::value::Tensor;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use std::time::{Duration, Instant};
-use wprs_core::edit::Depth;
+use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
+use std::time::Duration;
 
-const MAX_EDGE: u32 = 2048;
 pub const TELEMETRY: &str = "ORT_DISABLE_TELEMETRY";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,12 +50,6 @@ pub struct Estimator {
     session: Session,
     device: Device,
     _environment: Environment,
-}
-
-pub struct Bench {
-    pub device: Device,
-    pub load: Duration,
-    pub runs: Vec<Duration>,
 }
 
 fn text(e: impl std::fmt::Display) -> anyhow::Error {
@@ -127,59 +120,35 @@ impl Estimator {
     }
 
     pub fn estimate(&mut self, image: &RgbImage, input: u32) -> Result<Map> {
+        self.estimate_until(image, input, &AtomicBool::new(false))
+    }
+
+    pub fn estimate_until(&mut self, image: &RgbImage, input: u32, stop: &AtomicBool) -> Result<Map> {
         let (data, (w, h)) = tensor(image, input);
         let value = Tensor::from_array(([1usize, 3, h as usize, w as usize], data)).map_err(text)?;
-        let outputs = self.session.run(ort::inputs![value]).map_err(text)?;
+        let options = RunOptions::new().map_err(text)?;
+        let done = AtomicBool::new(false);
+        let outputs = std::thread::scope(|scope| {
+            scope.spawn(|| {
+                while !done.load(Relaxed) {
+                    if stop.load(Relaxed) {
+                        return drop(options.terminate());
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+            });
+            let ran = self.session.run_with_options(ort::inputs![value], &options);
+            done.store(true, Relaxed);
+            ran
+        });
+        ensure!(!stop.load(Relaxed), Stopped);
+        let outputs = outputs.map_err(text)?;
         let (shape, values) = outputs[0].try_extract_tensor::<f32>().map_err(text)?;
         let &[.., oh, ow] = &shape[..] else { bail!("the model gave no depth") };
         Ok(normalize(values, (ow as u32, oh as u32), image.dimensions(), input))
     }
 }
 
-pub fn decode(path: &Path) -> Result<RgbImage> {
-    let (mut image, orientation) =
-        wprs_render::decode_unoriented(ImageReader::open(path)?, wprs_render::picture_limits())
-            .with_context(|| format!("{} is not a picture", path.display()))?;
-    if image.width().max(image.height()) > MAX_EDGE {
-        image = image.thumbnail(MAX_EDGE, MAX_EDGE);
-    }
-    image.apply_orientation(orientation);
-    Ok(image.into_rgb8())
-}
-
-pub fn bench(places: &Places, image: &Path, depth: &Depth, device: Device, runs: usize) -> Result<Bench> {
-    let model =
-        places.installed(&MODEL).context("the depth model is not installed; see wprs-ctl models list")?;
-    let started = Instant::now();
-    let mut estimator = Estimator::open(&model, &places.library(None), threads(), device)?;
-    let (pixels, load) = (decode(image)?, started.elapsed());
-    let time = |_| {
-        let at = Instant::now();
-        estimator.estimate(&pixels, depth.input).map(|_| at.elapsed())
-    };
-    let runs = (0..runs.max(1)).map(time).collect::<Result<Vec<_>>>()?;
-    Ok(Bench { device: estimator.device(), load, runs })
-}
-
-pub fn generate(
-    places: &Places,
-    (image, sha256): (&Path, &str),
-    depth: &Depth,
-    (library, device): (Option<&Path>, Device),
-    stage: &mut dyn FnMut(Stage),
-) -> Result<PathBuf> {
-    let model =
-        places.installed(&MODEL).context("the depth model is not installed; see wprs-ctl models list")?;
-    let fits = (196..=1036).contains(&depth.input) && depth.input.is_multiple_of(14);
-    ensure!(fits, "the model input must be a multiple of 14 from 196 to 1036");
-    let dest = places.generated(sha256, depth).context("the image has no valid SHA-256")?;
-    stage(Stage::Loading);
-    let mut estimator = Estimator::open(&model, &places.library(library), threads(), device)?;
-    let pixels = decode(image)?;
-    stage(Stage::Estimating);
-    let map = estimator.estimate(&pixels, depth.input)?;
-    stage(Stage::Saving);
-    write(&map, &dest)?;
-    places.trim(&dest, CACHE_BYTES)?;
-    Ok(dest)
-}
+#[derive(Debug, thiserror::Error)]
+#[error("the depth map was cancelled")]
+pub struct Stopped;
