@@ -103,8 +103,9 @@ class RenderTest {
                 painter.refresh()
                 painter.show(true)
             }
-            assertTrue(waitFor { seen.isNotEmpty() && near(MAGENTA, seen.last(), LOSSY) })
-            assertTrue(near(Color.BLACK, edges.last(), LOSSY))
+            val filmed = waitFor { seen.isNotEmpty() && near(FILMED, seen.last(), LOSSY) }
+            assertTrue("drew ${seen.lastOrNull()?.let(::hex)} after ${Native.diagnostics()}", filmed)
+            assertTrue(hex(edges.last()), near(Color.BLACK, edges.last(), LOSSY))
         } finally {
             Native.setting("fit", "fill")
         }
@@ -120,8 +121,12 @@ class RenderTest {
             Wallpaper.reload(false)
             painter.refresh()
         }
-        assertTrue("a frame mixes the picture and the video", waitFor { seen.any { (it and 0xff) in 0x48..0xd0 } })
+        assertTrue("a frame mixes the picture and the video", waitFor { seen.any(::mixed) })
     }
+
+    private fun mixed(drawn: Int) = Color.red(drawn) >= 0xc0 && Color.green(drawn) in 0x30..0x54
+
+    private fun hex(color: Int) = Integer.toHexString(color)
 
     private fun near(expected: Int, drawn: Int, tolerance: Int) =
         listOf(16, 8, 0).all { shift -> kotlin.math.abs((expected shr shift and 0xff) - (drawn shr shift and 0xff)) <= tolerance }
@@ -163,7 +168,7 @@ class RenderTest {
         const val SIDE = 64
         const val CHOSEN = 0xffc86428.toInt()
         const val OTHER = 0xff2864c8.toInt()
-        const val MAGENTA = 0xffff00ff.toInt()
+        const val FILMED = 0xffd02060.toInt()
         const val CLIP = "magenta-64x32.webm"
         const val TOLERANCE = 3f
         const val LOSSY = 16

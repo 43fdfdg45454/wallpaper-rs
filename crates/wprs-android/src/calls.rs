@@ -133,6 +133,7 @@ pub fn diagnostics<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> JString<'a> {
             "cap": power.fps(false), "charging": power.charging, "saver": power.saver, "thermal": power.thermal,
             "tier": tier, "quality": quality, "reason": reason, "measured": gpu::measured(), "timed": gpu::timed(), "flashes": stage::report::flashes(), "left_out": stage::report::left_out(),
             "particles": stage::report::particles(), "scripts": crate::acting::scripts(), "stamps": gpu::stamps(),
+            "clips": crate::clips::report(),
         });
         Ok(env.new_string(report.to_string())?)
     })

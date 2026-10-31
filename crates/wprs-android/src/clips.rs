@@ -3,10 +3,16 @@ use crate::said;
 use ndk::media::image_reader::{AcquireResult, Image, ImageFormat, ImageReader};
 use ndk::native_window::NativeWindow;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+use std::sync::{Mutex, PoisonError};
 use wprs_render::{GpuImage, Planes, Renderer, Yuv};
 
 const EDGE: i32 = 1920;
 const IMAGES: i32 = 3;
+
+static SHOWN: AtomicU64 = AtomicU64::new(0);
+static FAILED: AtomicU64 = AtomicU64::new(0);
+static LAST: Mutex<String> = Mutex::new(String::new());
 
 struct Clip {
     path: PathBuf,
@@ -19,6 +25,19 @@ struct Clip {
 
 #[derive(Default)]
 pub(crate) struct Clips(Vec<Clip>);
+
+pub(crate) fn report() -> serde_json::Value {
+    let last = LAST.lock().unwrap_or_else(PoisonError::into_inner).clone();
+    serde_json::json!({ "frames": SHOWN.load(Relaxed), "failed": FAILED.load(Relaxed), "error": last })
+}
+
+fn failed(e: &Error, warned: &mut bool) {
+    FAILED.fetch_add(1, Relaxed);
+    if !std::mem::replace(warned, true) {
+        log::warn!("{e}");
+        *LAST.lock().unwrap_or_else(PoisonError::into_inner) = e.to_string();
+    }
+}
 
 fn media(e: ndk::media_error::MediaError) -> Error {
     said("android.video_frames", "video frames: %1", &[&e])
@@ -93,14 +112,15 @@ impl Clips {
                 Ok(AcquireResult::Image(image)) => planes(&image, &mut clip.chroma).and_then(|planes| {
                     crate::counted::gpu(|| r.convert_yuv(&mut clip.yuv, &planes).map(drop))
                         .map_err(Error::from)
+                        .inspect(|()| {
+                            SHOWN.fetch_add(1, Relaxed);
+                        })
                 }),
                 Ok(_) => Ok(()),
                 Err(e) => Err(media(e)),
             };
-            if let Err(e) = converted
-                && !std::mem::replace(&mut clip.warned, true)
-            {
-                log::warn!("{e}");
+            if let Err(e) = converted {
+                failed(&e, &mut clip.warned);
             }
             let clip: &'a Clip = clip;
             let Some(yuv) = clip.yuv.as_ref() else { continue };
