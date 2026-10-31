@@ -60,10 +60,14 @@ impl Anchor {
     }
 }
 
+pub(crate) fn local(base: &str) -> bool {
+    base.starts_with("file://") || !base.contains("://")
+}
+
 pub(crate) fn bases(state: &State, root: &Root) -> Vec<String> {
-    let mut bases = state.bases.clone();
+    let (mut bases, here) = (state.bases.clone(), state.bases.first().is_some_and(|b| local(b)));
     for mirror in root.mirrors.iter().map(|m| format!("{}/", m.trim_end_matches('/'))) {
-        if !bases.contains(&mirror) {
+        if (here || !local(&mirror)) && !bases.contains(&mirror) {
             bases.push(mirror);
         }
     }

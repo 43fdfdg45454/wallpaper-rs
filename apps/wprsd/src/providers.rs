@@ -1,15 +1,15 @@
 use crate::compositor::lock;
 use crate::daemon::Daemon;
-use crate::error::{Error, Result, invalid, not_found};
+use crate::error::{Error, Result, invalid};
 use crate::items::reply;
 use crate::jobs::now;
 use crate::kinds::{Options, effective, entry, hosts, kind_of, table};
-use crate::remote::{check_secret, claim, last_sync, needs_secret};
+use crate::remote::{check_secret, claim, last_sync};
 use crate::store::private_dir;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use tokio::time::{Duration, Instant};
-use wprs_core::dbus::error::{EXISTS, NEEDS_SECRET};
+use wprs_core::dbus::error::EXISTS;
 use wprs_core::model::{JobKind, MODEL, Provider, ProviderState, ProvidersReply};
 use zeroize::Zeroizing;
 
@@ -20,14 +20,6 @@ fn trimmed(options: HashMap<String, String>) -> Options {
 }
 
 impl Daemon {
-    pub async fn has_secret(&self, id: &str, kind: Option<&str>) -> Result<bool> {
-        let secret = kind.and_then(|kind| kind_of(kind).ok()?.secret).is_some();
-        match self.keyring().ok().filter(|_| secret) {
-            Some(keyring) => keyring.has(id).await,
-            None => Ok(false),
-        }
-    }
-
     pub async fn list_providers(self: &Arc<Self>) -> Result<String> {
         let serial = self.changes.serial();
         let entries: Vec<(String, toml::Value)> = self.state().config.providers.clone().into_iter().collect();
@@ -91,6 +83,7 @@ impl Daemon {
             next_sync: None,
             last_error,
             job,
+            orphan_secret: self.orphaned(id),
         };
         let (known, _, options) = match entry(value) {
             Ok(parsed) => parsed,
@@ -146,19 +139,6 @@ impl Daemon {
         Ok(source)
     }
 
-    async fn drop_orphan(&self, id: &str) -> Result<()> {
-        match self.keyring() {
-            Ok(keyring) if !keyring.discard(id).await? => Err(Error::Named(
-                NEEDS_SECRET,
-                format!(
-                    "the locked keyring holds an older secret for {id}; give the secret now to replace it, \
-                     or unlock the keyring and add the provider again to delete it"
-                ),
-            )),
-            _ => Ok(()),
-        }
-    }
-
     fn create_provider(&self, id: &str, entry: toml::Value) -> Result<String> {
         let dir = self.provider_dir(id);
         private_dir(&dir)?;
@@ -175,95 +155,5 @@ impl Daemon {
         self.library_changed(Vec::new());
         self.changes.changed("providers", vec![id.to_owned()]);
         Ok(source)
-    }
-
-    pub async fn set_provider(self: &Arc<Self>, id: String, key: String, value: String) -> Result<()> {
-        let (known, mut given, _) = self.provider(&id)?;
-        given.insert(key.clone(), value.trim().to_owned());
-        effective(&known, &given)?;
-        if known.secret.is_some() && ["url", "server", "user"].contains(&key.as_str()) {
-            self.keyring()?.delete(&id).await?;
-        }
-        let entry = table(&known, &given);
-        self.run(move |d| {
-            d.update_config(|c| {
-                c.providers.insert(id.clone(), entry);
-                Ok(())
-            })?;
-            tracing::info!(provider = id, key, "provider option changed");
-            d.changes.changed("providers", vec![id]);
-            d.remote.poke.notify_one();
-            Ok::<_, Error>(())
-        })
-        .await
-    }
-
-    pub async fn remove_provider(self: &Arc<Self>, id: String, purge: bool) -> Result<()> {
-        let value = self.state().config.providers.get(&id).cloned();
-        let value = value.ok_or_else(|| not_found(format!("provider {id:?} not found")))?;
-        self.library_ready()?;
-        if self.has_secret(&id, value.get("kind").and_then(toml::Value::as_str)).await? {
-            self.keyring()?.delete(&id).await?;
-        }
-        self.jobs.find(JobKind::ProviderSync, &id).into_iter().try_for_each(|job| self.cancel_job(job))?;
-        self.run(move |d| d.drop_provider(&id, purge)).await
-    }
-
-    fn drop_provider(&self, id: &str, purge: bool) -> Result<()> {
-        if let Some(source) = self.provider_source(id) {
-            let removed = self.store.write(|lib| lib.remove_source(&source.uid))?;
-            self.forget_files(&removed);
-            self.remember_credits(&source.path, &BTreeMap::new());
-        }
-        self.update_config(|c| {
-            c.providers.remove(id);
-            Ok(())
-        })?;
-        if purge {
-            std::fs::remove_dir_all(self.provider_dir(id)).ok();
-        }
-        lock(&self.remote.health).remove(id);
-        tracing::info!(provider = id, "provider removed");
-        self.library_changed(Vec::new());
-        self.changes.changed("providers", vec![id.to_owned()]);
-        Ok(())
-    }
-
-    pub async fn set_secret(self: &Arc<Self>, id: String, secret: Zeroizing<String>) -> Result<()> {
-        let (known, ..) = self.provider(&id)?;
-        known.secret.ok_or_else(|| invalid(format!("{} takes no secret", known.kind)))?;
-        if secret.is_empty() {
-            return Err(invalid("the secret is empty"));
-        }
-        check_secret(&secret)?;
-        self.keyring()?.store(&id, &secret).await?;
-        lock(&self.remote.health).remove(&id);
-        tracing::info!(provider = id, "provider secret stored");
-        self.changes.changed("providers", vec![id]);
-        self.remote.poke.notify_one();
-        Ok(())
-    }
-
-    pub async fn forget_secret(self: &Arc<Self>, id: String) -> Result<()> {
-        let value = self.state().config.providers.get(&id).cloned();
-        let value = value.ok_or_else(|| not_found(format!("provider {id:?} not found")))?;
-        let secret = value.get("kind").and_then(toml::Value::as_str).and_then(|k| kind_of(k).ok()?.secret);
-        if secret.is_some() {
-            self.keyring()?.delete(&id).await?;
-        }
-        self.changes.changed("providers", vec![id]);
-        Ok(())
-    }
-
-    pub async fn sync_providers(self: &Arc<Self>, id: String) -> Result<u64> {
-        self.library_ready()?;
-        if !id.is_empty() {
-            let (known, ..) = self.provider(&id)?;
-            let required = known.secret.is_some_and(|s| s.required);
-            if required && !self.has_secret(&id, Some(&known.kind)).await? {
-                return Err(needs_secret(&id));
-            }
-        }
-        Ok(self.sync_job(&id, true))
     }
 }

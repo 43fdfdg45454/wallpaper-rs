@@ -3,6 +3,7 @@ mod daily;
 mod fetch;
 mod immich;
 mod local;
+mod stream;
 mod wallhaven;
 mod webdav;
 mod wikimedia;
@@ -39,6 +40,8 @@ pub enum Error {
     Xml(#[from] roxmltree::Error),
     #[error("invalid response: {0}")]
     Invalid(String),
+    #[error("the file is larger than the space left in the cache")]
+    TooLarge,
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -117,14 +120,15 @@ pub(crate) fn keyed_client() -> Result<reqwest::Client> {
     build(Policy::custom(|attempt| redirect(attempt, true)))
 }
 
-fn redirect(attempt: Attempt, same_host: bool) -> Action {
-    let (url, previous) = (attempt.url(), attempt.previous());
+pub(crate) fn refused(previous: &[reqwest::Url], url: &reqwest::Url, same_host: bool) -> bool {
     let downgrade = previous.last().is_some_and(|p| p.scheme() == "https") && url.scheme() != "https";
-    let moved = same_host && previous.first().is_some_and(|first| first.origin() != url.origin());
-    let hops = previous.len();
-    match () {
-        _ if downgrade || moved => attempt.stop(),
-        _ if hops > 10 => attempt.error("too many redirects"),
+    downgrade || same_host && previous.first().is_some_and(|first| first.origin() != url.origin())
+}
+
+fn redirect(attempt: Attempt, same_host: bool) -> Action {
+    match attempt.previous().len() {
+        _ if refused(attempt.previous(), attempt.url(), same_host) => attempt.stop(),
+        hops if hops > 10 => attempt.error("too many redirects"),
         _ => attempt.follow(),
     }
 }
@@ -182,28 +186,4 @@ pub(crate) fn utc_date(days_ago: u32) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn upgrades_remote_http_only() {
-        assert_eq!(super::secure("http://apod.nasa.gov/a.jpg"), "https://apod.nasa.gov/a.jpg");
-        assert_eq!(super::secure("http://127.0.0.1:8080/a.jpg"), "http://127.0.0.1:8080/a.jpg");
-        assert_eq!(super::secure("http://[::1]/a.jpg"), "http://[::1]/a.jpg");
-        assert_eq!(super::secure("https://example.org/a.jpg"), "https://example.org/a.jpg");
-    }
-
-    #[test]
-    fn credentials_need_tls_or_loopback() {
-        assert!(super::guarded("http://example.org/dav", false).is_err());
-        assert!(super::guarded("http://example.org/dav", true).is_ok());
-        assert!(super::guarded("http://localhost:2283", false).is_ok());
-        assert!(super::guarded("https://example.org/dav", false).is_ok());
-    }
-
-    #[test]
-    fn secrets_stay_out_of_debug() {
-        let text = format!("{:?}", super::Secret::from("hunter2"));
-        assert!(!text.contains("hunter2"));
-        let header = super::HeaderValue::try_from(&super::Secret::from("hunter2")).unwrap();
-        assert!(header.is_sensitive() && !format!("{header:?}").contains("hunter2"));
-    }
-}
+mod tests;

@@ -1,7 +1,7 @@
+use crate::broken::{scan, sound};
 use crate::browse::{available, listing, newer};
-use crate::client::snapshots;
 use crate::download::package;
-use crate::store::{Snapshot, locked, optional, write};
+use crate::store::{Snapshot, load, locked, optional, write};
 use crate::{Error, Fetch, Listing, Reason, Release, Result, ensure, require};
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -33,13 +33,13 @@ pub fn install<F: Fetch>(
     let (repo, rest) = spec.rsplit_once('/').map_or((None, spec), |(r, s)| (Some(r), s));
     let (id, version) = rest.split_once('@').map_or((rest, None), |(i, v)| (i, Some(v)));
     let offered = |s: &Snapshot| repo.is_none_or(|r| r == s.state.repo_id) && pick(s, id, version).is_some();
-    let mut found: Vec<Snapshot> = snapshots(data)?.into_iter().filter(offered).collect();
+    let (snaps, list) = locked(data, false, || Ok((sound(scan(data)?), records(data)?)))?;
+    let mut found: Vec<Snapshot> = snaps.into_iter().filter(offered).collect();
     require(found.len() <= 1, "id", "is offered by several repositories; prefix it with the repository id")?;
     let snap = found.pop().ok_or_else(|| Error::NotFound(spec.into()))?;
     let (listing, release) = pick(&snap, id, version).ok_or_else(|| Error::NotFound(spec.into()))?;
     let (root, repo_id, t) = (&snap.root.value, &snap.state.repo_id, now.max(snap.state.max_timestamp));
     let foreign = |list: &[Installed]| list.iter().any(|i| i.id == id && &i.repo_id != repo_id);
-    let list = installed(data)?;
     require(!foreign(&list), "id", "is installed from another repository")?;
     ensure(root.expires.timestamp() > t, || Error::Expired(format!("root {}", root.version)))?;
     ensure(allow_stale || snap.entry.value.expires.timestamp() > t, || Error::Stale(repo_id.clone()))?;
@@ -68,6 +68,7 @@ pub fn install<F: Fetch>(
             return Ok(same.clone());
         }
         require(!foreign(&list), "id", "is installed from another repository")?;
+        still(data, &done)?;
         tmp.keep(&done.path)?;
         list.push(done.clone());
         save(data, &list)?;
@@ -90,6 +91,28 @@ pub fn remove(data: &Path, id: &str, version: Option<&str>) -> Result<Vec<Instal
         save(data, &kept)?;
         Ok(gone)
     })
+}
+
+pub fn current(data: &Path, repo_id: &str, id: &str, version: &str) -> Result<Installed> {
+    locked(data, false, || {
+        let found =
+            records(data)?.into_iter().find(|i| i.repo_id == repo_id && i.id == id && i.version == version);
+        let found = found.ok_or_else(|| Error::NotFound(format!("{id} {version} was uninstalled")))?;
+        if let Some(reason) = found.revoked {
+            return Err(Error::Revoked(format!("{id} {version} ({reason:?})")));
+        }
+        still(data, &found).map(|()| found)
+    })
+}
+
+fn still(data: &Path, item: &Installed) -> Result<()> {
+    let removed = |_| Error::NotFound(format!("repository {} was removed or broken", item.repo_id));
+    let snap = load(data, &item.repo_id).map_err(removed)?;
+    let key = item.signer.as_deref().and_then(|fp| snap.revoked.key(fp));
+    match snap.revoked.version(&item.id, &item.version).or(key) {
+        Some(reason) => Err(Error::Revoked(format!("{} {} ({reason:?})", item.id, item.version))),
+        None => Ok(()),
+    }
 }
 
 pub fn installed(data: &Path) -> Result<Vec<Installed>> {

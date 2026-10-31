@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use wprs_core::dbus::error::KEYRING_UNAVAILABLE;
 use zbus::proxy::CacheProperties;
-use zbus::{ObjectPath, OwnedObjectPath, OwnedVariant, Variant};
+use zbus::{ObjectPath, OwnedObjectPath, Variant};
 use zeroize::{Zeroize, Zeroizing};
 
 const SERVICE: &str = "org.freedesktop.secrets";
@@ -23,50 +23,10 @@ const SLOW: &str = "the keyring did not answer in time";
 type Secret = (OwnedObjectPath, Vec<u8>, Vec<u8>, String);
 type Paths = Vec<OwnedObjectPath>;
 
-#[zbus::proxy(
-    interface = "org.freedesktop.Secret.Service",
-    default_service = "org.freedesktop.secrets",
-    default_path = "/org/freedesktop/secrets"
-)]
-trait Service {
-    fn open_session(
-        &self,
-        algorithm: &str,
-        input: &Variant<'_>,
-    ) -> zbus::Result<(OwnedVariant, OwnedObjectPath)>;
-    fn search_items(&self, attributes: HashMap<&str, &str>) -> zbus::Result<(Paths, Paths)>;
-    fn unlock(&self, objects: &[OwnedObjectPath]) -> zbus::Result<(Paths, OwnedObjectPath)>;
-    fn get_secrets(
-        &self,
-        items: &[OwnedObjectPath],
-        session: &ObjectPath<'_>,
-    ) -> zbus::Result<HashMap<OwnedObjectPath, Secret>>;
-}
+mod proxy;
+mod write;
 
-#[zbus::proxy(interface = "org.freedesktop.Secret.Collection", default_service = "org.freedesktop.secrets")]
-trait Collection {
-    fn create_item(
-        &self,
-        properties: HashMap<&str, Variant<'_>>,
-        secret: &Secret,
-        replace: bool,
-    ) -> zbus::Result<(OwnedObjectPath, OwnedObjectPath)>;
-    #[zbus(property)]
-    fn locked(&self) -> zbus::Result<bool>;
-}
-
-#[zbus::proxy(interface = "org.freedesktop.Secret.Item", default_service = "org.freedesktop.secrets")]
-trait Item {
-    fn delete(&self) -> zbus::Result<OwnedObjectPath>;
-}
-
-#[zbus::proxy(interface = "org.freedesktop.Secret.Prompt", default_service = "org.freedesktop.secrets")]
-trait Prompt {
-    fn prompt(&self, window_id: &str) -> zbus::Result<()>;
-    fn dismiss(&self) -> zbus::Result<()>;
-    #[zbus(signal)]
-    fn completed(&self, dismissed: bool, result: Variant<'_>) -> zbus::Result<()>;
-}
+use proxy::{CollectionProxy, ItemProxy, PromptProxy, ServiceProxy};
 
 pub enum Stored {
     Secret(Zeroizing<String>),
@@ -172,62 +132,6 @@ impl Keyring {
             e.into_bytes().zeroize();
             unavailable("the stored secret is not text")
         })
-    }
-
-    pub async fn store(&self, id: &str, secret: &str) -> Result<()> {
-        bounded(self.write, self.create(id, secret)).await?;
-        self.remember(id, true);
-        Ok(())
-    }
-
-    async fn create(&self, id: &str, secret: &str) -> Result<()> {
-        let service = self.service().await.map_err(|_| unavailable(ABSENT))?;
-        let collection = self.collection().await?;
-        if collection.locked().await.map_err(refused)? {
-            self.unlock(&[collection.inner().path().to_owned().into()]).await?;
-        }
-        let (_, session) = service.open_session("plain", &Variant::from("")).await.map_err(refused)?;
-        let properties = HashMap::from([
-            ("org.freedesktop.Secret.Item.Label", Variant::from(format!("wallpaper-rs: {id}"))),
-            ("org.freedesktop.Secret.Item.Attributes", Variant::from(self.attributes(id))),
-        ]);
-        let mut value = (session.clone(), Vec::new(), secret.as_bytes().to_vec(), "text/plain".to_owned());
-        let created = collection.create_item(properties, &value, true).await;
-        value.2.zeroize();
-        self.close(&session).await;
-        self.complete(created.map_err(refused)?.1).await
-    }
-
-    pub async fn delete(&self, id: &str) -> Result<()> {
-        bounded(self.write, async {
-            let Ok((open, locked)) = self.search(id).await else { return Ok(()) };
-            if !locked.is_empty() {
-                self.unlock(&locked).await?;
-            }
-            for path in open.into_iter().chain(locked) {
-                self.complete(self.item(path).await?.delete().await.map_err(refused)?).await?;
-            }
-            Ok(())
-        })
-        .await?;
-        self.remember(id, false);
-        Ok(())
-    }
-
-    pub async fn discard(&self, id: &str) -> Result<bool> {
-        bounded(self.write, async {
-            let Ok((open, locked)) = self.search(id).await else { return Ok(true) };
-            for path in open {
-                let prompt = self.item(path).await?.delete().await.map_err(refused)?;
-                if prompt.as_str() != "/" {
-                    let pending = PromptProxy::builder(&self.bus).path(prompt).build().await;
-                    pending.map_err(refused)?.dismiss().await.ok();
-                    return Ok(false);
-                }
-            }
-            Ok(locked.is_empty())
-        })
-        .await
     }
 
     async fn item(&self, path: OwnedObjectPath) -> Result<ItemProxy<'static>> {

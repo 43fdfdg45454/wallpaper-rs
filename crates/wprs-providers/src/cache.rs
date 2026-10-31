@@ -1,4 +1,4 @@
-use crate::{Item, Media, Result, invalid, path_of};
+use crate::{Error, Item, Media, Result, invalid, path_of};
 use reqwest::header::{ETAG, HeaderName, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -6,6 +6,8 @@ use std::collections::HashSet;
 use std::fs::{File, FileTimes, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
 use tokio::io::AsyncWriteExt;
 
@@ -16,6 +18,7 @@ const FNV_PRIME: u64 = 0x100_0000_01b3;
 pub struct Cache {
     dir: PathBuf,
     limit: u64,
+    room: Arc<AtomicU64>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -29,7 +32,11 @@ impl Cache {
         let dir = dir.into();
         std::fs::create_dir_all(&dir)?;
         std::fs::set_permissions(&dir, Permissions::from_mode(0o700))?;
-        Ok(Self { dir, limit })
+        Ok(Self { dir, limit, room: Arc::new(AtomicU64::new(u64::MAX)) })
+    }
+
+    pub fn allow(&self, bytes: u64) {
+        self.room.store(bytes, Ordering::Relaxed);
     }
 
     pub fn path(&self, item: &Item) -> PathBuf {
@@ -57,9 +64,13 @@ impl Cache {
             Err(_) if path.exists() => return touch(path),
             response => response?,
         };
+        let room = self.room.load(Ordering::Relaxed);
+        if response.content_length().is_some_and(|len| len > room) {
+            return Err(Error::TooLarge);
+        }
         let fresh = Validators { etag: header(&response, ETAG), modified: header(&response, LAST_MODIFIED) };
         let part = path.with_extension("part");
-        if let Err(error) = store(&part, response).await {
+        if let Err(error) = store(&part, response, room).await {
             let _ = tokio::fs::remove_file(&part).await;
             return Err(error);
         }
@@ -73,10 +84,14 @@ impl Cache {
     }
 
     pub fn evict_except(&self, protected: &HashSet<PathBuf>) -> Result<Vec<PathBuf>> {
-        let media = std::fs::read_dir(&self.dir)?.flatten().map(|entry| entry.path());
+        let dir = std::fs::canonicalize(&self.dir)?;
+        let real = |p: &PathBuf| std::fs::canonicalize(p).unwrap_or_else(|_| p.clone());
+        let protected: HashSet<PathBuf> = protected.iter().map(real).collect();
+        let media = std::fs::read_dir(&dir)?.flatten().map(|entry| entry.path());
         let media = media.filter(|path| path.to_str().and_then(Media::detect).is_some());
         let stat = |path: PathBuf| {
-            let meta = std::fs::metadata(&path).ok().filter(|meta| meta.is_file())?;
+            let meta = std::fs::symlink_metadata(&path).ok().filter(|meta| meta.is_file())?;
+            (real(&path).parent() == Some(dir.as_path())).then_some(())?;
             Some((meta.accessed().ok()?, meta.len(), path))
         };
         let mut files: Vec<_> = media.filter_map(stat).collect();
@@ -97,9 +112,10 @@ impl Cache {
     }
 }
 
-async fn store(part: &Path, mut response: Response) -> Result<()> {
-    let mut file = private(part).await?;
+async fn store(part: &Path, mut response: Response, room: u64) -> Result<()> {
+    let (mut file, mut left) = (private(part).await?, room);
     while let Some(chunk) = response.chunk().await? {
+        left = left.checked_sub(chunk.len() as u64).ok_or(Error::TooLarge)?;
         file.write_all(&chunk).await?;
     }
     Ok(file.sync_all().await?)

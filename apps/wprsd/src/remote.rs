@@ -4,7 +4,7 @@ use crate::error::{Error, Result, failed, invalid, not_found};
 use crate::jobs::now;
 use crate::keyring::Keyring;
 use crate::kinds::{Options, entry};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -15,7 +15,7 @@ use wprs_core::dbus::error::NEEDS_SECRET;
 use wprs_core::model::Credit;
 use wprs_library::Source;
 
-const CREDITS: &str = ".credits.json";
+pub const CREDITS: &str = ".credits.json";
 const MAX_SECRET: usize = 4096;
 
 #[derive(Default)]
@@ -39,6 +39,8 @@ pub struct Remote {
     pub removing: Mutex<HashSet<String>>,
     pub previews: Mutex<Vec<(String, String)>>,
     pub preview_wake: Notify,
+    pub orphans: Mutex<BTreeSet<String>>,
+    pub orphan_wake: Notify,
 }
 
 pub struct Claim<'a>(&'a Mutex<HashSet<String>>, String);
@@ -54,7 +56,9 @@ pub fn claim<'a>(set: &'a Mutex<HashSet<String>>, id: &str) -> Option<Claim<'a>>
 }
 
 pub fn start(daemon: &Arc<Daemon>, bus: zbus::Connection) {
-    daemon.remote.keyring.set(Keyring::new(bus)).ok();
+    daemon.remote.keyring.set(Keyring::new(bus.clone())).ok();
+    daemon.load_orphans();
+    tokio::spawn(crate::orphans::watch(daemon.clone(), bus));
     for (id, value) in daemon.state().config.providers.iter() {
         if let Err(e) = entry(value) {
             tracing::warn!(provider = id, "skipping a provider whose configuration cannot be used");
@@ -67,7 +71,7 @@ pub fn start(daemon: &Arc<Daemon>, bus: zbus::Connection) {
         let dirs = dirs.filter_map(|dir| fs::canonicalize(dir.path()).ok());
         dirs.for_each(|dir| daemon.remember_credits(&dir, &read_credits(&dir)));
         tokio::spawn(crate::sync::schedule(daemon.clone()));
-        tokio::spawn(crate::repos::auto_refresh(Arc::downgrade(&daemon)));
+        tokio::spawn(crate::catalogue::auto_refresh(Arc::downgrade(&daemon)));
         tokio::spawn(crate::previews::previews(daemon));
     });
 }

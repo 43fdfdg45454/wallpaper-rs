@@ -69,6 +69,13 @@ Kirigami.Card {
         }
 
         QQC2.Label {
+            Kirigami.FormData.label: App.tr("Keyring:")
+            visible: !!card.provider.orphan_secret
+            text: App.tr("An older secret of a provider with this name stays in the locked keyring; it is never used and is deleted as soon as the keyring is unlocked.")
+            wrapMode: Text.Wrap
+        }
+
+        QQC2.Label {
             Kirigami.FormData.label: App.tr("Contacts:")
             text: card.provider.hosts.join(", ")
         }

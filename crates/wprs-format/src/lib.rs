@@ -1,5 +1,6 @@
 mod about;
 mod admin;
+mod broken;
 mod browse;
 mod build;
 mod catalog;
@@ -49,7 +50,7 @@ pub use build::{build, sha256, sha256_file};
 pub use catalog::{Added, add, revoke, revoke_key, unrevoke};
 pub use client::{Outcome, RepoInfo, Update, add_repo, remove_repo, repos, update_repo, verify};
 pub use display::{Accent, Display, Flip, Follow, FrameRate, Span};
-pub use download::preview;
+pub use download::{preview, previews, release};
 pub use entry::{Blob, DETAILS_FORMAT, Details, ENTRY_FORMAT, Entry, Pin};
 pub use facts::Facts;
 pub use fetch::{Anchor, Fetch, FileFetch};
@@ -57,7 +58,7 @@ pub use index::{
     DETAILED_FORMAT, KINDS_FORMAT, KeyRevocation, Listing, REVOKED_FORMAT, Reason, Revocation, Revoked,
     SHARD_FORMAT, Shard, shard_of,
 };
-pub use install::{Installed, install, installed, remove};
+pub use install::{Installed, current, install, installed, remove};
 #[cfg(feature = "sign")]
 pub use keys::{Keypair, Signer, keygen, sign_source};
 pub use locale::{LOCALE, locale_file, valid_tag};

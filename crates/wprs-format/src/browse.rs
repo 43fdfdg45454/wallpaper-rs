@@ -1,6 +1,7 @@
-use crate::client::snapshots;
-use crate::store::Snapshot;
-use crate::{Listing, Release, Result, Text, installed};
+use crate::broken::{scan, sound};
+use crate::install::records;
+use crate::store::{Snapshot, locked};
+use crate::{Listing, Release, Result, Text};
 use semver::Version;
 use serde::Serialize;
 use std::path::Path;
@@ -8,6 +9,7 @@ use std::path::Path;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Item {
     pub repo_id: String,
+    pub repo_name: String,
     pub id: String,
     pub author: Option<String>,
     pub release: Release,
@@ -16,15 +18,17 @@ pub struct Item {
 }
 
 pub fn browse(data: &Path, query: &str) -> Result<Vec<Item>> {
-    let (query, installed) = (query.to_lowercase(), installed(data)?);
+    let query = query.to_lowercase();
+    let (snaps, installed) = locked(data, false, || Ok((sound(scan(data)?), records(data)?)))?;
     let mut items = Vec::new();
-    for snap in snapshots(data)? {
+    for snap in snaps {
         for listing in snap.shards.iter().flat_map(|shard| &shard.packages) {
             let open = available(&snap, listing);
             let Some(release) = open.last().filter(|r| matches(&query, &listing.id, r)) else { continue };
             let here = installed.iter().filter(|i| i.repo_id == snap.state.repo_id && i.id == listing.id);
             items.push(Item {
                 repo_id: snap.state.repo_id.clone(),
+                repo_name: snap.root.value.name.clone(),
                 id: listing.id.clone(),
                 author: listing.author.clone(),
                 release: (*release).clone(),

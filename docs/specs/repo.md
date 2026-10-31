@@ -74,7 +74,7 @@ values they do not know (also inside `content` and `requires`; an unknown rating
 | `roles` | `{"root": {keys, threshold}, "online": {keys, threshold}}` |
 | `authors` | `[{"id": "[a-z][a-z0-9_-]{0,31}", "keys": [fingerprint…]}]`, unique ids |
 | `policy` | `{require_author_signature, max_package_size, entry_max_days}` |
-| `mirrors` | at most 16 `https://` or `file://` base URLs |
+| `mirrors` | at most 16 `https://` or `file://` base URLs; `file://` mirrors are used only by clients that added the repository itself from a `file://` URL or a folder, and skipped for repositories fetched over the network |
 
 `entry/<N>.json` (at most 128 KiB): `format` (`wpak-repo-entry/1.0`), `repo_id`, `version`
 (= `N`), `timestamp`, `expires` (`0 < expires - timestamp ≤ entry_max_days`), `root`
@@ -165,7 +165,10 @@ cancelled transfer (`io::ErrorKind::Interrupted`) stops at once without trying f
    every call with the same `T`, so listings and installs agree.
 8. Fetch every shard (those of the details when present) and the revocation list not already
    cached, cut at the declared size, check size and SHA-256, then parse them.
-9. Store root, entry, details, shards and revocations, then `state.json`; drop unreferenced shards.
+9. Under the exclusive lock, read the stored state again: when another process stored a newer
+   root or entry meanwhile, keep it and report it instead (nothing is ever rolled back); the same
+   entry version with other bytes is an equivocation. Otherwise store root, entry, details, shards
+   and revocations, then `state.json`, and drop unreferenced shards.
 10. Apply revocations to installed packages and list available updates (newer SemVer, not
     revoked).
 
@@ -180,11 +183,27 @@ cancelled transfer (`io::ErrorKind::Interrupted`) stops at once without trying f
 4. Validate the package, check `id`, `version`, `kind`, `license` and `manifest_sha256` against
    the release, and check the author signature when the root requires it or the listing names
    an author (key bound to that author in the root and not revoked).
-5. Under the exclusive lock, re-read `installed.json`, rename into place and record it.
+5. Under the exclusive lock, re-read `installed.json` and the repository, check that it is still
+   there and that neither the version nor the signing key is revoked, then rename into place and
+   record it. `current(data, repo_id, id, version)` repeats that check for an installed record, so
+   a caller can check again right before it activates the package.
 
 `preview(data, fetch, repo_id, id, version, dest)` downloads `previews/<sha256>.<ext>` of a
 release from the bases in order, cut at the signed size, checks SHA-256 and writes `dest`
-(`0600`) atomically. It returns `false` when the release has no preview.
+(`0600`) atomically. It returns `false` when the release has no preview. `release(data, repo_id,
+id, version)` returns any listed release, so callers can cache the preview of every version by its
+hash, and `previews(data, repo_id)` lists the preview hashes of every release of a repository, to
+delete them with it.
+
+## Broken repositories
+
+A folder under `<data>/repos/` whose snapshot cannot be read (no `state.json`, or a damaged or
+missing file) is reported by `repos` with `broken` set to the reason; `browse` and `install` skip
+it, so the other repositories keep working. `update_repo` fetches it again, anchored on its
+`repo_id`, from the address kept in its `state.json` or else from the network mirrors of its
+stored root, keeping the stored entry version and timestamps when they can be read, so it cannot
+be rolled back either. When no address is left, `add_repo` with its URL repairs it and
+`remove_repo` deletes it.
 
 ## Client storage
 
@@ -202,7 +221,10 @@ release from the bases in order, cut at the signed size, checks SHA-256 and writ
 Files are written to a temporary file in the same directory, synced and renamed. Files are
 `0600` and directories `0700`. Nothing is stored before it is verified. Committing a snapshot,
 removing a repository and saving `installed.json` hold an exclusive `flock` on
-`<data>/.repos.lock`; reading snapshots or `installed.json` holds a shared one. Downloads finish
+`<data>/.repos.lock`; reading snapshots or `installed.json` holds a shared one. `browse` and
+`install` read every snapshot and `installed.json` under one shared lock, so they never mix a
+catalogue with an older or newer list of installed packages. Each `browse` item carries the
+display name of its repository. Downloads finish
 before the lock is taken, so readers never wait for the network.
 
 ## Network interface
@@ -216,6 +238,7 @@ carry no cookies or identifiers.
 cookies or `Referer`, `https://` or `http://` to a loopback host only (redirects included, never
 from HTTPS to HTTP), redirects only to the origins of the bases it was asked to read or given with
 `within(bases)` (a repository's URL and the mirrors of its signed root), `file://` URLs and plain
-paths served by `FileFetch`, a 10 s connect timeout, and an abort (`io::ErrorKind::TimedOut`)
-when less than 8 KiB arrive in 30 s. A shared cancel flag, checked for every chunk, fails the
-transfer with `io::ErrorKind::Interrupted`.
+paths copied locally in chunks of 64 KiB, a 10 s connect timeout, and an abort
+(`io::ErrorKind::TimedOut`) when less than 8 KiB arrive in 30 s. The transfer runs on its own
+thread; a shared cancel flag, checked for every chunk and at least every 100 ms while waiting for
+the server, fails the transfer with `io::ErrorKind::Interrupted` at once, local copies included.

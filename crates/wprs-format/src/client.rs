@@ -1,3 +1,4 @@
+use crate::broken::{recover, scan, wreck};
 use crate::browse::{available, listing, newer};
 use crate::fetch::bases;
 use crate::install::{records, save};
@@ -7,12 +8,11 @@ use crate::{Anchor, Error, Fetch, Installed, Result, Time, ensure, sha256_file};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fs;
-use std::io;
 use std::path::Path;
 
 const WARN: i64 = 72 * 3600;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct RepoInfo {
     pub repo_id: String,
     pub url: String,
@@ -27,6 +27,7 @@ pub struct RepoInfo {
     pub stale: bool,
     pub packages: usize,
     pub warnings: Vec<String>,
+    pub broken: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -67,38 +68,41 @@ pub fn add_repo<F: Fetch>(data: &Path, fetch: &F, url: &str, now: i64) -> Result
 }
 
 pub fn update_repo<F: Fetch>(data: &Path, fetch: &F, repo_id: &str, now: i64) -> Result<Outcome> {
-    let old = locked(data, false, || load(data, repo_id))?;
-    let snap = refresh(fetch, old.state, Some(old.root), &old.blobs, None, now)?;
+    let gone = || Error::NotFound(format!("repository {repo_id}"));
+    let old = locked(data, false, || Ok(repo_dir(data, repo_id)?.is_dir().then(|| load(data, repo_id))))?;
+    let snap = match old.ok_or_else(gone)? {
+        Ok(old) => refresh(fetch, old.state, Some(old.root), &old.blobs, None, now)?,
+        Err(_) => recover(data, fetch, repo_id, now)?,
+    };
     locked(data, true, || {
-        let kept = repo_dir(data, repo_id)?.join("state.json").exists();
-        ensure(kept, || Error::NotFound(format!("repository {repo_id}")))?;
+        ensure(repo_dir(data, repo_id)?.is_dir(), gone)?;
+        if let Ok(current) = load(data, repo_id) {
+            let (new, old) = (&snap.state, &current.state);
+            let order = |s: &State| (s.root_version, s.entry_version);
+            if order(new) < order(old) {
+                return apply(data, &current, now);
+            }
+            let same = order(new) != order(old) || new.entry_sha256 == old.entry_sha256;
+            ensure(same, || Error::Equivocation(new.entry_version))?;
+        }
         commit(data, &snap)?;
         apply(data, &snap, now)
     })
 }
 
 pub fn repos(data: &Path, now: i64) -> Result<Vec<RepoInfo>> {
-    Ok(snapshots(data)?.iter().map(|snap| info(snap, now)).collect())
+    locked(data, false, || {
+        let found = scan(data)?.into_iter();
+        Ok(found.map(|(id, snap)| snap.map_or_else(|e| wreck(data, &id, &e), |s| info(&s, now))).collect())
+    })
 }
 
 pub fn remove_repo(data: &Path, repo_id: &str) -> Result<()> {
     locked(data, true, || Ok(fs::remove_dir_all(repo_dir(data, repo_id)?)?))
 }
 
-pub(crate) fn snapshots(data: &Path) -> Result<Vec<Snapshot>> {
-    locked(data, false, || {
-        let dirs = match fs::read_dir(data.join("repos")) {
-            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
-            dirs => dirs?,
-        };
-        let names = dirs.map(|d| Ok(d?.file_name().to_string_lossy().into_owned()));
-        let names = names.collect::<Result<Vec<_>>>()?;
-        names.iter().filter(|n| !n.starts_with('.')).map(|name| load(data, name)).collect()
-    })
-}
-
 fn absent(data: &Path, repo_id: &str) -> Result<()> {
-    let found = repo_dir(data, repo_id)?.join("state.json").exists();
+    let found = repo_dir(data, repo_id)?.is_dir() && load(data, repo_id).is_ok();
     ensure(!found, || Error::Exists(format!("repository {repo_id}")))
 }
 
@@ -131,6 +135,7 @@ fn info(snap: &Snapshot, now: i64) -> RepoInfo {
         stale: entry_left <= 0,
         packages: snap.shards.iter().map(|s| s.packages.len()).sum(),
         warnings: notes.iter().filter(|(on, _)| *on).map(|(_, note)| note.to_string()).collect(),
+        broken: None,
     }
 }
 

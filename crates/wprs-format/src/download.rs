@@ -15,12 +15,29 @@ pub fn preview<F: Fetch>(
     dest: &Path,
 ) -> Result<bool> {
     let snap = locked(data, false, || load(data, repo_id))?;
-    let release = listing(&snap, id).and_then(|l| l.versions.iter().find(|r| r.version == version));
-    let release = release.ok_or_else(|| Error::NotFound(format!("{id}@{version}")))?;
-    let Some(preview) = &release.preview else { return Ok(false) };
+    let Some(preview) = &found(&snap, id, version)?.preview else { return Ok(false) };
     let remote = format!("previews/{}.{}", preview.sha256, preview.ext);
     place(dest, true, |file| verified(fetch, &snap, &remote, preview.size, &preview.sha256, file))?;
     Ok(true)
+}
+
+pub fn release(data: &Path, repo_id: &str, id: &str, version: &str) -> Result<Release> {
+    let snap = locked(data, false, || load(data, repo_id))?;
+    found(&snap, id, version).cloned()
+}
+
+pub fn previews(data: &Path, repo_id: &str) -> Result<Vec<String>> {
+    let snap = locked(data, false, || load(data, repo_id))?;
+    let releases = snap.shards.iter().flat_map(|s| &s.packages).flat_map(|l| &l.versions);
+    let mut shas: Vec<String> = releases.filter_map(|r| Some(r.preview.as_ref()?.sha256.clone())).collect();
+    shas.sort();
+    shas.dedup();
+    Ok(shas)
+}
+
+fn found<'a>(snap: &'a Snapshot, id: &str, version: &str) -> Result<&'a Release> {
+    let release = listing(snap, id).and_then(|l| l.versions.iter().find(|r| r.version == version));
+    release.ok_or_else(|| Error::NotFound(format!("{id}@{version}")))
 }
 
 pub(crate) fn package(

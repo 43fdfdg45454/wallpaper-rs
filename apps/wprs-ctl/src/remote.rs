@@ -20,7 +20,12 @@ pub enum Remote {
         #[command(flatten)]
         wait: Wait,
     },
-    #[command(about = "Check a repository, or every repository when omitted, for updates and revocations")]
+    #[command(
+        about = "Check a repository, or every repository when omitted, for updates and revocations",
+        long_about = "Check a repository, or every repository when omitted, for updates and revocations. \
+            A broken repository, whose stored copy cannot be read, is fetched again from its address; \
+            when that address is lost, add it again with its URL or remove it."
+    )]
     Refresh {
         #[arg(help = "Repository id, or at least its first 8 hex digits")]
         repo: Option<String>,
@@ -51,7 +56,9 @@ pub async fn run(client: &Client, command: Remote) -> Result<()> {
 
 pub fn list(reply: ReposReply) -> String {
     let rows = reply.repos.into_iter().map(|r| {
-        let status = r.warnings.iter().map(text).chain(r.last_error).collect::<Vec<_>>().join(", ");
+        let broken = r.broken.map(|why| format!("broken, refresh or remove it: {why}"));
+        let status = broken.into_iter().chain(r.warnings.iter().map(text)).chain(r.last_error);
+        let status = status.collect::<Vec<_>>().join(", ");
         let (packages, checked, expires) = (r.packages.to_string(), time(r.checked), time(r.entry_expires));
         vec![prefix(&r.repo_id), r.name, packages, checked, expires, status]
     });

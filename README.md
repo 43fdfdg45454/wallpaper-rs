@@ -559,6 +559,26 @@ wprs-ctl input status                           # permisos y si se captura el so
 wprs-ctl input clicks on -o DP-1                # dejar que los clics de esa pantalla lleguen a su fondo
 ```
 
+Los repositorios aguantan los fallos. Las búsquedas leen todos los repositorios y los paquetes
+instalados de una vez, así que nunca mezclan un catálogo con otra lista de instalados; dos
+actualizaciones del mismo repositorio desde procesos distintos nunca lo devuelven a un estado
+anterior, y una instalación comprueba otra vez, al terminar la descarga y antes de pasar a la
+biblioteca, que el repositorio sigue ahí y que ni la versión ni su clave se revocaron. Si la copia
+guardada de un repositorio se daña (falta su `state.json`, por ejemplo), `wprs-ctl remote ls` y la
+app lo muestran como roto sin afectar a los demás: `wprs-ctl remote refresh` lo descarga otra vez
+de su dirección y, si esta se perdió, se repara añadiéndolo de nuevo con su URL o se quita. Los
+espejos `file://` de un repositorio firmado solo se usan cuando el propio repositorio se añadió
+desde una carpeta o una URL `file://`. Cancelar una descarga la para en una décima de segundo
+aunque el servidor no envíe nada (antes esperaba hasta 30 s), también en las copias desde
+`file://`. Las vistas previas de las versiones anteriores se descargan una sola vez y se borran
+con su repositorio. Un proveedor corta una descarga en cuanto no cabe en `cache_mb` (por su
+`Content-Length` o al llegar a ese tamaño), su limpieza de la caché resuelve los enlaces simbólicos
+y nunca borra fuera de su carpeta, y quitarlo sin `--purge` borra también su estado de
+sincronización, así que al añadirlo de nuevo sincroniza enseguida. Si el llavero está bloqueado o
+no responde cuando se añade un proveedor con el nombre de uno anterior, el secreto viejo nunca se
+usa: `wprs-ctl provider ls` y la app lo avisan, y se borra solo en cuanto el llavero se desbloquea
+o vuelve.
+
 La vista previa animada de un paquete (`previews.animated`) se mueve en los detalles de la app,
 en la miniatura de cada pantalla de la app y de la bandeja, y en la página del teléfono de un
 paquete que este no puede reproducir; solo mientras se ve, en el escritorio con el equipo

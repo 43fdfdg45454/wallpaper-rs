@@ -1061,7 +1061,10 @@ to HTTP.
 A sync job lists the provider's items and downloads them in list order into the cache folder.
 Files of items shown on an output, favorite, rated above 0 or in a manual playlist are protected:
 downloading stops when the other files would exceed `cache_mb` minus the protected files (the
-rest count as `skipped`), and older unprotected files are then evicted. The folder is scanned
+rest count as `skipped`), and older unprotected files are then evicted. The limit is enforced
+while a file arrives: a `Content-Length` above the room left is refused before the body is read,
+and a transfer without one stops as soon as it passes that room. Eviction resolves symbolic links
+first and only deletes regular files directly inside the cache folder. The folder is scanned
 (evicted items become `missing` and never rotate), the items get the provider's titles while
 their title is still the file name, and their credits (title, attribution, license, and a link
 for public services) are kept in the folder's `.credits.json` and reported as
@@ -1089,9 +1092,10 @@ nothing is created), registers the cache folder as a library source, writes
 kind whose secret is required then starts in `needs_secret`. On a kind with a secret,
 `secret = ""` also makes sure that no secret left in the keyring under the same id (by a
 provider removed while the keyring could not be reached) reaches the new provider: such an item
-is deleted when that needs no unlock prompt; when the keyring is locked, `Add` returns
-`NeedsSecret` and creates nothing, and the message asks to give the secret (which replaces the
-item) or to unlock the keyring and add the provider again. `InvalidArgs` for an invalid id,
+is deleted when that needs no unlock prompt. When the keyring is locked or cannot be reached, the
+provider is added anyway with `orphan_secret = true`: the old item is never read for it, and it is
+deleted without a prompt as soon as the keyring is unlocked or appears again (the daemon watches
+the Secret Service for that and also retries at startup); `SetSecret` replaces it at once. `InvalidArgs` for an invalid id,
 an unknown kind, option or value, a missing required option, an option named like a secret
 (`password`, `api_key`, `token`, `secret`), a refused URL, or a secret given to a kind without
 one; `Exists` for a taken id, also while another `Add` of the same id is running (the second call
@@ -1107,7 +1111,10 @@ On a kind with a secret, changing `url`, `server` or `user` also deletes the sto
 
 Cancels a running sync, deletes the stored secret (`KeyringUnavailable` only when it exists and
 cannot be deleted; then nothing is removed), the library source with its items and thumbnails,
-and the configuration entry. `purge` also deletes the cache folder.
+and the configuration entry. When the keyring cannot be reached, its secret is deleted later in
+the same way as an orphaned one. `purge` also deletes the cache folder; without it the downloaded
+files stay, but `.credits.json` goes too, so a provider added again under the same id syncs at
+once instead of waiting for the old `refresh` interval.
 
 ### `Sync(s id) → (t job)`
 
@@ -1138,25 +1145,32 @@ and an output showing one when its revocation arrives shows its background color
 ### `List() → (s json)`
 
 A `ReposReply`. `stale` and `warnings` are computed at every call; `last_error` is the message
-of the last failed refresh since the daemon started.
+of the last failed refresh since the daemon started, and it is dropped when the repository is
+removed or added again. A repository whose stored copy cannot be read (its `state.json` missing,
+a damaged file) is listed with the reason in `broken` and its other fields as far as they can be
+read; browsing and installing skip it, and the other repositories keep working.
 
 ### `Add(s url) → (t job)`
 
 Adds a repository whose URL carries its trust anchor. The URL is `https://`, `file://` or
 `http://` to this computer, without user information or fragment. `Exists` at once when its
-`repo_id=` names an added repository, or when the job finds it already added. The job verifies
-the repository fully and stores its signed state.
+`repo_id=` names an added repository, or when the job finds it already added; a `broken` one is
+replaced. The job verifies the repository fully and stores its signed state.
 
 ### `Refresh(s repo) → (t job)`
 
 Refreshes a repository (`""` = all) and applies revocations to the installed packages, also
-when the repository is stale. A failed refresh keeps the last verified state. With
+when the repository is stale. A failed refresh keeps the last verified state. A `broken`
+repository is fetched again from its stored address, or from the network mirrors of its stored
+root, anchored on its `repo_id`; when neither is left the refresh fails and the repository has to
+be added again with its URL or removed. With
 `repos.auto_refresh`, every repository is refreshed 10 minutes after the daemon starts and then
 every 24 hours; updates are never installed automatically.
 
 ### `Remove(s repo, b uninstall)`
 
-Removes a repository with its cached previews; `uninstall` also uninstalls its packages
+Removes a repository with the cached previews of all its versions (those another repository
+also offers stay); `uninstall` also uninstalls its packages
 (`Failed` if one of them is shown on an output). Without it the packages stay usable, without
 updates or revocations. Queued or running jobs of this repository (its refreshes and installs
 from it) are cancelled first and the call waits only for them; jobs of other repositories go on.
@@ -1175,7 +1189,8 @@ Returns `{spec: path}` for the cached previews of `[repo/]id[@version]` specs (a
 keys as given) and queues the others; `PreviewReady` follows for each of them. A new call from
 the same sender replaces its queued requests. Previews are downloaded within their signed size
 and hash, re-encoded by the thumbnail worker to JPEG files of at most 1024 px in
-`~/.cache/wallpaper-rs/previews/`, and only the re-encoded file is handed out.
+`~/.cache/wallpaper-rs/previews/`, and only the re-encoded file is handed out. Previews of older
+versions are cached the same way, named by their signed hash, and downloaded only once.
 
 ### `Install(s spec, b allow_stale, b allow_downgrade) → (t job)`
 
@@ -1186,7 +1201,10 @@ offered by several repositories without `repo`, a package installed from another
 explicit version older than the installed one without `allow_downgrade`;
 `NotFound` for an unknown package or version; `Failed` for an expired root (`root expired:
 possible freeze attack`) or a revoked version; `Stale` when the repository's index expired and
-`allow_stale` is false. The first installed version is imported into the library; later
+`allow_stale` is false. When the download ends, and again before the package reaches the library,
+the job checks that the repository is still there and that neither the version nor its signing
+key was revoked meanwhile; otherwise it fails and nothing is kept. The first installed version is
+imported into the library; later
 versions relink the same item, keeping its title, tags, rating, presets and playlist entries.
 
 ### `Uninstall(s id, s version)`
@@ -2191,6 +2209,7 @@ struct Provider {
     id: String, kind: String, options: BTreeMap<String, String>, source: Option<Uid>,
     state: ProviderState, has_secret: bool, hosts: Vec<String>, items: u32, cache_bytes: u64,
     last_sync: Option<Time>, next_sync: Option<Time>, last_error: Option<String>, job: Option<u64>,
+    orphan_secret: bool,
 }
 struct ProvidersReply { model: u32, serial: u64, providers: Vec<Provider> }
 struct SyncReport {
@@ -2203,7 +2222,7 @@ struct Repo {
     repo_id: String, url: String, name: String, hosts: Vec<String>, fingerprints: Vec<String>,
     root_version: u64, root_expires: Time, entry_version: u64, entry_expires: Time, checked: Time,
     stale: bool, packages: u32, warnings: Vec<RepoWarning>, last_error: Option<String>,
-    job: Option<u64>,
+    job: Option<u64>, broken: Option<String>,
 }
 struct ReposReply { model: u32, serial: u64, repos: Vec<Repo> }
 enum Reason { Malware, License, Takedown, Broken, Other }

@@ -50,8 +50,11 @@ impl Daemon {
             return Err(not_found(format!("{spec} matches no single package")));
         };
         let version = version.map_or_else(|| offer.release.version.clone(), String::from);
-        let preview = offer.release.preview.as_ref().filter(|_| version == offer.release.version);
-        Ok((offer.repo_id.clone(), id.to_owned(), version, preview.map(|p| p.sha256.clone())))
+        let preview = match version == offer.release.version {
+            true => offer.release.preview.clone(),
+            false => wprs_format::release(&self.store.data, &offer.repo_id, id, &version)?.preview,
+        };
+        Ok((offer.repo_id.clone(), id.to_owned(), version, preview.map(|p| p.sha256)))
     }
 
     fn preview_file(&self, sha256: &str) -> PathBuf {
@@ -116,7 +119,10 @@ impl Daemon {
     }
 
     fn fetch_preview(&self, spec: &str) -> Option<(PathBuf, PathBuf)> {
-        let (repo_id, id, version, _) = self.offer_of(spec).ok()?;
+        let (repo_id, id, version, known) = self.offer_of(spec).ok()?;
+        if let Some(cached) = known.map(|sha| self.preview_file(&sha)).filter(|p| p.is_file()) {
+            return Some((cached.clone(), cached));
+        }
         let dir = self.store.cache.join("previews");
         private_dir(&dir).ok()?;
         let download = dir.join(format!(".tmp-{}", NEXT.fetch_add(1, Ordering::Relaxed)));

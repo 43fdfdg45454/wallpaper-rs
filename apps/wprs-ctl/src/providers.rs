@@ -133,7 +133,9 @@ async fn has_secret(client: &Client, id: &str) -> Result<bool> {
 pub fn list_providers(reply: ProvidersReply) -> String {
     let rows = reply.providers.into_iter().map(|p| {
         let (state, items, cache) = (text(&p.state), p.items.to_string(), bytes(p.cache_bytes));
-        let error = p.last_error.unwrap_or_default();
+        let orphan =
+            p.orphan_secret.then_some("an older secret waits in the locked keyring until it is unlocked");
+        let error = p.last_error.into_iter().chain(orphan.map(String::from)).collect::<Vec<_>>().join(", ");
         vec![p.id, p.kind, state, items, cache, when(p.last_sync), when(p.next_sync), error]
     });
     table(&["PROVIDER", "KIND", "STATE", "ITEMS", "CACHE", "SYNCED", "NEXT", "ERROR"], rows)

@@ -1,52 +1,16 @@
 use crate::compositor::lock;
 use crate::daemon::Daemon;
 use crate::error::{Error, Result, failed, invalid, not_found};
-use crate::items::reply;
 use crate::jobs::now;
-use crate::repos::{fetcher, newer};
-use std::collections::HashMap;
-use std::io::{self, Write};
+use crate::repos::fetcher;
+use progress::{Dry, Progress};
+use std::io;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use wprs_core::model::{InstalledPackage, InstalledReply, JobKind, MODEL};
-use wprs_format::{Fetch, Installed};
+use wprs_core::model::{InstalledPackage, JobKind};
+use wprs_format::Installed;
 
 pub(crate) static PACKAGES: Mutex<()> = Mutex::new(());
-
-struct Dry;
-
-impl Fetch for Dry {
-    fn get(&self, _: &str, _: &str, _: u64) -> io::Result<Option<Vec<u8>>> {
-        Err(io::ErrorKind::WouldBlock.into())
-    }
-}
-
-struct Progress<F, P>(F, P);
-
-struct Counted<'a>(&'a mut dyn Write, &'a dyn Fn(u64), u64);
-
-impl Write for Counted<'_> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let written = self.0.write(buf)?;
-        self.2 += written as u64;
-        (self.1)(self.2);
-        Ok(written)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        self.0.flush()
-    }
-}
-
-impl<F: Fetch, P: Fn(u64)> Fetch for Progress<F, P> {
-    fn get(&self, base: &str, path: &str, max: u64) -> io::Result<Option<Vec<u8>>> {
-        self.0.get(base, path, max)
-    }
-
-    fn copy(&self, base: &str, path: &str, max: u64, out: &mut dyn Write) -> io::Result<bool> {
-        self.0.copy(base, path, max, &mut Counted(out, &self.1, 0))
-    }
-}
 
 pub fn parse_spec(spec: &str) -> Result<(Option<&str>, &str, Option<&str>)> {
     let (repo, rest) = spec.rsplit_once('/').map_or((None, spec), |(repo, rest)| (Some(repo), rest));
@@ -122,7 +86,8 @@ impl Daemon {
             };
             let _turn = d.jobs.wait_turn(JobKind::Scan);
             let _packages = lock(&PACKAGES);
-            if !record.path.is_file() {
+            let record = wprs_format::current(&d.store.data, &record.repo_id, &record.id, &record.version)?;
+            if lock(&d.remote.removing).contains(&record.repo_id) || !record.path.is_file() {
                 return Err(failed(format!(
                     "{} {} was uninstalled while it was installed",
                     record.id, record.version
@@ -195,45 +160,10 @@ impl Daemon {
         self.reload_installed();
         Ok(())
     }
-
-    pub fn latest(&self) -> Result<HashMap<(String, String), (String, String)>> {
-        let langs = wprs_core::locale::languages();
-        let notes = |r: &wprs_format::Release| r.changes.as_ref().map(|c| c.pick(&langs)).unwrap_or_default();
-        let items = wprs_format::browse(&self.store.data, "")?.into_iter();
-        Ok(items.map(|i| ((i.repo_id, i.id), (notes(&i.release), i.release.version))).collect())
-    }
-
-    pub fn list_installed(&self) -> Result<String> {
-        let serial = self.changes.serial();
-        let (list, latest) = (wprs_format::installed(&self.store.data)?, self.latest()?);
-        let model = |record: &Installed| {
-            let newest =
-                list.iter().filter(|i| i.id == record.id).all(|i| !newer(&i.version, &record.version));
-            let available = latest.get(&(record.repo_id.clone(), record.id.clone()));
-            let update = available.filter(|(_, v)| newest && newer(v, &record.version));
-            let (changes, update) = update.cloned().map_or((String::new(), None), |(c, v)| (c, Some(v)));
-            InstalledPackage { changes, ..self.package_model(record, update) }
-        };
-        reply(InstalledReply { model: MODEL, serial, packages: list.iter().map(model).collect() })
-    }
-
-    pub fn package_model(&self, record: &Installed, update: Option<String>) -> InstalledPackage {
-        let item = record.path.to_str().and_then(|p| self.store.read(|lib| lib.resolve_item(p)).ok());
-        let revoked = record.revoked.and_then(|r| serde_json::from_value(serde_json::to_value(r).ok()?).ok());
-        InstalledPackage {
-            repo_id: record.repo_id.clone(),
-            id: record.id.clone(),
-            version: record.version.clone(),
-            sha256: record.sha256.clone(),
-            size: record.size,
-            signer: record.signer.clone(),
-            revoked,
-            item,
-            update,
-            changes: String::new(),
-        }
-    }
 }
+
+mod listing;
+mod progress;
 
 #[cfg(test)]
 mod tests;

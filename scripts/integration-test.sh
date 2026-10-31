@@ -55,6 +55,7 @@ source "$(dirname "$0")"/integration-inputs.sh
 source "$(dirname "$0")"/integration-audio.sh
 source "$(dirname "$0")"/integration-sound.sh
 source "$(dirname "$0")"/integration-recovery.sh
+source "$(dirname "$0")"/integration-sources.sh
 
 kill "$daemon"
 wait "$daemon" 2>/dev/null || true

@@ -1,9 +1,11 @@
 use super::*;
 use crate::kinds::{Options, effective, kind_of};
 use serde_json::json;
+use std::collections::HashSet;
 use wiremock::matchers::{header, header_exists, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
-use wprs_providers::Bing;
+use wprs_core::dbus::error::NEEDS_SECRET;
+use wprs_providers::{Bing, Provider};
 
 async fn pictures() -> MockServer {
     let server = MockServer::start().await;

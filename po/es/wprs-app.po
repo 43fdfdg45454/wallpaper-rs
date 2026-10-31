@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 00:00+0000\n"
+"POT-Creation-Date: 2026-10-31 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -1852,6 +1852,18 @@ msgid "Show items"
 msgstr "Mostrar los elementos"
 
 #: apps/wprs-app/qml/ProviderCard.qml
+msgid "Keyring:"
+msgstr "Depósito de claves:"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid ""
+"An older secret of a provider with this name stays in the locked keyring; it "
+"is never used and is deleted as soon as the keyring is unlocked."
+msgstr ""
+"Un secreto antiguo de un proveedor con este nombre sigue en el depósito de "
+"claves bloqueado; nunca se usa y se borra en cuanto se desbloquee el depósito."
+
+#: apps/wprs-app/qml/ProviderCard.qml
 msgid "Contacts:"
 msgstr "Contacta con:"
 
@@ -1976,6 +1988,14 @@ msgstr "Claves: %1"
 #: apps/wprs-app/qml/RepoList.qml
 msgid "Last check: %1"
 msgstr "Última comprobación: %1"
+
+#: apps/wprs-app/qml/RepoList.qml
+msgid ""
+"The stored copy of this repository cannot be read: refresh it to fetch it "
+"again from its address, or remove it. (%1)"
+msgstr ""
+"No se puede leer la copia guardada de este repositorio: actualízalo para "
+"descargarlo de nuevo desde su dirección, o quítalo. (%1)"
 
 #: apps/wprs-app/qml/RepoList.qml apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Refresh"

@@ -32,7 +32,7 @@ QQC2.ScrollView {
 
             Kirigami.Heading {
                 level: 4
-                text: modelData.name + " · " + App.tr("Packages: %1", modelData.packages)
+                text: (modelData.name || modelData.repo_id.slice(0, 8)) + " · " + App.tr("Packages: %1", modelData.packages)
                 textFormat: Text.PlainText
             }
 
@@ -48,7 +48,7 @@ QQC2.ScrollView {
                 visible: text !== ""
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.negativeTextColor
-                text: modelData.warnings.map(w => Labels.value(w)).concat(modelData.last_error ? [modelData.last_error] : []).join("\n")
+                text: (modelData.broken ? [App.tr("The stored copy of this repository cannot be read: refresh it to fetch it again from its address, or remove it. (%1)", modelData.broken)] : []).concat(modelData.warnings.map(w => Labels.value(w))).concat(modelData.last_error ? [modelData.last_error] : []).join("\n")
                 textFormat: Text.PlainText
             }
 

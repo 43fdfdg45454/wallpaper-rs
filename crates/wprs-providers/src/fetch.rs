@@ -1,16 +1,21 @@
-use crate::{AGENT, Result, local, redirect};
-use reqwest::StatusCode;
-use reqwest::Url;
+use crate::stream::{CHUNK, Got, stream};
+use crate::{AGENT, Result, local, redirect, refused};
 use reqwest::blocking::Client;
 use reqwest::redirect::Policy;
+use reqwest::{StatusCode, Url};
 use std::collections::HashSet;
+use std::fs::File;
 use std::io::{self, Read, Write};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::thread;
 use std::time::{Duration, Instant};
-use wprs_format::{Fetch, FileFetch};
+use wprs_format::Fetch;
 
 const WINDOW: Duration = Duration::from_secs(30);
+const TICK: Duration = Duration::from_millis(100);
 const MIN_BYTES: u64 = 8 << 10;
 
 type Origins = Arc<Mutex<HashSet<String>>>;
@@ -31,8 +36,7 @@ impl HttpFetch {
         let origins = Origins::default();
         let known = origins.clone();
         let policy = Policy::custom(move |a| {
-            let within = declared(&known).contains(&origin(a.url()));
-            if within && allowed(a.url()) { redirect(a, false) } else { a.stop() }
+            if follows(&declared(&known), a.previous(), a.url()) { redirect(a, false) } else { a.stop() }
         });
         let builder = Client::builder().user_agent(AGENT).referer(false).redirect(policy);
         let client = builder.connect_timeout(Duration::from_secs(10)).timeout(window).build()?;
@@ -60,10 +64,10 @@ impl Fetch for HttpFetch {
     }
 
     fn copy(&self, base: &str, path: &str, max: u64, out: &mut dyn Write) -> io::Result<bool> {
-        if base.starts_with("file://") || !base.contains("://") {
-            return FileFetch.copy(base, path, max, out);
-        }
         self.live()?;
+        if base.starts_with("file://") || !base.contains("://") {
+            return self.local(base, path, max, out);
+        }
         let url = Url::parse(&format!("{base}{path}"))
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
         if !allowed(&url) {
@@ -73,28 +77,51 @@ impl Fetch for HttpFetch {
             ));
         }
         declared(&self.origins).insert(origin(&url));
-        let response = self.client.get(url).send();
-        let mut response = response.map_err(|e| io::Error::new(kind(&e), e.without_url()))?;
-        match response.status() {
-            StatusCode::NOT_FOUND | StatusCode::GONE => return Ok(false),
-            status if !status.is_success() => return Err(io::Error::other(format!("HTTP status {status}"))),
-            _ => {}
-        }
-        let (mut buf, mut left) = (vec![0; 64 << 10], max.saturating_add(1));
+        let (tx, rx) = mpsc::sync_channel(4);
+        let request = self.client.get(url);
+        thread::Builder::new().name("fetch".into()).spawn(move || stream(request, max, &tx))?;
         let (mut since, mut window) = (Instant::now(), 0);
+        loop {
+            self.live()?;
+            match rx.recv_timeout(TICK) {
+                Ok(Got::Status(StatusCode::NOT_FOUND | StatusCode::GONE)) => return Ok(false),
+                Ok(Got::Status(status)) if !status.is_success() => {
+                    return Err(io::Error::other(format!("HTTP status {status}")));
+                }
+                Ok(Got::Bytes(chunk)) => {
+                    out.write_all(&chunk)?;
+                    window += chunk.len() as u64;
+                }
+                Ok(Got::End) => return Ok(true),
+                Ok(Got::Failed(e)) => return Err(e),
+                Err(RecvTimeoutError::Disconnected) => return Err(io::Error::other("transfer ended")),
+                Ok(Got::Status(_)) | Err(RecvTimeoutError::Timeout) => {}
+            }
+            if window >= MIN_BYTES {
+                (since, window) = (Instant::now(), 0);
+            } else if since.elapsed() >= self.window {
+                return Err(io::Error::new(io::ErrorKind::TimedOut, "transfer too slow"));
+            }
+        }
+    }
+}
+
+impl HttpFetch {
+    fn local(&self, base: &str, path: &str, max: u64, out: &mut dyn Write) -> io::Result<bool> {
+        let root = base.strip_prefix("file://").unwrap_or(base);
+        let mut file = match File::open(Path::new(root).join(path)) {
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
+            file => file?,
+        };
+        let (mut buf, mut left) = (vec![0; CHUNK], max.saturating_add(1));
         while left > 0 {
             self.live()?;
-            let n = response.read(&mut buf[..left.min(64 << 10) as usize]).map_err(stalled)?;
+            let n = file.read(&mut buf[..left.min(CHUNK as u64) as usize])?;
             if n == 0 {
                 break;
             }
             out.write_all(&buf[..n])?;
-            (left, window) = (left - n as u64, window + n as u64);
-            if window >= MIN_BYTES {
-                (since, window) = (Instant::now(), 0);
-            } else if since.elapsed() >= self.window {
-                return Err(stalled(io::ErrorKind::TimedOut.into()));
-            }
+            left -= n as u64;
         }
         Ok(true)
     }
@@ -104,19 +131,23 @@ fn declared(origins: &Origins) -> MutexGuard<'_, HashSet<String>> {
     origins.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-fn origin(url: &Url) -> String {
+pub(crate) fn origin(url: &Url) -> String {
     url.origin().ascii_serialization()
+}
+
+pub(crate) fn follows(known: &HashSet<String>, previous: &[Url], url: &Url) -> bool {
+    known.contains(&origin(url)) && allowed(url) && !refused(previous, url, false)
 }
 
 fn allowed(url: &Url) -> bool {
     url.scheme() == "https" || url.scheme() == "http" && url.host_str().is_some_and(local)
 }
 
-fn kind(e: &reqwest::Error) -> io::ErrorKind {
+pub(crate) fn kind(e: &reqwest::Error) -> io::ErrorKind {
     if e.is_timeout() { io::ErrorKind::TimedOut } else { io::ErrorKind::Other }
 }
 
-fn stalled(e: io::Error) -> io::Error {
+pub(crate) fn stalled(e: io::Error) -> io::Error {
     let inner = e.get_ref().and_then(|e| e.downcast_ref::<reqwest::Error>());
     match inner.map_or(e.kind(), kind) {
         io::ErrorKind::TimedOut => io::Error::new(io::ErrorKind::TimedOut, "transfer too slow"),

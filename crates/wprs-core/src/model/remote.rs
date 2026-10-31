@@ -19,6 +19,8 @@ model! {
         pub next_sync: Option<Time>,
         pub last_error: Option<String>,
         pub job: Option<u64>,
+        #[serde(default)]
+        pub orphan_secret: bool,
     }
 
     pub struct ProvidersReply { pub model: u32, pub serial: u64, pub providers: Vec<Provider> }
@@ -54,6 +56,8 @@ model! {
         pub warnings: Vec<RepoWarning>,
         pub last_error: Option<String>,
         pub job: Option<u64>,
+        #[serde(default)]
+        pub broken: Option<String>,
     }
 
     pub struct ReposReply { pub model: u32, pub serial: u64, pub repos: Vec<Repo> }
