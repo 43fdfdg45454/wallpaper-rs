@@ -70,6 +70,7 @@ Kirigami.Page {
             text: App.tr("Undo")
             icon.name: "edit-undo"
             shortcut: StandardKey.Undo
+            tooltip: page.view.history?.undo ? App.tr("Undo: %1", page.view.history.undo) : ""
             enabled: (page.view.history?.done ?? []).length > 0
             onTriggered: page.run("undo")
         },
@@ -77,6 +78,7 @@ Kirigami.Page {
             text: App.tr("Redo")
             icon.name: "edit-redo"
             shortcut: StandardKey.Redo
+            tooltip: page.view.history?.redo ? App.tr("Redo: %1", page.view.history.redo) : ""
             enabled: (page.view.history?.undone ?? []).length > 0
             onTriggered: page.run("redo")
         },

@@ -4,77 +4,7 @@ use crate::{
 };
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
-#[derive(Debug, Clone, PartialEq, thiserror::Error)]
-pub enum Issue {
-    #[error("unsupported schema {0:?}, expected {SCHEMA:?}")]
-    Schema(String),
-    #[error("{path} is {value}, expected {min}..={max}")]
-    Range { path: String, value: f32, min: f32, max: f32 },
-    #[error("{path} has {count} entries, at most {max} are allowed")]
-    TooMany { path: String, count: usize, max: usize },
-    #[error("{0} must not be empty")]
-    Empty(String),
-    #[error("{0} must match [a-z0-9_]{{1,32}}")]
-    Id(String),
-    #[error("{0} repeats an id that is already in use")]
-    DuplicateId(String),
-    #[error("{path} names the unknown {what} {id:?}")]
-    Unknown { path: String, what: &'static str, id: String },
-    #[error("{path} names {id:?}, a property that holds no value")]
-    Valueless { path: String, id: String },
-    #[error("{0} needs exactly one source: prop, keys, audio, cursor, clock or script")]
-    Source(String),
-    #[error("{0} does not fit the type of this field")]
-    Type(String),
-    #[error("{0} keyframe times are not increasing")]
-    Unsorted(String),
-    #[error("{0} is nested deeper than 8 levels")]
-    Depth(String),
-    #[error("{0} masks itself through other layers")]
-    Cycle(String),
-    #[error("invalid color {0:?}, expected #rrggbb or #rrggbbaa")]
-    Color(String),
-    #[error(
-        "{0} is a sound layer: only id, type, sound, sounds, mode, pause, stream, play_on, loop, play, volume, pan, fade_in and fade_out apply"
-    )]
-    Sound(String),
-    #[error(
-        "{0} is a light layer: only id, type, transform, anchor, visible, parent, inherit, attach and the fields of the light apply"
-    )]
-    Light(String),
-    #[error("the scene has {0} light layers, at most 12 are allowed")]
-    Lights(usize),
-    #[error("{path} needs {count} variants of its shader, at most 8 are allowed")]
-    Variants { path: String, count: usize },
-    #[error("{0} needs either sound or sounds")]
-    Clips(String),
-    #[error("{0} depends on itself through other layers")]
-    Circle(String),
-    #[error("{path}: {reason}")]
-    Effect { path: String, reason: String },
-    #[error("{0} may only follow a property or keyframes")]
-    SoundSource(String),
-    #[error("the scene has {0} sound layers, at most 8 are allowed")]
-    Sounds(usize),
-    #[error("/properties/volume of a scene with sound must be a slider within 0..=100")]
-    Volume,
-    #[error("{0} nests particle systems more than two levels deep")]
-    Generations(String),
-    #[error("{0} names {1:?}, which its model does not have")]
-    Missing(String, String),
-    #[error("the scene has {0} mesh and model layers, at most 16 are allowed")]
-    Figures(usize),
-    #[error("the scene has {0} lights that cast shadows, at most 2 are allowed")]
-    Shadows(usize),
-    #[error("{0} applies inside a group with space 3d only")]
-    Flat(String),
-    #[error("{0} is locked by its particle system")]
-    Locked(String),
-    #[error("{0} needs either a duration or both frames and fps")]
-    Timing(String),
-    #[error("{0} applies to timelines that loop with repeat only")]
-    Wrap(String),
-}
+pub use crate::issue::Issue;
 
 pub(crate) fn nested<'b>(base: &str, layers: &'b [Layer], out: &mut Vec<(String, &'b str)>) {
     for (i, layer) in layers.iter().enumerate() {

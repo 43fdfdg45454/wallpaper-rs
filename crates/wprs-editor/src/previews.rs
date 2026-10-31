@@ -6,6 +6,7 @@ use image::imageops::FilterType;
 use serde_json::{Value, json};
 use std::fs;
 use std::path::Path;
+use wprs_core::message::said;
 use wprs_format::SCHEMA;
 use wprs_format::media::{preview, probe};
 
@@ -27,7 +28,11 @@ fn shrink(data: &[u8]) -> Result<Vec<u8>> {
             }
         }
     }
-    bail!("the picture does not fit in 1 MiB even as a jpeg of 512 pixels")
+    bail!(said(
+        "editor.picture_does_not",
+        "the picture does not fit in 1 MiB even as a jpeg of 512 pixels",
+        &[]
+    ))
 }
 
 pub fn store(dir: &Path, doc: &Value, file: &Path, animated: bool) -> Result<String> {
@@ -41,7 +46,14 @@ pub fn store(dir: &Path, doc: &Value, file: &Path, animated: bool) -> Result<Str
     if usable && preview(animated, &name(ext), &data).is_ok() {
         return place(dir, &name(ext), file);
     }
-    ensure!(!animated, "an animated preview is a gif or webp of at most 640 pixels a side, 15 s and 8 MiB");
+    ensure!(
+        !animated,
+        said(
+            "editor.animated_preview_gif",
+            "an animated preview is a gif or webp of at most 640 pixels a side, 15 s and 8 MiB",
+            &[]
+        )
+    );
     let part = dir.join("assets").join(".preview.part");
     fs::create_dir_all(dir.join("assets"))?;
     fs::write(&part, shrink(&data)?)?;
@@ -53,7 +65,11 @@ pub fn store(dir: &Path, doc: &Value, file: &Path, animated: bool) -> Result<Str
 fn field(doc: &Value, animated: bool) -> Result<&'static str> {
     Ok(match (animated, doc["manifest"]["schema"] == SCHEMA) {
         (false, false) => "preview",
-        (true, false) => bail!("an animated preview needs {SCHEMA}; upgrade the manifest first"),
+        (true, false) => bail!(said(
+            "editor.animated_preview_needs",
+            "an animated preview needs %1; upgrade the manifest first",
+            &[&SCHEMA]
+        )),
         (false, true) => "previews/thumbnail",
         (true, true) => "previews/animated",
     })

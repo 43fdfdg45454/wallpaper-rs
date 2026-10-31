@@ -1,6 +1,7 @@
 use crate::ops::{Op, set};
 use anyhow::{Result, anyhow, bail, ensure};
 use serde_json::{Value, json};
+use wprs_core::message::said;
 use wprs_scene::{Color, Ease};
 
 fn time(key: &Value) -> f64 {
@@ -58,7 +59,10 @@ pub struct Key<'a> {
 }
 
 pub fn keyframe(doc: &Value, pointer: &str, mut key: Key) -> Result<Vec<Op>> {
-    ensure!(key.time.is_finite() && key.time >= 0.0, "the time must be 0 or more seconds");
+    ensure!(
+        key.time.is_finite() && key.time >= 0.0,
+        said("editor.time_must_more", "the time must be 0 or more seconds", &[])
+    );
     key.time = (key.time * 1000.0).round() / 1000.0;
     if let Some(ease) = &key.ease {
         serde_json::from_value::<Ease>(ease.clone()).map_err(|e| anyhow!("{e}"))?;
@@ -69,7 +73,13 @@ pub fn keyframe(doc: &Value, pointer: &str, mut key: Key) -> Result<Vec<Op>> {
             let mut keys = keys.clone();
             let at = keys.iter().position(|k| (time(k) - key.time).abs() < 1e-3);
             if key.remove {
-                let i = at.ok_or_else(|| anyhow!("{pointer} has no keyframe at {} s", key.time))?;
+                let i = at.ok_or_else(|| {
+                    anyhow!(said(
+                        "editor.no_keyframe_s",
+                        "%1 has no keyframe at %2 s",
+                        &[&pointer, &key.time]
+                    ))
+                })?;
                 let removed = keys.remove(i);
                 return Ok(match keys.is_empty() {
                     true => set(doc, pointer, removed[1].clone()),
@@ -86,19 +96,28 @@ pub fn keyframe(doc: &Value, pointer: &str, mut key: Key) -> Result<Vec<Op>> {
             set(doc, &format!("{pointer}/keys"), Value::Array(keys))
         }
         None => {
-            ensure!(!key.remove, "{pointer} has no keyframes");
+            ensure!(!key.remove, said("editor.no_keyframes", "%1 has no keyframes", &[&pointer]));
             if current.is_some_and(Value::is_object) {
-                bail!("{pointer} follows another source; set a plain value first");
+                bail!(said(
+                    "editor.follows_another_source",
+                    "%1 follows another source; set a plain value first",
+                    &[&pointer]
+                ));
             }
             let value = key.value.clone().or_else(|| current.cloned());
-            let value = value.ok_or_else(|| anyhow!("{pointer} has no value yet; give one"))?;
+            let value = value.ok_or_else(|| {
+                anyhow!(said("editor.no_value_yet", "%1 has no value yet; give one", &[&pointer]))
+            })?;
             let first = key.ease.clone().map_or(json!([key.time, value]), |e| json!([key.time, value, e]));
             set(doc, pointer, json!({"keys": [first]}))
         }
     };
     if let Some(timeline) = key.timeline {
         let mut known = doc.pointer("/scene/timelines").and_then(Value::as_array).into_iter().flatten();
-        ensure!(known.any(|t| t["id"] == timeline), "there is no timeline {timeline:?}");
+        ensure!(
+            known.any(|t| t["id"] == timeline),
+            said("editor.there_no_timeline", "there is no timeline \"%1\"", &[&timeline])
+        );
         let mut staged = doc.clone();
         crate::ops::apply(&mut staged, &ops)?;
         ops.extend(set(&staged, &format!("{pointer}/timeline"), json!(timeline)));

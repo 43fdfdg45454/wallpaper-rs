@@ -301,7 +301,13 @@ the works the original came from, and its authors stay for whoever edits it to f
 
 `validate` lists the problems of the document and of the folder with the pointer of the field
 concerned, nested layers included, the same messages the app shows; unused files and a signature
-left by an earlier build are warnings. `build` refuses unsaved changes and errors, signs
+left by an earlier build are warnings. With `--json` each problem also carries `said`, a message id
+such as `scene.color` or `format.invalid` with its arguments; the app and `wprs-ctl` tell the
+messages and refusals in the language of the desktop from `po/<language>/wprs-messages.po`, and the
+outline names the steps of `history.undo` and `history.redo` and the layers of the starting points
+(`label`) in that language while the ids stay as stored. A starting point made in a language its
+labels lack keeps that language, the one of the title, as `default_locale` and copies the English
+labels into it. `build` refuses unsaved changes and errors, signs
 `manifest.json` with `--key` exactly as `wprs-ctl pack sign` does, or removes an earlier signature
 without it, and packs the folder with the code of `wprs-ctl pack build` into `-o FILE` or
 `<id>-<version>.wpak` next to the folder. `apply` builds the package into

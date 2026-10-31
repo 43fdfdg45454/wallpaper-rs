@@ -2,7 +2,7 @@ use crate::{Error, Facts, Manifest, Platform, Result, ensure, require};
 use semver::{Prerelease, Version, VersionReq};
 use wprs_scene::{described, drawn, newer_params};
 
-pub use crate::facts::{BUILTIN, check, facts, warnings};
+pub use crate::facts::{BUILTIN, check, facts, notes, warnings};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Support {

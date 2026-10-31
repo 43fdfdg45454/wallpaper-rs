@@ -1,14 +1,12 @@
-use crate::check::Problem;
 use crate::ops::{Op, apply, diff, set};
 use anyhow::Result;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use std::path::Path;
-use wprs_format::features::{check, facts, lacks, playable, warnings};
+use wprs_format::features::facts;
 use wprs_format::{
-    Content, Descriptor, Error, Facts, Input, Manifest, Origin, Platform, Rating, Requires, Scene, Text,
-    newer_names,
+    Content, Descriptor, Facts, Input, Manifest, Origin, Rating, Requires, Scene, Text, newer_names,
 };
 
 const TOP: [&str; 10] = [
@@ -129,51 +127,6 @@ pub fn cancels(doc: &Value, ops: &[Op], dir: Option<&Path>) -> bool {
     }
     let follow = synced(&probe, &doc["scene"], &BTreeSet::new(), dir);
     apply(&mut probe, &follow).is_ok() && probe["manifest"] == doc["manifest"]
-}
-
-fn at(field: &str) -> String {
-    match field {
-        f if f.starts_with("inputs") => "/manifest/inputs",
-        f if f.starts_with("the scene costs") => "/scene/layers",
-        _ => "/manifest/requires/features",
-    }
-    .into()
-}
-
-pub fn problems(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
-    let Some((manifest, found)) = facts_of(doc, dir).filter(|(m, _)| m.v2()) else { return Vec::new() };
-    let mut out: Vec<Problem> = check(&manifest, &found)
-        .err()
-        .into_iter()
-        .map(|e| match e {
-            Error::Invalid { field, reason } => Problem {
-                pointer: at(&field),
-                message: format!("{field}: {reason}"),
-                warning: field != "inputs",
-            },
-            e => Problem { pointer: "/manifest".into(), message: e.to_string(), warning: false },
-        })
-        .collect();
-    let unread = dir.map(|d| manifest.unread_texts(wprs_format::locale_names(d))).unwrap_or_default();
-    let notes = warnings(&manifest, &found).into_iter().chain(unread);
-    out.extend(notes.map(|message| Problem { pointer: at(&message), message, warning: true }));
-    out.extend(verdicts(&manifest, &found).into_iter().map(|message| Problem {
-        pointer: "/manifest/requires/features".into(),
-        message,
-        warning: true,
-    }));
-    out
-}
-
-pub fn verdicts(manifest: &Manifest, found: &Facts) -> Vec<String> {
-    let verdict = |p: Platform| match (playable(manifest, found, p), lacks(p.name(), &found.features)) {
-        (Err(e), _) => Some(format!("{}: refused: {e}", p.name())),
-        (Ok(()), without) if !without.is_empty() => {
-            Some(format!("{}: plays without {}", p.name(), without.join(", ")))
-        }
-        _ => None,
-    };
-    Platform::ALL.into_iter().filter_map(verdict).collect()
 }
 
 pub fn used(doc: &Value) -> Vec<Value> {

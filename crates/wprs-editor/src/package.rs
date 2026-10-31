@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use wprs_core::message::said;
 use wprs_format::{
     Ancestor, Kind, Limits, MANIFEST, Manifest, Origin, OriginKind, SIGNATURE, Signer, sign_source,
 };
@@ -37,14 +38,14 @@ fn unsign(dir: &Path) -> Result<()> {
 }
 
 pub fn build(project: &mut Project, out: &Path, signer: Option<&Signer>) -> Result<(String, u64)> {
-    ensure!(!project.dirty(), "save the scene before building it");
+    ensure!(!project.dirty(), said("editor.save_scene_before", "save the scene before building it", &[]));
     project.settle()?;
     build_saved(&project.dir, &project.doc, out, signer)
 }
 
 pub fn build_saved(dir: &Path, doc: &Value, out: &Path, signer: Option<&Signer>) -> Result<(String, u64)> {
     if let Some(p) = problems(dir, doc).into_iter().find(|p| !p.warning) {
-        bail!("{}: {}", p.pointer, p.message);
+        bail!(said("editor.text", "%1: %2", &[&p.pointer, &p.message]));
     }
     match signer {
         Some(signer) => drop(sign_source(dir, signer)?),
@@ -56,9 +57,12 @@ pub fn build_saved(dir: &Path, doc: &Value, out: &Path, signer: Option<&Signer>)
 
 pub fn extract(file: &Path, dir: &Path) -> Result<String> {
     let empty = !dir.exists() || fs::read_dir(dir)?.next().is_none();
-    ensure!(empty, "{} is not an empty folder", dir.display());
+    ensure!(empty, said("editor.not_empty_folder", "%1 is not an empty folder", &[&(dir.display())]));
     let mut package = wprs_format::open(file, &Limits::default())?;
-    ensure!(package.manifest.kind == Kind::Scene, "{} is not a scene package", file.display());
+    ensure!(
+        package.manifest.kind == Kind::Scene,
+        said("editor.not_scene_package", "%1 is not a scene package", &[&(file.display())])
+    );
     wprs_format::extract(&mut package, dir)?;
     unsign(dir)?;
     let path = dir.join(MANIFEST);

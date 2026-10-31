@@ -1,125 +1,14 @@
 use crate::author::Author;
+use crate::steps::{action, edit};
 use crate::usage;
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use serde_json::{Value, json};
+use serde_json::json;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use wprs_client::Client;
-use wprs_editor::actions::{Action, visible};
+use wprs_editor::actions::visible;
 use wprs_editor::starters::{default_id, starter};
-use wprs_editor::{Op, Project, assets, inspect, package, references};
-
-fn value(text: &str) -> Value {
-    serde_json::from_str(text).unwrap_or_else(|_| Value::String(text.into()))
-}
-
-fn edit(dir: &Path, action: Action) -> Result<()> {
-    let mut project = Project::open(dir)?;
-    let undoing = matches!(action, Action::Undo {} | Action::Redo {});
-    let named = match &action {
-        Action::RenameProperty { id, .. } | Action::RemoveProperty { id } => {
-            references::scripts(&project.dir, &project.doc, id).into_iter().map(|p| (p, id.clone())).collect()
-        }
-        _ => Vec::new(),
-    };
-    let ops = project.act(&action)?;
-    ensure!(!(undoing && ops.is_empty()), "there is nothing to {}", action.name());
-    project.save()?;
-    named.iter().for_each(|(path, id)| eprintln!("warning: {path} names {id:?}; scripts are not rewritten"));
-    let added = ops.iter().filter_map(|op| match op {
-        Op::Add { path, value } => {
-            Some(value["id"].as_str().unwrap_or(path.rsplit('/').next().unwrap_or_default()))
-        }
-        _ => None,
-    });
-    let added: Vec<&str> = added.collect();
-    match action {
-        Action::Import { .. } => added.last().iter().for_each(|id| println!("{id}")),
-        Action::AddPreset { .. } => {
-            let last = project.doc["manifest"]["presets"].as_array().and_then(|l| l.last());
-            last.and_then(|p| p["id"].as_str()).iter().for_each(|id| println!("{id}"))
-        }
-        Action::AddProperty { .. } => ops
-            .iter()
-            .filter_map(|op| match op {
-                Op::Add { path, .. } => {
-                    path.strip_prefix("/manifest/properties/").filter(|p| !p.contains('/'))
-                }
-                _ => None,
-            })
-            .for_each(|id| println!("{id}")),
-        Action::Thumbnail { .. } => ops
-            .iter()
-            .filter_map(|op| match op {
-                Op::Add { value, .. } | Op::Replace { value, .. } => value.as_str(),
-                _ => None,
-            })
-            .for_each(|path| println!("{path}")),
-        _ => ops
-            .iter()
-            .filter_map(|op| match op {
-                Op::Add { value, .. } => value["id"].as_str(),
-                _ => None,
-            })
-            .for_each(|id| println!("{id}")),
-    }
-    Ok(())
-}
-
-fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> {
-    Ok(match command {
-        Author::Set { dir, pointer, value: v } => (dir, Action::Set { pointer, value: value(&v) }),
-        Author::Add { dir, pointer, value: v } => (dir, Action::Add { pointer, value: value(&v) }),
-        Author::Remove { dir, pointer } => (dir, Action::Remove { pointer }),
-        Author::Move { dir, from, to } => (dir, Action::Move { from, to }),
-        Author::AddLayer { dir, kind, id, name, source, into, at } => {
-            (dir, Action::AddLayer { kind, id, name, source, into, at })
-        }
-        Author::RemoveLayer { dir, id } => (dir, Action::RemoveLayer { id }),
-        Author::DuplicateLayer { dir, id } => (dir, Action::DuplicateLayer { id }),
-        Author::MoveLayer { dir, id, to, into } => (dir, Action::MoveLayer { id, to, into }),
-        Author::Group { dir, ids, id } => (dir, Action::Group { ids, id }),
-        Author::Ungroup { dir, id } => (dir, Action::Ungroup { id }),
-        Author::Hide { dir, id, hidden } => (dir, Action::Hide { id, hidden }),
-        Author::Lock { dir, id, locked } => (dir, Action::Lock { id, locked }),
-        Author::Solo { dir, id } => (dir, Action::Solo { id }),
-        Author::Keyframe { dir, pointer, time, value: v, ease, timeline, remove } => {
-            let (value, ease) = (v.as_deref().map(value), ease.as_deref().map(value));
-            (dir, Action::Keyframe { pointer, time, value, ease, timeline, remove })
-        }
-        Author::Import { dir, file, id } => {
-            (dir, Action::Import { file: fs::canonicalize(&file).unwrap_or(file), id })
-        }
-        Author::ImportEffect { dir, descriptor, wgsl } => {
-            let wgsl = wgsl.map(|w| fs::canonicalize(&w).unwrap_or(w));
-            (
-                dir,
-                Action::ImportEffect {
-                    descriptor: fs::canonicalize(&descriptor).unwrap_or(descriptor),
-                    wgsl,
-                },
-            )
-        }
-        Author::ImportScript { dir, file } => {
-            (dir, Action::ImportScript { file: fs::canonicalize(&file).unwrap_or(file) })
-        }
-        Author::Translate { dir, pointer, language, text, add, .. } => {
-            (dir, Action::Translate { pointer, language, text, add })
-        }
-        Author::Thumbnail { dir, file, animated } => {
-            (dir, Action::Thumbnail { file: fs::canonicalize(&file).unwrap_or(file), animated })
-        }
-        Author::Upgrade { dir, rating, reasons, photosensitive, derived_from } => {
-            let rating = rating.and_then(|r| serde_json::from_value(json!(r)).ok());
-            let reasons = reasons.iter().filter_map(|r| serde_json::from_value(json!(r)).ok()).collect();
-            (dir, Action::Upgrade { rating, reasons, photosensitive, derived_from })
-        }
-        Author::Properties(command) => crate::userprops::action(command),
-        Author::Undo { dir } => (dir, Action::Undo {}),
-        Author::Redo { dir } => (dir, Action::Redo {}),
-        other => return Err(Box::new(other)),
-    })
-}
+use wprs_editor::{Project, assets, inspect, package};
 
 fn describe(project: &Project, json: bool) -> Result<()> {
     let problems = package::problems(&project.dir, &project.doc);
@@ -197,8 +86,9 @@ pub fn run(command: Author) -> Result<()> {
         Author::History { dir } => {
             let project = Project::open(&dir)?;
             let (done, undone) = project.history.labels();
-            done.iter().for_each(|label| println!("{label}"));
-            undone.iter().for_each(|label| println!("{label} (undone)"));
+            let step = |label: &&str| wprs_editor::history::step(label).local();
+            done.iter().for_each(|label| println!("{}", step(label)));
+            undone.iter().for_each(|label| println!("{} (undone)", step(label)));
         }
         Author::Recover { dir, discard } => {
             let mut project = Project::open(&dir)?;
@@ -215,7 +105,12 @@ pub fn run(command: Author) -> Result<()> {
                 match json {
                     true => println!("{}", serde_json::to_string(p)?),
                     false => {
-                        println!("{}{}: {}", if p.warning { "warning: " } else { "" }, p.pointer, p.message)
+                        println!(
+                            "{}{}: {}",
+                            if p.warning { "warning: " } else { "" },
+                            p.pointer,
+                            p.said.local()
+                        )
                     }
                 }
             }

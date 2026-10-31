@@ -2,6 +2,7 @@ use crate::ops::{Op, escape, set};
 use crate::schema::{at, branches, deref, root_of};
 use anyhow::{Result, bail, ensure};
 use serde_json::{Value, json};
+use wprs_core::message::said;
 use wprs_format::SCHEMA;
 use wprs_scene::tag;
 
@@ -59,7 +60,11 @@ pub fn translate(
     let named = language.len() <= 35 && language.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-');
     ensure!(
         named && pointer.starts_with("/manifest/") && textual(doc, pointer),
-        "name a language such as en or pt-BR and a text of the manifest"
+        said(
+            "editor.name_language_such",
+            "name a language such as en or pt-BR and a text of the manifest",
+            &[]
+        )
     );
     let current = doc.pointer(pointer).cloned().unwrap_or(Value::Null);
     let mut text = text.filter(|t| !t.trim().is_empty()).map(String::from);
@@ -70,14 +75,24 @@ pub fn translate(
         }
         let base = shown.first().and_then(|r| r["text"].as_str()).filter(|t| !t.is_empty());
         text = text.or(base.map(String::from));
-        ensure!(text.is_some(), "write the text in the default language first");
+        ensure!(
+            text.is_some(),
+            said("editor.write_text_default", "write the text in the default language first", &[])
+        );
     }
     let default = doc["manifest"]["default_locale"].as_str();
     let mapped = current.is_object() || key(doc, &current).is_some();
     let language = if language.is_empty() && mapped { default.unwrap_or("en") } else { language };
     let plain = language.is_empty() || default.is_some_and(|d| tag(d) == tag(language));
     let v2 = doc["manifest"]["schema"] == SCHEMA;
-    ensure!(v2 || plain || mapped, "texts in several languages need {SCHEMA}; upgrade the manifest first");
+    ensure!(
+        v2 || plain || mapped,
+        said(
+            "editor.texts_several_languages",
+            "texts in several languages need %1; upgrade the manifest first",
+            &[&SCHEMA]
+        )
+    );
     let (entry, value) = (format!("{pointer}/{}", escape(language)), |t: &str| json!(t));
     Ok(match (key(doc, &current), &current, text.as_deref()) {
         (Some(key), _, Some(t)) => set(doc, &strings(language, key), value(t)),
@@ -85,7 +100,7 @@ pub fn translate(
         (None, Value::Object(map), Some(t)) if !map.is_empty() => set(doc, &entry, value(t)),
         (None, Value::Object(map), None) if map.len() > 1 => gone(doc, &entry),
         (None, Value::Object(map), None) if map.contains_key(language) => {
-            ensure!(pointer != TITLE, "the title needs a text");
+            ensure!(pointer != TITLE, said("editor.title_needs_text", "the title needs a text", &[]));
             gone(doc, pointer)
         }
         (None, Value::Object(_), None) => Vec::new(),
@@ -98,9 +113,11 @@ pub fn translate(
             }
             ops
         }
-        (None, _, Some(_)) => bail!("write the text in the default language first"),
+        (None, _, Some(_)) => {
+            bail!(said("editor.write_text_default", "write the text in the default language first", &[]))
+        }
         (None, _, None) if plain => {
-            ensure!(pointer != TITLE, "the title needs a text");
+            ensure!(pointer != TITLE, said("editor.title_needs_text", "the title needs a text", &[]));
             gone(doc, pointer)
         }
         (None, _, None) => Vec::new(),

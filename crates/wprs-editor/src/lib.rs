@@ -4,6 +4,7 @@ pub mod assets;
 mod cache;
 pub mod canvas;
 pub mod check;
+pub mod findings;
 pub mod forms;
 pub mod history;
 pub mod inspect;
@@ -27,7 +28,7 @@ pub mod starters;
 pub mod texts;
 
 pub use actions::{ACTIONS, Action};
-pub use check::Problem;
+pub use findings::{Problem, told, told_with};
 pub use history::History;
 pub use inspect::Field;
 pub use ops::Op;

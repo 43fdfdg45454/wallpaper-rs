@@ -1,6 +1,7 @@
 use crate::ops::{Op, escape, set};
 use anyhow::{Result, anyhow, ensure};
 use serde_json::{Value, json};
+use wprs_core::message::said;
 
 pub const PROPERTY_KINDS: [&str; 11] =
     ["slider", "bool", "color", "combo", "text", "file", "folder", "button", "group", "label", "divider"];
@@ -34,7 +35,14 @@ pub(crate) fn valid(id: &str) -> Result<()> {
     let valid = id.len() <= 64
         && id.starts_with(|c: char| c.is_ascii_alphabetic())
         && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
-    ensure!(valid, "a property id is a letter followed by at most 63 letters, digits or _");
+    ensure!(
+        valid,
+        said(
+            "editor.property_id_letter",
+            "a property id is a letter followed by at most 63 letters, digits or _",
+            &[]
+        )
+    );
     Ok(())
 }
 
@@ -50,8 +58,11 @@ fn siblings(doc: &Value, group: Option<&str>, except: &str) -> Vec<(String, f64)
 
 fn target(doc: &Value, group: Option<&str>, kind: &str) -> Result<Option<String>> {
     let Some(g) = group.filter(|g| !g.is_empty()) else { return Ok(None) };
-    ensure!(doc["manifest"]["properties"][g]["type"] == "group", "{g} is not a group");
-    ensure!(kind != "group", "a group cannot go into another group");
+    ensure!(
+        doc["manifest"]["properties"][g]["type"] == "group",
+        said("editor.not_group_2", "%1 is not a group", &[&g])
+    );
+    ensure!(kind != "group", said("editor.group_cannot_go", "a group cannot go into another group", &[]));
     Ok(Some(g.to_owned()))
 }
 
@@ -63,12 +74,14 @@ pub fn add_property(
     label: Option<&str>,
 ) -> Result<Vec<Op>> {
     let kinds = PROPERTY_KINDS.join(", ");
-    let mut value = template(kind).ok_or_else(|| anyhow!("{kind} is not a kind of property: {kinds}"))?;
+    let mut value = template(kind).ok_or_else(|| {
+        anyhow!(said("editor.not_kind_property", "%1 is not a kind of property: %2", &[&kind, &kinds]))
+    })?;
     let id = match id {
         Some(id) => valid(id).map(|_| id.to_owned())?,
         None => (1..).map(|n| format!("{kind}_{n}")).find(|id| !clash(doc, id, "")).unwrap_or_default(),
     };
-    ensure!(!clash(doc, &id, ""), "the id {id} is in use");
+    ensure!(!clash(doc, &id, ""), said("editor.id_use", "the id %1 is in use", &[&id]));
     let group = target(doc, group, kind)?;
     let last = siblings(doc, group.as_deref(), &id).iter().map(|(_, o)| *o).fold(0.0, f64::max);
     value["order"] = json!(last.floor() as i64 + 1);
@@ -82,7 +95,9 @@ pub fn add_property(
 }
 
 pub fn move_property(doc: &Value, id: &str, to: usize, group: Option<&str>) -> Result<Vec<Op>> {
-    let prop = doc.pointer(&path(id)).ok_or_else(|| anyhow!("there is no property {id:?}"))?;
+    let prop = doc
+        .pointer(&path(id))
+        .ok_or_else(|| anyhow!(said("editor.there_no_property", "there is no property \"%1\"", &[&id])))?;
     let group = match group {
         Some(g) => target(doc, Some(g), prop["type"].as_str().unwrap_or_default())?,
         None => prop["group"].as_str().map(String::from),
@@ -109,8 +124,8 @@ pub fn add_preset(doc: &Value, id: Option<&str>, label: Option<&str>) -> Result<
         None => (1..).map(|n| format!("preset_{n}")).find(|id| !taken(id)).unwrap_or_default(),
     };
     let valid = !id.trim().is_empty() && id.chars().count() <= 64 && !id.chars().any(char::is_control);
-    ensure!(valid, "a preset id has 1 to 64 characters");
-    ensure!(!taken(&id), "the preset {id} exists");
+    ensure!(valid, said("editor.preset_id_characters", "a preset id has 1 to 64 characters", &[]));
+    ensure!(!taken(&id), said("editor.preset_exists", "the preset %1 exists", &[&id]));
     let mut preset = json!({"id": id, "values": {}});
     if let Some(label) = label.filter(|l| !l.trim().is_empty()) {
         preset["label"] = json!(label);

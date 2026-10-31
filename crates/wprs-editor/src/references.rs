@@ -4,12 +4,16 @@ use crate::settings::{condition as problem, parse};
 use anyhow::{Result, bail, ensure};
 use serde_json::Value;
 use std::path::Path;
+use wprs_core::message::said;
 use wprs_scene::Condition;
 
 pub fn rename_property(doc: &Value, id: &str, to: &str) -> Result<Vec<Op>> {
-    ensure!(doc.pointer(&path(id)).is_some(), "there is no property {id:?}");
+    ensure!(
+        doc.pointer(&path(id)).is_some(),
+        said("editor.there_no_property", "there is no property \"%1\"", &[&id])
+    );
     valid(to)?;
-    ensure!(!clash(doc, to, id), "the id {to} is in use");
+    ensure!(!clash(doc, to, id), said("editor.id_use_2", "the id %1 is in use", &[&to]));
     let renames = wprs_format::Renames::from([(id.to_owned(), to.to_owned())]);
     let (mut manifest, mut scene) = (doc["manifest"].clone(), doc["scene"].clone());
     wprs_format::rename_json(&mut manifest, Some(&mut scene), &renames);
@@ -19,9 +23,19 @@ pub fn rename_property(doc: &Value, id: &str, to: &str) -> Result<Vec<Op>> {
 }
 
 pub fn remove_property(doc: &Value, id: &str) -> Result<Vec<Op>> {
-    ensure!(doc.pointer(&path(id)).is_some(), "there is no property {id:?}");
+    ensure!(
+        doc.pointer(&path(id)).is_some(),
+        said("editor.there_no_property", "there is no property \"%1\"", &[&id])
+    );
     let users = users(doc, id);
-    ensure!(users.is_empty(), "{id} is still named by {}; change them first", users.join(", "));
+    ensure!(
+        users.is_empty(),
+        said(
+            "editor.still_named_change",
+            "%1 is still named by %2; change them first",
+            &[&id, &(users.join(", "))]
+        )
+    );
     let mut manifest = doc["manifest"].clone();
     let props = manifest["properties"].as_object_mut().into_iter().flat_map(|all| {
         all.remove(id);
@@ -91,11 +105,14 @@ pub fn scripts(dir: &Path, doc: &Value, id: &str) -> Vec<String> {
 }
 
 pub fn condition(doc: &Value, id: &str, enabled: bool, text: &str) -> Result<Vec<Op>> {
-    ensure!(doc.pointer(&path(id)).is_some(), "there is no property {id:?}");
+    ensure!(
+        doc.pointer(&path(id)).is_some(),
+        said("editor.there_no_property", "there is no property \"%1\"", &[&id])
+    );
     let key = if enabled { "enabled_if" } else { "visible_if" };
     let pointer = format!("{}/{key}", path(id));
     if let Some(reason) = problem(doc, &pointer, text) {
-        bail!("{id}: {key} {reason}");
+        bail!(said("editor.text_2", "%1: %2 %3", &[&id, &key, &reason]));
     }
     Ok(match parse(text) {
         c if c.is_empty() => {

@@ -65,7 +65,7 @@ pub mod host {
     pub fn import(path: &str) -> String {
         let stored = std::fs::File::open(path).map_err(Error::from);
         let stored = stored.and_then(|mut file| store::store(&mut file, path));
-        stored.map_or_else(|e| json!({ "error": e.to_string() }), |(uid, _)| json!(uid)).to_string()
+        stored.map_or_else(|e| json!({ "error": e.told() }), |(uid, _)| json!(uid)).to_string()
     }
 
     pub fn setting(key: &str, value: Option<&str>) -> String {
@@ -110,6 +110,19 @@ pub(crate) enum Error {
     Window,
     #[error("the app storage is not known yet")]
     Unprepared,
+}
+
+impl Error {
+    pub(crate) fn told(&self) -> String {
+        self.told_in(&library::languages())
+    }
+
+    pub(crate) fn told_in(&self, languages: &[String]) -> String {
+        match self {
+            Error::Format(e) => e.message().told(&wprs_core::message::tr_in(languages)),
+            e => e.to_string(),
+        }
+    }
 }
 
 #[cfg(target_os = "android")]

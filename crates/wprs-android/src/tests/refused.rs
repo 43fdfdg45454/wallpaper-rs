@@ -93,3 +93,11 @@ fn an_error_without_text_is_told_with_a_translated_reason() {
         assert!(text.contains("<string name=\"failed_without_reason\">"), "no reason in {v}");
     }
 }
+
+#[test]
+fn format_errors_are_told_in_the_language_of_the_phone() {
+    let error = crate::Error::Format(wprs_format::Error::Missing("scene.json".into()));
+    assert_eq!(error.told_in(&[]), "missing file \"scene.json\"");
+    let spanish = error.told_in(&["es_ES".into()]);
+    assert!(spanish.contains("scene.json") && !spanish.contains("missing"), "{spanish}");
+}

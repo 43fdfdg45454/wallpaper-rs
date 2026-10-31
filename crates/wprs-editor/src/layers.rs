@@ -2,6 +2,7 @@ use crate::starters::fold;
 use anyhow::{Result, anyhow, bail};
 use serde_json::{Value, json};
 use std::path::Path;
+use wprs_core::message::said;
 
 pub const KINDS: [&str; 10] =
     ["image", "video", "text", "shape", "solid", "spectrum", "particles", "sound", "group", "adjustment"];
@@ -22,7 +23,7 @@ pub fn walk(doc: &Value) -> Vec<(String, &Value)> {
 
 pub fn find(doc: &Value, id: &str) -> Result<String> {
     let found = walk(doc).into_iter().find(|(_, l)| l["id"] == id).map(|(path, _)| path);
-    found.ok_or_else(|| anyhow!("there is no layer {id:?}"))
+    found.ok_or_else(|| anyhow!(said("editor.there_no_layer", "there is no layer \"%1\"", &[&id])))
 }
 
 pub fn parent(path: &str) -> (&str, usize) {
@@ -35,7 +36,7 @@ pub fn children(doc: &Value, group: Option<&str>) -> Result<String> {
     let path = find(doc, id)?;
     match doc.pointer(&path).map(|l| &l["type"]) {
         Some(Value::String(kind)) if kind == "group" => Ok(format!("{path}/layers")),
-        _ => bail!("{id} is not a group"),
+        _ => bail!(said("editor.not_group", "%1 is not a group", &[&id])),
     }
 }
 
@@ -95,7 +96,7 @@ pub fn template(
     let asset = |what: &str| {
         let found = source.map(String::from).or_else(|| assets_of(doc, what).first().map(|a| a.to_string()));
         let article = if what == "image" { "an" } else { "a" };
-        found.ok_or_else(|| anyhow!("import {article} {what} first"))
+        found.ok_or_else(|| anyhow!(said("editor.import", "import %1 %2 first", &[&article, &what])))
     };
     Ok(match kind {
         "image" => json!({"id": id, "type": "image", "image": asset("image")?}),
@@ -111,7 +112,11 @@ pub fn template(
         "particles" => json!({"id": id, "type": "particles", "system": source.unwrap_or(id)}),
         "group" => json!({"id": id, "type": "group", "layers": []}),
         "adjustment" => json!({"id": id, "type": "adjustment", "effects": []}),
-        _ => bail!("{kind} is not a layer type; use one of {}", KINDS.join(", ")),
+        _ => bail!(said(
+            "editor.not_layer_type",
+            "%1 is not a layer type; use one of %2",
+            &[&kind, &(KINDS.join(", "))]
+        )),
     })
 }
 

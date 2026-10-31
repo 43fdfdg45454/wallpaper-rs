@@ -1,0 +1,1163 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: wallpaper-rs\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-30 00:00+0000\n"
+"PO-Revision-Date: 2026-10-30 00:00+0000\n"
+"Last-Translator: wallpaper-rs contributors\n"
+"Language-Team: wallpaper-rs contributors\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: crates/wprs-editor/src/actions.rs crates/wprs-editor/src/layers.rs
+msgid "there is no layer \"%1\""
+msgstr "no hay ninguna capa «%1»"
+
+#: crates/wprs-editor/src/actions.rs
+msgid ""
+"requires.features is computed from what the package uses, except locale_files"
+msgstr ""
+"requires.features se calcula a partir de lo que usa el paquete, salvo "
+"locale_files"
+
+#: crates/wprs-editor/src/actions.rs crates/wprs-editor/src/props.rs
+#: crates/wprs-editor/src/references.rs
+msgid "the id %1 is in use"
+msgstr "el id %1 ya está en uso"
+
+#: crates/wprs-editor/src/arrange.rs
+msgid "name the layers to group"
+msgstr "indica las capas que se agrupan"
+
+#: crates/wprs-editor/src/arrange.rs
+msgid "only layers of the same group can be grouped"
+msgstr "solo se pueden agrupar capas del mismo grupo"
+
+#: crates/wprs-editor/src/arrange.rs crates/wprs-editor/src/layers.rs
+#: crates/wprs-editor/src/props.rs
+msgid "%1 is not a group"
+msgstr "%1 no es un grupo"
+
+#: crates/wprs-editor/src/arrange.rs
+msgid "the group %1 has its own %2; reset them before ungrouping"
+msgstr "el grupo %1 tiene su propio %2; restablécelo antes de desagrupar"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "a sound may have at most %1 MiB"
+msgstr "un sonido puede tener como mucho %1 MiB"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "the sound %1"
+msgstr "el sonido %1"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "only pictures, videos, sounds, fonts and .cube tables can be imported"
+msgstr ""
+"solo se pueden importar imágenes, vídeos, sonidos, fuentes y tablas .cube"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "the file is larger than 1 GiB"
+msgstr "el archivo ocupa más de 1 GiB"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "a scene has at most %1 assets"
+msgstr "una escena tiene como mucho %1 recursos"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "the sounds of a scene may last %1 s together"
+msgstr "los sonidos de una escena pueden durar %1 s entre todos"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "the pictures of a scene may take 512 MiB once decoded"
+msgstr "las imágenes de una escena pueden ocupar 512 MiB una vez decodificadas"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "a color table may have at most 16 MiB"
+msgstr "una tabla de color puede tener como mucho 16 MiB"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "assets/ has too many files named %1"
+msgstr "assets/ tiene demasiados archivos llamados %1"
+
+#: crates/wprs-editor/src/assets.rs
+msgid "the asset %1 exists"
+msgstr "el recurso %1 ya existe"
+
+#: crates/wprs-editor/src/check.rs
+msgid "the kind of a scene package is scene"
+msgstr "el tipo de un paquete de escena es scene"
+
+#: crates/wprs-editor/src/check.rs crates/wprs-editor/src/findings.rs
+#: crates/wprs-editor/src/history.rs crates/wprs-format/src/facts.rs
+msgid "%1"
+msgstr "%1"
+
+#: crates/wprs-editor/src/check.rs
+msgid "%1 is not in the folder"
+msgstr "%1 no está en la carpeta"
+
+#: crates/wprs-editor/src/findings.rs crates/wprs-editor/src/package.rs
+#: crates/wprs-scene/src/issue.rs
+msgid "%1: %2"
+msgstr "%1: %2"
+
+#: crates/wprs-editor/src/findings.rs
+msgid "%1: refused: %2"
+msgstr "%1: rechazado: %2"
+
+#: crates/wprs-editor/src/findings.rs
+msgid "%1: plays without %2"
+msgstr "%1: se reproduce sin %2"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Change a value"
+msgstr "Cambiar un valor"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Add to a list"
+msgstr "Añadir a una lista"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Remove a value"
+msgstr "Quitar un valor"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Move a value"
+msgstr "Mover un valor"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Add a layer"
+msgstr "Añadir una capa"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Remove a layer"
+msgstr "Quitar una capa"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Duplicate a layer"
+msgstr "Duplicar una capa"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Move a layer"
+msgstr "Mover una capa"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Group layers"
+msgstr "Agrupar capas"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Ungroup layers"
+msgstr "Desagrupar capas"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Hide or show a layer"
+msgstr "Ocultar o mostrar una capa"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Lock or unlock a layer"
+msgstr "Bloquear o desbloquear una capa"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Show one layer alone"
+msgstr "Mostrar una capa sola"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Change a keyframe"
+msgstr "Cambiar un fotograma clave"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Import an asset"
+msgstr "Importar un recurso"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Import an effect"
+msgstr "Importar un efecto"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Import a script"
+msgstr "Importar un script"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Translate a text"
+msgstr "Traducir un texto"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Change the preview"
+msgstr "Cambiar la vista previa"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Upgrade the manifest"
+msgstr "Actualizar el manifiesto"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Add a property"
+msgstr "Añadir una propiedad"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Move a property"
+msgstr "Mover una propiedad"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Rename a property"
+msgstr "Renombrar una propiedad"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Remove a property"
+msgstr "Quitar una propiedad"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Change a condition"
+msgstr "Cambiar una condición"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Add a preset"
+msgstr "Añadir un ajuste predefinido"
+
+#: crates/wprs-editor/src/history.rs
+msgid "Update what the package uses"
+msgstr "Actualizar lo que usa el paquete"
+
+#: crates/wprs-editor/src/keys.rs
+msgid "the time must be 0 or more seconds"
+msgstr "el tiempo debe ser de 0 segundos o más"
+
+#: crates/wprs-editor/src/keys.rs
+msgid "%1 has no keyframe at %2 s"
+msgstr "%1 no tiene ningún fotograma clave en %2 s"
+
+#: crates/wprs-editor/src/keys.rs
+msgid "%1 has no keyframes"
+msgstr "%1 no tiene fotogramas clave"
+
+#: crates/wprs-editor/src/keys.rs
+msgid "%1 follows another source; set a plain value first"
+msgstr "%1 sigue a otra fuente; pon antes un valor fijo"
+
+#: crates/wprs-editor/src/keys.rs
+msgid "%1 has no value yet; give one"
+msgstr "%1 aún no tiene valor; da uno"
+
+#: crates/wprs-editor/src/keys.rs
+msgid "there is no timeline \"%1\""
+msgstr "no hay ninguna línea de tiempo «%1»"
+
+#: crates/wprs-editor/src/layers.rs
+msgid "import %1 %2 first"
+msgstr "importa antes %1 %2"
+
+#: crates/wprs-editor/src/layers.rs
+msgid "%1 is not a layer type; use one of %2"
+msgstr "%1 no es un tipo de capa; usa uno de %2"
+
+#: crates/wprs-editor/src/ops.rs
+msgid "\"%1\" is not a JSON Pointer"
+msgstr "«%1» no es un JSON Pointer"
+
+#: crates/wprs-editor/src/ops.rs
+msgid "\"%1\" is not an index from 0 to %2"
+msgstr "«%1» no es un índice de 0 a %2"
+
+#: crates/wprs-editor/src/ops.rs
+msgid "%1 does not exist"
+msgstr "%1 no existe"
+
+#: crates/wprs-editor/src/ops.rs
+msgid "%1 holds neither a list nor an object"
+msgstr "%1 no contiene ni una lista ni un objeto"
+
+#: crates/wprs-editor/src/ops.rs
+msgid "%1 cannot move into itself"
+msgstr "%1 no puede moverse dentro de sí mismo"
+
+#: crates/wprs-editor/src/ops.rs crates/wprs-format/src/said.rs
+msgid "%1 already exists"
+msgstr "%1 ya existe"
+
+#: crates/wprs-editor/src/package.rs
+msgid "save the scene before building it"
+msgstr "guarda la escena antes de construirla"
+
+#: crates/wprs-editor/src/package.rs crates/wprs-editor/src/project.rs
+msgid "%1 is not an empty folder"
+msgstr "%1 no es una carpeta vacía"
+
+#: crates/wprs-editor/src/package.rs
+msgid "%1 is not a scene package"
+msgstr "%1 no es un paquete de escena"
+
+#: crates/wprs-editor/src/previews.rs
+msgid "the picture does not fit in 1 MiB even as a jpeg of 512 pixels"
+msgstr "la imagen no cabe en 1 MiB ni como jpeg de 512 píxeles"
+
+#: crates/wprs-editor/src/previews.rs
+msgid ""
+"an animated preview is a gif or webp of at most 640 pixels a side, 15 s and "
+"8 MiB"
+msgstr ""
+"una vista previa animada es un gif o webp de como mucho 640 píxeles de lado, "
+"15 s y 8 MiB"
+
+#: crates/wprs-editor/src/previews.rs
+msgid "an animated preview needs %1; upgrade the manifest first"
+msgstr "una vista previa animada necesita %1; actualiza antes el manifiesto"
+
+#: crates/wprs-editor/src/project.rs
+msgid "the entry %1 is not a scene file"
+msgstr "la entrada %1 no es un archivo de escena"
+
+#: crates/wprs-editor/src/project.rs
+msgid ""
+"unsaved changes of an earlier session wait; recover or discard them first"
+msgstr ""
+"hay cambios sin guardar de una sesión anterior; recupéralos o descártalos "
+"antes"
+
+#: crates/wprs-editor/src/project.rs
+msgid "the files of %1 changed outside the editor; open the folder again"
+msgstr ""
+"los archivos de %1 cambiaron fuera del editor; vuelve a abrir la carpeta"
+
+#: crates/wprs-editor/src/props.rs
+msgid "a property id is a letter followed by at most 63 letters, digits or _"
+msgstr ""
+"el id de una propiedad es una letra seguida de como mucho 63 letras, cifras "
+"o _"
+
+#: crates/wprs-editor/src/props.rs
+msgid "a group cannot go into another group"
+msgstr "un grupo no puede ir dentro de otro grupo"
+
+#: crates/wprs-editor/src/props.rs
+msgid "%1 is not a kind of property: %2"
+msgstr "%1 no es un tipo de propiedad: %2"
+
+#: crates/wprs-editor/src/props.rs crates/wprs-editor/src/references.rs
+msgid "there is no property \"%1\""
+msgstr "no hay ninguna propiedad «%1»"
+
+#: crates/wprs-editor/src/props.rs
+msgid "a preset id has 1 to 64 characters"
+msgstr "el id de un ajuste predefinido tiene de 1 a 64 caracteres"
+
+#: crates/wprs-editor/src/props.rs
+msgid "the preset %1 exists"
+msgstr "el ajuste predefinido %1 ya existe"
+
+#: crates/wprs-editor/src/references.rs
+msgid "%1 is still named by %2; change them first"
+msgstr "%2 todavía nombra a %1; cámbialo antes"
+
+#: crates/wprs-editor/src/references.rs
+msgid "%1: %2 %3"
+msgstr "%1: %2 %3"
+
+#: crates/wprs-editor/src/scripts.rs
+msgid "%1 is not a .js file"
+msgstr "%1 no es un archivo .js"
+
+#: crates/wprs-editor/src/scripts.rs
+msgid "the scripts of a scene take at most 1 MiB together"
+msgstr "los scripts de una escena ocupan como mucho 1 MiB entre todos"
+
+#: crates/wprs-editor/src/scripts.rs
+msgid "a scene has at most %1 scripts"
+msgstr "una escena tiene como mucho %1 scripts"
+
+#: crates/wprs-editor/src/shaders.rs
+msgid "%1 is larger than %2 KiB"
+msgstr "%1 ocupa más de %2 KiB"
+
+#: crates/wprs-editor/src/shaders.rs
+msgid "the effect %1 %2"
+msgstr "el efecto %1 %2"
+
+#: crates/wprs-editor/src/shaders.rs
+msgid "a scene has at most %1 effects of its own"
+msgstr "una escena tiene como mucho %1 efectos propios"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "%1 is not a starting point; use one of %2"
+msgstr "%1 no es un punto de partida; usa uno de %2"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "%1 is not a language such as en or pt-BR"
+msgstr "%1 no es un idioma como en o pt-BR"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "Sky"
+msgstr "Cielo"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "Sun"
+msgstr "Sol"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "Far hills"
+msgstr "Colinas lejanas"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "Middle hills"
+msgstr "Colinas intermedias"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "Near hills"
+msgstr "Colinas cercanas"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "Snowflakes"
+msgstr "Copos de nieve"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "Time"
+msgstr "Hora"
+
+#: crates/wprs-editor/src/starters.rs
+msgid "Seconds"
+msgstr "Segundos"
+
+#: crates/wprs-editor/src/texts.rs
+msgid "name a language such as en or pt-BR and a text of the manifest"
+msgstr "indica un idioma como en o pt-BR y un texto del manifiesto"
+
+#: crates/wprs-editor/src/texts.rs
+msgid "write the text in the default language first"
+msgstr "escribe antes el texto en el idioma predeterminado"
+
+#: crates/wprs-editor/src/texts.rs
+msgid "texts in several languages need %1; upgrade the manifest first"
+msgstr ""
+"los textos en varios idiomas necesitan %1; actualiza antes el manifiesto"
+
+#: crates/wprs-editor/src/texts.rs
+msgid "the title needs a text"
+msgstr "el título necesita un texto"
+
+#: crates/wprs-format/src/admin.rs
+msgid "already holds a repository"
+msgstr "ya contiene un repositorio"
+
+#: crates/wprs-format/src/admin.rs
+msgid "the current root must be fully signed before rotating"
+msgstr "la raíz actual debe estar firmada del todo antes de rotarla"
+
+#: crates/wprs-format/src/admin.rs
+msgid "is not a root key of this or the previous root"
+msgstr "no es una clave raíz de esta raíz ni de la anterior"
+
+#: crates/wprs-format/src/catalog.rs
+msgid "package size"
+msgstr "tamaño del paquete"
+
+#: crates/wprs-format/src/catalog.rs
+msgid "differs from the author of earlier versions"
+msgstr "no coincide con el autor de las versiones anteriores"
+
+#: crates/wprs-format/src/catalog.rs
+msgid "is already published with other content"
+msgstr "ya está publicado con otro contenido"
+
+#: crates/wprs-format/src/catalog.rs
+msgid "is not listed in the root"
+msgstr "no figura en la raíz"
+
+#: crates/wprs-format/src/catalog.rs
+msgid "the package must carry an author signature"
+msgstr "el paquete debe llevar una firma de autor"
+
+#: crates/wprs-format/src/catalog.rs
+msgid "no author key of this repository signed it"
+msgstr "no lo firmó ninguna clave de autor de este repositorio"
+
+#: crates/wprs-format/src/check.rs
+msgid "is required: a rating of general or mature and its reasons"
+msgstr "es obligatorio: una clasificación general o para adultos y sus motivos"
+
+#: crates/wprs-format/src/check.rs
+msgid "is required: true when the package flashes"
+msgstr "es obligatorio: true si el paquete destella"
+
+#: crates/wprs-format/src/check.rs
+msgid "is required: original, or derived with the works it comes from"
+msgstr "es obligatorio: original, o derivado con las obras de las que procede"
+
+#: crates/wprs-format/src/check.rs
+msgid "is required with strings or localized texts"
+msgstr "es obligatorio con cadenas o textos traducidos"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected wallpaper-rs.wpak/2"
+msgstr "se esperaba wallpaper-rs.wpak/2"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected a lowercase reverse-DNS name like org.example.name"
+msgstr "se esperaba un nombre DNS inverso en minúsculas como org.example.name"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected a semantic version"
+msgstr "se esperaba una versión semántica"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected 1 to 128 characters each"
+msgstr "se esperaban de 1 a 128 caracteres cada uno"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected an SPDX license expression"
+msgstr "se esperaba una expresión de licencia SPDX"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected at most 32 tags of 1 to 32 characters"
+msgstr "se esperaban como mucho 32 etiquetas de 1 a 32 caracteres"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected a letter followed by letters, digits or _"
+msgstr "se esperaba una letra seguida de letras, cifras o _"
+
+#: crates/wprs-format/src/check.rs
+msgid "localized texts and the newer fields need wallpaper-rs.wpak/2"
+msgstr ""
+"los textos traducidos y los campos nuevos necesitan wallpaper-rs.wpak/2"
+
+#: crates/wprs-format/src/check.rs
+msgid "web, preset and assets packages need wallpaper-rs.wpak/2"
+msgstr ""
+"los paquetes web, de ajustes y de recursos necesitan wallpaper-rs.wpak/2"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected 1 to 128 characters"
+msgstr "se esperaban de 1 a 128 caracteres"
+
+#: crates/wprs-format/src/check.rs
+msgid "too many properties or presets"
+msgstr "demasiadas propiedades o ajustes predefinidos"
+
+#: crates/wprs-format/src/check.rs
+msgid "the newer kinds and fields of properties need wallpaper-rs.wpak/2"
+msgstr ""
+"los tipos y campos nuevos de las propiedades necesitan wallpaper-rs.wpak/2"
+
+#: crates/wprs-format/src/check.rs
+msgid "authors and tags have no < or >"
+msgstr "los autores y las etiquetas no llevan < ni >"
+
+#: crates/wprs-format/src/check.rs
+msgid "is called previews.thumbnail in wallpaper-rs.wpak/2"
+msgstr "se llama previews.thumbnail en wallpaper-rs.wpak/2"
+
+#: crates/wprs-format/src/check.rs
+msgid "at most 256 properties and 64 presets"
+msgstr "como mucho 256 propiedades y 64 ajustes predefinidos"
+
+#: crates/wprs-format/src/check.rs
+msgid "files and folders accept image, video or both"
+msgstr "los archivos y carpetas aceptan image, video o ambos"
+
+#: crates/wprs-format/src/check.rs
+msgid "texts of at most 8000 characters without control characters"
+msgstr "textos de como mucho 8000 caracteres sin caracteres de control"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected a language such as en or pt-BR"
+msgstr "se esperaba un idioma como en o pt-BR"
+
+#: crates/wprs-format/src/check.rs
+msgid "needs a text in the default language and languages like en or pt-BR"
+msgstr ""
+"necesita un texto en el idioma predeterminado e idiomas como en o pt-BR"
+
+#: crates/wprs-format/src/check.rs
+msgid "plain texts have no < or >"
+msgstr "los textos sin formato no llevan < ni >"
+
+#: crates/wprs-format/src/contents.rs
+msgid "expected a picture or a video of the package"
+msgstr "se esperaba una imagen o un vídeo del paquete"
+
+#: crates/wprs-format/src/contents.rs
+msgid "is not a WebAssembly module"
+msgstr "no es un módulo WebAssembly"
+
+#: crates/wprs-format/src/contents.rs
+msgid "size of the scene scripts"
+msgstr "tamaño de los scripts de la escena"
+
+#: crates/wprs-format/src/contents.rs
+msgid "size of the streamed sounds"
+msgstr "tamaño de los sonidos que se leen poco a poco"
+
+#: crates/wprs-format/src/contents.rs
+msgid "sound size"
+msgstr "tamaño del sonido"
+
+#: crates/wprs-format/src/contents.rs
+msgid "length of the sounds in seconds"
+msgstr "duración de los sonidos en segundos"
+
+#: crates/wprs-format/src/entry.rs
+msgid "does not match its file name or repository"
+msgstr "no coincide con su nombre de archivo ni con su repositorio"
+
+#: crates/wprs-format/src/entry.rs
+msgid "does not pin the current root"
+msgstr "no fija la raíz actual"
+
+#: crates/wprs-format/src/entry.rs
+msgid "expected 2^shard_bits shards named by SHA-256"
+msgstr "se esperaban 2^shard_bits fragmentos nombrados por SHA-256"
+
+#: crates/wprs-format/src/entry.rs
+msgid "exceeds the lifetime the root allows"
+msgstr "supera la vigencia que permite la raíz"
+
+#: crates/wprs-format/src/entry.rs
+msgid "does not match the entry it extends"
+msgstr "no coincide con la entrada que amplía"
+
+#: crates/wprs-format/src/facts.rs
+msgid "inputs declares %1 but nothing in the package uses it"
+msgstr "inputs declara %1, pero nada del paquete lo usa"
+
+#: crates/wprs-format/src/facts.rs
+msgid "requires.features lists %1, which the package does not use"
+msgstr "requires.features incluye %1, que el paquete no usa"
+
+#: crates/wprs-format/src/features.rs
+msgid "expected a version requirement such as >=0.6"
+msgstr "se esperaba un requisito de versión como >=0.6"
+
+#: crates/wprs-format/src/fetch.rs
+msgid "expected 64 hex digits"
+msgstr "se esperaban 64 cifras hexadecimales"
+
+#: crates/wprs-format/src/fetch.rs
+msgid "needs a fingerprint or repo_id query parameter"
+msgstr "necesita un parámetro fingerprint o repo_id"
+
+#: crates/wprs-format/src/fetch.rs
+msgid "download size"
+msgstr "tamaño de la descarga"
+
+#: crates/wprs-format/src/index.rs
+msgid "does not match its place in the entry"
+msgstr "no coincide con su lugar en la entrada"
+
+#: crates/wprs-format/src/index.rs
+msgid "expected a wpak-repo-revoked/1.0 of this repository"
+msgstr "se esperaba un wpak-repo-revoked/1.0 de este repositorio"
+
+#: crates/wprs-format/src/install.rs
+msgid "is offered by several repositories; prefix it with the repository id"
+msgstr "lo ofrecen varios repositorios; antepón el id del repositorio"
+
+#: crates/wprs-format/src/install.rs
+msgid "is installed from another repository"
+msgstr "está instalado desde otro repositorio"
+
+#: crates/wprs-format/src/locale.rs
+msgid "expected one file per language named like locale/pt-BR.json"
+msgstr "se esperaba un archivo por idioma con nombres como locale/pt-BR.json"
+
+#: crates/wprs-format/src/publish.rs
+msgid "is not signed by enough root keys"
+msgstr "no lo firman suficientes claves raíz"
+
+#: crates/wprs-format/src/publish.rs
+msgid "is not an online key of the current root"
+msgstr "no es una clave en línea de la raíz actual"
+
+#: crates/wprs-format/src/publish.rs
+msgid "must be between 1 day and the entry_max_days of the root"
+msgstr "debe estar entre 1 día y el entry_max_days de la raíz"
+
+#: crates/wprs-format/src/publish.rs
+msgid "is earlier than the last entry"
+msgstr "es anterior a la última entrada"
+
+#: crates/wprs-format/src/read.rs crates/wprs-format/src/validate.rs
+msgid "entry count"
+msgstr "número de entradas"
+
+#: crates/wprs-format/src/read.rs
+msgid "encryption"
+msgstr "cifrado"
+
+#: crates/wprs-format/src/read.rs
+msgid "compression method"
+msgstr "método de compresión"
+
+#: crates/wprs-format/src/read.rs crates/wprs-format/src/source.rs
+#: crates/wprs-format/src/validate.rs
+msgid "file size"
+msgstr "tamaño del archivo"
+
+#: crates/wprs-format/src/read.rs
+msgid "scene size"
+msgstr "tamaño de la escena"
+
+#: crates/wprs-format/src/read.rs
+msgid "preset size"
+msgstr "tamaño del ajuste"
+
+#: crates/wprs-format/src/read.rs
+msgid "LUT size"
+msgstr "tamaño de la LUT"
+
+#: crates/wprs-format/src/read.rs
+msgid "LUT data"
+msgstr "datos de la LUT"
+
+#: crates/wprs-format/src/read.rs crates/wprs-format/src/source.rs
+msgid "scene file size"
+msgstr "tamaño del archivo de escena"
+
+#: crates/wprs-format/src/repo.rs
+msgid "expected wpak-repo-root/1.0"
+msgstr "se esperaba wpak-repo-root/1.0"
+
+#: crates/wprs-format/src/repo.rs
+msgid "does not match the file name"
+msgstr "no coincide con el nombre del archivo"
+
+#: crates/wprs-format/src/repo.rs
+msgid "must be null in version 1 and the repository id after"
+msgstr "debe ser null en la versión 1 y el id del repositorio después"
+
+#: crates/wprs-format/src/repo.rs
+msgid "every key must be listed under its fingerprint"
+msgstr "cada clave debe figurar bajo su huella"
+
+#: crates/wprs-format/src/repo.rs
+msgid "keys must be listed and belong to one role or author"
+msgstr "las claves deben figurar y pertenecer a un solo papel o autor"
+
+#: crates/wprs-format/src/repo.rs
+msgid "expected 1 to 8 keys and a threshold between 1 and their number"
+msgstr "se esperaban de 1 a 8 claves y un umbral entre 1 y su número"
+
+#: crates/wprs-format/src/repo.rs
+msgid "expected unique lowercase ids with at least one key"
+msgstr "se esperaban ids únicos en minúsculas con al menos una clave"
+
+#: crates/wprs-format/src/repo.rs
+msgid "expected at most 16 https:// or file:// URLs"
+msgstr "se esperaban como mucho 16 direcciones https:// o file://"
+
+#: crates/wprs-format/src/repo.rs
+msgid "entry_max_days must be 1 to 90"
+msgstr "entry_max_days debe estar entre 1 y 90"
+
+#: crates/wprs-format/src/said.rs
+msgid "I/O error: %1"
+msgstr "error de entrada y salida: %1"
+
+#: crates/wprs-format/src/said.rs
+msgid "invalid zip archive: %1"
+msgstr "archivo zip no válido: %1"
+
+#: crates/wprs-format/src/said.rs
+msgid "malformed JSON: %1"
+msgstr "JSON mal formado: %1"
+
+#: crates/wprs-format/src/said.rs
+msgid "invalid %1: %2"
+msgstr "%1 no válido: %2"
+
+#: crates/wprs-format/src/said.rs
+msgid "unsafe path \"%1\""
+msgstr "ruta insegura «%1»"
+
+#: crates/wprs-format/src/said.rs
+msgid "duplicate entry \"%1\""
+msgstr "entrada repetida «%1»"
+
+#: crates/wprs-format/src/said.rs
+msgid "\"%1\" is a symbolic link or special file"
+msgstr "«%1» es un enlace simbólico o un archivo especial"
+
+#: crates/wprs-format/src/said.rs
+msgid "missing file \"%1\""
+msgstr "falta el archivo «%1»"
+
+#: crates/wprs-format/src/said.rs
+msgid "\"%1\" has an extension not allowed in %2 packages"
+msgstr "«%1» tiene una extensión no permitida en los paquetes %2"
+
+#: crates/wprs-format/src/said.rs
+msgid "%1 %2 exceeds the limit of %3"
+msgstr "%1 %2 supera el límite de %3"
+
+#: crates/wprs-format/src/said.rs
+msgid "entry \"%1\" uses an unsupported feature: %2"
+msgstr "la entrada «%1» usa una función no admitida: %2"
+
+#: crates/wprs-format/src/said.rs
+msgid "entry \"%1\" does not match its declared size"
+msgstr "la entrada «%1» no coincide con su tamaño declarado"
+
+#: crates/wprs-format/src/said.rs
+msgid "destination \"%1\" is in the way"
+msgstr "el destino «%1» estorba"
+
+#: crates/wprs-format/src/said.rs
+msgid "signature rejected: %1"
+msgstr "firma rechazada: %1"
+
+#: crates/wprs-format/src/said.rs
+msgid "invalid key: %1"
+msgstr "clave no válida: %1"
+
+#: crates/wprs-format/src/said.rs
+msgid "%1 has expired"
+msgstr "%1 ha caducado"
+
+#: crates/wprs-format/src/said.rs
+msgid "repository %1 is stale: its signed index has expired"
+msgstr "el repositorio %1 está caducado: su índice firmado ha vencido"
+
+#: crates/wprs-format/src/said.rs
+msgid "rollback rejected: %1"
+msgstr "vuelta atrás rechazada: %1"
+
+#: crates/wprs-format/src/said.rs
+msgid "entry %1 was published twice with different content"
+msgstr "la entrada %1 se publicó dos veces con distinto contenido"
+
+#: crates/wprs-format/src/said.rs
+msgid "%1 does not match its signed hash or size"
+msgstr "%1 no coincide con su hash o tamaño firmados"
+
+#: crates/wprs-format/src/said.rs
+msgid "%1 is revoked"
+msgstr "%1 está revocado"
+
+#: crates/wprs-format/src/said.rs
+msgid "%1 not found"
+msgstr "no se encuentra %1"
+
+#: crates/wprs-format/src/said.rs
+msgid "this package needs a newer version of wallpaper-rs: it uses %1"
+msgstr "este paquete necesita una versión más reciente de wallpaper-rs: usa %1"
+
+#: crates/wprs-format/src/said.rs
+msgid "this package is made for %1 only"
+msgstr "este paquete está hecho solo para %1"
+
+#: crates/wprs-format/src/settings.rs
+msgid "expected 30 to 1096 days"
+msgstr "se esperaban de 30 a 1096 días"
+
+#: crates/wprs-format/src/settings.rs
+msgid "expected at most 8"
+msgstr "se esperaban como mucho 8"
+
+#: crates/wprs-format/src/sign.rs
+msgid "expected 1 to 16 minisign blocks"
+msgstr "se esperaban de 1 a 16 bloques minisign"
+
+#: crates/wprs-format/src/store.rs
+msgid "expected 64 lowercase hex digits"
+msgstr "se esperaban 64 cifras hexadecimales en minúsculas"
+
+#: crates/wprs-format/src/update.rs
+msgid "root/1.json is not signed by the anchor key"
+msgstr "root/1.json no lo firma la clave de anclaje"
+
+#: crates/wprs-format/src/update.rs
+msgid "is more than a day in the future"
+msgstr "está más de un día en el futuro"
+
+#: crates/wprs-format/src/upgrade.rs
+msgid "is already wallpaper-rs.wpak/2"
+msgstr "ya es wallpaper-rs.wpak/2"
+
+#: crates/wprs-format/src/upgrade.rs
+msgid "expected wallpaper-rs.wpak/1"
+msgstr "se esperaba wallpaper-rs.wpak/1"
+
+#: crates/wprs-format/src/validate.rs
+msgid "total size"
+msgstr "tamaño total"
+
+#: crates/wprs-format/src/validate.rs
+msgid "compression ratio"
+msgstr "relación de compresión"
+
+#: crates/wprs-format/src/web.rs
+msgid "applies to web packages only"
+msgstr "solo se aplica a los paquetes web"
+
+#: crates/wprs-format/src/web.rs
+msgid "expected 0 to 5120 KiB"
+msgstr "se esperaban de 0 a 5120 KiB"
+
+#: crates/wprs-format/src/web.rs
+msgid "expected a #rrggbb color"
+msgstr "se esperaba un color #rrggbb"
+
+#: crates/wprs-format/src/web.rs
+msgid "lists the base of the preset"
+msgstr "incluye la base del ajuste"
+
+#: crates/wprs-format/src/web.rs
+msgid "preset and assets packages have none"
+msgstr "los paquetes de ajustes y de recursos no tienen"
+
+#: crates/wprs-format/src/web.rs
+msgid "preset and assets packages use none"
+msgstr "los paquetes de ajustes y de recursos no usan ninguno"
+
+#: crates/wprs-format/src/web.rs
+msgid "fit, background and flip apply to pictures and videos only"
+msgstr "fit, background y flip solo se aplican a imágenes y vídeos"
+
+#: crates/wprs-format/src/web.rs
+msgid "applies to pictures and videos, and all-outputs to scenes"
+msgstr "se aplica a imágenes y vídeos, y all-outputs a escenas"
+
+#: crates/wprs-format/src/web.rs
+msgid "zoom and position apply to videos only"
+msgstr "zoom y position solo se aplican a vídeos"
+
+#: crates/wprs-format/src/web.rs
+msgid "names each of desktop and android once"
+msgstr "nombra una sola vez cada uno de desktop y android"
+
+#: crates/wprs-format/src/web.rs
+msgid "expected the id of another package and a version requirement"
+msgstr "se esperaba el id de otro paquete y un requisito de versión"
+
+#: crates/wprs-format/src/web.rs
+msgid "lists the base of the preset with the same version requirement"
+msgstr "incluye la base del ajuste con el mismo requisito de versión"
+
+#: crates/wprs-format/src/web.rs
+msgid "at most 256 values named like properties"
+msgstr "como mucho 256 valores con nombres como los de las propiedades"
+
+#: crates/wprs-scene/src/bones.rs
+msgid "clip"
+msgstr "clip"
+
+#: crates/wprs-scene/src/bones.rs
+msgid "bone of the chain"
+msgstr "hueso de la cadena"
+
+#: crates/wprs-scene/src/bones.rs crates/wprs-scene/src/links.rs
+#: crates/wprs-scene/src/particles/checks.rs
+#: crates/wprs-scene/src/particles/pulls.rs crates/wprs-scene/src/rules.rs
+msgid "layer"
+msgstr "capa"
+
+#: crates/wprs-scene/src/bones.rs
+msgid "target"
+msgstr "objetivo"
+
+#: crates/wprs-scene/src/deep.rs crates/wprs-scene/src/fields.rs
+#: crates/wprs-scene/src/particles/rules.rs crates/wprs-scene/src/rules.rs
+#: crates/wprs-scene/src/sound.rs crates/wprs-scene/src/validate.rs
+msgid "asset"
+msgstr "recurso"
+
+#: crates/wprs-scene/src/deep.rs
+msgid "part"
+msgstr "parte"
+
+#: crates/wprs-scene/src/deep.rs crates/wprs-scene/src/rules.rs
+msgid "parameter"
+msgstr "parámetro"
+
+#: crates/wprs-scene/src/hooks.rs
+msgid "script parameter"
+msgstr "parámetro de script"
+
+#: crates/wprs-scene/src/hooks.rs
+msgid "media trigger"
+msgstr "disparador de medios"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "unsupported schema \"%1\", expected \"%2\""
+msgstr "esquema no admitido «%1»; se esperaba «%2»"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 is %2, expected %3..=%4"
+msgstr "%1 vale %2; se esperaba %3..=%4"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 has %2 entries, at most %3 are allowed"
+msgstr "%1 tiene %2 entradas; se permiten como mucho %3"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 must not be empty"
+msgstr "%1 no puede estar vacío"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 must match [a-z0-9_]{1,32}"
+msgstr "%1 debe cumplir [a-z0-9_]{1,32}"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 repeats an id that is already in use"
+msgstr "%1 repite un id que ya está en uso"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 names the unknown %2 \"%3\""
+msgstr "%1 nombra un %2 desconocido: «%3»"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 names \"%2\", a property that holds no value"
+msgstr "%1 nombra «%2», una propiedad que no guarda ningún valor"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 needs exactly one source: prop, keys, audio, cursor, clock or script"
+msgstr ""
+"%1 necesita exactamente una fuente: prop, keys, audio, cursor, clock o script"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 does not fit the type of this field"
+msgstr "%1 no encaja con el tipo de este campo"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 keyframe times are not increasing"
+msgstr "los tiempos de los fotogramas clave de %1 no van en aumento"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 is nested deeper than 8 levels"
+msgstr "%1 está anidado a más de 8 niveles"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 masks itself through other layers"
+msgstr "%1 se enmascara a sí mismo a través de otras capas"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "invalid color \"%1\", expected #rrggbb or #rrggbbaa"
+msgstr "color no válido «%1»; se esperaba #rrggbb o #rrggbbaa"
+
+#: crates/wprs-scene/src/issue.rs
+msgid ""
+"%1 is a sound layer: only id, type, sound, sounds, mode, pause, stream, "
+"play_on, loop, play, volume, pan, fade_in and fade_out apply"
+msgstr ""
+"%1 es una capa de sonido: solo se aplican id, type, sound, sounds, mode, "
+"pause, stream, play_on, loop, play, volume, pan, fade_in y fade_out"
+
+#: crates/wprs-scene/src/issue.rs
+msgid ""
+"%1 is a light layer: only id, type, transform, anchor, visible, parent, "
+"inherit, attach and the fields of the light apply"
+msgstr ""
+"%1 es una capa de luz: solo se aplican id, type, transform, anchor, visible, "
+"parent, inherit, attach y los campos de la luz"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "the scene has %1 light layers, at most 12 are allowed"
+msgstr "la escena tiene %1 capas de luz; se permiten como mucho 12"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 needs %2 variants of its shader, at most 8 are allowed"
+msgstr "%1 necesita %2 variantes de su sombreador; se permiten como mucho 8"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 needs either sound or sounds"
+msgstr "%1 necesita sound o sounds"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 depends on itself through other layers"
+msgstr "%1 depende de sí mismo a través de otras capas"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 may only follow a property or keyframes"
+msgstr "%1 solo puede seguir a una propiedad o a fotogramas clave"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "the scene has %1 sound layers, at most 8 are allowed"
+msgstr "la escena tiene %1 capas de sonido; se permiten como mucho 8"
+
+#: crates/wprs-scene/src/issue.rs
+msgid ""
+"/properties/volume of a scene with sound must be a slider within 0..=100"
+msgstr ""
+"/properties/volume de una escena con sonido debe ser un deslizador entre 0.."
+"=100"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 nests particle systems more than two levels deep"
+msgstr "%1 anida sistemas de partículas a más de dos niveles"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 names \"%2\", which its model does not have"
+msgstr "%1 nombra «%2», que su modelo no tiene"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "the scene has %1 mesh and model layers, at most 16 are allowed"
+msgstr ""
+"la escena tiene %1 capas de malla y de modelo; se permiten como mucho 16"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "the scene has %1 lights that cast shadows, at most 2 are allowed"
+msgstr ""
+"la escena tiene %1 luces que proyectan sombras; se permiten como mucho 2"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 applies inside a group with space 3d only"
+msgstr "%1 solo se aplica dentro de un grupo con space 3d"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 is locked by its particle system"
+msgstr "%1 está bloqueado por su sistema de partículas"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 needs either a duration or both frames and fps"
+msgstr "%1 necesita una duración o bien frames y fps"
+
+#: crates/wprs-scene/src/issue.rs
+msgid "%1 applies to timelines that loop with repeat only"
+msgstr "%1 solo se aplica a líneas de tiempo que se repiten con repeat"
+
+#: crates/wprs-scene/src/particles/checks.rs
+msgid "control point"
+msgstr "punto de control"
+
+#: crates/wprs-scene/src/particles/drawn.rs
+msgid "shader"
+msgstr "sombreador"
+
+#: crates/wprs-scene/src/particles/lineage.rs crates/wprs-scene/src/rules.rs
+msgid "particle system"
+msgstr "sistema de partículas"
+
+#: crates/wprs-scene/src/particles/starts.rs
+msgid "remap input"
+msgstr "entrada de reasignación"
+
+#: crates/wprs-scene/src/poses.rs
+msgid "mesh or model layer"
+msgstr "capa de malla o de modelo"
+
+#: crates/wprs-scene/src/probe.rs
+msgid "timeline"
+msgstr "línea de tiempo"
+
+#: crates/wprs-scene/src/rules.rs
+msgid "effect"
+msgstr "efecto"
+
+#: crates/wprs-scene/src/validate.rs
+msgid "property"
+msgstr "propiedad"
+
+#: crates/wprs-scene/src/validate.rs
+msgid "event"
+msgstr "evento"
+
+#: crates/wprs-scene/src/validate.rs
+msgid "layer that takes clicks"
+msgstr "capa que recibe clics"
+
+#: crates/wprs-scene/src/validate.rs
+msgid "layer that takes the pointer"
+msgstr "capa que recibe el puntero"
+
+#: crates/wprs-scene/src/validate.rs
+msgid "trigger"
+msgstr "disparador"

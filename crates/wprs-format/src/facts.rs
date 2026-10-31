@@ -2,6 +2,7 @@ use crate::features::{explain, lacks, refused};
 use crate::validate::extension;
 use crate::{Error, Input, Kind, Manifest, Platform, Result, Scene, Span};
 use std::collections::BTreeSet;
+use wprs_core::message::{Message, said};
 use wprs_scene::{EffectUse, Uses, needs, newer_params, source, tells_time};
 
 pub const BUILTIN: &str = "bloom blur blur_motion blur_radial chroma_key chromatic_aberration clouds \
@@ -171,14 +172,22 @@ pub fn check(manifest: &Manifest, facts: &Facts) -> Result<()> {
     }
 }
 
-pub fn warnings(manifest: &Manifest, facts: &Facts) -> Vec<String> {
+pub fn notes(manifest: &Manifest, facts: &Facts) -> Vec<Message> {
     let unused = manifest.features().iter().filter(|f| !facts.features.contains(*f));
     let inputs = manifest.inputs.iter().filter(|i| !facts.inputs.contains(i) && CHECKED.contains(i));
     let inputs = inputs.filter(|_| manifest.kind != Kind::Web);
-    let inputs = inputs.map(|i| format!("inputs declares {} but nothing in the package uses it", i.name()));
+    let inputs = inputs.map(|i| {
+        said("format.unused_input", "inputs declares %1 but nothing in the package uses it", &[&i.name()])
+    });
     unused
-        .map(|f| format!("requires.features lists {f}, which the package does not use"))
+        .map(|f| {
+            said("format.unused_feature", "requires.features lists %1, which the package does not use", &[f])
+        })
         .chain(inputs)
-        .chain(facts.notes.iter().cloned())
+        .chain(facts.notes.iter().map(|n| said("format.note", "%1", &[n])))
         .collect()
+}
+
+pub fn warnings(manifest: &Manifest, facts: &Facts) -> Vec<String> {
+    notes(manifest, facts).iter().map(ToString::to_string).collect()
 }

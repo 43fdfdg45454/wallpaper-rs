@@ -28,6 +28,7 @@ mod publish;
 mod read;
 mod release;
 mod repo;
+mod said;
 mod scenery;
 mod settings;
 mod sign;
@@ -88,55 +89,55 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("I/O error: {0}")]
+    #[error("{}", self.message())]
     Io(#[from] std::io::Error),
-    #[error("invalid zip archive: {0}")]
+    #[error("{}", self.message())]
     Zip(#[from] zip::result::ZipError),
-    #[error("malformed JSON: {0}")]
+    #[error("{}", self.message())]
     Json(#[from] serde_json::Error),
-    #[error("invalid {field}: {reason}")]
+    #[error("{}", self.message())]
     Invalid { field: String, reason: String },
-    #[error("unsafe path {0:?}")]
+    #[error("{}", self.message())]
     UnsafePath(String),
-    #[error("duplicate entry {0:?}")]
+    #[error("{}", self.message())]
     Duplicate(String),
-    #[error("{0:?} is a symbolic link or special file")]
+    #[error("{}", self.message())]
     Symlink(String),
-    #[error("missing file {0:?}")]
+    #[error("{}", self.message())]
     Missing(String),
-    #[error("{path:?} has an extension not allowed in {kind} packages")]
+    #[error("{}", self.message())]
     Extension { path: String, kind: Kind },
-    #[error("{what} {actual} exceeds the limit of {limit}")]
+    #[error("{}", self.message())]
     Limit { what: &'static str, actual: u64, limit: u64 },
-    #[error("entry {0:?} uses an unsupported feature: {1}")]
+    #[error("{}", self.message())]
     Unsupported(String, &'static str),
-    #[error("entry {0:?} does not match its declared size")]
+    #[error("{}", self.message())]
     SizeMismatch(String),
-    #[error("destination {0:?} is in the way")]
+    #[error("{}", self.message())]
     Blocked(PathBuf),
-    #[error("signature rejected: {0}")]
+    #[error("{}", self.message())]
     Signature(String),
-    #[error("invalid key: {0}")]
+    #[error("{}", self.message())]
     Key(String),
-    #[error("{0} has expired")]
+    #[error("{}", self.message())]
     Expired(String),
-    #[error("repository {0} is stale: its signed index has expired")]
+    #[error("{}", self.message())]
     Stale(String),
-    #[error("rollback rejected: {0}")]
+    #[error("{}", self.message())]
     Rollback(String),
-    #[error("entry {0} was published twice with different content")]
+    #[error("{}", self.message())]
     Equivocation(u64),
-    #[error("{0} does not match its signed hash or size")]
+    #[error("{}", self.message())]
     Mismatch(String),
-    #[error("{0} is revoked")]
+    #[error("{}", self.message())]
     Revoked(String),
-    #[error("{0} not found")]
+    #[error("{}", self.message())]
     NotFound(String),
-    #[error("{0} already exists")]
+    #[error("{}", self.message())]
     Exists(String),
-    #[error("this package needs a newer version of wallpaper-rs: it uses {0}")]
+    #[error("{}", self.message())]
     Newer(String),
-    #[error("this package is made for {0} only")]
+    #[error("{}", self.message())]
     Elsewhere(String),
 }
 

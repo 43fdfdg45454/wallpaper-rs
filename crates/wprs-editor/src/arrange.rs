@@ -3,6 +3,7 @@ use crate::layers::{parent, renamed, unique};
 use crate::ops::{Op, escape, set};
 use anyhow::{Context, Result, ensure};
 use serde_json::{Value, json};
+use wprs_core::message::said;
 
 fn stash(id: &str) -> String {
     format!("{EDITOR}/hidden/{}", escape(id))
@@ -53,7 +54,7 @@ pub fn duplicate(doc: &Value, id: &str) -> Result<Vec<Op>> {
 }
 
 pub fn group(doc: &Value, ids: &[String], id: Option<&str>) -> Result<Vec<Op>> {
-    ensure!(!ids.is_empty(), "name the layers to group");
+    ensure!(!ids.is_empty(), said("editor.name_layers_group", "name the layers to group", &[]));
     let mut found: Vec<(String, usize, Value)> = Vec::new();
     for id in ids {
         let (path, value) = layer(doc, id)?;
@@ -63,7 +64,10 @@ pub fn group(doc: &Value, ids: &[String], id: Option<&str>) -> Result<Vec<Op>> {
         }
     }
     let list = found[0].0.clone();
-    ensure!(found.iter().all(|(l, ..)| *l == list), "only layers of the same group can be grouped");
+    ensure!(
+        found.iter().all(|(l, ..)| *l == list),
+        said("editor.only_layers_same", "only layers of the same group can be grouped", &[])
+    );
     found.sort_by_key(|(_, i, _)| *i);
     let first = found[0].1;
     let id = id.map(String::from).unwrap_or_else(|| unique(doc, "group"));
@@ -75,7 +79,7 @@ pub fn group(doc: &Value, ids: &[String], id: Option<&str>) -> Result<Vec<Op>> {
 
 pub fn ungroup(doc: &Value, id: &str) -> Result<Vec<Op>> {
     let (path, value) = layer(doc, id)?;
-    ensure!(value["type"] == "group", "{id} is not a group");
+    ensure!(value["type"] == "group", said("editor.not_group", "%1 is not a group", &[&id]));
     let plain = json!({"id": id, "type": "group", "layers": value["layers"]});
     let normal = |v: &Value| {
         let layer = serde_json::from_value::<wprs_scene::Layer>(v.clone()).ok()?;
@@ -85,7 +89,14 @@ pub fn ungroup(doc: &Value, id: &str) -> Result<Vec<Op>> {
     let base = normal(&plain).unwrap_or_default();
     let own: Vec<&str> =
         own.iter().filter(|(k, v)| base.get(*k) != Some(*v)).map(|(k, _)| k.as_str()).collect();
-    ensure!(own.is_empty(), "the group {id} has its own {}; reset them before ungrouping", own.join(", "));
+    ensure!(
+        own.is_empty(),
+        said(
+            "editor.group_own_reset",
+            "the group %1 has its own %2; reset them before ungrouping",
+            &[&id, &(own.join(", "))]
+        )
+    );
     let (list, i) = parent(&path);
     let inner = value["layers"].as_array().into_iter().flatten().enumerate();
     let added: Vec<Op> =

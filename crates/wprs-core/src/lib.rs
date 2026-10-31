@@ -7,6 +7,7 @@ mod keep;
 pub mod layout;
 pub mod locale;
 pub mod markup;
+pub mod message;
 pub mod model;
 pub mod motion;
 pub mod settings;

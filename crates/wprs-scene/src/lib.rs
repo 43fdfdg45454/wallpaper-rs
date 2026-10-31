@@ -36,6 +36,7 @@ mod hitbox;
 mod hoist;
 mod hooks;
 mod input;
+mod issue;
 mod kept;
 mod kin;
 mod kinds;

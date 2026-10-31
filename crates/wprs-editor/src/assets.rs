@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::io;
 use std::path::Path;
+use wprs_core::message::said;
 use wprs_format::{Limits, MANIFEST, SIGNATURE, sha256_file};
 use wprs_scene::{
     Clip, Lut, MAX_ASSETS, MAX_LUT_BYTES, MAX_SOUND_SECONDS, MAX_SOUND_TOTAL, MAX_STREAM_BYTES,
@@ -21,8 +22,13 @@ fn paths<'a>(doc: &'a Value, kind: &str) -> Vec<&'a str> {
 
 fn seconds(file: &Path) -> Result<f32> {
     let size = fs::metadata(file)?.len();
-    ensure!(size <= MAX_STREAM_BYTES, "a sound may have at most {} MiB", MAX_STREAM_BYTES >> 20);
-    Ok(Clip::read(&file.to_string_lossy(), &fs::read(file)?).map_err(|e| anyhow!("the sound {e}"))?.seconds)
+    ensure!(
+        size <= MAX_STREAM_BYTES,
+        said("editor.sound_may_most", "a sound may have at most %1 MiB", &[&(MAX_STREAM_BYTES >> 20)])
+    );
+    Ok(Clip::read(&file.to_string_lossy(), &fs::read(file)?)
+        .map_err(|e| anyhow!(said("editor.sound", "the sound %1", &[&e])))?
+        .seconds)
 }
 
 fn pixels(file: &Path) -> Result<u64> {
@@ -32,28 +38,55 @@ fn pixels(file: &Path) -> Result<u64> {
 
 pub fn check(dir: &Path, doc: &Value, file: &Path) -> Result<()> {
     let kind = asset_kind(&file.to_string_lossy());
-    ensure!(kind != "other", "only pictures, videos, sounds, fonts and .cube tables can be imported");
+    ensure!(
+        kind != "other",
+        said(
+            "editor.only_pictures_videos",
+            "only pictures, videos, sounds, fonts and .cube tables can be imported",
+            &[]
+        )
+    );
     let size = fs::metadata(file).with_context(|| format!("cannot read {}", file.display()))?.len();
-    ensure!(size <= Limits::default().max_file_size, "the file is larger than 1 GiB");
+    ensure!(
+        size <= Limits::default().max_file_size,
+        said("editor.file_larger_than", "the file is larger than 1 GiB", &[])
+    );
     let count = doc.pointer("/scene/assets").and_then(Value::as_object).map_or(0, |a| a.len());
-    ensure!(count < MAX_ASSETS, "a scene has at most {MAX_ASSETS} assets");
+    ensure!(
+        count < MAX_ASSETS,
+        said("editor.scene_most_assets", "a scene has at most %1 assets", &[&MAX_ASSETS])
+    );
     match kind {
         "sound" => {
             let held = |s: f32| if s > MAX_SOUND_SECONDS { 0.0 } else { s };
             let others =
                 paths(doc, "sound").iter().map(|p| held(seconds(&dir.join(p)).unwrap_or(0.0))).sum::<f32>();
             let total = others + held(seconds(file)?);
-            ensure!(total <= MAX_SOUND_TOTAL, "the sounds of a scene may last {MAX_SOUND_TOTAL} s together");
+            ensure!(
+                total <= MAX_SOUND_TOTAL,
+                said(
+                    "editor.sounds_scene_may",
+                    "the sounds of a scene may last %1 s together",
+                    &[&MAX_SOUND_TOTAL]
+                )
+            );
         }
         "image" => {
             let others: u64 = paths(doc, "image").iter().map(|p| pixels(&dir.join(p)).unwrap_or(0)).sum();
             ensure!(
                 others + pixels(file)? <= DECODED,
-                "the pictures of a scene may take 512 MiB once decoded"
+                said(
+                    "editor.pictures_scene_may",
+                    "the pictures of a scene may take 512 MiB once decoded",
+                    &[]
+                )
             );
         }
         "lut" => {
-            ensure!(size <= MAX_LUT_BYTES as u64, "a color table may have at most 16 MiB");
+            ensure!(
+                size <= MAX_LUT_BYTES as u64,
+                said("editor.color_table_may", "a color table may have at most 16 MiB", &[])
+            );
             Lut::parse(&fs::read(file)?).map_err(|e| anyhow!("{e}"))?;
         }
         _ => {}
@@ -106,12 +139,12 @@ pub fn place(dir: &Path, name: &str, file: &Path) -> Result<String> {
             Err(_) => return copy(file, &target).map(|_| path),
         }
     }
-    Err(anyhow!("assets/ has too many files named {name}"))
+    Err(anyhow!(said("editor.assets_too_many", "assets/ has too many files named %1", &[&name])))
 }
 
 fn slot(doc: &Value, id: &str) -> Result<String> {
     let pointer = format!("/scene/assets/{}", escape(id));
-    ensure!(doc.pointer(&pointer).is_none(), "the asset {id} exists");
+    ensure!(doc.pointer(&pointer).is_none(), said("editor.asset_exists", "the asset %1 exists", &[&id]));
     Ok(pointer)
 }
 

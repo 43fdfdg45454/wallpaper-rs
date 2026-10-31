@@ -1185,7 +1185,13 @@ otra página no cierra un editor con cambios sin guardar.
   propone su declaración: los eventos que exporta o atiende con `on` y las partes de `wprs` que
   importa o llama; conviene revisarla antes de publicar.
 - **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
-  capa o el campo afectado. Debajo, la consola de los scripts muestra las últimas 50 líneas que
+  capa o el campo afectado. Esos mensajes y los rechazos del editor llevan un identificador con sus
+  argumentos (`scene.color`, `editor.step.add_layer`…) y salen en el idioma del escritorio en la
+  app y en `wprs-ctl`, y en el del teléfono cuando este muestra el mismo error; las capas de los
+  puntos de partida (`sky`, `sun`, `flakes`…) y los pasos de deshacer se muestran traducidos sin
+  cambiar los ids guardados. Un punto de partida creado en un idioma que sus etiquetas no tienen
+  usa ese idioma, el del título, como idioma predeterminado y copia en él las etiquetas en inglés
+  para traducirlas. Debajo, la consola de los scripts muestra las últimas 50 líneas que
   escribieron en la vista previa (`wprs-ctl state` las da en `console` de la salida `preview:`).
 
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
@@ -1336,7 +1342,7 @@ cargo build -p wprs-server && cargo build -p wprs-android --example phone
 cp target/debug/examples/phone target/debug/
 scripts/sync-test.sh target/debug        # daemons, el cliente del teléfono y wprs-server: enlace, clave y sincronización
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
-scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML
+scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML, del validador y del editor
 target/debug/wprs-app --check            # carga todo el QML de la app y falla ante cualquier aviso
 ```
 

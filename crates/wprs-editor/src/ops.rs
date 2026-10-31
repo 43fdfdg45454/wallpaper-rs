@@ -1,6 +1,7 @@
 use anyhow::{Result, anyhow, bail, ensure};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use wprs_core::message::said;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "lowercase", deny_unknown_fields)]
@@ -32,19 +33,24 @@ pub fn escape(key: &str) -> String {
 }
 
 fn split(path: &str) -> Result<(&str, String)> {
-    let (parent, key) = path.rsplit_once('/').ok_or_else(|| anyhow!("{path:?} is not a JSON Pointer"))?;
-    ensure!(path.starts_with('/'), "{path:?} is not a JSON Pointer");
+    let (parent, key) = path
+        .rsplit_once('/')
+        .ok_or_else(|| anyhow!(said("editor.not_json_pointer", "\"%1\" is not a JSON Pointer", &[&path])))?;
+    ensure!(path.starts_with('/'), said("editor.not_json_pointer", "\"%1\" is not a JSON Pointer", &[&path]));
     Ok((parent, key.replace("~1", "/").replace("~0", "~")))
 }
 
 fn index(key: &str, len: usize) -> Result<usize> {
     let canonical = key == "0" || !key.starts_with('0');
     let i = key.parse::<usize>().ok().filter(|i| canonical && *i <= len);
-    i.ok_or_else(|| anyhow!("{key:?} is not an index from 0 to {len}"))
+    i.ok_or_else(|| {
+        anyhow!(said("editor.not_index_from", "\"%1\" is not an index from 0 to %2", &[&key, &len]))
+    })
 }
 
 fn container<'a>(doc: &'a mut Value, parent: &str) -> Result<&'a mut Value> {
-    doc.pointer_mut(parent).ok_or_else(|| anyhow!("{parent} does not exist"))
+    doc.pointer_mut(parent)
+        .ok_or_else(|| anyhow!(said("editor.does_not_exist", "%1 does not exist", &[&parent])))
 }
 
 fn add(doc: &mut Value, path: &str, value: Value) -> Result<Op> {
@@ -59,13 +65,13 @@ fn add(doc: &mut Value, path: &str, value: Value) -> Result<Op> {
             Some(old) => Op::Replace { path: path.into(), value: old },
             None => Op::Remove { path: path.into() },
         }),
-        _ => bail!("{parent} holds neither a list nor an object"),
+        _ => bail!(said("editor.holds_neither_list", "%1 holds neither a list nor an object", &[&parent])),
     }
 }
 
 fn remove(doc: &mut Value, path: &str) -> Result<(String, Value)> {
     let (parent, key) = split(path)?;
-    let missing = || anyhow!("{path} does not exist");
+    let missing = || anyhow!(said("editor.does_not_exist_2", "%1 does not exist", &[&path]));
     match container(doc, parent)? {
         Value::Array(items) => {
             let i = index(&key, items.len().saturating_sub(1)).ok().filter(|i| *i < items.len());
@@ -83,11 +89,15 @@ fn apply_one(doc: &mut Value, op: &Op) -> Result<Op> {
         Op::Remove { path } => remove(doc, path).map(|(path, value)| Op::Add { path, value }),
         Op::Replace { path, value } => {
             let slot = doc.pointer_mut(path).filter(|_| !path.is_empty());
-            let slot = slot.ok_or_else(|| anyhow!("{path} does not exist"))?;
+            let slot =
+                slot.ok_or_else(|| anyhow!(said("editor.does_not_exist_2", "%1 does not exist", &[&path])))?;
             Ok(Op::Replace { path: path.clone(), value: std::mem::replace(slot, value.clone()) })
         }
         Op::Move { from, path } => {
-            ensure!(!path.starts_with(&format!("{from}/")), "{from} cannot move into itself");
+            ensure!(
+                !path.starts_with(&format!("{from}/")),
+                said("editor.cannot_move_into", "%1 cannot move into itself", &[&from])
+            );
             let (from, value) = remove(doc, from)?;
             let added = add(doc, path, value.clone());
             if let Ok(Op::Remove { path }) = added {
@@ -97,7 +107,9 @@ fn apply_one(doc: &mut Value, op: &Op) -> Result<Op> {
                 *container(doc, path)? = old.clone();
             }
             add(doc, &from, value)?;
-            Err(added.err().unwrap_or_else(|| anyhow!("{path} already exists")))
+            Err(added
+                .err()
+                .unwrap_or_else(|| anyhow!(said("editor.already_exists", "%1 already exists", &[&path]))))
         }
     }
 }

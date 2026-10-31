@@ -96,7 +96,7 @@ ColumnLayout {
 
                     QQC2.Label {
                         Layout.fillWidth: true
-                        text: row.modelData.id
+                        text: row.modelData.label ?? row.modelData.id
                         elide: Text.ElideRight
                         opacity: row.modelData.hidden ? 0.5 : 1
                     }

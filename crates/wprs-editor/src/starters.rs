@@ -2,6 +2,7 @@ use crate::meta::sync;
 use crate::ops::apply;
 use anyhow::{Result, bail, ensure};
 use serde_json::{Value, json};
+use wprs_core::message::{Message, said};
 use wprs_format::valid_tag;
 
 pub const STARTERS: [&str; 4] = ["empty", "particles", "parallax", "clock"];
@@ -54,7 +55,11 @@ fn layers(starter: &str) -> Result<(Value, Value, Value)> {
                 "default": "#f2f5ff"}});
             (json!([sky("#101828", "#283a5c"), time, date]), none, props)
         }
-        _ => bail!("{starter} is not a starting point; use one of {}", STARTERS.join(", ")),
+        _ => bail!(said(
+            "editor.not_starting_point",
+            "%1 is not a starting point; use one of %2",
+            &[&starter, &(STARTERS.join(", "))]
+        )),
     })
 }
 
@@ -65,10 +70,16 @@ pub fn locale() -> String {
 }
 
 pub fn starter(name: &str, id: &str, title: &str, locale: &str) -> Result<Value> {
-    ensure!(valid_tag(locale), "{locale} is not a language such as en or pt-BR");
-    let (layers, particles, properties) = layers(name)?;
-    let mut labels = properties.as_object().into_iter().flatten().filter_map(|(_, p)| p["label"].as_object());
-    let locale = if labels.all(|l| l.contains_key(locale)) { locale } else { "en" };
+    ensure!(
+        valid_tag(locale),
+        said("editor.not_language_such", "%1 is not a language such as en or pt-BR", &[&locale])
+    );
+    let (layers, particles, mut properties) = layers(name)?;
+    let labels = properties.as_object_mut().into_iter().flat_map(|p| p.values_mut());
+    for label in labels.filter_map(|p| p["label"].as_object_mut()).filter(|l| !l.contains_key(locale)) {
+        let english = label["en"].clone();
+        label.insert(locale.to_owned(), english);
+    }
     let manifest = json!({"schema": wprs_format::SCHEMA, "id": id, "version": "0.1.0", "title": title,
         "default_locale": locale, "license": "CC0-1.0", "origin": {"kind": "original"},
         "content": {"rating": "general"}, "photosensitive": false, "kind": "scene", "entry": "scene.json",
@@ -122,4 +133,18 @@ pub fn slug(name: &str) -> String {
 
 pub fn default_id(folder: &str) -> String {
     format!("org.example.{}", slug(folder))
+}
+
+pub fn label(id: &str) -> Option<Message> {
+    Some(match id {
+        "sky" => said("editor.layer.sky", "Sky", &[]),
+        "sun" => said("editor.layer.sun", "Sun", &[]),
+        "far" => said("editor.layer.far", "Far hills", &[]),
+        "middle" => said("editor.layer.middle", "Middle hills", &[]),
+        "near" => said("editor.layer.near", "Near hills", &[]),
+        "flakes" => said("editor.layer.flakes", "Snowflakes", &[]),
+        "time" => said("editor.layer.time", "Time", &[]),
+        "seconds" => said("editor.layer.seconds", "Seconds", &[]),
+        _ => return None,
+    })
 }

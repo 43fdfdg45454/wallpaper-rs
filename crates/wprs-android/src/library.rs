@@ -9,6 +9,17 @@ use wprs_library::{Item, Library, PlaylistInfo, Rules, Turn};
 const DATABASE: &str = "library.db";
 
 static LIBRARY: Mutex<Option<Library>> = Mutex::new(None);
+static LANGUAGES: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+pub(crate) fn languages() -> Vec<String> {
+    LANGUAGES.lock().unwrap_or_else(PoisonError::into_inner).clone()
+}
+
+fn heard(languages: &Option<Vec<String>>) {
+    if let Some(languages) = languages.as_ref().filter(|l| !l.is_empty()) {
+        *LANGUAGES.lock().unwrap_or_else(PoisonError::into_inner) = languages.clone();
+    }
+}
 
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
@@ -51,7 +62,7 @@ pub(crate) fn request(text: &str, on_battery: bool) -> String {
             .map_err(Error::from)
             .and_then(|r| with(|lib| answer(lib, r, on_battery))),
     };
-    answer.unwrap_or_else(|e| json!({ "error": e.to_string() })).to_string()
+    answer.unwrap_or_else(|e| json!({ "error": e.told() })).to_string()
 }
 
 fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value, Error> {
@@ -67,11 +78,13 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
     );
     let value = match request {
         Request::Items { query, languages } => {
+            heard(&languages);
             let mut items = lib.search(&query, now, 0, u32::MAX)?;
             lib.localize(&mut items, &languages.unwrap_or_default())?;
             listed(items)?
         }
         Request::Item { uid, languages } => {
+            heard(&languages);
             let (mut items, languages) = (vec![lib.item(&uid)?], languages.unwrap_or_default());
             lib.localize(&mut items, &languages)?;
             let about = items[0].package.as_ref().and_then(|_| pack::about(&items[0].path, &languages));

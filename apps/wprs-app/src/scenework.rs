@@ -23,7 +23,7 @@ impl SceneEditor {
                 editor.as_mut().set_busy(false);
                 match result {
                     Ok(value) => done(editor.as_mut(), value),
-                    Err(e) => editor.as_mut().fail(format!("{e:#}")),
+                    Err(e) => editor.as_mut().fail(e),
                 }
                 editor.next();
             })
@@ -90,7 +90,7 @@ impl SceneEditor {
         let project = self.as_mut().rust_mut().project.as_mut().map(|p| (p.dirty(), p.settle()));
         match project? {
             (true, _) => self.as_mut().fail("save the scene first"),
-            (_, Err(e)) => self.as_mut().fail(format!("{e:#}")),
+            (_, Err(e)) => self.as_mut().fail(e),
             (_, Ok(settled)) => {
                 if settled {
                     self.as_mut().refresh();

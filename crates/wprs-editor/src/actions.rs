@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use std::path::PathBuf;
+use wprs_core::message::said;
 use wprs_format::{Descriptor, Rating, features};
 
 pub const EDITOR: &str = "/scene/ext/editor";
@@ -203,7 +204,11 @@ impl Action {
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {
     let path = find(doc, id)?;
-    Ok((path.clone(), doc.pointer(&path).ok_or_else(|| anyhow!("there is no layer {id:?}"))?))
+    Ok((
+        path.clone(),
+        doc.pointer(&path)
+            .ok_or_else(|| anyhow!(said("editor.there_no_layer", "there is no layer \"%1\"", &[&id])))?,
+    ))
 }
 
 fn listed(doc: &Value, key: &str) -> Vec<String> {
@@ -237,7 +242,11 @@ fn computed(doc: &Value, ops: &[Op]) -> Result<()> {
     };
     ensure!(
         chosen.is_some_and(only),
-        "requires.features is computed from what the package uses, except locale_files"
+        said(
+            "editor.requires_features_computed",
+            "requires.features is computed from what the package uses, except locale_files",
+            &[]
+        )
     );
     Ok(())
 }
@@ -263,7 +272,7 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         Action::Move { from, to } => vec![Op::Move { from: from.clone(), path: to.clone() }],
         Action::AddLayer { kind, id, name, source, into, at } => {
             if let Some(id) = id {
-                ensure!(!taken(doc, id), "the id {id} is in use");
+                ensure!(!taken(doc, id), said("editor.id_use", "the id %1 is in use", &[&id]));
             }
             let base = name.as_deref().map(clean).filter(|c| !c.is_empty()).unwrap_or_else(|| kind.clone());
             let id = id.clone().unwrap_or_else(|| unique(doc, &base));

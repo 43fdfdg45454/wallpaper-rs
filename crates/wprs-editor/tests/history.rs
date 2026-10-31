@@ -147,3 +147,29 @@ fn only_gestures_merge() {
     history.undo(&mut edited).unwrap();
     assert_eq!(edited["scene"]["canvas"]["size"], json!([2, 2]));
 }
+
+#[test]
+fn steps_layers_refusals_and_problems_keep_ids_and_speak_spanish() {
+    let es = wprs_core::message::tr_in(&["es_ES.UTF-8".into()]);
+    let step = wprs_editor::history::step("add_layer");
+    assert_eq!((step.id, step.told(&es)), ("editor.step.add_layer", "Añadir una capa".into()));
+    assert_eq!(wprs_editor::history::step("mystery").told(&es), "mystery");
+    let sky = wprs_editor::starters::label("sky").unwrap();
+    assert_eq!((sky.to_string(), sky.told(&es)), ("Sky".into(), "Cielo".into()));
+    assert!(wprs_editor::starters::label("mine").is_none());
+    let mut doc = wprs_editor::starters::starter("parallax", "org.example.es", "Alba", "es").unwrap();
+    let action = serde_json::from_value(json!({"remove_layer": {"id": "nope"}})).unwrap();
+    let refused = wprs_editor::actions::plan(&doc, &action).unwrap_err();
+    assert_eq!(refused.to_string(), "there is no layer \"nope\"");
+    assert_eq!(wprs_editor::told_with(&refused, &es), "no hay ninguna capa «nope»");
+    doc["scene"]["layers"][0]["id"] = json!("Bad sky");
+    let found = wprs_editor::check::check(&doc);
+    let bad = found.iter().find(|p| p.said.id == "scene.id").expect("an id problem");
+    assert!(bad.said.told(&es).ends_with(" debe cumplir [a-z0-9_]{1,32}"), "{}", bad.said.told(&es));
+    let shown = serde_json::to_value(bad).unwrap();
+    assert_eq!(shown["said"]["id"], json!("scene.id"));
+    assert_eq!(
+        shown["message"],
+        json!(format!("{} must match [a-z0-9_]{{1,32}}", shown["said"]["args"][0].as_str().unwrap()))
+    );
+}

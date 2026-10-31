@@ -1,6 +1,7 @@
 use crate::actions::{locked, solo};
 use crate::canvas::gizmos;
-use crate::check::{Problem, review};
+use crate::check::review;
+use crate::findings::Problem;
 use crate::layers::{KINDS, asset_kind, walk};
 use crate::ops::escape;
 use crate::project::Project;
@@ -29,8 +30,9 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
         .iter()
         .map(|(pointer, l)| {
             let id = l["id"].as_str().unwrap_or_default();
+            let label = crate::starters::label(id).map_or_else(|| id.to_owned(), |m| m.local());
             let hidden = l["visible"] == false || l["play"] == false;
-            json!({"id": id, "type": l["type"], "pointer": pointer, "depth": pointer.matches("/layers/").count() - 1,
+            json!({"id": id, "label": label, "type": l["type"], "pointer": pointer, "depth": pointer.matches("/layers/").count() - 1,
                 "hidden": hidden, "locked": locked.iter().any(|x| x == id), "solo": solo == Some(id),
                 "effects": l["effects"].as_array().map_or(0, Vec::len)})
         })
@@ -76,7 +78,10 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
     );
     let systems: Vec<&String> =
         doc["scene"]["particles"].as_object().map(|p| p.keys().collect()).unwrap_or_default();
+    problems.iter_mut().for_each(|p| p.message = p.said.local());
     let (done, undone) = project.history.labels();
+    let step = |name: Option<&&str>| name.map(|n| crate::history::step(n).local());
+    let (undo, redo) = (step(done.last()), step(undone.first()));
     let m = &doc["manifest"];
     let title = crate::meta::title(doc, &wprs_core::locale::languages());
     json!({"title": title, "id": m["id"], "version": m["version"], "license": m["license"], "canvas": doc["scene"]["canvas"],
@@ -84,7 +89,7 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
         "layers": layers, "gizmos": gizmos(&project.dir, doc, time), "problems": problems, "assets": assets,
         "properties": crate::listing::rows(doc), "presets": crate::listing::presets(doc),
         "property_kinds": crate::props::PROPERTY_KINDS, "timelines": timelines, "tracks": tracks, "length": length, "systems": systems,
-        "history": {"done": done, "undone": undone}, "dirty": project.dirty(), "recoverable": project.pending.is_some(),
+        "history": {"done": done, "undone": undone, "undo": undo, "redo": redo}, "dirty": project.dirty(), "recoverable": project.pending.is_some(),
         "kinds": KINDS, "starters": STARTERS, "easings": wprs_scene::easings(),
         "effects": wprs_scene::builtin().iter().map(|d| d.id.as_str()).chain(own(doc)).collect::<Vec<_>>(),
         "effect_names": names(project)})

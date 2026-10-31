@@ -10,6 +10,7 @@ use std::io::Write;
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use wprs_core::message::said;
 use wprs_format::{MANIFEST, check_path, sha256};
 
 pub struct Project {
@@ -38,7 +39,10 @@ pub fn now() -> u64 {
 pub fn entry(doc: &Value) -> Result<String> {
     let entry = doc["manifest"]["entry"].as_str().unwrap_or("scene.json").to_owned();
     check_path(&entry)?;
-    ensure!(entry != MANIFEST && entry.ends_with(".json"), "the entry {entry} is not a scene file");
+    ensure!(
+        entry != MANIFEST && entry.ends_with(".json"),
+        said("editor.entry_not_scene", "the entry %1 is not a scene file", &[&entry])
+    );
     Ok(entry)
 }
 
@@ -108,7 +112,7 @@ impl Project {
 
     pub fn create(dir: &Path, doc: Value) -> Result<Project> {
         let empty = !dir.exists() || fs::read_dir(dir)?.next().is_none();
-        ensure!(empty, "{} is not an empty folder", dir.display());
+        ensure!(empty, said("editor.not_empty_folder", "%1 is not an empty folder", &[&(dir.display())]));
         fs::create_dir_all(dir.join("assets"))?;
         let (history, base) = (History::default(), String::new());
         let mut project = Project { dir: dir.to_owned(), doc, history, base, pending: None };
@@ -199,7 +203,11 @@ impl Project {
     fn ready(&self) -> Result<()> {
         ensure!(
             self.pending.is_none(),
-            "unsaved changes of an earlier session wait; recover or discard them first"
+            said(
+                "editor.unsaved_changes_earlier",
+                "unsaved changes of an earlier session wait; recover or discard them first",
+                &[]
+            )
         );
         Ok(())
     }
@@ -208,7 +216,11 @@ impl Project {
         self.ready()?;
         let disk = read(&self.dir).map(|d| stamp(&d)).unwrap_or_default();
         if disk != self.base {
-            bail!("the files of {} changed outside the editor; open the folder again", self.dir.display());
+            bail!(said(
+                "editor.files_changed_outside",
+                "the files of %1 changed outside the editor; open the folder again",
+                &[&(self.dir.display())]
+            ));
         }
         self.write_files()?;
         self.history.mark_saved();

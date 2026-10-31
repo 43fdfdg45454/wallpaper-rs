@@ -1,32 +1,13 @@
 use crate::assets::{files, unused};
+pub use crate::findings::Problem;
+use crate::findings::{manifest_problem, problem, warning};
 use crate::layers::find;
-use serde::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::Path;
-use wprs_format::{Error, FileEntry, Limits, Property, SIGNATURE, validate};
+use wprs_core::message::said;
+use wprs_format::{FileEntry, Limits, Property, SIGNATURE, validate};
 use wprs_scene::{Layer, Scene, System, Timeline};
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Problem {
-    pub pointer: String,
-    pub message: String,
-    pub warning: bool,
-}
-
-fn problem(pointer: impl Into<String>, message: impl ToString) -> Problem {
-    Problem { pointer: pointer.into(), message: message.to_string(), warning: false }
-}
-
-fn manifest_problem(e: Error) -> Problem {
-    match e {
-        Error::Invalid { field, reason } => {
-            let pointer = format!("/manifest/{}", field.split('.').collect::<Vec<_>>().join("/"));
-            problem(pointer, format!("{field}: {reason}"))
-        }
-        e => problem("/manifest", e),
-    }
-}
 
 fn locate(scene: &Value) -> String {
     fn bad<T: serde::de::DeserializeOwned>(v: &Value) -> bool {
@@ -71,7 +52,10 @@ pub fn review(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
     let props: BTreeMap<String, Property> = match crate::meta::read(doc, dir) {
         Ok(manifest) => {
             if manifest.kind != wprs_format::Kind::Scene {
-                out.push(problem("/manifest/kind", "the kind of a scene package is scene"));
+                out.push(problem(
+                    "/manifest/kind",
+                    said("editor.kind", "the kind of a scene package is scene", &[]),
+                ));
             }
             out.extend(manifest.missing().into_iter().map(manifest_problem));
             let first = manifest.check().err().map(manifest_problem);
@@ -79,18 +63,18 @@ pub fn review(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
             manifest.properties
         }
         Err(e) => {
-            out.push(problem("/manifest", e));
+            out.push(problem("/manifest", said("editor.manifest", "%1", &[&e])));
             BTreeMap::new()
         }
     };
     match serde_json::from_value::<Scene>(doc["scene"].clone()) {
-        Err(e) => out.push(problem(locate(&doc["scene"]), e)),
+        Err(e) => out.push(problem(locate(&doc["scene"]), said("editor.scene", "%1", &[&e]))),
         Ok(mut scene) => {
             let unread = dir.and_then(|d| crate::cache::read_files(&mut scene, d)).into_iter();
             let issues = unread.chain(scene.validate(&props)).map(|issue| {
                 let text = issue.to_string();
                 let path = text.split_whitespace().next().filter(|p| p.starts_with('/')).unwrap_or("");
-                problem(pointer(doc, path.trim_end_matches(':')), text)
+                problem(pointer(doc, path.trim_end_matches(':')), issue.message())
             });
             issues.for_each(|p| {
                 if !out.contains(&p) {
@@ -99,7 +83,7 @@ pub fn review(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
             });
         }
     }
-    out.extend(crate::meta::problems(doc, dir));
+    out.extend(crate::findings::problems(doc, dir));
     out
 }
 
@@ -110,7 +94,10 @@ pub fn check_files(dir: &Path, doc: &Value) -> Vec<Problem> {
     for (id, asset) in assets {
         let path = asset["path"].as_str().unwrap_or_default();
         if !found.iter().any(|(p, _)| p == path) {
-            out.push(problem(format!("/scene/assets/{id}/path"), format!("{path} is not in the folder")));
+            out.push(problem(
+                format!("/scene/assets/{id}/path"),
+                said("editor.not_in_folder", "%1 is not in the folder", &[&path]),
+            ));
         }
     }
     if let Ok(manifest) = crate::meta::read(doc, Some(dir)) {
@@ -138,22 +125,19 @@ pub fn check_files(dir: &Path, doc: &Value) -> Vec<Problem> {
         }
     }
     if found.iter().any(|(p, _)| p == SIGNATURE) {
-        out.push(Problem {
-            pointer: "/manifest".into(),
-            message: format!("{SIGNATURE} signs an earlier version; a build without a key removes it"),
-            warning: true,
-        });
+        let text = "%1 signs an earlier version; a build without a key removes it";
+        out.push(warning("/manifest", said("editor.signature", text, &[&SIGNATURE])));
     }
     let scene = serde_json::from_value::<Scene>(doc["scene"].clone()).ok();
     let read = |path: &str| std::fs::read_to_string(dir.join(path)).ok();
     if let Some((i, message)) = scene.and_then(|s| s.undeclared(read)) {
-        out.push(Problem { pointer: format!("/scene/scripts/{i}"), message, warning: false });
+        out.push(problem(format!("/scene/scripts/{i}"), said("editor.script", "%1", &[&message])));
     }
-    let unused = unused(dir, doc).into_iter().map(|path| Problem {
-        pointer: "/scene/assets".into(),
-        message: format!("{path} is not used by the scene but goes into the package"),
-        warning: true,
-    });
-    out.extend(unused);
+    let text = "%1 is not used by the scene but goes into the package";
+    out.extend(
+        unused(dir, doc)
+            .into_iter()
+            .map(|path| warning("/scene/assets", said("editor.unused", text, &[&path]))),
+    );
     out
 }

@@ -3,6 +3,7 @@ use anyhow::{Context, Result, ensure};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::Path;
+use wprs_core::message::said;
 use wprs_scene::{MAX_SCRIPT_BYTES, MAX_SCRIPTS2, ScriptApi, ScriptEvent, imported};
 
 const CALLS: [(&str, ScriptApi); 4] = [
@@ -55,14 +56,20 @@ pub fn declaration(source: &str) -> Value {
 
 pub fn import(dir: &Path, doc: &Value, file: &Path) -> Result<Vec<Op>> {
     let name = file.file_name().and_then(|n| n.to_str()).context("the script has no file name")?;
-    ensure!(name.ends_with(".js"), "{name} is not a .js file");
+    ensure!(name.ends_with(".js"), said("editor.not_js_file", "%1 is not a .js file", &[&name]));
     let size = fs::metadata(file).with_context(|| format!("cannot read {}", file.display()))?.len();
     let list = doc.pointer("/scene/scripts").and_then(Value::as_array).cloned().unwrap_or_default();
     let path = format!("scripts/{name}");
     let others = list.iter().filter_map(|s| s["path"].as_str()).filter(|p| *p != path);
     let total: u64 = others.clone().filter_map(|p| fs::metadata(dir.join(p)).ok()).map(|m| m.len()).sum();
-    ensure!(size + total <= MAX_SCRIPT_BYTES as u64, "the scripts of a scene take at most 1 MiB together");
-    ensure!(others.count() < MAX_SCRIPTS2, "a scene has at most {MAX_SCRIPTS2} scripts");
+    ensure!(
+        size + total <= MAX_SCRIPT_BYTES as u64,
+        said("editor.scripts_scene_take", "the scripts of a scene take at most 1 MiB together", &[])
+    );
+    ensure!(
+        others.count() < MAX_SCRIPTS2,
+        said("editor.scene_most_scripts", "a scene has at most %1 scripts", &[&MAX_SCRIPTS2])
+    );
     let source =
         fs::read_to_string(file).with_context(|| format!("{} is not a text file", file.display()))?;
     fs::create_dir_all(dir.join("scripts"))?;
