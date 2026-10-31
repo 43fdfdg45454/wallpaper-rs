@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use wprs_core::Fit;
 use wprs_core::edit::{self, Depth, Edit, Parallax, Source};
-use wprs_depth::{MODEL, Map, Places, adjust, beside, read, shrink};
+use wprs_depth::{Device, MODEL, Map, Places, adjust, beside, read, shrink};
 
 const AGENT: &str = concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION"));
 pub(crate) const EDITS: &str = "edits";
@@ -119,7 +119,7 @@ fn answer(request: Request) -> Result<Value, Error> {
             let edit = edited(&image)?;
             wprs_depth::background();
             let (depth, sha) = (edit.depth.clone().unwrap_or_default(), &edit.source.sha256);
-            wprs_depth::generate(&places, (&image, sha), &depth, Some(&library), &mut |_| {})?;
+            wprs_depth::generate(&places, (&image, sha), &depth, (Some(&library), Device::Cpu), &mut |_| {})?;
             moving(&image)?
         }
         Request::Import { uid, fd } => {

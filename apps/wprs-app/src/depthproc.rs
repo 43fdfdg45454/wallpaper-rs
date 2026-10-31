@@ -7,13 +7,19 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 use std::time::Duration;
 use wprs_core::edit::{self, Depth};
-use wprs_depth::{Places, Stage};
+use wprs_depth::{Device, Places, Stage};
 
-pub fn generate(image: &Path, input: u32, stop: &AtomicBool, report: Report<'_>) -> Result<()> {
+pub fn generate(
+    image: &Path,
+    (input, device): (u32, Device),
+    stop: &AtomicBool,
+    report: Report<'_>,
+) -> Result<()> {
     let mut child = Command::new(std::env::current_exe()?)
         .arg("--depth")
         .arg(image)
         .arg(input.to_string())
+        .arg(device.name())
         .env(wprs_depth::TELEMETRY, "1")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -58,12 +64,19 @@ pub fn child(args: &[String]) -> ExitCode {
         let edit = edit::load(&image, &edit::dir()).ok().flatten().map(|(_, e)| e).unwrap_or_default();
         let depth = edit.depth.clone().unwrap_or_default();
         let depth = Depth { input: input.unwrap_or(depth.input), ..depth };
+        let device = args.get(2).and_then(|d| d.parse().ok()).unwrap_or_default();
         let mut names = |stage| match stage {
             Stage::Loading => println!("stage loading"),
             Stage::Estimating => println!("stage estimating"),
             Stage::Saving => println!("stage saving"),
         };
-        wprs_depth::generate(&Places::default(), (&image, &sha(&image, &edit)?), &depth, None, &mut names)
+        wprs_depth::generate(
+            &Places::default(),
+            (&image, &sha(&image, &edit)?),
+            &depth,
+            (None, device),
+            &mut names,
+        )
     })();
     match made {
         Ok(path) => println!("done {}", path.display()),

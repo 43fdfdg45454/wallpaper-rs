@@ -65,8 +65,14 @@ Item {
 
     DragHandler {
         target: null
-        enabled: gizmo.movable
-        onActiveChanged: gizmo.grabbed = gizmo.modelData.position
+        enabled: !gizmo.modelData.locked
+        acceptedModifiers: Qt.NoModifier
+        onActiveChanged: {
+            gizmo.page.moving = active;
+            if (active && !gizmo.chosen)
+                gizmo.page.editor.select(gizmo.modelData.pointer);
+            gizmo.grabbed = gizmo.modelData.position;
+        }
         onCentroidChanged: {
             const delta = gizmo.moved(centroid);
             if (active && gizmo.grabbed)

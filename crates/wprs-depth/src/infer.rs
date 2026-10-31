@@ -2,10 +2,12 @@ use crate::{CACHE_BYTES, MODEL, Map, Places, normalize, tensor, write};
 use anyhow::{Context, Result, anyhow, bail, ensure};
 use image::{ImageReader, RgbImage};
 use ort::environment::Environment;
+use ort::ep::ExecutionProvider;
 use ort::session::Session;
 use ort::value::Tensor;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
+use std::time::{Duration, Instant};
 use wprs_core::edit::Depth;
 
 const MAX_EDGE: u32 = 2048;
@@ -18,9 +20,43 @@ pub enum Stage {
     Saving,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Device {
+    #[default]
+    Auto,
+    Cpu,
+    Cuda,
+}
+
+impl std::str::FromStr for Device {
+    type Err = anyhow::Error;
+
+    fn from_str(text: &str) -> Result<Self> {
+        match text {
+            "auto" => Ok(Device::Auto),
+            "cpu" => Ok(Device::Cpu),
+            "cuda" => Ok(Device::Cuda),
+            _ => bail!("{text} is not auto, cpu or cuda"),
+        }
+    }
+}
+
+impl Device {
+    pub fn name(self) -> &'static str {
+        ["auto", "cpu", "cuda"][self as usize]
+    }
+}
+
 pub struct Estimator {
     session: Session,
+    device: Device,
     _environment: Environment,
+}
+
+pub struct Bench {
+    pub device: Device,
+    pub load: Duration,
+    pub runs: Vec<Duration>,
 }
 
 fn text(e: impl std::fmt::Display) -> anyhow::Error {
@@ -51,20 +87,43 @@ fn environment(libraries: &[PathBuf]) -> Result<Environment> {
 }
 
 impl Estimator {
-    pub fn open(model: &Path, libraries: &[PathBuf], threads: usize) -> Result<Self> {
+    pub fn open(model: &Path, libraries: &[PathBuf], threads: usize, device: Device) -> Result<Self> {
         let environment = environment(libraries)?;
-        let cpu = ort::ep::CPU::default().with_arena_allocator(false).build();
-        let session = Session::builder(&environment)
-            .map_err(text)?
-            .with_execution_providers([cpu])
-            .map_err(text)?
-            .with_intra_threads(threads)
-            .map_err(text)?
-            .with_memory_pattern(false)
-            .map_err(text)?
-            .commit_from_file(model)
-            .map_err(text)?;
-        Ok(Self { session, _environment: environment })
+        let session = |gpu: bool| -> Result<Session> {
+            let cpu = ort::ep::CPU::default().with_arena_allocator(false).build();
+            let cuda = gpu.then(|| ort::ep::CUDA::default().build().error_on_failure());
+            let providers: Vec<_> = cuda.into_iter().chain([cpu]).collect();
+            Session::builder(&environment)
+                .map_err(text)?
+                .with_execution_providers(providers)
+                .map_err(text)?
+                .with_intra_threads(threads)
+                .map_err(text)?
+                .with_memory_pattern(false)
+                .map_err(text)?
+                .commit_from_file(model)
+                .map_err(text)
+        };
+        let cuda = device != Device::Cpu && ort::ep::CUDA::is_available().unwrap_or(false);
+        let (session, device) = match (device, cuda) {
+            (Device::Cuda, false) => {
+                bail!("this ONNX Runtime cannot use CUDA; give one built with CUDA in ORT_DYLIB_PATH")
+            }
+            (Device::Cuda, true) => (session(true).context("cannot run the model with CUDA")?, Device::Cuda),
+            (_, true) => match session(true) {
+                Ok(session) => (session, Device::Cuda),
+                Err(e) => {
+                    eprintln!("the model runs on the processor: {e:#}");
+                    (session(false)?, Device::Cpu)
+                }
+            },
+            _ => (session(false)?, Device::Cpu),
+        };
+        Ok(Self { session, device, _environment: environment })
+    }
+
+    pub fn device(&self) -> Device {
+        self.device
     }
 
     pub fn estimate(&mut self, image: &RgbImage, input: u32) -> Result<Map> {
@@ -88,11 +147,25 @@ pub fn decode(path: &Path) -> Result<RgbImage> {
     Ok(image.into_rgb8())
 }
 
+pub fn bench(places: &Places, image: &Path, depth: &Depth, device: Device, runs: usize) -> Result<Bench> {
+    let model =
+        places.installed(&MODEL).context("the depth model is not installed; see wprs-ctl models list")?;
+    let started = Instant::now();
+    let mut estimator = Estimator::open(&model, &places.library(None), threads(), device)?;
+    let (pixels, load) = (decode(image)?, started.elapsed());
+    let time = |_| {
+        let at = Instant::now();
+        estimator.estimate(&pixels, depth.input).map(|_| at.elapsed())
+    };
+    let runs = (0..runs.max(1)).map(time).collect::<Result<Vec<_>>>()?;
+    Ok(Bench { device: estimator.device(), load, runs })
+}
+
 pub fn generate(
     places: &Places,
     (image, sha256): (&Path, &str),
     depth: &Depth,
-    library: Option<&Path>,
+    (library, device): (Option<&Path>, Device),
     stage: &mut dyn FnMut(Stage),
 ) -> Result<PathBuf> {
     let model =
@@ -101,7 +174,7 @@ pub fn generate(
     ensure!(fits, "the model input must be a multiple of 14 from 196 to 1036");
     let dest = places.generated(sha256, depth).context("the image has no valid SHA-256")?;
     stage(Stage::Loading);
-    let mut estimator = Estimator::open(&model, &places.library(library), threads())?;
+    let mut estimator = Estimator::open(&model, &places.library(library), threads(), device)?;
     let pixels = decode(image)?;
     stage(Stage::Estimating);
     let map = estimator.estimate(&pixels, depth.input)?;

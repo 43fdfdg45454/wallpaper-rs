@@ -81,6 +81,7 @@ gstreamer-video = "0.25"
 gstreamer-allocators = "0.25"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_path_to_error = "0.1.20"
 schemars = "1.2.3"
 toml = "1"
 toml_edit = "=0.25.17"
@@ -121,7 +122,7 @@ getrandom = "0.4"
 openidconnect = { version = "4.0.1", default-features = false }
 tokio-util = { version = "0.7", features = ["io"] }
 x11rb = { version = "0.14", default-features = false, features = ["dl-libxcb", "randr", "shape"] }
-ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic"] }
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic", "cuda"] }
 flate2 = "1"
 tar = { version = "0.4", default-features = false }
 realfft = "3.5"

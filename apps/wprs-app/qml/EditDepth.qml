@@ -17,30 +17,47 @@ ColumnLayout {
             "saving": App.tr("Saving the map…")
         })
 
+    function show() {
+        if (maps.map !== "")
+            maps.view(JSON.stringify(depth), colour.checked);
+    }
+
+    onDepthChanged: show()
+
     DepthMaps {
         id: maps
 
+        device: ["auto", "cpu", "cuda"][where.currentIndex]
         Component.onCompleted: open(tool.page.item.path ?? "")
         onMapChanged: {
             if (map !== "")
                 tool.page.editor.refresh();
+            tool.show();
         }
     }
 
     Image {
         Layout.fillWidth: true
         Layout.preferredHeight: width * 0.6
-        source: maps.map
+        source: maps.look
         cache: false
         asynchronous: true
         fillMode: Image.PreserveAspectFit
         visible: maps.map !== ""
     }
 
+    QQC2.CheckBox {
+        id: colour
+
+        visible: maps.map !== ""
+        text: App.tr("False colour, red near and blue far")
+        onToggled: tool.show()
+    }
+
     QQC2.Label {
         Layout.fillWidth: true
         visible: maps.map === "" && !maps.busy
-        text: App.tr("This picture has no depth map yet. White is near and black is far.")
+        text: App.tr("This picture has no depth map yet. White is near and black is far. Once the model is downloaded, the map is made at once.")
         wrapMode: Text.Wrap
     }
 
@@ -70,6 +87,19 @@ ColumnLayout {
         type: Kirigami.MessageType.Error
         text: maps.error
         visible: text !== ""
+    }
+
+    RowLayout {
+        QQC2.Label {
+            text: App.tr("Run the model on")
+        }
+
+        QQC2.ComboBox {
+            id: where
+
+            Layout.fillWidth: true
+            model: [App.tr("The fastest device"), App.tr("The processor"), App.tr("The graphics card (CUDA)")]
+        }
     }
 
     QQC2.Button {

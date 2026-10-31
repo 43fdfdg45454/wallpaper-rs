@@ -6,7 +6,7 @@ use cxx_qt_lib::QString;
 use serde_json::{Map, Value, json};
 use std::pin::Pin;
 use std::time::Duration;
-use wprs_core::edit::{Action, Edit, Kind, Parallax, spline};
+use wprs_core::edit::{Action, Edit, Geometry, Kind, Parallax, spline};
 
 const LEVELS: [&str; 6] = ["ev", "temperature", "tint", "contrast", "saturation", "vibrance"];
 const CHANNELS: [&str; 4] = ["rgb", "r", "g", "b"];
@@ -62,7 +62,10 @@ pub fn describe(edit: &Edit) -> String {
     let curves: Map<String, Value> = CHANNELS.iter().map(|c| (c.to_string(), curve(edit, c))).collect();
     let depth = edit.depth.clone().unwrap_or_default();
     let parallax = edit.parallax.clone().unwrap_or(Parallax { enabled: false, ..Parallax::default() });
-    json!({"levels": levels, "tools": tools, "curves": curves, "masks": masks, "depth": depth, "parallax": parallax})
+    let image = (edit.source.pixels[0], edit.source.pixels[1]);
+    let whole = Geometry { crop: None, ..edit.geometry.clone() }.matrix(image);
+    let view = json!({"whole": whole, "crop": edit.geometry.matrix(image)});
+    json!({"levels": levels, "tools": tools, "curves": curves, "masks": masks, "depth": depth, "parallax": parallax, "view": view})
     .to_string()
 }
 

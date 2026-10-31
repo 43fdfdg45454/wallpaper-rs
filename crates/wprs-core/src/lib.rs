@@ -10,6 +10,7 @@ pub mod markup;
 pub mod message;
 pub mod model;
 pub mod motion;
+mod options;
 pub mod settings;
 mod store;
 

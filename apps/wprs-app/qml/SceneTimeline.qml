@@ -129,13 +129,38 @@ ColumnLayout {
                         model: track.modelData.keys
 
                         delegate: QQC2.Label {
+                            id: key
+
                             required property var modelData
                             required property int index
+                            property real moved: -1
 
-                            x: modelData[0] / timeline.length * lane.width - width / 2
+                            x: (moved >= 0 ? moved : modelData[0]) / timeline.length * lane.width - width / 2
                             anchors.verticalCenter: parent.verticalCenter
                             text: "◆"
                             color: timeline.chosen?.pointer === track.modelData.pointer && timeline.chosen?.index === index ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+
+                            QQC2.ToolTip.visible: key.moved >= 0
+                            QQC2.ToolTip.text: App.tr("%1 s", key.moved.toFixed(2))
+
+                            DragHandler {
+                                target: null
+                                yAxis.enabled: false
+                                onActiveChanged: {
+                                    if (!active && key.moved >= 0 && key.moved !== key.modelData[0])
+                                        timeline.page.run("keyframe", {
+                                            "pointer": track.modelData.pointer,
+                                            "time": key.moved,
+                                            "from": key.modelData[0]
+                                        });
+                                    if (!active)
+                                        key.moved = -1;
+                                }
+                                onCentroidChanged: {
+                                    if (active)
+                                        key.moved = Math.round(Math.max(0, Math.min(1, key.mapToItem(lane, centroid.position.x, 0).x / lane.width)) * timeline.length * 100) / 100;
+                                }
+                            }
 
                             TapHandler {
                                 onTapped: {

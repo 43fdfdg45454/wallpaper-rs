@@ -57,6 +57,13 @@ ColumnLayout {
                     })
             }
 
+            EditMaskHandles {
+                anchors.fill: parent
+                visible: canvas.section === 5 && !canvas.editor.comparing
+                page: canvas.page
+                matrix: canvas.page.values.view?.[canvas.editor.whole ? "whole" : "crop"] ?? [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+            }
+
             Repeater {
                 model: canvas.section === 1 ? Object.keys(canvas.outputs) : []
 
@@ -96,6 +103,14 @@ ColumnLayout {
         type: Kirigami.MessageType.Warning
         showCloseButton: false
         text: App.tr("The picture shown is not up to date. %1", canvas.troubles[canvas.editor.trouble] ?? "")
+    }
+
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        visible: canvas.editor.changed
+        type: Kirigami.MessageType.Warning
+        showCloseButton: false
+        text: App.tr("This picture changed after it was edited, so the edit may no longer fit it.")
     }
 
     Kirigami.InlineMessage {

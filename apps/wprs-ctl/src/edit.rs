@@ -1,10 +1,9 @@
-use crate::editing::{apply, change, export, open, preview};
-use anyhow::Result;
 use clap::Subcommand;
 use std::path::PathBuf;
-use wprs_core::edit::{self, Action};
 
-const MASK: &str = "Mask name, or linear:X0,Y0,X1,Y1, radial:X,Y,RX,RY[,FEATHER] or luminance:LO,HI[,SOFT]";
+const MASK: &str = "Mask name, or linear:X0,Y0,X1,Y1, radial:X,Y,RX,RY[,FEATHER], luminance:LO,HI[,SOFT] or depth:LO,HI[,SOFT]";
+
+pub use crate::editing::run;
 
 #[derive(Subcommand, Debug)]
 pub enum Edits {
@@ -125,41 +124,16 @@ pub enum Edits {
     Depth {
         #[arg(required = true)]
         path: Option<PathBuf>,
-        #[arg(long, help = "Level of the nearest point, 0 to 1, 1 by default")]
-        near: Option<f32>,
-        #[arg(long, help = "Level of the farthest point, 0 to 1, 0 by default")]
-        far: Option<f32>,
-        #[arg(long, help = "Curve between them, 0.2 to 5, 1 by default")]
-        gamma: Option<f32>,
-        #[arg(long, help = "Blur radius in pixels of the map, 0 to 16, 2 by default")]
-        smooth: Option<u32>,
-        #[arg(long, help = "Pixels by which near objects grow over their edges, 0 to 16, 3 by default")]
-        dilate: Option<u32>,
-        #[arg(
-            long,
-            help = "Short side given to the model: a multiple of 14 from 196 to 1036, 518 by default"
-        )]
-        input: Option<u32>,
+        #[command(flatten)]
+        levels: crate::depth::Levels,
         #[command(subcommand)]
         map: Option<crate::depth::Maps>,
     },
     #[command(about = "Move the image in depth on the desktop; any change turns it on unless --off")]
     Parallax {
         path: PathBuf,
-        #[arg(long, value_parser = ["auto", "pointer", "accelerometer"], help = "What moves it; auto when new")]
-        source: Option<String>,
-        #[arg(long, help = "Largest shift as a fraction of the width, up to 0.03")]
-        strength: Option<f32>,
-        #[arg(long, help = "Depth that stays still, 0 far to 1 near")]
-        focus: Option<f32>,
-        #[arg(long, value_parser = ["1", "8", "16", "32"], help = "Quality: 1 shifts, more steps follow edges")]
-        steps: Option<String>,
-        #[arg(long, value_name = "MS", help = "Time the movement takes to settle, 0 to 2000 ms")]
-        smoothing: Option<u32>,
-        #[arg(long, help = "Zoom that hides the edges, 1 to 1.1")]
-        overscan: Option<f32>,
-        #[arg(long, help = "Turn the parallax off and keep its settings")]
-        off: bool,
+        #[command(flatten)]
+        look: crate::depth::Look,
     },
     #[command(about = "Show this picture with its own fit, or with the screen's fit again with none")]
     Fit {
@@ -177,11 +151,17 @@ pub enum Edits {
         #[arg(long, help = "End the preview")]
         stop: bool,
     },
-    #[command(about = "Render the edited image to a PNG or JPEG file; needs no daemon")]
+    #[command(about = "Go back to the edit before the last change")]
+    Undo { path: PathBuf },
+    #[command(about = "Make again the change that undo went back from")]
+    Redo { path: PathBuf },
+    #[command(about = "Render the edited image to a PNG, JPEG, WebP or AVIF file; needs no daemon")]
     Export {
         path: PathBuf,
-        #[arg(short, long)]
+        #[arg(short, long, help = "The extension chooses the format: png, jpg, webp (lossless) or avif")]
         out: PathBuf,
+        #[arg(long, help = "Render the picture without its operations, to compare")]
+        before: bool,
         #[arg(long, default_value_t = 90, value_parser = clap::value_parser!(u8).range(1..=100))]
         quality: u8,
         #[arg(
@@ -191,55 +171,4 @@ pub enum Edits {
         )]
         size: Option<String>,
     },
-}
-
-fn action(command: Edits) -> Option<(PathBuf, Action)> {
-    Some(match command {
-        Edits::Set { path, changes } => (path, Action::Set { changes }),
-        Edits::Crop { path, rect, aspect, rotate, straighten, flip, output } => {
-            (path, Action::Crop { rect, aspect, rotate, straighten, flip, output })
-        }
-        Edits::Curve { path, points, channel, id } => (path, Action::Curve { points, channel, id }),
-        Edits::Blur { path, radius, mask, id } => (path, Action::Blur { radius: Some(radius), mask, id }),
-        Edits::Vignette { path, amount, midpoint, roundness, feather, id } => {
-            (path, Action::Vignette { amount: Some(amount), midpoint, roundness, feather, id })
-        }
-        Edits::Overlay { path, color, blend, opacity, mask, id } => {
-            (path, Action::Overlay { color: Some(color), blend, opacity, mask, id })
-        }
-        Edits::Mask { path, name, spec, invert } => (path, Action::Mask { name, spec, invert }),
-        Edits::Order { path, ids } => (path, Action::Order { ids }),
-        Edits::Span { path, zoom, center } => (path, Action::Span { zoom, center }),
-        Edits::Reset { path, ids } => (path, Action::Reset { ids }),
-        Edits::Depth { path, near, far, gamma, smooth, dilate, input, map: None } => {
-            (path?, Action::Depth { near, far, gamma, smooth, dilate, input })
-        }
-        Edits::Parallax { path, source, strength, focus, steps, smoothing, overscan, off } => {
-            let steps = steps.and_then(|s| s.parse().ok());
-            (path, Action::Parallax { source, strength, focus, steps, smoothing, overscan, off })
-        }
-        Edits::Fit { path, mode } => (path, Action::Fit { mode }),
-        Edits::Show { .. }
-        | Edits::Apply { .. }
-        | Edits::Preview { .. }
-        | Edits::Export { .. }
-        | Edits::Depth { map: Some(_), .. } => {
-            return None;
-        }
-    })
-}
-
-pub fn run(command: Edits) -> Result<()> {
-    match command {
-        Edits::Show { path } => print!("{}", open(&path)?.to_json()),
-        Edits::Reset { path, ids } if ids.is_empty() => {
-            edit::remove(&path, &edit::dir()).map_err(anyhow::Error::msg)?;
-        }
-        Edits::Apply { path, file } => apply(&path, &file)?,
-        Edits::Preview { path, changes, stop } => preview(&path, changes, stop)?,
-        Edits::Export { path, out, quality, size } => export(&path, &out, quality, size.as_deref())?,
-        Edits::Depth { map: Some(map), .. } => crate::depth::run(map)?,
-        command => action(command).map_or(Ok(()), |(path, action)| change(&path, action))?,
-    }
-    Ok(())
 }

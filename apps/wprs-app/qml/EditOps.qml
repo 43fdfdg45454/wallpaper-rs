@@ -97,7 +97,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 model: [App.tr("Whole picture")].concat(list.masks.map(name => App.tr("Mask %1", name)))
                 currentIndex: list.masks.indexOf(op.mask ?? "") + 1
-                onActivated: index => list.set(op.id, "mask", index > 0 ? list.masks[index - 1] : "null")
+                onActivated: index => list.set(op.id, "mask", index > 0 ? list.masks[index - 1] : "")
             }
         }
     }

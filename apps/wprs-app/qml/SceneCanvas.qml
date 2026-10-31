@@ -129,6 +129,14 @@ ColumnLayout {
             onTapped: canvas.page.editor.select("/scene/canvas")
         }
 
+        SceneBand {
+            anchors.fill: parent
+            enabled: !canvas.page.moving
+            page: canvas.page
+            screen: screen
+            ratio: canvas.ratio
+        }
+
         Rectangle {
             id: screen
 

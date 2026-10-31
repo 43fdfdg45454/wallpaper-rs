@@ -1,6 +1,6 @@
 use crate::Map;
 use image::imageops::{FilterType, resize};
-use image::{Luma, RgbImage};
+use image::{Luma, Rgb, RgbImage};
 use wprs_core::edit::Depth;
 
 const MEAN: [f32; 3] = [0.485, 0.456, 0.406];
@@ -85,4 +85,21 @@ pub fn shrink(map: Map, edge: u32) -> Map {
     }
     let size = |v: u32| ((u64::from(v) * u64::from(edge) / u64::from(long)) as u32).max(1);
     resize(&map, size(map.width()), size(map.height()), FilterType::Triangle)
+}
+
+const TURBO: [[f32; 6]; 3] = [
+    [0.135_721_38, 4.615_392_6, -42.660_323, 132.131_08, -152.942_4, 59.286_38],
+    [0.091_402_61, 2.194_188_4, 4.842_966_6, -14.185_033, 4.277_298_6, 2.829_566],
+    [0.106_673_3, 12.641_946, -60.582_05, 110.362_77, -89.903_11, 27.348_25],
+];
+
+pub fn coloured(map: &Map, false_colour: bool) -> RgbImage {
+    let paint = |v: u16| {
+        let t = f32::from(v) / 65535.0;
+        let channel = |c: &[f32; 6]| c.iter().rev().fold(0.0, |sum, k| sum * t + k).clamp(0.0, 1.0);
+        let grey = [t; 3];
+        let rgb = if false_colour { TURBO.each_ref().map(channel) } else { grey };
+        Rgb(rgb.map(|c| (c * 255.0).round() as u8))
+    };
+    RgbImage::from_fn(map.width(), map.height(), |x, y| paint(map.get_pixel(x, y)[0]))
 }

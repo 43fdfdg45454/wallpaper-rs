@@ -580,11 +580,19 @@ daemon las vuelve a leer en cuanto cambian. La app las edita desde la ficha de c
 controles de la sección elegida, y a la derecha la imagen editada. La dibuja la propia app en la
 GPU, con el mismo revelado que el daemon y `wprs-ctl edit export`, reducida (1024 píxeles de lado
 como mucho, 512 con render por software) y solo cuando cambia un valor o llega un mapa de
-profundidad nuevo; si no puede dibujarla, un aviso dice por qué. En *Recortar y girar* se ve la
-imagen entera con el recorte encima para moverlo y cambiar su tamaño, y en *Pantallas* el recorte de
-cada pantalla sobre el resultado. *Ver en el escritorio* lleva además la edición sin guardar al
-fondo real, allí donde esa imagen sea el fondo, y la ventana lo avisa bajo la imagen. Cada acción
-del editor existe también en `wprs-ctl edit`, que las cambia sin daemon:
+profundidad nuevo; si no puede dibujarla, un aviso dice por qué, y otro avisa si la imagen cambió
+después de editarla (también lo dicen `wprs-ctl edit` y el registro del daemon). En *Recortar y
+girar* se ve la imagen entera con el recorte encima para moverlo y cambiar su tamaño, en *Máscaras*
+las máscaras lineales y radiales se colocan arrastrando sus tiradores sobre la imagen, y en
+*Pantallas* el recorte de cada pantalla sobre el resultado y las pantallas dibujadas a escala en
+milímetros: se arrastran hasta donde están de verdad, con el ancho de sus marcos, y un patrón de
+líneas y círculos sobre las pantallas reales permite comprobarlo (las líneas siguen rectas de una
+pantalla a otra). *Deshacer* y *Rehacer* (Ctrl+Z y Ctrl+Mayúsculas+Z) recorren los mismos pasos que
+`wprs-ctl edit undo` y `redo`, *Comparar con el original* (tecla `\`) muestra la imagen sin
+operaciones y *Exportar…* guarda el resultado en PNG, JPEG, WebP sin pérdida o AVIF. *Ver en el
+escritorio* lleva además la edición sin guardar al fondo real, allí donde esa imagen sea el fondo,
+y la ventana lo avisa bajo la imagen. Cada acción del editor existe también en `wprs-ctl edit`, que
+las cambia sin daemon:
 
 ```sh
 wprs-ctl edit set foto.jpg ev=0.3 contrast=10 temperature=5200 tint=4
@@ -593,9 +601,14 @@ wprs-ctl edit crop foto.jpg --aspect 16:9 -o DP-1      # recorte propio de una p
 wprs-ctl edit overlay foto.jpg '#ff8800' --blend soft-light --opacity 0.3 --mask linear:0.5,0,0.5,0.5
 wprs-ctl edit preview foto.jpg ev=1                  # verlo en el escritorio 60 s sin guardar
 wprs-ctl edit export foto.jpg -o foto-editada.png    # mismo resultado, sin daemon
+wprs-ctl edit export foto.jpg -o foto.avif --quality 70   # o .jpg y .webp; --before sin operaciones
+wprs-ctl edit undo foto.jpg                          # y redo, también tras cambios hechos en la app
+wprs-ctl edit set foto.jpg ops.bl.mask=cielo         # dar una máscara a una operación; vacío la quita
 wprs-ctl edit fit foto.jpg center                    # su propio ajuste; none vuelve al de la pantalla
 wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
 wprs-ctl config layout.bezel_mm 8                    # ancho del marco de cada pantalla al extender
+wprs-ctl config layout.monitors.DP-1 0,0,597,336     # colocar una pantalla a mano, en milímetros
+wprs-ctl calibrate on                                # patrón para comprobarlo; off lo quita
 ```
 
 Una imagen fija puede moverse en profundidad (paralaje): con un mapa de profundidad en gris (blanco
@@ -613,12 +626,18 @@ se descargan de GitHub cuando lo pides, después de mostrar tamaño, licencia y 
 comprueban con su SHA-256 fijado, se guardan junto al texto completo de su licencia (y ONNX
 Runtime junto a los avisos de terceros de su archivo) y la imagen no sale nunca del equipo.
 `models.allow_download = false` impide cualquier descarga y `wprs-ctl models install` instala
-archivos obtenidos por otra vía:
+archivos obtenidos por otra vía. En la app, al terminar la descarga el mapa se calcula solo; se ve
+ya ajustado (cerca, lejos, curva, suavizado y bordes), en gris o en falso color, y el modelo corre
+en el procesador o, con un ONNX Runtime compilado con CUDA (por ejemplo indicado en
+`ORT_DYLIB_PATH`), en la tarjeta gráfica NVIDIA; *El dispositivo más rápido* la usa cuando puede y
+si falla vuelve al procesador:
 
 ```sh
 wprs-ctl models list                                 # tamaño, licencia, servidor y estado
 wprs-ctl models download depth-anything-v2-small     # pregunta antes de descargar
 wprs-ctl edit depth generate foto.jpg                # mapa calculado aquí; Ctrl-C cancela
+wprs-ctl edit depth generate foto.jpg --device cuda --bench   # medir el modelo en la tarjeta gráfica
+wprs-ctl edit depth export foto.jpg mapa.png --adjusted --colour   # el mapa ajustado en falso color
 wprs-ctl edit depth foto.jpg --dilate 4 --smooth 2   # ajustar cerca, lejos, curva y bordes
 wprs-ctl edit parallax foto.jpg --source pointer --strength 0.02 --focus 0.3
 ```
@@ -1123,15 +1142,17 @@ otra página no cierra un editor con cambios sin guardar.
   y dejar *solo* una capa en la vista previa.
 - **Lienzo**: la vista previa la dibuja el propio daemon en una salida virtual que llega por
   PipeWire, como el fondo de Plasma, así que necesita el módulo QML de KPipeWire. Ctrl y la rueda
-  amplían, la rueda o un arrastre con el botón central o el derecho desplazan, y la capa elegida se
-  mueve, gira y escala con sus asas. Las guías marcan lo que se ve en pantallas 16:9, 21:9, 32:9,
+  amplían, la rueda o un arrastre con el botón central o el derecho desplazan. Una capa sin
+  bloquear se arrastra directamente, y la elegida gira y escala con sus asas; un arrastre que
+  empieza fuera de las capas, o cualquiera con Mayúsculas, traza un rectángulo que elige las capas
+  que toca, como Ctrl en la lista, listas para agruparlas. Las guías marcan lo que se ve en pantallas 16:9, 21:9, 32:9,
   4:3, 16:10 y 9:16. *Ver en el escritorio* lleva la escena sin guardar a todas las pantallas
   sin aplicarla; se quita al desactivarlo o al cerrar el editor, y como mucho un minuto después si
   la app se cierra de golpe.
 - **Inspector**: se genera a partir del esquema JSON de las escenas (`wprs-ctl scene schema`), así
   que los campos nuevos del formato aparecen solos: números con deslizador y unidad, colores,
-  opciones, vectores, curvas, recursos, efectos con sus parámetros y la vuelta al valor por
-  defecto de cada campo opcional. Los nombres de los campos y de sus valores (modos de fusión,
+  opciones, vectores, curvas (un clic añade un punto, se arrastra y un doble clic lo quita),
+  recursos, efectos con sus parámetros y la vuelta al valor por defecto de cada campo opcional. Los nombres de los campos y de sus valores (modos de fusión,
   formas, curvas de interpolación, efectos, tipos de capa y de recurso, idiomas, *Igual que la
   pantalla* de los fotogramas por segundo) salen en el idioma del escritorio, y una prueba recorre
   el inspector de cada punto de partida con todas sus variantes y falla si algo de lo que muestra
@@ -1140,8 +1161,8 @@ otra página no cierra un editor con cambios sin guardar.
   instante actual o lo enlaza a una propiedad de usuario, al sonido o al puntero, y *Editar el
   origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace.
 - **Línea de tiempo**: reproducir, pausar y mover el cabezal (la vista previa se queda en ese
-  instante), una pista por valor animado con sus fotogramas clave, la interpolación de cada uno y
-  la línea de tiempo que la mueve, y la lista de líneas de tiempo para crearlas y editarlas.
+  instante), una pista por valor animado con sus fotogramas clave, que se arrastran a otro
+  instante, la interpolación de cada uno y la línea de tiempo que la mueve, y la lista de líneas de tiempo para crearlas y editarlas.
 - **Paquete**: *Detalles del paquete* lleva el manifiesto al inspector, que también se genera a
   partir de su esquema (`wprs-ctl scene schema --manifest`): título, descripción y notas de esta
   versión en cada idioma (*Traducir* añade uno a partir del texto del idioma por defecto sin tocar
@@ -1221,6 +1242,7 @@ wprs-ctl scene add-layer mar sound --source ola         # y remove-layer, duplic
 wprs-ctl scene add-layer mar text --name Título         # id «titulo», con ese texto
 wprs-ctl scene set mar /scene/layers/1/opacity 0.5      # cualquier campo por su JSON Pointer
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 2 1 --ease in_out_sine
+wprs-ctl scene keyframe mar /scene/layers/1/opacity 3 --from 2   # moverlo a otro instante
 wprs-ctl scene translate mar /manifest/title es Mar     # otro idioma; --add no pisa nada, --remove lo quita
 wprs-ctl scene set mar /manifest/content '{"rating": "mature", "descriptors": ["violence"]}'
 wprs-ctl scene thumbnail mar captura.png                # miniatura en assets/, reducida si hace falta

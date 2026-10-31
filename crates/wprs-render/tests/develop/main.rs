@@ -3,6 +3,8 @@ use serde_json::json;
 use wprs_core::{Edit, Fit, UvRect};
 use wprs_render::{Layer, Renderer};
 
+mod blur;
+
 fn renderer() -> Option<&'static Renderer> {
     match Renderer::shared() {
         Ok(r) => Some(r),
@@ -166,24 +168,6 @@ fn geometry_rotates_flips_and_crops() {
     assert_eq!(frame(json!({"rotate": 90, "crop": [0, 0, 0.5, 1]})), (16, 64));
     let (w, h) = frame(json!({"straighten": 10}));
     assert!(w < 64 && h < 32 && (w as f32 / h as f32 - 2.0).abs() < 0.1, "{w}x{h}");
-}
-
-#[test]
-fn blur_softens_edges_and_keeps_flat_areas() {
-    let Some(r) = renderer() else { return };
-    let image = RgbaImage::from_fn(64, 32, |x, _| Rgba(if x < 32 { [0, 0, 0, 255] } else { [255; 4] }));
-    let blur = op(json!({"type": "blur", "radius": 100}));
-    let out = develop(r, &image, &blur, (64, 32));
-    let edge = at(&out, 31, 16)[0];
-    assert!((20..235).contains(&edge), "edge {edge}");
-    expect(at(&out, 1, 16), [0; 3]);
-    expect(at(&out, 62, 16), [255; 3]);
-    let flat = develop(r, &flat([90, 160, 30]), &op(json!({"type": "blur", "radius": 200})), (64, 64));
-    expect(at(&flat, 32, 32), [90, 160, 30]);
-    let value = json!({"ops": [{"id": "b", "type": "blur", "radius": 100, "mask": "left"}, {"id": "e", "type": "exposure", "ev": 0}],
-        "masks": {"left": {"type": "linear", "from": [0.4, 0.5], "to": [0.3, 0.5]}}});
-    let masked = develop(r, &image, &edit(value), (64, 32));
-    expect(at(&masked, 33, 16), [255; 3]);
 }
 
 #[test]

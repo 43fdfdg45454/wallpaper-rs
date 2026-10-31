@@ -106,6 +106,7 @@ impl Daemon {
         let serial = self.changes.serial();
         let jobs = self.jobs.active();
         let st = self.state();
+        let placed = crate::calibration::monitors(&st);
         let output = |(name, info): (&String, &crate::streams::OutputInfo)| {
             let (r, s) = (st.config.resolve(name), status.get(name).cloned().unwrap_or_default());
             let ((width, height), [red, green, blue]) = (info.size, r.background);
@@ -138,6 +139,7 @@ impl Daemon {
                 credit,
                 edited: info.edited(),
                 screen: info.screen.clone(),
+                mm: placed.iter().find(|m| m.id == *name).map(|m| m.mm),
                 parallax: s.parallax,
                 frames: s.frames,
                 refresh: st.refresh(name),
@@ -182,6 +184,7 @@ impl Daemon {
                 .filter(|(name, _)| !crate::drafts::virtual_output(name))
                 .map(output)
                 .collect(),
+            calibrating: crate::calibration::calibrating(&st),
         };
         serde_json::to_string(&state).unwrap_or_default()
     }

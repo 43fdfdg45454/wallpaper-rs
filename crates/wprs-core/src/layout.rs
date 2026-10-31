@@ -74,6 +74,28 @@ fn beside(m: &Monitor, p: &Screen, s: &Screen, (w, h): (f64, f64), gap: f64) -> 
 impl Layout {
     pub const MAX_BEZEL_MM: f64 = 100.0;
 
+    pub const MAX_MONITORS: usize = 64;
+
+    pub fn place(&mut self, id: &str, value: &str) -> Result<(), String> {
+        let fine = (1..=256).contains(&id.len()) && !id.chars().any(char::is_control);
+        fine.then_some(()).ok_or_else(|| format!("{id:?} is not a screen name or identity"))?;
+        if matches!(value.trim(), "" | "none") {
+            self.monitors.remove(id);
+            return Ok(());
+        }
+        let numbers: Vec<f64> = value.split(',').filter_map(|n| n.trim().parse().ok()).collect();
+        let mm: [f64; 4] =
+            numbers.try_into().map_err(|_| format!("{value} is not X,Y,WIDTH,HEIGHT in millimetres"))?;
+        let inside = mm[..2].iter().all(|v| v.abs() <= 100_000.0)
+            && mm[2..].iter().all(|v| *v > 0.0 && *v <= 10_000.0);
+        inside.then_some(()).ok_or_else(|| format!("{value} is out of range"))?;
+        if !self.monitors.contains_key(id) && self.monitors.len() >= Self::MAX_MONITORS {
+            return Err(format!("at most {} screens can be placed by hand", Self::MAX_MONITORS));
+        }
+        self.monitors.insert(id.into(), Placed { mm });
+        Ok(())
+    }
+
     pub fn is_default(&self) -> bool {
         *self == Layout::default()
     }

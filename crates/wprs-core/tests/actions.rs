@@ -112,3 +112,26 @@ fn a_picture_keeps_its_own_fit() {
     assert!(e.fit.is_none() && e.is_empty());
     assert!(Edit::parse(r#"{"version": 1, "fit": "span"}"#).is_err());
 }
+
+#[test]
+fn any_name_can_be_a_mask_and_ids_keep_their_kind() {
+    let mut e = picture();
+    for name in ["1", "true", "null", "sky"] {
+        act(&mut e, json!({"mask": {"name": name, "spec": "linear:0,0,1,1"}})).unwrap();
+        act(&mut e, json!({"blur": {"radius": 4}})).unwrap();
+        e.set("ops.bl.mask", name).unwrap();
+        assert_eq!(e.ops[0].mask.as_deref(), Some(name));
+    }
+    e.set("ops.bl.mask", "").unwrap();
+    assert_eq!(e.ops[0].mask, None);
+    e.set("ops.bl.mask", "\"true\"").unwrap();
+    assert_eq!(e.ops[0].mask.as_deref(), Some("true"));
+    let before = e.clone();
+    let refused = act(&mut e, json!({"curve": {"points": ["0,0", "1,1"], "id": "bl"}})).unwrap_err();
+    assert_eq!(refused.to_string(), "bl is a blur operation, not curves; give another id");
+    assert!(act(&mut e, json!({"vignette": {"amount": 0.2, "id": "bl"}})).is_err());
+    assert!(act(&mut e, json!({"overlay": {"id": "bl"}})).is_err());
+    act(&mut e, json!({"curve": {"points": ["0,0", "1,1"]}})).unwrap();
+    assert!(act(&mut e, json!({"blur": {"radius": 2, "id": "cu"}})).is_err());
+    assert_eq!(e.ops.len(), before.ops.len() + 1);
+}

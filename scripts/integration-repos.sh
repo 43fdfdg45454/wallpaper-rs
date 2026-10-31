@@ -84,6 +84,12 @@ ctl edit set "$pic" ev=-2
 shown "$edited" 0 137 0
 ctl edit preview "$pic" ev=0
 shown "$edited" 0 255 0
+decoded=$(grep -c "decoded a picture" "$WORK/wprsd.log")
+ctl edit preview "$pic" ev=-1
+shown "$edited" 0 188 0
+ctl edit preview "$pic" ev=0
+shown "$edited" 0 255 0
+[ "$(grep -c "decoded a picture" "$WORK/wprsd.log")" = "$decoded" ] || fail "a preview decoded the picture again"
 ctl edit preview "$pic" --stop
 shown "$edited" 0 137 0
 ctl edit fit "$pic" center

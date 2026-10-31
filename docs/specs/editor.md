@@ -50,7 +50,7 @@ undo and redo walk through, the undone ones marked.
 | `group`, `ungroup` | `ids` of layers with the same parent, each taken once, and an optional group `id`; the `id` of a group, refused while the group has an opacity, transform, anchor, blend, mask, effects, parallax, visibility or clip of its own that ungrouping would lose | `group`, `ungroup` |
 | `hide` | `id`, `hidden`; sets `visible`, or `play` on a sound layer, to `false`, keeping what it held under `hidden`, and puts it back when shown | `hide DIR ID --hidden BOOL` |
 | `lock`, `solo` | `id` and `locked`; `id`, or nothing to end the solo | `lock`, `solo` |
-| `keyframe` | `pointer`, `time`, optional `value` (the current value when omitted), `ease`, `timeline`, `remove` | `keyframe DIR POINTER TIME [VALUE]` |
+| `keyframe` | `pointer`, `time`, optional `value` (the current value when omitted), `ease`, `timeline`, `remove`, `from` (moves the keyframe at that time to `time`, keeping its value and easing unless given, as one step) | `keyframe DIR POINTER TIME [VALUE]`, `--remove` or `--from T` |
 | `import` | `file`, optional `id`; copies the file into `assets/` and declares the asset | `import DIR FILE` |
 | `import_effect` | `descriptor`, optional `wgsl` (the `.wgsl` file beside the descriptor when omitted); checks the effect as a package reader does, copies both files to `effects/<id>.json` and `effects/<id>.wgsl` and declares or replaces `effects.<id>` of the scene | `import-effect DIR DESCRIPTOR [--wgsl FILE]` |
 | `import_script` | `file`, a `.js` module; copies it to `scripts/<name>` and declares or replaces its entry in `scripts` with the `events` it exports or handles with `on` and the `uses` it imports or calls (`spawn` and `order`, `effect`, `console`, `shared` also for imports of other modules), never its `params`, which are written by hand, refusing scripts that would take the scene past 1 MiB or 64 modules; the author checks what was proposed | `import-script DIR FILE` |
@@ -74,7 +74,8 @@ once there is an asset of that kind. `keyframe` turns a plain value into
 `{"keys": [[time, value]]}`, adds or replaces the key at that time (to the millisecond), keeps the
 keys sorted and turns the value back into a plain one when its last key goes; it refuses a value
 that follows another source. Keyframe times are seconds on the named timeline, or on the scene
-clock without one.
+clock without one. In the timeline of the app a keyframe is dragged along its track, to the
+hundredth of a second, and dropped with `keyframe` and `from`.
 
 `import` copies pictures, videos, sounds, fonts and `.cube` tables. It refuses a file over the
 limits of the format (256 assets, 1 GiB per file, 512 MiB of pictures once decoded, sounds of 32
@@ -121,7 +122,7 @@ the fields it shows for a pointer, as JSON. Annotations in the schema guide the 
 | `x-range` | `[min, max]` of a slider |
 | `x-ref` | the value names an `image`, `video`, `sound`, `font` or `lut` asset, a `layer`, a particle `system`, a `timeline`, a user `property` that holds a value or, for the `trigger` of a timeline, `start`, `beat` or `prop:<id>` of a button or of such a property, or a built-in `effect`, offered in a list; properties show their labels and effects their translated names |
 | `x-key` | a keyframe `[time, value, ease]` |
-| `x-curve` | a list of `[t, value]` points plotted as a curve |
+| `x-curve` | a list of `[t, value]` points edited on a plot: a click adds a point, a drag moves it (one gesture) and a double click removes it; `t` goes from `0` to `1` across and the value up to its `x-range`, or a quarter above the highest point |
 
 Numbers become sliders when they have a range, colors a color picker, enumerations and tagged
 variants a list with translated names, pairs two fields, `x-curve` lists a curve, color stops
@@ -277,9 +278,12 @@ on and ends it when the editor closes; the daemon ends it 60 seconds after the l
 minimized window marks the preview output covered. `wprs-ctl scene preview DIR [-o OUTPUT] [--time
 T]` shows the saved folder for 60 seconds, and `--stop` ends it.
 
-The canvas draws the outline of each layer with handles to move, turn and scale the selected one,
-and guides for 16:9, 21:9, 32:9, 4:3, 16:10 and 9:16 screens. Ctrl and the wheel zoom, the wheel
-or a drag with the middle or right button pans.
+The canvas draws the outline of each layer with handles to turn and scale the selected one, and
+guides for 16:9, 21:9, 32:9, 4:3, 16:10 and 9:16 screens. Dragging a layer that is not locked
+selects it and moves it, as one gesture. A drag that starts outside the layers, or any drag with
+Shift, draws a rectangle that selects the layers it touches and picks them as Ctrl does in the
+layer list, ready for *Group*. Ctrl and the wheel zoom, the wheel or a drag with the middle or
+right button pans.
 
 ## Starting points, building and applying
 

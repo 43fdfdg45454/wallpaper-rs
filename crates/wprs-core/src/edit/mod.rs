@@ -2,8 +2,11 @@ mod action;
 mod check;
 mod curve;
 mod depth;
+mod fields;
 mod file;
 mod geometry;
+mod history;
+mod masks;
 mod parse;
 mod set;
 mod tool;
@@ -14,6 +17,8 @@ pub use curve::spline;
 pub use depth::{Depth, MAX_STRENGTH, MODEL, Motion, Parallax, STEPS};
 pub use file::{MAX_BYTES, adopt, commit, dir, load, remove, save};
 pub use geometry::{Matrix, mul};
+pub use history::History;
+pub use masks::{Mask, Stroke};
 pub use parse::numbers;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -130,53 +135,6 @@ pub enum Blend {
     Overlay,
     SoftLight,
     Color,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum Mask {
-    Linear {
-        from: [f32; 2],
-        to: [f32; 2],
-        #[serde(default)]
-        invert: bool,
-    },
-    Radial {
-        center: [f32; 2],
-        radius: [f32; 2],
-        #[serde(default)]
-        feather: f32,
-        #[serde(default)]
-        invert: bool,
-    },
-    Luminance {
-        range: [f32; 2],
-        #[serde(default)]
-        soft: f32,
-        #[serde(default)]
-        invert: bool,
-    },
-    Depth {
-        range: [f32; 2],
-        #[serde(default)]
-        soft: f32,
-        #[serde(default)]
-        invert: bool,
-    },
-    Brush {
-        strokes: Vec<Stroke>,
-        #[serde(default)]
-        invert: bool,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Stroke {
-    pub radius: f32,
-    pub hardness: f32,
-    #[serde(default)]
-    pub erase: bool,
-    pub points: Vec<[f32; 2]>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

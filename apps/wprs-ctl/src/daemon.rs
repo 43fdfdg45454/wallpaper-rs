@@ -26,6 +26,7 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Reload => daemon.reload().await?,
         Command::RetryEffects => daemon.retry_effects().await?,
         Command::State { .. } => println!("{}", daemon.get_state().await?),
+        Command::Calibrate { state } => daemon.show_calibration(state == "on").await?,
         Command::Pause => daemon.set_paused(true).await?,
         Command::Resume => daemon.set_paused(false).await?,
         Command::Toggle => daemon.set_paused(!daemon.paused().await?).await?,
@@ -49,13 +50,7 @@ pub async fn run(command: Command) -> Result<()> {
         }
         Command::Release { output } => daemon.release_stream(&output).await?,
         Command::Covered { output, covered } => daemon.set_output_covered(&output, covered).await?,
-        Command::Screen { output, pos, size, scale, density, identity } => {
-            let point =
-                pos.split_once(',').and_then(|(x, y)| Some((x.trim().parse().ok()?, y.trim().parse().ok()?)));
-            let (x, y) = point.ok_or_else(|| crate::usage(format!("{pos} is not X,Y")))?;
-            let (width, height) = crate::editing::dimensions(&size)?;
-            daemon.set_output_info(&output, x, y, width, height, scale, density, &identity).await?
-        }
+        Command::Screen(placement) => placement.tell(daemon).await?,
         Command::Schema { json } => show::reply(daemon.get_schema().await?, json, show::schema)?,
         Command::Watch { json } => watch(client, json).await?,
         Command::Wait { serial, timeout, json } => {

@@ -29,6 +29,7 @@ pub struct Target {
     pub image: PathBuf,
     pub sha: String,
     pub depth: Depth,
+    pub device: wprs_depth::Device,
 }
 
 pub type Report<'a> = &'a mut dyn FnMut(&str, f64);
@@ -87,9 +88,11 @@ fn act(places: &Places, target: &Target, work: Work, stop: &AtomicBool, report: 
                     !stop.load(Relaxed)
                 })?;
             }
-            Ok(())
+            ready(places, target, stop, report)
         }
-        Work::Generate => crate::depthproc::generate(image, target.depth.input, stop, report),
+        Work::Generate => {
+            crate::depthproc::generate(image, (target.depth.input, target.device), stop, report)
+        }
         Work::Adopt(file) => places.import(&file, image, sha).map(drop),
         Work::Keep => {
             let found = places.find(image, sha, &target.depth).context("the image has no depth map yet")?;
@@ -99,8 +102,24 @@ fn act(places: &Places, target: &Target, work: Work, stop: &AtomicBool, report: 
             let sha = sha256(&file)?;
             let asset = assets().into_iter().find(|a| a.sha256 == sha);
             places
-                .install(&asset.context("this file is neither the depth model nor ONNX Runtime")?, &file)
-                .map(drop)
+                .install(&asset.context("this file is neither the depth model nor ONNX Runtime")?, &file)?;
+            ready(places, target, stop, report)
         }
     }
+}
+
+fn ready(places: &Places, target: &Target, stop: &AtomicBool, report: Report<'_>) -> Result<()> {
+    let missing = places.installed(&MODEL).is_none() || places.library(None).is_empty();
+    if missing || !target.image.is_file() || places.find(&target.image, &target.sha, &target.depth).is_some()
+    {
+        return Ok(());
+    }
+    crate::depthproc::generate(&target.image, (target.depth.input, target.device), stop, report)
+}
+
+pub fn look(places: &Places, (image, sha): (&Path, &str), depth: &Depth, colour: bool) -> Result<PathBuf> {
+    let found = places.find(image, sha, depth).context("the image has no depth map yet")?;
+    let map = wprs_depth::shrink(wprs_depth::adjust(&wprs_depth::shrink(read(&found)?, 1024), depth), 512);
+    let pixels = image::DynamicImage::ImageRgb8(wprs_depth::coloured(&map, colour)).into_rgba8();
+    crate::picture::write(&pixels)
 }

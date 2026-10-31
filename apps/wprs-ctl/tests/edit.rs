@@ -7,6 +7,7 @@ use std::process::{Command, Output, Stdio};
 fn run(dir: &Path, args: &[&str]) -> Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_wprs-ctl"));
     command.args(args).current_dir(dir).stdin(Stdio::null()).env("XDG_DATA_HOME", dir.join("data"));
+    command.env("XDG_STATE_HOME", dir.join("state"));
     command.env("DBUS_SESSION_BUS_ADDRESS", format!("unix:path={}/no-bus", dir.display()));
     command.output().unwrap()
 }
@@ -139,5 +140,40 @@ fn export_renders_the_edit_without_the_daemon() {
     ok(dir, &["edit", "export", "bands.png", "-o", "tall.png", "--size", "10x20"]);
     let tall = image::open(dir.join("tall.png")).unwrap().to_rgba8();
     assert!(tall.pixels().all(|p| p[0] < 8 && p[1] > 247), "the export is cropped, not stretched");
-    assert!(fails(dir, &["edit", "export", "hills.png", "-o", "out.gif"], 2).contains(".png, .jpg or .jpeg"));
+    assert!(
+        fails(dir, &["edit", "export", "hills.png", "-o", "out.gif"], 2)
+            .contains(".png, .jpg, .webp or .avif")
+    );
+    ok(dir, &["edit", "export", "hills.png", "-o", "out.webp", "--before"]);
+    let webp = image::open(dir.join("out.webp")).unwrap().to_rgba8();
+    assert!(webp.dimensions() == (20, 20) && webp.get_pixel(5, 10)[1] >= 250, "{:?}", webp.get_pixel(5, 10));
+    ok(dir, &["edit", "export", "hills.png", "-o", "out.avif", "--quality", "60"]);
+    assert_eq!(&std::fs::read(dir.join("out.avif")).unwrap()[4..12], b"ftypavif");
+}
+
+#[test]
+fn undo_and_redo_walk_through_the_changes_of_every_command() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    picture(dir);
+    let ev = || {
+        serde_json::from_str::<Value>(&ok(dir, &["edit", "show", "hills.png"])).unwrap()["ops"][0]["ev"]
+            .clone()
+    };
+    assert!(fails(dir, &["edit", "undo", "hills.png"], 1).contains("there is nothing to undo"));
+    ok(dir, &["edit", "set", "hills.png", "ev=1"]);
+    ok(dir, &["edit", "set", "hills.png", "ev=2"]);
+    ok(dir, &["edit", "undo", "hills.png"]);
+    assert_eq!(ev(), json!(1.0));
+    ok(dir, &["edit", "undo", "hills.png"]);
+    assert!(!dir.join("hills.png.wprs.json").exists());
+    ok(dir, &["edit", "redo", "hills.png"]);
+    ok(dir, &["edit", "redo", "hills.png"]);
+    assert_eq!(ev(), json!(2.0));
+    assert!(fails(dir, &["edit", "redo", "hills.png"], 1).contains("there is nothing to redo"));
+    ok(dir, &["edit", "reset", "hills.png"]);
+    ok(dir, &["edit", "undo", "hills.png"]);
+    assert_eq!(ev(), json!(2.0));
+    let kept = std::fs::read_dir(dir.join("state/wallpaper-rs/edit-history")).unwrap().count();
+    assert_eq!(kept, 1);
 }

@@ -27,6 +27,7 @@ mod parallax;
 #[cfg(target_os = "linux")]
 mod plane;
 mod readback;
+mod save;
 mod scene;
 mod shader;
 mod stack;
@@ -52,6 +53,7 @@ pub use luma::Meter;
 pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};
 pub use readback::TargetLimits;
+pub use save::{FORMATS, save};
 pub use scene::{
     MAX_FONT, MAX_SCENE_BUILD, Pixels, SceneAssets, SceneStats, SceneView, drawn_effects, finish_builds,
     font, retry_effects, set_build_timeout, set_gpu_budget, stop_builds, stop_effects,

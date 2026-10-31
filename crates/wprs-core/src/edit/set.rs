@@ -25,6 +25,9 @@ fn typed(current: &Value, text: &str) -> Result<Value, String> {
     };
     match current {
         _ if text == "null" => Ok(Value::Null),
+        _ if text.len() > 1 && text.starts_with('"') && text.ends_with('"') => {
+            serde_json::from_str(text).map_err(|e| e.to_string())
+        }
         Value::Bool(_) => text.parse().map(Value::Bool).map_err(|_| format!("{text} is not true or false")),
         Value::Number(_) => number(text),
         Value::Object(_) => Err("give one of its fields".into()),
@@ -82,7 +85,14 @@ impl Edit {
         let key = key.trim();
         let (mut doc, path) = self.resolve(key)?;
         let field = slot(&mut doc, &path).ok_or_else(|| format!("{key}: unknown setting"))?;
-        *field = typed(field, value).map_err(|e| format!("{key}: {e}"))?;
+        *field = match path.rsplit('.').next() {
+            Some("mask") if value.trim().is_empty() => Value::Null,
+            Some("mask") => serde_json::from_str(value.trim())
+                .ok()
+                .filter(Value::is_string)
+                .unwrap_or_else(|| Value::String(value.trim().into())),
+            _ => typed(field, value).map_err(|e| format!("{key}: {e}"))?,
+        };
         *self = Edit::from_value(doc)?;
         Ok(())
     }

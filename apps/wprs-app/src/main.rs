@@ -10,6 +10,7 @@ mod depthwork;
 mod diff;
 mod editing;
 mod editor;
+mod editsteps;
 mod events;
 mod fetch;
 mod grid;

@@ -26,6 +26,8 @@ model! {
         pub jobs: u32,
         pub options: BTreeMap<String, Value>,
         pub outputs: BTreeMap<String, OutputState>,
+        #[serde(default)]
+        pub calibrating: bool,
     }
 
     pub struct OutputState {
@@ -49,6 +51,8 @@ model! {
         pub edited: bool,
         #[serde(default)]
         pub screen: Option<Screen>,
+        #[serde(default)]
+        pub mm: Option<[f64; 4]>,
         #[serde(default)]
         pub parallax: bool,
         #[serde(default)]

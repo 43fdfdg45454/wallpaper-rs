@@ -12,7 +12,7 @@ wprs-client.workspace = true
 wprs-depth = { workspace = true, features = ["fetch", "infer"] }
 wprs-editor.workspace = true
 wprs-format.workspace = true
-wprs-render.workspace = true
+wprs-render = { workspace = true, features = ["avif"] }
 wprs-scene.workspace = true
 dirs.workspace = true
 anyhow.workspace = true

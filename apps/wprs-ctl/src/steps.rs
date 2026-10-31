@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use wprs_editor::actions::Action;
 use wprs_editor::{Op, Project, references};
 
-fn value(text: &str) -> Value {
+pub(crate) fn value(text: &str) -> Value {
     serde_json::from_str(text).unwrap_or_else(|_| Value::String(text.into()))
 }
 
@@ -69,21 +69,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
         Author::Add { dir, pointer, value: v } => (dir, Action::Add { pointer, value: value(&v) }),
         Author::Remove { dir, pointer } => (dir, Action::Remove { pointer }),
         Author::Move { dir, from, to } => (dir, Action::Move { from, to }),
-        Author::AddLayer { dir, kind, id, name, source, into, at } => {
-            (dir, Action::AddLayer { kind, id, name, source, into, at })
-        }
-        Author::RemoveLayer { dir, id } => (dir, Action::RemoveLayer { id }),
-        Author::DuplicateLayer { dir, id } => (dir, Action::DuplicateLayer { id }),
-        Author::MoveLayer { dir, id, to, into } => (dir, Action::MoveLayer { id, to, into }),
-        Author::Group { dir, ids, id } => (dir, Action::Group { ids, id }),
-        Author::Ungroup { dir, id } => (dir, Action::Ungroup { id }),
-        Author::Hide { dir, id, hidden } => (dir, Action::Hide { id, hidden }),
-        Author::Lock { dir, id, locked } => (dir, Action::Lock { id, locked }),
-        Author::Solo { dir, id } => (dir, Action::Solo { id }),
-        Author::Keyframe { dir, pointer, time, value: v, ease, timeline, remove } => {
-            let (value, ease) = (v.as_deref().map(value), ease.as_deref().map(value));
-            (dir, Action::Keyframe { pointer, time, value, ease, timeline, remove })
-        }
+        Author::Layers(command) => crate::layering::action(command),
         Author::Import { dir, file, id } => {
             (dir, Action::Import { file: fs::canonicalize(&file).unwrap_or(file), id })
         }

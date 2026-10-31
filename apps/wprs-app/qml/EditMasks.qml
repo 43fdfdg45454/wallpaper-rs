@@ -9,29 +9,38 @@ ColumnLayout {
 
     required property var page
     readonly property var masks: page.values.masks ?? {}
-    readonly property var kinds: ["linear", "radial", "luminance"]
+    readonly property var kinds: ["linear", "radial", "luminance", "depth"]
     readonly property var start: ({
             "linear": [0.5, 0, 0.5, 0.5],
             "radial": [0.5, 0.5, 0.3, 0.3, 0.5],
-            "luminance": [0, 0.5, 0.1]
+            "luminance": [0, 0.5, 0.1],
+            "depth": [0, 0.5, 0.1]
         })
     readonly property var labels: ({
             "linear": [App.tr("Start X"), App.tr("Start Y"), App.tr("End X"), App.tr("End Y")],
             "radial": [App.tr("Center X"), App.tr("Center Y"), App.tr("Width"), App.tr("Height"), App.tr("Feather")],
-            "luminance": [App.tr("Darkest"), App.tr("Brightest"), App.tr("Softness")]
+            "luminance": [App.tr("Darkest"), App.tr("Brightest"), App.tr("Softness")],
+            "depth": [App.tr("Farthest"), App.tr("Nearest"), App.tr("Softness")]
         })
     property string kind: "linear"
     property var numbers: start.linear
     property bool invert
 
+    onMasksChanged: {
+        if (masks[field.text] && masks[field.text].kind === kind)
+            numbers = masks[field.text].values;
+    }
+
     function pick(name) {
         field.text = name;
+        page.mask = name;
         kind = masks[name].kind;
         numbers = masks[name].values;
         invert = masks[name].invert;
     }
 
     function send(name, kind, numbers, invert) {
+        page.mask = name;
         if (name)
             page.run("mask", {
                 "name": name,
@@ -71,7 +80,7 @@ ColumnLayout {
 
     QQC2.ComboBox {
         Layout.fillWidth: true
-        model: [App.tr("Linear gradient"), App.tr("Radial gradient"), App.tr("Brightness range")]
+        model: [App.tr("Linear gradient"), App.tr("Radial gradient"), App.tr("Brightness range"), App.tr("Depth range")]
         currentIndex: tool.kinds.indexOf(tool.kind)
         onActivated: index => {
             tool.kind = tool.kinds[index];
@@ -95,6 +104,14 @@ ColumnLayout {
                 tool.send(field.text, tool.kind, tool.numbers, tool.invert);
             }
         }
+    }
+
+    QQC2.Label {
+        Layout.fillWidth: true
+        visible: tool.kind === "linear" || tool.kind === "radial"
+        text: App.tr("Drag the handles on the picture to place the mask.")
+        wrapMode: Text.Wrap
+        font: Kirigami.Theme.smallFont
     }
 
     QQC2.CheckBox {

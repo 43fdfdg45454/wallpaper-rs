@@ -42,6 +42,7 @@ calls! {
         SetVolume set_volume(volume: f64);
         SetMuted set_muted(muted: bool);
         PreviewEdit preview_edit(path: str, edit_json: str);
+        ShowCalibration show_calibration(on: bool);
         GetSceneProperties get_scene_properties(output: str) json;
         SetSceneProperty set_scene_property(output: str, id: str, value_json: str);
         ApplyScenePreset apply_scene_preset(output: str, preset: str);

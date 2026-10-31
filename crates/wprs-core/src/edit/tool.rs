@@ -14,6 +14,16 @@ impl Edit {
         self.ops.iter().find(|op| op.id == id).map(|op| op.kind.clone())
     }
 
+    fn claim(&self, id: &str, wanted: &str) -> Result<(), Error> {
+        let kind = self.kind(id).and_then(|k| serde_json::to_value(k).ok());
+        match kind.as_ref().and_then(|k| k["type"].as_str()) {
+            Some(found) if found != wanted => {
+                Err(invalid(format!("{id} is a {found} operation, not {wanted}; give another id")))
+            }
+            _ => Ok(()),
+        }
+    }
+
     fn upsert(&mut self, id: &str, kind: Kind, mask: Option<String>, opacity: Option<f32>) {
         match self.ops.iter_mut().find(|op| op.id == id) {
             Some(op) => {
@@ -78,7 +88,8 @@ impl Edit {
         if !["rgb", "r", "g", "b"].contains(&channel.as_str()) {
             return Err(usage(format!("{channel} is not rgb, r, g or b")));
         }
-        if !matches!(self.kind(&id), Some(Kind::Curves { .. })) {
+        self.claim(&id, "curves")?;
+        if self.kind(&id).is_none() {
             let (rgb, r, g, b) = Default::default();
             self.upsert(&id, Kind::Curves { rgb, r, g, b }, None, None);
         }
@@ -93,6 +104,7 @@ impl Edit {
         id: Option<String>,
     ) -> Result<(), Error> {
         let id = id.unwrap_or_else(|| "bl".into());
+        self.claim(&id, "blur")?;
         let old = match self.kind(&id) {
             Some(Kind::Blur { radius }) => radius,
             _ => 0.0,
@@ -104,6 +116,7 @@ impl Edit {
 
     pub(super) fn vignette(&mut self, given: [Option<f32>; 4], id: Option<String>) -> Result<(), Error> {
         let id = id.unwrap_or_else(|| "vi".into());
+        self.claim(&id, "vignette")?;
         let old = match self.kind(&id) {
             Some(Kind::Vignette { amount, midpoint, roundness, feather }) => {
                 [amount, midpoint, roundness, feather]
@@ -124,6 +137,7 @@ impl Edit {
         id: Option<String>,
     ) -> Result<(), Error> {
         let id = id.unwrap_or_else(|| "ov".into());
+        self.claim(&id, "overlay")?;
         let (old, was) = match self.kind(&id) {
             Some(Kind::Overlay { color, blend }) => (color, blend),
             _ => ("#000000".into(), Default::default()),

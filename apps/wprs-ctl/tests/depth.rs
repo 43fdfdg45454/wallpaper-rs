@@ -6,8 +6,12 @@ use std::process::{Command, Output, Stdio};
 fn run(dir: &Path, args: &[&str]) -> Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_wprs-ctl"));
     command.args(args).current_dir(dir).stdin(Stdio::null());
-    for (key, sub) in [("XDG_DATA_HOME", "data"), ("XDG_CACHE_HOME", "cache"), ("XDG_CONFIG_HOME", "config")]
-    {
+    for (key, sub) in [
+        ("XDG_DATA_HOME", "data"),
+        ("XDG_CACHE_HOME", "cache"),
+        ("XDG_CONFIG_HOME", "config"),
+        ("XDG_STATE_HOME", "state"),
+    ] {
         command.env(key, dir.join(sub));
     }
     command.env("DBUS_SESSION_BUS_ADDRESS", format!("unix:path={}/no-bus", dir.display()));

@@ -2,9 +2,10 @@ use clap::{ArgAction, Subcommand};
 use std::path::PathBuf;
 
 pub(crate) const DIR: &str = "Scene folder: manifest.json, scene.json and the assets";
-const POINTER: &str = "JSON Pointer into the document, such as /scene/layers/0/opacity or /manifest/title";
+pub(crate) const POINTER: &str =
+    "JSON Pointer into the document, such as /scene/layers/0/opacity or /manifest/title";
 const VALUE: &str = "JSON value; text that is not JSON is taken as a string";
-const ID: &str = "Layer id";
+pub(crate) const ID: &str = "Layer id";
 
 #[derive(Subcommand, Debug)]
 pub enum Author {
@@ -78,109 +79,8 @@ pub enum Author {
         from: String,
         to: String,
     },
-    #[command(
-        about = "Add a layer: image, video, text, shape, solid, spectrum, particles, sound, group or adjustment"
-    )]
-    AddLayer {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        kind: String,
-        #[arg(long, help = "Id of the new layer; made from the name, or else the kind, when omitted")]
-        id: Option<String>,
-        #[arg(
-            long,
-            help = "Name of the layer in your language: the base of its id and the words of a text layer"
-        )]
-        name: Option<String>,
-        #[arg(long, help = "Asset of an image, video or sound layer, or system of a particles layer")]
-        source: Option<String>,
-        #[arg(long, help = "Group to add the layer to")]
-        into: Option<String>,
-        #[arg(long, help = "Position among its siblings, 0 at the bottom; on top when omitted")]
-        at: Option<usize>,
-    },
-    #[command(about = "Remove a layer")]
-    RemoveLayer {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = ID)]
-        id: String,
-    },
-    #[command(about = "Copy a layer, with new ids, just above it")]
-    DuplicateLayer {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = ID)]
-        id: String,
-    },
-    #[command(about = "Move a layer to a position, 0 at the bottom, among the top layers or in a group")]
-    MoveLayer {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = ID)]
-        id: String,
-        to: usize,
-        #[arg(long, help = "Group to move the layer into")]
-        into: Option<String>,
-    },
-    #[command(about = "Put layers of the same group into a new group")]
-    Group {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(required = true)]
-        ids: Vec<String>,
-        #[arg(long, help = "Id of the new group")]
-        id: Option<String>,
-    },
-    #[command(about = "Replace a group with its layers")]
-    Ungroup {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = ID)]
-        id: String,
-    },
-    #[command(about = "Hide a layer, or mute a sound layer; --hidden false shows it again")]
-    Hide {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = ID)]
-        id: String,
-        #[arg(long, default_value_t = true, action = ArgAction::Set)]
-        hidden: bool,
-    },
-    #[command(about = "Lock a layer against changes on the canvas; --locked false unlocks it")]
-    Lock {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = ID)]
-        id: String,
-        #[arg(long, default_value_t = true, action = ArgAction::Set)]
-        locked: bool,
-    },
-    #[command(about = "Show only this layer in previews, or every layer again without an id")]
-    Solo {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = ID)]
-        id: Option<String>,
-    },
-    #[command(about = "Add or replace a keyframe of an animatable value, or remove it with --remove")]
-    Keyframe {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = POINTER)]
-        pointer: String,
-        #[arg(help = "Seconds on the timeline, or on the scene clock without one")]
-        time: f64,
-        #[arg(allow_hyphen_values = true, help = "JSON value; the current value when omitted")]
-        value: Option<String>,
-        #[arg(long, help = "Easing towards the next keyframe, such as in_out_sine, or [x1,y1,x2,y2]")]
-        ease: Option<String>,
-        #[arg(long, help = "Timeline that drives the keyframes")]
-        timeline: Option<String>,
-        #[arg(long)]
-        remove: bool,
-    },
+    #[command(flatten)]
+    Layers(crate::layering::Layering),
     #[command(about = "Copy a picture, video, sound, font or .cube table into the folder as an asset")]
     Import {
         #[arg(help = DIR)]
@@ -261,11 +161,6 @@ pub enum Author {
     },
     #[command(flatten)]
     Properties(crate::userprops::UserProps),
-    #[command(about = "Delete the files in assets/ that the scene does not use")]
-    Prune {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-    },
     #[command(about = "Undo the last change")]
     Undo {
         #[arg(help = DIR)]
@@ -276,61 +171,6 @@ pub enum Author {
         #[arg(help = DIR)]
         dir: PathBuf,
     },
-    #[command(about = "List the changes that undo and redo walk through")]
-    History {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-    },
-    #[command(about = "Restore the unsaved changes the app kept for a folder, or drop them with --discard")]
-    Recover {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(long)]
-        discard: bool,
-    },
-    #[command(about = "Check the scene and its files; exits with 1 when something is wrong")]
-    Validate {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(long, help = "Print one JSON object per problem")]
-        json: bool,
-    },
-    #[command(about = "Build the .wpak package, signed with --key, as wprs-ctl pack build does")]
-    Build {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(short, long, help = "Package file; <id>-<version>.wpak next to the scene folder when omitted")]
-        out: Option<PathBuf>,
-        #[arg(long, help = "Secret key file of the author")]
-        key: Option<PathBuf>,
-        #[arg(long, help = "Print the result as JSON")]
-        json: bool,
-    },
-    #[command(about = "Show the scene of the folder on the desktop for 60 seconds without applying it")]
-    Preview {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(short, long, default_value = "", help = crate::cli::OUTPUT)]
-        output: String,
-        #[arg(long, default_value_t = -1.0, allow_hyphen_values = true, help = "Hold this second; plays when negative")]
-        time: f64,
-        #[arg(long, help = "End the preview")]
-        stop: bool,
-    },
-    #[command(about = "Build the scene into the library and show it on an output")]
-    Apply {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(short, long, default_value = "", help = crate::cli::OUTPUT)]
-        output: String,
-    },
-    #[command(
-        about = "Print the JSON Schema of scenes, of user properties with --property or of manifests with --manifest"
-    )]
-    Schema {
-        #[arg(long)]
-        property: bool,
-        #[arg(long, conflicts_with = "property")]
-        manifest: bool,
-    },
+    #[command(flatten)]
+    Folder(crate::folder::Folder),
 }

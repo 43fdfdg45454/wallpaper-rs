@@ -1,6 +1,8 @@
+mod proxies;
 mod proxy;
 mod reply;
 
+pub use proxies::*;
 pub use proxy::*;
 pub use reply::{Error, error_name, explain, parse};
 

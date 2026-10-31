@@ -17,6 +17,8 @@ pub mod qobject {
         #[qproperty(bool, busy)]
         #[qproperty(bool, ready)]
         #[qproperty(bool, allowed)]
+        #[qproperty(QString, device)]
+        #[qproperty(QString, look)]
         type DepthMaps = super::DepthRust;
 
         #[qinvokable]
@@ -33,6 +35,8 @@ pub mod qobject {
         fn keep(self: Pin<&mut DepthMaps>);
         #[qinvokable]
         fn install(self: Pin<&mut DepthMaps>, file: &QString);
+        #[qinvokable]
+        fn view(self: Pin<&mut DepthMaps>, depth: &QString, colour: bool);
     }
 
     impl cxx_qt::Threading for DepthMaps {}
@@ -59,6 +63,10 @@ pub struct DepthRust {
     pub busy: bool,
     pub ready: bool,
     pub allowed: bool,
+    pub device: QString,
+    pub look: QString,
+    pub viewing: bool,
+    pub again: Option<(String, bool)>,
     pub file: PathBuf,
     pub sha: String,
     pub input: u32,
@@ -99,6 +107,28 @@ impl DepthMaps {
         self.start(Work::Install(given));
     }
 
+    pub fn view(mut self: Pin<&mut Self>, depth: &QString, colour: bool) {
+        if std::mem::replace(&mut self.as_mut().rust_mut().viewing, true) {
+            self.as_mut().rust_mut().again = Some((depth.to_string(), colour));
+            return;
+        }
+        let depth: Depth = serde_json::from_str(&depth.to_string()).unwrap_or_default();
+        let (qt, image, sha) = (self.qt_thread(), self.file.clone(), self.sha.clone());
+        std::thread::spawn(move || {
+            let shown = crate::depthwork::look(&Places::default(), (&image, &sha), &depth, colour);
+            qt.queue(move |mut maps| {
+                let old = crate::app::path(&maps.look.to_string());
+                maps.as_mut().set_look(QString::from(&shown.map(|p| bus_url(&p)).unwrap_or_default()));
+                old.map(std::fs::remove_file);
+                maps.as_mut().rust_mut().viewing = false;
+                if let Some((depth, colour)) = maps.as_mut().rust_mut().again.take() {
+                    maps.view(&QString::from(&depth), colour);
+                }
+            })
+            .ok();
+        });
+    }
+
     fn start(mut self: Pin<&mut Self>, work: Work) {
         if self.busy {
             return;
@@ -113,9 +143,10 @@ impl DepthMaps {
             input: Some(self.input).filter(|i| *i > 0).unwrap_or(Depth::default().input),
             ..Depth::default()
         };
+        let device = self.device.to_string().parse().unwrap_or_default();
         std::thread::spawn(move || {
             let report = qt.clone();
-            let target = Target { image, sha, depth };
+            let target = Target { image, sha, depth, device };
             let (shown, failed) = run(&Places::default(), target, work, &stop, &mut |stage, progress| {
                 let stage = QString::from(stage);
                 report
@@ -138,5 +169,15 @@ impl DepthMaps {
             })
             .ok();
         });
+    }
+}
+
+fn bus_url(path: &std::path::Path) -> String {
+    crate::bus::url(&path.to_string_lossy())
+}
+
+impl Drop for DepthRust {
+    fn drop(&mut self) {
+        crate::app::path(&self.look.to_string()).map(std::fs::remove_file);
     }
 }

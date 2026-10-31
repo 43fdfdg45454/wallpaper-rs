@@ -56,6 +56,7 @@ pub struct Key<'a> {
     pub ease: Option<Value>,
     pub timeline: Option<&'a str>,
     pub remove: bool,
+    pub from: Option<f64>,
 }
 
 pub fn keyframe(doc: &Value, pointer: &str, mut key: Key) -> Result<Vec<Op>> {
@@ -71,6 +72,14 @@ pub fn keyframe(doc: &Value, pointer: &str, mut key: Key) -> Result<Vec<Op>> {
     let mut ops = match current.and_then(|c| c.get("keys")).and_then(Value::as_array) {
         Some(keys) => {
             let mut keys = keys.clone();
+            if let Some(from) = key.from {
+                let i = keys.iter().position(|k| (time(k) - from).abs() < 1e-3).ok_or_else(|| {
+                    anyhow!(said("editor.no_keyframe_s", "%1 has no keyframe at %2 s", &[&pointer, &from]))
+                })?;
+                let moved = keys.remove(i);
+                key.value = key.value.or_else(|| Some(moved[1].clone()));
+                key.ease = key.ease.or_else(|| moved.get(2).cloned());
+            }
             let at = keys.iter().position(|k| (time(k) - key.time).abs() < 1e-3);
             if key.remove {
                 let i = at.ok_or_else(|| {
@@ -96,7 +105,10 @@ pub fn keyframe(doc: &Value, pointer: &str, mut key: Key) -> Result<Vec<Op>> {
             set(doc, &format!("{pointer}/keys"), Value::Array(keys))
         }
         None => {
-            ensure!(!key.remove, said("editor.no_keyframes", "%1 has no keyframes", &[&pointer]));
+            ensure!(
+                !key.remove && key.from.is_none(),
+                said("editor.no_keyframes", "%1 has no keyframes", &[&pointer])
+            );
             if current.is_some_and(Value::is_object) {
                 bail!(said(
                     "editor.follows_another_source",

@@ -1,3 +1,4 @@
+mod action;
 pub mod actions;
 pub mod arrange;
 pub mod assets;

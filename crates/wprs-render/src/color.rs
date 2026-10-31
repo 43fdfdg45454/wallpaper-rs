@@ -75,20 +75,22 @@ pub(crate) fn brush(masks: &[&[Stroke]], aspect: f32) -> RgbaImage {
     let height = (512.0 / aspect.max(1.0)).min((32e6 / area.max(1e-9)).sqrt()).max(8.0);
     let (w, h) = (((height * aspect).round() as u32).clamp(1, 2048), height.round() as u32);
     let mut out = RgbaImage::new(w, h);
+    let (sx, sy) = (w as f32 / aspect, h as f32);
     for (channel, s, a, b) in segments() {
-        let px = |p: [f32; 2]| [p[0] * aspect * h as f32, p[1] * h as f32];
-        let (a, b, r) = (px(a), px(b), s.radius * h as f32);
-        let span = |i: usize, limit: u32| {
-            let lo = (a[i].min(b[i]) - r).floor().max(0.0) as u32;
-            lo.min(limit)..((a[i].max(b[i]) + r).ceil().max(0.0) as u32).min(limit)
+        let px = |p: [f32; 2]| [p[0] * aspect, p[1]];
+        let (a, b, r) = (px(a), px(b), s.radius);
+        let span = |i: usize, scale: f32, limit: u32| {
+            let lo = ((a[i].min(b[i]) - r) * scale).floor().max(0.0) as u32;
+            lo.min(limit)..((a[i].max(b[i]) + r) * scale).ceil().max(0.0).min(limit as f32) as u32
         };
         let ab = [b[0] - a[0], b[1] - a[1]];
         let len = (ab[0] * ab[0] + ab[1] * ab[1]).max(1e-9);
-        for y in span(1, h) {
-            for x in span(0, w) {
-                let p = [x as f32 + 0.5 - a[0], y as f32 + 0.5 - a[1]];
+        for y in span(1, sy, h) {
+            for x in span(0, sx, w) {
+                let p = [(x as f32 + 0.5) / sx - a[0], (y as f32 + 0.5) / sy - a[1]];
                 let t = ((p[0] * ab[0] + p[1] * ab[1]) / len).clamp(0.0, 1.0);
-                let d = (p[0] - t * ab[0]).hypot(p[1] - t * ab[1]);
+                let near = |e: f32, half: f32| (e.abs() - half).max(0.0);
+                let d = near(p[0] - t * ab[0], 0.5 / sx).hypot(near(p[1] - t * ab[1], 0.5 / sy));
                 let inner = r * s.hardness.min(0.999);
                 let cover = 1.0 - ((d - inner) / (r - inner).max(1e-6)).clamp(0.0, 1.0);
                 let Rgba(pixel) = out.get_pixel_mut(x, y);
@@ -99,4 +101,23 @@ pub(crate) fn brush(masks: &[&[Stroke]], aspect: f32) -> RgbaImage {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use wprs_core::edit::Stroke;
+
+    #[test]
+    fn brushes_reach_the_right_end_of_very_long_pictures() {
+        for aspect in [1.0, 300.0, 5000.0] {
+            let stroke = |x: f32| Stroke { radius: 0.4, hardness: 0.9, erase: false, points: vec![[x, 0.5]] };
+            let (left, right) = (stroke(0.0), stroke(1.0));
+            let mask = super::brush(&[std::slice::from_ref(&left), std::slice::from_ref(&right)], aspect);
+            let (w, h) = mask.dimensions();
+            assert!(w <= 2048 && h >= 1, "{aspect}: {w}x{h}");
+            assert_eq!(mask.get_pixel(0, h / 2)[0], 255, "{aspect}");
+            assert_eq!(mask.get_pixel(w - 1, h / 2)[1], 255, "{aspect}");
+            assert_eq!(mask.get_pixel(w / 2, h / 2)[1], 0, "{aspect}");
+        }
+    }
 }

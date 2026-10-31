@@ -1,3 +1,4 @@
+pub use crate::args::{Out, Page, Wait};
 use crate::bench::SceneCommand;
 use crate::edit::Edits;
 use crate::inputs::Inputs;
@@ -12,7 +13,7 @@ use crate::providers::Provider;
 use crate::remote::Remote;
 use crate::repo::Repo;
 use crate::server::Server;
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use wprs_core::Fit;
 
 pub const OUTPUT: &str = "Output name such as DP-1; every output when omitted";
@@ -25,28 +26,6 @@ pub const ITEM: &str = "Item: a file path, a uid or the last 6 or more character
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
-}
-
-#[derive(Args, Debug)]
-pub struct Out {
-    #[arg(short, long, default_value = "", help = OUTPUT)]
-    pub output: String,
-}
-
-#[derive(Args, Debug)]
-pub struct Wait {
-    #[arg(long, help = "Wait for the job, showing its progress, and print the finished job")]
-    pub wait: bool,
-    #[arg(long, help = "With --wait, print the finished job as JSON")]
-    pub json: bool,
-}
-
-#[derive(Args, Debug)]
-pub struct Page {
-    #[arg(long, default_value_t = 0, help = "Number of entries to skip")]
-    pub offset: u32,
-    #[arg(long, default_value_t = 50, help = "Number of entries to print, at most 500")]
-    pub limit: u32,
 }
 
 #[derive(Subcommand, Debug)]
@@ -92,6 +71,13 @@ pub enum Command {
         #[arg(long, help = "Accepted for symmetry: the state is always JSON")]
         json: bool,
     },
+    #[command(
+        about = "Show a pattern of lines and circles over the screens to check where they are; setting layout.monitors.<screen> to X,Y,W,H in millimetres places one by hand"
+    )]
+    Calibrate {
+        #[arg(value_parser = ["on", "off"])]
+        state: String,
+    },
     #[command(about = "Pause animated wallpapers")]
     Pause,
     #[command(about = "Resume animated wallpapers")]
@@ -118,25 +104,7 @@ pub enum Command {
     #[command(about = "Release a stream created with the stream command")]
     Release { output: String },
     #[command(about = "Tell the daemon where a screen sits, for wallpapers that span screens")]
-    Screen {
-        output: String,
-        #[arg(
-            long,
-            value_name = "X,Y",
-            default_value = "0,0",
-            allow_hyphen_values = true,
-            help = "Logical position"
-        )]
-        pos: String,
-        #[arg(long, value_name = "WxH", help = "Logical size")]
-        size: String,
-        #[arg(long, default_value_t = 1.0)]
-        scale: f64,
-        #[arg(long, default_value_t = 0.0, help = "Physical pixels per millimetre, 0 when unknown")]
-        density: f64,
-        #[arg(long, default_value = "", help = "Maker, model and serial number of the screen")]
-        identity: String,
-    },
+    Screen(crate::args::Placement),
     #[command(about = "Report whether a window covers an output")]
     Covered {
         output: String,

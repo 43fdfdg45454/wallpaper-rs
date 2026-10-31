@@ -56,7 +56,9 @@ fn the_model_puts_the_near_ball_in_front_of_the_room() {
     }
     let image = RgbImage::from_fn(W, H, |x, y| ray(x, y).0);
     let libraries = Places::default().library(None);
-    let mut estimator = Estimator::open(model.as_ref(), &libraries, wprs_depth::threads()).unwrap();
+    let device = std::env::var("WPRS_DEPTH_DEVICE").unwrap_or_else(|_| "auto".into()).parse().unwrap();
+    let mut estimator = Estimator::open(model.as_ref(), &libraries, wprs_depth::threads(), device).unwrap();
+    eprintln!("the model runs on {}", estimator.device().name());
     let started = Instant::now();
     let map = estimator.estimate(&image, 518).unwrap();
     let seconds = started.elapsed().as_secs_f32();

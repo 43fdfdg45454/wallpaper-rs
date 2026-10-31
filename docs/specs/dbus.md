@@ -340,7 +340,22 @@ Shows the image `path` with `edit_json`, an edit as described in "Edits and span
 of its saved edit wherever `path` is shown, without saving anything. Calls replace the preview
 and are rendered at most once per frame; an empty `edit_json` ends it, and so do 60 s without a
 call. `path` is absolute; a relative path, an invalid edit (the message names the field) or more
-than 2 MiB of JSON return `InvalidArgs`, a missing file `NotFound`.
+than 2 MiB of JSON return `InvalidArgs`, a missing file `NotFound`. While a preview lasts the
+daemon keeps the decoded image, so a new call only renders the edit again; at most 4 images are
+previewed at once and a fifth one ends the preview that was called the longest ago.
+
+### `ShowCalibration(b on)`
+
+Shows on every output that has its place from `SetOutputInfo` (and is not a `preview:` output)
+a pattern drawn over the canvas in millimetres of "Edits and spanning", instead of its wallpaper:
+lines at 45° and circles every 100 mm around the centre of the canvas, a horizontal and a
+vertical line through it and an orange frame along the edges of each screen. Where screens are
+placed right, the lines continue straight from one screen to the next behind their frames; a
+screen is moved with `SetOption("layout.monitors.<identity or output>", "x,y,w,h")` and the
+frames with `layout.bezel_mm`, and the pattern follows at once. `false` shows the wallpapers
+again, and so do 10 minutes after the last call with `true`. `GetState().calibrating` tells
+whether it is shown; `wprs-ctl calibrate on|off` and the *Screens* section of the image editor
+call it.
 
 ### `PreviewScene(s output, s dir, s document, d time)`
 
@@ -501,6 +516,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `library.hide_mature` | leave packages rated `mature` out of `Search` (unless the query has its own `content:` filter; `SearchPage.query` stays the one given) and `Browse`; a change emits `library` and `repos` | `false` |
 | `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
+| `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |
 | `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
 
 Only the changed key is validated. Unknown keys and invalid or out-of-range values return
@@ -1715,16 +1731,19 @@ that cannot be used is ignored with a warning.
 }
 ```
 
-- `version` is `1`; newer files are refused. Unknown fields, out-of-range values and broken
-  references are errors that name the field, such as `ops[1].ev: 7 is out of range -5 to 5`.
+- `version` is `1`; newer files are refused. Unknown fields, values of the wrong type, out-of-range
+  values and broken references are errors that name the field, such as
+  `ops[1].ev: 7 is out of range -5 to 5` or `masks.sky.invert: invalid type: integer \`3\`, expected a boolean`.
 - `source` holds the name, size, SHA-256 and pixel size of the image when the edit was created;
-  `wprs-ctl edit` warns when the file size or the pixel size changed.
+  when the file size or the pixel size changed, `wprs-ctl edit` warns, the image editor of the app
+  says so above the picture and the daemon logs a warning once for each change of the file.
 - `geometry`: `crop` `[x, y, w, h]` in fractions of the rotated image (`null` for all of it),
   `rotate` clockwise `0`, `90`, `180` or `270`, `straighten` from `-45` to `45` degrees
   counterclockwise keeping the largest centred rectangle, `flip` `[horizontal, vertical]`.
 - `ops` run in order, at most 24. Each has a unique `id` (1 to 64 letters, digits, `-` or `_`), a
   `type`, `enabled` (`true` when absent), an optional `mask` naming one of `masks` and an
-  optional `opacity` from `0` to `1`.
+  optional `opacity` from `0` to `1`. `wprs-ctl edit curve`, `blur`, `vignette` and `overlay`
+  refuse an `--id` that names an operation of another type instead of changing its type.
 
 | `type` | Fields |
 |--------|--------|
@@ -1733,7 +1752,7 @@ that cannot be used is ignored with a warning.
 | `contrast` | `amount`, `-100` to `100` |
 | `saturation` | `saturation` and `vibrance`, `-100` to `100` |
 | `curves` | `rgb`, `r`, `g` and `b`: empty or 2 to 16 `[x, y]` points from `0` to `1` with growing `x` |
-| `blur` | `radius`, `0` to `200` pixels of a picture 1000 pixels long |
+| `blur` | `radius`, `0` to `200` pixels of a picture 1000 pixels long; an edge spreads as under a Gaussian blur whose standard deviation is the radius |
 | `overlay` | `color` `#rrggbb`; `blend` `normal`, `multiply`, `screen`, `overlay`, `soft_light` or `color` |
 | `vignette` | `amount`, `-1` to `1`; `midpoint`, `roundness` and `feather`, `0` to `1` |
 
@@ -1741,7 +1760,10 @@ that cannot be used is ignored with a warning.
   (`center`, `radius` `[rx, ry]`, `feather`), `luminance` and `depth` (`range` `[low, high]`,
   `soft`; `depth` reads the depth map, `1` near, and selects nothing while the image has none)
   and up to 4 `brush` masks (`strokes` of `radius`, `hardness`, `erase` and `points`, at most
-  20 000 points in all). Every mask takes `invert`.
+  20 000 points in all), drawn into one map of at most 2048 pixels a side that keeps the whole
+  width of very long pictures. Every mask takes `invert`. Any valid name can be a mask, such as
+  `1`, `true` or `null`: `wprs-ctl edit set FILE ops.<id>.mask=<name>` gives it to an operation
+  and an empty name takes it away.
 - `outputs` crops the edited image for one screen, keyed by its identity (as in
   `SetOutputInfo`) or output name; `connector` names the output as a hint. The Android app keeps
   the framing chosen on the phone under `Android`, in the shape of the phone's screen, inside the
@@ -1804,7 +1826,17 @@ same size, no more than twice it, and a larger copy made for one of them replace
 JPEG images larger than needed are decoded at 1/2, 1/4 or 1/8 of their size and then reduced, and so
 are the thumbnails of the library.
 `wprs-ctl edit export` renders with the same code at the size of the edited image, or at `--size`
-after cropping the edited image to that shape.
+after cropping the edited image to that shape. The extension of the file chooses PNG, JPEG
+(`--quality`), lossless WebP or AVIF (`--quality`, encoded without native libraries at speed 6),
+and `--before` renders the picture with its geometry but without its operations and masks, as
+*Compare with the original* shows it in the app, whose *Export…* writes the same files.
+
+Every `wprs-ctl edit` command that changes an edit, and *Save* in the image editor of the app,
+keep the edits that came before in
+`$XDG_STATE_HOME/wallpaper-rs/edit-history/<SHA-256 of the canonical image path>.json` (mode
+`0600`, 100 steps and 8 MiB at most, the oldest dropped first), so `wprs-ctl edit undo` and
+`redo` and *Undo* and *Redo* in the app walk through the same steps. In the app a slider or a
+handle dragged in one go is one step, and the steps since the last save are kept when it saves.
 
 With the `span` fit, the outputs that use it form one canvas in millimetres. A screen measures its
 physical pixels divided by its density (96 dpi times its scale when the density is unknown or
@@ -1813,7 +1845,9 @@ the shared edge and `2 × layout.bezel_mm` apart; `[layout.monitors."<identity o
 `mm = [x, y, w, h]` places a screen by hand. The edited image covers the canvas, moved by
 `span.zoom` and `span.center`, and every output shows its part of it, so a picture keeps its
 physical size across screens of different densities. An output without `SetOutputInfo` shows
-`span` like `fill`.
+`span` like `fill`. `GetState().outputs[x].mm` tells where each screen sits on the canvas; the
+*Screens* section of the image editor draws them to scale, a screen dragged there is placed with
+`layout.monitors`, and `ShowCalibration` shows a pattern to check the result on the real screens.
 
 ## Scenes
 
@@ -1986,7 +2020,10 @@ written (`null` for none); clients ignore fields they do not know, and read enum
 not know as unknown. Adding a field, an enum value or a method keeps the model version;
 removing, renaming or retyping something increases it. Times are Unix seconds; `Fit` is
 `"fill"`, `"fit"`, `"stretch"`, `"center"`, `"tile"` or `"span"`; enums are written in snake case.
-`edited` tells whether an edit applies to the shown image and `screen` repeats `SetOutputInfo`.
+`edited` tells whether an edit applies to the shown image and `screen` repeats `SetOutputInfo`;
+`mm` is `[x, y, w, h]`, where the screen sits on the canvas in millimetres (see "Edits and
+spanning"), or `null` before `SetOutputInfo`. `calibrating` tells whether `ShowCalibration` shows
+its pattern.
 `parallax` tells whether the image moves in depth and `frames` counts the frames rendered for the
 output since it appeared. `refresh` is the refresh rate of its screen in Hz (`0` while unknown)
 and `fps` the most frames per second it renders now (see "Frame rate"). `buffers` is `"dmabuf"`
@@ -2016,13 +2053,13 @@ struct State {
     library_error: Option<String>, serial: u64, paused: bool, on_battery: bool, locked: bool,
     volume: f64, muted: bool, profile: Option<Uid>, jobs: u32,
     options: BTreeMap<String, Value>,
-    outputs: BTreeMap<String, OutputState>,
+    outputs: BTreeMap<String, OutputState>, calibrating: bool,
 }
 struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
-    edited: bool, screen: Option<Screen>, parallax: bool, frames: u64, refresh: u32, fps: u32,
+    edited: bool, screen: Option<Screen>, mm: Option<[f64; 4]>, parallax: bool, frames: u64, refresh: u32, fps: u32,
     buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
     particles: String, quality: String, quality_reason: String, console: Vec<String>,
 }

@@ -100,6 +100,13 @@ fn keyframes_animate_values() {
     act(&mut doc, json!({"keyframe": {"pointer": opacity, "time": 1}}));
     let middle = &doc.pointer(opacity).unwrap()["keys"][1];
     assert!(middle[0] == 1.0 && (middle[1].as_f64().unwrap() - 0.5).abs() < 1e-6);
+    act(&mut doc, json!({"keyframe": {"pointer": opacity, "time": 1.5, "from": 1}}));
+    let moved = &doc.pointer(opacity).unwrap()["keys"][1];
+    assert!(moved[0] == 1.5 && (moved[1].as_f64().unwrap() - 0.5).abs() < 1e-6, "{moved}");
+    act(&mut doc, json!({"keyframe": {"pointer": opacity, "time": 1, "from": 1.5}}));
+    let missing: Action =
+        serde_json::from_value(json!({"keyframe": {"pointer": opacity, "time": 3, "from": 7}})).unwrap();
+    assert!(plan(&doc, &missing).is_err(), "there is no keyframe at 7 s");
     act(&mut doc, json!({"keyframe": {"pointer": opacity, "time": 1, "remove": true}}));
     act(&mut doc, json!({"keyframe": {"pointer": opacity, "time": 0, "remove": true}}));
     act(&mut doc, json!({"keyframe": {"pointer": opacity, "time": 2, "remove": true}}));

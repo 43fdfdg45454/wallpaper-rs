@@ -653,6 +653,56 @@ msgstr ""
 "Las descargas están desactivadas en los ajustes. Instala archivos obtenidos "
 "por otra vía."
 
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/ScenePage.qml
+msgid "Back"
+msgstr "Volver"
+
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/SceneEntry.qml
+#: apps/wprs-app/qml/ScenePage.qml
+msgid "Save"
+msgstr "Guardar"
+
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/ScenePage.qml
+msgid "Undo"
+msgstr "Deshacer"
+
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/ScenePage.qml
+msgid "Redo"
+msgstr "Rehacer"
+
+#: apps/wprs-app/qml/EditActions.qml
+msgid "Compare with the original"
+msgstr "Comparar con el original"
+
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/ScenePage.qml
+msgid "Show on the desktop"
+msgstr "Ver en el escritorio"
+
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/SavedPresets.qml
+#: apps/wprs-app/qml/ScenePresets.qml
+msgid "Export…"
+msgstr "Exportar…"
+
+#: apps/wprs-app/qml/EditActions.qml
+msgid "Reset all"
+msgstr "Restablecer todo"
+
+#: apps/wprs-app/qml/EditActions.qml
+msgid "PNG pictures"
+msgstr "Imágenes PNG"
+
+#: apps/wprs-app/qml/EditActions.qml
+msgid "JPEG pictures"
+msgstr "Imágenes JPEG"
+
+#: apps/wprs-app/qml/EditActions.qml
+msgid "Lossless WebP pictures"
+msgstr "Imágenes WebP sin pérdida"
+
+#: apps/wprs-app/qml/EditActions.qml
+msgid "AVIF pictures"
+msgstr "Imágenes AVIF"
+
 #: apps/wprs-app/qml/EditCanvas.qml
 msgid ""
 "This computer has no graphics card the app can use. Show on the desktop "
@@ -676,6 +726,13 @@ msgstr "La imagen no se puede dibujar aquí"
 #: apps/wprs-app/qml/EditCanvas.qml
 msgid "The picture shown is not up to date. %1"
 msgstr "La imagen que se ve no está al día. %1"
+
+#: apps/wprs-app/qml/EditCanvas.qml
+msgid ""
+"This picture changed after it was edited, so the edit may no longer fit it."
+msgstr ""
+"Esta imagen cambió después de editarla, así que puede que la edición ya no "
+"le encaje."
 
 #: apps/wprs-app/qml/EditCanvas.qml
 msgid ""
@@ -730,14 +787,36 @@ msgid "Saving the map…"
 msgstr "Guardando el mapa…"
 
 #: apps/wprs-app/qml/EditDepth.qml
-msgid "This picture has no depth map yet. White is near and black is far."
+msgid "False colour, red near and blue far"
+msgstr "Falso color: rojo cerca y azul lejos"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid ""
+"This picture has no depth map yet. White is near and black is far. Once the "
+"model is downloaded, the map is made at once."
 msgstr ""
 "Esta imagen aún no tiene mapa de profundidad. El blanco está cerca y el "
-"negro, lejos."
+"negro, lejos. En cuanto se descarga el modelo, el mapa se calcula solo."
 
 #: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/StatusBar.qml
 msgid "Cancel"
 msgstr "Cancelar"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "Run the model on"
+msgstr "Ejecutar el modelo en"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "The fastest device"
+msgstr "El dispositivo más rápido"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "The processor"
+msgstr "El procesador"
+
+#: apps/wprs-app/qml/EditDepth.qml
+msgid "The graphics card (CUDA)"
+msgstr "La tarjeta gráfica (CUDA)"
 
 #: apps/wprs-app/qml/EditDepth.qml
 msgid "Generate the map"
@@ -896,6 +975,38 @@ msgstr "Voltear en horizontal"
 msgid "Flip vertically"
 msgstr "Voltear en vertical"
 
+#: apps/wprs-app/qml/EditLayout.qml
+msgid "Where the screens are"
+msgstr "Dónde están las pantallas"
+
+#: apps/wprs-app/qml/EditLayout.qml
+msgid "%1 × %2 mm"
+msgstr "%1 × %2 mm"
+
+#: apps/wprs-app/qml/EditLayout.qml
+msgid ""
+"Drag a screen to where it really stands; the space between two screens is "
+"their frames."
+msgstr ""
+"Arrastra cada pantalla hasta donde está de verdad; el espacio entre dos "
+"pantallas son sus marcos."
+
+#: apps/wprs-app/qml/EditLayout.qml
+msgid "The desktop has not told where its screens are yet."
+msgstr "El escritorio aún no ha dicho dónde están sus pantallas."
+
+#: apps/wprs-app/qml/EditLayout.qml
+msgid "Width of each screen frame (mm)"
+msgstr "Ancho del marco de cada pantalla (mm)"
+
+#: apps/wprs-app/qml/EditLayout.qml
+msgid "Show a pattern on the screens to check them"
+msgstr "Mostrar un patrón en las pantallas para comprobarlas"
+
+#: apps/wprs-app/qml/EditLayout.qml
+msgid "Place the screens automatically"
+msgstr "Colocar las pantallas automáticamente"
+
 #: apps/wprs-app/qml/EditLight.qml
 msgid "Exposure (EV)"
 msgstr "Exposición (EV)"
@@ -973,6 +1084,14 @@ msgid "Softness"
 msgstr "Suavidad"
 
 #: apps/wprs-app/qml/EditMasks.qml
+msgid "Farthest"
+msgstr "Lo más lejano"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Nearest"
+msgstr "Lo más cercano"
+
+#: apps/wprs-app/qml/EditMasks.qml
 msgid "Name of the mask"
 msgstr "Nombre de la máscara"
 
@@ -987,6 +1106,14 @@ msgstr "Degradado radial"
 #: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Brightness range"
 msgstr "Rango de brillo"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Depth range"
+msgstr "Rango de profundidad"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Drag the handles on the picture to place the mask."
+msgstr "Arrastra los tiradores sobre la imagen para colocar la máscara."
 
 #: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Invert"
@@ -1075,22 +1202,9 @@ msgstr "Paralaje"
 msgid "Edit %1"
 msgstr "Editar %1"
 
-#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/ScenePage.qml
-msgid "Back"
-msgstr "Volver"
-
-#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/SceneEntry.qml
-#: apps/wprs-app/qml/ScenePage.qml
-msgid "Save"
-msgstr "Guardar"
-
-#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/ScenePage.qml
-msgid "Show on the desktop"
-msgstr "Ver en el escritorio"
-
 #: apps/wprs-app/qml/EditPage.qml
-msgid "Reset all"
-msgstr "Restablecer todo"
+msgid "Saved as %1"
+msgstr "Guardado como %1"
 
 #: apps/wprs-app/qml/EditParallax.qml
 msgid "Move the picture in depth"
@@ -1168,10 +1282,6 @@ msgstr "Centro vertical"
 #: apps/wprs-app/qml/EditScreens.qml
 msgid "Spread this picture over every screen"
 msgstr "Extender esta imagen por todas las pantallas"
-
-#: apps/wprs-app/qml/EditScreens.qml
-msgid "The width of the screen frames is in the settings."
-msgstr "El ancho de los marcos de las pantallas está en los ajustes."
 
 #: apps/wprs-app/qml/Filters.qml
 msgid "Search, for example: tag:sea kind:image -fav:yes sort:random"
@@ -1911,10 +2021,6 @@ msgstr "Desinstalar también sus paquetes"
 msgid "Rename"
 msgstr "Cambiar el nombre"
 
-#: apps/wprs-app/qml/SavedPresets.qml apps/wprs-app/qml/ScenePresets.qml
-msgid "Export…"
-msgstr "Exportar…"
-
 #: apps/wprs-app/qml/SavedPresets.qml
 msgid "Import as preset…"
 msgstr "Importar como preajuste…"
@@ -2117,6 +2223,14 @@ msgstr ""
 msgid "Let clicks and taps on this screen reach its wallpaper"
 msgstr "Dejar que los clics y toques de esta pantalla lleguen a su fondo"
 
+#: apps/wprs-app/qml/SceneCurve.qml
+msgid ""
+"Click to add a point, drag to move it, double-click to remove it. Across is "
+"the life of a particle, up its value."
+msgstr ""
+"Haz clic para añadir un punto, arrástralo para moverlo y haz doble clic para "
+"quitarlo. A lo ancho va la vida de la partícula y hacia arriba su valor."
+
 #: apps/wprs-app/qml/SceneEditors.qml apps/wprs-app/qml/SceneInput.qml
 msgid "Not set"
 msgstr "Sin fijar"
@@ -2280,16 +2394,8 @@ msgid "Scene: %1"
 msgstr "Escena: %1"
 
 #: apps/wprs-app/qml/ScenePage.qml
-msgid "Undo"
-msgstr "Deshacer"
-
-#: apps/wprs-app/qml/ScenePage.qml
 msgid "Undo: %1"
 msgstr "Deshacer: %1"
-
-#: apps/wprs-app/qml/ScenePage.qml
-msgid "Redo"
-msgstr "Rehacer"
 
 #: apps/wprs-app/qml/ScenePage.qml
 msgid "Redo: %1"
@@ -2437,7 +2543,7 @@ msgstr "Pausar"
 msgid "Play"
 msgstr "Reproducir"
 
-#: apps/wprs-app/qml/SceneTimeBar.qml
+#: apps/wprs-app/qml/SceneTimeBar.qml apps/wprs-app/qml/SceneTimeline.qml
 msgid "%1 s"
 msgstr "%1 s"
 

@@ -17,6 +17,7 @@ Kirigami.Page {
     property alias settings: panel.settings
     property string spot
     property var picked: []
+    property bool moving
     property string notice
     property real clock: editor.time
     readonly property var view: JSON.parse(editor.view || "{}")

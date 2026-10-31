@@ -13,9 +13,9 @@ mod store;
 pub use fetch::{AGENT, Cancelled, allowed, download};
 pub use files::{beside, read, sha256, shape, write};
 #[cfg(feature = "infer")]
-pub use infer::{Estimator, Stage, TELEMETRY, background, decode, generate, threads};
+pub use infer::{Bench, Device, Estimator, Stage, TELEMETRY, background, bench, decode, generate, threads};
 pub use models::{Asset, MODEL, Part, RUNTIME};
-pub use process::{adjust, input_size, normalize, shrink, tensor};
+pub use process::{adjust, coloured, input_size, normalize, shrink, tensor};
 pub use store::CACHE_BYTES;
 
 use std::path::{Path, PathBuf};

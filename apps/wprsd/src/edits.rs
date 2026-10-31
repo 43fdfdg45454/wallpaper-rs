@@ -1,4 +1,5 @@
 use crate::daemon::{Daemon, State, output_name};
+use crate::editpreview::Preview;
 use crate::error::{invalid, not_found};
 use crate::store::private_dir;
 use crate::streams::OutputInfo;
@@ -8,18 +9,19 @@ use std::mem::MaybeUninit;
 use std::os::fd::OwnedFd;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, MutexGuard, Weak};
-use std::time::{Duration, Instant};
+use std::time::SystemTime;
 use wprs_core::{Edit, Fit, Place, Screen};
 use wprs_wayland::Window;
 
-const PREVIEW: Duration = Duration::from_secs(60);
 const MAX_DIRS: usize = 256;
 
 #[derive(Default)]
 pub(crate) struct Sidecars {
     fd: Option<OwnedFd>,
     dirs: HashSet<PathBuf>,
-    previews: HashMap<PathBuf, (Arc<Edit>, Instant)>,
+    pub(crate) previews: HashMap<PathBuf, Preview>,
+    warned: HashSet<(PathBuf, Option<SystemTime>)>,
+    pub(crate) calibration: crate::calibration::Calibration,
 }
 
 fn flags() -> WatchFlags {
@@ -62,18 +64,35 @@ impl Daemon {
                 .map(drop)
                 .unwrap_or_else(|e| tracing::debug!("cannot watch: {e}"));
         }
-        if let Some((edit, _)) = sidecars.previews.get(file) {
-            return Some(edit.clone());
+        if let Some(preview) = sidecars.previews.get(file) {
+            return Some(preview.edit.clone());
         }
         drop(st);
         match wprs_core::edit::load(file, &self.store.data.join("edits")) {
-            Ok(found) => found.map(|(_, edit)| Arc::new(edit)),
+            Ok(found) => found.map(|(_, edit)| self.check_source(file, edit)),
             Err(e) => {
                 tracing::warn!("ignoring an edit file that cannot be used");
                 tracing::debug!("{e}");
                 None
             }
         }
+    }
+
+    fn check_source(&self, file: &Path, edit: Edit) -> Arc<Edit> {
+        let meta = std::fs::metadata(file).ok();
+        let key = (file.to_owned(), meta.as_ref().and_then(|m| m.modified().ok()));
+        let pixels = wprs_render::image_size(file).map_or([0; 2], |(w, h)| [w, h]);
+        if edit.source.changed(meta.map_or(0, |m| m.len()), pixels) {
+            let warned = &mut self.state().sidecars.warned;
+            if warned.len() >= MAX_DIRS {
+                warned.clear();
+            }
+            if warned.insert(key) {
+                tracing::warn!("an image changed after it was edited, so its edit may no longer fit it");
+                tracing::debug!("{}", file.display());
+            }
+        }
+        Arc::new(edit)
     }
 
     pub(crate) fn place(&self, output: &str, fit: Fit, edit: Option<&Edit>) -> Place {
@@ -120,54 +139,6 @@ impl Daemon {
             self.changes.changed("state", vec![output]);
         }
         Ok(())
-    }
-
-    pub fn preview_edit(self: &Arc<Self>, path: &Path, json: &str) -> anyhow::Result<()> {
-        let path =
-            std::fs::canonicalize(path).map_err(|_| not_found(format!("cannot find {}", path.display())))?;
-        if json.len() > wprs_core::edit::MAX_BYTES {
-            return Err(invalid("the edit is too large").into());
-        }
-        let edit =
-            Some(json.trim()).filter(|j| !j.is_empty()).map(Edit::parse).transpose().map_err(invalid)?;
-        let started = {
-            let mut st = self.state();
-            let previews = &mut st.sidecars.previews;
-            match edit {
-                Some(edit) => previews.insert(path.clone(), (Arc::new(edit), Instant::now())).is_none(),
-                None => {
-                    previews.remove(&path);
-                    false
-                }
-            }
-        };
-        if started {
-            tokio::spawn(expire(Arc::downgrade(self), path));
-        }
-        self.configure_all();
-        Ok(())
-    }
-}
-
-async fn expire(daemon: Weak<Daemon>, path: PathBuf) {
-    while let Some(d) = daemon.upgrade() {
-        let now = Instant::now();
-        let due = {
-            let mut st = d.state();
-            let due = st.sidecars.previews.get(&path).map(|(_, at)| *at + PREVIEW);
-            due.filter(|due| *due > now).or_else(|| st.sidecars.previews.remove(&path).map(|_| now))
-        };
-        match due {
-            None => return,
-            Some(due) if due <= now => {
-                tracing::debug!("an edit preview expired");
-                return drop(tokio::task::spawn_blocking(move || d.configure_all()));
-            }
-            Some(due) => {
-                drop(d);
-                tokio::time::sleep_until(due.into()).await
-            }
-        }
     }
 }
 

@@ -10,6 +10,7 @@ Kirigami.Page {
     required property var item
     property alias editor: editor
     property string aspect
+    property string mask
     readonly property var edit: JSON.parse(editor.json || "{}")
     readonly property var values: JSON.parse(editor.values || "{}")
     readonly property var ops: edit.ops ?? []
@@ -31,6 +32,12 @@ Kirigami.Page {
         editor.run("mask", '{"name": "sky", "spec": "luminance:0,0.4"}');
         editor.run("depth", '{"near": 0.9, "dilate": 4}');
         editor.run("parallax", '{"source": "pointer", "steps": 8}');
+        editor.undo();
+        editor.redo();
+        editor.compare(true);
+        editor.compare(false);
+        if (!editor.canUndo || editor.canRedo)
+            throw new Error("the image editor did not record its steps");
         for (let i = page.tools.length - 1; i >= 0; i--)
             side.currentIndex = i;
         editor.preview(true);
@@ -39,41 +46,21 @@ Kirigami.Page {
     title: App.tr("Edit %1", item.title || String(item.path ?? "").split("/").pop())
     padding: 0
     Component.onCompleted: editor.open(item.path ?? "", item.width ?? 0, item.height ?? 0)
-    actions: [
-        Kirigami.Action {
-            text: App.tr("Back")
-            icon.name: "go-previous"
-            onTriggered: App.navigate(0, "")
-        },
-        Kirigami.Action {
-            text: App.tr("Save")
-            icon.name: "document-save"
-            enabled: editor.dirty
-            onTriggered: editor.save()
-        },
-        Kirigami.Action {
-            text: App.tr("Show on the desktop")
-            icon.name: "view-visible"
-            checkable: true
-            checked: editor.live
-            enabled: editor.ready
-            onTriggered: editor.preview(!checked)
-        },
-        Kirigami.Action {
-            text: App.tr("Reset all")
-            icon.name: "edit-reset"
-            enabled: editor.ready
-            onTriggered: page.run("reset")
-        }
-    ]
+    actions: bar.actions
 
     Editor {
         id: editor
     }
 
+    EditActions {
+        id: bar
+
+        page: page
+    }
+
     header: Kirigami.InlineMessage {
-        type: Kirigami.MessageType.Error
-        text: editor.error
+        type: editor.error !== "" ? Kirigami.MessageType.Error : Kirigami.MessageType.Positive
+        text: editor.error || (editor.exported ? App.tr("Saved as %1", editor.exported) : "")
         visible: text !== ""
     }
 

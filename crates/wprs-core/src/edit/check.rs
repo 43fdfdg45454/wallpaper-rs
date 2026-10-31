@@ -68,7 +68,7 @@ impl Edit {
     pub fn from_value(value: Value) -> Result<Edit, String> {
         let version = value.get("version").and_then(Value::as_u64).unwrap_or_default();
         ensure(version <= u64::from(VERSION), || format!("version {version} is newer than {VERSION}"))?;
-        let edit: Edit = serde_json::from_value(value.clone()).map_err(|e| e.to_string())?;
+        let edit: Edit = super::fields::typed(&value)?;
         unknown(&value, &serde_json::to_value(&edit).map_err(|e| e.to_string())?, "")?;
         edit.validate().map(|()| edit)
     }

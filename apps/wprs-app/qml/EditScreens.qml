@@ -79,10 +79,7 @@ ColumnLayout {
         onClicked: App.act("SetWallpaper", [tool.page.item.path, "", "span"])
     }
 
-    QQC2.Label {
+    EditLayout {
         Layout.fillWidth: true
-        text: App.tr("The width of the screen frames is in the settings.")
-        wrapMode: Text.Wrap
-        font: Kirigami.Theme.smallFont
     }
 }

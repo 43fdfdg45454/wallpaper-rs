@@ -97,3 +97,21 @@ fn places_turn_into_uv_rectangles() {
     let span = Place::Span { monitors, output: "B".into(), center: [0.5, 0.5], zoom: 1.0 };
     assert_eq!(span.uv(Fit::Span, (100, 50), (50, 50)), UvRect::compute(Fit::Fill, (100, 50), (50, 50)));
 }
+
+#[test]
+fn screens_are_placed_by_hand_through_the_settings() {
+    let mut c = Config::default();
+    c.set_option("layout.monitors.Maker Model 1", "10, -20.5, 597, 336").unwrap();
+    assert_eq!(c.layout.monitors["Maker Model 1"], Placed { mm: [10.0, -20.5, 597.0, 336.0] });
+    assert!(toml::to_string(&c).unwrap().contains("[layout.monitors.\"Maker Model 1\"]"));
+    for wrong in ["1,2,3", "0,0,0,10", "0,0,10,nan", "a,b,c,d", "0,0,20000,10"] {
+        assert!(c.set_option("layout.monitors.DP-1", wrong).is_err(), "{wrong}");
+    }
+    assert!(c.set_option("layout.monitors.", "0,0,1,1").is_err());
+    c.set_option("layout.monitors.Maker Model 1", "none").unwrap();
+    assert!(c.layout.monitors.is_empty());
+    for i in 0..Layout::MAX_MONITORS {
+        c.set_option(&format!("layout.monitors.S{i}"), "0,0,1,1").unwrap();
+    }
+    assert!(c.set_option("layout.monitors.one more", "0,0,1,1").is_err());
+}

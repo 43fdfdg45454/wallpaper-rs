@@ -11,7 +11,7 @@ wprs-core.workspace = true
 wprs-client.workspace = true
 wprs-format = { workspace = true, features = ["sign"] }
 wprs-providers.workspace = true
-wprs-render.workspace = true
+wprs-render = { workspace = true, features = ["avif"] }
 wprs-depth = { workspace = true, features = ["fetch", "infer"] }
 wprs-scene.workspace = true
 wprs-editor.workspace = true

@@ -6,6 +6,9 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
+[features]
+avif = ["image/avif"]
+
 [dependencies]
 wprs-core.workspace = true
 wprs-scene.workspace = true

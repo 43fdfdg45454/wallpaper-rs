@@ -1,14 +1,11 @@
 use crate::author::Author;
 use crate::steps::{action, edit};
 use crate::usage;
-use anyhow::{Context, Result, anyhow, bail, ensure};
-use serde_json::json;
+use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::Path;
-use wprs_client::Client;
-use wprs_editor::actions::visible;
 use wprs_editor::starters::{default_id, starter};
-use wprs_editor::{Project, assets, inspect, package};
+use wprs_editor::{Project, inspect, package};
 
 fn describe(project: &Project, json: bool) -> Result<()> {
     let problems = package::problems(&project.dir, &project.doc);
@@ -31,12 +28,8 @@ fn describe(project: &Project, json: bool) -> Result<()> {
     Ok(())
 }
 
-fn count(n: usize, what: &str) -> String {
+pub(crate) fn count(n: usize, what: &str) -> String {
     format!("{n} {what}{}", if n == 1 { "" } else { "s" })
-}
-
-fn runtime() -> Result<tokio::runtime::Runtime> {
-    Ok(tokio::runtime::Builder::new_current_thread().enable_all().build()?)
 }
 
 pub fn run(command: Author) -> Result<()> {
@@ -80,96 +73,8 @@ pub fn run(command: Author) -> Result<()> {
                 })?
             );
         }
-        Author::Prune { dir } => {
-            assets::prune(&dir, &Project::open(&dir)?.doc)?.iter().for_each(|p| println!("{p}"))
-        }
-        Author::History { dir } => {
-            let project = Project::open(&dir)?;
-            let (done, undone) = project.history.labels();
-            let step = |label: &&str| wprs_editor::history::step(label).local();
-            done.iter().for_each(|label| println!("{}", step(label)));
-            undone.iter().for_each(|label| println!("{} (undone)", step(label)));
-        }
-        Author::Recover { dir, discard } => {
-            let mut project = Project::open(&dir)?;
-            ensure!(project.pending.is_some(), "there are no unsaved changes to recover");
-            project.recover(!discard)?;
-            if !discard {
-                project.save()?;
-            }
-        }
-        Author::Validate { dir, json } => {
-            let project = Project::open(&dir)?;
-            let problems = package::problems(&project.dir, &project.doc);
-            for p in &problems {
-                match json {
-                    true => println!("{}", serde_json::to_string(p)?),
-                    false => {
-                        println!(
-                            "{}{}: {}",
-                            if p.warning { "warning: " } else { "" },
-                            p.pointer,
-                            p.said.local()
-                        )
-                    }
-                }
-            }
-            let errors = problems.iter().filter(|p| !p.warning).count();
-            ensure!(errors == 0, "{}", count(errors, "problem"));
-        }
-        Author::Build { dir, out, key, json } => {
-            let mut project = Project::open(&dir)?;
-            let out = out.map_or_else(|| package::output(&dir, &project.doc), Ok)?;
-            let signer = key.map(|key| crate::keys::signer(&key)).transpose()?;
-            let (sha256, size) = package::build(&mut project, &out, signer.as_ref())?;
-            match json {
-                true => println!("{}", json!({"path": out, "sha256": sha256, "size": size})),
-                false => println!("{sha256} {size} {}", out.display()),
-            }
-        }
-        Author::Preview { dir, output, time, stop } => {
-            let project = Project::open(&dir)?;
-            let document =
-                json!({"manifest": project.doc["manifest"], "scene": visible(&project.doc)}).to_string();
-            let (dir, document) = (fs::canonicalize(&dir)?, if stop { String::new() } else { document });
-            let path = dir.to_str().context("the path is not UTF-8")?.to_owned();
-            runtime()?.block_on(async {
-                Ok::<_, anyhow::Error>(
-                    Client::connect().await?.daemon.preview_scene(&output, &path, &document, time).await?,
-                )
-            })?;
-        }
-        Author::Apply { dir, output } => {
-            let mut project = Project::open(&dir)?;
-            ensure!(!project.dirty() && project.pending.is_none(), "save the scene first");
-            let out = package::applied(&project.doc)?;
-            package::build(&mut project, &out, None)?;
-            let path = out.to_str().context("the path is not UTF-8")?.to_owned();
-            runtime()?.block_on(apply(&path, &output))?;
-        }
-        Author::Schema { property, manifest } => {
-            let schema = match (property, manifest) {
-                (true, _) => wprs_scene::property_schema(),
-                (_, true) => wprs_format::manifest_schema(),
-                _ => wprs_scene::schema(),
-            };
-            println!("{}", serde_json::to_string_pretty(&schema)?);
-        }
+        Author::Folder(command) => crate::folder::run(command)?,
         other => bail!("{other:?} is not a scene command"),
     }
-    Ok(())
-}
-
-async fn apply(path: &str, output: &str) -> Result<()> {
-    let client = Client::connect().await?;
-    let (_, job) =
-        client.run_job(async { Ok(((), client.library.import(&[path], false).await?)) }, |_, _| {}).await?;
-    let report = job.output.unwrap_or_default();
-    let uid = report["imported"][0]["uid"].as_str().map(String::from);
-    let failed =
-        report["failed"][0]["error"].as_str().unwrap_or("the library refused the package").to_owned();
-    let uid = uid.ok_or_else(|| anyhow!(failed))?;
-    client.library.apply(&uid, output, "", "").await?;
-    println!("{uid}");
     Ok(())
 }

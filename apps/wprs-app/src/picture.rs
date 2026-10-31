@@ -74,6 +74,18 @@ impl Picture {
     }
 }
 
+pub fn export(file: &Path, edit: &Edit, out: &Path, quality: u32) -> Result<()> {
+    let renderer = Renderer::shared()?;
+    let image = decode_image(file, renderer.max_edge())?;
+    let depth = edit.depth.clone().unwrap_or_default();
+    let map = match edit.needs_depth() {
+        true => Places::default().map(file, &edit.source.sha256, &depth, 4096)?,
+        false => None,
+    };
+    let pixels = renderer.export_edit(&image, edit, map.as_ref(), None)?;
+    Ok(wprs_render::save(&pixels, out, quality.clamp(1, 100) as u8)?)
+}
+
 pub fn write(pixels: &RgbaImage) -> Result<PathBuf> {
     let dir = dirs::runtime_dir().unwrap_or_else(std::env::temp_dir);
     let id = DRAWN.fetch_add(1, Ordering::Relaxed);
@@ -123,7 +135,8 @@ impl Editor {
             self.as_mut().rust_mut().redraw = true;
             return;
         }
-        let (edit, whole, qt) = (self.edit.clone(), self.wanted, self.qt_thread());
+        let edit = if self.comparing { self.edit.before() } else { self.edit.clone() };
+        let (whole, qt) = (self.wanted, self.qt_thread());
         self.as_mut().rust_mut().drawing = true;
         bus::spawn(async move {
             let started = Instant::now();

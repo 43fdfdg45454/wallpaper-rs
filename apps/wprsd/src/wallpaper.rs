@@ -27,6 +27,9 @@ impl Daemon {
             let (resolved, chosen) = (st.config.resolve(output), st.config.chosen(output));
             (info.size, resolved, chosen, info.uploaded.clone(), st.refresh(output))
         };
+        if self.show_pattern(output, size, refresh) {
+            return None;
+        }
         let (image, mut transition) =
             self.playlist_media(output, resolved.playlist.take()).unwrap_or((resolved.image.take(), None));
         let shown = image.as_deref().map(|p| crate::look::look(chosen, || crate::look::author(p)));
@@ -132,6 +135,7 @@ impl Daemon {
         let pixels = (uploaded.as_ref() != Some(&upload))
             .then(|| self.load_image(&file, modified, Some(edge())))
             .transpose()?;
+        pixels.iter().for_each(|image| self.keep_decoded(&file, image));
         Ok((Picture { file, modified, pixels, edit, place, depth }, upload))
     }
 
@@ -149,6 +153,7 @@ impl Daemon {
         let max_edge = self.compositor.max_edge();
         let image = wprs_render::decode_image(path, edge.map_or(max_edge, |e| e.min(max_edge)))
             .with_context(|| format!("cannot decode {}", path.display()))?;
+        tracing::debug!("decoded a picture");
         let image = Arc::new(image);
         let mut st = self.state();
         st.images.retain(|_, (_, weak)| weak.strong_count() > 0);

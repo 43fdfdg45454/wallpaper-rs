@@ -72,6 +72,14 @@ fn invalid_files_name_the_field() {
     assert_eq!(broken("span/zoom", json!(0.5)), "span.zoom: 0.5 is out of range 1 to 8");
     assert_eq!(broken("version", json!(2)), "version 2 is newer than 1");
     assert!(broken("masks/sky/type", json!("sketch")).contains("unknown variant"));
+    assert!(broken("ops/1/ev", json!("bright")).starts_with("ops[1].ev: invalid type: string \"bright\""));
+    assert!(broken("masks/sky/invert", json!(3)).starts_with("masks.sky.invert: invalid type: integer `3`"));
+    assert!(
+        broken("geometry/rotate", json!(-90)).starts_with("geometry.rotate: invalid value: integer `-90`")
+    );
+    assert!(
+        broken("outputs/Maker Model 1234/crop", json!("all")).starts_with("outputs.Maker Model 1234.crop:")
+    );
     let crowded = json!({"version": 1, "ops": (0..25).map(|i| json!({"id": format!("e{i}"), "type": "exposure", "ev": 0})).collect::<Vec<_>>()});
     assert!(Edit::from_value(crowded).unwrap_err().contains("at most 24 ops"));
 }

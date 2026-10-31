@@ -25,6 +25,7 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
         ],
     ),
     ("Daemon1", "PreviewEdit", "edit preview", &["PATH", "KEY=VALUE"]),
+    ("Daemon1", "ShowCalibration", "calibrate", &["STATE"]),
     ("Daemon1", "PreviewScene", "scene preview", &["--output", "DIR", "=document of DIR", "--time"]),
     ("Daemon1", "GetSceneProperties", "prop ls", &["--output"]),
     ("Daemon1", "SetSceneProperty", "prop set", &["--output", "ID", "VALUE"]),

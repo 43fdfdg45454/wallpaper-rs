@@ -49,7 +49,9 @@ impl Daemon {
             self.library_changed(Vec::new());
             self.changes.changed("repos", Vec::new());
         }
-        if key.starts_with("layout.") {
+        if key.starts_with("layout.") && crate::calibration::calibrating(&self.state()) {
+            self.configure_all();
+        } else if key.starts_with("layout.") {
             self.respan(self.state());
         }
         Ok(())

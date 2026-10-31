@@ -256,6 +256,36 @@ msgstr "Abrir wallpaper-rs"
 msgid "Settings…"
 msgstr "Ajustes…"
 
+#: integrations/plasma-tray/contents/ui/ScreenButtons.qml
+#, kde-format
+msgid "Next"
+msgstr "Siguiente"
+
+#: integrations/plasma-tray/contents/ui/ScreenButtons.qml
+#, kde-format
+msgid "Choose…"
+msgstr "Elegir…"
+
+#: integrations/plasma-tray/contents/ui/ScreenButtons.qml
+#, kde-format
+msgid "Favorite"
+msgstr "Favorito"
+
+#: integrations/plasma-tray/contents/ui/ScreenButtons.qml
+#, kde-format
+msgid "Remove from favorites"
+msgstr "Quitar de favoritos"
+
+#: integrations/plasma-tray/contents/ui/ScreenButtons.qml
+#, kde-format
+msgid "Add to favorites"
+msgstr "Añadir a favoritos"
+
+#: integrations/plasma-tray/contents/ui/ScreenButtons.qml
+#, kde-format
+msgid "Images and videos"
+msgstr "Imágenes y vídeos"
+
 #: integrations/plasma-tray/contents/ui/ScreenRow.qml
 #, kde-format
 msgid "Background color"
@@ -286,36 +316,6 @@ msgstr "Destella o muestra patrones rápidos; lo has permitido"
 msgid "Flashes or shows fast patterns that can trigger seizures"
 msgstr ""
 "Destella o muestra patrones rápidos que pueden provocar crisis epilépticas"
-
-#: integrations/plasma-tray/contents/ui/ScreenRow.qml
-#, kde-format
-msgid "Next"
-msgstr "Siguiente"
-
-#: integrations/plasma-tray/contents/ui/ScreenRow.qml
-#, kde-format
-msgid "Choose…"
-msgstr "Elegir…"
-
-#: integrations/plasma-tray/contents/ui/ScreenRow.qml
-#, kde-format
-msgid "Favorite"
-msgstr "Favorito"
-
-#: integrations/plasma-tray/contents/ui/ScreenRow.qml
-#, kde-format
-msgid "Remove from favorites"
-msgstr "Quitar de favoritos"
-
-#: integrations/plasma-tray/contents/ui/ScreenRow.qml
-#, kde-format
-msgid "Add to favorites"
-msgstr "Añadir a favoritos"
-
-#: integrations/plasma-tray/contents/ui/ScreenRow.qml
-#, kde-format
-msgid "Images and videos"
-msgstr "Imágenes y vídeos"
 
 #: integrations/plasma-tray/contents/ui/Thumbnail.qml
 #, kde-format

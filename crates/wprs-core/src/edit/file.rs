@@ -17,13 +17,21 @@ fn hex(digest: &[u8]) -> String {
     digest.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-fn places(image: &Path, edits: &Path) -> [PathBuf; 2] {
+pub(super) fn key(image: &Path) -> String {
     let canonical = std::fs::canonicalize(image).or_else(|_| std::path::absolute(image));
-    let key = Sha256::digest(canonical.unwrap_or_else(|_| image.into()).as_os_str().as_bytes());
-    [image.with_added_extension("wprs.json"), edits.join(hex(&key) + ".json")]
+    hex(&Sha256::digest(canonical.unwrap_or_else(|_| image.into()).as_os_str().as_bytes()))
+}
+
+fn places(image: &Path, edits: &Path) -> [PathBuf; 2] {
+    [image.with_added_extension("wprs.json"), edits.join(key(image) + ".json")]
 }
 
 impl Source {
+    pub fn changed(&self, bytes: u64, pixels: [u32; 2]) -> bool {
+        let pixels = pixels != [0; 2] && self.pixels != [0; 2] && self.pixels != pixels;
+        self.bytes != 0 && self.bytes != bytes || pixels
+    }
+
     pub fn read(image: &Path, pixels: [u32; 2]) -> std::io::Result<Source> {
         let (mut file, mut hash, mut chunk) = (std::fs::File::open(image)?, Sha256::new(), vec![0; 1 << 16]);
         let mut bytes = 0;

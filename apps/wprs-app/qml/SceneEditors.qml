@@ -5,6 +5,8 @@ import org.kde.kirigami as Kirigami
 import io.github.wallpaper_rs.app
 
 Item {
+    id: host
+
     required property var input
     readonly property Component number: numberEditor
     readonly property Component check: checkEditor
@@ -141,38 +143,8 @@ Item {
     Component {
         id: curveEditor
 
-        ColumnLayout {
-            Canvas {
-                id: plot
-
-                readonly property var points: Array.isArray(input.value) ? input.value : []
-
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.gridUnit * 3
-                onPointsChanged: requestPaint()
-                onPaint: {
-                    const context = getContext("2d");
-                    context.reset();
-                    context.strokeStyle = Kirigami.Theme.highlightColor;
-                    context.lineWidth = 2;
-                    const values = points.map(p => Number(p[1]) || 0), top = Math.max(1, ...values);
-                    context.beginPath();
-                    points.forEach((p, i) => context[i ? "lineTo" : "moveTo"](p[0] * width, height - (Number(p[1]) || 0) / top * (height - 4) - 2));
-                    context.stroke();
-                }
-            }
-
-            QQC2.TextField {
-                Layout.fillWidth: true
-                text: JSON.stringify(input.value ?? [])
-                onEditingFinished: {
-                    try {
-                        input.commit(JSON.parse(text));
-                    } catch (error) {
-                        input.page.editor.error = App.tr("%1 is not valid JSON", text);
-                    }
-                }
-            }
+        SceneCurve {
+            input: host.input
         }
     }
 
