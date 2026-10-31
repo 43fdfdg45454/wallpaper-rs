@@ -1,7 +1,7 @@
 use super::{CALMING, ENGINE, LEFT, LEVEL, RETRIES};
-use chrono::Timelike;
 use std::sync::PoisonError;
 use std::sync::atomic::Ordering::Relaxed;
+use std::time::{SystemTime, UNIX_EPOCH};
 use wprs_scene::Why;
 
 pub(crate) fn retry() {
@@ -44,6 +44,9 @@ pub(crate) fn level() -> Option<[String; 3]> {
 }
 
 pub(crate) fn wall() -> f64 {
-    let now = chrono::Local::now();
-    now.naive_local().and_utc().timestamp() as f64 + f64::from(now.nanosecond() % 1_000_000_000) / 1e9
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let seconds = libc::time_t::try_from(now.as_secs()).unwrap_or_default();
+    let mut local = unsafe { std::mem::zeroed::<libc::tm>() };
+    let found = !unsafe { libc::localtime_r(&seconds, &mut local) }.is_null();
+    now.as_secs_f64() + if found { local.tm_gmtoff as f64 } else { 0.0 }
 }
