@@ -25,6 +25,18 @@ probe.peer = typeof RTCPeerConnection;
 const gl = document.createElement("canvas").getContext("webgl");
 const info = gl && gl.getExtension("WEBGL_debug_renderer_info");
 probe.webgl = gl ? String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER)) : null;
+const zoneOf = (g) => new g.Intl.DateTimeFormat().resolvedOptions().timeZone;
+document.body.append(Object.assign(document.createElement("iframe"), { hidden: true }));
+const inner = window[0];
+probe.routes = {
+  frame: zoneOf(inner), frameHour: new inner.Date(Date.UTC(2024, 0, 1, 12)).getHours(), frameLanguage: inner.navigator.language,
+  framePeer: typeof inner.RTCPeerConnection, made: new Intl.DateTimeFormat.prototype.constructor().resolvedOptions().timeZone,
+  madeHour: new (Object.getPrototypeOf(new Date()).constructor)(Date.UTC(2024, 0, 1, 12)).getHours(),
+};
+const code = "postMessage([new Intl.DateTimeFormat().resolvedOptions().timeZone, new Date(Date.UTC(2024, 0, 1, 12)).getHours(), navigator.language])";
+const worker = new Worker(URL.createObjectURL(new Blob([code], { type: "text/javascript" })));
+worker.onmessage = (event) => { probe.worker = event.data; };
+worker.onerror = (event) => { probe.worker = ["error", String(event.message)]; };
 wprs.onProperties((changed) => {
   Object.assign(probe.props, changed);
   if (changed.tint) document.body.style.background = changed.tint.hex;

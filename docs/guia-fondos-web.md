@@ -68,7 +68,10 @@ wprs.onSettings(({ fps, locale, volume }) => ajustar(fps, locale, volume));
 - `localStorage` e IndexedDB guardan entre arranques si declaras `"web": { "storage_kib": 64 }`
   (hasta 5120) y el usuario no lo oculta; sin eso, nada sobrevive.
 - `console.log` y los errores van al registro del servicio (`RUST_LOG=wprsd=debug`).
-- `wprs.volume` es el volumen del fondo para el sonido de tu página; a 0 está silenciada.
+- `wprs.volume` es el volumen del fondo para el sonido de tu página: puede sonar sin que nadie
+  toque nada, `<audio>`, `<video>` y `AudioContext` suenan a ese volumen (por el que les pongas) y
+  a 0 está silenciada. Los audios y vídeos del paquete o de la carpeta elegida se reproducen desde
+  una copia en memoria, de hasta 256 MiB cada uno.
 
 ## Carpetas elegidas
 
@@ -84,13 +87,17 @@ Con `"mode": "all"` también tienes la lista entera y los cambios:
 
 ```js
 const todas = await wprs.files("fotos");
-wprs.onFiles("fotos", ({ added, removed }) => actualizar(added, removed));
+wprs.onFiles("fotos", ({ added, removed, changed }) => actualizar(added, removed, changed));
 ```
+
+`changed` trae pares `[antes, ahora]` de los archivos que se reescribieron con el mismo nombre: el
+token nuevo carga el contenido nuevo.
 
 ## Lo que ve tu página
 
 Por defecto ve la zona horaria (`new Date()` da la hora local), el idioma (`navigator.language`),
-el modelo de la tarjeta gráfica a través de WebGL y su propio almacenamiento. El usuario puede
+lo que puede hacer la tarjeta gráfica a través de WebGL (en el teléfono, también su modelo) y su
+propio almacenamiento. El usuario puede
 ocultar cada cosa: entonces la página ve UTC, `en-US`, un nombre de tarjeta genérico (WebGL sigue
 funcionando) y nada guardado. Haz que funcione en todos esos casos.
 

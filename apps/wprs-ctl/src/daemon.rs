@@ -98,10 +98,18 @@ pub async fn job<T>(
     start: impl Future<Output = zbus::Result<(T, u64)>>,
     wait: &Wait,
 ) -> Result<T> {
+    Ok(finished(client, start, wait).await?.0)
+}
+
+pub async fn finished<T>(
+    client: &Client,
+    start: impl Future<Output = zbus::Result<(T, u64)>>,
+    wait: &Wait,
+) -> Result<(T, Option<wprs_core::model::Job>)> {
     if !wait.wait {
         let (value, id) = start.await.map_err(explain)?;
         println!("{id}");
-        return Ok(value);
+        return Ok((value, None));
     }
     let started = Cell::new(None);
     let tty = io::stderr().is_terminal();
@@ -124,7 +132,7 @@ pub async fn job<T>(
         (None, None) => bail!("stopped waiting"),
     };
     println!("{}", if wait.json { serde_json::to_string(&job)? } else { show::summary(&job) });
-    Ok(value)
+    Ok((value, Some(job)))
 }
 
 async fn watch(client: &Client, json: bool) -> Result<()> {

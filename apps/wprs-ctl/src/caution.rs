@@ -21,13 +21,22 @@ pub async fn apply(client: &Client, uid: &str, output: &str, fit: &str, preset: 
         }
         done => done,
     }?;
-    let details: wprs_core::model::ItemDetails = wprs_client::parse(&lib.get_item(uid).await?)?;
+    notice(client, uid).await
+}
+
+pub async fn installed(client: &Client, job: Option<&wprs_core::model::Job>) -> Result<()> {
+    let item = job.and_then(|j| j.output.as_ref()).and_then(|o| o.get("item")).and_then(|i| i.as_str());
+    match item {
+        Some(uid) => notice(client, uid).await,
+        None => Ok(()),
+    }
+}
+
+async fn notice(client: &Client, uid: &str) -> Result<()> {
+    let details: wprs_core::model::ItemDetails = wprs_client::parse(&client.library.get_item(uid).await?)?;
     let exposes = details.item.package.map(|p| p.exposes).unwrap_or_default();
     if let Some(notice) = wprs_format::web_notice(&exposes) {
-        eprintln!("{}\n{RESTRICT} {uid}", notice.local());
+        eprintln!("{}\n{}", notice.local(), wprs_format::web_restrict(uid).local());
     }
     Ok(())
 }
-
-pub const RESTRICT: &str =
-    "Restrict them with: wprs-ctl lib confirm hide_zone|hide_language|hide_gpu|hide_storage";

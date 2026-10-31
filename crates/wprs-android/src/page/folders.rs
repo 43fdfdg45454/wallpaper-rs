@@ -15,7 +15,9 @@ static SALT: OnceLock<RandomState> = OnceLock::new();
 static LOCK: Mutex<()> = Mutex::new(());
 
 fn token(host: &str, prop: &str, path: &Path) -> String {
-    let hash = format!("{:016x}", SALT.get_or_init(RandomState::new).hash_one(path));
+    use std::os::unix::fs::MetadataExt;
+    let stamp = fs::metadata(path).map_or((0, 0, 0), |m| (m.len(), m.mtime(), m.mtime_nsec()));
+    let hash = format!("{:016x}", SALT.get_or_init(RandomState::new).hash_one((path, stamp)));
     format!("https://{host}/{USER}/{prop}/{}", wprs_format::page::token_name(path, &hash))
 }
 

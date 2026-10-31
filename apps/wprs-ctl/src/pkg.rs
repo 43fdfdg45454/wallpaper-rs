@@ -1,5 +1,5 @@
 use crate::cli::{JSON, Page, Wait};
-use crate::daemon::job;
+use crate::daemon::finished;
 use crate::input::confirm;
 use crate::items::range;
 use crate::show::{self, bytes, list, prefix, short, table, text};
@@ -131,7 +131,7 @@ async fn install(
     asked: &mut HashMap<String, bool>,
 ) -> Result<()> {
     let start = |stale| client.repos.install(spec, stale, downgrade).map_ok(|id| ((), id));
-    match job(client, start(allow_stale), wait).await {
+    let (_, done) = match finished(client, start(allow_stale), wait).await {
         Err(e) if !allow_stale && error_name(&e) == Some(STALE) => {
             let (repo, name) = offered_by(client, spec).await?;
             let question = format!("Repository {name} is stale (its signed index expired). Install anyway?");
@@ -140,18 +140,11 @@ async fn install(
                 None => confirm(&question).await?,
             };
             asked.insert(repo, yes);
-            if yes { job(client, start(true), wait).await } else { Err(e) }
+            if yes { finished(client, start(true), wait).await } else { Err(e) }
         }
         done => done,
     }?;
-    let (_, id) = spec.split_once('/').unwrap_or(("", spec));
-    let page: BrowsePage = parse(&client.repos.browse(id.split('@').next().unwrap_or(id), 0, 50).await?)?;
-    if page.packages.iter().any(|p| p.kind == "web") {
-        let names = ["zone", "language", "gpu"].map(String::from);
-        let notice = wprs_format::web_notice(&names).map(|m| m.local()).unwrap_or_default();
-        eprintln!("{notice}\n{} ITEM", crate::caution::RESTRICT);
-    }
-    Ok(())
+    crate::caution::installed(client, done.as_ref()).await
 }
 
 async fn offered_by(client: &Client, spec: &str) -> Result<(String, String)> {

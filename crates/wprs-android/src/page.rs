@@ -61,10 +61,16 @@ fn privacy(pack: &Pack) -> Privacy {
     Privacy { zone, language, gpu, storage, network }
 }
 
-fn settings(pack: &Pack, preview: bool) -> Value {
+pub(crate) const PLAIN: &str = "en-US";
+
+fn languages(pack: &Pack, privacy: Privacy) -> Vec<String> {
+    let user = if privacy.language { library::languages() } else { vec![PLAIN.into()] };
+    user.into_iter().chain(pack.locale.clone()).collect()
+}
+
+fn settings(pack: &Pack, preview: bool, privacy: Privacy) -> Value {
     let power = Power::now();
-    let languages = library::languages();
-    let locale = languages.first().cloned().or_else(|| pack.locale.clone()).unwrap_or_default();
+    let locale = languages(pack, privacy).first().cloned().unwrap_or_default();
     let muted = settings::setting("playback.muted", None).map_or(true, |m| m != "false");
     let volume = if muted { 0.0 } else { 1.0 };
     json!({"fps": power.fps(preview), "quality": power.ceiling() as u8, "locale": locale, "volume": volume})
@@ -101,6 +107,7 @@ pub(crate) fn spec(handle: i64, uid: &str, path: &Path, preview: bool) -> Result
         "background": web.background, "network": privacy.network, "storage": privacy.storage,
         "fps": Power::now().fps(preview), "audio": audio && granted[0] && view.audio,
         "pointer": pointer && granted[1], "clicks": clicks && granted[2], "tell": tell,
+        "guard": script::guard(view),
     }))
 }
 

@@ -7,6 +7,8 @@ use std::path::PathBuf;
 use wprs_format::page::{csp, decoded, mime};
 
 const API: &str = ":wprs/api.js";
+const GUARD: &str = ":wprs/guard.js";
+const WORKER: &str = ":wprs/worker.js";
 const TAG: &str = "<script src=\"/:wprs/api.js\"></script>";
 const OWN: &str = "'self' data: blob:";
 
@@ -56,8 +58,14 @@ pub(crate) fn serve(handle: i64, url: &str) -> Result<Value, Error> {
     };
     let bare = url.split(['?', '#']).next().unwrap_or_default();
     let Some(path) = decoded(rest.split(['?', '#']).next().unwrap_or_default()) else { return Ok(json!({})) };
-    if path == API {
-        return Ok(reply("text/javascript", "text", json!(script::source(view))));
+    let script = match path.as_str() {
+        API => Some(script::source(view)),
+        GUARD => Some(script::guard(view)),
+        WORKER => rest.split_once('?').and_then(|(_, query)| script::worker(view, query)),
+        _ => None,
+    };
+    if let Some(text) = script {
+        return Ok(reply("text/javascript", "text", json!(text)));
     }
     if let Some(file) = folders::user(&path).and(view.files.get(bare)) {
         return Ok(reply(mime(&file.to_string_lossy()), "path", json!(file)));

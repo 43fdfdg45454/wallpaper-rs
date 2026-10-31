@@ -67,13 +67,15 @@ fn folders(folder: wprs_web::Folder) {
         l.files.extend(folder.files.iter().map(|(t, p)| (t.clone(), p.clone())));
         l.folders.insert(folder.prop.clone(), folder.clone())
     });
-    let before: Vec<String> = old.map(|f| f.files.into_iter().map(|(t, _)| t).collect()).unwrap_or_default();
+    let old = old.map(|f| f.files).unwrap_or_default();
+    let before: Vec<String> = old.iter().map(|(t, _)| t.clone()).collect();
     let now: Vec<String> = folder.files.iter().map(|(t, _)| t.clone()).collect();
-    let added: Vec<&String> = now.iter().filter(|t| !before.contains(t)).collect();
-    let removed: Vec<&String> = before.iter().filter(|t| !now.contains(t)).collect();
-    live(|l| removed.iter().for_each(|t| drop(l.files.remove(*t))));
-    if folder.all && (!added.is_empty() || !removed.is_empty()) {
-        tell(&json!({"files": {"prop": folder.prop, "added": added, "removed": removed}}));
+    live(|l| before.iter().filter(|t| !now.contains(t)).for_each(|t| drop(l.files.remove(t))));
+    let paths: std::collections::HashMap<&str, &std::path::Path> =
+        old.iter().chain(&folder.files).map(|(t, p)| (t.as_str(), p.as_path())).collect();
+    let path = |t: &str| paths.get(t).map(|p| p.to_path_buf());
+    if let Some(notice) = wprs_format::page::files(&folder.prop, &before, &now, path).filter(|_| folder.all) {
+        tell(&json!({ "files": notice }));
     }
 }
 
@@ -99,7 +101,7 @@ fn show(view: &std::rc::Rc<View>, visible: bool) {
         view.hidden_at.set(None);
         if view.stopped.replace(false) {
             view.loaded.set(false);
-            crate::view::load(view.web);
+            crate::view::load(view.id);
         }
         return;
     }
@@ -128,10 +130,16 @@ fn pointer(view: &View, at: Option<(f64, f64)>) {
         Some(at) => (3, at),
         None => (5, (0.0, 0.0)),
     };
-    unsafe {
-        let event = (a.wpe_event_pointer_move_new)(kind, view.wpe, 0, time(), 0, x, y, 0.0, 0.0);
-        (a.wpe_view_event)(view.wpe, event);
-        (a.wpe_event_unref)(event);
+    deliver(view, unsafe { (a.wpe_event_pointer_move_new)(kind, view.wpe, 0, time(), 0, x, y, 0.0, 0.0) });
+}
+
+fn deliver(view: &View, event: Ptr) {
+    if !event.is_null() {
+        let a = get();
+        unsafe {
+            (a.wpe_view_event)(view.wpe, event);
+            (a.wpe_event_unref)(event);
+        }
     }
 }
 
@@ -141,12 +149,10 @@ fn press(view: &View, (x, y): (f64, f64), button: u32) {
     }
     let a = get();
     pointer(view, Some((x, y)));
-    for (kind, modifiers) in [(1, 1 << (7 + button.clamp(1, 5))), (2, 0)] {
-        unsafe {
-            let event =
-                (a.wpe_event_pointer_button_new)(kind, view.wpe, 0, time(), modifiers, button, x, y, 1);
-            (a.wpe_view_event)(view.wpe, event);
-            (a.wpe_event_unref)(event);
-        }
+    for (kind, modifiers, count) in [(1, 1 << (7 + button.clamp(1, 5)), 1), (2, 0, 0)] {
+        let event = unsafe {
+            (a.wpe_event_pointer_button_new)(kind, view.wpe, 0, time(), modifiers, button, x, y, count)
+        };
+        deliver(view, event);
     }
 }

@@ -1,10 +1,12 @@
 use crate::ffi::{Ptr, get, text};
 use crate::glib::{NUL, connect, strings};
 use crate::state::{Engine, FILTER, WAITING, engine, set_engine};
+use std::path::PathBuf;
 use wprs_web::{Link, Start, csp, filter};
 
 thread_local! {
     pub static DISPLAY: std::cell::Cell<Ptr> = const { std::cell::Cell::new(std::ptr::null_mut()) };
+    static STORE: std::cell::RefCell<PathBuf> = const { std::cell::RefCell::new(PathBuf::new()) };
 }
 
 pub fn start(link: Link, start: Start) -> Result<(), String> {
@@ -50,7 +52,9 @@ pub fn start(link: Link, start: Start) -> Result<(), String> {
             None => (a.webkit_network_session_new_ephemeral)(),
         };
         connect(session, "download-started", cancel as *const (), std::ptr::null_mut());
-        compile(&start.network);
+        let store = store().map_err(|e| format!("the network filter of the page cannot be built: {e}"))?;
+        compile(&start.network, &store);
+        STORE.with(|s| *s.borrow_mut() = store);
         set_engine(Engine { link, start, context, session, entries, preload });
     }
     Ok(())
@@ -60,15 +64,24 @@ unsafe extern "C" fn cancel(_session: Ptr, download: Ptr, _data: Ptr) {
     unsafe { (get().webkit_download_cancel)(download) };
 }
 
-fn store() -> std::path::PathBuf {
-    std::env::temp_dir().join(format!("wprs-web-{}", std::process::id()))
+fn store() -> std::io::Result<PathBuf> {
+    use std::io::Read;
+    use std::os::unix::fs::DirBuilderExt;
+    let runtime =
+        std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from).filter(|p| p.is_absolute() && p.is_dir());
+    let mut salt = [0u8; 8];
+    std::fs::File::open("/dev/urandom")?.read_exact(&mut salt)?;
+    let name = format!("wprs-web-{}-{:016x}", std::process::id(), u64::from_le_bytes(salt));
+    let dir = runtime.unwrap_or_else(std::env::temp_dir).join(name);
+    std::fs::DirBuilder::new().mode(0o700).create(&dir)?;
+    Ok(dir)
 }
 
-unsafe fn compile(network: &[String]) {
+unsafe fn compile(network: &[String], store: &std::path::Path) {
     let a = get();
     let rules = filter(network);
     unsafe {
-        let path = text(&store().to_string_lossy());
+        let path = text(&store.to_string_lossy());
         let store = (a.webkit_user_content_filter_store_new)(path.as_ptr());
         let bytes = (a.g_bytes_new)(rules.as_ptr().cast(), rules.len());
         let done = compiled as unsafe extern "C" fn(Ptr, Ptr, Ptr) as Ptr;
@@ -88,7 +101,7 @@ unsafe extern "C" fn compiled(store: Ptr, result: Ptr, _data: Ptr) {
     let a = get();
     let mut error = std::ptr::null_mut();
     let made = unsafe { (a.webkit_user_content_filter_store_save_finish)(store, result, &mut error) };
-    let _ = std::fs::remove_dir_all(self::store());
+    let _ = STORE.with(|s| std::fs::remove_dir_all(&*s.borrow()));
     if made.is_null() {
         crate::state::send(&wprs_web::FromWeb::Failed(
             "the network filter of the page cannot be built".into(),

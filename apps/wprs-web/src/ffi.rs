@@ -68,11 +68,14 @@ api! {
     webkit_get_major_version: fn() -> c_uint;
     webkit_get_minor_version: fn() -> c_uint;
     webkit_web_view_get_type: fn() -> GType;
+    webkit_website_policies_get_type: fn() -> GType;
+    webkit_user_content_manager_remove_all_scripts: fn(Ptr);
     webkit_web_context_get_type: fn() -> GType;
     webkit_web_view_get_wpe_view: fn(Ptr) -> Ptr;
     webkit_web_context_set_preferred_languages: fn(Ptr, *const Text);
     webkit_web_view_load_uri: fn(Ptr, Text);
     webkit_web_view_evaluate_javascript: fn(Ptr, Text, isize, Text, Text, Ptr, Ptr, Ptr);
+    webkit_web_view_evaluate_javascript_finish: fn(Ptr, Ptr, *mut Ptr) -> Ptr;
     webkit_web_view_set_is_muted: fn(Ptr, c_int);
     webkit_web_view_terminate_web_process: fn(Ptr);
     webkit_web_view_get_settings: fn(Ptr) -> Ptr;

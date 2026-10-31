@@ -411,8 +411,8 @@ declares `network` in `inputs`, and only then. Pages receive their settings thro
 | `rgb.setImage(bytes, w, h)` | sends RGBA pixels of at most 64 × 16 to the RGB lighting of the computer, at most 30 times a second, only with `permissions.rgb` and once the user allows it for the package |
 
 Nothing reaches the page without the input it needs, and a page never sees paths, device names,
-the battery or the list of fonts. It sees the time zone, the language and the graphics card through
-WebGL, and keeps its storage, until the user restricts each of them for the package; every client
+the battery or the list of fonts. It sees the time zone, the language and what the graphics card
+can do through WebGL, and keeps its storage, until the user restricts each of them for the package; every client
 shows a notice saying so (`web.md`, "Privacy"). `onMedia`, `openShortcut` and `rgb.setImage` exist
 but do nothing while their features are refused. Web pages with storage get the `storage` facet.
 

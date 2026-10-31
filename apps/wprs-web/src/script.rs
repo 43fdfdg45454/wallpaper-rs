@@ -1,12 +1,16 @@
 use crate::ffi::{Ptr, get, text};
 use crate::state::{all, engine, live, send};
 use serde_json::{Value, json};
+use std::ffi::c_int;
 use wprs_web::FromWeb;
 
 const POST: &str = "(m) => window.webkit.messageHandlers.wprs.postMessage(JSON.stringify(m))";
 const MAX_SAID: u32 = 200;
+const MEDIA: &str = include_str!("media.js");
+const ALL: c_int = 0;
+const TOP: c_int = 1;
 
-pub fn source(view: u32) -> Vec<String> {
+fn source(view: u32) -> Vec<(String, c_int)> {
     let Some(engine) = engine() else { return Vec::new() };
     let init = live(|l| {
         let s = &l.settings;
@@ -17,11 +21,28 @@ pub fn source(view: u32) -> Vec<String> {
             "settings": {"fps": s.fps, "quality": s.quality, "locale": s.locale, "volume": s.volume},
         })
     });
-    let mut scripts = vec![wprs_format::page::api(&init, POST)];
+    let mut scripts = vec![(wprs_format::page::api(&init, POST), TOP)];
     if engine.start.mask_gpu {
-        scripts.push(wprs_format::page::MASK.into());
+        scripts.push((format!("({})(globalThis);", wprs_format::page::MASK.trim_end()), TOP));
     }
+    scripts.push((wprs_format::page::VOLUME.into(), ALL));
+    scripts.push((MEDIA.into(), ALL));
+    scripts.extend(engine.preload.clone().map(|p| (p, TOP)));
     scripts
+}
+
+pub fn install(view: u32, manager: Ptr) {
+    let a = get();
+    unsafe {
+        (a.webkit_user_content_manager_remove_all_scripts)(manager);
+        for (source, frames) in source(view) {
+            let source = text(&source);
+            let script =
+                (a.webkit_user_script_new)(source.as_ptr(), frames, 0, std::ptr::null(), std::ptr::null());
+            (a.webkit_user_content_manager_add_script)(manager, script);
+            (a.webkit_user_script_unref)(script);
+        }
+    }
 }
 
 pub fn tell(message: &Value) {

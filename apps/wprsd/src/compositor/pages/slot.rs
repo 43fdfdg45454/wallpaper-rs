@@ -36,6 +36,9 @@ pub(in crate::compositor) struct PageSlot {
     pub(in crate::compositor) hidden: bool,
     pub(in crate::compositor) salt: [u8; 32],
     pub(in crate::compositor) scanned: Option<Instant>,
+    pub(in crate::compositor) scoped: bool,
+    pub(in crate::compositor) ready: bool,
+    pub(in crate::compositor) full: bool,
 }
 
 impl PageSlot {
@@ -64,6 +67,9 @@ impl PageSlot {
             hidden: false,
             salt,
             scanned: None,
+            scoped: false,
+            ready: false,
+            full: false,
         }
     }
 
@@ -79,7 +85,8 @@ impl PageSlot {
         self.stop();
         let Some(program) = crate::pages::helper() else { return };
         let networked = self.spec.privacy.network && !self.spec.pack.network.is_empty();
-        let isolation = Isolation { network: !networked, devices: self.hidden };
+        let isolation = Isolation { network: !networked, devices: self.hidden, limits: true };
+        (self.scoped, self.ready) = (wprs_web::scope().is_some(), false);
         let zone = !self.spec.privacy.zone;
         let spawned = wprs_web::spawn(&program, isolation, |c| {
             if zone {

@@ -95,3 +95,15 @@ pub fn web_failed() -> String {
 pub fn web_stalled() -> String {
     tr("The web page drew nothing for 10 seconds and is off; the background color shows instead.")
 }
+
+pub fn web_full() -> String {
+    tr(
+        "The web page keeps much more data than it declared, so it runs without keeping anything until its data is cleared.",
+    )
+}
+
+pub fn web_crashed() -> String {
+    tr(
+        "The web page crashed or stopped answering four times in a row and is off; the background color shows instead.",
+    )
+}

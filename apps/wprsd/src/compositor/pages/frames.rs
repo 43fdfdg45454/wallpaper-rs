@@ -95,13 +95,22 @@ fn take(
     now: Instant,
 ) {
     match message {
-        FromWeb::Ready { version, .. } => tracing::debug!(version, "the web helper started"),
+        FromWeb::Ready { version, .. } => {
+            slot.ready = true;
+            tracing::debug!(version, "the web helper started");
+        }
         FromWeb::Unavailable(reason) => {
             slot.failures = RETRIES;
             slot.fail(reason.clone(), now);
             slot.error = Some(crate::words::web_old(&reason));
         }
-        FromWeb::Failed(reason) => slot.fail(reason, now),
+        FromWeb::Failed(reason) => {
+            if slot.scoped && !slot.ready {
+                tracing::info!("the web helper does not start in a limited scope, starting it without one");
+                wprs_web::unscoped();
+            }
+            slot.fail(reason, now)
+        }
         FromWeb::Buffer { view, id, size, fourcc, modifier, offset, stride } => {
             let shared = Shared { id, size, fourcc, modifier, offset, stride };
             let imported = match (view_of(slot, view), fds.first()) {
@@ -127,8 +136,12 @@ fn take(
             drawn(slot);
         }
         FromWeb::Pixels { view, slot: index, size, stride, fresh } => {
-            if let (Some(v), Some(fd)) = (view_of(slot, view), fds.first().filter(|_| fresh)) {
-                let _ = v.map(fd, size, stride);
+            let mapped = match (view_of(slot, view), fds.first().filter(|_| fresh)) {
+                (Some(v), Some(fd)) => v.map(fd, size, stride),
+                _ => Ok(()),
+            };
+            if let Err(e) = mapped {
+                return slot.fail(format!("the web helper sent a frame that cannot be read: {e}"), now);
             }
             let uploaded = view_of(slot, view).map(|v| v.pixels(renderer, index, size));
             if let Some(Err(e)) = uploaded {
@@ -140,6 +153,11 @@ fn take(
         FromWeb::Wants { audio } => slot.audio = audio,
         FromWeb::Loaded { .. } => tracing::debug!("the web page loaded"),
         FromWeb::Crashed { .. } => tracing::warn!("the web page crashed and is loading again"),
+        FromWeb::Broken { .. } => {
+            slot.failures = RETRIES;
+            slot.fail(crate::words::web_crashed(), now);
+            slot.error = Some(crate::words::web_crashed());
+        }
         FromWeb::Said(text) if text == "sandbox: off" => slot.sandbox = "reduced",
         FromWeb::Said(text) => tracing::debug!("web page: {text}"),
     }
@@ -147,6 +165,6 @@ fn take(
 
 fn drawn(slot: &mut PageSlot) {
     if slot.waiting.take().is_some() {
-        (slot.failures, slot.error) = (0, None);
+        (slot.failures, slot.error) = (0, slot.full.then(crate::words::web_full));
     }
 }

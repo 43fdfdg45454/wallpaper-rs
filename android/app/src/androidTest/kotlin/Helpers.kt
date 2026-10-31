@@ -49,3 +49,18 @@ fun waitFor(done: () -> Boolean): Boolean {
     while (!done() && System.currentTimeMillis() < end) Thread.sleep(20)
     return done()
 }
+
+fun <T> zoned(zone: String, body: () -> T): T {
+    val instrumentation = InstrumentationRegistry.getInstrumentation()
+    val alarms = instrumentation.targetContext.getSystemService(android.app.AlarmManager::class.java)
+    val before = java.util.TimeZone.getDefault().id
+    instrumentation.uiAutomation.adoptShellPermissionIdentity("android.permission.SET_TIME_ZONE")
+    try {
+        alarms.setTimeZone(zone)
+        org.junit.Assert.assertTrue("the zone of the phone is $zone", waitFor { java.util.TimeZone.getDefault().id == zone })
+        return body()
+    } finally {
+        alarms.setTimeZone(before)
+        instrumentation.uiAutomation.dropShellPermissionIdentity()
+    }
+}

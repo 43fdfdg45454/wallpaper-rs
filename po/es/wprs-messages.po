@@ -1786,8 +1786,8 @@ msgid "your language"
 msgstr "tu idioma"
 
 #: crates/wprs-format/src/web.rs
-msgid "the model of your graphics card"
-msgstr "el modelo de tu tarjeta gráfica"
+msgid "what your graphics card can do"
+msgstr "lo que puede hacer tu tarjeta gráfica"
 
 #: crates/wprs-format/src/web.rs
 msgid "data it keeps on this computer"
@@ -1796,6 +1796,15 @@ msgstr "datos que guarda en este equipo"
 #: crates/wprs-format/src/web.rs
 msgid "the network, to reach the sites it names"
 msgstr "la red, para llegar a los sitios que nombra"
+
+#: crates/wprs-format/src/web.rs
+msgid ""
+"This web wallpaper uses %1. You can restrict each of them in its settings."
+msgstr "Este fondo web usa %1. Puedes restringir cada cosa en sus ajustes."
+
+#: crates/wprs-format/src/web.rs
+msgid "Restrict them with: %1"
+msgstr "Restríngelos con: %1"
 
 #: crates/wprs-scene/src/bones.rs
 msgid "clip"

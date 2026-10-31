@@ -9,6 +9,7 @@ mod scheme;
 mod script;
 mod state;
 mod view;
+mod watch;
 
 use ffi::{Ptr, get};
 use std::ffi::c_int;

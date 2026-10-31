@@ -1,5 +1,6 @@
 pub const API: &str = include_str!("page/api.js");
 pub const MASK: &str = include_str!("page/mask.js");
+pub const VOLUME: &str = include_str!("page/volume.js");
 pub const INIT: &str = "__WPRS_INIT__";
 pub const POST: &str = "__WPRS_POST__";
 
@@ -83,6 +84,23 @@ pub fn decoded(path: &str) -> Option<String> {
         }
     }
     String::from_utf8(out).ok()
+}
+
+pub fn files(
+    prop: &str,
+    before: &[String],
+    now: &[String],
+    path: impl Fn(&str) -> Option<std::path::PathBuf>,
+) -> Option<serde_json::Value> {
+    let fresh: Vec<&String> = now.iter().filter(|t| !before.contains(t)).collect();
+    let gone: Vec<&String> = before.iter().filter(|t| !now.contains(t)).collect();
+    let same = |a: &str, b: &str| path(a).is_some_and(|p| path(b) == Some(p));
+    let changed: Vec<(&String, &String)> =
+        fresh.iter().filter_map(|t| gone.iter().find(|g| same(g, t)).map(|g| (*g, *t))).collect();
+    let added: Vec<&String> = fresh.into_iter().filter(|t| !changed.iter().any(|c| c.1 == *t)).collect();
+    let removed: Vec<&String> = gone.into_iter().filter(|t| !changed.iter().any(|c| c.0 == *t)).collect();
+    let notice = serde_json::json!({"prop": prop, "added": added, "removed": removed, "changed": changed});
+    (!added.is_empty() || !removed.is_empty() || !changed.is_empty()).then_some(notice)
 }
 
 pub fn token_name(path: &std::path::Path, hash: &str) -> String {

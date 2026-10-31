@@ -9,6 +9,22 @@ use std::process::{Child, Command, Stdio};
 pub struct Isolation {
     pub network: bool,
     pub devices: bool,
+    pub limits: bool,
+}
+
+const LIMITS: [&str; 5] =
+    ["CPUQuota=100%", "CPUWeight=20", "MemoryMax=1536M", "MemorySwapMax=0", "TasksMax=512"];
+static SCOPES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+pub fn scope() -> Option<std::path::PathBuf> {
+    let runtime =
+        std::env::var_os("XDG_RUNTIME_DIR").filter(|_| SCOPES.load(std::sync::atomic::Ordering::Relaxed))?;
+    Path::new(&runtime).join("systemd/private").exists().then_some(())?;
+    std::env::split_paths(&std::env::var_os("PATH")?).map(|d| d.join("systemd-run")).find(|p| p.is_file())
+}
+
+pub fn unscoped() {
+    SCOPES.store(false, std::sync::atomic::Ordering::Relaxed);
 }
 
 fn write(path: &[u8], text: &[u8]) -> bool {
@@ -51,7 +67,18 @@ pub fn spawn(
     let raw = theirs.as_raw_fd();
     let (uid, gid) = (unsafe { libc::getuid() }, unsafe { libc::getgid() });
     let (uids, gids) = (format!("{uid} {uid} 1"), format!("{gid} {gid} 1"));
-    let mut cmd = Command::new(program);
+    let mut cmd = match isolation.limits.then(scope).flatten() {
+        Some(run) => {
+            let mut cmd = Command::new(run);
+            cmd.args(["--user", "--scope", "--quiet", "--collect"]);
+            for limit in LIMITS {
+                cmd.args(["-p", limit]);
+            }
+            cmd.arg("--").arg(program);
+            cmd
+        }
+        None => Command::new(program),
+    };
     cmd.stdin(Stdio::null());
     command(&mut cmd);
     unsafe {
@@ -62,6 +89,7 @@ pub fn spawn(
             }
             enter(isolation, (uids.as_bytes(), gids.as_bytes()));
             libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL);
+            libc::setpriority(libc::PRIO_PROCESS, 0, 10);
             Ok(())
         })
     };

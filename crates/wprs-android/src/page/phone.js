@@ -1,27 +1,4 @@
 (() => {
-  const peers = ["RTCPeerConnection", "webkitRTCPeerConnection", "RTCDataChannel", "RTCIceCandidate", "RTCSessionDescription"];
-  const strip = (w) => {
-    for (const name of peers) {
-      try {
-        delete w[name];
-      } catch (e) {}
-    }
-    try {
-      Object.defineProperty(w.Navigator.prototype, "serviceWorker", { get: () => undefined });
-    } catch (e) {}
-    return w;
-  };
-  strip(window);
-  for (const [proto, name] of [[HTMLIFrameElement.prototype, "contentWindow"], [HTMLIFrameElement.prototype, "contentDocument"]]) {
-    const getter = Object.getOwnPropertyDescriptor(proto, name).get;
-    Object.defineProperty(proto, name, {
-      get() {
-        const value = getter.call(this);
-        if (value) strip(value.defaultView || value);
-        return value;
-      },
-    });
-  }
   const native = window.requestAnimationFrame.bind(window);
   let fps = wprs.fps || 60;
   let last = 0;

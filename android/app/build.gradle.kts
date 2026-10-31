@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.compose.icons)
     implementation(libs.media3.exoplayer)
     implementation(libs.work.runtime)
+    implementation(libs.webkit)
     testImplementation(libs.junit)
     androidTestImplementation(libs.test.runner)
     androidTestImplementation(libs.test.junit)

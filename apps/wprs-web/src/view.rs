@@ -7,6 +7,8 @@ use std::ffi::c_int;
 use std::rc::Rc;
 use wprs_web::FromWeb;
 
+const RELOADS: u32 = 3;
+const STABLE: u32 = 60_000;
 const SETTINGS: [(&str, bool); 12] = [
     ("enable-webrtc", false),
     ("enable-media-stream", false),
@@ -24,7 +26,6 @@ const SETTINGS: [(&str, bool); 12] = [
 
 pub fn open(id: u32, (width, height): (u32, u32), scale: f64) {
     let (a, Some(engine)) = (get(), engine()) else { return };
-    let script = crate::script::source(id);
     unsafe {
         let manager = (a.webkit_user_content_manager_new)();
         (a.webkit_user_content_manager_add_filter)(manager, crate::state::FILTER.with(Cell::get));
@@ -35,14 +36,9 @@ pub fn open(id: u32, (width, height): (u32, u32), scale: f64) {
             crate::script::message as *const (),
             id as usize as Ptr,
         );
-        for source in script.iter().chain(&engine.preload) {
-            let source = text(source);
-            let script =
-                (a.webkit_user_script_new)(source.as_ptr(), 1, 0, std::ptr::null(), std::ptr::null());
-            (a.webkit_user_content_manager_add_script)(manager, script);
-            (a.webkit_user_script_unref)(script);
-        }
         let csp = text(&policy());
+        let policies =
+            (a.g_object_new)((a.webkit_website_policies_get_type)(), c"autoplay".as_ptr(), 0 as c_int, NUL);
         let web = (a.g_object_new)(
             (a.webkit_web_view_get_type)(),
             c"display".as_ptr(),
@@ -55,8 +51,11 @@ pub fn open(id: u32, (width, height): (u32, u32), scale: f64) {
             manager,
             c"default-content-security-policy".as_ptr(),
             csp.as_ptr(),
+            c"website-policies".as_ptr(),
+            policies,
             NUL,
         );
+        (a.g_object_unref)(policies);
         let settings = (a.webkit_web_view_get_settings)(web);
         SETTINGS.iter().for_each(|(name, on)| set_bool(settings, name, *on));
         let [r, g, b] = engine.start.background.map(|c| f64::from(c) / 255.0);
@@ -95,16 +94,22 @@ pub fn open(id: u32, (width, height): (u32, u32), scale: f64) {
             held: RefCell::default(),
             ring: RefCell::new(None),
             loaded: Cell::new(false),
+            answered: Cell::new(std::time::Instant::now()),
         };
-        VIEWS.with(|v| v.borrow_mut().insert(id, Rc::new(view)));
-        load(web);
+        let view = Rc::new(view);
+        VIEWS.with(|v| v.borrow_mut().insert(id, view.clone()));
+        load(id);
+        crate::watch::beat(view);
     }
 }
 
-pub fn load(web: Ptr) {
+pub fn load(id: u32) {
+    let Some(view) = crate::state::view(id) else { return };
+    crate::script::install(id, view.manager);
     let entry = engine().map(|e| e.start.entry.clone()).unwrap_or_default();
     let address = text(&uri(&entry));
-    unsafe { (get().webkit_web_view_load_uri)(web, address.as_ptr()) };
+    view.answered.set(std::time::Instant::now());
+    unsafe { (get().webkit_web_view_load_uri)(view.web, address.as_ptr()) };
 }
 
 unsafe extern "C" fn decide(_web: Ptr, decision: Ptr, kind: c_int, _data: Ptr) -> c_int {
@@ -147,11 +152,15 @@ unsafe extern "C" fn terminated(web: Ptr, reason: c_int, _data: Ptr) {
     if reason == 2 && view.stopped.get() {
         return;
     }
-    let crashes = view.crashes.get() + 1;
+    let (id, crashes) = (view.id, view.crashes.get() + 1);
     view.crashes.set(crashes);
-    send(&FromWeb::Crashed { view: view.id });
-    if crashes <= 3 {
-        crate::glib::later(1000 * crashes.pow(2), move || load(web));
+    view.loaded.set(false);
+    send(&FromWeb::Crashed { view: id });
+    let wait = if crashes <= RELOADS { 1000 * crashes.pow(2) } else { u32::MAX };
+    view.answered.set(std::time::Instant::now() + std::time::Duration::from_millis(u64::from(wait)));
+    match crashes <= RELOADS {
+        true => crate::glib::later(wait, move || load(id)),
+        false => send(&FromWeb::Broken { view: id }),
     }
 }
 
@@ -159,5 +168,14 @@ unsafe extern "C" fn loaded(web: Ptr, event: c_int, _data: Ptr) {
     if let Some(view) = by_web(web).filter(|_| event == 3) {
         view.loaded.set(true);
         send(&FromWeb::Loaded { view: view.id });
+        let (id, crashes) = (view.id, view.crashes.get());
+        if crashes > 0 {
+            crate::glib::later(STABLE, move || {
+                crate::state::view(id)
+                    .filter(|v| v.crashes.get() == crashes)
+                    .iter()
+                    .for_each(|v| v.crashes.set(0));
+            });
+        }
     }
 }

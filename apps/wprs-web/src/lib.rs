@@ -2,9 +2,9 @@ mod link;
 mod policy;
 mod spawn;
 
-pub use link::Link;
+pub use link::{Link, MAX_MESSAGE};
 pub use policy::{csp, filter, languages, mime};
-pub use spawn::{Isolation, isolated, spawn};
+pub use spawn::{Isolation, isolated, scope, spawn, unscoped};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -92,6 +92,7 @@ pub enum FromWeb {
     Wants { audio: bool },
     Loaded { view: u32 },
     Crashed { view: u32 },
+    Broken { view: u32 },
     Said(String),
 }
 
@@ -102,6 +103,13 @@ pub fn changed(old: &Map<String, Value>, new: &Map<String, Value>) -> Map<String
 }
 
 pub fn token(prop: &str, salt: &[u8; 32], path: &std::path::Path) -> String {
-    let hash = blake3::keyed_hash(salt, path.as_os_str().as_encoded_bytes()).to_hex();
+    use std::os::unix::fs::MetadataExt;
+    let stamp = std::fs::metadata(path).map_or([0; 3], |m| [m.len() as i64, m.mtime(), m.mtime_nsec()]);
+    let mut hasher = blake3::Hasher::new_keyed(salt);
+    hasher.update(path.as_os_str().as_encoded_bytes());
+    for n in stamp {
+        hasher.update(&n.to_le_bytes());
+    }
+    let hash = hasher.finalize().to_hex();
     format!("{USER_SCHEME}://{prop}/{}", wprs_format::page::token_name(path, &hash))
 }

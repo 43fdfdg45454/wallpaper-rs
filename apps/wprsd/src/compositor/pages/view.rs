@@ -86,6 +86,10 @@ impl ViewSlot {
 
     pub(super) fn map(&mut self, fd: &OwnedFd, size: (u32, u32), stride: u32) -> std::io::Result<()> {
         let len = stride as usize * size.1 as usize * 2;
+        let sealed = rustix::fs::fcntl_get_seals(fd)?.contains(rustix::fs::SealFlags::SHRINK);
+        if !sealed || (rustix::fs::fstat(fd)?.st_size as u64) < len as u64 {
+            return Err(std::io::Error::other("its frames are not in a sealed buffer of their size"));
+        }
         let map = unsafe { mmap(std::ptr::null_mut(), len, ProtFlags::READ, MapFlags::SHARED, fd, 0) }?;
         self.ring = Some(Mapped { map: map.cast(), len, stride, size });
         Ok(())

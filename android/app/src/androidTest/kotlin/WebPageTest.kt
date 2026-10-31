@@ -98,7 +98,7 @@ class WebPageTest {
 
     @Test
     fun pagesSeeTheirValuesAndNothingElse() {
-        val seen = until("the probe answers") { it.has("local") && it.has("wpak") && it.has("file") }
+        val seen = until("the probe answers") { probe -> listOf("own", "manifest", "escape", "other", "file", "wpak", "local").all(probe::has) }
         assertEquals("preloaded", seen.getString("early"))
         assertTrue(seen.getString("zone"), seen.getString("zone") in setOf(TimeZone.getDefault().id) + if (TimeZone.getDefault().rawOffset == 0) UTC else emptySet())
         assertEquals(android.content.res.Resources.getSystem().configuration.locales[0].toLanguageTag(), seen.getString("language"))
@@ -126,13 +126,22 @@ class WebPageTest {
     }
 
     @Test
-    fun privacyAndStorageArePerPackage() = runBlocking {
-        until("the page loads") { it.has("visits") }
+    fun privacyAndStorageArePerPackage() = zoned(ZONE) { runBlocking {
+        reload()
+        val shown = until("the page sees the zone of the phone") { it.has("worker") && it.optString("zone") == ZONE }
+        assertEquals(ZONE, shown.getJSONObject("routes").getString("frame"))
+        assertEquals(listOf(ZONE, 21), shown.getJSONArray("worker").let { listOf(it.getString(0), it.getInt(1)) })
         listOf("hide_zone", "hide_language", "hide_gpu").forEach { ask("confirm", "uid" to uid, "what" to it) }
         reload()
-        val hidden = until("the page loads again hiding what it may not see") { it.optString("zone") == "UTC" }
+        val hidden = until("the page loads again hiding what it may not see") { it.optString("zone") == "UTC" && it.has("worker") }
         assertEquals("en-US", hidden.getString("language"))
         assertEquals(12, hidden.getInt("hour"))
+        val routes = hidden.getJSONObject("routes")
+        listOf("frame", "made").forEach { assertEquals(it, "UTC", routes.getString(it)) }
+        listOf("frameHour", "madeHour").forEach { assertEquals(it, 12, routes.getInt(it)) }
+        assertEquals("en-US", routes.getString("frameLanguage"))
+        assertEquals("undefined", routes.getString("framePeer"))
+        assertEquals("[\"UTC\",12,\"en-US\"]", hidden.getJSONArray("worker").toString())
         assertTrue(hidden.getString("webgl"), hidden.isNull("webgl") || hidden.getString("webgl") == "WebKit WebGL")
         assertEquals(2, hidden.getInt("visits"))
         ask("clear_data", "uid" to uid)
@@ -143,7 +152,7 @@ class WebPageTest {
         until("hidden storage starts empty") { it.optInt("visits") == 1 && it.has("own") }
         reload()
         assertEquals(1, probe()!!.getInt("visits"))
-    }
+    } }
 
     @Test
     fun clicksAndChosenFilesNeedTheUser() = runBlocking {
@@ -177,5 +186,6 @@ class WebPageTest {
     private companion object {
         const val SIDE = 256
         val UTC = setOf("UTC", "GMT", "Etc/UTC", "Etc/GMT")
+        const val ZONE = "Asia/Tokyo"
     }
 }

@@ -7,10 +7,13 @@ use wprs_core::model::Input;
 use wprs_scene::{Control, Values};
 
 mod helper;
+mod kept;
 
 pub use helper::{available, helper, unavailable};
+pub use kept::within;
 
 pub const HIDES: [&str; 4] = ["hide_zone", "hide_language", "hide_gpu", "hide_storage"];
+pub const PLAIN: &str = "en-US";
 
 static CLEARED: std::sync::Mutex<std::collections::BTreeMap<String, u64>> =
     std::sync::Mutex::new(std::collections::BTreeMap::new());
@@ -35,6 +38,7 @@ pub struct WebPack {
     pub storage_kib: u32,
     pub key: String,
     pub shape: Json,
+    pub plain: Json,
 }
 
 #[derive(Clone)]
@@ -62,10 +66,10 @@ fn color(text: Option<&str>) -> [u8; 3] {
     hex.map_or([0; 3], |n| [(n >> 16) as u8, (n >> 8) as u8, n as u8])
 }
 
-pub fn shape(props: &Props) -> Json {
+pub fn shape(props: &Props, languages: &[String]) -> Json {
     let kinds: serde_json::Map<String, Json> =
         props.properties.iter().map(|(id, p)| (id.clone(), json!(p.kind()))).collect();
-    json!({"kinds": kinds, "labels": wprs_scene::labels(&props.properties, &props.languages)})
+    json!({"kinds": kinds, "labels": wprs_scene::labels(&props.properties, languages)})
 }
 
 impl Daemon {
@@ -87,7 +91,7 @@ impl Daemon {
             has(wprs_format::Input::Clicks),
         ];
         let key = self.package_key(wpak, &std::fs::metadata(wpak)?)?;
-        let shape = shape(&props);
+        let (shape, plain) = (shape(&props, &props.languages), shape(&props, &m.languages(&[PLAIN.into()])));
         Ok(Arc::new(WebPack {
             path: wpak.into(),
             props: Arc::new(props),
@@ -99,6 +103,7 @@ impl Daemon {
             storage_kib: web.storage_kib,
             key,
             shape,
+            plain,
         }))
     }
 

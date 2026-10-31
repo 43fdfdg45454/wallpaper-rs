@@ -9,6 +9,8 @@ use wprs_web::{Folder, Settings, Start, ToWeb, token};
 mod feed;
 mod frames;
 mod slot;
+#[cfg(test)]
+mod tests;
 mod view;
 
 pub(super) use slot::PageSlot;
@@ -59,6 +61,13 @@ pub(super) fn folders(spec: &PageSpec, salt: &[u8; 32]) -> Vec<Folder> {
     spec.folders.iter().filter_map(listed).collect()
 }
 
+pub(super) fn language(spec: &PageSpec) -> (String, &Json) {
+    match spec.privacy.language {
+        true => (spec.pack.props.languages.first().cloned().unwrap_or_default(), &spec.pack.shape),
+        false => (crate::pages::PLAIN.into(), &spec.pack.plain),
+    }
+}
+
 impl State {
     fn wanted(&self) -> Wanted {
         let mut wanted = Wanted::new();
@@ -84,13 +93,13 @@ impl State {
             preload: spec.pack.preload.clone(),
             background: spec.pack.background,
             network: if privacy.network { spec.pack.network.clone() } else { Vec::new() },
-            storage: spec.storage.clone(),
+            storage: spec.storage.clone().filter(|dir| crate::pages::within(dir, spec.pack.storage_kib)),
             languages: wprs_web::languages(&wprs_core::locale::languages(), !privacy.language),
             mask_gpu: !privacy.gpu,
             device: if slot.hidden { None } else { self.renderer.render_node().or_else(node) },
             modifiers: if shared { self.renderer.page_modifiers() } else { Vec::new() },
             properties,
-            shape: spec.pack.shape.clone(),
+            shape: language(spec).1.clone(),
             settings: self.page_settings(slot),
             allowed: Default::default(),
             folders: folders(spec, &slot.salt),
@@ -102,8 +111,7 @@ impl State {
         let fps = slot.views.values().map(|v| v.fps).max().unwrap_or(30).max(1);
         let silent = self.settings.muted || self.locked;
         let volume = if silent { 0.0 } else { self.settings.volume };
-        let locale = slot.spec.pack.props.languages.first().cloned().unwrap_or_default();
-        Settings { fps, quality: self.power.tier as u8, locale, volume }
+        Settings { fps, quality: self.power.tier as u8, locale: language(&slot.spec).0, volume }
     }
 
     pub(super) fn sync_pages(&mut self) {
@@ -123,7 +131,12 @@ impl State {
             if slot.link.is_none() && slot.due.is_some_and(|d| d <= now) {
                 slot.due = None;
                 let start = self.start(&slot);
+                slot.full = slot.spec.storage.is_some() && start.storage.is_none();
                 slot.spawn(start, &self.tx, now);
+                if slot.full {
+                    tracing::warn!("the web page keeps more than it declared and keeps nothing this time");
+                    slot.error = Some(crate::words::web_full());
+                }
             }
             if slot.link.is_some() {
                 self.sync_link(&mut slot, now);

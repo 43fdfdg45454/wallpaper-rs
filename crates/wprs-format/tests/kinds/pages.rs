@@ -78,3 +78,16 @@ fn presets_carry_values_and_pictures_for_a_base_package() {
     let script = [("preset.json", file.as_bytes()), ("photo.png", &png), ("run.js", b"x")];
     assert!(matches!(load(&preset(Value::Null), &script), Err(Error::Extension { .. })));
 }
+
+#[test]
+fn folder_notices_tell_added_removed_and_changed_files() {
+    use std::path::PathBuf;
+    let paths = [("a1", "/a"), ("a2", "/a"), ("b", "/b"), ("c", "/c")];
+    let path = |t: &str| paths.iter().find(|p| p.0 == t).map(|p| PathBuf::from(p.1));
+    let list = |names: &[&str]| names.iter().map(|n| n.to_string()).collect::<Vec<_>>();
+    let notice = wprs_format::page::files("photos", &list(&["a1", "b"]), &list(&["a2", "c"]), path);
+    let want =
+        serde_json::json!({"prop": "photos", "added": ["c"], "removed": ["b"], "changed": [["a1", "a2"]]});
+    assert_eq!(notice, Some(want));
+    assert_eq!(wprs_format::page::files("photos", &list(&["b"]), &list(&["b"]), path), None);
+}

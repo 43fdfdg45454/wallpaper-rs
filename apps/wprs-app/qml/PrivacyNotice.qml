@@ -10,7 +10,7 @@ Kirigami.InlineMessage {
     readonly property var words: ({
             "zone": App.tr("your time zone"),
             "language": App.tr("your language"),
-            "gpu": App.tr("the model of your graphics card"),
+            "gpu": App.tr("what your graphics card can do"),
             "storage": App.tr("data it keeps on this computer"),
             "network": App.tr("the network, to reach the sites it names")
         })

@@ -47,17 +47,30 @@ without access to the GPU devices and draws in memory. Pages are always opaque.
   `document.visibilityState = "hidden"`, stop their animation frames and draw nothing; after 5
   minutes hidden the web process is stopped and the last frame stays on screen until it is visible
   again, when the page loads again.
-- The helper reloads a page whose web process crashed, up to three times. The daemon restarts a
-  helper that stopped or failed after 1, 5 and 30 s; after the third failure in a row the screen
-  shows its background color and its error says why.
+- The helper asks each page for an answer every 5 s while its web process runs; a page that does
+  not answer for 10 s (a script stuck in a loop) is stopped and loads again like a crashed one. The
+  helper reloads a page whose web process crashed, ran out of memory or stopped answering after 1, 4
+  and 9 s; a fourth time in a row turns the page off, the screen shows its background color and its
+  error says why. A page that runs for a minute without crashing starts counting again. The daemon
+  restarts a helper that stopped or failed after 1, 5 and 30 s; after the third failure in a row the
+  screen shows its background color and its error says why.
+- The helper and WebKit's processes run at nice 10. When a systemd user manager runs, the helper
+  starts in its own transient scope with `CPUQuota=100%`, `CPUWeight=20`, `MemoryMax=1536M`,
+  `MemorySwapMax=0` and `TasksMax=512`, so a page takes at most one processor and 1.5 GB in all;
+  where the scope cannot be made the helper starts without it.
+- A page whose kept data (`data` below) grows past twice its `web.storage_kib` plus 1 MiB starts
+  without keeping anything, and its error says so until its data is cleared. WPE WebKit has no
+  quota per origin in its current interface, so the limit is checked when the page starts.
 - Changing a property sends only the changed values to the running page; changing what the page may
   see (below), clearing its data or granting the network starts it again.
 
 ## Protocol
 
 The helper gets one end of a `SOCK_SEQPACKET` socket pair as descriptor 3. Each packet is one JSON
-message (`ToWeb` from the daemon, `FromWeb` from the helper, in `apps/wprs-web/src/lib.rs`), at
-most 192 KiB, with buffer descriptors passed as `SCM_RIGHTS`. The helper dies with the daemon
+message (`ToWeb` from the daemon, `FromWeb` from the helper, in `apps/wprs-web/src/lib.rs`), with
+buffer descriptors passed as `SCM_RIGHTS`; a message over 32 KiB (long folder listings) travels in a
+sealed `memfd` instead, up to 64 MiB. The daemon maps frames only from `memfd`s sealed against
+shrinking and as large as the frames they hold. The helper dies with the daemon
 (`PR_SET_PDEATHSIG`).
 
 ## Sandbox
@@ -89,14 +102,16 @@ it next to the privacy notice.
 
 ## Privacy
 
-A page sees, by default, the real time zone, the language of the user, the model of the graphics
-card through WebGL, and keeps its own storage when it declares `web.storage_kib`. Each of them is
-restricted per package with `Library1.Confirm` (`hide_zone`: UTC; `hide_language`: `en-US`;
-`hide_gpu`: WebGL keeps working with a generic vendor and renderer and no debug extension, and
-`navigator.gpu` is absent; `hide_storage`: nothing is kept). `PackageInfo.exposes` lists what a page
+A page sees, by default, the real time zone, the language of the user, what the graphics card can
+do through WebGL, and keeps its own storage when it declares `web.storage_kib`. On the desktop WPE
+WebKit already reports a generic renderer (`Apple GPU`), so WebGL tells the page the limits and
+extensions of the card, not its model; on the phone the WebView reports the model. Each of them is
+restricted per package with `Library1.Confirm` (`hide_zone`: UTC; `hide_language`: `en-US`, also in
+`wprs.locale` and the labels of combos; `hide_gpu`: WebGL keeps working with a generic vendor and
+renderer and no debug extension, and `navigator.gpu` is absent; `hide_storage`: nothing is kept). `PackageInfo.exposes` lists what a page
 sees now, and the app (details and *Apply to…*), the tray (each screen) and `wprs-ctl` (`lib apply`
 and `lib show`) show the same notice from it: "This web wallpaper uses your time zone, your
-language, the model of your graphics card and data it keeps on this computer."
+language, what your graphics card can do and data it keeps on this computer."
 
 Storage lives in `~/.local/share/wallpaper-rs/web/<package id>/` (mode `0700`), is never synced,
 and goes away with `Library1.ClearData` (`wprs-ctl lib clear-data`, *Clear data* in the app) and
@@ -111,16 +126,19 @@ The helper injects `window.wprs` before the page's own scripts (and before `web.
 | Member | What it does |
 |--------|--------------|
 | `properties`, `onProperties(cb)` | all values when the callback is added, then only the changed ones; colors as `{hex, r, g, b, a}` (0 to 1), combos as `{value, label}`, files as `wpak-user://` tokens, folders as `wpak-user://<id>/` |
-| `fps`, `quality`, `locale`, `volume`, `onSettings(cb)` | the frame rate it is drawn at, the quality level (0 to 3), the language picked among the package's, and the wallpaper volume (0 to 1) for its own sound; the page is muted at 0 |
+| `fps`, `quality`, `locale`, `volume`, `onSettings(cb)` | the frame rate it is drawn at, the quality level (0 to 3), the language picked among the package's, and the wallpaper volume (0 to 1) for its own sound: the page may play sound without a gesture, its `<audio>` and `<video>` play at their own volume times the wallpaper's (`volume` reads what the page set) and an `AudioContext` sends its `destination` through a gain at the wallpaper's volume; the page is muted at 0 |
 | `paused`, `onPause(cb)` | `true` while hidden |
 | `onAudio(cb)` | `{left, right}`, 64 bands each from bass to treble, at most 30 times a second, once the user allows `audio` for the package; the first callback subscribes |
 | pointer and clicks | real DOM events: `pointermove` while `pointer` is allowed, and `click`s only from real clicks on screens where the user turned clicks on and the package holds `clicks` |
-| `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | the tokens of a chosen folder: `files` (and the `{added, removed}` notices) only with `mode: all`; `randomFile` in both modes |
+| `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | the tokens of a chosen folder: `files` (and the `{prop, added, removed, changed}` notices, `changed` as `[old, new]` pairs for files rewritten in place) only with `mode: all`; `randomFile` in both modes; a token changes with the size and time of its file, so a rewritten file loads anew |
 | `onAction(cb)` | the id of a pressed `button` property |
 | `onMedia`, `openShortcut`, `rgb.setImage` | present and inert: their features are refused until they work |
 
-`console` output and uncaught errors reach the daemon's log at debug level, at most 200 lines a
-run. The folder of a `folder` property is listed by the daemon (`max_files`, `recursive`, hidden
+Audio and video files of the package and of the user's folder play from a `blob:` copy that the
+helper's script makes when a media element (or `new Audio`) gets a `wpak:` or `wpak-user:` address,
+because GStreamer only reads the schemes it knows; the copy lives while the element uses it, and a
+file over 256 MiB does not play. `console` output and uncaught errors reach the daemon's log at
+debug level, at most 200 lines a run. The folder of a `folder` property is listed by the daemon (`max_files`, `recursive`, hidden
 files and links left out, the same rules as scenes), checked again every 5 s while the page is
 shown and never while hidden; the helper serves only the listed files, opened without following
 links.
@@ -151,13 +169,16 @@ these are the differences:
 - **Sandbox.** Layers 1 to 4 are the same, enforced by intercepting every request. Network loads
   are blocked in the WebView unless the package declares origins and the user allowed `network`,
   and only those origins pass; cookies, service workers, safe browsing and the WebView's metrics
-  are off, and peer connections (WebRTC) are removed from the page and from the frames it reads
-  through `contentWindow` before any of its scripts run. A page that reaches a frame of its own
-  through `window[0]` could still build one: Android offers no switch to turn peer connections off.
-  The renderer runs in the WebView's isolated process.
-- **Privacy.** `hide_zone` and `hide_language` are applied by a script that runs before the page's:
-  `Date`, `Intl`, the `toLocale…` methods and `navigator.language` see UTC and `en-US` in the page
-  and its frames, not in workers. `hide_gpu` uses the same mask as the desktop. Kept storage is the
+  are off, and peer connections (WebRTC) are removed from the page and from every frame of it (see
+  the guard below). The renderer runs in the WebView's isolated process.
+- **Privacy.** `hide_zone` and `hide_language` are applied by a guard script that runs before the
+  page's: `Date`, `Temporal.Now`, `Intl`, the `toLocale…` methods, `localeCompare` and
+  `navigator.language` see UTC and `en-US`, also through `constructor`. The WebView runs the guard
+  at the start of every frame of the page's origin (`addDocumentStartJavaScript`), and the guard
+  also applies itself to the frames the page creates, reads through `contentWindow` or reaches
+  through `window[n]`, to its workers (each starts from `/:wprs/worker.js`, which runs the guard
+  and then the page's script) and to its worklets. `hide_gpu` uses the same mask as the desktop,
+  where the phone's WebView would report the model of the graphics chip. Kept storage is the
   WebView's storage of the page's origin; *Clear data* and removing the last item of the package
   move the page to a new origin and delete the old one, and a page that keeps nothing gets a new
   origin each time it loads, deleted when it closes. The notice is shown on the page of the

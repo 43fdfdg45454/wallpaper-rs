@@ -31,6 +31,7 @@ pub struct View {
     pub held: RefCell<HashMap<u32, Ptr>>,
     pub ring: RefCell<Option<Ring>>,
     pub loaded: Cell<bool>,
+    pub answered: Cell<Instant>,
 }
 
 #[derive(Default)]

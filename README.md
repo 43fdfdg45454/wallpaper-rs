@@ -1107,7 +1107,7 @@ los hace.
 La página solo lee los archivos de su paquete, no llega a la red salvo que la declare y la permitas
 (`wprs-ctl input grant <id> network`, o el interruptor de sus detalles en la app), no ve rutas,
 dispositivos ni la batería, y el motor web la ejecuta en su propio entorno aislado. Por defecto ve
-tu zona horaria, tu idioma, el modelo de tu tarjeta gráfica (WebGL) y guarda sus datos en
+tu zona horaria, tu idioma, lo que puede hacer tu tarjeta gráfica (WebGL) y guarda sus datos en
 `~/.local/share/wallpaper-rs/web/<id>/` si los declara. Al aplicarla y en sus ajustes, la app, la
 bandeja y `wprs-ctl` avisan de qué usa, y puedes ocultar cada cosa por fondo: en los detalles del
 paquete en la app (*Privacidad*) o con

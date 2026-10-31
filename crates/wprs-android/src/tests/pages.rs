@@ -8,13 +8,15 @@ use std::path::Path;
 const HANDLE: i64 = 0x5eed;
 
 const MANIFEST: &str = r##"{
-  "schema": "wallpaper-rs.wpak/2", "id": "org.example.phone", "version": "1.0.0", "title": "Phone",
+  "schema": "wallpaper-rs.wpak/2", "id": "org.example.phone", "version": "1.0.0", "title": "Phone", "default_locale": "en",
   "license": "CC0-1.0", "origin": { "kind": "original" }, "content": { "rating": "general" },
   "photosensitive": false, "kind": "web", "entry": "index.html", "inputs": ["audio", "pointer", "network"],
   "permissions": { "network": { "allow": ["https://api.example.org"] } },
   "web": { "background": "#102030", "storage_kib": 64, "preload": "early.js" },
   "properties": {
     "tint": { "type": "color", "default": "#ff8000", "label": "Tint" },
+    "mood": { "type": "combo", "default": "calm", "label": "Mood",
+              "options": [{ "value": "calm", "label": { "en": "Calm", "es": "Calma" } }] },
     "photos": { "type": "folder", "mode": "all", "accept": ["image"], "label": "Photos" }
   }
 }"##;
@@ -73,7 +75,7 @@ pub(super) fn pages_are_served_from_their_package_only() {
             && api.contains("\"tint\":\"#ff8000\"")
             && api.ends_with("window.early = 1;")
     );
-    assert!(!api.contains("WEBGL_debug_renderer_info") && !api.contains("timeZone: \"UTC\""));
+    assert!(api.contains("})(false, false, null, \"https://") && !api.contains("WEBGL_debug_renderer_info"));
     values_reach_the_running_page(&uid, &path, &url);
     privacy_is_chosen_per_package(&uid, &path, &url);
     page::close(HANDLE);
@@ -120,10 +122,18 @@ fn privacy_is_chosen_per_package(uid: &str, path: &Path, url: &str) {
     let spec = page::spec(HANDLE, uid, path, false).unwrap();
     assert_ne!(spec["key"], key);
     let api = served(&format!("{url}:wprs/api.js"))["text"].as_str().unwrap().to_owned();
-    assert!(api.contains("WEBGL_debug_renderer_info") && api.contains("})(true, false);"), "{api}");
+    assert!(api.contains("WEBGL_debug_renderer_info") && api.contains("})(true, false, (g) => {"), "{api}");
+    let worker = served(&format!("{url}:wprs/worker.js?classic&{}", "data%3Atext%2Fjavascript%2C1"));
+    let worker = worker["text"].as_str().unwrap_or_default().to_owned();
+    assert!(
+        worker.contains("})(true, false, (g) => {")
+            && worker.ends_with("importScripts(\"data:text/javascript,1\");")
+    );
+    assert_eq!(served(&format!("{url}:wprs/worker.js?classic&https%3A%2F%2Fexample.org%2Fw.js")), json!({}));
     let form = ask(json!({ "op": "scene", "uid": uid, "languages": ["en"] }));
     assert_eq!(form["web"]["exposes"], json!(["language", "storage"]), "{form}");
     assert_eq!((form["uses"]["audio"].clone(), form["web"]["network"].clone()), (json!(true), json!(true)));
+    language_is_hidden_on_request(uid, path, url);
     ask(json!({ "op": "grant", "uid": uid, "input": "network", "on": true }));
     let spec = page::spec(HANDLE, uid, path, false).unwrap();
     assert_eq!(spec["network"], json!(true));
@@ -148,4 +158,18 @@ fn privacy_is_chosen_per_package(uid: &str, path: &Path, url: &str) {
     );
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
     assert_eq!(ask(json!({ "op": "cleared" })), json!([fresh["origin"]]));
+}
+
+fn language_is_hidden_on_request(uid: &str, path: &Path, url: &str) {
+    ask(json!({ "op": "scene", "uid": uid, "languages": ["es"] }));
+    let api = || {
+        page::spec(HANDLE, uid, path, false).unwrap();
+        served(&format!("{url}:wprs/api.js"))["text"].as_str().unwrap().to_owned()
+    };
+    let shown = api();
+    assert!(shown.contains("\"locale\":\"es") && shown.contains("\"Calma\""), "{shown}");
+    ask(json!({ "op": "confirm", "uid": uid, "what": "hide_language" }));
+    let hidden = api();
+    assert!(hidden.contains("\"locale\":\"en-US\"") && hidden.contains("\"Calm\""), "{hidden}");
+    assert!(!hidden.contains("Calma") && hidden.contains("})(true, true, (g) => {"), "{hidden}");
 }

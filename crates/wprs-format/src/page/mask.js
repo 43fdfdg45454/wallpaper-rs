@@ -1,4 +1,4 @@
-(() => {
+(g) => {
   const hidden = new Set([0x9245, 0x9246, 0x1f00, 0x1f01]);
   const hide = (proto) => {
     if (!proto) return;
@@ -16,7 +16,8 @@
       return (supported.call(this) || []).filter((name) => name !== "WEBGL_debug_renderer_info");
     };
   };
-  hide(window.WebGLRenderingContext && WebGLRenderingContext.prototype);
-  hide(window.WebGL2RenderingContext && WebGL2RenderingContext.prototype);
-  if (navigator.gpu) Object.defineProperty(Navigator.prototype, "gpu", { get: () => undefined });
-})();
+  hide(g.WebGLRenderingContext && g.WebGLRenderingContext.prototype);
+  hide(g.WebGL2RenderingContext && g.WebGL2RenderingContext.prototype);
+  const nav = g.Navigator || g.WorkerNavigator;
+  if (nav && "gpu" in nav.prototype) Object.defineProperty(nav.prototype, "gpu", { get: () => undefined, configurable: true });
+}

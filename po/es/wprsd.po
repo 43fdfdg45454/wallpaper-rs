@@ -159,3 +159,19 @@ msgid ""
 msgstr ""
 "La página web no dibujó nada durante 10 segundos y está apagada; en su lugar "
 "se ve el color de fondo."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"The web page keeps much more data than it declared, so it runs without "
+"keeping anything until its data is cleared."
+msgstr ""
+"La página web guarda muchos más datos de los que declaró, así que funciona "
+"sin guardar nada hasta que se borren sus datos."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"The web page crashed or stopped answering four times in a row and is off; "
+"the background color shows instead."
+msgstr ""
+"La página web falló o dejó de responder cuatro veces seguidas y está "
+"apagada; en su lugar se ve el color de fondo."

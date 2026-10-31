@@ -23,7 +23,7 @@ ColumnLayout {
         },
         {
             "what": "hide_gpu",
-            "text": App.tr("Let it see the model of the graphics card")
+            "text": App.tr("Let it see what the graphics card can do")
         },
         {
             "what": "hide_storage",

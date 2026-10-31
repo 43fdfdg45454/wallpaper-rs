@@ -18,7 +18,7 @@ QtObject {
         const words = {
             "zone": i18n("your time zone"),
             "language": i18n("your language"),
-            "gpu": i18n("the model of your graphics card"),
+            "gpu": i18n("what your graphics card can do"),
             "storage": i18n("data it keeps on this computer"),
             "network": i18n("the network, to reach the sites it names")
         };

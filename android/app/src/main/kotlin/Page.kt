@@ -18,6 +18,8 @@ import android.webkit.WebSettings
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import java.io.FileInputStream
 import org.json.JSONObject
 
@@ -65,6 +67,7 @@ class Page(context: Context, private val handle: Long, spec: JSONObject, val sur
         web.webViewClient = Client()
         web.webChromeClient = Refusing()
         web.addJavascriptInterface(Bridge(), BRIDGE)
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) WebViewCompat.addDocumentStartJavaScript(web, spec.getString("guard"), setOf(origin))
         presentation.window?.setBackgroundDrawable(ColorDrawable(background))
         presentation.setContentView(web)
         presentation.show()

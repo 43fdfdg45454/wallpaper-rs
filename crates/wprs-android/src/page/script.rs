@@ -1,13 +1,12 @@
 use super::folders::{self, Folders};
 use super::{View, views};
-use crate::library;
 use serde_json::{Value, json};
 use std::hash::{BuildHasher, RandomState};
 use wprs_format::page::{MASK, api};
 
 const POST: &str = "((h) => (m) => h.post(JSON.stringify(m)))(window.wprsHost)";
 const PHONE: &str = include_str!("phone.js");
-const HIDE: &str = include_str!("hide.js");
+const GUARD: &str = include_str!("guard.js");
 const MAX_SAID: u32 = 200;
 const BANDS: usize = 64;
 
@@ -18,8 +17,8 @@ fn call(messages: &[Value]) -> Option<String> {
 
 pub(super) fn source(view: &mut View) -> String {
     let (values, folders) = folders::values(view);
-    let settings = super::settings(&view.pack, view.preview);
-    let languages: Vec<String> = library::languages().into_iter().chain(view.pack.locale.clone()).collect();
+    let settings = super::settings(&view.pack, view.preview, view.privacy);
+    let languages = super::languages(&view.pack, view.privacy);
     let kinds: serde_json::Map<String, Value> =
         view.pack.properties.iter().map(|(id, p)| (id.clone(), json!(p.kind()))).collect();
     let init = json!({
@@ -27,19 +26,36 @@ pub(super) fn source(view: &mut View) -> String {
         "labels": wprs_scene::labels(&view.pack.properties, &languages),
     });
     view.sent = Some((values, settings, folders));
-    let p = view.privacy;
-    let hide =
-        (!p.zone || !p.language).then(|| format!("({})({}, {});", HIDE.trim_end(), !p.zone, !p.language));
-    let mask = (!p.gpu).then_some(MASK);
     let preload = view.pack.web.as_ref().and_then(|w| w.preload.clone());
-    let parts = [Some(api(&init, POST)), hide, mask.map(String::from), Some(PHONE.into()), preload];
+    let parts = [Some(api(&init, POST)), Some(guard(view)), Some(PHONE.into()), preload];
     parts.into_iter().flatten().collect::<Vec<_>>().join("\n")
+}
+
+pub(super) fn guard(view: &View) -> String {
+    let p = view.privacy;
+    let mask = if p.gpu { "null" } else { MASK.trim_end() };
+    let origin = json!(format!("https://{}", view.host));
+    format!("({})({}, {}, {mask}, {origin});", GUARD.trim_end(), !p.zone, !p.language)
+}
+
+pub(super) fn worker(view: &View, query: &str) -> Option<String> {
+    let (kind, src) = query.split_once('&')?;
+    let src = wprs_format::page::decoded(src)?;
+    let own = [format!("https://{}/", view.host), format!("blob:https://{}/", view.host), "data:".into()];
+    if !own.iter().any(|o| src.starts_with(o.as_str())) {
+        return None;
+    }
+    let load = match kind {
+        "module" => format!("import({});", json!(src)),
+        _ => format!("importScripts({});", json!(src)),
+    };
+    Some(format!("{}\n{load}", guard(view)))
 }
 
 pub(super) fn changes(view: &mut View) -> Option<String> {
     let (old_values, old_settings, old_folders) = view.sent.clone()?;
     let (values, folders) = folders::values(view);
-    let settings = super::settings(&view.pack, view.preview);
+    let settings = super::settings(&view.pack, view.preview, view.privacy);
     let mut messages = Vec::new();
     let changed: serde_json::Map<String, Value> = values
         .iter()
@@ -54,10 +70,9 @@ pub(super) fn changes(view: &mut View) -> Option<String> {
     }
     for (name, now) in folders.iter().filter(|(name, _)| name.starts_with('*')) {
         let before = old_folders.get(name).cloned().unwrap_or_default();
-        let added: Vec<&String> = now.iter().filter(|t| !before.contains(t)).collect();
-        let removed: Vec<&String> = before.iter().filter(|t| !now.contains(t)).collect();
-        if !added.is_empty() || !removed.is_empty() {
-            messages.push(json!({"files": {"prop": &name[1..], "added": added, "removed": removed}}));
+        let path = |t: &str| view.files.get(t).cloned();
+        if let Some(notice) = wprs_format::page::files(&name[1..], &before, now, path) {
+            messages.push(json!({ "files": notice }));
         }
     }
     view.sent = Some((values, settings, folders));

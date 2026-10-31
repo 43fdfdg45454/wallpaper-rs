@@ -25,7 +25,7 @@ if ! "$BIN/wprs-web" --check >/dev/null 2>&1; then
   echo "web wallpapers refused with a reason where the web engine is missing"
 else
   ctl lib apply "$tint" -o TEST-W 2>"$pages/notice"
-  grep -q "This web wallpaper uses your time zone, your language, the model of your graphics card and data it keeps" "$pages/notice" ||
+  grep -q "This web wallpaper uses your time zone, your language, what your graphics card can do and data it keeps" "$pages/notice" ||
     fail "no privacy notice on apply: $(cat "$pages/notice")"
   expect "s['outputs']['TEST-W']['kind']" web
   seen "$web" "255, 0, 0"

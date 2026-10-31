@@ -203,8 +203,8 @@ msgstr "tu idioma"
 
 #: integrations/plasma-tray/contents/ui/LeftOut.qml
 #, kde-format
-msgid "the model of your graphics card"
-msgstr "el modelo de tu tarjeta gráfica"
+msgid "what your graphics card can do"
+msgstr "lo que puede hacer tu tarjeta gráfica"
 
 #: integrations/plasma-tray/contents/ui/LeftOut.qml
 #, kde-format
