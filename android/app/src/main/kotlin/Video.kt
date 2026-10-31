@@ -31,12 +31,19 @@ class Videos(private val context: Context) {
         }
 
     fun adopt(key: String, uri: String) = videos.remove(key)?.let { video ->
+        if (uri in videos) return@let video.release()
         video.detach()
         video.fixed = null
         videos[uri] = video
     }
 
-    fun lend(uri: String, key: String) = videos.remove(uri)?.let { video ->
+    fun lend(uri: String, key: String, painter: Painter) {
+        val video = videos[uri] ?: return
+        if (video.viewers.any { it !== painter } || key in videos) {
+            leave(uri, painter)
+            return
+        }
+        videos -= uri
         video.detach()
         video.fixed = null
         videos[key] = video

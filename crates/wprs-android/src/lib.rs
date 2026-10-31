@@ -3,6 +3,7 @@
 mod account;
 mod acting;
 mod apply;
+mod blend;
 #[cfg(target_os = "android")]
 mod bridge;
 #[cfg(target_os = "android")]

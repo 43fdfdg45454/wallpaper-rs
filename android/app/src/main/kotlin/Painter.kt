@@ -46,7 +46,7 @@ class Painter(
         val wanted = wanted()
         if (uri != video) {
             if (uri != null) clips.firstOrNull { "file://$it" == uri }?.let { videos.adopt(key(it), uri) }
-            video?.let { old -> if (old.removePrefix(FILE) in wanted) videos.lend(old, key(old.removePrefix(FILE))) else videos.leave(old, this) }
+            video?.let { old -> if (old.removePrefix(FILE) in wanted) videos.lend(old, key(old.removePrefix(FILE)), this) else videos.leave(old, this) }
         }
         video = uri
         clip(wanted)

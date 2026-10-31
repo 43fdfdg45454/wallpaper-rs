@@ -5,7 +5,7 @@ use crate::power::Power;
 use crate::relief::{Raised, Tilted};
 use crate::settings::{self, Look};
 use crate::stage::Stage;
-use crate::{Error, choice};
+use crate::{Error, blend, choice};
 use ndk::native_window::{FrameRateCompatibility, NativeWindow};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -53,6 +53,7 @@ pub(crate) struct Engine {
     film: Option<PathBuf>,
     direct: Option<PathBuf>,
     handover: bool,
+    hidden: bool,
     window: NativeWindow,
 }
 
@@ -68,6 +69,7 @@ impl Engine {
             kept.map_or((None, None, None, 0), |k| (k.stage, k.image, k.raised, k.epoch));
         let chosen = choice::shown_on(preview, lock).map(|shown| shown.uid);
         let image = image.filter(|(key, _)| chosen.as_ref() == Some(&key.item));
+        let stage = stage.filter(|stage| blend::resumes(Some(&stage.uid), chosen.as_deref()));
         let (target, fading, checked, rate, failures) = (None, None, (epoch, 0, (0, 0)), 0, 0);
         let (offset, shown, dirty, presented, video, look) = (0.5, 0.5, true, 0, false, settings::look(lock));
         Self {
@@ -95,6 +97,7 @@ impl Engine {
             film: None,
             direct: None,
             handover: false,
+            hidden: true,
             window,
         }
     }

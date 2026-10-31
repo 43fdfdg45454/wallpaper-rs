@@ -72,6 +72,7 @@ impl Engine {
     }
 
     pub(crate) fn visible(&mut self, shown: bool) {
+        self.hidden = !shown;
         if !shown {
             self.forget_old_gpu();
             self.hint(0);

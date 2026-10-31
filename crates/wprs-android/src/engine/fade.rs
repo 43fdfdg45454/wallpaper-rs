@@ -1,10 +1,10 @@
 use super::{Engine, FRAMES};
-use crate::choice;
 use crate::gpu;
 use crate::power::{Power, delay_ms};
 use crate::relief::{Look as Seen, layer};
 use crate::settings::{self, Look};
 use crate::stage::Stage;
+use crate::{blend, choice};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::Ordering::Relaxed;
@@ -13,7 +13,6 @@ use wprs_render::{GpuImage, RenderError};
 
 const FILM: &str = "\u{0}film";
 const GONE: &str = "\u{0}gone";
-const PATIENCE_NS: i64 = 500_000_000;
 
 pub(crate) enum Gone {
     Picture(Arc<GpuImage>, (Fit, Option<[f32; 4]>)),
@@ -45,7 +44,7 @@ impl Engine {
         let current = self.direct.clone().or_else(|| self.film.clone());
         if shown != current {
             let look = settings::look(self.lock);
-            let fades = !look.fade.is_zero() && Power::now().fps(self.preview) > 0;
+            let fps = Power::now().fps(self.preview);
             let film = (look.fit, look.background);
             let gone = match (self.direct.take().or(self.film.take()), shown.is_some()) {
                 (Some(path), _) => Some(Gone::Film(path, film)),
@@ -56,7 +55,13 @@ impl Engine {
                 },
                 (None, false) => None,
             };
-            self.fading = gone.filter(|_| fades).map(Fading::new).or(self.fading.take());
+            let fades =
+                |gone: &Gone| blend::fades(look.fade, fps, self.hidden, matches!(gone, Gone::Film(..)));
+            self.fading = match gone {
+                Some(gone) if fades(&gone) => Some(Fading::new(gone)),
+                Some(_) => None,
+                None => self.fading.take(),
+            };
             (self.film, self.look, self.dirty) = (shown, look, true);
         }
         if self.film.is_some() && self.fading.is_none() && direct(&settings::look(self.lock)) {
@@ -113,7 +118,7 @@ impl Engine {
         let duration = self.look.fade.as_nanos().max(1) as f32;
         let progress = self.fading.as_mut().map_or(1.0, |fading| {
             let asked = *fading.asked.get_or_insert(nanos);
-            let ready = had || nanos - asked > PATIENCE_NS;
+            let ready = blend::begins(had, now.is_some(), nanos - asked);
             let start = fading.start.or(ready.then_some(nanos));
             fading.start = start;
             start.map_or(0.0, |start| ((nanos - start) as f32 / duration).clamp(0.0, 1.0))

@@ -14,6 +14,7 @@ struct Clip {
     yuv: Option<Yuv>,
     chroma: Vec<u8>,
     epoch: u64,
+    warned: bool,
 }
 
 #[derive(Default)]
@@ -58,7 +59,14 @@ impl Clips {
         }
         let reader = ImageReader::new(EDGE, EDGE, ImageFormat::YUV_420_888, IMAGES).map_err(media)?;
         let window = reader.window().map_err(media)?;
-        self.0.push(Clip { path: path.to_owned(), reader, yuv: None, chroma: Vec::new(), epoch: 0 });
+        self.0.push(Clip {
+            path: path.to_owned(),
+            reader,
+            yuv: None,
+            chroma: Vec::new(),
+            epoch: 0,
+            warned: false,
+        });
         Ok(window)
     }
 
@@ -81,14 +89,18 @@ impl Clips {
             if clip.epoch != epoch {
                 (clip.yuv, clip.epoch) = (None, epoch);
             }
-            if let Ok(AcquireResult::Image(image)) = clip.reader.acquire_latest_image() {
-                let converted = planes(&image, &mut clip.chroma).and_then(|planes| {
+            let converted = match clip.reader.acquire_latest_image() {
+                Ok(AcquireResult::Image(image)) => planes(&image, &mut clip.chroma).and_then(|planes| {
                     crate::counted::gpu(|| r.convert_yuv(&mut clip.yuv, &planes).map(drop))
                         .map_err(Error::from)
-                });
-                if let Err(e) = converted {
-                    log::warn!("{e}");
-                }
+                }),
+                Ok(_) => Ok(()),
+                Err(e) => Err(media(e)),
+            };
+            if let Err(e) = converted
+                && !std::mem::replace(&mut clip.warned, true)
+            {
+                log::warn!("{e}");
             }
             let clip: &'a Clip = clip;
             let Some(yuv) = clip.yuv.as_ref() else { continue };
