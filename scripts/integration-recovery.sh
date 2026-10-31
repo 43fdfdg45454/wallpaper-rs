@@ -3,11 +3,13 @@ set -euo pipefail
 declare anchor log output port
 restored() {
   read -r _ _ _ serial < <(ctl stream TEST-1 320 180) || return 1
+  [ -z "${1:-}" ] || [ "$serial" = "$1" ] || return 1
   "$BIN/probe" "$serial" 3 | grep -q "frame 320x180 .* buffers 4 center bgra \[0, 255, 0, 255\]"
 }
 ctl stream TEST-1 320 180 >/dev/null
 ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
 retry 10 restored || { echo "FAIL: stream before the PipeWire restart"; exit 1; }
+old=$serial
 dbus-monitor --session "type='signal',interface='io.github.wallpaper_rs.Daemon1',member='StreamChanged'" \
   >"$WORK/signals.log" 2>&1 & pids+=($!)
 sleep 0.5
@@ -17,10 +19,13 @@ wait_for 5 test ! -S "$XDG_RUNTIME_DIR/pipewire-0"
 pipewire >"$WORK/pipewire-restarted.log" 2>&1 & pids+=($!)
 wait_for 10 test -S "$XDG_RUNTIME_DIR/pipewire-0"
 wireplumber >"$WORK/wireplumber-restarted.log" 2>&1 & pids+=($!)
-retry 30 restored || { echo "FAIL: stream not restored after restarting PipeWire"; exit 1; }
-announced() { grep -A1 "member=StreamChanged" "$WORK/signals.log" | grep -q 'string "TEST-1"'; }
-wait_for 10 announced || fail "no StreamChanged signal for TEST-1: $(cat "$WORK/signals.log")"
-echo "PipeWire restart recovery and StreamChanged passed (serial $serial)"
+announced() { grep -A3 "member=StreamChanged" "$WORK/signals.log" | grep -A2 'string "TEST-1"' | sed -n 's/^ *uint64 //p' | tail -n 1; }
+renewed() { [ -n "$(announced)" ]; }
+wait_for 30 renewed || fail "no StreamChanged signal for TEST-1: $(cat "$WORK/signals.log")"
+new=$(announced)
+[ "$new" != "$old" ] || fail "StreamChanged announced the serial $old of the stream before the restart"
+retry 30 restored "$new" || fail "TEST-1 is not shown under its new serial $new: $(ctl stream TEST-1 320 180)"
+echo "PipeWire restart recovery and StreamChanged passed (serial $old, then $new)"
 
 kill "$daemon"
 wait "$daemon" 2>/dev/null || true
