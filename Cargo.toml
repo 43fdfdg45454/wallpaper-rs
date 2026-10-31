@@ -75,6 +75,7 @@ webpki-root-certs = "1"
 roxmltree = "0.21"
 percent-encoding = "2"
 wiremock = "0.6"
+tokio-rustls = { version = "0.26.6", default-features = false }
 gstreamer = "0.25"
 gstreamer-app = "0.25"
 gstreamer-video = "0.25"

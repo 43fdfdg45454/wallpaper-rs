@@ -40,3 +40,4 @@ tracing-subscriber.workspace = true
 reqwest = { workspace = true, features = ["form", "multipart"] }
 tempfile.workspace = true
 wiremock.workspace = true
+wprs-sync.workspace = true

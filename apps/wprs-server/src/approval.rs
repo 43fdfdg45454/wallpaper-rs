@@ -40,14 +40,14 @@ pub struct Preview {
 }
 
 pub async fn preview(State(app): St, auth: Auth, Input(p): Input<Preview>) -> Reply {
-    auth.scope(if auth.device.is_some() { "sync" } else { "devices" })?;
+    if auth.device.is_some() { auth.scope("sync") } else { auth.browser() }?;
     let code = user_code(&p.user_code)?;
     Ok(Json(app.db.run(move |c| pending_device(c, &code)).await?))
 }
 
 pub async fn approve(State(app): St, auth: Auth, client: Client, Input(a): Input<Approve>) -> Reply {
     match (&auth.device, a.password.clone()) {
-        (None, _) => auth.scope("devices")?,
+        (None, _) => auth.browser()?,
         (Some(_), Some(password)) => {
             let (who, user) = (auth.handle.clone(), auth.user);
             let checked = crate::account::authenticate(&app, &client, &who, password).await?;

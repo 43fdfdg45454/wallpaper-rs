@@ -25,6 +25,11 @@ pub enum Pkg {
         #[arg(long, help = JSON)]
         json: bool,
     },
+    #[command(about = "Show the previews of a mature package without blur from now on")]
+    Reveal {
+        #[arg(help = SPEC)]
+        spec: String,
+    },
     #[command(about = "Print the path of the preview image of a package")]
     Preview {
         #[arg(help = SPEC)]
@@ -67,6 +72,7 @@ pub async fn run(client: &Client, command: Pkg) -> Result<()> {
         Pkg::Search { query, page, json } => {
             show::reply(repos.browse(&query, page.offset, page.limit).await?, json, browse)?
         }
+        Pkg::Reveal { spec } => repos.reveal(&spec).await?,
         Pkg::Preview { spec } => {
             let path = tokio::time::timeout(Duration::from_secs(60), preview(client, &spec)).await;
             let path = path.context("no preview arrived within 60 s")??;
@@ -146,7 +152,8 @@ pub fn browse(page: BrowsePage) -> String {
     let rows = page.packages.into_iter().map(|p| {
         let installed = list(&p.installed) + if p.update { " (update available)" } else { "" };
         let flashing = (p.photosensitive == Some(true)).then_some("photosensitive");
-        let content = list([p.content.as_deref().or(Some("unrated")), flashing].into_iter().flatten());
+        let shown = (p.revealed && p.content.as_deref() == Some("mature")).then_some("shown");
+        let content = list([p.content.as_deref().or(Some("unrated")), flashing, shown].into_iter().flatten());
         vec![prefix(&p.repo_id), p.id, p.version, p.kind, content, installed, p.title]
     });
     let head = ["REPO", "ID", "VERSION", "KIND", "CONTENT", "INSTALLED", "TITLE"];

@@ -45,7 +45,7 @@ async fn hide(State(app): St, auth: Auth, h: Hide, on: bool) -> Reply {
     auth.at_least(Role::Moderator)?;
     let (id, reason) = (h.id, h.reason.trim().to_string());
     require(!on || reason.chars().count() >= 10, "reason: at least 10 characters for the author")?;
-    let (key, shared) = (id.clone(), app.clone());
+    let (key, shared, _turn) = (id.clone(), app.clone(), app.deciding.lock().await);
     let sql = "UPDATE packages SET hidden = ?2, hidden_at = ?3 WHERE id = ?1 AND (hidden IS NULL) = ?4";
     app.db
         .run(move |c| {

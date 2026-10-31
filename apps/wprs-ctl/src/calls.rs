@@ -102,6 +102,7 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Repos1", "Refresh", "remote refresh", &["REPO"]),
     ("Repos1", "Remove", "remote rm", &["REPO", "--uninstall"]),
     ("Repos1", "Browse", "pkg search", &["QUERY", "--offset", "--limit"]),
+    ("Repos1", "Reveal", "pkg reveal", &["SPEC"]),
     ("Repos1", "RequestPreviews", "pkg preview", &["SPEC"]),
     ("Repos1", "Install", "pkg install", &["SPEC", "--allow-stale", "--downgrade"]),
     ("Repos1", "Uninstall", "pkg uninstall", &["ID", "--version"]),

@@ -749,7 +749,8 @@ describen en inglés y en español, y `pulse` avisa de que destella con el ritmo
 
 La app y la bandeja difuminan las miniaturas de los paquetes para adultos hasta que decides
 mostrarlas (en los detalles de la app o con un clic o el teclado en la miniatura difuminada de una
-pantalla, en la página *Ajustes* de la app o en la bandeja), y *Ocultar el contenido para adultos*
+pantalla, en la página *Ajustes* de la app o en la bandeja; en *Explorar* basta un clic en la
+miniatura, y la decisión se guarda para ese paquete), y *Ocultar el contenido para adultos*
 (`library.hide_mature`) los saca de las búsquedas y de los repositorios. *Mostrar el contenido para
 adultos sin difuminar* (`library.show_mature`, desactivado por defecto) deja de difuminarlas en la
 app, la bandeja y el teléfono. Antes de aplicar un
@@ -769,6 +770,7 @@ wprs-ctl lib show 1R1AB2                     # clasificación, origen, créditos
 wprs-ctl lib search 'content:general facet:audio'
 wprs-ctl lib confirm photosensitive 1R1AB2   # permitir un paquete fotosensible
 wprs-ctl lib confirm mature 1R1AB2           # dejar de difuminar su miniatura
+wprs-ctl pkg reveal org.example.noche        # lo mismo para un paquete de un repositorio
 wprs-ctl pack check fondo/                   # qué necesita, usa y declara, y si lo reproducen el escritorio y el teléfono
 wprs-ctl pack upgrade fondo/ --rating general --photosensitive false   # pasar a la versión 2
 ```
@@ -1005,7 +1007,8 @@ día (cada firma caduca a los 7). Desde *Administración* se crean invitaciones 
 tokens, dispositivos enlazados con un código y subidas de paquetes `.wpak` de las dos versiones del
 manifiesto. El servidor acepta los paquetes para adultos que lo declaran en su manifiesto: llevan
 la etiqueta `mature` en el catálogo, en la búsqueda (`content=mature`, `facet=mature`) y en la API, y
-la web difumina sus miniaturas hasta que eliges verlas, una por paquete y sin JavaScript. El
+la web difumina sus miniaturas hasta que eliges verlas, una por paquete y sin JavaScript (la web no
+guarda la elección, así que vuelve a difuminarlas en cada visita). El
 catálogo filtra por clasificación y por faceta y avisa en la página de un paquete fotosensible.
 
 Los moderadores pueden ocultar un paquete sin retirarlo, con un motivo que ve su autor: sale del

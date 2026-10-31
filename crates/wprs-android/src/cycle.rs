@@ -5,7 +5,7 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD as B64;
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
-use wprs_sync::{Session, arrived, encode, hold, now_ms, rules};
+use wprs_sync::{Session, View, arrived, carry, encode, hold, now_ms, rules};
 
 pub(crate) async fn sync(conflict: &str) -> Result<Value, Error> {
     linked()?;
@@ -60,7 +60,10 @@ async fn cycle(conflict: &str) -> Result<Value, Error> {
             ("platform", json!(PLATFORM)),
             ("key", json!(encode(&secrets.device_key()?.public()))),
         ];
-        local.views.insert(format!("device/{device}"), fields.map(|(k, v)| (k.to_owned(), v)).into());
+        let (key, mut own): (_, View) =
+            (format!("device/{device}"), fields.map(|(k, v)| (k.to_owned(), v)).into());
+        carry(&key, &mut own, &replica, &BTreeSet::new());
+        local.views.insert(key, own);
     }
     let now = clock.tick(now_ms(), &device);
     let start = replica.bases.clone();

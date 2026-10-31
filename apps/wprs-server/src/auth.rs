@@ -17,7 +17,7 @@ pub enum Role {
 }
 
 pub const ROLES: [&str; 4] = ["user", "trusted", "moderator", "admin"];
-pub const SCOPES: [&str; 6] = ["catalog:read", "upload", "sync", "devices", "mod", "admin"];
+pub const SCOPES: [&str; 5] = ["catalog:read", "upload", "sync", "mod", "admin"];
 pub const DEVICE_SCOPES: &str = "upload sync";
 
 impl Role {

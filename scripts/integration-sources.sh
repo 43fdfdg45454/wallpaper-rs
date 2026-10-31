@@ -26,7 +26,11 @@ if ctl remote refresh "${repo:0:8}" --wait >/dev/null 2>&1; then fail "a reposit
 ctl remote add "http://127.0.0.1:$port/$anchor" --wait >/dev/null
 [ "$(ctl remote ls --json | jq_ "[(r['broken'], r['last_error'], r['packages']) for r in r['repos']]")" = "[(None, None, 2)]" ] ||
   fail "adding a broken repository again did not repair it: $(ctl remote ls --json)"
+ctl pkg reveal "${repo:0:8}/org.example.dawn"
+[ "$(ctl pkg search dawn --json | jq_ "[p['revealed'] for p in r['packages']]")" = "[True]" ] ||
+  fail "a revealed package was not remembered: $(ctl pkg search dawn --json)"
 ctl remote rm "${repo:0:8}"
+! grep -q "$repo" "$XDG_DATA_HOME/wallpaper-rs/revealed.json" || fail "a removed repository kept its revealed packages"
 if [ -e "$old" ] || [ -e "$new" ]; then fail "previews of every version go with their repository"; fi
 echo "broken repository and preview cache checks passed"
 dport=$(python3 -c "import socket; s = socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1])")
@@ -90,6 +94,15 @@ unlock
 swept() { [ "$(synced)" = "[(False, False)]" ]; }
 wait_for 30 swept || fail "the orphaned secret was kept after the keyring came back"
 [ "$(secretly dav)" = "[('needs_secret', False)]" ] || fail "an orphaned secret reached the provider: $(secretly dav)"
+kill "$kr"
+wait "$kr" 2>/dev/null || true
+ctl provider rm dav
+dav --no-secret >/dev/null
+unlock
+printf 'hunter2\n' | ctl provider secret dav --secret-stdin
+listed=$(ctl provider sync dav --wait --json | jq_ "[(p['listed'], p['failed']) for p in r['output']['reports']]")
+[ "$listed" = "[(3, 0)]" ] || fail "a secret stored over an orphaned one was lost: $listed $(synced)"
+[ "$(synced)" = "[(True, False)]" ] || fail "the orphan was kept after a new secret: $(synced)"
 ctl provider rm dav --purge
 kill "$kr"
 wait "$kr" 2>/dev/null || true

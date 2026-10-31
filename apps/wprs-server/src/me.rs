@@ -144,7 +144,7 @@ async fn remove(State(app): St, auth: Auth, Path((what, id)): Path<(String, Stri
         "devices" if auth.device.as_deref() == Some(id.as_str()) => {
             "DELETE FROM devices WHERE id = ?1 AND user_id = ?2"
         }
-        "devices" => auth.scope("devices").map(|()| "DELETE FROM devices WHERE id = ?1 AND user_id = ?2")?,
+        "devices" => auth.browser().map(|()| "DELETE FROM devices WHERE id = ?1 AND user_id = ?2")?,
         "author-keys" => auth
             .scope("upload")
             .map(|()| "DELETE FROM author_keys WHERE fingerprint = ?1 AND user_id = ?2")?,

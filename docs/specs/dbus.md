@@ -1183,7 +1183,15 @@ A `BrowsePage` of the packages offered, matched without case on id, title, descr
 language), tags, authors and facets, sorted by id then repository. `limit` is `0..=500`. Titles,
 descriptions and change notes come in the user's language; with `library.hide_mature`, packages
 rated `mature` are left out. Packages that the moderators of the repository hid are left out unless
-a version of them is installed; they can still be installed by id.
+a version of them is installed; they can still be installed by id. `revealed` tells whether the
+user chose to see the previews of a mature package without blur (`Reveal`).
+
+### `Reveal(s spec)`
+
+Remembers, for `[repo/]id[@version]`, that the user wants to see the previews of that package
+without blur, in every version, until the repository is removed; clients show them unblurred when
+`revealed` is set or `library.show_mature` is on. `NotFound` when no repository offers it,
+`Invalid` when several do without a repository prefix. Emits `repos`.
 
 ### `RequestPreviews(as specs) → (a{ss} paths)`
 

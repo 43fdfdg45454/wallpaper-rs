@@ -41,6 +41,7 @@ pub struct Remote {
     pub preview_wake: Notify,
     pub orphans: Mutex<BTreeSet<String>>,
     pub orphan_wake: Notify,
+    pub writing: tokio::sync::Mutex<()>,
 }
 
 pub struct Claim<'a>(&'a Mutex<HashSet<String>>, String);

@@ -39,8 +39,8 @@ pub use session::Session;
 pub use share::{DeviceKey, Mail, aad, code, commit, open_key, seal_key, transcript};
 pub use vault::{Secrets, encode};
 pub use views::{
-    DEVICE_KEYS, DOWNLOADS, Kept, Local, REFERENCES, edit_fields, edit_held, edit_of, item_view, kind, link,
-    object, preserve, references, settings,
+    DEVICE_KEYS, DOWNLOADS, Kept, Local, REFERENCES, carry, edit_fields, edit_held, edit_of, item_view, kind,
+    link, object, preserve, references, settings,
 };
 
 #[derive(Debug, thiserror::Error)]

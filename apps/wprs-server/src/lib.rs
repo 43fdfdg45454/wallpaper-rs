@@ -43,6 +43,7 @@ mod web;
 
 pub use backup::{backup, restore};
 pub use config::Config;
+pub use records::SYNC_FORMAT;
 pub use repo::{import, init, status};
 pub use validate::check;
 

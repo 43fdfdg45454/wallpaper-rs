@@ -125,3 +125,46 @@ fn hidden_packages_leave_browsing_but_stay_installable() {
     assert_eq!(again.version, "1.0.0");
     hide(&repo.dir, DAWN, false).unwrap();
 }
+
+fn reassign(repo: &Repo, author: Option<&str>) {
+    let path = repo.dir.join("catalog.json");
+    let mut catalog: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    catalog["packages"][0]["author"] = author.into();
+    std::fs::write(&path, serde_json::to_vec_pretty(&catalog).unwrap()).unwrap();
+}
+
+#[test]
+fn a_stolen_online_key_cannot_move_a_root_package_to_an_online_author() {
+    let repo = Repo::with(|_, s| (s.online_authors, s.require_author_signature) = (true, true));
+    repo.add(DAWN, "1.0.0");
+    repo.publish(NOW);
+    let info = add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap();
+    install(&repo.data, &FileFetch, DAWN, NOW, false, false).unwrap();
+    let thief = key();
+    register_author(&repo.dir, "mallory", &thief.public).unwrap();
+    reassign(&repo, Some("mallory"));
+    add(&repo.dir, &repo.package(DAWN, "1.1.0", Some(&thief)), Some("mallory"), NOW).unwrap();
+    publish(&repo.dir, &signer(&repo.online), 7, NOW + 60).unwrap();
+    update_repo(&repo.data, &FileFetch, &info.repo_id, NOW + 120).unwrap();
+    let refused = install(&repo.data, &FileFetch, DAWN, NOW + 120, false, false);
+    assert!(matches!(&refused, Err(Error::Signature(m)) if m.contains("online author")), "{refused:?}");
+    assert!(anchors(&repo.data).unwrap().is_empty());
+}
+
+#[test]
+fn a_stolen_online_key_cannot_replace_a_signed_package_with_an_unsigned_one() {
+    let repo = Repo::with(|_, s| (s.online_authors, s.authors) = (true, BTreeMap::new()));
+    let ana = repo.author.clone();
+    register_author(&repo.dir, "ana", &ana.public).unwrap();
+    add(&repo.dir, &repo.package(DAWN, "1.0.0", Some(&ana)), None, NOW).unwrap();
+    repo.publish(NOW);
+    let info = add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap();
+    install(&repo.data, &FileFetch, DAWN, NOW, false, false).unwrap();
+    reassign(&repo, None);
+    add(&repo.dir, &repo.package(DAWN, "1.1.0", None), None, NOW).unwrap();
+    publish(&repo.dir, &signer(&repo.online), 7, NOW + 60).unwrap();
+    update_repo(&repo.data, &FileFetch, &info.repo_id, NOW + 120).unwrap();
+    let refused = install(&repo.data, &FileFetch, DAWN, NOW + 120, false, false);
+    assert!(matches!(&refused, Err(Error::Signature(m)) if m.contains("unsigned")), "{refused:?}");
+    assert!(!repo.data.join("packages").join(DAWN).join("1.1.0.wpak").exists());
+}

@@ -4,8 +4,7 @@ use crate::browse::{available, listing, newer};
 use crate::download::package;
 use crate::store::{Snapshot, load, locked, optional, write};
 use crate::{
-    Error, Fetch, KeyRevocation, Listing, OnlineAuthor, Reason, Release, Result, Trusted, anchors, ensure,
-    require,
+    Error, Fetch, Listing, OnlineAuthor, Reason, Release, Result, Trusted, anchors, ensure, require,
 };
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -73,7 +72,7 @@ pub fn install<F: Fetch>(
         }
         require(!foreign(&list), "id", "is installed from another repository")?;
         still(data, &done)?;
-        let anchors = trusted(data, &done, online.as_ref(), &snap.revoked.keys)?;
+        let anchors = trusted(data, &done, &list, online.as_ref(), &snap, listing.author.as_deref())?;
         tmp.keep(&done.path)?;
         list.push(done.clone());
         save(data, &list)?;
@@ -115,15 +114,43 @@ pub fn current(data: &Path, repo_id: &str, id: &str, version: &str) -> Result<In
 fn trusted(
     data: &Path,
     done: &Installed,
+    list: &[Installed],
     online: Option<&OnlineAuthor>,
-    revoked: &[KeyRevocation],
+    snap: &Snapshot,
+    named: Option<&str>,
 ) -> Result<Option<Vec<Trusted>>> {
-    let (Some(author), Some(fp)) = (online, done.signer.as_deref()) else { return Ok(None) };
-    let key = author.keys.get(fp).map(|k| k.minisign.clone()).unwrap_or_default();
-    let new = Trusted { repo_id: done.repo_id.clone(), id: done.id.clone(), fingerprint: fp.into(), key };
-    let mut list = anchors(data)?;
-    trust(&mut list, new, author, revoked)?;
-    Ok(Some(list))
+    let (root, revoked) = (&snap.root.value, &snap.revoked.keys);
+    let mut anchors = anchors(data)?;
+    let same = |r: &str, i: &str| r == done.repo_id && i == done.id;
+    let at = anchors.iter().position(|a| same(&a.repo_id, &a.id));
+    let signed: Vec<&str> =
+        list.iter().filter(|i| same(&i.repo_id, &i.id)).filter_map(|i| i.signer.as_deref()).collect();
+    let refuse = |why: &str| Err(Error::Signature(format!("{} {why}", done.id)));
+    let owner =
+        |fp: &str| root.authors.iter().find(|a| root.author_keys(a, &[]).iter().any(|(f, _)| *f == fp));
+    match (done.signer.as_deref(), online) {
+        (None, _) if at.is_some() || !signed.is_empty() => {
+            refuse("is unsigned, but its installed versions were signed")
+        }
+        (None, _) => Ok(None),
+        (Some(_), Some(_)) if at.is_none() && !signed.is_empty() => {
+            refuse("was installed from an author of the root and cannot pass to an online author")
+        }
+        (Some(fp), Some(author)) => {
+            let key = author.keys.get(fp).map(|k| k.minisign.clone()).unwrap_or_default();
+            let new =
+                Trusted { repo_id: done.repo_id.clone(), id: done.id.clone(), fingerprint: fp.into(), key };
+            trust(&mut anchors, new, author, revoked)?;
+            Ok(Some(anchors))
+        }
+        (Some(_), None) if signed.iter().any(|s| owner(s).is_some_and(|o| Some(o.id.as_str()) != named)) => {
+            refuse("is signed by another author of the root than its installed versions")
+        }
+        (Some(_), None) => Ok(at.map(|i| {
+            anchors.remove(i);
+            anchors
+        })),
+    }
 }
 
 fn still(data: &Path, item: &Installed) -> Result<()> {

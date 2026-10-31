@@ -49,8 +49,16 @@ pub(crate) fn recover(data: &Path, fetch: &dyn Fetch, repo_id: &str, now: i64) -
     let state = seed(&dir, repo_id, json::<Root>(&dir.join("root.json")).ok().as_ref());
     let lost = || Error::Missing(format!("the address of repository {repo_id}; add it again or remove it"));
     ensure(!state.bases.is_empty(), lost)?;
-    let anchor = Anchor { base: state.bases[0].clone(), fingerprint: None, repo_id: Some(repo_id.into()) };
-    refresh(fetch, state, None, &BTreeMap::new(), Some(&anchor), now)
+    let (anchor, floor) = (state.bases[0].clone(), state.root_version);
+    let anchor = Anchor { base: anchor, fingerprint: None, repo_id: Some(repo_id.into()) };
+    let snap = refresh(fetch, state, None, &BTreeMap::new(), Some(&anchor), now)?;
+    let older = || {
+        Error::Rollback(format!(
+            "root {} is older than the root {floor} seen before",
+            snap.root.value.version
+        ))
+    };
+    ensure(snap.root.value.version >= floor, older).map(|()| snap)
 }
 
 fn seed(dir: &Path, repo_id: &str, root: Option<&Root>) -> State {

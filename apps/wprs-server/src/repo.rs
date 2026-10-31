@@ -27,9 +27,13 @@ impl Repo {
         self.dir.join("root/1.json").is_file() && self.key.is_file()
     }
 
-    pub fn add(&self, wpak: &Path, now: i64) -> wprs_format::Result<Added> {
+    pub fn add(&self, wpak: &Path, now: i64, hidden: bool) -> wprs_format::Result<Added> {
         let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
-        wprs_format::add(&self.dir, wpak, None, now / 1000)
+        let added = wprs_format::add(&self.dir, wpak, None, now / 1000)?;
+        if hidden {
+            wprs_format::hide(&self.dir, &added.id, true)?;
+        }
+        Ok(added)
     }
 
     pub fn revoke(&self, id: &str, version: &str, reason: Reason, message: &str) -> wprs_format::Result<()> {
@@ -61,10 +65,20 @@ impl Repo {
         wprs_format::hide(&self.dir, id, hidden)
     }
 
-    pub fn restore(&self, id: &str, version: &str, held: &Path, now: i64) -> anyhow::Result<()> {
+    pub fn restore(
+        &self,
+        id: &str,
+        version: &str,
+        held: &Path,
+        now: i64,
+        hidden: bool,
+    ) -> anyhow::Result<()> {
         let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
         let dest = self.dir.join("packages").join(id).join(format!("{version}.wpak"));
         wprs_format::add(&self.dir, held, None, now / 1000)?;
+        if hidden {
+            wprs_format::hide(&self.dir, id, true)?;
+        }
         DirBuilder::new().recursive(true).mode(0o700).create(dest.parent().context("bad path")?)?;
         fs::copy(held, &dest)?;
         Ok(wprs_format::unrevoke(&self.dir, id, version)?)

@@ -170,6 +170,7 @@ pub trait Repos1 {
     fn refresh(&self, repo: &str) -> Result<u64>;
     fn remove(&self, repo: &str, uninstall: bool) -> Result<()>;
     fn browse(&self, query: &str, offset: u32, limit: u32) -> Result<String>;
+    fn reveal(&self, spec: &str) -> Result<()>;
     fn request_previews(&self, specs: &[&str]) -> Result<HashMap<String, String>>;
     fn install(&self, spec: &str, allow_stale: bool, allow_downgrade: bool) -> Result<u64>;
     fn uninstall(&self, id: &str, version: &str) -> Result<()>;

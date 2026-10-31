@@ -100,9 +100,10 @@ tmp/ logs/ backups/
 - Authentication is `Authorization: Bearer wprs_<kind>_<64 hex>_<8 hex CRC-32>` (kinds `d`
   device, `p` personal) or the session cookie of the web site. The server stores SHA-256 of
   tokens and sessions only; revocation is immediate.
-- Scopes: `catalog:read`, `upload`, `sync`, `devices`, `mod`, `admin`. Device tokens get
-  `upload sync`: only account sessions (and personal tokens given `devices`) manage devices; the
-  migration to this version took `devices` away from device tokens issued before. Personal tokens
+- Scopes: `catalog:read`, `upload`, `sync`, `mod`, `admin`. Device tokens get `upload sync`: only
+  account sessions manage devices (a device may still sign itself out, and approve another one
+  with the account password); the migration to this version took the old `devices` scope away from
+  every token issued before. Personal tokens
   are created on the web site; `mod` and `admin` need the role and expire within 90 days. Web
   sessions have every scope of the role.
 - Roles: `user`, `trusted`, `moderator`, `admin`.
@@ -185,7 +186,8 @@ is the moderators' reason, or `null`, and only `/api/v1/packages/…` answers hi
 descriptions are those of the package's default language. The web catalog filters by rating and
 facet as well, shows the description with its markup (as written for packages of the first manifest
 version), a warning on the page of a photosensitive package and the previews of mature packages
-blurred until the visitor selects them, one package at a time, without JavaScript. The list answer is `{items,
+blurred until the visitor selects them, one package at a time, without JavaScript; the web site
+keeps no choice, so the blur comes back on every visit. The list answer is `{items,
 next_cursor}` with `Link: <…>; rel="next"` when there is more.
 
 ## Accounts
@@ -202,7 +204,7 @@ next_cursor}` with `Link: <…>; rel="next"` when there is more.
 | GET, POST | `/api/v1/me/tokens` | any, session | List; create `{name, scopes: "upload sync", days?}` → `201 {id, token, scopes, expires_at}` (shown once) |
 | DELETE | `/api/v1/me/tokens/{id}` | session | Revoke a personal token |
 | GET | `/api/v1/me/devices` | any | `{items: [{id, name, platform, enc_key, sig_key, created_at, seen_at}]}` |
-| DELETE | `/api/v1/me/devices/{id}` | `devices`, or the device itself | Revoke a device, its tokens, its mailbox and its event stream; asks for a key rotation |
+| DELETE | `/api/v1/me/devices/{id}` | session, or the device itself | Revoke a device, its tokens, its mailbox and its event stream; asks for a key rotation |
 | GET, POST | `/api/v1/me/author-keys` | any, `upload` | List; add `{public_key}` (minisign public key file or line) → `201 {fingerprint}` |
 | POST | `/api/v1/me/author-keys/rotate` | `upload` | `{from, public_key, signature}`: hand an online author over from a registered key to a new one → `201 {fingerprint}` |
 | DELETE | `/api/v1/me/author-keys/{fingerprint}` | `upload` | Remove |
@@ -232,11 +234,11 @@ For devices without a keyboard or accounts without a password (RFC 8628 style):
    `{device_code, user_code: "BCDF-GHJK", verification_uri, verification_uri_complete, interval: 5, expires_in: 600}`.
 2. The device shows `user_code` (and a QR code of `verification_uri_complete`).
 3. The user approves at `/link`, or another device calls
-   `POST /api/v1/auth/device/approve {user_code, approve: true|false, password}`: a session or a
-   token with `devices` approves without `password`; a device token needs the password of the
+   `POST /api/v1/auth/device/approve {user_code, approve: true|false, password}`: a session approves
+   without `password`; a device token needs the password of the
    account (checked like a sign-in, `401 bad_credentials` when wrong), so a stolen device token
    cannot add devices, and an account without a password approves at `/link`. Before that,
-   `POST /api/v1/auth/device/preview {user_code}` (`devices`, or any device token) answers what the
+   `POST /api/v1/auth/device/preview {user_code}` (a session, or any device token) answers what the
    pending request sent, `{platform, client, requested_at, expires_at}`, and never an address;
    `/link` shows the same with the warning to approve only a code shown on the user's own screen.
 4. The device polls `POST /api/v1/auth/device/token {device_code}` no faster than `interval`.
@@ -336,7 +338,7 @@ Sync stores the latest state of each item per account. The server never interpre
 | GET | `/api/v1/sync/state` | device | `{seq, min_seq, epoch, encrypted, key_id, rotate, used_bytes, quota_bytes, warning, escrow, files_bytes, files_quota_bytes, format}` (`escrow` tells whether one is stored, `format` is the newest sync format that wrote to the account); `404 sync_not_set_up` before setup |
 | POST | `/api/v1/sync/setup` | device | `{encrypted: true, key_id?}` (default) or `{encrypted: false, confirm_plaintext: true, key_id?}` → `201` state |
 | GET | `/api/v1/sync/changes?since=&limit=` | device | `{seq, min_seq, epoch, more, changes: [{collection, item, seq, epoch, device, deleted, payload}]}`; `410 resync` when `0 < since < min_seq` or `since > seq` |
-| POST | `/api/v1/sync/changes` | device | `{epoch, format, changes: [{collection, item, base, deleted, payload}]}` (at most 500) → `{seq, results}`; `409 client_too_old` when `format` (0 when missing) is below the account's |
+| POST | `/api/v1/sync/changes` | device | `{epoch, format, changes: [{collection, item, base, deleted, payload}]}` (at most 500) → `{seq, results}`; `409 client_too_old` when `format` (0 when missing) is below the account's, `422` when it is above the newest the server knows |
 | POST | `/api/v1/sync/epoch` | device | Key epochs, below → state |
 | POST | `/api/v1/sync/reset` | `sync` | `{confirm: "reset"}` deletes every record, private file and escrow → `204` |
 | GET, PUT | `/api/v1/sync/escrow` | device | `{escrow: base64 \| null}`, at most 4 KiB, only with encryption |
@@ -360,7 +362,8 @@ payload and is purged after 180 days, which raises `min_seq`.
 
 Sync format: clients send the version of the record format they write (`format`, 1 in this
 version). The account keeps the highest one that wrote to it and refuses writes of a lower one with
-`409 client_too_old`, so a device with an old version never uploads old item names or records
+`409 client_too_old`, and refuses a `format` above the newest it knows with `422`, so no device
+can lock the others out with a format that does not exist; a device with an old version never uploads old item names or records
 without the fields it does not know; it keeps reading until it is updated, and clients show a
 translated message. Records keep the fields and top-level keys that a version does not know when it
 merges them.

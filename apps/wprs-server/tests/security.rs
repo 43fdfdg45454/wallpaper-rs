@@ -153,9 +153,15 @@ async fn pending_codes_show_what_the_device_sent_and_nothing_else() {
         .await;
     let script = Who::Bearer(token["token"].as_str().unwrap().into());
     assert_eq!(
-        server.json(Method::POST, "/api/v1/auth/device/preview", &script, Some(code)).await.0,
+        server.json(Method::POST, "/api/v1/auth/device/preview", &script, Some(code.clone())).await.0,
         StatusCode::FORBIDDEN
     );
+    let approve = json!({"user_code": started["user_code"], "approve": true});
+    let (status, _) = server.json(Method::POST, "/api/v1/auth/device/approve", &script, Some(approve)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let wide = json!({"name": "devices", "scopes": "sync devices"});
+    let (status, _) = server.json(Method::POST, "/api/v1/me/tokens", &ana, Some(wide)).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     let long = json!({"platform": "linux", "client": "x".repeat(65)});
     assert_eq!(
         server.json(Method::POST, "/api/v1/auth/device/start", &Who::Nobody, Some(long)).await.0,

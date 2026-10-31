@@ -124,7 +124,7 @@ impl Daemon {
         }
         self.library_ready()?;
         if !secret.is_empty() {
-            self.keyring()?.store(&id, &secret).await?;
+            self.replace_secret(&id, &secret).await?;
         } else if known.secret.is_some() {
             self.drop_orphan(&id).await?;
         }

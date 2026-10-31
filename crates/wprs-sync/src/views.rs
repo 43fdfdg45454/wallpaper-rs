@@ -41,10 +41,22 @@ fn known(key: &str, kind: &str, field: &str) -> bool {
         "playlists" => has(&["name", "query"]) || field.starts_with("r:") || field.starts_with("e:"),
         "repos" => has(&["url", "repo_id", "name", "fingerprints"]),
         "secrets" => has(&["provider", "kind", "bind", "secret"]),
+        "device" => has(&["name", "platform", "key"]),
         "settings" if kind == "preset" => has(&["kind", "name", "value", "item"]),
         "settings" if kind == "profile" => has(&["kind", "name", "outputs", "options", "auto", "priority"]),
         _ => true,
     }
+}
+
+pub fn carry(key: &str, view: &mut View, replica: &Replica, dropped: &BTreeSet<String>) -> Option<View> {
+    let (base, doc) = replica.bases.get(key).and_then(|(_, doc)| Some((doc.view()?, doc)))?;
+    let gone =
+        |field: &str| field == "blob" && key.strip_prefix("library/").is_some_and(|k| dropped.contains(k));
+    let unknown =
+        base.iter().filter(|(f, _)| !view.contains_key(*f) && !known(key, kind(doc), f) && !gone(f));
+    let unknown: Vec<(String, Value)> = unknown.map(|(f, v)| (f.clone(), v.clone())).collect();
+    view.extend(unknown);
+    Some(base)
 }
 
 pub fn preserve(
@@ -54,16 +66,7 @@ pub fn preserve(
     dropped: &BTreeSet<String>,
 ) {
     for (key, view) in views.iter_mut() {
-        let Some((base, doc)) = replica.bases.get(key).and_then(|(_, doc)| Some((doc.view()?, doc))) else {
-            continue;
-        };
-        let gone = |field: &str| {
-            field == "blob" && key.strip_prefix("library/").is_some_and(|k| dropped.contains(k))
-        };
-        let unknown =
-            base.iter().filter(|(f, _)| !view.contains_key(*f) && !known(key, kind(doc), f) && !gone(f));
-        let unknown: Vec<(String, Value)> = unknown.map(|(f, v)| (f.clone(), v.clone())).collect();
-        view.extend(unknown);
+        let Some(base) = carry(key, view, replica, dropped) else { continue };
         if let Some(fields) = kept.get_mut(key) {
             fields.retain(|field, old| view.get(field).unwrap_or(&Value::Null) == old);
             for field in fields.keys() {

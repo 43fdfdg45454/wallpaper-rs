@@ -74,3 +74,20 @@ fn records_keep_fields_this_version_does_not_know() {
     let text = serde_json::to_value(&merged).unwrap();
     assert_eq!((&text["v"], &text["x"]["y"]), (&json!(2), &json!(1)));
 }
+
+#[test]
+fn an_older_device_keeps_record_fields_it_does_not_know() {
+    let stored = super::doc(&[("title", json!("Dawn"), 5), ("future", json!(true), 5)]);
+    let mut replica = Replica::default();
+    for key in [ITEM, "device/d1"] {
+        replica.bases.insert(key.into(), (3, stored.clone()));
+    }
+    let mut views = std::collections::BTreeMap::from([(ITEM.to_string(), super::title("Dawn"))]);
+    preserve(&mut views, &replica, &mut Kept::new(), &Default::default());
+    let mut own = super::title("Dawn");
+    carry("device/d1", &mut own, &replica, &Default::default());
+    for local in [&views[ITEM], &own] {
+        let next = step(replica.bases.get(ITEM), None, Some(local), rules("library"), &super::at(10, "old"));
+        assert_eq!((next.push, local["future"].clone()), (None, json!(true)));
+    }
+}

@@ -1,9 +1,9 @@
 use crate::compositor::lock;
 use crate::daemon::Daemon;
+use crate::error::Result;
 use futures_util::StreamExt;
 use std::collections::BTreeSet;
 use std::fs;
-use std::io::Write;
 use std::sync::Arc;
 use zbus::message::Type;
 use zbus::{MatchRule, MessageStream};
@@ -29,12 +29,7 @@ impl Daemon {
             changed.then(|| ids.clone())
         };
         let Some(ids) = ids else { return };
-        let saved =
-            tempfile::Builder::new().prefix(".tmp-").tempfile_in(&self.store.data).and_then(|mut f| {
-                f.write_all(&serde_json::to_vec(&ids).unwrap_or_default())?;
-                f.persist(self.store.data.join(FILE)).map(drop).map_err(|e| e.error)
-            });
-        if saved.is_err() {
+        if crate::reveals::save(&self.store.data, FILE, &ids).is_err() {
             tracing::warn!(provider = id, "the list of orphaned secrets could not be saved");
         }
         if pending {
@@ -44,11 +39,33 @@ impl Daemon {
         self.changes.changed("providers", vec![id.to_owned()]);
     }
 
+    pub async fn replace_secret(&self, id: &str, secret: &str) -> Result<()> {
+        let keyring = self.keyring()?;
+        let _writing = self.remote.writing.lock().await;
+        let was = self.orphaned(id);
+        self.orphan(id, false);
+        let stored = keyring.store(id, secret).await;
+        if stored.is_err() && was {
+            self.orphan(id, true);
+        }
+        stored
+    }
+
+    pub async fn drop_orphan(&self, id: &str) -> Result<()> {
+        let keyring = self.keyring()?;
+        let _writing = self.remote.writing.lock().await;
+        if !keyring.discard(id).await.unwrap_or(false) {
+            self.orphan(id, true);
+        }
+        Ok(())
+    }
+
     async fn sweep(&self) {
         let ids: Vec<String> = lock(&self.remote.orphans).iter().cloned().collect();
         let Ok(keyring) = self.keyring() else { return };
         for id in ids {
-            if keyring.discard(&id).await.unwrap_or(false) {
+            let _writing = self.remote.writing.lock().await;
+            if self.orphaned(&id) && keyring.discard(&id).await.unwrap_or(false) {
                 tracing::info!(provider = id, "the orphaned secret was deleted from the unlocked keyring");
                 self.orphan(&id, false);
             }

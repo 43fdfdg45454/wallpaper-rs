@@ -19,6 +19,7 @@ use serde_json::{Value, json};
 type Stored = (i64, String, bool, Vec<u8>, Option<Vec<u8>>, i64);
 
 pub const PAGE_BYTES: i64 = 4 << 20;
+pub const SYNC_FORMAT: i64 = 1;
 
 const COLLECTIONS: [&str; 6] = ["repos", "library", "playlists", "settings", "device", "secrets"];
 
@@ -155,6 +156,10 @@ async fn push(State(app): St, auth: Auth, Json(p): Json<Push>) -> Reply {
     let device = auth.device()?.to_string();
     app.limits.take(&SYNC, &device)?;
     require(p.changes.len() <= 500, "at most 500 changes per request")?;
+    require(
+        (0..=SYNC_FORMAT).contains(&p.format),
+        format!("format: 0 to {SYNC_FORMAT}, the newest of this server"),
+    )?;
     let decoded = p.changes.iter().map(decode).collect::<Res<Vec<_>>>()?;
     let (user, quota) = (auth.user, app.cfg.sync_quota as i64);
     let done = app.db.run(move |c| {

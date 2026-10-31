@@ -6674,6 +6674,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
+ "tokio-rustls",
  "wiremock",
  "wprs-format",
 ]
@@ -6775,6 +6776,7 @@ dependencies = [
  "wiremock",
  "wprs-format",
  "wprs-scene",
+ "wprs-sync",
 ]
 
 [[package]]

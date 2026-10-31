@@ -157,7 +157,7 @@ fn backups_hold_exactly_the_files_their_database_names() {
 }
 
 #[test]
-fn device_tokens_lose_the_devices_scope_when_migrating() {
+fn tokens_lose_the_devices_scope_when_migrating() {
     let mut conn = rusqlite::Connection::open_in_memory().unwrap();
     crate::db::MIGRATIONS[..4].iter().for_each(|sql| conn.execute_batch(sql).unwrap());
     conn.pragma_update(None, "user_version", 4).unwrap();
@@ -165,7 +165,8 @@ fn device_tokens_lose_the_devices_scope_when_migrating() {
         "INSERT INTO users (id, handle, quota_bytes, created_at) VALUES (1, 'ana', 1, 0);
          INSERT INTO devices (id, user_id, number, platform, created_at) VALUES ('d', 1, 1, 'linux', 0);
          INSERT INTO tokens (user_id, device_id, name, hash, scopes, created_at)
-           VALUES (1, 'd', 'device', x'01', 'upload sync devices', 0), (1, NULL, 'script', x'02', 'upload devices', 0);",
+           VALUES (1, 'd', 'device', x'01', 'upload sync devices', 0), (1, NULL, 'script', x'02', 'upload devices', 0),
+           (1, NULL, 'manager', x'03', 'devices', 0);",
     )
     .unwrap();
     assert_eq!(crate::db::migrate(&mut conn).unwrap(), crate::db::MIGRATIONS.len() - 4);
@@ -176,5 +177,5 @@ fn device_tokens_lose_the_devices_scope_when_migrating() {
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
-    assert_eq!(scopes, ["upload sync", "upload devices"]);
+    assert_eq!(scopes, ["upload sync", "upload"]);
 }

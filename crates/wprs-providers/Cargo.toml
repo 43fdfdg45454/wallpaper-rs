@@ -20,5 +20,6 @@ wprs-format.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+tokio-rustls.workspace = true
 tokio.workspace = true
 wiremock.workspace = true

@@ -58,6 +58,8 @@ impl Daemon {
             ids.iter().try_for_each(|package| self.uninstall(package, ""))?;
         }
         wprs_format::remove_repo(&self.store.data, &id)?;
+        let ours = format!("{id}/");
+        self.reveals(|set| set.extract_if(.., |key| key.starts_with(&ours)).count() > 0)?;
         previews.iter().for_each(|path| drop(std::fs::remove_file(path)));
         lock(&self.remote.repo_errors).remove(&id);
         tracing::info!(repo = &id[..8], "repository removed");
@@ -77,8 +79,9 @@ impl Daemon {
             .filter(|i| !hide || !mature(i))
             .collect();
         let total = items.len() as u32;
-        let langs = languages();
+        let (langs, revealed) = (languages(), self.revealed());
         let package = |item: wprs_format::Item| {
+            let revealed = revealed.contains(&format!("{}/{}", item.repo_id, item.id));
             let release = item.release;
             let (title, description) = (release.title_in(&langs), release.description_in(&langs));
             let changes = release.changes.as_ref().map(|c| c.pick(&langs)).unwrap_or_default();
@@ -106,6 +109,7 @@ impl Daemon {
                 photosensitive: release.photosensitive,
                 facets: release.facets,
                 changes,
+                revealed,
             }
         };
         let packages = items.into_iter().skip(offset as usize).take(limit as usize).map(package).collect();

@@ -1,13 +1,13 @@
 mod fixture;
 
-use fixture::{DAWN, DUSK, NOW, Repo, file_url};
+use fixture::{DAWN, DUSK, NOW, Repo, copy_dir, file_url, key, signer};
 use std::cell::{Cell, RefCell};
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use wprs_format::{
-    Error, Fetch, FileFetch, Reason, add_repo, browse, current, install, installed, previews, release,
-    remove_repo, repos, revoke, update_repo,
+    Error, Fetch, FileFetch, Reason, add_repo, browse, comment, current, install, installed, previews,
+    publish, release, remove_repo, repos, revoke, rotate_root, settings, sign_root, update_repo,
 };
 
 struct Hook<F: Fn()>(Cell<bool>, F);
@@ -144,4 +144,29 @@ fn every_version_names_its_preview() {
     let first = release(&repo.data, &id, DAWN, "1.0.0").unwrap().preview.unwrap().sha256;
     assert_eq!(previews(&repo.data, &id).unwrap(), [first]);
     assert!(matches!(release(&repo.data, &id, DAWN, "9.0.0"), Err(Error::NotFound(_))));
+}
+
+#[test]
+fn recovery_never_goes_back_to_an_older_root() {
+    let repo = Repo::new();
+    repo.add(DAWN, "1.0.0");
+    repo.publish(NOW);
+    let id = add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap().repo_id;
+    let old = repo.copy("old");
+    let (root2, online2) = (key(), key());
+    let mut next = settings(&repo.dir).unwrap();
+    (next.root_keys, next.online_keys) = (vec![root2.public.clone()], vec![online2.public.clone()]);
+    rotate_root(&repo.dir, &next, NOW + 10).unwrap();
+    let json = fs::read(repo.dir.join("root/2.json")).unwrap();
+    let by_old = signer(&repo.root).sign(&json, &comment("root", 2, &id)).unwrap();
+    fs::write(repo.dir.join("root/2.json.minisig"), by_old).unwrap();
+    sign_root(&repo.dir, &signer(&root2)).unwrap();
+    publish(&repo.dir, &signer(&online2), 7, NOW + 20).unwrap();
+    assert_eq!(update_repo(&repo.data, &FileFetch, &id, NOW + 30).unwrap().repo.root_version, 2);
+    fs::write(dir(&repo, &id).join("root.json"), b"{").unwrap();
+    fs::remove_dir_all(&repo.dir).unwrap();
+    copy_dir(&old, &repo.dir);
+    let refused = update_repo(&repo.data, &FileFetch, &id, NOW + 40);
+    assert!(matches!(&refused, Err(Error::Rollback(_))), "{:?}", refused.map(|o| o.repo.root_version));
+    assert!(repos(&repo.data, NOW).unwrap().iter().any(|r| r.repo_id == id && r.root_version == 2));
 }

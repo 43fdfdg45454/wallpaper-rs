@@ -15,13 +15,6 @@ impl Daemon {
         }
     }
 
-    pub async fn drop_orphan(&self, id: &str) -> Result<()> {
-        if !self.keyring()?.discard(id).await.unwrap_or(false) {
-            self.orphan(id, true);
-        }
-        Ok(())
-    }
-
     pub async fn set_secret(self: &Arc<Self>, id: String, secret: Zeroizing<String>) -> Result<()> {
         let (known, ..) = self.provider(&id)?;
         known.secret.ok_or_else(|| invalid(format!("{} takes no secret", known.kind)))?;
@@ -29,8 +22,7 @@ impl Daemon {
             return Err(invalid("the secret is empty"));
         }
         check_secret(&secret)?;
-        self.keyring()?.store(&id, &secret).await?;
-        self.orphan(&id, false);
+        self.replace_secret(&id, &secret).await?;
         lock(&self.remote.health).remove(&id);
         tracing::info!(provider = id, "provider secret stored");
         self.changes.changed("providers", vec![id]);

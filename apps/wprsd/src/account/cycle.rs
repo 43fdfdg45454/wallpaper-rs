@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use wprs_core::model::JobKind;
-use wprs_sync::{Api, Session, arrived, hold, now_ms, rules};
+use wprs_sync::{Api, Session, View, arrived, carry, hold, now_ms, rules};
 
 impl Daemon {
     pub fn sync_now(self: &Arc<Self>) -> Result<u64> {
@@ -117,7 +117,10 @@ impl Daemon {
         if encrypted {
             let key = encode(&secrets.device_key()?.public());
             let fields = [("name", json!(label)), ("platform", json!("linux")), ("key", json!(key))];
-            local.views.insert(format!("device/{device}"), fields.map(|(k, v)| (k.to_owned(), v)).into());
+            let (key, mut own): (_, View) =
+                (format!("device/{device}"), fields.map(|(k, v)| (k.to_owned(), v)).into());
+            carry(&key, &mut own, &replica, &BTreeSet::new());
+            local.views.insert(key, own);
         }
         let now = clock.tick(now_ms(), &device);
         let start = replica.bases.clone();

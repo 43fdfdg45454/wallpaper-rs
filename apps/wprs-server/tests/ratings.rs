@@ -17,6 +17,10 @@ async fn mature_uploads_carry_their_label_and_the_catalog_filters_by_rating_and_
     assert_eq!(night["state"], "pending_review", "{night}");
     upload(&server, &ana, &package_v2(server.dir.path(), "org.example.dusk", "1.0.0", Rating::General)).await;
     upload(&server, &ana, &package(server.dir.path(), "org.example.dawn", "1.0.0")).await;
+    upload(&server, &ana, &package(server.dir.path(), "org.example.noon", "1.0.0")).await;
+    let early = json!({"id": "org.example.noon", "reason": "Hidden before it was approved."});
+    let (status, _) = server.json(Method::POST, "/api/v1/mod/hidden", &admin, Some(early)).await;
+    assert_eq!(status, StatusCode::OK);
     let (_, queue) = server.json(Method::GET, "/api/v1/mod/queue", &admin, None).await;
     for case in queue["items"].as_array().unwrap().iter().map(|c| c["id"].as_i64().unwrap()) {
         let path = format!("/api/v1/mod/cases/{case}/decision");

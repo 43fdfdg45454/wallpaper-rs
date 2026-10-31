@@ -156,6 +156,10 @@ pub async fn decide(app: &Arc<App>, actor: Option<i64>, case: i64, d: Decision) 
     let (shared, blob) = (app.clone(), app.cfg.data.join("blobs").join(format!("{sha}.wpak")));
     let held = |ext: &str| app.cfg.data.join("held").join(format!("{sha}.{ext}"));
     let (id, number, path) = (package.clone(), version.clone(), blob.clone());
+    let key = package.clone();
+    let hidden = "SELECT hidden IS NOT NULL FROM packages WHERE id = ?1";
+    let hidden: bool =
+        app.db.run(move |c| Ok(c.query_row(hidden, [key], |r| r.get(0)).optional()?)).await?.unwrap_or(false);
     let next = match choice {
         "approve" if !app.repo.ready() => {
             return Err(Problem::conflict(
@@ -165,7 +169,7 @@ pub async fn decide(app: &Arc<App>, actor: Option<i64>, case: i64, d: Decision) 
         }
         "approve" => {
             let next = needs("pending", "published")?;
-            tokio::task::spawn_blocking(move || shared.repo.add(&path, now())).await??;
+            tokio::task::spawn_blocking(move || shared.repo.add(&path, now(), hidden)).await??;
             next
         }
         "reject" => needs("pending", "rejected")?,
@@ -186,7 +190,8 @@ pub async fn decide(app: &Arc<App>, actor: Option<i64>, case: i64, d: Decision) 
                     "the withdrawn file was deleted after its retention",
                 ));
             }
-            tokio::task::spawn_blocking(move || shared.repo.restore(&id, &number, &kept, t)).await??;
+            tokio::task::spawn_blocking(move || shared.repo.restore(&id, &number, &kept, t, hidden))
+                .await??;
             next
         }
         _ => None,

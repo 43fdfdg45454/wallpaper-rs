@@ -173,6 +173,10 @@ async fn clients_older_than_the_newest_sync_format_of_the_account_cannot_upload(
     assert_eq!(status, StatusCode::OK);
     let (status, refused) = push(&server, &old, 0, change(3)).await;
     assert_eq!((status, refused["code"].as_str()), (StatusCode::CONFLICT, Some("client_too_old")));
+    assert_eq!(wprs_server::SYNC_FORMAT, wprs_sync::FORMAT);
+    let ahead = json!({"epoch": 0, "format": wprs_sync::FORMAT + 1, "changes": change(4)});
+    let (status, _) = server.json(Method::POST, "/api/v1/sync/changes", &desk, Some(ahead)).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     let (_, state) = server.json(Method::GET, "/api/v1/sync/state", &old, None).await;
     assert_eq!(state["format"], 1);
     let (_, page) = server.json(Method::GET, "/api/v1/sync/changes?since=0", &old, None).await;

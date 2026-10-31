@@ -69,7 +69,7 @@ ColumnLayout {
                 id: row
 
                 required property var modelData
-                readonly property bool veiled: modelData.content === "mature" && !browse.shown[modelData.id] && !App.unveiled
+                readonly property bool veiled: modelData.content === "mature" && !modelData.revealed && !browse.shown[modelData.repo_id + "/" + modelData.id] && !App.unveiled
 
                 width: ListView.view.width
 
@@ -83,9 +83,13 @@ ColumnLayout {
 
                     TapHandler {
                         enabled: row.veiled
-                        onTapped: browse.shown = Object.assign({}, browse.shown, {
-                            [row.modelData.id]: true
-                        })
+                        onTapped: {
+                            const key = row.modelData.repo_id + "/" + row.modelData.id;
+                            browse.shown = Object.assign({}, browse.shown, {
+                                [key]: true
+                            });
+                            App.act("Reveal", [key], "Repos1");
+                        }
                     }
                 }
 

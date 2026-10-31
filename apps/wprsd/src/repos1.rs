@@ -40,6 +40,10 @@ impl Repos {
         self.d()?.run(move |d| d.browse(&query, offset, limit)).await
     }
 
+    async fn reveal(&self, spec: String) -> Result<()> {
+        self.d()?.run(move |d| d.reveal(&spec)).await
+    }
+
     #[zbus(out_args("paths"))]
     async fn request_previews(
         &self,

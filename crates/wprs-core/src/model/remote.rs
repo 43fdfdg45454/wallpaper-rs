@@ -91,6 +91,8 @@ model! {
         pub facets: Vec<String>,
         #[serde(default)]
         pub changes: String,
+        #[serde(default)]
+        pub revealed: bool,
     }
 
     pub struct BrowsePage {

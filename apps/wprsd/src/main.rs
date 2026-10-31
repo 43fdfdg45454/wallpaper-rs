@@ -49,6 +49,7 @@ mod relief;
 mod remote;
 mod repos;
 mod repos1;
+mod reveals;
 mod rotation;
 mod scan;
 mod scenepresets;

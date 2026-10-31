@@ -149,7 +149,10 @@ authors file, the client trusts each package on first use: `install` records in
 `(repo_id, id)`, and accepts a later version (or another version installed again) only when the
 same key signed it or a chain of rotations from the anchored key reaches the new one, each signed
 by its `from` key and none from a revoked key; the anchor then moves to the new key. A package
-whose author is in the root needs no anchor. Whoever steals the online key can therefore publish new
+whose author is in the root needs no anchor, but once a signed version of `(repo_id, id)` is
+installed, `install` refuses an unsigned release, an online author for a package installed from an
+author of the root, and another author of the root than the one that signed the installed versions;
+a release from an author of the root drops the anchor. Whoever steals the online key can therefore publish new
 authors and new packages, but not update a package already installed; a stolen author key is
 revoked through `revoked`.
 
