@@ -12,6 +12,9 @@ fn new_scenes_name_the_language_of_their_title() {
     spanish.args(["scene", "new", "mi", "--title", "Mi escena"]).current_dir(dir);
     spanish.env("XDG_STATE_HOME", dir.join("state")).env("LC_ALL", "es_ES.UTF-8").env_remove("LANGUAGE");
     assert!(spanish.status().unwrap().success());
+    let refused = spanish.args(["--from", "bogus"]).output().unwrap();
+    let said = String::from_utf8_lossy(&refused.stderr);
+    assert!(refused.status.code() == Some(2) && said.contains("no es un punto de partida"), "{said}");
     assert_eq!(show_in(dir, "mi", "/manifest/default_locale"), json!("es"));
     ok(dir, &["scene", "translate", "mi", "/manifest/title", "en", "My scene"]);
     let usage = |args: &[&str]| run(dir, &[&["scene", "translate", "mi", "/manifest/title"], args].concat());

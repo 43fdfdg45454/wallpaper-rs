@@ -52,6 +52,16 @@ fn depth_maps_are_imported_exported_and_adjusted() {
         (exported.color(), exported.into_luma16().get_pixel(30, 5)[0]),
         (image::ColorType::L16, u16::MAX)
     );
+    let before = std::fs::read(dir.join("hills.png.depth.png")).unwrap();
+    for flag in ["--colour", "--adjusted"] {
+        assert!(fails(dir, &["edit", "depth", "export", "hills.png", flag], 2).contains("name the file"));
+    }
+    assert_eq!(std::fs::read(dir.join("hills.png.depth.png")).unwrap(), before);
+    ok(dir, &["edit", "depth", "export", "hills.png", "seen.png", "--colour"]);
+    assert_eq!(
+        ImageReader::open(dir.join("seen.png")).unwrap().decode().unwrap().color(),
+        image::ColorType::Rgb8
+    );
     ok(dir, &["edit", "depth", "hills.png", "--near", "0.9", "--dilate", "4"]);
     ok(dir, &["edit", "parallax", "hills.png", "--source", "pointer", "--steps", "32", "--strength", "0.01"]);
     let edit: Value = serde_json::from_str(&ok(dir, &["edit", "show", "hills.png"])).unwrap();

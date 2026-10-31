@@ -21,7 +21,9 @@ pub enum Maps {
     },
     #[command(about = "Use a picture as the depth map, saved next to the image; white is near")]
     Import { path: PathBuf, file: PathBuf },
-    #[command(about = "Save the depth map as a 16-bit grey PNG; next to the image without a file")]
+    #[command(
+        about = "Save the depth map as a 16-bit grey PNG; next to the image without a file, except with --adjusted or --colour, which need one"
+    )]
     Export {
         path: PathBuf,
         file: Option<PathBuf>,
@@ -111,7 +113,13 @@ pub fn run(command: Maps) -> Result<()> {
         Maps::Import { path, file } => Some(places.import(&file, &path, &sha)?),
         Maps::Export { path, file, adjusted, colour } => {
             let from = found.context("the image has no depth map; generate or import one first")?;
-            let to = file.unwrap_or_else(|| beside(&path));
+            let to = match file {
+                Some(file) => file,
+                None if adjusted || colour => {
+                    return Err(crate::usage("name the file: --adjusted and --colour never replace the map"));
+                }
+                None => beside(&path),
+            };
             let map = if adjusted { adjust(&read(&from)?, &depth) } else { read(&from)? };
             match colour {
                 true => coloured(&map, true).save_with_format(&to, image::ImageFormat::Png)?,

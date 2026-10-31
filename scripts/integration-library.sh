@@ -139,9 +139,11 @@ stormy=$(ctl profile save Stormy --no-options)
 flash org.example.flash2
 ctl profile use "$stormy"
 expect "s['outputs']['TEST-7']['item'], 'once you allow it' in (s['outputs']['TEST-7']['error'] or '')" "(None, True)"
+ctl stream TEST-20 160 90 >/dev/null && ctl background '#203040' -o TEST-20 && ctl lib confirm photosensitive "$storm"
+expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-20']['background']" "(None, '#203040')"
 ctl lib confirm photosensitive "$flashing"
-expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['error']" "('$flashing', None)"
-ctl profile off && ctl profile rm "$stormy"
+expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['error'], s['outputs']['TEST-20']['background']" "('$flashing', None, '#203040')"
+ctl release TEST-20 && ctl profile off && ctl profile rm "$stormy"
 ctl lib apply "$storm" -o TEST-7
 expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['error']" "('$storm', None)"
 mkdir -p "$WORK/blink" && cp "$WORK/flash/preview.png" "$WORK/blink/preview.png"
@@ -186,10 +188,8 @@ told() { tail -n "+$mark" "$WORK/library-signals.log" | grep -A5 "member=Changed
 wait_for 5 told || fail "Confirm did not announce the other version: $(tail -n "+$mark" "$WORK/library-signals.log")"
 [ "$(reply "r['item']['package']['confirmed']" Library1 GetItem s "$newer")" = "['mature', 'photosensitive']" ] ||
   fail "the other version does not keep the decisions: $(ctl lib show "$newer" --json)"
-bus Library1 Remove asb 1 "$newer" false >/dev/null
 ctl release TEST-7 && expect "list(s['outputs'])" "[]"
-bus Library1 Remove asb 1 "$storm" false >/dev/null
-bus Library1 Remove asb 1 "$calm" false >/dev/null
+bus Library1 Remove asb 3 "$newer" "$storm" "$calm" false >/dev/null
 [ "$(find "$XDG_CACHE_HOME/wallpaper-rs/blobs" -type f | wc -l)" = 0 ] || fail "the package entry was kept"
 bus Library1 Remove asb 1 "$sunset" true >/dev/null
 [ ! -e "$copy" ] || fail "the imported copy was not deleted"

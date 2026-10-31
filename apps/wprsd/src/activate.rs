@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use wprs_core::OutputConfig;
 use wprs_core::config::parse_hex_color;
+use wprs_core::model::Profile;
 
 const HELD: &str = "the profile left out a wallpaper that flashes or shows fast patterns that can trigger \
     seizures in people with photosensitive epilepsy; the profile shows it once you allow it";
@@ -22,6 +23,55 @@ impl Daemon {
         }
         let _packages = crate::compositor::lock(&crate::packages::PACKAGES);
         let profile = model(self.store.read(|lib| lib.profile(key.trim()))?, None);
+        let (mut sections, held) = self.plan(&profile)?;
+        self.update_config(|c| {
+            sections.iter_mut().for_each(|(name, section)| section.scenes = c.scene_section(name).clone());
+            (c.default, c.profile) = (sections.remove("").unwrap_or_default(), Some(profile.uid.clone()));
+            c.outputs = sections;
+            for (key, value) in profile.options.iter().filter(|(key, _)| *key != DOWNLOADS) {
+                if let Err(e) = c.set_option(key, value) {
+                    tracing::warn!(key, "skipped a profile setting: {e}");
+                }
+            }
+            Ok(())
+        })?;
+        self.state().held = held;
+        self.configure_all();
+        self.watch_sources();
+        self.changes.changed("profiles", vec![profile.uid]);
+        Ok(())
+    }
+
+    pub(crate) fn allow_held(&self, key: &str) -> Result<()> {
+        let _packages = crate::compositor::lock(&crate::packages::PACKAGES);
+        let profile = model(self.store.read(|lib| lib.profile(key))?, None);
+        let (mut sections, still) = self.plan(&profile)?;
+        let freed: Vec<String> =
+            self.state().held.keys().filter(|o| !still.contains_key(*o)).cloned().collect();
+        if freed.is_empty() {
+            return Ok(());
+        }
+        self.update_config(|c| {
+            for (name, mut section) in freed.iter().filter_map(|o| Some((o, sections.remove(o)?))) {
+                section.scenes = c.scene_section(name).clone();
+                match name.is_empty() {
+                    true => c.default = section,
+                    false => drop(c.outputs.insert(name.clone(), section)),
+                }
+            }
+            Ok(())
+        })?;
+        self.state().held.retain(|o, _| !freed.contains(o));
+        let all = freed.iter().any(String::is_empty) || crate::edits::spans(&self.state());
+        match all {
+            true => self.configure_all(),
+            false => freed.iter().for_each(|o| drop(self.configure_output(o))),
+        }
+        self.watch_sources();
+        Ok(())
+    }
+
+    fn plan(&self, profile: &Profile) -> Result<(BTreeMap<String, OutputConfig>, HashMap<String, String>)> {
         let found = self.store.read(|lib| {
             let found = profile.outputs.iter().map(|(name, o)| {
                 let content = match (&o.item, &o.path, &o.playlist) {
@@ -66,21 +116,6 @@ impl Daemon {
                 OutputConfig { image, playlist, fit: o.fit, background, preset, ..Default::default() },
             );
         }
-        self.update_config(|c| {
-            sections.iter_mut().for_each(|(name, section)| section.scenes = c.scene_section(name).clone());
-            (c.default, c.profile) = (sections.remove("").unwrap_or_default(), Some(profile.uid.clone()));
-            c.outputs = sections;
-            for (key, value) in profile.options.iter().filter(|(key, _)| *key != DOWNLOADS) {
-                if let Err(e) = c.set_option(key, value) {
-                    tracing::warn!(key, "skipped a profile setting: {e}");
-                }
-            }
-            Ok(())
-        })?;
-        self.state().held = held;
-        self.configure_all();
-        self.watch_sources();
-        self.changes.changed("profiles", vec![profile.uid]);
-        Ok(())
+        Ok((sections, held))
     }
 }

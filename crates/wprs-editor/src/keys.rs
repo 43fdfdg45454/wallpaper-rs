@@ -81,6 +81,14 @@ pub fn keyframe(doc: &Value, pointer: &str, mut key: Key) -> Result<Vec<Op>> {
                 key.ease = key.ease.or_else(|| moved.get(2).cloned());
             }
             let at = keys.iter().position(|k| (time(k) - key.time).abs() < 1e-3);
+            ensure!(
+                key.from.is_none() || at.is_none() || key.remove,
+                said(
+                    "editor.already_keyframe_s",
+                    "%1 already has a keyframe at %2 s",
+                    &[&pointer, &key.time]
+                )
+            );
             if key.remove {
                 let i = at.ok_or_else(|| {
                     anyhow!(said(

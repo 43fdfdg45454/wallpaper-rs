@@ -5,6 +5,7 @@ mod grid;
 mod pages;
 mod picture;
 mod replies;
+mod tables;
 mod words;
 
 use crate::args::{INVALID, carries_secret, fixture};

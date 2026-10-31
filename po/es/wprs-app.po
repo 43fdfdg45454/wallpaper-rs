@@ -2288,7 +2288,7 @@ msgstr "Vídeos"
 msgid "Show"
 msgstr "Mostrar"
 
-#: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/SceneLayerRow.qml
 msgid "Hide"
 msgstr "Ocultar"
 
@@ -2312,11 +2312,11 @@ msgstr "Añadir un efecto"
 msgid "Edit the particle system"
 msgstr "Editar el sistema de partículas"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerRow.qml
 msgid "Lock"
 msgstr "Bloquear"
 
-#: apps/wprs-app/qml/SceneLayers.qml
+#: apps/wprs-app/qml/SceneLayerRow.qml
 msgid "Solo"
 msgstr "Solo"
 

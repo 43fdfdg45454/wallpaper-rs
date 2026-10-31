@@ -6,7 +6,7 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::time::{Duration, Instant};
-use wprs_core::edit::{self, Edit, Source};
+use wprs_core::edit::{self, Edit, History, Source};
 
 const MERGE: Duration = Duration::from_millis(500);
 
@@ -39,17 +39,28 @@ pub fn load(file: &Path, pixels: [u32; 2]) -> (Edit, Result<bool, String>) {
     }
 }
 
+pub type Last = Option<(String, Instant)>;
+
+pub fn step(
+    history: &mut History,
+    last: &mut Last,
+    (before, after): (&Edit, &Edit),
+    gesture: (String, Instant),
+) {
+    let merge = last.as_ref().is_some_and(|(g, at)| *g == gesture.0 && gesture.1 - *at < MERGE);
+    match merge {
+        true => history.redo.clear(),
+        false if before == after => return,
+        false => history.record(before, after),
+    }
+    *last = Some(gesture);
+}
+
 impl Editor {
     pub fn record(mut self: Pin<&mut Self>, before: &Edit, gesture: String) {
-        let now = Instant::now();
         let mut this = self.as_mut().rust_mut();
-        let merge = this.last.as_ref().is_some_and(|(g, at)| *g == gesture && now - *at < MERGE);
-        let after = this.edit.clone();
-        match merge {
-            true => this.history.redo.clear(),
-            false => this.history.record(before, &after),
-        }
-        this.last = Some((gesture, now));
+        let this = &mut *this;
+        step(&mut this.history, &mut this.last, (before, &this.edit), (gesture, Instant::now()));
     }
 
     fn walk(mut self: Pin<&mut Self>, back: bool) {

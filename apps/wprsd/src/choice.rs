@@ -98,7 +98,7 @@ pub(crate) fn unhold(daemon: &Daemon) -> Result<()> {
         let held = !daemon.state().held.is_empty();
         Ok(daemon.state().config.profile.clone().filter(|_| held))
     };
-    choose(decide, |profile| daemon.activate(profile))
+    choose(decide, |profile| daemon.allow_held(profile))
 }
 
 fn conditions(daemon: &Daemon) -> Conditions {

@@ -229,6 +229,10 @@ msgid "%1 has no keyframe at %2 s"
 msgstr "%1 no tiene ningún fotograma clave en %2 s"
 
 #: crates/wprs-editor/src/keys.rs
+msgid "%1 already has a keyframe at %2 s"
+msgstr "%1 ya tiene un fotograma clave en %2 s"
+
+#: crates/wprs-editor/src/keys.rs
 msgid "%1 has no keyframes"
 msgstr "%1 no tiene fotogramas clave"
 

@@ -98,3 +98,21 @@ fn a_change_asks_again_only_for_its_rows() {
     assert!(crate::diff::steady("tag:sea sort:added- sort:random:7") && crate::diff::steady("harbour"));
     assert!(!crate::diff::steady("sort:title") && !crate::diff::steady("fav:yes SORT:rating-"));
 }
+
+#[test]
+fn a_new_search_over_many_rows_starts_again_with_its_selection() {
+    let uids: Vec<String> = (0..3000).map(|i| format!("U{i:04}")).collect();
+    let mut grid = Grid { size: 256, ..Grid::default() };
+    grid.apply(&Edit::Insert(0, uids.iter().map(|uid| summary(uid)).collect()));
+    grid.toggle(5, true);
+    grid.toggle(2999, false);
+    let sorted: Vec<ItemSummary> = uids.iter().rev().map(|uid| summary(uid)).collect();
+    assert!(grid.plan(sorted.clone()).len() >= 2999, "a diff moves every row of a new order");
+    assert_eq!((grid.renew(false), grid.renew(true)), (Some(true), Some(false)));
+    grid.reset(sorted.into_iter().take(crate::grid::PAGE as usize).collect(), true);
+    let picked: Vec<_> = grid.selected().map(|i| i.uid.as_str()).collect();
+    assert_eq!((grid.rows.len(), picked), (200, vec!["U2999"]));
+    assert_eq!(grid.renew(false), None, "a page of rows keeps its rows in place");
+    grid.reset(vec![summary("U2999")], false);
+    assert_eq!(grid.selected().count(), 0);
+}

@@ -37,3 +37,17 @@ fn the_editor_names_why_a_picture_cannot_be_drawn() {
     assert_eq!(trouble(&wprs_render::RenderError::NoAdapter("none".into()).into()), "gpu");
     assert_eq!(trouble(&wprs_render::RenderError::DeviceLost("reset".into()).into()), "draw");
 }
+
+#[test]
+fn a_gesture_that_starts_without_a_change_still_makes_one_step() {
+    let (mut history, mut last, now) = (wprs_core::edit::History::default(), None, std::time::Instant::now());
+    let (before, mut after) = (Edit::default(), Edit::default());
+    let drag = |ms| ("set ev ".to_owned(), now + std::time::Duration::from_millis(ms));
+    crate::editsteps::step(&mut history, &mut last, (&before, &after), drag(0));
+    after.set("ev", "1").unwrap();
+    crate::editsteps::step(&mut history, &mut last, (&before, &after), drag(100));
+    let moved = after.clone();
+    after.set("ev", "1.5").unwrap();
+    crate::editsteps::step(&mut history, &mut last, (&moved, &after), drag(200));
+    assert_eq!(history.undo, [before]);
+}

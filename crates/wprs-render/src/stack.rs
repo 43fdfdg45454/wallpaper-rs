@@ -4,8 +4,6 @@ use image::RgbaImage;
 use wprs_core::config::parse_hex_color;
 use wprs_core::edit::{Edit, Kind, Mask, Matrix, Stroke};
 
-const SPREAD: f32 = 0.67;
-
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct Op {
@@ -116,8 +114,8 @@ pub(crate) fn plan(edit: &Edit, image: (u32, u32), size: (u32, u32), deep: bool)
             Kind::Vignette { amount, midpoint, roundness, feather } => {
                 (o.kind, o.a) = (7, [*amount, *midpoint, *roundness, feather.max(1e-3)])
             }
-            Kind::Blur { radius } if radius * long / 1000.0 * SPREAD >= 0.5 => {
-                blurs.push((count, radius * long / 1000.0 * SPREAD));
+            Kind::Blur { radius } if radius * long / 1000.0 >= 0.5 => {
+                blurs.push((count, radius * long / 1000.0));
                 o.kind = 8
             }
             Kind::Blur { .. } => continue,

@@ -1,5 +1,6 @@
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashSet;
 use wprs_core::model::{ItemKind, ItemSummary};
 
 pub const PAGE: u32 = 200;
@@ -73,6 +74,17 @@ impl Grid {
             }
         }
         changed
+    }
+
+    pub fn renew(&self, other: bool) -> Option<bool> {
+        (other || self.rows.is_empty() || self.rows.len() > PAGE as usize).then_some(!other)
+    }
+
+    pub fn reset(&mut self, items: Vec<ItemSummary>, keep: bool) {
+        let picked: HashSet<String> = self.selected().filter(|_| keep).map(|i| i.uid.clone()).collect();
+        self.rows.clear();
+        self.apply(&crate::diff::Edit::Insert(0, items));
+        self.rows.iter_mut().for_each(|r| r.selected = picked.contains(&r.item.uid));
     }
 
     pub fn selected(&self) -> impl Iterator<Item = &ItemSummary> {

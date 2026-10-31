@@ -147,7 +147,16 @@ impl Daemon {
                 wprs_format::open(&item.path, &wprs_format::Limits::default()).ok()?.read_file(name).ok()?;
             private_dir(&dir).ok()?;
             let part = file.with_extension("part");
+            let len = data.len() as u64;
             std::fs::write(&part, data).and_then(|()| std::fs::rename(&part, &file)).ok()?;
+            let prefix = format!("animated-{}-", item.uid);
+            let older = std::fs::read_dir(&dir).into_iter().flatten().flatten().map(|e| e.path());
+            older
+                .filter(|p| {
+                    *p != file && p.file_name().is_some_and(|n| n.to_string_lossy().starts_with(&prefix))
+                })
+                .for_each(|p| drop(std::fs::remove_file(p)));
+            self.thumbs.added(len, self.state().config.library.thumb_cache_mb);
         }
         Some(text(file))
     }

@@ -19,6 +19,7 @@ mod cube;
 mod cue;
 mod custom;
 mod deep;
+mod document;
 mod easing;
 mod effects;
 mod eval;
@@ -123,6 +124,7 @@ pub use custom::{
     CONTRACT, EffectFiles, MAX_EFFECT_FILES, MAX_GRID, MAX_INPUTS, MAX_OPTIONS, MAX_PARAMS, MAX_PASSES,
     MAX_TARGETS, MAX_VARIANTS, MAX_WGSL, MAX_WGSL_TOTAL,
 };
+pub use document::{Color, Scene, SceneError};
 pub use easing::Ease;
 pub use effects::{
     BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, Fuse, MaskMode, Output, PRELUDE, Pace, ParamDef,
@@ -210,12 +212,6 @@ pub use value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2, Ve
 pub use voice::{Playlist, Spot, Walk};
 pub use wake::Wake;
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use serde_json::Value as Json;
-use std::collections::{BTreeMap, BTreeSet};
-use std::sync::Arc;
-
 pub const SCHEMA: &str = "wallpaper-rs.scene/1";
 pub const MAX_SIZE: u32 = 16_384;
 pub const MAX_LAYERS: usize = 256;
@@ -229,134 +225,3 @@ pub const MAX_KEYS: usize = 256;
 pub const MAX_SCRIPTS: usize = 16;
 pub const MAX_ASSETS: usize = 256;
 pub const MAX_EVENTS: usize = 64;
-
-#[derive(Debug, thiserror::Error)]
-pub enum SceneError {
-    #[error("invalid scene: {0}")]
-    Json(#[from] serde_json::Error),
-    #[error("invalid scene: {0}")]
-    Invalid(Issue),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(try_from = "value::ColorRepr", into = "[f32; 4]")]
-pub struct Color(pub [f32; 4]);
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Scene {
-    pub schema: String,
-    pub canvas: Canvas,
-    #[serde(default)]
-    pub clock: Clock,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub assets: BTreeMap<String, Asset>,
-    #[serde(default)]
-    pub layers: Vec<Layer>,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub particles: BTreeMap<String, System>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub timelines: Vec<Timeline>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub scripts: Vec<Script>,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub effects: BTreeMap<String, EffectFiles>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub audio: Option<Hearing>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub camera3d: Option<Camera3d>,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub templates: BTreeMap<String, Layer>,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub pools: BTreeMap<String, Pool>,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub ext: BTreeMap<String, Json>,
-    #[serde(skip)]
-    #[schemars(skip)]
-    pub loaded: BTreeMap<String, Arc<Descriptor>>,
-    #[serde(skip)]
-    #[schemars(skip)]
-    pub models: BTreeMap<String, Arc<ModelFile>>,
-}
-
-impl Default for Color {
-    fn default() -> Self {
-        Color([0.0, 0.0, 0.0, 1.0])
-    }
-}
-
-impl Scene {
-    pub fn new(size: [u32; 2]) -> Scene {
-        let (assets, layers, particles, timelines, scripts, effects, audio, ext, loaded) = Default::default();
-        let (camera3d, templates, pools, models) = Default::default();
-        Scene {
-            schema: SCHEMA.into(),
-            canvas: Canvas::new(size),
-            clock: Clock::default(),
-            assets,
-            layers,
-            particles,
-            timelines,
-            scripts,
-            effects,
-            audio,
-            camera3d,
-            templates,
-            pools,
-            ext,
-            loaded,
-            models,
-        }
-    }
-
-    pub fn effect(&self, id: &str) -> Option<&Descriptor> {
-        self.loaded.get(id).map(|d| &**d).or_else(|| described(id).filter(|_| !self.effects.contains_key(id)))
-    }
-
-    pub fn shader(&self, id: &str) -> Option<&Descriptor> {
-        self.loaded
-            .get(id)
-            .map(|d| &**d)
-            .or_else(|| descriptor(id).filter(|_| !self.effects.contains_key(id)))
-    }
-
-    pub fn from_json(text: &str) -> Result<Scene, SceneError> {
-        Ok(serde_json::from_str(text)?)
-    }
-
-    pub fn load(text: &str, props: &BTreeMap<String, Property>) -> Result<Scene, SceneError> {
-        let scene = Scene::from_json(text)?;
-        match scene.validate(props).into_iter().next() {
-            Some(issue) => Err(SceneError::Invalid(issue)),
-            None => Ok(scene),
-        }
-    }
-
-    pub fn to_json(&self) -> Result<String, SceneError> {
-        Ok(serde_json::to_string_pretty(self)?)
-    }
-
-    pub fn layers(&self) -> impl Iterator<Item = &Layer> {
-        let mut stack: Vec<&Layer> = self.layers.iter().rev().collect();
-        std::iter::from_fn(move || {
-            let layer = stack.pop()?;
-            if let Kind::Group { layers, .. } = &layer.kind {
-                stack.extend(layers.iter().rev());
-            }
-            Some(layer)
-        })
-    }
-
-    pub fn layer(&self, id: &str) -> Option<&Layer> {
-        fn find<'a>(layers: &'a [Layer], id: &str) -> Option<&'a Layer> {
-            layers.iter().find_map(|l| if l.id == id { Some(l) } else { find(l.children(), id) })
-        }
-        find(&self.layers, id)
-    }
-
-    pub fn paths(&self) -> BTreeSet<&str> {
-        let assets = self.assets.values().map(|a| a.path.as_str());
-        let effects = self.effects.values().flat_map(|f| [f.descriptor.as_str(), f.wgsl.as_str()]);
-        assets.chain(self.scripts.iter().map(|s| s.path.as_str())).chain(effects).collect()
-    }
-}

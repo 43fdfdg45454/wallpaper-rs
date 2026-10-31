@@ -27,7 +27,7 @@ pub struct ItemModelRust {
     pub touched: Vec<String>,
     pub updating: bool,
     pub generation: u64,
-    pub fresh: bool,
+    pub fresh: Option<bool>,
     pub dirty: bool,
     pub sent: Vec<String>,
     pub pending: Option<(i32, i32)>,
@@ -83,8 +83,7 @@ impl ItemModel {
         }
         let mut this = self.as_mut().rust_mut();
         let other = this.asked.as_ref().is_none_or(|a| (a.0, a.1) != (source.0, source.1));
-        (this.fresh, this.dirty, this.generation) =
-            (other || this.grid.rows.is_empty(), false, this.generation + 1);
+        (this.fresh, this.dirty, this.generation) = (this.grid.renew(other), false, this.generation + 1);
         (this.asked, this.source, this.touched) = (Some(source.clone()), Some(source), Vec::new());
         self.fetch(0);
     }

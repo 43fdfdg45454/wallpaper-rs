@@ -16,7 +16,17 @@ const FRAME: f64 = 4.0;
 #[derive(Default)]
 pub(crate) struct Calibration {
     until: Option<Instant>,
-    made: Option<(Vec<Monitor>, Arc<RgbaImage>, u64)>,
+    made: Option<(Vec<Monitor>, Arc<RgbaImage>)>,
+    serial: u64,
+}
+
+impl Calibration {
+    fn turn(&mut self, on: bool) -> bool {
+        let started = on && self.until.is_none();
+        self.until = on.then(|| Instant::now() + SHOWN);
+        self.made = self.made.take().filter(|_| on);
+        started
+    }
 }
 
 fn bounds(monitors: &[Monitor]) -> [f64; 4] {
@@ -53,12 +63,7 @@ pub(crate) fn pattern(monitors: &[Monitor]) -> RgbaImage {
 
 impl Daemon {
     pub fn show_calibration(self: &Arc<Self>, on: bool) {
-        let started = {
-            let calibration = &mut self.state().sidecars.calibration;
-            let started = on && calibration.until.is_none();
-            calibration.until = on.then(|| Instant::now() + SHOWN);
-            started
-        };
+        let started = self.state().sidecars.calibration.turn(on);
         if started {
             tokio::spawn(expire(Arc::downgrade(self)));
         }
@@ -84,15 +89,22 @@ impl Daemon {
             monitors(&st)
         };
         let mine = monitors.iter().find(|m| m.id == output)?.mm;
-        let kept = self.state().sidecars.calibration.made.clone().filter(|(m, ..)| *m == monitors);
+        let kept = {
+            let calibration = &self.state().sidecars.calibration;
+            calibration
+                .made
+                .clone()
+                .filter(|(m, _)| *m == monitors)
+                .map(|(_, image)| (image, calibration.serial))
+        };
         let (image, serial) = match kept {
-            Some((_, image, serial)) => (image, serial),
+            Some(kept) => kept,
             None => {
                 let image = Arc::new(pattern(&monitors));
                 let calibration = &mut self.state().sidecars.calibration;
-                let serial = calibration.made.as_ref().map_or(0, |(.., s)| s + 1);
-                calibration.made = Some((monitors.clone(), image.clone(), serial));
-                (image, serial)
+                calibration.serial += 1;
+                calibration.made = Some((monitors.clone(), image.clone()));
+                (image, calibration.serial)
             }
         };
         let [x0, y0, w, h] = bounds(&monitors);
@@ -125,7 +137,7 @@ async fn expire(daemon: Weak<Daemon>) {
         match until {
             None => return,
             Some(until) if until <= Instant::now() => {
-                d.state().sidecars.calibration = Calibration::default();
+                d.state().sidecars.calibration.turn(false);
                 d.changes.changed("state", Vec::new());
                 return drop(tokio::task::spawn_blocking(move || d.configure_all()));
             }
@@ -154,5 +166,15 @@ mod tests {
         let center = image.get_pixel(2048, image.height() / 2).0;
         assert!(center[0] > 200, "{center:?}");
         assert_eq!(image.get_pixel(1000, 300).0, [24, 24, 24, 255]);
+    }
+
+    #[test]
+    fn turning_the_pattern_off_lets_its_picture_go() {
+        let mut calibration = super::Calibration::default();
+        assert!(calibration.turn(true) && !calibration.turn(true));
+        calibration.made = Some((Vec::new(), std::sync::Arc::new(image::RgbaImage::new(4096, 2048))));
+        calibration.serial = 3;
+        assert!(!calibration.turn(false));
+        assert!(calibration.made.is_none() && calibration.until.is_none() && calibration.serial == 3);
     }
 }

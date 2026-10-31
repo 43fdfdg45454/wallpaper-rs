@@ -71,59 +71,8 @@ ColumnLayout {
             model: panel.shown
             clip: true
 
-            delegate: QQC2.ItemDelegate {
-                id: row
-
-                required property var modelData
-
-                width: ListView.view.width
-                highlighted: modelData.pointer === panel.page.editor.selected || panel.page.picked.includes(modelData.id)
-                leftPadding: Kirigami.Units.largeSpacing * (1 + modelData.depth * 2)
-                onClicked: panel.pick(modelData, false)
-
-                MouseArea {
-                    anchors.fill: parent
-                    z: -1
-                    onClicked: mouse => panel.pick(row.modelData, (mouse.modifiers & Qt.ControlModifier) !== 0)
-                }
-
-                contentItem: RowLayout {
-                    Kirigami.Icon {
-                        source: panel.icon(row.modelData.type)
-                        Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                        Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                    }
-
-                    QQC2.Label {
-                        Layout.fillWidth: true
-                        text: row.modelData.label ?? row.modelData.id
-                        elide: Text.ElideRight
-                        opacity: row.modelData.hidden ? 0.5 : 1
-                    }
-
-                    Repeater {
-                        model: [["hide", "hidden", row.modelData.hidden, "view-hidden", App.tr("Hide")], ["lock", "locked", row.modelData.locked, "object-locked", App.tr("Lock")], ["solo", "", row.modelData.solo, "favorite", App.tr("Solo")]]
-
-                        delegate: QQC2.ToolButton {
-                            required property var modelData
-
-                            icon.name: modelData[3]
-                            text: modelData[4]
-                            display: QQC2.AbstractButton.IconOnly
-                            checkable: true
-                            checked: modelData[2]
-                            opacity: checked ? 1 : 0.4
-                            onClicked: {
-                                const args = {
-                                    "id": row.modelData.id
-                                };
-                                if (modelData[1])
-                                    args[modelData[1]] = checked;
-                                panel.page.run(modelData[0], modelData[0] === "solo" && !checked ? {} : args);
-                            }
-                        }
-                    }
-                }
+            delegate: SceneLayerRow {
+                owner: panel
             }
         }
     }

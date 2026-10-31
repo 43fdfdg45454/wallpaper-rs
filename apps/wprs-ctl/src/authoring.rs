@@ -46,8 +46,8 @@ pub fn run(command: Author) -> Result<()> {
             let folder = name.file_name().unwrap_or_default().to_string_lossy().into_owned();
             let id = id.unwrap_or_else(|| default_id(&folder));
             let locale = locale.unwrap_or_else(wprs_editor::starters::locale);
-            let doc =
-                starter(&from, &id, &title.unwrap_or(folder), &locale).map_err(|e| usage(e.to_string()))?;
+            let doc = starter(&from, &id, &title.unwrap_or(folder), &locale)
+                .map_err(|e| usage(wprs_editor::told(&e)))?;
             Project::create(&dir, doc)?;
         }
         Author::Open { dir, from, json } => {

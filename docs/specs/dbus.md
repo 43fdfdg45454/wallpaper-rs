@@ -807,8 +807,9 @@ thumbnails of a package rated `mature`) or `photosensitive` (`Apply` and playlis
 anything else returns `InvalidArgs`, an unknown uid `NotFound`. Items that are no packages are
 accepted and change nothing. `PackageInfo.confirmed` lists the decisions, and the `library` change
 names every item that shares a package id with these items. Allowing `photosensitive` while the
-active profile left a screen out for that reason (`OutputState.error`) activates the profile again,
-so the screen shows the package without another `Profiles1.Activate`.
+active profile left a screen out for that reason (`OutputState.error`) gives that screen what the
+profile sets for it once its packages are allowed, without another `Profiles1.Activate`; other
+screens and settings keep what they show now.
 
 ### Signal `ThumbnailReady(s uid, u size, s path)`
 
@@ -1752,7 +1753,7 @@ that cannot be used is ignored with a warning.
 | `contrast` | `amount`, `-100` to `100` |
 | `saturation` | `saturation` and `vibrance`, `-100` to `100` |
 | `curves` | `rgb`, `r`, `g` and `b`: empty or 2 to 16 `[x, y]` points from `0` to `1` with growing `x` |
-| `blur` | `radius`, `0` to `200` pixels of a picture 1000 pixels long; an edge spreads as under a Gaussian blur whose standard deviation is the radius |
+| `blur` | `radius`, `0` to `200` pixels of a picture 1000 pixels long; an edge spreads as under a Gaussian blur whose standard deviation is one and a half times the radius |
 | `overlay` | `color` `#rrggbb`; `blend` `normal`, `multiply`, `screen`, `overlay`, `soft_light` or `color` |
 | `vignette` | `amount`, `-1` to `1`; `midpoint`, `roundness` and `feather`, `0` to `1` |
 

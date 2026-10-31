@@ -107,6 +107,11 @@ fn keyframes_animate_values() {
     let missing: Action =
         serde_json::from_value(json!({"keyframe": {"pointer": opacity, "time": 3, "from": 7}})).unwrap();
     assert!(plan(&doc, &missing).is_err(), "there is no keyframe at 7 s");
+    let onto: Action =
+        serde_json::from_value(json!({"keyframe": {"pointer": opacity, "time": 2, "from": 1}})).unwrap();
+    let refused = plan(&doc, &onto).unwrap_err();
+    assert!(refused.to_string().contains("already has a keyframe at 2 s"), "{refused}");
+    assert_eq!(doc.pointer(opacity).unwrap()["keys"][2], json!([2.0, 1]));
     act(&mut doc, json!({"keyframe": {"pointer": opacity, "time": 1, "remove": true}}));
     act(&mut doc, json!({"keyframe": {"pointer": opacity, "time": 0, "remove": true}}));
     act(&mut doc, json!({"keyframe": {"pointer": opacity, "time": 2, "remove": true}}));

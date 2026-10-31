@@ -43,7 +43,7 @@ impl ItemModel {
     pub fn fetch(mut self: Pin<&mut Self>, offset: u32) {
         let Some(source) = self.source.clone() else { return };
         let rows = self.grid.rows.len() as u32;
-        let count = if offset > 0 || self.fresh { offset + PAGE } else { rows.max(PAGE) };
+        let count = if offset > 0 || self.fresh.is_some() { offset + PAGE } else { rows.max(PAGE) };
         let generation = self.generation;
         self.as_mut().set_loading(true);
         let qt = self.qt_thread();
@@ -121,10 +121,9 @@ impl ItemModel {
         {
             source.2 = page.query;
         }
-        if std::mem::take(&mut this.fresh) {
+        if let Some(keep) = this.fresh.take() {
             unsafe { self.as_mut().begin_reset_model() };
-            self.as_mut().rust_mut().grid.rows.clear();
-            self.as_mut().rust_mut().grid.apply(&Edit::Insert(0, page.items));
+            self.as_mut().rust_mut().grid.reset(page.items, keep);
             unsafe { self.as_mut().end_reset_model() };
         } else {
             let edits = match offset {

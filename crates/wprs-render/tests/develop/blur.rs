@@ -26,13 +26,13 @@ fn erf(x: f64) -> f64 {
 }
 
 #[test]
-fn blur_spreads_an_edge_like_a_gaussian_with_its_radius_as_deviation() {
+fn blur_spreads_an_edge_like_a_gaussian_one_and_a_half_times_its_radius() {
     let Some(r) = renderer() else { return };
     for (radius, width) in [(10.0, 1000), (25.0, 1000), (50.0, 500), (100.0, 1000)] {
         let image =
             RgbaImage::from_fn(width, 64, |x, _| Rgba(if x < width / 2 { [0, 0, 0, 255] } else { [255; 4] }));
         let out = develop(r, &image, &op(json!({"type": "blur", "radius": radius})), (width, 64));
-        let sigma = radius * f64::from(width) / 1000.0;
+        let sigma = 1.5 * radius * f64::from(width) / 1000.0;
         let reference =
             |x: u32| 0.5 + 0.5 * erf((f64::from(x) + 0.5 - f64::from(width / 2)) / (sigma * 2f64.sqrt()));
         let worst = (0..width).map(|x| (linear(at(&out, x, 32)[0]) - reference(x)).abs()).fold(0.0, f64::max);
