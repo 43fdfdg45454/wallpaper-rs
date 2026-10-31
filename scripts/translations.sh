@@ -70,8 +70,8 @@ for f in "${sources[@]}"; do
   mkdir -p "$TMP/rs/$(dirname "$f")"
   sed -E "s/'([a-z_]+)([^a-z_'])/\2/g" "$f" >"$TMP/rs/$f"
 done
-sed -i -E 's/^(\s*)\("[a-z_.]+", .*, ("[^"]*")\),?$/\1w(\2);/' "$TMP"/rs/crates/wprs-format/src/{check,validate,web}.rs
-sed -i -E 's/^(\s*)\("[a-z_]+", ("[^"]*")\),?$/\1w(\2);/' "$TMP/rs/crates/wprs-format/src/check.rs"
+sed -i -E 's/^(\s*)\("[a-z_.]+", .*, ("[^"]*")\),?$/\1w(\2);/' "$TMP"/rs/crates/wprs-format/src/{check,validate,web}.rs "$TMP"/rs/crates/wprs-format/src/check/*.rs
+sed -i -E 's/^(\s*)\("[a-z_]+", ("[^"]*")\),?$/\1w(\2);/' "$TMP"/rs/crates/wprs-format/src/check.rs "$TMP"/rs/crates/wprs-format/src/check/*.rs
 sed -i -E 's/^(\s*)\("[a-z0-9_.]+", ("[^"]*"), \[[A-Za-z, ]+\]\),?$/\1w(\2);/' "$TMP"/rs/crates/wprs-format/src/{features,scenery}.rs
 (cd "$TMP/rs" && xgettext --c++ --from-code=UTF-8 -k -ksaid:2 -kw:1 -kknown:2 -kpointed:2 -krequire:3 -kwithin:1 \
   -kUnsupported:2 -kSignature:1 --add-location=file --force-po --package-name=wallpaper-rs -o "$TMP/wprs-messages.pot" "${sources[@]}")

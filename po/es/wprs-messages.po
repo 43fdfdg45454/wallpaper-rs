@@ -782,63 +782,63 @@ msgstr "se esperaban de 1 a 128 caracteres"
 msgid "too many properties or presets"
 msgstr "demasiadas propiedades o ajustes predefinidos"
 
-#: crates/wprs-format/src/check.rs crates/wprs-format/src/manifest.rs
+#: crates/wprs-format/src/check.rs crates/wprs-format/src/manifest/read.rs
 msgid "the newer kinds and fields of properties need wallpaper-rs.wpak/2"
 msgstr ""
 "los tipos y campos nuevos de las propiedades necesitan wallpaper-rs.wpak/2"
 
-#: crates/wprs-format/src/check.rs
-msgid "authors and tags have no < or >"
-msgstr "los autores y las etiquetas no llevan < ni >"
-
-#: crates/wprs-format/src/check.rs
-msgid "is called previews.thumbnail in wallpaper-rs.wpak/2"
-msgstr "se llama previews.thumbnail en wallpaper-rs.wpak/2"
-
-#: crates/wprs-format/src/check.rs
-msgid "at most 256 properties and 64 presets"
-msgstr "como mucho 256 propiedades y 64 ajustes predefinidos"
-
-#: crates/wprs-format/src/check.rs
-msgid "files and folders accept image, video or both"
-msgstr "los archivos y carpetas aceptan image, video o ambos"
-
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check/texts.rs
 msgid "texts of at most 8000 characters without control characters"
 msgstr "textos de como mucho 8000 caracteres sin caracteres de control"
 
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check/texts.rs
 msgid "expected a language such as en or pt-BR"
 msgstr "se esperaba un idioma como en o pt-BR"
 
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check/texts.rs
 msgid "@%1 is not a text of the engine"
 msgstr "@%1 no es un texto del motor"
 
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check/texts.rs
 msgid "@%1 is not in the strings of the default language"
 msgstr "@%1 no está en los textos del idioma predeterminado"
 
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check/texts.rs
 msgid "needs a text in the default language and languages like en or pt-BR"
 msgstr ""
 "necesita un texto en el idioma predeterminado e idiomas como en o pt-BR"
 
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check/texts.rs
 msgid "has no text"
 msgstr "no tiene texto"
 
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check/texts.rs
 msgid "has no text in %1"
 msgstr "no tiene texto en %1"
 
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check/texts.rs
 msgid "expected at most %1 characters without control characters"
 msgstr "se esperaban como mucho %1 caracteres sin caracteres de control"
 
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check/texts.rs
 msgid "plain texts have no < or >"
 msgstr "los textos sin formato no llevan < ni >"
+
+#: crates/wprs-format/src/check/v2.rs
+msgid "authors and tags have no < or >"
+msgstr "los autores y las etiquetas no llevan < ni >"
+
+#: crates/wprs-format/src/check/v2.rs
+msgid "is called previews.thumbnail in wallpaper-rs.wpak/2"
+msgstr "se llama previews.thumbnail en wallpaper-rs.wpak/2"
+
+#: crates/wprs-format/src/check/v2.rs
+msgid "at most 256 properties and 64 presets"
+msgstr "como mucho 256 propiedades y 64 ajustes predefinidos"
+
+#: crates/wprs-format/src/check/v2.rs
+msgid "files and folders accept image, video or both"
+msgstr "los archivos y carpetas aceptan image, video o ambos"
 
 #: crates/wprs-format/src/contents.rs
 msgid "expected a picture or a video of the package"
@@ -1127,7 +1127,7 @@ msgstr "JSON mal formado: %1"
 msgid "expected one file per language named like locale/pt-BR.json"
 msgstr "se esperaba un archivo por idioma con nombres como locale/pt-BR.json"
 
-#: crates/wprs-format/src/manifest.rs
+#: crates/wprs-format/src/manifest/read.rs
 msgid "manifest version %1"
 msgstr "la versión %1 del manifiesto"
 
@@ -1767,7 +1767,8 @@ msgstr "hueso de la cadena"
 
 #: crates/wprs-scene/src/bones.rs crates/wprs-scene/src/links.rs
 #: crates/wprs-scene/src/particles/checks.rs
-#: crates/wprs-scene/src/particles/pulls.rs crates/wprs-scene/src/rules.rs
+#: crates/wprs-scene/src/particles/pulls.rs
+#: crates/wprs-scene/src/rules/shapes.rs
 msgid "layer"
 msgstr "capa"
 
@@ -1785,7 +1786,7 @@ msgstr "recurso"
 msgid "part"
 msgstr "parte"
 
-#: crates/wprs-scene/src/deep.rs crates/wprs-scene/src/rules.rs
+#: crates/wprs-scene/src/deep.rs crates/wprs-scene/src/rules/effects.rs
 msgid "parameter"
 msgstr "parámetro"
 
@@ -1943,7 +1944,8 @@ msgstr "punto de control"
 msgid "shader"
 msgstr "sombreador"
 
-#: crates/wprs-scene/src/particles/lineage.rs crates/wprs-scene/src/rules.rs
+#: crates/wprs-scene/src/particles/lineage.rs
+#: crates/wprs-scene/src/rules/kinds.rs
 msgid "particle system"
 msgstr "sistema de partículas"
 
@@ -1959,7 +1961,7 @@ msgstr "capa de malla o de modelo"
 msgid "timeline"
 msgstr "línea de tiempo"
 
-#: crates/wprs-scene/src/rules.rs
+#: crates/wprs-scene/src/rules/effects.rs
 msgid "effect"
 msgstr "efecto"
 

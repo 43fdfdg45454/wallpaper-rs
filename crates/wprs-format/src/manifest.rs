@@ -3,58 +3,21 @@ use crate::needs::{Input, Permissions, Platform, Requires};
 use crate::origin::Origin;
 use crate::video::Playback;
 use crate::web::Web;
-use crate::{Display, Error, Needs, Preset, Property, Result, Text, features};
+use crate::{Display, Needs, Preset, Property, Result, Text, features};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt;
-use wprs_core::message::said;
-use wprs_scene::Control;
+
+mod kind;
+mod read;
+
+pub use kind::Kind;
 
 pub const SCHEMA: &str = "wallpaper-rs.wpak/2";
 pub const SCHEMA_V1: &str = "wallpaper-rs.wpak/1";
 const PREFIX: &str = "wallpaper-rs.wpak/";
 
 pub type Strings = BTreeMap<String, BTreeMap<String, String>>;
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum Kind {
-    #[default]
-    Image,
-    Video,
-    Scene,
-    Web,
-    Preset,
-    Assets,
-}
-
-impl Kind {
-    pub fn name(self) -> &'static str {
-        match self {
-            Kind::Image => "image",
-            Kind::Video => "video",
-            Kind::Scene => "scene",
-            Kind::Web => "web",
-            Kind::Preset => "preset",
-            Kind::Assets => "assets",
-        }
-    }
-
-    pub fn shown(self) -> bool {
-        !matches!(self, Kind::Preset | Kind::Assets)
-    }
-
-    pub fn first(self) -> bool {
-        matches!(self, Kind::Image | Kind::Video | Kind::Scene)
-    }
-}
-
-impl fmt::Display for Kind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.name())
-    }
-}
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -152,46 +115,6 @@ pub fn manifest_schema() -> serde_json::Value {
 }
 
 impl Manifest {
-    pub fn from_json(bytes: &[u8]) -> Result<Self> {
-        Self::read(bytes, true)
-    }
-
-    pub(crate) fn read(bytes: &[u8], strict: bool) -> Result<Self> {
-        let header: Header = serde_json::from_slice(bytes)?;
-        let major = header.schema.strip_prefix(PREFIX).and_then(|n| n.parse::<u32>().ok());
-        if let Some(major) = major.filter(|m| *m > 2) {
-            return Err(Error::Newer(
-                said("format.manifest_version", "manifest version %1", &[&major]).into(),
-            ));
-        }
-        features::supported(header.requires.engine.as_deref(), &header.requires.features)?;
-        let mut manifest: Manifest = serde_json::from_slice(bytes)?;
-        if manifest.v2() {
-            return Ok(manifest);
-        }
-        let newer = header.properties.iter().find(|(_, p)| !wprs_scene::legacy(p)).filter(|_| strict);
-        if let Some((id, _)) = newer {
-            let reason = said(
-                "format.newer_properties",
-                "the newer kinds and fields of properties need wallpaper-rs.wpak/2",
-                &[],
-            );
-            return Err(crate::refuse(&format!("properties.{id}"), reason));
-        }
-        for property in manifest.properties.values_mut() {
-            if let Control::File { accept, .. } = &mut property.control {
-                accept.retain(|a| a == "image");
-            }
-        }
-        Ok(manifest)
-    }
-
-    pub(crate) fn newer_names(raw: &[u8], scene: Option<&str>, features: &BTreeSet<String>) -> Vec<String> {
-        let parsed = |text: &str| serde_json::from_str(text).is_ok_and(|v| wprs_scene::newer_scene_keys(&v));
-        let scene = || scene.is_some_and(parsed);
-        serde_json::from_slice(raw).map_or(Vec::new(), |m| newer_names(&m, scene, features))
-    }
-
     pub fn to_json(&self) -> Result<String> {
         Ok(serde_json::to_string_pretty(self)?)
     }
