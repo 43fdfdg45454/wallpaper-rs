@@ -183,6 +183,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-drm.sh
 
+      - name: User namespaces for the WebKit sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Helper and daemon with WPE WebKit
         run: |
           chmod +x target/debug/*

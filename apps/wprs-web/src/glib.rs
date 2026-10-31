@@ -1,8 +1,8 @@
 use crate::ffi::{Ptr, Text, get, text};
-use std::ffi::{CStr, c_int};
+use std::ffi::{CStr, c_char, c_int};
 use std::ptr::null_mut;
 
-pub const NUL: *const i8 = std::ptr::null();
+pub const NUL: *const c_char = std::ptr::null();
 
 pub unsafe fn connect(object: Ptr, signal: &str, handler: *const (), data: Ptr) {
     let name = text(signal);
