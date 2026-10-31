@@ -33,6 +33,7 @@ class SceneTest {
     fun prepare() {
         storage()
         examples(context)
+        Native.library(JSONObject().put("op", "items").put("query", "").put("languages", JSONArray(listOf("en"))).toString())
         reader.setOnImageAvailableListener({ source ->
             source.acquireLatestImage()?.use { image ->
                 val plane = image.planes[0]
