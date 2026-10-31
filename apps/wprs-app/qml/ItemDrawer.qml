@@ -136,6 +136,17 @@ Kirigami.OverlayDrawer {
                 host: drawer
             }
 
+            QQC2.Switch {
+                Layout.fillWidth: true
+                visible: drawer.pkg?.kind === "scene"
+                text: App.tr("Keep moving when the desktop asks for reduced motion")
+                checked: (drawer.pkg?.confirmed ?? []).includes("motion")
+                onToggled: {
+                    App.act(checked ? "Confirm" : "Unconfirm", [[drawer.uid], "motion"], "Library1");
+                    checked = Qt.binding(() => (drawer.pkg?.confirmed ?? []).includes("motion"));
+                }
+            }
+
             RowLayout {
                 QQC2.Button {
                     text: App.tr("Edit…")

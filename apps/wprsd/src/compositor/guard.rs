@@ -86,8 +86,14 @@ mod tests {
             Default::default(),
             Vec::new(),
         ));
-        let spec =
-            SceneSpec { values: Default::default(), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
+        let spec = SceneSpec {
+            values: Default::default(),
+            pack,
+            extra: Vec::new(),
+            clips: Vec::new(),
+            hold: None,
+            moving: false,
+        };
         SceneState::new(spec, Power::new(Tier::T3, false, 60))
     }
 
@@ -131,6 +137,18 @@ mod tests {
         assert!(free > 3.9 && label.is_empty(), "{free} {label}");
         let (guarded, label) = played(true);
         assert!(guarded < 0.7 * free && !label.is_empty(), "{guarded} {label}");
+    }
+
+    #[test]
+    fn a_package_allowed_to_move_ignores_reduced_motion_until_the_choice_is_withdrawn() {
+        let mut scene = state(blinking(), 0.03);
+        let moving = SceneSpec { moving: true, ..scene.spec.clone() };
+        scene.update(moving.clone());
+        scene.calm(true);
+        assert!(!scene.hushed && scene.quiet);
+        let still = SceneSpec { moving: false, ..moving.clone() };
+        assert!(scene.update(still) && scene.hushed);
+        assert!(scene.update(moving) && !scene.hushed && scene.quiet);
     }
 
     #[test]

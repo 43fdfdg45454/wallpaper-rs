@@ -2,7 +2,7 @@ use crate::actions::{Action, plan};
 use crate::history::History;
 use crate::meta::{cancels, detected, sync};
 use crate::ops::Op;
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{Result, bail, ensure};
 use serde_json::{Value, json};
 use std::fs;
 use std::io::Write;
@@ -40,8 +40,10 @@ pub fn entry(doc: &Value) -> Result<String> {
 
 pub fn read(dir: &Path) -> Result<Value> {
     let load = |name: &str| -> Result<Value> {
-        let text = fs::read_to_string(dir.join(name)).with_context(|| format!("cannot read {name}"))?;
-        serde_json::from_str(&text).with_context(|| format!("{name} is not valid JSON"))
+        let text = fs::read_to_string(dir.join(name))
+            .map_err(|e| said("editor.cannot_read", "cannot read %1: %2", &[&name, &e]))?;
+        serde_json::from_str(&text)
+            .map_err(|e| said("editor.not_json", "%1 is not valid JSON: %2", &[&name, &e]).into())
     };
     let manifest = load(MANIFEST)?;
     let scene = load(&entry(&json!({"manifest": manifest}))?)?;
@@ -49,7 +51,7 @@ pub fn read(dir: &Path) -> Result<Value> {
 }
 
 pub(crate) fn write(path: &Path, text: &str, mode: u32) -> Result<()> {
-    let dir = path.parent().context("a file needs a folder")?;
+    let dir = path.parent().ok_or_else(|| said("editor.needs_folder", "a file needs a folder", &[]))?;
     let tmp = dir.join(format!(".{}.tmp", path.file_name().unwrap_or_default().to_string_lossy()));
     let mut file = fs::OpenOptions::new().write(true).create(true).truncate(true).mode(mode).open(&tmp)?;
     file.write_all(text.as_bytes())?;

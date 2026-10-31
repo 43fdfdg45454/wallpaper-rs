@@ -29,7 +29,7 @@ impl Stage {
         if self.heavy && !std::mem::replace(&mut self.posed, true) {
             self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
         }
-        let calm = power.still && !self.heavy;
+        let calm = power.still && !self.heavy && !self.moving;
         if std::mem::replace(&mut self.calmed, calm) != calm && calm {
             self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
         }
@@ -65,8 +65,9 @@ impl Stage {
             listens: hears,
         };
         let acted = !still && self.acting.step(&mut self.runtime, sent);
-        let stilled = std::mem::replace(&mut self.stilled, power.still) != power.still;
-        let calmed = stilled && self.runtime.set_reduced_motion(power.still);
+        let asked = power.still && !self.moving;
+        let stilled = std::mem::replace(&mut self.stilled, asked) != asked;
+        let calmed = stilled && self.runtime.set_reduced_motion(asked);
         let tipped = self.runtime.set_tilt(crate::tilt::goal(self.offset, std::time::Instant::now()));
         self.runtime.set_wall(wall());
         let (ceiling, why) = budget.level(&self.runtime);

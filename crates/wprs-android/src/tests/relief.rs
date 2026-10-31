@@ -26,6 +26,9 @@ pub(super) fn relief(uid: &str) {
             .unwrap()
             .contains("not installed")
     );
+    let wrong = deep(json!({ "op": "make", "uid": uid, "device": "abacus" }));
+    assert!(wrong["error"].as_str().unwrap().contains("not auto, cpu or cuda"), "{wrong}");
+    assert_eq!(deep(json!({ "op": "look", "uid": uid, "colour": true }))["id"], "android.no_depth_map");
     let state = || {
         let item = deep(json!({ "op": "item", "uid": uid }));
         (item["parallax"].clone(), item["map"].clone())
@@ -63,6 +66,7 @@ pub(super) fn relief(uid: &str) {
     );
     let raise = depth::raised(&image).unwrap();
     assert_eq!(depth::maps::map(&raise).map(|map| map.dimensions()), Some((32, 16)));
+    looks(uid, &image, &deep);
     levels(uid, &image, &deep);
     masked(uid, &image);
     assert_eq!(deep(json!({ "op": "unmap", "uid": uid })), json!(1));
@@ -91,6 +95,22 @@ pub(super) fn relief(uid: &str) {
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
     assert!(!wprs_depth::beside(&image).exists() && !image.with_added_extension("wprs.json").exists());
     assert!(!fs::read_dir(store::dir().unwrap().join("depth")).is_ok_and(|mut maps| maps.next().is_some()));
+}
+
+fn looks(uid: &str, image: &Path, deep: &dyn Fn(Value) -> Value) {
+    let shown = |colour: bool| deep(json!({ "op": "look", "uid": uid, "colour": colour }));
+    let open = |path: &Value| image::open(path.as_str().unwrap()).unwrap().into_rgb8();
+    let grey = shown(false);
+    let pixel = open(&grey).get_pixel(0, 0).0;
+    let coloured = open(&shown(true));
+    assert!(!Path::new(grey.as_str().unwrap()).exists(), "only the shown view is kept");
+    assert!(pixel[0] == pixel[1] && pixel[1] == pixel[2], "{pixel:?}");
+    assert_ne!(coloured.get_pixel(0, 0).0, pixel, "false colour looks like the grey map");
+    assert_eq!(deep(json!({ "op": "item", "uid": uid }))["changed"], json!(false));
+    let bytes = fs::read(image).unwrap();
+    fs::write(image, [&bytes[..], b"tail"].concat()).unwrap();
+    assert_eq!(deep(json!({ "op": "item", "uid": uid }))["changed"], json!(true));
+    fs::write(image, bytes).unwrap();
 }
 
 fn levels(uid: &str, image: &Path, deep: &dyn Fn(Value) -> Value) {

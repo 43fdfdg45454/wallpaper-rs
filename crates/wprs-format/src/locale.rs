@@ -1,5 +1,6 @@
 use crate::{Manifest, Text};
 use std::collections::{BTreeMap, BTreeSet};
+use wprs_core::message::said;
 use wprs_scene::{Choice, Control, tag};
 
 pub const LOCALE: &str = "locale/";
@@ -80,7 +81,7 @@ impl Manifest {
             let language = language(&name).to_owned();
             let field = format!("{LOCALE}{language}.json");
             let table = serde_json::from_slice::<BTreeMap<String, String>>(&read(&name)?)
-                .map_err(|e| crate::Error::Invalid { field: field.clone(), reason: e.to_string() })?;
+                .map_err(|e| crate::refuse(&field, said("format.json", "malformed JSON: %1", &[&e])))?;
             let known = valid_tag(&language) && !self.string_files.contains_key(&language);
             crate::require(known, &field, "expected one file per language named like locale/pt-BR.json")?;
             total += size([&table]);

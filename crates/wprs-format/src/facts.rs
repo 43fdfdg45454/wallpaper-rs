@@ -1,6 +1,6 @@
-use crate::features::{explain, lacks, refused};
+use crate::features::{lacks, refused};
 use crate::validate::extension;
-use crate::{Error, Input, Kind, Manifest, Platform, Result, Scene, Span};
+use crate::{Input, Kind, Manifest, Platform, Result, Scene, Span};
 use std::collections::BTreeSet;
 use wprs_core::message::{Message, said};
 use wprs_scene::{EffectUse, Uses, needs, newer_params, source, tells_time};
@@ -154,20 +154,23 @@ fn shape([w, h]: [u32; 2]) -> Vec<String> {
 pub fn check(manifest: &Manifest, facts: &Facts) -> Result<()> {
     let granted = manifest.permissions.as_ref().is_some_and(|p| p.rgb);
     if facts.features.contains("rgb") && !granted {
-        let reason = "the scene sends its colors to RGB lighting; add \"rgb\": true".to_string();
-        return Err(Error::Invalid { field: "permissions".into(), reason });
+        let reason = said("format.rgb", "the scene sends its colors to RGB lighting; add \"rgb\": true", &[]);
+        return Err(crate::refuse("permissions", reason));
     }
     if let Some(missing) = facts.inputs.iter().find(|i| !manifest.inputs.contains(i)) {
         let at = facts.found.iter().find(|(i, _)| i == missing).map_or("/", |(_, at)| at.as_str());
-        let reason = format!("the scene uses {0} at {at} of scene.json; add \"{0}\"", missing.name());
-        return Err(Error::Invalid { field: "inputs".into(), reason });
+        let name = missing.name();
+        let reason =
+            said("format.undeclared", "the scene uses %1 at %2 of scene.json; add \"%1\"", &[&name, &at]);
+        return Err(crate::refuse("inputs", reason));
     }
     let listed = manifest.features();
     match facts.features.iter().find(|f| !listed.contains(f)) {
-        Some(f) => Err(Error::Invalid {
-            field: "requires.features".into(),
-            reason: format!("add {f:?} ({}); pack build fills this list", explain(f)),
-        }),
+        Some(f) => {
+            let why = crate::features::explained(f);
+            let reason = said("format.unlisted", "add \"%1\" (%2); pack build fills this list", &[f, &why]);
+            Err(crate::refuse("requires.features", reason.with(2, why)))
+        }
         None => Ok(()),
     }
 }

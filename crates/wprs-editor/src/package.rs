@@ -1,6 +1,6 @@
 use crate::check::{check_files, review};
 use crate::project::Project;
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{Result, bail, ensure};
 use serde_json::{Value, json};
 use std::fs;
 use std::io::ErrorKind;
@@ -26,7 +26,8 @@ pub fn name(doc: &Value) -> String {
 }
 
 pub fn output(dir: &Path, doc: &Value) -> Result<PathBuf> {
-    let dir = fs::canonicalize(dir).with_context(|| format!("cannot find {}", dir.display()))?;
+    let dir = fs::canonicalize(dir)
+        .map_err(|e| said("editor.cannot_find", "cannot find %1: %2", &[&dir.display(), &e]))?;
     Ok(dir.parent().unwrap_or(&dir).join(name(doc)))
 }
 
@@ -96,12 +97,16 @@ fn derived(original: &Manifest) -> Origin {
 }
 
 pub fn signer(key: &Path, password: Option<String>) -> Result<Signer> {
-    let secret = fs::read_to_string(key).with_context(|| format!("cannot read {}", key.display()))?;
+    let secret = fs::read_to_string(key)
+        .map_err(|e| said("editor.cannot_read", "cannot read %1: %2", &[&key.display(), &e]))?;
     Ok(Signer::new(&secret, password)?)
 }
 
 pub fn applied(doc: &Value) -> Result<PathBuf> {
-    let dir = dirs::data_dir().context("there is no data folder")?.join("wallpaper-rs").join("scenes");
+    let dir = dirs::data_dir()
+        .ok_or_else(|| said("editor.no_data_folder", "there is no data folder", &[]))?
+        .join("wallpaper-rs")
+        .join("scenes");
     fs::create_dir_all(&dir)?;
     Ok(dir.join(name(doc)))
 }

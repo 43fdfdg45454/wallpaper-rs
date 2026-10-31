@@ -11,6 +11,7 @@ Kirigami.Page {
     property alias editor: editor
     property string aspect
     property string mask
+    property var brush: null
     readonly property var edit: JSON.parse(editor.json || "{}")
     readonly property var values: JSON.parse(editor.values || "{}")
     readonly property var ops: edit.ops ?? []

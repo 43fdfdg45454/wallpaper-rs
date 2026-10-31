@@ -1,5 +1,6 @@
 use crate::{Error, Facts, Manifest, Platform, Result, ensure, require};
 use semver::{Prerelease, Version, VersionReq};
+use wprs_core::message::{Message, said};
 use wprs_scene::{described, drawn, newer_params};
 
 pub use crate::facts::{BUILTIN, check, facts, notes, warnings};
@@ -85,11 +86,33 @@ pub fn known(name: &str) -> bool {
 }
 
 pub fn explain(name: &str) -> String {
-    let found = entry(name).map(|(_, why, _)| why.to_string());
-    found.unwrap_or_else(|| match effect(name) {
-        Some((id, Some(param))) => format!("sets {param} on the {id} effect"),
-        _ => format!("uses the {} effect", name.trim_start_matches("effect.")),
-    })
+    explained(name).to_string()
+}
+
+pub fn explained(name: &str) -> Message {
+    match (entry(name), effect(name)) {
+        (Some((_, why, _)), _) => said("format.feature_why", "%1", &[&why]).texts(&[1]),
+        (None, Some((id, Some(param)))) => {
+            said("format.effect_param", "sets %1 on the %2 effect", &[&param, &id])
+        }
+        _ => said("format.effect_use", "uses the %1 effect", &[&name.trim_start_matches("effect.")]),
+    }
+}
+
+fn feature(name: &str) -> Message {
+    let why = explained(name);
+    said("format.feature", "the feature %1 (%2)", &[&name, &why]).with(2, why)
+}
+
+fn listed(items: Vec<Message>) -> Option<Message> {
+    let mut items = items.into_iter();
+    let first = items.next()?;
+    let rest: Vec<Message> = items.collect();
+    let Some((last, middle)) = rest.split_last() else { return Some(first) };
+    let joined = middle.iter().fold(first, |acc, item| {
+        said("format.comma", "%1, %2", &[&acc, item]).with(1, acc.clone()).with(2, item.clone())
+    });
+    Some(said("format.and", "%1 and %2", &[&joined, last]).with(1, joined.clone()).with(2, last.clone()))
 }
 
 pub const CHOSEN: [&str; 1] = ["locale_files"];
@@ -106,9 +129,10 @@ pub(crate) fn supported(engine: Option<&str>, features: &[String]) -> Result<()>
         let mut version = Version::parse(wprs_core::VERSION).unwrap_or(Version::new(0, 0, 0));
         version.pre = Prerelease::EMPTY;
         let ok = wanted.as_ref().is_ok_and(|w| w.matches(&version));
-        ensure(ok, || Error::Newer(format!("wallpaper-rs {engine}")))?;
+        ensure(ok, || Error::Newer(said("format.engine", "wallpaper-rs %1", &[&engine]).into()))?;
     }
-    features.iter().find(|f| !known(f)).map_or(Ok(()), |f| Err(Error::Newer(format!("the feature {f}"))))
+    let unknown = |f: &String| said("format.unknown_feature", "the feature %1", &[f]).into();
+    features.iter().find(|f| !known(f)).map_or(Ok(()), |f| Err(Error::Newer(unknown(f))))
 }
 
 pub fn lacks<'a>(profile: &str, features: impl IntoIterator<Item = &'a String>) -> Vec<String> {
@@ -129,10 +153,19 @@ pub fn playable(manifest: &Manifest, facts: &Facts, platform: Platform) -> Resul
     let names: Vec<&str> = manifest.platforms.iter().map(|p| p.title()).collect();
     ensure(allowed, || Error::Elsewhere(names.join(" and ")))?;
     let missing = refused(platform.name(), &facts.features);
-    let named: Vec<String> = missing.iter().map(|f| format!("{f} ({})", explain(f))).collect();
-    match named.as_slice() {
-        [] => Ok(()),
-        [one] => Err(Error::Newer(format!("the feature {one}"))),
-        [rest @ .., last] => Err(Error::Newer(format!("the features {} and {last}", rest.join(", ")))),
+    let many = missing.len() > 1;
+    let named = missing.iter().map(|f| {
+        if many {
+            said("format.named", "%1 (%2)", &[f, &explained(f)]).with(2, explained(f))
+        } else {
+            feature(f)
+        }
+    });
+    match listed(named.collect()) {
+        None => Ok(()),
+        Some(one) if !many => Err(Error::Newer(one.into())),
+        Some(all) => {
+            Err(Error::Newer(said("format.features", "the features %1", &[&all]).with(1, all).into()))
+        }
     }
 }

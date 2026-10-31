@@ -191,7 +191,14 @@ mod tests {
             serde_json::from_str(include_str!("../../../../scenes/snowfall/manifest.json")).unwrap();
         let properties = serde_json::from_value(manifest["properties"].clone()).unwrap();
         let pack = Arc::new(ScenePack::bare(scene, properties, Vec::new()));
-        SceneSpec { values: pack.props.values(&[]), pack, extra: Vec::new(), clips: Vec::new(), hold: None }
+        SceneSpec {
+            values: pack.props.values(&[]),
+            pack,
+            extra: Vec::new(),
+            clips: Vec::new(),
+            hold: None,
+            moving: false,
+        }
     }
 
     #[test]
@@ -296,8 +303,14 @@ mod tests {
           "layers": [{ "id": "card", "type": "solid", "color": "#4060ff", "size": [16, 9],
             "transform": { "rotation": { "timeline": "t", "keys": [[0, 0], [4, 360]] } } }] }"##;
         let pack = Arc::new(ScenePack::bare(Scene::from_json(text).unwrap(), Default::default(), Vec::new()));
-        let spec =
-            SceneSpec { values: Default::default(), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
+        let spec = SceneSpec {
+            values: Default::default(),
+            pack,
+            extra: Vec::new(),
+            clips: Vec::new(),
+            hold: None,
+            moving: false,
+        };
         let (content, fit, background) = (Content::Scene(spec.clone()), Fit::Stretch, [0; 3]);
         let (image, transition, uv, relief, scene) =
             (None, None, None, None, Some(SceneState::new(spec, power)));

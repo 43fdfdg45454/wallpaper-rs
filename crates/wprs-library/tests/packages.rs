@@ -94,6 +94,17 @@ fn rated_packages_are_searchable_and_confirmed_once_per_package() {
     assert_eq!(library.confirm(&[&storm.uid], "mature").unwrap(), both);
     let calm = library.search("content:unrated", NOW, 0, 1).unwrap().remove(0).uid;
     assert_eq!(library.confirm(&[&calm, &calm], "mature").unwrap(), [calm]);
+    let id = info_id(&library, &storm.uid);
+    assert!(!library.decided(&id, "motion").unwrap());
+    library.confirm(&[&storm.uid], "motion").unwrap();
+    assert!(library.decided(&id, "motion").unwrap());
+    assert_eq!(library.unconfirm(&[&storm.uid], "motion").unwrap(), both);
+    assert!(!library.decided(&id, "motion").unwrap() && library.decided(&id, "mature").unwrap());
+    assert!(matches!(library.unconfirm(&["01NOPE"], "motion"), Err(Error::NotFound(..))));
+}
+
+fn info_id(library: &Library, uid: &str) -> String {
+    library.item(uid).unwrap().package.unwrap().id
 }
 
 #[test]

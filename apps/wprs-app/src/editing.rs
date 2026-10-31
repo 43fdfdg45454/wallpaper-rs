@@ -6,7 +6,7 @@ use cxx_qt_lib::QString;
 use serde_json::{Map, Value, json};
 use std::pin::Pin;
 use std::time::Duration;
-use wprs_core::edit::{Action, Edit, Geometry, Kind, Parallax, spline};
+use wprs_core::edit::{Action, Edit, Geometry, Kind, Mask, Parallax, spline};
 
 const LEVELS: [&str; 6] = ["ev", "temperature", "tint", "contrast", "saturation", "vibrance"];
 const CHANNELS: [&str; 4] = ["rgb", "r", "g", "b"];
@@ -52,6 +52,11 @@ pub fn describe(edit: &Edit) -> String {
         .masks
         .iter()
         .filter_map(|(name, mask)| {
+            if let Mask::Brush { strokes, invert } = mask {
+                let brush =
+                    json!({"kind": "brush", "values": [], "strokes": strokes.len(), "invert": invert});
+                return Some((name.clone(), brush));
+            }
             let spec = mask.spec()?;
             let (kind, values) = spec.split_once(':')?;
             let values: Vec<f64> = values.split(',').filter_map(|v| v.parse().ok()).collect();

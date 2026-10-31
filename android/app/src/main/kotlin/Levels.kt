@@ -1,9 +1,15 @@
 package io.github.wallpaper_rs
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -23,6 +29,10 @@ fun level(key: String, value: Float): Any = if (key == "smooth" || key == "dilat
 
 @Composable
 fun Levels(main: Main, uid: String, state: JSONObject) {
+    var colour by remember(uid) { mutableStateOf(false) }
+    val look by loaded<String?>(null, uid, colour, state.toString()) { depth("look", "uid" to uid, "colour" to colour) as? String }
+    look?.let { Animated(it, Modifier.fillMaxWidth().heightIn(max = 240.dp).padding(horizontal = 16.dp)) }
+    Toggle(stringResource(R.string.false_colour), colour) { colour = it }
     LEVELS.forEach { (key, label, range) ->
         Level(stringResource(label), state.optDouble(key, 0.0).toFloat(), range) {
             main.act { withContext(Dispatchers.IO) { depth("levels", "uid" to uid, key to level(key, it)) } }

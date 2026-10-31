@@ -30,10 +30,12 @@ pub enum Pkg {
         #[arg(help = SPEC)]
         spec: String,
     },
-    #[command(about = "Print the path of the preview image of a package")]
+    #[command(about = "Print the path of the preview image of a package, or of its animated preview")]
     Preview {
         #[arg(help = SPEC)]
         spec: String,
+        #[arg(long, help = "The animated preview, a gif or webp, when the package has one")]
+        animated: bool,
     },
     #[command(about = "Install a package, or update it to its newest version")]
     Install {
@@ -73,8 +75,8 @@ pub async fn run(client: &Client, command: Pkg) -> Result<()> {
             show::reply(repos.browse(&query, page.offset, page.limit).await?, json, browse)?
         }
         Pkg::Reveal { spec } => repos.reveal(&spec).await?,
-        Pkg::Preview { spec } => {
-            let path = tokio::time::timeout(Duration::from_secs(60), preview(client, &spec)).await;
+        Pkg::Preview { spec, animated } => {
+            let path = tokio::time::timeout(Duration::from_secs(60), preview(client, &spec, animated)).await;
             let path = path.context("no preview arrived within 60 s")??;
             ensure!(!path.is_empty(), "no preview");
             println!("{path}")
@@ -100,14 +102,19 @@ pub async fn run(client: &Client, command: Pkg) -> Result<()> {
     Ok(())
 }
 
-async fn preview(client: &Client, spec: &str) -> Result<String> {
+async fn preview(client: &Client, spec: &str, animated: bool) -> Result<String> {
     let mut ready = client.repos.receive_preview_ready().await?;
-    if let Some(path) = client.repos.request_previews(&[spec]).await?.remove(spec) {
-        return Ok(path);
+    let cached = match animated {
+        true => client.repos.request_animated_previews(&[spec]).await?,
+        false => client.repos.request_previews(&[spec]).await?,
+    };
+    if let Some(path) = cached.get(spec) {
+        return Ok(path.clone());
     }
+    let wanted = if animated { format!("animated:{spec}") } else { spec.to_owned() };
     while let Some(signal) = ready.next().await {
         if let Ok(args) = signal.args()
-            && args.spec == spec
+            && args.spec == wanted
         {
             return Ok(args.path.into());
         }

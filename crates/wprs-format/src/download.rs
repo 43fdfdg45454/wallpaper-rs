@@ -17,8 +17,29 @@ pub fn preview<F: Fetch>(
     version: &str,
     dest: &Path,
 ) -> Result<bool> {
+    fetched(data, fetch, (repo_id, id, version), dest, |r| r.preview.as_ref())
+}
+
+pub fn animated<F: Fetch>(
+    data: &Path,
+    fetch: &F,
+    repo_id: &str,
+    id: &str,
+    version: &str,
+    dest: &Path,
+) -> Result<bool> {
+    fetched(data, fetch, (repo_id, id, version), dest, |r| r.animated.as_ref())
+}
+
+fn fetched<F: Fetch>(
+    data: &Path,
+    fetch: &F,
+    (repo_id, id, version): (&str, &str, &str),
+    dest: &Path,
+    pick: impl Fn(&Release) -> Option<&crate::Preview>,
+) -> Result<bool> {
     let snap = locked(data, false, || load(data, repo_id))?;
-    let Some(preview) = &found(&snap, id, version)?.preview else { return Ok(false) };
+    let Some(preview) = pick(found(&snap, id, version)?) else { return Ok(false) };
     let remote = format!("previews/{}.{}", preview.sha256, preview.ext);
     place(dest, true, |file| verified(fetch, &snap, &remote, preview.size, &preview.sha256, file))?;
     Ok(true)
@@ -32,7 +53,8 @@ pub fn release(data: &Path, repo_id: &str, id: &str, version: &str) -> Result<Re
 pub fn previews(data: &Path, repo_id: &str) -> Result<Vec<String>> {
     let snap = locked(data, false, || load(data, repo_id))?;
     let releases = snap.shards.iter().flat_map(|s| &s.packages).flat_map(|l| &l.versions);
-    let mut shas: Vec<String> = releases.filter_map(|r| Some(r.preview.as_ref()?.sha256.clone())).collect();
+    let shown = releases.flat_map(|r| r.preview.iter().chain(&r.animated));
+    let mut shas: Vec<String> = shown.map(|p| p.sha256.clone()).collect();
     shas.sort();
     shas.dedup();
     Ok(shas)

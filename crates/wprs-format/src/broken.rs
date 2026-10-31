@@ -10,7 +10,14 @@ use std::path::Path;
 
 pub(crate) type Found = Vec<(String, Result<Snapshot>)>;
 
+#[cfg(test)]
+thread_local! {
+    pub(crate) static SCANNED: std::cell::Cell<Option<fn(&Path)>> = const { std::cell::Cell::new(None) };
+}
+
 pub(crate) fn scan(data: &Path) -> Result<Found> {
+    #[cfg(test)]
+    SCANNED.with(|hook| hook.get().into_iter().for_each(|hook| hook(data)));
     let dirs = match fs::read_dir(data.join("repos")) {
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
         dirs => dirs?,

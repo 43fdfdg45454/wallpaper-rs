@@ -80,6 +80,8 @@ model! {
         pub size: u64,
         pub published: Time,
         pub preview: bool,
+        #[serde(default)]
+        pub animated: bool,
         pub versions: Vec<String>,
         pub installed: Vec<String>,
         pub update: bool,

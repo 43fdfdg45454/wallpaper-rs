@@ -102,6 +102,7 @@ impl Daemon {
                 size: release.size,
                 published: release.published.timestamp(),
                 preview: release.preview.is_some(),
+                animated: release.animated.is_some(),
                 versions: item.versions,
                 installed: item.installed,
                 update,
@@ -122,7 +123,11 @@ impl Daemon {
         let shas = |repo: &str| wprs_format::previews(data, repo).unwrap_or_default();
         let others: BTreeSet<String> = repos.filter(|r| r != id).flat_map(|r| shas(&r)).collect();
         let ours = shas(id).into_iter().filter(|sha| !others.contains(sha));
-        ours.map(|sha| self.store.cache.join("previews").join(format!("{sha}.jpg"))).collect()
+        let files = |sha: String| {
+            let dir = self.store.cache.join("previews");
+            [dir.join(format!("{sha}.jpg")), self.moving_file(&sha, "gif"), self.moving_file(&sha, "webp")]
+        };
+        ours.flat_map(files).collect()
     }
 
     pub fn reload_installed(&self) {

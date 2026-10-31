@@ -1,4 +1,5 @@
 use super::{Edit, Source};
+use crate::message::{Message, said};
 use crate::store::write_private;
 use sha2::{Digest, Sha256};
 use std::io::ErrorKind::NotFound;
@@ -11,6 +12,10 @@ pub const MAX_BYTES: usize = 2 << 20;
 
 pub fn dir() -> PathBuf {
     dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join("wallpaper-rs").join("edits")
+}
+
+pub fn missing(image: &Path) -> Message {
+    said("edit.cannot_find", "cannot find %1", &[&image.display()])
 }
 
 fn hex(digest: &[u8]) -> String {
@@ -48,7 +53,7 @@ impl Source {
     }
 }
 
-fn read(path: &Path) -> Result<Option<(SystemTime, String)>, String> {
+fn read(path: &Path) -> Result<Option<(SystemTime, String)>, Message> {
     let open = || -> std::io::Result<_> {
         let file = std::fs::File::open(path)?;
         let (modified, mut text) = (file.metadata()?.modified()?, String::new());
@@ -56,14 +61,16 @@ fn read(path: &Path) -> Result<Option<(SystemTime, String)>, String> {
         Ok((modified, text))
     };
     match open() {
-        Ok((_, text)) if text.len() > MAX_BYTES => Err(format!("{} is too large", path.display())),
+        Ok((_, text)) if text.len() > MAX_BYTES => {
+            Err(said("edit.too_large", "%1 is too large", &[&path.display()]))
+        }
         Ok(found) => Ok(Some(found)),
         Err(e) if e.kind() == NotFound => Ok(None),
-        Err(e) => Err(format!("cannot read {}: {e}", path.display())),
+        Err(e) => Err(said("edit.cannot_read", "cannot read %1: %2", &[&path.display(), &e])),
     }
 }
 
-pub fn load(image: &Path, edits: &Path) -> Result<Option<(PathBuf, Edit)>, String> {
+pub fn load(image: &Path, edits: &Path) -> Result<Option<(PathBuf, Edit)>, Message> {
     let mut newest: Option<(SystemTime, PathBuf, String)> = None;
     for path in places(image, edits) {
         if let Some((time, text)) = read(&path)?
@@ -73,21 +80,24 @@ pub fn load(image: &Path, edits: &Path) -> Result<Option<(PathBuf, Edit)>, Strin
         }
     }
     let Some((_, path, text)) = newest else { return Ok(None) };
-    let edit = Edit::parse(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+    let edit =
+        Edit::parse(&text).map_err(|e| said("edit.in_file", "%1: %2", &[&path.display(), &e]).with(2, e))?;
     Ok(Some((path, edit)))
 }
 
-pub fn save(edit: &Edit, image: &Path, edits: &Path) -> Result<PathBuf, String> {
+pub fn save(edit: &Edit, image: &Path, edits: &Path) -> Result<PathBuf, Message> {
     edit.validate()?;
     let (text, [beside, fallback]) = (edit.to_json(), places(image, edits));
     if !beside.is_symlink() && write_private(&beside, text.as_bytes()).is_ok() {
         std::fs::remove_file(&fallback).ok();
         return Ok(beside);
     }
-    write_private(&fallback, text.as_bytes()).map(|()| fallback).map_err(|e| e.to_string())
+    let failed =
+        |e: crate::ConfigError| said("edit.cannot_write", "cannot write %1: %2", &[&fallback.display(), &e]);
+    write_private(&fallback, text.as_bytes()).map_err(failed).map(|()| fallback)
 }
 
-pub fn commit(edit: &Edit, image: &Path, edits: &Path) -> Result<Option<PathBuf>, String> {
+pub fn commit(edit: &Edit, image: &Path, edits: &Path) -> Result<Option<PathBuf>, Message> {
     match edit.is_empty() {
         true => remove(image, edits).map(|_| None),
         false => save(edit, image, edits).map(Some),
@@ -99,7 +109,7 @@ pub fn adopt(
     image: &Path,
     edits: &Path,
     keep: bool,
-) -> Result<bool, String> {
+) -> Result<bool, Message> {
     let local = load(image, edits)?.map(|(_, edit)| edit);
     let Some(value) = synced else {
         return if keep || local.is_none() { Ok(false) } else { remove(image, edits) };
@@ -107,7 +117,8 @@ pub fn adopt(
     let mut edit = Edit::from_value(value.clone())?;
     edit.source = match &local {
         Some(local) => local.source.clone(),
-        None => Source::read(image, [0; 2]).map_err(|e| e.to_string())?,
+        None => Source::read(image, [0; 2])
+            .map_err(|e| said("edit.cannot_read", "cannot read %1: %2", &[&image.display(), &e]))?,
     };
     if local.as_ref() == Some(&edit) {
         return Ok(false);
@@ -115,10 +126,10 @@ pub fn adopt(
     commit(&edit, image, edits).map(|_| true)
 }
 
-pub fn remove(image: &Path, edits: &Path) -> Result<bool, String> {
+pub fn remove(image: &Path, edits: &Path) -> Result<bool, Message> {
     places(image, edits).iter().try_fold(false, |found, path| match std::fs::remove_file(path) {
         Ok(()) => Ok(true),
         Err(e) if e.kind() == NotFound => Ok(found),
-        Err(e) => Err(format!("cannot remove {}: {e}", path.display())),
+        Err(e) => Err(said("edit.cannot_remove", "cannot remove %1: %2", &[&path.display(), &e])),
     })
 }

@@ -11,7 +11,20 @@ ColumnLayout {
     property var packages: []
     property int total
     property var previews: ({})
+    property var moving: ({})
     property var shown: ({})
+    readonly property bool battery: App.state.on_battery ?? false
+
+    onBatteryChanged: {
+        if (!battery)
+            animate(packages);
+    }
+
+    function animate(list) {
+        const wanted = list.filter(p => p.animated && p.photosensitive !== true).map(browse.spec);
+        if (!battery && wanted.length > 0)
+            App.query("RequestAnimatedPreviews", [wanted], "Repos1", found => browse && (browse.moving = Object.assign({}, browse.moving, found[0])));
+    }
 
     function spec(pkg) {
         return pkg.repo_id + "/" + pkg.id + "@" + pkg.version;
@@ -24,6 +37,7 @@ ColumnLayout {
             browse.packages = reply.packages;
             browse.total = reply.total;
             App.query("RequestPreviews", [reply.packages.filter(p => p.preview).map(browse.spec)], "Repos1", found => browse && (browse.previews = Object.assign({}, browse.previews, found[0])));
+            browse.animate(reply.packages);
         });
     }
 
@@ -33,9 +47,14 @@ ColumnLayout {
         target: App.backend
 
         function onPreviewReady(spec, path) {
-            browse.previews = Object.assign({}, browse.previews, {
-                [spec]: path
-            });
+            if (spec.startsWith("animated:"))
+                browse.moving = Object.assign({}, browse.moving, {
+                    [spec.slice(9)]: path
+                });
+            else
+                browse.previews = Object.assign({}, browse.previews, {
+                    [spec]: path
+                });
         }
 
         function onChanged(topic) {
@@ -80,6 +99,15 @@ ColumnLayout {
                     asynchronous: true
                     fillMode: Image.PreserveAspectCrop
                     sourceSize: row.veiled ? Qt.size(12, 12) : undefined
+
+                    AnimatedImage {
+                        anchors.fill: parent
+                        visible: !row.veiled && status === AnimatedImage.Ready
+                        source: row.veiled || row.modelData.photosensitive === true ? "" : App.url(browse.moving[browse.spec(row.modelData)] ?? "")
+                        playing: visible && !browse.battery && browse.Window.visibility !== Window.Hidden
+                        cache: false
+                        fillMode: Image.PreserveAspectCrop
+                    }
 
                     TapHandler {
                         enabled: row.veiled

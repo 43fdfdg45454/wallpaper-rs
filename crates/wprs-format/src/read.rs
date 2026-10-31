@@ -127,7 +127,7 @@ impl<R: Read + Seek> Package<R> {
             let size = self.entries.iter().find(|e| e.path == asset.path).map_or(0, |e| e.size);
             within("LUT size", size, MAX_LUT_BYTES as u64)?;
             let lut = Lut::parse(&self.read_file(&asset.path)?)
-                .map_err(|e| Error::Invalid { field: asset.path.clone(), reason: e.to_string() })?;
+                .map_err(|e| Error::Invalid { field: asset.path.clone(), reason: e.to_string().into() })?;
             parsed.insert(asset.path.clone(), Arc::new(lut));
             within(
                 "LUT data",
@@ -195,5 +195,5 @@ impl<R: Read + Seek> Package<R> {
 }
 
 fn invalid(reason: String) -> Error {
-    Error::Invalid { field: "scene".into(), reason }
+    Error::Invalid { field: "scene".into(), reason: reason.into() }
 }

@@ -34,6 +34,6 @@ grep -x "Exec=.* --command=/app/bin/wprs-app --file-forwarding $app @@u %U @@" "
 grep -x "Icon=$app" "$desktop"
 if grep -q '^DBusActivatable=' "$desktop"; then exit 1; fi
 test -f "$exports/icons/hicolor/scalable/apps/$app.svg"
-test -f "$files/share/metainfo/$app.metainfo.xml"
+grep -qF "<release version=\"${version%%+*}\"" "$files/share/metainfo/$app.metainfo.xml"
 ls "$files/bin/wprsd" "$files/bin/wprs-ctl" "$files/bin/wprs-app"
 if grep -l -E '/run/build|/(home|root)/' "$files"/bin/wprs*; then exit 1; fi

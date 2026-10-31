@@ -27,6 +27,15 @@ pub(super) fn calmed() {
             let shot = shot.unwrap();
             assert!(shot.fps == 0 && (1..=60_000).contains(&shot.delay), "reduced motion kept moving");
         }
+        assert_eq!(ask(json!({ "op": "confirm", "uid": uid, "what": "motion" })), Value::Null);
+        let mut stage = Stage::new(uid.clone(), pack::load(&path).unwrap());
+        let fps = stage.render(r, ((64, 32), 0, 60), (still, wprs_scene::Tier::T3), &[], true).unwrap().fps;
+        assert!(stage.moving && fps > 0, "a scene allowed to move stayed still");
+        assert_eq!(ask(json!({ "op": "unconfirm", "uid": uid, "what": "motion" })), Value::Null);
+        stage.refresh();
+        let at = ((64, 32), 1_000_000, 60);
+        let fps = stage.render(r, at, (still, wprs_scene::Tier::T3), &[], true).unwrap().fps;
+        assert!(!stage.moving && fps == 0, "a withdrawn choice kept the scene moving");
         assert_eq!(settings::setting("playback.flash_guard", Some("true")).unwrap(), "true");
         assert!(power::guarded());
         let mut stage = Stage::new(uid.clone(), pack::load(&path).unwrap());

@@ -26,7 +26,7 @@ pub(crate) fn manifest_problem(e: Error) -> Problem {
     match &e {
         Error::Invalid { field, reason } => {
             let pointer = format!("/manifest/{}", field.split('.').collect::<Vec<_>>().join("/"));
-            problem(pointer, said("editor.field", "%1: %2", &[field, reason]).texts(&[2]))
+            problem(pointer, reason.put(said("editor.field", "%1: %2", &[field, reason]), 2))
         }
         e => problem("/manifest", e.message()),
     }
@@ -49,7 +49,7 @@ pub fn problems(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
         .map(|e| match e {
             Error::Invalid { field, reason } => Problem {
                 warning: field != "inputs",
-                ..problem(at(&field), said("editor.field", "%1: %2", &[&field, &reason]).texts(&[2]))
+                ..problem(at(&field), reason.put(said("editor.field", "%1: %2", &[&field, &reason]), 2))
             },
             e => problem("/manifest", e.message()),
         })

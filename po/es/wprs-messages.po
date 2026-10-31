@@ -12,6 +12,196 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: crates/wprs-core/src/edit/action.rs
+msgid "%1 is not KEY=VALUE"
+msgstr "%1 no es CLAVE=VALOR"
+
+#: crates/wprs-core/src/edit/action.rs
+msgid "no mask is named %1"
+msgstr "ninguna máscara se llama %1"
+
+#: crates/wprs-core/src/edit/action.rs
+msgid "no operation is named %1"
+msgstr "ninguna operación se llama %1"
+
+#: crates/wprs-core/src/edit/action.rs crates/wprs-core/src/edit/check.rs
+#: crates/wprs-core/src/edit/fields.rs crates/wprs-core/src/edit/set.rs
+#: crates/wprs-core/src/edit/tool.rs crates/wprs-editor/src/check.rs
+#: crates/wprs-editor/src/findings.rs crates/wprs-editor/src/history.rs
+#: crates/wprs-format/src/facts.rs crates/wprs-format/src/features.rs
+msgid "%1"
+msgstr "%1"
+
+#: crates/wprs-core/src/edit/action.rs
+msgid "some of %1 are not operations"
+msgstr "algunas de %1 no son operaciones"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "%1: %2 is out of range %3 to %4"
+msgstr "%1: %2 está fuera del rango de %3 a %4"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "%1: use 1 to 64 letters, digits, - or _"
+msgstr "%1: usa de 1 a 64 letras, cifras, - o _"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "%1: not inside the image"
+msgstr "%1: no está dentro de la imagen"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "%1: use 2 to 16 points"
+msgstr "%1: usa de 2 a 16 puntos"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "%1: x must grow from point to point"
+msgstr "%1: x tiene que crecer de un punto al siguiente"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "%1: unknown field"
+msgstr "%1: campo desconocido"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "version %1 is newer than %2"
+msgstr "la versión %1 es posterior a la %2"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "version: use 1 to %1"
+msgstr "version: usa de 1 a %1"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "source: too long"
+msgstr "source: demasiado largo"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "geometry.rotate: use 0, 90, 180 or 270"
+msgstr "geometry.rotate: usa 0, 90, 180 o 270"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "use at most 24 ops and 8 masks"
+msgstr "usa como mucho 24 operaciones y 8 máscaras"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "use at most 4 brush masks and 20000 points"
+msgstr "usa como mucho 4 máscaras de pincel y 20000 puntos"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "%1: %2 is used twice"
+msgstr "%1: %2 se usa dos veces"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "%1: no mask is named %2"
+msgstr "%1: ninguna máscara se llama %2"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "%1: use #rrggbb"
+msgstr "%1: usa #rrggbb"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "outputs.%1: too long"
+msgstr "outputs.%1: demasiado largo"
+
+#: crates/wprs-core/src/edit/check.rs
+msgid "fit: span belongs to the screens, not to a picture"
+msgstr "fit: span es de las pantallas, no de una imagen"
+
+#: crates/wprs-core/src/edit/depth.rs
+msgid "depth.model: use %1"
+msgstr "depth.model: usa %1"
+
+#: crates/wprs-core/src/edit/depth.rs
+msgid "%1 is not auto, pointer or accelerometer"
+msgstr "%1 no es auto, pointer ni accelerometer"
+
+#: crates/wprs-core/src/edit/depth.rs
+msgid "use 1, 8, 16 or 32 steps"
+msgstr "usa 1, 8, 16 o 32 pasos"
+
+#: crates/wprs-core/src/edit/fields.rs crates/wprs-core/src/edit/file.rs
+#: crates/wprs-core/src/edit/set.rs crates/wprs-editor/src/findings.rs
+#: crates/wprs-editor/src/package.rs crates/wprs-scene/src/issue.rs
+msgid "%1: %2"
+msgstr "%1: %2"
+
+#: crates/wprs-core/src/edit/file.rs
+msgid "cannot find %1"
+msgstr "no se encuentra %1"
+
+#: crates/wprs-core/src/edit/file.rs
+msgid "%1 is too large"
+msgstr "%1 es demasiado grande"
+
+#: crates/wprs-core/src/edit/file.rs crates/wprs-editor/src/assets.rs
+#: crates/wprs-editor/src/package.rs crates/wprs-editor/src/previews.rs
+#: crates/wprs-editor/src/project.rs crates/wprs-editor/src/scripts.rs
+#: crates/wprs-editor/src/shaders.rs
+msgid "cannot read %1: %2"
+msgstr "no se puede leer %1: %2"
+
+#: crates/wprs-core/src/edit/file.rs crates/wprs-editor/src/scripts.rs
+#: crates/wprs-editor/src/shaders.rs
+msgid "cannot write %1: %2"
+msgstr "no se puede escribir %1: %2"
+
+#: crates/wprs-core/src/edit/file.rs
+msgid "cannot remove %1: %2"
+msgstr "no se puede borrar %1: %2"
+
+#: crates/wprs-core/src/edit/parse.rs
+msgid "%1 is not a list of numbers"
+msgstr "%1 no es una lista de números"
+
+#: crates/wprs-core/src/edit/parse.rs
+msgid "%1 does not have %2 numbers"
+msgstr "%1 no tiene %2 números"
+
+#: crates/wprs-core/src/edit/parse.rs
+msgid "%1 is not a ratio such as 16:9"
+msgstr "%1 no es una proporción como 16:9"
+
+#: crates/wprs-core/src/edit/parse.rs
+msgid "%1 is not none, h, v or hv"
+msgstr "%1 no es none, h, v ni hv"
+
+#: crates/wprs-core/src/edit/parse.rs
+msgid "%1 is not a blend mode"
+msgstr "%1 no es un modo de fusión"
+
+#: crates/wprs-core/src/edit/parse.rs
+msgid "%1 is not a brush stroke"
+msgstr "%1 no es un trazo de pincel"
+
+#: crates/wprs-core/src/edit/parse.rs
+msgid "%1 is not a mask"
+msgstr "%1 no es una máscara"
+
+#: crates/wprs-core/src/edit/parse.rs
+msgid "%1 is not linear, radial, luminance, depth, brush or erase"
+msgstr "%1 no es linear, radial, luminance, depth, brush ni erase"
+
+#: crates/wprs-core/src/edit/set.rs
+msgid "%1 is not a number"
+msgstr "%1 no es un número"
+
+#: crates/wprs-core/src/edit/set.rs
+msgid "%1 is not true or false"
+msgstr "%1 no es true ni false"
+
+#: crates/wprs-core/src/edit/set.rs
+msgid "give one of its fields"
+msgstr "indica uno de sus campos"
+
+#: crates/wprs-core/src/edit/set.rs
+msgid "%1: unknown setting"
+msgstr "%1: ajuste desconocido"
+
+#: crates/wprs-core/src/edit/tool.rs
+msgid "%1 is a %2 operation, not %3; give another id"
+msgstr "%1 es una operación %2, no %3; indica otro id"
+
+#: crates/wprs-core/src/edit/tool.rs
+msgid "%1 is not rgb, r, g or b"
+msgstr "%1 no es rgb, r, g ni b"
+
 #: crates/wprs-editor/src/actions.rs crates/wprs-editor/src/layers.rs
 msgid "there is no layer \"%1\""
 msgstr "no hay ninguna capa «%1»"
@@ -53,6 +243,10 @@ msgstr "un sonido puede tener como mucho %1 MiB"
 msgid "the sound %1"
 msgstr "el sonido %1"
 
+#: crates/wprs-editor/src/assets.rs crates/wprs-editor/src/previews.rs
+msgid "the picture cannot be read: %1"
+msgstr "no se puede leer la imagen: %1"
+
 #: crates/wprs-editor/src/assets.rs
 msgid "only pictures, videos, sounds, fonts and .cube tables can be imported"
 msgstr ""
@@ -79,6 +273,10 @@ msgid "a color table may have at most 16 MiB"
 msgstr "una tabla de color puede tener como mucho 16 MiB"
 
 #: crates/wprs-editor/src/assets.rs
+msgid "name a file"
+msgstr "indica un archivo"
+
+#: crates/wprs-editor/src/assets.rs
 msgid "assets/ has too many files named %1"
 msgstr "assets/ tiene demasiados archivos llamados %1"
 
@@ -90,19 +288,9 @@ msgstr "el recurso %1 ya existe"
 msgid "the kind of a scene package is scene"
 msgstr "el tipo de un paquete de escena es scene"
 
-#: crates/wprs-editor/src/check.rs crates/wprs-editor/src/findings.rs
-#: crates/wprs-editor/src/history.rs crates/wprs-format/src/facts.rs
-msgid "%1"
-msgstr "%1"
-
 #: crates/wprs-editor/src/check.rs
 msgid "%1 is not in the folder"
 msgstr "%1 no está en la carpeta"
-
-#: crates/wprs-editor/src/findings.rs crates/wprs-editor/src/package.rs
-#: crates/wprs-scene/src/issue.rs
-msgid "%1: %2"
-msgstr "%1: %2"
 
 #: crates/wprs-editor/src/findings.rs
 msgid "%1: refused: %2"
@@ -281,6 +469,10 @@ msgid "%1 already exists"
 msgstr "%1 ya existe"
 
 #: crates/wprs-editor/src/package.rs
+msgid "cannot find %1: %2"
+msgstr "no se encuentra %1: %2"
+
+#: crates/wprs-editor/src/package.rs
 msgid "save the scene before building it"
 msgstr "guarda la escena antes de construirla"
 
@@ -292,9 +484,17 @@ msgstr "%1 no es una carpeta vacía"
 msgid "%1 is not a scene package"
 msgstr "%1 no es un paquete de escena"
 
+#: crates/wprs-editor/src/package.rs
+msgid "there is no data folder"
+msgstr "no hay carpeta de datos"
+
 #: crates/wprs-editor/src/previews.rs
 msgid "the picture does not fit in 1 MiB even as a jpeg of 512 pixels"
 msgstr "la imagen no cabe en 1 MiB ni como jpeg de 512 píxeles"
+
+#: crates/wprs-editor/src/previews.rs
+msgid "choose a png, jpeg, webp or gif picture"
+msgstr "elige una imagen png, jpeg, webp o gif"
 
 #: crates/wprs-editor/src/previews.rs
 msgid ""
@@ -311,6 +511,14 @@ msgstr "una vista previa animada necesita %1; actualiza antes el manifiesto"
 #: crates/wprs-editor/src/project.rs
 msgid "the entry %1 is not a scene file"
 msgstr "la entrada %1 no es un archivo de escena"
+
+#: crates/wprs-editor/src/project.rs
+msgid "%1 is not valid JSON: %2"
+msgstr "%1 no es un JSON válido: %2"
+
+#: crates/wprs-editor/src/project.rs crates/wprs-editor/src/session.rs
+msgid "a file needs a folder"
+msgstr "un archivo necesita una carpeta"
 
 #: crates/wprs-editor/src/project.rs
 msgid ""
@@ -359,6 +567,10 @@ msgid "%1: %2 %3"
 msgstr "%1: %2 %3"
 
 #: crates/wprs-editor/src/scripts.rs
+msgid "the script has no file name"
+msgstr "el script no tiene nombre de archivo"
+
+#: crates/wprs-editor/src/scripts.rs
 msgid "%1 is not a .js file"
 msgstr "%1 no es un archivo .js"
 
@@ -370,9 +582,25 @@ msgstr "los scripts de una escena ocupan como mucho 1 MiB entre todos"
 msgid "a scene has at most %1 scripts"
 msgstr "una escena tiene como mucho %1 scripts"
 
+#: crates/wprs-editor/src/scripts.rs crates/wprs-editor/src/shaders.rs
+msgid "%1 is not a text file: %2"
+msgstr "%1 no es un archivo de texto: %2"
+
+#: crates/wprs-editor/src/session.rs
+msgid "there is no state folder"
+msgstr "no hay carpeta de estado"
+
 #: crates/wprs-editor/src/shaders.rs
 msgid "%1 is larger than %2 KiB"
 msgstr "%1 ocupa más de %2 KiB"
+
+#: crates/wprs-editor/src/shaders.rs
+msgid "the descriptor is not valid JSON: %1"
+msgstr "el descriptor no es un JSON válido: %1"
+
+#: crates/wprs-editor/src/shaders.rs
+msgid "the descriptor has no id"
+msgstr "el descriptor no tiene id"
 
 #: crates/wprs-editor/src/shaders.rs
 msgid "the effect %1 %2"
@@ -450,6 +678,15 @@ msgstr "la raíz actual debe estar firmada del todo antes de rotarla"
 #: crates/wprs-format/src/admin.rs
 msgid "is not a root key of this or the previous root"
 msgstr "no es una clave raíz de esta raíz ni de la anterior"
+
+#: crates/wprs-format/src/archive.rs crates/wprs-format/src/source.rs
+#: crates/wprs-format/src/validate.rs
+msgid "file size"
+msgstr "tamaño del archivo"
+
+#: crates/wprs-format/src/archive.rs crates/wprs-format/src/source.rs
+msgid "scene file size"
+msgstr "tamaño del archivo de escena"
 
 #: crates/wprs-format/src/authors.rs
 msgid "expected a wpak-repo-authors/1.0 of this repository"
@@ -545,7 +782,7 @@ msgstr "se esperaban de 1 a 128 caracteres"
 msgid "too many properties or presets"
 msgstr "demasiadas propiedades o ajustes predefinidos"
 
-#: crates/wprs-format/src/check.rs
+#: crates/wprs-format/src/check.rs crates/wprs-format/src/manifest.rs
 msgid "the newer kinds and fields of properties need wallpaper-rs.wpak/2"
 msgstr ""
 "los tipos y campos nuevos de las propiedades necesitan wallpaper-rs.wpak/2"
@@ -575,9 +812,29 @@ msgid "expected a language such as en or pt-BR"
 msgstr "se esperaba un idioma como en o pt-BR"
 
 #: crates/wprs-format/src/check.rs
+msgid "@%1 is not a text of the engine"
+msgstr "@%1 no es un texto del motor"
+
+#: crates/wprs-format/src/check.rs
+msgid "@%1 is not in the strings of the default language"
+msgstr "@%1 no está en los textos del idioma predeterminado"
+
+#: crates/wprs-format/src/check.rs
 msgid "needs a text in the default language and languages like en or pt-BR"
 msgstr ""
 "necesita un texto en el idioma predeterminado e idiomas como en o pt-BR"
+
+#: crates/wprs-format/src/check.rs
+msgid "has no text"
+msgstr "no tiene texto"
+
+#: crates/wprs-format/src/check.rs
+msgid "has no text in %1"
+msgstr "no tiene texto en %1"
+
+#: crates/wprs-format/src/check.rs
+msgid "expected at most %1 characters without control characters"
+msgstr "se esperaban como mucho %1 caracteres sin caracteres de control"
 
 #: crates/wprs-format/src/check.rs
 msgid "plain texts have no < or >"
@@ -602,6 +859,10 @@ msgstr "tamaño de los sonidos que se leen poco a poco"
 #: crates/wprs-format/src/contents.rs
 msgid "sound size"
 msgstr "tamaño del sonido"
+
+#: crates/wprs-format/src/contents.rs
+msgid "lasts %1 s, at most %2 s are allowed"
+msgstr "dura %1 s y se permiten %2 s como mucho"
 
 #: crates/wprs-format/src/contents.rs
 msgid "length of the sounds in seconds"
@@ -634,6 +895,18 @@ msgid "does not match the entry it extends"
 msgstr "no coincide con la entrada que amplía"
 
 #: crates/wprs-format/src/facts.rs
+msgid "the scene sends its colors to RGB lighting; add \"rgb\": true"
+msgstr "la escena envía sus colores a la iluminación RGB; añade \"rgb\": true"
+
+#: crates/wprs-format/src/facts.rs
+msgid "the scene uses %1 at %2 of scene.json; add \"%1\""
+msgstr "la escena usa %1 en %2 de scene.json; añade \"%1\""
+
+#: crates/wprs-format/src/facts.rs
+msgid "add \"%1\" (%2); pack build fills this list"
+msgstr "añade \"%1\" (%2); pack build rellena esta lista"
+
+#: crates/wprs-format/src/facts.rs
 msgid "inputs declares %1 but nothing in the package uses it"
 msgstr "inputs declara %1, pero nada del paquete lo usa"
 
@@ -642,8 +915,177 @@ msgid "requires.features lists %1, which the package does not use"
 msgstr "requires.features incluye %1, que el paquete no usa"
 
 #: crates/wprs-format/src/features.rs
+msgid "reacts to the sound playing on the computer"
+msgstr "reacciona al sonido que se reproduce en el equipo"
+
+#: crates/wprs-format/src/features.rs
+msgid "follows the pointer"
+msgstr "sigue al puntero"
+
+#: crates/wprs-format/src/features.rs
+msgid "reacts to clicks"
+msgstr "reacciona a los clics"
+
+#: crates/wprs-format/src/features.rs
+msgid "shows what the media player plays"
+msgstr "muestra lo que reproduce el reproductor multimedia"
+
+#: crates/wprs-format/src/features.rs
+msgid "connects to the network"
+msgstr "se conecta a la red"
+
+#: crates/wprs-format/src/features.rs
+msgid "runs scene scripts"
+msgstr "ejecuta scripts de escena"
+
+#: crates/wprs-format/src/features.rs
+msgid "plays sound"
+msgstr "reproduce sonido"
+
+#: crates/wprs-format/src/features.rs
+msgid "has settings of the newer kinds"
+msgstr "tiene ajustes de los tipos nuevos"
+
+#: crates/wprs-format/src/features.rs
+msgid "shows pictures from a folder the user chooses"
+msgstr "muestra las imágenes de una carpeta que elige el usuario"
+
+#: crates/wprs-format/src/features.rs
+msgid "plays videos the user chooses"
+msgstr "reproduce vídeos que elige el usuario"
+
+#: crates/wprs-format/src/features.rs
+msgid "sets how its video plays"
+msgstr "define cómo se reproduce su vídeo"
+
+#: crates/wprs-format/src/features.rs
+msgid "is a web page"
+msgstr "es una página web"
+
+#: crates/wprs-format/src/features.rs
+msgid "sets the values of another package"
+msgstr "fija los valores de otro paquete"
+
+#: crates/wprs-format/src/features.rs
+msgid "holds resources for other packages"
+msgstr "guarda recursos para otros paquetes"
+
+#: crates/wprs-format/src/features.rs
+msgid "needs other packages"
+msgstr "necesita otros paquetes"
+
+#: crates/wprs-format/src/features.rs
+msgid "says what graphics card it needs"
+msgstr "dice qué tarjeta gráfica necesita"
+
+#: crates/wprs-format/src/features.rs
+msgid "names the devices it is made for"
+msgstr "nombra los dispositivos para los que está hecho"
+
+#: crates/wprs-format/src/features.rs
+msgid "keeps its texts in a file per language"
+msgstr "guarda sus textos en un archivo por idioma"
+
+#: crates/wprs-format/src/features.rs
+msgid "names texts the engine translates"
+msgstr "nombra textos que traduce el motor"
+
+#: crates/wprs-format/src/features.rs
+msgid "writes newer settings with their default values"
+msgstr "escribe ajustes nuevos con sus valores por defecto"
+
+#: crates/wprs-format/src/features.rs
+msgid "says that it was imported or where it was downloaded from"
+msgstr "dice que se importó o de dónde se descargó"
+
+#: crates/wprs-format/src/features.rs
+msgid "credits files to the package they come from"
+msgstr "atribuye archivos al paquete del que vienen"
+
+#: crates/wprs-format/src/features.rs
+msgid "sets the color around its picture or spreads over every screen"
+msgstr ""
+"fija el color alrededor de su imagen o se extiende por todas las pantallas"
+
+#: crates/wprs-format/src/features.rs
+msgid "suggests an accent color for the desktop"
+msgstr "propone un color de acento para el escritorio"
+
+#: crates/wprs-format/src/features.rs
+msgid "shows its picture or video mirrored"
+msgstr "muestra su imagen o su vídeo en espejo"
+
+#: crates/wprs-format/src/features.rs
+msgid "limits its frame rate, starts muted or plays once"
+msgstr "limita sus fotogramas, empieza en silencio o se reproduce una sola vez"
+
+#: crates/wprs-format/src/features.rs
+msgid "opens what the user chooses when clicked"
+msgstr "abre lo que elige el usuario con un clic"
+
+#: crates/wprs-format/src/features.rs
+msgid "reads the subfolders of a chosen folder or fewer of its files"
+msgstr "lee las subcarpetas de una carpeta elegida o menos de sus archivos"
+
+#: crates/wprs-format/src/features.rs
+msgid "lets its scripts or page list a chosen folder"
+msgstr "deja que sus scripts o su página listen una carpeta elegida"
+
+#: crates/wprs-format/src/features.rs
+msgid "changes its settings when the device saves power"
+msgstr "cambia sus ajustes cuando el dispositivo ahorra energía"
+
+#: crates/wprs-format/src/features.rs
+msgid "uses compressed textures in the KTX2 format"
+msgstr "usa texturas comprimidas en formato KTX2"
+
+#: crates/wprs-format/src/features.rs
+msgid "uses pictures in the AVIF format"
+msgstr "usa imágenes en formato AVIF"
+
+#: crates/wprs-format/src/features.rs
+msgid "spreads its scene over every screen"
+msgstr "extiende su escena por todas las pantallas"
+
+#: crates/wprs-format/src/features.rs
+msgid "sets %1 on the %2 effect"
+msgstr "ajusta %1 en el efecto %2"
+
+#: crates/wprs-format/src/features.rs
+msgid "uses the %1 effect"
+msgstr "usa el efecto %1"
+
+#: crates/wprs-format/src/features.rs
+msgid "the feature %1 (%2)"
+msgstr "la función %1 (%2)"
+
+#: crates/wprs-format/src/features.rs
+msgid "%1, %2"
+msgstr "%1, %2"
+
+#: crates/wprs-format/src/features.rs
+msgid "%1 and %2"
+msgstr "%1 y %2"
+
+#: crates/wprs-format/src/features.rs
 msgid "expected a version requirement such as >=0.6"
 msgstr "se esperaba un requisito de versión como >=0.6"
+
+#: crates/wprs-format/src/features.rs
+msgid "wallpaper-rs %1"
+msgstr "wallpaper-rs %1"
+
+#: crates/wprs-format/src/features.rs
+msgid "the feature %1"
+msgstr "la función %1"
+
+#: crates/wprs-format/src/features.rs
+msgid "%1 (%2)"
+msgstr "%1 (%2)"
+
+#: crates/wprs-format/src/features.rs
+msgid "the features %1"
+msgstr "las funciones %1"
 
 #: crates/wprs-format/src/fetch.rs
 msgid "expected 64 hex digits"
@@ -673,9 +1115,29 @@ msgstr "lo ofrecen varios repositorios; antepón el id del repositorio"
 msgid "is installed from another repository"
 msgstr "está instalado desde otro repositorio"
 
+#: crates/wprs-format/src/install.rs
+msgid "%1 %2 is older than the installed %3; confirm the downgrade"
+msgstr "%1 %2 es anterior a la %3 instalada; confirma que quieres volver atrás"
+
+#: crates/wprs-format/src/locale.rs crates/wprs-format/src/said.rs
+msgid "malformed JSON: %1"
+msgstr "JSON mal formado: %1"
+
 #: crates/wprs-format/src/locale.rs
 msgid "expected one file per language named like locale/pt-BR.json"
 msgstr "se esperaba un archivo por idioma con nombres como locale/pt-BR.json"
+
+#: crates/wprs-format/src/manifest.rs
+msgid "manifest version %1"
+msgstr "la versión %1 del manifiesto"
+
+#: crates/wprs-format/src/media.rs
+msgid "%1 must be a %2 image of at most %3 pixels a side"
+msgstr "%1 tiene que ser una imagen %2 de %3 píxeles de lado como mucho"
+
+#: crates/wprs-format/src/media.rs
+msgid "%1 must be a %2 image of at most %3 pixels a side and %4 s"
+msgstr "%1 tiene que ser una imagen %2 de %3 píxeles de lado y %4 s como mucho"
 
 #: crates/wprs-format/src/online.rs
 msgid "does not let authors register online"
@@ -696,6 +1158,10 @@ msgstr "está ligado en la raíz"
 #: crates/wprs-format/src/online.rs
 msgid "an author holds at most 16 keys"
 msgstr "un autor tiene 16 claves como mucho"
+
+#: crates/wprs-format/src/origin.rs
+msgid "a package from a provider is published under %1"
+msgstr "un paquete de un proveedor se publica con %1"
 
 #: crates/wprs-format/src/publish.rs
 msgid "is not signed by enough root keys"
@@ -725,11 +1191,6 @@ msgstr "cifrado"
 msgid "compression method"
 msgstr "método de compresión"
 
-#: crates/wprs-format/src/read.rs crates/wprs-format/src/source.rs
-#: crates/wprs-format/src/validate.rs
-msgid "file size"
-msgstr "tamaño del archivo"
-
 #: crates/wprs-format/src/read.rs
 msgid "scene size"
 msgstr "tamaño de la escena"
@@ -745,10 +1206,6 @@ msgstr "tamaño de la LUT"
 #: crates/wprs-format/src/read.rs
 msgid "LUT data"
 msgstr "datos de la LUT"
-
-#: crates/wprs-format/src/read.rs crates/wprs-format/src/source.rs
-msgid "scene file size"
-msgstr "tamaño del archivo de escena"
 
 #: crates/wprs-format/src/repo.rs
 msgid "expected wpak-repo-root/1.0"
@@ -797,10 +1254,6 @@ msgstr "error de entrada y salida: %1"
 #: crates/wprs-format/src/said.rs
 msgid "invalid zip archive: %1"
 msgstr "archivo zip no válido: %1"
-
-#: crates/wprs-format/src/said.rs
-msgid "malformed JSON: %1"
-msgstr "JSON mal formado: %1"
 
 #: crates/wprs-format/src/said.rs
 msgid "invalid %1: %2"
@@ -886,6 +1339,314 @@ msgstr "este paquete necesita una versión más reciente de wallpaper-rs: usa %1
 msgid "this package is made for %1 only"
 msgstr "este paquete está hecho solo para %1"
 
+#: crates/wprs-format/src/scenery.rs
+msgid "mixes layers with the newer blend modes"
+msgstr "mezcla capas con los modos de fusión nuevos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "tints or brightens its pictures, videos, particles or groups"
+msgstr "tiñe o aclara sus imágenes, vídeos, partículas o grupos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "moves layers with a layer outside their group"
+msgstr "mueve capas con una capa de fuera de su grupo"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "tilts layers in depth"
+msgstr "inclina capas en profundidad"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "weakens masks"
+msgstr "atenúa máscaras"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "masks its effects with layers or shapes"
+msgstr "enmascara sus efectos con capas o formas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "feeds layers into effects"
+msgstr "pasa capas a los efectos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "uses videos as masks, effect textures or light patterns"
+msgstr "usa vídeos como máscaras, texturas de efectos o proyecciones de luz"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "sets the speed, range or frame of its videos and moving pictures"
+msgstr ""
+"fija la velocidad, el tramo o el fotograma de sus vídeos e imágenes animadas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "sets how its pictures are filtered, repeated or shrunk"
+msgstr "fija cómo se filtran, repiten o reducen sus imágenes"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "plays sprite sheets or animated pictures"
+msgstr "reproduce hojas de sprites o imágenes animadas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "wraps or boxes its texts"
+msgstr "ajusta sus textos en líneas o les pone una caja"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "outlines, shadows, blurs or spaces its texts"
+msgstr "pone contorno, sombra, desenfoque o espaciado a sus textos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "uses font collections, compressed fonts or fallback fonts"
+msgstr "usa colecciones de fuentes, fuentes comprimidas o fuentes de respaldo"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "plays MP3 or long sounds, lists of sounds or sounds started by events"
+msgstr ""
+"reproduce sonidos MP3 o largos, listas de sonidos o sonidos que arrancan con "
+"eventos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "moves, zooms, turns or shakes the whole scene"
+msgstr "mueve, acerca, gira o sacude toda la escena"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "sets how the scene follows the pointer or the tilt of the phone"
+msgstr "fija cómo sigue la escena al puntero o a la inclinación del teléfono"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "makes the bright parts of the scene glow"
+msgstr "hace brillar las partes claras de la escena"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "renders brighter than white and maps the tones"
+msgstr "dibuja más claro que el blanco y ajusta los tonos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "draws over the previous frame"
+msgstr "dibuja sobre el fotograma anterior"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "lights its layers"
+msgstr "ilumina sus capas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "lights the air"
+msgstr "ilumina el aire"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "projects pictures with its lights"
+msgstr "proyecta imágenes con sus luces"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "shades its pictures with normal maps, gloss and glow"
+msgstr "sombrea sus imágenes con mapas de normales, brillo y luz propia"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "sets the light around and above the scene"
+msgstr "fija la luz alrededor y por encima de la escena"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "redraws a part of the scene elsewhere"
+msgstr "vuelve a dibujar una parte de la escena en otro sitio"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "starts things at named moments of its timelines"
+msgstr "arranca cosas en momentos con nombre de sus líneas de tiempo"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "counts the length of its timelines in frames"
+msgstr "cuenta la duración de sus líneas de tiempo en fotogramas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "blends the end of its looping timelines into their start"
+msgstr "enlaza el final de sus líneas de tiempo en bucle con su principio"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "starts its random patterns differently each time"
+msgstr "empieza sus patrones aleatorios de otra forma cada vez"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "shapes keyframe curves with handles"
+msgstr "da forma a las curvas de los fotogramas clave con manejadores"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "animates each part of a position or a color on its own"
+msgstr "anima por separado cada parte de una posición o un color"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "adds animations to a base value"
+msgstr "suma animaciones a un valor base"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "follows the time of day, the weekday or the month"
+msgstr "sigue la hora del día, el día de la semana o el mes"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "writes dates"
+msgstr "escribe fechas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "reacts to ranges of sound frequencies"
+msgstr "reacciona a tramos de frecuencias del sonido"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "shapes how values react with limits, an exponent or uneven smoothing"
+msgstr ""
+"da forma a la reacción de los valores con límites, un exponente o un "
+"suavizado desigual"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "sets how fast it reacts to sound"
+msgstr "fija lo rápido que reacciona al sonido"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "runs effect shaders of its own"
+msgstr "ejecuta shaders de efectos propios"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "builds its effect shaders in several variants"
+msgstr "compila sus shaders de efectos en varias variantes"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "bends layers with its effect shaders"
+msgstr "deforma capas con sus shaders de efectos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "runs effect shaders that use newer fields or helpers"
+msgstr "ejecuta shaders de efectos con campos o funciones de ayuda más nuevos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "bends pictures with a skeleton"
+msgstr "deforma imágenes con un esqueleto"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "reaches for targets with chains of bones"
+msgstr "alcanza objetivos con cadenas de huesos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "swings bones with springs, ropes and wind"
+msgstr "balancea huesos con muelles, cuerdas y viento"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "hands bones over to other parents"
+msgstr "pasa huesos a otros padres"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "morphs shapes and expressions"
+msgstr "transforma formas y expresiones"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "pins layers to bones or points of its models"
+msgstr "sujeta capas a huesos o puntos de sus modelos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "shows 3D models"
+msgstr "muestra modelos 3D"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "shades its models with fur, foliage, chroma or shaders of its own"
+msgstr "sombrea sus modelos con pelo, follaje, croma o shaders propios"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "moves a 3D camera"
+msgstr "mueve una cámara 3D"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "casts shadows"
+msgstr "proyecta sombras"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "spawns particles from other particles"
+msgstr "hace nacer partículas de otras partículas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "gives its particles depth"
+msgstr "da profundidad a sus partículas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "lights or refracts its particles"
+msgstr "ilumina o refracta sus partículas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "emits or stops particles with the shape of a layer"
+msgstr "emite o detiene partículas con la forma de una capa"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "moves particles with noise, paths, distances or remapped values"
+msgstr ""
+"mueve partículas con ruido, recorridos, distancias o valores reasignados"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "binds the ranges of births or the shapes of emitters"
+msgstr "enlaza los rangos de nacimiento o las formas de los emisores"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "makes particles hit boxes, lines or the inside of circles"
+msgstr ""
+"hace que las partículas choquen con cajas, líneas o el interior de círculos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "moves particles in flocks"
+msgstr "mueve partículas en bandadas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "draws particles as ropes or long trails"
+msgstr "dibuja partículas como cuerdas o estelas largas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "cuts out or turns its particles"
+msgstr "recorta o gira sus partículas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "draws particles with shaders of its own"
+msgstr "dibuja partículas con shaders propios"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "runs scripts that use the newer script interface"
+msgstr "ejecuta scripts que usan la interfaz de scripts más nueva"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "lets its scripts add layers"
+msgstr "deja que sus scripts añadan capas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "lets its scripts build shapes"
+msgstr "deja que sus scripts construyan formas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "lets its scripts keep data"
+msgstr "deja que sus scripts guarden datos"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "plays and stops its sounds from scripts"
+msgstr "reproduce y para sus sonidos desde scripts"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "drives pictures, videos, clips and bones from scripts"
+msgstr "mueve imágenes, vídeos, clips y huesos desde scripts"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "moves the camera or the parallax from scripts"
+msgstr "mueve la cámara o el paralaje desde scripts"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "opens what the user chooses from a script"
+msgstr "abre lo que elige el usuario desde un script"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "lets its scripts read and change the parents of layers"
+msgstr "deja que sus scripts lean y cambien los padres de las capas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "reacts to the pointer on its layers"
+msgstr "reacciona al puntero sobre sus capas"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "shows the title, cover or progress of what the media player plays"
+msgstr ""
+"muestra el título, la carátula o el avance de lo que suena en el reproductor"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "sends its colors to RGB lighting"
+msgstr "envía sus colores a la iluminación RGB"
+
 #: crates/wprs-format/src/settings.rs
 msgid "expected 30 to 1096 days"
 msgstr "se esperaban de 30 a 1096 días"
@@ -897,6 +1658,12 @@ msgstr "se esperaban como mucho 8"
 #: crates/wprs-format/src/sign.rs
 msgid "expected 1 to 16 minisign blocks"
 msgstr "se esperaban de 1 a 16 bloques minisign"
+
+#: crates/wprs-format/src/source.rs
+msgid "misses %1; run pack sign again, which fills the list before signing"
+msgstr ""
+"le falta %1; vuelve a ejecutar pack sign, que rellena la lista antes de "
+"firmar"
 
 #: crates/wprs-format/src/store.rs
 msgid "expected 64 lowercase hex digits"
@@ -925,6 +1692,18 @@ msgstr "tamaño total"
 #: crates/wprs-format/src/validate.rs
 msgid "compression ratio"
 msgstr "relación de compresión"
+
+#: crates/wprs-format/src/validate.rs
+msgid "%1 is not a usable %2 for %3 packages"
+msgstr "%1 no sirve como %2 en los paquetes %3"
+
+#: crates/wprs-format/src/validate.rs
+msgid "%1 has %2 bytes, more than the %3 allowed"
+msgstr "%1 tiene %2 bytes, más de los %3 permitidos"
+
+#: crates/wprs-format/src/validate.rs
+msgid "%1 is not a file or folder of the package"
+msgstr "%1 no es un archivo ni una carpeta del paquete"
 
 #: crates/wprs-format/src/web.rs
 msgid "applies to web packages only"

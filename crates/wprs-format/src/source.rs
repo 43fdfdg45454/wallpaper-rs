@@ -3,10 +3,11 @@ use crate::build::collect;
 use crate::contents::{Ends, binaries, preset_files, scripts, sounds};
 use crate::features::facts;
 use crate::locale::{LOCALE, MAX_LOCALE_FILE};
-use crate::{Error, Kind, Limits, MANIFEST, Manifest, Result, SIGNATURE, Scene, media, require, validate};
+use crate::{Error, Kind, Limits, MANIFEST, Manifest, Result, SIGNATURE, Scene, media, validate};
 use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
+use wprs_core::message::said;
 use wprs_scene::Files;
 
 pub fn inspect(source: impl AsRef<Path>) -> Result<(Manifest, Facts)> {
@@ -77,12 +78,13 @@ pub(crate) fn facts_of(
         }
         _ => None,
     };
-    let invalid = |e: wprs_scene::SceneError| Error::Invalid { field: "scene".into(), reason: e.to_string() };
+    let invalid =
+        |e: wprs_scene::SceneError| Error::Invalid { field: "scene".into(), reason: e.to_string().into() };
     let mut scene = scene.transpose().map_err(invalid)?;
     if let Some(scene) = scene.as_mut() {
         scripts(scene, &files)?;
         if let Some((i, reason)) = scene.undeclared(|path| fs::read_to_string(source.join(path)).ok()) {
-            return Err(Error::Invalid { field: format!("/scripts/{i}"), reason });
+            return Err(Error::Invalid { field: format!("/scripts/{i}"), reason: reason.into() });
         }
         sounds(scene, &files, |path, edge| match edge {
             Some(edge) => ends(&source.join(path), edge),
@@ -146,8 +148,15 @@ pub fn fill(source: impl AsRef<Path>) -> Result<Vec<String>> {
     if !manifest.v2() || added.is_empty() {
         return Ok(Vec::new());
     }
-    let reason = format!("misses {added:?}; run pack sign again, which fills the list before signing");
-    require(!source.join(SIGNATURE).exists(), "requires.features", &reason)?;
+    let names = format!("{added:?}");
+    let reason = || {
+        said(
+            "format.unsigned_features",
+            "misses %1; run pack sign again, which fills the list before signing",
+            &[&names],
+        )
+    };
+    crate::ensure(!source.join(SIGNATURE).exists(), || crate::refuse("requires.features", reason()))?;
     let features = &mut manifest.requires.get_or_insert_default().features;
     features.extend(added.iter().cloned());
     features.sort();

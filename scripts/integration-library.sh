@@ -107,6 +107,17 @@ wait_for 20 finished "$job" || fail "rated package import: $(bus Daemon1 GetJob 
 storm=$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")
 [ "$(reply "r['total']" Library1 Search suu "content:mature facet:photosensitive" 0 0)" = 1 ] || fail "rated search"
 cmp -s "$(reply "r['about']['animated']" Library1 GetItem s "$storm")" "$WORK/storm/moving.gif" || fail "no animated preview"
+moved=$(reply "r['about']['animated']" Library1 GetItem s "$storm")
+echo R0lGODlhAQABAIAAAP8AAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw== | base64 -d >"$WORK/storm/moving.gif"
+sed -i 's/"version": "1.0.0"/"version": "1.0.1"/' "$WORK/storm/manifest.json"
+ctl pack build "$WORK/storm" -o "$WORK/import/storm.wpak" >/dev/null
+touch -d "@$(($(stat -c %Y "$moved") + 120))" "$WORK/import/storm.wpak"
+job=$(bus Library1 Import asb 1 "$WORK/import/storm.wpak" false | out "d[0]")
+wait_for 20 finished "$job" || fail "package update: $(bus Daemon1 GetJob t "$job")"
+[ "$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")" = "$storm" ] || fail "the update made a new item"
+now=$(reply "r['about']['animated']" Library1 GetItem s "$storm")
+cmp -s "$now" "$WORK/storm/moving.gif" || fail "the animated preview did not follow the update"
+if [ "$now" = "$moved" ] || [ -e "$moved" ]; then fail "the old animated preview was kept: $(ls "$(dirname "$moved")")"; fi
 ctl config library.hide_mature true
 [ "$(reply "r['total']" Library1 Search suu "storm" 0 0), $(reply "r['total']" Library1 Search suu "content:mature" 0 0)" = "0, 1" ] ||
   fail "hidden mature content: $(ctl lib search storm)"

@@ -63,9 +63,15 @@ fn actions_keep_what_they_are_not_given() {
 fn mistakes_are_refused_without_changing_anything() {
     let mut e = picture();
     let fails = |e: &mut Edit, action: Value| act(e, action).unwrap_err();
+    let usage = fails(&mut e, json!({"set": {"changes": ["ev"]}}));
+    assert!(matches!(&usage, Error::Usage(m) if m.id == "edit.key_value" && m.args == ["ev"]), "{usage:?}");
+    assert_eq!(usage.to_string(), "ev is not KEY=VALUE");
+    let es = wprs_core::message::tr_in(&["es".into()]);
+    assert_eq!(usage.message().told(&es), "ev no es CLAVE=VALOR");
+    let range = Edit::parse(r#"{"version": 1, "span": {"zoom": 9}}"#).unwrap_err();
     assert_eq!(
-        fails(&mut e, json!({"set": {"changes": ["ev"]}})),
-        Error::Usage("ev is not KEY=VALUE".into())
+        (range.id, range.told(&es).as_str()),
+        ("edit.range", "span.zoom: 9 está fuera del rango de 1 a 8")
     );
     assert_eq!(
         fails(&mut e, json!({"crop": {"aspect": "wide"}})).to_string(),
@@ -134,4 +140,23 @@ fn any_name_can_be_a_mask_and_ids_keep_their_kind() {
     act(&mut e, json!({"curve": {"points": ["0,0", "1,1"]}})).unwrap();
     assert!(act(&mut e, json!({"blur": {"radius": 2, "id": "cu"}})).is_err());
     assert_eq!(e.ops.len(), before.ops.len() + 1);
+}
+
+#[test]
+fn brush_strokes_are_painted_and_erased_one_stroke_at_a_time() {
+    let mut e = picture();
+    act(&mut e, json!({"mask": {"name": "face", "spec": "brush:0.04,0.6:0.41,0.33;0.43,0.35"}})).unwrap();
+    act(&mut e, json!({"mask": {"name": "face", "spec": "erase:0.02,1:0.42,0.34"}})).unwrap();
+    let Mask::Brush { strokes, invert } = &e.masks["face"] else { panic!("{:?}", e.masks) };
+    assert_eq!((strokes.len(), *invert, strokes[0].points.len()), (2, false, 2));
+    assert!(!strokes[0].erase && strokes[1].erase && strokes[1].hardness == 1.0);
+    let before = e.clone();
+    assert!(matches!(
+        act(&mut e, json!({"mask": {"name": "face", "spec": "brush:0.04:0.4,0.3"}})),
+        Err(Error::Usage(_))
+    ));
+    assert!(act(&mut e, json!({"mask": {"name": "face", "spec": "brush:0.9,0.5:0.4,0.3"}})).is_err());
+    assert_eq!(e, before);
+    act(&mut e, json!({"mask": {"name": "face", "spec": "none"}})).unwrap();
+    assert!(e.masks.is_empty());
 }

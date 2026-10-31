@@ -1,5 +1,5 @@
 use crate::ops::Op;
-use anyhow::{Context, Result, ensure};
+use anyhow::{Result, ensure};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::Path;
@@ -55,9 +55,14 @@ pub fn declaration(source: &str) -> Value {
 }
 
 pub fn import(dir: &Path, doc: &Value, file: &Path) -> Result<Vec<Op>> {
-    let name = file.file_name().and_then(|n| n.to_str()).context("the script has no file name")?;
+    let name = file
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| said("editor.script_name", "the script has no file name", &[]))?;
     ensure!(name.ends_with(".js"), said("editor.not_js_file", "%1 is not a .js file", &[&name]));
-    let size = fs::metadata(file).with_context(|| format!("cannot read {}", file.display()))?.len();
+    let size = fs::metadata(file)
+        .map_err(|e| said("editor.cannot_read", "cannot read %1: %2", &[&file.display(), &e]))?
+        .len();
     let list = doc.pointer("/scene/scripts").and_then(Value::as_array).cloned().unwrap_or_default();
     let path = format!("scripts/{name}");
     let others = list.iter().filter_map(|s| s["path"].as_str()).filter(|p| *p != path);
@@ -70,10 +75,11 @@ pub fn import(dir: &Path, doc: &Value, file: &Path) -> Result<Vec<Op>> {
         others.count() < MAX_SCRIPTS2,
         said("editor.scene_most_scripts", "a scene has at most %1 scripts", &[&MAX_SCRIPTS2])
     );
-    let source =
-        fs::read_to_string(file).with_context(|| format!("{} is not a text file", file.display()))?;
+    let source = fs::read_to_string(file)
+        .map_err(|e| said("editor.not_text", "%1 is not a text file: %2", &[&file.display(), &e]))?;
     fs::create_dir_all(dir.join("scripts"))?;
-    fs::write(dir.join(&path), &source).with_context(|| format!("cannot write {path}"))?;
+    fs::write(dir.join(&path), &source)
+        .map_err(|e| said("editor.cannot_write", "cannot write %1: %2", &[&path, &e]))?;
     let mut entry = declaration(&source);
     entry["path"] = json!(path);
     Ok(match list.iter().position(|s| s["path"] == path) {

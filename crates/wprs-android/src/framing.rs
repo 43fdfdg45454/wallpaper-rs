@@ -158,7 +158,7 @@ pub(crate) fn fit(uids: &[String], fit: Option<Fit>) -> Result<Value, Error> {
     let mode = fit.map_or_else(|| "none".to_owned(), |fit| fit.to_string());
     for image in &pictures {
         let set = Action::Fit { mode: mode.clone() };
-        depth::change(image, |edit| edit.act(set).map_err(|e| Error::Setting(e.to_string())))?;
+        depth::change(image, |edit| edit.act(set).map_err(|e| Error::Said(e.message().clone())))?;
     }
     Ok(json!(pictures.len()))
 }

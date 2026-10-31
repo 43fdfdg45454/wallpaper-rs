@@ -98,6 +98,7 @@ pub trait Library1 {
     fn request_thumbnails(&self, uids: &[&str], size: u32) -> Result<HashMap<String, String>>;
     fn apply(&self, uid: &str, output: &str, fit: &str, preset: &str) -> Result<()>;
     fn confirm(&self, uids: &[&str], what: &str) -> Result<()>;
+    fn unconfirm(&self, uids: &[&str], what: &str) -> Result<()>;
     #[zbus(signal)]
     fn thumbnail_ready(&self, uid: &str, size: u32, path: &str) -> Result<()>;
 }
@@ -172,6 +173,7 @@ pub trait Repos1 {
     fn browse(&self, query: &str, offset: u32, limit: u32) -> Result<String>;
     fn reveal(&self, spec: &str) -> Result<()>;
     fn request_previews(&self, specs: &[&str]) -> Result<HashMap<String, String>>;
+    fn request_animated_previews(&self, specs: &[&str]) -> Result<HashMap<String, String>>;
     fn install(&self, spec: &str, allow_stale: bool, allow_downgrade: bool) -> Result<u64>;
     fn uninstall(&self, id: &str, version: &str) -> Result<()>;
     fn list_installed(&self) -> Result<String>;

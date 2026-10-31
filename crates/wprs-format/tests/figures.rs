@@ -103,6 +103,11 @@ fn declared_script_parts_and_media_become_inputs() {
         fault.to_string().contains("the scene uses media at /timelines/0 of scene.json; add \"media\""),
         "{fault}"
     );
+    let es = wprs_core::message::tr_in(&["es".into()]);
+    assert_eq!(
+        fault.message().told(&es),
+        "inputs no válido: la escena usa media en /timelines/0 de scene.json; añade \"media\""
+    );
     let wanted = ["inputs.audio", "inputs.media", "media_info", "scripts", "scripts2"];
     let package = load(&manifest(&wanted, json!({ "inputs": ["audio", "media"] })), &text, &files).unwrap();
     assert_eq!(package.facts.inputs.iter().collect::<Vec<_>>(), [&Input::Audio, &Input::Media]);

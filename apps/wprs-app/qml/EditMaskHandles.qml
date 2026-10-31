@@ -43,6 +43,30 @@ Item {
         });
     }
 
+    property var stroke: []
+
+    function paint(x, y) {
+        const at = apply(matrix, x / width, y / height).map(n => Math.max(-1, Math.min(2, n)));
+        const last = stroke[stroke.length - 1];
+        if (!last || Math.hypot(at[0] - last[0], at[1] - last[1]) > page.brush.radius / 4)
+            stroke = stroke.concat([at]);
+        line.requestPaint();
+    }
+
+    function lay() {
+        const b = page.brush, points = stroke.slice(0, 2000);
+        stroke = [];
+        line.requestPaint();
+        if (!b || points.length === 0)
+            return;
+        page.mask = b.name;
+        page.run("mask", {
+            "name": b.name,
+            "spec": (b.erase ? "erase:" : "brush:") + b.radius.toFixed(4) + "," + b.hardness.toFixed(3) + ":" + points.map(p => p[0].toFixed(4) + "," + p[1].toFixed(4)).join(";"),
+            "invert": b.invert
+        });
+    }
+
     onMaskChanged: line.requestPaint()
     onWidthChanged: line.requestPaint()
 
@@ -53,6 +77,20 @@ Item {
         onPaint: {
             const ctx = getContext("2d");
             ctx.reset();
+            if (handles.stroke.length > 0) {
+                ctx.strokeStyle = handles.page.brush?.erase ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.highlightColor;
+                ctx.globalAlpha = 0.6;
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                ctx.lineWidth = Math.max(2, (handles.page.brush?.radius ?? 0.01) * 2 * Math.max(width, height));
+                ctx.beginPath();
+                handles.stroke.forEach((at, i) => {
+                    const p = handles.apply(handles.inverse, at[0], at[1]);
+                    i === 0 ? ctx.moveTo(p[0] * width, p[1] * height) : ctx.lineTo(p[0] * width, p[1] * height);
+                });
+                ctx.stroke();
+                return;
+            }
             if (!handles.mask || handles.points.length === 0)
                 return;
             ctx.strokeStyle = Kirigami.Theme.highlightColor;
@@ -70,8 +108,18 @@ Item {
         }
     }
 
+    MouseArea {
+        anchors.fill: parent
+        enabled: handles.page.brush !== null
+        cursorShape: Qt.CrossCursor
+        onPressed: mouse => handles.paint(mouse.x, mouse.y)
+        onPositionChanged: mouse => handles.paint(mouse.x, mouse.y)
+        onReleased: handles.lay()
+        onCanceled: handles.lay()
+    }
+
     Repeater {
-        model: handles.points
+        model: handles.page.brush === null ? handles.points : []
 
         delegate: Rectangle {
             id: knob

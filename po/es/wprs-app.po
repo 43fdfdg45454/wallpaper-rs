@@ -1133,6 +1133,14 @@ msgid "Nearest"
 msgstr "Lo más cercano"
 
 #: apps/wprs-app/qml/EditMasks.qml
+msgid "Brush size"
+msgstr "Tamaño del pincel"
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Hardness"
+msgstr "Dureza"
+
+#: apps/wprs-app/qml/EditMasks.qml
 msgid "Name of the mask"
 msgstr "Nombre de la máscara"
 
@@ -1153,8 +1161,24 @@ msgid "Depth range"
 msgstr "Rango de profundidad"
 
 #: apps/wprs-app/qml/EditMasks.qml
+msgid "Painted with a brush"
+msgstr "Pintada con pincel"
+
+#: apps/wprs-app/qml/EditMasks.qml
 msgid "Drag the handles on the picture to place the mask."
 msgstr "Arrastra los tiradores sobre la imagen para colocar la máscara."
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Name the mask, then paint on the picture."
+msgstr "Pon nombre a la máscara y pinta sobre la imagen."
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Paint on the picture; each stroke is one step to undo."
+msgstr "Pinta sobre la imagen; cada trazo es un paso que se puede deshacer."
+
+#: apps/wprs-app/qml/EditMasks.qml
+msgid "Erase"
+msgstr "Borrar"
 
 #: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Invert"
@@ -1382,6 +1406,10 @@ msgstr ""
 #: apps/wprs-app/qml/ItemDrawer.qml
 msgid "Show mature content"
 msgstr "Mostrar el contenido para adultos"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Keep moving when the desktop asks for reduced motion"
+msgstr "Seguir en movimiento cuando el escritorio pide reducir el movimiento"
 
 #: apps/wprs-app/qml/ItemDrawer.qml apps/wprs-app/qml/SceneEditors.qml
 msgid "Edit…"
@@ -2373,6 +2401,10 @@ msgstr "Añadir un efecto"
 #: apps/wprs-app/qml/SceneInspector.qml
 msgid "Edit the particle system"
 msgstr "Editar el sistema de partículas"
+
+#: apps/wprs-app/qml/SceneLayerRow.qml
+msgid "Drag to move the layer"
+msgstr "Arrastra para mover la capa"
 
 #: apps/wprs-app/qml/SceneLayerRow.qml
 msgid "Lock"

@@ -15,7 +15,7 @@ pub(crate) fn shared(item: &wprs_library::Item) -> Option<Edit> {
 
 pub(crate) fn adopt(item: &wprs_library::Item, synced: Option<&Value>, keep: bool) -> Result<(), Error> {
     if item.kind == wprs_library::Kind::Image
-        && edit::adopt(synced, &item.path, &store::dir()?.join(EDITS), keep).map_err(Error::Setting)?
+        && edit::adopt(synced, &item.path, &store::dir()?.join(EDITS), keep).map_err(Error::Said)?
     {
         store::changed();
     }
@@ -41,10 +41,33 @@ pub(crate) fn map(raise: &Raise) -> Option<Map> {
     Some(adjust(&shrink(read(path).ok()?, EDGE), &raise.depth))
 }
 
+pub(crate) fn changed(image: &Path, edit: &Edit) -> bool {
+    let bytes = fs::metadata(image).map_or(0, |m| m.len());
+    let pixels = image::image_dimensions(image).map_or([0; 2], |(w, h)| [w, h]);
+    !edit.is_empty() && edit.source.changed(bytes, pixels)
+}
+
+pub(crate) fn look(image: &Path, edit: &Edit, colour: bool) -> Result<PathBuf, Error> {
+    let depth = edit.depth.clone().unwrap_or_default();
+    let missing = || crate::said("android.no_depth_map", "this picture has no depth map yet", &[]);
+    let map = found(image, edit).ok_or_else(missing)?;
+    let key = serde_json::to_string(&(&edit.source.sha256, &depth, colour))?;
+    let name = wprs_format::sha256(key.as_bytes())?;
+    let out = store::dir()?.join("looks").join(format!("{}.png", &name[..24]));
+    if !out.is_file() {
+        let shown = wprs_depth::shrink(adjust(&shrink(read(&map)?, EDGE), &depth), 512);
+        fs::create_dir_all(out.parent().unwrap_or(&out))?;
+        let looks = fs::read_dir(out.parent().unwrap_or(&out))?.flatten().map(|e| e.path());
+        looks.filter(|p| p.extension().is_some_and(|e| e == "png")).for_each(|p| drop(fs::remove_file(p)));
+        wprs_depth::coloured(&shown, colour).save(&out)?;
+    }
+    Ok(out)
+}
+
 pub(crate) fn forget(image: &Path) -> Result<(), Error> {
     let (edit, places) = (loaded(image)?, places()?);
     let sha = &edit.source.sha256;
     let maps = [places.own(sha), places.generated(sha, &edit.depth.unwrap_or_default()), Some(beside(image))];
     maps.into_iter().flatten().for_each(|map| drop(fs::remove_file(map)));
-    edit::remove(image, &store::dir()?.join(EDITS)).map(drop).map_err(Error::Setting)
+    edit::remove(image, &store::dir()?.join(EDITS)).map(drop).map_err(Error::Said)
 }

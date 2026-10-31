@@ -37,6 +37,7 @@ pub struct SceneSpec {
     pub extra: Vec<(String, Arc<wprs_render::Pixels>)>,
     pub clips: Vec<(String, Reel)>,
     pub hold: Option<f64>,
+    pub moving: bool,
 }
 
 #[derive(Debug, Clone)]

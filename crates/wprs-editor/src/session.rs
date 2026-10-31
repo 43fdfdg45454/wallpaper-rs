@@ -1,12 +1,13 @@
 use crate::history::History;
 use crate::project::{Project, write};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use wprs_core::message::said;
 use wprs_format::sha256;
 
 #[derive(Serialize, Deserialize)]
@@ -38,7 +39,8 @@ fn sweep(dir: &Path, keep: &Path) {
 fn state(dir: &Path) -> Result<PathBuf> {
     let dir = fs::canonicalize(dir)?;
     let name = sha256(dir.as_os_str().as_encoded_bytes())?;
-    let base = dirs::state_dir().context("there is no state folder")?;
+    let base =
+        dirs::state_dir().ok_or_else(|| said("editor.no_state_folder", "there is no state folder", &[]))?;
     Ok(base.join("wallpaper-rs").join("editor").join(format!("{}.json", &name[..32])))
 }
 
@@ -56,7 +58,7 @@ impl Project {
         {
             return self.forget();
         }
-        let dir = path.parent().context("a file needs a folder")?;
+        let dir = path.parent().ok_or_else(|| said("editor.needs_folder", "a file needs a folder", &[]))?;
         fs::DirBuilder::new().recursive(true).mode(0o700).create(dir)?;
         let saved = Saved { files: self.base.clone(), doc: self.doc.clone(), history: self.history.clone() };
         write(&path, &serde_json::to_string(&saved)?, 0o600)?;

@@ -21,7 +21,48 @@ QQC2.ItemDelegate {
         onClicked: mouse => row.owner.pick(row.modelData, (mouse.modifiers & Qt.ControlModifier) !== 0)
     }
 
+    function under(point) {
+        const view = row.ListView.view;
+        const at = view.contentItem.mapFromItem(null, point.x, point.y);
+        return row.owner.shown[view.indexAt(at.x, at.y)] ?? null;
+    }
+
+    Rectangle {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 2
+        visible: row.owner.target === row.modelData.pointer
+        color: Kirigami.Theme.highlightColor
+    }
+
     contentItem: RowLayout {
+        Kirigami.Icon {
+            source: "handle-sort"
+            Layout.preferredWidth: Kirigami.Units.iconSizes.small
+            Layout.preferredHeight: Kirigami.Units.iconSizes.small
+            opacity: grip.active ? 1 : 0.5
+            Accessible.name: App.tr("Drag to move the layer")
+
+            HoverHandler {
+                cursorShape: Qt.SizeVerCursor
+            }
+
+            DragHandler {
+                id: grip
+
+                target: null
+                xAxis.enabled: false
+                onCentroidChanged: {
+                    if (active)
+                        row.owner.target = row.under(centroid.scenePosition)?.pointer ?? "";
+                }
+                onActiveChanged: {
+                    if (!active)
+                        row.owner.drop(row.modelData, row.owner.shown.find(layer => layer.pointer === row.owner.target));
+                }
+            }
+        }
+
         Kirigami.Icon {
             source: row.owner.icon(row.modelData.type)
             Layout.preferredWidth: Kirigami.Units.iconSizes.small
@@ -31,6 +72,7 @@ QQC2.ItemDelegate {
         QQC2.Label {
             Layout.fillWidth: true
             text: row.modelData.label ?? row.modelData.id
+            textFormat: Text.PlainText
             elide: Text.ElideRight
             opacity: row.modelData.hidden ? 0.5 : 1
         }

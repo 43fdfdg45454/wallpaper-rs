@@ -78,3 +78,23 @@ fn paths_of_file_and_folder_settings_become_absolute() {
         assert!(wprs_ctl::props::path(empty, &base).is_err(), "{empty:?}");
     }
 }
+
+#[test]
+fn the_examples_use_file_folder_and_video_settings() {
+    let scenes = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scenes");
+    let manifest = |name: &str| {
+        let text = std::fs::read(scenes.join(name).join("manifest.json")).unwrap();
+        wprs_format::Manifest::from_json(&text).unwrap()
+    };
+    let (orbits, snowfall) = (manifest("orbits"), manifest("snowfall"));
+    let backdrop = &orbits.properties["backdrop"];
+    assert!(matches!(backdrop.control, wprs_scene::Control::File { .. }));
+    assert!(backdrop.accepts("video") && backdrop.accepts("image"));
+    assert!(orbits.features().iter().any(|f| f == "user_videos"));
+    let photos = &snowfall.properties["photos"];
+    assert!(matches!(photos.control, wprs_scene::Control::Folder { .. }) && photos.accepts("image"));
+    for name in ["orbits", "snowfall"] {
+        let checked = run(&["pack", "check", scenes.join(name).to_str().unwrap()]);
+        assert!(checked.status.success(), "{name}: {}", String::from_utf8_lossy(&checked.stderr));
+    }
+}

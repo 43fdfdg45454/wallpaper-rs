@@ -105,4 +105,5 @@
     <string name="error_android_wrong_passphrase">La frase no abre la custodia de la clave</string>
     <string name="error_format_elsewhere">Este paquete está hecho solo para el escritorio.</string>
     <string name="error_format_newer">Este paquete necesita una versión más nueva de wallpaper-rs.</string>
+    <string name="error_android_no_depth_map">Esta imagen todavía no tiene mapa de profundidad</string>
 </resources>

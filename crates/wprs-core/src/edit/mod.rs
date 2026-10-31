@@ -15,7 +15,7 @@ use crate::Fit;
 pub use action::{ACTIONS, Action, Error};
 pub use curve::spline;
 pub use depth::{Depth, MAX_STRENGTH, MODEL, Motion, Parallax, STEPS};
-pub use file::{MAX_BYTES, adopt, commit, dir, load, remove, save};
+pub use file::{MAX_BYTES, adopt, commit, dir, load, missing, remove, save};
 pub use geometry::{Matrix, mul};
 pub use history::History;
 pub use masks::{Mask, Stroke};

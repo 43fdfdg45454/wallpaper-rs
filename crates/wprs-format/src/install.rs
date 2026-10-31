@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use wprs_core::message::said;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -53,8 +54,12 @@ pub fn install<F: Fetch>(
     let explicit = version.is_some();
     let older = newest.filter(|n| explicit && !allow_downgrade && newer(&n.version, &release.version));
     if let Some((new, old)) = older.map(|n| (&n.version, &release.version)) {
-        let reason = format!("{id} {old} is older than the installed {new}; confirm the downgrade");
-        return Err(Error::Invalid { field: "version".into(), reason });
+        let reason = said(
+            "format.downgrade",
+            "%1 %2 is older than the installed %3; confirm the downgrade",
+            &[&id, old, new],
+        );
+        return Err(crate::refuse("version", reason));
     }
     let newest = newest.filter(|i| !explicit && !newer(&release.version, &i.version));
     if let Some(done) = list.iter().find(|i| i.id == id && i.version == release.version).or(newest) {

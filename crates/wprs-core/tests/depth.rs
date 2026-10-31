@@ -20,7 +20,7 @@ fn depth_and_parallax_sections_round_trip_and_are_checked() {
     assert!(edit.needs_depth() && edit.moving().is_some() && !Edit::default().needs_depth());
     let broken = |path: &str, value: &str| {
         let mut e = edit.clone();
-        e.set(path, value).unwrap_err()
+        e.set(path, value).unwrap_err().to_string()
     };
     assert_eq!(broken("parallax.strength", "0.2"), "parallax.strength: 0.2 is out of range 0 to 0.03");
     assert_eq!(broken("parallax.steps", "12"), "parallax.steps: use 1, 8, 16 or 32");
@@ -39,7 +39,9 @@ fn actions_adjust_depth_and_parallax() {
     assert_eq!((p.source, p.steps, p.strength, p.enabled), (Motion::Accelerometer, 32, 0.02, true));
     act(&mut e, json!({"parallax": {"off": true}})).unwrap();
     assert!(e.moving().is_none() && !e.needs_depth());
-    assert!(act(&mut e, json!({"parallax": {"source": "mouse"}})).unwrap_err().contains("not auto"));
+    assert!(
+        act(&mut e, json!({"parallax": {"source": "mouse"}})).unwrap_err().to_string().contains("not auto")
+    );
     assert!(act(&mut e, json!({"parallax": {"steps": 3}})).is_err());
     act(&mut e, json!({"mask": {"name": "far", "spec": "depth:0,0.4"}})).unwrap();
     assert_eq!(e.masks["far"].spec().as_deref(), Some("depth:0,0.4,0.1"));

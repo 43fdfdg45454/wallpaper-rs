@@ -53,7 +53,7 @@ fn invalid_files_name_the_field() {
             };
         }
         at[parts[parts.len() - 1]] = value;
-        Edit::from_value(doc).unwrap_err()
+        Edit::from_value(doc).unwrap_err().to_string()
     };
     assert_eq!(broken("ops/1/ev", json!(7)), "ops[1].ev: 7 is out of range -5 to 5");
     assert_eq!(
@@ -81,7 +81,7 @@ fn invalid_files_name_the_field() {
         broken("outputs/Maker Model 1234/crop", json!("all")).starts_with("outputs.Maker Model 1234.crop:")
     );
     let crowded = json!({"version": 1, "ops": (0..25).map(|i| json!({"id": format!("e{i}"), "type": "exposure", "ev": 0})).collect::<Vec<_>>()});
-    assert!(Edit::from_value(crowded).unwrap_err().contains("at most 24 ops"));
+    assert!(Edit::from_value(crowded).unwrap_err().to_string().contains("at most 24 ops"));
 }
 
 #[test]
@@ -106,10 +106,10 @@ fn set_takes_shorthands_and_dotted_paths() {
     edit.set("span", "null").unwrap();
     assert_eq!((edit.geometry.crop, &edit.span), (None, &None));
     let before = edit.clone();
-    assert_eq!(edit.set("ev", "9").unwrap_err(), "ops[0].ev: 9 is out of range -5 to 5");
-    assert_eq!(edit.set("ops.ev.ev", "bright").unwrap_err(), "ops.ev.ev: bright is not a number");
-    assert_eq!(edit.set("ops.nope.ev", "1").unwrap_err(), "ops.nope.ev: unknown setting");
-    assert_eq!(edit.set("ops.ct.foo", "1").unwrap_err(), "ops[2].foo: unknown field");
+    assert_eq!(edit.set("ev", "9").unwrap_err().to_string(), "ops[0].ev: 9 is out of range -5 to 5");
+    assert_eq!(edit.set("ops.ev.ev", "bright").unwrap_err().to_string(), "ops.ev.ev: bright is not a number");
+    assert_eq!(edit.set("ops.nope.ev", "1").unwrap_err().to_string(), "ops.nope.ev: unknown setting");
+    assert_eq!(edit.set("ops.ct.foo", "1").unwrap_err().to_string(), "ops[2].foo: unknown field");
     assert_eq!(edit, before);
 }
 
@@ -133,9 +133,9 @@ fn edits_live_beside_the_image_or_in_the_data_folder() {
     assert!(edit::remove(&image, &edits).unwrap() && !saved.exists());
     assert!(!edit::remove(&image, &edits).unwrap());
     std::fs::write(&saved, "{\"version\": 1, \"ops\": 3}").unwrap();
-    assert!(edit::load(&image, &edits).unwrap_err().starts_with(&saved.display().to_string()));
+    assert!(edit::load(&image, &edits).unwrap_err().to_string().starts_with(&saved.display().to_string()));
     std::fs::write(&saved, " ".repeat(edit::MAX_BYTES + 1)).unwrap();
-    assert!(edit::load(&image, &edits).unwrap_err().ends_with("is too large"));
+    assert!(edit::load(&image, &edits).unwrap_err().to_string().ends_with("is too large"));
     std::fs::remove_file(&saved).unwrap();
     let elsewhere = dir.path().join("elsewhere.json");
     std::os::unix::fs::symlink(&elsewhere, &saved).unwrap();

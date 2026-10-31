@@ -1,7 +1,7 @@
 pub use crate::contents::{files, prune, unused, used};
 use crate::layers::{asset_kind, unique};
 use crate::ops::{Op, escape, set};
-use anyhow::{Context, Result, anyhow, ensure};
+use anyhow::{Result, anyhow, ensure};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use std::fs;
@@ -33,7 +33,8 @@ fn seconds(file: &Path) -> Result<f32> {
 }
 
 fn pixels(file: &Path) -> Result<u64> {
-    let (w, h) = image::image_dimensions(file).context("the picture cannot be read")?;
+    let (w, h) = image::image_dimensions(file)
+        .map_err(|e| said("editor.unreadable_picture", "the picture cannot be read: %1", &[&e]))?;
     Ok(u64::from(w) * u64::from(h) * 4)
 }
 
@@ -47,7 +48,9 @@ pub fn check(dir: &Path, doc: &Value, file: &Path) -> Result<()> {
             &[]
         )
     );
-    let size = fs::metadata(file).with_context(|| format!("cannot read {}", file.display()))?.len();
+    let size = fs::metadata(file)
+        .map_err(|e| said("editor.cannot_read", "cannot read %1: %2", &[&file.display(), &e]))?
+        .len();
     ensure!(
         size <= Limits::default().max_file_size,
         said("editor.file_larger_than", "the file is larger than 1 GiB", &[])
@@ -111,7 +114,11 @@ fn copy(file: &Path, target: &Path) -> Result<()> {
 
 pub fn import(dir: &Path, doc: &Value, file: &Path, id: Option<&str>) -> Result<(String, String)> {
     check(dir, doc, file)?;
-    let name = file.file_name().context("name a file")?.to_string_lossy().replace(['/', '\\', ':'], "_");
+    let name = file
+        .file_name()
+        .ok_or_else(|| said("editor.name_a_file", "name a file", &[]))?
+        .to_string_lossy()
+        .replace(['/', '\\', ':'], "_");
     let id =
         id.map_or_else(|| unique(doc, name.rsplit_once('.').map_or(name.as_str(), |(s, _)| s)), String::from);
     slot(doc, &id)?;

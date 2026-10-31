@@ -54,6 +54,16 @@ impl Repos {
         self.d()?.run(move |d| d.request_previews(specs, &sender)).await
     }
 
+    #[zbus(out_args("paths"))]
+    async fn request_animated_previews(
+        &self,
+        specs: Vec<String>,
+        #[zbus(header)] header: Header<'_>,
+    ) -> Result<HashMap<String, String>> {
+        let sender = client(&header);
+        self.d()?.run(move |d| d.request_animated(specs, &sender)).await
+    }
+
     #[zbus(out_args("job"))]
     async fn install(&self, spec: String, allow_stale: bool, allow_downgrade: bool) -> Result<u64> {
         self.d()?.run(move |d| d.install(&spec, allow_stale, allow_downgrade)).await

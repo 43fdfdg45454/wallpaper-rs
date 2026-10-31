@@ -1,5 +1,6 @@
 use crate::validate::extension;
-use crate::{Facts, Kind, Manifest, Result, Scene, require};
+use crate::{Facts, Kind, Manifest, Result, Scene};
+use wprs_core::message::said;
 
 pub(crate) const EDGE: u64 = 4 << 20;
 
@@ -95,8 +96,20 @@ pub fn preview(animated: bool, path: &str, data: &[u8]) -> Result<()> {
     let ext = extension(path).unwrap_or_default().replace("jpg", "jpeg");
     let long = |m: &Media| seconds == 0 || m.duration_ms <= seconds * 1000;
     let fits = probe(data).is_some_and(|m| m.format == ext && m.width.max(m.height) <= side && long(&m));
-    let most = if seconds > 0 { format!(" and {seconds} s") } else { String::new() };
-    require(fits, field, &format!("{path:?} must be a {ext} image of at most {side} pixels a side{most}"))
+    let quoted = format!("{path:?}");
+    let reason = || match seconds {
+        0 => said(
+            "format.preview",
+            "%1 must be a %2 image of at most %3 pixels a side",
+            &[&quoted, &ext, &side],
+        ),
+        _ => said(
+            "format.preview_clip",
+            "%1 must be a %2 image of at most %3 pixels a side and %4 s",
+            &[&quoted, &ext, &side, &seconds],
+        ),
+    };
+    crate::ensure(fits, || crate::refuse(field, reason()))
 }
 
 pub fn hdr(data: &[u8]) -> bool {

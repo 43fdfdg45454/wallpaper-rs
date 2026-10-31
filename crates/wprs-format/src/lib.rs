@@ -30,6 +30,7 @@ mod origin;
 #[cfg(feature = "sign")]
 mod publish;
 mod read;
+mod refusal;
 mod release;
 mod repo;
 mod said;
@@ -55,7 +56,7 @@ pub use build::{build, sha256, sha256_file};
 pub use catalog::{Added, add, hide, revoke, revoke_key, unrevoke};
 pub use client::{Outcome, RepoInfo, Update, add_repo, remove_repo, repos, update_repo, verify};
 pub use display::{Accent, Display, Flip, Follow, FrameRate, Span};
-pub use download::{preview, previews, release};
+pub use download::{animated, preview, previews, release};
 pub use entry::{Blob, DETAILS_FORMAT, Details, ENTRY_FORMAT, Entry, Pin};
 pub use facts::Facts;
 pub use fetch::{Anchor, Fetch, FileFetch};
@@ -80,6 +81,7 @@ pub use origin::{Ancestor, Origin, OriginKind, PROVIDER_LICENSES, Provider};
 #[cfg(feature = "sign")]
 pub use publish::{Published, publish};
 pub use read::{Package, open, read};
+pub use refusal::Refusal;
 pub use release::{Needs, Preview, Rated, Release, Wanted};
 pub use repo::{Author, Key, Policy, ROOT_FORMAT, Role, Roles, Root, Time, comment};
 pub use settings::{Settings, settings};
@@ -105,7 +107,7 @@ pub enum Error {
     #[error("{}", self.message())]
     Json(#[from] serde_json::Error),
     #[error("{}", self.message())]
-    Invalid { field: String, reason: String },
+    Invalid { field: String, reason: Refusal },
     #[error("{}", self.message())]
     UnsafePath(String),
     #[error("{}", self.message())]
@@ -145,13 +147,17 @@ pub enum Error {
     #[error("{}", self.message())]
     Exists(String),
     #[error("{}", self.message())]
-    Newer(String),
+    Newer(Refusal),
     #[error("{}", self.message())]
     Elsewhere(String),
 }
 
 pub(crate) fn ensure(ok: bool, error: impl FnOnce() -> Error) -> Result<()> {
     if ok { Ok(()) } else { Err(error()) }
+}
+
+pub(crate) fn refuse(field: &str, reason: wprs_core::message::Message) -> Error {
+    Error::Invalid { field: field.into(), reason: reason.into() }
 }
 
 pub(crate) fn require(ok: bool, field: &str, reason: &str) -> Result<()> {

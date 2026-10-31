@@ -2,7 +2,7 @@ use super::*;
 use mock::{Shared, Vault, serve};
 use std::sync::Mutex;
 
-mod mock;
+pub(crate) mod mock;
 
 use mock::Bus;
 

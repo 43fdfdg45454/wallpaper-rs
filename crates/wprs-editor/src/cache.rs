@@ -11,7 +11,7 @@ type Read = (BTreeMap<String, Arc<Descriptor>>, BTreeMap<String, Arc<ModelFile>>
 
 type Cache<V> = Mutex<BTreeMap<PathBuf, ((String, Stamps), V)>>;
 
-static TABLES: Cache<Result<Strings, (String, String)>> = Mutex::new(BTreeMap::new());
+static TABLES: Cache<Result<Strings, (String, wprs_format::Refusal)>> = Mutex::new(BTreeMap::new());
 static FILES: Cache<Read> = Mutex::new(BTreeMap::new());
 
 fn stamps(dir: &Path, paths: impl IntoIterator<Item = String>) -> Stamps {
@@ -51,7 +51,7 @@ pub fn with_strings(dir: &Path, manifest: Manifest) -> wprs_format::Result<Manif
     let read = || match wprs_format::with_strings(dir, manifest.clone()) {
         Ok(read) => Ok(read.string_files),
         Err(Error::Invalid { field, reason }) => Err((field, reason)),
-        Err(e) => Err(("strings".into(), e.to_string())),
+        Err(e) => Err(("strings".into(), e.message().into())),
     };
     let tables = remembered(&TABLES, dir, key, read, |_| true);
     let string_files = tables.map_err(|(field, reason)| Error::Invalid { field, reason })?;

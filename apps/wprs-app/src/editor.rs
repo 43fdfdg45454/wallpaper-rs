@@ -133,7 +133,7 @@ impl Editor {
             args.and_then(|args| serde_json::from_value::<Action>(json!({ action.to_string(): args })));
         let before = self.edit.clone();
         let done = match action {
-            Ok(action) => self.as_mut().rust_mut().edit.act(action).map_err(|e| e.to_string()),
+            Ok(action) => self.as_mut().rust_mut().edit.act(action).map_err(|e| e.message().local()),
             Err(e) => Err(e.to_string()),
         };
         let failed = done.err();
@@ -155,8 +155,8 @@ impl Editor {
             return;
         }
         let done = match self.file.is_file() {
-            true => edit::commit(&self.edit, &self.file, &edit::dir()).map(drop),
-            false => Err(format!("cannot find {}", self.file.display())),
+            true => edit::commit(&self.edit, &self.file, &edit::dir()).map(drop).map_err(|e| e.local()),
+            false => Err(edit::missing(&self.file).local()),
         };
         if done.is_ok() {
             let edit = self.edit.clone();

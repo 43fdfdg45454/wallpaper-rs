@@ -105,4 +105,5 @@
     <string name="error_android_wrong_passphrase">The passphrase does not open the recovery escrow</string>
     <string name="error_format_elsewhere">This package is made for the desktop only.</string>
     <string name="error_format_newer">This package needs a newer version of wallpaper-rs.</string>
+    <string name="error_android_no_depth_map">This picture has no depth map yet</string>
 </resources>

@@ -1,4 +1,5 @@
 **/target
+**/target-*
 android
 .git
 .github

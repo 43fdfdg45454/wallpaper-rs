@@ -47,6 +47,7 @@ class Item(json: JSONObject) {
     private val confirmed = pack?.optJSONArray("confirmed")?.let { list -> List(list.length(), list::getString) }.orEmpty()
     val mature = pack?.optString("content") == "mature" && "mature" !in confirmed && !Unveil.mature
     val flashing = pack?.optBoolean("photosensitive") == true && "photosensitive" !in confirmed
+    val moving = "motion" in confirmed
 }
 
 object Unveil {

@@ -191,6 +191,11 @@ fn compressed_textures_are_refused_until_they_are_drawn() {
     let package = load(&entry, &[("image.ktx2", b"\xabKTX 20\xbb")]).unwrap();
     let refused = features::playable(&package.manifest, &package.facts, Platform::Desktop).unwrap_err();
     assert!(refused.to_string().ends_with("the feature ktx2 (uses compressed textures in the KTX2 format)"));
+    let es = wprs_core::message::tr_in(&["es".into()]);
+    assert!(refused.message().told(&es).starts_with("este paquete necesita una versión más reciente"));
+    assert!(
+        refused.message().told(&es).ends_with("la función ktx2 (usa texturas comprimidas en formato KTX2)")
+    );
     let unlisted = manifest(Kind::Image, "image.avif", json!({}));
     assert_eq!(field(load(&unlisted, &[("image.avif", b"x")]).map(drop)), "requires.features");
 }

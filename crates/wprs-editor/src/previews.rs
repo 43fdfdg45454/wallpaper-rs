@@ -1,6 +1,6 @@
 use crate::assets::place;
 use crate::ops::{Op, set};
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{Result, bail, ensure};
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
 use serde_json::{Value, json};
@@ -13,7 +13,8 @@ use wprs_format::media::{preview, probe};
 const MOST: usize = 1 << 20;
 
 fn shrink(data: &[u8]) -> Result<Vec<u8>> {
-    let picture = image::load_from_memory(data).context("the picture cannot be read")?;
+    let picture = image::load_from_memory(data)
+        .map_err(|e| said("editor.unreadable_picture", "the picture cannot be read: %1", &[&e]))?;
     for side in [1024, 768, 512] {
         let fitted = match picture.width().max(picture.height()) > side {
             true => picture.resize(side, side, FilterType::Triangle),
@@ -37,8 +38,10 @@ fn shrink(data: &[u8]) -> Result<Vec<u8>> {
 
 pub fn store(dir: &Path, doc: &Value, file: &Path, animated: bool) -> Result<String> {
     field(doc, animated)?;
-    let data = fs::read(file).with_context(|| format!("cannot read {}", file.display()))?;
-    let found = probe(&data).context("choose a png, jpeg, webp or gif picture")?;
+    let data = fs::read(file)
+        .map_err(|e| said("editor.cannot_read", "cannot read %1: %2", &[&file.display(), &e]))?;
+    let found = probe(&data)
+        .ok_or_else(|| said("editor.preview_kind", "choose a png, jpeg, webp or gif picture", &[]))?;
     let name = |ext: &str| format!("preview{}.{ext}", if animated { "-animated" } else { "" });
     let ext = if found.format == "jpeg" { "jpg" } else { found.format };
     let (most, kinds) = if animated { (8 << 20, "gif webp") } else { (MOST, "png jpeg webp") };

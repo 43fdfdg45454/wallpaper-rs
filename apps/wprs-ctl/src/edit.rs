@@ -1,7 +1,7 @@
 use clap::Subcommand;
 use std::path::PathBuf;
 
-const MASK: &str = "Mask name, or linear:X0,Y0,X1,Y1, radial:X,Y,RX,RY[,FEATHER], luminance:LO,HI[,SOFT] or depth:LO,HI[,SOFT]";
+const MASK: &str = "Mask name, or linear:X0,Y0,X1,Y1, radial:X,Y,RX,RY[,FEATHER], luminance:LO,HI[,SOFT], depth:LO,HI[,SOFT], or a brush stroke added to the mask, brush:RADIUS,HARDNESS:X,Y;X,Y;... or erase:RADIUS,HARDNESS:X,Y;...";
 
 pub use crate::editing::run;
 
@@ -87,7 +87,9 @@ pub enum Edits {
         #[arg(long, help = "ov when omitted")]
         id: Option<String>,
     },
-    #[command(about = "Add or replace a named mask, or remove it with none")]
+    #[command(
+        about = "Add or replace a named mask, paint or erase a stroke of a brush mask, or remove it with none"
+    )]
     Mask {
         path: PathBuf,
         name: String,

@@ -55,7 +55,8 @@ pub(super) struct SceneState {
     courses: Vec<Course>,
     zone: (i64, String),
     restock: bool,
-    hushed: bool,
+    pub(super) hushed: bool,
+    pub(super) quiet: bool,
     guard: Option<Box<super::guard::Guard>>,
     pub(super) damage: Option<Region>,
     spare: Spare,
@@ -127,6 +128,7 @@ impl SceneState {
             zone: (i64::MIN, String::new()),
             restock: false,
             hushed: false,
+            quiet: false,
             guard: None,
             damage: None,
             spare: Spare::default(),
@@ -183,7 +185,9 @@ impl SceneState {
         self.host.as_ref().map_or((0, 0), Link::shares)
     }
 
-    pub(super) fn calm(&mut self, calm: bool) -> bool {
+    pub(super) fn calm(&mut self, asked: bool) -> bool {
+        self.quiet = asked;
+        let calm = asked && !self.spec.moving;
         let parallax = self.runtime.set_reduced_motion(calm);
         if std::mem::replace(&mut self.hushed, calm) == calm {
             return parallax;
@@ -232,7 +236,9 @@ impl SceneState {
             spec.hold.into_iter().for_each(|time| self.runtime.seek(time));
             (self.still, self.moving, changed) = (spec.hold.is_some(), spec.hold.is_none(), true);
         }
+        let moved = spec.moving != self.spec.moving;
         (self.spec, self.uses) = (spec, self.needs(self.quality));
+        changed |= moved && self.calm(self.quiet);
         if changed {
             self.calm = 0;
         }

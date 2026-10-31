@@ -1,6 +1,7 @@
 use crate::validate::{extension, within};
 use crate::{Error, FileEntry, PresetFile, Result, ensure, media, require};
 use std::collections::BTreeSet;
+use wprs_core::message::said;
 use wprs_scene::{
     Clip, MAX_SOUND_BYTES, MAX_SOUND_SECONDS, MAX_SOUND_TOTAL, MAX_STREAM_BYTES, MAX_STREAM_SECONDS,
     MAX_STREAM_TOTAL, Scene,
@@ -57,9 +58,10 @@ pub(crate) fn sounds(
         let (head, tail) = read(path, stream.then_some(SOUND_EDGE))?;
         let tail = if tail.is_empty() { &head } else { &tail };
         let clip = Clip::sample(path, &head, tail, size)
-            .map_err(|reason| Error::Invalid { field: path.into(), reason })?;
-        let reason = format!("lasts {:.1} s, at most {seconds} s are allowed", clip.seconds);
-        require(clip.seconds <= seconds, path, &reason)?;
+            .map_err(|reason| Error::Invalid { field: path.into(), reason: reason.into() })?;
+        let lasts = format!("{:.1}", clip.seconds);
+        let reason = || said("format.lasts", "lasts %1 s, at most %2 s are allowed", &[&lasts, &seconds]);
+        crate::ensure(clip.seconds <= seconds, || crate::refuse(path, reason()))?;
         if !stream {
             total += clip.seconds;
             within("length of the sounds in seconds", total.ceil() as u64, MAX_SOUND_TOTAL as u64)?;

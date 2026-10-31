@@ -165,4 +165,10 @@
     <string name="drag_to_move">Drag to move</string>
     <string name="search">Search</string>
     <string name="clear_search">Clear the search</string>
+    <string name="keep_moving">Keep moving when the system asks for less motion</string>
+    <string name="false_colour">False colour, red near and blue far</string>
+    <string name="depth_device">Run the model on</string>
+    <string name="depth_device_auto">The fastest device</string>
+    <string name="depth_device_cpu">The processor</string>
+    <string name="picture_changed">This picture changed after it was edited, so the edit may no longer fit it.</string>
 </resources>

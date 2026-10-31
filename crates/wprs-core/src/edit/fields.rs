@@ -1,3 +1,4 @@
+use crate::message::{Message, said};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use serde_path_to_error::Segment;
@@ -18,7 +19,7 @@ fn shows(value: &Value, found: &str) -> bool {
     }
 }
 
-pub(super) fn typed<T: DeserializeOwned>(value: &Value) -> Result<T, String> {
+pub(super) fn typed<T: DeserializeOwned>(value: &Value) -> Result<T, Message> {
     serde_path_to_error::deserialize(value).map_err(|e| {
         let path = e.path().clone();
         let inner = e.into_inner().to_string();
@@ -32,8 +33,8 @@ pub(super) fn typed<T: DeserializeOwned>(value: &Value) -> Result<T, String> {
         });
         let path = Some(path.to_string()).filter(|p| p != ".").into_iter().chain(field);
         match path.collect::<Vec<_>>().join(".") {
-            path if path.is_empty() => inner,
-            path => format!("{path}: {inner}"),
+            path if path.is_empty() => said("edit.json", "%1", &[&inner]),
+            path => said("edit.field", "%1: %2", &[&path, &inner]),
         }
     })
 }

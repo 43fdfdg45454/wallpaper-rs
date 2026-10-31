@@ -98,11 +98,17 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                 }.map { stringResource(it) }
                 if (notes.isNotEmpty()) Note(notes.joinToString(" "))
             }
+            if (picture && state.optBoolean("changed")) Note(stringResource(R.string.picture_changed), MaterialTheme.colorScheme.error)
             if (picture) {
                 Framing(main, uid, state)
                 Relief(main, uid, state)
             }
             if (item?.scene == false) Kept(main, uid)
+            item?.takeIf { it.scene }?.let { shown ->
+                Toggle(stringResource(R.string.keep_moving), shown.moving) {
+                    main.act { ask(if (it) "confirm" else "unconfirm", "uid" to uid, "what" to "motion") }
+                }
+            }
         }
     }
     Column(Modifier.fillMaxSize()) {

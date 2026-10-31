@@ -63,6 +63,11 @@ fun Relief(main: Main, uid: String, state: JSONObject) {
         else -> if (moving) R.string.depth_none else R.string.depth_missing
     }
     Note(stringResource(map))
+    Choices(
+        stringResource(R.string.depth_device),
+        listOf("auto" to stringResource(R.string.depth_device_auto), "cpu" to stringResource(R.string.depth_device_cpu)),
+        Depth.device.value,
+    ) { Depth.device.value = it }
     Row(Modifier.padding(horizontal = 8.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
         val again = if (state.optBoolean("map")) R.string.remake_map else R.string.make_map
         TextButton(make, enabled = busy == null) { Text(stringResource(again)) }

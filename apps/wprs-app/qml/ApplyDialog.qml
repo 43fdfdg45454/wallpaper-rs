@@ -88,6 +88,24 @@ Kirigami.Dialog {
             model: dialog.choices(App.tr("None"), dialog.presets, value => value.name)
             textRole: "text"
             valueRole: "value"
+
+            delegate: QQC2.ItemDelegate {
+                id: named
+
+                required property var modelData
+                required property int index
+
+                width: ListView.view?.width ?? implicitWidth
+                text: modelData.text
+                highlighted: preset.highlightedIndex === index
+
+                contentItem: QQC2.Label {
+                    text: named.text
+                    color: named.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                }
+            }
         }
     }
 }

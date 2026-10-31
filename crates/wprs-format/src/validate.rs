@@ -1,7 +1,8 @@
 use crate::locale::locale_file;
-use crate::{Error, Kind, Manifest, Result, ensure, require};
+use crate::{Error, Kind, Manifest, Result, ensure};
 use std::collections::HashSet;
 use std::path::Path;
+use wprs_core::message::said;
 
 pub const MANIFEST: &str = "manifest.json";
 pub const SIGNATURE: &str = "manifest.json.minisig";
@@ -95,19 +96,28 @@ pub fn validate(manifest: &Manifest, files: &[FileEntry], limits: &Limits) -> Re
         check_path(path)?;
         let file = files.iter().find(|f| &f.path == path).ok_or_else(|| Error::Missing(path.clone()))?;
         let usable = path != MANIFEST && extension(path).is_some_and(|e| types.contains(&e.as_str()));
-        require(usable, field, &format!("{path:?} is not a usable {field} for {} packages", manifest.kind))?;
-        require(
-            file.size <= max,
-            field,
-            &format!("{path:?} has {} bytes, more than the {max} allowed", file.size),
-        )
+        let quoted = format!("{path:?}");
+        let unusable = || {
+            said(
+                "format.unusable",
+                "%1 is not a usable %2 for %3 packages",
+                &[&quoted, &field, &manifest.kind],
+            )
+        };
+        crate::ensure(usable, || crate::refuse(field, unusable()))?;
+        let large = || {
+            said("format.large", "%1 has %2 bytes, more than the %3 allowed", &[&quoted, &file.size, &max])
+        };
+        crate::ensure(file.size <= max, || crate::refuse(field, large()))
     })?;
     manifest.credits.iter().flat_map(|c| &c.paths).try_for_each(|path| {
         check_path(path.trim_end_matches('/'))?;
         let dir = path.ends_with('/');
         let found =
             files.iter().any(|f| if dir { f.path.starts_with(path.as_str()) } else { f.path == *path });
-        require(found, "credits", &format!("{path:?} is not a file or folder of the package"))
+        let quoted = format!("{path:?}");
+        let gone = || said("format.uncredited", "%1 is not a file or folder of the package", &[&quoted]);
+        crate::ensure(found, || crate::refuse("credits", gone()))
     })
 }
 

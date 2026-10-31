@@ -4,6 +4,7 @@ use crate::names::{clean, safe, valid_id, valid_license, valid_name, valid_prope
 use crate::origin::Origin;
 use crate::{Display, Error, Kind, Manifest, Playback, Result, SCHEMA, SCHEMA_V1, Text, markup, require};
 use std::collections::HashSet;
+use wprs_core::message::said;
 use wprs_scene::{Control, tag};
 
 const FIRST: &str =
@@ -39,7 +40,7 @@ impl Manifest {
             let field = format!("properties.{name}");
             let valid = if self.v2() { valid_property(name) } else { valid_name(name) };
             require(valid, &field, "expected a letter followed by letters, digits or _")?;
-            property.check().map_err(|reason| Error::Invalid { field, reason })
+            property.check().map_err(|reason| Error::Invalid { field, reason: reason.into() })
         })?;
         let mut properties = match self.kind {
             Kind::Video => self.video_properties(&Default::default(), None),
@@ -47,7 +48,7 @@ impl Manifest {
         };
         properties.extend(self.properties.clone());
         wprs_scene::check_presets(&properties, &self.presets)
-            .map_err(|(field, reason)| Error::Invalid { field, reason })
+            .map_err(|(field, reason)| Error::Invalid { field, reason: reason.into() })
     }
 
     pub fn missing(&self) -> Vec<Error> {
@@ -56,10 +57,7 @@ impl Manifest {
         let gone = [self.content.is_none(), self.photosensitive.is_none(), self.origin.is_none(), locale];
         let found = NEEDED.iter().zip(gone).filter(|(_, gone)| *gone && self.v2());
         found
-            .map(|((field, reason), _)| Error::Invalid {
-                field: field.to_string(),
-                reason: reason.to_string(),
-            })
+            .map(|((field, reason), _)| Error::Invalid { field: field.to_string(), reason: (*reason).into() })
             .collect()
     }
 
@@ -179,29 +177,40 @@ impl Manifest {
         };
         let default = self.default_locale.as_deref();
         if let Some(key) = self.key(text).filter(|k| k.starts_with("wprs.")) {
-            let reason = format!("@{key} is not a text of the engine");
-            return require(crate::locale::engine(key).is_some(), field, &reason);
+            let reason = || {
+                crate::refuse(field, said("format.engine_text", "@%1 is not a text of the engine", &[&key]))
+            };
+            return crate::ensure(crate::locale::engine(key).is_some(), reason);
         }
         if let Some(key) = self.key(text) {
             let known = default.and_then(|d| self.table(d)).is_some_and(|t| t.contains_key(key));
-            require(known, field, &format!("@{key} is not in the strings of the default language"))?;
+            let reason =
+                || said("format.unknown_key", "@%1 is not in the strings of the default language", &[&key]);
+            crate::ensure(known, || crate::refuse(field, reason()))?;
         }
         let values: Vec<(String, String)> = match self.resolve(text) {
             Text::Plain(t) => vec![(String::new(), t)],
             Text::Localized(map) => {
                 let named = map.keys().all(|l| valid_tag(l)) && default.is_none_or(|d| has(&map, d));
                 require(named, field, "needs a text in the default language and languages like en or pt-BR")?;
-                map.into_iter().map(|(language, t)| (format!(" in {language}"), t)).collect()
+                map.into_iter().collect()
             }
         };
         let marked = ["description", "changes"].contains(&field);
         values.iter().try_for_each(|(language, value)| {
-            require(field != "title" || !value.trim().is_empty(), field, &format!("has no text{language}"))?;
-            let ok = clean(value, max, lines);
-            require(ok, field, &format!("expected at most {max} characters without control characters"))?;
+            let empty = || match language.as_str() {
+                "" => said("format.no_text", "has no text", &[]),
+                language => said("format.no_text_in", "has no text in %1", &[&language]),
+            };
+            crate::ensure(field != "title" || !value.trim().is_empty(), || crate::refuse(field, empty()))?;
+            let long = || {
+                said("format.too_long", "expected at most %1 characters without control characters", &[&max])
+            };
+            crate::ensure(clean(value, max, lines), || crate::refuse(field, long()))?;
             require(marked || safe(value), field, "plain texts have no < or >")?;
             match marked {
-                true => markup::check(value).map_err(|reason| Error::Invalid { field: field.into(), reason }),
+                true => markup::check(value)
+                    .map_err(|reason| Error::Invalid { field: field.into(), reason: reason.into() }),
                 false => Ok(()),
             }
         })

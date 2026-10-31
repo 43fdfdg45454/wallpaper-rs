@@ -1,5 +1,6 @@
 use super::parse::{invalid, usage};
 use super::{Edit, Error};
+use crate::message::{Message, said};
 use serde::{Deserialize, Serialize};
 
 pub const MODEL: &str = "depth-anything-v2-small";
@@ -52,26 +53,25 @@ impl Default for Parallax {
     }
 }
 
-pub(super) fn check(depth: Option<&Depth>, parallax: Option<&Parallax>) -> Result<(), String> {
-    let within = |path: &str, value: f32, lo: f32, hi: f32| {
-        let fine = (lo..=hi).contains(&value);
-        fine.then_some(()).ok_or_else(|| format!("{path}: {value} is out of range {lo} to {hi}"))
-    };
+pub(super) fn check(depth: Option<&Depth>, parallax: Option<&Parallax>) -> Result<(), Message> {
+    let bounded = |path: &str, value: f32, lo: f32, hi: f32| super::check::bounded(path, value, (lo, hi));
+    let fine = |ok: bool, id, text| ok.then_some(()).ok_or_else(|| said(id, text, &[]));
     if let Some(d) = depth {
-        (d.model == MODEL).then_some(()).ok_or_else(|| format!("depth.model: use {MODEL}"))?;
+        let model = d.model == MODEL;
+        model.then_some(()).ok_or_else(|| said("edit.depth_model", "depth.model: use %1", &[&MODEL]))?;
         let input = (196..=1036).contains(&d.input) && d.input.is_multiple_of(14);
-        input.then_some(()).ok_or("depth.input: use a multiple of 14 from 196 to 1036")?;
-        within("depth.near", d.near, 0.0, 1.0)?;
-        within("depth.far", d.far, 0.0, 1.0)?;
-        within("depth.gamma", d.gamma, 0.2, 5.0)?;
-        (d.smooth <= 16 && d.dilate <= 16).then_some(()).ok_or("depth: use 0 to 16 pixels")?;
+        fine(input, "edit.depth_input", "depth.input: use a multiple of 14 from 196 to 1036")?;
+        bounded("depth.near", d.near, 0.0, 1.0)?;
+        bounded("depth.far", d.far, 0.0, 1.0)?;
+        bounded("depth.gamma", d.gamma, 0.2, 5.0)?;
+        fine(d.smooth <= 16 && d.dilate <= 16, "edit.depth_pixels", "depth: use 0 to 16 pixels")?;
     }
     let Some(p) = parallax else { return Ok(()) };
-    within("parallax.strength", p.strength, 0.0, MAX_STRENGTH)?;
-    within("parallax.focus", p.focus, 0.0, 1.0)?;
-    within("parallax.overscan", p.overscan, 1.0, 1.1)?;
-    STEPS.contains(&p.steps).then_some(()).ok_or("parallax.steps: use 1, 8, 16 or 32")?;
-    (p.smoothing_ms <= 2000).then_some(()).ok_or_else(|| "parallax.smoothing_ms: use 0 to 2000".into())
+    bounded("parallax.strength", p.strength, 0.0, MAX_STRENGTH)?;
+    bounded("parallax.focus", p.focus, 0.0, 1.0)?;
+    bounded("parallax.overscan", p.overscan, 1.0, 1.1)?;
+    fine(STEPS.contains(&p.steps), "edit.parallax_steps", "parallax.steps: use 1, 8, 16 or 32")?;
+    fine(p.smoothing_ms <= 2000, "edit.parallax_smoothing", "parallax.smoothing_ms: use 0 to 2000")
 }
 
 pub(super) struct Look {
@@ -97,7 +97,7 @@ impl Edit {
     pub(super) fn parallax(&mut self, look: Look) -> Result<(), Error> {
         let source = look.source.map(|s| {
             let named = serde_json::from_value(serde_json::Value::String(s.clone()));
-            named.map_err(|_| usage(format!("{s} is not auto, pointer or accelerometer")))
+            named.map_err(|_| usage(said("edit.motion", "%1 is not auto, pointer or accelerometer", &[&s])))
         });
         let source = source.transpose()?;
         let p = self.parallax.get_or_insert_with(Parallax::default);
@@ -105,7 +105,10 @@ impl Edit {
         (p.strength, p.focus) = (look.strength.unwrap_or(p.strength), look.focus.unwrap_or(p.focus));
         (p.steps, p.overscan) = (look.steps.unwrap_or(p.steps), look.overscan.unwrap_or(p.overscan));
         p.smoothing_ms = look.smoothing.unwrap_or(p.smoothing_ms);
-        STEPS.contains(&p.steps).then_some(()).ok_or_else(|| invalid("use 1, 8, 16 or 32 steps"))
+        STEPS
+            .contains(&p.steps)
+            .then_some(())
+            .ok_or_else(|| invalid(said("edit.steps", "use 1, 8, 16 or 32 steps", &[])))
     }
 
     pub fn moving(&self) -> Option<&Parallax> {

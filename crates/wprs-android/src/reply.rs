@@ -8,10 +8,10 @@ impl Error {
     pub(crate) fn reply(&self) -> serde_json::Value {
         let text = |id, arg: String| (id, vec![arg]);
         let (id, args) = match self {
-            Error::Said(m) => (m.id, m.args.clone()),
+            Error::Said(m) => (m.id, m.told_args(&wprs_core::message::tr_in(&library::languages()))),
             Error::Format(e) => {
                 let message = e.message();
-                (message.id, message.args)
+                (message.id, message.told_args(&wprs_core::message::tr_in(&library::languages())))
             }
             Error::Unreadable(name) => ("android.unreadable", vec![name.clone()]),
             Error::Library(wprs_library::Error::NotFound(what, key)) => {
@@ -38,6 +38,7 @@ impl Error {
     pub(crate) fn told_in(&self, languages: &[String]) -> String {
         match self {
             Error::Format(e) => e.message().told(&wprs_core::message::tr_in(languages)),
+            Error::Said(m) => m.told(&wprs_core::message::tr_in(languages)),
             e => e.to_string(),
         }
     }

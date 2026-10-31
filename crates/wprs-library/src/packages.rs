@@ -101,15 +101,36 @@ impl Library {
     }
 
     pub fn confirm(&mut self, uids: &[&str], what: &str) -> Result<Vec<String>> {
-        let known = ["mature", "photosensitive"].contains(&what);
+        self.decide(
+            uids,
+            what,
+            "INSERT OR IGNORE INTO confirmations(pkg_id, what) SELECT pkg_id, ?2 FROM items \
+            WHERE uid = ?1 AND pkg_id IS NOT NULL",
+        )
+    }
+
+    pub fn unconfirm(&mut self, uids: &[&str], what: &str) -> Result<Vec<String>> {
+        self.decide(
+            uids,
+            what,
+            "DELETE FROM confirmations WHERE what = ?2 AND pkg_id = \
+            (SELECT pkg_id FROM items WHERE uid = ?1)",
+        )
+    }
+
+    pub fn decided(&self, pkg_id: &str, what: &str) -> Result<bool> {
+        let sql = "SELECT count(*) FROM confirmations WHERE pkg_id = ?1 AND what = ?2";
+        Ok(self.db.query_row(sql, params![pkg_id, what], |row| row.get::<_, i64>(0))? > 0)
+    }
+
+    fn decide(&mut self, uids: &[&str], what: &str, sql: &str) -> Result<Vec<String>> {
+        let known = DECISIONS.contains(&what);
         ensure(known, || {
-            Error::Invalid("confirmation", format!("{what:?} is not mature or photosensitive"))
+            Error::Invalid("confirmation", format!("{what:?} is not mature, photosensitive or motion"))
         })?;
         let tx = self.db.transaction()?;
         let mut changed: Vec<String> = uids.iter().map(|uid| uid.to_string()).collect();
         for uid in uids {
-            let sql = "INSERT OR IGNORE INTO confirmations(pkg_id, what) SELECT pkg_id, ?2 FROM items \
-                WHERE uid = ?1 AND pkg_id IS NOT NULL";
             ensure(tx.execute(sql, params![uid, what])? == 1 || item_in(&tx, uid).is_ok(), || {
                 Error::NotFound("item", uid.to_string())
             })?;
@@ -128,6 +149,8 @@ impl Library {
         rows(&self.db, sql, [], |row| row.get(0))
     }
 }
+
+pub const DECISIONS: [&str; 3] = ["mature", "photosensitive", "motion"];
 
 impl PackageInfo {
     pub fn asks(&self, what: &str) -> bool {

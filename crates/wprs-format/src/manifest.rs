@@ -8,6 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use wprs_core::message::said;
 use wprs_scene::Control;
 
 pub const SCHEMA: &str = "wallpaper-rs.wpak/2";
@@ -159,7 +160,9 @@ impl Manifest {
         let header: Header = serde_json::from_slice(bytes)?;
         let major = header.schema.strip_prefix(PREFIX).and_then(|n| n.parse::<u32>().ok());
         if let Some(major) = major.filter(|m| *m > 2) {
-            return Err(Error::Newer(format!("manifest version {major}")));
+            return Err(Error::Newer(
+                said("format.manifest_version", "manifest version %1", &[&major]).into(),
+            ));
         }
         features::supported(header.requires.engine.as_deref(), &header.requires.features)?;
         let mut manifest: Manifest = serde_json::from_slice(bytes)?;
@@ -168,8 +171,12 @@ impl Manifest {
         }
         let newer = header.properties.iter().find(|(_, p)| !wprs_scene::legacy(p)).filter(|_| strict);
         if let Some((id, _)) = newer {
-            let reason = "the newer kinds and fields of properties need wallpaper-rs.wpak/2".into();
-            return Err(Error::Invalid { field: format!("properties.{id}"), reason });
+            let reason = said(
+                "format.newer_properties",
+                "the newer kinds and fields of properties need wallpaper-rs.wpak/2",
+                &[],
+            );
+            return Err(crate::refuse(&format!("properties.{id}"), reason));
         }
         for property in manifest.properties.values_mut() {
             if let Control::File { accept, .. } = &mut property.control {

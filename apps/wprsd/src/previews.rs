@@ -15,9 +15,14 @@ use std::time::{Duration, SystemTime};
 use wprs_library::{Item, Kind, Meta};
 use wprs_providers::HttpFetch;
 
+mod moving;
+
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
 pub const PREVIEW: &str = "preview-";
+pub const ANIMATED: &str = "animated:";
+
+type Offer = (String, String, String, Option<wprs_format::Preview>);
 
 fn text(path: PathBuf) -> String {
     path.to_string_lossy().into_owned()
@@ -34,13 +39,20 @@ pub async fn previews(daemon: Arc<Daemon>) {
             wake.await;
             continue;
         };
-        let path = daemon.make_preview(&spec).await.map(text).unwrap_or_default();
+        let path = match spec.strip_prefix(ANIMATED) {
+            Some(moving) => {
+                let (daemon, moving) = (daemon.clone(), moving.to_owned());
+                tokio::task::spawn_blocking(move || daemon.fetch_animated(&moving)).await.ok().flatten()
+            }
+            None => daemon.make_preview(&spec).await,
+        };
+        let path = path.map(text).unwrap_or_default();
         daemon.changes.send(Signal::Preview(spec, path));
     }
 }
 
 impl Daemon {
-    fn offer_of(&self, spec: &str) -> Result<(String, String, String, Option<String>)> {
+    fn offer_of(&self, spec: &str, animated: bool) -> Result<Offer> {
         let (repo, id, version) = parse_spec(spec)?;
         let repo = repo.map(|r| self.repo_id(r)).transpose()?;
         let offers = wprs_format::browse(&self.store.data, id)?.into_iter();
@@ -50,34 +62,56 @@ impl Daemon {
             return Err(not_found(format!("{spec} matches no single package")));
         };
         let version = version.map_or_else(|| offer.release.version.clone(), String::from);
-        let preview = match version == offer.release.version {
-            true => offer.release.preview.clone(),
-            false => wprs_format::release(&self.store.data, &offer.repo_id, id, &version)?.preview,
+        let release = match version == offer.release.version {
+            true => offer.release.clone(),
+            false => wprs_format::release(&self.store.data, &offer.repo_id, id, &version)?,
         };
-        Ok((offer.repo_id.clone(), id.to_owned(), version, preview.map(|p| p.sha256)))
+        let preview = if animated { release.animated } else { release.preview };
+        Ok((offer.repo_id.clone(), id.to_owned(), version, preview))
     }
 
     fn preview_file(&self, sha256: &str) -> PathBuf {
         self.store.cache.join("previews").join(format!("{sha256}.jpg"))
     }
 
+    fn cached(&self, spec: &str, animated: bool) -> Option<PathBuf> {
+        let (.., found) = self.offer_of(spec, animated).ok()?;
+        let found = found?;
+        let path = if animated {
+            self.moving_file(&found.sha256, &found.ext)
+        } else {
+            self.preview_file(&found.sha256)
+        };
+        File::open(&path).and_then(|f| f.set_modified(SystemTime::now())).is_ok().then_some(path)
+    }
+
     pub fn request_previews(&self, specs: Vec<String>, sender: &str) -> Result<HashMap<String, String>> {
+        self.queue_previews(specs, sender, false)
+    }
+
+    pub fn request_animated(&self, specs: Vec<String>, sender: &str) -> Result<HashMap<String, String>> {
+        self.queue_previews(specs, sender, true)
+    }
+
+    fn queue_previews(
+        &self,
+        specs: Vec<String>,
+        sender: &str,
+        animated: bool,
+    ) -> Result<HashMap<String, String>> {
         limited(&specs, 500)?;
         specs.iter().try_for_each(|spec| parse_spec(spec).map(drop))?;
         let mut cached = HashMap::new();
         let mut queued = Vec::new();
         for spec in specs {
-            let known =
-                self.offer_of(&spec).ok().and_then(|(.., sha)| sha).map(|sha| self.preview_file(&sha));
-            let touched =
-                known.filter(|p| File::open(p).and_then(|f| f.set_modified(SystemTime::now())).is_ok());
-            match touched {
+            match self.cached(&spec, animated) {
                 Some(path) => drop(cached.insert(spec, text(path))),
+                None if animated => queued.push((sender.to_owned(), format!("{ANIMATED}{spec}"))),
                 None => queued.push((sender.to_owned(), spec)),
             }
         }
         let mut queue = lock(&self.remote.previews);
-        queue.retain(|(from, _)| from != sender);
+        queue.retain(|(from, spec)| from != sender || spec.starts_with(ANIMATED) != animated);
         queue.extend(queued);
         self.remote.preview_wake.notify_one();
         Ok(cached)
@@ -119,7 +153,8 @@ impl Daemon {
     }
 
     fn fetch_preview(&self, spec: &str) -> Option<(PathBuf, PathBuf)> {
-        let (repo_id, id, version, known) = self.offer_of(spec).ok()?;
+        let (repo_id, id, version, known) = self.offer_of(spec, false).ok()?;
+        let known = known.map(|p| p.sha256);
         if let Some(cached) = known.map(|sha| self.preview_file(&sha)).filter(|p| p.is_file()) {
             return Some((cached.clone(), cached));
         }
@@ -138,32 +173,5 @@ impl Daemon {
             return Some((dest.clone(), dest));
         }
         Some((download, dest))
-    }
-}
-
-impl Daemon {
-    pub fn animated(&self, item: &Item, manifest: &wprs_format::Manifest) -> Option<String> {
-        let name = manifest.animated()?;
-        let ext = std::path::Path::new(name).extension()?.to_str()?.to_ascii_lowercase();
-        (ext == "gif" || ext == "webp").then_some(())?;
-        let dir = self.store.cache.join("previews");
-        let file = dir.join(format!("animated-{}-{}.{ext}", item.uid, item.mtime));
-        if !file.is_file() {
-            let data =
-                wprs_format::open(&item.path, &wprs_format::Limits::default()).ok()?.read_file(name).ok()?;
-            private_dir(&dir).ok()?;
-            let part = file.with_extension("part");
-            let len = data.len() as u64;
-            std::fs::write(&part, data).and_then(|()| std::fs::rename(&part, &file)).ok()?;
-            let prefix = format!("animated-{}-", item.uid);
-            let older = std::fs::read_dir(&dir).into_iter().flatten().flatten().map(|e| e.path());
-            older
-                .filter(|p| {
-                    *p != file && p.file_name().is_some_and(|n| n.to_string_lossy().starts_with(&prefix))
-                })
-                .for_each(|p| drop(std::fs::remove_file(p)));
-            self.thumbs.added(len, self.state().config.library.thumb_cache_mb);
-        }
-        Some(text(file))
     }
 }

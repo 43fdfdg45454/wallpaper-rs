@@ -26,6 +26,8 @@ ColumnLayout {
         return layers.find(layer => layer.pointer === parent)?.id ?? "";
     }
 
+    property string target
+
     readonly property var groups: current ? layers.filter(layer => layer.type === "group" && layer.pointer !== current.pointer && !layer.pointer.startsWith(current.pointer + "/")) : []
 
     function pick(layer, add) {
@@ -45,6 +47,21 @@ ColumnLayout {
         };
         if (into)
             args.into = into;
+        page.run("move_layer", args);
+    }
+
+    function drop(layer, onto) {
+        target = "";
+        if (!onto || onto.pointer === layer.pointer || onto.pointer.startsWith(layer.pointer + "/"))
+            return;
+        const parent = onto.pointer.replace(/\/layers\/\d+$/, "");
+        const args = {
+            "id": layer.id,
+            "to": Number(onto.pointer.split("/").pop())
+        };
+        const group = layers.find(other => other.pointer === parent)?.id;
+        if (group)
+            args.into = group;
         page.run("move_layer", args);
     }
 

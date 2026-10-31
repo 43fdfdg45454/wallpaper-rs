@@ -107,9 +107,18 @@ pub enum Lib {
         #[arg(long, default_value = "512", value_parser = ["256", "512", "1024"])]
         size: String,
     },
-    #[command(about = "Show mature thumbnails of packages, or allow photosensitive packages to be shown")]
+    #[command(
+        about = "Show mature thumbnails of packages, allow photosensitive packages to be shown, or let scenes keep moving when the desktop asks for reduced motion"
+    )]
     Confirm {
-        #[arg(value_parser = ["mature", "photosensitive"])]
+        #[arg(value_parser = ["mature", "photosensitive", "motion"])]
+        what: String,
+        #[arg(required = true, value_name = "ITEM", help = ITEM)]
+        items: Vec<String>,
+    },
+    #[command(about = "Withdraw a decision made with lib confirm")]
+    Unconfirm {
+        #[arg(value_parser = ["mature", "photosensitive", "motion"])]
         what: String,
         #[arg(required = true, value_name = "ITEM", help = ITEM)]
         items: Vec<String>,
@@ -165,6 +174,9 @@ pub async fn run(client: &Client, command: Lib) -> Result<()> {
             println!("{}", lib.thumbnail(&one(client, &item).await?, size.parse()?).await?)
         }
         Lib::Confirm { what, items } => lib.confirm(&strs(&resolve(client, &items).await?), &what).await?,
+        Lib::Unconfirm { what, items } => {
+            lib.unconfirm(&strs(&resolve(client, &items).await?), &what).await?
+        }
         Lib::Apply { item, output, fit, preset } => {
             let uid = one(client, &item).await?;
             crate::caution::apply(client, &uid, &output, fit.map_or("", Fit::as_str), &preset).await?

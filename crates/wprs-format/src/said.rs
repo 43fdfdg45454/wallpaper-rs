@@ -8,7 +8,7 @@ impl Error {
             Error::Zip(e) => said("format.zip", "invalid zip archive: %1", &[e]),
             Error::Json(e) => said("format.json", "malformed JSON: %1", &[e]),
             Error::Invalid { field, reason } => {
-                said("format.invalid", "invalid %1: %2", &[field, reason]).texts(&[2])
+                reason.put(said("format.invalid", "invalid %1: %2", &[field, reason]), 2)
             }
             Error::UnsafePath(p) => said("format.unsafe_path", "unsafe path \"%1\"", &[p]),
             Error::Duplicate(p) => said("format.duplicate", "duplicate entry \"%1\"", &[p]),
@@ -43,7 +43,12 @@ impl Error {
             Error::NotFound(r) => said("format.not_found", "%1 not found", &[r]),
             Error::Exists(r) => said("format.exists", "%1 already exists", &[r]),
             Error::Newer(r) => {
-                said("format.newer", "this package needs a newer version of wallpaper-rs: it uses %1", &[r])
+                let newer = said(
+                    "format.newer",
+                    "this package needs a newer version of wallpaper-rs: it uses %1",
+                    &[r],
+                );
+                r.said().map_or(newer.clone(), |inner| newer.with(1, inner.clone()))
             }
             Error::Elsewhere(r) => said("format.elsewhere", "this package is made for %1 only", &[r]),
         }

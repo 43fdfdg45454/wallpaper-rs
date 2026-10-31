@@ -170,3 +170,28 @@ fn recovery_never_goes_back_to_an_older_root() {
     assert!(matches!(&refused, Err(Error::Rollback(_))), "{:?}", refused.map(|o| o.repo.root_version));
     assert!(repos(&repo.data, NOW).unwrap().iter().any(|r| r.repo_id == id && r.root_version == 2));
 }
+
+#[test]
+fn a_repository_removed_during_its_update_stays_removed_and_says_so_once() {
+    let repo = Repo::new();
+    repo.add(DAWN, "1.0.0");
+    repo.publish(NOW);
+    let id = add_repo(&repo.data, &FileFetch, &repo.url(), NOW).unwrap().repo_id;
+    repo.publish(NOW + 10);
+    struct Gone<'a>(&'a Repo, &'a str, Cell<bool>);
+    impl Fetch for Gone<'_> {
+        fn get(&self, base: &str, path: &str, max: u64) -> io::Result<Option<Vec<u8>>> {
+            if !self.2.replace(true) {
+                remove_repo(&self.0.data, self.1).unwrap();
+            }
+            FileFetch.get(base, path, max)
+        }
+    }
+    let racing = Gone(&repo, &id, Cell::new(false));
+    let refreshed = update_repo(&repo.data, &racing, &id, NOW + 20);
+    assert!(racing.2.get(), "the removal did not run during the update");
+    assert!(matches!(&refreshed, Err(Error::NotFound(what)) if what.contains(&id)), "{refreshed:?}");
+    assert!(!dir(&repo, &id).exists(), "the update brought a removed repository back");
+    assert!(repos(&repo.data, NOW).unwrap().is_empty() && browse(&repo.data, "").unwrap().is_empty());
+    assert!(matches!(update_repo(&repo.data, &FileFetch, &id, NOW + 30), Err(Error::NotFound(_))));
+}

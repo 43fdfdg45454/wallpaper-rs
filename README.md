@@ -384,8 +384,11 @@ en el propio teléfono, con la telemetría de ONNX Runtime apagada, y la foto no
 *Cancelar* detiene la descarga o el cálculo en cuanto se pulsa, también a mitad del modelo. Con un
 mapa, la página muestra los mismos ajustes que el escritorio (`wprs-ctl edit depth`): nivel
 cercano y lejano, curva, suavizado y cuánto crecen los bordes cercanos, que cambian el paralaje y
-las máscaras de profundidad al soltarlos, y *Quitar el mapa de profundidad* borra el mapa calculado
-y el importado. *Usar un archivo de mapa de profundidad*
+las máscaras de profundidad al soltarlos, el mapa ajustado en gris o en *Falso color: rojo cerca y
+azul lejos*, como en la app, y *Quitar el mapa de profundidad* borra el mapa calculado y el
+importado. *Ejecutar el modelo en* elige, como en la app, el dispositivo más rápido o el procesador
+(en el teléfono el más rápido es hoy el procesador, porque su ONNX Runtime no trae aceleradores), y
+la página avisa, como el escritorio, si la imagen cambió después de editarla. *Usar un archivo de mapa de profundidad*
 importa un mapa hecho en el escritorio, el PNG de 16 bits que guarda junto a la imagen (por ejemplo
 `foto.jpg.depth.png`), si tiene la misma proporción. En *Ajustes*, *Permitir descargar el modelo de
 profundidad* (`models.allow_download`) bloquea la descarga, y ahí mismo se puede borrar el modelo.
@@ -534,7 +537,11 @@ clase medida, el nivel y por qué bajó. Con batería o con el perfil de ahorro 
 las escenas bajan de nivel y de fotogramas; si un sensor del sistema dice que la GPU o la CPU están
 cerca de su temperatura crítica, bajan más hasta que se enfrían. Cuando el escritorio pide reducir
 el movimiento (`reduced-motion` del portal de ajustes), las escenas se quedan quietas en su
-fotograma de muestra y solo se redibujan una vez por minuto para que los relojes sigan en hora. Los
+fotograma de muestra y solo se redibujan una vez por minuto para que los relojes sigan en hora,
+salvo las escenas a las que dejes seguir moviéndose (*Seguir en movimiento cuando el escritorio pide
+reducir el movimiento* en los detalles del paquete en la app, el mismo interruptor en su página del
+teléfono, `wprs-ctl lib confirm motion ELEMENTO` y `wprs-ctl lib unconfirm motion ELEMENTO` para
+volver atrás), pensado para escenas tranquilas. Los
 efectos lentos, como las nubes o las ondas, declaran a cuántos fotogramas por segundo se ven bien y
 una escena que solo se mueve por ellos no pasa de ahí. Cada fotograma redibuja solo la parte de la
 pantalla que cambió y, si nada cambió, no dibuja nada; las partículas quietas y las escenas
@@ -549,8 +556,8 @@ su capa (`follow`).
 
 Para quien es sensible a los destellos, `playback.flash_guard` (*Frenar o detener los fondos que
 destellan más de tres veces por segundo* en la página *Ajustes* de la app, que el botón *Ajustes…*
-de la bandeja abre, `wprs-ctl config playback.flash_guard true` y un interruptor en los ajustes del
-teléfono) mide el brillo de cada fotograma de las escenas y, si una destella más de tres veces por
+de la bandeja abre, un interruptor propio en la bandeja, `wprs-ctl config playback.flash_guard true` y
+un interruptor en los ajustes del teléfono) mide el brillo de cada fotograma de las escenas y, si una destella más de tres veces por
 segundo, la reproduce más despacio o la detiene; `wprs-ctl state` lo indica en `flashes`. Está apagado por
 defecto porque cuesta una pequeña lectura de la GPU por fotograma.
 
@@ -643,7 +650,12 @@ o vuelve.
 La vista previa animada de un paquete (`previews.animated`) se mueve en los detalles de la app,
 en la miniatura de cada pantalla de la app y de la bandeja, y en la página del teléfono de un
 paquete que este no puede reproducir; solo mientras se ve, en el escritorio con el equipo
-enchufado y, si el paquete es para adultos o fotosensible, después de permitirlo.
+enchufado y, si el paquete es para adultos o fotosensible, después de permitirlo. Al explorar los
+repositorios en la app también se mueven las vistas previas animadas de los paquetes que la tienen:
+se descargan solo con el equipo enchufado, dentro de su tamaño y su hash firmados, se guardan con
+las demás vistas previas y se borran con su repositorio; nunca se mueven las de un paquete
+fotosensible ni las que siguen difuminadas. `wprs-ctl pkg preview --animated PAQUETE` da la misma
+ruta.
 
 La biblioteca de la app pide de nuevo solo los elementos que nombra cada cambio (con `uid:`, que
 también acepta `wprs-ctl lib search 'uid:<uid>,<uid>'` con uids completos), y al cambiar o repetir una búsqueda
@@ -704,7 +716,9 @@ como mucho, 512 con render por software) y solo cuando cambia un valor o llega u
 profundidad nuevo; si no puede dibujarla, un aviso dice por qué, y otro avisa si la imagen cambió
 después de editarla (también lo dicen `wprs-ctl edit` y el registro del daemon). En *Recortar y
 girar* se ve la imagen entera con el recorte encima para moverlo y cambiar su tamaño, en *Máscaras*
-las máscaras lineales y radiales se colocan arrastrando sus tiradores sobre la imagen, y en
+las máscaras lineales y radiales se colocan arrastrando sus tiradores sobre la imagen y las de
+pincel se pintan sobre ella (con su tamaño, su dureza y *Borrar*; cada trazo es un paso que se
+puede deshacer), y en
 *Pantallas* el recorte de cada pantalla sobre el resultado y las pantallas dibujadas a escala en
 milímetros: se arrastran hasta donde están de verdad, con el ancho de sus marcos, y un patrón de
 líneas y círculos sobre las pantallas reales permite comprobarlo (las líneas siguen rectas de una
@@ -725,6 +739,7 @@ wprs-ctl edit export foto.jpg -o foto-editada.png    # mismo resultado, sin daem
 wprs-ctl edit export foto.jpg -o foto.avif --quality 70   # o .jpg y .webp; --before sin operaciones
 wprs-ctl edit undo foto.jpg                          # y redo, también tras cambios hechos en la app
 wprs-ctl edit set foto.jpg ops.bl.mask=cielo         # dar una máscara a una operación; vacío la quita
+wprs-ctl edit mask foto.jpg cara 'brush:0.04,0.6:0.41,0.33;0.43,0.35'   # un trazo de pincel; erase: borra
 wprs-ctl edit fit foto.jpg center                    # su propio ajuste; none vuelve al de la pantalla
 wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
 wprs-ctl config layout.bezel_mm 8                    # ancho del marco de cada pantalla al extender
@@ -1372,7 +1387,9 @@ otra página no cierra un editor con cambios sin guardar.
 - **Capas**: un árbol con todos los tipos de capa (imagen, vídeo, texto, forma, color, espectro,
   partículas, sonido, grupo y ajuste) para añadir, quitar, duplicar, subir y bajar, agrupar (Ctrl y
   clic eligen varias), meter en un grupo o sacar de él, ocultar (o silenciar un sonido), bloquear
-  y dejar *solo* una capa en la vista previa.
+  y dejar *solo* una capa en la vista previa. El asa de cada fila la arrastra a otro sitio de la
+  lista, también dentro de otro grupo o fuera de él (la misma acción que `wprs-ctl scene
+  move-layer`).
 - **Lienzo**: la vista previa la dibuja el propio daemon en una salida virtual que llega por
   PipeWire, como el fondo de Plasma, así que necesita el módulo QML de KPipeWire. Ctrl y la rueda
   amplían, la rueda o un arrastre con el botón central o el derecho desplazan. Una capa sin
@@ -1666,7 +1683,10 @@ flatpak-builder --user --install --install-deps-from=flathub --force-clean \
   packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.yml
 ```
 
-Con `WPRS_VERSION`, `sources.sh` pone esa versión en la copia. La CI construye el Flatpak para
+Con `WPRS_VERSION`, `sources.sh` pone esa versión en la copia (sin ella, la del `Cargo.toml`) y
+`packaging/flatpak/releases.sh` escribe en el metainfo de la copia la lista `<releases>`: esa versión
+con la fecha del último commit y las novedades y arreglos desde la etiqueta anterior, y las diez
+versiones publicadas antes, así que `appstreamcli` ya no avisa de `releases-info-missing`. La CI construye el Flatpak para
 x86_64 y para aarch64, este en un runner ARM de GitHub (gratuito en los repositorios públicos), y
 `packaging/flatpak/check.sh` instala cada paquete y comprueba las versiones, `wprs-app --check` sin
 pantalla, los archivos exportados (lanzador, icono, metainfo y servicios D-Bus), las órdenes de

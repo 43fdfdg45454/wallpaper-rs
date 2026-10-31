@@ -31,6 +31,7 @@ enum Request {
     Count { query: String },
     Item { uid: String, languages: Option<Vec<String>> },
     Confirm { uid: String, what: String },
+    Unconfirm { uid: String, what: String },
     Thumb { uid: String },
     Favorite { uids: Vec<String>, favorite: bool },
     Remove { uids: Vec<String> },
@@ -106,7 +107,16 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
             (value["about"], value["lacks"]) = (json!(about), json!(lacks.unwrap_or_default()));
             value
         }
-        Request::Confirm { uid, what } => lib.confirm(&[&uid], &what).map(|_| Value::Null)?,
+        Request::Confirm { uid, what } => {
+            lib.confirm(&[&uid], &what)?;
+            store::changed();
+            Value::Null
+        }
+        Request::Unconfirm { uid, what } => {
+            lib.unconfirm(&[&uid], &what)?;
+            store::changed();
+            Value::Null
+        }
         Request::Thumb { uid } => json!(store::thumb(lib, &lib.item(&uid)?)?),
         Request::Favorite { uids, favorite } => json!(lib.set_favorite_many(&known(lib, &uids), favorite)?),
         Request::Remove { uids } => lists::remove(lib, &uids, now)?,

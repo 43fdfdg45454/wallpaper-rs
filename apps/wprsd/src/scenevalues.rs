@@ -86,6 +86,15 @@ impl Daemon {
         Ok(())
     }
 
+    pub fn moved(&self, what: &str) {
+        if what != "motion" {
+            return;
+        }
+        let scenes: Vec<String> =
+            self.state().outputs.iter().filter(|(_, i)| i.scene.is_some()).map(|(n, _)| n.clone()).collect();
+        scenes.iter().for_each(|o| drop(self.configure_output(o)));
+    }
+
     pub fn refresh_package(&self, path: &Path) {
         let shows = |info: &crate::streams::OutputInfo| {
             let scene = info.scene.as_ref().is_some_and(|s| s.path == path);

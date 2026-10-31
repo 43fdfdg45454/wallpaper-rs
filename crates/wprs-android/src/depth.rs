@@ -30,6 +30,11 @@ enum Request {
     Make {
         uid: String,
         library: Option<PathBuf>,
+        device: Option<String>,
+    },
+    Look {
+        uid: String,
+        colour: bool,
     },
     Cancel,
     Unmap {
@@ -85,7 +90,7 @@ pub(crate) fn places() -> Result<Places, Error> {
 }
 
 pub(crate) fn loaded(image: &Path) -> Result<Edit, Error> {
-    let found = edit::load(image, &store::dir()?.join(EDITS)).map_err(Error::Setting)?;
+    let found = edit::load(image, &store::dir()?.join(EDITS)).map_err(Error::Said)?;
     Ok(found.map(|(_, edit)| edit).unwrap_or_default())
 }
 
@@ -104,7 +109,7 @@ pub(crate) fn found(image: &Path, edit: &Edit) -> Option<PathBuf> {
 pub(crate) fn change(image: &Path, change: impl FnOnce(&mut Edit) -> Result<(), Error>) -> Result<(), Error> {
     let mut edit = edited(image)?;
     change(&mut edit)?;
-    edit::commit(&edit, image, &store::dir()?.join(EDITS)).map_err(Error::Setting)?;
+    edit::commit(&edit, image, &store::dir()?.join(EDITS)).map_err(Error::Said)?;
     store::changed();
     Ok(())
 }
@@ -138,14 +143,15 @@ fn answer(request: Request) -> Result<Value, Error> {
         Request::Model => model::shown(&places),
         Request::Install => model::install(&places)?,
         Request::Forget => json!(model::forget(&places)),
-        Request::Make { uid, library } => {
+        Request::Make { uid, library, device } => {
+            let device: Device = device.as_deref().unwrap_or("cpu").parse()?;
             model::ready(&places)?;
             let image = image(&uid)?;
             let edit = edited(&image)?;
             STOP.store(false, Relaxed);
             wprs_depth::background();
             let (depth, sha) = (edit.depth.clone().unwrap_or_default(), &edit.source.sha256);
-            let runtime = (library.as_deref().filter(|l| l.is_file()), Device::Cpu);
+            let runtime = (library.as_deref().filter(|l| l.is_file()), device);
             let made =
                 wprs_depth::generate_until(&places, (&image, sha), &depth, runtime, &mut |_| {}, &STOP);
             if made.as_ref().is_err_and(|e| e.is::<wprs_depth::Stopped>()) {
@@ -155,6 +161,10 @@ fn answer(request: Request) -> Result<Value, Error> {
             moving(&image)?
         }
         Request::Cancel => Value::Null,
+        Request::Look { uid, colour } => {
+            let image = image(&uid)?;
+            json!(maps::look(&image, &loaded(&image)?, colour)?)
+        }
         Request::Unmap { uid } => {
             let image = image(&uid)?;
             let edit = edited(&image)?;
@@ -164,7 +174,7 @@ fn answer(request: Request) -> Result<Value, Error> {
         }
         Request::Levels { uid, near, far, gamma, smooth, dilate } => {
             let levels = edit::Action::Depth { near, far, gamma, smooth, dilate, input: None };
-            change(&image(&uid)?, |edit| edit.act(levels).map_err(|e| Error::Setting(e.to_string())))?;
+            change(&image(&uid)?, |edit| edit.act(levels).map_err(|e| Error::Said(e.message().clone())))?;
             Value::Null
         }
         Request::Import { uid, fd } => {
@@ -183,7 +193,8 @@ fn answer(request: Request) -> Result<Value, Error> {
             json!({ "parallax": edit.moving().is_some(), "map": found(&image, &edit).is_some(),
                 "near": levels.near, "far": levels.far, "gamma": levels.gamma, "smooth": levels.smooth, "dilate": levels.dilate,
                 "strength": p.strength, "focus": p.focus, "fit": edit.fit, "base": edit.geometry.crop,
-                "crop": framing::draft(&uid).or_else(|| framing::own(&edit)), "paused": Power::now().stills() })
+                "crop": framing::draft(&uid).or_else(|| framing::own(&edit)), "paused": Power::now().stills(),
+                "changed": maps::changed(&image, &edit) })
         }
         Request::Parallax { uid, on, strength, focus } => {
             change(&image(&uid)?, |edit| tune(edit, on, strength, focus))?;

@@ -36,8 +36,14 @@ fn delayed() -> SceneState {
     let scene = Scene::from_json(&text.to_string()).unwrap();
     let sounds = vec![("wind".into(), PathBuf::from("/wind.ogg"))];
     let pack = Arc::new(ScenePack::bare(scene, Default::default(), sounds));
-    let spec =
-        SceneSpec { values: Default::default(), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
+    let spec = SceneSpec {
+        values: Default::default(),
+        pack,
+        extra: Vec::new(),
+        clips: Vec::new(),
+        hold: None,
+        moving: false,
+    };
     SceneState::new(spec, super::super::power::Power::new(Tier::T3, false, 30))
 }
 

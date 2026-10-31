@@ -16,8 +16,14 @@ fn new_media_of_the_same_scene_keep_its_clock_and_view() {
         serde_json::from_str(include_str!("../../../../../scenes/snowfall/manifest.json")).unwrap();
     let properties = serde_json::from_value(manifest["properties"].clone()).unwrap();
     let pack = Arc::new(ScenePack::bare(scene, properties, Vec::new()));
-    let spec =
-        SceneSpec { values: pack.props.values(&[]), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
+    let spec = SceneSpec {
+        values: pack.props.values(&[]),
+        pack,
+        extra: Vec::new(),
+        clips: Vec::new(),
+        hold: None,
+        moving: false,
+    };
     let extra = vec![("photo".to_string(), wprs_render::Pixels::new(image::RgbaImage::new(2, 2)))];
     let turned = SceneSpec { extra, ..spec.clone() };
     let (old, new) = (Content::Scene(spec.clone()), Content::Scene(turned.clone()));
@@ -53,6 +59,7 @@ fn screens_showing_one_scene_share_its_script_process() {
         extra: Vec::new(),
         clips: Vec::new(),
         hold: None,
+        moving: false,
     };
     let mut scripts = Scripts::default();
     let mut states: Vec<SceneState> =
@@ -90,7 +97,14 @@ fn declared_inputs_without_scripts_wait_for_what_the_scene_binds() {
     let follows = |depth: &str| {
         let mut values = pack.props.values(&[]);
         values.insert("depth".into(), serde_json::json!(depth));
-        let spec = SceneSpec { values, pack: pack.clone(), extra: Vec::new(), clips: Vec::new(), hold: None };
+        let spec = SceneSpec {
+            values,
+            pack: pack.clone(),
+            extra: Vec::new(),
+            clips: Vec::new(),
+            hold: None,
+            moving: false,
+        };
         let mut state = SceneState::new(spec, power);
         let pointer = PointerState { pos: Some([0.5, 0.5]), inside: true, ..PointerState::default() };
         let moved = state.input(SceneInput::Pointer(String::new(), pointer, Vec::new(), [true; 2]));
@@ -112,8 +126,14 @@ fn a_small_moving_layer_damages_only_its_box_on_the_screen() {
         { "id": "dot", "type": "solid", "color": "#ffffff", "size": [8, 8],
           "transform": { "position": { "keys": [[0, [120, 20]], [4, [140, 20]]] } } }] }"##;
     let pack = Arc::new(ScenePack::bare(Scene::from_json(text).unwrap(), Default::default(), Vec::new()));
-    let spec =
-        SceneSpec { values: Default::default(), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
+    let spec = SceneSpec {
+        values: Default::default(),
+        pack,
+        extra: Vec::new(),
+        clips: Vec::new(),
+        hold: None,
+        moving: false,
+    };
     let power = Power::new(Tier::T3, false, 0);
     let (mut state, players, start) = (SceneState::new(spec, power), HashMap::new(), Instant::now());
     let at = |ms: u64| start + Duration::from_millis(ms);
@@ -140,8 +160,14 @@ fn slow_gpu_frames_lower_the_reported_quality_and_say_why() {
         serde_json::from_str(include_str!("../../../../../scenes/snowfall/manifest.json")).unwrap();
     let properties = serde_json::from_value(manifest["properties"].clone()).unwrap();
     let pack = Arc::new(ScenePack::bare(scene, properties, Vec::new()));
-    let spec =
-        SceneSpec { values: pack.props.values(&[]), pack, extra: Vec::new(), clips: Vec::new(), hold: None };
+    let spec = SceneSpec {
+        values: pack.props.values(&[]),
+        pack,
+        extra: Vec::new(),
+        clips: Vec::new(),
+        hold: None,
+        moving: false,
+    };
     let (mains, battery) = (Power::new(Tier::T3, false, 0), Power::new(Tier::T3, true, 0));
     assert_eq!(SceneState::new(spec.clone(), battery).quality(), ("q2", "battery"));
     let (mut state, players, start) = (SceneState::new(spec, mains), HashMap::new(), Instant::now());

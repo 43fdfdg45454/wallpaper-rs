@@ -53,7 +53,8 @@ fn the_tray_leaves_every_advanced_setting_to_the_settings_page() {
         assert!(!tray.contains(&quoted) && settings.contains(&quoted), "{call}");
     }
     let options: Vec<&str> = tray.split("\"playback.").skip(1).filter_map(|s| s.split('"').next()).collect();
-    assert_eq!(options, ["scene_sound", "scene_capture"], "the tray sets only the scene audio switches");
+    let only = ["scene_sound", "scene_capture", "flash_guard"];
+    assert_eq!(options, only, "the tray sets only the scene audio switches and the flash guard");
     assert!(settings.contains("\"SetOption\""));
     for call in [
         "SetPaused",
@@ -75,6 +76,10 @@ fn the_tray_offers_the_app_only_where_it_is_installed() {
     let flatpak = read("../../packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.yml");
     assert!(flatpak.contains("integrations/plasma-tray") && flatpak.contains("command: wprs-app\n"));
     assert!(flatpak.contains("for f in packaging/dbus/*.service"));
+    assert!(flatpak.contains(" -p wprs-app\n") && flatpak.contains(" target/release/wprs-app\n"));
+    let info = read("../../packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.metainfo.xml");
+    assert!(info.contains("<binary>wprs-app</binary>") && info.contains("<launchable type=\"desktop-id\">"));
+    assert!(read("../../packaging/flatpak/sources.sh").contains("releases.sh"));
     assert!(read(&format!("../../packaging/dbus/{APP_ID}.service")).contains("Exec=@BINDIR@/wprs-app"));
     let tray = read("../../integrations/plasma-tray/contents/ui/Daemon.qml");
     assert!(tray.contains(&format!("const app = \"{APP_ID}\"")) && tray.contains("\"ListActivatableNames\""));

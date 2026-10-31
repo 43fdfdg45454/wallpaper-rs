@@ -75,6 +75,7 @@ fn library_and_preset_commands_parse() {
             "lib confirm photosensitive R1AB2C",
             r#"Lib(Confirm { what: "photosensitive", items: ["R1AB2C"] })"#.into(),
         ),
+        ("lib unconfirm motion R1AB2C", r#"Lib(Unconfirm { what: "motion", items: ["R1AB2C"] })"#.into()),
         (
             "lib tag R1AB2C --add sea --add blue --remove old",
             r#"Lib(Tag { items: ["R1AB2C"], add: ["sea", "blue"], remove: ["old"] })"#.into(),
@@ -168,7 +169,11 @@ fn provider_and_package_commands_parse() {
         ("remote refresh 0123abcd", r#"Remote(Refresh { repo: Some("0123abcd"), wait: Wait { wait: false, json: false } })"#.into()),
         ("remote rm 0123abcd --uninstall", r#"Remote(Rm { repo: "0123abcd", uninstall: true })"#.into()),
         ("pkg search dawn --limit 5", r#"Pkg(Search { query: "dawn", page: Page { offset: 0, limit: 5 }, json: false })"#.into()),
-        ("pkg preview org.example.dawn", r#"Pkg(Preview { spec: "org.example.dawn" })"#.into()),
+        ("pkg preview org.example.dawn", r#"Pkg(Preview { spec: "org.example.dawn", animated: false })"#.into()),
+        (
+            "pkg preview org.example.dawn --animated",
+            r#"Pkg(Preview { spec: "org.example.dawn", animated: true })"#.into(),
+        ),
         ("pkg install 0123abcd/org.example.dawn@1.0.0 --allow-stale --downgrade --wait --json", format!(r#"Pkg(Install {{ spec: "0123abcd/org.example.dawn@1.0.0", allow_stale: true, downgrade: true, {wait} }})"#)),
         ("pkg upgrade", r#"Pkg(Upgrade { allow_stale: false, wait: Wait { wait: false, json: false } })"#.into()),
         ("pkg uninstall org.example.dawn --version 1.0.0", r#"Pkg(Uninstall { id: "org.example.dawn", version: "1.0.0" })"#.into()),

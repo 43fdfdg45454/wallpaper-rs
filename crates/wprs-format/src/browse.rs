@@ -65,3 +65,31 @@ fn matches(query: &str, id: &str, release: &Release) -> bool {
     let fields = [id].into_iter().chain(texts).chain(lists);
     query.is_empty() || fields.map(str::to_lowercase).any(|f| f.contains(query))
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs::{File, TryLockError};
+    use std::path::Path;
+    use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+
+    static SEEN: AtomicUsize = AtomicUsize::new(0);
+
+    fn held(data: &Path) {
+        let file = File::open(data.join(".repos.lock")).unwrap();
+        assert!(matches!(file.try_lock(), Err(TryLockError::WouldBlock)), "the scan ran without the lock");
+        SEEN.fetch_add(1, Relaxed);
+    }
+
+    #[test]
+    fn browsing_reads_the_repositories_and_the_installed_list_under_one_lock() {
+        let dir = tempfile::tempdir().unwrap();
+        crate::store::locked(dir.path(), true, || Ok(())).unwrap();
+        crate::broken::SCANNED.with(|hook| hook.set(Some(held)));
+        assert!(super::browse(dir.path(), "").unwrap().is_empty());
+        assert!(crate::repos(dir.path(), 0).unwrap().is_empty());
+        crate::broken::SCANNED.with(|hook| hook.set(None));
+        assert_eq!(SEEN.load(Relaxed), 2);
+        let file = File::open(dir.path().join(".repos.lock")).unwrap();
+        assert!(file.try_lock().is_ok(), "the lock outlived the snapshot");
+    }
+}

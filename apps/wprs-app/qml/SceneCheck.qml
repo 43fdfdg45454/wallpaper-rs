@@ -64,6 +64,25 @@ QtObject {
             throw new Error("the rating did not stay");
     }
 
+    function dragged() {
+        const panel = Qt.createComponent("SceneLayers.qml").createObject(page, {
+            "page": page
+        });
+        const top = () => panel.layers.filter(layer => /^\/scene\/layers\/\d+$/.test(layer.pointer));
+        const before = top();
+        const moving = before.find(layer => !layer.locked);
+        const onto = before.find(layer => layer.pointer !== moving.pointer);
+        panel.drop(moving, onto);
+        const after = top().find(layer => layer.id === moving.id);
+        if (!after || after.pointer !== onto.pointer)
+            throw new Error("dragging a layer did not move it: " + JSON.stringify(after));
+        panel.drop(after, top().find(layer => layer.pointer === moving.pointer));
+        const back = top().map(layer => layer.id).join();
+        panel.destroy();
+        if (back !== before.map(layer => layer.id).join())
+            throw new Error("dragging a layer back did not restore the order: " + back);
+    }
+
     function exercise() {
         for (const kind of page.view.starters) {
             page.editor.create(page.folder + "-" + kind, kind, "");
@@ -96,6 +115,7 @@ QtObject {
             });
             page.run("undo");
             page.run("redo");
+            dragged();
             page.run("set", {
                 "pointer": "/scene/timelines",
                 "value": [

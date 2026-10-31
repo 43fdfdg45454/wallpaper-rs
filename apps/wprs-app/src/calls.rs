@@ -81,6 +81,7 @@ calls! {
         RequestThumbnails request_thumbnails(uids: strs, size: u32);
         Apply apply(uid: str, output: str, fit: str, preset: str);
         Confirm confirm(uids: strs, what: str);
+        Unconfirm unconfirm(uids: strs, what: str);
     }
     Playlists1 playlists {
         List list() json;
@@ -129,6 +130,7 @@ calls! {
         Browse browse(query: str, offset: u32, limit: u32) json;
         Reveal reveal(spec: str);
         RequestPreviews request_previews(specs: strs);
+        RequestAnimatedPreviews request_animated_previews(specs: strs);
         Install install(spec: str, allow_stale: bool, allow_downgrade: bool);
         Uninstall uninstall(id: str, version: str);
         ListInstalled list_installed() json;

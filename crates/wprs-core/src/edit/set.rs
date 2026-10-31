@@ -1,4 +1,5 @@
 use super::{Edit, Kind, Op};
+use crate::message::{Message, said};
 use serde_json::Value;
 
 fn shorthand(key: &str) -> Option<(&'static str, Kind, &'static str)> {
@@ -17,22 +18,29 @@ fn shorthand(key: &str) -> Option<(&'static str, Kind, &'static str)> {
     })
 }
 
-fn typed(current: &Value, text: &str) -> Result<Value, String> {
+fn typed(current: &Value, text: &str) -> Result<Value, Message> {
     let text = text.trim();
     let number = |t: &str| match t.trim().parse::<i64>() {
         Ok(n) => Ok(Value::from(n)),
-        Err(_) => t.trim().parse::<f64>().map(Value::from).map_err(|_| format!("{t} is not a number")),
+        Err(_) => t
+            .trim()
+            .parse::<f64>()
+            .map(Value::from)
+            .map_err(|_| said("edit.number", "%1 is not a number", &[&t])),
     };
     match current {
         _ if text == "null" => Ok(Value::Null),
         _ if text.len() > 1 && text.starts_with('"') && text.ends_with('"') => {
-            serde_json::from_str(text).map_err(|e| e.to_string())
+            serde_json::from_str(text).map_err(|e| said("edit.json", "%1", &[&e]))
         }
-        Value::Bool(_) => text.parse().map(Value::Bool).map_err(|_| format!("{text} is not true or false")),
+        Value::Bool(_) => text
+            .parse()
+            .map(Value::Bool)
+            .map_err(|_| said("edit.boolean", "%1 is not true or false", &[&text])),
         Value::Number(_) => number(text),
-        Value::Object(_) => Err("give one of its fields".into()),
+        Value::Object(_) => Err(said("edit.object", "give one of its fields", &[])),
         Value::String(_) => Ok(Value::String(text.into())),
-        _ if text.starts_with('[') => serde_json::from_str(text).map_err(|e| e.to_string()),
+        _ if text.starts_with('[') => serde_json::from_str(text).map_err(|e| said("edit.json", "%1", &[&e])),
         Value::Array(_) => text.split(',').map(number).collect::<Result<_, _>>().map(Value::Array),
         Value::Null if text.contains(',') => {
             text.split(',').map(number).collect::<Result<_, _>>().map(Value::Array)
@@ -62,7 +70,7 @@ fn slot<'a>(doc: &'a mut Value, key: &str) -> Option<&'a mut Value> {
 }
 
 impl Edit {
-    fn resolve(&self, key: &str) -> Result<(Value, String), String> {
+    fn resolve(&self, key: &str) -> Result<(Value, String), Message> {
         let mut next = self.clone();
         let path = match shorthand(key) {
             Some((id, kind, field)) => {
@@ -73,7 +81,7 @@ impl Edit {
             }
             None => key.to_owned(),
         };
-        Ok((serde_json::to_value(&next).map_err(|e| e.to_string())?, path))
+        Ok((serde_json::to_value(&next).map_err(|e| said("edit.json", "%1", &[&e]))?, path))
     }
 
     pub fn get(&self, key: &str) -> Option<Value> {
@@ -81,17 +89,18 @@ impl Edit {
         slot(&mut doc, &path).map(Value::take).filter(|v| !v.is_null())
     }
 
-    pub fn set(&mut self, key: &str, value: &str) -> Result<(), String> {
+    pub fn set(&mut self, key: &str, value: &str) -> Result<(), Message> {
         let key = key.trim();
         let (mut doc, path) = self.resolve(key)?;
-        let field = slot(&mut doc, &path).ok_or_else(|| format!("{key}: unknown setting"))?;
+        let field = slot(&mut doc, &path)
+            .ok_or_else(|| said("edit.unknown_setting", "%1: unknown setting", &[&key]))?;
         *field = match path.rsplit('.').next() {
             Some("mask") if value.trim().is_empty() => Value::Null,
             Some("mask") => serde_json::from_str(value.trim())
                 .ok()
                 .filter(Value::is_string)
                 .unwrap_or_else(|| Value::String(value.trim().into())),
-            _ => typed(field, value).map_err(|e| format!("{key}: {e}"))?,
+            _ => typed(field, value).map_err(|e| said("edit.setting", "%1: %2", &[&key, &e]).with(2, e))?,
         };
         *self = Edit::from_value(doc)?;
         Ok(())

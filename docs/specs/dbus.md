@@ -804,13 +804,20 @@ packages are rendered live (see "Scenes"); the videos they contain are copied th
 
 Records a decision of the user about the packages of these items, once per package id, so that
 every version and copy of the package keeps it. `what` is `mature` (clients stop blurring the
-thumbnails of a package rated `mature`) or `photosensitive` (`Apply` and playlists may show it);
-anything else returns `InvalidArgs`, an unknown uid `NotFound`. Items that are no packages are
+thumbnails of a package rated `mature`), `photosensitive` (`Apply` and playlists may show it) or
+`motion` (the scene keeps moving while the desktop asks for reduced motion, for gentle scenes the
+user chose; every screen that shows a scene is configured again); anything else returns
+`InvalidArgs`, an unknown uid `NotFound`. Items that are no packages are
 accepted and change nothing. `PackageInfo.confirmed` lists the decisions, and the `library` change
 names every item that shares a package id with these items. Allowing `photosensitive` while the
 active profile left a screen out for that reason (`OutputState.error`) gives that screen what the
 profile sets for it once its packages are allowed, without another `Profiles1.Activate`; other
 screens and settings keep what they show now.
+
+### `Unconfirm(as uids, s what)`
+
+Withdraws a decision recorded with `Confirm`, with the same arguments, errors and `library` change;
+withdrawing `motion` makes the scene stay still again while the desktop asks for reduced motion.
 
 ### Signal `ThumbnailReady(s uid, u size, s path)`
 
@@ -1201,6 +1208,15 @@ the same sender replaces its queued requests. Previews are downloaded within the
 and hash, re-encoded by the thumbnail worker to JPEG files of at most 1024 px in
 `~/.cache/wallpaper-rs/previews/`, and only the re-encoded file is handed out. Previews of older
 versions are cached the same way, named by their signed hash, and downloaded only once.
+
+### `RequestAnimatedPreviews(as specs) → (a{ss} paths)`
+
+Like `RequestPreviews` for the animated previews (`previews.animated`, `animated` in `Browse`): the
+gif or webp file is downloaded within its signed size and hash, checked to be a picture of at most
+640 px a side and 15 s, and handed out as it is from `~/.cache/wallpaper-rs/previews/`, counted in
+`library.thumb_cache_mb` and removed with its repository. `PreviewReady` follows for each queued spec
+with the spec prefixed by `animated:`; a new call from the same sender replaces its queued animated
+requests only. Clients ask for them only on mains power and play them only while they are shown.
 
 ### `Install(s spec, b allow_stale, b allow_downgrade) → (t job)`
 
@@ -1828,7 +1844,10 @@ that cannot be used is ignored with a warning.
   `soft`; `depth` reads the depth map, `1` near, and selects nothing while the image has none)
   and up to 4 `brush` masks (`strokes` of `radius`, `hardness`, `erase` and `points`, at most
   20 000 points in all), drawn into one map of at most 2048 pixels a side that keeps the whole
-  width of very long pictures. Every mask takes `invert`. Any valid name can be a mask, such as
+  width of very long pictures. Every mask takes `invert`. The `mask` action (`wprs-ctl edit mask`)
+  adds one stroke to a brush mask with the spec `brush:RADIUS,HARDNESS:X,Y;X,Y;…` or
+  `erase:RADIUS,HARDNESS:X,Y;…`, creating the mask when it is not a brush yet; the app paints
+  the same strokes on the picture. Any valid name can be a mask, such as
   `1`, `true` or `null`: `wprs-ctl edit set FILE ops.<id>.mask=<name>` gives it to an operation
   and an empty name takes it away.
 - `outputs` crops the edited image for one screen, keyed by its identity (as in
@@ -2276,7 +2295,7 @@ enum Reason { Malware, License, Takedown, Broken, Other }
 struct RepoPackage {
     repo_id: String, repo_name: String, id: String, author: Option<String>, version: String,
     kind: String, title: String, description: String, tags: Vec<String>, license: String,
-    authors: Vec<String>, size: u64, published: Time, preview: bool, versions: Vec<String>,
+    authors: Vec<String>, size: u64, published: Time, preview: bool, animated: bool, versions: Vec<String>,
     installed: Vec<String>, update: bool, content: Option<String>, photosensitive: Option<bool>,
     facets: Vec<String>, changes: String,
 }

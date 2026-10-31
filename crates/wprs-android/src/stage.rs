@@ -38,6 +38,7 @@ pub(crate) struct Stage {
     restock: bool,
     calmed: bool,
     stilled: bool,
+    pub(crate) moving: bool,
     guard: Option<Box<Guarded>>,
     retried: u64,
     spare: Spare,
@@ -54,6 +55,10 @@ pub(crate) struct Shot<'a> {
     pub(crate) delay: i64,
 }
 
+fn moves(id: &str) -> bool {
+    crate::library::with(|lib| Ok(lib.decided(id, "motion")?)).unwrap_or(false)
+}
+
 impl Stage {
     pub(crate) fn new(uid: String, pack: Arc<Pack>) -> Stage {
         let mut runtime = Runtime::new(Arc::clone(&pack.scene), props::values(&pack));
@@ -61,7 +66,7 @@ impl Stage {
         runtime.set_language(pack.locale.as_deref().unwrap_or_default());
         runtime.set_listeners(true, false);
         pack.assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
-        let granted = props::granted(&pack.id);
+        let (granted, moving) = (props::granted(&pack.id), moves(&pack.id));
         let (view, quality, tick, due, touch) = (None, Quality::Q3, None, None, (None, 0, false));
         let acting = Acting::new(&pack, &runtime);
         let extras = Extras::gather(&pack, runtime.props(), extras::now(), &Extras::default());
@@ -85,6 +90,7 @@ impl Stage {
             restock: false,
             calmed: false,
             stilled: false,
+            moving,
             guard: None,
             retried: RETRIES.load(Relaxed),
             spare: Spare::default(),
@@ -98,6 +104,7 @@ impl Stage {
 
     pub(crate) fn refresh(&mut self) {
         self.granted = props::granted(&self.pack.id);
+        self.moving = moves(&self.pack.id);
         let changed = self.runtime.set_props(props::values(&self.pack));
         if changed {
             self.acting.reprops();

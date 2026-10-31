@@ -2,6 +2,7 @@ use crate::names::{safe, valid_license, within};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use wprs_core::markup::https;
+use wprs_core::message::said;
 
 pub const PROVIDER_LICENSES: [&str; 6] =
     ["CC0-1.0", "CC-PDM-1.0", "CC-PDDC", "CC-BY-2.0", "CC-BY-3.0", "CC-BY-4.0"];
@@ -108,7 +109,10 @@ impl crate::Manifest {
             branch.split(" AND ").all(|id| PROVIDER_LICENSES.contains(&id.trim_matches(['(', ')', ' '])))
         };
         let free = kind != Some(OriginKind::Provider) || self.license.split(" OR ").any(open);
-        let reason = format!("a package from a provider is published under {}", PROVIDER_LICENSES.join(", "));
-        crate::require(free, "license", &reason)
+        let licenses = PROVIDER_LICENSES.join(", ");
+        let reason = || {
+            said("format.provider_license", "a package from a provider is published under %1", &[&licenses])
+        };
+        crate::ensure(free, || crate::refuse("license", reason()))
     }
 }

@@ -13,7 +13,11 @@ MANIFEST
   ctl repo keygen root --no-password >/dev/null
   ctl repo keygen online --no-password >/dev/null
   ctl pack build src -o dawn.wpak >/dev/null
-  ctl pack build "$ROOT/scenes/dusk" -o dusk.wpak >/dev/null
+  cp -r "$ROOT/scenes/dusk" dusk
+  echo R0lGODlhAQABAIAAAP8AAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw== | base64 -d >dusk/moving.gif
+  python3 -c "import json, sys; m = json.load(open(sys.argv[1])); m['previews']['animated'] = 'moving.gif'
+json.dump(m, open(sys.argv[1], 'w'))" dusk/manifest.json
+  ctl pack build dusk -o dusk.wpak >/dev/null
   ctl repo init repo --name Example --root-key root.pub --online-key online.pub >/dev/null 2>&1
   ctl repo sign-root repo --key root.key >/dev/null
   ctl repo add repo dawn.wpak >/dev/null
@@ -53,6 +57,11 @@ item=$(ctl pkg install "$dusk" --wait --json | jq_ "r['output']['item']")
 [ "$(ctl lib search kind:scene --json | jq_ "[i['uid'] for i in r['items']]")" = "['$item']" ] ||
   fail "installed scene: $(ctl lib search kind:scene --json)"
 ctl pkg uninstall "$dusk"
+moving=$(ctl pkg preview --animated "$dusk")
+cmp -s "$moving" "$site/dusk/moving.gif" || fail "the animated preview of a repository package: $moving"
+[ "$(ctl pkg preview --animated "$dusk")" = "$moving" ] || fail "the cached animated preview was not reused"
+[ "$(ctl pkg search dusk --json | jq_ "[p['animated'] for p in r['packages']]")" = "[True]" ] ||
+  fail "browse does not say the package has an animated preview"
 python3 -c "import socket, time; s = socket.socket(); s.bind(('127.0.0.1', 0)); s.listen(8)
 print(s.getsockname()[1], flush=True); time.sleep(600)" >"$WORK/stall.port" & pids+=($!)
 wait_for 5 test -s "$WORK/stall.port" || fail "the stalled server did not start"
@@ -65,6 +74,7 @@ ctl remote rm "${repo:0:8}"
 bus Daemon1 CancelJob t "$stalled" >/dev/null
 [ "$(ctl remote ls --json | jq_ "len(r['repos'])")" = 0 ] || fail "the repository was kept"
 [ ! -e "$preview" ] || fail "the preview was kept with its repository"
+[ ! -e "$moving" ] || fail "the animated preview was kept with its repository"
 echo "repository checks passed"
 looks() {
   read -r b g r _ < <("$BIN/probe" "$1" 3 | sed 's/.*center bgra \[\(.*\)\]/\1/; s/,/ /g')

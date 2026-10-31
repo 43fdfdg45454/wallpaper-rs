@@ -4,7 +4,7 @@ use crate::error::{Error, Result, failed, invalid, not_found};
 use crate::jobs::now;
 use crate::keyring::Keyring;
 use crate::kinds::{Options, entry};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -39,9 +39,7 @@ pub struct Remote {
     pub removing: Mutex<HashSet<String>>,
     pub previews: Mutex<Vec<(String, String)>>,
     pub preview_wake: Notify,
-    pub orphans: Mutex<BTreeSet<String>>,
-    pub orphan_wake: Notify,
-    pub writing: tokio::sync::Mutex<()>,
+    pub orphans: crate::orphans::Orphans,
 }
 
 pub struct Claim<'a>(&'a Mutex<HashSet<String>>, String);

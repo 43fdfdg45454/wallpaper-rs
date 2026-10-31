@@ -117,6 +117,14 @@ fn format_errors_are_told_in_the_language_of_the_phone() {
     assert!(spanish.contains("scene.json") && !spanish.contains("missing"), "{spanish}");
 }
 
+#[test]
+fn edit_refusals_are_told_in_the_language_of_the_phone() {
+    let refused = wprs_core::Edit::parse(r#"{"version": 1, "span": {"zoom": 9}}"#).unwrap_err();
+    let error = crate::Error::Said(refused);
+    assert_eq!(error.told_in(&["es".into()]), "span.zoom: 9 está fuera del rango de 1 a 8");
+    assert_eq!(error.reply()["id"], "edit.range");
+}
+
 fn kinds(uid: &str, kind: wprs_format::Kind) {
     let item = crate::library::with(|lib| Ok(lib.item(uid)?)).unwrap();
     let kept = std::fs::read_dir(crate::pack::folder(&item.path).unwrap()).unwrap().count();

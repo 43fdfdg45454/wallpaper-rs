@@ -1,7 +1,8 @@
 use super::depth::Look;
 use super::parse::{invalid, numbers, usage};
 use super::tool::Turn;
-use super::{Edit, Mask, Span};
+use super::{Edit, Span};
+use crate::message::{Message, said};
 use serde::Deserialize;
 
 pub const ACTIONS: [&str; 13] = [
@@ -12,9 +13,17 @@ pub const ACTIONS: [&str; 13] = [
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
     #[error("{0}")]
-    Usage(String),
+    Usage(Message),
     #[error("{0}")]
-    Invalid(String),
+    Invalid(Message),
+}
+
+impl Error {
+    pub fn message(&self) -> &Message {
+        match self {
+            Error::Usage(m) | Error::Invalid(m) => m,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -108,8 +117,9 @@ impl Edit {
     fn run(&mut self, action: Action) -> Result<(), Error> {
         match action {
             Action::Set { changes } => changes.iter().try_for_each(|change| {
-                let (key, value) =
-                    change.split_once('=').ok_or_else(|| usage(format!("{change} is not KEY=VALUE")))?;
+                let (key, value) = change
+                    .split_once('=')
+                    .ok_or_else(|| usage(said("edit.key_value", "%1 is not KEY=VALUE", &[change])))?;
                 self.set(key, value).map_err(invalid)
             }),
             Action::Crop { rect, aspect, rotate, straighten, flip, output } => {
@@ -129,14 +139,13 @@ impl Edit {
                     .filter(|op| op.mask.as_ref() == Some(&name))
                     .for_each(|op| op.mask = None);
                 let found = self.masks.remove(&name).is_some();
-                found.then_some(()).ok_or_else(|| invalid(format!("no mask is named {name}")))
+                found
+                    .then_some(())
+                    .ok_or_else(|| invalid(said("edit.no_mask_named", "no mask is named %1", &[&name])))
             }
-            Action::Mask { name, spec, invert } => {
-                self.masks.insert(name, Mask::parse(&spec, invert)?);
-                Ok(())
-            }
+            Action::Mask { name, spec, invert } => self.shape(&name, &spec, invert),
             Action::Order { ids } => match ids.iter().find(|id| !self.ops.iter().any(|op| op.id == **id)) {
-                Some(id) => Err(invalid(format!("no operation is named {id}"))),
+                Some(id) => Err(invalid(said("edit.no_operation", "no operation is named %1", &[id]))),
                 None => {
                     self.ops.sort_by_key(|op| ids.iter().position(|id| *id == op.id).unwrap_or(usize::MAX));
                     Ok(())
@@ -163,15 +172,16 @@ impl Edit {
                 self.fit = (mode != "none")
                     .then(|| mode.parse())
                     .transpose()
-                    .map_err(|e: crate::fit::UnknownFit| usage(e.to_string()))?;
+                    .map_err(|e: crate::fit::UnknownFit| usage(said("edit.fit", "%1", &[&e])))?;
                 Ok(())
             }
             Action::Reset { ids } => {
                 let before = self.ops.len();
                 self.ops.retain(|op| !ids.contains(&op.id));
                 let all = before - self.ops.len() == ids.len();
-                all.then_some(())
-                    .ok_or_else(|| invalid(format!("some of {} are not operations", ids.join(" "))))
+                all.then_some(()).ok_or_else(|| {
+                    invalid(said("edit.not_operations", "some of %1 are not operations", &[&ids.join(" ")]))
+                })
             }
         }
     }

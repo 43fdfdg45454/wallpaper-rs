@@ -59,6 +59,13 @@ fn the_editor_describes_what_its_controls_show() {
         json!({"kind": "radial", "values": [0.5, 0.5, 0.25, 0.25, 0.5], "invert": true})
     );
     assert!(edit.ops.len() == 1 && changed["tools"]["bl"]["radius"] == json!(0.0));
+    for spec in ["brush:0.05,0.5:0.2,0.2;0.3,0.3", "erase:0.02,1:0.25,0.25"] {
+        edit.act(serde_json::from_value(json!({"mask": {"name": "face", "spec": spec}})).unwrap()).unwrap();
+    }
+    assert_eq!(
+        values(&edit)["masks"]["face"],
+        json!({"kind": "brush", "values": [], "strokes": 2, "invert": false})
+    );
     assert_eq!((&blank["depth"]["input"], &blank["parallax"]["enabled"]), (&json!(518), &json!(false)));
     edit.act(serde_json::from_value(json!({"parallax": {"source": "pointer"}})).unwrap()).unwrap();
     let moving = values(&edit);

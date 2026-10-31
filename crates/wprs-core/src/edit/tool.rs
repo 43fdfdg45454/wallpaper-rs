@@ -1,5 +1,6 @@
 use super::parse::{blend, fit, flips, invalid, numbers, ratio, usage};
 use super::{Edit, Error, Geometry, Kind, Mask, Op, OutputCrop};
+use crate::message::said;
 
 const WHOLE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 
@@ -17,9 +18,11 @@ impl Edit {
     fn claim(&self, id: &str, wanted: &str) -> Result<(), Error> {
         let kind = self.kind(id).and_then(|k| serde_json::to_value(k).ok());
         match kind.as_ref().and_then(|k| k["type"].as_str()) {
-            Some(found) if found != wanted => {
-                Err(invalid(format!("{id} is a {found} operation, not {wanted}; give another id")))
-            }
+            Some(found) if found != wanted => Err(invalid(said(
+                "edit.claimed",
+                "%1 is a %2 operation, not %3; give another id",
+                &[&id, &found, &wanted],
+            ))),
             _ => Ok(()),
         }
     }
@@ -36,11 +39,22 @@ impl Edit {
     fn mask_for(&mut self, id: &str, spec: Option<String>) -> Result<Option<String>, Error> {
         match spec {
             Some(spec) if spec.contains(':') => {
-                self.masks.insert(id.into(), Mask::parse(&spec, false)?);
+                self.shape(id, &spec, false)?;
                 Ok(Some(id.into()))
             }
             name => Ok(name),
         }
+    }
+
+    pub(super) fn shape(&mut self, name: &str, spec: &str, invert: bool) -> Result<(), Error> {
+        match (super::Stroke::parse(spec)?, self.masks.get_mut(name)) {
+            (Some(stroke), Some(Mask::Brush { strokes, .. })) => strokes.push(stroke),
+            (Some(stroke), _) => {
+                drop(self.masks.insert(name.into(), Mask::Brush { strokes: vec![stroke], invert }))
+            }
+            (None, _) => drop(self.masks.insert(name.into(), Mask::parse(spec, invert)?)),
+        }
+        Ok(())
     }
 
     pub(super) fn crop(
@@ -86,14 +100,14 @@ impl Edit {
         points.sort_by(|a, b| a[0].total_cmp(&b[0]));
         let (id, channel) = (id.unwrap_or_else(|| "cu".into()), channel.unwrap_or_else(|| "rgb".into()));
         if !["rgb", "r", "g", "b"].contains(&channel.as_str()) {
-            return Err(usage(format!("{channel} is not rgb, r, g or b")));
+            return Err(usage(said("edit.channel", "%1 is not rgb, r, g or b", &[&channel])));
         }
         self.claim(&id, "curves")?;
         if self.kind(&id).is_none() {
             let (rgb, r, g, b) = Default::default();
             self.upsert(&id, Kind::Curves { rgb, r, g, b }, None, None);
         }
-        let points = serde_json::to_string(&points).map_err(|e| invalid(e.to_string()))?;
+        let points = serde_json::to_string(&points).map_err(|e| invalid(said("edit.json", "%1", &[&e])))?;
         self.set(&format!("ops.{id}.{channel}"), &points).map_err(invalid)
     }
 

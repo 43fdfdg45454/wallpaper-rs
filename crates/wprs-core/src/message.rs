@@ -67,13 +67,17 @@ impl Message {
         self
     }
 
-    pub fn told(&self, tr: &dyn Fn(&str) -> String) -> String {
+    pub fn told_args(&self, tr: &dyn Fn(&str) -> String) -> Vec<String> {
         let arg = |(i, a): (usize, &String)| match self.nested.iter().find(|(at, _)| *at == i + 1) {
             Some((_, inner)) => inner.told(tr),
             None if self.texts.contains(&(i + 1)) => tr(a),
             None => a.clone(),
         };
-        render(&tr(self.text), &self.args.iter().enumerate().map(arg).collect::<Vec<_>>())
+        self.args.iter().enumerate().map(arg).collect()
+    }
+
+    pub fn told(&self, tr: &dyn Fn(&str) -> String) -> String {
+        render(&tr(self.text), &self.told_args(tr))
     }
 
     pub fn local(&self) -> String {
@@ -88,6 +92,12 @@ impl fmt::Display for Message {
 }
 
 impl std::error::Error for Message {}
+
+impl From<Message> for String {
+    fn from(message: Message) -> String {
+        message.to_string()
+    }
+}
 
 #[cfg(test)]
 mod tests {

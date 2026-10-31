@@ -20,6 +20,8 @@ object Depth {
     var cancelled = false
     private val worker = Executors.newSingleThreadExecutor { Thread(it, "wprs-depth") }
 
+    val device = mutableStateOf("auto")
+
     fun make(uid: String) = run(uid) {
         val model = depth("model") as JSONObject
         if (!model.getBoolean("installed")) {
@@ -30,7 +32,7 @@ object Depth {
             if (cancelled) return@run
             depth("install")
         }
-        depth("make", "uid" to uid)
+        depth("make", "uid" to uid, "device" to device.value)
     }
 
     fun cancel() {

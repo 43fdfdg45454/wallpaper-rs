@@ -10,10 +10,14 @@ fn text(e: String) -> anyhow::Error {
     anyhow::Error::msg(e)
 }
 
+fn told(e: wprs_core::message::Message) -> anyhow::Error {
+    anyhow::Error::msg(e.local())
+}
+
 fn refused(e: edit::Error) -> anyhow::Error {
     match e {
-        edit::Error::Usage(message) => usage(message),
-        edit::Error::Invalid(message) => text(message),
+        edit::Error::Usage(message) => usage(message.local()),
+        edit::Error::Invalid(message) => told(message),
     }
 }
 
@@ -31,7 +35,7 @@ fn source(path: &Path) -> Result<Source> {
 
 pub fn open(path: &Path) -> Result<Edit> {
     ensure!(path.is_file(), "cannot find {}", path.display());
-    let Some((_, edit)) = edit::load(path, &edit::dir()).map_err(text)? else {
+    let Some((_, edit)) = edit::load(path, &edit::dir()).map_err(told)? else {
         return Ok(Edit { source: source(path)?, ..Edit::default() });
     };
     let bytes = std::fs::metadata(path)?.len();
@@ -43,7 +47,7 @@ pub fn open(path: &Path) -> Result<Edit> {
 }
 
 pub fn keep(path: &Path, before: &Edit, after: &Edit) -> Result<()> {
-    edit::commit(after, path, &edit::dir()).map_err(text)?;
+    edit::commit(after, path, &edit::dir()).map_err(told)?;
     let mut history = History::load(path);
     history.record(before, after);
     history.save(path).map_err(text)
@@ -61,7 +65,7 @@ pub fn step(path: &Path, back: bool) -> Result<()> {
     let found = if back { history.undo(&current) } else { history.redo(&current) };
     let edit =
         found.with_context(|| format!("there is nothing to {}", if back { "undo" } else { "redo" }))?;
-    edit::commit(&edit, path, &edit::dir()).map_err(text)?;
+    edit::commit(&edit, path, &edit::dir()).map_err(told)?;
     history.save(path).map_err(text)
 }
 
@@ -71,7 +75,7 @@ pub fn apply(path: &Path, file: &str) -> Result<()> {
         file => std::fs::read_to_string(file).with_context(|| format!("cannot read {file}"))?,
     };
     ensure!(path.is_file(), "cannot find {}", path.display());
-    let mut edit = Edit::parse(&json).map_err(text)?;
+    let mut edit = Edit::parse(&json).map_err(told)?;
     if edit.source == Source::default() {
         edit.source = source(path)?;
     }
@@ -140,7 +144,7 @@ pub fn run(command: Edits) -> Result<()> {
         Edits::Show { path } => print!("{}", open(&path)?.to_json()),
         Edits::Reset { path, ids } if ids.is_empty() => match open(&path) {
             Ok(before) => keep(&path, &before, &Edit { source: before.source.clone(), ..Edit::default() })?,
-            Err(_) => drop(edit::remove(&path, &edit::dir()).map_err(text)?),
+            Err(_) => drop(edit::remove(&path, &edit::dir()).map_err(told)?),
         },
         Edits::Apply { path, file } => apply(&path, &file)?,
         Edits::Preview { path, changes, stop } => preview(&path, changes, stop)?,

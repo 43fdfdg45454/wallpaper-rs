@@ -22,7 +22,7 @@ pub fn gesture(action: &str, args: Option<&Value>) -> String {
 pub fn load(file: &Path, pixels: [u32; 2]) -> (Edit, Result<bool, String>) {
     let blank = Edit { source: Source { pixels, ..Source::default() }, ..Edit::default() };
     if !file.is_file() {
-        return (blank, Err(format!("cannot find {}", file.display())));
+        return (blank, Err(edit::missing(file).local()));
     }
     match edit::load(file, &edit::dir()) {
         Ok(Some((_, mut edit))) => {
@@ -35,7 +35,7 @@ pub fn load(file: &Path, pixels: [u32; 2]) -> (Edit, Result<bool, String>) {
         Ok(None) => Source::read(file, pixels)
             .map(|source| (Edit { source, ..Edit::default() }, Ok(false)))
             .unwrap_or_else(|e| (blank, Err(e.to_string()))),
-        Err(e) => (blank, Err(e)),
+        Err(e) => (blank, Err(e.local())),
     }
 }
 

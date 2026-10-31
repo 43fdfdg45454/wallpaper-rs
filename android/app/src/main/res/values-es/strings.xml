@@ -163,4 +163,10 @@
     <string name="drag_to_move">Arrastrar para mover</string>
     <string name="search">Buscar</string>
     <string name="clear_search">Borrar la búsqueda</string>
+    <string name="keep_moving">Seguir en movimiento cuando el sistema pide menos movimiento</string>
+    <string name="false_colour">Falso color: rojo cerca y azul lejos</string>
+    <string name="depth_device">Ejecutar el modelo en</string>
+    <string name="depth_device_auto">El dispositivo más rápido</string>
+    <string name="depth_device_cpu">El procesador</string>
+    <string name="picture_changed">Esta imagen cambió después de editarla, así que puede que la edición ya no le encaje.</string>
 </resources>
