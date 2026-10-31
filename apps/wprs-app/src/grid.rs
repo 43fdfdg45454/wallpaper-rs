@@ -80,6 +80,14 @@ impl Grid {
         (other || self.rows.is_empty() || self.rows.len() > PAGE as usize).then_some(!other)
     }
 
+    pub fn count(&self, offset: u32, fresh: Option<bool>) -> u32 {
+        match (offset, fresh) {
+            (0, Some(false)) => PAGE,
+            (0, _) => (self.rows.len() as u32).max(PAGE),
+            _ => offset + PAGE,
+        }
+    }
+
     pub fn reset(&mut self, items: Vec<ItemSummary>, keep: bool) {
         let picked: HashSet<String> = self.selected().filter(|_| keep).map(|i| i.uid.clone()).collect();
         self.rows.clear();

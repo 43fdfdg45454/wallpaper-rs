@@ -100,19 +100,25 @@ fn a_change_asks_again_only_for_its_rows() {
 }
 
 #[test]
-fn a_new_search_over_many_rows_starts_again_with_its_selection() {
-    let uids: Vec<String> = (0..3000).map(|i| format!("U{i:04}")).collect();
+fn a_new_search_over_many_rows_keeps_its_rows_and_selection() {
+    let uids: Vec<String> = (0..600).map(|i| format!("U{i:04}")).collect();
     let mut grid = Grid { size: 256, ..Grid::default() };
     grid.apply(&Edit::Insert(0, uids.iter().map(|uid| summary(uid)).collect()));
     grid.toggle(5, true);
-    grid.toggle(2999, false);
+    grid.toggle(450, false);
     let sorted: Vec<ItemSummary> = uids.iter().rev().map(|uid| summary(uid)).collect();
-    assert!(grid.plan(sorted.clone()).len() >= 2999, "a diff moves every row of a new order");
+    assert!(grid.plan(sorted.clone()).len() >= 599, "a diff moves every row of a new order");
     assert_eq!((grid.renew(false), grid.renew(true)), (Some(true), Some(false)));
-    grid.reset(sorted.into_iter().take(crate::grid::PAGE as usize).collect(), true);
+    assert_eq!((grid.count(0, Some(true)), grid.count(0, Some(false))), (600, 200));
+    assert_eq!((grid.count(0, None), grid.count(600, None)), (600, 800));
+    let kept = sorted.into_iter().filter(|i| i.uid != "U0005").take(grid.count(0, Some(true)) as usize);
+    grid.reset(kept.collect(), true);
     let picked: Vec<_> = grid.selected().map(|i| i.uid.as_str()).collect();
-    assert_eq!((grid.rows.len(), picked), (200, vec!["U2999"]));
+    let at = grid.rows.iter().position(|r| r.item.uid == "U0450");
+    assert_eq!((grid.rows.len(), picked, at), (599, vec!["U0450"], Some(149)));
+    let page: Vec<_> = grid.rows.iter().take(200).map(|r| r.item.clone()).collect();
+    grid.reset(page, true);
     assert_eq!(grid.renew(false), None, "a page of rows keeps its rows in place");
-    grid.reset(vec![summary("U2999")], false);
+    grid.reset(vec![summary("U0450")], false);
     assert_eq!(grid.selected().count(), 0);
 }

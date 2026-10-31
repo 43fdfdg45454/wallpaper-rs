@@ -1,7 +1,6 @@
 use crate::args::invalid;
 use crate::bus::{self, Event};
 use crate::diff::Edit;
-use crate::grid::PAGE;
 use crate::items::qobject::ItemModel;
 use crate::library::Source;
 use cxx_qt::{CxxQtType, Threading};
@@ -42,8 +41,7 @@ async fn pages((iface, member, mut key): Source, offset: u32, count: u32) -> Res
 impl ItemModel {
     pub fn fetch(mut self: Pin<&mut Self>, offset: u32) {
         let Some(source) = self.source.clone() else { return };
-        let rows = self.grid.rows.len() as u32;
-        let count = if offset > 0 || self.fresh.is_some() { offset + PAGE } else { rows.max(PAGE) };
+        let count = self.grid.count(offset, self.fresh);
         let generation = self.generation;
         self.as_mut().set_loading(true);
         let qt = self.qt_thread();
