@@ -6,7 +6,6 @@ dist
 docs
 integrations
 packaging
-po
 scripts
 tests
 deploy
