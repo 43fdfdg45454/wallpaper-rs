@@ -113,6 +113,7 @@ Kirigami.ApplicationWindow {
     Kirigami.PromptDialog {
         id: asking
 
+        y: parent ? Math.round((parent.height - implicitHeight) / 2) : 0
         title: App.tr("Allow this scene?")
         subtitle: consent.text
         standardButtons: Kirigami.Dialog.NoButton
