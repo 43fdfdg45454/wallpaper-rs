@@ -4,6 +4,7 @@ mod guard;
 mod iio;
 mod motion;
 mod output;
+mod pages;
 mod parallax;
 mod pictures;
 mod players;

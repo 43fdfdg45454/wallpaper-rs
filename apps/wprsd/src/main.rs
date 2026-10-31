@@ -31,6 +31,7 @@ mod library1;
 mod look;
 mod orphans;
 mod packages;
+mod pages;
 mod picks;
 mod pixels;
 mod playback;

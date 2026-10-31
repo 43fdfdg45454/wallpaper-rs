@@ -79,6 +79,7 @@ pub fn details(reply: ItemDetails) -> String {
         ("presets", Some(list(presets)).filter(|p| !p.is_empty())),
         ("playlists", Some(list(reply.playlists.iter().map(|p| &p.name))).filter(|p| !p.is_empty())),
         ("thumb", reply.thumb.map(|t| t.display().to_string())),
+        ("privacy", package.as_ref().and_then(|p| wprs_format::web_notice(&p.exposes)).map(|m| m.local())),
     ];
     let about = reply.about.as_ref().map(|a| crate::about::fields(a, package.as_ref())).unwrap_or_default();
     let fields = fields.into_iter().chain(about).filter(|(_, v)| v.as_ref().is_some_and(|v| !v.is_empty()));

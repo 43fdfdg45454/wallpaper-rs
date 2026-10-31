@@ -28,7 +28,7 @@ pub(super) fn status(reply: InputsReply) -> String {
     lines.extend(reply.shown.iter().map(|(output, shown)| {
         let used =
             [(shown.audio, Input::Audio), (shown.pointer, Input::Pointer), (shown.clicks, Input::Clicks)];
-        let used = used.into_iter();
+        let used = used.into_iter().chain([(shown.network, Input::Network)]);
         let used: BTreeSet<Input> = used.filter_map(|(on, input)| on.then_some(input)).collect();
         format!(
             "{output} shows {} using {} (allowed: {})",
@@ -54,3 +54,6 @@ pub(super) const CLICKS: &str =
     "clicks and taps on the screen (only real ones, never kept; keys are never read)";
 
 pub(super) const SLOW: &str = "its particles run on the processor, so fewer of them are shown";
+
+pub(super) const NETWORK: &str =
+    "the network, to reach the sites it names (they can learn that it runs on this computer)";

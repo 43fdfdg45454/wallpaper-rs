@@ -41,7 +41,12 @@ impl Renderer {
             offset: uv.offset,
             scale: uv.scale,
             background: [r, g, b, 1.0],
-            flags: [uv.repeat as u32, layer.image.is_some() as u32, 0, 0],
+            flags: [
+                uv.repeat as u32,
+                layer.image.is_some() as u32,
+                layer.image.is_some_and(opaque) as u32,
+                0,
+            ],
             shift: relief.map_or([0.0; 2], |r| r.shift),
             focus: relief.map_or(0.0, |r| r.focus),
             steps: relief.map_or(1, |r| r.steps.max(1)) as f32,
@@ -94,6 +99,10 @@ impl Renderer {
 fn srgb_to_linear(c: u8) -> f32 {
     let c = f32::from(c) / 255.0;
     if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+}
+
+fn opaque(image: &GpuImage) -> bool {
+    image.texture.format() == wgpu::TextureFormat::Bgra8UnormSrgb
 }
 
 #[cfg(test)]

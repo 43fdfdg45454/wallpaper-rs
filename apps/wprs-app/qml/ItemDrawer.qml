@@ -147,6 +147,12 @@ Kirigami.OverlayDrawer {
                 }
             }
 
+            WebPrivacy {
+                Layout.fillWidth: true
+                uid: drawer.uid
+                pkg: drawer.pkg
+            }
+
             RowLayout {
                 QQC2.Button {
                     text: App.tr("Edit…")

@@ -9,6 +9,9 @@ use futures_util::TryFutureExt;
 use wprs_client::Client;
 use wprs_core::Fit;
 
+const DECISIONS: [&str; 7] =
+    ["mature", "photosensitive", "motion", "hide_zone", "hide_language", "hide_gpu", "hide_storage"];
+
 #[derive(Subcommand, Debug)]
 pub enum Lib {
     #[command(about = "Add a folder and scan it; prints the source uid, then the job id")]
@@ -108,18 +111,23 @@ pub enum Lib {
         size: String,
     },
     #[command(
-        about = "Show mature thumbnails of packages, allow photosensitive packages to be shown, or let scenes keep moving when the desktop asks for reduced motion"
+        about = "Show mature thumbnails of packages, allow photosensitive packages to be shown, let scenes keep moving when the desktop asks for reduced motion, or hide the time zone, the language, the graphics card or storage from a web page"
     )]
     Confirm {
-        #[arg(value_parser = ["mature", "photosensitive", "motion"])]
+        #[arg(value_parser = DECISIONS)]
         what: String,
         #[arg(required = true, value_name = "ITEM", help = ITEM)]
         items: Vec<String>,
     },
     #[command(about = "Withdraw a decision made with lib confirm")]
     Unconfirm {
-        #[arg(value_parser = ["mature", "photosensitive", "motion"])]
+        #[arg(value_parser = DECISIONS)]
         what: String,
+        #[arg(required = true, value_name = "ITEM", help = ITEM)]
+        items: Vec<String>,
+    },
+    #[command(about = "Delete what the web pages of these packages stored on this computer")]
+    ClearData {
         #[arg(required = true, value_name = "ITEM", help = ITEM)]
         items: Vec<String>,
     },
@@ -177,6 +185,7 @@ pub async fn run(client: &Client, command: Lib) -> Result<()> {
         Lib::Unconfirm { what, items } => {
             lib.unconfirm(&strs(&resolve(client, &items).await?), &what).await?
         }
+        Lib::ClearData { items } => lib.clear_data(&strs(&resolve(client, &items).await?)).await?,
         Lib::Apply { item, output, fit, preset } => {
             let uid = one(client, &item).await?;
             crate::caution::apply(client, &uid, &output, fit.map_or("", Fit::as_str), &preset).await?

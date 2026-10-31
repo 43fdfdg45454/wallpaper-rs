@@ -1,0 +1,28 @@
+{
+  "schema": "wallpaper-rs.wpak/2",
+  "id": "io.github.wallpaper_rs.example.lights",
+  "version": "1.0.0",
+  "default_locale": "en",
+  "title": { "en": "Lights", "es": "Luces" },
+  "description": { "en": "Soft lights drifting over the photos of a folder you choose, written as a web page.\n\nThey pulse with the sound once you allow it, step aside from the pointer and remember where they were.",
+                   "es": "Luces suaves que flotan sobre las fotos de una carpeta que eliges, hecho como una página web.\n\nLaten con el sonido cuando lo permites, se apartan del puntero y recuerdan dónde estaban." },
+  "authors": ["wallpaper-rs contributors"],
+  "license": "CC0-1.0",
+  "origin": { "kind": "original" },
+  "content": { "rating": "general" },
+  "photosensitive": false,
+  "kind": "web",
+  "entry": "index.html",
+  "previews": { "thumbnail": "preview.png" },
+  "tags": ["example", "abstract", "music"],
+  "inputs": ["audio", "pointer"],
+  "web": { "background": "#0b1020", "storage_kib": 4 },
+  "requires": { "features": ["folder", "inputs.audio", "inputs.pointer", "properties2", "web"] },
+  "properties": {
+    "color": { "type": "color", "order": 1, "default": "#7fd4ff", "label": { "en": "Color", "es": "Color" } },
+    "count": { "type": "slider", "order": 2, "min": 4, "max": 40, "step": 1, "default": 16, "label": { "en": "Lights", "es": "Luces" } },
+    "speed": { "type": "slider", "order": 3, "min": 0, "max": 2, "step": 0.1, "default": 1, "label": { "en": "Speed", "es": "Velocidad" } },
+    "clock": { "type": "bool", "order": 4, "default": true, "label": { "en": "Show the time", "es": "Mostrar la hora" } },
+    "photos": { "type": "folder", "order": 5, "accept": ["image"], "every": 60, "label": { "en": "Photos", "es": "Fotos" } }
+  }
+}

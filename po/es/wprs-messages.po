@@ -1036,8 +1036,12 @@ msgid "reads the subfolders of a chosen folder or fewer of its files"
 msgstr "lee las subcarpetas de una carpeta elegida o menos de sus archivos"
 
 #: crates/wprs-format/src/features.rs
-msgid "lets its scripts or page list a chosen folder"
-msgstr "deja que sus scripts o su página listen una carpeta elegida"
+msgid "lets its page list a chosen folder"
+msgstr "deja que su página liste una carpeta elegida"
+
+#: crates/wprs-format/src/features.rs
+msgid "lets its scene scripts list a chosen folder"
+msgstr "deja que los scripts de su escena listen una carpeta elegida"
 
 #: crates/wprs-format/src/features.rs
 msgid "changes its settings when the device saves power"
@@ -1772,6 +1776,26 @@ msgstr "incluye la base del ajuste con el mismo requisito de versión"
 #: crates/wprs-format/src/web.rs
 msgid "at most 256 values named like properties"
 msgstr "como mucho 256 valores con nombres como los de las propiedades"
+
+#: crates/wprs-format/src/web.rs
+msgid "your time zone"
+msgstr "tu zona horaria"
+
+#: crates/wprs-format/src/web.rs
+msgid "your language"
+msgstr "tu idioma"
+
+#: crates/wprs-format/src/web.rs
+msgid "the model of your graphics card"
+msgstr "el modelo de tu tarjeta gráfica"
+
+#: crates/wprs-format/src/web.rs
+msgid "data it keeps on this computer"
+msgstr "datos que guarda en este equipo"
+
+#: crates/wprs-format/src/web.rs
+msgid "the network, to reach the sites it names"
+msgstr "la red, para llegar a los sitios que nombra"
 
 #: crates/wprs-scene/src/bones.rs
 msgid "clip"

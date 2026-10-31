@@ -98,6 +98,11 @@ pub(crate) fn examples(dir: &Path) -> Result<Vec<String>, Error> {
         let name = source.file_name().and_then(|n| n.to_str()).unwrap_or("scene").to_owned();
         let wpak = built.path().join(format!("{name}.wpak"));
         wprs_format::build(&source, &wpak, &wprs_format::Limits::default())?;
+        let package = wprs_format::open(&wpak, &wprs_format::Limits::default())?;
+        let platform = wprs_format::Platform::Android;
+        if wprs_format::features::playable(&package.manifest, &package.facts, platform).is_err() {
+            continue;
+        }
         added.push(store::store(&mut fs::File::open(&wpak)?, &name)?.0);
     }
     Ok(added)

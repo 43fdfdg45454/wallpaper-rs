@@ -172,7 +172,7 @@ the verified shards before installing.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/v1/catalog?q=&kind=&content=&facet=&cursor=&limit=` | — | Newest published packages that the moderators did not hide; `q` matches title, description, tags and id; `kind` is `image`, `video` or `scene`; `content` is `general`, `mature` or `unrated` (packages of the first manifest version); `facet` is one facet the package must have (`mature` included); `limit` 1 to 100 (24) |
+| GET | `/api/v1/catalog?q=&kind=&content=&facet=&cursor=&limit=` | — | Newest published packages that the moderators did not hide; `q` matches title, description, tags and id; `kind` is `image`, `video`, `scene` or `web`; `content` is `general`, `mature` or `unrated` (packages of the first manifest version); `facet` is one facet the package must have (`mature` included); `limit` 1 to 100 (24) |
 | GET | `/api/v1/packages/{id}` | — | Latest version plus `versions: [string]` |
 | GET | `/api/v1/packages/{id}/versions` | — | `{items: [item]}` |
 | POST | `/api/v1/packages/{id}/reports` | — | `{category: copyright\|illegal\|malware\|mature\|spam\|other, details}` → `201 {case}` |

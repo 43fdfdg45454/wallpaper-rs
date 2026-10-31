@@ -7013,6 +7013,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "wprs-web"
+version = "0.3.0"
+dependencies = [
+ "blake3",
+ "libc",
+ "libloading 0.8.9",
+ "rustix",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "wprs-format",
+ "zip",
+]
+
+[[package]]
 name = "wprsd"
 version = "0.3.0"
 dependencies = [
@@ -7053,6 +7068,7 @@ dependencies = [
  "wprs-sync",
  "wprs-video",
  "wprs-wayland",
+ "wprs-web",
  "zbus",
  "zeroize",
 ]

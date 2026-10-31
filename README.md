@@ -1092,6 +1092,31 @@ una vez sus paquetes, así que los que pedían una versión más nueva empiezan 
 anteriores reciben sus facetas. En el teléfono, la página de un paquete avisa de lo que no funciona
 allí.
 
+## Fondos web
+
+Un paquete `web` es una página (HTML, CSS, JavaScript, WebAssembly, WebGL, imágenes, fuentes,
+sonido y vídeo dentro del propio paquete) que se muestra como fondo con las mismas transiciones,
+ajuste, límite de FPS y pausas que los demás. La dibuja `wprs-web`, un proceso aparte que el
+servicio arranca para cada página que se ve y para en cuanto ninguna pantalla la muestra. Necesita
+WPE WebKit 2.54 o posterior (`wpewebkit` en Arch y Fedora); donde no está (Ubuntu 24.04, el Flatpak)
+el fondo se rechaza con el motivo en lugar de quedarse en blanco. `docs/specs/web.md` explica el
+motor, el aislamiento y la interfaz de la página, y `docs/guia-fondos-web.md` es la guía para quien
+los hace.
+
+La página solo lee los archivos de su paquete, no llega a la red salvo que la declare y la permitas
+(`wprs-ctl input grant <id> network`, o el interruptor de sus detalles en la app), no ve rutas,
+dispositivos ni la batería, y el motor web la ejecuta en su propio entorno aislado. Por defecto ve
+tu zona horaria, tu idioma, el modelo de tu tarjeta gráfica (WebGL) y guarda sus datos en
+`~/.local/share/wallpaper-rs/web/<id>/` si los declara. Al aplicarla y en sus ajustes, la app, la
+bandeja y `wprs-ctl` avisan de qué usa, y puedes ocultar cada cosa por fondo: en los detalles del
+paquete en la app (*Privacidad*) o con
+`wprs-ctl lib confirm hide_zone|hide_language|hide_gpu|hide_storage ELEMENTO` (`lib unconfirm` lo
+deshace). *Borrar datos* en la app o `wprs-ctl lib clear-data ELEMENTO` borra lo que guardó, y se
+borra solo al quitar el paquete. Los permisos de sonido, puntero y clics son los mismos que los de
+las escenas: los clics solo llegan desde clics reales en las pantallas donde los activas. Una página
+oculta deja de dibujar al momento y, tras 5 minutos oculta, se detiene su proceso y queda su último
+fotograma. El ejemplo *Luces* (`scenes/lights`) es una página web.
+
 ## Servidor propio
 
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas
@@ -1704,6 +1729,13 @@ la imagen del servidor con un BuildKit fijado, le adjunta los SBOM y la proceden
 GHCR, firma su resumen y le añade la atestación con el SBOM de las fuentes. La primera imagen crea
 el paquete `wprs-server` como privado: hay que hacerlo público una vez en sus ajustes de GitHub.
 
+Los fondos web se prueban donde hay WPE WebKit: el trabajo *Web wallpapers* de la CI ejecuta,
+en un contenedor de Arch con `wpewebkit`, la prueba del auxiliar (`apps/wprs-web/tests/page.rs`:
+la interfaz `window.wprs`, el límite de FPS, la pausa, que la página no llega a la red, a otros
+paquetes ni a archivos del equipo) y `scripts/web-test.sh` con el servicio, `wprs-ctl` y una
+página de color. En Ubuntu, `scripts/integration-test.sh` comprueba que el fondo se rechaza con su
+motivo. `WPRS_REQUIRE_WEB=1` hace que ambas fallen si falta el motor.
+
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre
 dispositivos DRM virtuales), activa el plugin, comprueba los píxeles de una captura, carga el icono
@@ -1757,6 +1789,9 @@ misma pausa.
   y contraseñas solo se envían al servidor configurado. Se guardan en el llavero del sistema
   (Secret Service) y en ningún otro sitio: ni en la configuración, ni en los registros, ni en la
   línea de órdenes. `http://` sin cifrar a otro equipo solo se permite con `allow_plain_http`.
+- Los fondos web no tienen red salvo que la declaren y la permitas; lo que ven de ti (zona horaria,
+  idioma, tarjeta gráfica y sus datos guardados) se avisa en la app, la bandeja y `wprs-ctl`, y
+  puedes ocultarlo por fondo.
 - El modelo de profundidad y ONNX Runtime solo se descargan si lo pides y aceptas su tamaño,
   licencia y servidores; llevan el mismo User-Agent genérico, sin cabecera Referer ni redirecciones
   de HTTPS a HTTP, se verifican con SHA-256 y los mapas se calculan en el equipo, en un proceso

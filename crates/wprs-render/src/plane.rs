@@ -19,15 +19,24 @@ impl Renderer {
         &self,
         frame: &Shared<'_>,
         plane: usize,
+        size: (u32, u32),
+    ) -> Result<wgpu::Texture, RenderError> {
+        let (fd, offset, stride) = frame.planes[plane];
+        unsafe { self.import_plane((fd, offset, stride, frame.modifier), size, PLANES[plane]) }
+    }
+
+    pub(crate) unsafe fn import_plane(
+        &self,
+        (fd, offset, stride, modifier): (std::os::fd::BorrowedFd<'_>, u32, u32, u64),
         (width, height): (u32, u32),
+        (format, wanted): (vk::Format, Format),
     ) -> Result<wgpu::Texture, RenderError> {
         let hal = unsafe { self.device.as_hal::<Vulkan>() }.ok_or_else(|| gpu("not a Vulkan device"))?;
         let (raw, instance) = (hal.raw_device(), hal.shared_instance().raw_instance());
-        let ((format, wanted), (fd, offset, stride)) = (PLANES[plane], frame.planes[plane]);
         let layout =
             [vk::SubresourceLayout { offset: offset.into(), row_pitch: stride.into(), ..Default::default() }];
         let mut explicit = vk::ImageDrmFormatModifierExplicitCreateInfoEXT::default()
-            .drm_format_modifier(frame.modifier)
+            .drm_format_modifier(modifier)
             .plane_layouts(&layout);
         let mut external = vk::ExternalMemoryImageCreateInfo::default().handle_types(Handle::DMA_BUF_EXT);
         let info = vk::ImageCreateInfo::default()

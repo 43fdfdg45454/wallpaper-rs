@@ -1,3 +1,4 @@
+use crate::pages::PageSpec;
 use crate::scenes::ScenePack;
 use image::RgbaImage;
 use std::path::PathBuf;
@@ -14,6 +15,7 @@ pub enum Content {
     Image(Picture),
     Video(Movie),
     Scene(SceneSpec),
+    Web(PageSpec),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -71,6 +73,7 @@ impl Content {
             (Content::Image(a), Content::Image(b)) => (&a.file, a.modified) == (&b.file, b.modified),
             (Content::Video(a), Content::Video(b)) => a.reel.path == b.reel.path,
             (Content::Scene(a), Content::Scene(b)) => Arc::ptr_eq(&a.pack, &b.pack),
+            (Content::Web(a), Content::Web(b)) => a.pack.path == b.pack.path && a.privacy == b.privacy,
             _ => false,
         }
     }
@@ -91,8 +94,20 @@ impl Content {
             Content::Video(m) => Some((m.reel.cut, m.volume, m.zoom, m.pan)),
             _ => None,
         };
+        let page = |c: &Content| match c {
+            Content::Web(p) => Some(p.clone()),
+            _ => None,
+        };
         let same = look(self) == look(other) && values(self) == values(other) && frame(self) == frame(other);
+        let same = same && page(self) == page(other);
         self.same_source(other) && same
+    }
+
+    pub(crate) fn page(&self) -> Option<&PageSpec> {
+        match self {
+            Content::Web(page) => Some(page),
+            _ => None,
+        }
     }
 
     pub(crate) fn video(&self) -> Option<&Reel> {
@@ -172,4 +187,5 @@ pub struct OutputStatus {
     pub decode: &'static str,
     pub left_out: Vec<String>,
     pub console: Vec<String>,
+    pub sandbox: &'static str,
 }

@@ -94,30 +94,15 @@ impl Library {
     }
 
     async fn confirm(&self, uids: Vec<String>, what: String) -> Result<()> {
-        self.d()?
-            .run(move |d| {
-                limited(&uids, crate::items::MAX_UIDS)?;
-                let changed = d.store.write(|lib| lib.confirm(&strs(&uids), &what))?;
-                d.changes.changed("library", changed);
-                d.moved(&what);
-                match what == "photosensitive" && d.compositor.running() {
-                    true => crate::choice::unhold(d),
-                    false => Ok::<_, Error>(()),
-                }
-            })
-            .await
+        self.d()?.run(move |d| d.decide(&strs(&uids), &what, true)).await
     }
 
     async fn unconfirm(&self, uids: Vec<String>, what: String) -> Result<()> {
-        self.d()?
-            .run(move |d| {
-                limited(&uids, crate::items::MAX_UIDS)?;
-                let changed = d.store.write(|lib| lib.unconfirm(&strs(&uids), &what))?;
-                d.changes.changed("library", changed);
-                d.moved(&what);
-                Ok::<_, Error>(())
-            })
-            .await
+        self.d()?.run(move |d| d.decide(&strs(&uids), &what, false)).await
+    }
+
+    async fn clear_data(&self, uids: Vec<String>) -> Result<()> {
+        self.d()?.run(move |d| d.clear_data(&strs(&uids))).await
     }
 
     #[zbus(out_args("json"))]

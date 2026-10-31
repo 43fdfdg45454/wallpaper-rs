@@ -117,7 +117,8 @@ msgstr "Dejar que las escenas reaccionen al sonido que suena"
 #: integrations/plasma-tray/contents/ui/Header.qml
 #, kde-format
 msgid "Slow down or stop wallpapers that flash more than three times a second"
-msgstr "Frenar o detener los fondos que destellan más de tres veces por segundo"
+msgstr ""
+"Frenar o detener los fondos que destellan más de tres veces por segundo"
 
 #: integrations/plasma-tray/contents/ui/Header.qml
 #, kde-format
@@ -189,6 +190,44 @@ msgstr "sus texturas ocuparían demasiada memoria"
 #, kde-format
 msgid "The effect %1 was left out: %2"
 msgstr "Se omitió el efecto %1: %2"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "your time zone"
+msgstr "tu zona horaria"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "your language"
+msgstr "tu idioma"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "the model of your graphics card"
+msgstr "el modelo de tu tarjeta gráfica"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "data it keeps on this computer"
+msgstr "datos que guarda en este equipo"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "the network, to reach the sites it names"
+msgstr "la red, para llegar a los sitios que nombra"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid ""
+"This web wallpaper uses %1. You can restrict each of them in its settings in "
+"the app."
+msgstr ""
+"Este fondo web usa %1. Puedes restringir cada cosa en sus ajustes de la app."
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "Its web engine runs without part of its sandbox on this computer."
+msgstr "Su motor web funciona sin parte de su aislamiento en este equipo."
 
 #: integrations/plasma-tray/contents/ui/LeftOut.qml
 #, kde-format

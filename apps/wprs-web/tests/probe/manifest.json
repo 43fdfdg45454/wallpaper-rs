@@ -1,0 +1,51 @@
+{
+  "schema": "wallpaper-rs.wpak/2",
+  "id": "org.example.probe",
+  "version": "1.0.0",
+  "title": "Probe",
+  "license": "CC0-1.0",
+  "origin": {
+    "kind": "original"
+  },
+  "content": {
+    "rating": "general"
+  },
+  "photosensitive": false,
+  "kind": "web",
+  "entry": "index.html",
+  "requires": {
+    "features": [
+      "inputs.audio",
+      "inputs.clicks",
+      "inputs.pointer",
+      "properties2",
+      "web"
+    ]
+  },
+  "inputs": [
+    "audio",
+    "pointer",
+    "clicks"
+  ],
+  "web": {
+    "preload": "early.js",
+    "background": "#102030",
+    "storage_kib": 64
+  },
+  "properties": {
+    "speed": {
+      "label": "Speed",
+      "type": "slider",
+      "min": 0.0,
+      "max": 2.0,
+      "default": 1.0,
+      "integer": false
+    },
+    "tint": {
+      "label": "Tint",
+      "type": "color",
+      "default": "#ff8000",
+      "alpha": false
+    }
+  }
+}

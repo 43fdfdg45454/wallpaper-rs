@@ -10,6 +10,7 @@ Kirigami.Dialog {
     property string uid
     property var presets: []
     property bool flashing
+    property var exposes: []
     property bool known
     readonly property var fits: App.schema.fits ?? ["fill", "fit", "stretch", "center", "tile"]
 
@@ -17,6 +18,7 @@ Kirigami.Dialog {
         dialog.uid = uid;
         dialog.presets = [];
         dialog.flashing = false;
+        dialog.exposes = [];
         dialog.known = false;
         App.query("GetItem", [uid], "Library1", reply => {
             if (!dialog)
@@ -25,6 +27,7 @@ Kirigami.Dialog {
                 return;
             const pkg = reply.item.package;
             dialog.flashing = !!pkg && pkg.photosensitive === true && !(pkg.confirmed ?? []).includes("photosensitive");
+            dialog.exposes = pkg?.exposes ?? [];
             dialog.known = true;
         });
         for (const item of [uid, ""])
@@ -61,6 +64,11 @@ Kirigami.Dialog {
             visible: dialog.flashing
             type: Kirigami.MessageType.Warning
             text: App.tr("This wallpaper flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy. Apply it only if that is safe for whoever sees this screen; you will not be asked again for this package.")
+        }
+
+        PrivacyNotice {
+            Layout.fillWidth: true
+            exposes: dialog.exposes
         }
 
         QQC2.ComboBox {

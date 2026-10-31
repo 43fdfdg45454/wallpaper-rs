@@ -130,6 +130,11 @@ impl Library {
         Ok(self.db.query_row(sql, params![pkg_id, what], |row| row.get::<_, i64>(0))? > 0)
     }
 
+    pub fn copies(&self, pkg_id: &str) -> Result<u32> {
+        let sql = "SELECT count(*) FROM items WHERE pkg_id = ?1";
+        Ok(self.db.query_row(sql, [pkg_id], |row| row.get::<_, u32>(0))?)
+    }
+
     pub fn moves(&self, pkg_id: &str) -> Result<bool> {
         let sql = "SELECT count(*) FROM confirmations WHERE pkg_id = ?1 AND what = 'motion' \
             AND NOT EXISTS (SELECT 1 FROM items WHERE pkg_id = ?1 AND photosensitive = 1)";
@@ -139,7 +144,8 @@ impl Library {
     fn decide(&mut self, uids: &[&str], what: &str, sql: &str) -> Result<Vec<String>> {
         let known = DECISIONS.contains(&what);
         ensure(known, || {
-            Error::Invalid("confirmation", format!("{what:?} is not mature, photosensitive or motion"))
+            let known = DECISIONS.join(", ");
+            Error::Invalid("confirmation", format!("{what:?} is not one of {known}"))
         })?;
         let tx = self.db.transaction()?;
         let mut changed: Vec<String> = uids.iter().map(|uid| uid.to_string()).collect();
@@ -163,7 +169,8 @@ impl Library {
     }
 }
 
-pub const DECISIONS: [&str; 3] = ["mature", "photosensitive", "motion"];
+pub const DECISIONS: [&str; 7] =
+    ["mature", "photosensitive", "motion", "hide_zone", "hide_language", "hide_gpu", "hide_storage"];
 
 impl PackageInfo {
     pub fn asks(&self, what: &str) -> bool {

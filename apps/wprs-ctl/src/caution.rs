@@ -20,5 +20,14 @@ pub async fn apply(client: &Client, uid: &str, output: &str, fit: &str, preset: 
             crate::inputs::asking(client, output, lib.apply(uid, output, fit, preset)).await
         }
         done => done,
+    }?;
+    let details: wprs_core::model::ItemDetails = wprs_client::parse(&lib.get_item(uid).await?)?;
+    let exposes = details.item.package.map(|p| p.exposes).unwrap_or_default();
+    if let Some(notice) = wprs_format::web_notice(&exposes) {
+        eprintln!("{}\n{RESTRICT} {uid}", notice.local());
     }
+    Ok(())
 }
+
+pub const RESTRICT: &str =
+    "Restrict them with: wprs-ctl lib confirm hide_zone|hide_language|hide_gpu|hide_storage";

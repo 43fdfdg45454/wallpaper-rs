@@ -1,0 +1,5 @@
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; }
+#photo { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 2s; }
+#photo.shown { opacity: 0.55; }
+#lights { position: fixed; inset: 0; width: 100%; height: 100%; }
+#clock { position: fixed; right: 4vw; bottom: 6vh; color: #ffffffcc; font: 300 7vh sans-serif; letter-spacing: 0.05em; }

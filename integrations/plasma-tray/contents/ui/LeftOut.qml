@@ -14,6 +14,18 @@ QtObject {
         return i18n("The effect %1 was left out: %2", line.slice(head.length, at), found[1]);
     }
 
+    function privacy(exposes, sandbox) {
+        const words = {
+            "zone": i18n("your time zone"),
+            "language": i18n("your language"),
+            "gpu": i18n("the model of your graphics card"),
+            "storage": i18n("data it keeps on this computer"),
+            "network": i18n("the network, to reach the sites it names")
+        };
+        const used = exposes.length ? i18n("This web wallpaper uses %1. You can restrict each of them in its settings in the app.", exposes.map(name => words[name] ?? name).join(", ")) : "";
+        return [used, sandbox === "reduced" ? i18n("Its web engine runs without part of its sandbox on this computer.") : ""].filter(t => t).join(" ");
+    }
+
     function level(info, state) {
         const reasons = {
             "device": i18n("the most this graphics card allows"),

@@ -38,6 +38,15 @@ impl State {
             o.shown.content = spec.content;
             return;
         }
+        if let Some(o) = current.as_deref_mut()
+            && let (Some(old), Some(new)) = (o.shown.content.page(), spec.content.page())
+            && old.pack.path == new.pack.path
+            && old.privacy == new.privacy
+        {
+            super::super::feed::declare_page(&name, new);
+            o.shown.content = spec.content;
+            return;
+        }
         let same = |o: &&mut Output| o.shown.fit == spec.fit && o.shown.content.same_look(&spec.content);
         let kept = current
             .filter(same)
@@ -63,7 +72,10 @@ impl State {
             }
             _ => None,
         };
-        super::super::feed::declare(&name, scene.as_ref());
+        match content.page() {
+            Some(page) => super::super::feed::declare_page(&name, page),
+            None => super::super::feed::declare(&name, scene.as_ref()),
+        }
         let shown = Shown { content, fit, background, image, uv, transition, relief, scene };
         let transition = !transition.unwrap_or(self.settings.transition).is_zero();
         match self.outputs.get_mut(&name) {

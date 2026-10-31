@@ -820,6 +820,21 @@ screens and settings keep what they show now.
 Withdraws a decision recorded with `Confirm`, with the same arguments, errors and `library` change;
 withdrawing `motion` makes the scene stay still again while the desktop asks for reduced motion.
 
+`hide_zone`, `hide_language`, `hide_gpu` and `hide_storage` restrict what a web page may learn
+(`web.md`): the time zone (it sees UTC), the language (it sees `en-US`), the name of the graphics
+card (WebGL keeps working with a generic renderer name) and its own storage (it keeps nothing). By
+default a page sees all four, and `PackageInfo.exposes` lists what the package's page sees now:
+`zone`, `language`, `gpu`, `storage` (only for pages that declare `web.storage_kib`) and `network`
+(only for pages that declare origins and hold the `network` grant of `Inputs1`), so that every
+client shows the same notice. Every screen that shows a web page is configured again, and its page
+starts again with the new settings.
+
+### `ClearData(as uids)`
+
+Deletes what the web pages of these packages stored (`~/.local/share/wallpaper-rs/web/<id>/`), once
+per package id, and starts again the pages that are shown. Removing the last item of a web package
+deletes it too. Items that are no web packages change nothing; an unknown uid returns `NotFound`.
+
 ### Signal `ThumbnailReady(s uid, u size, s path)`
 
 A thumbnail queued by `RequestThumbnails` is ready, or could not be made (`path = ""`).
@@ -1281,6 +1296,11 @@ a streamed output has no consumer (in Plasma, while the desktop is not shown). R
 locking, pausing, covering or hiding the scene or image stops it at once, and showing it again
 starts it again. `playback.scene_capture = false` turns audio off for every scene, granted or not.
 
+Web pages (`web.md`) take the same `audio`, `pointer` and `clicks` grants; `network` is a fourth
+input that only web pages that list origins in `permissions.network.allow` declare. Only the app,
+the tray and `wprs-ctl` grant it (`AccessDenied` for other callers, which cannot ask the user for
+it), and granting or revoking it starts the shown page again with or without those origins.
+
 - Audio: the daemon captures the monitor of the default output device through a PipeWire
   stream named "wallpaper-rs audio analysis" (desktop microphone indicators may show it) and
   turns it into at most 64 spectrum bands per channel, levels and beats on the render thread.
@@ -1312,7 +1332,7 @@ starts it again. `playback.scene_capture = false` turns audio off for every scen
 
 ### `Grant(s scene, s input)`
 
-Lets the scene package with id `scene` that an output shows now use `input`, `audio`, `pointer` or `clicks`,
+Lets the scene or web package with id `scene` that an output shows now use `input`, `audio`, `pointer`, `clicks` or `network`,
 whenever it is shown. A package that already has the input gets it again at once, from any caller
 and without asking. `InvalidArgs` for another input or a malformed id (1 to 255 characters of
 `a-z`, `0-9`, `.`, `_`, `-`) and while the outputs show more than one package with that id (other
@@ -2119,9 +2139,11 @@ output since it appeared. `refresh` is the refresh rate of its screen in Hz (`0`
 and `fps` the most frames per second it renders now (see "Frame rate"). `buffers` is `"dmabuf"`
 or `"memfd"` while a consumer streams the output, and `""` otherwise (see "Stream buffers").
 `sound` is `""`, `"off"`, `"playing"`, `"paused"` or `"elsewhere"` (see "Scene sound").
-`decode` is `"zero-copy"` when the video of that output reaches the GPU as a DMA-BUF that it reads
-in place, `"copy"` when its frames go through system memory, and `""` for content without video
-(see "Video decoding").
+`decode` is `"zero-copy"` when the video or web page of that output reaches the GPU as a DMA-BUF
+that it reads in place, `"copy"` when its frames go through system memory, and `""` for other
+content (see "Video decoding" and `web.md`). `sandbox` is `""` for other content, `"on"` while a
+web page runs with every layer of its sandbox, and `"reduced"` when the web engine could not start
+its own sandbox or the page could not get its own empty network, so clients can warn about it.
 `flashes` is `""`, or `"slowed"` or `"paused"` once `playback.flash_guard` slowed or stopped the
 scene of that output. `left_out` lists the package effects the scene of that output plays without,
 as `the effect <id> was left out: <reason>`; it is a note, not a failure. `particles` is `"gpu"`
@@ -2151,10 +2173,10 @@ struct OutputState {
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
     edited: bool, screen: Option<Screen>, mm: Option<[f64; 4]>, parallax: bool, frames: u64, refresh: u32, fps: u32,
     buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
-    particles: String, quality: String, quality_reason: String, console: Vec<String>,
+    particles: String, quality: String, quality_reason: String, console: Vec<String>, sandbox: String,
 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
-enum Shown { Color, Image, Video, Scene }
+enum Shown { Color, Image, Video, Scene, Web }
 struct OutputPlaylist { uid: Uid, name: String, position: u32, count: u32, next_at: Option<Time> }
 struct SceneProperties {
     model: u32, serial: u64, output: String, package: String, title: String,
@@ -2198,7 +2220,7 @@ struct JobReply { model: u32, serial: u64, job: Job }
 enum ItemKind { Image, Video, Package }
 struct PackageInfo {
     id: String, version: String, kind: String, license: String, content: Option<String>,
-    photosensitive: Option<bool>, facets: Vec<String>, confirmed: Vec<String>,
+    photosensitive: Option<bool>, facets: Vec<String>, confirmed: Vec<String>, exposes: Vec<String>,
 }
 struct About {
     schema: String, title: String, description: String, changes: String, authors: Vec<String>,
@@ -2313,9 +2335,10 @@ struct InstalledReply { model: u32, serial: u64, packages: Vec<InstalledPackage>
 struct Update { repo_id: String, id: String, installed: String, available: String, changes: String }
 struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
 
-enum Input { Audio, Pointer, Clicks }
+enum Input { Audio, Pointer, Clicks, Network }
 struct SceneInputs {
-    scene: String, audio: bool, pointer: bool, clicks: bool, title: String, key: String, granted: Vec<Input>,
+    scene: String, audio: bool, pointer: bool, clicks: bool, network: bool, title: String, key: String,
+    granted: Vec<Input>,
 }
 struct InputsReply {
     model: u32, serial: u64, capturing: bool, tracking: bool,

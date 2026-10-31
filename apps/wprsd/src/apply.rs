@@ -45,6 +45,7 @@ pub enum Media {
     Picture(PathBuf),
     Video(PathBuf, Option<Arc<crate::sceneprops::Props>>),
     Scene(Arc<crate::scenes::ScenePack>),
+    Web(Arc<crate::pages::WebPack>),
 }
 
 pub fn materialize(wpak: &Path, blob: &Path) -> anyhow::Result<bool> {
@@ -81,8 +82,10 @@ impl Daemon {
         }
         let revoked = self.state().installed.iter().any(|i| i.path == path && i.revoked.is_some());
         anyhow::ensure!(!revoked, "the package is revoked");
-        if wprs_format::peek(&path)?.kind == wprs_format::Kind::Scene {
-            return self.scene_pack(&path).map(Media::Scene);
+        match wprs_format::peek(&path)?.kind {
+            wprs_format::Kind::Scene => return self.scene_pack(&path).map(Media::Scene),
+            wprs_format::Kind::Web => return self.web_pack(&path).map(Media::Web),
+            _ => {}
         }
         let meta = std::fs::metadata(&path)?;
         let blob = self.blob(&path, meta.mtime(), meta.len());

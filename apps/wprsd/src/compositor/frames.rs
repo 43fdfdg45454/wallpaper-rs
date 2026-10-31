@@ -64,6 +64,7 @@ impl State {
             .chain(scenes)
             .chain(self.players.values().filter_map(|s| s.due))
             .chain(self.heard())
+            .chain(self.page_due())
             .chain(self.starvation())
             .chain(self.backdrops())
             .chain(moving.and_then(|fps| self.motion.due(fps)))

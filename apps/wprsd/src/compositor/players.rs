@@ -75,22 +75,29 @@ impl State {
         let status = |name: &str, o: &Output| {
             let slot = o.shown.content.video().and_then(|p| self.players.get(p));
             let scene_error = o.shown.scene.as_ref().and_then(|s| s.error.as_ref());
-            let error = slot.and_then(|s| s.error.as_ref()).or(scene_error).cloned();
+            let page = o.shown.content.page().and_then(|p| self.pages.get(&p.pack.path));
+            let page_error = page.and_then(|p| p.error.as_ref());
+            let error = slot.and_then(|s| s.error.as_ref()).or(scene_error).or(page_error).cloned();
             let stops = error.is_some();
             let kind = match o.shown.content {
                 Content::Color => "color",
                 Content::Image(_) => "image",
                 Content::Video(_) => "video",
                 Content::Scene(_) => "scene",
+                Content::Web(_) => "web",
             };
             let scene = o.shown.scene.as_ref().is_some_and(SceneState::playing);
-            let running = scene || slot.is_some_and(|s| s.playing && s.player.is_some());
+            let view = page.and_then(|p| p.views.get(name));
+            let drawn = page.is_some_and(|p| p.link.is_some()) && view.is_some_and(|v| v.texture.is_some());
+            let running = scene || drawn || slot.is_some_and(|s| s.playing && s.player.is_some());
             let watched = o.active && o.watched(self.exporter.is_streaming(name));
             let playing = watched && running && !stops;
             let flashes = o.shown.scene.as_ref().map_or("", SceneState::flashes);
             let particles = o.shown.scene.as_ref().map_or("", SceneState::particles);
             let quality = o.shown.scene.as_ref().map_or(("", ""), SceneState::quality);
-            let decode = slot.map_or("", |s| s.decode);
+            let copied = view.map(|v| if v.shown.is_some() { "zero-copy" } else { "copy" });
+            let decode = slot.map(|s| s.decode).or(copied.filter(|_| drawn)).unwrap_or("");
+            let sandbox = page.map_or("", |p| p.sandbox);
             (
                 kind,
                 playing,
@@ -99,12 +106,13 @@ impl State {
                 o.fps(self.power),
                 self.sound(name, o),
                 (flashes, particles, quality, decode),
+                sandbox,
             )
         };
         let mut published = lock(&self.status);
         let unchanged = published.len() == self.outputs.len()
             && self.outputs.iter().all(|(name, o)| {
-                let (kind, playing, error, parallax, fps, sound, flashes) = status(name, o);
+                let (kind, playing, error, parallax, fps, sound, flashes, sandbox) = status(name, o);
                 let left = left(o);
                 let lines = || console(name, o);
                 let same = |s: &OutputStatus| {
@@ -120,12 +128,22 @@ impl State {
                         &s.left_out[..],
                     ) == now
                 };
-                published.get(name).is_some_and(|s| same(s) && s.console.iter().eq(lines()))
+                published
+                    .get(name)
+                    .is_some_and(|s| same(s) && s.sandbox == sandbox && s.console.iter().eq(lines()))
             });
         if !unchanged {
             let entry = |(name, o): (&String, &Output)| {
-                let (kind, playing, error, parallax, fps, sound, (flashes, particles, quality, decode)) =
-                    status(name, o);
+                let (
+                    kind,
+                    playing,
+                    error,
+                    parallax,
+                    fps,
+                    sound,
+                    (flashes, particles, quality, decode),
+                    sandbox,
+                ) = status(name, o);
                 let (quality, quality_reason) = quality;
                 let frames = published.get(name).map_or(0, |s| s.frames);
                 let (left_out, console) = (left(o).to_vec(), console(name, o).cloned().collect());
@@ -144,6 +162,7 @@ impl State {
                     decode,
                     left_out,
                     console,
+                    sandbox,
                 };
                 (name.clone(), status)
             };

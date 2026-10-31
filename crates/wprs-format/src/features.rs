@@ -28,7 +28,7 @@ pub const REGISTRY: &[(&str, &str, [Support; 2])] = &[
     ("folder", "shows pictures from a folder the user chooses", [Yes, Yes]),
     ("user_videos", "plays videos the user chooses", [Yes, Yes]),
     ("video_properties", "sets how its video plays", [Yes, Without]),
-    ("web", "is a web page", [No, No]),
+    ("web", "is a web page", [Yes, No]),
     ("preset", "sets the values of another package", [No, No]),
     ("assets", "holds resources for other packages", [No, No]),
     ("packages", "needs other packages", [No, No]),
@@ -45,7 +45,8 @@ pub const REGISTRY: &[(&str, &str, [Support; 2])] = &[
     ("playback2", "limits its frame rate, starts muted or plays once", [No, No]),
     ("shortcut", "opens what the user chooses when clicked", [No, No]),
     ("folder2", "reads the subfolders of a chosen folder or fewer of its files", [Yes, Yes]),
-    ("folder_lists", "lets its scripts or page list a chosen folder", [No, No]),
+    ("folder_lists", "lets its page list a chosen folder", [Yes, No]),
+    ("script_folders", "lets its scene scripts list a chosen folder", [No, No]),
     ("quality_settings", "changes its settings when the device saves power", [No, No]),
     ("ktx2", "uses compressed textures in the KTX2 format", [No, No]),
     ("avif", "uses pictures in the AVIF format", [No, No]),
@@ -104,7 +105,7 @@ fn feature(name: &str) -> Message {
     said("format.feature", "the feature %1 (%2)", &[&name, &why]).with(2, why)
 }
 
-fn listed(items: Vec<Message>) -> Option<Message> {
+pub(crate) fn listed(items: Vec<Message>) -> Option<Message> {
     let mut items = items.into_iter();
     let first = items.next()?;
     let rest: Vec<Message> = items.collect();

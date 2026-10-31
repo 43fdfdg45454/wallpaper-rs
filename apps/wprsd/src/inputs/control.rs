@@ -1,4 +1,4 @@
-use super::{Control, Input, View};
+use super::{Control, Grants, Input, View};
 use crate::daemon::Daemon;
 use crate::error::{Result, invalid, not_found};
 use crate::streams::OutputInfo;
@@ -22,6 +22,7 @@ impl Control {
                     Input::Audio => need.audio && !self.blocked,
                     Input::Pointer => need.pointer,
                     Input::Clicks => need.clicks && self.views.get(output).is_some_and(|v| v.clicks),
+                    Input::Network => need.network,
                 };
                 declared && self.has(&need.scene, &need.key, input)
             })
@@ -65,4 +66,19 @@ impl Daemon {
         };
         st.outputs.iter().map(|(name, info)| (name.clone(), view(name, info))).collect()
     }
+}
+
+pub(crate) fn reported(control: &Control) -> Grants {
+    let reported = |(id, keys): (&String, &Grants)| {
+        let shown: Vec<&str> = control
+            .shown
+            .values()
+            .filter(|s| s.scene == *id && !s.key.is_empty())
+            .map(|s| s.key.as_str())
+            .collect();
+        let keys = keys.iter().filter(|(key, _)| shown.is_empty() || shown.contains(&key.as_str()));
+        let inputs: BTreeSet<Input> = keys.flat_map(|(_, inputs)| inputs).copied().collect();
+        (!inputs.is_empty()).then(|| (id.clone(), inputs))
+    };
+    control.grants.iter().filter_map(reported).collect()
 }

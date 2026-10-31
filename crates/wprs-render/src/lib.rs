@@ -22,6 +22,8 @@ mod filled;
 mod import;
 mod lost;
 mod luma;
+#[cfg(target_os = "linux")]
+mod page;
 mod palette;
 mod parallax;
 #[cfg(target_os = "linux")]
@@ -51,6 +53,8 @@ pub use exported::Exported;
 #[cfg(target_os = "linux")]
 pub use import::{Imported, Shared};
 pub use luma::Meter;
+#[cfg(target_os = "linux")]
+pub use page::{ARGB8888, PageBuffer, XRGB8888};
 pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};
 pub use platform::{Platform, heif, set_platform_decoder};

@@ -18,6 +18,7 @@ Requires:       gstreamer1-plugins-base >= 1.24
 Requires:       gstreamer1-plugins-good >= 1.24
 Requires:       pipewire-gstreamer
 Requires:       kf6-kirigami
+Recommends:     wpewebkit >= 2.54
 Requires:       kf6-qqc2-desktop-style
 Recommends:     %{name}-examples
 
@@ -41,7 +42,7 @@ one. They appear in the library, can be removed from it, and leave it with this 
 %autosetup -n wallpaper-rs-%{wprs_version}-x86_64-linux
 
 %install
-install -Dm755 -t %{buildroot}%{_bindir} bin/wprsd bin/wprs-ctl bin/wprs-app
+install -Dm755 -t %{buildroot}%{_bindir} bin/wprsd bin/wprs-ctl bin/wprs-app bin/wprs-web
 mkdir -p %{buildroot}%{_userunitdir} %{buildroot}%{_datadir}/dbus-1/services %{buildroot}%{_datadir}/plasma/wallpapers %{buildroot}%{_datadir}/plasma/plasmoids %{buildroot}%{_datadir}/applications
 sed 's|@BINDIR@|%{_bindir}|g' packaging/systemd/wprsd.service > %{buildroot}%{_userunitdir}/wprsd.service
 sed 's|@BINDIR@|%{_bindir}|g' packaging/dbus/io.github.wallpaper_rs.Daemon.service > %{buildroot}%{_datadir}/dbus-1/services/io.github.wallpaper_rs.Daemon.service
@@ -60,6 +61,7 @@ install -Dm644 -t %{buildroot}%{_datadir}/wallpaper-rs/examples examples/*.wpak
 %{_bindir}/wprsd
 %{_bindir}/wprs-ctl
 %{_bindir}/wprs-app
+%{_bindir}/wprs-web
 %{_userunitdir}/wprsd.service
 %{_datadir}/dbus-1/services/io.github.wallpaper_rs.Daemon.service
 %{_datadir}/dbus-1/services/io.github.wallpaper_rs.service

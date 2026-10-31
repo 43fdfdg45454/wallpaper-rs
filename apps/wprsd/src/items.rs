@@ -51,10 +51,11 @@ impl Daemon {
         let removable = installed.is_none() && !rescanned(&item);
         let (imported, thumb) = (item.path.starts_with(self.store.files()), self.thumbs.cached(&item, 256));
         let revoked = installed.and_then(|i| i.revoked);
-        merged(
-            item,
-            json!({"revoked": revoked, "removable": removable, "imported": imported, "thumb": thumb}),
-        )
+        let exposes = self.exposes(&item);
+        let extra = json!({"revoked": revoked, "removable": removable, "imported": imported, "thumb": thumb});
+        let mut summary: ItemSummary = merged(item, extra)?;
+        summary.package.iter_mut().for_each(|p| p.exposes = exposes.clone());
+        Ok(summary)
     }
 
     pub fn list_sources(&self) -> Result<String> {
@@ -105,7 +106,9 @@ impl Daemon {
         let animated = peeked.as_ref().and_then(|m| self.animated(&item, m));
         let about =
             peeked.map(|m| wprs_core::model::About { animated, ..m.about(&wprs_core::locale::languages()) });
-        let item = merged(item, Value::Null)?;
+        let exposes = self.exposes(&item);
+        let mut item: wprs_core::model::Item = merged(item, Value::Null)?;
+        item.package.iter_mut().for_each(|p| p.exposes = exposes.clone());
         reply(ItemDetails {
             model,
             serial,
@@ -175,6 +178,7 @@ impl Daemon {
         })?;
         self.forget_synced(hashes);
         self.forget_files(&removed);
+        self.forget_pages(&removed);
         removed.iter().filter(|_| delete_files).for_each(|item| drop(std::fs::remove_file(&item.path)));
         self.library_changed(uids.to_vec());
         Ok(())

@@ -17,8 +17,11 @@ const SOFT: f32 = 4.0;
 
 fn scenes() -> Vec<PathBuf> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scenes");
-    let mut dirs: Vec<_> =
-        std::fs::read_dir(root).unwrap().map(|e| e.unwrap().path()).filter(|p| p.is_dir()).collect();
+    let mut dirs: Vec<_> = std::fs::read_dir(root)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.join("scene.json").is_file())
+        .collect();
     dirs.sort();
     dirs
 }

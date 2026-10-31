@@ -114,6 +114,7 @@ impl Daemon {
                 "image" => Shown::Image,
                 "video" => Shown::Video,
                 "scene" => Shown::Scene,
+                "web" => Shown::Web,
                 _ => Shown::Color,
             };
             let section = st.config.outputs.get(name).filter(|o| o.image.is_some() || o.playlist.is_some());
@@ -153,6 +154,7 @@ impl Daemon {
                 decode: s.decode.into(),
                 left_out: s.left_out,
                 console: s.console,
+                sandbox: s.sandbox.into(),
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)

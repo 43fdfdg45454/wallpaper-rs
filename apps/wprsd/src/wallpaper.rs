@@ -72,6 +72,7 @@ impl Daemon {
                 let moving = self.store.read(|lib| lib.moves(&pack.props.id)).unwrap_or(false);
                 (Content::Scene(SceneSpec { pack, values, extra, clips, hold, moving }), None)
             }
+            Some(Ok(Media::Web(pack))) => (Content::Web(self.page_on(output, pack, &mut shown_video)), None),
             Some(Ok(Media::Picture(file))) => {
                 match self.picture(output, file, (size, resolved.fit), uploaded) {
                     Ok((picture, upload)) => {
@@ -90,10 +91,7 @@ impl Daemon {
                 }
             }
         };
-        let pixels = match &content {
-            Content::Image(picture) => picture.pixels.clone(),
-            _ => None,
-        };
+        let pixels = if let Content::Image(picture) = &content { picture.pixels.clone() } else { None };
         self.compositor.configure(
             output,
             size,
@@ -179,6 +177,7 @@ impl Daemon {
         let file = match self.media(path.to_owned())? {
             Media::Picture(file) => return Ok(Some(self.load_image(&file, modified(&file)?, None)?)),
             Media::Scene(_) => return Ok(None),
+            Media::Web(_) => return crate::pages::available().map(|_| None).map_err(|e| anyhow::anyhow!(e)),
             Media::Video(file, _) => file,
         };
         let size = wprs_video::probe(&file).with_context(|| format!("cannot play {}", path.display()))?;

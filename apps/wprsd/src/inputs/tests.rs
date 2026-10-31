@@ -26,7 +26,7 @@ fn mode(path: &std::path::Path) -> u32 {
 
 fn scene(scene: &str, key: &str, audio: bool, pointer: bool) -> SceneInputs {
     let (scene, key, title, granted) = (scene.into(), key.into(), String::new(), Default::default());
-    SceneInputs { scene, audio, pointer, clicks: false, title, key, granted }
+    SceneInputs { scene, audio, pointer, clicks: false, network: false, title, key, granted }
 }
 
 fn bound(key: &str, inputs: &[Input]) -> Bound {
@@ -106,7 +106,7 @@ fn declining_is_remembered_until_the_input_is_granted() {
 fn a_declined_question_spares_the_twins_and_old_clients_see_the_shown_package() {
     let dir = tempfile::tempdir().unwrap();
     let (path, hub) = (dir.path().join("inputs.json"), hub(Arc::default()));
-    let reported = || crate::inputs1::reported(&lock(&hub.control));
+    let reported = || crate::inputs::reported(&lock(&hub.control));
     showing(&hub, "DP-1", "key:signer");
     hub.grant(&path, SEA, "key:signer", Input::Audio).unwrap();
     showing(&hub, "DP-1", "sha256:twin");

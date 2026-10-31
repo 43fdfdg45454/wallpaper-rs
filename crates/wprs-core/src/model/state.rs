@@ -81,10 +81,12 @@ model! {
         pub decode: String,
         #[serde(default)]
         pub console: Vec<String>,
+        #[serde(default)]
+        pub sandbox: String,
     }
 
     #[derive(Copy, Eq, Hash)]
-    pub enum Shown { Color, Image, Video, Scene, #[serde(other)] Unknown }
+    pub enum Shown { Color, Image, Video, Scene, Web, #[serde(other)] Unknown }
 
     pub struct SceneProperties {
         pub model: u32,

@@ -143,7 +143,15 @@ async fn install(
             if yes { job(client, start(true), wait).await } else { Err(e) }
         }
         done => done,
+    }?;
+    let (_, id) = spec.split_once('/').unwrap_or(("", spec));
+    let page: BrowsePage = parse(&client.repos.browse(id.split('@').next().unwrap_or(id), 0, 50).await?)?;
+    if page.packages.iter().any(|p| p.kind == "web") {
+        let names = ["zone", "language", "gpu"].map(String::from);
+        let notice = wprs_format::web_notice(&names).map(|m| m.local()).unwrap_or_default();
+        eprintln!("{notice}\n{} ITEM", crate::caution::RESTRICT);
     }
+    Ok(())
 }
 
 async fn offered_by(client: &Client, spec: &str) -> Result<(String, String)> {

@@ -90,7 +90,8 @@ fn grants() -> Grants {
 
 pub(crate) fn granted(id: &str) -> [bool; 3] {
     let grants = grants();
-    Input::ALL.map(|input| grants.get(id).is_some_and(|g| g.contains(&input)))
+    [Input::Audio, Input::Pointer, Input::Clicks]
+        .map(|input| grants.get(id).is_some_and(|g| g.contains(&input)))
 }
 
 fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {

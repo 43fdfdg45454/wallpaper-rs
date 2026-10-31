@@ -46,7 +46,7 @@ async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Re
             label { "Search" input type="search" name="q" value=(q); }
             label { "Type" select name="kind" {
                 option value="" { "Any" }
-                @for k in ["image", "video", "scene"] { option value=(k) selected[kind == k] { (k) } }
+                @for k in ["image", "video", "scene", "web"] { option value=(k) selected[kind == k] { (k) } }
             } }
             label { "Rating" select name="content" {
                 option value="" { "Any" }

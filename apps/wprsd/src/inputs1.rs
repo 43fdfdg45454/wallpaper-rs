@@ -2,9 +2,9 @@ use crate::callers::{Caller, caller};
 use crate::compositor::lock;
 use crate::daemon::Daemon;
 use crate::error::{Result, denied, failed, invalid};
-use crate::inputs::{Control, Grants, Hub, declined_path, grants_path, hub, load, load_bound};
+use crate::inputs::reported;
+use crate::inputs::{Hub, declined_path, grants_path, hub, load, load_bound};
 use crate::items::reply;
-use std::collections::BTreeSet;
 use std::sync::{Arc, Weak};
 use wprs_core::model::{Input, InputsReply, MODEL};
 use zbus::message::Header;
@@ -38,34 +38,34 @@ impl Inputs {
         let (d, hub) = self.parts()?;
         let (input, scene) = (parse(input)?, scene_id(scene)?.to_owned());
         let (key, title) = lock(&hub.control).package(&scene, key)?;
-        if !caller(call.0, call.1).await.trusted() {
+        let trusted = caller(call.0, call.1).await.trusted();
+        if input == Input::Network && !trusted {
+            return Err(denied("only the app, the tray and wprs-ctl let a web wallpaper reach the network"));
+        }
+        if !trusted {
             if lock(&hub.control).has(&scene, &key, input) {
                 return Ok(());
             }
             return crate::confirm::grant(call.0, hub.clone(), grants_path(&d), (scene, key, title), input)
                 .await;
         }
-        d.run(move |d| hub.grant(&grants_path(d), &scene, &key, input)).await
+        d.run(move |d| {
+            hub.grant(&grants_path(d), &scene, &key, input)?;
+            reopen(d, input)
+        })
+        .await
     }
 }
 
-pub(crate) fn reported(control: &Control) -> Grants {
-    let reported = |(id, keys): (&String, &Grants)| {
-        let shown: Vec<&str> = control
-            .shown
-            .values()
-            .filter(|s| s.scene == *id && !s.key.is_empty())
-            .map(|s| s.key.as_str())
-            .collect();
-        let keys = keys.iter().filter(|(key, _)| shown.is_empty() || shown.contains(&key.as_str()));
-        let inputs: BTreeSet<Input> = keys.flat_map(|(_, inputs)| inputs).copied().collect();
-        (!inputs.is_empty()).then(|| (id.clone(), inputs))
-    };
-    control.grants.iter().filter_map(reported).collect()
+fn parse(input: &str) -> Result<Input> {
+    Input::parse(input).ok_or_else(|| invalid(format!("{input} is not audio, pointer, clicks or network")))
 }
 
-fn parse(input: &str) -> Result<Input> {
-    Input::parse(input).ok_or_else(|| invalid(format!("{input} is not audio, pointer or clicks")))
+fn reopen(d: &Daemon, input: Input) -> anyhow::Result<()> {
+    if input == Input::Network {
+        d.configure_all();
+    }
+    Ok(())
 }
 
 #[zbus::interface(name = "io.github.wallpaper_rs.Inputs1")]
@@ -94,7 +94,11 @@ impl Inputs {
     async fn revoke(&self, scene: String, input: String) -> Result<()> {
         let (d, hub) = self.parts()?;
         let (input, scene) = (parse(&input)?, scene_id(&scene)?.to_owned());
-        d.run(move |d| hub.revoke(&grants_path(d), &scene, input)).await
+        d.run(move |d| {
+            hub.revoke(&grants_path(d), &scene, input)?;
+            reopen(d, input)
+        })
+        .await
     }
 
     #[zbus(out_args("json"))]

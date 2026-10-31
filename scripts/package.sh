@@ -17,13 +17,13 @@ export RUSTFLAGS="--remap-path-prefix=$CARGO_HOME=/cargo --remap-path-prefix=$RU
   --remap-path-prefix=$HOME=/build --remap-path-prefix=$ROOT=/src"
 export CFLAGS="-ffile-prefix-map=$CARGO_HOME=/cargo -ffile-prefix-map=$HOME=/build -ffile-prefix-map=$ROOT=/src"
 export CXXFLAGS=$CFLAGS
-cargo build --release --locked -p wprsd -p wprs-ctl -p wprs-app --manifest-path "$ROOT/Cargo.toml"
+cargo build --release --locked -p wprsd -p wprs-ctl -p wprs-app -p wprs-web --manifest-path "$ROOT/Cargo.toml"
 
 SRC=$STAGE/src
 D=$STAGE/$NAME
 mkdir -p "$SRC" "$D/bin" "$D/packaging"
 git -C "$ROOT" archive HEAD integrations packaging scenes LICENSE README.md | tar -x -C "$SRC"
-for bin in wprsd wprs-ctl wprs-app; do
+for bin in wprsd wprs-ctl wprs-app wprs-web; do
   install -m755 "$ROOT/target/release/$bin" "$D/bin/"
   objcopy --remove-section=.comment "$D/bin/$bin"
 done

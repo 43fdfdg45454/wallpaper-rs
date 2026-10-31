@@ -36,6 +36,7 @@ impl Shown {
             Content::Image(_) => (self.image.as_ref(), self.fit),
             Content::Video(m) => (players.get(&m.reel).and_then(|p| p.texture.as_ref()), self.fit),
             Content::Scene(_) => (self.scene.as_ref().and_then(SceneState::image), Fit::Stretch),
+            Content::Web(_) => (self.image.as_ref(), Fit::Stretch),
         };
         let framed = match (&self.content, image) {
             (Content::Video(m), Some(i)) if m.zoom != 1.0 || m.pan != [0.0; 2] => {

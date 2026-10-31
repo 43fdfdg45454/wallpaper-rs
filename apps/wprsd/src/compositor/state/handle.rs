@@ -41,6 +41,10 @@ impl State {
                 self.hush();
             }
             Command::Press(output, id) => {
+                if let Some(page) = self.outputs.get(&output).and_then(|o| o.shown.content.page()) {
+                    let slot = self.pages.get(&page.pack.path);
+                    slot.into_iter().for_each(|s| s.send(&wprs_web::ToWeb::Action(id.clone())));
+                }
                 if let Some(o) = self.outputs.get_mut(&output)
                     && let Some(scene) = o.shown.scene.as_mut()
                 {

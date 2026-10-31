@@ -200,7 +200,7 @@ use.
 
 Each feature also says what each platform does with it: the desktop and the Android app either run
 it, play the package without it (and its page on the phone says so), or refuse the package with
-`this package needs a newer version of wallpaper-rs: it uses the feature web (is a web page)`
+`this package needs a newer version of wallpaper-rs: it uses the feature ktx2 (uses compressed textures in the KTX2 format)`
 before drawing anything, so that nothing is drawn wrongly or silently left out. The library still
 lists a refused package with its thumbnail, title and that reason, and reads it again after an
 update of wallpaper-rs. `wprs-ctl pack check` prints what each platform does. The Android app reads a chosen
@@ -217,7 +217,8 @@ the folder changed, and the stored value is the path of that copy.
 | `properties2` | has settings of the newer kinds or fields: sliders without `step` or with `decimals`, `editable` or `log`, combos of numbers or flags or with icons, `secret` texts, `button`, `divider`, `folder`, `shortcut`, collapsed groups, icons, fractional `order`, `visible_if` expressions, `enabled_if` and `default_asset`, or settings written in a way the first version cannot read (a field it does not know, even with its default value, a missing `default` of a text or `accept` of a file, or an `order` such as `2.0`) | runs | runs |
 | `folder` | shows pictures from a folder the user chooses | runs | runs |
 | `folder2` | reads the subfolders of a chosen folder (`recursive`) or fewer of its files (`max_files`) | runs | runs |
-| `folder_lists` | lets its scripts or page list a chosen folder (`mode: all`) | refused | refused |
+| `folder_lists` | lets its page list a chosen folder (`mode: all` in a `web` package) | runs | refused |
+| `script_folders` | lets its scene scripts list a chosen folder (`mode: all` in other kinds) | refused | refused |
 | `user_videos` | lets the user choose videos for its files or folders | runs | runs |
 | `shortcut` | has a `shortcut` property | refused | refused |
 | `quality_settings` | has properties with `quality` values | refused | refused |
@@ -226,7 +227,7 @@ the folder changed, and the stored value is the path of that copy.
 | `display2` | sets `display` of a picture, or its `background` or `span` | runs | without |
 | `flip` | sets `display.flip` to `horizontal` or `vertical` | refused | refused |
 | `accent` | sets `display.accent` | without | without |
-| `web` | is a web page (`kind: web`) | refused | refused |
+| `web` | is a web page (`kind: web`, see `web.md`) | runs | refused |
 | `preset` | sets the values of another package (`kind: preset`) | refused | refused |
 | `assets` | holds resources for other packages (`kind: assets`) | refused | refused |
 | `packages` | lists `requires.packages` | refused | refused |
@@ -377,7 +378,8 @@ packages that credited files come from with the details of the package.
 
 ## Web pages
 
-A `web` package shows its entry page in an isolated web view, without network unless allowed:
+A `web` package shows its entry page in an isolated web view, without network unless allowed
+(`web.md` describes the engine, the sandbox, what the page may see and its interface):
 
 ```json
 { "kind": "web", "entry": "index.html", "inputs": ["audio", "pointer", "network"],
@@ -398,9 +400,10 @@ declares `network` in `inputs`, and only then. Pages receive their settings thro
 | Member | What the page gets |
 |--------|--------------------|
 | `properties`, `onProperties(cb)` | the values of every property when it loads, then only the changed ones; colors as `#rrggbb[aa]` and `{r, g, b, a}` from 0 to 1, combos with their value and `label` |
-| `fps`, `onSettings(cb)` | the frame rate it may draw at, and `{fps, quality, locale}` when they change: the quality level (0 to 3) and the language picked among those of the package |
+| `fps`, `quality`, `locale`, `volume`, `onSettings(cb)` | the frame rate it may draw at, and `{fps, quality, locale, volume}` when they change: the quality level (0 to 3), the language picked among those of the package and the wallpaper volume (0 to 1) for its own sound |
 | `onPause(cb)` | `true` while it is hidden or paused, when animation frames stop too |
 | `onAudio(cb)` | 64 bands per channel while `audio` is allowed, silence otherwise |
+| pointer and clicks | real DOM events while `pointer` is allowed, and clicks only from real clicks on screens where clicks are on, for packages allowed `clicks` |
 | `onMedia(cb)` | what the media player plays while `media` is allowed, `{enabled: false}` otherwise |
 | `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | tokens `wpak-user://<prop>/…` for the files of a chosen folder, and the ones added and removed; never their paths |
 | `onAction(cb)` | the id of a pressed `button` property |
@@ -408,7 +411,10 @@ declares `network` in `inputs`, and only then. Pages receive their settings thro
 | `rgb.setImage(bytes, w, h)` | sends RGBA pixels of at most 64 × 16 to the RGB lighting of the computer, at most 30 times a second, only with `permissions.rgb` and once the user allows it for the package |
 
 Nothing reaches the page without the input it needs, and a page never sees paths, device names,
-the battery or the list of fonts.
+the battery or the list of fonts. It sees the time zone, the language and the graphics card through
+WebGL, and keeps its storage, until the user restricts each of them for the package; every client
+shows a notice saying so (`web.md`, "Privacy"). `onMedia`, `openShortcut` and `rgb.setImage` exist
+but do nothing while their features are refused. Web pages with storage get the `storage` facet.
 
 ## Presets
 

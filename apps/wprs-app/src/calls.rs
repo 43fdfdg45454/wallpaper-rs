@@ -82,6 +82,7 @@ calls! {
         Apply apply(uid: str, output: str, fit: str, preset: str);
         Confirm confirm(uids: strs, what: str);
         Unconfirm unconfirm(uids: strs, what: str);
+        ClearData clear_data(uids: strs);
     }
     Playlists1 playlists {
         List list() json;

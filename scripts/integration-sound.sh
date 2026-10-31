@@ -3,7 +3,7 @@ set -euo pipefail
 examples=$XDG_DATA_HOME/wallpaper-rs/examples
 mkdir -p "$examples"
 for dir in "$ROOT"/scenes/*/; do ctl pack build "$dir" -o "$examples/$(basename "$dir").wpak" >/dev/null; done
-packed=$(cat "$examples"/*.wpak | wc -c) && count=$(find "$examples" -name '*.wpak' | wc -l)
+packed=$(cat "$examples"/*.wpak | wc -c) && count=$(grep -l '"kind": "scene"' "$ROOT"/scenes/*/manifest.json | wc -l)
 ((packed < 409600 && count >= 5)) || fail "$count example scenes take $packed bytes"
 rescanned() {
   local job

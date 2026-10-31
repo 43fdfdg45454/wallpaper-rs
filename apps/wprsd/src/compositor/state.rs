@@ -22,6 +22,7 @@ pub(super) struct State {
     pub(super) settings: Settings,
     pub(super) outputs: BTreeMap<String, Output>,
     pub(super) players: HashMap<Reel, PlayerSlot>,
+    pub(super) pages: HashMap<PathBuf, super::pages::PageSlot>,
     pub(super) tx: mpsc::Sender<Command>,
     pub(super) status: Arc<Mutex<BTreeMap<String, OutputStatus>>>,
     pub(super) on_status: Box<dyn Fn(Vec<String>) + Send>,
@@ -53,6 +54,7 @@ impl State {
             settings,
             outputs,
             players,
+            pages: HashMap::new(),
             tx,
             status,
             on_status,
@@ -97,6 +99,9 @@ impl State {
             self.sync_players();
             self.feed_inputs();
             self.take_video_frames();
+            self.sync_pages();
+            self.feed_pages();
+            self.take_page_frames();
             self.start_fades();
             self.check_starvation();
             self.move_reliefs();

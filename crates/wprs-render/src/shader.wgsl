@@ -36,6 +36,7 @@ fn fs_main(in: VertexOut) -> @location(0) vec4<f32> {
     if outside && !repeat {
         return params.background;
     }
-    let rgb = mix(params.background.rgb, color.rgb, color.a);
+    let alpha = select(color.a, 1.0, params.flags.z == 1u);
+    let rgb = mix(params.background.rgb, color.rgb, alpha);
     return vec4<f32>(rgb, 1.0);
 }

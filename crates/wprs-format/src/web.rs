@@ -148,3 +148,17 @@ impl PresetFile {
         }
     }
 }
+
+pub fn web_notice(exposes: &[String]) -> Option<wprs_core::message::Message> {
+    use wprs_core::message::said;
+    let named = |name: &String| match name.as_str() {
+        "zone" => said("format.web_zone", "your time zone", &[]),
+        "language" => said("format.web_language", "your language", &[]),
+        "gpu" => said("format.web_gpu", "the model of your graphics card", &[]),
+        "storage" => said("format.web_storage", "data it keeps on this computer", &[]),
+        _ => said("format.web_network", "the network, to reach the sites it names", &[]),
+    };
+    let all = crate::features::listed(exposes.iter().map(named).collect())?;
+    let text = "This web wallpaper uses %1. You can restrict each of them in its settings.";
+    Some(said("format.web_notice", text, &[&all]).with(1, all))
+}

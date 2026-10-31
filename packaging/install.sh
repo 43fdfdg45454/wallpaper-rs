@@ -33,6 +33,7 @@ echo "Installing binaries to $BINDIR"
 install -Dm755 "$HERE/bin/wprsd" "$BINDIR/wprsd"
 install -Dm755 "$HERE/bin/wprs-ctl" "$BINDIR/wprs-ctl"
 install -Dm755 "$HERE/bin/wprs-app" "$BINDIR/wprs-app"
+install -Dm755 "$HERE/bin/wprs-web" "$BINDIR/wprs-web"
 
 echo "Installing the user service"
 mkdir -p "$UNIT_DIR" "$DBUS_DIR"

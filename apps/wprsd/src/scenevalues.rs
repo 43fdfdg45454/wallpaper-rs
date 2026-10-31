@@ -1,8 +1,10 @@
 use crate::daemon::Daemon;
 use crate::error::{Result, invalid};
+use crate::items::limited;
 use crate::sceneprops::{Props, Stored, stored};
 use serde_json::Value as Json;
 use std::path::Path;
+use std::sync::Arc;
 use wprs_scene::{Control, Values};
 
 impl Daemon {
@@ -86,12 +88,31 @@ impl Daemon {
         Ok(())
     }
 
+    pub fn decide(self: &Arc<Self>, uids: &[&str], what: &str, on: bool) -> Result<()> {
+        limited(uids, crate::items::MAX_UIDS)?;
+        let changed = match on {
+            true => self.store.write(|lib| lib.confirm(uids, what))?,
+            false => self.store.write(|lib| lib.unconfirm(uids, what))?,
+        };
+        self.changes.changed("library", changed);
+        self.moved(what);
+        match on && what == "photosensitive" && self.compositor.running() {
+            true => crate::choice::unhold(self),
+            false => Ok(()),
+        }
+    }
+
     pub fn moved(&self, what: &str) {
-        if what != "motion" {
+        let page = crate::pages::HIDES.contains(&what);
+        if what != "motion" && !page {
             return;
         }
+        let kind = |i: &crate::streams::OutputInfo| match page {
+            true => i.video.as_ref().is_some_and(|p| p.kind == "web"),
+            false => i.scene.is_some(),
+        };
         let scenes: Vec<String> =
-            self.state().outputs.iter().filter(|(_, i)| i.scene.is_some()).map(|(n, _)| n.clone()).collect();
+            self.state().outputs.iter().filter(|(_, i)| kind(i)).map(|(n, _)| n.clone()).collect();
         scenes.iter().for_each(|o| drop(self.configure_output(o)));
     }
 
@@ -124,8 +145,9 @@ impl Daemon {
             return Err(invalid(format!("{id} cannot be pressed while its condition does not hold")));
         }
         let shows = |(name, info): &(&String, &crate::streams::OutputInfo)| {
+            let page = info.video.as_ref().is_some_and(|v| v.kind == "web" && v.path == props.path);
             (output.is_empty() || **name == output)
-                && info.scene.as_ref().is_some_and(|s| s.path == props.path)
+                && (page || info.scene.as_ref().is_some_and(|s| s.path == props.path))
         };
         let shown: Vec<&String> = st.outputs.iter().filter(shows).map(|(n, _)| n).collect();
         shown.iter().for_each(|name| self.compositor.press(name, id));

@@ -141,6 +141,7 @@ impl Output {
     pub(super) fn animated(&self) -> bool {
         let moving =
             |s: &Shown| !s.content.videos().is_empty() || s.scene.as_ref().is_some_and(|sc| sc.due.is_some());
+        let moving = |s: &Shown| moving(s) || s.content.page().is_some();
         self.fade.is_some() || self.moving || self.layers().any(moving)
     }
 

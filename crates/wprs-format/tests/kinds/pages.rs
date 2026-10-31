@@ -10,12 +10,16 @@ fn web_packages_declare_what_their_page_uses() {
         package.facts.facets.contains(&"audio".into()) && package.facts.facets.contains(&"network".into())
     );
     assert!(features::warnings(&package.manifest, &package.facts).is_empty());
-    let refused = features::playable(&package.manifest, &package.facts, Platform::Desktop).unwrap_err();
+    features::playable(&package.manifest, &package.facts, Platform::Desktop).unwrap();
+    let refused = features::playable(&package.manifest, &package.facts, Platform::Android).unwrap_err();
     assert_eq!(
         refused.to_string(),
         "this package needs a newer version of wallpaper-rs: it uses the feature web (is a web page)"
     );
-    assert!(!package.facts.facets.contains(&"desktop".into()));
+    assert!(
+        package.facts.facets.contains(&"desktop".into()) && package.facts.facets.contains(&"storage".into())
+    );
+    assert!(!package.facts.facets.contains(&"android".into()));
     let bad = [("app.wasm", b"MZ\x90\0".as_slice()), ("index.html", b"x"), ("compat.js", b"x")];
     assert_eq!(field(load(&page(json!({})), &bad)), "app.wasm");
     let checked = |more: Value| field(page(more).check());

@@ -18,6 +18,8 @@ model! {
         pub facets: Vec<String>,
         #[serde(default)]
         pub confirmed: Vec<String>,
+        #[serde(default)]
+        pub exposes: Vec<String>,
     }
 
     pub struct About {
@@ -176,6 +178,15 @@ model! {
 pub fn asks(what: &str, content: Option<&str>, photosensitive: Option<bool>, confirmed: &[String]) -> bool {
     let flagged = if what == "mature" { content == Some("mature") } else { photosensitive == Some(true) };
     flagged && !confirmed.iter().any(|c| c == what)
+}
+
+pub fn exposes(kind: &str, facets: &[String], confirmed: &[String], network: bool) -> Vec<String> {
+    let has = |list: &[String], name: &str| list.iter().any(|f| f == name);
+    let parts = [("zone", true), ("language", true), ("gpu", true), ("storage", has(facets, "storage"))];
+    let shown = parts.into_iter().filter(|(name, on)| *on && !has(confirmed, &format!("hide_{name}")));
+    let network = (network && has(facets, "network")).then_some("network");
+    let all = shown.map(|(name, _)| name).chain(network).map(String::from);
+    if kind == "web" { all.collect() } else { Vec::new() }
 }
 
 impl PackageInfo {

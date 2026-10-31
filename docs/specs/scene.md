@@ -1214,8 +1214,9 @@ itself is read (and `recursive` levels of its subfolders), without following lin
 reading hidden files, at most `max_files` of them in name order, and nothing is read while the scene is not shown, paused, covered or behind the lock screen: a
 turn missed then happens once when the scene shows again. Files and folders are chosen by the user
 through the file chooser, are never set by presets and never travel with exported settings or sync.
-`mode: all` lets scripts and web pages list every file of the folder (`files`, `onFiles`), where
-`one` only gives them the picked one.
+`mode: all` lets web pages list every file of the folder (`files`, `onFiles`, `web.md`), where
+`one` only gives them one file at a time (`randomFile`); a scene whose scripts would list it needs
+the feature `script_folders`, which no platform runs yet.
 
 A `shortcut` holds what the user chose to open from the wallpaper: an `https://` address (opened
 through the OpenURI portal, which asks), a file or a folder (chosen through the file chooser) or an
@@ -1242,7 +1243,7 @@ package is ignored for the default, with a warning in the log, in `GetScenePrope
 ids and limits depend on the manifest version (`package.md`), and the newer kinds and fields above
 need the second version and its feature `properties2` (`folder` and `user_videos` for folders and
 videos chosen by the user, `folder2` for `max_files` and `recursive`, `folder_lists` for
-`mode: all`, `shortcut` and `quality_settings`; `package.md` says which platforms run each). The app shows these forms under *Scene settings* for each screen on its
+`mode: all` in web pages and `script_folders` in scenes, `shortcut` and `quality_settings`; `package.md` says which platforms run each). The app shows these forms under *Scene settings* for each screen on its
 Settings page, and the Android app on the page of the scene. The scenes in the `scenes/` folder of
 the repository are examples of this format, dedicated to the public domain.
 

@@ -143,11 +143,60 @@ jobs:
 
       - name: End-to-end test (D-Bus + PipeWire + daemon)
         run: |
-          cargo build --locked -p wprsd -p wprs-ctl
+          cargo build --locked -p wprsd -p wprs-ctl -p wprs-web
           cargo build --locked -p wprs-pipewire --example probe
           cargo build --locked -p wprsd --example timedate
           cp target/debug/examples/probe target/debug/probe
           scripts/integration-test.sh target/debug
+
+      - name: Web helper test binaries
+        run: |
+          page=$(cargo test --locked -p wprs-web --test page --no-run --message-format=json |
+            jq -r 'select(.executable != null and .target.name == "page") | .executable')
+          mkdir -p web-bin && cp "$page" web-bin/web-page
+          cp target/debug/wprsd target/debug/wprs-ctl target/debug/wprs-web target/debug/probe web-bin/
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: web-bin
+          path: web-bin
+          if-no-files-found: error
+          retention-days: 1
+
+  web:
+    name: Web wallpapers
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: web-bin
+          path: target/debug
+
+      - name: Virtual DRM devices
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci-drm.sh
+
+      - name: Helper and daemon with WPE WebKit
+        run: |
+          chmod +x target/debug/*
+          docker run --rm --device /dev/dri --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
+            -v "$PWD:$PWD" -w "$PWD" \
+            docker.io/library/archlinux:base-20261018.0.612668@sha256:52dfbd5afb23a220d5ee92dafcb4c788d96c026ed04179890c23adef4c897fa0 bash -c '
+            set -e
+            pacman -Sy --noconfirm --needed archlinux-keyring >/dev/null
+            pacman -Syu --noconfirm --needed wpewebkit pipewire wireplumber dbus python procps-ng \
+              gst-plugins-base gst-plugins-good mesa vulkan-swrast vulkan-icd-loader >/dev/null
+            pacman -Q wpewebkit
+            useradd -m -u "$(stat -c %u .)" tester
+            su tester -c "WPRS_REQUIRE_WEB=1 target/debug/web-page --test-threads 1 && WPRS_REQUIRE_WEB=1 scripts/web-test.sh target/debug"
+          '
 
   sway:
     name: Sway end-to-end
@@ -604,7 +653,7 @@ jobs:
   release:
     name: Release
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: [version, workflows, check, sway, x11, sync, package, android, android-emulator, rpm, flatpak, plasma, server]
+    needs: [version, workflows, check, sway, x11, sync, package, android, android-emulator, rpm, flatpak, plasma, web, server]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

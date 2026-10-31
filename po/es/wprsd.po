@@ -115,3 +115,47 @@ msgid ""
 msgstr ""
 "¿Dejar que «%1» siga el puntero? A la escena solo llega su última posición "
 "sobre la pantalla, y nunca se guarda."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"Web wallpapers cannot be shown here: the web helper wprs-web is not "
+"installed."
+msgstr ""
+"Aquí no se pueden mostrar fondos web: el auxiliar web wprs-web no está "
+"instalado."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"Web wallpapers cannot be shown here: they need WPE WebKit 2.54 or newer, "
+"which is not installed."
+msgstr ""
+"Aquí no se pueden mostrar fondos web: necesitan WPE WebKit 2.54 o posterior, "
+"que no está instalado."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"Web wallpapers cannot be shown here: they need WPE WebKit 2.54 or newer (%1)."
+msgstr ""
+"Aquí no se pueden mostrar fondos web: necesitan WPE WebKit 2.54 o posterior "
+"(%1)."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"Web wallpapers cannot be shown here: the web helper does not start (%1)."
+msgstr "Aquí no se pueden mostrar fondos web: el auxiliar web no arranca (%1)."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"The web page stopped three times in a row and is off; the background color "
+"shows instead."
+msgstr ""
+"La página web se detuvo tres veces seguidas y está apagada; en su lugar se "
+"ve el color de fondo."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"The web page drew nothing for 10 seconds and is off; the background color "
+"shows instead."
+msgstr ""
+"La página web no dibujó nada durante 10 segundos y está apagada; en su lugar "
+"se ve el color de fondo."

@@ -65,6 +65,7 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Library1", "Apply", "lib apply", &["ITEM", "--output", "--fit", "--preset"]),
     ("Library1", "Confirm", "lib confirm", &["ITEM", "WHAT"]),
     ("Library1", "Unconfirm", "lib unconfirm", &["ITEM", "WHAT"]),
+    ("Library1", "ClearData", "lib clear-data", &["ITEM"]),
     ("Playlists1", "List", "playlist ls", &[]),
     ("Playlists1", "Get", "playlist show", &["PL", "--offset", "--limit"]),
     ("Playlists1", "Create", "playlist new", &["NAME", "--query"]),

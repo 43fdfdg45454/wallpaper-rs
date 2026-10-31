@@ -88,7 +88,7 @@ fn shortcuts_lists_of_folders_and_quality_values_are_checked() {
     }));
     all.check().unwrap();
     let found = named(&all);
-    for name in ["folder", "folder2", "folder_lists", "properties2", "quality_settings", "shortcut"] {
+    for name in ["folder", "folder2", "script_folders", "properties2", "quality_settings", "shortcut"] {
         assert!(found.contains(&name.to_string()), "{name} in {found:?}");
     }
     let open = &all.properties["open"];

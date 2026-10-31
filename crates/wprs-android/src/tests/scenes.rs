@@ -10,7 +10,7 @@ use wprs_library::Kind;
 pub(super) fn scenes() {
     let examples = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scenes");
     let added = ask(json!({ "op": "examples", "dir": examples }));
-    let uids: Vec<String> = serde_json::from_value(added).unwrap();
+    let uids: Vec<String> = serde_json::from_value(added.clone()).unwrap_or_else(|_| panic!("{added}"));
     assert_eq!(uids.len(), 5);
     let listed = ask(json!({ "op": "items", "query": "kind:scene" }));
     let titles: BTreeSet<_> =

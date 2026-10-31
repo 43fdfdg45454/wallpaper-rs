@@ -22,6 +22,7 @@ members = [
     "apps/wprs-ctl",
     "apps/wprs-app",
     "apps/wprs-server",
+    "apps/wprs-web",
 ]
 exclude = ["vendor/naga"]
 
@@ -49,6 +50,7 @@ wprs-audio = { path = "crates/wprs-audio" }
 wprs-script = { path = "crates/wprs-script" }
 wprs-sync = { path = "crates/wprs-sync" }
 wprs-editor = { path = "crates/wprs-editor" }
+wprs-web = { path = "apps/wprs-web" }
 cxx = "1"
 cxx-qt = "=0.10.0"
 cxx-qt-lib = { version = "=0.10.0", features = ["qt_gui", "qt_qml", "qt_quickcontrols"] }
@@ -111,6 +113,7 @@ rpassword = "7"
 dirs = "7"
 blake3 = "1"
 libc = "0.2"
+libloading = "0.8.9"
 smithay-client-toolkit = { version = "0.21.1", default-features = false, features = ["system"] }
 raw-window-handle = "0.6"
 jni = "0.22.4"

@@ -151,6 +151,16 @@ ColumnLayout {
 
             PlasmaComponents3.Label {
                 Layout.fillWidth: true
+                visible: text !== ""
+                text: row.reasons.privacy(row.pkg.exposes ?? [], row.info.sandbox ?? "")
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+                font: Kirigami.Theme.smallFont
+                color: row.info.sandbox === "reduced" ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.disabledTextColor
+            }
+
+            PlasmaComponents3.Label {
+                Layout.fillWidth: true
                 visible: row.pkg.photosensitive === true
                 text: row.allowed ? i18n("Flashes or shows fast patterns; you allowed it") : i18n("Flashes or shows fast patterns that can trigger seizures")
                 wrapMode: Text.Wrap

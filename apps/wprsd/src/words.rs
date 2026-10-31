@@ -71,3 +71,27 @@ pub fn request(title: &str, audio: bool) -> (String, String) {
         ),
     }
 }
+
+pub fn web_missing() -> String {
+    tr("Web wallpapers cannot be shown here: the web helper wprs-web is not installed.")
+}
+
+pub fn web_engine() -> String {
+    tr("Web wallpapers cannot be shown here: they need WPE WebKit 2.54 or newer, which is not installed.")
+}
+
+pub fn web_old(why: &str) -> String {
+    tr("Web wallpapers cannot be shown here: they need WPE WebKit 2.54 or newer (%1).").replace("%1", why)
+}
+
+pub fn web_broken(why: &str) -> String {
+    tr("Web wallpapers cannot be shown here: the web helper does not start (%1).").replace("%1", why)
+}
+
+pub fn web_failed() -> String {
+    tr("The web page stopped three times in a row and is off; the background color shows instead.")
+}
+
+pub fn web_stalled() -> String {
+    tr("The web page drew nothing for 10 seconds and is off; the background color shows instead.")
+}

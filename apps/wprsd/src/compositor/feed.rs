@@ -10,7 +10,13 @@ pub(super) fn declare(output: &str, scene: Option<&SceneState>) {
     let pack = scene.map(|s| &s.spec.pack);
     let named = pack.map(|p| (p.props.id.as_str(), p.props.title.as_str(), p.key.as_str()));
     let uses = scene.map(SceneState::uses).unwrap_or_default();
-    inputs::needs(output, named.unwrap_or_default(), [uses.audio, uses.cursor, uses.clicks]);
+    inputs::needs(output, named.unwrap_or_default(), [uses.audio, uses.cursor, uses.clicks, false]);
+}
+
+pub(super) fn declare_page(output: &str, page: &crate::pages::PageSpec) {
+    let (p, [audio, pointer, clicks]) = (&page.pack, page.pack.uses);
+    let named = (p.props.id.as_str(), p.props.title.as_str(), p.key.as_str());
+    inputs::needs(output, named, [audio, pointer, clicks, !p.network.is_empty()]);
 }
 
 struct Live {

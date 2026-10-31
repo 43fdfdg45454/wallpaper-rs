@@ -90,6 +90,9 @@ pub fn facts(manifest: &Manifest, scene: Option<&Scene>, size: Option<[u32; 2]>)
     features.extend(declared(manifest, scene).into_iter().map(String::from));
     features.extend(scene.into_iter().flat_map(Scene::features).map(String::from));
     features.extend(manifest.properties.values().flat_map(|p| p.features()).map(String::from));
+    if manifest.kind != Kind::Web && features.remove("folder_lists") {
+        features.insert("script_folders".into());
+    }
     let page = manifest.kind == Kind::Web;
     let author = manifest.inputs.iter().filter(|i| page || !CHECKED.contains(i));
     let mut facets: Vec<String> = inputs.iter().chain(author).map(|i| i.name().to_owned()).collect();
@@ -103,6 +106,7 @@ pub fn facts(manifest: &Manifest, scene: Option<&Scene>, size: Option<[u32; 2]>)
         (manifest.photosensitive == Some(true), "photosensitive"),
         (manifest.locales().len() > 1, "localized"),
         (matches!(manifest.kind, Kind::Scene | Kind::Video | Kind::Web), "animated"),
+        (manifest.web.as_ref().is_some_and(|w| w.storage_kib > 0), "storage"),
     ];
     facets.extend(flags.into_iter().filter(|(on, _)| *on).map(|(_, n)| n.to_owned()));
     let allowed = |p: &Platform| manifest.platforms.is_empty() || manifest.platforms.contains(p);

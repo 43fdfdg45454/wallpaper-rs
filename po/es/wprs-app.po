@@ -1860,6 +1860,35 @@ msgstr "Nuevo preajuste para este elemento"
 msgid "New preset"
 msgstr "Nuevo preajuste"
 
+#: apps/wprs-app/qml/PrivacyNotice.qml
+msgid "your time zone"
+msgstr "tu zona horaria"
+
+#: apps/wprs-app/qml/PrivacyNotice.qml
+msgid "your language"
+msgstr "tu idioma"
+
+#: apps/wprs-app/qml/PrivacyNotice.qml
+msgid "the model of your graphics card"
+msgstr "el modelo de tu tarjeta gráfica"
+
+#: apps/wprs-app/qml/PrivacyNotice.qml
+msgid "data it keeps on this computer"
+msgstr "datos que guarda en este equipo"
+
+#: apps/wprs-app/qml/PrivacyNotice.qml
+msgid "the network, to reach the sites it names"
+msgstr "la red, para llegar a los sitios que nombra"
+
+#: apps/wprs-app/qml/PrivacyNotice.qml
+msgid ""
+"This web wallpaper uses %1. You can restrict each of them in its settings."
+msgstr "Este fondo web usa %1. Puedes restringir cada cosa en sus ajustes."
+
+#: apps/wprs-app/qml/PrivacyNotice.qml
+msgid "Its web engine runs without part of its sandbox on this computer."
+msgstr "Su motor web funciona sin parte de su aislamiento en este equipo."
+
 #: apps/wprs-app/qml/ProfileCard.qml
 msgid "Activate"
 msgstr "Activar"
@@ -2870,6 +2899,34 @@ msgstr ""
 "Destella o muestra patrones rápidos; las listas lo saltan hasta que lo "
 "permitas en sus detalles"
 
+#: apps/wprs-app/qml/WebPrivacy.qml
+msgid "Let it see the time zone"
+msgstr "Dejar que vea la zona horaria"
+
+#: apps/wprs-app/qml/WebPrivacy.qml
+msgid "Let it see the language"
+msgstr "Dejar que vea el idioma"
+
+#: apps/wprs-app/qml/WebPrivacy.qml
+msgid "Let it see the model of the graphics card"
+msgstr "Dejar que vea el modelo de la tarjeta gráfica"
+
+#: apps/wprs-app/qml/WebPrivacy.qml
+msgid "Let it keep data on this computer"
+msgstr "Dejar que guarde datos en este equipo"
+
+#: apps/wprs-app/qml/WebPrivacy.qml
+msgid "Privacy"
+msgstr "Privacidad"
+
+#: apps/wprs-app/qml/WebPrivacy.qml
+msgid "Let it reach the sites it names (show it first)"
+msgstr "Dejar que llegue a los sitios que nombra (primero muéstralo)"
+
+#: apps/wprs-app/qml/WebPrivacy.qml
+msgid "Clear data"
+msgstr "Borrar datos"
+
 #: apps/wprs-app/qml/facade/App.qml
 msgid "%1 MB"
 msgstr "%1 MB"
@@ -3507,8 +3564,12 @@ msgid "reads the subfolders of a chosen folder or fewer of its files"
 msgstr "lee las subcarpetas de una carpeta elegida o menos de sus archivos"
 
 #: apps/wprs-app/qml/facade/Labels.qml
-msgid "lets its scripts or page list a chosen folder"
-msgstr "deja que sus scripts o su página listen una carpeta elegida"
+msgid "lets its page list a chosen folder"
+msgstr "deja que su página liste una carpeta elegida"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "lets its scene scripts list a chosen folder"
+msgstr "deja que los scripts de su escena listen una carpeta elegida"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "changes its settings when the device saves power"

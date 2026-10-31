@@ -18,6 +18,7 @@ use wprs_core::model::{Input, SceneInputs};
 use wprs_scene::{AudioFrame, MAX_PRESSES, PointerState, Press};
 use wprs_wayland::Window;
 
+pub(crate) use control::reported;
 pub(crate) use keys::{Keys, draft_key};
 pub(crate) use parallax::{pointer_over, relief};
 pub(crate) use store::{declined_path, grants_path, load, load_bound, save};
@@ -115,13 +116,13 @@ async fn pace(hub: Arc<Hub>) {
 pub(crate) fn needs(
     output: &str,
     (scene, title, key): (&str, &str, &str),
-    [audio, pointer, clicks]: [bool; 3],
+    [audio, pointer, clicks, network]: [bool; 4],
 ) {
     let Some(hub) = hub() else { return };
     let (scene, title, key, granted) = (scene.into(), title.into(), key.into(), BTreeSet::new());
-    let need = SceneInputs { scene, audio, pointer, clicks, title, key, granted };
+    let need = SceneInputs { scene, audio, pointer, clicks, network, title, key, granted };
     let mut control = lock(&hub.control);
-    let changed = match audio || pointer || clicks {
+    let changed = match audio || pointer || clicks || network {
         true => control.shown.insert(output.into(), need.clone()) != Some(need),
         false => control.shown.remove(output).is_some(),
     };

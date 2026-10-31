@@ -67,6 +67,7 @@ pub enum Kind {
     Audio,
     Pointer,
     Clicks,
+    Network,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug)]
@@ -81,6 +82,7 @@ impl Kind {
             Kind::Audio => Input::Audio.as_str(),
             Kind::Pointer => Input::Pointer.as_str(),
             Kind::Clicks => Input::Clicks.as_str(),
+            Kind::Network => Input::Network.as_str(),
         }
     }
 }

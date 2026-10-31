@@ -8,6 +8,7 @@ run() { cmd=$1 && shift && flatpak run --env=QT_QPA_PLATFORM=offscreen --command
 test "$(run wprs-ctl $app --version)" = "wprs-ctl $version"
 test "$(run wprsd $app --version)" = "wprsd $version"
 run wprs-app $app --check
+if run wprs-web $app --check; then echo "the runtime unexpectedly carries WPE WebKit"; else echo "web wallpapers refused here, as expected"; fi
 files=$(flatpak info -l $app)/files
 exports=${files%%/app/*}/exports/share
 run wprs-plasma $app > plasma.sh
@@ -35,5 +36,5 @@ grep -x "Icon=$app" "$desktop"
 if grep -q '^DBusActivatable=' "$desktop"; then exit 1; fi
 test -f "$exports/icons/hicolor/scalable/apps/$app.svg"
 grep -qF "<release version=\"${version%%+*}\"" "$files/share/metainfo/$app.metainfo.xml"
-ls "$files/bin/wprsd" "$files/bin/wprs-ctl" "$files/bin/wprs-app"
+ls "$files/bin/wprsd" "$files/bin/wprs-ctl" "$files/bin/wprs-app" "$files/bin/wprs-web"
 if grep -l -E '/run/build|/(home|root)/' "$files"/bin/wprs*; then exit 1; fi

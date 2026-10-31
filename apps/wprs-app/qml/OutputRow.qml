@@ -119,6 +119,12 @@ RowLayout {
             font: Kirigami.Theme.smallFont
         }
 
+        PrivacyNotice {
+            Layout.fillWidth: true
+            exposes: row.pkg.exposes ?? []
+            reduced: row.info.sandbox === "reduced"
+        }
+
         QQC2.Label {
             Layout.fillWidth: true
             visible: row.mature

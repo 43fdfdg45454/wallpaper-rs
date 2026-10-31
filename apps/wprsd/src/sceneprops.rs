@@ -80,6 +80,7 @@ impl Daemon {
     pub fn package_props(&self, path: &Path) -> anyhow::Result<Arc<Props>> {
         match crate::decode::open(path)?.manifest.kind {
             wprs_format::Kind::Scene => Ok(self.scene_pack(path)?.props.clone()),
+            wprs_format::Kind::Web => Ok(self.web_pack(path)?.props.clone()),
             _ => self.video_props(path),
         }
     }

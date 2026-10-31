@@ -150,6 +150,11 @@ ColumnLayout {
                         color: Kirigami.Theme.negativeTextColor
                         text: App.tr("Flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy.")
                     }
+
+                    PrivacyNotice {
+                        Layout.fillWidth: true
+                        exposes: row.modelData.kind === "web" ? ["zone", "language", "gpu"] : []
+                    }
                 }
 
                 QQC2.ComboBox {
