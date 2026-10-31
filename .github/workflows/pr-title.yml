@@ -1,0 +1,23 @@
+name: Pull request title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  title:
+    name: Conventional Commits title
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^()]+\))?!?: \S' <<< "$TITLE" ||
+            { echo "::error::The title \"$TITLE\" does not follow Conventional Commits"; exit 1; }

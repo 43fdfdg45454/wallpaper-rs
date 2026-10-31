@@ -42,7 +42,8 @@ a partir de los commits de la rama principal, escritos con Conventional Commits
 - `build`, `chore`, `ci`, `docs`, `refactor`, `revert`, `style` y `test` no cambian la versión.
 
 La CI comprueba el asunto de todos los commits desde la última versión publicada y el título de
-cada pull request; mientras alguno no siga ese formato, la rama principal falla y no publica nada.
+cada pull request, también cada vez que se edita; mientras alguno no siga ese formato, la rama
+principal o la pull request fallan y no se publica nada.
 Un commit mal escrito que ya está en la rama se corrige añadiendo su hash a `ignore.sha` en
 `GitVersion.yml` junto con un commit nuevo del tipo correcto. GitVersion toma como actual el commit
 de fecha más reciente, así que cada commit necesita una fecha de commit posterior a la de toda su
@@ -51,18 +52,31 @@ historia, algo que la CI también comprueba. Si la fecha se fija a mano, sirve
 
 Solo los commits que suben la versión publican una nueva: cuando el último commit de la rama
 principal pasa todas las pruebas y su versión es mayor que todas las publicadas, la CI crea
-`v<versión>` en la página *Releases* del repositorio, con los archivos, un `SHA256SUMS` y las notas
-agrupadas en cambios incompatibles, novedades y correcciones. Una versión publicada no cambia nunca
-y volver a lanzar una ejecución antigua no publica nada. Las demás ramas y las pull requests llevan
-una prerelease de la versión siguiente cuyo número crece con cada commit (`0.3.1-branch-rama.2`,
-`0.4.0-feature-rama.1`, `0.3.1-PullRequest12.1`) y no se publican. `--version`, el daemon por
-D-Bus, el servidor y los paquetes de Plasma y KWin muestran la versión; una compilación local sin
-`WPRS_VERSION` usa la de `Cargo.toml` con el sufijo `-local`.
+`v<versión>` en la página *Releases* del repositorio, con los archivos, un SBOM SPDX de las
+dependencias (`wallpaper-rs.spdx.json`), un `SHA256SUMS` firmado y las notas agrupadas en cambios
+incompatibles, novedades y correcciones, y publica la imagen firmada del servidor propio. Una
+versión publicada no cambia nunca y volver a lanzar una ejecución antigua no publica nada. Las
+demás ramas y las pull requests llevan una prerelease de la versión siguiente cuyo número crece con
+cada commit (`0.3.1-branch-rama.2`, `0.4.0-feature-rama.1`, `0.3.1-PullRequest12.1`) y no se
+publican. `--version`, el daemon por D-Bus, el servidor y los paquetes de Plasma y KWin muestran la
+versión; una compilación local sin `WPRS_VERSION` usa la de `Cargo.toml` con el sufijo `-local`.
 
 ## Instalación (sin root)
 
 Cada versión de la página *Releases* trae siempre los mismos nombres de archivo y un `SHA256SUMS`
-para comprobarlos. Descarga `wallpaper-rs-x86_64-linux.tar.gz` de la última y ejecuta:
+para comprobarlos, firmado con [cosign](https://github.com/sigstore/cosign) sin clave propia: la
+firma (`SHA256SUMS.sigstore.json`) lleva un certificado de corta duración que Sigstore emite para la
+CI de este repositorio en la rama principal y queda en su registro público de transparencia. Con
+cosign 3 o posterior, junto a los archivos descargados:
+
+```sh
+cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity https://github.com/43fdfdg45454/wallpaper-rs/.github/workflows/ci.yml@refs/heads/master \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum -c --ignore-missing SHA256SUMS
+```
+
+Descarga `wallpaper-rs-x86_64-linux.tar.gz` de la última y ejecuta:
 
 ```sh
 tar xzf wallpaper-rs-x86_64-linux.tar.gz
@@ -974,6 +988,25 @@ que muestre la de una versión publicada, se construye desde su etiqueta:
 WPRS_VERSION=$(git describe --tags --exact-match --match 'v[0-9]*' | cut -c2-) docker compose up -d --build
 ```
 
+Cada versión publica también la imagen en `ghcr.io/43fdfdg45454/wprs-server` (`linux/amd64`, con las
+etiquetas `<versión>` y `latest`), firmada con cosign sin clave propia como los archivos de
+*Releases*. Lleva adjuntos los SBOM SPDX de BuildKit (los paquetes de la imagen y de la etapa de
+compilación) y su procedencia, y una atestación SPDX firmada con las dependencias de Rust de las
+fuentes con las que se construyó. Para usarla en lugar de construirla se fija su resumen, se
+comprueban la firma y la atestación y se arranca con `deploy/compose.image.yaml`:
+
+```sh
+IMAGE=ghcr.io/43fdfdg45454/wprs-server
+DIGEST=$(docker buildx imagetools inspect "$IMAGE:<versión>" --format '{{ .Manifest.Digest }}')
+ID=https://github.com/43fdfdg45454/wallpaper-rs/.github/workflows/ci.yml@refs/heads/master
+ISSUER=https://token.actions.githubusercontent.com
+cosign verify "$IMAGE@$DIGEST" --certificate-identity "$ID" --certificate-oidc-issuer "$ISSUER"
+cosign verify-attestation "$IMAGE@$DIGEST" --type spdxjson \
+  --certificate-identity "$ID" --certificate-oidc-issuer "$ISSUER" > wprs-server.sources.spdx.dsse
+docker buildx imagetools inspect "$IMAGE@$DIGEST" --format '{{ json .SBOM }}' > wprs-server.sbom.json
+WPRS_IMAGE=$IMAGE@$DIGEST docker compose -f compose.yaml -f deploy/compose.image.yaml up -d
+```
+
 La configuración va en variables de entorno, en un `.env` junto a `compose.yaml`; `VARIABLE_FILE`
 lee el valor de un archivo, para los secretos:
 
@@ -1409,7 +1442,12 @@ ANDROID_NDK_HOME=/ruta/al/ndk android/gradlew -p android assembleDebug
 adb install -r -d android/app/build/outputs/apk/debug/app-debug.apk
 android/gradlew -p android connectedDebugAndroidTest -Pabis=x86_64  # pruebas en un emulador x86_64
 scripts/android-power.sh -o consumo.csv  # consumo, fps y memoria por escenario en el teléfono
+ANDROID_NDK_HOME=/ruta/al/ndk scripts/apk-check.sh android/app/build/outputs/apk/release/app-release.apk
 ```
+
+`scripts/apk-check.sh`, que la CI pasa al APK publicado, comprueba que trae las bibliotecas nativas
+de arm64-v8a y x86_64, que todas están alineadas a páginas de 16 KB, que el APK lo está para
+`zipalign` y que la biblioteca de Rust no guarda rutas del ordenador que la compiló.
 
 `scripts/android-power.sh` recorre por adb los escenarios de consumo (imagen fija, desplazamiento,
 fondo tapado, pantalla apagada, ahorro de energía, temperatura alta, paralaje con el teléfono quieto
@@ -1454,6 +1492,16 @@ pantalla, los archivos exportados (lanzador, icono, metainfo y servicios D-Bus),
 Instala en el sistema y toca esa carpeta, así que fuera de la CI conviene usarlo en un contenedor
 desechable.
 
+Todas las acciones de GitHub están fijadas por el SHA completo de su commit, las imágenes de
+contenedor por su resumen y las herramientas que descarga la CI (`scripts/tools.sh`: actionlint,
+cosign y syft) por versión y SHA-256. La CI pasa actionlint, con shellcheck, por todos los
+workflows. Al publicar una versión, `scripts/release.sh` genera con syft el SBOM de los archivos que
+sigue git y firma `SHA256SUMS` con cosign sin clave propia (OIDC de GitHub; el trabajo solo tiene
+permiso de escritura en el contenido y de pedir el token), y `scripts/server-image.sh` construye
+la imagen del servidor con un BuildKit fijado, le adjunta los SBOM y la procedencia, la sube a
+GHCR, firma su resumen y le añade la atestación con el SBOM de las fuentes. La primera imagen crea
+el paquete `wprs-server` como privado: hay que hacerlo público una vez en sus ajustes de GitHub.
+
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre
 dispositivos DRM virtuales), activa el plugin, comprueba los píxeles de una captura, carga el icono
@@ -1491,7 +1539,7 @@ misma pausa.
 | `integrations/kwin-pointer` | Script de KWin que envía la posición del puntero mientras una escena o un paralaje la usa |
 | `po` | Traducciones gettext de los paquetes de Plasma y de la app |
 | `packaging` | Servicio systemd, activación D-Bus, lanzador e icono, scripts de instalación, Flatpak |
-| `deploy` | Despliegue de referencia del servidor con Caddy |
+| `deploy` | Despliegue de referencia del servidor con Caddy y con la imagen publicada |
 | `docs` | Especificaciones de la interfaz D-Bus, los paquetes y sus escenas, el editor de escenas, los repositorios firmados y el servidor |
 
 ## Privacidad

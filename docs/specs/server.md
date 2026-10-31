@@ -32,6 +32,16 @@ Caddy is pinned by the digest of its multi-platform index too; to update it, tak
 `Docker-Content-Digest` of `docker buildx imagetools inspect docker.io/library/caddy:<tag>` (the
 index, not one platform) and replace the tag and digest in that file.
 
+Each release also pushes the image to `ghcr.io/<owner>/wprs-server` (`linux/amd64`, tags
+`<version>` and `latest`) with BuildKit SPDX SBOMs of the image and of the build stage and a
+provenance attestation, signs its digest with cosign keyless from the release workflow
+(`scripts/server-image.sh`) and adds a signed SPDX attestation (`cosign attest --type spdxjson`) of
+the Rust dependencies in the sources it was built from. Check both with `cosign verify` and
+`cosign verify-attestation --type spdxjson` against the identity
+`https://github.com/<owner>/wallpaper-rs/.github/workflows/ci.yml@refs/heads/master` and the
+issuer `https://token.actions.githubusercontent.com`, then run that digest without building:
+`WPRS_IMAGE=ghcr.io/<owner>/wprs-server@sha256:<digest> docker compose -f compose.yaml -f deploy/compose.image.yaml up -d`.
+
 ### Configuration
 
 Every setting is an environment variable (`.env` next to `compose.yaml` is read). `NAME_FILE`

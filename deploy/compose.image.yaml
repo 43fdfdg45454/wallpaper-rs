@@ -1,0 +1,4 @@
+services:
+  wprs:
+    image: ${WPRS_IMAGE:?set WPRS_IMAGE to the verified image, as in ghcr.io/<owner>/wprs-server@sha256:<digest>}
+    pull_policy: missing

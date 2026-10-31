@@ -33,12 +33,11 @@ jobs:
       - name: Conventional Commits and commit dates
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          TITLE: ${{ github.event.pull_request.title }}
         run: |
           kept() { grep -vFf <(sed -n 's/^ *- \([0-9a-f]\{40\}\)$/\1/p' GitVersion.yml); }
           git cat-file -e "$BASE^{commit}" 2>/dev/null || BASE=$(git merge-base origin/master HEAD)
           BASE=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo "$BASE")
-          bad=$({ git log --no-merges --format='%H %s' "$BASE..HEAD"; [ -z "$TITLE" ] || echo "title $TITLE"; } | kept |
+          bad=$(git log --no-merges --format='%H %s' "$BASE..HEAD" | kept |
             grep -Ev '^\S+ (build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^()]+\))?!?: \S' || true)
           [ -z "$bad" ] || { echo "$bad"; echo "::error::These subjects do not follow Conventional Commits"; exit 1; }
           newest=$(git log --format='%ct %H' HEAD^@ | kept | sort -n | tail -1)
@@ -55,6 +54,19 @@ jobs:
         env:
           SHA: ${{ steps.gitversion.outputs.sha }}
         run: test "$SHA" = "$(git rev-parse HEAD)"
+
+  workflows:
+    name: Workflow lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - name: actionlint with shellcheck
+        run: |
+          shellcheck --version | grep '^version'
+          "$(scripts/tools.sh actionlint "$RUNNER_TEMP/tools")" -color
 
   check:
     name: Lint and test
@@ -337,31 +349,10 @@ jobs:
           fi
           android/gradlew -p android assembleRelease lintRelease -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME"
 
-      - name: 16 KB page alignment
+      - name: Native libraries, 16 KB page alignment and no build paths
         run: |
-          readelf="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
-          unzip -q android/app/build/outputs/apk/release/*.apk 'lib/*' -d "$RUNNER_TEMP/apk"
-          for abi in arm64-v8a x86_64; do
-            test -f "$RUNNER_TEMP/apk/lib/$abi/libwprs_android.so"
-            test -f "$RUNNER_TEMP/apk/lib/$abi/libonnxruntime.so"
-          done
-          for lib in "$RUNNER_TEMP"/apk/lib/*/*.so; do
-            aligns=$("$readelf" -lW "$lib" | awk '$1 == "LOAD" { print $NF }')
-            test -n "$aligns"
-            for align in $aligns; do
-              (( align >= 0x4000 )) || { echo "::error::$lib has a LOAD segment aligned to $align"; exit 1; }
-            done
-          done
-          tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
-          "$tools/zipalign" -c -P 16 -v 4 android/app/build/outputs/apk/release/*.apk
           cp android/app/build/outputs/apk/release/*.apk wallpaper-rs-android.apk
-
-      - name: No build paths in the native library
-        run: |
-          if grep -a -l -F "$HOME/" "$RUNNER_TEMP"/apk/lib/*/libwprs_android.so; then
-            echo "::error::the native library keeps paths of the build machine"
-            exit 1
-          fi
+          scripts/apk-check.sh wallpaper-rs-android.apk
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
@@ -447,7 +438,8 @@ jobs:
 
       - name: Build and install the RPM without its desktop dependencies
         run: |
-          docker run --rm -e WPRS_VERSION -v "$PWD:/src" -w /src fedora:latest bash -c '
+          docker run --rm -e WPRS_VERSION -v "$PWD:/src" -w /src \
+            docker.io/library/fedora:44@sha256:43b29f65a41eb9c35e1cd5323e3bdf3b655c2357a9f4f1ff2f9c2798e5045d80 bash -c '
             set -e
             dnf -y -q install rpm-build systemd-rpm-macros >/dev/null
             scripts/rpm.sh dist/wallpaper-rs-*.tar.gz rpm
@@ -536,8 +528,10 @@ jobs:
 
       - name: Run Plasma session test
         run: |
-          docker run --rm --device /dev/dri -v "$PWD:/src" -w /src archlinux:latest bash -c '
+          docker run --rm --device /dev/dri -v "$PWD:/src" -w /src \
+            docker.io/library/archlinux:base-20261018.0.612668@sha256:52dfbd5afb23a220d5ee92dafcb4c788d96c026ed04179890c23adef4c897fa0 bash -c '
             set -e
+            pacman -Sy --noconfirm --needed archlinux-keyring >/dev/null
             pacman -Syu --noconfirm --needed \
               plasma-desktop plasma-workspace kwin kpipewire spectacle \
               pipewire wireplumber dbus gst-plugins-base gst-plugins-good \
@@ -586,10 +580,13 @@ jobs:
   release:
     name: Release
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: [version, check, sway, x11, sync, package, android, android-emulator, rpm, flatpak, plasma, server]
+    needs: [version, workflows, check, sway, x11, sync, package, android, android-emulator, rpm, flatpak, plasma, server]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      id-token: write
+    outputs:
+      tag: ${{ steps.publish.outputs.tag }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
@@ -602,9 +599,36 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Publish the version
+      - name: Publish the version with an SBOM and signed checksums
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.version.outputs.semver }}
         run: scripts/release.sh artifacts
+
+  image:
+    name: Server image
+    needs: [version, release]
+    if: needs.release.outputs.tag != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      WPRS_VERSION: ${{ needs.version.outputs.informational }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - name: Push the image with its SBOM and sign it
+        env:
+          ACTOR: ${{ github.actor }}
+          TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.semver }}
+        run: |
+          docker login ghcr.io --username "$ACTOR" --password-stdin <<< "$TOKEN"
+          scripts/server-image.sh "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/wprs-server" "$VERSION" latest
+          docker logout ghcr.io
