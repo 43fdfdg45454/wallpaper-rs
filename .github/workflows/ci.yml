@@ -605,12 +605,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.version.outputs.semver }}
+          SIGN: ${{ github.repository_owner == 'wallpaper-rs' }}
         run: scripts/release.sh artifacts
 
   image:
     name: Server image
     needs: [version, release]
-    if: needs.release.outputs.tag != ''
+    if: needs.release.outputs.tag != '' && github.repository_owner == 'wallpaper-rs'
     runs-on: ubuntu-24.04
     permissions:
       contents: read

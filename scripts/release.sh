@@ -23,7 +23,9 @@ mkdir "$OUT/src" && git archive HEAD | tar -x -C "$OUT/src"
 "$("$(dirname "$0")"/tools.sh syft "$OUT/tools")" scan "dir:$OUT/src" -q --source-name wallpaper-rs --source-version "$VERSION" \
   -o "spdx-json=$OUT/files/wallpaper-rs.spdx.json"
 (cd "$OUT/files" && sha256sum -- * > SHA256SUMS)
-"$("$(dirname "$0")"/tools.sh cosign "$OUT/tools")" sign-blob --yes --bundle "$OUT/files/SHA256SUMS.sigstore.json" "$OUT/files/SHA256SUMS"
+if [ "${SIGN:-}" = true ]; then
+  "$("$(dirname "$0")"/tools.sh cosign "$OUT/tools")" sign-blob --yes --bundle "$OUT/files/SHA256SUMS.sigstore.json" "$OUT/files/SHA256SUMS"
+fi
 ID=https://github.com/${GH_REPO:?}/.github/workflows/ci.yml@refs/heads/master
 
 PREV=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD 2>/dev/null || true)
@@ -38,8 +40,10 @@ section() { [ -z "$2" ] || printf '## %s\n\n%s\n\n' "$1" "$2"; }
   section Features "$(log --invert-grep --grep="$FOOTER" | pick "^feat$SCOPE: ")"
   section Fixes "$(log --invert-grep --grep="$FOOTER" | pick "^(fix|perf)$SCOPE: ")"
   printf 'Verify the files with:\n\n```sh\n'
-  echo "cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json --certificate-identity $ID \\"
-  echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com"
+  if [ "${SIGN:-}" = true ]; then
+    echo "cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json --certificate-identity $ID \\"
+    echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com"
+  fi
   printf 'sha256sum -c --ignore-missing SHA256SUMS\n```\n'
 } > "$OUT/notes"
 gh release create "$TAG" "$OUT"/files/* --target "$(git rev-parse HEAD)" --title "$VERSION" --notes-file "$OUT/notes" --latest

@@ -54,7 +54,8 @@ Solo los commits que suben la versión publican una nueva: cuando el último com
 principal pasa todas las pruebas y su versión es mayor que todas las publicadas, la CI crea
 `v<versión>` en la página *Releases* del repositorio, con los archivos, un SBOM SPDX de las
 dependencias (`wallpaper-rs.spdx.json`), un `SHA256SUMS` firmado y las notas agrupadas en cambios
-incompatibles, novedades y correcciones, y publica la imagen firmada del servidor propio. Una
+incompatibles, novedades y correcciones, y publica la imagen firmada del servidor propio. La firma
+y la imagen solo se hacen cuando el repositorio está en la organización `wallpaper-rs`. Una
 versión publicada no cambia nunca y volver a lanzar una ejecución antigua no publica nada. Las
 demás ramas y las pull requests llevan una prerelease de la versión siguiente cuyo número crece con
 cada commit (`0.3.1-branch-rama.2`, `0.4.0-feature-rama.1`, `0.3.1-PullRequest12.1`) y no se
@@ -66,12 +67,13 @@ versión; una compilación local sin `WPRS_VERSION` usa la de `Cargo.toml` con e
 Cada versión de la página *Releases* trae siempre los mismos nombres de archivo y un `SHA256SUMS`
 para comprobarlos, firmado con [cosign](https://github.com/sigstore/cosign) sin clave propia: la
 firma (`SHA256SUMS.sigstore.json`) lleva un certificado de corta duración que Sigstore emite para la
-CI de este repositorio en la rama principal y queda en su registro público de transparencia. Con
-cosign 3 o posterior, junto a los archivos descargados:
+CI de este repositorio en la rama principal y queda en su registro público de transparencia. Las
+versiones publicadas antes de pasar a la organización `wallpaper-rs` no llevan firma. Con cosign 3
+o posterior, junto a los archivos descargados:
 
 ```sh
 cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
-  --certificate-identity https://github.com/43fdfdg45454/wallpaper-rs/.github/workflows/ci.yml@refs/heads/master \
+  --certificate-identity https://github.com/wallpaper-rs/wallpaper-rs/.github/workflows/ci.yml@refs/heads/master \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 sha256sum -c --ignore-missing SHA256SUMS
 ```
@@ -989,7 +991,7 @@ que muestre la de una versión publicada, se construye desde su etiqueta:
 WPRS_VERSION=$(git describe --tags --exact-match --match 'v[0-9]*' | cut -c2-) docker compose up -d --build
 ```
 
-Cada versión publica también la imagen en `ghcr.io/43fdfdg45454/wprs-server` (`linux/amd64`, con las
+Cada versión publica también la imagen en `ghcr.io/wallpaper-rs/wprs-server` (`linux/amd64`, con las
 etiquetas `<versión>` y `latest`), firmada con cosign sin clave propia como los archivos de
 *Releases*. Lleva adjuntos los SBOM SPDX de BuildKit (los paquetes de la imagen y de la etapa de
 compilación) y su procedencia, y una atestación SPDX firmada con las dependencias de Rust de las
@@ -997,9 +999,9 @@ fuentes con las que se construyó. Para usarla en lugar de construirla se fija s
 comprueban la firma y la atestación y se arranca con `deploy/compose.image.yaml`:
 
 ```sh
-IMAGE=ghcr.io/43fdfdg45454/wprs-server
+IMAGE=ghcr.io/wallpaper-rs/wprs-server
 DIGEST=$(docker buildx imagetools inspect "$IMAGE:<versión>" --format '{{ .Manifest.Digest }}')
-ID=https://github.com/43fdfdg45454/wallpaper-rs/.github/workflows/ci.yml@refs/heads/master
+ID=https://github.com/wallpaper-rs/wallpaper-rs/.github/workflows/ci.yml@refs/heads/master
 ISSUER=https://token.actions.githubusercontent.com
 cosign verify "$IMAGE@$DIGEST" --certificate-identity "$ID" --certificate-oidc-issuer "$ISSUER"
 cosign verify-attestation "$IMAGE@$DIGEST" --type spdxjson \
