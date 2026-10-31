@@ -11,6 +11,7 @@ mod choice;
 mod chosen;
 #[cfg(target_os = "android")]
 mod clips;
+mod counted;
 mod cycle;
 mod depth;
 #[cfg(target_os = "android")]
@@ -38,6 +39,7 @@ mod private;
 mod props;
 #[cfg(target_os = "android")]
 mod relief;
+mod reply;
 mod repos;
 mod rotation;
 mod saved;
@@ -121,39 +123,6 @@ pub(crate) enum Error {
 
 pub(crate) fn said(id: &'static str, text: &'static str, args: &[&dyn std::fmt::Display]) -> Error {
     Error::Said(wprs_core::message::said(id, text, args))
-}
-
-impl Error {
-    pub(crate) fn told(&self) -> String {
-        self.told_in(&library::languages())
-    }
-
-    pub(crate) fn reply(&self) -> serde_json::Value {
-        let (id, args) = match self {
-            Error::Said(m) => (m.id, m.args.clone()),
-            Error::Format(e) => {
-                let message = e.message();
-                (message.id, message.args)
-            }
-            Error::Unreadable(name) => ("android.unreadable", vec![name.clone()]),
-            Error::Library(wprs_library::Error::NotFound(what, key)) => {
-                ("android.not_found", vec![(*what).to_owned(), key.clone()])
-            }
-            Error::Library(wprs_library::Error::Exists(what, key)) => {
-                ("android.exists", vec![(*what).to_owned(), key.clone()])
-            }
-            Error::Io(e) => ("android.io", vec![e.to_string()]),
-            _ => ("", Vec::new()),
-        };
-        serde_json::json!({ "error": self.told(), "id": id, "args": args })
-    }
-
-    pub(crate) fn told_in(&self, languages: &[String]) -> String {
-        match self {
-            Error::Format(e) => e.message().told(&wprs_core::message::tr_in(languages)),
-            e => e.to_string(),
-        }
-    }
 }
 
 #[cfg(target_os = "android")]

@@ -10,6 +10,10 @@ ask "account {\"op\": \"escrow\", \"passphrase\": \"$pocket_phrase\"}" >/dev/nul
 [ "$(phone "['recovery']")" = current ] || fail "the phone's recovery escrow: $(phone "")"
 a server sync --wait >/dev/null
 [ "$(value a "['recovery']")" = current ] || fail "the desktop does not see the phone's escrow: $(a server status)"
+ask 'account {"op": "rotate"}' | grep -q '"epoch":' || fail "the phone did not replace the sync key"
+[ "$(phone "['recovery']")" = current ] || fail "the phone's rotation left its recovery escrow behind: $(phone "")"
+a server sync --wait >/dev/null
+[ "$(value a "['recovery']")" = current ] || fail "the desktop sees a stale escrow after the phone's rotation: $(a server status)"
 if grep -q -s -a -e swordfish "$WORK/phone/sync.json" "$WORK/phone.log"; then
   fail "a provider secret reached the sync state or the log of the phone"
 fi
@@ -70,6 +74,12 @@ send 'account {"op": "listen", "token": 2}'
 send 'account {"op": "hush", "token": 2}'
 answers=$(reply && reply)
 grep -q '"changed":false' <<<"$answers" || fail "hushing the phone did not end its listening: $answers"
+send 'account {"op": "listen", "token": 4}'
+[ "$(ask 'account {"op": "hush", "token": 3}')" = null ] || fail "the phone did not take an old hush"
+a playlist new "Heard after an old hush" >/dev/null
+a server sync --wait >/dev/null
+[ "$(reply | jq_ "r['changed']")" = True ] || fail "the hush of an older listener silenced the phone"
+sync_phone >/dev/null
 echo "phone event checks passed"
 
 mkdir -p "$WORK/spare" && mkfifo "$WORK/spare.in" "$WORK/spare.out"

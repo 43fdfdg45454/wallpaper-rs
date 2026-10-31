@@ -92,7 +92,10 @@ private fun Explore(main: Main, run: Run, close: () -> Unit) {
                     items(found.objects()) { item ->
                         ListItem(
                             headlineContent = { Text(item.optString("title").ifEmpty { item.getString("id") }) },
-                            supportingContent = { Text(listOf(item.getString("repo"), item.getString("version"), size(item.optLong("size"))).joinToString(" · ")) },
+                            supportingContent = {
+                                val mature = stringResource(R.string.mature).takeIf { item.optBoolean("mature") }
+                                Text(listOfNotNull(item.getString("repo"), item.getString("version"), size(item.optLong("size")), mature).joinToString(" · "))
+                            },
                             trailingContent = {
                                 if (item.optBoolean("installed")) Text(stringResource(R.string.repo_installed))
                                 else TextButton({

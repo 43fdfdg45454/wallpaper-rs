@@ -171,3 +171,22 @@ fn masked(uid: &str, image: &Path) {
     .unwrap();
     assert!(framing::framed(uid, image, wprs_core::Fit::Fill, false).map.is_none());
 }
+
+pub(super) fn heif_photos_get_maps() {
+    let decode = |_: &Path, edge: u32| {
+        Some(image::RgbaImage::from_pixel(edge.min(64), edge.min(32), image::Rgba([9; 4])))
+    };
+    assert!(store::store(&mut super::open("blue-64x32.heic"), "beach.heic").is_err());
+    wprs_render::set_platform_decoder(wprs_render::Platform { decode, size: |_| Some((64, 32)) });
+    wprs_library::platform_decodes_heif();
+    let (uid, _) = store::store(&mut super::open("blue-64x32.heic"), "beach.heic").unwrap();
+    let image = library::with(|lib| Ok(lib.item(&uid)?.path)).unwrap();
+    assert_eq!(wprs_depth::decode(&image).unwrap().dimensions(), (64, 32));
+    let map = tempfile::NamedTempFile::new().unwrap();
+    wprs_depth::write(&wprs_depth::Map::from_pixel(64, 32, image::Luma([9])), map.path()).unwrap();
+    let file = File::open(map.path()).unwrap();
+    let request = json!({ "op": "import", "uid": uid, "fd": file.as_raw_fd() });
+    assert_eq!(serde_json::from_str::<Value>(&depth::request(&request.to_string())).unwrap(), Value::Null);
+    assert!(depth::raised(&image).and_then(|raise| raise.map).is_some());
+    assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
+}

@@ -69,3 +69,24 @@ pub(crate) async fn device_code(code: &str, action: &str, mut body: Value) -> Re
     let (api, _) = api()?;
     Ok(api.post(&format!("/api/v1/auth/device/{action}"), body).await?)
 }
+
+pub(crate) async fn rotate_now() -> Result<Value, Error> {
+    linked()?;
+    if !read(|s| s.ready) {
+        return Err(said(
+            "android.phone_sync_key",
+            "this phone has no sync key yet; join from a linked device",
+            &[],
+        ));
+    }
+    if read(|s| s.encrypted) == Some(false) {
+        return Err(said(
+            "android.rotate_plain",
+            "sync is not encrypted: a new key would protect nothing",
+            &[],
+        ));
+    }
+    let (api, mut secrets) = api()?;
+    let first = said("android.rotated_elsewhere", "another device replaced the key first", &[]);
+    crate::rotation::rotate(&api, &mut secrets, false).await?.ok_or(first)
+}

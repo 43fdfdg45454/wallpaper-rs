@@ -1,5 +1,6 @@
 mod about;
 mod admin;
+mod archive;
 mod authors;
 mod broken;
 mod browse;
@@ -47,6 +48,7 @@ mod web;
 #[cfg(feature = "sign")]
 pub use admin::sign_root;
 pub use admin::{RootStatus, init, rotate_root, status};
+pub use archive::{extract, peek, thumbnail};
 pub use authors::{AUTHORS_FORMAT, Authors, ONLINE, OnlineAuthor, Rotation, Trusted, rotation_text};
 pub use browse::{Item, browse};
 pub use build::{build, sha256, sha256_file};
@@ -77,7 +79,7 @@ pub use online::{anchors, drop_author_key, register_author, rotate_author};
 pub use origin::{Ancestor, Origin, OriginKind, PROVIDER_LICENSES, Provider};
 #[cfg(feature = "sign")]
 pub use publish::{Published, publish};
-pub use read::{Package, extract, open, peek, read, thumbnail};
+pub use read::{Package, open, read};
 pub use release::{Needs, Preview, Rated, Release, Wanted};
 pub use repo::{Author, Key, Policy, ROOT_FORMAT, Role, Roles, Root, Time, comment};
 pub use settings::{Settings, settings};

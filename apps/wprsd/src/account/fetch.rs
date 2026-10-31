@@ -1,7 +1,7 @@
 use super::transfer::{BATCH, blob_path};
 use super::{block_on, sync_error};
 use crate::daemon::Daemon;
-use crate::error::{Result, failed, not_found};
+use crate::error::{Result, failed, invalid, not_found};
 use crate::jobs::{Ctl, now};
 use crate::store::private_dir;
 use serde_json::{Value, json};
@@ -37,6 +37,10 @@ impl Daemon {
     pub fn fetch_file(self: &Arc<Self>, id: &str) -> Result<u64> {
         self.require_ready()?;
         let blob = self.remote_file(id.trim()).ok_or_else(|| not_found(format!("no private file {id}")))?;
+        let name = blob["name"].as_str().unwrap_or_default();
+        if wprs_library::Kind::detect(Path::new(name)).is_none() {
+            return Err(invalid(format!("this computer cannot show {name}")));
+        }
         Ok(self.start_job(JobKind::Upload, "fetch", move |d, ctl| d.download(&blob, ctl)))
     }
 

@@ -37,7 +37,7 @@ impl Engine {
             }
             let Some((gpu, _)) = self.target.as_ref() else { return Ok((0, 0)) };
             let before = (self.look.fit, self.crop);
-            self.look = settings::look();
+            self.look = settings::look(self.lock);
             let shown = shown.filter(|shown| !shown.scene);
             let framed =
                 shown.as_ref().map(|s| framing::framed(&s.uid, &s.path, self.look.fit, self.preview));

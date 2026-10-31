@@ -102,7 +102,7 @@ pub fn labels(props: &Props, languages: &[String]) -> Json {
         let pairs = options
             .iter()
             .map(|o| option(o, languages))
-            .map(|o| (crate::resolve::key(&o.value), Json::String(o.label)));
+            .map(|o| (crate::resolve::binding::key(&o.value), Json::String(o.label)));
         Json::Object(pairs.collect())
     };
     let combos = props.iter().filter_map(|(id, p)| match &p.control {
@@ -118,6 +118,6 @@ fn option(choice: &Choice, languages: &[String]) -> SceneOption {
         Choice::Labeled { label, .. } => label.pick(languages),
         Choice::Plain(_) => String::new(),
     };
-    let label = if label.is_empty() { crate::resolve::key(&value) } else { label };
+    let label = if label.is_empty() { crate::resolve::binding::key(&value) } else { label };
     SceneOption { value, label, icon: icon(choice.icon()) }
 }

@@ -47,7 +47,7 @@ enum Request {
     Current,
 }
 
-fn hidden() -> bool {
+pub(crate) fn hidden() -> bool {
     settings::config().library.hide_mature
 }
 

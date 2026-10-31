@@ -6620,6 +6620,7 @@ dependencies = [
  "chrono",
  "image",
  "jni",
+ "libc",
  "log",
  "ndk",
  "ndk-sys",

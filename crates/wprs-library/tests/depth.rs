@@ -45,3 +45,21 @@ fn depth_maps_beside_images_are_not_wallpapers() {
     assert_eq!(titles(&library, "missing:yes sort:title"), gone);
     assert_eq!(library.count("missing:no", NOW).unwrap(), 2);
 }
+
+#[test]
+fn heif_photos_join_only_where_the_platform_decodes_them() {
+    let dir = TempDir::new().unwrap();
+    let root = dir.path().join("camera");
+    fs::create_dir_all(&root).unwrap();
+    for name in ["beach.heic", "boat.HEIF", "pier.jpg"] {
+        fs::write(root.join(name), name).unwrap();
+    }
+    let mut library = Library::open(dir.path().join("library.db")).unwrap();
+    let source = library.add_folder(&root, false).unwrap();
+    assert_eq!(library.scan(&source, NOW).unwrap().added, 1);
+    assert_eq!(titles(&library, "sort:title"), [("pier".into(), false)]);
+    assert!(matches!(library.import_file(root.join("beach.heic"), NOW), Err(Error::Invalid("file", _))));
+    wprs_library::platform_decodes_heif();
+    assert_eq!(Kind::detect(&root.join("boat.HEIF")), Some(Kind::Image));
+    assert_eq!(library.scan(&source, NOW).unwrap().added, 2);
+}

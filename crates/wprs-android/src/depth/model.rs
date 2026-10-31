@@ -22,6 +22,12 @@ fn needed(places: &Places) -> Vec<Asset> {
         .collect()
 }
 
+pub(crate) fn ready(places: &Places) -> Result<(), Error> {
+    let missing =
+        || said("android.depth_model_missing", "the depth model is not installed: download it first", &[]);
+    places.installed(&MODEL).map(drop).ok_or_else(missing)
+}
+
 pub(crate) fn part(places: &Places, asset: &Asset) -> PathBuf {
     places.file(asset).with_file_name(asset.archive()).with_added_extension("part")
 }

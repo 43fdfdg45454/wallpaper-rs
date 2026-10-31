@@ -1,7 +1,16 @@
 use crate::Color;
-use crate::resolve::key;
+use crate::resolve::binding::key;
 use crate::value::{Param, Vec2, Vec3};
 use serde_json::Value as Json;
+
+fn floats<const N: usize>(v: &Json) -> Option<[f32; N]> {
+    let list = v.as_array().filter(|list| list.len() == N)?;
+    let mut out = [0.0; N];
+    for (slot, x) in out.iter_mut().zip(list) {
+        *slot = x.as_f64()? as f32;
+    }
+    Some(out)
+}
 
 pub trait Animate: Clone + PartialEq + Default {
     fn lerp(&self, to: &Self, f: f32) -> Self {
@@ -69,7 +78,7 @@ impl Animate for Vec2 {
         Vec2([self.0[0].lerp(&to.0[0], f), self.0[1].lerp(&to.0[1], f)])
     }
     fn from_json(v: &Json) -> Option<Vec2> {
-        serde_json::from_value(v.clone()).ok()
+        v.as_f64().map(|x| Vec2([x as f32; 2])).or_else(|| floats(v).map(Vec2))
     }
     fn from_signal(x: f32) -> Option<Vec2> {
         Some(Vec2([x; 2]))
@@ -87,7 +96,7 @@ impl Animate for Vec3 {
         Vec3(std::array::from_fn(|i| self.0[i].lerp(&to.0[i], f)))
     }
     fn from_json(v: &Json) -> Option<Vec3> {
-        serde_json::from_value(v.clone()).ok()
+        v.as_f64().map(|x| Vec3([x as f32; 3])).or_else(|| floats(v).map(Vec3))
     }
     fn from_signal(x: f32) -> Option<Vec3> {
         Some(Vec3([x; 3]))
@@ -105,7 +114,10 @@ impl Animate for Color {
         Color(parts)
     }
     fn from_json(v: &Json) -> Option<Color> {
-        serde_json::from_value(v.clone()).ok()
+        match v {
+            Json::String(hex) => Color::parse(hex),
+            _ => floats(v).map(Color).or_else(|| floats(v).map(|[r, g, b]| Color([r, g, b, 1.0]))),
+        }
     }
     fn from_signal(x: f32) -> Option<Color> {
         Some(Color([x, x, x, 1.0]))
@@ -123,7 +135,12 @@ impl Animate for Param {
         }
     }
     fn from_json(v: &Json) -> Option<Param> {
-        serde_json::from_value(v.clone()).ok()
+        match v {
+            Json::Bool(b) => Some(Param::Bool(*b)),
+            Json::Number(n) => n.as_f64().map(|n| Param::Number(n as f32)),
+            Json::String(s) => Some(Color::parse(s).map_or_else(|| Param::Text(s.clone()), Param::Color)),
+            _ => floats(v).map(Param::Vec2).or_else(|| Color::from_json(v).map(Param::Color)),
+        }
     }
     fn from_signal(x: f32) -> Option<Param> {
         Some(Param::Number(x))

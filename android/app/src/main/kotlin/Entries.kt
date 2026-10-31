@@ -72,6 +72,9 @@ fun Entries(main: Main, uid: String, open: (String) -> Unit, close: () -> Unit) 
             Toggle(stringResource(R.string.skip_videos), rules.optBoolean("skip_videos_on_battery")) {
                 save("skip_videos_on_battery", it)
             }
+            Toggle(stringResource(R.string.resume_list), rules.optBoolean("resume", true)) { save("resume", it) }
+            Toggle(stringResource(R.string.synced_list), rules.optBoolean("synced")) { save("synced", it) }
+            Fade(rules, save)
             list?.let { Smart(it, keep) }
             Row(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp)) {
                 val use = {

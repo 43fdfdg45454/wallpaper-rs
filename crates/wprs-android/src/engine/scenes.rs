@@ -30,7 +30,7 @@ impl Engine {
             None => None,
         };
         let old = std::mem::replace(&mut self.stage, next).filter(|old| old.image().is_some());
-        let fades = !settings::look().fade.is_zero() && shown.is_some() && self.fading.is_none();
+        let fades = !settings::look(self.lock).fade.is_zero() && shown.is_some() && self.fading.is_none();
         if let Some(old) = old.filter(|_| fades) {
             (self.fading, self.image) = (Some(Fading::new(Gone::Scene(Box::new(old)))), None);
         }
@@ -104,7 +104,9 @@ impl Engine {
                 uv: None,
                 relief: None,
             };
-            self.dirty = !gpu.renderer.present_layers(surface, self.size, &[shown], || {})?;
+            let presented =
+                crate::counted::gpu(|| gpu.renderer.present_layers(surface, self.size, &[shown], || {}));
+            self.dirty = !presented?;
             if !self.dirty {
                 self.presented = nanos;
                 FRAMES.fetch_add(1, Relaxed);

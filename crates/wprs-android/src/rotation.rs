@@ -1,7 +1,7 @@
 use crate::keys::{pins, rekeyed};
 use crate::said;
 use crate::state::{read, update};
-use crate::{Error, vault};
+use crate::{Error, escrow, vault};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD as B64;
 use serde_json::{Value, json};
@@ -31,7 +31,7 @@ pub(crate) async fn current(api: &Api, secrets: &mut Secrets) -> Result<Value, E
         ));
     }
     if encrypted && !secrets.next.is_empty() {
-        rotate(api, secrets).await?;
+        rotate(api, secrets, state["rotate"] == true).await?;
         state = api.get("/api/v1/sync/state").await?;
     }
     let (server, id) = (state["epoch"].as_i64().unwrap_or_default(), state["key_id"].as_str());
@@ -97,7 +97,7 @@ async fn adopt(
     Ok(None)
 }
 
-pub(crate) async fn rotate(api: &Api, secrets: &mut Secrets) -> Result<Option<Value>, Error> {
+pub(crate) async fn rotate(api: &Api, secrets: &mut Secrets, revoked: bool) -> Result<Option<Value>, Error> {
     let (old, epoch) = (secrets.sync_key()?, secrets.epoch.unwrap_or(marks().3));
     let next = match secrets.next_key()? {
         Some(next) => next,
@@ -124,10 +124,15 @@ pub(crate) async fn rotate(api: &Api, secrets: &mut Secrets) -> Result<Option<Va
     let records = rekey(&session, epoch + 1).await?;
     api.post("/api/v1/sync/epoch", json!({"epoch": epoch + 1, "done": true})).await?;
     secrets.set_key(&session.key, epoch + 1);
-    secrets.lock.clear();
     vault::store(secrets)?;
     update(|s| (s.epoch, s.ready, s.stale) = (epoch + 1, true, false))?;
-    rekeyed(api).await?;
+    match rekeyed(api).await? || revoked {
+        true => {
+            secrets.lock.clear();
+            vault::store(secrets)?;
+        }
+        false => escrow::reseal(api, secrets).await?,
+    }
     let shared = hand_over(api, secrets, epoch + 1, &*bound, None).await?;
     Ok(Some(json!({"epoch": epoch + 1, "records": records, "shared": shared})))
 }

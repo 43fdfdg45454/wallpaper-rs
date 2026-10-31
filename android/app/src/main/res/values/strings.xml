@@ -56,6 +56,12 @@
     <string name="never">Never</string>
     <string name="shuffle">Shuffle</string>
     <string name="skip_videos">Skip videos on battery</string>
+    <string name="resume_list">Go on where it was left</string>
+    <string name="synced_list">Same wallpaper on the home and lock screens</string>
+    <string name="list_fade">Fade between its wallpapers</string>
+    <string name="fade_usual">As in Settings</string>
+    <string name="fade_none">None</string>
+    <string name="fade_ms">%1$d ms</string>
     <string name="delete">Delete playlist</string>
     <string name="empty_playlist">Add wallpapers from their page in the library</string>
     <string name="take_out">Remove from playlist</string>

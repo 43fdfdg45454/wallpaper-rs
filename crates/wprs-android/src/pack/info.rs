@@ -57,8 +57,10 @@ pub(crate) fn entry(path: &Path) -> Result<PathBuf, Error> {
     }
     let file = folder(path)?.join(format!("entry.{kind}"));
     fs::create_dir_all(folder(path)?)?;
-    store::write(&file, &package.read_file(&name)?)?;
-    Ok(file)
+    let mut part = tempfile::NamedTempFile::new_in(folder(path)?)?;
+    package.copy_file(&name, part.as_file_mut())?;
+    part.as_file().sync_all()?;
+    Ok(part.persist(&file).map(|_| file).map_err(|e| e.error)?)
 }
 
 fn drawn(package: &mut Package<BufReader<fs::File>>, scene: &Scene) -> Option<RgbaImage> {

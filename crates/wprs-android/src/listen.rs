@@ -13,8 +13,18 @@ const SILENT: Duration = Duration::from_secs(60);
 const QUIET: &str = r#"{"changed": false, "ended": false}"#;
 
 pub(crate) fn hush(token: u64) {
-    HUSHED.store(token, Relaxed);
+    HUSHED.fetch_max(token, Relaxed);
     HUSH.notify_waiters();
+}
+
+pub(crate) async fn hushed(token: u64) {
+    loop {
+        let heard = HUSH.notified();
+        if HUSHED.load(Relaxed) >= token {
+            return;
+        }
+        heard.await;
+    }
 }
 
 fn worth(event: &str, value: &Value) -> bool {
@@ -24,9 +34,9 @@ fn worth(event: &str, value: &Value) -> bool {
 
 pub(crate) async fn listen(token: u64) -> Result<Value, Error> {
     let quiet = || Ok(serde_json::from_str(QUIET)?);
-    let hushed = HUSH.notified();
+    let hushed = hushed(token);
     tokio::pin!(hushed);
-    if HUSHED.load(Relaxed) == token {
+    if HUSHED.load(Relaxed) >= token {
         return quiet();
     }
     if !crate::state::active() {
@@ -49,10 +59,38 @@ pub(crate) async fn listen(token: u64) -> Result<Value, Error> {
             chunk = timeout(SILENT, response.chunk()) => chunk,
             () = &mut hushed => return quiet(),
         };
-        let Ok(Ok(Some(chunk))) = chunk else { return Ok(json!({"changed": false, "ended": true})) };
+        let Ok(Ok(Some(chunk))) = chunk else {
+            return Ok(json!({"changed": false, "ended": true, "opened": true}));
+        };
         let events = parser.feed(&chunk).map_err(Error::from)?;
         if events.iter().any(|(event, value)| worth(event, value)) {
             return Ok(json!({"changed": true, "ended": false}));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{hush, hushed};
+    use std::time::Duration;
+
+    #[test]
+    fn a_stale_hush_leaves_a_newer_listener_alone() {
+        let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+        runtime.block_on(async {
+            let newer = hushed(1_000_002);
+            tokio::pin!(newer);
+            tokio::select! {
+                biased;
+                () = &mut newer => panic!("a listener was hushed before any hush"),
+                () = tokio::task::yield_now() => {}
+            }
+            hush(1_000_001);
+            let stale = tokio::time::timeout(Duration::from_millis(50), &mut newer).await;
+            assert!(stale.is_err(), "the hush of an older listener ended a newer one");
+            hushed(1_000_001).await;
+            hush(1_000_002);
+            newer.await;
+        });
     }
 }

@@ -5,7 +5,7 @@ use crate::settings::{self, BACKEND};
 use crate::{account, choice, depth, gpu, library, stage, store};
 use jni::objects::{JIntArray, JObject, JString};
 use jni::refs::Reference;
-use jni::sys::{jboolean, jint};
+use jni::sys::{jboolean, jint, jlong};
 use jni::{EnvUnowned, jni_mangle};
 use serde_json::json;
 use std::fs::File;
@@ -136,6 +136,11 @@ pub fn diagnostics<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> JString<'a> {
         });
         Ok(env.new_string(report.to_string())?)
     })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn allocations<'a>(_: EnvUnowned<'a>, _: JObject<'a>, start: jboolean) -> jlong {
+    crate::counted::watch(start).0 as jlong
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]

@@ -1,4 +1,4 @@
-use crate::fx::live;
+use crate::fx::slots::live;
 use crate::resolve::Context;
 use crate::{Descriptor, MAX_PARAMS, Pace, Use};
 

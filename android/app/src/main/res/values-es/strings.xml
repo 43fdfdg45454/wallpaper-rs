@@ -53,6 +53,12 @@
     <string name="never">Nunca</string>
     <string name="shuffle">Orden aleatorio</string>
     <string name="skip_videos">Saltar los vídeos con batería</string>
+    <string name="resume_list">Seguir donde se quedó</string>
+    <string name="synced_list">El mismo fondo en la pantalla de inicio y en la de bloqueo</string>
+    <string name="list_fade">Fundido entre sus fondos</string>
+    <string name="fade_usual">Como en Ajustes</string>
+    <string name="fade_none">Ninguno</string>
+    <string name="fade_ms">%1$d ms</string>
     <string name="delete">Borrar la lista</string>
     <string name="empty_playlist">Añade fondos desde su página en la biblioteca</string>
     <string name="take_out">Quitar de la lista</string>

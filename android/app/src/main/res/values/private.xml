@@ -8,6 +8,8 @@
     <string name="recovery_warning">Anyone with a copy of the server can try passphrases without limit: use several unrelated words that you use nowhere else, at least 20 characters.</string>
     <string name="passphrase">Passphrase</string>
     <string name="restore">Recover the key with the passphrase</string>
+    <string name="rotate_key">Replace the sync key</string>
+    <string name="rotating">Encrypting everything again with a new key…</string>
     <string name="restoring">Opening the recovery escrow, which takes a while…</string>
     <string name="secrets_shared">Provider keys synced: %1$s. The phone keeps them sealed by the Android keystore for the computers that use them.</string>
     <string name="private_files">Private files</string>

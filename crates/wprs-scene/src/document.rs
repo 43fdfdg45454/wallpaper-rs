@@ -122,6 +122,14 @@ impl Scene {
         })
     }
 
+    pub fn any_layer(&self, wanted: impl Fn(&Layer) -> bool) -> bool {
+        fn any(layers: &[Layer], wanted: &dyn Fn(&Layer) -> bool) -> bool {
+            let inner = |l: &Layer| matches!(&l.kind, Kind::Group { layers, .. } if any(layers, wanted));
+            layers.iter().any(|l| wanted(l) || inner(l))
+        }
+        any(&self.layers, &wanted)
+    }
+
     pub fn layer(&self, id: &str) -> Option<&Layer> {
         fn find<'a>(layers: &'a [Layer], id: &str) -> Option<&'a Layer> {
             layers.iter().find_map(|l| if l.id == id { Some(l) } else { find(l.children(), id) })

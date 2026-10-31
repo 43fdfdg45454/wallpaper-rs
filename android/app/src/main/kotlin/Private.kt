@@ -47,6 +47,7 @@ fun Phrase(title: String, close: () -> Unit, done: (String) -> Unit) {
 fun Recovery(status: JSONObject, run: Run) = Column(Modifier.padding(horizontal = 16.dp), Arrangement.spacedBy(4.dp)) {
     var asking by remember { mutableStateOf<String?>(null) }
     val waiting = stringResource(R.string.restoring)
+    val rotating = stringResource(R.string.rotating)
     if (!status.optBoolean("encrypted")) return@Column
     Text(stringResource(R.string.recovery_title), style = MaterialTheme.typography.titleSmall)
     if (status.optString("state") == "needs_key") {
@@ -59,6 +60,9 @@ fun Recovery(status: JSONObject, run: Run) = Column(Modifier.padding(horizontal 
             if (status.optString("recovery") != "off") TextButton({ run("") { account("escrow", "passphrase" to "") } }) {
                 Text(stringResource(R.string.recovery_remove))
             }
+        }
+        if (status.optString("state") == "ready") TextButton({ run(rotating) { account("rotate") } }) {
+            Text(stringResource(R.string.rotate_key))
         }
     }
     val shared = status.optJSONArray("secrets")?.let { list -> List(list.length(), list::getString) }.orEmpty()

@@ -16,9 +16,12 @@ pub struct Bench {
 }
 
 pub fn decode(path: &Path) -> Result<RgbImage> {
-    let (mut image, orientation) =
-        wprs_render::decode_unoriented(ImageReader::open(path)?, wprs_render::picture_limits())
-            .with_context(|| format!("{} is not a picture", path.display()))?;
+    let decoded = wprs_render::decode_unoriented(ImageReader::open(path)?, wprs_render::picture_limits());
+    let refused = || format!("{} is not a picture", path.display());
+    let Ok((mut image, orientation)) = decoded else {
+        let image = wprs_render::decode_image(path, MAX_EDGE).with_context(refused)?;
+        return Ok(image::DynamicImage::ImageRgba8(image).into_rgb8());
+    };
     if image.width().max(image.height()) > MAX_EDGE {
         image = image.thumbnail(MAX_EDGE, MAX_EDGE);
     }

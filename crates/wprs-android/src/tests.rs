@@ -18,6 +18,7 @@ mod relief;
 mod saved;
 mod scenes;
 mod screens;
+mod steady;
 mod tilted;
 mod words;
 
@@ -114,20 +115,22 @@ fn the_library_imports_rotates_and_keeps_settings() {
     assert!(ask(json!({ "op": "nothing" }))["error"].is_string());
 
     assert_eq!(settings::setting("fit", Some("fit")).unwrap(), "fit");
-    assert_eq!(settings::look().fit, wprs_core::Fit::Fit);
+    assert_eq!(settings::look(false).fit, wprs_core::Fit::Fit);
     assert_eq!(settings::setting("system_colors", None).unwrap(), "chosen");
     assert_eq!(settings::setting("system_colors", Some("always")).unwrap(), "always");
     assert!(settings::setting("system_colors", Some("often")).is_err());
     assert!(settings::setting("volume", None).is_err());
     assert_eq!(settings::setting("transition.kind", Some("none")).unwrap(), "none");
-    assert!(settings::look().fade.is_zero());
+    assert!(settings::look(false).fade.is_zero());
     assert_eq!(settings::setting("playback.max_fps", None).unwrap(), "30");
     frames::framing(&green, &bands);
     relief::relief(&green);
+    relief::heif_photos_get_maps();
     records::records();
     scenes::scenes();
     screens::home_and_lock();
     screens::ruled_lists();
+    screens::synced_lists_fade_their_own_way();
     tilted::scenes_follow_the_phone();
     chosen::chosen_files_and_folders();
     refused::packages_the_phone_cannot_play_are_refused();

@@ -1,5 +1,6 @@
 package io.github.wallpaper_rs
 
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,7 +19,7 @@ class Heard(private val main: Main, private val scope: CoroutineScope) {
 
     fun start() {
         if (job?.isActive == true) return
-        val mine = ++token
+        val mine = TOKENS.incrementAndGet().also { token = it }
         job = scope.launch(Dispatchers.IO) {
             var wait = FIRST_MS
             while (isActive && Sync.active()) {
@@ -29,6 +30,10 @@ class Heard(private val main: Main, private val scope: CoroutineScope) {
                         val request = JSONObject().put("op", "sync").put("conflict", main.getString(R.string.conflict, "%1"))
                         val synced = runCatching { JSONObject(Native.account(request.toString())) }.getOrNull()
                         if ((synced?.optInt("applied") ?: 0) > 0) main.runOnUiThread { main.changed(false) }
+                    }
+                    heard.optBoolean("opened") -> {
+                        wait = FIRST_MS
+                        delay(AGAIN_MS)
                     }
                     heard.has("error") || heard.optBoolean("ended") -> {
                         delay(wait)
@@ -41,14 +46,15 @@ class Heard(private val main: Main, private val scope: CoroutineScope) {
     }
 
     fun stop() {
-        val mine = token
         job?.cancel()
         job = null
-        scope.launch(Dispatchers.IO) { ask("hush", mine) }
+        ask("hush", token)
     }
 
     private companion object {
+        val TOKENS = AtomicLong()
         const val FIRST_MS = 30_000L
+        const val AGAIN_MS = 5_000L
         const val LAST_MS = 900_000L
     }
 }

@@ -99,7 +99,8 @@ pub(crate) fn offers(local: &Local, replica: &Replica) -> Vec<Offer> {
 }
 
 fn fetch() -> Result<HttpFetch, Error> {
-    HttpFetch::new(Arc::default()).map_err(|e| Error::Setting(e.to_string()))
+    HttpFetch::new(Arc::default())
+        .map_err(|e| said("android.web_client", "web connections cannot start: %1", &[&e]))
 }
 
 pub(crate) fn add(url: &str) -> Result<Value, Error> {
@@ -166,13 +167,17 @@ pub(crate) fn remove(repo_id: &str) -> Result<Value, Error> {
 }
 
 pub(crate) fn browse(query: &str) -> Result<Value, Error> {
-    let (found, languages) = (wprs_format::browse(&dir()?, query)?, library::languages());
-    let items = found.iter().take(200).map(|i| {
+    Ok(listed(wprs_format::browse(&dir()?, query)?, library::hidden(), &library::languages()))
+}
+
+pub(crate) fn listed(found: Vec<wprs_format::Item>, hide: bool, languages: &[String]) -> Value {
+    let mature = |i: &wprs_format::Item| i.release.content.as_ref().is_some_and(wprs_format::Rated::mature);
+    let items = found.iter().filter(|i| !hide || !mature(i)).take(200).map(|i| {
         json!({"repo_id": i.repo_id, "repo": i.repo_name, "id": i.id,
-        "version": i.release.version, "title": i.release.title.pick(&languages), "kind": i.release.kind,
-        "size": i.release.size, "installed": !i.installed.is_empty()})
+        "version": i.release.version, "title": i.release.title.pick(languages), "kind": i.release.kind,
+        "size": i.release.size, "installed": !i.installed.is_empty(), "mature": mature(i)})
     });
-    Ok(json!(items.collect::<Vec<_>>()))
+    json!(items.collect::<Vec<_>>())
 }
 
 pub(crate) fn install(repo_id: &str, id: &str) -> Result<Value, Error> {

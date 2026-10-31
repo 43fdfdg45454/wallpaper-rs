@@ -114,7 +114,7 @@ async fn cycle(conflict: &str) -> Result<Value, Error> {
         (s.files.here, s.offers, s.shared) = (here, offers, shared);
     })?;
     if encrypted && (state["rotate"] == true || left) {
-        rotation::rotate(&api, &mut secrets).await?;
+        rotation::rotate(&api, &mut secrets, true).await?;
     }
     let uploaded = match encrypted && !read(|s| s.files.idle()) {
         true => private::transfer(&api, &secrets).await,

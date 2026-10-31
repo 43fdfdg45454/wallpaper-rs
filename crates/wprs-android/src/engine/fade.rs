@@ -44,7 +44,7 @@ impl Engine {
             choice::shown_on(self.preview, self.lock).filter(|shown| shown.video).map(|shown| shown.path);
         let current = self.direct.clone().or_else(|| self.film.clone());
         if shown != current {
-            let look = settings::look();
+            let look = settings::look(self.lock);
             let fades = !look.fade.is_zero() && Power::now().fps(self.preview) > 0;
             let film = (look.fit, look.background);
             let gone = match (self.direct.take().or(self.film.take()), shown.is_some()) {
@@ -59,7 +59,7 @@ impl Engine {
             self.fading = gone.filter(|_| fades).map(Fading::new).or(self.fading.take());
             (self.film, self.look, self.dirty) = (shown, look, true);
         }
-        if self.film.is_some() && self.fading.is_none() && direct(&settings::look()) {
+        if self.film.is_some() && self.fading.is_none() && direct(&settings::look(self.lock)) {
             self.hint(0);
             self.direct = self.film.take();
             (self.target, self.image, self.raised, self.stage) = (None, None, None, None);
@@ -142,7 +142,7 @@ impl Engine {
         }
         if self.fading.is_some() && (fps == 0 || progress >= 1.0) {
             self.fading = None;
-            self.handover = self.film.is_some() && direct(&settings::look());
+            self.handover = self.film.is_some() && direct(&settings::look(self.lock));
             gpu::trim();
         }
         let busy = self.fading.is_some() || (self.film.is_some() && power.moving());

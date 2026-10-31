@@ -306,13 +306,15 @@ sistema le quita la GPU o la superficie. La edición hecha en el escritorio se a
 el enderezado, el color y las máscaras, también las de profundidad, que seleccionan sobre el mapa de
 profundidad de la foto después del mismo giro y la misma orientación que el escritorio. Admite JPEG, PNG, WebP, GIF y BMP y, con el
 decodificador del propio Android (`AImageDecoder`, sin librerías añadidas al APK), las fotos HEIC y
-AVIF de las cámaras; el escritorio aún no las muestra, así que en su biblioteca aparecen como
-imágenes que no se pueden abrir.
+AVIF de las cámaras. El escritorio no lee HEIC, así que no las añade a su biblioteca al recorrer
+sus carpetas ni al recibir los archivos privados del teléfono.
 
 La pestaña *Listas* crea listas de fondos que cambian solos cada 15 o 30 minutos, cada hora, cada 6
 horas, cada día o nunca, en orden o al azar y, si se quiere, saltando los vídeos con batería. Como en
 el escritorio, una lista puede cambiar solo ciertos días de la semana y a ciertas horas (`days` y
-`at` de sus reglas), cambia de nombre con el lápiz de su página y sus fondos se reordenan
+`at` de sus reglas), seguir donde se quedó o empezar de nuevo (`resume`), mostrar el mismo fondo en
+la pantalla de inicio y en la de bloqueo (`synced`) y tener su propio fundido (`transition_ms`),
+cambia de nombre con el lápiz de su página y sus fondos se reordenan
 arrastrándolos por el asa de la derecha. Su *Búsqueda inteligente* la convierte en una lista
 inteligente con la misma sintaxis que `wprs-ctl search` (por ejemplo `kind:image tag:mar`): muestra
 cuántos fondos encuentra mientras se escribe, se guarda con *Guardar la búsqueda* y *Hacerla manual*
@@ -394,8 +396,8 @@ escenas que trae el APK (las mismas que el escritorio), y *Abrir un paquete*, qu
 fondo, como en el escritorio: los de imagen se muestran como una foto más (con su ajuste, su
 encuadre, su edición y su paralaje), los de vídeo como un vídeo más y los de escena con el motor
 de escenas; los de página web, de preajustes y de recursos se rechazan con un aviso, igual que en
-el escritorio. La imagen o el vídeo del paquete se extrae una sola vez a los archivos de la app y se
-borra con el paquete. Las escenas se dibujan con el mismo motor que el
+el escritorio. La imagen o el vídeo del paquete se extrae al importarlo, por partes y sin cargarlo
+entero en memoria, a los archivos de la app y se borra con el paquete. Las escenas se dibujan con el mismo motor que el
 escritorio: capas, efectos, partículas (en la GPU si admite sombreadores de cálculo y, si no, en la
 CPU con menos partículas), textos, líneas de tiempo y propiedades. La página de una escena muestra
 sus propiedades y sus preajustes, que se guardan en la misma configuración que el escritorio; los
@@ -793,18 +795,22 @@ teléfono) están en la misma pestaña.
 
 Mientras la app está abierta, el teléfono escucha el canal de avisos del servidor (el mismo que
 usa el escritorio) y sincroniza en cuanto otro equipo guarda un cambio, sin esperar a la hora;
-al salir de la app cierra el canal, y en segundo plano no queda nada abierto ni ningún despertar
-nuevo. En la misma pestaña están las funciones de la cuenta que tiene el escritorio: la *Frase de
+si el canal se corta después de abrirse vuelve a conectarse a los 5 segundos, y solo espera cada
+vez más (hasta 15 minutos) cuando el servidor no responde; al salir de la app cierra el canal, y en
+segundo plano no queda nada abierto ni ningún despertar nuevo. En la misma pestaña están las funciones de la cuenta que tiene el escritorio: la *Frase de
 recuperación* (guardarla, cambiarla o quitarla, con la misma custodia Argon2id que
 `wprs-ctl server escrow`, y en un teléfono nuevo sin ningún otro equipo *Recuperar la clave con la
-frase*), los *Archivos privados* (los fondos propios que otro equipo subió cifrados, con
+frase*), *Cambiar la clave de sincronización* (como `wprs-ctl server rotate`: cifra todo de nuevo,
+la reparte a los demás equipos y vuelve a guardar la frase con la clave nueva salvo que se haya
+revocado un equipo), los *Archivos privados* (los fondos propios que otro equipo subió cifrados, con
 *Descargar* para añadirlos a la biblioteca del teléfono, y en la página de una imagen o un vídeo
 del teléfono *Guardar cifrado en el servidor*, que lo sube por partes cifradas igual que
 `wprs-ctl server files share`, y al desactivarlo se borra del servidor), las claves de proveedores
 que se sincronizan (el teléfono no usa proveedores, pero las guarda selladas por el almacén de
 claves y las muestra) y los *Repositorios*: los que se añaden en otro equipo llegan como
 propuesta con su clave y se añaden o se rechazan una vez, también se añade uno por su dirección,
-y *Explorar* busca sus paquetes y los instala en la biblioteca, comprobados con el índice firmado
+y *Explorar* busca sus paquetes (los marca si son para adultos y los oculta con *Ocultar el
+contenido para adultos*) y los instala en la biblioteca, comprobados con el índice firmado
 del repositorio; un paquete instalado así es el mismo elemento de la biblioteca en el teléfono y
 en el ordenador.
 

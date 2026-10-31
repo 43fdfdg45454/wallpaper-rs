@@ -120,3 +120,14 @@ pub(crate) async fn keep(api: &Api, secrets: &mut Secrets, state: &Value) -> Res
     let stale = sealed.is_some_and(|epoch| Some(epoch) < state["epoch"].as_i64());
     update(|s| (s.recovery, s.recovery_stale) = (sealed, stale))
 }
+
+pub(crate) async fn reseal(api: &Api, secrets: &Secrets) -> Result<(), Error> {
+    let Some(lock) = secrets.escrow_lock() else { return Ok(()) };
+    if !stored(api).await?.is_some_and(|escrow| lock.fits(&escrow)) {
+        return Ok(());
+    }
+    let (user, saved) = read(|s| (s.user(), s.epoch));
+    let epoch = secrets.epoch.unwrap_or(saved);
+    put(api, Some(lock.seal(&secrets.sync_key()?, user, epoch)?)).await?;
+    update(|s| (s.recovery, s.recovery_stale) = (Some(epoch), false))
+}

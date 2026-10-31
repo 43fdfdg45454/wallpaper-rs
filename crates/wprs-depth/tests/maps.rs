@@ -70,3 +70,16 @@ fn the_manifest_pins_permissive_files_on_github() {
     assert_eq!(Asset { urls, ..MODEL }.hosts(), "github.com, mirror.example");
     assert_eq!(find("depth-anything-v2-large"), None);
 }
+
+#[test]
+fn heif_photos_reach_the_depth_maps_through_the_platform_decoder() {
+    let heic = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/blue-64x32.heic");
+    assert!(wprs_depth::shape(&heic).is_err());
+    let decode = |_: &std::path::Path, edge: u32| {
+        Some(image::RgbaImage::from_pixel(edge.min(64), edge.min(32), image::Rgba([9; 4])))
+    };
+    assert!(wprs_render::set_platform_decoder(wprs_render::Platform { decode, size: |_| Some((64, 32)) }));
+    assert_eq!(wprs_depth::shape(&heic).unwrap(), (64, 32));
+    #[cfg(feature = "infer")]
+    assert_eq!(wprs_depth::decode(&heic).unwrap().dimensions(), (64, 32));
+}

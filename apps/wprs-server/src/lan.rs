@@ -4,7 +4,6 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Write;
 use std::net::SocketAddr;
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -43,8 +42,10 @@ pub fn host(public_url: &str) -> String {
 }
 
 fn keep(path: &Path, bytes: &[u8]) -> Result<()> {
-    let mut file = fs::OpenOptions::new().create_new(true).write(true).mode(0o600).open(path)?;
-    Ok(file.write_all(bytes)?)
+    let mut file = tempfile::NamedTempFile::new_in(path.parent().unwrap_or(Path::new(".")))?;
+    file.write_all(bytes)?;
+    file.as_file().sync_all()?;
+    Ok(file.persist(path).map(drop)?)
 }
 
 pub fn certificate(data: &Path, host: &str) -> Result<(Vec<u8>, Vec<u8>)> {

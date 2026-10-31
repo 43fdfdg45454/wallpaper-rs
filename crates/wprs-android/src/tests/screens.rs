@@ -61,3 +61,28 @@ pub(super) fn ruled_lists() {
     assert!(ask(json!({ "op": "save", "playlist": bad }))["error"].is_string());
     assert_eq!(ask(json!({ "op": "delete", "playlist": morning })), Value::Null);
 }
+
+pub(super) fn synced_lists_fade_their_own_way() {
+    let green = store::store(&mut open("green-64x32.png"), "green.png").unwrap().0;
+    let bands = store::store(&mut open("bands-640x180.png"), "bands.png").unwrap().0;
+    let list = ask(json!({ "op": "create", "name": "Twins" })).as_str().unwrap().to_owned();
+    ask(json!({ "op": "add", "playlist": list, "items": [green, bands] }));
+    let rules = json!({ "interval": "1h", "synced": true, "resume": false, "transition_ms": 250 });
+    let info = json!({ "uid": list, "name": "Twins", "query": null, "rules": rules });
+    assert_eq!(ask(json!({ "op": "save", "playlist": info })), Value::Null);
+    set(json!({ "playlist": list }), Target::Both);
+    assert_eq!(on(false), on(true));
+    assert_eq!(settings::look(true).fade, std::time::Duration::from_millis(250));
+    crate::library::with(|lib| {
+        let mut row = lib.rotation("home")?.unwrap();
+        row.next_at = Some(0);
+        Ok(lib.save_rotation(&row)?)
+    })
+    .unwrap();
+    let before = on(false);
+    assert!(choice::advance(true, true).unwrap());
+    assert!(on(true) != before && on(false) == on(true), "a synced list turns both screens together");
+    assert_eq!(ask(json!({ "op": "delete", "playlist": list })), Value::Null);
+    assert_eq!(settings::look(true).fade, settings::config().transition.duration());
+    assert_eq!(ask(json!({ "op": "remove", "uids": [green, bands] })), Value::Null);
+}

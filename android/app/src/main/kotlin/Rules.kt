@@ -86,6 +86,17 @@ fun Schedule(rules: JSONObject, save: (String, Any) -> Unit) = Column(Modifier.p
     if (times.isNotEmpty()) Text(stringResource(R.string.hours_hint), style = MaterialTheme.typography.bodySmall)
 }
 
+val FADES = listOf(0, 500, 1000, 2000)
+
+fun faded(rules: JSONObject): String = rules.opt("transition_ms").takeIf { it is Number }?.toString().orEmpty()
+
+@Composable
+fun Fade(rules: JSONObject, save: (String, Any) -> Unit) {
+    val lasting = FADES.map { ms -> ms.toString() to if (ms == 0) stringResource(R.string.fade_none) else stringResource(R.string.fade_ms, ms) }
+    val options = listOf("" to stringResource(R.string.fade_usual)) + lasting
+    Choices(stringResource(R.string.list_fade), options, faded(rules)) { save("transition_ms", it.toIntOrNull() ?: JSONObject.NULL) }
+}
+
 @Composable
 fun Smart(list: Playlist, save: (JSONObject) -> Unit) {
     val saved = list.info.optString("query").takeUnless { list.info.isNull("query") }

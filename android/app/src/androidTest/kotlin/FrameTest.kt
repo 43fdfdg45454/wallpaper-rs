@@ -9,6 +9,19 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class FrameTest : SceneBase() {
+    @Test
+    fun drawingFramesMakesNoNativeAllocationsBesidesTheGpuCalls() {
+        show("Snowfall")
+        assertTrue(waitFor { frames.get() > FRAMES })
+        Render.call { Native.allocations(true) }
+        val start = frames.get()
+        val waited = waitFor { frames.get() > start + MEASURED }
+        val made = Render.call { Native.allocations(false) }
+        val drawn = frames.get() - start
+        assertTrue(waited)
+        assertTrue("the render thread made $made native allocations in $drawn frames", made <= drawn)
+    }
+
     @Suppress("DEPRECATION")
     @Test
     fun drawingFramesAllocatesNothingOnTheRenderThread() {

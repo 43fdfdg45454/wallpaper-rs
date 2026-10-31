@@ -1,8 +1,7 @@
 use crate::Map;
 use anyhow::{Context, Result, ensure};
 use image::codecs::png::PngEncoder;
-use image::metadata::Orientation::{Rotate90, Rotate90FlipH, Rotate270, Rotate270FlipH};
-use image::{ExtendedColorType, ImageDecoder, ImageEncoder, ImageReader, Limits};
+use image::{ExtendedColorType, ImageEncoder, ImageReader, Limits};
 use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use std::os::unix::fs::DirBuilderExt;
@@ -49,14 +48,7 @@ pub fn read(path: &Path) -> Result<Map> {
 }
 
 pub fn shape(image: &Path) -> Result<(u32, u32)> {
-    let reader = ImageReader::open(image).with_context(|| format!("cannot open {}", image.display()))?;
-    let mut decoder = reader
-        .with_guessed_format()?
-        .into_decoder()
-        .with_context(|| format!("{} is not a picture", image.display()))?;
-    let (w, h) = decoder.dimensions();
-    let turned = matches!(decoder.orientation(), Ok(Rotate90 | Rotate270 | Rotate90FlipH | Rotate270FlipH));
-    Ok(if turned { (h, w) } else { (w, h) })
+    wprs_render::image_size(image).with_context(|| format!("{} is not a picture", image.display()))
 }
 
 pub fn write(map: &Map, path: &Path) -> Result<()> {

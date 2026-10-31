@@ -21,7 +21,7 @@ pub(crate) fn homes(scene: &Scene) -> HashMap<String, String> {
 impl Scene {
     pub fn tilts(&self) -> bool {
         let gyro = self.canvas.parallax.as_ref().is_some_and(|g| g.gyro);
-        gyro && self.layers().any(|l| !l.parallax.is_zero())
+        gyro && self.any_layer(|l| !l.parallax.is_zero())
     }
 }
 

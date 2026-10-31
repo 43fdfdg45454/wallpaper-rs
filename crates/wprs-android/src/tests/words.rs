@@ -10,7 +10,7 @@ fn ids(dir: &Path, found: &mut Vec<String>) {
             ids(&path, found);
         } else if path.extension().is_some_and(|e| e == "rs") {
             let text = fs::read_to_string(&path).unwrap().replace(char::is_whitespace, "");
-            let calls = text.split("said(\"android.").skip(1);
+            let calls = text.split("(\"android.").skip(1);
             found.extend(calls.filter_map(|rest| Some(format!("android.{}", rest.split_once('"')?.0))));
         }
     }
@@ -44,6 +44,26 @@ fn errors_carry_their_message_id_and_arguments() {
         (&unreadable["id"], &unreadable["args"]),
         (&json!("android.unreadable"), &json!(["notes.txt"]))
     );
-    let other = Error::Setting("x".into()).reply();
-    assert_eq!((&other["error"], &other["id"]), (&json!("x"), &json!("")));
+    let refused = Error::Setting("x".into()).reply();
+    assert_eq!(
+        (&refused["error"], &refused["id"], &refused["args"]),
+        (&json!("x"), &json!("android.refused"), &json!(["x"]))
+    );
+    let wrong = wprs_sync::Error::Crypto("the passphrase does not open the recovery escrow");
+    let sync = [wrong, wprs_sync::Error::Untrusted, wprs_sync::Error::Network("down".into())];
+    let ids = sync.map(|e| Error::Sync(e).reply()["id"].as_str().unwrap().to_owned());
+    assert_eq!(ids, ["android.wrong_passphrase", "android.sync_untrusted", "android.sync_network"]);
+    let server =
+        wprs_sync::Error::Server { status: 429, code: "rate_limited".into(), detail: "slow down".into() };
+    let others = [
+        Error::Sync(server),
+        Error::Depth(anyhow::anyhow!("no map")),
+        Error::Json(serde_json::from_str::<u8>("x").unwrap_err()),
+        Error::Unprepared,
+        Error::Library(wprs_library::Error::Conflict),
+    ];
+    for error in others {
+        let reply = error.reply();
+        assert!(reply["id"].as_str().is_some_and(|id| id.starts_with("android.")), "{reply}");
+    }
 }

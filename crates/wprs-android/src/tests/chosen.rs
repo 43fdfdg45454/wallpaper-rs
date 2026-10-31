@@ -66,3 +66,28 @@ pub(super) fn chosen_files_and_folders() {
     assert_eq!(gathered(0).assets(&pack).images["sky"].size(), (64, 32));
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }
+
+#[test]
+fn mature_packages_in_repositories_are_labelled_and_hidden_when_asked() {
+    let rated = |id: &str, rating: Option<&str>| wprs_format::Item {
+        repo_id: "r".into(),
+        repo_name: "Studio".into(),
+        id: id.into(),
+        author: None,
+        release: wprs_format::Release {
+            content: rating.map(|r| wprs_format::Rated { rating: r.into(), descriptors: Vec::new() }),
+            ..Default::default()
+        },
+        versions: Vec::new(),
+        installed: Vec::new(),
+    };
+    let found = || vec![rated("calm", Some("general")), rated("storm", Some("mature")), rated("old", None)];
+    let shown = |hide| {
+        let listed = crate::repos::listed(found(), hide, &[]);
+        let row = |i: &Value| (i["id"].as_str().unwrap().to_owned(), i["mature"].as_bool().unwrap());
+        listed.as_array().unwrap().iter().map(row).collect::<Vec<_>>()
+    };
+    let all = [("calm".to_owned(), false), ("storm".into(), true), ("old".into(), false)];
+    assert_eq!(shown(false), all);
+    assert_eq!(shown(true), [all[0].clone(), all[2].clone()]);
+}

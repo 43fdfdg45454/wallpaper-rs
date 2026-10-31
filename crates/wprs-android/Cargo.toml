@@ -25,6 +25,7 @@ anyhow.workspace = true
 base64.workspace = true
 chrono = { workspace = true, features = ["clock"] }
 image.workspace = true
+libc.workspace = true
 log.workspace = true
 reqwest.workspace = true
 serde.workspace = true

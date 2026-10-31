@@ -5,6 +5,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+use wprs_format::Kind as PackKind;
 use wprs_library::{Item, Kind, Library, Meta, qhash};
 use wprs_render::{decode_image, image_size, palette, thumbnails};
 
@@ -86,7 +87,7 @@ pub(crate) fn store(source: &mut impl Read, name: &str) -> Result<(String, Kind)
     let path = media.join(format!("{hash}.{extension}"));
     let title =
         Path::new(name).file_stem().and_then(|stem| stem.to_str()).unwrap_or_default().trim().to_owned();
-    library::with(|lib| {
+    let stored = library::with(|lib| {
         let known = path.to_str().filter(|_| path.is_file()).and_then(|text| lib.resolve_item(text).ok());
         let uid = match known {
             Some(uid) => uid,
@@ -108,7 +109,13 @@ pub(crate) fn store(source: &mut impl Read, name: &str) -> Result<(String, Kind)
             }
         };
         Ok((uid, kind))
-    })
+    })?;
+    let shown = |m: wprs_format::Manifest| matches!(m.kind, PackKind::Image | PackKind::Video);
+    let inner = kind == Kind::Package && wprs_format::peek(&path).is_ok_and(shown);
+    if inner && let Err(e) = pack::entry(&path) {
+        log::warn!("{e}");
+    }
+    Ok(stored)
 }
 
 pub(crate) fn poster_source(uid: &str) -> Result<Option<PathBuf>, Error> {

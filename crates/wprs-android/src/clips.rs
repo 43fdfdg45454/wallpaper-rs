@@ -82,8 +82,10 @@ impl Clips {
                 (clip.yuv, clip.epoch) = (None, epoch);
             }
             if let Ok(AcquireResult::Image(image)) = clip.reader.acquire_latest_image() {
-                let converted = planes(&image, &mut clip.chroma)
-                    .and_then(|planes| r.convert_yuv(&mut clip.yuv, &planes).map(drop).map_err(Error::from));
+                let converted = planes(&image, &mut clip.chroma).and_then(|planes| {
+                    crate::counted::gpu(|| r.convert_yuv(&mut clip.yuv, &planes).map(drop))
+                        .map_err(Error::from)
+                });
                 if let Err(e) = converted {
                     log::warn!("{e}");
                 }

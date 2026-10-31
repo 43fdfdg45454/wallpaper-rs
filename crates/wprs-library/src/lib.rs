@@ -39,8 +39,15 @@ use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, 
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 
-const IMAGES: [&str; 9] = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "avif", "heic", "heif"];
+const IMAGES: [&str; 7] = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "avif"];
+const PLATFORM_IMAGES: [&str; 2] = ["heic", "heif"];
+static PLATFORM_DECODES: AtomicBool = AtomicBool::new(false);
+
+pub fn platform_decodes_heif() {
+    PLATFORM_DECODES.store(true, Relaxed);
+}
 const VIDEOS: [&str; 7] = ["mp4", "m4v", "webm", "mkv", "mov", "avi", "ogv"];
 const DEPTH_MAP: &str = ".depth.png";
 
@@ -85,6 +92,7 @@ impl Kind {
         match extension.as_str() {
             _ if name.ends_with(DEPTH_MAP) => None,
             e if IMAGES.contains(&e) => Some(Kind::Image),
+            e if PLATFORM_IMAGES.contains(&e) && PLATFORM_DECODES.load(Relaxed) => Some(Kind::Image),
             e if VIDEOS.contains(&e) => Some(Kind::Video),
             "wpak" => Some(Kind::Package),
             _ => None,

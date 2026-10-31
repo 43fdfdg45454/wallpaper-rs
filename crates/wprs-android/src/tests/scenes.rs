@@ -16,6 +16,7 @@ pub(super) fn scenes() {
     let titles: BTreeSet<_> =
         listed.as_array().unwrap().iter().map(|i| i["title"].as_str().unwrap()).collect();
     assert!(titles.contains("Pulse") && titles.contains("Snowfall"), "{titles:?}");
+    super::steady::frames();
     let pulse = listed.as_array().unwrap().iter().find(|i| i["title"] == "Pulse").unwrap();
     let (pulse, path) =
         (pulse["uid"].as_str().unwrap().to_owned(), pulse["path"].as_str().unwrap().to_owned());

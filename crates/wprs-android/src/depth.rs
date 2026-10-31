@@ -139,6 +139,7 @@ fn answer(request: Request) -> Result<Value, Error> {
         Request::Install => model::install(&places)?,
         Request::Forget => json!(model::forget(&places)),
         Request::Make { uid, library } => {
+            model::ready(&places)?;
             let image = image(&uid)?;
             let edit = edited(&image)?;
             STOP.store(false, Relaxed);

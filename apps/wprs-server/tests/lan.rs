@@ -33,3 +33,17 @@ fn hosts_are_taken_from_the_public_address() {
     assert_eq!(lan::host("https://fondos.local:8443/"), "fondos.local");
     assert_eq!(lan::host("https://[fd00::2]:8443"), "fd00::2");
 }
+
+#[test]
+fn a_certificate_cut_short_by_a_crash_is_made_again() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join("tls")).unwrap();
+    std::fs::write(dir.path().join("tls/key.der"), b"cut short").unwrap();
+    let (cert, key) = lan::certificate(dir.path(), "127.0.0.1").unwrap();
+    assert!(lan::acceptor(cert.clone(), key.clone()).is_ok());
+    assert_eq!(std::fs::read(dir.path().join("tls/key.der")).unwrap(), key);
+    assert_eq!(lan::certificate(dir.path(), "127.0.0.1").unwrap(), (cert, key), "the new pair is kept");
+    let names: Vec<_> =
+        std::fs::read_dir(dir.path().join("tls")).unwrap().flatten().map(|e| e.file_name()).collect();
+    assert_eq!(names.len(), 2, "no temporary file is left: {names:?}");
+}

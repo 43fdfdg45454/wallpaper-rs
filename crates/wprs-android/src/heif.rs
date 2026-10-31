@@ -53,5 +53,6 @@ fn decode(path: &Path, max_edge: u32) -> Option<RgbaImage> {
 }
 
 pub(crate) fn register() {
+    wprs_library::platform_decodes_heif();
     wprs_render::set_platform_decoder(Platform { decode, size: |path| open(path).map(|(_, size)| size) });
 }

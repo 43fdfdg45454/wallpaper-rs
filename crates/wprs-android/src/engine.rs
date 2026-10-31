@@ -69,7 +69,7 @@ impl Engine {
         let chosen = choice::shown_on(preview, lock).map(|shown| shown.uid);
         let image = image.filter(|(key, _)| chosen.as_ref() == Some(&key.item));
         let (target, fading, checked, rate, failures) = (None, None, (epoch, 0, (0, 0)), 0, 0);
-        let (offset, shown, dirty, presented, video, look) = (0.5, 0.5, true, 0, false, settings::look());
+        let (offset, shown, dirty, presented, video, look) = (0.5, 0.5, true, 0, false, settings::look(lock));
         Self {
             target,
             image,

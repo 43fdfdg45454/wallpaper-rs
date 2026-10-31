@@ -40,25 +40,33 @@ pub fn effect_source(chain: &[&Descriptor]) -> String {
     s
 }
 
-pub fn fusion(effects: &[EffectUse]) -> Vec<Range<usize>> {
-    let fusable = |e: &EffectUse| {
-        let fixed = e.mask.is_none() && e.enabled == Value::Fixed(true);
-        descriptor(&e.effect).filter(|d| fixed && d.fuse.is_some() && d.class() == Class::Light)
-    };
-    let (mut runs, mut k) = (Vec::new(), 0);
-    while k < effects.len() {
-        let (mut n, mut slots) = (0, 0);
-        while let Some(d) = effects.get(k + n).and_then(fusable) {
-            slots += d.params.len();
-            if slots > SLOTS {
-                break;
+fn fusable(e: &EffectUse) -> Option<&'static Descriptor> {
+    let fixed = e.mask.is_none() && e.enabled == Value::Fixed(true);
+    descriptor(&e.effect).filter(|d| fixed && d.fuse.is_some() && d.class() == Class::Light)
+}
+
+pub fn runs(effects: &[EffectUse]) -> impl Iterator<Item = Range<usize>> + '_ {
+    let mut k = 0;
+    std::iter::from_fn(move || {
+        while k < effects.len() {
+            let (mut n, mut slots) = (0, 0);
+            while let Some(d) = effects.get(k + n).and_then(fusable) {
+                slots += d.params.len();
+                if slots > SLOTS {
+                    break;
+                }
+                n += 1;
             }
-            n += 1;
+            let start = k;
+            k += n.max(1);
+            if n > 1 {
+                return Some(start..start + n);
+            }
         }
-        if n > 1 {
-            runs.push(k..k + n);
-        }
-        k += n.max(1);
-    }
-    runs
+        None
+    })
+}
+
+pub fn fusion(effects: &[EffectUse]) -> Vec<Range<usize>> {
+    runs(effects).collect()
 }

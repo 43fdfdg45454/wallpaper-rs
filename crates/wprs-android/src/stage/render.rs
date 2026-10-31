@@ -65,7 +65,8 @@ impl Stage {
             listens: hears,
         };
         let acted = !still && self.acting.step(&mut self.runtime, sent);
-        let calmed = self.runtime.set_reduced_motion(power.still);
+        let stilled = std::mem::replace(&mut self.stilled, power.still) != power.still;
+        let calmed = stilled && self.runtime.set_reduced_motion(power.still);
         let tipped = self.runtime.set_tilt(crate::tilt::goal(self.offset, std::time::Instant::now()));
         self.runtime.set_wall(wall());
         let (ceiling, why) = budget.level(&self.runtime);
@@ -126,7 +127,9 @@ impl Stage {
         };
         self.due = (delay > 0 && wake != Wake::Idle).then_some(nanos + delay * 1_000_000);
         self.fps = if wake == Wake::Frame { fps } else { 0 };
-        let rendered = r.render_scene(view, &self.runtime, &frame, inner, quality, videos).map(drop);
+        let rendered =
+            crate::counted::gpu(|| r.render_scene(view, &self.runtime, &frame, inner, quality, videos))
+                .map(drop);
         self.spare = frame.spare();
         let (samples, gpu_ms) = view.gpu_time();
         if std::mem::replace(&mut self.samples, samples) != samples && !still {

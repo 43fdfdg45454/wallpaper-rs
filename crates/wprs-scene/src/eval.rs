@@ -1,105 +1,13 @@
 use crate::input::LayerOverride;
 use crate::resolve::Context;
 use crate::wake::wakes;
-use crate::{
-    Affine, Align, Blend, Color, Descriptor, EffectUse, Gradient, Kind, Layer, Layout, MAX_PARAMS, Mask,
-    Quality, Shape, Spectrum, Wake, fusion,
-};
-use std::borrow::Cow;
-use std::ops::Range;
+use crate::{Affine, Color, Kind, Layer, Quality, Wake};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Content<'a> {
-    Group {
-        clip: bool,
-    },
-    Image {
-        asset: Cow<'a, str>,
-        size: Option<[f32; 2]>,
-        frame: Option<u32>,
-    },
-    Video {
-        asset: Cow<'a, str>,
-        size: Option<[f32; 2]>,
-    },
-    Text {
-        text: Cow<'a, str>,
-        font: Option<&'a str>,
-        fallback: &'a [String],
-        size: f32,
-        color: Color,
-        align: Align,
-        layout: Layout,
-    },
-    Shape {
-        shape: Shape,
-        fill: Option<Color>,
-        gradient: Option<&'a Gradient>,
-        stroke: Option<(Color, f32)>,
-    },
-    Spectrum {
-        spectrum: &'a Spectrum,
-        color: Color,
-    },
-    Solid {
-        color: Color,
-        size: [f32; 2],
-    },
-    Particles {
-        system: &'a str,
-        flock: usize,
-        size: f32,
-    },
-    Adjustment,
-}
+mod drawn;
+mod shown;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct EffectDraw<'a> {
-    pub descriptor: &'a Descriptor,
-    pub effect: &'a EffectUse,
-    pub slots: [[f32; 4]; MAX_PARAMS],
-    pub mask: Option<&'a Mask>,
-    pub mask_texture: Option<Cow<'a, str>>,
-    pub mask_strength: f32,
-    pub scale: f32,
-    pub reach: f32,
-    pub chain: usize,
-    pub textures: Vec<(&'a str, String)>,
-    pub velocity: [f32; 2],
-    pub variant: u32,
-    pub reset: u32,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Draw<'a> {
-    pub layer: &'a Layer,
-    pub end: usize,
-    pub world: Affine,
-    pub origin: [f32; 2],
-    pub opacity: f32,
-    pub blend: Blend,
-    pub mask: Option<&'a Mask>,
-    pub mask_texture: Option<Cow<'a, str>>,
-    pub mask_strength: f32,
-    pub tint: Color,
-    pub brightness: f32,
-    pub effects: Range<usize>,
-    pub content: Content<'a>,
-    pub dynamic: bool,
-    pub isolate: bool,
-    pub hidden: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Frame<'a> {
-    pub draws: Vec<Draw<'a>>,
-    pub effects: Vec<EffectDraw<'a>>,
-    pub time: f32,
-    pub view: [f32; 4],
-    pub background: Color,
-    pub quality: Quality,
-    pub wake: Wake,
-}
+pub use drawn::{Content, Draw, EffectDraw, Frame};
+use shown::{content, masked, strength};
 
 pub(crate) fn walk<'a>(
     cx: &Context<'a>,
@@ -143,7 +51,6 @@ fn emit<'a>(
         cx.pace.set(u32::MAX);
     }
     let start = frame.effects.len();
-    let runs = if layer.effects.len() > 1 { fusion(&layer.effects) } else { Vec::new() };
     let mut paced = false;
     let controls = cx.script.effects.get(&layer.id);
     for (i, effect) in layer.effects.iter().enumerate() {
@@ -160,7 +67,7 @@ fn emit<'a>(
         (paced, _) = (paced || matches!(wake, Wake::At(_)), cx.paced(wake, d.min_fps));
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
         let (mask, scale) = (effect.mask.as_ref(), scale * d.scale_at(quality));
-        let chain = runs.iter().find(|r| r.start == i).map_or(1, |r| r.len());
+        let chain = crate::chain::runs(&layer.effects).find(|r| r.start == i).map_or(1, |r| r.len());
         let textures = d.params.iter().filter(|p| p.kind.asset());
         let textures = textures.filter_map(|p| match (effect.params.get(&p.id)?, p.id.as_str()) {
             (bound @ crate::Value::Bound(_), id) => match bound.get(cx) {
@@ -261,94 +168,4 @@ fn emit<'a>(
     let end = frame.draws.len();
     let draw = &mut frame.draws[index];
     (draw.end, draw.dynamic) = (end, moving || children);
-}
-
-fn content<'a>(
-    cx: &Context,
-    layer: &'a Layer,
-    set: &'a LayerOverride,
-    canvas: [f32; 2],
-    quality: Quality,
-) -> Content<'a> {
-    let tint = |c: Color| set.color.map_or(c, Color);
-    let boxed = |size: Option<[f32; 2]>| match set.size {
-        Some(crate::Extent::Box(b)) => Some(b),
-        _ => size,
-    };
-    match &layer.kind {
-        Kind::Group { clip, .. } => Content::Group { clip: *clip },
-        Kind::Image { image, size, playback, .. } => {
-            let asset = named(cx, image);
-            let frame = crate::sheet::frame(cx, &asset, playback.as_ref(), quality);
-            Content::Image { asset, size: boxed(*size), frame }
-        }
-        Kind::Video { video, size, .. } => Content::Video { asset: named(cx, video), size: boxed(*size) },
-        Kind::Text(t) => {
-            let text = match (&set.text, &t.text) {
-                (Some(t), _) => Cow::Owned(t.clone()),
-                (None, crate::Value::Fixed(t)) => Cow::Borrowed(t.as_str()),
-                (None, bound) => Cow::Owned(bound.get(cx)),
-            };
-            Content::Text {
-                text,
-                font: set.font.as_deref().or(t.font.as_deref()),
-                fallback: &t.fallback,
-                size: match set.size {
-                    Some(crate::Extent::Points(p)) => p,
-                    _ => t.size,
-                },
-                color: tint(t.color.get(cx)),
-                align: set.align.unwrap_or(t.align),
-                layout: Layout {
-                    wrap: t.wrap,
-                    line_height: t.line_height,
-                    padding: t.padding.unwrap_or(0.0),
-                    backing: t.background.as_ref().map(|b| (b.color.get(cx), b.padding, b.radius)),
-                },
-            }
-        }
-        Kind::Shape { shape, fill, gradient, stroke } => Content::Shape {
-            shape: *shape,
-            fill: fill.as_ref().map(|f| tint(f.get(cx))),
-            gradient: gradient.as_ref(),
-            stroke: stroke.as_ref().map(|s| (s.color.get(cx), s.width)),
-        },
-        Kind::Spectrum(spectrum) => {
-            if !cx.audio.silent {
-                cx.note(Wake::Frame);
-            }
-            Content::Spectrum { spectrum, color: tint(spectrum.color.get(cx)) }
-        }
-        Kind::Solid { color, size } => {
-            Content::Solid { color: tint(color.get(cx)), size: boxed(*size).unwrap_or(canvas) }
-        }
-        Kind::Particles { system, .. } => {
-            let index = cx.scene.particles.keys().position(|k| k == system).unwrap_or(usize::MAX);
-            let flock = crate::particles::flock_of(cx.flocks, index, &layer.id);
-            let size = cx
-                .scene
-                .particles
-                .get(system)
-                .map_or(1.0, |s| crate::particles::tuned(cx, Some(layer), s).size);
-            Content::Particles { system, flock, size }
-        }
-        Kind::Adjustment { .. } | Kind::Sound(_) | Kind::Light(_) | Kind::Mesh(_) | Kind::Model(_) => {
-            Content::Adjustment
-        }
-    }
-}
-
-fn strength(cx: &Context, mask: Option<&Mask>) -> f32 {
-    mask.and_then(|m| m.strength.as_ref()).map_or(1.0, |s| s.get(cx).clamp(0.0, 1.0))
-}
-
-fn masked<'a>(cx: &Context, mask: Option<&'a Mask>) -> Option<Cow<'a, str>> {
-    mask?.texture.as_ref().map(|t| named(cx, t))
-}
-
-fn named<'a>(cx: &Context, value: &'a crate::Value<String>) -> Cow<'a, str> {
-    match value {
-        crate::Value::Fixed(id) => Cow::Borrowed(id.as_str()),
-        bound => Cow::Owned(bound.get(cx)),
-    }
 }

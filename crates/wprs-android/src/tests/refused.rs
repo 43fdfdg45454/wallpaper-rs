@@ -43,7 +43,28 @@ pub(super) fn packages_the_phone_cannot_play_are_refused() {
     let path = table::build("desktop_only", &desktop, dir.path()).unwrap();
     let error = store::store(&mut File::open(&path).unwrap(), "desktop.wpak").unwrap_err().to_string();
     assert!(error.contains("made for the desktop only"), "{error}");
+    unpacked_in_pieces(dir.path());
 }
+
+fn unpacked_in_pieces(dir: &std::path::Path) {
+    let case = serde_json::json!({ "kind": "video", "entry": "clip.webm", "files": { "clip.webm": "fixture:magenta-64x32.webm" } });
+    let source = table::source("long", &case, dir);
+    let clip = source.join("clip.webm");
+    File::options().append(true).open(&clip).unwrap().set_len(BIG).unwrap();
+    let built = dir.join("long.wpak");
+    wprs_format::build(&source, &built, &wprs_format::Limits::default()).unwrap();
+    let (uid, _) = store::store(&mut File::open(&built).unwrap(), "long.wpak").unwrap();
+    let item = crate::library::with(|lib| Ok(lib.item(&uid)?)).unwrap();
+    std::fs::remove_dir_all(crate::pack::folder(&item.path).unwrap()).unwrap();
+    crate::counted::watch(true);
+    let entry = crate::pack::entry(&item.path).unwrap();
+    let (_, bytes) = crate::counted::watch(false);
+    assert_eq!(std::fs::read(&entry).unwrap(), std::fs::read(&clip).unwrap());
+    assert!(bytes < BIG / 4, "unpacking a {BIG} byte video took {bytes} bytes of memory");
+    crate::store::forget(&item).unwrap();
+}
+
+const BIG: u64 = 16 << 20;
 
 #[test]
 fn every_feature_the_phone_leaves_out_has_a_note_on_its_page() {
@@ -98,6 +119,8 @@ fn format_errors_are_told_in_the_language_of_the_phone() {
 
 fn kinds(uid: &str, kind: wprs_format::Kind) {
     let item = crate::library::with(|lib| Ok(lib.item(uid)?)).unwrap();
+    let kept = std::fs::read_dir(crate::pack::folder(&item.path).unwrap()).unwrap().count();
+    assert_eq!(kept, 1, "a {kind} package is unpacked when it is imported");
     let (file, shown) = crate::pack::media(&item).unwrap();
     assert_eq!(shown, kind.name(), "a {kind} package shows as one");
     assert!(file.file_stem().is_some_and(|s| s == "entry") && file.is_file(), "{file:?}");

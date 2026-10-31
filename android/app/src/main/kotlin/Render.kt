@@ -82,6 +82,8 @@ object Native {
     external fun retry()
 
     external fun finish()
+
+    external fun allocations(start: Boolean): Long
 }
 
 object Render {

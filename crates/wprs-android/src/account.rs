@@ -53,6 +53,7 @@ enum Request {
         conflict: String,
     },
     Remove,
+    Rotate,
     Escrow {
         passphrase: String,
     },
@@ -164,6 +165,7 @@ fn run(request: Request) -> Result<Value, Error> {
             }
             Request::Sync { conflict } => cycle::sync(&conflict).await,
             Request::Remove => remove().await,
+            Request::Rotate => keys::rotate_now().await,
             Request::Escrow { passphrase } => escrow::set(Zeroizing::new(passphrase)).await,
             Request::Restore { passphrase } => escrow::restore(Zeroizing::new(passphrase)).await,
             Request::Fetch { id } => {
