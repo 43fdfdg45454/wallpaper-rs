@@ -139,7 +139,8 @@ flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs | sh
 
 Flatpak no puede instalar el plugin de fondo ni el icono de la bandeja de Plasma: la última orden
 los instala con `kpackagetool6` desde los archivos del propio Flatpak y crea la carpeta en la que
-Flatpak monta las ediciones compartidas (sin `| sh` solo muestra las órdenes). Hay que repetirla después de cada actualización y reiniciar Plasma. El plugin arranca el
+Flatpak monta las ediciones compartidas, y deja `~/.local/share/wallpaper-rs/edits/`, que
+Flatpak crea legible por todos, solo para tu usuario (sin `| sh` solo muestra las órdenes). Hay que repetirla después de cada actualización y reiniciar Plasma. El plugin arranca el
 daemon por D-Bus cuando lo necesita; no hay servicio de systemd. En ARM se instala
 `./wallpaper-rs-aarch64.flatpak`. No instales a la vez el Flatpak y el `.tar.gz`, porque los dos
 registran los mismos servicios D-Bus: ejecuta antes `./uninstall.sh`.

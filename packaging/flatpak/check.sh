@@ -16,7 +16,8 @@ for p in wallpapers/io.github.wallpaper_rs plasmoids/io.github.wallpaper_rs.tray
   grep -qF "\"Version\": \"${version%%+*}\"" "$files/share/plasma/$p/metadata.json"
   grep -F -e "--install '$files/share/plasma/$p'" plasma.sh
 done
-grep "^mkdir " plasma.sh | sh
+grep -e "^mkdir " -e "^chmod " plasma.sh | sh
+test "$(stat -c %a "${XDG_DATA_HOME:-$HOME/.local/share}/wallpaper-rs/edits")" = 700
 dir=$(mktemp -d "$HOME/.wprs-check-XXXXXX")
 cp "$(dirname "$0")/../../scenes/pond/preview.jpg" "$dir/"
 flatpak run --filesystem="$dir:ro" --command=wprs-ctl $app edit set "$dir/preview.jpg" ev=0.5
