@@ -24,9 +24,10 @@ class PreviewTouchTest : SceneBase() {
         val dir = File(storage(), "preview-taps/taps").apply { mkdirs() }
         File(dir, "scene.json").writeText(TAPS_SCENE)
         File(dir, "tap.js").writeText(TAPS_SCRIPT)
-        File(dir, "manifest.json").writeText(TAPS_MANIFEST)
+        val own = TAPS_MANIFEST.replace("org.example.taps", "org.example.preview-taps").replace("\"Taps\"", "\"$TITLE\"")
+        File(dir, "manifest.json").writeText(own)
         Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
-        val uid = show("Taps")
+        val uid = show(TITLE)
         assertTrue(waitFor { frames.get() > 0 })
         val feel = Feel().apply { painter = this@PreviewTouchTest.painter }
         assertFalse("a preview without permission keeps its touches for the page", press(feel, MotionEvent.ACTION_DOWN, SIDE / 4f))
@@ -40,5 +41,9 @@ class PreviewTouchTest : SceneBase() {
         assertTrue(waitFor { frames.get() > before })
         assertTrue(press(feel, MotionEvent.ACTION_UP, SIDE / 4f))
         assertTrue("the touch on the preview did not reach the scene: ${lamp.get()}", waitFor { red() > 192 })
+    }
+
+    private companion object {
+        const val TITLE = "Preview taps"
     }
 }
