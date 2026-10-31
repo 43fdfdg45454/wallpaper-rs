@@ -6,19 +6,38 @@ use std::collections::HashSet;
 use std::hash::{BuildHasher, RandomState};
 use std::path::PathBuf;
 use std::sync::{Mutex, PoisonError};
-use wprs_library::{Kind, Library, Rotation, Turn, rotate};
+use wprs_library::{Library, Rotation, Turn, rotate};
 use wprs_schedule::PlaylistState;
 
-const OUTPUT: &str = "home";
+const HOME: &str = "home";
+pub(crate) const LOCK: &str = "lock";
 
 static PENDING: Mutex<Option<Choice>> = Mutex::new(None);
-static LISTS: Mutex<Option<(String, Vec<String>)>> = Mutex::new(None);
+type Listed = Option<(String, Vec<String>)>;
+
+static LISTS: Mutex<[Listed; 2]> = Mutex::new([None, None]);
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Choice {
     Item(String),
     Playlist(String),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum Target {
+    Both,
+    Home,
+    Lock,
+}
+
+pub(crate) fn screen(lock: bool) -> &'static str {
+    if lock { LOCK } else { "" }
+}
+
+fn row(lock: bool) -> &'static str {
+    if lock { LOCK } else { HOME }
 }
 
 pub(crate) struct Shown {
@@ -40,34 +59,40 @@ fn seed() -> u32 {
     RandomState::new().hash_one(std::time::SystemTime::now()) as u32
 }
 
-pub(crate) fn turn(lib: &mut Library, playlist: &str, turn: Turn, on_battery: bool) -> Result<bool, Error> {
+pub(crate) fn turn(
+    lib: &mut Library,
+    (playlist, lock): (&str, bool),
+    turn: Turn,
+    on_battery: bool,
+) -> Result<bool, Error> {
     let now = Utc::now();
     let rules = lib.playlist(playlist)?.rules;
     let flashing: HashSet<String> = lib.unconfirmed_flashing()?.into_iter().collect();
     let resolved = lib.resolve(playlist, now.timestamp(), on_battery, &flashing)?;
     let id = resolved.playlist.id.clone();
-    let stored = lib.rotation(OUTPUT)?.filter(|row| row.playlist == id);
+    let stored = lib.rotation(row(lock))?.filter(|row| row.playlist == id);
     let mut row = stored.clone().unwrap_or_else(|| {
         let state = PlaylistState::new(seed());
-        Rotation { output: OUTPUT.into(), playlist: id.clone(), state, next_at: None, current: None }
+        Rotation { output: self::row(lock).into(), playlist: id.clone(), state, next_at: None, current: None }
     });
     let mut lists = LISTS.lock().unwrap_or_else(PoisonError::into_inner);
-    let last = lists.take().filter(|(key, _)| *key == id).map(|(_, uids)| uids);
+    let slot = &mut lists[usize::from(lock)];
+    let last = slot.take().filter(|(key, _)| *key == id).map(|(_, uids)| uids);
     let turn = Turn { fresh: last.is_none(), ..turn };
     let switched = rotate(&mut row, last.as_deref(), &resolved, &rules, turn, now, &Local);
-    *lists = Some((id, resolved.uids));
+    *slot = Some((id, resolved.uids));
     if stored.as_ref() != Some(&row) {
         lib.save_rotation(&row)?;
     }
     if let Some(item) = row.current.as_ref().filter(|_| switched || turn.start) {
-        lib.mark_used(item, OUTPUT, now.timestamp())?;
+        lib.mark_used(item, self::row(lock), now.timestamp())?;
     }
     Ok(switched)
 }
 
-fn chosen(lib: &Library, preview: bool) -> Result<Option<String>, Error> {
+fn chosen(lib: &Library, preview: bool, lock: bool) -> Result<Option<String>, Error> {
     let pending = preview.then(|| PENDING.lock().unwrap_or_else(PoisonError::into_inner).clone()).flatten();
-    let shown = settings::config().resolve("");
+    let shown = settings::config().resolve(screen(lock));
     let choice = pending.or_else(|| {
         let image = shown.image.and_then(|path| lib.resolve_item(path.to_str()?).ok()).map(Choice::Item);
         shown.playlist.map(Choice::Playlist).or(image)
@@ -76,7 +101,7 @@ fn chosen(lib: &Library, preview: bool) -> Result<Option<String>, Error> {
         None => None,
         Some(Choice::Item(uid)) => Some(uid),
         Some(Choice::Playlist(playlist)) => {
-            match lib.rotation(OUTPUT)?.filter(|row| row.playlist == playlist) {
+            match lib.rotation(row(lock))?.filter(|row| row.playlist == playlist) {
                 Some(row) => row.current,
                 None => {
                     let shown = |i: &wprs_library::Item| {
@@ -92,48 +117,87 @@ fn chosen(lib: &Library, preview: bool) -> Result<Option<String>, Error> {
     })
 }
 
+#[cfg(test)]
 pub(crate) fn shown(preview: bool) -> Option<Shown> {
-    let item = with(|lib| chosen(lib, preview)?.map(|uid| Ok(lib.item(&uid)?)).transpose()).ok()??;
-    let (video, scene) = (item.kind == Kind::Video, item.kind == Kind::Package);
-    Some(Shown { video, scene, uid: item.uid, path: item.path })
+    shown_on(preview, false)
 }
 
-pub(crate) fn colors(preview: bool) -> Result<Option<[i32; 4]>, Error> {
-    with(|lib| match chosen(lib, preview)? {
+pub(crate) fn shown_on(preview: bool, lock: bool) -> Option<Shown> {
+    let item = with(|lib| chosen(lib, preview, lock)?.map(|uid| Ok(lib.item(&uid)?)).transpose()).ok()??;
+    let (path, kind) = crate::pack::media(&item).inspect_err(|e| log::warn!("{e}")).ok()?;
+    Some(Shown { video: kind == "video", scene: kind == "scene", uid: item.uid, path })
+}
+
+pub(crate) fn colors(preview: bool, lock: bool) -> Result<Option<[i32; 4]>, Error> {
+    with(|lib| match chosen(lib, preview, lock)? {
         Some(uid) => store::colors(lib, &lib.item(&uid)?),
         None => Ok(None),
     })
 }
 
-pub(crate) fn commit(on_battery: bool) -> Result<bool, Error> {
+fn own(config: &wprs_core::Config) -> Option<wprs_core::config::OutputConfig> {
+    config.outputs.get(LOCK).filter(|o| o.image.is_some() || o.playlist.is_some()).cloned()
+}
+
+pub(crate) fn commit(on_battery: bool, target: Target) -> Result<bool, Error> {
     let Some(choice) = PENDING.lock().unwrap_or_else(PoisonError::into_inner).take() else {
         return Ok(false);
     };
-    with(|lib| match choice {
-        Choice::Item(uid) => {
-            let path = lib.item(&uid)?.path;
-            settings::update(|config| {
-                config.set_image("", path, None);
-                Ok(())
-            })
+    let screens: &[bool] = match target {
+        Target::Both => &[false, true],
+        Target::Home => &[false],
+        Target::Lock => &[true],
+    };
+    let path = match &choice {
+        Choice::Item(uid) => Some(with(|lib| Ok(lib.item(uid)?.path))?),
+        Choice::Playlist(_) => None,
+    };
+    let (image, playlist) = match &choice {
+        Choice::Item(_) => (path, None),
+        Choice::Playlist(uid) => (None, Some(uid.clone())),
+    };
+    settings::update(|config| {
+        if target == Target::Home && own(config).is_none() {
+            let (image, playlist) = (config.default.image.clone(), config.default.playlist.clone());
+            let lock = config.outputs.entry(LOCK.into()).or_default();
+            (lock.image, lock.playlist) = (image, playlist);
         }
-        Choice::Playlist(uid) => {
-            settings::update(|config| {
-                config.set_playlist("", uid.clone());
-                Ok(())
-            })?;
-            turn(lib, &uid, Turn { start: true, live: true, ..Turn::default() }, on_battery).map(drop)
+        if target == Target::Both
+            && let Some(lock) = config.outputs.get_mut(LOCK)
+        {
+            (lock.image, lock.playlist, lock.preset) = (None, None, None);
         }
+        let section = match target {
+            Target::Lock => config.outputs.entry(LOCK.into()).or_default(),
+            _ => &mut config.default,
+        };
+        (section.image, section.playlist, section.preset) = (image, playlist, None);
+        config.outputs.retain(|_, o| *o != Default::default());
+        Ok(())
     })?;
+    if let Choice::Playlist(uid) = &choice {
+        let start = Turn { start: true, live: true, ..Turn::default() };
+        with(|lib| screens.iter().try_for_each(|&lock| turn(lib, (uid, lock), start, on_battery).map(drop)))?;
+    }
     store::changed();
     Ok(settings::chosen(settings::COLORS) != "never")
 }
 
-pub(crate) fn advance(on_battery: bool) -> Result<bool, Error> {
-    let Some(playlist) = settings::config().resolve("").playlist else { return Ok(false) };
-    let switched = with(|lib| turn(lib, &playlist, Turn { live: true, ..Turn::default() }, on_battery))?;
+pub(crate) fn advance(on_battery: bool, lock: bool) -> Result<bool, Error> {
+    let Some(playlist) = settings::config().resolve(screen(lock)).playlist else { return Ok(false) };
+    let live = Turn { live: true, ..Turn::default() };
+    let switched = with(|lib| turn(lib, (&playlist, lock), live, on_battery))?;
     if switched {
         store::changed();
     }
     Ok(switched)
+}
+
+pub(crate) fn retime(lib: &mut Library, on_battery: bool) {
+    let config = settings::config();
+    for lock in [false, true] {
+        if let Some(playlist) = config.resolve(screen(lock)).playlist {
+            let _ = turn(lib, (&playlist, lock), Turn { retime: true, ..Turn::default() }, on_battery);
+        }
+    }
 }

@@ -15,7 +15,7 @@ object Native {
 
     external fun prepare(files: String)
 
-    external fun attach(surface: Surface, preview: Boolean): Long
+    external fun attach(surface: Surface, preview: Boolean, lock: Boolean): Long
 
     external fun resize(engine: Long, width: Int, height: Int)
 
@@ -38,6 +38,8 @@ object Native {
     external fun turn(w: Float, x: Float, y: Float, z: Float, rotation: Int): Boolean
 
     external fun device(lowRam: Boolean, performance: Int)
+
+    external fun screen(engine: Long, lock: Boolean)
 
     external fun visible(engine: Long, shown: Boolean)
 
@@ -63,11 +65,11 @@ object Native {
 
     external fun account(request: String): String
 
-    external fun commit(): Boolean
+    external fun commit(target: String): Boolean
 
-    external fun rotate(): Boolean
+    external fun rotate(lock: Boolean): Boolean
 
-    external fun colors(preview: Boolean): IntArray?
+    external fun colors(preview: Boolean, lock: Boolean): IntArray?
 
     external fun setting(key: String, value: String?): String
 

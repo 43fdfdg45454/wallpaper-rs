@@ -1,6 +1,8 @@
 package io.github.wallpaper_rs
 
 import android.app.WallpaperColors
+import android.app.WallpaperManager
+import android.os.Build
 import android.service.wallpaper.WallpaperService
 import android.view.MotionEvent
 import android.view.SurfaceHolder
@@ -41,14 +43,33 @@ class Wallpaper : WallpaperService() {
             super.onCreate(surfaceHolder)
             painter = Painter(isPreview, videos, tilt, hearing) { on -> mainExecutor.execute { setTouchEventsEnabled(on) } }
             if (!isPreview) live++
-            if (!isPreview && commitWhenLive) Render.call {
-                commitWhenLive = false
-                Wallpaper.reload(Native.commit())
+            if (!isPreview) screens[this] = flags()
+            val lock = lock()
+            Render.call { painter.screen(lock) }
+            commitWhenLive?.takeIf { !isPreview }?.let { target ->
+                commitWhenLive = null
+                Render.call { Wallpaper.reload(Native.commit(target)) }
             }
             colors = Render.call { painter.colors() }
         }
 
+        override fun onWallpaperFlagsChanged(which: Int) {
+            super.onWallpaperFlagsChanged(which)
+            if (isPreview) return
+            screens[this] = which
+            val lock = lock()
+            Render.post {
+                painter.screen(lock)
+                reload(true)
+            }
+        }
+
+        private fun flags() = if (Build.VERSION.SDK_INT >= 34) wallpaperFlags else BOTH_FLAGS
+
+        private fun lock() = screens[this] == WallpaperManager.FLAG_LOCK
+
         override fun onDestroy() {
+            screens -= this
             if (!isPreview) live--
             super.onDestroy()
         }
@@ -68,7 +89,7 @@ class Wallpaper : WallpaperService() {
         override fun onVisibilityChanged(visible: Boolean) {
             power.show(this, visible)
             Render.post {
-                if (visible && !isPreview && Native.rotate()) Wallpaper.reload(Native.setting(COLORS, null) == ALWAYS)
+                if (visible && !isPreview && Native.rotate(painter.lock)) Wallpaper.reload(Native.setting(COLORS, null) == ALWAYS)
                 painter.show(visible)
             }
         }
@@ -100,12 +121,16 @@ class Wallpaper : WallpaperService() {
     companion object {
         private const val COLORS = "system_colors"
         private const val ALWAYS = "always"
+        private const val BOTH_FLAGS = WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
         private val scenes = mutableSetOf<Scene>()
+        private val screens = mutableMapOf<Scene, Int>()
         val previews = mutableSetOf<Painter>()
         var live = 0
 
         @Volatile
-        var commitWhenLive = false
+        var commitWhenLive: String? = null
+
+        fun joined(target: String) = target != BOTH && Build.VERSION.SDK_INT >= 34 && screens.values.any { it == BOTH_FLAGS }
 
         fun reload(notify: Boolean) = scenes.forEach { it.reload(notify) }
 

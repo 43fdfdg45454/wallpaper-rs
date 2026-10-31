@@ -1,6 +1,6 @@
 use crate::power::Power;
+use crate::said;
 use crate::{Error, framing, library, settings, store};
-use anyhow::anyhow;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::fs::{self, File};
@@ -83,14 +83,14 @@ fn moving(image: &Path) -> Result<Value, Error> {
 
 pub(crate) fn request(text: &str) -> String {
     let answer = serde_json::from_str(text).map_err(Error::from).and_then(answer);
-    answer.unwrap_or_else(|e| json!({ "error": e.to_string() })).to_string()
+    answer.unwrap_or_else(|e| e.reply()).to_string()
 }
 
 fn answer(request: Request) -> Result<Value, Error> {
     let places = places()?;
     let part = places.file(&MODEL).with_added_extension("part");
     let folder = part.parent().unwrap_or(&places.data);
-    let image = |uid: &str| library::with(|lib| Ok(lib.item(uid)?.path));
+    let image = |uid: &str| library::with(|lib| Ok(crate::pack::media(&lib.item(uid)?)?.0));
     Ok(match request {
         Request::Model => json!({
             "installed": places.installed(&MODEL).is_some(),
@@ -102,11 +102,16 @@ fn answer(request: Request) -> Result<Value, Error> {
         Request::Install => {
             if !settings::downloads() {
                 drop(fs::remove_file(&part));
-                Err(anyhow!("downloading the model is turned off"))?;
+                Err(said("android.download_off", "downloading the model is turned off", &[]))?;
             }
             if wprs_depth::sha256(&part).ok().as_deref() != Some(MODEL.sha256) {
                 drop(fs::remove_file(&part));
-                Err(anyhow!("the file from {} has another SHA-256 and was deleted", MODEL.hosts()))?;
+                let hosts = MODEL.hosts();
+                Err(said(
+                    "android.model_checksum",
+                    "the file from %1 has another SHA-256 and was deleted",
+                    &[&hosts],
+                ))?;
             }
             fs::write(folder.join("NOTICE.txt"), MODEL.notice())?;
             fs::write(folder.join("LICENSE.txt"), MODEL.license_text)?;
@@ -163,12 +168,18 @@ pub(crate) fn adopt(item: &wprs_library::Item, synced: Option<&Value>, keep: boo
     Ok(())
 }
 
+pub(crate) fn stamped(image: &Path, edit: &Edit) -> Option<(PathBuf, SystemTime)> {
+    found(image, edit).and_then(|path| Some((path.clone(), fs::metadata(&path).ok()?.modified().ok()?)))
+}
+
 pub(crate) fn raised(image: &Path) -> Option<Raise> {
     let edit = loaded(image).ok()?;
     let parallax = edit.moving()?.clone();
-    let map =
-        found(image, &edit).and_then(|path| Some((path.clone(), fs::metadata(&path).ok()?.modified().ok()?)));
-    Some(Raise { parallax, map, depth: edit.depth.unwrap_or_default() })
+    Some(Raise { parallax, map: stamped(image, &edit), depth: edit.depth.unwrap_or_default() })
+}
+
+pub(crate) fn masking(map: Option<&Path>, edit: &Edit) -> Option<Map> {
+    Some(adjust(&shrink(read(map?).ok()?, EDGE), edit.depth.as_ref().unwrap_or(&Depth::default())))
 }
 
 pub(crate) fn map(raise: &Raise) -> Option<Map> {

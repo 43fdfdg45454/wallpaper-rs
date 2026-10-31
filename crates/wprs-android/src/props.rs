@@ -1,5 +1,6 @@
 use crate::library::with;
 use crate::pack::{self, Pack};
+use crate::said;
 use crate::{Error, saved, settings, store};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -118,8 +119,9 @@ pub(crate) fn stored(value: &Value) -> Option<toml::Value> {
 
 fn set(pack: &Pack, key: &str, value: &Value) -> Result<(), Error> {
     let property = pack.properties.get(key).filter(|p| p.holds_value() && !p.personal());
-    let property = property.ok_or_else(|| Error::Scene(format!("no property {key} to set here")))?;
-    let checked = property.value(value).map_err(|e| Error::Scene(format!("{key} {e}")))?;
+    let property =
+        property.ok_or_else(|| said("android.property_set_here", "no property %1 to set here", &[&key]))?;
+    let checked = property.value(value).map_err(|e| said("android.property_value", "%1 %2", &[&key, &e]))?;
     change(pack, |values| match stored(&checked) {
         Some(value) => drop(values.insert(key.to_owned(), value)),
         None => drop(values.remove(key)),
@@ -131,7 +133,7 @@ fn grant(pack: &Pack, input: &str, on: bool) -> Result<(), Error> {
         "audio" => Input::Audio,
         "touch" => Input::Pointer,
         "taps" => Input::Clicks,
-        _ => return Err(Error::Scene(format!("{input} is not audio, touch or taps"))),
+        _ => return Err(said("android.audio_touch_taps", "%1 is not audio, touch or taps", &[&input])),
     };
     let mut grants = grants();
     let inputs = grants.entry(pack.id.clone()).or_default();

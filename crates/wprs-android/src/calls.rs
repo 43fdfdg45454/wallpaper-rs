@@ -25,7 +25,8 @@ pub fn store<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, fd: jint, name: JStrin
     on(&mut env, |env| {
         let mut source = File::from(unsafe { BorrowedFd::borrow_raw(fd) }.try_clone_to_owned()?);
         let (uid, kind) = store::store(&mut source, &name.try_to_string(env)?)?;
-        Ok(env.new_string(json!({ "uid": uid, "kind": kind }).to_string())?)
+        let poster = store::poster_source(&uid)?;
+        Ok(env.new_string(json!({ "uid": uid, "kind": kind, "poster": poster }).to_string())?)
     })
 }
 
@@ -73,19 +74,27 @@ pub fn depth<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, request: JString<'a>) 
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn commit<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> jboolean {
-    on(&mut env, |_| choice::commit(on_battery()))
-}
-
-#[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn rotate<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> jboolean {
-    on(&mut env, |_| choice::advance(on_battery()))
-}
-
-#[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn colors<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, preview: jboolean) -> JIntArray<'a> {
+pub fn commit<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, target: JString<'a>) -> jboolean {
     on(&mut env, |env| {
-        let Some(colors) = choice::colors(preview)? else { return Ok(JIntArray::default()) };
+        let target = serde_json::from_value(json!(target.try_to_string(env)?))?;
+        choice::commit(on_battery(), target)
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn rotate<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, lock: jboolean) -> jboolean {
+    on(&mut env, |_| choice::advance(on_battery(), lock))
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn colors<'a>(
+    mut env: EnvUnowned<'a>,
+    _: JObject<'a>,
+    preview: jboolean,
+    lock: jboolean,
+) -> JIntArray<'a> {
+    on(&mut env, |env| {
+        let Some(colors) = choice::colors(preview, lock)? else { return Ok(JIntArray::default()) };
         let array = JIntArray::new(env, colors.len())?;
         array.set_region(env, 0, &colors)?;
         Ok(array)

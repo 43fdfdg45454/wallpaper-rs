@@ -34,6 +34,9 @@ class Painter(
     var shown = false
         private set
 
+    var lock = false
+        private set
+
     var playing = false
         private set
 
@@ -42,7 +45,7 @@ class Painter(
 
     fun attach(surface: Surface) {
         this.surface = surface
-        handle = Native.attach(surface, preview)
+        handle = Native.attach(surface, preview, lock)
         refresh()
     }
 
@@ -55,6 +58,13 @@ class Painter(
         frames.stop()
         videos.join(uri, this)
         follow()
+    }
+
+    fun screen(lock: Boolean) {
+        if (lock == this.lock) return
+        this.lock = lock
+        Native.screen(handle, lock)
+        if (handle != 0L) refresh()
     }
 
     fun resize(width: Int, height: Int, rotation: Int) {
@@ -94,7 +104,7 @@ class Painter(
         if (Native.touch(handle, x, y, down)) move()
     }
 
-    fun colors(): WallpaperColors? = Native.colors(preview)?.let { (primary, secondary, tertiary, hints) ->
+    fun colors(): WallpaperColors? = Native.colors(preview, lock)?.let { (primary, secondary, tertiary, hints) ->
         WallpaperColors(Color.valueOf(primary), color(secondary), color(tertiary), hints)
     }
 

@@ -290,16 +290,28 @@ entera si se eligió en el ordenador. Se combina con el paralaje; el paso de pá
 recorre la imagen, o el recorte del ordenador si es más ancho que la pantalla, pero no mueve un
 encuadre hecho en el teléfono, que ya tiene su forma. La vista previa usa la forma de la pantalla en
 su orientación natural, también con el teléfono tumbado, donde se pone al lado de los controles.
-*Usar como fondo* abre la vista previa del sistema, donde se elige si va en la pantalla de inicio,
-en la de bloqueo o en las dos; si la app ya es el fondo, el cambio entra con un fundido sin pasar
-por ella. También se llega desde los fondos animados del sistema. Se dibuja con la GPU (Vulkan, u
+*Usar como fondo* pregunta si va en la pantalla de inicio, en la de bloqueo o en las dos (desde
+Android 14; antes, las dos muestran lo mismo), y cada pantalla guarda su propio fondo o su propia
+lista, igual que una pantalla del escritorio (`[outputs.lock]` en la configuración). Si la app ya
+es el fondo de esa pantalla, el cambio entra con un fundido sin pasar por la vista previa del
+sistema; si no, o si un mismo fondo de la app cubre las dos pantallas y se elige solo una, abre la
+vista previa del sistema para ponerlo allí. También se llega desde los fondos animados del sistema. Se dibuja con la GPU (Vulkan, u
 OpenGL ES si Vulkan falla) con el mismo renderizador que el escritorio, y se recupera sola si el
-sistema le quita la GPU o la superficie. Admite JPEG, PNG, WebP, GIF y BMP.
+sistema le quita la GPU o la superficie. La edición hecha en el escritorio se aplica igual: el giro,
+el enderezado, el color y las máscaras, también las de profundidad, que seleccionan sobre el mapa de
+profundidad de la foto después del mismo giro y la misma orientación que el escritorio. Admite JPEG, PNG, WebP, GIF y BMP.
 
 La pestaña *Listas* crea listas de fondos que cambian solos cada 15 o 30 minutos, cada hora, cada 6
-horas, cada día o nunca, en orden o al azar y, si se quiere, saltando los vídeos con batería. El
-cambio se decide cuando el fondo vuelve a verse, sin alarmas ni despertar el teléfono. La biblioteca,
-las listas y sus reglas usan el mismo modelo y la misma lógica de rotación que el escritorio.
+horas, cada día o nunca, en orden o al azar y, si se quiere, saltando los vídeos con batería. Como en
+el escritorio, una lista puede cambiar solo ciertos días de la semana y a ciertas horas (`days` y
+`at` de sus reglas), cambia de nombre con el lápiz de su página y sus fondos se reordenan
+arrastrándolos por el asa de la derecha. Su *Búsqueda inteligente* la convierte en una lista
+inteligente con la misma sintaxis que `wprs-ctl search` (por ejemplo `kind:image tag:mar`): muestra
+cuántos fondos encuentra mientras se escribe, se guarda con *Guardar la búsqueda* y *Hacerla manual*
+la vuelve a dejar como estaba. La biblioteca también tiene un campo de búsqueda con esa sintaxis,
+que se suma al filtro elegido. El cambio se decide cuando el fondo vuelve a verse, sin alarmas ni
+despertar el teléfono, también con días y horas. La biblioteca, las listas y sus reglas usan el
+mismo modelo y la misma lógica de rotación que el escritorio.
 
 La pestaña *Ajustes* elige cómo se ajustan las imágenes que no tienen ajuste propio y los vídeos
 (rellenar, imagen completa, estirar o centrar), el fundido entre fondos, el sonido de los vídeos,
@@ -307,7 +319,10 @@ los fotogramas por segundo con batería (30, 15 o 10) y con el cargador (60 o 30
 colores del sistema y los gráficos (automático, Vulkan u OpenGL ES). Debajo, el diagnóstico muestra
 la GPU, los fotogramas dibujados y por segundo, el límite que se aplica en ese momento, el estado de
 carga, ahorro de energía y temperatura y, con una escena, la clase del teléfono (y si se midió en su
-GPU), el nivel de calidad y por qué bajó. *Licencias* muestra los textos de ONNX Runtime, de los componentes que incluye y del modelo
+GPU), el nivel de calidad y por qué bajó. Los avisos que vienen del motor (los fallos de un
+paquete, de una propiedad, de la profundidad o de la sincronización) llevan un identificador de
+mensaje y se muestran en el idioma del teléfono con las mismas traducciones que el resto de la app.
+*Licencias* muestra los textos de ONNX Runtime, de los componentes que incluye y del modelo
 de profundidad.
 
 Los vídeos (MP4, MOV, 3GP, WebM o MKV) los decodifica el hardware del teléfono directamente sobre
@@ -347,8 +362,13 @@ importa un mapa hecho en el escritorio, el PNG de 16 bits que guarda junto a la 
 profundidad* (`models.allow_download`) bloquea la descarga, y ahí mismo se puede borrar el modelo.
 
 El filtro *Escenas* de la biblioteca tiene *Añadir las escenas de ejemplo*, que instala las cinco
-escenas que trae el APK (las mismas que el escritorio), y *Abrir un paquete de escena*, que importa
-un `.wpak` de escena con el selector de documentos de Android. Se dibujan con el mismo motor que el
+escenas que trae el APK (las mismas que el escritorio), y *Abrir un paquete*, que importa un
+`.wpak` con el selector de documentos de Android. Se admiten los tres tipos de paquete que son un
+fondo, como en el escritorio: los de imagen se muestran como una foto más (con su ajuste, su
+encuadre, su edición y su paralaje), los de vídeo como un vídeo más y los de escena con el motor
+de escenas; los de página web, de preajustes y de recursos se rechazan con un aviso, igual que en
+el escritorio. La imagen o el vídeo del paquete se extrae una sola vez a los archivos de la app y se
+borra con el paquete. Las escenas se dibujan con el mismo motor que el
 escritorio: capas, efectos, partículas (en la GPU si admite sombreadores de cálculo y, si no, en la
 CPU con menos partículas), textos, líneas de tiempo y propiedades. La página de una escena muestra
 sus propiedades y sus preajustes, que se guardan en la misma configuración que el escritorio; los
@@ -380,7 +400,10 @@ teléfono termina las compilaciones de sombreadores y limpia sus marcas de prueb
 normal no cuente como un efecto que colgó la GPU.
 
 Las miniaturas de los paquetes para adultos salen difuminadas y su página no los muestra hasta
-pulsar *Mostrar igualmente*, salvo que *Ajustes* muestre el contenido para adultos sin difuminar. Un paquete fotosensible no se previsualiza ni se puede usar como fondo
+pulsar *Mostrar igualmente*, salvo que *Ajustes* muestre el contenido para adultos sin difuminar.
+*Ocultar el contenido para adultos* (`library.hide_mature`, desactivado por defecto), justo encima,
+los saca de la biblioteca y de sus búsquedas, igual que en la app de escritorio y en `wprs-ctl`, salvo
+que la búsqueda pida `content:` ella misma. Un paquete fotosensible no se previsualiza ni se puede usar como fondo
 hasta aceptar el aviso de que destella o muestra patrones rápidos que pueden provocar crisis a
 personas con epilepsia fotosensible; las listas lo saltan mientras tanto. Cada decisión se recuerda
 por paquete. La biblioteca y la página de un paquete muestran su título y su descripción en el

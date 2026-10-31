@@ -1,3 +1,4 @@
+use crate::said;
 use crate::{Error, link, store, vault};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -29,6 +30,7 @@ pub(crate) struct Saved {
     pub(crate) paused: bool,
     pub(crate) last_sync: Option<i64>,
     pub(crate) last_error: Option<String>,
+    pub(crate) last_reply: Option<serde_json::Value>,
     pub(crate) warning: Option<String>,
     pub(crate) peers: Vec<Peer>,
     pub(crate) pinned: Option<BTreeMap<String, String>>,
@@ -87,10 +89,6 @@ pub(crate) fn forget(removed: Vec<String>, at: i64) -> Result<(), Error> {
     }
 }
 
-pub(crate) fn failed(message: impl Into<String>) -> Error {
-    Error::Account(message.into())
-}
-
 pub(crate) fn read<T>(look: impl FnOnce(&Saved) -> T) -> T {
     let mut saved = SAVED.lock().unwrap_or_else(PoisonError::into_inner);
     let file = || std::fs::read(store::dir().ok()?.join(FILE)).ok();
@@ -109,8 +107,8 @@ pub(crate) fn update(change: impl FnOnce(&mut Saved)) -> Result<(), Error> {
 
 pub(crate) fn linked() -> Result<(), Error> {
     match read(|s| (s.url.is_empty(), s.device.is_some())) {
-        (true, _) => Err(failed("add a server first")),
-        (false, false) => Err(failed("link this phone to the server first")),
+        (true, _) => Err(said("android.add_server", "add a server first", &[])),
+        (false, false) => Err(said("android.link_phone_server", "link this phone to the server first", &[])),
         _ => Ok(()),
     }
 }
@@ -124,7 +122,7 @@ pub(crate) async fn pause(seconds: u64) -> Result<(), Error> {
     let until = Instant::now() + Duration::from_secs(seconds);
     while Instant::now() < until {
         if CANCEL.load(Relaxed) {
-            return Err(failed("stopped"));
+            return Err(said("android.stopped", "stopped", &[]));
         }
         tokio::time::sleep(Duration::from_millis(200)).await;
     }

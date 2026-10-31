@@ -3,9 +3,9 @@ use crate::{Error, library, store};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::time::SystemTime;
 use wprs_core::edit::{Action, Edit, OutputCrop};
 use wprs_core::{Fit, UvRect};
-use wprs_library::Kind;
 
 pub(crate) const SCREEN: &str = "Android";
 const MAX_ZOOM: f32 = 8.0;
@@ -26,6 +26,7 @@ pub(crate) struct Framed {
     pub(crate) crop: Option<[f32; 4]>,
     pub(crate) base: Option<[f32; 4]>,
     pub(crate) develop: Option<Edit>,
+    pub(crate) map: Option<(PathBuf, SystemTime)>,
 }
 
 fn drafts() -> MutexGuard<'static, Option<Draft>> {
@@ -64,8 +65,11 @@ pub(crate) fn framed(uid: &str, image: &Path, fit: Fit, preview: bool) -> Framed
     let viewed = drafted.is_some() || matches!(fit, Fit::Fill | Fit::Stretch);
     let mut geometry = edit.geometry;
     geometry.crop = crop.filter(|_| !viewed);
-    let develop = Edit { geometry, ops: edit.ops, masks: edit.masks, source: edit.source, ..Edit::default() };
-    Framed { fit, crop: crop.filter(|_| viewed), base, develop: develop.develops().then_some(develop) }
+    let (ops, masks, source, levels) = (edit.ops, edit.masks, edit.source, edit.depth);
+    let develop = Edit { geometry, ops, masks, source, depth: levels, ..Edit::default() };
+    let develop = develop.develops().then_some(develop);
+    let map = develop.as_ref().filter(|edit| edit.needs_depth()).and_then(|edit| depth::stamped(image, edit));
+    Framed { fit, crop: crop.filter(|_| viewed), base, develop, map }
 }
 
 pub(crate) fn placed(
@@ -105,9 +109,10 @@ pub(crate) fn moved(
 
 fn begin(uid: String) -> Result<Draft, Error> {
     let item = library::with(|lib| Ok(lib.item(&uid)?))?;
-    let edit = loaded(&item.path)?;
+    let path = crate::pack::media(&item)?.0;
+    let edit = loaded(&path)?;
     let frame = edit.geometry.frame((item.meta.width.unwrap_or(1), item.meta.height.unwrap_or(1)));
-    Ok(Draft { uid, path: item.path, frame, crop: own(&edit) })
+    Ok(Draft { uid, path, frame, crop: own(&edit) })
 }
 
 pub(crate) fn frame(
@@ -147,8 +152,8 @@ pub(crate) fn unframe(image: &Path, uid: &str) -> Result<Value, Error> {
 
 pub(crate) fn fit(uids: &[String], fit: Option<Fit>) -> Result<Value, Error> {
     let pictures = library::with(|lib| {
-        let items = uids.iter().filter_map(|uid| lib.item(uid).ok());
-        Ok(items.filter(|item| item.kind == Kind::Image).map(|item| item.path).collect::<Vec<_>>())
+        let items = uids.iter().filter_map(|uid| crate::pack::media(&lib.item(uid).ok()?).ok());
+        Ok(items.filter(|(_, kind)| *kind == "image").map(|(path, _)| path).collect::<Vec<_>>())
     })?;
     let mode = fit.map_or_else(|| "none".to_owned(), |fit| fit.to_string());
     for image in &pictures {

@@ -1,3 +1,4 @@
+use crate::said;
 use crate::{Error, store};
 use std::fs;
 use wprs_sync::Secrets;
@@ -8,7 +9,7 @@ const TEXTS: &str = "texts.vault";
 
 #[cfg(target_os = "android")]
 mod keystore {
-    use crate::Error;
+    use crate::{Error, said};
     use jni::objects::{JByteArray, JClass};
     use jni::refs::Global;
     use jni::{Env, JavaVM, jni_sig, jni_str};
@@ -33,7 +34,13 @@ mod keystore {
                 env.exception_clear();
             }
             given.set_region(env, 0, &vec![0; bytes.len()])?;
-            let refused = |_| Error::Account("the Android keystore refused the stored server secrets".into());
+            let refused = |_| {
+                said(
+                    "android.android_keystore_refused",
+                    "the Android keystore refused the stored server secrets",
+                    &[],
+                )
+            };
             let found = env.cast_local::<JByteArray>(found.map_err(refused)?.l()?)?;
             let out = Zeroizing::new(env.convert_byte_array(&found)?);
             found.set_region(env, 0, &vec![0; out.len()])?;
@@ -66,10 +73,16 @@ fn open(sealed: &[u8]) -> Result<Zeroizing<Vec<u8>>, Error> {
 }
 
 pub(crate) fn load() -> Result<Secrets, Error> {
-    let sealed = fs::read(store::dir()?.join(FILE))
-        .map_err(|_| Error::Account("this phone holds no token for the server; link it again".into()))?;
-    let broken =
-        || Error::Account("the stored server secrets are broken; remove the server and link again".into());
+    let sealed = fs::read(store::dir()?.join(FILE)).map_err(|_| {
+        said("android.phone_holds_token", "this phone holds no token for the server; link it again", &[])
+    })?;
+    let broken = || {
+        said(
+            "android.stored_server_secrets",
+            "the stored server secrets are broken; remove the server and link again",
+            &[],
+        )
+    };
     serde_json::from_slice(&open(&sealed).map_err(|_| broken())?).map_err(|_| broken())
 }
 

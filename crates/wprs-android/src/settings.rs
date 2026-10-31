@@ -1,4 +1,5 @@
 use crate::account::NETWORK;
+use crate::said;
 use crate::{Error, power, store};
 use std::fs;
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -93,7 +94,12 @@ pub(crate) fn setting(key: &str, value: Option<&str>) -> Result<String, Error> {
         let mut own = table()?;
         if let Some(value) = value {
             let valid = allowed.contains(&value).then_some(value);
-            own.insert(key.into(), valid.ok_or_else(|| Error::Setting(format!("{key} = {value}")))?.into());
+            own.insert(
+                key.into(),
+                valid
+                    .ok_or_else(|| said("android.setting_value", "%1 cannot be %2", &[&key, &value]))?
+                    .into(),
+            );
             store::write(&store::dir()?.join(OWN), own.to_string().as_bytes())?;
             store::changed();
             caps();
@@ -116,7 +122,7 @@ pub(crate) fn setting(key: &str, value: Option<&str>) -> Result<String, Error> {
         (BATTERY, _) => Ok(on_battery(config.playback.max_fps).to_string()),
         (_, Some(toml::Value::String(text))) => Ok(text),
         (_, Some(value)) => Ok(value.to_string()),
-        (_, None) => Err(Error::Setting(format!("unknown setting {key}"))),
+        (_, None) => Err(said("android.unknown_setting", "unknown setting %1", &[&key])),
     }
 }
 

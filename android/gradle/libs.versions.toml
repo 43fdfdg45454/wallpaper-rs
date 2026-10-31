@@ -8,6 +8,7 @@ onnxruntime = "1.31.0"
 work = "2.12.0"
 test-runner = "1.7.0"
 test-junit = "1.3.0"
+junit = "4.13.2"
 
 [libraries]
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
@@ -19,6 +20,7 @@ onnxruntime = { module = "com.microsoft.onnxruntime:onnxruntime-android", versio
 work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
 test-runner = { module = "androidx.test:runner", version.ref = "test-runner" }
 test-junit = { module = "androidx.test.ext:junit", version.ref = "test-junit" }
+junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

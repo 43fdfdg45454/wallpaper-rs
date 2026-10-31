@@ -27,6 +27,7 @@ pub use import::qhash;
 pub use items::{Item, Meta, PackageInfo};
 pub use playlists::PlaylistInfo;
 pub use profiles::{Preset, Profile};
+pub use query::shown;
 pub use resolve::Resolved;
 pub use rotation::{Rotation, Used};
 pub use rules::Rules;

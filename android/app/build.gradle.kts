@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.onnxruntime)
     implementation(libs.work.runtime)
+    testImplementation(libs.junit)
     androidTestImplementation(libs.test.runner)
     androidTestImplementation(libs.test.junit)
 }

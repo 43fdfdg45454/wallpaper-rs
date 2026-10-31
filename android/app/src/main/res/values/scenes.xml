@@ -2,7 +2,7 @@
 <resources>
     <string name="scenes">Scenes</string>
     <string name="examples">Add the example scenes</string>
-    <string name="open_package">Open a scene package</string>
+    <string name="open_package">Open a package</string>
     <string name="react_sound">React to sound</string>
     <string name="react_touch">React to touch</string>
     <string name="microphone_needed">Reacting to sound needs the microphone permission</string>

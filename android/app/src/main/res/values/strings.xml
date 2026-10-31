@@ -41,8 +41,6 @@
     <string name="lacks_script_shortcuts">Its scripts open no shortcuts on the phone.</string>
     <string name="lacks_script_hierarchy">Its scripts do not change the parents of layers on the phone.</string>
     <string name="lacks_rgb">Its colors are not sent to RGB lighting on the phone.</string>
-    <string name="refused_newer">This package needs a newer version of wallpaper-rs.</string>
-    <string name="refused_elsewhere">This package is made for the desktop only.</string>
     <string name="failed_without_reason">Something failed without giving a reason.</string>
     <string name="cancel">Cancel</string>
     <string name="size" translatable="false">%1$d × %2$d</string>
@@ -63,7 +61,6 @@
     <string name="skip_videos">Skip videos on battery</string>
     <string name="delete">Delete playlist</string>
     <string name="empty_playlist">Add wallpapers from their page in the library</string>
-    <string name="earlier">Move up</string>
     <string name="take_out">Remove from playlist</string>
     <plurals name="wallpapers">
         <item quantity="one">%d wallpaper</item>
@@ -143,5 +140,26 @@
         <item quantity="one">%d file cannot be opened</item>
         <item quantity="other">%d files cannot be opened</item>
     </plurals>
+    <string name="hide_mature">Hide mature content</string>
     <string name="show_mature">Show mature content without blur</string>
+    <string name="place_where">Set as wallpaper on</string>
+    <string name="home_screen">Home screen</string>
+    <string name="lock_screen">Lock screen</string>
+    <string name="both_screens">Home and lock screens</string>
+    <string name="days">Days</string>
+    <string name="every_day">Every day</string>
+    <string name="hours">Hours</string>
+    <string name="remove_hour">Remove this hour</string>
+    <string name="add_hour">Add an hour</string>
+    <string name="hours_hint">It changes at these hours on the chosen days, the next time the wallpaper is seen</string>
+    <string name="smart_query">Smart search</string>
+    <string name="manual_playlist">Empty for a manual playlist</string>
+    <string name="matches">Matches: %1$d</string>
+    <string name="save_search">Save the search</string>
+    <string name="make_manual">Make manual</string>
+    <string name="save_name">Save</string>
+    <string name="rename_playlist">Rename the playlist</string>
+    <string name="drag_to_move">Drag to move</string>
+    <string name="search">Search</string>
+    <string name="clear_search">Clear the search</string>
 </resources>

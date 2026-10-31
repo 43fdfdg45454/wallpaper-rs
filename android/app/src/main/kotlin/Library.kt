@@ -39,6 +39,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.foundation.layout.fillMaxWidth
 
 private val FILTERS = listOf(
     R.string.all to "",
@@ -51,8 +60,15 @@ private val FILTERS = listOf(
 @Composable
 fun Library(main: Main, open: (String) -> Unit) = Box(Modifier.fillMaxSize()) {
     var filter by rememberSaveable { mutableIntStateOf(0) }
+    var text by rememberSaveable { mutableStateOf("") }
+    var searched by remember { mutableStateOf(text) }
+    LaunchedEffect(text) {
+        delay(SEARCH_MS)
+        searched = text.trim()
+    }
     val chosen = rememberSelection()
-    val query = FILTERS[filter].second
+    val kind = FILTERS[filter].second
+    val query = listOf(kind, searched).filter(String::isNotEmpty).joinToString(" ")
     val languages = listOf(LocalLocale.current.toLanguageTag().replace('-', '_'))
     val items by loaded<List<Item>?>(null, main.revision.intValue, query, languages) {
         fetch("items", "query" to query, "languages" to languages)
@@ -60,10 +76,15 @@ fun Library(main: Main, open: (String) -> Unit) = Box(Modifier.fillMaxSize()) {
     chosen.follow(items)
     Column {
         if (chosen.isEmpty()) Header(stringResource(R.string.library)) else Selecting(main, chosen, items.orEmpty().map(Item::uid))
-        Choices(null, FILTERS.map { (label, query) -> query to stringResource(label) }, query) { chosen ->
+        OutlinedTextField(
+            text, { text = it }, Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true,
+            placeholder = { Text(stringResource(R.string.search)) }, leadingIcon = { Icon(Icons.Default.Search, null) },
+            trailingIcon = { if (text.isNotEmpty()) IconButton({ text = "" }) { Icon(Icons.Default.Clear, stringResource(R.string.clear_search)) } },
+        )
+        Choices(null, FILTERS.map { (label, query) -> query to stringResource(label) }, kind) { chosen ->
             filter = FILTERS.indexOfFirst { it.second == chosen }
         }
-        if (query == SCENES) Row(Modifier.padding(horizontal = 8.dp), Arrangement.spacedBy(8.dp)) {
+        if (kind == SCENES) Row(Modifier.padding(horizontal = 8.dp), Arrangement.spacedBy(8.dp)) {
             TextButton(main::examples) { Text(stringResource(R.string.examples)) }
             TextButton(main::openPackage) { Text(stringResource(R.string.open_package)) }
         }
@@ -103,3 +124,4 @@ fun Thumb(item: Item, modifier: Modifier = Modifier, picked: Boolean = false) {
 }
 
 private const val SCENES = "kind:scene"
+private const val SEARCH_MS = 300L

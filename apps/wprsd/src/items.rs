@@ -79,10 +79,7 @@ impl Daemon {
         let hide = self.state().config.library.hide_mature;
         let (query, total, items) = self.store.read(|lib| {
             let query = lib.normalize_query(query, seed)?;
-            let shown = match hide && !query.contains("content:") {
-                true => format!("{query} -content:mature"),
-                false => query.clone(),
-            };
+            let shown = wprs_library::shown(&query, hide);
             let total = lib.count(&shown, now())?;
             let items = if limit == 0 { Vec::new() } else { lib.search(&shown, now(), offset, limit)? };
             Ok::<_, wprs_library::Error>((query, total, items))

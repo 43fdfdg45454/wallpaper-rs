@@ -43,6 +43,20 @@ fn depth_masks_follow_the_depth_map() {
 }
 
 #[test]
+fn depth_masks_follow_turned_and_tinted_photos() {
+    let Some(r) = renderer() else { return };
+    let gray = RgbaImage::from_pixel(W, H, Rgba([100, 100, 100, 255]));
+    let edit = Edit::from_value(json!({"version": 1, "geometry": {"rotate": 180},
+        "masks": {"near": {"type": "depth", "range": [0.5, 1.0], "soft": 0.01}},
+        "ops": [{"id": "warm", "type": "saturation", "saturation": 20, "vibrance": 0},
+            {"id": "ev", "type": "exposure", "ev": 1, "mask": "near"}]}))
+    .unwrap();
+    let out = r.read_image(&r.develop(&gray, &edit, Some(&halves(|x| x >= W / 2)), (W, H)).unwrap()).unwrap();
+    let (near, far) = (out.get_pixel(8, H / 2).0[1], out.get_pixel(56, H / 2).0[1]);
+    assert!(near > far + 30, "the turned near half is at {near}, the far half at {far}");
+}
+
+#[test]
 fn spanned_screens_stay_continuous_under_overscan() {
     let Some(r) = renderer() else { return };
     let image = RgbaImage::from_fn(W, H, |x, _| Rgba([(x * 4) as u8, 0, 128, 255]));

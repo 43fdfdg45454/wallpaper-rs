@@ -121,7 +121,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
             if (item?.scene == true) Scene(main, uid, Modifier.weight(1f))
         }
         Row(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
-            Button(main::apply, Modifier.weight(1f), enabled = ready && asks == null) { Text(stringResource(R.string.apply)) }
+            Button(main::setWallpaper, Modifier.weight(1f), enabled = ready && asks == null) { Text(stringResource(R.string.apply)) }
             val favorite = item?.favorite == true
             IconButton({ main.act { ask("favorite", "uids" to listOf(uid), "favorite" to !favorite) } }) {
                 val icon = if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder

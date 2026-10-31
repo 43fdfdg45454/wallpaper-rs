@@ -1,11 +1,7 @@
 package io.github.wallpaper_rs
 
 import android.app.Activity
-import android.app.WallpaperManager
-import android.content.ComponentName
-import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.widget.Toast
@@ -20,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts.PickMultipleVis
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.unit.IntSize
 import kotlin.concurrent.thread
 import kotlinx.coroutines.MainScope
@@ -40,9 +37,8 @@ class Main : ComponentActivity() {
     private val files = registerForActivityResult(OpenMultipleDocuments()) { store(it) }
     private val folder = registerForActivityResult(OpenDocumentTree()) { uri -> uri?.let(::importFolder) }
     private val packages = registerForActivityResult(OpenDocument()) { uri -> uri?.let { store(listOf(it)) } }
-    private val preview = registerForActivityResult(StartActivityForResult()) {
-        if (active()) commit() else if (it.resultCode != Activity.RESULT_OK) Wallpaper.commitWhenLive = false
-    }
+    val placing = mutableStateOf(false)
+    val preview = registerForActivityResult(StartActivityForResult()) { placed(it.resultCode == Activity.RESULT_OK) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,7 +86,7 @@ class Main : ComponentActivity() {
             runOnUiThread {
                 importing.intValue--
                 revision.intValue++
-                failure?.let { toast(it.message.orEmpty()) }
+                failure?.let(::toast)
             }
         }
     }
@@ -102,52 +98,21 @@ class Main : ComponentActivity() {
     }
 
     fun act(edit: Boolean = true, work: suspend () -> Unit) = scope.launch {
-        runCatching { work() }.onFailure { toast(it.message.orEmpty()) }
+        runCatching { work() }.onFailure(::toast)
         changed(edit)
     }
 
-    fun apply() = if (active()) commit() else useAsWallpaper()
-
     fun unpick(choice: JSONObject) {
-        if (!isChangingConfigurations && !Wallpaper.commitWhenLive) Render.post {
+        if (!isChangingConfigurations && Wallpaper.commitWhenLive == null) Render.post {
             Native.library(JSONObject().put("op", "unpick").put("choice", choice).toString())
             Wallpaper.reload(false)
         }
     }
 
-    fun toast(text: String) = Toast.makeText(this, told(text), Toast.LENGTH_LONG).show()
+    fun toast(text: String) =
+        Toast.makeText(this, text.ifBlank { getString(R.string.failed_without_reason) }, Toast.LENGTH_LONG).show()
 
-    private fun told(text: String) = when {
-        text.isBlank() -> getString(R.string.failed_without_reason)
-        text.startsWith(NEWER) -> getString(R.string.refused_newer)
-        text.startsWith(ELSEWHERE) -> getString(R.string.refused_elsewhere)
-        else -> text
-    }
-
-    private fun active() = Wallpaper.live > 0 || WallpaperManager.getInstance(this).let { manager ->
-        val lock = if (Build.VERSION.SDK_INT >= 34) manager.getWallpaperInfo(WallpaperManager.FLAG_LOCK) else null
-        listOfNotNull(manager.wallpaperInfo, lock).any { it.packageName == packageName }
-    }
-
-    private fun useAsWallpaper() {
-        val wallpaper = ComponentName(this, Wallpaper::class.java)
-        val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
-            .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, wallpaper)
-        Wallpaper.commitWhenLive = true
-        runCatching { preview.launch(intent) }.onFailure {
-            Wallpaper.commitWhenLive = false
-            toast(getString(R.string.unsupported))
-        }
-    }
-
-    private fun commit() = Render.post {
-        Wallpaper.commitWhenLive = false
-        Wallpaper.reload(Native.commit())
-        runOnUiThread {
-            revision.intValue++
-            toast(getString(R.string.applied))
-        }
-    }
+    fun toast(error: Throwable) = toast(told(error))
 
     fun store(uris: List<Uri>) {
         if (uris.isEmpty()) return
@@ -171,6 +136,7 @@ class Main : ComponentActivity() {
         val item = open(uri)?.use { Native.store(it.fd, name(uri)) }?.let(::JSONObject) ?: return false
         val uid = item.getString("uid")
         if (item.getString("kind") == "video") open(uri)?.use { poster(uid) { setDataSource(it.fileDescriptor) } }
+        item.optString("poster").takeIf { !item.isNull("poster") && it.isNotEmpty() }?.let { file -> poster(uid) { setDataSource(file) } }
         return true
     }
 
@@ -184,6 +150,4 @@ class Main : ComponentActivity() {
 }
 
 private const val EDITS = 30L
-private const val NEWER = "this package needs a newer version of wallpaper-rs"
-private const val ELSEWHERE = "this package is made for "
 private const val REFRESH = 10

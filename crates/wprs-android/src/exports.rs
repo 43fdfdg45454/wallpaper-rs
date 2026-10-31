@@ -38,10 +38,16 @@ pub fn prepare<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, files: JString<'a>) 
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn attach<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, surface: JObject<'a>, preview: jboolean) -> jlong {
+pub fn attach<'a>(
+    mut env: EnvUnowned<'a>,
+    _: JObject<'a>,
+    surface: JObject<'a>,
+    preview: jboolean,
+    lock: jboolean,
+) -> jlong {
     on(&mut env, |env| {
         let window = unsafe { NativeWindow::from_surface(env.get_raw().cast(), surface.as_raw().cast()) };
-        let engine = Box::new(Engine::open(window.ok_or(Error::Window)?, preview));
+        let engine = Box::new(Engine::open(window.ok_or(Error::Window)?, preview, lock));
         Ok(Box::into_raw(engine).expose_provenance() as jlong)
     })
 }

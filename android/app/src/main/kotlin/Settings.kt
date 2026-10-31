@@ -45,6 +45,7 @@ private val TOGGLES = listOf(
     Triple(R.string.allow_download, "models.allow_download", "true" to "false"),
     Triple(R.string.flash_guard, "playback.flash_guard", "true" to "false"),
     Triple(R.string.scene_capture, "playback.scene_capture", "true" to "false"),
+    Triple(R.string.hide_mature, "library.hide_mature", "true" to "false"),
     Triple(R.string.show_mature, Unveil.KEY, "true" to "false"),
 )
 private val KEYS = CHOICES.map { it.second } + TOGGLES.map { it.second }

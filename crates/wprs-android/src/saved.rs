@@ -1,6 +1,7 @@
 use crate::library::with;
 use crate::pack::Pack;
 use crate::props::{change, stored};
+use crate::said;
 use crate::{Error, store, vault};
 use serde_json::{Value, json};
 use std::sync::{Mutex, PoisonError};
@@ -44,7 +45,7 @@ pub(crate) fn chosen(pack: &Pack, key: &str) -> Result<Values, Error> {
     }
     let mine = with(|lib| Ok(lib.settings(&pack.id)?))?;
     let found = mine.into_iter().find(|p| p.uid == key || p.name.eq_ignore_ascii_case(key.trim()));
-    found.map(|p| values::saved(&p.value)).ok_or_else(|| Error::Scene(format!("no preset {key}")))
+    found.map(|p| values::saved(&p.value)).ok_or_else(|| said("android.no_preset", "no preset %1", &[&key]))
 }
 
 pub(crate) fn apply(pack: &Pack, given: &Values) -> Result<(), Error> {
@@ -65,7 +66,7 @@ pub(crate) fn rename(preset: &str, name: &str) -> Result<(), Error> {
 pub(crate) fn forget(preset: &str) -> Result<(), Error> {
     let settings = with(|lib| Ok(lib.preset(preset)?))?.package().is_some();
     if !settings {
-        return Err(Error::Scene(format!("{preset} is not a preset of settings")));
+        return Err(said("android.preset_settings", "%1 is not a preset of settings", &[&preset]));
     }
     with(|lib| Ok(lib.remove_preset(preset)?))?;
     store::changed();
@@ -82,7 +83,7 @@ pub(crate) fn export(pack: &Pack, preset: &str) -> Result<String, Error> {
 }
 
 pub(crate) fn import(pack: &Pack, text: &str, name: &str) -> Result<Vec<String>, Error> {
-    let (kept, warnings) = values::import(text, &pack.id, &pack.properties).map_err(Error::Scene)?;
+    let (kept, warnings) = values::import(text, &pack.id, &pack.properties).map_err(Error::Setting)?;
     match name.trim() {
         "" => apply(pack, &kept)?,
         name => keep(pack, name, &kept)?,
@@ -92,9 +93,9 @@ pub(crate) fn import(pack: &Pack, text: &str, name: &str) -> Result<Vec<String>,
 
 pub(crate) fn press(pack: &Pack, key: &str) -> Result<(), Error> {
     let button = pack.properties.get(key).filter(|p| matches!(p.control, Control::Button {}));
-    let button = button.ok_or_else(|| Error::Scene(format!("no button {key}")))?;
+    let button = button.ok_or_else(|| said("android.no_button", "no button %1", &[&key]))?;
     if !button.met(&pack.properties, &crate::props::values(pack), |p| &p.enabled_if) {
-        return Err(Error::Scene(format!("{key} cannot be pressed now")));
+        return Err(said("android.pressed_now", "%1 cannot be pressed now", &[&key]));
     }
     PRESSED.lock().unwrap_or_else(PoisonError::into_inner).push((pack.id.clone(), key.to_owned()));
     store::changed();
@@ -112,7 +113,11 @@ pub(crate) fn secret(pack: &Pack, key: &str, text: &str) -> Result<(), Error> {
     let hidden =
         matches!(pack.properties.get(key).map(|p| &p.control), Some(Control::Text { secret: true, .. }));
     if !hidden || text.chars().count() > 1024 || text.chars().any(char::is_control) {
-        return Err(Error::Scene(format!("{key} is no secret text of at most 1024 characters")));
+        return Err(said(
+            "android.secret_text_most",
+            "%1 is no secret text of at most 1024 characters",
+            &[&key],
+        ));
     }
     vault::keep(&format!("{}/{key}", pack.id), text)?;
     store::changed();

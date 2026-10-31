@@ -18,9 +18,14 @@ pub(super) fn packages_the_phone_cannot_play_are_refused() {
         let error = result.as_ref().err().map(ToString::to_string).unwrap_or_default();
         if refused.is_empty() {
             assert!(!error.contains("needs a newer version"), "{name}: {error}");
-            let scene = package.manifest.kind == wprs_format::Kind::Scene;
-            assert_eq!(result.is_ok(), scene, "{name}: {error}");
-            stored += usize::from(scene);
+            let shown = package.manifest.kind.first();
+            assert_eq!(result.is_ok(), shown, "{name}: {error}");
+            stored += usize::from(shown);
+            if let Ok((uid, _)) = result.as_ref()
+                && package.manifest.kind != wprs_format::Kind::Scene
+            {
+                kinds(uid, package.manifest.kind);
+            }
         } else {
             assert!(
                 error.starts_with("this package needs a newer version of wallpaper-rs"),
@@ -62,31 +67,20 @@ fn every_feature_the_phone_leaves_out_has_a_note_on_its_page() {
 
 #[test]
 fn refusals_are_told_in_the_language_of_the_phone() {
-    let main = include_str!("../../../../android/app/src/main/kotlin/Main.kt");
-    let res = concat!(env!("CARGO_MANIFEST_DIR"), "/../../android/app/src/main/res");
-    let strings =
-        ["values", "values-es"].map(|v| std::fs::read_to_string(format!("{res}/{v}/strings.xml")).unwrap());
-    let constant = |name: &str| {
-        let line = main.lines().find(|l| l.starts_with(&format!("private const val {name} = \""))).unwrap();
-        line.split('"').nth(1).unwrap().to_owned()
-    };
-    let errors = [
-        ("NEWER", "refused_newer", wprs_format::Error::Newer("the feature web".into())),
-        ("ELSEWHERE", "refused_elsewhere", wprs_format::Error::Elsewhere("the desktop".into())),
-    ];
-    for (name, key, error) in errors {
-        assert!(error.to_string().starts_with(&constant(name)), "{name} no longer matches {error}");
-        assert!(main.contains(&format!("startsWith({name}) -> getString(R.string.{key})")));
-        for text in &strings {
-            assert!(text.contains(&format!("<string name=\"{key}\">")), "no {key} string");
-        }
+    let words = include_str!("../../../../android/app/src/main/kotlin/Words.kt");
+    assert!(words.contains("\"error_\" + it.replace('.', '_')"));
+    let errors =
+        [wprs_format::Error::Newer("the feature web".into()), wprs_format::Error::Elsewhere("x".into())];
+    for (error, key) in errors.into_iter().zip(["error_format_newer", "error_format_elsewhere"]) {
+        let reply = crate::Error::Format(error).reply();
+        assert_eq!(format!("error_{}", reply["id"].as_str().unwrap().replace('.', "_")), key);
     }
 }
 
 #[test]
 fn an_error_without_text_is_told_with_a_translated_reason() {
     let main = include_str!("../../../../android/app/src/main/kotlin/Main.kt");
-    assert!(main.contains("text.isBlank() -> getString(R.string.failed_without_reason)"));
+    assert!(main.contains("text.ifBlank { getString(R.string.failed_without_reason) }"));
     let res = concat!(env!("CARGO_MANIFEST_DIR"), "/../../android/app/src/main/res");
     for v in ["values", "values-es"] {
         let text = std::fs::read_to_string(format!("{res}/{v}/strings.xml")).unwrap();
@@ -100,4 +94,18 @@ fn format_errors_are_told_in_the_language_of_the_phone() {
     assert_eq!(error.told_in(&[]), "missing file \"scene.json\"");
     let spanish = error.told_in(&["es_ES".into()]);
     assert!(spanish.contains("scene.json") && !spanish.contains("missing"), "{spanish}");
+}
+
+fn kinds(uid: &str, kind: wprs_format::Kind) {
+    let item = crate::library::with(|lib| Ok(lib.item(uid)?)).unwrap();
+    let (file, shown) = crate::pack::media(&item).unwrap();
+    assert_eq!(shown, kind.name(), "a {kind} package shows as one");
+    assert!(file.file_stem().is_some_and(|s| s == "entry") && file.is_file(), "{file:?}");
+    match kind {
+        wprs_format::Kind::Image => assert_eq!(item.meta.width, Some(64)),
+        _ => assert!(crate::media::is_video(&file)),
+    }
+    assert_eq!(crate::store::poster_source(uid).unwrap(), None, "a package preview is its poster");
+    crate::store::forget(&item).unwrap();
+    assert!(!file.exists());
 }

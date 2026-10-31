@@ -11,6 +11,7 @@ import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import org.json.JSONObject
 import org.junit.After
@@ -25,6 +26,7 @@ class RenderTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val frames = AtomicInteger()
     private val pixel = AtomicInteger()
+    private val seen = CopyOnWriteArrayList<Int>()
     private val thread = HandlerThread("reader").apply { start() }
     private val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
     private val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
@@ -34,12 +36,14 @@ class RenderTest {
     fun attach() {
         choose(CHOSEN)
         reader.setOnImageAvailableListener({ source ->
-            source.acquireLatestImage()?.use { image ->
-                val plane = image.planes[0]
-                val at = SIDE / 2 * plane.rowStride + SIDE / 2 * plane.pixelStride
-                val (r, g, b) = (0..2).map { plane.buffer.get(at + it).toInt() and 0xff }
-                pixel.set(Color.rgb(r, g, b))
-                frames.incrementAndGet()
+            generateSequence { runCatching { source.acquireNextImage() }.getOrNull() }.forEach { image ->
+                image.use {
+                    val plane = it.planes[0]
+                    val at = SIDE / 2 * plane.rowStride + SIDE / 2 * plane.pixelStride
+                    val (r, g, b) = (0..2).map { i -> plane.buffer.get(at + i).toInt() and 0xff }
+                    seen += Color.rgb(r, g, b).also(pixel::set)
+                    frames.incrementAndGet()
+                }
             }
         }, Handler(thread.looper))
         Render.call {
@@ -59,10 +63,28 @@ class RenderTest {
     fun drawsTheChosenImage() {
         Render.call { painter.show(true) }
         assertTrue(waitFor { frames.get() > 0 })
-        val drawn = pixel.get()
-        listOf(16, 8, 0).forEach { shift ->
-            assertEquals((CHOSEN shr shift and 0xff).toFloat(), (drawn shr shift and 0xff).toFloat(), TOLERANCE)
+        same(CHOSEN, pixel.get())
+    }
+
+    @Test
+    fun aNewSurfaceShowsAChangedChoiceWithoutFading() {
+        Native.setting("transition.kind", "fade")
+        Render.call { painter.show(true) }
+        assertTrue(waitFor { frames.get() > 0 })
+        Render.call { painter.detach() }
+        choose(OTHER)
+        val start = seen.size
+        Render.call {
+            painter.attach(reader.surface)
+            painter.resize(SIDE, SIDE, 0)
+            painter.show(true)
         }
+        assertTrue(waitFor { seen.size > start })
+        same(OTHER, seen[start])
+    }
+
+    private fun same(expected: Int, drawn: Int) = listOf(16, 8, 0).forEach { shift ->
+        assertEquals((expected shr shift and 0xff).toFloat(), (drawn shr shift and 0xff).toFloat(), TOLERANCE)
     }
 
     @Test
@@ -97,6 +119,7 @@ class RenderTest {
     private companion object {
         const val SIDE = 64
         const val CHOSEN = 0xffc86428.toInt()
+        const val OTHER = 0xff2864c8.toInt()
         const val TOLERANCE = 3f
     }
 }
@@ -125,7 +148,7 @@ fun install(file: File): String {
     val item = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
         .use { JSONObject(Native.store(it.fd, file.name)!!) }
     Native.library(JSONObject(mapOf("op" to "pick", "choice" to choice("item", item.getString("uid")))).toString())
-    Render.call { Native.commit() }
+    Render.call { Native.commit(BOTH) }
     return item.getString("kind")
 }
 

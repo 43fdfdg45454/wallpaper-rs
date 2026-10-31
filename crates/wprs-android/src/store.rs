@@ -111,6 +111,12 @@ pub(crate) fn store(source: &mut impl Read, name: &str) -> Result<(String, Kind)
     })
 }
 
+pub(crate) fn poster_source(uid: &str) -> Result<Option<PathBuf>, Error> {
+    let item = library::with(|lib| Ok(lib.item(uid)?))?;
+    let film = item.package.as_ref().is_some_and(|p| p.kind == "video") && !thumb_file(uid, "jpg")?.is_file();
+    film.then(|| pack::entry(&item.path)).transpose()
+}
+
 pub(crate) fn poster(
     uid: &str,
     argb: &[i32],
@@ -169,6 +175,10 @@ pub(crate) fn colors(lib: &mut Library, item: &Item) -> Result<Option<[i32; 4]>,
 pub(crate) fn forget(item: &Item) -> Result<(), Error> {
     crate::depth::forget(&item.path)?;
     if item.kind == Kind::Package {
+        let inner = item.package.as_ref().is_some_and(|p| p.kind == "image");
+        if let Some((file, _)) = inner.then(|| pack::media(item).ok()).flatten() {
+            crate::depth::forget(&file)?;
+        }
         drop(fs::remove_dir_all(pack::folder(&item.path)?));
     }
     let owned = item.path.starts_with(fs::canonicalize(dir()?.join(MEDIA))?).then(|| item.path.clone());

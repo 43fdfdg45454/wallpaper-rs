@@ -40,8 +40,6 @@
     <string name="lacks_script_shortcuts">Sus scripts no abren atajos en el teléfono.</string>
     <string name="lacks_script_hierarchy">Sus scripts no cambian los padres de las capas en el teléfono.</string>
     <string name="lacks_rgb">Sus colores no se envían a la iluminación RGB en el teléfono.</string>
-    <string name="refused_newer">Este paquete necesita una versión más nueva de wallpaper-rs.</string>
-    <string name="refused_elsewhere">Este paquete está hecho solo para el escritorio.</string>
     <string name="failed_without_reason">Algo falló sin dar ningún motivo.</string>
     <string name="cancel">Cancelar</string>
     <string name="no_playlists">Aún no hay listas</string>
@@ -60,7 +58,6 @@
     <string name="skip_videos">Saltar los vídeos con batería</string>
     <string name="delete">Borrar la lista</string>
     <string name="empty_playlist">Añade fondos desde su página en la biblioteca</string>
-    <string name="earlier">Subir</string>
     <string name="take_out">Quitar de la lista</string>
     <plurals name="wallpapers">
         <item quantity="one">%d fondo</item>
@@ -141,5 +138,26 @@
         <item quantity="many">No se pueden abrir %d archivos</item>
         <item quantity="other">No se pueden abrir %d archivos</item>
     </plurals>
+    <string name="hide_mature">Ocultar el contenido para adultos</string>
     <string name="show_mature">Mostrar el contenido para adultos sin difuminar</string>
+    <string name="place_where">Usar como fondo en</string>
+    <string name="home_screen">La pantalla de inicio</string>
+    <string name="lock_screen">La pantalla de bloqueo</string>
+    <string name="both_screens">Las dos pantallas</string>
+    <string name="days">Días</string>
+    <string name="every_day">Todos los días</string>
+    <string name="hours">Horas</string>
+    <string name="remove_hour">Quitar esta hora</string>
+    <string name="add_hour">Añadir una hora</string>
+    <string name="hours_hint">Cambia a estas horas en los días elegidos, la próxima vez que se vea el fondo</string>
+    <string name="smart_query">Búsqueda inteligente</string>
+    <string name="manual_playlist">Vacía para una lista manual</string>
+    <string name="matches">Coincidencias: %1$d</string>
+    <string name="save_search">Guardar la búsqueda</string>
+    <string name="make_manual">Hacerla manual</string>
+    <string name="save_name">Guardar</string>
+    <string name="rename_playlist">Cambiar el nombre de la lista</string>
+    <string name="drag_to_move">Arrastrar para mover</string>
+    <string name="search">Buscar</string>
+    <string name="clear_search">Borrar la búsqueda</string>
 </resources>

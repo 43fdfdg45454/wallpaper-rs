@@ -65,7 +65,7 @@ pub mod host {
     pub fn import(path: &str) -> String {
         let stored = std::fs::File::open(path).map_err(Error::from);
         let stored = stored.and_then(|mut file| store::store(&mut file, path));
-        stored.map_or_else(|e| json!({ "error": e.told() }), |(uid, _)| json!(uid)).to_string()
+        stored.map_or_else(|e| e.reply(), |(uid, _)| json!(uid)).to_string()
     }
 
     pub fn setting(key: &str, value: Option<&str>) -> String {
@@ -96,13 +96,11 @@ pub(crate) enum Error {
     #[error(transparent)]
     Sync(#[from] wprs_sync::Error),
     #[error("{0}")]
-    Account(String),
+    Said(#[from] wprs_core::message::Message),
     #[error("not a supported image or video: {0}")]
     Unreadable(String),
     #[error(transparent)]
     Format(#[from] wprs_format::Error),
-    #[error("{0}")]
-    Scene(String),
     #[error("{0}")]
     Setting(String),
     #[cfg(target_os = "android")]
@@ -112,9 +110,33 @@ pub(crate) enum Error {
     Unprepared,
 }
 
+pub(crate) fn said(id: &'static str, text: &'static str, args: &[&dyn std::fmt::Display]) -> Error {
+    Error::Said(wprs_core::message::said(id, text, args))
+}
+
 impl Error {
     pub(crate) fn told(&self) -> String {
         self.told_in(&library::languages())
+    }
+
+    pub(crate) fn reply(&self) -> serde_json::Value {
+        let (id, args) = match self {
+            Error::Said(m) => (m.id, m.args.clone()),
+            Error::Format(e) => {
+                let message = e.message();
+                (message.id, message.args)
+            }
+            Error::Unreadable(name) => ("android.unreadable", vec![name.clone()]),
+            Error::Library(wprs_library::Error::NotFound(what, key)) => {
+                ("android.not_found", vec![(*what).to_owned(), key.clone()])
+            }
+            Error::Library(wprs_library::Error::Exists(what, key)) => {
+                ("android.exists", vec![(*what).to_owned(), key.clone()])
+            }
+            Error::Io(e) => ("android.io", vec![e.to_string()]),
+            _ => ("", Vec::new()),
+        };
+        serde_json::json!({ "error": self.told(), "id": id, "args": args })
     }
 
     pub(crate) fn told_in(&self, languages: &[String]) -> String {

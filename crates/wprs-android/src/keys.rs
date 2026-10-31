@@ -1,5 +1,6 @@
 use crate::Error;
-use crate::state::{api, failed, linked, read, update};
+use crate::said;
+use crate::state::{api, linked, read, update};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 use wprs_sync::{Api, Peer, devices};
@@ -21,10 +22,12 @@ pub(crate) async fn peer(api: &Api, wanted: &str) -> Result<Peer, Error> {
             || p.name.eq_ignore_ascii_case(wanted)
             || read(|s| s.label_of(&p.id)).is_some_and(|l| l == wanted)
     };
-    let peer =
-        peers.iter().find(matches).ok_or_else(|| failed(format!("no device {wanted} on the server")))?;
+    let peer = peers
+        .iter()
+        .find(matches)
+        .ok_or_else(|| said("android.no_device", "no device %1 on the server", &[&wanted]))?;
     match read(|s| s.device.as_ref() == Some(&peer.id)) {
-        true => Err(failed("choose another device than this phone")),
+        true => Err(said("android.choose_another_device", "choose another device than this phone", &[])),
         false => Ok(peer.clone()),
     }
 }
@@ -59,7 +62,7 @@ pub(crate) async fn rekeyed(api: &Api) -> Result<bool, Error> {
 pub(crate) async fn device_code(code: &str, action: &str, mut body: Value) -> Result<Value, Error> {
     let letters: String = code.chars().filter(char::is_ascii_alphanumeric).collect();
     if letters.len() != 8 {
-        return Err(failed("give the 8 letters shown on the new device"));
+        return Err(said("android.give_letters_shown", "give the 8 letters shown on the new device", &[]));
     }
     linked()?;
     body["user_code"] = json!(letters.to_uppercase());

@@ -1,10 +1,13 @@
 use crate::choice::{self, Choice};
+use crate::said;
 use crate::{Error, framing, pack, props, settings, store};
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::{Mutex, PoisonError};
-use wprs_library::{Item, Library, PlaylistInfo, Rules, Turn};
+use wprs_library::{Item, Library, PlaylistInfo, Rules};
+
+mod lists;
 
 const DATABASE: &str = "library.db";
 
@@ -25,6 +28,7 @@ fn heard(languages: &Option<Vec<String>>) {
 #[serde(tag = "op", rename_all = "snake_case")]
 enum Request {
     Items { query: String, languages: Option<Vec<String>> },
+    Count { query: String },
     Item { uid: String, languages: Option<Vec<String>> },
     Confirm { uid: String, what: String },
     Thumb { uid: String },
@@ -41,6 +45,10 @@ enum Request {
     Pick { choice: Option<Choice> },
     Unpick { choice: Choice },
     Current,
+}
+
+fn hidden() -> bool {
+    settings::config().library.hide_mature
 }
 
 pub(crate) fn now() -> i64 {
@@ -62,7 +70,7 @@ pub(crate) fn request(text: &str, on_battery: bool) -> String {
             .map_err(Error::from)
             .and_then(|r| with(|lib| answer(lib, r, on_battery))),
     };
-    answer.unwrap_or_else(|e| json!({ "error": e.told() })).to_string()
+    answer.unwrap_or_else(|e| e.reply()).to_string()
 }
 
 fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value, Error> {
@@ -70,6 +78,7 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
     let reads = matches!(
         request,
         Request::Items { .. }
+            | Request::Count { .. }
             | Request::Item { .. }
             | Request::Thumb { .. }
             | Request::Playlists
@@ -79,10 +88,12 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
     let value = match request {
         Request::Items { query, languages } => {
             heard(&languages);
+            let query = wprs_library::shown(&query, hidden());
             let mut items = lib.search(&query, now, 0, u32::MAX)?;
             lib.localize(&mut items, &languages.unwrap_or_default())?;
             listed(items)?
         }
+        Request::Count { query } => json!(lib.count(&wprs_library::shown(&query, hidden()), now)?),
         Request::Item { uid, languages } => {
             heard(&languages);
             let (mut items, languages) = (vec![lib.item(&uid)?], languages.unwrap_or_default());
@@ -98,30 +109,8 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
         Request::Confirm { uid, what } => lib.confirm(&[&uid], &what).map(|_| Value::Null)?,
         Request::Thumb { uid } => json!(store::thumb(lib, &lib.item(&uid)?)?),
         Request::Favorite { uids, favorite } => json!(lib.set_favorite_many(&known(lib, &uids), favorite)?),
-        Request::Remove { uids } => {
-            let refs = known(lib, &uids);
-            let hashes = lib.hashed()?.into_iter().filter(|(i, _)| refs.contains(&i.uid.as_str()));
-            let removed: Vec<String> = hashes.map(|(_, hash)| wprs_sync::removed_blob(&hash)).collect();
-            let items = lib.remove_items(&refs)?;
-            crate::state::forget(removed, now * 1000)?;
-            items.iter().try_for_each(store::forget)?;
-            if items.iter().any(|item| shown.image.as_ref() == Some(&item.path)) {
-                settings::update(|config| {
-                    config.default.image = None;
-                    Ok(())
-                })?;
-            }
-            Value::Null
-        }
-        Request::Playlists => Value::Array(
-            (lib.playlists()?.into_iter())
-                .map(|p| {
-                    let (count, current) =
-                        (lib.playlist_items(&p.uid, now)?.len(), shown.playlist == Some(p.uid.clone()));
-                    Ok(json!({ "count": count, "current": current, "playlist": p }))
-                })
-                .collect::<Result<_, Error>>()?,
-        ),
+        Request::Remove { uids } => lists::remove(lib, &uids, now)?,
+        Request::Playlists => lists::playlists(lib, now)?,
         Request::Entries { playlist } => listed(lib.playlist_items(&playlist, now)?)?,
         Request::Create { name } => json!(lib.create_playlist(&name, None, &Rules::default())?),
         Request::Save { playlist } => json!(lib.update_playlist(&playlist)?),
@@ -129,14 +118,7 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
             drop_playlist(lib, &playlist)?;
             Value::Null
         }
-        Request::Add { playlist, items } => {
-            let listed =
-                |item: &str| lib.item_playlists(item).is_ok_and(|p| p.iter().any(|p| p.uid == playlist));
-            let mut seen = std::collections::HashSet::new();
-            let fresh: Vec<&str> =
-                known(lib, &items).into_iter().filter(|i| seen.insert(*i) && !listed(i)).collect();
-            json!(lib.add_to_playlist(&playlist, &fresh)?)
-        }
+        Request::Add { playlist, items } => lists::add(lib, &playlist, &items)?,
         Request::Take { playlist, items } => {
             json!(lib.remove_from_playlist_many(&playlist, &known(lib, &items))?)
         }
@@ -145,7 +127,11 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
             if let Some(Choice::Item(uid)) = &choice
                 && lib.item(uid)?.package.is_some_and(|p| p.asks("photosensitive"))
             {
-                return Err(Error::Scene("confirm this photosensitive wallpaper first".into()));
+                return Err(said(
+                    "android.confirm_photosensitive_wallpaper",
+                    "confirm this photosensitive wallpaper first",
+                    &[],
+                ));
             }
             json!(choice::pick(choice))
         }
@@ -161,23 +147,25 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
         }
     };
     if !reads {
-        if let Some(playlist) = settings::config().resolve("").playlist {
-            let _ = choice::turn(lib, &playlist, Turn { retime: true, ..Turn::default() }, on_battery);
-        }
+        choice::retime(lib, on_battery);
         store::changed();
     }
     Ok(value)
 }
 
-fn known<'a>(lib: &Library, uids: &'a [String]) -> Vec<&'a str> {
+pub(crate) fn known<'a>(lib: &Library, uids: &'a [String]) -> Vec<&'a str> {
     uids.iter().map(String::as_str).filter(|uid| lib.item(uid).is_ok()).collect()
 }
 
 pub(crate) fn drop_playlist(lib: &mut Library, playlist: &str) -> Result<(), Error> {
     lib.remove_playlist(playlist)?;
-    if settings::config().resolve("").playlist.as_deref() == Some(playlist) {
+    let config = settings::config();
+    let listed = |o: &wprs_core::config::OutputConfig| o.playlist.as_deref() == Some(playlist);
+    if listed(&config.default) || config.outputs.values().any(listed) {
         settings::update(|config| {
-            config.default.playlist = None;
+            let sections = std::iter::once(&mut config.default).chain(config.outputs.values_mut());
+            sections.filter(|o| listed(o)).for_each(|o| o.playlist = None);
+            config.outputs.retain(|_, o| *o != Default::default());
             Ok(())
         })?;
     }

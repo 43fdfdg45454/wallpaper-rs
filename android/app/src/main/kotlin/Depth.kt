@@ -14,7 +14,7 @@ import org.json.JSONObject
 object Depth {
     val working = mutableStateOf<String?>(null)
     val progress = mutableFloatStateOf(-1f)
-    val failure = mutableStateOf<Pair<String, String>?>(null)
+    val failure = mutableStateOf<Pair<String, Throwable>?>(null)
 
     @Volatile
     var cancelled = false
@@ -23,7 +23,7 @@ object Depth {
     fun make(uid: String, library: String) = run(uid) {
         val model = depth("model") as JSONObject
         if (!model.getBoolean("installed")) {
-            check(model.getBoolean("allowed")) { "downloading the model is turned off" }
+            if (!model.getBoolean("allowed")) throw Refused("downloading the model is turned off", "android.download_off")
             fetch(model)
             progress.floatValue = -1f
             depth("install")
@@ -41,7 +41,7 @@ object Depth {
         failure.value = null
         worker.execute {
             val failed = runCatching(work).exceptionOrNull()?.takeUnless { cancelled }
-            failure.value = failed?.let { uid to (it.message ?: it.javaClass.simpleName) }
+            failure.value = failed?.let { uid to it }
             working.value = null
             Render.post { Wallpaper.reload(false) }
         }

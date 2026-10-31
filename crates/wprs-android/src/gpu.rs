@@ -51,7 +51,8 @@ impl Gpu {
         let image = match &framed.develop {
             Some(edit) => {
                 let frame = edit.geometry.frame(decoded.dimensions());
-                r.develop(&decoded, edit, None, r.develop_size(frame, place(frame), key.size))
+                let map = crate::depth::masking(framed.map.as_ref().map(|(path, _)| path.as_path()), edit);
+                r.develop(&decoded, edit, map.as_ref(), r.develop_size(frame, place(frame), key.size))
             }
             None => r.upload_placed(&decoded, place(decoded.dimensions()), key.size),
         };

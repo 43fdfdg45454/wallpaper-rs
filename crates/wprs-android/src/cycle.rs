@@ -1,5 +1,6 @@
 use crate::link::PLATFORM;
-use crate::state::{api, failed, linked, read, update};
+use crate::said;
+use crate::state::{api, linked, read, update};
 use crate::{Error, apply, keys, local, rotation, vault};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD as B64;
@@ -10,13 +11,18 @@ use wprs_sync::{Session, View, arrived, carry, encode, hold, now_ms, rules};
 pub(crate) async fn sync(conflict: &str) -> Result<Value, Error> {
     linked()?;
     if !read(|s| s.ready || s.stale) {
-        return Err(failed("this phone has no sync key yet; join from a linked device"));
+        return Err(said(
+            "android.phone_sync_key",
+            "this phone has no sync key yet; join from a linked device",
+            &[],
+        ));
     }
     let result = cycle(conflict).await;
-    let error = result.as_ref().err().map(ToString::to_string);
+    let (error, reply) =
+        (result.as_ref().err().map(ToString::to_string), result.as_ref().err().map(Error::reply));
     update(|s| {
         s.last_sync = if error.is_none() { Some(crate::library::now()) } else { s.last_sync };
-        s.last_error = error;
+        (s.last_error, s.last_reply) = (error, reply);
     })?;
     result
 }
@@ -34,7 +40,11 @@ async fn cycle(conflict: &str) -> Result<Value, Error> {
     let stale = sealed.is_some_and(|epoch| Some(epoch) < state["epoch"].as_i64());
     update(|s| (s.outdated, s.recovery_stale) = (outdated, stale))?;
     if outdated {
-        return Err(failed("this account is synced by a newer version of wallpaper-rs: update the app"));
+        return Err(said(
+            "android.account_synced_newer",
+            "this account is synced by a newer version of wallpaper-rs: update the app",
+            &[],
+        ));
     }
     let saved = read(Clone::clone);
     let (device, encrypted, epoch) = (saved.me(), saved.encrypted.unwrap_or(true), saved.epoch);
@@ -103,14 +113,18 @@ async fn cycle(conflict: &str) -> Result<Value, Error> {
         rotation::rotate(&api, &mut secrets).await?;
     }
     if fresh > 0 {
-        return Err(failed(format!(
-            "{fresh} records cannot be decrypted with this sync key; they are skipped from now on"
-        )));
+        return Err(said(
+            "android.records_decrypted_sync",
+            "%1 records cannot be decrypted with this sync key; they are skipped from now on",
+            &[&fresh],
+        ));
     }
     if let Some((_, error)) = errors.first().filter(|_| broken > 0) {
-        return Err(failed(format!(
-            "{broken} synced changes cannot be applied on this phone and are tried again at every sync: {error}"
-        )));
+        return Err(said(
+            "android.synced_changes_applied",
+            "%1 synced changes cannot be applied on this phone and are tried again at every sync: %2",
+            &[&broken, &error],
+        ));
     }
     Ok(json!({"applied": changed + copied, "records": records, "unsent": unsent}))
 }

@@ -27,8 +27,10 @@ class Item(json: JSONObject) {
     val uid: String = json.getString("uid")
     val title: String = json.getString("title")
     val path: String = json.getString("path")
-    val video = json.getString("kind") == "video"
-    val scene = json.getString("kind") == "package"
+    private val pack = json.optJSONObject("package")
+    private val packed = pack?.optString("kind")
+    val video = json.getString("kind") == "video" || packed == "video"
+    val scene = json.getString("kind") == "package" && packed != "video" && packed != "image"
     val thumb: String? = if (json.isNull("thumb")) null else json.getString("thumb")
     val width = json.optInt("width")
     val height = json.optInt("height")
@@ -39,7 +41,6 @@ class Item(json: JSONObject) {
     val animated: String? = details?.takeUnless { it.isNull("animated") }?.optString("animated")?.takeIf { it.isNotEmpty() }
     val refused = (details?.optJSONArray("refused")?.length() ?: 0) > 0
     val lacks = json.optJSONArray("lacks")?.let { list -> List(list.length(), list::getString) }.orEmpty()
-    private val pack = json.optJSONObject("package")
     private val confirmed = pack?.optJSONArray("confirmed")?.let { list -> List(list.length(), list::getString) }.orEmpty()
     val mature = pack?.optString("content") == "mature" && "mature" !in confirmed && !Unveil.mature
     val flashing = pack?.optBoolean("photosensitive") == true && "photosensitive" !in confirmed
@@ -68,11 +69,9 @@ class Playlist(json: JSONObject) {
 fun Playlist.ruled(key: String, value: Any): JSONObject =
     JSONObject(info.toString()).apply { getJSONObject("rules").put(key, value) }
 
-class Refused(message: String) : Exception(message)
-
 private fun answer(native: (String) -> String, op: String, args: Array<out Pair<String, Any?>>): Any? {
     val answer = JSONTokener(native(JSONObject(mapOf("op" to op, *args)).toString())).nextValue()
-    if (answer is JSONObject && answer.length() == 1 && answer.opt("error") is String) throw Refused(answer.getString("error"))
+    if (answer is JSONObject) refusal(answer)?.let { throw it }
     return answer.takeUnless { it == JSONObject.NULL }
 }
 

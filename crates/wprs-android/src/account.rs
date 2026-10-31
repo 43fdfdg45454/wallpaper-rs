@@ -1,4 +1,5 @@
-use crate::state::{CANCEL, Saved, api, failed, linked, read, update};
+use crate::said;
+use crate::state::{CANCEL, Saved, api, linked, read, update};
 use crate::{Error, cycle, keys, link, pairing, settings, vault};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -61,7 +62,7 @@ fn status() -> Value {
         json!({
             "url": s.url, "name": s.name, "handle": s.handle, "device": s.device_name, "label": s.label,
             "state": s.state(), "encrypted": s.encrypted, "paused": s.paused, "last_sync": s.last_sync,
-            "last_error": s.last_error, "warning": s.warning, "records": s.replica.bases.len(),
+            "last_error": s.last_error, "last_reply": s.last_reply, "warning": s.warning, "records": s.replica.bases.len(),
             "quarantined": s.quarantine.len(), "unapplied": s.unapplied.len(),
             "devices": s.peers.iter().map(device).collect::<Vec<_>>(), "link": link::shown(),
             "pairing": pairing::shown(), "network": settings::chosen(NETWORK), "active": s.active(),
@@ -72,7 +73,7 @@ fn status() -> Value {
 
 pub(crate) fn request(text: &str) -> String {
     let answer = serde_json::from_str(text).map_err(Error::from).and_then(run);
-    answer.unwrap_or_else(|e| json!({ "error": e.to_string() })).to_string()
+    answer.unwrap_or_else(|e| e.reply()).to_string()
 }
 
 fn run(request: Request) -> Result<Value, Error> {
@@ -88,8 +89,9 @@ fn run(request: Request) -> Result<Value, Error> {
         }
         _ => {}
     }
-    let _busy =
-        BUSY.try_lock().map_err(|_| failed("another account task is running; try again when it ends"))?;
+    let _busy = BUSY.try_lock().map_err(|_| {
+        said("android.another_account_task", "another account task is running; try again when it ends", &[])
+    })?;
     CANCEL.store(false, Relaxed);
     let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
     runtime.block_on(async {

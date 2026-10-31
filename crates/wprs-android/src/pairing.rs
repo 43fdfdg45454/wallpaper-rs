@@ -1,5 +1,6 @@
 use crate::keys::{peer, pin, rekeyed};
-use crate::state::{api, failed, linked, pause, read, update};
+use crate::said;
+use crate::state::{api, linked, pause, read, update};
 use crate::{Error, rotation, vault};
 use serde_json::{Value, json};
 use std::sync::{Mutex, PoisonError};
@@ -42,7 +43,7 @@ async fn wait(api: &Api, peer: &Peer, pair: &str, step: &str) -> Result<Mail, Er
         }
         pause(2).await?;
     }
-    Err(failed(format!("{} did not answer within 10 minutes; start again", peer.name)))
+    Err(said("android.did_answer_within", "%1 did not answer within 10 minutes; start again", &[&peer.name]))
 }
 
 fn keep(pairing: Pairing) -> Value {
@@ -54,7 +55,7 @@ fn keep(pairing: Pairing) -> Value {
 pub(crate) async fn join(device: &str) -> Result<Value, Error> {
     linked()?;
     if read(|s| s.ready) {
-        return Err(failed("this phone already holds the sync key"));
+        return Err(said("android.phone_already_holds", "this phone already holds the sync key", &[]));
     }
     cancel();
     let (api, secrets) = api()?;
@@ -73,7 +74,11 @@ pub(crate) async fn join(device: &str) -> Result<Value, Error> {
 pub(crate) async fn share(device: &str) -> Result<Value, Error> {
     linked()?;
     if !read(|s| s.ready) {
-        return Err(failed("this phone has no sync key yet; join from a linked device"));
+        return Err(said(
+            "android.phone_sync_key",
+            "this phone has no sync key yet; join from a linked device",
+            &[],
+        ));
     }
     cancel();
     let (api, mut secrets) = api()?;
@@ -85,19 +90,31 @@ pub(crate) async fn share(device: &str) -> Result<Value, Error> {
             break letter.mail?;
         }
         if Instant::now() > until {
-            return Err(failed(format!("{} did not ask for the key within 10 minutes", peer.name)));
+            return Err(said(
+                "android.did_ask_key",
+                "%1 did not ask for the key within 10 minutes",
+                &[&peer.name],
+            ));
         }
         pause(2).await?;
     };
     if opened.step != "commit" || opened.pair.len() != 32 {
-        return Err(failed(format!("{} sent {} instead of a request: start again", peer.name, opened.step)));
+        return Err(said(
+            "android.sent_instead_request",
+            "%1 sent %2 instead of a request: start again",
+            &[&peer.name, &opened.step],
+        ));
     }
     let (pair, own) = (opened.pair.clone(), random::<32>());
     post(&api, &peer.id, &Mail::body("nonce", &pair, &own, 0)).await?;
     let other = nonce(&wait(&api, &peer, &pair, "reveal").await?)?;
     if opened.bytes()? != commit(pair.as_bytes(), &other) {
         post(&api, &peer.id, &Mail::body("abort", &pair, &[], 0)).await?;
-        return Err(failed("the joining device broke its commitment: someone stands between the devices"));
+        return Err(said(
+            "android.joining_device_broke",
+            "the joining device broke its commitment: someone stands between the devices",
+            &[],
+        ));
     }
     let bound = transcript(pair.as_bytes(), (&theirs, &other), (&mine.public(), &own));
     let epoch = secrets.epoch.unwrap_or(read(|s| s.epoch));
@@ -107,14 +124,20 @@ pub(crate) async fn share(device: &str) -> Result<Value, Error> {
 pub(crate) async fn confirm(typed: &str) -> Result<Value, Error> {
     let digits: String = typed.chars().filter(char::is_ascii_digit).collect();
     if digits.len() != 6 {
-        return Err(failed("the code has 6 digits"));
+        return Err(said("android.code_digits", "the code has 6 digits", &[]));
     }
     let pairing = PAIRING.lock().unwrap_or_else(PoisonError::into_inner).take();
-    let p = pairing.ok_or_else(|| failed("no comparison is waiting; start again"))?;
+    let p = pairing.ok_or_else(|| {
+        said("android.comparison_waiting_start", "no comparison is waiting; start again", &[])
+    })?;
     let (api, mut secrets) = api()?;
     if p.code.replace(' ', "") != digits {
         post(&api, &p.peer.id, &Mail::body("abort", &p.pair, &[], 0)).await?;
-        return Err(failed("the codes differ: the key did not move; someone may stand between the devices"));
+        return Err(said(
+            "android.codes_differ_key",
+            "the codes differ: the key did not move; someone may stand between the devices",
+            &[],
+        ));
     }
     let (user, me, encrypted) = read(|s| (s.user(), s.me(), s.encrypted.unwrap_or(true)));
     let key = p.peer.enc_key.clone().unwrap_or_default();
@@ -131,29 +154,35 @@ pub(crate) async fn confirm(typed: &str) -> Result<Value, Error> {
             break mail.bytes()?;
         }
         if Instant::now() > until {
-            return Err(failed(format!(
-                "{} did not send the key within 10 minutes; start again",
-                p.peer.name
-            )));
+            return Err(said(
+                "android.did_send_key",
+                "%1 did not send the key within 10 minutes; start again",
+                &[&p.peer.name],
+            ));
         }
         pause(1).await?;
     };
     let to = aad(user, &me, p.epoch, encrypted, &p.bound);
     let opened = open_key(&secrets.device_key()?, &p.theirs, &to, &sealed).map_err(|_| {
-        failed(format!(
-            "the key from {} does not open here: the server changed keys or settings",
-            p.peer.name
-        ))
+        said(
+            "android.key_does_open",
+            "the key from %1 does not open here: the server changed keys or settings",
+            &[&p.peer.name],
+        )
     })?;
     if p.key_id.as_ref().is_some_and(|id| *id != opened.id()) {
-        return Err(failed(format!("{} sent a key that is not the current key of the account", p.peer.name)));
+        return Err(said(
+            "android.sent_key_current",
+            "%1 sent a key that is not the current key of the account",
+            &[&p.peer.name],
+        ));
     }
     secrets.set_key(&opened, p.epoch);
     vault::store(&secrets)?;
     pin(&p.peer.id, &key)?;
     rekeyed(&api).await?;
     update(|s| {
-        (s.ready, s.stale, s.last_error, s.epoch) = (true, false, None, p.epoch);
+        (s.ready, s.stale, s.last_error, s.last_reply, s.epoch) = (true, false, None, None, p.epoch);
         (s.replica.seq, s.quarantine, s.unapplied) = Default::default();
     })?;
     Ok(json!({"from": p.peer.name}))

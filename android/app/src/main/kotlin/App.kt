@@ -62,6 +62,7 @@ fun App(main: Main) {
     var playlist by rememberSaveable { mutableStateOf<String?>(null) }
     BackHandler(item != null || playlist != null) { if (item != null) item = null else playlist = null }
     MaterialTheme(colorScheme = colors) {
+        if (main.placing.value) Placing(main)
         Scaffold(bottomBar = {
             if (item == null) NavigationBar {
                 TABS.forEachIndexed { index, (label, icon) ->

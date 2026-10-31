@@ -75,7 +75,7 @@ fun Relief(main: Main, uid: String, state: JSONObject) {
         if (share < 0f) LinearProgressIndicator(bar) else LinearProgressIndicator({ share }, bar)
         if (share >= 0f) TextButton({ Depth.cancelled = true }) { Text(stringResource(R.string.cancel)) }
     }
-    Depth.failure.value?.takeIf { it.first == uid && busy == null }?.let { (_, text) -> Note(text, MaterialTheme.colorScheme.error) }
+    Depth.failure.value?.takeIf { it.first == uid && busy == null }?.let { (_, error) -> Note(LocalContext.current.told(error).ifBlank { error.javaClass.simpleName }, MaterialTheme.colorScheme.error) }
     consent?.let { model ->
         AlertDialog(
             onDismissRequest = { consent = null },

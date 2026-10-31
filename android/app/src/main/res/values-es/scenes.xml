@@ -2,7 +2,7 @@
 <resources>
     <string name="scenes">Escenas</string>
     <string name="examples">Añadir las escenas de ejemplo</string>
-    <string name="open_package">Abrir un paquete de escena</string>
+    <string name="open_package">Abrir un paquete</string>
     <string name="react_sound">Reaccionar al sonido</string>
     <string name="react_touch">Reaccionar al tacto</string>
     <string name="microphone_needed">Para reaccionar al sonido hace falta el permiso del micrófono</string>

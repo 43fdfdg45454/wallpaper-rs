@@ -14,15 +14,19 @@ pub(crate) struct Parked {
 }
 
 thread_local! {
-    static PARKED: RefCell<[Option<Parked>; 2]> = const { RefCell::new([None, None]) };
+    static PARKED: RefCell<[Option<Parked>; 3]> = const { RefCell::new([None, None, None]) };
 }
 
-pub(crate) fn park(preview: bool, parked: Parked) {
-    PARKED.with_borrow_mut(|p| p[usize::from(preview)] = Some(parked));
+fn slot(preview: bool, lock: bool) -> usize {
+    if preview { 2 } else { usize::from(lock) }
 }
 
-pub(crate) fn take(preview: bool) -> Option<Parked> {
-    PARKED.with_borrow_mut(|p| p[usize::from(preview)].take())
+pub(crate) fn park(preview: bool, lock: bool, parked: Parked) {
+    PARKED.with_borrow_mut(|p| p[slot(preview, lock)] = Some(parked));
+}
+
+pub(crate) fn take(preview: bool, lock: bool) -> Option<Parked> {
+    PARKED.with_borrow_mut(|p| p[slot(preview, lock)].take())
 }
 
 pub(crate) fn forget() {
@@ -36,6 +40,6 @@ impl Drop for Engine {
         stage.iter_mut().for_each(Stage::hide);
         let epoch = self.target.as_ref().map_or(self.checked.0, |(gpu, _)| gpu.epoch);
         let (image, raised) = (self.image.take(), self.raised.take());
-        park(self.preview, Parked { stage, image, raised, epoch });
+        park(self.preview, self.lock, Parked { stage, image, raised, epoch });
     }
 }

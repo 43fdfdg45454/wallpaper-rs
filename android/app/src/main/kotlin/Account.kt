@@ -113,7 +113,8 @@ private fun Summary(main: Main, status: JSONObject, run: Run, approve: () -> Uni
             if (status.optBoolean("encrypted")) Text(stringResource(R.string.names_key), style = MaterialTheme.typography.bodySmall)
             val outdated = stringResource(R.string.outdated).takeIf { status.optBoolean("outdated") }
             val revoked = stringResource(R.string.recovery_revoked).takeIf { status.optBoolean("recovery_stale") }
-            listOfNotNull(outdated ?: status.text("last_error"), status.text("warning"), revoked).forEach {
+            val failed = status.optJSONObject("last_reply")?.let(::refusal)?.let(main::told) ?: status.text("last_error")
+            listOfNotNull(outdated ?: failed, status.text("warning"), revoked).forEach {
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

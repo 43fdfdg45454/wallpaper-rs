@@ -15,6 +15,16 @@ pub fn device<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, low_ram: jboolean, cl
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn screen<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong, lock: jboolean) {
+    on(&mut env, |_| {
+        engine(handle, |e| {
+            e.screen(lock);
+            Ok(())
+        })
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
 pub fn visible<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong, shown: jboolean) {
     on(&mut env, |_| {
         engine(handle, |e| {

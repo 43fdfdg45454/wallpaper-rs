@@ -77,15 +77,15 @@ pub(crate) fn goal(offset: f32, now: Instant) -> [f32; 2] {
     fresh.map_or([1.0 - 2.0 * offset.clamp(0.0, 1.0), 0.0], |s| s.goal)
 }
 
-pub(crate) fn wanted(preview: bool) -> bool {
-    choice::shown(preview).is_some_and(|shown| match shown.scene {
+pub(crate) fn wanted(preview: bool, lock: bool) -> bool {
+    choice::shown_on(preview, lock).is_some_and(|shown| match shown.scene {
         true => crate::pack::load(&shown.path).is_ok_and(|pack| pack.scene.tilts()),
         false => !shown.video && depth::raised(&shown.path).is_some(),
     })
 }
 
-pub(crate) fn scene(preview: bool) -> bool {
-    choice::shown(preview).is_some_and(|shown| shown.scene)
+pub(crate) fn scene(preview: bool, lock: bool) -> bool {
+    choice::shown_on(preview, lock).is_some_and(|shown| shown.scene)
 }
 
 pub(crate) fn rate(wanted: bool, power: Power, preview: bool) -> u32 {

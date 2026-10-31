@@ -259,7 +259,7 @@ class SceneTest {
         Native.library(JSONObject().put("op", "confirm").put("uid", uid).put("what", "photosensitive").toString())
         Native.library(JSONObject(mapOf("op" to "pick", "choice" to choice("item", uid))).toString())
         Render.call {
-            Native.commit()
+            Native.commit(BOTH)
             painter.attach(reader.surface)
             painter.resize(SIDE, SIDE, 0)
             painter.show(true)

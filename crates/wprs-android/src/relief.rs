@@ -31,10 +31,10 @@ pub(crate) struct Look {
 }
 
 impl Tilted {
-    pub(crate) fn rate(&mut self, preview: bool) -> u32 {
+    pub(crate) fn rate(&mut self, preview: bool, lock: bool) -> u32 {
         let generation = store::generation();
         if self.0 != generation {
-            *self = Tilted(generation, tilt::wanted(preview), tilt::scene(preview));
+            *self = Tilted(generation, tilt::wanted(preview, lock), tilt::scene(preview, lock));
         }
         let power = Power::now();
         tilt::rate(self.1 && !(self.2 && power.still), power, preview)

@@ -1,5 +1,6 @@
 use crate::keys::{pins, rekeyed};
-use crate::state::{failed, read, update};
+use crate::said;
+use crate::state::{read, update};
 use crate::{Error, vault};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD as B64;
@@ -16,10 +17,18 @@ pub(crate) async fn current(api: &Api, secrets: &mut Secrets) -> Result<Value, E
     let (mut state, encrypted) =
         (api.get("/api/v1/sync/state").await?, read(|s| s.encrypted.unwrap_or(true)));
     if state["encrypted"].as_bool() != Some(encrypted) {
-        return Err(failed("the server changed the encryption of this account; nothing was synced"));
+        return Err(said(
+            "android.server_changed_encryption",
+            "the server changed the encryption of this account; nothing was synced",
+            &[],
+        ));
     }
     if secrets.key.is_empty() {
-        return Err(failed("this phone has no sync key yet; join from a linked device"));
+        return Err(said(
+            "android.phone_sync_key",
+            "this phone has no sync key yet; join from a linked device",
+            &[],
+        ));
     }
     if encrypted && !secrets.next.is_empty() {
         rotate(api, secrets).await?;
@@ -36,7 +45,11 @@ pub(crate) async fn current(api: &Api, secrets: &mut Secrets) -> Result<Value, E
     let key = secrets.sync_key()?;
     if server != epoch || id.is_some_and(|id| id != key.id()) {
         update(|s| (s.ready, s.stale) = (false, true))?;
-        return Err(failed("the sync key of the account changed: waiting for the new key, or join again"));
+        return Err(said(
+            "android.sync_key_account",
+            "the sync key of the account changed: waiting for the new key, or join again",
+            &[],
+        ));
     }
     if let Some((from, bound)) = adopted {
         if rekeyed(api).await? {
@@ -91,7 +104,9 @@ pub(crate) async fn rotate(api: &Api, secrets: &mut Secrets) -> Result<Option<Va
         None => {
             secrets.next = encode(&old.rotated().bytes());
             vault::store(secrets)?;
-            secrets.next_key()?.ok_or_else(|| failed("the new key could not be stored"))?
+            secrets
+                .next_key()?
+                .ok_or_else(|| said("android.new_key_could", "the new key could not be stored", &[]))?
         }
     };
     match api.post("/api/v1/sync/epoch", json!({"epoch": epoch + 1, "key_id": next.id()})).await {
@@ -130,7 +145,9 @@ async fn hand_over(
     let (mut shared, mut waiting) = (Vec::new(), BTreeSet::new());
     for (id, theirs) in pins()?.iter().filter(|(id, _)| wanted(id)) {
         let to = aad(user, id, epoch, encrypted, bound);
-        let theirs = B64.decode(theirs).map_err(|_| failed("a pinned device key is broken"));
+        let theirs = B64
+            .decode(theirs)
+            .map_err(|_| said("android.pinned_device_key", "a pinned device key is broken", &[]));
         let sealed = theirs.and_then(|theirs| Ok(seal_key(&mine, &theirs, &to, &key)?));
         let sent = match sealed {
             Ok(sealed) => post(api, id, &Mail::body("rotate", "", &sealed, epoch)).await.map_err(Error::from),

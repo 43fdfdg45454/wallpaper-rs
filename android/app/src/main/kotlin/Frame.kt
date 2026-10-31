@@ -70,7 +70,7 @@ private fun Main.frame(uid: String, screen: IntSize, pan: FloatArray, zoom: Floa
     val failed = runCatching { depth("frame", "uid" to uid, "pan" to pan, "zoom" to zoom, "screen" to size, "done" to done) }
     Wallpaper.wake()
     if (done || failed.isFailure) runOnUiThread {
-        failed.exceptionOrNull()?.let { toast(it.message.orEmpty()) }
+        failed.exceptionOrNull()?.let(::toast)
         if (done) changed()
     }
 }

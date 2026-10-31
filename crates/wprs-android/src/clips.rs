@@ -1,4 +1,5 @@
 use crate::Error;
+use crate::said;
 use ndk::media::image_reader::{AcquireResult, Image, ImageFormat, ImageReader};
 use ndk::native_window::NativeWindow;
 use std::path::{Path, PathBuf};
@@ -19,7 +20,7 @@ struct Clip {
 pub(crate) struct Clips(Vec<Clip>);
 
 fn media(e: ndk::media_error::MediaError) -> Error {
-    Error::Scene(format!("video frames: {e}"))
+    said("android.video_frames", "video frames: %1", &[&e])
 }
 
 fn planes<'a>(image: &'a Image, chroma: &'a mut Vec<u8>) -> Result<Planes<'a>, Error> {

@@ -63,6 +63,8 @@ fn rated_packages_are_searchable_and_confirmed_once_per_package() {
         ["content:mature", "content:general", "content:unrated", "facet:photosensitive", "-content:mature"];
     assert_eq!(counts.map(|q| count(&library, q)), [1, 1, 1, 1, 2]);
     assert!(matches!(library.count("content:pg", NOW), Err(Error::Query(_))));
+    let hidden = ["", "content:mature"].map(|q| count(&library, &wprs_library::shown(q, true)));
+    assert_eq!((hidden, wprs_library::shown("sea", false)), ([2, 1], "sea".into()));
     let storm = library.search("content:mature", NOW, 0, 1).unwrap().remove(0);
     let info = storm.package.clone().unwrap();
     assert_eq!((info.content.as_deref(), info.photosensitive), (Some("mature"), Some(true)));

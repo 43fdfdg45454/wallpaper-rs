@@ -35,6 +35,13 @@ impl Library {
     }
 }
 
+pub fn shown(query: &str, hide_mature: bool) -> String {
+    match hide_mature && !query.contains("content:") {
+        true => format!("{query} -content:mature"),
+        false => query.to_owned(),
+    }
+}
+
 pub(crate) fn compile(query: &str, now: i64) -> Result<Compiled> {
     ensure(query.matches('"').count().is_multiple_of(2), || Error::Query("a quote is not closed".into()))?;
     let order = "i.added_at DESC, i.id DESC".to_string();

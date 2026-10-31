@@ -1,4 +1,5 @@
-use crate::state::{self, failed, pause, read, update};
+use crate::said;
+use crate::state::{self, pause, read, update};
 use crate::{Error, keys, vault};
 use reqwest::{Method, Url};
 use serde_json::{Value, json};
@@ -39,11 +40,19 @@ pub(crate) fn cancel() {
 pub(crate) async fn add(url: &str) -> Result<Value, Error> {
     let url = check_url(url)?;
     if read(|s| s.device.is_some()) {
-        return Err(failed("this phone is linked to a server; remove it first"));
+        return Err(said(
+            "android.phone_linked_server",
+            "this phone is linked to a server; remove it first",
+            &[],
+        ));
     }
     let found = Api::new(&url)?.get("/.well-known/wprs-server").await?;
     if !found["api"].as_array().is_some_and(|api| api.contains(&json!("v1"))) {
-        return Err(failed("this address does not serve a wallpaper-rs server"));
+        return Err(said(
+            "android.address_does_serve",
+            "this address does not serve a wallpaper-rs server",
+            &[],
+        ));
     }
     let name: String =
         found["name"].as_str().unwrap_or_default().chars().filter(|c| !c.is_control()).take(128).collect();
@@ -54,13 +63,19 @@ pub(crate) async fn add(url: &str) -> Result<Value, Error> {
 pub(crate) async fn start(label: &str, plaintext: bool) -> Result<Value, Error> {
     let url = read(|s| s.url.clone());
     match () {
-        _ if url.is_empty() => return Err(failed("add a server first")),
-        _ if read(|s| s.device.is_some()) => return Err(failed("this phone is already linked")),
+        _ if url.is_empty() => return Err(said("android.add_server", "add a server first", &[])),
+        _ if read(|s| s.device.is_some()) => {
+            return Err(said("android.phone_already_linked", "this phone is already linked", &[]));
+        }
         _ => {}
     }
     let label = label.trim().to_owned();
     if label.is_empty() || label.chars().count() > 64 || label.chars().any(char::is_control) {
-        return Err(failed("a device name has 1 to 64 printable characters"));
+        return Err(said(
+            "android.device_name_printable",
+            "a device name has 1 to 64 printable characters",
+            &[],
+        ));
     }
     let (key, api) = (DeviceKey::generate(), Api::new(&url)?);
     let body = json!({"platform": PLATFORM, "enc_key": encode(&key.public()), "client": AGENT});
@@ -80,7 +95,8 @@ pub(crate) async fn start(label: &str, plaintext: bool) -> Result<Value, Error> 
 
 pub(crate) async fn wait() -> Result<Value, Error> {
     let pending = PENDING.lock().unwrap_or_else(PoisonError::into_inner).take();
-    let pending = pending.ok_or_else(|| failed("no link is waiting; link again"))?;
+    let pending =
+        pending.ok_or_else(|| said("android.link_waiting_link", "no link is waiting; link again", &[]))?;
     let done = approved(&pending).await;
     SHOWN.lock().unwrap_or_else(PoisonError::into_inner).take();
     finish(pending, done?).await
@@ -94,11 +110,13 @@ async fn approved(pending: &Pending) -> Result<Value, Error> {
         match poll(&mut interval, answer.await) {
             Poll::Done(token) => return Ok(token),
             Poll::Wait(_) => {}
-            Poll::Stop(e) if e.code() == "access_denied" => return Err(failed("the link was refused")),
+            Poll::Stop(e) if e.code() == "access_denied" => {
+                return Err(said("android.link_refused", "the link was refused", &[]));
+            }
             Poll::Stop(e) => return Err(e.into()),
         }
     }
-    Err(failed("the code expired before it was approved; link again"))
+    Err(said("android.code_expired_before", "the code expired before it was approved; link again", &[]))
 }
 
 async fn finish(pending: Pending, token: Value) -> Result<Value, Error> {
@@ -116,8 +134,10 @@ async fn finish(pending: Pending, token: Value) -> Result<Value, Error> {
         let path = format!("/api/v1/me/devices/{}", text("device_id"));
         drop(api.call(Method::DELETE, &path, None).await);
         vault::forget()?;
-        return Err(failed(
+        return Err(said(
+            "android.account_syncs_without",
             "the account syncs without end-to-end encryption; link with plain text only if you accept that",
+            &[],
         ));
     }
     let owner = (read(|s| s.url.clone()), me["id"].as_i64().unwrap_or_default());
@@ -143,7 +163,11 @@ async fn finish(pending: Pending, token: Value) -> Result<Value, Error> {
             let body = json!({"encrypted": encrypted, "confirm_plaintext": plaintext, "key_id": sync.id()});
             let state = api.post("/api/v1/sync/setup", body).await?;
             if state["encrypted"].as_bool() != Some(encrypted) {
-                return Err(failed("the server set up sync with another encryption than asked"));
+                return Err(said(
+                    "android.server_set_up",
+                    "the server set up sync with another encryption than asked",
+                    &[],
+                ));
             }
             secrets.set_key(&sync, state["epoch"].as_i64().unwrap_or(0));
             vault::store(&secrets)?;
@@ -154,7 +178,7 @@ async fn finish(pending: Pending, token: Value) -> Result<Value, Error> {
         (s.encrypted, s.epoch) = (state["encrypted"].as_bool(), state["epoch"].as_i64().unwrap_or(0));
         (s.warning, s.ready, s.stale) =
             (state["warning"].as_str().map(String::from), !secrets.key.is_empty(), false);
-        (s.last_error, s.last_sync) = (None, None);
+        (s.last_error, s.last_reply, s.last_sync) = (None, None, None);
     })?;
     drop(keys::refresh(&api).await);
     let needs_key = secrets.key.is_empty();

@@ -27,7 +27,7 @@ impl Engine {
     }
 
     pub(crate) fn clips(&mut self) -> Option<Vec<String>> {
-        let shown = choice::shown(self.preview).filter(|shown| !shown.video);
+        let shown = choice::shown_on(self.preview, self.lock).filter(|shown| !shown.video);
         self.stage(shown.as_ref());
         let videos = &self.stage.as_ref()?.pack.videos;
         Some(videos.iter().filter_map(|(_, path)| path.to_str().map(String::from)).collect())
