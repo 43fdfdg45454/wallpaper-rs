@@ -39,6 +39,11 @@ fun settled(frames: AtomicInteger) = Thread.sleep(300).let { frames.get() }
 
 fun quiet(frames: AtomicInteger) = Thread.sleep(1500).let { frames.get() }
 
+fun hex(color: Int): String = Integer.toHexString(color)
+
+fun near(expected: Int, drawn: Int, tolerance: Int) =
+    listOf(16, 8, 0).all { shift -> kotlin.math.abs((expected shr shift and 0xff) - (drawn shr shift and 0xff)) <= tolerance }
+
 fun waitFor(done: () -> Boolean): Boolean {
     val end = System.currentTimeMillis() + 20_000
     while (!done() && System.currentTimeMillis() < end) Thread.sleep(20)

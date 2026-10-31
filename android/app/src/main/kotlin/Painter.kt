@@ -37,7 +37,7 @@ class Painter(
 
     fun attach(surface: Surface) {
         this.surface = surface
-        handle = Native.attach(surface, preview, lock)
+        handle = Native.attach(surface, preview, lock, shown)
         refresh()
     }
 

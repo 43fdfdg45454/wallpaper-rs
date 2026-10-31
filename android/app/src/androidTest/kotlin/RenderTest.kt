@@ -44,10 +44,7 @@ class RenderTest {
                 }
             }
         }, Handler(thread.looper))
-        Render.call {
-            painter.attach(reader.surface)
-            painter.resize(SIDE, SIDE, 0)
-        }
+        Render.call(::reattach)
     }
 
     @After
@@ -73,8 +70,7 @@ class RenderTest {
         choose(OTHER)
         val start = seen.size
         Render.call {
-            painter.attach(reader.surface)
-            painter.resize(SIDE, SIDE, 0)
+            reattach()
             painter.show(true)
         }
         assertTrue(waitFor { seen.size > start })
@@ -94,21 +90,11 @@ class RenderTest {
     }
 
     @Test
-    fun wholePictureVideosKeepTheirBars() {
-        Native.setting("fit", "fit")
-        try {
-            assertEquals(VIDEO, install(fixture(CLIP)))
-            Render.call {
-                Wallpaper.reload(false)
-                painter.refresh()
-                painter.show(true)
-            }
-            val filmed = waitFor { seen.isNotEmpty() && near(FILMED, seen.last(), LOSSY) }
-            assertTrue("drew ${seen.lastOrNull()?.let(::hex)} after ${Native.diagnostics()}", filmed)
-            assertTrue(hex(edges.last()), near(Color.BLACK, edges.last(), LOSSY))
-        } finally {
-            Native.setting("fit", "fill")
-        }
+    fun wholePictureVideosKeepTheirBars() = fitted {
+        film()
+        val filmed = waitFor { seen.isNotEmpty() && near(FILMED, seen.last(), LOSSY) }
+        assertTrue("drew ${seen.lastOrNull()?.let(::hex)} after ${Native.diagnostics()}", filmed)
+        assertTrue(hex(edges.last()), near(Color.BLACK, edges.last(), LOSSY))
     }
 
     @Test
@@ -124,12 +110,46 @@ class RenderTest {
         assertTrue("a frame mixes the picture and the video", waitFor { seen.any(::mixed) })
     }
 
+    @Test
+    fun aVideoShownOnANewSurfaceFadesIntoTheNextPicture() = fitted {
+        Native.setting("transition.kind", "fade")
+        film()
+        Render.call {
+            painter.detach()
+            reattach()
+        }
+        assertTrue(waitFor { seen.isNotEmpty() && near(FILMED, seen.last(), LOSSY) })
+        val start = seen.size
+        choose(CHOSEN)
+        Render.call {
+            Wallpaper.reload(false)
+            painter.refresh()
+        }
+        assertTrue("the video faded out", waitFor { seen.drop(start).any(::mixed) })
+    }
+
+    private fun reattach() {
+        painter.attach(reader.surface)
+        painter.resize(SIDE, SIDE, 0)
+    }
+
+    private fun film() {
+        assertEquals(VIDEO, install(fixture(CLIP)))
+        Render.call {
+            Wallpaper.reload(false)
+            painter.refresh()
+            painter.show(true)
+        }
+    }
+
+    private fun fitted(test: () -> Unit) = try {
+        Native.setting("fit", "fit")
+        test()
+    } finally {
+        Native.setting("fit", "fill")
+    }
+
     private fun mixed(drawn: Int) = Color.red(drawn) >= 0xc0 && Color.green(drawn) in 0x30..0x54
-
-    private fun hex(color: Int) = Integer.toHexString(color)
-
-    private fun near(expected: Int, drawn: Int, tolerance: Int) =
-        listOf(16, 8, 0).all { shift -> kotlin.math.abs((expected shr shift and 0xff) - (drawn shr shift and 0xff)) <= tolerance }
 
     private fun same(expected: Int, drawn: Int) = listOf(16, 8, 0).forEach { shift ->
         assertEquals((expected shr shift and 0xff).toFloat(), (drawn shr shift and 0xff).toFloat(), TOLERANCE)

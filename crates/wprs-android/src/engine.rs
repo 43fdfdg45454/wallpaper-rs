@@ -62,7 +62,7 @@ fn size(width: i32, height: i32) -> (u32, u32) {
 }
 
 impl Engine {
-    pub(crate) fn open(window: NativeWindow, preview: bool, lock: bool) -> Self {
+    pub(crate) fn open(window: NativeWindow, preview: bool, lock: bool, visible: bool) -> Self {
         let size = size(window.width(), window.height());
         let kept = parked::take(preview, lock);
         let (stage, image, raised, epoch) =
@@ -97,7 +97,7 @@ impl Engine {
             film: None,
             direct: None,
             handover: false,
-            hidden: true,
+            hidden: !visible,
             window,
         }
     }

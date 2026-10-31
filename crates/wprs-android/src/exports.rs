@@ -45,10 +45,11 @@ pub fn attach<'a>(
     surface: JObject<'a>,
     preview: jboolean,
     lock: jboolean,
+    shown: jboolean,
 ) -> jlong {
     on(&mut env, |env| {
         let window = unsafe { NativeWindow::from_surface(env.get_raw().cast(), surface.as_raw().cast()) };
-        let engine = Box::new(Engine::open(window.ok_or(Error::Window)?, preview, lock));
+        let engine = Box::new(Engine::open(window.ok_or(Error::Window)?, preview, lock, shown));
         Ok(Box::into_raw(engine).expose_provenance() as jlong)
     })
 }

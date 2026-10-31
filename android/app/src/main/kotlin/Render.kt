@@ -15,7 +15,7 @@ object Native {
 
     external fun prepare(files: String)
 
-    external fun attach(surface: Surface, preview: Boolean, lock: Boolean): Long
+    external fun attach(surface: Surface, preview: Boolean, lock: Boolean, shown: Boolean): Long
 
     external fun resize(engine: Long, width: Int, height: Int)
 
