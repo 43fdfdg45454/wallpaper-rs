@@ -1,8 +1,11 @@
 use super::super::Content;
+use super::super::SceneInput;
 use super::super::scripts::Scripts;
 use super::*;
 use crate::scenes::ScenePack;
+use std::collections::HashMap;
 use std::sync::Arc;
+use wprs_render::Renderer;
 use wprs_scene::{Scene, Tier};
 
 #[test]

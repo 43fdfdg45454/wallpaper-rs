@@ -3,27 +3,18 @@ use crate::changes::Signal;
 use crate::daemon::Daemon;
 use crate::error::{Error, Result, failed, invalid};
 use crate::items::limited;
-use crate::thumbs::{Req, SIZES};
+use crate::thumbs::Req;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 use zbus::message::Header;
 use zbus::object_server::SignalEmitter;
 
+mod args;
+
+use args::{strs, text, thumb_size};
+
 pub struct Library(pub Weak<Daemon>);
-
-fn text(path: PathBuf) -> String {
-    path.to_string_lossy().into_owned()
-}
-
-fn strs(list: &[String]) -> Vec<&str> {
-    list.iter().map(String::as_str).collect()
-}
-
-fn thumb_size(size: u32) -> Result<u32> {
-    if SIZES.contains(&size) { Ok(size) } else { Err(invalid(format!("size must be one of {SIZES:?}"))) }
-}
 
 impl Library {
     fn d(&self) -> Result<Arc<Daemon>> {

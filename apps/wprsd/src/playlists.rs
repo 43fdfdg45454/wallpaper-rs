@@ -1,15 +1,15 @@
-use crate::compositor::lock;
 use crate::daemon::Daemon;
 use crate::error::{Error, Result, failed, invalid};
-use crate::items::{MAX_UIDS, limited, merged, reply};
+use crate::items::{merged, reply};
 use crate::jobs::now;
-use crate::playback::stop_sections;
-use crate::rotation::{Act, seed};
+use crate::rotation::seed;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use wprs_core::model::{MODEL, Playlist, PlaylistPage, PlaylistsReply};
-use wprs_library::{EntryEdit, Library, PlaylistInfo, Rotation, Rules};
-use wprs_schedule::PlaylistState;
+use wprs_library::{Library, PlaylistInfo, Rules};
+
+mod edit;
+mod rules;
 
 const MAX_PAGE: u32 = 500;
 const FLAGS: [&str; 4] = ["synced", "resume", "advance_while_paused", "skip_videos_on_battery"];
@@ -102,132 +102,7 @@ impl Daemon {
         self.changes.changed("playlists", vec![uid.clone()]);
         Ok(uid)
     }
-
-    pub fn edit_playlist(
-        &self,
-        key: &str,
-        change: impl FnOnce(&mut Library, PlaylistInfo) -> Result<Vec<String>>,
-    ) -> Result<()> {
-        let uid = {
-            let mut lists = lock(&self.rotations.lists);
-            let (uid, keys) = self.store.write(|lib| {
-                let info = lib.playlist(key)?;
-                Ok::<_, Error>((info.uid.clone(), change(lib, info)?))
-            })?;
-            lists.extend(keys.into_iter().map(|key| (key, Vec::new())));
-            uid
-        };
-        self.changes.changed("playlists", vec![uid]);
-        self.show(Act::Check);
-        Ok(())
-    }
-
-    pub fn rename_playlist(&self, key: &str, name: &str) -> Result<()> {
-        self.edit_playlist(key, |lib, info| {
-            lib.update_playlist(&PlaylistInfo { name: name.into(), ..info })?;
-            Ok(Vec::new())
-        })
-    }
-
-    pub fn set_query(&self, key: &str, query: &str) -> Result<()> {
-        self.edit_playlist(key, |lib, info| {
-            lib.update_playlist(&PlaylistInfo { query: normalized(lib, query)?, ..info })?;
-            Ok(Vec::new())
-        })
-    }
-
-    pub fn edit_entries(
-        &self,
-        key: &str,
-        edit: impl FnOnce(&mut Library, &str) -> wprs_library::Result<()>,
-    ) -> Result<()> {
-        self.edit_playlist(key, |lib, info| {
-            edit(lib, &info.uid)?;
-            Ok(Vec::new())
-        })
-    }
-
-    pub fn remove_entries(&self, key: &str, indexes: &[u32], expected: &[String]) -> Result<()> {
-        limited(indexes, MAX_UIDS)?;
-        if indexes.len() != expected.len() {
-            return Err(invalid("indexes and expected must have the same length"));
-        }
-        let entries: Vec<(u32, &str)> =
-            indexes.iter().copied().zip(expected.iter().map(String::as_str)).collect();
-        self.edit_entries(key, |lib, uid| lib.edit_entries(uid, EntryEdit::Remove(&entries)))
-    }
-
-    pub fn set_playlist_rule(&self, key: &str, rule: &str, value: &str) -> Result<()> {
-        let showing = self.showing();
-        self.edit_playlist(key, |lib, mut info| {
-            let rules = set_rule(&info.rules, rule, value)?;
-            lock(&self.rotations.unsaved).retain(|r| r.playlist != info.uid);
-            let (migrate, reorder) = (rules.synced != info.rules.synced, rules.order != info.rules.order);
-            info.rules = rules;
-            lib.update_playlist(&info)?;
-            let rows: Vec<Rotation> =
-                lib.rotations()?.into_iter().filter(|r| r.playlist == info.uid).collect();
-            let (current, mut keys) = (rows.iter().find_map(|r| r.current.clone()), Vec::new());
-            for mut row in rows {
-                row.next_at = None;
-                match migrate {
-                    true => lib.clear_rotation(&row.output)?,
-                    false => lib.save_rotation(&row)?,
-                }
-                keys.extend((!migrate && reorder).then_some(row.output));
-            }
-            let added = match (migrate, info.rules.synced) {
-                (false, _) => Vec::new(),
-                (true, true) => vec![format!("@{}", info.uid)],
-                (true, false) => showing.get(&info.uid).cloned().unwrap_or_default(),
-            };
-            for key in &added {
-                let (state, current) = (PlaylistState::new(seed()), current.clone());
-                let row = Rotation {
-                    output: key.clone(),
-                    playlist: info.uid.clone(),
-                    state,
-                    next_at: None,
-                    current,
-                };
-                lib.save_rotation(&row)?;
-            }
-            keys.extend(added);
-            Ok(keys)
-        })
-    }
-
-    pub fn delete_playlist(&self, key: &str) -> Result<()> {
-        let uid = self.store.read(|lib| lib.playlist(key))?.uid;
-        let playing = self.state().playing.clone();
-        self.store.write(|lib| lib.remove_playlist(&uid))?;
-        self.update_config(|c| {
-            stop_sections(c, &playing, "", Some(&uid));
-            Ok(())
-        })?;
-        self.configure_all();
-        self.changes.changed("playlists", vec![uid]);
-        Ok(())
-    }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rules_are_checked_against_the_library_rules() {
-        let rules = set_rule(&Rules::default(), "at", "18:00, 07:30,18:00").unwrap();
-        let rules = set_rule(&rules, "days", "sunday,Mon").unwrap();
-        let json = serde_json::to_value(&rules).unwrap();
-        assert_eq!((&json["at"], &json["days"]), (&json!(["07:30", "18:00"]), &json!(["Mon", "Sun"])));
-        assert_eq!(set_rule(&rules, "interval", "1h30m").unwrap().interval.as_secs(), 5400);
-        assert_eq!(set_rule(&rules, "transition_ms", "250").unwrap().transition_ms, Some(250));
-        let bad = [("interval", "5s"), ("interval", "31d"), ("order", "random"), ("at", "25:00")];
-        for (key, value) in
-            bad.into_iter().chain([("synced", "yes"), ("transition_ms", "10001"), ("colour", "red")])
-        {
-            assert!(set_rule(&rules, key, value).is_err(), "{key}={value}");
-        }
-    }
-}
+mod tests;

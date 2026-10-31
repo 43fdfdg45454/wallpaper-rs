@@ -4,15 +4,13 @@ use crate::error::{Error, Result, failed, invalid, not_found};
 use crate::items::reply;
 use crate::jobs::now;
 use crate::rotation::{Act, Playing, excluded};
-use crate::timing::nap;
-use chrono::Utc;
-use futures_util::StreamExt;
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::time::Instant;
 use wprs_core::Config;
 use wprs_core::model::{HistoryEntry, HistoryReply, MODEL};
+
+mod turns;
+
+pub use turns::run;
 
 pub fn stop_sections(
     c: &mut Config,
@@ -110,114 +108,5 @@ impl Daemon {
     }
 }
 
-#[zbus::proxy(
-    interface = "org.freedesktop.login1.Manager",
-    default_service = "org.freedesktop.login1",
-    default_path = "/org/freedesktop/login1"
-)]
-trait Login {
-    #[zbus(signal)]
-    fn prepare_for_sleep(&self, start: bool) -> zbus::Result<()>;
-}
-
-async fn resumes(daemon: Arc<Daemon>) {
-    let follow = async {
-        let login = LoginProxy::new(&zbus::Connection::system().await?).await?;
-        let mut sleeps = login.receive_prepare_for_sleep().await?;
-        while let Some(signal) = sleeps.next().await {
-            if signal.args().is_ok_and(|a| !a.start) {
-                daemon.rotations.wake.notify_one();
-                daemon.remote.poke.notify_one();
-            }
-        }
-        zbus::Result::Ok(())
-    };
-    if let Err(e) = follow.await {
-        tracing::info!("cannot follow suspend and resume: {e}");
-    }
-}
-
-fn now_ms() -> i64 {
-    Utc::now().timestamp_millis()
-}
-
-const SETTLE: Duration = Duration::from_secs(3);
-
-fn settle(scanning: bool, since: Duration) -> bool {
-    scanning && since < SETTLE
-}
-
-pub async fn run(daemon: Arc<Daemon>) {
-    tokio::spawn(resumes(daemon.clone()));
-    crate::clock::start(&daemon);
-    let (mut serial, mut seen) = (daemon.changes.subscribe(), daemon.changes.serial());
-    loop {
-        let (print, worker, resolved) = (daemon.fingerprint(), daemon.clone(), Instant::now());
-        let due = tokio::task::spawn_blocking(move || worker.show(Act::Check)).await.ok().flatten();
-        let (due, mut pending) = (due.map(|at| at.saturating_mul(1000)), false);
-        loop {
-            let nap = nap(due, now_ms());
-            tokio::select! {
-                () = tokio::time::sleep(nap.unwrap_or_default()), if nap.is_some() => {
-                    if due.is_some_and(|at| at <= now_ms()) {
-                        break;
-                    }
-                }
-                () = tokio::time::sleep_until(resolved + SETTLE), if pending => break,
-                changed = serial.changed() => {
-                    if changed.is_err() {
-                        return;
-                    }
-                    let (now, topics) = daemon.changes.since(seen);
-                    seen = now;
-                    if daemon.fingerprint() != print {
-                        break;
-                    }
-                    if topics.iter().any(|t| t == "library") {
-                        if !settle(daemon.jobs.scanning(), resolved.elapsed()) {
-                            break;
-                        }
-                        pending = true;
-                    }
-                }
-                () = daemon.rotations.wake.notified() => break,
-            }
-        }
-    }
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use wprs_core::model::OutputPlaylist;
-
-    #[test]
-    fn library_changes_during_scans_resolve_at_most_every_few_seconds() {
-        assert!(!settle(false, Duration::ZERO));
-        assert!(settle(true, Duration::from_secs(1)));
-        assert!(!settle(true, SETTLE));
-    }
-
-    #[test]
-    fn stopping_keeps_the_item_shown() {
-        let shown = |uid: &str, path: &str| {
-            let playlist =
-                OutputPlaylist { uid: uid.into(), name: uid.into(), position: 0, count: 1, next_at: None };
-            Playing { playlist, item: None, path: Some(path.into()), error: None, transition: None }
-        };
-        let mut config = Config::default();
-        config.set_playlist("", "A".into());
-        config.set_playlist("DP-2", "B".into());
-        let playing =
-            HashMap::from([("DP-1".into(), shown("A", "/w/a.png")), ("DP-2".into(), shown("B", "/w/b.png"))]);
-        let mut one = config.clone();
-        assert_eq!(stop_sections(&mut one, &playing, "DP-2", None), ["B"]);
-        assert_eq!(
-            (one.resolve("DP-2").image, one.resolve("DP-1").playlist),
-            (Some("/w/b.png".into()), Some("A".into()))
-        );
-        assert_eq!(stop_sections(&mut config, &playing, "", Some("A")), ["A"]);
-        assert_eq!((&config.default.image, &config.default.playlist), (&Some("/w/a.png".into()), &None));
-        assert_eq!(config.resolve("DP-2").playlist.as_deref(), Some("B"));
-    }
-}
+mod tests;
