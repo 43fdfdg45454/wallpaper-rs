@@ -100,7 +100,11 @@ abstract class Examples : DefaultTask() {
     @TaskAction
     fun copy() {
         files.sync {
-            from(scenes) { into("scenes") }
+            from(scenes) {
+                into("scenes")
+                exclude { it.isDirectory && it.file.resolve("index.html").isFile }
+                exclude { it.relativePath.segments.size > 1 && it.file.parentFile.resolve("index.html").isFile }
+            }
             into(assets)
         }
     }
