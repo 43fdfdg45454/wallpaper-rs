@@ -40,6 +40,7 @@ class Videos(private val context: Context) {
     fun lend(uri: String, key: String, painter: Painter) {
         val video = videos[uri] ?: return
         if (video.viewers.any { it !== painter } || key in videos) {
+            if (key !in videos) videos[key] = Video(uri, from = video.at())
             leave(uri, painter)
             return
         }
@@ -63,6 +64,8 @@ class Videos(private val context: Context) {
 
     fun update(uri: String) = videos[uri]?.update()
 
+    fun positions() = videos.mapValues { it.value.at() }
+
     fun trim() = videos.values.filter { it.player?.playWhenReady == false }.forEach { it.release() }
 
     private fun configure(player: ExoPlayer, silent: Boolean = false) {
@@ -74,11 +77,16 @@ class Videos(private val context: Context) {
             player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, muted).build()
     }
 
-    private inner class Video(private val uri: String, var fixed: Surface? = null, private val audible: Boolean = false) : Player.Listener {
+    private inner class Video(
+        private val uri: String,
+        var fixed: Surface? = null,
+        private val audible: Boolean = false,
+        from: Long = 0L,
+    ) : Player.Listener {
         val viewers = mutableListOf<Painter>()
         var player: ExoPlayer? = null
         var output: Surface? = null
-        private var position = 0L
+        private var position = from
         private var retried = false
         private val idle = Runnable { release() }
 
@@ -123,6 +131,8 @@ class Videos(private val context: Context) {
             }
             output = target
         }
+
+        fun at() = player?.currentPosition ?: position
 
         fun detach() {
             player?.clearVideoSurface()

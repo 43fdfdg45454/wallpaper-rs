@@ -95,6 +95,21 @@ class VideoTest {
     }
 
     @Test
+    fun aVideoLeftOnOneScreenFadesOutFromWhereItWas() {
+        Native.setting("transition.kind", "fade")
+        assertEquals(VIDEO, install(fixture(CLIP)))
+        listOf(lock, home).forEach { it.attach() }
+        listOf(lock, home).forEach { it.show(true) }
+        assertTrue(home.plays())
+        assertTrue(waitFor { Render.call { videos.positions().values.single() } in 300L..700L })
+        assertEquals(IMAGE, install(still(Color.RED)))
+        val (before, after) = Render.call { videos.positions().also { home.painter.refresh() } to videos.positions() }
+        val shared = before.values.single()
+        val lent = after.filterKeys { it !in before }.values.single()
+        assertTrue("the video went from $shared to $lent", kotlin.math.abs(lent - shared) < 100)
+    }
+
+    @Test
     fun importsKeepOnlyVideosThePhoneDecodes() {
         assertTrue(playable { setDataSource(fixture(CLIP).path) })
         assertFalse(playable { setDataSource(still(Color.RED).path) })
