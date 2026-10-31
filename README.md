@@ -109,47 +109,68 @@ Kirigami y el estilo de escritorio de KDE (`qml6-module-org-kde-kirigami` y
 
 ## Instalación con Flatpak
 
-La misma página *Releases* trae `wallpaper-rs.flatpak`, con el daemon, `wprs-ctl`, GStreamer y
-los códecs dentro de un Flatpak, sin la app de escritorio. El runtime (`org.freedesktop.Platform`
-26.08) se descarga de Flathub al instalarlo:
+La misma página *Releases* trae `wallpaper-rs.flatpak` (x86_64) y `wallpaper-rs-aarch64.flatpak`
+(ARM de 64 bits), con la app de escritorio, el daemon, `wprs-ctl`, el plugin de fondo y el icono de
+la bandeja de Plasma, GStreamer y los códecs. El runtime (`org.kde.Platform` 6.11, con Qt 6, Kirigami
+y el estilo de escritorio de KDE) se descarga de Flathub al instalarlo, así que el repositorio
+`flathub` tiene que estar añadido; la primera orden lo añade si falta:
 
 ```sh
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak install --user ./wallpaper-rs.flatpak
 flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs | sh
 ```
 
 Flatpak no puede instalar el plugin de fondo ni el icono de la bandeja de Plasma: la última orden
-los instala con `kpackagetool6` desde los archivos del propio Flatpak (sin `| sh` solo muestra las
-órdenes). Hay que repetirla después de cada actualización y reiniciar Plasma. El plugin arranca el
-daemon por D-Bus cuando lo necesita; no hay servicio de systemd. No instales a la vez el Flatpak y
-el `.tar.gz`, porque los dos registran el mismo servicio D-Bus: ejecuta antes `./uninstall.sh`.
+los instala con `kpackagetool6` desde los archivos del propio Flatpak y crea la carpeta en la que
+Flatpak monta las ediciones compartidas (sin `| sh` solo muestra las órdenes). Hay que repetirla después de cada actualización y reiniciar Plasma. El plugin arranca el
+daemon por D-Bus cuando lo necesita; no hay servicio de systemd. En ARM se instala
+`./wallpaper-rs-aarch64.flatpak`. No instales a la vez el Flatpak y el `.tar.gz`, porque los dos
+registran los mismos servicios D-Bus: ejecuta antes `./uninstall.sh`.
 
-Sin la app, el icono de la bandeja ofrece solo lo básico (pausar, silenciar, el volumen, el perfil
-y, en cada pantalla, *Siguiente*, *Elegir…* y *Favorito*) y, en lugar de *Abrir wallpaper-rs* y
-*Ajustes…*, recuerda que lo demás (modo de ajuste, color de fondo, listas, ajustes de escena,
-fotogramas por segundo, pausas y transiciones) se cambia con `wprs-ctl`:
+La app sale en el menú de aplicaciones (`flatpak run io.github.wallpaper_rs.WallpaperRs` la abre
+desde la terminal) y el icono de la bandeja la abre con *Abrir wallpaper-rs* y *Ajustes…*, como en
+la instalación sin Flatpak. `wprs-ctl` también está dentro:
 
 ```sh
 alias wprs-ctl='flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperRs'
 wprs-ctl --help
 ```
 
+Con el alias, `wprs-ctl` solo ve las carpetas que ve el Flatpak (Imágenes, Vídeos, Descargas y las
+que añadas con `flatpak override`). Las rutas relativas valen cuando la carpeta actual es una de
+ellas o está dentro; desde cualquier otra, `flatpak run` arranca en la carpeta personal y la ruta
+relativa apunta a otro sitio, así que conviene usar la ruta completa: `wprs-ctl set
+~/Imágenes/fondo.jpg` en lugar de `wprs-ctl set fondo.jpg`.
+
 Permisos: la GPU, el socket de PipeWire, que publica los streams, lleva el sonido de los vídeos y de
 las escenas y permite capturar el sonido solo para las escenas con permiso (no hace falta el de
-PulseAudio), el socket de Wayland, solo para leer la resolución de cada pantalla (el daemon no abre
-ventanas), el nombre D-Bus del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
+PulseAudio), el socket de Wayland, para las ventanas de la app y, en el daemon, solo para leer la
+resolución de cada pantalla (el daemon no abre ventanas), X11 solo en una sesión X11 y para la app,
+los nombres D-Bus de la app y del daemon, el bloqueo de pantalla y la batería, el llavero del sistema (Secret
 Service) para las contraseñas y claves de los proveedores, KWin para cargar el script del puntero
 solo mientras una escena con permiso o un paralaje que sigue al puntero lo usa, las notificaciones
 del escritorio, solo para preguntarte antes de dar a una escena el sonido o el puntero (dentro del
 Flatpak el daemon no puede ver qué programa se lo pide, así que siempre pregunta así: la app, la
 bandeja y `wprs-ctl input grant` avisan de que la pregunta está en la notificación, y la posición del puntero
 solo la acepta del script de KWin), lectura de
-Imágenes, Vídeos y Descargas, y red. La red solo se usa para los proveedores de fondos y los
-repositorios que añadas tú. Los cambios de zona horaria llegan sin permisos, por el fichero que
-Flatpak actualiza en el sandbox. Para usar fondos de otra carpeta:
-`flatpak override --user --filesystem=/ruta:ro io.github.wallpaper_rs.WallpaperRs`. La
-configuración vive en `~/.var/app/io.github.wallpaper_rs.WallpaperRs/config/wallpaper-rs/`. Para
-desinstalar: `flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs remove | sh` y
+Imágenes, Vídeos y Descargas, escritura solo en `~/.local/share/wallpaper-rs/edits/`, y red. La red
+solo se usa para los proveedores de fondos, los repositorios y el servidor propio que añadas tú y
+para el modelo de profundidad y ONNX Runtime cuando los pides. Los cambios de zona horaria llegan
+sin permisos, por el fichero que Flatpak actualiza en el sandbox. Para usar fondos de otra carpeta:
+`flatpak override --user --filesystem=/ruta:ro io.github.wallpaper_rs.WallpaperRs`.
+
+Rutas, con `~/.var/app/io.github.wallpaper_rs.WallpaperRs` abreviado como `APP`: la configuración
+vive en `APP/config/wallpaper-rs/`, la biblioteca, las escenas propias y los mapas de profundidad en
+`APP/data/wallpaper-rs/` y la caché en `APP/cache/wallpaper-rs/`. Las ediciones de las imágenes que
+el Flatpak solo puede leer (todas las de Imágenes, Vídeos y Descargas) no caben junto a la imagen y
+van a `~/.local/share/wallpaper-rs/edits/`, la misma carpeta que usa un `wprs-ctl` de fuera del
+Flatpak: el permiso de escritura sobre ella hace que Flatpak la monte también en
+`APP/data/wallpaper-rs/edits/` en cuanto esa carpeta existe (la crea `wprs-plasma`), así que el daemon, la app y cualquier `wprs-ctl` ven las mismas
+ediciones. Las que guardó una versión del Flatpak sin ese permiso se quedan tapadas en
+`APP/data/wallpaper-rs/edits/` (solo dentro del Flatpak; fuera se ven) y se recuperan con
+`mv -n APP/data/wallpaper-rs/edits/*.json ~/.local/share/wallpaper-rs/edits/`. Para desinstalar:
+`flatpak run --command=wprs-plasma io.github.wallpaper_rs.WallpaperRs remove | sh` y
 `flatpak uninstall --user io.github.wallpaper_rs.WallpaperRs`.
 
 ## Sway, Hyprland, river, niri y COSMIC
@@ -1409,15 +1430,26 @@ instalarla hay que quitar el APK publicado con `adb uninstall io.github.wallpape
 también la imagen elegida. Su número de versión es 1 y el de la CI es el de cada ejecución, de
 ahí el `-d` de `adb install`.
 
-Flatpak local (compila sin red, con Rust 1.99.1 y las fuentes de Cargo descargadas antes por
-`flatpak-builder`):
+Flatpak local (compila sin red sobre el SDK de KDE 6.11, con Rust 1.99.1 de static.rust-lang.org y
+las fuentes de Cargo descargadas antes por `flatpak-builder`, comprobadas con su SHA-256). Solo
+entran los archivos que sigue git, con sus cambios sin confirmar; los que no sigue, como otras copias
+de trabajo dentro de la carpeta, se quedan fuera. El SDK y la extensión de LLVM vienen de Flathub:
 
 ```sh
-packaging/flatpak/cargo-sources.py      # genera cargo-sources.json desde Cargo.lock
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+packaging/flatpak/sources.sh            # copia a target/flatpak-src y genera cargo-sources.json
 flatpak-builder --user --install --install-deps-from=flathub --force-clean \
   --state-dir=target/flatpak-builder target/flatpak \
   packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.yml
 ```
+
+Con `WPRS_VERSION`, `sources.sh` pone esa versión en la copia. La CI construye el Flatpak para
+x86_64 y para aarch64, este en un runner ARM de GitHub (gratuito en los repositorios públicos), y
+`packaging/flatpak/check.sh` instala cada paquete y comprueba las versiones, `wprs-app --check` sin
+pantalla, los archivos exportados (lanzador, icono, metainfo y servicios D-Bus), las órdenes de
+`wprs-plasma` y que una edición hecha dentro del Flatpak llega a `~/.local/share/wallpaper-rs/edits/`.
+Instala en el sistema y toca esa carpeta, así que fuera de la CI conviene usarlo en un contenedor
+desechable.
 
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre

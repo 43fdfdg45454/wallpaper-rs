@@ -19,6 +19,7 @@ for pkg in Wallpaper:wallpapers/io.github.wallpaper_rs Applet:plasmoids/io.githu
   fi
 done
 if [ "$mode" = install ]; then
+  echo "mkdir -p -m 700 '$XDG_DATA_HOME/wallpaper-rs/edits'"
   echo "Then restart Plasma (systemctl --user restart plasma-plasmashell) and choose wallpaper-rs" \
     "in \"Configure Desktop and Wallpaper\"." >&2
 fi

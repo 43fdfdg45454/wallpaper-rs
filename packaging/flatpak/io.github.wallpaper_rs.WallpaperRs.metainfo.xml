@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<component type="console-application">
+<component type="desktop-application">
   <id>io.github.wallpaper_rs.WallpaperRs</id>
   <name>wallpaper-rs</name>
   <summary>Animated and static wallpapers for KDE Plasma</summary>
@@ -10,15 +10,11 @@
   </developer>
   <description>
     <p>
-      Images and looping videos as wallpapers, with transitions, one wallpaper per screen and
-      automatic pausing. A daemon renders each screen on the GPU and KDE Plasma shows it through a
-      wallpaper plugin; wprs-ctl manages it.
-    </p>
-    <p>
-      This package has no desktop app: the system tray icon offers the basics (pause, mute, volume,
-      profile, next wallpaper, choose a file and favorite), and every other setting, such as the fit
-      mode, background color, playlists, scene settings, frame rate, pausing and transitions, is
-      changed with <code>flatpak run --command=wprs-ctl io.github.wallpaper_rs.WallpaperRs</code>.
+      Images, looping videos and scenes as wallpapers, with transitions, one wallpaper per screen
+      and automatic pausing. A daemon renders each screen on the GPU and KDE Plasma shows it through
+      a wallpaper plugin. The app organizes the library, playlists, profiles and online sources and
+      edits images and scenes; the system tray icon offers the basics and wprs-ctl manages
+      everything from a terminal.
     </p>
     <p>
       Flatpak cannot install the Plasma wallpaper plugin and tray icon. After installing or
@@ -26,14 +22,18 @@
       to install them from this package with kpackagetool6.
     </p>
   </description>
+  <launchable type="desktop-id">io.github.wallpaper_rs.WallpaperRs.desktop</launchable>
   <url type="homepage">https://github.com/43fdfdg45454/wallpaper-rs</url>
   <categories>
-    <category>Utility</category>
+    <category>Settings</category>
+    <category>DesktopSettings</category>
   </categories>
   <provides>
+    <binary>wprs-app</binary>
     <binary>wprsd</binary>
     <binary>wprs-ctl</binary>
     <binary>wprs-plasma</binary>
+    <dbus type="user">io.github.wallpaper_rs</dbus>
     <dbus type="user">io.github.wallpaper_rs.Daemon</dbus>
   </provides>
   <content_rating type="oars-1.1"/>

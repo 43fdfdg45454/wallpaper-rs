@@ -1,15 +1,21 @@
 app-id: io.github.wallpaper_rs.WallpaperRs
-runtime: org.freedesktop.Platform
-runtime-version: '26.08'
-sdk: org.freedesktop.Sdk
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.llvm22
-command: wprsd
+command: wprs-app
+rename-desktop-file: io.github.wallpaper_rs.desktop
+rename-icon: io.github.wallpaper_rs
+copy-icon: true
 finish-args:
   - --device=dri
   - --share=network
+  - --share=ipc
   - --filesystem=xdg-run/pipewire-0:ro
   - --socket=wayland
+  - --socket=fallback-x11
+  - --own-name=io.github.wallpaper_rs
   - --own-name=io.github.wallpaper_rs.Daemon
   - --talk-name=org.freedesktop.ScreenSaver
   - --talk-name=org.freedesktop.secrets
@@ -20,6 +26,7 @@ finish-args:
   - --filesystem=xdg-pictures:ro
   - --filesystem=xdg-videos:ro
   - --filesystem=xdg-download:ro
+  - --filesystem=xdg-data/wallpaper-rs/edits:create
 modules:
   - name: wallpaper-rs
     buildsystem: simple
@@ -32,30 +39,34 @@ modules:
         CARGO_HOME: /run/build/wallpaper-rs/cargo
         RUSTFLAGS: --remap-path-prefix=/run/build/wallpaper-rs=/src --remap-path-prefix=/run/build/wallpaper-rs/cargo=/cargo
     build-commands:
-      - rust-dist/install.sh --prefix=/run/build/wallpaper-rs/rust --components=rustc,cargo,rust-std-x86_64-unknown-linux-gnu --disable-ldconfig
-      - WPRS_VERSION=$(cat VERSION 2>/dev/null) cargo build --release --offline --locked -p wprsd -p wprs-ctl
-      - install -Dm755 -t /app/bin target/release/wprsd target/release/wprs-ctl
+      - rust-dist/install.sh --prefix=/run/build/wallpaper-rs/rust --components=rustc,cargo,rust-std-$FLATPAK_ARCH-unknown-linux-gnu --disable-ldconfig
+      - WPRS_VERSION=$(cat VERSION 2>/dev/null) cargo build --release --offline --locked -p wprsd -p wprs-ctl -p wprs-app
+      - install -Dm755 -t /app/bin target/release/wprsd target/release/wprs-ctl target/release/wprs-app
       - install -Dm755 packaging/flatpak/wprs-plasma.sh /app/bin/wprs-plasma
       - scripts/translations.sh build
-      - install -d /app/share/plasma/wallpapers /app/share/plasma/plasmoids /app/share/dbus-1/services /app/share/wallpaper-rs
+      - install -d /app/share/plasma/wallpapers /app/share/plasma/plasmoids /app/share/dbus-1/services /app/share/applications /app/share/wallpaper-rs
       - cp -r integrations/kwin-pointer /app/share/wallpaper-rs/kwin-pointer
       - cp -r integrations/plasma-wallpaper /app/share/plasma/wallpapers/io.github.wallpaper_rs
       - cp -r integrations/plasma-tray /app/share/plasma/plasmoids/io.github.wallpaper_rs.tray
-      - sed 's|@BINDIR@|/app/bin|' packaging/dbus/io.github.wallpaper_rs.Daemon.service > /app/share/dbus-1/services/io.github.wallpaper_rs.Daemon.service
+      - for f in packaging/dbus/*.service; do sed 's|@BINDIR@|/app/bin|' "$f" > "/app/share/dbus-1/services/${f##*/}"; done
+      - sed -e 's|@BINDIR@|/app/bin|' -e '/^DBusActivatable=/d' packaging/desktop/io.github.wallpaper_rs.desktop > /app/share/applications/io.github.wallpaper_rs.desktop
+      - install -Dm644 -t /app/share/icons/hicolor/scalable/apps packaging/icons/io.github.wallpaper_rs.svg
       - install -Dm644 -t /app/share/metainfo packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.metainfo.xml
       - install -Dm644 -t /app/share/wallpaper-rs/examples scenes/LICENSE
       - for scene in scenes/*/; do target/release/wprs-ctl pack build "$scene" -o "/app/share/wallpaper-rs/examples/$(basename "$scene").wpak"; done
     sources:
       - type: dir
-        path: ../..
-        skip:
-          - .git
-          - target
-          - dist
+        path: ../../target/flatpak-src
       - type: archive
         only-arches:
           - x86_64
         url: https://static.rust-lang.org/dist/rust-1.99.1-x86_64-unknown-linux-gnu.tar.xz
         sha256: 231fcae47ee950621374725b5fc3b5441d2fbda2955ac45dd7dc816d8876cfe7
+        dest: rust-dist
+      - type: archive
+        only-arches:
+          - aarch64
+        url: https://static.rust-lang.org/dist/rust-1.99.1-aarch64-unknown-linux-gnu.tar.xz
+        sha256: a48fb1e853be56ce9b8e2751f5464dbd5e16440cd81e237920f3a5e7e806333e
         dest: rust-dist
       - cargo-sources.json

@@ -1692,8 +1692,9 @@ A request for the page already shown keeps it as it is, and while the image edit
 changes a page request only raises the window. `wprs-app --page <name>` and the launcher action
 *Settings* (`settings`) make the same request. The tray offers *Open wallpaper-rs* (`Activate`)
 and *Settings…* (`ActivateAction("settings")`) unless `ListActivatableNames` lists the daemon but
-not the app and the app is not running: the Flatpak ships no app, so there the tray says that the
-other settings are changed with `wprs-ctl`. When the bus answers that it does not know the app
+not the app and the app is not running; there the tray says that the other settings are changed
+with `wprs-ctl`. The Flatpak owns the app's name through `--own-name` too and exports its
+activation file, so the tray offers the app there as well. When the bus answers that it does not know the app
 (`ServiceUnknown`, as with dbus-broker, which does not watch for new service files, right after an
 install by `install.sh`), the tray asks it to read its configuration again (`ReloadConfig`) and
 tries once more; `install.sh` and `uninstall.sh` ask for that reload themselves.

@@ -470,55 +470,47 @@ jobs:
           retention-days: 7
 
   flatpak:
-    name: Flatpak bundle
+    name: Flatpak bundle (${{ matrix.arch }})
     needs: version
-    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            bundle: wallpaper-rs.flatpak
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            bundle: wallpaper-rs-aarch64.flatpak
+    runs-on: ${{ matrix.runner }}
     env:
       WPRS_VERSION: ${{ needs.version.outputs.informational }}
+      BUNDLE: ${{ matrix.bundle }}
     container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-26.08
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11@sha256:b0a8a2acb9e420dd0e3e083ff552bea5a817e17e41532f1d2287ff49ef9aae0e
       options: --privileged
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
 
-      - name: Vendored Cargo sources and version
-        run: |
-          packaging/flatpak/cargo-sources.py
-          printf '%s\n' "$WPRS_VERSION" > VERSION
-          sed -i "s/\"Version\": \"[^\"]*\"/\"Version\": \"${WPRS_VERSION%%+*}\"/" integrations/*/metadata.json
+      - name: Tracked sources, vendored Cargo sources and version
+        run: packaging/flatpak/sources.sh
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3
         with:
           manifest-path: packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.yml
-          bundle: wallpaper-rs.flatpak
-          cache-key: flatpak-${{ hashFiles('Cargo.lock', 'packaging/flatpak/*.yml') }}
+          bundle: ${{ matrix.bundle }}
+          arch: ${{ matrix.arch }}
+          cache-key: flatpak-${{ matrix.arch }}-${{ hashFiles('Cargo.lock', 'packaging/flatpak/*.yml') }}
           upload-artifact: false
 
       - name: Install and run the bundle
-        run: |
-          app=io.github.wallpaper_rs.WallpaperRs
-          flatpak install -y --noninteractive --bundle wallpaper-rs.flatpak
-          test "$(flatpak run --command=wprs-ctl $app --version)" = "wprs-ctl $WPRS_VERSION"
-          test "$(flatpak run --command=wprsd $app --version)" = "wprsd $WPRS_VERSION"
-          files=$(flatpak info -l $app)/files
-          flatpak run --command=wprs-plasma $app > plasma.sh
-          sh -n plasma.sh
-          for p in wallpapers/io.github.wallpaper_rs plasmoids/io.github.wallpaper_rs.tray; do
-            grep -qF "\"Version\": \"${WPRS_VERSION%%+*}\"" "$files/share/plasma/$p/metadata.json"
-            grep -F -e "--install '$files/share/plasma/$p'" plasma.sh
-          done
-          test -f "$files/share/wallpaper-rs/kwin-pointer/contents/code/main.js"
-          grep -qF "\"Version\": \"${WPRS_VERSION%%+*}\"" "$files/share/wallpaper-rs/kwin-pointer/metadata.json"
-          grep -x "Exec=.* --command=/app/bin/wprsd $app" /var/lib/flatpak/exports/share/dbus-1/services/io.github.wallpaper_rs.Daemon.service
-          ls "$files/bin/wprsd" "$files/bin/wprs-ctl"
-          if grep -l -E '/run/build|/(home|root)/' "$files"/bin/wprs*; then exit 1; fi
+        run: packaging/flatpak/check.sh "$BUNDLE"
 
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
-          name: wallpaper-rs-flatpak
-          path: wallpaper-rs.flatpak
+          name: wallpaper-rs-flatpak-${{ matrix.arch }}
+          path: ${{ matrix.bundle }}
           if-no-files-found: error
           retention-days: 7
 

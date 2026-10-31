@@ -15,7 +15,7 @@ OUT=$(mktemp -d)
 trap 'rm -rf "$OUT"' EXIT
 mkdir "$OUT/files"
 cp "$IN"/wallpaper-rs-*-x86_64-linux.tar.gz "$OUT/files/wallpaper-rs-x86_64-linux.tar.gz"
-cp "$IN/wallpaper-rs.flatpak" "$OUT/files/wallpaper-rs.flatpak"
+cp "$IN/wallpaper-rs.flatpak" "$IN/wallpaper-rs-aarch64.flatpak" "$OUT/files/"
 cp "$IN"/wallpaper-rs-[0-9]*.x86_64.rpm "$OUT/files/wallpaper-rs.x86_64.rpm"
 cp "$IN"/wallpaper-rs-examples-*.noarch.rpm "$OUT/files/wallpaper-rs-examples.noarch.rpm"
 cp "$IN/wallpaper-rs-android.apk" "$OUT/files/wallpaper-rs-android.apk"
