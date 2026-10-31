@@ -73,7 +73,9 @@ fn the_tray_leaves_every_advanced_setting_to_the_settings_page() {
 #[test]
 fn the_tray_offers_the_app_only_where_it_is_installed() {
     let flatpak = read("../../packaging/flatpak/io.github.wallpaper_rs.WallpaperRs.yml");
-    assert!(flatpak.contains("integrations/plasma-tray") && !flatpak.contains(&format!("{APP_ID}.service")));
+    assert!(flatpak.contains("integrations/plasma-tray") && flatpak.contains("command: wprs-app\n"));
+    assert!(flatpak.contains("for f in packaging/dbus/*.service"));
+    assert!(read(&format!("../../packaging/dbus/{APP_ID}.service")).contains("Exec=@BINDIR@/wprs-app"));
     let tray = read("../../integrations/plasma-tray/contents/ui/Daemon.qml");
     assert!(tray.contains(&format!("const app = \"{APP_ID}\"")) && tray.contains("\"ListActivatableNames\""));
     let panel = read("../../integrations/plasma-tray/contents/ui/Panel.qml");
