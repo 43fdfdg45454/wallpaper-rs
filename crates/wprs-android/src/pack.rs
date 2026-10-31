@@ -181,3 +181,17 @@ pub(crate) fn examples(dir: &Path) -> Result<Vec<String>, Error> {
     }
     Ok(added)
 }
+
+pub(crate) fn animated(uid: &str, path: &Path) -> Option<String> {
+    let manifest = wprs_format::peek(path).ok()?;
+    let name = manifest.animated()?;
+    let ext = Path::new(name).extension()?.to_str()?.to_ascii_lowercase();
+    (ext == "gif" || ext == "webp").then_some(())?;
+    let file = store::thumb_file(uid, &format!("animated.{ext}")).ok()?;
+    if !file.is_file() {
+        let data = wprs_format::open(path, &wprs_format::Limits::default()).ok()?.read_file(name).ok()?;
+        let part = file.with_extension("part");
+        fs::write(&part, data).and_then(|()| fs::rename(&part, &file)).ok()?;
+    }
+    Some(file.to_string_lossy().into_owned())
+}

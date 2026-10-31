@@ -519,6 +519,11 @@ wprs-ctl input status                           # permisos y si se captura el so
 wprs-ctl input clicks on -o DP-1                # dejar que los clics de esa pantalla lleguen a su fondo
 ```
 
+La vista previa animada de un paquete (`previews.animated`) se mueve en los detalles de la app,
+en la miniatura de cada pantalla de la app y de la bandeja, y en la página del teléfono de un
+paquete que este no puede reproducir; solo mientras se ve, en el escritorio con el equipo
+enchufado y, si el paquete es para adultos o fotosensible, después de permitirlo.
+
 La biblioteca de la app pide de nuevo solo los elementos que nombra cada cambio (con `uid:`, que
 también acepta `wprs-ctl lib search 'uid:<uid>,<uid>'` con uids completos), y al cambiar o repetir una búsqueda
 conserva la selección y la posición de los elementos que siguen en ella.

@@ -134,3 +134,21 @@ impl Daemon {
         Some((download, dest))
     }
 }
+
+impl Daemon {
+    pub fn animated(&self, item: &Item, manifest: &wprs_format::Manifest) -> Option<String> {
+        let name = manifest.animated()?;
+        let ext = std::path::Path::new(name).extension()?.to_str()?.to_ascii_lowercase();
+        (ext == "gif" || ext == "webp").then_some(())?;
+        let dir = self.store.cache.join("previews");
+        let file = dir.join(format!("animated-{}-{}.{ext}", item.uid, item.mtime));
+        if !file.is_file() {
+            let data =
+                wprs_format::open(&item.path, &wprs_format::Limits::default()).ok()?.read_file(name).ok()?;
+            private_dir(&dir).ok()?;
+            let part = file.with_extension("part");
+            std::fs::write(&part, data).and_then(|()| std::fs::rename(&part, &file)).ok()?;
+        }
+        Some(text(file))
+    }
+}

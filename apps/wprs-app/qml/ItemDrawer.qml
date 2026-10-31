@@ -16,6 +16,8 @@ Kirigami.OverlayDrawer {
     readonly property var credit: details.credit ?? null
     readonly property var pkg: item.package ?? null
     readonly property bool mature: !!pkg && pkg.content === "mature" && !(pkg.confirmed ?? []).includes("mature")
+    readonly property bool flashing: !!pkg && pkg.photosensitive === true && !(pkg.confirmed ?? []).includes("photosensitive")
+    readonly property string animated: mature || flashing ? "" : App.url(details.about?.animated ?? "")
 
     signal apply(string uid)
     signal remove(string uid)
@@ -68,6 +70,7 @@ Kirigami.OverlayDrawer {
             width: drawer.width - Kirigami.Units.largeSpacing * 2
 
             Image {
+                visible: !moving.visible
                 Layout.fillWidth: true
                 Layout.preferredHeight: width * 9 / 16
                 source: App.url(drawer.preview)
@@ -75,6 +78,18 @@ Kirigami.OverlayDrawer {
                 asynchronous: true
                 cache: false
                 sourceSize: drawer.mature ? Qt.size(16, 16) : undefined
+            }
+
+            AnimatedImage {
+                id: moving
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: width * 9 / 16
+                visible: drawer.animated !== "" && status === AnimatedImage.Ready
+                source: drawer.animated
+                playing: visible && drawer.opened && !(App.state.on_battery ?? false)
+                fillMode: Image.PreserveAspectFit
+                cache: false
             }
 
             QQC2.Button {

@@ -65,10 +65,10 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
     val preview = @Composable { modifier: Modifier ->
         Box(modifier.padding(horizontal = 16.dp), Alignment.Center) {
             if (asks != null) Caution(asks) { main.act { ask("confirm", "uid" to uid, "what" to asks) } }
-            else if (ready) {
+            else if (ready && (item?.refused != true || item?.animated == null)) {
                 val shape = Modifier.aspectRatio(screen.width.coerceAtLeast(1) / screen.height.coerceAtLeast(1).toFloat(), true)
                 Live(main, main.revision.intValue, Depth.working.value, modifier = if (picture) shape.framing(main, uid, screen) else shape)
-            }
+            } else item?.animated?.let { Animated(it, Modifier.fillMaxSize()) }
         }
     }
     val about = @Composable { modifier: Modifier ->

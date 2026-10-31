@@ -10,6 +10,8 @@ Rectangle {
     required property string source
     required property bool mature
     required property bool scene
+    property string animated
+    property bool moving
 
     border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
     clip: true
@@ -20,6 +22,16 @@ Rectangle {
         source: thumbnail.source
         sourceSize: thumbnail.mature ? Qt.size(12, 12) : undefined
         asynchronous: true
+        fillMode: Image.PreserveAspectCrop
+    }
+
+    AnimatedImage {
+        anchors.fill: parent
+        anchors.margins: parent.border.width
+        visible: thumbnail.animated !== "" && !thumbnail.mature && status === AnimatedImage.Ready
+        source: thumbnail.animated && !thumbnail.mature ? thumbnail.animated : ""
+        playing: visible && thumbnail.moving && thumbnail.Window.visibility !== Window.Hidden
+        cache: false
         fillMode: Image.PreserveAspectCrop
     }
 

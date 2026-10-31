@@ -40,6 +40,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import java.io.File
+import androidx.compose.ui.viewinterop.AndroidView
+import android.widget.ImageView
+import android.graphics.drawable.AnimatedImageDrawable
+import android.graphics.ImageDecoder
 
 private val TABS = listOf(
     R.string.library to Icons.Default.Home,
@@ -112,3 +117,13 @@ fun Toggle(label: String, checked: Boolean, enabled: Boolean = true, change: (Bo
 @Composable
 fun Note(text: String, color: Color = Color.Unspecified) =
     Text(text, Modifier.padding(16.dp, 4.dp), color, style = MaterialTheme.typography.bodySmall)
+
+@Composable
+fun Animated(path: String, modifier: Modifier = Modifier) = AndroidView({ ImageView(it) }, modifier) { view ->
+    if (view.tag != path) {
+        view.tag = path
+        val drawable = runCatching { ImageDecoder.decodeDrawable(ImageDecoder.createSource(File(path))) }.getOrNull()
+        view.setImageDrawable(drawable)
+        (drawable as? AnimatedImageDrawable)?.start()
+    }
+}

@@ -92,11 +92,12 @@ if ctl set "$WORK/import/calm.wpak" 2>"$WORK/wpak.out"; then fail "SetWallpaper 
 grep -q "import the package" "$WORK/wpak.out" || fail "package message: $(cat "$WORK/wpak.out")"
 mkdir -p "$WORK/storm" && cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/storm/image.png"
 cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/storm/preview.png"
+echo R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw== | base64 -d >"$WORK/storm/moving.gif"
 cat >"$WORK/storm/manifest.json" <<'STORM'
 {"schema": "wallpaper-rs.wpak/2", "id": "org.example.storm", "version": "1.0.0", "default_locale": "en",
  "title": {"en": "Storm", "es": "Tormenta"}, "description": "Lightning over **the sea**.", "license": "CC0-1.0",
- "kind": "image", "entry": "image.png", "previews": {"thumbnail": "preview.png"}, "origin": {"kind": "original"},
- "content": {"rating": "mature", "descriptors": ["violence"]}, "photosensitive": true,
+ "kind": "image", "entry": "image.png", "previews": {"thumbnail": "preview.png", "animated": "moving.gif"},
+ "origin": {"kind": "original"}, "content": {"rating": "mature", "descriptors": ["violence"]}, "photosensitive": true,
  "display": {"background": "#ff0000"}}
 STORM
 ctl pack check "$WORK/storm" | grep -q '^rating = mature (violence)$' || fail "pack check: $(ctl pack check "$WORK/storm")"
@@ -105,6 +106,7 @@ job=$(bus Library1 Import asb 1 "$WORK/import/storm.wpak" false | out "d[0]")
 wait_for 20 finished "$job" || fail "rated package import: $(bus Daemon1 GetJob t "$job")"
 storm=$(reply "r['job']['output']['imported'][0]['uid']" Daemon1 GetJob t "$job")
 [ "$(reply "r['total']" Library1 Search suu "content:mature facet:photosensitive" 0 0)" = 1 ] || fail "rated search"
+cmp -s "$(reply "r['about']['animated']" Library1 GetItem s "$storm")" "$WORK/storm/moving.gif" || fail "no animated preview"
 ctl config library.hide_mature true
 [ "$(reply "r['total']" Library1 Search suu "storm" 0 0), $(reply "r['total']" Library1 Search suu "content:mature" 0 0)" = "0, 1" ] ||
   fail "hidden mature content: $(ctl lib search storm)"

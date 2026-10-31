@@ -47,6 +47,8 @@ model! {
         pub packages: Vec<String>,
         #[serde(default)]
         pub refused: Vec<String>,
+        #[serde(default)]
+        pub animated: Option<String>,
     }
 
     pub struct Work { pub author: String, pub title: Option<String>, pub url: Option<String>, pub license: Option<String> }

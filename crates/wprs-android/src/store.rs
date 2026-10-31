@@ -172,7 +172,11 @@ pub(crate) fn forget(item: &Item) -> Result<(), Error> {
         drop(fs::remove_dir_all(pack::folder(&item.path)?));
     }
     let owned = item.path.starts_with(fs::canonicalize(dir()?.join(MEDIA))?).then(|| item.path.clone());
-    for path in [thumb_file(&item.uid, "jpg")?, thumb_file(&item.uid, "colors")?].into_iter().chain(owned) {
+    let animated = ["animated.gif", "animated.webp"].map(|ext| thumb_file(&item.uid, ext));
+    let files = [thumb_file(&item.uid, "jpg")?, thumb_file(&item.uid, "colors")?]
+        .into_iter()
+        .chain(animated.into_iter().flatten());
+    for path in files.chain(owned) {
         drop(fs::remove_file(path));
     }
     Ok(())

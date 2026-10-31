@@ -88,6 +88,8 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
             let (mut items, languages) = (vec![lib.item(&uid)?], languages.unwrap_or_default());
             lib.localize(&mut items, &languages)?;
             let about = items[0].package.as_ref().and_then(|_| pack::about(&items[0].path, &languages));
+            let animated = about.as_ref().and_then(|_| pack::animated(&uid, &items[0].path));
+            let about = about.map(|about| wprs_core::model::About { animated, ..about });
             let lacks = items[0].package.as_ref().map(|p| pack::lacks(&items[0].path, &p.facets));
             let mut value = listed(items)?[0].take();
             (value["about"], value["lacks"]) = (json!(about), json!(lacks.unwrap_or_default()));

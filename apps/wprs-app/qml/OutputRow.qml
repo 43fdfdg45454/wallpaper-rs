@@ -21,6 +21,7 @@ RowLayout {
     readonly property bool muted: daemon.state?.muted === true
     property string thumb
     property var details: ({})
+    property string animated
     readonly property var pkg: details.package ?? {}
     readonly property var confirmed: pkg.confirmed ?? []
     readonly property bool favorite: details.favorite === true
@@ -39,6 +40,7 @@ RowLayout {
             if (!row || row.item !== item)
                 return;
             row.details = reply.item ?? {};
+            row.animated = reply.about?.animated ?? "";
             daemon.query("Thumbnail", [item, 256], "Library1", answer => {
                 if (!row)
                     return;
@@ -50,6 +52,7 @@ RowLayout {
 
     onItemChanged: {
         thumb = "";
+        animated = "";
         details = {};
         Qt.callLater(load);
     }
@@ -83,6 +86,8 @@ RowLayout {
         item: row.item
         source: row.daemon.url(row.thumb)
         mature: row.mature
+        animated: row.pkg.photosensitive === true && !row.allowed ? "" : row.daemon.url(row.animated)
+        moving: !(row.daemon.state?.on_battery ?? false)
         scene: row.scene
     }
 

@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Dialogs
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PlasmaComponents3
@@ -17,6 +16,7 @@ ColumnLayout {
     property string thumb
     property LeftOut reasons: LeftOut {}
     property var details: ({})
+    property string animated
     readonly property var pkg: details.package ?? {}
     readonly property var confirmed: pkg.confirmed ?? []
     readonly property bool mature: pkg.content === "mature" && !confirmed.includes("mature")
@@ -30,6 +30,7 @@ ColumnLayout {
             if (row.item !== item)
                 return;
             row.details = reply.item ?? {};
+            row.animated = reply.about?.animated ?? "";
             daemon.query("Thumbnail", [item, 256], "Library1", answer => {
                 if (row.item === item)
                     row.thumb = answer[0] ?? "";
@@ -40,6 +41,7 @@ ColumnLayout {
     spacing: Kirigami.Units.smallSpacing
     onItemChanged: {
         thumb = "";
+        animated = "";
         details = {};
         Qt.callLater(load);
     }
@@ -82,6 +84,8 @@ ColumnLayout {
             item: row.item
             source: row.daemon.url(row.thumb)
             mature: row.mature
+            animated: row.pkg.photosensitive === true && !row.allowed ? "" : row.daemon.url(row.animated)
+            moving: !(row.daemon.state?.on_battery ?? false)
             scene: row.info.kind === "scene"
         }
 
@@ -156,53 +160,8 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
-        spacing: Kirigami.Units.smallSpacing
-
-        Item {
-            Layout.fillWidth: true
-            Layout.preferredWidth: 1
-            visible: row.playing === null
-        }
-
-        PlasmaComponents3.Button {
-            Layout.fillWidth: true
-            Layout.preferredWidth: 1
-            visible: row.playing !== null
-            icon.name: "media-skip-forward"
-            text: i18n("Next")
-            onClicked: row.daemon.act("Next", [row.name], "Playlists1")
-        }
-
-        PlasmaComponents3.Button {
-            Layout.fillWidth: true
-            Layout.preferredWidth: 1
-            icon.name: "document-open"
-            text: i18n("Choose…")
-            onClicked: files.open()
-        }
-
-        PlasmaComponents3.Button {
-            Layout.fillWidth: true
-            Layout.preferredWidth: 1
-            enabled: row.item !== ""
-            checkable: true
-            checked: row.details.favorite === true
-            icon.name: checked ? "emblem-favorite" : "bookmark-new"
-            text: i18n("Favorite")
-            PlasmaComponents3.ToolTip.text: checked ? i18n("Remove from favorites") : i18n("Add to favorites")
-            PlasmaComponents3.ToolTip.visible: hovered
-            onToggled: {
-                row.daemon.act("SetFavorite", [[row.item], checked], "Library1");
-                checked = Qt.binding(() => row.details.favorite === true);
-            }
-        }
-    }
-
-    FileDialog {
-        id: files
-
-        nameFilters: [i18n("Images and videos") + " (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.mp4 *.m4v *.webm *.mkv *.mov *.avi *.ogv *.mpg *.mpeg)"]
-        onAccepted: row.daemon.act("SetWallpaper", [row.daemon.path(selectedFile), row.name, ""])
+    ScreenButtons {
+        Layout.fillWidth: true
+        host: row
     }
 }

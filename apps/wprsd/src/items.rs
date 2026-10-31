@@ -104,8 +104,10 @@ impl Daemon {
         let installed = installed.map(|i| merged(i, json!({"item": uid, "update": null}))).transpose()?;
         let presets = presets.into_iter().map(preset).collect();
         let playlists = playlists.into_iter().map(|p| PlaylistRef { uid: p.uid, name: p.name }).collect();
-        let about = item.package.as_ref().and_then(|_| wprs_format::peek(&item.path).ok());
-        let about = about.map(|m| m.about(&wprs_core::locale::languages()));
+        let peeked = item.package.as_ref().and_then(|_| wprs_format::peek(&item.path).ok());
+        let animated = peeked.as_ref().and_then(|m| self.animated(&item, m));
+        let about =
+            peeked.map(|m| wprs_core::model::About { animated, ..m.about(&wprs_core::locale::languages()) });
         let item = merged(item, Value::Null)?;
         reply(ItemDetails {
             model,

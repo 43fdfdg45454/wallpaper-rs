@@ -711,7 +711,9 @@ confirmation, except the description of a first-version package (`schema` is
 `wallpaper-rs.wpak/1`), which is plain text shown as written. Every other text is plain.
 `provider` is the credit of the online source it comes from, `platforms` the devices it is made
 for, `packages` the packages it needs (`<id> <version requirement>`) and a credit's `source` the
-package its files come from (`<id> <version>`). A package this device cannot play keeps its
+package its files come from (`<id> <version>`). `animated` is the path of its animated preview
+(`previews.animated`), copied once into the thumbnail cache, or `null`; clients play it only while
+it is on screen, on mains power, and once a mature or photosensitive package was allowed. A package this device cannot play keeps its
 details, with the reason in `error` (`this package needs a newer version of wallpaper-rs: it uses
 …` or `this package is made for … only`).
 

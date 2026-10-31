@@ -48,6 +48,7 @@ impl Manifest {
             platforms: self.platforms.iter().map(|p| p.name().into()).collect(),
             packages: self.dependencies().iter().map(|d| format!("{} {}", d.id, d.version)).collect(),
             refused: features::refused(crate::Platform::here().name(), self.features()),
+            animated: None,
         }
     }
 }

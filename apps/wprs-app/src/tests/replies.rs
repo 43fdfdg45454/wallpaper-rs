@@ -139,3 +139,22 @@ fn the_call_table_follows_the_dbus_documentation() {
         assert_eq!(names.collect::<Vec<_>>(), *args, "{iface}.{member}");
     }
 }
+
+#[test]
+fn animated_previews_play_only_when_shown_allowed_and_on_mains() {
+    let tray = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/plasma-tray/contents/ui");
+    let app = |name: &str| qml_files().into_iter().find(|(n, _)| n == name).unwrap().1;
+    for text in [app("Thumbnail.qml"), std::fs::read_to_string(tray.join("Thumbnail.qml")).unwrap()] {
+        assert!(text.contains("AnimatedImage {") && text.contains("thumbnail.animated && !thumbnail.mature"));
+        assert!(text.contains(
+            "playing: visible && thumbnail.moving && thumbnail.Window.visibility !== Window.Hidden"
+        ));
+    }
+    for text in [app("OutputRow.qml"), std::fs::read_to_string(tray.join("ScreenRow.qml")).unwrap()] {
+        assert!(text.contains("animated: row.pkg.photosensitive === true && !row.allowed ? \"\" :"));
+        assert!(text.contains("moving: !(row.daemon.state?.on_battery ?? false)"));
+    }
+    let drawer = app("ItemDrawer.qml");
+    assert!(drawer.contains("readonly property string animated: mature || flashing ? \"\" :"));
+    assert!(drawer.contains("playing: visible && drawer.opened && !(App.state.on_battery ?? false)"));
+}
