@@ -11,6 +11,7 @@ mod chosen;
 mod cued;
 mod flight;
 mod frames;
+mod guarded;
 mod looks;
 mod pages;
 mod records;

@@ -45,3 +45,6 @@ jni.workspace = true
 ndk = { workspace = true, features = ["media", "nativewindow", "api-level-31"] }
 ndk-sys = { workspace = true, features = ["bitmap"] }
 tracing = { workspace = true, features = ["log"] }
+
+[dev-dependencies]
+rquickjs.workspace = true

@@ -1,49 +1,19 @@
-(zone, language, mask, origin) => {
+(zone, language, mask, origin, clocks) => {
   const mark = Symbol.for("wprs.guard");
   const tag = "en-US";
   const peers = ["RTCPeerConnection", "webkitRTCPeerConnection", "RTCDataChannel", "RTCIceCandidate", "RTCSessionDescription"];
   const formats = ["DateTimeFormat", "NumberFormat", "Collator", "PluralRules", "RelativeTimeFormat", "ListFormat", "DisplayNames", "Segmenter", "DurationFormat"];
-  const pick = (locales) => (language && locales === undefined ? tag : locales);
-  const timed = (given) => (zone ? Object.assign({ timeZone: "UTC" }, given) : given);
+  const listed = language && Intl.getCanonicalLocales;
+  const pick = (locales) => (language ? [...listed(locales), tag] : locales);
+  const timed = (given) => {
+    if (!zone || given === null) return given;
+    const at = given === undefined ? undefined : given.timeZone;
+    const value = at === undefined ? "UTC" : at;
+    return Object.create(given === undefined ? null : Object(given), { timeZone: { value, enumerable: true } });
+  };
   const own = (proto, made) => Object.defineProperty(proto, "constructor", { value: made, writable: true, configurable: true });
   const replace = (proto, name, wrap) => {
     if (proto && typeof proto[name] === "function") proto[name] = wrap(proto[name]);
-  };
-  const clocks = (g) => {
-    const Real = g.Date;
-    const p = Real.prototype;
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const two = (n) => String(n).padStart(2, "0");
-    for (const part of ["FullYear", "Month", "Date", "Day", "Hours", "Minutes", "Seconds", "Milliseconds"]) {
-      p[`get${part}`] = p[`getUTC${part}`];
-      if (part !== "Day") p[`set${part}`] = p[`setUTC${part}`];
-    }
-    p.getTimezoneOffset = () => 0;
-    p.toDateString = function () {
-      return `${days[this.getUTCDay()]} ${months[this.getUTCMonth()]} ${two(this.getUTCDate())} ${this.getUTCFullYear()}`;
-    };
-    p.toTimeString = function () {
-      return `${two(this.getUTCHours())}:${two(this.getUTCMinutes())}:${two(this.getUTCSeconds())} GMT+0000 (Coordinated Universal Time)`;
-    };
-    p.toString = function () {
-      return isNaN(this) ? "Invalid Date" : `${this.toDateString()} ${this.toTimeString()}`;
-    };
-    const Fake = function (...args) {
-      if (!new.target) return new Real().toString();
-      const local = args.length > 1 ? [Real.UTC(...args)] : args;
-      return Reflect.construct(Real, local, new.target === Fake ? Real : new.target);
-    };
-    Fake.prototype = p;
-    own(p, Fake);
-    Object.assign(Fake, { UTC: Real.UTC, now: Real.now, parse: Real.parse });
-    g.Date = Fake;
-    const now = g.Temporal && g.Temporal.Now;
-    for (const name of now ? Object.getOwnPropertyNames(now) : []) {
-      const real = now[name];
-      if (typeof real !== "function") continue;
-      now[name] = name === "timeZoneId" ? () => "UTC" : (at, ...rest) => real.call(now, at === undefined ? "UTC" : at, ...rest);
-    }
   };
   const hide = (g) => {
     for (const name of formats) {
@@ -63,6 +33,12 @@
         return real.call(this, pick(locales), timed(given));
       });
     }
+    const temporal = ["Instant", "ZonedDateTime", "PlainDate", "PlainTime", "PlainDateTime", "PlainYearMonth", "PlainMonthDay", "Duration"];
+    for (const kind of g.Temporal ? temporal : []) {
+      replace(g.Temporal[kind] && g.Temporal[kind].prototype, "toLocaleString", (real) => function (locales, given) {
+        return real.call(this, pick(locales), kind === "Instant" ? timed(given) : given);
+      });
+    }
     const located = (real) => function (locales, given) {
       return real.call(this, pick(locales), given);
     };
@@ -76,7 +52,7 @@
       Object.defineProperty(nav.prototype, "language", { get: () => tag, configurable: true });
       Object.defineProperty(nav.prototype, "languages", { get: () => Object.freeze([tag]), configurable: true });
     }
-    if (zone) clocks(g);
+    if (zone) clocks(g, own);
   };
   const workers = (g) => {
     for (const name of ["Worker", "SharedWorker"]) {

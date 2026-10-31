@@ -7,6 +7,7 @@ use wprs_format::page::{MASK, api};
 const POST: &str = "((h) => (m) => h.post(JSON.stringify(m)))(window.wprsHost)";
 const PHONE: &str = include_str!("phone.js");
 const GUARD: &str = include_str!("guard.js");
+const CLOCK: &str = include_str!("clock.js");
 const MAX_SAID: u32 = 200;
 const BANDS: usize = 64;
 
@@ -33,9 +34,17 @@ pub(super) fn source(view: &mut View) -> String {
 
 pub(super) fn guard(view: &View) -> String {
     let p = view.privacy;
-    let mask = if p.gpu { "null" } else { MASK.trim_end() };
-    let origin = json!(format!("https://{}", view.host));
-    format!("({})({}, {}, {mask}, {origin});", GUARD.trim_end(), !p.zone, !p.language)
+    guarded(
+        !p.zone,
+        !p.language,
+        if p.gpu { "null" } else { MASK.trim_end() },
+        &format!("https://{}", view.host),
+    )
+}
+
+pub(crate) fn guarded(zone: bool, language: bool, mask: &str, origin: &str) -> String {
+    let (guard, clock, origin) = (GUARD.trim_end(), CLOCK.trim_end(), json!(origin));
+    format!("({guard})({zone}, {language}, {mask}, {origin}, {clock});")
 }
 
 pub(super) fn worker(view: &View, query: &str) -> Option<String> {

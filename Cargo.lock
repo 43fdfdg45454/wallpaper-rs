@@ -6626,6 +6626,7 @@ dependencies = [
  "ndk-sys",
  "pollster",
  "reqwest",
+ "rquickjs",
  "rquickjs-sys",
  "serde",
  "serde_json",

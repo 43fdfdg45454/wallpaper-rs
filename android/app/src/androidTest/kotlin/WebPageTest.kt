@@ -130,7 +130,9 @@ class WebPageTest {
         reload()
         val shown = until("the page sees the zone of the phone") { it.has("worker") && it.optString("zone") == ZONE }
         assertEquals(ZONE, shown.getJSONObject("routes").getString("frame"))
-        assertEquals(listOf(ZONE, 21), shown.getJSONArray("worker").let { listOf(it.getString(0), it.getInt(1)) })
+        assertEquals(listOf(ZONE, 21, ZONE, -TOKYO), shown.getJSONArray("worker").let { listOf(it.getString(0), it.getInt(1), it.getString(3), it.getInt(4)) })
+        val leaks = shown.getJSONArray("leaks").let { all -> (0..1).map(all::getJSONArray) }
+        leaks.forEach { assertEquals(listOf(ZONE, -TOKYO, 0), listOf(it.getString(0), it.getInt(1), it.getInt(4))) }
         listOf("hide_zone", "hide_language", "hide_gpu").forEach { ask("confirm", "uid" to uid, "what" to it) }
         reload()
         val hidden = until("the page loads again hiding what it may not see") { it.optString("zone") == "UTC" && it.has("worker") }
@@ -141,7 +143,8 @@ class WebPageTest {
         listOf("frameHour", "madeHour").forEach { assertEquals(it, 12, routes.getInt(it)) }
         assertEquals("en-US", routes.getString("frameLanguage"))
         assertEquals("undefined", routes.getString("framePeer"))
-        assertEquals("[\"UTC\",12,\"en-US\"]", hidden.getJSONArray("worker").toString())
+        assertEquals("[\"UTC\",12,\"en-US\",\"UTC\",0]", hidden.getJSONArray("worker").toString())
+        assertEquals(List(2) { "[\"UTC\",0,\"en-US\",\"en-US\",0]" }.joinToString(",", "[", "]"), hidden.getJSONArray("leaks").toString())
         assertTrue(hidden.getString("webgl"), hidden.isNull("webgl") || hidden.getString("webgl") == "WebKit WebGL")
         assertEquals(2, hidden.getInt("visits"))
         ask("clear_data", "uid" to uid)
@@ -187,5 +190,6 @@ class WebPageTest {
         const val SIDE = 256
         val UTC = setOf("UTC", "GMT", "Etc/UTC", "Etc/GMT")
         const val ZONE = "Asia/Tokyo"
+        const val TOKYO = 9 * 3_600_000
     }
 }

@@ -33,7 +33,12 @@ probe.routes = {
   framePeer: typeof inner.RTCPeerConnection, made: new Intl.DateTimeFormat.prototype.constructor().resolvedOptions().timeZone,
   madeHour: new (Object.getPrototypeOf(new Date()).constructor)(Date.UTC(2024, 0, 1, 12)).getHours(),
 };
-const code = "postMessage([new Intl.DateTimeFormat().resolvedOptions().timeZone, new Date(Date.UTC(2024, 0, 1, 12)).getHours(), navigator.language])";
+const leaks = (g) => [new g.Intl.DateTimeFormat(undefined, { timeZone: undefined }).resolvedOptions().timeZone,
+  new g.Date("2024-01-01T12:00") - Date.UTC(2024, 0, 1, 12), new g.Intl.NumberFormat([]).resolvedOptions().locale,
+  new g.Intl.DateTimeFormat(["zz"]).resolvedOptions().locale, Math.round((g.Date.parse(g.document.lastModified) - Date.now()) / 36e5)];
+probe.leaks = [leaks(window), leaks(inner)];
+const code = "postMessage([new Intl.DateTimeFormat().resolvedOptions().timeZone, new Date(Date.UTC(2024, 0, 1, 12)).getHours(), navigator.language, " +
+  "new Intl.DateTimeFormat(undefined, { timeZone: undefined }).resolvedOptions().timeZone, new Date('2024-01-01T12:00') - Date.UTC(2024, 0, 1, 12)])";
 const worker = new Worker(URL.createObjectURL(new Blob([code], { type: "text/javascript" })));
 worker.onmessage = (event) => { probe.worker = event.data; };
 worker.onerror = (event) => { probe.worker = ["error", String(event.message)]; };

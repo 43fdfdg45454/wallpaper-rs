@@ -172,8 +172,11 @@ these are the differences:
   are off, and peer connections (WebRTC) are removed from the page and from every frame of it (see
   the guard below). The renderer runs in the WebView's isolated process.
 - **Privacy.** `hide_zone` and `hide_language` are applied by a guard script that runs before the
-  page's: `Date`, `Temporal.Now`, `Intl`, the `toLocale…` methods, `localeCompare` and
-  `navigator.language` see UTC and `en-US`, also through `constructor`. The WebView runs the guard
+  page's: `Date`, `Temporal`, `Intl`, the `toLocale…` methods, `localeCompare` and
+  `navigator.language` see UTC and `en-US`, also through `constructor`, when an option or the list
+  of languages is left empty (`timeZone: undefined`, `[]`) or names no language the engine knows,
+  in dates written without an offset (`new Date("2020-01-01T00:00")`, `Date.parse`, read as UTC),
+  in `getYear` and `setYear` and in `document.lastModified`. The WebView runs the guard
   at the start of every frame of the page's origin (`addDocumentStartJavaScript`), and the guard
   also applies itself to the frames the page creates, reads through `contentWindow` or reaches
   through `window[n]`, to its workers (each starts from `/:wprs/worker.js`, which runs the guard
