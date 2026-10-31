@@ -98,10 +98,11 @@ segundo, las pausas y las transiciones. Lo mismo hace `wprs-app --page settings`
 de imágenes o el de escenas tenga cambios sin guardar: entonces solo se muestra la ventana y el
 editor sigue abierto.
 
-Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer (con los plugins base y good y el de
-PipeWire, que lleva el sonido de los vídeos y de las escenas desde su versión 1.2; sin él o con uno
-anterior, el sonido va a la salida por defecto; si aún no hay ninguna salida de sonido, el fondo
-suena en cuanto aparece una) y un controlador Vulkan u OpenGL. El plugin de fondo usa los módulos QML de KPipeWire,
+Requisitos: KDE Plasma 6.4 o posterior, PipeWire, GStreamer 1.24 o posterior (con los plugins base
+y good y el de PipeWire, que lleva el sonido de los vídeos y de las escenas desde su versión 1.2;
+sin él o con uno anterior, el sonido va a la salida por defecto; si aún no hay ninguna salida de sonido, el fondo
+suena en cuanto aparece una) y un controlador Vulkan u OpenGL. `install.sh` avisa si no encuentra
+GStreamer 1.24 o posterior, y el paquete RPM lo exige. El plugin de fondo usa los módulos QML de KPipeWire,
 KWindowSystem y plasma-workspace; en Debian y Ubuntu vienen en `qml6-module-org-kde-pipewire`,
 `qml6-module-org-kde-kwindowsystem` y `plasma-workspace`. La app de escritorio usa Qt 6 Quick,
 Kirigami y el estilo de escritorio de KDE (`qml6-module-org-kde-kirigami` y
@@ -111,8 +112,9 @@ Kirigami y el estilo de escritorio de KDE (`qml6-module-org-kde-kirigami` y
 
 La misma página *Releases* trae `wallpaper-rs.flatpak` (x86_64) y `wallpaper-rs-aarch64.flatpak`
 (ARM de 64 bits), con la app de escritorio, el daemon, `wprs-ctl`, el plugin de fondo y el icono de
-la bandeja de Plasma, GStreamer y los códecs. El runtime (`org.kde.Platform` 6.11, con Qt 6, Kirigami
-y el estilo de escritorio de KDE) se descarga de Flathub al instalarlo, así que el repositorio
+la bandeja de Plasma. El runtime (`org.kde.Platform` 6.11, con Qt 6, Kirigami, el estilo de
+escritorio de KDE y GStreamer 1.26 con sus códecs; el Flatpak no se construye sobre uno con
+GStreamer anterior a 1.24) se descarga de Flathub al instalarlo, así que el repositorio
 `flathub` tiene que estar añadido; la primera orden lo añade si falta:
 
 ```sh
@@ -1372,8 +1374,9 @@ export function update() {
 
 ## Desarrollo
 
-Dependencias de compilación (Debian/Ubuntu): `libpipewire-0.3-dev libclang-dev pkg-config
-libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev qt6-base-dev qt6-declarative-dev`. Para las
+Dependencias de compilación (Debian/Ubuntu, con GStreamer 1.24 o posterior, como en Ubuntu 24.04):
+`libpipewire-0.3-dev libclang-dev pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+qt6-base-dev qt6-declarative-dev`. Para las
 pruebas: `mesa-vulkan-drivers pipewire wireplumber dbus-x11 gnome-keyring gstreamer1.0-plugins-base
 gstreamer1.0-plugins-good gstreamer1.0-pipewire gstreamer1.0-tools`, `sway grim foot` para la de
 Sway y `xvfb x11-utils x11-xserver-utils xdotool imagemagick openbox` para la de X11.

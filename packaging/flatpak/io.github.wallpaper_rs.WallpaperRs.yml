@@ -39,6 +39,7 @@ modules:
         CARGO_HOME: /run/build/wallpaper-rs/cargo
         RUSTFLAGS: --remap-path-prefix=/run/build/wallpaper-rs=/src --remap-path-prefix=/run/build/wallpaper-rs/cargo=/cargo
     build-commands:
+      - pkg-config --atleast-version=1.24 gstreamer-1.0
       - rust-dist/install.sh --prefix=/run/build/wallpaper-rs/rust --components=rustc,cargo,rust-std-$FLATPAK_ARCH-unknown-linux-gnu --disable-ldconfig
       - WPRS_VERSION=$(cat VERSION 2>/dev/null) cargo build --release --offline --locked -p wprsd -p wprs-ctl -p wprs-app
       - install -Dm755 -t /app/bin target/release/wprsd target/release/wprs-ctl target/release/wprs-app

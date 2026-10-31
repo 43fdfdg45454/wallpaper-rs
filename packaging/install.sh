@@ -24,6 +24,11 @@ for arg in "$@"; do
   esac
 done
 
+gst=$(ldd "$HERE/bin/wprsd" 2>/dev/null | awk '$1 == "libgstreamer-1.0.so.0" { print $3 }' || true)
+gst=$(readlink -f "$gst" 2>/dev/null || true) && gst=${gst##*/libgstreamer-1.0.so.0.} && gst=${gst%%.*}
+[[ $gst =~ ^[0-9]+$ ]] && ((gst >= 2400)) ||
+  echo "WARNING: GStreamer 1.24 or newer was not found; videos and the sound of scenes need it" >&2
+
 echo "Installing binaries to $BINDIR"
 install -Dm755 "$HERE/bin/wprsd" "$BINDIR/wprsd"
 install -Dm755 "$HERE/bin/wprs-ctl" "$BINDIR/wprs-ctl"

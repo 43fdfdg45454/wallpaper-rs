@@ -13,8 +13,9 @@ Requires:       pipewire
 Requires:       kpipewire
 Requires:       kf6-kwindowsystem
 Requires:       plasma-workspace
-Requires:       gstreamer1-plugins-base
-Requires:       gstreamer1-plugins-good
+Requires:       gstreamer1 >= 1.24
+Requires:       gstreamer1-plugins-base >= 1.24
+Requires:       gstreamer1-plugins-good >= 1.24
 Requires:       pipewire-gstreamer
 Requires:       kf6-kirigami
 Requires:       kf6-qqc2-desktop-style
