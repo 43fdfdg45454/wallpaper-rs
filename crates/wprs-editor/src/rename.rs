@@ -59,6 +59,13 @@ fn follower(l: &mut Value, change: Change) {
 
 pub(crate) fn bone(doc: &Value, path: &str, change: Change, trees: (&Tree, &Tree)) -> Vec<Op> {
     let Some(id) = doc.pointer(path).map(|l| l["id"].clone()) else { return Vec::new() };
+    let names: Vec<String> = match change {
+        Change::Renamed(old, new) => {
+            trees.0.names.iter().map(|n| if n == old { new } else { n }.to_owned()).collect()
+        }
+        _ => trees.0.names.to_vec(),
+    };
+    let renamed = Tree { names: &names, parents: trees.0.parents };
     let mut ops = Vec::new();
     for (at, before) in crate::layers::walk(doc) {
         let mut after = before.clone();
@@ -71,7 +78,7 @@ pub(crate) fn bone(doc: &Value, path: &str, change: Change, trees: (&Tree, &Tree
                 Change::Gone(g, keep) => (Some(g), keep),
                 Change::Moved => (None, None),
             };
-            crate::tidy::layer(&mut after, trees.0, trees.1, gone, keep);
+            crate::tidy::layer(&mut after, &renamed, trees.1, gone, keep);
         }
         if before["attach"]["layer"] == id {
             follower(&mut after, change);

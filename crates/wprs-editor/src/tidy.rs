@@ -74,8 +74,8 @@ pub(crate) fn layer(l: &mut Value, before: &Tree, after: &Tree, gone: Option<&st
         let had = c["chain"].as_array().map_or(0, Vec::len);
         let linked = before.hangs(c["chain"].as_array().map_or(&[], Vec::as_slice));
         if let Some(g) = gone {
-            c["chain"].as_array_mut().into_iter().for_each(|ch| ch.retain(|b| b != g));
-            c["limits"].as_object_mut().into_iter().for_each(|m| drop(m.remove(g)));
+            c.get_mut("chain").and_then(Value::as_array_mut).into_iter().for_each(|ch| ch.retain(|b| b != g));
+            c.get_mut("limits").and_then(Value::as_object_mut).into_iter().for_each(|m| drop(m.remove(g)));
             if c["target"] == format!("bone:{g}").as_str() {
                 return false;
             }

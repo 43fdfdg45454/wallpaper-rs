@@ -83,3 +83,33 @@ fn rehanging_a_bone_drops_the_chains_and_rules_it_breaks() {
     assert_eq!(layer(&p)["ik"][0]["chain"], json!(["root", "arm", "hand"]));
     assert_eq!(broken(&p), Vec::<String>::new());
 }
+
+#[test]
+fn removing_a_bone_or_point_leaves_chains_without_limits_as_they_were() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = rigged(&root);
+    act(&mut p, bone("tail", json!({ "parent": "root", "at": [0.2, 0.8] }))).unwrap();
+    act(&mut p, json!({ "ik": { "layer": "net", "root": "root", "tip": "arm" } })).unwrap();
+    let chain = layer(&p)["ik"].clone();
+    assert!(chain[0].get("limits").is_none());
+    let pin = json!({ "point": { "layer": "net", "name": "pin", "at": [0.5, 0.3] } });
+    act(&mut p, pin).unwrap();
+    act(&mut p, json!({ "point": { "layer": "net", "name": "pin", "remove": true } })).unwrap();
+    assert_eq!((broken(&p), layer(&p)["ik"].clone()), (Vec::<String>::new(), chain.clone()));
+    act(&mut p, bone("tail", json!({ "remove": true }))).unwrap();
+    assert_eq!((broken(&p), layer(&p)["ik"].clone()), (Vec::<String>::new(), chain));
+}
+
+#[test]
+fn renaming_and_rehanging_a_bone_at_once_drops_the_chains_it_breaks() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = dressed(&root);
+    act(&mut p, bone("arm", json!({ "to": "limb", "parent": "tail" }))).unwrap();
+    assert_eq!(broken(&p), Vec::<String>::new());
+    assert!(layer(&p).get("ik").is_none() && layer(&p).get("rules").is_none());
+    assert_eq!(layer(&p)["hit"], json!(["hand", "limb"]));
+    act(&mut p, json!({ "undo": {} })).unwrap();
+    act(&mut p, bone("arm", json!({ "to": "limb", "at": [0.6, 0.5] }))).unwrap();
+    assert_eq!(layer(&p)["ik"][0]["chain"], json!(["root", "limb", "hand"]));
+    assert_eq!(broken(&p), Vec::<String>::new());
+}

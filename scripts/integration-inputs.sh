@@ -91,10 +91,12 @@ ctl scene add-layer "$draft" solid --id badge >/dev/null
 ctl scene attach "$draft" badge --to puppet --bone arm --inherit position,rotation || fail "the layer was not attached"
 ctl scene attach "$draft" badge --point 0.5,0.4 || fail "the layer was not pinned to a new point"
 ctl scene attach "$draft" badge --nudge 4,-2 || fail "the layer was not moved along its point"
+ctl scene ik "$draft" puppet add root arm || fail "no chain without limits was added"
 ctl scene point "$draft" puppet pin --at 0.5,0.3 || fail "no point was placed"
 ctl scene point "$draft" puppet pin --rename peg --parent root || fail "the point was not renamed and rehung"
 ctl scene bones "$draft" puppet | grep -q '"peg"' || fail "the point was not listed"
 ctl scene point "$draft" puppet peg --remove || fail "the point was not removed"
+ctl scene validate "$draft" >/dev/null || fail "removing a point left the scene invalid"
 ctl scene parts "$draft" puppet --order body 2 --hide body || fail "the part was not ordered"
 ctl scene parts "$draft" puppet --show body || fail "the part was not shown"
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with chains, a rope, wind and attachments was not previewed"
@@ -108,6 +110,9 @@ ctl scene validate "$draft" >/dev/null || fail "removing a bone left the scene i
 ctl scene undo "$draft"
 ctl scene bone "$draft" puppet arm --root || fail "the arm was not rehung"
 ctl scene validate "$draft" >/dev/null || fail "rehanging a bone left the scene invalid"
+ctl scene undo "$draft"
+ctl scene bone "$draft" puppet arm --rename limb --parent paw || fail "the arm was not renamed and rehung"
+ctl scene validate "$draft" >/dev/null || fail "renaming and rehanging a bone left the scene invalid"
 ctl scene import "$draft" "$ROOT/tests/fixtures/parts.glb" --id body >/dev/null
 ctl scene add "$draft" /scene/layers/- '{"id": "body", "type": "mesh", "mesh": "body", "size": [100, 100]}'
 ctl scene bone "$draft" body tail --parent hip --at 0.8,0.8 || fail "a mesh of several parts took no bone"
