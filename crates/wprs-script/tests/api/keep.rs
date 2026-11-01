@@ -1,4 +1,5 @@
 use super::*;
+use std::time::Duration;
 use wprs_script::{Limits, Script};
 
 const STORE: &str = r#"import { scene, storage } from "wprs";
@@ -47,7 +48,7 @@ fn scene(uses: serde_json::Value) -> serde_json::Value {
 fn with(uses: serde_json::Value, source: &str, setup: impl FnOnce(&mut wprs_script::Setup)) -> Script {
     let mut made = common::setup(scene(uses), &[("main.js", source)]);
     setup(&mut made);
-    Script::load(&made, Limits::default()).unwrap()
+    Script::load(&made, Limits { update: Duration::from_millis(250), ..Limits::default() }).unwrap()
 }
 
 #[test]
