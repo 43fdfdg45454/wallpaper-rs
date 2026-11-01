@@ -97,6 +97,13 @@ const val RIG_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size":
 const val RIG_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.rig", "version": "1.0.0",
     "title": "Rig", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
     "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["mesh"] } }"""
+const val SWING_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] }, "assets": { "rig": { "path": "rig.glb" } },
+    "layers": [{ "id": "fox", "type": "mesh", "mesh": "rig", "size": [64, 32], "color": "#40c060",
+      "physics": [{ "bone": "arm", "mode": "rope", "gravity": 3, "stiffness": 0, "damping": 1 }],
+      "ik": [{ "chain": ["root", "arm"], "target": [8, 30], "weight": 0.5 }] }] }"""
+const val SWING_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.swing", "version": "1.0.0",
+    "title": "Swing", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+    "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["bone_physics", "ik", "mesh"] } }"""
 const val RIG_GLB = "Z2xURgIAAABsBgAAmAQAAEpTT057ImFjY2Vzc29ycyI6W3siYnVmZmVyVmlldyI6MCwiY29tcG9uZW50VHlwZSI6NTEyNiwiY291" +
     "bnQiOjYsIm1heCI6WzMyLjAsMTYuMCwwLjBdLCJtaW4iOlstMzIuMCwtMTYuMCwwLjBdLCJ0eXBlIjoiVkVDMyJ9LHsiYnVmZmVy" +
     "VmlldyI6MSwiY29tcG9uZW50VHlwZSI6NTEyNiwiY291bnQiOjYsInR5cGUiOiJWRUMyIn0seyJidWZmZXJWaWV3IjoyLCJjb21w" +

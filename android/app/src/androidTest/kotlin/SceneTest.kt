@@ -138,6 +138,19 @@ class SceneTest : SceneBase() {
     }
 
     @Test
+    fun bonesWithPhysicsAndChainsDrawAndSettle() {
+        val dir = File(storage(), "rigs/swing").apply { mkdirs() }
+        File(dir, "scene.json").writeText(SWING_SCENE)
+        File(dir, "rig.glb").writeBytes(java.util.Base64.getDecoder().decode(RIG_GLB))
+        File(dir, "manifest.json").writeText(SWING_MANIFEST)
+        val reply = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(reply, reply.startsWith("["))
+        show("Swing")
+        assertTrue("the mesh was not drawn", waitFor { frames.get() > 0 })
+        assertTrue("the bones did not settle", waitFor { frames.get().let { before -> quiet(frames) == before } })
+    }
+
+    @Test
     fun particlesWithTrailsOrdersGradientsAndSoundRangesDrawAndTellTheirPath() {
         val dir = File(storage(), "rains/rain").apply { mkdirs() }
         File(dir, "scene.json").writeText(RAIN_SCENE)
