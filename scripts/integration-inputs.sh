@@ -63,7 +63,27 @@ ctl scene mesh-depth "$draft" puppet '0.4,0.5;0.6,0.5' --by 30 --radius 0.2 || f
 ctl scene set "$draft" /scene/layers/1/hit '["arm"]'
 ctl scene set "$draft" /scene/canvas/wind '[40, 0]'
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with reaching and swinging bones was not previewed"
-for _ in $(seq 12); do ctl scene undo "$draft"; done
+ctl scene bone "$draft" puppet hand --parent arm --at 0.9,0.5 || fail "the mesh took no hand"
+ctl scene weights "$draft" puppet arm '0.5,0.5;0.6,0.5' --mode add --by 0.5 --radius 0.2 --lock root || fail "no weights were painted"
+ctl scene vertex-weights "$draft" puppet | grep -q '"arm"' || fail "the weights of the vertices were not listed"
+ctl scene bone "$draft" puppet hand --rename paw || fail "the hand was not renamed"
+ctl scene bone "$draft" puppet paw --root || fail "the paw was not rehung"
+ctl scene auto-weights "$draft" puppet || fail "the weights were not bound to the bones again"
+ctl scene clip "$draft" puppet swing --add --length 2 --loop pingpong || fail "no clip was added"
+ctl scene key "$draft" puppet swing 1 --bone arm --rotation 30 --position 4,0 --scale 1.2 --ease cubic || fail "the arm was not keyed"
+ctl scene key "$draft" puppet swing 1.5 --bone arm --from 1 --copy && ctl scene key "$draft" puppet swing 0 --order body --value 3
+ctl scene keys "$draft" puppet swing | grep -q '"cubic"' || fail "the keys of the clip were not listed"
+ctl scene clip "$draft" puppet swing --rename sway && ctl scene set "$draft" /scene/layers/1/animations '[{"clip": "sway"}]'
+ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a keyed and painted mesh was not previewed"
+ctl scene import "$draft" "$ROOT/tests/fixtures/parts.glb" --id body >/dev/null
+ctl scene add "$draft" /scene/layers/- '{"id": "body", "type": "mesh", "mesh": "body", "size": [100, 100]}'
+ctl scene bone "$draft" body tail --parent hip --at 0.8,0.8 || fail "a mesh of several parts took no bone"
+ctl scene expression "$draft" body happy --shape smile=0.8 || fail "no expression was made"
+ctl scene expression "$draft" body happy --rename glad || fail "the expression was not renamed"
+ctl scene clip "$draft" body grin --add
+ctl scene key "$draft" body grin 0.5 --shape smile --weight 0.5 || fail "the blend shape was not keyed"
+ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a mesh of several parts was not previewed"
+for _ in $(seq 30); do ctl scene undo "$draft"; done
 "$BIN/probe" "$s15" 4 --hold >"$WORK/edit-frames.out" 2>&1 & counter=$!; pids+=("$counter")
 sleep 1
 ctl scene set "$draft" /scene/canvas/background '#0000ff'

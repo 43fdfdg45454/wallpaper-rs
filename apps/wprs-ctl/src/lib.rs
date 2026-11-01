@@ -7,6 +7,7 @@ mod bench;
 mod calls;
 mod caution;
 pub mod cli;
+mod clipping;
 mod consent;
 mod daemon;
 mod depth;

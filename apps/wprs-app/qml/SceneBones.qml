@@ -6,16 +6,24 @@ Item {
     id: bones
 
     required property var gizmo
+    readonly property var mesh: gizmo.page.mesh
+    readonly property string layerId: gizmo.modelData.id
+    readonly property bool posing: mesh.posing(layerId)
+    readonly property bool placing: mesh.rigging === layerId && mesh.sculpt === null && mesh.weighing === null
     property var rig: ({
             "bones": []
         })
     readonly property var list: rig.bones ?? []
 
     function load() {
-        rig = JSON.parse(gizmo.page.editor.rig(gizmo.modelData.id) || "null") ?? {
+        rig = mesh.ask(layerId) ?? {
             "bones": []
         };
         links.requestPaint();
+    }
+
+    function at(point) {
+        return [Math.round(point.x / width * 1000) / 1000, Math.round(point.y / height * 1000) / 1000];
     }
 
     anchors.fill: parent
@@ -29,10 +37,17 @@ Item {
         target: bones.gizmo.page.editor
     }
 
+    SceneHeat {
+        anchors.fill: parent
+        host: bones
+        visible: bones.mesh.weighing !== null && bones.mesh.rigging === bones.layerId
+    }
+
     Canvas {
         id: links
 
         anchors.fill: parent
+        visible: !bones.posing
         onPaint: {
             const ctx = getContext("2d");
             ctx.reset();
@@ -54,23 +69,30 @@ Item {
         property var points: []
 
         target: null
-        enabled: bones.gizmo.page.sculpt !== null
+        enabled: bones.mesh.rigging === bones.layerId && (bones.mesh.sculpt !== null || bones.mesh.weighing !== null)
         onActiveChanged: {
-            if (!active && points.length > 0)
+            if (!active && points.length > 0 && bones.mesh.sculpt !== null)
                 bones.gizmo.page.run("mesh_depth", Object.assign({
-                    "layer": bones.gizmo.modelData.id,
+                    "layer": bones.layerId,
                     "points": points
-                }, bones.gizmo.page.sculpt));
+                }, bones.mesh.sculpt));
+            else if (!active && points.length > 0 && bones.mesh.weighing !== null && bones.mesh.bone !== "")
+                bones.gizmo.page.run("weights", Object.assign({}, bones.mesh.weighing, {
+                    "layer": bones.layerId,
+                    "bone": bones.mesh.bone,
+                    "points": points,
+                    "lock": bones.mesh.weighing.lock.filter(b => b !== bones.mesh.bone)
+                }));
             points = [];
         }
         onCentroidChanged: {
             if (active && points.length < 1024)
-                points = points.concat([[Math.round(centroid.position.x / bones.width * 1000) / 1000, Math.round(centroid.position.y / bones.height * 1000) / 1000]]);
+                points = points.concat([bones.at(centroid.position)]);
         }
     }
 
     Repeater {
-        model: bones.list
+        model: bones.posing ? [] : bones.list
 
         delegate: Rectangle {
             id: knob
@@ -82,7 +104,7 @@ Item {
             width: Kirigami.Units.gridUnit * 0.9
             height: width
             radius: width / 2
-            color: Kirigami.Theme.highlightColor
+            color: bones.mesh.bone === modelData.name ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.highlightColor
             border.color: Kirigami.Theme.backgroundColor
             visible: modelData.at !== undefined
 
@@ -92,18 +114,28 @@ Item {
                 text: knob.modelData.name
             }
 
+            TapHandler {
+                onTapped: bones.mesh.bone = knob.modelData.name
+            }
+
             DragHandler {
+                enabled: bones.placing
                 onActiveChanged: {
                     if (active)
                         return;
-                    const p = knob.mapToItem(bones, knob.width / 2, knob.height / 2);
                     bones.gizmo.page.run("bone", {
-                        "layer": bones.gizmo.modelData.id,
+                        "layer": bones.layerId,
                         "name": knob.modelData.name,
-                        "at": [Math.round(p.x / bones.width * 1000) / 1000, Math.round(p.y / bones.height * 1000) / 1000]
+                        "at": bones.at(knob.mapToItem(bones, knob.width / 2, knob.height / 2))
                     });
                 }
             }
         }
+    }
+
+    ScenePoseHandles {
+        anchors.fill: parent
+        host: bones
+        visible: bones.posing
     }
 }

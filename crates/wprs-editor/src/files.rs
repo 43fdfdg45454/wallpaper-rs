@@ -19,17 +19,6 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
             let (channel, radius, hardness, value) = (*channel, *radius, *hardness, *value);
             paint(dir, doc, &Stroke { pointer, channel, radius, hardness, value, points })
         }
-        Action::MeshFromPicture { image, outline, cells, id } => {
-            let (outline, cells, id) = (*outline, *cells, id.as_deref());
-            crate::rig::mesh_from_picture(dir, doc, &crate::rig::Cutting { image, outline, cells, id })
-        }
-        Action::Bone { layer, name, parent, at, remove } => {
-            let (parent, at, remove) = (parent.as_deref(), *at, *remove);
-            crate::rig::bone(dir, doc, &crate::rig::Boning { layer, name, parent, at, remove })
-        }
-        Action::MeshDepth { layer, points, radius, by } => {
-            crate::sculpt::depth(dir, doc, layer, points, (*radius, *by))
-        }
-        _ => return None,
+        action => return crate::rigging::act(dir, doc, action),
     })
 }

@@ -163,6 +163,10 @@ QtObject {
                 if (!page.fields.some(field => field.widget === "points"))
                     throw new Error(kind + ": the emitter box has no editor");
             }
+            if (kind === "empty")
+                Qt.createComponent("SceneMeshCheck.qml").createObject(page, {
+                    "page": page
+                }).exercise();
             if (kind === "parallax") {
                 manifest();
                 Qt.createComponent("SceneSettingsCheck.qml").createObject(page, {

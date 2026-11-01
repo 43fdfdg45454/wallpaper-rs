@@ -194,4 +194,6 @@ pub enum Author {
     Folder(crate::folder::Folder),
     #[command(flatten)]
     Rigging(crate::rigging::Rigging),
+    #[command(flatten)]
+    Clipping(crate::clipping::Clipping),
 }

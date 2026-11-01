@@ -15,6 +15,7 @@ pub mod qobject {
         #[qproperty(QString, selected)]
         #[qproperty(QString, error)]
         #[qproperty(QString, output)]
+        #[qproperty(QString, look)]
         #[qproperty(u32, node)]
         #[qproperty(f64, serial)]
         #[qproperty(f64, time)]
@@ -44,7 +45,7 @@ pub mod qobject {
         #[qinvokable]
         fn scripts(self: &SceneEditor, id: &QString) -> QString;
         #[qinvokable]
-        fn rig(self: &SceneEditor, id: &QString) -> QString;
+        fn rig(self: &SceneEditor, id: &QString, query: &QString) -> QString;
         #[qinvokable]
         fn save(self: Pin<&mut SceneEditor>);
         #[qinvokable]
@@ -91,6 +92,7 @@ pub struct SceneEditorRust {
     pub selected: QString,
     pub error: QString,
     pub output: QString,
+    pub look: QString,
     pub node: u32,
     pub serial: f64,
     pub time: f64,
@@ -166,8 +168,10 @@ impl SceneEditor {
         QString::from(&serde_json::to_string(&found.unwrap_or_default()).unwrap_or_default())
     }
 
-    pub fn rig(&self, id: &QString) -> QString {
-        let found = self.project.as_ref().map(|p| wprs_editor::rigs::rig(&p.dir, &p.doc, &id.to_string()));
+    pub fn rig(&self, id: &QString, query: &QString) -> QString {
+        let q = serde_json::from_str(&query.to_string()).unwrap_or_default();
+        let found =
+            self.project.as_ref().map(|p| wprs_editor::rigs::query(&p.dir, &p.doc, &id.to_string(), &q));
         QString::from(&found.unwrap_or_default().to_string())
     }
 

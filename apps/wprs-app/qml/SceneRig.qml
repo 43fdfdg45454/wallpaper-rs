@@ -8,30 +8,35 @@ ColumnLayout {
     id: rig
 
     required property var input
+    readonly property var page: input.page
     readonly property string base: input.field.pointer.replace(/\/[^/]*$/, "")
-    readonly property string layerId: JSON.parse(input.page.editor.value(base + "/id") || "\"\"") ?? ""
+    readonly property string layerId: JSON.parse(page.editor.value(base + "/id") || "\"\"") ?? ""
     property var info: ({})
     readonly property var bones: info.bones ?? []
     readonly property var clips: info.clips ?? []
+    readonly property bool editable: info.editable === true
 
     function load() {
-        info = JSON.parse(input.page.editor.rig(layerId) || "null") ?? {};
+        info = page.mesh.ask(layerId) ?? {};
     }
 
     function bone(args) {
-        input.page.run("bone", Object.assign({
+        page.run("bone", Object.assign({
             "layer": rig.layerId
         }, args));
     }
 
-    Component.onCompleted: load()
+    Component.onCompleted: {
+        load();
+        page.mesh.layer = layerId;
+    }
 
     Connections {
         function onViewChanged() {
             rig.load();
         }
 
-        target: rig.input.page.editor
+        target: rig.page.editor
     }
 
     QQC2.ComboBox {
@@ -45,79 +50,38 @@ ColumnLayout {
         text: App.tr("Place bones on the preview")
         icon.name: "transform-move"
         checkable: true
-        enabled: rig.info.editable === true
-        checked: rig.input.page.rigging === rig.layerId && rig.input.page.sculpt === null
-        onToggled: {
-            rig.input.page.rigging = checked ? rig.layerId : "";
-            rig.input.page.sculpt = null;
-        }
+        enabled: rig.editable
+        checked: rig.page.mesh.rigging === rig.layerId && rig.page.mesh.sculpt === null && rig.page.mesh.weighing === null
+        onToggled: rig.page.mesh.tool(rig.layerId, "bones", checked ? {} : null)
     }
 
-    SceneRigDepth {
+    SceneBoneTree {
         Layout.fillWidth: true
-        page: rig.input.page
-        layerId: rig.layerId
-        editable: rig.info.editable === true
-    }
-
-    Repeater {
-        model: rig.bones
-
-        delegate: RowLayout {
-            required property var modelData
-
-            QQC2.Label {
-                Layout.fillWidth: true
-                text: modelData.parent ? App.tr("%1, hanging from %2", modelData.name, modelData.parent) : modelData.name
-            }
-
-            QQC2.ToolButton {
-                icon.name: "edit-delete"
-                text: App.tr("Remove")
-                display: QQC2.AbstractButton.IconOnly
-                visible: rig.info.editable === true
-                onClicked: rig.bone({
-                    "name": modelData.name,
-                    "remove": true
-                })
-            }
-        }
-    }
-
-    RowLayout {
-        visible: rig.info.editable === true
-
-        QQC2.TextField {
-            id: named
-
-            Layout.fillWidth: true
-            placeholderText: App.tr("Name of a new bone")
-        }
-
-        QQC2.ComboBox {
-            id: under
-
-            model: [App.tr("No parent")].concat(rig.bones.map(b => b.name))
-        }
-
-        QQC2.Button {
-            text: App.tr("Add")
-            enabled: named.text.trim() !== ""
-            onClicked: {
-                rig.bone({
-                    "name": named.text.trim(),
-                    "parent": under.currentIndex > 0 ? rig.bones[under.currentIndex - 1].name : null
-                });
-                named.text = "";
-            }
-        }
+        host: rig
     }
 
     QQC2.Label {
         Layout.fillWidth: true
-        visible: rig.info.editable !== true
+        visible: !rig.editable
         wrapMode: Text.Wrap
-        text: App.tr("Bones are placed here on meshes cut from a picture; other meshes keep the bones of their file.")
+        text: App.tr("Bones are placed here on meshes whose parts are each drawn once; other meshes keep the bones of their file.")
+    }
+
+    SceneRigWeights {
+        Layout.fillWidth: true
+        host: rig
+    }
+
+    SceneRigDepth {
+        Layout.fillWidth: true
+        page: rig.page
+        layerId: rig.layerId
+        editable: rig.editable
+    }
+
+    SceneShapes {
+        Layout.fillWidth: true
+        host: rig
     }
 
     SceneRigMotion {
@@ -133,12 +97,29 @@ ColumnLayout {
         QQC2.ComboBox {
             Layout.fillWidth: true
             model: [App.tr("None")].concat(rig.clips)
-            onActivated: index => rig.input.page.run("set", {
-                "pointer": rig.base + "/animations",
-                "value": index === 0 ? [] : [{
-                    "clip": rig.clips[index - 1]
-                }]
-            })
+            onActivated: index => rig.page.run("set", {
+                    "pointer": rig.base + "/animations",
+                    "value": index === 0 ? [] : [
+                        {
+                            "clip": rig.clips[index - 1]
+                        }
+                    ]
+                })
+        }
+    }
+
+    QQC2.Button {
+        text: App.tr("Edit clips on the timeline")
+        icon.name: "chronometer"
+        onClicked: {
+            if (rig.clips.length === 0)
+                rig.page.run("clip", {
+                    "layer": rig.layerId,
+                    "id": "clip_1",
+                    "add": true
+                });
+            rig.page.mesh.layer = rig.layerId;
+            rig.page.mesh.clip = rig.clips[0] ?? "clip_1";
         }
     }
 }

@@ -9,11 +9,11 @@ ColumnLayout {
     required property var page
     required property string layerId
     required property bool editable
-    readonly property bool painting: page.sculpt !== null && page.rigging === layerId
+    readonly property bool painting: page.mesh.sculpt !== null && page.mesh.rigging === layerId
 
     function brush() {
         if (painting)
-            page.sculpt = {
+            page.mesh.sculpt = {
                 "by": raise.value,
                 "radius": Math.round(size.value * 1000) / 1000
             };
@@ -26,13 +26,10 @@ ColumnLayout {
         icon.name: "draw-brush"
         checkable: true
         checked: sculpt.painting
-        onToggled: {
-            sculpt.page.rigging = checked ? sculpt.layerId : "";
-            sculpt.page.sculpt = checked ? {
-                "by": raise.value,
-                "radius": Math.round(size.value * 1000) / 1000
-            } : null;
-        }
+        onToggled: sculpt.page.mesh.tool(sculpt.layerId, "depth", checked ? {
+            "by": raise.value,
+            "radius": Math.round(size.value * 1000) / 1000
+        } : null)
     }
 
     RowLayout {

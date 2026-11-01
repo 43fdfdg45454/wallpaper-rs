@@ -1,4 +1,4 @@
-pub const ACTIONS: [&str; 32] = [
+pub const ACTIONS: [&str; 37] = [
     "set",
     "add",
     "remove",
@@ -29,6 +29,11 @@ pub const ACTIONS: [&str; 32] = [
     "mesh_from_picture",
     "bone",
     "mesh_depth",
+    "weights",
+    "auto_weights",
+    "clip",
+    "key",
+    "expression",
     "undo",
     "redo",
 ];
@@ -48,4 +53,8 @@ pub(super) fn half() -> f32 {
 
 pub(super) fn whole() -> f32 {
     1.0
+}
+
+pub(super) fn tenth() -> f32 {
+    0.1
 }

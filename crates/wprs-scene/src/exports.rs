@@ -94,12 +94,13 @@ pub use crate::rig::{
     AnimClip, AnimLayer, Bend, Body, BoneKeys, BonePhysics, BoneRule, IkChain, MAX_ANIMATION_LAYERS,
     MAX_BODIES, MAX_CHAIN, MAX_CHAINS, MAX_CLIPS_PER_MODEL, MAX_EXPRESSIONS, Reach, Rig,
 };
+pub use crate::rigged::math as mesh_math;
 pub use crate::rigged::math::{Mat, Quat, Trs};
 pub use crate::rigged::{
     Channel, Cut, Interp, Joint, MAX_ACTIVE_SHAPES, MAX_CELLS, MAX_MORPH_TEXELS, MAX_RIG_BYTES,
     MAX_RIG_INDICES, MAX_RIG_KEYS, MAX_RIG_NODES, MAX_RIG_PALETTE, MAX_RIG_PIECES, MAX_RIG_VERTICES,
     MAX_SKETCH_BONES, MAX_SKETCH_DEPTH, MIN_CELLS, MORPH_WIDTH, Motion, Path as Track, Piece, Rigged, Sketch,
-    SketchBone, VERTEX_FLOATS,
+    SketchBone, VERTEX_FLOATS, nearest_bones,
 };
 pub use crate::runtime::Runtime;
 pub use crate::scan::{beyond_first, imported};

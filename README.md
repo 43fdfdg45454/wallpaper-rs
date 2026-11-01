@@ -1615,18 +1615,38 @@ imagen nueva en `masks/`, de modo que deshacer vuelve a la anterior (`wprs-ctl s
 hace lo mismo desde la terminal).
 
 También recorta una malla de una imagen de la escena («Malla desde una imagen» en el menú para añadir
-capas), con una cuadrícula de celdas o siguiendo el contorno de la parte opaca, y le pone huesos: el
-inspector del campo `mesh` los lista, añade y quita, elige el clip que reproduce la vista previa y
-los muestra sobre la vista previa, donde se arrastran; los pesos de los vértices siguen a los huesos
-más cercanos y cada cambio guarda una malla nueva en `meshes/`, de modo que deshacer vuelve a la
-anterior. Sobre la vista previa también se pinta la profundidad de los vértices, que los acerca o
-aleja del espectador para la perspectiva y para decidir qué tapa a qué. Desde la terminal hacen lo
-mismo `wprs-ctl scene mesh-from-picture`, `wprs-ctl scene bone`, `wprs-ctl scene mesh-depth` y
-`wprs-ctl scene bones`. El mismo inspector añade y quita cadenas que alcanzan (el último hueso,
-cuántos huesos sube y el objetivo), huesos con física (y su modo: muelle, rígido o cuerda), huesos
-que reciben el puntero y la profundidad con su escala y el ocultado de caras traseras; el resto de
-cada campo, como los límites, el peso o el viento, se edita en el inspector general, y desde la
-terminal todo ello con `wprs-ctl scene set`.
+capas), con una cuadrícula de celdas o siguiendo el contorno de la parte opaca, y le pone huesos, igual
+que a un `.glb` importado de varias partes. El inspector del campo `mesh` muestra los huesos en árbol:
+un clic elige un hueso (también sobre la vista previa), un doble clic lo renombra (y la escena lo
+sigue en clips, cadenas, física, reglas, puntero y capas sujetas), y un hueso soltado sobre otro
+cuelga de él. Sobre la vista previa los huesos se arrastran, se pinta la profundidad de los
+vértices, que los acerca o aleja del espectador, y se pintan los pesos del hueso elegido con un
+pincel que suma, resta, suaviza o normaliza, con fuerza, tamaño, borde suave y huesos bloqueados;
+la malla se colorea por el peso de ese hueso o por el hueso que manda en cada parte, y cada vértice
+queda con cuatro huesos como mucho y pesos que suman 1. Mientras no se pintan, los pesos siguen a
+los huesos más cercanos; una vez pintados se conservan al cambiar los huesos, y *Pesos automáticos*
+los vuelve a calcular. Cada cambio guarda una malla nueva en `meshes/`, de modo que deshacer vuelve a
+la anterior.
+
+*Editar los clips en la línea de tiempo* cambia las líneas de tiempo bajo la vista previa por los
+clips de la capa: se elige, crea, renombra o quita un clip, se fijan su duración y su bucle, y el
+cabezal recorre, reproduce y repite la vista previa con ese clip. Hay filas por canal de cada hueso,
+por el orden de las partes y por cada forma de mezcla, con un deslizador que guarda su peso; las
+claves se arrastran (con Ctrl se copian), se borran y se les da paso, línea o curva suave. Sobre la
+vista previa el hueso elegido tiene asas para moverlo, girarlo y escalarlo en ese instante, y
+*Clave* guarda su pose en las claves del clip del JSON de la escena, las mismas que reproduce el
+motor. Las formas de mezcla tienen deslizadores que solo cambian la vista previa, y con ellos se
+crean, cambian, renombran y quitan expresiones. El mismo inspector añade y quita cadenas que
+alcanzan (el último hueso, cuántos huesos sube y el objetivo), huesos con física (y su modo: muelle,
+rígido o cuerda), huesos que reciben el puntero y la profundidad con su escala y el ocultado de caras
+traseras; el resto de cada campo, como los límites, el peso o el viento, se edita en el inspector
+general, y desde la terminal todo ello con `wprs-ctl scene set`.
+
+Desde la terminal hacen lo mismo `wprs-ctl scene mesh-from-picture`, `bone` (con `--rename`,
+`--root` y `--remove`), `mesh-depth`, `weights` (pincel de pesos con `--mode`, `--by`, `--radius`,
+`--falloff` y `--lock`), `auto-weights`, `clip` (con `--add`, `--remove`, `--rename`, `--length` y `--loop`), `key` (claves
+de huesos, formas y orden, con `--ease`, `--remove`, `--from` y `--copy`) y `expression`; `bones`,
+`vertex-weights` y `keys` imprimen los huesos, los pesos de cada vértice y las claves de un clip.
 
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado

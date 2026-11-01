@@ -37,7 +37,8 @@ impl Check<'_> {
             let end = length.unwrap_or(86_400.0);
             self.range(&format!("{q}/from"), clip.from, 0.0, end);
             let to = clip.to.unwrap_or(end);
-            clip.to.iter().for_each(|t| self.range(&format!("{q}/to"), *t, clip.from.next_up(), end));
+            let most = if clip.animation.is_none() && clip.tracked() { 86_400.0 } else { end };
+            clip.to.iter().for_each(|t| self.range(&format!("{q}/to"), *t, clip.from.next_up(), most));
             self.tracks(&q, clip, model);
             self.count(&format!("{q}/events"), clip.events.len(), crate::MAX_EVENTS);
             for (k, e) in clip.events.iter().enumerate() {

@@ -8,7 +8,10 @@ use std::collections::BTreeSet;
 use wprs_core::message::said;
 use wprs_format::features;
 
-pub use crate::action::{ACTIONS, Action, EDITOR};
+pub use crate::action::{ACTIONS, Action, EDITOR, KeyEase};
+pub use crate::action::{
+    AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, MeshCut, WeightStroke,
+};
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {
     let path = find(doc, id)?;
@@ -166,7 +169,10 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         Action::AddPreset { id, label } => crate::props::add_preset(doc, id.as_deref(), label.as_deref())?,
         Action::Import { .. } | Action::ImportEffect { .. } | Action::ImportScript { .. } => Vec::new(),
         Action::Thumbnail { .. } | Action::PaintMask { .. } => Vec::new(),
-        Action::MeshFromPicture { .. } | Action::Bone { .. } | Action::MeshDepth { .. } => Vec::new(),
+        Action::MeshFromPicture(_) | Action::Bone(_) | Action::MeshDepth(_) | Action::Weights(_) => {
+            Vec::new()
+        }
+        Action::AutoWeights(_) | Action::Clip(_) | Action::Key(_) | Action::Expression(_) => Vec::new(),
         Action::Undo {} | Action::Redo {} => Vec::new(),
     })
 }

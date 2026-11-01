@@ -1,10 +1,11 @@
 use crate::layers::{clean, taken, unique};
 use crate::ops::{Op, escape, set};
+use crate::skin::Skin;
 use anyhow::{Result, anyhow, ensure};
 use serde_json::{Value, json};
 use std::path::Path;
 use wprs_core::message::said;
-use wprs_scene::{Cut, MAX_SKETCH_BONES, Rigged, Sketch, SketchBone};
+use wprs_scene::{Cut, MAX_SKETCH_BONES, Sketch};
 
 const MAX_SIDE: u32 = 8192;
 
@@ -21,9 +22,10 @@ pub struct Boning<'a> {
     pub parent: Option<&'a str>,
     pub at: Option<[f32; 2]>,
     pub remove: bool,
+    pub to: Option<&'a str>,
 }
 
-fn asset<'a>(doc: &'a Value, id: &str) -> Option<&'a str> {
+pub(crate) fn asset<'a>(doc: &'a Value, id: &str) -> Option<&'a str> {
     doc.pointer(&format!("/scene/assets/{}/path", escape(id)))?.as_str()
 }
 
@@ -63,79 +65,46 @@ pub(crate) fn mesh_from_picture(dir: &Path, doc: &Value, c: &Cutting) -> Result<
     Ok(ops)
 }
 
-pub(crate) fn sketch_of(dir: &Path, doc: &Value, layer: &Value) -> Result<(String, Sketch)> {
-    let not = || anyhow!(said("editor.not_mesh", "the layer is not a mesh", &[]));
-    let id = layer["mesh"].as_str().filter(|_| layer["type"] == "mesh").ok_or_else(not)?;
-    let path = asset(doc, id).ok_or_else(not)?;
-    let rig = Rigged::decode(&std::fs::read(dir.join(path))?).map_err(|e| anyhow!("{path} {e}"))?;
-    let canvas = doc.pointer("/scene/canvas/size").cloned().unwrap_or(json!([1920, 1080]));
-    let size = layer.get("size").filter(|s| s.is_array()).unwrap_or(&canvas);
-    let size = [0, 1].map(|k| size[k].as_f64().unwrap_or(1.0).max(1.0) as f32);
-    let one = said(
-        "editor.mesh_parts",
-        "bones and depth are edited here only on meshes of one part, such as those cut from a picture",
-        &[],
-    );
-    Ok((id.to_owned(), Sketch::from_rig(&rig, size).ok_or_else(|| anyhow!(one))?))
-}
-
 pub(crate) fn bone(dir: &Path, doc: &Value, b: &Boning) -> Result<Vec<Op>> {
-    let (_, layer) = crate::actions::layer(doc, b.layer)?;
-    let (id, mut sketch) = sketch_of(dir, doc, layer)?;
-    let found = sketch.bones.iter().position(|x| x.name == b.name);
-    let named = !b.name.is_empty() && b.name.len() <= 64 && !b.name.contains(['/', '#']);
-    ensure!(named, said("editor.bone_name", "a bone has a name of 1 to 64 characters without / or #", &[]));
-    let parent = b
-        .parent
-        .map(|p| {
-            sketch
-                .bones
-                .iter()
-                .position(|x| x.name == p)
-                .ok_or_else(|| anyhow!(said("editor.no_bone", "there is no bone \"%1\"", &[&p])))
-        })
-        .transpose()?;
-    let place =
-        |at: [f32; 2]| [at[0].clamp(-1.0, 2.0) * sketch.size[0], at[1].clamp(-1.0, 2.0) * sketch.size[1]];
+    let (path, layer) = crate::actions::layer(doc, b.layer)?;
+    let (id, mut skin) = Skin::load(dir, doc, layer)?;
+    let found = skin.bone(b.name).ok();
+    let parent = match b.parent {
+        Some("") => Some(None),
+        Some(p) => Some(Some(skin.bone(p)?)),
+        None => None,
+    };
+    let place = |s: &Skin, at: [f32; 2]| s.model(at.map(|v| v.clamp(-1.0, 2.0)));
+    let mut ops = Vec::new();
     match found {
-        Some(k) if b.remove => {
-            let up = sketch.bones[k].parent;
-            sketch.bones.remove(k);
-            for x in &mut sketch.bones {
-                x.parent = match x.parent {
-                    Some(p) if p == k => up.map(|u| if u > k { u - 1 } else { u }),
-                    Some(p) if p > k => Some(p - 1),
-                    p => p,
-                };
-            }
-        }
+        Some(k) if b.remove => skin.remove_bone(k)?,
         None if b.remove => {
             return Err(anyhow!(said("editor.no_bone", "there is no bone \"%1\"", &[&b.name])));
         }
         Some(k) => {
-            let below =
-                |p: usize| std::iter::successors(Some(p), |q| sketch.bones[*q].parent).any(|q| q == k);
-            ensure!(
-                parent.is_none_or(|p| !below(p)),
-                said("editor.bone_loop", "a bone cannot hang from itself or its children", &[])
-            );
-            if let Some(at) = b.at {
-                sketch.bones[k].at = place(at);
+            if let Some(p) = parent {
+                skin.hang(k, p)?;
             }
-            if b.parent.is_some() {
-                sketch.bones[k].parent = parent;
+            if let Some(at) = b.at {
+                let at = place(&skin, at);
+                skin.place(k, at);
+            }
+            if let Some(to) = b.to.filter(|t| *t != b.name) {
+                skin.named(to)?;
+                skin.names[k] = to.to_owned();
+                ops.extend(crate::rename::bone(doc, &path, b.name, to));
             }
         }
         None => {
             ensure!(
-                sketch.bones.len() < MAX_SKETCH_BONES,
+                skin.bones.len() < MAX_SKETCH_BONES,
                 said("editor.bones_most", "a mesh has at most %1 bones here", &[&MAX_SKETCH_BONES])
             );
-            let at = place(b.at.unwrap_or([0.5, 0.5]));
-            sketch.bones.push(SketchBone { name: b.name.to_owned(), parent, at });
+            let at = place(&skin, b.at.unwrap_or([0.5, 0.5]));
+            skin.add_bone(b.name, parent.flatten(), at)?;
         }
     }
-    sketch.bind();
-    let saved = store(dir, &id, &sketch.glb())?;
-    Ok(set(doc, &format!("/scene/assets/{}/path", escape(&id)), json!(saved)))
+    let mut saved = skin.save(dir, doc, &id)?;
+    saved.extend(ops);
+    Ok(saved)
 }

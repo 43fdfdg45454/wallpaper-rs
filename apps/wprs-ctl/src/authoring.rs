@@ -75,6 +75,7 @@ pub fn run(command: Author) -> Result<()> {
         }
         Author::Folder(command) => crate::folder::run(command)?,
         Author::Rigging(command) => crate::rigging::run(command)?,
+        Author::Clipping(command) => crate::clipping::run(command)?,
         other => bail!("{other:?} is not a scene command"),
     }
     Ok(())

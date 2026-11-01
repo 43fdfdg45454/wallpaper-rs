@@ -4,9 +4,13 @@ use std::path::PathBuf;
 use wprs_format::{Descriptor, Rating};
 
 mod names;
+mod rigging;
 
 pub use names::ACTIONS;
 use names::{half, whole};
+pub use rigging::{
+    AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MeshCut, WeightStroke,
+};
 
 pub const EDITOR: &str = "/scene/ext/editor";
 
@@ -169,31 +173,14 @@ pub enum Action {
         value: f32,
         points: Vec<[f32; 2]>,
     },
-    MeshFromPicture {
-        image: String,
-        #[serde(default)]
-        outline: bool,
-        #[serde(default)]
-        cells: Option<u32>,
-        #[serde(default)]
-        id: Option<String>,
-    },
-    Bone {
-        layer: String,
-        name: String,
-        #[serde(default)]
-        parent: Option<String>,
-        #[serde(default)]
-        at: Option<[f32; 2]>,
-        #[serde(default)]
-        remove: bool,
-    },
-    MeshDepth {
-        layer: String,
-        points: Vec<[f32; 2]>,
-        radius: f32,
-        by: f32,
-    },
+    MeshFromPicture(MeshCut),
+    Bone(BoneEdit),
+    MeshDepth(DepthStroke),
+    Weights(WeightStroke),
+    AutoWeights(AutoWeights),
+    Clip(ClipEdit),
+    Key(ClipKey),
+    Expression(ExpressionEdit),
     Undo {},
     Redo {},
 }

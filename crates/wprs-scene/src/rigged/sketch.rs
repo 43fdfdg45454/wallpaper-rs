@@ -42,32 +42,9 @@ impl Sketch {
 
     pub fn bind(&mut self) {
         let heads: Vec<[f32; 2]> = self.bones.iter().map(|b| b.at).collect();
-        let tail =
-            |b: usize| self.bones.iter().position(|c| c.parent == Some(b)).map_or(heads[b], |c| heads[c]);
-        let segments: Vec<([f32; 2], [f32; 2])> = (0..heads.len()).map(|b| (heads[b], tail(b))).collect();
+        let parents: Vec<Option<usize>> = self.bones.iter().map(|b| b.parent).collect();
         let band = (self.size[0].max(self.size[1]) * 0.04).max(1.0);
-        self.weights = self
-            .points
-            .iter()
-            .map(|p| {
-                let gaps: Vec<f32> = segments.iter().map(|(a, z)| distance(*p, *a, *z)).collect();
-                let least = gaps.iter().copied().fold(f32::MAX, f32::min);
-                let mut near: Vec<(u16, f32)> = gaps
-                    .iter()
-                    .enumerate()
-                    .map(|(b, d)| (b as u16, (-((d - least) / band).powi(2)).exp()))
-                    .collect();
-                near.sort_by(|x, y| y.1.total_cmp(&x.1));
-                near.truncate(4);
-                let sum: f32 = near.iter().map(|n| n.1).sum::<f32>().max(f32::MIN_POSITIVE);
-                let mut out = [(0, 0.0); 4];
-                near.iter().enumerate().for_each(|(k, n)| out[k] = (n.0, n.1 / sum));
-                if near.is_empty() {
-                    out[0].1 = 1.0;
-                }
-                out
-            })
-            .collect();
+        self.weights = nearest_bones(&self.points, &heads, &parents, band);
     }
 
     pub fn from_rig(rig: &Rigged, size: [f32; 2]) -> Option<Sketch> {
@@ -107,6 +84,37 @@ pub(super) fn worlds(rig: &Rigged) -> Vec<super::math::Mat> {
         out[n as usize] = j.parent.map_or(local, |p| mul(&out[p as usize], &local));
     }
     out
+}
+
+pub fn nearest_bones(
+    points: &[[f32; 2]],
+    heads: &[[f32; 2]],
+    parents: &[Option<usize>],
+    band: f32,
+) -> Vec<[(u16, f32); 4]> {
+    let tail = |b: usize| parents.iter().position(|c| *c == Some(b)).map_or(heads[b], |c| heads[c]);
+    let segments: Vec<([f32; 2], [f32; 2])> = (0..heads.len()).map(|b| (heads[b], tail(b))).collect();
+    points
+        .iter()
+        .map(|p| {
+            let gaps: Vec<f32> = segments.iter().map(|(a, z)| distance(*p, *a, *z)).collect();
+            let least = gaps.iter().copied().fold(f32::MAX, f32::min);
+            let mut near: Vec<(u16, f32)> = gaps
+                .iter()
+                .enumerate()
+                .map(|(b, d)| (b as u16, (-((d - least) / band).powi(2)).exp()))
+                .collect();
+            near.sort_by(|x, y| y.1.total_cmp(&x.1));
+            near.truncate(4);
+            let sum: f32 = near.iter().map(|n| n.1).sum::<f32>().max(f32::MIN_POSITIVE);
+            let mut out = [(0, 0.0); 4];
+            near.iter().enumerate().for_each(|(k, n)| out[k] = (n.0, n.1 / sum));
+            if near.is_empty() {
+                out[0].1 = 1.0;
+            }
+            out
+        })
+        .collect()
 }
 
 fn distance(p: [f32; 2], a: [f32; 2], b: [f32; 2]) -> f32 {

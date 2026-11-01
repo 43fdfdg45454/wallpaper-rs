@@ -14,7 +14,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub use cut::{Cut, MAX_CELLS, MIN_CELLS};
 pub use motion::{Channel, Interp, Motion, Path};
-pub use sketch::{MAX_SKETCH_BONES, MAX_SKETCH_DEPTH, Sketch, SketchBone};
+pub use sketch::{MAX_SKETCH_BONES, MAX_SKETCH_DEPTH, Sketch, SketchBone, nearest_bones};
 
 pub const VERTEX_FLOATS: usize = 14;
 pub const MAX_RIG_VERTICES: usize = 65_536;

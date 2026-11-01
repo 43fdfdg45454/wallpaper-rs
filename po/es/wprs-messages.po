@@ -297,6 +297,59 @@ msgstr "el tipo de un paquete de escena es scene"
 msgid "%1 is not in the folder"
 msgstr "%1 no está en la carpeta"
 
+#: crates/wprs-editor/src/clips.rs
+msgid "a clip id has 1 to 32 small letters, digits or _"
+msgstr "el id de un clip tiene de 1 a 32 minúsculas, cifras o _"
+
+#: crates/wprs-editor/src/clips.rs
+msgid "there is no clip \"%1\""
+msgstr "no hay ningún clip «%1»"
+
+#: crates/wprs-editor/src/clips.rs crates/wprs-editor/src/skin/mod.rs
+msgid "the layer is not a mesh"
+msgstr "la capa no es una malla"
+
+#: crates/wprs-editor/src/clips.rs
+msgid "a clip lasts more than 0 and at most %1 s"
+msgstr "un clip dura más de 0 y como mucho %1 s"
+
+#: crates/wprs-editor/src/clips.rs
+msgid "there is already a clip \"%1\""
+msgstr "ya hay un clip «%1»"
+
+#: crates/wprs-editor/src/clips.rs
+msgid "a mesh has at most %1 clips"
+msgstr "una malla tiene como mucho %1 clips"
+
+#: crates/wprs-editor/src/clips/keyed.rs
+msgid "a key is for one bone, blend shape or part order"
+msgstr "una clave es de un solo hueso, forma de mezcla u orden de parte"
+
+#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/rig.rs
+#: crates/wprs-editor/src/skin/mod.rs
+msgid "there is no bone \"%1\""
+msgstr "no hay ningún hueso «%1»"
+
+#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/shapes.rs
+msgid "there is no blend shape \"%1\""
+msgstr "no hay ninguna forma de mezcla «%1»"
+
+#: crates/wprs-editor/src/clips/keyed.rs
+msgid "there is no part \"%1\""
+msgstr "no hay ninguna parte «%1»"
+
+#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/keys.rs
+msgid "the time must be 0 or more seconds"
+msgstr "el tiempo debe ser de 0 segundos o más"
+
+#: crates/wprs-editor/src/clips/keyed.rs
+msgid "the key holds a value out of its range"
+msgstr "la clave tiene un valor fuera de su rango"
+
+#: crates/wprs-editor/src/clips/keyed.rs
+msgid "the clip has no key there at %1 s"
+msgstr "el clip no tiene ninguna clave ahí en %1 s"
+
 #: crates/wprs-editor/src/findings.rs
 msgid "%1: refused: %2"
 msgstr "%1: rechazado: %2"
@@ -412,10 +465,6 @@ msgstr "Añadir un ajuste predefinido"
 #: crates/wprs-editor/src/history.rs
 msgid "Update what the package uses"
 msgstr "Actualizar lo que usa el paquete"
-
-#: crates/wprs-editor/src/keys.rs
-msgid "the time must be 0 or more seconds"
-msgstr "el tiempo debe ser de 0 segundos o más"
 
 #: crates/wprs-editor/src/keys.rs
 msgid "%1 has no keyframe at %2 s"
@@ -588,32 +637,20 @@ msgid "a mesh is cut from pictures of at most %1 pixels a side"
 msgstr "una malla se recorta de imágenes de %1 píxeles de lado como mucho"
 
 #: crates/wprs-editor/src/rig.rs
-msgid "the layer is not a mesh"
-msgstr "la capa no es una malla"
-
-#: crates/wprs-editor/src/rig.rs
-msgid ""
-"bones and depth are edited here only on meshes of one part, such as those "
-"cut from a picture"
-msgstr ""
-"aquí solo se editan huesos y profundidad en mallas de una sola parte, como "
-"las recortadas de una imagen"
-
-#: crates/wprs-editor/src/rig.rs
-msgid "a bone has a name of 1 to 64 characters without / or #"
-msgstr "un hueso tiene un nombre de 1 a 64 caracteres sin / ni #"
-
-#: crates/wprs-editor/src/rig.rs
-msgid "there is no bone \"%1\""
-msgstr "no hay ningún hueso «%1»"
-
-#: crates/wprs-editor/src/rig.rs
-msgid "a bone cannot hang from itself or its children"
-msgstr "un hueso no puede colgar de sí mismo ni de sus hijos"
-
-#: crates/wprs-editor/src/rig.rs
 msgid "a mesh has at most %1 bones here"
 msgstr "aquí una malla tiene como mucho %1 huesos"
+
+#: crates/wprs-editor/src/rigging.rs
+msgid "the bone being painted is locked"
+msgstr "el hueso que se pinta está bloqueado"
+
+#: crates/wprs-editor/src/rigging.rs
+msgid "a weight stroke has a strength and a falloff from 0 to 1"
+msgstr "un trazo de pesos tiene una fuerza y un borde suave de 0 a 1"
+
+#: crates/wprs-editor/src/rigging.rs crates/wprs-editor/src/skin/brush.rs
+msgid "the mesh has no bones yet"
+msgstr "la malla todavía no tiene huesos"
 
 #: crates/wprs-editor/src/scripts.rs
 msgid "the script has no file name"
@@ -636,8 +673,8 @@ msgid "%1 is not a text file: %2"
 msgstr "%1 no es un archivo de texto: %2"
 
 #: crates/wprs-editor/src/sculpt.rs
-msgid "a depth stroke has 1 to %1 points"
-msgstr "un trazo de profundidad tiene de 1 a %1 puntos"
+msgid "a stroke has 1 to %1 points"
+msgstr "un trazo tiene de 1 a %1 puntos"
 
 #: crates/wprs-editor/src/sculpt.rs
 msgid "the brush has a radius above 0 and up to 1 of the longer side"
@@ -670,6 +707,50 @@ msgstr "el efecto %1 %2"
 #: crates/wprs-editor/src/shaders.rs
 msgid "a scene has at most %1 effects of its own"
 msgstr "una escena tiene como mucho %1 efectos propios"
+
+#: crates/wprs-editor/src/shapes.rs
+msgid "an expression has a name of 1 to 64 characters"
+msgstr "una expresión tiene un nombre de 1 a 64 caracteres"
+
+#: crates/wprs-editor/src/shapes.rs
+msgid "there is no expression \"%1\""
+msgstr "no hay ninguna expresión «%1»"
+
+#: crates/wprs-editor/src/shapes.rs
+msgid "there is already an expression \"%1\""
+msgstr "ya hay una expresión «%1»"
+
+#: crates/wprs-editor/src/shapes.rs
+msgid "a mesh has at most %1 expressions"
+msgstr "una malla tiene como mucho %1 expresiones"
+
+#: crates/wprs-editor/src/shapes.rs
+msgid "an expression weighs each blend shape from -1 to 1"
+msgstr "una expresión pesa cada forma de mezcla de -1 a 1"
+
+#: crates/wprs-editor/src/skin/bones.rs
+msgid "a bone has a name of 1 to 64 characters without / or #"
+msgstr "un hueso tiene un nombre de 1 a 64 caracteres sin / ni #"
+
+#: crates/wprs-editor/src/skin/bones.rs
+msgid "another bone or part is already called \"%1\""
+msgstr "otro hueso o parte ya se llama «%1»"
+
+#: crates/wprs-editor/src/skin/bones.rs
+msgid "a bone cannot hang from itself or its children"
+msgstr "un hueso no puede colgar de sí mismo ni de sus hijos"
+
+#: crates/wprs-editor/src/skin/bones.rs
+msgid "the bone carries a part of the mesh and stays"
+msgstr "el hueso lleva una parte de la malla y se queda"
+
+#: crates/wprs-editor/src/skin/read.rs
+msgid ""
+"bones and weights are edited here on meshes whose parts are each drawn once, "
+"in at most 64 primitives"
+msgstr ""
+"aquí se editan huesos y pesos de mallas cuyas partes se dibujan una sola "
+"vez, en 64 primitivas como mucho"
 
 #: crates/wprs-editor/src/starters.rs
 msgid "%1 is not a starting point; use one of %2"

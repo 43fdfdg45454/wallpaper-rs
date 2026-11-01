@@ -84,7 +84,7 @@ Item {
 
     DragHandler {
         target: null
-        enabled: !gizmo.modelData.locked && !gizmo.brushing && gizmo.page.rigging !== gizmo.modelData.id
+        enabled: !gizmo.modelData.locked && !gizmo.brushing && gizmo.page.mesh.rigging !== gizmo.modelData.id && !gizmo.page.mesh.posing(gizmo.modelData.id)
         acceptedModifiers: Qt.NoModifier
         onActiveChanged: {
             gizmo.page.moving = active;
@@ -147,6 +147,6 @@ Item {
 
     SceneBones {
         gizmo: gizmo
-        visible: gizmo.page.rigging === gizmo.modelData.id
+        visible: gizmo.page.mesh.rigging === gizmo.modelData.id || gizmo.page.mesh.posing(gizmo.modelData.id)
     }
 }

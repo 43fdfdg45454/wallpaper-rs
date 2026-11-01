@@ -109,6 +109,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
         }
         Author::Properties(command) => crate::userprops::action(command),
         Author::Rigging(command) => return crate::rigging::action(command),
+        Author::Clipping(command) => return crate::clipping::action(command),
         Author::Undo { dir } => (dir, Action::Undo {}),
         Author::Redo { dir } => (dir, Action::Redo {}),
         other => return Err(Box::new(other)),

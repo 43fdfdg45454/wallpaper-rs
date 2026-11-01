@@ -19,8 +19,9 @@ Kirigami.Page {
     property var picked: []
     property bool moving
     property var brush: null
-    property string rigging
-    property var sculpt: null
+    readonly property SceneMeshState mesh: SceneMeshState {
+        page: page
+    }
     property string notice
     property real clock: editor.time
     readonly property var view: JSON.parse(editor.view || "{}")
@@ -160,7 +161,7 @@ Kirigami.Page {
                 page: page
             }
 
-            SceneTimeline {
+            SceneTimes {
                 Layout.fillWidth: true
                 Layout.fillHeight: false
                 Layout.preferredHeight: Kirigami.Units.gridUnit * 9

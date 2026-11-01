@@ -79,8 +79,12 @@ impl SceneEditor {
             self.as_mut().rust_mut().queued = true;
             return;
         }
-        let document =
-            json!({"manifest": project.doc["manifest"], "scene": visible(&project.doc)}).to_string();
+        let mut scene = visible(&project.doc);
+        wprs_editor::rigs::preview(
+            &mut scene,
+            &serde_json::from_str(&self.look.to_string()).unwrap_or_default(),
+        );
+        let document = json!({"manifest": project.doc["manifest"], "scene": scene}).to_string();
         let dir = project.dir.to_string_lossy().into_owned();
         let time = if self.playing { -1.0 } else { self.time };
         let mut targets: Vec<(String, String)> = Vec::new();
