@@ -47,7 +47,7 @@ pub(crate) fn tapes(scene: &Scene) -> Vec<Tape> {
         let p = owner.and_then(|(_, p)| p).cloned().unwrap_or_default();
         let (start, end) = (f64::from(p.start), p.end.map(f64::from));
         let (layer, held, speed) = (owner.map(|(l, _)| l.id.clone()), None, None);
-        let (jumps, shown, ended, playing, rate) = (0, false, false, true, 1.0);
+        let (jumps, shown, ended, playing, rate) = (0, true, false, true, 1.0);
         Tape {
             asset: id.clone(),
             layer,
@@ -109,7 +109,7 @@ impl Runtime {
                     VideoCommand::Stop => {
                         (t.at, t.ended, t.held, t.jumps) = (t.start, false, Some(false), t.jumps + 1)
                     }
-                    VideoCommand::Rate(r) => t.speed = Some(r.clamp(0.0, 16.0)),
+                    VideoCommand::Rate(r) => t.speed = Some(crate::roll::playable(r)),
                     VideoCommand::Seek(_) => {}
                 }
             }

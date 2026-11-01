@@ -126,6 +126,8 @@ impl Descriptor {
             _ => Vec::new(),
         };
         fail(paced.iter().all(|id| kind(id, ParamKind::Float)), "pace names no float".into());
+        let steps = !matches!(self.pace, Some(Pace::Steps(s)) if s.iter().any(|n| !(1..=240).contains(n)));
+        fail(steps, "pace steps are outside 1..=240".into());
         if let Some(fuse) = self.fuse {
             let name = format!("fn {}_{id}(", if fuse == Fuse::Uv { "uv" } else { "color" });
             let single =

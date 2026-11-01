@@ -48,6 +48,7 @@ impl Descriptor {
                 || !p.values.is_empty()
                 || p.channels.is_some()
                 || p.paint.is_some()
+                || p.yields_to.is_some()
         });
         let passes = self.passes.iter().any(|p| {
             let fields = p.target.is_some()
@@ -59,8 +60,12 @@ impl Descriptor {
             let inputs = p.inputs.iter().any(|i| i == "backdrop" || i.starts_with("target:"));
             fields || inputs || p.inputs.len() > 5
         });
-        let more =
-            !self.targets.is_empty() || !self.options.is_empty() || !self.stage.is_layer() || self.compose;
+        let steps = matches!(self.pace, Some(crate::Pace::Steps(_)));
+        let more = !self.targets.is_empty()
+            || !self.options.is_empty()
+            || !self.stage.is_layer()
+            || self.compose
+            || steps;
         params || passes || self.params.len() > SLOTS || more
     }
 
@@ -118,6 +123,8 @@ impl Descriptor {
                 .as_ref()
                 .is_none_or(|v| p.kind == ParamKind::Mask && matches!(v, Param::Color(_) | Param::Number(_)));
             fail(paint, format!("{id} paints with something other than a color or a number, or is no mask"));
+            let yields = p.yields_to.as_ref().is_none_or(|o| o != id && self.param(o).is_some());
+            fail(yields, format!("{id} yields to no other parameter of the effect"));
         }
         let c = self.cost;
         fail(

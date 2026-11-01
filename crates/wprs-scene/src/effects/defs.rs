@@ -26,6 +26,8 @@ pub struct ParamDef {
     pub channels: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub paint: Option<Param>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub yields_to: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -85,3 +85,8 @@ const val LEANS_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.exam
     "title": "Leans", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
     "content": { "rating": "general" }, "photosensitive": false,
     "requires": { "features": ["bloom", "camera", "capture", "keep_frame", "text_styles", "tilt"] } }"""
+const val PART_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] }, "assets": { "clip": { "path": "clip.webm" } },
+    "layers": [{ "id": "clip", "type": "video", "video": "clip", "playback": { "start": 0.2, "end": 0.5, "loop": true } }] }"""
+const val PART_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.part", "version": "1.0.0",
+    "title": "Part", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+    "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["layer_playback"] } }"""

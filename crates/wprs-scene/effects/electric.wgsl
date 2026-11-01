@@ -2,8 +2,8 @@ fn color_electric(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     let l = layer_uv(uv);
     let span = layer_extent();
     let p = vec2<f32>(l.x * span.x / max(span.y, 1.0), l.y) * param(3u).x * 4.0 + frame.seed;
-    let rate = select(1.0, 0.5, frame.quality < 0.5);
-    let t = floor(frame.time * 30.0 * rate) / (30.0 * rate) * param(5u).x;
+    let hz = select(30.0, 15.0, frame.quality < 0.5);
+    let t = floor(frame.time * hz) / hz * param(5u).x;
     let a = fbm(p + vec2<f32>(t * 0.7, -t * 0.4), 3);
     let b = fbm(p * 1.3 + vec2<f32>(-t * 0.5, t * 0.8) + 7.7, 3);
     let near = 1.0 - min(abs(a - b) * 4.0, 1.0);

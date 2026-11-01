@@ -83,9 +83,9 @@ fn emit<'a>(
             (true, _) => Wake::Idle,
             (false, Some(_)) => {
                 let stirring = busy || cx.wake.get() == Wake::Frame;
-                wakes(d, &slots, cx).min(cx.stirred(key, stirring, d.settle(&slots)))
+                wakes(d, &slots, cx, quality).min(cx.stirred(key, stirring, d.settle(&slots)))
             }
-            (false, None) => wakes(d, &slots, cx),
+            (false, None) => wakes(d, &slots, cx, quality),
         };
         (paced, _) = (paced || matches!(wake, Wake::At(_)), cx.paced(wake, d.min_fps));
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());

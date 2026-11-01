@@ -60,9 +60,13 @@ impl Pipe {
     }
 
     pub(crate) fn post(&self, name: &str) {
+        self.send(gst::Structure::new_empty(name));
+    }
+
+    pub(crate) fn send(&self, message: gst::Structure) {
         if let Some(bus) = self.playbin.bus() {
             bus.set_flushing(false);
-            let _ = bus.post(gst::message::Application::new(gst::Structure::new_empty(name)));
+            let _ = bus.post(gst::message::Application::new(message));
         }
     }
 }
@@ -115,9 +119,14 @@ pub(crate) fn watch_bus(
                 break;
             }
             gst::MessageView::AsyncDone(_) => audio.settled(&playbin),
-            gst::MessageView::Application(a) if a.structure().is_some_and(|s| s.name() == "wprs-cut") => {
-                audio.retarget(&playbin)
-            }
+            gst::MessageView::Application(a) => match a.structure() {
+                Some(s) if s.name() == "wprs-cut" => audio.retarget(&playbin),
+                Some(s) if s.name() == "wprs-seek" => {
+                    let at = s.get::<u64>("at").map(gst::ClockTime::from_nseconds);
+                    at.into_iter().for_each(|at| audio.goto(&playbin, at));
+                }
+                _ => {}
+            },
             gst::MessageView::SegmentDone(_) => audio.again(&playbin, false),
             gst::MessageView::Eos(_) if !audio.cut.plain() => audio.again(&playbin, true),
             gst::MessageView::Eos(_) => {

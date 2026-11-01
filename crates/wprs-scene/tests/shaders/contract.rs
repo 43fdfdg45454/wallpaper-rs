@@ -86,6 +86,18 @@ fn descriptors_check_their_new_fields() {
         ),
         (params(json!({ "id": "k", "type": "blend", "default": "sparkle" })), "default of k does not fit"),
         (
+            params(json!({ "id": "k", "type": "float", "default": 0, "yields_to": "k" })),
+            "k yields to no other",
+        ),
+        (
+            params(json!({ "id": "k", "type": "float", "default": 0, "yields_to": "q" })),
+            "k yields to no other",
+        ),
+        (
+            json!({ "id": "probe", "pace": { "steps": [0, 15] }, "passes": [{ "entry": "fs_a" }] }),
+            "pace steps are outside 1..=240",
+        ),
+        (
             params(json!({ "id": "k", "type": "float", "default": 0, "label": { "en": "x".repeat(300) } })),
             "256",
         ),

@@ -117,9 +117,10 @@ impl Pipes {
             composite: module(
                 device,
                 format!(
-                    "{FRAME_WGSL}\n{BLEND_WGSL}\n{}\n{}",
+                    "{FRAME_WGSL}\n{BLEND_WGSL}\n{}\n{}\n{}",
                     include_str!("scene.wgsl"),
-                    include_str!("text.wgsl")
+                    include_str!("text.wgsl"),
+                    include_str!("spectrum.wgsl")
                 ),
             ),
             shelf: Arc::default(),

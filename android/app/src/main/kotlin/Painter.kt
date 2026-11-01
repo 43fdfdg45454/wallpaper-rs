@@ -158,7 +158,7 @@ class Painter(
     private fun key(path: String) = "$path#$handle"
 
     private fun steer(list: JSONArray) = (0 until list.length()).map(list::getJSONObject).forEach {
-        videos.steer(key(it.getString("path")), it.getBoolean("playing"), it.getDouble("rate").toFloat(), it.getLong("at").takeIf { _ -> it.getBoolean("seek") }, it.getBoolean("loop"))
+        videos.steer(key(it.getString("path")), it)
     }
 
     private fun follow() {

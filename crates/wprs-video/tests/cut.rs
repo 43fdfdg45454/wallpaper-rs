@@ -56,11 +56,7 @@ fn a_part_loops_within_its_range_at_its_speed() {
         let range = Duration::from_millis(cut.start.into()).saturating_sub(FRAME)..end + FRAME;
         assert!(seen.len() > 10, "{cut:?}: only {} frames", seen.len());
         assert!(seen.iter().all(|(_, pts)| range.contains(pts)), "{cut:?}: {seen:?}");
-        let steps = seen.windows(2).filter(|w| w[1].1 > w[0].1);
-        let (stream, wall) = steps.fold((0.0, 0.0), |(s, w), p| {
-            (s + (p[1].1 - p[0].1).as_secs_f64(), w + (p[1].0 - p[0].0).as_secs_f64())
-        });
-        let speed = stream / wall * 100.0;
+        let speed = speed(&seen);
         assert!((speed / f64::from(cut.speed) - 1.0).abs() < 0.35, "{cut:?} played at {speed:.0} %");
     }
 }
@@ -93,4 +89,37 @@ fn a_new_part_applies_to_the_running_video() {
     let seen = frames(&rx, Duration::from_millis(500), Duration::from_secs(2));
     assert!(seen.len() > 10, "only {} frames after the change", seen.len());
     assert!(seen.iter().all(|(_, pts)| *pts + FRAME >= Duration::from_millis(600)), "{seen:?}");
+}
+
+fn speed(seen: &[(Instant, Duration)]) -> f64 {
+    let steps = seen.windows(2).filter(|w| w[1].1 > w[0].1);
+    let (stream, wall) = steps.fold((0.0, 0.0), |(s, w), p| {
+        (s + (p[1].1 - p[0].1).as_secs_f64(), w + (p[1].0 - p[0].0).as_secs_f64())
+    });
+    stream / wall * 100.0
+}
+
+#[test]
+fn a_new_speed_keeps_the_position_of_the_running_video() {
+    let Some((mut player, rx)) = play(Cut { speed: 50, start: 0, end: 0 }, 60) else { return };
+    let before = frames(&rx, Duration::from_millis(500), Duration::from_millis(200));
+    let last = before.last().expect("frames before the change").1;
+    assert!(player.set_cut(Cut { speed: 100, start: 0, end: 0 }));
+    let after = frames(&rx, Duration::ZERO, Duration::from_millis(400));
+    let first = after.first().expect("frames after the change").1;
+    assert!(first + FRAME >= last, "the video went back from {last:?} to {first:?}");
+    assert!((speed(&after) / 100.0 - 1.0).abs() < 0.35, "played at {:.0} %", speed(&after));
+}
+
+#[test]
+fn a_seek_keeps_the_speed_and_the_end_of_the_part() {
+    let cut = Cut { speed: 200, start: 100, end: 500 };
+    let Some((player, rx)) = play(cut, 60) else { return };
+    frames(&rx, Duration::from_millis(300), Duration::ZERO);
+    player.seek(0.3);
+    let seen = frames(&rx, Duration::from_millis(100), Duration::from_secs(2));
+    let range = Duration::from_millis(100) - FRAME..Duration::from_millis(500) + FRAME;
+    assert!(seen.len() > 10, "only {} frames after the seek", seen.len());
+    assert!(seen.iter().all(|(_, pts)| range.contains(pts)), "{seen:?}");
+    assert!((speed(&seen) / 200.0 - 1.0).abs() < 0.35, "played at {:.0} %", speed(&seen));
 }

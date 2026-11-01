@@ -89,3 +89,33 @@ fn reduced_motion_wakes_sprite_sheets_and_paced_effects_once_a_minute() {
     assert_eq!(runtime.calmed(Wake::At(3600.0)), Wake::At(3600.0));
     assert_eq!(runtime.calmed(Wake::Idle), Wake::Idle);
 }
+
+#[test]
+fn a_pulse_driven_by_a_band_of_sound_sleeps_in_silence() {
+    let pulse = |params: Value| solid("a", json!({ "effects": [{ "effect": "pulse", "params": params }] }));
+    let wake = |params: Value| {
+        let mut runtime = Runtime::new(Arc::new(scene(json!([pulse(params)]))), Default::default());
+        runtime.frame(VIEW, Quality::Q3);
+        runtime.advance(3.0);
+        runtime.frame(VIEW, Quality::Q3).wake
+    };
+    assert_eq!(wake(json!({ "audio_band": 3 })), Wake::Idle);
+    assert_eq!(wake(json!({ "audio_band": 3, "noise": 0.5 })), Wake::Frame);
+    assert_eq!(wake(json!({})), Wake::Frame);
+}
+
+#[test]
+fn electric_sparks_ask_for_a_frame_only_when_their_step_changes() {
+    let sparks = solid("a", json!({ "effects": [{ "effect": "electric" }] }));
+    let mut runtime = Runtime::new(Arc::new(scene(json!([sparks]))), Default::default());
+    runtime.advance(0.01);
+    let next = |runtime: &Runtime, q: Quality| match runtime.frame(VIEW, q).wake {
+        Wake::At(s) => s,
+        wake => panic!("{wake:?}"),
+    };
+    let (high, low) = (next(&runtime, Quality::Q3), next(&runtime, Quality::Q0));
+    assert!(
+        (high - (1.0 / 30.0 - 0.01)).abs() < 1e-3 && (low - (1.0 / 15.0 - 0.01)).abs() < 1e-3,
+        "{high} {low}"
+    );
+}

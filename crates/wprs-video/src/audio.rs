@@ -13,20 +13,17 @@ const SPIN: Duration = Duration::from_millis(150);
 const SPINS: u8 = 3;
 
 fn seek(playbin: &gst::Element, at: gst::ClockTime, cut: Cut, flags: gst::SeekFlags) {
-    let sought = match cut.plain() {
-        true => playbin.seek_simple(flags, at),
-        false => {
-            let (stop, end) = match cut.end {
-                0 => (gst::SeekType::None, gst::ClockTime::NONE),
-                end => (gst::SeekType::Set, Some(Cut::at(end))),
-            };
-            let flags = flags | gst::SeekFlags::SEGMENT;
-            playbin.seek(cut.rate(), flags, gst::SeekType::Set, Some(at), stop, end)
-        }
-    };
-    if let Err(e) = sought {
+    let flags = if cut.plain() { flags } else { flags | gst::SeekFlags::SEGMENT };
+    let end = (cut.end > 0).then(|| Cut::at(cut.end));
+    let (set, rate) = (gst::SeekType::Set, cut.rate());
+    if let Err(e) = playbin.seek(rate, flags, set, Some(at), set, end) {
         tracing::debug!("cannot seek the video: {e}");
     }
+}
+
+fn instant(playbin: &gst::Element, cut: Cut) -> bool {
+    let (none, flags) = (gst::SeekType::None, gst::SeekFlags::INSTANT_RATE_CHANGE);
+    playbin.seek(cut.rate(), flags, none, gst::ClockTime::NONE, none, gst::ClockTime::NONE).is_ok()
 }
 
 pub(crate) fn from_output(src: &gst::Object) -> bool {
@@ -47,6 +44,7 @@ pub(crate) struct Audio {
     delay: Duration,
     restart: Option<gst::ClockTime>,
     fresh: bool,
+    aim: Option<gst::ClockTime>,
     hold: Option<Instant>,
 }
 
@@ -88,9 +86,25 @@ impl Audio {
     }
 
     pub(crate) fn retarget(&mut self, playbin: &gst::Element) {
-        (self.cut, self.mark) = (*lock(&self.shared.cut), None);
-        if !self.fresh && self.restart.is_none() {
-            self.seek(playbin, Cut::at(self.cut.start), true);
+        let (was, cut) = (self.cut, *lock(&self.shared.cut));
+        (self.cut, self.mark) = (cut, None);
+        if self.fresh || self.restart.is_some() || was == cut {
+            return;
+        }
+        if (was.start, was.end) != (cut.start, cut.end) {
+            return self.seek(playbin, Cut::at(cut.start), true);
+        }
+        if !instant(playbin, cut) {
+            let at = playbin.query_position::<gst::ClockTime>().unwrap_or(Cut::at(cut.start));
+            self.seek(playbin, at, true);
+        }
+    }
+
+    pub(crate) fn goto(&mut self, playbin: &gst::Element, at: gst::ClockTime) {
+        match (self.restart.is_some(), self.fresh) {
+            (true, _) => self.restart = Some(at),
+            (false, true) => self.aim = Some(at),
+            (false, false) => self.seek(playbin, at, true),
         }
     }
 
@@ -132,9 +146,11 @@ impl Audio {
             return self.seek(playbin, at, true);
         }
         let piped = playbin.property::<Option<gst::Element>>("audio-sink").is_some_and(|s| s.name() == SINK);
-        let fresh = std::mem::take(&mut self.fresh);
-        if fresh && !self.cut.plain() {
-            self.again(playbin, true);
+        let (fresh, aim) = (std::mem::take(&mut self.fresh), self.aim.take());
+        match aim.filter(|_| fresh) {
+            Some(at) => self.seek(playbin, at, true),
+            None if fresh && !self.cut.plain() => self.again(playbin, true),
+            None => {}
         }
         if fresh && piped {
             self.hold = Some(Instant::now() + GRACE);

@@ -105,6 +105,7 @@ pub enum Solve {
 pub enum Pace {
     Rate(String),
     Sweep([String; 3]),
+    Steps([u32; 2]),
     Outside,
 }
 

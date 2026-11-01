@@ -5,6 +5,7 @@ use image::{Rgba, RgbaImage};
 use serde_json::{Value, json};
 use std::path::Path;
 use wprs_core::message::said;
+use wprs_scene::{Param, Scene};
 
 const SIDE: u32 = 512;
 const POINTS: usize = 4096;
@@ -32,7 +33,8 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &Stroke) -> Result<Vec<Op>> {
     let id = named.map_or_else(|| unique(doc, s.pointer.rsplit('/').next().unwrap_or("mask")), String::from);
     let path = named.and_then(|id| doc.pointer(&format!("{}/path", asset(id)))?.as_str());
     let old = path.and_then(|p| image::open(dir.join(p)).ok()).map(|i| i.into_rgba8());
-    let mut picture = old.unwrap_or_else(|| RgbaImage::from_pixel(SIDE, SIDE, Rgba([0, 0, 0, 255])));
+    let mut picture =
+        old.unwrap_or_else(|| RgbaImage::from_pixel(SIDE, SIDE, Rgba(blank(dir, doc, s.pointer))));
     stroke(&mut picture, s);
     let saved =
         (1..).map(|n| format!("masks/{id}-{n}.png")).find(|p| !dir.join(p).exists()).unwrap_or_default();
@@ -41,6 +43,22 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &Stroke) -> Result<Vec<Op>> {
     let mut ops = set(doc, &asset(&id), json!({ "path": saved, "linear": true }));
     ops.extend(set(doc, s.pointer, json!(id)));
     Ok(ops)
+}
+
+fn blank(dir: &Path, doc: &Value, pointer: &str) -> [u8; 4] {
+    let painted = || {
+        let (at, id) = pointer.rsplit_once("/params/")?;
+        let name = doc.pointer(&format!("{at}/effect"))?.as_str()?;
+        let mut scene = serde_json::from_value::<Scene>(doc["scene"].clone()).ok()?;
+        crate::cache::read_files(&mut scene, dir);
+        let byte = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
+        match scene.effect(name)?.params.iter().find(|p| p.id == id)?.paint.as_ref()? {
+            Param::Color(c) => Some(c.0.map(byte)),
+            Param::Number(n) => Some([byte(*n); 4]),
+            _ => None,
+        }
+    };
+    painted().unwrap_or([0, 0, 0, 255])
 }
 
 fn stroke(picture: &mut RgbaImage, s: &Stroke) {

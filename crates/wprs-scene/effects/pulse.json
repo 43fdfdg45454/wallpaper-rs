@@ -13,7 +13,7 @@
         { "value": 2, "label": { "en": "Opacity", "es": "Opacidad" } }
       ]
     },
-    { "id": "speed", "type": "float", "default": 1, "min": 0, "max": 16, "uses": "time" },
+    { "id": "speed", "type": "float", "default": 1, "min": 0, "max": 16, "uses": "time", "yields_to": "audio_band" },
     { "id": "bounds", "type": "vec2", "default": [0, 1], "min": 0, "max": 4 },
     { "id": "tint_low", "type": "color", "default": "#000000" },
     { "id": "tint_high", "type": "color", "default": "#ffffff" },

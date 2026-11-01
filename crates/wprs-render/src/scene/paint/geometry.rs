@@ -12,7 +12,10 @@ impl<'a> Painter<'a, '_, '_> {
             Content::Image { size, .. } | Content::Video { size, .. } => {
                 Some((size.or(self.natural(i))?, unit))
             }
-            Content::Text { .. } => Some((self.text(i)?.1, unit)),
+            Content::Text { .. } => {
+                let (size, [rx, ry]) = self.lettered(i)?;
+                Some((size, [-rx, -ry, 1.0 + rx, 1.0 + ry]))
+            }
             Content::Solid { size, .. } => Some((*size, unit)),
             Content::Spectrum { spectrum, .. } => Some((spectrum.size, unit)),
             Content::Particles { .. } => Some((self.swarms.as_ref()?.canvas, unit)),
@@ -24,6 +27,13 @@ impl<'a> Painter<'a, '_, '_> {
             }
             _ => None,
         }
+    }
+
+    pub(crate) fn lettered(&self, i: usize) -> Option<([f32; 2], [f32; 2])> {
+        let Content::Text { layout, .. } = &self.frame.draws[i].content else { return None };
+        let raster = self.text(i)?.1;
+        let size = raster.map(|v| (v - 2.0 * layout.reach).max(1.0));
+        Some((size, [0, 1].map(|k| (raster[k] - size[k]) / 2.0 / size[k])))
     }
 
     pub(crate) fn cell(&self, i: usize) -> ([f32; 4], Option<&'a Sampling>) {

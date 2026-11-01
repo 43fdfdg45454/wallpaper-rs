@@ -5,6 +5,7 @@ use wprs_scene::*;
 
 mod forms;
 mod motion;
+mod sight;
 mod values;
 
 fn props() -> BTreeMap<String, Property> {

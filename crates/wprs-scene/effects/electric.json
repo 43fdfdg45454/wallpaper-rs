@@ -2,6 +2,7 @@
   "id": "electric",
   "name": { "en": "Electric" },
   "min_fps": 30,
+  "pace": { "steps": [30, 15] },
   "mask_mode": "strength",
   "params": [
     { "id": "color_a", "type": "color", "default": "#66ccff" },

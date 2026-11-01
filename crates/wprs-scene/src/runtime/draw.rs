@@ -96,8 +96,8 @@ impl Runtime {
             walk(&cx, [glow], (Affine::IDENTITY, None), quality, &mut frame, canvas);
         }
         plan(&self.swarms, (&self.systems, &self.flocks), &cx, &frame, quality, self.t);
-        self.sight(&frame);
-        frame.wake = cx.wake.get().min(self.cue_wake());
+        let sighted = if self.sight(&frame) { Wake::Frame } else { Wake::Idle };
+        frame.wake = cx.wake.get().min(self.cue_wake()).min(sighted);
         self.pace.set(if frame.wake == Wake::Frame { cx.pace.get() } else { u32::MAX });
         self.sizes.set((frame.draws.len(), frame.effects.len()));
         self.wake.set(frame.wake);

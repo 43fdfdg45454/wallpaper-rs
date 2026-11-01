@@ -80,7 +80,7 @@ wiremock = "0.6"
 tokio-rustls = { version = "0.26.6", default-features = false }
 rcgen = { version = "0.14.10", default-features = false, features = ["aws_lc_rs", "pem"] }
 mdns-sd = { version = "=0.21.5", default-features = false }
-gstreamer = "0.25"
+gstreamer = { version = "0.25", features = ["v1_18"] }
 gstreamer-app = "0.25"
 gstreamer-video = "0.25"
 gstreamer-allocators = "0.25"

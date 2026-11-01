@@ -33,7 +33,9 @@ impl Painter<'_, '_, '_> {
             }
             Content::Text { color, ink, .. } => {
                 item.color = premultiplied(*color, srgb, opacity);
-                let (image, _, k) = self.text(i)?;
+                let ((image, _, k), (_, room)) = (self.text(i)?, self.lettered(i)?);
+                let [sx, sy] = room.map(|r| 1.0 / (1.0 + 2.0 * r));
+                item.uv = [room[0] * sx, room[1] * sy, sx, sy];
                 let Some(ink) = ink.filter(|_| k > 0.0) else {
                     return Some(("fs_texture", item, self.ext(image)));
                 };
@@ -125,13 +127,11 @@ impl Painter<'_, '_, '_> {
 
     fn backing(&self, i: usize, m: Map, size: [f32; 2], opacity: f32, target: Target) -> Option<Item> {
         let d = &self.frame.draws[i];
-        let Content::Text {
-            layout: Layout { backing: Some((color, _, radius)), padding, reach, .. }, ..
-        } = &d.content
+        let Content::Text { layout: Layout { backing: Some((color, _, radius)), padding, .. }, .. } =
+            &d.content
         else {
             return None;
         };
-        let padding = padding + reach;
         let inner = [0, 1].map(|k| (size[k] - 2.0 * padding).max(1.0));
         let box_m = m
             .then(Affine::translate([padding / size[0], padding / size[1]]))

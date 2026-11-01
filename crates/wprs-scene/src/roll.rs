@@ -1,7 +1,7 @@
 use crate::look::Playback;
 use crate::resolve::Context;
 use crate::runtime::Runtime;
-use crate::{Content, Frame, Kind};
+use crate::{Content, Draw, Frame, Kind};
 
 impl Runtime {
     fn governed(&self, i: usize) -> (f32, bool) {
@@ -12,7 +12,7 @@ impl Runtime {
             _ => None,
         });
         let cx = self.context();
-        let rate = t.speed.unwrap_or_else(|| p.map_or(1.0, |p| p.rate.get(&cx).clamp(0.0, 16.0)));
+        let rate = playable(t.speed.unwrap_or_else(|| p.map_or(1.0, |p| p.rate.get(&cx))));
         (rate, t.held.unwrap_or_else(|| p.is_none_or(|p| p.playing.get(&cx))))
     }
 
@@ -43,13 +43,13 @@ impl Runtime {
         }
     }
 
-    pub(crate) fn sight(&self, frame: &Frame<'_>) {
+    pub(crate) fn sight(&self, frame: &Frame<'_>) -> bool {
         let mut seen = 0u64;
         let mut mark = |name: &str| {
             let found = self.tapes.iter().take(64).position(|t| t.asset == name);
             seen |= found.map_or(0, |i| 1 << i);
         };
-        for d in frame.draws.iter().filter(|d| !d.hidden) {
+        for (_, d) in frame.draws.iter().enumerate().filter(|(i, _)| needed(frame, *i, 4)) {
             if let Content::Image { asset, .. } | Content::Video { asset, .. } = &d.content {
                 mark(asset);
             }
@@ -61,13 +61,38 @@ impl Runtime {
                 fixed.filter_map(|p| p.named(e.effect)).for_each(&mut mark);
             }
         }
-        self.sighted.set(seen);
+        let fresh = seen & !self.sighted.replace(seen);
+        let rolling =
+            |(i, t): (usize, &crate::Tape)| fresh & (1 << i) != 0 && t.playing && !t.ended && t.rate > 0.0;
+        self.tapes.iter().take(64).enumerate().any(rolling)
     }
+}
+
+pub(crate) fn playable(rate: f32) -> f32 {
+    if rate > 0.0 { rate.clamp(0.1, 4.0) } else { 0.0 }
+}
+
+fn reads(frame: &Frame<'_>, d: &Draw<'_>, id: &str) -> bool {
+    let effects = &frame.effects[d.effects.clone()];
+    let masks = d.mask.into_iter().chain(effects.iter().filter_map(|e| e.mask));
+    let fed =
+        effects.iter().flat_map(|e| e.effect.params.values()).filter_map(|v| v.binding()?.layer.as_deref());
+    masks.filter_map(|m| m.layer.as_deref()).chain(fed).any(|l| l == id)
+}
+
+fn needed(frame: &Frame<'_>, i: usize, depth: u32) -> bool {
+    let draws = &frame.draws;
+    if !draws[i].hidden {
+        return true;
+    }
+    let mut names = draws[..=i].iter().enumerate().filter(|(k, a)| *k == i || a.end > i);
+    let read = |id: &str, j: usize| j != i && reads(frame, &draws[j], id) && needed(frame, j, depth - 1);
+    depth > 0 && names.any(|(_, a)| (0..draws.len()).any(|j| read(&a.layer.id, j)))
 }
 
 impl Context<'_> {
     pub(crate) fn rolls(&self, asset: &str, unknown: bool) -> bool {
         let found = self.tapes.iter().find(|t| t.asset == asset);
-        found.map_or(unknown, |t| t.playing && !t.ended && t.rate > 0.0)
+        found.map_or(unknown, |t| t.shown && t.playing && !t.ended && t.rate > 0.0)
     }
 }

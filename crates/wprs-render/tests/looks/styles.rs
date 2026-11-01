@@ -68,3 +68,23 @@ fn distance_fields_scale_without_drawing_the_letters_again() {
     let (high, lowest) = (soft(&low.pixels(r)), soft(&crate::stage::at_level(&mut low, r, Quality::Q0)));
     assert!(lowest < high, "the lowest level narrows the shadow: {lowest} against {high}");
 }
+
+#[test]
+fn styles_leave_a_text_where_its_corner_puts_it() {
+    let Some(r) = renderer() else { return };
+    let corner = json!({ "position": [20, 10], "origin": [0, 0] });
+    let start = |more: Value| {
+        let mut t = json!({ "transform": corner });
+        t.as_object_mut().unwrap().extend(more.as_object().unwrap().clone());
+        let pixels = styled(r, t).pixels(r);
+        let white = |x: u32, y: u32| at(&pixels, x, y)[1] > 200;
+        let left = (0..100).find(|&x| (0..50).any(|y| white(x, y)));
+        let top = (0..50).find(|&y| (0..100).any(|x| white(x, y)));
+        (left.unwrap(), top.unwrap())
+    };
+    let plain = start(json!({}));
+    for width in [2, 3] {
+        assert_eq!(start(json!({ "outline": { "color": "#ff0000", "width": width } })), plain, "{width}");
+    }
+    assert_eq!(start(json!({ "shadow": { "color": "#0000ff", "offset": [6, 6], "blur": 0 } })), plain);
+}

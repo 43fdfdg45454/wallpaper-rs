@@ -86,6 +86,20 @@ class SceneTest : SceneBase() {
     }
 
     @Test
+    fun videoRangesLoopWithinTheirPart() {
+        val dir = File(storage(), "parts/part").apply { mkdirs() }
+        fixture("magenta-64x32.webm").copyTo(File(dir, "clip.webm"), true)
+        File(dir, "scene.json").writeText(PART_SCENE)
+        File(dir, "manifest.json").writeText(PART_MANIFEST)
+        val reply = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(reply, reply.startsWith("["))
+        show("Part")
+        assertTrue(waitFor { frames.get() > FRAMES })
+        val seen = (0 until 40).map { Thread.sleep(50).let { Render.call { videos.positions().values.maxOrNull() ?: -1L } } }
+        assertTrue("$seen", seen.all { it <= 400 } && seen.distinct().size > 2)
+    }
+
+    @Test
     fun scenesThatMixLayersWithTheNewerModesAndEffectsDraw() {
         val dir = File(storage(), "mixes/mixes").apply { mkdirs() }
         File(dir, "scene.json").writeText(MIXES_SCENE)

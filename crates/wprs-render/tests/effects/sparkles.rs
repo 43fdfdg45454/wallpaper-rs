@@ -38,7 +38,8 @@ fn moving_patterns_draw_only_while_they_have_a_speed() {
     for (effect, moving, still) in cases {
         let Some(mut run) = Fx::new(effect, moving).input(squares()).run() else { return };
         let first = run.shot();
-        assert_eq!(run.runtime.wake(), Wake::Frame, "{effect}");
+        let stepped = effect == "electric" && matches!(run.runtime.wake(), Wake::At(_));
+        assert!(stepped || run.runtime.wake() == Wake::Frame, "{effect}");
         run.runtime.seek(0.7);
         let later = run.shot();
         assert!(later.diff(&first) > 0.3, "{effect} did not move: {}", later.diff(&first));

@@ -12,6 +12,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.upstream.BandwidthMeter
+import org.json.JSONObject
 
 @OptIn(UnstableApi::class)
 class Videos(private val context: Context) {
@@ -64,12 +65,16 @@ class Videos(private val context: Context) {
 
     fun update(uri: String) = videos[uri]?.update()
 
-    fun steer(key: String, playing: Boolean, rate: Float, seek: Long?, loop: Boolean) = videos[key]?.run {
-        held = playing
-        speed = rate
-        looped = loop
+    fun steer(key: String, wanted: JSONObject) = videos[key]?.run {
+        held = wanted.getBoolean("playing")
+        speed = wanted.getDouble("rate").toFloat()
+        looped = wanted.getBoolean("loop")
+        val seek = wanted.getLong("at").takeIf { wanted.getBoolean("seek") }
+        val range = wanted.getLong("start") to (wanted.getLong("end").takeIf { it >= 0 } ?: C.TIME_END_OF_SOURCE)
+        val cut = range != clip
+        clip = range
         seek?.let { position = it }
-        player?.let { steer(it, seek) }
+        player?.let { steer(it, seek, cut) }
         update()
     }
 
@@ -99,6 +104,7 @@ class Videos(private val context: Context) {
         var player: ExoPlayer? = null
         var output: Surface? = null
         var position = from
+        var clip = WHOLE
         private var retried = false
         private val idle = Runnable { release() }
 
@@ -126,6 +132,7 @@ class Videos(private val context: Context) {
         override fun onPlayerError(error: PlaybackException) = Render.post {
             if (!retried && player?.playerError != null) {
                 retried = true
+                clip = WHOLE
                 release()
                 update()
             }
@@ -137,18 +144,22 @@ class Videos(private val context: Context) {
                 configure(this, fixed != null && !audible)
                 steer(this, null)
                 setVideoSurface(target)
-                setMediaItem(MediaItem.fromUri(uri), position)
+                setMediaItem(item(), position)
                 prepare()
                 play()
             }
             output = target
         }
 
-        fun steer(player: ExoPlayer, seek: Long?) {
+        fun steer(player: ExoPlayer, seek: Long?, cut: Boolean = false) {
             player.repeatMode = if (looped) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
             player.setPlaybackSpeed(speed.coerceIn(0.1f, 4f))
-            seek?.let(player::seekTo)
+            if (cut) player.setMediaItem(item(), seek ?: 0L) else seek?.let(player::seekTo)
         }
+
+        private fun item() = MediaItem.Builder().setUri(uri).setClippingConfiguration(
+            MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.first).setEndPositionMs(clip.second).build(),
+        ).build()
 
         fun at() = player?.currentPosition ?: position
 
@@ -183,5 +194,6 @@ class Videos(private val context: Context) {
         const val STRETCH = "stretch"
         const val SOUND = "playback.muted"
         const val IDLE_MS = 30_000L
+        val WHOLE = 0L to C.TIME_END_OF_SOURCE
     }
 }
