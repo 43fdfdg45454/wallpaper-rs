@@ -9,6 +9,7 @@ use wprs_core::motion::{Spring, Tilt, Turn, aim};
 const FRESH: Duration = Duration::from_millis(500);
 const SILENCE: Duration = Duration::from_secs(2);
 const SUBPIXEL: f32 = 0.25;
+const LATE: f32 = 0.1;
 pub(crate) const PHONE: f32 = 3.0;
 const MARGIN: f32 = 0.2;
 
@@ -137,15 +138,25 @@ impl Motion {
         pixels: f32,
     ) -> (bool, bool) {
         let frame = 1.0 / fps.max(1) as f32;
-        let dt = self.last.map_or(frame, |last| ((nanos - last) as f32 / 1e9).clamp(0.0, frame));
+        let dt = self.last.map_or(frame, |last| ((nanos - last) as f32 / 1e9).clamp(0.0, LATE.max(frame)));
         self.last = Some(nanos);
         REACH.fetch_max(pixels.max(0.0).to_bits(), Relaxed);
-        self.spring.step(goal, smoothing_ms as f32 / 1000.0, dt);
+        let smoothing = smoothing_ms as f32 / 1000.0;
+        self.spring.step(goal, smoothing, dt);
+        let Spring { at, speed } = self.spring;
+        let left = |i: usize| (at[i] - goal[i]).abs() + speed[i].abs() * smoothing / 2.0;
+        if (0..2).all(|i| left(i) * pixels < SUBPIXEL) {
+            self.spring = Spring { at: goal, speed: [0.0; 2] };
+        }
         let moved = apart(self.spring.at, self.shown, pixels);
         if moved {
             self.shown = self.spring.at;
         }
-        (moved, !self.spring.settled(goal))
+        let busy = !self.spring.settled(goal);
+        if !busy {
+            self.last = None;
+        }
+        (moved, busy)
     }
 
     pub(crate) fn rest(&mut self) -> bool {

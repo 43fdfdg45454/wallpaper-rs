@@ -81,3 +81,28 @@ fn the_spring_settles_and_stops_asking_for_frames() {
     assert!((motion.at()[0] - 0.5).abs() < 0.01);
     assert!(motion.rest() && !motion.rest());
 }
+
+fn settle(every_ms: i64, fps: u32, pixels: f32) -> (i64, i64) {
+    let (mut motion, mut moved_at) = (Motion::default(), 0);
+    for t in (1..=200).map(|i| i * every_ms) {
+        let (moved, busy) = motion.step([0.8, 0.0], 150, (t * 1_000_000, fps), pixels);
+        if moved {
+            moved_at = t;
+        }
+        if !busy {
+            return (moved_at, t);
+        }
+    }
+    panic!("the spring never settled")
+}
+
+#[test]
+fn late_frames_keep_the_pace_and_the_spring_stops_below_a_quarter_pixel() {
+    let (fast, late) = (settle(16, 60, 3.84), settle(100, 60, 3.84));
+    assert!(late.1 <= fast.1 + 200, "late frames slow the spring down: {fast:?} {late:?}");
+    for (every, (moved, done)) in [(16, fast), (100, late), (33, settle(33, 30, 3.84))] {
+        assert!(done - moved <= 2 * every, "frames went on with nothing to show: {moved} {done}");
+    }
+    let wide = settle(16, 60, 0.02 * PHONE * 1080.0);
+    assert!(wide.1 <= 700 && wide.1 - wide.0 <= 32, "{wide:?}");
+}
