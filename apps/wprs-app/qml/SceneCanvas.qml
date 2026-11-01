@@ -165,6 +165,13 @@ ColumnLayout {
                 ratio: canvas.ratio
             }
 
+            SceneSwarm {
+                anchors.fill: parent
+                z: 5
+                page: canvas.page
+                ratio: canvas.ratio
+            }
+
             Repeater {
                 model: (canvas.page.view.gizmos ?? []).length
 

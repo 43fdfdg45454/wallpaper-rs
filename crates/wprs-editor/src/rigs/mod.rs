@@ -76,6 +76,10 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         _ if q.get("pose").is_some() => pose(dir, doc, id, &q["pose"]),
         _ if q.get("keys").is_some() => keys(dir, doc, id, q["keys"].as_str().unwrap_or_default()),
         _ if q.get("handles").is_some() => handles(dir, doc, id),
+        _ if q.get("particles").is_some() => {
+            let p = &q["particles"];
+            crate::swarms::handles(dir, doc, id, p["layer"].as_str(), p["time"].as_f64().unwrap_or(0.0))
+        }
         _ if q.get("outline").is_some() => outline(dir, doc, id),
         _ if q.get("wind").is_some() => wind_arrow(doc),
         _ => rig(dir, doc, id),

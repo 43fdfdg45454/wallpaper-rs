@@ -44,6 +44,7 @@ mod shapes;
 pub mod skin;
 mod spots;
 pub mod starters;
+pub mod swarms;
 pub mod texts;
 mod tidy;
 

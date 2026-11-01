@@ -180,20 +180,14 @@ pub enum Author {
     },
     #[command(flatten)]
     Properties(crate::userprops::UserProps),
-    #[command(about = "Undo the last change")]
-    Undo {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-    },
-    #[command(about = "Redo the last undone change")]
-    Redo {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-    },
+    #[command(flatten)]
+    Undoing(crate::undoing::Undoing),
     #[command(flatten)]
     Folder(crate::folder::Folder),
     #[command(flatten)]
     Rigging(crate::rigging::Rigging),
     #[command(flatten)]
     Clipping(crate::clipping::Clipping),
+    #[command(flatten)]
+    Swarming(crate::swarming::Swarming),
 }

@@ -41,7 +41,10 @@ pub mod server;
 pub mod serving;
 pub mod show;
 mod steps;
+mod swarmed;
+mod swarming;
 mod swinging;
+mod undoing;
 mod userprops;
 
 pub use calls::CALLS;

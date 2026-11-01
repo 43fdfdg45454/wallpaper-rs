@@ -68,6 +68,7 @@ undo and redo walk through, the undone ones marked.
 | `attach` | `layer`, optional `to` (a `mesh` or `model` layer; the one it follows already when omitted), `bone`, `point` (a node of the file, or `[x, y]` in fractions of the layer for a new point there: a node without a mesh named `<layer>_point`, marked `extras.point`, hanging from the bone that leads the nearest vertex, and the mesh is saved as a new file; a layer that already follows a point of its own on that mesh moves it there instead), `offset` (pixels), `nudge` (`[x, y]` pixels of the box of the mesh layer that the layer moves by, turned into `offset` along its bone or point at the rest pose and what it inherits), `inherit` (`position`, `rotation`, `scale`), `detach`; writes `attach`, keeping the offset and what it inherits while it follows the same layer, and refuses a layer that would follow itself, through other layers too. A point marked `extras.point` that the layer leaves (by `detach` or by following something else) goes with it when no other layer follows it and no chain reaches for it | `attach DIR LAYER [--to MESH_LAYER] [--bone NAME \| --point X,Y\|NAME] [--offset X,Y] [--nudge X,Y] [--inherit position,rotation,scale] [--detach]` |
 | `point` | `layer`, `name` (as for bones), optional `at` (fractions of the layer; required for a new point), `parent` (a bone; an empty one hangs it from none), `to` (a new name; the `attach` of the layers that follow it and the chains that reach for it as `bone:<name>` follow), `remove` (also drops those `attach` and chains); adds, moves, rehangs, renames or removes an attachment point, a node without a mesh marked `extras.point` that a new point hangs from the bone that leads the mesh there, and saves the mesh as a new file | `point DIR LAYER NAME [--at X,Y] [--parent BONE \| --root] [--rename NEW] [--remove]` |
 | `parts` | `layer`, optional `order` (`{ "<part>": n }`, −1000 to 1000, rounded), `hide` and `show` (parts; shown is the default, so the field goes), `clip` (`{ "<part>": "<part it only shows over>" }`, never itself, also through other parts) and `unclip`; writes `parts` and drops what is left empty | `parts DIR LAYER [--order PART N]... [--hide PART]... [--show PART]... [--clip PART TO]... [--unclip PART]...` |
+| `particles` | one of `shape` (`system`, `emitter`, `shape`: the shape of an emitter as the scene writes it; the next index adds an emitter with a `rate` of 10), `point` (`system`, `point` 0 to 7, optional `at` in pixels of the layer, `follow` (`true` follows the pointer, `false` stops), `angle`, `remove` for the last one; earlier points that are missing start at `[0, 0]`), `remap` (`system`, `remap` to add, with `index` to replace one, or `index` and `remove`), `cutout` (`system`, `range` `[start, end, opacity]`, none to remove it), `orient` (`system`, `orient`, `angle` with `fixed`), `perspective` (`system`, `focal`, `depth` and `depth_speed` ranges, or `off` to remove the three), `layer` (`system`, `emitter`, `id` of the layer it emits from, `threshold`, `color`, `inherit`, `jitter`, `refresh`), `inherit` (`system`, `child`, `inherit`, `follow`) and `shader` (`system`, `shader`, none to remove it); `cutout`, `orient` and `shader` take a `layer` to change the render of that particles layer, which starts as a copy of the render of the system. Each edit is refused, changing nothing, when it leaves the scene with a problem it did not have | `particles DIR SYSTEM shape N JSON`, `control-point pN [--at X,Y] [--angle D] [--cursor] [--remove]`, `remap add JSON`, `remap set N JSON`, `remap remove N`, `cutout START,END,OPACITY\|none [--layer L]`, `orient screen\|velocity\|fixed\|none [--angle D] [--layer L]`, `perspective [--focal F] [--depth MIN,MAX] [--depth-speed MIN,MAX] [--off]`, `emit-from-layer N LAYER [--threshold T] [--color] [--inherit] [--jitter J] [--refresh R]`, `inherit N color\|size\|alpha\|velocity... [--follow]`, `shader ID\|none [--layer L]`, and `particles DIR SYSTEM handles [--layer L] [--time T]` prints what the canvas draws for the system |
 | `import_script` | `file`, a `.js` module; copies it to `scripts/<name>` and declares or replaces its entry in `scripts` with the `events` it exports or handles with `on` and the `uses` it imports or calls (`spawn` and `order`, `effect`, `console`, `shared` also for imports of other modules), never its `params`, which are written by hand, refusing scripts that would take the scene past 1 MiB or 64 modules; the author checks what was proposed | `import-script DIR FILE` |
 | `translate` | `pointer` to a text of the manifest, `language`, `text` (an empty or missing one removes that language), `add` (adds a language the text lacks, starting from the text in the default language, and leaves one it has alone) | `translate DIR POINTER LANGUAGE TEXT`, `--remove` or `--add` |
 | `thumbnail` | `file`, `animated`; copies a picture into `assets/` as `previews.thumbnail` or `previews.animated` (`preview` in a first-version manifest) | `thumbnail DIR FILE [--animated]` |
@@ -136,7 +137,7 @@ the fields it shows for a pointer, as JSON. Annotations in the schema guide the 
 |------------|---------|
 | `x-unit` | unit shown after the label (`px`, `°`, `s`) |
 | `x-range` | `[min, max]` of a slider |
-| `x-ref` | the value names an `image`, `video`, `sound`, `font` or `lut` asset, a `layer`, a particle `system`, a `timeline`, a user `property` that holds a value or, for the `trigger` of a timeline, `start`, `beat` or `prop:<id>` of a button or of such a property, or a built-in `effect`, offered in a list; properties show their labels and effects their translated names |
+| `x-ref` | the value names an `image`, `video`, `sound`, `font` or `lut` asset, a `layer` (for the `layer` shape of a particle emitter only the layers that may feed its system), a particle `system`, a `timeline`, a user `property` that holds a value or, for the `trigger` of a timeline, `start`, `beat` or `prop:<id>` of a button or of such a property, or a built-in `effect`, offered in a list; properties show their labels and effects their translated names |
 | `x-key` | a keyframe `[time, value, ease]` |
 | `x-curve` | a list of `[t, value]` points edited on a plot: a click adds a point, a drag moves it (one gesture) and a double click removes it; `t` goes from `0` to `1` across and the value up to its `x-range`, or a quarter above the highest point |
 
@@ -362,6 +363,32 @@ the clip keys it, and *Key* writes, with `key`, the channels the handles changed
 of the bone at the playhead when none did. The timeline shows the seconds from the start of the
 clip, its `from`, and the keys are written where the playhead is. Only the preview sees
 the clip and the sliders chosen here; the scene keeps its own `animations` and `shapes`.
+
+### Particle systems
+
+Selecting a particle system, or a particles layer, draws its tools over the preview in pixels of
+the canvas, through the transform of the layer: every emitter shape with handles (the point; the
+corners of a box and the center and radius of a circle that are not anchored to a control point;
+the ends of a line; for `around`, the center, a handle for the radius and one for the end of the
+arc, with a dot at each place a birth takes; for `between`, its two ends, a handle that bows the
+line and one that slides the widest point of the taper, with dots sized as the taper sizes them;
+for `layer`, the outline of the layer and the pixels above the threshold of an image layer, or
+only its outline for other layers), the control points `p0` to `p7` as markers to drag, and a ring
+whose handle sets the focal length of the perspective. An end of `around` or `between` that names a
+control point moves that point. The inspector of the system lists its emitters with a picker of
+the shape, of the control points or the pointer that `around` and `between` follow and of their
+count; a picker of the layers it may emit from (never one that holds the system), with the
+threshold, its color, its motion and when it is read again; the control points with a toggle to
+follow the pointer and a dial for their angle; the remaps of the starting values, each with its
+input and output, two-handle ranges for `in` and `out`, its clamps, operation and wave, and the
+curve of the output over the input; a cutout with a two-handle range, its opacity and the alpha
+ramp it gives; the orientation with a dial for its angle; the perspective with its focal length
+and two-handle ranges for the depth and its speed; what each child takes from its parent particle;
+and the particle shaders of the package with a warning that the engine checks them and may leave
+them out. The curve is a component of its own that plots any `{ points, x, y }` the editor computes,
+so other tools can draw their curves with it. `wprs-ctl scene particles DIR SYSTEM handles` prints
+the same data: the transform of the layer and its inverse, the points, each emitter with its
+handles, the curves and the lists the pickers offer.
 
 ## Preview
 

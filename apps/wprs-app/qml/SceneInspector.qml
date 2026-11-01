@@ -147,6 +147,12 @@ ColumnLayout {
         ColumnLayout {
             width: parent.width
 
+            SceneSwarmTools {
+                Layout.fillWidth: true
+                page: inspector.page
+                system: /^\/scene\/particles\/[^\/]+$/.test(inspector.pointer) ? inspector.parts[2] : ""
+            }
+
             Repeater {
                 model: inspector.page.fields
 

@@ -53,7 +53,10 @@ pub(crate) fn candidates(doc: &Value, reference: &str, pointer: &str) -> Vec<Val
         doc.pointer(p).and_then(Value::as_array).map(|l| l.iter().map(|t| t["id"].clone()).collect())
     };
     match reference {
-        "layer" => walk(doc).into_iter().map(|(_, l)| l["id"].clone()).collect(),
+        "layer" => match pointer.strip_prefix("/scene/particles/").and_then(|p| p.split('/').next()) {
+            Some(id) => crate::swarms::sources(doc, &id.replace("~1", "/").replace("~0", "~")),
+            None => walk(doc).into_iter().map(|(_, l)| l["id"].clone()).collect(),
+        },
         "system" => keys("/scene/particles").unwrap_or_default(),
         "timeline" => ids("/scene/timelines").unwrap_or_default(),
         "language" => crate::meta::languages(doc),

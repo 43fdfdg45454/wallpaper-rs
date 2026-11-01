@@ -162,6 +162,9 @@ QtObject {
                 page.editor.select("/scene/particles/flakes/emitters/0");
                 if (!page.fields.some(field => field.widget === "points"))
                     throw new Error(kind + ": the emitter box has no editor");
+                Qt.createComponent("SceneSwarmCheck.qml").createObject(page, {
+                    "page": page
+                }).exercise();
             }
             if (kind === "empty")
                 Qt.createComponent("SceneMeshCheck.qml").createObject(page, {

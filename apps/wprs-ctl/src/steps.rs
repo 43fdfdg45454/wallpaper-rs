@@ -110,8 +110,9 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
         Author::Properties(command) => crate::userprops::action(command),
         Author::Rigging(command) => return crate::rigging::action(command),
         Author::Clipping(command) => return crate::clipping::action(command),
-        Author::Undo { dir } => (dir, Action::Undo {}),
-        Author::Redo { dir } => (dir, Action::Redo {}),
+        Author::Undoing(crate::undoing::Undoing::Undo { dir }) => (dir, Action::Undo {}),
+        Author::Undoing(crate::undoing::Undoing::Redo { dir }) => (dir, Action::Redo {}),
+        Author::Swarming(command) => return crate::swarmed::action(command),
         other => return Err(Box::new(other)),
     })
 }

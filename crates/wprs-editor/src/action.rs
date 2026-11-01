@@ -6,6 +6,7 @@ use wprs_format::{Descriptor, Rating};
 mod limbs;
 mod names;
 mod rigging;
+mod swarm;
 
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use names::ACTIONS;
@@ -13,6 +14,7 @@ use names::{half, whole};
 pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MeshCut, WeightStroke,
 };
+pub use swarm::ParticleEdit;
 
 pub const EDITOR: &str = "/scene/ext/editor";
 
@@ -189,6 +191,7 @@ pub enum Action {
     Attach(AttachEdit),
     Point(PointEdit),
     Parts(PartsEdit),
+    Particles(ParticleEdit),
     Undo {},
     Redo {},
 }

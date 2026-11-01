@@ -947,6 +947,50 @@ msgstr "Hora"
 msgid "Seconds"
 msgstr "Segundos"
 
+#: crates/wprs-editor/src/swarms/looks.rs
+msgid "the system has no remap %1"
+msgstr "el sistema no tiene la reasignación %1"
+
+#: crates/wprs-editor/src/swarms/looks.rs
+msgid "give a remap to add or set, or the index of one to remove"
+msgstr ""
+"da una reasignación para añadir o cambiar, o el índice de una para quitar"
+
+#: crates/wprs-editor/src/swarms/mod.rs
+msgid "there is no particle system \"%1\""
+msgstr "no hay ningún sistema de partículas «%1»"
+
+#: crates/wprs-editor/src/swarms/mod.rs
+msgid "the layer \"%1\" draws no particles of this system"
+msgstr "la capa «%1» no dibuja partículas de este sistema"
+
+#: crates/wprs-editor/src/swarms/mod.rs
+msgid "%1 does not fit: %2"
+msgstr "%1 no encaja: %2"
+
+#: crates/wprs-editor/src/swarms/mod.rs
+msgid "the system has no child %1"
+msgstr "el sistema no tiene el hijo %1"
+
+#: crates/wprs-editor/src/swarms/spots.rs
+msgid "the system has no emitter %1"
+msgstr "el sistema no tiene el emisor %1"
+
+#: crates/wprs-editor/src/swarms/spots.rs
+msgid "control points go from p0 to p7"
+msgstr "los puntos de control van de p0 a p7"
+
+#: crates/wprs-editor/src/swarms/spots.rs
+msgid "only the last control point can go"
+msgstr "solo se puede quitar el último punto de control"
+
+#: crates/wprs-editor/src/swarms/spots.rs
+msgid ""
+"a control point lies within a million pixels and turns up to 360 degrees"
+msgstr ""
+"un punto de control queda a menos de un millón de píxeles y gira hasta 360 "
+"grados"
+
 #: crates/wprs-editor/src/texts.rs
 msgid "name a language such as en or pt-BR and a text of the manifest"
 msgstr "indica un idioma como en o pt-BR y un texto del manifiesto"

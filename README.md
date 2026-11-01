@@ -1697,6 +1697,25 @@ con `--at`, `--parent`, `--root`, `--rename` y `--remove`) y `parts` (`--order`,
 `--show`, `--clip` y `--unclip`); `bones`, `vertex-weights` y `keys` imprimen los huesos y puntos,
 los pesos de cada vértice y las claves de un clip.
 
+Al elegir un sistema de partículas o una capa de partículas, la vista previa dibuja encima sus
+herramientas: cada forma de emisor con asas (el punto, las esquinas de una caja, el centro y el radio
+de un círculo, los extremos de una línea; para `around`, el centro, el radio y el final del arco, con
+un punto en cada lugar de nacimiento; para `between`, sus extremos, un asa que curva la línea y otra
+que desliza el punto más ancho del afinado; para `layer`, el contorno de la capa y los píxeles que
+pasan el umbral), los puntos de control `p0` a `p7` como marcadores que se arrastran y un anillo con
+un asa para la distancia focal de la perspectiva. El inspector del sistema ofrece el tipo de cada
+emisor, a qué punto de control o al puntero siguen `around` y `between`, una lista de las capas desde
+las que puede emitir (nunca una que contenga el sistema) con el umbral, su color, su movimiento y
+cuándo se vuelve a leer, los puntos de control con su dial de ángulo, las reasignaciones de valores
+iniciales con sus entradas y salidas, rangos de dos asas, límites, operación, onda y la curva de la
+salida frente a la entrada (un componente de curvas que también pueden usar otras herramientas), el
+recorte de alfa con su rango, su opacidad y la rampa que da, la orientación con un dial, la
+perspectiva con su distancia focal y los rangos de profundidad, lo que cada hijo toma de su
+partícula padre y los shaders de partículas del paquete con el aviso de que el motor los comprueba y
+puede dejarlos fuera. Desde la terminal hace lo mismo `wprs-ctl scene particles CARPETA SISTEMA` con
+`shape`, `control-point`, `remap add|set|remove`, `cutout`, `orient`, `perspective`,
+`emit-from-layer`, `inherit` y `shader`, y `handles` imprime lo que la vista previa dibuja.
+
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado
 se copia cada 30 segundos y al cerrar en `~/.local/state/wallpaper-rs/editor/`, que solo puede leer
