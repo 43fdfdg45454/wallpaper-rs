@@ -17,6 +17,13 @@ const STORE: &str = r#"import { scene, storage } from "wprs";
         scene.layer("info").text = said.join("|");
     }"#;
 
+const EARLY: &str = r#"import { scene, storage } from "wprs";
+    const bump = (key) => storage.set(key, (storage.get(key) ?? 0) + 1);
+    bump("loaded");
+    export function init() { bump("runs"); }
+    export function properties() { bump("tuned"); }
+    export function update() { scene.layer("info").text = ["loaded", "runs", "tuned"].map((k) => storage.get(k)).join("|"); }"#;
+
 const LIST: &str = r#"import { scene, folder } from "wprs";
     const said = [];
     let album = null;
@@ -67,6 +74,25 @@ fn scripts_keep_data_per_package_and_output_within_bounds() {
     let mut plain = with(json!(["timers"]), STORE, |_| {});
     let said = text(&at(&mut plain, 0.1).unwrap(), "info");
     assert!(said.starts_with("main.js uses storage without declaring it in scene.json"), "{said}");
+}
+
+#[test]
+fn writes_from_loading_init_and_properties_outlive_the_host_text_of_the_same_frame() {
+    let mut script = with(json!(["storage"]), EARLY, |s| s.storage = json!({ "package": { "runs": 4 } }));
+    let one: Values = [("a".to_string(), json!(1))].into();
+    let opened = r#"{"package":{"runs":4},"output":{},"seq":0}"#;
+    let out = script.update(&Frame { props: &one, storage: (1, opened), ..Frame::at(0.0) }).unwrap();
+    assert_eq!(text(&out, "info"), "1|5|1");
+    assert_eq!(out.storage.unwrap()["set"]["package"], json!({ "loaded": 1, "runs": 5, "tuned": 1 }));
+    let out = script.update(&Frame { props: &one, storage: (1, opened), ..Frame::at(0.1) }).unwrap();
+    assert_eq!((text(&out, "info"), out.storage), ("1|5|1".into(), None));
+    let two: Values = [("a".to_string(), json!(2))].into();
+    let heard = r#"{"package":{"loaded":1,"runs":9,"tuned":1},"output":{},"seq":1}"#;
+    let out = script.update(&Frame { props: &two, storage: (2, heard), ..Frame::at(0.2) }).unwrap();
+    assert_eq!(text(&out, "info"), "1|9|2");
+    assert_eq!(out.storage.unwrap()["set"]["package"], json!({ "tuned": 2 }));
+    let out = script.update(&Frame { props: &two, ..Frame::at(0.3) }).unwrap();
+    assert_eq!((text(&out, "info"), out.storage), ("1|9|2".into(), None));
 }
 
 #[test]

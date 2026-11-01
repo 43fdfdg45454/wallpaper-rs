@@ -71,5 +71,6 @@ export function storageFrom(text) {
     const got = JSON.parse(text);
     unsure = unsure.filter(([n]) => n > got.seq);
     for (const at of ["package", "output"]) kept[at] = { ...got[at] };
-    for (const [, at, key, value] of unsure) kept[at] = put(kept[at], key, value);
+    const waiting = ["package", "output"].flatMap((at) => [...ops[at]].map(([key, value]) => [0, at, key, value]));
+    for (const [, at, key, value] of [...unsure, ...waiting]) kept[at] = put(kept[at], key, value);
 }

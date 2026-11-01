@@ -129,9 +129,9 @@ state.tick = () => {
     for (const s of Object.values(soundState)) s.asked = null;
     if (f.time < lastTime) for (const t of timers.values()) t.due -= lastTime - f.time;
     lastTime = f.time;
+    storageFrom(f.storage);
     lifecycleEvents(f);
     folderEvents(f.folders);
-    storageFrom(f.storage);
     for (const [id, t] of [...timers].filter(([, t]) => t.due <= f.time).sort((a, b) => a[1].due - b[1].due)) {
         if (t.period) t.due = f.time + t.period;
         else timers.delete(id);
