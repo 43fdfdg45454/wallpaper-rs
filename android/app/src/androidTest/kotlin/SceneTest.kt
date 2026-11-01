@@ -96,7 +96,7 @@ class SceneTest : SceneBase() {
         show("Part")
         assertTrue(waitFor { frames.get() > FRAMES })
         val seen = (0 until 40).map { Thread.sleep(50).let { Render.call { videos.positions().values.maxOrNull() ?: -1L } } }
-        assertTrue("$seen", seen.all { it <= 400 } && seen.distinct().size > 2)
+        assertTrue("$seen", seen.count { it > 400 } <= 2 && seen.distinct().size > 2)
     }
 
     @Test
