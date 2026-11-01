@@ -16,11 +16,10 @@ fn taper(f: f32, at: f32, size: f32) -> f32 {
 fn sweep(e: u32, id: u32, order: u32, kind: u32) -> array<vec2<f32>, 3> {
     let a = sim.emitters[e * 4u];
     let b = sim.emitters[e * 4u + 1u];
-    let t = sim.clock.y;
     if kind == 6u {
         let i = f32(turn(b.x, b.z > 0.5, order).x);
         let steps = select(b.x - 1.0, b.x, a.w >= 360.0);
-        let angle = radians(i / max(steps, 1.0) * a.w + b.y + b.w * t);
+        let angle = radians(i / max(steps, 1.0) * a.w + b.y + b.w);
         return array(a.xy + a.z * vec2<f32>(cos(angle), sin(angle)), a.xy, vec2<f32>(1.0, 0.0));
     }
     if kind == 7u {
@@ -32,7 +31,7 @@ fn sweep(e: u32, id: u32, order: u32, kind: u32) -> array<vec2<f32>, 3> {
         let flip = select(1.0, -1.0, rand(r.y, KEY + 48u) < 0.5);
         let bow = p.x * sin(3.14159265 * f) * select(flip, p.y, p.y != 0.0);
         let at = a.xy + d * f + vec2<f32>(-d.y, d.x) * bow;
-        let at_t = p.z + q.x * t;
+        let at_t = p.z + q.x;
         let grow = select(1.0, taper(f, at_t - floor(at_t), p.w), b.w > 0.5);
         return array(at, (a.xy + a.zw) / 2.0, vec2<f32>(grow, 0.0));
     }

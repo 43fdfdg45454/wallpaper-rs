@@ -4,7 +4,7 @@ fn turbulent(id: u32, v: vec2<f32>) -> vec2<f32> {
     if g.w < 0.5 {
         return v;
     }
-    let x = f.z * sim.clock.y + g.z + f.w * rand(id, KEY + 40u) + f32(sim.ids.x & 1023u);
+    let x = f.z + g.z + f.w * rand(id, KEY + 40u) + f32(sim.ids.x & 1023u);
     let a = radians(f.x + (noise1(x) * 2.0 - 1.0) * f.y * 180.0);
     return vec2<f32>(cos(a), sin(a)) * lerp(g.x, g.y, rand(id, KEY + 41u));
 }
@@ -16,7 +16,7 @@ fn shifted(id: u32, at: vec2<f32>) -> vec2<f32> {
         return at;
     }
     let r = rand(id, KEY + 42u);
-    let p = vec2<f32>(at.x * f.y / 100.0 + r * f.z * 17.0 + f.w * sim.clock.y, at.y * f.y / 100.0 + r * f.z * 31.0);
+    let p = vec2<f32>(at.x * f.y / 100.0 + r * f.z * 17.0 + f.w, at.y * f.y / 100.0 + r * f.z * 31.0);
     let octaves = i32(g.z);
     let norm = f.x / (1.0 - pow(0.5, f32(octaves)));
     var off = vec2<f32>(fbm(p, octaves), fbm(p + vec2<f32>(5.2, 1.3), octaves)) * norm;
@@ -70,9 +70,6 @@ fn remap(p: ptr<function, Particle>) {
         let speed = length((*p).vel);
         var x = a.w;
         switch u32(a.x) {
-            case 1u: {
-                x = sim.clock.y;
-            }
             case 2u: {
                 x = (*p).life;
             }

@@ -1156,15 +1156,18 @@ velocidad inicial turbulenta, el desfase fractal del nacimiento, el nacimiento p
 de un punto o entre dos con arco y extremos afinados, la reasignación de valores al nacer
 (`init.remap`, hasta ocho, con la hora, el tiempo, la vida, la velocidad, el azar, la distancia a un
 punto, el sonido o el puntero), la herencia del color, el tamaño, el alfa y la velocidad de la
-partícula padre, y los shaders de partículas de un efecto del paquete (`render.shader`, con las mismas
-comprobaciones que los demás efectos del paquete y dejado fuera, sin dejar de dibujar las partículas,
-si no se puede construir).
+partícula padre (los hijos de un sistema con perspectiva nacen a su profundidad o donde se lo ve
+dibujado), y los shaders de partículas de un efecto del paquete (`render.shader`, con las mismas
+comprobaciones, el mismo tiempo de construcción y el mismo límite de tiempo en la GPU que los demás
+efectos del paquete, y dejado fuera, sin dejar de dibujar las partículas, si no se puede construir o
+es demasiado lento).
 
 También mueven y dibujan, igual en la GPU que en la CPU, las partículas que mantienen una distancia
 con un punto o se acercan al segmento entre dos (`keep_distance`, `keep_between`), la reasignación
 aplicada en cada paso (fuerza `remap`, también con la edad), las bandadas (`boids`: separación,
 alineación, cohesión y velocidad máxima, con una rejilla hash rehecha en cada paso; hasta 8 192
-partículas, 2 000 en la CPU, y 32, 16 u 8 vecinas según la calidad y el equipo), los choques contra
+partículas, 2 000 en la CPU, y 32, 16 u 8 vecinas según la calidad y el equipo; las que nacen en el
+mismo punto se separan), los choques contra
 cajas por dentro o por fuera, segmentos, el interior de un círculo y la parte opaca de otra capa
 (campo de distancias de 128 × 128 rehecho solo cuando la capa cambia), la respuesta que deja pegada
 la partícula (`stick`) y la que la mata, que cuenta como muerte para los sistemas hijos. Las cuerdas
@@ -1713,17 +1716,23 @@ los pesos de cada vértice y las claves de un clip.
 
 Al elegir un sistema de partículas o una capa de partículas, la vista previa dibuja encima sus
 herramientas: cada forma de emisor con asas (el punto, las esquinas de una caja, el centro y el radio
-de un círculo, los extremos de una línea; para `around`, el centro, el radio y el final del arco, con
+de un círculo, también alrededor del punto de control al que estén atados, los extremos de una línea; para `around`, el centro, el radio y el final del arco, con
 un punto en cada lugar de nacimiento; para `between`, sus extremos, un asa que curva la línea y otra
 que desliza el punto más ancho del afinado; para `layer`, el contorno de la capa y los píxeles que
 pasan el umbral), los puntos de control `p0` a `p7` como marcadores que se arrastran y un anillo con
-un asa para la distancia focal de la perspectiva. El inspector del sistema ofrece el tipo de cada
+un asa para la distancia focal de la perspectiva. La velocidad turbulenta dibuja el abanico de
+direcciones que puede dar el ruido, las de algunas partículas que nacen ahora y una flecha con un asa
+que la gira y otra que abre o cierra el abanico; el desfase fractal dibuja flechas desde una rejilla
+de lugares de nacimiento hasta donde los lleva el ruido, calculadas como en el motor, y un anillo con
+un asa para la distancia. El inspector del sistema ofrece el tipo de cada
 emisor, a qué punto de control o al puntero siguen `around` y `between`, una lista de las capas desde
 las que puede emitir (nunca una que contenga el sistema) con el umbral, su color, su movimiento y
 cuándo se vuelve a leer, los puntos de control con su dial de ángulo, las reasignaciones de valores
 iniciales con sus entradas y salidas, rangos de dos asas, límites, operación, onda y la curva de la
 salida frente a la entrada (un componente de curvas que también pueden usar otras herramientas), el
-recorte de alfa con su rango, su opacidad y la rampa que da, la orientación con un dial, la
+recorte de alfa con su rango, su opacidad y la rampa que da, los campos de la velocidad turbulenta
+(dirección, giro, velocidad del ruido, dispersión, fase, velocidad y banda de sonido) y del desfase
+fractal (distancia, tamaño, detalle, dispersión, deriva y lados), la orientación con un dial, la
 perspectiva con su distancia focal y los rangos de profundidad, lo que cada hijo toma de su
 partícula padre y los shaders de partículas del paquete con el aviso de que el motor los comprueba y
 puede dejarlos fuera. Desde la terminal hace lo mismo `wprs-ctl scene particles CARPETA SISTEMA` con
@@ -1740,16 +1749,18 @@ colisionador (rebotar, deslizar, parar, pegar o eliminar) con el rebote y el roz
 círculo o una caja retienen las partículas dentro y la capa con la que chocan; los objetivos y
 deslizadores de las distancias; las bandadas con el radio de vecinas, la separación, la alineación,
 la cohesión y la velocidad máxima; los operadores de reasignación con el mismo editor de curvas y
-la edad como entrada; la cuerda y la estela con sus campos y un selector de textura. El presupuesto
+la edad como entrada; la cuerda y la estela con sus campos y un selector de textura, y un aviso que
+deja en una partícula por paso los emisores que soltarían varias, para que la cuerda quede pareja. El presupuesto
 de partículas simula el sistema en el procesador hasta el instante de la línea de tiempo y dice
 cuántas viven de su capacidad, las plazas en la GPU y en el procesador de cada clase de equipo (los
 teléfonos y los equipos antiguos caen en las dos más bajas) y lo que guarda cada nivel de calidad
 de nacimientos, vecinas, puntos de estela y de cuerda; puede dibujar encima las partículas
 simuladas, la cuerda y algunas estelas, y al pulsar una partícula marca el radio de sus vecinas. Un
 selector de calidad de Q0 a Q3 limita la de la vista previa y *Reiniciar los sistemas* vuelve a
-empezar sus partículas. En la terminal, `wprs-ctl scene particles` suma `collider add|set|remove|
+empezar solo sus partículas, sin rehacer la escena. En la terminal, `wprs-ctl scene particles` suma `collider add|set|remove|
 response`, `keep distance|between|remove`, `boids`, `operator remap add|set|remove`, `rope`,
-`trail`, `texture` y `budget`, y `wprs-ctl scene preview --quality Q --restart` hace lo mismo con la
+`trail`, `texture`, `turbulent`, `offset`, `pace` y `budget` (`rope` avisa también de los emisores
+que amontonan la cuerda), y `wprs-ctl scene preview --quality Q --restart` hace lo mismo con la
 vista previa.
 
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)

@@ -81,8 +81,8 @@ pub use crate::particles::{
     Perspective, Placement, Play, REMAP_INPUTS, ROPE_POINTS, Refract, Refresh, Remap, RemapOp, RemapOutput,
     Render, Ring, Rope, STEP, SUBSTEPS, Sim, SlowNear, Source, Spread, Stack, Strand, Stretch, Surface,
     Swarm, Sweep, System, Taper, Target, Trail, Tunable, Turbulent, WARM, WARM_WORK, Wall, Wave, Wobble, bin,
-    cells, distance_field, fbm, flocks, gradient, hash, largest, mark, noise1, remap_input, remap_table,
-    remapped, seen, stacked, strung, taper, turn,
+    cells, distance_field, fbm, flocks, fractal, gradient, hash, largest, mark, noise1, remap_input,
+    remap_table, remapped, seen, stacked, strung, swirl, taper, turn,
 };
 pub use crate::pointing::{MAX_PRESSES, MAX_TOUCHES, Press, Touch, TouchKind};
 pub use crate::props::{

@@ -88,7 +88,7 @@ pub(crate) enum Op {
     Copy { from: Src, to: Src, origin: [u32; 2], size: (u32, u32), at: [u32; 2] },
     Draw { target: Src, entry: &'static str, mode: Mode, slot: u32, tex: [Src; 3] },
     Effect(Fill),
-    Particles { target: Src, system: usize, slot: u32, mode: Mode },
+    Particles { target: Src, system: usize, slot: u32, mode: Mode, timed: u64 },
     Read { from: Src, map: usize, size: (u32, u32) },
 }
 

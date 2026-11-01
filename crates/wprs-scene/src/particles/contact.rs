@@ -42,21 +42,25 @@ pub(super) fn follow(p: &mut Particle, s: &Sim, mirror: &[Event]) {
         p.age = p.life;
         return;
     };
+    let (_, near) = super::spawn::drawn(s, h.pos, h.depth);
     if s.hatch[1][1] < 0.5 {
-        p.pos = [p.pos[0] + h.pos[0] - h.prev[0], p.pos[1] + h.pos[1] - h.prev[1]];
+        p.pos = [p.pos[0] + (h.pos[0] - h.prev[0]) * near, p.pos[1] + (h.pos[1] - h.prev[1]) * near];
+    }
+    if s.depth[2][3] > 0.5 {
+        (p.depth[0], p.spare[1]) = (p.depth[0] + h.depth - p.spare[1], h.depth);
     }
     let bits = if s.hatch[0][3] > 0.5 { s.hatch[0][2] as u32 } else { 0 };
     if bits & 1 != 0 {
         p.color[..3].copy_from_slice(&h.color[..3]);
     }
     if bits & 2 != 0 {
-        p.size = h.size * s.hatch[1][0];
+        p.size = h.size * s.hatch[1][0] * near;
     }
     if bits & 4 != 0 {
         p.color[3] = h.color[3];
     }
     if bits & 8 != 0 {
-        p.vel = h.vel;
+        p.vel = h.vel.map(|v| v * near);
     }
 }
 

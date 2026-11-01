@@ -4,32 +4,36 @@ use super::spawn::KEY;
 use super::{Particle, Sim};
 use std::f32::consts::TAU;
 
+pub fn swirl(forward: f32, scale: f32, x: f32) -> f32 {
+    forward + (noise1(x) * 2.0 - 1.0) * scale * 180.0
+}
+
 pub(super) fn turbulent(s: &Sim, id: u32) -> Option<[f32; 2]> {
-    let ([forward, scale, speed, offset], g) = (s.fields[0], s.fields[1]);
+    let ([forward, scale, swept, offset], g) = (s.fields[0], s.fields[1]);
     if g[3] < 0.5 {
         return None;
     }
-    let x = speed * s.clock[1] + g[2] + offset * rand(s.ids[0], id, KEY + 40) + (s.ids[0] & 1023) as f32;
-    let a = (forward + (noise1(x) * 2.0 - 1.0) * scale * 180.0).to_radians();
+    let x = swept + g[2] + offset * rand(s.ids[0], id, KEY + 40) + (s.ids[0] & 1023) as f32;
+    let a = swirl(forward, scale, x).to_radians();
     let v = lerp(g[0], g[1], rand(s.ids[0], id, KEY + 41));
     Some([a.cos() * v, a.sin() * v])
 }
 
-pub(super) fn shifted(s: &Sim, id: u32, at: [f32; 2]) -> [f32; 2] {
-    let ([distance, scale, chaos, drift], g) = (s.fields[2], s.fields[3]);
-    if g[3] < 0.5 {
-        return at;
-    }
-    let r = rand(s.ids[0], id, KEY + 42);
-    let p = [
-        at[0] * scale / 100.0 + r * chaos * 17.0 + drift * s.clock[1],
-        at[1] * scale / 100.0 + r * chaos * 31.0,
-    ];
+pub fn fractal(at: [f32; 2], [distance, scale, chaos, drift]: [f32; 4], g: [f32; 3], r: f32) -> [f32; 2] {
+    let p = [at[0] * scale / 100.0 + r * chaos * 17.0 + drift, at[1] * scale / 100.0 + r * chaos * 31.0];
     let octaves = g[2] as i32;
     let norm = distance / (1.0 - 0.5f32.powi(octaves));
     let mut off = [fbm(p, octaves) * norm, fbm([p[0] + 5.2, p[1] + 1.3], octaves) * norm];
     (0..2).filter(|k| g[*k] != 0.0).for_each(|k| off[k] = g[k] * off[k].abs());
     [at[0] + off[0], at[1] + off[1]]
+}
+
+pub(super) fn shifted(s: &Sim, id: u32, at: [f32; 2]) -> [f32; 2] {
+    let g = s.fields[3];
+    if g[3] < 0.5 {
+        return at;
+    }
+    fractal(at, s.fields[2], [g[0], g[1], g[2]], rand(s.ids[0], id, KEY + 42))
 }
 
 pub(super) fn depth(s: &Sim, id: u32) -> [f32; 2] {
@@ -57,7 +61,6 @@ pub(super) fn remap(p: &mut Particle, s: &Sim) {
         let row = [s.remaps[3 * k], s.remaps[3 * k + 1], s.remaps[3 * k + 2]];
         let speed = p.vel[0].hypot(p.vel[1]);
         let x = match row[0][0] as u32 {
-            1 => s.clock[1],
             2 => p.life,
             3 => p.age,
             4 => speed,

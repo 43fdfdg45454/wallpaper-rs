@@ -20,6 +20,10 @@ impl SceneState {
         }
     }
 
+    pub(in crate::compositor) fn again(&mut self) {
+        self.runtime.restart_particles();
+    }
+
     pub(in crate::compositor) fn time(&self) -> f64 {
         self.runtime.time()
     }

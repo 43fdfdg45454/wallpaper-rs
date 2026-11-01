@@ -12,6 +12,7 @@ impl Swarm {
             let mut sim = self.frames[k];
             let (first, count) = (self.bases[k].ids[1], self.bases[k].ids[2]);
             (sim.clock[0], sim.clock[1], sim.ids[1], sim.ids[2]) = (dt, self.sim as f32, first, count);
+            sim.phases(self.sim);
             self.bases[k].ids[2] = count.wrapping_add(1);
             if sim.mode[0] == 0 {
                 let cap = sim.ids[3];

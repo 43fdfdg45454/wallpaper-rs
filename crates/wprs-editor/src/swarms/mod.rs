@@ -1,4 +1,5 @@
 mod budget;
+mod fields;
 mod handles;
 mod looks;
 mod samples;
@@ -6,6 +7,7 @@ mod shapes;
 mod spots;
 mod steers;
 mod tend;
+mod view;
 mod walls;
 
 use crate::action::ParticleEdit;
@@ -38,7 +40,8 @@ fn render(
 ) -> Result<Vec<Op>> {
     let Some(id) = layer else { return Ok(change(doc, &format!("{sys}/render"))) };
     let (path, found) = crate::actions::layer(doc, id)?;
-    let fits = found["type"] == "particles" && found["system"] == sys.rsplit('/').next().unwrap_or_default();
+    let own = crate::ops::unescape(sys.rsplit('/').next().unwrap_or_default());
+    let fits = found["type"] == "particles" && found["system"] == own.as_str();
     ensure!(fits, said("editor.not_particles", "the layer \"%1\" draws no particles of this system", &[&id]));
     let own = format!("{path}/render");
     let copy = doc.pointer(&format!("{sys}/render")).cloned().unwrap_or(json!({}));
@@ -125,6 +128,15 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &ParticleEdit) -> Result<Vec<Op>>
             let mut ops = put(doc, &format!("{at}/inherit"), (!inherit.is_empty()).then(|| json!(inherit)));
             ops.extend(put(doc, &format!("{at}/follow_inherit"), follow.filter(|f| *f).map(|_| json!(true))));
             ops
+        }
+        ParticleEdit::Turbulent { system: s, turbulent, quiet, off } => {
+            fields::turbulent(doc, &system(doc, s)?, turbulent.as_ref(), (*quiet, *off))?
+        }
+        ParticleEdit::Offset { system: s, offset, off } => {
+            fields::offset(doc, &system(doc, s)?, offset.as_ref(), *off)?
+        }
+        ParticleEdit::Pace { system: s, emitter, max_per_step } => {
+            fields::pace(doc, &system(doc, s)?, *emitter, *max_per_step)?
         }
         ParticleEdit::Tend(t) => tend::edit(doc, t)?,
         ParticleEdit::Shader { system: s, layer, shader } => {

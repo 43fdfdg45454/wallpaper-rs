@@ -14,6 +14,7 @@ mod depth;
 pub mod edit;
 mod editing;
 mod facts;
+mod fielding;
 mod filtering;
 mod folder;
 pub mod input;

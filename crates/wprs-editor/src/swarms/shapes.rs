@@ -66,17 +66,17 @@ pub(super) fn target(v: &Value, f: &Frame, spots: &[Value]) -> (Option<[f64; 2]>
     }
 }
 
-fn anchored(v: &Value, f: &Frame, spots: &[Value]) -> impl Fn([f64; 2]) -> [f64; 2] {
+fn anchored(v: &Value, f: &Frame, spots: &[Value]) -> Frame {
     let k = v.as_str().and_then(|p| p[1..].parse::<usize>().ok());
     let spot = k.and_then(|k| spots.get(k));
     let origin = spot.map_or([0.0; 2], |s| pair(&s["local"]));
     let angle = spot.map_or(0.0, |s| s["angle"].as_f64().unwrap_or(0.0) - f.turn());
+    let ([a, b], [c, d]) = (rot([1.0, 0.0], angle), rot([0.0, 1.0], angle));
     let m = f.m;
-    move |p: [f64; 2]| {
-        let [x, y] = rot(p, angle);
-        let q = [origin[0] + x, origin[1] + y];
-        [m[0] * q[0] + m[2] * q[1] + m[4], m[1] * q[0] + m[3] * q[1] + m[5]]
-    }
+    let mul = |x: f64, y: f64| [m[0] * x + m[2] * y, m[1] * x + m[3] * y];
+    let ([e, g], [h, i]) = (mul(a, b), mul(c, d));
+    let o = f.apply(origin);
+    Frame::new([e, g, h, i, o[0], o[1]])
 }
 
 fn around(a: &Value, f: &Frame, spots: &[Value], t: f64) -> Value {
@@ -141,23 +141,24 @@ pub(super) fn shapes(
             "box" => {
                 let (from, to) = if v.is_array() { (pair(&v[0]), pair(&v[1])) } else { (pair(&v["from"]), pair(&v["to"])) };
                 let place = anchored(&v["at"], f, spots);
-                let corners = [from, [to[0], from[1]], to, [from[0], to[1]]].map(|p| f.round(place(p)));
-                json!({ "kind": kind, "corners": corners, "from": from, "to": to, "inner": v["inner"], "anchor": v["at"] })
+                let corners = [from, [to[0], from[1]], to, [from[0], to[1]]].map(|p| f.round(place.apply(p)));
+                json!({ "kind": kind, "corners": corners, "from": from, "to": to, "inner": v["inner"], "anchor": v["at"],
+                    "inverse": place.inverse() })
             }
             "circle" => {
                 let place = anchored(&v["at"], f, spots);
                 let center = pair(&v["center"]);
                 let radius = num(&v["radius"], t, 0.0);
-                let edge = f.round(place([center[0] + radius, center[1]]));
-                json!({ "kind": kind, "center": f.round(place(center)), "local": center, "radius": radius * f.scale(), "edge": edge,
-                    "inner": num(&v["inner"], t, 0.0) * f.scale(), "anchor": v["at"] })
+                let edge = f.round(place.apply([center[0] + radius, center[1]]));
+                json!({ "kind": kind, "center": f.round(place.apply(center)), "local": center, "radius": radius * f.scale(), "edge": edge,
+                    "inner": num(&v["inner"], t, 0.0) * f.scale(), "anchor": v["at"], "inverse": place.inverse() })
             }
             "around" => around(v, f, spots, t),
             "between" => between(v, f, spots, t),
             "layer" => super::samples::samples(dir, doc, v, t),
             _ => json!({ "kind": kind }),
         };
-        out["index"] = json!(e);
+        (out["index"], out["max_per_step"]) = (json!(e), em["max_per_step"].clone());
         out
     }).collect()
 }

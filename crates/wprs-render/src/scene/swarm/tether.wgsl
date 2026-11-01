@@ -14,9 +14,6 @@ fn evolve(p: ptr<function, Particle>, k: u32, w: f32) {
     let speed = length((*p).vel);
     var x = f.z;
     switch u32(f.y) {
-        case 1u: {
-            x = sim.clock.y;
-        }
         case 2u: {
             x = (*p).life;
         }

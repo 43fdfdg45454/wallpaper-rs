@@ -55,6 +55,7 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
         json!({ "index": k, "system": c["system"], "on": c["on"], "inherit": c.get("inherit").unwrap_or(&json!([])),
             "follow_inherit": c["follow_inherit"].as_bool().unwrap_or(false) })
     });
+    let emitters = shapes(dir, doc, s, (&f, &spots), t);
     let count = spots.len();
     let inputs = [
         "daytime",
@@ -79,7 +80,7 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
         "frame": f.m,
         "inverse": f.inverse(),
         "points": spots,
-        "emitters": shapes(dir, doc, s, (&f, &spots), t),
+        "emitters": emitters,
         "perspective": s["perspective"],
         "depth": { "depth": s["init"]["depth"], "speed": s["init"]["depth_speed"] },
         "remaps": looks::remaps(s),
@@ -89,7 +90,8 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
         "keeps": super::steers::keeps(s, &f, &spots),
         "boids": super::steers::boids(s, &f),
         "operators": super::steers::operators(s),
-        "strands": super::steers::strands(doc, render),
+        "strands": super::steers::strands(doc, s, render),
+        "fields": super::view::fields(s, &f, &emitters, t),
         "outputs": ["size", "alpha", "color", "speed", "life", "rotation", "spin", "frame"],
         "domains": looks::domains(),
         "cutout": looks::cutout(render),

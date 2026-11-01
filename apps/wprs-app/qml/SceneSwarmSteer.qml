@@ -13,7 +13,7 @@ ColumnLayout {
     readonly property var targets: (tools.info?.points ?? []).map(p => p.name).concat(["cursor"])
 
     function force(index) {
-        return JSON.parse(tools.page.editor.value("/scene/particles/" + tools.system.replace(/~/g, "~0").replace(/\//g, "~1") + "/forces/" + index) || "null");
+        return JSON.parse(tools.page.editor.value(SceneSwarmKnobs.pointer(tools.system, "/forces/" + index)) || "null");
     }
 
     function patch(e, change, gesture) {

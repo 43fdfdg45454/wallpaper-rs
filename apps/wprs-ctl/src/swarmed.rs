@@ -63,17 +63,19 @@ fn edit(system: String, what: Particle) -> P {
         Particle::Keep(k) => crate::tended::keep(system, k),
         Particle::Boids(b) => crate::tended::boids(system, b),
         Particle::Operator(o) => crate::tended::operator(system, o),
-        Particle::Rope(r) => crate::tended::rope(system, r),
         Particle::Trail(t) => crate::tended::trail(system, t),
+        Particle::Turbulent(t) => crate::fielding::turbulent(system, t),
+        Particle::Offset(o) => crate::fielding::offset(system, o),
+        Particle::Pace(p) => crate::fielding::pace(system, p),
         Particle::Texture { texture, layer } => crate::tended::texture(system, texture, layered(layer)),
-        Particle::Handles { .. } | Particle::Budget { .. } => unreachable!(),
+        Particle::Handles { .. } | Particle::Budget { .. } | Particle::Rope(_) => unreachable!(),
     }
 }
 
 pub(crate) fn action(command: Swarming) -> Result<(PathBuf, Action), Box<Author>> {
     match command {
         Swarming::Particles {
-            what: what @ (Particle::Handles { .. } | Particle::Budget { .. }),
+            what: what @ (Particle::Handles { .. } | Particle::Budget { .. } | Particle::Rope(_)),
             dir,
             system,
         } => Err(Box::new(Author::Swarming(Swarming::Particles { dir, system, what }))),
@@ -91,6 +93,21 @@ pub(crate) fn run(command: Swarming) -> Result<()> {
         Particle::Budget { time, quality, layer } => {
             let quality = quality.as_deref().and_then(parsed).unwrap_or_default();
             wprs_editor::swarms::budget(&project.dir, &project.doc, &system, layer.as_deref(), time, quality)
+        }
+        Particle::Rope(r) => {
+            let (off, layer) = (r.off, r.layer.clone().filter(|l| !l.is_empty()));
+            crate::steps::edit(&dir, Action::Particles(crate::tended::rope(system.clone(), r)))?;
+            let project = Project::open(&dir)?;
+            let shown =
+                wprs_editor::swarms::handles(&project.dir, &project.doc, &system, layer.as_deref(), 0.0);
+            let uneven = shown["strands"]["uneven"].as_array().map_or(0, Vec::len);
+            if !off && uneven > 0 {
+                let dir = dir.display();
+                eprintln!(
+                    "{uneven} emitters may start more than one particle a step, which bunches the rope; wprs-ctl scene particles {dir} {system} pace --max-per-step 1 spaces it evenly"
+                );
+            }
+            return Ok(());
         }
         _ => return Ok(()),
     };

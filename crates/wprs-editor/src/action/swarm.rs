@@ -90,6 +90,29 @@ pub enum ParticleEdit {
         #[serde(default)]
         shader: Option<String>,
     },
+    Turbulent {
+        system: String,
+        #[serde(default)]
+        turbulent: Option<Value>,
+        #[serde(default)]
+        quiet: bool,
+        #[serde(default)]
+        off: bool,
+    },
+    Offset {
+        system: String,
+        #[serde(default)]
+        offset: Option<Value>,
+        #[serde(default)]
+        off: bool,
+    },
+    Pace {
+        system: String,
+        #[serde(default)]
+        emitter: Option<usize>,
+        #[serde(default)]
+        max_per_step: Option<u32>,
+    },
     #[serde(untagged)]
     Tend(TendEdit),
 }

@@ -6,6 +6,7 @@ use wprs_core::Fit;
 use wprs_render::{Layer, Pixels, Renderer, SceneAssets, SceneView};
 use wprs_scene::{Census, Quality, Runtime, SCHEMA, Scene, Values};
 
+mod deep;
 mod drawn;
 mod families;
 mod fields;

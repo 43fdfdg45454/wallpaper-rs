@@ -27,6 +27,12 @@ ctl scene set "$draft" /scene/particles/dust/children '[{"system": "spark", "on"
 ctl scene particles "$draft" dust inherit 0 color size --follow || fail "the child took nothing from its parent"
 ctl scene particles "$draft" dust shader none || fail "the shader was not cleared"
 ctl scene particles "$draft" dust handles | grep -q '"around"' || fail "the handles of the system were not listed"
+ctl scene particles "$draft" dust turbulent --forward 90 --scale 0.5 --speed 20,40 --audio bass || fail "no turbulent start was set"
+if ctl scene particles "$draft" dust turbulent --scale 3 2>/dev/null; then fail "a turn of three half turns was kept"; fi
+ctl scene particles "$draft" dust turbulent --quiet || fail "the turbulent start still follows the sound"
+ctl scene particles "$draft" dust offset --distance 12 --octaves 3 --sign 0,1 || fail "no fractal offset was set"
+if ctl scene particles "$draft" dust offset --octaves 9 2>/dev/null; then fail "nine octaves were kept"; fi
+ctl scene particles "$draft" dust handles | grep -q '"arrows"' || fail "the fractal offset is not shown"
 ctl scene show "$draft" /manifest/requires/features | grep -q particle_depth || fail "depth left particle_depth out"
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with newer particles was not previewed"
 ctl scene particles "$draft" dust perspective --off || fail "the depth was not removed"
@@ -55,11 +61,18 @@ ctl scene particles "$draft" dust operator remap add '{"input": "age", "in": [0,
 ctl scene particles "$draft" dust operator remap set 3 '{"input": "age", "in": [0, 2], "output": "size", "out": [4, 1], "op": "mul"}' ||
   fail "the remap operator was not set"
 ctl scene particles "$draft" dust rope --subdivide 3 --width 5 --uv-scroll 0.5 || fail "no rope was drawn"
+ctl scene particles "$draft" dust rope --width 5 2>&1 >/dev/null | grep -q "pace --max-per-step 1" ||
+  fail "the rope gave no advice on even births"
+ctl scene particles "$draft" dust pace --max-per-step 1 || fail "the emitters were not paced"
+ctl scene show "$draft" /scene/particles/dust/emitters/1/max_per_step | grep -qx 1 || fail "an emitter was not paced"
+if ctl scene particles "$draft" dust pace --emitter 9 --max-per-step 1 2>/dev/null; then fail "a missing emitter was paced"; fi
 ctl scene particles "$draft" dust trail --length 48 --segments 8 --subdivide 2 --textured true || fail "no long trail was drawn"
 if ctl scene particles "$draft" dust trail --length 90 2>/dev/null; then fail "a trail of 90 steps was kept"; fi
 ctl scene particles "$draft" dust texture none || fail "the texture was not cleared"
 ctl scene particles "$draft" dust budget --time 1 --quality q1 | grep -q '"levels"' || fail "no particle budget was printed"
 ctl scene preview "$draft" -o preview:1 --time 0.5 --quality q1 --restart || fail "the particles were not previewed at a lower quality"
+ctl scene preview "$draft" -o preview:1 --time 0.5 --quality q1 --restart || fail "the particles were not restarted"
+ctl scene particles "$draft" dust turbulent --off && ctl scene particles "$draft" dust offset --off
 ctl scene particles "$draft" dust operator remap remove 3 && ctl scene particles "$draft" dust boids --off
 ctl scene particles "$draft" dust rope --off || fail "the rope was not removed"
 ctl scene show "$draft" /manifest/requires/features | grep -q particle_ropes || fail "long trails left particle_ropes out"

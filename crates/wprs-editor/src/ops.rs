@@ -32,6 +32,10 @@ pub fn escape(key: &str) -> String {
     key.replace('~', "~0").replace('/', "~1")
 }
 
+pub fn unescape(token: &str) -> String {
+    token.replace("~1", "/").replace("~0", "~")
+}
+
 fn split(path: &str) -> Result<(&str, String)> {
     let (parent, key) = path
         .rsplit_once('/')

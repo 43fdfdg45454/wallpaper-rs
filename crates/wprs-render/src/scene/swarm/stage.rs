@@ -1,8 +1,12 @@
 use super::kit::Kit;
+use super::sprite::pipe;
+use super::staging::{left, within};
 use super::{PARTICLE, Swarms, binds};
 use crate::Renderer;
 use crate::scene::pipes::Mode;
 use wprs_scene::{Scene, Stage};
+
+const ENTRIES: (&str, &str) = ("wprs_vs_particle", "wprs_fs_particle");
 
 const OWN: [&str; 12] = [
     "Look",
@@ -43,30 +47,49 @@ pub(super) fn stage(r: &Renderer, scene: &Scene, kit: &mut Kit, id: Option<&str>
         kit.refused = Some((id.into(), "it is not a particle shader".into()));
         return;
     };
-    match wprs_scene::particle_shader(d, &prefixed(include_str!("sprite.wgsl"))) {
-        Ok(module) => {
+    let made = left(d.key).map_or(Ok(()), Err).and_then(|()| {
+        let module = wprs_scene::particle_shader(d, &prefixed(include_str!("sprite.wgsl")))?;
+        within((d.key, &r.device), move |device| {
             let source = wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(module));
             let label = Some("wprs-scene particle shader");
-            kit.stage =
-                Some((d.key, r.device.create_shader_module(wgpu::ShaderModuleDescriptor { label, source })));
-        }
+            device.create_shader_module(wgpu::ShaderModuleDescriptor { label, source })
+        })
+    });
+    match made {
+        Ok(module) => kit.stage = Some((d.key, module)),
         Err(why) => kit.refused = Some((id.into(), why)),
+    }
+}
+
+pub(super) fn leave(kits: &mut [Kit], key: u64, why: &str) {
+    for kit in kits.iter_mut().filter(|k| k.stage.as_ref().is_some_and(|s| s.0 == key)) {
+        tracing::warn!("the particle shader of {} was left out: {why}", kit.id);
+        kit.stage = None;
+        kit.refused = Some((kit.shader.clone().unwrap_or_default(), why.to_owned()));
     }
 }
 
 impl Swarms {
     pub(super) fn staged(&mut self, r: &Renderer, mode: Mode) {
-        let sprites = wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4];
         for k in 0..self.kits.len() {
-            let Some((key, module)) = self.kits[k].stage.as_ref() else { continue };
-            if self.stages.contains_key(&(mode, *key)) {
+            let Some((key, module)) = self.kits[k].stage.clone() else { continue };
+            if self.stages.contains_key(&(mode, key)) {
                 continue;
             }
-            let layouts = [&self.layouts[1], &self.layouts[2], &self.framing];
-            let entries = ("wprs_vs_particle", "wprs_fs_particle");
-            let pipeline = self.build(r, mode, (module, entries), &layouts, &[(PARTICLE, &sprites)]);
-            self.stages.insert((mode, *key), pipeline);
-            self.created += 1;
+            let groups = [self.layouts[1].clone(), self.layouts[2].clone(), self.framing.clone()];
+            let format = self.format;
+            let made = within((key, &r.device), move |device| {
+                let sprites = wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4];
+                let (shader, layouts) = ((&module, ENTRIES), [&groups[0], &groups[1], &groups[2]]);
+                pipe(device, (format, mode), shader, &layouts, &[(PARTICLE, &sprites)])
+            });
+            match made {
+                Ok(pipeline) => {
+                    self.stages.insert((mode, key), pipeline);
+                    self.created += 1;
+                }
+                Err(why) => leave(&mut self.kits, key, &why),
+            }
         }
     }
 

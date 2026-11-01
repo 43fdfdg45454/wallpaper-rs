@@ -17,6 +17,10 @@ pub fn set_build_timeout(limit: Duration) {
     TIMEOUT_MS.store(u64::try_from(limit.as_millis()).unwrap_or(u64::MAX), Relaxed);
 }
 
+pub(crate) fn build_timeout() -> Duration {
+    Duration::from_millis(TIMEOUT_MS.load(Relaxed))
+}
+
 type Refused = BTreeMap<String, String>;
 
 impl Renderer {

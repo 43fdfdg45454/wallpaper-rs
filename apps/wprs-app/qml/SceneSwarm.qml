@@ -42,11 +42,11 @@ Item {
     }
 
     function forceOf(i) {
-        return JSON.parse(page.editor.value("/scene/particles/" + system.replace(/~/g, "~0").replace(/\//g, "~1") + "/forces/" + i) || "null");
+        return JSON.parse(page.editor.value(SceneSwarmKnobs.pointer(system, "/forces/" + i)) || "null");
     }
 
     function shapeOf(e) {
-        return JSON.parse(page.editor.value("/scene/particles/" + system.replace(/~/g, "~0").replace(/\//g, "~1") + "/emitters/" + e + "/shape") || "null");
+        return JSON.parse(page.editor.value(SceneSwarmKnobs.pointer(system, "/emitters/" + e + "/shape")) || "null");
     }
 
     visible: info !== null
@@ -104,6 +104,11 @@ Item {
     }
 
     SceneSwarmKeeps {
+        anchors.fill: parent
+        swarm: swarm
+    }
+
+    SceneSwarmSwirl {
         anchors.fill: parent
         swarm: swarm
     }

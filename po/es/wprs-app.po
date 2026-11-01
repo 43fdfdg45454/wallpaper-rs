@@ -2357,7 +2357,8 @@ msgstr "Seguir una propiedad de usuario"
 msgid "Follow the sound"
 msgstr "Seguir el sonido"
 
-#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Bass"
 msgstr "Graves"
 
@@ -2365,15 +2366,18 @@ msgstr "Graves"
 msgid "Mids"
 msgstr "Medios"
 
-#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Treble"
 msgstr "Agudos"
 
-#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Level"
 msgstr "Nivel"
 
-#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneWords.qml
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Beat"
 msgstr "Pulso"
 
@@ -2391,7 +2395,8 @@ msgstr "Posición vertical"
 msgid "Over the screen"
 msgstr "Sobre la pantalla"
 
-#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Speed"
 msgstr "Velocidad"
 
@@ -3362,7 +3367,8 @@ msgstr "Reiniciar los sistemas"
 
 #: apps/wprs-app/qml/SceneSwarmBudget.qml
 msgid "Simulate on the processor and show the particles over the preview"
-msgstr "Simular en el procesador y mostrar las partículas sobre la vista previa"
+msgstr ""
+"Simular en el procesador y mostrar las partículas sobre la vista previa"
 
 #: apps/wprs-app/qml/SceneSwarmBudget.qml
 msgid "%1 alive of %2 at %3 s; %4 slots on the processor"
@@ -3372,20 +3378,27 @@ msgstr "%1 vivas de %2 a los %3 s; %4 plazas en el procesador"
 msgid ""
 "%1: %2 % of births, %3 neighbours, %4 trail points, %5 rope points between "
 "particles"
-msgstr "%1: %2 % de los nacimientos, %3 vecinas, %4 puntos de estela, %5 puntos de cuerda entre partículas"
+msgstr ""
+"%1: %2 % de los nacimientos, %3 vecinas, %4 puntos de estela, %5 puntos de "
+"cuerda entre partículas"
 
 #: apps/wprs-app/qml/SceneSwarmBudget.qml
 msgid ""
 "%1: %2 slots on the GPU, %3 on the processor, %4 trail points, %5 "
 "neighbours, %6 rope segments"
-msgstr "%1: %2 plazas en la GPU, %3 en el procesador, %4 puntos de estela, %5 vecinas, %6 tramos de cuerda"
+msgstr ""
+"%1: %2 plazas en la GPU, %3 en el procesador, %4 puntos de estela, %5 "
+"vecinas, %6 tramos de cuerda"
 
 #: apps/wprs-app/qml/SceneSwarmBudget.qml
 msgid ""
 "Phones and older computers fall on T0 or T1, which keep fewer slots, "
 "neighbours, trail points and rope segments; software rendering runs on the "
 "processor."
-msgstr "Los teléfonos y los equipos más antiguos caen en T0 o T1, que guardan menos plazas, vecinas, puntos de estela y tramos de cuerda; el render por software va en el procesador."
+msgstr ""
+"Los teléfonos y los equipos más antiguos caen en T0 o T1, que guardan menos "
+"plazas, vecinas, puntos de estela y tramos de cuerda; el render por software "
+"va en el procesador."
 
 #: apps/wprs-app/qml/SceneSwarmCollider.qml
 msgid "%1 %2"
@@ -3516,6 +3529,95 @@ msgstr "Desde una capa"
 #: apps/wprs-app/qml/SceneSwarmEmitter.qml apps/wprs-app/qml/SceneSwarmKeep.qml
 msgid "a point"
 msgstr "un punto"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Starting directions and offsets"
+msgstr "Direcciones de salida y desfases"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Turn starting directions with a noise"
+msgstr "Girar las direcciones de salida con un ruido"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Direction"
+msgstr "Dirección"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Turn by up to"
+msgstr "Girar hasta"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Noise speed"
+msgstr "Velocidad del ruido"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Spread between particles"
+msgstr "Dispersión entre partículas"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Phase"
+msgstr "Fase"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Sound multiplies the phase"
+msgstr "El sonido multiplica la fase"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "No sound"
+msgstr "Sin sonido"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Mid"
+msgstr "Medios"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Move births along a fractal noise"
+msgstr "Mover los nacimientos con un ruido fractal"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Distance"
+msgstr "Distancia"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Pattern size"
+msgstr "Tamaño del patrón"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Detail"
+msgstr "Detalle"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Scatter"
+msgstr "Dispersión"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Drift"
+msgstr "Deriva"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Across"
+msgstr "A lo ancho"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Down"
+msgstr "A lo alto"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Both sides"
+msgstr "Ambos lados"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Positive side"
+msgstr "Lado positivo"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Negative side"
+msgstr "Lado negativo"
 
 #: apps/wprs-app/qml/SceneSwarmFocal.qml
 msgid "Focal length %1 px"
@@ -3747,6 +3849,16 @@ msgid "Join particles with a rope"
 msgstr "Unir las partículas con una cuerda"
 
 #: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid ""
+"Emitters that start more than one particle a step bunch the rope; one a step "
+"spaces it evenly"
+msgstr "Los emisores que sueltan más de una partícula por paso amontonan la cuerda; una por paso la deja pareja"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "One particle a step"
+msgstr "Una partícula por paso"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
 msgid "Points between particles"
 msgstr "Puntos entre partículas"
 
@@ -3779,6 +3891,26 @@ msgstr "Puntos entre los puntos guardados"
 #: apps/wprs-app/qml/SceneSwarmStrands.qml
 msgid "Show the texture along the trail"
 msgstr "Mostrar la textura a lo largo de la estela"
+
+#: apps/wprs-app/qml/SceneSwarmSwirl.qml
+msgid "%1°"
+msgstr "%1°"
+
+#: apps/wprs-app/qml/SceneSwarmSwirl.qml
+msgid "Drag to turn the direction particles start in"
+msgstr "Arrastra para girar la dirección en la que salen las partículas"
+
+#: apps/wprs-app/qml/SceneSwarmSwirl.qml
+msgid "Drag to widen or narrow how far the noise turns them"
+msgstr "Arrastra para abrir o cerrar cuánto las gira el ruido"
+
+#: apps/wprs-app/qml/SceneSwarmSwirl.qml
+msgid "%1 px"
+msgstr "%1 px"
+
+#: apps/wprs-app/qml/SceneSwarmSwirl.qml
+msgid "Drag to change how far births move"
+msgstr "Arrastra para cambiar cuánto se mueven los nacimientos"
 
 #: apps/wprs-app/qml/SceneSwarmTools.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
@@ -5885,10 +6017,6 @@ msgid "Persistence"
 msgstr "Persistencia"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Phase"
-msgstr "Fase"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Phosphor"
 msgstr "Fósforo"
 
@@ -6309,6 +6437,14 @@ msgid "Drag to move the emitter"
 msgstr "Arrastra para mover el emisor"
 
 #: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
+msgid "Drag to resize the box around its control point"
+msgstr "Arrastra para cambiar el tamaño de la caja alrededor de su punto de control"
+
+#: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
+msgid "Drag to move the circle away from its control point"
+msgstr "Arrastra para alejar el círculo de su punto de control"
+
+#: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
 msgid "center"
 msgstr "centro"
 
@@ -6383,11 +6519,6 @@ msgstr "Fuente"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Forces"
 msgstr "Fuerzas"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Direction"
-msgstr "Dirección"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Field of view"
@@ -6683,10 +6814,6 @@ msgstr "Plano cercano"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Noise scale"
 msgstr "Escala del ruido"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Noise speed"
-msgstr "Velocidad del ruido"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Normal direction"
@@ -7584,10 +7711,6 @@ msgstr "Escribir profundidad"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Descriptor"
 msgstr "Descriptor"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Distance"
-msgstr "Distancia"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Dithering"

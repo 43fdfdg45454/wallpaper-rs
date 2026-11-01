@@ -59,6 +59,14 @@ impl State {
                     o.dirty |= o.shown.scene.is_some();
                 }
             }
+            Command::Again(output) => {
+                if let Some(o) = self.outputs.get_mut(&output)
+                    && let Some(scene) = o.shown.scene.as_mut()
+                {
+                    scene.again();
+                    o.dirty = true;
+                }
+            }
             Command::Wake => {}
             Command::Quit => return false,
         }

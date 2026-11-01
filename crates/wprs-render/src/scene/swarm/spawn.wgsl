@@ -2,6 +2,15 @@ fn pick(lo: f32, hi: f32, id: u32, k: u32, x: f32) -> f32 {
     return lerp(lo, hi, bend(rand(id, k), x));
 }
 
+fn nearness(z: f32) -> f32 {
+    let focal = sim.hatch[1].z;
+    if focal <= 0.0 {
+        return 1.0;
+    }
+    let f = focal + z;
+    return select(0.0, focal / f, f > 1.0);
+}
+
 fn spawn(e: u32, id: u32, ev: Event, hatched: bool, order: u32) -> Particle {
     let i = sim.init;
     let pl = sim.emitters[e * 4u + 2u];
@@ -51,25 +60,31 @@ fn spawn(e: u32, id: u32, ev: Event, hatched: bool, order: u32) -> Particle {
     }
     p.host = vec2<u32>(0u);
     p.look = vec2<f32>(1.0);
+    p.depth = vec2<f32>(deep(sim.depth[0], id, KEY + 44u), deep(sim.depth[1], id, KEY + 45u));
+    p.spare = vec2<f32>(0.0);
     if hatched {
         let bits = u32(sim.hatch[0].z);
-        p.pos += ev.pos;
+        let near = nearness(ev.depth);
+        p.pos += select(ev.pos, sim.depth[2].yz + (ev.pos - sim.depth[2].yz) * near, sim.hatch[1].z > 0.0);
+        p.size *= near;
         if (bits & 1u) != 0u {
             p.color = vec4<f32>(ev.color.rgb, p.color.a);
         }
         if (bits & 2u) != 0u {
-            p.size = ev.size * sim.hatch[1].x;
+            p.size = ev.size * sim.hatch[1].x * near;
         }
         if (bits & 4u) != 0u {
             p.color.a = ev.color.a;
         }
         if (bits & 8u) != 0u {
-            p.vel += ev.vel;
+            p.vel += ev.vel * near;
         }
         p.host = vec2<u32>(ev.slot, ev.id);
+        if sim.depth[2].w > 0.5 {
+            p.depth.x += ev.depth;
+        }
+        p.spare.y = ev.depth;
     }
-    p.depth = vec2<f32>(deep(sim.depth[0], id, KEY + 44u), deep(sim.depth[1], id, KEY + 45u));
-    p.spare = vec2<f32>(0.0);
     remap(&p);
     return p;
 }

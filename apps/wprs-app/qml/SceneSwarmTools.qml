@@ -62,6 +62,11 @@ ColumnLayout {
         tools: tools
     }
 
+    SceneSwarmFields {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
     SceneSwarmRemaps {
         Layout.fillWidth: true
         tools: tools

@@ -59,20 +59,25 @@ fn follow(p: ptr<function, Particle>) {
         return;
     }
     let h = event((*p).host.x);
+    let near = nearness(h.depth);
     if sim.hatch[1].y < 0.5 {
-        (*p).pos += h.pos - h.prev;
+        (*p).pos += (h.pos - h.prev) * near;
+    }
+    if sim.depth[2].w > 0.5 {
+        (*p).depth.x += h.depth - (*p).spare.y;
+        (*p).spare.y = h.depth;
     }
     let bits = select(0u, u32(sim.hatch[0].z), sim.hatch[0].w > 0.5);
     if (bits & 1u) != 0u {
         (*p).color = vec4<f32>(h.color.rgb, (*p).color.a);
     }
     if (bits & 2u) != 0u {
-        (*p).size = h.size * sim.hatch[1].x;
+        (*p).size = h.size * sim.hatch[1].x * near;
     }
     if (bits & 4u) != 0u {
         (*p).color.a = h.color.a;
     }
     if (bits & 8u) != 0u {
-        (*p).vel = h.vel;
+        (*p).vel = h.vel * near;
     }
 }

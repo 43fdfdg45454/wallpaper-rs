@@ -6,6 +6,7 @@ mod hostile;
 mod slow;
 mod spans;
 mod stack;
+mod swarm;
 mod variants;
 
 use hostile::{Shown, entry};

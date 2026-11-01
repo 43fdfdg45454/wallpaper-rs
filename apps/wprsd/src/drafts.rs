@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
 
+mod again;
 mod pack;
 
 const LIFE: Duration = Duration::from_secs(60);
@@ -52,17 +53,25 @@ impl Daemon {
                     .state()
                     .drafts
                     .values()
-                    .find(|d| d.document == document && d.pack.path == dir && d.trusted == trusted)
+                    .find(|d| {
+                        let same = d.document == document || again::restarted(&d.document, document);
+                        same && d.pack.path == dir && d.trusted == trusted
+                    })
                     .map(|d| d.pack.clone());
                 Some(found.map_or_else(|| self.draft_pack(&dir, document, trusted).map(Arc::new), Ok)?)
             }
         };
-        let started = {
+        let (started, again) = {
             let mut st = self.state();
-            let mut started = false;
+            let (mut started, mut again) = (false, Vec::new());
             for output in &outputs {
                 match &pack {
                     Some(pack) => {
+                        let old = st.drafts.get(output);
+                        let kept = old.is_some_and(|d| Arc::ptr_eq(&d.pack, pack) && d.hold == hold);
+                        if kept && old.is_some_and(|d| again::restarted(&d.document, document)) {
+                            again.push(output.clone());
+                        }
                         let (pack, document, at) = (pack.clone(), document.into(), Instant::now());
                         let draft = Draft { pack, hold, document, trusted, at };
                         started |= st.drafts.insert(output.clone(), draft).is_none();
@@ -70,12 +79,17 @@ impl Daemon {
                     None => drop(st.drafts.remove(output)),
                 }
             }
-            started
+            (started, again)
         };
         if started {
             tokio::spawn(expire(Arc::downgrade(self)));
         }
-        outputs.iter().for_each(|output| drop(self.configure_output(output)));
+        for output in &outputs {
+            match again.contains(output) {
+                true => self.compositor.restart_particles(output),
+                false => drop(self.configure_output(output)),
+            }
+        }
         Ok(())
     }
 }

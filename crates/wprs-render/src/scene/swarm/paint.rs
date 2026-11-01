@@ -34,12 +34,21 @@ impl Painter<'_, '_, '_> {
         let toned = crate::scene::item::toned(wprs_scene::Color([cr, cg, cb, 1.0]), d.brightness, srgb, 1.0);
         let tint = [toned[0], toned[1], toned[2], d.tint.0[3]];
         let slot = (swarms.looks.len() as u64 * super::LOOK) as u32;
+        let mut timed = 0;
         for (p, system) in herd.bake.systems.iter().enumerate() {
             let own = (p == 0).then_some(d.layer.id.as_str());
             let found = |layer: Option<&str>| {
                 swarms.kits.iter().position(|k| k.system == *system && k.layer.as_deref() == layer)
             };
             let Some(k) = own.and_then(|l| found(Some(l))).or_else(|| found(None)) else { continue };
+            let staged = swarms.kits[k].stage.as_ref().map(|s| s.0);
+            if let Some((key, why)) = staged.and_then(|key| Some((key, super::staging::left(key)?))) {
+                super::stage::leave(&mut swarms.kits, key, &why);
+            }
+            if let Some(key) = swarms.kits[k].stage.as_ref().map(|s| s.0) {
+                self.drawn.push(key);
+                timed = if timed == 0 { key } else { timed };
+            }
             let kit = &swarms.kits[k];
             if let Some((id, why)) = &kit.refused {
                 self.refused.entry(id.clone()).or_insert_with(|| why.clone());
@@ -65,6 +74,6 @@ impl Painter<'_, '_, '_> {
             swarms.looks.push(look);
             swarms.kitted.push(k);
         }
-        self.ops.push(Op::Particles { target: target.src, system: flock, slot, mode });
+        self.ops.push(Op::Particles { target: target.src, system: flock, slot, mode, timed });
     }
 }

@@ -36,6 +36,7 @@ pub enum Issue {
     Timing(String),
     Wrap(String),
     Unlinked(String),
+    Hatched(String),
 }
 
 impl Issue {
@@ -128,6 +129,11 @@ impl Issue {
             Issue::Unlinked(p) => {
                 said("scene.unlinked", "%1 must list bones that each hang from the one before", &[p])
             }
+            Issue::Hatched(p) => said(
+                "scene.hatched",
+                "%1 names a system that starts particles from a layer, which a child born from its parent cannot do",
+                &[p],
+            ),
         }
     }
 }

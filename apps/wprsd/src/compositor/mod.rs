@@ -46,6 +46,7 @@ enum Command {
     Locked(bool),
     Press(String, String),
     Retry,
+    Again(String),
     Wake,
     Quit,
 }
@@ -153,6 +154,10 @@ impl Compositor {
 
     pub fn retry_effects(&self) {
         self.send(Command::Retry)
+    }
+
+    pub fn restart_particles(&self, output: &str) {
+        self.send(Command::Again(output.into()))
     }
 
     pub fn status(&self) -> BTreeMap<String, OutputStatus> {

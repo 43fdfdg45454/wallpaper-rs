@@ -947,6 +947,15 @@ msgstr "Hora"
 msgid "Seconds"
 msgstr "Segundos"
 
+#: crates/wprs-editor/src/swarms/fields.rs
+#: crates/wprs-editor/src/swarms/spots.rs
+msgid "the system has no emitter %1"
+msgstr "el sistema no tiene el emisor %1"
+
+#: crates/wprs-editor/src/swarms/fields.rs
+msgid "an emitter starts at least one particle a step"
+msgstr "un emisor suelta al menos una partícula por paso"
+
 #: crates/wprs-editor/src/swarms/looks.rs
 msgid "the system has no remap %1"
 msgstr "el sistema no tiene la reasignación %1"
@@ -971,10 +980,6 @@ msgstr "%1 no encaja: %2"
 #: crates/wprs-editor/src/swarms/mod.rs
 msgid "the system has no child %1"
 msgstr "el sistema no tiene el hijo %1"
-
-#: crates/wprs-editor/src/swarms/spots.rs
-msgid "the system has no emitter %1"
-msgstr "el sistema no tiene el emisor %1"
 
 #: crates/wprs-editor/src/swarms/spots.rs
 msgid "control points go from p0 to p7"
@@ -2361,6 +2366,12 @@ msgstr "%1 solo se aplica a líneas de tiempo que se repiten con repeat"
 #: crates/wprs-scene/src/issue.rs
 msgid "%1 must list bones that each hang from the one before"
 msgstr "%1 debe listar huesos que cuelguen cada uno del anterior"
+
+#: crates/wprs-scene/src/issue.rs
+msgid ""
+"%1 names a system that starts particles from a layer, which a child born "
+"from its parent cannot do"
+msgstr "%1 nombra un sistema que hace nacer partículas desde una capa, algo que no puede hacer un hijo que nace de su padre"
 
 #: crates/wprs-scene/src/issue.rs
 msgid "invalid scene: %1"

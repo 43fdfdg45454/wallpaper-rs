@@ -1,4 +1,4 @@
-use super::{MAX_CHILDREN, MAX_CONTROL, Moment, Placement, System};
+use super::{EmitShape, MAX_CHILDREN, MAX_CONTROL, Moment, Placement, System};
 use crate::validate::{Check, Issue};
 use crate::{MAX_PARTICLES, Scene};
 
@@ -32,6 +32,10 @@ impl Check<'_> {
             c.offset.iter().for_each(|o| self.place(&format!("{q}/offset"), *o));
             c.angle.iter().for_each(|a| self.range(&format!("{q}/angle"), *a, -360.0, 360.0));
             self.range(&format!("{q}/scale"), c.scale, 0.0, 100.0);
+            let child = self.scene.particles.get(&c.system).map_or(&[][..], |s| &s.emitters[..]);
+            if c.on != Moment::Static && child.iter().any(|e| matches!(e.shape, EmitShape::Layer(_))) {
+                self.issues.push(Issue::Hatched(format!("{q}/system")));
+            }
             let repeated = c.inherit.iter().enumerate().any(|(i, f)| c.inherit[..i].contains(f));
             if repeated || (c.follow_inherit && c.on != Moment::Follow) {
                 self.issues.push(Issue::Type(format!("{q}/inherit")));

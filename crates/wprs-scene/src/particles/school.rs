@@ -1,3 +1,4 @@
+use super::motion::pcg;
 use super::{Force, Particle, Sim, System};
 
 impl Sim {
@@ -15,6 +16,13 @@ impl Sim {
 
 pub fn hash(c: [i32; 2], cells: u32) -> u32 {
     ((c[0] as u32).wrapping_mul(73_856_093) ^ (c[1] as u32).wrapping_mul(19_349_663)) & (cells - 1)
+}
+
+pub fn apart(a: u32, b: u32) -> [f32; 2] {
+    let (lo, hi) = (a.min(b), a.max(b));
+    let turn = (pcg(pcg(lo) ^ hi) >> 8) as f32 / 16_777_216.0 * std::f32::consts::TAU;
+    let side = if a < b { 1.0 } else { -1.0 };
+    [turn.cos() * side, turn.sin() * side]
 }
 
 fn cell(p: [f32; 2], r: f32) -> [i32; 2] {
@@ -65,6 +73,7 @@ impl School {
         let p = &all[i];
         let c = cell(p.pos, r);
         let (mut n, mut at, mut vel, mut away) = (0u32, [0.0f32; 2], [0.0f32; 2], [0.0f32; 2]);
+        let mut scanned = 0u32;
         let mut seen = [u32::MAX; 9];
         'cells: for m in 0..9 {
             let h = hash([c[0] + m as i32 % 3 - 1, c[1] + m as i32 / 3 - 1], cells);
@@ -74,17 +83,21 @@ impl School {
             seen[m] = h;
             let start = self.starts[h as usize] as usize;
             for &j in &self.sorted[start..start + self.counts[h as usize] as usize] {
+                scanned += 1;
+                if scanned > 4 * cap {
+                    break 'cells;
+                }
                 let q = &all[j as usize];
                 let d = [p.pos[0] - q.pos[0], p.pos[1] - q.pos[1]];
                 let l = (d[0] * d[0] + d[1] * d[1]).sqrt();
-                if j as usize == i || l >= r || l < 1e-6 {
+                if j as usize == i || l >= r {
                     continue;
                 }
                 n += 1;
-                let w = (1.0 - l / r) / l;
+                let push = if l < 1e-6 { apart(p.id, q.id) } else { d.map(|v| v * (1.0 - l / r) / l) };
                 at = [at[0] + q.pos[0], at[1] + q.pos[1]];
                 vel = [vel[0] + q.vel[0], vel[1] + q.vel[1]];
-                away = [away[0] + d[0] * w, away[1] + d[1] * w];
+                away = [away[0] + push[0], away[1] + push[1]];
                 if n >= cap {
                     break 'cells;
                 }

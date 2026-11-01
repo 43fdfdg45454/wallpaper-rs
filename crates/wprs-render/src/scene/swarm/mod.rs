@@ -14,6 +14,7 @@ pub(crate) use setup::sprites;
 mod sort;
 mod sprite;
 mod stage;
+mod staging;
 mod step;
 mod store;
 mod strands;

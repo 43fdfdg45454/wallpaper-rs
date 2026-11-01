@@ -1228,7 +1228,13 @@ The newer fields behave as follows.
   and die with it. Shapes of children are placed around the particle, moved by `offset` and turned
   by `angle`; `scale` also scales their sizes. `probability` is drawn once per particle and `max`
   limits the children born in a step; at most 1024 births and 1024 deaths of a system start children
-  in a step. `points_from` takes the control points of the parent.
+  in a step. `points_from` takes the control points of the parent. A child that is born from its
+  parent (`spawn`, `death` or `follow`) cannot start particles from a `layer`.
+- **Children in depth.** A child of a system with `perspective` that has `perspective` of its own is
+  born at the depth of its parent plus its own `init.depth`, and a `follow` child moves in depth
+  with its parent; a child without `perspective` is born where its parent is drawn, at
+  `f / (f + z)` times its size and inherited speed, and a `follow` child moves as far as its parent
+  is drawn to move.
 - **Instances.** `alpha`, `size`, `brightness` and `color` multiply the look of the layer; `count` is
   the fraction of births and slots it keeps, `speed` and `life` multiply the starting speed and life
   and `time_scale` the speed of its time. A layer whose `instance` sets `count`, `speed`, `life`,
@@ -1281,12 +1287,13 @@ positions as its own `trail` asks for, or none.
   picked from `speed`, along `forward` degrees turned by up to `scale` half turns by a smooth noise
   read at `phase + noise_speed · t + offset · u` (`t` the time of the system, `u` a number picked per
   particle, so `offset` spreads the directions of the particles born together); with `audio` the
-  level of that band multiplies `phase`.
+  level of that band multiplies `phase`. The noise is read again from its start every 4 096 units,
+  so a long run never loses precision.
 - **Fractal offset.** `init.offset_noise` moves each birth by up to `distance` pixels along the
   `fbm` of the shader helpers with `octaves` octaves, read at the place of birth times `scale` per
   100 pixels, drifting `noise_speed` units a second, and moved for each particle by `noise_scale`
   (0 keeps neighbors together, larger values scatter them); `sign` keeps the offset on one side as
-  for circles.
+  for circles. The drift also starts again every 4 096 units.
 - **Around a point.** `around` births on a circle of `radius` around `at` (`p0` by default), one
   place after another in birth order: `count` places over `arc` degrees (the last one meets the
   first on a full turn), turning `speed` degrees a second with the angle of the control point.
@@ -1303,7 +1310,7 @@ positions as its own `trail` asks for, or none.
   shaped by `sine` (`0.5 + 0.5 sin(2π t)`) or `noise`, mapped onto `out` (clamped with `clamp_out`)
   and `set`, multiplied, added or subtracted to `size`, `alpha`, `color` (its red, green and blue),
   `speed` (the length of the velocity), `life`, `rotation`, `spin` or `frame`. `daytime` goes from 0
-  at local midnight to 1, `runtime` counts the seconds of the system, `life` and `speed` are the
+  at local midnight to 1, `runtime` counts the seconds of the system (with a `noise` wave it starts again every 4 096 periods), `life` and `speed` are the
   picked ones, `random` is new for each particle and each remap, `distance:pN` is the distance in
   pixels to a control point, `audio:<band>` a band or its name and `cursor:x|y` the pointer across the
   screen from 0 to 1 (0.5 while it is away), which needs the pointer as any pointer input does.
@@ -1312,7 +1319,10 @@ positions as its own `trail` asks for, or none.
   each sprite with the center, velocity, corner, uv, color, size, rotation (degrees), age and life,
   and may change all of them; the engine then draws the corner. It may read `frame` and the noise
   and color helpers. A shader that cannot be built is left out like any other package effect and
-  the particles are drawn without it. Ropes and trails are drawn as usual.
+  the particles are drawn without it. Its module and pipelines are built away from drawing within
+  the build time of package shaders, its time on the GPU counts like the time of a package effect,
+  and one that takes too long to build, stopped the graphics card or is too slow is left out for the
+  run the same way. Ropes and trails are drawn as usual.
 - **Keeping distance.** `keep_distance` pulls each particle toward its target or pushes it away, as
   a spring that rests `distance` pixels from it: the acceleration is `strength · (d − distance)` along
   the line to the target, in pixels a second squared for each pixel. `keep_between` pulls each particle
@@ -1328,8 +1338,12 @@ positions as its own `trail` asks for, or none.
   `radius`), `alignment` turns its velocity toward their mean velocity and `cohesion` pulls it toward
   their mean position, each in pixels a second squared; `max_speed` (0 for none) caps its speed.
   Neighbors are found in a hash grid of cells `radius` pixels wide rebuilt every step (in compute
-  shaders on the GPU, in the same order on the CPU), and at most 32 of them count at quality 3 and 2,
-  16 at quality 1 and 8 at quality 0, or 8 and 16 on the two lower device tiers. The first `boids`
+  shaders on the GPU, on the CPU in the order of the particles; the GPU fills a cell in any order,
+  so where a cell holds more neighbors than count the two paths may pick different ones), and at
+  most 32 of them count at quality 3 and 2, 16 at quality 1 and 8 at quality 0, or 8 and 16 on the
+  two lower device tiers; a particle looks at no more than four times that many. Neighbors at the
+  same place count too and push each pair apart along a direction picked for the pair, so a flock
+  born at one point spreads out. The first `boids`
   force of a system sets the flock, which holds at most 8 192 particles, and 2 000 on the CPU.
 - **Colliders.** `box` keeps particles out of the box, or inside it with `inside`; it turns and
   scales with the layer. `segment` stops particles crossing the line from `from` to `to` from either

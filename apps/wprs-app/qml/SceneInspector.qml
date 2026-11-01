@@ -134,7 +134,7 @@ ColumnLayout {
             icon.name: "weather-snow"
             text: App.tr("Edit the particle system")
             display: QQC2.AbstractButton.IconOnly
-            onClicked: inspector.page.editor.select("/scene/particles/" + (inspector.page.fields.find(f => f.key === "system")?.value ?? ""))
+            onClicked: inspector.page.editor.select(SceneSwarmKnobs.pointer(String(inspector.page.fields.find(f => f.key === "system")?.value ?? ""), ""))
         }
     }
 
@@ -150,7 +150,7 @@ ColumnLayout {
             SceneSwarmTools {
                 Layout.fillWidth: true
                 page: inspector.page
-                system: /^\/scene\/particles\/[^\/]+$/.test(inspector.pointer) ? inspector.parts[2] : ""
+                system: /^\/scene\/particles\/[^\/]+$/.test(inspector.pointer) ? inspector.parts[2].replace(/~1/g, "/").replace(/~0/g, "~") : ""
             }
 
             Repeater {

@@ -37,7 +37,6 @@ pub(super) fn evolve(p: &mut Particle, s: &Sim, k: usize, w: f32) {
     ];
     let speed = (p.vel[0] * p.vel[0] + p.vel[1] * p.vel[1]).sqrt();
     let x = match f[1] as u32 {
-        1 => s.clock[1],
         2 => p.life,
         3 => p.age,
         4 => speed,

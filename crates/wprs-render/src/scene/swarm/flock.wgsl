@@ -93,6 +93,17 @@ fn flock_steer(@builtin(global_invocation_id) gid: vec3<u32>) {
     atomicStore(&grid.data[o + 1u], bitcast<u32>(out.y));
 }
 
+fn shuffle(v: u32) -> u32 {
+    let s = v * 747796405u + 2891336453u;
+    let w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u;
+    return (w >> 22u) ^ w;
+}
+
+fn apart(a: u32, b: u32) -> vec2<f32> {
+    let turn = f32(shuffle(shuffle(min(a, b)) ^ max(a, b)) >> 8u) / 16777216.0 * TAU;
+    return vec2<f32>(cos(turn), sin(turn)) * select(-1.0, 1.0, a < b);
+}
+
 fn near(i: u32, p: Particle) -> vec2<f32> {
     let b = sim.boids[0];
     let r = b.x;
@@ -105,6 +116,7 @@ fn near(i: u32, p: Particle) -> vec2<f32> {
     var away = vec2<f32>(0.0);
     var seen = array<u32, 9>(0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u);
     var done = false;
+    var scanned = 0u;
     for (var m = 0u; m < 9u && !done; m++) {
         let h = hashed(c + vec2<i32>(i32(m % 3u) - 1, i32(m / 3u) - 1));
         var twice = false;
@@ -118,18 +130,26 @@ fn near(i: u32, p: Particle) -> vec2<f32> {
         let start = atomicLoad(&grid.data[g + cells + h]);
         let end = start + atomicLoad(&grid.data[g + h]);
         for (var e = start; e < end; e++) {
+            scanned++;
+            if scanned > 4u * sim.flock.z {
+                done = true;
+                break;
+            }
             let j = atomicLoad(&grid.data[g + 3u * cells + e]);
             let q = particles[j];
             let d = p.pos - q.pos;
             let l = sqrt(dot(d, d));
-            if j == i || l >= r || l < 1e-6 {
+            if j == i || l >= r {
                 continue;
             }
             n++;
-            let w = (1.0 - l / r) / l;
+            if l < 1e-6 {
+                away += apart(p.id, q.id);
+            } else {
+                away += d * ((1.0 - l / r) / l);
+            }
             at += q.pos;
             vel += q.vel;
-            away += d * w;
             if n >= sim.flock.z {
                 done = true;
                 break;

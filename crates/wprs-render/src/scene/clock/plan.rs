@@ -11,6 +11,7 @@ fn timed(op: &Op) -> Option<(u64, bool)> {
     match op {
         Op::Effect(Fill { shader: Shader::Own(key, ..), .. }) => Some((*key, true)),
         Op::Effect(Fill { shader: Shader::Fx(key, _), .. }) => Some((*key, false)),
+        Op::Particles { timed, .. } if *timed != 0 => Some((*timed, true)),
         _ => None,
     }
 }

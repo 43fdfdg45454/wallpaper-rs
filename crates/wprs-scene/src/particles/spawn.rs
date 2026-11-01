@@ -12,6 +12,17 @@ fn unpack(bits: f32) -> [f32; 4] {
     [0, 8, 16, 24].map(|s| ((b >> s) & 255) as f32 / 255.0)
 }
 
+pub(super) fn drawn(s: &Sim, at: [f32; 2], z: f32) -> ([f32; 2], f32) {
+    let focal = s.hatch[1][2];
+    if focal <= 0.0 {
+        return (at, 1.0);
+    }
+    let f = focal + z;
+    let near = if f > 1.0 { focal / f } else { 0.0 };
+    let c = [s.depth[2][1], s.depth[2][2]];
+    ([c[0] + (at[0] - c[0]) * near, c[1] + (at[1] - c[1]) * near], near)
+}
+
 pub(super) fn spawn(
     s: &Sim,
     e: usize,
@@ -64,23 +75,28 @@ pub(super) fn spawn(
             vel[1] += w[1] * local[0] + w[3] * local[1] + t[1];
         }
     }
-    let mut host = [0; 2];
+    let (mut host, mut deep) = ([0; 2], depth(s, id));
     if let Some(ev) = ev {
         let bits = s.hatch[0][2] as u32;
-        pos = [pos[0] + ev.pos[0], pos[1] + ev.pos[1]];
+        let (at, near) = drawn(s, ev.pos, ev.depth);
+        pos = [pos[0] + at[0], pos[1] + at[1]];
+        size *= near;
         if bits & 1 != 0 {
             color[..3].copy_from_slice(&ev.color[..3]);
         }
         if bits & 2 != 0 {
-            size = ev.size * s.hatch[1][0];
+            size = ev.size * s.hatch[1][0] * near;
         }
         if bits & 4 != 0 {
             color[3] = ev.color[3];
         }
         if bits & 8 != 0 {
-            vel = [vel[0] + ev.vel[0], vel[1] + ev.vel[1]];
+            vel = [vel[0] + ev.vel[0] * near, vel[1] + ev.vel[1] * near];
         }
         host = [ev.slot, ev.id];
+        if s.depth[2][3] > 0.5 {
+            deep[0] += ev.depth;
+        }
     }
     let mut out = Particle {
         pos,
@@ -96,8 +112,8 @@ pub(super) fn spawn(
         color,
         host,
         look: [1.0; 2],
-        depth: depth(s, id),
-        spare: [0.0; 2],
+        depth: deep,
+        spare: [0.0, ev.map_or(0.0, |e| e.depth)],
     };
     remap(&mut out, s);
     out

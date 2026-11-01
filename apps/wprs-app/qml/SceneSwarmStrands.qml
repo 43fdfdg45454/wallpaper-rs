@@ -49,6 +49,21 @@ ColumnLayout {
             })
     }
 
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        visible: !!strands.info.rope && (strands.info.uneven ?? []).length > 0
+        type: Kirigami.MessageType.Information
+        text: App.tr("Emitters that start more than one particle a step bunch the rope; one a step spaces it evenly")
+        actions: [
+            Kirigami.Action {
+                text: App.tr("One particle a step")
+                onTriggered: strands.tools.edit("pace", {
+                        "max_per_step": 1
+                    })
+            }
+        ]
+    }
+
     SceneSwarmStrand {
         Layout.fillWidth: true
         visible: !!strands.info.rope

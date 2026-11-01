@@ -4,6 +4,17 @@ import QtQuick
 import io.github.wallpaper_rs.app
 
 QtObject {
+    function pointer(system, rest) {
+        return "/scene/particles/" + system.replace(/~/g, "~0").replace(/\//g, "~1") + rest;
+    }
+
+    function back(e, loc) {
+        const m = e.inverse;
+        if (!m)
+            return loc;
+        return p => [Math.round((m[0] * p[0] + m[2] * p[1] + m[4]) * 10) / 10, Math.round((m[1] * p[0] + m[3] * p[1] + m[5]) * 10) / 10];
+    }
+
     function spot(shape, ref, to, write) {
         if (typeof ref === "string" && /^p\d$/.test(ref))
             shape.swarm.edit("point", {
@@ -16,7 +27,7 @@ QtObject {
 
     function of(shape) {
         const e = shape.emitter, w = shape.swarm, loc = p => w.local(p);
-        const free = e.anchor === undefined || e.anchor === null;
+        const put = back(e, loc), anchored = typeof e.anchor === "string";
         const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
         switch (e.kind) {
         case "point":
@@ -45,28 +56,30 @@ QtObject {
                 }
             ];
         case "box":
-            return free ? [0, 2].map(k => ({
+            return [0, 2].map(k => ({
                         "at": e.corners[k],
+                        "tip": anchored ? App.tr("Drag to resize the box around its control point") : "",
                         "act": to => shape.patch(s => {
                                 const key = k === 0 ? "from" : "to", i = k === 0 ? 0 : 1;
                                 if (Array.isArray(s))
-                                    s[i] = loc(to);
+                                    s[i] = put(to);
                                 else
-                                    s[key] = loc(to);
+                                    s[key] = put(to);
                             })
-                    })) : [];
+                    }));
         case "circle":
-            return free ? [
+            return [
                 {
                     "at": e.center,
-                    "act": to => shape.patch(s => s.center = loc(to))
+                    "tip": anchored ? App.tr("Drag to move the circle away from its control point") : "",
+                    "act": to => shape.patch(s => s.center = put(to))
                 },
                 {
                     "at": e.edge,
                     "tip": App.tr("Drag to change the radius"),
-                    "act": to => shape.patch(s => s.radius = Math.round(dist(loc(to), e.local) * 10) / 10)
+                    "act": to => shape.patch(s => s.radius = Math.round(dist(put(to), e.local) * 10) / 10)
                 }
-            ] : [];
+            ];
         case "around":
             if (!e.center)
                 return [];

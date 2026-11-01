@@ -24,12 +24,12 @@ pub fn taper(f: f32, at: f32, size: f32) -> f32 {
 }
 
 pub(super) fn sweep(s: &Sim, e: usize, id: u32, order: u32, points: &[[f32; 2]]) -> Option<Spot> {
-    let (a, b, t) = (s.emitters[4 * e], s.emitters[4 * e + 1], s.clock[1]);
+    let (a, b) = (s.emitters[4 * e], s.emitters[4 * e + 1]);
     match s.shapes[e] {
         6 => {
             let (i, _) = turn(b[0], b[2] > 0.5, order);
             let steps = if a[3] >= 360.0 { b[0] } else { b[0] - 1.0 };
-            let angle = (i / steps.max(1.0) * a[3] + b[1] + b[3] * t).to_radians();
+            let angle = (i / steps.max(1.0) * a[3] + b[1] + b[3]).to_radians();
             Some(([a[0] + a[2] * angle.cos(), a[1] + a[2] * angle.sin()], [a[0], a[1]], [1.0, 0.0]))
         }
         7 => {
@@ -40,7 +40,7 @@ pub(super) fn sweep(s: &Sim, e: usize, id: u32, order: u32, points: &[[f32; 2]])
             let flip = if rand(s.ids[0], round, KEY + 48) < 0.5 { -1.0 } else { 1.0 };
             let bow = p[0] * (PI * f).sin() * if p[1] != 0.0 { p[1] } else { flip };
             let at = [a[0] + d[0] * f - d[1] * bow, a[1] + d[1] * f + d[0] * bow];
-            let grow = if b[3] > 0.5 { taper(f, fract(p[2] + q[0] * t), p[3]) } else { 1.0 };
+            let grow = if b[3] > 0.5 { taper(f, fract(p[2] + q[0]), p[3]) } else { 1.0 };
             Some((at, [(a[0] + a[2]) / 2.0, (a[1] + a[3]) / 2.0], [grow, 0.0]))
         }
         8 => {

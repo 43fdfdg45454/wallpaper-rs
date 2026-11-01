@@ -84,7 +84,8 @@ impl Sim {
             let follow = f32::from(u8::from(c.follow_inherit));
             b.hatch[0] = [c.probability, part.link as f32, inherit as f32, follow];
             let stay = f32::from(u8::from(s.space == super::Placement::World));
-            b.hatch[1] = [c.scale, stay, 0.0, 0.0];
+            let flat = host.and_then(|h| h.perspective).filter(|_| s.perspective.is_none());
+            b.hatch[1] = [c.scale, stay, flat.map_or(0.0, |p| p.focal.max(1.0)), 0.0];
         }
         for (e, em) in s.emitters.iter().take(MAX_EMITTERS2).enumerate() {
             let (kind, a, x) = match &em.shape {

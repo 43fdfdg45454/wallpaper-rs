@@ -46,10 +46,13 @@ pub(super) fn operators(s: &Value) -> Value {
     json!(rows.collect::<Vec<_>>())
 }
 
-pub(super) fn strands(doc: &Value, render: &Value) -> Value {
+pub(super) fn strands(doc: &Value, s: &Value, render: &Value) -> Value {
     let images = doc["scene"]["assets"].as_object().into_iter().flatten();
     let images = images
         .filter(|(_, a)| a["path"].as_str().is_some_and(|p| !p.ends_with(".webm") && !p.ends_with(".mp4")));
     let images: Vec<&String> = images.map(|(id, _)| id).collect();
-    json!({ "rope": render["rope"], "trail": render["trail"], "texture": render["texture"], "textures": images })
+    let emitters = s["emitters"].as_array().into_iter().flatten().enumerate();
+    let uneven: Vec<usize> = emitters.filter(|(_, e)| e["max_per_step"] != 1).map(|(k, _)| k).collect();
+    let uneven = if render["rope"].is_object() { uneven } else { Vec::new() };
+    json!({ "rope": render["rope"], "trail": render["trail"], "texture": render["texture"], "textures": images, "uneven": uneven })
 }

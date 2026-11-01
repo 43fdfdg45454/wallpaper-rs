@@ -35,6 +35,7 @@ pub(super) struct Kit {
     pub(super) rope: Option<wprs_scene::Rope>,
     pub(super) tex: wgpu::BindGroup,
     pub(super) stage: Option<(u64, wgpu::ShaderModule)>,
+    pub(super) shader: Option<String>,
     pub(super) refused: Option<(String, String)>,
 }
 
@@ -108,7 +109,9 @@ pub(super) fn kit(
     let trail = render.trail.as_ref().map_or(0, |t| if t.long() { t.kept().kept } else { t.length });
     let long = render.trail.as_ref().is_some_and(|t| t.long());
     let rope = render.rope;
-    let mut kit = Kit { id, system, layer, look, order, trail, long, rope, tex, stage: None, refused: None };
+    let shader = render.shader.clone();
+    let mut kit =
+        Kit { id, system, layer, look, order, trail, long, rope, tex, stage: None, shader, refused: None };
     super::stage::stage(r, scene, &mut kit, render.shader.as_deref());
     kit
 }

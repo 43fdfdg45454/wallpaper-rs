@@ -54,7 +54,7 @@ ColumnLayout {
     }
 
     function patch(change) {
-        const s = tools.page.editor.value("/scene/particles/" + tools.system + "/emitters/" + emitter.index + "/shape");
+        const s = tools.page.editor.value(SceneSwarmKnobs.pointer(tools.system, "/emitters/" + emitter.index + "/shape"));
         const shape = JSON.parse(s || "{}");
         change(shape[emitter.kind]);
         tools.edit("shape", {

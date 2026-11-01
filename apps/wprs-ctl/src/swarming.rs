@@ -87,6 +87,14 @@ pub enum Particle {
         #[arg(long, help = "Take them every step, for follow children")]
         follow: bool,
     },
+    #[command(about = "Start particles in directions turned by a smooth noise, or --off")]
+    Turbulent(crate::fielding::Turbulent),
+    #[command(about = "Move each birth along a fractal noise, or --off")]
+    Offset(crate::fielding::Offset),
+    #[command(
+        about = "Limit how many particles emitters start each step; no --max-per-step removes the limit"
+    )]
+    Pace(crate::fielding::Pace),
     #[command(about = "Draw with a package effect whose stage is particle, or none")]
     Shader {
         shader: String,

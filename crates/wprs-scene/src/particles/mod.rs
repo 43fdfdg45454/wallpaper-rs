@@ -30,6 +30,7 @@ mod ops;
 mod pace;
 mod pack;
 mod paths;
+mod phase;
 mod place;
 mod plan;
 mod points;
@@ -56,7 +57,7 @@ mod walls;
 mod wave;
 
 pub use bake::{Bake, CPU_PARTICLES, MAX_POINTS, MAX_TRAIL};
-pub use birth::remapped;
+pub use birth::{fractal, remapped, swirl};
 pub use budget::{CPU_BOIDS, MAX_BOIDS, MAX_LONG, MAX_ROPE, cells};
 pub use census::{Census, mark, seen};
 pub use children::{Child, Inheritable, MAX_CHILDREN, Moment};
