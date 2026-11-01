@@ -42,6 +42,8 @@ fn draw(
         opacity: 1.0,
         uv: None,
         relief: Some(relief),
+        flip: [false; 2],
+        grade: None,
     };
     let (mut target, mut pixels) = (r.create_target(W, H).unwrap(), Vec::new());
     r.render_layers(&mut target, &[layer], &mut pixels).unwrap();

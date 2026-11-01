@@ -11,6 +11,7 @@ use wprs_scene::Tier;
 
 mod shown;
 
+pub use shown::Tone;
 pub(super) use shown::{Shown, Sink};
 
 pub(super) type Raised = (GpuImage, Parallax);

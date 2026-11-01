@@ -1,6 +1,7 @@
 mod audio;
 mod bank;
 mod bus;
+mod deep;
 mod dmabuf;
 mod feed;
 mod mix;
@@ -13,6 +14,7 @@ mod still;
 mod video_sink;
 
 pub use bank::{Bank, decode, probe as probe_sound};
+pub use deep::{Hdr, Transfer};
 pub use dmabuf::{Dmabuf, accept as accept_dmabuf};
 pub use mix::{Clip, Mix, RATE, Source, Track};
 pub use player::Player;
@@ -63,6 +65,7 @@ pub struct Frame {
     pub stride: u32,
     pub pts: Option<Duration>,
     pixels: Pixels,
+    pub hdr: Option<Hdr>,
 }
 
 #[derive(Debug)]
@@ -101,6 +104,7 @@ pub(crate) struct Shared {
     pub(crate) seen: Arc<AtomicU64>,
     pub(crate) seeks: Arc<AtomicU64>,
     pub(crate) once: Arc<std::sync::atomic::AtomicBool>,
+    pub(crate) deep: Arc<std::sync::atomic::AtomicBool>,
     pub(crate) latency: Option<&'static str>,
 }
 

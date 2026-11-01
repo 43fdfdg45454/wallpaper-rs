@@ -26,14 +26,35 @@ impl Scene {
     }
 }
 
-fn follows(layer: &Layer, what: Inherit) -> bool {
+pub(crate) fn parent_of<'a>(layer: &'a Layer, set: &'a LayerOverride) -> Option<&'a String> {
+    match &set.parent {
+        Some(p) if p.is_empty() => None,
+        Some(p) => Some(p),
+        None => layer.parent.as_ref(),
+    }
+}
+
+pub(crate) fn glide(scene: &Scene, script: &crate::ScriptOutputs) -> crate::look::Glide {
+    let mut glide = scene.canvas.parallax.clone().unwrap_or_default();
+    if let Some(set) = script.stage.and_then(|s| s.parallax) {
+        glide.amount = set.amount.unwrap_or(glide.amount);
+        glide.delay = set.delay.unwrap_or(glide.delay);
+    }
+    glide
+}
+
+fn follows(layer: &Layer, set: &LayerOverride, what: Inherit) -> bool {
     let default = matches!(what, Inherit::Transform | Inherit::Visible);
-    layer.parent.is_some() && layer.inherit.as_ref().map_or(default, |list| list.contains(&what))
+    parent_of(layer, set).is_some() && layer.inherit.as_ref().map_or(default, |list| list.contains(&what))
 }
 
 impl Context<'_> {
     pub(crate) fn place(&self, layer: &Layer, outer: (Affine, Option<Lean>)) -> Place {
         self.placed(layer, Some(outer), 0)
+    }
+
+    pub(crate) fn world(&self, layer: &Layer) -> Affine {
+        self.camera.inverse().then(self.placed(layer, None, 0).world)
     }
 
     fn placed(&self, layer: &Layer, outer: Option<(Affine, Option<Lean>)>, depth: usize) -> Place {
@@ -46,17 +67,18 @@ impl Context<'_> {
             let found = self.scene.layer(id).filter(|_| depth < 2 * MAX_DEPTH);
             found.map(|l| self.placed(l, None, depth + 1))
         };
-        let parent = layer.parent.as_ref().and_then(by_id);
+        let parent = parent_of(layer, set).and_then(by_id);
         let home = || self.homes.get(&layer.id).and_then(by_id).map(|p| (p.world, p.lean));
-        let (base, around) = match parent.filter(|_| follows(layer, Inherit::Transform)) {
+        let follows = |what| follows(layer, set, what);
+        let (base, around) = match parent.filter(|_| follows(Inherit::Transform)) {
             Some(p) => (p.world, p.lean),
             None => outer.or_else(home).unwrap_or((self.camera, None)),
         };
         let mut visible = set.visible.unwrap_or_else(|| layer.visible.get(self));
         let mut opacity = set.opacity.unwrap_or_else(|| layer.opacity.get(self)).clamp(0.0, 1.0);
         if let Some(p) = parent {
-            visible &= p.visible || !follows(layer, Inherit::Visible);
-            opacity *= if follows(layer, Inherit::Opacity) { p.opacity } else { 1.0 };
+            visible &= p.visible || !follows(Inherit::Visible);
+            opacity *= if follows(Inherit::Opacity) { p.opacity } else { 1.0 };
         }
         let world = base.then(self.local(layer, set));
         let place = Place { world, lean: self.lean(layer, world, around), visible, opacity };
@@ -71,7 +93,7 @@ impl Context<'_> {
             [view[0] + fx * view[2], view[1] + fy * view[3]]
         });
         let free = layer.anchor.is_some()
-            || follows(layer, Inherit::Transform)
+            || follows(layer, set, Inherit::Transform)
             || matches!(layer.kind, Kind::Group { .. } | Kind::Adjustment { .. });
         let center = if free { [0.0; 2] } else { [canvas[0] / 2.0, canvas[1] / 2.0] };
         let position = set.position.unwrap_or_else(|| t.position.as_ref().map_or(center, |p| p.get(self).0));
@@ -87,7 +109,7 @@ impl Context<'_> {
         if depth == [0.0; 2] || self.still {
             return [0.0; 2];
         }
-        let glide = self.scene.canvas.parallax.clone().unwrap_or_default();
+        let glide = glide(self.scene, self.script);
         let tilt = if glide.gyro { self.tilt } else { [0.0; 2] };
         if glide.pointer > 0.0 && self.glide.moving() {
             self.note(Wake::Frame);

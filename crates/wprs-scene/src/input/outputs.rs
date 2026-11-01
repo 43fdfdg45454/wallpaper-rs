@@ -20,6 +20,10 @@ pub struct ScriptOutputs {
     pub console: Vec<String>,
     pub stopped: Vec<String>,
     pub open: Vec<String>,
+    pub stage: Option<crate::StageSet>,
+    pub storage: Option<Json>,
+    #[serde(skip)]
+    pub meshes: BTreeMap<String, std::sync::Arc<crate::Mesh>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -99,6 +103,8 @@ pub struct LayerOverride {
     pub size: Option<crate::Extent>,
     pub font: Option<String>,
     pub align: Option<crate::Align>,
+    pub parent: Option<String>,
+    pub file: Option<String>,
 }
 
 pub(crate) static UNSET: LayerOverride = LayerOverride {
@@ -115,6 +121,8 @@ pub(crate) static UNSET: LayerOverride = LayerOverride {
     size: None,
     font: None,
     align: None,
+    parent: None,
+    file: None,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

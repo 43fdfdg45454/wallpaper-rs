@@ -13,7 +13,11 @@ impl Check<'_> {
             Kind::Image { image: named, size, color, playback }
             | Kind::Video { video: named, size, color, playback } => {
                 let field = if matches!(kind, Kind::Image { .. }) { "image" } else { "video" };
-                self.named(&format!("{p}/{field}"), named);
+                let pooled = matches!(named, crate::Value::Fixed(id) if field == "video" && self.scene.pools.contains_key(id));
+                match pooled {
+                    true => self.uses(true, "script_geometry"),
+                    false => self.named(&format!("{p}/{field}"), named),
+                }
                 self.size(&format!("{p}/size"), *size);
                 self.tint(p, color.as_ref());
                 playback.iter().for_each(|b| self.playback(&format!("{p}/playback"), b));

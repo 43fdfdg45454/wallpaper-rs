@@ -21,7 +21,17 @@ fn screens_that_show_the_same_picture_share_one_texture() {
     let output = |image: GpuImage| {
         let (content, fit, background) = (Content::Image(picture.clone()), Fit::Fill, [0; 3]);
         let (transition, uv, relief, scene) = (None, None, None, None);
-        let shown = Shown { content, fit, background, image: Some(image), transition, uv, relief, scene };
+        let shown = Shown {
+            content,
+            fit,
+            background,
+            image: Some(image),
+            transition,
+            uv,
+            relief,
+            scene,
+            tone: Default::default(),
+        };
         Output::new((16, 9), shown, Sink::Stream(None), 60)
     };
     let mut outputs =

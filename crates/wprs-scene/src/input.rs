@@ -1,12 +1,16 @@
 use serde::{Deserialize, Serialize};
 
+mod mesh;
 mod outputs;
+mod stage;
 
+pub use mesh::{MAX_MESH_BYTES, MESH_FLOATS, Mesh};
 pub(crate) use outputs::UNSET;
 pub use outputs::{
     LayerOverride, ParticleCommand, ParticleControl, ScriptOutputs, SoundCommand, SoundControl,
     TimelineCommand, Tuning, VideoCommand, VideoControl,
 };
+pub use stage::{BloomSet, CameraSet, GlideSet, ShakeSet, StageSet};
 
 pub const BANDS: usize = 64;
 pub(crate) const SETTLE: f32 = 0.15;

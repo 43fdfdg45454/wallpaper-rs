@@ -43,7 +43,7 @@ impl Runtime {
     }
 
     pub fn parallax(&self) -> [f32; 2] {
-        let glide = self.scene.canvas.parallax.clone().unwrap_or_default();
+        let glide = crate::kin::glide(&self.scene, &self.script);
         let tilt = if glide.gyro && !self.still { self.tilt } else { [0.0; 2] };
         [0, 1].map(|i| ((self.glide.smooth[i] - 0.5) * glide.pointer + tilt[i] * 0.5) * glide.amount)
     }

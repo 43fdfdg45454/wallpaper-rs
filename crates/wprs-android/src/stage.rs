@@ -75,7 +75,7 @@ impl Stage {
         let (granted, moving) = (props::granted(&pack.id), moves(&pack.id));
         let (view, quality, tick, due, touch) = (None, Quality::Q3, None, None, (None, 0, false));
         let acting = Acting::new(&pack, &runtime);
-        let extras = Extras::gather(&pack, runtime.props(), extras::now(), &Extras::default());
+        let extras = Extras::gather(&pack, (runtime.props(), &[]), extras::now(), &Extras::default());
         let assets = extras.assets(&pack);
         Stage {
             uid,
@@ -155,8 +155,9 @@ impl Stage {
         Arc::clone(&self.extras.videos)
     }
 
-    fn gather(&mut self) {
-        let fresh = Extras::gather(&self.pack, self.runtime.props(), extras::now(), &self.extras);
+    pub(crate) fn gather(&mut self) {
+        let shown = &self.acting.keeping.shown;
+        let fresh = Extras::gather(&self.pack, (self.runtime.props(), shown), extras::now(), &self.extras);
         if !fresh.same(&self.extras) {
             (self.assets, self.restock, self.touch.2) = (fresh.assets(&self.pack), true, true);
         }

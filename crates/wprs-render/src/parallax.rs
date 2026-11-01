@@ -30,8 +30,11 @@ pub(crate) fn halves(map: &DepthMap) -> Vec<u16> {
 impl Renderer {
     pub(crate) fn reliefs(&self) -> &Pairs {
         self.reliefs.get_or_init(|| {
-            let shader =
-                module(&self.device, &[wprs_scene::RELIEF_WGSL, include_str!("parallax.wgsl")].concat());
+            let shader = module(
+                &self.device,
+                &[wprs_scene::RELIEF_WGSL, include_str!("grade.wgsl"), include_str!("parallax.wgsl")]
+                    .concat(),
+            );
             Pairs::new(bind_group_layout(&self.device, 2), shader, "fs_parallax")
         })
     }

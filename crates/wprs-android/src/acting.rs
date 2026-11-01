@@ -41,17 +41,22 @@ pub(crate) struct Acting {
     sounds: Vec<String>,
     filmed: Vec<Course>,
     ended: Vec<String>,
+    pub(crate) keeping: crate::keeping::Keeping,
+    pub(crate) moved: bool,
 }
 
 impl Acting {
     pub(crate) fn new(pack: &Pack, runtime: &Runtime) -> Acting {
         STATE.store(0, Relaxed);
+        let keeping = crate::keeping::Keeping::new(pack);
         let local = (!pack.scripts.is_empty()).then(|| {
             let named = (pack.locale.as_deref().unwrap_or_default(), &pack.labels);
-            let setup = Setup { mobile: true, ..Setup::new(&pack.scene, &pack.scripts, runtime.seed, named) };
+            let (storage, folders) = (keeping.scopes(), crate::keeping::folders(&pack.properties));
+            let made = Setup::new(&pack.scene, &pack.scripts, runtime.seed, named);
+            let setup = Setup { mobile: true, storage, folders, ..made };
             Local::new(&setup, Limits::default())
         });
-        Acting { local, ..Acting::default() }
+        Acting { local, keeping, ..Acting::default() }
     }
 
     pub(crate) fn reprops(&mut self) {
@@ -72,6 +77,7 @@ impl Acting {
         self.ended.extend(runtime.take_ended().into_iter().take(room));
         runtime.fill_playbacks(&mut self.courses);
         let rt = &*runtime;
+        self.keeping.list((sent.properties, &rt.scene), rt.props(), rt.time());
         rt.fill_reads(&mut self.reads);
         rt.fill_sounds(&mut self.sounds);
         rt.fill_videos(&mut self.filmed);
@@ -100,6 +106,7 @@ impl Acting {
             sounds: &self.sounds,
             videos: &self.filmed,
             ended: &self.ended,
+            folders: &self.keeping.text,
         };
         let before = local.progress().0;
         let answer = local.update(&frame);
@@ -121,6 +128,7 @@ impl Acting {
                     log::warn!("a scene script stopped: {}", out.stopped.join("; "));
                 }
                 self.timer = out.wake.map(|w| runtime.time() + w);
+                self.moved |= self.keeping.heard(&mut out);
                 let changed = runtime.set_script(out);
                 self.calm = if changed { 0 } else { self.calm };
                 changed

@@ -33,17 +33,18 @@ impl Fading {
 }
 
 pub(super) fn direct(look: &Look) -> bool {
-    matches!(look.fit, Fit::Fill | Fit::Stretch)
+    matches!(look.fit, Fit::Fill | Fit::Stretch) && look.flip == [false; 2] && look.grade.is_none()
 }
 
 impl Engine {
     pub(crate) fn video(&mut self) -> Option<String> {
         self.forget_old_gpu();
-        let shown =
-            choice::shown_on(self.preview, self.lock).filter(|shown| shown.video).map(|shown| shown.path);
+        let shown = choice::shown_on(self.preview, self.lock).filter(|shown| shown.video);
+        let flip = shown.as_ref().map_or([false; 2], |s| s.flip);
+        let shown = shown.map(|shown| shown.path);
         let current = self.direct.clone().or_else(|| self.film.clone());
         if shown != current {
-            let look = settings::look(self.lock);
+            let look = settings::Look { flip, ..settings::look(self.lock) };
             let fps = Power::now().fps(self.preview);
             let film = (look.fit, look.background);
             let gone = match (self.direct.take().or(self.film.take()), shown.is_some()) {
@@ -64,7 +65,10 @@ impl Engine {
             };
             (self.film, self.look, self.dirty) = (shown, look, true);
         }
-        if self.film.is_some() && self.fading.is_none() && direct(&settings::look(self.lock)) {
+        if self.film.is_some()
+            && self.fading.is_none()
+            && direct(&settings::Look { flip, ..settings::look(self.lock) })
+        {
             self.hint(0);
             self.direct = self.film.take();
             (self.target, self.image, self.raised, self.stage) = (None, None, None, None);
@@ -95,8 +99,9 @@ impl Engine {
         let frames = self.clips.frames(&gpu.renderer, gpu.epoch, &reels);
         let reel = |id: &str| frames.iter().find(|(key, _)| *key == id).map(|(_, image)| *image);
         let size = self.size;
-        let look =
-            Seen { fit: self.look.fit, background: self.look.background, pan: self.shown, crop: self.crop };
+        let (fit, background, flip, grade) =
+            (self.look.fit, self.look.background, self.look.flip, self.look.grade);
+        let look = Seen { fit, background, pan: self.shown, crop: self.crop, flip, grade };
         let stretched = Seen { fit: Fit::Stretch, crop: None, ..look };
         if let Some(stage) = self.stage.as_mut() {
             let r = &gpu.renderer;
@@ -147,7 +152,9 @@ impl Engine {
         }
         if self.fading.is_some() && (fps == 0 || progress >= 1.0) {
             self.fading = None;
-            self.handover = self.film.is_some() && direct(&settings::look(self.lock));
+            let flip = self.look.flip;
+            self.handover =
+                self.film.is_some() && direct(&settings::Look { flip, ..settings::look(self.lock) });
             gpu::trim();
         }
         let busy = self.fading.is_some() || (self.film.is_some() && power.moving());

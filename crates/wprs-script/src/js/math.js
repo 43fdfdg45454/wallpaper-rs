@@ -9,6 +9,10 @@ export const vectorAngle = (v) => {
     const [x, y] = list(v);
     return degrees(Math.atan2(y, x));
 };
+export const lookAt = (from, to) => {
+    const [[ax, ay], [bx, by]] = [list(from), list(to)];
+    return degrees(Math.atan2(by - ay, bx - ax));
+};
 
 export function mix(a, b, t) {
     if (typeof a === "number") return a + (b - a) * t;

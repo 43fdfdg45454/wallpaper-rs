@@ -23,6 +23,9 @@ impl State {
             _ => None,
         });
         let mut current = self.outputs.get_mut(&name).filter(|o| o.size == size);
+        if let Some(o) = current.as_deref_mut().filter(|o| o.shown.tone != spec.tone) {
+            (o.shown.tone, o.dirty, o.stale, o.composed) = (spec.tone, true, true, None);
+        }
         if current.as_ref().is_some_and(|o| o.shown.matches(&spec)) {
             return;
         }
@@ -33,7 +36,7 @@ impl State {
             && let Some(scene) = o.shown.scene.as_mut()
         {
             o.dirty |= scene.update(new.clone());
-            scene.link(&mut self.scripts);
+            scene.link(&mut self.scripts, &name);
             super::super::feed::declare(&name, Some(scene));
             o.shown.content = spec.content;
             return;
@@ -59,12 +62,12 @@ impl State {
             _ => kept,
         }
         .map_or((None, None, None), |(image, uv, relief)| (Some(image), Some(uv), relief));
-        let (content, fit, background, transition, refresh) =
-            (spec.content, spec.fit, spec.background, spec.transition, spec.refresh);
+        let (content, fit, background, transition, refresh, tone) =
+            (spec.content, spec.fit, spec.background, spec.transition, spec.refresh, spec.tone);
         let scene = match &content {
             Content::Scene(s) => {
                 let mut scene = SceneState::new(s.clone(), self.power);
-                scene.link(&mut self.scripts);
+                scene.link(&mut self.scripts, &name);
                 scene.calm(self.motion.calm);
                 scene.guard(self.settings.flash_guard);
                 resume.into_iter().for_each(|time| scene.resume(time));
@@ -76,7 +79,7 @@ impl State {
             Some(page) => super::super::feed::declare_page(&name, page),
             None => super::super::feed::declare(&name, scene.as_ref()),
         }
-        let shown = Shown { content, fit, background, image, uv, transition, relief, scene };
+        let shown = Shown { content, fit, background, image, uv, transition, relief, scene, tone };
         let transition = !transition.unwrap_or(self.settings.transition).is_zero();
         match self.outputs.get_mut(&name) {
             Some(output) => output.show(shown, size, transition),

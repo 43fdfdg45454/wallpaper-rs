@@ -134,7 +134,17 @@ fn turning_the_guard_off_wakes_a_scene_it_paused() {
     assert!(scene.flashes() == "paused" && scene.due.is_none(), "{} after {n} frames", scene.flashes());
     let (fit, background) = (wprs_core::Fit::Stretch, [0; 3]);
     let (image, transition, uv, relief, scene) = (None, None, None, None, Some(scene));
-    let shown = Shown { content: Content::Color, fit, background, image, transition, uv, relief, scene };
+    let shown = Shown {
+        content: Content::Color,
+        fit,
+        background,
+        image,
+        transition,
+        uv,
+        relief,
+        scene,
+        tone: Default::default(),
+    };
     let mut output = Output::new((32, 18), shown, Sink::Stream(None), 60);
     output.dirty = false;
     output.guard(true);

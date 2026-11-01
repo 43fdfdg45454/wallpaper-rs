@@ -15,7 +15,7 @@ fn only_methods_that_change_what_is_shown_need_the_renderer() {
         let methods = code.split("async fn ").skip(1).filter(uses);
         methods.map(|m| m.split('(').next().unwrap_or_default().to_owned()).collect()
     };
-    let daemon = "request_stream hold_stream release_stream set_output_covered set_wallpaper set_background \
+    let daemon = "request_stream hold_stream release_stream set_output_covered set_wallpaper set_background set_filter \
         press_scene_button set_option reload retry_effects set_paused set_volume set_muted";
     assert_eq!(guarded(include_str!("../service.rs")), daemon.split_whitespace().collect::<Vec<_>>());
     assert_eq!(guarded(include_str!("../library1.rs")), ["apply"]);

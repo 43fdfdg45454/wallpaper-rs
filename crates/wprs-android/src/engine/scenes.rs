@@ -107,6 +107,8 @@ impl Engine {
                 opacity: 1.0,
                 uv: None,
                 relief: None,
+                flip: [false; 2],
+                grade: self.look.grade,
             };
             let presented =
                 crate::counted::gpu(|| gpu.renderer.present_layers(surface, self.size, &[shown], || {}));

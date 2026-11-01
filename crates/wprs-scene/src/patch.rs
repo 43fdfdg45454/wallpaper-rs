@@ -49,5 +49,7 @@ patch!(
     busy: bool,
     console: Vec<String>,
     stopped: Vec<String>,
-    open: Vec<String>
+    open: Vec<String>,
+    stage: Option<crate::StageSet>,
+    storage: Option<Json>
 );

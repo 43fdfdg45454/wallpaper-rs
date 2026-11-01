@@ -5,6 +5,8 @@ import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
 ColumnLayout {
+    id: controls
+
     required property var host
 
     Flow {
@@ -65,6 +67,14 @@ ColumnLayout {
         }
 
         QQC2.ToolButton {
+            id: filtering
+
+            checkable: true
+            icon.name: "color-management"
+            text: host.daemon.tr("Filter")
+        }
+
+        QQC2.ToolButton {
             visible: host.sound !== ""
             icon.name: host.muted ? "audio-volume-muted" : "audio-volume-high"
             text: host.muted ? host.daemon.tr("Unmute") : host.daemon.tr("Mute")
@@ -100,6 +110,16 @@ ColumnLayout {
         sourceComponent: SceneControls {
             daemon: host.daemon
             output: host.name
+        }
+    }
+
+    Loader {
+        Layout.fillWidth: true
+        active: filtering.checked
+        visible: active
+
+        sourceComponent: OutputFilter {
+            host: controls.host
         }
     }
 

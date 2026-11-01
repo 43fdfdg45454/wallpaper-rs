@@ -106,8 +106,10 @@ releases where they look (`repo.md`).
 a picture or video is applied without one), `background` (`#rrggbb`, the color around a picture or
 video that does not cover the screen, used when it is applied without one), `span` (`per-output`,
 or `all-outputs` to spread over every screen: it is then applied with `span` unless the user chooses
-another placement) and `flip` (`none`, `horizontal` or `vertical`) for `image` and `video` packages,
-and `zoom` (1 to 8) and `position` (two numbers of -1 to 1) for videos. Scenes may also set `span`,
+another placement) and `flip` (`none`, `horizontal` or `vertical`: the picture or video is shown
+mirrored, on the computer and on the phone, at no cost, since the screen pass reads it mirrored; on
+the phone a mirrored video goes through the graphics card instead of playing straight on the
+screen) for `image` and `video` packages, and `zoom` (1 to 8) and `position` (two numbers of -1 to 1) for videos. Scenes may also set `span`,
 only to `all-outputs`, since drawing on each screen needs no key: it asks to draw one canvas across every screen, each output showing its part with the
 transform of its monitor; engines that cannot do that yet refuse such a scene with
 `spanned_scenes`, and the phone, which has one screen, shows it there. `accent` suggests an accent
@@ -229,14 +231,14 @@ the folder changed, and the stored value is the path of that copy.
 | `folder` | shows pictures from a folder the user chooses | runs | runs |
 | `folder2` | reads the subfolders of a chosen folder (`recursive`) or fewer of its files (`max_files`) | runs | runs |
 | `folder_lists` | lets its page list a chosen folder (`mode: all` in a `web` package) | runs | runs |
-| `script_folders` | lets its scene scripts list a chosen folder (`mode: all` in other kinds) | refused | refused |
+| `script_folders` | lets its scene scripts list a chosen folder (`mode: all` in other kinds) | runs | runs |
 | `user_videos` | lets the user choose videos for its files or folders | runs | runs |
 | `shortcut` | has a `shortcut` property | runs | without |
 | `quality_settings` | has properties with `quality` values | runs | runs |
 | `video_properties` | sets `playback` or `display` of a video | runs | without |
 | `playback2` | sets `max_fps`, `muted` or `loop`, or `playback` of a web page or a scene | runs | without |
 | `display2` | sets `display` of a picture, or its `background` or `span` | runs | without |
-| `flip` | sets `display.flip` to `horizontal` or `vertical` | refused | refused |
+| `flip` | sets `display.flip` to `horizontal` or `vertical` | runs | runs |
 | `accent` | sets `display.accent` | runs | runs |
 | `web` | is a web page (`kind: web`, see `web.md`) | runs | runs |
 | `preset` | sets the values of another package (`kind: preset`) | runs | refused |
@@ -334,13 +336,13 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `particle_shaders` | sets `render.shader` | refused | refused |
 | `scripts2` | has more than 16 script modules, modules that declare newer events, parts or `params`, values with `fn` or `params`, or named effect uses | runs | runs |
 | `script_layers` | has `templates` or scripts that use `layers` | runs | runs |
-| `script_geometry` | has `pools` or scripts that use `geometry` | refused | without |
-| `script_storage` | has scripts that use `storage` | refused | without |
+| `script_geometry` | has `pools` or scripts that use `geometry` | runs | runs |
+| `script_storage` | has scripts that use `storage` | runs | runs |
 | `script_sounds` | has scripts that use `sounds` | runs | without |
 | `script_animations` | has scripts that use `animations` | runs | runs |
-| `script_camera` | has scripts that use `camera` | refused | without |
+| `script_camera` | has scripts that use `camera` | runs | runs |
 | `script_shortcuts` | has scripts that use `shortcuts` | runs | without |
-| `script_hierarchy` | has scripts that use `hierarchy` | refused | without |
+| `script_hierarchy` | has scripts that use `hierarchy` | runs | runs |
 | `layer_events` | sets `solid: { "alpha" }`, `hit` bones, `click:`, `enter:` or `leave:` triggers or scripts that handle pointer events | runs | runs |
 | `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | refused | refused |
 
@@ -520,8 +522,10 @@ runs fully there, see "Platforms"), `compute` (it sets `requires.gpu` to `comput
 `ultrawide` from a 2.2 ratio and the size (`720p`, `1080p`, `1440p`, `4k`, `5k`, `8k`) of scenes
 and images, and `hdr` when a video of the package (its entry, or a video asset of its scene) writes
 the PQ or HLG transfer in its colour description (the `colr` box of MP4 or the colour elements of
-Matroska and WebM). Such a video plays with standard colors, so it may look washed out until the
-engine maps HDR tones; `wprs-ctl pack check` warns about it. Readers look for it only when they
+Matroska and WebM). On the computer such a video is decoded with 10 bits and its tones are mapped to
+standard colors on the graphics card (PQ and HLG, BT.2020 to sRGB, with 203 nits as the white of
+the screen and 1000 nits as the brightest light); on the phone it shows as Android decodes it,
+mapped by the system when it plays straight on the screen. `wprs-ctl pack check` says so. Readers look for it only when they
 record facets (adding to a repository, indexing the library, the server and `pack check`), never
 when they open a package to show it. The inputs of a web page come from its manifest as declared;
 for the other kinds every input, `media` included, comes from what the package uses, and an

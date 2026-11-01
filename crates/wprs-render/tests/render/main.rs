@@ -2,7 +2,10 @@ use image::{Rgba, RgbaImage};
 use wprs_core::Fit;
 use wprs_render::{GpuImage, Layer, Planes, Renderer, TargetLimits};
 
+mod cost;
+mod deep;
 mod layers;
+mod looks;
 mod readback;
 
 fn renderer() -> Option<&'static Renderer> {
@@ -17,7 +20,7 @@ fn renderer() -> Option<&'static Renderer> {
 }
 
 fn layer(image: Option<&GpuImage>, fit: Fit, background: [u8; 3], opacity: f32) -> Layer<'_> {
-    Layer { image, fit, background, opacity, uv: None, relief: None }
+    Layer { image, fit, background, opacity, uv: None, relief: None, flip: [false; 2], grade: None }
 }
 
 fn draw(r: &Renderer, image: Option<&RgbaImage>, fit: Fit, background: [u8; 3], size: (u32, u32)) -> Vec<u8> {

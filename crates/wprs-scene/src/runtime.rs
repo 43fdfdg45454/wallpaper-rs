@@ -8,6 +8,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
+mod adopted;
 mod clock;
 mod draw;
 mod feed;

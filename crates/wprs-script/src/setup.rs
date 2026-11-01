@@ -22,6 +22,10 @@ pub struct Setup {
     pub layers: BTreeMap<String, Json>,
     pub templates: BTreeMap<String, Json>,
     pub top: Vec<String>,
+    pub stage: Json,
+    pub pools: BTreeMap<String, Json>,
+    pub storage: Json,
+    pub folders: Vec<String>,
 }
 
 fn info(layer: &Layer, scene: &Scene) -> Json {
@@ -46,6 +50,11 @@ fn info(layer: &Layer, scene: &Scene) -> Json {
 fn nested(prefix: &str, layer: &Layer, scene: &Scene, out: &mut BTreeMap<String, Json>) {
     out.insert(prefix.to_owned(), info(layer, scene));
     layer.children().iter().for_each(|c| nested(&format!("{prefix}.{}", c.id), c, scene, out));
+}
+
+fn stage(scene: &Scene) -> Json {
+    let c = &scene.canvas;
+    json!({ "background": c.background, "camera": c.camera, "parallax": c.parallax, "bloom": c.bloom })
 }
 
 impl Setup {
@@ -74,6 +83,14 @@ impl Setup {
             layers: scene.layers().map(|l| (l.id.clone(), info(l, scene))).collect(),
             templates,
             top: scene.layers.iter().map(|l| l.id.clone()).collect(),
+            stage: stage(scene),
+            pools: scene
+                .pools
+                .iter()
+                .map(|(id, p)| (id.clone(), serde_json::to_value(p).unwrap_or_default()))
+                .collect(),
+            storage: Json::Null,
+            folders: Vec::new(),
         }
     }
 

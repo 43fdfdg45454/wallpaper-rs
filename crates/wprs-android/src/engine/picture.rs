@@ -38,6 +38,7 @@ impl Engine {
             let Some((gpu, _)) = self.target.as_ref() else { return Ok((0, 0)) };
             let before = (self.look.fit, self.crop);
             self.look = settings::look(self.lock);
+            self.look.flip = shown.as_ref().map_or([false; 2], |s| s.flip);
             let shown = shown.filter(|shown| !shown.scene);
             let framed =
                 shown.as_ref().map(|s| framing::framed(&s.uid, &s.path, self.look.fit, self.preview));
@@ -95,7 +96,8 @@ impl Engine {
             return Ok(animating(tilting));
         }
         let (fit, background, pan, size) = (self.look.fit, self.look.background, self.shown, self.size);
-        let look = Seen { fit, background, pan, crop: self.crop };
+        let (flip, grade) = (self.look.flip, self.look.grade);
+        let look = Seen { fit, background, pan, crop: self.crop, flip, grade };
         let current = self.image.as_ref().map(|(_, image)| image.as_ref());
         let raised = self.raised.as_ref().map(|raised| (raised, power.charging));
         let layers = [layer(current, 1.0, &look, size, raised)];

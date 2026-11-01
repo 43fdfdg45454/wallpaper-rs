@@ -4,6 +4,7 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Daemon1", "ReleaseStream", "release", &["OUTPUT"]),
     ("Daemon1", "SetWallpaper", "set", &["PATH", "--output", "--fit"]),
     ("Daemon1", "SetBackground", "background", &["COLOR", "--output"]),
+    ("Daemon1", "SetFilter", "filter", &["LOOK", "--output"]),
     ("Daemon1", "SetOption", "config", &["KEY", "VALUE"]),
     ("Daemon1", "SetPaused", "pause", &["=true"]),
     ("Daemon1", "SetVolume", "volume", &["PERCENT"]),

@@ -49,7 +49,7 @@ fn emit<'a>(
     let content = content(cx, layer, set, canvas, quality);
     let playing = match &content {
         Content::Image { asset, .. } => cx.playing.contains(asset.as_ref()) || cx.rolls(asset, false),
-        Content::Video { asset, .. } => cx.rolls(asset, true),
+        Content::Video { asset, .. } => !cx.scene.pools.contains_key(asset.as_ref()) && cx.rolls(asset, true),
         _ => false,
     };
     if playing {

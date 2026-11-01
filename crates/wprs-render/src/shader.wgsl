@@ -3,6 +3,10 @@ struct Params {
     scale: vec2<f32>,
     background: vec4<f32>,
     flags: vec4<u32>,
+    shift: vec2<f32>,
+    focus: f32,
+    steps: f32,
+    grade: Grade,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -26,17 +30,18 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VertexOut {
 
 @fragment
 fn fs_main(in: VertexOut) -> @location(0) vec4<f32> {
+    let background = vec4(graded(params.background.rgb, params.grade), 1.0);
     if params.flags.y == 0u {
-        return params.background;
+        return background;
     }
     let uv = params.offset + in.uv * params.scale;
     let repeat = params.flags.x == 1u;
     let outside = any(uv < vec2<f32>(0.0)) || any(uv > vec2<f32>(1.0));
     let color = textureSample(image, image_sampler, uv);
     if outside && !repeat {
-        return params.background;
+        return background;
     }
     let alpha = select(color.a, 1.0, params.flags.z == 1u);
     let rgb = mix(params.background.rgb, color.rgb, alpha);
-    return vec4<f32>(rgb, 1.0);
+    return vec4<f32>(graded(rgb, params.grade), 1.0);
 }

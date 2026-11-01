@@ -143,5 +143,5 @@ pub(crate) fn mark(facts: &mut Facts, path: &str) {
     facts.facets.sort();
     facts
         .notes
-        .push(format!("{path} is an HDR video, which plays with standard colors and may look washed out"));
+        .push(format!("{path} is an HDR video: the computer maps its tones to standard colors, and phones show it as Android decodes it"));
 }

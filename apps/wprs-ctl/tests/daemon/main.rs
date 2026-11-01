@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use wprs_core::dbus::{BUS_NAME, INTERFACE, OBJECT_PATH};
 use zbus::Connection;
 
+mod filters;
 mod replies;
 mod services;
 mod stores;

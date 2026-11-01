@@ -6,26 +6,34 @@ const OCTAVES: u32 = 4;
 
 impl Context<'_> {
     pub(crate) fn lens(&self, quality: Quality) -> Affine {
-        let Some(cam) = &self.scene.canvas.camera else { return Affine::IDENTITY };
+        let (cam, set) = (self.scene.canvas.camera.as_ref(), self.script.stage.and_then(|s| s.camera));
+        if cam.is_none() && set.is_none() {
+            return Affine::IDENTITY;
+        }
+        let set = set.unwrap_or_default();
         let half = self.canvas.map(|v| v / 2.0);
-        let center = cam.center.as_ref().map_or(half, |c| c.get(self).0);
-        let zoom = cam.zoom.get(self).clamp(0.1, 10.0);
+        let center = set.center.or_else(|| cam?.center.as_ref().map(|c| c.get(self).0)).unwrap_or(half);
+        let zoom = set.zoom.unwrap_or_else(|| cam.map_or(1.0, |c| c.zoom.get(self))).clamp(0.1, 10.0);
+        let turn = set.rotation.unwrap_or_else(|| cam.map_or(0.0, |c| c.rotation.get(self)));
         let moving = !self.still && quality > Quality::Q0;
-        let shake = cam.shake.as_ref().filter(|_| moving).map_or([0.0; 2], |s| self.shake(s));
+        let found = cam.and_then(|c| c.shake.as_ref());
+        let shakes = moving && (found.is_some() || set.shake.is_some());
+        let shake = if shakes { self.shaken(found, set.shake.unwrap_or_default()) } else { [0.0; 2] };
         Affine::translate([half[0] + shake[0], half[1] + shake[1]])
-            .then(Affine::rotate(cam.rotation.get(self).clamp(-360.0, 360.0)))
+            .then(Affine::rotate(turn.clamp(-360.0, 360.0)))
             .then(Affine::scale([zoom; 2]))
             .then(Affine::translate([-center[0], -center[1]]))
     }
 
-    fn shake(&self, s: &Shake) -> [f32; 2] {
-        let amplitude = s.amplitude.get(self).clamp(0.0, 1000.0);
-        let speed = s.speed.get(self).clamp(0.0, 60.0);
-        if !s.enabled.get(self) || amplitude == 0.0 || speed == 0.0 {
+    fn shaken(&self, s: Option<&Shake>, set: crate::ShakeSet) -> [f32; 2] {
+        let s = s.cloned().unwrap_or_default();
+        let amplitude = set.amplitude.unwrap_or_else(|| s.amplitude.get(self)).clamp(0.0, 1000.0);
+        let speed = set.speed.unwrap_or_else(|| s.speed.get(self)).clamp(0.0, 60.0);
+        if !set.enabled.unwrap_or_else(|| s.enabled.get(self)) || amplitude == 0.0 || speed == 0.0 {
             return [0.0; 2];
         }
         self.note(Wake::Frame);
-        let rough = s.roughness.get(self).clamp(0.0, 1.0);
+        let rough = set.roughness.unwrap_or_else(|| s.roughness.get(self)).clamp(0.0, 1.0);
         [0, 1].map(|axis| amplitude * fbm(self.t * speed, axis, rough))
     }
 

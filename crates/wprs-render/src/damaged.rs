@@ -55,6 +55,8 @@ mod tests {
             opacity: 1.0,
             uv: None,
             relief: None,
+            flip: [false; 2],
+            grade: None,
         };
         let (mut target, mut ages) = (r.create_target(40, 20).unwrap(), Ages::default());
         let mut seen = Vec::new();

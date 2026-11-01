@@ -402,6 +402,20 @@ Sets the color shown around and behind the wallpaper of `output`, or of every ou
 `output` is empty (this also clears per-output colors). `color` is `#rrggbb`; anything else
 returns `InvalidArgs`.
 
+### `SetFilter(s filter, s output)`
+
+Colors the wallpaper of `output` with a filter, or of every output when `output` is empty (this
+also clears per-output filters); an empty `filter` clears it. `filter` is a JSON object with any of
+`look` (`none`, `warm`, `cool`, `golden`, `vivid`, `punch`, `muted`, `matte`, `fade`, `mono`, `noir`,
+`sepia`, `dusk`, `mint`, `rose` or `night`, default `none`), `strength` (how much of the look shows,
+0 to 1, default 1), `exposure` (stops, −3 to 3), `contrast`, `saturation` and `warmth` (−1 to 1) and
+`hue` (degrees, −180 to 180), all 0 by default; unknown keys and values out of range return
+`InvalidArgs`. The filter applies to pictures, videos, scenes and pages alike, never changes the
+files, is kept per output under `filter` in `config.toml` (a screen with a filter of its own,
+`none` included, keeps it when every output changes), like the fit and the color of the screen. It
+is folded into the pass that draws the wallpaper on the screen, so it costs no extra
+pass, and no filter costs nothing. The phone uses the filter of the `[default]` section.
+
 ### `GetSceneProperties(s output) → (s json)`
 
 A `SceneProperties` document for the package shown on `output`, or for `output = ""` the one set in
@@ -548,7 +562,8 @@ playlist and credit of each output are kept up to date when they change. `comput
 the graphics card runs compute shaders in hardware, and each output's `accent` is the accent color
 (`#rrggbb`) its wallpaper suggests: `display.accent` of its package (with the current value of a
 color property it names), else the dominant color of the preview or picture, or `null`; the Plasma
-wallpaper plugin gives it to Plasma as the accent color of the wallpaper.
+wallpaper plugin gives it to Plasma as the accent color of the wallpaper. `filter` is the filter of
+the output (`SetFilter`), or `null` when it shows its pictures as they are.
 
 ### `GetSchema() → (s json)`
 
@@ -2185,7 +2200,9 @@ struct OutputState {
     edited: bool, screen: Option<Screen>, mm: Option<[f64; 4]>, parallax: bool, frames: u64, refresh: u32, fps: u32,
     buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
     particles: String, quality: String, quality_reason: String, console: Vec<String>, sandbox: String,
+    accent: Option<String>, filter: Option<Filter>,
 }
+struct Filter { look: String, strength: f32, exposure: f32, contrast: f32, saturation: f32, warmth: f32, hue: f32 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }
 enum Shown { Color, Image, Video, Scene, Web }
 struct OutputPlaylist { uid: Uid, name: String, position: u32, count: u32, next_at: Option<Time> }

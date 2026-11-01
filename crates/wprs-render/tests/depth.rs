@@ -74,6 +74,8 @@ fn spanned_screens_stay_continuous_under_overscan() {
             opacity: 1.0,
             uv,
             relief: Some(relief),
+            flip: [false; 2],
+            grade: None,
         };
         let (mut target, mut pixels) = (r.create_target(W / 2, H).unwrap(), Vec::new());
         r.render_layers(&mut target, &[layer], &mut pixels).unwrap();

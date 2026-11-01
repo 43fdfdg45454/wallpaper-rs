@@ -82,6 +82,22 @@ impl Daemon {
         self.change_output(output, |c| c.set_background(output, color))
     }
 
+    pub fn set_filter(&self, filter: &str, output: &str) -> anyhow::Result<()> {
+        let output = output.trim();
+        let filter: wprs_core::Filter = match filter.trim() {
+            "" => wprs_core::Filter::default(),
+            text => serde_json::from_str(text).map_err(|e| InvalidArgs(format!("invalid filter: {e}")))?,
+        };
+        if !filter.valid() {
+            let ranges = wprs_core::filter::RANGES.map(|(n, lo, hi)| format!("{n} {lo} to {hi}")).join(", ");
+            return Err(InvalidArgs(format!("a filter takes {ranges}")).into());
+        }
+        self.change_output(output, |c| {
+            c.set_filter(output, filter);
+            Ok(())
+        })
+    }
+
     pub(crate) fn change_output(
         &self,
         output: &str,

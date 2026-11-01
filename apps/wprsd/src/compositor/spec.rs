@@ -164,6 +164,7 @@ pub struct Spec {
     pub background: [u8; 3],
     pub transition: Option<Duration>,
     pub refresh: u32,
+    pub tone: super::Tone,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

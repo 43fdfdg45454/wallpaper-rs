@@ -25,6 +25,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) texts: &'a [(usize, u64)],
     pub(crate) rasters: &'a HashMap<u64, super::rasters::Raster>,
     pub(crate) videos: &'a [(&'a str, &'a GpuImage)],
+    pub(crate) molds: &'a HashMap<String, super::molds::Mold>,
     pub(crate) exts: &'p mut Vec<GpuImage>,
     pub(crate) screen: Affine,
     pub(crate) stage: Affine,
@@ -81,9 +82,16 @@ impl<'a> Painter<'a, '_, '_> {
     }
 
     pub(crate) fn picture(&self, id: &str) -> Option<&'a GpuImage> {
-        let (videos, images) = (self.videos, self.images);
-        let video = videos.iter().find(|(name, _)| *name == id).map(|(_, v)| *v);
-        video.or_else(|| images.get(id).map(|image| &image.0))
+        self.moving(id).or_else(|| self.images.get(id).map(|image| &image.0))
+    }
+
+    pub(crate) fn moving(&self, id: &str) -> Option<&'a GpuImage> {
+        let (videos, molds) = (self.videos, self.molds);
+        videos
+            .iter()
+            .find(|(name, _)| *name == id)
+            .map(|(_, v)| *v)
+            .or_else(|| molds.get(id).map(|m| &m.image))
     }
 
     pub(crate) fn acquire(&mut self, size: (u32, u32)) -> Option<Src> {

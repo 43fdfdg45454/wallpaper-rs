@@ -3,7 +3,7 @@ use rquickjs::module::Declared;
 use rquickjs::{Ctx, Error, Module, Result};
 use std::collections::{HashMap, HashSet};
 
-const PARTS: [(&str, &str); 13] = [
+const PARTS: [(&str, &str); 17] = [
     ("wprs", include_str!("js/prelude.js")),
     ("wprs/math", include_str!("js/math.js")),
     ("wprs:scalars", include_str!("js/scalars.js")),
@@ -14,6 +14,10 @@ const PARTS: [(&str, &str); 13] = [
     ("wprs:base", include_str!("js/base.js")),
     ("wprs:extras", include_str!("js/extras.js")),
     ("wprs:layers", include_str!("js/layers.js")),
+    ("wprs:kin", include_str!("js/kin.js")),
+    ("wprs:stage", include_str!("js/stage.js")),
+    ("wprs:keep", include_str!("js/keep.js")),
+    ("wprs:molds", include_str!("js/molds.js")),
     ("wprs:media", include_str!("js/media.js")),
     ("wprs:life", include_str!("js/life.js")),
     ("wprs:first", include_str!("js/first.js")),

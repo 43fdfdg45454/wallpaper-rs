@@ -8,6 +8,12 @@ use std::time::Duration;
 use wprs_core::{Fit, UvRect};
 use wprs_render::{GpuImage, Layer, Relief, Target};
 
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct Tone {
+    pub flip: [bool; 2],
+    pub grade: Option<wprs_core::Grade>,
+}
+
 pub(in crate::compositor) struct Shown {
     pub(in crate::compositor) content: Content,
     pub(in crate::compositor) fit: Fit,
@@ -17,6 +23,7 @@ pub(in crate::compositor) struct Shown {
     pub(in crate::compositor) uv: Option<UvRect>,
     pub(in crate::compositor) relief: Option<Raised>,
     pub(in crate::compositor) scene: Option<SceneState>,
+    pub(in crate::compositor) tone: Tone,
 }
 
 impl Shown {
@@ -50,7 +57,8 @@ impl Shown {
             let shift = [p.strength * x / reach, p.strength * y * aspect / reach];
             Relief { depth, shift, focus: p.focus, steps: p.steps.min(steps), overscan: p.overscan }
         });
-        Layer { image, fit, background: self.background, opacity, uv: framed, relief }
+        let (flip, grade) = (self.tone.flip, self.tone.grade);
+        Layer { image, fit, background: self.background, opacity, uv: framed, relief, flip, grade }
     }
 }
 

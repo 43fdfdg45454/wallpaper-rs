@@ -3,8 +3,10 @@ mod clock;
 mod frame;
 #[cfg(not(target_os = "android"))]
 mod host;
+mod limits;
 mod local;
 mod modules;
+mod molds;
 #[cfg(not(target_os = "android"))]
 mod sandbox;
 mod setup;
@@ -13,6 +15,7 @@ mod wire;
 pub use frame::{Encoder, Frame, Mode};
 #[cfg(not(target_os = "android"))]
 pub use host::{Host, serve};
+pub use limits::Limits;
 pub use local::Local;
 #[cfg(not(target_os = "android"))]
 pub use sandbox::enter as sandbox;
@@ -30,21 +33,6 @@ use wprs_scene::ScriptOutputs;
 const MAX_FAILURES: u32 = 3;
 const MAX_OUTPUT: usize = 256 << 10;
 const RANDOM: &str = "((s) => () => ((s ^= s << 13, s ^= s >>> 17, s ^= s << 5) >>> 0) / 4294967296)";
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Limits {
-    pub memory: usize,
-    pub stack: usize,
-    pub update: Duration,
-    pub load: Duration,
-}
-
-impl Default for Limits {
-    fn default() -> Self {
-        let (update, load) = (Duration::from_millis(4), Duration::from_millis(100));
-        Limits { memory: 32 << 20, stack: 256 << 10, update, load }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, thiserror::Error, Serialize, Deserialize)]
 pub enum Error {
@@ -70,6 +58,8 @@ pub struct Script {
     outputs: ScriptOutputs,
     encoder: Encoder,
     zone: bool,
+    blob: Vec<u8>,
+    generation: u64,
 }
 
 impl Script {
@@ -128,6 +118,8 @@ impl Script {
             outputs,
             encoder,
             zone: false,
+            blob: Vec::new(),
+            generation: 0,
         })
     }
 
@@ -141,6 +133,7 @@ impl Script {
             return Err(Error::Disabled);
         }
         let (state, zone, behind) = (self.state.clone(), self.zone, self.failures > 0);
+        let blob = &mut self.blob;
         let budget = if self.started { self.limits.update } else { self.limits.load };
         let text = self.clock.run(&self.context, budget, |ctx| {
             let state = state.restore(ctx)?;
@@ -151,6 +144,7 @@ impl Script {
                 clock::set_zone(&rule);
             }
             let out: Option<Object> = state.get::<_, Function>("tick")?.call(())?;
+            molds::take(&state, blob)?;
             match out {
                 Some(out) => ctx.json_stringify(out)?.map(|s| s.to_string()).transpose(),
                 None => Ok(None),
@@ -173,8 +167,14 @@ impl Script {
         self.encoder = encoder;
         if let Some(text) = ran? {
             patched(&mut self.outputs, &text, &mut self.encoder)?;
+            molds::read(&self.blob, &mut self.outputs, &mut self.generation)
+                .map_err(|e| Error::Script(e.to_string()))?;
         }
         Ok(self.outputs.clone())
+    }
+
+    pub(crate) fn blob(&self) -> &[u8] {
+        &self.blob
     }
 
     pub fn destroy(&mut self) {

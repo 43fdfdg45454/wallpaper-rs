@@ -28,6 +28,7 @@ mod gpu;
 mod hearing;
 #[cfg(target_os = "android")]
 mod heif;
+mod keeping;
 mod keys;
 mod library;
 mod link;

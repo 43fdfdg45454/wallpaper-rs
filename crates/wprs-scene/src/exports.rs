@@ -51,8 +51,9 @@ pub use crate::helper::{
 pub use crate::hitbox::{AlphaMap, Hitbox, Hitboxes};
 pub use crate::ink::Ink;
 pub use crate::input::{
-    AudioFrame, BANDS, LayerOverride, ParticleCommand, ParticleControl, PointerState, ScriptOutputs,
-    SoundCommand, SoundControl, TimelineCommand, Tuning, VideoCommand, VideoControl,
+    AudioFrame, BANDS, BloomSet, CameraSet, GlideSet, LayerOverride, MAX_MESH_BYTES, MESH_FLOATS, Mesh,
+    ParticleCommand, ParticleControl, PointerState, ScriptOutputs, ShakeSet, SoundCommand, SoundControl,
+    StageSet, TimelineCommand, Tuning, VideoCommand, VideoControl,
 };
 pub use crate::layer::{Anchor, Inherit, Kind, Layer, Parallax, Solid, Transform};
 pub use crate::lean::Lean;

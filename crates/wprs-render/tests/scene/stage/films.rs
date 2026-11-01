@@ -12,6 +12,8 @@ fn shot_with_video(r: &Renderer, shot: &mut Shot, video: &wprs_render::GpuImage)
         opacity: 1.0,
         uv: None,
         relief: None,
+        flip: [false; 2],
+        grade: None,
     };
     let mut pixels = Vec::new();
     r.render_layers(&mut target, &[layer], &mut pixels).unwrap();

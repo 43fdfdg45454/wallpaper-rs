@@ -14,6 +14,7 @@ struct Params {
     shift: [f32; 2],
     focus: f32,
     steps: f32,
+    grade: [[f32; 4]; 5],
 }
 
 pub(crate) struct Slot {
@@ -35,7 +36,8 @@ impl Renderer {
             layer.uv.unwrap_or_else(|| UvRect::compute(layer.fit, image.size(), target))
         });
         let relief = layer.relief.filter(|_| layer.image.is_some());
-        let uv = relief.map_or(uv, |r| zoom(uv, r.overscan));
+        let uv = flipped(relief.map_or(uv, |r| zoom(uv, r.overscan)), layer.flip);
+        let turned = |s: [f32; 2]| [0, 1].map(|i| if layer.flip[i] { -s[i] } else { s[i] });
         let [r, g, b] = layer.background.map(srgb_to_linear);
         let params = Params {
             offset: uv.offset,
@@ -47,9 +49,10 @@ impl Renderer {
                 layer.image.is_some_and(opaque) as u32,
                 0,
             ],
-            shift: relief.map_or([0.0; 2], |r| r.shift),
+            shift: relief.map_or([0.0; 2], |r| turned(r.shift)),
             focus: relief.map_or(0.0, |r| r.focus),
             steps: relief.map_or(1, |r| r.steps.max(1)) as f32,
+            grade: layer.grade.map_or([[0.0; 4]; 5], |g| g.uniform()),
         };
         let (image, depth) = (layer.image.unwrap_or(&self.placeholder), relief.map(|r| r.depth));
         let key = (image.id, uv.repeat, depth.map(|d| d.id));
@@ -96,6 +99,13 @@ impl Renderer {
     }
 }
 
+fn flipped(mut uv: UvRect, flip: [bool; 2]) -> UvRect {
+    for i in (0..2).filter(|i| flip[*i]) {
+        (uv.offset[i], uv.scale[i]) = (uv.offset[i] + uv.scale[i], -uv.scale[i]);
+    }
+    uv
+}
+
 fn srgb_to_linear(c: u8) -> f32 {
     let c = f32::from(c) / 255.0;
     if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
@@ -127,6 +137,8 @@ mod tests {
             opacity,
             uv: None,
             relief: None,
+            flip: [false; 2],
+            grade: None,
         };
         let mut draw = |layers: &[Layer<'_>]| {
             r.render_layers(&mut target, layers, &mut pixels).unwrap();

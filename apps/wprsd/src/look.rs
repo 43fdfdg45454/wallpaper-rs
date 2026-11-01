@@ -1,3 +1,4 @@
+use crate::compositor::{Content, Tone};
 use std::path::Path;
 use wprs_core::Fit;
 use wprs_core::config::parse_hex_color;
@@ -11,8 +12,17 @@ pub(crate) fn display(path: &Path) -> wprs_format::Display {
     manifest.and_then(|m| m.display).unwrap_or_default()
 }
 
-pub fn author(path: &Path) -> Look {
-    let display = display(path);
+pub fn flip(display: &wprs_format::Display) -> [bool; 2] {
+    let flip = display.flip.unwrap_or(wprs_format::Flip::None);
+    [flip == wprs_format::Flip::Horizontal, flip == wprs_format::Flip::Vertical]
+}
+
+pub fn tone(display: &wprs_format::Display, shown: &Content, filter: wprs_core::Filter) -> Tone {
+    let shows = matches!(shown, Content::Image(_) | Content::Video(_));
+    Tone { flip: if shows { flip(display) } else { [false; 2] }, grade: filter.grade() }
+}
+
+pub fn author(display: &wprs_format::Display) -> Look {
     let span = display.span == Some(wprs_format::Span::AllOutputs);
     (display.fit.or(span.then_some(Fit::Span)), display.background.as_deref().and_then(parse_hex_color))
 }
@@ -50,7 +60,8 @@ mod tests {
         std::fs::write(source.join("manifest.json"), manifest.to_string()).unwrap();
         let wpak = dir.path().join("look.wpak");
         wprs_format::build(&source, &wpak, &wprs_format::Limits::default()).unwrap();
-        assert!(crate::decode::open(&wpak).is_err());
-        assert_eq!(author(&wpak), (None, Some([255, 0, 0])));
+        assert!(crate::decode::open(&wpak).is_ok());
+        assert_eq!(author(&display(&wpak)), (None, Some([255, 0, 0])));
+        assert_eq!(flip(&display(&wpak)), [true, false]);
     }
 }

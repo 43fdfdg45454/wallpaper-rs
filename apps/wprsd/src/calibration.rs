@@ -74,7 +74,14 @@ impl Daemon {
     pub(crate) fn show_pattern(&self, output: &str, size: (u32, u32), refresh: u32) -> bool {
         let Some(picture) = self.calibration_for(output) else { return false };
         let (content, transition) = (Content::Image(picture), Some(Duration::ZERO));
-        let spec = Spec { content, fit: Fit::Fill, background: [0; 3], transition, refresh };
+        let spec = Spec {
+            content,
+            fit: Fit::Fill,
+            background: [0; 3],
+            transition,
+            refresh,
+            tone: Default::default(),
+        };
         self.compositor.configure(output, size, spec);
         if let Some(info) = self.state().outputs.get_mut(output) {
             (info.uploaded, info.scene, info.video) = (None, None, None);

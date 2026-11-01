@@ -64,6 +64,17 @@ impl Runtime {
             }
         }
         outputs.effects.retain(|_, list| !list.is_empty());
+        if let Some(b) = outputs.stage.and_then(|s| s.bloom) {
+            let numbers = [("threshold", b.threshold), ("intensity", b.strength), ("radius", b.radius)];
+            let numbers =
+                numbers.into_iter().filter_map(|(k, v)| Some((k.to_owned(), crate::Param::Number(v?))));
+            let tint = b.tint.map(|t| ("tint".to_owned(), crate::Param::Color(crate::Color(t))));
+            let control =
+                crate::EffectControl { at: 0, params: numbers.chain(tint).collect(), ..Default::default() };
+            outputs.effects.insert(String::new(), vec![control]);
+        }
+        self.parents(&mut outputs);
+        self.molds(&mut outputs);
         let (wake, busy) = (outputs.wake, outputs.busy);
         (outputs.wake, outputs.busy, outputs.console) = (self.script.wake, self.script.busy, Vec::new());
         let changed = outputs != self.script;
@@ -165,6 +176,7 @@ impl Runtime {
             parallax: set.parallax.unwrap_or(layer.parallax.0),
             size: set.size.or(size),
             text,
+            world: cx.world(layer).0,
         })
     }
 }

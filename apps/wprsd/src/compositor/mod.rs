@@ -20,6 +20,7 @@ pub(crate) mod stops;
 mod surface;
 
 use crate::fatal;
+pub use output::Tone;
 pub use spec::*;
 use state::State;
 use std::collections::BTreeMap;

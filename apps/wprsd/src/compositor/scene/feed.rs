@@ -5,7 +5,9 @@ use wprs_render::{GpuImage, SceneView};
 use wprs_scene::MAX_PRESSES;
 
 impl SceneState {
-    pub(in crate::compositor) fn update(&mut self, spec: SceneSpec) -> bool {
+    pub(in crate::compositor) fn update(&mut self, mut spec: SceneSpec) -> bool {
+        spec.extra.retain(|(key, _)| !key.starts_with("wpak-user://"));
+        spec.extra.extend(self.listed.pixels.iter().cloned());
         let mut changed = self.runtime.set_props(spec.values.clone());
         let media = self.spec.media() != spec.media();
         if media {

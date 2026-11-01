@@ -1,18 +1,19 @@
 import { state, setup, MAX, owner, need, dirty, touched, put } from "wprs:core";
 import { fields, convert, copy, paramValue } from "wprs:values";
 import { video } from "wprs:media";
+import { family } from "wprs:kin";
 
 export const touches = ["click", "enter", "leave", "move", "down", "up"];
 export const own = { handles: new Map(), spawned: new Map(), watched: new Set(), touchers: {}, overrides: {}, once: {}, controls: {}, top: [...setup.top], ordered: false, count: 0, size: 0 };
 const sizes = new Map();
 const drawn = Object.keys(setup.layers).length;
 
-const info = (id) => {
+export const info = (id) => {
     if (setup.layers[id]) return setup.layers[id];
     const [head, ...rest] = id.split(".");
     return own.spawned.has(head) ? setup.templates[[own.spawned.get(head), ...rest].join(".")] : undefined;
 };
-const watch = (id) => void (own.watched.size < MAX.watched && !own.watched.has(id) && own.watched.add(id) && dirty.add("watch"));
+export const watch = (id) => void (own.watched.size < MAX.watched && !own.watched.has(id) && own.watched.add(id) && dirty.add("watch"));
 const sized = (template) => {
     if (!sizes.has(template)) sizes.set(template, Object.keys(setup.templates).filter((k) => k === template || k.startsWith(`${template}.`)).length);
     return sizes.get(template);
@@ -77,6 +78,7 @@ export function layer(id, watching = true) {
         },
         destroy: () => scene.destroy(id),
     };
+    family(h, id);
     for (const key of fields) {
         Object.defineProperty(h, key, {
             enumerable: true,
@@ -95,7 +97,7 @@ export function layer(id, watching = true) {
 
 const spot = (index) => Math.max(0, Math.min(own.top.length, Math.trunc(Number(index) || 0)));
 
-export const scene = Object.freeze({
+export const scene = {
     layer: (id) => layer(id),
     layers: () => [...own.top],
     spawn(template, options = {}) {
@@ -140,4 +142,4 @@ export const scene = Object.freeze({
         own.ordered = true;
         dirty.add("order");
     },
-});
+};

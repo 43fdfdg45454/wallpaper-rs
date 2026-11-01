@@ -42,6 +42,7 @@ pub struct Frame<'a> {
     pub sounds: &'a [String],
     pub videos: &'a [Course],
     pub ended: &'a [String],
+    pub folders: &'a str,
 }
 
 impl Frame<'static> {
@@ -67,6 +68,7 @@ impl Frame<'static> {
             sounds: &[],
             videos: &[],
             ended: &[],
+            folders: "",
         }
     }
 }
@@ -77,12 +79,13 @@ pub struct Encoder {
     props: Option<Values>,
     zone: Option<String>,
     audio: Option<AudioFrame>,
+    folders: Option<String>,
     pub(crate) resend: bool,
 }
 
 impl Encoder {
     pub fn reset(&mut self) {
-        (self.props, self.zone, self.audio) = (None, None, None);
+        (self.props, self.zone, self.audio, self.folders) = (None, None, None, None);
     }
 
     pub fn encode(&mut self, f: &Frame) -> &[u8] {
@@ -129,7 +132,7 @@ impl Encoder {
                 Some(Extent::Box(b)) => w.u8(2).f32s(&b),
                 None => w.u8(0),
             };
-            w.opt(r.text.as_deref());
+            w.opt(r.text.as_deref()).f32s(&r.world);
         }
         w.u16(f.touches.len());
         for t in f.touches {
@@ -146,6 +149,10 @@ impl Encoder {
         w.u16(f.ended.len());
         for id in f.ended {
             w.str(id);
+        }
+        if w.flag(!f.folders.is_empty() && self.folders.as_deref() != Some(f.folders)) {
+            w.str(f.folders);
+            self.folders = Some(f.folders.to_owned());
         }
         w.flag(std::mem::take(&mut self.resend));
         self.buf = std::mem::take(&mut w.0);

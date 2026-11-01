@@ -64,6 +64,8 @@ impl Run {
             opacity: 1.0,
             uv: None,
             relief: None,
+            flip: [false; 2],
+            grade: None,
         };
         r.render_layers(&mut target, &[layer], &mut pixels).unwrap();
         pixels

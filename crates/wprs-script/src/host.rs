@@ -28,7 +28,13 @@ pub fn serve() -> std::io::Result<()> {
         };
         match reply {
             Ok(None) => send(&mut out, 0, &[])?,
-            Ok(Some(text)) => send(&mut out, 1, text.as_bytes())?,
+            Ok(Some(text)) => match script.as_ref().map(Script::blob).filter(|b| !b.is_empty()) {
+                Some(blob) => {
+                    let body = [&(text.len() as u32).to_le_bytes()[..], text.as_bytes(), blob].concat();
+                    send(&mut out, 4, &body)?
+                }
+                None => send(&mut out, 1, text.as_bytes())?,
+            },
             Err(e) => send(&mut out, 2, serde_json::to_string(&e)?.as_bytes())?,
         }
     }
@@ -68,6 +74,7 @@ pub struct Host {
     encoder: Encoder,
     progress: (u64, u64),
     kept: ScriptOutputs,
+    generation: u64,
 }
 
 impl Host {
@@ -76,7 +83,17 @@ impl Host {
         let command = (program.into(), args.iter().map(|a| a.to_string()).collect());
         let (retry, encoder) = (Instant::now(), Encoder::default());
         let kept = ScriptOutputs::default();
-        Host { command, load, running: None, failures: 0, retry, encoder, progress: (0, 0), kept }
+        Host {
+            command,
+            load,
+            running: None,
+            failures: 0,
+            retry,
+            encoder,
+            progress: (0, 0),
+            kept,
+            generation: 0,
+        }
     }
 
     pub fn progress(&self) -> (u64, u64) {
@@ -123,6 +140,16 @@ impl Host {
             Ok(Some((1, body))) => {
                 let text = String::from_utf8_lossy(&body);
                 patched(&mut self.kept, &text, &mut self.encoder).map(|()| Some(self.kept.clone()))
+            }
+            Ok(Some((4, body))) => {
+                let split =
+                    body.get(..4).map_or(0, |n| u32::from_le_bytes([n[0], n[1], n[2], n[3]]) as usize);
+                let (text, blob) =
+                    body.get(4..).unwrap_or_default().split_at(split.min(body.len().saturating_sub(4)));
+                patched(&mut self.kept, &String::from_utf8_lossy(text), &mut self.encoder)?;
+                crate::molds::read(blob, &mut self.kept, &mut self.generation)
+                    .map_err(|e| Error::Script(e.to_string()))
+                    .map(|()| Some(self.kept.clone()))
             }
             Ok(Some((_, body))) => match serde_json::from_slice(&body) {
                 Ok(Error::Disabled) => {

@@ -28,6 +28,8 @@ pub(crate) fn at_level(shot: &mut Shot, r: &Renderer, quality: Quality) -> Vec<u
         opacity: 1.0,
         uv: None,
         relief: None,
+        flip: [false; 2],
+        grade: None,
     };
     let mut pixels = Vec::new();
     r.render_layers(&mut target, &[layer], &mut pixels).unwrap();

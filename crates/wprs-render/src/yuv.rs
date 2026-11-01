@@ -142,6 +142,15 @@ impl Renderer {
     }
 
     pub(crate) fn convert(&self, group: &wgpu::BindGroup, image: &GpuImage) {
+        self.draw_with(&self.converter().pipeline, group, image)
+    }
+
+    pub(crate) fn draw_with(
+        &self,
+        pipeline: &wgpu::RenderPipeline,
+        group: &wgpu::BindGroup,
+        image: &GpuImage,
+    ) {
         let mut encoder = self.device.create_command_encoder(&Default::default());
         let ops =
             wgpu::Operations { load: wgpu::LoadOp::Clear(wgpu::Color::BLACK), store: wgpu::StoreOp::Store };
@@ -153,7 +162,7 @@ impl Renderer {
             color_attachments: &[Some(attachment)],
             ..Default::default()
         });
-        pass.set_pipeline(&self.converter().pipeline);
+        pass.set_pipeline(pipeline);
         pass.set_bind_group(0, group, &[]);
         pass.draw(0..3, 0..1);
         drop(pass);

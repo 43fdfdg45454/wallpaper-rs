@@ -38,6 +38,10 @@ impl Daemon {
         Err(zbus::fdo::Error::InvalidArgs(format!("invalid value {value:?} for {key}")))
     }
 
+    fn set_filter(&self, filter: String, output: String) {
+        self.0.push(format!("SetFilter [{output}] {filter}"));
+    }
+
     fn get_schema(&self) -> String {
         let immich = json!({"kind": "immich", "hosts": [], "options": [],
             "secret": {"name": "api_key", "required": true}});

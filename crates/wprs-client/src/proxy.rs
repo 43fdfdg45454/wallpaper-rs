@@ -12,6 +12,7 @@ pub trait Daemon1 {
     fn release_stream(&self, output: &str) -> Result<()>;
     fn set_wallpaper(&self, path: &str, output: &str, fit: &str) -> Result<()>;
     fn set_background(&self, color: &str, output: &str) -> Result<()>;
+    fn set_filter(&self, filter: &str, output: &str) -> Result<()>;
     fn set_option(&self, key: &str, value: &str) -> Result<()>;
     fn set_paused(&self, paused: bool) -> Result<()>;
     fn set_volume(&self, volume: f64) -> Result<()>;

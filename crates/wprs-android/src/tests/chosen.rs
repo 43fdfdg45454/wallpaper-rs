@@ -35,7 +35,7 @@ pub(super) fn chosen_files_and_folders() {
         json!({ "op": "choose", "uid": uid, "key": "photo", "fd": clip.as_raw_fd(), "name": "clip.webm" }),
     );
     assert_eq!(refused["id"], json!("android.not_accepted"), "an image property takes no video");
-    let gathered = |at| Extras::gather(&pack, &props::values(&pack), at, &Extras::default());
+    let gathered = |at| Extras::gather(&pack, (&props::values(&pack), &[]), at, &Extras::default());
     let sky = gathered(0).assets(&pack).images["sky"].size();
     assert_eq!(sky, (640, 180), "the chosen picture replaces the default one");
     let plan = ask(json!({ "op": "folder", "uid": uid, "key": "album", "tree": "content://tree/photos" }));

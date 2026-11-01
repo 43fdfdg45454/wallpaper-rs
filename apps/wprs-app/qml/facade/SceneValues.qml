@@ -47,6 +47,7 @@ QtObject {
             "fixed": App.tr("Fixed"),
             "front": App.tr("Front"),
             "g": App.tr("Green"),
+            "folders": App.tr("Files of chosen folders"),
             "genres": App.tr("Genres"),
             "geometry": App.tr("Shapes"),
             "glow": App.tr("Glow"),

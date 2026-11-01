@@ -1,9 +1,8 @@
 use super::{Command, Reel, Settings, lock, loudness};
 use std::path::Path;
-use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
-use wprs_render::{GpuImage, Imported, Renderer, Shared, log_allowed};
+use wprs_render::{GpuImage, Imported, Renderer};
 use wprs_video::{Event, Frame, Options, Player};
 
 const RETRIES: u32 = 3;
@@ -32,6 +31,7 @@ pub(super) struct PlayerSlot {
     inbox: Arc<Inbox>,
     shares: bool,
     imported: Option<Imported>,
+    deep: Option<wprs_render::Deep>,
     held: Option<Frame>,
     pub(super) steered: Option<(wprs_video::Cut, u32)>,
 }
@@ -55,6 +55,7 @@ impl PlayerSlot {
             inbox,
             shares,
             imported,
+            deep: None,
             held,
             steered: None,
         }
@@ -142,41 +143,6 @@ impl PlayerSlot {
         uploaded
     }
 
-    fn upload(&mut self, path: &Path, renderer: &Renderer, frame: Frame, now: Instant) -> bool {
-        let (data, w, h, stride) = (frame.data(), frame.width, frame.height, frame.stride);
-        let uploaded = match (frame.dmabuf(), &mut self.texture) {
-            (Some(shared), _) => {
-                let (modifier, bt709, full, turn) = (shared.modifier, shared.bt709, shared.full, shared.turn);
-                let planes = shared.planes();
-                let wanted = Shared { size: (w, h), modifier, planes, bt709, full, turn, fit: self.max_size };
-                let image = renderer.convert_shared(&mut self.imported, &wanted).cloned();
-                image.map(|image| drop(self.texture.replace(image)))
-            }
-            (None, Some(texture)) if self.decode == "copy" => {
-                renderer.update_rgba(texture, data, w, h, stride)
-            }
-            (None, _) => renderer.upload_rgba(data, w, h, stride).map(|t| drop(self.texture.replace(t))),
-        };
-        let shared = frame.dmabuf().is_some();
-        if uploaded.is_ok() {
-            self.imported = self.imported.take().filter(|_| shared);
-            (self.decode, self.held) = (if shared { "zero-copy" } else { "copy" }, shared.then_some(frame));
-        } else if shared {
-            self.copy_instead(now);
-        }
-        let Err(e) = uploaded else {
-            (self.error, self.failures) = (None, 0);
-            self.due = self.due.filter(|_| self.player.is_none());
-            return true;
-        };
-        static UPLOAD_ERRORS: AtomicU64 = AtomicU64::new(0);
-        if log_allowed(&UPLOAD_ERRORS) {
-            tracing::warn!("cannot upload a video frame: {e}");
-            tracing::debug!(path = %path.display(), "video with frames that cannot be uploaded");
-        }
-        false
-    }
-
     fn copy_instead(&mut self, now: Instant) {
         tracing::info!("the GPU cannot read the decoded video frames in place, copying them instead");
         (self.shares, self.player, self.imported, self.held, self.due) = (false, None, None, None, Some(now));
@@ -197,3 +163,4 @@ impl PlayerSlot {
 
 #[cfg(test)]
 mod tests;
+mod upload;

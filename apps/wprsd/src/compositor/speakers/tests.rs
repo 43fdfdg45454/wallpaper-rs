@@ -70,7 +70,17 @@ fn a_silent_scene_wakes_the_loop_on_its_clock_before_any_speaker_exists() {
     scene.hear(tick, now);
     let (content, background) = (Content::Scene(scene.spec.clone()), [0; 3]);
     let (image, transition, uv, relief, scene) = (None, None, None, None, Some(scene));
-    let shown = Shown { content, fit: Fit::Stretch, background, image, transition, uv, relief, scene };
+    let shown = Shown {
+        content,
+        fit: Fit::Stretch,
+        background,
+        image,
+        transition,
+        uv,
+        relief,
+        scene,
+        tone: Default::default(),
+    };
     let outputs = BTreeMap::from([("A".into(), Output::new((16, 9), shown, Sink::Stream(None), 60))]);
     let chosen = |live| Chosen::from([(PathBuf::new(), ("A".into(), live, 1.0))]);
     assert_eq!(ticks(&outputs, chosen(true)).collect::<Vec<_>>(), [now + tick]);

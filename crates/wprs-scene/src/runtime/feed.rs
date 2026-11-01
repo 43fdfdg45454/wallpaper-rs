@@ -61,6 +61,7 @@ impl Runtime {
             self.stirred[0] = self.t;
         }
         let delay = self.scene.canvas.parallax.as_ref().map_or(crate::input::SETTLE, |g| g.delay);
+        let delay = self.script.stage.and_then(|s| s.parallax?.delay).unwrap_or(delay);
         let dt = (self.t - self.glided).clamp(0.0, MAX_STEP) as f32;
         self.glide = match delay == crate::input::SETTLE {
             true => pointer,
@@ -79,7 +80,8 @@ impl Runtime {
     }
 
     pub fn set_reduced_motion(&mut self, still: bool) -> bool {
-        let shakes = self.scene.canvas.camera.as_ref().is_some_and(|c| c.shake.is_some());
+        let shakes = self.scene.canvas.camera.as_ref().is_some_and(|c| c.shake.is_some())
+            || self.script.stage.is_some_and(|s| s.camera.is_some_and(|c| c.shake.is_some()));
         let moves = shakes || self.scene.layers().any(|l| !l.parallax.is_zero());
         moves && std::mem::replace(&mut self.still, still) != still
     }

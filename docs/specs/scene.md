@@ -1263,8 +1263,8 @@ reading hidden files, at most `max_files` of them in name order, and nothing is 
 turn missed then happens once when the scene shows again. Files and folders are chosen by the user
 through the file chooser, are never set by presets and never travel with exported settings or sync.
 `mode: all` lets web pages list every file of the folder (`files`, `onFiles`, `web.md`), where
-`one` only gives them one file at a time (`randomFile`); a scene whose scripts would list it needs
-the feature `script_folders`, which no platform runs yet.
+`one` only gives them one file at a time (`randomFile`); scene scripts list it with `folder(prop)`
+(see "Scripts"), which needs the feature `script_folders`.
 
 A `shortcut` holds what the user chose to open from the wallpaper: an `https://` address of at
 most 2048 characters (opened through the OpenURI portal of the desktop, which may ask first), a
@@ -1401,7 +1401,9 @@ export const sway = (value, { params }) => Math.sin(scene.layer("tree").rotation
 | `audio` | `bass`, `mid`, `treble`, `level`, `beat`, `bands(16 \| 32 \| 64, "left" \| "right" \| "average")` (a new array) and `buffers(16 \| 32 \| 64)`: `{ left, right, average }` as `Float32Array`s that the engine fills in place before each frame |
 | `input` | `cursor`: `x`, `y` (fractions of the screen), `inside`, `buttons`, `left`, `scene` (canvas pixels) and `screen` (screen pixels); `buttons` and `left` stay 0 without the `clicks` input |
 | `sound(id)` | a sound layer of the scene (`uses: ["sounds"]`, `script_sounds`): `play()` (from where `pause()` left it, or from the start), `pause()`, `stop()` (back to the start), `playing` and `volume` (0 to 1, multiplied by the volume of the layer and the user's). The first call takes the sound over from its `play_on`; the layer's own `play` and the user's mute still silence it. Phones play no scene sounds, so there the calls change nothing |
-| `scene` | `layer(id)`, `layers()` (the ids of the top-level layers in drawing order), `spawn(template, options)`, `destroy(id)` and `order(id, index)` |
+| `scene` | `layer(id)`, `layers()` (the ids of the top-level layers in drawing order), `spawn(template, options)`, `destroy(id)` and `order(id, index)`, and `mesh(pool)`, `camera`, `parallax`, `bloom` and `background` (see below) |
+| `storage` | `get`, `set`, `delete`, `clear` and `keys` of what the scripts keep (see below) |
+| `folder(prop)` | the pictures of a folder the user chose (see below) |
 | `timeline(id)` | `play()`, `pause()`, `reverse()`, `stop()`, `seek(t)`, `speed` (−100 to 100; below zero the timeline runs backwards like after `reverse()`, and one that plays `once` ends at its start), `time`, `duration`, `playing` and `on(name, handler)` for its events and `ended` |
 | `particles(layer)` | `play`, `pause` (no births, particles keep moving), `stop` (removes them until `play`), `playing`, `emit(n)` (1 to 1000), `point(n, [x, y])` and the `instance` fields `alpha`, `size`, `count`, `speed`, `life`, `time_scale`, `brightness` and `color`, which last until changed |
 | `shared` | an object shared by all the modules of the scene: at most 256 values, each a frozen copy of what was set (numbers, strings, booleans, arrays, typed arrays and objects of them, at most 65536 items and 32 levels in all), so a value changes by setting it again; getters, functions and other prototypes are refused; modules may also `import` each other with relative paths (`./lib/bands.js`), among the files of `scripts` |
@@ -1440,6 +1442,54 @@ clamped to its range; pictures cannot be changed), `get(parameter)`, `reset()` (
 with `state` keeps) and `index`, `name` and `effect`. What a script sets lasts until changed, and the
 inputs of the scene count every effect of a scene whose scripts use `effects` as shown.
 
+### Parents, the camera, shapes, storage and folders
+
+With `hierarchy`, `layer.parent` is the id of the layer it follows (its `parent`, or the group that
+holds it) or `null`, `layer.children` the ids of the layers that follow it or that its group holds,
+and `layer.world` a `wprs/math` `Mat3` from the pixels of the layer to canvas pixels, without the
+camera, as the scene evaluated it at the last frame. `layer.setParent(id, keep)` makes a layer follow
+another layer of the scene (`null` to follow none) without changing the order of drawing, as `parent`
+does in `scene.json`; with `keep` the layer stays where it is, its position, rotation and scale
+turned into ones relative to the new parent. A layer cannot follow itself or one that follows it, nor
+more than 8 parents deep: the call throws and the engine drops such a parent too. `lookAt(from, to)`
+of `wprs/math` gives the angle in degrees that turns a layer at `from` towards `to`.
+
+With `camera`, `scene.camera` (`{ center, zoom, rotation, shake: { enabled, amplitude, roughness,
+speed } }`), `scene.parallax` (`{ amount, delay }`), `scene.bloom` (`{ threshold, strength, radius,
+tint }`) and `scene.background` (a color) read what the scene sets in `canvas` and what the script
+wrote; writing an object changes only the fields it names, within the ranges of `canvas`, and `null`
+gives the field back to the scene. The camera is the same transformation as `canvas.camera`, without
+passes, its shake stays still with *reduce motion* and at Q0, and bloom changes only a scene whose
+`canvas` sets `bloom`.
+
+With `geometry`, `scene.mesh(pool)` gives a pool of `pools`: `create({ vertices, indices, format,
+visible })` adds a shape and returns it, with `update(fields)`, `destroy()`, `id` and `alive`;
+`shapes` lists them and `clear()` removes them. `vertices` is a `Float32Array` or an array of numbers
+in pixels of the pool, by vertex `x, y` (`format: "xy"`), `x, y, u, v` (`"xyuv"`, the default), `x, y,
+r, g, b, a` (`"xyrgba"`) or `x, y, u, v, r, g, b, a` (`"xyuvrgba"`), colors from 0 to 1 that tint
+`texture` (white without one); `indices` (a `Uint32Array` or numbers, three a triangle, at most six a
+vertex) default to the vertices in order. A pool holds at most `max` shapes and `max_vertices`
+vertices, the shapes of a frame take at most 1 MiB, and the engine drops a pool whose shapes name a
+vertex that is not there or a number that is not finite. The shapes are drawn into a picture of the
+pool of `size` (`[w, h]`, 1 to 4096, the canvas by default) that a `video` layer shows with `"video":
+"<pool id>"`, so they take the place, transform, effects, masks and blending of that layer; a pool
+that does not change draws nothing again and asks for no frames, and what the scripts send is binary,
+not text.
+
+With `storage`, `storage.get(key, scope)`, `set(key, value, scope)`, `delete(key, scope)`,
+`clear(scope)` and `keys(scope)` keep JSON values for the package (`"package"`, the default) or for
+the screen (`"output"`), at most 64 KiB in each scope: `set` throws past that or for a value that is
+not JSON. They are kept on the device only (never synced or exported), in a file of the package
+(mode 0600) that is written at most every 5 s and when the scene stops, and removed with the package;
+a scene whose scripts use storage runs one script process per screen.
+
+With `folders`, `folder(prop)` lists a `folder` property with `mode: all`: `files` are opaque ids of
+its pictures (an id changes when its file is written again), `name(id)` the name of the file, and
+`on("added" | "removed" | "changed", handler)` gets `{ prop, files }` (`changed` as `[old, new]`
+pairs) when the folder changes, looked at every 2 s while the scene is shown. `show(layer, id)` makes
+an image layer show that file instead of its own picture (`null` gives it back), at most eight files
+at once. Scripts never see paths, and the phone lists the folder the user chose in the same way.
+
 `templates` maps at most 64 ids to layers that scripts with `layers` copy into the scene, validated
 like the other layers (`script_layers`); a template id may not be the id of a layer, a template holds
 at most 256 layers with its children, and templates are pictures, texts, shapes, solids, spectra and
@@ -1461,8 +1511,8 @@ The `wprs/math` module, written for this engine, has `Vec2`, `Vec3` and `Vec4` (
 (`translation`, `scaling`, `rotationX/Y/Z`, `fromEuler`, `perspective`, `lookAt`, `transformPoint`,
 `transformVector` and `decompose`), both with `multiply`, `transpose`, `determinant`, `invert`,
 `equals` and `get(row, col)`, and `clamp`, `mix`, `smoothstep`, `step`, `fract`, `remap`, `degrees`,
-`radians`, `angleDelta`, `mixAngle`, `angleVector`, `vectorAngle`, `rgbToHsv` and `hsvToRgb` (hue from
-0 to 1). Vectors and colors go in and out as these classes or as arrays.
+`radians`, `angleDelta`, `mixAngle`, `angleVector`, `vectorAngle`, `lookAt`, `rgbToHsv` and `hsvToRgb` (hue
+from 0 to 1). Vectors and colors go in and out as these classes or as arrays.
 
 `Math.random` follows `clock.seed`, and `clock.seed: null` gives it a new seed on every start.
 Scripts never see paths, device names, the battery or the list of fonts.
@@ -1488,7 +1538,7 @@ module's exports, imports and calls.
 | Field | Meaning |
 |-------|---------|
 | `events` | the functions the module exports and the events it handles, each once: the lifecycle above (`update` is the only one older engines call), the pointer events of `solid` layers and `hit` bones `click`, `down`, `up` (input `clicks`), `enter`, `leave` and `move` (input `pointer`), delivered with `scene.layer(id).on(event, handler)` as `{ type, layer, local, scene }` with the touched bone, and `mediaStatus`, `mediaPlayback`, `mediaProperties`, `mediaThumbnail` and `mediaTimeline` (input `media`) |
-| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, and parts that engines run later: `media` (the `media` object and its colors, input `media`; `media_info`), `storage` (`storage.get`, `set`, `delete` and `clear` per output or package, 64 KiB of JSON kept on the device only, removed with the package; `script_storage`), `geometry` (`scene.mesh(pool)` with `create`, `update` and `destroy`, at most 1 MiB of vertices a frame; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`; texture frames, mesh and model clips, bones, shapes and attachments come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `camera3d`, `parallax` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`) and `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) |
+| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, `media` (the `media` object and its colors, input `media`; `media_info`, which engines run later), `storage` (`storage`; `script_storage`), `geometry` (`scene.mesh(pool)`; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`; texture frames, mesh and model clips, bones, shapes and attachments come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `parallax`, `bloom` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`), `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) and `folders` (`folder(prop)`; `script_folders`), described in "Parents, the camera, shapes, storage and folders" |
 | `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}`. They live only here: the module does not export them and `scene import-script` does not propose them |
 
 Any event but `update`, any part but `audio`, `pointer` and `clicks`, and `params` name `scripts2`;
@@ -1506,7 +1556,7 @@ timers, or exports `init`, `destroy`, `resize`, `properties` or `settings`, and 
 those imports and calls. Its inputs are those of what it imports from `wprs`: `audio` the sound and
 `input` the pointer, never words that only appear in its comments or texts. Effect uses may carry a `name` (`[a-z0-9_]{1,32}`, unique in their layer) by which scripts find
 them (`scripts2`). `pools` maps at most 16 ids to `{ "type": "mesh", "max" (1 to 256 shapes),
-"max_vertices" (3 to 65536), "texture" }`, the shapes scripts with `geometry` may build
+"max_vertices" (3 to 65536), "texture", "size" }`, the shapes scripts with `geometry` may build
 (`script_geometry`).
 
 ```json

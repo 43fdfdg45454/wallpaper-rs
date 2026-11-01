@@ -50,7 +50,7 @@ impl Painter<'_, '_, '_> {
             false => *owner == e.descriptor.id && *key == def.id,
         };
         let found = id.and_then(|id| images.get(id)).or_else(|| paints.iter().find(painted).map(|(.., i)| i));
-        let moving = id.and_then(|id| self.videos.iter().find(|(name, _)| *name == id)).map(|(_, v)| *v);
+        let moving = id.and_then(|id| self.moving(id));
         moving.or(found.map(|image| &image.0)).map(|image| self.ext(image))
     }
 

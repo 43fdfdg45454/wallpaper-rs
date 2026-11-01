@@ -54,6 +54,8 @@ fn pixels(r: &Renderer, view: &mut SceneView, runtime: &Runtime) -> Vec<u8> {
         opacity: 1.0,
         uv: None,
         relief: None,
+        flip: [false; 2],
+        grade: None,
     };
     let (mut target, mut out) = (r.create_target(SIZE.0, SIZE.1).unwrap(), Vec::new());
     r.render_layers(&mut target, &[layer], &mut out).unwrap();

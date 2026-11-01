@@ -6,11 +6,15 @@ use serde_json::json;
 use wprs_scene::{AudioFrame, Extent, LayerRead, PointerState, Values, script_key};
 use wprs_script::{Frame, Mode, Touch, TouchKind};
 
+mod geometry;
+mod hierarchy;
 mod inputs;
+mod keep;
 mod layers;
 mod lifecycle;
 mod modules;
 mod shortcuts;
+mod stage;
 
 fn spin_scene() -> serde_json::Value {
     let params = json!({ "speed": { "type": "number", "default": 1, "min": 0, "max": 10 } });

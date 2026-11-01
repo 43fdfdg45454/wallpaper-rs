@@ -53,6 +53,8 @@ pub enum Command {
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
+    #[command(about = "Color the wallpaper of a screen with a look and adjustments; none clears it")]
+    Filter(crate::filtering::FilterArgs),
     #[command(about = "Change a setting, or list them all without arguments")]
     Config {
         #[arg(help = "Setting such as transition.kind; see the list without arguments")]

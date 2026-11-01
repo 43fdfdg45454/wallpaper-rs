@@ -9,6 +9,7 @@ mod calibrate;
 mod color;
 mod damaged;
 mod decode;
+mod deep;
 mod develop;
 mod device;
 #[cfg(target_os = "linux")]
@@ -44,6 +45,7 @@ pub use decode::{
     decode_image, decode_limited, decode_reduced, decode_unoriented, decoded_size, image_size, needed_edge,
     picture_limits, thumbnails,
 };
+pub use deep::{Deep, DeepPlanes, GAMUT, KNEE, PEAK_NITS, REFERENCE_NITS, deep_rows};
 pub use device::{Display, Renderer};
 #[cfg(target_os = "linux")]
 pub use dmabuf::{Dmabuf, Dmabufs};
@@ -100,6 +102,8 @@ pub struct Layer<'a> {
     pub opacity: f32,
     pub uv: Option<UvRect>,
     pub relief: Option<Relief<'a>>,
+    pub flip: [bool; 2],
+    pub grade: Option<wprs_core::Grade>,
 }
 
 pub fn log_allowed(last: &AtomicU64) -> bool {

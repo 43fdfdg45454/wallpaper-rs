@@ -6,7 +6,7 @@ use wprs_scene::ScriptOutputs;
 const PATIENCE: Duration = Duration::from_millis(250);
 const SLOW: u32 = 20;
 
-type Reply = (Result<Option<String>, Error>, Vec<u8>);
+type Reply = (Result<Option<(String, Vec<u8>)>, Error>, Vec<u8>);
 
 pub struct Local {
     frames: Sender<Vec<u8>>,
@@ -18,6 +18,7 @@ pub struct Local {
     progress: (u64, u64),
     first: Duration,
     kept: ScriptOutputs,
+    generation: u64,
 }
 
 impl Local {
@@ -32,7 +33,7 @@ impl Local {
             };
             if outbox.send((Ok(None), Vec::new())).is_ok() {
                 while let Ok(frame) = inbox.recv() {
-                    let reply = script.run(&frame);
+                    let reply = script.run(&frame).map(|t| t.map(|t| (t, script.blob().to_vec())));
                     if outbox.send((reply, frame)).is_err() {
                         break;
                     }
@@ -45,7 +46,18 @@ impl Local {
         let first = (limits.load * SLOW).max(PATIENCE);
         let (encoder, waiting, progress) = (Encoder::default(), Some(Instant::now()), (0, 0));
         let kept = ScriptOutputs::default();
-        Local { frames, replies, encoder, waiting, replied: 0, failures, progress, first, kept }
+        Local {
+            frames,
+            replies,
+            encoder,
+            waiting,
+            replied: 0,
+            failures,
+            progress,
+            first,
+            kept,
+            generation: 0,
+        }
     }
 
     pub fn progress(&self) -> (u64, u64) {
@@ -88,8 +100,11 @@ impl Local {
         self.waiting = Some(Instant::now());
         match reply {
             None | Some(Ok(None)) => Ok(None),
-            Some(Ok(Some(text))) => {
-                patched(&mut self.kept, &text, &mut self.encoder).map(|()| Some(self.kept.clone()))
+            Some(Ok(Some((text, blob)))) => {
+                patched(&mut self.kept, &text, &mut self.encoder)?;
+                crate::molds::read(&blob, &mut self.kept, &mut self.generation)
+                    .map_err(|e| Error::Script(e.to_string()))
+                    .map(|()| Some(self.kept.clone()))
             }
             Some(Err(Error::Disabled)) => {
                 self.failures = MAX_FAILURES;

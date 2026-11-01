@@ -135,6 +135,7 @@ pub(crate) fn apply<'js>(ctx: &Ctx<'js>, state: &Object<'js>, bytes: &[u8]) -> R
             _ => at.remove("size")?,
         }
         at.set("text", c.opt()?)?;
+        pair(ctx, &at, "world", &c.f32s::<6>()?)?;
     }
     let touches = Array::new(ctx.clone())?;
     for i in 0..c.u16()? {
@@ -165,6 +166,7 @@ pub(crate) fn apply<'js>(ctx: &Ctx<'js>, state: &Object<'js>, bytes: &[u8]) -> R
         ended.set(i, c.str()?)?;
     }
     frame.set("ended", ended)?;
+    frame.set("folders", c.opt()?)?;
     if c.flag()? {
         state.get::<_, Function>("forget")?.call::<_, ()>(())?;
     }

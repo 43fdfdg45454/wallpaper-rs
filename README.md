@@ -106,9 +106,14 @@ perfil y una fila por pantalla con la miniatura y el nombre de su fondo y los bo
 (solo con una lista en marcha), *Elegir…* y *Favorito*; la miniatura de un paquete para adultos sale
 difuminada hasta que haces clic en ella y, si el fondo destella, la fila lo avisa. También pregunta
 qué permitir a una escena que lo pide. Todo lo demás está en la app: *Abrir wallpaper-rs* la abre y
-*Ajustes…* la abre directamente en su página *Ajustes*, con el modo de ajuste, el color de fondo y
-la lista de cada pantalla o de todas a la vez, los ajustes de cada escena, los fotogramas por
-segundo, las pausas y las transiciones. Lo mismo hace `wprs-app --page settings` (o la acción
+*Ajustes…* la abre directamente en su página *Ajustes*, con el modo de ajuste, el color de fondo,
+el filtro y la lista de cada pantalla o de todas a la vez, los ajustes de cada escena, los fotogramas
+por segundo, las pausas y las transiciones. El filtro (botón *Filtro*, o `wprs-ctl filter`) colorea
+cualquier fondo de una pantalla, imagen, vídeo, escena o página, sin tocar los archivos: uno de 15
+estilos propios (cálido, frío, dorado, vivo, intenso, apagado, mate, desvaído, blanco y negro, noir,
+sepia, atardecer, menta, rosa y noche) con su intensidad, más exposición, contraste, saturación,
+calidez y tono. Va dentro de la pasada que dibuja el fondo en la pantalla, así que no añade otra, y
+sin filtro no cuesta nada. Lo mismo hace `wprs-app --page settings` (o la acción
 *Ajustes* del lanzador); `--page` acepta también `library`, `scenes`, `playlists`, `profiles`,
 `providers`, `repos` y `account`. Si la app ya está abierta, pasa a esa página, salvo que el editor
 de imágenes o el de escenas tenga cambios sin guardar: entonces solo se muestra la ventana y el
@@ -417,9 +422,13 @@ de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cam
 Los ajustes de reproducción de los paquetes de vídeo no se usan en el teléfono, y la página del
 paquete lo avisa, igual que de todo lo que el teléfono omite: el color alrededor de la imagen y la
 extensión sobre varias pantallas, el límite de fotogramas, el inicio en silencio y la reproducción
-única de vídeos y páginas, los atajos, los sonidos nuevos, lo que los scripts aún no pueden hacer en
-ningún sitio o no tiene sentido en el teléfono (geometría, almacenamiento, sonidos) y la iluminación
-RGB. Si un paquete pide sombreadores de cálculo y la gráfica del teléfono no los tiene, su página lo
+única de vídeos y páginas, los atajos, los sonidos nuevos, lo que no tiene sentido en el teléfono
+(los sonidos de los scripts) y la iluminación RGB. Los scripts de escena guardan datos, crean formas,
+mueven la cámara, cambian los padres de las capas y listan la carpeta elegida igual que en el
+escritorio. El filtro de color de la sección `[default]` de `config.toml` y el volteo de imágenes y
+vídeos se aplican también aquí; un vídeo con filtro o volteado pasa por la gráfica en vez de
+reproducirse directo en la pantalla. Un vídeo HDR se ve como lo decodifica Android: al reproducirse
+directo, el sistema adapta sus tonos. Si un paquete pide sombreadores de cálculo y la gráfica del teléfono no los tiene, su página lo
 avisa. El color de acento del fondo (o, si no propone uno, el dominante de su vista previa) es el
 color que Android da al sistema. Un paquete de más de 1 GiB descomprimido se rechaza, y los
 preajustes publicados aparte y las dependencias entre paquetes aún no funcionan en el teléfono. Un paquete hecho solo para
@@ -486,6 +495,8 @@ wprs-ctl set ~/Vídeos/mar.mp4 -o DP-1 -f fit    # una pantalla, modo de ajuste
 wprs-ctl fit center                             # solo el modo de ajuste, mismo fondo
 wprs-ctl fit tile -o DP-1                       # el modo de ajuste de una pantalla
 wprs-ctl background '#203040'                   # color alrededor del fondo
+wprs-ctl filter warm --strength 0.6 -o DP-1      # filtro de color de una pantalla (none lo quita)
+wprs-ctl filter --list                          # los filtros que hay
 wprs-ctl pause | resume | toggle                # pausar los fondos animados
 wprs-ctl volume 40 | mute | unmute              # sonido de los vídeos y las escenas
 wprs-ctl config                                 # ver los ajustes
@@ -901,8 +912,7 @@ la imagen, la extensión sobre todas las pantallas, el volteo, el límite de fot
 silencio y la reproducción única. Cada función tiene un nombre en `requires.features`, y el
 escritorio y el teléfono dicen si la ejecutan, si reproducen el paquete sin ella o si lo rechazan
 con «necesita una versión más nueva de wallpaper-rs» antes de dibujar nada; en esta versión
-rechazan los recursos publicados aparte, el volteo, las listas de carpetas desde los scripts de
-escena y las texturas KTX2 y AVIF. `wprs-ctl pack check` dice qué hace cada plataforma con un paquete
+rechazan los recursos publicados aparte y las texturas KTX2 y AVIF. `wprs-ctl pack check` dice qué hace cada plataforma con un paquete
 y `docs/specs/package.md` describe el formato entero.
 
 Un preajuste publicado aparte aparece en la biblioteca como variante de su fondo base: la ficha del
@@ -1124,8 +1134,10 @@ anteriores rechazan con el aviso de versión más nueva los paquetes que los usa
 tiempo pueden medirse en fotogramas (`frames` y `fps`, que ya funciona en las dos plataformas) y
 enlazar el final de un bucle con su principio (`wrap`, rechazado mientras el motor no lo dibuje), y
 `"seed": null` da a una escena una semilla nueva cada vez que empieza. Un paquete con un vídeo HDR
-recibe la faceta `hdr` y `wprs-ctl pack check` avisa de que se verá con colores normales, quizá
-apagados. Los clientes de repositorios se saltan las versiones de un tipo de paquete que no conocen
+(PQ o HLG) recibe la faceta `hdr` y `wprs-ctl pack check` lo dice: en el ordenador se decodifica con
+10 bits y la gráfica adapta sus tonos a colores normales (BT.2020 a sRGB, el blanco de la pantalla
+a 203 nits y la luz más fuerte a 1000), también dentro de las escenas, y los vídeos normales no
+cambian. Los clientes de repositorios se saltan las versiones de un tipo de paquete que no conocen
 en vez de dejar de leer el índice. La tabla de perfiles (qué hacen el escritorio y el teléfono con
 cada función) está en `docs/specs/package.md`, y `docs/specs/scene.md` termina con una guía para
 rehacer a mano una escena hecha con otro programa: dónde va cada parte en el formato y cómo pasar
@@ -1656,6 +1668,26 @@ interfaz completa; lo esencial:
   y `up`, y un clic solo cuenta si se suelta sobre la misma capa. Se declara en `events` y la escena
   pide las entradas `pointer` y `clicks`: el usuario las permite por paquete y, los clics, también
   por pantalla, donde empiezan apagados. En el teléfono un toque es un clic.
+- **Padres, cámara y ajustes de escena**: con `uses: ["hierarchy"]`, `layer.parent`,
+  `layer.children` y `layer.world` (una `Mat3`) dicen a quién sigue una capa, quién la sigue y dónde
+  queda en el lienzo, y `layer.setParent("sol", true)` la hace seguir a otra capa sin moverla ni
+  cambiar el orden de dibujo; `lookAt(desde, hacia)` de `wprs/math` da el ángulo para mirar hacia un
+  punto. Con `uses: ["camera"]`, `scene.camera = {zoom: 2, shake: {amplitude: 6}}`,
+  `scene.parallax`, `scene.bloom` y `scene.background` cambian la cámara, el paralaje, el resplandor
+  y el color de fondo de la escena, y `null` los devuelve a lo que dice `scene.json`.
+- **Formas propias**: con `uses: ["geometry"]` y un `pools` en `scene.json`,
+  `scene.mesh("barras").create({vertices, indices, format: "xyuv"})` crea triángulos con
+  `Float32Array` que `update()` cambia y `destroy()` quita, dentro de los límites del pool y de 1 MiB
+  por fotograma. Se dibujan en la imagen del pool, que una capa `video` muestra con `"video":
+  "barras"`; un pool que no cambia no pide fotogramas.
+- **Guardar datos**: con `uses: ["storage"]`, `storage.set("visitas", n)` y `storage.get` guardan
+  JSON del paquete o, con `"output"`, de la pantalla: como mucho 64 KiB cada uno, solo en el
+  dispositivo (sin sincronizar), en un archivo privado que se escribe como mucho cada 5 s y al parar
+  y se borra al desinstalar el paquete.
+- **Carpeta elegida**: con `uses: ["folders"]` y una propiedad `folder` con `"mode": "all"`,
+  `folder("fotos").files` da identificadores opacos de sus imágenes, `name(id)` el nombre del
+  archivo, `on("added" | "removed" | "changed", …)` avisa de los cambios y `show("marco", id)` elige
+  qué foto muestra una capa. Los scripts nunca ven rutas.
 - **Sonido**: con `uses: ["sounds"]`, `sound("campana")` controla una capa de sonido con `play()`,
   `pause()`, `stop()`, `playing` y `volume`, de 0 a 1 y por debajo del volumen general, que también
   la silencia. La primera llamada se queda el sonido aunque tuviera `play_on`. El teléfono no
@@ -1667,8 +1699,8 @@ interfaz completa; lo esencial:
   asigna: para cambiarlo se asigna otra vez), que también se importan entre sí con rutas relativas
   (`import { media } from "./lib/media.js"`).
 - **Matemáticas**: `wprs/math` trae `Vec2`, `Vec3`, `Vec4`, `Mat3` y `Mat4` con sus operaciones
-  (producto, inversa, descomposición, reflejo, proyección…), `smoothstep`, `mix`, `remap`, ángulos y
-  `rgbToHsv` y `hsvToRgb`.
+  (producto, inversa, descomposición, reflejo, proyección…), `smoothstep`, `mix`, `remap`, ángulos,
+  `lookAt`, `rgbToHsv` y `hsvToRgb`.
 - **Declarar lo que se usa**: cada entrada de `scripts` lista sus `events` y sus `uses`; un módulo
   que declara algo solo puede usar los temporizadores, las capas creadas y los efectos si los
   declara, y `pack build` deduce de ahí las funciones nuevas que pide el paquete, para que un motor

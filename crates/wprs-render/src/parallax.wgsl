@@ -1,4 +1,4 @@
-struct Parallax { offset: vec2<f32>, scale: vec2<f32>, background: vec4<f32>, flags: vec4<u32>, shift: vec2<f32>, focus: f32, steps: f32 };
+struct Parallax { offset: vec2<f32>, scale: vec2<f32>, background: vec4<f32>, flags: vec4<u32>, shift: vec2<f32>, focus: f32, steps: f32, grade: Grade };
 struct VertexOut { @builtin(position) position: vec4<f32>, @location(0) uv: vec2<f32> };
 
 @group(0) @binding(0) var<uniform> p: Parallax;
@@ -15,7 +15,7 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOut {
 @fragment
 fn fs_parallax(in: VertexOut) -> @location(0) vec4<f32> {
     let uv = p.offset + in.uv * p.scale;
-    if any(uv < vec2(0.0)) || any(uv > vec2(1.0)) { return p.background; }
+    if any(uv < vec2(0.0)) || any(uv > vec2(1.0)) { return vec4(graded(p.background.rgb, p.grade), 1.0); }
     let at = relief(depth, smp, uv, p.shift, p.focus, p.steps);
-    return vec4(textureSampleLevel(image, smp, at, 0.0).rgb, 1.0);
+    return vec4(graded(textureSampleLevel(image, smp, at, 0.0).rgb, p.grade), 1.0);
 }

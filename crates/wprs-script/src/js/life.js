@@ -2,6 +2,8 @@ import { state, setup, channels, records, timers, pending, stopped, record, guar
 import { engine } from "wprs:base";
 import { own, layer, touches } from "wprs:layers";
 import { handlers, particleState, soundState, videoHandlers } from "wprs:media";
+import { takeStorage, folderEvents } from "wprs:keep";
+import { stage } from "wprs:stage";
 
 const lifecycle = ["init", "update", "destroy", "resize", "properties", "settings", "timelineEvent"];
 const [listeners, sites] = [[], []];
@@ -95,6 +97,29 @@ function lifecycleEvents(f) {
     [seen.screen, seen.fps, seen.quality, seen.props, state.fresh] = [screen, f.fps, f.quality, f.props, false];
 }
 
+const now = { values: null, out: null, run: null, lines: null, saved: null };
+const layerOf = (id) => (own.once[id] ? { ...own.overrides[id], ...own.once[id] } : own.overrides[id]) ?? null;
+const made = {
+    values: () => now.values,
+    layers: () => Object.fromEntries([...new Set([...Object.keys(own.overrides), ...last.once])].map((id) => [id, layerOf(id)]).filter(([, v]) => v)),
+    timelines: () => now.out.timelines,
+    open: () => now.out.open,
+    stage: () => (Object.keys(stage).length ? stage : null),
+    storage: () => now.saved,
+    meshes: () => true,
+    particles: () => Object.assign(now.out.particles, Object.fromEntries(Object.entries(particleState).map(([id, p]) => [id, { ...now.out.particles[id], instance: p.instance, points: p.points }]))),
+    sounds: () => Object.assign(now.out.sounds, Object.fromEntries(Object.entries(soundState).map(([id, s]) => [id, { ...now.out.sounds[id], volume: s.volume }]))),
+    videos: () => now.out.videos,
+    effects: () => Object.fromEntries(Object.entries(own.controls).map(([id, list]) => [id, Object.values(list)])),
+    spawned: () => [...own.spawned],
+    order: () => (own.ordered ? [...own.top] : null),
+    watch: () => [...own.watched],
+    wake: () => now.run.wake,
+    busy: () => now.run.busy,
+    console: () => now.lines,
+    stopped: () => stopped,
+};
+
 state.tick = () => {
     const f = state.frame;
     const out = (state.out = { timelines: [], particles: {}, sounds: {}, videos: {}, open: [] });
@@ -104,6 +129,7 @@ state.tick = () => {
     if (f.time < lastTime) for (const t of timers.values()) t.due -= lastTime - f.time;
     lastTime = f.time;
     lifecycleEvents(f);
+    folderEvents(f.folders);
     for (const [id, t] of [...timers].filter(([, t]) => t.due <= f.time).sort((a, b) => a[1].due - b[1].due)) {
         if (t.period) t.due = f.time + t.period;
         else timers.delete(id);
@@ -133,35 +159,23 @@ state.tick = () => {
         if (mod.failures >= 3) stop(mod, mod.error);
     }
     const lines = pending.splice(0);
+    const saved = takeStorage();
     if (!same(values, last.values)) [last.values] = [kept(values), dirty.add("values")];
     for (const k of ["busy", "wake"]) if (!Object.is(run[k], last[k])) [last[k]] = [run[k], dirty.add(k)];
     const commands = (list) => Object.values(list).some((p) => p.commands?.length);
-    const loud = { timelines: out.timelines.length > 0, open: out.open.length > 0, console: lines.length > 0, particles: commands(out.particles), sounds: commands(out.sounds), videos: commands(out.videos) };
+    const loud = { storage: saved !== null, timelines: out.timelines.length > 0, open: out.open.length > 0, console: lines.length > 0, particles: commands(out.particles), sounds: commands(out.sounds), videos: commands(out.videos) };
     for (const id of [...last.once, ...Object.keys(own.once)]) touched.add(id);
     last.once = Object.keys(own.once);
     for (const k of Object.keys(loud)) if (loud[k] || last.loud[k]) dirty.add(k);
     last.loud = loud;
     if (!dirty.size && !touched.size) return null;
-    const layer = (id) => (own.once[id] ? { ...own.overrides[id], ...own.once[id] } : own.overrides[id]) ?? null;
-    const made = {
-        values: () => values,
-        layers: () => Object.fromEntries([...new Set([...Object.keys(own.overrides), ...last.once])].map((id) => [id, layer(id)]).filter(([, v]) => v)),
-        timelines: () => out.timelines,
-        open: () => out.open,
-        particles: () => Object.assign(out.particles, Object.fromEntries(Object.entries(particleState).map(([id, p]) => [id, { ...out.particles[id], instance: p.instance, points: p.points }]))),
-        sounds: () => Object.assign(out.sounds, Object.fromEntries(Object.entries(soundState).map(([id, s]) => [id, { ...out.sounds[id], volume: s.volume }]))),
-        videos: () => out.videos,
-        effects: () => Object.fromEntries(Object.entries(own.controls).map(([id, list]) => [id, Object.values(list)])),
-        spawned: () => [...own.spawned],
-        order: () => (own.ordered ? [...own.top] : null),
-        watch: () => [...own.watched],
-        wake: () => run.wake,
-        busy: () => run.busy,
-        console: () => lines,
-        stopped: () => stopped,
-    };
+    now.values = values;
+    now.out = out;
+    now.run = run;
+    now.lines = lines;
+    now.saved = saved;
     const changed = Object.fromEntries([...dirty].map((k) => [k, made[k]()]));
-    if (touched.size && !dirty.has("layers")) changed.layer_edits = Object.fromEntries([...touched].map((id) => [id, layer(id)]));
+    if (touched.size && !dirty.has("layers")) changed.layer_edits = Object.fromEntries([...touched].map((id) => [id, layerOf(id)]));
     [dirty, touched].forEach((set) => set.clear());
     return changed;
 };

@@ -4,13 +4,13 @@ use gstreamer::prelude::*;
 use gstreamer_app as gst_app;
 use gstreamer_video as gst_video;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
 pub fn build(
     options: Options,
     sink: Sink,
-    seen: Arc<AtomicU64>,
+    (seen, deep): (Arc<AtomicU64>, Arc<AtomicBool>),
 ) -> Result<(gst::Element, gst::Element, gst::Element, bool), Error> {
     let bin = gst::Bin::with_name("wprs-video-sink");
     let rate = make("videorate")?;
@@ -28,15 +28,32 @@ pub fn build(
     let shares = options.zero_copy && dmabuf::caps().is_some();
     let flip = flip.ok().filter(|_| !shares);
     let size = make("capsfilter")?;
-    size.set_property("caps", size_caps(options.max_size, shares));
+    size.set_property("caps", size_caps(options.max_size, shares, false));
     size.set_property_from_str("caps-change-mode", "delayed");
-    let tail = [flip, Some(size.clone()), Some(appsink(sink, shares).upcast())].into_iter().flatten();
+    let tail = [flip, Some(size.clone()), Some(appsink(sink.clone(), shares).upcast())].into_iter().flatten();
     let chain: Vec<gst::Element> = std::iter::once(rate.clone()).chain(convert).chain(tail).collect();
     bin.add_many(&chain).map_err(Error::state)?;
     gst::Element::link_many(&chain).map_err(Error::state)?;
     let pad = chain[0].static_pad("sink").expect("videorate has a sink pad");
     pad.add_probe(gst::PadProbeType::BUFFER, move |_, _| {
         seen.fetch_add(1, Ordering::Relaxed);
+        gst::PadProbeReturn::Ok
+    });
+    let (filter, max_size) = (size.clone(), options.max_size);
+    pad.add_probe(gst::PadProbeType::EVENT_DOWNSTREAM, move |_, info| {
+        let Some(gst::EventView::Caps(c)) = info.event().map(|e| e.view()) else {
+            return gst::PadProbeReturn::Ok;
+        };
+        let hdr = crate::deep::transfer(c.caps()).is_some();
+        match hdr && shares {
+            true => sink(Event::Error(crate::UNSHARED.into())),
+            false if deep.swap(hdr, Ordering::Relaxed) != hdr => {
+                let current = filter.property::<gst::Caps>("caps");
+                let max = current.structure(0).and_then(widest).unwrap_or(max_size);
+                filter.set_property("caps", size_caps(max, false, hdr));
+            }
+            false => {}
+        }
         gst::PadProbeReturn::Ok
     });
     let ghost = gst::GhostPad::with_target(&pad).map_err(Error::state)?;
@@ -48,10 +65,15 @@ pub fn set_max_fps(rate: &gst::Element, max_fps: u32, cut: Cut) {
     rate.set_property("max-rate", cut.cap(max_fps));
 }
 
-pub fn size_caps((max_width, max_height): (u32, u32), zero_copy: bool) -> gst::Caps {
+fn widest(s: &gst::StructureRef) -> Option<(u32, u32)> {
+    let top = |key| s.get::<gst::IntRange<i32>>(key).ok().map(|r| r.max().max(1) as u32);
+    Some((top("width")?, top("height")?))
+}
+
+pub fn size_caps((max_width, max_height): (u32, u32), zero_copy: bool, deep: bool) -> gst::Caps {
     let up_to = |max: u32| gst::IntRange::new(1, max.clamp(1, i32::MAX as u32) as i32);
     let copied = gst::Caps::builder("video/x-raw")
-        .field("format", "RGBA")
+        .field("format", if deep { crate::deep::DEEP } else { "RGBA" })
         .field("pixel-aspect-ratio", gst::Fraction::new(1, 1))
         .field("width", up_to(max_width))
         .field("height", up_to(max_height))
@@ -110,12 +132,15 @@ fn deliver(
 fn shared_frame(sample: &gst::Sample, turn: u8) -> Option<Frame> {
     let (width, height, shared, buffer) = dmabuf::read(sample, turn)?;
     let pts = buffer.pts().map(|t| Duration::from_nanos(t.nseconds()));
-    Some(Frame { width, height, stride: 0, pts, pixels: Pixels::Shared { shared, _held: buffer } })
+    Some(Frame { width, height, stride: 0, pts, pixels: Pixels::Shared { shared, _held: buffer }, hdr: None })
 }
 
 fn to_frame(sample: &gst::Sample, turn: u8) -> Option<Frame> {
     let info = gst_video::VideoInfo::from_caps(sample.caps()?).ok()?;
     let buffer = sample.buffer_owned()?;
+    if info.format() == gst_video::VideoFormat::I42010le {
+        return crate::deep::frame(&info, buffer);
+    }
     let pts = buffer.pts().map(|t| Duration::from_nanos(t.nseconds()));
     let buffer = buffer.into_mapped_buffer_readable().ok()?;
     let stride = u32::try_from(*info.stride().first()?).ok()?;
@@ -125,9 +150,9 @@ fn to_frame(sample: &gst::Sample, turn: u8) -> Option<Frame> {
         return None;
     }
     if turn == 0 {
-        return Some(Frame { width, height, stride, pts, pixels: Pixels::Mapped(offset, buffer) });
+        return Some(Frame { width, height, stride, pts, pixels: Pixels::Mapped(offset, buffer), hdr: None });
     }
     let (width, height, pixels) = dmabuf::turned(&buffer[offset..], (width, height, stride as usize), turn);
     let buffer = gst::Buffer::from_mut_slice(pixels).into_mapped_buffer_readable().ok()?;
-    Some(Frame { width, height, stride: width * 4, pts, pixels: Pixels::Mapped(0, buffer) })
+    Some(Frame { width, height, stride: width * 4, pts, pixels: Pixels::Mapped(0, buffer), hdr: None })
 }

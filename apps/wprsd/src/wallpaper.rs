@@ -21,18 +21,19 @@ fn modified(path: &Path) -> anyhow::Result<Option<SystemTime>> {
 impl Daemon {
     pub fn configure_output(&self, output: &str) -> Option<Arc<RgbaImage>> {
         let _order = lock(&ORDER);
-        let (size, mut resolved, chosen, uploaded, refresh) = {
+        let (size, mut resolved, chosen, uploaded, refresh, filter) = {
             let st = self.state();
             let info = st.outputs.get(output)?;
             let (resolved, chosen) = (st.config.resolve(output), st.config.chosen(output));
-            (info.size, resolved, chosen, info.uploaded.clone(), st.refresh(output))
+            (info.size, resolved, chosen, info.uploaded.clone(), st.refresh(output), st.config.filter(output))
         };
         if self.show_pattern(output, size, refresh) {
             return None;
         }
         let (image, mut transition) =
             self.playlist_media(output, resolved.playlist.take()).unwrap_or((resolved.image.take(), None));
-        let shown = image.as_deref().map(|p| crate::look::look(chosen, || crate::look::author(p)));
+        let display = image.as_deref().map(crate::look::display).unwrap_or_default();
+        let shown = image.as_deref().map(|_| crate::look::look(chosen, || crate::look::author(&display)));
         (resolved.fit, resolved.background) = shown.unwrap_or((resolved.fit, resolved.background));
         let draft = self.state().drafts.get(output).map(|d| (d.pack.clone(), d.hold));
         if draft.is_some() {
@@ -95,7 +96,8 @@ impl Daemon {
         };
         let (pixels, accent) =
             (content.pixels(), self.accent(image.as_deref(), &content, shown_video.as_deref()));
-        let spec = Spec { content, fit, background: resolved.background, transition, refresh };
+        let tone = crate::look::tone(&display, &content, filter);
+        let spec = Spec { content, fit, background: resolved.background, transition, refresh, tone };
         self.compositor.configure(output, size, spec);
         let mut st = self.state();
         if let Some(info) = st.outputs.get_mut(output) {

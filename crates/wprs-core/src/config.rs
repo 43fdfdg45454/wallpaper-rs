@@ -1,3 +1,4 @@
+use crate::filter::Filter;
 use crate::fit::Fit;
 use crate::layout::Layout;
 use crate::settings::{Library, Models, Pause, Playback, Repos, Transition};
@@ -18,6 +19,8 @@ pub struct OutputConfig {
     pub preset: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clicks: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filter: Option<Filter>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub scenes: BTreeMap<String, BTreeMap<String, toml::Value>>,
 }
@@ -62,6 +65,10 @@ impl Config {
         for (section, o) in sections {
             if o.background.take_if(|c| parse_hex_color(c).is_none()).is_some() {
                 fixed.push(format!("{section}.background"));
+            }
+            if let Some(f) = o.filter.as_mut().filter(|f| !f.valid()) {
+                *f = f.sanitized();
+                fixed.push(format!("{section}.filter"));
             }
         }
         fixed
@@ -122,6 +129,15 @@ impl Config {
 
     pub fn set_clicks(&mut self, output: &str, on: bool) {
         self.section(output, |o| o.clicks = None).clicks = Some(on);
+    }
+
+    pub fn filter(&self, output: &str) -> Filter {
+        self.pick(output, |o| o.filter).unwrap_or_default()
+    }
+
+    pub fn set_filter(&mut self, output: &str, filter: Filter) {
+        let kept = (!filter.is_identity() || !output.is_empty()).then_some(filter.sanitized());
+        self.section(output, |o| o.filter = None).filter = kept;
     }
 
     fn section(&mut self, output: &str, clear: impl FnMut(&mut OutputConfig)) -> &mut OutputConfig {

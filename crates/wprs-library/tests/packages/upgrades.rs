@@ -54,10 +54,9 @@ fn packages_this_device_cannot_show_keep_their_details_and_say_why() {
     edit("phone", |m| {
         (m["platforms"], m["requires"]) = (json!(["android"]), json!({"features": ["platforms"]}))
     });
-    edit("mirror", |m| {
-        (m["display"], m["requires"]) =
-            (json!({"flip": "horizontal"}), json!({"features": ["display2", "flip"]}))
-    });
+    let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures/blue-64x32.avif");
+    fs::copy(fixture, dir.path().join("mirror").join("image.avif")).unwrap();
+    edit("mirror", |m| (m["entry"], m["requires"]) = (json!("image.avif"), json!({"features": ["avif"]})));
     let mut library = Library::open(dir.path().join("library.db")).unwrap();
     let source = library.add_folder(&root, true).unwrap();
     library.scan(&source, NOW).unwrap();
@@ -66,7 +65,10 @@ fn packages_this_device_cannot_show_keep_their_details_and_say_why() {
     assert_eq!(phone.meta.error.as_deref(), Some("this package is made for Android only"));
     assert_eq!(phone.package.unwrap().facets, ["android", "landscape"]);
     let error = mirror.meta.error.unwrap();
-    assert!(error.contains("needs a newer version") && error.contains("flip (shows its picture"), "{error}");
+    assert!(
+        error.contains("needs a newer version") && error.contains("avif (uses pictures in the AVIF"),
+        "{error}"
+    );
     assert_eq!(mirror.package.unwrap().id, "org.example.mirror");
 }
 

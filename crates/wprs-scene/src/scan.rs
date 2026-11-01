@@ -52,6 +52,8 @@ fn api(name: &str) -> Option<ScriptApi> {
         "console" => ScriptApi::Console,
         "shared" => ScriptApi::Shared,
         "sound" => ScriptApi::Sounds,
+        "storage" => ScriptApi::Storage,
+        "folder" => ScriptApi::Folders,
         _ => return None,
     })
 }

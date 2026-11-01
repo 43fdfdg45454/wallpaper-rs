@@ -12,8 +12,10 @@ use wprs_render::{Pictures, SceneAssets};
 use wprs_scene::{Preset, Property, Scene};
 
 mod info;
+mod mirror;
 
 pub(crate) use info::{about, animated, check, entry, examples, lacks, media};
+pub(crate) use mirror::flip;
 
 const IMAGES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
 const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];

@@ -2,6 +2,7 @@ use serde_json::json;
 use std::sync::Arc;
 use wprs_scene::*;
 
+mod geometry;
 mod modules;
 mod templates;
 mod values;

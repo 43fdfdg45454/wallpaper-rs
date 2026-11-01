@@ -27,6 +27,8 @@ pub(crate) struct Look {
     pub(crate) fit: Fit,
     pub(crate) background: [u8; 3],
     pub(crate) fade: Duration,
+    pub(crate) flip: [bool; 2],
+    pub(crate) grade: Option<wprs_core::Grade>,
 }
 
 pub(crate) fn prepare() -> Result<(), Error> {
@@ -148,5 +150,6 @@ pub(crate) fn look(lock: bool) -> Look {
         listed.and_then(|uid| crate::library::with(|lib| Ok(lib.playlist(&uid)?.rules.transition_ms)).ok());
     let fade =
         own.flatten().map_or_else(|| config.transition.duration(), |ms| Duration::from_millis(ms.into()));
-    Look { fit: shown.fit, background: shown.background, fade }
+    let grade = config.filter("").grade();
+    Look { fit: shown.fit, background: shown.background, fade, flip: [false; 2], grade }
 }

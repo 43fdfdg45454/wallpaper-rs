@@ -82,7 +82,8 @@ impl Runtime {
         let (mut draws, mut effects) = spare.lists();
         draws.reserve(self.sizes.get().0);
         effects.reserve(self.sizes.get().1);
-        let background = self.scene.canvas.background;
+        let set = self.script.stage.and_then(|s| s.background).map(crate::Color);
+        let background = set.unwrap_or(self.scene.canvas.background);
         let (time, wake) = (self.t as f32, Wake::Idle);
         let camera = cx.camera;
         let keep = !self.scene.canvas.clear;

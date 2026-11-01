@@ -37,6 +37,7 @@ calls! {
         PreviewScene preview_scene(output: str, dir: str, document: str, time: f64);
         SetWallpaper set_wallpaper(path: str, output: str, fit: str);
         SetBackground set_background(color: str, output: str);
+        SetFilter set_filter(filter: str, output: str);
         SetOption set_option(key: str, value: str);
         SetPaused set_paused(paused: bool);
         SetVolume set_volume(volume: f64);

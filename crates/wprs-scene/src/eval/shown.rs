@@ -19,11 +19,14 @@ pub(crate) fn content<'a>(
     match &layer.kind {
         Kind::Group { clip, .. } => Content::Group { clip: *clip },
         Kind::Image { image, size, playback, .. } => {
-            let asset = named(cx, image);
+            let asset = set.file.as_deref().map_or_else(|| named(cx, image), Cow::Borrowed);
             let frame = crate::sheet::frame(cx, &asset, playback.as_ref(), quality);
             Content::Image { asset, size: boxed(*size), frame }
         }
-        Kind::Video { video, size, .. } => Content::Video { asset: named(cx, video), size: boxed(*size) },
+        Kind::Video { video, size, .. } => {
+            let asset = set.file.as_deref().map_or_else(|| named(cx, video), Cow::Borrowed);
+            Content::Video { asset, size: boxed(*size) }
+        }
         Kind::Text(t) => {
             let ink = t.ink(cx, quality);
             let text = match (&set.text, &t.text) {

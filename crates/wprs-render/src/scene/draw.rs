@@ -16,9 +16,10 @@ impl Painter<'_, '_, '_> {
         item.size = [0.0, 0.0, 1.0, f32::from(u8::from(srgb))];
         match &d.content {
             Content::Image { asset, .. } | Content::Video { asset, .. } => {
-                let (images, videos) = (self.images, self.videos);
-                let video = videos.iter().find(|(id, _)| id == asset).map(|(_, v)| *v);
+                let images = self.images;
+                let video = self.moving(asset);
                 let found = video.or_else(|| images.get(asset.as_ref()).map(|i| &i.0))?;
+                item.size[2] = f32::from(u8::from(!self.molds.contains_key(asset.as_ref())));
                 let (rect, s) = self.cell(i);
                 let natural = self.natural(i).unwrap_or(size);
                 let wrap = s.filter(|_| video.is_none()).map_or(Wrapping::Clamp, |s| s.wrap);

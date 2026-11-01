@@ -29,7 +29,7 @@ fn fades_never_outrun_a_known_display_or_the_battery_cap() {
     let color = || {
         let (content, fit, background) = (Content::Color, Fit::Stretch, [0; 3]);
         let (image, transition, uv, relief, scene) = (None, None, None, None, None);
-        Shown { content, fit, background, image, transition, uv, relief, scene }
+        Shown { content, fit, background, image, transition, uv, relief, scene, tone: Default::default() }
     };
     let fade = |refresh, on_battery| {
         let mut output = Output::new((16, 9), color(), Sink::Stream(None), refresh);
@@ -52,6 +52,7 @@ fn a_failed_draw_is_tried_again_later_and_less_often() {
         uv: None,
         relief: None,
         scene: None,
+        tone: Default::default(),
     };
     let (power, now) = (Power::new(Tier::T3, false, 0), Instant::now());
     let mut output = Output::new((16, 9), color(), Sink::Stream(None), 60);
@@ -90,8 +91,17 @@ fn a_scene_that_follows_the_display_asks_for_120_fps_on_a_120_hz_stream() {
         let (spec, now) = (snowfall(), Instant::now());
         let scene = Some(SceneState::new(spec.clone(), power));
         let (content, image, transition, uv, relief) = (Content::Scene(spec), None, None, None, None);
-        let shown =
-            Shown { content, fit: Fit::Stretch, background: [0; 3], image, transition, uv, relief, scene };
+        let shown = Shown {
+            content,
+            fit: Fit::Stretch,
+            background: [0; 3],
+            image,
+            transition,
+            uv,
+            relief,
+            scene,
+            tone: Default::default(),
+        };
         let mut output = Output::new((16, 9), shown, Sink::Stream(None), 120);
         let scene = output.shown.scene.as_mut().expect("a scene");
         scene.render(renderer, (output.size, output.refresh), power, &HashMap::new(), true, now).unwrap();
@@ -128,7 +138,8 @@ fn a_scene_frame_that_changed_nothing_is_not_composed_again() {
     };
     let (content, fit, background) = (Content::Scene(spec.clone()), Fit::Stretch, [0; 3]);
     let (image, transition, uv, relief, scene) = (None, None, None, None, Some(SceneState::new(spec, power)));
-    let shown = Shown { content, fit, background, image, transition, uv, relief, scene };
+    let shown =
+        Shown { content, fit, background, image, transition, uv, relief, scene, tone: Default::default() };
     let mut output = Output::new((16, 9), shown, Sink::Stream(None), 60);
     let frame = |output: &mut Output, starved: bool, at: Instant| {
         let scene = output.shown.scene.as_mut().expect("a scene");
@@ -145,7 +156,17 @@ fn a_scene_frame_that_changed_nothing_is_not_composed_again() {
     assert!(!frame(&mut output, false, later), "a repaint was skipped");
     assert!(frame(&mut output, false, later));
     let (image, transition, uv, relief, scene) = (None, None, None, None, None);
-    let color = Shown { content: Content::Color, fit, background, image, transition, uv, relief, scene };
+    let color = Shown {
+        content: Content::Color,
+        fit,
+        background,
+        image,
+        transition,
+        uv,
+        relief,
+        scene,
+        tone: Default::default(),
+    };
     output.fade = Some((color, None));
     assert!(!frame(&mut output, false, later), "a fade was skipped");
 }

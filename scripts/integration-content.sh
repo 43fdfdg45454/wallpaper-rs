@@ -41,6 +41,9 @@ expect "s['outputs']['TEST-20']['accent']" "#0000ff"
 ctl lib apply "$green" -o TEST-20
 expect "s['outputs']['TEST-20']['item'], s['outputs']['TEST-20']['accent']" "('$base', '#00ff00')"
 shown "$s20" 0 255 0
+ctl filter none --exposure -1 -o TEST-20 && shown "$s20" 0 188 0
+expect "s['outputs']['TEST-20']['filter']['exposure']" "-1.0"
+ctl filter none -o TEST-20 && shown "$s20" 0 255 0
 [ "$(ctl prop get tint -o TEST-20)" = '"#00ff00"' ] || fail "preset values: $(ctl prop ls -o TEST-20)"
 grep -q "gone is not a setting of org.example.base" "$WORK"/*.log || fail "an unknown preset value was not reported"
 fps=$(field "s['outputs']['TEST-20']['fps']")

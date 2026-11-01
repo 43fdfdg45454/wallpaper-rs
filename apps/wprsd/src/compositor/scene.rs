@@ -1,4 +1,5 @@
 mod level;
+mod listing;
 mod polling;
 #[cfg(test)]
 mod tests;
@@ -68,6 +69,8 @@ pub(super) struct SceneState {
     governor: Governor,
     why: Why,
     samples: u64,
+    listed: listing::Listed,
+    stash: Option<wprs_core::stash::Stash>,
 }
 
 fn after(seconds: f64) -> Duration {
@@ -145,6 +148,8 @@ impl SceneState {
             governor: Governor::default(),
             why,
             samples: 0,
+            listed: Default::default(),
+            stash: None,
         };
         scene.uses = scene.needs(quality);
         scene

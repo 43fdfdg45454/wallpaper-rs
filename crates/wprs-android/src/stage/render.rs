@@ -66,6 +66,9 @@ impl Stage {
             listens: hears,
         };
         let acted = !still && self.acting.step(&mut self.runtime, sent);
+        if std::mem::take(&mut self.acting.moved) {
+            self.gather();
+        }
         let asked = power.still && !self.moving;
         let stilled = std::mem::replace(&mut self.stilled, asked) != asked;
         let calmed = stilled && self.runtime.set_reduced_motion(asked);

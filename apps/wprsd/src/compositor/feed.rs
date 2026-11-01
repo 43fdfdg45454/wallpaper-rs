@@ -65,7 +65,10 @@ impl State {
             };
             let scene = self.outputs.get_mut(&live.name).and_then(|o| o.shown.scene.as_mut());
             if let Some(outputs) = scene.filter(|_| live.due).and_then(|s| s.script(&live.name, mode)) {
-                self.feed(SceneInput::Script(live.name, Box::new(outputs)));
+                self.feed(SceneInput::Script(live.name.clone(), Box::new(outputs)));
+            }
+            if let Some(o) = self.outputs.get_mut(&live.name) {
+                o.dirty |= o.shown.scene.as_mut().is_some_and(|s| s.loaded());
             }
         }
     }

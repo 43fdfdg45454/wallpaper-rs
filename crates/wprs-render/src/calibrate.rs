@@ -118,6 +118,8 @@ impl Renderer {
             opacity: if i == 0 { 1.0 } else { 0.5 },
             uv: None,
             relief: None,
+            flip: [false; 2],
+            grade: None,
         };
         let layers: Vec<Layer> = (0..passes.max(1)).map(layer).collect();
         let (start, mut times) = (Instant::now(), Vec::new());

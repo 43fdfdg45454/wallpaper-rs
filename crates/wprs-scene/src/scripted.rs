@@ -40,6 +40,7 @@ pub struct LayerRead {
     pub parallax: [f32; 2],
     pub size: Option<Extent>,
     pub text: Option<String>,
+    pub world: [f32; 6],
 }
 
 fn finite<const N: usize>(v: Option<[f32; N]>, lo: f32, hi: f32) -> Option<[f32; N]> {
@@ -71,6 +72,8 @@ impl LayerOverride {
             size,
             font: self.font.filter(|f| f.len() <= 128 && font(f)),
             align: self.align,
+            parent: self.parent.filter(|p| p.len() <= 192),
+            file: self.file.filter(|f| f.len() <= 256 && f.starts_with("wpak-user://")),
         }
     }
 }
@@ -131,6 +134,9 @@ impl ScriptOutputs {
         self.stopped.truncate(64);
         self.console.iter_mut().chain(&mut self.stopped).for_each(|line| *line = plain_line(line));
         self.wake = self.wake.filter(|w| w.is_finite()).map(|w| w.clamp(0.0, 86_400.0));
+        self.stage = self.stage.map(crate::StageSet::bounded);
+        self.storage = self.storage.filter(|s| s.is_object());
+        self.meshes.retain(|id, _| scene.pools.contains_key(id));
         self
     }
 }

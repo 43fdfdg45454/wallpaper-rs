@@ -53,8 +53,7 @@ impl<'a> Painter<'a, '_, '_> {
         let (Content::Image { asset, .. } | Content::Video { asset, .. }) = &frame.draws[i].content else {
             return None;
         };
-        let found = self.videos.iter().find(|(id, _)| id == asset);
-        let natural = found.map(|(_, v)| [v.size().0 as f32, v.size().1 as f32]);
+        let natural = self.moving(asset).map(|v| [v.size().0 as f32, v.size().1 as f32]);
         let [w, h] = natural.or_else(|| self.images.get(asset.as_ref()).map(|image| image.1))?;
         let rect = self.cell(i).0;
         Some([w * rect[2], h * rect[3]])

@@ -1,5 +1,5 @@
 use super::{Credit, Time, Uid};
-use crate::{Fit, Screen};
+use crate::{Filter, Fit, Screen};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -87,6 +87,8 @@ model! {
         pub sandbox: String,
         #[serde(default)]
         pub accent: Option<String>,
+        #[serde(default)]
+        pub filter: Option<Filter>,
     }
 
     #[derive(Copy, Eq, Hash)]

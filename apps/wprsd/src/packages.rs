@@ -154,6 +154,7 @@ impl Daemon {
                 }
                 None => {
                     self.forget_synced(vec![crate::account::removed_package(&gone[0].repo_id, id)]);
+                    drop(wprs_core::stash::forget(&self.store.data.join("storage"), id));
                     self.store.write(|lib| lib.remove_items(&[uid.as_str()]))?
                 }
             };

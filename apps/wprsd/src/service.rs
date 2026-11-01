@@ -102,6 +102,10 @@ impl Service {
         self.d()?.render(move |d| d.set_background(&color, &output)).await
     }
 
+    async fn set_filter(&self, filter: String, output: String) -> Result<()> {
+        self.d()?.render(move |d| d.set_filter(&filter, &output)).await
+    }
+
     #[zbus(out_args("json"))]
     async fn get_scene_properties(&self, output: String) -> Result<String> {
         let d = self.d()?;

@@ -36,8 +36,18 @@ fn chosen(pack: &Pack, id: &str, path: &Path, now: u64, next: &mut Option<u64>) 
 }
 
 impl Extras {
-    pub(crate) fn gather(pack: &Pack, values: &Values, now: u64, old: &Extras) -> Extras {
+    pub(crate) fn gather(
+        pack: &Pack,
+        (values, shown): (&Values, &[(String, PathBuf)]),
+        now: u64,
+        old: &Extras,
+    ) -> Extras {
         let (mut images, mut videos, mut next) = (Vec::new(), Vec::new(), None);
+        for (key, file) in shown {
+            let kept = old.images.iter().find(|(k, f, _)| k == key && f == file).map(|(.., p)| Arc::clone(p));
+            let decoded = kept.or_else(|| wprs_render::decode_image(file, EDGE).ok().map(Pixels::new));
+            images.extend(decoded.map(|pixels| (key.clone(), file.clone(), pixels)));
+        }
         for (id, prop) in &pack.properties {
             let Some(path) = values.get(id).and_then(Json::as_str).filter(|v| v.starts_with('/')) else {
                 continue;

@@ -66,6 +66,7 @@ pub enum ScriptApi {
     Console,
     Shared,
     Hierarchy,
+    Folders,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -108,6 +109,9 @@ pub struct Pool {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-ref" = "image"))]
     pub texture: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-unit" = "px", "x-range" = [1, 4096]))]
+    pub size: Option<[u32; 2]>,
 }
 
 impl ScriptEvent {

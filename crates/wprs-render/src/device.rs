@@ -34,6 +34,8 @@ pub struct Renderer {
     pub(crate) reliefs: OnceLock<Pairs>,
     pub(crate) scene: OnceLock<crate::scene::Pipes>,
     pub(crate) yuv: OnceLock<crate::yuv::Converter>,
+    pub(crate) deep: OnceLock<crate::deep::Mapper>,
+    pub(crate) molder: OnceLock<crate::scene::molds::Molder>,
     pub(crate) luma: OnceLock<crate::luma::Luma>,
     pub(crate) tier: OnceLock<wprs_scene::Tier>,
     pub(crate) calibration: OnceLock<wprs_scene::Calibration>,
@@ -82,7 +84,11 @@ impl Renderer {
         };
         let info = adapter.get_info();
         Ok(Self {
-            layers: Pairs::new(layout, module(&device, include_str!("shader.wgsl")), "fs_main"),
+            layers: Pairs::new(
+                layout,
+                module(&device, concat!(include_str!("grade.wgsl"), include_str!("shader.wgsl"))),
+                "fs_main",
+            ),
             clamp: sampler(wgpu::AddressMode::ClampToEdge),
             repeat: sampler(wgpu::AddressMode::Repeat),
             placeholder: create_image(&device, &queue, &[0; 4], 1, 1, 4),
@@ -93,6 +99,8 @@ impl Renderer {
             reliefs: OnceLock::new(),
             scene: OnceLock::new(),
             yuv: OnceLock::new(),
+            deep: OnceLock::new(),
+            molder: OnceLock::new(),
             luma: OnceLock::new(),
             tier: OnceLock::new(),
             calibration: OnceLock::new(),

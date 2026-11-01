@@ -560,7 +560,8 @@ msgstr "Mantener"
 msgid "Preset:"
 msgstr "Preajuste:"
 
-#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/OutputFilter.qml
+#: apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "None"
@@ -1065,12 +1066,12 @@ msgid "Tint"
 msgstr "Tinte"
 
 #: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/EditOps.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
+#: apps/wprs-app/qml/OutputFilter.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Contrast"
 msgstr "Contraste"
 
 #: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/EditOps.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/OutputFilter.qml apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Saturation"
 msgstr "Saturación"
 
@@ -1187,7 +1188,8 @@ msgstr "Borrar"
 msgid "Invert"
 msgstr "Invertir"
 
-#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/facade/SceneWords.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/OutputFilter.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Exposure"
 msgstr "Exposición"
 
@@ -1225,7 +1227,8 @@ msgstr "Bajar"
 msgid "Remove"
 msgstr "Quitar"
 
-#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/OutputFilter.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Strength"
 msgstr "Fuerza"
 
@@ -1690,6 +1693,10 @@ msgstr "Ajustes de la escena"
 msgid "Video settings"
 msgstr "Ajustes del vídeo"
 
+#: apps/wprs-app/qml/OutputControls.qml
+msgid "Filter"
+msgstr "Filtro"
+
 #: apps/wprs-app/qml/OutputControls.qml apps/wprs-app/qml/StatusBar.qml
 msgid "Unmute"
 msgstr "Activar el sonido"
@@ -1705,6 +1712,82 @@ msgstr "Otra pantalla reproduce el sonido de esta escena"
 #: apps/wprs-app/qml/OutputControls.qml apps/wprs-app/qml/SceneEntry.qml
 msgid "Images and videos"
 msgstr "Imágenes y vídeos"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Warm"
+msgstr "Cálido"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Cool"
+msgstr "Frío"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Golden"
+msgstr "Dorado"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Vivid"
+msgstr "Vivo"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Punch"
+msgstr "Intenso"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Subdued"
+msgstr "Apagado"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Matte"
+msgstr "Mate"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Faded"
+msgstr "Desvaído"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Black and white"
+msgstr "Blanco y negro"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Noir"
+msgstr "Noir"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Sepia"
+msgstr "Sepia"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Dusk"
+msgstr "Atardecer"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Mint"
+msgstr "Menta"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Rose"
+msgstr "Rosa"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Night"
+msgstr "Noche"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Warmth"
+msgstr "Calidez"
+
+#: apps/wprs-app/qml/OutputFilter.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Hue"
+msgstr "Tono"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Filter:"
+msgstr "Filtro:"
+
+#: apps/wprs-app/qml/OutputFilter.qml
+msgid "Show as it is"
+msgstr "Mostrar tal cual"
 
 #: apps/wprs-app/qml/OutputRow.qml apps/wprs-app/qml/SceneBuild.qml
 msgid "Every screen"
@@ -5458,10 +5541,6 @@ msgid "Hue, saturation and value"
 msgstr "Tono, saturación y brillo"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Hue"
-msgstr "Tono"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Icon"
 msgstr "Icono"
 
@@ -5937,6 +6016,10 @@ msgstr "Mezcla dura"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Parents of layers"
 msgstr "Padres de las capas"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Files of chosen folders"
+msgstr "Archivos de carpetas elegidas"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Hold"

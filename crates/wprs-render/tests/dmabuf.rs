@@ -6,7 +6,16 @@ use wprs_core::{Ages, Fit, Region};
 use wprs_render::{Layer, Renderer, Shared};
 
 fn color(background: [u8; 3]) -> Layer<'static> {
-    Layer { image: None, fit: Fit::Fill, background, opacity: 1.0, uv: None, relief: None }
+    Layer {
+        image: None,
+        fit: Fit::Fill,
+        background,
+        opacity: 1.0,
+        uv: None,
+        relief: None,
+        flip: [false; 2],
+        grade: None,
+    }
 }
 
 #[test]

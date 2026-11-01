@@ -12,15 +12,27 @@ const CLICK: Duration = Duration::from_secs(2);
 const APART: Duration = Duration::from_secs(1);
 
 impl SceneState {
-    pub(in super::super) fn link(&mut self, scripts: &mut Scripts) {
+    pub(in super::super) fn link(&mut self, scripts: &mut Scripts, output: &str) {
         if self.still || !self.runtime.uses().scripts {
             return;
         }
         let old = self.host.take();
+        let stores = self.spec.pack.scene.scripts.iter().any(|s| s.wants(wprs_scene::ScriptApi::Storage));
+        if stores && self.stash.is_none() {
+            let dir = wprs_core::stash::dir();
+            self.stash = dir.and_then(|d| wprs_core::stash::Stash::open(&d, &self.spec.pack.props.id));
+        }
         let pack = &self.spec.pack;
-        let key = (Arc::as_ptr(pack) as usize, serde_json::to_string(&self.spec.values).unwrap_or_default());
+        let values = serde_json::to_string(&self.spec.values).unwrap_or_default();
+        let key = (Arc::as_ptr(pack) as usize, if stores { format!("{values} {output}") } else { values });
         let named = (pack.locale.as_str(), &pack.labels);
-        let setup = || Setup::new(&pack.scene, &pack.scripts, self.runtime.seed, named);
+        let (stash, folders) = (&self.stash, self.folders());
+        let setup = || {
+            let mut setup = Setup::new(&pack.scene, &pack.scripts, self.runtime.seed, named);
+            setup.storage = stash.as_ref().map_or(serde_json::Value::Null, |s| s.scopes(output));
+            setup.folders = folders;
+            setup
+        };
         let (link, kept) = match old {
             Some(link) => link.rekey(scripts, key, setup),
             None => (super::super::scripts::link(scripts, key, setup), false),
@@ -51,6 +63,9 @@ impl SceneState {
             rt.fill_sounds(&mut self.sounding);
             rt.fill_videos(&mut self.filmed);
         }
+        let now = Instant::now();
+        self.listing(now);
+        let rt = &self.runtime;
         let minute = rt.wall().div_euclid(60.0) as i64;
         if self.zone.0 != minute {
             self.zone = (minute, crate::zone::posix());
@@ -88,6 +103,7 @@ impl SceneState {
             sounds: &self.sounding,
             videos: &self.filmed,
             ended: &self.ended,
+            folders: &self.listed.text,
         };
         let link = self.host.as_mut()?;
         let before = link.progress().0;
@@ -117,6 +133,11 @@ impl SceneState {
                 self.answered = true;
                 self.heard_script(&mut outputs);
                 self.open(output, std::mem::take(&mut outputs.open));
+                self.show(&outputs);
+                if let (Some(stash), Some(stored)) = (self.stash.as_mut(), outputs.storage.take()) {
+                    stash.take(output, &stored);
+                }
+                self.stash.iter_mut().filter(|s| s.due(now)).for_each(|s| drop(s.flush(now, false)));
                 Some(outputs)
             }
             Ok(None) => None,

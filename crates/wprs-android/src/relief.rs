@@ -29,6 +29,8 @@ pub(crate) struct Look {
     pub(crate) background: [u8; 3],
     pub(crate) pan: f32,
     pub(crate) crop: Option<[f32; 4]>,
+    pub(crate) flip: [bool; 2],
+    pub(crate) grade: Option<wprs_core::Grade>,
 }
 
 impl Tilted {
@@ -114,5 +116,14 @@ pub(crate) fn layer<'a>(
     let relief = relief.map(|((raised, charging), uv)| raised.relief(aspect, uv.scale[0], charging));
     let uv = uv.map(|uv| relief.as_ref().map_or(uv, |(_, zoom)| zoomed(uv, *zoom)));
     let (fit, background) = (look.fit, look.background);
-    Layer { image, fit, background, opacity, uv, relief: relief.map(|(relief, _)| relief) }
+    Layer {
+        image,
+        fit,
+        background,
+        opacity,
+        uv,
+        relief: relief.map(|(relief, _)| relief),
+        flip: look.flip,
+        grade: look.grade,
+    }
 }

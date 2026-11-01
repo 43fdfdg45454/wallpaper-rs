@@ -161,6 +161,7 @@ impl Renderer {
                 clock: super::clock::Clock::new(self),
                 hitboxes: Default::default(),
                 covers: HashMap::new(),
+                molds: HashMap::new(),
             }
         })
         .inspect_err(|_| super::flight::forget(id))

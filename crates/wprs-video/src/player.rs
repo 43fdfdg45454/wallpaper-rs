@@ -35,8 +35,8 @@ impl Player {
         let tempo = audio.then(|| make("scaletempo").ok()).flatten();
         tempo.iter().for_each(|tempo| playbin.set_property("audio-filter", tempo));
         let shared = Shared { cut: Arc::new(options.cut.into()), ..Shared::default() };
-        let (video_sink, size, rate, zero_copy) =
-            video_sink::build(options, sink.clone(), shared.seen.clone())?;
+        let watched = (shared.seen.clone(), shared.deep.clone());
+        let (video_sink, size, rate, zero_copy) = video_sink::build(options, sink.clone(), watched)?;
         playbin.set_property("video-sink", &video_sink);
         if zero_copy {
             let flags = if audio { "video+audio+soft-volume+native-video" } else { "video+native-video" };
@@ -83,7 +83,8 @@ impl Player {
     }
 
     pub fn set_max_size(&self, max_size: (u32, u32)) {
-        self.size.set_property("caps", video_sink::size_caps(max_size, self.zero_copy));
+        let deep = self.shared.deep.load(std::sync::atomic::Ordering::Relaxed);
+        self.size.set_property("caps", video_sink::size_caps(max_size, self.zero_copy, deep));
     }
 
     pub fn set_max_fps(&mut self, max_fps: u32) {

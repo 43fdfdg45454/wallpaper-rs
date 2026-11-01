@@ -47,6 +47,7 @@ impl Check<'_> {
             self.uses(s.wants(ScriptApi::Camera), "script_camera");
             self.uses(s.wants(ScriptApi::Shortcuts), "script_shortcuts");
             self.uses(s.wants(ScriptApi::Hierarchy), "script_hierarchy");
+            self.uses(s.wants(ScriptApi::Folders), "script_folders");
             self.uses(s.wants(ScriptApi::Media) || s.events.iter().any(|e| e.media()), "media_info");
             let touches = s.events.iter().any(|e| e.pointer() || e.clicks());
             self.uses(touches, "layer_events");
@@ -107,6 +108,10 @@ impl Check<'_> {
             self.range(&format!("{p}/max"), pool.max as f32, 1.0, MAX_POOL_LAYERS as f32);
             self.range(&format!("{p}/max_vertices"), pool.max_vertices as f32, 3.0, MAX_POOL_VERTICES as f32);
             pool.texture.iter().for_each(|t| self.picture(&format!("{p}/texture"), t));
+            if let Some([w, h]) = pool.size {
+                self.range(&format!("{p}/size"), w.max(h) as f32, 1.0, 4096.0);
+                self.range(&format!("{p}/size"), w.min(h) as f32, 1.0, 4096.0);
+            }
         }
     }
 

@@ -156,6 +156,7 @@ impl Daemon {
                 console: s.console,
                 sandbox: s.sandbox.into(),
                 accent: info.accent.clone(),
+                filter: Some(st.config.filter(name)).filter(|f| !f.is_identity()),
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)

@@ -19,6 +19,7 @@ mod load;
 mod make;
 mod map;
 mod mips;
+pub(crate) mod molds;
 mod own;
 mod packages;
 mod paint;
