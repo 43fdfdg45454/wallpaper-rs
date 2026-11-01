@@ -124,6 +124,20 @@ class SceneTest : SceneBase() {
     }
 
     @Test
+    fun meshLayersBendTheirBonesAndSettleOnceTheirClipEnds() {
+        val dir = File(storage(), "rigs/rig").apply { mkdirs() }
+        File(dir, "scene.json").writeText(RIG_SCENE)
+        File(dir, "rig.glb").writeBytes(java.util.Base64.getDecoder().decode(RIG_GLB))
+        File(dir, "manifest.json").writeText(RIG_MANIFEST)
+        val reply = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(reply, reply.startsWith("["))
+        show("Rig")
+        assertTrue("the clip did not move the mesh", waitFor { frames.get() > 3 })
+        Thread.sleep(700)
+        assertEquals(settled(frames), quiet(frames))
+    }
+
+    @Test
     fun particlesWithTrailsOrdersGradientsAndSoundRangesDrawAndTellTheirPath() {
         val dir = File(storage(), "rains/rain").apply { mkdirs() }
         File(dir, "scene.json").writeText(RAIN_SCENE)
