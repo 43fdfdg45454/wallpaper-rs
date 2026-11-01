@@ -311,7 +311,7 @@ an exact result should use the other modes.
 | mask `strength` | 0 to 1 (default 1), weakens the mask: m′ = mix(1, m, strength) | `mask_strength` |
 | adjustment `size` | `[width, height]` in pixels (at most twice the canvas): only that rectangle around the layer position (placed by `origin`, without the rotation, skew or scale of the layer) is captured and its effects change only that part, and `redraw: true` draws what was captured again with the whole transform of the layer, its opacity, blend mode and mask, as a magnifier or a mirror; without `size` the whole canvas is captured and turned around its middle. A capture is one copy of the rectangle and one pass more, and any change in the scene redraws the whole frame | `capture` |
 | adjustment `rgb` | `true` sends what the layer captures, shrunk to at most 64 × 16, to the RGB lighting of the computer, at most 30 times a second; the manifest must set `permissions.rgb` (`package.md`) | `rgb` |
-| `attach` | `{ "layer", "bone" \| "point", "offset": [x, y], "inherit" }`: follows a bone or a node of a `mesh` or `model` layer instead of a `parent`; `inherit` lists `position`, `rotation` and `scale` (all by default); a layer may not follow itself, through other attachments either | `attach` |
+| `attach` | `{ "layer", "bone" \| "point", "offset": [x, y], "inherit" }`: follows a bone or a node of a `mesh` or `model` layer instead of a `parent`, as posed in the same frame; `inherit` lists `position`, `rotation` and `scale` (all by default; without `position` the layer stays on the origin of the mesh layer); `offset` is in pixels along the bone; the layer hides with its mesh layer, and its own `transform` applies on top as under a parent; a layer may not follow itself, through other attachments either | `attach` |
 | `solid` | `true` or `{ "alpha" (0 to 1) }`: the layer takes the pointer for `click:`, `enter:` and `leave:` triggers and script pointer events, over its box or, with `alpha`, only where it is at least that opaque (pictures by the alpha of their pixels, the other kinds by their color and opacity); a solid group takes the pointer over the boxes of its layers; layers are tested from the top down, as they were drawn in the last frame, with their transforms, parents and parallax, and hidden layers never take it | `layer_events` with `alpha` |
 | `depth_test` | inside a group with `space: 3d`, a flat layer hides behind the models in front of it instead of covering them | `model3d` |
 
@@ -414,14 +414,14 @@ layers of a scene; meshes are read whole, once, when the scene is.
 | `texture` | a picture or video asset (or bound value) that replaces the textures of the file; without it, the picture of the first material that has one, or white; the base color of each material multiplies its parts |
 | `size`, `color` | the box in pixels the mesh fills (the canvas by default) and a color that multiplies it |
 | `parts` | per part (mesh name of the file): `order` (−1000 to 1000, may follow keyframes with `step`), `clip_to` (another part it only shows over) and `visible`; parts are drawn by `order` (0 by default), in the order of the file when it is the same |
-| `depth` | `{ "scale" (0 to 10), "cull" }`: how far the depth of the vertices pushes them with `canvas.perspective` or the 3D camera, and whether parts seen from behind are hidden |
+| `depth` | `{ "scale" (0 to 10, 1 by default), "cull" }`: how far the depth of the vertices (z of the file, towards the viewer, in pixels) pushes them with the perspective of `canvas.perspective` or of the 3D camera, also under `transform.tilt`, and whether triangles seen from behind (turning clockwise on screen) are hidden; without `depth` the depth of vertices is ignored |
 | `clips` | at most 64 `{ "id", "animation", "from", "to", "loop", "events", "bones", "shapes", "order" }`: a stretch of an animation of the file (the first one without `animation`, unless the clip has keys of its own) in seconds within its length, played `repeat` (default), `pingpong` or `once`, with named `events` like timelines, and keys of its own on the same seconds (below) |
 | `animations` | at most 16 animation layers `{ "clip", "weight" (0 to 1), "rate" (0 to 16), "additive", "blend_in", "blend_out" (0 to 10 s), "enabled", "bones" }`, mixed in order: replacing layers first, then additive ones; `bones` limits a layer to those bones; bones without a track keep their rest pose |
-| `ik` | at most 16 chains `{ "chain" (2 to 8 bones from the root), "target", "limits": { "<bone>": [min, max] }, "weight", "bend": "clockwise" \| "counterclockwise" }`; `target` is a point (which may be bound), `"cursor"`, `"bone:<name>"` or `"layer:<id>"`; solved after the animations (`ik`) |
-| `physics` | at most 64 `{ "bone", "mode": "spring" \| "rigid" \| "rope", "stiffness", "damping", "inertia", "wind" (0 to 1), "gravity" (−10 to 10), "rotation": [min, max] degrees, "translation": [min, max] px }` simulated at a fixed 60 Hz so that it does not depend on the frame rate, after the inverse kinematics (`bone_physics`) |
+| `ik` | at most 16 chains `{ "chain" (2 to 8 bones, each hanging from the one before), "target", "limits": { "<bone>": [min, max] }, "weight", "bend": "clockwise" \| "counterclockwise" }`; `target` is a point in pixels of the box from its top left (which may be bound), `"cursor"`, `"bone:<name>"` (any node of the file) or `"layer:<id>"`; see "Reaching and swinging" (`ik`) |
+| `physics` | at most 64 `{ "bone", "mode": "spring" \| "rigid" \| "rope", "stiffness", "damping", "inertia" (0 to 1, 0.5 by default), "wind" (0 to 1), "gravity" (−10 to 10), "rotation": [min, max] degrees, "translation": [min, max] px }`; see "Reaching and swinging" (`bone_physics`) |
 | `rules` | at most 64 `{ "bone", "parent", "weight" }`: moves a bone over to another parent as `weight` goes from 0 to 1, keeping its pose, as a sword passing from a rock to a hand (`bone_rules`) |
 | `shapes`, `expressions` | weights from 0 to 1 of the blend shapes of the file, and at most 64 expressions `{ "<name>": { "<shape>": weight (−1 to 1) } }` whose names `shapes` may also set; at most 8 shapes act at once on each part, the heaviest (`blend_shapes`) |
-| `hit` | bones whose area takes the pointer for scripts, which then learn the bone that was touched (`layer_events`) |
+| `hit` | bones whose area takes the pointer for scripts, which then learn the bone that was touched (`layer_events`): the layer takes the pointer like a `solid` one, and each event carries the listed bone that bends the drawn triangle under the pointer, or the listed bone it hangs from, else `null` |
 
 The keys of a clip are lists of `[time, value]` keyframes with an optional easing, as in timelines:
 
@@ -455,6 +455,33 @@ no allocation per frame; at the lowest quality moving skeletons ask for at most 
   "physics": [{ "bone": "tail", "mode": "rope", "wind": 0.6 }],
   "shapes": { "smile": { "prop": "mood" } } }
 ```
+
+#### Reaching and swinging
+
+Each frame the pose is worked out in this order: the animation layers, the `rules`, the `ik`
+chains in their order, what scripts set (see "Bones, blend shapes and attachments"), and the
+`physics`. Rotations of bones are measured in degrees clockwise from their rest pose, as in clips.
+
+A chain turns its bones so that its end (where the first child of its last bone starts, or as far
+again along the last bone when it has none) reaches the target. Chains of two bones are solved
+exactly, bending at their middle joint the way `bend` says; longer chains, and chains whose `limits`
+stop a bone, take at most 10 rounds that turn each bone towards the target from the end back. A
+target out of reach stretches the chain towards it. `limits` keep each listed bone within `[min,
+max]` degrees of its rest pose and `weight` blends the turns with the pose. `"cursor"` follows the
+pointer only while the scene may read it (the pointer input, told to the user like any other use of
+the pointer); without it the chain keeps its pose. `"layer:<id>"` follows the position of that layer.
+
+Bodies of `physics` swing at a fixed step of 1/60 s (1/30 s on battery), at most 15 steps a frame,
+so that they do not depend on the frame rate; longer gaps are dropped. A `spring` pulls the end of
+its bone back to where the pose puts it (`stiffness`), a `rigid` bone swings like a pendulum held
+loosely to its pose, and a `rope` links the bone and its first children (those without a body of
+their own, at most 8 links) into a chain that hangs and sways. `inertia` is how much a body stays
+behind when its parent moves, `damping` how fast it calms down, `gravity` pulls down (98 pixels per
+second squared for each unit), `wind` is how much `canvas.wind` (in pixels a second, with gusts)
+pushes it, `rotation` bounds how far each link turns from its pose and `translation` lets the head of
+the bone itself move that many pixels each way. A body that has not moved for half a second, while
+its pose and the wind stay still, asks for no frames; at the lowest quality bodies keep the pose
+of the animation and ask for nothing. Scripts can push bones with `impulse`.
 
 ### Models and 3D
 
@@ -1466,8 +1493,9 @@ engine bounds what it receives: positions and sizes to 100000 pixels, scales to 
 ±89°, `origin` and `parallax` to ±10, `opacity` and colors to 0..1, texts to 4096 characters and their
 points to 1..2048, and fonts to the fonts the scene names or `sans-serif`, `serif` and `monospace`.
 `layer.on(event, handler)` handles the pointer events of the layer (see the declarations): each
-handler gets `{ type, layer, local, scene }`, `local` in pixels of the layer from its top left corner
-(of the group for a solid group) and `scene` in canvas pixels. `enter`, `leave` and `move` follow
+handler gets `{ type, layer, local, scene, bone }`, `local` in pixels of the layer from its top left corner
+(of the group for a solid group), `scene` in canvas pixels and `bone` the touched bone of a `mesh`
+layer that lists `hit` bones (else `null`). `enter`, `leave` and `move` follow
 the topmost solid layer under the pointer; `down` goes to that layer, which then takes `move` and
 `up` until every button is released, also off it, and `click` follows an `up` on the layer that took
 the `down`. They reach the scripts in the next frame, at most 64 a frame.
@@ -1487,6 +1515,24 @@ name }` in the frame after a video without `loop` reaches its end. Calls take th
 after a `once` clip ends. A clip that no animation layer plays gets a replacing one, at weight 1,
 the first time a script calls it. Calls take the layer over from its `rate`, `weight` and
 `enabled` until the scene starts again; animations run before the scripts of the next frame.
+
+Bones, blend shapes and attachments of a `mesh` layer take `uses: ["animations"]` too. `layer.bones`
+lists its bones (every node of its file) and `layer.bone(name)` returns a handle with `name`,
+`parent`, `rotation` (degrees clockwise), `position` (`[x, y]` pixels, y down, in the space of its
+parent) and `scale`, measured from the rest pose like the keys of clips, and `worldPosition` (pixels
+of the box of the layer from its top left) and `worldRotation`; reading gives what the script set
+or the pose of the last frame. Writing sets the bone for the next frame after the animations, rules
+and chains and before the bodies of `physics`, so a bone with a body springs back once let go;
+writing `worldPosition` or `worldRotation` replaces the local `position` and `rotation` and the other
+way round, and `reset()` lets the bone go. `layer.shape(name, weight)` sets a blend shape or
+expression (−1 to 1) instead of what `shapes` gives it and `layer.shape(name)` reads what the script
+set; `layer.impulse(bone, [vx, vy])` pushes the end of a bone that has a body by that speed in pixels
+a second, once. `layer.hit(x, y)` names the bone nearest to that point of the box (among `hit` when
+it lists any) and `layer.attachment(name)` gives `{ matrix, origin, angle, uv }` of a bone or node:
+its frame in canvas pixels (`[a, b, c, d, e, f]`), where it is, its angle in degrees clockwise and
+its place as fractions of the box. A layer that reads bones reports their pose every frame, at
+most 256 of them; the engine bounds positions to 100000 pixels, scales to 1000 and impulses to 16 a
+frame.
 
 `layer.effect(index or name)` controls one effect of the layer: `enabled`, `set(parameter, value)`
 (numbers, vectors, colors, switches and blend modes, checked against the effect's description and
@@ -1593,7 +1639,7 @@ module's exports, imports and calls.
 | Field | Meaning |
 |-------|---------|
 | `events` | the functions the module exports and the events it handles, each once: the lifecycle above (`update` is the only one older engines call), the pointer events of `solid` layers and `hit` bones `click`, `down`, `up` (input `clicks`), `enter`, `leave` and `move` (input `pointer`), delivered with `scene.layer(id).on(event, handler)` as `{ type, layer, local, scene }` with the touched bone, and `mediaStatus`, `mediaPlayback`, `mediaProperties`, `mediaThumbnail` and `mediaTimeline` (input `media`) |
-| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, `media` (the `media` object and its colors, input `media`; `media_info`, which engines run later), `storage` (`storage`; `script_storage`), `geometry` (`scene.mesh(pool)`; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video` and `layer.anim(clip)`; texture frames, model clips, bones, shapes and attachments come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `parallax`, `bloom` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`), `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) and `folders` (`folder(prop)`; `script_folders`), described in "Parents, the camera, shapes, storage and folders" |
+| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, `media` (the `media` object and its colors, input `media`; `media_info`, which engines run later), `storage` (`storage`; `script_storage`), `geometry` (`scene.mesh(pool)`; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`, `layer.anim(clip)` and, on `mesh` layers, `layer.bone(name)`, `bones`, `shape`, `impulse`, `hit` and `attachment`; texture frames and model clips come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `parallax`, `bloom` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`), `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) and `folders` (`folder(prop)`; `script_folders`), described in "Parents, the camera, shapes, storage and folders" |
 | `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}`. They live only here: the module does not export them and `scene import-script` does not propose them |
 
 Any event but `update`, any part but `audio`, `pointer` and `clicks`, and `params` name `scripts2`;

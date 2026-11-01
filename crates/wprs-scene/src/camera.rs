@@ -51,7 +51,7 @@ impl Context<'_> {
         Some(outer.map_or(own, |o| o.then(own)))
     }
 
-    fn distance(&self) -> f32 {
+    pub(crate) fn distance(&self) -> f32 {
         let fov = || self.scene.camera3d.as_ref().map_or(45.0, |c| c.fov.get(self)).clamp(1.0, 179.0);
         let found = self.scene.canvas.perspective;
         found.unwrap_or_else(|| self.canvas[1] / 2.0 / (fov().to_radians() / 2.0).tan()).max(100.0)
@@ -68,7 +68,7 @@ fn fbm(t: f32, axis: u32, rough: f32) -> f32 {
     sum / total
 }
 
-fn noise(x: f32, seed: u32) -> f32 {
+pub(crate) fn noise(x: f32, seed: u32) -> f32 {
     let hash = |n: f32| {
         let v = (n as i64 as u32).wrapping_mul(0x9e37_79b1) ^ seed.wrapping_mul(0x85eb_ca77);
         let v = (v ^ (v >> 15)).wrapping_mul(0x2c1b_3c6d);

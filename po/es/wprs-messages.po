@@ -2051,6 +2051,10 @@ msgid "%1 applies to timelines that loop with repeat only"
 msgstr "%1 solo se aplica a líneas de tiempo que se repiten con repeat"
 
 #: crates/wprs-scene/src/issue.rs
+msgid "%1 must list bones that each hang from the one before"
+msgstr "%1 debe listar huesos que cuelguen cada uno del anterior"
+
+#: crates/wprs-scene/src/issue.rs
 msgid "invalid scene: %1"
 msgstr "escena no válida: %1"
 

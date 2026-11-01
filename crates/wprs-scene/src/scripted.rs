@@ -41,6 +41,7 @@ pub struct LayerRead {
     pub size: Option<Extent>,
     pub text: Option<String>,
     pub world: [f32; 6],
+    pub bones: Vec<[f32; 6]>,
 }
 
 fn finite<const N: usize>(v: Option<[f32; N]>, lo: f32, hi: f32) -> Option<[f32; N]> {
@@ -137,6 +138,8 @@ impl ScriptOutputs {
         self.stage = self.stage.map(crate::StageSet::bounded);
         self.storage = self.storage.filter(|s| s.is_object());
         self.meshes.retain(|id, _| scene.pools.contains_key(id));
+        let rigs = std::mem::take(&mut self.rigs).into_iter().filter(|(id, _)| scene.layer(id).is_some());
+        self.rigs = rigs.take(crate::MAX_DRIVEN_RIGS).map(|(id, r)| (id, r.bounded())).collect();
         self
     }
 }

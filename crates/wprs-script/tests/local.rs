@@ -86,7 +86,13 @@ fn every_pointer_event_reaches_its_layer_handlers() {
     let touches: Vec<Touch> = kinds
         .iter()
         .enumerate()
-        .map(|(i, kind)| Touch { layer: "b".into(), kind: *kind, local: [i as f32, 0.0], scene: [0.0; 2] })
+        .map(|(i, kind)| Touch {
+            layer: "b".into(),
+            kind: *kind,
+            local: [i as f32, 0.0],
+            scene: [0.0; 2],
+            bone: None,
+        })
         .collect();
     let out = script.update(&Frame { touches: &touches, ..Frame::at(0.0) }).unwrap();
     assert_eq!(text(&out, "a"), "enter@0,0 move@1,0 down@2,0 up@3,0 click@4,0 leave@5,0");

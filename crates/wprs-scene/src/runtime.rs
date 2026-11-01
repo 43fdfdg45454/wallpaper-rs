@@ -74,6 +74,7 @@ pub struct Runtime {
     pub(crate) sighted: Cell<u64>,
     pub(crate) puppets: Vec<crate::puppet::Puppet>,
     pub(crate) seen: Cell<u64>,
+    pub(crate) viewed: Cell<[f32; 4]>,
 }
 
 impl Runtime {
@@ -113,6 +114,7 @@ impl Runtime {
             sighted: Cell::new(u64::MAX),
             puppets: puppets::cast(&scene),
             seen: Cell::new(u64::MAX),
+            viewed: Cell::new([0.0, 0.0, size[0] as f32, size[1] as f32]),
             scene,
             seed,
             raw: props.clone(),

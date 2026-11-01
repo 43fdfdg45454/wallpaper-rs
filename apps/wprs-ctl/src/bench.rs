@@ -79,6 +79,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
     };
     let cost = scene.cost(quality);
     let mut runtime = Runtime::new(Arc::new(scene), values);
+    runtime.set_quality(quality);
     assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
     let start = Instant::now();
     let mut others = Vec::new();

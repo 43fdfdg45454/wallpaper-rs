@@ -71,7 +71,10 @@ impl Painter<'_, '_, '_> {
 
     pub(crate) fn hitboxes(&self, sources: &Sources, covers: &mut Covers, boxes: &mut Hitboxes) {
         let (draws, mut n) = (&self.frame.draws, 0);
-        for (i, d) in draws.iter().enumerate().filter(|(_, d)| !d.layer.solid.is_off() && !d.hidden) {
+        let takes = |d: &&wprs_scene::Draw| {
+            !d.layer.solid.is_off() || d.layer.rig().is_some_and(|r| !r.hit.is_empty())
+        };
+        for (i, d) in draws.iter().enumerate().filter(|(_, d)| takes(d) && !d.hidden) {
             let (id, solid) = (d.layer.id.as_str(), d.layer.solid);
             match d.content {
                 Content::Group { .. } => {

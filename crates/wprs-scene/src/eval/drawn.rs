@@ -53,6 +53,7 @@ pub enum Content<'a> {
         size: [f32; 2],
         pose: u64,
         texture: Option<Cow<'a, str>>,
+        relief: Option<crate::Relief>,
     },
     Adjustment,
 }

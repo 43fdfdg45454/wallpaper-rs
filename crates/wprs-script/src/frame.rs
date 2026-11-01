@@ -135,11 +135,12 @@ impl Encoder {
                 Some(Extent::Box(b)) => w.u8(2).f32s(&b),
                 None => w.u8(0),
             };
-            w.opt(r.text.as_deref()).f32s(&r.world);
+            w.opt(r.text.as_deref()).f32s(&r.world).u16(r.bones.len());
+            r.bones.iter().for_each(|b| _ = w.f32s(b));
         }
         w.u16(f.touches.len());
         for t in f.touches {
-            w.str(&t.layer).u8(t.kind as u8).f32s(&t.local).f32s(&t.scene);
+            w.str(&t.layer).u8(t.kind as u8).f32s(&t.local).f32s(&t.scene).opt(t.bone.as_deref());
         }
         w.u16(f.sounds.len());
         for id in f.sounds {

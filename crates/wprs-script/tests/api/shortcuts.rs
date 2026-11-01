@@ -20,7 +20,7 @@ fn scene(uses: serde_json::Value) -> serde_json::Value {
 }
 
 fn touch(kind: TouchKind) -> Touch {
-    Touch { layer: "button".into(), kind, local: [1.0, 1.0], scene: [1.0, 1.0] }
+    Touch { layer: "button".into(), kind, local: [1.0, 1.0], scene: [1.0, 1.0], bone: None }
 }
 
 #[test]

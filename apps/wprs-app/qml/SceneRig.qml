@@ -110,6 +110,11 @@ ColumnLayout {
         text: App.tr("Bones are placed here on meshes cut from a picture; other meshes keep the bones of their file.")
     }
 
+    SceneRigMotion {
+        Layout.fillWidth: true
+        host: rig
+    }
+
     RowLayout {
         QQC2.Label {
             text: App.tr("Clip in the preview")

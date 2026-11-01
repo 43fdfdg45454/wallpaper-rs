@@ -1,6 +1,9 @@
 mod checks;
 mod decode;
 mod kit;
+mod pin;
 mod pose;
+mod reach;
 mod settle;
 mod sketch;
+mod swing;

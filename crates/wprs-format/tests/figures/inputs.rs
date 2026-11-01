@@ -1,20 +1,19 @@
 use super::*;
 
 #[test]
-fn meshes_are_read_from_the_package_and_their_newer_parts_refused_until_they_are_drawn() {
+fn meshes_are_read_from_the_package_and_their_chains_play_everywhere() {
     let layers = json!([{ "id": "p", "type": "mesh", "mesh": "fox", "ik": [{ "chain": ["arm", "hand"], "target": [10, 10] }] }]);
     let assets = json!({ "assets": { "sky": { "path": "sky.png" }, "fox": { "path": "fox.glb" } } });
     let text = scene(layers, assets.clone());
     let package = load(&manifest(&["ik", "mesh"], json!({})), &text, &[("fox.glb", &fox())]).unwrap();
     assert_eq!(package.facts.features.iter().collect::<Vec<_>>(), ["ik", "mesh"]);
     for platform in [Platform::Desktop, Platform::Android] {
-        let refused =
-            features::playable(&package.manifest, &package.facts, platform).unwrap_err().to_string();
-        assert!(
-            refused.contains("ik (reaches for targets with chains of bones)") && !refused.contains("mesh ("),
-            "{refused}"
-        );
+        assert!(features::playable(&package.manifest, &package.facts, platform).is_ok());
     }
+    let loose = json!([{ "id": "p", "type": "mesh", "mesh": "fox", "ik": [{ "chain": ["hand", "arm"], "target": [1, 1] }] }]);
+    let fault =
+        load(&manifest(&["ik", "mesh"], json!({})), &scene(loose, assets.clone()), &[("fox.glb", &fox())]);
+    assert!(fault.map(drop).unwrap_err().to_string().contains("each hang from the one before"));
     let wrong = json!([{ "id": "p", "type": "mesh", "mesh": "fox", "ik": [{ "chain": ["arm", "tail"], "target": [1, 1] }] }]);
     let fault = load(&manifest(&["ik", "mesh"], json!({})), &scene(wrong, assets), &[("fox.glb", &fox())]);
     assert!(fault.map(drop).unwrap_err().to_string().contains("/layers/0/ik/0/chain/1 names \"tail\""));

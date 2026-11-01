@@ -42,3 +42,57 @@ fn a_mesh_that_cannot_be_read_names_its_asset() {
     let found = scene(fox(json!({})), gl.bytes()).unwrap_err().to_string();
     assert!(found.contains("/assets/arm") && found.contains("cycle"), "{found}");
 }
+
+#[test]
+fn chains_bodies_and_attachments_are_checked_against_the_file() {
+    let fine = json!({ "ik": [{ "chain": ["root", "arm"], "target": "bone:patch", "limits": { "arm": [-45, 45] } }],
+        "physics": [{ "bone": "hand", "mode": "rope", "rotation": [-30, 30], "translation": [-4, 4] }], "hit": ["arm"] });
+    assert_eq!(issue(fine), "");
+    for (bad, said) in [
+        (json!({ "ik": [{ "chain": ["root", "hand"], "target": [1, 1] }] }), "hang from the one before"),
+        (json!({ "ik": [{ "chain": ["arm", "root"], "target": [1, 1] }] }), "hang from the one before"),
+        (json!({ "ik": [{ "chain": ["root", "leg"], "target": [1, 1] }] }), "leg"),
+        (json!({ "ik": [{ "chain": ["root", "arm"], "target": "bone:tail" }] }), "tail"),
+        (json!({ "ik": [{ "chain": ["root", "arm"], "target": [1, 1], "weight": 3 }] }), "weight"),
+        (
+            json!({ "ik": (0..17).map(|_| json!({ "chain": ["root", "arm"], "target": [1, 1] })).collect::<Vec<_>>() }),
+            "at most 16",
+        ),
+        (json!({ "physics": [{ "bone": "tail" }] }), "tail"),
+        (json!({ "physics": [{ "bone": "arm" }, { "bone": "arm" }] }), "physics/1/bone"),
+        (json!({ "physics": [{ "bone": "arm", "translation": [5, -5] }] }), "translation/1"),
+        (json!({ "physics": [{ "bone": "arm", "gravity": 11 }] }), "gravity"),
+        (json!({ "physics": (0..65).map(|_| json!({ "bone": "arm" })).collect::<Vec<_>>() }), "at most 64"),
+        (json!({ "hit": ["arm", "arm"] }), "hit"),
+        (json!({ "hit": ["tail"] }), "tail"),
+    ] {
+        let found = issue(bad.clone());
+        assert!(found.contains(said), "{bad}: {said}: {found}");
+    }
+}
+
+#[test]
+fn attachments_name_bones_and_points_of_meshes_without_loops() {
+    let two = |attach: serde_json::Value, back: Option<serde_json::Value>| {
+        let mut fox = fox(json!({}));
+        if let Some(b) = back {
+            fox["attach"] = b;
+        }
+        let layers = json!([fox, { "id": "badge", "type": "mesh", "mesh": "arm", "attach": attach }]);
+        let text = json!({ "schema": wprs_scene::SCHEMA, "canvas": { "size": [64, 64] },
+            "assets": { "arm": { "path": "arm.glb" } }, "layers": layers });
+        let mut scene = wprs_scene::Scene::from_json(&text.to_string()).map_err(|e| e.to_string())?;
+        scene
+            .adopt(&Default::default(), |_: &str, _: usize| Ok::<_, String>(arm().bytes()))
+            .map_err(|e| e.to_string())
+    };
+    assert_eq!(two(json!({ "layer": "fox", "bone": "hand" }), None), Ok(()));
+    assert_eq!(two(json!({ "layer": "fox", "point": "patch" }), None), Ok(()));
+    let missing = two(json!({ "layer": "fox", "bone": "tail" }), None).unwrap_err();
+    assert!(missing.contains("attach/bone") && missing.contains("tail"), "{missing}");
+    let both = two(json!({ "layer": "fox", "bone": "hand", "point": "patch" }), None).unwrap_err();
+    assert!(both.contains("/attach"), "{both}");
+    let looped =
+        two(json!({ "layer": "fox", "bone": "hand" }), Some(json!({ "layer": "badge", "bone": "hand" })));
+    assert!(looped.unwrap_err().contains("depends on itself"));
+}

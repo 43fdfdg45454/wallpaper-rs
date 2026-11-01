@@ -136,6 +136,18 @@ pub(crate) fn apply<'js>(ctx: &Ctx<'js>, state: &Object<'js>, bytes: &[u8]) -> R
         }
         at.set("text", c.opt()?)?;
         pair(ctx, &at, "world", &c.f32s::<6>()?)?;
+        match c.u16()? {
+            0 => at.remove("bones")?,
+            n => {
+                let bones = Array::new(ctx.clone())?;
+                for i in 0..n {
+                    let frame = Array::new(ctx.clone())?;
+                    floats(&frame, &c.f32s::<6>()?)?;
+                    bones.set(i, frame)?;
+                }
+                at.set("bones", bones)?;
+            }
+        }
     }
     let touches = Array::new(ctx.clone())?;
     for i in 0..c.u16()? {
@@ -144,6 +156,7 @@ pub(crate) fn apply<'js>(ctx: &Ctx<'js>, state: &Object<'js>, bytes: &[u8]) -> R
         t.set("kind", c.u8()?)?;
         pair(ctx, &t, "local", &c.f32s::<2>()?)?;
         pair(ctx, &t, "scene", &c.f32s::<2>()?)?;
+        t.set("bone", c.opt()?)?;
         touches.set(i, t)?;
     }
     frame.set("touches", touches)?;

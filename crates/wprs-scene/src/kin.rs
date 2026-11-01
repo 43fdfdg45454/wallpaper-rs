@@ -53,11 +53,15 @@ impl Context<'_> {
         self.placed(layer, Some(outer), 0)
     }
 
+    pub(crate) fn placement(&self, layer: &Layer) -> Place {
+        self.placed(layer, None, 0)
+    }
+
     pub(crate) fn world(&self, layer: &Layer) -> Affine {
         self.camera.inverse().then(self.placed(layer, None, 0).world)
     }
 
-    fn placed(&self, layer: &Layer, outer: Option<(Affine, Option<Lean>)>, depth: usize) -> Place {
+    pub(crate) fn placed(&self, layer: &Layer, outer: Option<(Affine, Option<Lean>)>, depth: usize) -> Place {
         let key = std::ptr::from_ref(layer) as usize;
         if let Some(found) = self.places.borrow().get(&key) {
             return *found;
@@ -70,12 +74,17 @@ impl Context<'_> {
         let parent = parent_of(layer, set).and_then(by_id);
         let home = || self.homes.get(&layer.id).and_then(by_id).map(|p| (p.world, p.lean));
         let follows = |what| follows(layer, set, what);
+        let pinned = layer.attach.as_ref().filter(|_| set.parent.is_none());
+        let pinned = pinned.and_then(|a| self.pinned(a, depth));
         let (base, around) = match parent.filter(|_| follows(Inherit::Transform)) {
             Some(p) => (p.world, p.lean),
-            None => outer.or_else(home).unwrap_or((self.camera, None)),
+            None => {
+                pinned.map(|(w, lean, _)| (w, lean)).or(outer).or_else(home).unwrap_or((self.camera, None))
+            }
         };
         let mut visible = set.visible.unwrap_or_else(|| layer.visible.get(self));
         let mut opacity = set.opacity.unwrap_or_else(|| layer.opacity.get(self)).clamp(0.0, 1.0);
+        visible &= pinned.is_none_or(|p| p.2);
         if let Some(p) = parent {
             visible &= p.visible || !follows(Inherit::Visible);
             opacity *= if follows(Inherit::Opacity) { p.opacity } else { 1.0 };
@@ -93,6 +102,7 @@ impl Context<'_> {
             [view[0] + fx * view[2], view[1] + fy * view[3]]
         });
         let free = layer.anchor.is_some()
+            || (layer.attach.is_some() && set.parent.is_none())
             || follows(layer, set, Inherit::Transform)
             || matches!(layer.kind, Kind::Group { .. } | Kind::Adjustment { .. });
         let center = if free { [0.0; 2] } else { [canvas[0] / 2.0, canvas[1] / 2.0] };

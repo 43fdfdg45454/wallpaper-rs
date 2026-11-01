@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 mod mesh;
 mod outputs;
+mod rigs;
 mod stage;
 
 pub use mesh::{MAX_MESH_BYTES, MESH_FLOATS, Mesh};
@@ -10,6 +11,7 @@ pub use outputs::{
     LayerOverride, ParticleCommand, ParticleControl, ScriptOutputs, SoundCommand, SoundControl,
     TimelineCommand, Tuning, VideoCommand, VideoControl,
 };
+pub use rigs::{BoneSet, MAX_DRIVEN_BONES, MAX_DRIVEN_RIGS, MAX_DRIVEN_SHAPES, MAX_IMPULSES, RigControl};
 pub use stage::{BloomSet, CameraSet, GlideSet, ShakeSet, StageSet};
 
 pub const BANDS: usize = 64;

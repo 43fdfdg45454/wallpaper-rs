@@ -10,18 +10,19 @@ fn puppet() -> Scene {
     s.bones = vec![bone("root", None, [4.0, 32.0]), bone("arm", Some(0), [32.0, 32.0])];
     s.bind();
     let glb = s.glb();
-    let doc = serde_json::json!({ "schema": SCHEMA, "canvas": { "size": [64, 64] },
+    let doc = serde_json::json!({ "schema": SCHEMA,
         "assets": { "pic": { "path": "pic.png" }, "mesh": { "path": "mesh.glb" } },
         "layers": [{ "id": "fox", "type": "mesh", "mesh": "mesh", "texture": "pic",
             "clips": [{ "id": "swing", "loop": "pingpong", "bones": { "arm": { "rotation": [[0, 0], [1, 60]] } } }],
-            "animations": [{ "clip": "swing" }] }] });
+            "animations": [{ "clip": "swing" }], "ik": [{ "chain": ["root", "arm"], "target": [40, 20], "weight": 0.5 }],
+            "physics": [{ "bone": "arm", "mode": "rope", "gravity": 1 }] }], "canvas": { "size": [64, 64], "wind": [30, 0] } });
     let mut scene = Scene::from_json(&doc.to_string()).unwrap();
     scene.adopt(&Default::default(), move |_: &str, _: usize| Ok::<_, String>(glb.clone())).unwrap();
     scene
 }
 
 #[test]
-fn a_moving_skeleton_poses_and_evaluates_its_frames_without_allocating() {
+fn a_moving_skeleton_with_reach_and_swing_poses_and_evaluates_its_frames_without_allocating() {
     let Ok(r) = Renderer::shared() else { return };
     let picture = RgbaImage::from_fn(64, 64, |x, y| Rgba([x as u8 * 4, y as u8 * 4, 90, 255]));
     let assets = super::super::SceneAssets {

@@ -313,11 +313,11 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `vertex_effects` | brings effects with a `vertex` stage | runs | runs |
 | `custom_effects2` | brings effects with `compose`, `swap`, `min_fps` or `velocity`, or whose shader calls `cursor_last`, `grid_uv`, `grid_position` or `fs_copy` | runs | runs |
 | `mesh` | has `mesh` layers, with their parts, depth, clips and animation layers | runs | runs |
-| `ik` | sets `ik` chains on a mesh or model | refused | refused |
-| `bone_physics` | sets `physics` on a mesh or model, or `canvas.wind` | refused | refused |
+| `ik` | sets `ik` chains on a mesh or model | runs | runs |
+| `bone_physics` | sets `physics` on a mesh or model, or `canvas.wind` | runs | runs |
 | `bone_rules` | sets `rules` on a mesh or model | runs | runs |
 | `blend_shapes` | sets `shapes` or `expressions` on a mesh or model | runs | runs |
-| `attach` | sets `attach` on a layer | refused | refused |
+| `attach` | sets `attach` on a layer | runs | runs |
 | `model3d` | has `model` layers or groups with `space: 3d` | refused | refused |
 | `material_shaders` | shades a model with `fur`, `foliage`, `chroma` or a material shader of its own | refused | refused |
 | `camera3d` | sets `camera3d` | refused | refused |

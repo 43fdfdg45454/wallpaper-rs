@@ -35,6 +35,7 @@ pub enum Issue {
     Locked(String),
     Timing(String),
     Wrap(String),
+    Unlinked(String),
 }
 
 impl Issue {
@@ -124,6 +125,9 @@ impl Issue {
                 said("scene.timing", "%1 needs either a duration or both frames and fps", &[p])
             }
             Issue::Wrap(p) => said("scene.wrap", "%1 applies to timelines that loop with repeat only", &[p]),
+            Issue::Unlinked(p) => {
+                said("scene.unlinked", "%1 must list bones that each hang from the one before", &[p])
+            }
         }
     }
 }

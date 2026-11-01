@@ -44,7 +44,21 @@ fn info(layer: &Layer, scene: &Scene) -> Json {
     if let Some(group) = initial.get_mut("layers") {
         *group = Json::Array(layer.children().iter().map(|c| json!(c.id)).collect());
     }
-    json!({ "type": kind, "effects": effects, "initial": initial })
+    json!({ "type": kind, "effects": effects, "initial": initial, "rig": rig(layer, scene) })
+}
+
+fn rig(layer: &Layer, scene: &Scene) -> Json {
+    let wprs_scene::Kind::Mesh(m) = &layer.kind else { return Json::Null };
+    let Some(r) = scene.rigs.get(&m.mesh) else { return Json::Null };
+    let bones: Vec<Json> = (r.joints.iter())
+        .map(|j| {
+            let ([x, y, _], q, s) = (j.rest.t, j.rest.r, j.rest.s);
+            let turn = -2.0 * q[2].atan2(q[3]).to_degrees();
+            json!({ "name": j.name, "parent": j.parent, "position": [x, -y], "rotation": turn, "scale": [s[0], s[1]] })
+        })
+        .collect();
+    let size = m.size.unwrap_or(scene.canvas.size.map(|v| v as f32));
+    json!({ "size": size, "bones": bones, "shapes": r.shapes, "hit": m.rig.hit })
 }
 
 fn nested(prefix: &str, layer: &Layer, scene: &Scene, out: &mut BTreeMap<String, Json>) {

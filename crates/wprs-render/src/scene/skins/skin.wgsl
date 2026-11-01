@@ -1,5 +1,5 @@
 struct Bones { m: array<vec4<f32>, 768> };
-struct Pieces { box_size: vec4<f32>, data: array<vec4<f32>, 384> };
+struct Pieces { box_size: vec4<f32>, lift: vec4<f32>, data: array<vec4<f32>, 384> };
 struct In {
     @builtin(vertex_index) index: u32,
     @location(0) pos: vec3<f32>,
@@ -40,7 +40,8 @@ fn vs_skin(v: In) -> Out {
         let b = u32(v.joints[j]) * 3u;
         moved += vec3<f32>(dot(bones.m[b], at), dot(bones.m[b + 1u], at), dot(bones.m[b + 2u], at)) * v.weights[j];
     }
-    let ndc = moved.xy / (pieces.box_size.xy * 0.5);
+    let lift = pieces.lift.xyz * moved.z;
+    let ndc = (moved.xy + lift.xy) / max(1.0 + lift.z, 0.05) / (pieces.box_size.xy * 0.5);
     return Out(vec4<f32>(ndc, 0.5, 1.0), v.uv, pieces.data[k + 5u]);
 }
 

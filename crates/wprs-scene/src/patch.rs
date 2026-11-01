@@ -1,5 +1,6 @@
 use crate::{
-    EffectControl, LayerOverride, ParticleControl, ScriptOutputs, SoundControl, TimelineCommand, VideoControl,
+    EffectControl, LayerOverride, ParticleControl, RigControl, ScriptOutputs, SoundControl, TimelineCommand,
+    VideoControl,
 };
 use serde::{Deserialize, Deserializer};
 use serde_json::Value as Json;
@@ -51,5 +52,6 @@ patch!(
     stopped: Vec<String>,
     open: Vec<String>,
     stage: Option<crate::StageSet>,
-    storage: Option<Json>
+    storage: Option<Json>,
+    rigs: BTreeMap<String, RigControl>
 );

@@ -26,7 +26,7 @@ fn mix(local: &mut Trs, rest: &Trs, path: Path, v: &[f32], (w, additive): (f32, 
 
 impl Puppet {
     pub(crate) fn blend(&mut self, cx: &Context, m: &MeshLayer) {
-        let Puppet { heads, clips, locals, shape, sorted, buffer, rig, .. } = self;
+        let Puppet { heads, clips, locals, shape, sorted, buffer, rig, layer, .. } = self;
         locals.clear();
         locals.extend(rig.joints.iter().map(|j| j.rest));
         shape.clear();
@@ -90,14 +90,13 @@ impl Puppet {
                 }
             }
         }
+        let set = cx.script.rigs.get(layer.as_str()).map(|r| &r.shapes);
+        let given = |name: &String| set.and_then(|s| s.get(name)).copied();
         for (name, v) in &m.rig.shapes {
-            let x = v.get(cx);
-            match m.rig.expressions.get(name) {
-                Some(parts) => parts.iter().for_each(|(s, k)| {
-                    rig.shape(s).into_iter().for_each(|i| shape[i] += k * x);
-                }),
-                None => rig.shape(name).into_iter().for_each(|i| shape[i] += x),
-            }
+            express(rig, m, shape, name, given(name).unwrap_or_else(|| v.get(cx)));
+        }
+        for (name, x) in set.into_iter().flatten().filter(|(n, _)| !m.rig.shapes.contains_key(*n)) {
+            express(rig, m, shape, name, *x);
         }
         shape.iter_mut().for_each(|s| *s = s.clamp(-1.0, 1.0));
     }
@@ -105,4 +104,13 @@ impl Puppet {
 
 fn weigh(now: f32, v: f32, default: f32, (w, additive): (f32, bool)) -> f32 {
     if additive { now + (v - default) * w } else { now + (v - now) * w }
+}
+
+fn express(rig: &crate::Rigged, m: &MeshLayer, shape: &mut [f32], name: &str, x: f32) {
+    match m.rig.expressions.get(name) {
+        Some(parts) => {
+            parts.iter().for_each(|(s, k)| rig.shape(s).into_iter().for_each(|i| shape[i] += k * x))
+        }
+        None => rig.shape(name).into_iter().for_each(|i| shape[i] += x),
+    }
 }

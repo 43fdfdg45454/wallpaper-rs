@@ -177,6 +177,7 @@ impl Runtime {
             size: set.size.or(size),
             text,
             world: cx.world(layer).0,
+            bones: self.bones_read(&cx, layer),
         })
     }
 }

@@ -15,8 +15,13 @@ fn the_cursor_and_layer_touches_reach_scripts() {
     );
     let pointer =
         PointerState { pos: Some([0.5, 0.25]), buttons: 1, inside: true, ..PointerState::default() };
-    let touches =
-        [Touch { layer: "button".into(), kind: TouchKind::Click, local: [1.0, 2.0], scene: [3.0, 4.0] }];
+    let touches = [Touch {
+        layer: "button".into(),
+        kind: TouchKind::Click,
+        local: [1.0, 2.0],
+        scene: [3.0, 4.0],
+        bone: None,
+    }];
     let frame = Frame {
         pointer: &pointer,
         view: [100.0, 0.0, 200.0, 100.0],

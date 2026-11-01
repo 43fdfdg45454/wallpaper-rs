@@ -3,9 +3,22 @@ use crate::rigged::{MAX_ACTIVE_SHAPES, Rigged};
 use crate::{Kind, Layer, MeshLayer, Wake};
 use std::sync::Arc;
 
+mod drive;
+mod finish;
 mod heads;
+pub(crate) mod limb;
+pub(crate) mod mount;
 mod pose;
+mod reach;
+mod sway;
+mod swing;
+mod touch;
 mod world;
+
+pub(crate) use mount::Seat;
+pub use reach::IK_ROUNDS;
+pub(crate) use swing::Sim;
+pub use swing::{MAX_STEPS, QUIET, QUIET_STEPS};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Drawn {
@@ -64,6 +77,9 @@ pub struct Puppet {
     pub posed: Posed,
     pub wake: Wake,
     pub(crate) dirty: bool,
+    pub(crate) chains: Vec<reach::Chain>,
+    pub(crate) bodies: Vec<swing::Body>,
+    pub(crate) lag: f32,
 }
 
 pub(crate) fn mesh(layer: &Layer) -> Option<&MeshLayer> {
@@ -89,7 +105,11 @@ impl Puppet {
         let rules = if order.len() == rig.joints.len() { rules } else { Vec::new() };
         let order = if rules.is_empty() { rig.order.clone() } else { order };
         let n = rig.joints.len();
+        let (chains, bodies) = (reach::chains(&rig, m), swing::bodies(&rig, m, &order));
         Some(Puppet {
+            chains,
+            bodies,
+            lag: 0.0,
             layer: layer.id.clone(),
             clips,
             heads,
@@ -111,5 +131,24 @@ impl Puppet {
 
     pub fn posed(&self) -> &Posed {
         &self.posed
+    }
+
+    pub fn settled(&self) -> bool {
+        self.bodies.iter().all(swing::Body::still)
+    }
+
+    pub(crate) fn pose(&mut self, cx: &crate::resolve::Context, m: &MeshLayer, (seat, sim): (&Seat, &Sim)) {
+        self.blend(cx, m);
+        self.worlds(cx, m);
+        if !self.chains.is_empty() {
+            self.reach(cx, m, seat);
+        }
+        if let Some(set) = cx.script.rigs.get(&self.layer) {
+            self.drive(cx, m, set, seat);
+        }
+        if !self.bodies.is_empty() {
+            self.swing(cx, m, sim);
+        }
+        self.finish(cx, m);
     }
 }

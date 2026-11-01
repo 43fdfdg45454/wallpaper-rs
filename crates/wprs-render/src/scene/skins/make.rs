@@ -7,6 +7,7 @@ use wprs_scene::{MORPH_WIDTH, Rigged};
 pub(crate) struct Skin {
     pub(crate) digest: u64,
     pub(crate) generation: u64,
+    pub(crate) relief: Option<wprs_scene::Relief>,
     pub(crate) image: GpuImage,
     pub(crate) depth: wgpu::TextureView,
     pub(crate) vertices: wgpu::Buffer,
@@ -70,6 +71,7 @@ impl Renderer {
             Skin {
                 digest: rig.digest,
                 generation: 0,
+                relief: None,
                 image,
                 depth: view(&depth),
                 vertices,

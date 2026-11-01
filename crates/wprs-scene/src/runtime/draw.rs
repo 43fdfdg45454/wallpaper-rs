@@ -77,6 +77,7 @@ impl Runtime {
     }
 
     pub fn frame_in(&self, spare: Spare, view: [f32; 4], quality: Quality) -> Frame<'_> {
+        self.viewed.set(view);
         let cx = Context { view, ..self.context() };
         let cx = Context { camera: cx.lens(quality), ..cx };
         let canvas = self.scene.canvas.size.map(|v| v as f32);

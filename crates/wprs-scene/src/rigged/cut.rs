@@ -40,6 +40,13 @@ impl Sketch {
             sketch = grid(&mask, cells, true);
         }
         sketch.size = size.map(|v| v.max(1) as f32);
+        let points = &sketch.points;
+        for t in &mut sketch.triangles {
+            let [p, q, r] = t.map(|i| points[i as usize]);
+            if (q[0] - p[0]) * (r[1] - p[1]) - (r[0] - p[0]) * (q[1] - p[1]) > 0.0 {
+                t.swap(1, 2);
+            }
+        }
         sketch
     }
 }

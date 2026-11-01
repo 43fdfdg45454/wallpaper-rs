@@ -22,9 +22,11 @@ fn glb(doc: &Value) -> Vec<u8> {
 }
 
 fn fox() -> Vec<u8> {
-    glb(&json!({ "asset": { "version": "2.0" }, "nodes": [{ "name": "arm" }, { "name": "hand" }],
+    glb(
+        &json!({ "asset": { "version": "2.0" }, "nodes": [{ "name": "arm", "children": [1] }, { "name": "hand" }],
         "skins": [{ "joints": [0, 1] }], "accessors": [{ "count": 3 }],
-        "meshes": [{ "name": "body", "primitives": [{ "attributes": { "POSITION": 0, "JOINTS_0": 0, "WEIGHTS_0": 0 } }] }] }))
+        "meshes": [{ "name": "body", "primitives": [{ "attributes": { "POSITION": 0, "JOINTS_0": 0, "WEIGHTS_0": 0 } }] }] }),
+    )
 }
 
 fn manifest(features: &[&str], change: Value) -> Manifest {

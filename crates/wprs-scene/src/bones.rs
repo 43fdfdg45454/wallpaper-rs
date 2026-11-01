@@ -65,6 +65,10 @@ impl Check<'_> {
             if ik.chain.iter().enumerate().any(|(k, b)| ik.chain[..k].contains(b)) {
                 self.issues.push(Issue::DuplicateId(format!("{q}/chain")));
             }
+            let hangs = |w: &[String]| model.is_none_or(|m| m.parents.get(&w[1]) == Some(&w[0]));
+            if !ik.chain.windows(2).all(hangs) {
+                self.issues.push(Issue::Unlinked(format!("{q}/chain")));
+            }
             match &ik.target {
                 Reach::Point(v) => self.value(&format!("{q}/target"), v),
                 Reach::Named(name) => self.reach(&format!("{q}/target"), name, layer, model),
@@ -149,7 +153,7 @@ impl Check<'_> {
     fn reach(&mut self, path: &str, name: &str, layer: &str, model: Option<&ModelFile>) {
         match name.split_once(':') {
             None if name == "cursor" => {}
-            Some(("bone", b)) if model.is_some_and(|m| !m.bones.contains(b)) => {
+            Some(("bone", b)) if model.is_some_and(|m| !m.bones.contains(b) && !m.nodes.contains(b)) => {
                 self.issues.push(Issue::Missing(path.into(), b.into()))
             }
             Some(("bone", _)) => {}

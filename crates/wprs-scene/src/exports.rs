@@ -31,6 +31,7 @@ pub use crate::effects::{
     Variant, builtin, descriptor, register,
 };
 pub use crate::eval::{Content, Draw, EffectDraw, Frame};
+pub use crate::extrude::Relief;
 pub use crate::figure::{
     Attach, Coverage, Cull, Follows, MATERIALS, MAX_FIGURES, MAX_SHADOWS, Material, MeshDepth, MeshLayer,
     MeshPart, ModelLayer, Space,
@@ -51,9 +52,10 @@ pub use crate::helper::{
 pub use crate::hitbox::{AlphaMap, Hitbox, Hitboxes};
 pub use crate::ink::Ink;
 pub use crate::input::{
-    AudioFrame, BANDS, BloomSet, CameraSet, GlideSet, LayerOverride, MAX_MESH_BYTES, MESH_FLOATS, Mesh,
-    ParticleCommand, ParticleControl, PointerState, ScriptOutputs, ShakeSet, SoundCommand, SoundControl,
-    StageSet, TimelineCommand, Tuning, VideoCommand, VideoControl,
+    AudioFrame, BANDS, BloomSet, BoneSet, CameraSet, GlideSet, LayerOverride, MAX_DRIVEN_BONES,
+    MAX_DRIVEN_RIGS, MAX_DRIVEN_SHAPES, MAX_IMPULSES, MAX_MESH_BYTES, MESH_FLOATS, Mesh, ParticleCommand,
+    ParticleControl, PointerState, RigControl, ScriptOutputs, ShakeSet, SoundCommand, SoundControl, StageSet,
+    TimelineCommand, Tuning, VideoCommand, VideoControl,
 };
 pub use crate::layer::{Anchor, Inherit, Kind, Layer, Parallax, Solid, Transform};
 pub use crate::lean::Lean;
@@ -85,7 +87,7 @@ pub use crate::props::{
     Choice, Condition, Control, Expr, ICONS, Leveling, Mode, Pick, Preset, Property, Slider, Text, Values,
     check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag, veiled,
 };
-pub use crate::puppet::{Drawn, Posed, Puppet};
+pub use crate::puppet::{Drawn, IK_ROUNDS, MAX_STEPS, Posed, Puppet, QUIET, QUIET_STEPS};
 pub use crate::quality::{Class, Quality, Why};
 pub use crate::released::{newer_manifest_keys, newer_scene_keys};
 pub use crate::rig::{

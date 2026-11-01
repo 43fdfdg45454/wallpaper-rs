@@ -59,7 +59,7 @@ pub fn glb(doc: &Json) -> Vec<u8> {
 pub fn figure() -> Json {
     let names = ["root", "arm", "hand", "hair", "sword", "head", "socket"];
     json!({ "asset": { "version": "2.0" },
-        "nodes": names.iter().map(|n| json!({ "name": n })).collect::<Vec<_>>(),
+        "nodes": names.iter().map(|n| if *n == "arm" { json!({ "name": n, "children": [2] }) } else { json!({ "name": n }) }).collect::<Vec<_>>(),
         "skins": [{ "joints": [0, 1, 2, 3, 4, 5] }],
         "meshes": [
             { "name": "body", "extras": { "targetNames": ["mouth_open", "cheeks", "blink"] },

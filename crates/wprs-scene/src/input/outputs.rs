@@ -22,6 +22,7 @@ pub struct ScriptOutputs {
     pub open: Vec<String>,
     pub stage: Option<crate::StageSet>,
     pub storage: Option<Json>,
+    pub rigs: BTreeMap<String, super::RigControl>,
     #[serde(skip)]
     pub meshes: BTreeMap<String, std::sync::Arc<crate::Mesh>>,
 }

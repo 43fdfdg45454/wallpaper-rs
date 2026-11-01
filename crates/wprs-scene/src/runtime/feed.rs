@@ -99,6 +99,7 @@ impl Runtime {
         self.play_sounds(&outputs.sounds);
         self.steer(&outputs.videos);
         self.steer_puppets(&outputs.videos);
+        self.steer_rigs(&outputs.rigs);
         for (id, command) in &outputs.timelines {
             let Some((tl, head)) = self.timelines.iter_mut().find(|(tl, _)| &tl.id == id) else { continue };
             match *command {

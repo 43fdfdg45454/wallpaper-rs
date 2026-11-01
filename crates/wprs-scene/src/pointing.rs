@@ -19,6 +19,7 @@ pub struct Touch {
     pub kind: TouchKind,
     pub local: [f32; 2],
     pub scene: [f32; 2],
+    pub bone: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -40,7 +41,7 @@ pub(crate) struct Pointing {
 impl Pointing {
     fn emit(&mut self, kind: TouchKind, layer: &str, local: [f32; 2], scene: [f32; 2]) {
         if self.touches.len() < MAX_TOUCHES {
-            self.touches.push(Touch { layer: layer.to_owned(), kind, local, scene });
+            self.touches.push(Touch { layer: layer.to_owned(), kind, local, scene, bone: None });
         }
         let word = match kind {
             TouchKind::Click => "click",
@@ -112,8 +113,9 @@ impl Runtime {
         presses.iter().take(MAX_PRESSES).chain(now).for_each(|press| p.step(boxes, view, *press, allowed));
         let fired = std::mem::take(&mut p.fired);
         let touched = p.touches.len() > before;
-        if self.scene.scripts.is_empty() {
-            p.touches.clear();
+        match self.scene.scripts.is_empty() {
+            true => p.touches.clear(),
+            false => self.touch_bones(before),
         }
         for word in &fired {
             self.trigger_late(|t| t == word, 0.0);
@@ -123,5 +125,30 @@ impl Runtime {
 
     pub fn take_touches(&mut self) -> Vec<Touch> {
         std::mem::take(&mut self.pointing.touches)
+    }
+}
+
+impl Runtime {
+    fn touch_bones(&mut self, from: usize) {
+        let canvas = self.scene.canvas.size.map(|v| v as f32);
+        let (mut left, mut last): (usize, Option<(String, Option<String>)>) = (8, None);
+        for t in self.pointing.touches.iter_mut().skip(from) {
+            let found =
+                self.scene.layer(&t.layer).and_then(crate::puppet::mesh).filter(|m| !m.rig.hit.is_empty());
+            let Some((m, p)) = found.zip(self.puppets.iter().find(|p| p.layer == t.layer)) else { continue };
+            t.bone = match (left, &last) {
+                (0, Some((layer, bone))) if *layer == t.layer => bone.clone(),
+                (0, _) => None,
+                _ => {
+                    left -= 1;
+                    let size = match self.script.layers.get(&t.layer).and_then(|s| s.size) {
+                        Some(crate::Extent::Box(b)) => b,
+                        _ => m.size.unwrap_or(canvas),
+                    };
+                    p.bone_at(m, [t.local[0] - size[0] / 2.0, size[1] / 2.0 - t.local[1]]).map(str::to_owned)
+                }
+            };
+            last = Some((t.layer.clone(), t.bone.clone()));
+        }
     }
 }

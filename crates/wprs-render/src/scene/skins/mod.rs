@@ -11,12 +11,11 @@ pub(crate) use make::Skin;
 pub(crate) const FORMAT: Format = Format::Rgba8UnormSrgb;
 pub(crate) const DEPTH: Format = Format::Depth24PlusStencil8;
 pub(crate) const BONES: usize = 768;
-pub(crate) const PIECES: usize = 1 + 384;
+pub(crate) const PIECES: usize = 2 + 384;
 
 pub(crate) struct Skinner {
     pub(crate) layout: wgpu::BindGroupLayout,
-    pub(crate) plain: wgpu::RenderPipeline,
-    pub(crate) clipped: wgpu::RenderPipeline,
+    pub(crate) pipes: [wgpu::RenderPipeline; 4],
 }
 
 fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
@@ -46,7 +45,8 @@ fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     })
 }
 
-fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, clipped: bool) -> wgpu::RenderPipeline {
+fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, k: usize) -> wgpu::RenderPipeline {
+    let (clipped, cull) = (k % 2 == 1, k >= 2);
     let shader = crate::shader::module(device, include_str!("skin.wgsl"));
     let attributes = wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2, 2 => Float32x4, 3 => Float32x4, 4 => Float32];
     let buffers = [Some(wgpu::VertexBufferLayout {
@@ -89,7 +89,7 @@ fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, clipped: bool
             compilation_options: Default::default(),
             targets: &[Some(wgpu::ColorTargetState { blend, ..FORMAT.into() })],
         }),
-        primitive: Default::default(),
+        primitive: wgpu::PrimitiveState { cull_mode: cull.then_some(wgpu::Face::Back), ..Default::default() },
         depth_stencil,
         multisample: Default::default(),
         multiview_mask: None,
@@ -99,6 +99,6 @@ fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, clipped: bool
 
 pub(crate) fn skinner(device: &wgpu::Device) -> Skinner {
     let layout = layout(device);
-    let (plain, clipped) = (pipeline(device, &layout, false), pipeline(device, &layout, true));
-    Skinner { layout, plain, clipped }
+    let pipes = std::array::from_fn(|k| pipeline(device, &layout, k));
+    Skinner { layout, pipes }
 }

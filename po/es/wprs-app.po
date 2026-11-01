@@ -1223,8 +1223,8 @@ msgstr "Bajar"
 #: apps/wprs-app/qml/SceneAssets.qml apps/wprs-app/qml/SceneInput.qml
 #: apps/wprs-app/qml/SceneInspector.qml apps/wprs-app/qml/SceneLayerTools.qml
 #: apps/wprs-app/qml/ScenePairs.qml apps/wprs-app/qml/SceneProperties.qml
-#: apps/wprs-app/qml/SceneRig.qml apps/wprs-app/qml/SceneSettingMenu.qml
-#: apps/wprs-app/qml/SettingsPage.qml
+#: apps/wprs-app/qml/SceneRig.qml apps/wprs-app/qml/SceneRigRow.qml
+#: apps/wprs-app/qml/SceneSettingMenu.qml apps/wprs-app/qml/SettingsPage.qml
 msgid "Remove"
 msgstr "Quitar"
 
@@ -1261,7 +1261,8 @@ msgstr "Efectos"
 msgid "Masks"
 msgstr "Máscaras"
 
-#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/facade/SceneLabels.qml
+#: apps/wprs-app/qml/EditPage.qml apps/wprs-app/qml/SceneRigTouch.qml
+#: apps/wprs-app/qml/facade/SceneLabels.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Depth"
 msgstr "Profundidad"
@@ -2111,7 +2112,8 @@ msgstr "Añadir un proveedor"
 
 #: apps/wprs-app/qml/ProviderDialog.qml apps/wprs-app/qml/SceneEditors.qml
 #: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/ScenePairs.qml
-#: apps/wprs-app/qml/SceneRig.qml
+#: apps/wprs-app/qml/SceneRig.qml apps/wprs-app/qml/SceneRigMotion.qml
+#: apps/wprs-app/qml/SceneRigTouch.qml
 msgid "Add"
 msgstr "Añadir"
 
@@ -2766,6 +2768,68 @@ msgstr ""
 msgid "Clip in the preview"
 msgstr "Clip de la vista previa"
 
+#: apps/wprs-app/qml/SceneRigMotion.qml apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "the pointer"
+msgstr "el puntero"
+
+#: apps/wprs-app/qml/SceneRigMotion.qml
+msgid "a point"
+msgstr "un punto"
+
+#: apps/wprs-app/qml/SceneRigMotion.qml
+msgid "Chains that reach"
+msgstr "Cadenas que alcanzan"
+
+#: apps/wprs-app/qml/SceneRigMotion.qml
+msgid "%1 reach for %2"
+msgstr "%1 alcanzan %2"
+
+#: apps/wprs-app/qml/SceneRigMotion.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "The pointer"
+msgstr "El puntero"
+
+#: apps/wprs-app/qml/SceneRigMotion.qml
+msgid "A point"
+msgstr "Un punto"
+
+#: apps/wprs-app/qml/SceneRigMotion.qml
+msgid ""
+"A chain that follows the pointer needs the pointer permission, and the scene "
+"tells the user that it follows the pointer."
+msgstr ""
+"Una cadena que sigue al puntero necesita el permiso del puntero, y la escena "
+"avisa al usuario de que sigue al puntero."
+
+#: apps/wprs-app/qml/SceneRigMotion.qml
+msgid "Bones that swing"
+msgstr "Huesos con física"
+
+#: apps/wprs-app/qml/SceneRigMotion.qml
+msgid "%1 swings as a %2"
+msgstr "%1 se mueve como %2"
+
+#: apps/wprs-app/qml/SceneRigTouch.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Bones that take the pointer"
+msgstr "Huesos que reciben el puntero"
+
+#: apps/wprs-app/qml/SceneRigTouch.qml
+msgid ""
+"Scripts learn which of these bones the pointer touched, with the pointer "
+"permission."
+msgstr ""
+"Los scripts saben cuál de estos huesos tocó el puntero, con el permiso del "
+"puntero."
+
+#: apps/wprs-app/qml/SceneRigTouch.qml
+msgid "Push vertices by their depth with perspective"
+msgstr "Proyectar la profundidad de los vértices con perspectiva"
+
+#: apps/wprs-app/qml/SceneRigTouch.qml
+msgid "Hide parts seen from behind"
+msgstr "Ocultar las partes vistas por detrás"
+
 #: apps/wprs-app/qml/SceneSetting.qml
 msgid "More"
 msgstr "Más"
@@ -3235,11 +3299,6 @@ msgstr "Escena"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "the sound"
 msgstr "el sonido"
-
-#: apps/wprs-app/qml/facade/LabelWords.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "the pointer"
-msgstr "el puntero"
 
 #: apps/wprs-app/qml/facade/LabelWords.qml
 msgid "clicks"
@@ -4447,10 +4506,6 @@ msgid "The network"
 msgstr "La red"
 
 #: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "The pointer"
-msgstr "El puntero"
-
-#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Arabic"
 msgstr "Árabe"
 
@@ -5582,10 +5637,6 @@ msgstr "Ayuda"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Hexagons"
 msgstr "Hexágonos"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Bones that take the pointer"
-msgstr "Huesos que reciben el puntero"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Hue, saturation and value"

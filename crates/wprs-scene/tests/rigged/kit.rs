@@ -149,3 +149,22 @@ pub fn moved(rt: &Runtime, bone: usize, p: [f32; 3]) -> [f32; 3] {
 pub fn near(a: [f32; 3], b: [f32; 3]) -> bool {
     a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-3)
 }
+
+pub fn at(rt: &Runtime, bone: &str) -> [f32; 2] {
+    let p = rt.puppet("fox").unwrap();
+    let f = p.bone_frames([64.0, 64.0])[p.rig.joint(bone).unwrap()];
+    [f[4] - 32.0, 32.0 - f[5]]
+}
+
+pub fn close(a: [f32; 2], b: [f32; 2], within: f32) -> bool {
+    (a[0] - b[0]).hypot(a[1] - b[1]) < within
+}
+
+pub fn layers(list: Value) -> Runtime {
+    let text = json!({ "schema": SCHEMA, "canvas": { "size": [64, 64] },
+        "assets": { "arm": { "path": "arm.glb" } }, "layers": list });
+    let mut scene = Scene::from_json(&text.to_string()).unwrap();
+    let glb = arm().bytes();
+    scene.adopt(&BTreeMap::new(), move |_: &str, _: usize| Ok::<_, String>(glb.clone())).unwrap();
+    Runtime::new(Arc::new(scene), Values::new())
+}

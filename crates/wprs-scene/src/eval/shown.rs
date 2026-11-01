@@ -87,7 +87,13 @@ pub(crate) fn content<'a>(
             }
             let pose = puppet.map_or(0, |p| p.posed.generation);
             let texture = m.texture.as_ref().map(|t| named(cx, t));
-            Content::Mesh { layer: &layer.id, size: boxed(m.size).unwrap_or(canvas), pose, texture }
+            Content::Mesh {
+                layer: &layer.id,
+                size: boxed(m.size).unwrap_or(canvas),
+                pose,
+                texture,
+                relief: None,
+            }
         }
         Kind::Adjustment { .. } | Kind::Sound(_) | Kind::Light(_) | Kind::Model(_) => Content::Adjustment,
     }

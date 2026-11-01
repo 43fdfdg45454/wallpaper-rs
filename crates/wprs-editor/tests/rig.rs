@@ -85,3 +85,38 @@ fn a_grid_mesh_covers_the_picture_and_names_what_it_needs() {
     assert!(act(&mut project, json!({ "mesh_from_picture": { "image": "nothing" } })).is_err());
     assert!(act(&mut project, json!({ "bone": { "layer": "nothing", "name": "x" } })).is_err());
 }
+
+#[test]
+fn chains_swings_touches_depth_and_attachments_are_set_and_inspected() {
+    let root = tempfile::tempdir().unwrap();
+    let mut project = project(&root);
+    act(&mut project, json!({ "mesh_from_picture": { "image": "fox", "cells": 4, "id": "net" } })).unwrap();
+    let bone = |name: &str, parent: Value, at: [f32; 2]| json!({ "bone": { "layer": "net", "name": name, "parent": parent, "at": at } });
+    act(&mut project, bone("root", Value::Null, [0.2, 0.5])).unwrap();
+    act(&mut project, bone("arm", json!("root"), [0.6, 0.5])).unwrap();
+    let at = format!("/scene/layers/{}", project.doc["scene"]["layers"].as_array().unwrap().len() - 1);
+    let set = |p: &mut Project, key: &str, value: Value| {
+        act(p, json!({ "set": { "pointer": format!("{at}/{key}"), "value": value } }))
+    };
+    set(&mut project, "ik", json!([{ "chain": ["root", "arm"], "target": "cursor" }])).unwrap();
+    set(&mut project, "physics", json!([{ "bone": "arm", "mode": "rope", "gravity": 1 }])).unwrap();
+    set(&mut project, "hit", json!(["arm"])).unwrap();
+    set(&mut project, "depth", json!({ "scale": 2, "cull": true })).unwrap();
+    act(&mut project, json!({ "set": { "pointer": "/scene/canvas/wind", "value": [30, 0] } })).unwrap();
+    let problems = wprs_editor::package::problems(&project.dir, &project.doc);
+    assert!(problems.iter().all(|p| p.warning), "{problems:?}");
+    let keys: Vec<String> =
+        wprs_editor::inspect::fields(&project.doc, &at).into_iter().map(|f| f.key).collect();
+    for key in ["ik", "physics", "hit", "depth", "attach"] {
+        assert!(keys.iter().any(|k| k == key), "{key}: {keys:?}");
+    }
+    let wind =
+        wprs_editor::inspect::fields(&project.doc, "/scene/canvas").into_iter().find(|f| f.key == "wind");
+    assert_eq!(wind.map(|f| f.widget), Some("vec2".to_string()));
+    assert!(
+        set(&mut project, "ik", json!([{ "chain": ["arm", "root"], "target": "cursor" }])).is_err() || {
+            let problems = wprs_editor::package::problems(&project.dir, &project.doc);
+            problems.iter().any(|p| !p.warning)
+        }
+    );
+}

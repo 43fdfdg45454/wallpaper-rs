@@ -32,7 +32,7 @@ Object.assign(state, { buffers: {}, fresh: false, loading: "", started: false, o
 export const records = new Map();
 export const timers = new Map();
 export const [pending, stopped] = [[], []];
-export const SECTIONS = ["values", "layers", "timelines", "particles", "sounds", "videos", "effects", "spawned", "order", "watch", "wake", "busy", "console", "stopped", "open", "stage", "storage", "meshes"];
+export const SECTIONS = ["values", "layers", "timelines", "particles", "sounds", "videos", "effects", "spawned", "order", "watch", "wake", "busy", "console", "stopped", "open", "stage", "storage", "meshes", "rigs"];
 export const [dirty, touched] = [new Set(SECTIONS), new Set()];
 const equal = (a, b) => Object.is(a, b) || (Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => Object.is(x, b[i])));
 export const put = (target, key, value) => !equal(target[key], value) && ((target[key] = value), true);

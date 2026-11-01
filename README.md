@@ -1095,6 +1095,23 @@ fotogramas por segundo como mucho. Los scripts controlan los clips con
 `scene.layer("zorro").anim("saludo")` (`play`, `pause`, `stop`, `seek`, `rate`, `weight` y el aviso
 `ended`) si declaran `animations`.
 
+También se mueven solas: las cadenas de cinemática inversa giran sus huesos hasta alcanzar un punto,
+un hueso, otra capa o el puntero (este solo con el permiso del puntero, que la app avisa como
+cualquier otro uso del puntero), exactas para dos huesos y por rondas para cadenas más largas, con
+límites por hueso, peso y sentido del codo. La física de huesos simula muelles, péndulos y cuerdas a
+un paso fijo de 1/60 s (1/30 s con batería y como mucho 15 pasos por fotograma), con inercia,
+amortiguación, gravedad, límites de giro y de estiramiento y el viento de `canvas.wind` con ráfagas;
+un cuerpo quieto medio segundo deja de pedir fotogramas y en la calidad más baja los huesos se
+quedan en la pose de la animación. Con `depth` la profundidad de los vértices se proyecta con la
+perspectiva de `canvas.perspective` (también bajo la inclinación de la capa) y las caras vistas por
+detrás se ocultan si se pide. Cualquier capa se sujeta a un hueso o a un nodo de una malla con
+`attach`, siguiendo su posición, giro y escala del mismo fotograma. Los scripts leen y mueven huesos
+con `scene.layer("zorro").bone("brazo")` (giro, posición y escala locales o del mundo, para el
+fotograma siguiente y antes de la física, de modo que el hueso vuelve con su muelle al soltarlo),
+fijan formas de mezcla con `shape`, empujan huesos con `impulse`, buscan el hueso más cercano con
+`hit` y leen puntos de sujeción con `attachment`; los huesos de `hit` reciben el puntero y los
+eventos dicen qué hueso se tocó.
+
 De las partículas nuevas, el escritorio y el teléfono ya dibujan, igual en la GPU que en la CPU, el
 espacio de mundo (las partículas nacen con la posición, el giro y la escala de su capa y después no
 la siguen), hasta ocho puntos de control movidos por valores, el cursor, la capa o los scripts, las
@@ -1603,7 +1620,11 @@ inspector del campo `mesh` los lista, añade y quita, elige el clip que reproduc
 los muestra sobre la vista previa, donde se arrastran; los pesos de los vértices siguen a los huesos
 más cercanos y cada cambio guarda una malla nueva en `meshes/`, de modo que deshacer vuelve a la
 anterior. Desde la terminal hacen lo mismo `wprs-ctl scene mesh-from-picture`, `wprs-ctl scene bone`
-y `wprs-ctl scene bones`.
+y `wprs-ctl scene bones`. El mismo inspector añade y quita cadenas que alcanzan (el último hueso,
+cuántos huesos sube y el objetivo), huesos con física (y su modo: muelle, rígido o cuerda), huesos
+que reciben el puntero y la profundidad con su escala y el ocultado de caras traseras; el resto de
+cada campo, como los límites, el peso o el viento, se edita en el inspector general, y desde la
+terminal todo ello con `wprs-ctl scene set`.
 
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado
