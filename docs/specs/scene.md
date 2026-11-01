@@ -1277,7 +1277,7 @@ preset or sync, and `SetSceneProperty` refuses a file or folder that does not ex
 data folders of the desktop: one that is hidden or runs in a terminal is refused, a `DBusActivatable`
 one is activated through `org.freedesktop.Application`, and any other is started from its `Exec`
 line without a shell and without its field codes; applications open only outside the Flatpak. The
-content never sees the target: a script calls `openShortcut(prop)` inside the handler of a real
+content never sees the target, only `true` when one is set and `null` otherwise: a script calls `openShortcut(prop)` inside the handler of a real
 `click` of a layer and a page calls `wprs.openShortcut(prop)`; the daemon opens it only within 2 s
 of a click that reached the scene or page on a screen that takes clicks, for a package that holds
 the `clicks` grant, at most once a second per screen, and only for a `shortcut` property of the
@@ -1481,7 +1481,10 @@ With `storage`, `storage.get(key, scope)`, `set(key, value, scope)`, `delete(key
 the screen (`"output"`), at most 64 KiB in each scope: `set` throws past that or for a value that is
 not JSON. They are kept on the device only (never synced or exported), in a file of the package
 (mode 0600) that is written at most every 5 s and when the scene stops, and removed with the package;
-a scene whose scripts use storage runs one script process per screen.
+a scene whose scripts use storage runs one script process per screen. The screens showing a package
+share its `package` scope: what one stores reaches the scripts of the others on their next frame,
+and each keeps its own `output` scope (at most 16 screens, the one used longest ago going first).
+Previews in the editor read what is kept but never write it.
 
 With `folders`, `folder(prop)` lists a `folder` property with `mode: all`: `files` are opaque ids of
 its pictures (an id changes when its file is written again), `name(id)` the name of the file, and

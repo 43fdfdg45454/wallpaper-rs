@@ -38,7 +38,8 @@ pub(super) fn values(
         let file = spec.files.iter().position(|(prop, _)| prop == id).map(|i| json!(files[i].0));
         let folder =
             spec.folders.iter().any(|(prop, ..)| prop == id).then(|| json!(format!("wpak-user://{id}/")));
-        if let Some(token) = file.or(folder) {
+        let hidden = wprs_scene::veiled(spec.pack.props.properties.get(id), value);
+        if let Some(token) = file.or(folder).or(hidden) {
             *value = token;
         } else if value.as_str().is_some_and(|v| v.starts_with('/')) {
             *value = Json::Null;

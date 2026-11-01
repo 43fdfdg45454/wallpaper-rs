@@ -1,3 +1,4 @@
+mod heard;
 mod level;
 mod listing;
 mod polling;
@@ -70,7 +71,7 @@ pub(super) struct SceneState {
     why: Why,
     samples: u64,
     listed: listing::Listed,
-    stash: Option<wprs_core::stash::Stash>,
+    keeper: Option<wprs_core::stash::Keeper>,
 }
 
 fn after(seconds: f64) -> Duration {
@@ -149,7 +150,7 @@ impl SceneState {
             why,
             samples: 0,
             listed: Default::default(),
-            stash: None,
+            keeper: None,
         };
         scene.uses = scene.needs(quality);
         scene

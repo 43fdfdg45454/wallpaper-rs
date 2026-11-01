@@ -167,6 +167,7 @@ pub(crate) fn apply<'js>(ctx: &Ctx<'js>, state: &Object<'js>, bytes: &[u8]) -> R
     }
     frame.set("ended", ended)?;
     frame.set("folders", c.opt()?)?;
+    frame.set("storage", c.opt()?)?;
     if c.flag()? {
         state.get::<_, Function>("forget")?.call::<_, ()>(())?;
     }

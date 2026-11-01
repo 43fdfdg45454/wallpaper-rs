@@ -111,10 +111,17 @@ impl Daemon {
             let o = &profile.outputs[&name];
             let background = o.background.as_deref().and_then(parse_hex_color);
             let background = background.map(|[r, g, b]| format!("#{r:02x}{g:02x}{b:02x}"));
-            sections.insert(
-                name,
-                OutputConfig { image, playlist, fit: o.fit, background, preset, ..Default::default() },
-            );
+            let filter = o.filter.filter(wprs_core::Filter::valid);
+            let section = OutputConfig {
+                image,
+                playlist,
+                fit: o.fit,
+                background,
+                preset,
+                filter,
+                ..Default::default()
+            };
+            sections.insert(name, section);
         }
         Ok((sections, held))
     }

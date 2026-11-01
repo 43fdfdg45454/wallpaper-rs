@@ -10,6 +10,7 @@ const SOURCE: &str = r#"import { scene } from "wprs";
             step(() => (shape = bars.create({ vertices: new Float32Array([0, 0, 10, 0, 0, 10]), format: "xy" }), shape.id));
             step(() => bars.create({ vertices: [0, 0, 1], format: "xy" }));
             step(() => bars.create({ vertices: [0, 0, 1, 1, 2, 2], indices: [0, 1], format: "xy" }));
+            step(() => bars.create({ vertices: [0, 0, 1, 1, 2, 2], indices: [0, 1, 3], format: "xy" }));
             step(() => bars.create({ vertices: [0, 0, 1, 1, 0, 0, 1, 1, 2, 2, 1, 1], indices: [0, 1, 2], format: "xyuv" }).id);
             step(() => bars.create({ vertices: [0, 0, 1, 1, 2, 2], format: "xy" }));
             step(() => scene.mesh("nope"));
@@ -31,7 +32,7 @@ fn scripts_build_shapes_in_their_pools_and_send_only_changes() {
     let mut script = staged(scene(json!(["geometry"])), &[("main.js", SOURCE)]);
     let out = at(&mut script, 0.0).unwrap();
     let said = text(&out, "info");
-    let wanted = "pool|1|xy vertices hold 2 numbers each|indices come in threes|2|bars holds at most 2 shapes|nope is not a pool of the scene";
+    let wanted = "pool|1|xy vertices hold 2 numbers each|indices come in threes|an index names a vertex the shape lacks|2|bars holds at most 2 shapes|nope is not a pool of the scene";
     assert_eq!(said, wanted);
     let mesh = out.meshes["bars"].clone();
     assert_eq!((mesh.shapes, mesh.count(), mesh.indices.clone()), (2, 6, vec![0, 1, 2, 3, 4, 5]));

@@ -6,7 +6,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Instant;
-use wprs_core::stash::Stash;
+use wprs_core::stash::Keeper;
 use wprs_scene::{Control, Mode, Property, Scene, ScriptApi, ScriptOutputs, Values};
 
 const SCREEN: &str = "phone";
@@ -16,7 +16,7 @@ static SALT: OnceLock<RandomState> = OnceLock::new();
 
 #[derive(Default)]
 pub(crate) struct Keeping {
-    stash: Option<Stash>,
+    keeper: Option<Keeper>,
     pub(crate) text: String,
     files: Vec<(String, PathBuf)>,
     pub(crate) shown: Vec<(String, PathBuf)>,
@@ -32,15 +32,31 @@ pub(crate) fn folders(properties: &BTreeMap<String, Property>) -> Vec<String> {
     properties.iter().filter(|(_, p)| all(&p.control)).map(|(id, _)| id.clone()).collect()
 }
 
+pub(crate) fn forget(lib: &wprs_library::Library, items: &[wprs_library::Item]) -> Result<(), crate::Error> {
+    let gone = |p: &&wprs_library::PackageInfo| lib.copies(&p.id).is_ok_and(|n| n == 0);
+    for package in items.iter().filter_map(|i| i.package.as_ref()).filter(gone) {
+        if package.kind == "web" {
+            crate::page::clear(&package.id)?;
+        }
+        wprs_core::stash::forget(&crate::store::dir()?.join("storage"), &package.id)?;
+    }
+    Ok(())
+}
+
 impl Keeping {
     pub(crate) fn new(pack: &Pack) -> Keeping {
         let stores = pack.scene.scripts.iter().any(|s| s.wants(ScriptApi::Storage));
         let dir = stores.then(|| crate::store::dir().ok()).flatten();
-        Keeping { stash: dir.and_then(|d| Stash::open(&d.join("storage"), &pack.id)), ..Keeping::default() }
+        let keeper = dir.and_then(|d| Keeper::open(&d.join("storage"), &pack.id, SCREEN, true));
+        Keeping { keeper, ..Keeping::default() }
     }
 
     pub(crate) fn scopes(&self) -> Json {
-        self.stash.as_ref().map_or(Json::Null, |s| s.scopes(SCREEN))
+        self.keeper.as_ref().map_or(Json::Null, Keeper::scopes)
+    }
+
+    pub(crate) fn storage(&self) -> (u64, &str) {
+        self.keeper.as_ref().map_or((0, ""), Keeper::frame)
     }
 
     pub(crate) fn list(
@@ -49,6 +65,7 @@ impl Keeping {
         values: &Values,
         time: f64,
     ) {
+        self.keeper.iter_mut().for_each(|k| k.refresh(Instant::now()));
         let lists = scene.scripts.iter().any(|s| s.wants(ScriptApi::Folders));
         if !lists || self.listed_at.is_some_and(|at| time >= at && time < at + EVERY) {
             return;
@@ -75,11 +92,9 @@ impl Keeping {
     }
 
     pub(crate) fn heard(&mut self, out: &mut ScriptOutputs) -> bool {
-        if let (Some(stash), Some(stored)) = (self.stash.as_mut(), out.storage.take()) {
-            stash.take(SCREEN, &stored);
+        if let (Some(keeper), Some(stored)) = (self.keeper.as_mut(), out.storage.take()) {
+            keeper.take(&stored, Instant::now());
         }
-        let now = Instant::now();
-        self.stash.iter_mut().filter(|s| s.due(now)).for_each(|s| drop(s.flush(now, false)));
         let mut asked: Vec<&String> = out.layers.values().filter_map(|l| l.file.as_ref()).collect();
         asked.sort();
         asked.dedup();

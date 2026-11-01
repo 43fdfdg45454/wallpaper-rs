@@ -1031,7 +1031,8 @@ A `ProfileReply`.
 
 ### `Save(s name, b with_options) → (s uid)`
 
-Saves the current assignment of every output, and with `with_options` every setting except
+Saves the current assignment of every output (its item, file or playlist, fit, background, preset
+and filter), and with `with_options` every setting except
 `models.allow_download` (which `Activate` never applies either), as a profile. An existing
 profile of that name is replaced and keeps its uid, rules and priority.
 
@@ -2311,7 +2312,7 @@ struct HistoryEntry { at: Time, item: Option<ItemSummary> }
 struct HistoryReply { model: u32, serial: u64, output: String, entries: Vec<HistoryEntry> }
 struct ProfileOutput {
     item: Option<Uid>, path: Option<PathBuf>, playlist: Option<Uid>, fit: Option<Fit>,
-    background: Option<String>, preset: Option<Uid>,
+    background: Option<String>, preset: Option<Uid>, filter: Option<Filter>,
 }
 struct ProfileAuto { outputs: Option<Vec<String>>, on_battery: Option<bool> }
 struct Profile {

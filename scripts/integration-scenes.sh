@@ -107,8 +107,10 @@ scene = {"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32], "fit": "
                     {"id": "flash", "type": "solid", "color": "#ffffff", "size": [64, 32],
                      "visible": {"timeline": "flash", "keys": [[0, False], [0.05, True], [2, False]]}}]}
 reel = dict(common, id="org.example.reel", title="Reel", kind="video", entry="loop.webm",
-            requires={"features": ["video_properties"]}, playback={"speed": 2, "start": 0.6, "volume": 0.5},
-            display={"fit": "stretch", "zoom": 2, "position": [0.5, 0.5]}, presets=[{"id": "slow", "values": {"speed": 0.5}}])
+            requires={"features": ["video_properties", "accent"]}, playback={"speed": 2, "start": 0.6, "volume": 0.5},
+            properties={"mark": {"type": "color", "label": "Mark", "default": "#123456"}},
+            display={"fit": "stretch", "zoom": 2, "position": [0.5, 0.5], "accent": {"prop": "mark"}},
+            presets=[{"id": "slow", "values": {"speed": 0.5}}])
 for name, manifest, files in [("knobs", knobs, {"scene.json": json.dumps(scene)}), ("reel", reel, {})]:
     with zipfile.ZipFile(f"{sys.argv[1]}/{name}.wpak", "w") as package:
         package.writestr("manifest.json", json.dumps(manifest))
@@ -164,6 +166,7 @@ ctl prop share --own -o TEST-11
 grep -q hunter2 "$config" "$WORK"/*.log && fail "a secret reached the configuration or a log"
 ctl lib apply "$reel" -o TEST-11
 shown "$s11" 0 0 0
+expect "s['outputs']['TEST-11']['accent']" "#123456"
 steady() { for _ in $(seq 8); do looks "$@" || return 1; sleep 0.2; done; }
 steady "$s11" 0 0 0 || fail "the video left its part: $("$BIN/probe" "$s11" 3)"
 [ "$(settings "r['kind'], r['values']['speed'], r['values']['zoom'], r['values']['volume']")" = "('video', 2.0, 2.0, 50)" ] ||

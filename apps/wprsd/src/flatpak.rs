@@ -79,6 +79,17 @@ fn watch(
     std::thread::Builder::new().name("wprs-zone".into()).spawn(watch).map(drop)
 }
 
+pub(crate) fn not_found(path: &std::path::Path) -> String {
+    match app_id() {
+        Some(id) => format!(
+            "cannot find {} (if it exists, give access to its folder with: flatpak override --user --filesystem=\"{}:ro\" {id})",
+            path.display(),
+            path.parent().unwrap_or(path).display()
+        ),
+        None => format!("cannot find {}", path.display()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

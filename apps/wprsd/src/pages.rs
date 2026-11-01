@@ -182,14 +182,4 @@ impl Daemon {
         self.moved("hide_storage");
         Ok(())
     }
-
-    pub fn forget_pages(&self, removed: &[wprs_library::Item]) {
-        let kept = |id: &str| self.store.read(|lib| lib.copies(id)).is_ok_and(|n| n > 0);
-        let web = removed.iter().filter_map(|i| i.package.as_ref()).filter(|p| p.kind == "web");
-        for package in web.filter(|p| !kept(&p.id)) {
-            if let Err(e) = self.clear_page_data(&package.id) {
-                tracing::warn!("cannot remove the data of a web page: {e}");
-            }
-        }
-    }
 }

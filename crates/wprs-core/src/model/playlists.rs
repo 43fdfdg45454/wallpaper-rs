@@ -50,6 +50,7 @@ model! {
         pub fit: Option<Fit>,
         pub background: Option<String>,
         pub preset: Option<Uid>,
+        pub filter: Option<crate::Filter>,
     }
 
     pub struct ProfileAuto { pub outputs: Option<Vec<String>>, pub on_battery: Option<bool> }

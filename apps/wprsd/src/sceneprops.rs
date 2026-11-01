@@ -80,7 +80,8 @@ impl Daemon {
             self.store.read(item).ok().and_then(|i| i.meta.duration_ms).map(|ms| f64::from(ms) / 1000.0);
         let properties = m.video_properties(&crate::words::video(), length);
         let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
-        let authored = Authored::of(&m);
+        let mut authored = Authored::of(&m);
+        authored.accent = authored.accent.and_then(|a| a.settled(&m.properties));
         let presets = m.presets;
         Ok(Arc::new(Props {
             path: path.into(),

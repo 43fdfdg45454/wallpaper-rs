@@ -16,11 +16,16 @@ preset = dict(common, id="org.example.base-green", version="1.0.0", title="Base 
               entry="preset.json", requires={"features": ["packages", "preset"],
               "packages": [{"id": "org.example.base", "version": "^1.2"}]})
 values = {"base": {"id": "org.example.base", "version": "^1.2"}, "values": {"tint": "#00ff00", "gone": 3}}
-for name, manifest, files in [("base", base, {"scene.json": scene}), ("green", preset, {"preset.json": values})]:
+picture = dict(common, id="org.example.marked", version="1.0.0", title="Marked", kind="image", entry="image.png",
+               display={"accent": "#ff0000"}, requires={"features": ["accent", "display2"]})
+for name, manifest, files in [("base", base, {"scene.json": scene}), ("green", preset, {"preset.json": values}),
+                              ("picture", picture, {})]:
     with zipfile.ZipFile(f"{sys.argv[1]}/{name}.wpak", "w") as package:
         package.writestr("manifest.json", json.dumps(manifest))
         [package.writestr(k, json.dumps(v)) for k, v in files.items()]
         package.write(sys.argv[2], "preview.png")
+        if manifest["kind"] == "image":
+            package.write(sys.argv[2], "image.png")
 PACKAGE
 added() {
   local job; job=$(bus Library1 Import asb 1 "$1" false | out "d[0]")
@@ -48,6 +53,12 @@ ctl filter none -o TEST-20 && shown "$s20" 0 255 0
 grep -q "gone is not a setting of org.example.base" "$WORK"/*.log || fail "an unknown preset value was not reported"
 fps=$(field "s['outputs']['TEST-20']['fps']")
 { [ "$fps" -ge 1 ] && [ "$fps" -le 12 ]; } || fail "the author's frame rate cap was not kept: $fps"
+marked=$(added "$content/picture.wpak")
+ctl lib apply "$marked" -o TEST-20 && shown "$s20" 0 255 0
+expect "s['outputs']['TEST-20']['accent']" "#ff0000"
 ctl release TEST-20 && expect "list(s['outputs'])" "[]"
-bus Library1 Remove asb 2 "$green" "$base" false >/dev/null
+kept=$XDG_DATA_HOME/wallpaper-rs/storage/org.example.base.json
+mkdir -p "${kept%/*}" && echo '{"package":{"visits":3},"outputs":{}}' >"$kept"
+bus Library1 Remove asb 3 "$green" "$base" "$marked" false >/dev/null
+[ ! -e "$kept" ] || fail "what the scene scripts stored outlived the package"
 echo "content checks passed"

@@ -59,6 +59,7 @@ pub(crate) fn read(blob: &[u8], outputs: &mut ScriptOutputs, generation: &mut u6
         let shapes = c.u16()?;
         *generation += 1;
         let mut mesh = Mesh { generation: *generation, shapes: shapes as u32, ..Mesh::default() };
+        let mut named = true;
         for _ in 0..shapes {
             let stride = usize::from(c.u8()?);
             let (n, base) = (c_len(c)?, mesh.count() as u32);
@@ -69,15 +70,49 @@ pub(crate) fn read(blob: &[u8], outputs: &mut ScriptOutputs, generation: &mut u6
                 return Err(std::io::Error::other("a shape of the wrong format"));
             }
             widen(vertices, stride, &mut mesh.vertices);
+            let own = (vertices.len() / (4 * stride)) as u32;
             let found = indices.as_chunks::<4>().0.iter().map(|b| u32::from_le_bytes(*b));
+            named &= found.clone().all(|i| i < own);
             mesh.indices.extend(found.map(|i| i.saturating_add(base)));
         }
         debug_assert_eq!(mesh.vertices.len() % MESH_FLOATS, 0);
-        outputs.meshes.insert(pool, Arc::new(mesh));
+        match named {
+            true => drop(outputs.meshes.insert(pool, Arc::new(mesh))),
+            false => drop(outputs.meshes.remove(&pool)),
+        }
     }
     Ok(())
 }
 
 fn c_len(c: &mut Cursor<'_>) -> std::io::Result<usize> {
     c.u32().map(|n| n as usize)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pool(shapes: &[(&[f32], &[u32])]) -> Vec<u8> {
+        let w = &mut Wire(Vec::new());
+        w.u16(1).str("bars").u16(shapes.len());
+        for (vertices, indices) in shapes {
+            w.u8(2).u32(4 * vertices.len() as u32);
+            vertices.iter().for_each(|v| w.0.extend_from_slice(&v.to_le_bytes()));
+            w.u32(4 * indices.len() as u32);
+            indices.iter().for_each(|i| w.0.extend_from_slice(&i.to_le_bytes()));
+        }
+        std::mem::take(&mut w.0)
+    }
+
+    #[test]
+    fn a_shape_may_only_name_its_own_vertices() {
+        let (mut outputs, mut generation) = (ScriptOutputs::default(), 0);
+        let triangle: &[f32] = &[0.0, 0.0, 1.0, 0.0, 0.0, 1.0];
+        read(&pool(&[(triangle, &[0, 1, 2]), (triangle, &[0, 1, 2])]), &mut outputs, &mut generation)
+            .unwrap();
+        assert_eq!(outputs.meshes["bars"].indices, [0, 1, 2, 3, 4, 5]);
+        read(&pool(&[(triangle, &[0, 1, 5]), (triangle, &[0, 1, 2])]), &mut outputs, &mut generation)
+            .unwrap();
+        assert!(!outputs.meshes.contains_key("bars"), "a shape reached into the next one");
+    }
 }

@@ -94,8 +94,8 @@ impl Daemon {
                 }
             }
         };
-        let (pixels, accent) =
-            (content.pixels(), self.accent(image.as_deref(), &content, shown_video.as_deref()));
+        let accent = self.accent(output, (image.as_deref(), &display), &content, shown_video.as_deref());
+        let pixels = content.pixels();
         let tone = crate::look::tone(&display, &content, filter);
         let spec = Spec { content, fit, background: resolved.background, transition, refresh, tone };
         self.compositor.configure(output, size, spec);
@@ -163,7 +163,7 @@ impl Daemon {
     }
 
     pub fn set_wallpaper(&self, path: &Path, output: &str, fit: Option<Fit>) -> anyhow::Result<()> {
-        let path = std::fs::canonicalize(path).with_context(|| not_found(path))?;
+        let path = std::fs::canonicalize(path).with_context(|| crate::flatpak::not_found(path))?;
         if wprs_library::Kind::detect(&path) == Some(wprs_library::Kind::Package) {
             return Err(InvalidArgs("import the package and use Library1.Apply".into()).into());
         }
@@ -185,16 +185,5 @@ impl Daemon {
         let size = wprs_video::probe(&file).with_context(|| format!("cannot play {}", path.display()))?;
         tracing::debug!(path = %path.display(), ?size, "video accepted");
         Ok(None)
-    }
-}
-
-fn not_found(path: &Path) -> String {
-    match crate::flatpak::app_id() {
-        Some(id) => format!(
-            "cannot find {} (if it exists, give access to its folder with: flatpak override --user --filesystem=\"{}:ro\" {id})",
-            path.display(),
-            path.parent().unwrap_or(path).display()
-        ),
-        None => format!("cannot find {}", path.display()),
     }
 }

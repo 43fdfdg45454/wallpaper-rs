@@ -85,3 +85,12 @@ fn sliders_round_dividers_hide_their_ids_and_groups_lend_their_conditions() {
     let high = effective(&props, &[&values(json!({ "level": 0.8 }))]);
     assert!(props["go"].met(&props, &high, |p| &p.enabled_if));
 }
+
+#[test]
+fn content_only_learns_whether_a_shortcut_target_is_set() {
+    let props = props(json!({ "open": { "type": "shortcut" }, "away": { "type": "shortcut" } }));
+    let chosen = effective(&props, &[&values(json!({ "open": { "file": "/documents/secret.pdf" } }))]);
+    let shown = exposed(&props, &chosen);
+    assert_eq!((&shown["open"], &shown["away"]), (&json!(true), &json!(null)));
+    assert!(!serde_json::to_string(&shown).unwrap().contains("secret"));
+}

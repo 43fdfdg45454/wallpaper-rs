@@ -61,6 +61,18 @@ pub fn saved(preset: &Json) -> Values {
     serde_json::from_value(preset.get("values").cloned().unwrap_or_default()).unwrap_or_default()
 }
 
+fn same(fit: &Json, given: &Json) -> bool {
+    match (fit, given) {
+        (Json::Number(a), Json::Number(b)) => {
+            let (a, b) = (a.as_f64().unwrap_or(f64::NAN), b.as_f64().unwrap_or(f64::NAN));
+            (a - b).abs() <= 1e-9 * a.abs().max(1.0)
+        }
+        (Json::String(a), Json::String(b)) => a.eq_ignore_ascii_case(b),
+        (Json::Array(a), Json::Array(b)) => a.len() == b.len() && a.iter().zip(b).all(|(a, b)| same(a, b)),
+        _ => fit == given,
+    }
+}
+
 pub struct Chosen {
     pub values: Values,
     pub files: Vec<(String, String)>,
@@ -77,7 +89,7 @@ pub fn chosen(preset: &crate::PresetFile, props: &BTreeMap<String, Property>) ->
                 warnings.push(format!("{id} is not set by presets"))
             }
             Some(p) => match p.value(value) {
-                Ok(fit) if fit == *value => drop(values.insert(id.clone(), fit)),
+                Ok(fit) if same(&fit, value) => drop(values.insert(id.clone(), fit)),
                 Ok(_) => warnings.push(format!("{id} is out of range")),
                 Err(e) => warnings.push(format!("{id} {e}")),
             },

@@ -83,7 +83,7 @@ pub use crate::particles::{
 pub use crate::pointing::{MAX_PRESSES, MAX_TOUCHES, Press, Touch, TouchKind};
 pub use crate::props::{
     Choice, Condition, Control, Expr, ICONS, Leveling, Mode, Pick, Preset, Property, Slider, Text, Values,
-    check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag,
+    check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag, veiled,
 };
 pub use crate::quality::{Class, Quality, Why};
 pub use crate::released::{newer_manifest_keys, newer_scene_keys};

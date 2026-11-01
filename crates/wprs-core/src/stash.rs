@@ -3,15 +3,23 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+mod keeper;
+
+pub use keeper::Keeper;
+
 pub const LIMIT: usize = 64 << 10;
 pub const EVERY: Duration = Duration::from_secs(5);
 const OUTPUTS: usize = 16;
+const SCOPES: [&str; 2] = ["package", "output"];
 
 pub struct Stash {
     path: PathBuf,
     package: Map<String, Json>,
     outputs: Map<String, Json>,
+    used: Vec<String>,
+    version: u64,
     dirty: bool,
+    forgotten: bool,
     written: Option<Instant>,
 }
 
@@ -26,7 +34,9 @@ pub fn file(dir: &Path, package: &str) -> Option<PathBuf> {
 }
 
 pub fn forget(dir: &Path, package: &str) -> std::io::Result<()> {
-    match file(dir, package).map(std::fs::remove_file) {
+    let path = file(dir, package);
+    path.iter().for_each(|p| keeper::drop_open(p));
+    match path.map(std::fs::remove_file) {
         Some(Err(e)) if e.kind() != std::io::ErrorKind::NotFound => Err(e),
         _ => Ok(()),
     }
@@ -47,34 +57,67 @@ impl Stash {
             std::fs::read(&path).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
         let (package, outputs) = (object(read.get("package")), object(read.get("outputs")));
         let package = if fits(&package) { package } else { Map::new() };
-        Some(Stash { path, package, outputs, dirty: false, written: None })
+        let used = outputs.keys().cloned().collect();
+        let (version, dirty, forgotten, written) = (0, false, false, None);
+        Some(Stash { path, package, outputs, used, version, dirty, forgotten, written })
     }
 
     pub fn scopes(&self, output: &str) -> Json {
         json!({ "package": self.package, "output": object(self.outputs.get(output)) })
     }
 
-    pub fn take(&mut self, output: &str, changed: &Json) {
-        if let Some(p) = changed.get("package").and_then(Json::as_object).filter(|p| fits(p)) {
-            (self.package, self.dirty) = (p.clone(), true);
+    pub fn version(&self) -> u64 {
+        self.version
+    }
+
+    pub fn touch(&mut self, output: &str) {
+        if let Some(at) = self.used.iter().position(|o| o == output) {
+            let o = self.used.remove(at);
+            self.used.push(o);
         }
-        if let Some(o) = changed.get("output").and_then(Json::as_object).filter(|o| fits(o)) {
-            self.outputs.remove(output);
-            if self.outputs.len() >= OUTPUTS {
-                let first = self.outputs.keys().next().cloned().unwrap_or_default();
-                self.outputs.remove(&first);
+    }
+
+    pub fn merge(&mut self, output: &str, ops: &Json) -> bool {
+        let mut fine = true;
+        for at in SCOPES {
+            let set = ops.pointer(&format!("/set/{at}")).and_then(Json::as_object).filter(|m| !m.is_empty());
+            let gone = ops.pointer(&format!("/gone/{at}")).and_then(Json::as_array).filter(|g| !g.is_empty());
+            if set.is_none() && gone.is_none() {
+                continue;
             }
-            self.outputs.insert(output.to_owned(), Json::Object(o.clone()));
-            self.dirty = true;
+            let mut next =
+                if at == "package" { self.package.clone() } else { object(self.outputs.get(output)) };
+            gone.into_iter().flatten().filter_map(Json::as_str).for_each(|k| drop(next.remove(k)));
+            set.into_iter().flatten().for_each(|(k, v)| drop(next.insert(k.clone(), v.clone())));
+            if !fits(&next) {
+                fine = false;
+                continue;
+            }
+            match at {
+                "package" => self.package = next,
+                _ => self.place(output, next),
+            }
+            (self.dirty, self.version) = (true, self.version + 1);
         }
+        fine
+    }
+
+    fn place(&mut self, output: &str, next: Map<String, Json>) {
+        self.used.retain(|o| o != output);
+        while self.used.len() >= OUTPUTS {
+            let oldest = self.used.remove(0);
+            self.outputs.remove(&oldest);
+        }
+        self.used.push(output.to_owned());
+        self.outputs.insert(output.to_owned(), Json::Object(next));
     }
 
     pub fn due(&self, now: Instant) -> bool {
-        self.dirty && self.written.is_none_or(|at| now.duration_since(at) >= EVERY)
+        self.dirty && !self.forgotten && self.written.is_none_or(|at| now.duration_since(at) >= EVERY)
     }
 
     pub fn flush(&mut self, now: Instant, force: bool) -> std::io::Result<()> {
-        if !self.dirty || !(force || self.due(now)) {
+        if !self.dirty || self.forgotten || !(force || self.due(now)) {
             return Ok(());
         }
         let dir = self.path.parent().unwrap_or(Path::new("."));

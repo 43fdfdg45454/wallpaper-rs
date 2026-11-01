@@ -19,6 +19,9 @@ impl SceneState {
             spec.hold.into_iter().for_each(|time| self.runtime.seek(time));
             (self.still, self.moving, changed) = (spec.hold.is_some(), spec.hold.is_none(), true);
         }
+        if spec.values != self.spec.values {
+            (self.listed.due, self.listed.unset) = (None, false);
+        }
         let moved = spec.moving != self.spec.moving;
         (self.spec, self.uses) = (spec, self.needs(self.quality));
         changed |= moved && self.calm(self.quiet);

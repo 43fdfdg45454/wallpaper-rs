@@ -111,7 +111,10 @@ pub(crate) fn apply(
 fn delete(local: &Local, item: &str) -> Result<(), Error> {
     let uids: Vec<&str> = local.items.get(item).into_iter().flatten().map(String::as_str).collect();
     let shown = settings::config().resolve("").image;
-    let items = with(|lib| Ok::<_, Error>(lib.remove_items(&uids)?))?;
+    let items = with(|lib| {
+        let items = lib.remove_items(&uids)?;
+        crate::keeping::forget(lib, &items).map(|()| items)
+    })?;
     items.iter().try_for_each(store::forget)?;
     match items.iter().any(|item| shown.as_ref() == Some(&item.path)) {
         true => settings::update(|config| {

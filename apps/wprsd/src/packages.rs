@@ -154,16 +154,30 @@ impl Daemon {
                 }
                 None => {
                     self.forget_synced(vec![crate::account::removed_package(&gone[0].repo_id, id)]);
-                    drop(wprs_core::stash::forget(&self.store.data.join("storage"), id));
                     self.store.write(|lib| lib.remove_items(&[uid.as_str()]))?
                 }
             };
             self.forget_files(&removed);
+            self.forget_data(&removed);
             self.library_changed(vec![uid]);
         }
         tracing::info!("package uninstalled");
         self.reload_installed();
         Ok(())
+    }
+
+    pub fn forget_data(&self, removed: &[wprs_library::Item]) {
+        let kept = |id: &str| self.store.read(|lib| lib.copies(id)).is_ok_and(|n| n > 0);
+        for package in removed.iter().filter_map(|i| i.package.as_ref()).filter(|p| !kept(&p.id)) {
+            if let Err(e) = wprs_core::stash::forget(&self.store.data.join("storage"), &package.id) {
+                tracing::warn!("cannot remove what the scene scripts stored: {e}");
+            }
+            if package.kind == "web"
+                && let Err(e) = self.clear_page_data(&package.id)
+            {
+                tracing::warn!("cannot remove the data of a web page: {e}");
+            }
+        }
     }
 }
 

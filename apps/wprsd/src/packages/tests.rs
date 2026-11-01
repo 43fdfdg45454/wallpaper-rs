@@ -81,6 +81,17 @@ async fn repositories_install_over_http_with_progress() {
         let info = wprs_format::add_repo(&data, &fetch, &url, now()).unwrap();
         assert_eq!((info.packages, info.hosts.len()), (1, 1));
         assert_eq!(name(wprs_format::add_repo(&data, &fetch, &url, now()).unwrap_err()), EXISTS);
+        let needs = |version: &str| wprs_format::Dependency {
+            id: "org.example.dawn".into(),
+            version: version.into(),
+        };
+        let older = crate::variants::matching(&data, &info.repo_id, &needs("~1.0")).unwrap();
+        assert_eq!(
+            older,
+            format!("{}/org.example.dawn@1.0.0", info.repo_id),
+            "the newest release that matches"
+        );
+        assert!(crate::variants::matching(&data, &info.repo_id, &needs("^2")).is_err());
         let dry = wprs_format::install(&data, &Dry, "org.example.dawn", now(), false, false);
         assert!(matches!(dry, Err(wprs_format::Error::Io(e)) if e.kind() == io::ErrorKind::WouldBlock));
         let missing = wprs_format::install(&data, &Dry, "org.example.dusk", now(), false, false);

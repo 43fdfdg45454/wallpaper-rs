@@ -85,3 +85,30 @@ fn property_names_must_be_identifiers() {
         );
     }
 }
+
+#[test]
+fn presets_keep_whole_numbers_on_sliders_and_colors_in_any_case() {
+    let props = serde_json::from_value(json!({
+        "speed": { "type": "slider", "min": 0.5, "max": 4, "decimals": 2, "default": 1 },
+        "count": { "type": "slider", "min": 0, "max": 9.5, "default": 2 },
+        "tint": { "type": "color", "default": "#000000" }
+    }))
+    .unwrap();
+    let preset: wprs_format::PresetFile = serde_json::from_value(json!({
+        "base": { "id": "org.example.base", "version": "^1" },
+        "values": { "speed": 1, "count": 5, "tint": "#00FF00" }
+    }))
+    .unwrap();
+    let chosen = wprs_format::values::chosen(&preset, &props);
+    assert!(chosen.warnings.is_empty(), "{:?}", chosen.warnings);
+    assert_eq!(chosen.values["tint"], json!("#00ff00"));
+    assert_eq!((chosen.values["speed"].as_f64(), chosen.values["count"].as_f64()), (Some(1.0), Some(5.0)));
+    let far: wprs_format::PresetFile = serde_json::from_value(json!({
+        "base": { "id": "org.example.base", "version": "^1" },
+        "values": { "speed": 9, "count": -1 }
+    }))
+    .unwrap();
+    let chosen = wprs_format::values::chosen(&far, &props);
+    assert_eq!(chosen.warnings, ["count is out of range", "speed is out of range"]);
+    assert!(chosen.values.is_empty());
+}

@@ -2,7 +2,8 @@ import { state, setup, channels, records, timers, pending, stopped, record, guar
 import { engine } from "wprs:base";
 import { own, layer, touches } from "wprs:layers";
 import { handlers, particleState, soundState, videoHandlers } from "wprs:media";
-import { takeStorage, folderEvents } from "wprs:keep";
+import { takeStorage, storageFrom } from "wprs:keep";
+import { folderEvents } from "wprs:folders";
 import { stage } from "wprs:stage";
 
 const lifecycle = ["init", "update", "destroy", "resize", "properties", "settings", "timelineEvent"];
@@ -130,6 +131,7 @@ state.tick = () => {
     lastTime = f.time;
     lifecycleEvents(f);
     folderEvents(f.folders);
+    storageFrom(f.storage);
     for (const [id, t] of [...timers].filter(([, t]) => t.due <= f.time).sort((a, b) => a[1].due - b[1].due)) {
         if (t.period) t.due = f.time + t.period;
         else timers.delete(id);

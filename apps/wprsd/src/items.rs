@@ -170,7 +170,7 @@ impl Daemon {
         })?;
         self.forget_synced(hashes);
         self.forget_files(&removed);
-        self.forget_pages(&removed);
+        self.forget_data(&removed);
         removed.iter().filter(|_| delete_files).for_each(|item| drop(std::fs::remove_file(&item.path)));
         self.library_changed(uids.to_vec());
         Ok(())

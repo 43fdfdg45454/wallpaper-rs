@@ -162,17 +162,11 @@ impl Service {
     }
 
     async fn set_option(&self, key: String, value: String) -> Result<()> {
-        let (d, duck) = (self.d()?, key == "playback.duck");
-        d.render(move |d| d.set_option(&key, &value)).await?;
-        duck.then(|| crate::duck::follow(&d));
-        Ok(())
+        self.d()?.render(move |d| d.set_option(&key, &value).inspect(|_| crate::duck::follow(d))).await
     }
 
     async fn reload(&self) -> Result<()> {
-        let d = self.d()?;
-        d.render(|d| d.reload()).await?;
-        crate::duck::follow(&d);
-        Ok(())
+        self.d()?.render(|d| d.reload().inspect(|_| crate::duck::follow(d))).await
     }
 
     async fn retry_effects(&self) -> Result<()> {

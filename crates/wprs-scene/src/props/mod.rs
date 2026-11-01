@@ -14,7 +14,7 @@ pub use legacy::legacy;
 pub use leveling::Leveling;
 pub use slider::Slider;
 pub use text::tag;
-pub use values::{effective, exposed, stale};
+pub use values::{effective, exposed, stale, veiled};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

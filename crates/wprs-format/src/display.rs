@@ -91,6 +91,14 @@ impl Display {
 }
 
 impl Accent {
+    pub fn settled(
+        &self,
+        properties: &std::collections::BTreeMap<String, wprs_scene::Property>,
+    ) -> Option<Accent> {
+        let own = wprs_scene::effective(properties, &[]);
+        self.resolve(&own).map(|c| Accent::Color(format!("#{c:06x}")))
+    }
+
     pub fn resolve(&self, values: &wprs_scene::Values) -> Option<u32> {
         let color = match self {
             Accent::Color(color) => color.as_str(),

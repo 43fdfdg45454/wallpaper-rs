@@ -81,6 +81,7 @@ impl Acting {
         rt.fill_reads(&mut self.reads);
         rt.fill_sounds(&mut self.sounds);
         rt.fill_videos(&mut self.filmed);
+        let storage = self.keeping.storage();
         let props = &*self.props.get_or_insert_with(|| wprs_scene::exposed(sent.properties, rt.props()));
         let timer = self.timer.is_some_and(|t| t <= rt.time());
         let quiet = self.fired.is_empty() && self.actions.is_empty() && self.touches.is_empty();
@@ -107,6 +108,7 @@ impl Acting {
             videos: &self.filmed,
             ended: &self.ended,
             folders: &self.keeping.text,
+            storage,
         };
         let before = local.progress().0;
         let answer = local.update(&frame);

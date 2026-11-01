@@ -10,10 +10,18 @@ pub fn effective(props: &BTreeMap<String, Property>, layers: &[&Values]) -> Valu
     props.iter().map(pick).collect()
 }
 
+pub fn veiled(prop: Option<&Property>, value: &Json) -> Option<Json> {
+    prop.is_some_and(|p| matches!(p.control, Control::Shortcut {}))
+        .then(|| if value.is_null() { Json::Null } else { json!(true) })
+}
+
 pub fn exposed(props: &BTreeMap<String, Property>, values: &Values) -> Values {
     let token = |id: &String, value: &Json| {
         let user =
             props.get(id).is_some_and(|p| matches!(p.control, Control::File { .. } | Control::Folder { .. }));
+        if let Some(hidden) = veiled(props.get(id), value) {
+            return hidden;
+        }
         match value.as_str() {
             Some(path) if user && path.starts_with('/') => json!(format!("wpak-user://{id}")),
             _ if user => Json::Null,

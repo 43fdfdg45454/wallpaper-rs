@@ -9,10 +9,7 @@ pub(super) fn remove(lib: &mut Library, uids: &[String], now: i64) -> Result<Val
     let hashes = lib.hashed()?.into_iter().filter(|(i, _)| refs.contains(&i.uid.as_str()));
     let removed: Vec<String> = hashes.map(|(_, hash)| wprs_sync::removed_blob(&hash)).collect();
     let items = lib.remove_items(&refs)?;
-    let pages = items.iter().filter_map(|i| i.package.as_ref()).filter(|p| p.kind == "web");
-    for package in pages.filter(|p| lib.copies(&p.id).is_ok_and(|n| n == 0)) {
-        crate::page::clear(&package.id)?;
-    }
+    crate::keeping::forget(lib, &items)?;
     crate::state::forget(removed, now * 1000)?;
     items.iter().try_for_each(store::forget)?;
     let gone =

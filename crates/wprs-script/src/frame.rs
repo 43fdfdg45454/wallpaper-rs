@@ -43,6 +43,7 @@ pub struct Frame<'a> {
     pub videos: &'a [Course],
     pub ended: &'a [String],
     pub folders: &'a str,
+    pub storage: (u64, &'a str),
 }
 
 impl Frame<'static> {
@@ -69,6 +70,7 @@ impl Frame<'static> {
             videos: &[],
             ended: &[],
             folders: "",
+            storage: (0, ""),
         }
     }
 }
@@ -80,12 +82,13 @@ pub struct Encoder {
     zone: Option<String>,
     audio: Option<AudioFrame>,
     folders: Option<String>,
+    storage: Option<u64>,
     pub(crate) resend: bool,
 }
 
 impl Encoder {
     pub fn reset(&mut self) {
-        (self.props, self.zone, self.audio, self.folders) = (None, None, None, None);
+        (self.props, self.zone, self.audio, self.folders, self.storage) = (None, None, None, None, None);
     }
 
     pub fn encode(&mut self, f: &Frame) -> &[u8] {
@@ -153,6 +156,10 @@ impl Encoder {
         if w.flag(!f.folders.is_empty() && self.folders.as_deref() != Some(f.folders)) {
             w.str(f.folders);
             self.folders = Some(f.folders.to_owned());
+        }
+        if w.flag(!f.storage.1.is_empty() && self.storage != Some(f.storage.0)) {
+            w.str(f.storage.1);
+            self.storage = Some(f.storage.0);
         }
         w.flag(std::mem::take(&mut self.resend));
         self.buf = std::mem::take(&mut w.0);

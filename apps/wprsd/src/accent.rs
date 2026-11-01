@@ -11,14 +11,19 @@ fn authored(props: &Props, values: &Values) -> Option<u32> {
 impl Daemon {
     pub(crate) fn accent(
         &self,
-        image: Option<&Path>,
+        output: &str,
+        (image, display): (Option<&Path>, &wprs_format::Display),
         content: &Content,
         video: Option<&Props>,
     ) -> Option<String> {
         let shown = match content {
             Content::Scene(s) => authored(&s.pack.props, &s.values),
             Content::Web(p) => authored(&p.pack.props, &p.values),
-            Content::Video(_) => video.and_then(|p| authored(p, &Values::new())),
+            Content::Video(_) | Content::Image(_) => {
+                let chosen = |p: &Props| p.values(&self.state().config.scene_values(output, &p.id));
+                let values = video.map(chosen).unwrap_or_default();
+                video.and_then(|p| authored(p, &values)).or_else(|| display.accent.as_ref()?.resolve(&values))
+            }
             _ => None,
         };
         let color = shown.or_else(|| self.dominant(image?))?;

@@ -60,9 +60,10 @@ impl Daemon {
         (stale, downgrade): (bool, bool),
     ) {
         let needed = wprs_format::peek(&record.path).map(|m| m.dependencies().to_vec()).unwrap_or_default();
-        for dependency in needed.iter().filter(|d| self.base_for(d).is_err()) {
-            let spec = format!("{}/{}", record.repo_id, dependency.id);
-            if let Err(e) = self.install(&spec, stale, downgrade) {
+        for dependency in needed.iter().filter(|d| !self.present(d)) {
+            let spec = matching(&self.store.data, &record.repo_id, dependency);
+            let done = spec.and_then(|spec| self.install(&spec, stale, downgrade));
+            if let Err(e) = done {
                 tracing::warn!(
                     package = dependency.id,
                     "cannot install a package that {} needs: {e}",
@@ -71,6 +72,26 @@ impl Daemon {
             }
         }
     }
+
+    fn present(&self, dependency: &wprs_format::Dependency) -> bool {
+        let wanted = VersionReq::parse(&dependency.version).ok();
+        let found = self.store.read(|lib| lib.packages_of(&dependency.id)).unwrap_or_default();
+        found.iter().filter_map(version).any(|v| wanted.as_ref().is_some_and(|w| w.matches(&v)))
+    }
+}
+
+pub(crate) fn matching(
+    data: &std::path::Path,
+    repo: &str,
+    dependency: &wprs_format::Dependency,
+) -> Result<String> {
+    let wanted = VersionReq::parse(&dependency.version).map_err(|e| failed(e.to_string()))?;
+    let offers = wprs_format::browse(data, &dependency.id)?;
+    let offer = offers.into_iter().find(|o| o.id == dependency.id && o.repo_id == repo);
+    let versions = offer.map(|o| o.versions).unwrap_or_default();
+    let best = versions.iter().filter_map(|v| Version::parse(v).ok()).filter(|v| wanted.matches(v)).max();
+    let missing = || not_found(format!("no release of {} matches {}", dependency.id, dependency.version));
+    best.map(|v| format!("{repo}/{}@{v}", dependency.id)).ok_or_else(missing)
 }
 
 impl Daemon {

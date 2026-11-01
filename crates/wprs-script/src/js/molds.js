@@ -18,6 +18,7 @@ function shape(o, format = "xyuv") {
     const indices = o.indices === undefined ? Uint32Array.from({ length: n - (n % 3) }, (_, i) => i) : new Uint32Array(o.indices);
     if (indices.length % 3) throw new RangeError("indices come in threes");
     if (indices.length > 6 * n) throw new RangeError("a shape has at most six indices a vertex");
+    if (indices.some((i) => i >= n)) throw new RangeError("an index names a vertex the shape lacks");
     budget.bytes += vertices.byteLength + indices.byteLength;
     if (budget.bytes > LIMIT) throw new RangeError("scripts change at most 1 MiB of shapes a frame");
     return { format: f, stride, n, vertices, indices, visible: o.visible ?? true };

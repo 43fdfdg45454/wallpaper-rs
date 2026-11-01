@@ -83,3 +83,12 @@ fn pages_get_values_tuned_to_the_quality_level_without_the_volume_the_engine_add
     assert_eq!(Json::Object(at(wprs_scene::Quality::Q3)), json!({"rate": 60, "mood": "calm"}));
     assert_eq!(at(wprs_scene::Quality::Q1)["rate"], json!(15));
 }
+
+#[test]
+fn pages_never_see_where_a_shortcut_leads() {
+    let mut page = page(true, json!({"open": {"type": "shortcut"}, "away": {"type": "shortcut"}}));
+    page.values = serde_json::from_value(json!({"open": {"uri": "https://example.org/private"}})).unwrap();
+    let shown = Json::Object(values(&page, &[0; 32], wprs_scene::Quality::Q3).0);
+    assert!(shown["open"] == json!(true) && shown.get("away").is_none_or(Json::is_null));
+    assert!(!shown.to_string().contains("example.org"));
+}

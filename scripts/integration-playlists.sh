@@ -84,10 +84,13 @@ ctl playlist rm Warm
 echo "playlist checks passed"
 
 ctl lib apply "$red" -o TEST-8 -f center
+ctl filter warm --strength 0.5 -o TEST-8
 profile=$(ctl profile save Evening)
 ctl lib apply "$green" -o TEST-8 && expect "$shown" "$green"
+ctl filter none -o TEST-8
 ctl profile use Evening
 expect "$shown, s['outputs']['TEST-8']['fit'], s['profile']" "('$red', 'center', '$profile')"
+expect "s['outputs']['TEST-8']['filter']['look'], s['outputs']['TEST-8']['filter']['strength']" "('warm', 0.5)"
 [ "$(ctl profile save evening)" = "$profile" ] || fail "saving a profile again changed its uid"
 [ "$(ctl profile ls --json | js "[(p['name'], p['active'], p['outputs']['TEST-8']['item']) for p in r['profiles']]")" = \
   "[('Evening', True, '$red')]" ] || fail "profiles: $(ctl profile ls --json)"

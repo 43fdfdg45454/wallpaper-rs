@@ -156,8 +156,12 @@ fn privacy_is_chosen_per_package(uid: &str, path: &Path, url: &str) {
         passing.as_str().unwrap().ends_with(".e.wpak.invalid") && passing != fresh["origin"],
         "{passing}"
     );
+    let kept = store::dir().unwrap().join("storage/org.example.phone.json");
+    fs::create_dir_all(kept.parent().unwrap()).unwrap();
+    fs::write(&kept, r#"{"package":{"visits":3},"outputs":{}}"#).unwrap();
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
     assert_eq!(ask(json!({ "op": "cleared" })), json!([fresh["origin"]]));
+    assert!(!kept.exists(), "what the scripts stored outlived the package");
 }
 
 fn language_is_hidden_on_request(uid: &str, path: &Path, url: &str) {

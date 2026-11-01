@@ -113,7 +113,7 @@ cualquier fondo de una pantalla, imagen, vídeo, escena o página, sin tocar los
 estilos propios (cálido, frío, dorado, vivo, intenso, apagado, mate, desvaído, blanco y negro, noir,
 sepia, atardecer, menta, rosa y noche) con su intensidad, más exposición, contraste, saturación,
 calidez y tono. Va dentro de la pasada que dibuja el fondo en la pantalla, así que no añade otra, y
-sin filtro no cuesta nada. Lo mismo hace `wprs-app --page settings` (o la acción
+sin filtro no cuesta nada. Los perfiles guardan y ponen el filtro de cada pantalla junto con su fondo. Lo mismo hace `wprs-app --page settings` (o la acción
 *Ajustes* del lanzador); `--page` acepta también `library`, `scenes`, `playlists`, `profiles`,
 `providers`, `repos` y `account`. Si la app ya está abierta, pasa a esa página, salvo que el editor
 de imágenes o el de escenas tenga cambios sin guardar: entonces solo se muestra la ventana y el
@@ -1683,11 +1683,14 @@ interfaz completa; lo esencial:
 - **Guardar datos**: con `uses: ["storage"]`, `storage.set("visitas", n)` y `storage.get` guardan
   JSON del paquete o, con `"output"`, de la pantalla: como mucho 64 KiB cada uno, solo en el
   dispositivo (sin sincronizar), en un archivo privado que se escribe como mucho cada 5 s y al parar
-  y se borra al desinstalar el paquete.
+  y se borra al quitar o desinstalar el paquete. Las pantallas que muestran el paquete comparten lo
+  del paquete (lo que guarda una llega a las demás en su siguiente fotograma) y las vistas previas
+  del editor lo leen sin escribirlo.
 - **Carpeta elegida**: con `uses: ["folders"]` y una propiedad `folder` con `"mode": "all"`,
   `folder("fotos").files` da identificadores opacos de sus imágenes, `name(id)` el nombre del
   archivo, `on("added" | "removed" | "changed", …)` avisa de los cambios y `show("marco", id)` elige
-  qué foto muestra una capa. Los scripts nunca ven rutas.
+  qué foto muestra una capa. La carpeta se mira cada 2 s fuera del hilo que dibuja, también con la
+  escena quieta. Los scripts nunca ven rutas.
 - **Sonido**: con `uses: ["sounds"]`, `sound("campana")` controla una capa de sonido con `play()`,
   `pause()`, `stop()`, `playing` y `volume`, de 0 a 1 y por debajo del volumen general, que también
   la silencia. La primera llamada se queda el sonido aunque tuviera `play_on`. El teléfono no

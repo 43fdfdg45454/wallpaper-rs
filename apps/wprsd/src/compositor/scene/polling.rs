@@ -2,14 +2,10 @@ use super::super::scripts::Scripts;
 use super::SceneState;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use wprs_render::log_allowed;
 use wprs_scene::{MAX_FIRED, ScriptOutputs};
 use wprs_script::{Error, Frame, Mode, Setup};
-
-const KEPT_LINES: usize = 50;
-const CLICK: Duration = Duration::from_secs(2);
-const APART: Duration = Duration::from_secs(1);
 
 impl SceneState {
     pub(in super::super) fn link(&mut self, scripts: &mut Scripts, output: &str) {
@@ -18,18 +14,19 @@ impl SceneState {
         }
         let old = self.host.take();
         let stores = self.spec.pack.scene.scripts.iter().any(|s| s.wants(wprs_scene::ScriptApi::Storage));
-        if stores && self.stash.is_none() {
+        if stores && self.keeper.as_ref().is_none_or(|k| k.output() != output) {
+            let (id, writes) = (&self.spec.pack.props.id, !crate::drafts::virtual_output(output));
             let dir = wprs_core::stash::dir();
-            self.stash = dir.and_then(|d| wprs_core::stash::Stash::open(&d, &self.spec.pack.props.id));
+            self.keeper = dir.and_then(|d| wprs_core::stash::Keeper::open(&d, id, output, writes));
         }
         let pack = &self.spec.pack;
         let values = serde_json::to_string(&self.spec.values).unwrap_or_default();
         let key = (Arc::as_ptr(pack) as usize, if stores { format!("{values} {output}") } else { values });
         let named = (pack.locale.as_str(), &pack.labels);
-        let (stash, folders) = (&self.stash, self.folders());
+        let (keeper, folders) = (&self.keeper, self.folders());
         let setup = || {
             let mut setup = Setup::new(&pack.scene, &pack.scripts, self.runtime.seed, named);
-            setup.storage = stash.as_ref().map_or(serde_json::Value::Null, |s| s.scopes(output));
+            setup.storage = keeper.as_ref().map_or(serde_json::Value::Null, wprs_core::stash::Keeper::scopes);
             setup.folders = folders;
             setup
         };
@@ -39,6 +36,7 @@ impl SceneState {
         };
         if !kept {
             (self.answered, self.awaiting, self.timer) = (false, 0, f64::INFINITY);
+            self.keeper.iter_mut().for_each(wprs_core::stash::Keeper::resend);
         }
         self.host = Some(link);
     }
@@ -64,7 +62,9 @@ impl SceneState {
             rt.fill_videos(&mut self.filmed);
         }
         let now = Instant::now();
-        self.listing(now);
+        let listed = self.listing(now);
+        self.keeper.iter_mut().for_each(|k| k.refresh(now));
+        let storage = self.keeper.as_ref().map_or((0, ""), wprs_core::stash::Keeper::frame);
         let rt = &self.runtime;
         let minute = rt.wall().div_euclid(60.0) as i64;
         if self.zone.0 != minute {
@@ -76,7 +76,8 @@ impl SceneState {
             self.clicked[0] = Some(Instant::now());
         }
         let (view, screen, fps) = (self.sent.1, self.sent.2, self.sent.3);
-        let eventful = !self.fired.is_empty()
+        let eventful = listed
+            || !self.fired.is_empty()
             || !actions.is_empty()
             || !touches.is_empty()
             || self.timer <= rt.time()
@@ -104,6 +105,7 @@ impl SceneState {
             videos: &self.filmed,
             ended: &self.ended,
             folders: &self.listed.text,
+            storage,
         };
         let link = self.host.as_mut()?;
         let before = link.progress().0;
@@ -134,10 +136,9 @@ impl SceneState {
                 self.heard_script(&mut outputs);
                 self.open(output, std::mem::take(&mut outputs.open));
                 self.show(&outputs);
-                if let (Some(stash), Some(stored)) = (self.stash.as_mut(), outputs.storage.take()) {
-                    stash.take(output, &stored);
+                if let (Some(keeper), Some(stored)) = (self.keeper.as_mut(), outputs.storage.take()) {
+                    keeper.take(&stored, now);
                 }
-                self.stash.iter_mut().filter(|s| s.due(now)).for_each(|s| drop(s.flush(now, false)));
                 Some(outputs)
             }
             Ok(None) => None,
@@ -157,37 +158,5 @@ impl SceneState {
                 None
             }
         }
-    }
-
-    fn open(&mut self, output: &str, asked: Vec<String>) {
-        let now = Instant::now();
-        let recent = self.clicked[0].is_some_and(|at| now.duration_since(at) < CLICK);
-        let rested = self.clicked[1].is_none_or(|at| now.duration_since(at) >= APART);
-        if let Some(prop) = asked.first().filter(|_| recent && rested && self.allowed[1]) {
-            self.clicked = [None, Some(now)];
-            crate::shortcuts::ask(output, &self.spec.pack.props.id, prop);
-        }
-    }
-
-    fn heard_script(&mut self, outputs: &mut ScriptOutputs) {
-        for line in outputs.console.drain(..) {
-            let line = wprs_scene::plain_line(&line);
-            tracing::debug!(scene = self.spec.pack.props.id, "script {line}");
-            self.console.push_back(line);
-        }
-        while self.console.len() > KEPT_LINES {
-            self.console.pop_front();
-        }
-        let stopped =
-            outputs.stopped.last().map(|why| crate::words::script_stopped(&wprs_scene::plain_line(why)));
-        if stopped.is_some() && stopped != self.error {
-            tracing::warn!(
-                scene = self.spec.pack.props.id,
-                "a scene script stopped: {}",
-                outputs.stopped.iter().map(|s| wprs_scene::plain_line(s)).collect::<Vec<_>>().join("; ")
-            );
-            self.error = stopped;
-        }
-        self.timer = outputs.wake.map_or(f64::INFINITY, |w| self.runtime.time() + w);
     }
 }

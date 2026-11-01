@@ -40,7 +40,8 @@ pub(crate) fn model(p: wprs_library::Profile, active: Option<&String>) -> Profil
 fn content(o: &OutputConfig, items: &HashMap<PathBuf, String>) -> ProfileOutput {
     let item = o.image.as_ref().and_then(|path| items.get(path).cloned());
     let (path, playlist, fit) = (o.image.clone().filter(|_| item.is_none()), o.playlist.clone(), o.fit);
-    ProfileOutput { item, path, playlist, fit, background: o.background.clone(), preset: o.preset.clone() }
+    let (background, preset, filter) = (o.background.clone(), o.preset.clone(), o.filter);
+    ProfileOutput { item, path, playlist, fit, background, preset, filter }
 }
 
 impl Daemon {

@@ -52,7 +52,7 @@ ColumnLayout {
             visible: !kin.base && kin.repo !== ""
             text: App.tr("Install it")
             icon.name: "download"
-            onClicked: App.act("Install", [kin.repo + "/" + kin.pkg.base, false, false], "Repos1")
+            onClicked: App.act("Install", [kin.repo + "/" + kin.pkg.id + "@" + kin.pkg.version, false, false], "Repos1")
         }
     }
 

@@ -51,8 +51,19 @@ fn scripts_keep_data_per_package_and_output_within_bounds() {
     let out = at(&mut script, 0.1).unwrap();
     let said = text(&out, "info");
     assert!(said.starts_with("4|none|set|set|storage keeps at most 64 KiB in each scope|storage keeps only JSON values|storage takes the scope package or output"), "{said}");
-    assert_eq!(out.storage, Some(json!({ "package": { "visits": 5 }, "output": { "seat": { "row": 2 } } })));
-    assert_eq!(at(&mut script, 0.2).unwrap().storage.map(|s| s["package"]["visits"].clone()), Some(json!(6)));
+    let set = |seq: u64, package, output| json!({ "seq": seq, "set": { "package": package, "output": output }, "gone": { "package": [], "output": [] } });
+    assert_eq!(out.storage, Some(set(1, json!({ "visits": 5 }), json!({ "seat": { "row": 2 } }))));
+    assert_eq!(
+        at(&mut script, 0.2).unwrap().storage,
+        Some(set(2, json!({ "visits": 6 }), json!({ "seat": { "row": 2 } })))
+    );
+    let heard = r#"{"package":{"visits":40,"other":1},"output":{"seat":"far"},"seq":2}"#;
+    let out = script.update(&Frame { storage: (1, heard), ..Frame::at(0.3) }).unwrap();
+    assert!(text(&out, "info").starts_with("40|far|set|set"), "another screen's data arrives");
+    assert_eq!(out.storage.unwrap()["set"]["package"], json!({ "visits": 41 }));
+    let late = r#"{"package":{"visits":40},"output":{},"seq":2}"#;
+    let out = script.update(&Frame { storage: (2, late), ..Frame::at(0.4) }).unwrap();
+    assert!(text(&out, "info").starts_with("41|"), "what the host has not taken yet stays");
     let mut plain = with(json!(["timers"]), STORE, |_| {});
     let said = text(&at(&mut plain, 0.1).unwrap(), "info");
     assert!(said.starts_with("main.js uses storage without declaring it in scene.json"), "{said}");

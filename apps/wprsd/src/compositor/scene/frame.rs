@@ -45,6 +45,7 @@ impl SceneState {
             }
             self.view = Some(view);
         }
+        let listing = self.listing_wake(now);
         let view = self.view.as_mut().expect("created above");
         let inner = view.inner(renderer, size, quality);
         let rect = view.view(inner);
@@ -78,7 +79,8 @@ impl SceneState {
         let timer = match self.timer - self.runtime.time() {
             left if left.is_finite() => Wake::At(left.max(0.0)),
             _ => Wake::Idle,
-        };
+        }
+        .min(listing);
         let wake = match &self.host {
             _ if self.still || stopped => Wake::Idle,
             Some(h) if !self.answered || h.progress().1 < self.awaiting => Wake::Frame,
