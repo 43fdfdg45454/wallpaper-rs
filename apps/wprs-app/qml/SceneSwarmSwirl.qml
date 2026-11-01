@@ -33,7 +33,7 @@ Item {
             const ctx = getContext("2d"), r = swirl.r, g = swirl.gust, d = swirl.drift;
             ctx.reset();
             if (g) {
-                const [x, y] = [g.at[0] * r, g.at[1] * r], rad = v => v * Math.PI / 180;
+                const x = g.at[0] * r, y = g.at[1] * r, rad = v => v * Math.PI / 180;
                 ctx.fillStyle = Kirigami.Theme.highlightColor;
                 ctx.globalAlpha = 0.18;
                 ctx.beginPath();
@@ -61,13 +61,13 @@ Item {
                 ctx.strokeStyle = Kirigami.Theme.positiveTextColor;
                 ctx.fillStyle = Kirigami.Theme.positiveTextColor;
                 ctx.lineWidth = 1;
-                d.arrows.forEach(([from, to]) => {
+                d.arrows.forEach(pair => {
                         ctx.beginPath();
-                        ctx.moveTo(from[0] * r, from[1] * r);
-                        ctx.lineTo(to[0] * r, to[1] * r);
+                        ctx.moveTo(pair[0][0] * r, pair[0][1] * r);
+                        ctx.lineTo(pair[1][0] * r, pair[1][1] * r);
                         ctx.stroke();
                         ctx.beginPath();
-                        ctx.arc(to[0] * r, to[1] * r, 1.8, 0, 2 * Math.PI);
+                        ctx.arc(pair[1][0] * r, pair[1][1] * r, 1.8, 0, 2 * Math.PI);
                         ctx.fill();
                     });
                 ctx.setLineDash([4, 4]);
