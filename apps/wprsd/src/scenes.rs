@@ -33,6 +33,7 @@ pub struct ScenePack {
     pub labels: Json,
     pub inputs: Option<Uses>,
     pub key: String,
+    pub cap: Option<wprs_scene::Quality>,
 }
 
 pub type Extra = (Vec<(String, Arc<Pixels>)>, Vec<(String, Reel)>);
@@ -64,6 +65,7 @@ impl ScenePack {
             labels,
             inputs: None,
             key,
+            cap: None,
         }
     }
 }

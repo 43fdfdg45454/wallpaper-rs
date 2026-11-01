@@ -56,6 +56,10 @@ pub enum Folder {
         time: f64,
         #[arg(long, help = "End the preview")]
         stop: bool,
+        #[arg(long, value_parser = ["q0", "q1", "q2", "q3"], help = "Highest quality level of the preview")]
+        quality: Option<String>,
+        #[arg(long, help = "Start the particle systems and the scene again")]
+        restart: bool,
     },
     #[command(about = "Build the scene into the library and show it on an output")]
     Apply {
@@ -128,10 +132,13 @@ pub(crate) fn run(command: Folder) -> Result<()> {
                 false => println!("{sha256} {size} {}", out.display()),
             }
         }
-        Folder::Preview { dir, output, time, stop } => {
+        Folder::Preview { dir, output, time, stop, quality, restart } => {
             let project = Project::open(&dir)?;
-            let document =
-                json!({"manifest": project.doc["manifest"], "scene": visible(&project.doc)}).to_string();
+            let mut document = json!({"manifest": project.doc["manifest"], "scene": visible(&project.doc)});
+            let nonce = restart.then(|| std::time::UNIX_EPOCH.elapsed().map_or(1, |d| d.as_millis() as u64));
+            let staged = wprs_editor::rigs::staged(&json!({ "quality": quality, "restart": nonce }));
+            staged.into_iter().for_each(|s| document["preview"] = s);
+            let document = document.to_string();
             let (dir, document) = (fs::canonicalize(&dir)?, if stop { String::new() } else { document });
             let path = dir.to_str().context("the path is not UTF-8")?.to_owned();
             runtime()?.block_on(async {

@@ -1730,6 +1730,28 @@ puede dejarlos fuera. Desde la terminal hace lo mismo `wprs-ctl scene particles 
 `shape`, `control-point`, `remap add|set|remove`, `cutout`, `orient`, `perspective`,
 `emit-from-layer`, `inherit` y `shader`, y `handles` imprime lo que la vista previa dibuja.
 
+La vista previa dibuja también los colisionadores del sistema con el color de su respuesta (rojo
+donde mueren las partículas, verde donde se pegan) y asas para cada tipo: el borde del lienzo, el
+plano con su punto y el lado en el que se quedan, el círculo con su centro y su radio, la caja con
+dos esquinas, el segmento con sus extremos y la capa con su contorno y su campo de distancias; un
+anillo con la distancia que se mantiene alrededor de su objetivo, o la línea entre dos puntos, con
+asas que mueven el objetivo, los extremos y la distancia. El inspector ofrece la respuesta de cada
+colisionador (rebotar, deslizar, parar, pegar o eliminar) con el rebote y el rozamiento, si un
+círculo o una caja retienen las partículas dentro y la capa con la que chocan; los objetivos y
+deslizadores de las distancias; las bandadas con el radio de vecinas, la separación, la alineación,
+la cohesión y la velocidad máxima; los operadores de reasignación con el mismo editor de curvas y
+la edad como entrada; la cuerda y la estela con sus campos y un selector de textura. El presupuesto
+de partículas simula el sistema en el procesador hasta el instante de la línea de tiempo y dice
+cuántas viven de su capacidad, las plazas en la GPU y en el procesador de cada clase de equipo (los
+teléfonos y los equipos antiguos caen en las dos más bajas) y lo que guarda cada nivel de calidad
+de nacimientos, vecinas, puntos de estela y de cuerda; puede dibujar encima las partículas
+simuladas, la cuerda y algunas estelas, y al pulsar una partícula marca el radio de sus vecinas. Un
+selector de calidad de Q0 a Q3 limita la de la vista previa y *Reiniciar los sistemas* vuelve a
+empezar sus partículas. En la terminal, `wprs-ctl scene particles` suma `collider add|set|remove|
+response`, `keep distance|between|remove`, `boids`, `operator remap add|set|remove`, `rope`,
+`trail`, `texture` y `budget`, y `wprs-ctl scene preview --quality Q --restart` hace lo mismo con la
+vista previa.
+
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado
 se copia cada 30 segundos y al cerrar en `~/.local/state/wallpaper-rs/editor/`, que solo puede leer

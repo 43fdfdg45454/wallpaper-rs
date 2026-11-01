@@ -11,7 +11,7 @@ use wprs_format::features;
 pub use crate::action::{ACTIONS, Action, EDITOR, KeyEase};
 pub use crate::action::{
     AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, IkEdit,
-    MeshCut, ParticleEdit, PartsEdit, PointEdit, Spot, WeightStroke, WindEdit,
+    MeshCut, ParticleEdit, PartsEdit, PointEdit, Response, Spot, Strand, TendEdit, WeightStroke, WindEdit,
 };
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {

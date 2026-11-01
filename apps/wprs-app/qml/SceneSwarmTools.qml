@@ -22,10 +22,10 @@ ColumnLayout {
 
     function edit(what, args, gesture) {
         page.run("particles", {
-            [what]: Object.assign({
-                "system": system
-            }, args)
-        }, gesture === true);
+                [what]: Object.assign({
+                        "system": system
+                    }, args)
+            }, gesture === true);
     }
 
     visible: info !== null
@@ -63,6 +63,32 @@ ColumnLayout {
     }
 
     SceneSwarmRemaps {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
+    SceneSwarmRemaps {
+        Layout.fillWidth: true
+        tools: tools
+        steady: true
+    }
+
+    SceneSwarmSteer {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
+    SceneSwarmColliders {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
+    SceneSwarmStrands {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
+    SceneSwarmBudget {
         Layout.fillWidth: true
         tools: tools
     }

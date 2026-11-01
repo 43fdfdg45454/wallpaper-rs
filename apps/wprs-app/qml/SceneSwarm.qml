@@ -35,10 +35,14 @@ Item {
 
     function edit(what, args) {
         page.run("particles", {
-            [what]: Object.assign({
-                "system": system
-            }, args)
-        }, true);
+                [what]: Object.assign({
+                        "system": system
+                    }, args)
+            }, true);
+    }
+
+    function forceOf(i) {
+        return JSON.parse(page.editor.value("/scene/particles/" + system.replace(/~/g, "~0").replace(/\//g, "~1") + "/forces/" + i) || "null");
     }
 
     function shapeOf(e) {
@@ -83,13 +87,28 @@ Item {
             tint: Kirigami.Theme.neutralTextColor
             tip: modelData.bound ? App.tr("This control point follows a value; moving it replaces the value") : App.tr("Drag to move the control point")
             onMoved: (to, done) => swarm.edit("point", {
-                    "point": Number(modelData.name.slice(1)),
-                    "at": modelData.world ? to : swarm.local(to)
-                })
+                        "point": Number(modelData.name.slice(1)),
+                        "at": modelData.world ? to : swarm.local(to)
+                    })
         }
     }
 
     SceneSwarmFocal {
+        anchors.fill: parent
+        swarm: swarm
+    }
+
+    SceneSwarmWalls {
+        anchors.fill: parent
+        swarm: swarm
+    }
+
+    SceneSwarmKeeps {
+        anchors.fill: parent
+        swarm: swarm
+    }
+
+    SceneSwarmLive {
         anchors.fill: parent
         swarm: swarm
     }

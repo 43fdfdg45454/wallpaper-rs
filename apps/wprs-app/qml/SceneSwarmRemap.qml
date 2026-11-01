@@ -9,8 +9,9 @@ GridLayout {
 
     required property var tools
     required property var row
+    property bool steady
     readonly property var value: row.remap
-    readonly property var inputs: tools.info?.inputs ?? []
+    readonly property var inputs: (steady ? tools.info?.steady_inputs : tools.info?.inputs) ?? []
     readonly property var outputs: tools.info?.outputs ?? []
     readonly property var domains: tools.info?.domains ?? ({})
     readonly property var reach: domains[value.input.split(":")[0]] ?? [0, 1]
@@ -19,10 +20,21 @@ GridLayout {
     readonly property var waves: ["none", "sine", "noise"]
 
     function set(change, gesture) {
-        remap.tools.edit("remap", {
-            "index": row.index,
-            "remap": Object.assign({}, value, change)
-        }, gesture);
+        const next = Object.assign({}, value, change);
+        if (steady)
+            remap.tools.edit("force", {
+                    "index": row.index,
+                    "force": Object.assign({}, row.window ? {
+                            "window": row.window
+                        } : {}, {
+                            "remap": next
+                        })
+                }, gesture);
+        else
+            remap.tools.edit("remap", {
+                    "index": row.index,
+                    "remap": next
+                }, gesture);
     }
 
     columns: 2
@@ -32,8 +44,8 @@ GridLayout {
         model: remap.inputs
         currentIndex: remap.inputs.indexOf(remap.value.input)
         onActivated: index => remap.set({
-                "input": remap.inputs[index]
-            })
+                    "input": remap.inputs[index]
+                })
     }
 
     QQC2.ComboBox {
@@ -41,8 +53,8 @@ GridLayout {
         model: remap.outputs
         currentIndex: remap.outputs.indexOf(remap.value.output)
         onActivated: index => remap.set({
-                "output": remap.outputs[index]
-            })
+                    "output": remap.outputs[index]
+                })
     }
 
     QQC2.RangeSlider {
@@ -54,11 +66,11 @@ GridLayout {
         first.value: remap.value.in[0]
         second.value: remap.value.in[1]
         first.onMoved: remap.set({
-            "in": [first.value, second.value].map(v => Math.round(v * 100) / 100)
-        }, true)
+                "in": [first.value, second.value].map(v => Math.round(v * 100) / 100)
+            }, true)
         second.onMoved: remap.set({
-            "in": [first.value, second.value].map(v => Math.round(v * 100) / 100)
-        }, true)
+                "in": [first.value, second.value].map(v => Math.round(v * 100) / 100)
+            }, true)
     }
 
     QQC2.RangeSlider {
@@ -68,27 +80,27 @@ GridLayout {
         first.value: remap.value.out[0]
         second.value: remap.value.out[1]
         first.onMoved: remap.set({
-            "out": [first.value, second.value].map(v => Math.round(v * 100) / 100)
-        }, true)
+                "out": [first.value, second.value].map(v => Math.round(v * 100) / 100)
+            }, true)
         second.onMoved: remap.set({
-            "out": [first.value, second.value].map(v => Math.round(v * 100) / 100)
-        }, true)
+                "out": [first.value, second.value].map(v => Math.round(v * 100) / 100)
+            }, true)
     }
 
     QQC2.CheckBox {
         text: App.tr("Clamp the input")
         checked: remap.value.clamp_in === true
         onToggled: remap.set({
-            "clamp_in": checked
-        })
+                "clamp_in": checked
+            })
     }
 
     QQC2.CheckBox {
         text: App.tr("Clamp the output")
         checked: remap.value.clamp_out === true
         onToggled: remap.set({
-            "clamp_out": checked
-        })
+                "clamp_out": checked
+            })
     }
 
     QQC2.ComboBox {
@@ -96,8 +108,8 @@ GridLayout {
         model: [App.tr("Set"), App.tr("Multiply"), App.tr("Add"), App.tr("Subtract")]
         currentIndex: Math.max(0, remap.ops.indexOf(remap.value.op ?? "set"))
         onActivated: index => remap.set({
-                "op": remap.ops[index]
-            })
+                    "op": remap.ops[index]
+                })
     }
 
     QQC2.ComboBox {
@@ -105,8 +117,8 @@ GridLayout {
         model: [App.tr("Straight"), App.tr("Sine wave"), App.tr("Noise")]
         currentIndex: Math.max(0, remap.waves.indexOf(remap.value.wave ?? "none"))
         onActivated: index => remap.set({
-                "wave": remap.waves[index]
-            })
+                    "wave": remap.waves[index]
+                })
     }
 
     SceneCurvePlot {
@@ -120,9 +132,9 @@ GridLayout {
         Layout.columnSpan: 2
         icon.name: "edit-delete"
         text: App.tr("Remove this remap")
-        onClicked: remap.tools.edit("remap", {
-            "index": remap.row.index,
-            "remove": true
-        })
+        onClicked: remap.tools.edit(remap.steady ? "force" : "remap", {
+                "index": remap.row.index,
+                "remove": true
+            })
     }
 }

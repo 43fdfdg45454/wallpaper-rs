@@ -7,6 +7,7 @@ mod limbs;
 mod names;
 mod rigging;
 mod swarm;
+mod tend;
 
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use names::ACTIONS;
@@ -14,7 +15,7 @@ use names::{half, whole};
 pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MeshCut, WeightStroke,
 };
-pub use swarm::ParticleEdit;
+pub use swarm::{ParticleEdit, Response, Strand, TendEdit};
 
 pub const EDITOR: &str = "/scene/ext/editor";
 

@@ -28,12 +28,15 @@ QtObject {
 
     function show() {
         const shaped = Object.keys(shapes).length > 0;
-        page.editor.look = layer !== "" && (clip !== "" || shaped || still) ? JSON.stringify({
+        const kept = JSON.parse(page.editor.look || "{}");
+        const look = layer !== "" && (clip !== "" || shaped || still) ? {
             "layer": layer,
             "clip": clip !== "" ? clip : null,
             "shapes": shapes,
             "still": still
-        }) : "";
+        } : {};
+        ["quality", "restart"].filter(k => kept[k] !== undefined).forEach(k => look[k] = kept[k]);
+        page.editor.look = Object.keys(look).length > 0 ? JSON.stringify(look) : "";
         page.editor.seek(page.clock, page.editor.playing);
     }
 

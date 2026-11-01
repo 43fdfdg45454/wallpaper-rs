@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use wprs_scene::{Inheritable, Orient, Refresh};
 
+pub use super::tend::{Response, Strand, TendEdit};
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum ParticleEdit {
@@ -88,4 +90,6 @@ pub enum ParticleEdit {
         #[serde(default)]
         shader: Option<String>,
     },
+    #[serde(untagged)]
+    Tend(TendEdit),
 }

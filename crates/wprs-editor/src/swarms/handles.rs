@@ -10,7 +10,7 @@ fn pair(v: &Value) -> Option<[f64; 2]> {
     Some([list[0].as_f64()?, list[1].as_f64()?])
 }
 
-fn frame(dir: &Path, doc: &Value, layer: Option<&str>, t: f64) -> Frame {
+pub(super) fn frame(dir: &Path, doc: &Value, layer: Option<&str>, t: f64) -> Frame {
     let canvas = pair(&doc["scene"]["canvas"]["size"]).unwrap_or([1920.0, 1080.0]);
     let found = layer.and_then(|id| crate::canvas::gizmos(dir, doc, t).into_iter().find(|g| g.id == id));
     let Some(g) = found else { return Frame::new([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]) };
@@ -39,7 +39,7 @@ fn points(s: &Value, f: &Frame, t: f64) -> Vec<Value> {
         .collect()
 }
 
-fn drawn_by<'a>(doc: &'a Value, system: &str) -> Option<&'a str> {
+pub(super) fn drawn_by<'a>(doc: &'a Value, system: &str) -> Option<&'a str> {
     let layers = crate::layers::walk(doc).into_iter().map(|(_, l)| l);
     layers.filter(|l| l["type"] == "particles" && l["system"] == system).find_map(|l| l["id"].as_str())
 }
@@ -69,7 +69,10 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
         "audio:treble",
         "audio:level",
     ];
-    let inputs = inputs.map(String::from).into_iter().chain((0..count).map(|k| format!("distance:p{k}")));
+    let inputs: Vec<String> =
+        inputs.map(String::from).into_iter().chain((0..count).map(|k| format!("distance:p{k}"))).collect();
+    let mut steady = inputs.clone();
+    steady.insert(3, "age".into());
     json!({
         "system": system,
         "layer": layer,
@@ -80,7 +83,13 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
         "perspective": s["perspective"],
         "depth": { "depth": s["init"]["depth"], "speed": s["init"]["depth_speed"] },
         "remaps": looks::remaps(s),
-        "inputs": inputs.collect::<Vec<_>>(),
+        "inputs": inputs,
+        "steady_inputs": steady,
+        "colliders": super::walls::colliders(dir, doc, s, &f, t),
+        "keeps": super::steers::keeps(s, &f, &spots),
+        "boids": super::steers::boids(s, &f),
+        "operators": super::steers::operators(s),
+        "strands": super::steers::strands(doc, render),
         "outputs": ["size", "alpha", "color", "speed", "life", "rotation", "spin", "frame"],
         "domains": looks::domains(),
         "cutout": looks::cutout(render),

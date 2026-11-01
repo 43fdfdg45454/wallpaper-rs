@@ -80,10 +80,28 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
             let p = &q["particles"];
             crate::swarms::handles(dir, doc, id, p["layer"].as_str(), p["time"].as_f64().unwrap_or(0.0))
         }
+        _ if q.get("budget").is_some() => {
+            let b = &q["budget"];
+            let quality = serde_json::from_value(b["quality"].clone()).unwrap_or_default();
+            crate::swarms::budget(
+                dir,
+                doc,
+                id,
+                b["layer"].as_str(),
+                b["time"].as_f64().unwrap_or(0.0),
+                quality,
+            )
+        }
         _ if q.get("outline").is_some() => outline(dir, doc, id),
         _ if q.get("wind").is_some() => wind_arrow(doc),
         _ => rig(dir, doc, id),
     }
+}
+
+pub fn staged(look: &Value) -> Option<Value> {
+    let quality = look.get("quality").filter(|q| q.is_string());
+    let restart = look.get("restart").filter(|r| r.is_u64());
+    (quality.is_some() || restart.is_some()).then(|| json!({ "quality": quality, "restart": restart }))
 }
 
 pub fn preview(scene: &mut Value, look: &Value) {

@@ -127,6 +127,7 @@ impl Daemon {
             false => String::new(),
         };
         let (props, scene) = (Arc::new(props), Arc::new(scene));
+        let cap = serde_json::from_value(doc["preview"]["quality"].clone()).ok();
         Ok(ScenePack {
             path: dir,
             props,
@@ -141,6 +142,7 @@ impl Daemon {
             labels,
             inputs,
             key,
+            cap,
         })
     }
 }

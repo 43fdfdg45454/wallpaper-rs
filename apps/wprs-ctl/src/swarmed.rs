@@ -59,25 +59,41 @@ fn edit(system: String, what: Particle) -> P {
         Particle::Shader { shader, layer } => {
             P::Shader { system, layer: layered(layer), shader: Some(shader).filter(|s| s != "none") }
         }
-        Particle::Handles { .. } => unreachable!(),
+        Particle::Collider(c) => crate::tended::collider(system, c),
+        Particle::Keep(k) => crate::tended::keep(system, k),
+        Particle::Boids(b) => crate::tended::boids(system, b),
+        Particle::Operator(o) => crate::tended::operator(system, o),
+        Particle::Rope(r) => crate::tended::rope(system, r),
+        Particle::Trail(t) => crate::tended::trail(system, t),
+        Particle::Texture { texture, layer } => crate::tended::texture(system, texture, layered(layer)),
+        Particle::Handles { .. } | Particle::Budget { .. } => unreachable!(),
     }
 }
 
 pub(crate) fn action(command: Swarming) -> Result<(PathBuf, Action), Box<Author>> {
     match command {
-        Swarming::Particles { what: what @ Particle::Handles { .. }, dir, system } => {
-            Err(Box::new(Author::Swarming(Swarming::Particles { dir, system, what })))
-        }
+        Swarming::Particles {
+            what: what @ (Particle::Handles { .. } | Particle::Budget { .. }),
+            dir,
+            system,
+        } => Err(Box::new(Author::Swarming(Swarming::Particles { dir, system, what }))),
         Swarming::Particles { dir, system, what } => Ok((dir, Action::Particles(edit(system, what)))),
     }
 }
 
 pub(crate) fn run(command: Swarming) -> Result<()> {
-    let Swarming::Particles { dir, system, what: Particle::Handles { layer, time } } = command else {
-        return Ok(());
-    };
+    let Swarming::Particles { dir, system, what } = command;
     let project = Project::open(&dir)?;
-    let found = wprs_editor::swarms::handles(&project.dir, &project.doc, &system, layer.as_deref(), time);
+    let found = match what {
+        Particle::Handles { layer, time } => {
+            wprs_editor::swarms::handles(&project.dir, &project.doc, &system, layer.as_deref(), time)
+        }
+        Particle::Budget { time, quality, layer } => {
+            let quality = quality.as_deref().and_then(parsed).unwrap_or_default();
+            wprs_editor::swarms::budget(&project.dir, &project.doc, &system, layer.as_deref(), time, quality)
+        }
+        _ => return Ok(()),
+    };
     anyhow::ensure!(!found.is_null(), "there is no particle system {system:?}");
     println!("{}", serde_json::to_string_pretty(&found)?);
     Ok(())

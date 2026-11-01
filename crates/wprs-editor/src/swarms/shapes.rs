@@ -51,7 +51,7 @@ fn rot([x, y]: [f64; 2], deg: f64) -> [f64; 2] {
     [x * c - y * s, x * s + y * c]
 }
 
-fn target(v: &Value, f: &Frame, spots: &[Value]) -> (Option<[f64; 2]>, f64) {
+pub(super) fn target(v: &Value, f: &Frame, spots: &[Value]) -> (Option<[f64; 2]>, f64) {
     match v {
         Value::Array(_) => (Some(f.apply(pair(v))), f.turn()),
         Value::String(p) if p.starts_with('p') => {

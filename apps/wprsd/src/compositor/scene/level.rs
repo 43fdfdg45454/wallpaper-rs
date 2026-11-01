@@ -7,7 +7,7 @@ impl SceneState {
     pub(super) fn level(&mut self, power: Power) -> Quality {
         let (quality, why) = self.governor.level(power.level(&self.runtime));
         self.why = why;
-        quality
+        quality.min(self.spec.pack.cap.unwrap_or(Quality::Q3))
     }
 
     pub(super) fn judge(&mut self, (samples, gpu_ms): (u64, f64), power: Power, refresh: u32, now: Instant) {

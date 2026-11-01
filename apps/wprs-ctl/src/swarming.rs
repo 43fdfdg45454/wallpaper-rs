@@ -93,6 +93,35 @@ pub enum Particle {
         #[arg(long, help = "A particles layer whose own render changes")]
         layer: Option<String>,
     },
+    #[command(subcommand, about = "Add, set or remove colliders and choose how particles meet them")]
+    Collider(crate::tending::Collider),
+    #[command(subcommand, about = "Keep particles at a distance from a point or between two")]
+    Keep(crate::tending::Keep),
+    #[command(about = "Move particles in a flock, or --off")]
+    Boids(crate::tending::Boids),
+    #[command(subcommand, about = "Change values of the particles every step")]
+    Operator(crate::tending::Operator),
+    #[command(about = "Join the particles with a rope in the order they were born, or --off")]
+    Rope(crate::tending::Rope),
+    #[command(about = "Leave a trail of up to 64 steps behind each particle, or --off")]
+    Trail(crate::tending::Trail),
+    #[command(about = "Draw particles, ropes and textured trails with an image asset, or none")]
+    Texture {
+        texture: String,
+        #[arg(long, help = "A particles layer whose own render changes")]
+        layer: Option<String>,
+    },
+    #[command(
+        about = "Print the particle budget as JSON: particles alive at a time on the processor, slots by device tier and path, and what each quality level keeps"
+    )]
+    Budget {
+        #[arg(long, default_value_t = 2.0)]
+        time: f64,
+        #[arg(long, value_parser = ["q0", "q1", "q2", "q3"])]
+        quality: Option<String>,
+        #[arg(long)]
+        layer: Option<String>,
+    },
     #[command(about = "Print what the editor draws over the preview for the system as JSON")]
     Handles {
         #[arg(long)]

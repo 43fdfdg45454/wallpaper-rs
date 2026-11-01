@@ -1111,8 +1111,8 @@ msgstr "Centro X"
 msgid "Center Y"
 msgstr "Centro Y"
 
-#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/Labels.qml
-#: apps/wprs-app/qml/facade/SceneLabels.qml
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneSwarmStrands.qml
+#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Width"
 msgstr "Anchura"
 
@@ -1237,7 +1237,7 @@ msgstr "Quitar"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/OutputFilter.qml
 #: apps/wprs-app/qml/SceneRigWeights.qml apps/wprs-app/qml/SceneRigWind.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/SceneSwarmKeep.qml apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Strength"
 msgstr "Fuerza"
 
@@ -1955,6 +1955,7 @@ msgid "Playing on %1:"
 msgstr "Reproduciéndose en %1:"
 
 #: apps/wprs-app/qml/PlaylistEditor.qml
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
 msgid "Stop"
 msgstr "Detener"
 
@@ -2535,7 +2536,7 @@ msgstr "Paso"
 msgid "Linear"
 msgstr "Lineal"
 
-#: apps/wprs-app/qml/SceneClipBar.qml
+#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/SceneSwarmStrands.qml
 msgid "Smooth curve"
 msgstr "Curva suave"
 
@@ -3331,6 +3332,137 @@ msgstr "Este punto de control sigue un valor; moverlo sustituye el valor"
 msgid "Drag to move the control point"
 msgstr "Arrastra para mover el punto de control"
 
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "Particle budget"
+msgstr "Presupuesto de partículas"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "Preview quality"
+msgstr "Calidad de la vista previa"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "Q0, lowest"
+msgstr "Q0, la más baja"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "Q1"
+msgstr "Q1"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "Q2"
+msgstr "Q2"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "Q3, highest"
+msgstr "Q3, la más alta"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "Restart systems"
+msgstr "Reiniciar los sistemas"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "Simulate on the processor and show the particles over the preview"
+msgstr "Simular en el procesador y mostrar las partículas sobre la vista previa"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "%1 alive of %2 at %3 s; %4 slots on the processor"
+msgstr "%1 vivas de %2 a los %3 s; %4 plazas en el procesador"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid ""
+"%1: %2 % of births, %3 neighbours, %4 trail points, %5 rope points between "
+"particles"
+msgstr "%1: %2 % de los nacimientos, %3 vecinas, %4 puntos de estela, %5 puntos de cuerda entre partículas"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid ""
+"%1: %2 slots on the GPU, %3 on the processor, %4 trail points, %5 "
+"neighbours, %6 rope segments"
+msgstr "%1: %2 plazas en la GPU, %3 en el procesador, %4 puntos de estela, %5 vecinas, %6 tramos de cuerda"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid ""
+"Phones and older computers fall on T0 or T1, which keep fewer slots, "
+"neighbours, trail points and rope segments; software rendering runs on the "
+"processor."
+msgstr "Los teléfonos y los equipos más antiguos caen en T0 o T1, que guardan menos plazas, vecinas, puntos de estela y tramos de cuerda; el render por software va en el procesador."
+
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
+msgid "%1 %2"
+msgstr "%1 %2"
+
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bounce"
+msgstr "Rebote"
+
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
+msgid "Slide"
+msgstr "Deslizar"
+
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
+msgid "Stick"
+msgstr "Pegar"
+
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
+msgid "Kill"
+msgstr "Eliminar"
+
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
+msgid "Keep particles inside"
+msgstr "Mantener las partículas dentro"
+
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
+#: apps/wprs-app/qml/SceneSwarmColliders.qml
+#: apps/wprs-app/qml/SceneSwarmSource.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Layer"
+msgstr "Capa"
+
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Friction"
+msgstr "Fricción"
+
+#: apps/wprs-app/qml/SceneSwarmCollider.qml
+msgid "Remove this collider"
+msgstr "Quitar este colisionador"
+
+#: apps/wprs-app/qml/SceneSwarmColliders.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Canvas"
+msgstr "Lienzo"
+
+#: apps/wprs-app/qml/SceneSwarmColliders.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Plane"
+msgstr "Plano"
+
+#: apps/wprs-app/qml/SceneSwarmColliders.qml
+#: apps/wprs-app/qml/SceneSwarmEmitter.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Circle"
+msgstr "Círculo"
+
+#: apps/wprs-app/qml/SceneSwarmColliders.qml
+#: apps/wprs-app/qml/SceneSwarmEmitter.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Box"
+msgstr "Caja"
+
+#: apps/wprs-app/qml/SceneSwarmColliders.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Segment"
+msgstr "Segmento"
+
+#: apps/wprs-app/qml/SceneSwarmColliders.qml
+msgid "Colliders"
+msgstr "Colisionadores"
+
+#: apps/wprs-app/qml/SceneSwarmColliders.qml
+msgid "Add a collider"
+msgstr "Añadir un colisionador"
+
 #: apps/wprs-app/qml/SceneSwarmDepth.qml
 #: apps/wprs-app/qml/facade/SceneEffects.qml
 #: apps/wprs-app/qml/facade/SceneNames.qml
@@ -3358,16 +3490,6 @@ msgid "Point"
 msgstr "Punto"
 
 #: apps/wprs-app/qml/SceneSwarmEmitter.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Box"
-msgstr "Caja"
-
-#: apps/wprs-app/qml/SceneSwarmEmitter.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Circle"
-msgstr "Círculo"
-
-#: apps/wprs-app/qml/SceneSwarmEmitter.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Line"
 msgstr "Línea"
@@ -3391,7 +3513,7 @@ msgstr "Entre dos puntos"
 msgid "From a layer"
 msgstr "Desde una capa"
 
-#: apps/wprs-app/qml/SceneSwarmEmitter.qml
+#: apps/wprs-app/qml/SceneSwarmEmitter.qml apps/wprs-app/qml/SceneSwarmKeep.qml
 msgid "a point"
 msgstr "un punto"
 
@@ -3402,6 +3524,26 @@ msgstr "Distancia focal %1 px"
 #: apps/wprs-app/qml/SceneSwarmFocal.qml
 msgid "Drag to change how strongly depth shrinks particles"
 msgstr "Arrastra para cambiar cuánto encoge la profundidad a las partículas"
+
+#: apps/wprs-app/qml/SceneSwarmKeep.qml
+msgid "Keep a distance from"
+msgstr "Mantener una distancia con"
+
+#: apps/wprs-app/qml/SceneSwarmKeep.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Keep between"
+msgstr "Mantener entre"
+
+#: apps/wprs-app/qml/SceneSwarmKeep.qml
+msgid "Distance %1 px"
+msgstr "Distancia %1 px"
+
+#: apps/wprs-app/qml/SceneSwarmKeep.qml
+msgid "Remove this force"
+msgstr "Quitar esta fuerza"
+
+#: apps/wprs-app/qml/SceneSwarmKeeps.qml
+msgid "Drag to move the point kept to"
+msgstr "Arrastra para mover el punto con el que se mantiene la distancia"
 
 #: apps/wprs-app/qml/SceneSwarmKin.qml
 msgid "Child %1 takes from its parent:"
@@ -3500,17 +3642,16 @@ msgid "Remove this remap"
 msgstr "Quitar esta reasignación"
 
 #: apps/wprs-app/qml/SceneSwarmRemaps.qml
+msgid "Values changed as particles live"
+msgstr "Valores que cambian mientras viven las partículas"
+
+#: apps/wprs-app/qml/SceneSwarmRemaps.qml
 msgid "Starting values from inputs"
 msgstr "Valores iniciales desde entradas"
 
 #: apps/wprs-app/qml/SceneSwarmRemaps.qml
 msgid "Add a remap"
 msgstr "Añadir una reasignación"
-
-#: apps/wprs-app/qml/SceneSwarmSource.qml
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Layer"
-msgstr "Capa"
 
 #: apps/wprs-app/qml/SceneSwarmSource.qml
 #: apps/wprs-app/qml/facade/SceneLabels.qml
@@ -3545,10 +3686,108 @@ msgstr ""
 "La vista previa marca la caja de esta capa; el motor emite desde sus píxeles "
 "opacos."
 
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Distances and flocks"
+msgstr "Distancias y bandadas"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Keep a distance"
+msgstr "Mantener una distancia"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Keep between two points"
+msgstr "Mantener entre dos puntos"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Add a force"
+msgstr "Añadir una fuerza"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Move in flocks"
+msgstr "Moverse en bandadas"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Neighbour radius"
+msgstr "Radio de las vecinas"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Separation"
+msgstr "Separación"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Alignment"
+msgstr "Alineación"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Cohesion"
+msgstr "Cohesión"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Most speed"
+msgstr "Velocidad máxima"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "Ropes and trails"
+msgstr "Cuerdas y estelas"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+#: apps/wprs-app/qml/facade/SceneLabels.qml
+msgid "Texture"
+msgstr "Textura"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "No texture"
+msgstr "Sin textura"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "Join particles with a rope"
+msgstr "Unir las partículas con una cuerda"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "Points between particles"
+msgstr "Puntos entre partículas"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "Texture repeats"
+msgstr "Repeticiones de la textura"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+#: apps/wprs-app/qml/facade/SceneLabels.qml
+msgid "Texture scroll"
+msgstr "Desplazamiento de la textura"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "Leave a trail"
+msgstr "Dejar una estela"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Steps"
+msgstr "Pasos"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "Kept points"
+msgstr "Puntos guardados"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "Points between kept points"
+msgstr "Puntos entre los puntos guardados"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "Show the texture along the trail"
+msgstr "Mostrar la textura a lo largo de la estela"
+
 #: apps/wprs-app/qml/SceneSwarmTools.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Emitters"
 msgstr "Emisores"
+
+#: apps/wprs-app/qml/SceneSwarmWalls.qml
+msgid "Drag to move the collider"
+msgstr "Arrastra para mover el colisionador"
 
 #: apps/wprs-app/qml/SceneTexts.qml
 msgid "Remove this language"
@@ -5443,10 +5682,6 @@ msgid "Text"
 msgstr "Texto"
 
 #: apps/wprs-app/qml/facade/SceneLabels.qml
-msgid "Texture"
-msgstr "Textura"
-
-#: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Textured"
 msgstr "Con textura"
 
@@ -5541,10 +5776,6 @@ msgstr "Usa"
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Texture scale"
 msgstr "Escala de la textura"
-
-#: apps/wprs-app/qml/facade/SceneLabels.qml
-msgid "Texture scroll"
-msgstr "Desplazamiento de la textura"
 
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Vertical alignment"
@@ -5676,10 +5907,6 @@ msgstr "Paso de puntos"
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Pivot"
 msgstr "Pivote"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Plane"
-msgstr "Plano"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Play on"
@@ -5870,16 +6097,8 @@ msgid "Seed"
 msgstr "Semilla"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Segment"
-msgstr "Segmento"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Segments"
 msgstr "Segmentos"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Separation"
-msgstr "Separación"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Shade"
@@ -6014,10 +6233,6 @@ msgid "Star"
 msgstr "Estrella"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Steps"
-msgstr "Pasos"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Particles stick"
 msgstr "Las partículas se quedan pegadas"
 
@@ -6058,13 +6273,40 @@ msgstr "Balanceo"
 msgid "Particle system"
 msgstr "Sistema de partículas"
 
-#: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
-msgid "Drag to move the emitter"
-msgstr "Arrastra para mover el emisor"
+#: apps/wprs-app/qml/facade/SceneSwarmGrips.qml
+msgid "Drag to move the plane"
+msgstr "Arrastra para mover el plano"
 
+#: apps/wprs-app/qml/facade/SceneSwarmGrips.qml
+msgid "Drag to turn the side particles stay on"
+msgstr "Arrastra para girar el lado en el que se quedan las partículas"
+
+#: apps/wprs-app/qml/facade/SceneSwarmGrips.qml
 #: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
 msgid "Drag to change the radius"
 msgstr "Arrastra para cambiar el radio"
+
+#: apps/wprs-app/qml/facade/SceneSwarmGrips.qml
+msgid "target"
+msgstr "objetivo"
+
+#: apps/wprs-app/qml/facade/SceneSwarmGrips.qml
+msgid "Drag to change the distance kept"
+msgstr "Arrastra para cambiar la distancia que se mantiene"
+
+#: apps/wprs-app/qml/facade/SceneSwarmGrips.qml
+#: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
+msgid "from"
+msgstr "desde"
+
+#: apps/wprs-app/qml/facade/SceneSwarmGrips.qml
+#: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
+msgid "to"
+msgstr "hasta"
+
+#: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
+msgid "Drag to move the emitter"
+msgstr "Arrastra para mover el emisor"
 
 #: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
 msgid "center"
@@ -6073,14 +6315,6 @@ msgstr "centro"
 #: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
 msgid "Drag to change the arc"
 msgstr "Arrastra para cambiar el arco"
-
-#: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
-msgid "from"
-msgstr "desde"
-
-#: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
-msgid "to"
-msgstr "hasta"
 
 #: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
 msgid "Drag to bow the line"
@@ -6170,10 +6404,6 @@ msgstr "Fotogramas"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Frequency"
 msgstr "Frecuencia"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Friction"
-msgstr "Fricción"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "From"
@@ -6283,10 +6513,6 @@ msgstr "Distorsión k1"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Distortion k2"
 msgstr "Distorsión k2"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Keep between"
-msgstr "Mantener entre"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Keep distance"
@@ -7048,10 +7274,6 @@ msgid "Add on top"
 msgstr "Sumar encima"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Alignment"
-msgstr "Alineación"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Transparency"
 msgstr "Transparencia"
 
@@ -7176,10 +7398,6 @@ msgid "Bottom right"
 msgstr "Abajo a la derecha"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Bounce"
-msgstr "Rebote"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Bounds"
 msgstr "Límites"
 
@@ -7210,10 +7428,6 @@ msgstr "Cámara"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "3D camera"
 msgstr "Cámara 3D"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Canvas"
-msgstr "Lienzo"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Speed limit"
@@ -7278,10 +7492,6 @@ msgstr "Clips"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Clock"
 msgstr "Reloj"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Cohesion"
-msgstr "Cohesión"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Collapsed"

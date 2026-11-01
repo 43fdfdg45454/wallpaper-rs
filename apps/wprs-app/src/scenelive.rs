@@ -80,11 +80,13 @@ impl SceneEditor {
             return;
         }
         let mut scene = visible(&project.doc);
-        wprs_editor::rigs::preview(
-            &mut scene,
-            &serde_json::from_str(&self.look.to_string()).unwrap_or_default(),
-        );
-        let document = json!({"manifest": project.doc["manifest"], "scene": scene}).to_string();
+        let look: Value = serde_json::from_str(&self.look.to_string()).unwrap_or_default();
+        wprs_editor::rigs::preview(&mut scene, &look);
+        let mut document = json!({"manifest": project.doc["manifest"], "scene": scene});
+        if let Some(staged) = wprs_editor::rigs::staged(&look) {
+            document["preview"] = staged;
+        }
+        let document = document.to_string();
         let dir = project.dir.to_string_lossy().into_owned();
         let time = if self.playing { -1.0 } else { self.time };
         let mut targets: Vec<(String, String)> = Vec::new();

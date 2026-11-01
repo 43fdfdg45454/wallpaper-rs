@@ -991,6 +991,18 @@ msgstr ""
 "un punto de control queda a menos de un millón de píxeles y gira hasta 360 "
 "grados"
 
+#: crates/wprs-editor/src/swarms/tend.rs
+msgid "give what to add or set, or the index of one to remove"
+msgstr "indica qué añadir o poner, o el índice de lo que hay que quitar"
+
+#: crates/wprs-editor/src/swarms/tend.rs
+msgid "the system has no collider %1"
+msgstr "el sistema no tiene el colisionador %1"
+
+#: crates/wprs-editor/src/swarms/tend.rs
+msgid "the system has no force %1"
+msgstr "el sistema no tiene la fuerza %1"
+
 #: crates/wprs-editor/src/texts.rs
 msgid "name a language such as en or pt-BR and a text of the manifest"
 msgstr "indica un idioma como en o pt-BR y un texto del manifiesto"

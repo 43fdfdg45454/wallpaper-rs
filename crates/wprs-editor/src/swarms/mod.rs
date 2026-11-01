@@ -1,8 +1,12 @@
+mod budget;
 mod handles;
 mod looks;
 mod samples;
 mod shapes;
 mod spots;
+mod steers;
+mod tend;
+mod walls;
 
 use crate::action::ParticleEdit;
 use crate::ops::{Op, apply, escape, set};
@@ -12,8 +16,10 @@ use std::path::Path;
 use wprs_core::message::said;
 
 pub use crate::curves::{Curve, plot};
+pub use budget::budget;
 pub use handles::handles;
 pub use looks::{controls, sources};
+pub use walls::response;
 
 fn system(doc: &Value, id: &str) -> Result<String> {
     let path = format!("/scene/particles/{}", escape(id));
@@ -120,6 +126,7 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &ParticleEdit) -> Result<Vec<Op>>
             ops.extend(put(doc, &format!("{at}/follow_inherit"), follow.filter(|f| *f).map(|_| json!(true))));
             ops
         }
+        ParticleEdit::Tend(t) => tend::edit(doc, t)?,
         ParticleEdit::Shader { system: s, layer, shader } => {
             render(doc, &system(doc, s)?, layer.as_deref(), |d, at| {
                 put(d, &format!("{at}/shader"), shader.as_ref().map(|id| json!(id)))

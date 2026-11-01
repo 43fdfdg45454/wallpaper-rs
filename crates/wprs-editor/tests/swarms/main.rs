@@ -9,6 +9,7 @@ use wprs_editor::starters::starter;
 mod edits;
 mod handles;
 mod looks;
+mod tends;
 
 fn state() {
     static STATE: OnceLock<TempDir> = OnceLock::new();
