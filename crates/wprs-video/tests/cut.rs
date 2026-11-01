@@ -85,7 +85,7 @@ fn a_start_at_or_past_the_end_plays_the_whole_video_without_spinning() {
 #[test]
 fn a_new_part_applies_to_the_running_video() {
     let Some((mut player, rx)) = play(Cut::default(), 60) else { return };
-    assert!(player.set_cut(Cut { speed: 100, start: 600, end: 0 }));
+    player.set_cut(Cut { speed: 100, start: 600, end: 0 });
     let seen = frames(&rx, Duration::from_millis(500), Duration::from_secs(2));
     assert!(seen.len() > 10, "only {} frames after the change", seen.len());
     assert!(seen.iter().all(|(_, pts)| *pts + FRAME >= Duration::from_millis(600)), "{seen:?}");
@@ -104,7 +104,7 @@ fn a_new_speed_keeps_the_position_of_the_running_video() {
     let Some((mut player, rx)) = play(Cut { speed: 50, start: 0, end: 0 }, 60) else { return };
     let before = frames(&rx, Duration::from_millis(500), Duration::from_millis(200));
     let last = before.last().expect("frames before the change").1;
-    assert!(player.set_cut(Cut { speed: 100, start: 0, end: 0 }));
+    player.set_cut(Cut { speed: 100, start: 0, end: 0 });
     let after = frames(&rx, Duration::ZERO, Duration::from_millis(400));
     let first = after.first().expect("frames after the change").1;
     assert!(first + FRAME >= last, "the video went back from {last:?} to {first:?}");

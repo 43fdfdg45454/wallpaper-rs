@@ -10,7 +10,6 @@ pub struct Player {
     size: gst::Element,
     rate: gst::Element,
     audio: bool,
-    tempo: bool,
     shared: Shared,
     max_fps: u32,
     zero_copy: bool,
@@ -33,7 +32,7 @@ impl Player {
         playbin.set_property("mute", options.muted);
         let piped = audio.then(|| pipewire::sink(None)).flatten();
         piped.iter().for_each(|sink| playbin.set_property("audio-sink", sink));
-        let tempo = (audio && options.cut.speed != 100).then(|| make("scaletempo").ok()).flatten();
+        let tempo = audio.then(|| make("scaletempo").ok()).flatten();
         tempo.iter().for_each(|tempo| playbin.set_property("audio-filter", tempo));
         let shared = Shared { cut: Arc::new(options.cut.into()), ..Shared::default() };
         let (video_sink, size, rate, zero_copy) =
@@ -53,20 +52,16 @@ impl Player {
             });
         }
         let pipe = Pipe::start(playbin, (uri, shared.clone()), sink, audio)?;
-        let (tempo, max_fps) = (tempo.is_some(), options.max_fps);
-        Ok(Self { pipe, size, rate, audio, tempo, shared, max_fps, zero_copy })
+        let max_fps = options.max_fps;
+        Ok(Self { pipe, size, rate, audio, shared, max_fps, zero_copy })
     }
 
-    pub fn set_cut(&mut self, cut: Cut) -> bool {
-        if self.audio && !self.tempo && cut.speed != 100 {
-            return false;
-        }
+    pub fn set_cut(&mut self, cut: Cut) {
         *lock(&self.shared.cut) = cut;
         if self.max_fps > 0 {
             video_sink::set_max_fps(&self.rate, self.max_fps, cut);
         }
         self.pipe.post("wprs-cut");
-        true
     }
 
     pub fn seek(&self, seconds: f64) {

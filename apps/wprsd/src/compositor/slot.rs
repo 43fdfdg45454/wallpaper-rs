@@ -191,3 +191,6 @@ impl PlayerSlot {
         self.error = Some(error);
     }
 }
+
+#[cfg(test)]
+mod tests;

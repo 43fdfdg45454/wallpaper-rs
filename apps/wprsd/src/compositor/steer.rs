@@ -6,9 +6,9 @@ use wprs_video::Cut;
 
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct Steer {
-    cut: Cut,
-    jumps: u32,
-    at: f64,
+    pub(super) cut: Cut,
+    pub(super) jumps: u32,
+    pub(super) at: f64,
     pub(super) wants: bool,
 }
 

@@ -30,11 +30,14 @@ impl State {
             if self.players.contains_key(reel) {
                 continue;
             }
-            let moved = orphans.iter_mut().position(|(r, s)| {
-                r.path == reel.path && s.player.as_mut().is_some_and(|p| p.set_cut(reel.cut))
-            });
+            let moved = orphans.iter().position(|(r, s)| r.path == reel.path && s.player.is_some());
             let slot = match moved {
-                Some(i) => orphans.swap_remove(i).1,
+                Some(i) => {
+                    let mut slot = orphans.swap_remove(i).1;
+                    slot.player.iter_mut().for_each(|p| p.set_cut(reel.cut));
+                    slot.steered = None;
+                    slot
+                }
                 None => PlayerSlot::new(demand(outputs, exporter, reel, power), now),
             };
             self.players.insert(reel.clone(), slot);
