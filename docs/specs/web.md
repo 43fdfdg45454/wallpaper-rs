@@ -37,8 +37,11 @@ When the daemon's GPU can import them, the helper asks WebKit to render into the
 modifiers that GPU samples in place (`XRGB8888`/`ARGB8888` with one plane, on the render node of the
 daemon) and sends each buffer once as a DMA-BUF (`decode` reads `zero-copy`); the daemon gives a
 buffer back once a newer frame replaced it. Otherwise frames travel through a sealed `memfd` with two
-slots (`decode` reads `copy`). When the page draws nothing on the GPU within 10 s, it starts again
-without access to the GPU devices and draws in memory. Pages are always opaque.
+slots (`decode` reads `copy`). A page gets a GPU only when the daemon renders on a hardware GPU
+whose render node can allocate a GBM buffer (`wprs-web --gpu <node>`, checked once per node);
+otherwise (`vgem`, virtual GPUs without 3D, software rendering) it starts without the GPU devices
+and draws in memory, as it also does when it draws nothing on the GPU within 10 s. Pages are
+always opaque.
 
 ## Lifecycle
 

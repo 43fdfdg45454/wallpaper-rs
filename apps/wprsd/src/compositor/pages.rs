@@ -22,18 +22,6 @@ const GRACE: Duration = Duration::from_secs(2);
 type Views = Vec<(String, (u32, u32), (bool, bool), u32, PageSpec)>;
 type Wanted = BTreeMap<PathBuf, (PageSpec, Views)>;
 
-fn node() -> Option<String> {
-    let mut nodes: Vec<String> = std::fs::read_dir("/dev/dri")
-        .into_iter()
-        .flatten()
-        .flatten()
-        .map(|e| e.path().to_string_lossy().into_owned())
-        .filter(|p| p.contains("renderD"))
-        .collect();
-    nodes.sort();
-    nodes.into_iter().next()
-}
-
 pub(super) fn values(spec: &PageSpec, salt: &[u8; 32]) -> (Map<String, Json>, Vec<(String, PathBuf)>) {
     let files: Vec<(String, PathBuf)> =
         spec.files.iter().map(|(prop, path)| (token(prop, salt, path), path.clone())).collect();
@@ -85,7 +73,8 @@ impl State {
     fn start(&self, slot: &PageSlot) -> Start {
         let (spec, privacy) = (&slot.spec, slot.spec.privacy);
         let (properties, files) = values(spec, &slot.salt);
-        let shared = slot.shared && !slot.hidden;
+        let device = self.page_device(slot);
+        let shared = slot.shared && device.is_some();
         Start {
             package: spec.pack.path.clone(),
             id: spec.pack.props.id.clone(),
@@ -96,7 +85,7 @@ impl State {
             storage: spec.storage.clone().filter(|dir| crate::pages::within(dir, spec.pack.storage_kib)),
             languages: wprs_web::languages(&wprs_core::locale::languages(), !privacy.language),
             mask_gpu: !privacy.gpu,
-            device: if slot.hidden { None } else { self.renderer.render_node().or_else(node) },
+            device,
             modifiers: if shared { self.renderer.page_modifiers() } else { Vec::new() },
             properties,
             shape: language(spec).1.clone(),
@@ -105,6 +94,12 @@ impl State {
             folders: folders(spec, &slot.salt),
             files,
         }
+    }
+
+    fn page_device(&self, slot: &PageSlot) -> Option<String> {
+        let hardware = !slot.hidden && !self.renderer.software();
+        let node = hardware.then(|| self.renderer.render_node()).flatten();
+        crate::pages::helper().and_then(|program| wprs_web::device(&program, node))
     }
 
     fn page_settings(&self, slot: &PageSlot) -> Settings {
@@ -131,6 +126,10 @@ impl State {
             if slot.link.is_none() && slot.due.is_some_and(|d| d <= now) {
                 slot.due = None;
                 let start = self.start(&slot);
+                if start.device.is_none() && !slot.hidden {
+                    tracing::info!("the graphics card cannot draw web pages, drawing them in memory");
+                    slot.hidden = true;
+                }
                 slot.full = slot.spec.storage.is_some() && start.storage.is_none();
                 slot.spawn(start, &self.tx, now);
                 if slot.full {

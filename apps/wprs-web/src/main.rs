@@ -2,6 +2,7 @@ mod engine;
 mod ffi;
 mod formats;
 mod frames;
+mod gbm;
 mod glib;
 mod ring;
 mod run;
@@ -51,6 +52,10 @@ unsafe extern "C" fn readable(_fd: c_int, _condition: u32, _data: Ptr) -> c_int 
 }
 
 fn main() {
+    let mut args = std::env::args().skip(1);
+    if let (Some(wprs_web::PROBE), Some(node)) = (args.next().as_deref(), args.next()) {
+        std::process::exit(if gbm::allocates(&node) { 0 } else { 3 });
+    }
     if std::env::args().nth(1).as_deref() == Some("--check") {
         match version() {
             Ok(version) => println!("{version}"),

@@ -12,6 +12,7 @@ mod reload;
 use helper::{Page, available, start};
 use serde_json::json;
 use std::net::TcpListener;
+use std::path::Path;
 use std::time::{Duration, Instant};
 use wprs_web::{Isolation, Start, ToWeb};
 
@@ -69,4 +70,12 @@ fn page_without_a_render_node_draws_in_memory() {
     page.frames = 0;
     page.pump(Instant::now() + Duration::from_secs(1));
     assert!(page.frames >= 5, "{} frames in memory", page.frames);
+}
+
+#[test]
+fn a_node_that_cannot_hold_a_buffer_is_not_given_to_the_page() {
+    let helper = Path::new(helper::HELPER);
+    assert_eq!(wprs_web::device(helper, None), None);
+    assert_eq!(wprs_web::device(helper, Some("/dev/null".into())), None);
+    assert_eq!(wprs_web::device(helper, Some("/dev/dri/renderD9999".into())), None);
 }

@@ -25,6 +25,7 @@ pub struct Page {
 
 impl Page {
     pub fn open(start: Start, isolation: Isolation) -> Page {
+        let isolation = Isolation { devices: isolation.devices || start.device.is_none(), ..isolation };
         let (link, child) = spawn(Path::new(HELPER), isolation, |c| {
             c.env_remove("WPRS_LOG");
         })
@@ -104,6 +105,16 @@ pub fn package(dir: &Path, extra: &[(&str, &[u8])]) -> PathBuf {
     out
 }
 
+fn node() -> Option<String> {
+    let mut nodes: Vec<String> = std::fs::read_dir("/dev/dri")
+        .ok()?
+        .flatten()
+        .map(|e| e.path().to_string_lossy().into_owned())
+        .collect();
+    nodes.sort();
+    nodes.into_iter().find(|n| n.contains("renderD"))
+}
+
 pub fn start(dir: &Path, port: u16) -> Start {
     with(dir, port, &[])
 }
@@ -119,12 +130,7 @@ pub fn with(dir: &Path, port: u16, extra: &[(&str, &[u8])]) -> Start {
         entry: "index.html".into(),
         preload: Some("early.js".into()),
         storage: Some(dir.join("storage")),
-        device: std::fs::read_dir("/dev/dri").ok().and_then(|d| {
-            let mut nodes: Vec<String> =
-                d.flatten().map(|e| e.path().to_string_lossy().into_owned()).collect();
-            nodes.sort();
-            nodes.into_iter().find(|n| n.contains("renderD"))
-        }),
+        device: wprs_web::device(Path::new(HELPER), node()),
         languages: vec!["es-AR".into()],
         properties,
         shape: json!({"kinds": {"tint": "color", "speed": "slider"}}),
