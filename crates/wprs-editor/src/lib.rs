@@ -24,6 +24,8 @@ pub mod previews;
 pub mod project;
 pub mod props;
 pub mod references;
+mod rig;
+pub mod rigs;
 pub mod schema;
 pub mod scripts;
 mod session;

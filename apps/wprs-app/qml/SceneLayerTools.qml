@@ -21,7 +21,7 @@ Flow {
                 delegate: QQC2.MenuItem {
                     required property string modelData
 
-                    enabled: !["image", "video", "sound"].includes(modelData) || (tools.owner.page.view.assets ?? []).some(asset => asset.kind === modelData)
+                    enabled: !["image", "video", "sound", "mesh"].includes(modelData) || (tools.owner.page.view.assets ?? []).some(asset => asset.kind === (modelData === "mesh" ? "model" : modelData))
                     text: SceneWords.kind(modelData) + (enabled ? "" : " (" + App.tr("import a file of this kind first") + ")")
                     icon.name: tools.owner.icon(modelData)
                     onTriggered: tools.owner.page.run("add_layer", {
@@ -31,6 +31,19 @@ Flow {
                     })
                 }
             }
+
+            QQC2.MenuItem {
+                text: App.tr("Mesh from a picture…")
+                icon.name: "draw-polyline"
+                enabled: (tools.owner.page.view.assets ?? []).some(asset => asset.kind === "image")
+                onTriggered: cutter.open()
+            }
+        }
+
+        SceneMeshCut {
+            id: cutter
+
+            page: tools.owner.page
         }
     }
 

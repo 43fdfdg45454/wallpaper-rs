@@ -80,9 +80,16 @@ pub(crate) fn content<'a>(
                 .map_or(1.0, |s| crate::particles::tuned(cx, Some(layer), s).size);
             Content::Particles { system, flock, size }
         }
-        Kind::Adjustment { .. } | Kind::Sound(_) | Kind::Light(_) | Kind::Mesh(_) | Kind::Model(_) => {
-            Content::Adjustment
+        Kind::Mesh(m) => {
+            let puppet = cx.puppets.iter().find(|p| p.layer == layer.id);
+            if let Some(p) = puppet {
+                cx.paced(if p.dirty { Wake::Frame } else { p.wake }, (quality == Quality::Q0).then_some(30));
+            }
+            let pose = puppet.map_or(0, |p| p.posed.generation);
+            let texture = m.texture.as_ref().map(|t| named(cx, t));
+            Content::Mesh { layer: &layer.id, size: boxed(m.size).unwrap_or(canvas), pose, texture }
         }
+        Kind::Adjustment { .. } | Kind::Sound(_) | Kind::Light(_) | Kind::Model(_) => Content::Adjustment,
     }
 }
 

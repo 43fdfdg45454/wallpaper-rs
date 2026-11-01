@@ -44,7 +44,7 @@ fn listed<'de, D: Deserializer<'de>, T: DeserializeOwned>(d: D) -> Result<Vec<T>
 pub(super) struct Doc {
     pub asset: Info,
     #[serde(deserialize_with = "listed")]
-    pub nodes: Vec<Named>,
+    pub nodes: Vec<NodeHead>,
     #[serde(deserialize_with = "listed")]
     pub skins: Vec<Skin>,
     #[serde(deserialize_with = "listed")]
@@ -73,6 +73,14 @@ pub(super) struct Info {
 #[serde(default)]
 pub(super) struct Named {
     pub name: Option<String>,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct NodeHead {
+    pub name: Option<String>,
+    #[serde(deserialize_with = "listed")]
+    pub children: Vec<usize>,
 }
 
 #[derive(Deserialize, Default)]

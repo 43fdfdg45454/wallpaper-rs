@@ -60,6 +60,7 @@ impl Scene {
         match &layer.kind {
             Kind::Image { size, .. } | Kind::Video { size, .. } => *size,
             Kind::Solid { size, .. } => Some(size.unwrap_or(canvas)),
+            Kind::Mesh(m) => Some(m.size.unwrap_or(canvas)),
             Kind::Shape { shape: s, stroke, .. } => {
                 let margin = stroke.as_ref().map_or(0.0, |s| s.width.abs());
                 Some(shape(s).map(|v| v + margin))

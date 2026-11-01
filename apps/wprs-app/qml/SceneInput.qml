@@ -121,6 +121,7 @@ ColumnLayout {
                 "points": pairsEditor,
                 "list": editors.list,
                 "ref:mask": editors.mask,
+                "ref:model": editors.rig,
                 "texts": textsEditor,
                 "markup": textsEditor,
                 "flags": metaEditor,

@@ -101,8 +101,7 @@ export function sound(id) {
     });
 }
 
-export function video(id) {
-    id = String(id);
+function playback(id, more = () => ({})) {
     const send = (command) => {
         need("animations");
         ((state.out.videos[id] ??= {}).commands ??= []).push(command);
@@ -112,7 +111,7 @@ export function video(id) {
         if (!Number.isFinite(Number(v))) throw new TypeError(`${what} takes a number`);
         return Number(v);
     };
-    return Object.freeze({
+    const handle = {
         play: () => send("play"),
         pause: () => send("pause"),
         stop: () => send("stop"),
@@ -138,5 +137,24 @@ export function video(id) {
         set rate(r) {
             send({ rate: Math.min(16, Math.max(0, number(r, "rate"))) });
         },
-    });
+    };
+    Object.defineProperties(handle, Object.getOwnPropertyDescriptors(more(send, number)));
+    return Object.freeze(handle);
+}
+
+export const video = (id) => playback(String(id));
+
+const weights = {};
+
+export function anim(layer, clip) {
+    const id = `${String(layer)}#${String(clip)}`;
+    return playback(id, (send, number) => ({
+        get weight() {
+            return weights[id] ?? 1;
+        },
+        set weight(w) {
+            weights[id] = Math.min(1, Math.max(0, number(w, "weight")));
+            send({ weight: weights[id] });
+        },
+    }));
 }

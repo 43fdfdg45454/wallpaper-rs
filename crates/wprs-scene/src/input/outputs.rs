@@ -55,6 +55,7 @@ pub enum VideoCommand {
     Stop,
     Seek(f32),
     Rate(f32),
+    Weight(f32),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

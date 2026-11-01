@@ -107,6 +107,7 @@ QtObject {
             "max_speed": App.tr("Top speed"),
             "max_vertices": App.tr("Most vertices"),
             "media": App.tr("Media player"),
+            "mesh": App.tr("Mesh"),
             "min": App.tr("Minimum"),
             "mipmaps": App.tr("Smaller copies"),
             "mix": App.tr("Blend frames"),

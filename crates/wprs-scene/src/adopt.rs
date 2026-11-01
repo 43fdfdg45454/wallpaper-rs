@@ -1,12 +1,13 @@
 use crate::custom::{MAX_WGSL, MAX_WGSL_TOTAL};
 use crate::effects::Descriptor;
-use crate::gltf::{MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODELS_JSON, ModelFile};
 use crate::validate::Issue;
-use crate::{Layer, Property, Scene, SceneError};
+use crate::{Property, Scene, SceneError};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::sync::{Arc, Mutex};
+
+mod models;
 
 pub trait Files {
     type Error: Display;
@@ -81,37 +82,6 @@ impl Scene {
             }
             self.loaded.insert(id.clone(), compiled(&id, &json, &wgsl).map_err(|e| fail(at, e))?);
         }
-        let figures: Vec<String> = self
-            .layers()
-            .chain(self.templates.values())
-            .filter_map(Layer::figure)
-            .map(String::from)
-            .collect();
-        let (mut read, mut json, mut left) =
-            (BTreeMap::<String, Arc<ModelFile>>::new(), 0, MAX_MODEL_ENTRIES);
-        for id in figures {
-            let Some(asset) = self.assets.get(&id).filter(|a| a.extension() == "glb") else { continue };
-            let (path, at) = (asset.path.clone(), format!("/assets/{id}"));
-            if let Some(file) = read.get(&path) {
-                self.models.insert(id, file.clone());
-                continue;
-            }
-            let wrong = |e: String| fail(at.clone(), format!("{path} {e}"));
-            let mut head =
-                |keep| files.head(&path, MAX_MODEL_BYTES, keep).map_err(|e| fail(at.clone(), e.to_string()));
-            let size = ModelFile::json_len(&head(20)?.0).map_err(wrong)?;
-            json += size;
-            if json > MAX_MODELS_JSON {
-                return Err(wrong(format!(
-                    "passes the {} MiB of model data a scene may read",
-                    MAX_MODELS_JSON >> 20
-                )));
-            }
-            let (bytes, total) = head(20 + size)?;
-            let file = Arc::new(ModelFile::parse_head(&bytes, total, &mut left).map_err(wrong)?);
-            read.insert(path, file.clone());
-            self.models.insert(id, file);
-        }
-        Ok(())
+        self.read_models(&mut files, fail)
     }
 }

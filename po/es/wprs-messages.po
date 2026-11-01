@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 00:00+0000\n"
+"POT-Creation-Date: 2026-11-01 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -214,7 +214,7 @@ msgstr ""
 "locale_files"
 
 #: crates/wprs-editor/src/actions.rs crates/wprs-editor/src/props.rs
-#: crates/wprs-editor/src/references.rs
+#: crates/wprs-editor/src/references.rs crates/wprs-editor/src/rig.rs
 msgid "the id %1 is in use"
 msgstr "el id %1 ya está en uso"
 
@@ -248,6 +248,7 @@ msgid "the sound %1"
 msgstr "el sonido %1"
 
 #: crates/wprs-editor/src/assets.rs crates/wprs-editor/src/previews.rs
+#: crates/wprs-editor/src/rig.rs
 msgid "the picture cannot be read: %1"
 msgstr "no se puede leer la imagen: %1"
 
@@ -577,6 +578,42 @@ msgstr "%2 todavía nombra a %1; cámbialo antes"
 #: crates/wprs-editor/src/references.rs
 msgid "%1: %2 %3"
 msgstr "%1: %2 %3"
+
+#: crates/wprs-editor/src/rig.rs
+msgid "there is no picture \"%1\" to cut a mesh from"
+msgstr "no hay ninguna imagen «%1» de la que recortar una malla"
+
+#: crates/wprs-editor/src/rig.rs
+msgid "a mesh is cut from pictures of at most %1 pixels a side"
+msgstr "una malla se recorta de imágenes de %1 píxeles de lado como mucho"
+
+#: crates/wprs-editor/src/rig.rs
+msgid "the layer is not a mesh"
+msgstr "la capa no es una malla"
+
+#: crates/wprs-editor/src/rig.rs
+msgid ""
+"bones are placed here only on meshes of one part, such as those cut from a "
+"picture"
+msgstr ""
+"aquí solo se colocan huesos en mallas de una sola parte, como las recortadas "
+"de una imagen"
+
+#: crates/wprs-editor/src/rig.rs
+msgid "a bone has a name of 1 to 64 characters without / or #"
+msgstr "un hueso tiene un nombre de 1 a 64 caracteres sin / ni #"
+
+#: crates/wprs-editor/src/rig.rs
+msgid "there is no bone \"%1\""
+msgstr "no hay ningún hueso «%1»"
+
+#: crates/wprs-editor/src/rig.rs
+msgid "a bone cannot hang from itself or its children"
+msgstr "un hueso no puede colgar de sí mismo ni de sus hijos"
+
+#: crates/wprs-editor/src/rig.rs
+msgid "a mesh has at most %1 bones here"
+msgstr "aquí una malla tiene como mucho %1 huesos"
 
 #: crates/wprs-editor/src/scripts.rs
 msgid "the script has no file name"

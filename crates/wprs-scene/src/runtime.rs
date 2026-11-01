@@ -12,6 +12,7 @@ mod adopted;
 mod clock;
 mod draw;
 mod feed;
+mod puppets;
 mod reads;
 
 use draw::holds;
@@ -71,6 +72,8 @@ pub struct Runtime {
     pub(crate) ended: Vec<String>,
     pub(crate) lengths: BTreeMap<String, f32>,
     pub(crate) sighted: Cell<u64>,
+    pub(crate) puppets: Vec<crate::puppet::Puppet>,
+    pub(crate) seen: Cell<u64>,
 }
 
 impl Runtime {
@@ -108,6 +111,8 @@ impl Runtime {
             ended: Vec::new(),
             lengths: BTreeMap::new(),
             sighted: Cell::new(u64::MAX),
+            puppets: puppets::cast(&scene),
+            seen: Cell::new(u64::MAX),
             scene,
             seed,
             raw: props.clone(),
@@ -155,6 +160,8 @@ impl Runtime {
             systems,
         };
         runtime.set_lengths(BTreeMap::new());
+        runtime.step_puppets(0.0);
+        runtime.pose_puppets();
         runtime
     }
 }

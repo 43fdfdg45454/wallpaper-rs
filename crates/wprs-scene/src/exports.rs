@@ -85,11 +85,18 @@ pub use crate::props::{
     Choice, Condition, Control, Expr, ICONS, Leveling, Mode, Pick, Preset, Property, Slider, Text, Values,
     check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag, veiled,
 };
+pub use crate::puppet::{Drawn, Posed, Puppet};
 pub use crate::quality::{Class, Quality, Why};
 pub use crate::released::{newer_manifest_keys, newer_scene_keys};
 pub use crate::rig::{
-    AnimClip, AnimLayer, Bend, Body, BonePhysics, BoneRule, IkChain, MAX_ANIMATION_LAYERS, MAX_BODIES,
-    MAX_CHAIN, MAX_CHAINS, MAX_CLIPS_PER_MODEL, MAX_EXPRESSIONS, Reach, Rig,
+    AnimClip, AnimLayer, Bend, Body, BoneKeys, BonePhysics, BoneRule, IkChain, MAX_ANIMATION_LAYERS,
+    MAX_BODIES, MAX_CHAIN, MAX_CHAINS, MAX_CLIPS_PER_MODEL, MAX_EXPRESSIONS, Reach, Rig,
+};
+pub use crate::rigged::math::{Mat, Quat, Trs};
+pub use crate::rigged::{
+    Channel, Cut, Interp, Joint, MAX_ACTIVE_SHAPES, MAX_CELLS, MAX_MORPH_TEXELS, MAX_RIG_BYTES, MAX_RIG_KEYS,
+    MAX_RIG_PALETTE, MAX_RIG_PIECES, MAX_RIG_VERTICES, MAX_SKETCH_BONES, MIN_CELLS, MORPH_WIDTH, Motion,
+    Path as Track, Piece, Rigged, Sketch, SketchBone, VERTEX_FLOATS,
 };
 pub use crate::runtime::Runtime;
 pub use crate::scan::{beyond_first, imported};

@@ -42,6 +42,7 @@ pub struct SceneView {
     pub(super) hitboxes: wprs_scene::Hitboxes,
     pub(super) covers: HashMap<String, Option<Arc<wprs_scene::AlphaMap>>>,
     pub(super) molds: HashMap<String, super::molds::Mold>,
+    pub(super) skins: HashMap<String, super::skins::Skin>,
 }
 
 impl Drop for SceneView {

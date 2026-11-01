@@ -1,6 +1,6 @@
 import { state, setup, MAX, owner, need, dirty, touched, put } from "wprs:core";
 import { fields, convert, copy, paramValue } from "wprs:values";
-import { video } from "wprs:media";
+import { anim, video } from "wprs:media";
 import { family } from "wprs:kin";
 
 export const touches = ["click", "enter", "leave", "move", "down", "up"];
@@ -76,6 +76,7 @@ export function layer(id, watching = true) {
         get video() {
             return video(id);
         },
+        anim: (clip) => anim(id, clip),
         destroy: () => scene.destroy(id),
     };
     family(h, id);

@@ -8,6 +8,9 @@ impl Runtime {
         (self.tapes, self.ended) = (crate::footage::tapes(&self.scene), Vec::new());
         (self.t, self.stirred, self.beat) = (0.0, [f64::NEG_INFINITY; 2], f64::NEG_INFINITY);
         self.swarms.get_mut().iter_mut().for_each(Swarm::restart);
+        self.puppets = super::puppets::cast(&self.scene);
+        self.step_puppets(0.0);
+        self.pose_puppets();
         (self.onsets, self.gates) =
             (crate::voice::onsets(&self.scene), RefCell::new(vec![None; self.onsets.len()]));
         while self.t < t {
@@ -28,10 +31,12 @@ impl Runtime {
             (self.t, self.dt, left) = (self.t + step, step as f32, left - step);
             self.tick(step as f32);
             self.roll(step);
+            self.step_puppets(step as f32);
             if left <= 0.0 {
-                return;
+                break;
             }
         }
+        self.pose_puppets();
     }
 
     pub fn set_wall(&mut self, local: f64) {

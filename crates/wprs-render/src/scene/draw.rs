@@ -55,6 +55,12 @@ impl Painter<'_, '_, '_> {
                 item.color = premultiplied(*color, srgb, opacity);
                 Some(("fs_solid", item, Src::White))
             }
+            Content::Mesh { layer, .. } => {
+                let skin = &self.skins.get(*layer)?.image;
+                item.size[2] = 0.0;
+                (item.color, item.shape) = (toned(d.tint, d.brightness, srgb, opacity), [1.0, 0.0, 1.0, 1.0]);
+                Some(("fs_picture", item, self.ext(skin)))
+            }
             Content::Shape { shape: s, fill, gradient: g, stroke } => {
                 let (size, params, place) = shape(s);
                 (item.size, item.shape, item.place) =
@@ -98,7 +104,10 @@ impl Painter<'_, '_, '_> {
         let Some((size, quad)) = self.geometry(i) else { return };
         let Some((entry, mut item, src)) = self.content(i, opacity, size) else { return };
         let b = self.frame.draws[i].brightness;
-        if !matches!(self.frame.draws[i].content, Content::Image { .. } | Content::Video { .. }) {
+        if !matches!(
+            self.frame.draws[i].content,
+            Content::Image { .. } | Content::Video { .. } | Content::Mesh { .. }
+        ) {
             [&mut item.color, &mut item.stroke]
                 .into_iter()
                 .for_each(|c| c[..3].iter_mut().for_each(|v| *v *= b));

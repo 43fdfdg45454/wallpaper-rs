@@ -387,27 +387,70 @@ A light may also follow a bone with `attach`.
 
 A `mesh` layer (`mesh`) draws a binary glTF of flat parts (positions with an optional depth, UVs and,
 for bending, `JOINTS_0` and `WEIGHTS_0` with a skin) bent by its skeleton, such as a character cut
-into limbs. A scene has at most 16 `mesh` and `model` layers.
+into limbs. A scene has at most 16 `mesh` and `model` layers. The editor cuts such a mesh out of a
+picture of the scene, along a grid or its outline, and places its bones (see `editor.md`).
+
+Positions are in pixels from the middle of the box the layer fills, x to the right and y up as glTF
+writes them, and UVs start at the top left of the picture. Every node of the file is a joint: the
+bones of skins, and the nodes that carry a mesh without a skin, which then move as one piece. The
+rest pose is the transform of each node; vertices follow at most 4 bones whose weights add up to 1
+(within 0.02, then made exact). The engine skins the vertices on the GPU into a picture of the box
+(half its pixels at the lowest quality and three quarters at the next) and draws that picture like
+any other layer, with its transform, effects, masks and blend mode; it draws it again only when the
+pose, the blend shapes, the order of the parts or a video texture changed, and a still or settled
+skeleton asks for no frames. Parts moved out of the box are cut at its edge, so `size` leaves them
+room.
+
+Files are refused that have a bone cycle or a node with two parents, a vertex whose weights do not
+add up to 1 or that follows a bone of no skin, an index out of its vertices, a value that is not a
+number, sparse accessors, primitives other than triangles (strips and fans are read as triangles),
+animation keys out of order, more than 65 536 vertices, 256 bones and parts, 64 drawn primitives,
+524 288 blend shape vertices or 4 194 304 animation values, or 128 MiB of meshes for all the mesh
+layers of a scene; meshes are read whole, once, when the scene is.
 
 | Field | Meaning |
 |-------|---------|
 | `mesh` | the `.glb` asset |
-| `texture` | a picture or video asset (or bound value) that replaces the textures of the file |
+| `texture` | a picture or video asset (or bound value) that replaces the textures of the file; without it, the picture of the first material that has one, or white; the base color of each material multiplies its parts |
 | `size`, `color` | the box in pixels the mesh fills (the canvas by default) and a color that multiplies it |
-| `parts` | per part (mesh name of the file): `order` (−1000 to 1000, may follow keyframes with `step`), `clip_to` (another part it only shows over) and `visible` |
+| `parts` | per part (mesh name of the file): `order` (−1000 to 1000, may follow keyframes with `step`), `clip_to` (another part it only shows over) and `visible`; parts are drawn by `order` (0 by default), in the order of the file when it is the same |
 | `depth` | `{ "scale" (0 to 10), "cull" }`: how far the depth of the vertices pushes them with `canvas.perspective` or the 3D camera, and whether parts seen from behind are hidden |
-| `clips` | at most 64 `{ "id", "animation", "from", "to", "loop", "events" }`: a stretch of an animation of the file (the first one without `animation`) in seconds within its length, played `repeat` (default), `pingpong` or `once`, with named `events` like timelines |
+| `clips` | at most 64 `{ "id", "animation", "from", "to", "loop", "events", "bones", "shapes", "order" }`: a stretch of an animation of the file (the first one without `animation`, unless the clip has keys of its own) in seconds within its length, played `repeat` (default), `pingpong` or `once`, with named `events` like timelines, and keys of its own on the same seconds (below) |
 | `animations` | at most 16 animation layers `{ "clip", "weight" (0 to 1), "rate" (0 to 16), "additive", "blend_in", "blend_out" (0 to 10 s), "enabled", "bones" }`, mixed in order: replacing layers first, then additive ones; `bones` limits a layer to those bones; bones without a track keep their rest pose |
 | `ik` | at most 16 chains `{ "chain" (2 to 8 bones from the root), "target", "limits": { "<bone>": [min, max] }, "weight", "bend": "clockwise" \| "counterclockwise" }`; `target` is a point (which may be bound), `"cursor"`, `"bone:<name>"` or `"layer:<id>"`; solved after the animations (`ik`) |
 | `physics` | at most 64 `{ "bone", "mode": "spring" \| "rigid" \| "rope", "stiffness", "damping", "inertia", "wind" (0 to 1), "gravity" (−10 to 10), "rotation": [min, max] degrees, "translation": [min, max] px }` simulated at a fixed 60 Hz so that it does not depend on the frame rate, after the inverse kinematics (`bone_physics`) |
 | `rules` | at most 64 `{ "bone", "parent", "weight" }`: moves a bone over to another parent as `weight` goes from 0 to 1, keeping its pose, as a sword passing from a rock to a hand (`bone_rules`) |
-| `shapes`, `expressions` | weights from 0 to 1 of the blend shapes of the file, and at most 64 expressions `{ "<name>": { "<shape>": weight (−1 to 1) } }` whose names `shapes` may also set; at most 8 shapes act at once, the heaviest (`blend_shapes`) |
+| `shapes`, `expressions` | weights from 0 to 1 of the blend shapes of the file, and at most 64 expressions `{ "<name>": { "<shape>": weight (−1 to 1) } }` whose names `shapes` may also set; at most 8 shapes act at once on each part, the heaviest (`blend_shapes`) |
 | `hit` | bones whose area takes the pointer for scripts, which then learn the bone that was touched (`layer_events`) |
+
+The keys of a clip are lists of `[time, value]` keyframes with an optional easing, as in timelines:
+
+| Key | Meaning |
+|-----|---------|
+| `bones` | per bone (a node of the file): `rotation` in degrees clockwise, `position` `[x, y]` in pixels with y down in the space of its parent, and `scale` `[x, y]`, each added to its rest pose; they replace the tracks of the file for that bone |
+| `shapes` | per blend shape: its weight (−1 to 1) |
+| `order` | per part: the `order` it takes while the clip plays, rounded to whole numbers; `parts.<name>.order` still wins when set |
+
+A replacing layer moves each bone from what the layers before it left towards its own pose by its
+weight; rotations are blended along the shorter way and normalized. An additive layer adds what its
+clip moves away from the rest pose, times its weight. The weight of a layer also follows its fade:
+it grows over `blend_in` when the layer starts or is enabled and falls over `blend_out` when it is
+disabled, stopped or, for `once`, when it ends, so two layers that swap `enabled` cross-fade. A layer
+plays while it is shown and weighs more than nothing; a `once` clip then holds its last pose and
+tells scripts that it ended. Blend shapes follow the same mix (the tracks of the file named `weights`
+and the `shapes` of clips), and `shapes` and the expressions they name add to it. A `rules` entry
+blends the place the bone would have under its own parent with the place it would have under the new
+one, which keeps the place it had when the rule began to weigh (`bone_rules`); a rule may not close a
+loop of parents. Cutouts use a stencil: a part with `clip_to` only shows where the part it follows
+was drawn, as last drawn. The pose is worked out at most once per frame, only for shown layers, with
+no allocation per frame; at the lowest quality moving skeletons ask for at most 30 frames a second.
 
 ```json
 { "id": "fox", "type": "mesh", "mesh": "fox", "size": [600, 900],
-  "clips": [{ "id": "idle", "animation": "idle", "events": [{ "t": 1.2, "name": "blink" }] }],
-  "animations": [{ "clip": "idle" }],
+  "clips": [{ "id": "idle", "animation": "idle", "events": [{ "t": 1.2, "name": "blink" }] },
+            { "id": "wave", "loop": "pingpong", "bones": { "arm": { "rotation": [[0, 0], [0.8, 35, "in_out_sine"]] } },
+              "order": { "tail": [[0, 1]] } }],
+  "animations": [{ "clip": "idle" }, { "clip": "wave", "bones": ["arm", "hand"], "blend_in": 0.3 }],
   "ik": [{ "chain": ["neck", "head"], "target": "cursor", "limits": { "head": [-30, 30] } }],
   "physics": [{ "bone": "tail", "mode": "rope", "wind": 0.6 }],
   "shapes": { "smile": { "prop": "mood" } } }
@@ -1436,6 +1479,15 @@ frame: the last `seek` of a frame counts), `time`, `duration` (`undefined` while
 name }` in the frame after a video without `loop` reaches its end. Calls take the video over from the
 `playback` of the layer until the scene starts again.
 
+`layer.anim(clip)` controls the animation layers of a `mesh` layer that play the clip with that id
+(`uses: ["animations"]`): `play()` (from the start once a `once` clip ended, fading in over its
+`blend_in`), `pause()`, `stop()` (back to the start, fading out over its `blend_out`), `seek(seconds)`
+(within the clip), `rate` (0 to 16), `weight` (0 to 1, the last one the script set, 1 before), `time`,
+`duration`, `playing` and `on("ended", handler)`, called with `{ layer, clip, name }` in the frame
+after a `once` clip ends. A clip that no animation layer plays gets a replacing one, at weight 1,
+the first time a script calls it. Calls take the layer over from its `rate`, `weight` and
+`enabled` until the scene starts again; animations run before the scripts of the next frame.
+
 `layer.effect(index or name)` controls one effect of the layer: `enabled`, `set(parameter, value)`
 (numbers, vectors, colors, switches and blend modes, checked against the effect's description and
 clamped to its range; pictures cannot be changed), `get(parameter)`, `reset()` (clears what an effect
@@ -1541,7 +1593,7 @@ module's exports, imports and calls.
 | Field | Meaning |
 |-------|---------|
 | `events` | the functions the module exports and the events it handles, each once: the lifecycle above (`update` is the only one older engines call), the pointer events of `solid` layers and `hit` bones `click`, `down`, `up` (input `clicks`), `enter`, `leave` and `move` (input `pointer`), delivered with `scene.layer(id).on(event, handler)` as `{ type, layer, local, scene }` with the touched bone, and `mediaStatus`, `mediaPlayback`, `mediaProperties`, `mediaThumbnail` and `mediaTimeline` (input `media`) |
-| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, `media` (the `media` object and its colors, input `media`; `media_info`, which engines run later), `storage` (`storage`; `script_storage`), `geometry` (`scene.mesh(pool)`; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`; texture frames, mesh and model clips, bones, shapes and attachments come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `parallax`, `bloom` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`), `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) and `folders` (`folder(prop)`; `script_folders`), described in "Parents, the camera, shapes, storage and folders" |
+| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, `media` (the `media` object and its colors, input `media`; `media_info`, which engines run later), `storage` (`storage`; `script_storage`), `geometry` (`scene.mesh(pool)`; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video` and `layer.anim(clip)`; texture frames, model clips, bones, shapes and attachments come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `parallax`, `bloom` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`), `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) and `folders` (`folder(prop)`; `script_folders`), described in "Parents, the camera, shapes, storage and folders" |
 | `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}`. They live only here: the module does not export them and `scene import-script` does not propose them |
 
 Any event but `update`, any part but `audio`, `pointer` and `clicks`, and `params` name `scripts2`;

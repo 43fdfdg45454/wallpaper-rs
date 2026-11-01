@@ -31,15 +31,22 @@ fn menus(words: &Words) -> Vec<(String, Option<String>)> {
 
 fn document(name: &str) -> Value {
     let mut doc = starter(name, "org.example.words", "Words", "en").unwrap();
-    let assets =
-        [("pic", "a.png"), ("clip", "a.webm"), ("tone", "a.ogg"), ("face", "a.ttf"), ("grade", "a.cube")];
+    let assets = [
+        ("pic", "a.png"),
+        ("clip", "a.webm"),
+        ("tone", "a.ogg"),
+        ("face", "a.ttf"),
+        ("grade", "a.cube"),
+        ("rig", "a.glb"),
+    ];
     for (id, path) in assets {
         let ops = set(&doc, &format!("/scene/assets/{id}"), json!({"path": format!("assets/{path}")}));
         apply(&mut doc, &ops).unwrap();
     }
     for kind in KINDS {
-        let source =
-            [("image", "pic"), ("video", "clip"), ("sound", "tone")].into_iter().find(|(k, _)| *k == kind);
+        let source = [("image", "pic"), ("video", "clip"), ("sound", "tone"), ("mesh", "rig")]
+            .into_iter()
+            .find(|(k, _)| *k == kind);
         let source = source.map(|(_, s)| s.to_owned());
         let layer =
             Action::AddLayer { kind: kind.into(), id: None, name: None, source, into: None, at: None };

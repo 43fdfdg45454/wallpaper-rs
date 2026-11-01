@@ -25,6 +25,8 @@ impl Renderer {
         self.judge(view, frame);
         view.pace(self);
         self.molds(view, runtime)?;
+        let scale = view.screen(size).0;
+        self.skins(view, (runtime, frame), videos, scale[0].abs().max(scale[3].abs()))?;
         let created = (view.pool.created, pipes::compiled(0));
         if view.target.as_ref().is_none_or(|(t, _)| t.size() != size) {
             retarget(self, view, size);
@@ -52,6 +54,7 @@ impl Renderer {
             rasters: &v.texts,
             videos,
             molds: &v.molds,
+            skins: &v.skins,
             exts: &mut scratch.exts,
             screen,
             stage: screen.then(wprs_scene::Affine::scale(v.canvas.map(|v| v as f32))),

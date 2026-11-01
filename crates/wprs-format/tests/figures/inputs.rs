@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn meshes_are_read_from_the_package_and_refused_until_they_are_drawn() {
+fn meshes_are_read_from_the_package_and_their_newer_parts_refused_until_they_are_drawn() {
     let layers = json!([{ "id": "p", "type": "mesh", "mesh": "fox", "ik": [{ "chain": ["arm", "hand"], "target": [10, 10] }] }]);
     let assets = json!({ "assets": { "sky": { "path": "sky.png" }, "fox": { "path": "fox.glb" } } });
     let text = scene(layers, assets.clone());
@@ -11,9 +11,7 @@ fn meshes_are_read_from_the_package_and_refused_until_they_are_drawn() {
         let refused =
             features::playable(&package.manifest, &package.facts, platform).unwrap_err().to_string();
         assert!(
-            refused.contains(
-                "ik (reaches for targets with chains of bones) and mesh (bends pictures with a skeleton)"
-            ),
+            refused.contains("ik (reaches for targets with chains of bones)") && !refused.contains("mesh ("),
             "{refused}"
         );
     }

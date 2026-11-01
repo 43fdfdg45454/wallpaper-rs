@@ -15,6 +15,7 @@ Item {
     readonly property Component curve: curveEditor
     readonly property Component raw: rawEditor
     readonly property Component mask: maskEditor
+    readonly property Component rig: rigEditor
 
     visible: false
 
@@ -153,6 +154,14 @@ Item {
         id: maskEditor
 
         SceneMask {
+            input: host.input
+        }
+    }
+
+    Component {
+        id: rigEditor
+
+        SceneRig {
             input: host.input
         }
     }

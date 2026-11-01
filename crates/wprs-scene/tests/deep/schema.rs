@@ -76,7 +76,7 @@ fn each_model_file_is_read_once_and_its_counts_cannot_overflow() {
         inner(path, max)
     };
     scene.adopt(&BTreeMap::new(), counted).unwrap();
-    assert_eq!(reads, 2);
+    assert_eq!(reads, 1);
     assert!(std::sync::Arc::ptr_eq(&scene.models["fox"], &scene.models["robot"]));
     let mut huge = figure();
     huge["accessors"][3]["count"] = json!(u64::MAX);

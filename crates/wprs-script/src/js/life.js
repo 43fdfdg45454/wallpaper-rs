@@ -67,7 +67,8 @@ function events(f) {
         (handlers[e.timeline]?.[event.name] ?? []).forEach(([mod, fn]) => guard(mod, fn, event));
     }
     for (const id of f.ended) {
-        const event = Object.freeze({ layer: id, name: "ended" });
+        const [layer, clip] = id.split("#");
+        const event = Object.freeze(clip === undefined ? { layer, name: "ended" } : { layer, clip, name: "ended" });
         (videoHandlers[id]?.ended ?? []).forEach(([mod, fn]) => guard(mod, fn, event));
     }
     for (const t of f.touches) {

@@ -44,6 +44,8 @@ pub mod qobject {
         #[qinvokable]
         fn scripts(self: &SceneEditor, id: &QString) -> QString;
         #[qinvokable]
+        fn rig(self: &SceneEditor, id: &QString) -> QString;
+        #[qinvokable]
         fn save(self: Pin<&mut SceneEditor>);
         #[qinvokable]
         fn recover(self: Pin<&mut SceneEditor>, keep: bool);
@@ -162,6 +164,11 @@ impl SceneEditor {
     pub fn scripts(&self, id: &QString) -> QString {
         let found = self.project.as_ref().map(|p| references::scripts(&p.dir, &p.doc, &id.to_string()));
         QString::from(&serde_json::to_string(&found.unwrap_or_default()).unwrap_or_default())
+    }
+
+    pub fn rig(&self, id: &QString) -> QString {
+        let found = self.project.as_ref().map(|p| wprs_editor::rigs::rig(&p.dir, &p.doc, &id.to_string()));
+        QString::from(&found.unwrap_or_default().to_string())
     }
 
     pub fn count(&self, pointer: &QString) -> i32 {

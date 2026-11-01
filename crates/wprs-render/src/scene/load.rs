@@ -162,6 +162,7 @@ impl Renderer {
                 hitboxes: Default::default(),
                 covers: HashMap::new(),
                 molds: HashMap::new(),
+                skins: HashMap::new(),
             }
         })
         .inspect_err(|_| super::flight::forget(id))

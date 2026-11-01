@@ -48,6 +48,15 @@ ctl scene undo "$draft"
 ctl scene set "$draft" /scene/clock '{"seed": null}'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a fresh seed was not previewed"
 ctl scene undo "$draft"
+ctl scene import "$draft" "$ROOT/tests/fixtures/green-64x32.png" --id leaf >/dev/null
+ctl scene mesh-from-picture "$draft" leaf --cells 8 --id puppet >/dev/null || fail "no mesh was cut from a picture"
+ctl scene bone "$draft" puppet root --at 0.2,0.5 || fail "the mesh took no root bone"
+ctl scene bone "$draft" puppet arm --parent root --at 0.6,0.5 || fail "the mesh took no arm"
+ctl scene bones "$draft" puppet | grep -q '"arm"' || fail "the bones of the mesh were not listed"
+ctl scene set "$draft" /scene/layers/1/clips '[{"id": "wave", "bones": {"arm": {"rotation": [[0, 0], [1, 40]]}}}]'
+ctl scene set "$draft" /scene/layers/1/animations '[{"clip": "wave"}]'
+ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a bent mesh was not previewed"
+for _ in 1 2 3 4 5 6; do ctl scene undo "$draft"; done
 "$BIN/probe" "$s15" 4 --hold >"$WORK/edit-frames.out" 2>&1 & counter=$!; pids+=("$counter")
 sleep 1
 ctl scene set "$draft" /scene/canvas/background '#0000ff'

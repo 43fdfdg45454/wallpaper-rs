@@ -108,6 +108,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
             (dir, Action::Upgrade { rating, reasons, photosensitive, derived_from })
         }
         Author::Properties(command) => crate::userprops::action(command),
+        Author::Rigging(command) => return crate::rigging::action(command),
         Author::Undo { dir } => (dir, Action::Undo {}),
         Author::Redo { dir } => (dir, Action::Redo {}),
         other => return Err(Box::new(other)),

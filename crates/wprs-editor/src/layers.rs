@@ -4,8 +4,19 @@ use serde_json::{Value, json};
 use std::path::Path;
 use wprs_core::message::said;
 
-pub const KINDS: [&str; 10] =
-    ["image", "video", "text", "shape", "solid", "spectrum", "particles", "sound", "group", "adjustment"];
+pub const KINDS: [&str; 11] = [
+    "image",
+    "video",
+    "text",
+    "shape",
+    "solid",
+    "spectrum",
+    "particles",
+    "sound",
+    "group",
+    "adjustment",
+    "mesh",
+];
 pub const LAYERS: &str = "/scene/layers";
 
 pub fn walk(doc: &Value) -> Vec<(String, &Value)> {
@@ -74,6 +85,7 @@ pub fn asset_kind(path: &str) -> &'static str {
         "ogg" | "opus" | "flac" | "wav" | "mp3" => "sound",
         "ttf" | "otf" | "ttc" | "otc" | "woff2" => "font",
         "cube" => "lut",
+        "glb" => "model",
         _ => "other",
     }
 }
@@ -102,6 +114,7 @@ pub fn template(
         "image" => json!({"id": id, "type": "image", "image": asset("image")?}),
         "video" => json!({"id": id, "type": "video", "video": asset("video")?}),
         "sound" => json!({"id": id, "type": "sound", "sound": asset("sound")?}),
+        "mesh" => json!({"id": id, "type": "mesh", "mesh": asset("model")?}),
         "text" => {
             json!({"id": id, "type": "text", "text": name.unwrap_or("Text"), "size": 96, "color": "#ffffff"})
         }

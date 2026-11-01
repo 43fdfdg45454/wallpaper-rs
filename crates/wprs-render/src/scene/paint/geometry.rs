@@ -16,7 +16,7 @@ impl<'a> Painter<'a, '_, '_> {
                 let (size, [rx, ry]) = self.lettered(i)?;
                 Some((size, [-rx, -ry, 1.0 + rx, 1.0 + ry]))
             }
-            Content::Solid { size, .. } => Some((*size, unit)),
+            Content::Solid { size, .. } | Content::Mesh { size, .. } => Some((*size, unit)),
             Content::Spectrum { spectrum, .. } => Some((spectrum.size, unit)),
             Content::Particles { .. } => Some((self.swarms.as_ref()?.canvas, unit)),
             Content::Shape { shape: s, stroke, .. } => {

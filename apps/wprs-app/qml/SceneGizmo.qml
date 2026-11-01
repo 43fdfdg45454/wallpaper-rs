@@ -84,7 +84,7 @@ Item {
 
     DragHandler {
         target: null
-        enabled: !gizmo.modelData.locked && !gizmo.brushing
+        enabled: !gizmo.modelData.locked && !gizmo.brushing && gizmo.page.rigging !== gizmo.modelData.id
         acceptedModifiers: Qt.NoModifier
         onActiveChanged: {
             gizmo.page.moving = active;
@@ -143,5 +143,10 @@ Item {
                 gizmo.commit("scale", [gizmo.grabbed[0] * (1 + 2 * delta[2] / w), gizmo.grabbed[1] * (1 + 2 * delta[3] / h)]);
             }
         }
+    }
+
+    SceneBones {
+        gizmo: gizmo
+        visible: gizmo.page.rigging === gizmo.modelData.id
     }
 }

@@ -166,6 +166,7 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         Action::AddPreset { id, label } => crate::props::add_preset(doc, id.as_deref(), label.as_deref())?,
         Action::Import { .. } | Action::ImportEffect { .. } | Action::ImportScript { .. } => Vec::new(),
         Action::Thumbnail { .. } | Action::PaintMask { .. } => Vec::new(),
+        Action::MeshFromPicture { .. } | Action::Bone { .. } => Vec::new(),
         Action::Undo {} | Action::Redo {} => Vec::new(),
     })
 }

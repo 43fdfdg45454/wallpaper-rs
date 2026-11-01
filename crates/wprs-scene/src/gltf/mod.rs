@@ -23,6 +23,7 @@ const CROWDED: &str = "lists more entries than the models of a scene may hold";
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ModelFile {
     pub nodes: BTreeSet<String>,
+    pub parents: BTreeMap<String, String>,
     pub bones: BTreeSet<String>,
     pub animations: BTreeMap<String, f32>,
     pub shapes: BTreeSet<String>,
@@ -104,6 +105,10 @@ impl Doc {
                 ));
             }
             file.bones.extend(skin.joints.iter().filter_map(|j| nodes.get(*j).cloned()));
+        }
+        for (i, n) in self.nodes.iter().enumerate() {
+            let child = |c: &usize| Some((nodes.get(*c)?.clone(), nodes[i].clone()));
+            file.parents.extend(n.children.iter().filter_map(child));
         }
         file.nodes = nodes.into_iter().collect();
         let count = |i: Option<usize>| i.and_then(|i| self.accessors.get(i)).map_or(0, |a| a.count);

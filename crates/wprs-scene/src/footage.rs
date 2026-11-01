@@ -80,6 +80,7 @@ impl Runtime {
             let (time, playing, speed) = (t.at as f32, t.playing && !t.ended, t.rate);
             out.push(Course { id: id.clone(), time, duration, playing, speed });
         }
+        self.puppet_courses(out);
     }
 
     pub fn take_ended(&mut self) -> Vec<String> {
@@ -110,7 +111,7 @@ impl Runtime {
                         (t.at, t.ended, t.held, t.jumps) = (t.start, false, Some(false), t.jumps + 1)
                     }
                     VideoCommand::Rate(r) => t.speed = Some(crate::roll::playable(r)),
-                    VideoCommand::Seek(_) => {}
+                    VideoCommand::Seek(_) | VideoCommand::Weight(_) => {}
                 }
             }
             if let Some(at) = jump {

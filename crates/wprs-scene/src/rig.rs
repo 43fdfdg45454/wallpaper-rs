@@ -4,6 +4,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+mod tracks;
+
+pub use tracks::BoneKeys;
+
 pub const MAX_CLIPS_PER_MODEL: usize = 64;
 pub const MAX_ANIMATION_LAYERS: usize = 16;
 pub const MAX_CHAINS: usize = 16;
@@ -48,6 +52,12 @@ pub struct AnimClip {
     pub repeat: Loop,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub events: Vec<Event>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub bones: BTreeMap<String, BoneKeys>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub shapes: BTreeMap<String, Vec<crate::Key<f32>>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub order: BTreeMap<String, Vec<crate::Key<f32>>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]

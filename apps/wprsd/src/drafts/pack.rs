@@ -23,7 +23,7 @@ impl Daemon {
         ensure!(valid_id(&manifest.id), invalid("the manifest id is not a name like org.example.name"));
         manifest.check_properties().map_err(|e| invalid(e.to_string()))?;
         ensure!(manifest.kind == Kind::Scene, invalid("the manifest is not a scene manifest"));
-        let scene = Scene::load(&doc["scene"].to_string(), &manifest.properties)
+        let mut scene = Scene::load(&doc["scene"].to_string(), &manifest.properties)
             .map_err(|e| invalid(e.to_string()))?;
         let facts = features::facts(&manifest, Some(&scene), None);
         features::playable(&manifest, &facts, Platform::Desktop).map_err(|e| invalid(e.to_string()))?;
@@ -38,6 +38,12 @@ impl Daemon {
             );
             Ok(found)
         };
+        let read = |path: &str, max: usize| -> Result<Vec<u8>> {
+            let found = file(path)?;
+            ensure!(std::fs::metadata(&found)?.len() <= max as u64, invalid(format!("{path} is too large")));
+            Ok(std::fs::read(found)?)
+        };
+        scene.read_meshes(read).map_err(|e| invalid(e.to_string()))?;
         let (mut assets, mut videos, mut sounds) = (SceneAssets::default(), Vec::new(), Vec::new());
         let (mut decoded, mut seconds, mut streamed, mut tables) = (0u64, 0f32, 0f32, 0u64);
         for (id, asset) in &scene.assets {

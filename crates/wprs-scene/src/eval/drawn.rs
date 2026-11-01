@@ -48,6 +48,12 @@ pub enum Content<'a> {
         flock: usize,
         size: f32,
     },
+    Mesh {
+        layer: &'a str,
+        size: [f32; 2],
+        pose: u64,
+        texture: Option<Cow<'a, str>>,
+    },
     Adjustment,
 }
 

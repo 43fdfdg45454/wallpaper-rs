@@ -1,4 +1,4 @@
-pub const ACTIONS: [&str; 29] = [
+pub const ACTIONS: [&str; 31] = [
     "set",
     "add",
     "remove",
@@ -26,6 +26,25 @@ pub const ACTIONS: [&str; 29] = [
     "condition",
     "add_preset",
     "paint_mask",
+    "mesh_from_picture",
+    "bone",
     "undo",
     "redo",
 ];
+
+impl super::Action {
+    pub fn name(&self) -> String {
+        serde_json::to_value(self)
+            .ok()
+            .and_then(|v| v.as_object()?.keys().next().cloned())
+            .unwrap_or_default()
+    }
+}
+
+pub(super) fn half() -> f32 {
+    0.5
+}
+
+pub(super) fn whole() -> f32 {
+    1.0
+}

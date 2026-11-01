@@ -5,6 +5,8 @@ use crate::rig::{
 use crate::validate::{Check, Issue};
 use std::collections::BTreeSet;
 
+mod tracks;
+
 impl Check<'_> {
     pub(crate) fn rig(&mut self, p: &str, layer: &str, rig: &Rig, model: Option<&ModelFile>) {
         let bone = |c: &mut Self, path: String, name: &str| {
@@ -25,6 +27,7 @@ impl Check<'_> {
                     self.issues.push(Issue::Missing(format!("{q}/animation"), name.clone()));
                     None
                 }),
+                (_, None) if clip.tracked() => Some(clip.end()),
                 (Some(m), None) => m.animations.values().next().copied().or_else(|| {
                     self.issues.push(Issue::Missing(format!("{q}/animation"), "any animation".into()));
                     None
@@ -35,6 +38,7 @@ impl Check<'_> {
             self.range(&format!("{q}/from"), clip.from, 0.0, end);
             let to = clip.to.unwrap_or(end);
             clip.to.iter().for_each(|t| self.range(&format!("{q}/to"), *t, clip.from.next_up(), end));
+            self.tracks(&q, clip, model);
             self.count(&format!("{q}/events"), clip.events.len(), crate::MAX_EVENTS);
             for (k, e) in clip.events.iter().enumerate() {
                 self.range(&format!("{q}/events/{k}/t"), e.t, 0.0, (to - clip.from).max(0.0));
@@ -103,6 +107,7 @@ impl Check<'_> {
                 self.issues.push(Issue::Circle(format!("{q}/parent")));
             }
             self.number(&format!("{q}/weight"), &r.weight, 0.0, 1.0);
+            self.ruled(&q, rig, r, model);
         }
         self.shapes(p, rig, model);
         rig.hit.iter().enumerate().for_each(|(k, b)| bone(self, format!("{p}/hit/{k}"), b));

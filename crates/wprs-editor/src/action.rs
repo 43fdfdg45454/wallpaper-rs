@@ -6,6 +6,7 @@ use wprs_format::{Descriptor, Rating};
 mod names;
 
 pub use names::ACTIONS;
+use names::{half, whole};
 
 pub const EDITOR: &str = "/scene/ext/editor";
 
@@ -168,23 +169,25 @@ pub enum Action {
         value: f32,
         points: Vec<[f32; 2]>,
     },
+    MeshFromPicture {
+        image: String,
+        #[serde(default)]
+        outline: bool,
+        #[serde(default)]
+        cells: Option<u32>,
+        #[serde(default)]
+        id: Option<String>,
+    },
+    Bone {
+        layer: String,
+        name: String,
+        #[serde(default)]
+        parent: Option<String>,
+        #[serde(default)]
+        at: Option<[f32; 2]>,
+        #[serde(default)]
+        remove: bool,
+    },
     Undo {},
     Redo {},
-}
-
-impl Action {
-    pub fn name(&self) -> String {
-        serde_json::to_value(self)
-            .ok()
-            .and_then(|v| v.as_object()?.keys().next().cloned())
-            .unwrap_or_default()
-    }
-}
-
-fn half() -> f32 {
-    0.5
-}
-
-fn whole() -> f32 {
-    1.0
 }

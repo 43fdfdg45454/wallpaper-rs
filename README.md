@@ -1081,6 +1081,20 @@ Las capas `solid` ya reciben el puntero: `click:`, `enter:` y `leave:` arrancan 
 sonidos sin scripts, y los scripts reciben los eventos de cada capa; los scripts también reproducen,
 pausan y paran las capas de sonido.
 
+Las capas `mesh` ya se dibujan en el escritorio y en el teléfono: la GPU deforma los vértices con
+hasta cuatro huesos cada uno y las formas de mezcla más pesadas, y la imagen resultante se compone
+como cualquier otra capa, con sus efectos, máscaras y modos de fusión. Los clips toman las
+animaciones del archivo o claves propias en el JSON de la escena (giro, posición y escala de cada
+hueso, peso de cada forma y orden de cada parte), en bucle, ida y vuelta o una vez; las capas de
+animación se mezclan con peso, velocidad, fundidos de entrada y salida, capas aditivas y capas
+limitadas a unos huesos. Las reglas pasan un hueso a otro padre sin que salte, las expresiones
+agrupan formas, y las partes se ordenan y se recortan unas sobre otras. Un esqueleto quieto o que ya
+terminó no pide fotogramas, la pose se calcula solo para capas visibles y sin reservar memoria en
+cada fotograma, y en la calidad más baja la malla se dibuja a la mitad de resolución y se mueve a 30
+fotogramas por segundo como mucho. Los scripts controlan los clips con
+`scene.layer("zorro").anim("saludo")` (`play`, `pause`, `stop`, `seek`, `rate`, `weight` y el aviso
+`ended`) si declaran `animations`.
+
 De las partículas nuevas, el escritorio y el teléfono ya dibujan, igual en la GPU que en la CPU, el
 espacio de mundo (las partículas nacen con la posición, el giro y la escala de su capa y después no
 la siguen), hasta ocho puntos de control movidos por valores, el cursor, la capa o los scripts, las
@@ -1582,6 +1596,14 @@ cada parámetro de máscara hay un botón para pintar, el canal (rojo, verde, az
 para borrar y el tamaño del pincel, y cada trazo sobre la capa en la vista previa se guarda como una
 imagen nueva en `masks/`, de modo que deshacer vuelve a la anterior (`wprs-ctl scene paint-mask`
 hace lo mismo desde la terminal).
+
+También recorta una malla de una imagen de la escena («Malla desde una imagen» en el menú para añadir
+capas), con una cuadrícula de celdas o siguiendo el contorno de la parte opaca, y le pone huesos: el
+inspector del campo `mesh` los lista, añade y quita, elige el clip que reproduce la vista previa y
+los muestra sobre la vista previa, donde se arrastran; los pesos de los vértices siguen a los huesos
+más cercanos y cada cambio guarda una malla nueva en `meshes/`, de modo que deshacer vuelve a la
+anterior. Desde la terminal hacen lo mismo `wprs-ctl scene mesh-from-picture`, `wprs-ctl scene bone`
+y `wprs-ctl scene bones`.
 
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado

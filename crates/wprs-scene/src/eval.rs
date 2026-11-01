@@ -133,6 +133,7 @@ fn emit<'a>(
             color.as_ref()
         }
         Kind::Group { color, .. } => color.as_ref(),
+        Kind::Mesh(m) => m.color.as_ref(),
         _ => None,
     };
     let tint = set.color.map(Color).filter(|_| painted.is_some() || group).or(painted.map(|c| c.get(cx)));

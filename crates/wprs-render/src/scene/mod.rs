@@ -32,6 +32,7 @@ mod ready;
 mod render;
 mod sampling;
 mod sized;
+pub(crate) mod skins;
 mod sources;
 mod state;
 #[cfg(test)]

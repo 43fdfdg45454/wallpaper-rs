@@ -51,8 +51,11 @@ impl Painter<'_, '_, '_> {
                     Content::Adjustment if !effects.iter().all(pointwise) => Reach::Around,
                     _ => Reach::Own,
                 };
-                let video =
-                    self.frame.draws[i..d.end].iter().any(|d| matches!(d.content, Content::Video { .. }));
+                let video = self.frame.draws[i..d.end].iter().any(|d| match &d.content {
+                    Content::Video { .. } => true,
+                    Content::Mesh { texture: Some(t), .. } => self.videos.iter().any(|(n, _)| n == t),
+                    _ => false,
+                });
                 let (fed, moving) = self.feeding(i..d.end);
                 let (ticking, flocks) = self.ticking(i..d.end);
                 let moment = if ticking || moving { self.moment } else { 0 };

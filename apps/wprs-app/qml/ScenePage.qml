@@ -19,6 +19,7 @@ Kirigami.Page {
     property var picked: []
     property bool moving
     property var brush: null
+    property string rigging
     property string notice
     property real clock: editor.time
     readonly property var view: JSON.parse(editor.view || "{}")
