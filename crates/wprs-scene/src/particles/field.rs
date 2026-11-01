@@ -58,13 +58,7 @@ pub(super) fn reserve(s: &System, points: &mut Vec<[f32; 2]>) -> [[u32; 2]; MAX_
     out
 }
 
-pub(super) fn field(
-    iw: u32,
-    ih: u32,
-    rgba: &[u8],
-    threshold: f32,
-    canvas: [f32; 2],
-) -> ([usize; 2], Vec<f32>) {
+pub fn field(iw: u32, ih: u32, rgba: &[u8], threshold: f32, canvas: [f32; 2]) -> ([usize; 2], Vec<f32>) {
     let (iw, ih) = (iw.max(1) as usize, ih.max(1) as usize);
     let stride = ((iw * ih) as f32 / MAX_FIELD as f32).sqrt().ceil().max(1.0) as usize;
     let size = [iw.div_ceil(stride), ih.div_ceil(stride)];

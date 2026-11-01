@@ -2,6 +2,8 @@ mod binds;
 mod census;
 mod chart;
 mod dispatch;
+mod fence;
+mod flight;
 mod kit;
 mod looks;
 mod maps;
@@ -14,6 +16,7 @@ mod sprite;
 mod stage;
 mod step;
 mod store;
+mod strands;
 mod texels;
 
 use super::SceneView;
@@ -26,7 +29,7 @@ use wgpu::{BindGroup, BindGroupLayout, Buffer, BufferUsages as B};
 use wprs_scene::{Bake, Blend, Cloud, Quality, Stack};
 
 const CHUNK: usize = 16;
-const SIM: u64 = 3328;
+const SIM: u64 = 3584;
 const LOOK: u64 = 1536;
 const PARTICLE: u64 = 96;
 
@@ -37,6 +40,9 @@ struct Store {
     gpu: Option<(Buffer, Buffer, BindGroup)>,
     trail: Option<Buffer>,
     stacks: Vec<Stacked>,
+    rope: Option<Buffer>,
+    flock: Option<BindGroup>,
+    twine: Option<BindGroup>,
 }
 
 struct Stacked {
@@ -72,11 +78,14 @@ pub(crate) struct Swarms {
     flights: Vec<Option<Flight>>,
     marks: Vec<(u64, u32)>,
     module: wgpu::ShaderModule,
-    layouts: [BindGroupLayout; 4],
+    layouts: [BindGroupLayout; 6],
     compute: Option<[wgpu::ComputePipeline; 3]>,
+    flocking: Option<[wgpu::ComputePipeline; 5]>,
+    twining: Option<wgpu::ComputePipeline>,
     sorts: Option<[wgpu::ComputePipeline; 3]>,
     pipelines: HashMap<Mode, wgpu::RenderPipeline>,
     ribbons: HashMap<Mode, wgpu::RenderPipeline>,
+    cords: HashMap<Mode, [wgpu::RenderPipeline; 2]>,
     format: wgpu::TextureFormat,
     sampler: wgpu::Sampler,
     looks: Vec<Look>,

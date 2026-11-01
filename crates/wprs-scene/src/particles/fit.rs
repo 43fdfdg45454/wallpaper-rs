@@ -102,20 +102,25 @@ pub(super) fn fit(sim: &mut Sim, s: &System, f: &Fit, cx: &Context, moves: &mut 
         sim.fields[1][2] *= heard(cx, band);
     }
     for (k, r) in s.init.remap.iter().take(super::MAX_REMAPS).enumerate() {
-        let [kind, point] = input(&r.input);
-        let (x, y) = match kind as u32 {
-            0 => (cx.time_of_day("day"), 0.0),
-            6 => {
-                let [x, y, _] = f.room.points[(point as usize).min(MAX_CONTROL - 1)];
-                (x, y)
-            }
-            7 => (level(cx, r.input.trim_start_matches("audio:")), 0.0),
-            8 | 9 => {
-                let p = cx.pointer;
-                (if p.inside { p.smooth[kind as usize - 8] } else { 0.5 }, 0.0)
-            }
-            _ => continue,
-        };
-        (sim.remaps[3 * k][3], sim.remaps[3 * k + 2][3]) = (x, y);
+        if let Some((x, y)) = live(cx, f.room, &r.input) {
+            (sim.remaps[3 * k][3], sim.remaps[3 * k + 2][3]) = (x, y);
+        }
     }
+}
+
+pub(super) fn live(cx: &Context, room: &Room, name: &str) -> Option<(f32, f32)> {
+    let [kind, point] = input(name);
+    Some(match kind as u32 {
+        0 => (cx.time_of_day("day"), 0.0),
+        6 => {
+            let [x, y, _] = room.points[(point as usize).min(MAX_CONTROL - 1)];
+            (x, y)
+        }
+        7 => (level(cx, name.trim_start_matches("audio:")), 0.0),
+        8 | 9 => {
+            let p = cx.pointer;
+            (if p.inside { p.smooth[kind as usize - 8] } else { 0.5 }, 0.0)
+        }
+        _ => return None,
+    })
 }

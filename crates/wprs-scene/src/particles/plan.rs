@@ -82,7 +82,9 @@ impl Swarm {
             fit_into(&mut self.frames[k], s, &fit, cx, &mut self.moves[k]);
             let sim = &mut self.frames[k];
             super::drive::forces(sim, s, &room, cx);
-            super::drive::colliders(sim, s, anchor);
+            super::walls::colliders(sim, s, anchor);
+            super::walls::layered(sim, s, all, to_sim);
+            sim.flock[2] = q as u32 + 1;
         }
         self.places = frames;
         (self.beat, self.buttons) = (cx.audio.beat, p.buttons);

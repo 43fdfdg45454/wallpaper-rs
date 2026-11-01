@@ -11,12 +11,16 @@ fn record(base: u32, i: u32, p: Particle, slot: u32, prev: vec2<f32>) {
     }
 }
 
-fn mark(i: u32, p: Particle) {
+fn mark(i: u32, p: Particle, before: f32) {
     let k = sim.trail.y;
     let o = sim.trail.x + i * k * 4u;
-    for (var j = k - 1u; j > 0u; j--) {
-        for (var c = 0u; c < 4u; c++) {
-            state.data[o + j * 4u + c] = state.data[o + j * 4u - 4u + c];
+    let stride = max(sim.trail.z, 1u);
+    let span = f32(stride) / 60.0;
+    if stride == 1u || u32(p.age / span) != u32(before / span) {
+        for (var j = k - 1u; j > 0u; j--) {
+            for (var c = 0u; c < 4u; c++) {
+                state.data[o + j * 4u + c] = state.data[o + j * 4u - 4u + c];
+            }
         }
     }
     let deep = sim.depth[2];

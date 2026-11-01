@@ -150,7 +150,7 @@ impl Check<'_> {
     }
 }
 
-fn holds(layer: &crate::Layer, system: &str) -> bool {
+pub(super) fn holds(layer: &crate::Layer, system: &str) -> bool {
     let draws = matches!(&layer.kind, crate::Kind::Particles { system: s, .. } if s == system);
     draws || layer.children().iter().any(|c| holds(c, system))
 }

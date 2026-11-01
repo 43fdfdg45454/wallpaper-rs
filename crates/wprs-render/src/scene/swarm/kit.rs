@@ -18,6 +18,8 @@ pub(super) struct Look {
     pub(super) cut: [f32; 4],
     pub(super) turn: [f32; 4],
     pub(super) deep: [f32; 4],
+    pub(super) strand: [f32; 4],
+    pub(super) cord: [f32; 4],
     pub(super) sizes: [[f32; 4]; 16],
     pub(super) colors: [[f32; 4]; 64],
 }
@@ -29,6 +31,8 @@ pub(super) struct Kit {
     pub(super) look: Look,
     pub(super) order: Option<(Stack, f32)>,
     pub(super) trail: u32,
+    pub(super) long: bool,
+    pub(super) rope: Option<wprs_scene::Rope>,
     pub(super) tex: wgpu::BindGroup,
     pub(super) stage: Option<(u64, wgpu::ShaderModule)>,
     pub(super) refused: Option<(String, String)>,
@@ -77,6 +81,8 @@ pub(super) fn kit(
         cut: render.cutout.map_or([0.0, 1.0, 1.0, 0.0], |[a, b, o]| [a, b, o, 1.0]),
         turn: turn(render),
         deep: own.map_or([0.0; 4], |s| s.perspective.map_or([0.0; 4], |p| [p.focal.max(1.0), 0.0, 0.0, 1.0])),
+        strand: super::looks::strand(render),
+        cord: super::looks::cord(render),
         sizes: std::array::from_fn(|i| std::array::from_fn(|j| sizes[i * 4 + j])),
         colors: colors.map(tone),
         ..Zeroable::zeroed()
@@ -99,8 +105,10 @@ pub(super) fn kit(
     let id = scene.particles.keys().nth(system).cloned().unwrap_or_default();
     let largest = scene.particles.values().nth(system).map_or(1.0, |s| wprs_scene::largest(s, render));
     let order = render.order.map(|o| (o, largest)).or_else(|| far(scene, &id, own));
-    let trail = render.trail.as_ref().map_or(0, |t| t.length);
-    let mut kit = Kit { id, system, layer, look, order, trail, tex, stage: None, refused: None };
+    let trail = render.trail.as_ref().map_or(0, |t| if t.long() { t.kept().kept } else { t.length });
+    let long = render.trail.as_ref().is_some_and(|t| t.long());
+    let rope = render.rope;
+    let mut kit = Kit { id, system, layer, look, order, trail, long, rope, tex, stage: None, refused: None };
     super::stage::stage(r, scene, &mut kit, render.shader.as_deref());
     kit
 }

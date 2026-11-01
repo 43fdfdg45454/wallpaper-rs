@@ -34,6 +34,9 @@ pub struct Cloud {
     pub(super) mirror: Vec<Event>,
     pub(super) hatched: u32,
     pub trail: Vec<[u32; 4]>,
+    pub rope: Vec<super::Strand>,
+    school: super::school::School,
+    order: Vec<(u32, u32)>,
 }
 
 impl Cloud {
@@ -75,15 +78,20 @@ impl Cloud {
             self.mirror = vec![Event::default(); n];
         }
         let mirror = host.map_or(&[][..], |h| h.mirror.as_slice());
-        let k = s.trail[1] as usize;
+        let (k, stride) = (s.trail[1] as usize, s.trail[2].max(1));
         if self.trail.len() != n * k {
             self.trail = vec![[0; 4]; n * k];
         }
+        self.school.steer(&self.particles, s);
+        let span = stride as f32 / 60.0;
         for (i, p) in self.particles.iter_mut().enumerate().filter(|(_, p)| p.age < p.life) {
-            let prev = p.pos;
-            simulate(p, s, mirror, points);
+            let (prev, before) = (p.pos, p.age);
+            let nudge = self.school.nudges.get(i).copied().filter(|_| s.flock[1] > 0).unwrap_or_default();
+            simulate(p, s, mirror, points, nudge);
             if let Some(h) = self.trail.get_mut(i * k..(i + 1) * k).filter(|_| k > 0) {
-                h.copy_within(..k - 1, 1);
+                if stride == 1 || (p.age / span) as u32 != (before / span) as u32 {
+                    h.copy_within(..k - 1, 1);
+                }
                 h[0] = mark(p, s.depth[2]);
                 if p.age >= p.life {
                     h.iter_mut().for_each(|e| e[2] = 0);
@@ -100,6 +108,10 @@ impl Cloud {
             }
         }
         self.breed(s, host, points);
+    }
+
+    pub fn strand(&mut self, s: &Sim) {
+        super::strand::strung(&self.particles, s, &mut self.order, &mut self.rope);
     }
 
     pub(super) fn full(&self, s: &Sim) -> bool {

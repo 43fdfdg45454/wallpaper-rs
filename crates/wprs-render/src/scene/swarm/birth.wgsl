@@ -29,9 +29,10 @@ fn deep(d: vec4<f32>, id: u32, k: u32) -> f32 {
 }
 
 fn remapped(x: f32, k: u32) -> f32 {
-    let a = sim.remaps[k * 3u];
-    let b = sim.remaps[k * 3u + 1u];
-    let c = sim.remaps[k * 3u + 2u];
+    return shaped(x, sim.remaps[k * 3u], sim.remaps[k * 3u + 1u], sim.remaps[k * 3u + 2u], k);
+}
+
+fn shaped(x: f32, a: vec4<f32>, b: vec4<f32>, c: vec4<f32>, k: u32) -> f32 {
     var t = (x - a.y) / (a.z - a.y);
     if c.y > 0.5 {
         t = clamp(t, 0.0, 1.0);
@@ -90,33 +91,57 @@ fn remap(p: ptr<function, Particle>) {
             default: {}
         }
         let y = remapped(x, k);
-        let o = u32(b.w);
-        switch u32(b.x) {
-            case 0u: {
-                (*p).size = max(op((*p).size, y, o), 0.0);
-            }
-            case 1u: {
-                (*p).color.a = clamp(op((*p).color.a, y, o), 0.0, 1.0);
-            }
-            case 2u: {
-                (*p).color = vec4<f32>(max(vec3<f32>(op((*p).color.r, y, o), op((*p).color.g, y, o), op((*p).color.b, y, o)), vec3<f32>(0.0)), (*p).color.a);
-            }
-            case 3u: {
-                let n = op(speed, y, o);
-                (*p).vel = select(vec2<f32>(n, 0.0), (*p).vel * n / speed, speed > 1e-6);
-            }
-            case 4u: {
-                (*p).life = max(op((*p).life, y, o), 1e-3);
-            }
-            case 5u: {
-                (*p).rot = op((*p).rot, y, o);
-            }
-            case 6u: {
-                (*p).spin = op((*p).spin, y, o);
-            }
-            default: {
-                (*p).frame = max(op((*p).frame, y, o), 0.0);
-            }
+        give(p, u32(b.x), speed, y, u32(b.w), -1.0, 1.0);
+    }
+}
+
+fn applied(v: f32, y: f32, kind: u32, rate: f32, w: f32) -> f32 {
+    if rate < 0.0 {
+        return op(v, y, kind);
+    }
+    switch kind {
+        case 1u: {
+            return v * pow(max(y, 0.0), rate * w);
+        }
+        case 2u: {
+            return v + y * rate * w;
+        }
+        case 3u: {
+            return v - y * rate * w;
+        }
+        default: {
+            return lerp(v, y, w);
+        }
+    }
+}
+
+fn give(p: ptr<function, Particle>, out: u32, speed: f32, y: f32, o: u32, rate: f32, w: f32) {
+    switch out {
+        case 0u: {
+            (*p).size = max(applied((*p).size, y, o, rate, w), 0.0);
+        }
+        case 1u: {
+            (*p).color.a = clamp(applied((*p).color.a, y, o, rate, w), 0.0, 1.0);
+        }
+        case 2u: {
+            let c = vec3<f32>(applied((*p).color.r, y, o, rate, w), applied((*p).color.g, y, o, rate, w), applied((*p).color.b, y, o, rate, w));
+            (*p).color = vec4<f32>(max(c, vec3<f32>(0.0)), (*p).color.a);
+        }
+        case 3u: {
+            let n = applied(speed, y, o, rate, w);
+            (*p).vel = select(vec2<f32>(n, 0.0), (*p).vel * n / speed, speed > 1e-6);
+        }
+        case 4u: {
+            (*p).life = max(applied((*p).life, y, o, rate, w), 1e-3);
+        }
+        case 5u: {
+            (*p).rot = applied((*p).rot, y, o, rate, w);
+        }
+        case 6u: {
+            (*p).spin = applied((*p).spin, y, o, rate, w);
+        }
+        default: {
+            (*p).frame = max(applied((*p).frame, y, o, rate, w), 0.0);
         }
     }
 }

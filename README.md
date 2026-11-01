@@ -1160,6 +1160,20 @@ partícula padre, y los shaders de partículas de un efecto del paquete (`render
 comprobaciones que los demás efectos del paquete y dejado fuera, sin dejar de dibujar las partículas,
 si no se puede construir).
 
+También mueven y dibujan, igual en la GPU que en la CPU, las partículas que mantienen una distancia
+con un punto o se acercan al segmento entre dos (`keep_distance`, `keep_between`), la reasignación
+aplicada en cada paso (fuerza `remap`, también con la edad), las bandadas (`boids`: separación,
+alineación, cohesión y velocidad máxima, con una rejilla hash rehecha en cada paso; hasta 8 192
+partículas, 2 000 en la CPU, y 32, 16 u 8 vecinas según la calidad y el equipo), los choques contra
+cajas por dentro o por fuera, segmentos, el interior de un círculo y la parte opaca de otra capa
+(campo de distancias de 128 × 128 rehecho solo cuando la capa cambia), la respuesta que deja pegada
+la partícula (`stick`) y la que la mata, que cuenta como muerte para los sistemas hijos. Las cuerdas
+(`render.rope`) unen las partículas en el orden en que nacieron con una tira Catmull-Rom construida
+en un sombreador de cálculo, de hasta 4 096 tramos (1 024 y 2 048 en los equipos más modestos y
+menos subdivisiones en calidad baja), y las estelas largas guardan hasta 64 posiciones repartidas a lo
+largo de `length` pasos (`segments`), con subdivisión, ancho, textura y su escala y desplazamiento,
+16 o 32 posiciones en los equipos intermedios y ninguna en el más modesto.
+
 El escritorio y el teléfono dibujan también la mezcla por degradado, el revelado con el puntero,
 el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos, el fuego, el giro,
 la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela

@@ -6,6 +6,9 @@ fn take(p: Particle) {
     }
     let slot = state.data[u32(old - 1)];
     particles[slot] = p;
+    if sim.rope.x > 0u {
+        state.data[sim.rope.y + p.id % sim.rope.x] = slot;
+    }
     if (sim.mode.y & 1u) != 0u {
         let n = u32(atomicAdd(&state.head[1], 1));
         if n < MAX_EVENTS {

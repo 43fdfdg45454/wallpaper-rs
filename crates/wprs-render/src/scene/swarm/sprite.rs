@@ -19,7 +19,32 @@ impl Swarms {
         self.pipelines.insert(mode, sprite);
         self.ribbons.insert(mode, ribbon);
         self.created += 2;
+        if self.kits.iter().any(|k| k.rope.is_some() || k.long) {
+            self.corded(r, mode);
+        }
         self.staged(r, mode);
+    }
+
+    fn corded(&mut self, r: &Renderer, mode: Mode) {
+        let layouts = [&self.layouts[1], &self.layouts[2]];
+        let module = &self.module;
+        let (a, b) = (
+            wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4],
+            wgpu::vertex_attr_array![3 => Float32x4, 4 => Float32x4, 5 => Float32x4],
+        );
+        let rope = self.build(r, mode, (module, ("vs_rope", "fs_cord")), &layouts, &[(48, &a), (48, &b)]);
+        let (p, q) = (
+            wgpu::vertex_attr_array![0 => Float32x2, 1 => Float16x2],
+            wgpu::vertex_attr_array![9 => Float32x2, 10 => Float16x2],
+        );
+        let (ta, tb) = (
+            wgpu::vertex_attr_array![3 => Float32x2, 4 => Float16x2, 5 => Unorm8x4],
+            wgpu::vertex_attr_array![6 => Float32x2, 7 => Float16x2, 8 => Unorm8x4],
+        );
+        let slots = [(16, &p[..]), (16, &ta[..]), (16, &tb[..]), (16, &q[..])];
+        let long = self.build(r, mode, (module, ("vs_long", "fs_cord")), &layouts, &slots);
+        self.cords.insert(mode, [rope, long]);
+        self.created += 2;
     }
 
     pub(super) fn build(

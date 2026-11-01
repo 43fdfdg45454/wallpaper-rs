@@ -3,8 +3,12 @@ use super::hatch::Event;
 use super::wave::{curl, reach, up, window, wobble};
 use super::{Particle, Sim};
 
-pub(super) fn simulate(p: &mut Particle, s: &Sim, mirror: &[Event], points: &[[f32; 2]]) {
-    let dt = s.clock[0];
+pub(super) fn simulate(p: &mut Particle, s: &Sim, mirror: &[Event], points: &[[f32; 2]], nudge: [f32; 2]) {
+    let (dt, prev) = (s.clock[0], p.pos);
+    if p.spare[0] > 0.5 {
+        p.age += dt;
+        return;
+    }
     if s.mode[0] == 3 {
         follow(p, s, mirror);
     }
@@ -74,6 +78,13 @@ pub(super) fn simulate(p: &mut Particle, s: &Sim, mirror: &[Event], points: &[[f
                 slow *= lerp(a[2], 1.0, up(a[0], a[1], r)).max(0.0).powf(dt * 60.0 * w);
                 [0.0; 2]
             }
+            13 => n.map(|v| v * (r - a[0]) * f[3]),
+            14 => super::tether::between(f, a, p.pos),
+            15 => {
+                super::tether::evolve(p, s, k, w);
+                [0.0; 2]
+            }
+            16 => nudge,
             _ => [0.0; 2],
         };
         acc = [acc[0] + add[0] * w, acc[1] + add[1] * w];
@@ -84,8 +95,10 @@ pub(super) fn simulate(p: &mut Particle, s: &Sim, mirror: &[Event], points: &[[f
         let f = s.forces[4 * k];
         let w = window(s.forces[4 * k + 3], t);
         let l = p.vel[0].hypot(p.vel[1]);
-        if f[0] as u32 == 9 && w > 0.0 && l > f[1] {
-            let cut = lerp(1.0, f[1].max(0.0) / l, w);
+        let most = if f[0] as u32 == 16 { s.forces[4 * k + 1][1] } else { f[1] };
+        let capped = f[0] as u32 == 9 || (f[0] as u32 == 16 && most > 0.0);
+        if capped && w > 0.0 && l > most {
+            let cut = lerp(1.0, most.max(0.0) / l, w);
             p.vel = p.vel.map(|v| v * cut);
         }
     }
@@ -95,7 +108,7 @@ pub(super) fn simulate(p: &mut Particle, s: &Sim, mirror: &[Event], points: &[[f
     p.age += dt;
     p.depth[0] += p.depth[1] * dt;
     p.look = look;
-    super::contact::collide(p, s, points);
+    super::contact::collide(p, s, points, prev);
 }
 
 pub(super) fn lerp(a: f32, b: f32, t: f32) -> f32 {

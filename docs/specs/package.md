@@ -328,11 +328,11 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `particle_lighting` | sets `render.lit`, `render.normal` or `render.refract` | refused | refused |
 | `particle_layers` | emits from a `layer` | runs | runs |
 | `particle_fields` | uses `turbulent`, `offset_noise`, `init.remap`, `around` or `between` | runs | runs |
-| `particle_steering` | uses `keep_distance`, `keep_between` or a `remap` force | refused | refused |
+| `particle_steering` | uses `keep_distance`, `keep_between` or a `remap` force | runs | runs |
 | `particle_values` | binds an end of an `init` range or a field of an emitter shape | runs | runs |
-| `particle_collisions` | collides with a `box`, a `segment`, a `layer` or the inside of a circle, or sets `stick` | refused | refused |
-| `boids` | sets the `boids` force | refused | refused |
-| `particle_ropes` | sets `render.rope` or trails longer than 16 steps or with `segments`, `subdivide`, `uv_scale`, `uv_scroll` or `textured` | refused | refused |
+| `particle_collisions` | collides with a `box`, a `segment`, a `layer` or the inside of a circle, or sets `stick` | runs | runs |
+| `boids` | sets the `boids` force | runs | runs |
+| `particle_ropes` | sets `render.rope` or trails longer than 16 steps or with `segments`, `subdivide`, `uv_scale`, `uv_scroll` or `textured` | runs | runs |
 | `particle_looks` | sets `render.cutout`, `render.orient` or `render.angle` | runs | runs |
 | `particle_shaders` | sets `render.shader` | runs | runs |
 | `scripts2` | has more than 16 script modules, modules that declare newer events, parts or `params`, values with `fn` or `params`, or named effect uses | runs | runs |

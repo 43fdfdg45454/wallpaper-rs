@@ -4,7 +4,7 @@ use crate::readback::{FAILED, MAPPED};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
 use wgpu::TextureFormat as Format;
-use wprs_scene::{Affine, EmitShape, MAX_POINTS, Refresh, Scene};
+use wprs_scene::{Affine, EmitShape, MAX_POINTS, Refresh, Scene, Surface};
 
 pub(crate) const SIDE: u32 = 512;
 const ROW: u32 = SIDE * 8;
@@ -24,6 +24,7 @@ pub(crate) struct Map {
     pub(super) texels: Vec<u8>,
     pub(super) shot: Option<Asked>,
     pub(super) threshold: f32,
+    pub(super) wall: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -39,14 +40,23 @@ impl Swarms {
         let mut out = Vec::new();
         for (herd, h) in herds.iter().enumerate() {
             for (part, s) in h.bake.systems.iter().enumerate() {
-                for (emitter, e) in systems[*s].emitters.iter().enumerate().take(8) {
-                    let EmitShape::Layer(l) = &e.shape else { continue };
+                let shapes =
+                    systems[*s].emitters.iter().enumerate().take(8).filter_map(|(k, e)| match &e.shape {
+                        EmitShape::Layer(l) => Some((k, l.id.clone(), l.refresh, l.threshold.0, false)),
+                        _ => None,
+                    });
+                let walls =
+                    systems[*s].collide.iter().enumerate().take(8).filter_map(|(k, c)| match &c.bounds {
+                        Surface::Layer { id } => Some((k, id.clone(), Refresh::OnChange, 0.5, true)),
+                        _ => None,
+                    });
+                for (emitter, source, refresh, threshold, wall) in shapes.chain(walls) {
                     out.push(Map {
                         herd,
                         part,
                         emitter,
-                        source: l.id.clone(),
-                        refresh: l.refresh,
+                        source,
+                        refresh,
                         key: None,
                         at: f32::NEG_INFINITY,
                         buffer: buffer(r, u64::from(ROW * SIDE), B::MAP_READ | B::COPY_DST),
@@ -55,7 +65,8 @@ impl Swarms {
                         sent: false,
                         texels: Vec::new(),
                         shot: None,
-                        threshold: l.threshold.0,
+                        threshold,
+                        wall,
                     });
                 }
             }
@@ -122,7 +133,11 @@ impl Swarms {
                 }
                 m.buffer.unmap();
             }
-            let wanted = thresholds(m.herd, m.part, m.emitter).unwrap_or(m.threshold);
+            let wanted = if m.wall {
+                m.threshold
+            } else {
+                thresholds(m.herd, m.part, m.emitter).unwrap_or(m.threshold)
+            };
             if fresh || (wanted - m.threshold).abs() > 0.5 / 255.0 {
                 m.threshold = wanted;
                 self.chart(r, i);
@@ -133,6 +148,9 @@ impl Swarms {
     fn chart(&mut self, r: &Renderer, i: usize) {
         let m = &self.maps[i];
         let Some(shot) = m.shot else { return };
+        if m.wall {
+            return self.wall(r, i, shot);
+        }
         let bake = &mut self.herds[m.herd].bake;
         let start = bake.layers[m.part][m.emitter][0] as usize;
         let count = super::texels::compact(

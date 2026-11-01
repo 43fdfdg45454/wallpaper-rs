@@ -1,5 +1,23 @@
 use wprs_scene::{Blend, Kind, Orient, Render, Scene, Spread, Stack, System};
 
+fn flag(b: bool) -> f32 {
+    f32::from(u8::from(b))
+}
+
+pub(super) fn strand(r: &Render) -> [f32; 4] {
+    let Some(t) = r.trail.as_ref().filter(|t| t.long()) else { return [0.0; 4] };
+    [
+        t.subdivide.unwrap_or(0).min(7) as f32,
+        t.uv_scale.unwrap_or(1.0),
+        t.uv_scroll.unwrap_or(0.0),
+        flag(t.textured),
+    ]
+}
+
+pub(super) fn cord(r: &Render) -> [f32; 4] {
+    r.rope.map_or([0.0; 4], |c| [c.width, c.uv_scale, c.uv_scroll, flag(r.texture.is_some())])
+}
+
 pub(super) fn turn(r: &Render) -> [f32; 4] {
     let mode = match r.orient {
         Some(Orient::Velocity) => 1.0,

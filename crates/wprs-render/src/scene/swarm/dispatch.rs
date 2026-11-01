@@ -50,6 +50,22 @@ impl Swarms {
                 for (p, store) in flight.stores.iter().enumerate() {
                     let Some((_, _, group)) = &store.gpu else { continue };
                     let sim = bake.apply(p, swarm.sim(j, p));
+                    if let (Some(flock), Some([clear, tally, scan, scatter, steer])) =
+                        (&store.flock, &self.flocking)
+                    {
+                        pass.set_bind_group(0, flock, &offset);
+                        let each = bake.allocs[p].div_ceil(64);
+                        for (pipe, n) in [
+                            (clear, sim.flock[1].div_ceil(64)),
+                            (tally, each),
+                            (scan, 1),
+                            (scatter, each),
+                            (steer, each),
+                        ] {
+                            pass.set_pipeline(pipe);
+                            pass.dispatch_workgroups(n, 1, 1);
+                        }
+                    }
                     pass.set_bind_group(0, group, &offset);
                     pass.set_pipeline(simulate);
                     pass.dispatch_workgroups(bake.allocs[p].div_ceil(64), 1, 1);
@@ -70,6 +86,17 @@ impl Swarms {
                     };
                     pass.set_bind_group(0, group, &offset);
                     pass.set_pipeline(settle);
+                    pass.dispatch_workgroups(1, 1, 1);
+                }
+            }
+            if first + CHUNK >= count
+                && let Some(twine) = &self.twining
+            {
+                let offset = [((count - 1 - first) * SIM as usize) as u32];
+                for store in flight.stores.iter().filter(|s| s.rope.is_some()) {
+                    let Some(group) = &store.twine else { continue };
+                    pass.set_bind_group(0, group, &offset);
+                    pass.set_pipeline(twine);
                     pass.dispatch_workgroups(1, 1, 1);
                 }
             }

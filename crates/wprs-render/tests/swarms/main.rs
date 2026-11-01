@@ -11,6 +11,8 @@ mod families;
 mod fields;
 mod looks;
 mod sources;
+mod steered;
+mod strung;
 mod timed;
 
 const SIZE: (u32, u32) = (160, 80);

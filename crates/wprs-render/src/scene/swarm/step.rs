@@ -51,10 +51,17 @@ impl Swarms {
                     (0..parts).for_each(|p| flight.sims[p] = bake.apply(p, swarm.sim(j, p)));
                     Cloud::brood(&mut flight.clouds, &flight.sims, &bake.hosts, &bake.points);
                 }
+                for (cloud, (sim, store)) in
+                    flight.clouds.iter_mut().zip(flight.sims.iter().zip(&flight.stores))
+                {
+                    let Some(rope) = &store.rope else { continue };
+                    cloud.strand(sim);
+                    r.queue.write_buffer(rope, super::flight::ROPE_AT, bytemuck::cast_slice(&cloud.rope));
+                }
                 for (store, cloud) in flight.stores.iter().zip(&flight.clouds) {
                     r.queue.write_buffer(&store.particles, 0, bytemuck::cast_slice(&cloud.particles));
                     if let Some(trail) = store.trail.as_ref().filter(|_| !cloud.trail.is_empty()) {
-                        r.queue.write_buffer(trail, 0, bytemuck::cast_slice(&cloud.trail));
+                        r.queue.write_buffer(trail, 16, bytemuck::cast_slice(&cloud.trail));
                     }
                 }
                 super::sort::sort(

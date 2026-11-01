@@ -7,8 +7,11 @@ impl Swarms {
     pub(super) fn prepare(&mut self, r: &Renderer, gpu: bool) {
         self.gpu = gpu;
         if gpu && self.compute.is_none() {
-            let parts = [include_str!("sim.wgsl"), include_str!("events.wgsl"), include_str!("shape.wgsl")];
+            let parts = [include_str!("kinds.wgsl"), include_str!("sim.wgsl"), include_str!("events.wgsl")];
             let parts = parts.into_iter().chain([
+                include_str!("shape.wgsl"),
+                include_str!("tether.wgsl"),
+                include_str!("walls.wgsl"),
                 include_str!("paths.wgsl"),
                 include_str!("birth.wgsl"),
                 wprs_scene::NOISE_WGSL,
@@ -34,6 +37,7 @@ impl Swarms {
                 })
             }));
         }
+        self.extras(r, gpu);
         if gpu && self.sorts.is_none() && self.kits.iter().any(|k| k.order.is_some()) {
             self.sorts = Some(self.sorting(r));
         }
@@ -56,7 +60,8 @@ impl Swarms {
                 buffer(r, u64::from(*alloc) * PARTICLE, B::VERTEX | B::COPY_DST | B::COPY_SRC | extra);
             let gpu = self.gpu.then(|| {
                 let state = fresh(*alloc, bake.states[p]);
-                let state = init(bytemuck::cast_slice(&state), B::STORAGE | B::COPY_DST | B::VERTEX);
+                let state =
+                    init(bytemuck::cast_slice(&state), B::STORAGE | B::COPY_DST | B::COPY_SRC | B::VERTEX);
                 let sims = buffer(r, CHUNK as u64 * SIM, B::UNIFORM | B::COPY_DST);
                 let size = wgpu::BufferSize::new(size_of::<Sim>() as u64);
                 let sim =
@@ -73,8 +78,8 @@ impl Swarms {
                 (state, sims, group)
             });
             let k = u64::from(bake.trails[p]);
-            let trail =
-                (!self.gpu && k > 0).then(|| buffer(r, u64::from(*alloc) * k * 16, B::VERTEX | B::COPY_DST));
+            let trail = (!self.gpu && k > 0)
+                .then(|| buffer(r, u64::from(*alloc) * k * 16 + 48, B::VERTEX | B::COPY_DST));
             let mut orders: Vec<(Stack, f32)> = Vec::new();
             for (o, size) in self.kits.iter().filter(|k| k.system == bake.systems[p]).filter_map(|k| k.order)
             {
@@ -85,7 +90,8 @@ impl Swarms {
             }
             let stacks =
                 orders.into_iter().map(|(o, size)| self.stacked(r, (&particles, *alloc), o, size)).collect();
-            stores.push(Store { particles, gpu, trail, stacks });
+            let (rope, flock, twine) = self.strings(r, (bake, p), &particles, gpu.as_ref());
+            stores.push(Store { particles, gpu, trail, stacks, rope, flock, twine });
         }
         let clouds = if self.gpu { Vec::new() } else { bake.allocs.iter().map(|a| Cloud::new(*a)).collect() };
         Flight { points, stores, clouds, sims: Vec::new() }

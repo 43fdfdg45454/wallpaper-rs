@@ -3,10 +3,14 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use wprs_scene::*;
 
+mod capped;
 mod extremes;
 mod fields;
 mod scheduled;
+mod steering;
+mod strands;
 mod validated;
+mod walls;
 
 const VIEW: [f32; 4] = [0.0, 0.0, 200.0, 100.0];
 

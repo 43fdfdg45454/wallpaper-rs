@@ -1168,8 +1168,8 @@ sets it, and every other name must be one of `points`. Targets and centers of fo
 | `perspective`, `init.depth`, `init.depth_speed` | `{ "focal" (1 to 100000 px) }` and depth ranges in pixels, which need `perspective` | `particle_depth` |
 | force `window` | `[in_start, in_end, out_start, out_end]` fractions of the life, in order, in which any force fades in and out | `particles2` |
 | forces | `{ "oscillate": { "what": "position" \| "alpha" \| "size", "freq", "scale", "phase", "mask" } }`, `{ "cap": speed }`, `{ "torque": k }`, `{ "spin_drag": k }`, `{ "slow_near": { "target", "inner", "outer", "factor" } }`; `attractor`, `vortex` and `orbit` take `radius` and `falloff` (`constant`, `linear`, `inverse_square`), `vortex` also `inner`, `outer` and `ring: { "radius", "width", "pull" }`, `turbulence` also `speed`, `time_scale` and `mask` | `particles2` |
-| forces | `{ "keep_distance": { "target", "distance", "strength" } }`, `{ "keep_between": { "from", "to", "strength" } }`, `{ "remap": { … } }` applied every step (input `age` too) | `particle_steering` |
-| force `boids` | `{ "radius", "separation", "alignment", "cohesion", "max_speed" }` flocking, for systems of at most 8192 particles | `boids` |
+| forces | `{ "keep_distance": { "target", "distance", "strength" } }` (−1000 to 1000), `{ "keep_between": { "from", "to", "strength" } }`, `{ "remap": { … } }` applied every step (input `age` too) | `particle_steering` |
+| force `boids` | `{ "radius" (1 to 10000), "separation", "alignment", "cohesion" (0 to 10), "max_speed" }` flocking, for systems of at most 8192 particles | `boids` |
 | collider `mask` | `{ "mask": { "texture", "threshold" } }`, the part of an image stretched over the canvas whose alpha is above `threshold` (0.5 by default), which particles bounce off or die on | `particles2` |
 | colliders | `{ "box": { "from", "to", "inside" } }`, `{ "segment": { "from", "to" } }`, `circle` with `inside`, and `stick: true` | `particle_collisions` |
 | collider `layer` | `{ "layer": { "id" } }`, the opaque shape of a layer | `particle_collisions` |
@@ -1244,7 +1244,7 @@ The newer fields behave as follows.
 - **Trails.** `render.trail` keeps the last `length` positions of each particle, one per 1/60 s
   step, and draws a ribbon through them that is `width` times as wide as the particle was there and
   fades to nothing at its end, with the color and size the particle had there. It holds 16 bytes
-  per particle and step, at most 16 steps (4, 8 or 16 by device class, none with software rendering
+  per particle and kept position, at most 16 steps for trails that are not long (4, 8 or 16 by device class, none with software rendering
   or on the CPU of the weakest devices, half of them or none at lower quality levels) and at most
   1 048 576 points per system. A layer with a `render` of its own draws as many of the kept
 positions as its own `trail` asks for, or none.
@@ -1313,6 +1313,52 @@ positions as its own `trail` asks for, or none.
   and may change all of them; the engine then draws the corner. It may read `frame` and the noise
   and color helpers. A shader that cannot be built is left out like any other package effect and
   the particles are drawn without it. Ropes and trails are drawn as usual.
+- **Keeping distance.** `keep_distance` pulls each particle toward its target or pushes it away, as
+  a spring that rests `distance` pixels from it: the acceleration is `strength · (d − distance)` along
+  the line to the target, in pixels a second squared for each pixel. `keep_between` pulls each particle
+  toward the nearest point of the segment from `from` to `to` by `strength` times its distance from
+  it. Neither damps the motion, so a `drag` settles particles on the ring or the line.
+- **Remap operators.** A `remap` force applies the mapping of `init.remap` every 1/60 s step, with
+  the `age` of the particle as one more input and `random` fixed for each particle and force. `set`
+  replaces the value, `add` and `sub` add or subtract the mapped value each second and `mul`
+  multiplies it by the mapped value each second (`v · y^dt`). The `window` of the force fades it in
+  and out: `set` then moves the value only that fraction of the way.
+- **Flocks.** `boids` steers each particle with its neighbors closer than `radius`: `separation`
+  pushes it away from them (their mean direction away, fading to nothing at `radius`, times
+  `radius`), `alignment` turns its velocity toward their mean velocity and `cohesion` pulls it toward
+  their mean position, each in pixels a second squared; `max_speed` (0 for none) caps its speed.
+  Neighbors are found in a hash grid of cells `radius` pixels wide rebuilt every step (in compute
+  shaders on the GPU, in the same order on the CPU), and at most 32 of them count at quality 3 and 2,
+  16 at quality 1 and 8 at quality 0, or 8 and 16 on the two lower device tiers. The first `boids`
+  force of a system sets the flock, which holds at most 8 192 particles, and 2 000 on the CPU.
+- **Colliders.** `box` keeps particles out of the box, or inside it with `inside`; it turns and
+  scales with the layer. `segment` stops particles crossing the line from `from` to `to` from either
+  side; particles that go around its ends pass. `circle` with `inside` keeps particles within the
+  circle. `layer` keeps particles out of the opaque part (alpha above 0.5) of a layer that does not
+  hold the system: the engine draws the layer as for emission, turns it into a field of at most
+  128 × 128 distances, rebuilt only when the drawing of the layer changes (at most four times a
+  second), and the field follows the position, turn and scale of the layer between readings; while it
+  was never drawn nothing collides. `stick` stops a particle where it touches and keeps it there
+  until it dies, without forces or other colliders. `kill` ends the particle where it touches, which
+  starts the `death` children of the system like any other death.
+- **Ropes.** `render.rope` joins the living particles of a system's own emitters into one strip in
+  the order they were born, from the newest, with `subdivide` (0 to 7) points between two particles
+  on a Catmull-Rom curve (`smooth`, the default) or a straight line. It is `width` pixels wide, times
+  `size_over_life` and the size an `oscillate` force gives, and takes the color of the particles
+  with `color_over_life`. With a `texture`, the strip shows it along its length: `uv_scale` times per
+  particle, moving `uv_scroll` times a second. The strip is built by a compute shader after the last
+  step of a frame (and the same way on the CPU), with at most 4 096 segments (1 024 and 2 048 on the
+  two lower device tiers) and fewer points between particles at quality 1 (half) and 0 (none). Ropes
+  are not drawn for systems born from other particles. One particle emitted per step
+  (`max_per_step: 1`) keeps the rope even.
+- **Long trails.** A trail longer than 16 steps, or with `segments`, `subdivide`, `uv_scale`,
+  `uv_scroll` or `textured`, keeps `segments + 1` positions (`length` without `segments`), one every
+  `(length − 1) / segments` steps, so it covers `length` steps with fewer points, and draws a smooth
+  ribbon through them with `subdivide` (0 to 7) points between two kept positions. It keeps at most
+  64 positions, 32 or 16 on the middle device tiers and none on the lowest, spacing them further
+  apart when it keeps fewer; quality 2, 1 and 0 draw half, a quarter or none of them, and quality 1
+  and 0 fewer points between them. With `textured` and a texture, the ribbon shows it along its
+  length, `uv_scale` times from head to tail, moving `uv_scroll` times a second.
 - **Limits.** A scene simulates at most 64 systems, counting children and layers with particles of
   their own, and their capacities share the 200 000 particles. `prewarm` runs in steps of 1/15 s,
   at most 30 million particle steps for the whole scene, and stops once it takes more than 200 ms.

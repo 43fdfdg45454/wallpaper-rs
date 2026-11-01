@@ -55,8 +55,13 @@ impl Painter<'_, '_, '_> {
             look.tint[0] = opacity;
             look.tint[2] = herd.bake.sizes[p] * size;
             let trail = herd.bake.trails[p];
-            look.extra[1] = swarms.quality.trail(kit.trail.min(trail)) as f32;
-            look.extra[2] = trail as f32;
+            let q = swarms.quality;
+            let drawn =
+                if kit.long { q.long_trail(kit.trail.min(trail)) } else { q.trail(kit.trail.min(trail)) };
+            (look.extra[1], look.extra[2]) = (drawn as f32, trail as f32);
+            look.strand[0] = q.subdivide(look.strand[0] as u32) as f32;
+            let scroll = |v: f32| (f64::from(v) * f64::from(frame.time)).rem_euclid(1.0) as f32;
+            (look.strand[2], look.cord[2]) = (scroll(look.strand[2]), scroll(look.cord[2]));
             swarms.looks.push(look);
             swarms.kitted.push(k);
         }

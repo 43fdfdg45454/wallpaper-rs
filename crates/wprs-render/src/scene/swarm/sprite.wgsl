@@ -9,6 +9,8 @@ struct Look {
     cut: vec4<f32>,
     turn: vec4<f32>,
     deep: vec4<f32>,
+    strand: vec4<f32>,
+    cord: vec4<f32>,
     sizes: array<vec4<f32>, 16>,
     colors: array<vec4<f32>, 64>,
 };

@@ -32,7 +32,7 @@ pub(super) fn module(r: &Renderer, wgsl: &str) -> wgpu::ShaderModule {
         .create_shader_module(wgpu::ShaderModuleDescriptor { label: Some("wprs-scene particles"), source })
 }
 
-pub(super) fn layouts(r: &Renderer) -> [BindGroupLayout; 4] {
+pub(super) fn layouts(r: &Renderer) -> [BindGroupLayout; 6] {
     let layout = |entries: &[wgpu::BindGroupLayoutEntry]| {
         let label = Some("wprs-scene particles");
         r.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { label, entries })
@@ -42,13 +42,14 @@ pub(super) fn layouts(r: &Renderer) -> [BindGroupLayout; 4] {
     let (view_dimension, c) = (wgpu::TextureViewDimension::D2, S::COMPUTE);
     let texture = wgpu::BindingType::Texture { sample_type, view_dimension, multisampled: false };
     let rects = plain(4096);
+    let sim = uniform(size_of::<wprs_scene::Sim>());
     [
         layout(&[
             entry(0, c, storage(false)),
             entry(1, c, storage(false)),
             entry(2, c, storage(true)),
             entry(3, c, storage(true)),
-            entry(4, c, uniform(size_of::<wprs_scene::Sim>())),
+            entry(4, c, sim),
         ]),
         layout(&[entry(0, S::VERTEX_FRAGMENT, uniform(size_of::<Look>())), entry(1, S::FRAGMENT, filtering)]),
         layout(&[entry(0, S::FRAGMENT, texture), entry(1, S::FRAGMENT, rects)]),
@@ -57,6 +58,13 @@ pub(super) fn layouts(r: &Renderer) -> [BindGroupLayout; 4] {
             entry(1, c, storage(false)),
             entry(2, c, storage(false)),
             entry(3, c, plain(16)),
+        ]),
+        layout(&[entry(0, c, storage(true)), entry(1, c, storage(false)), entry(2, c, sim)]),
+        layout(&[
+            entry(0, c, storage(true)),
+            entry(1, c, storage(true)),
+            entry(2, c, storage(false)),
+            entry(3, c, sim),
         ]),
     ]
 }

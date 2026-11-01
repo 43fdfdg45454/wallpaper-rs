@@ -33,6 +33,10 @@ impl Check<'_> {
                 self.uses(true, "particle_collisions");
                 let drawn = self.scene.layer(id).is_some_and(crate::Layer::drawn);
                 self.known(&format!("{q}/bounds/layer/id"), "layer", id, drawn);
+                let system = q.split('/').nth(2).unwrap_or_default();
+                if self.scene.layer(id).is_some_and(|l| super::checks::holds(l, system)) {
+                    self.issues.push(Issue::Circle(format!("{q}/bounds/layer/id")));
+                }
             }
             _ => {}
         }
@@ -120,7 +124,7 @@ impl Check<'_> {
                 }
                 self.range(&format!("{p}/max_speed"), b.max_speed, 0.0, 1e5);
                 let system = q.split("/forces/").next().unwrap_or(q);
-                self.range(&format!("{system}/capacity"), s.capacity as f32, 1.0, 8192.0);
+                self.range(&format!("{system}/capacity"), s.capacity as f32, 1.0, super::MAX_BOIDS as f32);
             }
             Force::Remap(r) => self.remap(&format!("{q}/remap"), r, (s, "particle_steering")),
         }

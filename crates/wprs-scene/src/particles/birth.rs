@@ -66,24 +66,27 @@ pub(super) fn remap(p: &mut Particle, s: &Sim) {
             _ => row[0][3],
         };
         let y = remapped(x, row, k as u32);
-        let op = |v: f32| match row[1][3] as u32 {
+        give(p, row[1][0] as u32, speed, |v| match row[1][3] as u32 {
             1 => v * y,
             2 => v + y,
             3 => v - y,
             _ => y,
-        };
-        match row[1][0] as u32 {
-            0 => p.size = op(p.size).max(0.0),
-            1 => p.color[3] = op(p.color[3]).clamp(0.0, 1.0),
-            2 => (0..3).for_each(|c| p.color[c] = op(p.color[c]).max(0.0)),
-            3 => {
-                let n = op(speed);
-                p.vel = if speed > 1e-6 { p.vel.map(|v| v * n / speed) } else { [n, 0.0] };
-            }
-            4 => p.life = op(p.life).max(1e-3),
-            5 => p.rot = op(p.rot),
-            6 => p.spin = op(p.spin),
-            _ => p.frame = op(p.frame).max(0.0),
+        });
+    }
+}
+
+pub(super) fn give(p: &mut Particle, out: u32, speed: f32, op: impl Fn(f32) -> f32) {
+    match out {
+        0 => p.size = op(p.size).max(0.0),
+        1 => p.color[3] = op(p.color[3]).clamp(0.0, 1.0),
+        2 => (0..3).for_each(|c| p.color[c] = op(p.color[c]).max(0.0)),
+        3 => {
+            let n = op(speed);
+            p.vel = if speed > 1e-6 { p.vel.map(|v| v * n / speed) } else { [n, 0.0] };
         }
+        4 => p.life = op(p.life).max(1e-3),
+        5 => p.rot = op(p.rot),
+        6 => p.spin = op(p.spin),
+        _ => p.frame = op(p.frame).max(0.0),
     }
 }

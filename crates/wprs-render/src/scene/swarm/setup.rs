@@ -98,13 +98,22 @@ impl Swarms {
             stamp: (None, false),
             module: module(
                 r,
-                &[wprs_scene::STAGES_WGSL, PLAIN, include_str!("sprite.wgsl"), include_str!("ribbon.wgsl")]
-                    .join("\n"),
+                &[
+                    wprs_scene::STAGES_WGSL,
+                    PLAIN,
+                    include_str!("sprite.wgsl"),
+                    include_str!("ribbon.wgsl"),
+                    include_str!("cord.wgsl"),
+                ]
+                .join("\n"),
             ),
             layouts,
             compute: None,
+            flocking: None,
+            twining: None,
             pipelines: HashMap::new(),
             ribbons: HashMap::new(),
+            cords: HashMap::new(),
             sorts: None,
             format,
             sampler: r.device.create_sampler(&sampler),

@@ -1,9 +1,8 @@
-use super::points::{Room, bare};
-use super::{Falloff, Force, MAX_COLLIDERS2, MAX_FORCES2, Sim, Surface, System, Target, Wobble};
-use crate::Affine;
+use super::points::Room;
+use super::{Falloff, Force, MAX_FORCES2, Sim, System, Target, Wobble};
 use crate::resolve::Context;
 
-const NONE: [f32; 4] = [0.0; 4];
+pub(super) const NONE: [f32; 4] = [0.0; 4];
 
 fn fall(f: Option<Falloff>, default: f32) -> f32 {
     f.map_or(default, |f| match f {
@@ -59,31 +58,15 @@ pub(super) fn forces(sim: &mut Sim, s: &System, room: &Room, cx: &Context) {
             Force::Torque(v) => ([10.0, v.get(cx), 0.0, 0.0], NONE, NONE),
             Force::SpinDrag(v) => ([11.0, v.get(cx), 0.0, 0.0], NONE, NONE),
             Force::SlowNear(n) => (pull(12.0, &n.target, 1.0), [n.inner, n.outer, n.factor, 0.0], NONE),
-            _ => (NONE, NONE, NONE),
+            Force::KeepDistance(k) => (pull(13.0, &k.target, k.strength), [k.distance, 0.0, 0.0, 0.0], NONE),
+            Force::KeepBetween(k) => {
+                let [x, y, on] = room.aim(&k.to);
+                (pull(14.0, &k.from, k.strength * on), [x, y, 0.0, 0.0], NONE)
+            }
+            Force::Remap(r) => super::tether::steady(r, room, cx),
+            Force::Boids(b) => ([16.0, 0.0, 0.0, 0.0], [0.0, b.max_speed, 0.0, 0.0], NONE),
         };
         let window = o.window.unwrap_or([0.0, 0.0, 1.0, 1.0]);
         sim.forces[4 * k..4 * k + 4].copy_from_slice(&[head, a, b, window]);
-    }
-}
-
-pub(super) fn colliders(sim: &mut Sim, s: &System, frame: Affine) {
-    let grow = (frame.0[0] * frame.0[3] - frame.0[1] * frame.0[2]).abs().sqrt();
-    for (k, c) in s.collide.iter().take(MAX_COLLIDERS2).enumerate() {
-        let ([kind, x, y, z], w) = match &c.bounds {
-            Surface::Canvas => ([1.0, 0.0, 0.0, 0.0], 0.0),
-            Surface::Plane { point, normal } => {
-                let ([x, y], [u, v]) = (frame.apply(*point), bare(frame).apply(*normal));
-                let l = u.hypot(v).max(1e-6);
-                ([2.0, x, y, u / l], v / l)
-            }
-            Surface::Circle { center, radius, .. } => {
-                let [x, y] = frame.apply(*center);
-                ([3.0, x, y, radius * grow], 0.0)
-            }
-            Surface::Mask { .. } => ([4.0, 0.0, 0.0, 0.0], 0.0),
-            Surface::Box { .. } | Surface::Segment { .. } | Surface::Layer { .. } => (NONE, 0.0),
-        };
-        sim.colliders[2 * k] = [kind, x, y, z];
-        sim.colliders[2 * k + 1] = [w, c.bounce, c.friction, f32::from(u8::from(c.kill))];
     }
 }

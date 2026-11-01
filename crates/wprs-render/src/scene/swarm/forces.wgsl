@@ -5,6 +5,7 @@ struct Pull {
     drag: f32,
     slow: f32,
     damp: f32,
+    nudge: vec2<f32>,
 };
 
 fn pull(p: ptr<function, Particle>, k: u32, t: f32, dt: f32, g: ptr<function, Pull>) {
@@ -75,6 +76,18 @@ fn pull(p: ptr<function, Particle>, k: u32, t: f32, dt: f32, g: ptr<function, Pu
             if f.w > 0.0 {
                 (*g).slow *= pow(max(lerp(a.z, 1.0, up(a.x, a.y, r)), 0.0), dt * 60.0 * w);
             }
+        }
+        case 13u: {
+            add = n * (r - a.x) * f.w;
+        }
+        case 14u: {
+            add = between(f, a, (*p).pos);
+        }
+        case 15u: {
+            evolve(p, k, w);
+        }
+        case 16u: {
+            add = (*g).nudge;
         }
         default: {}
     }

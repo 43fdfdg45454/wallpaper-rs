@@ -44,3 +44,12 @@ pub(super) fn compact(texels: &[u8], shot: Asked, threshold: f32, out: &mut [[f3
     }
     count as u32
 }
+
+pub(super) fn alphas(texels: &[u8], shot: Asked) -> Vec<u8> {
+    let n = shot.size.0 as usize * shot.size.1 as usize;
+    let bytes = if shot.format == Format::Rgba16Float { 8 } else { 4 };
+    if texels.len() < n * bytes {
+        return Vec::new();
+    }
+    (0..n).flat_map(|i| [0, 0, 0, (texel(texels, shot, i)[3] * 255.0).round() as u8]).collect()
+}
