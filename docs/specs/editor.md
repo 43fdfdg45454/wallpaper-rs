@@ -137,7 +137,7 @@ the fields it shows for a pointer, as JSON. Annotations in the schema guide the 
 |------------|---------|
 | `x-unit` | unit shown after the label (`px`, `°`, `s`) |
 | `x-range` | `[min, max]` of a slider |
-| `x-ref` | the value names an `image`, `video`, `sound`, `font` or `lut` asset, a `layer` (for the `layer` shape of a particle emitter only the layers that may feed its system), a particle `system`, a `timeline`, a user `property` that holds a value or, for the `trigger` of a timeline, `start`, `beat` or `prop:<id>` of a button or of such a property, or a built-in `effect`, offered in a list; properties show their labels and effects their translated names |
+| `x-ref` | the value names an `image`, `video`, `sound`, `font` or `lut` asset, a `layer` (for the `layer` shape of a particle emitter only the layers that may feed its system), a particle `system`, a `control` point of the system (`p0` and the `points` it has), a `timeline`, a user `property` that holds a value or, for the `trigger` of a timeline, `start`, `beat` or `prop:<id>` of a button or of such a property, or a built-in `effect`, offered in a list; properties show their labels and effects their translated names |
 | `x-key` | a keyframe `[time, value, ease]` |
 | `x-curve` | a list of `[t, value]` points edited on a plot: a click adds a point, a drag moves it (one gesture) and a double click removes it; `t` goes from `0` to `1` across and the value up to its `x-range`, or a quarter above the highest point |
 

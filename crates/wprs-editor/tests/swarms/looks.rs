@@ -40,3 +40,17 @@ fn particle_shaders_offer_package_effects_of_the_particle_stage() {
     edit(&mut p, "shader", json!({})).unwrap();
     assert!(system(&p)["render"].get("shader").is_none());
 }
+
+#[test]
+fn fields_that_name_a_control_point_offer_the_points_of_the_system() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    edit(&mut p, "point", json!({ "point": 2, "at": [10, 10] })).unwrap();
+    let ring = json!({ "circle": { "center": [0, 0], "radius": 10, "at": "p1" } });
+    edit(&mut p, "shape", json!({ "emitter": 0, "shape": ring })).unwrap();
+    let fields =
+        wprs_editor::inspect::fields_at(&p.doc, "/scene/particles/flakes/emitters/0/shape/circle", 0.0);
+    let at = fields.iter().find(|f| f.key == "at").expect("the anchor of the circle");
+    assert_eq!(at.widget, "ref:control");
+    assert_eq!(at.options, [json!("p0"), json!("p1"), json!("p2")]);
+}

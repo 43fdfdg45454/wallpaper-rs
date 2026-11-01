@@ -58,6 +58,7 @@ pub(crate) fn candidates(doc: &Value, reference: &str, pointer: &str) -> Vec<Val
             None => walk(doc).into_iter().map(|(_, l)| l["id"].clone()).collect(),
         },
         "system" => keys("/scene/particles").unwrap_or_default(),
+        "control" => crate::swarms::controls(doc, pointer),
         "timeline" => ids("/scene/timelines").unwrap_or_default(),
         "language" => crate::meta::languages(doc),
         "effect" => {

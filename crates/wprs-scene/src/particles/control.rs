@@ -15,7 +15,7 @@ impl JsonSchema for Handle {
         "Handle".into()
     }
     fn json_schema(_: &mut SchemaGenerator) -> Schema {
-        schemars::json_schema!({"type": "string", "pattern": "^p[0-7]$"})
+        schemars::json_schema!({"type": "string", "pattern": "^p[0-7]$", "x-ref": "control"})
     }
 }
 

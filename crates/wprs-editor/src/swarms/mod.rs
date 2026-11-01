@@ -1,4 +1,3 @@
-mod curves;
 mod handles;
 mod looks;
 mod samples;
@@ -12,9 +11,9 @@ use serde_json::{Value, json};
 use std::path::Path;
 use wprs_core::message::said;
 
-pub use curves::{Curve, plot};
+pub use crate::curves::{Curve, plot};
 pub use handles::handles;
-pub use looks::sources;
+pub use looks::{controls, sources};
 
 fn system(doc: &Value, id: &str) -> Result<String> {
     let path = format!("/scene/particles/{}", escape(id));

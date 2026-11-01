@@ -9,6 +9,7 @@ pub mod canvas;
 pub mod check;
 mod clips;
 mod contents;
+pub mod curves;
 mod cutouts;
 mod files;
 pub mod findings;

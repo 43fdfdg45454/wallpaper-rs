@@ -67,6 +67,13 @@ fn holds(layer: &Value, system: &str) -> bool {
     own || layer["layers"].as_array().into_iter().flatten().any(|c| holds(c, system))
 }
 
+pub fn controls(doc: &Value, pointer: &str) -> Vec<Value> {
+    let system =
+        pointer.strip_prefix("/scene/particles/").and_then(|p| p.split('/').next()).unwrap_or_default();
+    let points = doc.pointer(&format!("/scene/particles/{system}/points")).and_then(Value::as_array);
+    (0..points.map_or(0, Vec::len).max(1)).map(|k| json!(format!("p{k}"))).collect()
+}
+
 pub fn sources(doc: &Value, system: &str) -> Vec<Value> {
     let drawn = |l: &Value| !matches!(l["type"].as_str(), Some("sound" | "light"));
     let layers = crate::layers::walk(doc).into_iter().map(|(_, l)| l);

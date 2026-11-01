@@ -59,7 +59,7 @@ impl Walk<'_> {
             Value::Array(list) => list.iter().find(|t| *t != "null").cloned().unwrap_or_default(),
             t => t.clone(),
         };
-        let reference = meta["x-ref"].as_str();
+        let reference = meta["x-ref"].as_str().or(schema["x-ref"].as_str());
         if let Some(r) = reference.filter(|r| RIG.contains(r))
             && let Some(found) = self.dir.and_then(|d| options(d, self.doc, r, &pointer, &current))
         {
