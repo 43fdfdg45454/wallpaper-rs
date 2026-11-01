@@ -17,18 +17,19 @@ impl Runtime {
 
     pub(crate) fn step_puppets(&mut self, dt: f32) {
         let mut puppets = std::mem::take(&mut self.puppets);
-        let mut ended = std::mem::take(&mut self.ended);
+        let (mut ended, mut heard) = (std::mem::take(&mut self.ended), Vec::new());
         {
             let cx = self.context();
             for p in &mut puppets {
                 let Some(m) = self.scene.layer(&p.layer).and_then(mesh) else { continue };
                 cx.wake.set(Wake::Idle);
-                p.lag = (p.lag + dt).min(1.0);
-                p.step(&cx, m, dt, &mut ended);
+                (p.lag, p.since) = ((p.lag + dt).min(1.0), (p.since + dt).min(1.0));
+                p.step(&cx, m, dt, (&mut ended, &mut heard));
                 p.wake = p.wake.min(cx.wake.get());
             }
         }
         (self.puppets, self.ended) = (puppets, ended);
+        self.spread(heard);
     }
 
     pub(crate) fn pose_puppets(&mut self) {

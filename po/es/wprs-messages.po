@@ -593,11 +593,11 @@ msgstr "la capa no es una malla"
 
 #: crates/wprs-editor/src/rig.rs
 msgid ""
-"bones are placed here only on meshes of one part, such as those cut from a "
-"picture"
+"bones and depth are edited here only on meshes of one part, such as those "
+"cut from a picture"
 msgstr ""
-"aquí solo se colocan huesos en mallas de una sola parte, como las recortadas "
-"de una imagen"
+"aquí solo se editan huesos y profundidad en mallas de una sola parte, como "
+"las recortadas de una imagen"
 
 #: crates/wprs-editor/src/rig.rs
 msgid "a bone has a name of 1 to 64 characters without / or #"
@@ -634,6 +634,18 @@ msgstr "una escena tiene como mucho %1 scripts"
 #: crates/wprs-editor/src/scripts.rs crates/wprs-editor/src/shaders.rs
 msgid "%1 is not a text file: %2"
 msgstr "%1 no es un archivo de texto: %2"
+
+#: crates/wprs-editor/src/sculpt.rs
+msgid "a depth stroke has 1 to %1 points"
+msgstr "un trazo de profundidad tiene de 1 a %1 puntos"
+
+#: crates/wprs-editor/src/sculpt.rs
+msgid "the brush has a radius above 0 and up to 1 of the longer side"
+msgstr "el pincel tiene un radio mayor que 0 y de hasta 1 del lado más largo"
+
+#: crates/wprs-editor/src/sculpt.rs
+msgid "a stroke raises or lowers vertices by at most %1 pixels"
+msgstr "un trazo acerca o aleja los vértices %1 píxeles como mucho"
 
 #: crates/wprs-editor/src/session.rs
 msgid "there is no state folder"

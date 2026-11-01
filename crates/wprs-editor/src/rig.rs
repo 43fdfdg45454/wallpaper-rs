@@ -27,7 +27,7 @@ fn asset<'a>(doc: &'a Value, id: &str) -> Option<&'a str> {
     doc.pointer(&format!("/scene/assets/{}/path", escape(id)))?.as_str()
 }
 
-fn store(dir: &Path, id: &str, glb: &[u8]) -> Result<String> {
+pub(crate) fn store(dir: &Path, id: &str, glb: &[u8]) -> Result<String> {
     let saved =
         (1..).map(|n| format!("meshes/{id}-{n}.glb")).find(|p| !dir.join(p).exists()).unwrap_or_default();
     std::fs::create_dir_all(dir.join("meshes"))?;
@@ -73,7 +73,7 @@ pub(crate) fn sketch_of(dir: &Path, doc: &Value, layer: &Value) -> Result<(Strin
     let size = [0, 1].map(|k| size[k].as_f64().unwrap_or(1.0).max(1.0) as f32);
     let one = said(
         "editor.mesh_parts",
-        "bones are placed here only on meshes of one part, such as those cut from a picture",
+        "bones and depth are edited here only on meshes of one part, such as those cut from a picture",
         &[],
     );
     Ok((id.to_owned(), Sketch::from_rig(&rig, size).ok_or_else(|| anyhow!(one))?))

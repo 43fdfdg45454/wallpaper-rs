@@ -1,6 +1,6 @@
 use super::doc::{Gltf, Node};
 use super::math::{Mat, Trs, decompose, normalized};
-use super::{Joint, Rigged};
+use super::{Joint, MAX_RIG_NODES, Rigged};
 
 pub(super) fn column(m: &[f32]) -> Mat {
     std::array::from_fn(|k| m[(k % 4) * 4 + k / 4])
@@ -21,6 +21,9 @@ fn rest(n: &Node) -> Result<Trs, String> {
 
 pub(super) fn joints(doc: &Gltf, rig: &mut Rigged) -> Result<(), String> {
     let count = doc.nodes.len();
+    if count > MAX_RIG_NODES {
+        return Err(format!("has more than {MAX_RIG_NODES} nodes"));
+    }
     let mut parents: Vec<Option<u16>> = vec![None; count];
     for (i, n) in doc.nodes.iter().enumerate() {
         for &c in &n.children {

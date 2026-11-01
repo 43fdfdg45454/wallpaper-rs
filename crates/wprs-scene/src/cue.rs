@@ -105,6 +105,10 @@ impl Runtime {
             tl.advance(head, step);
             heard(tl, head, from, was, &mut names);
         }
+        self.spread(names);
+    }
+
+    pub(crate) fn spread(&mut self, mut names: Vec<(Fired, f32)>) {
         let mut i = 0;
         while let Some((fired, late)) = names.get(i) {
             let (wanted, late) = (fired.name.as_ref().map(|n| format!("event:{n}")), *late);

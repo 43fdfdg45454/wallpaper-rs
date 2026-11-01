@@ -1137,6 +1137,7 @@ msgid "Nearest"
 msgstr "Lo más cercano"
 
 #: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneMask.qml
+#: apps/wprs-app/qml/SceneRigDepth.qml
 msgid "Brush size"
 msgstr "Tamaño del pincel"
 
@@ -2767,6 +2768,23 @@ msgstr ""
 #: apps/wprs-app/qml/SceneRig.qml
 msgid "Clip in the preview"
 msgstr "Clip de la vista previa"
+
+#: apps/wprs-app/qml/SceneRigDepth.qml
+msgid "Paint depth on the preview"
+msgstr "Pintar la profundidad sobre la vista previa"
+
+#: apps/wprs-app/qml/SceneRigDepth.qml
+msgid "Pixels towards the viewer"
+msgstr "Píxeles hacia el espectador"
+
+#: apps/wprs-app/qml/SceneRigDepth.qml
+msgid ""
+"Strokes on the mesh raise its vertices towards the viewer, or lower them "
+"below zero; with depth on, nearer vertices cover farther ones."
+msgstr ""
+"Los trazos sobre la malla acercan sus vértices al espectador, o los alejan "
+"por debajo de cero; con la profundidad activa, los vértices más cercanos "
+"tapan a los más lejanos."
 
 #: apps/wprs-app/qml/SceneRigMotion.qml apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml

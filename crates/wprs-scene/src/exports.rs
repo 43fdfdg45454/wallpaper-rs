@@ -96,9 +96,10 @@ pub use crate::rig::{
 };
 pub use crate::rigged::math::{Mat, Quat, Trs};
 pub use crate::rigged::{
-    Channel, Cut, Interp, Joint, MAX_ACTIVE_SHAPES, MAX_CELLS, MAX_MORPH_TEXELS, MAX_RIG_BYTES, MAX_RIG_KEYS,
-    MAX_RIG_PALETTE, MAX_RIG_PIECES, MAX_RIG_VERTICES, MAX_SKETCH_BONES, MIN_CELLS, MORPH_WIDTH, Motion,
-    Path as Track, Piece, Rigged, Sketch, SketchBone, VERTEX_FLOATS,
+    Channel, Cut, Interp, Joint, MAX_ACTIVE_SHAPES, MAX_CELLS, MAX_MORPH_TEXELS, MAX_RIG_BYTES,
+    MAX_RIG_INDICES, MAX_RIG_KEYS, MAX_RIG_NODES, MAX_RIG_PALETTE, MAX_RIG_PIECES, MAX_RIG_VERTICES,
+    MAX_SKETCH_BONES, MAX_SKETCH_DEPTH, MIN_CELLS, MORPH_WIDTH, Motion, Path as Track, Piece, Rigged, Sketch,
+    SketchBone, VERTEX_FLOATS,
 };
 pub use crate::runtime::Runtime;
 pub use crate::scan::{beyond_first, imported};

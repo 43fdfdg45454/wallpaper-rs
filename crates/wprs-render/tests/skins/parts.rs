@@ -2,7 +2,7 @@ use super::kit::{mesh, near, render, renderer, rgb, scene};
 use serde_json::json;
 use wprs_scene::Quality;
 
-fn quads() -> Vec<u8> {
+fn quads(z: f32) -> Vec<u8> {
     let mut bin = Vec::new();
     let mut views = Vec::new();
     let mut add = |values: Vec<u8>| {
@@ -10,9 +10,9 @@ fn quads() -> Vec<u8> {
         bin.extend(values);
         views.len() - 1
     };
-    let quad = |x0: f32, x1: f32| [x0, -24.0, 0.0, x1, -24.0, 0.0, x1, 24.0, 0.0, x0, 24.0, 0.0];
+    let quad = |x0: f32, x1: f32, z: f32| [x0, -24.0, z, x1, -24.0, z, x1, 24.0, z, x0, 24.0, z];
     let f = |v: &[f32]| v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>();
-    let (back, front) = (add(f(&quad(-24.0, 8.0))), add(f(&quad(-8.0, 24.0))));
+    let (back, front) = (add(f(&quad(-24.0, 8.0, z))), add(f(&quad(-8.0, 24.0, 0.0))));
     let list = add([0u32, 1, 2, 0, 2, 3].iter().flat_map(|i| i.to_le_bytes()).collect());
     let accessor = |view: usize, kind: &str, component: u32, count: usize| json!({ "bufferView": view, "type": kind, "componentType": component, "count": count });
     let primitive =
@@ -38,9 +38,13 @@ fn quads() -> Vec<u8> {
 }
 
 fn drawn(parts: serde_json::Value) -> Vec<u8> {
-    let mut layer = mesh(json!({ "parts": parts }));
+    raised(json!({ "parts": parts }), 0.0)
+}
+
+fn raised(extra: serde_json::Value, z: f32) -> Vec<u8> {
+    let mut layer = mesh(extra);
     layer.as_object_mut().unwrap().remove("texture");
-    render(renderer().unwrap(), scene(layer, quads()), 0.0, Quality::Q3)
+    render(renderer().unwrap(), scene(layer, quads(z)), 0.0, Quality::Q3)
 }
 
 #[test]
@@ -71,4 +75,20 @@ fn a_cutout_shows_its_part_only_over_the_part_it_follows() {
     assert!(near(rgb(&cut, 50, 32), [0, 0, 0]), "{:?}", rgb(&cut, 50, 32));
     let hidden = drawn(json!({ "back": { "visible": false } }));
     assert!(near(rgb(&hidden, 12, 32), [0, 0, 0]) && near(rgb(&hidden, 50, 32), [0, 255, 0]));
+}
+
+#[test]
+fn with_depth_nearer_vertices_cover_farther_ones_whatever_the_order_of_their_parts() {
+    if renderer().is_none() {
+        return;
+    }
+    let (red, green) = ([255, 0, 0], [0, 255, 0]);
+    let flat = raised(json!({}), 4.0);
+    assert!(near(rgb(&flat, 32, 32), green), "without depth the order of the parts decides");
+    let deep = raised(json!({ "depth": { "scale": 0 } }), 4.0);
+    assert!(near(rgb(&deep, 32, 32), red) && near(rgb(&deep, 50, 32), green), "{:?}", rgb(&deep, 32, 32));
+    let behind = raised(json!({ "depth": { "scale": 0 } }), -4.0);
+    assert!(near(rgb(&behind, 32, 32), green) && near(rgb(&behind, 12, 32), red));
+    let level = raised(json!({ "depth": { "scale": 0 }, "parts": { "back": { "order": 1 } } }), 0.0);
+    assert!(near(rgb(&level, 32, 32), red), "parts at the same depth keep their order");
 }

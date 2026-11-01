@@ -63,9 +63,12 @@ fn advance(b: &mut Body, e: &BonePhysics, sim: &Sim, (f0, f1): (f32, f32)) {
 impl Puppet {
     pub(crate) fn swing(&mut self, cx: &Context, m: &MeshLayer, sim: &Sim) {
         let steps = ((self.lag / sim.h) as u32).min(MAX_STEPS);
-        self.lag = if steps == MAX_STEPS { 0.0 } else { self.lag - steps as f32 * sim.h };
-        if sim.frozen {
-            self.lag = 0.0;
+        self.lag = if steps == MAX_STEPS || sim.frozen { 0.0 } else { self.lag - steps as f32 * sim.h };
+        let ran = sim.h * steps as f32;
+        let span = if steps == MAX_STEPS { ran } else { self.since.max(ran) }.max(1e-6);
+        let at = |s: u32| (s as f32 * sim.h / span).min(1.0);
+        if steps > 0 || sim.frozen {
+            self.since = self.lag;
         }
         for k in 0..self.bodies.len() {
             let e = &m.rig.physics[self.bodies[k].entry];
@@ -81,33 +84,36 @@ impl Puppet {
             let windy = e.wind > 0.0 && sim.wind != [0.0; 2];
             let busy = windy || body.quiet < QUIET_STEPS;
             if busy {
-                let n = steps as f32;
-                (0..steps).for_each(|s| advance(body, e, sim, (s as f32 / n, (s + 1) as f32 / n)));
+                (0..steps).for_each(|s| advance(body, e, sim, (at(s), at(s + 1))));
             }
-            body.before.clone_from_slice(&body.pins);
+            if steps > 0 {
+                let f = at(steps);
+                body.before.iter_mut().zip(&body.pins).for_each(|(b, p)| *b = mix(*b, *p, f));
+            }
             if windy || body.quiet < QUIET_STEPS {
                 cx.note(Wake::Frame);
             }
-            self.lean(k, e);
+            self.lean(k, e, if sim.frozen { 0.0 } else { (self.lag / sim.h).min(1.0) });
             self.worlds(cx, m);
         }
     }
 
-    fn lean(&mut self, k: usize, e: &BonePhysics) {
+    fn lean(&mut self, k: usize, e: &BonePhysics, ahead: f32) {
         let Puppet { bodies, locals, worlds, rig, .. } = self;
         let body = &bodies[k];
+        let shown = |i: usize| mix(body.was[i], body.at[i], 1.0 + ahead);
         for (i, &n) in body.nodes.iter().enumerate() {
             let n = n as usize;
             let parent = rig.joints[n].parent.map(|p| worlds[p as usize]);
             let world = |l: &Trs| parent.map_or(l.matrix(), |p| mul(&p, &l.matrix()));
             if i == 0 && e.translation.is_some() {
-                let [x, y] = gap(pivot(&world(&locals[n])), body.at[0]);
+                let [x, y] = gap(pivot(&world(&locals[n])), shown(0));
                 let back = parent.map_or(crate::rigged::math::IDENTITY, |p| invert(&p));
                 (0..3).for_each(|r| locals[n].t[r] += back[r * 4] * x + back[r * 4 + 1] * y);
             }
             let w = world(&locals[n]);
             let p = pivot(&w);
-            let delta = wrap(angle(gap(p, body.at[i + 1])) - angle(gap(p, end(&w, body.tips[i]))));
+            let delta = wrap(angle(gap(p, shown(i + 1))) - angle(gap(p, end(&w, body.tips[i]))));
             turn(&mut locals[n], delta * mirrored(parent.as_ref()));
             worlds[n] = world(&locals[n]);
         }

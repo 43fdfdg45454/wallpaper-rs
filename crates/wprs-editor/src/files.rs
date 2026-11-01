@@ -27,6 +27,9 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
             let (parent, at, remove) = (parent.as_deref(), *at, *remove);
             crate::rig::bone(dir, doc, &crate::rig::Boning { layer, name, parent, at, remove })
         }
+        Action::MeshDepth { layer, points, radius, by } => {
+            crate::sculpt::depth(dir, doc, layer, points, (*radius, *by))
+        }
         _ => return None,
     })
 }

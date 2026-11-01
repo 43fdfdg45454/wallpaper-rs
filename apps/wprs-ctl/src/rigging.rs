@@ -39,6 +39,25 @@ pub enum Rigging {
         #[arg(long, help = "Remove the bone; its children hang from its parent")]
         remove: bool,
     },
+    #[command(
+        about = "Raise or lower the depth of the vertices of a mesh layer cut from a picture along a stroke, for the perspective of its depth and the order of what covers what"
+    )]
+    MeshDepth {
+        #[arg(help = DIR)]
+        dir: PathBuf,
+        #[arg(help = ID)]
+        layer: String,
+        #[arg(help = "The stroke as fractions of the layer, X,Y;X,Y;...")]
+        points: String,
+        #[arg(
+            long,
+            allow_hyphen_values = true,
+            help = "Pixels towards the viewer at the middle of the brush, from -1000 to 1000; below zero lowers"
+        )]
+        by: f32,
+        #[arg(long, default_value_t = 0.1, help = "Radius of the brush, a fraction of the longer side")]
+        radius: f32,
+    },
     #[command(about = "Print the bones, parts, blend shapes, animations and clips of a mesh layer as JSON")]
     Bones {
         #[arg(help = DIR)]
@@ -48,17 +67,21 @@ pub enum Rigging {
     },
 }
 
+fn pair(p: &str) -> Option<[f32; 2]> {
+    p.split_once(',').and_then(|(x, y)| Some([x.trim().parse().ok()?, y.trim().parse().ok()?]))
+}
+
 pub(crate) fn action(command: Rigging) -> Result<(PathBuf, Action), Box<Author>> {
     Ok(match command {
         Rigging::MeshFromPicture { dir, image, outline, cells, id } => {
             (dir, Action::MeshFromPicture { image, outline, cells, id })
         }
         Rigging::Bone { dir, layer, name, at, parent, remove } => {
-            let pair = |p: &str| {
-                p.split_once(',').and_then(|(x, y)| Some([x.trim().parse().ok()?, y.trim().parse().ok()?]))
-            };
-            let at = at.as_deref().and_then(pair);
-            (dir, Action::Bone { layer, name, parent, at, remove })
+            (dir, Action::Bone { layer, name, parent, at: at.as_deref().and_then(pair), remove })
+        }
+        Rigging::MeshDepth { dir, layer, points, by, radius } => {
+            let points = points.split(';').filter(|p| !p.trim().is_empty()).map(pair).collect::<Option<_>>();
+            (dir, Action::MeshDepth { layer, points: points.unwrap_or_default(), radius, by })
         }
         other => return Err(Box::new(Author::Rigging(other))),
     })

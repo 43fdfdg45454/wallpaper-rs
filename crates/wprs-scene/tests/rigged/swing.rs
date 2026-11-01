@@ -135,3 +135,25 @@ fn an_impulse_from_a_script_swings_a_settled_bone() {
     assert!(!close(at(&rt, "hand"), rest, 1.0), "{:?} {:?}", at(&rt, "hand"), rest);
     assert_eq!(rt.frame(VIEW, Quality::Q3).wake, Wake::Frame);
 }
+
+#[test]
+fn a_swinging_bone_follows_a_moving_parent_alike_at_every_frame_rate() {
+    let waving = |inertia: f32| {
+        runtime(json!({ "clips": [{ "id": "wave", "animation": "wave", "loop": "pingpong" }],
+            "animations": [{ "clip": "wave" }],
+            "physics": [{ "bone": "hand", "stiffness": 0.1, "damping": 0.1, "inertia": inertia }] }))
+    };
+    for inertia in [0.0, 0.5] {
+        let turns: Vec<f32> = [60.0, 120.0, 144.0, 240.0]
+            .iter()
+            .map(|fps| {
+                let mut rt = waving(inertia);
+                run(&mut rt, 0.75, 1.0 / fps);
+                let p = rt.puppet("fox").unwrap();
+                let f = p.bone_frames([64.0, 64.0])[p.rig.joint("hand").unwrap()];
+                f[1].atan2(f[0]).to_degrees()
+            })
+            .collect();
+        assert!(turns.iter().all(|t| (t - turns[0]).abs() < 1.5), "inertia {inertia}: {turns:?}");
+    }
+}

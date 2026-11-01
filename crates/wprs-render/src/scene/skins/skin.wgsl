@@ -42,7 +42,8 @@ fn vs_skin(v: In) -> Out {
     }
     let lift = pieces.lift.xyz * moved.z;
     let ndc = (moved.xy + lift.xy) / max(1.0 + lift.z, 0.05) / (pieces.box_size.xy * 0.5);
-    return Out(vec4<f32>(ndc, 0.5, 1.0), v.uv, pieces.data[k + 5u]);
+    let depth = clamp(0.5 - moved.z * pieces.box_size.z, 0.0, 1.0);
+    return Out(vec4<f32>(ndc, depth, 1.0), v.uv, pieces.data[k + 5u]);
 }
 
 @fragment

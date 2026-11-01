@@ -46,8 +46,18 @@ ColumnLayout {
         icon.name: "transform-move"
         checkable: true
         enabled: rig.info.editable === true
-        checked: rig.input.page.rigging === rig.layerId
-        onToggled: rig.input.page.rigging = checked ? rig.layerId : ""
+        checked: rig.input.page.rigging === rig.layerId && rig.input.page.sculpt === null
+        onToggled: {
+            rig.input.page.rigging = checked ? rig.layerId : "";
+            rig.input.page.sculpt = null;
+        }
+    }
+
+    SceneRigDepth {
+        Layout.fillWidth: true
+        page: rig.input.page
+        layerId: rig.layerId
+        editable: rig.info.editable === true
     }
 
     Repeater {

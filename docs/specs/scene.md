@@ -395,7 +395,9 @@ writes them, and UVs start at the top left of the picture. Every node of the fil
 bones of skins, and the nodes that carry a mesh without a skin, which then move as one piece. The
 rest pose is the transform of each node; vertices follow at most 4 bones whose weights add up to 1
 (within 0.02, then made exact). The engine skins the vertices on the GPU into a picture of the box
-(half its pixels at the lowest quality and three quarters at the next) and draws that picture like
+at the pixels it covers on the screen, with its transform, parents and camera, up to the pixels of
+its picture (half of them at the lowest quality and three quarters at the next; a mesh drawn larger
+than its box is skinned in steps of half an octave) and draws that picture like
 any other layer, with its transform, effects, masks and blend mode; it draws it again only when the
 pose, the blend shapes, the order of the parts or a video texture changed, and a still or settled
 skeleton asks for no frames. Parts moved out of the box are cut at its edge, so `size` leaves them
@@ -404,9 +406,11 @@ room.
 Files are refused that have a bone cycle or a node with two parents, a vertex whose weights do not
 add up to 1 or that follows a bone of no skin, an index out of its vertices, a value that is not a
 number, sparse accessors, primitives other than triangles (strips and fans are read as triangles),
-animation keys out of order, more than 65 536 vertices, 256 bones and parts, 64 drawn primitives,
-524 288 blend shape vertices or 4 194 304 animation values, or 128 MiB of meshes for all the mesh
-layers of a scene; meshes are read whole, once, when the scene is.
+animation keys out of order, a mesh that names a blend shape twice, more than 1 024 nodes, 65 536
+vertices, 1 048 576 triangle corners (three for each triangle, strips and fans included), 256 bones
+and parts, 64 drawn primitives, 524 288 blend shape vertices or 4 194 304 animation values, or 128 MiB
+of meshes for all the mesh layers of a scene; meshes are read whole, once, when the scene is, and a
+file is refused as soon as it passes a limit.
 
 | Field | Meaning |
 |-------|---------|
@@ -414,8 +418,8 @@ layers of a scene; meshes are read whole, once, when the scene is.
 | `texture` | a picture or video asset (or bound value) that replaces the textures of the file; without it, the picture of the first material that has one, or white; the base color of each material multiplies its parts |
 | `size`, `color` | the box in pixels the mesh fills (the canvas by default) and a color that multiplies it |
 | `parts` | per part (mesh name of the file): `order` (−1000 to 1000, may follow keyframes with `step`), `clip_to` (another part it only shows over) and `visible`; parts are drawn by `order` (0 by default), in the order of the file when it is the same |
-| `depth` | `{ "scale" (0 to 10, 1 by default), "cull" }`: how far the depth of the vertices (z of the file, towards the viewer, in pixels) pushes them with the perspective of `canvas.perspective` or of the 3D camera, also under `transform.tilt`, and whether triangles seen from behind (turning clockwise on screen) are hidden; without `depth` the depth of vertices is ignored |
-| `clips` | at most 64 `{ "id", "animation", "from", "to", "loop", "events", "bones", "shapes", "order" }`: a stretch of an animation of the file (the first one without `animation`, unless the clip has keys of its own) in seconds within its length, played `repeat` (default), `pingpong` or `once`, with named `events` like timelines, and keys of its own on the same seconds (below) |
+| `depth` | `{ "scale" (0 to 10, 1 by default), "cull" }`: how far the depth of the vertices (z of the file, towards the viewer, in pixels) pushes them with the perspective of `canvas.perspective` or of the 3D camera, also under `transform.tilt`, and whether triangles seen from behind (turning clockwise on screen) are hidden; with `depth` nearer vertices also cover farther ones whatever the order of their parts, and parts at the same depth keep their order (soft edges look best when parts are also ordered from back to front); without `depth` the depth of vertices is ignored |
+| `clips` | at most 64 `{ "id", "animation", "from", "to", "loop", "events", "bones", "shapes", "order" }`: a stretch of an animation of the file (the first one without `animation`, unless the clip has keys of its own) in seconds within its length, played `repeat` (default), `pingpong` or `once`, with named `events` (seconds from the start of the clip) that fire like those of timelines each time a playing clip passes them, both ways for `pingpong`, start what `event:<name>` triggers and reach scripts as `timelineEvent` with the timeline `<layer>#<clip>`, and keys of its own on the same seconds (below) |
 | `animations` | at most 16 animation layers `{ "clip", "weight" (0 to 1), "rate" (0 to 16), "additive", "blend_in", "blend_out" (0 to 10 s), "enabled", "bones" }`, mixed in order: replacing layers first, then additive ones; `bones` limits a layer to those bones; bones without a track keep their rest pose |
 | `ik` | at most 16 chains `{ "chain" (2 to 8 bones, each hanging from the one before), "target", "limits": { "<bone>": [min, max] }, "weight", "bend": "clockwise" \| "counterclockwise" }`; `target` is a point in pixels of the box from its top left (which may be bound), `"cursor"`, `"bone:<name>"` (any node of the file) or `"layer:<id>"`; see "Reaching and swinging" (`ik`) |
 | `physics` | at most 64 `{ "bone", "mode": "spring" \| "rigid" \| "rope", "stiffness", "damping", "inertia" (0 to 1, 0.5 by default), "wind" (0 to 1), "gravity" (−10 to 10), "rotation": [min, max] degrees, "translation": [min, max] px }`; see "Reaching and swinging" (`bone_physics`) |
@@ -472,7 +476,9 @@ pointer only while the scene may read it (the pointer input, told to the user li
 the pointer); without it the chain keeps its pose. `"layer:<id>"` follows the position of that layer.
 
 Bodies of `physics` swing at a fixed step of 1/60 s (1/30 s on battery), at most 15 steps a frame,
-so that they do not depend on the frame rate; longer gaps are dropped. A `spring` pulls the end of
+so that they do not depend on the frame rate: each step follows the pose of the parent along the
+time it covers, also on frames that take no step, and a frame between steps shows the bodies where
+their last step carries them; longer gaps are dropped. A `spring` pulls the end of
 its bone back to where the pose puts it (`stiffness`), a `rigid` bone swings like a pendulum held
 loosely to its pose, and a `rope` links the bone and its first children (those without a body of
 their own, at most 8 links) into a chain that hangs and sways. `inertia` is how much a body stays

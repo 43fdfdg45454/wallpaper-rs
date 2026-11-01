@@ -59,10 +59,11 @@ ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a bent 
 ctl scene set "$draft" /scene/layers/1/ik '[{"chain": ["root", "arm"], "target": "cursor", "limits": {"arm": [-60, 60]}}]'
 ctl scene set "$draft" /scene/layers/1/physics '[{"bone": "arm", "mode": "rope", "gravity": 1, "wind": 0.5}]'
 ctl scene set "$draft" /scene/layers/1/depth '{"scale": 1, "cull": true}'
+ctl scene mesh-depth "$draft" puppet '0.4,0.5;0.6,0.5' --by 30 --radius 0.2 || fail "the depth of the mesh was not painted"
 ctl scene set "$draft" /scene/layers/1/hit '["arm"]'
 ctl scene set "$draft" /scene/canvas/wind '[40, 0]'
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with reaching and swinging bones was not previewed"
-for _ in $(seq 11); do ctl scene undo "$draft"; done
+for _ in $(seq 12); do ctl scene undo "$draft"; done
 "$BIN/probe" "$s15" 4 --hold >"$WORK/edit-frames.out" 2>&1 & counter=$!; pids+=("$counter")
 sleep 1
 ctl scene set "$draft" /scene/canvas/background '#0000ff'

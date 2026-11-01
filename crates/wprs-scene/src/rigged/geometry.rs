@@ -2,7 +2,9 @@ use super::build::column;
 use super::doc::Primitive;
 use super::math::IDENTITY;
 use super::read::Bin;
-use super::{MAX_MORPH_TEXELS, MAX_RIG_PALETTE, MAX_RIG_PIECES, MAX_RIG_VERTICES, Piece, Rigged};
+use super::{
+    MAX_MORPH_TEXELS, MAX_RIG_INDICES, MAX_RIG_PALETTE, MAX_RIG_PIECES, MAX_RIG_VERTICES, Piece, Rigged,
+};
 
 fn named(name: &Option<String>, kind: &str, i: usize) -> String {
     name.clone().filter(|n| !n.is_empty()).unwrap_or_else(|| format!("{kind}_{i}"))
@@ -28,7 +30,7 @@ fn skin(bin: &Bin, rig: &mut Rigged, s: usize) -> Result<(u32, usize), String> {
 pub(super) fn pieces(bin: &Bin, rig: &mut Rigged) -> Result<(), String> {
     let doc = bin.doc;
     rig.parts = doc.meshes.iter().enumerate().map(|(i, m)| named(&m.name, "mesh", i)).collect();
-    let mut skins = vec![None; doc.skins.len()];
+    let (mut skins, mut skipped) = (vec![None; doc.skins.len()], 0);
     for (n, node) in doc.nodes.iter().enumerate() {
         let Some(m) = node.mesh else { continue };
         let mesh = doc.meshes.get(m).ok_or_else(|| format!("node {n} names the missing mesh {m}"))?;
@@ -37,6 +39,9 @@ pub(super) fn pieces(bin: &Bin, rig: &mut Rigged) -> Result<(), String> {
                 mesh.extras.as_ref().and_then(|e| e.names.get(t)).cloned().unwrap_or(format!("shape_{t}"))
             })
             .collect();
+        if let Some(twice) = names.iter().enumerate().find(|(t, n)| names[..*t].contains(n)).map(|x| x.1) {
+            return Err(format!("mesh {m} names the blend shape {twice:?} twice"));
+        }
         for (t, name) in names.iter().enumerate() {
             if rig.shape(name).is_none() {
                 rig.shapes.push(name.clone());
@@ -57,14 +62,20 @@ pub(super) fn pieces(bin: &Bin, rig: &mut Rigged) -> Result<(), String> {
                     (rig.palette.len() as u32 - 1, 1)
                 }
             };
-            primitive(bin, rig, p, (m, base, joints), &names)?;
+            if rig.palette.len() > MAX_RIG_PALETTE {
+                return Err(format!("has more than {MAX_RIG_PALETTE} bones and parts"));
+            }
+            match rig.pieces.len() < MAX_RIG_PIECES {
+                true => primitive(bin, rig, p, (m, base, joints), &names)?,
+                false => skipped += 1,
+            }
         }
     }
-    let total = rig.morphs.len();
+    let (total, pieces) = (rig.morphs.len(), rig.pieces.len() + skipped);
     let checks = [
         (rig.vertex_count() <= MAX_RIG_VERTICES, format!("more than {MAX_RIG_VERTICES} vertices")),
         (rig.palette.len() <= MAX_RIG_PALETTE, format!("more than {MAX_RIG_PALETTE} bones and parts")),
-        (rig.pieces.len() <= MAX_RIG_PIECES, format!("more than {MAX_RIG_PIECES} drawn primitives")),
+        (pieces <= MAX_RIG_PIECES, format!("more than {MAX_RIG_PIECES} drawn primitives")),
         (total <= MAX_MORPH_TEXELS, format!("more than {MAX_MORPH_TEXELS} blend shape vertices")),
     ];
     match checks.into_iter().find(|(ok, _)| !ok) {
@@ -81,10 +92,16 @@ fn primitive(
     names: &[String],
 ) -> Result<(), String> {
     let at = |key: &str| p.attributes.get(key).copied();
-    let positions = bin.floats(at("POSITION").ok_or("has a primitive without positions")?, 3)?;
-    let n = positions.len() / 3;
-    if rig.vertex_count() + n > MAX_RIG_VERTICES {
+    let position = at("POSITION").ok_or("has a primitive without positions")?;
+    if rig.vertex_count() + bin.count(position)? > MAX_RIG_VERTICES {
         return Err(format!("has more than {MAX_RIG_VERTICES} vertices"));
+    }
+    let positions = bin.floats(position, 3)?;
+    let n = positions.len() / 3;
+    let listed = p.indices.map_or(Ok(n), |a| bin.count(a))?;
+    let corners = if p.mode.unwrap_or(4) == 4 { listed / 3 * 3 } else { listed.saturating_sub(2) * 3 };
+    if rig.indices.len() + corners > MAX_RIG_INDICES {
+        return Err(format!("has more than {MAX_RIG_INDICES} triangle corners"));
     }
     let uvs = at("TEXCOORD_0").map_or(Ok(vec![0.0; n * 2]), |a| bin.floats(a, 2))?;
     let skinned = joints > 0 && at("JOINTS_0").is_some();

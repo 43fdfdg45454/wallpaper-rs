@@ -1,7 +1,7 @@
 use super::{ClipMap, Head, Puppet};
 use crate::resolve::Context;
 use crate::rigged::Rigged;
-use crate::{AnimClip, Course, Loop, MAX_ANIMATION_LAYERS, MAX_FIRED, MeshLayer, VideoCommand, Wake};
+use crate::{AnimClip, Course, Fired, Loop, MAX_ANIMATION_LAYERS, MAX_FIRED, MeshLayer, VideoCommand, Wake};
 
 pub(super) fn map(rig: &Rigged, c: &AnimClip) -> ClipMap {
     let motion = match &c.animation {
@@ -28,7 +28,7 @@ pub(super) fn head(rig: &Rigged, m: &MeshLayer, layer: Option<usize>, clip: Opti
         false => rig.joints.iter().map(|j| bones.contains(&j.name)).collect(),
     };
     let (t, fade, ended, off, held, rate, weight, speed) = (0.0, 0.0, false, false, None, None, None, 1.0);
-    Some(Head { clip, layer, t, fade, ended, off, held, rate, weight, mask, speed })
+    Some(Head { clip, layer, t, fade, ended, off, held, rate, weight, mask, speed, fresh: true })
 }
 
 fn toward(fade: f32, on: bool, dt: f32, (up, down): (f32, f32)) -> f32 {
@@ -41,9 +41,17 @@ fn toward(fade: f32, on: bool, dt: f32, (up, down): (f32, f32)) -> f32 {
 }
 
 impl Puppet {
-    pub(crate) fn step(&mut self, cx: &Context, m: &MeshLayer, dt: f32, ended: &mut Vec<String>) {
+    pub(crate) fn step(
+        &mut self,
+        cx: &Context,
+        m: &MeshLayer,
+        dt: f32,
+        (ended, heard): (&mut Vec<String>, &mut Vec<(Fired, f32)>),
+    ) {
         let mut wake = Wake::Idle;
-        for h in &mut self.heads {
+        for i in 0..self.heads.len() {
+            let first = !self.heads[..i].iter().any(|o| o.clip == self.heads[i].clip);
+            let h = &mut self.heads[i];
             let a = h.layer.map(|i| &m.rig.animations[i]);
             let (clip, map) = (&m.rig.clips[h.clip], &self.clips[h.clip]);
             let on = (h.held == Some(true) || a.is_none_or(|a| a.enabled.get(cx))) && !h.off;
@@ -59,12 +67,21 @@ impl Puppet {
             if !rolls || (h.fade <= 0.0 && was <= 0.0) {
                 continue;
             }
+            let (from, length) = (h.t, f64::from(map.length));
             h.t += f64::from(dt * h.speed);
-            if clip.repeat == Loop::Once && h.t >= f64::from(map.length) {
-                (h.t, h.ended, h.off) = (f64::from(map.length), true, blends.1 > 0.0);
-                if ended.len() < MAX_FIRED {
-                    ended.push(format!("{}#{}", self.layer, clip.id));
-                }
+            let over = clip.repeat == Loop::Once && h.t >= length;
+            if over {
+                (h.t, h.ended, h.off) = (length, true, blends.1 > 0.0);
+            }
+            if dt > 0.0 && first && !clip.events.is_empty() {
+                super::cues::crossed((&self.layer, clip), length, (from, h.t, h.fresh), h.speed, heard);
+                h.fresh = false;
+            }
+            if over && ended.len() < MAX_FIRED {
+                ended.push(format!("{}#{}", self.layer, clip.id));
+            }
+            if clip.repeat != Loop::Once {
+                h.t = h.t.rem_euclid(super::cues::period(clip.repeat, length));
             }
         }
         self.wake = wake;
@@ -80,12 +97,16 @@ impl Puppet {
             for command in commands {
                 match *command {
                     VideoCommand::Play if h.ended => {
-                        (h.t, h.ended, h.off, h.held) = (0.0, false, false, Some(true))
+                        (h.t, h.ended, h.off, h.held, h.fresh) = (0.0, false, false, Some(true), true)
                     }
                     VideoCommand::Play => (h.off, h.held) = (false, Some(true)),
                     VideoCommand::Pause => h.held = Some(false),
-                    VideoCommand::Stop => (h.t, h.ended, h.off, h.held) = (0.0, false, true, Some(false)),
-                    VideoCommand::Seek(s) => (h.t, h.ended) = (f64::from(s).clamp(0.0, length), false),
+                    VideoCommand::Stop => {
+                        (h.t, h.ended, h.off, h.held, h.fresh) = (0.0, false, true, Some(false), true)
+                    }
+                    VideoCommand::Seek(s) => {
+                        (h.t, h.ended, h.fresh) = (f64::from(s).clamp(0.0, length), false, s <= 0.0)
+                    }
                     VideoCommand::Rate(r) => h.rate = Some(r.clamp(0.0, 16.0)),
                     VideoCommand::Weight(w) => h.weight = Some(w.clamp(0.0, 1.0)),
                 }

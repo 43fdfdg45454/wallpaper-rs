@@ -32,12 +32,16 @@ impl Renderer {
         self.skinner.get_or_init(|| super::skinner(&self.device))
     }
 
-    pub(crate) fn fresh_skin(&self, rig: &Rigged, (w, h): (u32, u32)) -> Result<Skin, RenderError> {
+    pub(crate) fn skin_targets(&self, size: (u32, u32)) -> (GpuImage, wgpu::TextureView) {
+        let usage = U::RENDER_ATTACHMENT | U::TEXTURE_BINDING | U::COPY_SRC;
+        let image = gpu_image(create_texture(&self.device, "wprs-render skin", size, FORMAT, usage));
+        let depth = create_texture(&self.device, "wprs-render skin depth", size, DEPTH, U::RENDER_ATTACHMENT);
+        (image, depth.create_view(&Default::default()))
+    }
+
+    pub(crate) fn fresh_skin(&self, rig: &Rigged, size: (u32, u32)) -> Result<Skin, RenderError> {
         self.scoped(|| {
-            let usage = U::RENDER_ATTACHMENT | U::TEXTURE_BINDING | U::COPY_SRC;
-            let image = gpu_image(create_texture(&self.device, "wprs-render skin", (w, h), FORMAT, usage));
-            let depth =
-                create_texture(&self.device, "wprs-render skin depth", (w, h), DEPTH, U::RENDER_ATTACHMENT);
+            let (image, depth) = self.skin_targets(size);
             let fill = |label, bytes: &[u8], usage| {
                 crate::filled::filled((&self.device, &self.queue), label, bytes, usage)
             };
@@ -73,7 +77,7 @@ impl Renderer {
                 generation: 0,
                 relief: None,
                 image,
-                depth: view(&depth),
+                depth,
                 vertices,
                 indices,
                 bones,

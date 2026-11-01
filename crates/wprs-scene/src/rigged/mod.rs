@@ -14,12 +14,14 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub use cut::{Cut, MAX_CELLS, MIN_CELLS};
 pub use motion::{Channel, Interp, Motion, Path};
-pub use sketch::{MAX_SKETCH_BONES, Sketch, SketchBone};
+pub use sketch::{MAX_SKETCH_BONES, MAX_SKETCH_DEPTH, Sketch, SketchBone};
 
 pub const VERTEX_FLOATS: usize = 14;
 pub const MAX_RIG_VERTICES: usize = 65_536;
 pub const MAX_RIG_PALETTE: usize = 256;
 pub const MAX_RIG_PIECES: usize = 64;
+pub const MAX_RIG_NODES: usize = 1024;
+pub const MAX_RIG_INDICES: usize = 1 << 20;
 pub const MORPH_WIDTH: usize = 2048;
 pub const MAX_MORPH_TEXELS: usize = MORPH_WIDTH * 512;
 pub const MAX_RIG_BYTES: usize = 128 << 20;

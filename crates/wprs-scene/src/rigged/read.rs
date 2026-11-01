@@ -48,6 +48,10 @@ impl Bin<'_> {
         Ok(a)
     }
 
+    pub fn count(&self, i: usize) -> Result<usize, String> {
+        Ok(self.accessor(i)?.count)
+    }
+
     pub fn view(&self, i: usize) -> Result<&[u8], String> {
         let v = self.doc.views.get(i).ok_or_else(|| format!("names the missing buffer view {i}"))?;
         let end = v.offset.checked_add(v.length).filter(|_| v.buffer == 0);

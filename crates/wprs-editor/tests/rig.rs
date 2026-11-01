@@ -120,3 +120,35 @@ fn chains_swings_touches_depth_and_attachments_are_set_and_inspected() {
         }
     );
 }
+
+#[test]
+fn a_stroke_raises_the_depth_of_a_mesh_and_undo_lowers_it() {
+    let root = tempfile::tempdir().unwrap();
+    let mut project = project(&root);
+    act(&mut project, json!({ "mesh_from_picture": { "image": "fox", "cells": 8, "id": "net" } })).unwrap();
+    act(&mut project, json!({ "bone": { "layer": "net", "name": "root", "at": [0.2, 0.5] } })).unwrap();
+    let depths = |p: &Project| {
+        let path = p.doc["scene"]["assets"]["net"]["path"].as_str().unwrap().to_owned();
+        let rig = wprs_scene::Rigged::decode(&std::fs::read(p.dir.join(path)).unwrap()).unwrap();
+        rig.vertices.chunks(wprs_scene::VERTEX_FLOATS).map(|v| v[2]).collect::<Vec<f32>>()
+    };
+    let stroke = |by: f32| json!({ "mesh_depth": { "layer": "net", "points": [[0.5, 0.5]], "radius": 0.2, "by": by } });
+    act(&mut project, stroke(30.0)).unwrap();
+    let raised = depths(&project);
+    let top = raised.iter().copied().fold(0.0, f32::max);
+    assert!(top > 20.0 && top <= 30.0, "{top}");
+    assert!(raised.contains(&0.0), "vertices out of the brush keep their depth");
+    assert_eq!(wprs_editor::rigs::rig(&project.dir, &project.doc, "net")["bones"][0]["name"], "root");
+    act(&mut project, stroke(-60.0)).unwrap();
+    assert!(depths(&project).iter().copied().fold(0.0, f32::min) < -20.0);
+    act(&mut project, json!({ "undo": {} })).unwrap();
+    assert_eq!(depths(&project), raised);
+    for bad in [
+        json!({ "mesh_depth": { "layer": "net", "points": [], "radius": 0.2, "by": 10 } }),
+        json!({ "mesh_depth": { "layer": "net", "points": [[0.5, 0.5]], "radius": 0, "by": 10 } }),
+        json!({ "mesh_depth": { "layer": "net", "points": [[0.5, 0.5]], "radius": 0.2, "by": 5000 } }),
+        json!({ "mesh_depth": { "layer": "nothing", "points": [[0.5, 0.5]], "radius": 0.2, "by": 10 } }),
+    ] {
+        assert!(act(&mut project, bad).is_err());
+    }
+}

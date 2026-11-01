@@ -121,6 +121,15 @@ fn bones_need_the_animations_part_and_known_names() {
     assert!(said.contains("uses animations without declaring it"), "{said}");
     assert!(out.rigs.values().all(|r| r.bones.is_empty()));
     let (mut script, _) = rigged(
+        &["layers"],
+        r#"import { scene } from "wprs";
+        export function update() { scene.layer("a").text = scene.layer("fox").bones.join(","); }"#,
+    );
+    let out = script.update(&Frame::at(0.0)).unwrap();
+    assert_eq!(text(&out, "a"), "");
+    let said = [out.console, out.stopped].concat().join(" ");
+    assert!(said.contains("uses animations without declaring it"), "{said}");
+    let (mut script, _) = rigged(
         &["animations", "layers"],
         r#"import { scene } from "wprs";
         let said = "";

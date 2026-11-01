@@ -2,6 +2,7 @@ use super::Rigged;
 use super::math::{apply, mul};
 
 pub const MAX_SKETCH_BONES: usize = 128;
+pub const MAX_SKETCH_DEPTH: f32 = 65_536.0;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SketchBone {
@@ -18,6 +19,7 @@ pub struct Sketch {
     pub bones: Vec<SketchBone>,
     pub weights: Vec<[(u16, f32); 4]>,
     pub shapes: Vec<(String, Vec<[f32; 2]>)>,
+    pub depth: Vec<f32>,
 }
 
 impl Sketch {
@@ -27,6 +29,15 @@ impl Sketch {
 
     pub fn picture(&self, [x, y, _]: [f32; 3]) -> [f32; 2] {
         [x + self.size[0] / 2.0, self.size[1] / 2.0 - y]
+    }
+
+    pub fn raise(&mut self, stroke: &[[f32; 2]], radius: f32, by: f32) {
+        self.depth.resize(self.points.len(), 0.0);
+        let r = radius.max(1e-3);
+        for (p, z) in self.points.iter().zip(&mut self.depth) {
+            let near = stroke.iter().map(|s| (s[0] - p[0]).hypot(s[1] - p[1]) / r).fold(1.0, f32::min);
+            *z = (*z + by * (1.0 - near * near).powi(2)).clamp(-MAX_SKETCH_DEPTH, MAX_SKETCH_DEPTH);
+        }
     }
 
     pub fn bind(&mut self) {
@@ -72,6 +83,7 @@ impl Sketch {
         }
         for v in rig.vertices.chunks(super::VERTEX_FLOATS) {
             sketch.points.push(sketch.picture([v[0], v[1], v[2]]));
+            sketch.depth.push(v[2]);
             let w: [(u16, f32); 4] = std::array::from_fn(|k| (v[5 + k] as u16, v[9 + k]));
             sketch.weights.push(w);
         }

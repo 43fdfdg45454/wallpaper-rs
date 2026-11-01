@@ -1619,8 +1619,10 @@ capas), con una cuadrícula de celdas o siguiendo el contorno de la parte opaca,
 inspector del campo `mesh` los lista, añade y quita, elige el clip que reproduce la vista previa y
 los muestra sobre la vista previa, donde se arrastran; los pesos de los vértices siguen a los huesos
 más cercanos y cada cambio guarda una malla nueva en `meshes/`, de modo que deshacer vuelve a la
-anterior. Desde la terminal hacen lo mismo `wprs-ctl scene mesh-from-picture`, `wprs-ctl scene bone`
-y `wprs-ctl scene bones`. El mismo inspector añade y quita cadenas que alcanzan (el último hueso,
+anterior. Sobre la vista previa también se pinta la profundidad de los vértices, que los acerca o
+aleja del espectador para la perspectiva y para decidir qué tapa a qué. Desde la terminal hacen lo
+mismo `wprs-ctl scene mesh-from-picture`, `wprs-ctl scene bone`, `wprs-ctl scene mesh-depth` y
+`wprs-ctl scene bones`. El mismo inspector añade y quita cadenas que alcanzan (el último hueso,
 cuántos huesos sube y el objetivo), huesos con física (y su modo: muelle, rígido o cuerda), huesos
 que reciben el puntero y la profundidad con su escala y el ocultado de caras traseras; el resto de
 cada campo, como los límites, el peso o el viento, se edita en el inspector general, y desde la

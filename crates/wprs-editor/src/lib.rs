@@ -28,6 +28,7 @@ mod rig;
 pub mod rigs;
 pub mod schema;
 pub mod scripts;
+mod sculpt;
 mod session;
 pub mod settings;
 pub mod shaders;

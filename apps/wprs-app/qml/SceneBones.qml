@@ -50,6 +50,25 @@ Item {
         }
     }
 
+    DragHandler {
+        property var points: []
+
+        target: null
+        enabled: bones.gizmo.page.sculpt !== null
+        onActiveChanged: {
+            if (!active && points.length > 0)
+                bones.gizmo.page.run("mesh_depth", Object.assign({
+                    "layer": bones.gizmo.modelData.id,
+                    "points": points
+                }, bones.gizmo.page.sculpt));
+            points = [];
+        }
+        onCentroidChanged: {
+            if (active && points.length < 1024)
+                points = points.concat([[Math.round(centroid.position.x / bones.width * 1000) / 1000, Math.round(centroid.position.y / bones.height * 1000) / 1000]]);
+        }
+    }
+
     Repeater {
         model: bones.list
 

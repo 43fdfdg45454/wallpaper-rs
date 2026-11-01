@@ -3,7 +3,10 @@ use crate::rigged::{MAX_ACTIVE_SHAPES, Rigged};
 use crate::{Kind, Layer, MeshLayer, Wake};
 use std::sync::Arc;
 
+mod cues;
 mod drive;
+#[cfg(test)]
+mod far;
 mod finish;
 mod heads;
 pub(crate) mod limb;
@@ -48,6 +51,7 @@ pub(crate) struct Head {
     pub weight: Option<f32>,
     pub mask: Vec<bool>,
     pub speed: f32,
+    pub fresh: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -80,6 +84,7 @@ pub struct Puppet {
     pub(crate) chains: Vec<reach::Chain>,
     pub(crate) bodies: Vec<swing::Body>,
     pub(crate) lag: f32,
+    pub(crate) since: f32,
 }
 
 pub(crate) fn mesh(layer: &Layer) -> Option<&MeshLayer> {
@@ -106,10 +111,12 @@ impl Puppet {
         let order = if rules.is_empty() { rig.order.clone() } else { order };
         let n = rig.joints.len();
         let (chains, bodies) = (reach::chains(&rig, m), swing::bodies(&rig, m, &order));
+        let wide = rig.motions.iter().flat_map(|m| &m.channels).map(|c| c.width()).max().unwrap_or(0);
         Some(Puppet {
             chains,
             bodies,
             lag: 0.0,
+            since: 0.0,
             layer: layer.id.clone(),
             clips,
             heads,
@@ -120,7 +127,7 @@ impl Puppet {
             worlds: Vec::with_capacity(n),
             shape: Vec::with_capacity(rig.shapes.len()),
             sorted: Vec::with_capacity(rig.parts.len()),
-            buffer: vec![0.0; rig.shapes.len().max(4)],
+            buffer: vec![0.0; wide.max(rig.shapes.len()).max(4)],
             next: Posed::default(),
             posed: Posed::default(),
             wake: Wake::Frame,

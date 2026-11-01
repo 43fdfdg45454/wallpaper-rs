@@ -1,4 +1,6 @@
+mod caps;
 mod checks;
+mod cues;
 mod decode;
 mod kit;
 mod pin;

@@ -137,7 +137,13 @@ function attachment(id, name) {
 }
 
 export function rigged(h, id) {
-    Object.defineProperty(h, "bones", { enumerable: true, get: () => rigOf(id).bones.map((b) => b.name) });
+    Object.defineProperty(h, "bones", {
+        enumerable: true,
+        get() {
+            need("animations");
+            return rigOf(id).bones.map((b) => b.name);
+        },
+    });
     h.bone = (name) => bone(id, name);
     h.hit = (x, y) => hit(id, number("x")(x), number("y")(y));
     h.attachment = (name) => attachment(id, name);

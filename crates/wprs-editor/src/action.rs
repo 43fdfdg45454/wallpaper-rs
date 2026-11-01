@@ -188,6 +188,12 @@ pub enum Action {
         #[serde(default)]
         remove: bool,
     },
+    MeshDepth {
+        layer: String,
+        points: Vec<[f32; 2]>,
+        radius: f32,
+        by: f32,
+    },
     Undo {},
     Redo {},
 }

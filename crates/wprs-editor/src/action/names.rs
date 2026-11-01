@@ -1,4 +1,4 @@
-pub const ACTIONS: [&str; 31] = [
+pub const ACTIONS: [&str; 32] = [
     "set",
     "add",
     "remove",
@@ -28,6 +28,7 @@ pub const ACTIONS: [&str; 31] = [
     "paint_mask",
     "mesh_from_picture",
     "bone",
+    "mesh_depth",
     "undo",
     "redo",
 ];

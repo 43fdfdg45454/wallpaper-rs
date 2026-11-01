@@ -28,7 +28,11 @@ impl Sketch {
     pub fn glb(&self) -> Vec<u8> {
         let mut out = Out { bin: Vec::new(), views: Vec::new(), accessors: Vec::new() };
         let n = self.points.len();
-        let positions: Vec<[f32; 3]> = self.points.iter().map(|p| self.mesh(*p)).collect();
+        let lifted = |(k, p): (usize, &[f32; 2])| {
+            let [x, y, _] = self.mesh(*p);
+            [x, y, self.depth.get(k).copied().unwrap_or(0.0)]
+        };
+        let positions: Vec<[f32; 3]> = self.points.iter().enumerate().map(lifted).collect();
         let (lo, hi) = positions.iter().fold(([f32::MAX; 3], [f32::MIN; 3]), |(lo, hi), p| {
             (std::array::from_fn(|i| lo[i].min(p[i])), std::array::from_fn(|i| hi[i].max(p[i])))
         });
