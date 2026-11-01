@@ -1522,6 +1522,12 @@ otra página no cierra un editor con cambios sin guardar.
   para traducirlas. Debajo, la consola de los scripts muestra las últimas 50 líneas que
   escribieron en la vista previa (`wprs-ctl state` las da en `console` de la salida `preview:`).
 
+El editor de escenas pinta también las máscaras de los efectos que las piden por canal: junto a
+cada parámetro de máscara hay un botón para pintar, el canal (rojo, verde, azul o alfa), un modo
+para borrar y el tamaño del pincel, y cada trazo sobre la capa en la vista previa se guarda como una
+imagen nueva en `masks/`, de modo que deshacer vuelve a la anterior (`wprs-ctl scene paint-mask`
+hace lo mismo desde la terminal).
+
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado
 se copia cada 30 segundos y al cerrar en `~/.local/state/wallpaper-rs/editor/`, que solo puede leer

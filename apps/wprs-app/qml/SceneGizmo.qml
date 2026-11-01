@@ -18,6 +18,7 @@ Item {
     }
     readonly property bool chosen: page.editor.selected === modelData.pointer
     readonly property bool movable: chosen && !modelData.locked
+    readonly property bool brushing: (page.brush?.pointer ?? "").startsWith(modelData.pointer + "/effects/")
     readonly property var center: [modelData.offset[0] + modelData.position[0], modelData.offset[1] + modelData.position[1]]
     readonly property string base: modelData.pointer + "/transform"
     property var grabbed: null
@@ -64,8 +65,26 @@ Item {
     }
 
     DragHandler {
+        property var points: []
+
         target: null
-        enabled: !gizmo.modelData.locked
+        enabled: gizmo.brushing
+        onActiveChanged: {
+            if (!active && points.length > 0)
+                gizmo.page.run("paint_mask", Object.assign({
+                    "points": points
+                }, gizmo.page.brush));
+            points = [];
+        }
+        onCentroidChanged: {
+            if (active)
+                points = points.concat([[centroid.position.x / gizmo.width, centroid.position.y / gizmo.height]]);
+        }
+    }
+
+    DragHandler {
+        target: null
+        enabled: !gizmo.modelData.locked && !gizmo.brushing
         acceptedModifiers: Qt.NoModifier
         onActiveChanged: {
             gizmo.page.moving = active;

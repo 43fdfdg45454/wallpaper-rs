@@ -22,7 +22,8 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
         ParamKind::Vec2 | ParamKind::Position => ("vec2", None),
         ParamKind::Color => ("color", None),
         ParamKind::Bool => ("bool", None),
-        ParamKind::Texture | ParamKind::Mask => ("ref:image", Some("image")),
+        ParamKind::Texture => ("ref:image", Some("image")),
+        ParamKind::Mask => ("ref:mask", Some("image")),
         ParamKind::Lut => ("ref:lut", Some("lut")),
         ParamKind::Int => ("integer", None),
         ParamKind::Enum | ParamKind::Blend => ("enum", None),
@@ -53,6 +54,11 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
         depth,
         names,
         title: local(&p.label),
+        sample: if p.kind == ParamKind::Mask {
+            json!({ "channels": p.channels.unwrap_or(1) })
+        } else {
+            Value::Null
+        },
         help: local(&p.help),
         ..Field::default()
     }

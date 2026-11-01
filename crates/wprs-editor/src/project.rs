@@ -112,19 +112,10 @@ impl Project {
             Action::Redo {} => {
                 return Ok(self.history.redo(&mut self.doc)?.map(|(_, o)| o).unwrap_or_default());
             }
-            Action::Import { file, id } => {
-                let (id, path) = crate::assets::import(&self.dir, &self.doc, file, id.as_deref())?;
-                crate::assets::adopt(&self.doc, &id, &path)?
-            }
-            Action::ImportEffect { descriptor, wgsl } => {
-                crate::shaders::import(&self.dir, &self.doc, descriptor, wgsl.as_deref())?
-            }
-            Action::ImportScript { file } => crate::scripts::import(&self.dir, &self.doc, file)?,
-            Action::Thumbnail { file, animated } => {
-                let path = crate::previews::store(&self.dir, &self.doc, file, *animated)?;
-                crate::previews::adopt(&self.doc, *animated, &path)?
-            }
-            action => plan(&self.doc, action)?,
+            action => match crate::files::act(&self.dir, &self.doc, action) {
+                Some(ops) => ops?,
+                None => plan(&self.doc, action)?,
+            },
         };
         self.commit(&action.name(), ops, gesture)
     }

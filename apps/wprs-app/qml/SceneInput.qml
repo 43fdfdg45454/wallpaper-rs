@@ -120,6 +120,7 @@ ColumnLayout {
                 "stops": pairsEditor,
                 "points": pairsEditor,
                 "list": editors.list,
+                "ref:mask": editors.mask,
                 "texts": textsEditor,
                 "markup": textsEditor,
                 "flags": metaEditor,

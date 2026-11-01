@@ -782,17 +782,20 @@ msgstr ""
 msgid "All channels"
 msgstr "Todos los canales"
 
-#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/SceneMask.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Red"
 msgstr "Rojo"
 
-#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/SceneMask.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Green"
 msgstr "Verde"
 
-#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/SceneMask.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Blue"
 msgstr "Azul"
@@ -1132,7 +1135,7 @@ msgstr "Lo más lejano"
 msgid "Nearest"
 msgstr "Lo más cercano"
 
-#: apps/wprs-app/qml/EditMasks.qml
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneMask.qml
 msgid "Brush size"
 msgstr "Tamaño del pincel"
 
@@ -1176,7 +1179,7 @@ msgstr "Pon nombre a la máscara y pinta sobre la imagen."
 msgid "Paint on the picture; each stroke is one step to undo."
 msgstr "Pinta sobre la imagen; cada trazo es un paso que se puede deshacer."
 
-#: apps/wprs-app/qml/EditMasks.qml
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneMask.qml
 msgid "Erase"
 msgstr "Borrar"
 
@@ -2350,6 +2353,7 @@ msgstr ""
 "quitarlo. A lo ancho va la vida de la partícula y hacia arriba su valor."
 
 #: apps/wprs-app/qml/SceneEditors.qml apps/wprs-app/qml/SceneInput.qml
+#: apps/wprs-app/qml/SceneMask.qml
 msgid "Not set"
 msgstr "Sin fijar"
 
@@ -2480,6 +2484,19 @@ msgstr "Bajar"
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Move out of the group"
 msgstr "Sacar del grupo"
+
+#: apps/wprs-app/qml/SceneMask.qml
+msgid "Paint"
+msgstr "Pintar"
+
+#: apps/wprs-app/qml/SceneMask.qml apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Alpha"
+msgstr "Alfa"
+
+#: apps/wprs-app/qml/SceneMask.qml
+msgid "Paint on the layer in the preview; each stroke is one step to undo."
+msgstr "Pinta sobre la capa en la vista previa; cada trazo es un paso que se puede deshacer."
 
 #: apps/wprs-app/qml/SceneMeta.qml
 msgid "One per line"
@@ -5685,11 +5702,6 @@ msgstr "Plano"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "3D"
 msgstr "3D"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Alpha"
-msgstr "Alfa"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "ACES"

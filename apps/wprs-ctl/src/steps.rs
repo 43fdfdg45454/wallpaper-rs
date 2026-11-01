@@ -86,6 +86,16 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
         Author::ImportScript { dir, file } => {
             (dir, Action::ImportScript { file: fs::canonicalize(&file).unwrap_or(file) })
         }
+        Author::PaintMask { dir, pointer, points, channel, radius, hardness, value } => {
+            let pair = |p: &str| {
+                p.split_once(',').and_then(|(x, y)| Some([x.trim().parse().ok()?, y.trim().parse().ok()?]))
+            };
+            let points =
+                points.split(';').filter(|p| !p.trim().is_empty()).map(pair).collect::<Option<Vec<_>>>();
+            let points = points.unwrap_or_default();
+            let channel = channel.and_then(|c| ["r", "g", "b", "a"].iter().position(|n| *n == c));
+            (dir, Action::PaintMask { pointer, channel, radius, hardness, value, points })
+        }
         Author::Translate { dir, pointer, language, text, add, .. } => {
             (dir, Action::Translate { pointer, language, text, add })
         }

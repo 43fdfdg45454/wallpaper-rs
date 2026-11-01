@@ -3,6 +3,10 @@ use serde_json::Value;
 use std::path::PathBuf;
 use wprs_format::{Descriptor, Rating};
 
+mod names;
+
+pub use names::ACTIONS;
+
 pub const EDITOR: &str = "/scene/ext/editor";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -153,40 +157,20 @@ pub enum Action {
         #[serde(default)]
         label: Option<String>,
     },
+    PaintMask {
+        pointer: String,
+        #[serde(default)]
+        channel: Option<usize>,
+        radius: f32,
+        #[serde(default = "half")]
+        hardness: f32,
+        #[serde(default = "whole")]
+        value: f32,
+        points: Vec<[f32; 2]>,
+    },
     Undo {},
     Redo {},
 }
-
-pub const ACTIONS: [&str; 28] = [
-    "set",
-    "add",
-    "remove",
-    "move",
-    "add_layer",
-    "remove_layer",
-    "duplicate_layer",
-    "move_layer",
-    "group",
-    "ungroup",
-    "hide",
-    "lock",
-    "solo",
-    "keyframe",
-    "import",
-    "import_effect",
-    "import_script",
-    "translate",
-    "thumbnail",
-    "upgrade",
-    "add_property",
-    "move_property",
-    "rename_property",
-    "remove_property",
-    "condition",
-    "add_preset",
-    "undo",
-    "redo",
-];
 
 impl Action {
     pub fn name(&self) -> String {
@@ -195,4 +179,12 @@ impl Action {
             .and_then(|v| v.as_object()?.keys().next().cloned())
             .unwrap_or_default()
     }
+}
+
+fn half() -> f32 {
+    0.5
+}
+
+fn whole() -> f32 {
+    1.0
 }

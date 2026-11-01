@@ -110,6 +110,25 @@ pub enum Author {
         file: PathBuf,
     },
     #[command(
+        about = "Paint a stroke into the picture of a mask parameter of an effect, on one channel or on all colors, kept as a new linear picture in masks/ so that undo returns to the previous one"
+    )]
+    PaintMask {
+        #[arg(help = DIR)]
+        dir: PathBuf,
+        #[arg(help = "JSON Pointer to the parameter, such as /scene/layers/0/effects/0/params/regions")]
+        pointer: String,
+        #[arg(help = "The stroke as fractions of the layer, X,Y;X,Y;...")]
+        points: String,
+        #[arg(long, value_parser = ["r", "g", "b", "a"], help = "Channel to paint; all colors when omitted")]
+        channel: Option<String>,
+        #[arg(long, default_value_t = 0.05, help = "Radius of the brush, a fraction of the shorter side")]
+        radius: f32,
+        #[arg(long, default_value_t = 0.5, help = "Hardness of the edge of the brush, from 0 to 1")]
+        hardness: f32,
+        #[arg(long, default_value_t = 1.0, help = "Value painted, from 0 (erases) to 1")]
+        value: f32,
+    },
+    #[command(
         about = "Set the text of a title, description, change notes, label or option in one language; an empty language sets the plain text"
     )]
     Translate {

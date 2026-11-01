@@ -833,7 +833,7 @@ drawn once a frame however many effects read it, and a change to it, hidden or n
 reads in turn, redraws the layers that read it.
 
 The contract is the prelude above plus `aux4` to `aux7` (eight auxiliary textures in all), `mask_rgb(i, uv)` (every
-channel of `aux<i>` placed on the layer, for `mask` parameters painted per channel), `PI`,
+channel of `aux<i>` placed on the layer, for `mask` parameters, which the scene editor paints one channel at a time), `PI`,
 `tex_size(i)` (size in pixels of `aux<i>`), `daytime()` (0 at midnight to 1, in steps of a
 minute), `parallax()` (the current parallax shift, before each layer's own depth), `cursor_last()`
 (the pointer one frame earlier, in fractions of the output), `grid_uv(i)` (the corner of the grid

@@ -492,6 +492,14 @@ msgstr "%1 no es un paquete de escena"
 msgid "there is no data folder"
 msgstr "no hay carpeta de datos"
 
+#: crates/wprs-editor/src/paint.rs
+msgid "masks are painted on a parameter of an effect"
+msgstr "las máscaras se pintan en un parámetro de un efecto"
+
+#: crates/wprs-editor/src/paint.rs
+msgid "a stroke has 1 to %1 points and a channel from 0 to 3"
+msgstr "un trazo tiene de 1 a %1 puntos y un canal de 0 a 3"
+
 #: crates/wprs-editor/src/previews.rs
 msgid "the picture does not fit in 1 MiB even as a jpeg of 512 pixels"
 msgstr "la imagen no cabe en 1 MiB ni como jpeg de 512 píxeles"
