@@ -1100,7 +1100,8 @@ un hueso, otra capa o el puntero (este solo con el permiso del puntero, que la a
 cualquier otro uso del puntero), exactas para dos huesos y por rondas para cadenas más largas, con
 límites por hueso, peso y sentido del codo. La física de huesos simula muelles, péndulos y cuerdas a
 un paso fijo de 1/60 s (1/30 s con batería y como mucho 15 pasos por fotograma), con inercia,
-amortiguación, gravedad, límites de giro y de estiramiento y el viento de `canvas.wind` con ráfagas;
+amortiguación, gravedad, límites de giro y de estiramiento y el viento de `canvas.wind` con ráfagas
+(`canvas.gusts`, de 0 a 1);
 un cuerpo quieto medio segundo deja de pedir fotogramas y en la calidad más baja los huesos se
 quedan en la pose de la animación. Con `depth` la profundidad de los vértices se proyecta con la
 perspectiva de `canvas.perspective` (también bajo la inclinación de la capa) y las caras vistas por
@@ -1636,17 +1637,39 @@ claves se arrastran (con Ctrl se copian), se borran y se les da paso, línea o c
 vista previa el hueso elegido tiene asas para moverlo, girarlo y escalarlo en ese instante, y
 *Clave* guarda su pose en las claves del clip del JSON de la escena, las mismas que reproduce el
 motor. Las formas de mezcla tienen deslizadores que solo cambian la vista previa, y con ellos se
-crean, cambian, renombran y quitan expresiones. El mismo inspector añade y quita cadenas que
-alcanzan (el último hueso, cuántos huesos sube y el objetivo), huesos con física (y su modo: muelle,
-rígido o cuerda), huesos que reciben el puntero y la profundidad con su escala y el ocultado de caras
-traseras; el resto de cada campo, como los límites, el peso o el viento, se edita en el inspector
-general, y desde la terminal todo ello con `wprs-ctl scene set`.
+crean, cambian, renombran y quitan expresiones.
+
+El mismo inspector tiene herramientas sobre la vista previa para el resto del personaje. *Crear una
+cadena en la vista previa* pide un clic en el hueso donde empieza y otro en el hueso donde termina;
+cada cadena elige qué alcanza (el puntero, un punto, un hueso o un punto de la malla, u otra capa),
+se dobla hacia el otro lado, tiene peso y límites por hueso. El objetivo de punto es un anillo que se
+arrastra y cada límite es un arco alrededor del hueso con dos puntos que fijan su ángulo mínimo y
+máximo. Los huesos que se balancean se eligen con un clic sobre la vista previa, con su modo y
+deslizadores de rigidez, amortiguación, inercia, gravedad (que se ve como una flecha) y viento;
+*Dibujar una cuerda* crea, a lo largo del trazo, hasta 9 huesos nuevos encadenados que cuelgan del
+hueso elegido y se balancean como cuerda, y *Simular* y *Reiniciar* hacen correr la física en la
+vista previa o la devuelven a la pose de reposo. El viento de `canvas.wind` es una flecha que se
+arrastra desde el centro del lienzo, con su ángulo, su fuerza y sus ráfagas (`canvas.gusts`). Para
+sujetar capas, se arrastra una capa sobre un hueso, o sobre la malla para crear allí un punto nuevo
+(un nodo sin malla del archivo, colgado del hueso que manda en ese lugar), eligiendo si sigue la
+posición, el giro y la escala, y una línea une cada capa sujeta con su hueso o punto. Las partes se
+ordenan arrastrándolas en una lista de atrás hacia delante, se ocultan y se recortan para verse solo
+sobre otra parte, cuyo contorno se marca en la vista previa. En el inspector general, todo campo que
+nombra un hueso, un punto, una parte o una forma de mezcla (cadenas, objetivos y límites, física,
+reglas, máscaras de huesos de las capas de animación, `hit`, `attach` y `parts`) ofrece los de la
+malla en una lista.
 
 Desde la terminal hacen lo mismo `wprs-ctl scene mesh-from-picture`, `bone` (con `--rename`,
 `--root` y `--remove`), `mesh-depth`, `weights` (pincel de pesos con `--mode`, `--by`, `--radius`,
 `--falloff` y `--lock`), `auto-weights`, `clip` (con `--add`, `--remove`, `--rename`, `--length` y `--loop`), `key` (claves
-de huesos, formas y orden, con `--ease`, `--remove`, `--from` y `--copy`) y `expression`; `bones`,
-`vertex-weights` y `keys` imprimen los huesos, los pesos de cada vértice y las claves de un clip.
+de huesos, formas y orden, con `--ease`, `--remove`, `--from` y `--copy`), `expression`, `ik` (`add
+RAÍZ PUNTA`, `set N` y `remove N`, con `--target`, `--limit HUESO MÍN MÁX`, `--bend` y `--weight`),
+`physics` (`add HUESO...` con `--mode`, `--stiffness`, `--damping`, `--inertia`, `--gravity`,
+`--wind`, `--rotation` y `--translation`; `rope NOMBRE X,Y;X,Y;...` con `--parent`; `remove
+HUESO...`), `wind` (`--angle`, `--strength`, `--noise` y `--off`), `attach` (`--to`, `--bone`,
+`--point X,Y` o un nodo, `--offset`, `--inherit` y `--detach`) y `parts` (`--order`, `--hide`,
+`--show`, `--clip` y `--unclip`); `bones`, `vertex-weights` y `keys` imprimen los huesos y puntos,
+los pesos de cada vértice y las claves de un clip.
 
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado

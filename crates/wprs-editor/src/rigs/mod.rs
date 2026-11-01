@@ -2,11 +2,18 @@ use crate::skin::Skin;
 use serde_json::{Value, json};
 use std::path::Path;
 
+mod handles;
 mod heat;
+mod known;
+mod outline;
 mod pose;
 mod rows;
 
+pub(crate) use handles::rest_end;
+pub use handles::{handles, wind_arrow};
 pub use heat::{heat, heat_color, hue, vertices};
+pub use known::known;
+pub use outline::outline;
 pub use pose::pose;
 pub use rows::keys;
 
@@ -18,7 +25,7 @@ pub fn rig(dir: &Path, doc: &Value, id: &str) -> Value {
     let Ok((_, layer)) = crate::actions::layer(doc, id) else { return Value::Null };
     let clips: Vec<&Value> = layer["clips"].as_array().into_iter().flatten().map(|c| &c["id"]).collect();
     let expressions = layer.get("expressions").cloned().unwrap_or(json!({}));
-    let mut out = json!({ "clips": clips, "bones": [], "parts": [], "shapes": [], "defaults": [],
+    let mut out = json!({ "clips": clips, "bones": [], "points": [], "parts": [], "shapes": [], "defaults": [],
         "expressions": expressions, "animations": [], "editable": false, "auto": false });
     let Ok((_, _, rig)) = crate::skin::rigged(dir, doc, layer) else { return out };
     out["parts"] = json!(rig.parts);
@@ -35,12 +42,20 @@ pub fn rig(dir: &Path, doc: &Value, id: &str) -> Value {
                 json!({ "name": skin.names[*b], "parent": parent, "at": at })
             });
             out["bones"] = json!(bones.collect::<Vec<_>>());
+            let points = (0..skin.names.len()).filter(|n| !skin.bones.contains(n)).map(|n| {
+                let at = skin.picture(skin.head(&worlds, n)).map(round);
+                json!({ "name": skin.names[n], "at": at, "part": !skin.is_point(n) })
+            });
+            out["points"] = json!(points.collect::<Vec<_>>());
             (out["editable"], out["auto"]) = (json!(true), json!(skin.auto));
         }
         Err(_) => {
             let skin = rig.palette.iter().map(|(n, _)| &rig.joints[*n as usize]);
             let names = skin.map(|j| json!({ "name": j.name, "parent": j.parent.map(|p| rig.joints[p as usize].name.clone()) }));
             out["bones"] = json!(names.collect::<Vec<_>>());
+            let loose = (0..rig.joints.len()).filter(|n| rig.palette.iter().all(|(j, _)| *j as usize != *n));
+            let points = loose.map(|n| json!({ "name": rig.joints[n].name, "part": true }));
+            out["points"] = json!(points.collect::<Vec<_>>());
         }
     }
     out
@@ -51,6 +66,9 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         _ if q.get("weights").is_some() => heat(dir, doc, id, q["weights"].as_str()),
         _ if q.get("pose").is_some() => pose(dir, doc, id, &q["pose"]),
         _ if q.get("keys").is_some() => keys(dir, doc, id, q["keys"].as_str().unwrap_or_default()),
+        _ if q.get("handles").is_some() => handles(dir, doc, id),
+        _ if q.get("outline").is_some() => outline(dir, doc, id),
+        _ if q.get("wind").is_some() => wind_arrow(doc),
         _ => rig(dir, doc, id),
     }
 }
@@ -70,6 +88,11 @@ pub fn preview(scene: &mut Value, look: &Value) {
     }
     let found = scene.get_mut("layers").and_then(|list| find(list, id));
     let Some(layer) = found.filter(|l| l["type"] == "mesh") else { return };
+    if look["still"] == true
+        && let Some(map) = layer.as_object_mut()
+    {
+        map.remove("physics");
+    }
     if let Some(clip) = look["clip"].as_str() {
         layer["animations"] = json!([{ "clip": clip }]);
     }

@@ -9,7 +9,7 @@ Item {
     readonly property var mesh: gizmo.page.mesh
     readonly property string layerId: gizmo.modelData.id
     readonly property bool posing: mesh.posing(layerId)
-    readonly property bool placing: mesh.rigging === layerId && mesh.sculpt === null && mesh.weighing === null
+    readonly property bool placing: mesh.rigging === layerId && mesh.sculpt === null && mesh.weighing === null && mesh.mode === ""
     property var rig: ({
             "bones": []
         })
@@ -91,6 +91,14 @@ Item {
         }
     }
 
+    SceneLimbs {
+        id: limbs
+
+        anchors.fill: parent
+        host: bones
+        visible: !bones.posing
+    }
+
     Repeater {
         model: bones.posing ? [] : bones.list
 
@@ -115,7 +123,7 @@ Item {
             }
 
             TapHandler {
-                onTapped: bones.mesh.bone = knob.modelData.name
+                onTapped: limbs.tapped(knob.modelData.name)
             }
 
             DragHandler {

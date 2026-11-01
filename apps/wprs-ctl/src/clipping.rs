@@ -101,6 +101,8 @@ pub enum Clipping {
         #[arg(long, help = "Remove the expression")]
         remove: bool,
     },
+    #[command(flatten)]
+    Limbing(crate::limbing::Limbing),
 }
 
 pub(crate) fn action(command: Clipping) -> Result<(PathBuf, Action), Box<Author>> {
@@ -159,6 +161,7 @@ pub(crate) fn action(command: Clipping) -> Result<(PathBuf, Action), Box<Author>
             let shapes = parsed.collect::<Option<_>>().unwrap_or_default();
             (dir, Action::Expression(ExpressionEdit { layer, name, shapes, remove, to }))
         }
+        Clipping::Limbing(command) => return crate::limbing::action(command),
         other => return Err(Box::new(Author::Clipping(other))),
     })
 }

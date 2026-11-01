@@ -129,7 +129,7 @@ ColumnLayout {
                 "computed": metaEditor,
                 "ref:thumbnail": metaEditor,
                 "ref:animated": metaEditor
-            })[input.field.widget] ?? (input.field.widget.startsWith("ref:") ? choiceEditor : editors.raw)
+            })[input.field.widget] ?? (/^(refs|map):|^ref:reach$/.test(input.field.widget) ? editors.refs : input.field.widget.startsWith("ref:") ? choiceEditor : editors.raw)
     }
 
     Component {

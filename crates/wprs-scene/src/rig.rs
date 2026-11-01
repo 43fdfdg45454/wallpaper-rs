@@ -29,10 +29,12 @@ pub struct Rig {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub rules: Vec<BoneRule>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    #[schemars(extend("x-ref" = "shape"))]
     pub shapes: BTreeMap<String, Value<f32>>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub expressions: BTreeMap<String, BTreeMap<String, f32>>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[schemars(extend("x-ref" = "bone"))]
     pub hit: Vec<String>,
 }
 
@@ -53,6 +55,7 @@ pub struct AnimClip {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub events: Vec<Event>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    #[schemars(extend("x-ref" = "bone"))]
     pub bones: BTreeMap<String, BoneKeys>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub shapes: BTreeMap<String, Vec<crate::Key<f32>>>,
@@ -82,6 +85,7 @@ pub struct AnimLayer {
     #[serde(default = "crate::content::shown")]
     pub enabled: Value<bool>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schemars(extend("x-ref" = "bone"))]
     pub bones: Vec<String>,
 }
 
@@ -104,10 +108,12 @@ pub enum Bend {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct IkChain {
+    #[schemars(extend("x-ref" = "bone"))]
     pub chain: Vec<String>,
+    #[schemars(extend("x-ref" = "reach"))]
     pub target: Reach,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    #[schemars(extend("x-unit" = "°"))]
+    #[schemars(extend("x-unit" = "°", "x-ref" = "bone"))]
     pub limits: BTreeMap<String, [f32; 2]>,
     #[serde(default = "one")]
     #[schemars(extend("x-range" = [0, 1]))]
@@ -128,6 +134,7 @@ pub enum Body {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BonePhysics {
+    #[schemars(extend("x-ref" = "bone"))]
     pub bone: String,
     #[serde(default)]
     pub mode: Body,
@@ -157,7 +164,9 @@ pub struct BonePhysics {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BoneRule {
+    #[schemars(extend("x-ref" = "bone"))]
     pub bone: String,
+    #[schemars(extend("x-ref" = "bone"))]
     pub parent: String,
     #[schemars(extend("x-range" = [0, 1]))]
     pub weight: Value<f32>,

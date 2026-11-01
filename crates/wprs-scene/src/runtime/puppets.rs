@@ -42,7 +42,8 @@ impl Runtime {
             let cx = Context { view: self.viewed.get(), camera, ..cx };
             let [x, y] = wind.map_or([0.0; 2], |w| w.get(&cx).0);
             let h = if self.battery { 1.0 / 30.0 } else { 1.0 / 60.0 };
-            let sim = Sim { frozen: self.level == Quality::Q0, h, wind: [x, -y], t: self.t as f32 };
+            let gust = self.scene.canvas.gusts.map_or([0.65, 0.35], |g| [1.0 - g, g]);
+            let sim = Sim { frozen: self.level == Quality::Q0, h, wind: [x, -y], gust, t: self.t as f32 };
             let pointer = self.pointer.pos.filter(|_| self.uses().cursor);
             for (i, p) in puppets.iter_mut().enumerate() {
                 let shown = i >= 64 || seen & (1 << i) != 0;

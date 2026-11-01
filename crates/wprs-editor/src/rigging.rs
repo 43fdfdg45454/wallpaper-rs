@@ -48,6 +48,11 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::Clip(c) => crate::clips::clip(dir, doc, c),
         Action::Key(k) => crate::clips::key(dir, doc, k),
         Action::Expression(e) => crate::shapes::expression(dir, doc, e),
+        Action::Ik(k) => crate::limbs::ik(dir, doc, k),
+        Action::Physics(b) => crate::bodies::physics(dir, doc, b),
+        Action::Wind(w) => crate::limbs::wind(doc, w),
+        Action::Attach(a) => crate::attach::attach(dir, doc, a),
+        Action::Parts(p) => crate::cutouts::parts(dir, doc, p),
         _ => return None,
     })
 }

@@ -5,10 +5,12 @@ use crate::schema::{MANIFEST, PROPERTY, at, choose, deref, root_of};
 use serde::Serialize;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
+use std::path::Path;
 use std::sync::Arc;
 use wprs_scene::{Descriptor, builtin};
 
 mod branches;
+mod rigrefs;
 mod walk;
 
 use walk::Walk;
@@ -69,7 +71,11 @@ pub fn fields_at(doc: &Value, pointer: &str, time: f64) -> Vec<Field> {
 }
 
 pub fn fields_with(doc: &Value, pointer: &str, time: f64, own: &Own) -> Vec<Field> {
-    let mut out = fields_own(doc, pointer, own);
+    fields_from(None, doc, pointer, time, own)
+}
+
+pub fn fields_from(dir: Option<&Path>, doc: &Value, pointer: &str, time: f64, own: &Own) -> Vec<Field> {
+    let mut out = fields_in(dir, doc, pointer, own);
     for f in &mut out {
         f.shown = match f.source.as_str() {
             "keys" => value_at(&f.value, time),
@@ -86,6 +92,10 @@ pub fn fields(doc: &Value, pointer: &str) -> Vec<Field> {
 }
 
 pub fn fields_own(doc: &Value, pointer: &str, own: &Own) -> Vec<Field> {
+    fields_in(None, doc, pointer, own)
+}
+
+pub fn fields_in(dir: Option<&Path>, doc: &Value, pointer: &str, own: &Own) -> Vec<Field> {
     let (Some((root, _)), Some(schema)) = (root_of(pointer), at(doc, pointer)) else { return Vec::new() };
     let value = doc.pointer(pointer).cloned().unwrap_or_default();
     let top = hidden(doc);
@@ -95,7 +105,7 @@ pub fn fields_own(doc: &Value, pointer: &str, own: &Own) -> Vec<Field> {
         _ if std::ptr::eq(root, &*PROPERTY) => (&HIDDEN, crate::settings::ORDER),
         _ => (&HIDDEN, ""),
     };
-    let mut walk = Walk { doc, own, root, hidden, order, out: Vec::new() };
+    let mut walk = Walk { dir, doc, own, root, hidden, order, out: Vec::new() };
     let (mut resolved, _) = deref(root, &schema);
     if value.is_object() && !resolved["properties"].is_object() && resolved.get("oneOf").is_none() {
         resolved = deref(root, choose(root, resolved, &value)).0;

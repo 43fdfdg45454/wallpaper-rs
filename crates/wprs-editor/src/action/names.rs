@@ -1,4 +1,4 @@
-pub const ACTIONS: [&str; 37] = [
+pub const ACTIONS: [&str; 42] = [
     "set",
     "add",
     "remove",
@@ -34,6 +34,11 @@ pub const ACTIONS: [&str; 37] = [
     "clip",
     "key",
     "expression",
+    "ik",
+    "physics",
+    "wind",
+    "attach",
+    "parts",
     "undo",
     "redo",
 ];

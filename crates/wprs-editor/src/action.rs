@@ -3,9 +3,11 @@ use serde_json::Value;
 use std::path::PathBuf;
 use wprs_format::{Descriptor, Rating};
 
+mod limbs;
 mod names;
 mod rigging;
 
+pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, Spot, WindEdit};
 pub use names::ACTIONS;
 use names::{half, whole};
 pub use rigging::{
@@ -181,6 +183,11 @@ pub enum Action {
     Clip(ClipEdit),
     Key(ClipKey),
     Expression(ExpressionEdit),
+    Ik(IkEdit),
+    Physics(BodyEdit),
+    Wind(WindEdit),
+    Attach(AttachEdit),
+    Parts(PartsEdit),
     Undo {},
     Redo {},
 }

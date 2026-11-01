@@ -23,6 +23,7 @@ pub struct MeshLayer {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Value<Color>>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    #[schemars(extend("x-ref" = "part"))]
     pub parts: BTreeMap<String, MeshPart>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub depth: Option<MeshDepth>,
@@ -37,6 +38,7 @@ pub struct MeshPart {
     #[schemars(extend("x-range" = [-1000, 1000]))]
     pub order: Option<Value<f32>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "part"))]
     pub clip_to: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub visible: Option<Value<bool>>,
@@ -146,8 +148,10 @@ pub struct Attach {
     #[schemars(extend("x-ref" = "layer"))]
     pub layer: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "bone"))]
     pub bone: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "point"))]
     pub point: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-unit" = "px"))]

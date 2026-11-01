@@ -1,5 +1,10 @@
 mod clips;
+mod cutouts;
 mod kit;
+mod limbs;
 mod parts;
+mod pins;
+mod refs;
 mod shapes;
+mod swing;
 mod weights;

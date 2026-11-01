@@ -33,6 +33,10 @@ impl Check<'_> {
             self.uses(true, "bone_physics");
             self.value("/canvas/wind", wind);
         }
+        if let Some(g) = scene.canvas.gusts {
+            self.uses(true, "bone_physics");
+            self.range("/canvas/gusts", g, 0.0, 1.0);
+        }
         let Some(cam) = &scene.camera3d else { return };
         self.uses(true, "camera3d");
         self.number("/camera3d/fov", &cam.fov, 1.0, 179.0);

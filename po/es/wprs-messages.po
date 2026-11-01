@@ -289,6 +289,82 @@ msgstr "assets/ tiene demasiados archivos llamados %1"
 msgid "the asset %1 exists"
 msgstr "el recurso %1 ya existe"
 
+#: crates/wprs-editor/src/attach.rs
+msgid "a point is placed in fractions of the layer"
+msgstr "un punto se coloca en fracciones de la capa"
+
+#: crates/wprs-editor/src/attach.rs
+msgid "the layer follows no bone"
+msgstr "la capa no sigue ningún hueso"
+
+#: crates/wprs-editor/src/attach.rs
+msgid "say which mesh layer it follows"
+msgstr "indica qué capa de malla sigue"
+
+#: crates/wprs-editor/src/attach.rs
+msgid "a layer cannot follow itself, through other layers either"
+msgstr "una capa no puede seguirse a sí misma, tampoco a través de otras capas"
+
+#: crates/wprs-editor/src/attach.rs
+msgid "a layer follows a bone or point of a mesh or model layer"
+msgstr "una capa sigue un hueso o un punto de una capa de malla o de modelo"
+
+#: crates/wprs-editor/src/attach.rs
+msgid "a layer follows a bone or a point, not both"
+msgstr "una capa sigue un hueso o un punto, no los dos"
+
+#: crates/wprs-editor/src/attach.rs
+msgid "points are placed on mesh layers"
+msgstr "los puntos se colocan en capas de malla"
+
+#: crates/wprs-editor/src/attach.rs
+msgid "say which bone or point it follows"
+msgstr "indica qué hueso o punto sigue"
+
+#: crates/wprs-editor/src/attach.rs
+msgid "an offset is two numbers of pixels"
+msgstr "un desplazamiento son dos números de píxeles"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "%1 goes from 0 to 1"
+msgstr "%1 va de 0 a 1"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "gravity goes from -10 to 10"
+msgstr "la gravedad va de -10 a 10"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "%1 goes from a smaller to a larger value, within %2"
+msgstr "%1 va de un valor menor a uno mayor, dentro de %2"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "a rope takes one name for its bones"
+msgstr "una cuerda lleva un solo nombre para sus huesos"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "a rope has 2 to %1 points"
+msgstr "una cuerda tiene de 2 a %1 puntos"
+
+#: crates/wprs-editor/src/bodies.rs crates/wprs-editor/src/rig.rs
+msgid "a mesh has at most %1 bones here"
+msgstr "aquí una malla tiene como mucho %1 huesos"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "name the bones that swing"
+msgstr "indica los huesos que se balancean"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "a rope is removed by its first bone"
+msgstr "una cuerda se quita por su primer hueso"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "the bone \"%1\" does not swing"
+msgstr "el hueso «%1» no se balancea"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "a mesh has at most %1 swinging bones"
+msgstr "una malla tiene como mucho %1 huesos que se balancean"
+
 #: crates/wprs-editor/src/check.rs
 msgid "the kind of a scene package is scene"
 msgstr "el tipo de un paquete de escena es scene"
@@ -325,8 +401,8 @@ msgstr "una malla tiene como mucho %1 clips"
 msgid "a key is for one bone, blend shape or part order"
 msgstr "una clave es de un solo hueso, forma de mezcla u orden de parte"
 
-#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/rig.rs
-#: crates/wprs-editor/src/skin/mod.rs
+#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/limbs.rs
+#: crates/wprs-editor/src/rig.rs crates/wprs-editor/src/skin/mod.rs
 msgid "there is no bone \"%1\""
 msgstr "no hay ningún hueso «%1»"
 
@@ -334,7 +410,7 @@ msgstr "no hay ningún hueso «%1»"
 msgid "there is no blend shape \"%1\""
 msgstr "no hay ninguna forma de mezcla «%1»"
 
-#: crates/wprs-editor/src/clips/keyed.rs
+#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/cutouts.rs
 msgid "there is no part \"%1\""
 msgstr "no hay ninguna parte «%1»"
 
@@ -349,6 +425,22 @@ msgstr "la clave tiene un valor fuera de su rango"
 #: crates/wprs-editor/src/clips/keyed.rs
 msgid "the clip has no key there at %1 s"
 msgstr "el clip no tiene ninguna clave ahí en %1 s"
+
+#: crates/wprs-editor/src/cutouts.rs
+msgid "say what changes in the parts"
+msgstr "indica qué cambia en las partes"
+
+#: crates/wprs-editor/src/cutouts.rs
+msgid "a part is hidden or shown, not both"
+msgstr "una parte se oculta o se muestra, no las dos cosas"
+
+#: crates/wprs-editor/src/cutouts.rs
+msgid "the order of a part goes from -1000 to 1000"
+msgstr "el orden de una parte va de -1000 a 1000"
+
+#: crates/wprs-editor/src/cutouts.rs
+msgid "a part shows over another part, not over itself"
+msgstr "una parte se ve sobre otra parte, no sobre sí misma"
 
 #: crates/wprs-editor/src/findings.rs
 msgid "%1: refused: %2"
@@ -498,6 +590,56 @@ msgstr "importa antes %1 %2"
 msgid "%1 is not a layer type; use one of %2"
 msgstr "%1 no es un tipo de capa; usa uno de %2"
 
+#: crates/wprs-editor/src/limbs.rs
+msgid "a chain goes from a bone down to one that hangs below it, 2 to %1 bones"
+msgstr ""
+"una cadena va de un hueso a otro que cuelga por debajo de él, de 2 a %1 "
+"huesos"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "a chain reaches for cursor, bone:<name>, layer:<id> or a point [x, y]"
+msgstr "una cadena alcanza cursor, bone:<nombre>, layer:<id> o un punto [x, y]"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "a limit names a bone of its chain"
+msgstr "un límite nombra un hueso de su cadena"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "a limit goes from a smaller to a larger angle, -180 to 180"
+msgstr "un límite va de un ángulo menor a uno mayor, de -180 a 180"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "a chain weighs from 0 to 1"
+msgstr "una cadena pesa de 0 a 1"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "there is no chain %1"
+msgstr "no hay ninguna cadena %1"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "say which chain changes"
+msgstr "indica qué cadena cambia"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "a mesh has at most %1 chains"
+msgstr "una malla tiene como mucho %1 cadenas"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "a new chain names its root and tip bones"
+msgstr "una cadena nueva nombra su hueso de inicio y su hueso final"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "say the angle, strength or gusts of the wind"
+msgstr "indica el ángulo, la fuerza o las ráfagas del viento"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "the wind blows from 0 to 10000 pixels a second"
+msgstr "el viento sopla de 0 a 10000 píxeles por segundo"
+
+#: crates/wprs-editor/src/limbs.rs
+msgid "gusts go from 0 to 1"
+msgstr "las ráfagas van de 0 a 1"
+
 #: crates/wprs-editor/src/ops.rs
 msgid "\"%1\" is not a JSON Pointer"
 msgstr "«%1» no es un JSON Pointer"
@@ -635,10 +777,6 @@ msgstr "no hay ninguna imagen «%1» de la que recortar una malla"
 #: crates/wprs-editor/src/rig.rs
 msgid "a mesh is cut from pictures of at most %1 pixels a side"
 msgstr "una malla se recorta de imágenes de %1 píxeles de lado como mucho"
-
-#: crates/wprs-editor/src/rig.rs
-msgid "a mesh has at most %1 bones here"
-msgstr "aquí una malla tiene como mucho %1 huesos"
 
 #: crates/wprs-editor/src/rigging.rs
 msgid "the bone being painted is locked"

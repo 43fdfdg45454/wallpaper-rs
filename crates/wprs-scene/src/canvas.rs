@@ -46,6 +46,9 @@ pub struct Canvas {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-unit" = "px/s"))]
     pub wind: Option<Value<Vec2>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-range" = [0, 1]))]
+    pub gusts: Option<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -71,7 +74,8 @@ impl Default for Clock {
 impl Canvas {
     pub fn new(size: [u32; 2]) -> Canvas {
         let (fit, background, blend_space) = (Fit::Fill, Color::default(), BlendSpace::Linear);
-        let (parallax, camera, bloom, hdr, tonemap, perspective, ambient, sky, wind) = Default::default();
+        let (parallax, camera, bloom, hdr, tonemap, perspective, ambient, sky, wind, gusts) =
+            Default::default();
         Canvas {
             size,
             fit,
@@ -87,6 +91,7 @@ impl Canvas {
             ambient,
             sky,
             wind,
+            gusts,
         }
     }
 }

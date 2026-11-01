@@ -123,7 +123,11 @@ fn every_scene_editor_action_has_a_scene_command_with_the_same_arguments() {
     let scene = Cli::command().find_subcommand("scene").cloned().unwrap();
     for name in ACTIONS {
         let command = scene.find_subcommand(name.replace('_', "-")).unwrap_or_else(|| panic!("scene {name}"));
-        let ids: Vec<&str> = command.get_arguments().map(|a| a.get_id().as_str()).collect();
+        let mut ids: Vec<&str> = command.get_arguments().map(|a| a.get_id().as_str()).collect();
+        for sub in command.get_subcommands() {
+            ids.push(sub.get_name());
+            ids.extend(sub.get_arguments().map(|a| a.get_id().as_str()));
+        }
         for field in fields(json!({name: {"": null}})) {
             assert!(ids.contains(&field.as_str()), "scene {name} lacks {field}");
         }

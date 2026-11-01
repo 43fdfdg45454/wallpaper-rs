@@ -96,6 +96,9 @@ QtObject {
         page.run("redo");
         if (page.mesh.ask("puppet").bones[1]?.name !== "limb")
             throw new Error("the bone was not renamed");
+        Qt.createComponent("SceneLimbCheck.qml").createObject(page, {
+            "page": page
+        }).exercise();
         page.editor.select("/scene/layers/0");
     }
 }

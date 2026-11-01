@@ -976,7 +976,7 @@ msgstr ""
 "Limita un efecto a una parte de la imagen con una máscara en la lista de "
 "operaciones."
 
-#: apps/wprs-app/qml/EditGeometry.qml
+#: apps/wprs-app/qml/EditGeometry.qml apps/wprs-app/qml/SceneRigIk.qml
 msgid "Free"
 msgstr "Libre"
 
@@ -1224,14 +1224,15 @@ msgstr "Bajar"
 #: apps/wprs-app/qml/SceneAssets.qml apps/wprs-app/qml/SceneBoneRow.qml
 #: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/SceneInspector.qml
 #: apps/wprs-app/qml/SceneLayerTools.qml apps/wprs-app/qml/ScenePairs.qml
-#: apps/wprs-app/qml/SceneProperties.qml apps/wprs-app/qml/SceneRigRow.qml
+#: apps/wprs-app/qml/SceneProperties.qml apps/wprs-app/qml/SceneRigIk.qml
+#: apps/wprs-app/qml/SceneRigPhysics.qml apps/wprs-app/qml/SceneRigRow.qml
 #: apps/wprs-app/qml/SceneSettingMenu.qml apps/wprs-app/qml/SceneShapes.qml
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Remove"
 msgstr "Quitar"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/OutputFilter.qml
-#: apps/wprs-app/qml/SceneRigWeights.qml
+#: apps/wprs-app/qml/SceneRigWeights.qml apps/wprs-app/qml/SceneRigWind.qml
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Strength"
 msgstr "Fuerza"
@@ -2116,7 +2117,7 @@ msgstr "Añadir un proveedor"
 
 #: apps/wprs-app/qml/ProviderDialog.qml apps/wprs-app/qml/SceneBoneTree.qml
 #: apps/wprs-app/qml/SceneEditors.qml apps/wprs-app/qml/SceneInput.qml
-#: apps/wprs-app/qml/ScenePairs.qml apps/wprs-app/qml/SceneRigMotion.qml
+#: apps/wprs-app/qml/ScenePairs.qml apps/wprs-app/qml/SceneRefs.qml
 #: apps/wprs-app/qml/SceneRigTouch.qml apps/wprs-app/qml/SceneRigWeights.qml
 msgid "Add"
 msgstr "Añadir"
@@ -2644,7 +2645,8 @@ msgstr "Vídeos"
 msgid "Hide"
 msgstr "Ocultar"
 
-#: apps/wprs-app/qml/SceneInput.qml
+#: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/SceneRefs.qml
+#: apps/wprs-app/qml/SceneRigIk.qml
 msgid "Layer %1"
 msgstr "Capa %1"
 
@@ -2796,6 +2798,22 @@ msgstr "Rehacer: %1"
 msgid "Build and apply…"
 msgstr "Compilar y aplicar…"
 
+#: apps/wprs-app/qml/SceneParts.qml
+msgid "Parts, from back to front"
+msgstr "Partes, de atrás hacia delante"
+
+#: apps/wprs-app/qml/SceneParts.qml
+msgid "Shown"
+msgstr "Visible"
+
+#: apps/wprs-app/qml/SceneParts.qml
+msgid "Over everything"
+msgstr "Sobre todo"
+
+#: apps/wprs-app/qml/SceneParts.qml
+msgid "Only over %1"
+msgstr "Solo sobre %1"
+
 #: apps/wprs-app/qml/ScenePoseKnob.qml
 msgid "Move the bone"
 msgstr "Mover el hueso"
@@ -2824,7 +2842,7 @@ msgstr "Copiar ajustes"
 msgid "Paste settings"
 msgstr "Pegar ajustes"
 
-#: apps/wprs-app/qml/ScenePresets.qml
+#: apps/wprs-app/qml/ScenePresets.qml apps/wprs-app/qml/SceneRigPhysics.qml
 msgid "Reset"
 msgstr "Restablecer"
 
@@ -2856,6 +2874,19 @@ msgstr "Añadir una propiedad"
 msgid "Add preset"
 msgstr "Añadir un preajuste"
 
+#: apps/wprs-app/qml/SceneRefs.qml apps/wprs-app/qml/SceneRigIk.qml
+msgid "A point"
+msgstr "Un punto"
+
+#: apps/wprs-app/qml/SceneRefs.qml apps/wprs-app/qml/SceneRigIk.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "The pointer"
+msgstr "El puntero"
+
+#: apps/wprs-app/qml/SceneRefs.qml
+msgid "Bone %1"
+msgstr "Hueso %1"
+
 #: apps/wprs-app/qml/SceneRig.qml
 msgid "Place bones on the preview"
 msgstr "Colocar huesos sobre la vista previa"
@@ -2876,6 +2907,26 @@ msgstr "Clip de la vista previa"
 msgid "Edit clips on the timeline"
 msgstr "Editar los clips en la línea de tiempo"
 
+#: apps/wprs-app/qml/SceneRigAttach.qml
+msgid "Layers that follow this mesh"
+msgstr "Capas que siguen esta malla"
+
+#: apps/wprs-app/qml/SceneRigAttach.qml
+msgid "%1 follows %2"
+msgstr "%1 sigue a %2"
+
+#: apps/wprs-app/qml/SceneRigAttach.qml
+msgid "Attach layers on the preview"
+msgstr "Sujetar capas en la vista previa"
+
+#: apps/wprs-app/qml/SceneRigAttach.qml
+msgid ""
+"Drag a layer onto a bone, or onto the mesh for a new point there; or pick a "
+"layer and click the preview."
+msgstr ""
+"Arrastra una capa sobre un hueso, o sobre la malla para un punto nuevo allí; "
+"o elige una capa y haz clic en la vista previa."
+
 #: apps/wprs-app/qml/SceneRigDepth.qml
 msgid "Paint depth on the preview"
 msgstr "Pintar la profundidad sobre la vista previa"
@@ -2893,33 +2944,47 @@ msgstr ""
 "por debajo de cero; con la profundidad activa, los vértices más cercanos "
 "tapan a los más lejanos."
 
-#: apps/wprs-app/qml/SceneRigMotion.qml apps/wprs-app/qml/facade/LabelWords.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "the pointer"
-msgstr "el puntero"
-
-#: apps/wprs-app/qml/SceneRigMotion.qml
-msgid "a point"
-msgstr "un punto"
-
-#: apps/wprs-app/qml/SceneRigMotion.qml
+#: apps/wprs-app/qml/SceneRigIk.qml
 msgid "Chains that reach"
 msgstr "Cadenas que alcanzan"
 
-#: apps/wprs-app/qml/SceneRigMotion.qml
-msgid "%1 reach for %2"
-msgstr "%1 alcanzan %2"
+#: apps/wprs-app/qml/SceneRigIk.qml
+msgid "Bend the other way"
+msgstr "Doblar hacia el otro lado"
 
-#: apps/wprs-app/qml/SceneRigMotion.qml
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "The pointer"
-msgstr "El puntero"
+#: apps/wprs-app/qml/SceneRigIk.qml
+msgid "Reaches for %1"
+msgstr "Alcanza %1"
 
-#: apps/wprs-app/qml/SceneRigMotion.qml
-msgid "A point"
-msgstr "Un punto"
+#: apps/wprs-app/qml/SceneRigIk.qml apps/wprs-app/qml/facade/SceneLabels.qml
+msgid "Weight"
+msgstr "Peso"
 
-#: apps/wprs-app/qml/SceneRigMotion.qml
+#: apps/wprs-app/qml/SceneRigIk.qml
+msgid "Limit"
+msgstr "Limitar"
+
+#: apps/wprs-app/qml/SceneRigIk.qml
+msgid "Make a chain on the preview"
+msgstr "Crear una cadena en la vista previa"
+
+#: apps/wprs-app/qml/SceneRigIk.qml
+msgid ""
+"Drag the ring of a chain that reaches for a point, and the dots of its "
+"limits, on the preview."
+msgstr ""
+"Arrastra en la vista previa el anillo de una cadena que alcanza un punto y "
+"los puntos de sus límites."
+
+#: apps/wprs-app/qml/SceneRigIk.qml
+msgid "Click the bone the chain starts from."
+msgstr "Haz clic en el hueso donde empieza la cadena."
+
+#: apps/wprs-app/qml/SceneRigIk.qml
+msgid "Now click the bone it ends at, below %1."
+msgstr "Ahora haz clic en el hueso donde termina, por debajo de %1."
+
+#: apps/wprs-app/qml/SceneRigIk.qml
 msgid ""
 "A chain that follows the pointer needs the pointer permission, and the scene "
 "tells the user that it follows the pointer."
@@ -2927,13 +2992,35 @@ msgstr ""
 "Una cadena que sigue al puntero necesita el permiso del puntero, y la escena "
 "avisa al usuario de que sigue al puntero."
 
-#: apps/wprs-app/qml/SceneRigMotion.qml
+#: apps/wprs-app/qml/SceneRigPhysics.qml
 msgid "Bones that swing"
 msgstr "Huesos con física"
 
-#: apps/wprs-app/qml/SceneRigMotion.qml
-msgid "%1 swings as a %2"
-msgstr "%1 se mueve como %2"
+#: apps/wprs-app/qml/SceneRigPhysics.qml
+msgid "Pick bones that swing on the preview"
+msgstr "Elegir en la vista previa los huesos que se balancean"
+
+#: apps/wprs-app/qml/SceneRigPhysics.qml
+msgid "Draw a rope on the preview"
+msgstr "Dibujar una cuerda en la vista previa"
+
+#: apps/wprs-app/qml/SceneRigPhysics.qml
+msgid ""
+"Drag along where the rope hangs: it gets up to 9 new bones and hangs from "
+"the picked bone, or the nearest one."
+msgstr ""
+"Arrastra por donde cuelga la cuerda: recibe hasta 9 huesos nuevos y cuelga "
+"del hueso elegido, o del más cercano."
+
+#: apps/wprs-app/qml/SceneRigPhysics.qml
+msgid "Click a bone to make it swing, or to stop it. The arrows show gravity."
+msgstr ""
+"Haz clic en un hueso para que se balancee, o para detenerlo. Las flechas "
+"muestran la gravedad."
+
+#: apps/wprs-app/qml/SceneRigPhysics.qml
+msgid "Simulate"
+msgstr "Simular"
 
 #: apps/wprs-app/qml/SceneRigTouch.qml apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Bones that take the pointer"
@@ -3008,6 +3095,37 @@ msgstr "Los pesos pintados se conservan al cambiar los huesos."
 #: apps/wprs-app/qml/SceneRigWeights.qml
 msgid "Auto weights"
 msgstr "Pesos automáticos"
+
+#: apps/wprs-app/qml/SceneRigWind.qml apps/wprs-app/qml/facade/SceneLabels.qml
+msgid "Wind"
+msgstr "Viento"
+
+#: apps/wprs-app/qml/SceneRigWind.qml
+msgid "Show on the preview"
+msgstr "Mostrar en la vista previa"
+
+#: apps/wprs-app/qml/SceneRigWind.qml
+msgid "No wind"
+msgstr "Sin viento"
+
+#: apps/wprs-app/qml/SceneRigWind.qml
+msgid ""
+"The wind follows a binding or keyframes; set it here to make it fixed again."
+msgstr ""
+"El viento sigue un enlace o fotogramas clave; ajústalo aquí para que vuelva "
+"a ser fijo."
+
+#: apps/wprs-app/qml/SceneRigWind.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Angle"
+msgstr "Ángulo"
+
+#: apps/wprs-app/qml/SceneRigWind.qml
+msgid "%1 px/s"
+msgstr "%1 px/s"
+
+#: apps/wprs-app/qml/SceneRigWind.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Gusts"
+msgstr "Ráfagas"
 
 #: apps/wprs-app/qml/SceneSetting.qml
 msgid "More"
@@ -3497,6 +3615,11 @@ msgstr "Escena"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "the sound"
 msgstr "el sonido"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "the pointer"
+msgstr "el puntero"
 
 #: apps/wprs-app/qml/facade/LabelWords.qml
 msgid "clicks"
@@ -5207,10 +5330,6 @@ msgid "Wavelength"
 msgstr "Longitud de onda"
 
 #: apps/wprs-app/qml/facade/SceneLabels.qml
-msgid "Weight"
-msgstr "Peso"
-
-#: apps/wprs-app/qml/facade/SceneLabels.qml
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Shader"
 msgstr "Shader"
@@ -5218,10 +5337,6 @@ msgstr "Shader"
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "What"
 msgstr "Qué"
-
-#: apps/wprs-app/qml/facade/SceneLabels.qml
-msgid "Wind"
-msgstr "Viento"
 
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Active window"
@@ -6690,10 +6805,6 @@ msgstr "Amplitud"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Anchor"
 msgstr "Anclaje"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Angle"
-msgstr "Ángulo"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Second angle"

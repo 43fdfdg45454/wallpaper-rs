@@ -63,6 +63,7 @@ its thumbnail and details in the library. Scenes without them read and draw as b
 | `perspective` | distance of the viewer in pixels (100 to 100000) for layers tilted with `transform.tilt` and moved with `transform.z`; without it the distance at which the canvas height fills the `fov` of `camera3d`, or 45° | `tilt` |
 | `ambient`, `sky` | colors of the light around the scene and from above, for lit layers | `ambient_light` |
 | `wind` | `[x, y]` pixels per second, may be bound: the wind that moves bones with `physics` and models with the `foliage` material | `bone_physics` |
+| `gusts` | 0 to 1 (0.35 when unset): how much of `wind` comes and goes in gusts, from a steady wind at 0 to one that drops to nothing between gusts at 1 | `bone_physics` |
 
 The scene may also set `audio: { "attack" (0.001 to 2 s), "release" (0.01 to 10 s), "gain": "auto" |
 "fixed" }`, how fast audio values rise and fall and whether they follow the system volume
@@ -392,10 +393,11 @@ picture of the scene, along a grid or its outline, and places its bones (see `ed
 
 Positions are in pixels from the middle of the box the layer fills, x to the right and y up as glTF
 writes them, and UVs start at the top left of the picture. Every node of the file is a joint: the
-bones of skins, and the nodes that carry a mesh without a skin, which then move as one piece. The
-rest pose is the transform of each node; vertices follow at most 4 bones whose weights add up to 1
-(within 0.02, then made exact). The engine skins the vertices on the GPU into a picture of the box
-at the pixels it covers on the screen, with its transform, parents and camera, up to the pixels of
+bones of skins, the nodes that carry a mesh without a skin, which then move as one piece, and
+nodes without a mesh, such as attachment points (the editor marks the ones it places with
+`extras.point`), which follow their parent. The rest pose is the transform of each node; vertices
+follow at most 4 bones whose weights add up to 1 (within 0.02, then made exact). The engine skins
+the vertices on the GPU into a picture of the box at the pixels it covers on the screen, with its transform, parents and camera, up to the pixels of
 its picture (half of them at the lowest quality and three quarters at the next; a mesh drawn larger
 than its box is skinned in steps of half an octave) and draws that picture like
 any other layer, with its transform, effects, masks and blend mode; it draws it again only when the

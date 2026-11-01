@@ -25,6 +25,7 @@ pub(crate) struct Sim {
     pub frozen: bool,
     pub h: f32,
     pub wind: [f32; 2],
+    pub gust: [f32; 2],
     pub t: f32,
 }
 

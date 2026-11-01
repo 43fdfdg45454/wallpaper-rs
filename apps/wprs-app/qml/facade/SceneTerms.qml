@@ -42,6 +42,7 @@ QtObject {
             "gradient": App.tr("Gradient"),
             "gravity": App.tr("Gravity"),
             "group": App.tr("Group"),
+            "gusts": App.tr("Gusts"),
             "gyro": App.tr("Phone tilt"),
             "halo": App.tr("Halo"),
             "hdr": App.tr("High dynamic range"),

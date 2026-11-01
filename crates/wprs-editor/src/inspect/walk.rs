@@ -1,11 +1,14 @@
 use super::branches::{array, tagged};
+use super::rigrefs::{RIG, options};
 use super::{Field, Own, SOURCES, candidates};
 use crate::schema::{branches, choose, deref, sample};
 use crate::texts::rows;
 use serde_json::Value;
+use std::path::Path;
 use wprs_scene::easings;
 
 pub(super) struct Walk<'a> {
+    pub(super) dir: Option<&'a Path>,
     pub(super) doc: &'a Value,
     pub(super) own: &'a Own,
     pub(super) root: &'a Value,
@@ -57,6 +60,13 @@ impl Walk<'_> {
             t => t.clone(),
         };
         let reference = meta["x-ref"].as_str();
+        if let Some(r) = reference.filter(|r| RIG.contains(r))
+            && let Some(found) = self.dir.and_then(|d| options(d, self.doc, r, &pointer, &current))
+        {
+            f.options = found;
+            return self.rigged(f, r, schema, &current);
+        }
+        let reference = reference.filter(|r| !RIG.contains(r));
         let all: Vec<&Value> = branches(schema).iter().map(|b| deref(self.root, b).0).collect();
         let banded =
             all.iter().all(|b| b.get("enum").is_some() || b["type"] == "integer" || b["type"] == "array");

@@ -2,6 +2,7 @@ mod bind;
 mod bones;
 mod brush;
 mod glb;
+mod points;
 mod read;
 mod write;
 

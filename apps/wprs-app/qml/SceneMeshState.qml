@@ -13,6 +13,12 @@ QtObject {
     property string clip
     property var shapes: ({})
     property var pose: null
+    property string mode
+    property string root
+    property string part
+    property string attaching
+    property var inherit: ["position", "rotation", "scale"]
+    property bool still
     readonly property real time: clip !== "" ? page.clock : 0
 
     function ask(id, q) {
@@ -21,10 +27,11 @@ QtObject {
 
     function show() {
         const shaped = Object.keys(shapes).length > 0;
-        page.editor.look = layer !== "" && (clip !== "" || shaped) ? JSON.stringify({
+        page.editor.look = layer !== "" && (clip !== "" || shaped || still) ? JSON.stringify({
             "layer": layer,
             "clip": clip !== "" ? clip : null,
-            "shapes": shapes
+            "shapes": shapes,
+            "still": still
         }) : "";
         page.editor.seek(page.clock, page.editor.playing);
     }
@@ -33,6 +40,18 @@ QtObject {
         rigging = settings === null ? "" : id;
         sculpt = kind === "depth" ? settings : null;
         weighing = kind === "weights" ? settings : null;
+        mode = "";
+    }
+
+    function use(id, kind) {
+        tool(id, "", kind === "" ? null : {});
+        mode = kind;
+        root = "";
+    }
+
+    function reset() {
+        still = true;
+        Qt.callLater(() => still = false);
     }
 
     function pointer(id) {
@@ -48,9 +67,12 @@ QtObject {
         show();
     }
     onShapesChanged: show()
+    onStillChanged: show()
     onLayerChanged: {
         clip = "";
         shapes = {};
         bone = "";
+        part = "";
+        still = false;
     }
 }

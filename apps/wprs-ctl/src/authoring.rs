@@ -69,7 +69,7 @@ pub fn run(command: Author) -> Result<()> {
                 "{}",
                 serde_json::to_string_pretty(&{
                     let project = Project::open(&dir)?;
-                    inspect::fields_own(&project.doc, &pointer, &project.effects())
+                    inspect::fields_in(Some(&project.dir), &project.doc, &pointer, &project.effects())
                 })?
             );
         }

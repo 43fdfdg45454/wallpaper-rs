@@ -10,7 +10,8 @@ use wprs_format::features;
 
 pub use crate::action::{ACTIONS, Action, EDITOR, KeyEase};
 pub use crate::action::{
-    AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, MeshCut, WeightStroke,
+    AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, IkEdit,
+    MeshCut, PartsEdit, Spot, WeightStroke, WindEdit,
 };
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {
@@ -173,6 +174,9 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
             Vec::new()
         }
         Action::AutoWeights(_) | Action::Clip(_) | Action::Key(_) | Action::Expression(_) => Vec::new(),
+        Action::Ik(_) | Action::Physics(_) | Action::Wind(_) | Action::Attach(_) | Action::Parts(_) => {
+            Vec::new()
+        }
         Action::Undo {} | Action::Redo {} => Vec::new(),
     })
 }

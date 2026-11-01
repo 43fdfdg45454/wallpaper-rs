@@ -144,10 +144,9 @@ impl SceneEditor {
     }
 
     pub fn inspect(&self, pointer: &QString) -> QString {
-        let fields = self
-            .project
-            .as_ref()
-            .map(|p| inspect::fields_with(&p.doc, &pointer.to_string(), self.time, &p.effects()));
+        let fields = self.project.as_ref().map(|p| {
+            inspect::fields_from(Some(&p.dir), &p.doc, &pointer.to_string(), self.time, &p.effects())
+        });
         QString::from(&serde_json::to_string(&fields.unwrap_or_default()).unwrap_or_default())
     }
 

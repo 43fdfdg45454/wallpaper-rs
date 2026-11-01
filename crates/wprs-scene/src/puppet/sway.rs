@@ -21,7 +21,7 @@ fn advance(b: &mut Body, e: &BonePhysics, sim: &Sim, (f0, f1): (f32, f32)) {
     let carry = gap(from, pin).map(|v| v * (1.0 - e.inertia));
     let pull = |at: [f32; 2], was: [f32; 2], target: [f32; 2], drop: f32, i: usize| {
         let v = gap(was, at).map(|v| v * decay);
-        let gust = 0.65 + 0.35 * crate::camera::noise(sim.t * 0.9 + i as f32 * 0.37, 7);
+        let gust = sim.gust[0] + sim.gust[1] * crate::camera::noise(sim.t * 0.9 + i as f32 * 0.37, 7);
         let air = [0, 1].map(|c| (sim.wind[c] * gust - v[c] / h) * 4.0 * e.wind);
         let a = [k * (target[0] - at[0]) + air[0], k * (target[1] - at[1]) + air[1] + drop];
         [0, 1].map(|c| at[c] + v[c] + a[c] * h * h)

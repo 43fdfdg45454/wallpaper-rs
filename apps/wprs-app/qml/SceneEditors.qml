@@ -16,6 +16,7 @@ Item {
     readonly property Component raw: rawEditor
     readonly property Component mask: maskEditor
     readonly property Component rig: rigEditor
+    readonly property Component refs: refsEditor
 
     visible: false
 
@@ -154,6 +155,14 @@ Item {
         id: maskEditor
 
         SceneMask {
+            input: host.input
+        }
+    }
+
+    Component {
+        id: refsEditor
+
+        SceneRefs {
             input: host.input
         }
     }
