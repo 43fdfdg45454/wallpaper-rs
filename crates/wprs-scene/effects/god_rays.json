@@ -10,7 +10,20 @@
     { "id": "exposure", "type": "float", "default": 0.6, "min": 0, "max": 4 },
     { "id": "color", "type": "color", "default": "#fff4e0" },
     { "id": "samples", "type": "float", "default": 12, "min": 4, "max": 16 },
-    { "id": "follow", "type": "bool", "default": false, "uses": "cursor" }
+    { "id": "follow", "type": "bool", "default": false, "uses": "cursor" },
+    {
+      "id": "mode",
+      "type": "enum",
+      "default": 0,
+      "values": [
+        { "value": 0, "label": { "en": "Radial", "es": "Radial" } },
+        { "value": 1, "label": { "en": "Directional", "es": "Direccional" } },
+        { "value": 2, "label": { "en": "Star", "es": "Estrella" } }
+      ]
+    },
+    { "id": "angle", "type": "float", "default": 90, "min": -360, "max": 360 },
+    { "id": "noise", "type": "float", "default": 0, "min": 0, "max": 1, "uses": "time" },
+    { "id": "edges", "type": "int", "default": 6, "min": 2, "max": 16 }
   ],
   "passes": [
     { "entry": "fs_god_rays_bright", "scale": 0.5 },
@@ -19,5 +32,5 @@
     { "entry": "fs_god_rays_mix", "inputs": ["input", "pass:2"] }
   ],
   "cost": { "taps": 3, "passes": 4, "scale": 0.5 },
-  "quality": { "q1": { "params": { "samples": 8 } } }
+  "quality": { "q1": { "params": { "samples": 8, "edges": 8 } } }
 }

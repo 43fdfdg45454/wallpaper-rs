@@ -65,7 +65,12 @@ impl Descriptor {
     }
 
     pub fn newest(&self) -> bool {
-        const HELPERS: [&str; 7] = [
+        const HELPERS: [&str; 12] = [
+            "mask_rgb",
+            "outside_layer",
+            "OUTSIDE_UV",
+            "time_phase",
+            "layer_extent",
             "cursor_last",
             "grid_uv",
             "grid_position",

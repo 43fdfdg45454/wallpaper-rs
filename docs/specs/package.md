@@ -242,13 +242,12 @@ the folder changed, and the stored value is the path of that copy.
 | `avif` | uses AVIF pictures | refused | refused |
 | `spanned_scenes` | sets `display.span` of a scene to `all-outputs` | refused | without |
 | `rgb` | sets `permissions.rgb` or sends colors to RGB lighting from a scene | refused | without |
-| `effect.<id>` | uses a built-in effect that older versions do not have; `pack build` and `pack check` name the ones a package needs | runs once drawn, refused before | as on the desktop |
-| `effect.<id>.<parameter>` | sets a parameter that an older version of a built-in effect does not have | runs once drawn, refused before | as on the desktop |
+| `effect.<id>` | uses a built-in effect that older versions do not have; `pack build` and `pack check` name the ones a package needs | runs | runs |
+| `effect.<id>.<parameter>` | sets a parameter that an older version of a built-in effect does not have | runs | runs |
 
-Effects and parameters that the format describes but the engine does not draw yet (the list is in
-"Effects not drawn yet" of `scene.md`) are refused by every platform with these names, which stay
-the same once they are drawn, so that older versions keep refusing them. `effect.tint`,
-`effect.blend_texture` and `effect.light_shafts` run on both platforms.
+Every effect and parameter listed in "Newer effects and parameters" of `scene.md` runs on both
+platforms. A package that uses one names it with these names, so that older versions, which do not
+draw it, refuse the package with the newer-version message.
 
 The fields of `scene.json` that came after the first version name these features (`scene.md` says
 what each field does). Each one is refused on a platform until its engine draws it, and the table
@@ -258,7 +257,7 @@ the other `script_` features, which change nothing there:
 
 | Feature | The scene | Desktop | Android |
 |---------|-----------|---------|---------|
-| `blend_modes2` | uses a blend mode after `luminosity` (`linear_burn` … `negation`) | runs | runs |
+| `blend_modes2` | uses a blend mode after `luminosity` (`linear_burn` … `diffuse_light`) | runs | runs |
 | `layer_color` | sets `brightness` on a layer or `color` on a picture, video, particles or group layer | runs | runs |
 | `parent` | sets `parent` or `inherit` on a layer | runs | runs |
 | `tilt` | sets `transform.tilt`, `transform.z` or `canvas.perspective` | refused | refused |

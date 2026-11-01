@@ -84,7 +84,9 @@ fn blend_pick(mode: u32, b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
         case 28u: { return blend_reflect(s, b); }
         case 29u: { return min(b, s) - max(b, s) + 1.0; }
         case 30u: { return (b + s) * 0.5; }
-        default: { return 1.0 - abs(1.0 - b - s); }
+        case 31u: { return 1.0 - abs(1.0 - b - s); }
+        case 32u: { return min(b * s / max(blend_lum(s), 1e-3), vec3<f32>(1.0)); }
+        default: { return min(2.0 * b * s, vec3<f32>(1.0)); }
     }
 }
 

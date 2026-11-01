@@ -68,7 +68,7 @@ impl Painter<'_, '_, '_> {
         let lut = self.lut(e);
         let (made, start) = (self.made.len(), self.ops.len());
         let side = |v: f32, s: f32| (v * s * e.scale).ceil().max(1.0) as u32;
-        let sim = d.state.map(|s| self.state(i, e, (side(rect.w, s.scale), side(rect.h, s.scale))));
+        let sim = d.state.as_ref().map(|s| self.state(i, e, (side(rect.w, s.scale), side(rect.h, s.scale))));
         if sim.is_some_and(|s| s.is_none()) || !self.targets(d, rect, e.scale) {
             fed.all().for_each(|s| self.release(s));
             return current;

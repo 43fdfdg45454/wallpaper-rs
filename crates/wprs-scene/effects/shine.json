@@ -11,8 +11,11 @@
     { "id": "color", "type": "color", "default": "#ffffff" },
     { "id": "speed", "type": "float", "default": 0.25, "min": -4, "max": 4, "uses": "time" },
     { "id": "gap", "type": "float", "default": 1, "min": 0, "max": 8 },
-    { "id": "phase", "type": "float", "default": 0, "min": 0, "max": 1 }
+    { "id": "phase", "type": "float", "default": 0, "min": 0, "max": 1 },
+    { "id": "blend", "type": "blend", "default": "add" },
+    { "id": "gradient", "type": "texture", "default": "" }
   ],
+  "passes": [{ "entry": "fs_shine", "inputs": ["previous", "asset:gradient"] }],
   "fuse": "color",
   "pace": { "sweep": ["speed", "gap", "phase"] }
 }

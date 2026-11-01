@@ -1,0 +1,11 @@
+{
+  "id": "trail",
+  "name": { "en": "Motion trail" },
+  "params": [{ "id": "persistence", "type": "float", "default": 0.8, "min": 0, "max": 0.99 }],
+  "state": { "scale": 1, "settle": 0.25, "fade": "persistence" },
+  "passes": [
+    { "entry": "fs_trail_step", "inputs": ["input", "state"], "output": "state" },
+    { "entry": "fs_trail", "inputs": ["state"] }
+  ],
+  "cost": { "taps": 2, "passes": 2, "scale": 1 }
+}

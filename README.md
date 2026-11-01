@@ -1062,14 +1062,22 @@ partículas pasan al procesador, el estado de la pantalla lo dice (`"particles":
 aplicación, la bandeja, `wprs-ctl` al mostrar la escena y los ajustes del teléfono avisan de que se
 muestran menos.
 
-También están descritos los efectos que el motor aún no dibuja: mezcla por degradado, revelar con
-el puntero, desplazamiento por mapa, cáusticas, destellos, fuego, giro, transformación, pulso,
-contraste local, estela de movimiento, VHS, fluidos, destello de lente y chisporroteo eléctrico, y
-los parámetros nuevos de efectos que ya existen (el modo estrella y direccional de los rayos de luz,
-el desfase por píxel de las ondas, el modo doble del balanceo, la fusión del desenfoque y del grano,
-etc.). Se validan como los integrados, el editor de escenas los
-muestra y se nombran `effect.<id>` y `effect.<id>.<parámetro>`: el escritorio y el teléfono rechazan
-con el mismo aviso los que no dibujan, y los nombres no cambian cuando se dibujen. Las líneas de
+El escritorio y el teléfono dibujan también la mezcla por degradado, el revelado con el puntero,
+el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos, el fuego, el giro,
+la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela
+de movimiento, el VHS, los fluidos, el destello de lente y el chisporroteo eléctrico, y los parámetros
+nuevos de los efectos que ya existían: rayos de luz direccionales o en estrella, aberración cromática
+en cuatro modos, grano en blanco y negro o con otro modo de fusión, desenfoque mezclado con la imagen,
+fondo visible en el iris y la lente, reflejo inclinado, desplazamiento sin repetición, sacudida con
+ruido, fricción y límites, brillo con fusión y degradado, balanceo doble, remolino elíptico,
+ondulaciones con perspectiva, reflejo, tinte, paredes y velocidad, ondas dobles con perspectiva y un
+desfase por píxel (`phase`) que evita que las zonas vecinas se muevan a la vez. Con los valores por
+defecto todo se ve exactamente como antes. Los efectos que dependen del tiempo dejan de pedir
+fotogramas cuando su velocidad es cero; la estela y los fluidos se detienen en cuanto se asientan;
+los fluidos se congelan en la calidad más baja, y los efectos medios se omiten en ella, como al
+funcionar con batería. Los modos de fusión `tint` y `diffuse_light` son aproximaciones cuyas fórmulas
+pueden cambiar. Se nombran `effect.<id>` y `effect.<id>.<parámetro>`, de modo que los motores
+anteriores rechazan con el aviso de versión más nueva los paquetes que los usan. Las líneas de
 tiempo pueden medirse en fotogramas (`frames` y `fps`, que ya funciona en las dos plataformas) y
 enlazar el final de un bucle con su principio (`wrap`, rechazado mientras el motor no lo dibuje), y
 `"seed": null` da a una escena una semilla nueva cada vez que empieza. Un paquete con un vídeo HDR

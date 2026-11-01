@@ -11,7 +11,7 @@ pub(crate) fn format(d: &Descriptor, pass: &PassDef, formats: [TextureFormat; 2]
     match (target, pass.output) {
         (Some(t), _) if t.format == Texel::Rgba16f => formats[1],
         (Some(_), _) => TextureFormat::Rgba8Unorm,
-        (None, Output::State) => formats[1],
+        (None, Output::State | Output::Step) => formats[1],
         (None, Output::Next) => formats[0],
     }
 }

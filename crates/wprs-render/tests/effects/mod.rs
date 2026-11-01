@@ -54,3 +54,21 @@ pub fn ramp() -> RgbaImage {
         Rgba([v, v, v, 255])
     })
 }
+
+pub fn squares() -> RgbaImage {
+    RgbaImage::from_fn(W, H, |x, y| Rgba(if (x / 4 + y / 4) % 2 == 0 { [255; 4] } else { [0, 0, 0, 255] }))
+}
+
+pub fn spot() -> RgbaImage {
+    RgbaImage::from_fn(W, H, |x, y| {
+        Rgba(if x.abs_diff(32) < 3 && y.abs_diff(16) < 3 { [255; 4] } else { [0, 0, 0, 255] })
+    })
+}
+
+pub fn differ(shots: &[&Shot], least: f32) {
+    for (i, a) in shots.iter().enumerate() {
+        for (j, b) in shots.iter().enumerate().skip(i + 1) {
+            assert!(a.diff(b) > least, "shots {i} and {j} differ by {} only", a.diff(b));
+        }
+    }
+}

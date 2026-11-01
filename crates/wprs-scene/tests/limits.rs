@@ -120,7 +120,7 @@ fn new_fields_refuse_values_outside_their_limits() {
 fn malformed_new_fields_are_refused_while_parsing() {
     let mut doc: Json = serde_json::from_str(FULL).unwrap();
     for (pointer, value) in [
-        ("/layers/0/blend", json!("tint")),
+        ("/layers/0/blend", json!("sparkle")),
         ("/layers/5/light", json!("area")),
         ("/canvas/tonemap", json!("filmic")),
         ("/layers/3/render", json!("vector")),

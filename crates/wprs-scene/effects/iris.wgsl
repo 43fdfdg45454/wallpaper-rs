@@ -21,5 +21,6 @@ fn uv_iris(uv: vec2<f32>) -> vec2<f32> {
     let look = (cursor_uv() - from_layer(param(2u).xy)) / unit * param(1u).x;
     let follow = look * min(1.0, range / max(length(look), 1e-3));
     let offset = select(iris_gaze() * range * param(3u).x, follow, frame.inside > 0.5);
-    return uv - offset * unit * mask_at(uv);
+    let moved = uv - offset * unit * mask_at(uv);
+    return select(moved, outside_layer(moved), param(5u).x > 0.5);
 }

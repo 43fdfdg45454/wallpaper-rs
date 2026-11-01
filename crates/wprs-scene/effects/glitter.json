@@ -1,0 +1,13 @@
+{
+  "id": "glitter",
+  "name": { "en": "Glitter" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "density", "type": "float", "default": 0.3, "min": 0, "max": 1 },
+    { "id": "size", "type": "float", "default": 2, "min": 0.5, "max": 16 },
+    { "id": "speed", "type": "float", "default": 1, "min": 0, "max": 8, "uses": "time" },
+    { "id": "color", "type": "color", "default": "#ffffff" }
+  ],
+  "fuse": "color",
+  "pace": { "rate": "speed" }
+}

@@ -48,8 +48,8 @@ fn parameters_added_to_built_in_effects_are_declared_as_newer() {
 
 #[test]
 fn described_effects_are_complete_and_drawn_only_with_a_shader() {
-    assert!(undrawn().len() >= 15);
-    for id in ["tint", "blend_texture", "light_shafts"] {
+    assert!(undrawn().is_empty());
+    for id in NEWER.split_whitespace() {
         assert!(drawn(id, None) && descriptor(id).is_some_and(|d| d.problems().is_empty()), "{id}");
     }
     for d in undrawn() {

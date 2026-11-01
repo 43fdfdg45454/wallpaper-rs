@@ -29,9 +29,8 @@ ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/solid '{"alpha": 0.5}'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with solid layers was not previewed"
 ctl scene undo "$draft"
-ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "glitter"}]'
-if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with an effect not drawn yet was previewed"; fi
-grep -q "effect.glitter" <<<"$refused" || fail "the refused preview did not name effect.glitter: $refused"
+ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "glitter", "params": {"speed": 0}}, {"effect": "fluid", "params": {"source_strength": 8}}, {"effect": "god_rays", "params": {"mode": 2}}]'
+ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with glitter, fluid and a star of rays was not previewed"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "light_shafts", "params": {"speed": 0}}, {"effect": "tint", "mask": {"shape": {"ellipse": {"size": [40, 40]}}}}]'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with the newer built-in effects was not previewed"

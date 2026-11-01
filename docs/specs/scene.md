@@ -278,8 +278,12 @@ lower or higher luminance), `vivid_light` (color burn with 2S below one half, co
 2S − 1 above), `linear_light` clamp(B + 2S − 1), `pin_light` (min(B, 2S) below one half, max(B,
 2S − 1) above), `hard_mix` (1 where B + S ≥ 1, else 0), `subtract` max(0, B − S), `divide` (1 where S
 is 0, else min(1, B / S)), `reflect` (1 where S is 1, else min(1, B² / (1 − S))), `glow` (reflect with
-B and S swapped), `phoenix` min(B, S) − max(B, S) + 1, `average` (B + S) / 2 and `negation`
-1 − |1 − B − S|.
+B and S swapped), `phoenix` min(B, S) − max(B, S) + 1, `average` (B + S) / 2, `negation`
+1 − |1 − B − S|, `tint` min(1, B × S / lum(S)), where lum is 0.3 R + 0.59 G + 0.11 B, so that the
+layer colors the backdrop without darkening it, and `diffuse_light` min(1, 2 B × S), the layer as a
+light falling on the backdrop, neutral at one half. `tint` and `diffuse_light` are approximations
+of these looks: their formulas may still change to match reference pictures, and scenes that need
+an exact result should use the other modes.
 
 | Layer field | Meaning | Feature |
 |-------------|---------|---------|
@@ -566,9 +570,9 @@ fn uv_nudge(uv: vec2<f32>) -> vec2<f32> {
 | `velocity` | a `bool` parameter that, when set, gives the shader the speed of the layer in `fx.velocity.xy` (canvas pixels per second) and keeps the scene drawing while it moves |
 | `fuse` | `uv` or `color` for single-pass effects, see below |
 | `reach` | a float parameter, in pixels, by which the effect grows the layer bounds |
-| `state` | `{ "scale", "settle" }`, persistent textures for simulations, see below |
+| `state` | `{ "scale", "settle", "fade" }`, persistent textures for simulations, see below |
 | `solve` | `homography`: the first four parameters are `vec2` corners (top left, top right, bottom right, bottom left, as fractions of the layer) and the three slots after the parameters hold the rows of the matrix that takes a layer point back to the unit square; such an effect is not fused |
-| `quality` | overrides per level, `{ "q1": { "params": { "taps": 8 }, "scale": 0.5 } }`, applied at that level and below; a number is an upper limit for the value the scene sets, other values replace it, and `scale` shrinks the inner passes and the state |
+| `quality` | overrides per level, `{ "q1": { "params": { "taps": 8 }, "scale": 0.5 } }`, applied at that level and below; a number is an upper limit for the value the scene sets, other values replace it, `scale` shrinks the inner passes and the state, and `"freeze": true` keeps an effect that would be dropped at that level: its state stops and it shows its last picture without asking for frames |
 
 Every shader starts from one prelude. `frame` holds `time`, `dt`, `resolution`, `cursor` and
 `cursor_delta` (fractions of the output), `buttons` (the pressed pointer buttons as a bit mask),
@@ -580,7 +584,10 @@ Every shader starts from one prelude. `frame` holds `time`, `dt`, `resolution`, 
 `sample(t, uv)`, `px(pixels)`, `mask_at(uv)`, `layer_uv(uv)` and its inverse `from_layer(uv)`,
 `asset_at(t, uv)` (an asset placed on the layer, such as a depth map), `cursor_uv()`,
 `screen_uv(uv)`, `to_linear`, `from_linear`, `straight`, `oklab`, `from_oklab`, `gauss`, `hash`,
-`hash2`, `noise1`, `value_noise`, `gradient_noise`, `fbm(p, octaves)`, `bayer(pixel)` and
+`hash2`, `noise1`, `value_noise`, `gradient_noise`, `fbm(p, octaves)`, `bayer(pixel)`,
+`layer_extent()` (the size of the layer in output pixels), `time_phase(t, uv)` (the brightness of a
+`phase` picture at that point), `outside_layer(uv)` (the point, or `OUTSIDE_UV` when it is off the
+layer; a `uv_<id>` function that returns `OUTSIDE_UV` leaves that point transparent) and
 `relief(depth, sampler, uv, shift, focus, steps)`, the depth search of `depth_parallax`.
 `fx.texel` is the size of the first input, `fx.info.z` the pass index, `fx.area` the effect
 rectangle in output pixels, `fx.clip` the part of it that is on the screen (as fractions, where
@@ -600,7 +607,11 @@ keeps its speed at any frame rate; `fx.info.y` counts these steps) and `state` r
 They start transparent, restart when the layer size changes and are dropped when the scene leaves,
 stops or pauses. `settle` keeps rendering that many
 seconds after the pointer moves, a button is pressed or the sound stops, so ripples fade before the
-scene goes still.
+scene goes still, and also after the layer or the effects before it last changed. `fade` names a
+float parameter by which the state is kept each step: the scene then also renders until a picture
+kept that way has faded below 1/512 (at most 60 s). In a built-in effect, passes with `"output":
+"step"` before the pass that writes the state run with it on each step, into 16-bit textures of
+their own, so that a simulation can solve in several passes; package effects use targets instead.
 
 `cargo test -p wprs-scene` checks every descriptor and compiles its shader. A GPU test for an
 effect goes in `crates/wprs-render/tests/effects/<id>.rs`, also found automatically:
@@ -642,7 +653,7 @@ and `life`. Package descriptors may also use:
 
 | Field | Meaning |
 |-------|---------|
-| `params` | at most 24; besides the kinds above, `int` (whole numbers), `enum` (with `values`: 1 to 64 `{ "value", "label" }`), `blend` (one of the 32 blend modes, given to the shader as its number in the order of the list), `position` (a point of the layer the editor lets the author place) and `mask` (a picture painted per channel, with `channels` 1, 3 or 4 and `paint`, the color or number a mask without a picture has); a `texture` or `mask` whose value names no asset but is `white`, `black`, `noise` or `normal_flat` reads that generic picture; every parameter may have a `label` and a `help` per language, of at most 256 characters |
+| `params` | at most 24; besides the kinds above, `int` (whole numbers), `enum` (with `values`: 1 to 64 `{ "value", "label" }`), `blend` (one of the 34 blend modes, given to the shader as its number in the order of the list), `position` (a point of the layer the editor lets the author place) and `mask` (a picture painted per channel, with `channels` 1, 3 or 4 and `paint`, the color or number a mask without a picture has); a `texture` or `mask` whose value names no asset but is `white`, `black`, `noise` or `normal_flat` reads that generic picture; every parameter may have a `label` and a `help` per language, of at most 256 characters |
 | `targets` | at most 8 named textures `{ "scale" (0 to 2 of the layer size), "format" }` with `rgba8` (default) or `rgba16f`, kept between passes of one frame |
 | `options` | at most 8 variants `{ "id", "values", "default", "when_bound" }`, each a WGSL `override` of the shader with 1 to 16 whole numbers or flags; a use sets them through `params`, as literals or bound to a property, and every combination it may need (at most 8 per use) is built when the scene loads, never during a frame; `when_bound` turns an option on while the named texture parameter has a picture |
 | `compose` | `true` draws the layer over what lies below it first; the effect reads that picture as its input and its result replaces the layer's box on the scene |
@@ -821,7 +832,8 @@ what lies below them or the layer they read is part of their picture. A layer th
 drawn once a frame however many effects read it, and a change to it, hidden or not, or to a layer it
 reads in turn, redraws the layers that read it.
 
-The contract is the prelude above plus `aux4` to `aux7` (eight auxiliary textures in all), `PI`,
+The contract is the prelude above plus `aux4` to `aux7` (eight auxiliary textures in all), `mask_rgb(i, uv)` (every
+channel of `aux<i>` placed on the layer, for `mask` parameters painted per channel), `PI`,
 `tex_size(i)` (size in pixels of `aux<i>`), `daytime()` (0 at midnight to 1, in steps of a
 minute), `parallax()` (the current parallax shift, before each layer's own depth), `cursor_last()`
 (the pointer one frame earlier, in fractions of the output), `grid_uv(i)` (the corner of the grid
@@ -842,56 +854,59 @@ above, and then lists the effect among the ones a layer can add. Its parameters 
 the inspector with their localized `label`, sliders within `min` and `max`, choices for `enum` and
 `blend`, and may be bound to properties, keyframes or scripts like any parameter.
 
-### Effects not drawn yet
+### Newer effects and parameters
 
-The format also describes the effects and parameters below, so that a scene can be written with
-them today. Each is validated like a built-in one (types, ranges, assets, `{ "layer" }` textures
-and the inputs it needs) and names a feature: `effect.<id>` for an effect, `effect.<id>.<parameter>`
-for a newer parameter of an existing effect. Engines refuse a package that uses one they do not
-draw yet with the newer-version message, on every platform, and run it once the effect gains its
-shader; the names stay the same. Package effects may not take their ids. Positions are fractions
-of the layer, `blend` parameters take any of the 32 blend modes, `phase` parameters are `linear`
-pictures whose brightness shifts the time of each point so that neighbouring parts do not move
-together, and `gradient` parameters are pictures of one row read from left to right.
+The effects and parameters below came after the first built-in set. Each names a feature:
+`effect.<id>` for an effect, `effect.<id>.<parameter>` for a newer parameter of an older effect, so
+that older engines refuse a package that uses one with the newer-version message instead of an
+unknown name; every engine that knows them draws them on every platform. Package effects may not
+take their ids. Positions are fractions of the layer, `blend` parameters take any of the 34 blend
+modes, `phase` parameters are `linear` pictures whose brightness shifts the time of each point (by
+a whole cycle at full brightness, by eight steps of the noise for `shake`) so that neighbouring
+parts do not move together, and `gradient` parameters are pictures of one row read from left to
+right. An effect that has a `phase` picture is not fused with its neighbours. Costs are the units
+of "Cost and frame rate": light effects run at every quality level, medium ones are dropped at Q0
+(and at Q1 when `optional`), heavy ones run their inner passes at a quarter of their size at Q1;
+the quality level falls on battery, with software rendering or when frames take too long, so these
+rules are also what a phone or a laptop on battery draws.
 
-| Effect | What it does | Parameters |
-|--------|--------------|------------|
-| `blend_gradient` | mixes in another picture through a gradient map | `texture`, `map` (textures), `progress`, `softness` (0 to 1) |
-| `caustics` | moving light patterns of water | `color`, `scale` (0.1 to 16), `speed` (0 to 8, needs time), `strength` (0 to 4), `perspective` (0 to 1) |
-| `displace` | bends the layer by a normal or offset map, or by built-in noise without one | `map`, `mode` (0 normals, 1 offsets), `scale` (0.1 to 16), `strength` (0 to 256 px), `scroll` (−4 to 4, needs time while not zero), `ratio` (0.1 to 10) |
-| `electric` | thin crackling lines from two drifting noises | `color_a`, `color_b`, `bounds` (0 to 1), `scale` (0.1 to 16), `smoothness` (0 to 1), `speed` (0 to 8, needs time), `multiply` (0 to 8), `blend` |
-| `fire` | moves and colors flames already in the picture | `speed` (0 to 8, needs time), `strength` (0 to 64 px), `scale` (0.1 to 16), `gradient` |
-| `fluid` | smoke, fire or liquid simulated over the layer and pushed by the pointer | `render` (0 gradient, 1 emitter color, 2 background color, 3 distortion), `gradient`, `color`, `velocity_decay`, `dye_decay` (0 to 1), `push` (0 to 8, needs the pointer while not zero), `source`, `source_angle` (−360 to 360), `source_strength` (0 to 64), `line_from`, `line_to`, `line_strength` (0 to 64), `blend`, `perspective` (0 to 1), `opaque` |
-| `glitter` | short sparkles in a grid of cells | `density` (0 to 1), `size` (0.5 to 16 px), `speed` (0 to 8, needs time), `color` |
-| `lens_flare` | ghosts and a halo along the line from a light to the center | `source`, `follow` (needs the pointer when set), `intensity` (0 to 4), `ghosts` (0 to 8), `halo` (0 to 1), `color` |
-| `local_contrast` | sharpens local contrast | `radius` (1 to 64 px), `amount` (0 to 4), `luma_only` |
-| `pulse` | makes brightness, color or opacity beat in time or with a band of sound | `what` (0 brightness, 1 color, 2 opacity), `speed` (0 to 16, needs time), `bounds` (0 to 4), `tint_low`, `tint_high`, `noise`, `noise_speed` (0 to 16), `phase`, `audio_band` (0 off, or a band 1 to 64 that needs sound) |
-| `reveal` | shows another picture through a shape that may follow the pointer | `texture`, `shape` (0 circle, 1 ellipse), `radius`, `softness` (0 to 1), `follow` (needs the pointer when set), `invert`, `center` |
-| `spin` | turns the part of the layer around a center | `center`, `angle` (−360 to 360), `speed` (−720 to 720 °/s, needs time while not zero), `radius` (0 to 2) |
-| `trail` | keeps fading copies of earlier frames, independent of the frame rate | `persistence` (0 to 0.99) |
-| `transform` | moves, scales, turns or skews the layer after the effects before it | `offset` (−2 to 2), `scale` (0.01 to 16), `angle` (−360 to 360), `skew` (−89 to 89), `pivot` |
-| `vhs` | a tracking line, noise and color fringes of a worn tape | `strength` (0 to 1), `speed` (0 to 8, needs time), `noise` (0 to 1), `aberration` (0 to 16 px) |
+| Effect | What it does | Parameters | Cost and lower levels |
+|--------|--------------|------------|-----------------------|
+| `blend_gradient` | mixes in another picture through a gradient map, from left to right without one | `texture`, `map` (textures), `progress`, `softness` (0 to 1) | light |
+| `caustics` | moving light patterns of water | `color`, `scale` (0.1 to 16), `speed` (0 to 8, needs time while not zero), `strength` (0 to 4), `perspective` (0 to 1) | light; one layer of pattern instead of two at Q0 |
+| `displace` | bends the layer by a normal map (`mode` 0, refracted through its slope) or an offset map (`mode` 1, 0.5 still), repeated over the layer, or by built-in noise without one | `map`, `mode`, `scale` (0.1 to 16), `strength` (0 to 256 px), `scroll` (−4 to 4 a second, needs time while not zero), `ratio` (0.1 to 10, wider than tall) | light |
+| `electric` | thin crackling lines where two drifting noises meet | `color_a`, `color_b`, `bounds` (0 to 1, where lines start and are full), `scale` (0.1 to 16), `smoothness` (0 to 1), `speed` (0 to 8, needs time while not zero), `multiply` (0 to 8), `blend` (`add`) | light; changes 15 times a second at Q0 instead of 30 |
+| `fire` | lifts and flickers flames already in the picture, and colors them by brightness with a `gradient` | `speed` (0 to 8, needs time while not zero), `strength` (0 to 64 px), `scale` (0.1 to 16), `gradient` | light |
+| `fluid` | smoke, fire or liquid simulated over the layer, from a point, a line or the pointer | `render` (0 gradient, 1 emitter color, 2 the picture itself, 3 distortion only), `gradient`, `color`, `velocity_decay`, `dye_decay` (0 to 1, kept each 1/60 s), `push` (0 to 8, needs the pointer while not zero), `source`, `source_angle` (−360 to 360, −90 is up), `source_strength` (0 to 64), `line_from`, `line_to`, `line_strength` (0 to 64; a strength above zero needs time), `blend`, `perspective` (0 to 1), `opaque` | heavy: a state of a quarter of the layer, 20 pressure steps every 1/60 s (8 at Q1, where the state is halved); frozen at Q0, where it shows its last state and asks for no frames; draws only while it emits, the pointer pushes it, or for 6 s after |
+| `glitter` | short star-shaped sparkles in a grid of cells | `density` (0 to 1), `size` (0.5 to 16 px), `speed` (0 to 8 new patterns a second, the scene sleeps in between), `color` | light; cells twice as large at Q0 |
+| `lens_flare` | a core, a halo and ghosts along the line from a light to the middle | `source`, `follow` (needs the pointer when set), `intensity` (0 to 4), `ghosts` (0 to 8), `halo` (0 to 1), `color` | medium |
+| `local_contrast` | deepens contrast around edges (unsharp mask) | `radius` (1 to 64 px), `amount` (0 to 4), `luma_only` (on by default: colors keep their hue) | medium, two blur passes at half size; best marked `optional` |
+| `pulse` | makes brightness, color or opacity beat in time, with noise, or with a band of sound | `what` (0 brightness, 1 color, 2 opacity), `speed` (0 to 16 beats a second, needs time while not zero), `bounds` (0 to 4, the level at the low and the high of a beat), `tint_low`, `tint_high`, `noise` (0 to 1, needs time while not zero), `noise_speed` (0 to 16), `phase`, `audio_band` (0 off, or a band 1 to 64 whose level drives the beat; needs sound only then) | light |
+| `reveal` | shows another picture through a circle or an ellipse that may follow the pointer | `texture`, `shape` (0 circle, 1 ellipse), `radius`, `softness` (0 to 1), `follow` (needs the pointer when set), `invert`, `center` | light |
+| `spin` | turns the part of the layer around a center, fading out towards `radius` | `center`, `angle` (−360 to 360), `speed` (−720 to 720 °/s, needs time while not zero), `radius` (0 to 2, of the longer side) | light |
+| `trail` | keeps fading copies of what the effects before it drew, the same at any frame rate | `persistence` (0 to 0.99, kept each 1/60 s) | medium, a state of the layer's size; draws while the layer or the effects before it change and until the copies have faded |
+| `transform` | moves, scales, turns or skews the layer after the effects before it, within its box | `offset` (−2 to 2), `scale` (0.01 to 16), `angle` (−360 to 360), `skew` (−89 to 89), `pivot` | light |
+| `vhs` | a rolling tracking line, torn rows, snow and color fringes of a worn tape | `strength` (0 to 1), `speed` (0 to 8, needs time while not zero), `noise` (0 to 1), `aberration` (0 to 16 px) | light |
 
 | Effect | Newer parameters |
 |--------|------------------|
-| `blur` | `blend`, `amount` (0 to 1) |
-| `blur_motion` | `follow`, `shutter` (0 to 0.5 s), both drawn already |
-| `chromatic_aberration` | `mode` (0 expansion, 1 directional, 2 radial, 3 barrel), `angle` (−360 to 360) |
-| `film_grain` | `mono`, `bias` (−1 to 1, towards dark or bright parts), `blend` |
-| `flow` | `noise` (a built-in flow field when no map is given), `phase` |
-| `god_rays` | `mode` (0 radial, 1 directional, 2 star), `angle` (−360 to 360), `noise` (0 to 1), `edges` (2 to 16 rays of a star) |
-| `iris`, `lens_distort` | `background` (shows what is behind where the layer moved away) |
-| `reflection` | `angle` (−360 to 360) of the mirror line |
-| `scroll` | `repeat_x`, `repeat_y` |
-| `shake` | `noise`, `friction` (0 to 1), `bounds` (0 to 1), `phase` |
-| `shine` | `blend`, `gradient` |
-| `sway` | `double`, `phase` |
-| `twirl` | `aspect` (0.1 to 10), `inner`, `noise` (0 to 1), `repeat` |
-| `water_ripple` | `perspective` (0 to 1), `reflection`, `tint`, `walls` (a picture where the water stays still), `speed` (0 to 4) |
-| `waves` | `count` (1 or 2), `angle2` (−360 to 360), `perspective` (0 to 1), `phase` |
+| `blur` | `blend` (`normal`) and `amount` (0 to 1) mix the blurred picture back into the sharp one |
+| `blur_motion` | `follow`, `shutter` (0 to 0.5 s) |
+| `chromatic_aberration` | `mode` (0 grows with the distance from `center`, 1 the same shift along `angle`, 2 the same shift away from `center`, 3 grows with the square of the distance), `angle` (−360 to 360) |
+| `film_grain` | `mono` (black and white film), `bias` (−1 to 1, more grain in dark or bright parts), `blend` (`overlay`, the lightness grain as before; any other mode blends a grey noise) |
+| `flow` | `noise` (a built-in flow field when no map is given, as long as `direction`), `phase` |
+| `god_rays` | `mode` (0 radial, 1 along `angle`, 2 a star of `edges` rays from every bright part, at most 8 at Q1), `angle` (−360 to 360), `noise` (0 to 1, a flicker that needs time while not zero), `edges` (2 to 16) |
+| `iris`, `lens_distort` | `background`: where the layer moved away it shows what lies behind instead of its edge |
+| `reflection` | `angle` (−360 to 360) turns the mirror line around its middle |
+| `scroll` | `repeat_x`, `repeat_y`: off, the picture leaves that side instead of coming back |
+| `shake` | `noise` (0 to 1, jerkier), `friction` (0 to 1, longer near rest), `bounds` (0 to 1 of `strength` on each axis), `phase` |
+| `shine` | `blend` (`add`, as before), `gradient` (read across the band) |
+| `sway` | `double` (a second, slower wave over the first), `phase` |
+| `twirl` | `aspect` (0.1 to 10, an ellipse), `inner` (0 to 1, turned whole inside), `noise` (0 to 1), `repeat` (wraps the picture around instead of stretching its edge) |
+| `water_ripple` | `perspective` (0 to 1, smaller waves towards the top), `reflection` (a picture seen in the slopes), `tint` (colors the moving water), `walls` (a picture where the water stays still), `speed` (0 to 4) |
+| `waves` | `count` (1 or 2), `angle2` (−360 to 360, of the second wave), `perspective` (0 to 1), `phase` |
 
-A newer parameter that is drawn already still names its feature, so that older engines refuse a
-package that sets it with the newer-version message instead of an unknown parameter.
+The values left at their defaults draw exactly what the effects drew before them.
 
 ## Sound
 

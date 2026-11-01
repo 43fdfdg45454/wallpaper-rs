@@ -80,7 +80,7 @@ impl Pipes {
             for d in layer.effects.iter().filter_map(|e| descriptor(&e.effect)) {
                 let key = self.chain(device, std::iter::once(d), Some(&mut lease));
                 for pass in &d.passes {
-                    let target = if pass.output == Output::State { state } else { format };
+                    let target = if pass.output == Output::Next { format } else { state };
                     let _ = self.get(device, Shader::Fx(key, &pass.entry), Mode::Replace, target);
                 }
             }

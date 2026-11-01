@@ -28,11 +28,14 @@ pub fn effect_source(chain: &[&Descriptor]) -> String {
     for (k, d) in chain.iter().enumerate().rev() {
         let (id, base, next) = (&d.id, bases[k], k + 1);
         let _ = match d.fuse {
-            Some(Fuse::Uv) => writeln!(s, "    fx_base = {base}u;\n    let q{k} = uv_{id}(q{next});"),
+            Some(Fuse::Uv) => writeln!(
+                s,
+                "    fx_base = {base}u;\n    let q{k} = select(uv_{id}(q{next}), OUTSIDE_UV, q{next}.x <= OUTSIDE_UV.x);"
+            ),
             _ => writeln!(s, "    let q{k} = q{next};"),
         };
     }
-    s.push_str("    var c = tap(q0);\n");
+    s.push_str("    var c = select(tap(q0), vec4<f32>(0.0), q0.x <= OUTSIDE_UV.x);\n");
     for (k, d) in chain.iter().enumerate().filter(|(_, d)| d.fuse == Some(Fuse::Color)) {
         let _ = writeln!(s, "    fx_base = {}u;\n    c = color_{}(c, q{});", bases[k], d.id, k + 1);
     }
@@ -41,8 +44,9 @@ pub fn effect_source(chain: &[&Descriptor]) -> String {
 }
 
 fn fusable(e: &EffectUse) -> Option<&'static Descriptor> {
+    let pictured = |d: &Descriptor| d.params.iter().any(|p| p.kind.asset() && e.params.contains_key(&p.id));
     let fixed = e.mask.is_none() && e.enabled == Value::Fixed(true);
-    descriptor(&e.effect).filter(|d| fixed && d.fuse.is_some() && d.class() == Class::Light)
+    descriptor(&e.effect).filter(|d| fixed && !pictured(d) && d.fuse.is_some() && d.class() == Class::Light)
 }
 
 pub fn runs(effects: &[EffectUse]) -> impl Iterator<Item = Range<usize>> + '_ {

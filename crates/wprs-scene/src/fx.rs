@@ -1,9 +1,13 @@
 use crate::effects::{Descriptor, Fuse, Output, Pace, ParamDef, ParamKind, PassDef, SLOTS, Solve, Use};
 use crate::value::Param;
-use crate::{Class, MAX_PARAMS, Quality};
+use crate::{Class, MAX_PARAMS};
+use homography::homography;
 use slots::live;
+use std::borrow::Cow;
 
+mod homography;
 pub(crate) mod slots;
+mod tune;
 
 const READS: f32 = 4.0;
 const OPS: f32 = 512.0;
@@ -32,12 +36,12 @@ impl Descriptor {
         Ok(d)
     }
 
-    pub fn pack<'a>(&'a self, value: impl Fn(&'a str) -> Option<Param>) -> [[f32; 4]; MAX_PARAMS] {
+    pub fn pack<'a>(&'a self, value: impl Fn(&'a str) -> Option<Cow<'a, Param>>) -> [[f32; 4]; MAX_PARAMS] {
         let mut slots = [[0.0; 4]; MAX_PARAMS];
         let pictures =
             |def: &&ParamDef| matches!(def.kind, ParamKind::Texture | ParamKind::Lut | ParamKind::Mask);
         for (slot, def) in slots.iter_mut().zip(&self.params).filter(|(_, def)| !pictures(def)) {
-            *slot = def.slot(&value(&def.id).unwrap_or_else(|| def.default.clone()));
+            *slot = def.slot(value(&def.id).as_deref().unwrap_or(&def.default));
         }
         if self.solve == Some(Solve::Homography) && self.params.len() + 3 <= SLOTS {
             let rows = homography(std::array::from_fn(|i| [slots[i][0], slots[i][1]]));
@@ -77,23 +81,6 @@ impl Descriptor {
             value.is_none_or(|v| live(p.slot(&v)))
         };
         self.uses.contains(&input) || self.params.iter().any(|p| p.uses == Some(input) && on(p))
-    }
-
-    pub fn tuned(&self, quality: Quality, id: &str) -> Option<&Param> {
-        self.quality.range(quality..).find_map(|(_, t)| t.params.get(id))
-    }
-
-    pub fn setting(&self, quality: Quality, id: &str, set: Option<Param>) -> Option<Param> {
-        let Some(cap) = self.tuned(quality, id) else { return set };
-        let value = set.or_else(|| self.param(id).map(|i| self.params[i].default.clone()));
-        Some(match (cap, value) {
-            (Param::Number(c), Some(Param::Number(v))) => Param::Number(v.min(*c)),
-            _ => cap.clone(),
-        })
-    }
-
-    pub fn scale_at(&self, quality: Quality) -> f32 {
-        self.quality.range(quality..).find_map(|(_, t)| t.scale).unwrap_or(1.0)
     }
 
     pub fn problems(&self) -> Vec<String> {
@@ -153,7 +140,18 @@ impl Descriptor {
             }
             fail(tune.scale.is_none_or(unit), format!("quality {level:?} has a scale outside (0, 1]"));
         }
-        fail(self.state.is_none_or(|s| unit(s.scale)), "the state has a scale outside (0, 1]".into());
+        fail(
+            self.state.as_ref().is_none_or(|s| unit(s.scale)),
+            "the state has a scale outside (0, 1]".into(),
+        );
+        let fade = self.state.as_ref().and_then(|s| s.fade.as_deref());
+        fail(fade.is_none_or(|f| kind(f, ParamKind::Float)), "the state fades by no float".into());
+        let last = self.passes.iter().rposition(|p| p.output == Output::State);
+        let mut steps = self.passes.iter().enumerate().filter(|(_, p)| p.output == Output::Step);
+        fail(
+            steps.all(|(n, _)| last.is_some_and(|l| n < l)),
+            "a step pass comes after the last state pass".into(),
+        );
         let corners = self.params.len() + 3 <= SLOTS
             && self.fuse.is_none()
             && self.params.iter().take(4).filter(|p| p.kind == ParamKind::Vec2).count() == 4;
@@ -178,22 +176,4 @@ impl Descriptor {
             }
         }
     }
-}
-
-fn homography([p0, p1, p2, p3]: [[f32; 2]; 4]) -> [[f32; 4]; 3] {
-    let (dx, dy) = ([p1[0] - p2[0], p3[0] - p2[0]], [p1[1] - p2[1], p3[1] - p2[1]]);
-    let sum = [0, 1].map(|i| p0[i] - p1[i] + p2[i] - p3[i]);
-    let den = dx[0] * dy[1] - dx[1] * dy[0];
-    let (g, h) = match den.abs() > 1e-9 {
-        true => ((sum[0] * dy[1] - dx[1] * sum[1]) / den, (dx[0] * sum[1] - sum[0] * dy[0]) / den),
-        false => (0.0, 0.0),
-    };
-    let [a, d] = [0, 1].map(|i| p1[i] - p0[i] + g * p1[i]);
-    let [b, e] = [0, 1].map(|i| p3[i] - p0[i] + h * p3[i]);
-    let [c, f] = p0;
-    [
-        [e - f * h, c * h - b, b * f - c * e, 0.0],
-        [f * g - d, a - c * g, c * d - a * f, 0.0],
-        [d * h - e * g, b * g - a * h, a * e - b * d, 0.0],
-    ]
 }

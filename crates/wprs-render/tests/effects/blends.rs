@@ -46,6 +46,7 @@ fn channel(mode: Blend, b: f32, s: f32) -> f32 {
         Blend::Glow => reflect(s, b),
         Blend::Phoenix => b.min(s) - b.max(s) + 1.0,
         Blend::Average => (b + s) / 2.0,
+        Blend::DiffuseLight => (2.0 * b * s).min(1.0),
         _ => 1.0 - (1.0 - b - s).abs(),
     }
 }
@@ -56,6 +57,7 @@ fn expected(mode: Blend, b: [u8; 3], s: [u8; 3]) -> [u8; 3] {
         Blend::DarkerColor if lum(s) < lum(b) => s,
         Blend::LighterColor if lum(s) > lum(b) => s,
         Blend::DarkerColor | Blend::LighterColor => b,
+        Blend::Tint => [0, 1, 2].map(|k| (b[k] * s[k] / lum(s).max(1e-3)).min(1.0)),
         _ => [0, 1, 2].map(|k| channel(mode, b[k], s[k])),
     };
     mixed.map(|v| (v * 255.0).round() as u8)

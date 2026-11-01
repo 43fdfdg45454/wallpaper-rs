@@ -1,4 +1,5 @@
 use super::*;
+use std::borrow::Cow;
 
 fn compile(source: &str) -> Result<naga::Module, String> {
     let module = naga::front::wgsl::parse_str(source).map_err(|e| e.emit_to_string(source))?;
@@ -29,7 +30,7 @@ fn every_built_in_effect_matches_its_shader() {
         base.entry_points.iter().chain(&chain.entry_points).map(|e| e.name.as_str()).collect();
     assert!([CHAIN_ENTRY, "fs_mask_mix", "vs_main"].iter().all(|e| entries.contains(e)), "{entries:?}");
     let blur = descriptor("blur").unwrap();
-    let packed = blur.pack(|id| (id == "radius").then_some(Param::Number(300.0)));
+    let packed = blur.pack(|id| (id == "radius").then_some(Cow::Owned(Param::Number(300.0))));
     assert_eq!((packed[0], packed[1]), ([128.0, 0.0, 0.0, 0.0], [0.0; 4]));
     let waves = descriptor("waves").unwrap();
     assert_eq!(
@@ -75,7 +76,8 @@ fn built_in_effects_compile_and_report_their_cost() {
     assert_eq!((depth.problems(), depth.class(), depth.units()), (Vec::<String>::new(), Medium, 3.0));
     let gates: Vec<Use> = depth.params.iter().filter_map(|p| p.uses).collect();
     assert_eq!((gates, depth.reach.as_deref()), (vec![Use::Cursor, Use::Time], Some("strength")));
-    let steps = [Quality::Q1, Quality::Q2, Quality::Q3].map(|q| depth.setting(q, "steps", None));
+    let steps =
+        [Quality::Q1, Quality::Q2, Quality::Q3].map(|q| depth.setting(q, "steps", None).map(Cow::into_owned));
     assert_eq!(steps, [Some(Param::Number(8.0)), Some(Param::Number(12.0)), None]);
     let samples = |id: &str, q| descriptor(id).and_then(|d| d.tuned(q, "samples")).cloned();
     assert_eq!(samples("god_rays", Quality::Q1), Some(Param::Number(8.0)));

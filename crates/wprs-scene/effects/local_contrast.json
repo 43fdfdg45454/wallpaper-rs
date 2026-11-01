@@ -1,0 +1,17 @@
+{
+  "id": "local_contrast",
+  "name": { "en": "Local contrast" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "radius", "type": "float", "default": 8, "min": 1, "max": 64 },
+    { "id": "amount", "type": "float", "default": 0.5, "min": 0, "max": 4 },
+    { "id": "luma_only", "type": "bool", "default": true }
+  ],
+  "passes": [
+    { "entry": "fs_local_contrast_h", "scale": 0.5 },
+    { "entry": "fs_local_contrast_v", "scale": 0.5 },
+    { "entry": "fs_local_contrast", "inputs": ["input", "pass:1"] }
+  ],
+  "cost": { "taps": 3, "passes": 3, "scale": 0.5 },
+  "reach": "radius"
+}

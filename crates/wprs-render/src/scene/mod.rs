@@ -20,6 +20,7 @@ mod own;
 mod packages;
 mod paint;
 mod pipes;
+mod placed;
 mod pool;
 mod poster;
 mod ready;

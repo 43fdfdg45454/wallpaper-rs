@@ -1,0 +1,14 @@
+{
+  "id": "fire",
+  "name": { "en": "Fire" },
+  "min_fps": 30,
+  "mask_mode": "strength",
+  "params": [
+    { "id": "speed", "type": "float", "default": 1, "min": 0, "max": 8, "uses": "time" },
+    { "id": "strength", "type": "float", "default": 8, "min": 0, "max": 64 },
+    { "id": "scale", "type": "float", "default": 3, "min": 0.1, "max": 16 },
+    { "id": "gradient", "type": "texture", "default": "" }
+  ],
+  "passes": [{ "entry": "fs_fire", "inputs": ["previous", "asset:gradient"] }],
+  "reach": "strength"
+}

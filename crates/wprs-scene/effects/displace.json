@@ -1,0 +1,23 @@
+{
+  "id": "displace",
+  "name": { "en": "Displace" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "map", "type": "texture", "default": "" },
+    {
+      "id": "mode",
+      "type": "enum",
+      "default": 0,
+      "values": [
+        { "value": 0, "label": { "en": "Normals", "es": "Normales" } },
+        { "value": 1, "label": { "en": "Offsets", "es": "Desplazamientos" } }
+      ]
+    },
+    { "id": "scale", "type": "float", "default": 1, "min": 0.1, "max": 16 },
+    { "id": "strength", "type": "float", "default": 8, "min": 0, "max": 256 },
+    { "id": "scroll", "type": "vec2", "default": [0, 0], "min": -4, "max": 4, "uses": "time" },
+    { "id": "ratio", "type": "float", "default": 1, "min": 0.1, "max": 10 }
+  ],
+  "passes": [{ "entry": "fs_displace", "inputs": ["previous", "asset:map"] }],
+  "reach": "strength"
+}

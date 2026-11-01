@@ -5,8 +5,13 @@
   "params": [
     { "id": "strength", "type": "float", "default": 0, "min": 0, "max": 256, "uses": "time" },
     { "id": "speed", "type": "float", "default": 2, "min": 0, "max": 60 },
-    { "id": "direction", "type": "vec2", "default": [1, 1], "min": -1, "max": 1 }
+    { "id": "direction", "type": "vec2", "default": [1, 1], "min": -1, "max": 1 },
+    { "id": "noise", "type": "float", "default": 0, "min": 0, "max": 1 },
+    { "id": "friction", "type": "float", "default": 0, "min": 0, "max": 1 },
+    { "id": "bounds", "type": "vec2", "default": [1, 1], "min": 0, "max": 1 },
+    { "id": "phase", "type": "texture", "default": "" }
   ],
+  "passes": [{ "entry": "fs_shake", "inputs": ["previous", "asset:phase"] }],
   "fuse": "uv",
   "reach": "strength"
 }

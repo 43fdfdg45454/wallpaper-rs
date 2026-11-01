@@ -5,7 +5,11 @@
   "params": [
     { "id": "angle", "type": "float", "default": 60, "min": -1080, "max": 1080 },
     { "id": "radius", "type": "float", "default": 256, "min": 0, "max": 16384 },
-    { "id": "center", "type": "vec2", "default": [0.5, 0.5], "min": -1, "max": 2 }
+    { "id": "center", "type": "vec2", "default": [0.5, 0.5], "min": -1, "max": 2 },
+    { "id": "aspect", "type": "float", "default": 1, "min": 0.1, "max": 10 },
+    { "id": "inner", "type": "float", "default": 0, "min": 0, "max": 1 },
+    { "id": "noise", "type": "float", "default": 0, "min": 0, "max": 1 },
+    { "id": "repeat", "type": "bool", "default": false }
   ],
   "fuse": "uv"
 }

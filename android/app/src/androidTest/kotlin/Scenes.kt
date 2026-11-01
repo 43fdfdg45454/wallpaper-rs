@@ -49,11 +49,14 @@ const val MIXES_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size
     { "id": "fill", "type": "solid", "color": "#ffffff", "blend": "linear_burn",
       "effects": [{ "effect": "light_shafts", "params": { "speed": 0 } },
                   { "effect": "tint", "mask": { "shape": { "ellipse": { "size": [30, 20] } } } },
-                  { "effect": "blend_texture", "params": { "texture": { "layer": "spot" } }, "mask": { "layer": "spot" } }] }] }"""
+                  { "effect": "blend_texture", "params": { "texture": { "layer": "spot" } }, "mask": { "layer": "spot" } },
+                  { "effect": "glitter", "params": { "speed": 0 } }, { "effect": "trail" },
+                  { "effect": "god_rays", "params": { "mode": 2 } }, { "effect": "fluid", "params": { "push": 0 } }] }] }"""
 const val MIXES_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.mixes", "version": "1.0.0",
     "title": "Mixes", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
     "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["blend_modes2",
-    "effect.blend_texture", "effect.light_shafts", "effect.tint", "effect_masks", "layer_textures"] } }"""
+    "effect.blend_texture", "effect.fluid", "effect.glitter", "effect.god_rays.mode", "effect.light_shafts",
+    "effect.tint", "effect.trail", "effect_masks", "layer_textures"] } }"""
 const val RAIN_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
     "audio": { "attack": 0.05, "release": 0.3, "gain": "fixed" },
     "particles": { "rain": { "capacity": 60, "seed": 3, "emitters": [{ "shape": { "box": { "from": [4, 0], "to": [60, 4] } }, "rate": 60 }],

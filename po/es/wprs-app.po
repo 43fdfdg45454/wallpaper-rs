@@ -5796,6 +5796,10 @@ msgid "Difference"
 msgstr "Diferencia"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Diffuse light"
+msgstr "Luz difusa"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Directional"
 msgstr "Direccional"
 

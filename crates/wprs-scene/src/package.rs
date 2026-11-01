@@ -21,6 +21,10 @@ pub(crate) fn checked(id: &str, json: &str, wgsl: &str) -> Result<Descriptor, St
         (d.id == id, format!("declares the id {}, expected {id}", d.id)),
         (raw.get("cost").is_some(), "needs a cost".into()),
         (wgsl.len() <= MAX_WGSL, format!("its shader is larger than {} KiB", MAX_WGSL >> 10)),
+        (
+            d.passes.iter().all(|p| p.output != crate::Output::Step),
+            "only built-in effects have step passes".into(),
+        ),
     ];
     if let Some((_, problem)) = checks.into_iter().find(|(ok, _)| !ok) {
         return Err(problem);

@@ -15,7 +15,7 @@ fn every_new_field_parses_validates_and_names_its_feature() {
     assert_eq!(music.clips().collect::<Vec<_>>(), ["theme", "wind"]);
     assert_eq!((music.mode, music.pause, music.stream), (Some(Order::Random), Some([2.0, 8.0]), true));
     assert_eq!(scene.layer("sky").unwrap().blend, Blend::LinearBurn);
-    assert!(Blend::LinearBurn.newer() && !Blend::Luminosity.newer() && BLENDS.len() == 32);
+    assert!(Blend::LinearBurn.newer() && !Blend::Luminosity.newer() && BLENDS.len() == 34);
     assert_eq!(scene.layer("sky").unwrap().parallax, Parallax([0.1, 0.02]));
     assert_eq!(scene.assets["run"].cells(), 8);
     assert!(

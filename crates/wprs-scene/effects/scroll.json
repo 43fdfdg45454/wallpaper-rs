@@ -2,6 +2,10 @@
   "id": "scroll",
   "name": { "en": "Scroll" },
   "mask_mode": "strength",
-  "params": [{ "id": "speed", "type": "vec2", "default": [0.01, 0], "min": -4, "max": 4, "uses": "time" }],
+  "params": [
+    { "id": "speed", "type": "vec2", "default": [0.01, 0], "min": -4, "max": 4, "uses": "time" },
+    { "id": "repeat_x", "type": "bool", "default": true },
+    { "id": "repeat_y", "type": "bool", "default": true }
+  ],
   "fuse": "uv"
 }

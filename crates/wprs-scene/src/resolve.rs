@@ -56,6 +56,15 @@ impl Context<'_> {
         v
     }
 
+    pub(crate) fn stirred(&self, key: usize, stirring: bool, settle: f32) -> Wake {
+        let mut motion = self.motion.borrow_mut();
+        if stirring {
+            motion.insert(key + 1, ([0.0; 2], f64::from(self.t), [0.0; 2]));
+        }
+        let calm = motion.get(&(key + 1)).map_or(f32::INFINITY, |m| self.t - m.1 as f32);
+        if (0.0..settle).contains(&calm) { Wake::Frame } else { Wake::Idle }
+    }
+
     pub(crate) fn note(&self, wake: Wake) {
         self.paced(wake, None);
     }

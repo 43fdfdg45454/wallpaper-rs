@@ -1,0 +1,12 @@
+{
+  "id": "transform",
+  "name": { "en": "Transform" },
+  "params": [
+    { "id": "offset", "type": "vec2", "default": [0, 0], "min": -2, "max": 2 },
+    { "id": "scale", "type": "vec2", "default": [1, 1], "min": 0.01, "max": 16 },
+    { "id": "angle", "type": "float", "default": 0, "min": -360, "max": 360 },
+    { "id": "skew", "type": "vec2", "default": [0, 0], "min": -89, "max": 89 },
+    { "id": "pivot", "type": "position", "default": [0.5, 0.5] }
+  ],
+  "fuse": "uv"
+}

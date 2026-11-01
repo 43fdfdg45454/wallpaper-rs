@@ -1,86 +1,30 @@
-use super::item::{Fx, Rect, channel, rows, scale_of};
+use super::Src;
+use super::fed::Fed;
+use super::item::{Fx, Rect};
 use super::paint::Painter;
-use super::pipes::{Mode, Shader};
-use super::{Fill, Op, Src};
-use wprs_scene::{Affine, CHAIN_ENTRY, Descriptor, EffectDraw, MaskMode, Output, ParamKind, descriptor};
+use super::pipes::Shader;
+use wprs_scene::{Affine, CHAIN_ENTRY, EffectDraw, MaskMode, Output, ParamKind, PassDef, descriptor};
 
 pub(crate) const EMPTY: [Src; 7] =
     [Src::Clear, Src::White, Src::Clear, Src::Clear, Src::Clear, Src::Clear, Src::Void];
 
+struct At<'f, 'e> {
+    key: u64,
+    fx: Fx,
+    mask: Src,
+    lut: Src,
+    rect: Rect,
+    source: Src,
+    current: Src,
+    base: usize,
+    sim: Option<usize>,
+    fed: &'f Fed<'e>,
+    e: &'f EffectDraw<'e>,
+    last: usize,
+    scale: f32,
+}
+
 impl Painter<'_, '_, '_> {
-    fn pass(
-        &mut self,
-        shader: Shader,
-        rect: Rect,
-        out: Option<Src>,
-        scale: f32,
-        tex: [Src; 7],
-        fx: Fx,
-    ) -> Src {
-        let Some((target, slot)) = self.place(rect, out, scale, tex[0], fx) else { return tex[0] };
-        let mut all = [Src::Clear; 11];
-        all[..7].copy_from_slice(&tex);
-        let (more, mode, load, vertices, tex) = (None, Mode::Replace, false, 3, self.set(all));
-        self.ops.push(Op::Effect(Fill { target, shader, slot, tex, more, mode, load, vertices }));
-        target
-    }
-
-    pub(crate) fn set(&mut self, tex: [Src; 11]) -> u32 {
-        self.sets.push(tex);
-        self.sets.len() as u32 - 1
-    }
-
-    pub(crate) fn bare(&mut self, entry: &'static str, rect: Rect, tex: [Src; 7], fx: Fx) -> Src {
-        let lease = Some(&mut *self.lease);
-        let plain = self.r.pipes().chain(&self.r.device, std::iter::empty::<&Descriptor>(), lease);
-        self.pass(Shader::Fx(plain, entry), rect, None, 1.0, tex, fx)
-    }
-
-    pub(crate) fn place(
-        &mut self,
-        rect: Rect,
-        out: Option<Src>,
-        scale: f32,
-        first: Src,
-        fx: Fx,
-    ) -> Option<(Src, u32)> {
-        let size = ((rect.w * scale).ceil().max(1.0) as u32, (rect.h * scale).ceil().max(1.0) as u32);
-        let out = out.or_else(|| self.acquire(size))?;
-        let (w, h) = self.size_of(first);
-        let px = scale_of(self.screen) * w as f32 / rect.w.max(1.0);
-        let f = self.full;
-        let (x0, y0) = (((f.x - rect.x) / rect.w).max(0.0), ((f.y - rect.y) / rect.h).max(0.0));
-        let (x1, y1) = (((f.x + f.w - rect.x) / rect.w).min(1.0), ((f.y + f.h - rect.y) / rect.h).min(1.0));
-        let fx = Fx {
-            texel: [1.0 / w as f32, 1.0 / h as f32, w as f32, h as f32],
-            info: [fx.info[0], fx.info[1], fx.info[2], px],
-            area: [rect.x, rect.y, rect.w, rect.h],
-            clip: [x0, y0, x1.max(x0), y1.max(y0)],
-            ..fx
-        };
-        Some((out, self.pool.push(&fx)))
-    }
-
-    pub(crate) fn base(&mut self, e: &EffectDraw<'_>, layer_uv: Affine) -> (Fx, Src) {
-        let images = self.images;
-        let mask = e.mask_texture.as_deref().and_then(|id| images.get(id));
-        let mask = mask.map_or(Src::White, |image| self.ext(&image.0));
-        let (mut mask_m0, mask_m1) = rows(layer_uv);
-        mask_m0[3] = 1.0 - e.mask_strength;
-        let fx = Fx {
-            slots: e.slots,
-            texel: [0.0; 4],
-            channel: e.mask.map_or([0.0, 0.0, 0.0, 1.0], |m| channel(m.channel, m.texture.is_some())),
-            mask_m0,
-            mask_m1,
-            info: [f32::from(u8::from(e.mask.is_some_and(|m| m.invert))), 0.0, 0.0, 0.0],
-            area: [0.0; 4],
-            clip: [0.0, 0.0, 1.0, 1.0],
-            velocity: [e.velocity[0], e.velocity[1], 0.0, 0.0],
-        };
-        (fx, mask)
-    }
-
     pub(crate) fn effects(&mut self, i: usize, input: Src, rect: Rect, layer_uv: Affine) -> Src {
         let frame = self.frame;
         let list = &frame.effects[frame.draws[i].effects.clone()];
@@ -132,52 +76,42 @@ impl Painter<'_, '_, '_> {
         let mask = fed.mask.unwrap_or(mask);
         let lut = self.lut(e);
         let tune = d.scale_at(self.frame.quality);
-        let sim = match d.state {
+        let mut ticks = 0;
+        let sim = match &d.state {
             Some(s) => {
                 let side = |v: f32| (v * s.scale * tune).ceil().max(1.0) as u32;
-                let Some(sim) = self.state(i, e, (side(rect.w), side(rect.h))) else {
+                let Some((sim, _, n)) = self.state(i, e, (side(rect.w), side(rect.h))) else {
                     fed.all().for_each(|s| self.release(s));
                     return current;
                 };
+                ticks = if e.frozen { 0 } else { n };
                 Some(sim)
             }
             None => None,
         };
-        let (base, mut previous, last) = (self.outputs.len(), current, d.passes.len() - 1);
-        for (n, pass) in d.passes.iter().enumerate() {
-            let state = pass.output == Output::State;
-            let runs = sim.filter(|_| state).map_or(1, |(.., ticks)| ticks);
-            for k in 0..runs {
-                let front = sim.map(|(id, ..)| (id, self.front(id)));
-                let mut tex = [Src::Clear, mask, Src::Clear, Src::Clear, Src::Clear, Src::Clear, lut];
-                for (at, name) in [0, 2, 3, 4, 5].into_iter().zip(&pass.inputs) {
-                    tex[at] = match name.as_str() {
-                        "previous" => previous,
-                        "input" => current,
-                        "source" => source,
-                        "mask" => mask,
-                        "backdrop" => self.backdrop.unwrap_or(Src::Clear),
-                        "state" => front.map_or(Src::Clear, |(id, side)| Src::State(id, side)),
-                        other => match other.split_once(':') {
-                            Some(("pass", k)) => {
-                                k.parse().ok().and_then(|k: usize| self.outputs[base..].get(k).copied())
-                            }
-                            Some(("asset", p)) => fed.get(p).or_else(|| self.asset(e, p, ParamKind::Texture)),
-                            _ => None,
+        let base = self.outputs.len();
+        let (last, scale) = (d.passes.len() - 1, e.scale);
+        let at = At { key, fx, mask, lut, rect, source, current, base, sim, fed: &fed, e, last, scale };
+        let state = |p: &PassDef| p.output == Output::State;
+        let step = sim.and_then(|_| d.passes.iter().rposition(state)).map_or(0, |s| s + 1);
+        let mut previous = current;
+        for k in 0..ticks {
+            for (n, pass) in d.passes[..step].iter().enumerate() {
+                previous = self.step_pass(&at, n, pass, k, previous);
+                match self.outputs.get_mut(base + n) {
+                    Some(slot) => {
+                        let old = std::mem::replace(slot, previous);
+                        if ![current, source].contains(&old) && !self.outputs.contains(&old) {
+                            self.release(old);
                         }
-                        .unwrap_or(Src::Clear),
-                    };
-                }
-                let out = front.filter(|_| state).map(|(id, side)| Src::State(id, 1 - side));
-                let scale = if n == last { pass.scale } else { pass.scale * e.scale };
-                let info = [fx.info[0], k as f32, n as f32, 0.0];
-                let fx = Fx { info, ..fx };
-                previous =
-                    self.pass(Shader::Fx(key, &pass.entry), rect, out, scale.clamp(0.05, 1.0), tex, fx);
-                if let Some((id, _)) = front.filter(|_| out.is_some()) {
-                    self.flip(id);
+                    }
+                    None => self.outputs.push(previous),
                 }
             }
+        }
+        self.outputs.resize(base + step, current);
+        for (n, pass) in d.passes.iter().enumerate().skip(step) {
+            previous = self.step_pass(&at, n, pass, 0, previous);
             self.outputs.push(previous);
         }
         if d.mask_mode == MaskMode::Mix && e.mask.is_some() {
@@ -187,11 +121,47 @@ impl Painter<'_, '_, '_> {
         }
         while self.outputs.len() > base {
             let out = self.outputs.pop().expect("longer than base");
-            if ![previous, current, source].contains(&out) {
+            if ![previous, current, source].contains(&out) && !self.outputs.contains(&out) {
                 self.release(out);
             }
         }
         fed.all().filter(|s| *s != previous).for_each(|s| self.release(s));
         previous
+    }
+
+    fn step_pass(&mut self, at: &At<'_, '_>, n: usize, pass: &'static PassDef, k: u32, previous: Src) -> Src {
+        let front = at.sim.map(|id| (id, self.front(id)));
+        let mut tex = [Src::Clear, at.mask, Src::Clear, Src::Clear, Src::Clear, Src::Clear, at.lut];
+        for (slot, name) in [0, 2, 3, 4, 5].into_iter().zip(&pass.inputs) {
+            tex[slot] = match name.as_str() {
+                "previous" => previous,
+                "input" => at.current,
+                "source" => at.source,
+                "mask" => at.mask,
+                "backdrop" => self.backdrop.unwrap_or(Src::Clear),
+                "state" => front.map_or(Src::Clear, |(id, side)| Src::State(id, side)),
+                other => match other.split_once(':') {
+                    Some(("pass", p)) => {
+                        p.parse().ok().and_then(|p: usize| self.outputs[at.base..].get(p).copied())
+                    }
+                    Some(("asset", p)) => at.fed.get(p).or_else(|| self.asset(at.e, p, ParamKind::Texture)),
+                    _ => None,
+                }
+                .unwrap_or(Src::Clear),
+            };
+        }
+        let state = pass.output == Output::State;
+        let scale = if n == at.last { pass.scale } else { pass.scale * at.scale };
+        let side = |v: f32| (v * scale.clamp(0.05, 1.0)).ceil().max(1.0) as u32;
+        let temp = (pass.output == Output::Step)
+            .then(|| self.borrow((side(at.rect.w), side(at.rect.h)), self.state_format));
+        let out = front.filter(|_| state).map(|(id, side)| Src::State(id, 1 - side));
+        let out = out.or(temp.flatten().map(Src::Pool));
+        let fx = Fx { info: [at.fx.info[0], k as f32, n as f32, 0.0], ..at.fx };
+        let done = self.pass(Shader::Fx(at.key, &pass.entry), at.rect, out, scale.clamp(0.05, 1.0), tex, fx);
+        if let Some((id, _)) = front.filter(|_| out.is_some()) {
+            self.flip(id);
+        }
+        done
     }
 }

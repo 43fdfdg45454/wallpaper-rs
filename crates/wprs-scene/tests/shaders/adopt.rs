@@ -12,7 +12,7 @@ fn scenes_adopt_their_package_effects_and_check_their_uses() {
     for (params, problem) in [
         (json!({ "detail": 9 }), "/layers/0/effects/0/params/detail is 9, expected 0..=4"),
         (json!({ "taps": 5 }), "/layers/0/effects/0/params/taps does not fit"),
-        (json!({ "mode": "tint" }), "/layers/0/effects/0/params/mode does not fit"),
+        (json!({ "mode": "sparkle" }), "/layers/0/effects/0/params/mode does not fit"),
         (json!({ "missing": 1 }), "names the unknown parameter"),
     ] {
         let mut wrong = scene(json!([{ "effect": "ripple", "params": params }]));

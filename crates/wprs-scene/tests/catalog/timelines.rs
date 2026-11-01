@@ -47,9 +47,9 @@ fn timelines_count_frames_wrap_and_seeds_start_fresh() {
 #[test]
 fn the_scene_reference_lists_every_described_effect_and_parameter() {
     let doc = include_str!("../../../../docs/specs/scene.md");
-    let (_, rest) = doc.split_once("### Effects not drawn yet").unwrap();
+    let (_, rest) = doc.split_once("### Newer effects and parameters").unwrap();
     let (section, _) = rest.split_once("\n## ").unwrap();
-    for d in undrawn() {
+    for d in NEWER.split_whitespace().skip(3).filter_map(descriptor) {
         let row = section
             .lines()
             .find(|l| l.starts_with(&format!("| `{}` |", d.id)))

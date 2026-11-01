@@ -112,12 +112,11 @@ class ScenePagesTest : SceneBase() {
     }
 
     @Test
-    fun scenesWithEffectsTheEngineDoesNotDrawAreRefused() {
+    fun scenesWithTheNewerEffectsAndParametersAreAccepted() {
         val dir = File(storage(), "shafts/shafts").apply { mkdirs() }
         File(dir, "scene.json").writeText(SHAFTS_SCENE)
         File(dir, "manifest.json").writeText(SHAFTS_MANIFEST)
-        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
-        val named = "effect.blur.blend (sets blend on the blur effect) and effect.glitter (uses the glitter effect)"
-        assertTrue(reply.getString("error").contains(named))
+        val reply = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(reply, reply.startsWith("["))
     }
 }

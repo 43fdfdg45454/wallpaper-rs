@@ -1,0 +1,14 @@
+{
+  "id": "lens_flare",
+  "name": { "en": "Lens flare" },
+  "params": [
+    { "id": "source", "type": "position", "default": [0.3, 0.3] },
+    { "id": "follow", "type": "bool", "default": false, "uses": "cursor" },
+    { "id": "intensity", "type": "float", "default": 1, "min": 0, "max": 4 },
+    { "id": "ghosts", "type": "int", "default": 4, "min": 0, "max": 8 },
+    { "id": "halo", "type": "float", "default": 0.3, "min": 0, "max": 1 },
+    { "id": "color", "type": "color", "default": "#ffffff" }
+  ],
+  "passes": [{ "entry": "fs_lens_flare" }],
+  "cost": { "taps": 4, "passes": 1, "scale": 1 }
+}

@@ -2,8 +2,13 @@ use serde_json::{Value as Json, json};
 use std::collections::BTreeMap;
 use wprs_scene::*;
 
+mod drawn;
 mod effects;
 mod timelines;
+
+const NEWER: &str =
+    "tint blend_texture light_shafts blend_gradient caustics displace electric fire fluid glitter
+    lens_flare local_contrast pulse reveal spin trail transform vhs";
 
 fn scene(more: Json) -> Scene {
     let mut doc = json!({ "schema": SCHEMA, "canvas": { "size": [64, 32] }, "assets": { "sky": { "path": "sky.png" } } });

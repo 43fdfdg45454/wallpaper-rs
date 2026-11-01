@@ -4,7 +4,19 @@
   "mask_mode": "strength",
   "params": [
     { "id": "amount", "type": "float", "default": 3, "min": -64, "max": 64 },
-    { "id": "center", "type": "vec2", "default": [0.5, 0.5], "min": -1, "max": 2 }
+    { "id": "center", "type": "vec2", "default": [0.5, 0.5], "min": -1, "max": 2 },
+    {
+      "id": "mode",
+      "type": "enum",
+      "default": 0,
+      "values": [
+        { "value": 0, "label": { "en": "Expansion", "es": "Expansión" } },
+        { "value": 1, "label": { "en": "Directional", "es": "Direccional" } },
+        { "value": 2, "label": { "en": "Radial", "es": "Radial" } },
+        { "value": 3, "label": { "en": "Barrel", "es": "Barril" } }
+      ]
+    },
+    { "id": "angle", "type": "float", "default": 0, "min": -360, "max": 360 }
   ],
   "passes": [{ "entry": "fs_chromatic_aberration" }],
   "reach": "amount"

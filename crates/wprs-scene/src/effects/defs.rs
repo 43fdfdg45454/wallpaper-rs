@@ -58,6 +58,7 @@ pub struct PassDef {
 pub enum Output {
     #[default]
     Next,
+    Step,
     State,
 }
 
@@ -69,11 +70,13 @@ pub struct Cost {
     pub scale: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct State {
     pub scale: f32,
     pub settle: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fade: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -83,6 +86,8 @@ pub struct Tune {
     pub params: BTreeMap<String, Param>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scale: Option<f32>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub freeze: bool,
 }
 
 impl Default for Cost {
@@ -93,6 +98,6 @@ impl Default for Cost {
 
 impl Default for State {
     fn default() -> Self {
-        State { scale: 1.0, settle: 0.0 }
+        State { scale: 1.0, settle: 0.0, fade: None }
     }
 }

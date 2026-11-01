@@ -1,8 +1,12 @@
 {
   "id": "blur",
   "name": { "en": "Blur" },
-  "params": [{ "id": "radius", "type": "float", "default": 8, "min": 0, "max": 128 }],
-  "passes": [{ "entry": "fs_blur_h" }, { "entry": "fs_blur_v" }],
+  "params": [
+    { "id": "radius", "type": "float", "default": 8, "min": 0, "max": 128 },
+    { "id": "blend", "type": "blend", "default": "normal" },
+    { "id": "amount", "type": "float", "default": 1, "min": 0, "max": 1 }
+  ],
+  "passes": [{ "entry": "fs_blur_h" }, { "entry": "fs_blur_v", "inputs": ["previous", "input"] }],
   "cost": { "taps": 3, "passes": 2, "scale": 1 },
   "reach": "radius"
 }

@@ -10,12 +10,17 @@
     { "id": "cursor", "type": "float", "default": 1, "min": 0, "max": 8 },
     { "id": "click", "type": "float", "default": 1, "min": 0, "max": 8, "uses": "clicks" },
     { "id": "beat", "type": "float", "default": 0, "min": 0, "max": 8, "uses": "audio" },
-    { "id": "specular", "type": "float", "default": 0.15, "min": 0, "max": 2 }
+    { "id": "specular", "type": "float", "default": 0.15, "min": 0, "max": 2 },
+    { "id": "perspective", "type": "float", "default": 0, "min": 0, "max": 1 },
+    { "id": "reflection", "type": "texture", "default": "" },
+    { "id": "tint", "type": "color", "default": "#ffffff" },
+    { "id": "walls", "type": "texture", "default": "" },
+    { "id": "speed", "type": "float", "default": 1, "min": 0, "max": 4 }
   ],
   "state": { "scale": 0.25, "settle": 4 },
   "passes": [
-    { "entry": "fs_water_ripple_step", "scale": 0.25, "inputs": ["state"], "output": "state" },
-    { "entry": "fs_water_ripple", "inputs": ["input", "state"] }
+    { "entry": "fs_water_ripple_step", "scale": 0.25, "inputs": ["state", "asset:walls"], "output": "state" },
+    { "entry": "fs_water_ripple", "inputs": ["input", "state", "asset:reflection"] }
   ],
   "cost": { "taps": 3, "passes": 2, "scale": 1 },
   "reach": "strength",

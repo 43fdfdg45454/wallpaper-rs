@@ -1,4 +1,5 @@
 use schemars::JsonSchema;
+use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, JsonSchema)]
@@ -37,11 +38,13 @@ pub enum Blend {
     Phoenix,
     Average,
     Negation,
+    Tint,
+    DiffuseLight,
 }
 
 use Blend::*;
 
-pub const BLENDS: [Blend; 32] = [
+pub const BLENDS: [Blend; 34] = [
     Normal,
     Add,
     Multiply,
@@ -74,6 +77,8 @@ pub const BLENDS: [Blend; 32] = [
     Phoenix,
     Average,
     Negation,
+    Tint,
+    DiffuseLight,
 ];
 
 impl Blend {
@@ -90,6 +95,7 @@ impl Blend {
     }
 
     pub fn named(name: &str) -> Option<Blend> {
-        serde_json::from_value(serde_json::Value::String(name.into())).ok()
+        let words: serde::de::value::StrDeserializer<'_, serde::de::value::Error> = name.into_deserializer();
+        Blend::deserialize(words).ok()
     }
 }

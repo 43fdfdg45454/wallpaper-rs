@@ -1,4 +1,5 @@
 use super::*;
+use std::borrow::Cow;
 
 #[test]
 fn asset_parameters_name_assets_of_their_kind() {
@@ -47,7 +48,7 @@ fn perspective_solves_the_homography_of_its_corners() {
     let d = descriptor("perspective").unwrap();
     let corners = [[0.2, 0.1], [0.9, 0.0], [1.0, 1.0], [0.0, 0.8]];
     let names = ["top_left", "top_right", "bottom_right", "bottom_left"];
-    let slots = d.pack(|id| names.iter().position(|n| *n == id).map(|i| Param::Vec2(corners[i])));
+    let slots = d.pack(|id| names.iter().position(|n| *n == id).map(|i| Cow::Owned(Param::Vec2(corners[i]))));
     let unit = |[x, y]: [f32; 2]| {
         let h = [4, 5, 6].map(|r| slots[r][0] * x + slots[r][1] * y + slots[r][2]);
         [h[0] / h[2], h[1] / h[2]]

@@ -111,7 +111,7 @@ fn every_new_scene_field_round_trips_and_shows_in_the_inspector() {
         assert!(wanted.iter().all(|k| found.iter().any(|f| f == k)), "{pointer} shows {found:?}");
     }
     let blend = fields(&doc, "/scene/layers/0").into_iter().find(|f| f.key == "blend").unwrap();
-    assert!(blend.options.contains(&json!("phoenix")) && blend.options.len() == 32);
+    assert!(blend.options.contains(&json!("phoenix")) && blend.options.len() == 34);
 }
 
 #[test]

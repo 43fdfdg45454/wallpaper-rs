@@ -1,0 +1,27 @@
+{
+  "id": "pulse",
+  "name": { "en": "Pulse" },
+  "mask_mode": "strength",
+  "params": [
+    {
+      "id": "what",
+      "type": "enum",
+      "default": 0,
+      "values": [
+        { "value": 0, "label": { "en": "Brightness", "es": "Brillo" } },
+        { "value": 1, "label": { "en": "Color", "es": "Color" } },
+        { "value": 2, "label": { "en": "Opacity", "es": "Opacidad" } }
+      ]
+    },
+    { "id": "speed", "type": "float", "default": 1, "min": 0, "max": 16, "uses": "time" },
+    { "id": "bounds", "type": "vec2", "default": [0, 1], "min": 0, "max": 4 },
+    { "id": "tint_low", "type": "color", "default": "#000000" },
+    { "id": "tint_high", "type": "color", "default": "#ffffff" },
+    { "id": "noise", "type": "float", "default": 0, "min": 0, "max": 1, "uses": "time" },
+    { "id": "noise_speed", "type": "float", "default": 1, "min": 0, "max": 16 },
+    { "id": "phase", "type": "texture", "default": "" },
+    { "id": "audio_band", "type": "int", "default": 0, "min": 0, "max": 64, "uses": "audio" }
+  ],
+  "passes": [{ "entry": "fs_pulse", "inputs": ["previous", "asset:phase"] }],
+  "fuse": "color"
+}

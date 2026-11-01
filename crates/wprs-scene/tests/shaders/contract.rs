@@ -4,8 +4,18 @@ use super::*;
 fn package_effects_compile_against_the_contract_and_report_what_they_read() {
     let d = packaged(|_| (), WGSL).unwrap_or_else(|e| panic!("{e}"));
     assert!(d.uses.contains(&Use::Time) && d.uses.contains(&Use::Audio) && !d.uses.contains(&Use::Cursor));
+    let plain =
+        |b: &&Descriptor| newer_params(&b.id).next().is_none() && b.params.iter().all(|p| p.label.is_empty());
+    let basic = [
+        ParamKind::Float,
+        ParamKind::Vec2,
+        ParamKind::Color,
+        ParamKind::Bool,
+        ParamKind::Texture,
+        ParamKind::Lut,
+    ];
     let mut first =
-        builtin().iter().filter(|b| !["tint", "blend_texture", "light_shafts"].contains(&b.id.as_str()));
+        builtin().iter().filter(plain).filter(|b| b.params.iter().all(|p| basic.contains(&p.kind)));
     assert!(d.newer() && first.all(|b| !b.newer()));
     assert_eq!(d.params[2].slot(&Param::Text("linear_burn".into()))[0], Blend::LinearBurn as u8 as f32);
     assert!(d.params[1].accepts(&Param::Number(1.0)) && !d.params[1].accepts(&Param::Number(2.0)));
@@ -74,7 +84,7 @@ fn descriptors_check_their_new_fields() {
             params(json!({ "id": "k", "type": "mask", "default": "", "channels": 2 })),
             "channels other than 1, 3 or 4",
         ),
-        (params(json!({ "id": "k", "type": "blend", "default": "tint" })), "default of k does not fit"),
+        (params(json!({ "id": "k", "type": "blend", "default": "sparkle" })), "default of k does not fit"),
         (
             params(json!({ "id": "k", "type": "float", "default": 0, "label": { "en": "x".repeat(300) } })),
             "256",

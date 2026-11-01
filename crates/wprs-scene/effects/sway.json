@@ -10,8 +10,11 @@
     { "id": "spread", "type": "float", "default": 1.5, "min": 0, "max": 64 },
     { "id": "swing", "type": "bool", "default": false },
     { "id": "angle", "type": "float", "default": 3, "min": 0, "max": 90 },
-    { "id": "pivot", "type": "vec2", "default": [0.5, 0], "min": -1, "max": 2 }
+    { "id": "pivot", "type": "vec2", "default": [0.5, 0], "min": -1, "max": 2 },
+    { "id": "double", "type": "bool", "default": false },
+    { "id": "phase", "type": "texture", "default": "" }
   ],
+  "passes": [{ "entry": "fs_sway", "inputs": ["previous", "asset:phase"] }],
   "fuse": "uv",
   "reach": "amplitude"
 }

@@ -1,0 +1,51 @@
+{
+  "id": "fluid",
+  "name": { "en": "Fluid" },
+  "mask_mode": "strength",
+  "params": [
+    {
+      "id": "render",
+      "type": "enum",
+      "default": 0,
+      "values": [
+        { "value": 0, "label": { "en": "Gradient", "es": "Degradado" } },
+        { "value": 1, "label": { "en": "Emitter color", "es": "Color del emisor" } },
+        { "value": 2, "label": { "en": "Background color", "es": "Color de fondo" } },
+        { "value": 3, "label": { "en": "Distortion", "es": "Distorsión" } }
+      ]
+    },
+    { "id": "gradient", "type": "texture", "default": "" },
+    { "id": "color", "type": "color", "default": "#ffffff" },
+    { "id": "velocity_decay", "type": "float", "default": 0.98, "min": 0, "max": 1 },
+    { "id": "dye_decay", "type": "float", "default": 0.97, "min": 0, "max": 1 },
+    { "id": "push", "type": "float", "default": 1, "min": 0, "max": 8, "uses": "cursor" },
+    { "id": "source", "type": "position", "default": [0.5, 0.9] },
+    { "id": "source_angle", "type": "float", "default": -90, "min": -360, "max": 360 },
+    { "id": "source_strength", "type": "float", "default": 0, "min": 0, "max": 64, "uses": "time" },
+    { "id": "line_from", "type": "position", "default": [0.3, 1] },
+    { "id": "line_to", "type": "position", "default": [0.7, 1] },
+    { "id": "line_strength", "type": "float", "default": 0, "min": 0, "max": 64, "uses": "time" },
+    { "id": "blend", "type": "blend", "default": "normal" },
+    { "id": "perspective", "type": "float", "default": 0, "min": 0, "max": 1 },
+    { "id": "opaque", "type": "bool", "default": false }
+  ],
+  "state": { "scale": 0.25, "settle": 6 },
+  "passes": [
+    { "entry": "fs_fluid_advect", "scale": 0.25, "inputs": ["state"], "output": "step" },
+    { "entry": "fs_fluid_divergence", "scale": 0.25, "inputs": ["pass:0"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:0", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:2", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:3", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:4", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:5", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:6", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:7", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:8", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:9", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_pressure", "scale": 0.25, "inputs": ["pass:10", "pass:1"], "output": "step" },
+    { "entry": "fs_fluid_step", "scale": 0.25, "inputs": ["pass:0", "pass:11"], "output": "state" },
+    { "entry": "fs_fluid", "inputs": ["input", "state", "asset:gradient"] }
+  ],
+  "cost": { "taps": 10, "passes": 14, "scale": 0.25 },
+  "quality": { "q1": { "scale": 0.5 }, "q0": { "freeze": true } }
+}

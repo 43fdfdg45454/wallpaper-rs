@@ -64,6 +64,7 @@ pub struct EffectDraw<'a> {
     pub textures: Vec<(&'a str, String)>,
     pub velocity: [f32; 2],
     pub variant: u32,
+    pub frozen: bool,
     pub reset: u32,
 }
 

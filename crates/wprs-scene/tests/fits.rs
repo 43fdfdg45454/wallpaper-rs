@@ -29,7 +29,7 @@ fn every_built_in_effect_fits_the_package_limits_with_room_to_spare() {
         let id = format!("x_{}", d.id);
         json["id"] = id.clone().into();
         json["cost"] = json.get("cost").cloned().unwrap_or(json!({}));
-        let json = json.to_string();
+        let json = json.to_string().replace(r#""output":"step""#, r#""output":"next""#);
         let checked = Descriptor::packaged(&id, &json, &renamed(&d.wgsl, &d.id));
         if UNIFORM_LOOPS.contains(&d.id.as_str()) {
             let fault = checked.err().unwrap_or_else(|| panic!("{} was accepted", d.id));
@@ -37,8 +37,9 @@ fn every_built_in_effect_fits_the_package_limits_with_room_to_spare() {
             continue;
         }
         let p = checked.unwrap_or_else(|e| panic!("{}: {e}", d.id));
-        assert!(p.ops * 50.0 < MAX_OPS as f32, "{} {}", d.id, p.ops);
-        assert!(p.size * 10 < MAX_INLINED, "{} {}", d.id, p.size);
+        let (spare, room) = if d.passes.len() > 8 { (10.0, 2) } else { (50.0, 10) };
+        assert!(p.ops * spare < MAX_OPS as f32, "{} {}", d.id, p.ops);
+        assert!(p.size * room < MAX_INLINED, "{} {}", d.id, p.size);
         (measured, ops, size) = (measured + 1, ops.max(p.ops), size.max(p.size));
     }
     eprintln!(

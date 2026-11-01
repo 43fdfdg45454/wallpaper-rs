@@ -35,6 +35,7 @@ QtObject {
             "death": App.tr("On death"),
             "destroy": App.tr("Destroyed"),
             "difference": App.tr("Difference"),
+            "diffuse_light": App.tr("Diffuse light"),
             "directional": App.tr("Directional"),
             "display": App.tr("Match the display"),
             "divide": App.tr("Divide"),

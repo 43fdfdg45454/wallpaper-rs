@@ -130,7 +130,7 @@ fn the_inspector_follows_the_schema() {
     let field = |key: &str| shown.iter().find(|f| f.key == key).unwrap_or_else(|| panic!("{key}"));
     assert_eq!((field("opacity").widget.as_str(), field("opacity").bindable), ("number", true));
     assert_eq!(field("opacity").range, json!([0, 1]));
-    assert_eq!((field("blend").widget.as_str(), field("blend").options.len()), ("enum", 32));
+    assert_eq!((field("blend").widget.as_str(), field("blend").options.len()), ("enum", 34));
     assert_eq!((field("position").widget.as_str(), field("position").unit.as_str()), ("vec2", "px"));
     assert_eq!(field("fill").widget, "color");
     assert_eq!(field("shape").widget, "variant");

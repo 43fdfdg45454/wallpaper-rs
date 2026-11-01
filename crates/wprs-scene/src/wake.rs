@@ -22,7 +22,7 @@ impl Wake {
 
 pub(crate) fn wakes(d: &Descriptor, slots: &[[f32; 4]; MAX_PARAMS], cx: &Context) -> Wake {
     let gated = d.params.iter().zip(slots).filter(|(_, s)| live(**s)).filter_map(|(p, _)| p.uses);
-    let settle = d.state.map_or(0.0, |s| s.settle);
+    let settle = d.state.as_ref().map_or(0.0, |s| s.settle);
     let wake = |u| match u {
         Use::Time => pace(d, slots, cx),
         Use::Cursor | Use::Clicks if cx.pointer.moving() || cx.calm[0] < settle => Wake::Frame,

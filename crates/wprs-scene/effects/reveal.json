@@ -1,0 +1,23 @@
+{
+  "id": "reveal",
+  "name": { "en": "Reveal" },
+  "mask_mode": "strength",
+  "params": [
+    { "id": "texture", "type": "texture", "default": "" },
+    {
+      "id": "shape",
+      "type": "enum",
+      "default": 0,
+      "values": [
+        { "value": 0, "label": { "en": "Circle", "es": "Círculo" } },
+        { "value": 1, "label": { "en": "Ellipse", "es": "Elipse" } }
+      ]
+    },
+    { "id": "radius", "type": "float", "default": 0.15, "min": 0, "max": 1 },
+    { "id": "softness", "type": "float", "default": 0.3, "min": 0, "max": 1 },
+    { "id": "follow", "type": "bool", "default": false, "uses": "cursor" },
+    { "id": "invert", "type": "bool", "default": false },
+    { "id": "center", "type": "position", "default": [0.5, 0.5] }
+  ],
+  "passes": [{ "entry": "fs_reveal", "inputs": ["previous", "asset:texture"] }]
+}

@@ -117,3 +117,17 @@ fn from_hsv(c: vec3<f32>) -> vec3<f32> {
     let p = (vec3<f32>(5.0, 3.0, 1.0) + fract(c.x) * 6.0) % vec3<f32>(6.0);
     return c.z - c.z * c.y * clamp(min(p, 4.0 - p), vec3<f32>(0.0), vec3<f32>(1.0));
 }
+
+fn mask_rgb(i: u32, uv: vec2<f32>) -> vec4<f32> {
+    let l = layer_uv(uv);
+    switch i {
+        case 0u: { return textureSampleLevel(aux0, samp, l, 0.0); }
+        case 1u: { return textureSampleLevel(aux1, samp, l, 0.0); }
+        case 2u: { return textureSampleLevel(aux2, samp, l, 0.0); }
+        case 3u: { return textureSampleLevel(aux3, samp, l, 0.0); }
+        case 4u: { return textureSampleLevel(aux4, samp, l, 0.0); }
+        case 5u: { return textureSampleLevel(aux5, samp, l, 0.0); }
+        case 6u: { return textureSampleLevel(aux6, samp, l, 0.0); }
+        default: { return textureSampleLevel(aux7, samp, l, 0.0); }
+    }
+}
