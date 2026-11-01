@@ -33,6 +33,7 @@ pub(super) struct PlayerSlot {
     shares: bool,
     imported: Option<Imported>,
     held: Option<Frame>,
+    pub(super) steered: Option<(wprs_video::Cut, u32)>,
 }
 
 impl PlayerSlot {
@@ -55,6 +56,7 @@ impl PlayerSlot {
             shares,
             imported,
             held,
+            steered: None,
         }
     }
 
@@ -120,7 +122,7 @@ impl PlayerSlot {
                 tracing::debug!(path = %path.display(), "video opened");
                 player.set_volume(volume, muted || locked);
                 player.set_playing(self.playing);
-                (self.player, self.due) = (Some(player), Some(now + FIRST_FRAME));
+                (self.player, self.due, self.steered) = (Some(player), Some(now + FIRST_FRAME), None);
             }
             Err(e) => drop(lock(&self.inbox.error).replace(e.to_string())),
         }

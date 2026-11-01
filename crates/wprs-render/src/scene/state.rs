@@ -50,7 +50,8 @@ impl Painter<'_, '_, '_> {
             false => *owner == e.descriptor.id && *key == def.id,
         };
         let found = id.and_then(|id| images.get(id)).or_else(|| paints.iter().find(painted).map(|(.., i)| i));
-        found.map(|image| self.ext(&image.0))
+        let moving = id.and_then(|id| self.videos.iter().find(|(name, _)| *name == id)).map(|(_, v)| *v);
+        moving.or(found.map(|image| &image.0)).map(|image| self.ext(image))
     }
 
     pub(crate) fn lut(&mut self, e: &EffectDraw<'_>) -> Src {

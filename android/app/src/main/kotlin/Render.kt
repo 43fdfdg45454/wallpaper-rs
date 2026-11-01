@@ -67,6 +67,8 @@ object Native {
 
     external fun clip(engine: Long, path: String, open: Boolean): Surface?
 
+    external fun steer(engine: Long): String?
+
     external fun depth(request: String): String
 
     external fun store(fd: Int, name: String): String?

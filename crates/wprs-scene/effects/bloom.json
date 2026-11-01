@@ -5,7 +5,8 @@
     { "id": "threshold", "type": "float", "default": 0.8, "min": 0, "max": 4 },
     { "id": "intensity", "type": "float", "default": 1, "min": 0, "max": 8 },
     { "id": "radius", "type": "float", "default": 16, "min": 0, "max": 128 },
-    { "id": "knee", "type": "float", "default": 0.5, "min": 0, "max": 1 }
+    { "id": "knee", "type": "float", "default": 0.5, "min": 0, "max": 1 },
+    { "id": "tint", "type": "color", "default": "#ffffff" }
   ],
   "passes": [
     { "entry": "fs_bloom_bright", "scale": 0.5 },

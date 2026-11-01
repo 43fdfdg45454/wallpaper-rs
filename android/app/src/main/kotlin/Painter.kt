@@ -26,7 +26,10 @@ class Painter(
     private val frames = Frames { nanos ->
         if (hears) hearing.poll()
         if (page != null) return@Frames listen()
-        Native.draw(handle, nanos, false).also { if (it < 0L) Render.handler.post(handover) else if (it == 0L && playing) follow() }
+        Native.draw(handle, nanos, false).also {
+            Native.steer(handle)?.let { list -> Render.post { steer(JSONArray(list)) } }
+            if (it < 0L) Render.handler.post(handover) else if (it == 0L && playing) follow()
+        }
     }
 
     var shown = false
@@ -153,6 +156,10 @@ class Painter(
     }
 
     private fun key(path: String) = "$path#$handle"
+
+    private fun steer(list: JSONArray) = (0 until list.length()).map(list::getJSONObject).forEach {
+        videos.steer(key(it.getString("path")), it.getBoolean("playing"), it.getDouble("rate").toFloat(), it.getLong("at").takeIf { _ -> it.getBoolean("seek") }, it.getBoolean("loop"))
+    }
 
     private fun follow() {
         val inputs = if (video == null) Native.inputs(handle) else 0

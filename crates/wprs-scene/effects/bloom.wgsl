@@ -21,5 +21,5 @@ fn fs_bloom_v(in: VertexOut) -> @location(0) vec4<f32> {
 
 @fragment
 fn fs_bloom_mix(in: VertexOut) -> @location(0) vec4<f32> {
-    return tap(in.uv) + sample(aux0, in.uv) * param(1u).x;
+    return tap(in.uv) + sample(aux0, in.uv) * vec4<f32>(param(4u).rgb, 1.0) * param(1u).x;
 }

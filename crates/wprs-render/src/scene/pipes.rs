@@ -50,6 +50,7 @@ pub(crate) struct Pipes {
     pub(crate) wrap: wgpu::Sampler,
     pub(crate) near: wgpu::Sampler,
     pub(crate) shrinks: Mutex<HashMap<TextureFormat, wgpu::RenderPipeline>>,
+    pub(crate) fields: Mutex<Option<super::field::Fielders>>,
 }
 
 fn entry(binding: u32, ty: wgpu::BindingType) -> wgpu::BindGroupLayoutEntry {
@@ -113,7 +114,14 @@ impl Pipes {
         };
         let (linear, clamp) = (wgpu::FilterMode::Linear, wgpu::AddressMode::ClampToEdge);
         Pipes {
-            composite: module(device, format!("{FRAME_WGSL}\n{BLEND_WGSL}\n{}", include_str!("scene.wgsl"))),
+            composite: module(
+                device,
+                format!(
+                    "{FRAME_WGSL}\n{BLEND_WGSL}\n{}\n{}",
+                    include_str!("scene.wgsl"),
+                    include_str!("text.wgsl")
+                ),
+            ),
             shelf: Arc::default(),
             frame: layout(&[
                 entry(0, uniform(false)),
@@ -129,6 +137,7 @@ impl Pipes {
             wrap: sampler_of(wgpu::AddressMode::Repeat, linear),
             near: sampler_of(clamp, wgpu::FilterMode::Nearest),
             shrinks: Mutex::default(),
+            fields: Mutex::default(),
         }
     }
 }

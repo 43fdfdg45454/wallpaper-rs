@@ -59,9 +59,8 @@ impl Painter<'_, '_, '_> {
     }
 
     pub(crate) fn base(&mut self, e: &EffectDraw<'_>, layer_uv: Affine) -> (Fx, Src) {
-        let images = self.images;
-        let mask = e.mask_texture.as_deref().and_then(|id| images.get(id));
-        let mask = mask.map_or(Src::White, |image| self.ext(&image.0));
+        let mask = e.mask_texture.as_deref().and_then(|id| self.picture(id));
+        let mask = mask.map_or(Src::White, |image| self.ext(image));
         let (mut mask_m0, mask_m1) = rows(layer_uv);
         mask_m0[3] = 1.0 - e.mask_strength;
         let fx = Fx {

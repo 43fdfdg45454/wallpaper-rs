@@ -1,5 +1,6 @@
 import { state, setup, MAX, owner, need, dirty, touched, put } from "wprs:core";
 import { fields, convert, copy, paramValue } from "wprs:values";
+import { video } from "wprs:media";
 
 export const touches = ["click", "enter", "leave", "move", "down", "up"];
 export const own = { handles: new Map(), spawned: new Map(), watched: new Set(), touchers: {}, overrides: {}, once: {}, controls: {}, top: [...setup.top], ordered: false, count: 0, size: 0 };
@@ -71,6 +72,9 @@ export function layer(id, watching = true) {
             ((own.touchers[id] ??= {})[event] ??= []).push([owner(), fn]);
         },
         effect: (which) => effect(id, which),
+        get video() {
+            return video(id);
+        },
         destroy: () => scene.destroy(id),
     };
     for (const key of fields) {

@@ -33,11 +33,13 @@ pub(crate) struct Context<'a> {
     pub(crate) now: f64,
     pub(crate) view: [f32; 4],
     pub(crate) canvas: [f32; 2],
+    pub(crate) camera: crate::Affine,
     pub(crate) glide: &'a PointerState,
     pub(crate) tilt: [f32; 2],
     pub(crate) still: bool,
     pub(crate) sheets: &'a BTreeMap<String, Vec<f32>>,
     pub(crate) flocks: &'a [crate::particles::Flock],
+    pub(crate) tapes: &'a [crate::Tape],
 }
 
 pub(crate) type Motion = ([f32; 2], f64, [f32; 2]);

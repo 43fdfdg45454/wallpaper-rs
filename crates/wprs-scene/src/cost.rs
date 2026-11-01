@@ -58,8 +58,10 @@ impl Scene {
 
     pub fn cost(&self, quality: Quality) -> f32 {
         let areas = self.areas();
-        let area = |l: &Layer| areas.get(&std::ptr::from_ref(l)).copied().unwrap_or(1.0);
+        let whole = self.canvas.camera.is_some();
+        let area = |l: &Layer| areas.get(&std::ptr::from_ref(l)).copied().filter(|_| !whole).unwrap_or(1.0);
         let layers = self.layers().filter(|l| l.flat()).map(|l| self.units(l, quality) * area(l));
+        let glow = crate::glow::glows(&self.canvas)[0].as_deref().map_or(0.0, |g| self.units(g, quality));
         let particles = self.layers().filter_map(|l| match &l.kind {
             Kind::Particles { system, .. } => self.particles.get(system),
             _ => None,
@@ -70,6 +72,6 @@ impl Scene {
         let read: std::collections::HashSet<&str> = self.layers().flat_map(crate::links::reads).collect();
         let apart = read.into_iter().filter_map(|id| self.layer(id)).map(|l| APART * area(l));
         let scale = quality.render_scale();
-        BASE + (layers.sum::<f32>() + particles.sum::<f32>() + apart.sum::<f32>()) * scale * scale
+        BASE + (layers.sum::<f32>() + particles.sum::<f32>() + apart.sum::<f32>() + glow) * scale * scale
     }
 }

@@ -29,6 +29,9 @@ impl SceneState {
     }
 
     pub(in super::super) fn script(&mut self, output: &str, mode: Mode) -> Option<ScriptOutputs> {
+        let ended = self.runtime.take_ended();
+        let room = MAX_FIRED.saturating_sub(self.ended.len());
+        self.ended.extend(ended.into_iter().take(room));
         let fresh = self.runtime.take_fired();
         let room = MAX_FIRED.saturating_sub(self.fired.len());
         self.fired.extend(fresh.into_iter().take(room));
@@ -43,6 +46,7 @@ impl SceneState {
             rt.fill_playbacks(&mut self.courses);
             rt.fill_reads(&mut self.read_back);
             rt.fill_sounds(&mut self.sounding);
+            rt.fill_videos(&mut self.filmed);
         }
         let minute = rt.wall().div_euclid(60.0) as i64;
         if self.zone.0 != minute {
@@ -76,6 +80,8 @@ impl SceneState {
             reads: &self.read_back,
             touches: &touches,
             sounds: &self.sounding,
+            videos: &self.filmed,
+            ended: &self.ended,
         };
         let link = self.host.as_mut()?;
         let before = link.progress().0;
@@ -84,6 +90,7 @@ impl SceneState {
         match frames > before {
             true => {
                 self.fired.clear();
+                self.ended.clear();
                 if eventful {
                     (self.calm, self.awaiting) = (0, frames);
                     self.sent.0.clone_from(&self.exposed);

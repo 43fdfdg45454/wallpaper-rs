@@ -26,7 +26,7 @@ pub(super) fn packaged(json: &Value, wgsl: &str, layers: Vec<Value>) -> Option<R
 
 fn adjustments(layers: usize, uses: usize, effect: &str) -> Vec<Value> {
     let list: Vec<Value> = (0..uses).map(|_| json!({ "effect": effect })).collect();
-    let layer = |i| json!({ "id": format!("adj{i}"), "type": "adjustment", "size": [1, 1], "effects": list });
+    let layer = |i| json!({ "id": format!("adj{i}"), "type": "adjustment", "effects": list });
     (0..layers).map(layer).collect()
 }
 

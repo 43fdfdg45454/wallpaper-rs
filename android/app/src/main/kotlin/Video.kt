@@ -64,6 +64,15 @@ class Videos(private val context: Context) {
 
     fun update(uri: String) = videos[uri]?.update()
 
+    fun steer(key: String, playing: Boolean, rate: Float, seek: Long?, loop: Boolean) = videos[key]?.run {
+        held = playing
+        speed = rate
+        looped = loop
+        seek?.let { position = it }
+        player?.let { steer(it, seek) }
+        update()
+    }
+
     fun positions() = videos.mapValues { it.value.at() }
 
     fun trim() = videos.values.filter { it.player?.playWhenReady == false }.forEach { it.release() }
@@ -84,16 +93,19 @@ class Videos(private val context: Context) {
         from: Long = 0L,
     ) : Player.Listener {
         val viewers = mutableListOf<Painter>()
+        var held = true
+        var speed = 1f
+        var looped = true
         var player: ExoPlayer? = null
         var output: Surface? = null
-        private var position = from
+        var position = from
         private var retried = false
         private val idle = Runnable { release() }
 
         fun update() {
             Render.cancel(idle)
             val reader = fixed
-            val target = if (reader != null) reader.takeIf { viewers.any(Painter::playing) }
+            val target = if (reader != null) reader.takeIf { held && viewers.any(Painter::playing) }
             else viewers.lastOrNull { it.shown }?.surface?.takeIf { Native.moving() }
             val active = player
             when {
@@ -122,14 +134,20 @@ class Videos(private val context: Context) {
         private fun start(target: Surface) {
             player = ExoPlayer.Builder(context).setBandwidthMeter(Offline).setUsePlatformDiagnostics(false).build().apply {
                 addListener(this@Video)
-                repeatMode = Player.REPEAT_MODE_ONE
                 configure(this, fixed != null && !audible)
+                steer(this, null)
                 setVideoSurface(target)
                 setMediaItem(MediaItem.fromUri(uri), position)
                 prepare()
                 play()
             }
             output = target
+        }
+
+        fun steer(player: ExoPlayer, seek: Long?) {
+            player.repeatMode = if (looped) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+            player.setPlaybackSpeed(speed.coerceIn(0.1f, 4f))
+            seek?.let(player::seekTo)
         }
 
         fun at() = player?.currentPosition ?: position

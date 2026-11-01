@@ -75,3 +75,13 @@ const val FLASH_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.exam
     "default_locale": "en", "title": { "en": "Flash", "es": "Destello" }, "description": { "en": "Fast **flashes**.", "es": "Destellos **rápidos**." },
     "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
     "content": { "rating": "mature", "descriptors": ["violence"] }, "photosensitive": true }"""
+const val LEANS_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32], "clear": false, "perspective": 120,
+    "camera": { "zoom": 1.2, "rotation": 5 }, "bloom": { "threshold": 0.5, "radius": 4, "tint": "#ffd0a0" } }, "layers": [
+    { "id": "card", "type": "solid", "color": "#4080ff", "size": [30, 20], "transform": { "tilt": [20, 30], "z": 10 } },
+    { "id": "word", "type": "text", "text": "Hi", "size": 12, "outline": { "color": "#000000", "width": 1 },
+      "shadow": { "offset": [1, 1], "blur": 1 }, "letter_spacing": 2 },
+    { "id": "lens", "type": "adjustment", "size": [16, 16], "redraw": true, "transform": { "position": [32, 16], "scale": 1.5 } }] }"""
+const val LEANS_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.leans", "version": "1.0.0",
+    "title": "Leans", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+    "content": { "rating": "general" }, "photosensitive": false,
+    "requires": { "features": ["bloom", "camera", "capture", "keep_frame", "text_styles", "tilt"] } }"""

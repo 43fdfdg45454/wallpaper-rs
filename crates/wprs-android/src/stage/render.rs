@@ -25,6 +25,7 @@ impl Stage {
         force: bool,
     ) -> Result<Shot<'a>, RenderError> {
         let budget = Budget::new(tier, !power.charging, cap.max(1));
+        self.runtime.set_battery(!power.charging);
         self.heavy = budget.still(&self.runtime);
         if self.heavy && !std::mem::replace(&mut self.posed, true) {
             self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));

@@ -63,8 +63,13 @@ impl Runtime {
     }
 
     pub fn set_reduced_motion(&mut self, still: bool) -> bool {
-        let moves = self.scene.layers().any(|l| !l.parallax.is_zero());
+        let shakes = self.scene.canvas.camera.as_ref().is_some_and(|c| c.shake.is_some());
+        let moves = shakes || self.scene.layers().any(|l| !l.parallax.is_zero());
         moves && std::mem::replace(&mut self.still, still) != still
+    }
+
+    pub fn set_battery(&mut self, battery: bool) -> bool {
+        std::mem::replace(&mut self.battery, battery) != battery && self.glow[1].is_some()
     }
 
     pub fn set_sheet(&mut self, asset: &str, durations: Vec<f32>) {
@@ -74,6 +79,7 @@ impl Runtime {
     pub fn set_script(&mut self, outputs: ScriptOutputs) -> bool {
         let outputs = outputs.bounded(&self.scene);
         self.play_sounds(&outputs.sounds);
+        self.steer(&outputs.videos);
         for (id, command) in &outputs.timelines {
             let Some((tl, head)) = self.timelines.iter_mut().find(|(tl, _)| &tl.id == id) else { continue };
             match *command {

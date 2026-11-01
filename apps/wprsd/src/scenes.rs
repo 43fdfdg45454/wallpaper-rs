@@ -78,6 +78,11 @@ pub(crate) fn bank(scene: &Scene, sounds: &[(String, PathBuf)]) -> (Bank, BTreeM
     (Bank::new(files), probed.collect())
 }
 
+pub(crate) fn filmed(lengths: &mut BTreeMap<String, f32>, videos: &[(String, Reel)]) {
+    let found = videos.iter().filter_map(|(id, reel)| Some((id.clone(), wprs_scene::film_file(&reel.path)?)));
+    lengths.extend(found);
+}
+
 pub(crate) fn listens(scene: &Scene, scripts: &[(String, String)]) -> bool {
     let uses = wprs_scene::needs(scene);
     uses.audio || uses.cursor || wprs_scene::script_inputs(scene, scripts).contains(&true)

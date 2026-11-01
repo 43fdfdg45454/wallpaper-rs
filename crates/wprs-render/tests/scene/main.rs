@@ -13,6 +13,7 @@ use wprs_scene::{AudioFrame, Property, Quality, Runtime, SCHEMA, Scene, effectiv
 
 mod compose;
 mod passes;
+mod stage;
 
 const SIZE: (u32, u32) = (100, 50);
 

@@ -28,7 +28,7 @@ pub struct Runtime {
     glide: PointerState,
     glided: f64,
     tilt: [f32; 2],
-    still: bool,
+    pub(crate) still: bool,
     homes: HashMap<String, String>,
     sheets: BTreeMap<String, Vec<f32>>,
     pub(crate) script: ScriptOutputs,
@@ -61,6 +61,12 @@ pub struct Runtime {
     swarms: RefCell<Vec<Swarm>>,
     flocks: Vec<Flock>,
     systems: Vec<System>,
+    glow: crate::glow::Glows,
+    battery: bool,
+    pub(crate) tapes: Vec<crate::Tape>,
+    pub(crate) ended: Vec<String>,
+    pub(crate) lengths: BTreeMap<String, f32>,
+    pub(crate) sighted: Cell<u64>,
 }
 
 impl Runtime {
@@ -89,7 +95,15 @@ impl Runtime {
         let listened = crate::voice::listened(&scene, true, true);
         let onsets = crate::voice::onsets(&scene);
         let gates = RefCell::new(vec![None; onsets.len()]);
+        let glow = crate::glow::glows(&scene.canvas);
+        let tapes = crate::footage::tapes(&scene);
         let mut runtime = Runtime {
+            glow,
+            battery: false,
+            tapes,
+            ended: Vec::new(),
+            lengths: BTreeMap::new(),
+            sighted: Cell::new(u64::MAX),
             scene,
             seed,
             props,

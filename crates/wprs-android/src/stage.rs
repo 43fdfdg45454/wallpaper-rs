@@ -68,6 +68,9 @@ impl Stage {
         runtime.set_language(pack.locale.as_deref().unwrap_or_default());
         runtime.set_listeners(true, false);
         pack.assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
+        let films =
+            pack.videos.iter().filter_map(|(id, path)| Some((id.clone(), wprs_scene::film_file(path)?)));
+        runtime.set_lengths(films.collect());
         let (granted, moving) = (props::granted(&pack.id), moves(&pack.id));
         let (view, quality, tick, due, touch) = (None, Quality::Q3, None, None, (None, 0, false));
         let acting = Acting::new(&pack, &runtime);
@@ -141,6 +144,10 @@ impl Stage {
 
     pub(crate) fn image(&self) -> Option<&GpuImage> {
         self.view.as_ref()?.image()
+    }
+
+    pub(crate) fn tapes(&self) -> &[wprs_scene::Tape] {
+        self.runtime.tapes()
     }
 
     pub(crate) fn videos(&self) -> Arc<Vec<(String, PathBuf)>> {

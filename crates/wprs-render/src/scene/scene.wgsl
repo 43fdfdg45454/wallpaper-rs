@@ -19,6 +19,8 @@ struct Item {
     mask_shape: vec4<f32>,
     back: vec4<f32>,
     mode: vec4<f32>,
+    lean: vec4<f32>,
+    mask_lean: vec4<f32>,
 };
 
 struct Out {
@@ -40,7 +42,7 @@ fn vs_item(@builtin(vertex_index) i: u32) -> Out {
     let corner = vec2<f32>(f32(i & 1u), f32((i >> 1u) & 1u));
     let u = mix(item.quad.xy, item.quad.zw, corner);
     let p = vec3<f32>(u, 1.0);
-    return Out(vec4<f32>(dot(item.m0.xyz, p), dot(item.m1.xyz, p), 0.0, 1.0), u);
+    return Out(vec4<f32>(dot(item.m0.xyz, p), dot(item.m1.xyz, p), 0.0, 1.0 + dot(item.lean.xyz, p)), u);
 }
 
 fn encode(c: vec3<f32>) -> vec3<f32> {
@@ -90,7 +92,7 @@ fn mask_value(in: Out) -> f32 {
         return 1.0;
     }
     let p = vec3<f32>(in.position.xy, 1.0);
-    let at = vec2<f32>(dot(item.mask_m0.xyz, p), dot(item.mask_m1.xyz, p));
+    let at = vec2<f32>(dot(item.mask_m0.xyz, p), dot(item.mask_m1.xyz, p)) / (1.0 + dot(item.mask_lean.xyz, p));
     var m: f32;
     if kind < 2.5 {
         m = dot(textureSampleLevel(mask_tex, samp, at, 0.0), item.channel);

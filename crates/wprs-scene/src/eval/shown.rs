@@ -25,6 +25,7 @@ pub(crate) fn content<'a>(
         }
         Kind::Video { video, size, .. } => Content::Video { asset: named(cx, video), size: boxed(*size) },
         Kind::Text(t) => {
+            let ink = t.ink(cx, quality);
             let text = match (&set.text, &t.text) {
                 (Some(t), _) => Cow::Owned(t.clone()),
                 (None, crate::Value::Fixed(t)) => Cow::Borrowed(t.as_str()),
@@ -45,7 +46,10 @@ pub(crate) fn content<'a>(
                     line_height: t.line_height,
                     padding: t.padding.unwrap_or(0.0),
                     backing: t.background.as_ref().map(|b| (b.color.get(cx), b.padding, b.radius)),
+                    spacing: t.spacing(cx),
+                    reach: ink.map_or(0.0, |i| i.reach),
                 },
+                ink,
             }
         }
         Kind::Shape { shape, fill, gradient, stroke } => Content::Shape {

@@ -1,4 +1,5 @@
 mod fonts;
+mod styles;
 mod text;
 mod time;
 

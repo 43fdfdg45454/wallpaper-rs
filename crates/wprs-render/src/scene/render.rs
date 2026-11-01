@@ -79,6 +79,7 @@ impl Renderer {
             more: super::stops::frame(runtime),
             backdrop: None,
             flocks: &scratch.flocks,
+            flat: std::cell::Cell::new(None),
         };
         if frame.draws.iter().any(|d| !d.layer.solid.is_off()) {
             painter.hitboxes(&v.sources, &mut v.covers, &mut v.hitboxes);
@@ -92,10 +93,10 @@ impl Renderer {
             (size, background.map(f32::to_bits), quality as u8, srgb).hash(&mut h);
             h.finish()
         };
-        let damage =
-            painter.damage(&v.marks, &mut scratch.marks, std::mem::replace(&mut v.stamp, stamp) != stamp);
+        let damage = painter.damage(&v.marks, &mut scratch.marks, v.stamp != stamp);
+        let fresh = std::mem::replace(&mut v.stamp, stamp) != stamp;
         let damage = match damage {
-            Damage::Part(_) if v.trimmed => Damage::Full,
+            Damage::Part(_) if v.trimmed || frame.keep => Damage::Full,
             damage => damage,
         };
         std::mem::swap(&mut v.marks, &mut scratch.marks);
@@ -126,12 +127,13 @@ impl Renderer {
             v.scratch = scratch;
             return Ok(&view.target.as_ref().expect("created above").1);
         }
+        let keep = frame.keep && !fresh && !v.trimmed;
         v.trimmed = false;
         painter.clip = match damage {
             Damage::Part(rect) => Some(rect),
             _ => None,
         };
-        painter.run(Src::Canvas, background.map(f64::from));
+        painter.run(Src::Canvas, background.map(f64::from), keep);
         let clip = painter.clip;
         let reused = painter.reused;
         let (trial, drawn) = (super::flight::trial(v.id), !scratch.drawn.is_empty());
@@ -169,7 +171,7 @@ impl Renderer {
         v.states.extract_if(old).for_each(|(_, sim)| sim.tex.into_iter().for_each(|t| pool.give(t)));
         pool.end_frame();
         let now = pool.frame;
-        v.texts.retain(|_, (.., used)| now - *used < TEXT_FRAMES);
+        v.texts.retain(|_, r| now - r.used < TEXT_FRAMES);
         counted.compiled = pipes::compiled(0).wrapping_sub(created.1);
         (counted.created, counted.reused, counted.textures) =
             (pool.created - created.0 + counted.compiled, reused, pool.textures() as u32);

@@ -1,11 +1,6 @@
-use super::SceneView;
-use super::item::scale_of;
-use crate::Renderer;
-use crate::texture::create_image;
 use ab_glyph::{Font, FontArc, GlyphId, PxScale, ScaleFont, point};
 use image::{Rgba, RgbaImage};
-use std::hash::{DefaultHasher, Hash, Hasher};
-use wprs_scene::{Affine, Align, Content, Frame, Layout};
+use wprs_scene::{Align, Layout};
 
 const MAX_EDGE: u32 = 4096;
 const ELLIPSIS: char = '…';
@@ -26,6 +21,7 @@ struct Line {
 struct Typesetter<'f> {
     fonts: &'f [FontArc],
     scale: PxScale,
+    spacing: f32,
 }
 
 fn breaks_after(c: char) -> bool {
@@ -40,7 +36,7 @@ impl Typesetter<'_> {
     }
 
     fn advance(&self, (font, id): (usize, GlyphId)) -> f32 {
-        self.fonts[font].as_scaled(self.scale).h_advance(id)
+        self.fonts[font].as_scaled(self.scale).h_advance(id) + self.spacing
     }
 
     fn line(&self, chars: &[char]) -> Line {
@@ -54,6 +50,7 @@ impl Typesetter<'_> {
             if !c.is_whitespace() {
                 line.width = pen;
             }
+            pen += self.spacing;
             last = Some((font, id));
         }
         line
@@ -108,7 +105,7 @@ pub(crate) fn raster(
 ) -> Option<RgbaImage> {
     let scale = PxScale::from(px.clamp(1.0, 1024.0));
     let first = fonts.first()?.as_scaled(scale);
-    let set = Typesetter { fonts, scale };
+    let set = Typesetter { fonts, scale, spacing: layout.spacing * k };
     let advance = layout.line_height.map_or(first.height() + first.line_gap(), |h| h * px);
     let limit = layout.wrap.map(|w| w.width * k);
     let chars: Vec<char> = text.chars().take(16_384).collect();
@@ -127,7 +124,7 @@ pub(crate) fn raster(
     let block =
         limit.unwrap_or_else(|| lines.iter().map(|l| l.width).fold(0.0, f32::max)).min(MAX_EDGE as f32);
     let [bx, by] = layout.backing.map_or([0.0; 2], |(_, padding, _)| padding.map(|p| p * k));
-    let margin = layout.padding * k + 1.0;
+    let margin = (layout.padding + layout.reach) * k + 1.0;
     let width = ((block + 2.0 * (bx + margin)).ceil() as u32).min(MAX_EDGE);
     let height = ((advance * lines.len().max(1) as f32 + 2.0 * (by + margin)).ceil() as u32).min(MAX_EDGE);
     let mut image = RgbaImage::from_pixel(width, height, Rgba([255, 255, 255, 0]));
@@ -154,45 +151,4 @@ pub(crate) fn raster(
         }
     }
     Some(image)
-}
-
-impl Renderer {
-    pub(crate) fn rasters(
-        &self,
-        view: &mut SceneView,
-        frame: &Frame<'_>,
-        screen: Affine,
-        found: &mut Vec<(usize, u64)>,
-    ) {
-        for (i, d) in frame.draws.iter().enumerate() {
-            let Content::Text { text, font, size, align, fallback, layout, .. } = &d.content else {
-                continue;
-            };
-            let k = scale_of(screen.then(d.world)).max(1e-3);
-            let px = (size * k * 2.0).round() / 2.0;
-            let key = {
-                let mut h = DefaultHasher::new();
-                let wrap = layout.wrap.map(|w| (w.width.to_bits(), w.lines, w.ellipsis));
-                let backing = layout.backing.map(|b| (b.1.map(f32::to_bits), b.2.to_bits()));
-                let spacing = (layout.line_height.map(f32::to_bits), layout.padding.to_bits(), backing);
-                (text, font, fallback, px.to_bits(), *align as u8, wrap, spacing).hash(&mut h);
-                h.finish()
-            };
-            let frame_no = view.pool.frame;
-            if let Some(entry) = view.texts.get_mut(&key) {
-                entry.2 = frame_no;
-            } else {
-                let fonts = view.fonts.chain(*font, fallback);
-                if let Some(image) = raster(&fonts, text, px, *align, px / size, layout) {
-                    let (w, h) = image.dimensions();
-                    let gpu = create_image(&self.device, &self.queue, image.as_raw(), w, h, w * 4);
-                    view.pool.created += 1;
-                    view.texts.insert(key, (gpu, [w as f32 * size / px, h as f32 * size / px], frame_no));
-                }
-            }
-            if view.texts.contains_key(&key) {
-                found.push((i, key));
-            }
-        }
-    }
 }

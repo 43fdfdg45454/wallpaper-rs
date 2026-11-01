@@ -87,6 +87,14 @@ pub fn clips<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong) -> JStr
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn steer<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong) -> JString<'a> {
+    on(&mut env, |env| match engine(handle, |e| Ok(e.steer()))? {
+        Some(list) => Ok(env.new_string(list)?),
+        None => Ok(JString::default()),
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
 pub fn clip<'a>(
     mut env: EnvUnowned<'a>,
     _: JObject<'a>,

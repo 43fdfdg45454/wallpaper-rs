@@ -1,11 +1,12 @@
 use crate::input::LayerOverride;
 use crate::resolve::Context;
-use crate::{Affine, Inherit, Kind, Layer, MAX_DEPTH, Scene, Wake};
+use crate::{Affine, Inherit, Kind, Layer, Lean, MAX_DEPTH, Scene, Wake};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Place {
     pub(crate) world: Affine,
+    pub(crate) lean: Option<Lean>,
     pub(crate) visible: bool,
     pub(crate) opacity: f32,
 }
@@ -31,11 +32,11 @@ fn follows(layer: &Layer, what: Inherit) -> bool {
 }
 
 impl Context<'_> {
-    pub(crate) fn place(&self, layer: &Layer, outer: Affine) -> Place {
+    pub(crate) fn place(&self, layer: &Layer, outer: (Affine, Option<Lean>)) -> Place {
         self.placed(layer, Some(outer), 0)
     }
 
-    fn placed(&self, layer: &Layer, outer: Option<Affine>, depth: usize) -> Place {
+    fn placed(&self, layer: &Layer, outer: Option<(Affine, Option<Lean>)>, depth: usize) -> Place {
         let key = std::ptr::from_ref(layer) as usize;
         if let Some(found) = self.places.borrow().get(&key) {
             return *found;
@@ -46,10 +47,10 @@ impl Context<'_> {
             found.map(|l| self.placed(l, None, depth + 1))
         };
         let parent = layer.parent.as_ref().and_then(by_id);
-        let home = || self.homes.get(&layer.id).and_then(by_id).map(|p| p.world);
-        let base = match parent.filter(|_| follows(layer, Inherit::Transform)) {
-            Some(p) => p.world,
-            None => outer.or_else(home).unwrap_or(Affine::IDENTITY),
+        let home = || self.homes.get(&layer.id).and_then(by_id).map(|p| (p.world, p.lean));
+        let (base, around) = match parent.filter(|_| follows(layer, Inherit::Transform)) {
+            Some(p) => (p.world, p.lean),
+            None => outer.or_else(home).unwrap_or((self.camera, None)),
         };
         let mut visible = set.visible.unwrap_or_else(|| layer.visible.get(self));
         let mut opacity = set.opacity.unwrap_or_else(|| layer.opacity.get(self)).clamp(0.0, 1.0);
@@ -57,7 +58,8 @@ impl Context<'_> {
             visible &= p.visible || !follows(layer, Inherit::Visible);
             opacity *= if follows(layer, Inherit::Opacity) { p.opacity } else { 1.0 };
         }
-        let place = Place { world: base.then(self.local(layer, set)), visible, opacity };
+        let world = base.then(self.local(layer, set));
+        let place = Place { world, lean: self.lean(layer, world, around), visible, opacity };
         self.places.borrow_mut().insert(key, place);
         place
     }

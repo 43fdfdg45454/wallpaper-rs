@@ -1,4 +1,5 @@
-use super::super::item::{Item, Rect, channel, invert, rows, shape};
+use super::super::item::{Item, Rect, channel, shape};
+use super::super::map::Map;
 use super::super::paint::{Painter, Target};
 use super::super::pipes::Mode;
 use super::super::{Op, Src};
@@ -9,19 +10,17 @@ impl Painter<'_, '_, '_> {
         &mut self,
         item: &mut Item,
         (mask, texture, strength): (Option<&Mask>, Option<&str>, f32),
-        m: Affine,
+        m: Map,
         size: [f32; 2],
         target: Target,
     ) -> Src {
         let Some(mask) = mask else { return Src::White };
-        let to_local = invert(m).then(Affine::translate([target.rect.x, target.rect.y]));
+        let to_local = m.inverse().then(Affine::translate([target.rect.x, target.rect.y]));
         let weak = 1.0 - strength;
         item.mask_info = [1.0, f32::from(u8::from(mask.invert)), mask.feather, weak];
         item.channel = channel(mask.channel, mask.texture.is_some());
-        let images = self.images;
         let (affine, src) = if let Some(id) = texture {
-            let image = images.get(id).map(|image| &image.0);
-            (to_local, image.map_or(Src::White, |image| self.ext(image)))
+            (to_local, self.picture(id).map_or(Src::White, |image| self.ext(image)))
         } else if let Some(id) = &mask.layer {
             item.mask_info[0] = 2.0;
             let found = self.frame.draws.iter().position(|d| &d.layer.id == id).and_then(|j| self.shared(j));
@@ -34,22 +33,22 @@ impl Painter<'_, '_, '_> {
                 (target.rect.x - r.x) / r.w,
                 (target.rect.y - r.y) / r.h,
             ]);
-            (back, src)
+            (Map::Flat(back), src)
         } else if let Some(s) = &mask.shape {
             let (shape_size, params, _) = shape(s);
             item.mask_info[0] = 3.0;
             item.mask_shape = [params[0], params[1], shape_size[0], shape_size[1]];
             let center =
                 Affine::translate([(shape_size[0] - size[0]) / 2.0, (shape_size[1] - size[1]) / 2.0]);
-            (center.then(Affine::scale(size)).then(to_local), Src::White)
+            (to_local.after(center.then(Affine::scale(size))), Src::White)
         } else {
             return Src::White;
         };
-        (item.mask_m0, item.mask_m1) = rows(affine);
+        affine.sample(item);
         src
     }
 
-    pub(super) fn blend(
+    pub(crate) fn blend(
         &mut self,
         item: &mut Item,
         blend: Blend,

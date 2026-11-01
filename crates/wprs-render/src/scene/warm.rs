@@ -28,7 +28,9 @@ fn entry(layer: &Layer) -> Option<&'static str> {
 fn walk(layers: &[Layer], atop: bool, pairs: &mut BTreeSet<(&'static str, Mode)>) {
     for (n, layer) in layers.iter().enumerate() {
         let m = mode(layer.blend, atop && n > 0);
-        for e in entry(layer).into_iter().chain(matches!(layer.kind, Kind::Text(_)).then_some("fs_shape")) {
+        let styled = matches!(&layer.kind, Kind::Text(t) if t.styled());
+        let text = [matches!(layer.kind, Kind::Text(_)).then_some("fs_shape"), styled.then_some("fs_text")];
+        for e in entry(layer).into_iter().chain(text.into_iter().flatten()) {
             pairs.extend([(e, m), (e, Mode::Normal), ("fs_texture", m)]);
         }
         if let Kind::Group { layers, clip, .. } = &layer.kind {
@@ -47,6 +49,9 @@ impl Pipes {
         }
         if srgb {
             let _ = self.get(device, Shader::Scene("fs_texture"), Mode::Replace, Format::Rgba8UnormSrgb);
+        }
+        if scene.drawable().any(|l| matches!(&l.kind, Kind::Text(t) if t.styled())) {
+            drop(self.fielders(device));
         }
         if scene.drawable().any(|l| matches!(l.kind, Kind::Image { .. })) {
             let linear = scene.assets.values().any(|a| a.linear);

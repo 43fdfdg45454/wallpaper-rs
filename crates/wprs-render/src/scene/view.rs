@@ -18,7 +18,7 @@ pub struct SceneView {
     pub(super) samplings: HashMap<String, super::sampling::Sampling>,
     pub(super) sources: HashMap<String, Arc<super::Pixels>>,
     pub(super) fonts: fonts::Fonts,
-    pub(super) texts: HashMap<u64, (GpuImage, [f32; 2], u64)>,
+    pub(super) texts: HashMap<u64, super::rasters::Raster>,
     pub(super) pool: Pool,
     pub(super) caches: HashMap<usize, Cached>,
     pub(super) luts: Vec<(String, Tex)>,

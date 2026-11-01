@@ -252,37 +252,37 @@ draw it, refuse the package with the newer-version message.
 The fields of `scene.json` that came after the first version name these features (`scene.md` says
 what each field does). Each one is refused on a platform until its engine draws it, and the table
 says which ones run today; the phone, which runs scene scripts in a thread of their own but plays no
-scene sound, plays a scene with `sound2` silently, runs `scripts2` and `script_layers`, and leaves out
-the other `script_` features, which change nothing there:
+scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_layers` and
+`script_animations`, and leaves out the other `script_` features, which change nothing there:
 
 | Feature | The scene | Desktop | Android |
 |---------|-----------|---------|---------|
 | `blend_modes2` | uses a blend mode after `luminosity` (`linear_burn` … `diffuse_light`) | runs | runs |
 | `layer_color` | sets `brightness` on a layer or `color` on a picture, video, particles or group layer | runs | runs |
 | `parent` | sets `parent` or `inherit` on a layer | runs | runs |
-| `tilt` | sets `transform.tilt`, `transform.z` or `canvas.perspective` | refused | refused |
+| `tilt` | sets `transform.tilt`, `transform.z` or `canvas.perspective` | runs | runs |
 | `mask_strength` | sets `strength` on a mask | runs | runs |
 | `effect_masks` | masks an effect with a `layer` or a `shape` | runs | runs |
 | `layer_textures` | feeds a layer into an effect texture with `{ "layer" }` | runs | runs |
-| `video_textures` | uses a video asset as a mask, an effect texture or the picture of a light | refused | refused |
-| `layer_playback` | sets `playback` on a picture or video layer | refused | refused |
+| `video_textures` | uses a video asset as a mask, an effect texture or the picture of a light | runs | runs |
+| `layer_playback` | sets `playback` on a picture or video layer | runs | runs |
 | `texture_options` | sets `filter`, `wrap` or `mipmaps` on an asset | runs | runs |
 | `animated_textures` | sets `frames`, `fps`, `durations`, `rects` or `animated` on an asset | runs | runs |
 | `text_layout` | sets `valign`, `wrap`, `line_height`, `background` or `padding` on a text | runs | runs |
-| `text_styles` | sets `letter_spacing`, `outline`, `shadow`, `blur` or `render: sdf` on a text | refused | refused |
+| `text_styles` | sets `letter_spacing`, `outline`, `shadow`, `blur` or `render: sdf` on a text | runs | runs |
 | `fonts2` | uses ttc, otc or woff2 fonts, `face` or `fallback` | runs | runs |
 | `sound2` | plays MP3, `sounds` lists, `mode`, `pause`, `stream` or `play_on` | runs | without |
-| `camera` | sets `canvas.camera` | refused | refused |
+| `camera` | sets `canvas.camera` | runs | runs |
 | `parallax2` | sets `canvas.parallax` or a parallax with two different parts | runs | runs |
-| `bloom` | sets `canvas.bloom` | refused | refused |
+| `bloom` | sets `canvas.bloom` | runs | runs |
 | `hdr` | sets `canvas.hdr` or `canvas.tonemap` | refused | refused |
-| `keep_frame` | sets `canvas.clear` to `false` | refused | refused |
+| `keep_frame` | sets `canvas.clear` to `false` | runs | runs |
 | `lights` | has `light` layers | refused | refused |
 | `volumetric_lights` | sets `volumetric` on a light | refused | refused |
 | `light_textures` | sets `texture` on a spot light | refused | refused |
 | `lighting2d` | sets `lighting` on a layer | refused | refused |
 | `ambient_light` | sets `canvas.ambient` or `canvas.sky` | refused | refused |
-| `capture` | sets `size` or `redraw` on an adjustment layer | refused | refused |
+| `capture` | sets `size` or `redraw` on an adjustment layer | runs | runs |
 | `timeline_events` | names `events` of a timeline or triggers on `event:<name>` | runs | runs |
 | `timeline_frames` | gives the length of a timeline in `frames` at `fps` | runs | runs |
 | `timeline_wrap` | sets `wrap` on a looping timeline | runs | runs |
@@ -326,7 +326,7 @@ the other `script_` features, which change nothing there:
 | `script_geometry` | has `pools` or scripts that use `geometry` | refused | without |
 | `script_storage` | has scripts that use `storage` | refused | without |
 | `script_sounds` | has scripts that use `sounds` | runs | without |
-| `script_animations` | has scripts that use `animations` | refused | without |
+| `script_animations` | has scripts that use `animations` | runs | runs |
 | `script_camera` | has scripts that use `camera` | refused | without |
 | `script_shortcuts` | has scripts that use `shortcuts` | refused | without |
 | `script_hierarchy` | has scripts that use `hierarchy` | refused | without |

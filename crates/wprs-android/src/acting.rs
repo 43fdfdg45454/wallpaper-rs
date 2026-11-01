@@ -39,6 +39,8 @@ pub(crate) struct Acting {
     props: Option<Values>,
     reads: Vec<(String, LayerRead)>,
     sounds: Vec<String>,
+    filmed: Vec<Course>,
+    ended: Vec<String>,
 }
 
 impl Acting {
@@ -66,10 +68,13 @@ impl Acting {
         let Some(local) = self.local.as_mut() else { return false };
         let room = MAX_FIRED.saturating_sub(self.fired.len());
         self.fired.extend(runtime.take_fired().into_iter().take(room));
+        let room = MAX_FIRED.saturating_sub(self.ended.len());
+        self.ended.extend(runtime.take_ended().into_iter().take(room));
         runtime.fill_playbacks(&mut self.courses);
         let rt = &*runtime;
         rt.fill_reads(&mut self.reads);
         rt.fill_sounds(&mut self.sounds);
+        rt.fill_videos(&mut self.filmed);
         let props = &*self.props.get_or_insert_with(|| wprs_scene::exposed(sent.properties, rt.props()));
         let timer = self.timer.is_some_and(|t| t <= rt.time());
         let quiet = self.fired.is_empty() && self.actions.is_empty() && self.touches.is_empty();
@@ -93,11 +98,14 @@ impl Acting {
             reads: &self.reads,
             touches: &self.touches,
             sounds: &self.sounds,
+            videos: &self.filmed,
+            ended: &self.ended,
         };
         let before = local.progress().0;
         let answer = local.update(&frame);
         if local.progress().0 > before {
             self.fired.clear();
+            self.ended.clear();
             self.actions.clear();
             self.touches.clear();
             if eventful {

@@ -108,7 +108,8 @@ impl Daemon {
         let (locale, languages) = (m.locale_in(&user), m.languages(&user));
         let properties = scene.properties(&m.properties, &crate::words::volume());
         let labels = wprs_scene::labels(&properties, &languages);
-        let (clips, lengths) = crate::scenes::bank(&scene, &sounds);
+        let (clips, mut lengths) = crate::scenes::bank(&scene, &sounds);
+        crate::scenes::filmed(&mut lengths, &videos);
         let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
         let (path, presets) = (dir.clone(), m.presets);
         let props = Props { path, id, version, title, kind: "scene", languages, properties, presets };

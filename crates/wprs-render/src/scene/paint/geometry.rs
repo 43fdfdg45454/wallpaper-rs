@@ -56,7 +56,7 @@ impl<'a> Painter<'a, '_, '_> {
         if let Content::Particles { flock, .. } = d.content
             && self.swarms.as_ref().is_some_and(|s| s.world(flock))
         {
-            return self.screen.then(Affine::scale(size));
+            return self.screen.then(frame.camera).then(Affine::scale(size));
         }
         let shift = Affine::translate([-d.origin[0] * size[0], -d.origin[1] * size[1]]);
         self.screen.then(d.world).then(shift).then(Affine::scale(size))
@@ -69,6 +69,14 @@ impl<'a> Painter<'a, '_, '_> {
     }
 
     pub(crate) fn extent(&self, i: usize) -> Option<Rect> {
+        if self.lean(i).is_none() || matches!(self.frame.draws[i].content, Content::Adjustment) {
+            return self.level(i);
+        }
+        let [x0, y0, x1, y1] = self.within(i, |p| p.level(i)).map(|r| [r.x, r.y, r.x + r.w, r.y + r.h])?;
+        self.map(i, Affine::IDENTITY).bounds([x0, y0, x1, y1])
+    }
+
+    fn level(&self, i: usize) -> Option<Rect> {
         let frame = self.frame;
         let d = &frame.draws[i];
         let rect = match &d.content {

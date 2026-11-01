@@ -5,6 +5,7 @@ use std::cell::RefCell;
 impl Runtime {
     pub fn seek(&mut self, t: f64) {
         self.timelines.iter_mut().for_each(|(tl, head)| *head = tl.start());
+        (self.tapes, self.ended) = (crate::footage::tapes(&self.scene), Vec::new());
         (self.t, self.stirred, self.beat) = (0.0, [f64::NEG_INFINITY; 2], f64::NEG_INFINITY);
         self.swarms.get_mut().iter_mut().for_each(Swarm::restart);
         (self.onsets, self.gates) =
@@ -26,6 +27,7 @@ impl Runtime {
             let step = left.min(MAX_STEP);
             (self.t, self.dt, left) = (self.t + step, step as f32, left - step);
             self.tick(step as f32);
+            self.roll(step);
             if left <= 0.0 {
                 return;
             }

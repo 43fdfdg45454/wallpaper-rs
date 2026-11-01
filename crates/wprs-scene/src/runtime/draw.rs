@@ -61,11 +61,13 @@ impl Runtime {
             now: self.t,
             view: [0.0; 4],
             canvas: self.scene.canvas.size.map(|v| v as f32),
+            camera: Affine::IDENTITY,
             glide: &self.glide,
             tilt: if self.still { [0.0; 2] } else { self.tilt },
             still: self.still,
             sheets: &self.sheets,
             flocks: &self.flocks,
+            tapes: &self.tapes,
         }
     }
 
@@ -75,18 +77,26 @@ impl Runtime {
 
     pub fn frame_in(&self, spare: Spare, view: [f32; 4], quality: Quality) -> Frame<'_> {
         let cx = Context { view, ..self.context() };
+        let cx = Context { camera: cx.lens(quality), ..cx };
         let canvas = self.scene.canvas.size.map(|v| v as f32);
         let (mut draws, mut effects) = spare.lists();
         draws.reserve(self.sizes.get().0);
         effects.reserve(self.sizes.get().1);
         let background = self.scene.canvas.background;
         let (time, wake) = (self.t as f32, Wake::Idle);
-        let mut frame = Frame { draws, effects, time, view, background, quality, wake };
+        let camera = cx.camera;
+        let keep = !self.scene.canvas.clear;
+        let mut frame = Frame { draws, effects, time, view, background, camera, canvas, keep, quality, wake };
+        let root = (camera, None);
         match self.arranged() {
-            Some(top) => walk(&cx, top, Affine::IDENTITY, quality, &mut frame, canvas),
-            None => walk(&cx, &self.scene.layers, Affine::IDENTITY, quality, &mut frame, canvas),
+            Some(top) => walk(&cx, top, root, quality, &mut frame, canvas),
+            None => walk(&cx, &self.scene.layers, root, quality, &mut frame, canvas),
+        }
+        if let Some(glow) = crate::glow::pick(&self.glow, quality, self.battery) {
+            walk(&cx, [glow], (Affine::IDENTITY, None), quality, &mut frame, canvas);
         }
         plan(&self.swarms, (&self.systems, &self.flocks), &cx, &frame, quality, self.t);
+        self.sight(&frame);
         frame.wake = cx.wake.get().min(self.cue_wake());
         self.pace.set(if frame.wake == Wake::Frame { cx.pace.get() } else { u32::MAX });
         self.sizes.set((frame.draws.len(), frame.effects.len()));

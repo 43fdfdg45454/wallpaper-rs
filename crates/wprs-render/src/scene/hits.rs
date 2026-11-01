@@ -55,6 +55,7 @@ impl Painter<'_, '_, '_> {
             alpha: d.opacity * d.tint.0[3] * shade,
             threshold,
             coverage,
+            unlean: d.lean.map(|l| l.inverse()),
         };
         match out.get_mut(*n) {
             Some(slot) => {

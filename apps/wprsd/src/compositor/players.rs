@@ -42,6 +42,8 @@ impl State {
         let heard = (self.settings, self.locked);
         for (reel, slot) in &mut self.players {
             let (max_size, active, fps, volume) = demand(outputs, exporter, reel, power);
+            let steer = super::steer::steer(outputs, reel);
+            let active = active && steer.is_none_or(|s| s.wants);
             if slot.fps != fps {
                 slot.player.iter_mut().for_each(|p| p.set_max_fps(fps));
                 slot.fps = fps;
@@ -57,6 +59,7 @@ impl State {
                 slot.player.iter().for_each(|p| p.set_max_size(max_size));
                 slot.max_size = max_size;
             }
+            slot.steer(steer);
             slot.tick(reel, heard, &self.tx, now);
         }
     }

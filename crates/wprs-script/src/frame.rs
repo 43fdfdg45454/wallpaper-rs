@@ -40,6 +40,8 @@ pub struct Frame<'a> {
     pub reads: &'a [(String, LayerRead)],
     pub touches: &'a [Touch],
     pub sounds: &'a [String],
+    pub videos: &'a [Course],
+    pub ended: &'a [String],
 }
 
 impl Frame<'static> {
@@ -63,6 +65,8 @@ impl Frame<'static> {
             reads: &[],
             touches: &[],
             sounds: &[],
+            videos: &[],
+            ended: &[],
         }
     }
 }
@@ -133,6 +137,14 @@ impl Encoder {
         }
         w.u16(f.sounds.len());
         for id in f.sounds {
+            w.str(id);
+        }
+        w.u16(f.videos.len());
+        for c in f.videos {
+            w.str(&c.id).f32(c.time).f32(c.duration).u8(u8::from(c.playing)).f32(c.speed);
+        }
+        w.u16(f.ended.len());
+        for id in f.ended {
             w.str(id);
         }
         w.flag(std::mem::take(&mut self.resend));

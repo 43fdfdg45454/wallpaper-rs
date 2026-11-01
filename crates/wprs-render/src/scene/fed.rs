@@ -129,7 +129,8 @@ impl Painter<'_, '_, '_> {
         let mut item = quad([1.0; 4]);
         (item.m0, item.m1) = ndc(full, full.affine());
         let target = Target { src: out, rect: full };
-        let masked = self.mask(&mut item, (Some(mask), None, 1.0), full.affine(), size, target);
+        let masked =
+            self.mask(&mut item, (Some(mask), None, 1.0), super::map::Map::Flat(full.affine()), size, target);
         item.mask_info[1] = 0.0;
         self.paint(out, item, [Src::White, masked, Src::Clear]);
         Some(out)

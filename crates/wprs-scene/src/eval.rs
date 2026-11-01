@@ -1,7 +1,7 @@
 use crate::input::LayerOverride;
 use crate::resolve::Context;
 use crate::wake::wakes;
-use crate::{Affine, Color, Kind, Layer, Quality, Wake};
+use crate::{Affine, Color, Kind, Layer, Lean, Quality, Wake};
 use std::borrow::Cow;
 
 mod drawn;
@@ -13,7 +13,7 @@ use shown::{content, masked, strength};
 pub(crate) fn walk<'a>(
     cx: &Context<'a>,
     layers: impl IntoIterator<Item = &'a Layer>,
-    parent: Affine,
+    parent: (Affine, Option<Lean>),
     quality: Quality,
     frame: &mut Frame<'a>,
     canvas: [f32; 2],
@@ -47,14 +47,18 @@ fn emit<'a>(
     };
     let origin = set.origin.or(t.origin).or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5, valign]);
     let content = content(cx, layer, set, canvas, quality);
-    let playing = matches!(&content, Content::Image { asset, .. } if cx.playing.contains(asset.as_ref()));
-    if playing || matches!(layer.kind, Kind::Video { .. }) {
+    let playing = match &content {
+        Content::Image { asset, .. } => cx.playing.contains(asset.as_ref()) || cx.rolls(asset, false),
+        Content::Video { asset, .. } => cx.rolls(asset, true),
+        _ => false,
+    };
+    if playing {
         cx.pace.set(u32::MAX);
     }
     let start = frame.effects.len();
     let mut paced = false;
-    let moves = matches!(layer.kind, Kind::Video { .. } | Kind::Particles { .. });
-    let busy = playing || moves;
+    let moves = playing || matches!(layer.kind, Kind::Particles { .. });
+    let busy = moves;
     let controls = cx.script.effects.get(&layer.id);
     for (i, effect) in layer.effects.iter().enumerate() {
         let ctl = controls.and_then(|list| list.iter().find(|c| c.at == i));
@@ -156,13 +160,14 @@ fn emit<'a>(
         || layer.cache
         || (group && (opacity < 1.0 || toned));
     let index = frame.draws.len();
-    let world = place.world;
+    let (world, lean) = (place.world, place.lean);
     let (blend, mask) = (layer.blend, layer.mask.as_ref());
     let mask_strength = strength(cx, mask);
     let draw = Draw {
         layer,
         end: index + 1,
         world,
+        lean,
         origin,
         opacity,
         blend,
@@ -178,11 +183,8 @@ fn emit<'a>(
         hidden: false,
     };
     frame.draws.push(draw);
-    walk(cx, layer.children(), world, quality, frame, canvas);
-    let moving = paced
-        || playing
-        || matches!(layer.kind, Kind::Video { .. } | Kind::Particles { .. })
-        || cx.wake.get() == Wake::Frame;
+    walk(cx, layer.children(), (world, lean), quality, frame, canvas);
+    let moving = paced || moves || cx.wake.get() == Wake::Frame;
     let children = frame.draws[index + 1..].iter().any(|d| d.dynamic);
     if children {
         layer.effects.iter().for_each(|e| _ = cx.stirred(std::ptr::from_ref(e) as usize, true, 0.0));

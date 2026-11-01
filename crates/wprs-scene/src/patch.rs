@@ -1,4 +1,6 @@
-use crate::{EffectControl, LayerOverride, ParticleControl, ScriptOutputs, SoundControl, TimelineCommand};
+use crate::{
+    EffectControl, LayerOverride, ParticleControl, ScriptOutputs, SoundControl, TimelineCommand, VideoControl,
+};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value as Json;
 use std::collections::BTreeMap;
@@ -38,6 +40,7 @@ patch!(
     timelines: Vec<(String, TimelineCommand)>,
     particles: BTreeMap<String, ParticleControl>,
     sounds: BTreeMap<String, SoundControl>,
+    videos: BTreeMap<String, VideoControl>,
     effects: BTreeMap<String, Vec<EffectControl>>,
     spawned: Vec<(String, String)>,
     order: Option<Vec<String>>,

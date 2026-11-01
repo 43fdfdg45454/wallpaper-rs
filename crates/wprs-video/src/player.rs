@@ -69,6 +69,14 @@ impl Player {
         true
     }
 
+    pub fn seek(&self, seconds: f64) {
+        let at = gst::ClockTime::from_nseconds((seconds.clamp(0.0, 86_400.0) * 1e9) as u64);
+        let flags = gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE;
+        if let Err(e) = self.pipe.playbin.seek_simple(flags, at) {
+            tracing::debug!("cannot seek the video: {e}");
+        }
+    }
+
     pub fn set_playing(&self, playing: bool) {
         self.pipe.set_playing(playing);
     }

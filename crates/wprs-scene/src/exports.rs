@@ -35,7 +35,9 @@ pub use crate::figure::{
     Attach, Coverage, Cull, Follows, MATERIALS, MAX_FIGURES, MAX_SHADOWS, Material, MeshDepth, MeshLayer,
     MeshPart, ModelLayer, Space,
 };
+pub use crate::film::{film_file, film_seconds};
 pub use crate::flash::{Calming, FLASH_GRID, FlashGuard, SAFE_FLASHES};
+pub use crate::footage::Tape;
 pub use crate::form::{form, labels, order};
 pub use crate::gltf::{
     EXTENSIONS, MAX_BONES, MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODEL_JSON, MAX_MODEL_PARTS,
@@ -47,11 +49,13 @@ pub use crate::helper::{
     CHECK_CPU, CHECK_MEMORY, CHECK_SHADER, launch_checks_from_here, serve_check, serve_check_with,
 };
 pub use crate::hitbox::{AlphaMap, Hitbox, Hitboxes};
+pub use crate::ink::Ink;
 pub use crate::input::{
     AudioFrame, BANDS, LayerOverride, ParticleCommand, ParticleControl, PointerState, ScriptOutputs,
-    SoundCommand, SoundControl, TimelineCommand, Tuning,
+    SoundCommand, SoundControl, TimelineCommand, Tuning, VideoCommand, VideoControl,
 };
 pub use crate::layer::{Anchor, Inherit, Kind, Layer, Parallax, Solid, Transform};
+pub use crate::lean::Lean;
 pub use crate::lens::{Camera3d, CameraKey, CameraPath, Fade, FadeTo, MAX_PATHS, PathOrder};
 pub use crate::light::{Beam, Light, Lighting, MAX_LIGHTS, Volumetric};
 pub use crate::look::{Bloom, Camera, Glare, Glide, Playback, Shake, Tonemap};

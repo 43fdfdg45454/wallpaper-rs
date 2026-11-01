@@ -18,6 +18,7 @@ impl SceneState {
         now: Instant,
     ) -> Result<bool, RenderError> {
         self.due = None;
+        self.runtime.set_battery(power.on_battery);
         let dt = self.step(active, now);
         let p = self.pointer;
         let pointer = self.runtime.pointer().follow(p.pos, p.buttons, dt as f32);

@@ -1,5 +1,8 @@
 {
   "params": {
+    "bloom": [
+      { "id": "tint", "type": "color", "default": "#ffffff" }
+    ],
     "blur": [
       { "id": "blend", "type": "blend", "default": "normal" },
       { "id": "amount", "type": "float", "default": 1, "min": 0, "max": 1 }

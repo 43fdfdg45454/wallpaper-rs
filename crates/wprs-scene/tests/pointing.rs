@@ -17,7 +17,16 @@ fn runtime(extra: serde_json::Value) -> Runtime {
 fn hitbox(layer: &str, [x, y, w, h]: [f32; 4]) -> Hitbox {
     let to_box = Affine::scale([1.0 / w, 1.0 / h]).then(Affine::translate([-x, -y]));
     let (to_local, cell) = (Affine::translate([-x, -y]), [0.0, 0.0, 1.0, 1.0]);
-    Hitbox { layer: layer.into(), to_box, to_local, cell, alpha: 1.0, threshold: None, coverage: None }
+    Hitbox {
+        layer: layer.into(),
+        to_box,
+        to_local,
+        cell,
+        alpha: 1.0,
+        threshold: None,
+        coverage: None,
+        unlean: None,
+    }
 }
 
 fn boxes() -> Hitboxes {

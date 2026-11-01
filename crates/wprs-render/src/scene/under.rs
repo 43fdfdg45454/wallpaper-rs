@@ -9,7 +9,7 @@ impl Painter<'_, '_, '_> {
         self.frame.effects[self.frame.draws[i].effects.clone()].iter().any(|e| e.descriptor.below())
     }
 
-    fn under(&mut self, rect: Rect, target: Target) -> Option<Src> {
+    pub(crate) fn under(&mut self, rect: Rect, target: Target) -> Option<Src> {
         let src = self.acquire(rect.size())?;
         self.ops.push(Op::Clear(src, [0.0; 4]));
         if let Some(r) = rect.pixels(target.rect) {

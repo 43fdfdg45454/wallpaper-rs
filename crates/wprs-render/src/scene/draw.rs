@@ -1,4 +1,5 @@
-use super::item::{Item, Rect, gradient, ndc, premultiplied, scale_of, shape, toned};
+use super::item::{Item, gradient, premultiplied, scale_of, shape, toned};
+use super::map::Map;
 use super::paint::{Painter, Target};
 use super::{Op, Src};
 use wprs_scene::{Affine, Blend, Content, Layout, Mask, SpectrumStyle, Wrapping};
@@ -30,9 +31,22 @@ impl Painter<'_, '_, '_> {
                 item.shape = [1.0 + wrap as u8 as f32, f32::from(u8::from(nearest)), tiles[0], tiles[1]];
                 Some(("fs_picture", item, self.ext(found)))
             }
-            Content::Text { color, .. } => {
+            Content::Text { color, ink, .. } => {
                 item.color = premultiplied(*color, srgb, opacity);
-                Some(("fs_texture", item, self.ext(self.text(i)?.0)))
+                let (image, _, k) = self.text(i)?;
+                let Some(ink) = ink.filter(|_| k > 0.0) else {
+                    return Some(("fs_texture", item, self.ext(image)));
+                };
+                if let Some((c, w)) = ink.outline {
+                    (item.stroke, item.style[0]) = (premultiplied(c, srgb, opacity), w * k);
+                }
+                (item.style[1], item.style[2]) = (ink.blur * k, f32::from(u8::from(ink.field)));
+                if let Some((c, [x, y], b)) = ink.shadow {
+                    let (w, h) = image.size();
+                    item.stop_colors[0] = premultiplied(c, srgb, opacity);
+                    item.grad = [x * k / w as f32, y * k / h as f32, b * k, 1.0];
+                }
+                Some(("fs_text", item, self.ext(image)))
             }
             Content::Solid { color, .. } => {
                 item.color = premultiplied(*color, srgb, opacity);
@@ -87,15 +101,10 @@ impl Painter<'_, '_, '_> {
                 .for_each(|c| c[..3].iter_mut().for_each(|v| *v *= b));
             item.stop_colors.iter_mut().for_each(|c| c[..3].iter_mut().for_each(|v| *v *= b));
         }
-        let m = self.local(i, size);
-        let [x0, y0, x1, y1] = quad;
-        let Some(bounds) = Rect::around([[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map(|p| m.apply(p)))
-            .and_then(|r| r.pixels(target.rect))
-        else {
-            return;
-        };
+        let m = self.map(i, self.local(i, size));
+        let Some(bounds) = m.bounds(quad).and_then(|r| r.pixels(target.rect)) else { return };
         item.quad = quad;
-        (item.m0, item.m1) = ndc(target.rect, m);
+        m.place(&mut item, target.rect);
         let frame = self.frame;
         let d = &frame.draws[i];
         let masked =
@@ -114,13 +123,15 @@ impl Painter<'_, '_, '_> {
         self.release(back);
     }
 
-    fn backing(&self, i: usize, m: Affine, size: [f32; 2], opacity: f32, target: Target) -> Option<Item> {
+    fn backing(&self, i: usize, m: Map, size: [f32; 2], opacity: f32, target: Target) -> Option<Item> {
         let d = &self.frame.draws[i];
-        let Content::Text { layout: Layout { backing: Some((color, _, radius)), padding, .. }, .. } =
-            &d.content
+        let Content::Text {
+            layout: Layout { backing: Some((color, _, radius)), padding, reach, .. }, ..
+        } = &d.content
         else {
             return None;
         };
+        let padding = padding + reach;
         let inner = [0, 1].map(|k| (size[k] - 2.0 * padding).max(1.0));
         let box_m = m
             .then(Affine::translate([padding / size[0], padding / size[1]]))
@@ -136,7 +147,7 @@ impl Painter<'_, '_, '_> {
             style: [0.0, 1.0, 0.0, 0.0],
             ..Item::default()
         };
-        (item.m0, item.m1) = ndc(target.rect, box_m);
+        box_m.place(&mut item, target.rect);
         Some(item)
     }
 }

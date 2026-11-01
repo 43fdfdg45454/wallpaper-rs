@@ -22,10 +22,15 @@ ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/blend linear_burn
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a newer blend mode was not previewed"
 ctl scene undo "$draft"
-ctl scene set "$draft" /scene/layers/0/transform/tilt '[10, 0]'
-if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with tilted layers was previewed"; fi
-grep -q "tilt" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
+ctl scene set "$draft" /scene/canvas/hdr true
+if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with an hdr canvas was previewed"; fi
+grep -q "hdr" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
 ctl scene undo "$draft"
+ctl scene set "$draft" /scene/layers/0/transform/tilt '[10, 0]'
+ctl scene set "$draft" /scene/canvas/camera '{"zoom": 1.5, "rotation": 10}'
+ctl scene set "$draft" /scene/canvas/bloom '{"tint": "#ffd0a0"}'
+ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a camera, bloom and tilted layers was not previewed"
+ctl scene undo "$draft" && ctl scene undo "$draft" && ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/solid '{"alpha": 0.5}'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with solid layers was not previewed"
 ctl scene undo "$draft"

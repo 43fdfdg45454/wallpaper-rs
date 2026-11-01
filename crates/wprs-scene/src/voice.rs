@@ -117,6 +117,7 @@ impl Runtime {
     }
 
     pub fn set_lengths(&mut self, lengths: BTreeMap<String, f32>) {
+        self.lengths.clone_from(&lengths);
         let seed = |i: usize| self.seed ^ mix(i as u64 + 1);
         self.lists =
             self.scene.sounds().enumerate().map(|(i, s)| Playlist::of(s, &lengths, seed(i))).collect();

@@ -23,7 +23,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) samplings: &'a HashMap<String, Sampling>,
     pub(crate) luts: &'a [(String, Tex)],
     pub(crate) texts: &'a [(usize, u64)],
-    pub(crate) rasters: &'a HashMap<u64, (GpuImage, [f32; 2], u64)>,
+    pub(crate) rasters: &'a HashMap<u64, super::rasters::Raster>,
     pub(crate) videos: &'a [(&'a str, &'a GpuImage)],
     pub(crate) exts: &'p mut Vec<GpuImage>,
     pub(crate) screen: Affine,
@@ -50,6 +50,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) backdrop: Option<Src>,
     pub(crate) swarms: Option<&'p mut super::swarm::Swarms>,
     pub(crate) flocks: &'a [u64],
+    pub(crate) flat: std::cell::Cell<Option<(wprs_scene::Lean, wprs_scene::Lean)>>,
 }
 
 #[derive(Clone, Copy)]
@@ -73,10 +74,16 @@ impl<'a> Painter<'a, '_, '_> {
         Src::Ext(self.exts.len() - 1)
     }
 
-    pub(crate) fn text(&self, i: usize) -> Option<(&'a GpuImage, [f32; 2])> {
+    pub(crate) fn text(&self, i: usize) -> Option<(&'a GpuImage, [f32; 2], f32)> {
         let rasters = self.rasters;
         let at = self.texts.binary_search_by_key(&i, |(i, _)| *i).ok()?;
-        rasters.get(&self.texts[at].1).map(|(image, size, _)| (image, *size))
+        rasters.get(&self.texts[at].1).map(|r| (&r.image, r.size, r.field))
+    }
+
+    pub(crate) fn picture(&self, id: &str) -> Option<&'a GpuImage> {
+        let (videos, images) = (self.videos, self.images);
+        let video = videos.iter().find(|(name, _)| *name == id).map(|(_, v)| *v);
+        video.or_else(|| images.get(id).map(|image| &image.0))
     }
 
     pub(crate) fn acquire(&mut self, size: (u32, u32)) -> Option<Src> {
@@ -108,7 +115,7 @@ impl<'a> Painter<'a, '_, '_> {
         for d in &self.frame.draws[range] {
             let effects = &self.frame.effects[d.effects.clone()];
             let fields = (d.end, d.world, d.origin, d.opacity, d.blend, &d.content, d.mask, d.hidden);
-            let looks = (d.tint, d.brightness, d.mask_strength, d.isolate);
+            let looks = (d.tint, d.brightness, d.mask_strength, d.isolate, d.lean);
             let _ = write!(h, "{:p}{fields:?}{looks:?}{:?}", d.layer, d.mask_texture);
             for e in effects {
                 let (id, slots, scale, mask) =

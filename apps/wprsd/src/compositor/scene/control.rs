@@ -30,6 +30,10 @@ impl SceneState {
         }
     }
 
+    pub(in crate::compositor) fn tape(&self, asset: &str) -> Option<&wprs_scene::Tape> {
+        self.runtime.tapes().iter().find(|t| t.asset == asset)
+    }
+
     pub(in crate::compositor) fn uses(&self) -> Uses {
         self.uses
     }

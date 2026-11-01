@@ -921,6 +921,19 @@ y el teléfono rechazan con el mismo aviso una escena que use alguno que su moto
 teléfono, que reproduce las escenas sin sonido, solo omite el sonido nuevo). `docs/specs/scene.md`
 describe cada campo y sus límites.
 
+De esa lista, el escritorio y el teléfono ya dibujan la cámara 2D (centro, zoom, giro y una
+sacudida de ruido que se apaga con «reducir movimiento» y en la calidad más baja), el resplandor de
+escena con tinte y su juego HDR (solo en la calidad más alta, o en la siguiente con corriente), los
+fotogramas que se dibujan sobre el anterior (más caros, porque cada cambio redibuja la imagen
+entera), la inclinación en profundidad de capas y grupos con su máscara proyectada igual, la captura
+de una región por una capa de ajuste para cambiarla en su sitio o dibujarla de nuevo como lupa o
+espejo, el espaciado entre letras, el contorno, la sombra y el desenfoque del texto desde un campo de
+distancias que la GPU construye una vez por cada cambio del texto (y que deja escalarlo sin volver a
+dibujar las letras), y los vídeos en cualquier sitio que admite una imagen, con un decodificador por
+vídeo que se pausa mientras nada lo muestra, la reproducción de `playback` y el control desde
+scripts con `layer.video` (reproducir, pausar, parar, saltar, ritmo, tiempo, duración y aviso de
+fin).
+
 El escritorio y el teléfono ya dibujan también los efectos propios del paquete. Cada uno es un
 descriptor JSON y un shader WGSL con hasta 16 pasadas que escriben en la siguiente textura o en
 objetivos con nombre a su escala (en 8 o 16 bits por canal), los copian, los intercambian para

@@ -5,7 +5,7 @@ mod outputs;
 pub(crate) use outputs::UNSET;
 pub use outputs::{
     LayerOverride, ParticleCommand, ParticleControl, ScriptOutputs, SoundCommand, SoundControl,
-    TimelineCommand, Tuning,
+    TimelineCommand, Tuning, VideoCommand, VideoControl,
 };
 
 pub const BANDS: usize = 64;

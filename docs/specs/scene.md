@@ -56,11 +56,11 @@ its thumbnail and details in the library. Scenes without them read and draw as b
 | `canvas` field | Meaning | Feature |
 |----------------|---------|---------|
 | `parallax` | `{ "amount" (0 to 4, default 1), "delay" (0 to 2 s, default 0.15), "pointer" (0 to 1, default 1), "gyro" }`: how far and how softly layers with a `parallax` follow the pointer, how much the pointer counts and whether the tilt of the phone moves them too (on Android, through the same motion sensors as picture parallax, only while the scene is shown; the phone has no pointer, so there every scene with parallax layers follows the tilt as if `gyro` were on, or the launcher pages when the phone has no motion sensor, and neither moves them with the battery saver on); `pointer: 0` needs no pointer; a layer moves by its `parallax` times the canvas size times `amount` times the offset of the pointer from the middle (−0.5 to 0.5) times `pointer`, plus half the tilt; where the system asks for reduced motion, layers stay in place and neither the pointer nor the tilt moves them | `parallax2` |
-| `camera` | `{ "center", "zoom" (0.1 to 10), "rotation", "shake" }` moves, zooms and turns the whole scene as one transform without extra passes; `shake` is `{ "enabled", "amplitude" (0 to 1000 px), "roughness" (0 to 1), "speed" (0 to 60 Hz) }`, turned off where motion is reduced and at the lowest quality level; all of them may be bound | `camera` |
-| `bloom` | `{ "threshold" (0 to 4), "strength" (0 to 8), "radius" (0 to 128 px), "tint", "hdr": { "threshold" (0 to 16), "strength" (0 to 8) } }`, a glow of the bright parts drawn after everything else; `hdr` is used only at the highest quality levels on mains power | `bloom` |
+| `camera` | `{ "center", "zoom" (0.1 to 10), "rotation", "shake" }` moves, zooms and turns the whole scene as one transform without extra passes: the point `center` of the canvas (its middle by default) shows at the middle, `zoom` times larger and turned clockwise by `rotation` degrees; `shake` is `{ "enabled", "amplitude" (0 to 1000 px), "roughness" (0 to 1), "speed" (0 to 60 Hz) }`, a smooth noise of the scene time (four octaves, each weighed by `roughness` against the one before) that moves the scene by at most `amplitude` pixels and asks for a frame every frame while it runs; it is turned off where motion is reduced and at the lowest quality level, and the scene then stands still; all of them may be bound | `camera` |
+| `bloom` | `{ "threshold" (0 to 4), "strength" (0 to 8), "radius" (0 to 128 px), "tint", "hdr": { "threshold" (0 to 16), "strength" (0 to 8) } }`, a glow of the bright parts drawn after everything else, with the `bloom` effect and its `tint` over the whole canvas, as an adjustment layer at the top would; the `hdr` threshold and strength replace the plain ones at level `q3`, and at `q2` on mains power; it costs like that effect (four passes at half size), is dropped where the effect is and is drawn only when something below it changed | `bloom` |
 | `hdr`, `tonemap` | `hdr: true` keeps colors brighter than white in 16-bit intermediate images, and `tonemap` (`none`, `aces` or `agx`, only with `hdr`) maps them to the screen | `hdr` |
-| `clear` | `false` draws every frame over the previous one, which leaves trails; it needs a full redraw of every frame, so it costs more | `keep_frame` |
-| `perspective` | distance of the viewer in pixels (100 to 100000) for layers tilted with `transform.tilt` and moved with `transform.z` | `tilt` |
+| `clear` | `false` draws every frame over the previous one, which leaves trails: the canvas is filled with `background` only when the view starts or changes size, and no layer is kept as a still picture; each frame that changes is drawn whole instead of only the part that changed, so it costs more | `keep_frame` |
+| `perspective` | distance of the viewer in pixels (100 to 100000) for layers tilted with `transform.tilt` and moved with `transform.z`; without it the distance at which the canvas height fills the `fov` of `camera3d`, or 45° | `tilt` |
 | `ambient`, `sky` | colors of the light around the scene and from above, for lit layers | `ambient_light` |
 | `wind` | `[x, y]` pixels per second, may be bound: the wind that moves bones with `physics` and models with the `foliage` material | `bone_physics` |
 
@@ -82,8 +82,7 @@ The scene may also set `audio: { "attack" (0.001 to 2 s), "release" (0.01 to 10 
 
 An `image` layer that shows a sheet plays its frames on the scene clock, so that every layer showing
 the same sheet at the same rate shows the same frame; its `playback` sets the rate, the range, whether
-it loops and the frame (`layer_playback`, which no platform runs yet, so a package that uses it is
-refused). A sheet without `fps` or `durations` shows its first frame. The scene asks for a frame only when the next frame of a shown
+it loops and the frame (`layer_playback`). A sheet without `fps` or `durations` shows its first frame. The scene asks for a frame only when the next frame of a shown
 sheet is due, never while the layer is hidden, and the lowest quality level shows the first frame of
 the range without moving.
 
@@ -95,9 +94,20 @@ hands the textures of a finished layer to the next layer that needs one of the s
 steady frame creates nothing and makes no allocations of its own. Evaluating a frame allocates
 nothing either: `Runtime::frame_in` takes the lists of the previous frame back (`Frame::spare`).
 
+Each video asset has one decoder, shared by every layer, mask and effect that shows it on every
+screen. The first layer of the scene that shows the asset, as a `video` layer or as the picture of an
+`image` layer, steers it with its `playback`: `rate` (decoders play from 0.1 to 4 times; 0 holds
+the video), `playing`, `loop` (on by default), `start` and `end` in seconds. The time of a video runs
+on the scene clock while it plays and something shows it: a video that no visible layer, mask or
+effect shows waits where it is and its decoder pauses, as for a paused or finished video, and none of
+them asks for frames. Without `loop` the video stops at `end`, or at its own end (read from the
+header of its WebM, MKV or MP4 file), and tells scripts. On battery its decoder runs no faster than
+the frame rate of the scene, which `clock.max_fps` caps. On the phone the decoder is the platform's
+MediaCodec, through the system player.
+
 Fonts may also be TrueType or OpenType collections (`.ttc`, `.otc`) and compressed `.woff2` files
 (`fonts2`). Videos may be used as masks, effect textures and the picture of a spot light
-(`video_textures`); sounds may also be MP3 (see "Sound"). KTX2 textures are accepted by the package
+(`video_textures`), and wherever a picture is; sounds may also be MP3 (see "Sound"). KTX2 textures are accepted by the package
 reader but refused with `ktx2` until the engine loads them. Meshes and models are binary glTF 2.0
 files (`.glb`, at most 64 MiB each; FBX or OBJ convert to it with common 3D tools): readers read
 only the header and the JSON part of each file once (at most 4 MiB, and 16 MiB for all the models
@@ -127,7 +137,8 @@ whose place can change while it plays (a bound or animated `position`, `rotation
 `scale`, a `tilt`, an `anchor`, `parallax`, a `parent`, an `attach`, a bound `reach`, or any script
 in the scene) counts as the whole canvas. A
 layer that masks or feeds others adds one more unit times its share, once however many read it,
-since it is drawn on its own at most once a frame. Particles add their overdraw, and every frame costs 1.5 units for composing and copying. A scene
+since it is drawn on its own at most once a frame. Particles add their overdraw, `canvas.bloom` adds the units of its effect over the whole canvas, a
+`canvas.camera` makes every layer count as the whole canvas, and every frame costs 1.5 units for composing and copying. A scene
 that costs more at level `q2` than the 8 units of older integrated and phone GPUs gets a warning
 from `wprs-ctl pack check`, `pack build` and the scene editor, since those devices show it with
 fewer details. The quality level is the highest whose cost fits the budget of the device: 4, 8, 16
@@ -291,17 +302,25 @@ an exact result should use the other modes.
 | `color` | on `image`, `video`, `particles` and `group` layers, a color that multiplies the layer (white by default); a group applies it to its children together | `layer_color` |
 | `parent` | the id of another drawn layer whose transform moves, turns and scales this one without changing the drawing order; the position of the layer is then relative to the position of its parent, in its turned and scaled frame (at the parent's position by default), instead of to its group; chains go at most 8 deep and never back to themselves | `parent` |
 | `inherit` | what follows the parent: `transform`, `visible` and `opacity` (default `transform` and `visible`), only with `parent` | `parent` |
-| `transform.tilt` | `[x, y]` degrees (−89 to 89) of tilt in depth, seen with `canvas.perspective` | `tilt` |
-| `transform.z` | pixels towards the viewer (−100000 to 100000) | `tilt` |
+| `transform.tilt` | `[x, y]` degrees (−89 to 89) of tilt in depth around the position of the layer, seen with `canvas.perspective`: a positive `x` turns the bottom edge towards the viewer, a positive `y` the left edge | `tilt` |
+| `transform.z` | pixels towards the viewer (−100000 to 100000); a layer at or behind the viewer is not drawn | `tilt` |
 | `parallax` | a number or `[x, y]` (−10 to 10 each), with a different depth per axis | `parallax2` when the two differ |
 | `lighting` | on `image`, `video`, `text` and `particles` layers, `{ "normal", "roughness", "reflection", "emissive", "strength", "env" }`: a `linear` normal map, roughness and reflection from 0 to 1, light of its own from 0 to 16, how much the lights count from 0 to 1 and a picture to reflect, how the layer takes the light of `light` layers | `lighting2d` |
 | `playback` | on `image` layers showing moving pictures or videos and on `video` layers, `{ "rate" (0 to 16), "playing", "loop", "start", "end" (seconds), "frame" }`; `frame` picks a frame of a sprite sheet and may be bound to keyframes, the pointer, the audio or a script | `layer_playback` |
 | mask `strength` | 0 to 1 (default 1), weakens the mask: m′ = mix(1, m, strength) | `mask_strength` |
-| adjustment `size` | `[width, height]` in pixels (at most twice the canvas): only that rectangle around the layer position is captured, and `redraw: true` draws what was captured again with the transform of the layer, as a magnifier or a mirror | `capture` |
+| adjustment `size` | `[width, height]` in pixels (at most twice the canvas): only that rectangle around the layer position (placed by `origin`, without the rotation, skew or scale of the layer) is captured and its effects change only that part, and `redraw: true` draws what was captured again with the whole transform of the layer, its opacity, blend mode and mask, as a magnifier or a mirror; without `size` the whole canvas is captured and turned around its middle. A capture is one copy of the rectangle and one pass more, and any change in the scene redraws the whole frame | `capture` |
 | adjustment `rgb` | `true` sends what the layer captures, shrunk to at most 64 × 16, to the RGB lighting of the computer, at most 30 times a second; the manifest must set `permissions.rgb` (`package.md`) | `rgb` |
 | `attach` | `{ "layer", "bone" \| "point", "offset": [x, y], "inherit" }`: follows a bone or a node of a `mesh` or `model` layer instead of a `parent`; `inherit` lists `position`, `rotation` and `scale` (all by default); a layer may not follow itself, through other attachments either | `attach` |
 | `solid` | `true` or `{ "alpha" (0 to 1) }`: the layer takes the pointer for `click:`, `enter:` and `leave:` triggers and script pointer events, over its box or, with `alpha`, only where it is at least that opaque (pictures by the alpha of their pixels, the other kinds by their color and opacity); a solid group takes the pointer over the boxes of its layers; layers are tested from the top down, as they were drawn in the last frame, with their transforms, parents and parallax, and hidden layers never take it | `layer_events` with `alpha` |
 | `depth_test` | inside a group with `space: 3d`, a flat layer hides behind the models in front of it instead of covering them | `model3d` |
+
+A layer with `tilt` or `z` is drawn as a projected quadrilateral: one 3 × 3 projective transform
+instead of the flat one, so the GPU spreads its picture with the right perspective and it costs
+nothing more. The projection follows the camera, so zooming the camera zooms a tilted layer as a
+picture of it. The effects of a tilted layer run in its own plane before it is projected, and its
+mask leans with it. A tilted group is drawn apart first (one more pass over its box) and then
+projected, and its layers lean with it; tilts nested in groups add up. The pointer finds a tilted
+layer where it shows.
 
 ### Text
 
@@ -322,6 +341,18 @@ A `text` layer also takes these fields:
 | `render` | `auto` (default), `raster` or `sdf`, which draws from a distance field so that the size can change without drawing the letters again | `text_styles` with `sdf` |
 
 Outline, shadow, blur and letter spacing may be bound like other values.
+
+Outlines, shadows and blurs are drawn from a distance field: the letters are drawn once, the GPU
+spreads their edges into distances with a jump flood (a few passes over a texture of the text, made
+once each time the text, its layout or the room of its styles changes), and the shader draws the
+fill, the outline, the shadow and the blur from it, so a change of their colors, widths, offsets or
+blurs changes only numbers. With `render: auto` a text with a style uses the field at a reference
+size (twice its size, from 16 to 256 pixels), so it grows and shrinks without being drawn again;
+`raster` draws it again at its size on the screen, as plain texts are, and `sdf` uses the field
+even without a style. The texture keeps room around the letters for the widest style, rounded up to
+a power of two, so animating a style within that room draws nothing again. At the lowest quality
+level shadows blur at most 4 pixels. Devices whose GPU cannot draw into 16-bit float textures draw
+styled texts as plain ones.
 
 A text is laid out again only when its text, size on screen or layout changes; its color, the color of
 its background and its position never lay it out again. Each character comes from the first font of
@@ -890,6 +921,7 @@ rules are also what a phone or a laptop on battery draws.
 
 | Effect | Newer parameters |
 |--------|------------------|
+| `bloom` | `tint` (white) colors the glow, as `canvas.bloom` does |
 | `blur` | `blend` (`normal`) and `amount` (0 to 1) mix the blurred picture back into the sharp one |
 | `blur_motion` | `follow`, `shutter` (0 to 0.5 s) |
 | `chromatic_aberration` | `mode` (0 grows with the distance from `center`, 1 the same shift along `angle`, 2 the same shift away from `center`, 3 grows with the square of the distance), `angle` (−360 to 360) |
@@ -1381,6 +1413,13 @@ the topmost solid layer under the pointer; `down` goes to that layer, which then
 `up` until every button is released, also off it, and `click` follows an `up` on the layer that took
 the `down`. They reach the scripts in the next frame, at most 64 a frame.
 
+`layer.video` controls the video the layer shows (`uses: ["animations"]`): `play()` (from `start`
+once it ended), `pause()`, `stop()` (back to `start`, paused), `seek(seconds)` (at most one jump a
+frame: the last `seek` of a frame counts), `time`, `duration` (`undefined` while it is not known),
+`playing`, `rate` (0 to 16, read and written) and `on("ended", handler)`, called with `{ layer,
+name }` in the frame after a video without `loop` reaches its end. Calls take the video over from the
+`playback` of the layer until the scene starts again.
+
 `layer.effect(index or name)` controls one effect of the layer: `enabled`, `set(parameter, value)`
 (numbers, vectors, colors, switches and blend modes, checked against the effect's description and
 clamped to its range; pictures cannot be changed), `get(parameter)`, `reset()` (clears what an effect
@@ -1435,7 +1474,7 @@ module's exports, imports and calls.
 | Field | Meaning |
 |-------|---------|
 | `events` | the functions the module exports and the events it handles, each once: the lifecycle above (`update` is the only one older engines call), the pointer events of `solid` layers and `hit` bones `click`, `down`, `up` (input `clicks`), `enter`, `leave` and `move` (input `pointer`), delivered with `scene.layer(id).on(event, handler)` as `{ type, layer, local, scene }` with the touched bone, and `mediaStatus`, `mediaPlayback`, `mediaProperties`, `mediaThumbnail` and `mediaTimeline` (input `media`) |
-| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, and parts that engines run later: `media` (the `media` object and its colors, input `media`; `media_info`), `storage` (`storage.get`, `set`, `delete` and `clear` per output or package, 64 KiB of JSON kept on the device only, removed with the package; `script_storage`), `geometry` (`scene.mesh(pool)` with `create`, `update` and `destroy`, at most 1 MiB of vertices a frame; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (texture frames, video playback, mesh and model clips, bones, shapes and attachments; `script_animations`), `camera` (`scene.camera`, `camera3d`, `parallax` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, only inside a click; `script_shortcuts`) and `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) |
+| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, and parts that engines run later: `media` (the `media` object and its colors, input `media`; `media_info`), `storage` (`storage.get`, `set`, `delete` and `clear` per output or package, 64 KiB of JSON kept on the device only, removed with the package; `script_storage`), `geometry` (`scene.mesh(pool)` with `create`, `update` and `destroy`, at most 1 MiB of vertices a frame; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`; texture frames, mesh and model clips, bones, shapes and attachments come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `camera3d`, `parallax` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, only inside a click; `script_shortcuts`) and `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) |
 | `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}`. They live only here: the module does not export them and `scene import-script` does not propose them |
 
 Any event but `update`, any part but `audio`, `pointer` and `clicks`, and `params` name `scripts2`;

@@ -1,4 +1,4 @@
-use crate::Affine;
+use crate::{Affine, Lean};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -16,6 +16,7 @@ pub struct Hitbox {
     pub alpha: f32,
     pub threshold: Option<f32>,
     pub coverage: Option<Arc<AlphaMap>>,
+    pub unlean: Option<Lean>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -31,8 +32,12 @@ impl AlphaMap {
 }
 
 impl Hitbox {
+    pub fn flat(&self, p: [f32; 2]) -> [f32; 2] {
+        self.unlean.map_or(p, |l| l.apply(p))
+    }
+
     pub fn holds(&self, p: [f32; 2]) -> bool {
-        let u = self.to_box.apply(p);
+        let u = self.to_box.apply(self.flat(p));
         let seen = || {
             let [x, y, w, h] = self.cell;
             self.coverage.as_ref().map_or(1.0, |c| c.at([x + u[0] * w, y + u[1] * h]))
@@ -43,10 +48,10 @@ impl Hitbox {
 
 impl Hitboxes {
     pub fn hit(&self, p: [f32; 2]) -> Option<(&str, [f32; 2])> {
-        self.0.iter().rev().find(|b| b.holds(p)).map(|b| (b.layer.as_str(), b.to_local.apply(p)))
+        self.0.iter().rev().find(|b| b.holds(p)).map(|b| (b.layer.as_str(), b.to_local.apply(b.flat(p))))
     }
 
     pub fn local(&self, layer: &str, p: [f32; 2]) -> [f32; 2] {
-        self.0.iter().rfind(|b| b.layer == layer).map_or([0.0; 2], |b| b.to_local.apply(p))
+        self.0.iter().rfind(|b| b.layer == layer).map_or([0.0; 2], |b| b.to_local.apply(b.flat(p)))
     }
 }

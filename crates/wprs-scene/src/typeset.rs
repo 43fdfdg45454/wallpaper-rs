@@ -12,6 +12,8 @@ pub struct Layout {
     pub line_height: Option<f32>,
     pub padding: f32,
     pub backing: Option<(Color, [f32; 2], f32)>,
+    pub spacing: f32,
+    pub reach: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]

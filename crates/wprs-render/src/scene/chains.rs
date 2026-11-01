@@ -76,14 +76,16 @@ impl Pipes {
         let mut lease = Lease(Vec::new(), self.shelf.clone());
         let base = self.chain(device, std::iter::empty::<&Descriptor>(), Some(&mut lease));
         let _ = self.get(device, Shader::Fx(base, "fs_mask_mix"), Mode::Replace, format);
-        for layer in scene.drawable() {
-            for d in layer.effects.iter().filter_map(|e| descriptor(&e.effect)) {
-                let key = self.chain(device, std::iter::once(d), Some(&mut lease));
-                for pass in &d.passes {
-                    let target = if pass.output == Output::Next { format } else { state };
-                    let _ = self.get(device, Shader::Fx(key, &pass.entry), Mode::Replace, target);
-                }
+        let glow = scene.canvas.bloom.as_ref().and_then(|_| descriptor("bloom"));
+        let used = scene.drawable().flat_map(|l| l.effects.iter().filter_map(|e| descriptor(&e.effect)));
+        for d in used.chain(glow) {
+            let key = self.chain(device, std::iter::once(d), Some(&mut lease));
+            for pass in &d.passes {
+                let target = if pass.output == Output::Next { format } else { state };
+                let _ = self.get(device, Shader::Fx(key, &pass.entry), Mode::Replace, target);
             }
+        }
+        for layer in scene.drawable() {
             for run in fusion(&layer.effects) {
                 let chain = layer.effects[run].iter().filter_map(|e| descriptor(&e.effect));
                 let key = self.chain(device, chain, Some(&mut lease));

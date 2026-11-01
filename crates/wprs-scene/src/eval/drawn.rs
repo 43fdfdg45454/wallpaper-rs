@@ -27,6 +27,7 @@ pub enum Content<'a> {
         color: Color,
         align: Align,
         layout: Layout,
+        ink: Option<crate::Ink>,
     },
     Shape {
         shape: Shape,
@@ -73,6 +74,7 @@ pub struct Draw<'a> {
     pub layer: &'a Layer,
     pub end: usize,
     pub world: Affine,
+    pub lean: Option<crate::Lean>,
     pub origin: [f32; 2],
     pub opacity: f32,
     pub blend: Blend,
@@ -95,6 +97,9 @@ pub struct Frame<'a> {
     pub time: f32,
     pub view: [f32; 4],
     pub background: Color,
+    pub camera: Affine,
+    pub canvas: [f32; 2],
+    pub keep: bool,
     pub quality: Quality,
     pub wake: Wake,
 }

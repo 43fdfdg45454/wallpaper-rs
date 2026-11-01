@@ -15,6 +15,7 @@ mod slot;
 mod speakers;
 mod spec;
 mod state;
+mod steer;
 pub(crate) mod stops;
 mod surface;
 

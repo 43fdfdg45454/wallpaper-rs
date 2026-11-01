@@ -98,6 +98,18 @@ class SceneTest : SceneBase() {
     }
 
     @Test
+    fun cameraTiltCaptureBloomStyledTextsAndKeptFramesDrawAndSettle() {
+        val dir = File(storage(), "leans/leans").apply { mkdirs() }
+        File(dir, "scene.json").writeText(LEANS_SCENE)
+        File(dir, "manifest.json").writeText(LEANS_MANIFEST)
+        val reply = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(reply, reply.startsWith("["))
+        show("Leans")
+        assertTrue(waitFor { frames.get() > 0 })
+        assertEquals(settled(frames), quiet(frames))
+    }
+
+    @Test
     fun particlesWithTrailsOrdersGradientsAndSoundRangesDrawAndTellTheirPath() {
         val dir = File(storage(), "rains/rain").apply { mkdirs() }
         File(dir, "scene.json").writeText(RAIN_SCENE)

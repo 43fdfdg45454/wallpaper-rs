@@ -15,7 +15,7 @@ impl Painter<'_, '_, '_> {
         let frame = self.frame;
         let d = &frame.draws[i];
         let Content::Particles { flock, size, .. } = d.content else { return };
-        if mask.is_some() || !blend.fixed() {
+        if mask.is_some() || !blend.fixed() || self.lean(i).is_some() {
             return self.apart(i, target, atop);
         }
         let (r, screen, srgb) = (self.r, self.screen, self.srgb);
@@ -25,7 +25,7 @@ impl Painter<'_, '_, '_> {
         let Some(herd) = swarms.herds.get(flock) else { return };
         let [w, h] = swarms.canvas;
         let m = match herd.world {
-            true => screen,
+            true => screen.then(frame.camera),
             false => screen.then(d.world).then(Affine::translate([-d.origin[0] * w, -d.origin[1] * h])),
         };
         let tinted = d.tint != wprs_scene::Color([1.0; 4]) || d.brightness != 1.0;

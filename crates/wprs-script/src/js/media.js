@@ -2,7 +2,7 @@ import { state, owner, need, dirty, put } from "wprs:core";
 import { numbers } from "wprs:values";
 
 const tunables = ["alpha", "size", "count", "speed", "life", "time_scale", "brightness", "color"];
-export const [handlers, particleState, soundState] = [{}, {}, {}];
+export const [handlers, particleState, soundState, videoHandlers] = [{}, {}, {}, {}];
 
 export function timeline(id) {
     id = String(id);
@@ -97,6 +97,46 @@ export function sound(id) {
         set volume(v) {
             if (!Number.isFinite(Number(v))) throw new TypeError("volume takes a number from 0 to 1");
             if (put(own, "volume", Math.min(1, Math.max(0, Number(v))))) dirty.add("sounds");
+        },
+    });
+}
+
+export function video(id) {
+    id = String(id);
+    const send = (command) => {
+        need("animations");
+        ((state.out.videos[id] ??= {}).commands ??= []).push(command);
+    };
+    const now = () => state.frame.videos?.[id] ?? {};
+    const number = (v, what) => {
+        if (!Number.isFinite(Number(v))) throw new TypeError(`${what} takes a number`);
+        return Number(v);
+    };
+    return Object.freeze({
+        play: () => send("play"),
+        pause: () => send("pause"),
+        stop: () => send("stop"),
+        seek: (t) => send({ seek: Math.max(0, number(t, "seek")) }),
+        on(name, handler) {
+            need("animations");
+            if (name !== "ended" || typeof handler !== "function") throw new TypeError("on takes ended and a function");
+            ((videoHandlers[id] ??= {}).ended ??= []).push([owner(), handler]);
+        },
+        get time() {
+            return now().time;
+        },
+        get duration() {
+            const d = now().duration;
+            return Number.isFinite(d) ? d : undefined;
+        },
+        get playing() {
+            return now().playing;
+        },
+        get rate() {
+            return now().rate;
+        },
+        set rate(r) {
+            send({ rate: Math.min(16, Math.max(0, number(r, "rate"))) });
         },
     });
 }

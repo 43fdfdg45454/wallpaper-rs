@@ -20,6 +20,7 @@ mod paged;
 mod parked;
 mod picture;
 mod scenes;
+mod steer;
 
 pub(crate) use parked::forget;
 
@@ -57,6 +58,7 @@ pub(crate) struct Engine {
     handover: bool,
     hidden: bool,
     window: NativeWindow,
+    steered: steer::Steered,
 }
 
 fn size(width: i32, height: i32) -> (u32, u32) {
@@ -102,6 +104,7 @@ impl Engine {
             handover: false,
             hidden: !visible,
             window,
+            steered: Default::default(),
         }
     }
 

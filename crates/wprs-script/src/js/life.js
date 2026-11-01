@@ -1,7 +1,7 @@
 import { state, setup, channels, records, timers, pending, stopped, record, guard, stop, dirty, touched, SECTIONS } from "wprs:core";
 import { engine } from "wprs:base";
 import { own, layer, touches } from "wprs:layers";
-import { handlers, particleState, soundState } from "wprs:media";
+import { handlers, particleState, soundState, videoHandlers } from "wprs:media";
 
 const lifecycle = ["init", "update", "destroy", "resize", "properties", "settings", "timelineEvent"];
 const [listeners, sites] = [[], []];
@@ -63,6 +63,10 @@ function events(f) {
         if (e.name !== null && e.name !== undefined) listeners.forEach(([mod, fn]) => guard(mod, fn, event));
         (handlers[e.timeline]?.[event.name] ?? []).forEach(([mod, fn]) => guard(mod, fn, event));
     }
+    for (const id of f.ended) {
+        const event = Object.freeze({ layer: id, name: "ended" });
+        (videoHandlers[id]?.ended ?? []).forEach(([mod, fn]) => guard(mod, fn, event));
+    }
     for (const t of f.touches) {
         const type = touches[t.kind];
         const event = Object.freeze({ type, layer: layer(t.layer), local: t.local, scene: t.scene });
@@ -91,7 +95,7 @@ function lifecycleEvents(f) {
 
 state.tick = () => {
     const f = state.frame;
-    const out = (state.out = { timelines: [], particles: {}, sounds: {} });
+    const out = (state.out = { timelines: [], particles: {}, sounds: {}, videos: {} });
     const [values, run] = [{}, { busy: false }];
     [legacy, own.once] = [null, {}];
     for (const s of Object.values(soundState)) s.asked = null;
@@ -130,7 +134,7 @@ state.tick = () => {
     if (!same(values, last.values)) [last.values] = [kept(values), dirty.add("values")];
     for (const k of ["busy", "wake"]) if (!Object.is(run[k], last[k])) [last[k]] = [run[k], dirty.add(k)];
     const commands = (list) => Object.values(list).some((p) => p.commands?.length);
-    const loud = { timelines: out.timelines.length > 0, console: lines.length > 0, particles: commands(out.particles), sounds: commands(out.sounds) };
+    const loud = { timelines: out.timelines.length > 0, console: lines.length > 0, particles: commands(out.particles), sounds: commands(out.sounds), videos: commands(out.videos) };
     for (const id of [...last.once, ...Object.keys(own.once)]) touched.add(id);
     last.once = Object.keys(own.once);
     for (const k of Object.keys(loud)) if (loud[k] || last.loud[k]) dirty.add(k);
@@ -143,6 +147,7 @@ state.tick = () => {
         timelines: () => out.timelines,
         particles: () => Object.assign(out.particles, Object.fromEntries(Object.entries(particleState).map(([id, p]) => [id, { ...out.particles[id], instance: p.instance, points: p.points }]))),
         sounds: () => Object.assign(out.sounds, Object.fromEntries(Object.entries(soundState).map(([id, s]) => [id, { ...out.sounds[id], volume: s.volume }]))),
+        videos: () => out.videos,
         effects: () => Object.fromEntries(Object.entries(own.controls).map(([id, list]) => [id, Object.values(list)])),
         spawned: () => [...own.spawned],
         order: () => (own.ordered ? [...own.top] : null),

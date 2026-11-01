@@ -27,7 +27,8 @@ impl Painter<'_, '_, '_> {
         let d = &self.frame.draws[i];
         let plain = matches!(d.content, Content::Group { clip: false }) && d.opacity >= 1.0;
         let plain = plain && d.blend == Blend::Normal && d.mask.is_none() && d.effects.is_empty();
-        plain && d.tint == Color([1.0; 4]) && d.brightness == 1.0 && !d.layer.cache
+        let tilted = d.layer.transform.tilt.is_some() || d.layer.transform.z.is_some();
+        plain && d.tint == Color([1.0; 4]) && d.brightness == 1.0 && !d.layer.cache && !tilted
     }
 
     fn marks(&mut self, range: Range<usize>, out: &mut Vec<Mark>) {
@@ -46,6 +47,7 @@ impl Painter<'_, '_, '_> {
                     _ if d.mask.is_some_and(|m| m.layer.is_some()) => Reach::Matte,
                     _ if effects.iter().any(|e| e.descriptor.below()) => Reach::Matte,
                     _ if self.feeds(i..d.end).next().is_some() => Reach::Matte,
+                    Content::Adjustment if self.captures(i).is_some() => Reach::Matte,
                     Content::Adjustment if !effects.iter().all(pointwise) => Reach::Around,
                     _ => Reach::Own,
                 };

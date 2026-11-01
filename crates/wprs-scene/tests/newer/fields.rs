@@ -65,3 +65,20 @@ fn clock_texts_keep_their_letters_and_date_texts_name_their_feature() {
         "layers": [{ "id": "s", "type": "solid", "color": "#000000", "opacity": { "date": "d" } }] });
     assert!(Scene::load(&wrong.to_string(), &BTreeMap::new()).is_err());
 }
+
+#[test]
+fn video_lengths_come_from_their_headers() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures");
+    for name in ["magenta-64x32.webm", "quadrants-64x32.webm"] {
+        let bytes = std::fs::read(dir.join(name)).unwrap();
+        let seconds = wprs_scene::film_seconds(&bytes, &[]).unwrap();
+        assert!(seconds > 0.0 && seconds < 60.0, "{name}: {seconds}");
+    }
+    let mut mp4 = vec![0, 0, 0, 108];
+    mp4.extend(b"mvhd");
+    mp4.extend([0; 12]);
+    mp4.extend(1000u32.to_be_bytes());
+    mp4.extend(2500u32.to_be_bytes());
+    assert_eq!(wprs_scene::film_seconds(b"junk", &mp4), Some(2.5));
+    assert_eq!(wprs_scene::film_seconds(b"junk", b"more junk"), None);
+}

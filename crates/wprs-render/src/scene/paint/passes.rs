@@ -6,12 +6,12 @@ use std::ops::Range;
 use wprs_scene::{Blend, Content, Layer};
 
 impl<'a> Painter<'a, '_, '_> {
-    pub(crate) fn run(&mut self, canvas: Src, background: [f64; 4]) {
+    pub(crate) fn run(&mut self, canvas: Src, background: [f64; 4], keep: bool) {
         self.spend();
         let frame = self.frame;
         let draws = &frame.draws;
         let (mut static_end, mut i, mut fed) = (0, 0, 0u64);
-        while i < draws.len() && !draws[i].dynamic {
+        while !self.frame.keep && i < draws.len() && !draws[i].dynamic {
             let (key, moving) = self.feeding(i..draws[i].end);
             if moving {
                 break;
@@ -24,6 +24,7 @@ impl<'a> Painter<'a, '_, '_> {
             self.clip.map_or(([0, 0], self.full.size()), |c| ([c.x as u32, c.y as u32], c.size()));
         if static_end == 0 {
             match self.clip {
+                _ if keep => {}
                 Some(_) => self.fill(canvas, background),
                 None => self.ops.push(Op::Clear(canvas, background)),
             }
@@ -73,6 +74,14 @@ impl<'a> Painter<'a, '_, '_> {
     }
 
     pub(crate) fn isolate(&mut self, i: usize) -> Option<(Src, Rect)> {
+        let own = self.lean(i).and(self.frame.draws[i].lean).map(|l| (l, l.inverse()));
+        let outer = own.map(|own| self.flat.replace(Some(own)));
+        let out = self.isolated(i);
+        outer.into_iter().for_each(|o| self.flat.set(o));
+        out
+    }
+
+    fn isolated(&mut self, i: usize) -> Option<(Src, Rect)> {
         let frame = self.frame;
         let d = &frame.draws[i];
         let rect = self.extent(i)?.pixels(self.full)?.bucket();

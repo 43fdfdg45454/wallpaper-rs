@@ -30,6 +30,8 @@ pub(crate) struct Item {
     pub(crate) mask_shape: [f32; 4],
     pub(crate) back: [f32; 4],
     pub(crate) mode: [f32; 4],
+    pub(crate) lean: [f32; 4],
+    pub(crate) mask_lean: [f32; 4],
 }
 
 #[repr(C)]

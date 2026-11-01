@@ -151,6 +151,20 @@ pub(crate) fn apply<'js>(ctx: &Ctx<'js>, state: &Object<'js>, bytes: &[u8]) -> R
         sounds.set(i, c.str()?)?;
     }
     frame.set("sounds", sounds)?;
+    let videos = Object::new(ctx.clone())?;
+    for _ in 0..c.u16()? {
+        let at = child(ctx, &videos, c.str()?)?;
+        at.set("time", c.f32()?)?;
+        at.set("duration", c.f32()?)?;
+        at.set("playing", c.flag()?)?;
+        at.set("rate", c.f32()?)?;
+    }
+    frame.set("videos", videos)?;
+    let ended = Array::new(ctx.clone())?;
+    for i in 0..c.u16()? {
+        ended.set(i, c.str()?)?;
+    }
+    frame.set("ended", ended)?;
     if c.flag()? {
         state.get::<_, Function>("forget")?.call::<_, ()>(())?;
     }
