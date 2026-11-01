@@ -10,6 +10,8 @@ pub enum Stack {
     Largest,
     Smallest,
     Lowest,
+    #[serde(skip)]
+    Farthest,
 }
 
 pub fn bin(p: &Particle, kind: Stack, size: f32, height: f32) -> u32 {
@@ -21,6 +23,7 @@ pub fn bin(p: &Particle, kind: Stack, size: f32, height: f32) -> u32 {
         Stack::Largest => s,
         Stack::Smallest => 1.0 - s,
         Stack::Lowest => (p.pos[1] / height.max(1.0)).clamp(0.0, 1.0),
+        Stack::Farthest => (0.5 - p.depth[0] / (2.0 * size.max(1e-6))).clamp(0.0, 1.0),
     };
     ((k * 256.0) as u32).min(255)
 }

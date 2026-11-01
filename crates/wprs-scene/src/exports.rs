@@ -26,9 +26,9 @@ pub use crate::custom::{
 pub use crate::document::{Color, Scene, SceneError};
 pub use crate::easing::Ease;
 pub use crate::effects::{
-    BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, Fuse, MaskMode, Output, PRELUDE, Pace, ParamDef,
-    ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage, State, Texel, Tune, Use,
-    Variant, builtin, descriptor, register,
+    BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, Fuse, MaskMode, NOISE_WGSL, Output, PRELUDE, Pace,
+    ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage, State, Texel,
+    Tune, Use, Variant, builtin, descriptor, register,
 };
 pub use crate::eval::{Content, Draw, EffectDraw, Frame};
 pub use crate::extrude::Relief;
@@ -80,7 +80,8 @@ pub use crate::particles::{
     Palette, Part, Particle, Periodic, Perspective, Placement, Play, REMAP_INPUTS, Refract, Refresh, Remap,
     RemapOp, RemapOutput, Render, Ring, Rope, STEP, SUBSTEPS, Sim, SlowNear, Source, Spread, Stack, Stretch,
     Surface, Swarm, Sweep, System, Taper, Target, Trail, Tunable, Turbulent, WARM, WARM_WORK, Wave, Wobble,
-    bin, flocks, largest, mark, stacked,
+    bin, fbm, flocks, gradient, hash, largest, mark, noise1, remap_input, remap_table, remapped, seen,
+    stacked, taper, turn,
 };
 pub use crate::pointing::{MAX_PRESSES, MAX_TOUCHES, Press, Touch, TouchKind};
 pub use crate::props::{
@@ -119,6 +120,7 @@ pub use crate::sites::{Site, script_inputs, script_key, sites};
 pub use crate::sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice, volume_property};
 pub use crate::spare::Spare;
 pub use crate::spend::{MAX_STATEFUL, Spend, over};
+pub use crate::sprites::{STAGES_WGSL, particle_shader};
 pub use crate::strikes::{STOPPED, end_trials, forgive_strikes, keep_strikes, strike, struck, tried, trying};
 pub use crate::tier::{Gpu, Tier};
 pub use crate::timeline::{Event, Handles, Key, Loop, Timeline, local, sample};

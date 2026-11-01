@@ -15,6 +15,7 @@ pub(super) struct Feed {
     pub off: bool,
     pub on: bool,
     pub window: u32,
+    pub sequence: u32,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -47,6 +48,7 @@ pub struct Swarm {
     pub(super) scale: f64,
     pub(super) warm: usize,
     pub(super) places: Vec<crate::Affine>,
+    pub(super) moves: Vec<[[f32; 6]; MAX_EMITTERS2]>,
 }
 
 impl Swarm {
@@ -77,6 +79,7 @@ impl Swarm {
         *self = Swarm {
             warm: self.warm,
             places: std::mem::take(&mut self.places),
+            moves: std::mem::take(&mut self.moves),
             epoch,
             stamp: self.stamp,
             parts: n,

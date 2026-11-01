@@ -16,6 +16,10 @@ impl Swarms {
         stamp: Option<&wgpu::QuerySet>,
     ) -> Result<bool, RenderError> {
         let start = Instant::now();
+        let heard = |herd: usize, part: usize, e: usize| {
+            runtime.swarm(herd).filter(|s| s.count() > 0).map(|s| s.sim(0, part).emitters[4 * e + 1][0])
+        };
+        self.collect(r, heard);
         self.stamp = (stamp.cloned(), false);
         (self.steps, self.created, self.quality) = (0, 0, quality);
         self.looks.clear();

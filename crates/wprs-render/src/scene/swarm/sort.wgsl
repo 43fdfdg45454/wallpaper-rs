@@ -12,6 +12,8 @@ struct Particle {
     color: vec4<f32>,
     host: vec2<u32>,
     look: vec2<f32>,
+    depth: vec2<f32>,
+    spare: vec2<f32>,
 };
 
 struct Key {
@@ -29,8 +31,9 @@ struct Key {
 fn bin(p: Particle) -> u32 {
     let t = clamp(p.age / p.life, 0.0, 1.0);
     let s = clamp(p.size * p.look.y / max(key.size, 1e-6), 0.0, 1.0);
-    var k = array<f32, 5>(1.0 - t, t, s, 1.0 - s, clamp(p.pos.y / max(key.height, 1.0), 0.0, 1.0));
-    return min(u32(k[min(key.kind, 4u)] * 256.0), 255u);
+    let far = clamp(0.5 - p.depth.x / (2.0 * max(key.size, 1e-6)), 0.0, 1.0);
+    var k = array<f32, 6>(1.0 - t, t, s, 1.0 - s, clamp(p.pos.y / max(key.height, 1.0), 0.0, 1.0), far);
+    return min(u32(k[min(key.kind, 5u)] * 256.0), 255u);
 }
 
 @compute @workgroup_size(64)

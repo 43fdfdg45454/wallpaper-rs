@@ -95,6 +95,9 @@ impl Swarm {
             let once = em.burst.as_ref().filter(|b| b.every.is_none() && b.on.is_none());
             f.pending = f.pending.saturating_add(once.map_or(0, |b| b.count));
             f.next = t;
+            if matches!(&em.shape, super::EmitShape::Around(a) if a.restart) {
+                f.sequence = 0;
+            }
         }
         f.on = on;
     }

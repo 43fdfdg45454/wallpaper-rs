@@ -4,6 +4,7 @@ use std::sync::Arc;
 use wprs_scene::*;
 
 mod extremes;
+mod fields;
 mod scheduled;
 mod validated;
 

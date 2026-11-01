@@ -3,7 +3,8 @@ use crate::Renderer;
 use crate::scene::pipes::Mode;
 
 impl Swarms {
-    pub(crate) fn upload(&mut self, r: &Renderer) {
+    pub(crate) fn upload(&mut self, r: &Renderer, uniform: &wgpu::Buffer) {
+        self.framed(r, uniform);
         let needed = self.looks.len() as u64 * LOOK;
         if needed == 0 {
             return;
@@ -57,7 +58,18 @@ impl Swarms {
                 pass.draw(0..4, 0..(alloc * k - 1) as u32);
             }
             let sorted = kit.order.and_then(|(o, _)| store.stacks.iter().find(|s| s.order == o));
-            pass.set_pipeline(pipeline);
+            let own = kit
+                .stage
+                .as_ref()
+                .and_then(|(key, _)| self.stages.get(&(mode, *key)))
+                .zip(self.framed.as_ref());
+            match own {
+                Some((stage, framed)) => {
+                    pass.set_pipeline(stage);
+                    pass.set_bind_group(2, framed, &[]);
+                }
+                None => pass.set_pipeline(pipeline),
+            }
             pass.set_vertex_buffer(0, sorted.map_or(&store.particles, |s| &s.sorted).slice(..));
             pass.draw(0..4, 0..herd.bake.allocs[p]);
         }

@@ -1,3 +1,4 @@
+use super::birth::{depth, remap, shifted, turbulent};
 use super::hatch::Event;
 use super::motion::{bend, lerp, rand};
 use super::place::place;
@@ -6,13 +7,27 @@ use super::{Particle, Sim};
 
 pub(super) const KEY: u32 = 0x8000_0000;
 
-pub(super) fn spawn(s: &Sim, e: usize, id: u32, points: &[[f32; 2]], ev: Option<&Event>) -> Particle {
+fn unpack(bits: f32) -> [f32; 4] {
+    let b = bits.to_bits();
+    [0, 8, 16, 24].map(|s| ((b >> s) & 255) as f32 / 255.0)
+}
+
+pub(super) fn spawn(
+    s: &Sim,
+    e: usize,
+    id: u32,
+    points: &[[f32; 2]],
+    ev: Option<&Event>,
+    order: u32,
+) -> Particle {
     let r = |k: u32| rand(s.ids[0], id, k);
     let i = s.init;
     let pick = |lo: f32, hi: f32, k: u32, x: f32| lerp(lo, hi, bend(r(k), x));
     let (p, q) = (s.emitters[4 * e + 2], s.emitters[4 * e + 3]);
     let lin = |v: [f32; 2]| [p[0] * v[0] + p[2] * v[1], p[1] * v[0] + p[3] * v[1]];
-    let (at, center) = place(s, e, id, points);
+    let (at, center, extra) = place(s, e, id, points, order);
+    let local = at;
+    let at = shifted(s, id, at);
     let angle = pick(i[1][0], i[1][1], 4, i[6][2]).to_radians();
     let ahead = [angle.cos(), angle.sin()];
     let mut v = if i[9][2] > 0.5 {
@@ -20,6 +35,7 @@ pub(super) fn spawn(s: &Sim, e: usize, id: u32, points: &[[f32; 2]], ev: Option<
     } else {
         ahead.map(|a| a * pick(i[0][2], i[0][3], 3, i[6][1]))
     };
+    v = turbulent(s, id).unwrap_or(v);
     let out = [at[0] - center[0], at[1] - center[1]];
     let l = out[0].hypot(out[1]);
     let dir = if l > 1e-4 { [out[0] / l, out[1] / l] } else { ahead };
@@ -30,10 +46,23 @@ pub(super) fn spawn(s: &Sim, e: usize, id: u32, points: &[[f32; 2]], ev: Option<
     let mut vel = [v[0] + q[2] + i[9][0] * carry, v[1] + q[3] + i[9][1] * carry];
     let shifted = lin(at);
     let mut pos = [shifted[0] + q[0], shifted[1] + q[1]];
-    let mut size = pick(i[1][2], i[1][3], 5, i[6][3]) * s.hatch[1][0];
+    let mut size = pick(i[1][2], i[1][3], 5, i[6][3]) * s.hatch[1][0] * extra[0];
     let mut color = tone(s, id);
     if i[3][2] >= 0.0 {
         color[3] = pick(i[3][2], i[3][3], 12, i[7][3]);
+    }
+    if s.shapes[e] == 8 {
+        let (a, w, t) = (s.emitters[4 * e], s.paths[2 * e], s.paths[2 * e + 1]);
+        pos = [pos[0] + (r(KEY + 49) - 0.5) * a[2], pos[1] + (r(KEY + 50) - 0.5) * a[2]];
+        let flags = a[3] as u32;
+        if flags & 1 != 0 {
+            let c = unpack(extra[1]);
+            color = [c[0], c[1], c[2], color[3] * c[3]];
+        }
+        if flags & 2 != 0 {
+            vel[0] += w[0] * local[0] + w[2] * local[1] + t[0];
+            vel[1] += w[1] * local[0] + w[3] * local[1] + t[1];
+        }
     }
     let mut host = [0; 2];
     if let Some(ev) = ev {
@@ -53,7 +82,7 @@ pub(super) fn spawn(s: &Sim, e: usize, id: u32, points: &[[f32; 2]], ev: Option<
         }
         host = [ev.slot, ev.id];
     }
-    Particle {
+    let mut out = Particle {
         pos,
         vel,
         age: 0.0,
@@ -67,5 +96,9 @@ pub(super) fn spawn(s: &Sim, e: usize, id: u32, points: &[[f32; 2]], ev: Option<
         color,
         host,
         look: [1.0; 2],
-    }
+        depth: depth(s, id),
+        spare: [0.0; 2],
+    };
+    remap(&mut out, s);
+    out
 }

@@ -1,11 +1,20 @@
 use super::motion::{lerp, rand};
+use super::paths::{Spot, sweep};
 use super::spawn::KEY;
 use super::{Num, Sim};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::TAU;
 
-pub(super) fn place(s: &Sim, e: usize, id: u32, points: &[[f32; 2]]) -> ([f32; 2], [f32; 2]) {
+pub(super) fn place(s: &Sim, e: usize, id: u32, points: &[[f32; 2]], order: u32) -> Spot {
+    if let Some(spot) = sweep(s, e, id, order, points) {
+        return spot;
+    }
+    let (at, center) = spread(s, e, id, points);
+    (at, center, [1.0, 0.0])
+}
+
+fn spread(s: &Sim, e: usize, id: u32, points: &[[f32; 2]]) -> ([f32; 2], [f32; 2]) {
     let (a, b, seed) = (s.emitters[4 * e], s.emitters[4 * e + 1], s.ids[0]);
     let u = [rand(seed, id, 0), rand(seed, id, 1)];
     let (w, h) = (s.clock[2], s.clock[3]);

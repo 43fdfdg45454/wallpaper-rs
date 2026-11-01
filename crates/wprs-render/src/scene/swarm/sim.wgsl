@@ -15,6 +15,12 @@ struct Sim {
     colliders: array<vec4<f32>, 16>,
     hatch: array<vec4<f32>, 2>,
     trail: vec4<u32>,
+    orders: array<vec4<u32>, 2>,
+    paths: array<vec4<f32>, 16>,
+    fields: array<vec4<f32>, 4>,
+    depth: array<vec4<f32>, 3>,
+    remap: vec4<u32>,
+    remaps: array<vec4<f32>, 24>,
 };
 
 struct Particle {
@@ -31,6 +37,8 @@ struct Particle {
     color: vec4<f32>,
     host: vec2<u32>,
     look: vec2<f32>,
+    depth: vec2<f32>,
+    spare: vec2<f32>,
 };
 
 struct Event {

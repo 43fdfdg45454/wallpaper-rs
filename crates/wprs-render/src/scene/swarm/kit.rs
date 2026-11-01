@@ -1,3 +1,4 @@
+use super::looks::{far, turn};
 use crate::Renderer;
 use crate::scene::Image;
 use crate::scene::item::linear;
@@ -14,6 +15,9 @@ pub(super) struct Look {
     pub(super) trail: [f32; 4],
     pub(super) shade: [f32; 4],
     pub(super) extra: [f32; 4],
+    pub(super) cut: [f32; 4],
+    pub(super) turn: [f32; 4],
+    pub(super) deep: [f32; 4],
     pub(super) sizes: [[f32; 4]; 16],
     pub(super) colors: [[f32; 4]; 64],
 }
@@ -26,6 +30,8 @@ pub(super) struct Kit {
     pub(super) order: Option<(Stack, f32)>,
     pub(super) trail: u32,
     pub(super) tex: wgpu::BindGroup,
+    pub(super) stage: Option<(u64, wgpu::ShaderModule)>,
+    pub(super) refused: Option<(String, String)>,
 }
 
 type Sprite<'a> = (Option<(&'a str, Option<&'a Image>)>, &'a [[f32; 4]]);
@@ -47,6 +53,7 @@ pub(super) fn kit(
         n => [1, n.min(256) as u32],
     };
     let image = sprite.and_then(|(_, image)| image);
+    let own = scene.particles.values().nth(system);
     let frames = match render.frames {
         None => 0.0,
         Some(Frames::Time) => 1.0,
@@ -67,6 +74,9 @@ pub(super) fn kit(
             stretch.max.unwrap_or(1e9),
         ],
         extra: [flag(!cells.is_empty()), 0.0, 0.0, render.trail.as_ref().map_or(1.0, |t| t.width)],
+        cut: render.cutout.map_or([0.0, 1.0, 1.0, 0.0], |[a, b, o]| [a, b, o, 1.0]),
+        turn: turn(render),
+        deep: own.map_or([0.0; 4], |s| s.perspective.map_or([0.0; 4], |p| [p.focal.max(1.0), 0.0, 0.0, 1.0])),
         sizes: std::array::from_fn(|i| std::array::from_fn(|j| sizes[i * 4 + j])),
         colors: colors.map(tone),
         ..Zeroable::zeroed()
@@ -88,6 +98,9 @@ pub(super) fn kit(
         r.device.create_bind_group(&wgpu::BindGroupDescriptor { label: None, layout, entries: &entries });
     let id = scene.particles.keys().nth(system).cloned().unwrap_or_default();
     let largest = scene.particles.values().nth(system).map_or(1.0, |s| wprs_scene::largest(s, render));
-    let (order, trail) = (render.order.map(|o| (o, largest)), render.trail.as_ref().map_or(0, |t| t.length));
-    Kit { id, system, layer, look, order, trail, tex }
+    let order = render.order.map(|o| (o, largest)).or_else(|| far(scene, &id, own));
+    let trail = render.trail.as_ref().map_or(0, |t| t.length);
+    let mut kit = Kit { id, system, layer, look, order, trail, tex, stage: None, refused: None };
+    super::stage::stage(r, scene, &mut kit, render.shader.as_deref());
+    kit
 }

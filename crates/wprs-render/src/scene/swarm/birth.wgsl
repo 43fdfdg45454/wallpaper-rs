@@ -1,0 +1,122 @@
+fn turbulent(id: u32, v: vec2<f32>) -> vec2<f32> {
+    let f = sim.fields[0];
+    let g = sim.fields[1];
+    if g.w < 0.5 {
+        return v;
+    }
+    let x = f.z * sim.clock.y + g.z + f.w * rand(id, KEY + 40u) + f32(sim.ids.x & 1023u);
+    let a = radians(f.x + (noise1(x) * 2.0 - 1.0) * f.y * 180.0);
+    return vec2<f32>(cos(a), sin(a)) * lerp(g.x, g.y, rand(id, KEY + 41u));
+}
+
+fn shifted(id: u32, at: vec2<f32>) -> vec2<f32> {
+    let f = sim.fields[2];
+    let g = sim.fields[3];
+    if g.w < 0.5 {
+        return at;
+    }
+    let r = rand(id, KEY + 42u);
+    let p = vec2<f32>(at.x * f.y / 100.0 + r * f.z * 17.0 + f.w * sim.clock.y, at.y * f.y / 100.0 + r * f.z * 31.0);
+    let octaves = i32(g.z);
+    let norm = f.x / (1.0 - pow(0.5, f32(octaves)));
+    var off = vec2<f32>(fbm(p, octaves), fbm(p + vec2<f32>(5.2, 1.3), octaves)) * norm;
+    off = select(off, g.xy * abs(off), g.xy != vec2<f32>(0.0));
+    return at + off;
+}
+
+fn deep(d: vec4<f32>, id: u32, k: u32) -> f32 {
+    return select(0.0, pick(d.x, d.y, id, k, d.z), d.w > 0.5);
+}
+
+fn remapped(x: f32, k: u32) -> f32 {
+    let a = sim.remaps[k * 3u];
+    let b = sim.remaps[k * 3u + 1u];
+    let c = sim.remaps[k * 3u + 2u];
+    var t = (x - a.y) / (a.z - a.y);
+    if c.y > 0.5 {
+        t = clamp(t, 0.0, 1.0);
+    }
+    if u32(c.x) == 1u {
+        t = 0.5 + 0.5 * sin(TAU * t);
+    } else if u32(c.x) == 2u {
+        t = noise1(t + f32(k) * 13.7);
+    }
+    let y = lerp(b.y, b.z, t);
+    return select(y, clamp(y, min(b.y, b.z), max(b.y, b.z)), c.z > 0.5);
+}
+
+fn op(v: f32, y: f32, kind: u32) -> f32 {
+    switch kind {
+        case 1u: {
+            return v * y;
+        }
+        case 2u: {
+            return v + y;
+        }
+        case 3u: {
+            return v - y;
+        }
+        default: {
+            return y;
+        }
+    }
+}
+
+fn remap(p: ptr<function, Particle>) {
+    for (var k = 0u; k < min(sim.remap.x, 8u); k++) {
+        let a = sim.remaps[k * 3u];
+        let b = sim.remaps[k * 3u + 1u];
+        let speed = length((*p).vel);
+        var x = a.w;
+        switch u32(a.x) {
+            case 1u: {
+                x = sim.clock.y;
+            }
+            case 2u: {
+                x = (*p).life;
+            }
+            case 3u: {
+                x = (*p).age;
+            }
+            case 4u: {
+                x = speed;
+            }
+            case 5u: {
+                x = rand((*p).id, KEY + 56u + k);
+            }
+            case 6u: {
+                x = distance((*p).pos, vec2<f32>(a.w, sim.remaps[k * 3u + 2u].w));
+            }
+            default: {}
+        }
+        let y = remapped(x, k);
+        let o = u32(b.w);
+        switch u32(b.x) {
+            case 0u: {
+                (*p).size = max(op((*p).size, y, o), 0.0);
+            }
+            case 1u: {
+                (*p).color.a = clamp(op((*p).color.a, y, o), 0.0, 1.0);
+            }
+            case 2u: {
+                (*p).color = vec4<f32>(max(vec3<f32>(op((*p).color.r, y, o), op((*p).color.g, y, o), op((*p).color.b, y, o)), vec3<f32>(0.0)), (*p).color.a);
+            }
+            case 3u: {
+                let n = op(speed, y, o);
+                (*p).vel = select(vec2<f32>(n, 0.0), (*p).vel * n / speed, speed > 1e-6);
+            }
+            case 4u: {
+                (*p).life = max(op((*p).life, y, o), 1e-3);
+            }
+            case 5u: {
+                (*p).rot = op((*p).rot, y, o);
+            }
+            case 6u: {
+                (*p).spin = op((*p).spin, y, o);
+            }
+            default: {
+                (*p).frame = max(op((*p).frame, y, o), 0.0);
+            }
+        }
+    }
+}

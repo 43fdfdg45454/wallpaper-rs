@@ -93,6 +93,7 @@ pub(super) fn simulate(p: &mut Particle, s: &Sim, mirror: &[Event], points: &[[f
     p.pos = [0, 1].map(|i| p.pos[i] + p.vel[i] * dt + shift[i]);
     p.rot += p.spin * dt;
     p.age += dt;
+    p.depth[0] += p.depth[1] * dt;
     p.look = look;
     super::contact::collide(p, s, points);
 }

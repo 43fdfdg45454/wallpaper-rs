@@ -54,7 +54,7 @@ fn trails_remember_recent_positions_and_forget_the_dead() {
     let (k, cloud) = (6, &fly.clouds[0]);
     let (slot, p) = cloud.particles.iter().enumerate().find(|(_, p)| p.age < p.life).unwrap();
     let marks = &cloud.trail[slot * k..(slot + 1) * k];
-    assert_eq!(marks[0], mark(p));
+    assert_eq!(marks[0], mark(p, [0.0; 4]));
     let xs: Vec<f32> = marks.iter().map(|m| f32::from_bits(m[0])).collect();
     assert!(xs.windows(2).all(|w| w[0] > w[1]) && (xs[0] - xs[1] - 1.0).abs() < 1e-3, "{xs:?}");
     assert!(marks.iter().all(|m| m[2] != 0 && m[3] >> 24 == 255));

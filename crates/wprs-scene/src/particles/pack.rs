@@ -24,6 +24,12 @@ pub struct Sim {
     pub colliders: [[f32; 4]; 16],
     pub hatch: [[f32; 4]; 2],
     pub trail: [u32; 4],
+    pub orders: [u32; 8],
+    pub paths: [[f32; 4]; 16],
+    pub fields: [[f32; 4]; 4],
+    pub depth: [[f32; 4]; 3],
+    pub remap: [u32; 4],
+    pub remaps: [[f32; 4]; 24],
 }
 
 impl Default for Sim {
@@ -92,12 +98,17 @@ impl Sim {
                 EmitShape::Line([p, q]) => (3, [p[0], p[1], q[0], q[1]], [0.0; 4]),
                 EmitShape::Edge => (4, [0.0; 4], [0.0; 4]),
                 EmitShape::Mask { .. } => (5, [0.0; 4], [0.0; 4]),
-                EmitShape::Layer(_) | EmitShape::Around(_) | EmitShape::Between(_) => (0, [0.0; 4], [0.0; 4]),
+                EmitShape::Around(a) => (6, [0.0, 0.0, a.radius.0, a.arc.0], super::sow::around(a)),
+                EmitShape::Between(w) => (7, [0.0; 4], super::sow::between(w)),
+                EmitShape::Layer(l) => {
+                    (8, [0.0, 0.0, l.jitter, super::sow::flags(l)], [l.threshold.0, 0.0, 0.0, 0.0])
+                }
             };
             (b.shapes[e], b.emitters[4 * e], b.emitters[4 * e + 1]) = (kind, a, x);
             b.emitters[4 * e + 2] = [1.0, 0.0, 0.0, 1.0];
         }
         b.fill(s);
+        b.sow(s);
         b
     }
 

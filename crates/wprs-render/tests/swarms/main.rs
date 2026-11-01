@@ -6,8 +6,11 @@ use wprs_core::Fit;
 use wprs_render::{Layer, Pixels, Renderer, SceneAssets, SceneView};
 use wprs_scene::{Census, Quality, Runtime, SCHEMA, Scene, Values};
 
+mod drawn;
 mod families;
+mod fields;
 mod looks;
+mod sources;
 mod timed;
 
 const SIZE: (u32, u32) = (160, 80);

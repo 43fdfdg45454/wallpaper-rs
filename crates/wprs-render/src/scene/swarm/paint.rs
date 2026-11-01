@@ -15,6 +15,7 @@ impl Painter<'_, '_, '_> {
         let frame = self.frame;
         let d = &frame.draws[i];
         let Content::Particles { flock, size, .. } = d.content else { return };
+        self.chart(flock);
         if mask.is_some() || !blend.fixed() || self.lean(i).is_some() {
             return self.apart(i, target, atop);
         }
@@ -40,11 +41,17 @@ impl Painter<'_, '_, '_> {
             };
             let Some(k) = own.and_then(|l| found(Some(l))).or_else(|| found(None)) else { continue };
             let kit = &swarms.kits[k];
+            if let Some((id, why)) = &kit.refused {
+                self.refused.entry(id.clone()).or_insert_with(|| why.clone());
+            }
             let mut look = kit.look;
             if tinted {
                 look.colors.iter_mut().for_each(|c| (0..4).for_each(|j| c[j] *= tint[j]));
             }
             (look.m0, look.m1) = ndc(target.rect, m);
+            look.turn[2] = m.0[1].atan2(m.0[0]);
+            let middle = m.inverse().apply(screen.apply([w / 2.0, h / 2.0]));
+            (look.deep[1], look.deep[2]) = (middle[0], middle[1]);
             look.tint[0] = opacity;
             look.tint[2] = herd.bake.sizes[p] * size;
             let trail = herd.bake.trails[p];

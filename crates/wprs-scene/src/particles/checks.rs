@@ -116,6 +116,10 @@ impl Check<'_> {
                 self.known(&format!("{p}/layer/id"), "layer", &l.id, drawn);
                 self.num(&format!("{p}/layer/threshold"), &l.threshold, 0.0, 1.0);
                 self.range(&format!("{p}/layer/jitter"), l.jitter, 0.0, 1e4);
+                let id = q.split('/').nth(2).unwrap_or_default();
+                if self.scene.layer(&l.id).is_some_and(|src| holds(src, id)) {
+                    self.issues.push(Issue::Circle(format!("{p}/layer/id")));
+                }
             }
             EmitShape::Around(a) => {
                 self.uses(true, "particle_fields");
@@ -144,4 +148,9 @@ impl Check<'_> {
             _ => {}
         }
     }
+}
+
+fn holds(layer: &crate::Layer, system: &str) -> bool {
+    let draws = matches!(&layer.kind, crate::Kind::Particles { system: s, .. } if s == system);
+    draws || layer.children().iter().any(|c| holds(c, system))
 }

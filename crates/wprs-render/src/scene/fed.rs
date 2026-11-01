@@ -52,7 +52,7 @@ impl Painter<'_, '_, '_> {
         })
     }
 
-    fn upstream(&mut self, j: usize) -> (u64, bool) {
+    pub(crate) fn upstream(&mut self, j: usize) -> (u64, bool) {
         match self.chains.get(j) {
             Some(Some(found)) => return *found,
             Some(None) => self.chains[j] = Some((0, true)),
@@ -108,7 +108,7 @@ impl Painter<'_, '_, '_> {
         fed
     }
 
-    fn drawn(&mut self, id: &str, m: Affine, (w, h): (u32, u32)) -> Option<Src> {
+    pub(crate) fn drawn(&mut self, id: &str, m: Affine, (w, h): (u32, u32)) -> Option<Src> {
         let j = self.frame.draws.iter().position(|d| d.layer.id == id)?;
         let (src, r) = self.shared(j)?;
         let out = self.acquire((w, h));

@@ -33,7 +33,8 @@ impl Cloud {
         match (s.mode[0], host) {
             (0, _) => (0..s.total()).for_each(|k| {
                 let e = (0..7).find(|e| k < s.births[*e]).unwrap_or(7);
-                let p = spawn(s, e, s.ids[1].wrapping_add(k), points, None);
+                let order = s.orders[e].wrapping_add(k - if e == 0 { 0 } else { s.births[e - 1] });
+                let p = spawn(s, e, s.ids[1].wrapping_add(k), points, None, order);
                 self.place(s, p);
             }),
             (1, Some(h)) => h.spawned.iter().for_each(|ev| hatch(self, s, ev, points)),
@@ -63,8 +64,8 @@ fn hatch(c: &mut Cloud, s: &Sim, ev: &Event, points: &[[f32; 2]]) {
             }
             c.hatched += 1;
             let id = pcg(ev.id ^ pcg(j ^ pcg(s.ids[2])));
+            c.place(s, spawn(s, e, id, points, Some(ev), j));
             j += 1;
-            c.place(s, spawn(s, e, id, points, Some(ev)));
         }
     }
 }

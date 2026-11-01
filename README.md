@@ -1147,6 +1147,19 @@ partículas pasan al procesador, el estado de la pantalla lo dice (`"particles":
 aplicación, la bandeja, `wprs-ctl` al mostrar la escena y los ajustes del teléfono avisan de que se
 muestran menos.
 
+Además dibujan, igual en la GPU que en la CPU, la perspectiva de las partículas en escenas 2D
+(`perspective` con la profundidad y su velocidad al nacer, de lejos a cerca con fusión normal), el
+recorte del alfa de la textura (`render.cutout`), la orientación hacia la pantalla, el movimiento o un
+ángulo fijo (`render.orient`), la emisión desde los píxeles visibles de otra capa con su color y su
+movimiento (forma `layer`, leída a 256 o 512 píxeles y de nuevo solo cuando la capa cambia), la
+velocidad inicial turbulenta, el desfase fractal del nacimiento, el nacimiento por turnos alrededor
+de un punto o entre dos con arco y extremos afinados, la reasignación de valores al nacer
+(`init.remap`, hasta ocho, con la hora, el tiempo, la vida, la velocidad, el azar, la distancia a un
+punto, el sonido o el puntero), la herencia del color, el tamaño, el alfa y la velocidad de la
+partícula padre, y los shaders de partículas de un efecto del paquete (`render.shader`, con las mismas
+comprobaciones que los demás efectos del paquete y dejado fuera, sin dejar de dibujar las partículas,
+si no se puede construir).
+
 El escritorio y el teléfono dibujan también la mezcla por degradado, el revelado con el puntero,
 el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos, el fuego, el giro,
 la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela

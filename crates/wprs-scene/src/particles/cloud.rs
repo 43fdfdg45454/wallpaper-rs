@@ -21,6 +21,8 @@ pub struct Particle {
     pub color: [f32; 4],
     pub host: [u32; 2],
     pub look: [f32; 2],
+    pub depth: [f32; 2],
+    pub spare: [f32; 2],
 }
 
 #[derive(Debug, Clone, Default)]
@@ -82,7 +84,7 @@ impl Cloud {
             simulate(p, s, mirror, points);
             if let Some(h) = self.trail.get_mut(i * k..(i + 1) * k).filter(|_| k > 0) {
                 h.copy_within(..k - 1, 1);
-                h[0] = mark(p);
+                h[0] = mark(p, s.depth[2]);
                 if p.age >= p.life {
                     h.iter_mut().for_each(|e| e[2] = 0);
                 }

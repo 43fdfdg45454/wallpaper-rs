@@ -34,8 +34,8 @@ fn hatch(ev: Event) {
                 return;
             }
             let id = pcg(ev.id ^ pcg(j ^ pcg(sim.ids.z)));
+            take(spawn(e, id, ev, true, j));
             j++;
-            take(spawn(e, id, ev, true));
         }
     }
 }
@@ -53,7 +53,8 @@ fn emit(@builtin(global_invocation_id) gid: vec3<u32>) {
                 e++;
             }
             var none: Event;
-            take(spawn(e, sim.ids.y + k, none, false));
+            let order = sim.orders[e / 4u][e % 4u] + k - select(0u, births(max(e, 1u) - 1u), e > 0u);
+            take(spawn(e, sim.ids.y + k, none, false, order));
         }
         case 1u, 2u: {
             if k < min(host[sim.mode.x], MAX_EVENTS) {

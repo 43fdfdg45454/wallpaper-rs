@@ -1,15 +1,20 @@
 mod binds;
 mod census;
+mod chart;
 mod dispatch;
 mod kit;
+mod looks;
+mod maps;
 mod paint;
 mod setup;
 mod show;
 pub(crate) use setup::sprites;
 mod sort;
 mod sprite;
+mod stage;
 mod step;
 mod store;
+mod texels;
 
 use super::SceneView;
 use super::pipes::Mode;
@@ -21,9 +26,9 @@ use wgpu::{BindGroup, BindGroupLayout, Buffer, BufferUsages as B};
 use wprs_scene::{Bake, Blend, Cloud, Quality, Stack};
 
 const CHUNK: usize = 16;
-const SIM: u64 = 2560;
+const SIM: u64 = 3328;
 const LOOK: u64 = 1536;
-const PARTICLE: u64 = 80;
+const PARTICLE: u64 = 96;
 
 type Stamp = (Option<wgpu::QuerySet>, bool);
 
@@ -43,6 +48,7 @@ struct Stacked {
 }
 
 struct Flight {
+    points: Buffer,
     stores: Vec<Store>,
     clouds: Vec<Cloud>,
     sims: Vec<wprs_scene::Sim>,
@@ -80,6 +86,10 @@ pub(crate) struct Swarms {
     quality: Quality,
     none: Buffer,
     stamp: Stamp,
+    maps: Vec<maps::Map>,
+    stages: HashMap<(Mode, u64), wgpu::RenderPipeline>,
+    framing: BindGroupLayout,
+    framed: Option<BindGroup>,
 }
 
 pub(super) fn compute(r: &Renderer) -> bool {

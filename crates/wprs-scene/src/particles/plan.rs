@@ -1,13 +1,21 @@
 use super::aim::Aim;
+use super::fit::{Fit, fit as fit_into};
 use super::points::{Room, bare};
 use super::tune::tuned;
-use super::{Flock, MAX_PREWARM2, Moment, Placement, STEP, Swarm, System, WARM};
+use super::{Flock, MAX_EMITTERS2, MAX_PREWARM2, Moment, Placement, STEP, Swarm, System, WARM};
 use crate::resolve::Context;
 use crate::{Affine, Content, Draw, Frame, Quality};
 use std::cell::RefCell;
 
 impl Swarm {
-    fn plan(&mut self, systems: &[System], flock: &Flock, cx: &Context, now: f64, d: &Draw, q: Quality) {
+    fn plan(
+        &mut self,
+        (systems, flock): (&[System], &Flock),
+        cx: &Context,
+        now: f64,
+        (d, all): (&Draw, &Frame),
+        q: Quality,
+    ) {
         let (root, canvas, view, p) = (&systems[flock.system], cx.canvas, cx.view, cx.pointer);
         let layer = flock.layer.as_ref().map(|_| d.layer);
         let lift = d.world.then(Affine::translate([-d.origin[0] * canvas[0], -d.origin[1] * canvas[1]]));
@@ -24,6 +32,8 @@ impl Swarm {
         let mut frames = std::mem::take(&mut self.places);
         frames.clear();
         let me = std::ptr::from_ref(self).addr();
+        let dt = self.clock.map_or(0.0, |c| (now - c) as f32);
+        self.moves.resize(flock.parts.len(), [[0.0; 6]; MAX_EMITTERS2]);
         for (k, part) in flock.parts.iter().enumerate() {
             let s = &systems[part.system];
             let host = part.host.map(|h| (h, &systems[flock.parts[h].system]));
@@ -68,6 +78,8 @@ impl Swarm {
             }
             let aim = Aim { frame, room: &room, hatched, cursor, drift, share };
             self.aim(k, s, cx, &aim);
+            let fit = Fit { frame, to_sim, room: &room, hatched, draws: all, dt };
+            fit_into(&mut self.frames[k], s, &fit, cx, &mut self.moves[k]);
             let sim = &mut self.frames[k];
             super::drive::forces(sim, s, &room, cx);
             super::drive::colliders(sim, s, anchor);
@@ -109,7 +121,7 @@ pub(crate) fn plan(
         let shown =
             |d: &&Draw| !d.hidden && matches!(d.content, Content::Particles { flock: f, .. } if f == i);
         if let Some(d) = frame.draws.iter().find(shown) {
-            swarm.plan(systems, flock, cx, now, d, quality);
+            swarm.plan((systems, flock), cx, now, (d, frame), quality);
         }
     }
 }

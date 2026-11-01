@@ -47,6 +47,17 @@ pub(super) fn shapes<'a>(
     ranges
 }
 
+pub(super) fn reserve(s: &System, points: &mut Vec<[f32; 2]>) -> [[u32; 2]; MAX_EMITTERS2] {
+    let mut out = [[0; 2]; MAX_EMITTERS2];
+    for (e, em) in s.emitters.iter().take(MAX_EMITTERS2).enumerate() {
+        if matches!(em.shape, EmitShape::Layer(_)) {
+            out[e] = [points.len() as u32, 0];
+            points.resize(points.len() + 2 * MAX_POINTS, [0.0; 2]);
+        }
+    }
+    out
+}
+
 pub(super) fn field(
     iw: u32,
     ih: u32,

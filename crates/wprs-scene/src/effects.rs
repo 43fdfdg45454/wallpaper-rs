@@ -12,12 +12,16 @@ pub use parts::{
 };
 
 pub const FRAME_WGSL: &str = include_str!("frame.wgsl");
+pub const NOISE_WGSL: &str = include_str!("noise.wgsl");
 pub const RELIEF_WGSL: &str = include_str!("relief.wgsl");
 pub const BLEND_WGSL: &str = include_str!("blend.wgsl");
 pub const PRELUDE: &str = concat!(
     include_str!("frame.wgsl"),
     include_str!("prelude.wgsl"),
     include_str!("helpers.wgsl"),
+    include_str!("oklab.wgsl"),
+    include_str!("noise.wgsl"),
+    include_str!("dither.wgsl"),
     include_str!("relief.wgsl"),
     include_str!("blend.wgsl")
 );

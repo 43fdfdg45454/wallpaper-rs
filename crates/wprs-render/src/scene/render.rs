@@ -150,7 +150,7 @@ impl Renderer {
         v.caches.extract_if(|id, _| !kept.contains(id)).for_each(|(_, c)| pool.give(c.tex));
         let resolve = srgb.then(|| resolve(pool));
         pool.upload(&self.device, &self.queue, self.pipes(), &v.uniform);
-        v.swarms.iter_mut().for_each(|s| s.upload(self));
+        v.swarms.iter_mut().for_each(|s| s.upload(self, &v.uniform));
         let (canvas, output) = v.target.as_ref().expect("created above");
         let (caches, states, luts, swarms) = (&v.caches, &v.states, &v.luts, v.swarms.as_ref());
         let exts = &scratch.exts;
@@ -185,6 +185,7 @@ impl Renderer {
             (counted.created, counted.steps) = (counted.created + s.created, s.steps);
             (counted.particles, counted.sim_us) = (s.slots(), s.micros);
         }
+        v.swarms.iter_mut().for_each(|s| s.sent());
         counted.in_flight = super::flight::flying(v.id);
         (counted.gpu_us, counted.sim_gpu_us) =
             ((v.clock.gpu_ms * 1000.0) as u32, (v.clock.sim_ms * 1000.0) as u32);

@@ -45,8 +45,12 @@ impl Swarm {
                         f.pending = f.pending.saturating_add(n.saturating_sub(most)).min(cap);
                         n = n.min(most);
                     }
+                    let before = total;
                     total = total.saturating_add(n).min(cap);
                     sim.births[e] = total;
+                    let f = &mut self.feeds[k][e];
+                    sim.orders[e] = f.sequence;
+                    f.sequence = f.sequence.wrapping_add(total - before);
                 }
                 sim.births[s.emitters.len().min(MAX_EMITTERS2)..].fill(total);
                 self.bases[k].ids[1] = first.wrapping_add(total);

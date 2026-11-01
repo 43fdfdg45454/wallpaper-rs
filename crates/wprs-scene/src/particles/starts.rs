@@ -101,11 +101,14 @@ impl Check<'_> {
             }
         }
         self.count(&format!("{p}/remap"), i.remap.len(), MAX_REMAPS);
-        i.remap.iter().enumerate().for_each(|(k, r)| self.remap(&format!("{p}/remap/{k}"), r, s));
+        i.remap
+            .iter()
+            .enumerate()
+            .for_each(|(k, r)| self.remap(&format!("{p}/remap/{k}"), r, (s, "particle_fields")));
     }
 
-    pub(super) fn remap(&mut self, q: &str, r: &Remap, s: &System) {
-        self.uses(true, "particle_fields");
+    pub(super) fn remap(&mut self, q: &str, r: &Remap, (s, flag): (&System, &'static str)) {
+        self.uses(true, flag);
         let input = r.input.as_str();
         let point = input.strip_prefix("distance:").map(|h| Handle::try_from(h.to_string()));
         let band = |b: &str| {

@@ -36,6 +36,7 @@ fn simulate(@builtin(global_invocation_id) gid: vec3<u32>) {
     p.pos += p.vel * dt + g.shift;
     p.rot += p.spin * dt;
     p.age += dt;
+    p.depth.x += p.depth.y * dt;
     p.look = g.look;
     collide(&p);
     if (sim.mode.y & 4u) != 0u {

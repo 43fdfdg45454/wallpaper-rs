@@ -4474,22 +4474,26 @@ msgid "lights or refracts its particles"
 msgstr "ilumina o refracta sus partículas"
 
 #: apps/wprs-app/qml/facade/Labels.qml
-msgid "emits or stops particles with the shape of a layer"
-msgstr "emite o detiene partículas con la forma de una capa"
+msgid "emits particles from the shape of a layer"
+msgstr "emite partículas desde la forma de una capa"
 
 #: apps/wprs-app/qml/facade/Labels.qml
-msgid "moves particles with noise, paths, distances or remapped values"
+msgid "starts particles with noise, paths or remapped values"
+msgstr "hace nacer partículas con ruido, recorridos o valores reasignados"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "keeps particles at distances or remaps their values as they live"
 msgstr ""
-"mueve partículas con ruido, recorridos, distancias o valores reasignados"
+"mantiene las partículas a distancia o reasigna sus valores mientras viven"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "binds the ranges of births or the shapes of emitters"
 msgstr "enlaza los rangos de nacimiento o las formas de los emisores"
 
 #: apps/wprs-app/qml/facade/Labels.qml
-msgid "makes particles hit boxes, lines or the inside of circles"
+msgid "makes particles hit boxes, lines, layers or the inside of circles"
 msgstr ""
-"hace que las partículas choquen con cajas, líneas o el interior de círculos"
+"hace chocar partículas con cajas, líneas, capas o el interior de círculos"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "moves particles in flocks"

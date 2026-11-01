@@ -324,16 +324,17 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `shadows` | sets `shadows` on a light, or `cast_shadows` or `receive_shadows` on a material | refused | refused |
 | `particles2` | moves particles in world space, with control points, per-layer `instance` or `render`, scripts that use `particles`, emitter timing, newer emitter shapes, initializers and forces, operator windows, render `brightness`, `cycles`, `order` or a stretch range, `init.gradient`, a `mask` collider, or beyond the older limits (8 systems, 4 emitters, 8 forces, 4 colliders, 10 s of prewarm) | runs | runs |
 | `particle_children` | sets `children` on a system | runs | runs |
-| `particle_depth` | sets `perspective`, `init.depth` or `init.depth_speed` | refused | refused |
+| `particle_depth` | sets `perspective`, `init.depth` or `init.depth_speed` | runs | runs |
 | `particle_lighting` | sets `render.lit`, `render.normal` or `render.refract` | refused | refused |
-| `particle_layers` | emits from a `layer` or collides with one | refused | refused |
-| `particle_fields` | uses `turbulent`, `offset_noise`, `remap`, `around`, `between`, `keep_distance` or `keep_between` | refused | refused |
+| `particle_layers` | emits from a `layer` | runs | runs |
+| `particle_fields` | uses `turbulent`, `offset_noise`, `init.remap`, `around` or `between` | runs | runs |
+| `particle_steering` | uses `keep_distance`, `keep_between` or a `remap` force | refused | refused |
 | `particle_values` | binds an end of an `init` range or a field of an emitter shape | runs | runs |
-| `particle_collisions` | collides with a `box`, a `segment` or the inside of a circle, or sets `stick` | refused | refused |
+| `particle_collisions` | collides with a `box`, a `segment`, a `layer` or the inside of a circle, or sets `stick` | refused | refused |
 | `boids` | sets the `boids` force | refused | refused |
 | `particle_ropes` | sets `render.rope` or trails longer than 16 steps or with `segments`, `subdivide`, `uv_scale`, `uv_scroll` or `textured` | refused | refused |
-| `particle_looks` | sets `render.cutout`, `render.orient` or `render.angle` | refused | refused |
-| `particle_shaders` | sets `render.shader` | refused | refused |
+| `particle_looks` | sets `render.cutout`, `render.orient` or `render.angle` | runs | runs |
+| `particle_shaders` | sets `render.shader` | runs | runs |
 | `scripts2` | has more than 16 script modules, modules that declare newer events, parts or `params`, values with `fn` or `params`, or named effect uses | runs | runs |
 | `script_layers` | has `templates` or scripts that use `layers` | runs | runs |
 | `script_geometry` | has `pools` or scripts that use `geometry` | runs | runs |

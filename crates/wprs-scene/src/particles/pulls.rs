@@ -30,7 +30,7 @@ impl Check<'_> {
                 self.range(&format!("{q}/bounds/mask/threshold"), *threshold, 0.0, 1.0);
             }
             Surface::Layer { id } => {
-                self.uses(true, "particle_layers");
+                self.uses(true, "particle_collisions");
                 let drawn = self.scene.layer(id).is_some_and(crate::Layer::drawn);
                 self.known(&format!("{q}/bounds/layer/id"), "layer", id, drawn);
             }
@@ -98,13 +98,13 @@ impl Check<'_> {
                 self.range(&format!("{q}/slow_near/factor"), n.factor, 0.0, 1.0);
             }
             Force::KeepDistance(k) => {
-                self.uses(true, "particle_fields");
+                self.uses(true, "particle_steering");
                 self.target(q, &k.target, s);
                 self.range(&format!("{q}/keep_distance/distance"), k.distance, 0.0, 1e5);
                 self.range(&format!("{q}/keep_distance/strength"), k.strength, -1e3, 1e3);
             }
             Force::KeepBetween(k) => {
-                self.uses(true, "particle_fields");
+                self.uses(true, "particle_steering");
                 self.target(q, &k.from, s);
                 self.target(q, &k.to, s);
                 self.range(&format!("{q}/keep_between/strength"), k.strength, -1e3, 1e3);
@@ -122,7 +122,7 @@ impl Check<'_> {
                 let system = q.split("/forces/").next().unwrap_or(q);
                 self.range(&format!("{system}/capacity"), s.capacity as f32, 1.0, 8192.0);
             }
-            Force::Remap(r) => self.remap(&format!("{q}/remap"), r, s),
+            Force::Remap(r) => self.remap(&format!("{q}/remap"), r, (s, "particle_steering")),
         }
     }
 }

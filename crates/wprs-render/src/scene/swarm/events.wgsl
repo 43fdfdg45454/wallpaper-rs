@@ -19,9 +19,17 @@ fn mark(i: u32, p: Particle) {
             state.data[o + j * 4u + c] = state.data[o + j * 4u - 4u + c];
         }
     }
-    state.data[o] = bitcast<u32>(p.pos.x);
-    state.data[o + 1u] = bitcast<u32>(p.pos.y);
-    state.data[o + 2u] = pack2x16float(vec2<f32>(p.size * p.look.y, min(p.age / p.life, 1.0)));
+    let deep = sim.depth[2];
+    var pos = p.pos;
+    var near = 1.0;
+    if deep.w > 0.5 {
+        let f = deep.x + p.depth.x;
+        near = select(0.0, deep.x / f, f > 1.0);
+        pos = deep.yz + (p.pos - deep.yz) * near;
+    }
+    state.data[o] = bitcast<u32>(pos.x);
+    state.data[o + 1u] = bitcast<u32>(pos.y);
+    state.data[o + 2u] = pack2x16float(vec2<f32>(p.size * p.look.y * near, min(p.age / p.life, 1.0)));
     state.data[o + 3u] = pack4x8unorm(vec4<f32>(p.color.rgb, p.color.a * p.look.x));
     if p.age >= p.life {
         for (var j = 0u; j < k; j++) {

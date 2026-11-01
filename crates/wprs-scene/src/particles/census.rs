@@ -37,11 +37,21 @@ impl Census {
     }
 }
 
-pub fn mark(p: &Particle) -> [u32; 4] {
+pub fn seen(p: &Particle, deep: [f32; 4]) -> ([f32; 2], f32) {
+    if deep[3] < 0.5 {
+        return (p.pos, 1.0);
+    }
+    let f = deep[0] + p.depth[0];
+    let k = if f > 1.0 { deep[0] / f } else { 0.0 };
+    ([deep[1] + (p.pos[0] - deep[1]) * k, deep[2] + (p.pos[1] - deep[2]) * k], k)
+}
+
+pub fn mark(p: &Particle, deep: [f32; 4]) -> [u32; 4] {
     let half = |v: f32| u32::from(half::f16::from_f32(v).to_bits());
+    let (pos, k) = seen(p, deep);
     let byte = |c: f32| (c.clamp(0.0, 1.0) * 255.0).round_ties_even() as u32;
     let c = [p.color[0], p.color[1], p.color[2], p.color[3] * p.look[0]];
     let packed = c.iter().enumerate().map(|(i, c)| byte(*c) << (8 * i)).sum();
     let t = (p.age / p.life).min(1.0);
-    [p.pos[0].to_bits(), p.pos[1].to_bits(), half(p.size * p.look[1]) | half(t) << 16, packed]
+    [pos[0].to_bits(), pos[1].to_bits(), half(p.size * p.look[1] * k) | half(t) << 16, packed]
 }

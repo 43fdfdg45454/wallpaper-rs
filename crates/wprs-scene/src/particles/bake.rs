@@ -16,6 +16,7 @@ pub struct Bake {
     pub points: Vec<[f32; 2]>,
     pub trails: Vec<u32>,
     pub marks: Vec<u32>,
+    pub layers: Vec<[[u32; 2]; MAX_EMITTERS2]>,
     fields: Vec<[[f32; 4]; super::MAX_COLLIDERS2]>,
     asked: Vec<u32>,
     makes: Vec<u32>,
@@ -87,6 +88,7 @@ impl Bake {
             );
             bake.fields.push(super::field::fields(s, &image, [w, h], &mut bake.points));
             bake.ranges.push(super::field::shapes(s, &image, [w, h], &mut bake.points));
+            bake.layers.push(super::field::reserve(s, &mut bake.points));
         }
         bake.retrail(tier);
         Some(bake)
@@ -139,9 +141,12 @@ impl Bake {
             if mask {
                 out.emitters[4 * e] = self.ranges[part][e];
             }
-            total = total
-                .saturating_add(if mask && self.ranges[part][e][1] < 1.0 { 0 } else { n })
-                .min(out.ids[3]);
+            let [start, count] = self.layers[part][e];
+            if out.shapes[e] == 8 {
+                (out.emitters[4 * e][0], out.emitters[4 * e][1]) = (start as f32, count as f32);
+            }
+            let empty = (mask && self.ranges[part][e][1] < 1.0) || (out.shapes[e] == 8 && count == 0);
+            total = total.saturating_add(if empty { 0 } else { n }).min(out.ids[3]);
             out.births[e] = total;
         }
         out

@@ -8,9 +8,14 @@ impl Swarms {
         self.gpu = gpu;
         if gpu && self.compute.is_none() {
             let parts = [include_str!("sim.wgsl"), include_str!("events.wgsl"), include_str!("shape.wgsl")];
+            let parts = parts.into_iter().chain([
+                include_str!("paths.wgsl"),
+                include_str!("birth.wgsl"),
+                wprs_scene::NOISE_WGSL,
+            ]);
             let more = [include_str!("spawn.wgsl"), include_str!("emit.wgsl"), include_str!("simulate.wgsl")];
             let rest = [include_str!("collide.wgsl"), include_str!("forces.wgsl"), include_str!("step.wgsl")];
-            let module = module(r, &parts.into_iter().chain(more).chain(rest).collect::<Vec<_>>().join("\n"));
+            let module = module(r, &parts.chain(more).chain(rest).collect::<Vec<_>>().join("\n"));
             let layouts = [Some(&self.layouts[0])];
             let desc = wgpu::PipelineLayoutDescriptor {
                 label: None,
@@ -43,7 +48,7 @@ impl Swarms {
         };
         let none = [[0.0f32; 2]];
         let points = if bake.points.is_empty() { &none[..] } else { &bake.points };
-        let points = init(bytemuck::cast_slice(points), B::STORAGE);
+        let points = init(bytemuck::cast_slice(points), B::STORAGE | B::COPY_DST);
         let mut stores: Vec<Store> = Vec::with_capacity(bake.allocs.len());
         for (p, alloc) in bake.allocs.iter().enumerate() {
             let extra = if self.gpu { B::STORAGE } else { B::empty() };
@@ -83,7 +88,7 @@ impl Swarms {
             stores.push(Store { particles, gpu, trail, stacks });
         }
         let clouds = if self.gpu { Vec::new() } else { bake.allocs.iter().map(|a| Cloud::new(*a)).collect() };
-        Flight { stores, clouds, sims: Vec::new() }
+        Flight { points, stores, clouds, sims: Vec::new() }
     }
 
     pub(crate) fn trim(&mut self) {

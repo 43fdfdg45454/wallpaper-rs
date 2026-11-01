@@ -1168,11 +1168,11 @@ sets it, and every other name must be one of `points`. Targets and centers of fo
 | `perspective`, `init.depth`, `init.depth_speed` | `{ "focal" (1 to 100000 px) }` and depth ranges in pixels, which need `perspective` | `particle_depth` |
 | force `window` | `[in_start, in_end, out_start, out_end]` fractions of the life, in order, in which any force fades in and out | `particles2` |
 | forces | `{ "oscillate": { "what": "position" \| "alpha" \| "size", "freq", "scale", "phase", "mask" } }`, `{ "cap": speed }`, `{ "torque": k }`, `{ "spin_drag": k }`, `{ "slow_near": { "target", "inner", "outer", "factor" } }`; `attractor`, `vortex` and `orbit` take `radius` and `falloff` (`constant`, `linear`, `inverse_square`), `vortex` also `inner`, `outer` and `ring: { "radius", "width", "pull" }`, `turbulence` also `speed`, `time_scale` and `mask` | `particles2` |
-| forces | `{ "keep_distance": { "target", "distance", "strength" } }`, `{ "keep_between": { "from", "to", "strength" } }`, `{ "remap": { … } }` applied every step (input `age` too) | `particle_fields` |
+| forces | `{ "keep_distance": { "target", "distance", "strength" } }`, `{ "keep_between": { "from", "to", "strength" } }`, `{ "remap": { … } }` applied every step (input `age` too) | `particle_steering` |
 | force `boids` | `{ "radius", "separation", "alignment", "cohesion", "max_speed" }` flocking, for systems of at most 8192 particles | `boids` |
 | collider `mask` | `{ "mask": { "texture", "threshold" } }`, the part of an image stretched over the canvas whose alpha is above `threshold` (0.5 by default), which particles bounce off or die on | `particles2` |
 | colliders | `{ "box": { "from", "to", "inside" } }`, `{ "segment": { "from", "to" } }`, `circle` with `inside`, and `stick: true` | `particle_collisions` |
-| collider `layer` | `{ "layer": { "id" } }`, the opaque shape of a layer | `particle_layers` |
+| collider `layer` | `{ "layer": { "id" } }`, the opaque shape of a layer | `particle_collisions` |
 | `children` | at most 4 `{ "system", "on": "static" \| "spawn" \| "death" \| "follow", "probability", "max", "offset", "angle", "scale" (0 to 100), "points_from", "inherit", "follow_inherit" }`: other systems born with or from each particle, at most two levels deep and never back to themselves; `inherit` copies `color`, `size`, `alpha` or `velocity`, every step with `follow_inherit` on `follow` children; a collider that `kill`s counts as a death | `particle_children` |
 | render `brightness`, `cycles`, `stretch` | 0 to 16, may be bound; repeats the frames that many times per life (1 to 64, with `frames: life`); `stretch` may be `{ "time", "min", "max" }` in pixels, and `min` equal to `max` only turns a sprite along its motion | `particles2` |
 | render `order` | `newest`, `oldest`, `largest`, `smallest` or `lowest`: the particles drawn on top; others are drawn in no set order | `particles2` |
@@ -1255,6 +1255,64 @@ positions as its own `trail` asks for, or none.
   the canvas (the image itself when it is smaller), and pushes particles out of the opaque part
   along it, at the place where they went in. It works on world and local systems alike, in pixels
   of the canvas, and reads the image once when the scene loads.
+- **Perspective.** With `perspective`, each particle keeps a depth `z` picked from `init.depth`
+  that changes by `init.depth_speed` pixels a second, while forces stay flat. A particle is drawn at
+  `c + (p - c) · f / (f + z)` and `f / (f + z)` times its size, where `c` is the center of the canvas
+  and `f` the `focal` length, so positive depths go away and negative ones come closer; a particle
+  at `z <= 1 - f` is behind the eye and is not drawn. Trails follow the drawn positions. Under the
+  `normal` blend and without `render.order`, particles are drawn from the farthest to the nearest
+  (in 256 steps of depth, on the GPU and on the CPU); `add` needs no order.
+- **Cutouts.** `render.cutout: [start, end, opacity]` turns the alpha `a` of the texture (or of the
+  soft disc) into `clamp((a - start) / (end - start), 0, 1) · opacity` before the alpha of the
+  particle multiplies it, so a soft texture becomes a hard edge at `start`..`end`.
+- **Orientation.** `render.orient` draws a sprite turned by its `rotation` (`screen`, the default),
+  along its motion (`velocity`) or at `angle` degrees on the screen whatever the rotation of the
+  particle and of the layer (`fixed`). World systems never turn with their layer.
+- **Emission from a layer.** The `layer` shape draws the layer `id` (an image, a text, a mesh, a
+  group, with its effects) once, at most 256 pixels on its longer side (512 when it covers more than
+  1 024 pixels), keeps the opaque pixels whose alpha is above `threshold` (at most 4 096 of them,
+  evenly picked) and births particles there with its color when `color` is set. The pixels are
+  read again only when the drawing of the layer changes and `refresh` is `on_change`, at most four
+  times a second; between readings they follow the position, turn and scale of the layer, and
+  `inherit` adds the speed of the layer where each particle is born. `jitter` spreads births over
+  that many pixels. The layer cannot hold the system it feeds, and while it was never drawn no
+  particle is born.
+- **Turbulent start.** `init.turbulent` replaces `speed` and `angle`: each particle starts at a speed
+  picked from `speed`, along `forward` degrees turned by up to `scale` half turns by a smooth noise
+  read at `phase + noise_speed · t + offset · u` (`t` the time of the system, `u` a number picked per
+  particle, so `offset` spreads the directions of the particles born together); with `audio` the
+  level of that band multiplies `phase`.
+- **Fractal offset.** `init.offset_noise` moves each birth by up to `distance` pixels along the
+  `fbm` of the shader helpers with `octaves` octaves, read at the place of birth times `scale` per
+  100 pixels, drifting `noise_speed` units a second, and moved for each particle by `noise_scale`
+  (0 keeps neighbors together, larger values scatter them); `sign` keeps the offset on one side as
+  for circles.
+- **Around a point.** `around` births on a circle of `radius` around `at` (`p0` by default), one
+  place after another in birth order: `count` places over `arc` degrees (the last one meets the
+  first on a full turn), turning `speed` degrees a second with the angle of the control point.
+  `mirror` goes back and forth instead of starting again, and `restart` starts the sequence again
+  whenever the emitter starts.
+- **Between two points.** `between` births along the line from `from` to `to` in birth order, at
+  `count` places over the first `span` of it, back and forth with `mirror`. `arc.amount` bows the
+  line by that fraction of its length to the left (negative to the right), `arc.side` scales the
+  bow or, at 0, picks a side for each round of `count` births. `taper` shrinks births toward the
+  ends: full size at `position`, moving `speed` lengths a second, and `size` times as large at the
+  ends.
+- **Remaps.** `init.remap` maps an input onto a starting value when a particle is born, in order:
+  `x` from `in` becomes `t = (x - in[0]) / (in[1] - in[0])` (clamped to 0..1 with `clamp_in`),
+  shaped by `sine` (`0.5 + 0.5 sin(2π t)`) or `noise`, mapped onto `out` (clamped with `clamp_out`)
+  and `set`, multiplied, added or subtracted to `size`, `alpha`, `color` (its red, green and blue),
+  `speed` (the length of the velocity), `life`, `rotation`, `spin` or `frame`. `daytime` goes from 0
+  at local midnight to 1, `runtime` counts the seconds of the system, `life` and `speed` are the
+  picked ones, `random` is new for each particle and each remap, `distance:pN` is the distance in
+  pixels to a control point, `audio:<band>` a band or its name and `cursor:x|y` the pointer across the
+  screen from 0 to 1 (0.5 while it is away), which needs the pointer as any pointer input does.
+- **Particle shaders.** `render.shader` names a package effect with `stage: "particle"`, checked and
+  limited like every package shader. Its `fn particle(p: Sprite) -> Sprite` runs for each corner of
+  each sprite with the center, velocity, corner, uv, color, size, rotation (degrees), age and life,
+  and may change all of them; the engine then draws the corner. It may read `frame` and the noise
+  and color helpers. A shader that cannot be built is left out like any other package effect and
+  the particles are drawn without it. Ropes and trails are drawn as usual.
 - **Limits.** A scene simulates at most 64 systems, counting children and layers with particles of
   their own, and their capacities share the 200 000 particles. `prewarm` runs in steps of 1/15 s,
   at most 30 million particle steps for the whole scene, and stops once it takes more than 200 ms.

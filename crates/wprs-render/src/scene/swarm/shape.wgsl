@@ -24,7 +24,16 @@ fn hollow(a: vec4<f32>, b: vec4<f32>, u: vec2<f32>, pick: f32) -> vec2<f32> {
     return vec2<f32>(lerp(hi.x - band.x, hi.x, u.x), lerp(y.x, y.y, u.y));
 }
 
-fn place(e: u32, id: u32) -> array<vec2<f32>, 2> {
+fn place(e: u32, id: u32, order: u32) -> array<vec2<f32>, 3> {
+    let kind = sim.shapes[e / 4u][e % 4u];
+    if kind >= 6u {
+        return sweep(e, id, order, kind);
+    }
+    let at = spread(e, id);
+    return array(at[0], at[1], vec2<f32>(1.0, 0.0));
+}
+
+fn spread(e: u32, id: u32) -> array<vec2<f32>, 2> {
     let a = sim.emitters[e * 4u];
     let b = sim.emitters[e * 4u + 1u];
     let u = vec2<f32>(rand(id, 0u), rand(id, 1u));

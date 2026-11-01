@@ -1878,22 +1878,26 @@ msgid "lights or refracts its particles"
 msgstr "ilumina o refracta sus partículas"
 
 #: crates/wprs-format/src/scenery.rs
-msgid "emits or stops particles with the shape of a layer"
-msgstr "emite o detiene partículas con la forma de una capa"
+msgid "emits particles from the shape of a layer"
+msgstr "emite partículas desde la forma de una capa"
 
 #: crates/wprs-format/src/scenery.rs
-msgid "moves particles with noise, paths, distances or remapped values"
+msgid "starts particles with noise, paths or remapped values"
+msgstr "hace nacer partículas con ruido, recorridos o valores reasignados"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "keeps particles at distances or remaps their values as they live"
 msgstr ""
-"mueve partículas con ruido, recorridos, distancias o valores reasignados"
+"mantiene las partículas a distancia o reasigna sus valores mientras viven"
 
 #: crates/wprs-format/src/scenery.rs
 msgid "binds the ranges of births or the shapes of emitters"
 msgstr "enlaza los rangos de nacimiento o las formas de los emisores"
 
 #: crates/wprs-format/src/scenery.rs
-msgid "makes particles hit boxes, lines or the inside of circles"
+msgid "makes particles hit boxes, lines, layers or the inside of circles"
 msgstr ""
-"hace que las partículas choquen con cajas, líneas o el interior de círculos"
+"hace chocar partículas con cajas, líneas, capas o el interior de círculos"
 
 #: crates/wprs-format/src/scenery.rs
 msgid "moves particles in flocks"

@@ -8,6 +8,8 @@ use wprs_scene::{
     Bake, Blend, EmitShape, Kind, Placement, Quality, Render, Scene, Surface, System, Values, flocks,
 };
 
+const PLAIN: &str = "fn particle(p: Sprite) -> Sprite {\n    return p;\n}\n";
+
 pub(crate) fn renders(scene: &Scene) -> Vec<(usize, Option<String>, &Render)> {
     let own = scene.layers().filter_map(|l| match &l.kind {
         Kind::Particles { system, render: Some(r), .. } => {
@@ -94,7 +96,11 @@ impl Swarms {
             flights: Vec::new(),
             marks: Vec::new(),
             stamp: (None, false),
-            module: module(r, concat!(include_str!("sprite.wgsl"), "\n", include_str!("ribbon.wgsl"))),
+            module: module(
+                r,
+                &[wprs_scene::STAGES_WGSL, PLAIN, include_str!("sprite.wgsl"), include_str!("ribbon.wgsl")]
+                    .join("\n"),
+            ),
             layouts,
             compute: None,
             pipelines: HashMap::new(),
@@ -108,7 +114,12 @@ impl Swarms {
             bytes: Vec::new(),
             quality: Quality::Q3,
             none,
+            maps: Vec::new(),
+            stages: HashMap::new(),
+            framing: super::stage::framing(r),
+            framed: None,
         };
+        swarms.maps = Swarms::charts(r, scene, &swarms.herds);
         swarms.prepare(r, gpu);
         drawn.into_iter().chain([&Blend::Normal]).for_each(|b| swarms.pipeline(r, mode(*b, false)));
         Some(swarms)
