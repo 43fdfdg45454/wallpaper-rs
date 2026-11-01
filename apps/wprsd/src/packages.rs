@@ -96,6 +96,7 @@ impl Daemon {
             let uid = d.link(&record)?;
             tracing::info!(repo = &record.repo_id[..8], "package installed");
             d.reload_installed();
+            d.install_needed(&record, (allow_stale, allow_downgrade));
             Ok(serde_json::to_value(InstalledPackage { item: Some(uid), ..d.package_model(&record, None) })
                 .unwrap_or_default())
         }))

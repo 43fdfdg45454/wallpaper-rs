@@ -9,6 +9,7 @@ source "$(dirname "$0")"/integration-library.sh
 source "$(dirname "$0")"/integration-playlists.sh
 source "$(dirname "$0")"/integration-repos.sh
 source "$(dirname "$0")"/integration-scenes.sh
+source "$(dirname "$0")"/integration-content.sh
 source "$(dirname "$0")"/integration-inputs.sh
 source "$(dirname "$0")"/integration-audio.sh
 source "$(dirname "$0")"/integration-sound.sh

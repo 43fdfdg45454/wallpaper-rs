@@ -90,6 +90,17 @@ impl Display {
     }
 }
 
+impl Accent {
+    pub fn resolve(&self, values: &wprs_scene::Values) -> Option<u32> {
+        let color = match self {
+            Accent::Color(color) => color.as_str(),
+            Accent::Prop { prop } => values.get(prop)?.as_str()?,
+        };
+        let hex = color.strip_prefix('#').filter(|h| matches!(h.len(), 6 | 8))?;
+        u32::from_str_radix(hex.get(..6)?, 16).ok()
+    }
+}
+
 impl FrameRate {
     pub(crate) fn valid(self) -> bool {
         match self {

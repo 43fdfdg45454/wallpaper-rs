@@ -22,10 +22,18 @@ const GRACE: Duration = Duration::from_secs(2);
 type Views = Vec<(String, (u32, u32), (bool, bool), u32, PageSpec)>;
 type Wanted = BTreeMap<PathBuf, (PageSpec, Views)>;
 
-pub(super) fn values(spec: &PageSpec, salt: &[u8; 32]) -> (Map<String, Json>, Vec<(String, PathBuf)>) {
+pub(super) fn values(
+    spec: &PageSpec,
+    salt: &[u8; 32],
+    quality: wprs_scene::Quality,
+) -> (Map<String, Json>, Vec<(String, PathBuf)>) {
     let files: Vec<(String, PathBuf)> =
         spec.files.iter().map(|(prop, path)| (token(prop, salt, path), path.clone())).collect();
-    let mut values: Map<String, Json> = spec.values.clone().into_iter().collect();
+    let mut tuned = spec.pack.leveling.tuned(&spec.values, quality);
+    if !spec.pack.own_volume {
+        tuned.remove(wprs_scene::VOLUME);
+    }
+    let mut values: Map<String, Json> = tuned.into_iter().collect();
     for (id, value) in values.iter_mut() {
         let file = spec.files.iter().position(|(prop, _)| prop == id).map(|i| json!(files[i].0));
         let folder =
@@ -72,7 +80,7 @@ impl State {
 
     fn start(&self, slot: &PageSlot) -> Start {
         let (spec, privacy) = (&slot.spec, slot.spec.privacy);
-        let (properties, files) = values(spec, &slot.salt);
+        let (properties, files) = values(spec, &slot.salt, self.power.steady());
         let device = self.page_device(slot);
         let shared = slot.shared && device.is_some();
         Start {
@@ -105,8 +113,15 @@ impl State {
     fn page_settings(&self, slot: &PageSlot) -> Settings {
         let fps = slot.views.values().map(|v| v.fps).max().unwrap_or(30).max(1);
         let silent = self.settings.muted || self.locked;
-        let volume = if silent { 0.0 } else { self.settings.volume };
-        Settings { fps, quality: self.power.tier as u8, locale: language(&slot.spec).0, volume }
+        let own = slot
+            .spec
+            .values
+            .get(wprs_scene::VOLUME)
+            .and_then(Json::as_f64)
+            .filter(|_| !slot.spec.pack.own_volume);
+        let own = own.map_or(1.0, |v| v.clamp(0.0, 100.0) / 100.0);
+        let volume = if silent { 0.0 } else { self.settings.volume * self.settings.duck * own };
+        Settings { fps, quality: self.power.steady() as u8, locale: language(&slot.spec).0, volume }
     }
 
     pub(super) fn sync_pages(&mut self) {

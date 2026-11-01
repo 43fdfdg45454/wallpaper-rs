@@ -27,6 +27,7 @@ pub(crate) struct OutputInfo {
     pub(crate) refresh: u32,
     pub(crate) scene: Option<std::sync::Arc<crate::scenes::ScenePack>>,
     pub(crate) video: Option<std::sync::Arc<crate::sceneprops::Props>>,
+    pub(crate) accent: Option<String>,
 }
 
 impl OutputInfo {
@@ -172,5 +173,15 @@ impl Daemon {
             self.changes.changed("state", vec![output]);
         }
         Ok(())
+    }
+}
+
+impl crate::daemon::Daemon {
+    pub(crate) fn unreached(&self) -> std::collections::BTreeSet<String> {
+        if crate::flatpak::app_id().is_none() {
+            return Default::default();
+        }
+        let st = self.state();
+        st.outputs.iter().filter(|(_, info)| !info.claims.is_empty()).map(|(name, _)| name.clone()).collect()
     }
 }

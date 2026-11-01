@@ -1,3 +1,4 @@
+mod accent;
 mod account;
 mod activate;
 mod apply;
@@ -14,6 +15,7 @@ mod controls;
 mod daemon;
 mod decode;
 mod drafts;
+mod duck;
 mod editpreview;
 mod edits;
 mod error;
@@ -61,6 +63,7 @@ mod schema;
 mod secrets;
 mod serve;
 mod service;
+mod shortcuts;
 #[cfg(test)]
 mod spec;
 mod store;
@@ -71,6 +74,7 @@ mod sync1;
 mod thumbs;
 mod tidy;
 mod timing;
+mod variants;
 mod wallpaper;
 mod watch;
 mod words;

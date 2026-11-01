@@ -129,13 +129,14 @@ The helper injects `window.wprs` before the page's own scripts (and before `web.
 | Member | What it does |
 |--------|--------------|
 | `properties`, `onProperties(cb)` | all values when the callback is added, then only the changed ones; colors as `{hex, r, g, b, a}` (0 to 1), combos as `{value, label}`, files as `wpak-user://` tokens, folders as `wpak-user://<id>/` |
-| `fps`, `quality`, `locale`, `volume`, `onSettings(cb)` | the frame rate it is drawn at, the quality level (0 to 3), the language picked among the package's, and the wallpaper volume (0 to 1) for its own sound: the page may play sound without a gesture, its `<audio>` and `<video>` play at their own volume times the wallpaper's (`volume` reads what the page set) and an `AudioContext` sends its `destination` through a gain at the wallpaper's volume; the page is muted at 0 |
+| `fps`, `quality`, `locale`, `volume`, `onSettings(cb)` | the frame rate it is drawn at (never above `playback.max_fps`), the quality level (0 to 3, lower on battery, in power saving or with heat; properties with `quality` values change with it), the language picked among the package's, and the wallpaper volume (0 to 1, the general volume times the page's own `volume` setting) for its own sound: the page may play sound without a gesture, its `<audio>` and `<video>` play at their own volume times the wallpaper's (`volume` reads what the page set) and an `AudioContext` sends its `destination` through a gain at the wallpaper's volume; the page is muted at 0 |
 | `paused`, `onPause(cb)` | `true` while hidden |
 | `onAudio(cb)` | `{left, right}`, 64 bands each from bass to treble, at most 30 times a second, once the user allows `audio` for the package; the first callback subscribes |
 | pointer and clicks | real DOM events: `pointermove` while `pointer` is allowed, and `click`s only from real clicks on screens where the user turned clicks on and the package holds `clicks` |
 | `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | the tokens of a chosen folder: `files` (and the `{prop, added, removed, changed}` notices, `changed` as `[old, new]` pairs for files rewritten in place) only with `mode: all`; `randomFile` in both modes; a token changes with the size and time of its file, so a rewritten file loads anew |
 | `onAction(cb)` | the id of a pressed `button` property |
-| `onMedia`, `openShortcut`, `rgb.setImage` | present and inert: their features are refused until they work |
+| `openShortcut(prop)` | asks to open what the user chose for a `shortcut` property; it returns `false` outside a user activation, and the daemon opens it only within 2 s of a real click that reached the page, at most once a second; the page never learns the target |
+| `onMedia`, `rgb.setImage` | present and inert: their features are refused until they work |
 
 Audio and video files of the package and of the user's folder play from a `blob:` copy that the
 helper's script makes when a media element (or `new Audio`) gets a `wpak:` or `wpak-user:` address,

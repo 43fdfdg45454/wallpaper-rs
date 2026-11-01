@@ -98,7 +98,10 @@ impl Stage {
             let delay = left.unwrap_or(idle);
             return Ok(Shot { image: None, fps: self.fps, delay });
         }
-        self.quality = quality;
+        if std::mem::replace(&mut self.quality, quality) != quality && self.runtime.set_quality(quality) {
+            self.restock = true;
+            self.acting.reprops();
+        }
         if let Some(view) = self.view.as_mut().filter(|_| std::mem::take(&mut self.restock)) {
             r.refresh_scene(view, (&self.pack.scene, self.runtime.props()), &self.assets)?;
         }

@@ -1,5 +1,7 @@
+mod setup;
+
 use crate::changes::Changes;
-use crate::compositor::{Compositor, Settings, lock};
+use crate::compositor::{Compositor, lock};
 use crate::folders::Folders;
 use crate::jobs::Jobs;
 use crate::rotation::{Playing, Rotations};
@@ -8,16 +10,16 @@ use crate::streams::OutputInfo;
 use crate::thumbs::Thumbs;
 use anyhow::Context;
 use image::RgbaImage;
+pub(crate) use setup::{output_name, settings};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::SystemTime;
 use tokio::sync::{Notify, watch};
-use wprs_core::{Config, Models, Playback, dbus};
+use wprs_core::{Config, Models};
 use wprs_format::Installed;
 use wprs_pipewire::Exporter;
 use wprs_render::Renderer;
-use zbus::fdo;
 
 #[derive(Default)]
 pub(crate) struct State {
@@ -60,6 +62,7 @@ pub struct Daemon {
     pub(crate) props: watch::Sender<Props>,
     pub(crate) adapter: String,
     pub(crate) tier: (&'static str, bool),
+    pub(crate) compute: bool,
     pub(crate) store: Store,
     pub(crate) changes: Changes,
     pub(crate) jobs: Jobs,
@@ -90,6 +93,7 @@ impl Daemon {
         crate::streams::share_video(renderer);
         let calibrated = renderer.calibrate(wprs_core::gpu_tier().as_deref());
         let tier = (["t0", "t1", "t2", "t3"][calibrated.tier as usize], calibrated.measured());
+        let compute = renderer.compute() && !renderer.software();
         tracing::info!("renderer ready");
         tracing::debug!(adapter, tier = tier.0, unit_ms = calibrated.unit_ms, "GPU adapter");
         let changes = Changes::new();
@@ -118,6 +122,7 @@ impl Daemon {
             props,
             adapter,
             tier,
+            compute,
             store,
             changes,
             jobs,
@@ -182,19 +187,4 @@ impl State {
         let playback = &self.config.playback;
         Props { paused: self.user_paused, volume: playback.volume, muted: playback.muted }
     }
-}
-
-pub(crate) fn settings(config: &Config) -> Settings {
-    let playback = config.playback.sanitized();
-    let transition = config.transition.duration();
-    let Playback { max_fps, volume, muted, software_parallax, flash_guard, scene_sound, .. } = playback;
-    Settings { transition, max_fps, volume, muted, software_parallax, flash_guard, scene_sound }
-}
-
-pub(crate) fn output_name(output: &str) -> fdo::Result<String> {
-    let output = output.trim();
-    if output.len() > 128 || output.chars().any(char::is_control) {
-        return Err(fdo::Error::InvalidArgs("invalid output name".into()));
-    }
-    Ok(if output.is_empty() { dbus::DEFAULT_OUTPUT.to_owned() } else { output.to_owned() })
 }

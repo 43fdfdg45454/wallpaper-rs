@@ -6,10 +6,14 @@ use rustix::fs::{MemfdFlags, SealFlags, fcntl_add_seals, ftruncate, memfd_create
 use std::sync::Arc;
 
 fn spec(language: bool) -> PageSpec {
-    let properties =
-        serde_json::from_value(json!({"mood": {"type": "combo", "default": "calm", "label": "Mood",
-        "options": [{"value": "calm", "label": {"en": "Calm", "es": "Calma"}}]}}))
-        .unwrap();
+    page(language, json!({}))
+}
+
+fn page(language: bool, more: Json) -> PageSpec {
+    let mut properties = json!({"mood": {"type": "combo", "default": "calm", "label": "Mood",
+        "options": [{"value": "calm", "label": {"en": "Calm", "es": "Calma"}}]}});
+    properties.as_object_mut().unwrap().extend(more.as_object().unwrap().clone());
+    let properties = serde_json::from_value(properties).unwrap();
     let languages = vec!["es_AR.UTF-8".to_owned(), "en".to_owned()];
     let props = Props {
         path: "/p.wpak".into(),
@@ -20,10 +24,12 @@ fn spec(language: bool) -> PageSpec {
         languages: languages.clone(),
         properties,
         presets: Vec::new(),
+        authored: Default::default(),
     };
     let (shape, plain) = (shape(&props, &languages), shape(&props, &[PLAIN.into(), "en".into()]));
     let pack = WebPack {
         path: "/p.wpak".into(),
+        leveling: wprs_scene::Leveling::of(&props.properties),
         props: Arc::new(props),
         entry: "index.html".into(),
         preload: None,
@@ -34,6 +40,8 @@ fn spec(language: bool) -> PageSpec {
         key: "k".into(),
         shape,
         plain,
+        own_volume: false,
+        max_fps: 0,
     };
     let privacy = Privacy { language, ..Privacy::default() };
     let (files, folders, values) = (Vec::new(), Vec::new(), Default::default());
@@ -63,4 +71,15 @@ fn frames_are_read_only_from_sealed_buffers_of_their_size() {
     assert!(view.map(&made(128, true), (4, 4), 16).is_ok());
     assert!(view.map(&made(128, false), (4, 4), 16).is_err());
     assert!(view.map(&made(64, true), (4, 4), 16).is_err());
+}
+
+#[test]
+fn pages_get_values_tuned_to_the_quality_level_without_the_volume_the_engine_added() {
+    let tuned =
+        json!({"rate": {"type": "slider", "min": 0, "max": 60, "default": 60, "quality": {"q1": 15}}});
+    let mut page = page(true, tuned);
+    page.values = serde_json::from_value(json!({"rate": 60, "volume": 40, "mood": "calm"})).unwrap();
+    let at = |q| values(&page, &[0; 32], q).0;
+    assert_eq!(Json::Object(at(wprs_scene::Quality::Q3)), json!({"rate": 60, "mood": "calm"}));
+    assert_eq!(at(wprs_scene::Quality::Q1)["rate"], json!(15));
 }

@@ -19,6 +19,7 @@ mod scan;
 mod settings;
 mod tags;
 mod timing;
+mod variants;
 
 pub use db::SCHEMA_VERSION;
 pub use entries::EntryEdit;

@@ -98,7 +98,7 @@ pub(crate) fn refresh(db: &Connection, id: i64, probe: &mut Probe) -> Result<()>
     probe.fill()?;
     let sql = "UPDATE items SET kind = ?2, size = ?3, mtime = ?4, qhash = ?5, width = NULL, height = NULL, \
         duration_ms = NULL, audio = NULL, color = NULL, error = NULL, pkg_id = NULL, pkg_version = NULL, \
-        pkg_type = NULL, license = NULL, content = NULL, photosensitive = NULL, facets = NULL WHERE id = ?1";
+        pkg_type = NULL, license = NULL, content = NULL, photosensitive = NULL, facets = NULL, base = NULL WHERE id = ?1";
     db.execute(sql, params![id, probe.kind, probe.size, probe.mtime, probe.hash])?;
     probe.reading.as_ref().map_or(Ok(()), |reading| store_package(db, id, reading))
 }

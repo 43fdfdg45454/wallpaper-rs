@@ -12,13 +12,15 @@ pub struct Playback {
     pub flash_guard: bool,
     pub scene_sound: bool,
     pub scene_capture: bool,
+    pub duck: bool,
 }
 
 impl Default for Playback {
     fn default() -> Self {
         let (volume, muted, max_fps) = (0.5, true, fps::DISPLAY);
         let (software_parallax, flash_guard, scene_sound, scene_capture) = (false, false, true, true);
-        Self { volume, muted, max_fps, software_parallax, flash_guard, scene_sound, scene_capture }
+        let duck = false;
+        Self { volume, muted, max_fps, software_parallax, flash_guard, scene_sound, scene_capture, duck }
     }
 }
 
@@ -27,6 +29,13 @@ pub mod fps {
 
     pub const DISPLAY: u32 = 0;
     pub const WORD: &str = "display";
+
+    pub fn lower(a: u32, b: u32) -> u32 {
+        match (a, b) {
+            (DISPLAY, other) | (other, DISPLAY) => other,
+            _ => a.min(b),
+        }
+    }
 
     pub fn serialize<S: Serializer>(fps: &u32, s: S) -> Result<S::Ok, S::Error> {
         match *fps {

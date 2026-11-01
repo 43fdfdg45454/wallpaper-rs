@@ -42,6 +42,9 @@ pub(super) fn status(reply: InputsReply) -> String {
     let screens = |set: &BTreeSet<String>| if set.is_empty() { "none".to_owned() } else { list(set.iter()) };
     lines.push(format!("clicks reach the wallpaper on: {}", screens(&reply.clicks)));
     lines.push(format!("taking clicks now: {}", screens(&reply.clicking)));
+    if !reply.unreached.is_empty() {
+        lines.push(format!("clicks cannot reach the wallpaper here on: {}", screens(&reply.unreached)));
+    }
     lines.join("\n") + "\n"
 }
 

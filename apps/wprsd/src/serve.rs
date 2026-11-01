@@ -63,6 +63,8 @@ pub(crate) async fn run(args: Args) -> anyhow::Result<()> {
     tokio::spawn(bus::announce_streams(connection.clone(), daemon.clone()));
     tokio::spawn(playback::run(daemon.clone()));
     tokio::spawn(picks::run(daemon.clone()));
+    tokio::spawn(crate::shortcuts::serve(connection.clone(), daemon.clone()));
+    crate::duck::follow(&daemon);
     tokio::spawn(crate::choice::follow(daemon.clone(), known));
     if cfg!(debug_assertions) && std::env::var_os("WPRS_RENDER_STOP").is_some() {
         let (daemon, mut stop) = (daemon.clone(), signal(SignalKind::user_defined2())?);

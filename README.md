@@ -415,10 +415,14 @@ permiso de lectura de la carpeta y, cada vez que se abre, copia otra vez lo que 
 *Quitar* borra la copia y devuelve el permiso. Como en el escritorio, la escena muestra el archivo
 de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cambia mientras se ve.
 Los ajustes de reproducción de los paquetes de vídeo no se usan en el teléfono, y la página del
-paquete lo avisa, igual que de todo lo que el teléfono omite: la tarjeta gráfica que pide, el color
-alrededor de la imagen y la extensión sobre varias pantallas, el color de acento, los sonidos nuevos, lo que los scripts aún no
-pueden hacer en ningún sitio o no tiene sentido en el teléfono (geometría, almacenamiento, sonidos)
-y la iluminación RGB. Un paquete hecho solo para
+paquete lo avisa, igual que de todo lo que el teléfono omite: el color alrededor de la imagen y la
+extensión sobre varias pantallas, el límite de fotogramas, el inicio en silencio y la reproducción
+única de vídeos y páginas, los atajos, los sonidos nuevos, lo que los scripts aún no pueden hacer en
+ningún sitio o no tiene sentido en el teléfono (geometría, almacenamiento, sonidos) y la iluminación
+RGB. Si un paquete pide sombreadores de cálculo y la gráfica del teléfono no los tiene, su página lo
+avisa. El color de acento del fondo (o, si no propone uno, el dominante de su vista previa) es el
+color que Android da al sistema. Un paquete de más de 1 GiB descomprimido se rechaza, y los
+preajustes publicados aparte y las dependencias entre paquetes aún no funcionan en el teléfono. Un paquete hecho solo para
 el escritorio se rechaza con ese aviso, traducido. El nivel de calidad sale de la
 clase del teléfono (básica con poca memoria o sin sombreadores de cálculo, alta si el fabricante
 declara una clase de rendimiento de Android 13 o posterior, media en el resto, ajustada con la misma
@@ -897,10 +901,36 @@ la imagen, la extensión sobre todas las pantallas, el volteo, el límite de fot
 silencio y la reproducción única. Cada función tiene un nombre en `requires.features`, y el
 escritorio y el teléfono dicen si la ejecutan, si reproducen el paquete sin ella o si lo rechazan
 con «necesita una versión más nueva de wallpaper-rs» antes de dibujar nada; en esta versión
-rechazan los preajustes y recursos publicados aparte, las dependencias, el volteo, el límite de
-fotogramas, el silencio y la repetición del autor, los atajos, los valores por nivel de calidad, las
-listas de carpetas desde los scripts de escena y las texturas KTX2 y AVIF. `wprs-ctl pack check` dice qué
-hace cada plataforma con un paquete y `docs/specs/package.md` describe el formato entero.
+rechazan los recursos publicados aparte, el volteo, las listas de carpetas desde los scripts de
+escena y las texturas KTX2 y AVIF. `wprs-ctl pack check` dice qué hace cada plataforma con un paquete
+y `docs/specs/package.md` describe el formato entero.
+
+Un preajuste publicado aparte aparece en la biblioteca como variante de su fondo base: la ficha del
+base lista sus preajustes, la del preajuste nombra su base, y *Aplicar* (o `wprs-ctl lib apply`)
+muestra el base con esos valores; los que el base instalado no conoce, de otro tipo o fuera de rango
+se descartan con un aviso en el registro. Instalar un paquete de un repositorio instala también, del
+mismo repositorio, los paquetes que nombra en `requires.packages` y faltan; si aun así falta el base,
+la ficha ofrece instalarlo. El autor puede proponer un color de acento (`display.accent`, un color o
+una propiedad de color): el escritorio lo da al fondo de Plasma, que lo usa si eliges el acento desde
+el fondo, y el teléfono al sistema; sin él se propone el dominante de la vista previa, y
+`wprs-ctl state` lo muestra por pantalla. `playback` también vale para escenas (límite de
+fotogramas, volumen y silencio del autor): los fotogramas por segundo nunca pasan del mínimo entre
+lo que pides, lo que pide el autor, la pantalla, la batería y el nivel de calidad. Las escenas con
+sonido, los vídeos y las páginas web tienen su propio volumen por pantalla, que empieza en el del
+autor (o en cero si pide empezar en silencio) y se multiplica por el general; *Silenciar los fondos
+mientras otra aplicación reproduce sonido* (`playback.duck`, apagado de serie) los baja con un
+fundido mientras alguna otra aplicación reproduce, contando sus flujos de PipeWire sin leer sus
+nombres ni su contenido. Las propiedades con valores por nivel de calidad (`quality`) los toman solas
+cuando el equipo ahorra energía, y scripts y páginas reciben el nivel. Un atajo (`shortcut`) lo
+eliges tú en los ajustes del fondo: una dirección `https://` (se abre con el portal del escritorio),
+un archivo o una carpeta (con el selector) o una aplicación por su id `.desktop` (fuera del
+Flatpak); el fondo nunca ve qué elegiste y solo puede pedir abrirlo dentro de un clic real, como
+mucho una vez por segundo, en una pantalla que acepta clics. Si una escena usa clics en una pantalla
+a la que no llegan (como Plasma dentro del Flatpak), sus ajustes lo avisan. Un paquete que pide
+sombreadores de cálculo avisa antes de aplicarlo si la gráfica no los tiene, y la ficha de cada
+paquete dice en qué equipos funciona entero (`desktop`, `android`): el validador lo calcula con las
+funciones que usa y los límites del teléfono (1 GiB descomprimido, imágenes de 8192 px de lado y
+32 Mpx).
 
 Las escenas también describen ya todo lo que un autor puede querer rehacer a mano: 15 modos de fusión
 más (`linear_burn` … `negation`), tinte y brillo de capa, padre de transformación sin cambiar el orden

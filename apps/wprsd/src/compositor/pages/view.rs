@@ -31,6 +31,7 @@ pub(in crate::compositor) struct ViewSlot {
     pub(in crate::compositor) shown: Option<u32>,
     pub(in crate::compositor) fresh: bool,
     pub(in crate::compositor) pointer: Option<(f64, f64)>,
+    pub(in crate::compositor) pressed: [Option<std::time::Instant>; 2],
     imported: HashMap<u32, GpuImage>,
     ring: Option<Mapped>,
     copied: Option<GpuImage>,

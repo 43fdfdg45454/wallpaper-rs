@@ -61,8 +61,10 @@ impl PlayerSlot {
     }
 
     pub(super) fn hush(&self, (settings, locked): (Settings, bool)) {
-        let (volume, muted) =
-            (loudness(settings.volume, self.volume), settings.muted || locked || self.volume == 0);
+        let (volume, muted) = (
+            loudness(settings.volume * settings.duck, self.volume),
+            settings.muted || locked || self.volume == 0,
+        );
         self.player.iter().for_each(|p| p.set_volume(volume, muted));
     }
 
@@ -120,7 +122,8 @@ impl PlayerSlot {
         match opened {
             Ok(player) => {
                 tracing::debug!(path = %path.display(), "video opened");
-                player.set_volume(volume, muted || locked);
+                player.set_volume(volume * settings.duck, muted || locked);
+                player.play_once(reel.once);
                 player.set_playing(self.playing);
                 (self.player, self.due, self.steered) = (Some(player), Some(now + FIRST_FRAME), None);
             }

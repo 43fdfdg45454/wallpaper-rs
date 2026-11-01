@@ -20,18 +20,21 @@ pub(crate) struct Reading {
     pub(crate) manifest: Option<Manifest>,
     facets: Option<String>,
     error: Option<String>,
+    base: Option<String>,
 }
 
 pub(crate) fn read_package(kind: Kind, path: &Path) -> Option<Reading> {
     (kind == Kind::Package).then_some(())?;
-    let read = wprs_format::open(path, &Limits::default()).and_then(|mut p| p.look_at_videos().map(|()| p));
+    let read = wprs_format::open(path, &Limits::default()).and_then(|mut p| p.look_closer().map(|()| p));
     Some(match read {
-        Ok(package) => {
+        Ok(mut package) => {
             let refused = playable(&package.manifest, &package.facts, Platform::here()).err();
             let (facets, error) = (Some(package.facts.facets.join(" ")), refused.map(|e| e.to_string()));
-            Reading { manifest: Some(package.manifest), facets, error }
+            let preset = package.manifest.kind == wprs_format::Kind::Preset;
+            let base = preset.then(|| package.preset().ok()).flatten().map(|p| p.base.id);
+            Reading { manifest: Some(package.manifest), facets, error, base }
         }
-        Err(e) => Reading { manifest: None, facets: None, error: Some(e.to_string()) },
+        Err(e) => Reading { manifest: None, facets: None, error: Some(e.to_string()), base: None },
     })
 }
 
@@ -48,10 +51,10 @@ pub(crate) fn store_package(db: &Connection, id: i64, reading: &Reading) -> Resu
         _ => None,
     });
     let sql = "UPDATE items SET error = ?2, pkg_id = ?3, pkg_version = ?4, pkg_type = ?5, license = ?6, \
-        content = ?7, photosensitive = ?8, facets = ?9, pkg_read = ?10, titles = ?11 WHERE id = ?1";
-    let error = &reading.error;
+        content = ?7, photosensitive = ?8, facets = ?9, pkg_read = ?10, titles = ?11, base = ?12 WHERE id = ?1";
+    let (error, base) = (&reading.error, &reading.base);
     let values =
-        params![id, error, pkg_id, version, pkg_type, license, content, flashing, facets, read, titles];
+        params![id, error, pkg_id, version, pkg_type, license, content, flashing, facets, read, titles, base];
     db.execute(sql, values)?;
     let usable = |tag: &&String| printable(tag.trim(), TAG_LENGTH) && !tag.contains(['<', '>']);
     for tag in m.iter().flat_map(|m| &m.tags).filter(usable) {

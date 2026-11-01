@@ -155,6 +155,7 @@ impl Daemon {
                 left_out: s.left_out,
                 console: s.console,
                 sandbox: s.sandbox.into(),
+                accent: info.accent.clone(),
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)
@@ -187,6 +188,7 @@ impl Daemon {
                 .map(output)
                 .collect(),
             calibrating: crate::calibration::calibrating(&st),
+            compute: self.compute,
         };
         serde_json::to_string(&state).unwrap_or_default()
     }

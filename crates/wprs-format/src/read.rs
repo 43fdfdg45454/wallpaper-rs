@@ -22,8 +22,8 @@ pub struct Package<R> {
     pub manifest: Manifest,
     pub entries: Vec<FileEntry>,
     pub facts: Facts,
-    videos: Vec<String>,
-    archive: ZipArchive<R>,
+    pub(crate) videos: Vec<String>,
+    pub(crate) archive: ZipArchive<R>,
 }
 
 pub fn open(path: impl AsRef<Path>, limits: &Limits) -> Result<Package<BufReader<File>>> {
@@ -146,26 +146,6 @@ impl<R: Read + Seek> Package<R> {
             media::preview(animated, &path, &self.read_file(&path)?)?;
         }
         Ok(())
-    }
-
-    pub fn look_at_videos(&mut self) -> Result<()> {
-        for path in self.videos.clone() {
-            let (head, tail) = self.ends(&path, media::EDGE)?;
-            if media::hdr(&head) || tail.is_some_and(|t| media::hdr(&t)) {
-                media::mark(&mut self.facts, &path);
-            }
-        }
-        Ok(())
-    }
-
-    fn ends(&mut self, path: &str, edge: u64) -> Result<(Vec<u8>, Option<Vec<u8>>)> {
-        let head = self.head(path, edge)?;
-        let Ok(mut file) = self.archive.by_name_seek(path) else { return Ok((head, None)) };
-        let size = file.seek(io::SeekFrom::End(0))?;
-        file.seek(io::SeekFrom::Start(size.saturating_sub(edge).max(edge)))?;
-        let mut tail = Vec::new();
-        file.read_to_end(&mut tail)?;
-        Ok((head, Some(tail)))
     }
 
     pub(crate) fn head(&mut self, path: &str, max: u64) -> Result<Vec<u8>> {

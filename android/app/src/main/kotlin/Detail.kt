@@ -80,9 +80,9 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                     when (lack) {
                         "sound" -> R.string.lacks_sound
                         "video_properties" -> R.string.lacks_video_properties
+                        "playback2" -> R.string.lacks_playback2
                         "gpu" -> R.string.lacks_gpu
                         "display2" -> R.string.lacks_display2
-                        "accent" -> R.string.lacks_accent
                         "spanned_scenes" -> R.string.lacks_spanned_scenes
                         "sound2" -> R.string.lacks_sound2
                         "script_geometry" -> R.string.lacks_script_geometry
@@ -91,6 +91,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                         "script_animations" -> R.string.lacks_script_animations
                         "script_camera" -> R.string.lacks_script_camera
                         "script_shortcuts" -> R.string.lacks_script_shortcuts
+                        "shortcut" -> R.string.lacks_shortcut
                         "script_hierarchy" -> R.string.lacks_script_hierarchy
                         "rgb" -> R.string.lacks_rgb
                         else -> null

@@ -41,7 +41,11 @@
     onAudio(cb) { handlers.audio.push(cb); if (handlers.audio.length === 1) post({ audio: true }); },
     onAction(cb) { handlers.action.push(cb); },
     onMedia(cb) { call([cb], { enabled: false }); },
-    openShortcut() { return false; },
+    openShortcut(prop) {
+      if (navigator.userActivation && !navigator.userActivation.isActive) return false;
+      post({ open: String(prop) });
+      return true;
+    },
     rgb: Object.freeze({ setImage() { return false; } }),
     files(prop) { return ask("files", prop); },
     randomFile(prop) { return ask("random", prop); },

@@ -30,8 +30,9 @@ pub(super) struct Speaker {
 
 pub(super) fn choose(shown: Vec<(String, PathBuf, bool, f64)>, settings: Settings, locked: bool) -> Chosen {
     let mut chosen = Chosen::new();
-    let volume =
-        |level: f64| if settings.muted || !settings.scene_sound { 0.0 } else { settings.volume * level };
+    let volume = |level: f64| {
+        if settings.muted || !settings.scene_sound { 0.0 } else { settings.volume * settings.duck * level }
+    };
     let audible =
         shown.into_iter().map(|(name, pack, active, level)| (name, pack, active && !locked, volume(level)));
     for (name, pack, live, volume) in audible.filter(|(.., volume)| *volume > 0.0) {

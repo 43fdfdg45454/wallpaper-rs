@@ -1,16 +1,17 @@
 use crate::daemon::Daemon;
-use crate::error::{Result, failed, invalid, not_found};
+use crate::error::{Result, failed, invalid};
 use crate::jobs::now;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use std::hash::{BuildHasher, RandomState};
-use wprs_core::dbus::uri_scheme;
 use wprs_core::model::{
     ItemDetails, ItemSummary, MODEL, PlaylistRef, Preset, SearchPage, SourcesReply, Tag, TagsReply,
 };
 use wprs_format::Installed;
 use wprs_library::{Item, Kind, Library};
+
+mod resolve;
 
 pub const MAX_UIDS: usize = 10_000;
 const MAX_PAGE: u32 = 500;
@@ -106,7 +107,7 @@ impl Daemon {
         let animated = peeked.as_ref().and_then(|m| self.animated(&item, m));
         let about =
             peeked.map(|m| wprs_core::model::About { animated, ..m.about(&wprs_core::locale::languages()) });
-        let exposes = self.exposes(&item);
+        let (exposes, (variants, base)) = (self.exposes(&item), self.kin(&item));
         let mut item: wprs_core::model::Item = merged(item, Value::Null)?;
         item.package.iter_mut().for_each(|p| p.exposes = exposes.clone());
         reply(ItemDetails {
@@ -120,18 +121,9 @@ impl Daemon {
             installed,
             revoked,
             about,
+            variants,
+            base,
         })
-    }
-
-    pub fn resolve(&self, refs: &[String]) -> Result<Vec<String>> {
-        limited(refs, MAX_UIDS)?;
-        let found = |lib: &Library, r: &String| match lib.resolve_item(r) {
-            _ if uri_scheme(r).is_some() => Err(invalid(format!("{r} is a URI; give a local path"))),
-            Err(wprs_library::Error::NotFound(..)) => Err(not_found(format!("no item matches {r:?}"))),
-            Err(wprs_library::Error::Invalid(_, message)) => Err(invalid(message)),
-            other => Ok(other?),
-        };
-        self.store.read(|lib| refs.iter().map(|r| found(lib, r)).collect::<Result<Vec<_>>>())
     }
 
     pub fn list_tags(&self) -> Result<String> {

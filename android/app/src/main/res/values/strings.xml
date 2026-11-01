@@ -25,9 +25,9 @@
     <string name="show_anyway">Show anyway</string>
     <string name="lacks_sound">Its sounds do not play on the phone.</string>
     <string name="lacks_video_properties">Its video plays without its speed, part and framing settings on the phone.</string>
-    <string name="lacks_gpu">The phone does not check the graphics card it asks for.</string>
+    <string name="lacks_gpu">It needs compute shaders, which the graphics of this phone lack, so it may draw slowly or leave parts out.</string>
+    <string name="lacks_playback2">Its videos and web pages play on the phone without its frame rate limit, its muted start and playing once.</string>
     <string name="lacks_display2">Its color around the picture and its spreading over every screen are not used on the phone.</string>
-    <string name="lacks_accent">Its accent color is not used on the phone.</string>
     <string name="lacks_spanned_scenes">Its scene is not spread over several screens on the phone.</string>
     <string name="lacks_sound2">Its MP3 or long sounds, lists of sounds and sounds started by events do not play on the phone.</string>
     <string name="lacks_script_geometry">Shapes its scripts build are not shown on the phone.</string>
@@ -35,6 +35,7 @@
     <string name="lacks_script_sounds">Its scripts do not play or stop sounds on the phone.</string>
     <string name="lacks_script_animations">Its scripts do not drive pictures, videos, clips or bones on the phone.</string>
     <string name="lacks_script_camera">Its scripts do not move the camera or the parallax on the phone.</string>
+    <string name="lacks_shortcut">The shortcuts you choose for it open only on the desktop.</string>
     <string name="lacks_script_shortcuts">Its scripts open no shortcuts on the phone.</string>
     <string name="lacks_script_hierarchy">Its scripts do not change the parents of layers on the phone.</string>
     <string name="lacks_rgb">Its colors are not sent to RGB lighting on the phone.</string>

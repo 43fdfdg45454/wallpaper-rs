@@ -64,7 +64,7 @@ GridLayout {
     }
 
     Repeater {
-        model: [["playback.scene_sound", i18n("Let scenes play their sounds"), true], ["playback.scene_capture", i18n("Let scenes react to the sound that plays"), true], ["playback.flash_guard", i18n("Slow down or stop wallpapers that flash more than three times a second"), false]]
+        model: [["playback.scene_sound", i18n("Let scenes play their sounds"), true], ["playback.scene_capture", i18n("Let scenes react to the sound that plays"), true], ["playback.duck", i18n("Silence wallpapers while another application plays sound"), false], ["playback.flash_guard", i18n("Slow down or stop wallpapers that flash more than three times a second"), false]]
 
         delegate: PlasmaComponents3.Switch {
             required property var modelData

@@ -43,7 +43,7 @@ pub(crate) struct Pack {
 }
 
 fn open(path: &Path) -> Result<Package<BufReader<fs::File>>, Error> {
-    let package = wprs_format::open(path, &wprs_format::Limits::default())?;
+    let package = wprs_format::open(path, &wprs_format::Limits::phone())?;
     wprs_format::features::playable(&package.manifest, &package.facts, wprs_format::Platform::Android)?;
     match package.manifest.kind {
         kind if kind.first() || kind == Kind::Web => Ok(package),
@@ -102,6 +102,7 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
     }
     let mut package = scene_of(package)?;
     let mut scene = package.scene()?;
+    package.manifest.pace(&mut scene);
     if scene.layers().any(|layer| !layer.parallax.is_zero()) {
         scene.canvas.parallax.get_or_insert_with(Default::default).gyro = true;
     }

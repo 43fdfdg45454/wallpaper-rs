@@ -44,9 +44,10 @@ impl ScenePack {
         properties: BTreeMap<String, wprs_scene::Property>,
         sounds: Vec<(String, PathBuf)>,
     ) -> ScenePack {
-        let (path, id, version, title, languages, presets) = Default::default();
+        let (path, id, version, title, languages, presets, authored) = Default::default();
         let props =
-            Arc::new(Props { path, id, version, title, kind: "scene", languages, properties, presets });
+            Props { path, id, version, title, kind: "scene", languages, properties, presets, authored };
+        let props = Arc::new(props);
         let (path, locale, assets, videos, clips, scripts, key) = Default::default();
         let labels = Json::Object(Default::default());
         ScenePack {

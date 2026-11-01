@@ -12,7 +12,7 @@ impl SceneState {
             self.runtime.set_playing(spec.clips.iter().map(|(asset, _)| asset.clone()).collect());
         }
         self.restock |= changed || media;
-        self.exposed = wprs_scene::exposed(&spec.pack.props.properties, &spec.values);
+        self.exposed = wprs_scene::exposed(&spec.pack.props.properties, self.runtime.props());
         if spec.hold != self.spec.hold {
             spec.hold.into_iter().for_each(|time| self.runtime.seek(time));
             (self.still, self.moving, changed) = (spec.hold.is_some(), spec.hold.is_none(), true);

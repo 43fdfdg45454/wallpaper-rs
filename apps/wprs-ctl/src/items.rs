@@ -80,6 +80,24 @@ pub fn details(reply: ItemDetails) -> String {
         ("playlists", Some(list(reply.playlists.iter().map(|p| &p.name))).filter(|p| !p.is_empty())),
         ("thumb", reply.thumb.map(|t| t.display().to_string())),
         ("privacy", package.as_ref().and_then(|p| wprs_format::web_notice(&p.exposes)).map(|m| m.local())),
+        (
+            "works on",
+            package
+                .as_ref()
+                .map(|p| list(p.facets.iter().filter(|f| ["desktop", "android"].contains(&f.as_str())))),
+        ),
+        (
+            "preset of",
+            package
+                .as_ref()
+                .and_then(|p| p.base.clone())
+                .map(|b| reply.base.map_or(format!("{b} (not installed)"), |i| format!("{} ({b})", i.uid))),
+        ),
+        (
+            "variants",
+            Some(list(reply.variants.iter().map(|v| format!("{} {}", v.uid, v.name))))
+                .filter(|v| !v.is_empty()),
+        ),
     ];
     let about = reply.about.as_ref().map(|a| crate::about::fields(a, package.as_ref())).unwrap_or_default();
     let fields = fields.into_iter().chain(about).filter(|(_, v)| v.as_ref().is_some_and(|v| !v.is_empty()));

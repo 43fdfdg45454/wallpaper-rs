@@ -100,6 +100,7 @@ pub(crate) struct Shared {
     pub(crate) cut: Arc<Mutex<Cut>>,
     pub(crate) seen: Arc<AtomicU64>,
     pub(crate) seeks: Arc<AtomicU64>,
+    pub(crate) once: Arc<std::sync::atomic::AtomicBool>,
     pub(crate) latency: Option<&'static str>,
 }
 

@@ -119,6 +119,9 @@ pub unsafe extern "C" fn message(_manager: Ptr, value: Ptr, data: Ptr) {
     if let Some(prop) = message.get("random").and_then(Value::as_str) {
         reply(view, id, random(&tokens(prop, false).unwrap_or_default()));
     }
+    if let Some(prop) = message.get("open").and_then(Value::as_str) {
+        send(&FromWeb::Open { view, prop: prop.chars().take(64).collect() });
+    }
     if let Some(error) = message.get("error").and_then(Value::as_str) {
         let quiet = live(|l| {
             l.said += 1;

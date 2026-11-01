@@ -41,7 +41,7 @@ impl Daemon {
         let hold = draft.as_ref().and_then(|(_, hold)| *hold);
         let media = match draft {
             Some((pack, _)) => Some(Ok(Media::Scene(pack))),
-            None => image.map(|image| self.media(image)),
+            None => image.clone().map(|image| self.media(image)),
         };
         let (mut shown_scene, mut shown_video, mut turn, mut fit) = (None, None, None, resolved.fit);
         let (content, upload) = match media {
@@ -54,7 +54,9 @@ impl Daemon {
             Some(Ok(Media::Video(path, props))) => {
                 let movie = match &props {
                     Some(p) => p.movie(path, &p.values(&self.state().config.scene_values(output, &p.id))),
-                    None => Movie { reel: Reel::plain(path), volume: 100, zoom: 1.0, pan: [0.0; 2] },
+                    None => {
+                        Movie { reel: Reel::plain(path), volume: 100, zoom: 1.0, pan: [0.0; 2], max_fps: 0 }
+                    }
                 };
                 shown_video = props;
                 (Content::Video(movie), None)
@@ -91,15 +93,13 @@ impl Daemon {
                 }
             }
         };
-        let pixels = if let Content::Image(picture) = &content { picture.pixels.clone() } else { None };
-        self.compositor.configure(
-            output,
-            size,
-            Spec { content, fit, background: resolved.background, transition, refresh },
-        );
+        let (pixels, accent) =
+            (content.pixels(), self.accent(image.as_deref(), &content, shown_video.as_deref()));
+        let spec = Spec { content, fit, background: resolved.background, transition, refresh };
+        self.compositor.configure(output, size, spec);
         let mut st = self.state();
         if let Some(info) = st.outputs.get_mut(output) {
-            (info.uploaded, info.scene, info.video) = (upload, shown_scene, shown_video);
+            (info.uploaded, info.scene, info.video, info.accent) = (upload, shown_scene, shown_video, accent);
         }
         st.turns.remove(output);
         st.missed.remove(output);

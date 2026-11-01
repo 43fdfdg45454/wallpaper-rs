@@ -10,6 +10,7 @@ mod inputs;
 mod layers;
 mod lifecycle;
 mod modules;
+mod shortcuts;
 
 fn spin_scene() -> serde_json::Value {
     let params = json!({ "speed": { "type": "number", "default": 1, "min": 0, "max": 10 } });

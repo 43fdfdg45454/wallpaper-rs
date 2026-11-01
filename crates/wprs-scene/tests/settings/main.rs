@@ -5,6 +5,7 @@ use wprs_scene::*;
 mod bindings;
 mod conditions;
 mod forms;
+mod leveling;
 
 fn props(value: Value) -> BTreeMap<String, Property> {
     serde_json::from_value(value).unwrap()

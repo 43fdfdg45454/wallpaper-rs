@@ -39,6 +39,8 @@ model! {
         pub clicks: BTreeSet<String>,
         #[serde(default)]
         pub clicking: BTreeSet<String>,
+        #[serde(default)]
+        pub unreached: BTreeSet<String>,
     }
 }
 

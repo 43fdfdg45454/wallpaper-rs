@@ -2,11 +2,14 @@ use super::super::scripts::Scripts;
 use super::SceneState;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
+use std::time::{Duration, Instant};
 use wprs_render::log_allowed;
 use wprs_scene::{MAX_FIRED, ScriptOutputs};
 use wprs_script::{Error, Frame, Mode, Setup};
 
 const KEPT_LINES: usize = 50;
+const CLICK: Duration = Duration::from_secs(2);
+const APART: Duration = Duration::from_secs(1);
 
 impl SceneState {
     pub(in super::super) fn link(&mut self, scripts: &mut Scripts) {
@@ -54,6 +57,9 @@ impl SceneState {
         }
         let actions = std::mem::take(&mut self.pressed);
         let touches = std::mem::take(&mut self.touches);
+        if touches.iter().any(|t| t.kind == wprs_scene::TouchKind::Click) {
+            self.clicked[0] = Some(Instant::now());
+        }
         let (view, screen, fps) = (self.sent.1, self.sent.2, self.sent.3);
         let eventful = !self.fired.is_empty()
             || !actions.is_empty()
@@ -110,6 +116,7 @@ impl SceneState {
             Ok(Some(mut outputs)) => {
                 self.answered = true;
                 self.heard_script(&mut outputs);
+                self.open(output, std::mem::take(&mut outputs.open));
                 Some(outputs)
             }
             Ok(None) => None,
@@ -128,6 +135,16 @@ impl SceneState {
                 }
                 None
             }
+        }
+    }
+
+    fn open(&mut self, output: &str, asked: Vec<String>) {
+        let now = Instant::now();
+        let recent = self.clicked[0].is_some_and(|at| now.duration_since(at) < CLICK);
+        let rested = self.clicked[1].is_none_or(|at| now.duration_since(at) >= APART);
+        if let Some(prop) = asked.first().filter(|_| recent && rested && self.allowed[1]) {
+            self.clicked = [None, Some(now)];
+            crate::shortcuts::ask(output, &self.spec.pack.props.id, prop);
         }
     }
 

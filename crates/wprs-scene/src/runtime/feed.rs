@@ -9,7 +9,23 @@ impl Runtime {
         self.lang = lang.to_owned();
     }
 
-    pub fn set_props(&mut self, props: Values) -> bool {
+    pub fn set_props(&mut self, raw: Values) -> bool {
+        let props = self.leveling.tuned(&raw, self.level);
+        self.raw = raw;
+        self.retune(props)
+    }
+
+    pub fn set_leveling(&mut self, leveling: crate::Leveling) -> bool {
+        self.leveling = leveling;
+        self.retune(self.leveling.tuned(&self.raw, self.level))
+    }
+
+    pub fn set_quality(&mut self, level: crate::Quality) -> bool {
+        let moved = std::mem::replace(&mut self.level, level) != level;
+        moved && !self.leveling.is_empty() && self.retune(self.leveling.tuned(&self.raw, level))
+    }
+
+    fn retune(&mut self, props: Values) -> bool {
         let changed: Vec<String> =
             props.iter().filter(|(k, v)| self.props.get(*k) != Some(*v)).map(|(k, _)| k.clone()).collect();
         self.props = props;

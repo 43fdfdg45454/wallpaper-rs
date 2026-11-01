@@ -123,6 +123,11 @@ Kirigami.OverlayDrawer {
                 host: drawer
             }
 
+            ItemKin {
+                Layout.fillWidth: true
+                host: drawer
+            }
+
             PackageAbout {
                 Layout.fillWidth: true
                 visible: !!drawer.details.about

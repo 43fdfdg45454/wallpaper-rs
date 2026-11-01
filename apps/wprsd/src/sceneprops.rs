@@ -22,6 +22,20 @@ pub struct Props {
     pub languages: Vec<String>,
     pub properties: BTreeMap<String, Property>,
     pub presets: Vec<Preset>,
+    pub authored: Authored,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Authored {
+    pub playback: wprs_format::Playback,
+    pub accent: Option<wprs_format::Accent>,
+}
+
+impl Authored {
+    pub fn of(m: &wprs_format::Manifest) -> Authored {
+        let accent = m.display.as_ref().and_then(|d| d.accent.clone());
+        Authored { playback: m.playback.clone().unwrap_or_default(), accent }
+    }
 }
 
 pub fn stored(value: &Json) -> Option<toml::Value> {
@@ -49,8 +63,10 @@ impl Props {
         let (start, end) = ((num("start") * 1000.0) as u32, (num("end") * 1000.0) as u32);
         let end = if end > start + 100 { end } else { 0 };
         let cut = Cut { speed: (num("speed") * 100.0).round() as u32, start, end };
-        let (reel, volume) = (Reel { path, cut }, num("volume").round() as u32);
-        Movie { reel, volume, zoom: num("zoom") as f32, pan: [num("x") as f32, num("y") as f32] }
+        let play = &self.authored.playback;
+        let (reel, volume) = (Reel { path, cut, once: play.once() }, num("volume").round() as u32);
+        let (zoom, pan, max_fps) = (num("zoom") as f32, [num("x") as f32, num("y") as f32], play.frame_cap());
+        Movie { reel, volume, zoom, pan, max_fps }
     }
 }
 
@@ -64,6 +80,7 @@ impl Daemon {
             self.store.read(item).ok().and_then(|i| i.meta.duration_ms).map(|ms| f64::from(ms) / 1000.0);
         let properties = m.video_properties(&crate::words::video(), length);
         let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
+        let authored = Authored::of(&m);
         let presets = m.presets;
         Ok(Arc::new(Props {
             path: path.into(),
@@ -74,6 +91,7 @@ impl Daemon {
             languages,
             properties,
             presets,
+            authored,
         }))
     }
 

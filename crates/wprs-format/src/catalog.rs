@@ -46,7 +46,7 @@ pub fn add(dir: &Path, wpak: &Path, author: Option<&str>, now: i64) -> Result<Ad
     within("package size", size, root.policy.max_package_size)?;
     let mut package = open(wpak, &Limits::default())?;
     package.manifest.publishable()?;
-    package.look_at_videos()?;
+    package.look_closer()?;
     let author = signer(&mut package, &root, author, &catalog)?;
     let (id, version) = (package.manifest.id.clone(), package.manifest.version.clone());
     let added = Added { id: id.clone(), author, release: release(&mut package, dir, wpak, size, now)? };

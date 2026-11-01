@@ -84,6 +84,9 @@ pub(crate) fn about(path: &Path, languages: &[String]) -> Option<wprs_core::mode
 pub(crate) fn lacks(path: &Path, facets: &[String]) -> Vec<String> {
     let listed = wprs_format::peek(path).map(|m| m.features().to_vec()).unwrap_or_default();
     let mut found = wprs_format::features::lacks("android", listed.iter().chain(facets));
+    found.extend(
+        facets.iter().any(|f| f == "compute").then(|| "gpu".to_owned()).filter(|_| !crate::power::computes()),
+    );
     found.sort();
     found.dedup();
     found

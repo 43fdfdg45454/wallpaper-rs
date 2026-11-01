@@ -11,7 +11,7 @@ pub fn check(path: &Path, json: bool) -> Result<()> {
         true => inspect(path)?,
         false => {
             let mut package = open(path, &Limits::default())?;
-            package.look_at_videos()?;
+            package.look_closer()?;
             (package.manifest, package.facts)
         }
     };

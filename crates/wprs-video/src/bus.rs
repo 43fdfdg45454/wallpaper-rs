@@ -129,6 +129,7 @@ pub(crate) fn watch_bus(
             },
             gst::MessageView::SegmentDone(_) => audio.again(&playbin, false),
             gst::MessageView::Eos(_) if !audio.cut.plain() => audio.again(&playbin, true),
+            gst::MessageView::Eos(_) if audio.once() => {}
             gst::MessageView::Eos(_) => {
                 let flags = gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT;
                 if let Err(e) = playbin.seek_simple(flags, gst::ClockTime::ZERO) {

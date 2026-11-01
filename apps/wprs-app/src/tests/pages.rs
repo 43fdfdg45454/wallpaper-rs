@@ -53,8 +53,8 @@ fn the_tray_leaves_every_advanced_setting_to_the_settings_page() {
         assert!(!tray.contains(&quoted) && settings.contains(&quoted), "{call}");
     }
     let options: Vec<&str> = tray.split("\"playback.").skip(1).filter_map(|s| s.split('"').next()).collect();
-    let only = ["scene_sound", "scene_capture", "flash_guard"];
-    assert_eq!(options, only, "the tray sets only the scene audio switches and the flash guard");
+    let only = ["scene_sound", "scene_capture", "duck", "flash_guard"];
+    assert_eq!(options, only, "the tray sets only the sound switches and the flash guard");
     assert!(settings.contains("\"SetOption\""));
     for call in [
         "SetPaused",

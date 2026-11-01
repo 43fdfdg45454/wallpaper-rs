@@ -29,6 +29,8 @@ pub struct PackageInfo {
     pub photosensitive: Option<bool>,
     pub facets: Vec<String>,
     pub confirmed: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,6 +69,7 @@ pub(crate) fn item_row(row: &Row<'_>) -> rusqlite::Result<Item> {
             photosensitive: row.get("photosensitive")?,
             facets: words("facets")?,
             confirmed: words("confirmed")?,
+            base: row.get("base")?,
         }),
         None => None,
     };

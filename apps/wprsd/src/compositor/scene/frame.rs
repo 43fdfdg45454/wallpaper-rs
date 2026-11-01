@@ -26,6 +26,11 @@ impl SceneState {
         self.runtime.set_wall(crate::zone::wall());
         let (quality, uses) = (self.level(power), self.uses);
         if quality != self.quality {
+            let retuned = self.runtime.set_quality(quality);
+            self.restock |= retuned;
+            if retuned {
+                self.exposed = wprs_scene::exposed(&self.spec.pack.props.properties, self.runtime.props());
+            }
             (self.quality, self.uses) = (quality, self.needs(quality));
         }
         if let Some(view) = self.view.as_mut().filter(|_| std::mem::take(&mut self.restock)) {

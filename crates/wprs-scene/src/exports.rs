@@ -81,7 +81,7 @@ pub use crate::particles::{
 };
 pub use crate::pointing::{MAX_PRESSES, MAX_TOUCHES, Press, Touch, TouchKind};
 pub use crate::props::{
-    Choice, Condition, Control, Expr, ICONS, Mode, Pick, Preset, Property, Slider, Text, Values,
+    Choice, Condition, Control, Expr, ICONS, Leveling, Mode, Pick, Preset, Property, Slider, Text, Values,
     check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag,
 };
 pub use crate::quality::{Class, Quality, Why};
@@ -104,7 +104,7 @@ pub use crate::scripting::{
 pub use crate::shape::{MAX_ARGUMENTS, MAX_BRACKETS, MAX_OPERANDS};
 pub use crate::signal::{CLOCKS, Gain, HEARD, Hearing, Reduce, SPLITS, Smooth, center, ease, edge, levels};
 pub use crate::sites::{Site, script_inputs, script_key, sites};
-pub use crate::sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice};
+pub use crate::sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice, volume_property};
 pub use crate::spare::Spare;
 pub use crate::spend::{MAX_STATEFUL, Spend, over};
 pub use crate::strikes::{STOPPED, end_trials, forgive_strikes, keep_strikes, strike, struck, tried, trying};

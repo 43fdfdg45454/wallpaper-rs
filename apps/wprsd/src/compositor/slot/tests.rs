@@ -8,7 +8,19 @@ const FRAME: Duration = Duration::from_millis(60);
 fn heard() -> (Settings, bool) {
     let (transition, max_fps, volume, muted) = (Duration::ZERO, 60, 1.0, false);
     let (software_parallax, flash_guard, scene_sound) = (false, false, true);
-    (Settings { transition, max_fps, volume, muted, software_parallax, flash_guard, scene_sound }, false)
+    (
+        Settings {
+            transition,
+            max_fps,
+            volume,
+            muted,
+            software_parallax,
+            flash_guard,
+            scene_sound,
+            duck: 1.0,
+        },
+        false,
+    )
 }
 
 fn frames(slot: &PlayerSlot, span: Duration) -> Vec<(Instant, Duration)> {
@@ -28,7 +40,7 @@ fn a_steered_part_and_speed_reach_a_video_with_sound_opened_plain() {
         return assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "video required: {e}");
     }
     let (reel, (tx, _rx), now) =
-        (Reel { path: FIXTURE.into(), cut: Cut::default() }, mpsc::channel(), Instant::now());
+        (Reel { path: FIXTURE.into(), cut: Cut::default(), once: false }, mpsc::channel(), Instant::now());
     let mut slot = PlayerSlot::new(((64, 32), true, 60, 100), now);
     slot.shares = false;
     slot.tick(&reel, heard(), &tx, now);

@@ -22,6 +22,7 @@ pub enum Content {
 pub struct Reel {
     pub path: PathBuf,
     pub cut: Cut,
+    pub once: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -30,6 +31,7 @@ pub struct Movie {
     pub volume: u32,
     pub zoom: f32,
     pub pan: [f32; 2],
+    pub max_fps: u32,
 }
 
 #[derive(Clone)]
@@ -103,6 +105,10 @@ impl Content {
         self.same_source(other) && same
     }
 
+    pub(crate) fn pixels(&self) -> Option<Arc<RgbaImage>> {
+        if let Content::Image(picture) = self { picture.pixels.clone() } else { None }
+    }
+
     pub(crate) fn page(&self) -> Option<&PageSpec> {
         match self {
             Content::Web(page) => Some(page),
@@ -128,7 +134,7 @@ impl Content {
 
 impl Reel {
     pub fn plain(path: PathBuf) -> Reel {
-        Reel { path, cut: Cut::default() }
+        Reel { path, cut: Cut::default(), once: false }
     }
 }
 
@@ -169,6 +175,7 @@ pub struct Settings {
     pub software_parallax: bool,
     pub flash_guard: bool,
     pub scene_sound: bool,
+    pub duck: f64,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]

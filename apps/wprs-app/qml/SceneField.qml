@@ -157,6 +157,14 @@ ColumnLayout {
         onEdited: (key, value) => field.edited(key, value)
     }
 
+    SceneShortcut {
+        Layout.fillWidth: true
+        daemon: field.daemon
+        modelData: field.modelData
+        visible: field.kind === "shortcut"
+        onEdited: (key, value) => field.edited(key, value)
+    }
+
     QQC2.Label {
         Layout.fillWidth: true
         visible: field.modelData.help !== ""

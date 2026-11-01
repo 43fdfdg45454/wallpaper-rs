@@ -35,6 +35,7 @@ pub(super) struct SceneState {
     presses: Vec<Press>,
     allowed: [bool; 2],
     touches: Vec<Touch>,
+    clicked: [Option<Instant>; 2],
     host: Option<Link>,
     calm: u32,
     answered: bool,
@@ -90,10 +91,12 @@ impl SceneState {
             }
             None => {}
         }
-        let exposed = wprs_scene::exposed(&spec.pack.props.properties, &spec.values);
+        let (quality, why) = power.level(&runtime);
+        runtime.set_leveling(wprs_scene::Leveling::of(&spec.pack.props.properties));
+        runtime.set_quality(quality);
+        let exposed = wprs_scene::exposed(&spec.pack.props.properties, runtime.props());
         let [audio, cursor] = wprs_scene::script_inputs(&spec.pack.scene, &spec.pack.scripts);
         let reads = spec.pack.inputs.map_or((audio, cursor), |u| (audio && u.audio, cursor && u.cursor));
-        let (reads, (quality, why)) = (reads, power.level(&runtime));
         let (view, tick, pointer, calm, error, due, uses) = Default::default();
         let (moving, voices, heard) = (!still, Vec::new(), None);
         let mut scene = SceneState {
@@ -109,6 +112,7 @@ impl SceneState {
             presses: Vec::new(),
             allowed: [false; 2],
             touches: Vec::new(),
+            clicked: [None; 2],
             host: None,
             calm,
             answered: false,

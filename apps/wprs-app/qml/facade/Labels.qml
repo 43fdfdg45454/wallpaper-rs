@@ -10,6 +10,7 @@ QtObject {
             "playback.flash_guard": App.tr("Slow down or stop wallpapers that flash more than three times a second"),
             "playback.scene_sound": App.tr("Let scenes play their sounds"),
             "playback.scene_capture": App.tr("Let scenes react to the sound that plays"),
+            "playback.duck": App.tr("Silence wallpapers while another application plays sound"),
             "transition.kind": App.tr("Transition"),
             "transition.duration_ms": App.tr("Transition length (ms)"),
             "pause.when_covered": App.tr("Pause when a window covers the screen"),

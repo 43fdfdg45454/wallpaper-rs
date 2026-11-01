@@ -3,14 +3,18 @@ use super::super::state::State;
 use super::slot::{FIRST_FRAME, PageSlot, RETRIES};
 use super::view::Shared;
 use super::{SCAN, folders, values};
-use std::time::Instant;
+use std::time::{Duration, Instant};
+
+const CLICK: Duration = Duration::from_secs(2);
+const APART: Duration = Duration::from_secs(1);
 use wprs_web::{FromWeb, ToWeb};
 
 impl State {
     pub(super) fn sync_link(&self, slot: &mut PageSlot, now: Instant) {
         let (mut out, mut files) = (Vec::new(), Vec::new());
+        let quality = self.power.steady();
         for view in slot.views.values_mut() {
-            let (values, own) = values(view.spec.as_ref().unwrap_or(&slot.spec), &slot.salt);
+            let (values, own) = values(view.spec.as_ref().unwrap_or(&slot.spec), &slot.salt, quality);
             files.extend(own);
             let changed = wprs_web::changed(&view.sent, &values);
             if view.opened && !changed.is_empty() {
@@ -160,6 +164,17 @@ fn take(
         }
         FromWeb::Said(text) if text == "sandbox: off" => slot.sandbox = "reduced",
         FromWeb::Said(text) => tracing::debug!("web page: {text}"),
+        FromWeb::Open { view, prop } => open(slot, view, &prop, now),
+    }
+}
+
+fn open(slot: &mut PageSlot, id: u32, prop: &str, now: Instant) {
+    let package = slot.spec.pack.props.id.clone();
+    let Some((name, view)) = slot.views.iter_mut().find(|(_, v)| v.id == id) else { return };
+    let recent = view.pressed[0].is_some_and(|at| now.duration_since(at) < CLICK);
+    if recent && view.pressed[1].is_none_or(|at| now.duration_since(at) >= APART) {
+        view.pressed = [None, Some(now)];
+        crate::shortcuts::ask(name, &package, prop);
     }
 }
 

@@ -86,7 +86,7 @@ fn a_video_with_sound_keeps_its_position_on_a_new_speed() {
     let before = frames(&rx, Duration::from_millis(300), Duration::from_millis(200));
     let last = before.last().expect("frames before the change").1;
     player.set_cut(Cut { speed: 50, start: 0, end: 0 });
-    let after = frames(&rx, Duration::ZERO, Duration::from_millis(600));
+    let after = frames(&rx, Duration::from_millis(400), Duration::from_millis(800));
     std::fs::remove_file(path).unwrap();
     let first = after.first().expect("frames after the change").1;
     assert!(first + FRAME >= last, "the video went back from {last:?} to {first:?}");

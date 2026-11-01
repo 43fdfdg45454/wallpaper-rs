@@ -106,13 +106,16 @@ impl Daemon {
         let (m, inputs) = (manifest.localized(), manifest.declared());
         let user = wprs_core::locale::languages();
         let (locale, languages) = (m.locale_in(&user), m.languages(&user));
-        let properties = scene.properties(&m.properties, &crate::words::volume());
+        let authored = crate::sceneprops::Authored::of(&m);
+        let loudness = authored.playback.loudness();
+        let properties = scene.properties(&m.properties, &crate::words::volume(), loudness);
         let labels = wprs_scene::labels(&properties, &languages);
         let (clips, mut lengths) = crate::scenes::bank(&scene, &sounds);
         crate::scenes::filmed(&mut lengths, &videos);
         let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
         let (path, presets) = (dir.clone(), m.presets);
-        let props = Props { path, id, version, title, kind: "scene", languages, properties, presets };
+        let props =
+            Props { path, id, version, title, kind: "scene", languages, properties, presets, authored };
         let key = match crate::scenes::listens(&scene, &scripts) {
             true => crate::inputs::draft_key(&dir, document, &scripts, trusted),
             false => String::new(),

@@ -79,7 +79,7 @@ releases where they look (`repo.md`).
 | `inputs` | 2 | `[audio, pointer, clicks, media, network]`, see "Inputs" |
 | `permissions` | 2, `web` and `scene` | `{network: {allow: [..]}, rgb}`: `network` for web pages only, see "Web pages"; `rgb` see "RGB lighting" |
 | `web` | 2, `web` only | `{preload, background, storage_kib}`, see "Web pages" |
-| `playback` | 2, `video` and `web` | how the content plays by default, see "Display and playback" |
+| `playback` | 2, `video`, `web` and `scene` | how the content plays by default, see "Display and playback" |
 | `display` | 2 | how a picture or video is placed and the accent it suggests, see "Display and playback" |
 | `properties`, `presets` | 1, 2 | user properties (`scene.md`): in *1* at most 64 with ids `[a-z][a-z0-9_-]{0,62}` of the types `color`, `slider` with `step`, `bool`, `combo` of texts, `text`, `file`, `group` and `label`; in *2* at most 256 with ids `[A-Za-z][A-Za-z0-9_]{0,63}` that differ in more than case, combos of at most 64 options, files and folders that accept `image`, `video` or both, and every newer type and field; at most 32 presets in *1*, 64 in *2*, for scenes and videos |
 
@@ -111,15 +111,26 @@ and `zoom` (1 to 8) and `position` (two numbers of -1 to 1) for videos. Scenes m
 only to `all-outputs`, since drawing on each screen needs no key: it asks to draw one canvas across every screen, each output showing its part with the
 transform of its monitor; engines that cannot do that yet refuse such a scene with
 `spanned_scenes`, and the phone, which has one screen, shows it there. `accent` suggests an accent
-color for the desktop, `#rrggbb` or `{"prop": "<id>"}` of a color property, in any kind but
-`assets`; no engine passes it to the desktop yet, so both platforms play such a package without
-`accent` and say so.
+color for the desktop, `#rrggbb` or `{"prop": "<id>"}` of a color property (its current value), in
+any kind but `assets`. Without it the accent is the dominant color of the preview. The daemon
+reports it per output (`accent` in `GetState`) and changes it only when the value changes; the Plasma
+wallpaper plugin gives it to Plasma as the accent color of the wallpaper, which Plasma uses when the
+user chooses the accent color from the wallpaper, the phone gives it to Android as the primary
+color of the wallpaper, and other desktops ignore it.
 
 `playback` takes `speed` (0.1 to 4), `start` and `end` (0 to 3600 s, `end` after `start`) and
-`volume` (0 to 1) for videos, and `max_fps` (1 to 240, or `display` to follow the screen), `muted`
-(it starts without sound) and `loop` (`false` plays it once and keeps the last frame) for videos
-and web pages, whose page also takes `volume`. A setting the user makes always wins, and the frame
-rate never exceeds what the user, the screen, the battery and the quality level allow.
+`loop` (`false` plays it once and keeps the last frame) for videos, and `max_fps` (1 to 240, or
+`display` to follow the screen), `volume` (0 to 1) and `muted` (it starts without sound) for videos,
+web pages and scenes; a page decides itself how it repeats, so it ignores `loop`. A setting the user
+makes always wins, and the frame rate never exceeds what the user, the author (`playback.max_fps`,
+and `clock.max_fps` in a scene), the screen, the battery and the quality level allow. Videos, web
+pages and scenes with sound layers have a `volume` setting of their own (0 to 100 %, per screen or
+shared like the other settings) that starts at the author's `volume`, or at 0 with `muted`, and
+multiplies the general volume; a page reads the product as `wprs.volume`, and one that declares a
+`volume` property of its own keeps it instead. The general option `playback.duck` (off by default)
+fades every wallpaper sound out while another application plays sound and back in when it stops:
+the daemon counts the PipeWire playback streams of other processes that are running, without
+reading their names, their media or their sound.
 
 ### Video settings
 
@@ -220,18 +231,18 @@ the folder changed, and the stored value is the path of that copy.
 | `folder_lists` | lets its page list a chosen folder (`mode: all` in a `web` package) | runs | runs |
 | `script_folders` | lets its scene scripts list a chosen folder (`mode: all` in other kinds) | refused | refused |
 | `user_videos` | lets the user choose videos for its files or folders | runs | runs |
-| `shortcut` | has a `shortcut` property | refused | refused |
-| `quality_settings` | has properties with `quality` values | refused | refused |
+| `shortcut` | has a `shortcut` property | runs | without |
+| `quality_settings` | has properties with `quality` values | runs | runs |
 | `video_properties` | sets `playback` or `display` of a video | runs | without |
-| `playback2` | sets `max_fps`, `muted` or `loop`, or `playback` of a web page | refused | refused |
+| `playback2` | sets `max_fps`, `muted` or `loop`, or `playback` of a web page or a scene | runs | without |
 | `display2` | sets `display` of a picture, or its `background` or `span` | runs | without |
 | `flip` | sets `display.flip` to `horizontal` or `vertical` | refused | refused |
-| `accent` | sets `display.accent` | without | without |
+| `accent` | sets `display.accent` | runs | runs |
 | `web` | is a web page (`kind: web`, see `web.md`) | runs | runs |
-| `preset` | sets the values of another package (`kind: preset`) | refused | refused |
+| `preset` | sets the values of another package (`kind: preset`) | runs | refused |
 | `assets` | holds resources for other packages (`kind: assets`) | refused | refused |
-| `packages` | lists `requires.packages` | refused | refused |
-| `gpu` | sets `requires.gpu` | without | without |
+| `packages` | lists `requires.packages` | runs | refused |
+| `gpu` | sets `requires.gpu` | runs | runs |
 | `platforms` | sets `platforms` | runs | runs |
 | `locale_files` | keeps texts in `locale/<language>.json` | runs | runs |
 | `engine_strings` | names a text of the engine, `"@wprs.<key>"` | runs | runs |
@@ -328,7 +339,7 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `script_sounds` | has scripts that use `sounds` | runs | without |
 | `script_animations` | has scripts that use `animations` | runs | runs |
 | `script_camera` | has scripts that use `camera` | refused | without |
-| `script_shortcuts` | has scripts that use `shortcuts` | refused | without |
+| `script_shortcuts` | has scripts that use `shortcuts` | runs | without |
 | `script_hierarchy` | has scripts that use `hierarchy` | refused | without |
 | `layer_events` | sets `solid: { "alpha" }`, `hit` bones, `click:`, `enter:` or `leave:` triggers or scripts that handle pointer events | runs | runs |
 | `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | refused | refused |
@@ -354,16 +365,24 @@ draw it, fails them.
 narrow where it plays: a package made for the phone only is refused on the desktop with `this
 package is made for android only`, and the reverse. Facets name each platform that runs the
 package fully (no feature refused or left out) and that its `platforms` allows, so that `facet:android`
-finds what plays whole on the phone. Repositories copy `platforms` into the release.
+finds what plays whole on the phone. When they record facets (adding to a repository, indexing the
+library, the server and `pack check`), readers also check the limits of the phone: a package that
+takes more than 1 GiB once unpacked, or holds a png, jpeg, webp or gif picture of more than 8192
+pixels a side or 32 megapixels, loses the `android` facet and `pack check` says why. The phone opens
+packages with that 1 GiB limit, so it refuses larger ones. The app shows where a package works fully
+in its details and `wprs-ctl lib show` prints it as `works on`. Repositories copy `platforms` into the
+release.
 
 ## Dependencies
 
 `requires.packages` lists at most 16 other packages, each `{id, version}` with a SemVer requirement
 such as `^1.2`, that a package needs installed; it cannot name the package itself or one id twice.
 `requires.gpu` is `any` (the default) or `compute` for packages that cannot draw without compute
-shaders, so that the app can warn before applying them where they run in software; no engine
-checks it yet, so both platforms play such a package without `gpu` and say so. Repositories copy
-`requires` into the release.
+shaders; they get the `compute` facet, and where the graphics card lacks compute shaders or draws in
+software (`compute` of `GetState`) the app, `wprs-ctl lib apply` and the page of the package on the
+phone warn before it is applied, which it still is. Installing a package from a repository also
+installs, from the same repository, each package of `requires.packages` that no installed version
+matches. Repositories copy `requires` into the release.
 
 ## Origin
 
@@ -412,8 +431,8 @@ declares `network` in `inputs`, and only then. Pages receive their settings thro
 Nothing reaches the page without the input it needs, and a page never sees paths, device names,
 the battery or the list of fonts. It sees the time zone, the language and what the graphics card
 can do through WebGL, and keeps its storage, until the user restricts each of them for the package; every client
-shows a notice saying so (`web.md`, "Privacy"). `onMedia`, `openShortcut` and `rgb.setImage` exist
-but do nothing while their features are refused. Web pages with storage get the `storage` facet.
+shows a notice saying so (`web.md`, "Privacy"). `onMedia` and `rgb.setImage` exist but do nothing
+while their features are refused. Web pages with storage get the `storage` facet.
 
 ## Presets
 
@@ -435,7 +454,14 @@ version requirement, at most 256 `values` and `files` by property id (an id is i
 and the files are pictures or videos of the package. A preset package has no properties, presets
 or inputs of its own; values that the installed base does not know, of another type or out of range
 are left out with a warning, like the values of a preset of the base. Repositories copy the id of
-the base into the release (`base`), so that clients can list the presets of a package.
+the base into the release (`base`), so that clients can list the presets of a package. The library
+keeps the base of each preset (`package.base` of an item), and `GetItem` lists the installed presets
+of a package (`variants`) and the installed base of a preset (`base`), which the app shows as
+variants of the base. Applying a preset applies the newest installed version of its base that meets
+the requirement on that output, with the values of the preset kept as the settings of the base
+there, like a preset of the base, and the files of the preset taken out of it into the cache as the
+chosen files of their `file` settings; while no such base is installed, applying it fails with
+`NotFound` naming the base, and the app offers to install it from the repository of the preset.
 
 ## Shared resources
 
@@ -490,7 +516,7 @@ Repositories, the library and the server compute facets from the package itself,
 cannot lie: the inputs the scene uses (`audio`, `pointer`, `clicks`), `sound`, `scripts`, `clock` (a
 text shows the time), `customizable` (it has properties to change), `photosensitive`, `localized`
 (more than one language), `animated` (scenes, videos and web pages), `desktop` and `android` (it
-runs fully there, see "Platforms"), the orientation (`landscape`, `portrait`, `square`),
+runs fully there, see "Platforms"), `compute` (it sets `requires.gpu` to `compute`), the orientation (`landscape`, `portrait`, `square`),
 `ultrawide` from a 2.2 ratio and the size (`720p`, `1080p`, `1440p`, `4k`, `5k`, `8k`) of scenes
 and images, and `hdr` when a video of the package (its entry, or a video asset of its scene) writes
 the PQ or HLG transfer in its colour description (the `colr` box of MP4 or the colour elements of

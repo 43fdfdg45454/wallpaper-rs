@@ -22,8 +22,12 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 19);
-    assert!(!c.playback.flash_guard && c.playback.scene_sound && c.playback.scene_capture);
+    assert_eq!(c.options().len(), 20);
+    assert!(
+        !c.playback.flash_guard && c.playback.scene_sound && c.playback.scene_capture && !c.playback.duck
+    );
+    c.set_option("playback.duck", "true").unwrap();
+    assert!(c.playback.duck && c.set_option("playback.duck", "often").is_err());
     c.set_option("playback.scene_capture", "false").unwrap();
     assert!(!c.playback.sanitized().scene_capture && c.playback.scene_sound);
     c.set_option("playback.flash_guard", "true").unwrap();

@@ -40,6 +40,12 @@ impl Default for Limits {
     }
 }
 
+impl Limits {
+    pub fn phone() -> Self {
+        Limits { max_total_size: crate::PHONE_BYTES, ..Limits::default() }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileEntry {
     pub path: String,

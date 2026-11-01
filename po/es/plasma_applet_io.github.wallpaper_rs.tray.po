@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 00:00+0000\n"
+"POT-Creation-Date: 2026-11-01 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -113,6 +113,11 @@ msgstr "Dejar que las escenas reproduzcan sus sonidos"
 #, kde-format
 msgid "Let scenes react to the sound that plays"
 msgstr "Dejar que las escenas reaccionen al sonido que suena"
+
+#: integrations/plasma-tray/contents/ui/Header.qml
+#, kde-format
+msgid "Silence wallpapers while another application plays sound"
+msgstr "Silenciar los fondos mientras otra aplicación reproduce sonido"
 
 #: integrations/plasma-tray/contents/ui/Header.qml
 #, kde-format

@@ -69,7 +69,14 @@ impl Audio {
         seek(playbin, at, self.cut, flags);
     }
 
+    pub(crate) fn once(&self) -> bool {
+        self.shared.once.load(Ordering::Relaxed)
+    }
+
     pub(crate) fn again(&mut self, playbin: &gst::Element, flush: bool) {
+        if self.once() {
+            return tracing::debug!("the video plays once and stays on its last frame");
+        }
         let seen = self.shared.seen.load(Ordering::Relaxed);
         let spins = spins(self.mark, seen);
         self.mark = Some((seen, Instant::now(), spins));

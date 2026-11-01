@@ -31,6 +31,16 @@ impl Budget {
         (heated, steps(fitted, heated, Why::Heat, why))
     }
 
+    pub fn steady(&self) -> Quality {
+        let strained = self.tier.quality(self.on_battery || self.saver);
+        let start = if self.saver { strained.lower() } else { strained };
+        match self.heat {
+            Heat::Cool => start,
+            Heat::Warm => start.lower(),
+            Heat::Hot => Quality::Q0,
+        }
+    }
+
     pub fn gpu_share(&self) -> f32 {
         if self.on_battery || self.saver { 0.25 } else { 0.5 }
     }

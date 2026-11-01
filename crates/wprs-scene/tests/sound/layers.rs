@@ -41,9 +41,16 @@ fn sound_layers_validate_their_sources_and_ranges() {
 fn scenes_with_sound_get_a_volume_property() {
     let quiet = scene(json!([]));
     let loud = scene(json!([{ "id": "s", "type": "sound", "sound": "wind" }]));
-    assert!(!quiet.properties(&props(), "Volume").contains_key(VOLUME));
-    let added = loud.properties(&props(), "Volume");
+    assert!(!quiet.properties(&props(), "Volume", 100.0).contains_key(VOLUME));
+    let added = loud.properties(&props(), "Volume", 100.0);
     assert_eq!((added[VOLUME].kind(), added[VOLUME].default_value()), ("slider", json!(100)));
+    let authored = loud.properties(&props(), "Volume", 40.0);
+    assert_eq!(authored[VOLUME].default_value(), json!(40), "the author's playback volume is the default");
+    assert_eq!(
+        loud.properties(&props(), "Volume", 0.0)[VOLUME].default_value(),
+        json!(0),
+        "muted starts silent"
+    );
 }
 
 #[test]

@@ -21,6 +21,17 @@ impl Daemon {
         if checked != given {
             tracing::warn!(property = id, "a property value was adjusted to its range");
         }
+        if matches!(prop.control, Control::Shortcut {}) && !checked.is_null() {
+            let target = crate::shortcuts::target(&checked);
+            let found = match &target {
+                Some(crate::shortcuts::Target::File(p)) => p.is_file(),
+                Some(crate::shortcuts::Target::Folder(p)) => p.is_dir(),
+                other => other.is_some(),
+            };
+            found
+                .then_some(())
+                .ok_or_else(|| invalid(format!("{id}: no such address, file, folder or application")))?;
+        }
         if let Some(path) = checked.as_str().filter(|_| prop.personal()) {
             self.check_choice(prop, Path::new(path))
                 .map_err(|e| invalid(format!("{id}: cannot use {path}: {e:#}")))?;

@@ -27,8 +27,10 @@ impl State {
                     view.pointer = at;
                     out.push(ToWeb::Pointer { view: view.id, at });
                 }
-                let pressed = presses.into_iter().filter(|_| presses_allowed).filter_map(|p| p.at);
-                out.extend(pressed.map(|[x, y]| ToWeb::Press {
+                let pressed: Vec<_> =
+                    presses.into_iter().filter(|_| presses_allowed).filter_map(|p| p.at).collect();
+                view.pressed[0] = if pressed.is_empty() { view.pressed[0] } else { Some(now) };
+                out.extend(pressed.into_iter().map(|[x, y]| ToWeb::Press {
                     view: view.id,
                     at: (f64::from(x) * w, f64::from(y) * h),
                     button: 1,

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 00:00+0000\n"
+"POT-Creation-Date: 2026-11-01 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -1495,6 +1495,42 @@ msgstr "Revocado:"
 msgid "Credit:"
 msgstr "Créditos:"
 
+#: apps/wprs-app/qml/ItemKin.qml
+msgid "Works fully on: %1"
+msgstr "Funciona entero en: %1"
+
+#: apps/wprs-app/qml/ItemKin.qml
+msgid "It does not work fully on any device yet"
+msgstr "Todavía no funciona entero en ningún equipo"
+
+#: apps/wprs-app/qml/ItemKin.qml
+msgid ""
+"It needs compute shaders, which the graphics of this computer lack or run in "
+"software, so it may draw slowly or leave parts out."
+msgstr ""
+"Necesita shaders de cálculo, que la gráfica de este equipo no tiene o "
+"ejecuta por software, así que puede dibujarse lento o con partes de menos."
+
+#: apps/wprs-app/qml/ItemKin.qml
+msgid "Preset of %1"
+msgstr "Preajuste de %1"
+
+#: apps/wprs-app/qml/ItemKin.qml
+msgid "Preset of %1, which is not installed"
+msgstr "Preajuste de %1, que no está instalado"
+
+#: apps/wprs-app/qml/ItemKin.qml apps/wprs-app/qml/SceneField.qml
+msgid "Show"
+msgstr "Mostrar"
+
+#: apps/wprs-app/qml/ItemKin.qml
+msgid "Install it"
+msgstr "Instalarlo"
+
+#: apps/wprs-app/qml/ItemKin.qml
+msgid "Presets of this wallpaper:"
+msgstr "Preajustes de este fondo:"
+
 #: apps/wprs-app/qml/LeftOut.qml
 msgid "it is too slow for this graphics card"
 msgstr "es demasiado lento para esta tarjeta gráfica"
@@ -1625,7 +1661,7 @@ msgstr "Ajustes"
 
 #: apps/wprs-app/qml/OutputControls.qml apps/wprs-app/qml/SceneBuild.qml
 #: apps/wprs-app/qml/SceneEntry.qml apps/wprs-app/qml/SceneMeta.qml
-#: apps/wprs-app/qml/Settings.qml
+#: apps/wprs-app/qml/SceneShortcut.qml apps/wprs-app/qml/Settings.qml
 msgid "Choose…"
 msgstr "Elegir…"
 
@@ -2344,6 +2380,14 @@ msgstr ""
 msgid "Let clicks and taps on this screen reach its wallpaper"
 msgstr "Dejar que los clics y toques de esta pantalla lleguen a su fondo"
 
+#: apps/wprs-app/qml/SceneControls.qml
+msgid ""
+"Clicks and taps cannot reach the wallpaper of this screen here, so this "
+"scene does not react to them."
+msgstr ""
+"Aquí los clics y toques no llegan al fondo de esta pantalla, así que esta "
+"escena no reacciona a ellos."
+
 #: apps/wprs-app/qml/SceneCurve.qml
 msgid ""
 "Click to add a point, drag to move it, double-click to remove it. Across is "
@@ -2404,10 +2448,6 @@ msgstr "Imágenes"
 #: apps/wprs-app/qml/SceneEntry.qml
 msgid "Videos"
 msgstr "Vídeos"
-
-#: apps/wprs-app/qml/SceneField.qml
-msgid "Show"
-msgstr "Mostrar"
 
 #: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/SceneLayerRow.qml
 msgid "Hide"
@@ -2496,7 +2536,9 @@ msgstr "Alfa"
 
 #: apps/wprs-app/qml/SceneMask.qml
 msgid "Paint on the layer in the preview; each stroke is one step to undo."
-msgstr "Pinta sobre la capa en la vista previa; cada trazo es un paso que se puede deshacer."
+msgstr ""
+"Pinta sobre la capa en la vista previa; cada trazo es un paso que se puede "
+"deshacer."
 
 #: apps/wprs-app/qml/SceneMeta.qml
 msgid "One per line"
@@ -2646,6 +2688,57 @@ msgstr "Actualizar"
 msgid "User properties"
 msgstr "Propiedades de usuario"
 
+#: apps/wprs-app/qml/SceneShortcut.qml
+msgid "Web address"
+msgstr "Dirección web"
+
+#: apps/wprs-app/qml/SceneShortcut.qml apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "File"
+msgstr "Archivo"
+
+#: apps/wprs-app/qml/SceneShortcut.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Folder"
+msgstr "Carpeta"
+
+#: apps/wprs-app/qml/SceneShortcut.qml
+msgid "Application"
+msgstr "Aplicación"
+
+#: apps/wprs-app/qml/SceneShortcut.qml
+msgid "Nothing is chosen; a click on the wallpaper opens nothing."
+msgstr "No hay nada elegido; un clic en el fondo no abre nada."
+
+#: apps/wprs-app/qml/SceneShortcut.qml
+msgid "What it opens"
+msgstr "Qué abre"
+
+#: apps/wprs-app/qml/SceneShortcut.qml
+msgid "Application id, such as org.kde.dolphin"
+msgstr "Id de la aplicación, como org.kde.dolphin"
+
+#: apps/wprs-app/qml/SceneShortcut.qml
+msgid "Use"
+msgstr "Usar"
+
+#: apps/wprs-app/qml/SceneShortcut.qml apps/wprs-app/qml/Settings.qml
+msgid "Clear"
+msgstr "Borrar"
+
+#: apps/wprs-app/qml/SceneShortcut.qml
+msgid ""
+"Only you choose what it opens: the wallpaper never sees it and asks for it "
+"only when you click it on a screen that takes clicks. Web addresses open "
+"through the desktop, which may ask first; applications open only outside the "
+"Flatpak."
+msgstr ""
+"Solo tú eliges qué abre: el fondo nunca lo ve y solo lo pide cuando haces "
+"clic en él en una pantalla que acepta clics. Las direcciones web se abren a "
+"través del escritorio, que puede preguntar antes; las aplicaciones solo se "
+"abren fuera del Flatpak."
+
 #: apps/wprs-app/qml/SceneSide.qml apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Layers"
 msgstr "Capas"
@@ -2790,10 +2883,6 @@ msgstr "Cambiar el nombre de la etiqueta"
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Rate"
 msgstr "Valorar"
-
-#: apps/wprs-app/qml/Settings.qml
-msgid "Clear"
-msgstr "Borrar"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Add folder…"
@@ -3296,6 +3385,10 @@ msgid "Let scenes react to the sound that plays"
 msgstr "Dejar que las escenas reaccionen al sonido que suena"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+msgid "Silence wallpapers while another application plays sound"
+msgstr "Silenciar los fondos mientras otra aplicación reproduce sonido"
+
+#: apps/wprs-app/qml/facade/Labels.qml
 msgid "Transition"
 msgstr "Transición"
 
@@ -3443,10 +3536,6 @@ msgstr "Nombre de usuario"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Server"
 msgstr "Servidor"
-
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Folder"
-msgstr "Carpeta"
 
 #: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Album"
@@ -4787,12 +4876,6 @@ msgstr "Partículas"
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Parts"
 msgstr "Partes"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "File"
-msgstr "Archivo"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Camera paths"

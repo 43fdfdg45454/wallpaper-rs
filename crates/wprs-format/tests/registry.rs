@@ -1,6 +1,7 @@
 #[path = "../../../tests/fixtures/features.rs"]
 mod table;
 
+use serde_json::json;
 use std::collections::BTreeSet;
 use wprs_format::features::{self, Support};
 use wprs_format::{Limits, Platform, open};
@@ -100,7 +101,7 @@ fn hdr_videos_get_a_facet_and_a_warning_wherever_their_colors_are_written() {
         let path = table::build(&name, case, dir.path()).unwrap();
         let mut package = open(&path, &Limits::default()).unwrap();
         assert!(!package.facts.facets.contains(&"hdr".to_owned()), "opening a package reads no video");
-        package.look_at_videos().unwrap();
+        package.look_closer().unwrap();
         assert!(package.facts.facets.contains(&"hdr".to_owned()));
         let (manifest, facts) = wprs_format::inspect(dir.path().join(&name)).unwrap();
         let warned = features::warnings(&manifest, &facts);
@@ -109,7 +110,46 @@ fn hdr_videos_get_a_facet_and_a_warning_wherever_their_colors_are_written() {
     let plain = table::cases().into_iter().find(|(n, _)| n == "video_properties").unwrap().1;
     let path = table::build("plain", &plain, dir.path()).unwrap();
     let mut package = open(&path, &Limits::default()).unwrap();
-    package.look_at_videos().unwrap();
+    package.look_closer().unwrap();
     assert!(!package.facts.facets.contains(&"hdr".to_owned()));
     assert!(!wprs_format::media::hdr(&mp4[..4 << 20]) && wprs_format::media::hdr(&mkv));
+}
+
+fn png(width: u32, height: u32) -> String {
+    let mut head = b"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR".to_vec();
+    head.extend(width.to_be_bytes());
+    head.extend(height.to_be_bytes());
+    head.extend([8, 6, 0, 0, 0, 0, 0, 0, 0]);
+    format!("base64:{}", base64::Engine::encode(&base64::engine::general_purpose::STANDARD, head))
+}
+
+#[test]
+fn packages_with_pictures_larger_than_a_phone_draws_lose_the_android_facet_with_a_note() {
+    let dir = tempfile::tempdir().unwrap();
+    let case = |w, h| json!({ "files": { "notes/big.png": png(w, h), "notes/readme.txt": "x" } });
+    for (name, (w, h), phone) in
+        [("small", (8192, 4096), true), ("wide", (8193, 16), false), ("many", (6000, 6000), false)]
+    {
+        let path = table::build(name, &case(w, h), dir.path()).unwrap();
+        let mut package = open(&path, &Limits::default()).unwrap();
+        assert!(package.facts.facets.contains(&"android".to_owned()), "opening reads no picture");
+        package.look_closer().unwrap();
+        assert_eq!(package.facts.facets.contains(&"android".to_owned()), phone, "{name}");
+        assert_eq!(package.facts.notes.iter().any(|n| n.contains("a phone draws")), !phone, "{name}");
+        let (_, facts) = wprs_format::inspect(dir.path().join(name)).unwrap();
+        assert_eq!(facts.facets.contains(&"android".to_owned()), phone, "pack check of {name}");
+        assert!(facts.facets.contains(&"desktop".to_owned()));
+    }
+    assert_eq!(Limits::phone().max_total_size, wprs_format::PHONE_BYTES);
+}
+
+#[test]
+fn packages_that_need_compute_shaders_say_so_in_their_facets() {
+    let dir = tempfile::tempdir().unwrap();
+    let compute = json!({ "manifest": { "requires": { "gpu": "compute", "features": ["gpu"] } } });
+    let path = table::build("compute", &compute, dir.path()).unwrap();
+    let package = open(&path, &Limits::default()).unwrap();
+    assert!(package.facts.facets.contains(&"compute".to_owned()));
+    let path = table::build("any", &json!({}), dir.path()).unwrap();
+    assert!(!open(&path, &Limits::default()).unwrap().facts.facets.contains(&"compute".to_owned()));
 }

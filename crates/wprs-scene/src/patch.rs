@@ -48,5 +48,6 @@ patch!(
     wake: Option<f64>,
     busy: bool,
     console: Vec<String>,
-    stopped: Vec<String>
+    stopped: Vec<String>,
+    open: Vec<String>
 );

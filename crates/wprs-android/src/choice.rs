@@ -132,7 +132,13 @@ pub(crate) fn shown_on(preview: bool, lock: bool) -> Option<Shown> {
 
 pub(crate) fn colors(preview: bool, lock: bool) -> Result<Option<[i32; 4]>, Error> {
     with(|lib| match chosen(lib, preview, lock)? {
-        Some(uid) => store::colors(lib, &lib.item(&uid)?),
+        Some(uid) => {
+            let item = lib.item(&uid)?;
+            let mut colors = store::colors(lib, &item)?;
+            let accent = colors.as_ref().and_then(|_| crate::accent::accent(&item));
+            colors.iter_mut().zip(accent).for_each(|(c, accent)| c[0] = accent);
+            Ok(colors)
+        }
         None => Ok(None),
     })
 }

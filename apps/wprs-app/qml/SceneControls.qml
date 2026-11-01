@@ -151,6 +151,13 @@ ColumnLayout {
         }
     }
 
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        visible: scene.uses.clicks === true && (scene.inputs.unreached ?? []).includes(scene.output)
+        type: Kirigami.MessageType.Warning
+        text: scene.daemon.tr("Clicks and taps cannot reach the wallpaper of this screen here, so this scene does not react to them.")
+    }
+
     ScenePresets {
         Layout.fillWidth: true
         visible: scene.packageId !== ""

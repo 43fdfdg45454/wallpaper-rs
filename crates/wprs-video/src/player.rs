@@ -42,10 +42,11 @@ impl Player {
             let flags = if audio { "video+audio+soft-volume+native-video" } else { "video+native-video" };
             playbin.set_property_from_str("flags", flags);
         }
-        let (again, cut) = (uri.clone(), shared.cut.clone());
+        let (again, cut, once) = (uri.clone(), shared.cut.clone(), shared.once.clone());
         if !audio {
             playbin.connect("about-to-finish", false, move |args| {
-                if let Some(finishing) = args[0].get::<gst::Element>().ok().filter(|_| lock(&cut).plain()) {
+                let looping = lock(&cut).plain() && !once.load(std::sync::atomic::Ordering::Relaxed);
+                if let Some(finishing) = args[0].get::<gst::Element>().ok().filter(|_| looping) {
                     finishing.set_property("uri", &again);
                 }
                 None
@@ -62,6 +63,10 @@ impl Player {
             video_sink::set_max_fps(&self.rate, self.max_fps, cut);
         }
         self.pipe.post("wprs-cut");
+    }
+
+    pub fn play_once(&self, once: bool) {
+        self.shared.once.store(once, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn seek(&self, seconds: f64) {

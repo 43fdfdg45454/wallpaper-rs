@@ -8,18 +8,22 @@ macro_rules! model {
 
 mod account;
 mod inputs;
+mod jobs;
 mod library;
 mod playlists;
 mod remote;
 mod schema;
+mod sources;
 mod state;
 
 pub use account::*;
 pub use inputs::*;
+pub use jobs::*;
 pub use library::*;
 pub use playlists::*;
 pub use remote::*;
 pub use schema::*;
+pub use sources::*;
 pub use state::*;
 
 pub const MODEL: u32 = 1;

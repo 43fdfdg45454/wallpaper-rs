@@ -37,9 +37,9 @@ fn display_and_playback_fields_belong_to_their_kinds() {
     assert_eq!(named(&picture), ["display2"]);
     assert_eq!(named(&shown(Kind::Video, json!({ "flip": "horizontal" }))), ["flip", "video_properties"]);
     assert_eq!(named(&shown(Kind::Scene, json!({ "accent": "#ff8800" }))), ["accent"]);
-    let unread = ["accent".to_string(), "gpu".into()];
-    let platforms = Platform::ALL.map(|p| features::lacks(p.name(), &unread));
-    assert!(platforms.iter().all(|lacked| *lacked == unread), "{platforms:?}");
+    let read = ["accent".to_string(), "gpu".into()];
+    let platforms = Platform::ALL.map(|p| features::lacks(p.name(), &read));
+    assert!(platforms.iter().all(Vec::is_empty), "{platforms:?}");
     let tinted = Manifest {
         properties: serde_json::from_value(json!({ "tint": { "type": "color", "default": "#ff8800" },
             "on": { "type": "bool", "default": true } }))
@@ -69,9 +69,20 @@ fn display_and_playback_fields_belong_to_their_kinds() {
     assert_eq!(field(play(Kind::Video, json!({ "max_fps": 241 })).check()), "playback");
     assert_eq!(field(play(Kind::Image, json!({ "volume": 0.5 })).check()), "playback");
     let facts = features::facts(&video, None, None);
-    assert!(
-        features::playable(&video, &facts, Platform::Desktop).unwrap_err().to_string().contains("playback2")
+    features::playable(&video, &facts, Platform::Desktop).unwrap();
+    assert!(features::lacks("android", &facts.features).contains(&"playback2".to_string()));
+    let scene = play(Kind::Scene, json!({ "max_fps": 24, "volume": 0.4, "muted": false }));
+    scene.check().unwrap();
+    assert!(named(&scene).contains(&"playback2".to_string()));
+    for bad in [json!({ "speed": 2 }), json!({ "loop": false }), json!({ "start": 1 })] {
+        assert_eq!(field(play(Kind::Scene, bad.clone()).check()), "playback", "{bad}");
+    }
+    let quiet = Playback { muted: Some(true), volume: Some(0.8), ..Playback::default() };
+    assert_eq!(
+        (quiet.loudness(), Playback { volume: Some(0.42), ..Playback::default() }.loudness()),
+        (0.0, 40.0)
     );
+    assert_eq!((Playback::default().frame_cap(), Playback::default().loudness()), (0, 100.0));
 }
 
 #[test]

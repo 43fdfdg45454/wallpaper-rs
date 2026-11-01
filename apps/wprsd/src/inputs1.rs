@@ -114,6 +114,7 @@ impl Inputs {
         let clicks = control.views.iter().filter(|(_, v)| v.clicks).map(|(name, _)| name.clone()).collect();
         let clicking = control.wants(Input::Clicks);
         drop(control);
+        let unreached = d.unreached();
         let (asking, quiet) = crate::confirm::questions();
         reply(InputsReply {
             model: MODEL,
@@ -128,6 +129,7 @@ impl Inputs {
             quiet,
             clicks,
             clicking,
+            unreached,
         })
     }
 

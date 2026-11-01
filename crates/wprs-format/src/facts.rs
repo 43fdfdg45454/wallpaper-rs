@@ -57,7 +57,7 @@ fn declared(m: &Manifest, scene: Option<&Scene>) -> Vec<&'static str> {
         (image || (pictured && display.newer()), "display2"),
         (display.accent.is_some(), "accent"),
         (display.flipped(), "flip"),
-        (web || playback.newer(), "playback2"),
+        (web || playback.newer() || (m.kind == Kind::Scene && m.playback.is_some()), "playback2"),
         (video, "video_properties"),
         (files.contains("ktx2"), "ktx2"),
         (files.contains("avif"), "avif"),
@@ -107,6 +107,7 @@ pub fn facts(manifest: &Manifest, scene: Option<&Scene>, size: Option<[u32; 2]>)
         (manifest.locales().len() > 1, "localized"),
         (matches!(manifest.kind, Kind::Scene | Kind::Video | Kind::Web), "animated"),
         (manifest.web.as_ref().is_some_and(|w| w.storage_kib > 0), "storage"),
+        (manifest.requires.as_ref().is_some_and(|r| r.gpu == Some(crate::Gpu::Compute)), "compute"),
     ];
     facets.extend(flags.into_iter().filter(|(on, _)| *on).map(|(_, n)| n.to_owned()));
     let allowed = |p: &Platform| manifest.platforms.is_empty() || manifest.platforms.contains(p);
@@ -115,7 +116,7 @@ pub fn facts(manifest: &Manifest, scene: Option<&Scene>, size: Option<[u32; 2]>)
     let runs = Platform::ALL.into_iter().filter(|p| allowed(p) && fully(p) && manifest.kind.shown());
     facets.extend(runs.map(|p| p.name().to_owned()));
     let size = scene.filter(|_| manifest.kind == Kind::Scene).map(|s| s.canvas.size).or(size);
-    facets.extend(size.into_iter().flat_map(shape));
+    facets.extend(size.into_iter().flat_map(crate::shape::shape));
     facets.sort();
     facets.dedup();
     let missing = |i: &&Input| manifest.v2() && !manifest.inputs.contains(i);
@@ -133,26 +134,6 @@ fn place(scene: &Scene, input: Input) -> String {
         _ => |u| u.cursor,
     };
     source(scene, pick).unwrap_or_else(|| "/".into())
-}
-
-fn shape([w, h]: [u32; 2]) -> Vec<String> {
-    const SIZES: [(&str, u32, u32); 6] = [
-        ("8k", 7680, 4320),
-        ("5k", 5120, 2880),
-        ("4k", 3840, 2160),
-        ("1440p", 2560, 1440),
-        ("1080p", 1920, 1080),
-        ("720p", 1280, 720),
-    ];
-    let (long, short) = (w.max(h), w.min(h));
-    let orient = match w.cmp(&h) {
-        std::cmp::Ordering::Greater => "landscape",
-        std::cmp::Ordering::Less => "portrait",
-        std::cmp::Ordering::Equal => "square",
-    };
-    let size = SIZES.iter().find(|(_, a, b)| long >= *a && short >= *b).map(|(n, ..)| *n);
-    let wide = (long as f32 / short.max(1) as f32 >= 2.2).then_some("ultrawide");
-    [Some(orient), size, wide].into_iter().flatten().map(String::from).collect()
 }
 
 pub fn check(manifest: &Manifest, facts: &Facts) -> Result<()> {

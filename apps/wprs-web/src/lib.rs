@@ -96,6 +96,7 @@ pub enum FromWeb {
     Crashed { view: u32 },
     Broken { view: u32 },
     Said(String),
+    Open { view: u32, prop: String },
 }
 
 pub fn changed(old: &Map<String, Value>, new: &Map<String, Value>) -> Map<String, Value> {

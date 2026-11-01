@@ -19,6 +19,7 @@ pub struct ScriptOutputs {
     pub busy: bool,
     pub console: Vec<String>,
     pub stopped: Vec<String>,
+    pub open: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

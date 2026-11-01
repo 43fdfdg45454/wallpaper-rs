@@ -33,4 +33,8 @@ WallpaperItem {
     Taps {
         anchors.fill: parent
     }
+
+    Accent {
+        wallpaper: root
+    }
 }

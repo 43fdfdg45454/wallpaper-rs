@@ -123,8 +123,12 @@ pub fn hdr(data: &[u8]) -> bool {
     boxed || data.starts_with(&[0x1a, 0x45, 0xdf, 0xa3]) && tagged
 }
 
+pub fn is_video_path(path: &str) -> bool {
+    extension(path).is_some_and(|e| ["webm", "mp4", "mkv"].contains(&e.as_str()))
+}
+
 pub(crate) fn videos(manifest: &Manifest, scene: Option<&Scene>) -> Vec<String> {
-    let video = |p: &String| extension(p).is_some_and(|e| ["webm", "mp4", "mkv"].contains(&e.as_str()));
+    let video = |p: &String| is_video_path(p);
     let entry = (manifest.kind == Kind::Video).then(|| manifest.entry.clone());
     let assets = scene.into_iter().flat_map(|s| s.assets.values().map(|a| a.path.clone()));
     let mut found: Vec<String> = entry.into_iter().chain(assets).filter(video).collect();

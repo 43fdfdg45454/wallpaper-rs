@@ -126,6 +126,10 @@ impl Daemon {
             let reason = reason.unwrap_or_default();
             return Err(failed(format!("{} {} is revoked ({reason})", package.id, package.version)));
         }
+        if item.package.as_ref().is_some_and(|p| p.kind == "preset") {
+            drop(_packages);
+            return self.apply_variant(&item, &output, fit.map_or(String::new(), |f| f.to_string()).as_str());
+        }
         let (fit, background, preset) = match preset {
             Some((uid, PresetValue { fit: preset_fit, background, .. })) => {
                 (fit.or(preset_fit), background, Some(uid))

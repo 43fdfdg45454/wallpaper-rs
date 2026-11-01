@@ -9,7 +9,7 @@ cp "$ROOT/tests/fixtures/green-64x32.png" "$WORK/import/sunset.png"
 dbus-monitor --session "type='signal',interface='io.github.wallpaper_rs.Daemon1'" \
   "type='signal',interface='io.github.wallpaper_rs.Library1'" >"$WORK/library-signals.log" 2>&1 & pids+=($!)
 sleep 0.5
-[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(19, 7, [256, 512, 1024])" ] ||
+[ "$(reply "len(r['options']), len(r['providers']), r['thumb_sizes']" Daemon1 GetSchema)" = "(20, 7, [256, 512, 1024])" ] ||
   fail "schema: $(bus Daemon1 GetSchema)"
 read -r source job < <(bus Library1 AddSource sb "$pics" true | out "' '.join(map(str, d))")
 wait_for 20 finished "$job" || fail "scan job: $(bus Daemon1 GetJob t "$job")"

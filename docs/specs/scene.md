@@ -1266,13 +1266,26 @@ through the file chooser, are never set by presets and never travel with exporte
 `one` only gives them one file at a time (`randomFile`); a scene whose scripts would list it needs
 the feature `script_folders`, which no platform runs yet.
 
-A `shortcut` holds what the user chose to open from the wallpaper: an `https://` address (opened
-through the OpenURI portal, which asks), a file or a folder (chosen through the file chooser) or an
-application by its desktop id, never a command. Only the user sets it, never the author, a preset
-or sync, and the content never sees the target: a script or a page asks to open it, only inside a
-real click and at most once a second. `quality` maps quality levels (`q0` to `q3`, `q3` the
-highest) to a value of the property: on that level and the lower ones the value is at most that
-one for a slider and exactly that one for a combo or a flag, so a power-saving mode turns itself on
+A `shortcut` holds what the user chose to open from the wallpaper: an `https://` address of at
+most 2048 characters (opened through the OpenURI portal of the desktop, which may ask first), a
+file or a folder (chosen through the file chooser and opened through the same portal, which gets
+it as an open file) or an application by its desktop id (`[A-Za-z0-9._-]`, at most 255 characters),
+never a command. Only the user sets it (`SetSceneProperty`, `wprs-ctl prop set open
+'{"uri": "https://example.org"}'`, or the app's control under *Scene settings*), never the author, a
+preset or sync, and `SetSceneProperty` refuses a file or folder that does not exist. It stays in
+`config.toml` on this computer. An application is looked up as `applications/<id>.desktop` in the
+data folders of the desktop: one that is hidden or runs in a terminal is refused, a `DBusActivatable`
+one is activated through `org.freedesktop.Application`, and any other is started from its `Exec`
+line without a shell and without its field codes; applications open only outside the Flatpak. The
+content never sees the target: a script calls `openShortcut(prop)` inside the handler of a real
+`click` of a layer and a page calls `wprs.openShortcut(prop)`; the daemon opens it only within 2 s
+of a click that reached the scene or page on a screen that takes clicks, for a package that holds
+the `clicks` grant, at most once a second per screen, and only for a `shortcut` property of the
+package shown there. The phone plays such packages without opening shortcuts. `quality` maps
+quality levels (`q0` to `q3`, `q3` the highest) to a value of the property: on that level and the
+lower ones the value is at most that one for a slider and exactly that one for a combo or a flag,
+as the scene, its scripts and web pages see it (the stored value does not change), so a
+power-saving mode turns itself on
 with the battery.
 
 `presets` is a list of `{ "id", "label", "values" }`; a preset cannot set files, folders, secrets
@@ -1475,7 +1488,7 @@ module's exports, imports and calls.
 | Field | Meaning |
 |-------|---------|
 | `events` | the functions the module exports and the events it handles, each once: the lifecycle above (`update` is the only one older engines call), the pointer events of `solid` layers and `hit` bones `click`, `down`, `up` (input `clicks`), `enter`, `leave` and `move` (input `pointer`), delivered with `scene.layer(id).on(event, handler)` as `{ type, layer, local, scene }` with the touched bone, and `mediaStatus`, `mediaPlayback`, `mediaProperties`, `mediaThumbnail` and `mediaTimeline` (input `media`) |
-| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, and parts that engines run later: `media` (the `media` object and its colors, input `media`; `media_info`), `storage` (`storage.get`, `set`, `delete` and `clear` per output or package, 64 KiB of JSON kept on the device only, removed with the package; `script_storage`), `geometry` (`scene.mesh(pool)` with `create`, `update` and `destroy`, at most 1 MiB of vertices a frame; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`; texture frames, mesh and model clips, bones, shapes and attachments come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `camera3d`, `parallax` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, only inside a click; `script_shortcuts`) and `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) |
+| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, and parts that engines run later: `media` (the `media` object and its colors, input `media`; `media_info`), `storage` (`storage.get`, `set`, `delete` and `clear` per output or package, 64 KiB of JSON kept on the device only, removed with the package; `script_storage`), `geometry` (`scene.mesh(pool)` with `create`, `update` and `destroy`, at most 1 MiB of vertices a frame; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`; texture frames, mesh and model clips, bones, shapes and attachments come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `camera3d`, `parallax` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`) and `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) |
 | `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}`. They live only here: the module does not export them and `scene import-script` does not propose them |
 
 Any event but `update`, any part but `audio`, `pointer` and `clicks`, and `params` name `scripts2`;

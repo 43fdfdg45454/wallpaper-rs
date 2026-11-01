@@ -6,7 +6,7 @@ use image::ImageFormat;
 use serde_json::{Value, json};
 use std::fs;
 use std::io::Cursor;
-use wprs_format::{Error, Kind, Limits, Manifest, Platform, features, manifest_schema, read};
+use wprs_format::{Error, Kind, Limits, Manifest, Platform, Playback, features, manifest_schema, read};
 
 mod origins;
 mod texts;

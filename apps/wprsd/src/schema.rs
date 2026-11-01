@@ -55,6 +55,7 @@ fn options() -> Vec<Field> {
         flag("playback.flash_guard"),
         flag("playback.scene_sound"),
         flag("playback.scene_capture"),
+        flag("playback.duck"),
         values(option("transition.kind", FieldKind::Enum), &["fade", "none"]),
         range(option("transition.duration_ms", FieldKind::Int), 0.0, 10_000.0, Some(1.0)),
         flag("pause.when_covered"),

@@ -1,6 +1,6 @@
 use crate::daemon::Daemon;
 use crate::sceneprops::Props;
-use serde_json::{Value as Json, json};
+use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_core::model::Input;
@@ -8,9 +8,12 @@ use wprs_scene::{Control, Values};
 
 mod helper;
 mod kept;
+mod shape;
 
 pub use helper::{available, helper, unavailable};
 pub use kept::within;
+use shape::color;
+pub use shape::shape;
 
 pub const HIDES: [&str; 4] = ["hide_zone", "hide_language", "hide_gpu", "hide_storage"];
 pub const PLAIN: &str = "en-US";
@@ -30,6 +33,7 @@ pub struct Privacy {
 pub struct WebPack {
     pub path: PathBuf,
     pub props: Arc<Props>,
+    pub leveling: wprs_scene::Leveling,
     pub entry: String,
     pub preload: Option<String>,
     pub background: [u8; 3],
@@ -39,6 +43,8 @@ pub struct WebPack {
     pub key: String,
     pub shape: Json,
     pub plain: Json,
+    pub own_volume: bool,
+    pub max_fps: u32,
 }
 
 #[derive(Clone)]
@@ -61,17 +67,6 @@ impl PartialEq for PageSpec {
     }
 }
 
-fn color(text: Option<&str>) -> [u8; 3] {
-    let hex = text.and_then(|t| t.strip_prefix('#')).and_then(|h| u32::from_str_radix(h, 16).ok());
-    hex.map_or([0; 3], |n| [(n >> 16) as u8, (n >> 8) as u8, n as u8])
-}
-
-pub fn shape(props: &Props, languages: &[String]) -> Json {
-    let kinds: serde_json::Map<String, Json> =
-        props.properties.iter().map(|(id, p)| (id.clone(), json!(p.kind()))).collect();
-    json!({"kinds": kinds, "labels": wprs_scene::labels(&props.properties, languages)})
-}
-
 impl Daemon {
     pub fn web_pack(&self, wpak: &Path) -> anyhow::Result<Arc<WebPack>> {
         let package = crate::decode::open(wpak)?;
@@ -79,9 +74,15 @@ impl Daemon {
         anyhow::ensure!(m.kind == wprs_format::Kind::Web, "{} is not a web package", wpak.display());
         let languages = m.languages(&wprs_core::locale::languages());
         let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
-        let (properties, presets) = (m.properties.clone(), m.presets.clone());
+        let (mut properties, presets) = (m.properties.clone(), m.presets.clone());
+        let authored = crate::sceneprops::Authored::of(&m);
+        let own_volume = properties.contains_key(wprs_scene::VOLUME);
+        let added = wprs_scene::volume_property(&crate::words::volume(), authored.playback.loudness());
+        properties.entry(wprs_scene::VOLUME.into()).or_insert(added);
+        let max_fps = authored.playback.frame_cap();
+        let kind = "web";
         let props =
-            Props { path: wpak.into(), id, version, title, kind: "web", languages, properties, presets };
+            Props { path: wpak.into(), id, version, title, kind, languages, properties, presets, authored };
         let web = m.web.clone().unwrap_or_default();
         let network = m.permissions.iter().flat_map(|p| &p.network).flat_map(|n| n.allow.clone()).collect();
         let has = |i: wprs_format::Input| m.inputs.contains(&i);
@@ -94,6 +95,7 @@ impl Daemon {
         let (shape, plain) = (shape(&props, &props.languages), shape(&props, &m.languages(&[PLAIN.into()])));
         Ok(Arc::new(WebPack {
             path: wpak.into(),
+            leveling: wprs_scene::Leveling::of(&props.properties),
             props: Arc::new(props),
             entry: m.entry.clone(),
             preload: web.preload,
@@ -104,6 +106,8 @@ impl Daemon {
             key,
             shape,
             plain,
+            own_volume,
+            max_fps,
         }))
     }
 

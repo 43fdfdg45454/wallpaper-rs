@@ -1,5 +1,6 @@
 #![cfg_attr(not(target_os = "android"), allow(dead_code))]
 
+mod accent;
 mod account;
 mod acting;
 mod apply;

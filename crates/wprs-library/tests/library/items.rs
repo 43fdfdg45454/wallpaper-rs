@@ -38,6 +38,7 @@ fn packages_are_described_by_their_manifest() {
         photosensitive: None,
         facets: vec!["android".into(), "desktop".into()],
         confirmed: Vec::new(),
+        base: None,
     };
     assert_eq!((calm.title.as_str(), calm.package), ("Calm Water", Some(info)));
     let broken = find(&library, "broken");

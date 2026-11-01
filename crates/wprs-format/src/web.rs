@@ -103,8 +103,9 @@ impl Manifest {
         let rules = [
             (
                 "playback",
-                matches!(self.kind, Kind::Video | Kind::Web) || self.playback.is_none(),
-                "applies to video and web packages only",
+                matches!(self.kind, Kind::Video | Kind::Web)
+                    || self.playback.as_ref().is_none_or(|p| self.kind == Kind::Scene && p.scenic()),
+                "applies to video and web packages, and max_fps, volume and muted to scenes",
             ),
             (
                 "display",

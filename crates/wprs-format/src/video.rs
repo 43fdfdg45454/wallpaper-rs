@@ -46,9 +46,34 @@ impl Playback {
     pub(crate) fn newer(&self) -> bool {
         self.max_fps.is_some() || self.muted.is_some() || self.repeat.is_some()
     }
+
+    pub(crate) fn scenic(&self) -> bool {
+        (self.speed, self.start, self.end, self.repeat) == (None, None, None, None)
+    }
+
+    pub fn loudness(&self) -> f64 {
+        let volume = if self.muted == Some(true) { 0.0 } else { self.volume.unwrap_or(1.0) };
+        (volume * 20.0).round() * 5.0
+    }
+
+    pub fn frame_cap(&self) -> u32 {
+        match self.max_fps {
+            Some(FrameRate::Fixed(fps)) => fps,
+            _ => wprs_core::settings::fps::DISPLAY,
+        }
+    }
+
+    pub fn once(&self) -> bool {
+        self.repeat == Some(false)
+    }
 }
 
 impl Manifest {
+    pub fn pace(&self, scene: &mut wprs_scene::Scene) {
+        let cap = self.playback.as_ref().map_or(wprs_core::settings::fps::DISPLAY, Playback::frame_cap);
+        scene.clock.max_fps = wprs_core::settings::fps::lower(scene.clock.max_fps, cap);
+    }
+
     pub fn video_properties(&self, labels: &[String; 8], length: Option<f64>) -> BTreeMap<String, Property> {
         let (play, show) =
             (self.playback.clone().unwrap_or_default(), self.display.clone().unwrap_or_default());
@@ -64,11 +89,7 @@ impl Manifest {
             Slider { log: true, ..slider(0.1, 4.0, play.speed.unwrap_or(1.0), 2, "×") },
             slider(0.0, length - TAIL, play.start.unwrap_or(0.0), 1, "s"),
             slider(0.0, length, play.end.unwrap_or(0.0), 1, "s"),
-            Slider {
-                integer: true,
-                step: Some(5.0),
-                ..slider(0.0, 100.0, (play.volume.unwrap_or(1.0) * 20.0).round() * 5.0, 0, "%")
-            },
+            Slider { integer: true, step: Some(5.0), ..slider(0.0, 100.0, play.loudness(), 0, "%") },
             slider(1.0, 8.0, show.zoom.unwrap_or(1.0), 2, "×"),
             slider(-1.0, 1.0, x, 2, ""),
             slider(-1.0, 1.0, y, 2, ""),

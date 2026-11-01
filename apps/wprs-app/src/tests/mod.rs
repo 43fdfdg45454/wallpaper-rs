@@ -110,11 +110,13 @@ fn package_texts_render_as_plain_text() {
     let files = files
         .into_iter()
         .chain([
+            "ItemKin",
             "OutputRow",
             "OutputControls",
             "SceneField",
             "SceneChoices",
             "SceneEntry",
+            "SceneShortcut",
             "ScenePresets",
             "SavedPresets",
             "History",

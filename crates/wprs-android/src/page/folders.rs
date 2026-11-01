@@ -30,7 +30,9 @@ pub(super) type Folders = BTreeMap<String, Vec<String>>;
 pub(super) fn values(view: &mut View) -> (Map<String, Value>, Folders) {
     let (pack, mut folders) = (view.pack.clone(), Folders::new());
     let host = view.host.clone();
-    let mut values: Map<String, Value> = props::values(&pack).into_iter().collect();
+    let quality = crate::power::Power::now().ceiling();
+    let tuned = wprs_scene::Leveling::of(&pack.properties).tuned(&props::values(&pack), quality);
+    let mut values: Map<String, Value> = tuned.into_iter().collect();
     for (id, value) in values.iter_mut() {
         let path = value.as_str().filter(|v| v.starts_with('/')).map(PathBuf::from);
         let control = pack.properties.get(id).map(|p| &p.control);

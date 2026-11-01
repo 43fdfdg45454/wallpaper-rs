@@ -506,6 +506,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `playback.flash_guard` | measure the brightness of every scene frame and slow down, or stop, a scene that flashes more than three times a second (see "Cost and frame rate" in `scene.md`); it costs a small read back from the GPU per frame | `false` |
 | `playback.scene_sound` | let scenes play their sound layers (see "Scene sound"); `false` keeps every scene silent, whatever its permissions and volume, and leaves the sound of videos alone | `true` |
 | `playback.scene_capture` | let scenes that were granted `audio` follow the sound that plays (see "Inputs"); `false` closes the audio capture for every scene | `true` |
+| `playback.duck` | fade the sound of every wallpaper (videos, scene sounds and web pages) out in 0.5 s while another application plays sound, and back in when it stops; a PipeWire watcher counts the running playback streams of other processes (not the daemon, its helpers or their children), reading neither their names nor their sound | `false` |
 | `transition.kind` | `fade`, `none` | `fade` |
 | `transition.duration_ms` | `0` to `10000` | `600` |
 | `pause.when_covered` | pause while a maximized or fullscreen window covers the output | `true` |
@@ -543,7 +544,11 @@ next to a left-out effect in the app call it.
 ### `GetState() → (s json)`
 
 A `State` document (see "JSON model"). It never waits for the library: the library item, preset,
-playlist and credit of each output are kept up to date when they change.
+playlist and credit of each output are kept up to date when they change. `compute` says whether
+the graphics card runs compute shaders in hardware, and each output's `accent` is the accent color
+(`#rrggbb`) its wallpaper suggests: `display.accent` of its package (with the current value of a
+color property it names), else the dominant color of the preview or picture, or `null`; the Plasma
+wallpaper plugin gives it to Plasma as the accent color of the wallpaper.
 
 ### `GetSchema() → (s json)`
 
@@ -732,7 +737,10 @@ package its files come from (`<id> <version>`). `animated` is the path of its an
 (`previews.animated`), copied once into the thumbnail cache, or `null`; clients play it only while
 it is on screen, on mains power, and once a mature or photosensitive package was allowed. A package this device cannot play keeps its
 details, with the reason in `error` (`this package needs a newer version of wallpaper-rs: it uses
-…` or `this package is made for … only`).
+…` or `this package is made for … only`). `variants` lists the installed preset packages whose base
+is this package (`{uid, name}`), and for a preset package `item.package.base` is the id of its base
+and `base` the installed base (`{uid, name}`) or `null`. `Apply` of a preset package applies its
+base with the values of the preset (`package.md`, "Presets").
 
 ### `SetTitle(s uid, s title)`
 
@@ -1395,7 +1403,10 @@ notification or left it unanswered (`quiet`), both by package id, the scenes tha
 (`granted`, what clients check before asking), the outputs whose
 parallax image follows the pointer (`parallax`), whether audio is being captured (`capturing`)
 and whether the pointer is being followed (`tracking`), the outputs that take clicks (`clicks`, the
-setting of `SetClicks`) and the ones whose scene takes them now (`clicking`).
+setting of `SetClicks`), the ones whose scene takes them now (`clicking`) and the ones that clicks
+cannot reach here (`unreached`: in the Flatpak, the outputs that a client such as the Plasma
+wallpaper plugin draws, since only a Plasma shell outside the Flatpak may call `Touch`), where the
+app warns on the settings of a scene that uses clicks.
 
 ### `SetClicks(s output, b on)`
 

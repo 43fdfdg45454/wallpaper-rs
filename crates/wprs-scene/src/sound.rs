@@ -91,17 +91,20 @@ impl Scene {
         &self,
         declared: &BTreeMap<String, Property>,
         label: &str,
+        loudness: f64,
     ) -> BTreeMap<String, Property> {
         let mut props = declared.clone();
         if self.sounds().next().is_some() {
-            let control =
-                Control::Slider(Slider { integer: true, ..Slider::new(0.0, 100.0, Some(5.0), 100.0) });
-            let volume =
-                Property { label: Some(Text::Plain(label.into())), order: -1.0, ..Property::new(control) };
-            props.entry(VOLUME.into()).or_insert(volume);
+            props.entry(VOLUME.into()).or_insert_with(|| volume_property(label, loudness));
         }
         props
     }
+}
+
+pub fn volume_property(label: &str, loudness: f64) -> Property {
+    let loud = loudness.clamp(0.0, 100.0);
+    let control = Control::Slider(Slider { integer: true, ..Slider::new(0.0, 100.0, Some(5.0), loud) });
+    Property { label: Some(Text::Plain(label.into())), order: -1.0, ..Property::new(control) }
 }
 
 impl Check<'_> {

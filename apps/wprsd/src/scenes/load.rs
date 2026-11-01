@@ -24,7 +24,8 @@ impl Daemon {
             "{} is not a scene package",
             wpak.display()
         );
-        let scene = package.scene()?;
+        let mut scene = package.scene()?;
+        package.manifest.pace(&mut scene);
         let (mut assets, mut videos, mut sounds) = (SceneAssets::default(), Vec::new(), Vec::new());
         let mut decoded = wprs_render::Pictures::default();
         for (id, asset) in &scene.assets {
@@ -76,7 +77,9 @@ impl Daemon {
         let m = package.manifest.localized();
         let locale = m.locale_in(&wprs_core::locale::languages());
         let languages = m.languages(&wprs_core::locale::languages());
-        let properties = scene.properties(&m.properties, &crate::words::volume());
+        let authored = crate::sceneprops::Authored::of(&m);
+        let loudness = authored.playback.loudness();
+        let properties = scene.properties(&m.properties, &crate::words::volume(), loudness);
         let labels = wprs_scene::labels(&properties, &languages);
         let (clips, mut lengths) = bank(&scene, &sounds);
         crate::scenes::filmed(&mut lengths, &videos);
@@ -84,8 +87,17 @@ impl Daemon {
             (m.id.clone(), m.version.clone(), m.title.pick(&languages), m.presets);
         let (path, inputs) = (wpak.to_owned(), package.manifest.declared());
         let key = if listens(&scene, &scripts) { self.package_key(wpak, &meta)? } else { String::new() };
-        let props =
-            Props { path: path.clone(), id, version, title, kind: "scene", languages, properties, presets };
+        let props = Props {
+            path: path.clone(),
+            id,
+            version,
+            title,
+            kind: "scene",
+            languages,
+            properties,
+            presets,
+            authored,
+        };
         let (scene, props) = (Arc::new(scene), Arc::new(props));
         let pack = Arc::new(ScenePack {
             path,

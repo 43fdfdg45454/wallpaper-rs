@@ -4,6 +4,7 @@ use super::scene::SceneState;
 use super::{Content, Reel};
 use std::time::Instant;
 use wprs_core::edit::Parallax;
+use wprs_core::settings::fps::lower;
 use wprs_core::{Ages, Region};
 use wprs_render::GpuImage;
 use wprs_scene::Tier;
@@ -78,7 +79,8 @@ impl Output {
         match (&self.shown.scene, &self.shown.relief, &self.shown.content) {
             (Some(scene), ..) => scene.fps(power, self.refresh),
             (None, Some(_), _) if power.tier == Tier::T0 => rate.min(SOFTWARE.1),
-            (.., Content::Video(_)) => power.video(self.refresh),
+            (.., Content::Video(m)) => lower(power.video(self.refresh), m.max_fps),
+            (.., Content::Web(p)) => lower(rate, p.pack.max_fps),
             _ => rate,
         }
     }

@@ -23,6 +23,14 @@ export const clearTimeout = (cancel) => void (typeof cancel === "function" && ca
 export const clearInterval = clearTimeout;
 Object.assign(globalThis, { console, setTimeout, setInterval, clearTimeout, clearInterval });
 
+export function openShortcut(id) {
+    need("shortcuts");
+    const prop = String(id);
+    if (!state.clicking || state.out.open.length >= 4) return false;
+    if (!state.out.open.includes(prop)) state.out.open.push(prop);
+    return true;
+}
+
 const refused = [Map, Set, WeakMap, WeakSet, Promise, Date, RegExp, DataView, ArrayBuffer];
 function frozen(value) {
     let items = 0;

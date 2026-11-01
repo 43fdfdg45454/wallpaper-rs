@@ -60,3 +60,36 @@ pub fn import(
 pub fn saved(preset: &Json) -> Values {
     serde_json::from_value(preset.get("values").cloned().unwrap_or_default()).unwrap_or_default()
 }
+
+pub struct Chosen {
+    pub values: Values,
+    pub files: Vec<(String, String)>,
+    pub warnings: Vec<String>,
+}
+
+pub fn chosen(preset: &crate::PresetFile, props: &BTreeMap<String, Property>) -> Chosen {
+    let (mut values, mut files, mut warnings) = (Values::new(), Vec::new(), Vec::new());
+    let base = &preset.base.id;
+    for (id, value) in &preset.values {
+        match props.get(id) {
+            None => warnings.push(format!("{id} is not a setting of {base}")),
+            Some(p) if !p.holds_value() || p.personal() => {
+                warnings.push(format!("{id} is not set by presets"))
+            }
+            Some(p) => match p.value(value) {
+                Ok(fit) if fit == *value => drop(values.insert(id.clone(), fit)),
+                Ok(_) => warnings.push(format!("{id} is out of range")),
+                Err(e) => warnings.push(format!("{id} {e}")),
+            },
+        }
+    }
+    for (id, path) in &preset.files {
+        let what = if crate::media::is_video_path(path) { "video" } else { "image" };
+        match props.get(id).filter(|p| matches!(p.control, wprs_scene::Control::File { .. })) {
+            Some(p) if p.accepts(what) => files.push((id.clone(), path.clone())),
+            Some(_) => warnings.push(format!("{id} takes no {what}")),
+            None => warnings.push(format!("{id} is not a file setting of {base}")),
+        }
+    }
+    Chosen { values, files, warnings }
+}

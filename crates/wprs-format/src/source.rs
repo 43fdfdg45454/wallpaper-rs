@@ -108,6 +108,16 @@ pub(crate) fn facts_of(
             media::mark(&mut found, &path);
         }
     }
+    let total = files.iter().map(|f| f.size).sum();
+    let mut heads = Vec::new();
+    for file in files.iter().filter(|f| crate::closer::picture(&f.path)) {
+        let (head, _) = Folder(source).head(&file.path, usize::MAX, crate::closer::HEAD as usize)?;
+        heads.push((head, file.path.clone()));
+    }
+    if let Some(note) = crate::closer::oversized(total, heads) {
+        found.facets.retain(|f| f != "android");
+        found.notes.push(note);
+    }
     Ok(found)
 }
 

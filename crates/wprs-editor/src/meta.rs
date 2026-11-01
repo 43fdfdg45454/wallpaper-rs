@@ -36,13 +36,17 @@ pub fn hidden(doc: &Value) -> Vec<&'static str> {
 }
 
 pub fn applies(doc: &Value, pointer: &str) -> bool {
+    let scene = doc["manifest"]["kind"] == "scene";
     let framing: &[&str] = match doc["manifest"]["kind"].as_str() {
         Some("scene") => &["fit", "zoom", "position", "background", "flip"],
         Some("image") => &["zoom", "position"],
         _ => &[],
     };
-    let key = pointer.strip_prefix("/manifest/display/").and_then(|k| k.split('/').next());
-    key.is_none_or(|k| !framing.contains(&k)) || doc.pointer(pointer).is_some()
+    let playing: &[&str] = if scene { &["speed", "start", "end", "loop"] } else { &[] };
+    let key = |prefix: &str| pointer.strip_prefix(prefix).and_then(|k| k.split('/').next());
+    let shown = key("/manifest/display/").is_none_or(|k| !framing.contains(&k))
+        && key("/manifest/playback/").is_none_or(|k| !playing.contains(&k));
+    shown || doc.pointer(pointer).is_some()
 }
 
 pub fn adjust(doc: &Value, field: &mut crate::Field) {
