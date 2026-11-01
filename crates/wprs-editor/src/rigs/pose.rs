@@ -1,7 +1,7 @@
 use super::round;
 use serde_json::{Value, json};
 use std::path::Path;
-use wprs_scene::mesh_math::{IDENTITY, Mat, apply, mul, qmul, turn};
+use wprs_scene::mesh_math::{IDENTITY, Mat, apply, conjugate, mul, qmul, turn};
 use wprs_scene::{AnimClip, Key, Rigged, Track, Trs, Vec2, local, sample};
 
 pub(crate) fn length(rig: &Rigged, c: &AnimClip) -> (Option<usize>, f32) {
@@ -56,6 +56,27 @@ pub fn locals(rig: &Rigged, c: &AnimClip, t: f32) -> Vec<Trs> {
     out
 }
 
+pub(crate) type Channels = (f32, [f32; 2], [f32; 2]);
+
+pub(crate) fn channels(rig: &Rigged, c: &AnimClip, ls: &[Trs], n: usize, at: f32) -> Channels {
+    let (rest, l) = (rig.joints[n].rest, ls[n]);
+    let own = c.bones.get(&rig.joints[n].name);
+    let q = qmul(conjugate(rest.r), l.r);
+    let turned = (-(2.0 * q[2].atan2(q[3])).to_degrees() + 180.0).rem_euclid(360.0) - 180.0;
+    let rotation = own.filter(|k| !k.rotation.is_empty()).map_or(turned, |k| sample(&k.rotation, at));
+    let moved = [l.t[0] - rest.t[0], rest.t[1] - l.t[1]];
+    let position = own.filter(|k| !k.position.is_empty()).map_or(moved, |k| sample(&k.position, at).0);
+    let grown = [0, 1].map(|i| l.s[i] / if rest.s[i].abs() > 1e-6 { rest.s[i] } else { 1.0 });
+    let scale = own.filter(|k| !k.scale.is_empty()).map_or(grown, |k| sample(&k.scale, at).0);
+    (rotation, position, scale)
+}
+
+pub(crate) fn posed(rig: &Rigged, clip: &Value, bone: &str, t: f32) -> Option<Channels> {
+    let c = serde_json::from_value::<AnimClip>(clip.clone()).ok()?;
+    let n = rig.joint(bone)?;
+    Some(channels(rig, &c, &locals(rig, &c, t), n, t + c.from))
+}
+
 pub fn worlds(rig: &Rigged, locals: &[Trs]) -> Vec<Mat> {
     let mut out = vec![IDENTITY; rig.joints.len()];
     for &n in &rig.order {
@@ -97,19 +118,16 @@ pub fn pose(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         .map(|n| {
             let w = &ws[n];
             let up = rig.joints[n].parent.map_or(IDENTITY, |p| ws[p as usize]);
-            let keys = c.bones.get(&rig.joints[n].name);
             let frame = [up[0], up[1], up[4], up[5]].map(round);
-            let at = |list: Option<&Vec<Key<Vec2>>>, rest: [f32; 2]| {
-                list.filter(|k| !k.is_empty()).map_or(rest, |k| sample(k, t + c.from).0).map(round)
-            };
+            let (rotation, position, scale) = channels(&rig, &c, &ls, n, t + c.from);
             json!({
                 "name": rig.joints[n].name,
                 "at": picture(apply(w, [0.0; 3])),
                 "angle": round((-w[4]).atan2(w[0]).to_degrees()),
                 "frame": frame,
-                "rotation": keys.filter(|k| !k.rotation.is_empty()).map_or(0.0, |k| round(sample(&k.rotation, t + c.from))),
-                "position": at(keys.map(|k| &k.position), [0.0, 0.0]),
-                "scale": at(keys.map(|k| &k.scale), [1.0, 1.0]),
+                "rotation": round(rotation),
+                "position": position.map(round),
+                "scale": scale.map(round),
             })
         })
         .collect();

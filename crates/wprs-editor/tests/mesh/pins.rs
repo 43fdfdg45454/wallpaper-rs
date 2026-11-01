@@ -35,7 +35,10 @@ fn layers_follow_bones_and_points_placed_on_the_mesh() {
     let shown = info(&p, "net");
     assert_eq!(shown["bones"].as_array().unwrap().len(), 2);
     let points = shown["points"].as_array().unwrap();
-    assert!(points.contains(&json!({ "name": "hat_point", "at": [0.3, 0.5], "part": false })), "{points:?}");
+    assert!(
+        points.contains(&json!({ "name": "hat_point", "at": [0.3, 0.5], "part": false, "parent": "root" })),
+        "{points:?}"
+    );
     let path = p.doc["scene"]["assets"]["net"]["path"].as_str().unwrap().to_owned();
     let rig = wprs_scene::Rigged::decode(&std::fs::read(p.dir.join(path)).unwrap()).unwrap();
     let node = rig.joint("hat_point").unwrap();

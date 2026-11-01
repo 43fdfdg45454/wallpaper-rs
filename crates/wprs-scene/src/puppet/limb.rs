@@ -1,21 +1,10 @@
 use crate::Affine;
 use crate::rigged::Rigged;
-use crate::rigged::math::{Mat, Quat, Trs, conjugate, normalized, qmul};
+use crate::rigged::math::{Mat, Trs, conjugate, normalized, qmul};
 use std::f32::consts::PI;
 
-pub(crate) fn spin(q: Quat, v: [f32; 3]) -> [f32; 3] {
-    let p = qmul(qmul(q, [v[0], v[1], v[2], 0.0]), conjugate(q));
-    [p[0], p[1], p[2]]
-}
-
 pub(crate) fn tip(rig: &Rigged, n: usize) -> [f32; 3] {
-    if let Some(c) = rig.joints.iter().find(|j| j.parent == Some(n as u16)) {
-        return c.rest.t;
-    }
-    let j = &rig.joints[n];
-    let back = spin(conjugate(j.rest.r), j.rest.t);
-    let t: [f32; 3] = std::array::from_fn(|i| back[i] / j.rest.s[i].abs().max(1e-6));
-    if t[0].hypot(t[1]) < 1e-3 { [32.0, 0.0, 0.0] } else { t }
+    rig.tip(n)
 }
 
 pub(crate) fn pivot(w: &Mat) -> [f32; 2] {

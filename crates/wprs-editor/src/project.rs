@@ -69,6 +69,7 @@ impl Project {
             None => (History::default(), None),
         };
         let mut project = Project { dir: dir.to_owned(), doc, history, base, pending };
+        project.bring_back();
         if project.history.done.is_empty() && project.history.saved.is_none() {
             project.history.mark_saved();
         }
@@ -106,11 +107,13 @@ impl Project {
     fn step(&mut self, action: &Action, gesture: bool) -> Result<Vec<Op>> {
         self.ready()?;
         let ops = match action {
-            Action::Undo {} => {
-                return Ok(self.history.undo(&mut self.doc)?.map(|(_, o)| o).unwrap_or_default());
-            }
-            Action::Redo {} => {
-                return Ok(self.history.redo(&mut self.doc)?.map(|(_, o)| o).unwrap_or_default());
+            Action::Undo {} | Action::Redo {} => {
+                let moved = match action {
+                    Action::Undo {} => self.history.undo(&mut self.doc)?,
+                    _ => self.history.redo(&mut self.doc)?,
+                };
+                self.bring_back();
+                return Ok(moved.map(|(_, o)| o).unwrap_or_default());
             }
             action => match crate::files::act(&self.dir, &self.doc, action) {
                 Some(ops) => ops?,
@@ -180,6 +183,7 @@ impl Project {
         }
         self.write_files()?;
         self.history.mark_saved();
+        self.tuck();
         self.persist()
     }
 

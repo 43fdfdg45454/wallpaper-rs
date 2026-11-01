@@ -45,7 +45,11 @@ Item {
             if (!spot || !spot.at)
                 continue;
             const c = mapFromItem(g.parent, (other.offset[0] + other.position[0]) * g.ratio, (other.offset[1] + other.position[1]) * g.ratio);
-            out.push([spot.at, [c.x / width, c.y / height]]);
+            out.push({
+                "id": other.id,
+                "from": spot.at,
+                "to": [c.x / width, c.y / height]
+            });
         }
         return out;
     }
@@ -128,6 +132,15 @@ Item {
         target: limbs.mesh
     }
 
+    Connections {
+        function onRigChanged() {
+            limbs.pins = limbs.visible ? limbs.attached() : [];
+            drawing.requestPaint();
+        }
+
+        target: limbs.host
+    }
+
     SceneLimbLines {
         id: drawing
 
@@ -165,7 +178,7 @@ Item {
         onDropped: drop => limbs.pin(drop.source.layerId, Qt.point(drop.x, drop.y), "")
     }
 
-    SceneIkKnobs {
+    SceneLimbKnobs {
         anchors.fill: parent
         host: limbs
     }

@@ -1,5 +1,13 @@
 use crate::ops::{Op, set};
+use crate::tidy::Tree;
 use serde_json::{Value, json};
+
+#[derive(Clone, Copy)]
+pub(crate) enum Change<'a> {
+    Renamed(&'a str, &'a str),
+    Gone(&'a str, Option<&'a str>),
+    Moved,
+}
 
 fn swap(v: Option<&mut Value>, old: &str, new: &str) {
     if let Some(v) = v.filter(|v| *v == old) {
@@ -35,23 +43,44 @@ fn layer(l: &mut Value, old: &str, new: &str) {
     each(l, "hit").for_each(|b| swap(Some(b), old, new));
 }
 
-pub(crate) fn bone(doc: &Value, path: &str, old: &str, new: &str) -> Vec<Op> {
+fn follower(l: &mut Value, change: Change) {
+    let Some(a) = l.get_mut("attach") else { return };
+    match change {
+        Change::Renamed(old, new) => {
+            swap(a.get_mut("bone"), old, new);
+            swap(a.get_mut("point"), old, new);
+        }
+        Change::Gone(gone, _) if a["bone"] == gone || a["point"] == gone => {
+            drop(l.as_object_mut().and_then(|m| m.remove("attach")))
+        }
+        _ => {}
+    }
+}
+
+pub(crate) fn bone(doc: &Value, path: &str, change: Change, trees: (&Tree, &Tree)) -> Vec<Op> {
     let Some(id) = doc.pointer(path).map(|l| l["id"].clone()) else { return Vec::new() };
     let mut ops = Vec::new();
     for (at, before) in crate::layers::walk(doc) {
         let mut after = before.clone();
         if at == path {
-            layer(&mut after, old, new);
+            let (gone, keep) = match change {
+                Change::Renamed(old, new) => {
+                    layer(&mut after, old, new);
+                    (None, None)
+                }
+                Change::Gone(g, keep) => (Some(g), keep),
+                Change::Moved => (None, None),
+            };
+            crate::tidy::layer(&mut after, trees.0, trees.1, gone, keep);
         }
-        if before["attach"]["layer"] == id
-            && let Some(a) = after.get_mut("attach")
-        {
-            swap(a.get_mut("bone"), old, new);
-            swap(a.get_mut("point"), old, new);
+        if before["attach"]["layer"] == id {
+            follower(&mut after, change);
         }
         let (Some(a), Some(b)) = (before.as_object(), after.as_object()) else { continue };
         let fields = b.iter().filter(|(k, v)| *k != "layers" && a.get(*k) != Some(*v));
         ops.extend(fields.flat_map(|(k, v)| set(doc, &format!("{at}/{k}"), v.clone())));
+        let removed = a.keys().filter(|k| !b.contains_key(*k));
+        ops.extend(removed.map(|k| Op::Remove { path: format!("{at}/{k}") }));
     }
     ops
 }

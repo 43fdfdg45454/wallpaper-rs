@@ -53,6 +53,7 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::Wind(w) => crate::limbs::wind(doc, w),
         Action::Attach(a) => crate::attach::attach(dir, doc, a),
         Action::Parts(p) => crate::cutouts::parts(dir, doc, p),
+        Action::Point(p) => crate::spots::point(dir, doc, p),
         _ => return None,
     })
 }

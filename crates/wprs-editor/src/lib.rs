@@ -30,6 +30,7 @@ pub mod project;
 pub mod props;
 pub mod references;
 mod rename;
+mod revisions;
 mod rig;
 mod rigging;
 pub mod rigs;
@@ -41,8 +42,10 @@ pub mod settings;
 pub mod shaders;
 mod shapes;
 pub mod skin;
+mod spots;
 pub mod starters;
 pub mod texts;
+mod tidy;
 
 pub use actions::{ACTIONS, Action};
 pub use findings::{Problem, told, told_with};

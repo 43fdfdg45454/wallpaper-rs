@@ -59,6 +59,11 @@ ColumnLayout {
         }
     }
 
+    ScenePointList {
+        Layout.fillWidth: true
+        host: pins.host
+    }
+
     QQC2.Button {
         text: App.tr("Attach layers on the preview")
         icon.name: "insert-link"
@@ -72,7 +77,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: pins.active
         wrapMode: Text.Wrap
-        text: App.tr("Drag a layer onto a bone, or onto the mesh for a new point there; or pick a layer and click the preview.")
+        text: App.tr("Drag a layer onto a bone, or onto the mesh for a new point there; or pick a layer and click the preview. Drag the squares to move points and the rings to move the layers that follow.")
     }
 
     Flow {

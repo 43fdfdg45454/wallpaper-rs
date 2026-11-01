@@ -38,7 +38,8 @@ pub(super) fn joints(doc: &Gltf, rig: &mut Rigged) -> Result<(), String> {
     }
     for (i, n) in doc.nodes.iter().enumerate() {
         let name = n.name.clone().filter(|n| !n.is_empty()).unwrap_or_else(|| format!("node_{i}"));
-        rig.joints.push(Joint { name, parent: parents[i], rest: rest(n)? });
+        let point = n.extras["point"] == true;
+        rig.joints.push(Joint { name, parent: parents[i], rest: rest(n)?, point });
     }
     let mut order: Vec<u16> = (0..count).filter(|i| parents[*i].is_none()).map(|i| i as u16).collect();
     let mut at = 0;

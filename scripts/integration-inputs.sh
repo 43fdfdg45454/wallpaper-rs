@@ -48,6 +48,7 @@ ctl scene undo "$draft"
 ctl scene set "$draft" /scene/clock '{"seed": null}'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a fresh seed was not previewed"
 ctl scene undo "$draft"
+steps=$(ctl scene history "$draft" | grep -vc '(undone)$')
 ctl scene import "$draft" "$ROOT/tests/fixtures/green-64x32.png" --id leaf >/dev/null
 ctl scene mesh-from-picture "$draft" leaf --cells 8 --id puppet >/dev/null || fail "no mesh was cut from a picture"
 ctl scene bone "$draft" puppet root --at 0.2,0.5 || fail "the mesh took no root bone"
@@ -71,34 +72,55 @@ ctl scene bone "$draft" puppet paw --root || fail "the paw was not rehung"
 ctl scene auto-weights "$draft" puppet || fail "the weights were not bound to the bones again"
 ctl scene clip "$draft" puppet swing --add --length 2 --loop pingpong || fail "no clip was added"
 ctl scene key "$draft" puppet swing 1 --bone arm --rotation 30 --position 4,0 --scale 1.2 --ease cubic || fail "the arm was not keyed"
-ctl scene key "$draft" puppet swing 1.5 --bone arm --from 1 --copy && ctl scene key "$draft" puppet swing 0 --order body --value 3
+ctl scene key "$draft" puppet swing 1.5 --bone arm --from 1 --copy || fail "the key was not copied"
+ctl scene key "$draft" puppet swing 0 --order body --value 3 || fail "the order of a part was not keyed"
 ctl scene keys "$draft" puppet swing | grep -q '"cubic"' || fail "the keys of the clip were not listed"
-ctl scene clip "$draft" puppet swing --rename sway && ctl scene set "$draft" /scene/layers/1/animations '[{"clip": "sway"}]'
+ctl scene clip "$draft" puppet swing --rename sway || fail "the clip was not renamed"
+ctl scene set "$draft" /scene/layers/1/animations '[{"clip": "sway"}]'
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a keyed and painted mesh was not previewed"
 ctl scene ik "$draft" puppet add root arm --limit arm -45 45 --bend counterclockwise || fail "no chain was added"
 ctl scene ik "$draft" puppet set 1 --target 30,20 --weight 0.8 || fail "the chain was not aimed"
 ctl scene ik "$draft" puppet remove 0 || fail "the chain was not removed"
 ctl scene physics "$draft" puppet add arm --mode spring --stiffness 0.3 --gravity -2 || fail "the arm does not swing"
 ctl scene physics "$draft" puppet rope tail '0.6,0.6;0.7,0.7;0.8,0.8' --parent arm --wind 0.5 || fail "no rope was drawn"
+ctl scene physics "$draft" puppet add arm --rotation -20,20 --translation -4,4 || fail "the swing of the arm was not bounded"
+ctl scene physics "$draft" puppet add arm --free rotation || fail "the bound of the arm was not lifted"
 ctl scene physics "$draft" puppet remove arm || fail "the arm still swings"
 ctl scene wind "$draft" --angle 30 --strength 60 --noise 0.5 || fail "the wind was not set"
 ctl scene add-layer "$draft" solid --id badge >/dev/null
 ctl scene attach "$draft" badge --to puppet --bone arm --inherit position,rotation || fail "the layer was not attached"
 ctl scene attach "$draft" badge --point 0.5,0.4 || fail "the layer was not pinned to a new point"
+ctl scene attach "$draft" badge --nudge 4,-2 || fail "the layer was not moved along its point"
+ctl scene point "$draft" puppet pin --at 0.5,0.3 || fail "no point was placed"
+ctl scene point "$draft" puppet pin --rename peg --parent root || fail "the point was not renamed and rehung"
+ctl scene bones "$draft" puppet | grep -q '"peg"' || fail "the point was not listed"
+ctl scene point "$draft" puppet peg --remove || fail "the point was not removed"
 ctl scene parts "$draft" puppet --order body 2 --hide body || fail "the part was not ordered"
 ctl scene parts "$draft" puppet --show body || fail "the part was not shown"
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with chains, a rope, wind and attachments was not previewed"
 ctl scene attach "$draft" badge --detach || fail "the layer was not let go"
+ctl scene bone "$draft" puppet tip --parent arm --at 0.9,0.5 || fail "the mesh took no tip"
+ctl scene ik "$draft" puppet add arm tip --limit tip -30 30 || fail "no chain to the tip was added"
+ctl scene physics "$draft" puppet add tip || fail "the tip does not swing"
+ctl scene key "$draft" puppet sway 0.5 --bone tip --rotation 10 || fail "the tip was not keyed"
+ctl scene bone "$draft" puppet tip --remove || fail "the tip was not removed"
+ctl scene validate "$draft" >/dev/null || fail "removing a bone left the scene invalid"
+ctl scene undo "$draft"
+ctl scene bone "$draft" puppet arm --root || fail "the arm was not rehung"
+ctl scene validate "$draft" >/dev/null || fail "rehanging a bone left the scene invalid"
 ctl scene import "$draft" "$ROOT/tests/fixtures/parts.glb" --id body >/dev/null
 ctl scene add "$draft" /scene/layers/- '{"id": "body", "type": "mesh", "mesh": "body", "size": [100, 100]}'
 ctl scene bone "$draft" body tail --parent hip --at 0.8,0.8 || fail "a mesh of several parts took no bone"
 ctl scene expression "$draft" body happy --shape smile=0.8 || fail "no expression was made"
 ctl scene expression "$draft" body happy --rename glad || fail "the expression was not renamed"
-ctl scene clip "$draft" body grin --add
+ctl scene clip "$draft" body grin --add || fail "no clip was added to the mesh of several parts"
 ctl scene key "$draft" body grin 0.5 --shape smile --weight 0.5 || fail "the blend shape was not keyed"
 ctl scene parts "$draft" body --clip chest legs --order legs -1 || fail "the part was not cut to another"
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a mesh of several parts was not previewed"
-for _ in $(seq 44); do ctl scene undo "$draft"; done
+ctl scene build "$draft" -o "$WORK/meshes.wpak" >/dev/null || fail "the scene with meshes was not built"
+packed=$(python3 -c "import sys, zipfile; print(sum(n.startswith('meshes/') for n in zipfile.ZipFile(sys.argv[1]).namelist()))" "$WORK/meshes.wpak")
+[ "$packed" = 2 ] || fail "the package carries $packed meshes instead of the two in use"
+while [ "$(ctl scene history "$draft" | grep -vc '(undone)$')" -gt "$steps" ]; do ctl scene undo "$draft"; done
 "$BIN/probe" "$s15" 4 --hold >"$WORK/edit-frames.out" 2>&1 & counter=$!; pids+=("$counter")
 sleep 1
 ctl scene set "$draft" /scene/canvas/background '#0000ff'

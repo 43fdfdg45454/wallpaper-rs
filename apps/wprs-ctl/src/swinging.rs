@@ -31,6 +31,8 @@ pub struct Tuning {
         help = "Pixels the head of the bone may move each way"
     )]
     translation: Option<String>,
+    #[arg(long, value_parser = ["rotation", "translation"], help = "Lift a bound again")]
+    free: Vec<String>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -79,6 +81,7 @@ fn tuned(layer: String, bones: Vec<String>, t: Tuning) -> BodyEdit {
         wind,
         rotation,
         translation,
+        free: t.free,
         rope,
         parent,
         remove,

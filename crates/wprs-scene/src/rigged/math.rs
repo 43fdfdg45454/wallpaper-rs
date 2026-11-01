@@ -152,3 +152,10 @@ pub fn turn(clockwise: f32) -> Quat {
     let (s, c) = (-clockwise.to_radians() / 2.0).sin_cos();
     [0.0, 0.0, s, c]
 }
+
+pub fn beyond(rest: &Trs) -> [f32; 3] {
+    let [x, y, z] = rest.t;
+    let back = qmul(qmul(conjugate(rest.r), [x, y, z, 0.0]), rest.r);
+    let t: [f32; 3] = std::array::from_fn(|i| back[i] / rest.s[i].abs().max(1e-6));
+    if t[0].hypot(t[1]) < 1e-3 { [32.0, 0.0, 0.0] } else { t }
+}

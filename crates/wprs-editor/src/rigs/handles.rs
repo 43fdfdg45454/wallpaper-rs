@@ -2,7 +2,7 @@ use super::round;
 use crate::skin::Skin;
 use serde_json::{Value, json};
 use std::path::Path;
-use wprs_scene::mesh_math::Mat;
+use wprs_scene::mesh_math::{Mat, apply, beyond};
 
 struct Frame<'a> {
     skin: &'a Skin,
@@ -20,16 +20,10 @@ impl Frame<'_> {
 
     fn tail(&self, n: usize) -> [f32; 2] {
         let s = self.skin;
-        let child = (0..s.names.len()).find(|c| s.parents[*c] == Some(n) && s.bones.contains(c));
-        let [hx, hy] = self.head(n);
-        match (child, s.up(n)) {
-            (Some(c), _) => self.head(c),
-            (None, Some(p)) => {
-                let [px, py] = self.head(p);
-                [2.0 * hx - px, 2.0 * hy - py]
-            }
-            (None, None) => [hx + 0.1, hy],
-        }
+        let child = (0..s.names.len()).find(|c| s.parents[*c] == Some(n) && !s.is_point(*c));
+        let end =
+            child.map_or_else(|| apply(&self.worlds[n], beyond(&s.locals[n])), |c| s.head(&self.worlds, c));
+        s.picture(end)
     }
 
     fn angle(&self, n: usize) -> f64 {
@@ -80,7 +74,8 @@ pub fn handles(dir: &Path, doc: &Value, id: &str) -> Value {
         let n = f.node(p["bone"].as_str()?)?;
         let gravity = p["gravity"].as_f64().unwrap_or(0.0);
         Some(json!({ "bone": p["bone"], "mode": p.get("mode").unwrap_or(&json!("spring")), "at": f.at(n),
-            "tip": f.tail(n).map(round), "gravity": gravity }))
+            "tip": f.tail(n).map(round), "gravity": gravity, "rest": f.angle(n),
+            "rotation": p["rotation"], "translation": p["translation"] }))
     });
     let [w, h] = skin.size;
     json!({ "size": [w, h], "ik": ik.collect::<Vec<_>>(), "bodies": bodies.collect::<Vec<_>>() })

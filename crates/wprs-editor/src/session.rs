@@ -32,6 +32,7 @@ fn sweep(dir: &Path, keep: &Path) {
     for (i, (modified, path)) in found.iter().enumerate() {
         if i < excess || *modified < old {
             fs::remove_file(path).ok();
+            fs::remove_dir_all(path.with_extension("meshes")).ok();
         }
     }
 }
@@ -42,6 +43,10 @@ fn state(dir: &Path) -> Result<PathBuf> {
     let base =
         dirs::state_dir().ok_or_else(|| said("editor.no_state_folder", "there is no state folder", &[]))?;
     Ok(base.join("wallpaper-rs").join("editor").join(format!("{}.json", &name[..32])))
+}
+
+pub(crate) fn stash(dir: &Path) -> Result<PathBuf> {
+    Ok(state(dir)?.with_extension("meshes"))
 }
 
 pub(crate) fn saved(dir: &Path) -> Option<Saved> {
@@ -67,6 +72,9 @@ impl Project {
     }
 
     pub fn forget(&self) -> Result<()> {
+        if let Ok(stash) = stash(&self.dir) {
+            fs::remove_dir_all(stash).ok();
+        }
         match fs::remove_file(state(&self.dir)?) {
             Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
             _ => Ok(()),
@@ -78,6 +86,7 @@ impl Project {
         if keep {
             (self.doc, self.history) = (doc, history);
         }
+        self.bring_back();
         self.persist()
     }
 }

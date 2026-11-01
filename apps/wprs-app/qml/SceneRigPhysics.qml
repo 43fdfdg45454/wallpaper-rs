@@ -90,6 +90,12 @@ ColumnLayout {
                     }
                 }
             }
+
+            ScenePhysicsBounds {
+                Layout.fillWidth: true
+                owner: swing
+                body: body.modelData
+            }
         }
     }
 
@@ -113,7 +119,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: swing.mesh.mode === "rope" || swing.mesh.mode === "bodies"
         wrapMode: Text.Wrap
-        text: swing.mesh.mode === "rope" ? App.tr("Drag along where the rope hangs: it gets up to 9 new bones and hangs from the picked bone, or the nearest one.") : App.tr("Click a bone to make it swing, or to stop it. The arrows show gravity.")
+        text: swing.mesh.mode === "rope" ? App.tr("Drag along where the rope hangs: it gets up to 9 new bones and hangs from the picked bone, or the nearest one.") : App.tr("Click a bone to make it swing, or to stop it. Drag the squares to set gravity and the dots to bound the turn.")
     }
 
     RowLayout {

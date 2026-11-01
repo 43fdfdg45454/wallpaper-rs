@@ -4,6 +4,7 @@ mod cues;
 mod decode;
 mod kit;
 mod pin;
+mod points;
 mod pose;
 mod reach;
 mod settle;

@@ -58,8 +58,11 @@ pub(crate) fn size(doc: &Value, layer: &Value) -> [f32; 2] {
 impl Skin {
     pub fn load(dir: &Path, doc: &Value, layer: &Value) -> Result<(String, Skin)> {
         let (id, path, rig) = rigged(dir, doc, layer)?;
-        let glb = Glb::read(&std::fs::read(dir.join(&path))?)?;
-        Ok((id, Skin::from(glb, &rig, size(doc, layer))?))
+        Ok((id, Skin::read(dir, &path, &rig, size(doc, layer))?))
+    }
+
+    pub fn read(dir: &Path, path: &str, rig: &Rigged, size: [f32; 2]) -> Result<Skin> {
+        Skin::from(Glb::read(&std::fs::read(dir.join(path))?)?, rig, size)
     }
 
     pub fn save(self, dir: &Path, doc: &Value, id: &str) -> Result<Vec<Op>> {

@@ -29,6 +29,7 @@ pub(super) struct Node {
     pub scale: Option<[f32; 3]>,
     pub matrix: Option<[f32; 16]>,
     pub weights: Vec<f32>,
+    pub extras: serde_json::Value,
 }
 
 #[derive(Deserialize, Default)]

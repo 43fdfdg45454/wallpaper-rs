@@ -40,7 +40,7 @@ pub(super) fn bodies(rig: &Rigged, m: &MeshLayer, order: &[u16]) -> Vec<Body> {
             let mut nodes = vec![rig.joint(&p.bone)? as u16];
             while p.mode == Mode::Rope && nodes.len() < crate::MAX_CHAIN {
                 let last = *nodes.last()?;
-                let next = rig.joints.iter().position(|j| j.parent == Some(last));
+                let next = rig.child(last as usize);
                 match next.filter(|c| !own(*c)) {
                     Some(c) => nodes.push(c as u16),
                     None => break,

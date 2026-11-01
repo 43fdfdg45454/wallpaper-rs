@@ -1,6 +1,8 @@
 use crate::layers::{clean, taken, unique};
 use crate::ops::{Op, escape, set};
+use crate::rename::Change;
 use crate::skin::Skin;
+use crate::tidy::Tree;
 use anyhow::{Result, anyhow, ensure};
 use serde_json::{Value, json};
 use std::path::Path;
@@ -30,8 +32,9 @@ pub(crate) fn asset<'a>(doc: &'a Value, id: &str) -> Option<&'a str> {
 }
 
 pub(crate) fn store(dir: &Path, id: &str, glb: &[u8]) -> Result<String> {
-    let saved =
-        (1..).map(|n| format!("meshes/{id}-{n}.glb")).find(|p| !dir.join(p).exists()).unwrap_or_default();
+    let stash = crate::session::stash(dir).ok();
+    let free = |p: &String| !dir.join(p).exists() && stash.as_ref().is_none_or(|s| !s.join(p).exists());
+    let saved = (1..).map(|n| format!("meshes/{id}-{n}.glb")).find(free).unwrap_or_default();
     std::fs::create_dir_all(dir.join("meshes"))?;
     std::fs::write(dir.join(&saved), glb)?;
     Ok(saved)
@@ -68,6 +71,7 @@ pub(crate) fn mesh_from_picture(dir: &Path, doc: &Value, c: &Cutting) -> Result<
 pub(crate) fn bone(dir: &Path, doc: &Value, b: &Boning) -> Result<Vec<Op>> {
     let (path, layer) = crate::actions::layer(doc, b.layer)?;
     let (id, mut skin) = Skin::load(dir, doc, layer)?;
+    let (names, parents) = (skin.names.clone(), skin.parents.clone());
     let found = skin.bone(b.name).ok();
     let parent = match b.parent {
         Some("") => Some(None),
@@ -75,9 +79,13 @@ pub(crate) fn bone(dir: &Path, doc: &Value, b: &Boning) -> Result<Vec<Op>> {
         None => None,
     };
     let place = |s: &Skin, at: [f32; 2]| s.model(at.map(|v| v.clamp(-1.0, 2.0)));
-    let mut ops = Vec::new();
-    match found {
-        Some(k) if b.remove => skin.remove_bone(k)?,
+    let change = match found {
+        Some(k) if b.remove => {
+            let heir = skin.up(k).map(|h| skin.names[h].clone());
+            skin.remove_bone(k)?;
+            let keep = heir.or_else(|| skin.bones.first().map(|h| skin.names[*h].clone()));
+            Some((Change::Gone(b.name, None), keep))
+        }
         None if b.remove => {
             return Err(anyhow!(said("editor.no_bone", "there is no bone \"%1\"", &[&b.name])));
         }
@@ -89,10 +97,13 @@ pub(crate) fn bone(dir: &Path, doc: &Value, b: &Boning) -> Result<Vec<Op>> {
                 let at = place(&skin, at);
                 skin.place(k, at);
             }
-            if let Some(to) = b.to.filter(|t| *t != b.name) {
-                skin.named(to)?;
-                skin.names[k] = to.to_owned();
-                ops.extend(crate::rename::bone(doc, &path, b.name, to));
+            match b.to.filter(|t| *t != b.name) {
+                Some(to) => {
+                    skin.named(to)?;
+                    skin.names[k] = to.to_owned();
+                    Some((Change::Renamed(b.name, to), None))
+                }
+                None => Some((Change::Moved, None)),
             }
         }
         None => {
@@ -102,8 +113,18 @@ pub(crate) fn bone(dir: &Path, doc: &Value, b: &Boning) -> Result<Vec<Op>> {
             );
             let at = place(&skin, b.at.unwrap_or([0.5, 0.5]));
             skin.add_bone(b.name, parent.flatten(), at)?;
+            None
         }
-    }
+    };
+    let before = Tree { names: &names, parents: &parents };
+    let after = Tree { names: &skin.names, parents: &skin.parents };
+    let ops = change.map_or_else(Vec::new, |(c, keep)| {
+        let c = match c {
+            Change::Gone(g, _) => Change::Gone(g, keep.as_deref()),
+            c => c,
+        };
+        crate::rename::bone(doc, &path, c, (&before, &after))
+    });
     let mut saved = skin.save(dir, doc, &id)?;
     saved.extend(ops);
     Ok(saved)

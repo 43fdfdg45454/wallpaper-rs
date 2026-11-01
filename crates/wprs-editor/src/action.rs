@@ -7,7 +7,7 @@ mod limbs;
 mod names;
 mod rigging;
 
-pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, Spot, WindEdit};
+pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use names::ACTIONS;
 use names::{half, whole};
 pub use rigging::{
@@ -187,6 +187,7 @@ pub enum Action {
     Physics(BodyEdit),
     Wind(WindEdit),
     Attach(AttachEdit),
+    Point(PointEdit),
     Parts(PartsEdit),
     Undo {},
     Redo {},

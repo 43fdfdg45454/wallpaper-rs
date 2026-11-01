@@ -17,6 +17,7 @@ QtObject {
     property string root
     property string part
     property string attaching
+    property string spot
     property var inherit: ["position", "rotation", "scale"]
     property bool still
     readonly property real time: clip !== "" ? page.clock : 0
@@ -52,6 +53,13 @@ QtObject {
     function reset() {
         still = true;
         Qt.callLater(() => still = false);
+    }
+
+    function pending(bone) {
+        const p = pose && pose.bone === bone ? pose : null;
+        const out = {};
+        (p?.changed ?? []).forEach(c => out[c] = p[c]);
+        return out;
     }
 
     function pointer(id) {

@@ -33,6 +33,7 @@ pub struct Joint {
     pub name: String,
     pub parent: Option<u16>,
     pub rest: Trs,
+    pub point: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -84,6 +85,14 @@ impl Rigged {
 
     pub fn joint(&self, name: &str) -> Option<usize> {
         self.joints.iter().position(|j| j.name == name)
+    }
+
+    pub fn child(&self, n: usize) -> Option<usize> {
+        self.joints.iter().position(|j| j.parent == Some(n as u16) && !j.point)
+    }
+
+    pub fn tip(&self, n: usize) -> [f32; 3] {
+        self.child(n).map_or_else(|| math::beyond(&self.joints[n].rest), |c| self.joints[c].rest.t)
     }
 
     pub fn part(&self, name: &str) -> Option<usize> {

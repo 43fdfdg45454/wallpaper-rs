@@ -10,12 +10,13 @@ fn ease(k: &Value) -> Value {
     }
 }
 
-fn row(kind: &str, name: &str, channel: &str, keys: &Value) -> Value {
+fn row(kind: &str, name: &str, channel: &str, keys: &Value, from: f64) -> Value {
+    let t = |k: &Value| ((k[0].as_f64().unwrap_or(0.0) - from) * 1e4).round() / 1e4;
     let keys: Vec<Value> = keys
         .as_array()
         .into_iter()
         .flatten()
-        .map(|k| json!({ "t": k[0], "value": k[1], "ease": ease(k) }))
+        .map(|k| json!({ "t": t(k), "value": k[1], "ease": ease(k) }))
         .collect();
     json!({ "kind": kind, "name": name, "channel": channel, "keys": keys })
 }
@@ -24,16 +25,17 @@ pub fn keys(dir: &Path, doc: &Value, id: &str, clip: &str) -> Value {
     let Ok((_, layer)) = crate::actions::layer(doc, id) else { return Value::Null };
     let Ok((_, c)) = crate::clips::found(layer, clip) else { return Value::Null };
     let mut rows = Vec::new();
+    let from = c["from"].as_f64().unwrap_or(0.0);
     for (bone, tracks) in c["bones"].as_object().into_iter().flatten() {
         for channel in ["rotation", "position", "scale"] {
             if tracks.get(channel).is_some() {
-                rows.push(row("bone", bone, channel, &tracks[channel]));
+                rows.push(row("bone", bone, channel, &tracks[channel], from));
             }
         }
     }
     for kind in ["shapes", "order"] {
         for (name, keys) in c[kind].as_object().into_iter().flatten() {
-            rows.push(row(kind.trim_end_matches('s'), name, "", keys));
+            rows.push(row(kind.trim_end_matches('s'), name, "", keys, from));
         }
     }
     let rig = crate::skin::rigged(dir, doc, layer).ok().map(|r| r.2);

@@ -96,17 +96,12 @@ QQC2.ToolBar {
                 icon.name: "keyframe-add"
                 enabled: clipBar.mesh.bone !== ""
                 onClicked: {
-                    const p = clipBar.mesh.pose && clipBar.mesh.pose.bone === clipBar.mesh.bone ? clipBar.mesh.pose : {};
                     clipBar.line.key({
                         "kind": "bone",
                         "name": clipBar.mesh.bone
                     }, Object.assign({
                         "time": clipBar.line.now
-                    }, p.bone ? {
-                        "rotation": p.rotation,
-                        "position": p.position,
-                        "scale": p.scale
-                    } : {}));
+                    }, clipBar.mesh.pending(clipBar.mesh.bone)));
                     clipBar.mesh.pose = null;
                 }
             }

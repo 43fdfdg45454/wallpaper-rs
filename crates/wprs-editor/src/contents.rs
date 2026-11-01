@@ -53,7 +53,10 @@ pub fn unused(dir: &Path, doc: &Value) -> Vec<String> {
 }
 
 pub fn prune(dir: &Path, doc: &Value) -> Result<Vec<String>> {
-    let gone: Vec<String> = unused(dir, doc).into_iter().filter(|p| p.starts_with("assets/")).collect();
+    let mut gone: Vec<String> = unused(dir, doc).into_iter().filter(|p| p.starts_with("assets/")).collect();
+    let named = crate::session::saved(dir).map(|s| crate::revisions::named(&s.history)).unwrap_or_default();
+    gone.extend(crate::revisions::spare(dir, doc).into_iter().filter(|p| !named.contains(p)));
+    gone.sort();
     gone.iter().try_for_each(|p| fs::remove_file(dir.join(p)))?;
     Ok(gone)
 }

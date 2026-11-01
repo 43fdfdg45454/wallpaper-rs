@@ -289,7 +289,7 @@ msgstr "assets/ tiene demasiados archivos llamados %1"
 msgid "the asset %1 exists"
 msgstr "el recurso %1 ya existe"
 
-#: crates/wprs-editor/src/attach.rs
+#: crates/wprs-editor/src/attach.rs crates/wprs-editor/src/spots.rs
 msgid "a point is placed in fractions of the layer"
 msgstr "un punto se coloca en fracciones de la capa"
 
@@ -325,6 +325,16 @@ msgstr "indica qué hueso o punto sigue"
 msgid "an offset is two numbers of pixels"
 msgstr "un desplazamiento son dos números de píxeles"
 
+#: crates/wprs-editor/src/attach/nudge.rs
+msgid "a layer is moved by two numbers of pixels"
+msgstr "una capa se mueve con dos números de píxeles"
+
+#: crates/wprs-editor/src/attach/nudge.rs crates/wprs-editor/src/clips/keyed.rs
+#: crates/wprs-editor/src/limbs.rs crates/wprs-editor/src/rig.rs
+#: crates/wprs-editor/src/skin/mod.rs
+msgid "there is no bone \"%1\""
+msgstr "no hay ningún hueso «%1»"
+
 #: crates/wprs-editor/src/bodies.rs
 msgid "%1 goes from 0 to 1"
 msgstr "%1 va de 0 a 1"
@@ -336,6 +346,10 @@ msgstr "la gravedad va de -10 a 10"
 #: crates/wprs-editor/src/bodies.rs
 msgid "%1 goes from a smaller to a larger value, within %2"
 msgstr "%1 va de un valor menor a uno mayor, dentro de %2"
+
+#: crates/wprs-editor/src/bodies.rs
+msgid "rotation and translation are the bounds that can be freed"
+msgstr "rotation y translation son los límites que se pueden quitar"
 
 #: crates/wprs-editor/src/bodies.rs
 msgid "a rope takes one name for its bones"
@@ -400,11 +414,6 @@ msgstr "una malla tiene como mucho %1 clips"
 #: crates/wprs-editor/src/clips/keyed.rs
 msgid "a key is for one bone, blend shape or part order"
 msgstr "una clave es de un solo hueso, forma de mezcla u orden de parte"
-
-#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/limbs.rs
-#: crates/wprs-editor/src/rig.rs crates/wprs-editor/src/skin/mod.rs
-msgid "there is no bone \"%1\""
-msgstr "no hay ningún hueso «%1»"
 
 #: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/shapes.rs
 msgid "there is no blend shape \"%1\""
@@ -882,6 +891,10 @@ msgstr "un hueso no puede colgar de sí mismo ni de sus hijos"
 msgid "the bone carries a part of the mesh and stays"
 msgstr "el hueso lleva una parte de la malla y se queda"
 
+#: crates/wprs-editor/src/skin/points.rs
+msgid "there is no point \"%1\""
+msgstr "no hay ningún punto «%1»"
+
 #: crates/wprs-editor/src/skin/read.rs
 msgid ""
 "bones and weights are edited here on meshes whose parts are each drawn once, "
@@ -889,6 +902,10 @@ msgid ""
 msgstr ""
 "aquí se editan huesos y pesos de mallas cuyas partes se dibujan una sola "
 "vez, en 64 primitivas como mucho"
+
+#: crates/wprs-editor/src/spots.rs
+msgid "say where the new point goes"
+msgstr "indica dónde va el punto nuevo"
 
 #: crates/wprs-editor/src/starters.rs
 msgid "%1 is not a starting point; use one of %2"

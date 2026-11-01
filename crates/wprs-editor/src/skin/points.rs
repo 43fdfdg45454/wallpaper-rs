@@ -1,11 +1,17 @@
 use super::Skin;
 use anyhow::{Result, anyhow};
 use serde_json::json;
+use wprs_core::message::said;
 use wprs_scene::mesh_math::{IDENTITY, decompose, invert, mul};
 
 impl Skin {
     pub fn is_point(&self, node: usize) -> bool {
         self.glb.json["nodes"][node]["extras"]["point"] == true
+    }
+
+    pub fn point(&self, name: &str) -> Result<usize> {
+        let found = (0..self.names.len()).find(|n| self.is_point(*n) && self.names[*n] == name);
+        found.ok_or_else(|| anyhow!(said("editor.no_point", "there is no point \"%1\"", &[&name])))
     }
 
     pub fn lead(&self, [x, y]: [f32; 2]) -> Option<usize> {

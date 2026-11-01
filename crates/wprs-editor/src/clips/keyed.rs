@@ -1,5 +1,6 @@
 use crate::action::{ClipKey, KeyEase};
 use crate::ops::{Op, escape, set};
+use crate::rigs::Channels;
 use anyhow::{Result, anyhow, ensure};
 use serde_json::{Value, json};
 use wprs_core::message::said;
@@ -27,7 +28,7 @@ fn ease(e: KeyEase) -> Option<Value> {
     }
 }
 
-fn tracks(k: &ClipKey, known: &wprs_scene::Rigged) -> Result<Vec<Track>> {
+fn tracks(k: &ClipKey, known: &wprs_scene::Rigged, posed: Option<Channels>) -> Result<Vec<Track>> {
     let ClipKey { bone, rotation, position, scale, shape, weight, order, value, .. } = k;
     let one = [bone.is_some(), shape.is_some(), order.is_some()].iter().filter(|x| **x).count() == 1;
     ensure!(one, said("editor.key_what", "a key is for one bone, blend shape or part order", &[]));
@@ -39,10 +40,12 @@ fn tracks(k: &ClipKey, known: &wprs_scene::Rigged) -> Result<Vec<Track>> {
     };
     if let Some(b) = bone {
         known.joint(b).ok_or_else(|| anyhow!(said("editor.no_bone", "there is no bone \"%1\"", &[b])))?;
+        let (r, p, s) = (posed.map(|p| p.0), posed.map(|p| p.1), posed.map(|p| p.2));
+        let pair = |v: Option<[f32; 2]>| v.map(|v| json!(v.map(num)));
         let all = [
-            track(["bones", b, "rotation"], rotation.map(num), json!(0), 1e5),
-            track(["bones", b, "position"], position.map(|v| json!(v.map(num))), json!([0, 0]), 1e5),
-            track(["bones", b, "scale"], scale.map(|v| json!(v.map(num))), json!([1, 1]), 1e3),
+            track(["bones", b, "rotation"], rotation.or(r).map(num), json!(0), 1e5),
+            track(["bones", b, "position"], pair(position.or(p)), json!([0, 0]), 1e5),
+            track(["bones", b, "scale"], pair(scale.or(s)), json!([1, 1]), 1e3),
         ];
         let named = rotation.is_some() || position.is_some() || scale.is_some();
         return Ok(all.into_iter().filter(|t| !named || t.value.is_some()).collect());
@@ -69,10 +72,15 @@ pub(crate) fn key(dir: &std::path::Path, doc: &Value, k: &ClipKey) -> Result<Vec
         fine(*t) && from.is_none_or(fine),
         said("editor.time_must_more", "the time must be 0 or more seconds", &[])
     );
-    let (t, from) = (at(*t), from.map(at));
+    let base = found["from"].as_f64().unwrap_or(0.0);
+    let plain =
+        !remove && from.is_none() && k.rotation.is_none() && k.position.is_none() && k.scale.is_none();
+    let posed =
+        k.bone.as_deref().filter(|_| plain).and_then(|b| crate::rigs::posed(&known, found, b, *t as f32));
+    let (t, from) = (at(*t + base), from.map(|f| at(f + base)));
     let mut c = found.clone();
     let mut done = 0;
-    for track in tracks(k, &known)? {
+    for track in tracks(k, &known, posed)? {
         let pointer = format!("/{}", track.path.iter().map(|p| escape(p)).collect::<Vec<_>>().join("/"));
         let mut keys = c.pointer(&pointer).and_then(Value::as_array).cloned().unwrap_or_default();
         let near = |keys: &[Value], s: f64| keys.iter().position(|k| (time(k) - s).abs() < 1e-3);
@@ -102,7 +110,7 @@ pub(crate) fn key(dir: &std::path::Path, doc: &Value, k: &ClipKey) -> Result<Vec
         done += 1;
         store(&mut c, &track.path, keys);
     }
-    let when = from.unwrap_or(t);
+    let when = k.from.unwrap_or(k.time);
     ensure!(done > 0, said("editor.no_clip_key", "the clip has no key there at %1 s", &[&when]));
     Ok(set(doc, &format!("{path}/clips/{i}"), c))
 }

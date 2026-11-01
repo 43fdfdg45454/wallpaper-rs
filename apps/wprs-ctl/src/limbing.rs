@@ -3,7 +3,7 @@ use crate::rigging::pair;
 use clap::{Args, Subcommand};
 use serde_json::json;
 use std::path::PathBuf;
-use wprs_editor::actions::{Action, AttachEdit, IkEdit, PartsEdit, Spot, WindEdit};
+use wprs_editor::actions::{Action, IkEdit, PartsEdit, WindEdit};
 
 #[derive(Subcommand, Debug)]
 pub enum Limbing {
@@ -48,29 +48,8 @@ pub enum Limbing {
         #[arg(long, conflicts_with_all = ["angle", "strength", "gusts"], help = "No wind")]
         off: bool,
     },
-    #[command(about = "Pin a layer to a bone or a point of a mesh layer, or let it go")]
-    Attach {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = ID)]
-        layer: String,
-        #[arg(long, value_name = "MESH_LAYER", help = "The mesh layer it follows")]
-        to: Option<String>,
-        #[arg(long, conflicts_with = "point", help = "The bone it follows")]
-        bone: Option<String>,
-        #[arg(
-            long,
-            value_name = "X,Y or NAME",
-            help = "A new point at X,Y in fractions of the mesh layer, or a node of its file"
-        )]
-        point: Option<String>,
-        #[arg(long, allow_hyphen_values = true, value_name = "X,Y", help = "Pixels along the bone")]
-        offset: Option<String>,
-        #[arg(long, value_delimiter = ',', value_parser = ["position", "rotation", "scale"], help = "What it follows, comma separated (all when unset)")]
-        inherit: Option<Vec<String>>,
-        #[arg(long, conflicts_with_all = ["to", "bone", "point"], help = "Follow nothing again")]
-        detach: bool,
-    },
+    #[command(flatten)]
+    Marking(crate::marking::Marking),
     #[command(about = "Order, hide, show and cut the parts of a mesh layer to show only over another part")]
     Parts {
         #[arg(help = DIR)]
@@ -174,13 +153,7 @@ pub(crate) fn action(command: Limbing) -> Result<(PathBuf, Action), Box<Author>>
         Limbing::Wind { dir, angle, strength, gusts, off } => {
             (dir, Action::Wind(WindEdit { angle, strength, gusts, off }))
         }
-        Limbing::Attach { dir, layer, to, bone, point, offset, inherit, detach } => {
-            let point = point.map(|p| pair(&p).map_or(Spot::Name(p), Spot::At));
-            let inherit =
-                inherit.map(|l| l.iter().filter_map(|f| serde_json::from_value(json!(f)).ok()).collect());
-            let offset = offset.as_deref().and_then(pair);
-            (dir, Action::Attach(AttachEdit { layer, to, bone, point, offset, inherit, detach }))
-        }
+        Limbing::Marking(command) => crate::marking::action(command),
         Limbing::Parts { dir, layer, order, hide, show, clip, unclip } => {
             let order =
                 order.chunks(2).filter_map(|c| Some((c[0].clone(), c.get(1)?.parse().ok()?))).collect();

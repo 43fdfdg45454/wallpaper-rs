@@ -10,7 +10,7 @@ Item {
     required property var host
     readonly property var mesh: host.mesh
     property var shown: null
-    readonly property var colors: shown ? (mesh.view === "owner" ? shown.owner : shown.heat) : []
+    readonly property string picture: shown ? (mesh.view === "owner" ? shown.owner : shown.heat) : ""
 
     function load() {
         if (!visible)
@@ -18,7 +18,6 @@ Item {
         shown = mesh.ask(host.layerId, {
             "weights": mesh.bone || null
         });
-        paper.requestPaint();
     }
 
     onVisibleChanged: load()
@@ -27,10 +26,6 @@ Item {
     Connections {
         function onBoneChanged() {
             heat.load();
-        }
-
-        function onViewChanged() {
-            paper.requestPaint();
         }
 
         target: heat.mesh
@@ -44,28 +39,12 @@ Item {
         target: heat.host.gizmo.page.editor
     }
 
-    Canvas {
-        id: paper
-
+    Image {
         anchors.fill: parent
         opacity: 0.75
-        onPaint: {
-            const ctx = getContext("2d");
-            ctx.reset();
-            const s = heat.shown;
-            if (!s)
-                return;
-            s.triangles.forEach((t, i) => {
-                const a = s.points[t[0]], b = s.points[t[1]], c = s.points[t[2]];
-                ctx.fillStyle = heat.colors[i];
-                ctx.beginPath();
-                ctx.moveTo(a[0] * width, a[1] * height);
-                ctx.lineTo(b[0] * width, b[1] * height);
-                ctx.lineTo(c[0] * width, c[1] * height);
-                ctx.closePath();
-                ctx.fill();
-            });
-        }
+        smooth: true
+        cache: false
+        source: heat.picture
     }
 
     Flow {

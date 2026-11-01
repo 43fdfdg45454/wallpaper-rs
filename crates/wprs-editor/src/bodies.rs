@@ -34,6 +34,13 @@ fn tune(entry: &mut Map<String, Value>, b: &BodyEdit) -> Result<()> {
         );
         entry.insert(key.into(), json!([num(lo), num(hi)]));
     }
+    for key in &b.free {
+        ensure!(
+            ["rotation", "translation"].contains(&key.as_str()),
+            said("editor.body_free", "rotation and translation are the bounds that can be freed", &[])
+        );
+        entry.remove(key);
+    }
     if let Some(m) = b.mode {
         entry.insert("mode".into(), json!(m));
     }

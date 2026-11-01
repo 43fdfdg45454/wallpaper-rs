@@ -18,8 +18,9 @@ Item {
         shown = mesh.ask(host.layerId, {
             "pose": Object.assign({
                 "clip": mesh.clip,
-                "time": mesh.time
-            }, mesh.pose && mesh.pose.bone === mesh.bone ? mesh.pose : {})
+                "time": mesh.time,
+                "bone": mesh.bone
+            }, mesh.pending(mesh.bone))
         });
         lines.requestPaint();
     }
@@ -30,7 +31,8 @@ Item {
             "bone": mesh.bone,
             "rotation": p ? p.rotation : picked.rotation,
             "position": p ? p.position : picked.position,
-            "scale": p ? p.scale : picked.scale
+            "scale": p ? p.scale : picked.scale,
+            "changed": p?.changed ?? []
         };
     }
 
@@ -50,6 +52,8 @@ Item {
             return;
         const h = start.head, w = start.where, s = shown.size, f = picked.frame;
         const pose = Object.assign({}, start);
+        const channel = kind === "move" ? "position" : kind === "turn" ? "rotation" : "scale";
+        pose.changed = start.changed.includes(channel) ? start.changed : start.changed.concat([channel]);
         if (kind === "move") {
             const mx = (pos.x - w.x) / width * s[0], my = -(pos.y - w.y) / height * s[1];
             const det = f[0] * f[3] - f[1] * f[2] || 1;

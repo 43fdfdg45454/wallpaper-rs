@@ -2318,6 +2318,10 @@ msgstr "Un módulo JavaScript de la escena"
 msgid "An effect descriptor, and its WGSL shader when it is not beside it"
 msgstr "Un descriptor de efecto y su shader WGSL cuando no está a su lado"
 
+#: apps/wprs-app/qml/SceneAttachKnobs.qml
+msgid "Drag to move %1 along what it follows"
+msgstr "Arrastra para mover %1 a lo largo de lo que sigue"
+
 #: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneInput.qml
 msgid "Follows %1"
 msgstr "Sigue %1"
@@ -2383,6 +2387,10 @@ msgstr "Sobre la pantalla"
 #: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Speed"
 msgstr "Velocidad"
+
+#: apps/wprs-app/qml/SceneBodyKnobs.qml
+msgid "Drag up or down to set the gravity of %1"
+msgstr "Arrastra hacia arriba o abajo para fijar la gravedad de %1"
 
 #: apps/wprs-app/qml/SceneBoneTree.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Bones"
@@ -2814,6 +2822,30 @@ msgstr "Sobre todo"
 msgid "Only over %1"
 msgstr "Solo sobre %1"
 
+#: apps/wprs-app/qml/ScenePhysicsBounds.qml
+msgid "Bound its turn, in degrees"
+msgstr "Acotar su giro, en grados"
+
+#: apps/wprs-app/qml/ScenePhysicsBounds.qml
+msgid "Bound how far its head slides, in pixels"
+msgstr "Acotar cuánto se desliza su cabeza, en píxeles"
+
+#: apps/wprs-app/qml/ScenePointList.qml
+msgid "Attachment points"
+msgstr "Puntos de sujeción"
+
+#: apps/wprs-app/qml/ScenePointList.qml
+msgid "No bone"
+msgstr "Ningún hueso"
+
+#: apps/wprs-app/qml/ScenePointList.qml
+msgid "Remove the point"
+msgstr "Quitar el punto"
+
+#: apps/wprs-app/qml/ScenePointList.qml
+msgid "Add a point"
+msgstr "Añadir un punto"
+
 #: apps/wprs-app/qml/ScenePoseKnob.qml
 msgid "Move the bone"
 msgstr "Mover el hueso"
@@ -2922,10 +2954,12 @@ msgstr "Sujetar capas en la vista previa"
 #: apps/wprs-app/qml/SceneRigAttach.qml
 msgid ""
 "Drag a layer onto a bone, or onto the mesh for a new point there; or pick a "
-"layer and click the preview."
+"layer and click the preview. Drag the squares to move points and the rings "
+"to move the layers that follow."
 msgstr ""
 "Arrastra una capa sobre un hueso, o sobre la malla para un punto nuevo allí; "
-"o elige una capa y haz clic en la vista previa."
+"o elige una capa y haz clic en la vista previa. Arrastra los cuadrados para "
+"mover los puntos y los anillos para mover las capas que los siguen."
 
 #: apps/wprs-app/qml/SceneRigDepth.qml
 msgid "Paint depth on the preview"
@@ -3013,10 +3047,12 @@ msgstr ""
 "del hueso elegido, o del más cercano."
 
 #: apps/wprs-app/qml/SceneRigPhysics.qml
-msgid "Click a bone to make it swing, or to stop it. The arrows show gravity."
+msgid ""
+"Click a bone to make it swing, or to stop it. Drag the squares to set "
+"gravity and the dots to bound the turn."
 msgstr ""
-"Haz clic en un hueso para que se balancee, o para detenerlo. Las flechas "
-"muestran la gravedad."
+"Haz clic en un hueso para que se balancee, o para detenerlo. Arrastra los "
+"cuadrados para fijar la gravedad y los puntos para acotar el giro."
 
 #: apps/wprs-app/qml/SceneRigPhysics.qml
 msgid "Simulate"

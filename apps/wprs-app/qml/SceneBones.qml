@@ -16,6 +16,8 @@ Item {
     readonly property var list: rig.bones ?? []
 
     function load() {
+        if (!visible)
+            return;
         rig = mesh.ask(layerId) ?? {
             "bones": []
         };
@@ -27,6 +29,7 @@ Item {
     }
 
     anchors.fill: parent
+    onVisibleChanged: load()
     Component.onCompleted: load()
 
     Connections {
@@ -139,6 +142,12 @@ Item {
                 }
             }
         }
+    }
+
+    ScenePoints {
+        anchors.fill: parent
+        host: bones
+        visible: !bones.posing && bones.mesh.rigging === bones.layerId && bones.mesh.mode === "attach"
     }
 
     ScenePoseHandles {

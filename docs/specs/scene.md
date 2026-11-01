@@ -395,7 +395,7 @@ Positions are in pixels from the middle of the box the layer fills, x to the rig
 writes them, and UVs start at the top left of the picture. Every node of the file is a joint: the
 bones of skins, the nodes that carry a mesh without a skin, which then move as one piece, and
 nodes without a mesh, such as attachment points (the editor marks the ones it places with
-`extras.point`), which follow their parent. The rest pose is the transform of each node; vertices
+`extras.point`), which follow their parent and never count as the end of a bone. The rest pose is the transform of each node; vertices
 follow at most 4 bones whose weights add up to 1 (within 0.02, then made exact). The engine skins
 the vertices on the GPU into a picture of the box at the pixels it covers on the screen, with its transform, parents and camera, up to the pixels of
 its picture (half of them at the lowest quality and three quarters at the next; a mesh drawn larger
@@ -468,8 +468,9 @@ Each frame the pose is worked out in this order: the animation layers, the `rule
 chains in their order, what scripts set (see "Bones, blend shapes and attachments"), and the
 `physics`. Rotations of bones are measured in degrees clockwise from their rest pose, as in clips.
 
-A chain turns its bones so that its end (where the first child of its last bone starts, or as far
-again along the last bone when it has none) reaches the target. Chains of two bones are solved
+A chain turns its bones so that its end (where the first child of its last bone starts, leaving
+out nodes marked `extras.point`, or as far again along the last bone when it has none) reaches the
+target; bodies of `physics` take the end of their bone, and ropes their links, the same way. Chains of two bones are solved
 exactly, bending at their middle joint the way `bend` says; longer chains, and chains whose `limits`
 stop a bone, take at most 10 rounds that turn each bone towards the target from the end back. A
 target out of reach stretches the chain towards it. `limits` keep each listed bone within `[min,

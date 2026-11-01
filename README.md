@@ -1620,23 +1620,28 @@ capas), con una cuadrícula de celdas o siguiendo el contorno de la parte opaca,
 que a un `.glb` importado de varias partes. El inspector del campo `mesh` muestra los huesos en árbol:
 un clic elige un hueso (también sobre la vista previa), un doble clic lo renombra (y la escena lo
 sigue en clips, cadenas, física, reglas, puntero y capas sujetas), y un hueso soltado sobre otro
-cuelga de él. Sobre la vista previa los huesos se arrastran, se pinta la profundidad de los
+cuelga de él; al quitar un hueso o colgarlo de otro, en el mismo paso se quitan las claves, cadenas,
+cuerpos de física, reglas, huesos de `hit` y capas sujetas que lo nombraban o que dejaron de
+encadenarse, de modo que la escena sigue siendo válida. Sobre la vista previa los huesos se arrastran, se pinta la profundidad de los
 vértices, que los acerca o aleja del espectador, y se pintan los pesos del hueso elegido con un
 pincel que suma, resta, suaviza o normaliza, con fuerza, tamaño, borde suave y huesos bloqueados;
 la malla se colorea por el peso de ese hueso o por el hueso que manda en cada parte, y cada vértice
 queda con cuatro huesos como mucho y pesos que suman 1. Mientras no se pintan, los pesos siguen a
 los huesos más cercanos; una vez pintados se conservan al cambiar los huesos, y *Pesos automáticos*
 los vuelve a calcular. Cada cambio guarda una malla nueva en `meshes/`, de modo que deshacer vuelve a
-la anterior.
+la anterior; al guardar, las mallas anteriores esperan fuera de la carpeta, junto al historial del
+editor, y vuelven cuando un paso las nombra, así que el paquete lleva solo las mallas en uso.
 
 *Editar los clips en la línea de tiempo* cambia las líneas de tiempo bajo la vista previa por los
 clips de la capa: se elige, crea, renombra o quita un clip, se fijan su duración y su bucle, y el
-cabezal recorre, reproduce y repite la vista previa con ese clip. Hay filas por canal de cada hueso,
+cabezal recorre, reproduce y repite la vista previa con ese clip, en segundos desde el comienzo del
+clip (su `from`), donde se escriben también las claves. Hay filas por canal de cada hueso,
 por el orden de las partes y por cada forma de mezcla, con un deslizador que guarda su peso; las
 claves se arrastran (con Ctrl se copian), se borran y se les da paso, línea o curva suave. Sobre la
 vista previa el hueso elegido tiene asas para moverlo, girarlo y escalarlo en ese instante, y
-*Clave* guarda su pose en las claves del clip del JSON de la escena, las mismas que reproduce el
-motor. Las formas de mezcla tienen deslizadores que solo cambian la vista previa, y con ellos se
+*Clave* guarda en las claves del clip del JSON de la escena, las mismas que reproduce el motor, solo
+los canales que cambiaron las asas, o la pose entera del hueso (con el movimiento del archivo) si no
+cambió ninguno. Las formas de mezcla tienen deslizadores que solo cambian la vista previa, y con ellos se
 crean, cambian, renombran y quitan expresiones.
 
 El mismo inspector tiene herramientas sobre la vista previa para el resto del personaje. *Crear una
@@ -1645,14 +1650,21 @@ cada cadena elige qué alcanza (el puntero, un punto, un hueso o un punto de la 
 se dobla hacia el otro lado, tiene peso y límites por hueso. El objetivo de punto es un anillo que se
 arrastra y cada límite es un arco alrededor del hueso con dos puntos que fijan su ángulo mínimo y
 máximo. Los huesos que se balancean se eligen con un clic sobre la vista previa, con su modo y
-deslizadores de rigidez, amortiguación, inercia, gravedad (que se ve como una flecha) y viento;
+deslizadores de rigidez, amortiguación, inercia, gravedad (una flecha cuya punta se arrastra) y
+viento, y casillas que acotan su giro (un arco con dos puntos que se arrastran) y cuánto se desliza
+su cabeza;
 *Dibujar una cuerda* crea, a lo largo del trazo, hasta 9 huesos nuevos encadenados que cuelgan del
 hueso elegido y se balancean como cuerda, y *Simular* y *Reiniciar* hacen correr la física en la
 vista previa o la devuelven a la pose de reposo. El viento de `canvas.wind` es una flecha que se
 arrastra desde el centro del lienzo, con su ángulo, su fuerza y sus ráfagas (`canvas.gusts`). Para
 sujetar capas, se arrastra una capa sobre un hueso, o sobre la malla para crear allí un punto nuevo
 (un nodo sin malla del archivo, colgado del hueso que manda en ese lugar), eligiendo si sigue la
-posición, el giro y la escala, y una línea une cada capa sujeta con su hueso o punto. Las partes se
+posición, el giro y la escala, y una línea une cada capa sujeta con su hueso o punto y acaba en un
+anillo que se arrastra para moverla a lo largo de él. Los puntos de la malla se listan con su nombre,
+que se edita ahí mismo, el hueso del que cuelgan y un botón para quitarlos, y sobre la vista previa
+son cuadrados que se arrastran; un punto creado para una sola capa se va con ella cuando la capa
+deja de seguirlo. Los puntos nunca cuentan como el final de un hueso, así que no cambian las
+cadenas ni la física. Las partes se
 ordenan arrastrándolas en una lista de atrás hacia delante, se ocultan y se recortan para verse solo
 sobre otra parte, cuyo contorno se marca en la vista previa. En el inspector general, todo campo que
 nombra un hueso, un punto, una parte o una forma de mezcla (cadenas, objetivos y límites, física,
@@ -1665,9 +1677,10 @@ Desde la terminal hacen lo mismo `wprs-ctl scene mesh-from-picture`, `bone` (con
 de huesos, formas y orden, con `--ease`, `--remove`, `--from` y `--copy`), `expression`, `ik` (`add
 RAÍZ PUNTA`, `set N` y `remove N`, con `--target`, `--limit HUESO MÍN MÁX`, `--bend` y `--weight`),
 `physics` (`add HUESO...` con `--mode`, `--stiffness`, `--damping`, `--inertia`, `--gravity`,
-`--wind`, `--rotation` y `--translation`; `rope NOMBRE X,Y;X,Y;...` con `--parent`; `remove
+`--wind`, `--rotation`, `--translation` y `--free`; `rope NOMBRE X,Y;X,Y;...` con `--parent`; `remove
 HUESO...`), `wind` (`--angle`, `--strength`, `--noise` y `--off`), `attach` (`--to`, `--bone`,
-`--point X,Y` o un nodo, `--offset`, `--inherit` y `--detach`) y `parts` (`--order`, `--hide`,
+`--point X,Y` o un nodo, `--offset`, `--nudge`, `--inherit` y `--detach`), `point` (puntos de sujeción
+con `--at`, `--parent`, `--root`, `--rename` y `--remove`) y `parts` (`--order`, `--hide`,
 `--show`, `--clip` y `--unclip`); `bones`, `vertex-weights` y `keys` imprimen los huesos y puntos,
 los pesos de cada vértice y las claves de un clip.
 

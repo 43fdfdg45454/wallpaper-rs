@@ -65,7 +65,7 @@ fn keys_are_set_moved_copied_eased_and_removed() {
     assert_eq!(arm(&p)["rotation"][1], json!([0.5, 15.0]));
     assert_eq!(
         (arm(&p)["position"].clone(), arm(&p)["scale"].clone()),
-        (json!([[0.5, [0, 0]]]), json!([[0.5, [1, 1]]]))
+        (json!([[0.5, [0.0, 0.0]]]), json!([[0.5, [1.0, 1.0]]]))
     );
     act(&mut p, key(1.5, json!({ "bone": "arm", "from": 1.0 }))).unwrap();
     act(&mut p, key(2.0, json!({ "bone": "arm", "from": 1.5, "copy": true }))).unwrap();

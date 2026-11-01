@@ -11,11 +11,11 @@ wprs-core.workspace = true
 wprs-scene.workspace = true
 wprs-format = { workspace = true, features = ["sign"] }
 anyhow.workspace = true
+base64.workspace = true
 dirs.workspace = true
 image.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
-base64.workspace = true
 tempfile.workspace = true

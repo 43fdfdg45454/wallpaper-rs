@@ -73,6 +73,42 @@ QtObject {
             "to": "puppet",
             "point": [0.4, 0.5]
         });
+        run("attach", {
+            "layer": "hat",
+            "nudge": [4, -2]
+        });
+        run("point", {
+            "layer": "puppet",
+            "name": "badge",
+            "at": [0.6, 0.3]
+        });
+        run("point", {
+            "layer": "puppet",
+            "name": "badge",
+            "to": "pin",
+            "parent": "root"
+        });
+        if (!(mesh.ask("puppet").points ?? []).some(p => p.name === "pin" && p.parent === "root"))
+            throw new Error("the point was not renamed and rehung");
+        run("point", {
+            "layer": "puppet",
+            "name": "pin",
+            "remove": true
+        });
+        run("physics", {
+            "layer": "puppet",
+            "bones": ["limb"],
+            "rotation": [-20, 20]
+        });
+        if (!mesh.ask("puppet", {
+            "handles": true
+        }).bodies.some(b => b.rotation && b.rotation[1] === 20))
+            throw new Error("the swinging bone does not show its bounds");
+        run("physics", {
+            "layer": "puppet",
+            "bones": ["limb"],
+            "free": ["rotation"]
+        });
         mesh.part = "body";
         mesh.use("puppet", "parts");
         run("parts", {

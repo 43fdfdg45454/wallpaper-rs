@@ -25,13 +25,21 @@ Canvas {
                 line(ctx, c.end, c.target);
         ctx.strokeStyle = Kirigami.Theme.highlightColor;
         for (const p of owner.pins)
-            line(ctx, p[0], p[1]);
+            line(ctx, p.from, p.to);
         ctx.setLineDash([]);
         ctx.strokeStyle = Kirigami.Theme.positiveTextColor;
         for (const c of owner.shown.ik ?? [])
             for (const l of c.limits) {
                 ctx.beginPath();
                 ctx.arc(l.at[0] * width, l.at[1] * height, reach, rad(l.rest + l.min), rad(l.rest + l.max));
+                ctx.stroke();
+            }
+        ctx.strokeStyle = Kirigami.Theme.negativeTextColor;
+        ctx.strokeStyle = Kirigami.Theme.neutralTextColor;
+        for (const b of owner.shown.bodies ?? [])
+            if (b.rotation) {
+                ctx.beginPath();
+                ctx.arc(b.at[0] * width, b.at[1] * height, reach, rad(b.rest + b.rotation[0]), rad(b.rest + b.rotation[1]));
                 ctx.stroke();
             }
         ctx.strokeStyle = Kirigami.Theme.negativeTextColor;

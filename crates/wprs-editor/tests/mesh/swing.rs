@@ -63,3 +63,20 @@ fn bones_swing_with_their_settings_and_a_rope_is_drawn() {
     act(&mut p, physics(json!({ "bones": ["arm", "tail_1"], "remove": true }))).unwrap();
     assert!(p.doc["scene"]["layers"][0].get("physics").is_none());
 }
+
+#[test]
+fn bounds_show_on_the_preview_and_can_be_lifted_again() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = rigged(&root);
+    act(&mut p, physics(json!({ "bones": ["arm"], "rotation": [-20, 40], "translation": [-5, 5] }))).unwrap();
+    let shown = query(&p, "net", json!({ "handles": true }))["bodies"][0].clone();
+    assert_eq!(
+        (shown["rest"].clone(), shown["rotation"].clone(), shown["translation"].clone()),
+        (json!(0.0), json!([-20.0, 40.0]), json!([-5.0, 5.0]))
+    );
+    act(&mut p, physics(json!({ "bones": ["arm"], "free": ["rotation"] }))).unwrap();
+    assert_eq!(bodies(&p), json!([{ "bone": "arm", "mode": "spring", "translation": [-5.0, 5.0] }]));
+    assert!(act(&mut p, physics(json!({ "bones": ["arm"], "free": ["gravity"] }))).is_err());
+    act(&mut p, json!({ "undo": {} })).unwrap();
+    assert_eq!(bodies(&p)[0]["rotation"], json!([-20.0, 40.0]));
+}

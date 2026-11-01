@@ -105,14 +105,30 @@ fn the_heat_view_colours_triangles_by_the_weight_of_the_picked_bone() {
     let mut p = rigged(&root);
     act(&mut p, brush("arm", "add", 1.0, 1.0, &[])).unwrap();
     let shown = query(&p, "net", json!({ "weights": "arm" }));
-    let triangles = shown["triangles"].as_array().unwrap().len();
-    assert!(triangles > 0 && shown["heat"].as_array().unwrap().len() == triangles);
-    assert!(shown["heat"].as_array().unwrap().iter().all(|c| c == "#dc2828"));
-    assert!(shown["owner"].as_array().unwrap().iter().all(|c| *c == json!(hue(1))));
+    let (heat, owner) = (picture(&shown["heat"]), picture(&shown["owner"]));
+    assert_eq!(shown["size"], json!([heat.width(), heat.height()]));
+    assert_eq!((heat.width(), heat.height()), (384, 192));
+    assert_eq!(heat.get_pixel(192, 96).0, [0xdc, 0x28, 0x28, 255]);
+    let covered =
+        |i: &image::RgbaImage| i.pixels().filter(|q| q.0[3] == 255).map(|q| hex(q.0)).collect::<Vec<_>>();
+    assert!(covered(&heat).len() > 384 * 150 && covered(&heat).iter().all(|c| c == "#dc2828"));
+    assert!(covered(&owner).iter().all(|c| *c == hue(1)));
     assert_eq!((shown["bones"].clone(), shown["colors"][1].clone()), (json!(["root", "arm"]), json!(hue(1))));
-    let points = shown["points"].as_array().unwrap();
-    assert_eq!(points.len(), listed(&p).len());
-    assert!(points.iter().all(|q| (0.0..=1.0).contains(&q[0].as_f64().unwrap())));
     let cold = query(&p, "net", json!({ "weights": "root" }));
-    assert!(cold["heat"].as_array().unwrap().iter().all(|c| c == "#1e2878"));
+    assert!(covered(&picture(&cold["heat"])).iter().all(|c| c == "#1e2878"));
+    act(&mut p, brush("root", "add", 1.0, 0.5, &[])).unwrap();
+    let mixed = picture(&query(&p, "net", json!({ "weights": "arm" }))["heat"]);
+    let shades: std::collections::BTreeSet<String> = covered(&mixed).into_iter().collect();
+    assert!(shades.len() > 2, "{shades:?}");
+}
+
+fn picture(url: &Value) -> image::RgbaImage {
+    use base64::Engine;
+    let text = url.as_str().unwrap().strip_prefix("data:image/png;base64,").unwrap();
+    let png = base64::engine::general_purpose::STANDARD.decode(text).unwrap();
+    image::load_from_memory(&png).unwrap().into_rgba8()
+}
+
+fn hex([r, g, b, _]: [u8; 4]) -> String {
+    format!("#{r:02x}{g:02x}{b:02x}")
 }

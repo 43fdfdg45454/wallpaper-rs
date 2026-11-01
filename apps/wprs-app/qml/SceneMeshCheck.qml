@@ -57,6 +57,10 @@ QtObject {
             "mode": "smooth",
             "by": 0.5
         });
+        if (!(page.mesh.ask("puppet", {
+                "weights": "arm"
+            }).heat ?? "").startsWith("data:image/png;base64,"))
+            throw new Error("the heat view has no picture");
         run("auto_weights", {});
         page.mesh.tool("puppet", "weights", null);
         run("clip", {
@@ -75,7 +79,8 @@ QtObject {
             "bone": "arm",
             "rotation": 45,
             "position": [0, 0],
-            "scale": [1, 1]
+            "scale": [1, 1],
+            "changed": ["rotation"]
         };
         const keys = page.mesh.ask("puppet", {
             "keys": "wave"

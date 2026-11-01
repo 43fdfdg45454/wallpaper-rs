@@ -49,6 +49,8 @@ pub struct BodyEdit {
     #[serde(default)]
     pub translation: Option<[f32; 2]>,
     #[serde(default)]
+    pub free: Vec<String>,
+    #[serde(default)]
     pub rope: Vec<[f32; 2]>,
     #[serde(default)]
     pub parent: Option<String>,
@@ -91,7 +93,24 @@ pub struct AttachEdit {
     #[serde(default)]
     pub inherit: Option<Vec<Follows>>,
     #[serde(default)]
+    pub nudge: Option<[f32; 2]>,
+    #[serde(default)]
     pub detach: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PointEdit {
+    pub layer: String,
+    pub name: String,
+    #[serde(default)]
+    pub at: Option<[f32; 2]>,
+    #[serde(default)]
+    pub parent: Option<String>,
+    #[serde(default)]
+    pub to: Option<String>,
+    #[serde(default)]
+    pub remove: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
