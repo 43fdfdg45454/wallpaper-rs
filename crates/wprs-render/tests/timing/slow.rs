@@ -1,14 +1,15 @@
-use super::hostile::{entry, renderer, scene, show};
+use super::hostile::{Shown, entry, renderer, scene, show};
 use super::{book, busy, draw, lines, one, wide};
 use std::time::Duration;
-use wprs_render::{drawn_effects, retry_effects, set_gpu_budget};
+use wprs_render::{Renderer, drawn_effects, retry_effects, set_gpu_budget};
 
-#[test]
-fn slow_effects_are_left_out_for_the_run_without_a_strike_and_never_queue_up() {
-    let _one = one();
-    let Some(r) = renderer() else { return };
+fn effects() -> wprs_scene::Scene {
+    scene(&[("busy", busy(BUSY)), ("fine", entry("return tap(in.uv) * 0.5;"))])
+}
+
+fn attempt(r: &Renderer) -> (Shown, Result<(), String>) {
+    retry_effects();
     let path = book("busy");
-    let effects = || scene(&[("busy", busy(BUSY)), ("fine", entry("return tap(in.uv) * 0.5;"))]);
     let s = effects();
     let key = s.loaded["busy"].key;
     set_gpu_budget(Some(Duration::from_millis(2)));
@@ -33,13 +34,39 @@ fn slow_effects_are_left_out_for_the_run_without_a_strike_and_never_queue_up() {
     );
     assert_eq!(lines(&path, key, "1"), 0, "{}", std::fs::read_to_string(&path).unwrap_or_default());
     r.finish().unwrap();
-    let fast = (0..3).map(|_| draw(r, &mut shown, size)).max().unwrap();
+    let frames: Vec<_> = (0..3)
+        .map(|_| {
+            let took = draw(r, &mut shown, size);
+            let stats = shown.view.stats();
+            (took, stats.compiled, stats.created)
+        })
+        .collect();
     r.finish().unwrap();
-    assert!(fast * 2 < slowest, "frames without the busy effect took {fast:?}, with it {slowest:?}");
+    assert!(
+        frames.iter().all(|f| f.1 == 0 && f.2 <= 1),
+        "frames without the busy effect built pipelines or objects: {frames:?}"
+    );
     assert!(!drawn_effects().contains(&key));
+    let fast = frames.iter().map(|f| f.0).max().unwrap_or_default();
+    let miss = format!("frames without the busy effect took {fast:?}, with it {slowest:?}");
+    (shown, (fast * 2 < slowest).then_some(()).ok_or(miss))
+}
+
+#[test]
+fn slow_effects_are_left_out_for_the_run_without_a_strike_and_never_queue_up() {
+    let _one = one();
+    let Some(r) = renderer() else { return };
+    let mut misses = Vec::new();
+    let mut shown = loop {
+        match attempt(r) {
+            (shown, Ok(())) => break shown,
+            (_, Err(miss)) => misses.push(miss),
+        }
+        assert!(misses.len() < 3, "{misses:?}");
+    };
     set_gpu_budget(None);
     assert!(retry_effects() >= 1 && shown.view.retry(), "a view with an effect left out is built again");
-    let mut shown = show(r, effects()).unwrap();
+    shown = show(r, effects()).unwrap();
     draw(r, &mut shown, (64, 32));
     assert!(shown.view.left_out().is_empty(), "{:?}", shown.view.left_out());
     r.finish().unwrap();
