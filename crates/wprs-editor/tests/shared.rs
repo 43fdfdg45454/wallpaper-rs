@@ -2,11 +2,22 @@ use image::{ImageFormat, RgbImage};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
+use tempfile::TempDir;
 use wprs_editor::actions::{Action, ImportAssets};
 use wprs_editor::offer::{Offer, make};
 use wprs_editor::shelf::Pick;
 use wprs_editor::starters::starter;
 use wprs_editor::{Project, package, stock};
+
+fn state() {
+    static STATE: OnceLock<TempDir> = OnceLock::new();
+    STATE.get_or_init(|| {
+        let dir = tempfile::tempdir().unwrap();
+        unsafe { std::env::set_var("XDG_STATE_HOME", dir.path()) };
+        dir
+    });
+}
 
 fn picture(path: &Path, color: [u8; 3]) {
     RgbImage::from_pixel(64, 32, color.into()).save_with_format(path, ImageFormat::Png).unwrap();
@@ -66,7 +77,7 @@ fn target(root: &Path, id: &str) -> Project {
 #[test]
 fn asset_packages_are_made_from_chosen_parts_and_imported_with_credits() {
     let root = tempfile::tempdir().unwrap();
-    unsafe { std::env::set_var("XDG_STATE_HOME", root.path().join("state")) };
+    state();
     let wpak = shared(root.path());
     let cache = root.path().join("cache");
     let listed = stock::browse(&wpak, Some(&cache)).unwrap();
@@ -116,7 +127,7 @@ fn asset_packages_are_made_from_chosen_parts_and_imported_with_credits() {
 #[test]
 fn bad_imports_and_offers_are_refused() {
     let root = tempfile::tempdir().unwrap();
-    unsafe { std::env::set_var("XDG_STATE_HOME", root.path().join("state")) };
+    state();
     let wpak = shared(root.path());
     let mut project = target(root.path(), "scene");
     let import = |p: &mut Project, package: &Path, parts: &[&str]| {
