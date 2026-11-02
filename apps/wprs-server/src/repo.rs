@@ -14,6 +14,8 @@ use wprs_format::{
 
 mod listed;
 
+pub use listed::Shown;
+
 pub struct Repo {
     pub dir: PathBuf,
     key: PathBuf,
@@ -29,12 +31,10 @@ impl Repo {
         self.dir.join("root/1.json").is_file() && self.key.is_file()
     }
 
-    pub fn add(&self, wpak: &Path, now: i64, hidden: bool) -> wprs_format::Result<Added> {
+    pub fn add(&self, wpak: &Path, now: i64, shown: listed::Shown) -> wprs_format::Result<Added> {
         let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
         let added = wprs_format::add(&self.dir, wpak, None, now / 1000)?;
-        if hidden {
-            wprs_format::hide(&self.dir, &added.id, true)?;
-        }
+        shown.mark(&self.dir, &added.id, &added.release.version)?;
         Ok(added)
     }
 
@@ -73,14 +73,12 @@ impl Repo {
         version: &str,
         held: &Path,
         now: i64,
-        hidden: bool,
+        shown: listed::Shown,
     ) -> anyhow::Result<()> {
         let _guard = self.lock.lock().unwrap_or_else(PoisonError::into_inner);
         let dest = self.dir.join("packages").join(id).join(format!("{version}.wpak"));
         wprs_format::add(&self.dir, held, None, now / 1000)?;
-        if hidden {
-            wprs_format::hide(&self.dir, id, true)?;
-        }
+        shown.mark(&self.dir, id, version)?;
         DirBuilder::new().recursive(true).mode(0o700).create(dest.parent().context("bad path")?)?;
         fs::copy(held, &dest)?;
         Ok(wprs_format::unrevoke(&self.dir, id, version)?)

@@ -57,11 +57,7 @@ pub async fn decide(app: &Arc<App>, actor: Option<i64>, case: i64, d: Decision) 
         .run(move |c| Ok(c.query_row(hidden, [version_id], read).optional()?))
         .await?
         .unwrap_or_default();
-    let (listed, version_key) = (shared.clone(), version.clone());
-    let unlist = move |id: &str| match unlisted {
-        true => listed.repo.list(id, Some(&version_key), false),
-        false => Ok(()),
-    };
+    let shown = crate::repo::Shown { hidden, unlisted };
     let next = match choice {
         "approve" if !app.repo.ready() => {
             return Err(Problem::conflict(
@@ -71,10 +67,7 @@ pub async fn decide(app: &Arc<App>, actor: Option<i64>, case: i64, d: Decision) 
         }
         "approve" => {
             let next = needs("pending", "published")?;
-            tokio::task::spawn_blocking(move || {
-                shared.repo.add(&path, now(), hidden).and_then(|a| unlist(&a.id))
-            })
-            .await??;
+            tokio::task::spawn_blocking(move || shared.repo.add(&path, now(), shown)).await??;
             next
         }
         "reject" => needs("pending", "rejected")?,
@@ -95,11 +88,7 @@ pub async fn decide(app: &Arc<App>, actor: Option<i64>, case: i64, d: Decision) 
                     "the withdrawn file was deleted after its retention",
                 ));
             }
-            let restored = move || {
-                shared.repo.restore(&id, &number, &kept, t, hidden)?;
-                Ok::<_, anyhow::Error>(unlist(&id)?)
-            };
-            tokio::task::spawn_blocking(restored).await??;
+            tokio::task::spawn_blocking(move || shared.repo.restore(&id, &number, &kept, t, shown)).await??;
             next
         }
         _ => None,
