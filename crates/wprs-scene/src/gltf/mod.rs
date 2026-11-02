@@ -19,6 +19,7 @@ pub const EXTENSIONS: [&str; 4] = [
     "KHR_mesh_quantization",
     "KHR_texture_transform",
 ];
+pub(crate) const PICTURES: &str = "has overlapping pictures that together pass the size of the file";
 const CROWDED: &str = "lists more entries than the models of a scene may hold";
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -90,6 +91,14 @@ impl ModelFile {
         ];
         if let Some((what, count, max)) = counts.into_iter().find(|(_, count, max)| count > max) {
             return Err(format!("has {count} {what}, at most {max} are allowed"));
+        }
+        let bin = size.saturating_sub(28 + json.len() as u64);
+        let mut spans: Vec<(u64, u64)> =
+            doc.images.iter().filter_map(|i| doc.views.get(i.view?)).map(|v| (v.offset, v.length)).collect();
+        spans.sort_unstable();
+        spans.dedup();
+        if spans.iter().fold(0u64, |sum, s| sum.saturating_add(s.1)) > bin {
+            return Err(PICTURES.into());
         }
         doc.summary()
     }

@@ -53,16 +53,22 @@ pub(super) fn textures(bin: &Bin) -> Result<(Vec<ModelTexture>, Vec<u16>), Strin
         let most = crate::MAX_MODEL_PARTS;
         return Err(format!("has {} textures, at most {most} are allowed", doc.textures.len()));
     }
-    let (mut out, mut views, mut map, mut texels) = (Vec::new(), Vec::new(), Vec::new(), 0u64);
+    let (mut out, mut held, mut map, mut texels, mut copied) = (Vec::new(), Vec::new(), Vec::new(), 0u64, 0);
     for (t, texture) in doc.textures.iter().enumerate() {
         let image = texture.source.and_then(|s| doc.images.get(s));
         let view =
             image.and_then(|i| i.view).ok_or_else(|| format!("texture {t} has no picture in the file"))?;
-        if let Some(at) = views.iter().position(|v| *v == view) {
+        let span = bin.view(view)?;
+        let range = (doc.views[view].offset, span.len());
+        if let Some(at) = held.iter().position(|r| *r == range) {
             map.push(at as u16);
             continue;
         }
-        let bytes = bin.view(view)?.to_vec();
+        copied += span.len();
+        if copied > bin.bin.len() {
+            return Err(crate::gltf::PICTURES.into());
+        }
+        let bytes = span.to_vec();
         let size =
             picture_size(&bytes).ok_or_else(|| format!("texture {t} is not a PNG, JPEG or WebP picture"))?;
         if size[0].max(size[1]) > MAX_TEXTURE {
@@ -79,7 +85,7 @@ pub(super) fn textures(bin: &Bin) -> Result<(Vec<ModelTexture>, Vec<u16>), Strin
             return Err(format!("has more than {MAX_MODEL_TEXELS} texture pixels"));
         }
         map.push(out.len() as u16);
-        views.push(view);
+        held.push(range);
         out.push(ModelTexture { bytes, size });
     }
     Ok((out, map))

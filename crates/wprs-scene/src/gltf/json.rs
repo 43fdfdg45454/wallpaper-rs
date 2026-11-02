@@ -61,6 +61,8 @@ pub(super) struct Doc {
     pub buffers: Vec<Linked>,
     #[serde(deserialize_with = "listed")]
     pub images: Vec<Linked>,
+    #[serde(rename = "bufferViews", deserialize_with = "listed")]
+    pub views: Vec<View>,
     #[serde(rename = "extensionsRequired", deserialize_with = "listed")]
     pub required: Vec<String>,
     #[serde(rename = "extensionsUsed", deserialize_with = "listed")]
@@ -86,6 +88,17 @@ pub(super) struct NodeHead {
 #[serde(default)]
 pub(super) struct Linked {
     pub uri: Option<IgnoredAny>,
+    #[serde(rename = "bufferView")]
+    pub view: Option<usize>,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct View {
+    #[serde(rename = "byteOffset")]
+    pub offset: u64,
+    #[serde(rename = "byteLength")]
+    pub length: u64,
 }
 
 #[derive(Deserialize, Default)]
