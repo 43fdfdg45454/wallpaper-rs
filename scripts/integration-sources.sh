@@ -24,7 +24,7 @@ ctl remote ls | grep -q "broken, refresh or remove it" || fail "remote ls hides 
 ctl pkg search sky >/dev/null || fail "a broken repository stopped browsing"
 if ctl remote refresh "${repo:0:8}" --wait >/dev/null 2>&1; then fail "a repository without an address was refreshed"; fi
 ctl remote add "http://127.0.0.1:$port/$anchor" --wait >/dev/null
-[ "$(ctl remote ls --json | jq_ "[(r['broken'], r['last_error'], r['packages']) for r in r['repos']]")" = "[(None, None, 2)]" ] ||
+[ "$(ctl remote ls --json | jq_ "[(r['broken'], r['last_error'], r['packages']) for r in r['repos']]")" = "[(None, None, 3)]" ] ||
   fail "adding a broken repository again did not repair it: $(ctl remote ls --json)"
 ctl pkg reveal "${repo:0:8}/org.example.dawn"
 [ "$(ctl pkg search dawn --json | jq_ "[p['revealed'] for p in r['packages']]")" = "[True]" ] ||

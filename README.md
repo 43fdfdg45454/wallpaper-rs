@@ -1480,6 +1480,9 @@ wprs-ctl server status
 wprs-ctl server rotate                           # clave nueva; los demás equipos la reciben solos
 wprs-ctl server reset                            # sin ningún equipo con la clave: rehace los datos desde este
 wprs-ctl server upload fondo.wpak                # sube un paquete con el token del equipo
+wprs-ctl server upload fondo.wpak --unlisted     # … oculto: fuera del catálogo, instalable con su enlace
+wprs-ctl server packages                         # tus subidas, con su estado y visibilidad
+wprs-ctl server visibility org.example.fondo public   # cambia la visibilidad de un paquete o de una versión
 wprs-ctl server repo 1a2b3c4d                    # añade un repositorio que otro equipo sincronizó, tras revisarlo
 wprs-ctl server secret wallhaven                 # sincroniza la clave de un proveedor, cifrada
 wprs-ctl server files share ./fondos             # sube tus propios fondos, cifrados; en otro equipo:
@@ -1487,6 +1490,21 @@ wprs-ctl server files ls                         # … los lista y `server files
 wprs-ctl server escrow                           # guarda la clave en el servidor, cerrada con una frase
 wprs-ctl server restore                          # equipo nuevo sin ningún otro: recupera la clave con la frase
 ```
+
+Al subir un paquete eliges si es público u oculto (en el diálogo de subida de *Repositorios*, en la
+web del servidor o con `--unlisted`): uno oculto se publica y se firma igual, pero el catálogo y la
+búsqueda no lo muestran, y quien tenga su enlace o su id lo ve y lo instala. *Cuenta* lista tus
+subidas y te deja cambiar la visibilidad de cada versión. En un repositorio estático, `wprs-ctl repo
+add --unlisted`, `repo hide` y `repo unhide` hacen lo mismo antes de `repo publish`.
+
+En el catálogo de *Repositorios* los paquetes que destaca el operador del repositorio salen primero
+y marcados (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o desde
+`/admin/featured` del servidor), y, con un servidor enlazado, cada paquete muestra sus votos a favor y
+en contra y botones para votar (`wprs-ctl remote vote ID up|down|none`, `remote votes ID…`). El
+servidor cuenta un voto por cuenta y paquete, guarda solo los recuentos y tu propio voto, nunca una
+lista de quién votó ni de quién instaló qué. El ajuste *Mostrar los votos del servidor en el
+catálogo* (`repos.vote_counts`) deja de pedir y mostrar los recuentos. Tus valoraciones locales de la
+biblioteca siguen siendo privadas y se sincronizan cifradas.
 
 Aprueba solo un código que muestre la pantalla de tu propio equipo nuevo: quien te envía un código
 intenta entrar en tu cuenta. Aprobar desde un equipo pide la contraseña de la cuenta, porque los

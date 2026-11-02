@@ -35,6 +35,8 @@ pub struct Details {
     pub shards: Vec<Blob>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub kinds: Vec<Blob>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub featured: Option<Blob>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

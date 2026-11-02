@@ -553,6 +553,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `library.hide_mature` | leave packages rated `mature` out of `Search` (unless the query has its own `content:` filter; `SearchPage.query` stays the one given) and `Browse`; a change emits `library` and `repos` | `false` |
 | `library.show_mature` | show the previews of packages rated `mature` without blur; otherwise clients (app, tray, phone) blur them until the user confirms once per package with `Library1.Confirm`; a change emits `library` and `repos` | `false` |
 | `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
+| `repos.vote_counts` | fetch and show vote counts from the linked server in the catalog (`GetVotes`); voting itself stays possible | `true` |
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
 | `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |
 | `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
@@ -1815,6 +1816,36 @@ Uploads a `.wpak` package with this device's token (`POST /api/v1/uploads`, `PUT
 in an `upload` job whose output is an `UploadOutput`; the job fails when the server refuses the
 package. It is published in the server's repository after review, or at once when the server
 publishes uploads of the account's role.
+
+### `UploadAs(s path, s visibility) → (t job)`
+
+Like `Upload`, with `visibility` `public` or `unlisted` (`server.md`, "Uploads"): an unlisted package
+stays out of the catalog and its search, and whoever has its id installs it. A server that does not
+repeat `unlisted` when the upload opens gets it cancelled, and the job fails without uploading.
+`Upload` is `UploadAs` with `public`.
+
+### `ListPackages() → (s json)`
+
+`{items: [{package, version, title, state, created_at, published_at, visibility, decision,
+statement}]}`: the versions this account uploaded, from `/api/v1/me/packages`.
+
+### `SetVisibility(s id, s version, s visibility)`
+
+Makes every version of the package `id` of this account (`version` empty) or one version `public` or
+`unlisted`; `InvalidArgs` for another value or an id that is not a package id.
+
+### `Vote(s id, s vote) → (s json)`
+
+Sends `up`, `down` or `none` for the package `id` to the linked server with this device's token
+(`POST /api/v1/packages/{id}/vote`) and answers `{id, up, down, mine}`. The server keeps only the counts
+and the vote of this account. `InvalidArgs` for another vote or an id that is not a package id.
+
+### `GetVotes(as ids) → (s json)`
+
+`{items: {id: {up, down}}, shown}` from the linked server for at most 100 package ids; `shown` is
+`false`, with no items and without reaching the network, while no server is linked or
+`repos.vote_counts` is off. Counts are hints the repository does not sign. `RepoPackage` carries
+`featured` for the packages the repository features (`repo.md`).
 
 ### `RemoveServer(b wipe)`
 

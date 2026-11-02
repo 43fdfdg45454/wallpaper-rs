@@ -21,6 +21,8 @@ pub(crate) struct Catalog {
     pub keys: Vec<KeyRevocation>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub authors: Vec<OnlineAuthor>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub featured: Vec<crate::Pick>,
 }
 
 impl Catalog {
@@ -88,6 +90,18 @@ pub fn hide(dir: &Path, id: &str, hidden: bool) -> Result<()> {
     let listing = catalog.packages.iter_mut().find(|l| l.id == id);
     let listing = listing.ok_or_else(|| Error::NotFound(id.into()))?;
     listing.versions.iter_mut().for_each(|r| r.hidden = hidden);
+    catalog.save(dir)
+}
+
+pub fn list(dir: &Path, id: &str, version: Option<&str>, listed: bool) -> Result<()> {
+    let mut catalog = Catalog::load(dir)?;
+    let listing = catalog.packages.iter_mut().find(|l| l.id == id);
+    let listing = listing.ok_or_else(|| Error::NotFound(id.into()))?;
+    let mut chosen =
+        listing.versions.iter_mut().filter(|r| version.is_none_or(|v| r.version == v)).peekable();
+    let wanted = format!("{id}@{}", version.unwrap_or("*"));
+    ensure(chosen.peek().is_some(), || Error::NotFound(wanted))?;
+    chosen.for_each(|r| r.listed = (!listed).then_some(false));
     catalog.save(dir)
 }
 
@@ -163,5 +177,6 @@ fn release(package: &mut Opened, dir: &Path, wpak: &Path, size: u64, now: i64) -
         platforms: manifest.platforms.iter().map(|p| p.name().to_owned()).collect(),
         base,
         hidden: false,
+        listed: None,
     })
 }

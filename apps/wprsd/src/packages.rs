@@ -61,7 +61,7 @@ impl Daemon {
             Err(e) => return Err(e.into()),
         };
         self.library_ready()?;
-        let offers = wprs_format::browse(&data, id)?;
+        let offers = wprs_format::browse_with(&data, id, true)?;
         let offer = offers.into_iter().find(|o| o.id == id && repo.as_ref().is_none_or(|r| *r == o.repo_id));
         let (repo_id, version, size) = match (&done, offer) {
             (Some(done), _) => (done.repo_id.clone(), done.version.clone(), done.size),

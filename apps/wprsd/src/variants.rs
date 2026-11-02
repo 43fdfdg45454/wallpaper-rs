@@ -86,7 +86,7 @@ pub(crate) fn matching(
     dependency: &wprs_format::Dependency,
 ) -> Result<String> {
     let wanted = VersionReq::parse(&dependency.version).map_err(|e| failed(e.to_string()))?;
-    let offers = wprs_format::browse(data, &dependency.id)?;
+    let offers = wprs_format::browse_with(data, &dependency.id, true)?;
     let offer = offers.into_iter().find(|o| o.id == dependency.id && o.repo_id == repo);
     let versions = offer.map(|o| o.versions).unwrap_or_default();
     let best = versions.iter().filter_map(|v| Version::parse(v).ok()).filter(|v| wanted.matches(v)).max();

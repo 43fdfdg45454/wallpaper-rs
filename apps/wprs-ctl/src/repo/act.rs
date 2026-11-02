@@ -24,13 +24,20 @@ pub fn run(command: Repo) -> Result<()> {
         }
         Repo::SignRoot { dir, key, json } => root(&sign_root(&dir, &signer(&key)?)?, json)?,
         Repo::Status { dir, json } => root(&status(&dir)?, json)?,
-        Repo::Add { dir, files, author, json } => {
+        Repo::Feature { dir, id, note } => wprs_format::feature(&dir, &id, note.as_deref(), true)?,
+        Repo::Unfeature { dir, id } => wprs_format::feature(&dir, &id, None, false)?,
+        Repo::Hide { dir, id, version } => wprs_format::list(&dir, &id, version.as_deref(), false)?,
+        Repo::Unhide { dir, id, version } => wprs_format::list(&dir, &id, version.as_deref(), true)?,
+        Repo::Add { dir, files, author, unlisted, json } => {
             let remote = [&dir].into_iter().chain(&files).any(|p| p.to_string_lossy().contains("://"));
             if remote {
                 return Err(usage("use wprs-ctl remote add to add a repository to this computer"));
             }
             for file in files {
                 let added = add(&dir, &file, author.as_deref(), now()?)?;
+                if unlisted {
+                    wprs_format::list(&dir, &added.id, Some(&added.release.version), false)?;
+                }
                 let (release, author) = (&added.release, added.author.as_deref().unwrap_or("-"));
                 let text =
                     format!("{} {} sha256={} author={author}", added.id, release.version, release.sha256);

@@ -41,6 +41,7 @@ entry/latest                            "<N>\n", unsigned hint, the only mutable
 details/<N>.json, details/<N>.json.minisig  immutable, only when a second-version release exists
 index/<sha256>.json                     shards, immutable
 revoked/<sha256>.json                   revocations, immutable
+featured/<sha256>.json                  packages the operator features, immutable, optional
 authors/<sha256>.json                   online authors, immutable, only with policy.authors = online
 previews/<sha256>.<ext>                 preview images copied from packages
 packages/<id>/<version>.wpak            packages, immutable once published
@@ -121,6 +122,22 @@ took the package out of browsing. Clients leave it out of `browse` unless a vers
 and keep installing and updating it; first-version shards never carry it, and a repository with a
 hidden release always publishes details.
 
+A release of the second-version shards may also carry `listed: false`: the version is unlisted. Clients
+leave it out of `browse` and its search unless a version of the package is installed, and install it
+when asked by id. First-version shards leave unlisted releases out, so versions of wallpaper-rs that do
+not know the field never show them, and a repository with an unlisted release always publishes
+details. `wprs-ctl repo add --unlisted` adds versions unlisted, and `repo hide DIR ID [--version V]`
+and `repo unhide` change it for a package or one version; publish next.
+
+`featured/<sha256>.json` (optional): `format` (`wpak-repo-featured/1.0`), `repo_id` and `items`: at
+most 64 `{id, note?}`, ids of packages of the repository, each once, with a note of at most 200
+characters on one line without `<` or `>`. The details cite it as `featured` (`{sha256, size}`), so the
+online signature covers it and a repository with featured packages always publishes details; the
+entry never names it, so versions of wallpaper-rs that do not know it keep reading the repository.
+Clients mark these packages as featured when browsing and list them first. Nothing in a manifest can
+feature a package: only the operator does, with `wprs-ctl repo feature DIR ID [--note TEXT]` and
+`repo unfeature DIR ID` (`feature(dir, id, note, on)`), then `publish`.
+
 `authors/<sha256>.json` (only with online authors): `format` (`wpak-repo-authors/1.0`), `repo_id`
 and `authors`: `[{id, keys: {fingerprint: {minisign}}, rotations: [{from, to, sig}]}]`, ids as in
 the root and unique, `to` listed in `keys`, `sig` a minisign block of the key `from` over
@@ -167,6 +184,8 @@ revoked through `revoked`.
 | Add a package (validated, never `imported`, provider packages under their licenses only, signature checked against root authors, preview copied) | `add(dir, wpak, author, now)` |
 | Revoke a package version or a key, or withdraw the revocation of a version | `revoke(dir, id, version, reason, message)`, `revoke_key(dir, fingerprint, reason)`, `unrevoke(dir, id, version)` |
 | Hide every version of a package from browsing, or show it again | `hide(dir, id, hidden)` |
+| Unlist a package or one version, or list it again | `list(dir, id, version, listed)` |
+| Feature a package with an optional note, or stop featuring it | `feature(dir, id, note, on)` |
 | With online authors: register an author key, hand an author over to a new key, drop a key that no rotation names | `register_author(dir, id, key)`, `rotate_author(dir, id, from, key, sig)` with `sign_rotation(signer, id, key)`, `drop_author_key(dir, id, fingerprint)` |
 | Write shards, revocations, the next entry and its details; repeat before expiry | `publish(dir, online, lifetime_days, now)` |
 | Replace keys or policy: write `root/<N+1>.json`, then sign with the old and the new root threshold, then publish with the current online key | `rotate_root(dir, settings, now)`, `sign_root`, `publish` |

@@ -167,6 +167,11 @@ calls! {
         ListFiles list_files() json;
         FetchFile fetch_file(file: str);
         Upload upload(path: str);
+        UploadAs upload_as(path: str, visibility: str);
+        ListPackages list_packages() json;
+        SetVisibility set_visibility(id: str, version: str, visibility: str);
+        Vote vote(id: str, vote: str) json;
+        GetVotes get_votes(ids: strs) json;
         RemoveServer remove_server(wipe: bool);
     }
 }

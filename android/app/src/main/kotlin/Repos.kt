@@ -89,12 +89,13 @@ private fun Explore(main: Main, run: Run, close: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(stringResource(R.string.repo_search)) })
                 LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    items(found.objects()) { item ->
+                    items(found.objects().sortedByDescending { it.optBoolean("featured") }) { item ->
                         ListItem(
                             headlineContent = { Text(item.optString("title").ifEmpty { item.getString("id") }) },
                             supportingContent = {
                                 val mature = stringResource(R.string.mature).takeIf { item.optBoolean("mature") }
-                                Text(listOfNotNull(item.getString("repo"), item.getString("version"), size(item.optLong("size")), mature).joinToString(" · "))
+                                val featured = stringResource(R.string.repo_featured).takeIf { item.optBoolean("featured") }
+                                Text(listOfNotNull(featured, item.getString("repo"), item.getString("version"), size(item.optLong("size")), mature).joinToString(" · "))
                             },
                             trailingContent = {
                                 if (item.optBoolean("installed")) Text(stringResource(R.string.repo_installed))

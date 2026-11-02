@@ -25,6 +25,7 @@ mod status;
 mod tests;
 mod transfer;
 mod upload;
+mod votes;
 mod watch;
 
 pub use watch::start;

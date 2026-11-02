@@ -39,6 +39,21 @@ pub enum Remote {
         #[arg(long, help = "Also uninstall its packages")]
         uninstall: bool,
     },
+    #[command(
+        about = "Vote for a package on the linked server; the server keeps only the counts and your own vote"
+    )]
+    Vote {
+        id: String,
+        #[arg(value_parser = ["up", "down", "none"])]
+        vote: String,
+    },
+    #[command(
+        about = "Print the vote counts of packages on the linked server, unless repos.vote_counts hides them"
+    )]
+    Votes {
+        #[arg(required = true)]
+        ids: Vec<String>,
+    },
 }
 
 pub async fn run(client: &Client, command: Remote) -> Result<()> {
@@ -50,6 +65,13 @@ pub async fn run(client: &Client, command: Remote) -> Result<()> {
             job(client, repos.refresh(repo.as_deref().unwrap_or("")).map_ok(|id| ((), id)), &wait).await?
         }
         Remote::Rm { repo, uninstall } => repos.remove(&repo, uninstall).await?,
+        Remote::Vote { id, vote } => {
+            println!("{}", crate::providers::patient(client.sync.vote(&id, &vote)).await?)
+        }
+        Remote::Votes { ids } => {
+            let ids: Vec<&str> = ids.iter().map(String::as_str).collect();
+            println!("{}", crate::providers::patient(client.sync.get_votes(&ids)).await?)
+        }
     }
     Ok(())
 }

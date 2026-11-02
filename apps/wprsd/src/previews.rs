@@ -55,7 +55,7 @@ impl Daemon {
     fn offer_of(&self, spec: &str, animated: bool) -> Result<Offer> {
         let (repo, id, version) = parse_spec(spec)?;
         let repo = repo.map(|r| self.repo_id(r)).transpose()?;
-        let offers = wprs_format::browse(&self.store.data, id)?.into_iter();
+        let offers = wprs_format::browse_with(&self.store.data, id, true)?.into_iter();
         let offers: Vec<_> =
             offers.filter(|o| o.id == id && repo.as_ref().is_none_or(|r| *r == o.repo_id)).collect();
         let [offer] = offers.as_slice() else {

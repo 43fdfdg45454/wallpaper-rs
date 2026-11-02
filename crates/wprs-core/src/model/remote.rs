@@ -95,6 +95,8 @@ model! {
         pub changes: String,
         #[serde(default)]
         pub revealed: bool,
+        #[serde(default)]
+        pub featured: bool,
     }
 
     pub struct BrowsePage {

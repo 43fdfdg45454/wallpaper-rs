@@ -39,6 +39,8 @@ pub struct Release {
     pub base: Option<String>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub hidden: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub listed: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -109,6 +111,10 @@ impl Release {
 
     pub fn first(&self) -> bool {
         self.schema.is_empty()
+    }
+
+    pub fn shown(&self) -> bool {
+        self.listed != Some(false)
     }
 
     pub fn title_in(&self, languages: &[String]) -> String {

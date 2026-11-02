@@ -12,6 +12,8 @@ use wprs_format::{
     Added, Entry, Keypair, Published, Reason, RootStatus, Settings, Signer, fingerprint, keygen, settings,
 };
 
+mod listed;
+
 pub struct Repo {
     pub dir: PathBuf,
     key: PathBuf,

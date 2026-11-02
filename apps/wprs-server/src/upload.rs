@@ -42,13 +42,28 @@ fn tmp(app: &App, name: &str) -> PathBuf {
 struct Open {
     size: u64,
     sha256: String,
+    #[serde(default)]
+    visibility: Option<String>,
+}
+
+pub(crate) fn listed(visibility: Option<&str>) -> Res<bool> {
+    match visibility.unwrap_or("public") {
+        "public" => Ok(true),
+        "unlisted" => Ok(false),
+        _ => Err(Problem::bad("visibility: public or unlisted")),
+    }
 }
 
 async fn open(State(app): St, auth: Auth, Input(o): Input<Open>) -> Res<impl IntoResponse> {
     auth.scope("upload")?;
+    let shown = listed(o.visibility.as_deref())?;
     let id = start(&app, &auth, o.size, o.sha256, "open").await?;
+    let (key, sql) = (id.clone(), "UPDATE uploads SET listed = ?2 WHERE id = ?1");
+    app.db.run(move |c| Ok(c.execute(sql, params![key, shown])?)).await?;
     let url = app.cfg.url(&format!("/api/v1/uploads/{id}"));
-    Ok((StatusCode::CREATED, Json(json!({"id": id, "put_url": url, "expires_at": now() + DAY}))))
+    let visibility = if shown { "public" } else { "unlisted" };
+    let opened = json!({"id": id, "put_url": url, "expires_at": now() + DAY, "visibility": visibility});
+    Ok((StatusCode::CREATED, Json(opened)))
 }
 
 fn allowed(c: &Connection, user: i64, per_day: i64) -> Res<i64> {

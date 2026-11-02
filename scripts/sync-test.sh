@@ -155,6 +155,7 @@ await b "$job"
 [ "$(value b "['state']")" = ready ] || fail "the key share: $(b server status --json)"
 echo "link, approval and key share checks passed"
 source "$(dirname "$0")"/sync-library.sh
+source "$(dirname "$0")"/sync-unlisted.sh
 source "$(dirname "$0")"/sync-files.sh
 source "$(dirname "$0")"/sync-keys.sh
 source "$(dirname "$0")"/sync-phone.sh

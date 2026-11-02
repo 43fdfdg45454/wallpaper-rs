@@ -477,6 +477,30 @@ msgstr ""
 msgid "Error:"
 msgstr "Error:"
 
+#: apps/wprs-app/qml/AccountUploads.qml
+msgid "Your uploads"
+msgstr "Tus subidas"
+
+#: apps/wprs-app/qml/AccountUploads.qml
+msgid ""
+"Unlisted versions stay out of the catalog and search; whoever has their link "
+"can still install them."
+msgstr ""
+"Las versiones ocultas quedan fuera del catálogo y de la búsqueda; quien "
+"tenga su enlace puede instalarlas igual."
+
+#: apps/wprs-app/qml/AccountUploads.qml
+msgid "%1 %2 · %3"
+msgstr "%1 %2 · %3"
+
+#: apps/wprs-app/qml/AccountUploads.qml
+msgid "Public"
+msgstr "Público"
+
+#: apps/wprs-app/qml/AccountUploads.qml
+msgid "Unlisted"
+msgstr "Oculto"
+
 #: apps/wprs-app/qml/Actions.qml apps/wprs-app/qml/SceneAssets.qml
 #: apps/wprs-app/qml/ScenePresets.qml
 msgid "Import…"
@@ -574,6 +598,10 @@ msgid "Showing %1 of %2 packages; refine the search to see others."
 msgstr "Se muestran %1 de %2 paquetes; afina la búsqueda para ver otros."
 
 #: apps/wprs-app/qml/Browse.qml
+msgid "Featured"
+msgstr "Destacado"
+
+#: apps/wprs-app/qml/Browse.qml
 msgid "Installed: %1"
 msgstr "Instalado: %1"
 
@@ -600,6 +628,20 @@ msgstr "Actualizar"
 #: apps/wprs-app/qml/Browse.qml
 msgid "Install"
 msgstr "Instalar"
+
+#: apps/wprs-app/qml/BrowseVotes.qml
+msgid "Vote up"
+msgstr "Votar a favor"
+
+#: apps/wprs-app/qml/BrowseVotes.qml
+msgid "Vote down"
+msgstr "Votar en contra"
+
+#: apps/wprs-app/qml/BrowseVotes.qml
+msgid ""
+"Votes go to your server with your account; it keeps only the counts and your "
+"own vote."
+msgstr "Los votos van a tu servidor con tu cuenta; guarda solo los recuentos y tu propio voto."
 
 #: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
 msgid "Follow the sound that plays"
@@ -4460,7 +4502,9 @@ msgstr "%1 %2 · %3 · de %4"
 msgid ""
 "The chosen parts and their files are copied into this scene, so it works "
 "without the package; their credits and the origin are written for you."
-msgstr "Las partes elegidas y sus archivos se copian en esta escena, que así funciona sin el paquete; sus créditos y el origen se escriben solos."
+msgstr ""
+"Las partes elegidas y sus archivos se copian en esta escena, que así "
+"funciona sin el paquete; sus créditos y el origen se escriben solos."
 
 #: apps/wprs-app/qml/SceneShared.qml
 msgid "Assets packages"
@@ -5456,6 +5500,26 @@ msgstr ""
 "Destella o muestra patrones rápidos; las listas lo saltan hasta que lo "
 "permitas en sus detalles"
 
+#: apps/wprs-app/qml/UploadDialog.qml
+msgid "Upload to the server"
+msgstr "Subir al servidor"
+
+#: apps/wprs-app/qml/UploadDialog.qml
+msgid "Public: in the catalog and its search"
+msgstr "Público: en el catálogo y su búsqueda"
+
+#: apps/wprs-app/qml/UploadDialog.qml
+msgid "Unlisted: only whoever has its link finds it"
+msgstr "Oculto: solo lo encuentra quien tenga su enlace"
+
+#: apps/wprs-app/qml/UploadDialog.qml
+msgid ""
+"An unlisted package is still published and signed: whoever has its link or "
+"id can see and install it. You can change this later on your account page."
+msgstr ""
+"Un paquete oculto se publica y se firma igual: quien tenga su enlace o su id "
+"puede verlo e instalarlo. Puedes cambiarlo después en la página de tu cuenta."
+
 #: apps/wprs-app/qml/WebPrivacy.qml
 msgid "Let it see the time zone"
 msgstr "Dejar que vea la zona horaria"
@@ -5876,6 +5940,10 @@ msgstr "Mostrar el contenido para adultos sin difuminar"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Refresh repositories every day"
 msgstr "Actualizar los repositorios cada día"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Show vote counts from your server in the catalog"
+msgstr "Mostrar en el catálogo los votos de tu servidor"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Screen frame width for spanning (mm)"

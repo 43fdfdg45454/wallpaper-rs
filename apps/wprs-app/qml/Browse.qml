@@ -14,6 +14,8 @@ ColumnLayout {
     property var moving: ({})
     property var asked: ({})
     property var shown: ({})
+    property var votes: ({})
+    property bool counted
     readonly property bool battery: App.state.on_battery ?? false
 
     function animate(pkg) {
@@ -32,8 +34,9 @@ ColumnLayout {
         App.query("Browse", [field.text, 0, 200], "Repos1", reply => {
             if (!browse)
                 return;
-            browse.packages = reply.packages;
+            browse.packages = reply.packages.filter(p => p.featured).concat(reply.packages.filter(p => !p.featured));
             browse.total = reply.total;
+            App.query("GetVotes", [reply.packages.slice(0, 100).map(p => p.id)], "Sync1", found => browse && (browse.votes = found.items ?? {}, browse.counted = found.shown === true), () => browse && (browse.counted = false));
             App.query("RequestPreviews", [reply.packages.filter(p => p.preview).map(browse.spec)], "Repos1", found => browse && (browse.previews = Object.assign({}, browse.previews, found[0])));
         });
     }
@@ -132,7 +135,7 @@ ColumnLayout {
 
                     Kirigami.Heading {
                         level: 4
-                        text: row.modelData.title + " · " + Labels.value(row.modelData.kind)
+                        text: (row.modelData.featured ? App.tr("Featured") + " · " : "") + row.modelData.title + " · " + Labels.value(row.modelData.kind)
                         textFormat: Text.PlainText
                     }
 
@@ -149,6 +152,13 @@ ColumnLayout {
                         wrapMode: Text.Wrap
                         color: Kirigami.Theme.negativeTextColor
                         text: App.tr("Flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy.")
+                    }
+
+                    BrowseVotes {
+                        counts: browse.votes[row.modelData.id] ?? null
+                        shown: browse.counted
+                        onVoted: found => browse.votes = Object.assign({}, browse.votes, Object.fromEntries([[row.modelData.id, found]]))
+                        packageId: row.modelData.id
                     }
 
                     PrivacyNotice {

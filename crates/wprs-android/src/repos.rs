@@ -175,7 +175,7 @@ pub(crate) fn listed(found: Vec<wprs_format::Item>, hide: bool, languages: &[Str
     let items = found.iter().filter(|i| !hide || !mature(i)).take(200).map(|i| {
         json!({"repo_id": i.repo_id, "repo": i.repo_name, "id": i.id,
         "version": i.release.version, "title": i.release.title.pick(languages), "kind": i.release.kind,
-        "size": i.release.size, "installed": !i.installed.is_empty(), "mature": mature(i)})
+        "size": i.release.size, "installed": !i.installed.is_empty(), "mature": mature(i), "featured": i.featured})
     });
     json!(items.collect::<Vec<_>>())
 }

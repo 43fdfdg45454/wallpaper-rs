@@ -43,7 +43,27 @@ fn operator_commands_parse() {
         ("repo status site --json", r#"Repo(Status { dir: "site", json: true })"#),
         (
             "repo add site a.wpak --author studio",
-            r#"Repo(Add { dir: "site", files: ["a.wpak"], author: Some("studio"), json: false })"#,
+            r#"Repo(Add { dir: "site", files: ["a.wpak"], author: Some("studio"), unlisted: false, json: false })"#,
+        ),
+        (
+            "repo add site a.wpak --unlisted",
+            r#"Repo(Add { dir: "site", files: ["a.wpak"], author: None, unlisted: true, json: false })"#,
+        ),
+        (
+            "repo hide site org.example.dawn --version 1.0.0",
+            r#"Repo(Hide { dir: "site", id: "org.example.dawn", version: Some("1.0.0") })"#,
+        ),
+        (
+            "repo unhide site org.example.dawn",
+            r#"Repo(Unhide { dir: "site", id: "org.example.dawn", version: None })"#,
+        ),
+        (
+            "repo feature site org.example.dawn --note Calm",
+            r#"Repo(Feature { dir: "site", id: "org.example.dawn", note: Some("Calm") })"#,
+        ),
+        (
+            "repo unfeature site org.example.dawn",
+            r#"Repo(Unfeature { dir: "site", id: "org.example.dawn" })"#,
         ),
         (
             "repo revoke site org.example.dawn --version 1.0.0 --reason broken",

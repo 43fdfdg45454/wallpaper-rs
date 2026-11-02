@@ -135,16 +135,16 @@ pub(crate) fn load(data: &Path, repo_id: &str) -> Result<Snapshot> {
             .map(Some)?,
     };
     let value = details.as_ref().map(|d: &Doc<Details>| &d.value);
-    let blobs =
-        kept(&entry.value, value).chain([&entry.value.revoked]).chain(&entry.value.authors).map(|blob| {
-            match fs::read(dir.join("blobs").join(format!("{}.json", blob.sha256))) {
-                Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
-                bytes => {
-                    let bytes = bytes?;
-                    blob.matches(&bytes).map(|()| Some((blob.sha256.clone(), bytes)))
-                }
+    let blobs = kept(&entry.value, value).chain([&entry.value.revoked]).chain(&entry.value.authors);
+    let blobs = blobs.chain(value.and_then(|d| d.featured.as_ref())).map(|blob| {
+        match fs::read(dir.join("blobs").join(format!("{}.json", blob.sha256))) {
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+            bytes => {
+                let bytes = bytes?;
+                blob.matches(&bytes).map(|()| Some((blob.sha256.clone(), bytes)))
             }
-        });
+        }
+    });
     let blobs = blobs.filter_map(Result::transpose).collect::<Result<BTreeMap<_, _>>>()?;
     let older = cold(value, &blobs);
     let (shards, revoked) = contents(&entry.value, older.as_ref().or(value), repo_id, &blobs)?;

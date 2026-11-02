@@ -3,8 +3,8 @@ use crate::net::{API, client_ip, key};
 use crate::pages::local;
 use crate::web::layout;
 use crate::{
-    App, St, account, admin, catalog, device, files, hiding, legal, mailbox, me, moderation, pages, records,
-    served, sync, upload, web,
+    App, St, account, admin, catalog, device, featuring, files, hiding, legal, mailbox, me, moderation,
+    pages, records, served, sync, upload, visibility, votes, web,
 };
 use axum::Router;
 use axum::body::{Body, to_bytes};
@@ -35,6 +35,9 @@ pub fn router(app: Arc<App>) -> Router {
         records::routes,
         mailbox::routes,
         files::routes,
+        visibility::routes,
+        votes::routes,
+        featuring::routes,
     ]);
     modules.extend([web::routes, pages::routes, legal::routes]);
     #[cfg(feature = "oidc")]

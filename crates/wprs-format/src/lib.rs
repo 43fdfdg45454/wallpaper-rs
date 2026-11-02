@@ -14,6 +14,7 @@ mod display;
 mod download;
 mod entry;
 mod facts;
+mod featured;
 pub mod features;
 mod fetch;
 mod index;
@@ -55,15 +56,16 @@ pub use admin::sign_root;
 pub use admin::{RootStatus, init, rotate_root, status};
 pub use archive::{extract, peek, thumbnail};
 pub use authors::{AUTHORS_FORMAT, Authors, ONLINE, OnlineAuthor, Rotation, Trusted, rotation_text};
-pub use browse::{Item, browse};
+pub use browse::{Item, browse, browse_with};
 pub use build::{build, sha256, sha256_file};
-pub use catalog::{Added, add, hide, revoke, revoke_key, unrevoke};
+pub use catalog::{Added, add, hide, list, revoke, revoke_key, unrevoke};
 pub use client::{Outcome, RepoInfo, Update, add_repo, remove_repo, repos, update_repo, verify};
 pub use closer::{PHONE_BYTES, PHONE_PIXELS, PHONE_SIDE};
 pub use display::{Accent, Display, Flip, Follow, FrameRate, Span};
 pub use download::{animated, preview, previews, release};
 pub use entry::{Blob, DETAILS_FORMAT, Details, ENTRY_FORMAT, Entry, Pin};
 pub use facts::Facts;
+pub use featured::{FEATURED_FORMAT, Featured, MAX_FEATURED, Pick, feature, featured};
 pub use fetch::{Anchor, Fetch, FileFetch};
 pub use index::{
     DETAILED_FORMAT, KINDS_FORMAT, KeyRevocation, Listing, REVOKED_FORMAT, Reason, Revocation, Revoked,

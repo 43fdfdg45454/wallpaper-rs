@@ -111,6 +111,7 @@ impl Daemon {
                 facets: release.facets,
                 changes,
                 revealed,
+                featured: item.featured,
             }
         };
         let packages = items.into_iter().skip(offset as usize).take(limit as usize).map(package).collect();

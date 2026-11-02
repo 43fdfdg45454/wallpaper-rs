@@ -42,5 +42,10 @@ pub trait Sync1 {
     fn list_files(&self) -> Result<String>;
     fn fetch_file(&self, file: &str) -> Result<u64>;
     fn upload(&self, path: &str) -> Result<u64>;
+    fn upload_as(&self, path: &str, visibility: &str) -> Result<u64>;
+    fn list_packages(&self) -> Result<String>;
+    fn set_visibility(&self, id: &str, version: &str, visibility: &str) -> Result<()>;
+    fn vote(&self, id: &str, vote: &str) -> Result<String>;
+    fn get_votes(&self, ids: &[&str]) -> Result<String>;
     fn remove_server(&self, wipe: bool) -> Result<()>;
 }

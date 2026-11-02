@@ -51,8 +51,40 @@ pub enum Repo {
         files: Vec<PathBuf>,
         #[arg(long, help = "Author id the packages must be signed by")]
         author: Option<String>,
+        #[arg(
+            long,
+            help = "Leave the new versions out of browsing and search; installing by id still works"
+        )]
+        unlisted: bool,
         #[arg(long, help = "Print one JSON object per package")]
         json: bool,
+    },
+    #[command(
+        about = "Unlist a package or one version: out of browsing and search, still installable by id; publish next"
+    )]
+    Hide {
+        dir: PathBuf,
+        id: String,
+        #[arg(long)]
+        version: Option<String>,
+    },
+    #[command(
+        about = "Feature a package of the repository, signed into it, with an optional note; publish next"
+    )]
+    Feature {
+        dir: PathBuf,
+        id: String,
+        #[arg(long)]
+        note: Option<String>,
+    },
+    #[command(about = "Stop featuring a package; publish next")]
+    Unfeature { dir: PathBuf, id: String },
+    #[command(about = "List an unlisted package or version again; publish next")]
+    Unhide {
+        dir: PathBuf,
+        id: String,
+        #[arg(long)]
+        version: Option<String>,
     },
     #[command(about = "Revoke a package or one of its versions; publish next")]
     Revoke {

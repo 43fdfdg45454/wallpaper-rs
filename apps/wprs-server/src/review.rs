@@ -98,6 +98,8 @@ pub async fn record(app: &App, user: i64, upload: &str, sha: &str, size: i64, re
         ];
         tx.execute(sql, values)?;
         let version = tx.last_insert_rowid();
+        let sql = "UPDATE versions SET listed = (SELECT listed FROM uploads WHERE id = ?1) WHERE id = ?2";
+        tx.execute(sql, params![upload, version])?;
         let sql = "UPDATE uploads SET state = 'done', errors = NULL, version_id = ?2 WHERE id = ?1";
         tx.execute(sql, params![upload, version])?;
         let sql = "INSERT INTO cases (version_id, reason, created_at) VALUES (?1, 'upload', ?2)";

@@ -124,8 +124,26 @@ pub enum Server {
     #[command(about = "Upload a .wpak package to the repository of the server")]
     Upload {
         file: String,
+        #[arg(
+            long,
+            help = "Keep it out of the catalog and search; whoever has its link can still install it"
+        )]
+        unlisted: bool,
         #[command(flatten)]
         wait: Wait,
+    },
+    #[command(about = "List the packages this account uploaded, with their state and visibility")]
+    Packages {
+        #[arg(long, help = "Print the result as JSON")]
+        json: bool,
+    },
+    #[command(about = "Make a package, or one version, public or unlisted")]
+    Visibility {
+        id: String,
+        #[arg(value_parser = ["public", "unlisted"])]
+        visibility: String,
+        #[arg(long)]
+        version: Option<String>,
     },
     #[command(about = "Forget the server and delete the token and sync key of this computer")]
     Remove {

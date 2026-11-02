@@ -193,7 +193,7 @@ async fn administration(State(app): St, auth: Option<Auth>) -> Res<Response> {
             }
         }
         p { a href="/api/v1/admin/transparency" { "Transparency report (CSV)" } " · "
-            a href="/api/v1/mod/audit" { "Audit log (JSON)" } }
+            a href="/api/v1/mod/audit" { "Audit log (JSON)" } " · " a href="/admin/featured" { "Featured packages" } }
     };
     Ok(page(&app, Some(&auth), "Administration", body).into_response())
 }

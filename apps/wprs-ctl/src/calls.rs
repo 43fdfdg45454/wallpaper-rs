@@ -138,5 +138,10 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Sync1", "ListFiles", "server files ls", &[]),
     ("Sync1", "FetchFile", "server files fetch", &["FILE"]),
     ("Sync1", "Upload", "server upload", &["FILE"]),
+    ("Sync1", "UploadAs", "server upload", &["FILE", "--unlisted"]),
+    ("Sync1", "ListPackages", "server packages", &[]),
+    ("Sync1", "SetVisibility", "server visibility", &["ID", "--version", "VISIBILITY"]),
+    ("Sync1", "Vote", "remote vote", &["ID", "VOTE"]),
+    ("Sync1", "GetVotes", "remote votes", &["IDS"]),
     ("Sync1", "RemoveServer", "server remove", &["--wipe"]),
 ];

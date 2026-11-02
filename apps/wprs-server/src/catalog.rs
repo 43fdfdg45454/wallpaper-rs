@@ -16,17 +16,21 @@ use serde_json::{Value, json};
 
 const SELECT: &str = "SELECT v.id AS row, v.package_id AS id, v.version, v.kind, v.title, v.description, \
                       v.license, v.tags, v.authors, v.size, v.sha256, v.published_at, u.handle AS owner, \
-                      v.content, v.photosensitive, v.facets, p.hidden \
+                      v.content, v.photosensitive, v.facets, p.hidden, v.listed, \
+                      (SELECT COALESCE(SUM(value = 1), 0) FROM votes WHERE package_id = v.package_id) AS up, \
+                      (SELECT COALESCE(SUM(value = -1), 0) FROM votes WHERE package_id = v.package_id) AS down, \
+                      EXISTS (SELECT 1 FROM featured f WHERE f.package_id = v.package_id) AS featured \
                       FROM versions v JOIN packages p ON p.id = v.package_id \
                       LEFT JOIN users u ON u.id = p.owner_id";
 const NEWEST: &str = " WHERE v.state = 'published' AND p.hidden IS NULL AND v.id = (SELECT w.id FROM versions w \
-                      WHERE w.package_id = v.package_id AND w.state = 'published' \
+                      WHERE w.package_id = v.package_id AND w.state = 'published' AND w.listed = 1 \
                       ORDER BY w.published_at DESC, w.id DESC LIMIT 1) \
                       AND (?1 = '' OR (?1 = 'm' AND v.id IN (SELECT rowid FROM search WHERE search MATCH ?2)) \
                       OR (?1 = 't' AND v.tags LIKE ?2 ESCAPE '!')) \
                       AND (?3 = '' OR v.kind = ?3) AND (v.published_at, v.id) < (?4, ?5) \
                       AND (?7 = '' OR v.content = ?7 OR (?7 = 'unrated' AND v.content IS NULL)) \
                       AND (?8 = '' OR EXISTS (SELECT 1 FROM json_each(v.facets) WHERE value = ?8)) \
+                      AND (?9 = '' OR EXISTS (SELECT 1 FROM featured f WHERE f.package_id = v.package_id)) \
                       ORDER BY v.published_at DESC, v.id DESC LIMIT ?6";
 
 pub fn routes() -> Router {
@@ -48,6 +52,8 @@ pub struct Search {
     pub content: String,
     #[serde(default)]
     pub facet: String,
+    #[serde(default)]
+    pub featured: String,
     pub limit: Option<u32>,
 }
 
@@ -56,10 +62,15 @@ fn shape(mut item: Value) -> Value {
         item[key] = serde_json::from_str(item[key].as_str().unwrap_or("[]")).unwrap_or_default();
     }
     item["photosensitive"] = item["photosensitive"].as_i64().map(|f| f != 0).into();
+    item["listed"] = (item["listed"] != 0).into();
+    item["featured"] = (item["featured"] != 0).into();
+    item["votes"] = json!({"up": item["up"], "down": item["down"]});
     let (id, version, sha) = (text(&item, "id"), text(&item, "version"), text(&item, "sha256"));
     let (thumbnail, download) = (format!("/media/{sha}.jpg"), format!("/repo/packages/{id}/{version}.wpak"));
     (item["thumbnail"], item["download"]) = (thumbnail.into(), download.into());
-    item.as_object_mut().map(|fields| fields.remove("row"));
+    item.as_object_mut()
+        .into_iter()
+        .for_each(|fields| ["row", "up", "down"].iter().for_each(|k| drop(fields.remove(*k))));
     item
 }
 
@@ -82,7 +93,8 @@ pub fn search(c: &Connection, s: &Search) -> Res<(Vec<Value>, Option<String>)> {
     let after = cursor.split_once(':').and_then(|(a, b)| Some((a.parse().ok()?, b.parse().ok()?)));
     let (at, row): (i64, i64) = after.unwrap_or((i64::MAX, i64::MAX));
     let (mode, pattern) = pattern(&s.q);
-    let values = params![mode, pattern, s.kind, at, row, limit as i64 + 1, s.content, s.facet];
+    let featured = if s.featured.is_empty() || s.featured == "false" { "" } else { "1" };
+    let values = params![mode, pattern, s.kind, at, row, limit as i64 + 1, s.content, s.facet, featured];
     let mut found = rows(c, &format!("{SELECT}{NEWEST}"), values)?;
     let more = found.len() > limit;
     found.truncate(limit);
@@ -107,6 +119,7 @@ async fn list(State(app): St, Query(s): Query<Search>) -> Res<impl IntoResponse>
         ("kind", encode(&s.kind)),
         ("content", encode(&s.content)),
         ("facet", encode(&s.facet)),
+        ("featured", encode(&s.featured)),
         ("limit", s.limit.map(|l| l.to_string()).unwrap_or_default()),
     ];
     let (items, next) = app.db.run(move |c| search(c, &s)).await?;

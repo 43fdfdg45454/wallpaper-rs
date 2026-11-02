@@ -43,6 +43,8 @@ pub(crate) fn refresh(
     let list = kept(&entry.value, details.as_ref().map(|d| &d.value));
     let wanted = list.map(|b| ("index", b)).chain([("revoked", &entry.value.revoked)]);
     let wanted = wanted.chain(crate::authors::blob(&entry.value));
+    let picked = details.as_ref().and_then(|d| d.value.featured.as_ref()).map(|b| ("featured", b));
+    let wanted = wanted.chain(picked);
     let blobs = wanted.map(|(dir, blob)| {
         if let Some(bytes) = cache.get(&blob.sha256).filter(|b| blob.matches(b).is_ok()) {
             return Ok((blob.sha256.clone(), bytes.clone()));

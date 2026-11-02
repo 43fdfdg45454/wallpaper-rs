@@ -62,6 +62,7 @@ cmp -s "$moving" "$site/dusk/moving.gif" || fail "the animated preview of a repo
 [ "$(ctl pkg preview --animated "$dusk")" = "$moving" ] || fail "the cached animated preview was not reused"
 [ "$(ctl pkg search dusk --json | jq_ "[p['animated'] for p in r['packages']]")" = "[True]" ] ||
   fail "browse does not say the package has an animated preview"
+source "$(dirname "$0")"/integration-unlisted.sh
 python3 -c "import socket, time; s = socket.socket(); s.bind(('127.0.0.1', 0)); s.listen(8)
 print(s.getsockname()[1], flush=True); time.sleep(600)" >"$WORK/stall.port" & pids+=($!)
 wait_for 5 test -s "$WORK/stall.port" || fail "the stalled server did not start"

@@ -80,8 +80,10 @@ fn mature_packages_in_repositories_are_labelled_and_hidden_when_asked() {
         },
         versions: Vec::new(),
         installed: Vec::new(),
+        featured: id == "calm",
     };
     let found = || vec![rated("calm", Some("general")), rated("storm", Some("mature")), rated("old", None)];
+    assert_eq!(crate::repos::listed(found(), false, &[])[0]["featured"], true);
     let shown = |hide| {
         let listed = crate::repos::listed(found(), hide, &[]);
         let row = |i: &Value| (i["id"].as_str().unwrap().to_owned(), i["mature"].as_bool().unwrap());

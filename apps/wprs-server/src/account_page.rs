@@ -13,6 +13,20 @@ fn remove(path: String) -> Markup {
     html! { form method="post" action={ (path) "?_method=DELETE&back=/account" } { button { "Remove" } } }
 }
 
+const VISIBILITY: [&str; 2] = ["public", "unlisted"];
+const UNLISTED: &str = "Unlisted versions stay out of the catalog and search; whoever has the link to the package \
+                        can still see and install them.";
+
+fn visibility(v: &Value) -> Markup {
+    let (id, version, now) = (text(v, "package"), text(v, "version"), text(v, "visibility"));
+    let other = if now == "public" { "unlisted" } else { "public" };
+    html! { form method="post" action={ "/api/v1/me/packages/" (id) "/visibility?back=/account" } {
+        input type="hidden" name="version" value=(version);
+        input type="hidden" name="visibility" value=(other);
+        (now) " " button { "Make " (other) }
+    } }
+}
+
 pub async fn account(State(app): St, auth: Option<Auth>) -> Res<Response> {
     let Some(auth) = auth else { return Ok(Redirect::to("/login?next=/account").into_response()) };
     let user = auth.user;
@@ -28,19 +42,22 @@ pub async fn account(State(app): St, auth: Option<Auth>) -> Res<Response> {
             (me["used_bytes"]) " of " (me["quota_bytes"]) " bytes." }
         section.card { h2 { "Upload a wallpaper package" }
             form method="post" action="/upload?back=/account" enctype="multipart/form-data" {
+                label { "Visibility" (crate::admin::choose("visibility", "Visibility", &VISIBILITY, "public")) }
                 label { ".wpak file" input type="file" name="package" accept=".wpak" required; }
                 button { "Upload" }
             }
+            p.muted { (UNLISTED) }
             table {
-                thead { tr { th { "Package" } th { "Version" } th { "State" } th { "Moderation" } } }
+                thead { tr { th { "Package" } th { "Version" } th { "State" } th { "Visibility" } th { "Moderation" } } }
                 tbody {
                     @for v in &versions { tr {
                         td { (text(v, "title")) br; code { (text(v, "package")) } }
-                        td { (text(v, "version")) } td { (text(v, "state")) } td { (text(v, "statement")) }
+                        td { (text(v, "version")) } td { (text(v, "state")) }
+                        td { (visibility(v)) } td { (text(v, "statement")) }
                     } }
                     @for u in &uploads { tr {
                         td { "Upload " (text(u, "id")) } td {}
-                        td { (text(u, "state")) } td { (text(u, "errors")) }
+                        td { (text(u, "state")) } td {} td { (text(u, "errors")) }
                     } }
                 }
             }

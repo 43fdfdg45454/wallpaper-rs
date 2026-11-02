@@ -462,7 +462,8 @@ msgstr "el clip no tiene ninguna clave ahí en %1 s"
 
 #: crates/wprs-editor/src/credit.rs
 msgid "a package has at most 64 credits; credit folders instead of files"
-msgstr "un paquete tiene como mucho 64 créditos; acredita carpetas en vez de archivos"
+msgstr ""
+"un paquete tiene como mucho 64 créditos; acredita carpetas en vez de archivos"
 
 #: crates/wprs-editor/src/credit.rs
 msgid "a package is derived from at most 64 works"
@@ -1039,7 +1040,8 @@ msgstr "una expresión pesa cada forma de mezcla de -1 a 1"
 
 #: crates/wprs-editor/src/shelf.rs
 msgid "name a part as layer:ID, particles:ID, script:PATH or effect:ID, not %1"
-msgstr "nombra una parte como layer:ID, particles:ID, script:RUTA o effect:ID, no %1"
+msgstr ""
+"nombra una parte como layer:ID, particles:ID, script:RUTA o effect:ID, no %1"
 
 #: crates/wprs-editor/src/shelf.rs
 msgid "choose at least one part"
@@ -1604,6 +1606,22 @@ msgstr "inputs declara %1, pero nada del paquete lo usa"
 #: crates/wprs-format/src/facts.rs
 msgid "requires.features lists %1, which the package does not use"
 msgstr "requires.features incluye %1, que el paquete no usa"
+
+#: crates/wprs-format/src/featured.rs
+msgid "expected a wpak-repo-featured/1.0 of this repository"
+msgstr "se esperaba un wpak-repo-featured/1.0 de este repositorio"
+
+#: crates/wprs-format/src/featured.rs
+msgid "expected at most 64 package ids, each once, with short notes"
+msgstr "se esperaban como mucho 64 ids de paquete, cada uno una vez, con notas cortas"
+
+#: crates/wprs-format/src/featured.rs
+msgid "has 1 to 200 characters on one line without < or >"
+msgstr "tiene de 1 a 200 caracteres en una línea sin < ni >"
+
+#: crates/wprs-format/src/featured.rs
+msgid "holds at most 64 packages"
+msgstr "admite como mucho 64 paquetes"
 
 #: crates/wprs-format/src/features.rs
 msgid "reacts to the sound playing on the computer"
@@ -2462,7 +2480,8 @@ msgstr "incluye la base del ajuste"
 
 #: crates/wprs-format/src/web.rs
 msgid "assets packages are copied into scenes and need none"
-msgstr "los paquetes de recursos se copian en las escenas y no necesitan ninguno"
+msgstr ""
+"los paquetes de recursos se copian en las escenas y no necesitan ninguno"
 
 #: crates/wprs-format/src/web.rs
 msgid "preset and assets packages have none"

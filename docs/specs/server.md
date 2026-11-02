@@ -172,11 +172,20 @@ the verified shards before installing.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/v1/catalog?q=&kind=&content=&facet=&cursor=&limit=` | — | Newest published packages that the moderators did not hide; `q` matches title, description, tags and id; `kind` is `image`, `video`, `scene` or `web`; `content` is `general`, `mature` or `unrated` (packages of the first manifest version); `facet` is one facet the package must have (`mature` included); `limit` 1 to 100 (24) |
+| GET | `/api/v1/catalog?q=&kind=&content=&facet=&cursor=&limit=` | — | Newest published and listed version of each package that the moderators did not hide; `q` matches title, description, tags and id; `kind` is `image`, `video`, `scene` or `web`; `content` is `general`, `mature` or `unrated` (packages of the first manifest version); `facet` is one facet the package must have (`mature` included); `limit` 1 to 100 (24) |
 | GET | `/api/v1/packages/{id}` | — | Latest version plus `versions: [string]` |
 | GET | `/api/v1/packages/{id}/versions` | — | `{items: [item]}` |
 | POST | `/api/v1/packages/{id}/reports` | — | `{category: copyright\|illegal\|malware\|mature\|spam\|other, details}` → `201 {case}` |
 | GET | `/media/{sha256}.jpg` | — | Thumbnail of a pending or published version |
+| POST | `/api/v1/packages/{id}/vote` | session or token | `{vote: up\|down\|none}` → `{id, up, down, mine}`; one vote per account and package, at most 60 changes an hour (`429`), `404` for a package that is not published |
+| GET | `/api/v1/packages/{id}/vote` | session or token | `{id, up, down, mine}` |
+| GET | `/api/v1/votes?ids=` | — | `{items: {id: {up, down}}}` for at most 100 package ids separated by commas |
+
+`featured=true` keeps the packages the operator features. `votes` is `{up, down}`: counts of the
+votes of accounts, unsigned hints that are not part of the repository. The server keeps one vote per
+account and package to count it once and lets each account read only its own; it never lists who
+voted and keeps no record of installs or downloads. The page of a package shows the counts, the
+note when it is featured and, for a signed-in visitor, buttons to vote up, down or withdraw the vote.
 
 Search uses an SQLite FTS5 index with the trigram tokenizer (without diacritics) over the id,
 title, description and tags of published versions, kept up to date by triggers: every word of `q`
@@ -184,9 +193,11 @@ with at least 3 characters must appear as a substring, in any case and with or w
 a `q` without such a word matches tags that start with it.
 
 Item: `{id, version, kind, title, description, license, tags, authors, size, sha256, published_at,
-owner, thumbnail, download, content, photosensitive, facets, hidden}` (`thumbnail` and `download` are
+owner, thumbnail, download, content, photosensitive, facets, hidden, listed, featured, votes}` (`thumbnail` and `download` are
 paths; `content` and `photosensitive` are `null` for packages of the first manifest version; `hidden`
-is the moderators' reason, or `null`, and only `/api/v1/packages/…` answers hidden packages). Titles and
+is the moderators' reason, or `null`, and only `/api/v1/packages/…` answers hidden packages; `listed` is
+`false` for an unlisted version, which only `/api/v1/packages/…` and the page of the package show, with a
+note that it is unlisted). Titles and
 descriptions are those of the package's default language. The web catalog filters by rating and
 facet as well, shows the description with its markup (as written for packages of the first manifest
 version), a warning on the page of a photosensitive package and the previews of mature packages
@@ -262,12 +273,22 @@ identities are refused unless `WPRS_OIDC_AUTO_PROVISION` creates an account.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/v1/uploads` | `upload` | `{size, sha256}` → `201 {id, put_url, expires_at}`; checks blocklist, strikes, daily limit, two open sessions and quota first |
+| POST | `/api/v1/uploads` | `upload` | `{size, sha256, visibility?}` → `201 {id, put_url, expires_at, visibility}`; `visibility` is `public` (the default) or `unlisted`; checks blocklist, strikes, daily limit, two open sessions and quota first |
 | PUT | `/api/v1/uploads/{id}` | `upload` | Body is the `.wpak`; `Content-Length` must equal `size`; size and SHA-256 are checked while streaming; one request at a time per upload (`429`) |
 | POST | `/api/v1/uploads/{id}/finalize` | `upload` | Validates and returns the status |
 | GET | `/api/v1/uploads/{id}` | `upload` | Status |
 | DELETE | `/api/v1/uploads/{id}` | `upload` | Cancel an unfinished upload → `204` |
-| POST | `/upload` | session | `multipart/form-data` field `package`, for the web site; strikes, daily limit, open uploads and quota are checked and an open upload session is reserved before the package is read, the blocklist right after; at most 8 fields, others up to 4 KiB, 30 s each |
+| POST | `/api/v1/me/packages/{id}/visibility` | `upload` | `{visibility: public\|unlisted, version?}` sets every version of a package of this account, or one, → `{id, version, visibility}`; `404` for a package of another account or an unknown version |
+| POST | `/upload` | session | `multipart/form-data` field `package`, and an optional `visibility` before it, for the web site; strikes, daily limit, open uploads and quota are checked and an open upload session is reserved before the package is read, the blocklist right after; at most 8 fields, others up to 4 KiB, 30 s each |
+
+An unlisted version is published, signed and served like any other, with `listed: false` in its
+release of the repository (`repo.md`): the catalog, its search and the web site's lists leave it out,
+while its page, the package API and installing it by id keep working. Clients that do not know the
+field never see it, since first-version shards leave unlisted releases out. Clients ask for
+`unlisted` only when the answer of `POST /api/v1/uploads` repeats it, and cancel the upload otherwise,
+so that a server without unlisted uploads never publishes a package openly. `/api/v1/me/packages`
+gives each version its `visibility`, and the account page has the picker on the upload form and a
+button per version; every change is audited and the repository is published again.
 
 Status: `{id, state, errors: [string], package, version}` with `state` one of `open`,
 `received`, `failed`, `pending_review`, `published`, `rejected`, `removed`, `revoked`.
@@ -302,6 +323,8 @@ review unless `WPRS_AUTO_PUBLISH` publishes them.
 | PATCH | `/api/v1/admin/users/{id}` | admin | `{role?, status?: active\|suspended, quota_mib?}` |
 | GET | `/api/v1/admin/repo` | admin | Repository state |
 | POST | `/api/v1/admin/repo/publish` | admin | Sign now → `{entry_version, expires, packages}` |
+| GET, POST | `/api/v1/admin/featured` | admin | List; feature `{id, note?}` (a published package, at most 64, a note of at most 200 characters on one line) |
+| DELETE | `/api/v1/admin/featured/{id}` | admin | Stop featuring it; both are audited, signed into the repository (`repo.md`) and listed on `/admin/featured` |
 | GET | `/api/v1/admin/transparency` | admin | CSV counts of notices, cases and decisions, without personal data |
 
 Decisions: `approve` (pending → published), `reject` (pending → rejected, the file and its

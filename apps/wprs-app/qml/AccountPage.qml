@@ -159,6 +159,12 @@ Kirigami.ScrollablePage {
             Layout.fillWidth: true
             account: page.account
         }
+
+        AccountUploads {
+            Layout.fillWidth: true
+            visible: !!page.account && items.length > 0
+            account: page.account
+        }
     }
 
     AccountDialogs {

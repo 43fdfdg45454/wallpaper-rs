@@ -121,7 +121,31 @@ impl Sync {
 
     #[zbus(out_args("job"))]
     async fn upload(&self, path: String) -> Result<u64> {
-        self.d()?.run(move |d| d.upload(&path)).await
+        self.d()?.run(move |d| d.upload(&path, "public")).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn upload_as(&self, path: String, visibility: String) -> Result<u64> {
+        self.d()?.run(move |d| d.upload(&path, &visibility)).await
+    }
+
+    #[zbus(out_args("json"))]
+    async fn list_packages(&self) -> Result<String> {
+        self.d()?.run(|d| d.own_packages()).await
+    }
+
+    #[zbus(out_args("json"))]
+    async fn vote(&self, id: String, vote: String) -> Result<String> {
+        self.d()?.run(move |d| d.vote(&id, &vote)).await
+    }
+
+    #[zbus(out_args("json"))]
+    async fn get_votes(&self, ids: Vec<String>) -> Result<String> {
+        self.d()?.run(move |d| d.votes(&ids)).await
+    }
+
+    async fn set_visibility(&self, id: String, version: String, visibility: String) -> Result<()> {
+        self.d()?.run(move |d| d.set_visibility(&id, &version, &visibility)).await
     }
 
     async fn remove_server(&self, wipe: bool) -> Result<()> {

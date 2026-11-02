@@ -100,7 +100,14 @@ Kirigami.Page {
         id: packages
 
         nameFilters: [App.tr("Packages (*.wpak)")]
-        onAccepted: App.act("Upload", [App.path(selectedFile)], "Sync1")
+        onAccepted: {
+            uploader.file = App.path(selectedFile);
+            uploader.open();
+        }
+    }
+
+    UploadDialog {
+        id: uploader
     }
 
     Kirigami.Dialog {

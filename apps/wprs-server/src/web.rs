@@ -39,6 +39,7 @@ const FACETS: [&str; 8] =
 
 async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Res<Markup> {
     let (q, kind, rating, facet) = (s.q.clone(), s.kind.clone(), s.content.clone(), s.facet.clone());
+    let picked = !s.featured.is_empty();
     let (items, next) = app.db.run(move |c| search(c, &s)).await?;
     let encode = |text: &str| utf8_percent_encode(text, NON_ALPHANUMERIC).to_string();
     let body = html! {
@@ -56,6 +57,7 @@ async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Re
                 option value="" { "Anything" }
                 @for f in FACETS { option value=(f) selected[facet == f] { (f) } }
             } }
+            label { input type="checkbox" name="featured" value="true" checked[picked]; "Featured only" }
             button { "Search" }
         }
         @if items.is_empty() { p { "Nothing found." } }
@@ -64,7 +66,8 @@ async fn home(State(app): St, auth: Option<Auth>, Query(s): Query<Search>) -> Re
             a href={ "/packages/" (text(i, "id")) } { (text(i, "title")) }
             br;
             small {
-                (text(i, "kind")) " · " (text(i, "license"))
+                @if i["featured"] == true { "Featured · " }
+                (text(i, "kind")) " · " (text(i, "license")) " · ▲ " (i["votes"]["up"]) " ▼ " (i["votes"]["down"])
                 @if let Some(o) = i["owner"].as_str() { " · " (o) }
             }
         } } }
@@ -89,11 +92,16 @@ async fn package(State(app): St, auth: Option<Auth>, Path(id): Path<String>) -> 
         @if let Some(reason) = latest["hidden"].as_str() {
             p.warning { "The moderators took this wallpaper out of the catalog: " (reason) }
         }
+        @if versions.iter().any(|v| v["listed"] == false) {
+            p.muted { "Unlisted: this wallpaper, or some of its versions, stays out of the catalog and search; \
+                whoever has this link can see and install it." }
+        }
         @if latest["photosensitive"] == true {
             p.warning { "This wallpaper has flashing lights or patterns that can affect people with \
                 photosensitive epilepsy." }
         }
         (PreEscaped(description))
+        (crate::votes::ballot(&id, &latest, auth.is_some()))
         dl {
             dt { "Package" } dd { code { (id) } }
             dt { "Type" } dd { (text(&latest, "kind")) }

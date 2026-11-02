@@ -19,6 +19,8 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     include_str!("../migrations/0003_files.sql"),
     include_str!("../migrations/0004_package_facts.sql"),
     include_str!("../migrations/0005_hidden_packages_and_sync_formats.sql"),
+    include_str!("../migrations/0006_unlisted_versions.sql"),
+    include_str!("../migrations/0007_votes_and_featured.sql"),
 ];
 
 pub fn now() -> i64 {

@@ -12,6 +12,7 @@ mod db;
 mod device;
 mod discovery;
 mod error;
+mod featuring;
 mod files;
 mod hiding;
 mod http;
@@ -40,6 +41,8 @@ mod sync;
 mod tests;
 mod upload;
 mod validate;
+mod visibility;
+mod votes;
 mod web;
 
 pub use backup::{backup, restore};

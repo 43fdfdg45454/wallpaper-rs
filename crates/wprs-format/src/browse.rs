@@ -15,17 +15,26 @@ pub struct Item {
     pub release: Release,
     pub versions: Vec<String>,
     pub installed: Vec<String>,
+    pub featured: bool,
 }
 
 pub fn browse(data: &Path, query: &str) -> Result<Vec<Item>> {
+    browse_with(data, query, false)
+}
+
+pub fn browse_with(data: &Path, query: &str, unlisted: bool) -> Result<Vec<Item>> {
     let query = query.to_lowercase();
     let (snaps, installed) = locked(data, false, || Ok((sound(scan(data)?), records(data)?)))?;
     let mut items = Vec::new();
     for snap in snaps {
+        let picked = picked(&snap);
         for listing in snap.shards.iter().flat_map(|shard| &shard.packages) {
-            let open = available(&snap, listing);
-            let Some(release) = open.last().filter(|r| matches(&query, &listing.id, r)) else { continue };
             let here = installed.iter().filter(|i| i.repo_id == snap.state.repo_id && i.id == listing.id);
+            let mut open = available(&snap, listing);
+            if here.clone().next().is_none() && !unlisted {
+                open.retain(|r| r.shown());
+            }
+            let Some(release) = open.last().filter(|r| matches(&query, &listing.id, r)) else { continue };
             if release.hidden && here.clone().next().is_none() {
                 continue;
             }
@@ -37,11 +46,19 @@ pub fn browse(data: &Path, query: &str) -> Result<Vec<Item>> {
                 release: (*release).clone(),
                 versions: open.iter().map(|r| r.version.clone()).collect(),
                 installed: here.map(|i| i.version.clone()).collect(),
+                featured: picked.contains(&listing.id),
             });
         }
     }
     items.sort_by(|a, b| (&a.id, &a.repo_id).cmp(&(&b.id, &b.repo_id)));
     Ok(items)
+}
+
+fn picked(snap: &Snapshot) -> Vec<String> {
+    let blob = snap.details.as_ref().and_then(|d| d.value.featured.as_ref());
+    let bytes = blob.and_then(|b| snap.blobs.get(&b.sha256));
+    let found = bytes.and_then(|b| crate::Featured::parse(b, &snap.state.repo_id).ok());
+    found.map(|f| f.items.into_iter().map(|p| p.id).collect()).unwrap_or_default()
 }
 
 pub(crate) fn listing<'a>(snap: &'a Snapshot, id: &str) -> Option<&'a Listing> {

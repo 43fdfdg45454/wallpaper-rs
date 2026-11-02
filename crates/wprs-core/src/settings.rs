@@ -155,11 +155,12 @@ impl Library {
 #[serde(default, deny_unknown_fields)]
 pub struct Repos {
     pub auto_refresh: bool,
+    pub vote_counts: bool,
 }
 
 impl Default for Repos {
     fn default() -> Self {
-        Self { auto_refresh: true }
+        Self { auto_refresh: true, vote_counts: true }
     }
 }
 

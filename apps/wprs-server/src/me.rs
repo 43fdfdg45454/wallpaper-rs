@@ -33,7 +33,8 @@ const KEYS: &str = "SELECT fingerprint, public_key, created_at FROM author_keys 
 const UPLOADS: &str = "SELECT id, state, errors, created_at FROM uploads WHERE user_id = ?1 \
                        AND state != 'done' ORDER BY created_at DESC LIMIT 50";
 const VERSIONS: &str = "SELECT v.package_id AS package, v.version, v.title, v.state, v.created_at, \
-                        v.published_at, c.decision, c.statement FROM versions v \
+                        v.published_at, CASE v.listed WHEN 0 THEN 'unlisted' ELSE 'public' END AS visibility, \
+                        c.decision, c.statement FROM versions v \
                         LEFT JOIN cases c ON c.id = (SELECT id FROM cases WHERE version_id = v.id \
                         AND decided_at IS NOT NULL ORDER BY decided_at DESC LIMIT 1) \
                         WHERE v.uploaded_by = ?1 ORDER BY v.created_at DESC";

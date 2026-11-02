@@ -4,8 +4,8 @@ use crate::repo::at;
 use crate::store::{json, write};
 use crate::{
     AUTHORS_FORMAT, Authors, Blob, DETAILED_FORMAT, DETAILS_FORMAT, Details, ENTRY_FORMAT, Entry,
-    KINDS_FORMAT, Listing, Pin, REVOKED_FORMAT, Release, Result, Revoked, SHARD_FORMAT, Shard, Signer, Time,
-    comment, require, sha256, sha256_file, shard_of, status,
+    FEATURED_FORMAT, Featured, KINDS_FORMAT, Listing, Pin, REVOKED_FORMAT, Release, Result, Revoked,
+    SHARD_FORMAT, Shard, Signer, Time, comment, require, sha256, sha256_file, shard_of, status,
 };
 use chrono::TimeDelta;
 use serde::Serialize;
@@ -35,6 +35,13 @@ pub fn publish(dir: &Path, signer: &Signer, lifetime_days: u32, now: i64) -> Res
         Authors { format: AUTHORS_FORMAT.into(), repo_id: repo_id.clone(), authors: catalog.authors.clone() };
     let authors =
         root.policy.online().then(|| put(dir, "authors", serde_json::to_vec(&listed)?)).transpose()?;
+    let picks = Featured {
+        format: FEATURED_FORMAT.into(),
+        repo_id: repo_id.clone(),
+        items: catalog.featured.clone(),
+    };
+    let featured =
+        (!picks.items.is_empty()).then(|| put(dir, "featured", serde_json::to_vec(&picks)?)).transpose()?;
     let (shards, detailed, revoked) = blobs(dir, &repo_id, catalog)?;
     let last = fs::read_to_string(dir.join("entry/latest")).ok().and_then(|t| t.trim().parse::<u64>().ok());
     let previous: Option<Entry> = last.map(|n| json(&dir.join(format!("entry/{n}.json")))).transpose()?;
@@ -59,7 +66,8 @@ pub fn publish(dir: &Path, signer: &Signer, lifetime_days: u32, now: i64) -> Res
     let mut docs = vec![("entry", bytes.clone())];
     if let Some((shards, kinds)) = detailed {
         let (format, entry) = (DETAILS_FORMAT.into(), sha256(&bytes[..])?);
-        let details = Details { format, repo_id: repo_id.clone(), version: number, entry, shards, kinds };
+        let (repo_id, version) = (repo_id.clone(), number);
+        let details = Details { format, repo_id, version, entry, shards, kinds, featured };
         docs.push(("details", serde_json::to_vec(&details)?));
     }
     for (kind, bytes) in docs {
@@ -102,11 +110,12 @@ fn blobs(dir: &Path, repo_id: &str, catalog: Catalog) -> Result<Blobs> {
         shards.collect::<Result<Vec<_>>>()
     };
     let releases = || catalog.packages.iter().flat_map(|l| &l.versions);
-    let (newer, kinds) = (releases().any(|r| !r.first() || r.hidden), releases().any(|r| !r.kind.first()));
+    let newer = releases().any(|r| !r.first() || r.hidden || !r.shown()) || !catalog.featured.is_empty();
+    let kinds = releases().any(|r| !r.kind.first());
     let detailed = newer.then(|| shards(DETAILED_FORMAT, |r| r.kind.first())).transpose()?;
     let kinds = kinds.then(|| shards(KINDS_FORMAT, |_| true)).transpose()?.unwrap_or_default();
     let detailed = detailed.map(|shards| (shards, kinds));
-    let first = shards(SHARD_FORMAT, Release::first)?;
+    let first = shards(SHARD_FORMAT, |r| r.first() && r.shown())?;
     let (packages, keys) = (catalog.revoked, catalog.keys);
     let revoked = Revoked { format: REVOKED_FORMAT.into(), repo_id: repo_id.into(), packages, keys };
     Ok((first, detailed, put("revoked", serde_json::to_vec(&revoked)?)?))
