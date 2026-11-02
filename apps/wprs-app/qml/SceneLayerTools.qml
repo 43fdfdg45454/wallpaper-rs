@@ -21,6 +21,8 @@ Flow {
                 delegate: QQC2.MenuItem {
                     required property string modelData
 
+                    visible: modelData !== "light"
+                    height: visible ? implicitHeight : 0
                     enabled: !["image", "video", "sound", "mesh"].includes(modelData) || (tools.owner.page.view.assets ?? []).some(asset => asset.kind === (modelData === "mesh" ? "model" : modelData))
                     text: SceneWords.kind(modelData) + (enabled ? "" : " (" + App.tr("import a file of this kind first") + ")")
                     icon.name: tools.owner.icon(modelData)
@@ -29,6 +31,26 @@ Flow {
                         "name": SceneWords.kind(modelData),
                         "into": tools.owner.current?.type === "group" ? tools.owner.current.id : undefined
                     })
+                }
+            }
+
+            QQC2.Menu {
+                title: App.tr("Light")
+
+                Repeater {
+                    model: [["point", App.tr("Point light")], ["spot", App.tr("Spot light")], ["tube", App.tr("Tube light")], ["directional", App.tr("Directional light")]]
+
+                    delegate: QQC2.MenuItem {
+                        required property var modelData
+
+                        text: modelData[1]
+                        onTriggered: tools.owner.page.run("light", {
+                            "add": {
+                                "light": modelData[0],
+                                "into": tools.owner.current?.type === "group" ? tools.owner.current.id : undefined
+                            }
+                        })
+                    }
                 }
             }
 

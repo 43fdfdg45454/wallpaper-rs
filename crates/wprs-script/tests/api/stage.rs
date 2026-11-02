@@ -8,6 +8,8 @@ const SOURCE: &str = r##"import { scene } from "wprs";
             scene.parallax = { amount: 0.5 };
             scene.bloom = { strength: 2, tint: "#ff0000" };
             scene.background = "#102030";
+            scene.ambient = "#202020";
+            scene.sky = [0.5, 0.6, 1, 1];
             if (time > 0) scene.camera = null;
             scene.layer("info").text = JSON.stringify(scene.camera);
             scene.camera = { zoom: "near" };
@@ -41,6 +43,10 @@ fn scripts_move_the_camera_and_change_the_scene_settings() {
     assert!(
         (r - 16.0 / 255.0).abs() < 1e-6 && (g - 32.0 / 255.0).abs() < 1e-6 && (b - 48.0 / 255.0).abs() < 1e-6
     );
+    assert_eq!(
+        (stage.ambient.map(|c| c[0] > 0.12 && c[0] < 0.13), stage.sky),
+        (Some(true), Some([0.5, 0.6, 1.0, 1.0]))
+    );
     assert!(text(&out, "info").ends_with(" zoom takes a number"), "{}", text(&out, "info"));
     let later = at(&mut script, 0.1).unwrap();
     assert!(text(&later, "info").starts_with("{} zoom"), "{}", text(&later, "info"));
@@ -50,6 +56,12 @@ fn scripts_move_the_camera_and_change_the_scene_settings() {
         ..Default::default()
     };
     assert_eq!(bounded.bounded().camera.unwrap().zoom, Some(10.0));
+    let lit = wprs_scene::StageSet {
+        ambient: Some([2.0, f32::NAN, 0.5, 1.0]),
+        sky: Some([2.0, 0.0, 0.5, 1.0]),
+        ..Default::default()
+    };
+    assert_eq!((lit.bounded().ambient, lit.bounded().sky), (None, Some([1.0, 0.0, 0.5, 1.0])));
 }
 
 #[test]

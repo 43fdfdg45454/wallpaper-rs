@@ -72,7 +72,7 @@ impl Kit {
             });
             let made: Vec<(Key, wgpu::RenderPipeline)> = (job.wanted.iter())
                 .map(|&(shader, mode, format)| {
-                    let recipe = Recipe::own(&job.d, module.clone(), self.groups.clone(), shader);
+                    let recipe = Recipe::own(&job.d, module.clone(), self.groups.to_vec(), shader);
                     ((shader, mode, format), recipe.make(&self.device, mode, format))
                 })
                 .collect();

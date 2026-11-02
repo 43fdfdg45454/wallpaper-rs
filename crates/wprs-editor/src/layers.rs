@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use std::path::Path;
 use wprs_core::message::said;
 
-pub const KINDS: [&str; 11] = [
+pub const KINDS: [&str; 12] = [
     "image",
     "video",
     "text",
@@ -16,6 +16,7 @@ pub const KINDS: [&str; 11] = [
     "group",
     "adjustment",
     "mesh",
+    "light",
 ];
 pub const LAYERS: &str = "/scene/layers";
 
@@ -125,6 +126,7 @@ pub fn template(
         "particles" => json!({"id": id, "type": "particles", "system": source.unwrap_or(id)}),
         "group" => json!({"id": id, "type": "group", "layers": []}),
         "adjustment" => json!({"id": id, "type": "adjustment", "effects": []}),
+        "light" => crate::lamps::template(doc, id, source)?,
         _ => bail!(said(
             "editor.not_layer_type",
             "%1 is not a layer type; use one of %2",

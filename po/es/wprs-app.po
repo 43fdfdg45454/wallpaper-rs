@@ -902,12 +902,13 @@ msgid "Pictures"
 msgstr "Imágenes"
 
 #: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditOps.qml
-#: apps/wprs-app/qml/facade/SceneEffects.qml
+#: apps/wprs-app/qml/SceneNormals.qml apps/wprs-app/qml/facade/SceneEffects.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Blur"
 msgstr "Desenfoque"
 
-#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Radius"
 msgstr "Radio"
 
@@ -1116,7 +1117,8 @@ msgstr "Centro Y"
 msgid "Width"
 msgstr "Anchura"
 
-#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Height"
 msgstr "Altura"
 
@@ -1140,12 +1142,13 @@ msgstr "Lo más lejano"
 msgid "Nearest"
 msgstr "Lo más cercano"
 
-#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneMask.qml
-#: apps/wprs-app/qml/SceneRigDepth.qml apps/wprs-app/qml/SceneRigWeights.qml
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneMapBrush.qml
+#: apps/wprs-app/qml/SceneMask.qml apps/wprs-app/qml/SceneRigDepth.qml
+#: apps/wprs-app/qml/SceneRigWeights.qml
 msgid "Brush size"
 msgstr "Tamaño del pincel"
 
-#: apps/wprs-app/qml/EditMasks.qml
+#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneMapBrush.qml
 msgid "Hardness"
 msgstr "Dureza"
 
@@ -1236,6 +1239,7 @@ msgid "Remove"
 msgstr "Quitar"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/OutputFilter.qml
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneNormals.qml
 #: apps/wprs-app/qml/SceneRigWeights.qml apps/wprs-app/qml/SceneRigWind.qml
 #: apps/wprs-app/qml/SceneSwarmKeep.qml apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Strength"
@@ -1312,7 +1316,8 @@ msgstr "Lo más rápido: solo desplazar"
 msgid "%1 steps"
 msgstr "%1 pasos"
 
-#: apps/wprs-app/qml/EditParallax.qml apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/EditParallax.qml apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Intensity"
 msgstr "Intensidad"
 
@@ -1782,7 +1787,8 @@ msgstr "Filtro"
 msgid "Unmute"
 msgstr "Activar el sonido"
 
-#: apps/wprs-app/qml/OutputControls.qml apps/wprs-app/qml/StatusBar.qml
+#: apps/wprs-app/qml/OutputControls.qml apps/wprs-app/qml/SceneLightsPanel.qml
+#: apps/wprs-app/qml/StatusBar.qml
 msgid "Mute"
 msgstr "Silenciar"
 
@@ -2370,6 +2376,14 @@ msgstr "Nombre"
 msgid "Cannot write the file"
 msgstr "No se puede escribir el archivo"
 
+#: apps/wprs-app/qml/SceneAmbient.qml
+msgid "Light around"
+msgstr "Luz ambiente"
+
+#: apps/wprs-app/qml/SceneAmbient.qml
+msgid "Light from above"
+msgstr "Luz del cielo"
+
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid "Import an effect…"
 msgstr "Importar un efecto…"
@@ -2562,7 +2576,8 @@ msgstr ""
 msgid "The preview appears here while wprsd runs."
 msgstr "La vista previa aparece aquí mientras wprsd está en marcha."
 
-#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Length"
 msgstr "Longitud"
 
@@ -2679,7 +2694,7 @@ msgstr ""
 "quitarlo. A lo ancho va la vida de la partícula y hacia arriba su valor."
 
 #: apps/wprs-app/qml/SceneEditors.qml apps/wprs-app/qml/SceneInput.qml
-#: apps/wprs-app/qml/SceneMask.qml
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneMask.qml
 msgid "Not set"
 msgstr "Sin fijar"
 
@@ -2764,7 +2779,7 @@ msgstr "Arrastra para mover la capa"
 msgid "Lock"
 msgstr "Bloquear"
 
-#: apps/wprs-app/qml/SceneLayerRow.qml
+#: apps/wprs-app/qml/SceneLayerRow.qml apps/wprs-app/qml/SceneLightsPanel.qml
 msgid "Solo"
 msgstr "Solo"
 
@@ -2775,6 +2790,28 @@ msgstr "Añadir una capa"
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "import a file of this kind first"
 msgstr "importa antes un archivo de este tipo"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Light"
+msgstr "Luz"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Point light"
+msgstr "Luz puntual"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Spot light"
+msgstr "Foco"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Tube light"
+msgstr "Tubo de luz"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Directional light"
+msgstr "Luz direccional"
 
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Mesh from a picture…"
@@ -2811,6 +2848,171 @@ msgstr "Bajar"
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Move out of the group"
 msgstr "Sacar del grupo"
+
+#: apps/wprs-app/qml/SceneLightGizmo.qml
+msgid "Drag to move the light"
+msgstr "Arrastra para mover la luz"
+
+#: apps/wprs-app/qml/SceneLightKnobs.qml
+msgid "Height %1"
+msgstr "Altura %1"
+
+#: apps/wprs-app/qml/SceneLightKnobs.qml
+msgid "Drag up or down to raise or lower the light"
+msgstr "Arrastra hacia arriba o abajo para subir o bajar la luz"
+
+#: apps/wprs-app/qml/SceneLightKnobs.qml
+msgid "Drag to change where the light ends"
+msgstr "Arrastra para cambiar dónde acaba la luz"
+
+#: apps/wprs-app/qml/SceneLightKnobs.qml
+msgid "Drag to turn the light"
+msgstr "Arrastra para girar la luz"
+
+#: apps/wprs-app/qml/SceneLightKnobs.qml
+msgid "Drag to widen or narrow the bright middle of the cone"
+msgstr "Arrastra para abrir o cerrar el centro brillante del cono"
+
+#: apps/wprs-app/qml/SceneLightKnobs.qml
+msgid "Drag to widen or narrow the cone"
+msgstr "Arrastra para abrir o cerrar el cono"
+
+#: apps/wprs-app/qml/SceneLightKnobs.qml
+msgid "Drag to move this end of the tube"
+msgstr "Arrastra para mover este extremo del tubo"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/SceneSwarmEmitter.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Point"
+msgstr "Punto"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Spot"
+msgstr "Foco"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Tube"
+msgstr "Tubo"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Directional"
+msgstr "Direccional"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+msgid "Bright middle"
+msgstr "Centro brillante"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Cone"
+msgstr "Cono"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+msgid "Light against the distance"
+msgstr "Luz según la distancia"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+msgid "Show the part it redraws when it moves"
+msgstr "Mostrar la parte que redibuja al moverse"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+msgid "Light the preview with it alone"
+msgstr "Iluminar la vista previa solo con ella"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+msgid "Leave it out of the preview"
+msgstr "Dejarla fuera de la vista previa"
+
+#: apps/wprs-app/qml/SceneLighting.qml
+msgid "Normal map"
+msgstr "Mapa de normales"
+
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Reflected picture"
+msgstr "Imagen reflejada"
+
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Roughness map"
+msgstr "Mapa de rugosidad"
+
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Glow map"
+msgstr "Mapa de luz propia"
+
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Lighting"
+msgstr "Iluminación"
+
+#: apps/wprs-app/qml/SceneLighting.qml
+msgid "Take the light of light layers"
+msgstr "Recibir la luz de las capas de luz"
+
+#: apps/wprs-app/qml/SceneLighting.qml
+msgid "Generate normals…"
+msgstr "Generar normales…"
+
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Roughness"
+msgstr "Rugosidad"
+
+#: apps/wprs-app/qml/SceneLighting.qml
+#: apps/wprs-app/qml/facade/SceneEffects.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Reflection"
+msgstr "Reflejo"
+
+#: apps/wprs-app/qml/SceneLighting.qml
+#: apps/wprs-app/qml/facade/SceneEffects.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Glow"
+msgstr "Resplandor"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "Lights"
+msgstr "Luces"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "%1 of at most %2 lights"
+msgstr "%1 de %2 luces como mucho"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "%1: %2 of %3 lights, %4 left out"
+msgstr "%1: %2 de %3 luces, %4 fuera"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "Restart the preview"
+msgstr "Reiniciar la vista previa"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid ""
+"%1: lighting worked out once as the scene starts; nothing more each frame"
+msgstr ""
+"%1: la luz se calcula una vez al empezar la escena; nada más en cada "
+"fotograma"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "%1: %2 lights over %3 lit layers, %4 pixel lights each frame"
+msgstr ""
+"%1: %2 luces sobre %3 capas iluminadas, %4 luces por píxel en cada fotograma"
+
+#: apps/wprs-app/qml/SceneMapBrush.qml
+msgid "Paint roughness on the preview"
+msgstr "Pintar la rugosidad sobre la vista previa"
+
+#: apps/wprs-app/qml/SceneMapBrush.qml
+msgid "Paint glow on the preview"
+msgstr "Pintar la luz propia sobre la vista previa"
+
+#: apps/wprs-app/qml/SceneMapBrush.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Gray"
+msgstr "Gris"
 
 #: apps/wprs-app/qml/SceneMask.qml
 msgid "Paint"
@@ -2860,6 +3062,22 @@ msgstr "Se calcula a partir de lo que usa el paquete: %1"
 #: apps/wprs-app/qml/SceneMeta.qml
 msgid "No picture"
 msgstr "Sin imagen"
+
+#: apps/wprs-app/qml/SceneNormals.qml
+msgid "Generate normals from the picture"
+msgstr "Generar normales a partir de la imagen"
+
+#: apps/wprs-app/qml/SceneNormals.qml
+msgid "Generate"
+msgstr "Generar"
+
+#: apps/wprs-app/qml/SceneNormals.qml
+msgid ""
+"The relief is lit from the top left; the map is kept as a picture of the "
+"package."
+msgstr ""
+"El relieve se ilumina desde arriba a la izquierda; el mapa se guarda como "
+"imagen del paquete."
 
 #: apps/wprs-app/qml/SceneNotes.qml
 msgid "This folder has unsaved changes from an earlier session."
@@ -2988,6 +3206,30 @@ msgstr "Añadir una propiedad"
 #: apps/wprs-app/qml/SceneProperties.qml
 msgid "Add preset"
 msgstr "Añadir un preajuste"
+
+#: apps/wprs-app/qml/SceneQuality.qml apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Restart"
+msgstr "Reiniciar"
+
+#: apps/wprs-app/qml/SceneQuality.qml
+msgid "Preview quality"
+msgstr "Calidad de la vista previa"
+
+#: apps/wprs-app/qml/SceneQuality.qml
+msgid "Q0, lowest"
+msgstr "Q0, la más baja"
+
+#: apps/wprs-app/qml/SceneQuality.qml
+msgid "Q1"
+msgstr "Q1"
+
+#: apps/wprs-app/qml/SceneQuality.qml
+msgid "Q2"
+msgstr "Q2"
+
+#: apps/wprs-app/qml/SceneQuality.qml
+msgid "Q3, highest"
+msgstr "Q3, la más alta"
 
 #: apps/wprs-app/qml/SceneRefs.qml apps/wprs-app/qml/SceneRigIk.qml
 msgid "A point"
@@ -3411,26 +3653,6 @@ msgid "Particle budget"
 msgstr "Presupuesto de partículas"
 
 #: apps/wprs-app/qml/SceneSwarmBudget.qml
-msgid "Preview quality"
-msgstr "Calidad de la vista previa"
-
-#: apps/wprs-app/qml/SceneSwarmBudget.qml
-msgid "Q0, lowest"
-msgstr "Q0, la más baja"
-
-#: apps/wprs-app/qml/SceneSwarmBudget.qml
-msgid "Q1"
-msgstr "Q1"
-
-#: apps/wprs-app/qml/SceneSwarmBudget.qml
-msgid "Q2"
-msgstr "Q2"
-
-#: apps/wprs-app/qml/SceneSwarmBudget.qml
-msgid "Q3, highest"
-msgstr "Q3, la más alta"
-
-#: apps/wprs-app/qml/SceneSwarmBudget.qml
 msgid "Restart systems"
 msgstr "Reiniciar los sistemas"
 
@@ -3564,12 +3786,6 @@ msgstr "Velocidad en profundidad"
 #: apps/wprs-app/qml/SceneSwarmEmitter.qml
 msgid "Emitter %1"
 msgstr "Emisor %1"
-
-#: apps/wprs-app/qml/SceneSwarmEmitter.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Point"
-msgstr "Punto"
 
 #: apps/wprs-app/qml/SceneSwarmEmitter.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
@@ -5676,13 +5892,6 @@ msgid "Blend texture"
 msgstr "Mezclar textura"
 
 #: apps/wprs-app/qml/facade/SceneEffects.qml
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Glow"
-msgstr "Resplandor"
-
-#: apps/wprs-app/qml/facade/SceneEffects.qml
 msgid "Motion blur"
 msgstr "Desenfoque de movimiento"
 
@@ -5797,11 +6006,6 @@ msgstr "Posterizar"
 #: apps/wprs-app/qml/facade/SceneEffects.qml
 msgid "Pulse"
 msgstr "Pulso"
-
-#: apps/wprs-app/qml/facade/SceneEffects.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Reflection"
-msgstr "Reflejo"
 
 #: apps/wprs-app/qml/facade/SceneEffects.qml
 msgid "Reveal"
@@ -6220,10 +6424,6 @@ msgid "Repeat down"
 msgstr "Repetir a lo alto"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Restart"
-msgstr "Reiniciar"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "RGB lighting"
 msgstr "Iluminación RGB"
 
@@ -6242,10 +6442,6 @@ msgstr "Cuerda"
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Rotation"
 msgstr "Giro"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Roughness"
-msgstr "Rugosidad"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Rows"
@@ -6754,15 +6950,6 @@ msgid "Life"
 msgstr "Vida"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Light"
-msgstr "Luz"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Lighting"
-msgstr "Iluminación"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Limits"
 msgstr "Límites"
 
@@ -6870,10 +7057,6 @@ msgstr "Mezclar fotogramas"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Mode"
 msgstr "Modo"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Gray"
-msgstr "Gris"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Several lines"
@@ -7074,10 +7257,6 @@ msgstr "Diferencia"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Diffuse light"
 msgstr "Luz difusa"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Directional"
-msgstr "Direccional"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Divide"
@@ -7313,10 +7492,6 @@ msgid "On birth"
 msgstr "Al nacer"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Spot"
-msgstr "Foco"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Spring"
 msgstr "Muelle"
 
@@ -7355,10 +7530,6 @@ msgstr "Temporizadores"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Top"
 msgstr "Arriba"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Tube"
-msgstr "Tubo"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Every frame"
@@ -7717,10 +7888,6 @@ msgid "Choice"
 msgstr "Selección"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Cone"
-msgstr "Cono"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Count"
 msgstr "Número"
 
@@ -7855,10 +8022,6 @@ msgstr "Activo cuando"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "End"
 msgstr "Fin"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Reflected picture"
-msgstr "Imagen reflejada"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Events"

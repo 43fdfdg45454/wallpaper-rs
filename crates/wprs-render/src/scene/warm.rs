@@ -33,6 +33,15 @@ fn walk(layers: &[Layer], atop: bool, pairs: &mut BTreeSet<(&'static str, Mode)>
         for e in entry(layer).into_iter().chain(text.into_iter().flatten()) {
             pairs.extend([(e, m), (e, Mode::Normal), ("fs_texture", m)]);
         }
+        if layer.lighting.is_some() {
+            let lit = [
+                ("fs_picture", "fs_lit_picture"),
+                ("fs_texture", "fs_lit_texture"),
+                ("fs_text", "fs_lit_text"),
+            ];
+            let found = lit.iter().filter(|(e, _)| entry(layer) == Some(e) || (styled && *e == "fs_text"));
+            found.for_each(|(_, l)| pairs.extend([(*l, m), (*l, Mode::Normal)]));
+        }
         if let Kind::Group { layers, clip, .. } = &layer.kind {
             walk(layers, *clip, pairs);
         }
@@ -45,7 +54,8 @@ impl Pipes {
         walk(&scene.layers, false, &mut pairs);
         scene.templates.values().for_each(|t| walk(std::slice::from_ref(t), true, &mut pairs));
         for (e, m) in pairs {
-            let _ = self.get(device, Shader::Scene(e), m, format);
+            let shader = if e.starts_with("fs_lit") { Shader::Lit(e) } else { Shader::Scene(e) };
+            let _ = self.get(device, shader, m, format);
         }
         if srgb {
             let _ = self.get(device, Shader::Scene("fs_texture"), Mode::Replace, Format::Rgba8UnormSrgb);

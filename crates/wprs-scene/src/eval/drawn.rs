@@ -76,6 +76,18 @@ pub struct EffectDraw<'a> {
     pub reset: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Lit<'a> {
+    pub strength: f32,
+    pub roughness: f32,
+    pub reflection: f32,
+    pub emissive: f32,
+    pub normal: Option<&'a str>,
+    pub env: Option<&'a str>,
+    pub roughness_map: Option<&'a str>,
+    pub emissive_map: Option<&'a str>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Draw<'a> {
     pub layer: &'a Layer,
@@ -95,6 +107,7 @@ pub struct Draw<'a> {
     pub dynamic: bool,
     pub isolate: bool,
     pub hidden: bool,
+    pub lit: Option<Lit<'a>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -109,4 +122,7 @@ pub struct Frame<'a> {
     pub keep: bool,
     pub quality: Quality,
     pub wake: Wake,
+    pub lamps: Vec<super::lamps::Lamp<'a>>,
+    pub ambient: Option<Color>,
+    pub sky: Option<Color>,
 }

@@ -81,7 +81,7 @@ impl Runtime {
         let cx = Context { view, ..self.context() };
         let cx = Context { camera: cx.lens(quality), ..cx };
         let canvas = self.scene.canvas.size.map(|v| v as f32);
-        let (mut draws, mut effects) = spare.lists();
+        let (mut draws, mut effects, mut lamps) = spare.lists();
         draws.reserve(self.sizes.get().0);
         effects.reserve(self.sizes.get().1);
         let set = self.script.stage.and_then(|s| s.background).map(crate::Color);
@@ -89,7 +89,25 @@ impl Runtime {
         let (time, wake) = (self.t as f32, Wake::Idle);
         let camera = cx.camera;
         let keep = !self.scene.canvas.clear;
-        let mut frame = Frame { draws, effects, time, view, background, camera, canvas, keep, quality, wake };
+        let stage = self.script.stage.unwrap_or_default();
+        let ambient = stage.ambient.map(crate::Color).or(self.scene.canvas.ambient);
+        let sky = stage.sky.map(crate::Color).or(self.scene.canvas.sky);
+        lamps.clear();
+        let mut frame = Frame {
+            draws,
+            effects,
+            time,
+            view,
+            background,
+            camera,
+            canvas,
+            keep,
+            quality,
+            wake,
+            lamps,
+            ambient,
+            sky,
+        };
         let root = (camera, None);
         match self.arranged() {
             Some(top) => walk(&cx, top, root, quality, &mut frame, canvas),
@@ -98,6 +116,7 @@ impl Runtime {
         if let Some(glow) = crate::glow::pick(&self.glow, quality, self.battery) {
             walk(&cx, [glow], (Affine::IDENTITY, None), quality, &mut frame, canvas);
         }
+        crate::eval::lamps::lamps(&cx, &self.scene.layers, root, true, quality, &mut frame.lamps);
         plan(&self.swarms, (&self.systems, &self.flocks), &cx, &frame, quality, self.t);
         self.sight_puppets(&frame);
         let sighted = if self.sight(&frame) { Wake::Frame } else { Wake::Idle };

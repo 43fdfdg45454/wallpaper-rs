@@ -11,7 +11,7 @@ impl<'a> Painter<'a, '_, '_> {
         let frame = self.frame;
         let draws = &frame.draws;
         let (mut static_end, mut i, mut fed) = (0, 0, 0u64);
-        while !self.frame.keep && i < draws.len() && !draws[i].dynamic {
+        while !self.frame.keep && i < draws.len() && !draws[i].dynamic && !self.shifting(i..draws[i].end) {
             let (key, moving) = self.feeding(i..draws[i].end);
             if moving {
                 break;
@@ -56,7 +56,7 @@ impl<'a> Painter<'a, '_, '_> {
                 _ if self.skip(i, target) => {}
                 Content::Adjustment => self.adjust(i, target),
                 Content::Group { .. } => self.apart(i, target, atop),
-                _ if !d.effects.is_empty() || d.layer.cache => self.apart(i, target, atop),
+                _ if !d.effects.is_empty() || d.layer.cache || self.baking(i) => self.apart(i, target, atop),
                 _ => self.direct(i, target, (d.opacity, d.blend, d.mask), atop),
             }
             i = d.end;
@@ -87,7 +87,7 @@ impl<'a> Painter<'a, '_, '_> {
         let rect = self.extent(i)?.pixels(self.full)?.bucket();
         let id = d.layer as *const Layer as usize;
         let (fed, moving) = self.feeding(i..d.end);
-        let still = !d.dynamic && self.backdrop.is_none() && !moving;
+        let still = !d.dynamic && self.backdrop.is_none() && !moving && !self.shifting(i..d.end);
         let key = still.then(|| self.digest(i..d.end, (rect, self.srgb, fed)));
         if key.is_some() && self.caches.get(&id).map(|c| c.key) == key {
             self.reused += 1;

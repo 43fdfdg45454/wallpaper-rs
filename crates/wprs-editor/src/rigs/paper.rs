@@ -9,7 +9,7 @@ pub(super) struct Paper {
     pub owner: RgbaImage,
 }
 
-pub(super) fn url(image: &RgbaImage) -> String {
+pub(crate) fn url(image: &RgbaImage) -> String {
     let mut png = std::io::Cursor::new(Vec::new());
     image.write_to(&mut png, image::ImageFormat::Png).ok();
     format!("data:image/png;base64,{}", base64::engine::general_purpose::STANDARD.encode(png.into_inner()))

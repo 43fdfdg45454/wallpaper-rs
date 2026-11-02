@@ -34,6 +34,7 @@ pub(crate) struct Pool {
     pub(crate) lend: u64,
     pub(crate) short: Option<u64>,
     pub(crate) ledger: super::limit::Ledger,
+    pub(crate) glow: super::lamps::Glow,
 }
 
 impl Pool {
@@ -67,6 +68,7 @@ impl Pool {
             lend: BUDGET,
             short: None,
             ledger,
+            glow: super::lamps::Glow::new(device),
         }
     }
 

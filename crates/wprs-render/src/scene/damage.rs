@@ -59,7 +59,11 @@ impl Painter<'_, '_, '_> {
                 let (fed, moving) = self.feeding(i..d.end);
                 let (ticking, flocks) = self.ticking(i..d.end);
                 let moment = if ticking || moving { self.moment } else { 0 };
-                let key = if video { MOVING } else { self.digest(i..d.end, (d.hidden, moment, fed, flocks)) };
+                let key = if video {
+                    MOVING
+                } else {
+                    self.sealed(i..d.end, (d.hidden, moment, fed, flocks), false)
+                };
                 let rect = if d.hidden { None } else { self.extent(i) };
                 out.push((std::ptr::from_ref::<Layer>(d.layer) as usize, key, rect, reach));
             }
@@ -82,6 +86,12 @@ impl Painter<'_, '_, '_> {
     pub(crate) fn damage(&mut self, old: &[Mark], new: &mut Vec<Mark>, fresh: bool) -> Damage {
         new.clear();
         self.marks(0..self.frame.draws.len(), new);
+        if self.frame.draws.iter().any(|d| d.lit.is_some() && !d.hidden) {
+            let glow = &self.pool.glow;
+            new.extend(
+                glow.marks[..glow.count()].iter().map(|&(id, key, rect)| (id, key, Some(rect), Reach::Own)),
+            );
+        }
         if fresh || old.is_empty() {
             return Damage::Full;
         }

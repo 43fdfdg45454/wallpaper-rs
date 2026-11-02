@@ -68,7 +68,9 @@ fn nested(prefix: &str, layer: &Layer, scene: &Scene, out: &mut BTreeMap<String,
 
 fn stage(scene: &Scene) -> Json {
     let c = &scene.canvas;
-    json!({ "background": c.background, "camera": c.camera, "parallax": c.parallax, "bloom": c.bloom })
+    let (ambient, sky) = (c.ambient, c.sky);
+    json!({ "background": c.background, "camera": c.camera, "parallax": c.parallax, "bloom": c.bloom,
+        "ambient": ambient, "sky": sky })
 }
 
 impl Setup {

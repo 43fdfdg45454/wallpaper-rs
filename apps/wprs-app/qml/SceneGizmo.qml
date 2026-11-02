@@ -18,7 +18,7 @@ Item {
     }
     readonly property bool chosen: page.editor.selected === modelData.pointer
     readonly property bool movable: chosen && !modelData.locked
-    readonly property bool brushing: (page.brush?.pointer ?? "").startsWith(modelData.pointer + "/effects/")
+    readonly property bool brushing: ["/effects/", "/lighting"].some(part => (page.brush?.pointer ?? "").startsWith(modelData.pointer + part))
     readonly property var center: [modelData.offset[0] + modelData.position[0], modelData.offset[1] + modelData.position[1]]
     readonly property string base: modelData.pointer + "/transform"
     property var grabbed: null
@@ -64,6 +64,14 @@ Item {
         onTapped: gizmo.page.editor.select(gizmo.modelData.pointer)
     }
 
+    SceneMapHeat {
+        id: heat
+
+        anchors.fill: parent
+        page: gizmo.page
+        visible: gizmo.brushing && gizmo.page.brush?.action === "paint_map"
+    }
+
     DragHandler {
         property var points: []
 
@@ -71,9 +79,7 @@ Item {
         enabled: gizmo.brushing
         onActiveChanged: {
             if (!active && points.length > 0)
-                gizmo.page.run("paint_mask", Object.assign({
-                    "points": points
-                }, gizmo.page.brush));
+                gizmo.page.run(gizmo.page.brush.action ?? "paint_mask", heat.stroke(gizmo.page.brush, points));
             points = [];
         }
         onCentroidChanged: {

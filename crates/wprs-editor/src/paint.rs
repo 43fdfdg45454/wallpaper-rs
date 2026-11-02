@@ -8,7 +8,7 @@ use wprs_core::message::said;
 use wprs_scene::{Param, Scene};
 
 const SIDE: u32 = 512;
-const POINTS: usize = 4096;
+pub(crate) const POINTS: usize = 4096;
 
 pub struct Stroke<'a> {
     pub pointer: &'a str,
@@ -61,7 +61,7 @@ fn blank(dir: &Path, doc: &Value, pointer: &str) -> [u8; 4] {
     painted().unwrap_or([0, 0, 0, 255])
 }
 
-fn stroke(picture: &mut RgbaImage, s: &Stroke) {
+pub(crate) fn stroke(picture: &mut RgbaImage, s: &Stroke) {
     let (w, h) = picture.dimensions();
     let r = s.radius.clamp(0.001, 0.5) * w.min(h) as f32;
     let soft = r * s.hardness.clamp(0.0, 0.99);

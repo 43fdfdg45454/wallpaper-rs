@@ -309,7 +309,7 @@ an exact result should use the other modes.
 | `transform.tilt` | `[x, y]` degrees (−89 to 89) of tilt in depth around the position of the layer, seen with `canvas.perspective`: a positive `x` turns the bottom edge towards the viewer, a positive `y` the left edge | `tilt` |
 | `transform.z` | pixels towards the viewer (−100000 to 100000); a layer at or behind the viewer is not drawn | `tilt` |
 | `parallax` | a number or `[x, y]` (−10 to 10 each), with a different depth per axis | `parallax2` when the two differ |
-| `lighting` | on `image`, `video`, `text` and `particles` layers, `{ "normal", "roughness", "reflection", "emissive", "strength", "env" }`: a `linear` normal map, roughness and reflection from 0 to 1, light of its own from 0 to 16, how much the lights count from 0 to 1 and a picture to reflect, how the layer takes the light of `light` layers | `lighting2d` |
+| `lighting` | on `image`, `video`, `text` and `particles` layers, `{ "normal", "roughness", "roughness_map", "reflection", "env", "emissive", "emissive_map", "strength" }`: how the layer takes the light of `light` layers (see "Lights"); on `particles` layers it also names `particle_lighting` | `lighting2d` |
 | `playback` | on `image` layers showing moving pictures or videos and on `video` layers, `{ "rate" (0 to 16; a video plays at 0 or from 0.1 to 4), "playing", "loop", "start", "end" (seconds), "frame" }`; `frame` picks a frame of a sprite sheet and may be bound to keyframes, the pointer, the audio or a script | `layer_playback` |
 | mask `strength` | 0 to 1 (default 1), weakens the mask: m′ = mix(1, m, strength) | `mask_strength` |
 | adjustment `size` | `[width, height]` in pixels (at most twice the canvas): only that rectangle around the layer position (placed by `origin`, without the rotation, skew or scale of the layer) is captured and its effects change only that part, and `redraw: true` draws what was captured again with the whole transform of the layer, its opacity, blend mode and mask, as a magnifier or a mirror; without `size` the whole canvas is captured and turned around its middle. A capture is one copy of the rectangle and one pass more, and any change in the scene redraws the whole frame | `capture` |
@@ -368,23 +368,52 @@ shaping (Arabic, Indic scripts) or right-to-left text do not show correctly yet.
 ### Lights
 
 A `light` layer lights the layers that have `lighting` (`lights`); it draws nothing, so it takes only
-`id`, `type`, `transform` (its position, its rotation for the direction of spot and directional
-lights, and `tilt`), `anchor`, `visible`, `parent`, `inherit` and these fields. A scene has at most
-12 lights.
+`id`, `type`, `transform` (its position, its rotation for the direction of spot, tube and directional
+lights, and `tilt`), `anchor`, `visible`, `parent`, `inherit` and these fields. It follows parents,
+groups and bones (`attach`) and animates with keyframes like other layers. A scene has at most 12
+lights; on T0 and T1 devices (phones and older computers) only the first 8 in the order of the layers
+light anything.
 
 | Field | Meaning |
 |-------|---------|
 | `light` | `point` (default), `spot`, `tube` or `directional` |
-| `color`, `intensity` | the color (white by default) and 0 to 100 (default 1) |
-| `radius` | 1 to 100000 px (default 512), where the light ends |
-| `z` | height above the canvas, −100000 to 100000 px (default 100) |
-| `cone` | spot lights only: `[inner, outer]` angles from 0 to 180 degrees |
-| `length` | tube lights only: 1 to 100000 px |
+| `color`, `intensity` | the color (white by default) and 0 to 100 (default 1); both may be bound |
+| `radius` | 1 to 100000 px (default 512), where the light ends; may be bound |
+| `z` | height above the canvas, −100000 to 100000 px (default 100); may be bound |
+| `cone` | spot lights only: `[inner, outer]` angles from 0 to 180 degrees (default `[30, 60]`), full in the middle and dark past the outer angle |
+| `length` | tube lights only: 1 to 100000 px (default 256) |
 | `volumetric` | point and spot lights only: `{ "density" (0 to 1), "samples" (4 to 64) }` lights the air (`volumetric_lights`) |
 | `texture` | spot lights only: a picture or video the light projects (`light_textures`) |
 | `shadows` | point, spot and directional lights: `true` casts shadows of models and of materials that `receive_shadows`; at most 2 lights per scene (`shadows`) |
 
-A light may also follow a bone with `attach`.
+A spot or directional light with no rotation points down the canvas and turns clockwise with
+`rotation`; the first number of `transform.tilt` (−89 to 89 degrees) dips it into the canvas, so
+`[90, 0]` would point straight at it. A tube light lies along the x axis of its layer, `length`
+long, and lights like a row of point lights. The light of a point, spot or tube light fades as
+(1 − d²/r²)² with the distance d in three dimensions, `z` included, and ends at the radius r; a
+directional light reaches everywhere with the same strength.
+
+Each pixel of a lit layer adds, for every light, the color of the light times its intensity, its
+fade, its cone and the cosine between the normal of the pixel and the direction to the light, and a
+highlight that is sharp on smooth surfaces and spread out on rough ones; the ambient light comes on
+top, the color of `canvas.ambient` on surfaces facing down and of `canvas.sky` (the ambient one when
+unset) on surfaces facing up, and black when neither is set. A layer without a normal map faces the
+viewer, and so takes the mix of both halfway. `lighting` takes:
+
+| Field | Meaning |
+|-------|---------|
+| `normal` | a `linear` normal map: red to the right, green up and blue towards the viewer, from 0 to 1 for −1 to 1, laid over the layer as its picture is and turned with the layer |
+| `roughness`, `roughness_map` | 0 to 1 (default 0.5), times the red of a `linear` gray picture |
+| `reflection`, `env` | 0 to 1 (default 0): how much of `env`, a picture read by the normal as a sphere, the layer reflects; without `env` it reflects what is drawn below it, moved by its normals |
+| `emissive`, `emissive_map` | light of its own from 0 to 16 (default 0), times the red of a `linear` gray picture; it shows even in the dark |
+| `strength` | 0 to 1 (default 1): how much of the lit color replaces the plain one |
+
+The numbers may be bound. Lighting is worked out in the same pass that draws the layer, for at most
+12 lights and only where a light reaches. While the lights stay still, lit layers are drawn once and
+kept like other still layers; when one moves, only the box its radius covers is drawn again. At the
+lowest quality level the lighting is worked out once, when the scene starts or the level changes,
+and lit layers are kept as still pictures: lights that move stay where they started and ask for no
+frames. Scripts read and set `scene.ambient` and `scene.sky` as colors, like `scene.background`.
 
 ### Meshes
 
@@ -1686,8 +1715,8 @@ of `wprs/math` gives the angle in degrees that turns a layer at `from` towards `
 
 With `camera`, `scene.camera` (`{ center, zoom, rotation, shake: { enabled, amplitude, roughness,
 speed } }`), `scene.parallax` (`{ amount, delay }`), `scene.bloom` (`{ threshold, strength, radius,
-tint }`) and `scene.background` (a color) read what the scene sets in `canvas` and what the script
-wrote; writing an object changes only the fields it names, within the ranges of `canvas`, and `null`
+tint }`), `scene.background`, `scene.ambient` and `scene.sky` (colors) read what the scene sets in
+`canvas` and what the script wrote; writing an object changes only the fields it names, within the ranges of `canvas`, and `null`
 gives the field back to the scene. The camera is the same transformation as `canvas.camera`, without
 passes, its shake stays still with *reduce motion* and at Q0, and bloom changes only a scene whose
 `canvas` sets `bloom`.
@@ -1771,7 +1800,7 @@ module's exports, imports and calls.
 | Field | Meaning |
 |-------|---------|
 | `events` | the functions the module exports and the events it handles, each once: the lifecycle above (`update` is the only one older engines call), the pointer events of `solid` layers and `hit` bones `click`, `down`, `up` (input `clicks`), `enter`, `leave` and `move` (input `pointer`), delivered with `scene.layer(id).on(event, handler)` as `{ type, layer, local, scene }` with the touched bone, and `mediaStatus`, `mediaPlayback`, `mediaProperties`, `mediaThumbnail` and `mediaTimeline` (input `media`) |
-| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, `media` (the `media` object and its colors, input `media`; `media_info`, which engines run later), `storage` (`storage`; `script_storage`), `geometry` (`scene.mesh(pool)`; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`, `layer.anim(clip)` and, on `mesh` layers, `layer.bone(name)`, `bones`, `shape`, `impulse`, `hit` and `attachment`; texture frames and model clips come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `parallax`, `bloom` and `background`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`), `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) and `folders` (`folder(prop)`; `script_folders`), described in "Parents, the camera, shapes, storage and folders" |
+| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, `media` (the `media` object and its colors, input `media`; `media_info`, which engines run later), `storage` (`storage`; `script_storage`), `geometry` (`scene.mesh(pool)`; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`, `layer.anim(clip)` and, on `mesh` layers, `layer.bone(name)`, `bones`, `shape`, `impulse`, `hit` and `attachment`; texture frames and model clips come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `parallax`, `bloom`, `background`, `ambient` and `sky`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`), `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) and `folders` (`folder(prop)`; `script_folders`), described in "Parents, the camera, shapes, storage and folders" |
 | `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}`. They live only here: the module does not export them and `scene import-script` does not propose them |
 
 Any event but `update`, any part but `audio`, `pointer` and `clicks`, and `params` name `scripts2`;

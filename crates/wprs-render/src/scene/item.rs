@@ -32,6 +32,11 @@ pub(crate) struct Item {
     pub(crate) mode: [f32; 4],
     pub(crate) lean: [f32; 4],
     pub(crate) mask_lean: [f32; 4],
+    pub(crate) lit: [f32; 4],
+    pub(crate) lit_maps: [f32; 4],
+    pub(crate) lit_basis: [f32; 4],
+    pub(crate) lit_at: [f32; 4],
+    pub(crate) lit_env: [f32; 4],
 }
 
 #[repr(C)]

@@ -1,4 +1,4 @@
-use super::names::{half, tenth};
+use super::names::{half, tenth, whole};
 use crate::skin::Mode;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -130,4 +130,18 @@ pub struct ExpressionEdit {
     pub remove: bool,
     #[serde(default)]
     pub to: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MaskStroke {
+    pub pointer: String,
+    #[serde(default)]
+    pub channel: Option<usize>,
+    pub radius: f32,
+    #[serde(default = "half")]
+    pub hardness: f32,
+    #[serde(default = "whole")]
+    pub value: f32,
+    pub points: Vec<[f32; 2]>,
 }

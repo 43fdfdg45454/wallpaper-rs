@@ -20,7 +20,7 @@ fn bytes(c: [f32; 3]) -> [u8; 3] {
     c.map(|v| v.round().clamp(0.0, 255.0) as u8)
 }
 
-fn heat_rgb(w: f32) -> [u8; 3] {
+pub(crate) fn heat_rgb(w: f32) -> [u8; 3] {
     let w = if w.is_finite() { w.clamp(0.0, 1.0) } else { 0.0 };
     let k = STOPS.iter().position(|s| s.0 >= w).unwrap_or(4).max(1);
     let ((a, ca), (b, cb)) = (STOPS[k - 1], STOPS[k]);

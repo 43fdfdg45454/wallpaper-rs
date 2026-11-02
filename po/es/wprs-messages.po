@@ -591,6 +591,58 @@ msgstr "%1 aún no tiene valor; da uno"
 msgid "there is no timeline \"%1\""
 msgstr "no hay ninguna línea de tiempo «%1»"
 
+#: crates/wprs-editor/src/lamps/edit.rs
+msgid "%1 is not a light type; use point, spot, tube or directional"
+msgstr "%1 no es un tipo de luz; usa point, spot, tube o directional"
+
+#: crates/wprs-editor/src/lamps/edit.rs
+msgid "%1 of a light goes from %2 to %3"
+msgstr "%1 de una luz va de %2 a %3"
+
+#: crates/wprs-editor/src/lamps/edit.rs
+msgid "%1 is not a light layer"
+msgstr "%1 no es una capa de luz"
+
+#: crates/wprs-editor/src/lamps/edit.rs
+msgid "only %1 lights take %2"
+msgstr "solo las luces %1 admiten %2"
+
+#: crates/wprs-editor/src/lamps/edit.rs
+msgid "a light color is #rrggbb or [r, g, b, a]"
+msgstr "el color de una luz es #rrggbb o [r, g, b, a]"
+
+#: crates/wprs-editor/src/lamps/edit.rs
+msgid "the light %1 is not shown"
+msgstr "la luz %1 no se muestra"
+
+#: crates/wprs-editor/src/lamps/lit.rs
+msgid "%1 is not a picture of the scene"
+msgstr "%1 no es una imagen de la escena"
+
+#: crates/wprs-editor/src/lamps/lit.rs
+msgid "lighting is for image, video and text layers"
+msgstr "la iluminación es para capas de imagen, vídeo y texto"
+
+#: crates/wprs-editor/src/lamps/lit.rs
+msgid "%1 goes from 0 to %2"
+msgstr "%1 va de 0 a %2"
+
+#: crates/wprs-editor/src/lamps/lit.rs
+msgid "%1 is #rrggbb or [r, g, b, a]"
+msgstr "%1 es #rrggbb o [r, g, b, a]"
+
+#: crates/wprs-editor/src/lamps/maps.rs
+msgid "name a picture or an image layer"
+msgstr "indica una imagen o una capa de imagen"
+
+#: crates/wprs-editor/src/lamps/maps.rs
+msgid "strength goes from 0 to %1 and blur from 0 to %2"
+msgstr "la fuerza va de 0 a %1 y el desenfoque de 0 a %2"
+
+#: crates/wprs-editor/src/lamps/maps.rs crates/wprs-editor/src/paint.rs
+msgid "a stroke has 1 to %1 points and a channel from 0 to 3"
+msgstr "un trazo tiene de 1 a %1 puntos y un canal de 0 a 3"
+
 #: crates/wprs-editor/src/layers.rs
 msgid "import %1 %2 first"
 msgstr "importa antes %1 %2"
@@ -696,10 +748,6 @@ msgstr "no hay carpeta de datos"
 #: crates/wprs-editor/src/paint.rs
 msgid "masks are painted on a parameter of an effect"
 msgstr "las máscaras se pintan en un parámetro de un efecto"
-
-#: crates/wprs-editor/src/paint.rs
-msgid "a stroke has 1 to %1 points and a channel from 0 to 3"
-msgstr "un trazo tiene de 1 a %1 puntos y un canal de 0 a 3"
 
 #: crates/wprs-editor/src/previews.rs
 msgid "the picture does not fit in 1 MiB even as a jpeg of 512 pixels"

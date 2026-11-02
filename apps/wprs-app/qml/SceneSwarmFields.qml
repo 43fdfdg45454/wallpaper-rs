@@ -36,7 +36,7 @@ ColumnLayout {
             })
     }
 
-    SceneSwarmSliders {
+    SceneSliders {
         Layout.fillWidth: true
         visible: fields.gust !== null
         value: fields.gust ?? ({})
@@ -95,7 +95,7 @@ ColumnLayout {
             })
     }
 
-    SceneSwarmSliders {
+    SceneSliders {
         Layout.fillWidth: true
         visible: fields.drift !== null
         value: fields.drift ?? ({})

@@ -33,6 +33,7 @@ impl Renderer {
         }
         let screen = view.screen(size);
         let data = frame_data(runtime, frame, size, view.srgb, quality);
+        view.pool.glow.update(&self.queue, frame, screen, view.srgb, self.light_cap());
         self.queue.write_buffer(&view.uniform, 0, bytemuck::bytes_of(&data));
         self.shrunk(view, frame, screen);
         let mut scratch = std::mem::take(&mut view.scratch);

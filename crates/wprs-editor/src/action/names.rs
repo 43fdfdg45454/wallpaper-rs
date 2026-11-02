@@ -1,4 +1,4 @@
-pub const ACTIONS: [&str; 44] = [
+pub const ACTIONS: [&str; 49] = [
     "set",
     "add",
     "remove",
@@ -41,6 +41,11 @@ pub const ACTIONS: [&str; 44] = [
     "point",
     "parts",
     "particles",
+    "light",
+    "lighting",
+    "normals",
+    "paint_map",
+    "ambient",
     "undo",
     "redo",
 ];

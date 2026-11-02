@@ -3,7 +3,7 @@ use anyhow::{Result, ensure};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
-use wprs_editor::actions::Action;
+use wprs_editor::actions::{Action, MaskStroke};
 use wprs_editor::{Op, Project, references};
 
 pub(crate) fn value(text: &str) -> Value {
@@ -94,7 +94,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
                 points.split(';').filter(|p| !p.trim().is_empty()).map(pair).collect::<Option<Vec<_>>>();
             let points = points.unwrap_or_default();
             let channel = channel.and_then(|c| ["r", "g", "b", "a"].iter().position(|n| *n == c));
-            (dir, Action::PaintMask { pointer, channel, radius, hardness, value, points })
+            (dir, Action::PaintMask(MaskStroke { pointer, channel, radius, hardness, value, points }))
         }
         Author::Translate { dir, pointer, language, text, add, .. } => {
             (dir, Action::Translate { pointer, language, text, add })
@@ -113,6 +113,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
         Author::Undoing(crate::undoing::Undoing::Undo { dir }) => (dir, Action::Undo {}),
         Author::Undoing(crate::undoing::Undoing::Redo { dir }) => (dir, Action::Redo {}),
         Author::Swarming(command) => return crate::swarmed::action(command),
+        Author::Lamping(command) => return crate::lamped::action(command),
         other => return Err(Box::new(other)),
     })
 }

@@ -37,6 +37,32 @@ impl Pool {
         group
     }
 
+    pub(crate) fn lit(
+        &mut self,
+        device: &wgpu::Device,
+        layout: &wgpu::BindGroupLayout,
+        views: &[(u64, &wgpu::TextureView); 4],
+    ) -> BindGroup {
+        let mut key = [3; 12];
+        views.iter().zip(&mut key[1..]).for_each(|((id, _), k)| *k = *id);
+        if let Some((group, used)) = self.groups.get_mut(&key) {
+            *used = self.frame;
+            return group.clone();
+        }
+        let first = self.glow.buffer.as_entire_binding();
+        let resources =
+            std::iter::once(first).chain(views.iter().map(|(_, v)| wgpu::BindingResource::TextureView(v)));
+        let entries: Vec<_> = resources
+            .enumerate()
+            .map(|(i, resource)| wgpu::BindGroupEntry { binding: i as u32, resource })
+            .collect();
+        let group =
+            device.create_bind_group(&wgpu::BindGroupDescriptor { label: None, layout, entries: &entries });
+        self.created += 1;
+        self.groups.insert(key, (group.clone(), self.frame));
+        group
+    }
+
     pub(crate) fn group(
         &mut self,
         device: &wgpu::Device,

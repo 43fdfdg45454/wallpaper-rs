@@ -40,7 +40,9 @@ impl Check<'_> {
         if !lit {
             self.issues.push(Issue::Type(format!("{p}/lighting")));
         }
-        for (name, id) in [("normal", &l.normal), ("env", &l.env)] {
+        self.uses(matches!(layer.kind, Kind::Particles { .. }), "particle_lighting");
+        let maps = [("roughness_map", &l.roughness_map), ("emissive_map", &l.emissive_map)];
+        for (name, id) in [("normal", &l.normal), ("env", &l.env)].into_iter().chain(maps) {
             id.iter().for_each(|id| self.picture(&format!("{p}/lighting/{name}"), id));
         }
         let parts = [("roughness", &l.roughness, 1.0), ("reflection", &l.reflection, 1.0)];

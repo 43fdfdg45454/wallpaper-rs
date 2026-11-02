@@ -74,12 +74,12 @@ QtObject {
         SceneSwarmCensus.measure(page, "flakes", null);
         if (!(SceneSwarmCensus.census?.alive > 0) || SceneSwarmCensus.census.levels.length !== 4)
             throw new Error("particles: the budget does not count the particles");
-        SceneSwarmCensus.quality = "q1";
-        SceneSwarmCensus.again(page);
+        SceneLook.quality = "q1";
+        SceneLook.again(page);
         const look = JSON.parse(page.editor.look || "{}");
         if (look.quality !== "q1" || look.restart !== 1)
             throw new Error("particles: the preview did not take the quality and the restart");
-        SceneSwarmCensus.quality = "q3";
+        SceneLook.quality = "q3";
         page.editor.look = "";
     }
 

@@ -8,6 +8,7 @@ mod install;
 #[cfg(feature = "infer")]
 mod made;
 pub mod models;
+mod normals;
 mod process;
 mod store;
 
@@ -19,6 +20,7 @@ pub use infer::{Device, Estimator, Stage, Stopped, TELEMETRY, background, thread
 #[cfg(feature = "infer")]
 pub use made::{Bench, bench, decode, generate, generate_until};
 pub use models::{Asset, MODEL, Part, RUNTIME};
+pub use normals::{MAX_BLUR, MAX_STRENGTH, normals, relief, sphere};
 pub use process::{adjust, coloured, input_size, normalize, shrink, tensor};
 pub use store::CACHE_BYTES;
 

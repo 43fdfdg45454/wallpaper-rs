@@ -41,6 +41,8 @@ pub struct StageSet {
     pub camera: Option<CameraSet>,
     pub parallax: Option<GlideSet>,
     pub bloom: Option<BloomSet>,
+    pub ambient: Option<[f32; 4]>,
+    pub sky: Option<[f32; 4]>,
 }
 
 fn within(v: Option<f32>, lo: f32, hi: f32) -> Option<f32> {
@@ -81,6 +83,8 @@ impl StageSet {
             camera: self.camera.map(camera),
             parallax: self.parallax.map(glide),
             bloom: self.bloom.map(bloom),
+            ambient: color(self.ambient),
+            sky: color(self.sky),
         }
     }
 }

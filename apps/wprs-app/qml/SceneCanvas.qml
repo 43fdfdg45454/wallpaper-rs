@@ -158,27 +158,11 @@ ColumnLayout {
                 text: canvas.missing ? App.tr("Install the KPipeWire QML module to see the preview here, or use Show on the desktop.") : App.tr("The preview appears here while wprsd runs.")
             }
 
-            SceneWind {
+            SceneOverlays {
                 anchors.fill: parent
                 z: 4
                 page: canvas.page
                 ratio: canvas.ratio
-            }
-
-            SceneSwarm {
-                anchors.fill: parent
-                z: 5
-                page: canvas.page
-                ratio: canvas.ratio
-            }
-
-            Repeater {
-                model: (canvas.page.view.gizmos ?? []).length
-
-                delegate: SceneGizmo {
-                    page: canvas.page
-                    ratio: canvas.ratio
-                }
             }
 
             Rectangle {

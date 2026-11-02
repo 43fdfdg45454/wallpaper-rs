@@ -1197,6 +1197,19 @@ menos subdivisiones en calidad baja), y las estelas largas guardan hasta 64 posi
 largo de `length` pasos (`segments`), con subdivisión, ancho, textura y su escala y desplazamiento,
 16 o 32 posiciones en los equipos intermedios y ninguna en el más modesto.
 
+El escritorio y el teléfono dibujan también las capas de luz (`type: light`): puntuales, focos con
+su cono interior y exterior, tubos y direccionales, con color, intensidad, radio y altura sobre el
+lienzo, que se emparentan, se sujetan a huesos y se animan como las demás capas. No se dibujan: las
+capas de imagen, vídeo y texto con `lighting` las reciben con su mapa de normales, rugosidad (con su
+mapa), reflejo de una imagen o de lo que tienen debajo, luz propia (con su mapa) y una intensidad
+que mezcla lo iluminado con lo de siempre, más la luz ambiente de `canvas.ambient` y la del cielo de
+`canvas.sky` según hacia dónde mire la normal; los scripts leen y cambian las dos como el fondo. La
+luz se calcula en la misma pasada que dibuja la capa, con 12 luces como mucho (8 en los teléfonos y
+los equipos modestos) y solo hasta donde llega cada una: con las luces quietas las capas iluminadas
+se dibujan una vez y se guardan, una luz que se mueve solo redibuja la caja de su radio y, en la
+calidad más baja, la luz se calcula una sola vez al empezar y las luces que se mueven se quedan
+donde empezaron, sin pedir fotogramas. Una escena sin luces se ve exactamente como antes.
+
 El escritorio y el teléfono dibujan también la mezcla por degradado, el revelado con el puntero,
 el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos, el fuego, el giro,
 la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela
@@ -1782,6 +1795,25 @@ response`, `keep distance|between|remove`, `boids`, `operator remap add|set|remo
 `trail`, `texture`, `turbulent`, `offset`, `pace` y `budget` (`rope` avisa también de los emisores
 que amontonan la cuerda), y `wprs-ctl scene preview --quality Q --restart` hace lo mismo con la
 vista previa.
+
+El menú *Añadir capa* ofrece *Luz* con sus cuatro tipos, cada uno con valores de partida
+razonables. Las luces se ven sobre la vista previa como marcadores que se arrastran y la elegida
+muestra sus asas: el anillo del radio, la altura, el giro, los bordes del cono de un foco, los dos
+extremos de un tubo y la flecha de una luz direccional, y a petición la caja que redibuja al
+moverse; si sus valores tienen claves, el arrastre crea la clave en el instante actual. El inspector
+de la luz elige el tipo y el color, ajusta intensidad, radio, altura, largo y cono, dibuja la caída
+de la luz con la distancia y la deja sola o la silencia en la vista previa. Al elegir el lienzo se
+listan todas las luces con esos dos interruptores, cuántas hay frente a las que guarda cada clase de
+equipo, los colores de la luz ambiente y del cielo con una esfera iluminada por ellos y el selector
+de calidad de Q0 a Q3, que aquí dice si la luz se calcula una vez o cuánto cuesta en cada fotograma.
+Las capas de imagen, vídeo y texto tienen su parte de iluminación: los mapas de normales, de
+reflejo, de rugosidad y de luz propia, sus deslizadores, *Generar normales* a partir de la imagen
+(con fuerza, desenfoque y una vista del relieve antes de guardarlo como imagen del paquete) y un
+pincel que pinta en gris la rugosidad o la luz propia sobre la vista previa con su vista de calor.
+En la terminal hacen lo mismo `wprs-ctl scene light CARPETA CAPA add|set|remove|solo|mute|falloff`,
+`scene lights` (las asas, la caja y las cuentas, o el coste con `--cost`), `scene lighting`,
+`scene normals CARPETA IMAGEN --generate`, `scene paint-map CARPETA CAPA roughness|emissive` y
+`scene ambient`.
 
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado

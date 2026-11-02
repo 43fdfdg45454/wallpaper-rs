@@ -290,11 +290,11 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `bloom` | sets `canvas.bloom` | runs | runs |
 | `hdr` | sets `canvas.hdr` or `canvas.tonemap` | refused | refused |
 | `keep_frame` | sets `canvas.clear` to `false` | runs | runs |
-| `lights` | has `light` layers | refused | refused |
+| `lights` | has `light` layers | runs | runs |
 | `volumetric_lights` | sets `volumetric` on a light | refused | refused |
 | `light_textures` | sets `texture` on a spot light | refused | refused |
-| `lighting2d` | sets `lighting` on a layer | refused | refused |
-| `ambient_light` | sets `canvas.ambient` or `canvas.sky` | refused | refused |
+| `lighting2d` | sets `lighting` on a layer | runs | runs |
+| `ambient_light` | sets `canvas.ambient` or `canvas.sky` | runs | runs |
 | `capture` | sets `size` or `redraw` on an adjustment layer | runs | runs |
 | `timeline_events` | names `events` of a timeline or triggers on `event:<name>` | runs | runs |
 | `timeline_frames` | gives the length of a timeline in `frames` at `fps` | runs | runs |

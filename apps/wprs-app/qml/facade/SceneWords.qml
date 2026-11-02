@@ -133,6 +133,7 @@ QtObject {
             "ellipse": App.tr("Ellipse"),
             "ellipsis": App.tr("Ellipsis"),
             "emissive": App.tr("Own light"),
+            "emissive_map": App.tr("Glow map"),
             "emitters": App.tr("Emitters"),
             "enabled": App.tr("Enabled"),
             "enabled_if": App.tr("Enabled when"),

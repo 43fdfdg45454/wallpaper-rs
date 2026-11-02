@@ -30,7 +30,8 @@ pub use crate::effects::{
     PRELUDE, Pace, ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage,
     State, Texel, Tune, Use, Variant, builtin, descriptor, register,
 };
-pub use crate::eval::{Content, Draw, EffectDraw, Frame};
+pub use crate::eval::lamps::Lamp;
+pub use crate::eval::{Content, Draw, EffectDraw, Frame, Lit};
 pub use crate::extrude::Relief;
 pub use crate::figure::{
     Attach, Coverage, Cull, Follows, MATERIALS, MAX_FIGURES, MAX_SHADOWS, Material, MeshDepth, MeshLayer,

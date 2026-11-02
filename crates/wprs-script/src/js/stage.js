@@ -18,6 +18,7 @@ const shapes = {
     parallax: fields({ amount: number("amount"), delay: number("delay") }),
     bloom: fields({ threshold: number("threshold"), strength: number("strength"), radius: number("radius"), tint: (v) => numbers(v, 4, "tint") }),
 };
+const colors = ["background", "ambient", "sky"];
 const plain = (v) => (v !== null && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([, x]) => typeof x !== "object" || Array.isArray(x))) : {});
 const read = (key) => {
     const set = stage[key] ?? {};
@@ -27,7 +28,7 @@ const read = (key) => {
 const write = (key, value) => {
     need("camera");
     if (value === null || value === undefined) delete stage[key];
-    else if (key === "background") stage.background = numbers(value, 4, "background");
+    else if (colors.includes(key)) stage[key] = numbers(value, 4, key);
     else {
         const made = shapes[key](value);
         if (made.shake) made.shake = { ...stage[key]?.shake, ...made.shake };
@@ -37,7 +38,7 @@ const write = (key, value) => {
 };
 
 Object.defineProperties(scene, {
-    background: { enumerable: true, get: () => (need("camera"), stage.background ?? initial.background), set: (v) => write("background", v) },
+    ...Object.fromEntries(colors.map((key) => [key, { enumerable: true, get: () => (need("camera"), stage[key] ?? initial[key]), set: (v) => write(key, v) }])),
     ...Object.fromEntries(["camera", "parallax", "bloom"].map((key) => [key, { enumerable: true, get: () => (need("camera"), read(key)), set: (v) => write(key, v) }])),
     mesh: { value: mesh },
 });

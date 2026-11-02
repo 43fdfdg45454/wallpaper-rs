@@ -17,6 +17,7 @@ pub mod forms;
 pub mod history;
 pub mod inspect;
 pub mod keys;
+pub mod lamps;
 pub mod layers;
 mod limbs;
 pub mod listing;

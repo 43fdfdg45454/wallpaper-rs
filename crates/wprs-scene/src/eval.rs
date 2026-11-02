@@ -5,9 +5,10 @@ use crate::{Affine, Color, Kind, Layer, Lean, Quality, Wake};
 use std::borrow::Cow;
 
 mod drawn;
+pub(crate) mod lamps;
 mod shown;
 
-pub use drawn::{Content, Draw, EffectDraw, Frame};
+pub use drawn::{Content, Draw, EffectDraw, Frame, Lit};
 use shown::{content, masked, strength};
 
 pub(crate) fn walk<'a>(
@@ -61,7 +62,6 @@ fn emit<'a>(
     let start = frame.effects.len();
     let mut paced = false;
     let moves = playing || matches!(layer.kind, Kind::Particles { .. });
-    let busy = moves;
     let controls = cx.script.effects.get(&layer.id);
     for (i, effect) in layer.effects.iter().enumerate() {
         let ctl = controls.and_then(|list| list.iter().find(|c| c.at == i));
@@ -85,7 +85,7 @@ fn emit<'a>(
         let wake = match (frozen, &d.state) {
             (true, _) => Wake::Idle,
             (false, Some(_)) => {
-                let stirring = busy || cx.wake.get() == Wake::Frame;
+                let stirring = moves || cx.wake.get() == Wake::Frame;
                 wakes(d, &slots, cx, quality).min(cx.stirred(key, stirring, d.settle(&slots)))
             }
             (false, None) => wakes(d, &slots, cx, quality),
@@ -185,6 +185,7 @@ fn emit<'a>(
         dynamic: false,
         isolate,
         hidden: false,
+        lit: layer.lighting.as_ref().map(|l| lamps::lighting(cx, l)),
     };
     frame.draws.push(draw);
     walk(cx, layer.children(), (world, lean), quality, frame, canvas);

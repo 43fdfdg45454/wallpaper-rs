@@ -55,6 +55,6 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::Parts(p) => crate::cutouts::parts(dir, doc, p),
         Action::Point(p) => crate::spots::point(dir, doc, p),
         Action::Particles(e) => crate::swarms::edit(dir, doc, e),
-        _ => return None,
+        action => return crate::lamps::act(dir, doc, action),
     })
 }

@@ -190,4 +190,6 @@ pub enum Author {
     Clipping(crate::clipping::Clipping),
     #[command(flatten)]
     Swarming(crate::swarming::Swarming),
+    #[command(flatten)]
+    Lamping(crate::lamping::Lamping),
 }

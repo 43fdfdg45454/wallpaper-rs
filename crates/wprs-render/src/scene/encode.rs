@@ -92,7 +92,7 @@ impl Renderer {
                     src.swarms.iter().for_each(|s| s.draw(&mut pass, *system, *slot, *mode));
                     (stats.passes, stats.draws, k) = (stats.passes + 1, stats.draws + 1, k + 1);
                 }
-                Op::Clear(target, _) | Op::Draw { target, .. } => {
+                Op::Clear(target, _) | Op::Draw { target, .. } | Op::Lit { target, .. } => {
                     let target = *target;
                     let load = match &ops[k] {
                         Op::Clear(_, [r, g, b, a]) => {
@@ -104,18 +104,26 @@ impl Renderer {
                     let (_, view, texture) = src.get(pool, target);
                     let mut pass = pass(&mut encoder, &view, load, None);
                     src.clip(&mut pass, target);
-                    while let Some(Op::Draw { target: t, entry, mode, slot, tex }) = ops.get(k) {
+                    while let Some(
+                        op @ (Op::Draw { target: t, entry, mode, slot, tex }
+                        | Op::Lit { target: t, entry, mode, slot, tex, .. }),
+                    ) = ops.get(k)
+                    {
                         if *t != target {
                             break;
                         }
-                        let pipeline = pipes.get(&self.device, Shader::Scene(entry), *mode, texture.format());
-                        let Some(pipeline) = pipeline else {
+                        let shader =
+                            if let Op::Lit { .. } = op { Shader::Lit(entry) } else { Shader::Scene(entry) };
+                        let Some(pipeline) = pipes.get(&self.device, shader, *mode, texture.format()) else {
                             k += 1;
                             continue;
                         };
                         pass.set_pipeline(&pipeline);
                         pass.set_bind_group(0, &frame.0, &[*slot]);
                         pass.set_bind_group(1, &src.group(self, pool, false, tex), &[]);
+                        if let Op::Lit { maps, .. } = op {
+                            pass.set_bind_group(2, &src.lit(self, pool, maps), &[]);
+                        }
                         pass.draw(0..4, 0..1);
                         (stats.draws, k) = (stats.draws + 1, k + 1);
                     }

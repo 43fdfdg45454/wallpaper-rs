@@ -3,17 +3,19 @@ use serde_json::Value;
 use std::path::PathBuf;
 use wprs_format::{Descriptor, Rating};
 
+mod lamps;
 mod limbs;
 mod names;
 mod rigging;
 mod swarm;
 mod tend;
 
+pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use names::ACTIONS;
-use names::{half, whole};
 pub use rigging::{
-    AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MeshCut, WeightStroke,
+    AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
+    WeightStroke,
 };
 pub use swarm::{ParticleEdit, Response, Strand, TendEdit};
 
@@ -167,17 +169,7 @@ pub enum Action {
         #[serde(default)]
         label: Option<String>,
     },
-    PaintMask {
-        pointer: String,
-        #[serde(default)]
-        channel: Option<usize>,
-        radius: f32,
-        #[serde(default = "half")]
-        hardness: f32,
-        #[serde(default = "whole")]
-        value: f32,
-        points: Vec<[f32; 2]>,
-    },
+    PaintMask(MaskStroke),
     MeshFromPicture(MeshCut),
     Bone(BoneEdit),
     MeshDepth(DepthStroke),
@@ -193,6 +185,11 @@ pub enum Action {
     Point(PointEdit),
     Parts(PartsEdit),
     Particles(ParticleEdit),
+    Light(LightEdit),
+    Lighting(LightingEdit),
+    Normals(NormalsMake),
+    PaintMap(MapStroke),
+    Ambient(AmbientEdit),
     Undo {},
     Redo {},
 }

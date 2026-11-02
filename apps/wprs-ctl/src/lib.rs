@@ -22,6 +22,8 @@ pub mod input;
 pub mod inputs;
 pub mod items;
 pub mod keys;
+mod lamped;
+mod lamping;
 mod layering;
 pub mod library;
 mod limbing;

@@ -73,6 +73,7 @@ QtObject {
             "rope": App.tr("Rope"),
             "rotation": App.tr("Rotation"),
             "roughness": App.tr("Roughness"),
+            "roughness_map": App.tr("Roughness map"),
             "roundness": App.tr("Roundness"),
             "rows": App.tr("Rows"),
             "rules": App.tr("Bone rules"),

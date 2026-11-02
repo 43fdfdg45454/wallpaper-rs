@@ -21,6 +21,11 @@ struct Item {
     mode: vec4<f32>,
     lean: vec4<f32>,
     mask_lean: vec4<f32>,
+    lit: vec4<f32>,
+    lit_maps: vec4<f32>,
+    lit_basis: vec4<f32>,
+    lit_at: vec4<f32>,
+    lit_env: vec4<f32>,
 };
 
 struct Out {
@@ -119,31 +124,6 @@ fn finish(src: vec4<f32>, in: Out) -> vec4<f32> {
 @fragment
 fn fs_texture(in: Out) -> @location(0) vec4<f32> {
     return finish(styled(textureSample(src_tex, samp, item.uv.xy + in.uv * item.uv.zw)) * item.color, in);
-}
-
-fn wrapped(u: vec2<f32>) -> vec2<f32> {
-    if item.shape.x > 2.5 {
-        return 1.0 - abs(1.0 - (u - 2.0 * floor(u * 0.5)));
-    }
-    if item.shape.x > 1.5 {
-        return fract(u);
-    }
-    return clamp(u, vec2<f32>(0.0), vec2<f32>(1.0));
-}
-
-@fragment
-fn fs_picture(in: Out) -> @location(0) vec4<f32> {
-    let tiles = in.uv * item.shape.zw;
-    let room = 0.5 / max(vec2<f32>(textureDimensions(src_tex)) * item.uv.zw, vec2<f32>(1.0));
-    let at = item.uv.xy + clamp(wrapped(tiles), room, 1.0 - room) * item.uv.zw;
-    let dx = dpdx(tiles * item.uv.zw);
-    let dy = dpdy(tiles * item.uv.zw);
-    var t = textureSampleGrad(src_tex, samp, at, dx, dy);
-    if item.shape.y > 0.5 {
-        let size = vec2<f32>(textureDimensions(src_tex));
-        t = textureLoad(src_tex, vec2<i32>(min(floor(at * size), size - 1.0)), 0);
-    }
-    return finish(styled(t) * item.color, in);
 }
 
 fn styled(sampled: vec4<f32>) -> vec4<f32> {

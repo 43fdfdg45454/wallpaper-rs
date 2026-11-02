@@ -6781,6 +6781,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "wprs-core",
+ "wprs-depth",
  "wprs-format",
  "wprs-scene",
 ]

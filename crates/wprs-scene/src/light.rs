@@ -73,6 +73,12 @@ pub struct Lighting {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(extend("x-ref" = "image"))]
     pub env: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "image"))]
+    pub roughness_map: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-ref" = "image"))]
+    pub emissive_map: Option<String>,
 }
 
 impl Default for Volumetric {
@@ -84,7 +90,8 @@ impl Default for Volumetric {
 impl Default for Lighting {
     fn default() -> Self {
         let [roughness, reflection, emissive, strength] = [0.5, 0.0, 0.0, 1.0].map(Value::Fixed);
-        Lighting { normal: None, roughness, reflection, emissive, strength, env: None }
+        let (normal, env, roughness_map, emissive_map) = Default::default();
+        Lighting { normal, roughness, reflection, emissive, strength, env, roughness_map, emissive_map }
     }
 }
 

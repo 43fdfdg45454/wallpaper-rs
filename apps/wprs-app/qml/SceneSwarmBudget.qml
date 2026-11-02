@@ -9,7 +9,6 @@ ColumnLayout {
 
     required property var tools
     readonly property var census: SceneSwarmCensus.census?.system === tools.system ? SceneSwarmCensus.census : null
-    readonly property var levels: ["q0", "q1", "q2", "q3"]
 
     function measure() {
         SceneSwarmCensus.measure(tools.page, tools.system, null);
@@ -36,27 +35,10 @@ ColumnLayout {
         text: App.tr("Particle budget")
     }
 
-    RowLayout {
-        QQC2.Label {
-            text: App.tr("Preview quality")
-        }
-
-        QQC2.ComboBox {
-            Layout.fillWidth: true
-            model: [App.tr("Q0, lowest"), App.tr("Q1"), App.tr("Q2"), App.tr("Q3, highest")]
-            currentIndex: budget.levels.indexOf(SceneSwarmCensus.quality)
-            onActivated: index => {
-                SceneSwarmCensus.quality = budget.levels[index];
-                SceneSwarmCensus.preview(budget.tools.page);
-                budget.measure();
-            }
-        }
-
-        QQC2.Button {
-            icon.name: "view-refresh"
-            text: App.tr("Restart systems")
-            onClicked: SceneSwarmCensus.again(budget.tools.page)
-        }
+    SceneQuality {
+        page: budget.tools.page
+        again: App.tr("Restart systems")
+        onPicked: budget.measure()
     }
 
     QQC2.CheckBox {

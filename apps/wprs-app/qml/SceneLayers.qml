@@ -76,7 +76,8 @@ ColumnLayout {
                 "particles": "weather-snow",
                 "sound": "audio-x-generic",
                 "group": "folder",
-                "adjustment": "color-management"
+                "adjustment": "color-management",
+                "light": "help-hint"
             })[type] ?? "layer-visible-on";
     }
 

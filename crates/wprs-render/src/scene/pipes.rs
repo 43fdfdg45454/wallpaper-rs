@@ -32,6 +32,7 @@ pub(crate) enum Mode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum Shader {
     Scene(&'static str),
+    Lit(&'static str),
     Fx(u64, &'static str),
     Own(u64, u8, u32),
 }
@@ -43,6 +44,7 @@ pub(crate) struct Pipes {
     pub(crate) shelf: Arc<Mutex<Shelf>>,
     pub(crate) frame: BindGroupLayout,
     pub(crate) textures: BindGroupLayout,
+    pub(crate) lit: BindGroupLayout,
     pub(crate) fx_frame: BindGroupLayout,
     pub(crate) fx: BindGroupLayout,
     pub(crate) own: BindGroupLayout,
@@ -117,10 +119,12 @@ impl Pipes {
             composite: module(
                 device,
                 format!(
-                    "{FRAME_WGSL}\n{BLEND_WGSL}\n{}\n{}\n{}",
+                    "{FRAME_WGSL}\n{BLEND_WGSL}\n{}\n{}\n{}\n{}\n{}",
                     include_str!("scene.wgsl"),
+                    include_str!("picture.wgsl"),
                     include_str!("text.wgsl"),
-                    include_str!("spectrum.wgsl")
+                    include_str!("spectrum.wgsl"),
+                    include_str!("lit.wgsl")
                 ),
             ),
             shelf: Arc::default(),
@@ -131,6 +135,7 @@ impl Pipes {
                 entry(3, sampler),
             ]),
             textures: layout(&[flat(0), flat(1), flat(2)]),
+            lit: layout(&[entry(0, uniform(false)), flat(1), flat(2), flat(3), flat(4)]),
             fx_frame: layout(&[entry(0, uniform(false)), entry(1, sampler), entry(2, sampler)]),
             fx: layout(&fx),
             own: layout(&own),

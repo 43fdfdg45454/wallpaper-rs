@@ -15,9 +15,13 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::ImportScript { file } => crate::scripts::import(dir, doc, file),
         Action::Thumbnail { file, animated } => crate::previews::store(dir, doc, file, *animated)
             .and_then(|path| crate::previews::adopt(doc, *animated, &path)),
-        Action::PaintMask { pointer, channel, radius, hardness, value, points } => {
-            let (channel, radius, hardness, value) = (*channel, *radius, *hardness, *value);
-            paint(dir, doc, &Stroke { pointer, channel, radius, hardness, value, points })
+        Action::PaintMask(m) => {
+            let (channel, radius, hardness, value) = (m.channel, m.radius, m.hardness, m.value);
+            paint(
+                dir,
+                doc,
+                &Stroke { pointer: &m.pointer, channel, radius, hardness, value, points: &m.points },
+            )
         }
         action => return crate::rigging::act(dir, doc, action),
     })

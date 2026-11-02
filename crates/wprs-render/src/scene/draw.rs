@@ -5,6 +5,7 @@ use super::{Op, Src};
 use wprs_scene::{Affine, Blend, Content, Layout, Mask, SpectrumStyle, Wrapping};
 
 mod compose;
+mod lit;
 mod masks;
 
 impl Painter<'_, '_, '_> {
@@ -129,8 +130,15 @@ impl Painter<'_, '_, '_> {
             let tex = [Src::White, masked, back];
             self.ops.push(Op::Draw { target: target.src, entry: "fs_shape", mode, slot, tex });
         }
-        let slot = self.pool.push(&item);
-        self.ops.push(Op::Draw { target: target.src, entry, mode, slot, tex: [src, masked, back] });
+        let lit = self.light(i, entry, &mut item, (self.local(i, size), bounds), target);
+        let (slot, tex) = (self.pool.push(&item), [src, masked, back]);
+        match lit {
+            Some((entry, maps, behind)) => {
+                self.ops.push(Op::Lit { target: target.src, entry, mode, slot, tex, maps });
+                self.release(behind);
+            }
+            None => self.ops.push(Op::Draw { target: target.src, entry, mode, slot, tex }),
+        }
         self.release(masked);
         self.release(back);
     }

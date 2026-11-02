@@ -7,7 +7,7 @@ pub(crate) struct Recipe {
     module: ShaderModule,
     entry: String,
     vertex: String,
-    groups: [BindGroupLayout; 2],
+    groups: Vec<BindGroupLayout>,
     constants: Vec<(String, f64)>,
     strip: bool,
 }
@@ -16,7 +16,7 @@ impl Recipe {
     pub(crate) fn own(
         d: &Descriptor,
         module: ShaderModule,
-        groups: [BindGroupLayout; 2],
+        groups: Vec<BindGroupLayout>,
         shader: Shader,
     ) -> Recipe {
         let Shader::Own(_, pass, variant) = shader else { unreachable!("a package shader") };
@@ -35,7 +35,7 @@ impl Recipe {
         let options = wgpu::PipelineCompilationOptions { constants: &constants, ..Default::default() };
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("wprs-scene pipeline layout"),
-            bind_group_layouts: &[Some(&self.groups[0]), Some(&self.groups[1])],
+            bind_group_layouts: &self.groups.iter().map(Some).collect::<Vec<_>>(),
             immediate_size: 0,
         });
         let topology = match self.strip {
@@ -94,11 +94,15 @@ impl Pipes {
             };
             match shader {
                 Shader::Scene(entry) => {
-                    let groups = [self.frame.clone(), self.textures.clone()];
+                    let groups = vec![self.frame.clone(), self.textures.clone()];
+                    plain(self.composite.clone(), entry, "vs_item", groups, true)
+                }
+                Shader::Lit(entry) => {
+                    let groups = vec![self.frame.clone(), self.textures.clone(), self.lit.clone()];
                     plain(self.composite.clone(), entry, "vs_item", groups, true)
                 }
                 Shader::Fx(id, entry) => {
-                    plain(module(id), entry, "vs_main", [self.fx_frame.clone(), self.fx.clone()], false)
+                    plain(module(id), entry, "vs_main", vec![self.fx_frame.clone(), self.fx.clone()], false)
                 }
                 Shader::Own(..) => return None,
             }

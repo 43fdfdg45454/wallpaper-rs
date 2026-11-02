@@ -120,11 +120,20 @@ impl<'a> Painter<'a, '_, '_> {
     }
 
     pub(crate) fn digest(&self, range: Range<usize>, extra: impl std::fmt::Debug) -> u64 {
+        self.sealed(range, extra, true)
+    }
+
+    pub(crate) fn sealed(&self, range: Range<usize>, extra: impl std::fmt::Debug, lamps: bool) -> u64 {
         let mut h = Hashing(DefaultHasher::new());
+        if self.frame.draws[range.clone()].iter().any(|d| d.lit.is_some()) {
+            let now = &self.pool.glow.now;
+            let around = [now.ambient, now.sky];
+            h.0.write(if lamps { bytemuck::bytes_of(now) } else { bytemuck::bytes_of(&around) });
+        }
         for d in &self.frame.draws[range] {
             let effects = &self.frame.effects[d.effects.clone()];
             let fields = (d.end, d.world, d.origin, d.opacity, d.blend, &d.content, d.mask, d.hidden);
-            let looks = (d.tint, d.brightness, d.mask_strength, d.isolate, d.lean);
+            let looks = (d.tint, d.brightness, d.mask_strength, d.isolate, d.lean, d.lit);
             let _ = write!(h, "{:p}{fields:?}{looks:?}{:?}", d.layer, d.mask_texture);
             for e in effects {
                 let (id, slots, scale, mask) =

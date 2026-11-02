@@ -10,8 +10,9 @@ use wprs_format::features;
 
 pub use crate::action::{ACTIONS, Action, EDITOR, KeyEase};
 pub use crate::action::{
-    AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, IkEdit,
-    MeshCut, ParticleEdit, PartsEdit, PointEdit, Response, Spot, Strand, TendEdit, WeightStroke, WindEdit,
+    AmbientEdit, AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit,
+    IkEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, MaskStroke, MeshCut, NormalsMake,
+    ParticleEdit, PartsEdit, PointEdit, Response, Spot, Strand, TendEdit, WeightStroke, WindEdit,
 };
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {
@@ -168,16 +169,7 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         Action::RemoveProperty { id } => crate::references::remove_property(doc, id)?,
         Action::Condition { id, enabled, text } => crate::references::condition(doc, id, *enabled, text)?,
         Action::AddPreset { id, label } => crate::props::add_preset(doc, id.as_deref(), label.as_deref())?,
-        Action::Import { .. } | Action::ImportEffect { .. } | Action::ImportScript { .. } => Vec::new(),
-        Action::Thumbnail { .. } | Action::PaintMask { .. } => Vec::new(),
-        Action::MeshFromPicture(_) | Action::Bone(_) | Action::MeshDepth(_) | Action::Weights(_) => {
-            Vec::new()
-        }
-        Action::AutoWeights(_) | Action::Clip(_) | Action::Key(_) | Action::Expression(_) => Vec::new(),
-        Action::Ik(_) | Action::Physics(_) | Action::Wind(_) | Action::Attach(_) | Action::Parts(_) => {
-            Vec::new()
-        }
-        Action::Point(_) | Action::Particles(_) | Action::Undo {} | Action::Redo {} => Vec::new(),
+        _ => Vec::new(),
     })
 }
 

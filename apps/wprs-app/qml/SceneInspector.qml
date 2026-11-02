@@ -147,6 +147,24 @@ ColumnLayout {
         ColumnLayout {
             width: parent.width
 
+            SceneLightTools {
+                Layout.fillWidth: true
+                page: inspector.page
+                node: inspector.node
+            }
+
+            SceneLighting {
+                Layout.fillWidth: true
+                page: inspector.page
+                node: inspector.node
+            }
+
+            SceneLightsPanel {
+                Layout.fillWidth: true
+                visible: inspector.pointer === "/scene/canvas"
+                page: inspector.page
+            }
+
             SceneSwarmTools {
                 Layout.fillWidth: true
                 page: inspector.page
