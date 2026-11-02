@@ -165,3 +165,18 @@ async fn finish(pending: Pending, token: Value) -> Result<Value, Error> {
         json!({"device": text("device_name"), "encrypted": state["encrypted"], "needs_key": needs_key, "active": state::active()}),
     )
 }
+
+pub(crate) async fn remove() -> Result<(), Error> {
+    let device = read(|s| s.device.clone());
+    if let (Some(device), Ok((api, _))) = (device, state::api()) {
+        let path = format!("/api/v1/me/devices/{device}");
+        let gone = api.call(Method::DELETE, &path, None);
+        if !matches!(tokio::time::timeout(Duration::from_secs(10), gone).await, Ok(Ok(_))) {
+            log::warn!("the server could not be told to forget this phone");
+        }
+    }
+    vault::forget()?;
+    cancel();
+    crate::pairing::cancel();
+    update(|s| *s = state::Saved::default())
+}

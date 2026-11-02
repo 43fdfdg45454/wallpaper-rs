@@ -101,6 +101,8 @@
     <string name="error_android_unreadable">No es una imagen ni un vídeo admitido: %1$s</string>
     <string name="error_android_utf_text">%1$s no es texto UTF-8</string>
     <string name="error_android_video_frames">Fotogramas de vídeo: %1$s</string>
+    <string name="error_android_vote_ids">Indica como mucho 100 ids de paquete</string>
+    <string name="error_android_vote_value">Indica un id de paquete y up, down o none</string>
     <string name="error_android_web_client">No se pueden abrir conexiones web: %1$s</string>
     <string name="error_android_wrong_passphrase">La frase no abre la custodia de la clave</string>
     <string name="error_format_elsewhere">Este paquete está hecho solo para el escritorio.</string>

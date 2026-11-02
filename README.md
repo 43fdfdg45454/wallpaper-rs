@@ -1497,13 +1497,14 @@ búsqueda no lo muestran, y quien tenga su enlace o su id lo ve y lo instala. *C
 subidas y te deja cambiar la visibilidad de cada versión. En un repositorio estático, `wprs-ctl repo
 add --unlisted`, `repo hide` y `repo unhide` hacen lo mismo antes de `repo publish`.
 
-En el catálogo de *Repositorios* los paquetes que destaca el operador del repositorio salen primero
-y marcados (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o desde
+En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
+del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o desde
 `/admin/featured` del servidor), y, con un servidor enlazado, cada paquete muestra sus votos a favor y
-en contra y botones para votar (`wprs-ctl remote vote ID up|down|none`, `remote votes ID…`). El
+en contra, con tu voto marcado, y botones para votar (`wprs-ctl remote vote ID up|down|none`, `remote votes ID…`). El
 servidor cuenta un voto por cuenta y paquete, guarda solo los recuentos y tu propio voto, nunca una
 lista de quién votó ni de quién instaló qué. El ajuste *Mostrar los votos del servidor en el
-catálogo* (`repos.vote_counts`) deja de pedir y mostrar los recuentos. Tus valoraciones locales de la
+catálogo* (`repos.vote_counts`, también en los ajustes del teléfono) deja de pedir y mostrar los
+recuentos. Tus valoraciones locales de la
 biblioteca siguen siendo privadas y se sincronizan cifradas.
 
 Aprueba solo un código que muestre la pantalla de tu propio equipo nuevo: quien te envía un código

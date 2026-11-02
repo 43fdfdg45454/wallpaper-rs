@@ -19,6 +19,14 @@
     <string name="remove">Quitar</string>
     <string name="mature">Contenido para adultos</string>
     <string name="repo_featured">Destacado</string>
+    <string name="repo_featured_section">Destacados por los repositorios</string>
+    <string name="repo_all">Todos los paquetes</string>
+    <string name="vote_up">Votar a favor</string>
+    <string name="vote_down">Votar en contra</string>
+    <string name="votes_up">A favor %1$d</string>
+    <string name="votes_down">En contra %1$d</string>
+    <string name="votes_note">Los votos van a tu servidor con tu cuenta; guarda solo los recuentos y tu propio voto.</string>
+    <string name="vote_counts">Mostrar los recuentos de votos de tu servidor</string>
     <string name="flashing">Destellos</string>
     <string name="mature_warning">Este fondo tiene contenido para adultos.</string>
     <string name="flashing_warning">Este fondo destella o muestra patrones rápidos que pueden provocar crisis a personas con epilepsia fotosensible.</string>

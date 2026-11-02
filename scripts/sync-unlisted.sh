@@ -23,7 +23,7 @@ api -X POST "$URL/api/v1/admin/repo/publish" >/dev/null
 if a remote vote org.example.noon sideways 2>/dev/null; then fail "a vote other than up, down or none was sent"; fi
 a remote vote org.example.noon up | grep -q '"up":1' || fail "the vote was not counted"
 a remote vote org.example.noon down | grep -q '"down":1,.*"up":0' || fail "a changed vote was counted twice"
-a remote votes org.example.noon | grep -q '"down":1,"up":0' || fail "counts: $(a remote votes org.example.noon)"
+a remote votes org.example.noon | grep -q '"down":1,"mine":"down","up":0' || fail "counts: $(a remote votes org.example.noon)"
 curl -fsS "$URL/api/v1/catalog?q=noon" | grep -q '"votes":{"down":1,"up":0}' || fail "the catalog has no counts"
 a config repos.vote_counts false
 a remote votes org.example.noon | grep -q '"shown":false' || fail "hidden counts were fetched"

@@ -88,7 +88,7 @@ async fn vote(State(app): St, auth: Auth, Path(id): Path<String>, Input(v): Inpu
     Ok(Json(found.await?))
 }
 
-async fn counts(State(app): St, Query(q): Query<Ids>) -> Reply {
+async fn counts(State(app): St, auth: Option<Auth>, Query(q): Query<Ids>) -> Reply {
     let ids: Vec<String> = q.ids.split(',').filter(|i| !i.is_empty()).map(String::from).collect();
     if ids.len() > 100 || !ids.iter().all(|i| wprs_format::valid_id(i)) {
         return Err(Problem::bad("ids: at most 100 package ids separated by commas"));
@@ -96,8 +96,9 @@ async fn counts(State(app): St, Query(q): Query<Ids>) -> Reply {
     let items = app.db.run(move |c| {
         let mut items = Map::new();
         for id in ids {
-            let (up, down): (i64, i64) = c.query_row(COUNTS, [&id], |r| Ok((r.get(0)?, r.get(1)?)))?;
-            items.insert(id, json!({"up": up, "down": down}));
+            let mut found = tally(c, &id, auth.as_ref().map(|a| a.user))?;
+            found.as_object_mut().map(|o| o.remove("id"));
+            items.insert(id, found);
         }
         Ok(items)
     });

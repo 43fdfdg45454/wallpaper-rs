@@ -24,6 +24,13 @@ pub(super) fn records() {
     assert!(
         ask(json!({ "op": "add", "url": "http://example.org" }))["error"].as_str().unwrap().contains("https")
     );
+    let refused = |request: Value| ask(request)["error"].as_str().unwrap_or_default().to_owned();
+    let dawn = "org.example.dawn";
+    assert!(refused(json!({"op": "vote", "id": dawn, "vote": "sideways"})).contains("up, down or none"));
+    assert!(refused(json!({"op": "vote", "id": "Not An Id", "vote": "up"})).contains("package id"));
+    assert!(refused(json!({"op": "vote", "id": dawn, "vote": "up"})).contains("add a server"));
+    assert!(refused(json!({"op": "votes", "ids": vec![dawn; 101]})).contains("100"));
+    assert_eq!(ask(json!({"op": "votes", "ids": [dawn]})), json!({"items": {}, "shown": false}));
     let mut secrets = Secrets::default();
     secrets.token = "t".into();
     vault::store(&secrets).unwrap();

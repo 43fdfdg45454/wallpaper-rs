@@ -111,6 +111,7 @@ fn package_texts_render_as_plain_text() {
         .into_iter()
         .chain([
             "ItemKin",
+            "BrowseRow",
             "OutputRow",
             "OutputControls",
             "SceneField",

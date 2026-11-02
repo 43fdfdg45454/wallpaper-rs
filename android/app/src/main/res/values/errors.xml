@@ -101,6 +101,8 @@
     <string name="error_android_unreadable">Not a supported image or video: %1$s</string>
     <string name="error_android_utf_text">%1$s is not UTF-8 text</string>
     <string name="error_android_video_frames">Video frames: %1$s</string>
+    <string name="error_android_vote_ids">Give at most 100 package ids</string>
+    <string name="error_android_vote_value">Give a package id and up, down or none</string>
     <string name="error_android_web_client">Web connections cannot start: %1$s</string>
     <string name="error_android_wrong_passphrase">The passphrase does not open the recovery escrow</string>
     <string name="error_format_elsewhere">This package is made for the desktop only.</string>

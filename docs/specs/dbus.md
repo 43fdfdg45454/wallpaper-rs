@@ -1842,7 +1842,7 @@ and the vote of this account. `InvalidArgs` for another vote or an id that is no
 
 ### `GetVotes(as ids) → (s json)`
 
-`{items: {id: {up, down}}, shown}` from the linked server for at most 100 package ids; `shown` is
+`{items: {id: {up, down, mine}}, shown}` from the linked server (`mine` is the vote of this account: `up`, `down` or `none`) for at most 100 package ids; `shown` is
 `false`, with no items and without reaching the network, while no server is linked or
 `repos.vote_counts` is off. Counts are hints the repository does not sign. `RepoPackage` carries
 `featured` for the packages the repository features (`repo.md`).

@@ -84,102 +84,26 @@ ColumnLayout {
             model: browse.packages
             spacing: Kirigami.Units.largeSpacing
 
-            delegate: RowLayout {
-                id: row
+            delegate: ColumnLayout {
+                id: item
 
                 required property var modelData
-                readonly property bool veiled: modelData.content === "mature" && !modelData.revealed && !browse.shown[modelData.repo_id + "/" + modelData.id] && !App.unveiled
-                readonly property bool wants: (pointer.hovered || version.activeFocus || install.activeFocus) && !veiled && !browse.battery && modelData.photosensitive !== true
+                required property int index
+                readonly property bool starts: item.index === 0 ? item.modelData.featured === true : !item.modelData.featured && browse.packages[item.index - 1].featured === true
 
                 width: ListView.view.width
-                onWantsChanged: {
-                    if (wants)
-                        browse.animate(modelData);
+
+                Kirigami.Heading {
+                    visible: item.starts
+                    level: 3
+                    textFormat: Text.PlainText
+                    text: item.modelData.featured ? App.tr("Featured by the repositories") : App.tr("All packages")
                 }
 
-                Image {
-                    Layout.preferredWidth: Kirigami.Units.gridUnit * 8
-                    Layout.preferredHeight: Kirigami.Units.gridUnit * 5
-                    source: App.url(browse.previews[browse.spec(row.modelData)] ?? "")
-                    asynchronous: true
-                    fillMode: Image.PreserveAspectCrop
-                    sourceSize: row.veiled ? Qt.size(12, 12) : undefined
-
-                    HoverHandler {
-                        id: pointer
-                    }
-
-                    AnimatedImage {
-                        anchors.fill: parent
-                        visible: row.wants && status === AnimatedImage.Ready
-                        source: row.wants ? App.url(browse.moving[browse.spec(row.modelData)] ?? "") : ""
-                        playing: visible && browse.Window.visibility !== Window.Hidden
-                        cache: false
-                        fillMode: Image.PreserveAspectCrop
-                    }
-
-                    TapHandler {
-                        enabled: row.veiled
-                        onTapped: {
-                            const key = row.modelData.repo_id + "/" + row.modelData.id;
-                            browse.shown = Object.assign({}, browse.shown, {
-                                [key]: true
-                            });
-                            App.act("Reveal", [key], "Repos1");
-                        }
-                    }
-                }
-
-                ColumnLayout {
+                BrowseRow {
                     Layout.fillWidth: true
-
-                    Kirigami.Heading {
-                        level: 4
-                        text: (row.modelData.featured ? App.tr("Featured") + " · " : "") + row.modelData.title + " · " + Labels.value(row.modelData.kind)
-                        textFormat: Text.PlainText
-                    }
-
-                    QQC2.Label {
-                        Layout.fillWidth: true
-                        wrapMode: Text.Wrap
-                        textFormat: Text.PlainText
-                        text: [row.modelData.content ? App.plain(row.modelData.description) : row.modelData.description, row.modelData.authors.join(", ") + " · " + row.modelData.license + " · " + App.bytes(row.modelData.size), row.modelData.id + " · " + row.modelData.repo_name, row.modelData.installed.length > 0 ? App.tr("Installed: %1", row.modelData.installed.join(", ")) : "", row.modelData.update && row.modelData.changes ? App.tr("What's new: %1", App.plain(row.modelData.changes)) : "", row.veiled ? App.tr("Mature content: click the picture to show it") : ""].filter(t => t).join("\n")
-                    }
-
-                    QQC2.Label {
-                        Layout.fillWidth: true
-                        visible: row.modelData.photosensitive === true
-                        wrapMode: Text.Wrap
-                        color: Kirigami.Theme.negativeTextColor
-                        text: App.tr("Flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy.")
-                    }
-
-                    BrowseVotes {
-                        counts: browse.votes[row.modelData.id] ?? null
-                        shown: browse.counted
-                        onVoted: found => browse.votes = Object.assign({}, browse.votes, Object.fromEntries([[row.modelData.id, found]]))
-                        packageId: row.modelData.id
-                    }
-
-                    PrivacyNotice {
-                        Layout.fillWidth: true
-                        exposes: row.modelData.kind === "web" ? ["zone", "language", "gpu"] : []
-                    }
-                }
-
-                QQC2.ComboBox {
-                    id: version
-
-                    model: row.modelData.versions
-                    currentIndex: count - 1
-                }
-
-                QQC2.Button {
-                    id: install
-
-                    text: row.modelData.update ? App.tr("Update") : App.tr("Install")
-                    icon.name: "download"
-                    onClicked: browse.installer.install(row.modelData.repo_id + "/" + row.modelData.id + "@" + version.currentText)
+                    modelData: item.modelData
+                    catalog: browse
                 }
             }
         }

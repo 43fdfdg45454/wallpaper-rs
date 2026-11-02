@@ -179,13 +179,16 @@ the verified shards before installing.
 | GET | `/media/{sha256}.jpg` | — | Thumbnail of a pending or published version |
 | POST | `/api/v1/packages/{id}/vote` | session or token | `{vote: up\|down\|none}` → `{id, up, down, mine}`; one vote per account and package, at most 60 changes an hour (`429`), `404` for a package that is not published |
 | GET | `/api/v1/packages/{id}/vote` | session or token | `{id, up, down, mine}` |
-| GET | `/api/v1/votes?ids=` | — | `{items: {id: {up, down}}}` for at most 100 package ids separated by commas |
+| GET | `/api/v1/votes?ids=` | — | `{items: {id: {up, down, mine?}}}` for at most 100 package ids separated by commas; `mine` (`up`, `down` or `none`) only with a session |
 
 `featured=true` keeps the packages the operator features. `votes` is `{up, down}`: counts of the
 votes of accounts, unsigned hints that are not part of the repository. The server keeps one vote per
 account and package to count it once and lets each account read only its own; it never lists who
 voted and keeps no record of installs or downloads. The page of a package shows the counts, the
 note when it is featured and, for a signed-in visitor, buttons to vote up, down or withdraw the vote.
+The desktop app and the phone vote with the token of the device and read the counts with
+`/api/v1/votes`, which adds `mine` for that account; both skip the counts while `repos.vote_counts`
+is off.
 
 Search uses an SQLite FTS5 index with the trigram tokenizer (without diacritics) over the id,
 title, description and tags of published versions, kept up to date by triggers: every word of `q`

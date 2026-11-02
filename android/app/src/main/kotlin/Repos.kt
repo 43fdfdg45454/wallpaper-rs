@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -81,6 +81,9 @@ private fun Explore(main: Main, run: Run, close: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var installed by remember { mutableIntStateOf(0) }
     val found by loaded(JSONArray(), query, installed) { account("browse", "query" to query) as? JSONArray ?: JSONArray() }
+    var voted by remember { mutableStateOf(JSONObject()) }
+    val counted by loaded(JSONObject(), found) { votes(found.objects().map { it.getString("id") }) }
+    val items = found.objects().sortedByDescending { it.optBoolean("featured") }
     AlertDialog(
         onDismissRequest = close,
         confirmButton = { TextButton(close) { Text(stringResource(R.string.close)) } },
@@ -88,14 +91,24 @@ private fun Explore(main: Main, run: Run, close: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(stringResource(R.string.repo_search)) })
+                Text(stringResource(R.string.votes_note), style = MaterialTheme.typography.bodySmall)
                 LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    items(found.objects().sortedByDescending { it.optBoolean("featured") }) { item ->
+                    itemsIndexed(items) { index, item ->
+                        val featured = item.optBoolean("featured")
+                        if (index == 0 && featured || !featured && items.getOrNull(index - 1)?.optBoolean("featured") == true) {
+                            Text(stringResource(if (featured) R.string.repo_featured_section else R.string.repo_all), style = MaterialTheme.typography.titleSmall)
+                        }
+                        val id = item.getString("id")
                         ListItem(
-                            headlineContent = { Text(item.optString("title").ifEmpty { item.getString("id") }) },
+                            headlineContent = { Text(item.optString("title").ifEmpty { id }) },
                             supportingContent = {
                                 val mature = stringResource(R.string.mature).takeIf { item.optBoolean("mature") }
-                                val featured = stringResource(R.string.repo_featured).takeIf { item.optBoolean("featured") }
-                                Text(listOfNotNull(featured, item.getString("repo"), item.getString("version"), size(item.optLong("size")), mature).joinToString(" · "))
+                                val mark = stringResource(R.string.repo_featured).takeIf { featured }
+                                Column {
+                                    Text(listOfNotNull(mark, item.getString("repo"), item.getString("version"), size(item.optLong("size")), mature).joinToString(" · "))
+                                    val counts = voted.optJSONObject(id) ?: counted.optJSONObject("items")?.optJSONObject(id)
+                                    Votes(id, counts, counted.optBoolean("shown"), run) { voted = JSONObject(voted.toString()).put(id, it) }
+                                }
                             },
                             trailingContent = {
                                 if (item.optBoolean("installed")) Text(stringResource(R.string.repo_installed))

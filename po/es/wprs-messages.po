@@ -1613,7 +1613,8 @@ msgstr "se esperaba un wpak-repo-featured/1.0 de este repositorio"
 
 #: crates/wprs-format/src/featured.rs
 msgid "expected at most 64 package ids, each once, with short notes"
-msgstr "se esperaban como mucho 64 ids de paquete, cada uno una vez, con notas cortas"
+msgstr ""
+"se esperaban como mucho 64 ids de paquete, cada uno una vez, con notas cortas"
 
 #: crates/wprs-format/src/featured.rs
 msgid "has 1 to 200 characters on one line without < or >"

@@ -56,6 +56,7 @@ mod store;
 mod tests;
 mod tilt;
 mod vault;
+mod votes;
 
 pub mod host {
     use crate::{Error, account, depth, library, settings, store};

@@ -20,6 +20,14 @@
     <string name="remove">Remove</string>
     <string name="mature">Mature content</string>
     <string name="repo_featured">Featured</string>
+    <string name="repo_featured_section">Featured by the repositories</string>
+    <string name="repo_all">All packages</string>
+    <string name="vote_up">Vote up</string>
+    <string name="vote_down">Vote down</string>
+    <string name="votes_up">Up %1$d</string>
+    <string name="votes_down">Down %1$d</string>
+    <string name="votes_note">Votes go to your server with your account; it keeps only the counts and your own vote.</string>
+    <string name="vote_counts">Show vote counts from your server</string>
     <string name="flashing">Flashing lights</string>
     <string name="mature_warning">This wallpaper has mature content.</string>
     <string name="flashing_warning">This wallpaper flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy.</string>

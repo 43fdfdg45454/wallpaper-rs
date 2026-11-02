@@ -40,6 +40,8 @@ async fn votes_are_counted_without_voters_and_featured_packages_are_marked() {
     assert_eq!(catalog["items"][0]["votes"], json!({"up": 1, "down": 1}), "{catalog}");
     let (_, many) = server.json(Method::GET, &format!("/api/v1/votes?ids={DAWN}"), &Who::Nobody, None).await;
     assert_eq!(many["items"][DAWN], json!({"up": 1, "down": 1}));
+    let (_, own) = server.json(Method::GET, &format!("/api/v1/votes?ids={DAWN}"), &bob, None).await;
+    assert_eq!(own["items"][DAWN], json!({"up": 1, "down": 1, "mine": "down"}));
     let bad = server.json(Method::GET, "/api/v1/votes?ids=Not%20An%20Id", &Who::Nobody, None).await.0;
     assert_eq!(bad, StatusCode::UNPROCESSABLE_ENTITY);
     server.json(Method::POST, &path, &bob, Some(json!({"vote": "none"}))).await;

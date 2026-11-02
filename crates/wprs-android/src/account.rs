@@ -1,11 +1,10 @@
 use crate::said;
-use crate::state::{CANCEL, Saved, api, linked, read, update};
-use crate::{Error, cycle, escrow, keys, link, listen, pairing, private, repos, settings, vault};
+use crate::state::{CANCEL, linked, read, update};
+use crate::{Error, cycle, escrow, keys, link, listen, pairing, private, repos, settings, votes};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::Mutex;
 use std::sync::atomic::Ordering::Relaxed;
-use std::time::Duration;
 use wprs_sync::Peer;
 use zeroize::Zeroizing;
 
@@ -92,6 +91,13 @@ enum Request {
         repo_id: String,
         id: String,
     },
+    Votes {
+        ids: Vec<String>,
+    },
+    Vote {
+        id: String,
+        vote: String,
+    },
 }
 
 fn status() -> Value {
@@ -140,6 +146,8 @@ fn run(request: Request) -> Result<Value, Error> {
         Request::RemoveRepo { repo_id } => return repos::remove(&repo_id),
         Request::Browse { query } => return repos::browse(&query),
         Request::Install { repo_id, id } => return repos::install(&repo_id, &id),
+        Request::Votes { ids } => return votes::counts(&ids),
+        Request::Vote { id, vote } => return votes::cast(&id, &vote),
         Request::Listen { token } => {
             let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
             return runtime.block_on(listen::listen(token));
@@ -164,7 +172,7 @@ fn run(request: Request) -> Result<Value, Error> {
                 keys::device_code(&code, "approve", json!({"approve": approve, "password": password})).await
             }
             Request::Sync { conflict } => cycle::sync(&conflict).await,
-            Request::Remove => remove().await,
+            Request::Remove => link::remove().await.map(|()| status()),
             Request::Rotate => keys::rotate_now().await,
             Request::Escrow { passphrase } => escrow::set(Zeroizing::new(passphrase)).await,
             Request::Restore { passphrase } => escrow::restore(Zeroizing::new(passphrase)).await,
@@ -175,20 +183,4 @@ fn run(request: Request) -> Result<Value, Error> {
             _ => Ok(Value::Null),
         }
     })
-}
-
-async fn remove() -> Result<Value, Error> {
-    let device = read(|s| s.device.clone());
-    if let (Some(device), Ok((api, _))) = (device, api()) {
-        let path = format!("/api/v1/me/devices/{device}");
-        let gone = api.call(reqwest::Method::DELETE, &path, None);
-        if !matches!(tokio::time::timeout(Duration::from_secs(10), gone).await, Ok(Ok(_))) {
-            log::warn!("the server could not be told to forget this phone");
-        }
-    }
-    vault::forget()?;
-    link::cancel();
-    pairing::cancel();
-    update(|s| *s = Saved::default())?;
-    Ok(status())
 }

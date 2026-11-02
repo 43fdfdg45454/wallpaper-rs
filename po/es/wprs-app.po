@@ -598,22 +598,30 @@ msgid "Showing %1 of %2 packages; refine the search to see others."
 msgstr "Se muestran %1 de %2 paquetes; afina la búsqueda para ver otros."
 
 #: apps/wprs-app/qml/Browse.qml
+msgid "Featured by the repositories"
+msgstr "Destacados por los repositorios"
+
+#: apps/wprs-app/qml/Browse.qml
+msgid "All packages"
+msgstr "Todos los paquetes"
+
+#: apps/wprs-app/qml/BrowseRow.qml
 msgid "Featured"
 msgstr "Destacado"
 
-#: apps/wprs-app/qml/Browse.qml
+#: apps/wprs-app/qml/BrowseRow.qml
 msgid "Installed: %1"
 msgstr "Instalado: %1"
 
-#: apps/wprs-app/qml/Browse.qml apps/wprs-app/qml/Installed.qml
+#: apps/wprs-app/qml/BrowseRow.qml apps/wprs-app/qml/Installed.qml
 msgid "What's new: %1"
 msgstr "Novedades: %1"
 
-#: apps/wprs-app/qml/Browse.qml
+#: apps/wprs-app/qml/BrowseRow.qml
 msgid "Mature content: click the picture to show it"
 msgstr "Contenido para adultos: haz clic en la imagen para mostrarlo"
 
-#: apps/wprs-app/qml/Browse.qml
+#: apps/wprs-app/qml/BrowseRow.qml
 msgid ""
 "Flashes or shows fast patterns that can trigger seizures in people with "
 "photosensitive epilepsy."
@@ -621,11 +629,11 @@ msgstr ""
 "Destella o muestra patrones rápidos que pueden provocar crisis a personas "
 "con epilepsia fotosensible."
 
-#: apps/wprs-app/qml/Browse.qml
+#: apps/wprs-app/qml/BrowseRow.qml
 msgid "Update"
 msgstr "Actualizar"
 
-#: apps/wprs-app/qml/Browse.qml
+#: apps/wprs-app/qml/BrowseRow.qml
 msgid "Install"
 msgstr "Instalar"
 
@@ -641,7 +649,9 @@ msgstr "Votar en contra"
 msgid ""
 "Votes go to your server with your account; it keeps only the counts and your "
 "own vote."
-msgstr "Los votos van a tu servidor con tu cuenta; guarda solo los recuentos y tu propio voto."
+msgstr ""
+"Los votos van a tu servidor con tu cuenta; guarda solo los recuentos y tu "
+"propio voto."
 
 #: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
 msgid "Follow the sound that plays"

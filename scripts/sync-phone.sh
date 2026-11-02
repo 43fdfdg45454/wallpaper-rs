@@ -74,6 +74,16 @@ a server sync --wait >/dev/null
 [ "$(a config playback.max_fps)" = "playback.max_fps = 60" ] || fail "the phone changed a desktop-only setting"
 [ "$(value a "['devices'][-1]['label']")" = Pocket ] || fail "the phone's name on the desktop: $(a server status)"
 echo "phone link, join and sync checks passed"
+[ "$(ask 'account {"op": "votes", "ids": ["org.example.noon"]}' | jq_ "r['items']['org.example.noon']['mine']")" = down ] ||
+  fail "the phone does not see the account's vote"
+send 'account {"op": "vote", "id": "org.example.noon", "vote": "sideways"}'
+IFS= read -r -t 60 refused <&8 || fail "the phone did not answer a bad vote"
+[[ $refused == *'"error":'* ]] || fail "the phone sent a vote other than up, down or none"
+[ "$(ask 'account {"op": "vote", "id": "org.example.noon", "vote": "up"}' | jq_ "(r['up'], r['down'], r['mine'])")" = "(1, 0, 'up')" ] ||
+  fail "the phone's vote was not counted"
+ask 'setting repos.vote_counts false' >/dev/null
+[ "$(ask 'account {"op": "votes", "ids": ["org.example.noon"]}' | jq_ "r['shown']")" = False ] || fail "the phone fetched hidden counts"
+ask 'setting repos.vote_counts true' >/dev/null
 
 a server rotate --wait --json | jq_ "r['output']['shared']" | grep -q "$pocket" || fail "the new key did not go to the phone"
 ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
