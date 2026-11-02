@@ -26,8 +26,8 @@ pub fn run(command: Repo) -> Result<()> {
         Repo::Status { dir, json } => root(&status(&dir)?, json)?,
         Repo::Feature { dir, id, note } => wprs_format::feature(&dir, &id, note.as_deref(), true)?,
         Repo::Unfeature { dir, id } => wprs_format::feature(&dir, &id, None, false)?,
-        Repo::Hide { dir, id, version } => wprs_format::list(&dir, &id, version.as_deref(), false)?,
-        Repo::Unhide { dir, id, version } => wprs_format::list(&dir, &id, version.as_deref(), true)?,
+        Repo::Unlist { dir, id, version } => wprs_format::list(&dir, &id, version.as_deref(), false)?,
+        Repo::ListAgain { dir, id, version } => wprs_format::list(&dir, &id, version.as_deref(), true)?,
         Repo::Add { dir, files, author, unlisted, json } => {
             let remote = [&dir].into_iter().chain(&files).any(|p| p.to_string_lossy().contains("://"));
             if remote {

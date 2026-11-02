@@ -50,12 +50,12 @@ fn operator_commands_parse() {
             r#"Repo(Add { dir: "site", files: ["a.wpak"], author: None, unlisted: true, json: false })"#,
         ),
         (
-            "repo hide site org.example.dawn --version 1.0.0",
-            r#"Repo(Hide { dir: "site", id: "org.example.dawn", version: Some("1.0.0") })"#,
+            "repo unlist site org.example.dawn --version 1.0.0",
+            r#"Repo(Unlist { dir: "site", id: "org.example.dawn", version: Some("1.0.0") })"#,
         ),
         (
-            "repo unhide site org.example.dawn",
-            r#"Repo(Unhide { dir: "site", id: "org.example.dawn", version: None })"#,
+            "repo list-again site org.example.dawn",
+            r#"Repo(ListAgain { dir: "site", id: "org.example.dawn", version: None })"#,
         ),
         (
             "repo feature site org.example.dawn --note Calm",

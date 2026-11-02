@@ -126,8 +126,9 @@ A release of the second-version shards may also carry `listed: false`: the versi
 leave it out of `browse` and its search unless a version of the package is installed, and install it
 when asked by id. First-version shards leave unlisted releases out, so versions of wallpaper-rs that do
 not know the field never show them, and a repository with an unlisted release always publishes
-details. `wprs-ctl repo add --unlisted` adds versions unlisted, and `repo hide DIR ID [--version V]`
-and `repo unhide` change it for a package or one version; publish next.
+details. `wprs-ctl repo add --unlisted` adds versions unlisted, and `repo unlist DIR ID [--version V]`
+and `repo list-again` change it for a package or one version; publish next. Unlisting is not the
+moderators' `hidden` flag (`wprs_format::hide`), which no subcommand of `repo` sets.
 
 `featured/<sha256>.json` (optional): `format` (`wpak-repo-featured/1.0`), `repo_id` and `items`: at
 most 64 `{id, note?}`, ids of packages of the repository, each once, with a note of at most 200

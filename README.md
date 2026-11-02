@@ -1538,7 +1538,7 @@ búsqueda no lo muestran, y quien tenga su enlace o su id lo ve y lo instala. Oc
 sigue en los archivos firmados del repositorio, que cualquiera puede descargar y leer, con su título y
 su descripción; lo privado va en la sincronización o en un repositorio propio. *Cuenta* lista tus
 subidas y te deja cambiar la visibilidad de cada versión. En un repositorio estático, `wprs-ctl repo
-add --unlisted`, `repo hide` y `repo unhide` hacen lo mismo antes de `repo publish`.
+add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo publish`.
 
 En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
 del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o desde

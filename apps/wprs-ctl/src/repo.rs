@@ -62,7 +62,7 @@ pub enum Repo {
     #[command(
         about = "Unlist a package or one version: out of browsing and search, still installable by id; publish next"
     )]
-    Hide {
+    Unlist {
         dir: PathBuf,
         id: String,
         #[arg(long)]
@@ -80,7 +80,7 @@ pub enum Repo {
     #[command(about = "Stop featuring a package; publish next")]
     Unfeature { dir: PathBuf, id: String },
     #[command(about = "List an unlisted package or version again; publish next")]
-    Unhide {
+    ListAgain {
         dir: PathBuf,
         id: String,
         #[arg(long)]
