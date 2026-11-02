@@ -32,6 +32,11 @@ const val LAMP_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size"
 const val LAMP_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.lamp", "version": "1.0.0",
     "title": "Lamp", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
     "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["lights"] } }"""
+const val FOG_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
+    "layers": [{ "id": "lamp", "type": "light", "light": "spot", "cone": [10, 30], "volumetric": { "density": 0.3 } }] }"""
+const val FOG_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.lamp", "version": "1.0.0",
+    "title": "Lamp", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+    "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["lights", "volumetric_lights"] } }"""
 const val STAGE_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] }, "camera3d": { "fov": 50 },
     "layers": [{ "id": "stage", "type": "group", "space": "3d", "layers": [] }] }"""
 const val STAGE_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.stage", "version": "1.0.0",

@@ -94,12 +94,16 @@ class ScenePagesTest : SceneBase() {
     }
 
     @Test
-    fun scenesWithLightsAreRefusedUntilTheEngineDrawsThem() {
+    fun scenesWithLightsAreAcceptedAndLitAirIsRefusedUntilTheEngineDrawsIt() {
         val dir = File(storage(), "lamps/lamp").apply { mkdirs() }
         File(dir, "scene.json").writeText(LAMP_SCENE)
         File(dir, "manifest.json").writeText(LAMP_MANIFEST)
+        val lit = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(lit, lit.startsWith("["))
+        File(dir, "scene.json").writeText(FOG_SCENE)
+        File(dir, "manifest.json").writeText(FOG_MANIFEST)
         val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
-        assertTrue(reply.getString("error").contains("it uses the feature lights (lights its layers)"))
+        assertTrue(reply.getString("error").contains("it uses the feature volumetric_lights (lights the air)"))
     }
 
     @Test
