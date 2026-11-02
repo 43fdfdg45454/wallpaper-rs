@@ -34,6 +34,7 @@ mod render;
 mod sampling;
 mod sized;
 pub(crate) mod skins;
+pub(crate) mod solids;
 mod sources;
 mod state;
 #[cfg(test)]

@@ -30,7 +30,7 @@ impl Renderer {
         pool: &mut Pool,
         src: &Sources<'_>,
         ops: &[Op],
-        resolve: Option<u32>,
+        resolve: Option<(u32, &'static str)>,
         (clock, timing): (&Clock, Timing),
         (view, serial): (usize, u64),
     ) -> (SceneStats, wgpu::SubmissionIndex, Instant) {
@@ -131,8 +131,10 @@ impl Renderer {
                 }
             }
         }
-        let blit = |p| pipes.get(&self.device, Shader::Scene("fs_texture"), Mode::Replace, p);
-        if let Some((slot, pipeline)) = resolve.and_then(|slot| Some((slot, blit(Format::Rgba8UnormSrgb)?))) {
+        let blit = |e, p| pipes.get(&self.device, Shader::Scene(e), Mode::Replace, p);
+        if let Some((slot, pipeline)) =
+            resolve.and_then(|(slot, entry)| Some((slot, blit(entry, Format::Rgba8UnormSrgb)?)))
+        {
             let group = src.group(self, pool, false, &[Src::Canvas, Src::White, Src::Clear]);
             let load =
                 src.scissor.map_or(wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT), |_| wgpu::LoadOp::Load);

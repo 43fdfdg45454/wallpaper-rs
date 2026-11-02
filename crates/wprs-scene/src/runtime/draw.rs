@@ -81,7 +81,7 @@ impl Runtime {
         let cx = Context { view, ..self.context() };
         let cx = Context { camera: cx.lens(quality), ..cx };
         let canvas = self.scene.canvas.size.map(|v| v as f32);
-        let (mut draws, mut effects, mut lamps) = spare.lists();
+        let (mut draws, mut effects, mut lamps, stages, placed, looks) = spare.lists();
         draws.reserve(self.sizes.get().0);
         effects.reserve(self.sizes.get().1);
         let set = self.script.stage.and_then(|s| s.background).map(crate::Color);
@@ -107,6 +107,9 @@ impl Runtime {
             lamps,
             ambient,
             sky,
+            stages,
+            placed,
+            looks,
         };
         let root = (camera, None);
         match self.arranged() {
@@ -123,6 +126,7 @@ impl Runtime {
             frame.lamps.iter_mut().for_each(|l| l.slot = frame.draws.len());
         }
         plan(&self.swarms, (&self.systems, &self.flocks), &cx, &frame, quality, self.t);
+        crate::eval::staged::seal(&cx, &mut frame);
         self.sight_puppets(&frame);
         let sighted = if self.sight(&frame) { Wake::Frame } else { Wake::Idle };
         frame.wake = cx.wake.get().min(self.cue_wake()).min(sighted);

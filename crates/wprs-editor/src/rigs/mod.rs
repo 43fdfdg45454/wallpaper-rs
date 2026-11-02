@@ -95,6 +95,7 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
             )
         }
         _ if crate::lamps::asks(q) => crate::lamps::query(dir, doc, id, q),
+        _ if crate::stage3d::asks(q) => crate::stage3d::query(dir, doc, id, q),
         _ if q.get("outline").is_some() => outline(dir, doc, id),
         _ if q.get("wind").is_some() => wind_arrow(doc),
         _ => rig(dir, doc, id),
@@ -109,6 +110,7 @@ pub fn staged(look: &Value) -> Option<Value> {
 
 pub fn preview(scene: &mut Value, look: &Value) {
     crate::lamps::preview(scene);
+    crate::stage3d::preview(scene);
     let Some(id) = look["layer"].as_str() else { return };
     fn find<'a>(list: &'a mut Value, id: &str) -> Option<&'a mut Value> {
         for l in list.as_array_mut()?.iter_mut() {

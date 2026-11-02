@@ -27,7 +27,7 @@ fn skin(bin: &Bin, rig: &mut Rigged, s: usize) -> Result<(u32, usize), String> {
     Ok((base, skin.joints.len()))
 }
 
-pub(super) fn pieces(bin: &Bin, rig: &mut Rigged) -> Result<(), String> {
+pub(crate) fn pieces(bin: &Bin, rig: &mut Rigged) -> Result<(), String> {
     let doc = bin.doc;
     rig.parts = doc.meshes.iter().enumerate().map(|(i, m)| named(&m.name, "mesh", i)).collect();
     let (mut skins, mut skipped) = (vec![None; doc.skins.len()], 0);
@@ -162,7 +162,7 @@ fn primitive(
     Ok(())
 }
 
-fn triangles(list: &[u32], mode: u32, base: u32, out: &mut Vec<u32>) -> Result<(), String> {
+pub(crate) fn triangles(list: &[u32], mode: u32, base: u32, out: &mut Vec<u32>) -> Result<(), String> {
     let at = |k: usize| list[k] + base;
     match mode {
         4 => out.extend(list.iter().take(list.len() / 3 * 3).map(|i| i + base)),
@@ -176,7 +176,7 @@ fn triangles(list: &[u32], mode: u32, base: u32, out: &mut Vec<u32>) -> Result<(
     Ok(())
 }
 
-pub(super) fn picture(bin: &Bin) -> Option<Vec<u8>> {
+pub(crate) fn picture(bin: &Bin) -> Option<Vec<u8>> {
     let doc = bin.doc;
     let chosen = doc.materials.iter().find_map(|m| m.pbr.as_ref()?.texture.as_ref()).map(|t| t.index);
     let image = chosen.and_then(|t| doc.textures.get(t)?.source).or((!doc.images.is_empty()).then_some(0))?;

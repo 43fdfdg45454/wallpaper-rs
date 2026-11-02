@@ -165,6 +165,13 @@ ColumnLayout {
                 page: inspector.page
             }
 
+            SceneSolids {
+                Layout.fillWidth: true
+                page: inspector.page
+                node: inspector.node
+                pointer: inspector.pointer
+            }
+
             SceneSwarmTools {
                 Layout.fillWidth: true
                 page: inspector.page

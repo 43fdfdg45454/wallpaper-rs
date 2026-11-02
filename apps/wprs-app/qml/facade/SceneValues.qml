@@ -184,6 +184,7 @@ QtObject {
             "parallax": App.tr("Layered parallax"),
             "clock": App.tr("Text clock"),
             "mesh": App.tr("Mesh"),
-            "model": App.tr("3D model")
+            "model": App.tr("3D model"),
+            "group3d": App.tr("3D group")
         })
 }

@@ -23,7 +23,7 @@ Flow {
 
                     visible: modelData !== "light"
                     height: visible ? implicitHeight : 0
-                    enabled: !["image", "video", "sound", "mesh"].includes(modelData) || (tools.owner.page.view.assets ?? []).some(asset => asset.kind === (modelData === "mesh" ? "model" : modelData))
+                    enabled: !["image", "video", "sound", "mesh", "model"].includes(modelData) || (tools.owner.page.view.assets ?? []).some(asset => asset.kind === (modelData === "mesh" ? "model" : modelData))
                     text: SceneWords.kind(modelData) + (enabled ? "" : " (" + App.tr("import a file of this kind first") + ")")
                     icon.name: tools.owner.icon(modelData)
                     onTriggered: tools.owner.page.run("add_layer", {
@@ -55,6 +55,12 @@ Flow {
             }
 
             QQC2.MenuItem {
+                text: App.tr("3D model from a file…")
+                icon.name: "draw-cuboid"
+                onTriggered: importer.open()
+            }
+
+            QQC2.MenuItem {
                 text: App.tr("Mesh from a picture…")
                 icon.name: "draw-polyline"
                 enabled: (tools.owner.page.view.assets ?? []).some(asset => asset.kind === "image")
@@ -66,6 +72,13 @@ Flow {
             id: cutter
 
             page: tools.owner.page
+        }
+
+        SceneModelImport {
+            id: importer
+
+            page: tools.owner.page
+            into: tools.owner.current?.type === "group" ? tools.owner.current.id : ""
         }
     }
 

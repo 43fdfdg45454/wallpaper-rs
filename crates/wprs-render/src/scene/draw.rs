@@ -57,6 +57,12 @@ impl Painter<'_, '_, '_> {
                 item.color = premultiplied(*color, srgb, opacity);
                 Some(("fs_solid", item, Src::White))
             }
+            Content::Model { layer, slice, .. } => {
+                let image = self.solids.get(*layer)?.slices.get(*slice)?;
+                item.size[2] = 0.0;
+                (item.color, item.shape) = (toned(d.tint, d.brightness, srgb, opacity), [1.0, 0.0, 1.0, 1.0]);
+                Some(("fs_picture", item, self.ext(image)))
+            }
             Content::Mesh { layer, .. } => {
                 let skin = &self.skins.get(*layer)?.image;
                 item.size[2] = 0.0;
@@ -108,7 +114,7 @@ impl Painter<'_, '_, '_> {
         let b = self.frame.draws[i].brightness;
         if !matches!(
             self.frame.draws[i].content,
-            Content::Image { .. } | Content::Video { .. } | Content::Mesh { .. }
+            Content::Image { .. } | Content::Video { .. } | Content::Mesh { .. } | Content::Model { .. }
         ) {
             [&mut item.color, &mut item.stroke]
                 .into_iter()

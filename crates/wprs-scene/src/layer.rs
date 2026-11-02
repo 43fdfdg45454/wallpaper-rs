@@ -95,7 +95,7 @@ impl Layer {
     }
 
     pub fn flat(&self) -> bool {
-        self.drawn() && !matches!(self.kind, Kind::Model(_))
+        self.drawn()
     }
 }
 

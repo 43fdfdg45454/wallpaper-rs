@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 00:00+0000\n"
+"POT-Creation-Date: 2026-11-02 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -227,7 +227,7 @@ msgid "only layers of the same group can be grouped"
 msgstr "solo se pueden agrupar capas del mismo grupo"
 
 #: crates/wprs-editor/src/arrange.rs crates/wprs-editor/src/layers.rs
-#: crates/wprs-editor/src/props.rs
+#: crates/wprs-editor/src/props.rs crates/wprs-editor/src/stage3d/edit.rs
 msgid "%1 is not a group"
 msgstr "%1 no es un grupo"
 
@@ -998,6 +998,82 @@ msgstr ""
 #: crates/wprs-editor/src/spots.rs
 msgid "say where the new point goes"
 msgstr "indica dónde va el punto nuevo"
+
+#: crates/wprs-editor/src/stage3d/camera.rs
+msgid "%1 of the 3D camera goes from %2 to %3"
+msgstr "%1 de la cámara 3D va de %2 a %3"
+
+#: crates/wprs-editor/src/stage3d/camera.rs
+msgid "the up of the 3D camera cannot be zero"
+msgstr "el arriba de la cámara 3D no puede ser cero"
+
+#: crates/wprs-editor/src/stage3d/camera.rs
+msgid "a zoom is a factor above 0"
+msgstr "un zoom es un factor mayor que 0"
+
+#: crates/wprs-editor/src/stage3d/camera.rs
+msgid "%1 is not a model that is shown"
+msgstr "%1 no es un modelo que se muestre"
+
+#: crates/wprs-editor/src/stage3d/camera.rs
+msgid "%1 is not a tone map; use none, aces or agx"
+msgstr "%1 no es un mapeo de tonos; usa none, aces o agx"
+
+#: crates/wprs-editor/src/stage3d/camera.rs
+msgid "tone maps need hdr"
+msgstr "el mapeo de tonos necesita hdr"
+
+#: crates/wprs-editor/src/stage3d/camera.rs
+msgid "the split goes from 0 to 1"
+msgstr "la división va de 0 a 1"
+
+#: crates/wprs-editor/src/stage3d/edit.rs
+msgid "%1 of a model goes from %2 to %3"
+msgstr "%1 de un modelo va de %2 a %3"
+
+#: crates/wprs-editor/src/stage3d/edit.rs
+msgid "%1 is not a model layer"
+msgstr "%1 no es una capa de modelo"
+
+#: crates/wprs-editor/src/stage3d/edit.rs
+msgid "a model cannot be scaled to nothing"
+msgstr "un modelo no puede escalarse a nada"
+
+#: crates/wprs-editor/src/stage3d/edit.rs
+msgid "only flat layers test depth"
+msgstr "solo las capas planas prueban la profundidad"
+
+#: crates/wprs-editor/src/stage3d/edit.rs
+msgid "only layers inside a 3D group test depth"
+msgstr "solo las capas dentro de un grupo 3D prueban la profundidad"
+
+#: crates/wprs-editor/src/stage3d/material.rs
+msgid "a material color is #rrggbb or [r, g, b, a]"
+msgstr "un color de material es #rrggbb o [r, g, b, a]"
+
+#: crates/wprs-editor/src/stage3d/material.rs
+msgid "the model has no material named %1"
+msgstr "el modelo no tiene ningún material llamado %1"
+
+#: crates/wprs-editor/src/stage3d/material.rs
+msgid "%1 is not a material shader; use pbr, unlit or a package effect"
+msgstr "%1 no es un shader de material; usa pbr, unlit o un efecto del paquete"
+
+#: crates/wprs-editor/src/stage3d/material.rs
+msgid "%1 of a material goes from %2 to %3"
+msgstr "%1 de un material va de %2 a %3"
+
+#: crates/wprs-editor/src/stage3d/material.rs
+msgid "%1 is not a parameter of %2"
+msgstr "%1 no es un parámetro de %2"
+
+#: crates/wprs-editor/src/stage3d/store.rs
+msgid "%1 %2"
+msgstr "%1 %2"
+
+#: crates/wprs-editor/src/stage3d/store.rs
+msgid "%1 is not a model of the scene"
+msgstr "%1 no es un modelo de la escena"
 
 #: crates/wprs-editor/src/starters.rs
 msgid "%1 is not a starting point; use one of %2"
@@ -2007,12 +2083,20 @@ msgid "shows 3D models"
 msgstr "muestra modelos 3D"
 
 #: crates/wprs-format/src/scenery.rs
+msgid "animates, poses or swings its 3D models"
+msgstr "anima, posa o balancea sus modelos 3D"
+
+#: crates/wprs-format/src/scenery.rs
 msgid "shades its models with fur, foliage, chroma or shaders of its own"
 msgstr "sombrea sus modelos con pelo, follaje, croma o shaders propios"
 
 #: crates/wprs-format/src/scenery.rs
 msgid "moves a 3D camera"
 msgstr "mueve una cámara 3D"
+
+#: crates/wprs-format/src/scenery.rs
+msgid "flies the 3D camera along paths"
+msgstr "mueve la cámara 3D por recorridos"
 
 #: crates/wprs-format/src/scenery.rs
 msgid "casts shadows"

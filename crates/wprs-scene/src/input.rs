@@ -12,7 +12,7 @@ pub use outputs::{
     TimelineCommand, Tuning, VideoCommand, VideoControl,
 };
 pub use rigs::{BoneSet, MAX_DRIVEN_BONES, MAX_DRIVEN_RIGS, MAX_DRIVEN_SHAPES, MAX_IMPULSES, RigControl};
-pub use stage::{BloomSet, CameraSet, GlideSet, ShakeSet, StageSet};
+pub use stage::{BloomSet, Camera3dSet, CameraSet, GlideSet, ShakeSet, StageSet};
 
 pub const BANDS: usize = 64;
 pub(crate) const SETTLE: f32 = 0.15;

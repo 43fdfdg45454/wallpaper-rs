@@ -95,7 +95,22 @@ pub(crate) fn content<'a>(
                 relief: None,
             }
         }
-        Kind::Adjustment { .. } | Kind::Sound(_) | Kind::Light(_) | Kind::Model(_) => Content::Adjustment,
+        Kind::Model(m) => {
+            let size = boxed(m.size).unwrap_or(canvas);
+            Content::Model { layer: &layer.id, stage: usize::MAX, slice: 0, size, key: 0 }
+        }
+        Kind::Adjustment { .. } | Kind::Sound(_) | Kind::Light(_) => Content::Adjustment,
+    }
+}
+
+pub(crate) fn painted(layer: &Layer) -> Option<&crate::Value<Color>> {
+    match &layer.kind {
+        Kind::Image { color, .. } | Kind::Video { color, .. } | Kind::Particles { color, .. } => {
+            color.as_ref()
+        }
+        Kind::Group { color, .. } => color.as_ref(),
+        Kind::Mesh(m) => m.color.as_ref(),
+        _ => None,
     }
 }
 

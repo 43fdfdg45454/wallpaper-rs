@@ -562,7 +562,7 @@ msgstr "Preajuste:"
 
 #: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/OutputFilter.qml
 #: apps/wprs-app/qml/SceneRig.qml apps/wprs-app/qml/SceneSwarmKin.qml
-#: apps/wprs-app/qml/SceneSwarmLight.qml
+#: apps/wprs-app/qml/SceneSwarmLight.qml apps/wprs-app/qml/SceneTones.qml
 #: apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
@@ -965,8 +965,8 @@ msgstr "Superponer"
 msgid "Soft light"
 msgstr "Luz suave"
 
-#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/SceneSwarmKin.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/SceneMaterial3d.qml
+#: apps/wprs-app/qml/SceneSwarmKin.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Color"
 msgstr "Color"
 
@@ -1066,7 +1066,8 @@ msgstr "Exposición (EV)"
 msgid "Temperature (K)"
 msgstr "Temperatura (K)"
 
-#: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/facade/SceneEffects.qml
+#: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/SceneMaterial3d.qml
+#: apps/wprs-app/qml/facade/SceneEffects.qml
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Tint"
 msgstr "Tinte"
@@ -2462,8 +2463,8 @@ msgid "Remove unused files"
 msgstr "Borrar los archivos sin usar"
 
 #: apps/wprs-app/qml/SceneAssets.qml
-msgid "Pictures, videos, sounds, fonts and color tables"
-msgstr "Imágenes, vídeos, sonidos, fuentes y tablas de color"
+msgid "Pictures, videos, sounds, fonts, color tables and models"
+msgstr "Imágenes, vídeos, sonidos, fuentes, tablas de color y modelos"
 
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid "A JavaScript module of the scene"
@@ -2607,6 +2608,42 @@ msgstr "Aplicar a la pantalla"
 #: apps/wprs-app/qml/SceneBuild.qml
 msgid "Secret keys"
 msgstr "Claves secretas"
+
+#: apps/wprs-app/qml/SceneCamera3d.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "3D camera"
+msgstr "Cámara 3D"
+
+#: apps/wprs-app/qml/SceneCamera3d.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Field of view"
+msgstr "Campo de visión"
+
+#: apps/wprs-app/qml/SceneCamera3d.qml
+msgid "Roll"
+msgstr "Giro"
+
+#: apps/wprs-app/qml/SceneCamera3d.qml
+msgid "From %1 toward %2"
+msgstr "Desde %1 hacia %2"
+
+#: apps/wprs-app/qml/SceneCamera3d.qml
+msgid "Set the camera from the view"
+msgstr "Poner la cámara desde la vista"
+
+#: apps/wprs-app/qml/SceneCamera3d.qml
+msgid "Look through the camera"
+msgstr "Mirar por la cámara"
+
+#: apps/wprs-app/qml/SceneCamera3d.qml
+msgid "Back to the camera view"
+msgstr "Volver a la vista de la cámara"
+
+#: apps/wprs-app/qml/SceneCamera3d.qml
+msgid ""
+"On the preview: drag with the right button to turn the view, with the middle "
+"button or Shift to slide it, and roll the wheel to come closer"
+msgstr ""
+"En la vista previa: arrastra con el botón derecho para girar la vista, con "
+"el botón central o Mayús para desplazarla, y gira la rueda para acercarte"
 
 #: apps/wprs-app/qml/SceneCanvas.qml
 msgid "Zoom out"
@@ -2758,6 +2795,14 @@ msgstr ""
 "Haz clic para añadir un punto, arrástralo para moverlo y haz doble clic para "
 "quitarlo. A lo ancho va la vida de la partícula y hacia arriba su valor."
 
+#: apps/wprs-app/qml/SceneDepthToggle.qml
+msgid "3D group: models, lights and flat layers share depth"
+msgstr "Grupo 3D: modelos, luces y capas planas comparten profundidad"
+
+#: apps/wprs-app/qml/SceneDepthToggle.qml
+msgid "Hide behind nearer models"
+msgstr "Ocultarse tras los modelos más cercanos"
+
 #: apps/wprs-app/qml/SceneEditors.qml apps/wprs-app/qml/SceneInput.qml
 #: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneMask.qml
 msgid "Not set"
@@ -2880,6 +2925,10 @@ msgid "Directional light"
 msgstr "Luz direccional"
 
 #: apps/wprs-app/qml/SceneLayerTools.qml
+msgid "3D model from a file…"
+msgstr "Modelo 3D desde un archivo…"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Mesh from a picture…"
 msgstr "Malla desde una imagen…"
 
@@ -2963,7 +3012,7 @@ msgstr ""
 "Los teléfonos y los ordenadores más antiguos iluminan el aire a un cuarto "
 "del tamaño; la vista previa muestra el nivel elegido abajo."
 
-#: apps/wprs-app/qml/SceneLightCast.qml
+#: apps/wprs-app/qml/SceneLightCast.qml apps/wprs-app/qml/SceneModelTools.qml
 msgid "Nothing"
 msgstr "Nada"
 
@@ -3129,7 +3178,7 @@ msgstr ""
 "Las partículas toman aquí la fuerza y el brillo; su mapa de normales y la "
 "refracción están en el sistema de partículas."
 
-#: apps/wprs-app/qml/SceneLighting.qml
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneMaterial3d.qml
 #: apps/wprs-app/qml/facade/SceneEffects.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
@@ -3137,7 +3186,8 @@ msgstr ""
 msgid "Glow"
 msgstr "Resplandor"
 
-#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneMaterial3d.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Roughness"
 msgstr "Rugosidad"
 
@@ -3235,6 +3285,61 @@ msgstr ""
 "Pinta sobre la capa en la vista previa; cada trazo es un paso que se puede "
 "deshacer."
 
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Metal and roughness"
+msgstr "Metal y rugosidad"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Normals"
+msgstr "Normales"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Occlusion"
+msgstr "Oclusión"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Physical"
+msgstr "Físico"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Unlit"
+msgstr "Sin luz"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Lit"
+msgstr "Iluminado"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Both sides"
+msgstr "Ambos lados"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Casts shadows"
+msgstr "Proyecta sombras"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Takes shadows"
+msgstr "Recibe sombras"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Metal"
+msgstr "Metal"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Relief"
+msgstr "Relieve"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "(none)"
+msgstr "(ninguno)"
+
+#: apps/wprs-app/qml/SceneMaterials3d.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Materials"
+msgstr "Materiales"
+
 #: apps/wprs-app/qml/SceneMeshCut.qml
 msgid "Mesh from a picture"
 msgstr "Malla desde una imagen"
@@ -3267,6 +3372,109 @@ msgstr "Se calcula a partir de lo que usa el paquete: %1"
 #: apps/wprs-app/qml/SceneMeta.qml
 msgid "No picture"
 msgstr "Sin imagen"
+
+#: apps/wprs-app/qml/SceneModelCost.qml apps/wprs-app/qml/SceneModelInfo.qml
+msgid "%1 MiB"
+msgstr "%1 MiB"
+
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "3D models"
+msgstr "Modelos 3D"
+
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "with reflections"
+msgstr "con reflejos"
+
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "no reflections of pictures"
+msgstr "sin reflejos de imágenes"
+
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "%1: %2 triangles in %3 3D groups, %4 units of work, %5"
+msgstr "%1: %2 triángulos en %3 grupos 3D, %4 unidades de trabajo, %5"
+
+#: apps/wprs-app/qml/SceneModelCost.qml apps/wprs-app/qml/SceneModelInfo.qml
+msgid "fits"
+msgstr "cabe"
+
+#: apps/wprs-app/qml/SceneModelCost.qml apps/wprs-app/qml/SceneModelInfo.qml
+msgid "too heavy"
+msgstr "demasiado pesado"
+
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "%1 at %2: %3, %4 of textures at most %5 px"
+msgstr "%1 a %2: %3, %4 de texturas de %5 px como mucho"
+
+#: apps/wprs-app/qml/SceneModelGizmo.qml
+msgid "Drag to move the model along this direction"
+msgstr "Arrastra para mover el modelo en esta dirección"
+
+#: apps/wprs-app/qml/SceneModelImport.qml
+msgid "3D model from a file"
+msgstr "Modelo 3D desde un archivo"
+
+#: apps/wprs-app/qml/SceneModelImport.qml
+msgid "Pick a binary glTF file"
+msgstr "Elegir un archivo glTF binario"
+
+#: apps/wprs-app/qml/SceneModelImport.qml
+msgid ""
+"FBX and OBJ files open in Blender and leave it as binary glTF (.glb); the "
+"guide in the documentation tells how."
+msgstr ""
+"Los archivos FBX y OBJ se abren en Blender y salen de él como glTF binario (."
+"glb); la guía de la documentación explica cómo."
+
+#: apps/wprs-app/qml/SceneModelImport.qml
+msgid "Binary glTF models"
+msgstr "Modelos glTF binarios"
+
+#: apps/wprs-app/qml/SceneModelInfo.qml
+msgid "%1 KiB"
+msgstr "%1 KiB"
+
+#: apps/wprs-app/qml/SceneModelInfo.qml
+msgid "%1 triangles, %2 materials, %3 textures, %4 bones, %5 clips"
+msgstr "%1 triángulos, %2 materiales, %3 texturas, %4 huesos, %5 clips"
+
+#: apps/wprs-app/qml/SceneModelInfo.qml
+msgid "%1 (%2 s)"
+msgstr "%1 (%2 s)"
+
+#: apps/wprs-app/qml/SceneModelInfo.qml
+msgid "%1: %2, textures at most %3 px, %4 of texture memory"
+msgstr "%1: %2, texturas de %3 px como mucho, %4 de memoria de texturas"
+
+#: apps/wprs-app/qml/SceneModelTools.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "3D model"
+msgstr "Modelo 3D"
+
+#: apps/wprs-app/qml/SceneModelTools.qml
+msgid "Reflects"
+msgstr "Refleja"
+
+#: apps/wprs-app/qml/SceneModelTools.qml
+msgid "Look at it in the authoring view"
+msgstr "Mirarlo en la vista de edición"
+
+#: apps/wprs-app/qml/SceneModelTurn.qml
+msgid "Turn"
+msgstr "Girar"
+
+#: apps/wprs-app/qml/SceneModelTurn.qml
+msgid "Drag sideways to turn the model, up and down to tip it"
+msgstr ""
+"Arrastra a los lados para girar el modelo, arriba y abajo para inclinarlo"
+
+#: apps/wprs-app/qml/SceneModelTurn.qml apps/wprs-app/qml/SceneSwarmKin.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Size"
+msgstr "Tamaño"
+
+#: apps/wprs-app/qml/SceneModelTurn.qml
+msgid "Drag away from the model to make it bigger"
+msgstr "Arrastra lejos del modelo para agrandarlo"
 
 #: apps/wprs-app/qml/SceneNormals.qml
 msgid "Generate normals from the picture"
@@ -3845,6 +4053,23 @@ msgstr "Recursos"
 msgid "Package"
 msgstr "Paquete"
 
+#: apps/wprs-app/qml/SceneStageCamera.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Camera"
+msgstr "Cámara"
+
+#: apps/wprs-app/qml/SceneStageCamera.qml
+msgid "Drag to move the scene camera"
+msgstr "Arrastra para mover la cámara de la escena"
+
+#: apps/wprs-app/qml/SceneStageCamera.qml
+msgid "Aim"
+msgstr "Mira"
+
+#: apps/wprs-app/qml/SceneStageCamera.qml
+msgid "Drag to move what the scene camera looks at"
+msgstr "Arrastra para mover lo que mira la cámara de la escena"
+
 #: apps/wprs-app/qml/SceneSwarm.qml
 msgid "This control point follows a value; moving it replaces the value"
 msgstr "Este punto de control sigue un valor; moverlo sustituye el valor"
@@ -4145,10 +4370,6 @@ msgid "Down"
 msgstr "A lo alto"
 
 #: apps/wprs-app/qml/SceneSwarmFields.qml
-msgid "Both sides"
-msgstr "Ambos lados"
-
-#: apps/wprs-app/qml/SceneSwarmFields.qml
 msgid "Positive side"
 msgstr "Lado positivo"
 
@@ -4187,10 +4408,6 @@ msgstr "Arrastra para mover el punto con el que se mantiene la distancia"
 #: apps/wprs-app/qml/SceneSwarmKin.qml
 msgid "Child %1 takes from its parent:"
 msgstr "El hijo %1 toma de su padre:"
-
-#: apps/wprs-app/qml/SceneSwarmKin.qml apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Size"
-msgstr "Tamaño"
 
 #: apps/wprs-app/qml/SceneSwarmKin.qml apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Velocity"
@@ -4506,6 +4723,38 @@ msgstr ""
 #: apps/wprs-app/qml/SceneTimeline.qml
 msgid "Scene clock"
 msgstr "Reloj de la escena"
+
+#: apps/wprs-app/qml/SceneTones.qml
+msgid "Bright colors"
+msgstr "Colores brillantes"
+
+#: apps/wprs-app/qml/SceneTones.qml
+msgid "Keep colors brighter than white"
+msgstr "Conservar colores más brillantes que el blanco"
+
+#: apps/wprs-app/qml/SceneTones.qml
+msgid "Tone map"
+msgstr "Mapeo de tonos"
+
+#: apps/wprs-app/qml/SceneTones.qml
+msgid "Filmic (ACES)"
+msgstr "Fílmico (ACES)"
+
+#: apps/wprs-app/qml/SceneTones.qml
+msgid "Soft (AgX)"
+msgstr "Suave (AgX)"
+
+#: apps/wprs-app/qml/SceneTones.qml
+msgid "Before and after"
+msgstr "Antes y después"
+
+#: apps/wprs-app/qml/SceneTones.qml
+msgid ""
+"The preview shows the left part without the tone map. Phones keep 8-bit "
+"colors before the tone map."
+msgstr ""
+"La vista previa muestra la parte izquierda sin mapeo de tonos. Los teléfonos "
+"conservan colores de 8 bits antes del mapeo de tonos."
 
 #: apps/wprs-app/qml/ScenesPage.qml
 msgid "Title:"
@@ -5605,6 +5854,14 @@ msgstr "sujeta capas a huesos o puntos de sus modelos"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "shows 3D models"
 msgstr "muestra modelos 3D"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "animates, poses or swings its 3D models"
+msgstr "anima, posa o balancea sus modelos 3D"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "flies the 3D camera along paths"
+msgstr "mueve la cámara 3D por recorridos"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "shades its models with fur, foliage, chroma or shaders of its own"
@@ -7053,10 +7310,6 @@ msgid "Forces"
 msgstr "Fuerzas"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Field of view"
-msgstr "Campo de visión"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Frame"
 msgstr "Fotograma"
 
@@ -7242,10 +7495,6 @@ msgid "Lines"
 msgstr "Líneas"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Lit"
-msgstr "Iluminado"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Locked settings"
 msgstr "Ajustes bloqueados"
 
@@ -7272,10 +7521,6 @@ msgstr "Mapa"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Mask"
 msgstr "Máscara"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Materials"
-msgstr "Materiales"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Maximum"
@@ -7321,6 +7566,10 @@ msgstr "Mezclar fotogramas"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Mode"
 msgstr "Modo"
+
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Model"
+msgstr "Modelo"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Several lines"
@@ -7892,8 +8141,8 @@ msgid "Text clock"
 msgstr "Reloj de texto"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "3D model"
-msgstr "Modelo 3D"
+msgid "3D group"
+msgstr "Grupo 3D"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Color fringes"
@@ -8056,24 +8305,12 @@ msgid "Cache"
 msgstr "Caché"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Camera"
-msgstr "Cámara"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "3D camera"
-msgstr "Cámara 3D"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Speed limit"
 msgstr "Límite de velocidad"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Capacity"
 msgstr "Capacidad"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Casts shadows"
-msgstr "Proyecta sombras"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Center point"

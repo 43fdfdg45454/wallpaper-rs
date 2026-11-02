@@ -42,7 +42,13 @@ impl Scene {
             let drawn = e.mask.as_ref().is_some_and(|m| m.layer.is_some() || m.shape.is_some());
             (layers.count() + usize::from(drawn)) as f32 * FED
         });
-        effects.sum::<f32>() + fed.sum::<f32>() + backdrop + if apart { APART } else { 0.0 }
+        let solid = match &l.kind {
+            Kind::Model(m) => {
+                self.solids.get(&m.model).map_or(0.0, |s| s.triangles as f32 / 50_000.0 + APART)
+            }
+            _ => 0.0,
+        };
+        effects.sum::<f32>() + fed.sum::<f32>() + backdrop + solid + if apart { APART } else { 0.0 }
     }
 
     pub fn copies_cost<'a>(&self, copies: impl Iterator<Item = &'a Layer>, quality: Quality) -> f32 {

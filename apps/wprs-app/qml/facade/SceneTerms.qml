@@ -113,6 +113,7 @@ QtObject {
             "mipmaps": App.tr("Smaller copies"),
             "mix": App.tr("Blend frames"),
             "mode": App.tr("Mode"),
+            "model": App.tr("Model"),
             "mono": App.tr("Gray"),
             "multiline": App.tr("Several lines"),
             "name": App.tr("Name"),

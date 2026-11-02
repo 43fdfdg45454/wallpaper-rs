@@ -77,7 +77,9 @@ ColumnLayout {
                 "sound": "audio-x-generic",
                 "group": "folder",
                 "adjustment": "color-management",
-                "light": "help-hint"
+                "light": "help-hint",
+                "model": "draw-cuboid",
+                "group3d": "folder-3d"
             })[type] ?? "layer-visible-on";
     }
 

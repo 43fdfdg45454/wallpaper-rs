@@ -1,11 +1,11 @@
-mod build;
+pub(crate) mod build;
 mod cut;
 mod delaunay;
-mod doc;
-mod geometry;
+pub(crate) mod doc;
+pub(crate) mod geometry;
 pub mod math;
 mod motion;
-mod read;
+pub(crate) mod read;
 mod sketch;
 mod write;
 

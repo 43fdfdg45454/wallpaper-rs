@@ -288,7 +288,7 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `camera` | sets `canvas.camera` | runs | runs |
 | `parallax2` | sets `canvas.parallax` or a parallax with two different parts | runs | runs |
 | `bloom` | sets `canvas.bloom` | runs | runs |
-| `hdr` | sets `canvas.hdr` or `canvas.tonemap` | refused | refused |
+| `hdr` | sets `canvas.hdr` or `canvas.tonemap` | runs | runs |
 | `keep_frame` | sets `canvas.clear` to `false` | runs | runs |
 | `lights` | has `light` layers | runs | runs |
 | `volumetric_lights` | sets `volumetric` on a light | runs | runs |
@@ -318,9 +318,11 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `bone_rules` | sets `rules` on a mesh or model | runs | runs |
 | `blend_shapes` | sets `shapes` or `expressions` on a mesh or model | runs | runs |
 | `attach` | sets `attach` on a layer | runs | runs |
-| `model3d` | has `model` layers or groups with `space: 3d` | refused | refused |
+| `model3d` | has `model` layers or groups with `space: 3d` | runs | runs |
+| `model_animation` | sets `clips`, `animations`, `ik`, `physics`, `rules`, `shapes`, `expressions` or `root_motion` on a model | refused | refused |
 | `material_shaders` | shades a model with `fur`, `foliage`, `chroma` or a material shader of its own | refused | refused |
-| `camera3d` | sets `camera3d` | refused | refused |
+| `camera3d` | sets `camera3d` | runs | runs |
+| `camera_paths` | sets `camera3d.paths` | refused | refused |
 | `shadows` | sets `shadows` on a light, or `cast_shadows` or `receive_shadows` on a material | refused | refused |
 | `particles2` | moves particles in world space, with control points, per-layer `instance` or `render`, scripts that use `particles`, emitter timing, newer emitter shapes, initializers and forces, operator windows, render `brightness`, `cycles`, `order` or a stretch range, `init.gradient`, a `mask` collider, or beyond the older limits (8 systems, 4 emitters, 8 forces, 4 colliders, 10 s of prewarm) | runs | runs |
 | `particle_children` | sets `children` on a system | runs | runs |

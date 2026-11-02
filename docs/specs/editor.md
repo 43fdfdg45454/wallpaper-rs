@@ -84,6 +84,7 @@ undo and redo walk through, the undone ones marked.
 | `remove_property` | `id`; removes the property, its values in presets and in conditions that are maps, and the `group` of its members; refused, naming each place, while a binding, a `prop:` trigger or an expression condition names it; the command warns about scripts as `rename_property` does | `remove-property DIR ID` |
 | `condition` | `id`, `text`, `enabled`: sets `visible_if`, or `enabled_if`, to the expression or, when `text` is a JSON object, to that map; refuses a condition that does not check, and an empty one removes it | `condition DIR ID TEXT [--enabled]` |
 | `add_preset` | optional `id` (`preset_<n>` when omitted), `label`; a preset without values | `add-preset DIR` |
+| `scene3d` | one of: `model` with `add` (`asset`, optional `id`, `into`, `at`: a position), `set` (`layer`, optional `position`, `rotation`, `scale`: three numbers each, the scale never 0, `size`, `env`: a picture, empty removes it, `asset`) or `remove` (`layer`); `group` (optional `id`, `into`, `layers` to gather; makes a group with `space: 3d`); `space` (`layer`, `deep`); `depth_test` (`layer`, `on`; only flat layers inside a 3D group); `material` (`layer`, `name` of a material of the file, optional `shader`: `pbr`, `unlit` or a package effect, `lit`, `double_sided`, `cast_shadows`, `receive_shadows`, `color`, `emissive` (`null` removes them), `params` with `metallic`, `roughness` and `occlusion` 0 to 1 and `normal_scale` 0 to 10, `clear`); `camera` (optional `fov` 1 to 179, `near`, `far`, `eye`, `center`, `up`, `roll` −180 to 180 degrees around the view, `from_view`, `clear`); `view` (the authoring view in `ext.editor.view3d`: `orbit` in degrees, `pan` in pixels, `zoom` as a factor, `frame` (a model layer), `through`, `reset`); `tones` (optional `hdr`, `tonemap`: `none`, `aces` or `agx`, only with `hdr`, `split` 0 to 1 for the before and after preview) | `model DIR add\|set\|remove\|info …`, `group3d DIR add\|space\|depth-test\|show …`, `material DIR LAYER [NAME] … [--list]`, `camera3d DIR …`, `view3d DIR …`, `tonemap DIR …`, or `scene3d DIR --model JSON` (one of `--model`, `--group`, `--space`, `--depth-test`, `--material`, `--camera`, `--view`, `--tones`) as the app sends it; `model-info FILE.glb` and `cost3d DIR` print what the inspector shows |
 | `undo`, `redo` | none | `undo`, `redo` |
 
 A new layer gets an id made from its `name`, or else from its kind (`text`, `text_2`…; accents
@@ -481,6 +482,43 @@ that draws the displacement over each particle of the processor simulation on th
 particle budget lists how many lights light the particles and whether they refract at each level.
 `wprs-ctl scene light … volumetric --show`, `projection --show`, `particles … lit --show`,
 `refract --show` and `lights --cost` print the same data.
+
+### Models and 3D
+
+The Add layer menu offers 3D model (once the scene has a `.glb` asset), 3D group and 3D model from a
+file, a dialog that reads a binary glTF file before it is imported and tells its triangles,
+materials, textures, bones and clips, and for each device tier whether it fits, the largest texture
+it gets (2048 px on phones and on T0 and T1) and the texture memory, with a note on converting FBX and
+OBJ with Blender; accepting imports the file and adds a model layer, inside the selected group.
+
+A scene with models draws over the preview an authoring view with its own camera, kept in
+`ext.editor.view3d` and never in the scene: dragging with the right button turns it around its
+target, with the middle button or Shift slides it and the wheel brings it closer, and the preview
+renders through it while the scene camera shows as a dashed frustum with a handle on its eye, a square
+on the point it looks at, both moved in the plane of the view, and a line toward its up. Each model
+shows its box, which selects it with a click; the selected model shows three arrows along x, y and z
+that move it along that direction, a knob above it that turns it (sideways around y, up and down
+around x) and a square on its box corner that scales it. These handles write `position`, `rotation`
+and `scale`, so keyed values are keyed at the current time.
+
+The inspector of a model layer shows the counts and the tier verdicts of its file, a Reflects picker of
+the pictures of the scene (`env`) with a thumbnail, Look at it in the authoring view, and a Materials
+part with a row per material of the file: a ball shaded with the material and the light around and from
+above of the scene (as in the light tools), the shader picker (physical, unlit or a package effect),
+lit, both sides, casts and takes shadows, tint and glow colors, sliders for metal, roughness, relief and
+occlusion, and the thumbnails of the maps of the file (color, metal and roughness, normals, occlusion,
+glow). The inspector of a group turns it 3D, and the inspector of a flat layer inside a 3D group
+toggles Hide behind nearer models (`depth_test`).
+
+Selecting the canvas also shows the 3D camera: sliders for the field of view and the roll that change
+the preview while they move, where it looks from and toward, Set the camera from the view, Look
+through the camera and Back to the camera view; and Bright colors: a switch for `hdr`, the tone map
+picker and a Before and after slider that keeps `ext.editor.tonemap_split`, so the preview shows the
+part on the left without the tone map. The quality picker of the lights panel lists for each level the
+triangles, the 3D groups, the work units of the models and whether reflections of pictures are drawn,
+and for each tier the quality it starts at, whether the models fit and their texture memory.
+`wprs-ctl scene model`, `group3d`, `material`, `camera3d`, `view3d`, `tonemap`, `model-info` and
+`cost3d` do the same from the terminal, and `group3d … show` prints the handles the preview draws.
 
 ## Preview
 

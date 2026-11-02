@@ -71,7 +71,7 @@ ColumnLayout {
         id: files
 
         fileMode: FileDialog.OpenFiles
-        nameFilters: [App.tr("Pictures, videos, sounds, fonts and color tables") + " (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.webm *.mp4 *.mkv *.ogg *.opus *.flac *.wav *.ttf *.otf *.cube)"]
+        nameFilters: [App.tr("Pictures, videos, sounds, fonts, color tables and models") + " (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.webm *.mp4 *.mkv *.ogg *.opus *.flac *.wav *.ttf *.otf *.cube *.glb)"]
         onAccepted: selectedFiles.forEach(file => panel.page.run("import", {
                 "file": App.path(file)
             }))

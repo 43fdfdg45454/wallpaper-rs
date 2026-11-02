@@ -140,6 +140,11 @@ ColumnLayout {
         onPicked: panel.load()
     }
 
+    SceneModelCost {
+        Layout.fillWidth: true
+        info: panel.cost?.models ?? null
+    }
+
     Repeater {
         model: panel.cost?.levels ?? []
 

@@ -192,4 +192,6 @@ pub enum Author {
     Swarming(crate::swarming::Swarming),
     #[command(flatten)]
     Lamping(crate::lamping::Lamping),
+    #[command(flatten)]
+    Modeling(crate::modeling::Modeling),
 }

@@ -1,10 +1,10 @@
 use super::Files;
 use crate::gltf::{MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODELS_JSON, ModelFile};
-use crate::{Kind, Rigged, Scene, SceneError};
+use crate::{Kind, Model, Rigged, Scene, SceneError};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-type Read = (Arc<ModelFile>, Option<Arc<Rigged>>);
+type Read = (Arc<ModelFile>, Option<Arc<Rigged>>, Option<Arc<Model>>);
 
 impl Scene {
     pub fn read_meshes(&mut self, mut files: impl Files) -> Result<(), SceneError> {
@@ -17,25 +17,35 @@ impl Scene {
         files: &mut impl Files,
         fail: impl Fn(String, String) -> SceneError + Copy,
     ) -> Result<(), SceneError> {
-        let mut figures = BTreeMap::<String, bool>::new();
+        let mut figures = BTreeMap::<String, (bool, bool)>::new();
         for l in self.layers().chain(self.templates.values()) {
             let Some(id) = l.figure() else { continue };
-            *figures.entry(id.to_owned()).or_default() |= matches!(l.kind, Kind::Mesh(_));
+            let seen = figures.entry(id.to_owned()).or_default();
+            (seen.0, seen.1) =
+                (seen.0 | matches!(l.kind, Kind::Mesh(_)), seen.1 | matches!(l.kind, Kind::Model(_)));
+        }
+        let mut paths = BTreeMap::<String, (bool, bool)>::new();
+        for (id, (mesh, solid)) in &figures {
+            let Some(asset) = self.assets.get(id) else { continue };
+            let seen = paths.entry(asset.path.clone()).or_default();
+            (seen.0, seen.1) = (seen.0 | mesh, seen.1 | solid);
         }
         let (mut read, mut json, mut left, mut whole) =
             (BTreeMap::<String, Read>::new(), 0, MAX_MODEL_ENTRIES, 0);
-        for (id, mesh) in figures {
+        for id in figures.into_keys() {
             let Some(asset) = self.assets.get(&id).filter(|a| a.extension() == "glb") else { continue };
             let (path, at) = (asset.path.clone(), format!("/assets/{id}"));
-            if let Some((file, rig)) = read.get(&path).filter(|(_, rig)| rig.is_some() || !mesh) {
+            let (mesh, solid) = paths.get(&path).copied().unwrap_or_default();
+            if let Some((file, rig, model)) = read.get(&path) {
                 self.models.insert(id.clone(), file.clone());
                 rig.iter().for_each(|r| _ = self.rigs.insert(id.clone(), r.clone()));
+                model.iter().for_each(|m| _ = self.solids.insert(id.clone(), m.clone()));
                 continue;
             }
             let wrong = |e: String| fail(at.clone(), format!("{path} {e}"));
             let mut head =
                 |keep| files.head(&path, MAX_MODEL_BYTES, keep).map_err(|e| fail(at.clone(), e.to_string()));
-            let (bytes, total) = match mesh {
+            let (bytes, total) = match mesh || solid {
                 true => {
                     let bytes =
                         files.read(&path, MAX_MODEL_BYTES).map_err(|e| fail(at.clone(), e.to_string()))?;
@@ -63,8 +73,10 @@ impl Scene {
             }
             let file = Arc::new(ModelFile::parse_head(&bytes, total, &mut left).map_err(wrong)?);
             let rig = mesh.then(|| Rigged::decode(&bytes).map(Arc::new)).transpose().map_err(wrong)?;
-            read.insert(path, (file.clone(), rig.clone()));
+            let model = solid.then(|| Model::decode(&bytes).map(Arc::new)).transpose().map_err(wrong)?;
+            read.insert(path, (file.clone(), rig.clone(), model.clone()));
             self.models.insert(id.clone(), file);
+            model.into_iter().for_each(|m| _ = self.solids.insert(id.clone(), m));
             if let Some(rig) = rig {
                 self.rigs.insert(id, rig);
             }

@@ -43,6 +43,12 @@ pub struct SceneView {
     pub(super) covers: HashMap<String, Option<Arc<wprs_scene::AlphaMap>>>,
     pub(super) molds: HashMap<String, super::molds::Mold>,
     pub(super) skins: HashMap<String, super::skins::Skin>,
+    pub(super) solids: HashMap<String, super::solids::Staged>,
+    pub(super) models: HashMap<u64, super::solids::GpuModel>,
+    pub(super) envs: HashMap<String, (u64, crate::texture::GpuImage)>,
+    pub(super) hdr: bool,
+    pub(super) tone: u8,
+    pub(super) split: f32,
 }
 
 impl Drop for SceneView {
@@ -105,6 +111,10 @@ impl SceneView {
         self.pool.trim();
         self.states.clear();
         self.swarms.iter_mut().for_each(swarm::Swarms::trim);
+    }
+
+    pub fn model_renders(&self) -> u64 {
+        self.solids.values().map(|s| s.renders).sum()
     }
 
     pub fn damage(&self) -> Option<wprs_core::Region> {

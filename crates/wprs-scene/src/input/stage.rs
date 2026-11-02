@@ -43,6 +43,20 @@ pub struct StageSet {
     pub bloom: Option<BloomSet>,
     pub ambient: Option<[f32; 4]>,
     pub sky: Option<[f32; 4]>,
+    pub camera3d: Option<Camera3dSet>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Camera3dSet {
+    pub fov: Option<f32>,
+    pub eye: Option<[f32; 3]>,
+    pub center: Option<[f32; 3]>,
+    pub up: Option<[f32; 3]>,
+}
+
+fn point(p: Option<[f32; 3]>) -> Option<[f32; 3]> {
+    p.filter(|p| p.iter().all(|v| v.is_finite())).map(|p| p.map(|v| v.clamp(-1e6, 1e6)))
 }
 
 fn within(v: Option<f32>, lo: f32, hi: f32) -> Option<f32> {
@@ -85,6 +99,12 @@ impl StageSet {
             bloom: self.bloom.map(bloom),
             ambient: color(self.ambient),
             sky: color(self.sky),
+            camera3d: self.camera3d.map(|c| Camera3dSet {
+                fov: within(c.fov, 1.0, 179.0),
+                eye: point(c.eye),
+                center: point(c.center),
+                up: point(c.up).filter(|u| u.iter().any(|v| *v != 0.0)),
+            }),
         }
     }
 }

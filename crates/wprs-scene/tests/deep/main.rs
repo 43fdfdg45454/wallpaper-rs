@@ -9,8 +9,10 @@ const DEEP: &str = include_str!("../deep.json");
 const GLASS: &str = "fn material(s: Surface) -> Surface {\n    var o = s;\n    o.albedo = vec4<f32>(o.albedo.rgb, 0.4);\n    return o;\n}";
 const SPARKLE: &str = "fn particle(p: Sprite) -> Sprite {\n    var o = p;\n    o.size = p.size * (1.0 + sin(frame.time));\n    return o;\n}";
 
-const EXPECTED: [&str; 34] = [
+const EXPECTED: [&str; 36] = [
     "attach",
+    "camera_paths",
+    "model_animation",
     "capture",
     "lights",
     "blend_shapes",

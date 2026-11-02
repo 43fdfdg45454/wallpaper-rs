@@ -17,6 +17,7 @@ const shapes = {
     camera: fields({ center: vec("center"), zoom: number("zoom"), rotation: number("rotation"), shake }),
     parallax: fields({ amount: number("amount"), delay: number("delay") }),
     bloom: fields({ threshold: number("threshold"), strength: number("strength"), radius: number("radius"), tint: (v) => numbers(v, 4, "tint") }),
+    camera3d: fields({ fov: number("fov"), eye: (v) => numbers(v, 3, "eye"), center: (v) => numbers(v, 3, "center"), up: (v) => numbers(v, 3, "up") }),
 };
 const colors = ["background", "ambient", "sky"];
 const plain = (v) => (v !== null && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([, x]) => typeof x !== "object" || Array.isArray(x))) : {});
@@ -39,7 +40,7 @@ const write = (key, value) => {
 
 Object.defineProperties(scene, {
     ...Object.fromEntries(colors.map((key) => [key, { enumerable: true, get: () => (need("camera"), stage[key] ?? initial[key]), set: (v) => write(key, v) }])),
-    ...Object.fromEntries(["camera", "parallax", "bloom"].map((key) => [key, { enumerable: true, get: () => (need("camera"), read(key)), set: (v) => write(key, v) }])),
+    ...Object.fromEntries(["camera", "parallax", "bloom", "camera3d"].map((key) => [key, { enumerable: true, get: () => (need("camera"), read(key)), set: (v) => write(key, v) }])),
     mesh: { value: mesh },
 });
 Object.freeze(scene);

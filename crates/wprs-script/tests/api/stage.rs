@@ -75,3 +75,28 @@ fn scripts_that_do_not_declare_camera_leave_the_scene_settings() {
         text(&out, "info")
     );
 }
+
+#[test]
+fn scripts_override_the_3d_camera_for_the_next_frame_within_bounds() {
+    let source = r##"import { scene } from "wprs";
+    export function update({ time }) {
+        scene.camera3d = { fov: 30, eye: [0, 2, 9], center: [1, 0, 0] };
+        scene.layer("info").text = JSON.stringify(scene.camera3d.fov);
+        try { scene.camera3d = { eye: [1, 2] }; } catch (e) { scene.layer("info").text += " " + e.message; }
+    }"##;
+    let doc = json!({ "camera3d": { "fov": 50 }, "scripts": [{ "path": "main.js", "uses": ["camera"] }],
+        "layers": [{ "id": "info", "type": "text", "text": "", "size": 10 }] });
+    let mut script = staged(doc, &[("main.js", source)]);
+    let out = at(&mut script, 0.0).unwrap();
+    let cam = out.stage.unwrap().camera3d.unwrap();
+    assert_eq!((cam.fov, cam.eye, cam.center), (Some(30.0), Some([0.0, 2.0, 9.0]), Some([1.0, 0.0, 0.0])));
+    assert!(text(&out, "info").starts_with("30 "), "{}", text(&out, "info"));
+    let wild = wprs_scene::Camera3dSet {
+        fov: Some(500.0),
+        up: Some([0.0; 3]),
+        eye: Some([f32::NAN, 0.0, 0.0]),
+        ..Default::default()
+    };
+    let set = wprs_scene::StageSet { camera3d: Some(wild), ..Default::default() }.bounded().camera3d.unwrap();
+    assert_eq!((set.fov, set.up, set.eye), (Some(179.0), None, None));
+}

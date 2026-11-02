@@ -1,11 +1,11 @@
 use super::doc::{Accessor, Gltf};
 
-pub(super) struct Bin<'a> {
+pub(crate) struct Bin<'a> {
     pub doc: &'a Gltf,
     pub bin: &'a [u8],
 }
 
-pub(super) fn chunks(bytes: &[u8]) -> Result<(&[u8], &[u8]), String> {
+pub(crate) fn chunks(bytes: &[u8]) -> Result<(&[u8], &[u8]), String> {
     let word = |at: usize| bytes.get(at..at + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
     let json = word(12).ok_or("has a cut header")? as usize;
     let text = bytes.get(20..20 + json).ok_or("has a cut JSON chunk")?;

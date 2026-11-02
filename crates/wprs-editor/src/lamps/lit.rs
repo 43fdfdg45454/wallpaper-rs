@@ -103,7 +103,7 @@ pub(crate) fn ambient(doc: &Value, e: &AmbientEdit) -> Result<Vec<Op>> {
     Ok(ops)
 }
 
-fn color(doc: &Value, name: &str) -> Option<[f32; 4]> {
+pub(crate) fn color(doc: &Value, name: &str) -> Option<[f32; 4]> {
     serde_json::from_value::<wprs_scene::Color>(doc["scene"]["canvas"][name].clone()).ok().map(|c| c.0)
 }
 

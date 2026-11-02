@@ -28,6 +28,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) videos: &'a [(&'a str, &'a GpuImage)],
     pub(crate) molds: &'a HashMap<String, super::molds::Mold>,
     pub(crate) skins: &'a HashMap<String, super::skins::Skin>,
+    pub(crate) solids: &'a HashMap<String, super::solids::Staged>,
     pub(crate) exts: &'p mut Vec<GpuImage>,
     pub(crate) screen: Affine,
     pub(crate) stage: Affine,

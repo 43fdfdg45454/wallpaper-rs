@@ -22,9 +22,9 @@ ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/blend linear_burn
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a newer blend mode was not previewed"
 ctl scene undo "$draft"
-ctl scene set "$draft" /scene/canvas/hdr true
-if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with an hdr canvas was previewed"; fi
-grep -q "hdr" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
+ctl scene set "$draft" /scene/camera3d '{"paths": [{"id": "a", "keys": [{"t": 0, "eye": [0, 0, 5], "center": 0}, {"t": 1, "eye": [1, 0, 5], "center": 0}]}]}'
+if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with camera paths was previewed"; fi
+grep -q "camera_paths" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/transform/tilt '[10, 0]'
 ctl scene set "$draft" /scene/canvas/camera '{"zoom": 1.5, "rotation": 10}'
@@ -103,6 +103,7 @@ ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with chains,
 ctl scene attach "$draft" badge --detach || fail "the layer was not let go"
 source "$(dirname "$0")"/integration-particles.sh
 source "$(dirname "$0")"/integration-lights.sh
+source "$(dirname "$0")"/integration-models.sh
 ctl scene bone "$draft" puppet tip --parent arm --at 0.9,0.5 || fail "the mesh took no tip"
 ctl scene ik "$draft" puppet add arm tip --limit tip -30 30 || fail "no chain to the tip was added"
 ctl scene physics "$draft" puppet add tip || fail "the tip does not swing"

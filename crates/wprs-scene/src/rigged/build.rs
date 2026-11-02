@@ -2,11 +2,11 @@ use super::doc::{Gltf, Node};
 use super::math::{Mat, Trs, decompose, normalized};
 use super::{Joint, MAX_RIG_NODES, Rigged};
 
-pub(super) fn column(m: &[f32]) -> Mat {
+pub(crate) fn column(m: &[f32]) -> Mat {
     std::array::from_fn(|k| m[(k % 4) * 4 + k / 4])
 }
 
-fn rest(n: &Node) -> Result<Trs, String> {
+pub(crate) fn rest(n: &Node) -> Result<Trs, String> {
     let trs = match n.matrix {
         Some(m) => decompose(&column(&m)),
         None => Trs {
@@ -19,7 +19,7 @@ fn rest(n: &Node) -> Result<Trs, String> {
     finite.then_some(trs).ok_or_else(|| "has a node transform that is not a number".into())
 }
 
-pub(super) fn joints(doc: &Gltf, rig: &mut Rigged) -> Result<(), String> {
+pub(crate) fn joints(doc: &Gltf, rig: &mut Rigged) -> Result<(), String> {
     let count = doc.nodes.len();
     if count > MAX_RIG_NODES {
         return Err(format!("has more than {MAX_RIG_NODES} nodes"));

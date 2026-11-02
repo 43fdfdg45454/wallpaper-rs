@@ -8,6 +8,7 @@ mod lamps;
 mod limbs;
 mod names;
 mod rigging;
+mod solid;
 mod swarm;
 mod tend;
 
@@ -19,6 +20,7 @@ pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
     WeightStroke,
 };
+pub use solid::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
 pub use swarm::{ParticleEdit, Response, Strand, TendEdit};
 
 pub const EDITOR: &str = "/scene/ext/editor";
@@ -192,6 +194,7 @@ pub enum Action {
     Normals(NormalsMake),
     PaintMap(MapStroke),
     Ambient(AmbientEdit),
+    Scene3d(Edit3d),
     Undo {},
     Redo {},
 }

@@ -1241,6 +1241,24 @@ simulación por GPU que en la del procesador, y pueden refractar lo que tienen d
 normales (`render.refract`, como gotas en un cristal): a tamaño completo en Q3, a la mitad en Q2 y
 nada en Q1 y Q0.
 
+El escritorio y el teléfono dibujan también los modelos 3D (`type: model`): glTF binario con mallas,
+nodos, materiales metálico-rugosos (color, normales, metal y rugosidad, oclusión, luz propia, modos
+de transparencia y doble cara) y texturas PNG, JPEG o WebP de hasta 4096 píxeles (2048 en los
+teléfonos y los equipos modestos). Un modelo suelto se dibuja en su propia caja; un grupo con
+`space: "3d"` reúne sus modelos en una pasada con profundidad invertida de 32 bits y se compone como
+una capa más, con efectos, máscaras y mezcla. Las capas planas del grupo quedan delante salvo que
+pidan `depth_test`: entonces se colocan en el plano que mira la cámara y los modelos más cercanos las
+tapan. Los materiales de la escena cambian por nombre el shader (`pbr` o `unlit`), el tinte, la luz
+propia, la doble cara y los números; las capas de luz iluminan los modelos (12 como mucho, 8 en los
+teléfonos), con la luz ambiente y la del cielo, y una imagen panorámica (`env`) da la luz de alrededor
+y los reflejos, sin reflejos en la calidad más baja. La cámara 3D (`camera3d`: campo de visión, planos
+cercano y lejano, ojo, centro y arriba) sirve para los modelos, los grupos 3D y las capas inclinadas,
+y los scripts la cambian para el fotograma siguiente. Un modelo quieto se dibuja una vez y se guarda,
+un grupo 3D se redibuja solo cuando algo suyo cambia, y cada clase de equipo admite 50 000, 150 000,
+500 000 o 2 000 000 de triángulos. Con `canvas.hdr` los colores más brillantes que el blanco se
+conservan en imágenes de 16 bits y `canvas.tonemap` (`aces` o `agx`) los ajusta a la pantalla en una
+última pasada; sin `tonemap`, la escena se ve como siempre.
+
 El escritorio y el teléfono dibujan también la mezcla por degradado, el revelado con el puntero,
 el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos, el fuego, el giro,
 la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela
@@ -1853,6 +1871,49 @@ En la terminal hacen lo mismo `wprs-ctl scene light CARPETA CAPA add|set|remove|
 `scene lights` (las asas, la caja y las cuentas, o el coste con `--cost`), `scene lighting`,
 `scene normals CARPETA IMAGEN --generate`, `scene paint-map CARPETA CAPA roughness|emissive` y
 `scene ambient`.
+
+Los modelos 3D se añaden con *Modelo 3D desde un archivo*, que lee el `.glb` antes de importarlo y
+dice sus triángulos, materiales, texturas, huesos y clips y qué recibe cada clase de equipo, o con
+*Modelo 3D* y *Grupo 3D* del menú de capas. La vista previa de una escena con modelos tiene una vista
+de edición con su propia cámara, que no se guarda en la escena: el botón derecho la gira, el central
+(o Mayús) la desplaza y la rueda la acerca, mientras la cámara de la escena se dibuja como una
+pirámide con asas para el ojo y el punto al que mira. El modelo elegido muestra flechas en x, y y z
+para moverlo, una asa para girarlo y otra para escalarlo; un clic en su caja lo elige. El inspector de
+un modelo enseña sus cuentas, el reflejo (`env`) con miniatura y un panel de materiales con una esfera
+de muestra, el shader, la luz, la doble cara, las sombras, los colores, los números y las miniaturas
+de sus mapas; el de un grupo lo vuelve 3D y el de una capa plana dentro de él activa *Ocultarse tras
+los modelos más cercanos*. Al elegir el lienzo aparecen la cámara 3D (campo de visión y giro en vivo,
+*Poner la cámara desde la vista*, *Mirar por la cámara*) y los colores brillantes (HDR, mapeo de tonos
+y un deslizador de antes y después sobre la vista previa); el selector de calidad dice cuántos
+triángulos, grupos 3D y memoria de texturas cuesta cada nivel y si cabe en cada clase de equipo.
+En la terminal hacen lo mismo `wprs-ctl scene model CARPETA add|set|remove|info`, `scene group3d
+CARPETA add|space|depth-test|show`, `scene material CARPETA CAPA [MATERIAL]`, `scene camera3d`,
+`scene view3d`, `scene tonemap`, `scene model-info ARCHIVO.glb` y `scene cost3d`.
+
+#### Pasar modelos FBX y OBJ a glTF con Blender
+
+wallpaper-rs lee solo glTF binario (`.glb`). Para un modelo en FBX u OBJ, con Blender 3.6 o más
+nuevo:
+
+1. Abre Blender, borra el cubo de la escena inicial y usa *Archivo → Importar → FBX* (u *OBJ*). Si
+   el modelo trae texturas aparte, deja las imágenes junto al archivo para que Blender las encuentre.
+2. Comprueba la escala y la orientación: glTF usa metros, +Y arriba y −Z adelante; el exportador
+   convierte los ejes de Blender, así que basta con que el modelo se vea derecho en Blender. Aplica
+   la escala y la rotación con *Objeto → Aplicar → Todas las transformaciones*.
+3. Revisa los materiales: el exportador traduce el *Principled BSDF* (color, metal, rugosidad,
+   normales, emisión y alfa); otros nodos se pierden. Para que una textura viaje dentro del archivo,
+   conéctala directamente al *Principled BSDF*.
+4. Usa *Archivo → Exportar → glTF 2.0*, elige el formato *glTF Binary (.glb)* y, en *Incluir*,
+   *Objetos seleccionados* si solo quieres una parte. Deja activadas *Normales*, *UV* y *Tangentes*,
+   y en *Animación* las acciones y las formas de mezcla si las tiene.
+5. Si el archivo pesa mucho, reduce texturas a 2048 píxeles o menos (lo que reciben los teléfonos) y
+   usa el modificador *Diezmar* para bajar triángulos; `wprs-ctl scene model-info modelo.glb` dice si
+   cabe en cada clase de equipo.
+6. Impórtalo en el editor con *Modelo 3D desde un archivo* o con
+   `wprs-ctl scene import CARPETA modelo.glb --id modelo` y `wprs-ctl scene model CARPETA add capa --asset modelo`.
+
+Los archivos que cargan imágenes o búferes desde fuera, o que exigen extensiones no admitidas (como
+la compresión Draco), se rechazan: expórtalos sin compresión de mallas.
 
 Cada cambio es una operación sobre un JSON Pointer. Deshacer y rehacer (Ctrl+Z y Ctrl+Mayús+Z)
 guardan hasta 500 pasos o 64 MiB, y un arrastre cuenta como un solo paso. Lo que no se ha guardado

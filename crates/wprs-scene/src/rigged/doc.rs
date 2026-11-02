@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Gltf {
+pub(crate) struct Gltf {
     pub nodes: Vec<Node>,
     pub skins: Vec<Skin>,
     pub meshes: Vec<Mesh>,
@@ -19,7 +19,7 @@ pub(super) struct Gltf {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Node {
+pub(crate) struct Node {
     pub name: Option<String>,
     pub children: Vec<usize>,
     pub mesh: Option<usize>,
@@ -34,7 +34,7 @@ pub(super) struct Node {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Skin {
+pub(crate) struct Skin {
     pub joints: Vec<usize>,
     #[serde(rename = "inverseBindMatrices")]
     pub inverse: Option<usize>,
@@ -42,7 +42,7 @@ pub(super) struct Skin {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Mesh {
+pub(crate) struct Mesh {
     pub name: Option<String>,
     pub primitives: Vec<Primitive>,
     pub weights: Vec<f32>,
@@ -51,14 +51,14 @@ pub(super) struct Mesh {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Extras {
+pub(crate) struct Extras {
     #[serde(rename = "targetNames")]
     pub names: Vec<String>,
 }
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Primitive {
+pub(crate) struct Primitive {
     pub attributes: BTreeMap<String, usize>,
     pub indices: Option<usize>,
     pub mode: Option<u32>,
@@ -68,7 +68,7 @@ pub(super) struct Primitive {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Accessor {
+pub(crate) struct Accessor {
     #[serde(rename = "bufferView")]
     pub view: Option<usize>,
     #[serde(rename = "byteOffset")]
@@ -84,7 +84,7 @@ pub(super) struct Accessor {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct View {
+pub(crate) struct View {
     pub buffer: usize,
     #[serde(rename = "byteOffset")]
     pub offset: usize,
@@ -96,7 +96,7 @@ pub(super) struct View {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Animation {
+pub(crate) struct Animation {
     pub name: Option<String>,
     pub channels: Vec<Channel>,
     pub samplers: Vec<Sampler>,
@@ -104,21 +104,21 @@ pub(super) struct Animation {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Channel {
+pub(crate) struct Channel {
     pub sampler: usize,
     pub target: Target,
 }
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Target {
+pub(crate) struct Target {
     pub node: Option<usize>,
     pub path: String,
 }
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Sampler {
+pub(crate) struct Sampler {
     pub input: usize,
     pub output: usize,
     pub interpolation: Option<String>,
@@ -126,35 +126,63 @@ pub(super) struct Sampler {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Material {
+pub(crate) struct Material {
+    pub name: Option<String>,
     #[serde(rename = "pbrMetallicRoughness")]
     pub pbr: Option<Pbr>,
+    #[serde(rename = "normalTexture")]
+    pub normal: Option<Reference>,
+    #[serde(rename = "occlusionTexture")]
+    pub occlusion: Option<Reference>,
+    #[serde(rename = "emissiveTexture")]
+    pub glow: Option<Reference>,
+    #[serde(rename = "emissiveFactor")]
+    pub emissive: Option<[f32; 3]>,
+    #[serde(rename = "alphaMode")]
+    pub alpha: Option<String>,
+    #[serde(rename = "alphaCutoff")]
+    pub cutoff: Option<f32>,
+    #[serde(rename = "doubleSided")]
+    pub double: bool,
+    pub extensions: BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Pbr {
+pub(crate) struct Pbr {
     #[serde(rename = "baseColorFactor")]
     pub color: Option<[f32; 4]>,
     #[serde(rename = "baseColorTexture")]
     pub texture: Option<Reference>,
+    #[serde(rename = "metallicFactor")]
+    pub metallic: Option<f32>,
+    #[serde(rename = "roughnessFactor")]
+    pub roughness: Option<f32>,
+    #[serde(rename = "metallicRoughnessTexture")]
+    pub orm: Option<Reference>,
 }
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Reference {
+pub(crate) struct Reference {
     pub index: usize,
+    #[serde(rename = "texCoord")]
+    pub set: usize,
+    pub scale: Option<f32>,
+    pub strength: Option<f32>,
 }
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Texture {
+pub(crate) struct Texture {
     pub source: Option<usize>,
 }
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Image {
+pub(crate) struct Image {
     #[serde(rename = "bufferView")]
     pub view: Option<usize>,
+    #[serde(rename = "mimeType")]
+    pub mime: Option<String>,
 }

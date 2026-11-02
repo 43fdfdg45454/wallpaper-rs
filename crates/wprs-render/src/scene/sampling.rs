@@ -47,7 +47,7 @@ pub(crate) fn samplings(scene: &Scene, assets: &SceneAssets) -> HashMap<String, 
 }
 
 impl Renderer {
-    pub(super) fn mipped(&self, image: &Image, pixels: Option<&Arc<Pixels>>) -> Image {
+    pub(crate) fn mipped(&self, image: &Image, pixels: Option<&Arc<Pixels>>) -> Image {
         let (source, natural) = &**image;
         let (w, h) = source.size();
         let levels = 32 - w.max(h).leading_zeros();

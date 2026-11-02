@@ -20,6 +20,7 @@ pub use cast::{cast, homography};
 pub use cost::cost;
 pub use edit::template;
 pub use lit::hemisphere;
+pub(crate) use lit::{color, picture};
 pub use maps::{heat, preview as normals_preview};
 pub use placed::{Placed, placed};
 pub use report::{AIM, FEW, Z_KNOB, falloff, handles, lights, reach, tiers, tilt_share};
@@ -36,6 +37,7 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::Normals(m) => maps::normals(dir, doc, m),
         Action::PaintMap(s) => maps::paint(dir, doc, s),
         Action::Ambient(e) => lit::ambient(doc, e),
+        Action::Scene3d(e) => crate::stage3d::act(dir, doc, e),
         _ => return None,
     })
 }

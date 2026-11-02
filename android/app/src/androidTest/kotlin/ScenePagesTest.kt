@@ -122,12 +122,16 @@ class ScenePagesTest : SceneBase() {
     }
 
     @Test
-    fun scenesWithModelsAreRefusedUntilTheEngineDrawsThem() {
+    fun scenesWithModelsAreDrawnAndCameraPathsWaitForTheEngine() {
         val dir = File(storage(), "stages/stage").apply { mkdirs() }
         File(dir, "scene.json").writeText(STAGE_SCENE)
         File(dir, "manifest.json").writeText(STAGE_MANIFEST)
+        val shown = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+        assertTrue(shown, shown.startsWith("["))
+        File(dir, "scene.json").writeText(FLOWN_SCENE)
+        File(dir, "manifest.json").writeText(FLOWN_MANIFEST)
         val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
-        assertTrue(reply.getString("error").contains("camera3d (moves a 3D camera) and model3d (shows 3D models)"))
+        assertTrue(reply.getString("error").contains("it uses the feature camera_paths (flies the 3D camera along paths)"))
     }
 
     @Test

@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use std::path::Path;
 use wprs_core::message::said;
 
-pub const KINDS: [&str; 12] = [
+pub const KINDS: [&str; 14] = [
     "image",
     "video",
     "text",
@@ -17,6 +17,8 @@ pub const KINDS: [&str; 12] = [
     "adjustment",
     "mesh",
     "light",
+    "model",
+    "group3d",
 ];
 pub const LAYERS: &str = "/scene/layers";
 
@@ -116,6 +118,8 @@ pub fn template(
         "video" => json!({"id": id, "type": "video", "video": asset("video")?}),
         "sound" => json!({"id": id, "type": "sound", "sound": asset("sound")?}),
         "mesh" => json!({"id": id, "type": "mesh", "mesh": asset("model")?}),
+        "model" => json!({"id": id, "type": "model", "model": asset("model")?}),
+        "group3d" => json!({"id": id, "type": "group", "space": "3d", "layers": []}),
         "text" => {
             json!({"id": id, "type": "text", "text": name.unwrap_or("Text"), "size": 96, "color": "#ffffff"})
         }

@@ -7,9 +7,11 @@ use std::borrow::Cow;
 mod drawn;
 pub(crate) mod lamps;
 mod shown;
+pub(crate) mod staged;
 
 pub use drawn::{Content, Draw, EffectDraw, Frame, Lit};
 use shown::{content, masked, strength};
+pub use staged::{Look, MAX_PLANES, Placed, Stage3d};
 
 pub(crate) fn walk<'a>(
     cx: &Context<'a>,
@@ -25,8 +27,10 @@ pub(crate) fn walk<'a>(
         let place = cx.place(layer, parent);
         let (shown, at) = (place.visible && place.opacity > 0.0, frame.draws.len());
         if shown || cx.mattes.contains(&layer.id) {
+            let placed = frame.placed.len();
             emit(cx, layer, set, place, quality, frame, canvas);
             frame.draws[at].hidden = !shown;
+            staged::after(cx, layer, (at, placed), frame, canvas);
         }
         cx.wake.set(outer.min(cx.wake.get()));
     }
@@ -131,14 +135,7 @@ fn emit<'a>(
     }
     let effects = start..frame.effects.len();
     let group = matches!(layer.kind, Kind::Group { .. });
-    let painted = match &layer.kind {
-        Kind::Image { color, .. } | Kind::Video { color, .. } | Kind::Particles { color, .. } => {
-            color.as_ref()
-        }
-        Kind::Group { color, .. } => color.as_ref(),
-        Kind::Mesh(m) => m.color.as_ref(),
-        _ => None,
-    };
+    let painted = shown::painted(layer);
     let tint = set.color.map(Color).filter(|_| painted.is_some() || group).or(painted.map(|c| c.get(cx)));
     let tint = tint.unwrap_or(Color([1.0; 4]));
     let brightness = layer.brightness.as_ref().map_or(1.0, |b| b.get(cx).clamp(0.0, 16.0));

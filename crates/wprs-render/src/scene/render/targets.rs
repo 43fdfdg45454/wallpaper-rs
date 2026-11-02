@@ -17,7 +17,7 @@ pub(super) fn retarget(r: &Renderer, view: &mut SceneView, size: (u32, u32)) {
         pool.give(canvas);
     }
     let canvas = pool.take(&r.device, size, view.format);
-    let output = match view.srgb {
+    let output = match view.srgb || view.tone > 0 {
         true => {
             let Tex { texture, view, id } = pool.take(&r.device, size, Format::Rgba8UnormSrgb);
             GpuImage { texture, view, id }
@@ -28,10 +28,11 @@ pub(super) fn retarget(r: &Renderer, view: &mut SceneView, size: (u32, u32)) {
     view.marks.clear();
 }
 
-pub(super) fn resolve(pool: &mut Pool) -> u32 {
+pub(super) fn resolve(pool: &mut Pool, srgb: bool, (tone, split): (u8, f32)) -> (u32, &'static str) {
     let (m0, m1, full) = ([2.0, 0.0, -1.0, 0.0], [0.0, -2.0, 1.0, 0.0], [0.0, 0.0, 1.0, 1.0]);
-    let mode = [0.0, 1.0, 0.0, 0.0];
-    pool.push(&Item { m0, m1, quad: full, uv: full, color: [1.0; 4], mode, ..Default::default() })
+    let mode = [0.0, f32::from(u8::from(srgb)), f32::from(tone), split.clamp(0.0, 1.0)];
+    let slot = pool.push(&Item { m0, m1, quad: full, uv: full, color: [1.0; 4], mode, ..Default::default() });
+    (slot, if tone > 0 { "fs_tonemap" } else { "fs_texture" })
 }
 
 impl Scratch {

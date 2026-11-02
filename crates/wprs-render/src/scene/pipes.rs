@@ -128,6 +128,7 @@ impl Pipes {
                         include_str!("lamps.wgsl"),
                         include_str!("lit.wgsl"),
                         include_str!("air.wgsl"),
+                        include_str!("tones.wgsl"),
                     ]
                     .join("\n")
                 ),

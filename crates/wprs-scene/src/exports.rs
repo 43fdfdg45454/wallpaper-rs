@@ -31,8 +31,9 @@ pub use crate::effects::{
     State, Texel, Tune, Use, Variant, builtin, descriptor, register,
 };
 pub use crate::eval::lamps::{Lamp, Picture};
-pub use crate::eval::{Content, Draw, EffectDraw, Frame, Lit};
+pub use crate::eval::{Content, Draw, EffectDraw, Frame, Lit, Look, MAX_PLANES, Placed, Stage3d};
 pub use crate::extrude::Relief;
+pub use crate::eye::{Eye, IDENTITY4, Mat4, apply4, mul4, placement, unit3};
 pub use crate::figure::{
     Attach, Coverage, Cull, Follows, MATERIALS, MAX_FIGURES, MAX_SHADOWS, Material, MeshDepth, MeshLayer,
     MeshPart, ModelLayer, Space,
@@ -53,7 +54,7 @@ pub use crate::helper::{
 pub use crate::hitbox::{AlphaMap, Hitbox, Hitboxes};
 pub use crate::ink::Ink;
 pub use crate::input::{
-    AudioFrame, BANDS, BloomSet, BoneSet, CameraSet, GlideSet, LayerOverride, MAX_DRIVEN_BONES,
+    AudioFrame, BANDS, BloomSet, BoneSet, Camera3dSet, CameraSet, GlideSet, LayerOverride, MAX_DRIVEN_BONES,
     MAX_DRIVEN_RIGS, MAX_DRIVEN_SHAPES, MAX_IMPULSES, MAX_MESH_BYTES, MESH_FLOATS, Mesh, ParticleCommand,
     ParticleControl, PointerState, RigControl, ScriptOutputs, ShakeSet, SoundCommand, SoundControl, StageSet,
     TimelineCommand, Tuning, VideoCommand, VideoControl,
@@ -68,6 +69,11 @@ pub use crate::measure::MAX_BUILD;
 pub use crate::measured::{Calibration, calibrate};
 pub use crate::media::{Cover, MEDIA_TRIGGERS, Media, Reading};
 pub use crate::memory::MAX_MEMORY;
+pub use crate::model::{
+    Alpha, Finish, Forge, ForgeMaterial, ForgeShape, MAX_MODEL_VERTICES, MAX_TEXTURE, MODEL_FLOATS, Model,
+    ModelCaps, ModelTexture, PHONE_TEXTURE, Primitive, SLOTS as MAP_SLOTS, Verdict, caps as model_caps,
+    picture_size, verdict as model_verdict,
+};
 pub use crate::outside::{
     CHECK_WALL, Checker, UNCHECKED, check_out_of_process, checker, helper_runs, set_checker,
 };

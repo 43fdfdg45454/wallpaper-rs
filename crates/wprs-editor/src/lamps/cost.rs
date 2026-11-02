@@ -72,5 +72,6 @@ pub fn cost(dir: &Path, doc: &Value, t: f64, quality: Quality) -> Value {
     json!({ "quality": quality, "levels": rows, "phone": phone, "animated": animated,
         "lit_layers": lit.iter().map(|g| &g.id).collect::<Vec<_>>(), "volumetric": airy.len(),
         "lit_systems": named(&lit_swarms), "refracting": named(&bent),
-        "tiers": super::report::tiers(layers.iter().filter(|(_, l)| l["type"] == "light").count()) })
+        "tiers": super::report::tiers(layers.iter().filter(|(_, l)| l["type"] == "light").count()),
+        "models": crate::stage3d::cost(dir, doc, quality) })
 }

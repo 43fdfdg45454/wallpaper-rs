@@ -55,6 +55,13 @@ pub enum Content<'a> {
         texture: Option<Cow<'a, str>>,
         relief: Option<crate::Relief>,
     },
+    Model {
+        layer: &'a str,
+        stage: usize,
+        slice: usize,
+        size: [f32; 2],
+        key: u64,
+    },
     Adjustment,
 }
 
@@ -125,4 +132,7 @@ pub struct Frame<'a> {
     pub lamps: Vec<super::lamps::Lamp<'a>>,
     pub ambient: Option<Color>,
     pub sky: Option<Color>,
+    pub stages: Vec<super::Stage3d<'a>>,
+    pub placed: Vec<super::Placed<'a>>,
+    pub looks: Vec<super::Look>,
 }

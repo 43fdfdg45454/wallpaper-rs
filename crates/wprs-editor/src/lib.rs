@@ -45,6 +45,7 @@ pub mod shaders;
 mod shapes;
 pub mod skin;
 mod spots;
+pub mod stage3d;
 pub mod starters;
 pub mod swarms;
 pub mod texts;

@@ -47,6 +47,11 @@ const val STAGE_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size
 const val STAGE_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.stage", "version": "1.0.0",
     "title": "Stage", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
     "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["camera3d", "model3d"] } }"""
+const val FLOWN_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] }, "camera3d": { "paths": [{ "id": "around",
+    "keys": [{ "t": 0, "eye": [0, 0, 5], "center": [0, 0, 0] }, { "t": 1, "eye": [1, 0, 5], "center": [0, 0, 0] }] }] }, "layers": [] }"""
+const val FLOWN_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.example.flown", "version": "1.0.0",
+    "title": "Flown", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "origin": { "kind": "original" },
+    "content": { "rating": "general" }, "photosensitive": false, "requires": { "features": ["camera3d", "camera_paths"] } }"""
 const val SHAFTS_SCENE = """{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [64, 32] },
     "layers": [{ "id": "fill", "type": "solid", "color": "#ffffff",
                  "effects": [{ "effect": "glitter" }, { "effect": "blur", "params": { "blend": "screen" } }] }] }"""

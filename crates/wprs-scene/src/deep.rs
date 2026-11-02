@@ -86,6 +86,10 @@ impl<'a> Check<'a> {
             }
             self.material(&q, mat);
         }
+        let r = &m.rig;
+        let still = r.clips.is_empty() && r.animations.is_empty() && r.ik.is_empty() && r.physics.is_empty();
+        let still = still && r.rules.is_empty() && r.shapes.is_empty() && r.expressions.is_empty();
+        self.uses(!still || m.root_motion, "model_animation");
         if m.root_motion && m.rig.clips.is_empty() {
             self.issues.push(Issue::Type(format!("{p}/root_motion")));
         }

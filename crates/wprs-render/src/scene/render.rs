@@ -25,8 +25,7 @@ impl Renderer {
         self.judge(view, frame);
         view.pace(self);
         self.molds(view, runtime)?;
-        let scale = view.screen(size).0;
-        self.skins(view, (runtime, frame), videos, scale[0].abs().max(scale[3].abs()))?;
+        self.figures(view, (runtime, frame), videos, view.screen(size).0)?;
         let created = (view.pool.created, pipes::compiled(0));
         if view.target.as_ref().is_none_or(|(t, _)| t.size() != size) {
             retarget(self, view, size);
@@ -56,6 +55,7 @@ impl Renderer {
             videos,
             molds: &v.molds,
             skins: &v.skins,
+            solids: &v.solids,
             exts: &mut scratch.exts,
             screen,
             stage: screen.then(wprs_scene::Affine::scale(v.canvas.map(|v| v as f32))),
@@ -150,7 +150,7 @@ impl Renderer {
         let quiet = self.quiet(timing);
         let (pool, kept) = (&mut v.pool, &scratch.kept);
         v.caches.extract_if(|id, _| !kept.contains(id)).for_each(|(_, c)| pool.give(c.tex));
-        let resolve = srgb.then(|| resolve(pool));
+        let resolve = (srgb || v.tone > 0).then(|| resolve(pool, srgb, (v.tone, v.split)));
         pool.upload(&self.device, &self.queue, self.pipes(), &v.uniform);
         v.swarms.iter_mut().for_each(|s| s.upload(self, &v.uniform));
         let (canvas, output) = v.target.as_ref().expect("created above");

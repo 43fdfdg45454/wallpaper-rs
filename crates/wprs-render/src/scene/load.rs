@@ -12,6 +12,12 @@ fn linear(scene: &Scene, id: &str) -> bool {
     scene.assets.get(id).is_some_and(|a| a.linear)
 }
 
+fn tones(scene: &Scene) -> (bool, u8, f32) {
+    let tone = if scene.canvas.hdr { scene.canvas.tonemap.map_or(0, |t| t as u8) } else { 0 };
+    let split = scene.ext.get("editor").and_then(|e| e["tonemap_split"].as_f64()).unwrap_or(0.0);
+    (scene.canvas.hdr, tone, split as f32)
+}
+
 fn mips(scene: &Scene, id: &str) -> Option<bool> {
     scene.assets.get(id).and_then(|a| a.mipmaps)
 }
@@ -29,6 +35,7 @@ impl Renderer {
     ) -> Result<bool, RenderError> {
         view.marks.clear();
         view.pool.glow.baked = None;
+        (view.hdr, view.tone, view.split) = tones(scene);
         let same = |id: &String| match (view.sources.get(id), assets.images.get(id)) {
             (Some(was), Some(now)) => Arc::ptr_eq(was, now),
             (was, now) => was.is_none() && now.is_none(),
@@ -81,7 +88,9 @@ impl Renderer {
         let half = self.gpu.get_texture_format_features(Format::Rgba16Float);
         let flags = wgpu::TextureFormatFeatureFlags::FILTERABLE | wgpu::TextureFormatFeatureFlags::BLENDABLE;
         let usable = half.allowed_usages.contains(Usage::RENDER_ATTACHMENT) && half.flags.contains(flags);
+        let deep = scene.canvas.hdr && usable && self.tier() >= wprs_scene::Tier::T2;
         let format = match (srgb, usable) {
+            (true, _) if deep => Format::Rgba16Float,
             (true, _) => Format::Rgba8Unorm,
             (false, true) => Format::Rgba16Float,
             (false, false) => Format::Rgba8UnormSrgb,
@@ -164,6 +173,13 @@ impl Renderer {
                 covers: HashMap::new(),
                 molds: HashMap::new(),
                 skins: HashMap::new(),
+                solids: HashMap::new(),
+                models: HashMap::new(),
+                envs: HashMap::new(),
+                hdr: scene.canvas.hdr,
+                tone: if scene.canvas.hdr { scene.canvas.tonemap.map_or(0, |t| t as u8) } else { 0 },
+                split: scene.ext.get("editor").and_then(|e| e["tonemap_split"].as_f64()).unwrap_or(0.0)
+                    as f32,
             }
         })
         .inspect_err(|_| super::flight::forget(id))

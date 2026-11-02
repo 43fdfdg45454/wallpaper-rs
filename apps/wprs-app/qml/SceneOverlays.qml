@@ -27,6 +27,13 @@ Item {
         ratio: overlays.ratio
     }
 
+    SceneStage3d {
+        anchors.fill: parent
+        z: 5
+        page: overlays.page
+        ratio: overlays.ratio
+    }
+
     Repeater {
         model: (overlays.page.view.gizmos ?? []).length
 

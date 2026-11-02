@@ -39,6 +39,7 @@ impl Check<'_> {
         }
         let Some(cam) = &scene.camera3d else { return };
         self.uses(true, "camera3d");
+        self.uses(!cam.paths.is_empty(), "camera_paths");
         self.number("/camera3d/fov", &cam.fov, 1.0, 179.0);
         self.range("/camera3d/near", cam.near, 0.001, 1000.0);
         self.range("/camera3d/far", cam.far, cam.near.next_up(), 1e6);

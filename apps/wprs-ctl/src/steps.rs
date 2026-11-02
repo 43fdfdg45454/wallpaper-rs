@@ -114,6 +114,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
         Author::Undoing(crate::undoing::Undoing::Redo { dir }) => (dir, Action::Redo {}),
         Author::Swarming(command) => return crate::swarmed::action(command),
         Author::Lamping(command) => return crate::lamped::action(command),
+        Author::Modeling(command) => return crate::modeled::action(command),
         other => return Err(Box::new(other)),
     })
 }

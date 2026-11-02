@@ -144,6 +144,8 @@ QtObject {
             "blend_shapes": App.tr("morphs shapes and expressions"),
             "attach": App.tr("pins layers to bones or points of its models"),
             "model3d": App.tr("shows 3D models"),
+            "model_animation": App.tr("animates, poses or swings its 3D models"),
+            "camera_paths": App.tr("flies the 3D camera along paths"),
             "material_shaders": App.tr("shades its models with fur, foliage, chroma or shaders of its own"),
             "camera3d": App.tr("moves a 3D camera"),
             "shadows": App.tr("casts shadows"),
