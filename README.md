@@ -578,8 +578,10 @@ Las pantallas HDR muestran los colores más brillantes que el blanco de las esce
 `canvas.hdr`: si el escritorio y el controlador gráfico ofrecen una superficie HDR (en Wayland, con el
 protocolo de gestión de color), la escena guarda 16 bits hasta el final y dobla lo que pasa de 0,8
 del blanco hacia el brillo máximo de esa pantalla, que el escritorio comunica junto a su blanco de
-referencia (si no lo dice, se supone el doble del blanco). `playback.hdr` vale `auto` (solo con
-corriente y con la escena en `q3`, porque gasta más), `on` o `off`, y cada pantalla puede tener el
+referencia (si no lo dice, se supone el doble del blanco). `playback.hdr` vale `auto` (solo si
+el escritorio o el teléfono dicen que la pantalla muestra HDR, con corriente y con una escena con
+`canvas.hdr` y mapeo de tonos en `q3`, porque gasta más; las imágenes, los vídeos y las páginas
+siguen en SDR), `on` (siempre que la superficie lo admita, aunque la pantalla no lo diga) u `off`, y cada pantalla puede tener el
 suyo (`playback.hdr.DP-1`); si la pantalla no puede, se ve en SDR como siempre. La app lo ofrece en
 *Ajustes* → *HDR* y en cada pantalla, con lo que la pantalla admite y por qué está activado o no; el
 panel de tonos del editor avisa de cómo se ven esas escenas en una pantalla HDR. En el teléfono

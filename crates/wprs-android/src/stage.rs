@@ -68,7 +68,7 @@ impl Stage {
     }
 
     pub(crate) fn top(&self) -> bool {
-        self.quality == Quality::Q3
+        self.quality == Quality::Q3 && self.pack.scene.canvas.bright()
     }
 
     pub(crate) fn new(uid: String, pack: Arc<Pack>) -> Stage {

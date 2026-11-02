@@ -51,13 +51,17 @@ pub(crate) fn headroom(s: Screen) -> f32 {
     }
 }
 
+pub(crate) fn wanted(offered: bool, charging: bool, top: bool) -> (bool, &'static str) {
+    get(&CHOICE).decide((offered, get(&SCREEN).hdr), !charging, top)
+}
+
 pub(crate) fn light(
     r: &Renderer,
     surface: &mut Surface,
     charging: bool,
     top: bool,
 ) -> Result<f32, RenderError> {
-    let (want, reason) = get(&CHOICE).decide(surface.hdr_offered(), !charging, top);
+    let (want, reason) = wanted(surface.hdr_offered(), charging, top);
     r.light(surface, want)?;
     let (active, offered) = (surface.hdr(), surface.hdr_offered());
     let reason = if want && !active { "display" } else { reason };

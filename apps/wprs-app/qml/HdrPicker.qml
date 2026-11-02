@@ -13,7 +13,7 @@ ColumnLayout {
     readonly property string general: String((daemon.state?.options ?? {})["playback.hdr"] ?? "auto")
     readonly property string chosen: output ? (hdr?.own ?? "none") : general
     readonly property var words: ({
-            "auto": daemon.tr("Automatic: on mains power and at the highest scene quality"),
+            "auto": daemon.tr("Automatic: on HDR screens, on mains power, for scenes with bright colors at the highest quality"),
             "on": daemon.tr("Always when the screen can show it, also on battery"),
             "off": daemon.tr("Never: standard colors only")
         })
@@ -23,7 +23,7 @@ ColumnLayout {
             "off": daemon.tr("turned off"),
             "display": daemon.tr("this screen or the desktop offers no HDR"),
             "battery": daemon.tr("on battery"),
-            "quality": daemon.tr("the scene is below the highest quality")
+            "quality": daemon.tr("no scene with bright colors is shown at the highest quality")
         })
     readonly property var choices: {
         const found = Object.keys(words).map(value => ({

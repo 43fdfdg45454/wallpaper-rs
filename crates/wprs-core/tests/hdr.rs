@@ -4,13 +4,15 @@ use wprs_core::{Config, HdrChoice};
 #[test]
 fn hdr_follows_the_choice_the_display_the_power_and_the_quality() {
     use HdrChoice::*;
-    assert_eq!(Auto.decide(true, false, true), (true, "auto"));
-    assert_eq!(Auto.decide(true, true, true), (false, "battery"));
-    assert_eq!(Auto.decide(true, false, false), (false, "quality"));
-    assert_eq!(On.decide(true, true, false), (true, "on"));
-    assert_eq!(On.decide(false, false, true), (false, "display"));
-    assert_eq!(Auto.decide(false, false, true), (false, "display"));
-    assert_eq!(Off.decide(true, false, true), (false, "off"));
+    assert_eq!(Auto.decide((true, true), false, true), (true, "auto"));
+    assert_eq!(Auto.decide((true, true), true, true), (false, "battery"));
+    assert_eq!(Auto.decide((true, true), false, false), (false, "quality"));
+    assert_eq!(On.decide((true, false), true, false), (true, "on"));
+    assert_eq!(On.decide((false, true), false, true), (false, "display"));
+    assert_eq!(Auto.decide((false, true), false, true), (false, "display"));
+    assert_eq!(Auto.decide((true, false), false, true), (false, "display"));
+    assert_eq!(Auto.decide((true, false), true, false), (false, "display"));
+    assert_eq!(Off.decide((true, true), false, true), (false, "off"));
     assert_eq!(HdrChoice::default(), Auto);
 }
 

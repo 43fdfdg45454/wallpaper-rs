@@ -31,14 +31,20 @@ impl HdrChoice {
         Self::WORDS[self as usize]
     }
 
-    pub fn decide(self, offered: bool, on_battery: bool, top: bool) -> (bool, &'static str) {
+    pub fn decide(
+        self,
+        (offered, display): (bool, bool),
+        on_battery: bool,
+        top: bool,
+    ) -> (bool, &'static str) {
         match self {
             HdrChoice::Off => (false, "off"),
             _ if !offered => (false, "display"),
+            HdrChoice::On => (true, "on"),
+            HdrChoice::Auto if !display => (false, "display"),
             HdrChoice::Auto if on_battery => (false, "battery"),
             HdrChoice::Auto if !top => (false, "quality"),
             HdrChoice::Auto => (true, "auto"),
-            HdrChoice::On => (true, "on"),
         }
     }
 }

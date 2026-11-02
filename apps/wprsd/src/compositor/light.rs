@@ -23,7 +23,8 @@ impl Hdr {
 
 impl Output {
     fn top(&self) -> bool {
-        self.shown.scene.as_ref().is_none_or(|s| s.quality().quality == "q3")
+        let bright = |s: &super::scene::SceneState| s.spec.pack.scene.canvas.bright();
+        self.shown.scene.as_ref().is_some_and(|s| s.quality().quality == "q3" && bright(s))
     }
 }
 
@@ -38,10 +39,10 @@ impl Screen {
         let (peak_nits, reference_nits) = (light.map(|l| l.peak_nits), light.map(|l| l.reference_nits));
         let display = light.is_some_and(|l| l.hdr);
         let Some(surface) = self.surface.as_mut() else {
-            let reason = choice.decide(false, battery, top).1;
+            let reason = choice.decide((false, display), battery, top).1;
             return Ok(Hdr { display, peak_nits, reference_nits, reason, ..Hdr::default() });
         };
-        let (want, reason) = choice.decide(surface.hdr_offered(), battery, top);
+        let (want, reason) = choice.decide((surface.hdr_offered(), display), battery, top);
         renderer.light(surface, want)?;
         let (active, offered) = (surface.hdr(), surface.hdr_offered());
         let reason = if want && !active { "display" } else { reason };
@@ -53,7 +54,9 @@ pub(super) fn light(output: &mut Output, renderer: &Renderer, power: Power) -> R
     let (choice, top) = (output.shown.tone.hdr, output.top());
     let found = match &mut output.sink {
         Sink::Surface(screen) => screen.light(renderer, choice, (power.on_battery, top))?,
-        Sink::Stream(_) => Hdr { reason: choice.decide(false, power.on_battery, top).1, ..Hdr::default() },
+        Sink::Stream(_) => {
+            Hdr { reason: choice.decide((false, false), power.on_battery, top).1, ..Hdr::default() }
+        }
     };
     if found.active != output.hdr.active {
         (output.dirty, output.composed) = (true, None);
@@ -61,3 +64,6 @@ pub(super) fn light(output: &mut Output, renderer: &Renderer, power: Power) -> R
     output.hdr = found;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

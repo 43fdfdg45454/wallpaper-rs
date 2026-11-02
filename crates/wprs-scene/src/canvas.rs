@@ -72,6 +72,10 @@ impl Default for Clock {
 }
 
 impl Canvas {
+    pub fn bright(&self) -> bool {
+        self.hdr && self.tonemap.is_some_and(|t| t != Tonemap::None)
+    }
+
     pub fn new(size: [u32; 2]) -> Canvas {
         let (fit, background, blend_space) = (Fit::Fill, Color::default(), BlendSpace::Linear);
         let (parallax, camera, bloom, hdr, tonemap, perspective, ambient, sky, wind, gusts) =

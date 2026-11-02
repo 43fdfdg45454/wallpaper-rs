@@ -1524,8 +1524,12 @@ msgid "The new choice takes effect the next time the daemon starts."
 msgstr "La nueva elección vale desde el próximo arranque del daemon."
 
 #: apps/wprs-app/qml/HdrPicker.qml
-msgid "Automatic: on mains power and at the highest scene quality"
-msgstr "Automático: con corriente y con la calidad de escena más alta"
+msgid ""
+"Automatic: on HDR screens, on mains power, for scenes with bright colors at "
+"the highest quality"
+msgstr ""
+"Automático: en pantallas HDR, con corriente, para escenas con colores "
+"brillantes en la calidad más alta"
 
 #: apps/wprs-app/qml/HdrPicker.qml
 msgid "Always when the screen can show it, also on battery"
@@ -1556,8 +1560,8 @@ msgid "on battery"
 msgstr "con batería"
 
 #: apps/wprs-app/qml/HdrPicker.qml
-msgid "the scene is below the highest quality"
-msgstr "la escena está por debajo de la calidad más alta"
+msgid "no scene with bright colors is shown at the highest quality"
+msgstr "no se muestra una escena con colores brillantes en la calidad más alta"
 
 #: apps/wprs-app/qml/HdrPicker.qml apps/wprs-app/qml/QualityPicker.qml
 msgid "Like every screen: %1"
