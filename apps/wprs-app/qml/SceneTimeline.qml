@@ -31,32 +31,32 @@ ColumnLayout {
             "loop": "repeat"
         };
         page.run(list.length ? "add" : "set", {
-            "pointer": "/scene/timelines" + (list.length ? "/-" : ""),
-            "value": list.length ? value : [value]
-        });
+                "pointer": "/scene/timelines" + (list.length ? "/-" : ""),
+                "value": list.length ? value : [value]
+            });
     }
 
     function drive(track, index) {
         const field = track.pointer + "/timeline";
         if (index > 0)
             page.run("set", {
-                "pointer": field,
-                "value": names[index]
-            });
+                    "pointer": field,
+                    "value": names[index]
+                });
         else if (track.timeline)
             page.run("remove", {
-                "pointer": field
-            });
+                    "pointer": field
+                });
     }
 
     function edit(ease, remove) {
         page.run("keyframe", {
-            "pointer": chosen.pointer,
-            "time": picked[0],
-            "value": picked[1],
-            "ease": ease,
-            "remove": remove
-        });
+                "pointer": chosen.pointer,
+                "time": picked[0],
+                "value": picked[1],
+                "ease": ease,
+                "remove": remove
+            });
     }
 
     spacing: 0
@@ -73,11 +73,18 @@ ColumnLayout {
         timeline: parent
     }
 
+    ScenePathLanes {
+        id: lanes
+
+        Layout.fillWidth: true
+        timeline: timeline
+    }
+
     Kirigami.PlaceholderMessage {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.margins: Kirigami.Units.largeSpacing
-        visible: timeline.tracks.length === 0
+        visible: timeline.tracks.length === 0 && !lanes.visible
         text: App.tr("No keyframes yet: the ◇ button next to a value adds one at the current time.")
     }
 
@@ -149,10 +156,10 @@ ColumnLayout {
                                 onActiveChanged: {
                                     if (!active && key.moved >= 0 && key.moved !== key.modelData[0])
                                         timeline.page.run("keyframe", {
-                                            "pointer": track.modelData.pointer,
-                                            "time": key.moved,
-                                            "from": key.modelData[0]
-                                        });
+                                                "pointer": track.modelData.pointer,
+                                                "time": key.moved,
+                                                "from": key.modelData[0]
+                                            });
                                     if (!active)
                                         key.moved = -1;
                                 }

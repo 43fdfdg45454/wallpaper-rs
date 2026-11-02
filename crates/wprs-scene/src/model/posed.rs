@@ -102,6 +102,7 @@ pub(super) fn geometry(bin: &Bin, model: &mut Model, rig: &mut Rigged) -> Result
             if rig.palette.len() > MAX_RIG_PALETTE {
                 return Err(format!("has more than {MAX_RIG_PALETTE} bones and parts"));
             }
+            super::build::room(bin, p, model)?;
             let found = part(bin, p, MAX_MODEL_VERTICES - model.vertex_count(), &IDENTITY)?;
             let count = found.at.len();
             match joints {

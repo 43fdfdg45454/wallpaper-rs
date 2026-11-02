@@ -24,6 +24,8 @@ pub use crate::custom::{
     MAX_TARGETS, MAX_VARIANTS, MAX_WGSL, MAX_WGSL_TOTAL,
 };
 pub use crate::document::{Color, Scene, SceneError};
+pub use crate::drafted::{DEBUG_VIEWS, Drafted};
+pub use crate::drawn::TRIANGLE_UNIT;
 pub use crate::easing::Ease;
 pub use crate::effects::{
     BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, Fuse, GENERIC_PICTURES, MaskMode, NOISE_WGSL, Output,
@@ -73,9 +75,9 @@ pub use crate::measured::{Calibration, calibrate};
 pub use crate::media::{Cover, MEDIA_TRIGGERS, Media, Reading};
 pub use crate::memory::MAX_MEMORY;
 pub use crate::model::{
-    Alpha, Finish, Forge, ForgeMaterial, ForgeRig, ForgeShape, MAX_MODEL_VERTICES, MAX_POSED_MORPHS,
-    MAX_TEXTURE, MODEL_FLOATS, Model, ModelCaps, ModelTexture, PHONE_TEXTURE, Primitive, SKIN_FLOATS,
-    SLOTS as MAP_SLOTS, Verdict, caps as model_caps, fur_shells, picture_size, shadow_side,
+    Alpha, Finish, Forge, ForgeMaterial, ForgeRig, ForgeShape, MAX_MODEL_TEXELS, MAX_MODEL_VERTICES,
+    MAX_POSED_MORPHS, MAX_TEXTURE, MODEL_FLOATS, Model, ModelCaps, ModelTexture, PHONE_TEXTURE, Primitive,
+    SKIN_FLOATS, SLOTS as MAP_SLOTS, Verdict, caps as model_caps, fur_shells, picture_size, shadow_side,
     verdict as model_verdict,
 };
 pub use crate::outside::{

@@ -7,6 +7,13 @@ fn linear(c: [f32; 4]) -> [f32; 4] {
     [l[0], l[1], l[2], c[3]]
 }
 
+pub(super) fn grow(p: &Placed) -> f32 {
+    let m = &p.matrix;
+    let axis =
+        |c: usize| (m[c * 4] * m[c * 4] + m[c * 4 + 1] * m[c * 4 + 1] + m[c * 4 + 2] * m[c * 4 + 2]).sqrt();
+    (0..3).map(axis).fold(0.0, f32::max).max(1e-6)
+}
+
 pub(super) fn object(p: &Placed) -> (Object, bool) {
     let m = &p.matrix;
     let a = |r: usize, c: usize| m[c * 4 + r];
@@ -25,7 +32,7 @@ pub(super) fn object(p: &Placed) -> (Object, bool) {
 pub(super) fn finish(
     f: &Finish,
     look: Option<&Look>,
-    (opacity, flipped, radius): (f32, bool, f32),
+    (opacity, flipped, radius, grow): (f32, bool, f32, f32),
     (hdr, skinned): (bool, bool),
 ) -> (Finish3, Key, u32) {
     let mut color = linear(f.color);
@@ -33,7 +40,6 @@ pub(super) fn finish(
         let c = linear(c);
         color = std::array::from_fn(|i| color[i] * c[i]);
     }
-    color[3] *= opacity;
     let emissive = look.and_then(|l| l.emissive).map_or(f.emissive, |e| {
         let l = linear([e[0], e[1], e[2], 1.0]);
         [l[0], l[1], l[2]]
@@ -51,10 +57,19 @@ pub(super) fn finish(
         Alpha::Mask(c) if look.and_then(|l| l.blend).is_none_or(|b| b == Coverage::Mask) => c.max(1e-4),
         _ => 0.0,
     };
+    let shade = look.map_or(Shade::Pbr, |l| l.shade);
     let mut blend = match (look.and_then(|l| l.blend), f.alpha) {
         (Some(Coverage::Blend), _) | (None, Alpha::Blend) => 1,
         (Some(Coverage::Add), _) => 2,
+        (None, _) if shade == Shade::Chroma => 1,
         _ => 0,
+    };
+    let forced = match blend {
+        0 => 1.0 + opacity,
+        _ => {
+            color[3] *= opacity;
+            0.0
+        }
     };
     if blend == 0 && opacity < 1.0 {
         blend = 1;
@@ -70,19 +85,18 @@ pub(super) fn finish(
     let cull = if flipped && cull > 0 { 3 - cull } else { cull };
     let test = look.and_then(|l| l.depth_test).unwrap_or(true);
     let write = look.and_then(|l| l.depth_write).unwrap_or(blend == 0);
-    let shade = look.map_or(Shade::Pbr, |l| l.shade);
     let x = look.map_or([0.0; 8], |l| l.extra);
     let receive = look.and_then(|l| l.receive).unwrap_or(true);
     let (kind, shells) = match shade {
-        Shade::Fur => (2.0, x[0].max(1.0) as u32),
+        Shade::Fur => (2.0, x[0].max(1.0) as u32 + 1),
         Shade::Foliage => (3.0, 1),
         Shade::Chroma => (4.0, 1),
         Shade::Package => (5.0, 1),
         _ => (0.0, 1),
     };
     let (comb, key, more) = match shade {
-        Shade::Fur => ([x[3], x[4], x[5], 0.0], [0.0; 4], [1.0, 0.0, 0.0, 0.0]),
-        Shade::Foliage => ([0.0, 0.0, 0.0, x[0] * 0.05 * radius], [0.0; 4], [1.0, 0.0, x[1], 0.0]),
+        Shade::Fur => ([x[3] / grow, x[4] / grow, x[5] / grow, 0.0], [0.0; 4], [1.0, 0.0, 0.0, 0.0]),
+        Shade::Foliage => ([0.0, 0.0, 0.0, x[0] * 0.05 * radius * grow], [0.0; 4], [1.0, 0.0, x[1], 0.0]),
         Shade::Chroma => ([0.0; 4], [x[0], x[1], x[2], x[3]], [1.0, x[4], 0.0, 0.0]),
         _ => ([0.0; 4], [0.0; 4], [1.0, 0.0, 0.0, 0.0]),
     };
@@ -90,10 +104,10 @@ pub(super) fn finish(
         color,
         emissive: [emissive[0], emissive[1], emissive[2], 0.0],
         pbr,
-        flags: [cutoff, f32::from(u8::from(lit)), f32::from(u8::from(receive)), 0.0],
+        flags: [cutoff, f32::from(u8::from(lit)), f32::from(u8::from(receive)), forced],
         maps: [f32::from(u8::from(f.maps[2].is_some())), 0.0, 0.0, 0.0],
         more,
-        shade: [kind, x[0], x[1], x[2]],
+        shade: [kind, x[0], if shade == Shade::Fur { x[1] * grow } else { x[1] }, x[2]],
         comb,
         key,
         params: look.map_or([[0.0; 4]; 8], |l| l.slots),

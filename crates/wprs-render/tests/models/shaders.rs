@@ -31,6 +31,33 @@ fn fur_grows_shells_past_the_skin_and_fewer_at_the_lowest_quality() {
 }
 
 #[test]
+fn one_fur_layer_still_grows_a_shell_at_full_length_and_scales_with_the_layer() {
+    let Some(r) = renderer() else { return };
+    let models = || BTreeMap::from([("ball", ball(unlit("skin", [0.9, 0.7, 0.4, 1.0])))]);
+    let fur = json!({ "shader": "fur", "params": { "layers": 1, "length": 40, "density": 1 } });
+    let sized = |material: Value, k: f32| {
+        let mut l = shaded("ball", material);
+        l[0]["scale"] = json!([k, k, k]);
+        l
+    };
+    let bare = render(r, scene(json!({}), sized(json!({}), 0.5), models()), Quality::Q0);
+    let one = render(r, scene(json!({}), sized(fur.clone(), 0.5), models()), Quality::Q0);
+    assert!(covered(&one) > covered(&bare) + 20, "{} {}", covered(&one), covered(&bare));
+    let span = |px: &[u8]| {
+        let xs: Vec<u32> = (0..SIDE * SIDE)
+            .filter(|i| rgb(px, i % SIDE, i / SIDE).iter().any(|c| *c > 8))
+            .map(|i| i % SIDE)
+            .collect();
+        (xs.iter().max().unwrap() - xs.iter().min().unwrap() + 1) as f32
+    };
+    let small = span(&one) / span(&bare);
+    let big_bare = render(r, scene(json!({}), sized(json!({}), 1.0), models()), Quality::Q0);
+    let big = render(r, scene(json!({}), sized(fur, 1.0), models()), Quality::Q0);
+    let large = span(&big) / span(&big_bare);
+    assert!((small - large).abs() < 0.15, "fur keeps its share of the ball at any scale: {small} {large}");
+}
+
+#[test]
 fn foliage_sways_with_the_wind_and_sleeps_without_it() {
     let Some(r) = renderer() else { return };
     let models = || BTreeMap::from([("card", plane(unlit("skin", [0.2, 0.9, 0.2, 1.0])))]);

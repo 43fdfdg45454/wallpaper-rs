@@ -1,7 +1,7 @@
 use crate::rigs::round;
 use serde_json::{Value, json};
 use std::path::Path;
-use wprs_scene::{Kind, Model, Quality, Tier, model_caps, model_verdict};
+use wprs_scene::{Kind, Model, Quality, TRIANGLE_UNIT, Tier, model_caps, model_verdict};
 
 const LEVELS: [Quality; 4] = [Quality::Q0, Quality::Q1, Quality::Q2, Quality::Q3];
 
@@ -28,9 +28,10 @@ pub fn cost(dir: &Path, doc: &Value, quality: Quality) -> Value {
         .iter()
         .map(|q| {
             let k = q.render_scale();
-            let units: f32 = models.iter().map(|m| m.triangles as f32 / 50_000.0 + 1.0).sum::<f32>() * k * k;
+            let unit = |id: &&str| scene.layer(id).map_or(0.0, |l| scene.drawn_triangles(l, *q) as f32 / TRIANGLE_UNIT + 1.0);
+            let units: f32 = shown.iter().map(|(id, _)| unit(id)).sum::<f32>() * k * k;
             let (shadows, fur) = (super::spend::shadow_texels(&scene, *q), super::spend::fur(&scene, *q));
-            json!({ "quality": q, "triangles": triangles, "pixels": round(canvas[0] * canvas[1] * k * k),
+            json!({ "quality": q, "triangles": triangles, "drawn": scene.model_triangles(*q), "pixels": round(canvas[0] * canvas[1] * k * k),
                 "units": round(units), "scene": round(scene.cost(*q)), "specular": *q > Quality::Q0,
                 "shadow_texels": shadows, "fur_shells": fur.0, "fur_triangles": fur.1,
                 "skinned": super::spend::skinned(&scene), "physics": *q > Quality::Q0 })
@@ -43,7 +44,9 @@ pub fn cost(dir: &Path, doc: &Value, quality: Quality) -> Value {
             let cap = model_caps(t, false);
             let memory: u64 = models.iter().map(|m| m.texture_bytes(cap.texture)).sum();
             let busy = scene.cost(t.quality(false)) > t.budget();
-            json!({ "tier": t, "fits": v.fits && !busy, "reasons": v.reasons, "busy": busy, "memory": memory,
+            let over = scene.model_triangles(Quality::Q0) > cap.triangles;
+            let poster = over || scene.cost(Quality::Q0) > t.budget();
+            json!({ "tier": t, "fits": v.fits && !busy && !over, "poster": poster, "reasons": v.reasons, "busy": busy, "memory": memory,
                 "triangles": cap.triangles, "texture": cap.texture, "quality": t.quality(false), "shadows": cap.shadows })
         })
         .collect();

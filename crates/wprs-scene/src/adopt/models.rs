@@ -36,6 +36,7 @@ impl Scene {
         }
         let (mut read, mut json, mut left, mut whole) =
             (BTreeMap::<String, Read>::new(), 0, MAX_MODEL_ENTRIES, 0);
+        let mut drawn = (0u64, 0u64);
         for id in figures.into_keys() {
             let Some(asset) = self.assets.get(&id).filter(|a| a.extension() == "glb") else { continue };
             let (path, at) = (asset.path.clone(), format!("/assets/{id}"));
@@ -76,6 +77,15 @@ impl Scene {
                 )));
             }
             let file = Arc::new(ModelFile::parse_head(&bytes, total, &mut left).map_err(wrong)?);
+            if solid {
+                drawn = (drawn.0 + file.triangles, drawn.1 + file.vertices);
+                if drawn.0 > crate::MAX_TRIANGLES || drawn.1 > crate::MAX_MODEL_VERTICES as u64 {
+                    return Err(wrong(format!(
+                        "passes the {} triangles the models of a scene may hold",
+                        crate::MAX_TRIANGLES
+                    )));
+                }
+            }
             let rig = mesh.then(|| Rigged::decode(&bytes).map(Arc::new)).transpose().map_err(wrong)?;
             let decode = |b: &[u8]| if posed { Model::decode_posed(b) } else { Model::decode(b) };
             let model = solid.then(|| decode(&bytes).map(Arc::new)).transpose().map_err(wrong)?;

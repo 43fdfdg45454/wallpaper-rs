@@ -46,6 +46,8 @@ pub(crate) fn camera_edit(doc: &Value, e: &CameraEdit) -> Result<Vec<Op>> {
         let low = c["near"].as_f64().unwrap_or(0.1);
         c["far"] = json!(ranged("far", v, low * 1.0001, 1e6)?);
     }
+    let (n, f) = (c["near"].as_f64().unwrap_or(0.1), c["far"].as_f64().unwrap_or(1000.0));
+    ranged("far", f, n * 1.0001, 1e6)?;
     for (name, v) in [("eye", e.eye), ("center", e.center), ("up", e.up)] {
         if let Some(v) = v {
             c[name] = point(name, v)?;

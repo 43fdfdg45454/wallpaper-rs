@@ -57,6 +57,9 @@ pub struct Scene {
     #[serde(skip)]
     #[schemars(skip)]
     pub solids: BTreeMap<String, Arc<crate::Model>>,
+    #[serde(skip)]
+    #[schemars(skip)]
+    pub draft: crate::Drafted,
 }
 
 impl Default for Color {
@@ -68,7 +71,7 @@ impl Default for Color {
 impl Scene {
     pub fn new(size: [u32; 2]) -> Scene {
         let (assets, layers, particles, timelines, scripts, effects, audio, ext, loaded) = Default::default();
-        let (camera3d, templates, pools, models, rigs, solids) = Default::default();
+        let (camera3d, templates, pools, models, rigs, solids, draft) = Default::default();
         Scene {
             schema: SCHEMA.into(),
             canvas: Canvas::new(size),
@@ -88,6 +91,7 @@ impl Scene {
             models,
             rigs,
             solids,
+            draft,
         }
     }
 

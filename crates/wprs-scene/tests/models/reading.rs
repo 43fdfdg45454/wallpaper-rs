@@ -64,3 +64,15 @@ fn models_and_cameras_name_their_features() {
     let costly = scene(json!({}), json!([model("m", json!({}))]));
     assert!(costly.cost(Quality::Q2) > scene(json!({}), json!([])).cost(Quality::Q2));
 }
+
+#[test]
+fn editor_marks_reach_the_renderer_only_through_a_preview() {
+    let mut s =
+        scene(json!({ "ext": { "editor": { "debug3d": "shadows", "tonemap_split": 2 } } }), json!([]));
+    assert_eq!(s.draft, Drafted::default(), "a loaded package keeps the editor marks out of the picture");
+    s.drafted();
+    assert_eq!(s.draft, Drafted { debug3d: 3, split: 1.0 });
+    s.ext.clear();
+    s.drafted();
+    assert_eq!(s.draft, Drafted::default());
+}

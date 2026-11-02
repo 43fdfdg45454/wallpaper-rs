@@ -1233,11 +1233,12 @@ msgstr "Bajar"
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/PlaylistItems.qml
 #: apps/wprs-app/qml/SceneAssets.qml apps/wprs-app/qml/SceneBoneRow.qml
 #: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/SceneInspector.qml
-#: apps/wprs-app/qml/SceneLayerTools.qml apps/wprs-app/qml/ScenePairs.qml
-#: apps/wprs-app/qml/SceneProperties.qml apps/wprs-app/qml/SceneRigIk.qml
-#: apps/wprs-app/qml/SceneRigPhysics.qml apps/wprs-app/qml/SceneRigRow.qml
-#: apps/wprs-app/qml/SceneSettingMenu.qml apps/wprs-app/qml/SceneShapes.qml
-#: apps/wprs-app/qml/SceneSwarmPoints.qml apps/wprs-app/qml/SettingsPage.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml apps/wprs-app/qml/SceneModelSwing.qml
+#: apps/wprs-app/qml/ScenePairs.qml apps/wprs-app/qml/SceneProperties.qml
+#: apps/wprs-app/qml/SceneRigIk.qml apps/wprs-app/qml/SceneRigPhysics.qml
+#: apps/wprs-app/qml/SceneRigRow.qml apps/wprs-app/qml/SceneSettingMenu.qml
+#: apps/wprs-app/qml/SceneShapes.qml apps/wprs-app/qml/SceneSwarmPoints.qml
+#: apps/wprs-app/qml/SettingsPage.qml
 msgid "Remove"
 msgstr "Quitar"
 
@@ -2606,6 +2607,37 @@ msgstr "(todos)"
 msgid "All bones"
 msgstr "Todos los huesos"
 
+#: apps/wprs-app/qml/SceneBonePose3d.qml
+msgid ""
+"Drag the ring to turn the bone in the view, inside it to tip it; each drag "
+"keys the clip at the playhead"
+msgstr ""
+"Arrastra el anillo para girar el hueso en la vista y su interior para "
+"inclinarlo; cada arrastre pone una clave en el clip en el cursor de "
+"reproducción"
+
+#: apps/wprs-app/qml/SceneBonePose3d.qml
+msgid "Move"
+msgstr "Mover"
+
+#: apps/wprs-app/qml/SceneBonePose3d.qml
+msgid "Drag to move the bone in the view; it keys the clip at the playhead"
+msgstr ""
+"Arrastra para mover el hueso en la vista; pone una clave en el clip en el "
+"cursor de reproducción"
+
+#: apps/wprs-app/qml/SceneBoneSwing3d.qml
+msgid "Least"
+msgstr "Mínimo"
+
+#: apps/wprs-app/qml/SceneBoneSwing3d.qml
+msgid "Most"
+msgstr "Máximo"
+
+#: apps/wprs-app/qml/SceneBoneSwing3d.qml
+msgid "Drag to bound how far the bone swings, in its own plane"
+msgstr "Arrastra para limitar cuánto se balancea el hueso, en su propio plano"
+
 #: apps/wprs-app/qml/SceneBoneTree.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Bones"
 msgstr "Huesos"
@@ -2763,9 +2795,9 @@ msgstr "Pausar"
 msgid "Play"
 msgstr "Reproducir"
 
-#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/ScenePathRow.qml
-#: apps/wprs-app/qml/ScenePaths3d.qml apps/wprs-app/qml/SceneTimeBar.qml
-#: apps/wprs-app/qml/SceneTimeline.qml
+#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/ScenePathLanes.qml
+#: apps/wprs-app/qml/ScenePathRow.qml apps/wprs-app/qml/ScenePaths3d.qml
+#: apps/wprs-app/qml/SceneTimeBar.qml apps/wprs-app/qml/SceneTimeline.qml
 msgid "%1 s"
 msgstr "%1 s"
 
@@ -3545,6 +3577,10 @@ msgstr "%1: %2 triángulos en %3 grupos 3D, %4 unidades de trabajo, %5"
 msgid "fits"
 msgstr "cabe"
 
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "shows its poster"
+msgstr "muestra su póster"
+
 #: apps/wprs-app/qml/SceneModelCost.qml apps/wprs-app/qml/SceneModelInfo.qml
 msgid "too heavy"
 msgstr "demasiado pesado"
@@ -3560,6 +3596,10 @@ msgstr "%1 luces con sombras"
 #: apps/wprs-app/qml/SceneModelGizmo.qml
 msgid "Drag to move the model along this direction"
 msgstr "Arrastra para mover el modelo en esta dirección"
+
+#: apps/wprs-app/qml/SceneModelGizmo.qml
+msgid "The position follows a binding; change it in the inspector"
+msgstr "La posición sigue un enlace; cámbiala en el inspector"
 
 #: apps/wprs-app/qml/SceneModelImport.qml
 msgid "3D model from a file"
@@ -3651,8 +3691,8 @@ msgid "Swinging bones"
 msgstr "Huesos que se balancean"
 
 #: apps/wprs-app/qml/SceneModelSwing.qml
-msgid "%1 swings as %2, stiffness %3, wind %4"
-msgstr "%1 se balancea como %2, rigidez %3, viento %4"
+msgid "Show the wind on the preview"
+msgstr "Mostrar el viento en la vista previa"
 
 #: apps/wprs-app/qml/SceneModelSwing.qml
 msgid ""
@@ -3684,6 +3724,10 @@ msgid "Drag sideways to turn the model, up and down to tip it"
 msgstr ""
 "Arrastra a los lados para girar el modelo, arriba y abajo para inclinarlo"
 
+#: apps/wprs-app/qml/SceneModelTurn.qml
+msgid "The rotation follows a binding; change it in the inspector"
+msgstr "El giro sigue un enlace; cámbialo en el inspector"
+
 #: apps/wprs-app/qml/SceneModelTurn.qml apps/wprs-app/qml/SceneSwarmKin.qml
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Size"
@@ -3692,6 +3736,10 @@ msgstr "Tamaño"
 #: apps/wprs-app/qml/SceneModelTurn.qml
 msgid "Drag away from the model to make it bigger"
 msgstr "Arrastra lejos del modelo para agrandarlo"
+
+#: apps/wprs-app/qml/SceneModelTurn.qml
+msgid "The scale follows a binding; change it in the inspector"
+msgstr "La escala sigue un enlace; cámbiala en el inspector"
 
 #: apps/wprs-app/qml/SceneNewMaterial.qml
 msgid "Name of a new material shader"
@@ -3784,6 +3832,10 @@ msgstr "Sobre todo"
 #: apps/wprs-app/qml/SceneParts.qml
 msgid "Only over %1"
 msgstr "Solo sobre %1"
+
+#: apps/wprs-app/qml/ScenePathLanes.qml
+msgid "Camera path %1"
+msgstr "Recorrido de cámara %1"
 
 #: apps/wprs-app/qml/ScenePathRow.qml
 msgid "%1, %2 s"
@@ -4408,6 +4460,15 @@ msgstr "Arrastra para mover lo que mira la cámara de la escena"
 #: apps/wprs-app/qml/SceneStagePaths.qml
 msgid "Drag to move this key of the camera path"
 msgstr "Arrastra para mover esta clave del recorrido de cámara"
+
+#: apps/wprs-app/qml/SceneStagePaths.qml
+msgid "Aim at %1 s"
+msgstr "Mira a los %1 s"
+
+#: apps/wprs-app/qml/SceneStagePaths.qml
+msgid "Drag to move the point this key of the camera path looks at"
+msgstr ""
+"Arrastra para mover el punto al que mira esta clave del recorrido de cámara"
 
 #: apps/wprs-app/qml/SceneStagePaths.qml
 msgid "Camera now"

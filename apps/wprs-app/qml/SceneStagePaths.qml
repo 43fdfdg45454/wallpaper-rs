@@ -11,25 +11,25 @@ Item {
 
     function load() {
         info = JSON.parse(stage.page.editor.rig("", JSON.stringify({
-            "paths3d": {
-                "time": stage.page.editor.time
-            }
-        })) || "null");
+                        "paths3d": {
+                            "time": stage.page.editor.time
+                        }
+                    })) || "null");
     }
 
-    function moveKey(path, key, from, to) {
-        const h = handles;
+    function moveKey(path, key, field, to) {
+        const h = handles, from = field === "eye" ? key.at : key.aim, k = key["reach_" + field] ?? h.unit;
         const d = [to[0] - from[0], to[1] - from[1]];
-        const eye = key.eye.map((v, i) => Math.round((v + (h.right[i] * d[0] - h.upward[i] * d[1]) * h.unit) * 1000) / 1000);
+        const args = {
+            "path": path,
+            "time": key.t
+        };
+        args[field] = key[field].map((v, i) => Math.round((v + (h.right[i] * d[0] - h.upward[i] * d[1]) * k) * 1000) / 1000);
         stage.page.run("scene3d", {
-            "path": {
-                "key": {
-                    "path": path,
-                    "time": key.t,
-                    "eye": eye
+                "path": {
+                    "key": args
                 }
-            }
-        }, true);
+            }, true);
     }
 
     visible: handles !== null && (info?.paths ?? []).length > 0
@@ -77,7 +77,34 @@ Item {
                     tip: App.tr("Drag to move this key of the camera path")
                     onMoved: (to, done) => {
                         if (done)
-                            paths.moveKey(one.modelData.id, modelData, modelData.at, to);
+                            paths.moveKey(one.modelData.id, modelData, "eye", to);
+                    }
+                }
+            }
+
+            SceneLightLines {
+                anchors.fill: parent
+                ratio: paths.stage.ratio
+                dashed: true
+                tint: Kirigami.Theme.positiveTextColor
+                segments: one.modelData.keys.filter(k => k.at && k.aim).map(k => [k.at, k.aim])
+            }
+
+            Repeater {
+                model: one.modelData.keys.filter(k => k.aim)
+
+                delegate: SceneKnob {
+                    required property var modelData
+
+                    at: modelData.aim
+                    ratio: paths.stage.ratio
+                    square: true
+                    label: App.tr("Aim at %1 s", modelData.t)
+                    tint: Kirigami.Theme.positiveTextColor
+                    tip: App.tr("Drag to move the point this key of the camera path looks at")
+                    onMoved: (to, done) => {
+                        if (done)
+                            paths.moveKey(one.modelData.id, modelData, "center", to);
                     }
                 }
             }

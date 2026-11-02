@@ -35,6 +35,7 @@ pub fn info(model: &Model, file: &ModelFile) -> Value {
         "middle": model.middle().map(round),
         "tiers": tiers,
         "phone": model_caps(Tier::T1, true),
+        "notes": file.notes,
     })
 }
 

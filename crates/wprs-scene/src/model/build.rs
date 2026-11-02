@@ -53,11 +53,26 @@ pub(super) fn append(model: &mut Model, p: &part::Part, material: Option<usize>)
     Primitive { first, count, material, base, vertices: p.at.len() as u32, piece: u16::MAX }
 }
 
+pub(super) fn room(bin: &Bin, p: &crate::rigged::doc::Primitive, model: &Model) -> Result<(), String> {
+    let at = p.indices.or_else(|| p.attributes.get("POSITION").copied());
+    let n = at.map_or(Ok(0), |a| bin.count(a))? as u64;
+    let more = match p.mode.unwrap_or(4) {
+        4 => n / 3,
+        5 | 6 => n.saturating_sub(2),
+        _ => 0,
+    };
+    match model.triangles.saturating_add(more) > crate::MAX_TRIANGLES {
+        true => Err(format!("has more than {} triangles", crate::MAX_TRIANGLES)),
+        false => Ok(()),
+    }
+}
+
 pub(super) fn geometry(bin: &Bin, model: &mut Model) -> Result<(), String> {
     for (n, world) in roots(bin)? {
         let Some(m) = bin.doc.nodes[n].mesh else { continue };
         let mesh = bin.doc.meshes.get(m).ok_or_else(|| format!("node {n} names the missing mesh {m}"))?;
         for p in &mesh.primitives {
+            room(bin, p, model)?;
             let part = part::part(bin, p, MAX_MODEL_VERTICES - model.vertex_count(), &world)?;
             let prim = append(model, &part, p.material);
             model.primitives.push(prim);

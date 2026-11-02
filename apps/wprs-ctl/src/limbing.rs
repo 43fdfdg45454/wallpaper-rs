@@ -16,7 +16,9 @@ pub enum Limbing {
         #[command(subcommand)]
         change: Chain,
     },
-    #[command(about = "Make bones of a mesh layer swing, draw a rope of new bones, or stop them swinging")]
+    #[command(
+        about = "Make bones of a mesh or model layer swing, draw a rope of new bones, or stop them swinging"
+    )]
     Physics {
         #[arg(help = DIR)]
         dir: PathBuf,

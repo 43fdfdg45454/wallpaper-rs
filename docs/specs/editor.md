@@ -493,14 +493,16 @@ it gets (2048 px on phones and on T0 and T1) and the texture memory, with a note
 OBJ with Blender; accepting imports the file and adds a model layer, inside the selected group.
 
 A scene with models draws over the preview an authoring view with its own camera, kept in
-`ext.editor.view3d` and never in the scene: dragging with the right button turns it around its
+`ext.editor.view3d`, which only the preview reads: dragging with the right button turns it around its
 target, with the middle button or Shift slides it and the wheel brings it closer, and the preview
 renders through it while the scene camera shows as a dashed frustum with a handle on its eye, a square
 on the point it looks at, both moved in the plane of the view, and a line toward its up. Each model
 shows its box, which selects it with a click; the selected model shows three arrows along x, y and z
 that move it along that direction, a knob above it that turns it (sideways around y, up and down
-around x) and a square on its box corner that scales it. These handles write `position`, `rotation`
-and `scale`, so keyed values are keyed at the current time.
+around x) and a square on its box corner that scales it. These handles start from the values the
+model has at the current time and write `position`, `rotation` and `scale`: a keyed value gets a key at
+the current time, a value bound to a property or a script keeps its binding and its handle is dimmed,
+and `scene3d` `model` `set` refuses to write over keys or a binding.
 
 The inspector of a model layer shows the counts and the tier verdicts of its file, a Reflects picker of
 the pictures of the scene (`env`) with a thumbnail, Look at it in the authoring view, and a Materials
@@ -530,7 +532,18 @@ for its weight, and Animation layers: per layer the clip it plays, On, Adds, mov
 for weight, speed, fade in and fade out, and a bone mask picker (Only these bones); the same Animation
 layers part shows under the bones of a mesh. In the authoring view the selected model draws its bones
 (a line from each bone to its parent and a knob that picks the bone for the timeline and the pickers)
-and, with root motion, the path its first clip walks over two turns.
+and, with root motion, the path its first clip walks over two turns. The picked bone shows a ring: dragging
+the ring turns the bone around the view axis, dragging inside it tips the bone like a trackball, and a
+square in its middle moves it in the plane of the view; each drag keys `angles` or `shift` of that bone
+in the chosen clip at the playhead (a model without clips gets `clip_1`). A swinging bone draws the fan
+its rotation bound allows in its own plane, with Least and Most knobs that drag the bound, and under
+Swinging bones each body shows its wind slider, the bounds of its turn and slide and Show the wind on
+the preview, which draws the arrow of the wind of the scene. `rigs::query` answers `bone3d` (`layer`,
+`bone`, `clip`, `time`, `clip_time`, `from` with the values the drag started at, and `turn` in degrees,
+`tilt` `[x, y]` in degrees or `slide` `[x, y]` in pixels) with the `angles` and `shift` to key, and
+`bound3d` (`layer`, `bone`, `point`) with the degrees of the bound under a point;
+`wprs-ctl scene key … --angles X,Y,Z --shift X,Y,Z` and `scene physics … add BONE --rotation MIN,MAX`
+do the same from the terminal.
 
 A material row picks Fur, Foliage or Chroma key besides Physical and Unlit and the material shaders of
 the package: fur shows sliders for shells, length and density, the shells each quality level draws and
@@ -548,8 +561,11 @@ dashed frusta of the maps in the authoring view. The 3D camera panel shows Camer
 length, Loop, the easing, remove, its keys (a click removes one) and Key the view at the current time,
 Add from the view, the order, the fade with its length, and Fly through the paths from the camera, which
 looks through the scene camera and plays from the start. In the authoring view each path draws its
-curve, a knob on each key that moves the eye of that key in the plane of the view, and a square where
-the paths put the camera at the current time. The cost lines add the shadow maps, the fur shells and
+curve, a knob on each key that moves the eye of that key and a square on the point it looks at, both
+moved in the plane of the view at their own depth, a dashed line between them, and a square where the
+paths put the camera at the current time. The scene timeline shows a lane per path with its keys, which
+drag to another time (`key` with `from`, `camera-path … key PATH T --from T` in the terminal) and seek
+the preview with a click. The cost lines add the shadow maps, the fur shells and
 the skinned vertices of each quality level and the shadowed lights of each tier. `wprs-ctl scene
 animate`, `clip`, `key`, `material`, `shadows`, `camera-path`, `new-material`, `debug3d` and `cost3d`
 do the same from the terminal.

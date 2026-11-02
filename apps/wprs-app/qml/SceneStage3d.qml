@@ -12,28 +12,39 @@ Item {
 
     function load() {
         info = JSON.parse(page.editor.rig("", JSON.stringify({
-            "stage3d": {
-                "time": page.editor.time
-            }
-        })) || "null");
+                        "stage3d": {
+                            "time": page.editor.time
+                        }
+                    })) || "null");
     }
 
     function view(args) {
         page.run("scene3d", {
-            "view": args
-        }, true);
+                "view": args
+            }, true);
     }
 
     function place(model, field, value) {
+        const rounded = value.map(v => Math.round(v * 1000) / 1000);
+        if (model.held[field] === "bound")
+            return;
+        if (model.held[field] === "keyed") {
+            page.run("keyframe", {
+                    "pointer": model.pointer + "/" + field,
+                    "time": page.editor.time,
+                    "value": rounded
+                }, true);
+            return;
+        }
         const set = {
             "layer": model.id
         };
-        set[field] = value.map(v => Math.round(v * 1000) / 1000);
+        set[field] = rounded;
         page.run("scene3d", {
-            "model": {
-                "set": set
-            }
-        }, true);
+                "model": {
+                    "set": set
+                }
+            }, true);
     }
 
     visible: models.length > 0

@@ -54,13 +54,17 @@ pub(super) struct Doc {
     #[serde(deserialize_with = "listed")]
     pub accessors: Vec<Accessor>,
     #[serde(deserialize_with = "listed")]
-    pub materials: Vec<Named>,
+    pub materials: Vec<super::notes::Surface>,
+    #[serde(deserialize_with = "listed")]
+    pub samplers: Vec<super::notes::Sampler>,
     #[serde(deserialize_with = "listed")]
     pub buffers: Vec<Linked>,
     #[serde(deserialize_with = "listed")]
     pub images: Vec<Linked>,
     #[serde(rename = "extensionsRequired", deserialize_with = "listed")]
     pub required: Vec<String>,
+    #[serde(rename = "extensionsUsed", deserialize_with = "listed")]
+    pub used: Vec<String>,
 }
 
 #[derive(Deserialize, Default)]
@@ -71,14 +75,9 @@ pub(super) struct Info {
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
-pub(super) struct Named {
-    pub name: Option<String>,
-}
-
-#[derive(Deserialize, Default)]
-#[serde(default)]
 pub(super) struct NodeHead {
     pub name: Option<String>,
+    pub mesh: Option<usize>,
     #[serde(deserialize_with = "listed")]
     pub children: Vec<usize>,
 }

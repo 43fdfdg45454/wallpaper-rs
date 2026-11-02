@@ -118,6 +118,10 @@ impl SceneView {
         self.solids.values().map(|s| s.renders).sum()
     }
 
+    pub fn held_models(&self) -> (usize, usize) {
+        (self.models.len(), self.envs.len())
+    }
+
     pub fn shadow_renders(&self) -> u64 {
         self.solids.values().map(|s| s.shadow_renders).sum()
     }

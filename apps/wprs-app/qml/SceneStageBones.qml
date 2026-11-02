@@ -29,6 +29,16 @@ Item {
         segments: bones.path.slice(1).map((p, i) => [bones.path[i], p])
     }
 
+    SceneBoneSwing3d {
+        anchors.fill: parent
+        bones: bones
+    }
+
+    SceneBonePose3d {
+        anchors.fill: parent
+        bones: bones
+    }
+
     Repeater {
         model: bones.list
 
@@ -56,7 +66,6 @@ Item {
                     bones.stage.page.mesh.bone = parent.modelData.name;
                 }
             }
-
         }
     }
 }

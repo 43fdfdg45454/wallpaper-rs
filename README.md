@@ -1255,7 +1255,8 @@ y los reflejos, sin reflejos en la calidad más baja. La cámara 3D (`camera3d`:
 cercano y lejano, ojo, centro y arriba) sirve para los modelos, los grupos 3D y las capas inclinadas,
 y los scripts la cambian para el fotograma siguiente. Un modelo quieto se dibuja una vez y se guarda,
 un grupo 3D se redibuja solo cuando algo suyo cambia, y cada clase de equipo admite 50 000, 150 000,
-500 000 o 2 000 000 de triángulos. Con `canvas.hdr` los colores más brillantes que el blanco se
+500 000 o 2 000 000 de triángulos (con las capas de pelo de la calidad más baja): si los modelos
+dibujan más, ese equipo muestra el póster de la escena. Con `canvas.hdr` los colores más brillantes que el blanco se
 conservan en imágenes de 16 bits y `canvas.tonemap` (`aces` o `agx`) los ajusta a la pantalla en una
 última pasada; sin `tonemap`, la escena se ve como siempre.
 
@@ -1892,7 +1893,8 @@ En la terminal hacen lo mismo `wprs-ctl scene light CARPETA CAPA add|set|remove|
 Los modelos 3D se añaden con *Modelo 3D desde un archivo*, que lee el `.glb` antes de importarlo y
 dice sus triángulos, materiales, texturas, huesos y clips y qué recibe cada clase de equipo, o con
 *Modelo 3D* y *Grupo 3D* del menú de capas. La vista previa de una escena con modelos tiene una vista
-de edición con su propia cámara, que no se guarda en la escena: el botón derecho la gira, el central
+de edición con su propia cámara, que se guarda con el proyecto pero solo la usa la vista previa (igual
+que la vista de depuración y la división del mapa de tonos): el botón derecho la gira, el central
 (o Mayús) la desplaza y la rueda la acerca, mientras la cámara de la escena se dibuja como una
 pirámide con asas para el ojo y el punto al que mira. El modelo elegido muestra flechas en x, y y z
 para moverlo, una asa para girarlo y otra para escalarlo; un clic en su caja lo elige. El inspector de
@@ -1914,7 +1916,12 @@ de las formas de mezcla y las marcas de los eventos), *Clip nuevo del archivo* c
 antena, cadena, gelatina), un deslizador por forma de mezcla y las capas de animación (clip, peso,
 velocidad, fundidos, modo aditivo y máscara de huesos), que ahora también aparecen bajo los huesos de
 las mallas. En la vista de edición el modelo elegido dibuja sus huesos, que se eligen con un clic, y el
-camino que recorre con el movimiento de raíz. Cada material elige pelo (capas por calidad, largo,
+camino que recorre con el movimiento de raíz; el hueso elegido muestra un anillo que lo gira (por el
+borde) o lo inclina (por dentro) y un cuadrado que lo mueve, y cada arrastre pone una clave en el clip
+en el cursor de reproducción. Los huesos que se balancean dibujan el abanico de su límite de giro con
+dos asas para cambiarlo, y su panel tiene el viento de cada hueso, los límites y la flecha del viento
+sobre la vista previa. Las asas de mover, girar y escalar parten del valor del modelo en ese momento:
+si tiene claves ponen una clave y si sigue un enlace no lo tocan. Cada material elige pelo (capas por calidad, largo,
 densidad y un panel para peinarlo), vegetación (balanceo, velocidad, la flecha del viento y la máscara
 de los colores de vértice sobre la vista previa) o croma (color clave, tolerancia, suavizado y el mate
 sobre la vista previa); *Shader de material nuevo* escribe una plantilla y cada shader del paquete dice
@@ -1922,12 +1929,14 @@ si compila o en qué línea y columna falla, con un aviso de que corre en la tar
 luces enciende las sombras por luz, con el tamaño del mapa y lo que dibuja cada clase de equipo, el
 desplazamiento y una vista que pinta de rojo lo que queda en sombra y dibuja los volúmenes de los
 mapas. El panel de la cámara 3D edita recorridos: claves tomadas de la vista actual, que se arrastran
-sobre la curva dibujada en la vista de edición, bucle, suavizado, orden, fundido y un botón para
+sobre la curva dibujada en la vista de edición (el ojo y el punto al que miran, cada uno a su
+profundidad) y en su propia fila de la línea de tiempo de la escena, bucle, suavizado, orden, fundido y un botón para
 recorrerlos desde la cámara. El panel de coste suma por nivel los mapas de sombra, las capas de pelo y
 los vértices con piel. En la terminal: `wprs-ctl scene animate CARPETA CAPA layer|root|preset|morph|clips|bones`,
 `scene clip … --animation NOMBRE --from S`, `scene key … --angles X,Y,Z --shift X,Y,Z`, `scene material
 … --shader fur|foliage|chroma --key COLOR`, `scene shadows CARPETA LUZ`, `scene camera-path CARPETA
-add|key|remove|set|order|fade|show`, `scene new-material CARPETA NOMBRE [--check]` y `scene debug3d`.
+add|key|remove|set|order|fade|show`, `scene new-material CARPETA NOMBRE [--check]`,
+`scene physics CARPETA CAPA add HUESO --rotation MIN,MAX` y `scene debug3d`.
 
 #### Pasar modelos FBX y OBJ a glTF con Blender
 

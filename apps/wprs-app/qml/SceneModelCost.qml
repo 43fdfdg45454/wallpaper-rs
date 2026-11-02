@@ -53,7 +53,7 @@ ColumnLayout {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
             color: modelData.fits ? Kirigami.Theme.textColor : Kirigami.Theme.negativeTextColor
-            text: App.tr("%1 at %2: %3, %4 of textures at most %5 px", modelData.tier.toUpperCase(), modelData.quality.toUpperCase(), modelData.fits ? App.tr("fits") : App.tr("too heavy"), cost.memory(modelData.memory), modelData.texture) + (modelData.reasons.length > 0 ? " (" + modelData.reasons.join("; ") + ")" : "") + ", " + App.tr("%1 lights with shadows", modelData.shadows ?? 0)
+            text: App.tr("%1 at %2: %3, %4 of textures at most %5 px", modelData.tier.toUpperCase(), modelData.quality.toUpperCase(), modelData.fits ? App.tr("fits") : modelData.poster ? App.tr("shows its poster") : App.tr("too heavy"), cost.memory(modelData.memory), modelData.texture) + (modelData.reasons.length > 0 ? " (" + modelData.reasons.join("; ") + ")" : "") + ", " + App.tr("%1 lights with shadows", modelData.shadows ?? 0)
         }
     }
 }

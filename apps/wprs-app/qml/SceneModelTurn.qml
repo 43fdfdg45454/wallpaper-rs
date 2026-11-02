@@ -17,11 +17,12 @@ Item {
         ratio: turn.ratio
         label: App.tr("Turn")
         tint: Kirigami.Theme.neutralTextColor
-        tip: App.tr("Drag sideways to turn the model, up and down to tip it")
+        tip: turn.gizmo.free("rotation") ? App.tr("Drag sideways to turn the model, up and down to tip it") : App.tr("The rotation follows a binding; change it in the inspector")
+        opacity: turn.gizmo.free("rotation") ? 1 : 0.4
         onMoved: (to, done) => {
-            if (!done)
+            if (!done || !turn.gizmo.free("rotation"))
                 return;
-            const r = turn.gizmo.three(turn.model.rotation, [0, 0, 0]);
+            const r = turn.gizmo.three("rotation");
             r[1] += (to[0] - turn.model.at[0]) * 0.5;
             r[0] += (to[1] - (turn.model.box[1] - 24 / turn.ratio)) * 0.5;
             turn.gizmo.stage.place(turn.model, "rotation", r);
@@ -34,13 +35,14 @@ Item {
         square: true
         label: App.tr("Size")
         tint: Kirigami.Theme.neutralTextColor
-        tip: App.tr("Drag away from the model to make it bigger")
+        tip: turn.gizmo.free("scale") ? App.tr("Drag away from the model to make it bigger") : App.tr("The scale follows a binding; change it in the inspector")
+        opacity: turn.gizmo.free("scale") ? 1 : 0.4
         onMoved: (to, done) => {
-            if (!done)
+            if (!done || !turn.gizmo.free("scale"))
                 return;
             const at = turn.model.at, corner = [turn.model.box[2], turn.model.box[3]];
             const k = Math.max(0.01, Math.hypot(to[0] - at[0], to[1] - at[1]) / Math.max(Math.hypot(corner[0] - at[0], corner[1] - at[1]), 1e-3));
-            turn.gizmo.stage.place(turn.model, "scale", turn.gizmo.three(turn.model.scale, [1, 1, 1]).map(v => v * k));
+            turn.gizmo.stage.place(turn.model, "scale", turn.gizmo.three("scale").map(v => v * k));
         }
     }
 }

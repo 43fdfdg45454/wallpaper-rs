@@ -384,6 +384,10 @@ msgstr "una malla tiene como mucho %1 huesos que se balancean"
 msgid "the kind of a scene package is scene"
 msgstr "el tipo de un paquete de escena es scene"
 
+#: crates/wprs-editor/src/check.rs crates/wprs-editor/src/stage3d/store.rs
+msgid "%1 %2"
+msgstr "%1 %2"
+
 #: crates/wprs-editor/src/check.rs
 msgid "%1 is not in the folder"
 msgstr "%1 no está en la carpeta"
@@ -1076,6 +1080,13 @@ msgid "%1 of a model goes from %2 to %3"
 msgstr "%1 de un modelo va de %2 a %3"
 
 #: crates/wprs-editor/src/stage3d/edit.rs
+msgid ""
+"the %1 of the model is keyed or bound: add a keyframe or change the binding"
+msgstr ""
+"el campo %1 del modelo tiene claves o un enlace: añade una clave o cambia el "
+"enlace"
+
+#: crates/wprs-editor/src/stage3d/edit.rs
 msgid "a model cannot be scaled to nothing"
 msgstr "un modelo no puede escalarse a nada"
 
@@ -1178,10 +1189,6 @@ msgstr "un mapa de sombras tiene de 256 a 4096 píxeles de lado"
 #: crates/wprs-editor/src/stage3d/shadows.rs
 msgid "the bias goes from 0 to 1"
 msgstr "el desplazamiento va de 0 a 1"
-
-#: crates/wprs-editor/src/stage3d/store.rs
-msgid "%1 %2"
-msgstr "%1 %2"
 
 #: crates/wprs-editor/src/stage3d/store.rs
 msgid "%1 is not a model of the scene"

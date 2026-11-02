@@ -80,7 +80,8 @@ pub(super) fn plan(s: &mut Staged, frame: &Frame, stage: &Stage3d) {
         let defaults = wprs_scene::Finish::default();
         for (m, f) in p.model.materials.iter().chain([&defaults]).enumerate() {
             let look = looks.iter().find(|l| usize::from(l.material) == m);
-            let shape = (p.opacity, flipped, p.model.radius());
+            let opacity = if stage.layer == p.layer.id { 1.0 } else { p.opacity };
+            let shape = (opacity, flipped, p.model.radius(), super::looks::grow(p));
             let (uniform, key, shells) = super::looks::finish(f, look, shape, (s.hdr, skinned));
             put(&mut finishes, u64::from(slot + m as u32) * FINISH_SLOT, &uniform);
             let cast = look.and_then(|l| l.cast).unwrap_or(true) && key.blend == 0;

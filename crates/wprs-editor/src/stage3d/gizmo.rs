@@ -79,9 +79,20 @@ fn model(doc: &Value, seen: &Seen, p: &wprs_scene::Placed, stage: &str) -> Optio
     let hi = shown.iter().fold([f32::MIN; 2], |m, q| [m[0].max(q[0]), m[1].max(q[1])]);
     let pointer = crate::actions::layer(doc, &p.layer.id).map(|(p, _)| p).unwrap_or_default();
     let layer = doc.pointer(&pointer).cloned().unwrap_or_default();
+    let held = |k: &str| match &layer[k] {
+        Value::Object(o)
+            if o.contains_key("keys")
+                && o.keys().all(|k| ["keys", "timeline", "loop"].contains(&k.as_str())) =>
+        {
+            "keyed"
+        }
+        Value::Object(_) => "bound",
+        _ => "fixed",
+    };
     Some(json!({ "id": p.layer.id, "pointer": pointer, "stage": stage, "at": px(at), "arms": arms,
         "length": round(length), "depth": round(depth), "box": [round(lo[0]), round(lo[1]), round(hi[0]), round(hi[1])],
-        "position": layer["position"], "rotation": layer["rotation"], "scale": layer["scale"] }))
+        "position": layer["position"], "rotation": layer["rotation"], "scale": layer["scale"], "now": super::turns::now(p),
+        "held": { "position": held("position"), "rotation": held("rotation"), "scale": held("scale") } }))
 }
 
 fn viewed(raw: &Value) -> View {
@@ -100,7 +111,11 @@ fn sight(frame: &wprs_scene::Frame, s: &wprs_scene::Stage3d, view: &View) -> See
 }
 
 pub(super) fn seen_for(doc: &Value, frame: &wprs_scene::Frame) -> Option<Seen> {
-    Some(sight(frame, frame.stages.first()?, &viewed(&doc["scene"])))
+    seen_at(doc, frame, 0)
+}
+
+pub(super) fn seen_at(doc: &Value, frame: &wprs_scene::Frame, stage: usize) -> Option<Seen> {
+    Some(sight(frame, frame.stages.get(stage)?, &viewed(&doc["scene"])))
 }
 
 pub(super) fn reach(frame: &wprs_scene::Frame) -> ([f32; 3], f32) {
@@ -132,7 +147,9 @@ pub fn stage(dir: &Path, doc: &Value, t: f64) -> Value {
         let seen = sight(&frame, s, &view);
         let shown = frame.placed[s.models.clone()].iter();
         models.extend(
-            shown.filter_map(|p| Some(super::bones::bones(&rt, &seen, p, model(doc, &seen, p, s.layer)?))),
+            shown.filter_map(|p| {
+                Some(super::bones::bones(&rt, &seen, p, doc, model(doc, &seen, p, s.layer)?))
+            }),
         );
         if !view.through && handles.is_null() {
             lines = frustum(&seen, &cam);

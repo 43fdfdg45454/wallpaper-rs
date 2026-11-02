@@ -58,7 +58,7 @@ its thumbnail and details in the library. Scenes without them read and draw as b
 | `parallax` | `{ "amount" (0 to 4, default 1), "delay" (0 to 2 s, default 0.15), "pointer" (0 to 1, default 1), "gyro" }`: how far and how softly layers with a `parallax` follow the pointer, how much the pointer counts and whether the tilt of the phone moves them too (on Android, through the same motion sensors as picture parallax, only while the scene is shown; the phone has no pointer, so there every scene with parallax layers follows the tilt as if `gyro` were on, or the launcher pages when the phone has no motion sensor, and neither moves them with the battery saver on); `pointer: 0` needs no pointer; a layer moves by its `parallax` times the canvas size times `amount` times the offset of the pointer from the middle (−0.5 to 0.5) times `pointer`, plus half the tilt; where the system asks for reduced motion, layers stay in place and neither the pointer nor the tilt moves them | `parallax2` |
 | `camera` | `{ "center", "zoom" (0.1 to 10), "rotation", "shake" }` moves, zooms and turns the whole scene as one transform without extra passes: the point `center` of the canvas (its middle by default) shows at the middle, `zoom` times larger and turned clockwise by `rotation` degrees; `shake` is `{ "enabled", "amplitude" (0 to 1000 px), "roughness" (0 to 1), "speed" (0 to 60 Hz) }`, a smooth noise of the scene time (four octaves, each weighed by `roughness` against the one before) that moves the scene by at most `amplitude` pixels and asks for a frame every frame while it runs; it is turned off where motion is reduced and at the lowest quality level, and the scene then stands still; all of them may be bound | `camera` |
 | `bloom` | `{ "threshold" (0 to 4), "strength" (0 to 8), "radius" (0 to 128 px), "tint", "hdr": { "threshold" (0 to 16), "strength" (0 to 8) } }`, a glow of the bright parts drawn after everything else, with the `bloom` effect and its `tint` over the whole canvas, as an adjustment layer at the top would; the `hdr` threshold and strength replace the plain ones at level `q3`, and at `q2` on mains power; it costs like that effect (four passes at half size), is dropped where the effect is and is drawn only when something below it changed | `bloom` |
-| `hdr`, `tonemap` | `hdr: true` keeps colors brighter than white in 16-bit intermediate images (always in the linear blend space where the graphics card has them; in the `srgb` blend space only on the T2 and T3 tiers, while T0, T1 and phones keep 8 bits there) and draws models in 16 bits, and `tonemap` (`none`, `aces` or `agx`, only with `hdr`) maps them to the screen in one last pass at every quality level; `none` keeps the picture of a scene without `hdr` | `hdr` |
+| `hdr`, `tonemap` | `hdr: true` keeps colors brighter than white in 16-bit intermediate images (in either blend space, on every tier and on phones, wherever the graphics card can draw and blend them; cards that cannot keep 8 bits and still apply the tone map) and draws models in 16 bits, and `tonemap` (`none`, `aces` or `agx`, only with `hdr`) maps them to the screen in one last pass at every quality level; `none` keeps the picture of a scene without `hdr` | `hdr` |
 | `clear` | `false` draws every frame over the previous one, which leaves trails: the canvas is filled with `background` only when the view starts or changes size, and no layer is kept as a still picture; each frame that changes is drawn whole instead of only the part that changed, so it costs more | `keep_frame` |
 | `perspective` | distance of the viewer in pixels (100 to 100000) for layers tilted with `transform.tilt` and moved with `transform.z`; without it the distance at which the canvas height fills the `fov` of `camera3d`, or 45° | `tilt` |
 | `ambient`, `sky` | colors of the light around the scene and from above, for lit layers | `ambient_light` |
@@ -115,7 +115,9 @@ files (`.glb`, at most 64 MiB each; FBX or OBJ convert to it with common 3D tool
 only the header and the JSON part of each file once (at most 4 MiB, and 16 MiB for all the models
 of a scene), refuse files that load anything from outside themselves or require an extension other
 than `KHR_materials_emissive_strength`, `KHR_materials_unlit`, `KHR_mesh_quantization` and
-`KHR_texture_transform`, skins of more than 256 bones, more than 64 blend shapes per primitive,
+`KHR_texture_transform` (only for mesh layers: a model layer refuses a file that requires it, and the
+editor warns about files that use it, read a second set of texture coordinates or clamp or mirror a
+texture, which models draw with the first set and repeated), skins of more than 256 bones, more than 64 blend shapes per primitive,
 more than 65 536 nodes or 4096 meshes, materials, animations or skins, more than 262 144 list
 entries for all the models of a scene and more than 2 000 000 triangles, and read the names of its nodes (attachment points), skin joints
 (bones), meshes (parts), materials, blend shapes (`extras.targetNames`, or `shape_<n>`) and
@@ -635,15 +637,22 @@ A flat layer inside a 3D group is drawn in front of the models in its order unle
 `depth_test`: it then stands on the plane through the point the camera looks at, moved toward the
 viewer by its `transform.z` in pixels of that plane, so that models in front of the plane cover it.
 The models are drawn in slices between such planes, at most 4 different ones (more layers share the
-nearest), and the layers between their slices. A 3D group inside another 3D group draws its own
+nearest), and the layers between their slices. Particle layers count as flat layers there: with
+`depth_test` the whole system stands on its plane, and its particles are not tested one by one
+against the depth of the models. A 3D group inside another 3D group draws its own
 picture, and the models of the outer one then draw alone.
 
 A model whose values do not move renders once and its picture is kept; a 3D group renders again only
 when a model, the camera, a light, the light around or the size changes, so that a still scene asks
-for no frames. The work of a model counts its triangles toward the cost of the scene. Device tiers
-take at most 50 000 triangles (T0), 150 000 (T1), 500 000 (T2) and 2 000 000 (T3), skins of at most 256
-bones and shadows of 0, 0, 1 and 2 lights; the editor and the validator tell which tiers a scene fits,
-and heavier scenes there run at a lower quality, or as their poster when even the lowest is too much.
+for no frames. The work of a model counts the triangles it draws, fur shells included, toward the
+cost of the scene, one unit for every 60 000. Device tiers take at most 50 000 triangles (T0), 150 000
+(T1), 500 000 (T2) and 2 000 000 (T3), skins of at most 256 bones and shadows of 0, 0, 1 and 2 lights;
+the editor and the validator tell which tiers a scene fits. A tier shows the poster of a scene whose
+models draw more triangles than it takes at the lowest quality, where fur keeps a quarter of its
+shells; other heavy scenes run there at a lower quality, or as their poster when even the lowest
+costs too much. A model inside a 3D group with an `opacity` below 1 is drawn see-through, blended in
+linear light, and no longer hides what lies behind it; a lone model keeps its depth and is faded as a
+whole.
 
 `camera3d` at the root of the scene (`camera3d`) is the camera of models, 3D groups and tilted
 layers: `fov` (1 to 179 degrees, may be bound), `near` and `far` planes, `eye`, `center` (both may be

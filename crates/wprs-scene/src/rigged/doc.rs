@@ -15,6 +15,8 @@ pub(crate) struct Gltf {
     pub materials: Vec<Material>,
     pub textures: Vec<Texture>,
     pub images: Vec<Image>,
+    #[serde(rename = "extensionsRequired")]
+    pub required: Vec<String>,
 }
 
 #[derive(Deserialize, Default)]

@@ -21,6 +21,7 @@ pub const SKIN_FLOATS: usize = 8;
 pub const MAX_TEXTURE: u32 = 4096;
 pub const PHONE_TEXTURE: u32 = 2048;
 pub const MAX_MODEL_VERTICES: usize = 1 << 23;
+pub const MAX_MODEL_TEXELS: u64 = 1 << 28;
 pub const MAX_POSED_MORPHS: usize = crate::rigged::MORPH_WIDTH * 2048;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -76,13 +77,17 @@ impl Model {
         let (text, bin) = chunks(bytes)?;
         let doc: crate::rigged::doc::Gltf =
             serde_json::from_slice(text).map_err(|e| format!("has invalid JSON: {e}"))?;
+        if doc.required.iter().any(|e| e == "KHR_texture_transform") {
+            return Err("requires KHR_texture_transform, which model layers draw without".into());
+        }
         let bin = Bin { doc: &doc, bin };
         let mut h = DefaultHasher::new();
         bytes.hash(&mut h);
         posed.hash(&mut h);
         let mut model = Model { digest: h.finish(), ..Model::default() };
-        model.textures = pictures::textures(&bin)?;
-        model.materials = surface::finishes(&doc, model.textures.len())?;
+        let (textures, map) = pictures::textures(&bin)?;
+        model.textures = textures;
+        model.materials = surface::finishes(&doc, &map)?;
         match posed {
             false => build::geometry(&bin, &mut model)?,
             true => {

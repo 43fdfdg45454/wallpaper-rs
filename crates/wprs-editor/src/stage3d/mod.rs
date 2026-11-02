@@ -13,11 +13,14 @@ mod info;
 mod material;
 mod newmat;
 mod paths;
+mod pose;
 mod shadows;
 mod spend;
 mod sphere;
 mod store;
+mod swing;
 mod thumbs;
+mod turns;
 mod view;
 
 pub use cost::cost;
@@ -27,8 +30,17 @@ pub use newmat::TEMPLATE;
 pub use store::file;
 pub use view::{View, preview};
 
-const QUERIES: [&str; 7] =
-    ["model_info", "stage3d", "materials3d", "cost3d", "shadows3d", "paths3d", "material_check"];
+const QUERIES: [&str; 9] = [
+    "model_info",
+    "stage3d",
+    "materials3d",
+    "cost3d",
+    "shadows3d",
+    "paths3d",
+    "material_check",
+    "bone3d",
+    "bound3d",
+];
 
 pub(crate) fn act(dir: &Path, doc: &Value, e: &Edit3d) -> Result<Vec<Op>> {
     match e {
@@ -69,6 +81,8 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         _ if q.get("model_info").is_some() => model_info(dir, doc, &q["model_info"]),
         _ if q.get("stage3d").is_some() => stage(dir, doc, t(&q["stage3d"])),
         _ if q.get("shadows3d").is_some() => shadows::shadows(dir, doc, t(&q["shadows3d"])),
+        _ if q.get("bone3d").is_some() => pose::bone(dir, doc, &q["bone3d"]),
+        _ if q.get("bound3d").is_some() => swing::bound(dir, doc, &q["bound3d"]),
         _ if q.get("paths3d").is_some() => paths::paths(dir, doc, t(&q["paths3d"])),
         _ if q.get("material_check").is_some() => {
             newmat::check(dir, doc, q["material_check"]["name"].as_str().unwrap_or_default())

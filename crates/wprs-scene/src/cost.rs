@@ -43,9 +43,7 @@ impl Scene {
             (layers.count() + usize::from(drawn)) as f32 * FED
         });
         let solid = match &l.kind {
-            Kind::Model(m) => {
-                self.solids.get(&m.model).map_or(0.0, |s| s.triangles as f32 / 50_000.0 + APART)
-            }
+            Kind::Model(_) => self.drawn_triangles(l, quality) as f32 / crate::TRIANGLE_UNIT + APART,
             _ => 0.0,
         };
         effects.sum::<f32>() + fed.sum::<f32>() + backdrop + solid + if apart { APART } else { 0.0 }

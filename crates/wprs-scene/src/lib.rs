@@ -22,6 +22,8 @@ mod cue;
 mod custom;
 mod deep;
 mod document;
+mod drafted;
+mod drawn;
 mod easing;
 mod effects;
 mod eval;

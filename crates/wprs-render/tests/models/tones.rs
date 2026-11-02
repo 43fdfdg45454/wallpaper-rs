@@ -39,10 +39,13 @@ fn bright_models_keep_their_light_past_white_with_hdr() {
 fn the_editor_split_shows_the_picture_before_the_tone_map_on_the_left() {
     let Some(r) = renderer() else { return };
     let mut s = bright(json!({ "hdr": true, "tonemap": "aces" }));
-    s.ext.insert("editor".into(), json!({ "tonemap_split": 0.5 }));
+    s.ext.insert("editor".into(), json!({ "tonemap_split": 0.5, "debug3d": "shadows" }));
+    let published = render(r, s.clone(), Quality::Q3);
+    s.drafted();
     let split = render(r, s, Quality::Q3);
     let none = render(r, bright(json!({ "hdr": true })), Quality::Q3);
     let aces = render(r, bright(json!({ "hdr": true, "tonemap": "aces" })), Quality::Q3);
+    assert_eq!(published, aces, "editor states saved in a package never change how it plays");
     assert_eq!(rgb(&split, 4, 4), rgb(&none, 4, 4));
     assert_eq!(rgb(&split, 60, 4), rgb(&aces, 60, 4));
 }

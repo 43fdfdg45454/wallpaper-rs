@@ -47,16 +47,16 @@ fn finite(v: &[f32]) -> bool {
     v.iter().all(|x| x.is_finite())
 }
 
-pub(super) fn finishes(doc: &Gltf, textures: usize) -> Result<Vec<Finish>, String> {
+pub(super) fn finishes(doc: &Gltf, textures: &[u16]) -> Result<Vec<Finish>, String> {
     let mut out = Vec::with_capacity(doc.materials.len());
     for (i, m) in doc.materials.iter().enumerate() {
         let name = m.name.clone().filter(|n| !n.is_empty()).unwrap_or_else(|| format!("material_{i}"));
         let slot = |r: &Option<Reference>| -> Result<Option<u16>, String> {
             match r {
-                Some(r) if r.index >= textures => {
-                    Err(format!("material {name} names the missing texture {}", r.index))
-                }
-                Some(r) => Ok(Some(r.index as u16)),
+                Some(r) => match textures.get(r.index) {
+                    Some(i) => Ok(Some(*i)),
+                    None => Err(format!("material {name} names the missing texture {}", r.index)),
+                },
                 None => Ok(None),
             }
         };

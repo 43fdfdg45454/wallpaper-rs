@@ -71,6 +71,13 @@ pub fn review(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
         Err(e) => out.push(problem(locate(&doc["scene"]), said("editor.scene", "%1", &[&e]))),
         Ok(mut scene) => {
             let unread = dir.and_then(|d| crate::cache::read_files(&mut scene, d)).into_iter();
+            for (id, file) in &scene.models {
+                let path = scene.assets.get(id).map_or(id.as_str(), |a| a.path.as_str());
+                let at = format!("/scene/assets/{id}");
+                out.extend(
+                    file.notes.iter().map(|n| warning(&at, said("editor.model_file", "%1 %2", &[&path, n]))),
+                );
+            }
             let issues = unread.chain(scene.validate(&props)).map(|issue| {
                 let text = issue.to_string();
                 let path = text.split_whitespace().next().filter(|p| p.starts_with('/')).unwrap_or("");

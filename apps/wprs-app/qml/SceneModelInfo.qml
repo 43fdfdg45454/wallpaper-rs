@@ -41,4 +41,17 @@ ColumnLayout {
             text: App.tr("%1: %2, textures at most %3 px, %4 of texture memory", modelData.tier.toUpperCase(), modelData.fits ? App.tr("fits") : App.tr("too heavy"), modelData.texture, card.size(modelData.memory)) + (modelData.reasons.length > 0 ? " (" + modelData.reasons.join("; ") + ")" : "")
         }
     }
+
+    Repeater {
+        model: card.info?.notes ?? []
+
+        delegate: QQC2.Label {
+            required property string modelData
+
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            color: Kirigami.Theme.neutralTextColor
+            text: modelData
+        }
+    }
 }

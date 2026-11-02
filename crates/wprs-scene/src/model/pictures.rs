@@ -1,4 +1,4 @@
-use super::{MAX_TEXTURE, ModelTexture};
+use super::{MAX_MODEL_TEXELS, MAX_TEXTURE, ModelTexture};
 use crate::rigged::read::Bin;
 
 fn word(b: &[u8], at: usize) -> Option<u32> {
@@ -47,13 +47,21 @@ fn webp(b: &[u8]) -> Option<[u32; 2]> {
     }
 }
 
-pub(super) fn textures(bin: &Bin) -> Result<Vec<ModelTexture>, String> {
+pub(super) fn textures(bin: &Bin) -> Result<(Vec<ModelTexture>, Vec<u16>), String> {
     let doc = bin.doc;
-    let mut out = Vec::with_capacity(doc.textures.len());
+    if doc.textures.len() > crate::MAX_MODEL_PARTS {
+        let most = crate::MAX_MODEL_PARTS;
+        return Err(format!("has {} textures, at most {most} are allowed", doc.textures.len()));
+    }
+    let (mut out, mut views, mut map, mut texels) = (Vec::new(), Vec::new(), Vec::new(), 0u64);
     for (t, texture) in doc.textures.iter().enumerate() {
         let image = texture.source.and_then(|s| doc.images.get(s));
         let view =
             image.and_then(|i| i.view).ok_or_else(|| format!("texture {t} has no picture in the file"))?;
+        if let Some(at) = views.iter().position(|v| *v == view) {
+            map.push(at as u16);
+            continue;
+        }
         let bytes = bin.view(view)?.to_vec();
         let size =
             picture_size(&bytes).ok_or_else(|| format!("texture {t} is not a PNG, JPEG or WebP picture"))?;
@@ -66,7 +74,13 @@ pub(super) fn textures(bin: &Bin) -> Result<Vec<ModelTexture>, String> {
         if size.contains(&0) {
             return Err(format!("texture {t} has no pixels"));
         }
+        texels += u64::from(size[0]) * u64::from(size[1]);
+        if texels > MAX_MODEL_TEXELS {
+            return Err(format!("has more than {MAX_MODEL_TEXELS} texture pixels"));
+        }
+        map.push(out.len() as u16);
+        views.push(view);
         out.push(ModelTexture { bytes, size });
     }
-    Ok(out)
+    Ok((out, map))
 }

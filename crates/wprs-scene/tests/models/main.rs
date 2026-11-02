@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use wprs_scene::*;
 
+mod crafted;
 mod flight;
 mod frames;
 mod limits;

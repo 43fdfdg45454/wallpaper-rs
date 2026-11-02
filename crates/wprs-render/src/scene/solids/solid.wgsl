@@ -107,7 +107,7 @@ fn fs_solid(in: Out, @builtin(front_facing) front: bool) -> @location(0) vec4<f3
     }
     s.normal = n;
     if kind > 1.5 && kind < 2.5 && in.shell > 0.5 {
-        let k = in.shell / max(finish.shade.y, 1.0);
+        let k = in.shell / (max(finish.shade.y, 1.0) + 1.0);
         let cells = floor(in.uv * (40.0 + finish.shade.w * 360.0));
         if hashed(cells) < k + (1.0 - finish.shade.w) * 0.5 {
             discard;
@@ -120,6 +120,11 @@ fn fs_solid(in: Out, @builtin(front_facing) front: bool) -> @location(0) vec4<f3
     }
     s = material(s);
     if finish.flags.x > 0.0 && s.albedo.a < finish.flags.x {
+        discard;
+    }
+    if finish.flags.w > 0.5 {
+        s.albedo.a = finish.flags.w - 1.0;
+    } else if s.albedo.a < 0.004 {
         discard;
     }
     return lit(s, in, front);

@@ -21,11 +21,18 @@ fn the_scene_camera_is_set_rolled_and_taken_from_the_view() {
         json!({ "fov": 0 }),
         json!({ "fov": 180 }),
         json!({ "far": 0.1 }),
+        json!({ "near": 300 }),
         json!({ "up": [0, 0, 0] }),
         json!({ "roll": 400 }),
     ] {
         assert!(edit(&mut p, json!({ "camera": bad.clone() })).is_err(), "{bad}");
     }
+    edit(&mut p, json!({ "camera": { "near": 150, "far": 400 } })).unwrap();
+    assert!(p.doc.pointer("/scene/camera3d/near") == Some(&json!(150.0)));
+    edit(&mut p, json!({ "camera": { "near": 0.5, "far": 200 } })).unwrap();
+    let doc: wprs_scene::Scene = serde_json::from_value(p.doc["scene"].clone()).unwrap();
+    let issues: Vec<String> = doc.validate(&Default::default()).iter().map(|i| i.to_string()).collect();
+    assert!(!issues.iter().any(|i| i.contains("camera3d")), "{issues:?}");
     edit(&mut p, json!({ "view": { "orbit": [90, 0] } })).unwrap();
     edit(&mut p, json!({ "camera": { "from_view": true } })).unwrap();
     let eye = p.doc["scene"]["camera3d"]["eye"].clone();

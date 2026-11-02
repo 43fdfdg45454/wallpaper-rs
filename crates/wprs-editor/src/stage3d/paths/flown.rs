@@ -20,6 +20,10 @@ pub fn paths(dir: &Path, doc: &Value, t: f64) -> Value {
     let frame = rt.frame([0.0, 0.0, size[0], size[1]], Quality::Q3);
     let seen = seen_for(doc, &frame);
     let at = |p: [f32; 3]| seen.as_ref().and_then(|s| s.at(p)).map(px);
+    let reach = |p: [f32; 3]| {
+        let s = seen.as_ref()?;
+        Some(round(s.eye.unit(s.size[1]) * s.eye.depth(p).max(s.eye.near) / s.eye.distance()))
+    };
     let fov = scene.camera3d.as_ref().map_or(60.0, |c| match &c.fov {
         wprs_scene::Value::Fixed(f) => *f,
         _ => 60.0,
@@ -36,7 +40,7 @@ pub fn paths(dir: &Path, doc: &Value, t: f64) -> Value {
                 .keys
                 .iter()
                 .map(|k| json!({ "t": k.t, "eye": k.eye.0.map(round), "center": k.center.0.map(round), "fov": k.fov,
-                    "at": at(k.eye.0), "aim": at(k.center.0) }))
+                    "at": at(k.eye.0), "aim": at(k.center.0), "reach_eye": reach(k.eye.0), "reach_center": reach(k.center.0) }))
                 .collect();
             let span = if p.closed { period } else { period - first };
             let sample = |k: usize| path_pose(p, first + span * k as f32 / SAMPLES as f32, base);

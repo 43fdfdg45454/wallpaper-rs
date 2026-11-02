@@ -26,6 +26,9 @@ ctl scene material "$draft" doll --list | grep -q '"sphere"' || fail "the materi
 ctl scene camera3d "$draft" --fov 45 --eye 0,1,6 --center 0,0,0 || fail "the 3D camera was not set"
 if ctl scene camera3d "$draft" --fov 200 2>/dev/null; then fail "a field of view of 200 was kept"; fi
 ctl scene camera3d "$draft" --roll -15 || fail "the 3D camera was not rolled"
+ctl scene camera3d "$draft" --far 2 || fail "the far plane was not set"
+if ctl scene camera3d "$draft" --near 5 2>/dev/null; then fail "a near plane past the far one was kept"; fi
+ctl scene camera3d "$draft" --far 1000 || fail "the far plane was not set back"
 ctl scene view3d "$draft" --orbit 40,10 --zoom 0.5 || fail "the authoring view did not move"
 ctl scene group3d "$draft" show | grep -q '"center": \[' || fail "the camera handles were not shown from the authoring view"
 ctl scene view3d "$draft" --frame doll || fail "the authoring view did not frame the model"
@@ -48,12 +51,15 @@ ctl scene clip "$draft" walker bend --add || fail "no clip was added to the mode
 ctl scene clip "$draft" walker bend --animation bend --from 0.5 || fail "the clip did not take the animation of the file"
 if ctl scene clip "$draft" walker bend --animation nothing 2>/dev/null; then fail "a missing animation was played"; fi
 ctl scene key "$draft" walker bend 0.5 --bone tip --angles 0,0,30 || fail "no 3D key was set"
+ctl scene key "$draft" walker bend 0.5 --bone tip --shift 0,0.1,0 || fail "no 3D shift was keyed"
 ctl scene animate "$draft" walker layer --add bend || fail "no animation layer was added"
 ctl scene animate "$draft" walker layer --index 0 --weight 0.5 --rate 2 --blend-in 0.3 --bones tip || fail "the animation layer was not tuned"
 if ctl scene animate "$draft" walker layer --index 0 --weight 3 2>/dev/null; then fail "a weight of 3 was kept"; fi
 ctl scene animate "$draft" walker clips | grep -q '"files"' || fail "the clips of the model were not listed"
 ctl scene animate "$draft" walker root true || fail "root motion was not turned on"
 ctl scene animate "$draft" walker preset tip hair || fail "the physics preset was not applied"
+ctl scene physics "$draft" walker add tip --rotation -20,40 --wind 0.5 || fail "the swing of a model bone was not bounded"
+ctl scene group3d "$draft" show | grep -q '"swing"' || fail "the swing bound of a model bone was not shown"
 ctl scene animate "$draft" walker morph bulge 0.6 || fail "the blend shape was not weighed"
 if ctl scene animate "$draft" walker morph nothing 0.5 2>/dev/null; then fail "a missing blend shape was weighed"; fi
 ctl scene group3d "$draft" show | grep -q '"bones"' || fail "the bones of the model were not shown in the authoring view"
@@ -71,6 +77,7 @@ ctl scene debug3d "$draft" shadows || fail "the 3D debug view did not show shado
 ctl scene debug3d "$draft" none || fail "the 3D debug view did not go back to the light"
 ctl scene camera-path "$draft" add tour || fail "no camera path was added"
 ctl scene camera-path "$draft" key tour 4 --eye 2,1,6 --center 0,0,0 --fov 40 || fail "no path key was set"
+ctl scene camera-path "$draft" key tour 3 --from 4 || fail "the path key was not moved in time"
 ctl scene camera-path "$draft" set tour --loop true --ease in_out_sine || fail "the path does not loop"
 ctl scene camera-path "$draft" order random || fail "the paths were not ordered"
 ctl scene camera-path "$draft" fade --to cross --duration 0.5 || fail "the paths were not faded"

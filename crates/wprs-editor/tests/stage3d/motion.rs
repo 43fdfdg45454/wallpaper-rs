@@ -11,7 +11,7 @@ fn named(p: &mut wprs_editor::Project, animation: &str) {
     act(p, json!({ "set": { "pointer": pointer, "value": animation } })).unwrap();
 }
 
-fn rigged(root: &tempfile::TempDir) -> wprs_editor::Project {
+pub fn rigged(root: &tempfile::TempDir) -> wprs_editor::Project {
     let mut p = project(root);
     std::fs::write(p.dir.join("rig.glb"), wprs_scene::ForgeRig::new(2.0, 0.5).glb()).unwrap();
     act(&mut p, json!({ "set": { "pointer": "/scene/assets/rig", "value": { "path": "rig.glb" } } }))

@@ -2,7 +2,7 @@ use super::gizmo::{Seen, px, world};
 use serde_json::{Value, json};
 use wprs_scene::{Placed, Runtime, mul4, placement};
 
-pub(super) fn bones(rt: &Runtime, seen: &Seen, p: &Placed, mut out: Value) -> Value {
+pub(super) fn bones(rt: &Runtime, seen: &Seen, p: &Placed, doc: &Value, mut out: Value) -> Value {
     let Some(rig) = p.model.rig.as_ref() else { return out };
     let Some(puppet) = rt.puppet(&p.layer.id) else { return out };
     let worlds = puppet.joint_worlds();
@@ -14,6 +14,11 @@ pub(super) fn bones(rt: &Runtime, seen: &Seen, p: &Placed, mut out: Value) -> Va
         list.push(json!({ "name": j.name, "at": px(at), "from": up.map(px) }));
     }
     out["bones"] = json!(list);
+    let pointer = out["pointer"].as_str().unwrap_or_default().to_owned();
+    let raw = doc.pointer(&pointer).cloned().unwrap_or_default();
+    out["swing"] = json!(super::swing::arcs(rt, seen, p, &raw));
+    out["clips"] =
+        json!(raw["clips"].as_array().into_iter().flatten().map(|c| c["id"].clone()).collect::<Vec<_>>());
     let layer = &p.layer;
     let root = matches!(&layer.kind, wprs_scene::Kind::Model(m) if m.root_motion);
     let clip = match &layer.kind {

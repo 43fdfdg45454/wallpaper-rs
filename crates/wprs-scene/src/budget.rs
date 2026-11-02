@@ -51,7 +51,8 @@ impl Budget {
     }
 
     pub fn still(&self, runtime: &Runtime) -> bool {
-        runtime.cost(Quality::Q0) > self.tier.budget()
+        let most = crate::model_caps(self.tier, false).triangles;
+        runtime.cost(Quality::Q0) > self.tier.budget() || runtime.scene.model_triangles(Quality::Q0) > most
     }
 
     fn chosen(&self, refresh: u32) -> u32 {

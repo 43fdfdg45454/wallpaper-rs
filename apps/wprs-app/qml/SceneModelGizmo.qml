@@ -11,15 +11,19 @@ Item {
     readonly property bool chosen: stage.selected === model.pointer
     readonly property var tints: [Kirigami.Theme.negativeTextColor, Kirigami.Theme.positiveTextColor, Kirigami.Theme.linkColor]
 
-    function three(v, or) {
-        return Array.isArray(v) ? v.slice() : typeof v === "number" ? [v, v, v] : or.slice();
+    function three(field) {
+        return model.now[field].slice();
+    }
+
+    function free(field) {
+        return model.held[field] !== "bound";
     }
 
     function slide(k, to, done) {
         const at = model.at, arm = model.arms[k];
         const d = [arm[0] - at[0], arm[1] - at[1]];
         const along = ((to[0] - at[0]) * d[0] + (to[1] - at[1]) * d[1]) / Math.max(d[0] * d[0] + d[1] * d[1], 1e-6);
-        const p = three(model.position, [0, 0, 0]);
+        const p = three("position");
         p[k] += (along - 1) * model.length;
         if (done)
             stage.place(model, "position", p);
@@ -57,8 +61,12 @@ Item {
             ratio: gizmo.ratio
             label: ["X", "Y", "Z"][index]
             tint: gizmo.tints[index]
-            tip: App.tr("Drag to move the model along this direction")
-            onMoved: (to, done) => gizmo.slide(index, to, done)
+            tip: gizmo.free("position") ? App.tr("Drag to move the model along this direction") : App.tr("The position follows a binding; change it in the inspector")
+            opacity: gizmo.free("position") ? 1 : 0.4
+            onMoved: (to, done) => {
+                if (gizmo.free("position"))
+                    gizmo.slide(index, to, done);
+            }
         }
     }
 

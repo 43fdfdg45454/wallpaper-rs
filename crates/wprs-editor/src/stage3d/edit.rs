@@ -26,6 +26,17 @@ fn round(v: &[f64]) -> Value {
 fn change(dir: &Path, doc: &Value, s: &ModelSet) -> Result<Vec<Op>> {
     let (path, _) = model_layer(doc, &s.layer)?;
     let mut ops = Vec::new();
+    for (field, given) in [("position", s.position), ("rotation", s.rotation), ("scale", s.scale)] {
+        let held = doc.pointer(&format!("{path}/{field}")).is_some_and(Value::is_object);
+        ensure!(
+            given.is_none() || !held,
+            said(
+                "editor.model_held",
+                "the %1 of the model is keyed or bound: add a keyframe or change the binding",
+                &[&field]
+            )
+        );
+    }
     let mut put = |field: &str, v: Value| ops.extend(set(doc, &format!("{path}/{field}"), v));
     if let Some(p) = s.position {
         finite("position", &p, -1e6, 1e6)?;

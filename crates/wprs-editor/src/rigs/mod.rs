@@ -132,7 +132,7 @@ pub fn preview(scene: &mut Value, look: &Value) {
         None
     }
     let found = scene.get_mut("layers").and_then(|list| find(list, id));
-    let Some(layer) = found.filter(|l| l["type"] == "mesh") else { return };
+    let Some(layer) = found.filter(|l| l["type"] == "mesh" || l["type"] == "model") else { return };
     if look["still"] == true
         && let Some(map) = layer.as_object_mut()
     {

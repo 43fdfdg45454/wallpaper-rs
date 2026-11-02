@@ -1,4 +1,5 @@
 mod json;
+mod notes;
 
 use json::{Doc, within};
 use std::collections::{BTreeMap, BTreeSet};
@@ -30,7 +31,9 @@ pub struct ModelFile {
     pub parts: BTreeSet<String>,
     pub materials: BTreeSet<String>,
     pub triangles: u64,
+    pub vertices: u64,
     pub skinned: bool,
+    pub notes: Vec<String>,
 }
 
 fn name(named: &Option<String>, kind: &str, i: usize) -> String {
@@ -112,16 +115,19 @@ impl Doc {
         }
         file.nodes = nodes.into_iter().collect();
         let count = |i: Option<usize>| i.and_then(|i| self.accessors.get(i)).map_or(0, |a| a.count);
+        let mut sizes = Vec::with_capacity(self.meshes.len());
         for (i, mesh) in self.meshes.iter().enumerate() {
             file.parts.insert(name(&mesh.name, "mesh", i));
             let names = mesh.extras.as_ref().map_or(&[][..], |e| &e.names);
+            let mut size = (0u64, 0u64);
             for p in &mesh.primitives {
                 let n = count(p.indices).max(count(p.attributes.position));
-                file.triangles = file.triangles.saturating_add(match p.mode.unwrap_or(4) {
+                size.0 = size.0.saturating_add(match p.mode.unwrap_or(4) {
                     4 => n / 3,
                     5 | 6 => n.saturating_sub(2),
                     _ => 0,
                 });
+                size.1 = size.1.saturating_add(count(p.attributes.position));
                 let joints = p.attributes.joints.is_some() && p.attributes.weights.is_some();
                 file.skinned |= joints && !self.skins.is_empty();
                 if p.targets.len() > MAX_MORPHS {
@@ -134,9 +140,18 @@ impl Doc {
                     (0..p.targets.len()).map(|t| names.get(t).map_or(format!("shape_{t}"), String::clone));
                 file.shapes.extend(shapes);
             }
+            sizes.push(size);
         }
+        let placed = self.nodes.iter().filter_map(|n| sizes.get(n.mesh?));
+        let add = |a: (u64, u64), b: &(u64, u64)| (a.0.saturating_add(b.0), a.1.saturating_add(b.1));
+        let (drawn, kept) = (placed.fold((0, 0), add), sizes.iter().fold((0, 0), add));
+        (file.triangles, file.vertices) = (drawn.0.max(kept.0), drawn.1.max(kept.1));
         if file.triangles > MAX_TRIANGLES {
             return Err(format!("has {} triangles, at most {MAX_TRIANGLES} are allowed", file.triangles));
+        }
+        if file.vertices > crate::MAX_MODEL_VERTICES as u64 {
+            let most = crate::MAX_MODEL_VERTICES;
+            return Err(format!("has {} vertices, at most {most} are allowed", file.vertices));
         }
         for (i, a) in self.animations.iter().enumerate() {
             let ends = a.samplers.iter().filter_map(|s| self.accessors.get(s.input)?.max.first().copied());
@@ -144,6 +159,7 @@ impl Doc {
         }
         file.materials =
             self.materials.iter().enumerate().map(|(i, m)| name(&m.name, "material", i)).collect();
+        file.notes = notes::notes(self);
         Ok(file)
     }
 }
