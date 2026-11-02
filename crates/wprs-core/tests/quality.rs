@@ -44,6 +44,10 @@ fn a_screen_can_keep_its_own_quality_and_drop_it_again() {
     assert!(c.set_option("playback.quality.a\u{7}b", "q1").is_err());
     assert_eq!(c.quality("DP-1"), QualityChoice::Fixed(0));
     assert!(!c.options().keys().any(|k| k.starts_with("playback.quality.")), "own levels are not listed");
+    c.set_option("playback.quality.HDMI-A-2", "min-q1").unwrap();
+    let own: Vec<_> = c.own_qualities().into_iter().collect();
+    assert_eq!(own, [("DP-1".into(), "q0".into()), ("HDMI-A-2".into(), "min-q1".into())]);
+    c.set_option("playback.quality.HDMI-A-2", "none").unwrap();
     c.set_option("playback.quality.DP-1", "none").unwrap();
     assert_eq!(c.quality("DP-1"), QualityChoice::AtLeast(2));
     assert!(c.outputs.is_empty(), "an empty screen section is dropped");

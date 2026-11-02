@@ -36,6 +36,18 @@ expect "$level" "($floored)"
 ctl quality q1 -o TEST-Q >/dev/null
 expect "$level, s['outputs']['TEST-Q']['quality_choice']" "('q1', 'user', 'q1')"
 grep -q '^\[outputs.TEST-Q\]' "$config" || fail "the own level of the screen was not saved: $(cat "$config")"
+ctl config playback.quality.TEST-GONE q2
+[ "$(ctl config playback.quality.TEST-GONE)" = "playback.quality.TEST-GONE = q2" ] ||
+  fail "the own level of a screen that is not connected cannot be read: $(ctl config playback.quality.TEST-GONE)"
+ctl quality -o TEST-GONE | grep -q "^playback.quality.TEST-GONE = q2, not connected" ||
+  fail "wprs-ctl quality -o for a screen that is not connected: $(ctl quality -o TEST-GONE)"
+kept=$(ctl profile save Kept)
+ctl profile use "$kept"
+expect "$level, s['qualities']" "('q1', 'user', {'TEST-GONE': 'q2', 'TEST-Q': 'q1'})"
+ctl profile off
+ctl config playback.quality.TEST-GONE none
+[ "$(ctl config playback.quality.TEST-GONE)" = "playback.quality.TEST-GONE = none" ] ||
+  fail "the own level of a screen was not cleared: $(ctl config playback.quality.TEST-GONE)"
 if ctl quality q7 -o TEST-Q 2>/dev/null; then fail "an invalid level was accepted"; fi
 ctl config playback.quality.TEST-Q none
 expect "$level, s['outputs']['TEST-Q']['quality_choice']" "($floored, None)"

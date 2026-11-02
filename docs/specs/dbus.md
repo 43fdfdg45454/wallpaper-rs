@@ -541,7 +541,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `playback.scene_sound` | let scenes play their sound layers (see "Scene sound"); `false` keeps every scene silent, whatever its permissions and volume, and leaves the sound of videos alone | `true` |
 | `playback.scene_capture` | let scenes that were granted `audio` follow the sound that plays (see "Inputs"); `false` closes the audio capture for every scene | `true` |
 | `playback.quality` | the quality level of scenes: `auto` lets the engine choose it from the cost of the scene, the GPU class, the GPU time of the frames, battery, power saving and heat (see "Cost and frame rate" in `scene.md`); `q0` to `q3` fix it, and `min-q1` or `min-q2` keep the automatic choice but never below that level; a level the user sets holds on battery, with power saving, while warm and over the cost, and a heavy scene shows fewer frames a second instead; it is not synced and profiles leave it out | `auto` |
-| `playback.quality.<output>` | the same values for the scenes of one output, or `none` (or an empty value) to follow `playback.quality` again; kept as `quality` in `[outputs."<output>"]`, not listed in `options`; web pages follow `playback.quality` | none |
+| `playback.quality.<output>` | the same values for the scenes of one output, or `none` (or an empty value) to follow `playback.quality` again; kept as `quality` in `[outputs."<output>"]`, not listed in `options` but in `qualities`, read back with `wprs-ctl config playback.quality.<output>` even while the output is not connected, kept when a profile is used; web pages follow `playback.quality` | none |
 | `playback.duck` | fade the sound of every wallpaper (videos, scene sounds and web pages) out in 0.5 s while another application plays sound, and back in when it stops; a PipeWire watcher counts the running playback streams of other processes (not the daemon, its helpers or their children), reading neither their names nor their sound | `false` |
 | `transition.kind` | `fade`, `none` | `fade` |
 | `transition.duration_ms` | `0` to `10000` | `600` |
@@ -2214,7 +2214,8 @@ daemon found when it started, each with its `name`, `kind` (`"integrated"`, `"de
 one it renders with. `gpu_warning` says, in the language of the daemon, that no card matched
 `render.gpu`, or that the matching card could not be opened, and the automatic choice was taken, or
 is `null`; `gpu_restart` is true while `render.gpu` differs from the value the daemon started with,
-without regard to case. `console` holds, only for
+without regard to case. `qualities` maps every output that has its own `playback.quality.<output>`
+in the configuration, connected or not, to that value. `console` holds, only for
 the `preview:` outputs of the scene editor, the last 50 lines its scripts wrote with `console`, as
 `<level> <module>: <text>`; other outputs leave it empty so that scripts that write often never wake
 the bus.
@@ -2228,6 +2229,7 @@ struct State {
     options: BTreeMap<String, Value>,
     outputs: BTreeMap<String, OutputState>, calibrating: bool, compute: bool,
     adapters: Vec<GpuAdapter>, gpu_warning: Option<String>, gpu_restart: bool,
+    qualities: BTreeMap<String, String>,
 }
 struct GpuAdapter { name: String, kind: String, backend: String, used: bool }
 struct OutputState {

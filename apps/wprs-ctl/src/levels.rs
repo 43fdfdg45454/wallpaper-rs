@@ -56,7 +56,11 @@ pub async fn run(client: &Client, args: QualityArgs) -> Result<()> {
             json!({ "output": name, "choice": o.quality_choice, "quality": o.quality, "reason": o.quality_reason,
                 "cost": o.quality_cost, "budget": o.quality_budget, "note": note(o) })
         });
-        println!("{}", json!({ "quality": general(&state), "outputs": rows.collect::<Vec<_>>() }));
+        let own = &state.qualities;
+        println!(
+            "{}",
+            json!({ "quality": general(&state), "own": own, "outputs": rows.collect::<Vec<_>>() })
+        );
         return Ok(());
     }
     let rows: Vec<_> = shown.collect();
@@ -66,8 +70,22 @@ pub async fn run(client: &Client, args: QualityArgs) -> Result<()> {
     });
     print!("{}", table(&["OUTPUT", "CHOICE", "LEVEL", "WHY"], cells));
     println!("{} = {}", QualityChoice::KEY, clean(&general(&state)));
+    if !output.is_empty() && !state.outputs.contains_key(output) {
+        let own = state.qualities.get(output).map_or("none", String::as_str);
+        println!("{}{output} = {}, not connected", QualityChoice::OWN, clean(own));
+    }
     rows.iter().filter_map(|(name, o)| Some((name, note(o)?))).for_each(|(name, n)| println!("{name}: {n}"));
     Ok(())
+}
+
+pub fn own(state: &serde_json::Value, key: &str, json: bool) -> bool {
+    let Some(output) = key.strip_prefix(QualityChoice::OWN) else { return false };
+    let own = state["qualities"].get(output).cloned().unwrap_or_default();
+    match json {
+        true => println!("{}", serde_json::Value::Object([(key.to_owned(), own)].into_iter().collect())),
+        false => println!("{key} = {}", own.as_str().unwrap_or("none")),
+    }
+    true
 }
 
 pub async fn notice(client: &Client, key: &str) -> Result<()> {

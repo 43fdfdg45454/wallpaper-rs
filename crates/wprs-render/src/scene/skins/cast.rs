@@ -33,7 +33,7 @@ impl Renderer {
             let k = scale * super::size::grown(d.world, *size, scale, pixels);
             let fits = sized(*size, k, frame.quality, edge);
             if video.is_none() {
-                self.mip_skin((&mut view.images, &view.sources), skin, named, fits);
+                self.mip_skin((&mut view.images, &view.sources, &view.samplings), skin, named, fits);
             }
             let found =
                 video.or_else(|| named.and_then(|t| view.images.get(t)).map(|i| &i.0)).or(skin.own.as_ref());

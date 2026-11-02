@@ -565,9 +565,10 @@ el motivo es `user`. La app lo ofrece en *Ajustes* → *Calidad de las escenas* 
 escena, con su propio valor (*Como todas las pantallas* vuelve al general); el teléfono, en sus
 ajustes. `wprs-ctl quality q3`, `wprs-ctl quality min-q1 -o DP-1`, `wprs-ctl quality none -o DP-1`
 o `wprs-ctl config playback.quality q2` y `wprs-ctl config playback.quality.DP-1 q1` lo cambian, y
-`wprs-ctl quality` muestra la elección, el nivel y el motivo de cada pantalla. El ajuste no se
-sincroniza ni entra en los perfiles, porque depende de cada equipo, y las páginas web siguen el
-general. Con batería o con el perfil de ahorro de energía de power-profiles-daemon
+`wprs-ctl quality` muestra la elección, el nivel y el motivo de cada pantalla;
+`wprs-ctl config playback.quality.DP-1` lee el valor propio de una pantalla aunque no esté
+conectada. El ajuste no se sincroniza ni entra en los perfiles, porque depende de cada equipo: al
+usar un perfil, cada pantalla conserva su propio valor; las páginas web siguen el general. Con batería o con el perfil de ahorro de energía de power-profiles-daemon
 las escenas bajan de nivel y de fotogramas; si un sensor del sistema dice que la GPU o la CPU están
 cerca de su temperatura crítica, bajan más hasta que se enfrían. Cuando el escritorio pide reducir
 el movimiento (`reduced-motion` del portal de ajustes), las escenas se quedan quietas en su

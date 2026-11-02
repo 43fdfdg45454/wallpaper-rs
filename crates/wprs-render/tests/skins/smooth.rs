@@ -19,11 +19,11 @@ fn disk() -> RgbaImage {
     })
 }
 
-fn shown(r: &Renderer, quality: Quality) -> Vec<u8> {
+fn shown(r: &Renderer, quality: Quality, pic: serde_json::Value) -> Vec<u8> {
     let glb = Sketch::cut(&vec![255; (OUT * OUT) as usize], [OUT, OUT], Cut::Grid, 8).glb();
     let layer = json!({ "id": "fox", "type": "mesh", "mesh": "mesh", "texture": "pic", "size": [OUT, OUT] });
     let doc = json!({ "schema": SCHEMA, "canvas": { "size": [OUT, OUT], "background": "#000000" },
-        "assets": { "pic": { "path": "pic.png" }, "mesh": { "path": "mesh.glb" } }, "layers": [layer] });
+        "assets": { "pic": pic, "mesh": { "path": "mesh.glb" } }, "layers": [layer] });
     let mut scene = Scene::from_json(&doc.to_string()).unwrap();
     scene.adopt(&BTreeMap::new(), move |_: &str, _: usize| Ok::<_, String>(glb.clone())).unwrap();
     let assets =
@@ -65,8 +65,22 @@ fn jaggedness(px: &[u8]) -> f32 {
 #[test]
 fn a_mesh_keeps_smooth_edges_at_the_lowest_quality() {
     let Some(r) = renderer() else { return };
-    let [low, high] = [Quality::Q0, Quality::Q3].map(|q| jaggedness(&shown(r, q)));
+    let [low, high] =
+        [Quality::Q0, Quality::Q3].map(|q| jaggedness(&shown(r, q, json!({ "path": "pic.png" }))));
     eprintln!("edge spread at q0 {low:.1}, at q3 {high:.1}");
     assert!(low < 30.0, "the edge of the mesh shows steps at q0: {low:.1} (q3: {high:.1})");
     assert!(high < 30.0, "the edge of the mesh shows steps at q3: {high:.1}");
+}
+
+#[test]
+fn a_mesh_picture_the_author_keeps_without_mipmaps_is_not_mipped() {
+    let Some(r) = renderer() else { return };
+    let pic = |mipmaps: Option<bool>| match mipmaps {
+        Some(m) => json!({ "path": "pic.png", "mipmaps": m }),
+        None => json!({ "path": "pic.png" }),
+    };
+    let [auto, off, on] = [None, Some(false), Some(true)].map(|m| jaggedness(&shown(r, Quality::Q0, pic(m))));
+    eprintln!("edge spread at q0: automatic {auto:.1}, mipmaps off {off:.1}, mipmaps on {on:.1}");
+    assert!(off > auto + 10.0, "a picture marked without mipmaps was mipped: {off:.1} against {auto:.1}");
+    assert!(on < 30.0, "a picture marked with mipmaps shows steps: {on:.1}");
 }

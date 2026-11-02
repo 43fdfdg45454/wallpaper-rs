@@ -192,6 +192,7 @@ impl Daemon {
             adapters: self.gpus.adapters.clone(),
             gpu_warning: self.gpus.warning.clone(),
             gpu_restart: self.gpus.restart(&st.config.render.gpu),
+            qualities: st.config.own_qualities(),
         };
         serde_json::to_string(&state).unwrap_or_default()
     }

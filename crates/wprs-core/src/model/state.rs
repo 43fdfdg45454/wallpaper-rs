@@ -36,6 +36,8 @@ model! {
         pub gpu_warning: Option<String>,
         #[serde(default)]
         pub gpu_restart: bool,
+        #[serde(default)]
+        pub qualities: BTreeMap<String, String>,
     }
 
     pub struct GpuAdapter { pub name: String, pub kind: String, pub backend: String, pub used: bool }

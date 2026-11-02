@@ -25,9 +25,11 @@ impl Daemon {
         let profile = model(self.store.read(|lib| lib.profile(key.trim()))?, None);
         let (mut sections, held) = self.plan(&profile)?;
         self.update_config(|c| {
+            let own: Vec<_> = c.outputs.iter().filter_map(|(n, o)| Some((n.clone(), o.quality?))).collect();
             sections.iter_mut().for_each(|(name, section)| section.scenes = c.scene_section(name).clone());
             (c.default, c.profile) = (sections.remove("").unwrap_or_default(), Some(profile.uid.clone()));
             c.outputs = sections;
+            own.into_iter().for_each(|(name, q)| c.outputs.entry(name).or_default().quality = Some(q));
             for (key, value) in profile.options.iter().filter(|(key, _)| *key != DOWNLOADS) {
                 if let Err(e) = c.set_option(key, value) {
                     tracing::warn!(key, "skipped a profile setting: {e}");
@@ -54,6 +56,7 @@ impl Daemon {
         self.update_config(|c| {
             for (name, mut section) in freed.iter().filter_map(|o| Some((o, sections.remove(o)?))) {
                 section.scenes = c.scene_section(name).clone();
+                section.quality = c.own_quality(name);
                 match name.is_empty() {
                     true => c.default = section,
                     false => drop(c.outputs.insert(name.clone(), section)),

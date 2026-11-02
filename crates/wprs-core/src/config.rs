@@ -149,6 +149,10 @@ impl Config {
         self.outputs.get(output).filter(|_| !output.is_empty()).and_then(|o| o.quality)
     }
 
+    pub fn own_qualities(&self) -> BTreeMap<String, String> {
+        self.outputs.iter().filter_map(|(name, o)| Some((name.clone(), o.quality?.as_str().into()))).collect()
+    }
+
     pub fn set_filter(&mut self, output: &str, filter: Filter) {
         let kept = (!filter.is_identity() || !output.is_empty()).then_some(filter.sanitized());
         self.section(output, |o| o.filter = None).filter = kept;
