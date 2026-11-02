@@ -54,7 +54,7 @@ fn lamps_follow_their_layer_parents_and_visibility() {
     let frame = runtime.frame([0.0, 0.0, 200.0, 100.0], Quality::Q3);
     let names: Vec<&str> = frame.lamps.iter().map(|l| l.layer.id.as_str()).collect();
     assert_eq!(names, ["top", "inside"]);
-    let inside = frame.lamps[1];
+    let inside = &frame.lamps[1];
     assert_eq!(inside.at(), [110.0, 20.0]);
     let [x, y, z] = inside.heading();
     assert!((x + 1.0).abs() < 1e-4 && y.abs() < 1e-4 && z.abs() < 1e-4, "{x} {y} {z}");

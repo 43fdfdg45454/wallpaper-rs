@@ -12,7 +12,7 @@ pub use crate::action::{ACTIONS, Action, EDITOR, KeyEase};
 pub use crate::action::{
     AmbientEdit, AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit,
     IkEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, MaskStroke, MeshCut, NormalsMake,
-    ParticleEdit, PartsEdit, PointEdit, Response, Spot, Strand, TendEdit, WeightStroke, WindEdit,
+    ParticleEdit, PartsEdit, PointEdit, Response, Spot, Strand, SwarmLight, TendEdit, WeightStroke, WindEdit,
 };
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {

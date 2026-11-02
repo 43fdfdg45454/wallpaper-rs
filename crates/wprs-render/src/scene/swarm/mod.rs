@@ -1,3 +1,4 @@
+mod bent;
 mod binds;
 mod census;
 mod chart;
@@ -5,11 +6,13 @@ mod dispatch;
 mod fence;
 mod flight;
 mod kit;
+mod lamp;
 mod looks;
 mod maps;
 mod paint;
 mod setup;
 mod show;
+pub(crate) use lamp::Lamp;
 pub(crate) use setup::sprites;
 mod sort;
 mod sprite;
@@ -79,12 +82,14 @@ pub(crate) struct Swarms {
     flights: Vec<Option<Flight>>,
     marks: Vec<(u64, u32)>,
     module: wgpu::ShaderModule,
-    layouts: [BindGroupLayout; 6],
+    layouts: [BindGroupLayout; 7],
     compute: Option<[wgpu::ComputePipeline; 3]>,
     flocking: Option<[wgpu::ComputePipeline; 5]>,
     twining: Option<wgpu::ComputePipeline>,
     sorts: Option<[wgpu::ComputePipeline; 3]>,
     pipelines: HashMap<Mode, wgpu::RenderPipeline>,
+    lits: HashMap<Mode, wgpu::RenderPipeline>,
+    bend: Option<wgpu::RenderPipeline>,
     ribbons: HashMap<Mode, wgpu::RenderPipeline>,
     cords: HashMap<Mode, [wgpu::RenderPipeline; 2]>,
     format: wgpu::TextureFormat,

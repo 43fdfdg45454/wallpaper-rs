@@ -63,7 +63,7 @@ impl Renderer {
             if particles {
                 let looks = (view.format, view.srgb);
                 view.swarms =
-                    swarm::Swarms::new(self, (scene, props), assets, &view.images, &pool.white.view, looks);
+                    swarm::Swarms::new(self, (scene, props), assets, &view.images, pool.lamped(), looks);
             }
             changed.iter().filter_map(|id| assets.images.get(id)).for_each(|p| p.release());
         })?;
@@ -117,7 +117,7 @@ impl Renderer {
             let sources = assets.images.clone();
             self.mipmap(&mut images, &samplings, &sources);
             let swarms =
-                swarm::Swarms::new(self, (scene, props), assets, &images, &pool.white.view, (format, srgb));
+                swarm::Swarms::new(self, (scene, props), assets, &images, pool.lamped(), (format, srgb));
             assets.images.values().for_each(|p| p.release());
             SceneView {
                 fit: scene.canvas.fit,

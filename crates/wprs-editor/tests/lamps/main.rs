@@ -6,10 +6,13 @@ use wprs_editor::Project;
 use wprs_editor::actions::Action;
 use wprs_editor::starters::starter;
 
+mod air;
+mod cast;
 mod edits;
 mod gizmos;
 mod maps;
 mod surfaces;
+mod swarm;
 
 fn state() {
     static STATE: OnceLock<TempDir> = OnceLock::new();

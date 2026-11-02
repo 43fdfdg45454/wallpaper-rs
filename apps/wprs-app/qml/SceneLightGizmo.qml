@@ -62,6 +62,11 @@ Item {
         border.width: 2
     }
 
+    SceneLightCone {
+        anchors.fill: parent
+        gizmo: gizmo
+    }
+
     SceneLightLines {
         anchors.fill: parent
         visible: gizmo.chosen

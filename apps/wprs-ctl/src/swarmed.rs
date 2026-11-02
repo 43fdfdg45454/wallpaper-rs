@@ -1,4 +1,5 @@
 use crate::author::Author;
+use crate::glowing::{Bend, Lit};
 use crate::steps::value;
 use crate::swarming::{Particle, Remap, Swarming};
 use anyhow::Result;
@@ -69,11 +70,21 @@ fn edit(system: String, what: Particle) -> P {
         Particle::Pace(p) => crate::fielding::pace(system, p),
         Particle::Texture { texture, layer } => crate::tended::texture(system, texture, layered(layer)),
         Particle::Handles { .. } | Particle::Budget { .. } | Particle::Rope(_) => unreachable!(),
+        Particle::Lit(_) | Particle::Refract(_) => unreachable!(),
     }
 }
 
 pub(crate) fn action(command: Swarming) -> Result<(PathBuf, Action), Box<Author>> {
     match command {
+        Swarming::Particles { what: Particle::Lit(l), dir, system } if !l.show => {
+            Ok((dir, Action::Particles(P::Light(crate::glowing::lit(system, &l)))))
+        }
+        Swarming::Particles { what: Particle::Refract(b), dir, system } if !b.show => {
+            Ok((dir, Action::Particles(P::Light(crate::glowing::bend(system, &b)))))
+        }
+        Swarming::Particles { what: what @ (Particle::Lit(_) | Particle::Refract(_)), dir, system } => {
+            Err(Box::new(Author::Swarming(Swarming::Particles { dir, system, what })))
+        }
         Swarming::Particles {
             what: what @ (Particle::Handles { .. } | Particle::Budget { .. } | Particle::Rope(_)),
             dir,
@@ -108,6 +119,9 @@ pub(crate) fn run(command: Swarming) -> Result<()> {
                 );
             }
             return Ok(());
+        }
+        Particle::Lit(Lit { layer, .. }) | Particle::Refract(Bend { layer, .. }) => {
+            wprs_editor::lamps::swarm_light(&project.dir, &project.doc, &system, layer.as_deref())
         }
         _ => return Ok(()),
     };

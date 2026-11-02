@@ -86,12 +86,17 @@ impl Painter<'_, '_, '_> {
     pub(crate) fn damage(&mut self, old: &[Mark], new: &mut Vec<Mark>, fresh: bool) -> Damage {
         new.clear();
         self.marks(0..self.frame.draws.len(), new);
-        if self.frame.draws.iter().any(|d| d.lit.is_some() && !d.hidden) {
-            let glow = &self.pool.glow;
-            new.extend(
-                glow.marks[..glow.count()].iter().map(|&(id, key, rect)| (id, key, Some(rect), Reach::Own)),
-            );
-        }
+        self.watch_gobos();
+        let lit = self.frame.draws.iter().any(|d| d.lit.is_some() && !d.hidden) || self.lit_swarms();
+        let glow = &self.pool.glow;
+        let marks =
+            glow.marks[..glow.count()].iter().zip(&glow.now.bulbs).filter(|(_, b)| lit || b.air[0] > 0.0);
+        let live = |b: &super::lamps::Bulb| glow.live && b.air[2] > 0.0;
+        new.extend(
+            marks.map(|(&(id, key, rect), b)| {
+                (id, if live(b) { MOVING } else { key }, Some(rect), Reach::Own)
+            }),
+        );
         if fresh || old.is_empty() {
             return Damage::Full;
         }

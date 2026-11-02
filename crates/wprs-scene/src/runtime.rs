@@ -85,7 +85,11 @@ impl Runtime {
             let masks = l.mask.iter().chain(l.effects.iter().filter_map(|e| e.mask.as_ref()));
             let fed =
                 l.effects.iter().flat_map(|e| e.params.values()).filter_map(|v| v.binding()?.layer.clone());
-            masks.filter_map(|m| m.layer.clone()).chain(fed)
+            let lit = match &l.kind {
+                crate::Kind::Light(light) => light.texture.as_ref().and_then(|t| t.binding()?.layer.clone()),
+                _ => None,
+            };
+            masks.filter_map(|m| m.layer.clone()).chain(fed).chain(lit)
         });
         let targets = targets.collect();
         let mut mattes = BTreeSet::new();

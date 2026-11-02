@@ -107,6 +107,16 @@ ColumnLayout {
         marks: tools.falloff?.marks ?? []
     }
 
+    SceneLightAir {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
+    SceneLightCast {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
     Flow {
         Layout.fillWidth: true
 

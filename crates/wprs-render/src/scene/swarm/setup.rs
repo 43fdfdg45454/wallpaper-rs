@@ -50,7 +50,7 @@ impl Swarms {
         (scene, props): (&Scene, &Values),
         assets: &SceneAssets,
         images: &HashMap<String, Image>,
-        white: &wgpu::TextureView,
+        (white, lights): (&wgpu::TextureView, &wgpu::Buffer),
         (format, srgb): (wgpu::TextureFormat, bool),
     ) -> Option<Swarms> {
         let drawn: Vec<&Blend> = scene
@@ -69,10 +69,14 @@ impl Swarms {
         let cells = crate::scene::sampling::samplings(scene, assets);
         let pixels = |id: &str| masks.get(id).map(|i| (i.width(), i.height(), i.as_raw().as_slice()));
         let sprites = sprites(scene, props);
+        let layers = scene.layers().any(|l| l.lighting.is_some() && matches!(l.kind, Kind::Particles { .. }));
+        let lamp = super::Lamp { layout: &layouts[6], lights, images, white, layers };
         let kits = renders(scene).into_iter().zip(&sprites).map(|((system, layer, render), sprite)| {
             let frames = sprite.as_ref().and_then(|t| cells.get(t)).map_or(&[][..], |c| &c.cells[..]);
             let sprite = sprite.as_deref().map(|t| (t, images.get(t)));
-            kit(r, &layouts[2], (system, layer), render, scene, (sprite, frames), white, srgb)
+            let mut kit = kit(r, &layouts[2], (system, layer), render, scene, (sprite, frames), white, srgb);
+            super::lamp::light(r, &mut kit, render, &lamp);
+            kit
         });
         let systems: Vec<_> = scene.particles.values().collect();
         let herds = flocks(scene).into_iter().enumerate().filter_map(|(i, f)| {
@@ -104,6 +108,8 @@ impl Swarms {
                     include_str!("sprite.wgsl"),
                     include_str!("ribbon.wgsl"),
                     include_str!("cord.wgsl"),
+                    include_str!("../lamps.wgsl"),
+                    include_str!("lit.wgsl"),
                 ]
                 .join("\n"),
             ),
@@ -112,6 +118,8 @@ impl Swarms {
             flocking: None,
             twining: None,
             pipelines: HashMap::new(),
+            lits: HashMap::new(),
+            bend: None,
             ribbons: HashMap::new(),
             cords: HashMap::new(),
             sorts: None,

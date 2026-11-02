@@ -10,6 +10,7 @@ use std::hash::{DefaultHasher, Hasher};
 use std::ops::Range;
 use wprs_scene::{Affine, Frame};
 
+mod air;
 mod geometry;
 mod passes;
 
@@ -129,6 +130,7 @@ impl<'a> Painter<'a, '_, '_> {
             let now = &self.pool.glow.now;
             let around = [now.ambient, now.sky];
             h.0.write(if lamps { bytemuck::bytes_of(now) } else { bytemuck::bytes_of(&around) });
+            h.0.write_u64(if lamps { self.pool.glow.seen } else { 0 });
         }
         for d in &self.frame.draws[range] {
             let effects = &self.frame.effects[d.effects.clone()];

@@ -1,4 +1,4 @@
-use crate::light::{Beam, Light, MAX_LIGHTS};
+use crate::light::{Beam, Light, MAX_LIGHTS, MAX_PROJECTIONS};
 use crate::typeset::{MAX_FALLBACK, TextLayer};
 use crate::validate::{Check, Issue};
 use crate::{Kind, Layer};
@@ -78,8 +78,7 @@ impl Check<'_> {
         }
         if let Some(texture) = &l.texture {
             self.uses(true, "light_textures");
-            self.named(&format!("{p}/texture"), texture);
-            self.moving(texture);
+            self.projected(&format!("{p}/texture"), texture);
         }
     }
 
@@ -88,6 +87,8 @@ impl Check<'_> {
         if count > MAX_LIGHTS {
             self.issues.push(Issue::Lights(count));
         }
+        let spots = self.scene.layers().filter(|l| matches!(&l.kind, Kind::Light(l) if l.texture.is_some()));
+        self.count("/layers", spots.count(), MAX_PROJECTIONS);
         let shadows = self.scene.layers().filter(|l| matches!(&l.kind, Kind::Light(l) if l.shadows)).count();
         if shadows > crate::figure::MAX_SHADOWS {
             self.issues.push(Issue::Shadows(shadows));

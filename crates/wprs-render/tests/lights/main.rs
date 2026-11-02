@@ -5,9 +5,12 @@ use wprs_core::Fit;
 use wprs_render::{Layer, Pixels, Renderer, SceneAssets, SceneView};
 use wprs_scene::{Quality, Runtime, SCHEMA, Scene, Values};
 
+mod air;
 mod beams;
 mod cached;
+mod gobos;
 mod surfaces;
+mod swarm;
 
 pub const SIZE: (u32, u32) = (160, 90);
 

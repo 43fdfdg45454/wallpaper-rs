@@ -11,6 +11,9 @@ struct Look {
     deep: vec4<f32>,
     strand: vec4<f32>,
     cord: vec4<f32>,
+    light: vec4<f32>,
+    place: vec4<f32>,
+    bend: vec4<f32>,
     sizes: array<vec4<f32>, 16>,
     colors: array<vec4<f32>, 64>,
 };
@@ -20,6 +23,7 @@ struct Corner {
     @location(0) uv: vec2<f32>,
     @location(1) color: vec4<f32>,
     @location(2) @interpolate(flat) frames: vec3<f32>,
+    @location(3) @interpolate(flat) turn: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> look: Look;
@@ -85,6 +89,8 @@ fn vs_particle(
     out.position = vec4<f32>(dot(look.m0.xyz, p), dot(look.m1.xyz, p), 0.0, 1.0);
     out.uv = s.uv;
     out.color = s.color;
+    let spun = radians(s.rotation) + look.turn.z;
+    out.turn = vec4<f32>(cos(spun), sin(spun), s.size * look.light.w, 0.0);
     let n = max(look.atlas.x * look.atlas.y, 1.0);
     var f = c.y;
     switch u32(look.atlas.z) {
@@ -114,8 +120,7 @@ fn cell(f: f32, uv: vec2<f32>) -> vec4<f32> {
     return textureSample(sprite, samp, (at + uv) / vec2<f32>(cols, max(look.atlas.y, 1.0)));
 }
 
-@fragment
-fn fs_particle(in: Corner) -> @location(0) vec4<f32> {
+fn painted(in: Corner) -> vec4<f32> {
     var s = mix(cell(in.frames.x, in.uv), cell(in.frames.y, in.uv), in.frames.z);
     if look.tint.y > 0.5 {
         s = vec4<f32>(encode(s.rgb), s.a);
@@ -127,4 +132,9 @@ fn fs_particle(in: Corner) -> @location(0) vec4<f32> {
     }
     c *= in.color;
     return vec4<f32>(c.rgb * c.a, c.a);
+}
+
+@fragment
+fn fs_particle(in: Corner) -> @location(0) vec4<f32> {
+    return painted(in);
 }

@@ -562,6 +562,7 @@ msgstr "Preajuste:"
 
 #: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/OutputFilter.qml
 #: apps/wprs-app/qml/SceneRig.qml apps/wprs-app/qml/SceneSwarmKin.qml
+#: apps/wprs-app/qml/SceneSwarmLight.qml
 #: apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
@@ -2792,6 +2793,7 @@ msgid "import a file of this kind first"
 msgstr "importa antes un archivo de este tipo"
 
 #: apps/wprs-app/qml/SceneLayerTools.qml apps/wprs-app/qml/SceneLightTools.qml
+#: apps/wprs-app/qml/SceneSwarmLight.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Light"
@@ -2848,6 +2850,70 @@ msgstr "Bajar"
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Move out of the group"
 msgstr "Sacar del grupo"
+
+#: apps/wprs-app/qml/SceneLightAir.qml
+msgid "%1: off"
+msgstr "%1: apagado"
+
+#: apps/wprs-app/qml/SceneLightAir.qml apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "half"
+msgstr "la mitad"
+
+#: apps/wprs-app/qml/SceneLightAir.qml apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "a quarter"
+msgstr "un cuarto"
+
+#: apps/wprs-app/qml/SceneLightAir.qml
+msgid "%1: %2 of the size, %3 samples"
+msgstr "%1: %2 del tamaño, %3 muestras"
+
+#: apps/wprs-app/qml/SceneLightAir.qml
+msgid "Light the air"
+msgstr "Iluminar el aire"
+
+#: apps/wprs-app/qml/SceneLightAir.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Density"
+msgstr "Densidad"
+
+#: apps/wprs-app/qml/SceneLightAir.qml apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Samples"
+msgstr "Muestras"
+
+#: apps/wprs-app/qml/SceneLightAir.qml
+msgid ""
+"Phones and older computers light the air at a quarter of the size; the "
+"preview shows the level picked below."
+msgstr ""
+"Los teléfonos y los ordenadores más antiguos iluminan el aire a un cuarto "
+"del tamaño; la vista previa muestra el nivel elegido abajo."
+
+#: apps/wprs-app/qml/SceneLightCast.qml
+msgid "Nothing"
+msgstr "Nada"
+
+#: apps/wprs-app/qml/SceneLightCast.qml
+msgid "%1 (video)"
+msgstr "%1 (vídeo)"
+
+#: apps/wprs-app/qml/SceneLightCast.qml
+msgid "%1 (layer)"
+msgstr "%1 (capa)"
+
+#: apps/wprs-app/qml/SceneLightCast.qml
+msgid "Projects"
+msgstr "Proyecta"
+
+#: apps/wprs-app/qml/SceneLightCast.qml
+msgid "The cone on the preview shows where the picture lands."
+msgstr "El cono en la vista previa muestra dónde cae la imagen."
+
+#: apps/wprs-app/qml/SceneLightCast.qml
+msgid ""
+"The beam does not reach the canvas; tilt it toward the canvas to see where "
+"the picture lands."
+msgstr ""
+"El haz no llega al lienzo; inclínalo hacia el lienzo para ver dónde cae la "
+"imagen."
 
 #: apps/wprs-app/qml/SceneLightGizmo.qml
 msgid "Drag to move the light"
@@ -2928,7 +2994,7 @@ msgstr "Iluminar la vista previa solo con ella"
 msgid "Leave it out of the preview"
 msgstr "Dejarla fuera de la vista previa"
 
-#: apps/wprs-app/qml/SceneLighting.qml
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneSwarmLight.qml
 msgid "Normal map"
 msgstr "Mapa de normales"
 
@@ -2975,8 +3041,48 @@ msgid "Glow"
 msgstr "Resplandor"
 
 #: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "air at %1 of the size, %2 taps"
+msgstr "aire a %1 del tamaño, %2 lecturas"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "no air"
+msgstr "sin aire"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "%1 lit particle lights"
+msgstr "%1 luces sobre partículas"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "no refraction"
+msgstr "sin refracción"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "refraction over %1 pixels"
+msgstr "refracción sobre %1 píxeles"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid ""
+"%1: lighting worked out once as the scene starts; nothing more each frame"
+msgstr ""
+"%1: la luz se calcula una vez al empezar la escena; nada más en cada "
+"fotograma"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "%1: %2 lights over %3 lit layers, %4 pixel lights each frame"
+msgstr ""
+"%1: %2 luces sobre %3 capas iluminadas, %4 luces por píxel en cada fotograma"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
 msgid "Lights"
 msgstr "Luces"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "air"
+msgstr "aire"
+
+#: apps/wprs-app/qml/SceneLightsPanel.qml
+msgid "projects"
+msgstr "proyecta"
 
 #: apps/wprs-app/qml/SceneLightsPanel.qml
 msgid "%1 of at most %2 lights"
@@ -2991,16 +3097,8 @@ msgid "Restart the preview"
 msgstr "Reiniciar la vista previa"
 
 #: apps/wprs-app/qml/SceneLightsPanel.qml
-msgid ""
-"%1: lighting worked out once as the scene starts; nothing more each frame"
-msgstr ""
-"%1: la luz se calcula una vez al empezar la escena; nada más en cada "
-"fotograma"
-
-#: apps/wprs-app/qml/SceneLightsPanel.qml
-msgid "%1: %2 lights over %3 lit layers, %4 pixel lights each frame"
-msgstr ""
-"%1: %2 luces sobre %3 capas iluminadas, %4 luces por píxel en cada fotograma"
+msgid "On phones: %1"
+msgstr "En teléfonos: %1"
 
 #: apps/wprs-app/qml/SceneMapBrush.qml
 msgid "Paint roughness on the preview"
@@ -3648,6 +3746,36 @@ msgstr "Este punto de control sigue un valor; moverlo sustituye el valor"
 msgid "Drag to move the control point"
 msgstr "Arrastra para mover el punto de control"
 
+#: apps/wprs-app/qml/SceneSwarmBend.qml
+msgid "Bend what is behind the particles"
+msgstr "Doblar lo que hay detrás de las partículas"
+
+#: apps/wprs-app/qml/SceneSwarmBend.qml
+msgid "Show the displacement over the preview"
+msgstr "Mostrar el desplazamiento sobre la vista previa"
+
+#: apps/wprs-app/qml/SceneSwarmBend.qml
+msgid "%1: left out"
+msgstr "%1: se omite"
+
+#: apps/wprs-app/qml/SceneSwarmBend.qml
+msgid "%1: shifts up to %2 px at full size"
+msgstr "%1: desplaza hasta %2 px a tamaño completo"
+
+#: apps/wprs-app/qml/SceneSwarmBend.qml
+msgid "%1: shifts up to %2 px at half size"
+msgstr "%1: desplaza hasta %2 px a la mitad del tamaño"
+
+#: apps/wprs-app/qml/SceneSwarmBend.qml
+msgid ""
+"Refracting particles are drawn only as the bend of what is behind them; Q1 "
+"and Q0, where phones often run, leave them out. Draw the system with a "
+"second layer to paint them too."
+msgstr ""
+"Las partículas que refractan solo se dibujan como la curvatura de lo que hay "
+"detrás; Q1 y Q0, donde suelen funcionar los teléfonos, las omiten. Dibuja el "
+"sistema con una segunda capa para pintarlas también."
+
 #: apps/wprs-app/qml/SceneSwarmBudget.qml
 msgid "Particle budget"
 msgstr "Presupuesto de partículas"
@@ -3682,14 +3810,31 @@ msgstr ""
 "vecinas, %6 tramos de cuerda"
 
 #: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "off"
+msgstr "apagada"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "at full size"
+msgstr "a tamaño completo"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "at half size"
+msgstr "a la mitad del tamaño"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
+msgid "%1: lit by up to %2 lights; refraction %3"
+msgstr "%1: iluminadas por hasta %2 luces; refracción %3"
+
+#: apps/wprs-app/qml/SceneSwarmBudget.qml
 msgid ""
 "Phones and older computers fall on T0 or T1, which keep fewer slots, "
-"neighbours, trail points and rope segments; software rendering runs on the "
-"processor."
+"neighbours, trail points and rope segments, light particles with up to 8 "
+"lights and refract only from Q2; software rendering runs on the processor."
 msgstr ""
-"Los teléfonos y los equipos más antiguos caen en T0 o T1, que guardan menos "
-"plazas, vecinas, puntos de estela y tramos de cuerda; el render por software "
-"va en el procesador."
+"Los teléfonos y los ordenadores más antiguos caen en T0 o T1, que guardan "
+"menos huecos, vecinos, puntos de estela y segmentos de cuerda, iluminan las "
+"partículas con hasta 8 luces y solo refractan desde Q2; el dibujado por "
+"software funciona en el procesador."
 
 #: apps/wprs-app/qml/SceneSwarmCollider.qml
 msgid "%1 %2"
@@ -3961,6 +4106,18 @@ msgstr ""
 "Los shaders de partículas vienen con el paquete. El motor los comprueba como "
 "los demás efectos del paquete y deja fuera el que no puede construir o que "
 "es demasiado lento; entonces las partículas se dibujan sin él."
+
+#: apps/wprs-app/qml/SceneSwarmLight.qml
+msgid "Take the lights of the scene"
+msgstr "Recibir las luces de la escena"
+
+#: apps/wprs-app/qml/SceneSwarmLight.qml
+msgid ""
+"Lit from the front and from behind: each sprite takes up to 8 lights on both "
+"faces."
+msgstr ""
+"Iluminada por delante y por detrás: cada sprite recibe hasta 8 luces en "
+"ambas caras."
 
 #: apps/wprs-app/qml/SceneSwarmLook.qml apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Look"
@@ -6456,10 +6613,6 @@ msgid "Eye jumps"
 msgstr "Saltos de mirada"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Samples"
-msgstr "Muestras"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Saturation range"
 msgstr "Rango de saturación"
 
@@ -7934,10 +8087,6 @@ msgstr "Recurso por defecto"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Delay"
 msgstr "Retardo"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Density"
-msgstr "Densidad"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Depth test"

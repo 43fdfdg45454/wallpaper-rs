@@ -1,8 +1,15 @@
 use crate::light::{Beam, Light, MAX_LIGHTS};
 use crate::resolve::Context;
-use crate::{Affine, Color, Kind, Layer, Lean, Lighting, Lit, Quality, Wake};
+use crate::{Affine, Color, Kind, Layer, Lean, Lighting, Lit, Quality, Value, Wake};
+use std::borrow::Cow;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum Picture<'a> {
+    Asset(Cow<'a, str>),
+    Layer(&'a str),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Lamp<'a> {
     pub layer: &'a Layer,
     pub beam: Beam,
@@ -14,6 +21,8 @@ pub struct Lamp<'a> {
     pub z: f32,
     pub cone: [f32; 2],
     pub length: f32,
+    pub air: Option<[f32; 2]>,
+    pub picture: Option<Picture<'a>>,
 }
 
 impl Lamp<'_> {
@@ -51,7 +60,7 @@ pub(crate) fn lamps<'a>(
             }
             Kind::Light(l) if out.len() < MAX_LIGHTS => {
                 let before = cx.wake.replace(Wake::Idle);
-                let found = lamp(cx, layer, l, outer).filter(|_| shown);
+                let found = lamp(cx, layer, l, outer, quality).filter(|_| shown);
                 let wake = if quality == Quality::Q0 { before } else { before.min(cx.wake.get()) };
                 cx.wake.set(wake);
                 out.extend(found);
@@ -64,12 +73,23 @@ pub(crate) fn lamps<'a>(
 fn lamp<'a>(
     cx: &Context<'a>,
     layer: &'a Layer,
-    l: &Light,
+    l: &'a Light,
     outer: (Affine, Option<Lean>),
+    quality: Quality,
 ) -> Option<Lamp<'a>> {
     let place = cx.place(layer, outer);
     let tilt = layer.transform.tilt.as_ref().map_or(0.0, |t| t.get(cx).0[0].clamp(-89.0, 89.0));
     let cone = l.cone.unwrap_or([30.0, 60.0]);
+    let picture = l.texture.as_ref().filter(|_| l.light == Beam::Spot).map(|t| match t {
+        Value::Bound(b) if b.layer.is_some() => Picture::Layer(b.layer.as_deref().unwrap_or_default()),
+        t => Picture::Asset(super::shown::named(cx, t)),
+    });
+    if let Some(Picture::Asset(id)) = &picture
+        && !cx.scene.pools.contains_key(id.as_ref())
+        && cx.rolls(id, false)
+    {
+        cx.paced(Wake::Frame, None);
+    }
     place.visible.then_some(Lamp {
         layer,
         beam: l.light,
@@ -81,6 +101,11 @@ fn lamp<'a>(
         z: l.z.get(cx).clamp(-1e5, 1e5),
         cone: [cone[0].clamp(0.0, 180.0), cone[1].clamp(0.0, 180.0).max(cone[0])],
         length: l.length.unwrap_or(256.0).clamp(1.0, 1e5),
+        air: l
+            .volumetric
+            .filter(|_| quality != Quality::Q0 && matches!(l.light, Beam::Point | Beam::Spot))
+            .map(|v| [v.density.clamp(0.0, 1.0), v.samples.clamp(4, 64) as f32]),
+        picture,
     })
 }
 

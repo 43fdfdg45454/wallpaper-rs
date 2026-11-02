@@ -1210,6 +1210,17 @@ se dibujan una vez y se guardan, una luz que se mueve solo redibuja la caja de s
 calidad más baja, la luz se calcula una sola vez al empezar y las luces que se mueven se quedan
 donde empezaron, sin pedir fotogramas. Una escena sin luces se ve exactamente como antes.
 
+Las luces puntuales y los focos pueden iluminar el aire (`volumetric`, con densidad y muestras): un
+resplandor con rayos que sale de la luz hasta su radio, calculado a la mitad del tamaño de la
+pantalla, a un cuarto en Q1 y en los teléfonos, y apagado en Q0; se guarda mientras la luz está
+quieta. Un foco proyecta una imagen, un vídeo o una capa con sus efectos (`texture`, hasta cuatro
+focos por escena) sobre las capas iluminadas, las partículas y el aire; una capa que recibe luz no se
+puede proyectar, para no formar un bucle. Las partículas reciben las luces (`render.lit`) en sus dos
+caras, hasta 8, con un mapa de normales que gira con cada partícula (`render.normal`), igual en la
+simulación por GPU que en la del procesador, y pueden refractar lo que tienen detrás con un mapa de
+normales (`render.refract`, como gotas en un cristal): a tamaño completo en Q3, a la mitad en Q2 y
+nada en Q1 y Q0.
+
 El escritorio y el teléfono dibujan también la mezcla por degradado, el revelado con el puntero,
 el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos, el fuego, el giro,
 la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela
@@ -1810,7 +1821,15 @@ Las capas de imagen, vídeo y texto tienen su parte de iluminación: los mapas d
 reflejo, de rugosidad y de luz propia, sus deslizadores, *Generar normales* a partir de la imagen
 (con fuerza, desenfoque y una vista del relieve antes de guardarlo como imagen del paquete) y un
 pincel que pinta en gris la rugosidad o la luz propia sobre la vista previa con su vista de calor.
-En la terminal hacen lo mismo `wprs-ctl scene light CARPETA CAPA add|set|remove|solo|mute|falloff`,
+Las luces puntuales y los focos tienen *Iluminar el aire* con deslizadores de densidad y muestras,
+la curva del resplandor y lo que hace cada nivel de calidad; los focos eligen qué proyectan (imágenes,
+vídeos y las capas que se pueden proyectar) y la vista previa dibuja la imagen dentro del cono, donde
+cae sobre el lienzo. Las herramientas de partículas tienen su parte de luz: recibir las luces, el
+mapa de normales con una vista de la partícula iluminada por delante y por detrás, y la refracción con
+su mapa, su cantidad y el desplazamiento dibujado sobre la vista previa; el presupuesto dice qué
+cuesta cada nivel y qué recortan los teléfonos.
+En la terminal hacen lo mismo `wprs-ctl scene light CARPETA CAPA add|set|remove|solo|mute|falloff|volumetric|projection`,
+`scene particles CARPETA SISTEMA lit|refract`,
 `scene lights` (las asas, la caja y las cuentas, o el coste con `--cost`), `scene lighting`,
 `scene normals CARPETA IMAGEN --generate`, `scene paint-map CARPETA CAPA roughness|emissive` y
 `scene ambient`.

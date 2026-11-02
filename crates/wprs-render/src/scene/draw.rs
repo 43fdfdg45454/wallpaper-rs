@@ -5,6 +5,7 @@ use super::{Op, Src};
 use wprs_scene::{Affine, Blend, Content, Layout, Mask, SpectrumStyle, Wrapping};
 
 mod compose;
+mod gobo;
 mod lit;
 mod masks;
 

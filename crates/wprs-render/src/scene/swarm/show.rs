@@ -31,7 +31,13 @@ impl Swarms {
         self.looked.iter().for_each(|(buffer, _)| r.queue.write_buffer(buffer, 0, &self.bytes));
     }
 
-    pub(crate) fn draw(&self, pass: &mut wgpu::RenderPass<'_>, flock: usize, slot: u32, mode: Mode) {
+    pub(crate) fn draw(
+        &self,
+        pass: &mut wgpu::RenderPass<'_>,
+        flock: usize,
+        slot: u32,
+        (mode, bend): (Mode, bool),
+    ) {
         let flight = self.flights.get(flock).and_then(Option::as_ref);
         let pipes = (self.pipelines.get(&mode), self.ribbons.get(&mode));
         let (Some(flight), Some((_, group)), (Some(pipeline), Some(ribbon)), Some(herd)) =
@@ -42,10 +48,20 @@ impl Swarms {
         let first = (u64::from(slot) / LOOK) as usize;
         for (p, store) in flight.stores.iter().enumerate() {
             let Some(kit) = self.kitted.get(first + p).and_then(|k| self.kits.get(*k)) else { continue };
+            if bend != kit.bend.is_some() {
+                continue;
+            }
             let look = self.looks.get(first + p).map_or(0.0, |l| l.extra[1]);
             pass.set_bind_group(0, group, &[slot + (p as u64 * LOOK) as u32]);
             pass.set_bind_group(1, &kit.tex, &[]);
             let (alloc, k) = (u64::from(herd.bake.allocs[p]), u64::from(herd.bake.trails[p]));
+            if let Some((bent, group)) = self.bend.as_ref().zip(kit.lit.as_ref()).filter(|_| bend) {
+                pass.set_pipeline(bent);
+                pass.set_bind_group(2, group, &[]);
+                pass.set_vertex_buffer(0, store.particles.slice(..));
+                pass.draw(0..4, 0..herd.bake.allocs[p]);
+                continue;
+            }
             let trail = match (&store.trail, &store.gpu) {
                 (Some(t), _) => Some((t, 16)),
                 (None, Some((state, ..))) if k > 0 => Some((state, (4 + u64::from(herd.bake.marks[p])) * 4)),
@@ -85,12 +101,18 @@ impl Swarms {
                 .as_ref()
                 .and_then(|(key, _)| self.stages.get(&(mode, *key)))
                 .zip(self.framed.as_ref());
-            match own {
-                Some((stage, framed)) => {
+            let lit = self.looks.get(first + p).is_some_and(|l| l.light[0] > 0.5);
+            let lamp = kit.lit.as_ref().zip(self.lits.get(&mode)).filter(|_| lit);
+            match (own, lamp) {
+                (Some((stage, framed)), _) => {
                     pass.set_pipeline(stage);
                     pass.set_bind_group(2, framed, &[]);
                 }
-                None => pass.set_pipeline(pipeline),
+                (None, Some((group, lamped))) => {
+                    pass.set_pipeline(lamped);
+                    pass.set_bind_group(2, group, &[]);
+                }
+                (None, None) => pass.set_pipeline(pipeline),
             }
             pass.set_vertex_buffer(0, sorted.map_or(&store.particles, |s| &s.sorted).slice(..));
             pass.draw(0..4, 0..herd.bake.allocs[p]);

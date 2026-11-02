@@ -119,12 +119,17 @@ impl Pipes {
             composite: module(
                 device,
                 format!(
-                    "{FRAME_WGSL}\n{BLEND_WGSL}\n{}\n{}\n{}\n{}\n{}",
-                    include_str!("scene.wgsl"),
-                    include_str!("picture.wgsl"),
-                    include_str!("text.wgsl"),
-                    include_str!("spectrum.wgsl"),
-                    include_str!("lit.wgsl")
+                    "{FRAME_WGSL}\n{BLEND_WGSL}\n{}",
+                    [
+                        include_str!("scene.wgsl"),
+                        include_str!("picture.wgsl"),
+                        include_str!("text.wgsl"),
+                        include_str!("spectrum.wgsl"),
+                        include_str!("lamps.wgsl"),
+                        include_str!("lit.wgsl"),
+                        include_str!("air.wgsl"),
+                    ]
+                    .join("\n")
                 ),
             ),
             shelf: Arc::default(),
@@ -135,7 +140,9 @@ impl Pipes {
                 entry(3, sampler),
             ]),
             textures: layout(&[flat(0), flat(1), flat(2)]),
-            lit: layout(&[entry(0, uniform(false)), flat(1), flat(2), flat(3), flat(4)]),
+            lit: layout(
+                &std::iter::once(entry(0, uniform(false))).chain((1..=8).map(flat)).collect::<Vec<_>>(),
+            ),
             fx_frame: layout(&[entry(0, uniform(false)), entry(1, sampler), entry(2, sampler)]),
             fx: layout(&fx),
             own: layout(&own),

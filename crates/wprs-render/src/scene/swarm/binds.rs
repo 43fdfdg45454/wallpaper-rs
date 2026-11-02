@@ -32,7 +32,7 @@ pub(super) fn module(r: &Renderer, wgsl: &str) -> wgpu::ShaderModule {
         .create_shader_module(wgpu::ShaderModuleDescriptor { label: Some("wprs-scene particles"), source })
 }
 
-pub(super) fn layouts(r: &Renderer) -> [BindGroupLayout; 6] {
+pub(super) fn layouts(r: &Renderer) -> [BindGroupLayout; 7] {
     let layout = |entries: &[wgpu::BindGroupLayoutEntry]| {
         let label = Some("wprs-scene particles");
         r.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { label, entries })
@@ -65,6 +65,11 @@ pub(super) fn layouts(r: &Renderer) -> [BindGroupLayout; 6] {
             entry(1, c, storage(true)),
             entry(2, c, storage(false)),
             entry(3, c, sim),
+        ]),
+        layout(&[
+            entry(0, S::FRAGMENT, plain(size_of::<crate::scene::lamps::Lights>() as u64)),
+            entry(1, S::FRAGMENT, texture),
+            entry(2, S::FRAGMENT, texture),
         ]),
     ]
 }

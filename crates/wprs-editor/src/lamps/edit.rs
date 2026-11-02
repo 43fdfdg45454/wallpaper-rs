@@ -66,9 +66,11 @@ pub(crate) fn change(dir: &Path, doc: &Value, s: &LightSet) -> Result<Vec<Op>> {
     let mut ops = Vec::new();
     if s.light.is_some() {
         ops.extend(set(doc, &format!("{path}/light"), json!(beam)));
-        let wrong = [("cone", Beam::Spot), ("length", Beam::Tube), ("texture", Beam::Spot)];
-        let found =
-            wrong.into_iter().filter(|(f, k)| *k != beam && doc.pointer(&format!("{path}/{f}")).is_some());
+        let (spot, tube, airy) = (&[Beam::Spot][..], &[Beam::Tube][..], &[Beam::Point, Beam::Spot][..]);
+        let wrong = [("cone", spot), ("length", tube), ("texture", spot), ("volumetric", airy)];
+        let found = wrong
+            .into_iter()
+            .filter(|(f, k)| !k.contains(&beam) && doc.pointer(&format!("{path}/{f}")).is_some());
         ops.extend(found.map(|(field, _)| Op::Remove { path: format!("{path}/{field}") }));
     }
     let mut put = |field: &str, v: Value| ops.extend(set(doc, &format!("{path}/{field}"), v));
@@ -162,6 +164,14 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &LightEdit) -> Result<Vec<Op>> {
             Some(_) => vec![Op::Remove { path: format!("{EDITOR}/lights/solo") }],
             None => Vec::new(),
         },
+        LightEdit::Volumetric { layer, density, samples, off } => {
+            let (path, beam) = light(doc, layer)?;
+            super::air::volumetric(doc, (&path, beam), (*density, *samples), *off)?
+        }
+        LightEdit::Projection { layer, asset, from, off } => {
+            let (path, beam) = light(doc, layer)?;
+            super::cast::projection(dir, doc, (&path, beam), (asset.as_deref(), from.as_deref()), *off)?
+        }
         LightEdit::Mute { layer, muted } => {
             light(doc, layer)?;
             let mut list = listed(doc);

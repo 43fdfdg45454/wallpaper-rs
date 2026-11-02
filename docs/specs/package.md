@@ -291,8 +291,8 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `hdr` | sets `canvas.hdr` or `canvas.tonemap` | refused | refused |
 | `keep_frame` | sets `canvas.clear` to `false` | runs | runs |
 | `lights` | has `light` layers | runs | runs |
-| `volumetric_lights` | sets `volumetric` on a light | refused | refused |
-| `light_textures` | sets `texture` on a spot light | refused | refused |
+| `volumetric_lights` | sets `volumetric` on a light | runs | runs |
+| `light_textures` | sets `texture` on a spot light | runs | runs |
 | `lighting2d` | sets `lighting` on a layer | runs | runs |
 | `ambient_light` | sets `canvas.ambient` or `canvas.sky` | runs | runs |
 | `capture` | sets `size` or `redraw` on an adjustment layer | runs | runs |
@@ -325,7 +325,7 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `particles2` | moves particles in world space, with control points, per-layer `instance` or `render`, scripts that use `particles`, emitter timing, newer emitter shapes, initializers and forces, operator windows, render `brightness`, `cycles`, `order` or a stretch range, `init.gradient`, a `mask` collider, or beyond the older limits (8 systems, 4 emitters, 8 forces, 4 colliders, 10 s of prewarm) | runs | runs |
 | `particle_children` | sets `children` on a system | runs | runs |
 | `particle_depth` | sets `perspective`, `init.depth` or `init.depth_speed` | runs | runs |
-| `particle_lighting` | sets `render.lit`, `render.normal` or `render.refract` | refused | refused |
+| `particle_lighting` | sets `render.lit`, `render.normal` or `render.refract`, or `lighting` on a particles layer | runs | runs |
 | `particle_layers` | emits from a `layer` | runs | runs |
 | `particle_fields` | uses `turbulent`, `offset_noise`, `init.remap`, `around` or `between` | runs | runs |
 | `particle_steering` | uses `keep_distance`, `keep_between` or a `remap` force | runs | runs |

@@ -3,6 +3,7 @@ use serde_json::Value;
 use std::path::PathBuf;
 use wprs_format::{Descriptor, Rating};
 
+mod glows;
 mod lamps;
 mod limbs;
 mod names;
@@ -10,6 +11,7 @@ mod rigging;
 mod swarm;
 mod tend;
 
+pub use glows::SwarmLight;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use names::ACTIONS;

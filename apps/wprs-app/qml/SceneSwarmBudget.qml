@@ -9,6 +9,10 @@ ColumnLayout {
 
     required property var tools
     readonly property var census: SceneSwarmCensus.census?.system === tools.system ? SceneSwarmCensus.census : null
+    readonly property var glow: {
+        const g = SceneSwarmGlow.info?.system === tools.system ? SceneSwarmGlow.info : null;
+        return g && (g.lit || g.refract) ? g : null;
+    }
 
     function measure() {
         SceneSwarmCensus.measure(tools.page, tools.system, null);
@@ -82,11 +86,23 @@ ColumnLayout {
         }
     }
 
+    Repeater {
+        model: glow ? glow.levels : []
+
+        delegate: QQC2.Label {
+            required property var modelData
+
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            text: App.tr("%1: lit by up to %2 lights; refraction %3", modelData.quality.toUpperCase(), modelData.lights, modelData.refract === null ? App.tr("off") : modelData.refract === 1 ? App.tr("at full size") : App.tr("at half size"))
+        }
+    }
+
     QQC2.Label {
         Layout.fillWidth: true
         visible: budget.census !== null
         wrapMode: Text.Wrap
         font: Kirigami.Theme.smallFont
-        text: App.tr("Phones and older computers fall on T0 or T1, which keep fewer slots, neighbours, trail points and rope segments; software rendering runs on the processor.")
+        text: App.tr("Phones and older computers fall on T0 or T1, which keep fewer slots, neighbours, trail points and rope segments, light particles with up to 8 lights and refract only from Q2; software rendering runs on the processor.")
     }
 }

@@ -17,6 +17,7 @@ mod facts;
 mod fielding;
 mod filtering;
 mod folder;
+mod glowing;
 mod gpus;
 pub mod input;
 pub mod inputs;

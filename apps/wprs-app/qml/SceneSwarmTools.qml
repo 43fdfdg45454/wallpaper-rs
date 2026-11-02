@@ -103,6 +103,11 @@ ColumnLayout {
         tools: tools
     }
 
+    SceneSwarmLight {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
     SceneSwarmKin {
         Layout.fillWidth: true
         tools: tools

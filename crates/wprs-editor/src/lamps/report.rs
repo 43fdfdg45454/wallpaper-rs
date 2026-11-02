@@ -76,7 +76,9 @@ pub fn lights(dir: &Path, doc: &Value, t: f64) -> Value {
         h["pointer"] = json!(crate::layers::find(doc, &l.id).unwrap_or_default());
         h["muted"] = json!(muted.contains(&l.id.as_str()));
         h["solo"] = json!(solo == Some(l.id.as_str()));
-        h["hidden"] = json!(crate::actions::layer(doc, &l.id).is_ok_and(|(_, v)| v["visible"] == false));
+        let own = crate::actions::layer(doc, &l.id).map(|(_, v)| v).unwrap_or(&Value::Null);
+        h["hidden"] = json!(own["visible"] == false);
+        (h["volumetric"], h["texture"]) = (own["volumetric"].clone(), own["texture"].clone());
         h
     });
     json!({ "lights": rows.collect::<Vec<_>>(), "count": all.len(), "max": MAX_LIGHTS, "tiers": tiers(all.len()),

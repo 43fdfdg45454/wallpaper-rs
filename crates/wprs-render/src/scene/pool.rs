@@ -72,6 +72,10 @@ impl Pool {
         }
     }
 
+    pub(crate) fn lamped(&self) -> (&wgpu::TextureView, &wgpu::Buffer) {
+        (&self.white.view, &self.glow.buffer)
+    }
+
     pub(crate) fn acquire(
         &mut self,
         device: &wgpu::Device,

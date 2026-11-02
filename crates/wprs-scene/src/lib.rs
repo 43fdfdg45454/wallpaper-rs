@@ -71,6 +71,7 @@ mod played;
 mod pointing;
 mod poses;
 mod probe;
+mod projected;
 mod props;
 mod puppet;
 mod quality;

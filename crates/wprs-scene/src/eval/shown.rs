@@ -107,7 +107,7 @@ pub(crate) fn masked<'a>(cx: &Context<'a>, mask: Option<&'a Mask>) -> Option<Cow
     mask?.texture.as_ref().map(|t| named(cx, t))
 }
 
-fn named<'a>(cx: &Context<'a>, value: &'a crate::Value<String>) -> Cow<'a, str> {
+pub(crate) fn named<'a>(cx: &Context<'a>, value: &'a crate::Value<String>) -> Cow<'a, str> {
     let plain = |b: &crate::Binding<String>| !b.tracked() && b.keys.is_none() && b.base.is_none();
     match value {
         crate::Value::Fixed(id) => Cow::Borrowed(id.as_str()),

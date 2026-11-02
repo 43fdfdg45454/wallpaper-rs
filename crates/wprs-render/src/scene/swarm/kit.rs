@@ -20,6 +20,9 @@ pub(super) struct Look {
     pub(super) deep: [f32; 4],
     pub(super) strand: [f32; 4],
     pub(super) cord: [f32; 4],
+    pub(super) light: [f32; 4],
+    pub(super) place: [f32; 4],
+    pub(super) bend: [f32; 4],
     pub(super) sizes: [[f32; 4]; 16],
     pub(super) colors: [[f32; 4]; 64],
 }
@@ -37,6 +40,8 @@ pub(super) struct Kit {
     pub(super) stage: Option<(u64, wgpu::ShaderModule)>,
     pub(super) shader: Option<String>,
     pub(super) refused: Option<(String, String)>,
+    pub(super) lit: Option<wgpu::BindGroup>,
+    pub(super) bend: Option<f32>,
 }
 
 type Sprite<'a> = (Option<(&'a str, Option<&'a Image>)>, &'a [[f32; 4]]);
@@ -110,8 +115,9 @@ pub(super) fn kit(
     let long = render.trail.as_ref().is_some_and(|t| t.long());
     let rope = render.rope;
     let shader = render.shader.clone();
+    let (stage, refused, lit, bend) = (None, None, None, None);
     let mut kit =
-        Kit { id, system, layer, look, order, trail, long, rope, tex, stage: None, shader, refused: None };
+        Kit { id, system, layer, look, order, trail, long, rope, tex, stage, shader, refused, lit, bend };
     super::stage::stage(r, scene, &mut kit, render.shader.as_deref());
     kit
 }

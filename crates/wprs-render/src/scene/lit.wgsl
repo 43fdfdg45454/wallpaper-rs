@@ -1,22 +1,35 @@
-struct Bulb {
-    at: vec4<f32>,
-    color: vec4<f32>,
-    dir: vec4<f32>,
-    more: vec4<f32>,
-};
-
-struct Lights {
-    head: vec4<f32>,
-    ambient: vec4<f32>,
-    sky: vec4<f32>,
-    bulbs: array<Bulb, 12>,
-};
-
 @group(2) @binding(0) var<uniform> lights: Lights;
 @group(2) @binding(1) var normal_tex: texture_2d<f32>;
 @group(2) @binding(2) var rough_tex: texture_2d<f32>;
 @group(2) @binding(3) var glow_tex: texture_2d<f32>;
 @group(2) @binding(4) var env_tex: texture_2d<f32>;
+@group(2) @binding(5) var gobo_a: texture_2d<f32>;
+@group(2) @binding(6) var gobo_b: texture_2d<f32>;
+@group(2) @binding(7) var gobo_c: texture_2d<f32>;
+@group(2) @binding(8) var gobo_d: texture_2d<f32>;
+
+fn gobo(b: Bulb, l: vec3<f32>) -> vec3<f32> {
+    let slot = u32(b.air.z + 0.5);
+    if slot == 0u || b.color.w < 0.5 || b.color.w > 1.5 {
+        return vec3<f32>(1.0);
+    }
+    let a = b.dir.xyz;
+    let level = length(a.xy) > 1e-4;
+    let side = select(vec3<f32>(1.0, 0.0, 0.0), normalize(vec3<f32>(a.y, -a.x, 0.0)), level);
+    let up = cross(side, a);
+    let w = -l;
+    let wide = sqrt(max(1.0 - b.dir.w * b.dir.w, 1e-6)) / max(b.dir.w, 1e-3);
+    let uv = 0.5 + 0.5 * vec2<f32>(dot(w, side), dot(w, up)) / (max(dot(w, a), 1e-3) * wide);
+    var c = textureSampleLevel(gobo_a, samp, uv, 0.0);
+    if slot == 2u {
+        c = textureSampleLevel(gobo_b, samp, uv, 0.0);
+    } else if slot == 3u {
+        c = textureSampleLevel(gobo_c, samp, uv, 0.0);
+    } else if slot == 4u {
+        c = textureSampleLevel(gobo_d, samp, uv, 0.0);
+    }
+    return c.rgb;
+}
 
 fn facing(at: vec2<f32>) -> vec3<f32> {
     if item.lit_maps.x < 0.5 {
@@ -25,31 +38,6 @@ fn facing(at: vec2<f32>) -> vec3<f32> {
     let t = textureSampleLevel(normal_tex, samp, at, 0.0).xyz * 2.0 - 1.0;
     let xy = t.x * item.lit_basis.xy - t.y * item.lit_basis.zw;
     return normalize(vec3<f32>(xy * item.lit_at.z, max(t.z, 0.0) + 1e-3));
-}
-
-fn reach(b: Bulb, p: vec2<f32>) -> vec4<f32> {
-    let kind = b.color.w;
-    if kind > 2.5 {
-        return vec4<f32>(-b.dir.xyz, 1.0);
-    }
-    var src = b.at.xy;
-    if kind > 1.5 {
-        let ab = b.more.yz * 2.0;
-        let t = clamp(dot(p - (src - b.more.yz), ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
-        src = src - b.more.yz + ab * t;
-    }
-    let v = vec3<f32>(src - p, b.at.z);
-    let d = length(v);
-    if d >= b.at.w {
-        return vec4<f32>(0.0);
-    }
-    let f = 1.0 - d * d / (b.at.w * b.at.w);
-    let l = v / max(d, 1e-3);
-    var k = f * f;
-    if kind > 0.5 && kind < 1.5 {
-        k *= smoothstep(b.dir.w, b.more.x, dot(-l, b.dir.xyz));
-    }
-    return vec4<f32>(l, k);
 }
 
 fn shade(c: vec4<f32>, at: vec2<f32>, in: Out) -> vec4<f32> {
@@ -72,9 +60,10 @@ fn shade(c: vec4<f32>, at: vec2<f32>, in: Out) -> vec4<f32> {
             continue;
         }
         let ndl = max(dot(n, r.xyz), 0.0);
-        light += b.color.rgb * ndl * r.w;
+        let tone = b.color.rgb * gobo(b, r.xyz);
+        light += tone * ndl * r.w;
         let h = normalize(r.xyz + vec3<f32>(0.0, 0.0, 1.0));
-        spec += b.color.rgb * pow(max(dot(n, h), 0.0), shine) * gloss * r.w * select(0.0, 1.0, ndl > 0.0);
+        spec += tone * pow(max(dot(n, h), 0.0), shine) * gloss * r.w * select(0.0, 1.0, ndl > 0.0);
     }
     var rgb = albedo * light + spec + albedo * glow;
     if item.lit_maps.w > 0.5 {

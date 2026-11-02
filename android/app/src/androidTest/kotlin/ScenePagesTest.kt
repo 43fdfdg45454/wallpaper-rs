@@ -94,16 +94,18 @@ class ScenePagesTest : SceneBase() {
     }
 
     @Test
-    fun scenesWithLightsAreAcceptedAndLitAirIsRefusedUntilTheEngineDrawsIt() {
+    fun scenesWithLightsAndLitAirAreAcceptedAndShadowsAreRefusedUntilTheEngineDrawsThem() {
         val dir = File(storage(), "lamps/lamp").apply { mkdirs() }
-        File(dir, "scene.json").writeText(LAMP_SCENE)
-        File(dir, "manifest.json").writeText(LAMP_MANIFEST)
-        val lit = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
-        assertTrue(lit, lit.startsWith("["))
-        File(dir, "scene.json").writeText(FOG_SCENE)
-        File(dir, "manifest.json").writeText(FOG_MANIFEST)
+        for ((scene, manifest) in listOf(LAMP_SCENE to LAMP_MANIFEST, FOG_SCENE to FOG_MANIFEST)) {
+            File(dir, "scene.json").writeText(scene)
+            File(dir, "manifest.json").writeText(manifest)
+            val lit = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+            assertTrue(lit, lit.startsWith("["))
+        }
+        File(dir, "scene.json").writeText(SHADOW_SCENE)
+        File(dir, "manifest.json").writeText(SHADOW_MANIFEST)
         val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
-        assertTrue(reply.getString("error").contains("it uses the feature volumetric_lights (lights the air)"))
+        assertTrue(reply.getString("error").contains("it uses the feature shadows (casts shadows)"))
     }
 
     @Test

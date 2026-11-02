@@ -23,7 +23,7 @@ pub use handles::handles;
 pub use looks::{controls, sources};
 pub use walls::response;
 
-fn system(doc: &Value, id: &str) -> Result<String> {
+pub(crate) fn system(doc: &Value, id: &str) -> Result<String> {
     let path = format!("/scene/particles/{}", escape(id));
     ensure!(
         doc.pointer(&path).is_some(),
@@ -32,7 +32,7 @@ fn system(doc: &Value, id: &str) -> Result<String> {
     Ok(path)
 }
 
-fn render(
+pub(crate) fn render(
     doc: &Value,
     sys: &str,
     layer: Option<&str>,
@@ -52,7 +52,7 @@ fn render(
     Ok(ops)
 }
 
-fn put(doc: &Value, path: &str, value: Option<Value>) -> Vec<Op> {
+pub(crate) fn put(doc: &Value, path: &str, value: Option<Value>) -> Vec<Op> {
     match value {
         Some(v) => set(doc, path, v),
         None if doc.pointer(path).is_some() => vec![Op::Remove { path: path.into() }],
@@ -74,7 +74,7 @@ fn issues(dir: &Path, doc: &Value) -> Result<Vec<(String, String)>> {
     Ok(all.map(|i| (i.to_string(), i.message().to_string())).collect())
 }
 
-fn checked(dir: &Path, doc: &Value, ops: Vec<Op>) -> Result<Vec<Op>> {
+pub(crate) fn checked(dir: &Path, doc: &Value, ops: Vec<Op>) -> Result<Vec<Op>> {
     let mut probe = doc.clone();
     apply(&mut probe, &ops)?;
     let before = issues(dir, doc).unwrap_or_default();
@@ -139,6 +139,7 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &ParticleEdit) -> Result<Vec<Op>>
             fields::pace(doc, &system(doc, s)?, *emitter, *max_per_step)?
         }
         ParticleEdit::Tend(t) => tend::edit(doc, t)?,
+        ParticleEdit::Light(l) => return crate::lamps::glow(dir, doc, l),
         ParticleEdit::Shader { system: s, layer, shader } => {
             render(doc, &system(doc, s)?, layer.as_deref(), |d, at| {
                 put(d, &format!("{at}/shader"), shader.as_ref().map(|id| json!(id)))

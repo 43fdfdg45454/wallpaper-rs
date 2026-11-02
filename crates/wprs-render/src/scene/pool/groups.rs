@@ -41,7 +41,7 @@ impl Pool {
         &mut self,
         device: &wgpu::Device,
         layout: &wgpu::BindGroupLayout,
-        views: &[(u64, &wgpu::TextureView); 4],
+        views: &[(u64, &wgpu::TextureView); 8],
     ) -> BindGroup {
         let mut key = [3; 12];
         views.iter().zip(&mut key[1..]).for_each(|((id, _), k)| *k = *id);

@@ -30,7 +30,7 @@ pub use crate::effects::{
     PRELUDE, Pace, ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage,
     State, Texel, Tune, Use, Variant, builtin, descriptor, register,
 };
-pub use crate::eval::lamps::Lamp;
+pub use crate::eval::lamps::{Lamp, Picture};
 pub use crate::eval::{Content, Draw, EffectDraw, Frame, Lit};
 pub use crate::extrude::Relief;
 pub use crate::figure::{
@@ -61,7 +61,7 @@ pub use crate::input::{
 pub use crate::layer::{Anchor, Inherit, Kind, Layer, Parallax, Solid, Transform};
 pub use crate::lean::Lean;
 pub use crate::lens::{Camera3d, CameraKey, CameraPath, Fade, FadeTo, MAX_PATHS, PathOrder};
-pub use crate::light::{Beam, Light, Lighting, MAX_LIGHTS, Volumetric};
+pub use crate::light::{Beam, Light, Lighting, MAX_LIGHTS, MAX_PROJECTIONS, Volumetric};
 pub use crate::look::{Bloom, Camera, Glare, Glide, Playback, Shake, Tonemap};
 pub use crate::loops::{MAX_INLINED, MAX_LOOP, MAX_OPS, MAX_SHADER_NODES, MAX_WORK};
 pub use crate::measure::MAX_BUILD;
@@ -86,6 +86,7 @@ pub use crate::particles::{
     remap_table, remapped, seen, stacked, strung, swirl, taper, turn,
 };
 pub use crate::pointing::{MAX_PRESSES, MAX_TOUCHES, Press, Touch, TouchKind};
+pub use crate::projected::projectable;
 pub use crate::props::{
     Choice, Condition, Control, Expr, ICONS, Leveling, Mode, Pick, Preset, Property, Slider, Text, Values,
     check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag, veiled,
@@ -123,6 +124,7 @@ pub use crate::sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice, volume_property}
 pub use crate::spare::Spare;
 pub use crate::spend::{MAX_STATEFUL, Spend, over};
 pub use crate::sprites::{STAGES_WGSL, particle_shader};
+pub use crate::stage::{IMAGES, VIDEOS};
 pub use crate::strikes::{STOPPED, end_trials, forgive_strikes, keep_strikes, strike, struck, tried, trying};
 pub use crate::tier::{Gpu, Tier};
 pub use crate::timeline::{Event, Handles, Key, Loop, Timeline, local, sample};

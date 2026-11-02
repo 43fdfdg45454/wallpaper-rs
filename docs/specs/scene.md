@@ -382,8 +382,8 @@ light anything.
 | `z` | height above the canvas, −100000 to 100000 px (default 100); may be bound |
 | `cone` | spot lights only: `[inner, outer]` angles from 0 to 180 degrees (default `[30, 60]`), full in the middle and dark past the outer angle |
 | `length` | tube lights only: 1 to 100000 px (default 256) |
-| `volumetric` | point and spot lights only: `{ "density" (0 to 1), "samples" (4 to 64) }` lights the air (`volumetric_lights`) |
-| `texture` | spot lights only: a picture or video the light projects (`light_textures`) |
+| `volumetric` | point and spot lights only: `{ "density" (0 to 1, default 0.2), "samples" (4 to 64, default 16) }` lights the air (`volumetric_lights`), see below |
+| `texture` | spot lights only: the asset id of a picture or video, or `{ "layer": id }`, that the light projects (`light_textures`); at most 4 spot lights of a scene project, see below |
 | `shadows` | point, spot and directional lights: `true` casts shadows of models and of materials that `receive_shadows`; at most 2 lights per scene (`shadows`) |
 
 A spot or directional light with no rotation points down the canvas and turns clockwise with
@@ -414,6 +414,22 @@ kept like other still layers; when one moves, only the box its radius covers is 
 lowest quality level the lighting is worked out once, when the scene starts or the level changes,
 and lit layers are kept as still pictures: lights that move stay where they started and ask for no
 frames. Scripts read and set `scene.ambient` and `scene.sky` as colors, like `scene.background`.
+
+A `volumetric` light glows in the air in front of the whole scene, within its radius. Each pixel
+gathers, at `samples` points on the line from the pixel towards the light, the fade, the cone and
+the projected picture of the light there; `density` is the part of the line it walks and also how
+strongly the air glows, and the glow fades to nothing at the radius. The air is worked out at half
+the size of the screen (Q3 and Q2) or a quarter (Q1, and on T0 and T1 devices), with half the
+samples at Q1, and not at all at Q0; it is added to the frame, kept while the light stays still and
+drawn again only in the box of its radius when the light moves.
+
+A spot light with a `texture` multiplies its color by the picture, which fills the outer cone as a
+projector does, upright and seen from behind the light. A video plays on and asks for frames while it
+plays; a `{ "layer": id }` projects that layer as it is drawn, with its effects, even when it is
+hidden (`layer_textures`). The projected layer must not take light itself, hold or read a layer that
+does, or the scene is refused as a loop. Lit layers, lit particles and the glowing air all take the
+projected picture; layers lit by a still picture stay kept, a video or a moving layer redraws them in
+the box of the light.
 
 ### Meshes
 
@@ -1209,7 +1225,7 @@ sets it, and every other name must be one of `points`. Targets and centers of fo
 | render `order` | `newest`, `oldest`, `largest`, `smallest` or `lowest`: the particles drawn on top; others are drawn in no set order | `particles2` |
 | render `rope`, `trail` | `{ "subdivide" (0 to 7), "width", "uv_scale", "uv_scroll", "smooth" }` joins particles in birth order; trails of up to 64 steps with `segments`, `subdivide`, `uv_scale`, `uv_scroll` and `textured` | `particle_ropes` |
 | render `cutout`, `orient`, `angle` | `[start, end, opacity]` remaps the alpha of the texture; `screen`, `velocity` or `fixed` with `angle` | `particle_looks` |
-| render `lit`, `normal`, `refract` | lit by the scene lights with a normal map; `{ "normal", "amount" }` bends what is behind | `particle_lighting` |
+| render `lit`, `normal`, `refract` | `lit` lights the sprites with the scene lights, at most 8, on both faces (a light behind the canvas, with a negative `z`, lights the back); `normal` is a `linear` normal map laid over each sprite and turned with it; the `lighting` block of the layer, when set, lights them too and gives `strength` and `emissive`. `refract`: `{ "normal", "amount" }` (0 to 1) draws the sprites only as a bend of what is behind them, by the normal map, up to `amount` times half the size of a sprite; it works at full size at Q3, at half size at Q2 and leaves the sprites out at Q1 and Q0. Sprites drawn with a particle shader, trails and ropes are not lit | `particle_lighting` |
 | render `shader` | a package effect with `stage: "particle"` | `particle_shaders` |
 
 The newer fields behave as follows.

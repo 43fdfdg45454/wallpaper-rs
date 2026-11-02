@@ -34,7 +34,9 @@ impl Painter<'_, '_, '_> {
         let toned = crate::scene::item::toned(wprs_scene::Color([cr, cg, cb, 1.0]), d.brightness, srgb, 1.0);
         let tint = [toned[0], toned[1], toned[2], d.tint.0[3]];
         let slot = (swarms.looks.len() as u64 * super::LOOK) as u32;
-        let mut timed = 0;
+        let (mut timed, mut bent) = (0, false);
+        let (strength, glow) = d.lit.map_or((1.0, 0.0), |l| (l.strength, l.emissive));
+        let lit = f32::from(u8::from(d.lit.is_some()));
         for (p, system) in herd.bake.systems.iter().enumerate() {
             let own = (p == 0).then_some(d.layer.id.as_str());
             let found = |layer: Option<&str>| {
@@ -59,6 +61,9 @@ impl Painter<'_, '_, '_> {
             }
             (look.m0, look.m1) = ndc(target.rect, m);
             look.turn[2] = m.0[1].atan2(m.0[0]);
+            (look.light[0], look.light[3]) = (look.light[0].max(lit), crate::scene::item::scale_of(m));
+            look.place = [target.rect.x, target.rect.y, strength, glow];
+            bent |= kit.bend.is_some();
             let middle = m.inverse().apply(screen.apply([w / 2.0, h / 2.0]));
             (look.deep[1], look.deep[2]) = (middle[0], middle[1]);
             look.tint[0] = opacity;
@@ -74,6 +79,9 @@ impl Painter<'_, '_, '_> {
             swarms.looks.push(look);
             swarms.kitted.push(k);
         }
-        self.ops.push(Op::Particles { target: target.src, system: flock, slot, mode, timed });
+        self.ops.push(Op::Particles { target: target.src, system: flock, slot, mode, timed, bend: false });
+        if bent {
+            self.bend(target, flock, slot);
+        }
     }
 }

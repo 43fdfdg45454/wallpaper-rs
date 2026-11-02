@@ -28,6 +28,24 @@ pub enum LightEdit {
         #[serde(default)]
         muted: bool,
     },
+    Volumetric {
+        layer: String,
+        #[serde(default)]
+        density: Option<f64>,
+        #[serde(default)]
+        samples: Option<u32>,
+        #[serde(default)]
+        off: bool,
+    },
+    Projection {
+        layer: String,
+        #[serde(default)]
+        asset: Option<String>,
+        #[serde(default)]
+        from: Option<String>,
+        #[serde(default)]
+        off: bool,
+    },
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

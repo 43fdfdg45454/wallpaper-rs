@@ -5,6 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub const MAX_LIGHTS: usize = 12;
+pub const MAX_PROJECTIONS: usize = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -105,4 +106,23 @@ fn reach() -> Value<f32> {
 
 fn height() -> Value<f32> {
     Value::Fixed(100.0)
+}
+
+impl crate::Quality {
+    pub fn air(self, tier: crate::Tier) -> Option<(f32, f32)> {
+        match self {
+            crate::Quality::Q0 => None,
+            crate::Quality::Q1 => Some((4.0, 0.5)),
+            _ if tier <= crate::Tier::T1 => Some((4.0, 1.0)),
+            _ => Some((2.0, 1.0)),
+        }
+    }
+
+    pub fn bend(self) -> Option<f32> {
+        match self {
+            crate::Quality::Q3 => Some(1.0),
+            crate::Quality::Q2 => Some(0.5),
+            _ => None,
+        }
+    }
 }

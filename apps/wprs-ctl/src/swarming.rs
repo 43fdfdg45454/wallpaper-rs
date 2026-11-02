@@ -95,6 +95,10 @@ pub enum Particle {
         about = "Limit how many particles emitters start each step; no --max-per-step removes the limit"
     )]
     Pace(crate::fielding::Pace),
+    #[command(about = "Light the particles with the lights of the scene, with a normal map, or --off")]
+    Lit(crate::glowing::Lit),
+    #[command(about = "Bend what is behind the particles with a normal map, or --off")]
+    Refract(crate::glowing::Bend),
     #[command(about = "Draw with a package effect whose stage is particle, or none")]
     Shader {
         shader: String,

@@ -19,6 +19,7 @@ impl Swarms {
         self.pipelines.insert(mode, sprite);
         self.ribbons.insert(mode, ribbon);
         self.created += 2;
+        self.lamped(r, mode);
         if self.kits.iter().any(|k| k.rope.is_some() || k.long) {
             self.corded(r, mode);
         }
@@ -103,4 +104,24 @@ pub(super) fn pipe(
         multiview_mask: None,
         cache: None,
     })
+}
+
+impl Swarms {
+    fn lamped(&mut self, r: &Renderer, mode: Mode) {
+        let sprites = wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4];
+        let layouts = [&self.layouts[1], &self.layouts[2], &self.layouts[6]];
+        let slots = [(PARTICLE, &sprites[..])];
+        if self.kits.iter().any(|k| k.lit.is_some() && k.bend.is_none()) && !self.lits.contains_key(&mode) {
+            let made =
+                self.build(r, mode, (&self.module, ("vs_particle", "fs_lit_particle")), &layouts, &slots);
+            self.lits.insert(mode, made);
+            self.created += 1;
+        }
+        if self.kits.iter().any(|k| k.bend.is_some()) && self.bend.is_none() {
+            let shader = (&self.module, ("vs_particle", "fs_bend_particle"));
+            let format = (wgpu::TextureFormat::Rgba16Float, Mode::Normal);
+            self.bend = Some(pipe(&r.device, format, shader, &layouts, &slots));
+            self.created += 1;
+        }
+    }
 }

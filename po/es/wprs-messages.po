@@ -591,6 +591,34 @@ msgstr "%1 aún no tiene valor; da uno"
 msgid "there is no timeline \"%1\""
 msgstr "no hay ninguna línea de tiempo «%1»"
 
+#: crates/wprs-editor/src/lamps/air.rs
+msgid "only point and spot lights light the air"
+msgstr "solo las luces puntuales y los focos iluminan el aire"
+
+#: crates/wprs-editor/src/lamps/air.rs
+msgid "density goes from 0 to 1 and samples from 4 to 64"
+msgstr "la densidad va de 0 a 1 y las muestras de 4 a 64"
+
+#: crates/wprs-editor/src/lamps/cast.rs crates/wprs-editor/src/lamps/edit.rs
+msgid "only %1 lights take %2"
+msgstr "solo las luces %1 admiten %2"
+
+#: crates/wprs-editor/src/lamps/cast.rs
+msgid "%1 is not a picture or video of the scene"
+msgstr "%1 no es una imagen ni un vídeo de la escena"
+
+#: crates/wprs-editor/src/lamps/cast.rs
+msgid ""
+"the layer %1 cannot be projected: it is missing, takes light or reads a lit "
+"layer"
+msgstr ""
+"la capa %1 no se puede proyectar: no existe, recibe luz o lee una capa "
+"iluminada"
+
+#: crates/wprs-editor/src/lamps/cast.rs
+msgid "give a picture, a video or a layer to project"
+msgstr "indica una imagen, un vídeo o una capa para proyectar"
+
 #: crates/wprs-editor/src/lamps/edit.rs
 msgid "%1 is not a light type; use point, spot, tube or directional"
 msgstr "%1 no es un tipo de luz; usa point, spot, tube o directional"
@@ -602,10 +630,6 @@ msgstr "%1 de una luz va de %2 a %3"
 #: crates/wprs-editor/src/lamps/edit.rs
 msgid "%1 is not a light layer"
 msgstr "%1 no es una capa de luz"
-
-#: crates/wprs-editor/src/lamps/edit.rs
-msgid "only %1 lights take %2"
-msgstr "solo las luces %1 admiten %2"
 
 #: crates/wprs-editor/src/lamps/edit.rs
 msgid "a light color is #rrggbb or [r, g, b, a]"
@@ -642,6 +666,14 @@ msgstr "la fuerza va de 0 a %1 y el desenfoque de 0 a %2"
 #: crates/wprs-editor/src/lamps/maps.rs crates/wprs-editor/src/paint.rs
 msgid "a stroke has 1 to %1 points and a channel from 0 to 3"
 msgstr "un trazo tiene de 1 a %1 puntos y un canal de 0 a 3"
+
+#: crates/wprs-editor/src/lamps/swarm.rs
+msgid "refraction needs a normal map"
+msgstr "la refracción necesita un mapa de normales"
+
+#: crates/wprs-editor/src/lamps/swarm.rs
+msgid "the amount of refraction goes from 0 to 1"
+msgstr "la cantidad de refracción va de 0 a 1"
 
 #: crates/wprs-editor/src/layers.rs
 msgid "import %1 %2 first"
@@ -2222,7 +2254,7 @@ msgstr "hueso de la cadena"
 
 #: crates/wprs-scene/src/bones.rs crates/wprs-scene/src/links.rs
 #: crates/wprs-scene/src/particles/checks.rs
-#: crates/wprs-scene/src/particles/pulls.rs
+#: crates/wprs-scene/src/particles/pulls.rs crates/wprs-scene/src/projected.rs
 #: crates/wprs-scene/src/rules/shapes.rs
 msgid "layer"
 msgstr "capa"

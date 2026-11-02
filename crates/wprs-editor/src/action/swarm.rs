@@ -114,5 +114,7 @@ pub enum ParticleEdit {
         max_per_step: Option<u32>,
     },
     #[serde(untagged)]
+    Light(super::SwarmLight),
+    #[serde(untagged)]
     Tend(TendEdit),
 }

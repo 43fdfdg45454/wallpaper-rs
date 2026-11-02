@@ -17,7 +17,8 @@ impl Painter<'_, '_, '_> {
     }
 
     pub(crate) fn shifting(&self, range: std::ops::Range<usize>) -> bool {
-        self.pool.glow.moved && self.frame.draws[range].iter().any(|d| d.lit.is_some())
+        let glow = &self.pool.glow;
+        (glow.moved || glow.live) && self.frame.draws[range].iter().any(|d| d.lit.is_some())
     }
 
     fn map_of(&mut self, id: Option<&str>) -> Option<Src> {
@@ -33,7 +34,7 @@ impl Painter<'_, '_, '_> {
         item: &mut Item,
         (m, bounds): (Affine, Rect),
         target: Target,
-    ) -> Option<(&'static str, [Src; 4], Src)> {
+    ) -> Option<(&'static str, [Src; 8], Src)> {
         let entry = match entry {
             "fs_picture" => "fs_lit_picture",
             "fs_texture" => "fs_lit_texture",
@@ -47,7 +48,8 @@ impl Painter<'_, '_, '_> {
         item.lit_basis = [a / x, b / x, c / y, d / y];
         item.lit_at = [target.rect.x, target.rect.y, 1.0, MIRROR * scale_of(self.screen)];
         let found = [l.normal, l.roughness_map, l.emissive_map].map(|id| self.map_of(id));
-        let mut maps = [Src::White; 4];
+        let mut maps = [Src::White; 8];
+        maps[4..].copy_from_slice(&self.gobos());
         for (k, src) in found.into_iter().enumerate() {
             item.lit_maps[k] = f32::from(u8::from(src.is_some()));
             maps[k] = src.unwrap_or(Src::White);

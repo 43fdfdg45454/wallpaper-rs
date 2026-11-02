@@ -8,7 +8,7 @@ use wprs_scene::{Scene, Stage};
 
 const ENTRIES: (&str, &str) = ("wprs_vs_particle", "wprs_fs_particle");
 
-const OWN: [&str; 12] = [
+const OWN: [&str; 13] = [
     "Look",
     "look",
     "Corner",
@@ -21,6 +21,7 @@ const OWN: [&str; 12] = [
     "cell",
     "vs_particle",
     "fs_particle",
+    "painted",
 ];
 
 fn prefixed(src: &str) -> String {

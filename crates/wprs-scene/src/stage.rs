@@ -3,8 +3,8 @@ use crate::validate::{Check, Issue};
 mod assets;
 mod timing;
 
-pub(crate) const IMAGES: [&str; 8] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif", "ktx2"];
-pub(crate) const VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
+pub const IMAGES: [&str; 8] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif", "ktx2"];
+pub const VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
 
 impl Check<'_> {
     pub(crate) fn canvas(&mut self) {

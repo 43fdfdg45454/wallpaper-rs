@@ -42,6 +42,8 @@ fn light(layer: String, what: Lamp) -> LightEdit {
         Lamp::Remove => LightEdit::Remove { layer },
         Lamp::Solo { off } => LightEdit::Solo { layer: (!off).then_some(layer) },
         Lamp::Mute { off } => LightEdit::Mute { layer, muted: !off },
+        Lamp::Volumetric(a) => crate::glowing::air(layer, &a),
+        Lamp::Projection(c) => crate::glowing::cast(layer, &c),
         Lamp::Falloff { .. } => unreachable!(),
     }
 }
@@ -64,6 +66,8 @@ fn lighting(l: Lit) -> (PathBuf, Action) {
 
 fn shown(what: &Lamping) -> bool {
     match what {
+        Lamping::Light { what: Lamp::Volumetric(a), .. } => a.show,
+        Lamping::Light { what: Lamp::Projection(c), .. } => c.show,
         Lamping::Light { what, .. } => matches!(what, Lamp::Falloff { .. }),
         Lamping::Lights { .. } => true,
         Lamping::Normals { preview, generate, .. } => *preview && !*generate,
@@ -101,6 +105,12 @@ pub(crate) fn action(command: Lamping) -> Result<(PathBuf, Action), Box<Author>>
 pub(crate) fn run(command: Lamping) -> Result<()> {
     let open = |dir: &PathBuf| Project::open(dir);
     let found = match command {
+        Lamping::Light { dir, layer, what: Lamp::Volumetric(a) } => {
+            return crate::glowing::print(&dir, |p| wprs_editor::lamps::air(&p.dir, &p.doc, &layer, a.time));
+        }
+        Lamping::Light { dir, layer, what: Lamp::Projection(c) } => {
+            return crate::glowing::print(&dir, |p| wprs_editor::lamps::cast(&p.dir, &p.doc, &layer, c.time));
+        }
         Lamping::Light { dir, layer, what: Lamp::Falloff { time } } => {
             let p = open(&dir)?;
             wprs_editor::lamps::falloff(&p.dir, &p.doc, &layer, time)

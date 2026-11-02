@@ -41,6 +41,7 @@ impl<'a> Painter<'a, '_, '_> {
             self.ops.push(Op::Copy { from: Src::Cache(0), to: canvas, origin, size, at: origin });
         }
         self.list(static_end..draws.len(), root, false);
+        self.air(root);
         self.unshare();
     }
 

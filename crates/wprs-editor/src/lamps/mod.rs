@@ -4,21 +4,29 @@ use anyhow::Result;
 use serde_json::{Value, json};
 use std::path::Path;
 
+mod air;
+mod cast;
 mod cost;
 mod edit;
 mod lit;
 mod maps;
 mod placed;
 mod report;
+mod swarm;
 
+pub use air::{air, levels as air_levels};
+pub use cast::{cast, homography};
 pub use cost::cost;
 pub use edit::template;
 pub use lit::hemisphere;
 pub use maps::{heat, preview as normals_preview};
 pub use placed::{Placed, placed};
 pub use report::{AIM, FEW, Z_KNOB, falloff, handles, lights, reach, tiers};
+pub(crate) use swarm::edit as glow;
+pub use swarm::{sides, swarm_light};
 
-const QUERIES: [&str; 6] = ["lights", "falloff", "normals", "map", "hemisphere", "lighting"];
+const QUERIES: [&str; 9] =
+    ["lights", "falloff", "normals", "map", "hemisphere", "lighting", "air", "projection", "swarm_light"];
 
 pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec<Op>>> {
     Some(match action {
@@ -70,6 +78,15 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
             heat(dir, doc, m["layer"].as_str().unwrap_or(id), field)
         }
         _ if q.get("hemisphere").is_some() => hemisphere(doc),
+        _ if q.get("air").is_some() => air(dir, doc, q["air"]["layer"].as_str().unwrap_or(id), t(&q["air"])),
+        _ if q.get("projection").is_some() => {
+            let p = &q["projection"];
+            cast(dir, doc, p["layer"].as_str().unwrap_or(id), t(p))
+        }
+        _ if q.get("swarm_light").is_some() => {
+            let s = &q["swarm_light"];
+            swarm_light(dir, doc, s["system"].as_str().unwrap_or(id), s["layer"].as_str())
+        }
         _ => {
             let l = &q["lighting"];
             cost(dir, doc, t(l), serde_json::from_value(l["quality"].clone()).unwrap_or_default())

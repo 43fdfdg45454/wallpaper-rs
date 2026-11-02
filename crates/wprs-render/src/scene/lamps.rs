@@ -1,7 +1,7 @@
 use super::item::{Rect, linear, scale_of};
 use bytemuck::{Pod, Zeroable};
 use std::hash::{DefaultHasher, Hash, Hasher};
-use wprs_scene::{Affine, Beam, Color, Frame, Lamp, MAX_LIGHTS, Quality};
+use wprs_scene::{Affine, Beam, Color, Frame, Lamp, MAX_LIGHTS, MAX_PROJECTIONS, Quality};
 
 pub(crate) const FEW: usize = 8;
 
@@ -12,6 +12,7 @@ pub(crate) struct Bulb {
     pub(crate) color: [f32; 4],
     pub(crate) dir: [f32; 4],
     pub(crate) more: [f32; 4],
+    pub(crate) air: [f32; 4],
 }
 
 #[repr(C)]
@@ -29,6 +30,10 @@ pub(crate) struct Glow {
     pub(crate) marks: [Mark; MAX_LIGHTS],
     pub(crate) moved: bool,
     pub(crate) baked: bool,
+    pub(crate) live: bool,
+    pub(crate) seen: u64,
+    pub(crate) slots: [usize; MAX_PROJECTIONS],
+    pub(crate) gobos: Option<[super::Src; MAX_PROJECTIONS]>,
     written: Option<Lights>,
 }
 
@@ -54,6 +59,7 @@ pub(crate) fn bulb(lamp: &Lamp<'_>, screen: Affine, srgb: bool) -> (Bulb, Rect) 
         color,
         dir: [hx, hy, hz, outer.min(inner - 1e-4)],
         more: [inner, a / long * half, b / long * half, 0.0],
+        air: lamp.air.map_or([0.0; 4], |[density, samples]| [density, samples, 0.0, 0.0]),
     };
     let ends = if lamp.beam == Beam::Tube { [bulb.more[1], bulb.more[2]] } else { [0.0; 2] };
     let rect = match lamp.beam {
@@ -71,18 +77,23 @@ pub(crate) fn lights(
     frame: &Frame<'_>,
     (screen, srgb): (Affine, bool),
     cap: usize,
-    marks: &mut [Mark],
+    (marks, slots): (&mut [Mark], &mut [usize; MAX_PROJECTIONS]),
 ) -> Lights {
     let mut out = Lights::default();
     let shown = frame.lamps.iter().take(cap.min(MAX_LIGHTS).min(marks.len()));
+    let mut taken = 0;
     for (i, lamp) in shown.enumerate() {
-        let (b, rect) = bulb(lamp, screen, srgb);
+        let (mut b, rect) = bulb(lamp, screen, srgb);
+        if lamp.picture.is_some() && taken < MAX_PROJECTIONS {
+            (slots[taken], taken, b.air[2]) = (i, taken + 1, (taken + 1) as f32);
+        }
         out.bulbs[i] = b;
         let mut h = DefaultHasher::new();
         bytemuck::bytes_of(&b).hash(&mut h);
         marks[i] = (std::ptr::from_ref(lamp.layer) as usize, h.finish(), rect);
         out.head[0] = (i + 1) as f32;
     }
+    out.head[1] = taken as f32;
     let ambient = frame.ambient.map_or([0.0; 4], |c| tone(c, srgb, 1.0));
     (out.ambient, out.sky) = (ambient, frame.sky.map_or(ambient, |c| tone(c, srgb, 1.0)));
     out
@@ -103,6 +114,10 @@ impl Glow {
             marks: [empty; MAX_LIGHTS],
             moved: false,
             baked: false,
+            live: false,
+            seen: 0,
+            slots: [0; MAX_PROJECTIONS],
+            gobos: None,
             written: None,
         }
     }
@@ -115,13 +130,14 @@ impl Glow {
         srgb: bool,
         cap: usize,
     ) {
+        self.gobos = None;
         let keep = frame.quality == Quality::Q0 && self.baked;
         self.baked = frame.quality == Quality::Q0;
         if keep {
             self.moved = false;
             return;
         }
-        let now = lights(frame, (screen, srgb), cap, &mut self.marks);
+        let now = lights(frame, (screen, srgb), cap, (&mut self.marks, &mut self.slots));
         self.moved = self.written.is_some_and(|w| w != now);
         self.now = now;
         if self.written != Some(now) {
@@ -132,6 +148,14 @@ impl Glow {
 
     pub(crate) fn count(&self) -> usize {
         self.now.head[0] as usize
+    }
+
+    pub(crate) fn pictures(&self) -> usize {
+        self.now.head[1] as usize
+    }
+
+    pub(crate) fn airy(&self) -> bool {
+        self.now.bulbs[..self.count()].iter().any(|b| b.air[0] > 0.0)
     }
 }
 

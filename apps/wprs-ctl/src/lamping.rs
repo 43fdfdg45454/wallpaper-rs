@@ -135,6 +135,10 @@ pub enum Lamp {
         #[arg(long)]
         off: bool,
     },
+    #[command(about = "Light the air around a point or spot light, or --off")]
+    Volumetric(crate::glowing::Air),
+    #[command(about = "Project a picture, a video or a layer with a spot light, or --off")]
+    Projection(crate::glowing::Cast),
     #[command(about = "Show the intensity of the light against the distance as points")]
     Falloff {
         #[arg(long, default_value_t = 0.0)]

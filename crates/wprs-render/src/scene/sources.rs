@@ -50,12 +50,12 @@ impl Sources<'_> {
         pool.own(&r.device, &r.scene.get().expect("created with the view").own, &refs)
     }
 
-    pub(crate) fn lit(&self, r: &Renderer, pool: &mut Pool, maps: &[Src; 4]) -> BindGroup {
-        let views: [(u64, wgpu::TextureView); 4] = std::array::from_fn(|k| {
+    pub(crate) fn lit(&self, r: &Renderer, pool: &mut Pool, maps: &[Src; 8]) -> BindGroup {
+        let views: [(u64, wgpu::TextureView); 8] = std::array::from_fn(|k| {
             let (id, view, _) = self.get(pool, maps[k]);
             (id, view)
         });
-        let refs: [(u64, &wgpu::TextureView); 4] = std::array::from_fn(|k| (views[k].0, &views[k].1));
+        let refs: [(u64, &wgpu::TextureView); 8] = std::array::from_fn(|k| (views[k].0, &views[k].1));
         pool.lit(&r.device, &r.scene.get().expect("created with the view").lit, &refs)
     }
 
