@@ -17,7 +17,7 @@ struct Session {
     rgb: Rgb,
     client: Option<Client>,
     failed: Option<Instant>,
-    last: Option<Strip>,
+    last: Option<(String, Strip)>,
     test: Option<(Instant, Option<u32>)>,
 }
 
@@ -39,13 +39,17 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
         match asks.recv_timeout(wait) {
             Ok(Ask::Settings(rgb)) => {
                 if rgb != s.rgb {
+                    if !rgb.enabled {
+                        s.forget(None);
+                    }
                     (s.client, s.failed, s.rgb) = (None, None, rgb);
                     s.publish(None);
                 }
             }
+            Ok(Ask::Forget(source)) => s.forget(Some(&source)),
             Ok(Ask::Frame(source, strip)) => {
-                lock(&s.status).source = Some(source);
-                s.last = Some(strip.clone());
+                lock(&s.status).source = Some(source.clone());
+                s.last = Some((source, strip.clone()));
                 if s.test.is_none() {
                     s.paint(&strip, None);
                 }
@@ -74,6 +78,21 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
 }
 
 impl Session {
+    fn forget(&mut self, source: Option<&str>) {
+        if self.last.as_ref().is_some_and(|(from, _)| source.is_none_or(|s| s == from)) {
+            self.last = None;
+            lock(&self.status).source = None;
+        }
+    }
+
+    fn repaint(&mut self) {
+        match self.last.clone() {
+            Some((source, strip)) if super::allowed(&source) => self.paint(&strip, None),
+            Some(_) => self.forget(None),
+            None => {}
+        }
+    }
+
     fn publish(&mut self, error: Option<String>) {
         let mut status = lock(&self.status);
         status.connected = self.client.is_some();
@@ -137,19 +156,14 @@ impl Session {
             }
             self.test = None;
             lock(&self.status).testing = false;
-            if let Some(last) = self.last.clone() {
-                self.paint(&last, None);
-            }
-            return;
+            return self.repaint();
         }
         let changed = self.client.as_mut().map(Client::heard);
         match changed {
             Some(Ok(true)) => {
                 self.client = None;
-                if self.ready().is_ok()
-                    && let Some(last) = self.last.clone()
-                {
-                    self.paint(&last, None);
+                if self.ready().is_ok() {
+                    self.repaint();
                 }
             }
             Some(Err(e)) => {
@@ -160,3 +174,6 @@ impl Session {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

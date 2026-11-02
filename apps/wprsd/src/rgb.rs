@@ -16,6 +16,7 @@ const KEPT: usize = 16;
 pub(crate) enum Ask {
     Settings(Rgb),
     Frame(String, Strip),
+    Forget(String),
     Test(Option<u32>, Sender<Result<(), String>>),
     Connect(Sender<Result<(), String>>),
 }
@@ -87,7 +88,12 @@ pub(crate) fn frame(source: &str, strip: Strip, send: bool) {
 pub(crate) fn forget(source: &str) {
     if let Some(l) = LIGHTS.get() {
         lock(&l.strips).remove(source);
+        l.asks.send(Ask::Forget(source.into())).ok();
     }
+}
+
+fn allowed(source: &str) -> bool {
+    !source.starts_with("preview:") && crate::inputs::lights(source)
 }
 
 pub(crate) fn strip(source: &str) -> Option<Strip> {

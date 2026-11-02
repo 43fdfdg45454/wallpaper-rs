@@ -96,6 +96,15 @@ green() { tail -n 2 "$rgbs/painted" | grep -q '"device": 0, "colors": \[\[0, 255
 wait_for 10 green || fail "the keyboard did not turn green: $(tail -n 3 "$rgbs/painted")"
 [ "$(ctl rgb status --json | js "r['source'], r['frames'] > 0")" = "('TEST-RGB', True)" ] || fail "status: $(ctl rgb status)"
 ctl input revoke org.example.lit rgb
+sleep 0.5
+before=$(wc -l <"$rgbs/painted")
+ctl rgb test 1
+tested() { [ "$(ctl rgb status --json | js "r['testing']")" = False ]; }
+wait_for 10 tested || fail "the test pattern did not end"
+sleep 0.5
+if tail -n "+$((before + 1))" "$rgbs/painted" | grep -q '"device": 0'; then
+  fail "the colors of a revoked package came back after a test"
+fi
 ctl config rgb.enabled false
 [ "$(ctl rgb status --json | js "r['enabled'], r['connected']")" = "(False, False)" ] || fail "RGB lighting stayed on"
 ctl release TEST-RGB && expect "list(s['outputs'])" "[]"
