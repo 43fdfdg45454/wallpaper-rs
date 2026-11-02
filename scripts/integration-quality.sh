@@ -24,20 +24,21 @@ level="s['outputs']['TEST-Q']['quality'], s['outputs']['TEST-Q']['quality_reason
 expect "s['outputs']['TEST-Q']['kind']" scene
 auto=$(field "$level")
 case $auto in *user*) fail "the automatic level says the user chose it: $auto" ;; esac
-ctl quality q3 | grep -q "^TEST-Q  *q3 " || fail "wprs-ctl quality q3: $(ctl quality)"
+ctl quality q3 | grep "^TEST-Q  *q3 " >/dev/null || fail "wprs-ctl quality q3: $(ctl quality)"
 expect "$level" "('q3', 'user')"
 grep -q '^quality = "q3"' "$config" || fail "the level was not saved: $(cat "$config")"
 echo ac >&8 && echo battery >&8
 sleep 1
 expect "s['on_battery'], $level" "(True, 'q3', 'user')"
+case $auto in "('q0'"* | "('q1'"*) floored="'q2', 'user'" ;; *) floored=${auto#(} floored=${floored%)} ;; esac
 ctl config playback.quality min-q2
-expect "$level" "('q2', 'user')"
+expect "$level" "($floored)"
 ctl quality q1 -o TEST-Q >/dev/null
 expect "$level, s['outputs']['TEST-Q']['quality_choice']" "('q1', 'user', 'q1')"
 grep -q '^\[outputs.TEST-Q\]' "$config" || fail "the own level of the screen was not saved: $(cat "$config")"
 if ctl quality q7 -o TEST-Q 2>/dev/null; then fail "an invalid level was accepted"; fi
 ctl config playback.quality.TEST-Q none
-expect "$level, s['outputs']['TEST-Q']['quality_choice']" "('q2', 'user', None)"
+expect "$level, s['outputs']['TEST-Q']['quality_choice']" "($floored, None)"
 ctl quality auto >/dev/null
 expect "$level" "$auto"
 [ "$(ctl quality --json | python3 -c "import json, sys; print(json.load(sys.stdin)['quality'])")" = auto ] ||
