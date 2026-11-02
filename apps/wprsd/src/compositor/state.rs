@@ -71,6 +71,12 @@ impl State {
     }
 
     pub(super) fn run(&mut self, rx: &mpsc::Receiver<Command>) {
+        self.serve(rx);
+        self.pages.clear();
+        super::pages::settle();
+    }
+
+    fn serve(&mut self, rx: &mpsc::Receiver<Command>) {
         loop {
             let first = match self.next_deadline() {
                 Some(deadline) => match rx.recv_timeout(deadline.saturating_duration_since(Instant::now())) {

@@ -8,6 +8,8 @@ pixel() { "$BIN/probe" "$1" 3 2>/dev/null | grep -q "center bgra \[$2, 255\]"; }
 seen() { wait_for 20 pixel "$@" || fail "stream $1 shows $("$BIN/probe" "$1" 3 2>&1 | tail -n 1), expected bgra $2"; }
 helpers() { pgrep -u "$(id -u)" -f "$BIN/wprs-web" | grep -c . || true; }
 stopped() { [ "$(helpers)" = 0 ] && ! pgrep -g "$group" >/dev/null; }
+helper() { field "s['outputs']['TEST-W'].get('helper')"; }
+fresh() { group=$(helper) && [ "$group" != None ] && [ "$group" != "$1" ] && [ "$(helpers)" = 1 ]; }
 ctl pack build "$ROOT/tests/fixtures/tint" -o "$pages/tint.wpak" >/dev/null
 ctl pack build "$ROOT/scenes/lights" -o "$pages/lights.wpak" >/dev/null
 ctl lib import "$pages/tint.wpak" "$pages/lights.wpak" --wait >/dev/null
@@ -41,13 +43,17 @@ else
   seen "$web" "0, 255, 0"
   [ -d "$XDG_DATA_HOME/wallpaper-rs/web/org.example.tint" ] || fail "the page kept no storage"
   touch "$XDG_DATA_HOME/wallpaper-rs/web/org.example.tint/kept"
+  old=$(helper)
   ctl lib clear-data "$tint"
   [ ! -e "$XDG_DATA_HOME/wallpaper-rs/web/org.example.tint/kept" ] || fail "the data of the page stayed"
+  wait_for 10 fresh "$old" || fail "the page did not start again after its data was cleared: $(helper)"
   seen "$web" "0, 255, 0"
+  old=$(helper)
+  [ "$old" != None ] || fail "the state names no web helper for the page"
   ctl lib apply "$lights" -o TEST-W 2>/dev/null
   expect "s['outputs']['TEST-W']['kind'], s['outputs']['TEST-W']['error']" "('web', None)"
-  group=$(pgrep -u "$(id -u)" -f "$BIN/wprs-web" | head -n 1)
-  [ -n "$group" ] || fail "no web helper runs for the example page"
+  wait_for 10 fresh "$old" || fail "no single new web helper runs for the example page: $(helper), $(helpers) running"
+  group=$(helper)
   ctl release TEST-W
   wait_for 10 stopped || fail "the web helper or its engine outlived its page: $(pgrep -a -g "$group")"
   echo "web wallpaper checks passed"

@@ -14,6 +14,7 @@ pub struct OutputStatus {
     pub left_out: Vec<String>,
     pub console: Vec<String>,
     pub sandbox: &'static str,
+    pub helper: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize)]

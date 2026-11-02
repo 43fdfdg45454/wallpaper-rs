@@ -4,6 +4,7 @@ mod formats;
 mod frames;
 mod gbm;
 mod glib;
+mod quit;
 mod ring;
 mod run;
 mod scheme;
@@ -44,9 +45,9 @@ unsafe extern "C" fn readable(_fd: c_int, _condition: u32, _data: Ptr) -> c_int 
     loop {
         match engine.link.recv::<ToWeb>(false) {
             Ok(Some((message, _))) => run::handle(message),
-            Ok(None) => std::process::exit(0),
+            Ok(None) => quit::quit(0),
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => return 1,
-            Err(_) => std::process::exit(1),
+            Err(_) => quit::quit(1),
         }
     }
 }

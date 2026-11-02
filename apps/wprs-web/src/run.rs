@@ -58,7 +58,7 @@ pub fn handle(message: ToWeb) {
         }
         ToWeb::Freed { view: id, slot } => view(id).into_iter().for_each(|v| crate::frames::freed(&v, slot)),
         ToWeb::Copy => live(|l| l.copy = true),
-        ToWeb::Quit => std::process::exit(0),
+        ToWeb::Quit => crate::quit::quit(0),
     }
 }
 
@@ -79,7 +79,7 @@ fn folders(folder: wprs_web::Folder) {
     }
 }
 
-fn close(id: u32) {
+pub fn close(id: u32) {
     if let Some(view) = VIEWS.with(|v| v.borrow_mut().remove(&id)) {
         let a = get();
         let held: Vec<Ptr> = view.held.borrow_mut().drain().map(|(_, b)| b).collect();

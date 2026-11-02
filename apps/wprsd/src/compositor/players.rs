@@ -103,7 +103,7 @@ impl State {
             let quality = o.shown.scene.as_ref().map_or(Level::default(), |s| s.quality());
             let copied = view.map(|v| if v.shown.is_some() { "zero-copy" } else { "copy" });
             let decode = slot.map(|s| s.decode).or(copied.filter(|_| drawn)).unwrap_or("");
-            let sandbox = page.map_or("", |p| p.sandbox);
+            let sandbox = page.map_or(("", None), |p| (p.sandbox, p.child.as_ref().map(|c| c.id())));
             (
                 kind,
                 playing,
@@ -134,9 +134,9 @@ impl State {
                         &s.left_out[..],
                     ) == now
                 };
-                published
-                    .get(name)
-                    .is_some_and(|s| same(s) && s.sandbox == sandbox && s.console.iter().eq(lines()))
+                published.get(name).is_some_and(|s| {
+                    same(s) && (s.sandbox, s.helper) == sandbox && s.console.iter().eq(lines())
+                })
             });
         if !unchanged {
             let entry = |(name, o): (&String, &Output)| {
@@ -148,7 +148,7 @@ impl State {
                     fps,
                     sound,
                     (flashes, particles, level, decode),
-                    sandbox,
+                    (sandbox, helper),
                 ) = status(name, o);
                 let frames = published.get(name).map_or(0, |s| s.frames);
                 let (left_out, console) = (left(o).to_vec(), console(name, o).cloned().collect());
@@ -167,6 +167,7 @@ impl State {
                     left_out,
                     console,
                     sandbox,
+                    helper,
                 };
                 (name.clone(), status)
             };

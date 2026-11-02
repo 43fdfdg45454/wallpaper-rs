@@ -45,7 +45,7 @@ fn page(language: bool, more: Json) -> PageSpec {
     };
     let privacy = Privacy { language, ..Privacy::default() };
     let (files, folders, values) = (Vec::new(), Vec::new(), Default::default());
-    PageSpec { pack: Arc::new(pack), values, privacy, files, folders, storage: None, cleared: 0 }
+    PageSpec { pack: Arc::new(pack), values, privacy, files, folders, storage: None }
 }
 
 #[test]
@@ -91,4 +91,65 @@ fn pages_never_see_where_a_shortcut_leads() {
     let shown = Json::Object(values(&page, &[0; 32], wprs_scene::Quality::Q3).0);
     assert!(shown["open"] == json!(true) && shown.get("away").is_none_or(Json::is_null));
     assert!(!shown.to_string().contains("example.org"));
+}
+
+fn slow_helper(data: &std::path::Path) -> (Arc<wprs_web::Link>, std::process::Child) {
+    let script =
+        "(while :; do touch \"$0/alive\"; sleep 0.01; done) & cat <&3 >/dev/null; sleep 0.3; kill $!";
+    let shell = std::path::Path::new("/bin/sh");
+    let (link, child) = wprs_web::spawn(shell, Default::default(), |c| {
+        c.arg("-c").arg(script).arg(data);
+    })
+    .unwrap();
+    (Arc::new(link), child)
+}
+
+fn quiet(data: &std::path::Path) -> bool {
+    let until = Instant::now() + Duration::from_secs(5);
+    while ending::busy(data) && Instant::now() < until {
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    !ending::busy(data)
+}
+
+#[test]
+fn a_page_stops_without_waiting_and_starts_again_only_once_its_helper_left_its_data() {
+    let root = tempfile::tempdir().unwrap();
+    let data = root.path().join("data");
+    std::fs::create_dir(&data).unwrap();
+    let (link, child) = slow_helper(&data);
+    let group = child.id();
+    let mut slot = PageSlot::new(spec(true), Instant::now());
+    (slot.spec.storage, slot.link, slot.child) = (Some(data.clone()), Some(link), Some(child));
+    let started = Instant::now();
+    slot.stop();
+    assert!(started.elapsed() < Duration::from_millis(100), "{:?}", started.elapsed());
+    let now = Instant::now();
+    slot.due = Some(now);
+    assert!(!slot.starts(now) && slot.due.is_some_and(|due| due > now));
+    assert!(quiet(&data) && wprs_web::members(group).is_empty());
+    let now = Instant::now();
+    slot.due = Some(now);
+    assert!(slot.starts(now) && slot.due.is_none());
+}
+
+#[test]
+fn clearing_the_data_of_a_page_waits_for_its_helper_and_then_removes_it() {
+    let root = tempfile::tempdir().unwrap();
+    let data = root.path().join("data");
+    std::fs::create_dir(&data).unwrap();
+    let (link, child) = slow_helper(&data);
+    let group = child.id();
+    let mut slot = PageSlot::new(spec(true), Instant::now());
+    (slot.spec.storage, slot.link, slot.child) = (Some(data.clone()), Some(link), Some(child));
+    drop(slot);
+    let (done, answer) = std::sync::mpsc::channel();
+    let started = Instant::now();
+    ending::clear(data.clone(), done);
+    assert!(started.elapsed() < Duration::from_millis(100), "{:?}", started.elapsed());
+    answer.recv_timeout(Duration::from_secs(10)).unwrap().unwrap();
+    assert!(wprs_web::members(group).is_empty() && !data.exists());
+    std::thread::sleep(Duration::from_millis(50));
+    assert!(!data.exists(), "nothing writes into the data of a page once it is cleared");
+    assert!(quiet(&data));
 }

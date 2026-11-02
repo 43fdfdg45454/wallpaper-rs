@@ -154,6 +154,7 @@ impl Daemon {
                 left_out: s.left_out,
                 console: s.console,
                 sandbox: s.sandbox.into(),
+                helper: s.helper,
                 accent: info.accent.clone(),
                 filter: Some(st.config.filter(name)).filter(|f| !f.is_identity()),
             };

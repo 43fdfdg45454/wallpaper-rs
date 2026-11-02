@@ -68,6 +68,7 @@ impl State {
                 }
             }
             Command::Wake => {}
+            Command::Clear(dir, done) => self.clear_page(dir, done),
             Command::Quit => return false,
         }
         true

@@ -11,7 +11,7 @@ use wprs_web::{Allowed, FromWeb, Isolation, Link, Settings, ToWeb};
 pub(super) const RETRIES: u32 = 3;
 pub(super) const FIRST_FRAME: Duration = Duration::from_secs(10);
 const BACKOFF: [u64; 3] = [1, 5, 30];
-const DRAIN: Duration = Duration::from_secs(3);
+const SETTLE: Duration = Duration::from_millis(25);
 
 pub(super) type Inbox = Arc<Mutex<Vec<(FromWeb, Vec<OwnedFd>)>>>;
 
@@ -135,17 +135,21 @@ impl PageSlot {
         (self.files, self.folders, self.settings, self.allowed) = Default::default();
     }
 
+    pub(super) fn starts(&mut self, now: Instant) -> bool {
+        if self.link.is_some() || self.due.is_none_or(|due| due > now) {
+            return false;
+        }
+        let busy = self.spec.storage.as_deref().is_some_and(super::ending::busy);
+        self.due = busy.then_some(now + SETTLE);
+        !busy
+    }
+
     pub(super) fn stop(&mut self) {
         self.send(&ToWeb::Quit);
-        if let Some(mut child) = self.child.take() {
-            let _ = child.kill();
-            let _ = child.wait();
-            if !wprs_web::drain(child.id(), DRAIN) {
-                tracing::warn!("the web engine of a page outlived its helper and was stopped");
-            }
+        (self.link, self.inbox) = (None, Inbox::default());
+        if let Some(child) = self.child.take() {
+            super::ending::later(child, self.spec.storage.clone());
         }
-        self.link = None;
-        lock(&self.inbox).clear();
     }
 
     pub(super) fn fail(&mut self, error: String, now: Instant) {

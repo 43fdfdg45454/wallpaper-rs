@@ -45,6 +45,7 @@ macro_rules! api {
 api! {
     g_main_loop_new: fn(Ptr, c_int) -> Ptr;
     g_main_loop_run: fn(Ptr);
+    g_main_context_iteration: fn(Ptr, c_int) -> c_int;
     g_unix_fd_add: fn(c_int, c_uint, Ptr, Ptr) -> c_uint;
     g_timeout_add: fn(c_uint, Ptr, Ptr) -> c_uint;
     g_idle_add: fn(Ptr, Ptr) -> c_uint;

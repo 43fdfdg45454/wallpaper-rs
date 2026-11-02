@@ -76,6 +76,15 @@ sealed `memfd` instead, up to 64 MiB. The daemon maps frames only from `memfd`s 
 shrinking and as large as the frames they hold. The helper dies with the daemon
 (`PR_SET_PDEATHSIG`).
 
+Each helper leads its own process group, which WebKit's processes join. To stop a page the daemon
+sends `Quit` (closing the socket counts the same): the helper closes its views, lets go of its
+WebKit context and network session, waits up to one second for WebKit's processes to end, kills
+those left and exits. The daemon never waits for this on its render thread: a thread of its own
+gives the helper 1.5 s, then kills it, and kills whatever stays in its group 3 s later. A page that
+keeps data starts again only once its earlier helper and group are gone, and `ClearData` deletes
+the data only after that, so two engines never share it. When the daemon stops it waits for every
+helper to end.
+
 ## Sandbox
 
 Every layer applies to every page:

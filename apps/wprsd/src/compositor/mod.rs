@@ -50,6 +50,7 @@ enum Command {
     Retry,
     Again(String),
     Wake,
+    Clear(std::path::PathBuf, mpsc::Sender<std::io::Result<()>>),
     Quit,
 }
 

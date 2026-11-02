@@ -2,11 +2,13 @@ mod gpu;
 mod link;
 mod policy;
 mod spawn;
+mod stop;
 
 pub use gpu::{PROBE, device};
 pub use link::{Link, MAX_MESSAGE};
 pub use policy::{csp, filter, languages, mime};
-pub use spawn::{Isolation, drain, isolated, scope, spawn, unscoped};
+pub use spawn::{Isolation, isolated, scope, spawn, unscoped};
+pub use stop::{DRAIN, GRACE, drain, end, members};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};

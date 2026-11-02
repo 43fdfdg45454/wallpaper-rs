@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use wprs_web::{Folder, Settings, Start, ToWeb, token};
 
+mod ending;
 mod feed;
 mod frames;
 mod slot;
@@ -13,6 +14,7 @@ mod slot;
 mod tests;
 mod view;
 
+pub(super) use ending::settle;
 pub(super) use slot::PageSlot;
 use view::ViewSlot;
 
@@ -130,8 +132,8 @@ impl State {
         self.pages.retain(|path, _| wanted.contains_key(path));
         for (path, (spec, views)) in wanted {
             let renew = self.pages.get(&path).is_none_or(|s| {
-                let old = (s.spec.privacy, &s.spec.pack.key, s.spec.cleared, &s.spec.storage);
-                old != (spec.privacy, &spec.pack.key, spec.cleared, &spec.storage)
+                let old = (s.spec.privacy, &s.spec.pack.key, &s.spec.storage);
+                old != (spec.privacy, &spec.pack.key, &spec.storage)
             });
             if renew {
                 self.pages.insert(path.clone(), PageSlot::new(spec.clone(), now));
@@ -139,8 +141,7 @@ impl State {
             let Some(mut slot) = self.pages.remove(&path) else { continue };
             slot.spec = spec;
             self.sync_views(&mut slot, &views, now);
-            if slot.link.is_none() && slot.due.is_some_and(|d| d <= now) {
-                slot.due = None;
+            if slot.starts(now) {
                 let start = self.start(&slot);
                 if start.device.is_none() && !slot.hidden {
                     tracing::info!("the graphics card cannot draw web pages, drawing them in memory");

@@ -4,7 +4,6 @@ use std::os::fd::AsRawFd;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
-use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Isolation {
@@ -104,25 +103,4 @@ pub fn isolated(pid: u32) -> bool {
     let own = std::fs::read_link("/proc/self/ns/net").ok();
     let theirs = std::fs::read_link(format!("/proc/{pid}/ns/net")).ok();
     own.is_some() && theirs.is_some() && own != theirs
-}
-
-fn running(group: i32) -> bool {
-    let Ok(dir) = std::fs::read_dir("/proc") else { return false };
-    dir.flatten().filter_map(|e| std::fs::read_to_string(e.path().join("stat")).ok()).any(|stat| {
-        let mut fields = stat.rsplit_once(')').map_or("", |(_, rest)| rest).split_whitespace();
-        let (state, of) = (fields.next(), fields.nth(1).and_then(|g| g.parse::<i32>().ok()));
-        state.is_some_and(|s| s != "Z" && s != "X") && of == Some(group)
-    })
-}
-
-pub fn drain(helper: u32, within: Duration) -> bool {
-    let (group, end) = (helper as i32, Instant::now() + within);
-    while running(group) {
-        if Instant::now() >= end {
-            unsafe { libc::kill(-group, libc::SIGKILL) };
-            return false;
-        }
-        std::thread::sleep(Duration::from_millis(10));
-    }
-    true
 }

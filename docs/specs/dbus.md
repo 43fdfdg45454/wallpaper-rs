@@ -2194,6 +2194,8 @@ that it reads in place, `"copy"` when its frames go through system memory, and `
 content (see "Video decoding" and `web.md`). `sandbox` is `""` for other content, `"on"` while a
 web page runs with every layer of its sandbox, and `"reduced"` when the web engine could not start
 its own sandbox or the page could not get its own empty network, so clients can warn about it.
+`helper` is the process id of the web helper that draws the page of that output, and `null` for
+other content or while no helper runs.
 `flashes` is `""`, or `"slowed"` or `"paused"` once `playback.flash_guard` slowed or stopped the
 scene of that output. `left_out` lists the package effects the scene of that output plays without,
 as `the effect <id> was left out: <reason>`; it is a note, not a failure. `particles` is `"gpu"`

@@ -102,6 +102,8 @@ model! {
         #[serde(default)]
         pub sandbox: String,
         #[serde(default)]
+        pub helper: Option<u32>,
+        #[serde(default)]
         pub accent: Option<String>,
         #[serde(default)]
         pub filter: Option<Filter>,

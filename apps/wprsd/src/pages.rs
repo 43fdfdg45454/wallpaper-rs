@@ -18,9 +18,6 @@ pub use shape::shape;
 pub const HIDES: [&str; 4] = ["hide_zone", "hide_language", "hide_gpu", "hide_storage"];
 pub const PLAIN: &str = "en-US";
 
-static CLEARED: std::sync::Mutex<std::collections::BTreeMap<String, u64>> =
-    std::sync::Mutex::new(std::collections::BTreeMap::new());
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Privacy {
     pub zone: bool,
@@ -55,14 +52,12 @@ pub struct PageSpec {
     pub files: Vec<(String, PathBuf)>,
     pub folders: Vec<(String, PathBuf, bool)>,
     pub storage: Option<PathBuf>,
-    pub cleared: u64,
 }
 
 impl PartialEq for PageSpec {
     fn eq(&self, other: &PageSpec) -> bool {
-        let same = (&self.values, self.privacy, &self.files, &self.folders, &self.storage, self.cleared);
-        let theirs =
-            (&other.values, other.privacy, &other.files, &other.folders, &other.storage, other.cleared);
+        let same = (&self.values, self.privacy, &self.files, &self.folders, &self.storage);
+        let theirs = (&other.values, other.privacy, &other.files, &other.folders, &other.storage);
         self.pack.path == other.pack.path && same == theirs
     }
 }
@@ -136,8 +131,7 @@ impl Daemon {
         let privacy = self.privacy(&pack);
         let storage = (privacy.storage && pack.storage_kib > 0).then(|| self.page_storage(&pack.props.id));
         let storage = storage.filter(|dir| crate::store::private_dir(dir).is_ok());
-        let cleared = crate::compositor::lock(&CLEARED).get(&pack.props.id).copied().unwrap_or(0);
-        PageSpec { pack, values, privacy, files, folders, storage, cleared }
+        PageSpec { pack, values, privacy, files, folders, storage }
     }
 
     pub fn page_on(&self, output: &str, pack: Arc<WebPack>, shown: &mut Option<Arc<Props>>) -> PageSpec {
@@ -160,11 +154,7 @@ impl Daemon {
     }
 
     pub fn clear_page_data(&self, id: &str) -> std::io::Result<()> {
-        *crate::compositor::lock(&CLEARED).entry(id.to_owned()).or_default() += 1;
-        match std::fs::remove_dir_all(self.page_storage(id)) {
-            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e),
-            _ => Ok(()),
-        }
+        self.compositor.clear_page(self.page_storage(id))
     }
 
     pub fn clear_data(&self, uids: &[&str]) -> crate::error::Result<()> {
