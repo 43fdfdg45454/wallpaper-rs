@@ -76,6 +76,10 @@ a server sync --wait >/dev/null
 echo "phone link, join and sync checks passed"
 [ "$(ask 'account {"op": "votes", "ids": ["org.example.noon"]}' | jq_ "r['items']['org.example.noon']['mine']")" = down ] ||
   fail "the phone does not see the account's vote"
+server_repo=$(ask 'account {"op": "votes", "ids": ["org.example.noon"]}' | jq_ "r['repo_id']")
+both="[\"$server_repo/org.example.noon\", \"$(printf '%064d' 7)/org.example.noon\"]"
+[ "$(ask "account {\"op\": \"votes\", \"ids\": $both}" | jq_ "sorted(r['items'])")" = "['$server_repo/org.example.noon']" ] ||
+  fail "the phone asked the server about a package of another repository"
 send 'account {"op": "vote", "id": "org.example.noon", "vote": "sideways"}'
 IFS= read -r -t 60 refused <&8 || fail "the phone did not answer a bad vote"
 [[ $refused == *'"error":'* ]] || fail "the phone sent a vote other than up, down or none"

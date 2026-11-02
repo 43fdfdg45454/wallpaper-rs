@@ -188,7 +188,9 @@ voted and keeps no record of installs or downloads. The page of a package shows 
 note when it is featured and, for a signed-in visitor, buttons to vote up, down or withdraw the vote.
 The desktop app and the phone vote with the token of the device and read the counts with
 `/api/v1/votes`, which adds `mine` for that account; both skip the counts while `repos.vote_counts`
-is off.
+is off. They ask and vote only for packages of the repository the server announces (its `repo_id`
+in `/.well-known/wprs-server`): ids of packages from other repositories never reach the server, and
+rows of other repositories show no counts and no vote buttons.
 
 Search uses an SQLite FTS5 index with the trigram tokenizer (without diacritics) over the id,
 title, description and tags of published versions, kept up to date by triggers: every word of `q`

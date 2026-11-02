@@ -43,6 +43,7 @@ pub enum Remote {
         about = "Vote for a package on the linked server; the server keeps only the counts and your own vote"
     )]
     Vote {
+        #[arg(help = "A package id of the server's repository, or REPO/ID; other repositories are refused")]
         id: String,
         #[arg(value_parser = ["up", "down", "none"])]
         vote: String,
@@ -51,7 +52,7 @@ pub enum Remote {
         about = "Print the vote counts of packages on the linked server, unless repos.vote_counts hides them"
     )]
     Votes {
-        #[arg(required = true)]
+        #[arg(required = true, help = "Package ids, or REPO/ID; ids of other repositories are never sent")]
         ids: Vec<String>,
     },
 }

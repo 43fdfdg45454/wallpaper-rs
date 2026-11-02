@@ -82,7 +82,7 @@ private fun Explore(main: Main, run: Run, close: () -> Unit) {
     var installed by remember { mutableIntStateOf(0) }
     val found by loaded(JSONArray(), query, installed) { account("browse", "query" to query) as? JSONArray ?: JSONArray() }
     var voted by remember { mutableStateOf(JSONObject()) }
-    val counted by loaded(JSONObject(), found) { votes(found.objects().map { it.getString("id") }) }
+    val counted by loaded(JSONObject(), found) { votes(found.objects().map { it.getString("repo_id") + "/" + it.getString("id") }) }
     val items = found.objects().sortedByDescending { it.optBoolean("featured") }
     AlertDialog(
         onDismissRequest = close,
@@ -106,8 +106,11 @@ private fun Explore(main: Main, run: Run, close: () -> Unit) {
                                 val mark = stringResource(R.string.repo_featured).takeIf { featured }
                                 Column {
                                     Text(listOfNotNull(mark, item.getString("repo"), item.getString("version"), size(item.optLong("size")), mature).joinToString(" · "))
-                                    val counts = voted.optJSONObject(id) ?: counted.optJSONObject("items")?.optJSONObject(id)
-                                    Votes(id, counts, counted.optBoolean("shown"), run) { voted = JSONObject(voted.toString()).put(id, it) }
+                                    val spec = item.getString("repo_id") + "/" + id
+                                    val counts = voted.optJSONObject(spec) ?: counted.optJSONObject("items")?.optJSONObject(spec)
+                                    if (item.getString("repo_id") == counted.optString("repo_id").takeIf { !counted.isNull("repo_id") }) {
+                                        Votes(spec, counts, counted.optBoolean("shown"), run) { voted = JSONObject(voted.toString()).put(spec, it) }
+                                    }
                                 }
                             },
                             trailingContent = {

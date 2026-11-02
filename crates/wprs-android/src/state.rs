@@ -52,6 +52,7 @@ pub(crate) struct Saved {
     pub(crate) offers: Vec<crate::repos::Offer>,
     pub(crate) declined: BTreeSet<String>,
     pub(crate) shared: Vec<String>,
+    pub(crate) repo_id: Option<String>,
 }
 
 impl Saved {

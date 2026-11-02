@@ -52,3 +52,19 @@ pub(crate) fn valid_license(expr: &str) -> bool {
     });
     matches!(end, Some((Next::Operator { .. }, 0)))
 }
+
+pub const MAX_VOTED: usize = 100;
+
+pub fn voted<'a>(specs: &'a [String], server: Option<&str>) -> Option<Vec<(&'a str, &'a str)>> {
+    let split = |spec: &'a str| match spec.split_once('/') {
+        Some((repo, id)) => (Some(repo), id),
+        None => (None, spec),
+    };
+    let parts: Vec<_> = specs.iter().map(|s| (s.as_str(), split(s))).collect();
+    let fine = |(repo, id): (Option<&str>, &str)| valid_id(id) && repo.is_none_or(|r| within(r, 128));
+    if specs.len() > MAX_VOTED || !parts.iter().all(|(_, p)| fine(*p)) {
+        return None;
+    }
+    let ours = |repo: Option<&str>| repo.is_none_or(|r| server.is_some_and(|s| !s.is_empty() && s == r));
+    Some(parts.into_iter().filter(|(_, (repo, _))| ours(*repo)).map(|(spec, (_, id))| (spec, id)).collect())
+}

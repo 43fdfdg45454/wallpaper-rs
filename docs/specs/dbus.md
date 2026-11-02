@@ -1884,14 +1884,20 @@ Makes every version of the package `id` of this account (`version` empty) or one
 ### `Vote(s id, s vote) → (s json)`
 
 Sends `up`, `down` or `none` for the package `id` to the linked server with this device's token
-(`POST /api/v1/packages/{id}/vote`) and answers `{id, up, down, mine}`. The server keeps only the counts
-and the vote of this account. `InvalidArgs` for another vote or an id that is not a package id.
+(`POST /api/v1/packages/{id}/vote`) and answers `{id, up, down, mine}`. `id` is a package id of the
+repository of the linked server, or `repo_id/id`. The server keeps only the counts
+and the vote of this account. `InvalidArgs` for another vote, an id that is not a package id, or a
+`repo_id` that is not the one of the linked server's repository (nothing is sent).
 
 ### `GetVotes(as ids) → (s json)`
 
-`{items: {id: {up, down, mine}}, shown}` from the linked server (`mine` is the vote of this account: `up`, `down` or `none`) for at most 100 package ids; `shown` is
-`false`, with no items and without reaching the network, while no server is linked or
-`repos.vote_counts` is off. Counts are hints the repository does not sign. `RepoPackage` carries
+`{items: {id: {up, down, mine}}, shown, repo_id}` from the linked server (`mine` is the vote of this account: `up`, `down` or `none`) for at most 100 package ids, each a package id of the
+server's repository or `repo_id/id`; `items` is keyed by the ids as given, and ids whose `repo_id` is
+not the server's repository are never sent and get no item. `repo_id` is the repository of the linked
+server (`null` when none is linked or it announces none), so a client shows vote buttons only on its
+packages. `shown` is
+`false`, with no items and without reaching the network, while no server is linked, no id is of its
+repository or `repos.vote_counts` is off. Counts are hints the repository does not sign. `RepoPackage` carries
 `featured` for the packages the repository features (`repo.md`).
 
 ### `RemoveServer(b wipe)`

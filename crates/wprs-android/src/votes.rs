@@ -1,14 +1,15 @@
 use crate::state::{api, linked};
-use crate::{Error, said, settings};
-use serde_json::{Value, json};
-use wprs_format::valid_id;
+use crate::{Error, said, server, settings};
+use serde_json::{Map, Value, json};
+use wprs_format::voted;
 
-const MOST: usize = 100;
+fn runtime() -> Result<tokio::runtime::Runtime, Error> {
+    Ok(tokio::runtime::Builder::new_current_thread().enable_all().build()?)
+}
 
 fn answer(path: String, body: Option<Value>) -> Result<Value, Error> {
     let (api, _) = api()?;
-    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
-    Ok(runtime.block_on(async {
+    Ok(runtime()?.block_on(async {
         match body {
             Some(body) => api.post(&path, body).await,
             None => api.get(&path).await,
@@ -16,21 +17,49 @@ fn answer(path: String, body: Option<Value>) -> Result<Value, Error> {
     })?)
 }
 
+fn repository() -> Result<Option<String>, Error> {
+    linked()?;
+    runtime()?.block_on(server::repository())
+}
+
 pub(crate) fn counts(ids: &[String]) -> Result<Value, Error> {
-    if ids.len() > MOST || !ids.iter().all(|i| valid_id(i)) {
+    if voted(ids, None).is_none() {
         return Err(said("android.vote_ids", "give at most 100 package ids", &[]));
     }
-    if ids.is_empty() || !settings::config().repos.vote_counts || linked().is_err() {
-        return Ok(json!({"items": {}, "shown": false}));
+    let none = |repo: &Option<String>| json!({"items": {}, "shown": false, "repo_id": repo});
+    if ids.is_empty() || linked().is_err() {
+        return Ok(none(&None));
     }
-    let found = answer(format!("/api/v1/votes?ids={}", ids.join(",")), None)?;
-    Ok(json!({"items": found["items"], "shown": true}))
+    let repo = repository()?;
+    let asked = voted(ids, repo.as_deref()).unwrap_or_default();
+    if asked.is_empty() || !settings::config().repos.vote_counts {
+        return Ok(none(&repo));
+    }
+    let mut wanted: Vec<&str> = asked.iter().map(|(_, id)| *id).collect();
+    wanted.sort_unstable();
+    wanted.dedup();
+    let found = answer(format!("/api/v1/votes?ids={}", wanted.join(",")), None)?;
+    let count = |id: &str| found["items"].get(id).cloned().unwrap_or(Value::Null);
+    let items: Map<String, Value> = asked
+        .iter()
+        .filter(|(_, id)| !count(id).is_null())
+        .map(|(spec, id)| ((*spec).into(), count(id)))
+        .collect();
+    Ok(json!({"items": items, "shown": true, "repo_id": repo}))
 }
 
 pub(crate) fn cast(id: &str, vote: &str) -> Result<Value, Error> {
-    if !valid_id(id) || !matches!(vote, "up" | "down" | "none") {
+    let specs = [id.to_owned()];
+    if voted(&specs, None).is_none() || !matches!(vote, "up" | "down" | "none") {
         return Err(said("android.vote_value", "give a package id and up, down or none", &[]));
     }
-    linked()?;
+    let repo = repository()?;
+    let Some((_, id)) = voted(&specs, repo.as_deref()).unwrap_or_default().first().copied() else {
+        return Err(said(
+            "android.vote_elsewhere",
+            "votes go only to packages of the repository of the linked server",
+            &[],
+        ));
+    };
     answer(format!("/api/v1/packages/{id}/vote"), Some(json!({ "vote": vote })))
 }

@@ -1540,8 +1540,10 @@ add --unlisted`, `repo hide` y `repo unhide` hacen lo mismo antes de `repo publi
 
 En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
 del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o desde
-`/admin/featured` del servidor), y, con un servidor enlazado, cada paquete muestra sus votos a favor y
-en contra, con tu voto marcado, y botones para votar (`wprs-ctl remote vote ID up|down|none`, `remote votes ID…`). El
+`/admin/featured` del servidor), y, con un servidor enlazado, cada paquete del repositorio de ese servidor muestra sus votos a favor y
+en contra, con tu voto marcado, y botones para votar (`wprs-ctl remote vote ID up|down|none`, `remote votes ID…`,
+también como `REPO/ID`); los paquetes de otros repositorios no muestran votos y sus ids nunca se
+envían al servidor. El
 servidor cuenta un voto por cuenta y paquete, guarda solo los recuentos y tu propio voto, nunca una
 lista de quién votó ni de quién instaló qué. El ajuste *Mostrar los votos del servidor en el
 catálogo* (`repos.vote_counts`, también en los ajustes del teléfono) deja de pedir y mostrar los

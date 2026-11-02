@@ -30,7 +30,25 @@ pub(super) fn records() {
     assert!(refused(json!({"op": "vote", "id": "Not An Id", "vote": "up"})).contains("package id"));
     assert!(refused(json!({"op": "vote", "id": dawn, "vote": "up"})).contains("add a server"));
     assert!(refused(json!({"op": "votes", "ids": vec![dawn; 101]})).contains("100"));
-    assert_eq!(ask(json!({"op": "votes", "ids": [dawn]})), json!({"items": {}, "shown": false}));
+    assert_eq!(
+        ask(json!({"op": "votes", "ids": [dawn]})),
+        json!({"items": {}, "shown": false, "repo_id": null})
+    );
+    let (server, other) = ("a".repeat(64), format!("{}/{dawn}", "b".repeat(64)));
+    let linked = |s: &mut crate::state::Saved| {
+        (s.url, s.device, s.repo_id) = ("https://example.org".into(), Some("d".into()), Some(server.clone()))
+    };
+    crate::state::update(linked).unwrap();
+    let elsewhere = ask(json!({"op": "votes", "ids": [other]}));
+    assert_eq!(
+        elsewhere,
+        json!({"items": {}, "shown": false, "repo_id": server}),
+        "ids of other repositories stay here"
+    );
+    assert!(
+        refused(json!({"op": "vote", "id": other, "vote": "up"})).contains("repository of the linked server")
+    );
+    crate::state::update(|s| *s = crate::state::Saved::default()).unwrap();
     let mut secrets = Secrets::default();
     secrets.token = "t".into();
     vault::store(&secrets).unwrap();

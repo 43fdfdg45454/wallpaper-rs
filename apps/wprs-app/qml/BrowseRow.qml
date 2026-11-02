@@ -75,10 +75,12 @@ RowLayout {
         }
 
         BrowseVotes {
-            counts: row.catalog.votes[row.modelData.id] ?? null
+            readonly property string spec: row.modelData.repo_id + "/" + row.modelData.id
+            visible: row.catalog.voteRepo !== "" && row.modelData.repo_id === row.catalog.voteRepo
+            counts: row.catalog.votes[spec] ?? null
             shown: row.catalog.counted
-            onVoted: found => row.catalog.votes = Object.assign({}, row.catalog.votes, Object.fromEntries([[row.modelData.id, found]]))
-            packageId: row.modelData.id
+            onVoted: found => row.catalog.votes = Object.assign({}, row.catalog.votes, Object.fromEntries([[spec, found]]))
+            packageId: spec
         }
 
         PrivacyNotice {

@@ -25,6 +25,14 @@ a remote vote org.example.noon up | grep -q '"up":1' || fail "the vote was not c
 a remote vote org.example.noon down | grep -q '"down":1,.*"up":0' || fail "a changed vote was counted twice"
 a remote votes org.example.noon | grep -q '"down":1,"mine":"down","up":0' || fail "counts: $(a remote votes org.example.noon)"
 curl -fsS "$URL/api/v1/catalog?q=noon" | grep -q '"votes":{"down":1,"up":0}' || fail "the catalog has no counts"
+server_repo=$(a remote votes org.example.noon | jq_ "r['repo_id']")
+other=$(printf '%064d' 7)
+a remote votes "$server_repo/org.example.noon" | jq_ "r['items']['$server_repo/org.example.noon']['down']" | grep -qx 1 ||
+  fail "counts of the server's repository were not given by repository and id"
+[ "$(a remote votes "$other/org.example.noon" | jq_ "(r['shown'], len(r['items']))")" = "(False, 0)" ] ||
+  fail "ids of another repository were sent to the server"
+if a remote vote "$other/org.example.noon" up 2>/dev/null; then fail "a vote for another repository was sent"; fi
+a remote votes org.example.noon | grep -q '"down":1,"mine":"down","up":0' || fail "a refused vote changed the counts"
 a config repos.vote_counts false
 a remote votes org.example.noon | grep -q '"shown":false' || fail "hidden counts were fetched"
 a config repos.vote_counts true
