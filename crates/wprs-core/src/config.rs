@@ -25,6 +25,8 @@ pub struct OutputConfig {
     pub filter: Option<Filter>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quality: Option<QualityChoice>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hdr: Option<crate::HdrChoice>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub scenes: BTreeMap<String, BTreeMap<String, toml::Value>>,
 }

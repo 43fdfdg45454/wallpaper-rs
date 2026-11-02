@@ -22,7 +22,7 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 23);
+    assert_eq!(c.options().len(), 24);
     assert!(c.repos.vote_counts);
     c.set_option("repos.vote_counts", "false").unwrap();
     assert!(!c.repos.vote_counts && c.set_option("repos.vote_counts", "sometimes").is_err());

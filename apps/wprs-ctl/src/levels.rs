@@ -3,8 +3,8 @@ use anyhow::Result;
 use clap::Args;
 use serde_json::json;
 use wprs_client::Client;
-use wprs_core::QualityChoice;
 use wprs_core::model::{OutputState, State};
+use wprs_core::{HdrChoice, QualityChoice};
 
 const SETTLE: std::time::Duration = std::time::Duration::from_millis(300);
 
@@ -21,8 +21,18 @@ pub struct QualityArgs {
         help = "Output name such as DP-1 for its own level; every output when omitted"
     )]
     pub output: String,
+    #[arg(long, value_parser = ["auto", "on", "off", "none"], help = HDR)]
+    pub hdr: Option<String>,
     #[arg(long, help = crate::cli::JSON)]
     pub json: bool,
+}
+
+const HDR: &str = "Show colors brighter than white on HDR screens: auto (on mains power at the highest level), on or off; with --output, none follows the general setting";
+
+fn hdr(o: &OutputState) -> String {
+    let h = &o.hdr;
+    let peak = h.peak_nits.map(|n| format!(", {n} nits")).unwrap_or_default();
+    format!("{} {} ({}{peak})", h.choice, if h.active { "on" } else { "off" }, h.reason)
 }
 
 pub fn note(o: &OutputState) -> Option<String> {
@@ -49,26 +59,33 @@ pub async fn run(client: &Client, args: QualityArgs) -> Result<()> {
         client.daemon.set_option(&key, level).await?;
         tokio::time::sleep(SETTLE).await;
     }
+    if let Some(choice) = &args.hdr {
+        let key =
+            if output.is_empty() { HdrChoice::KEY.to_owned() } else { format!("{}{output}", HdrChoice::OWN) };
+        client.daemon.set_option(&key, choice).await?;
+        tokio::time::sleep(SETTLE).await;
+    }
     let state: State = serde_json::from_str(&client.daemon.get_state().await?)?;
     let shown = state.outputs.iter().filter(|(name, _)| output.is_empty() || name.as_str() == output);
     if args.json {
         let rows = shown.map(|(name, o)| {
             json!({ "output": name, "choice": o.quality_choice, "quality": o.quality, "reason": o.quality_reason,
-                "cost": o.quality_cost, "budget": o.quality_budget, "note": note(o) })
+                "cost": o.quality_cost, "budget": o.quality_budget, "note": note(o), "hdr": o.hdr })
         });
         let own = &state.qualities;
         println!(
             "{}",
-            json!({ "quality": general(&state), "own": own, "outputs": rows.collect::<Vec<_>>() })
+            json!({ "quality": general(&state), "own": own, "hdr": state.options.get(HdrChoice::KEY),
+                "own_hdr": state.hdrs, "outputs": rows.collect::<Vec<_>>() })
         );
         return Ok(());
     }
     let rows: Vec<_> = shown.collect();
     let cells = rows.iter().map(|(name, o)| {
         let chosen = o.quality_choice.clone().unwrap_or_else(|| general(&state));
-        vec![name.to_string(), chosen, o.quality.clone(), o.quality_reason.clone()]
+        vec![name.to_string(), chosen, o.quality.clone(), o.quality_reason.clone(), hdr(o)]
     });
-    print!("{}", table(&["OUTPUT", "CHOICE", "LEVEL", "WHY"], cells));
+    print!("{}", table(&["OUTPUT", "CHOICE", "LEVEL", "WHY", "HDR"], cells));
     println!("{} = {}", QualityChoice::KEY, clean(&general(&state)));
     if !output.is_empty() && !state.outputs.contains_key(output) {
         let own = state.qualities.get(output).map_or("none", String::as_str);
@@ -79,8 +96,12 @@ pub async fn run(client: &Client, args: QualityArgs) -> Result<()> {
 }
 
 pub fn own(state: &serde_json::Value, key: &str, json: bool) -> bool {
-    let Some(output) = key.strip_prefix(QualityChoice::OWN) else { return false };
-    let own = state["qualities"].get(output).cloned().unwrap_or_default();
+    let quality = key.strip_prefix(QualityChoice::OWN).map(|o| ("qualities", o));
+    let Some((list, output)) = quality.or_else(|| key.strip_prefix(HdrChoice::OWN).map(|o| ("hdrs", o)))
+    else {
+        return false;
+    };
+    let own = state[list].get(output).cloned().unwrap_or_default();
     match json {
         true => println!("{}", serde_json::Value::Object([(key.to_owned(), own)].into_iter().collect())),
         false => println!("{key} = {}", own.as_str().unwrap_or("none")),

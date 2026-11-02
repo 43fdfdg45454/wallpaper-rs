@@ -12,6 +12,7 @@ use wprs_scene::Affine;
 pub struct SceneView {
     pub(super) fit: Fit,
     pub(super) span: Option<[f32; 4]>,
+    pub(crate) headroom: f32,
     pub(super) canvas: [u32; 2],
     pub(super) srgb: bool,
     pub(super) format: Format,
@@ -32,7 +33,7 @@ pub struct SceneView {
     pub(super) _lease: Lease,
     pub(super) refused: std::collections::BTreeMap<String, String>,
     pub(super) scratch: super::Scratch,
-    pub(super) marks: Vec<super::damage::Mark>,
+    pub(crate) marks: Vec<super::damage::Mark>,
     pub(super) stamp: u64,
     pub(super) trimmed: bool,
     pub(super) region: Option<wprs_core::Region>,

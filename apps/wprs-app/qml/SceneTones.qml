@@ -77,4 +77,15 @@ ColumnLayout {
         font: Kirigami.Theme.smallFont
         text: App.tr("The preview shows the left part without the tone map. Phones keep 8-bit colors before the tone map.")
     }
+
+    QQC2.Label {
+        readonly property var lit: Object.keys(App.state.outputs ?? {}).filter(name => App.state.outputs[name].hdr?.active)
+
+        Layout.fillWidth: true
+        visible: tones.hdr
+        wrapMode: Text.Wrap
+        textFormat: Text.PlainText
+        font: Kirigami.Theme.smallFont
+        text: App.tr("On HDR screens the colors brighter than white are kept and bent softly to how bright each screen gets, instead of this tone map; the preview here shows the standard picture.") + (lit.length > 0 ? " " + App.tr("HDR is on for: %1", lit.join(", ")) : "")
+    }
 }

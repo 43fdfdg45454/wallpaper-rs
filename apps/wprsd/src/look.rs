@@ -1,7 +1,7 @@
 use crate::compositor::{Content, Tone};
 use std::path::Path;
-use wprs_core::Fit;
 use wprs_core::config::parse_hex_color;
+use wprs_core::{Fit, HdrChoice};
 use wprs_library::Kind;
 
 pub type Look = (Option<Fit>, Option<[u8; 3]>);
@@ -17,9 +17,13 @@ pub fn flip(display: &wprs_format::Display) -> [bool; 2] {
     [flip == wprs_format::Flip::Horizontal, flip == wprs_format::Flip::Vertical]
 }
 
-pub fn tone(display: &wprs_format::Display, shown: &Content, filter: wprs_core::Filter) -> Tone {
+pub fn tone(
+    display: &wprs_format::Display,
+    shown: &Content,
+    (filter, hdr): (wprs_core::Filter, HdrChoice),
+) -> Tone {
     let shows = matches!(shown, Content::Image(_) | Content::Video(_));
-    Tone { flip: if shows { flip(display) } else { [false; 2] }, grade: filter.grade() }
+    Tone { flip: if shows { flip(display) } else { [false; 2] }, grade: filter.grade(), hdr }
 }
 
 pub fn author(display: &wprs_format::Display) -> Look {

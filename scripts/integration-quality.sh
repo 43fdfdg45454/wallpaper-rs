@@ -55,6 +55,22 @@ ctl quality auto >/dev/null
 expect "$level" "$auto"
 [ "$(ctl quality --json | python3 -c "import json, sys; print(json.load(sys.stdin)['quality'])")" = auto ] ||
   fail "wprs-ctl quality --json: $(ctl quality --json)"
+hdr="s['outputs']['TEST-Q']['hdr']['choice'], s['outputs']['TEST-Q']['hdr']['active'], s['outputs']['TEST-Q']['hdr']['reason']"
+expect "$hdr" "('auto', False, 'display')"
+ctl config playback.hdr on
+expect "$hdr" "('on', False, 'display')"
+ctl quality --hdr off -o TEST-Q >/dev/null
+expect "$hdr, s['outputs']['TEST-Q']['hdr']['own'], s['hdrs']" "('off', False, 'off', 'off', {'TEST-Q': 'off'})"
+ctl quality -o TEST-Q | grep "^TEST-Q .*off off (off)" >/dev/null || fail "wprs-ctl quality: $(ctl quality)"
+ctl config playback.hdr.TEST-GONE on
+[ "$(ctl config playback.hdr.TEST-GONE)" = "playback.hdr.TEST-GONE = on" ] ||
+  fail "the own HDR choice of a screen that is not connected cannot be read: $(ctl config playback.hdr.TEST-GONE)"
+if ctl config playback.hdr bright 2>/dev/null; then fail "an invalid HDR choice was accepted"; fi
+if ctl config playback.hdr.TEST-Q maybe 2>/dev/null; then fail "an invalid own HDR choice was accepted"; fi
+if ctl quality --hdr bright 2>/dev/null; then fail "wprs-ctl quality took an invalid HDR choice"; fi
+grep -q '^hdr = "off"' "$config" || fail "the own HDR choice was not saved: $(cat "$config")"
+ctl config playback.hdr.TEST-GONE none && ctl quality --hdr none -o TEST-Q >/dev/null && ctl quality --hdr auto >/dev/null
+expect "$hdr, s['hdrs']" "('auto', False, 'display', {})"
 kill "$held" 2>/dev/null || true
 ctl release TEST-Q
 echo "quality choice checks passed ($auto on battery)"

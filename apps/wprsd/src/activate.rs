@@ -56,7 +56,7 @@ impl Daemon {
         self.update_config(|c| {
             for (name, mut section) in freed.iter().filter_map(|o| Some((o, sections.remove(o)?))) {
                 section.scenes = c.scene_section(name).clone();
-                section.quality = c.own_quality(name);
+                (section.quality, section.hdr) = (c.own_quality(name), c.own_hdr(name));
                 match name.is_empty() {
                     true => c.default = section,
                     false => drop(c.outputs.insert(name.clone(), section)),

@@ -1512,6 +1512,77 @@ msgstr "En uso: %1 (%2)."
 msgid "The new choice takes effect the next time the daemon starts."
 msgstr "La nueva elección vale desde el próximo arranque del daemon."
 
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "Automatic: on mains power and at the highest scene quality"
+msgstr "Automático: con corriente y con la calidad de escena más alta"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "Always when the screen can show it, also on battery"
+msgstr "Siempre que la pantalla pueda mostrarlo, también con batería"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "Never: standard colors only"
+msgstr "Nunca: solo colores normales"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "automatic"
+msgstr "automático"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "chosen"
+msgstr "elegido"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "turned off"
+msgstr "desactivado"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "this screen or the desktop offers no HDR"
+msgstr "esta pantalla o el escritorio no ofrecen HDR"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "on battery"
+msgstr "con batería"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "the scene is below the highest quality"
+msgstr "la escena está por debajo de la calidad más alta"
+
+#: apps/wprs-app/qml/HdrPicker.qml apps/wprs-app/qml/QualityPicker.qml
+msgid "Like every screen: %1"
+msgstr "Como todas las pantallas: %1"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "HDR is on: %1"
+msgstr "HDR activado: %1"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "HDR is off: %1"
+msgstr "HDR desactivado: %1"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "The screen reaches %1 nits and shows white at %2 nits."
+msgstr "La pantalla llega a %1 nits y muestra el blanco a %2 nits."
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "HDR of %1"
+msgstr "HDR de %1"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "HDR"
+msgstr "HDR"
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid ""
+"Screens and desktops that support HDR show bright scenes brighter than "
+"white, tone mapped to how bright each screen gets. It uses more power, so "
+"the automatic choice keeps it to mains power and the highest scene quality."
+msgstr ""
+"Las pantallas y escritorios que admiten HDR muestran las escenas brillantes "
+"por encima del blanco, ajustadas al brillo que alcanza cada pantalla. Gasta "
+"más energía, así que la opción automática lo reserva para cuando hay "
+"corriente y la calidad de escena más alta."
+
 #: apps/wprs-app/qml/History.qml
 msgid "an item that was removed"
 msgstr "un elemento que se quitó"
@@ -2378,10 +2449,6 @@ msgstr "Siempre reducida (1 de 3)"
 #: apps/wprs-app/qml/QualityPicker.qml
 msgid "Always the lowest (0 of 3), uses the least power"
 msgstr "Siempre la más baja (0 de 3), la que menos energía gasta"
-
-#: apps/wprs-app/qml/QualityPicker.qml
-msgid "Like every screen: %1"
-msgstr "Como todas las pantallas: %1"
 
 #: apps/wprs-app/qml/QualityPicker.qml
 msgid "Scene quality of %1"
@@ -5350,6 +5417,20 @@ msgstr ""
 "La vista previa muestra la parte izquierda sin mapeo de tonos. Los teléfonos "
 "conservan colores de 8 bits antes del mapeo de tonos."
 
+#: apps/wprs-app/qml/SceneTones.qml
+msgid ""
+"On HDR screens the colors brighter than white are kept and bent softly to "
+"how bright each screen gets, instead of this tone map; the preview here "
+"shows the standard picture."
+msgstr ""
+"En las pantallas HDR los colores más brillantes que el blanco se conservan "
+"y se doblan con suavidad hasta el brillo que alcanza cada pantalla, en lugar "
+"de este mapeo de tonos; la vista previa de aquí muestra la imagen normal."
+
+#: apps/wprs-app/qml/SceneTones.qml
+msgid "HDR is on for: %1"
+msgstr "HDR activado en: %1"
+
 #: apps/wprs-app/qml/ScenesPage.qml
 msgid "My scene"
 msgstr "Mi escena"
@@ -5441,6 +5522,10 @@ msgstr "General"
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Quality:"
 msgstr "Calidad:"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "HDR:"
+msgstr "HDR:"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Draw with:"

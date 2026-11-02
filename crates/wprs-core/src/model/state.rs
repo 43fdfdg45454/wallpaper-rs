@@ -1,4 +1,4 @@
-use super::{Credit, Time, Uid};
+use super::{Credit, HdrState, Time, Uid};
 use crate::{Filter, Fit, Screen};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -38,6 +38,8 @@ model! {
         pub gpu_restart: bool,
         #[serde(default)]
         pub qualities: BTreeMap<String, String>,
+        #[serde(default)]
+        pub hdrs: BTreeMap<String, String>,
     }
 
     pub struct GpuAdapter { pub name: String, pub kind: String, pub backend: String, pub used: bool }
@@ -107,6 +109,8 @@ model! {
         pub accent: Option<String>,
         #[serde(default)]
         pub filter: Option<Filter>,
+        #[serde(default)]
+        pub hdr: HdrState,
     }
 
     #[derive(Copy, Eq, Hash)]

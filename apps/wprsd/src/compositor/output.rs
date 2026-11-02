@@ -35,6 +35,7 @@ pub(super) struct Output {
     pub(super) composed: Option<Composed>,
     pub(super) failed: u32,
     pub(super) ages: Ages,
+    pub(super) hdr: super::light::Hdr,
 }
 
 impl Output {
@@ -59,6 +60,7 @@ impl Output {
             failed,
             composed: None,
             ages: Ages::default(),
+            hdr: Default::default(),
         }
     }
 

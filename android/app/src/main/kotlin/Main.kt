@@ -1,7 +1,9 @@
 package io.github.wallpaper_rs
 
 import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.widget.Toast
@@ -57,6 +59,10 @@ class Main : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (Build.VERSION.SDK_INT >= 34) {
+            val lit = Native.setting("playback.hdr", null) != "off"
+            window.colorMode = if (lit) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
+        }
         power.show(this, true)
         heard.start()
     }

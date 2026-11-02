@@ -48,6 +48,7 @@ impl SceneState {
         let listing = self.listing_wake(now);
         let view = self.view.as_mut().expect("created above");
         view.spread(self.spec.span);
+        view.light(self.lit);
         let inner = view.inner(renderer, size, quality);
         let rect = view.view(inner);
         let presses = std::mem::take(&mut self.presses);

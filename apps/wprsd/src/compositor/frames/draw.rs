@@ -15,6 +15,9 @@ pub(super) fn draw(
     let (renderer, exporter, players, power, limits) = shared;
     let moved = limits.map(|steps| (output.offset, steps));
     let refresh = output.refresh;
+    super::super::light::light(output, renderer, power)?;
+    let lit = output.hdr.headroom();
+    output.shown.scene.iter_mut().for_each(|s| s.lit = lit);
     if let Some(scene) = output.shown.scene.as_mut()
         && scene.render(renderer, (output.size, refresh), power, players, output.active, now)?
     {

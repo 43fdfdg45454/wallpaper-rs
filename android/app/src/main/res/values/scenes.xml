@@ -55,4 +55,15 @@
     <string name="tier_timed">The class was measured with GPU timestamps, without counting the wait for the processor.</string>
     <string name="level_chosen">Level chosen by you: it holds while not charging and when the phone is warm.</string>
     <string name="level_over">This scene costs %1$s units a frame at this level, more than the %2$s this GPU is estimated to hold; expect fewer frames per second.</string>
+    <string name="hdr_output">HDR on screens that support it</string>
+    <string name="hdr_auto">Automatic: while charging and at the highest scene quality</string>
+    <string name="hdr_on">Always when the screen supports it, also on battery</string>
+    <string name="hdr_off">Never: standard colors only</string>
+    <string name="hdr_state_on">HDR is on, up to %1$s times as bright as white</string>
+    <string name="hdr_state_off">HDR is off: %1$s</string>
+    <string name="hdr_why_display">this screen or the graphics driver offers no HDR</string>
+    <string name="hdr_why_battery">on battery</string>
+    <string name="hdr_why_quality">the scene is below the highest quality</string>
+    <string name="hdr_why_off">turned off</string>
+    <string name="hdr_screen">The screen says it shows HDR: %1$s, peak %2$s nits</string>
 </resources>

@@ -36,6 +36,7 @@ private val QUALITIES = listOf(
     "auto" to R.string.quality_auto, "min-q2" to R.string.quality_min_q2, "min-q1" to R.string.quality_min_q1,
     "q3" to R.string.quality_q3, "q2" to R.string.quality_q2, "q1" to R.string.quality_q1, "q0" to R.string.quality_q0,
 )
+private val HDRS = listOf("auto" to R.string.hdr_auto, "on" to R.string.hdr_on, "off" to R.string.hdr_off)
 private val CHOICES = listOf(
     Triple(R.string.fit, "fit", FIT),
     Triple(R.string.battery_fps, "playback.max_fps", listOf("30", "15", "10").map { it to R.string.fps }),
@@ -43,6 +44,7 @@ private val CHOICES = listOf(
     Triple(R.string.system_colors, "system_colors", COLORS),
     Triple(R.string.backend, "backend", BACKENDS),
     Triple(R.string.scene_quality, "playback.quality", QUALITIES),
+    Triple(R.string.hdr_output, "playback.hdr", HDRS),
 )
 private val TOGGLES = listOf(
     Triple(R.string.fade, "transition.kind", "fade" to "none"),
@@ -116,6 +118,7 @@ fun Settings(main: Main) {
                 levelReason(report.optString("reason"))?.let { stringResource(R.string.level_reason, stringResource(it)) },
                 stringResource(R.string.level_chosen).takeIf { report.optString("reason") == "user" },
                 report.optJSONArray("over")?.let { stringResource(R.string.level_over, "%.1f".format(it.optDouble(0)), "%.0f".format(it.optDouble(1))) },
+                hdrState(report.optJSONObject("hdr")),
                 stringResource(R.string.particles_cpu).takeIf { report.optString("particles") == "cpu" },
                 stringResource(R.string.scripts_stopped).takeIf { report.optString("scripts") == "off" },
                 stringResource(R.string.script_stopped).takeIf { report.optString("scripts") == "stopped" },

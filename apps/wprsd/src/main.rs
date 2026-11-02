@@ -31,6 +31,7 @@ mod jobs;
 mod keyring;
 mod kinds;
 mod library1;
+mod lights;
 mod look;
 mod orphans;
 mod packages;

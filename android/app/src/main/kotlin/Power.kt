@@ -5,9 +5,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.display.DisplayManager
 import android.os.BatteryManager
+import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
+import android.view.Display
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.content.ContextCompat
 
@@ -66,8 +69,17 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
             headroom,
             !ValueAnimator.areAnimatorsEnabled(),
         )
+        display()
         powered.intValue++
         Render.post { Wallpaper.wake() }
+    }
+
+    private fun display() {
+        val shown = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY) ?: return
+        val ratio = if (Build.VERSION.SDK_INT >= 34 && shown.isHdrSdrRatioAvailable) shown.hdrSdrRatio else 0f
+        @Suppress("DEPRECATION")
+        val peak = shown.hdrCapabilities?.desiredMaxLuminance ?: 0f
+        Native.display(shown.isHdr, peak, ratio)
     }
 
     private companion object {

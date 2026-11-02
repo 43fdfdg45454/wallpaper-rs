@@ -63,6 +63,14 @@ fn moves(id: &str) -> bool {
 }
 
 impl Stage {
+    pub(crate) fn light(&mut self, headroom: f32) {
+        self.view.iter_mut().for_each(|view| view.light(headroom));
+    }
+
+    pub(crate) fn top(&self) -> bool {
+        self.quality == Quality::Q3
+    }
+
     pub(crate) fn new(uid: String, pack: Arc<Pack>) -> Stage {
         let mut runtime = Runtime::new(Arc::clone(&pack.scene), props::values(&pack));
         pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));

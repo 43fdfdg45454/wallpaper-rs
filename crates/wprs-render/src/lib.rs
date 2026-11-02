@@ -20,6 +20,7 @@ mod export;
 #[cfg(target_os = "linux")]
 mod exported;
 mod filled;
+pub mod hdr;
 #[cfg(target_os = "linux")]
 mod import;
 mod lost;

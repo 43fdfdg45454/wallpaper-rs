@@ -10,6 +10,7 @@ mod cached;
 mod coverage;
 mod depth;
 mod finish;
+mod light;
 mod paths;
 mod posed;
 mod shaders;

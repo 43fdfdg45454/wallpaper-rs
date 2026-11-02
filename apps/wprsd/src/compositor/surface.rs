@@ -7,8 +7,8 @@ use wprs_wayland::{Cover, Pacer, Window};
 const SETTLE: Duration = Duration::from_millis(500);
 
 pub(super) struct Screen {
-    surface: Option<Surface>,
-    window: Window,
+    pub(super) surface: Option<Surface>,
+    pub(super) window: Window,
     pacer: Pacer,
     fresh: bool,
     painted: Option<Instant>,

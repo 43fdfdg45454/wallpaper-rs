@@ -8,18 +8,20 @@ pub struct Presentation {
     pub vsync: bool,
     pub latency: u32,
     pub format: Option<Format>,
+    pub hdr: bool,
 }
 
 impl Presentation {
-    pub const DESKTOP: Self = Self { vsync: false, latency: 2, format: Some(TARGET_FORMAT) };
-    pub const MOBILE: Self = Self { vsync: true, latency: 1, format: None };
+    pub const DESKTOP: Self = Self { vsync: false, latency: 2, format: Some(TARGET_FORMAT), hdr: false };
+    pub const MOBILE: Self = Self { vsync: true, latency: 1, format: None, hdr: false };
 }
 
 pub struct Surface {
-    surface: wgpu::Surface<'static>,
-    config: wgpu::SurfaceConfiguration,
-    presentation: Presentation,
-    slots: Vec<Slot>,
+    pub(crate) surface: wgpu::Surface<'static>,
+    pub(crate) config: wgpu::SurfaceConfiguration,
+    pub(crate) presentation: Presentation,
+    pub(crate) slots: Vec<Slot>,
+    pub(crate) offered: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,14 +78,15 @@ impl Renderer {
         if !self.gpu.is_surface_supported(&surface) {
             return Err(RenderError::Surface(format!("{} cannot present to this surface", self.adapter())));
         }
-        let config = self.surface_config(&surface, (width, height), presentation)?;
+        let (config, offered) = self.surface_config(&surface, (width, height), presentation)?;
         self.scoped(|| surface.configure(&self.device, &config))?;
-        Ok(Surface { surface, config, presentation, slots: Vec::new() })
+        Ok(Surface { surface, config, presentation, slots: Vec::new(), offered })
     }
 
-    fn renew(&self, target: &mut Surface) -> Result<(), RenderError> {
+    pub(crate) fn renew(&self, target: &mut Surface) -> Result<(), RenderError> {
         let size = (target.config.width, target.config.height);
-        let config = self.surface_config(&target.surface, size, target.presentation)?;
+        let (config, offered) = self.surface_config(&target.surface, size, target.presentation)?;
+        target.offered = offered;
         if config.format != target.config.format {
             target.slots.clear();
         }
@@ -96,16 +99,17 @@ impl Renderer {
         surface: &wgpu::Surface<'static>,
         (width, height): (u32, u32),
         presentation: Presentation,
-    ) -> Result<wgpu::SurfaceConfiguration, RenderError> {
+    ) -> Result<(wgpu::SurfaceConfiguration, bool), RenderError> {
         let failed = RenderError::Surface;
         let caps = surface.get_capabilities(&self.gpu);
         let format = surface_format(&caps.formats, presentation.format)
             .ok_or_else(|| failed("no surface format".into()))?;
+        let (offered, lit) = crate::hdr::lit(&caps, presentation.hdr);
         let opaque = caps.alpha_modes.contains(&CompositeAlphaMode::Opaque);
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format,
-            color_space: wgpu::SurfaceColorSpace::Auto,
+            format: lit.map_or(format, |l| l.0),
+            color_space: lit.map_or(wgpu::SurfaceColorSpace::Auto, |l| l.1),
             width,
             height,
             desired_maximum_frame_latency: presentation.latency,
@@ -113,7 +117,7 @@ impl Renderer {
             alpha_mode: if opaque { CompositeAlphaMode::Opaque } else { CompositeAlphaMode::Auto },
             view_formats: Vec::new(),
         };
-        Ok(config)
+        Ok((config, offered))
     }
 
     pub fn present_layers(
@@ -164,37 +168,4 @@ impl Renderer {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use wgpu::TextureFormat::*;
-
-    #[test]
-    fn desktop_presentation_never_waits_for_vsync_when_it_can_avoid_it() {
-        assert_eq!(present_mode(&[PresentMode::Fifo, PresentMode::Mailbox], false), PresentMode::Mailbox);
-        assert_eq!(present_mode(&[PresentMode::Immediate, PresentMode::Fifo], false), PresentMode::Immediate);
-        assert_eq!(present_mode(&[PresentMode::Fifo], false), PresentMode::Fifo);
-        assert_eq!(present_mode(&[PresentMode::Mailbox, PresentMode::Fifo], true), PresentMode::Fifo);
-    }
-
-    #[test]
-    fn a_suboptimal_swapchain_is_drawn_once_then_configured_again() {
-        assert_eq!(steps(Got::Fresh), (true, false));
-        assert_eq!(steps(Got::Stale), (true, true));
-        assert_eq!(steps(Got::Outdated), (false, true));
-        assert_eq!(steps(Got::Busy), (false, false));
-    }
-
-    #[test]
-    fn surface_formats_prefer_the_requested_format_then_the_first_srgb() {
-        let desktop = Presentation::DESKTOP.format;
-        assert_eq!(surface_format(&[Rgba8UnormSrgb, Bgra8UnormSrgb], desktop), Some(Bgra8UnormSrgb));
-        assert_eq!(surface_format(&[Bgra8Unorm, Rgba8UnormSrgb], desktop), Some(Rgba8UnormSrgb));
-        assert_eq!(surface_format(&[Rgb10a2Unorm], desktop), Some(Rgb10a2Unorm));
-        assert_eq!(surface_format(&[], desktop), None);
-        let mobile = Presentation::MOBILE.format;
-        assert_eq!(
-            surface_format(&[Rgba8Unorm, Rgba8UnormSrgb, Bgra8UnormSrgb], mobile),
-            Some(Rgba8UnormSrgb)
-        );
-    }
-}
+mod tests;

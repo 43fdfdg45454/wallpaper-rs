@@ -26,6 +26,9 @@ impl Config {
         if let Some(output) = key.strip_prefix(QualityChoice::OWN) {
             return self.set_own_quality(output, value);
         }
+        if let Some(output) = key.strip_prefix(crate::HdrChoice::OWN) {
+            return self.set_own_hdr(output, value);
+        }
         let unknown = || format!("unknown setting '{key}', see the list of settings");
         let current = self.options().remove(key).ok_or_else(unknown)?;
         let text = value.trim();

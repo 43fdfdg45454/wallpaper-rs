@@ -20,6 +20,18 @@ fn agx(x: vec3<f32>) -> vec3<f32> {
     return clamp(pow(max(back * v, vec3<f32>(0.0)), vec3<f32>(2.2)), vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
+fn peak(x: vec3<f32>, h: f32) -> vec3<f32> {
+    let knee = 0.8;
+    let l = max(max(x.r, x.g), x.b);
+    if l <= knee {
+        return max(x, vec3<f32>(0.0));
+    }
+    let room = h - knee;
+    let over = l - knee;
+    let mapped = knee + room * over / (over + room);
+    return max(x * (mapped / l), vec3<f32>(0.0));
+}
+
 @fragment
 fn fs_tonemap(in: Out) -> @location(0) vec4<f32> {
     var c = textureSample(src_tex, samp, item.uv.xy + in.uv * item.uv.zw);
@@ -31,7 +43,9 @@ fn fs_tonemap(in: Out) -> @location(0) vec4<f32> {
     if in.uv.x < item.mode.w {
         return vec4<f32>(rgb * c.a, c.a);
     }
-    if item.mode.z > 1.5 {
+    if item.mode.x > 1.0 {
+        rgb = peak(rgb, item.mode.x);
+    } else if item.mode.z > 1.5 {
         rgb = agx(rgb);
     } else if item.mode.z > 0.5 {
         rgb = aces(rgb);

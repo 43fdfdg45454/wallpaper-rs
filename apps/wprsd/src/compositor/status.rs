@@ -15,6 +15,7 @@ pub struct OutputStatus {
     pub console: Vec<String>,
     pub sandbox: &'static str,
     pub helper: Option<u32>,
+    pub hdr: super::light::Hdr,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize)]
@@ -23,4 +24,17 @@ pub struct Level {
     pub reason: &'static str,
     pub cost: f32,
     pub budget: f32,
+}
+
+impl OutputStatus {
+    pub fn shown(&self) -> wprs_core::model::Shown {
+        use wprs_core::model::Shown;
+        match self.kind {
+            "image" => Shown::Image,
+            "video" => Shown::Video,
+            "scene" => Shown::Scene,
+            "web" => Shown::Web,
+            _ => Shown::Color,
+        }
+    }
 }

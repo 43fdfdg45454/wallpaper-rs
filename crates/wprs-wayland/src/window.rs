@@ -26,12 +26,15 @@ pub(crate) struct Parts {
     pub(crate) empty: Option<Region>,
     pub(crate) presentation: Option<WpPresentation>,
     pub(crate) wanted: std::sync::Mutex<Option<bool>>,
+    pub(crate) light: std::sync::Mutex<Option<crate::Light>>,
+    pub(crate) feedback: Option<crate::color::Feedback>,
 }
 
 impl Drop for Parts {
     fn drop(&mut self) {
         self.viewport.iter().for_each(WpViewport::destroy);
         self.fractional.iter().for_each(WpFractionalScaleV1::destroy);
+        self.feedback.iter().for_each(crate::color::Feedback::destroy);
     }
 }
 
@@ -85,6 +88,11 @@ impl Window {
     pub fn refresh(&self) -> Duration {
         let millihertz = Some(self.refresh).filter(|r| *r > 0).unwrap_or(60_000).clamp(1_000, 1_000_000);
         Duration::from_micros(1_000_000_000 / u64::from(millihertz))
+    }
+
+    pub fn light(&self) -> Option<crate::Light> {
+        let Native::Layer(parts, _) = &self.native else { return None };
+        *parts.light.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     pub fn hz(&self) -> u32 {

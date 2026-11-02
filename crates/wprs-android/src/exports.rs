@@ -101,6 +101,14 @@ pub fn detach<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong) {
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn display<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, hdr: jboolean, peak: jfloat, ratio: jfloat) {
+    on(&mut env, |_| {
+        crate::hdr::screen(hdr, peak, ratio);
+        Ok(())
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
 pub fn power<'a>(
     mut env: EnvUnowned<'a>,
     _: JObject<'a>,

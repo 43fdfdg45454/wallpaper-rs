@@ -135,7 +135,9 @@ impl State {
                     ) == now
                 };
                 published.get(name).is_some_and(|s| {
-                    same(s) && (s.sandbox, s.helper) == sandbox && s.console.iter().eq(lines())
+                    same(s)
+                        && (s.sandbox, s.helper, s.hdr) == (sandbox.0, sandbox.1, o.hdr)
+                        && s.console.iter().eq(lines())
                 })
             });
         if !unchanged {
@@ -168,6 +170,7 @@ impl State {
                     console,
                     sandbox,
                     helper,
+                    hdr: o.hdr,
                 };
                 (name.clone(), status)
             };

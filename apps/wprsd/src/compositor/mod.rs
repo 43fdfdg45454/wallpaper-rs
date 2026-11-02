@@ -2,6 +2,7 @@ mod feed;
 mod frames;
 mod guard;
 mod iio;
+mod light;
 mod motion;
 mod output;
 mod pages;
@@ -21,6 +22,7 @@ pub(crate) mod stops;
 mod surface;
 
 use crate::fatal;
+pub use light::Hdr;
 pub use output::Tone;
 pub use spec::*;
 use state::State;

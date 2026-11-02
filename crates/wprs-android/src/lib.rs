@@ -25,6 +25,7 @@ mod extras;
 mod framing;
 #[cfg(target_os = "android")]
 mod gpu;
+mod hdr;
 mod hearing;
 #[cfg(target_os = "android")]
 mod heif;

@@ -132,6 +132,7 @@ impl Renderer {
             SceneView {
                 fit: scene.canvas.fit,
                 span: None,
+                headroom: 1.0,
                 canvas: scene.canvas.size,
                 srgb,
                 format,

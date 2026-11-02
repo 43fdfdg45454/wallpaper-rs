@@ -77,6 +77,7 @@ pub(super) struct SceneState {
     listed: listing::Listed,
     keeper: Option<wprs_core::stash::Keeper>,
     shared: Option<clock::Clock>,
+    pub(super) lit: f32,
 }
 
 fn after(seconds: f64) -> Duration {
@@ -160,6 +161,7 @@ impl SceneState {
             listed: Default::default(),
             keeper: None,
             shared: None,
+            lit: 1.0,
         };
         scene.uses = scene.needs(quality);
         scene

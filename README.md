@@ -572,7 +572,21 @@ ajustes. `wprs-ctl quality q3`, `wprs-ctl quality min-q1 -o DP-1`, `wprs-ctl qua
 o `wprs-ctl config playback.quality q2` y `wprs-ctl config playback.quality.DP-1 q1` lo cambian, y
 `wprs-ctl quality` muestra la elección, el nivel y el motivo de cada pantalla;
 `wprs-ctl config playback.quality.DP-1` lee el valor propio de una pantalla aunque no esté
-conectada. El ajuste no se sincroniza ni entra en los perfiles, porque depende de cada equipo: al
+conectada.
+
+Las pantallas HDR muestran los colores más brillantes que el blanco de las escenas con
+`canvas.hdr`: si el escritorio y el controlador gráfico ofrecen una superficie HDR (en Wayland, con el
+protocolo de gestión de color), la escena guarda 16 bits hasta el final y dobla lo que pasa de 0,8
+del blanco hacia el brillo máximo de esa pantalla, que el escritorio comunica junto a su blanco de
+referencia (si no lo dice, se supone el doble del blanco). `playback.hdr` vale `auto` (solo con
+corriente y con la escena en `q3`, porque gasta más), `on` o `off`, y cada pantalla puede tener el
+suyo (`playback.hdr.DP-1`); si la pantalla no puede, se ve en SDR como siempre. La app lo ofrece en
+*Ajustes* → *HDR* y en cada pantalla, con lo que la pantalla admite y por qué está activado o no; el
+panel de tonos del editor avisa de cómo se ven esas escenas en una pantalla HDR. En el teléfono
+(Android 14 o posterior) está en sus ajustes, la app usa `COLOR_MODE_HDR` en su ventana y el
+diagnóstico dice si la pantalla muestra HDR y su pico. `wprs-ctl quality --hdr on`,
+`wprs-ctl quality --hdr off -o DP-1` y `wprs-ctl config playback.hdr.DP-1 auto` lo cambian, y
+`wprs-ctl quality` y `wprs-ctl state` muestran el estado de cada pantalla. El ajuste no se sincroniza ni entra en los perfiles, porque depende de cada equipo: al
 usar un perfil, cada pantalla conserva su propio valor; las páginas web siguen el general. Con batería o con el perfil de ahorro de energía de power-profiles-daemon
 las escenas bajan de nivel y de fotogramas; si un sensor del sistema dice que la GPU o la CPU están
 cerca de su temperatura crítica, bajan más hasta que se enfrían. Cuando el escritorio pide reducir

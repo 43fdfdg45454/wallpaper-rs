@@ -37,6 +37,8 @@ object Native {
 
     external fun power(charging: Boolean, saver: Boolean, low: Boolean, thermal: Int, headroom: Float, still: Boolean)
 
+    external fun display(hdr: Boolean, peak: Float, ratio: Float)
+
     external fun moving(): Boolean
 
     external fun parallax(engine: Long): Int

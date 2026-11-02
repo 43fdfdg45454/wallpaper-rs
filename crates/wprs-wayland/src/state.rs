@@ -65,6 +65,8 @@ pub(crate) struct State {
     scaling: Scaling,
     presentation: Option<WpPresentation>,
     overlap: Option<Notify>,
+    color: Option<crate::color::Manager>,
+    pub(crate) lights: HashMap<String, crate::color::Gathered>,
     pub(crate) screens: Vec<Screen>,
     pub(crate) toplevels: HashMap<ObjectId, Toplevel>,
     pub(crate) reopened: HashMap<String, Vec<Instant>>,
@@ -95,6 +97,8 @@ impl State {
             scaling: Scaling::bind(globals, qh),
             presentation: crate::presented::bind(globals, qh),
             overlap: crate::cosmic::bind(globals, qh),
+            color: crate::color::bind(globals, qh),
+            lights: HashMap::new(),
             screens: Vec::new(),
             toplevels: HashMap::new(),
             reopened: HashMap::new(),
@@ -128,8 +132,10 @@ impl State {
         tracing::info!(output = name, "layer surface created");
         let overlaps = crate::cosmic::watch(self.overlap.as_ref(), &layer, qh);
         let presentation = self.presentation.clone();
-        let wanted = Default::default();
-        let parts = Arc::new(Parts { layer, viewport, fractional, empty, presentation, wanted });
+        let (wanted, light) = Default::default();
+        let feedback = crate::color::watch(self.color.as_ref(), layer.wl_surface(), qh, &name);
+        let parts =
+            Arc::new(Parts { layer, viewport, fractional, empty, presentation, wanted, light, feedback });
         let (name, integer, fractional, rate) = (name.clone(), info.scale_factor, None, Rate::default());
         let screen = Screen {
             output,

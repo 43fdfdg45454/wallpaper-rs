@@ -4,7 +4,7 @@ use crate::service::Service;
 use crate::streams::HELD;
 use std::sync::Arc;
 use wprs_core::dbus;
-use wprs_core::model::{MODEL, OutputState, Shown, State};
+use wprs_core::model::{MODEL, OutputState, State};
 use zbus::fdo::DBusProxy;
 use zbus::message::Header;
 use zbus::object_server::SignalEmitter;
@@ -106,13 +106,7 @@ impl Daemon {
         let output = |(name, info): (&String, &crate::streams::OutputInfo)| {
             let (r, s) = (st.config.resolve(name), status.get(name).cloned().unwrap_or_default());
             let ((width, height), [red, green, blue]) = (info.size, r.background);
-            let kind = match s.kind {
-                "image" => Shown::Image,
-                "video" => Shown::Video,
-                "scene" => Shown::Scene,
-                "web" => Shown::Web,
-                _ => Shown::Color,
-            };
+            let kind = s.shown();
             let section = st.config.outputs.get(name).filter(|o| o.image.is_some() || o.playlist.is_some());
             let preset = section.unwrap_or(&st.config.default).preset.clone();
             let item = r.image.as_ref().and_then(|image| st.items.get(image).cloned());
@@ -157,11 +151,13 @@ impl Daemon {
                 helper: s.helper,
                 accent: info.accent.clone(),
                 filter: Some(st.config.filter(name)).filter(|f| !f.is_identity()),
+                hdr: crate::lights::state(&st.config, name, &s.hdr),
             };
             crate::rotation::overlay(&st, name, &mut state);
             (name.clone(), state)
         };
         let playback = &st.config.playback;
+        let shown = st.outputs.iter().filter(|(name, _)| !crate::drafts::virtual_output(name));
         let state = State {
             model: MODEL,
             version: wprs_core::VERSION.into(),
@@ -182,18 +178,14 @@ impl Daemon {
             options: serde_json::to_value(st.config.options())
                 .and_then(serde_json::from_value)
                 .unwrap_or_default(),
-            outputs: st
-                .outputs
-                .iter()
-                .filter(|(name, _)| !crate::drafts::virtual_output(name))
-                .map(output)
-                .collect(),
+            outputs: shown.map(output).collect(),
             calibrating: crate::calibration::calibrating(&st),
             compute: self.compute,
             adapters: self.gpus.adapters.clone(),
             gpu_warning: self.gpus.warning.clone(),
             gpu_restart: self.gpus.restart(&st.config.render.gpu),
             qualities: st.config.own_qualities(),
+            hdrs: st.config.own_hdrs(),
         };
         serde_json::to_string(&state).unwrap_or_default()
     }

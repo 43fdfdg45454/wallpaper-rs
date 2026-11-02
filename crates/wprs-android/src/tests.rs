@@ -12,6 +12,7 @@ mod cued;
 mod flight;
 mod frames;
 mod guarded;
+mod lit;
 mod looks;
 mod pages;
 mod records;
@@ -129,6 +130,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     relief::relief(&green);
     relief::heif_photos_get_maps();
     records::records();
+    lit::hdr_follows_the_setting_and_the_display();
     scenes::scenes();
     screens::home_and_lock();
     screens::ruled_lists();

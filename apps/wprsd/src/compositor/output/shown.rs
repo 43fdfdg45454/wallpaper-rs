@@ -12,6 +12,7 @@ use wprs_render::{GpuImage, Layer, Relief, Target};
 pub struct Tone {
     pub flip: [bool; 2],
     pub grade: Option<wprs_core::Grade>,
+    pub hdr: wprs_core::HdrChoice,
 }
 
 pub(in crate::compositor) struct Shown {

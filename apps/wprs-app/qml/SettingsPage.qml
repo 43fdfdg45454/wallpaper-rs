@@ -56,7 +56,7 @@ Kirigami.ScrollablePage {
 
             Settings {
                 daemon: App
-                model: (App.schema.options ?? []).filter(f => f.key !== "render.gpu" && f.key !== "playback.quality")
+                model: (App.schema.options ?? []).filter(f => !["render.gpu", "playback.quality", "playback.hdr"].includes(f.key))
                 values: App.state.options ?? {}
                 onEdited: (key, value) => App.act("SetOption", [key, value])
             }
@@ -68,6 +68,11 @@ Kirigami.ScrollablePage {
 
             QualityPicker {
                 Kirigami.FormData.label: App.tr("Quality:")
+                daemon: App
+            }
+
+            HdrPicker {
+                Kirigami.FormData.label: App.tr("HDR:")
                 daemon: App
             }
 

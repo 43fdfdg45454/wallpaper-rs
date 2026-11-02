@@ -7,6 +7,7 @@ use wgpu::TextureFormat as Format;
 use wprs_scene::Runtime;
 
 pub(super) fn retarget(r: &Renderer, view: &mut SceneView, size: (u32, u32)) {
+    let wanted = output_format(view);
     let pool = &mut view.pool;
     view.caches.drain().for_each(|(_, c)| pool.give(c.tex));
     if let Some((canvas, output)) = view.target.take() {
@@ -19,7 +20,7 @@ pub(super) fn retarget(r: &Renderer, view: &mut SceneView, size: (u32, u32)) {
     let canvas = pool.take(&r.device, size, view.format);
     let output = match view.srgb || view.tone > 0 {
         true => {
-            let Tex { texture, view, id } = pool.take(&r.device, size, Format::Rgba8UnormSrgb);
+            let Tex { texture, view, id } = pool.take(&r.device, size, wanted);
             GpuImage { texture, view, id }
         }
         false => GpuImage { texture: canvas.texture.clone(), view: canvas.view.clone(), id: canvas.id },
@@ -28,9 +29,21 @@ pub(super) fn retarget(r: &Renderer, view: &mut SceneView, size: (u32, u32)) {
     view.marks.clear();
 }
 
-pub(super) fn resolve(pool: &mut Pool, srgb: bool, (tone, split): (u8, f32)) -> (u32, &'static str) {
+pub(super) fn output_format(view: &SceneView) -> Format {
+    match (view.srgb || view.tone > 0, view.tone > 0 && view.headroom > 1.0) {
+        (true, true) => Format::Rgba16Float,
+        (true, false) => Format::Rgba8UnormSrgb,
+        (false, _) => view.format,
+    }
+}
+
+pub(super) fn resolve(
+    pool: &mut Pool,
+    srgb: bool,
+    (tone, split, lit): (u8, f32, f32),
+) -> (u32, &'static str) {
     let (m0, m1, full) = ([2.0, 0.0, -1.0, 0.0], [0.0, -2.0, 1.0, 0.0], [0.0, 0.0, 1.0, 1.0]);
-    let mode = [0.0, f32::from(u8::from(srgb)), f32::from(tone), split.clamp(0.0, 1.0)];
+    let mode = [lit, f32::from(u8::from(srgb)), f32::from(tone), split.clamp(0.0, 1.0)];
     let slot = pool.push(&Item { m0, m1, quad: full, uv: full, color: [1.0; 4], mode, ..Default::default() });
     (slot, if tone > 0 { "fs_tonemap" } else { "fs_texture" })
 }

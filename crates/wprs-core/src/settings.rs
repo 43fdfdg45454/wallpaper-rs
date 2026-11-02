@@ -15,6 +15,7 @@ pub struct Playback {
     pub scene_capture: bool,
     pub duck: bool,
     pub quality: QualityChoice,
+    pub hdr: crate::HdrChoice,
 }
 
 impl Default for Playback {
@@ -32,6 +33,7 @@ impl Default for Playback {
             scene_capture,
             duck,
             quality,
+            hdr: crate::HdrChoice::Auto,
         }
     }
 }

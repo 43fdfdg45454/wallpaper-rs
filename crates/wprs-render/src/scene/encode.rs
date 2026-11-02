@@ -4,7 +4,6 @@ use super::pool::Pool;
 use super::{Op, SceneStats, Src};
 use crate::Renderer;
 use std::time::Instant;
-use wgpu::TextureFormat as Format;
 
 pub(crate) use super::sources::Sources;
 
@@ -133,7 +132,7 @@ impl Renderer {
         }
         let blit = |e, p| pipes.get(&self.device, Shader::Scene(e), Mode::Replace, p);
         if let Some((slot, pipeline)) =
-            resolve.and_then(|(slot, entry)| Some((slot, blit(entry, Format::Rgba8UnormSrgb)?)))
+            resolve.and_then(|(slot, entry)| Some((slot, blit(entry, src.output.texture.format())?)))
         {
             let group = src.group(self, pool, false, &[Src::Canvas, Src::White, Src::Clear]);
             let load =
