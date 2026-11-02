@@ -43,6 +43,7 @@ fn delayed() -> SceneState {
         clips: Vec::new(),
         hold: None,
         moving: false,
+        quality: None,
     };
     SceneState::new(spec, super::super::power::Power::new(Tier::T3, false, 30))
 }

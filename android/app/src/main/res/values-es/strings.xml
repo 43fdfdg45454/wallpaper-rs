@@ -170,4 +170,12 @@
     <string name="depth_device_auto">El dispositivo más rápido</string>
     <string name="depth_device_cpu">El procesador</string>
     <string name="picture_changed">Esta imagen cambió después de editarla, así que puede que la edición ya no le encaje.</string>
+    <string name="scene_quality">Calidad de las escenas</string>
+    <string name="quality_auto">Automática: baja con batería, con calor o en escenas pesadas</string>
+    <string name="quality_min_q2">Automática, pero nunca por debajo de alta (2 de 3)</string>
+    <string name="quality_min_q1">Automática, pero nunca por debajo de reducida (1 de 3)</string>
+    <string name="quality_q3">Siempre la más alta (3 de 3)</string>
+    <string name="quality_q2">Siempre alta (2 de 3)</string>
+    <string name="quality_q1">Siempre reducida (1 de 3)</string>
+    <string name="quality_q0">Siempre la más baja (0 de 3), la que menos batería gasta</string>
 </resources>

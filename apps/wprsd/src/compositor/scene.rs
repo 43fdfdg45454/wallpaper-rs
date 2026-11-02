@@ -69,6 +69,7 @@ pub(super) struct SceneState {
     spare: Spare,
     governor: Governor,
     why: Why,
+    over: Option<(f32, f32)>,
     samples: u64,
     listed: listing::Listed,
     keeper: Option<wprs_core::stash::Keeper>,
@@ -80,6 +81,7 @@ fn after(seconds: f64) -> Duration {
 
 impl SceneState {
     pub(super) fn new(spec: SceneSpec, power: Power) -> SceneState {
+        let power = Power { choice: spec.quality.unwrap_or(power.choice), ..power };
         let mut runtime = Runtime::new(spec.pack.scene.clone(), spec.values.clone());
         spec.pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
         runtime.set_language(&spec.pack.locale);
@@ -96,6 +98,7 @@ impl SceneState {
             None => {}
         }
         let (quality, why) = power.level(&runtime);
+        let over = power.over(&runtime, quality);
         runtime.set_leveling(wprs_scene::Leveling::of(&spec.pack.props.properties));
         runtime.set_quality(quality);
         let exposed = wprs_scene::exposed(&spec.pack.props.properties, runtime.props());
@@ -148,6 +151,7 @@ impl SceneState {
             spare: Spare::default(),
             governor: Governor::default(),
             why,
+            over,
             samples: 0,
             listed: Default::default(),
             keeper: None,

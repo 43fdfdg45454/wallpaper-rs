@@ -73,7 +73,8 @@ impl Daemon {
                 turn = crate::picks::next_turn(&pack.props.properties, &values);
                 shown_scene = Some(pack.clone());
                 let moving = self.store.read(|lib| lib.moves(&pack.props.id)).unwrap_or(false);
-                (Content::Scene(SceneSpec { pack, values, extra, clips, hold, moving }), None)
+                let quality = self.state().config.own_quality(output);
+                (Content::Scene(SceneSpec { pack, values, extra, clips, hold, moving, quality }), None)
             }
             Some(Ok(Media::Web(pack))) => (Content::Web(self.page_on(output, pack, &mut shown_video)), None),
             Some(Ok(Media::Picture(file))) => {

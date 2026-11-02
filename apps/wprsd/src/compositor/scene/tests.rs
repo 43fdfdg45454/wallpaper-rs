@@ -26,6 +26,7 @@ fn new_media_of_the_same_scene_keep_its_clock_and_view() {
         clips: Vec::new(),
         hold: None,
         moving: false,
+        quality: None,
     };
     let extra = vec![("photo".to_string(), wprs_render::Pixels::new(image::RgbaImage::new(2, 2)))];
     let turned = SceneSpec { extra, ..spec.clone() };
@@ -65,6 +66,7 @@ fn screens_showing_one_scene_share_its_script_process() {
         clips: Vec::new(),
         hold: None,
         moving: false,
+        quality: None,
     };
     let mut scripts = Scripts::default();
     let mut states: Vec<SceneState> =
@@ -109,6 +111,7 @@ fn declared_inputs_without_scripts_wait_for_what_the_scene_binds() {
             clips: Vec::new(),
             hold: None,
             moving: false,
+            quality: None,
         };
         let mut state = SceneState::new(spec, power);
         let pointer = PointerState { pos: Some([0.5, 0.5]), inside: true, ..PointerState::default() };
@@ -138,6 +141,7 @@ fn a_small_moving_layer_damages_only_its_box_on_the_screen() {
         clips: Vec::new(),
         hold: None,
         moving: false,
+        quality: None,
     };
     let power = Power::new(Tier::T3, false, 0);
     let (mut state, players, start) = (SceneState::new(spec, power), HashMap::new(), Instant::now());
@@ -172,11 +176,13 @@ fn slow_gpu_frames_lower_the_reported_quality_and_say_why() {
         clips: Vec::new(),
         hold: None,
         moving: false,
+        quality: None,
     };
     let (mains, battery) = (Power::new(Tier::T3, false, 0), Power::new(Tier::T3, true, 0));
-    assert_eq!(SceneState::new(spec.clone(), battery).quality(), ("q2", "battery"));
+    let level = |s: &SceneState| (s.quality().quality, s.quality().reason);
+    assert_eq!(level(&SceneState::new(spec.clone(), battery)), ("q2", "battery"));
     let (mut state, players, start) = (SceneState::new(spec, mains), HashMap::new(), Instant::now());
-    assert_eq!(state.quality(), ("q3", "full"));
+    assert_eq!(level(&state), ("q3", "full"));
     state.render(renderer, ((16, 9), 60), mains, &players, true, start).unwrap();
     let mut at = start;
     for sample in 1..=200 {
@@ -184,5 +190,5 @@ fn slow_gpu_frames_lower_the_reported_quality_and_say_why() {
         state.judge((sample, 50.0), mains, 60, at);
     }
     state.render(renderer, ((16, 9), 60), mains, &players, true, at).unwrap();
-    assert_eq!(state.quality(), ("q2", "slow"));
+    assert_eq!(level(&state), ("q2", "slow"));
 }

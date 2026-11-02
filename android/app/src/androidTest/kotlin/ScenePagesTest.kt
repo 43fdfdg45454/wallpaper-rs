@@ -22,6 +22,19 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ScenePagesTest : SceneBase() {
     @Test
+    fun aChosenQualityHoldsWhateverThePower() {
+        assertEquals("auto", Native.setting("playback.quality", null))
+        try {
+            assertEquals("q3", Native.setting("playback.quality", "q3"))
+            show("Snowfall")
+            val chosen = { JSONObject(Native.diagnostics()).let { it.optString("quality") to it.optString("reason") } }
+            assertTrue("the level: ${chosen()}", waitFor { chosen() == ("Q3" to "user") })
+        } finally {
+            Native.setting("playback.quality", "auto")
+        }
+    }
+
+    @Test
     fun pagesGetTheirItemAndProperties() = runBlocking {
         val uid = show("Snowfall")
         assertEquals("Snowfall", Item(ask("item", "uid" to uid) as JSONObject).title)

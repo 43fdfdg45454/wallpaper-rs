@@ -115,6 +115,9 @@ impl State {
     pub(super) fn apply_settings(&mut self, settings: Settings) {
         let old = std::mem::replace(&mut self.settings, settings);
         self.power.max_fps = settings.max_fps;
+        if std::mem::replace(&mut self.power.choice, settings.quality) != settings.quality {
+            self.outputs.values_mut().filter(|o| o.shown.scene.is_some()).for_each(|o| o.dirty = true);
+        }
         self.outputs.values_mut().for_each(|o| o.guard(settings.flash_guard));
         if old.software_parallax != settings.software_parallax && self.motion.software {
             self.restill();

@@ -93,11 +93,7 @@ impl Daemon {
         if info.created {
             tracing::info!(output, node = info.node_id, serial = info.serial, "stream ready");
         }
-        self.run(move |d| {
-            d.configure_output(&output);
-            Ok::<_, Error>(())
-        })
-        .await?;
+        self.run(move |d| Ok::<_, Error>(d.configure_output(&output).is_some())).await?;
         Ok((info.node_id, info.serial))
     }
 
@@ -149,8 +145,11 @@ impl Daemon {
                 sound: s.sound.into(),
                 flashes: s.flashes.into(),
                 particles: s.particles.into(),
-                quality: s.quality.into(),
-                quality_reason: s.quality_reason.into(),
+                quality: s.level.quality.into(),
+                quality_reason: s.level.reason.into(),
+                quality_choice: st.config.own_quality(name).map(|q| q.as_str().into()),
+                quality_cost: f64::from((s.level.cost * 10.0).round() / 10.0),
+                quality_budget: f64::from(s.level.budget),
                 decode: s.decode.into(),
                 left_out: s.left_out,
                 console: s.console,

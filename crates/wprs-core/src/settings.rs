@@ -1,3 +1,4 @@
+use crate::quality::QualityChoice;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -13,14 +14,25 @@ pub struct Playback {
     pub scene_sound: bool,
     pub scene_capture: bool,
     pub duck: bool,
+    pub quality: QualityChoice,
 }
 
 impl Default for Playback {
     fn default() -> Self {
         let (volume, muted, max_fps) = (0.5, true, fps::DISPLAY);
         let (software_parallax, flash_guard, scene_sound, scene_capture) = (false, false, true, true);
-        let duck = false;
-        Self { volume, muted, max_fps, software_parallax, flash_guard, scene_sound, scene_capture, duck }
+        let (duck, quality) = (false, QualityChoice::Auto);
+        Self {
+            volume,
+            muted,
+            max_fps,
+            software_parallax,
+            flash_guard,
+            scene_sound,
+            scene_capture,
+            duck,
+            quality,
+        }
     }
 }
 

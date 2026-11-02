@@ -1,4 +1,4 @@
-use super::{CALMING, ENGINE, LEFT, LEVEL, RETRIES};
+use super::{CALMING, ENGINE, LEFT, LEVEL, OVER, RETRIES};
 use std::sync::PoisonError;
 use std::sync::atomic::Ordering::Relaxed;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -41,6 +41,11 @@ pub(crate) fn level() -> Option<[String; 3]> {
     let level = LEVEL.load(Relaxed).checked_sub(1)?;
     let why = Why::ALL.get(level as usize % 8)?.name();
     Some([format!("T{}", level / 32), format!("Q{}", level / 8 % 4), why.into()])
+}
+
+pub(crate) fn over() -> Option<[f32; 2]> {
+    let bits = OVER.load(Relaxed);
+    (bits != 0).then(|| [f32::from_bits((bits >> 32) as u32), f32::from_bits(bits as u32)])
 }
 
 pub(crate) fn wall() -> f64 {

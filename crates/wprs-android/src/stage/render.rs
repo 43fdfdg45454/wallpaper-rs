@@ -1,5 +1,5 @@
 use super::report::wall;
-use super::{CALMING, ENGINE, LEFT, LEVEL, RETRIES, Shot, Stage};
+use super::{CALMING, ENGINE, LEFT, LEVEL, OVER, RETRIES, Shot, Stage};
 use crate::acting::Sent;
 use crate::hearing;
 use crate::power::{Power, delay_ms};
@@ -24,7 +24,8 @@ impl Stage {
         videos: &[(&str, &GpuImage)],
         force: bool,
     ) -> Result<Shot<'a>, RenderError> {
-        let budget = Budget::new(tier, !power.charging, cap.max(1));
+        let budget =
+            Budget { choice: crate::power::choice(), ..Budget::new(tier, !power.charging, cap.max(1)) };
         self.runtime.set_battery(!power.charging);
         self.heavy = budget.still(&self.runtime);
         if self.heavy && !std::mem::replace(&mut self.posed, true) {
@@ -74,10 +75,16 @@ impl Stage {
         let calmed = stilled && self.runtime.set_reduced_motion(asked);
         let tipped = self.runtime.set_tilt(crate::tilt::goal(self.offset, std::time::Instant::now()));
         self.runtime.set_wall(wall());
-        let (ceiling, why) = budget.level(&self.runtime);
-        let ceiling = if power.ceiling() < ceiling { (power.ceiling(), Why::Heat) } else { (ceiling, why) };
+        let (auto, why) = budget.auto(&self.runtime);
+        let auto = if power.ceiling() < auto { (power.ceiling(), Why::Heat) } else { (auto, why) };
+        let ceiling = budget.choose(auto);
+        self.governor.hold(budget.floor());
         let (quality, why) = self.governor.level(ceiling);
         LEVEL.store(1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32, Relaxed);
+        let over = budget
+            .over(&self.runtime, quality)
+            .map(|(c, b)| u64::from(c.to_bits()) << 32 | u64::from(b.to_bits()));
+        OVER.store(over.unwrap_or_default(), Relaxed);
         let fps = if still { 0 } else { budget.fps(&self.runtime, quality, 0) };
         let retried = RETRIES.load(Relaxed);
         if std::mem::replace(&mut self.retried, retried) != retried {

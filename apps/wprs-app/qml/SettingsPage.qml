@@ -56,9 +56,19 @@ Kirigami.ScrollablePage {
 
             Settings {
                 daemon: App
-                model: (App.schema.options ?? []).filter(f => f.key !== "render.gpu")
+                model: (App.schema.options ?? []).filter(f => f.key !== "render.gpu" && f.key !== "playback.quality")
                 values: App.state.options ?? {}
                 onEdited: (key, value) => App.act("SetOption", [key, value])
+            }
+
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: App.tr("Scene quality")
+            }
+
+            QualityPicker {
+                Kirigami.FormData.label: App.tr("Quality:")
+                daemon: App
             }
 
             Kirigami.Separator {

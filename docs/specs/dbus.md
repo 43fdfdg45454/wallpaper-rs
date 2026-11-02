@@ -540,6 +540,8 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `playback.flash_guard` | measure the brightness of every scene frame and slow down, or stop, a scene that flashes more than three times a second (see "Cost and frame rate" in `scene.md`); it costs a small read back from the GPU per frame | `false` |
 | `playback.scene_sound` | let scenes play their sound layers (see "Scene sound"); `false` keeps every scene silent, whatever its permissions and volume, and leaves the sound of videos alone | `true` |
 | `playback.scene_capture` | let scenes that were granted `audio` follow the sound that plays (see "Inputs"); `false` closes the audio capture for every scene | `true` |
+| `playback.quality` | the quality level of scenes: `auto` lets the engine choose it from the cost of the scene, the GPU class, the GPU time of the frames, battery, power saving and heat (see "Cost and frame rate" in `scene.md`); `q0` to `q3` fix it, and `min-q1` or `min-q2` keep the automatic choice but never below that level; a level the user sets holds on battery, with power saving, while warm and over the cost, and a heavy scene shows fewer frames a second instead; it is not synced and profiles leave it out | `auto` |
+| `playback.quality.<output>` | the same values for the scenes of one output, or `none` (or an empty value) to follow `playback.quality` again; kept as `quality` in `[outputs."<output>"]`, not listed in `options`; web pages follow `playback.quality` | none |
 | `playback.duck` | fade the sound of every wallpaper (videos, scene sounds and web pages) out in 0.5 s while another application plays sound, and back in when it stops; a PipeWire watcher counts the running playback streams of other processes (not the daemon, its helpers or their children), reading neither their names nor their sound | `false` |
 | `transition.kind` | `fade`, `none` | `fade` |
 | `transition.duration_ms` | `0` to `10000` | `600` |
@@ -2198,8 +2200,13 @@ as `the effect <id> was left out: <reason>`; it is a note, not a failure. `parti
 or `"cpu"` for a scene with particles, and `""` otherwise. `quality` is the quality level the scene
 of that output draws at (`"q0"` to `"q3"`, `""` for other content) and `quality_reason` why:
 `"full"` (the highest), `"device"` (the most its graphics card class allows), `"cost"` (the scene is
-too heavy for the card at a higher level), `"battery"`, `"saver"` (power saving), `"heat"` or
-`"slow"` (its frames took too long on the GPU); see "Cost and frame rate" in `scene.md`. `tier` is
+too heavy for the card at a higher level), `"battery"`, `"saver"` (power saving), `"heat"`,
+`"slow"` (its frames took too long on the GPU) or `"user"` (`playback.quality` fixed the level or
+kept it above a floor); see "Cost and frame rate" in `scene.md`. `quality_choice` is the own value
+of `playback.quality.<output>` or `null` when the output follows `playback.quality`;
+`quality_cost` and `quality_budget` are the units a frame the scene costs at its level and the
+units the GPU class holds, both `0` unless the user's choice put the level where it costs more than
+the class holds, in which case clients say that fewer frames a second are to be expected. `tier` is
 the class of the graphics card, `"t0"` to `"t3"`, and `tier_measured` whether a short measured
 render set it rather than the model of the card alone. `adapters` lists the graphics cards the
 daemon found when it started, each with its `name`, `kind` (`"integrated"`, `"dedicated"`,
@@ -2229,7 +2236,8 @@ struct OutputState {
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
     edited: bool, screen: Option<Screen>, mm: Option<[f64; 4]>, parallax: bool, frames: u64, refresh: u32, fps: u32,
     buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
-    particles: String, quality: String, quality_reason: String, console: Vec<String>, sandbox: String,
+    particles: String, quality: String, quality_reason: String, quality_choice: Option<String>,
+    quality_cost: f64, quality_budget: f64, console: Vec<String>, sandbox: String,
     accent: Option<String>, filter: Option<Filter>,
 }
 struct Filter { look: String, strength: f32, exposure: f32, contrast: f32, saturation: f32, warmth: f32, hue: f32 }

@@ -24,10 +24,12 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Filter(args) => crate::filtering::run(client, args).await?,
         Command::Config { key: Some(key), value: Some(value), .. } => {
             daemon.set_option(&key, &value).await?;
-            crate::gpus::notice(client, &key).await?
+            crate::gpus::notice(client, &key).await?;
+            crate::levels::notice(client, &key).await?
         }
         Command::Config { key, json, .. } => options(&daemon.get_state().await?, key.as_deref(), json)?,
         Command::Gpu(args) => crate::gpus::run(client, args).await?,
+        Command::Quality(args) => crate::levels::run(client, args).await?,
         Command::Reload => daemon.reload().await?,
         Command::RetryEffects => daemon.retry_effects().await?,
         Command::State { .. } => println!("{}", daemon.get_state().await?),

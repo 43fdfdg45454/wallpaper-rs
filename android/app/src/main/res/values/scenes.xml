@@ -53,4 +53,6 @@
     <string name="nothing_chosen">Nothing chosen: it uses its own</string>
     <string name="choose_file">Choose</string>
     <string name="tier_timed">The class was measured with GPU timestamps, without counting the wait for the processor.</string>
+    <string name="level_chosen">Level chosen by you: it holds while not charging and when the phone is warm.</string>
+    <string name="level_over">This scene costs %1$s units a frame at this level, more than the %2$s this GPU is estimated to hold; expect fewer frames per second.</string>
 </resources>

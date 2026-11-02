@@ -1,4 +1,5 @@
 use crate::{Quality, Runtime, Tier};
+use wprs_core::QualityChoice;
 use wprs_core::settings::fps::DISPLAY;
 
 const BATTERY: u32 = 30;
@@ -19,6 +20,7 @@ pub struct Budget {
     pub max_fps: u32,
     pub saver: bool,
     pub heat: Heat,
+    pub choice: QualityChoice,
 }
 
 fn display(refresh: u32) -> u32 {
@@ -37,7 +39,7 @@ impl Heat {
 
 impl Budget {
     pub fn new(tier: Tier, on_battery: bool, max_fps: u32) -> Budget {
-        Budget { tier, on_battery, max_fps, saver: false, heat: Heat::Cool }
+        Budget { tier, on_battery, max_fps, saver: false, heat: Heat::Cool, choice: QualityChoice::Auto }
     }
 
     fn strained(&self) -> bool {

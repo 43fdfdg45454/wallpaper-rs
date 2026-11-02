@@ -2,6 +2,7 @@ use crate::filter::Filter;
 use crate::fit::Fit;
 use crate::gpu::Render;
 use crate::layout::Layout;
+use crate::quality::QualityChoice;
 use crate::settings::{Library, Models, Pause, Playback, Repos, Transition};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,8 @@ pub struct OutputConfig {
     pub clicks: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filter: Option<Filter>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quality: Option<QualityChoice>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub scenes: BTreeMap<String, BTreeMap<String, toml::Value>>,
 }
@@ -136,6 +139,14 @@ impl Config {
 
     pub fn filter(&self, output: &str) -> Filter {
         self.pick(output, |o| o.filter).unwrap_or_default()
+    }
+
+    pub fn quality(&self, output: &str) -> QualityChoice {
+        self.own_quality(output).unwrap_or(self.playback.quality)
+    }
+
+    pub fn own_quality(&self, output: &str) -> Option<QualityChoice> {
+        self.outputs.get(output).filter(|_| !output.is_empty()).and_then(|o| o.quality)
     }
 
     pub fn set_filter(&mut self, output: &str, filter: Filter) {

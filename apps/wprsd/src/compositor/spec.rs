@@ -42,6 +42,7 @@ pub struct SceneSpec {
     pub clips: Vec<(String, Reel)>,
     pub hold: Option<f64>,
     pub moving: bool,
+    pub quality: Option<wprs_core::QualityChoice>,
 }
 
 #[derive(Debug, Clone)]
@@ -89,7 +90,7 @@ impl Content {
             _ => None,
         };
         let values = |c: &Content| match c {
-            Content::Scene(s) => Some((s.values.clone(), s.media(), s.hold, s.moving)),
+            Content::Scene(s) => Some((s.values.clone(), s.media(), s.hold, s.moving, s.quality)),
             _ => None,
         };
         let frame = |c: &Content| match c {
@@ -177,23 +178,5 @@ pub struct Settings {
     pub flash_guard: bool,
     pub scene_sound: bool,
     pub duck: f64,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
-pub struct OutputStatus {
-    pub kind: &'static str,
-    pub playing: bool,
-    pub error: Option<String>,
-    pub parallax: bool,
-    pub frames: u64,
-    pub fps: u32,
-    pub sound: &'static str,
-    pub flashes: &'static str,
-    pub particles: &'static str,
-    pub quality: &'static str,
-    pub quality_reason: &'static str,
-    pub decode: &'static str,
-    pub left_out: Vec<String>,
-    pub console: Vec<String>,
-    pub sandbox: &'static str,
+    pub quality: wprs_core::QualityChoice,
 }

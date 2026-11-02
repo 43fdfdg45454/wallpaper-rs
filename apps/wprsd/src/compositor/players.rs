@@ -3,7 +3,7 @@ use super::power::Power;
 use super::scene::SceneState;
 use super::slot::{Demand, PlayerSlot};
 use super::state::State;
-use super::{Content, OutputStatus, Reel, lock};
+use super::{Content, Level, OutputStatus, Reel, lock};
 use std::collections::BTreeMap;
 use std::time::Instant;
 use wprs_pipewire::Exporter;
@@ -100,7 +100,7 @@ impl State {
             let playing = watched && running && !stops;
             let flashes = o.shown.scene.as_ref().map_or("", SceneState::flashes);
             let particles = o.shown.scene.as_ref().map_or("", SceneState::particles);
-            let quality = o.shown.scene.as_ref().map_or(("", ""), SceneState::quality);
+            let quality = o.shown.scene.as_ref().map_or(Level::default(), |s| s.quality());
             let copied = view.map(|v| if v.shown.is_some() { "zero-copy" } else { "copy" });
             let decode = slot.map(|s| s.decode).or(copied.filter(|_| drawn)).unwrap_or("");
             let sandbox = page.map_or("", |p| p.sandbox);
@@ -130,7 +130,7 @@ impl State {
                         s.parallax,
                         s.fps,
                         s.sound,
-                        (s.flashes, s.particles, (s.quality, s.quality_reason), s.decode),
+                        (s.flashes, s.particles, s.level, s.decode),
                         &s.left_out[..],
                     ) == now
                 };
@@ -147,10 +147,9 @@ impl State {
                     parallax,
                     fps,
                     sound,
-                    (flashes, particles, quality, decode),
+                    (flashes, particles, level, decode),
                     sandbox,
                 ) = status(name, o);
-                let (quality, quality_reason) = quality;
                 let frames = published.get(name).map_or(0, |s| s.frames);
                 let (left_out, console) = (left(o).to_vec(), console(name, o).cloned().collect());
                 let status = OutputStatus {
@@ -163,8 +162,7 @@ impl State {
                     sound,
                     flashes,
                     particles,
-                    quality,
-                    quality_reason,
+                    level,
                     decode,
                     left_out,
                     console,

@@ -140,6 +140,7 @@ fn caps() {
     let config = config();
     power::caps(on_battery(config.playback.max_fps), chosen(CHARGER).parse().unwrap_or(60));
     power::guard(config.playback.flash_guard, config.playback.scene_capture);
+    power::choose(config.playback.quality);
 }
 
 pub(crate) fn look(lock: bool) -> Look {

@@ -12,6 +12,7 @@ mod camera;
 mod canvas;
 mod catalog;
 mod chain;
+mod choice;
 mod clip;
 mod content;
 mod cost;

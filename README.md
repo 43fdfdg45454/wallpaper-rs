@@ -504,6 +504,7 @@ wprs-ctl config transition.duration_ms 1000     # cambiar un ajuste
 wprs-ctl state                                  # estado en JSON
 wprs-ctl gpu                                    # tarjetas gráficas y la que está en uso
 wprs-ctl gpu dedicated                          # dibujar con la dedicada desde el próximo arranque
+wprs-ctl quality q3                             # calidad fija de las escenas (auto, q0-q3, min-q1, min-q2)
 wprs-ctl reload                                 # releer la configuración
 ```
 
@@ -551,7 +552,22 @@ el nivel de arriba; cada vez que tiene que volver a bajar en menos de 30 s, las 
 por encima de lo que permiten la clase, la batería y la temperatura. Sin marcas de tiempo en la GPU
 mide uno de cada quince fotogramas esperando a la GPU. `wprs-ctl state` (`tier`,
 `tier_measured`, y `quality` y `quality_reason` en cada pantalla), la app y la bandeja muestran la
-clase medida, el nivel y por qué bajó. Con batería o con el perfil de ahorro de energía de power-profiles-daemon
+clase medida, el nivel y por qué bajó.
+
+El nivel también se puede elegir a mano con `playback.quality`: `auto` (lo de siempre), un nivel
+fijo de `q0` a `q3`, o `min-q1` y `min-q2`, que dejan la elección automática pero nunca por debajo de
+ese nivel (puede subir más). Lo que elijas se respeta siempre, también con batería, con el ahorro
+de energía, con calor y aunque la escena pese más de lo que aguanta la GPU: entonces la escena se
+ve con todos sus detalles y con menos fotogramas por segundo, y la app, la bandeja, el teléfono y
+`wprs-ctl quality` avisan de lo que cuesta («esta escena cuesta X unidades por fotograma…; espera
+menos fotogramas»); las bajadas automáticas solo valen en `auto` o por encima del mínimo elegido, y
+el motivo es `user`. La app lo ofrece en *Ajustes* → *Calidad de las escenas* y en cada pantalla con
+escena, con su propio valor (*Como todas las pantallas* vuelve al general); el teléfono, en sus
+ajustes. `wprs-ctl quality q3`, `wprs-ctl quality min-q1 -o DP-1`, `wprs-ctl quality none -o DP-1`
+o `wprs-ctl config playback.quality q2` y `wprs-ctl config playback.quality.DP-1 q1` lo cambian, y
+`wprs-ctl quality` muestra la elección, el nivel y el motivo de cada pantalla. El ajuste no se
+sincroniza ni entra en los perfiles, porque depende de cada equipo, y las páginas web siguen el
+general. Con batería o con el perfil de ahorro de energía de power-profiles-daemon
 las escenas bajan de nivel y de fotogramas; si un sensor del sistema dice que la GPU o la CPU están
 cerca de su temperatura crítica, bajan más hasta que se enfrían. Cuando el escritorio pide reducir
 el movimiento (`reduced-motion` del portal de ajustes), las escenas se quedan quietas en su
@@ -1111,7 +1127,8 @@ limitadas a unos huesos. Las reglas pasan un hueso a otro padre sin que salte, l
 agrupan formas, y las partes se ordenan y se recortan unas sobre otras. Un esqueleto quieto o que ya
 terminó no pide fotogramas, la pose se calcula solo para capas visibles y sin reservar memoria en
 cada fotograma, y en la calidad más baja la malla se dibuja a la mitad de resolución y se mueve a 30
-fotogramas por segundo como mucho. Los scripts controlan los clips con
+fotogramas por segundo como mucho; la textura de la malla se lee con mipmaps y filtrado lineal
+cuando se dibuja más pequeña, así que los bordes del personaje siguen suaves, sin escalones. Los scripts controlan los clips con
 `scene.layer("zorro").anim("saludo")` (`play`, `pause`, `stop`, `seek`, `rate`, `weight` y el aviso
 `ended`) si declaran `animations`.
 

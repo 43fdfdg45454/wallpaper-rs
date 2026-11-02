@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::quality::QualityChoice;
 use crate::settings::fps;
 use std::collections::BTreeMap;
 
@@ -21,6 +22,9 @@ impl Config {
     pub fn set_option(&mut self, key: &str, value: &str) -> Result<(), String> {
         if let Some(id) = key.strip_prefix("layout.monitors.") {
             return self.layout.place(id, value);
+        }
+        if let Some(output) = key.strip_prefix(QualityChoice::OWN) {
+            return self.set_own_quality(output, value);
         }
         let unknown = || format!("unknown setting '{key}', see the list of settings");
         let current = self.options().remove(key).ok_or_else(unknown)?;
@@ -45,6 +49,27 @@ impl Config {
             return Err(format!("{text} is out of range for {key}"));
         }
         *self = updated;
+        Ok(())
+    }
+
+    fn set_own_quality(&mut self, output: &str, value: &str) -> Result<(), String> {
+        let (output, text) = (output.trim(), value.trim());
+        if output.is_empty() || output.len() > 128 || output.chars().any(char::is_control) {
+            return Err(format!("invalid output name in {}<output>", QualityChoice::OWN));
+        }
+        let own = match text {
+            "" | "none" => None,
+            _ => Some(
+                QualityChoice::parse(text)
+                    .map_err(|e| format!("invalid value for {}{output}: {e}", QualityChoice::OWN))?,
+            ),
+        };
+        match self.outputs.get_mut(output) {
+            Some(o) => o.quality = own,
+            None if own.is_some() => self.outputs.entry(output.to_owned()).or_default().quality = own,
+            None => {}
+        }
+        self.outputs.retain(|_, o| *o != crate::config::OutputConfig::default());
         Ok(())
     }
 }

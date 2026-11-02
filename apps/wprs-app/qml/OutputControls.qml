@@ -102,6 +102,13 @@ ColumnLayout {
         }
     }
 
+    QualityPicker {
+        visible: host.scene && host.name !== ""
+        daemon: host.daemon
+        output: host.name
+        info: host.info
+    }
+
     Loader {
         Layout.fillWidth: true
         active: host.tunable && settings.checked

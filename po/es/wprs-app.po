@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 00:00+0000\n"
+"POT-Creation-Date: 2026-11-02 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -1697,6 +1697,19 @@ msgstr ""
 "rebajada porque sus fotogramas tardaban demasiado en la tarjeta gráfica"
 
 #: apps/wprs-app/qml/LeftOut.qml
+msgid "chosen by you"
+msgstr "elegida por ti"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid ""
+"this scene costs %1 units a frame at this level, more than the %2 this "
+"graphics card is estimated to hold; expect fewer frames per second"
+msgstr ""
+"esta escena cuesta %1 unidades por fotograma en este nivel, más de las %2 "
+"que se calcula que aguanta esta tarjeta gráfica; espera menos fotogramas por "
+"segundo"
+
+#: apps/wprs-app/qml/LeftOut.qml
 msgid "Quality %1 of 3"
 msgstr "Calidad %1 de 3"
 
@@ -2273,6 +2286,57 @@ msgid ""
 msgstr ""
 "Los proveedores descargan a tu biblioteca imágenes de las fuentes en línea "
 "que elijas."
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid "Automatic: lower on battery, when hot or when the scene is heavy"
+msgstr "Automática: baja con batería, con calor o si la escena es pesada"
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid "Automatic, but never below high (2 of 3)"
+msgstr "Automática, pero nunca por debajo de alta (2 de 3)"
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid "Automatic, but never below reduced (1 of 3)"
+msgstr "Automática, pero nunca por debajo de reducida (1 de 3)"
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid "Always the highest (3 of 3)"
+msgstr "Siempre la más alta (3 de 3)"
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid "Always high (2 of 3)"
+msgstr "Siempre alta (2 de 3)"
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid "Always reduced (1 of 3)"
+msgstr "Siempre reducida (1 de 3)"
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid "Always the lowest (0 of 3), uses the least power"
+msgstr "Siempre la más baja (0 de 3), la que menos energía gasta"
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid "Like every screen: %1"
+msgstr "Como todas las pantallas: %1"
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid "Scene quality of %1"
+msgstr "Calidad de las escenas de %1"
+
+#: apps/wprs-app/qml/QualityPicker.qml apps/wprs-app/qml/SettingsPage.qml
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Scene quality"
+msgstr "Calidad de las escenas"
+
+#: apps/wprs-app/qml/QualityPicker.qml
+msgid ""
+"A level you choose holds on battery, when the computer is hot and for heavy "
+"scenes too; a scene heavier than this graphics card holds then shows fewer "
+"frames per second."
+msgstr ""
+"El nivel que elijas se mantiene también con batería, con el equipo caliente "
+"y en escenas pesadas; una escena más pesada de lo que aguanta esta tarjeta "
+"gráfica muestra entonces menos fotogramas por segundo."
 
 #: apps/wprs-app/qml/RepoList.qml
 msgid "No repositories yet"
@@ -4538,6 +4602,10 @@ msgstr "Recargar la configuración"
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "General"
 msgstr "General"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Quality:"
+msgstr "Calidad:"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Draw with:"

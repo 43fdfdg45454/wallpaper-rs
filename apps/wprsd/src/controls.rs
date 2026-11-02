@@ -49,6 +49,9 @@ impl Daemon {
             self.library_changed(Vec::new());
             self.changes.changed("repos", Vec::new());
         }
+        if key.starts_with(wprs_core::QualityChoice::OWN) {
+            self.configure_all();
+        }
         if key.starts_with("layout.") && crate::calibration::calibrating(&self.state()) {
             self.configure_all();
         } else if key.starts_with("layout.") {

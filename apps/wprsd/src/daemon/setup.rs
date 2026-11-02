@@ -5,9 +5,20 @@ use zbus::fdo;
 pub(crate) fn settings(config: &Config) -> Settings {
     let playback = config.playback.sanitized();
     let transition = config.transition.duration();
-    let Playback { max_fps, volume, muted, software_parallax, flash_guard, scene_sound, .. } = playback;
+    let Playback { max_fps, volume, muted, software_parallax, flash_guard, scene_sound, quality, .. } =
+        playback;
     let duck = crate::duck::gain();
-    Settings { transition, max_fps, volume, muted, software_parallax, flash_guard, scene_sound, duck }
+    Settings {
+        transition,
+        max_fps,
+        volume,
+        muted,
+        software_parallax,
+        flash_guard,
+        scene_sound,
+        duck,
+        quality,
+    }
 }
 
 pub(crate) fn output_name(output: &str) -> fdo::Result<String> {

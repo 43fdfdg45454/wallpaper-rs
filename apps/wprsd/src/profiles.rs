@@ -69,10 +69,9 @@ impl Daemon {
             sections.map(|(name, o)| (name, content(o, &items))).collect();
         let text = |value: Value| value.as_str().map_or_else(|| value.to_string(), String::from);
         let options = serde_json::to_value(config.options()).ok().and_then(|v| v.as_object().cloned());
-        let options = options
-            .into_iter()
-            .flatten()
-            .filter(|(k, _)| with_options && k != DOWNLOADS && k != wprs_sync::GPU);
+        let options = options.into_iter().flatten().filter(|(k, _)| {
+            with_options && ![DOWNLOADS, wprs_sync::GPU, wprs_sync::QUALITY].contains(&k.as_str())
+        });
         let options: BTreeMap<String, String> = options.map(|(k, v)| (k, text(v))).collect();
         let (outputs, options) = (stored(&outputs), stored(&options));
         let uid = self.store.write(|lib| {

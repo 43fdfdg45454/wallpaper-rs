@@ -11,6 +11,7 @@ use wprs_scene::{FlashGuard, Governor, Press, Quality, Runtime, Spare};
 mod input;
 
 static LEVEL: AtomicU32 = AtomicU32::new(0);
+static OVER: AtomicU64 = AtomicU64::new(0);
 static CALMING: AtomicU32 = AtomicU32::new(0);
 static ENGINE: AtomicU32 = AtomicU32::new(0);
 static LEFT: Mutex<(u64, Vec<(String, String)>)> = Mutex::new((0, Vec::new()));

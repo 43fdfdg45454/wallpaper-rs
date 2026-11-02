@@ -53,4 +53,6 @@
     <string name="nothing_chosen">Nada elegido: usa el suyo</string>
     <string name="choose_file">Elegir</string>
     <string name="tier_timed">La clase se midió con marcas de tiempo de la GPU, sin contar la espera del procesador.</string>
+    <string name="level_chosen">Nivel elegido por ti: se mantiene aunque el teléfono no se esté cargando o esté caliente.</string>
+    <string name="level_over">Esta escena cuesta %1$s unidades por fotograma en este nivel, más de las %2$s que se calcula que aguanta esta GPU; espera menos fotogramas por segundo.</string>
 </resources>

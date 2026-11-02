@@ -13,6 +13,7 @@ pub mod message;
 pub mod model;
 pub mod motion;
 mod options;
+pub mod quality;
 pub mod settings;
 pub mod stash;
 mod store;
@@ -24,6 +25,7 @@ pub use filter::{Filter, Grade, Look};
 pub use fit::{Fit, UvRect};
 pub use gpu::{GpuChoice, Render};
 pub use layout::{Layout, Place, Screen};
+pub use quality::QualityChoice;
 pub use settings::{Library, Models, Pause, Playback, Repos, Transition, TransitionKind};
 pub use store::{gpu_tier, stopped_effects};
 

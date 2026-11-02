@@ -187,6 +187,18 @@ which all do, with timestamps or by waiting (see below). `GetState().outputs[x].
 `quality_reason` tell the level and why it is below the highest; the app, the tray and the phone
 show both, translated.
 
+The user can take the level out of these hands with `playback.quality` (see `SetOption` in
+`dbus.md`): `auto`, the default, is everything above; `q0` to `q3` fix the level, and `min-q1` or
+`min-q2` keep the automatic choice but never let it go below that level. A level the user sets
+always holds, also on battery, with power saving, while the device is warm and when the scene costs
+more than the tier holds: only the frame rate still follows the tier, the power source and the
+temperature, so a heavy scene shows fewer frames a second instead of fewer details. Above a floor,
+the automatic choice and the GPU time of the frames move the level as usual. The reason is then
+`user`, and when the chosen level costs more than the budget of the tier the app, the tray, the phone
+and `wprs-ctl quality` say what the scene costs and that fewer frames are to be expected. A scene
+over budget even at the lowest level still stays at `poster_time`. The phone keeps its own value,
+and stopping on battery saver or at a critical temperature still stops it.
+
 Every view of a scene also holds a hard budget, whatever the quality level: each effect use, built
 in or packaged, does its units (at the highest level, four times for an effect with a `state`, which
 may run four steps a frame) times the share it covers times the megapixels drawn, at least half a
@@ -449,7 +461,10 @@ nodes without a mesh, such as attachment points (the editor marks the ones it pl
 follow at most 4 bones whose weights add up to 1 (within 0.02, then made exact). The engine skins
 the vertices on the GPU into a picture of the box at the pixels it covers on the screen, with its transform, parents and camera, up to the pixels of
 its picture (half of them at the lowest quality and three quarters at the next; a mesh drawn larger
-than its box is skinned in steps of half an octave) and draws that picture like
+than its box is skinned in steps of half an octave). When the skin has fewer than about three
+quarters of the pixels of its texture on each side, the texture gets mipmaps and is read with
+trilinear filtering, so the edges of a character stay smooth at the lowest quality instead of
+showing steps, and draws that picture like
 any other layer, with its transform, effects, masks and blend mode; it draws it again only when the
 pose, the blend shapes, the order of the parts or a video texture changed, and a still or settled
 skeleton asks for no frames. Parts moved out of the box are cut at its edge, so `size` leaves them

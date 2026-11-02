@@ -23,11 +23,14 @@ QtObject {
             "battery": daemon.tr("lowered on battery"),
             "saver": daemon.tr("lowered while saving power"),
             "heat": daemon.tr("lowered while the computer is hot"),
-            "slow": daemon.tr("lowered because its frames took too long on the graphics card")
+            "slow": daemon.tr("lowered because its frames took too long on the graphics card"),
+            "user": daemon.tr("chosen by you")
         };
+        const over = info.quality_reason === "user" && info.quality_budget > 0 && info.quality_cost > info.quality_budget;
+        const note = over ? daemon.tr("this scene costs %1 units a frame at this level, more than the %2 this graphics card is estimated to hold; expect fewer frames per second", Number(info.quality_cost).toFixed(1), Number(info.quality_budget).toFixed(0)) : "";
         const quality = daemon.tr("Quality %1 of 3", info.quality.slice(1));
         const tier = String(state?.tier ?? "").slice(1);
         const card = !tier ? "" : state.tier_measured ? daemon.tr("graphics card class %1 of 3, measured", tier) : daemon.tr("graphics card class %1 of 3, from its model", tier);
-        return [reasons[info.quality_reason] ? quality + ": " + reasons[info.quality_reason] : quality, card].filter(t => t).join(" · ");
+        return [[reasons[info.quality_reason] ? quality + ": " + reasons[info.quality_reason] : quality, card].filter(t => t).join(" · "), note].filter(t => t).join("\n");
     }
 }

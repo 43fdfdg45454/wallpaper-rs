@@ -22,13 +22,13 @@ impl SceneState {
         if spec.values != self.spec.values {
             (self.listed.due, self.listed.unset) = (None, false);
         }
-        let moved = spec.moving != self.spec.moving;
+        let (moved, leveled) = (spec.moving != self.spec.moving, spec.quality != self.spec.quality);
         (self.spec, self.uses) = (spec, self.needs(self.quality));
         changed |= moved && self.calm(self.quiet);
         if changed {
             self.calm = 0;
         }
-        changed || media
+        changed || media || leveled
     }
 
     pub(in crate::compositor) fn input(&mut self, input: SceneInput) -> bool {

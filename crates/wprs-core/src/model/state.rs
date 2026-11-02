@@ -88,6 +88,12 @@ model! {
         #[serde(default)]
         pub quality_reason: String,
         #[serde(default)]
+        pub quality_choice: Option<String>,
+        #[serde(default)]
+        pub quality_cost: f64,
+        #[serde(default)]
+        pub quality_budget: f64,
+        #[serde(default)]
         pub decode: String,
         #[serde(default)]
         pub console: Vec<String>,

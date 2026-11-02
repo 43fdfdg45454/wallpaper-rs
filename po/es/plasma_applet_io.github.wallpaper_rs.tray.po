@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 00:00+0000\n"
+"POT-Creation-Date: 2026-11-02 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -264,6 +264,21 @@ msgstr "rebajada mientras el equipo está caliente"
 msgid "lowered because its frames took too long on the graphics card"
 msgstr ""
 "rebajada porque sus fotogramas tardaban demasiado en la tarjeta gráfica"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "chosen by you"
+msgstr "elegida por ti"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid ""
+"this scene costs %1 units a frame at this level, more than the %2 this "
+"graphics card is estimated to hold; expect fewer frames per second"
+msgstr ""
+"esta escena cuesta %1 unidades por fotograma en este nivel, más de las %2 "
+"que se calcula que aguanta esta tarjeta gráfica; espera menos fotogramas por "
+"segundo"
 
 #: integrations/plasma-tray/contents/ui/LeftOut.qml
 #, kde-format

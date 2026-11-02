@@ -14,7 +14,15 @@ fn state(folder: Option<&std::path::Path>) -> SceneState {
     let pack = Arc::new(ScenePack::bare(scene, properties, Vec::new()));
     let chosen = folder.map(|f| json!({ "album": f }));
     let values = serde_json::from_value(chosen.unwrap_or(json!({}))).unwrap();
-    let spec = SceneSpec { values, pack, extra: Vec::new(), clips: Vec::new(), hold: None, moving: false };
+    let spec = SceneSpec {
+        values,
+        pack,
+        extra: Vec::new(),
+        clips: Vec::new(),
+        hold: None,
+        moving: false,
+        quality: None,
+    };
     SceneState::new(spec, Power::new(Tier::T3, false, 0))
 }
 

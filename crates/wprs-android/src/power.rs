@@ -1,4 +1,5 @@
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering::Relaxed};
+use wprs_core::QualityChoice;
 use wprs_scene::{Quality, Tier};
 
 const CHARGING_FPS: u32 = 60;
@@ -18,6 +19,15 @@ static CLASS: AtomicI32 = AtomicI32::new(0);
 static GUARD: AtomicBool = AtomicBool::new(false);
 static HEARS: AtomicBool = AtomicBool::new(true);
 static COMPUTES: AtomicBool = AtomicBool::new(true);
+static CHOICE: std::sync::Mutex<QualityChoice> = std::sync::Mutex::new(QualityChoice::Auto);
+
+pub(crate) fn choose(choice: QualityChoice) {
+    *CHOICE.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = choice;
+}
+
+pub(crate) fn choice() -> QualityChoice {
+    *CHOICE.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
 
 pub(crate) fn guard(on: bool, hears: bool) {
     GUARD.store(on, Relaxed);

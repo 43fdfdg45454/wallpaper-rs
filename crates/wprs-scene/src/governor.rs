@@ -13,7 +13,7 @@ const BOUNCE: Duration = Duration::from_secs(30);
 const TRIES: u8 = 4;
 
 impl Budget {
-    pub fn level(&self, runtime: &Runtime) -> (Quality, Why) {
+    pub fn auto(&self, runtime: &Runtime) -> (Quality, Why) {
         let steps = |from: Quality, to: Quality, why: Why, now: Why| if to < from { why } else { now };
         let base = self.tier.quality(false);
         let why = if base < Quality::Q3 { Why::Device } else { Why::Full };
@@ -34,11 +34,12 @@ impl Budget {
     pub fn steady(&self) -> Quality {
         let strained = self.tier.quality(self.on_battery || self.saver);
         let start = if self.saver { strained.lower() } else { strained };
-        match self.heat {
+        let auto = match self.heat {
             Heat::Cool => start,
             Heat::Warm => start.lower(),
             Heat::Hot => Quality::Q0,
-        }
+        };
+        self.choose((auto, Why::Full)).0
     }
 
     pub fn gpu_share(&self) -> f32 {
@@ -63,11 +64,19 @@ pub struct Governor {
     tries: u8,
     gains: [f32; 4],
     gauge: Option<f32>,
+    floor: Option<Quality>,
 }
 
 impl Governor {
+    pub fn hold(&mut self, floor: Quality) {
+        if self.floor.unwrap_or(Quality::Q0) != floor {
+            *self = Governor { floor: Some(floor), ..Governor::default() };
+        }
+    }
+
     pub fn level(&self, (ceiling, why): (Quality, Why)) -> (Quality, Why) {
-        let lowered = (0..self.steps).fold(ceiling, |q, _| q.lower());
+        let floor = self.floor.unwrap_or(Quality::Q0).min(ceiling);
+        let lowered = (0..self.steps).fold(ceiling, |q, _| q.lower()).max(floor);
         if lowered < ceiling { (lowered, Why::Slow) } else { (ceiling, why) }
     }
 
@@ -101,7 +110,7 @@ impl Governor {
         let ((limit, cost), (high, dearer)) = (budget(here), budget(above));
         let expected = (dearer / cost.max(f32::EPSILON) * MARGIN).clamp(1.0, MOST);
         let gain = self.gains.get(index).map_or(1.0, |g| g.clamp(1.0, expected));
-        let slow = self.ewma > limit && here > Quality::Q0;
+        let slow = self.ewma > limit && here > self.floor.unwrap_or(Quality::Q0);
         let fits = steps > 0 && raises && self.ewma < high / 2.0;
         let fast = fits && self.ewma * gain < high / 2.0;
         let since = |mark: &mut Option<Instant>, on: bool| {

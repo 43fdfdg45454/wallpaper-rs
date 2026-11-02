@@ -172,4 +172,12 @@
     <string name="depth_device_auto">The fastest device</string>
     <string name="depth_device_cpu">The processor</string>
     <string name="picture_changed">This picture changed after it was edited, so the edit may no longer fit it.</string>
+    <string name="scene_quality">Scene quality</string>
+    <string name="quality_auto">Automatic: lower on battery, when warm or for heavy scenes</string>
+    <string name="quality_min_q2">Automatic, but never below high (2 of 3)</string>
+    <string name="quality_min_q1">Automatic, but never below reduced (1 of 3)</string>
+    <string name="quality_q3">Always the highest (3 of 3)</string>
+    <string name="quality_q2">Always high (2 of 3)</string>
+    <string name="quality_q1">Always reduced (1 of 3)</string>
+    <string name="quality_q0">Always the lowest (0 of 3), uses the least battery</string>
 </resources>

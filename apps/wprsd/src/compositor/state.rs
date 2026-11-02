@@ -46,7 +46,8 @@ impl State {
     ) -> Self {
         let (outputs, players, windows) = (BTreeMap::new(), HashMap::new(), HashMap::new());
         let (on_status, motion) = (Box::new(|_| {}), Motion::new(renderer.software()));
-        let power = Power::new(renderer.tier(), false, settings.max_fps);
+        let power =
+            Power { choice: settings.quality, ..Power::new(renderer.tier(), false, settings.max_fps) };
         let (speakers, locked) = (BTreeMap::new(), false);
         Self {
             renderer,

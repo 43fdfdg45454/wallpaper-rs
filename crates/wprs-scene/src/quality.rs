@@ -78,13 +78,14 @@ pub enum Why {
     Saver,
     Heat,
     Slow,
+    User,
 }
 
 impl Why {
-    pub const ALL: [Why; 7] =
-        [Why::Full, Why::Device, Why::Cost, Why::Battery, Why::Saver, Why::Heat, Why::Slow];
+    pub const ALL: [Why; 8] =
+        [Why::Full, Why::Device, Why::Cost, Why::Battery, Why::Saver, Why::Heat, Why::Slow, Why::User];
 
     pub fn name(self) -> &'static str {
-        ["full", "device", "cost", "battery", "saver", "heat", "slow"][self as usize]
+        ["full", "device", "cost", "battery", "saver", "heat", "slow", "user"][self as usize]
     }
 }

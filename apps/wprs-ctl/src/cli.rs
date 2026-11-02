@@ -4,12 +4,8 @@ use crate::edit::Edits;
 use crate::inputs::Inputs;
 use crate::library::Lib;
 use crate::models::Models;
-use crate::pack::Pack;
-use crate::pkg::Pkg;
-use crate::playlists::Playlist;
 use crate::profiles::{Preset, Profile};
-use crate::props::Prop;
-use crate::providers::Provider;
+use crate::{pack::Pack, pkg::Pkg, playlists::Playlist, props::Prop, providers::Provider};
 use crate::{remote::Remote, repo::Repo, server::Server};
 use clap::{Parser, Subcommand};
 use wprs_core::Fit;
@@ -64,6 +60,10 @@ pub enum Command {
     },
     #[command(about = "List the graphics cards and the one in use, or choose the one the daemon starts with")]
     Gpu(crate::gpus::GpuArgs),
+    #[command(
+        about = "Show the quality level of each screen and why, or keep it automatic, fixed or above a floor"
+    )]
+    Quality(crate::levels::QualityArgs),
     #[command(about = "Re-read the configuration file")]
     Reload,
     #[command(about = "Draw again the effects left out after they stopped the graphics card or a program")]

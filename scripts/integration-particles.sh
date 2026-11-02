@@ -26,13 +26,13 @@ ctl scene set "$draft" /scene/particles/spark '{"capacity": 10, "emitters": [{"s
 ctl scene set "$draft" /scene/particles/dust/children '[{"system": "spark", "on": "follow"}]'
 ctl scene particles "$draft" dust inherit 0 color size --follow || fail "the child took nothing from its parent"
 ctl scene particles "$draft" dust shader none || fail "the shader was not cleared"
-ctl scene particles "$draft" dust handles | grep -q '"around"' || fail "the handles of the system were not listed"
+ctl scene particles "$draft" dust handles | grep '"around"' >/dev/null || fail "the handles of the system were not listed"
 ctl scene particles "$draft" dust turbulent --forward 90 --scale 0.5 --speed 20,40 --audio bass || fail "no turbulent start was set"
 if ctl scene particles "$draft" dust turbulent --scale 3 2>/dev/null; then fail "a turn of three half turns was kept"; fi
 ctl scene particles "$draft" dust turbulent --quiet || fail "the turbulent start still follows the sound"
 ctl scene particles "$draft" dust offset --distance 12 --octaves 3 --sign 0,1 || fail "no fractal offset was set"
 if ctl scene particles "$draft" dust offset --octaves 9 2>/dev/null; then fail "nine octaves were kept"; fi
-ctl scene particles "$draft" dust handles | grep -q '"arrows"' || fail "the fractal offset is not shown"
+ctl scene particles "$draft" dust handles | grep '"arrows"' >/dev/null || fail "the fractal offset is not shown"
 ctl scene show "$draft" /manifest/requires/features | grep -q particle_depth || fail "depth left particle_depth out"
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with newer particles was not previewed"
 ctl scene particles "$draft" dust perspective --off || fail "the depth was not removed"
@@ -47,14 +47,14 @@ ctl scene particles "$draft" dust collider set 1 '{"bounds": {"layer": {"id": "b
 if ctl scene particles "$draft" dust collider add '{"bounds": {"layer": {"id": "dust"}}}' 2>/dev/null; then
   fail "a layer collided with its own particles"
 fi
-ctl scene particles "$draft" dust handles | grep -q '"field"' || fail "the layer collider shows no field"
+ctl scene particles "$draft" dust handles | grep '"field"' >/dev/null || fail "the layer collider shows no field"
 ctl scene particles "$draft" dust collider remove 1 || fail "the collider was not removed"
 ctl scene particles "$draft" dust keep distance p1 --distance 30 --strength 5 || fail "no distance is kept"
 ctl scene particles "$draft" dust keep between p0 40,30 --strength 2 || fail "particles are not kept between two points"
 ctl scene particles "$draft" dust keep distance cursor --distance 80 --index 1 || fail "the distance was not replaced"
 ctl scene particles "$draft" dust keep remove 2 || fail "the force was not removed"
 ctl scene particles "$draft" dust boids --radius 30 --alignment 2 --max-speed 120 || fail "the particles do not flock"
-ctl scene particles "$draft" dust handles | grep -q '"boids"' || fail "the flock is not shown"
+ctl scene particles "$draft" dust handles | grep '"boids"' >/dev/null || fail "the flock is not shown"
 if ctl scene particles "$draft" dust boids --separation 40 2>/dev/null; then fail "a separation beyond 10 was kept"; fi
 ctl scene particles "$draft" dust operator remap add '{"input": "age", "in": [0, 3], "output": "alpha", "out": [1, 0]}' ||
   fail "no remap operator was added"

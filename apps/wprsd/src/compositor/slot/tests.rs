@@ -18,6 +18,7 @@ fn heard() -> (Settings, bool) {
             flash_guard,
             scene_sound,
             duck: 1.0,
+            quality: Default::default(),
         },
         false,
     )
