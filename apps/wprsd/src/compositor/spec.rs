@@ -43,6 +43,7 @@ pub struct SceneSpec {
     pub hold: Option<f64>,
     pub moving: bool,
     pub quality: Option<wprs_core::QualityChoice>,
+    pub span: Option<[f32; 4]>,
 }
 
 #[derive(Debug, Clone)]
@@ -90,7 +91,7 @@ impl Content {
             _ => None,
         };
         let values = |c: &Content| match c {
-            Content::Scene(s) => Some((s.values.clone(), s.media(), s.hold, s.moving, s.quality)),
+            Content::Scene(s) => Some((s.values.clone(), s.media(), s.hold, s.moving, s.quality, s.span)),
             _ => None,
         };
         let frame = |c: &Content| match c {

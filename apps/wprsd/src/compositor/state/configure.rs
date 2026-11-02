@@ -22,6 +22,7 @@ impl State {
             }
             _ => None,
         });
+        let clock = super::super::scene::clock::clock_for(&self.outputs, &name, &spec.content);
         let mut current = self.outputs.get_mut(&name).filter(|o| o.size == size);
         if let Some(o) = current.as_deref_mut().filter(|o| o.shown.tone != spec.tone) {
             (o.shown.tone, o.dirty, o.stale, o.composed) = (spec.tone, true, true, None);
@@ -36,6 +37,7 @@ impl State {
             && let Some(scene) = o.shown.scene.as_mut()
         {
             o.dirty |= scene.update(new.clone());
+            scene.share(clock);
             scene.link(&mut self.scripts, &name);
             super::super::feed::declare(&name, Some(scene));
             o.shown.content = spec.content;
@@ -71,6 +73,7 @@ impl State {
                 scene.calm(self.motion.calm);
                 scene.guard(self.settings.flash_guard);
                 resume.into_iter().for_each(|time| scene.resume(time));
+                scene.share(clock);
                 Some(scene)
             }
             _ => None,

@@ -15,6 +15,7 @@ pub mod motion;
 mod options;
 pub mod quality;
 pub mod settings;
+pub mod spread;
 pub mod stash;
 mod store;
 

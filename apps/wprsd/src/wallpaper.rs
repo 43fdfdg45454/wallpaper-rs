@@ -74,7 +74,8 @@ impl Daemon {
                 shown_scene = Some(pack.clone());
                 let moving = self.store.read(|lib| lib.moves(&pack.props.id)).unwrap_or(false);
                 let quality = self.state().config.own_quality(output);
-                (Content::Scene(SceneSpec { pack, values, extra, clips, hold, moving, quality }), None)
+                let span = self.scene_span(output, resolved.fit, pack.scene.canvas.size);
+                (Content::Scene(SceneSpec { pack, values, extra, clips, hold, moving, quality, span }), None)
             }
             Some(Ok(Media::Web(pack))) => (Content::Web(self.page_on(output, pack, &mut shown_video)), None),
             Some(Ok(Media::Picture(file))) => {
@@ -103,6 +104,7 @@ impl Daemon {
         let mut st = self.state();
         if let Some(info) = st.outputs.get_mut(output) {
             (info.uploaded, info.scene, info.video, info.accent) = (upload, shown_scene, shown_video, accent);
+            info.spread = fit == Fit::Span && !crate::drafts::virtual_output(output);
         }
         st.turns.remove(output);
         st.missed.remove(output);
@@ -115,7 +117,11 @@ impl Daemon {
 
     pub fn configure_all(&self) {
         let outputs: Vec<String> = self.state().outputs.keys().cloned().collect();
+        let spread = self.spreading();
         let _decoded: Vec<_> = outputs.iter().filter_map(|o| self.configure_output(o)).collect();
+        if self.spreading() != spread {
+            let _decoded: Vec<_> = outputs.iter().filter_map(|o| self.configure_output(o)).collect();
+        }
     }
 
     fn picture(

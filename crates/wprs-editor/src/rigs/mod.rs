@@ -106,6 +106,7 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         }
         _ if q.get("outline").is_some() => outline(dir, doc, id),
         _ if q.get("wind").is_some() => wind_arrow(doc),
+        _ if q.get("spread").is_some() => crate::spread::spread(doc, &q["spread"]),
         _ => rig(dir, doc, id),
     }
 }

@@ -50,6 +50,7 @@ mod shapes;
 pub mod shelf;
 pub mod skin;
 mod spots;
+pub mod spread;
 pub mod stage3d;
 pub mod starters;
 pub mod stock;

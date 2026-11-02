@@ -33,7 +33,8 @@ fn flags() -> WatchFlags {
 }
 
 pub(crate) fn spans(st: &State) -> bool {
-    st.outputs.keys().any(|o| !crate::drafts::virtual_output(o) && st.config.resolve(o).fit == Fit::Span)
+    let spread = |o: &str, info: &OutputInfo| info.spread || st.config.resolve(o).fit == Fit::Span;
+    st.outputs.iter().any(|(o, info)| !crate::drafts::virtual_output(o) && spread(o, info))
 }
 
 fn density(px_per_mm: f64) -> f64 {
@@ -104,7 +105,11 @@ impl Daemon {
         if fit != Fit::Span || screen.is_none() {
             return Place::Fit;
         }
-        let spanned = st.outputs.iter().filter(|(name, _)| st.config.resolve(name).fit == Fit::Span);
+        let spread = |name: &str, info: &OutputInfo| {
+            name == output || info.spread || st.config.resolve(name).fit == Fit::Span
+        };
+        let spanned = st.outputs.iter().filter(|(name, info)| spread(name, info));
+        let spanned = spanned.filter(|(name, _)| !crate::drafts::virtual_output(name));
         let screens =
             spanned.filter_map(|(name, info)| Some((name.as_str(), info.size, info.screen.as_ref()?)));
         let span = edit.and_then(|e| e.span.clone()).unwrap_or_default();

@@ -587,7 +587,17 @@ started again, and `--stop` ends it. The document of a preview may carry `previe
 restart }`, which the daemon reads only for previews.
 
 The canvas draws the outline of each layer with handles to turn and scale the selected one, and
-guides for 16:9, 21:9, 32:9, 4:3, 16:10 and 9:16 screens. Dragging a layer that is not locked
+guides for 16:9, 21:9, 32:9, 4:3, 16:10 and 9:16 screens. *Screens* previews the scene spread over
+several screens: two or three side by side, two stacked, or the user's own layout as the daemon
+reports it (`GetState().outputs[x].mm`). It frames the part of the canvas that each screen shows
+and darkens what the frames between them (`layout.bezel_mm`) and the edges of the layout hide, and
+its *Spread over every screen* box sets or removes `display.span: "all-outputs"` in the manifest,
+as an undoable step. The parts come from the editor query `{"spread": {"layout", "bezel",
+"monitors"}}` (`rigs::query`), which answers `{spread, canvas, screens, bounds, parts: [{id, rect}]}`
+with each rect in canvas pixels, or `error` for an unknown layout or screens without a name or a
+size (at most 64). `wprs-ctl scene preview DIR --layout dual|triple|vertical|mine --out FILE`
+writes the same view as a picture, without a desktop: the scene at its poster time, each screen's
+part at its physical place and the frames between them. Dragging a layer that is not locked
 selects it and moves it, as one gesture. A drag that starts outside the layers, or any drag with
 Shift, draws a rectangle that selects the layers it touches and picks them as Ctrl does in the
 layer list, ready for *Group*. Ctrl and the wheel zoom, the wheel or a drag with the middle or

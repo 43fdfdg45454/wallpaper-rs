@@ -1,7 +1,10 @@
+pub(super) mod clock;
 mod heard;
 mod level;
 mod listing;
 mod polling;
+#[cfg(test)]
+mod spreads;
 #[cfg(test)]
 mod tests;
 
@@ -73,6 +76,7 @@ pub(super) struct SceneState {
     samples: u64,
     listed: listing::Listed,
     keeper: Option<wprs_core::stash::Keeper>,
+    shared: Option<clock::Clock>,
 }
 
 fn after(seconds: f64) -> Duration {
@@ -155,6 +159,7 @@ impl SceneState {
             samples: 0,
             listed: Default::default(),
             keeper: None,
+            shared: None,
         };
         scene.uses = scene.needs(quality);
         scene

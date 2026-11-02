@@ -22,6 +22,7 @@ fn state(folder: Option<&std::path::Path>) -> SceneState {
         hold: None,
         moving: false,
         quality: None,
+        span: None,
     };
     SceneState::new(spec, Power::new(Tier::T3, false, 0))
 }

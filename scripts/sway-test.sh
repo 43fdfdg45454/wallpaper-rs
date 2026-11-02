@@ -155,6 +155,7 @@ expect "s['outputs']['HEADLESS-2']['covered']" False
 expect "s['outputs']['HEADLESS-2']['playing']" True
 echo "video output flap checks passed"
 
+source "$(dirname "$0")"/sway-spread.sh
 source "$(dirname "$0")"/sway-inputs.sh
 
 status=0

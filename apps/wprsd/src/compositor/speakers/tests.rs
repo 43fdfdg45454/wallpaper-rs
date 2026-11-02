@@ -44,6 +44,7 @@ fn delayed() -> SceneState {
         hold: None,
         moving: false,
         quality: None,
+        span: None,
     };
     SceneState::new(spec, super::super::power::Power::new(Tier::T3, false, 30))
 }

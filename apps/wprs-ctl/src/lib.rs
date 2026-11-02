@@ -54,6 +54,7 @@ pub mod server;
 pub mod serving;
 pub mod shelving;
 pub mod show;
+pub mod spanning;
 mod steps;
 mod swarmed;
 mod swarming;

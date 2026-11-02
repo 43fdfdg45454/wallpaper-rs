@@ -67,6 +67,7 @@ mod service;
 mod shortcuts;
 #[cfg(test)]
 mod spec;
+mod spread;
 mod store;
 mod streams;
 mod surfaces;

@@ -86,7 +86,12 @@ fn library_and_preset_commands_parse() {
         ("lib thumb R1AB2C", r#"Lib(Thumb { item: "R1AB2C", size: "512" })"#.into()),
         (
             "lib apply R1AB2C -o DP-1 -f center -p dark",
-            r#"Lib(Apply { item: "R1AB2C", output: "DP-1", fit: Some(Center), preset: "dark" })"#.into(),
+            r#"Lib(Apply { item: "R1AB2C", output: "DP-1", fit: Some(Center), span: false, preset: "dark" })"#
+                .into(),
+        ),
+        (
+            "lib apply R1AB2C --span",
+            r#"Lib(Apply { item: "R1AB2C", output: "", fit: None, span: true, preset: "" })"#.into(),
         ),
         ("preset ls", "Preset(Ls { item: None, json: false })".into()),
         ("preset ls R1AB2C --json", r#"Preset(Ls { item: Some("R1AB2C"), json: true })"#.into()),

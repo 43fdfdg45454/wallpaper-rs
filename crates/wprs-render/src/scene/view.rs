@@ -11,6 +11,7 @@ use wprs_scene::Affine;
 
 pub struct SceneView {
     pub(super) fit: Fit,
+    pub(super) span: Option<[f32; 4]>,
     pub(super) canvas: [u32; 2],
     pub(super) srgb: bool,
     pub(super) format: Format,
@@ -59,7 +60,18 @@ impl Drop for SceneView {
 }
 
 impl SceneView {
+    pub fn spread(&mut self, part: Option<[f32; 4]>) {
+        let usable = part.filter(|r| r.iter().all(|v| v.is_finite()) && r[2] > 0.0 && r[3] > 0.0);
+        if usable != self.span {
+            self.span = usable;
+            self.marks.clear();
+        }
+    }
+
     pub fn view(&self, size: (u32, u32)) -> [f32; 4] {
+        if let Some(part) = self.span {
+            return part;
+        }
         let fit = match self.fit {
             Fit::Tile => Fit::Center,
             Fit::Span => Fit::Fill,

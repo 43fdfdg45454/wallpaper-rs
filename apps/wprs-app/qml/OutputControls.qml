@@ -67,6 +67,15 @@ ColumnLayout {
         }
 
         QQC2.ToolButton {
+            id: spreading
+
+            visible: (host.info.shown_fit ?? host.info.fit) === "span"
+            checkable: true
+            icon.name: "view-split-left-right"
+            text: host.daemon.tr("Where the screens are")
+        }
+
+        QQC2.ToolButton {
             id: filtering
 
             checkable: true
@@ -118,6 +127,14 @@ ColumnLayout {
             daemon: host.daemon
             output: host.name
         }
+    }
+
+    Loader {
+        Layout.fillWidth: true
+        active: spreading.visible && spreading.checked
+        visible: active
+
+        sourceComponent: EditLayout {}
     }
 
     Loader {

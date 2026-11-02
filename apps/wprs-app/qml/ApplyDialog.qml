@@ -12,6 +12,7 @@ Kirigami.Dialog {
     property bool flashing
     property var exposes: []
     property bool known
+    property bool spread
     readonly property var fits: App.schema.fits ?? ["fill", "fit", "stretch", "center", "tile"]
 
     function show(uid) {
@@ -20,6 +21,8 @@ Kirigami.Dialog {
         dialog.flashing = false;
         dialog.exposes = [];
         dialog.known = false;
+        dialog.spread = false;
+        fit.currentIndex = 0;
         App.query("GetItem", [uid], "Library1", reply => {
             if (!dialog)
                 return;
@@ -28,6 +31,9 @@ Kirigami.Dialog {
             const pkg = reply.item.package;
             dialog.flashing = !!pkg && pkg.photosensitive === true && !(pkg.confirmed ?? []).includes("photosensitive");
             dialog.exposes = pkg?.exposes ?? [];
+            dialog.spread = reply.about?.spread === true;
+            if (dialog.spread && dialog.fits.includes("span"))
+                fit.currentIndex = fit.indexOfValue("span");
             dialog.known = true;
         });
         for (const item of [uid, ""])
@@ -87,6 +93,18 @@ Kirigami.Dialog {
             model: dialog.choices(App.tr("Keep"), dialog.fits, value => Labels.value(value))
             textRole: "text"
             valueRole: "value"
+        }
+
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            visible: dialog.spread
+            type: Kirigami.MessageType.Information
+            text: App.tr("This wallpaper is made to spread over every screen, so it is placed across them. Choose another placement to show it whole on each screen.")
+        }
+
+        EditLayout {
+            Layout.fillWidth: true
+            visible: fit.currentValue === "span"
         }
 
         QQC2.ComboBox {

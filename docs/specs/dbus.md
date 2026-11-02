@@ -772,7 +772,9 @@ confirmation, except the description of a first-version package (`schema` is
 `wallpaper-rs.wpak/1`), which is plain text shown as written. Every other text is plain.
 `provider` is the credit of the online source it comes from, `platforms` the devices it is made
 for, `packages` the packages it needs (`<id> <version requirement>`) and a credit's `source` the
-package its files come from (`<id> <version>`). `animated` is the path of its animated preview
+package its files come from (`<id> <version>`), and `spread` is `true` when its author asks to
+spread it over every screen (`display.span` is `all-outputs`), so that clients propose `span` when
+it is applied. `animated` is the path of its animated preview
 (`previews.animated`), copied once into the thumbnail cache, or `null`; clients play it only while
 it is on screen, on mains power, and once a mature or photosensitive package was allowed. A package this device cannot play keeps its
 details, with the reason in `error` (`this package needs a newer version of wallpaper-rs: it uses
@@ -1977,7 +1979,8 @@ that cannot be used is ignored with a warning.
   `overscan` (`1` to `1.1`) the zoom that hides the edges.
 - `fit` (`fill`, `fit`, `stretch`, `center` or `tile`) shows this picture with its own fit instead
   of the fit of the output, except on `span` outputs; `GetState().outputs[x].fit` stays the fit of
-  the output and `shown_fit` reports the fit in use.
+  the output and `shown_fit` reports the fit in use (`span` also on outputs that show a scene its
+  author spread over every screen, which each draw their part of one canvas on one shared clock).
 
 The depth map of an image is a grey PNG, white near. It can sit next to the image
 (`hills.jpg.depth.png`, where `wprs-ctl edit depth import` and `export` put it), in

@@ -139,6 +139,8 @@ pub enum Lib {
         output: String,
         #[arg(short, long, help = FIT)]
         fit: Option<Fit>,
+        #[arg(long, conflicts_with = "fit", help = "Spread it over every screen, as --fit span")]
+        span: bool,
         #[arg(short, long, default_value = "", help = "Preset uid or name")]
         preset: String,
     },
@@ -186,8 +188,8 @@ pub async fn run(client: &Client, command: Lib) -> Result<()> {
             lib.unconfirm(&strs(&resolve(client, &items).await?), &what).await?
         }
         Lib::ClearData { items } => lib.clear_data(&strs(&resolve(client, &items).await?)).await?,
-        Lib::Apply { item, output, fit, preset } => {
-            let uid = one(client, &item).await?;
+        Lib::Apply { item, output, fit, span, preset } => {
+            let (uid, fit) = (one(client, &item).await?, if span { Some(Fit::Span) } else { fit });
             crate::caution::apply(client, &uid, &output, fit.map_or("", Fit::as_str), &preset).await?
         }
     }

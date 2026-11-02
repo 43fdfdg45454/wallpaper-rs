@@ -60,6 +60,10 @@ pub enum Folder {
         quality: Option<String>,
         #[arg(long, help = "Start the particle systems and the scene again")]
         restart: bool,
+        #[arg(long, value_parser = ["dual", "triple", "vertical", "mine"], requires = "out", help = SPREAD)]
+        layout: Option<String>,
+        #[arg(long, requires = "layout", help = "Picture file of --layout: .png, .jpg, .webp or .avif")]
+        out: Option<PathBuf>,
     },
     #[command(about = "Build the scene into the library and show it on an output")]
     Apply {
@@ -67,6 +71,8 @@ pub enum Folder {
         dir: PathBuf,
         #[arg(short, long, default_value = "", help = crate::cli::OUTPUT)]
         output: String,
+        #[arg(long, help = "Spread it over every screen, each one showing its part")]
+        span: bool,
     },
     #[command(
         about = "Print the JSON Schema of scenes, of user properties with --property or of manifests with --manifest"
@@ -78,6 +84,9 @@ pub enum Folder {
         manifest: bool,
     },
 }
+
+const SPREAD: &str =
+    "Write the scene over two or three screens side by side, two stacked or yours, without a desktop";
 
 fn runtime() -> Result<tokio::runtime::Runtime> {
     Ok(tokio::runtime::Builder::new_current_thread().enable_all().build()?)
@@ -132,7 +141,10 @@ pub(crate) fn run(command: Folder) -> Result<()> {
                 false => println!("{sha256} {size} {}", out.display()),
             }
         }
-        Folder::Preview { dir, output, time, stop, quality, restart } => {
+        Folder::Preview { dir, layout: Some(layout), out: Some(out), .. } => {
+            crate::spanning::preview(&dir, &layout, &out)?
+        }
+        Folder::Preview { dir, output, time, stop, quality, restart, .. } => {
             let project = Project::open(&dir)?;
             let mut document = json!({"manifest": project.doc["manifest"], "scene": visible(&project.doc)});
             let nonce = restart.then(|| std::time::UNIX_EPOCH.elapsed().map_or(1, |d| d.as_millis() as u64));
@@ -147,13 +159,13 @@ pub(crate) fn run(command: Folder) -> Result<()> {
                 )
             })?;
         }
-        Folder::Apply { dir, output } => {
+        Folder::Apply { dir, output, span } => {
             let mut project = Project::open(&dir)?;
             ensure!(!project.dirty() && project.pending.is_none(), "save the scene first");
             let out = package::applied(&project.doc)?;
             package::build(&mut project, &out, None)?;
             let path = out.to_str().context("the path is not UTF-8")?.to_owned();
-            runtime()?.block_on(apply(&path, &output))?;
+            runtime()?.block_on(apply(&path, &output, if span { "span" } else { "" }))?;
         }
         Folder::Schema { property, manifest } => {
             let schema = match (property, manifest) {
@@ -167,7 +179,7 @@ pub(crate) fn run(command: Folder) -> Result<()> {
     Ok(())
 }
 
-async fn apply(path: &str, output: &str) -> Result<()> {
+async fn apply(path: &str, output: &str, fit: &str) -> Result<()> {
     let client = Client::connect().await?;
     let (_, job) =
         client.run_job(async { Ok(((), client.library.import(&[path], false).await?)) }, |_, _| {}).await?;
@@ -176,7 +188,7 @@ async fn apply(path: &str, output: &str) -> Result<()> {
     let failed =
         report["failed"][0]["error"].as_str().unwrap_or("the library refused the package").to_owned();
     let uid = uid.ok_or_else(|| anyhow!(failed))?;
-    client.library.apply(&uid, output, "", "").await?;
+    client.library.apply(&uid, output, fit, "").await?;
     println!("{uid}");
     Ok(())
 }

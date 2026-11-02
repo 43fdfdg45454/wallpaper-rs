@@ -581,6 +581,15 @@ msgid "Keep"
 msgstr "Mantener"
 
 #: apps/wprs-app/qml/ApplyDialog.qml
+msgid ""
+"This wallpaper is made to spread over every screen, so it is placed across "
+"them. Choose another placement to show it whole on each screen."
+msgstr ""
+"Este fondo está hecho para extenderse sobre todas las pantallas, así que se "
+"coloca a lo largo de ellas. Elige otra colocación para verlo entero en cada "
+"pantalla."
+
+#: apps/wprs-app/qml/ApplyDialog.qml
 msgid "Preset:"
 msgstr "Preajuste:"
 
@@ -1079,7 +1088,7 @@ msgstr "Voltear en horizontal"
 msgid "Flip vertically"
 msgstr "Voltear en vertical"
 
-#: apps/wprs-app/qml/EditLayout.qml
+#: apps/wprs-app/qml/EditLayout.qml apps/wprs-app/qml/OutputControls.qml
 msgid "Where the screens are"
 msgstr "Dónde están las pantallas"
 
@@ -1095,7 +1104,7 @@ msgstr ""
 "Arrastra cada pantalla hasta donde está de verdad; el espacio entre dos "
 "pantallas son sus marcos."
 
-#: apps/wprs-app/qml/EditLayout.qml
+#: apps/wprs-app/qml/EditLayout.qml apps/wprs-app/qml/SceneSpan.qml
 msgid "The desktop has not told where its screens are yet."
 msgstr "El escritorio aún no ha dicho dónde están sus pantallas."
 
@@ -4588,6 +4597,39 @@ msgstr "Recursos"
 msgid "Package"
 msgstr "Paquete"
 
+#: apps/wprs-app/qml/SceneSpan.qml
+msgid "These screens cannot be shown: %1"
+msgstr "Estas pantallas no se pueden mostrar: %1"
+
+#: apps/wprs-app/qml/SceneSpanPick.qml
+msgid "Screens:"
+msgstr "Pantallas:"
+
+#: apps/wprs-app/qml/SceneSpanPick.qml
+msgid "One screen"
+msgstr "Una pantalla"
+
+#: apps/wprs-app/qml/SceneSpanPick.qml
+msgid "Two side by side"
+msgstr "Dos en fila"
+
+#: apps/wprs-app/qml/SceneSpanPick.qml
+msgid "Three side by side"
+msgstr "Tres en fila"
+
+#: apps/wprs-app/qml/SceneSpanPick.qml
+msgid "Two stacked"
+msgstr "Dos apiladas"
+
+#: apps/wprs-app/qml/SceneSpanPick.qml
+msgid "My screens"
+msgstr "Mis pantallas"
+
+#: apps/wprs-app/qml/SceneSpanPick.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Spread over every screen"
+msgstr "Extenderse por todas las pantallas"
+
 #: apps/wprs-app/qml/SceneStageCamera.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Camera"
@@ -6766,10 +6808,6 @@ msgstr "Versión"
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Every file"
 msgstr "Todos los archivos"
-
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Spread over every screen"
-msgstr "Extenderse por todas las pantallas"
 
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Any graphics card"

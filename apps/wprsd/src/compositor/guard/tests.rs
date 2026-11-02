@@ -33,6 +33,7 @@ fn staged(layers: serde_json::Value, particles: serde_json::Value, poster: f32) 
         hold: None,
         moving: false,
         quality: None,
+        span: None,
     };
     SceneState::new(spec, Power::new(Tier::T3, false, 60))
 }

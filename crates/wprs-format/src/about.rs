@@ -49,6 +49,7 @@ impl Manifest {
             packages: self.dependencies().iter().map(|d| format!("{} {}", d.id, d.version)).collect(),
             refused: features::refused(crate::Platform::here().name(), self.features()),
             animated: None,
+            spread: self.display.as_ref().is_some_and(|d| d.span == Some(crate::Span::AllOutputs)),
         }
     }
 }

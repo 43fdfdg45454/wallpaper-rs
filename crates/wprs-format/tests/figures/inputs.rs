@@ -77,10 +77,9 @@ fn rgb_output_and_spanned_scenes_need_their_manifest_fields() {
     let plain = scene(json!([{ "id": "sky", "type": "image", "image": "sky" }]), json!({}));
     let spread = json!({ "display": { "span": "all-outputs" } });
     let package = load(&manifest(&["display2", "spanned_scenes"], spread), &plain, &[]).unwrap();
-    let desktop =
-        features::playable(&package.manifest, &package.facts, Platform::Desktop).unwrap_err().to_string();
-    assert!(desktop.contains("spanned_scenes (spreads its scene over every screen)"), "{desktop}");
+    assert!(features::playable(&package.manifest, &package.facts, Platform::Desktop).is_ok());
     assert!(features::playable(&package.manifest, &package.facts, Platform::Android).is_ok());
+    assert!(features::lacks("android", &package.facts.features).contains(&"spanned_scenes".to_owned()));
     let flipped = json!({ "display": { "flip": "horizontal" } });
     let fault =
         load(&manifest(&["display2", "flip"], flipped), &plain, &[]).map(drop).unwrap_err().to_string();

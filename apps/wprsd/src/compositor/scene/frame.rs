@@ -47,6 +47,7 @@ impl SceneState {
         }
         let listing = self.listing_wake(now);
         let view = self.view.as_mut().expect("created above");
+        view.spread(self.spec.span);
         let inner = view.inner(renderer, size, quality);
         let rect = view.view(inner);
         let presses = std::mem::take(&mut self.presses);
@@ -109,7 +110,9 @@ impl SceneState {
     fn step(&mut self, active: bool, now: Instant) -> f64 {
         let dt = self.tick.filter(|_| active).map_or(0.0, |t| now.saturating_duration_since(t).as_secs_f64());
         if active && !self.still && !self.hushed {
-            self.runtime.advance(dt * self.guard.as_ref().map_or(1.0, |g| g.speed()));
+            let rate = self.guard.as_ref().map_or(1.0, |g| g.speed());
+            let shared = self.shared.as_ref().map(|c| super::clock::tick(c, now, self.tick.is_some(), rate));
+            self.runtime.advance(shared.map_or(dt * rate, |t| t - self.runtime.time()).max(0.0));
         }
         self.tick = active.then_some(now);
         dt

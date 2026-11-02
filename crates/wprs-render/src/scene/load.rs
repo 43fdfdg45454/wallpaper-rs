@@ -131,6 +131,7 @@ impl Renderer {
             assets.images.values().for_each(|p| p.release());
             SceneView {
                 fit: scene.canvas.fit,
+                span: None,
                 canvas: scene.canvas.size,
                 srgb,
                 format,

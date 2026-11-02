@@ -111,8 +111,13 @@ mirrored, on the computer and on the phone, at no cost, since the screen pass re
 the phone a mirrored video goes through the graphics card instead of playing straight on the
 screen) for `image` and `video` packages, and `zoom` (1 to 8) and `position` (two numbers of -1 to 1) for videos. Scenes may also set `span`,
 only to `all-outputs`, since drawing on each screen needs no key: it asks to draw one canvas across every screen, each output showing its part with the
-transform of its monitor; engines that cannot do that yet refuse such a scene with
-`spanned_scenes`, and the phone, which has one screen, shows it there. `accent` suggests an accent
+transform of its monitor. The canvas covers the physical layout of the screens that use `span`
+(`layout` in the daemon settings, frames between screens included, so a line crossing two screens
+stays straight behind the frames); each screen renders only its own part at its own quality level,
+and all of them follow one shared clock, so animations and timelines stay in step across screens.
+It is applied with `span` unless the user chooses another placement, which shows the whole scene on
+each screen as before. Older engines refuse such a scene with `spanned_scenes`, and the phone,
+which has one screen, shows it there. `accent` suggests an accent
 color for the desktop, `#rrggbb` or `{"prop": "<id>"}` of a color property (its current value), in
 any kind but `assets`. Without it the accent is the dominant color of the preview. The daemon
 reports it per output (`accent` in `GetState`) and changes it only when the value changes; the Plasma
@@ -253,7 +258,7 @@ the folder changed, and the stored value is the path of that copy.
 | `credits2` | credits files to the package they come from (`credits[].source`) | runs | runs |
 | `ktx2` | uses KTX2 textures | refused | refused |
 | `avif` | uses AVIF pictures | refused | refused |
-| `spanned_scenes` | sets `display.span` of a scene to `all-outputs` | refused | without |
+| `spanned_scenes` | sets `display.span` of a scene to `all-outputs` | runs | without |
 | `rgb` | sets `permissions.rgb` or sends colors to RGB lighting from a scene | refused | without |
 | `effect.<id>` | uses a built-in effect that older versions do not have; `pack build` and `pack check` name the ones a package needs | runs | runs |
 | `effect.<id>.<parameter>` | sets a parameter that an older version of a built-in effect does not have | runs | runs |

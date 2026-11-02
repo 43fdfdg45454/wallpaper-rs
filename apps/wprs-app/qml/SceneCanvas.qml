@@ -96,6 +96,12 @@ ColumnLayout {
 
                 model: canvas.aspects.map(aspect => aspect || App.tr("No guide"))
             }
+
+            SceneSpanPick {
+                id: spans
+
+                page: canvas.page
+            }
         }
     }
 
@@ -163,6 +169,14 @@ ColumnLayout {
                 z: 4
                 page: canvas.page
                 ratio: canvas.ratio
+            }
+
+            SceneSpan {
+                anchors.fill: parent
+                z: 5
+                page: canvas.page
+                ratio: canvas.ratio
+                layout: spans.layout
             }
 
             Rectangle {

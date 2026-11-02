@@ -22,6 +22,7 @@ fn snowfall() -> SceneSpec {
         hold: None,
         moving: false,
         quality: None,
+        span: None,
     }
 }
 
@@ -137,6 +138,7 @@ fn a_scene_frame_that_changed_nothing_is_not_composed_again() {
         hold: None,
         moving: false,
         quality: None,
+        span: None,
     };
     let (content, fit, background) = (Content::Scene(spec.clone()), Fit::Stretch, [0; 3]);
     let (image, transition, uv, relief, scene) = (None, None, None, None, Some(SceneState::new(spec, power)));

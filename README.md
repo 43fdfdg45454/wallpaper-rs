@@ -508,8 +508,13 @@ wprs-ctl quality q3                             # calidad fija de las escenas (a
 wprs-ctl reload                                 # releer la configuración
 ```
 
-Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile` y `span` (una imagen sobre todas las
-pantallas, con su tamaño físico y los marcos entre ellas). Las pantallas que muestran la misma
+Modos de ajuste: `fill`, `fit`, `stretch`, `center`, `tile` y `span` (una imagen, un vídeo o una
+escena sobre todas las pantallas, con su tamaño físico y los marcos entre ellas). Una escena
+extendida se dibuja en cada pantalla solo en su parte, con su propio nivel de calidad y un mismo
+reloj para todas, así que sus animaciones siguen a la par de una pantalla a otra. Si el autor la
+hizo para varias pantallas (`display.span: "all-outputs"`), la app propone `span` al aplicarla y
+muestra dónde están las pantallas; cada fila de pantalla lo deja cambiar y abre el mismo esquema.
+`wprs-ctl lib apply ID --span` hace lo mismo desde la terminal. Las pantallas que muestran la misma
 imagen con la misma edición, como las de `span` o las que tienen su propio recorte, comparten una
 sola copia en la GPU, y los JPEG grandes se decodifican directamente a un tamaño reducido. Con una
 escena pasa lo mismo: cada imagen del paquete se sube una vez y la usan todas las pantallas que la
@@ -1700,7 +1705,9 @@ otra página no cierra un editor con cambios sin guardar.
   bloquear se arrastra directamente, y la elegida gira y escala con sus asas; un arrastre que
   empieza fuera de las capas, o cualquiera con Mayúsculas, traza un rectángulo que elige las capas
   que toca, como Ctrl en la lista, listas para agruparlas. Las guías marcan lo que se ve en pantallas 16:9, 21:9, 32:9,
-  4:3, 16:10 y 9:16. *Ver en el escritorio* lleva la escena sin guardar a todas las pantallas
+  4:3, 16:10 y 9:16. *Pantallas* muestra la escena extendida sobre dos o tres pantallas en fila,
+  dos apiladas o las tuyas, con el marco de cada una y oscurecido lo que tapan los marcos entre
+  ellas, y *Extender sobre todas las pantallas* lo pide en el manifiesto. *Ver en el escritorio* lleva la escena sin guardar a todas las pantallas
   sin aplicarla; se quita al desactivarlo o al cerrar el editor, y como mucho un minuto después si
   la app se cierra de golpe.
 - **Inspector**: se genera a partir del esquema JSON de las escenas (`wprs-ctl scene schema`), así
@@ -2040,8 +2047,10 @@ wprs-ctl scene group mar near far --id colinas && wprs-ctl scene hide mar sky
 wprs-ctl scene undo mar && wprs-ctl scene history mar
 wprs-ctl scene validate mar                             # problemas, cada uno con su JSON Pointer
 wprs-ctl scene preview mar -o DP-1 --time 2             # verla en el escritorio 60 s sin aplicarla
+wprs-ctl scene preview mar --layout dual --out dual.png # extendida sobre dos pantallas, sin escritorio
 wprs-ctl scene build mar --key autor.key                # firmar y crear el .wpak
 wprs-ctl scene apply mar -o DP-1                        # añadirla a la biblioteca y mostrarla
+wprs-ctl scene apply mar --span                         # mostrarla extendida sobre todas las pantallas
 ```
 
 ### Guía para autores de scripts

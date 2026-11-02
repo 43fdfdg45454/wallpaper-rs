@@ -27,6 +27,7 @@ fn new_media_of_the_same_scene_keep_its_clock_and_view() {
         hold: None,
         moving: false,
         quality: None,
+        span: None,
     };
     let extra = vec![("photo".to_string(), wprs_render::Pixels::new(image::RgbaImage::new(2, 2)))];
     let turned = SceneSpec { extra, ..spec.clone() };
@@ -67,6 +68,7 @@ fn screens_showing_one_scene_share_its_script_process() {
         hold: None,
         moving: false,
         quality: None,
+        span: None,
     };
     let mut scripts = Scripts::default();
     let mut states: Vec<SceneState> =
@@ -112,6 +114,7 @@ fn declared_inputs_without_scripts_wait_for_what_the_scene_binds() {
             hold: None,
             moving: false,
             quality: None,
+            span: None,
         };
         let mut state = SceneState::new(spec, power);
         let pointer = PointerState { pos: Some([0.5, 0.5]), inside: true, ..PointerState::default() };
@@ -142,6 +145,7 @@ fn a_small_moving_layer_damages_only_its_box_on_the_screen() {
         hold: None,
         moving: false,
         quality: None,
+        span: None,
     };
     let power = Power::new(Tier::T3, false, 0);
     let (mut state, players, start) = (SceneState::new(spec, power), HashMap::new(), Instant::now());
@@ -177,6 +181,7 @@ fn slow_gpu_frames_lower_the_reported_quality_and_say_why() {
         hold: None,
         moving: false,
         quality: None,
+        span: None,
     };
     let (mains, battery) = (Power::new(Tier::T3, false, 0), Power::new(Tier::T3, true, 0));
     let level = |s: &SceneState| (s.quality().quality, s.quality().reason);

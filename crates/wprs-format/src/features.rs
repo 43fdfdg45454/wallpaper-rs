@@ -50,7 +50,7 @@ pub const REGISTRY: &[(&str, &str, [Support; 2])] = &[
     ("quality_settings", "changes its settings when the device saves power", [Yes, Yes]),
     ("ktx2", "uses compressed textures in the KTX2 format", [No, No]),
     ("avif", "uses pictures in the AVIF format", [No, No]),
-    ("spanned_scenes", "spreads its scene over every screen", [No, Without]),
+    ("spanned_scenes", "spreads its scene over every screen", [Yes, Without]),
 ];
 
 const RELEASED: &str = "inputs.audio inputs.pointer inputs.clicks inputs.media inputs.network scripts sound \
