@@ -952,6 +952,22 @@ con «necesita una versión más nueva de wallpaper-rs» antes de dibujar nada; 
 rechazan los recursos publicados aparte y las texturas KTX2 y AVIF. `wprs-ctl pack check` dice qué hace cada plataforma con un paquete
 y `docs/specs/package.md` describe el formato entero.
 
+Un paquete de recursos (`assets`) ofrece capas, sistemas de partículas, scripts y efectos sueltos
+para que otros autores los copien en sus escenas. En el editor de escenas, el panel *Assets* tiene
+*Crear un paquete de recursos* (marcas las partes, les das título y miniatura, y eliges licencia,
+crédito e imagen del paquete) e *Importar de un paquete de recursos*, que muestra la miniatura de
+cada parte y la licencia y el crédito de cada archivo antes de copiar nada; lo importado queda en
+`assets/<id>-<versión>/`, con sus créditos y el origen escritos solos, y la escena funciona sin el
+paquete. La biblioteca los lista aparte (filtro *Recursos* o `kind:assets`) y no se aplican como
+fondo.
+
+```sh
+wprs-ctl pack new-assets mi-escena/ partes/ --part layer:nieve --part particles:nieve \
+  --id org.example.partes --title Partes --license CC-BY-4.0 --attribution "Tu nombre"
+wprs-ctl pack build partes/ && wprs-ctl pack parts org.example.partes-1.0.0.wpak
+wprs-ctl scene import-assets otra-escena/ org.example.partes-1.0.0.wpak --part layer:nieve
+```
+
 Un preajuste publicado aparte aparece en la biblioteca como variante de su fondo base: la ficha del
 base lista sus preajustes, la del preajuste nombra su base, y *Aplicar* (o `wprs-ctl lib apply`)
 muestra el base con esos valores; los que el base instalado no conoce, de otro tipo o fuera de rango

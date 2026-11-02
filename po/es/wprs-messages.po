@@ -131,14 +131,14 @@ msgid "%1 is too large"
 msgstr "%1 es demasiado grande"
 
 #: crates/wprs-core/src/edit/file.rs crates/wprs-editor/src/assets.rs
-#: crates/wprs-editor/src/package.rs crates/wprs-editor/src/previews.rs
-#: crates/wprs-editor/src/project.rs crates/wprs-editor/src/scripts.rs
-#: crates/wprs-editor/src/shaders.rs
+#: crates/wprs-editor/src/offer.rs crates/wprs-editor/src/package.rs
+#: crates/wprs-editor/src/previews.rs crates/wprs-editor/src/project.rs
+#: crates/wprs-editor/src/scripts.rs crates/wprs-editor/src/shaders.rs
 msgid "cannot read %1: %2"
 msgstr "no se puede leer %1: %2"
 
-#: crates/wprs-core/src/edit/file.rs crates/wprs-editor/src/scripts.rs
-#: crates/wprs-editor/src/shaders.rs
+#: crates/wprs-core/src/edit/file.rs crates/wprs-editor/src/offer.rs
+#: crates/wprs-editor/src/scripts.rs crates/wprs-editor/src/shaders.rs
 msgid "cannot write %1: %2"
 msgstr "no se puede escribir %1: %2"
 
@@ -213,8 +213,9 @@ msgstr ""
 "requires.features se calcula a partir de lo que usa el paquete, salvo "
 "locale_files"
 
-#: crates/wprs-editor/src/actions.rs crates/wprs-editor/src/props.rs
-#: crates/wprs-editor/src/references.rs crates/wprs-editor/src/rig.rs
+#: crates/wprs-editor/src/actions.rs crates/wprs-editor/src/bring.rs
+#: crates/wprs-editor/src/props.rs crates/wprs-editor/src/references.rs
+#: crates/wprs-editor/src/rig.rs
 msgid "the id %1 is in use"
 msgstr "el id %1 ya está en uso"
 
@@ -380,6 +381,18 @@ msgstr "el hueso «%1» no se balancea"
 msgid "a mesh has at most %1 swinging bones"
 msgstr "una malla tiene como mucho %1 huesos que se balancean"
 
+#: crates/wprs-editor/src/bring.rs
+msgid "upgrade the scene to the second version before importing parts"
+msgstr "pasa la escena a la segunda versión antes de importar partes"
+
+#: crates/wprs-editor/src/bring.rs
+msgid "the package does not offer %1"
+msgstr "el paquete no ofrece %1"
+
+#: crates/wprs-editor/src/bring.rs
+msgid "%1 exists with other content"
+msgstr "%1 ya existe con otro contenido"
+
 #: crates/wprs-editor/src/check.rs
 msgid "the kind of a scene package is scene"
 msgstr "el tipo de un paquete de escena es scene"
@@ -446,6 +459,14 @@ msgstr "la clave tiene un valor fuera de su rango"
 #: crates/wprs-editor/src/clips/keyed.rs
 msgid "the clip has no key there at %1 s"
 msgstr "el clip no tiene ninguna clave ahí en %1 s"
+
+#: crates/wprs-editor/src/credit.rs
+msgid "a package has at most 64 credits; credit folders instead of files"
+msgstr "un paquete tiene como mucho 64 créditos; acredita carpetas en vez de archivos"
+
+#: crates/wprs-editor/src/credit.rs
+msgid "a package is derived from at most 64 works"
+msgstr "un paquete deriva de 64 obras como mucho"
 
 #: crates/wprs-editor/src/cutouts.rs
 msgid "say what changes in the parts"
@@ -789,6 +810,15 @@ msgstr "los ajustes predefinidos son %1"
 msgid "a layer has at most %1 swinging bones"
 msgstr "una capa tiene como mucho %1 huesos que se balancean"
 
+#: crates/wprs-editor/src/offer.rs crates/wprs-editor/src/package.rs
+#: crates/wprs-editor/src/project.rs
+msgid "%1 is not an empty folder"
+msgstr "%1 no es una carpeta vacía"
+
+#: crates/wprs-editor/src/offer.rs
+msgid "%1 is not a package id"
+msgstr "%1 no es un id de paquete"
+
 #: crates/wprs-editor/src/ops.rs
 msgid "\"%1\" is not a JSON Pointer"
 msgstr "«%1» no es un JSON Pointer"
@@ -820,10 +850,6 @@ msgstr "no se encuentra %1: %2"
 #: crates/wprs-editor/src/package.rs
 msgid "save the scene before building it"
 msgstr "guarda la escena antes de construirla"
-
-#: crates/wprs-editor/src/package.rs crates/wprs-editor/src/project.rs
-msgid "%1 is not an empty folder"
-msgstr "%1 no es una carpeta vacía"
 
 #: crates/wprs-editor/src/package.rs
 msgid "%1 is not a scene package"
@@ -868,13 +894,6 @@ msgstr "%1 no es un JSON válido: %2"
 #: crates/wprs-editor/src/project.rs crates/wprs-editor/src/session.rs
 msgid "a file needs a folder"
 msgstr "un archivo necesita una carpeta"
-
-#: crates/wprs-editor/src/project.rs
-msgid ""
-"unsaved changes of an earlier session wait; recover or discard them first"
-msgstr ""
-"hay cambios sin guardar de una sesión anterior; recupéralos o descártalos "
-"antes"
 
 #: crates/wprs-editor/src/project.rs
 msgid "the files of %1 changed outside the editor; open the folder again"
@@ -971,6 +990,13 @@ msgstr "un trazo acerca o aleja los vértices %1 píxeles como mucho"
 msgid "there is no state folder"
 msgstr "no hay carpeta de estado"
 
+#: crates/wprs-editor/src/session.rs
+msgid ""
+"unsaved changes of an earlier session wait; recover or discard them first"
+msgstr ""
+"hay cambios sin guardar de una sesión anterior; recupéralos o descártalos "
+"antes"
+
 #: crates/wprs-editor/src/shaders.rs
 msgid "%1 is larger than %2 KiB"
 msgstr "%1 ocupa más de %2 KiB"
@@ -1010,6 +1036,18 @@ msgstr "una malla tiene como mucho %1 expresiones"
 #: crates/wprs-editor/src/shapes.rs
 msgid "an expression weighs each blend shape from -1 to 1"
 msgstr "una expresión pesa cada forma de mezcla de -1 a 1"
+
+#: crates/wprs-editor/src/shelf.rs
+msgid "name a part as layer:ID, particles:ID, script:PATH or effect:ID, not %1"
+msgstr "nombra una parte como layer:ID, particles:ID, script:RUTA o effect:ID, no %1"
+
+#: crates/wprs-editor/src/shelf.rs
+msgid "choose at least one part"
+msgstr "elige al menos una parte"
+
+#: crates/wprs-editor/src/shelf.rs
+msgid "the scene has no %1"
+msgstr "la escena no tiene %1"
 
 #: crates/wprs-editor/src/skin/bones.rs
 msgid "a bone has a name of 1 to 64 characters without / or #"
@@ -1233,6 +1271,10 @@ msgstr "Hora"
 #: crates/wprs-editor/src/starters.rs
 msgid "Seconds"
 msgstr "Segundos"
+
+#: crates/wprs-editor/src/stock.rs
+msgid "%1 is not an assets package"
+msgstr "%1 no es un paquete de recursos"
 
 #: crates/wprs-editor/src/swarms/fields.rs
 #: crates/wprs-editor/src/swarms/spots.rs
@@ -1824,6 +1866,30 @@ msgstr "un autor tiene 16 claves como mucho"
 msgid "a package from a provider is published under %1"
 msgstr "un paquete de un proveedor se publica con %1"
 
+#: crates/wprs-format/src/parts.rs
+msgid "lists at most 256 parts"
+msgstr "lista 256 partes como mucho"
+
+#: crates/wprs-format/src/parts.rs
+msgid "kind is layer, particles, script or effect"
+msgstr "kind es layer, particles, script o effect"
+
+#: crates/wprs-format/src/parts.rs
+msgid "names a part that the document does not hold"
+msgstr "nombra una parte que el documento no tiene"
+
+#: crates/wprs-format/src/parts.rs
+msgid "names a part twice"
+msgstr "nombra una parte dos veces"
+
+#: crates/wprs-format/src/parts.rs
+msgid "title has 1 to 128 characters on one line"
+msgstr "title tiene de 1 a 128 caracteres en una línea"
+
+#: crates/wprs-format/src/parts.rs
+msgid "a thumbnail has at most 1 MiB"
+msgstr "una miniatura tiene como mucho 1 MiB"
+
 #: crates/wprs-format/src/publish.rs
 msgid "is not signed by enough root keys"
 msgstr "no lo firman suficientes claves raíz"
@@ -2393,6 +2459,10 @@ msgstr "se esperaba un color #rrggbb"
 #: crates/wprs-format/src/web.rs
 msgid "lists the base of the preset"
 msgstr "incluye la base del ajuste"
+
+#: crates/wprs-format/src/web.rs
+msgid "assets packages are copied into scenes and need none"
+msgstr "los paquetes de recursos se copian en las escenas y no necesitan ninguno"
 
 #: crates/wprs-format/src/web.rs
 msgid "preset and assets packages have none"

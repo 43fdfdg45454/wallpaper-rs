@@ -52,6 +52,7 @@ pub mod repo;
 mod rigging;
 pub mod server;
 pub mod serving;
+pub mod shelving;
 pub mod show;
 mod steps;
 mod swarmed;

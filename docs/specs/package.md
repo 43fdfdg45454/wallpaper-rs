@@ -471,10 +471,33 @@ chosen files of their `file` settings; while no such base is installed, applying
 ## Shared resources
 
 An `assets` package offers parts of scenes for other authors: its entry is a scene document
-(`scene.md`) whose layers, particle systems, scripts, effects (`effects`, see "Package effects" in
-`scene.md`) and assets are the parts it offers, with their own files. It is never shown as a wallpaper. An author copies what they use into their own package
-and credits it with `credits[].source`, so that the package works without the shared one and the
-license of every file stays written.
+(`scene.md`), usually `assets.json`, whose layers, particle systems, scripts, effects (`effects`, see
+"Package effects" in `scene.md`) and assets are the parts it offers, with their own files. It is never
+shown as a wallpaper: the library lists it apart (`kind:assets`; searches without a `kind:` leave it
+out) and applying it fails. It needs no other package (`requires.packages` is refused), since an
+author copies what they use into their own package and credits it with `credits[].source`, so that
+the package works without the shared one and the license of every file stays written.
+
+`ext.parts` of the document names what it offers, at most 256 `{kind, id, title?, thumbnail?}`:
+`kind` is `layer` (a layer at the top of `layers`), `particles` (a particle system), `script` (the
+`path` of a script) or `effect` (a package effect), each once and present in the document; `title` has
+1 to 128 characters on one line without `<` or `>`; `thumbnail` is a png, jpg or webp of the package of
+at most 1024 pixels a side and 1 MiB. Without `ext.parts`, every top-level layer, particle system,
+script and effect is a part.
+
+```json
+{ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [1920, 1080] },
+  "assets": { "flake": { "path": "assets/flake.png" } },
+  "layers": [{ "id": "snow", "type": "particles", "system": "snow" }],
+  "particles": { "snow": { "capacity": 2000, "emitters": [{ "shape": "edge", "rate": 120 }] } },
+  "ext": { "parts": [{ "kind": "layer", "id": "snow", "title": "Snow", "thumbnail": "parts/0.jpg" }] } }
+```
+
+Importing a part (`editor.md`, "Shared parts") copies it with everything it names (its child layers,
+the assets, particle systems, effects, templates, pools and timelines it uses) and their files under
+`assets/<id>-<version>/`, renames ids that the scene already uses, adds one credit per license and
+attribution with `source: {id, version}`, and adds the package to `origin.derived_from` of an original
+or derived scene (an original one becomes derived).
 
 ## Languages
 

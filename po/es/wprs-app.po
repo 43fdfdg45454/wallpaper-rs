@@ -898,7 +898,7 @@ msgid "Grow near edges (px)"
 msgstr "Ensanchar los bordes cercanos (px)"
 
 #: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/SceneMeta.qml
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/SceneOffer.qml apps/wprs-app/qml/facade/Labels.qml
 msgid "Pictures"
 msgstr "Imágenes"
 
@@ -2510,6 +2510,14 @@ msgid "Import a script…"
 msgstr "Importar un script…"
 
 #: apps/wprs-app/qml/SceneAssets.qml
+msgid "Import from an assets package…"
+msgstr "Importar de un paquete de recursos…"
+
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "Make an assets package…"
+msgstr "Crear un paquete de recursos…"
+
+#: apps/wprs-app/qml/SceneAssets.qml
 msgid "Remove unused files"
 msgstr "Borrar los archivos sin usar"
 
@@ -3801,6 +3809,66 @@ msgstr "Recuperar"
 msgid "Discard"
 msgstr "Descartar"
 
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "Make an assets package"
+msgstr "Crear un paquete de recursos"
+
+#: apps/wprs-app/qml/SceneOffer.qml apps/wprs-app/qml/ScenesPage.qml
+msgid "Title:"
+msgstr "Título:"
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "parts"
+msgstr "partes"
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "Package id:"
+msgstr "Id del paquete:"
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "License:"
+msgstr "Licencia:"
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "Credit as:"
+msgstr "Acreditar a:"
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "Your name, as other authors will credit you"
+msgstr "Tu nombre, tal como te acreditarán otros autores"
+
+#: apps/wprs-app/qml/SceneOffer.qml apps/wprs-app/qml/ScenesPage.qml
+msgid "Folder:"
+msgstr "Carpeta:"
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "Preview:"
+msgstr "Vista previa:"
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "Pick a picture…"
+msgstr "Elegir una imagen…"
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "The assets package is in %1; build it from its own editor."
+msgstr "El paquete de recursos está en %1; constrúyelo desde su propio editor."
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "Make the package"
+msgstr "Crear el paquete"
+
+#: apps/wprs-app/qml/SceneOffer.qml
+msgid "Open it in the editor"
+msgstr "Abrirlo en el editor"
+
+#: apps/wprs-app/qml/SceneOfferPart.qml
+msgid "Title of the part"
+msgstr "Título de la parte"
+
+#: apps/wprs-app/qml/SceneOfferPart.qml
+msgid "Thumbnail…"
+msgstr "Miniatura…"
+
 #: apps/wprs-app/qml/ScenePage.qml
 msgid "Scene: %1"
 msgstr "Escena: %1"
@@ -4375,6 +4443,32 @@ msgstr "Guardar los deslizadores"
 #: apps/wprs-app/qml/SceneShapes.qml
 msgid "New name for %1"
 msgstr "Nombre nuevo para %1"
+
+#: apps/wprs-app/qml/SceneShared.qml
+msgid "Import from an assets package"
+msgstr "Importar de un paquete de recursos"
+
+#: apps/wprs-app/qml/SceneShared.qml
+msgid "Pick an assets package"
+msgstr "Elegir un paquete de recursos"
+
+#: apps/wprs-app/qml/SceneShared.qml
+msgid "%1 %2 · %3 · by %4"
+msgstr "%1 %2 · %3 · de %4"
+
+#: apps/wprs-app/qml/SceneShared.qml
+msgid ""
+"The chosen parts and their files are copied into this scene, so it works "
+"without the package; their credits and the origin are written for you."
+msgstr "Las partes elegidas y sus archivos se copian en esta escena, que así funciona sin el paquete; sus créditos y el origen se escriben solos."
+
+#: apps/wprs-app/qml/SceneShared.qml
+msgid "Assets packages"
+msgstr "Paquetes de recursos"
+
+#: apps/wprs-app/qml/SceneSharedPart.qml
+msgid "%1 · %2 · %3"
+msgstr "%1 · %2 · %3"
 
 #: apps/wprs-app/qml/SceneShortcut.qml
 msgid "Web address"
@@ -5161,16 +5255,8 @@ msgstr ""
 "conservan colores de 8 bits antes del mapeo de tonos."
 
 #: apps/wprs-app/qml/ScenesPage.qml
-msgid "Title:"
-msgstr "Título:"
-
-#: apps/wprs-app/qml/ScenesPage.qml
 msgid "My scene"
 msgstr "Mi escena"
-
-#: apps/wprs-app/qml/ScenesPage.qml
-msgid "Folder:"
-msgstr "Carpeta:"
 
 #: apps/wprs-app/qml/ScenesPage.qml
 msgid "Open"

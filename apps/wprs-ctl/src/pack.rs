@@ -64,10 +64,13 @@ pub enum Pack {
         #[arg(long, help = "Print one JSON object per file")]
         json: bool,
     },
+    #[command(flatten)]
+    Shelving(crate::shelving::Shelving),
 }
 
 pub fn run(command: Pack) -> Result<()> {
     match command {
+        Pack::Shelving(command) => crate::shelving::run(command)?,
         Pack::Build { dir, out, json } => {
             let manifest = Manifest::from_json(&fs::read(dir.join(MANIFEST))?)?;
             let out = out.unwrap_or_else(|| format!("{}-{}.wpak", manifest.id, manifest.version).into());

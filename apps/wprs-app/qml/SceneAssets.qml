@@ -41,7 +41,9 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
+    Flow {
+        Layout.fillWidth: true
+
         QQC2.ToolButton {
             text: App.tr("Import…")
             icon.name: "document-import"
@@ -61,10 +63,34 @@ ColumnLayout {
         }
 
         QQC2.ToolButton {
+            text: App.tr("Import from an assets package…")
+            icon.name: "package-x-generic"
+            onClicked: shared.open()
+        }
+
+        QQC2.ToolButton {
+            text: App.tr("Make an assets package…")
+            icon.name: "document-export"
+            onClicked: offer.open()
+        }
+
+        QQC2.ToolButton {
             text: App.tr("Remove unused files")
             icon.name: "edit-clear-all"
             onClicked: panel.page.editor.prune()
         }
+    }
+
+    SceneShared {
+        id: shared
+
+        page: panel.page
+    }
+
+    SceneOffer {
+        id: offer
+
+        page: panel.page
     }
 
     FileDialog {

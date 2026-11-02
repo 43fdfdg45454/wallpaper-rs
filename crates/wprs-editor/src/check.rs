@@ -51,7 +51,7 @@ pub fn review(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
     let mut out = Vec::new();
     let props: BTreeMap<String, Property> = match crate::meta::read(doc, dir) {
         Ok(manifest) => {
-            if manifest.kind != wprs_format::Kind::Scene {
+            if !matches!(manifest.kind, wprs_format::Kind::Scene | wprs_format::Kind::Assets) {
                 out.push(problem(
                     "/manifest/kind",
                     said("editor.kind", "the kind of a scene package is scene", &[]),

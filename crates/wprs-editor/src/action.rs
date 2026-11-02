@@ -12,11 +12,10 @@ mod rigging;
 mod solid;
 mod swarm;
 mod tend;
-
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use motion::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
-pub use names::{ACTIONS, EDITOR};
+pub use names::{ACTIONS, EDITOR, ImportAssets};
 pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
     WeightStroke,
@@ -114,6 +113,7 @@ pub enum Action {
     ImportScript {
         file: PathBuf,
     },
+    ImportAssets(ImportAssets),
     Translate {
         pointer: String,
         language: String,

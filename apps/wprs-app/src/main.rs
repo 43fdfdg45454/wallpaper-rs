@@ -23,6 +23,7 @@ mod scenefile;
 mod scenelive;
 mod scenework;
 mod secret;
+mod shelf;
 #[cfg(test)]
 mod tests;
 mod tr;

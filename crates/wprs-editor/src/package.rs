@@ -61,7 +61,7 @@ pub fn extract(file: &Path, dir: &Path) -> Result<String> {
     ensure!(empty, said("editor.not_empty_folder", "%1 is not an empty folder", &[&(dir.display())]));
     let mut package = wprs_format::open(file, &Limits::default())?;
     ensure!(
-        package.manifest.kind == Kind::Scene,
+        matches!(package.manifest.kind, Kind::Scene | Kind::Assets),
         said("editor.not_scene_package", "%1 is not a scene package", &[&(file.display())])
     );
     wprs_format::extract(&mut package, dir)?;

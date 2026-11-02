@@ -9,6 +9,7 @@ use wprs_format::{
 };
 use wprs_library::{Error, Library};
 
+mod shared;
 mod upgrades;
 
 const NOW: i64 = 1_700_000_000;

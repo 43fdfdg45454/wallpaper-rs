@@ -58,6 +58,11 @@ pub fn read<R: Read + Seek>(reader: R, limits: &Limits) -> Result<Package<R>> {
         .then(|| package.scene_text())
         .transpose()?;
     let (scene, text) = scene.unzip();
+    if let Some(scene) = scene.as_ref().filter(|_| package.manifest.kind == Kind::Assets) {
+        let entries = package.entries.clone();
+        let size = |path: &str| entries.iter().find(|e| e.path == path).map(|e| e.size);
+        crate::parts::check(scene, size, |path| package.read_file(path))?;
+    }
     let size = match package.manifest.kind {
         Kind::Image => package.head(&package.manifest.entry.clone(), 1 << 16)?,
         Kind::Preset => package.preset().map(|_| Vec::new())?,

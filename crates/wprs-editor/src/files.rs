@@ -13,6 +13,7 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
             crate::shaders::import(dir, doc, descriptor, wgsl.as_deref())
         }
         Action::ImportScript { file } => crate::scripts::import(dir, doc, file),
+        Action::ImportAssets(wanted) => crate::bring::import(dir, doc, wanted),
         Action::Thumbnail { file, animated } => crate::previews::store(dir, doc, file, *animated)
             .and_then(|path| crate::previews::adopt(doc, *animated, &path)),
         Action::PaintMask(m) => {

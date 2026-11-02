@@ -82,6 +82,10 @@ pub(crate) fn facts_of(
         |e: wprs_scene::SceneError| Error::Invalid { field: "scene".into(), reason: e.message().into() };
     let mut scene = scene.transpose().map_err(invalid)?;
     if let Some(scene) = scene.as_mut() {
+        if manifest.kind == Kind::Assets {
+            let size = |path: &str| files.iter().find(|f| f.path == path).map(|f| f.size);
+            crate::parts::check(scene, size, |path| Ok(fs::read(source.join(path))?))?;
+        }
         scripts(scene, &files)?;
         if let Some((i, reason)) = scene.undeclared(|path| fs::read_to_string(source.join(path)).ok()) {
             return Err(Error::Invalid { field: format!("/scripts/{i}"), reason: reason.into() });

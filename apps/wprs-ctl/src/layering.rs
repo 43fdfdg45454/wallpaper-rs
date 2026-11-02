@@ -2,7 +2,7 @@ use crate::author::{DIR, ID, POINTER};
 use crate::steps::value;
 use clap::{ArgAction, Subcommand};
 use std::path::PathBuf;
-use wprs_editor::actions::Action;
+use wprs_editor::actions::{Action, ImportAssets};
 
 #[derive(Subcommand, Debug)]
 pub enum Layering {
@@ -117,10 +117,30 @@ pub enum Layering {
         )]
         from: Option<f64>,
     },
+    #[command(
+        about = "Copy parts of an assets package into the scene under assets/<id>-<version>/ and credit \
+        them; every part when no --part is given"
+    )]
+    ImportAssets {
+        #[arg(help = DIR)]
+        dir: PathBuf,
+        #[arg(help = "The assets package, a .wpak file")]
+        package: PathBuf,
+        #[arg(
+            long = "part",
+            value_name = "KIND:ID",
+            help = "A part as layer:ID, particles:ID, script:PATH or effect:ID"
+        )]
+        parts: Vec<String>,
+    },
 }
 
 pub(crate) fn action(command: Layering) -> (PathBuf, Action) {
     match command {
+        Layering::ImportAssets { dir, package, parts } => {
+            let package = std::fs::canonicalize(&package).unwrap_or(package);
+            (dir, Action::ImportAssets(ImportAssets { package, parts }))
+        }
         Layering::AddLayer { dir, kind, id, name, source, into, at } => {
             (dir, Action::AddLayer { kind, id, name, source, into, at })
         }

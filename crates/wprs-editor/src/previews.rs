@@ -12,7 +12,7 @@ use wprs_format::media::{preview, probe};
 
 const MOST: usize = 1 << 20;
 
-fn shrink(data: &[u8]) -> Result<Vec<u8>> {
+pub(crate) fn shrink(data: &[u8]) -> Result<Vec<u8>> {
     let picture = image::load_from_memory(data)
         .map_err(|e| said("editor.unreadable_picture", "the picture cannot be read: %1", &[&e]))?;
     for side in [1024, 768, 512] {

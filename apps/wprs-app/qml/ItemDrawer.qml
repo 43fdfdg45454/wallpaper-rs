@@ -172,6 +172,7 @@ Kirigami.OverlayDrawer {
                 QQC2.Button {
                     text: App.tr("Apply to…")
                     icon.name: "preferences-desktop-wallpaper"
+                    visible: drawer.item.package?.kind !== "assets"
                     onClicked: drawer.apply(drawer.uid)
                 }
 

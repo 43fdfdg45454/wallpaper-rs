@@ -9,6 +9,7 @@ use wprs_format::{Error, Kind, Limits, Manifest, Package, Platform, features, re
 
 mod pages;
 mod parts;
+mod shelf;
 
 fn manifest(kind: Kind, entry: &str, more: Value) -> Manifest {
     let mut value = serde_json::to_value(Manifest { entry: entry.into(), ..v2(kind) }).unwrap();

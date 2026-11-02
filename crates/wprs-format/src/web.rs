@@ -50,6 +50,7 @@ impl Manifest {
         let content = !matches!(self.kind, Kind::Preset | Kind::Assets);
         let based = self.kind != Kind::Preset || !self.dependencies().is_empty();
         let packages = self.requires.as_ref().is_none_or(|r| r.valid_packages(&self.id));
+        let copied = self.kind != Kind::Assets || self.dependencies().is_empty();
         let rules = [
             ("web", web || self.web.is_none(), "applies to web packages only"),
             (
@@ -76,6 +77,7 @@ impl Manifest {
                 "at most 16 other package ids, each once, with a version requirement such as ^1.2",
             ),
             ("requires.packages", based, "lists the base of the preset"),
+            ("requires.packages", copied, "assets packages are copied into scenes and need none"),
             ("properties", content || self.properties.is_empty(), "preset and assets packages have none"),
             ("presets", content || self.presets.is_empty(), "preset and assets packages have none"),
             ("inputs", content || self.inputs.is_empty(), "preset and assets packages use none"),

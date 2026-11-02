@@ -107,6 +107,7 @@ ctl scene attach "$draft" badge --detach || fail "the layer was not let go"
 source "$(dirname "$0")"/integration-particles.sh
 source "$(dirname "$0")"/integration-lights.sh
 source "$(dirname "$0")"/integration-models.sh
+source "$(dirname "$0")"/integration-shared.sh
 ctl scene bone "$draft" puppet tip --parent arm --at 0.9,0.5 || fail "the mesh took no tip"
 ctl scene ik "$draft" puppet add arm tip --limit tip -30 30 || fail "no chain to the tip was added"
 ctl scene physics "$draft" puppet add tip || fail "the tip does not swing"

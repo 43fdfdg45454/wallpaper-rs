@@ -46,7 +46,11 @@ pub(crate) fn compile(query: &str, now: i64) -> Result<Compiled> {
     ensure(query.matches('"').count().is_multiple_of(2), || Error::Query("a quote is not closed".into()))?;
     let order = "i.added_at DESC, i.id DESC".to_string();
     let mut compiled = Compiled { filter: "1".into(), params: Vec::new(), order };
-    for Term { negated, key, value, quoted } in terms(query) {
+    let terms = terms(query);
+    if !terms.iter().any(|t| t.key.as_deref() == Some("kind")) {
+        compiled.filter += " AND coalesce(i.pkg_type, '') != 'assets'";
+    }
+    for Term { negated, key, value, quoted } in terms {
         let (sql, params) = match key.as_deref() {
             Some("sort") => {
                 ensure(!negated, || Error::Query("sort: cannot be negated".into()))?;

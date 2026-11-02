@@ -29,6 +29,7 @@ mod needs;
 mod online;
 mod origin;
 pub mod page;
+mod parts;
 #[cfg(feature = "sign")]
 mod publish;
 mod read;
@@ -82,6 +83,7 @@ pub use needs::{Dependency, Gpu, Input, Network, Permissions, Platform, Requires
 pub use online::sign_rotation;
 pub use online::{anchors, drop_author_key, register_author, rotate_author};
 pub use origin::{Ancestor, Origin, OriginKind, PROVIDER_LICENSES, Provider};
+pub use parts::{MAX_PARTS, PART_KINDS, Part, exists, parts};
 #[cfg(feature = "sign")]
 pub use publish::{Published, publish};
 pub use read::{Package, open, read};

@@ -46,7 +46,7 @@ ColumnLayout {
         spacing: Kirigami.Units.smallSpacing
 
         Repeater {
-            model: ["image", "video", "package", "scene"]
+            model: ["image", "video", "package", "scene", "assets"]
 
             delegate: Kirigami.Chip {
                 required property string modelData

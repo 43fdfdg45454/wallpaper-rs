@@ -75,6 +75,7 @@ undo and redo walk through, the undone ones marked.
 | `paint_map` | `layer`, `map` (`roughness` or `emissive`), `radius`, optional `hardness` and `value` (the gray, 0 to 1) and `points` (fractions of the layer); paints the stroke into the map the layer has when it is a painted map (a `linear` picture under `maps/`) that nothing else uses, or else into a new map that starts as a copy of the one it had, or the size of its picture (at most 512 on the longer side), white for roughness and black for glow, saves it as `maps/<id>-<n>.png`, declares it as a `linear` asset and sets `roughness_map` or `emissive_map` | `paint-map DIR LAYER roughness\|emissive --points X,Y;X,Y;... [--radius R] [--hardness H] [--value V]`, or `--heat` to print the map as a heat view |
 | `ambient` | optional `ambient` and `sky` (colors), `clear` (removes both); sets `canvas.ambient` and `canvas.sky` | `ambient DIR [--ambient C] [--sky C] [--clear]`, or `--preview` to print the hemisphere they make |
 | `import_script` | `file`, a `.js` module; copies it to `scripts/<name>` and declares or replaces its entry in `scripts` with the `events` it exports or handles with `on` and the `uses` it imports or calls (`spawn` and `order`, `effect`, `console`, `shared` also for imports of other modules), never its `params`, which are written by hand, refusing scripts that would take the scene past 1 MiB or 64 modules; the author checks what was proposed | `import-script DIR FILE` |
+| `import_assets` | `package`, a `.wpak` of kind `assets`, and `parts`, each `layer:ID`, `particles:ID`, `script:PATH` or `effect:ID` (every part when empty); copies the parts with what they name and their files under `assets/<id>-<version>/`, renames ids in use, credits the files with their license, attribution and `source`, and adds the package to `origin.derived_from` (see "Shared parts"); a scene of the first version is refused | `import-assets DIR PACKAGE [--part KIND:ID]…` |
 | `translate` | `pointer` to a text of the manifest, `language`, `text` (an empty or missing one removes that language), `add` (adds a language the text lacks, starting from the text in the default language, and leaves one it has alone) | `translate DIR POINTER LANGUAGE TEXT`, `--remove` or `--add` |
 | `thumbnail` | `file`, `animated`; copies a picture into `assets/` as `previews.thumbnail` or `previews.animated` (`preview` in a first-version manifest) | `thumbnail DIR FILE [--animated]` |
 | `upgrade` | optional `rating`, `reasons`, `photosensitive`, `derived_from`; moves a first-version manifest to `wallpaper-rs.wpak/2` | `upgrade DIR [--rating R] [--reason R] [--photosensitive B] [--derived-from A]` |
@@ -591,6 +592,22 @@ selects it and moves it, as one gesture. A drag that starts outside the layers, 
 Shift, draws a rectangle that selects the layers it touches and picks them as Ctrl does in the
 layer list, ready for *Group*. Ctrl and the wheel zoom, the wheel or a drag with the middle or
 right button pans.
+
+## Shared parts
+
+The *Assets* panel of the scene editor has two tools for `assets` packages (`package.md`, "Shared
+resources"). *Make an assets package* lists the layers, particle systems, scripts and package effects
+of the scene with the selected layer checked; each checked part takes a title and a thumbnail, and the
+package takes a title, an id, a license, the name its parts are credited to and a preview picture.
+It saves the scene, writes a new folder with `assets.json`, the files the parts use, the credits of
+the scene that cover them and the pictures made into jpegs of at most 1024 pixels and 1 MiB, and
+offers to open that folder in the editor, where it is built like a scene. `wprs-ctl pack new-assets
+SCENE OUT --part KIND:ID… --id ID --title TITLE --license SPDX --attribution NAME [--thumbnail FILE]
+[--part-thumbnail KIND:ID=FILE] [--part-title KIND:ID=TITLE]` does the same.
+
+*Import from an assets package* opens a `.wpak`, shows each part with its thumbnail and, before
+anything is copied, the license and credit of every file it brings; the checked parts are imported
+with `import_assets`, one step of the history. `wprs-ctl pack parts FILE [--json]` lists the same.
 
 ## Starting points, building and applying
 

@@ -26,7 +26,7 @@ const FACETED: &str = "' ' || i.facets || ' ' LIKE '% ' || ? || ' %'";
 const MAX_UIDS: usize = 500;
 const KEYS: [(&str, &str); 18] = [
     ("tag", "a tag name"),
-    ("kind", "image, video, package or scene"),
+    ("kind", "image, video, package, scene or assets"),
     ("fav", "nothing, yes or no"),
     ("rating", "a rating from 0 to 5 with an optional >=, <=, >, < or ="),
     ("res", "a size like >=3840x2160, 4k, 1440p or 1080p"),
@@ -84,7 +84,9 @@ fn parse(key: &str, value: &str, now: i64) -> Option<(String, Vec<Value>)> {
         "tag" => (TAGGED.into(), text(value)),
         "in" => (LISTED.into(), [text(value), text(value)].concat()),
         "source" => ("i.source_id = (SELECT id FROM sources WHERE uid = ?)".into(), text(value)),
-        "kind" if lower == "scene" || lower == "web" => ("i.pkg_type = ?".into(), text(&lower)),
+        "kind" if ["scene", "web", "assets"].contains(&lower.as_str()) => {
+            ("i.pkg_type = ?".into(), text(&lower))
+        }
         "kind" => ("i.kind = ?".into(), text(lower.parse::<Kind>().ok()?.as_str())),
         "fav" => ("i.favorite = ?".into(), int(flag(&lower)?)),
         "missing" => ("i.missing = ?".into(), int(flag(&lower)?)),

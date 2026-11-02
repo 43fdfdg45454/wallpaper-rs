@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use wprs_core::message::said;
 use wprs_format::features;
 
-pub use crate::action::{ACTIONS, Action, EDITOR, KeyEase};
+pub use crate::action::{ACTIONS, Action, EDITOR, ImportAssets, KeyEase};
 pub use crate::action::{
     AmbientEdit, AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit,
     IkEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, MaskStroke, MeshCut, NormalsMake,

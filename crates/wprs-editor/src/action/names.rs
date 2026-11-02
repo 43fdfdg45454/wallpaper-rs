@@ -1,6 +1,6 @@
 pub const EDITOR: &str = "/scene/ext/editor";
 
-pub const ACTIONS: [&str; 51] = [
+pub const ACTIONS: [&str; 52] = [
     "set",
     "add",
     "remove",
@@ -18,6 +18,7 @@ pub const ACTIONS: [&str; 51] = [
     "import",
     "import_effect",
     "import_script",
+    "import_assets",
     "translate",
     "thumbnail",
     "upgrade",
@@ -53,6 +54,14 @@ pub const ACTIONS: [&str; 51] = [
     "undo",
     "redo",
 ];
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ImportAssets {
+    pub package: std::path::PathBuf,
+    #[serde(default)]
+    pub parts: Vec<String>,
+}
 
 impl super::Action {
     pub fn name(&self) -> String {
