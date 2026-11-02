@@ -28,8 +28,9 @@ fn kept(cache: &Cache, path: PathBuf, size: [f32; 2], make: impl FnOnce() -> Val
 }
 
 fn file(dir: &Path, doc: &Value, layer: &Value) -> Option<PathBuf> {
-    let path = layer["mesh"].as_str().and_then(|m| crate::rig::asset(doc, m)).map(|p| dir.join(p));
-    path.filter(|_| layer["type"] == "mesh")
+    let key = if crate::skin::solid(layer) { "model" } else { "mesh" };
+    let path = layer[key].as_str().and_then(|m| crate::rig::asset(doc, m)).map(|p| dir.join(p));
+    path.filter(|_| layer["type"] == key)
 }
 
 pub(super) fn body(dir: &Path, doc: &Value, layer: &Value) -> Arc<Value> {

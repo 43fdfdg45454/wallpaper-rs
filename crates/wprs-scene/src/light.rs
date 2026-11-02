@@ -46,6 +46,12 @@ pub struct Light {
     pub texture: Option<Value<String>>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub shadows: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-unit" = "px", "x-range" = [256, 4096]))]
+    pub shadow_resolution: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-range" = [0, 1]))]
+    pub shadow_bias: Option<f32>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]

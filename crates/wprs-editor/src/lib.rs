@@ -22,6 +22,7 @@ pub mod layers;
 mod limbs;
 pub mod listing;
 pub mod meta;
+pub mod motion;
 pub mod ops;
 pub mod outline;
 pub mod package;

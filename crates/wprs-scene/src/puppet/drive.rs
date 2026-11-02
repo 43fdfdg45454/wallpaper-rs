@@ -1,11 +1,12 @@
+use super::Fig;
 use super::limb::{angle, mirrored, turn, wrap};
 use super::{Puppet, Seat};
+use crate::RigControl;
 use crate::resolve::Context;
 use crate::rigged::math::{IDENTITY, apply, invert, qmul};
-use crate::{MeshLayer, RigControl};
 
 impl Puppet {
-    pub(crate) fn drive(&mut self, cx: &Context, m: &MeshLayer, set: &RigControl, seat: &Seat) {
+    pub(crate) fn drive(&mut self, cx: &Context, m: &Fig, set: &RigControl, seat: &Seat) {
         if set.bones.is_empty() {
             return;
         }

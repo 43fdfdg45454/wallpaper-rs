@@ -1,9 +1,10 @@
 use super::super::SceneView;
-use super::calls::{Call, put, sized};
+use super::calls::{plan, put, rooms, sized};
 use super::uniform::scene3;
-use super::{SCENE_SLOT, SLOT, Staged};
+use super::{GpuModel, SCENE_SLOT, Staged};
 use crate::{RenderError, Renderer};
-use wprs_scene::{Frame, Stage3d};
+use std::collections::HashMap;
+use wprs_scene::{Frame, MAX_PLANES, Stage3d};
 
 impl Renderer {
     pub(crate) fn figures(
@@ -15,28 +16,33 @@ impl Renderer {
     ) -> Result<(), RenderError> {
         let reach = scale[0].abs().max(scale[3].abs());
         self.skins(view, (runtime, frame), videos, reach)?;
-        self.solid_stages(view, frame, reach)
+        self.solid_stages(view, (&runtime.scene, frame), reach)
     }
 
     pub(crate) fn solid_stages(
         &self,
         view: &mut SceneView,
-        frame: &Frame<'_>,
+        (scene, frame): (&wprs_scene::Scene, &Frame<'_>),
         scale: f32,
     ) -> Result<(), RenderError> {
         let edge = self.max_edge();
         let hdr = view.hdr;
         for stage in &frame.stages {
             let size = sized(stage.size, scale, frame, edge);
-            let room: usize =
-                frame.placed[stage.models.clone()].iter().map(|p| p.model.materials.len() + 1).sum();
+            let room = rooms(frame, stage);
             let fits = view.solids.get(stage.layer).is_some_and(|s| {
-                s.size == size && s.slices.len() == stage.slices && s.room >= room && s.hdr == hdr
+                s.size == size
+                    && s.slices.len() == stage.slices
+                    && s.room >= room.0
+                    && s.draw_room >= room.1
+                    && s.bone_room >= room.2
+                    && s.hdr == hdr
             });
             if !fits {
                 view.solids.insert(stage.layer.to_string(), self.staged(size, stage.slices, hdr, room));
             }
-            if view.solids.get(stage.layer).is_some_and(|s| s.key == stage.key && s.renders > 0) {
+            let key = stage.key ^ (u64::from(view.debug3d) << 56);
+            if view.solids.get(stage.layer).is_some_and(|s| s.key == key && s.renders > 0) {
                 continue;
             }
             for p in &frame.placed[stage.models.clone()] {
@@ -44,6 +50,8 @@ impl Renderer {
                     e.insert(self.scoped(|| self.gpu_model(p.model))?);
                 }
             }
+            let looks = &frame.looks;
+            self.packages(scene, looks.iter().map(|l| l.package).filter(|k| *k != 0));
             let env = frame.placed[stage.models.clone()].iter().find_map(|p| p.env);
             let source = env.and_then(|e| view.images.get(e)).map(|i| &i.0);
             if let (Some(e), Some(source)) = (env, source)
@@ -55,10 +63,11 @@ impl Renderer {
             let map = env.and_then(|e| view.envs.get(e)).map(|(_, m)| m);
             let staged = view.solids.get_mut(stage.layer).expect("made above");
             let env_view = map.unwrap_or(&self.solids().white);
-            self.stage_groups(staged, env_view);
-            let models = &view.models;
-            self.scoped(|| self.paint_stage(staged, models, frame, stage, map.is_some()))?;
-            staged.key = stage.key;
+            let flags = (map.is_some(), view.debug3d);
+            self.scoped(|| {
+                self.paint_stage(staged, (&view.models, env_view, &view.uniform), frame, stage, flags)
+            })?;
+            staged.key = key;
             staged.renders += 1;
         }
         let live: Vec<&str> = frame.stages.iter().map(|s| s.layer).collect();
@@ -69,109 +78,69 @@ impl Renderer {
     fn paint_stage(
         &self,
         staged: &mut Staged,
-        models: &std::collections::HashMap<u64, super::GpuModel>,
+        (models, env, uniform): (&HashMap<u64, GpuModel>, &crate::texture::GpuImage, &wgpu::Buffer),
         frame: &Frame<'_>,
         stage: &Stage3d<'_>,
-        env: bool,
+        flags: (bool, u8),
     ) {
+        plan(staged, frame, stage);
+        let shadows = self.shadow_plan(frame, stage);
         let mut bytes = std::mem::take(&mut staged.bytes);
         bytes.clear();
-        for k in 0..stage.slices {
-            put(&mut bytes, k as u64 * SCENE_SLOT, &scene3(frame, stage, k, env, self.light_cap()));
-        }
-        self.queue.write_buffer(&staged.scene, 0, &bytes);
-        let (mut calls, mut objects, mut finishes) = (
-            std::mem::take(&mut staged.calls),
-            std::mem::take(&mut staged.objects_bytes),
-            std::mem::take(&mut staged.finish_bytes),
-        );
-        calls.clear();
-        objects.clear();
-        finishes.clear();
-        let mut slot = 0u32;
-        for (o, p) in frame.placed[stage.models.clone()].iter().enumerate() {
-            let (object, flipped) = super::looks::object(p);
-            put(&mut objects, o as u64 * SLOT, &object);
-            let looks = &frame.looks[p.looks.clone()];
-            let far = stage.eye.depth([p.matrix[12], p.matrix[13], p.matrix[14]]);
-            let defaults = wprs_scene::Finish::default();
-            for (m, f) in p.model.materials.iter().chain([&defaults]).enumerate() {
-                let look = looks.iter().find(|l| usize::from(l.material) == m);
-                let (uniform, key) = super::looks::finish(f, look, p.opacity, flipped, staged.hdr);
-                put(&mut finishes, u64::from(slot + m as u32) * SLOT, &uniform);
-                for prim in p
-                    .model
-                    .primitives
+        let eyes = [Some(stage.eye), stage.cross.map(|c| c.0)];
+        for (e, eye) in eyes.iter().enumerate() {
+            let Some(eye) = eye else { continue };
+            for k in 0..stage.slices {
+                let mut s = scene3(frame, (stage, eye), k, flags, self.light_cap());
+                shadows
                     .iter()
-                    .filter(|q| q.material.map_or(p.model.materials.len(), usize::from) == m)
-                {
-                    let (first, count, maps, object, finish) =
-                        (prim.first, prim.count, m, o as u32, slot + m as u32);
-                    calls.push(Call { model: p.model.digest, first, count, maps, object, finish, key, far });
-                }
+                    .flatten()
+                    .enumerate()
+                    .for_each(|(i, p)| s.lights[p.lamp].more[2] = i as f32 + 1.0);
+                put(&mut bytes, (e * (MAX_PLANES + 1) + k) as u64 * SCENE_SLOT, &s);
             }
-            slot += p.model.materials.len() as u32 + 1;
         }
-        self.queue.write_buffer(&staged.objects, 0, &objects);
-        self.queue.write_buffer(&staged.finishes, 0, &finishes);
-        calls.sort_by(|a, b| {
-            (a.key.blend > 0).cmp(&(b.key.blend > 0)).then(match a.key.blend > 0 {
-                true => b.far.total_cmp(&a.far),
-                false => std::cmp::Ordering::Equal,
-            })
-        });
-        let Some((_, groups)) = &staged.groups else {
-            (staged.bytes, staged.calls, staged.objects_bytes, staged.finish_bytes) =
-                (bytes, calls, objects, finishes);
-            return;
-        };
-        let solids = self.solids();
+        staged.bytes = bytes;
+        self.shadow_slots(staged, (frame, stage), &shadows, flags);
+        self.queue.write_buffer(&staged.scene, 0, &staged.bytes);
+        for (buffer, data) in [
+            (&staged.objects, &staged.objects_bytes),
+            (&staged.finishes, &staged.finish_bytes),
+            (&staged.bones, &staged.bone_bytes),
+            (&staged.draws, &staged.draw_bytes),
+        ] {
+            if !data.is_empty() {
+                self.queue.write_buffer(buffer, 0, data);
+            }
+        }
+        let due = self.shadow_maps(staged, frame, stage, &shadows);
+        if staged.groups.is_none() {
+            staged.cross_groups.clear();
+        }
+        self.stage_groups(staged, env, uniform);
+        for p in &frame.placed[stage.models.clone()] {
+            if let Some(gpu) = models.get(&p.model.digest) {
+                self.object_group(staged, p.model.digest, gpu);
+            }
+        }
         let mut encoder = self.device.create_command_encoder(&Default::default());
+        self.shadow_passes(&mut encoder, staged, models, due);
         for k in 0..stage.slices {
-            let color = wgpu::RenderPassColorAttachment {
-                view: &staged.slices[k].view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                    store: wgpu::StoreOp::Store,
-                },
-            };
-            let depth = wgpu::RenderPassDepthStencilAttachment {
-                view: &staged.depth,
-                depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(0.0),
-                    store: wgpu::StoreOp::Discard,
-                }),
-                stencil_ops: None,
-            };
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("wprs-render solids"),
-                color_attachments: &[Some(color)],
-                depth_stencil_attachment: Some(depth),
-                ..Default::default()
-            });
-            pass.set_bind_group(0, &groups[0], &[(k as u64 * SCENE_SLOT) as u32]);
-            let (mut key, mut bound) = (None, None);
-            for c in &calls {
-                let Some(gpu) = models.get(&c.model) else { continue };
-                if key != Some(c.key) {
-                    pass.set_pipeline(&solids.pipe(&self.device, c.key));
-                    key = Some(c.key);
-                }
-                if bound != Some(c.model) {
-                    pass.set_vertex_buffer(0, gpu.vertices.slice(..));
-                    pass.set_index_buffer(gpu.indices.slice(..), wgpu::IndexFormat::Uint32);
-                    bound = Some(c.model);
-                }
-                pass.set_bind_group(1, &groups[1], &[c.object * SLOT as u32]);
-                pass.set_bind_group(2, &gpu.maps[c.maps.min(gpu.maps.len() - 1)], &[]);
-                pass.set_bind_group(3, &groups[2], &[c.finish * SLOT as u32]);
-                pass.draw_indexed(c.first..c.first + c.count, 0, 0..1);
+            self.stage_pass(&mut encoder, staged, models, (k, 0));
+        }
+        if let Some((_, f)) = stage.cross {
+            if staged.cross.len() != stage.slices {
+                staged.cross = self.slice_images(staged.size, staged.hdr, stage.slices);
+                staged.cross_groups.clear();
+            }
+            if staged.cross_groups.len() != stage.slices {
+                staged.cross_groups = staged.cross.iter().map(|c| self.mix_group(c)).collect();
+            }
+            for k in 0..stage.slices {
+                self.stage_pass(&mut encoder, staged, models, (k, 1));
+                self.mix_slices(&mut encoder, &staged.cross_groups[k], &staged.slices[k], f);
             }
         }
         self.queue.submit([encoder.finish()]);
-        (staged.bytes, staged.calls, staged.objects_bytes, staged.finish_bytes) =
-            (bytes, calls, objects, finishes);
     }
 }

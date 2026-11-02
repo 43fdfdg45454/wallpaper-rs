@@ -5,7 +5,7 @@ use crate::validate::{Check, Issue};
 use crate::value::{Param, Value};
 
 const MAX_MATERIALS: usize = 64;
-const BUILT: [(&str, &str, f32, f32); 12] = [
+const BUILT: [(&str, &str, f32, f32); 15] = [
     ("pbr", "metallic", 0.0, 1.0),
     ("pbr", "roughness", 0.0, 1.0),
     ("pbr", "normal_scale", 0.0, 10.0),
@@ -13,6 +13,9 @@ const BUILT: [(&str, &str, f32, f32); 12] = [
     ("fur", "layers", 1.0, 32.0),
     ("fur", "length", 0.0, 100.0),
     ("fur", "density", 0.0, 1.0),
+    ("fur", "comb_x", -1.0, 1.0),
+    ("fur", "comb_y", -1.0, 1.0),
+    ("fur", "comb_z", -1.0, 1.0),
     ("foliage", "strength", 0.0, 10.0),
     ("foliage", "speed", 0.0, 10.0),
     ("chroma", "key", 0.0, 1.0),
@@ -111,7 +114,8 @@ impl<'a> Check<'a> {
             self.value(&path, value);
             let declared = match built {
                 true => {
-                    BUILT.iter().find(|(s, n, ..)| *s == shader && n == id).map(|(.., lo, hi)| (*lo, *hi))
+                    let shared = |s: &str| s == shader || (s == "pbr" && shader != "unlit");
+                    BUILT.iter().find(|(s, n, ..)| shared(s) && n == id).map(|(.., lo, hi)| (*lo, *hi))
                 }
                 false => self
                     .scene

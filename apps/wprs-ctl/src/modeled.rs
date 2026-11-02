@@ -74,6 +74,7 @@ fn edit(command: Modeling) -> Result<(PathBuf, Edit3d)> {
             color: c,
             emissive,
             params,
+            key,
             clear,
             ..
         } => {
@@ -97,6 +98,7 @@ fn edit(command: Modeling) -> Result<(PathBuf, Edit3d)> {
                 color: color(c),
                 emissive: color(emissive),
                 params: set,
+                key: key.map(|k| crate::steps::value(&k)),
                 clear,
             };
             (dir, Edit3d::Material(m))
@@ -119,11 +121,27 @@ fn edit(command: Modeling) -> Result<(PathBuf, Edit3d)> {
         Modeling::Tonemap { dir, hdr, map, split } => {
             (dir, Edit3d::Tones(TonesEdit { hdr, tonemap: map, split }))
         }
-        Modeling::Scene3d { dir, model, group, space, depth_test, material, camera, view, tones } => {
+        Modeling::Scene3d {
+            dir,
+            model,
+            group,
+            space,
+            depth_test,
+            material,
+            camera,
+            view,
+            tones,
+            shadows,
+            path,
+            new_material,
+            debug,
+        } => {
             let named = [("model", model), ("group", group), ("space", space), ("depth_test", depth_test)];
             let more = [("material", material), ("camera", camera), ("view", view), ("tones", tones)];
+            let late =
+                [("shadows", shadows), ("path", path), ("new_material", new_material), ("debug", debug)];
             let given: Vec<(&str, String)> =
-                named.into_iter().chain(more).filter_map(|(k, v)| Some((k, v?))).collect();
+                named.into_iter().chain(more).chain(late).filter_map(|(k, v)| Some((k, v?))).collect();
             anyhow::ensure!(given.len() == 1, "give exactly one of the 3D edits");
             let (key, text) = &given[0];
             let value: Value = serde_json::from_str(text).with_context(|| format!("{text} is not JSON"))?;

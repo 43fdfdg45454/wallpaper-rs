@@ -14,6 +14,7 @@ pub use crate::action::{
     IkEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, MaskStroke, MeshCut, NormalsMake,
     ParticleEdit, PartsEdit, PointEdit, Response, Spot, Strand, SwarmLight, TendEdit, WeightStroke, WindEdit,
 };
+pub use crate::action::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
 pub use crate::action::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {

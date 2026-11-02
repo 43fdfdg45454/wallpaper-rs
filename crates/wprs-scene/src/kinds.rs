@@ -61,7 +61,13 @@ impl Check<'_> {
             ("volumetric", only(l.volumetric.is_some(), &[Beam::Point, Beam::Spot])),
             ("texture", only(l.texture.is_some(), &[Beam::Spot])),
             ("shadows", only(l.shadows, &[Beam::Point, Beam::Spot, Beam::Directional])),
+            ("shadow_resolution", l.shadow_resolution.is_some() && !l.shadows),
+            ("shadow_bias", l.shadow_bias.is_some() && !l.shadows),
         ];
+        l.shadow_resolution
+            .iter()
+            .for_each(|r| self.range(&format!("{p}/shadow_resolution"), *r as f32, 256.0, 4096.0));
+        l.shadow_bias.iter().for_each(|b| self.range(&format!("{p}/shadow_bias"), *b, 0.0, 1.0));
         self.uses(l.shadows, "shadows");
         for (name, _) in misplaced.into_iter().filter(|(_, wrong)| *wrong) {
             self.issues.push(Issue::Type(format!("{p}/{name}")));

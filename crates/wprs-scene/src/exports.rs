@@ -30,8 +30,11 @@ pub use crate::effects::{
     PRELUDE, Pace, ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage,
     State, Texel, Tune, Use, Variant, builtin, descriptor, register,
 };
-pub use crate::eval::lamps::{Lamp, Picture};
-pub use crate::eval::{Content, Draw, EffectDraw, Frame, Lit, Look, MAX_PLANES, Placed, Stage3d};
+pub use crate::eval::lamps::{Lamp, Picture, SHADOW_BIAS};
+pub use crate::eval::{
+    CHROMA_KEY, Content, Draw, EffectDraw, FUR_LAYERS, FUR_LENGTH, Flight, Frame, Lit, Look, MAX_PLANES,
+    Placed, Shade, Stage3d, centripetal, path_period, path_pose, play_paths, sequence,
+};
 pub use crate::extrude::Relief;
 pub use crate::eye::{Eye, IDENTITY4, Mat4, apply4, mul4, placement, unit3};
 pub use crate::figure::{
@@ -70,13 +73,15 @@ pub use crate::measured::{Calibration, calibrate};
 pub use crate::media::{Cover, MEDIA_TRIGGERS, Media, Reading};
 pub use crate::memory::MAX_MEMORY;
 pub use crate::model::{
-    Alpha, Finish, Forge, ForgeMaterial, ForgeShape, MAX_MODEL_VERTICES, MAX_TEXTURE, MODEL_FLOATS, Model,
-    ModelCaps, ModelTexture, PHONE_TEXTURE, Primitive, SLOTS as MAP_SLOTS, Verdict, caps as model_caps,
-    picture_size, verdict as model_verdict,
+    Alpha, Finish, Forge, ForgeMaterial, ForgeRig, ForgeShape, MAX_MODEL_VERTICES, MAX_POSED_MORPHS,
+    MAX_TEXTURE, MODEL_FLOATS, Model, ModelCaps, ModelTexture, PHONE_TEXTURE, Primitive, SKIN_FLOATS,
+    SLOTS as MAP_SLOTS, Verdict, caps as model_caps, fur_shells, picture_size, shadow_side,
+    verdict as model_verdict,
 };
 pub use crate::outside::{
     CHECK_WALL, Checker, UNCHECKED, check_out_of_process, checker, helper_runs, set_checker,
 };
+pub use crate::package::shader_line;
 pub use crate::particles::{
     Area, Around, Bake, Between, Boids, Bow, Burst, CPU_BOIDS, CPU_PARTICLES, Carry, Census, Child, Cloud,
     Collider, ControlPoint, Cue, EVENT, EmitShape, Emitter, Falloff, Flock, Follow, Force, Frames, Handle,
@@ -97,7 +102,7 @@ pub use crate::props::{
     Choice, Condition, Control, Expr, ICONS, Leveling, Mode, Pick, Preset, Property, Slider, Text, Values,
     check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag, veiled,
 };
-pub use crate::puppet::{Drawn, IK_ROUNDS, MAX_STEPS, Posed, Puppet, QUIET, QUIET_STEPS};
+pub use crate::puppet::{Drawn, IK_ROUNDS, MAX_STEPS, MODEL_UNIT, Posed, Puppet, QUIET, QUIET_STEPS};
 pub use crate::quality::{Class, Quality, Why};
 pub use crate::released::{newer_manifest_keys, newer_scene_keys};
 pub use crate::rig::{
@@ -129,7 +134,7 @@ pub use crate::sites::{Site, script_inputs, script_key, sites};
 pub use crate::sound::{MAX_SOUNDS, Order, Sound, VOLUME, Voice, volume_property};
 pub use crate::spare::Spare;
 pub use crate::spend::{MAX_STATEFUL, Spend, over};
-pub use crate::sprites::{STAGES_WGSL, particle_shader};
+pub use crate::sprites::{STAGES_WGSL, material_shader, particle_shader};
 pub use crate::stage::{IMAGES, VIDEOS};
 pub use crate::strikes::{STOPPED, end_trials, forgive_strikes, keep_strikes, strike, struck, tried, trying};
 pub use crate::tier::{Gpu, Tier};

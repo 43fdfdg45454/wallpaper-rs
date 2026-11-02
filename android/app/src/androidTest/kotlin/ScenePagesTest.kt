@@ -107,31 +107,26 @@ class ScenePagesTest : SceneBase() {
     }
 
     @Test
-    fun scenesWithLightsAndLitAirAreAcceptedAndShadowsAreRefusedUntilTheEngineDrawsThem() {
+    fun scenesWithLightsLitAirAndShadowsAreAccepted() {
         val dir = File(storage(), "lamps/lamp").apply { mkdirs() }
-        for ((scene, manifest) in listOf(LAMP_SCENE to LAMP_MANIFEST, FOG_SCENE to FOG_MANIFEST)) {
+        val all = listOf(LAMP_SCENE to LAMP_MANIFEST, FOG_SCENE to FOG_MANIFEST, SHADOW_SCENE to SHADOW_MANIFEST)
+        for ((scene, manifest) in all) {
             File(dir, "scene.json").writeText(scene)
             File(dir, "manifest.json").writeText(manifest)
             val lit = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
             assertTrue(lit, lit.startsWith("["))
         }
-        File(dir, "scene.json").writeText(SHADOW_SCENE)
-        File(dir, "manifest.json").writeText(SHADOW_MANIFEST)
-        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
-        assertTrue(reply.getString("error").contains("it uses the feature shadows (casts shadows)"))
     }
 
     @Test
-    fun scenesWithModelsAreDrawnAndCameraPathsWaitForTheEngine() {
+    fun scenesWithModelsAndCameraPathsAreDrawn() {
         val dir = File(storage(), "stages/stage").apply { mkdirs() }
-        File(dir, "scene.json").writeText(STAGE_SCENE)
-        File(dir, "manifest.json").writeText(STAGE_MANIFEST)
-        val shown = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
-        assertTrue(shown, shown.startsWith("["))
-        File(dir, "scene.json").writeText(FLOWN_SCENE)
-        File(dir, "manifest.json").writeText(FLOWN_MANIFEST)
-        val reply = JSONObject(Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString()))
-        assertTrue(reply.getString("error").contains("it uses the feature camera_paths (flies the 3D camera along paths)"))
+        for ((scene, manifest) in listOf(STAGE_SCENE to STAGE_MANIFEST, FLOWN_SCENE to FLOWN_MANIFEST)) {
+            File(dir, "scene.json").writeText(scene)
+            File(dir, "manifest.json").writeText(manifest)
+            val shown = Native.library(JSONObject().put("op", "examples").put("dir", dir.parent).toString())
+            assertTrue(shown, shown.startsWith("["))
+        }
     }
 
     @Test

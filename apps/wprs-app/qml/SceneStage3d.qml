@@ -68,6 +68,28 @@ Item {
         stage: stage
     }
 
+    SceneStageShadows {
+        anchors.fill: parent
+        stage: stage
+    }
+
+    SceneStagePaths {
+        anchors.fill: parent
+        stage: stage
+    }
+
+    Repeater {
+        model: stage.models
+
+        delegate: SceneStageBones {
+            required property var modelData
+
+            anchors.fill: parent
+            stage: stage
+            model: modelData
+        }
+    }
+
     Repeater {
         model: stage.models
 

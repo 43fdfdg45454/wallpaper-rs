@@ -29,7 +29,7 @@ pub enum Modeling {
         layer: String,
         #[arg(help = "Name of the material in the model; leave out with --list")]
         name: Option<String>,
-        #[arg(long, help = "pbr, unlit or the id of a package effect")]
+        #[arg(long, help = "pbr, unlit, fur, foliage, chroma or the id of a package material shader")]
         shader: Option<String>,
         #[arg(long, action = ArgAction::Set)]
         lit: Option<bool>,
@@ -46,9 +46,11 @@ pub enum Modeling {
         #[arg(
             long = "param",
             value_name = "ID=VALUE",
-            help = "metallic, roughness, normal_scale or occlusion"
+            help = "metallic, roughness, normal_scale, occlusion, or layers, length, density, comb_x, comb_y, comb_z of fur, strength and speed of foliage, threshold and softness of chroma"
         )]
         params: Vec<String>,
+        #[arg(long, help = "Key color of a chroma material such as #00ff00")]
+        key: Option<String>,
         #[arg(long, help = "Drop the changes of this material")]
         clear: bool,
         #[arg(long, help = "List the materials with their maps instead")]
@@ -131,6 +133,14 @@ pub enum Modeling {
         view: Option<String>,
         #[arg(long, value_name = "JSON")]
         tones: Option<String>,
+        #[arg(long, value_name = "JSON")]
+        shadows: Option<String>,
+        #[arg(long, value_name = "JSON")]
+        path: Option<String>,
+        #[arg(long, value_name = "JSON")]
+        new_material: Option<String>,
+        #[arg(long, value_name = "JSON")]
+        debug: Option<String>,
     },
     #[command(about = "Show what the models cost at each quality level and on each device tier")]
     Cost3d {

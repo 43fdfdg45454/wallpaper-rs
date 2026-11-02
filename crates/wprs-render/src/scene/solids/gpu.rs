@@ -10,7 +10,37 @@ use wprs_scene::Model;
 pub(crate) struct GpuModel {
     pub(crate) vertices: wgpu::Buffer,
     pub(crate) indices: wgpu::Buffer,
+    pub(crate) paint: wgpu::Buffer,
+    pub(crate) skin: Option<wgpu::Buffer>,
+    pub(crate) morphs: Option<wgpu::TextureView>,
     pub(crate) maps: Vec<wgpu::BindGroup>,
+}
+
+pub(super) fn morph_texture(r: &Renderer, morphs: &[[f32; 4]]) -> wgpu::TextureView {
+    let width = wprs_scene::MORPH_WIDTH;
+    let texels = morphs.len().max(1);
+    let size = (texels.min(width) as u32, texels.div_ceil(width) as u32);
+    let usage = wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST;
+    let t = crate::texture::create_texture(
+        &r.device,
+        "wprs-render solid shapes",
+        size,
+        Format::Rgba32Float,
+        usage,
+    );
+    let mut data = morphs.to_vec();
+    data.resize((size.0 * size.1) as usize, [0.0; 4]);
+    r.queue.write_texture(
+        t.as_image_copy(),
+        bytemuck::cast_slice(&data),
+        wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(size.0 * 16), rows_per_image: None },
+        wgpu::Extent3d { width: size.0, height: size.1, depth_or_array_layers: 1 },
+    );
+    t.create_view(&Default::default())
+}
+
+pub(super) fn blank_morphs(r: &Renderer) -> wgpu::TextureView {
+    morph_texture(r, &[])
 }
 
 impl Renderer {
@@ -35,6 +65,11 @@ impl Renderer {
         };
         let vertices = fill("wprs-render solid vertices", bytemuck::cast_slice(&model.vertices), B::VERTEX);
         let indices = fill("wprs-render solid indices", bytemuck::cast_slice(&model.indices), B::INDEX);
+        let paint = fill("wprs-render solid paint", bytemuck::cast_slice(&model.paint), B::VERTEX);
+        let skin = model
+            .posed()
+            .then(|| fill("wprs-render solid skin", bytemuck::cast_slice(&model.skin), B::VERTEX));
+        let morphs = (!model.morphs.is_empty()).then(|| morph_texture(self, &model.morphs));
         let solids = self.solids();
         let mut made: HashMap<(u16, bool), Option<Image>> = HashMap::new();
         let mut picture = |slot: Option<u16>, linear: bool| -> Option<Image> {
@@ -69,6 +104,6 @@ impl Renderer {
                 entries: &entries,
             }));
         }
-        GpuModel { vertices, indices, maps }
+        GpuModel { vertices, indices, paint, skin, morphs, maps }
     }
 }

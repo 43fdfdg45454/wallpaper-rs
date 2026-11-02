@@ -104,4 +104,9 @@ ColumnLayout {
         font: Kirigami.Theme.smallFont
         text: App.tr("On the preview: drag with the right button to turn the view, with the middle button or Shift to slide it, and roll the wheel to come closer")
     }
+
+    ScenePaths3d {
+        Layout.fillWidth: true
+        page: panel.page
+    }
 }

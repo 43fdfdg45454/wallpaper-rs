@@ -25,15 +25,15 @@ impl Renderer {
         self.judge(view, frame);
         view.pace(self);
         self.molds(view, runtime)?;
+        let data = frame_data(runtime, frame, size, view.srgb, quality);
+        self.queue.write_buffer(&view.uniform, 0, bytemuck::bytes_of(&data));
         self.figures(view, (runtime, frame), videos, view.screen(size).0)?;
         let created = (view.pool.created, pipes::compiled(0));
         if view.target.as_ref().is_none_or(|(t, _)| t.size() != size) {
             retarget(self, view, size);
         }
         let screen = view.screen(size);
-        let data = frame_data(runtime, frame, size, view.srgb, quality);
         view.pool.glow.update(&self.queue, frame, screen, view.srgb, self.light_cap());
-        self.queue.write_buffer(&view.uniform, 0, bytemuck::bytes_of(&data));
         self.shrunk(view, frame, screen);
         let mut scratch = std::mem::take(&mut view.scratch);
         scratch.reset(frame.draws.len(), runtime);

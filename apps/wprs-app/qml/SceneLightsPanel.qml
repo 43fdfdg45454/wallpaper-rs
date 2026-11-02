@@ -134,6 +134,12 @@ ColumnLayout {
         page: panel.page
     }
 
+    SceneShadows3d {
+        Layout.fillWidth: true
+        page: panel.page
+        lights: panel.info?.lights ?? []
+    }
+
     SceneQuality {
         page: panel.page
         again: App.tr("Restart the preview")

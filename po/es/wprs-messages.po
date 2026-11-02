@@ -330,7 +330,8 @@ msgid "a layer is moved by two numbers of pixels"
 msgstr "una capa se mueve con dos números de píxeles"
 
 #: crates/wprs-editor/src/attach/nudge.rs crates/wprs-editor/src/clips/keyed.rs
-#: crates/wprs-editor/src/limbs.rs crates/wprs-editor/src/rig.rs
+#: crates/wprs-editor/src/limbs.rs crates/wprs-editor/src/motion/play.rs
+#: crates/wprs-editor/src/motion/presets.rs crates/wprs-editor/src/rig.rs
 #: crates/wprs-editor/src/skin/mod.rs
 msgid "there is no bone \"%1\""
 msgstr "no hay ningún hueso «%1»"
@@ -395,9 +396,10 @@ msgstr "el id de un clip tiene de 1 a 32 minúsculas, cifras o _"
 msgid "there is no clip \"%1\""
 msgstr "no hay ningún clip «%1»"
 
-#: crates/wprs-editor/src/clips.rs crates/wprs-editor/src/skin/mod.rs
-msgid "the layer is not a mesh"
-msgstr "la capa no es una malla"
+#: crates/wprs-editor/src/clips.rs crates/wprs-editor/src/motion/mod.rs
+#: crates/wprs-editor/src/skin/mod.rs
+msgid "the layer is not a mesh or a model"
+msgstr "la capa no es una malla ni un modelo"
 
 #: crates/wprs-editor/src/clips.rs
 msgid "a clip lasts more than 0 and at most %1 s"
@@ -411,21 +413,27 @@ msgstr "ya hay un clip «%1»"
 msgid "a mesh has at most %1 clips"
 msgstr "una malla tiene como mucho %1 clips"
 
+#: crates/wprs-editor/src/clips.rs
+msgid "the file has no animation \"%1\""
+msgstr "el archivo no tiene ninguna animación «%1»"
+
+#: crates/wprs-editor/src/clips.rs crates/wprs-editor/src/clips/keyed.rs
+#: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/stage3d/paths.rs
+msgid "the time must be 0 or more seconds"
+msgstr "el tiempo debe ser de 0 segundos o más"
+
 #: crates/wprs-editor/src/clips/keyed.rs
 msgid "a key is for one bone, blend shape or part order"
 msgstr "una clave es de un solo hueso, forma de mezcla u orden de parte"
 
-#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/shapes.rs
+#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/motion/mod.rs
+#: crates/wprs-editor/src/shapes.rs
 msgid "there is no blend shape \"%1\""
 msgstr "no hay ninguna forma de mezcla «%1»"
 
 #: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/cutouts.rs
 msgid "there is no part \"%1\""
 msgstr "no hay ninguna parte «%1»"
-
-#: crates/wprs-editor/src/clips/keyed.rs crates/wprs-editor/src/keys.rs
-msgid "the time must be 0 or more seconds"
-msgstr "el tiempo debe ser de 0 segundos o más"
 
 #: crates/wprs-editor/src/clips/keyed.rs
 msgid "the key holds a value out of its range"
@@ -745,6 +753,38 @@ msgstr "el viento sopla de 0 a 10000 píxeles por segundo"
 msgid "gusts go from 0 to 1"
 msgstr "las ráfagas van de 0 a 1"
 
+#: crates/wprs-editor/src/motion/mod.rs crates/wprs-editor/src/stage3d/edit.rs
+msgid "%1 is not a model layer"
+msgstr "%1 no es una capa de modelo"
+
+#: crates/wprs-editor/src/motion/mod.rs
+msgid "root motion needs a clip that moves the root"
+msgstr "el movimiento de raíz necesita un clip que mueva la raíz"
+
+#: crates/wprs-editor/src/motion/mod.rs
+msgid "a blend shape weighs from -1 to 1"
+msgstr "una forma de mezcla pesa de -1 a 1"
+
+#: crates/wprs-editor/src/motion/play.rs
+msgid "%1 of an animation layer goes from %2 to %3"
+msgstr "%1 de una capa de animación va de %2 a %3"
+
+#: crates/wprs-editor/src/motion/play.rs
+msgid "a layer has at most %1 animation layers"
+msgstr "una capa tiene como mucho %1 capas de animación"
+
+#: crates/wprs-editor/src/motion/play.rs
+msgid "there is no animation layer %1"
+msgstr "no hay ninguna capa de animación %1"
+
+#: crates/wprs-editor/src/motion/presets.rs
+msgid "the presets are %1"
+msgstr "los ajustes predefinidos son %1"
+
+#: crates/wprs-editor/src/motion/presets.rs
+msgid "a layer has at most %1 swinging bones"
+msgstr "una capa tiene como mucho %1 huesos que se balancean"
+
 #: crates/wprs-editor/src/ops.rs
 msgid "\"%1\" is not a JSON Pointer"
 msgstr "«%1» no es un JSON Pointer"
@@ -1027,13 +1067,13 @@ msgstr "el mapeo de tonos necesita hdr"
 msgid "the split goes from 0 to 1"
 msgstr "la división va de 0 a 1"
 
+#: crates/wprs-editor/src/stage3d/camera.rs
+msgid "the 3D view shows mask, matte or shadows"
+msgstr "la vista 3D muestra mask, matte o shadows"
+
 #: crates/wprs-editor/src/stage3d/edit.rs
 msgid "%1 of a model goes from %2 to %3"
 msgstr "%1 de un modelo va de %2 a %3"
-
-#: crates/wprs-editor/src/stage3d/edit.rs
-msgid "%1 is not a model layer"
-msgstr "%1 no es una capa de modelo"
 
 #: crates/wprs-editor/src/stage3d/edit.rs
 msgid "a model cannot be scaled to nothing"
@@ -1066,6 +1106,78 @@ msgstr "%1 de un material va de %2 a %3"
 #: crates/wprs-editor/src/stage3d/material.rs
 msgid "%1 is not a parameter of %2"
 msgstr "%1 no es un parámetro de %2"
+
+#: crates/wprs-editor/src/stage3d/material.rs
+msgid "only chroma materials take a key color"
+msgstr "solo los materiales de croma llevan un color clave"
+
+#: crates/wprs-editor/src/stage3d/newmat.rs
+msgid "there is already a shader named %1"
+msgstr "ya hay un shader llamado %1"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "there is no camera path \"%1\""
+msgstr "no hay ningún recorrido de cámara «%1»"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "the path has no key at %1 s"
+msgstr "el recorrido no tiene ninguna clave a los %1 s"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "a camera path keeps at least 2 keys"
+msgstr "un recorrido de cámara conserva al menos 2 claves"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "a key point is within a million units"
+msgstr "un punto de clave está a menos de un millón de unidades"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "the field of view goes from 1 to 179 degrees"
+msgstr "el campo de visión va de 1 a 179 grados"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "a camera path has at most %1 keys"
+msgstr "un recorrido de cámara tiene como mucho %1 claves"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "there is already a camera path \"%1\""
+msgstr "ya hay un recorrido de cámara «%1»"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "a scene has at most %1 camera paths"
+msgstr "una escena tiene como mucho %1 recorridos de cámara"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "%1 is not an easing"
+msgstr "%1 no es una curva de suavizado"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "paths play sequential or random"
+msgstr "los recorridos se reproducen sequential o random"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "paths fade to black or cross"
+msgstr "los recorridos se funden a black o cross"
+
+#: crates/wprs-editor/src/stage3d/paths.rs
+msgid "a fade lasts 0 to 10 s"
+msgstr "un fundido dura de 0 a 10 s"
+
+#: crates/wprs-editor/src/stage3d/shadows.rs
+msgid "only point, spot and directional lights cast shadows"
+msgstr "solo las luces puntuales, de foco y direccionales dan sombra"
+
+#: crates/wprs-editor/src/stage3d/shadows.rs
+msgid "a scene has at most %1 lights with shadows"
+msgstr "una escena tiene como mucho %1 luces con sombras"
+
+#: crates/wprs-editor/src/stage3d/shadows.rs
+msgid "a shadow map has 256 to 4096 pixels a side"
+msgstr "un mapa de sombras tiene de 256 a 4096 píxeles de lado"
+
+#: crates/wprs-editor/src/stage3d/shadows.rs
+msgid "the bias goes from 0 to 1"
+msgstr "el desplazamiento va de 0 a 1"
 
 #: crates/wprs-editor/src/stage3d/store.rs
 msgid "%1 %2"

@@ -30,7 +30,8 @@ ColumnLayout {
 
     function compose(s, bone) {
         const listed = (s?.rows ?? []).filter(r => r.kind !== "shape");
-        const own = ["rotation", "position", "scale"].map(c => ({
+        const channels = s?.model ? ["angles", "shift"] : ["rotation", "position", "scale"];
+        const own = channels.map(c => ({
                     "kind": "bone",
                     "name": bone,
                     "channel": c,
@@ -108,6 +109,11 @@ ColumnLayout {
     }
 
     SceneClipBar {
+        Layout.fillWidth: true
+        line: strip
+    }
+
+    SceneClipEvents {
         Layout.fillWidth: true
         line: strip
     }

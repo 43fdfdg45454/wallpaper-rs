@@ -1,6 +1,7 @@
+use super::Fig;
 use super::limb::{end, pivot, tip};
+use crate::Body as Mode;
 use crate::rigged::Rigged;
-use crate::{Body as Mode, MeshLayer};
 
 pub const MAX_STEPS: u32 = 15;
 pub const QUIET_STEPS: u32 = 30;
@@ -27,9 +28,10 @@ pub(crate) struct Sim {
     pub wind: [f32; 2],
     pub gust: [f32; 2],
     pub t: f32,
+    pub unit: f32,
 }
 
-pub(super) fn bodies(rig: &Rigged, m: &MeshLayer, order: &[u16]) -> Vec<Body> {
+pub(super) fn bodies(rig: &Rigged, m: &Fig, order: &[u16]) -> Vec<Body> {
     let own = |n: usize| m.rig.physics.iter().any(|p| rig.joint(&p.bone) == Some(n));
     let mut out: Vec<Body> = m
         .rig

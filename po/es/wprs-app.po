@@ -932,6 +932,7 @@ msgid "Roundness"
 msgstr "Redondez"
 
 #: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditMasks.qml
+#: apps/wprs-app/qml/SceneMaterialShade.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Feather"
 msgstr "Difuminado"
@@ -2450,6 +2451,55 @@ msgstr "Luz ambiente"
 msgid "Light from above"
 msgstr "Luz del cielo"
 
+#: apps/wprs-app/qml/SceneAnimLayers.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Animation layers"
+msgstr "Capas de animación"
+
+#: apps/wprs-app/qml/SceneAnimLayers.qml
+msgid "Add a clip first; each layer plays one clip and they mix in order."
+msgstr ""
+"Añade primero un clip; cada capa reproduce un clip y se mezclan en orden."
+
+#: apps/wprs-app/qml/SceneAnimLayers.qml
+#: apps/wprs-app/qml/facade/SceneLabels.qml
+msgid "On"
+msgstr "Encendido"
+
+#: apps/wprs-app/qml/SceneAnimLayers.qml
+msgid "Adds"
+msgstr "Suma"
+
+#: apps/wprs-app/qml/SceneAnimLayers.qml apps/wprs-app/qml/SceneRigIk.qml
+#: apps/wprs-app/qml/facade/SceneLabels.qml
+msgid "Weight"
+msgstr "Peso"
+
+#: apps/wprs-app/qml/SceneAnimLayers.qml apps/wprs-app/qml/SceneBind.qml
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Speed"
+msgstr "Velocidad"
+
+#: apps/wprs-app/qml/SceneAnimLayers.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Fade in"
+msgstr "Entrada gradual"
+
+#: apps/wprs-app/qml/SceneAnimLayers.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Fade out"
+msgstr "Salida gradual"
+
+#: apps/wprs-app/qml/SceneAnimLayers.qml
+msgid "Only these bones"
+msgstr "Solo estos huesos"
+
+#: apps/wprs-app/qml/SceneAnimLayers.qml
+msgid "Add a layer playing…"
+msgstr "Añadir una capa que reproduzca…"
+
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid "Import an effect…"
 msgstr "Importar un efecto…"
@@ -2544,14 +2594,17 @@ msgstr "Posición vertical"
 msgid "Over the screen"
 msgstr "Sobre la pantalla"
 
-#: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneSwarmFields.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Speed"
-msgstr "Velocidad"
-
 #: apps/wprs-app/qml/SceneBodyKnobs.qml
 msgid "Drag up or down to set the gravity of %1"
 msgstr "Arrastra hacia arriba o abajo para fijar la gravedad de %1"
+
+#: apps/wprs-app/qml/SceneBonePick.qml
+msgid "(all)"
+msgstr "(todos)"
+
+#: apps/wprs-app/qml/SceneBonePick.qml
+msgid "All bones"
+msgstr "Todos los huesos"
 
 #: apps/wprs-app/qml/SceneBoneTree.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Bones"
@@ -2710,7 +2763,8 @@ msgstr "Pausar"
 msgid "Play"
 msgstr "Reproducir"
 
-#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/SceneTimeBar.qml
+#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/ScenePathRow.qml
+#: apps/wprs-app/qml/ScenePaths3d.qml apps/wprs-app/qml/SceneTimeBar.qml
 #: apps/wprs-app/qml/SceneTimeline.qml
 msgid "%1 s"
 msgstr "%1 s"
@@ -2747,7 +2801,16 @@ msgstr "Cambiar el nombre del clip"
 msgid "Remove the clip"
 msgstr "Quitar el clip"
 
-#: apps/wprs-app/qml/SceneClipRow.qml
+#: apps/wprs-app/qml/SceneClipEvents.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Events"
+msgstr "Eventos"
+
+#: apps/wprs-app/qml/SceneClipEvents.qml apps/wprs-app/qml/SceneStagePaths.qml
+msgid "%1 at %2 s"
+msgstr "%1 a los %2 s"
+
+#: apps/wprs-app/qml/SceneClipRow.qml apps/wprs-app/qml/SceneModelMotion.qml
 msgid "Shape %1"
 msgstr "Forma %1"
 
@@ -2762,6 +2825,18 @@ msgstr "Copiar a %1 s"
 #: apps/wprs-app/qml/SceneClipRow.qml
 msgid "Move to %1 s"
 msgstr "Mover a %1 s"
+
+#: apps/wprs-app/qml/SceneCombPad.qml
+msgid "Comb"
+msgstr "Peinado"
+
+#: apps/wprs-app/qml/SceneCombPad.qml
+msgid "Drag to comb the fur across the surface"
+msgstr "Arrastra para peinar el pelo sobre la superficie"
+
+#: apps/wprs-app/qml/SceneCombPad.qml
+msgid "Toward the viewer"
+msgstr "Hacia quien mira"
 
 #: apps/wprs-app/qml/SceneCondition.qml
 msgid "Always"
@@ -2984,7 +3059,8 @@ msgstr "%1: %2 del tamaño, %3 muestras"
 msgid "Light the air"
 msgstr "Iluminar el aire"
 
-#: apps/wprs-app/qml/SceneLightAir.qml apps/wprs-app/qml/facade/SceneWords.qml
+#: apps/wprs-app/qml/SceneLightAir.qml apps/wprs-app/qml/SceneMaterialShade.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Density"
 msgstr "Densidad"
 
@@ -3286,6 +3362,27 @@ msgstr ""
 "deshacer."
 
 #: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Physical"
+msgstr "Físico"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Unlit"
+msgstr "Sin luz"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Fur"
+msgstr "Pelo"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+msgid "Foliage"
+msgstr "Vegetación"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
+#: apps/wprs-app/qml/facade/SceneEffects.qml
+msgid "Chroma key"
+msgstr "Croma"
+
+#: apps/wprs-app/qml/SceneMaterial3d.qml
 msgid "Metal and roughness"
 msgstr "Metal y rugosidad"
 
@@ -3296,14 +3393,6 @@ msgstr "Normales"
 #: apps/wprs-app/qml/SceneMaterial3d.qml
 msgid "Occlusion"
 msgstr "Oclusión"
-
-#: apps/wprs-app/qml/SceneMaterial3d.qml
-msgid "Physical"
-msgstr "Físico"
-
-#: apps/wprs-app/qml/SceneMaterial3d.qml
-msgid "Unlit"
-msgstr "Sin luz"
 
 #: apps/wprs-app/qml/SceneMaterial3d.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
@@ -3334,6 +3423,49 @@ msgstr "Relieve"
 #: apps/wprs-app/qml/SceneMaterial3d.qml
 msgid "(none)"
 msgstr "(ninguno)"
+
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+msgid "Shells"
+msgstr "Capas"
+
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+msgid "Length, in hundredths of the model"
+msgstr "Largo, en centésimas del modelo"
+
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+msgid "Shells per quality level: %1, %2, %3 and %4"
+msgstr "Capas por nivel de calidad: %1, %2, %3 y %4"
+
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+#: apps/wprs-app/qml/facade/SceneEffects.qml
+msgid "Sway"
+msgstr "Vaivén"
+
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Key color"
+msgstr "Color clave"
+
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+#: apps/wprs-app/qml/facade/SceneLabels.qml
+msgid "Tolerance"
+msgstr "Tolerancia"
+
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+msgid "Show the sway mask of the vertex colors"
+msgstr "Mostrar la máscara de balanceo de los colores de vértice"
+
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+msgid "Show the matte"
+msgstr "Mostrar el mate"
+
+#: apps/wprs-app/qml/SceneMaterialShade.qml
+msgid ""
+"This shader comes with the package and runs on the graphics card within the "
+"limits of package effects; use only shaders you trust."
+msgstr ""
+"Este shader viene con el paquete y corre en la tarjeta gráfica dentro de los "
+"límites de los efectos de paquete; usa solo shaders en los que confíes."
 
 #: apps/wprs-app/qml/SceneMaterials3d.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
@@ -3373,6 +3505,22 @@ msgstr "Se calcula a partir de lo que usa el paquete: %1"
 msgid "No picture"
 msgstr "Sin imagen"
 
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "shadow maps of %1 megapixels"
+msgstr "mapas de sombra de %1 megapíxeles"
+
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "%1 fur shells over %2 triangles"
+msgstr "%1 capas de pelo sobre %2 triángulos"
+
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "%1 skinned vertices with swinging bones"
+msgstr "%1 vértices con piel y huesos que se balancean"
+
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "%1 skinned vertices, bones keep their animation"
+msgstr "%1 vértices con piel, los huesos mantienen su animación"
+
 #: apps/wprs-app/qml/SceneModelCost.qml apps/wprs-app/qml/SceneModelInfo.qml
 msgid "%1 MiB"
 msgstr "%1 MiB"
@@ -3404,6 +3552,10 @@ msgstr "demasiado pesado"
 #: apps/wprs-app/qml/SceneModelCost.qml
 msgid "%1 at %2: %3, %4 of textures at most %5 px"
 msgstr "%1 a %2: %3, %4 de texturas de %5 px como mucho"
+
+#: apps/wprs-app/qml/SceneModelCost.qml
+msgid "%1 lights with shadows"
+msgstr "%1 luces con sombras"
 
 #: apps/wprs-app/qml/SceneModelGizmo.qml
 msgid "Drag to move the model along this direction"
@@ -3437,13 +3589,78 @@ msgstr "%1 KiB"
 msgid "%1 triangles, %2 materials, %3 textures, %4 bones, %5 clips"
 msgstr "%1 triángulos, %2 materiales, %3 texturas, %4 huesos, %5 clips"
 
-#: apps/wprs-app/qml/SceneModelInfo.qml
+#: apps/wprs-app/qml/SceneModelInfo.qml apps/wprs-app/qml/SceneModelMotion.qml
 msgid "%1 (%2 s)"
 msgstr "%1 (%2 s)"
 
 #: apps/wprs-app/qml/SceneModelInfo.qml
 msgid "%1: %2, textures at most %3 px, %4 of texture memory"
 msgstr "%1: %2, texturas de %3 px como mucho, %4 de memoria de texturas"
+
+#: apps/wprs-app/qml/SceneModelMotion.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Animation"
+msgstr "Animación"
+
+#: apps/wprs-app/qml/SceneModelMotion.qml
+msgid "its own keys"
+msgstr "sus propias claves"
+
+#: apps/wprs-app/qml/SceneModelMotion.qml
+msgid "%1, %2 s from %3"
+msgstr "%1, %2 s de %3"
+
+#: apps/wprs-app/qml/SceneModelMotion.qml
+msgid "On the timeline"
+msgstr "En la línea de tiempo"
+
+#: apps/wprs-app/qml/SceneModelMotion.qml
+msgid "New clip from the file…"
+msgstr "Clip nuevo del archivo…"
+
+#: apps/wprs-app/qml/SceneModelMotion.qml
+msgid "Root motion: the clip moves the layer"
+msgstr "Movimiento de raíz: el clip mueve la capa"
+
+#: apps/wprs-app/qml/SceneModelSwing.qml
+msgid "Hair"
+msgstr "Pelo"
+
+#: apps/wprs-app/qml/SceneModelSwing.qml
+msgid "Tail"
+msgstr "Cola"
+
+#: apps/wprs-app/qml/SceneModelSwing.qml
+msgid "Cloth"
+msgstr "Tela"
+
+#: apps/wprs-app/qml/SceneModelSwing.qml
+msgid "Antenna"
+msgstr "Antena"
+
+#: apps/wprs-app/qml/SceneModelSwing.qml
+msgid "Chain"
+msgstr "Cadena"
+
+#: apps/wprs-app/qml/SceneModelSwing.qml
+msgid "Jelly"
+msgstr "Gelatina"
+
+#: apps/wprs-app/qml/SceneModelSwing.qml
+msgid "Swinging bones"
+msgstr "Huesos que se balancean"
+
+#: apps/wprs-app/qml/SceneModelSwing.qml
+msgid "%1 swings as %2, stiffness %3, wind %4"
+msgstr "%1 se balancea como %2, rigidez %3, viento %4"
+
+#: apps/wprs-app/qml/SceneModelSwing.qml
+msgid ""
+"Swinging stops at the lowest quality level, where the bones keep their "
+"animation."
+msgstr ""
+"El balanceo se detiene en el nivel de calidad más bajo, donde los huesos "
+"mantienen su animación."
 
 #: apps/wprs-app/qml/SceneModelTools.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
@@ -3475,6 +3692,38 @@ msgstr "Tamaño"
 #: apps/wprs-app/qml/SceneModelTurn.qml
 msgid "Drag away from the model to make it bigger"
 msgstr "Arrastra lejos del modelo para agrandarlo"
+
+#: apps/wprs-app/qml/SceneNewMaterial.qml
+msgid "Name of a new material shader"
+msgstr "Nombre de un shader de material nuevo"
+
+#: apps/wprs-app/qml/SceneNewMaterial.qml
+msgid "New material shader"
+msgstr "Shader de material nuevo"
+
+#: apps/wprs-app/qml/SceneNewMaterial.qml
+msgid ""
+"Material shaders write fn material(s: Surface) -> Surface in effects/NAME."
+"wgsl of the package; they read frame and param(0u) to param(7u)."
+msgstr ""
+"Los shaders de material escriben fn material(s: Surface) -> Surface en "
+"effects/NOMBRE.wgsl del paquete; leen frame y de param(0u) a param(7u)."
+
+#: apps/wprs-app/qml/SceneNewMaterial.qml
+msgid "%1 builds"
+msgstr "%1 se compila"
+
+#: apps/wprs-app/qml/SceneNewMaterial.qml
+msgid "%1, line %2, column %3: %4"
+msgstr "%1, línea %2, columna %3: %4"
+
+#: apps/wprs-app/qml/SceneNewMaterial.qml
+msgid "%1: %2"
+msgstr "%1: %2"
+
+#: apps/wprs-app/qml/SceneNewMaterial.qml
+msgid "Check again"
+msgstr "Comprobar de nuevo"
 
 #: apps/wprs-app/qml/SceneNormals.qml
 msgid "Generate normals from the picture"
@@ -3535,6 +3784,59 @@ msgstr "Sobre todo"
 #: apps/wprs-app/qml/SceneParts.qml
 msgid "Only over %1"
 msgstr "Solo sobre %1"
+
+#: apps/wprs-app/qml/ScenePathRow.qml
+msgid "%1, %2 s"
+msgstr "%1, %2 s"
+
+#: apps/wprs-app/qml/ScenePathRow.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Loop"
+msgstr "Bucle"
+
+#: apps/wprs-app/qml/ScenePathRow.qml
+msgid "Remove this key"
+msgstr "Quitar esta clave"
+
+#: apps/wprs-app/qml/ScenePathRow.qml
+msgid "Key the view at %1 s"
+msgstr "Clave de la vista a los %1 s"
+
+#: apps/wprs-app/qml/ScenePaths3d.qml apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Camera paths"
+msgstr "Recorridos de cámara"
+
+#: apps/wprs-app/qml/ScenePaths3d.qml
+msgid "Name of a new path"
+msgstr "Nombre de un recorrido nuevo"
+
+#: apps/wprs-app/qml/ScenePaths3d.qml
+msgid "Add from the view"
+msgstr "Añadir desde la vista"
+
+#: apps/wprs-app/qml/ScenePaths3d.qml apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "In order"
+msgstr "En orden"
+
+#: apps/wprs-app/qml/ScenePaths3d.qml
+msgid "At random"
+msgstr "Al azar"
+
+#: apps/wprs-app/qml/ScenePaths3d.qml
+msgid "Cut"
+msgstr "Corte"
+
+#: apps/wprs-app/qml/ScenePaths3d.qml
+msgid "Through black"
+msgstr "Pasando por negro"
+
+#: apps/wprs-app/qml/ScenePaths3d.qml
+msgid "Crossing"
+msgstr "Cruzado"
+
+#: apps/wprs-app/qml/ScenePaths3d.qml
+msgid "Fly through the paths from the camera"
+msgstr "Recorrer los caminos desde la cámara"
 
 #: apps/wprs-app/qml/ScenePhysicsBounds.qml
 msgid "Bound its turn, in degrees"
@@ -3727,10 +4029,6 @@ msgstr "Doblar hacia el otro lado"
 #: apps/wprs-app/qml/SceneRigIk.qml
 msgid "Reaches for %1"
 msgstr "Alcanza %1"
-
-#: apps/wprs-app/qml/SceneRigIk.qml apps/wprs-app/qml/facade/SceneLabels.qml
-msgid "Weight"
-msgstr "Peso"
 
 #: apps/wprs-app/qml/SceneRigIk.qml
 msgid "Limit"
@@ -3957,6 +4255,43 @@ msgstr "Actualizar"
 msgid "User properties"
 msgstr "Propiedades de usuario"
 
+#: apps/wprs-app/qml/SceneShadows3d.qml apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Shadows"
+msgstr "Sombras"
+
+#: apps/wprs-app/qml/SceneShadows3d.qml
+msgid "At most %1 lights cast shadows; tiers draw %2."
+msgstr "Como mucho %1 luces dan sombra; los niveles de equipo dibujan %2."
+
+#: apps/wprs-app/qml/SceneShadows3d.qml
+msgid "%1 casts shadows"
+msgstr "%1 da sombra"
+
+#: apps/wprs-app/qml/SceneShadows3d.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Automatic"
+msgstr "Automático"
+
+#: apps/wprs-app/qml/SceneShadows3d.qml apps/wprs-app/qml/SceneSwarmSwirl.qml
+msgid "%1 px"
+msgstr "%1 px"
+
+#: apps/wprs-app/qml/SceneShadows3d.qml apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Bias"
+msgstr "Sesgo"
+
+#: apps/wprs-app/qml/SceneShadows3d.qml
+msgid "%1 px, %2 px on phones, %3 px at Q0"
+msgstr "%1 px, %2 px en teléfonos, %3 px en Q0"
+
+#: apps/wprs-app/qml/SceneShadows3d.qml
+msgid "none"
+msgstr "ninguna"
+
+#: apps/wprs-app/qml/SceneShadows3d.qml
+msgid "Show where shadows fall and the frusta of the maps"
+msgstr "Mostrar dónde caen las sombras y los volúmenes de los mapas"
+
 #: apps/wprs-app/qml/SceneShapes.qml
 msgid "Blend shapes in the preview"
 msgstr "Formas de mezcla en la vista previa"
@@ -4069,6 +4404,18 @@ msgstr "Mira"
 #: apps/wprs-app/qml/SceneStageCamera.qml
 msgid "Drag to move what the scene camera looks at"
 msgstr "Arrastra para mover lo que mira la cámara de la escena"
+
+#: apps/wprs-app/qml/SceneStagePaths.qml
+msgid "Drag to move this key of the camera path"
+msgstr "Arrastra para mover esta clave del recorrido de cámara"
+
+#: apps/wprs-app/qml/SceneStagePaths.qml
+msgid "Camera now"
+msgstr "Cámara ahora"
+
+#: apps/wprs-app/qml/SceneStagePaths.qml
+msgid "Where the paths put the camera at this time"
+msgstr "Dónde ponen los recorridos la cámara en este momento"
 
 #: apps/wprs-app/qml/SceneSwarm.qml
 msgid "This control point follows a value; moving it replaces the value"
@@ -4673,10 +5020,6 @@ msgid "Drag to widen or narrow how far the noise turns them"
 msgstr "Arrastra para abrir o cerrar cuánto las gira el ruido"
 
 #: apps/wprs-app/qml/SceneSwarmSwirl.qml
-msgid "%1 px"
-msgstr "%1 px"
-
-#: apps/wprs-app/qml/SceneSwarmSwirl.qml
 msgid "Drag to change how far births move"
 msgstr "Arrastra para cambiar cuánto se mueven los nacimientos"
 
@@ -5024,11 +5367,6 @@ msgstr "Mosaico"
 #: apps/wprs-app/qml/facade/LabelWords.qml
 msgid "Span"
 msgstr "Extender"
-
-#: apps/wprs-app/qml/facade/LabelWords.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "In order"
-msgstr "En orden"
 
 #: apps/wprs-app/qml/facade/LabelWords.qml
 msgid "Shuffled"
@@ -6429,10 +6767,6 @@ msgid "Caustics"
 msgstr "Cáusticas"
 
 #: apps/wprs-app/qml/facade/SceneEffects.qml
-msgid "Chroma key"
-msgstr "Croma"
-
-#: apps/wprs-app/qml/facade/SceneEffects.qml
 msgid "Chromatic aberration"
 msgstr "Aberración cromática"
 
@@ -6555,10 +6889,6 @@ msgid "Spin"
 msgstr "Velocidad de giro"
 
 #: apps/wprs-app/qml/facade/SceneEffects.qml
-msgid "Sway"
-msgstr "Vaivén"
-
-#: apps/wprs-app/qml/facade/SceneEffects.qml
 msgid "Tilt-shift"
 msgstr "Efecto miniatura"
 
@@ -6646,10 +6976,6 @@ msgid "To"
 msgstr "Hasta"
 
 #: apps/wprs-app/qml/facade/SceneLabels.qml
-msgid "Tolerance"
-msgstr "Tolerancia"
-
-#: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Tone mapping"
 msgstr "Mapeo de tonos"
 
@@ -6676,10 +7002,6 @@ msgstr "Traslación"
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Trigger"
 msgstr "Disparador"
-
-#: apps/wprs-app/qml/facade/SceneLabels.qml
-msgid "On"
-msgstr "Encendido"
 
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Turbulence"
@@ -6803,10 +7125,6 @@ msgstr "Partículas"
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Parts"
 msgstr "Partes"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Camera paths"
-msgstr "Recorridos de cámara"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Periodic"
@@ -7025,8 +7343,12 @@ msgid "Shadow"
 msgstr "Sombra"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Shadows"
-msgstr "Sombras"
+msgid "Shadow bias"
+msgstr "Desplazamiento de la sombra"
+
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Shadow map size"
+msgstr "Tamaño del mapa de sombras"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
@@ -7258,14 +7580,6 @@ msgid "Factor"
 msgstr "Factor"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Fade in"
-msgstr "Entrada gradual"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Fade out"
-msgstr "Salida gradual"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Fallback fonts"
 msgstr "Fuentes de respaldo"
 
@@ -7435,10 +7749,6 @@ msgid "Keep distance"
 msgstr "Mantener la distancia"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Key color"
-msgstr "Color clave"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Keyframes"
 msgstr "Fotogramas clave"
 
@@ -7501,10 +7811,6 @@ msgstr "Ajustes bloqueados"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Logarithmic scale"
 msgstr "Escala logarítmica"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Loop"
-msgstr "Bucle"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Brightness only"
@@ -7682,10 +7988,6 @@ msgstr "Artista del álbum"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Artist"
 msgstr "Artista"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Automatic"
-msgstr "Automático"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Average"
@@ -8181,12 +8483,8 @@ msgid "Animated"
 msgstr "Animada"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Animation"
-msgstr "Animación"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Animation layers"
-msgstr "Capas de animación"
+msgid "Turn in 3D"
+msgstr "Giro en 3D"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Arc"
@@ -8243,10 +8541,6 @@ msgstr "Valor base"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Bend"
 msgstr "Doblez"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Bias"
-msgstr "Sesgo"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Blend mode"
@@ -8519,10 +8813,6 @@ msgstr "Activo cuando"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "End"
 msgstr "Fin"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Events"
-msgstr "Eventos"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Every"

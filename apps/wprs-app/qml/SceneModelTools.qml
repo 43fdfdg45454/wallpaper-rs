@@ -91,6 +91,12 @@ ColumnLayout {
         })
     }
 
+    SceneModelMotion {
+        Layout.fillWidth: true
+        page: tools.page
+        layerId: tools.figure
+    }
+
     SceneMaterials3d {
         Layout.fillWidth: true
         page: tools.page

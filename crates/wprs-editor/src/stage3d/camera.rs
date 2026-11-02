@@ -136,3 +136,17 @@ pub(crate) fn tones(doc: &Value, e: &TonesEdit) -> Result<Vec<Op>> {
     }
     Ok(ops)
 }
+
+pub(crate) fn debug(doc: &Value, show: Option<&str>) -> Result<Vec<Op>> {
+    let at = format!("{EDITOR}/debug3d");
+    match show {
+        Some(s) => {
+            ensure!(
+                ["mask", "matte", "shadows"].contains(&s),
+                said("editor.debug3d", "the 3D view shows mask, matte or shadows", &[])
+            );
+            Ok(set(doc, &at, json!(s)))
+        }
+        None => Ok(doc.pointer(&at).map(|_| Op::Remove { path: at.clone() }).into_iter().collect()),
+    }
+}

@@ -1,8 +1,9 @@
+use super::Fig;
 use super::Puppet;
 use crate::resolve::Context;
 use crate::rigged::Path;
 use crate::rigged::math::{Trs, conjugate, nlerp, normalized, qmul, turn};
-use crate::{MeshLayer, sample};
+use crate::sample;
 
 fn mix(local: &mut Trs, rest: &Trs, path: Path, v: &[f32], (w, additive): (f32, bool)) {
     let lerp = |a: [f32; 3], b: [f32; 3]| std::array::from_fn(|i| a[i] + (b[i] - a[i]) * w);
@@ -25,7 +26,7 @@ fn mix(local: &mut Trs, rest: &Trs, path: Path, v: &[f32], (w, additive): (f32, 
 }
 
 impl Puppet {
-    pub(crate) fn blend(&mut self, cx: &Context, m: &MeshLayer) {
+    pub(crate) fn blend(&mut self, cx: &Context, m: &Fig) {
         let Puppet { heads, clips, locals, shape, sorted, buffer, rig, layer, .. } = self;
         locals.clear();
         locals.extend(rig.joints.iter().map(|j| j.rest));
@@ -73,6 +74,15 @@ impl Puppet {
                         let v = [rest.t[0] + x, rest.t[1] - y, rest.t[2]];
                         mix(&mut locals[n], &rest, Path::Translation, &v, (w, additive));
                     }
+                    if !keys.angles.is_empty() {
+                        let q = qmul(rest.r, euler(sample(&keys.angles, t).0));
+                        mix(&mut locals[n], &rest, Path::Rotation, &q, (w, additive));
+                    }
+                    if !keys.shift.is_empty() {
+                        let [x, y, z] = sample(&keys.shift, t).0;
+                        let v = [rest.t[0] + x, rest.t[1] + y, rest.t[2] + z];
+                        mix(&mut locals[n], &rest, Path::Translation, &v, (w, additive));
+                    }
                     if !keys.scale.is_empty() {
                         let [x, y] = sample(&keys.scale, t).0;
                         let v = [rest.s[0] * x, rest.s[1] * y, rest.s[2]];
@@ -102,11 +112,21 @@ impl Puppet {
     }
 }
 
+pub(crate) fn euler(degrees: [f32; 3]) -> [f32; 4] {
+    let axis = |k: usize| {
+        let (s, c) = (degrees[k].to_radians() / 2.0).sin_cos();
+        let mut q = [0.0, 0.0, 0.0, c];
+        q[k] = s;
+        q
+    };
+    qmul(axis(2), qmul(axis(1), axis(0)))
+}
+
 fn weigh(now: f32, v: f32, default: f32, (w, additive): (f32, bool)) -> f32 {
     if additive { now + (v - default) * w } else { now + (v - now) * w }
 }
 
-fn express(rig: &crate::Rigged, m: &MeshLayer, shape: &mut [f32], name: &str, x: f32) {
+fn express(rig: &crate::Rigged, m: &Fig, shape: &mut [f32], name: &str, x: f32) {
     match m.rig.expressions.get(name) {
         Some(parts) => {
             parts.iter().for_each(|(s, k)| rig.shape(s).into_iter().for_each(|i| shape[i] += k * x))

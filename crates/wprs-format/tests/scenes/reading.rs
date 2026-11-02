@@ -5,29 +5,35 @@ fn scenes_name_their_newer_features_and_engines_refuse_what_they_cannot_draw() {
     let layers = json!([
         { "id": "sky", "type": "image", "image": "sky", "blend": "linear_burn", "lighting": { "roughness": 0.5 } },
         { "id": "lamp", "type": "light", "light": "point", "intensity": 2, "shadows": true },
+        { "id": "title", "type": "text", "text": { "media": "title" } },
         { "id": "rain", "type": "sound", "sound": "rain", "stream": true }
     ]);
     let text =
         scene(layers, json!({ "assets": { "sky": { "path": "sky.png" }, "rain": { "path": "rain.wav" } } }));
     let wav = [&b"RIFF\0\0\0\0WAVEfmt \x10\0\0\0\x01\0\x01\0\x40\x1f\0\0\x80\x3e\0\0\x02\0\x10\0data\x80\x3e\0\0"[..], &[0; 16_000]].concat();
     let files: [(&str, &[u8]); 2] = [("scene.json", text.as_bytes()), ("rain.wav", &wav)];
-    let all = ["blend_modes2", "lighting2d", "lights", "shadows", "sound", "sound2"];
-    let package = load(&manifest(&all), &files).unwrap();
+    let all =
+        ["blend_modes2", "inputs.media", "lighting2d", "lights", "media_info", "shadows", "sound", "sound2"];
+    let mut listed = manifest(&all);
+    listed.inputs = vec![wprs_format::Input::Media];
+    let package = load(&listed, &files).unwrap();
     assert_eq!(package.facts.features.iter().collect::<Vec<_>>(), all);
     let desktop = features::playable(&package.manifest, &package.facts, Platform::Desktop).unwrap_err();
     assert_eq!(
         desktop.to_string(),
-        "this package needs a newer version of wallpaper-rs: it uses the feature shadows (casts shadows)"
+        "this package needs a newer version of wallpaper-rs: it uses the feature media_info (shows the title, cover or progress of what the media player plays)"
     );
     let phone =
         features::playable(&package.manifest, &package.facts, Platform::Android).unwrap_err().to_string();
     assert!(
-        phone.contains("shadows") && !phone.contains("lighting2d") && !phone.contains("blend_modes2"),
+        phone.contains("media_info") && !phone.contains("shadows") && !phone.contains("lighting2d"),
         "{phone}"
     );
     assert_eq!(features::lacks("android", &package.facts.features), ["sound", "sound2"]);
     assert!(package.facts.facets.iter().all(|f| f != "desktop" && f != "android"));
-    let unlisted = load(&manifest(&["sound", "sound2"]), &files).map(drop).unwrap_err().to_string();
+    let mut few = manifest(&["sound", "sound2"]);
+    few.inputs = vec![wprs_format::Input::Media];
+    let unlisted = load(&few, &files).map(drop).unwrap_err().to_string();
     assert!(
         unlisted.contains("add \"blend_modes2\" (mixes layers with the newer blend modes)"),
         "{unlisted}"

@@ -1,6 +1,10 @@
 use serde_json::{Value, json};
 
+mod rig;
 mod shapes;
+
+pub use rig::ForgeRig;
+use rig::finish as pack;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ForgeShape {
@@ -67,9 +71,9 @@ impl Out {
         let view = self.view(bytemuck::cast_slice(data));
         let mut a =
             json!({ "bufferView": view, "componentType": 5126, "count": data.len() / width, "type": kind });
-        if width == 3 {
+        if width == 3 || width == 1 {
             let range = |f: fn(f32, f32) -> f32, s: f32| {
-                (0..3).map(|k| data.iter().skip(k).step_by(3).copied().fold(s, f)).collect::<Vec<_>>()
+                (0..width).map(|k| data.iter().skip(k).step_by(width).copied().fold(s, f)).collect::<Vec<_>>()
             };
             (a["min"], a["max"]) = (json!(range(f32::min, f32::MAX)), json!(range(f32::max, f32::MIN)));
         }
@@ -115,25 +119,9 @@ impl Forge {
             .iter()
             .map(|m| shapes::material(m, &mut out, &mut textures, &mut images))
             .collect();
-        while !out.bin.len().is_multiple_of(4) {
-            out.bin.push(0);
-        }
         let doc = json!({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [{ "nodes": (0..nodes.len()).collect::<Vec<_>>() }],
             "nodes": nodes, "meshes": meshes, "materials": materials, "textures": textures, "images": images,
-            "accessors": out.accessors, "bufferViews": out.views, "buffers": [{ "byteLength": out.bin.len() }] });
-        let mut text = doc.to_string().into_bytes();
-        while !text.len().is_multiple_of(4) {
-            text.push(b' ');
-        }
-        let total = 12 + 8 + text.len() + 8 + out.bin.len();
-        let mut glb = Vec::with_capacity(total);
-        for word in [0x4654_6C67, 2, total as u32, text.len() as u32, 0x4E4F_534A] {
-            glb.extend_from_slice(&u32::to_le_bytes(word));
-        }
-        glb.extend_from_slice(&text);
-        glb.extend_from_slice(&(out.bin.len() as u32).to_le_bytes());
-        glb.extend_from_slice(&0x004E_4942u32.to_le_bytes());
-        glb.extend_from_slice(&out.bin);
-        glb
+            "accessors": out.accessors, "bufferViews": out.views });
+        pack(doc, out.bin)
     }
 }

@@ -1,8 +1,9 @@
+use super::Fig;
 use super::limb::{angle, around, end, gap, length, mirrored, offset, pivot, range, tip, turn, wrap};
 use super::{Puppet, Seat};
 use crate::resolve::Context;
 use crate::rigged::Rigged;
-use crate::{Bend, MeshLayer, Reach};
+use crate::{Bend, Reach};
 
 pub const IK_ROUNDS: usize = 10;
 
@@ -25,7 +26,7 @@ pub(crate) struct Chain {
     pub turns: Vec<f32>,
 }
 
-pub(super) fn chains(rig: &Rigged, m: &MeshLayer) -> Vec<Chain> {
+pub(super) fn chains(rig: &Rigged, m: &Fig) -> Vec<Chain> {
     let resolve = |(entry, ik): (usize, &crate::IkChain)| {
         let nodes: Vec<u16> =
             ik.chain.iter().map(|b| rig.joint(b).map(|i| i as u16)).collect::<Option<_>>()?;
@@ -58,7 +59,7 @@ fn clamp(c: &Chain, i: usize, now: f32, delta: f32, sign: f32) -> f32 {
 }
 
 impl Puppet {
-    pub(crate) fn reach(&mut self, cx: &Context, m: &MeshLayer, seat: &Seat) {
+    pub(crate) fn reach(&mut self, cx: &Context, m: &Fig, seat: &Seat) {
         for k in 0..self.chains.len() {
             let ik = &m.rig.ik[self.chains[k].entry];
             let weight = ik.weight.get(cx).clamp(0.0, 1.0);

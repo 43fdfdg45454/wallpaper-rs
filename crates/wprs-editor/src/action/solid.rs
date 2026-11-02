@@ -26,6 +26,15 @@ pub enum Edit3d {
     Camera(CameraEdit),
     View(ViewEdit),
     Tones(TonesEdit),
+    Shadows(super::ShadowEdit),
+    Path(super::PathEdit),
+    NewMaterial {
+        name: String,
+    },
+    Debug {
+        #[serde(default)]
+        show: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -71,6 +80,7 @@ pub struct MaterialEdit {
     pub color: Option<Value>,
     pub emissive: Option<Value>,
     pub params: BTreeMap<String, f64>,
+    pub key: Option<Value>,
     pub clear: bool,
 }
 

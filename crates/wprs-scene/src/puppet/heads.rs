@@ -1,7 +1,8 @@
+use super::Fig;
 use super::{ClipMap, Head, Puppet};
 use crate::resolve::Context;
 use crate::rigged::Rigged;
-use crate::{AnimClip, Course, Fired, Loop, MAX_ANIMATION_LAYERS, MAX_FIRED, MeshLayer, VideoCommand, Wake};
+use crate::{AnimClip, Course, Fired, Loop, MAX_ANIMATION_LAYERS, MAX_FIRED, VideoCommand, Wake};
 
 pub(super) fn map(rig: &Rigged, c: &AnimClip) -> ClipMap {
     let motion = match &c.animation {
@@ -16,7 +17,7 @@ pub(super) fn map(rig: &Rigged, c: &AnimClip) -> ClipMap {
     ClipMap { motion, bones, shapes, order, length: (end - c.from).max(0.0) }
 }
 
-pub(super) fn head(rig: &Rigged, m: &MeshLayer, layer: Option<usize>, clip: Option<usize>) -> Option<Head> {
+pub(super) fn head(rig: &Rigged, m: &Fig, layer: Option<usize>, clip: Option<usize>) -> Option<Head> {
     let animation = layer.map(|i| &m.rig.animations[i]);
     let clip = match animation {
         Some(a) => m.rig.clips.iter().position(|c| c.id == a.clip)?,
@@ -28,7 +29,7 @@ pub(super) fn head(rig: &Rigged, m: &MeshLayer, layer: Option<usize>, clip: Opti
         false => rig.joints.iter().map(|j| bones.contains(&j.name)).collect(),
     };
     let (t, fade, ended, off, held, rate, weight, speed) = (0.0, 0.0, false, false, None, None, None, 1.0);
-    Some(Head { clip, layer, t, fade, ended, off, held, rate, weight, mask, speed, fresh: true })
+    Some(Head { clip, layer, t, fade, ended, off, held, rate, weight, mask, speed, fresh: true, laps: 0 })
 }
 
 fn toward(fade: f32, on: bool, dt: f32, (up, down): (f32, f32)) -> f32 {
@@ -44,7 +45,7 @@ impl Puppet {
     pub(crate) fn step(
         &mut self,
         cx: &Context,
-        m: &MeshLayer,
+        m: &Fig,
         dt: f32,
         (ended, heard): (&mut Vec<String>, &mut Vec<(Fired, f32)>),
     ) {
@@ -81,13 +82,15 @@ impl Puppet {
                 ended.push(format!("{}#{}", self.layer, clip.id));
             }
             if clip.repeat != Loop::Once {
-                h.t = h.t.rem_euclid(super::cues::period(clip.repeat, length));
+                let period = super::cues::period(clip.repeat, length);
+                h.laps += (h.t / period).floor().max(0.0) as u32;
+                h.t = h.t.rem_euclid(period);
             }
         }
         self.wake = wake;
     }
 
-    pub(crate) fn steer(&mut self, m: &MeshLayer, clip: &str, commands: &[VideoCommand]) {
+    pub(crate) fn steer(&mut self, m: &Fig, clip: &str, commands: &[VideoCommand]) {
         let Some(c) = m.rig.clips.iter().position(|x| x.id == clip) else { return };
         if !self.heads.iter().any(|h| h.clip == c) && self.heads.len() < 2 * MAX_ANIMATION_LAYERS {
             self.heads.extend(head(&self.rig, m, None, Some(c)));
@@ -97,15 +100,18 @@ impl Puppet {
             for command in commands {
                 match *command {
                     VideoCommand::Play if h.ended => {
-                        (h.t, h.ended, h.off, h.held, h.fresh) = (0.0, false, false, Some(true), true)
+                        (h.t, h.ended, h.off, h.held, h.fresh, h.laps) =
+                            (0.0, false, false, Some(true), true, 0)
                     }
                     VideoCommand::Play => (h.off, h.held) = (false, Some(true)),
                     VideoCommand::Pause => h.held = Some(false),
                     VideoCommand::Stop => {
-                        (h.t, h.ended, h.off, h.held, h.fresh) = (0.0, false, true, Some(false), true)
+                        (h.t, h.ended, h.off, h.held, h.fresh, h.laps) =
+                            (0.0, false, true, Some(false), true, 0)
                     }
                     VideoCommand::Seek(s) => {
-                        (h.t, h.ended, h.fresh) = (f64::from(s).clamp(0.0, length), false, s <= 0.0)
+                        (h.t, h.ended, h.fresh, h.laps) =
+                            (f64::from(s).clamp(0.0, length), false, s <= 0.0, 0)
                     }
                     VideoCommand::Rate(r) => h.rate = Some(r.clamp(0.0, 16.0)),
                     VideoCommand::Weight(w) => h.weight = Some(w.clamp(0.0, 1.0)),
@@ -115,7 +121,7 @@ impl Puppet {
         self.dirty = true;
     }
 
-    pub(crate) fn courses(&self, m: &MeshLayer, out: &mut Vec<Course>) {
+    pub(crate) fn courses(&self, m: &Fig, out: &mut Vec<Course>) {
         for (i, h) in self.heads.iter().enumerate() {
             if self.heads[..i].iter().any(|o| o.clip == h.clip) {
                 continue;

@@ -319,11 +319,11 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `blend_shapes` | sets `shapes` or `expressions` on a mesh or model | runs | runs |
 | `attach` | sets `attach` on a layer | runs | runs |
 | `model3d` | has `model` layers or groups with `space: 3d` | runs | runs |
-| `model_animation` | sets `clips`, `animations`, `ik`, `physics`, `rules`, `shapes`, `expressions` or `root_motion` on a model | refused | refused |
-| `material_shaders` | shades a model with `fur`, `foliage`, `chroma` or a material shader of its own | refused | refused |
+| `model_animation` | sets `clips`, `animations`, `ik`, `physics`, `rules`, `shapes`, `expressions` or `root_motion` on a model | runs | runs |
+| `material_shaders` | shades a model with `fur`, `foliage`, `chroma` or a material shader of its own | runs | runs |
 | `camera3d` | sets `camera3d` | runs | runs |
-| `camera_paths` | sets `camera3d.paths` | refused | refused |
-| `shadows` | sets `shadows` on a light, or `cast_shadows` or `receive_shadows` on a material | refused | refused |
+| `camera_paths` | sets `camera3d.paths` | runs | runs |
+| `shadows` | sets `shadows` on a light, or `cast_shadows` or `receive_shadows` on a material | runs | runs |
 | `particles2` | moves particles in world space, with control points, per-layer `instance` or `render`, scripts that use `particles`, emitter timing, newer emitter shapes, initializers and forces, operator windows, render `brightness`, `cycles`, `order` or a stretch range, `init.gradient`, a `mask` collider, or beyond the older limits (8 systems, 4 emitters, 8 forces, 4 colliders, 10 s of prewarm) | runs | runs |
 | `particle_children` | sets `children` on a system | runs | runs |
 | `particle_depth` | sets `perspective`, `init.depth` or `init.depth_speed` | runs | runs |

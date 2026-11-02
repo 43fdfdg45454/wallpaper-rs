@@ -42,11 +42,24 @@ pub(crate) struct Skin {
 }
 
 pub(crate) fn rigged(dir: &Path, doc: &Value, layer: &Value) -> Result<(String, String, Rigged)> {
-    let not = || anyhow!(said("editor.not_mesh", "the layer is not a mesh", &[]));
-    let id = layer["mesh"].as_str().filter(|_| layer["type"] == "mesh").ok_or_else(not)?;
+    let not = || anyhow!(said("editor.not_figure", "the layer is not a mesh or a model", &[]));
+    let solid = layer["type"] == "model";
+    let id = match solid {
+        true => layer["model"].as_str(),
+        false => layer["mesh"].as_str().filter(|_| layer["type"] == "mesh"),
+    };
+    let id = id.ok_or_else(not)?;
     let path = crate::rig::asset(doc, id).ok_or_else(not)?;
-    let rig = Rigged::decode(&std::fs::read(dir.join(path))?).map_err(|e| anyhow!("{path} {e}"))?;
-    Ok((id.to_owned(), path.to_owned(), rig))
+    let bytes = std::fs::read(dir.join(path))?;
+    let rig = match solid {
+        true => wprs_scene::Model::skeleton(&bytes),
+        false => Rigged::decode(&bytes),
+    };
+    Ok((id.to_owned(), path.to_owned(), rig.map_err(|e| anyhow!("{path} {e}"))?))
+}
+
+pub(crate) fn solid(layer: &Value) -> bool {
+    layer["type"] == "model"
 }
 
 pub(crate) fn size(doc: &Value, layer: &Value) -> [f32; 2] {

@@ -1,6 +1,7 @@
+use super::Fig;
 use super::limb::boxed;
 use crate::resolve::Context;
-use crate::{Affine, Extent, Layer, MeshLayer};
+use crate::{Affine, Extent, Layer};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Seat {
@@ -9,7 +10,7 @@ pub(crate) struct Seat {
     pub size: [f32; 2],
 }
 
-pub(crate) fn size(cx: &Context, layer: &Layer, m: &MeshLayer) -> [f32; 2] {
+pub(crate) fn size(cx: &Context, layer: &Layer, m: &Fig) -> [f32; 2] {
     match cx.script.layers.get(&layer.id).and_then(|s| s.size) {
         Some(Extent::Box(b)) => b,
         _ => m.size.unwrap_or(cx.canvas),
@@ -29,13 +30,7 @@ pub(crate) fn mount_on(cx: &Context, layer: &Layer, size: [f32; 2], world: Affin
 }
 
 impl Seat {
-    pub(crate) fn new(
-        cx: &Context,
-        layer: &Layer,
-        m: &MeshLayer,
-        pointer: Option<[f32; 2]>,
-        placed: bool,
-    ) -> Seat {
+    pub(crate) fn new(cx: &Context, layer: &Layer, m: &Fig, pointer: Option<[f32; 2]>, placed: bool) -> Seat {
         let size = size(cx, layer, m);
         let to_mesh = if placed { mount(cx, layer, size).inverse() } else { Affine::IDENTITY };
         let v = cx.view;

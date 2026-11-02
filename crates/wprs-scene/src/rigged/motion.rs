@@ -82,7 +82,7 @@ impl Channel {
     }
 }
 
-pub(super) fn motions(bin: &Bin, rig: &mut Rigged) -> Result<(), String> {
+pub(crate) fn motions(bin: &Bin, rig: &mut Rigged) -> Result<(), String> {
     let doc = bin.doc;
     let mut total = 0;
     for (i, a) in doc.animations.iter().enumerate() {

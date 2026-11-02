@@ -85,6 +85,10 @@ pub struct ClipEdit {
     pub length: Option<f32>,
     #[serde(default, rename = "loop")]
     pub repeat: Option<Loop>,
+    #[serde(default)]
+    pub animation: Option<String>,
+    #[serde(default)]
+    pub from: Option<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -101,6 +105,10 @@ pub struct ClipKey {
     pub position: Option<[f32; 2]>,
     #[serde(default)]
     pub scale: Option<[f32; 2]>,
+    #[serde(default)]
+    pub angles: Option<[f32; 3]>,
+    #[serde(default)]
+    pub shift: Option<[f32; 3]>,
     #[serde(default)]
     pub shape: Option<String>,
     #[serde(default)]

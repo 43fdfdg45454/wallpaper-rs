@@ -396,7 +396,9 @@ light anything.
 | `length` | tube lights only: 1 to 100000 px (default 256) |
 | `volumetric` | point and spot lights only: `{ "density" (0 to 1, default 0.2), "samples" (4 to 64, default 16), "shafts" (0 to 1, default 0) }` lights the air (`volumetric_lights`), see below |
 | `texture` | spot lights only: the asset id of a picture or video, or `{ "layer": id }`, that the light projects (`light_textures`); at most 4 spot lights of a scene project, see below |
-| `shadows` | point, spot and directional lights: `true` casts shadows of models and of materials that `receive_shadows`; at most 2 lights per scene (`shadows`) |
+| `shadows` | point, spot and directional lights: `true` casts shadows of models on models whose materials take them; at most 2 lights per scene (`shadows`), see "Models and 3D" |
+| `shadow_resolution` | with `shadows`: 256 to 4096 pixels a side of its map (for point lights, of each of its six faces) instead of the size picked for its kind |
+| `shadow_bias` | with `shadows`: 0 to 1 (default 0.2), how far surfaces lift away from their own shadow; raise it against stripes, lower it when shadows leave their casters |
 
 A spot or directional light with no rotation points down the canvas and turns clockwise with
 `rotation`; the first number of `transform.tilt` (−89 to 89 degrees) dips it into the canvas, so
@@ -565,7 +567,7 @@ layer, with its effects, masks, blending and `transform`; a `group` with `space:
 models in one pass with a shared depth into a box the size of the canvas, placed where a child of the
 group without a `transform` would be, which then composes as one layer in the place of the group. Models
 also take `clips`, `animations`, `ik`, `physics`, `rules`, `shapes`, `expressions` and `hit` as meshes
-do (`model_animation`, which engines run later), and:
+do (`model_animation`, see "Animated models" below), and:
 
 | Field | Meaning |
 |-------|---------|
@@ -587,7 +589,39 @@ Primitives without a material take a white one. Textures may be PNG, JPEG or Web
 0 to 10), `unlit`, `fur` (`layers` 1 to 32, `length` 0 to 100, `density` 0 to 1), `foliage`
 (`strength` and `speed` 0 to 10, swaying with `canvas.wind`), `chroma` (`key` color, `threshold` and
 `softness` 0 to 1) or the id of a package effect with `stage: "material"` (`material_shaders` for all
-but `pbr` and `unlit`). Shadows of lights and materials name `shadows`.
+but `pbr` and `unlit`); `fur` also takes `comb_x`, `comb_y` and `comb_z` from −1 to 1, and all but `unlit`
+take the numbers of `pbr`. Shadows of lights and materials name `shadows`; both `cast_shadows` and
+`receive_shadows` are `true` unless set, which changes nothing until a light casts shadows.
+
+- **`fur`** draws its primitives again as shells pushed out along the normal, `layers` of them (12 by
+  default) at Q3, three quarters at Q2, half at Q1 and a quarter at Q0 (at least one); `length` is how
+  far the outer shell stands, in hundredths of the radius of the model (10 by default), `density` how
+  close the strands grow (0.5), and the comb bends them towards that direction of the model, more at the
+  tips. Strands thin out towards the tips and shade darker at their roots; the shells are cut, not
+  blended, so they need no sorting.
+- **`foliage`** sways the vertices with `canvas.wind`: the red of the vertex colors (`COLOR_0`) of the
+  file says how much each vertex moves (black stays), or, without vertex colors, the height within the
+  model. `strength` (1 by default) scales the sway, which reaches a twentieth of the radius of the model
+  for a wind of 100 pixels a second, and `speed` (1) its pace. Without wind, at the lowest quality or
+  when the wind stays still at nothing, foliage stays still and asks for no frames.
+- **`chroma`** makes the colors close to `key` (green by default) transparent: closer than `threshold`
+  (0.4) is cut, and the cut fades over `softness` (0.1) beyond it.
+- **A material shader of the package** (`stage: "material"`, checked and limited like every package
+  shader) gives `fn material(s: Surface) -> Surface`, which runs for each pixel after the maps are read
+  and before the light, and may change the place, normal, color, glow, roughness, metal and occlusion.
+  It may read `frame`, `param(0u)` to `param(7u)` (its parameters in their order, set by `params`), the
+  noise and color helpers, but no pictures. A shader that cannot be built is drawn as `pbr`, and the
+  stage renders again each frame while it reads time, audio or the pointer.
+
+Shadows are maps the models are drawn into from the light: 2 048 pixels a side for a directional light,
+fitted around the models of the stage, 1 024 for a spot light within its cone and six faces of 512 for a
+point light, all at most 4 096 (1 024 on phones, 2 048 on T2) and half of that at the lowest quality;
+`shadow_resolution` picks another size within those caps. Each pixel of a material that takes shadows
+reads its map four times around its place and blends them (percentage closer filtering), lifted along its
+normal by `shadow_bias`. Desktop computers (T3) draw shadows of the first 2 lights that cast them, T2 of
+the first one, and T0 and T1 of none. A map is drawn again only when its light, a caster, a pose or a
+swaying material changes, so a moving camera over still models reuses it. Primitives drawn with `blend`
+or `add` and materials with `cast_shadows: false` cast none.
 
 Light layers light the models as they light flat layers: each light stands on the plane through the
 point the camera looks at, under the point of the box where it is drawn, moved toward the viewer by
@@ -619,7 +653,41 @@ bound) and `up`; `paths` (at most 16 `{ "id", "keys", "ease", "loop" }`, each wi
 Without `camera3d` the camera stands at `[0, 0, 5]`, looks at the origin with `up` `[0, 1, 0]`, a
 `fov` of 60 degrees, `near` 0.1 and `far` 1000; depth is reversed (1 near, 0 far) in 32-bit floats.
 Scripts that use `camera` read `scene.camera3d` and set `{ "fov", "eye", "center", "up" }` for the next
-frame (`fov` 1 to 179, points within a million units). Paths name `camera_paths`, which engines run later.
+frame (`fov` 1 to 179, points within a million units); what they set wins over the paths.
+
+Paths (`camera_paths`) fly the camera through their keys on a centripetal Catmull-Rom curve, which
+passes through each key and never loops on keys close together; `up` and `fov` follow the same curve,
+and keys without them keep those of the camera. An open path holds its first key until its first `t`
+and lasts until its last key; a path with `loop` closes back on its first key one mean gap after its
+last key, without a jump in place or heading, and `ease` shapes the time along one pass. One open path
+plays once and holds its last key, asking for no more frames; one looping path loops for good; several
+paths play one after another, each once (a looping one for one turn), `sequential` in their order or
+`random` in a new order each round, and then start again. `fade` joins them: `black` darkens the last
+half of `duration` of a path and brightens the first half of the next one (the models of the stage fade
+to black, their alpha kept), and `cross` draws the last `duration` of a path over the start of the next
+one, mixing both pictures. Moving paths ask for frames, within `max_fps` and at most 30 a second at the
+lowest quality.
+
+#### Animated models
+
+A model with any of `clips`, `animations`, `ik`, `physics`, `rules`, `shapes`, `expressions` or
+`root_motion` (`model_animation`) is read with its skeleton: the joints of its skins and the nodes that
+carry meshes become bones, and its vertices stay in the space of their skin (at most 4 bones a vertex,
+weights adding up to 1 within 0.02) or of their node. Clips, animation layers (weight, rate, additive
+layers, fades and bone masks), rules, blend shapes and expressions work as on meshes, mixing the
+animations of the file; the keys of a clip may also give a bone `angles` (degrees around x, then y, then
+z) and `shift` (in units of the model, along x, y and z) added to its rest pose. The palette is worked out
+on the CPU at most once a frame and only for models that are shown, and the GPU skins each vertex with
+it in the vertex shader; blend shapes of the file (positions and normals) are mixed there too, the 8
+heaviest for each primitive. A still skinned model draws its rest pose, as the file places it. At most
+256 bones and parts, 1 024 nodes and 4 194 304 blend shape values a model.
+
+`physics` swings bones in the plane of x and y of the model, counting one unit of the model as 100
+pixels for `gravity`, `wind` and `translation`, and freezes at the lowest quality, where bones keep the
+pose of their animation. Chains of `ik` follow only `bone:` targets on models. With `root_motion`, the
+first playing clip that moves a bone of the file stops moving that bone along x and z and moves the layer
+instead, adding up each turn of a repeating clip, so that a walk walks on; up and down stays in the pose.
+A model that moves in its stage renders the stage again only on the frames where its pose changed.
 
 ## Values
 

@@ -9,6 +9,8 @@ use wprs_format::{Limits, open};
 use wprs_render::{Renderer, SceneAssets};
 use wprs_scene::{Quality, Runtime, Spare, Wake, effective};
 
+use crate::benching::{ms_of, spread};
+
 const WARMUP: usize = 10;
 
 #[derive(Subcommand, Debug)]
@@ -28,9 +30,11 @@ pub enum SceneCommand {
         screens: usize,
         #[arg(long, help = "Print the report as JSON")]
         json: bool,
+        #[arg(long, value_parser = ["t0", "t1", "t2", "t3"], help = "Apply the limits of this device tier")]
+        tier: Option<String>,
     },
     #[command(flatten)]
-    Author(crate::author::Author),
+    Author(Box<crate::author::Author>),
 }
 
 fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAssets)> {
@@ -48,25 +52,12 @@ fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAsse
     Ok((scene, values, assets))
 }
 
-fn spread(mut samples: Vec<f64>) -> serde_json::Value {
-    samples.sort_by(f64::total_cmp);
-    let at =
-        |q: f64| samples.get(((samples.len() as f64 - 1.0) * q).round() as usize).copied().unwrap_or(0.0);
-    let mean = samples.iter().sum::<f64>() / samples.len().max(1) as f64;
-    json!({ "mean": mean, "p50": at(0.5), "p95": at(0.95), "max": at(1.0) })
-}
-
-fn ms_of(value: &serde_json::Value, unit: &str) -> String {
-    let at = |key: &str| value[key].as_f64().unwrap_or(0.0);
-    format!("{:.3} {unit} (p95 {:.3}, max {:.3})", at("mean"), at("p95"), at("max"))
-}
-
 pub fn run(command: SceneCommand) -> Result<()> {
-    let (path, frames, size, fps, quality, screens, json) = match command {
-        SceneCommand::Bench { path, frames, size, fps, quality, screens, json } => {
-            (path, frames, size, fps, quality, screens.clamp(1, 16), json)
+    let (path, frames, size, fps, quality, screens, json, forced) = match command {
+        SceneCommand::Bench { path, frames, size, fps, quality, screens, json, tier } => {
+            (path, frames, size, fps, quality, screens.clamp(1, 16), json, tier)
         }
-        SceneCommand::Author(command) => return crate::authoring::run(command),
+        SceneCommand::Author(command) => return crate::authoring::run(*command),
     };
     let size = dimensions(&size)?;
     let (scene, values, assets) = load(&path)?;
@@ -74,6 +65,9 @@ pub fn run(command: SceneCommand) -> Result<()> {
         wprs_core::Config::default_path().and_then(|p| wprs_core::Config::load(&p)).map(|c| c.render.gpu);
     let r = Renderer::with_choice(None, &gpu.unwrap_or_default())?.renderer;
     let calibrated = r.calibrate(wprs_core::gpu_tier().as_deref());
+    if let Some(t) = forced {
+        r.force_tier(Some(serde_json::from_value(json!(t))?));
+    }
     let (tier, unit_ms) = (r.tier(), calibrated.unit_ms);
     let quality = match quality.as_deref() {
         Some(q) => serde_json::from_value(json!(q))?,

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use wprs_scene::{Inheritable, Orient, Refresh};
 
+pub use super::glows::SwarmLight;
 pub use super::tend::{Response, Strand, TendEdit};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

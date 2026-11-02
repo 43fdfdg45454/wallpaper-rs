@@ -43,7 +43,10 @@ fn body(dir: &Path, doc: &Value, layer: &Value) -> Value {
     out["defaults"] = json!(rig.defaults);
     out["animations"] =
         json!(rig.motions.iter().map(|m| json!({ "name": m.name, "length": m.length })).collect::<Vec<_>>());
-    match Skin::read(dir, &path, &rig, crate::skin::size(doc, layer)) {
+    out["model"] = json!(crate::skin::solid(layer));
+    let skin =
+        (!crate::skin::solid(layer)).then(|| Skin::read(dir, &path, &rig, crate::skin::size(doc, layer)));
+    match skin.unwrap_or_else(|| Err(anyhow::anyhow!("a model"))) {
         Ok(skin) => {
             let worlds = skin.worlds();
             let bones = skin.bones.iter().map(|b| {
@@ -61,7 +64,9 @@ fn body(dir: &Path, doc: &Value, layer: &Value) -> Value {
             (out["editable"], out["auto"]) = (json!(true), json!(skin.auto));
         }
         Err(_) => {
-            let skin = rig.palette.iter().map(|(n, _)| &rig.joints[*n as usize]);
+            let mut seen = std::collections::BTreeSet::new();
+            let skin =
+                rig.palette.iter().filter(|(n, _)| seen.insert(*n)).map(|(n, _)| &rig.joints[*n as usize]);
             let names = skin.map(|j| json!({ "name": j.name, "parent": j.parent.map(|p| rig.joints[p as usize].name.clone()) }));
             out["bones"] = json!(names.collect::<Vec<_>>());
             let loose = (0..rig.joints.len()).filter(|n| rig.palette.iter().all(|(j, _)| *j as usize != *n));
@@ -96,6 +101,9 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         }
         _ if crate::lamps::asks(q) => crate::lamps::query(dir, doc, id, q),
         _ if crate::stage3d::asks(q) => crate::stage3d::query(dir, doc, id, q),
+        _ if q.get("motion").is_some() => {
+            crate::motion::motion(dir, doc, q["motion"]["layer"].as_str().unwrap_or(id))
+        }
         _ if q.get("outline").is_some() => outline(dir, doc, id),
         _ if q.get("wind").is_some() => wind_arrow(doc),
         _ => rig(dir, doc, id),

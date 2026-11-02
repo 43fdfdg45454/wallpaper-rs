@@ -8,16 +8,20 @@ use wprs_core::message::said;
 use wprs_scene::{MAX_MODEL_BYTES, Model, ModelFile};
 
 type Read = (Arc<Model>, Arc<ModelFile>);
-type Kept = HashMap<PathBuf, (Option<SystemTime>, u64, Read)>;
+type Kept = HashMap<(PathBuf, bool), (Option<SystemTime>, u64, Read)>;
 
 static KEPT: Mutex<Option<Kept>> = Mutex::new(None);
 
 pub fn file(path: &Path) -> Result<Read> {
+    file_as(path, false)
+}
+
+pub fn file_as(path: &Path, posed: bool) -> Result<Read> {
     let meta = std::fs::metadata(path)?;
     let stamp = (meta.modified().ok(), meta.len());
     let mut kept = KEPT.lock().unwrap_or_else(PoisonError::into_inner);
     let kept = kept.get_or_insert_with(HashMap::new);
-    if let Some((m, l, read)) = kept.get(path).filter(|(m, l, _)| (*m, *l) == stamp) {
+    if let Some((m, l, read)) = kept.get(&(path.to_path_buf(), posed)).filter(|(m, l, _)| (*m, *l) == stamp) {
         let _ = (m, l);
         return Ok(read.clone());
     }
@@ -27,9 +31,10 @@ pub fn file(path: &Path) -> Result<Read> {
         return Err(tell(format!("is larger than {} MiB", MAX_MODEL_BYTES >> 20)));
     }
     let head = Arc::new(ModelFile::parse(&bytes).map_err(tell)?);
-    let read = (Arc::new(Model::decode(&bytes).map_err(tell)?), head);
+    let decoded = if posed { Model::decode_posed(&bytes) } else { Model::decode(&bytes) };
+    let read = (Arc::new(decoded.map_err(tell)?), head);
     kept.retain(|_, (_, _, r)| Arc::strong_count(&r.0) > 1);
-    kept.insert(path.to_path_buf(), (stamp.0, stamp.1, read.clone()));
+    kept.insert((path.to_path_buf(), posed), (stamp.0, stamp.1, read.clone()));
     Ok(read)
 }
 
@@ -48,9 +53,13 @@ pub fn asset(dir: &Path, doc: &Value, asset: &str) -> Result<Read> {
 
 pub fn scene(dir: &Path, doc: &Value) -> Option<wprs_scene::Scene> {
     let mut scene = wprs_scene::Scene::from_json(&doc["scene"].to_string()).ok()?;
-    let ids: Vec<String> = scene.layers().filter_map(|l| l.figure().map(String::from)).collect();
-    for id in ids {
-        if let Ok((model, head)) = asset(dir, doc, &id) {
+    let posed = |l: &wprs_scene::Layer| matches!(&l.kind, wprs_scene::Kind::Model(m) if !m.rig.is_empty() || m.root_motion);
+    let mut ids: Vec<(String, bool)> =
+        scene.layers().filter_map(|l| Some((l.figure()?.to_owned(), posed(l)))).collect();
+    ids.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
+    ids.dedup_by(|a, b| a.0 == b.0);
+    for (id, posed) in ids {
+        if let Ok((model, head)) = path(dir, doc, &id).and_then(|p| file_as(&p, posed)) {
             scene.solids.insert(id.clone(), model);
             scene.models.insert(id, head);
         }

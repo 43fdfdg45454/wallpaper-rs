@@ -1,6 +1,6 @@
 use super::pipes::Key;
 use super::uniform::{Finish3, Object};
-use wprs_scene::{Alpha, Color, Coverage, Cull, Finish, Look, Placed};
+use wprs_scene::{Alpha, Color, Coverage, Cull, Finish, Look, Placed, Shade};
 
 fn linear(c: [f32; 4]) -> [f32; 4] {
     let l = super::uniform::tone(Color(c), 1.0);
@@ -25,10 +25,9 @@ pub(super) fn object(p: &Placed) -> (Object, bool) {
 pub(super) fn finish(
     f: &Finish,
     look: Option<&Look>,
-    opacity: f32,
-    flipped: bool,
-    hdr: bool,
-) -> (Finish3, Key) {
+    (opacity, flipped, radius): (f32, bool, f32),
+    (hdr, skinned): (bool, bool),
+) -> (Finish3, Key, u32) {
     let mut color = linear(f.color);
     if let Some(c) = look.and_then(|l| l.color) {
         let c = linear(c);
@@ -71,13 +70,34 @@ pub(super) fn finish(
     let cull = if flipped && cull > 0 { 3 - cull } else { cull };
     let test = look.and_then(|l| l.depth_test).unwrap_or(true);
     let write = look.and_then(|l| l.depth_write).unwrap_or(blend == 0);
+    let shade = look.map_or(Shade::Pbr, |l| l.shade);
+    let x = look.map_or([0.0; 8], |l| l.extra);
+    let receive = look.and_then(|l| l.receive).unwrap_or(true);
+    let (kind, shells) = match shade {
+        Shade::Fur => (2.0, x[0].max(1.0) as u32),
+        Shade::Foliage => (3.0, 1),
+        Shade::Chroma => (4.0, 1),
+        Shade::Package => (5.0, 1),
+        _ => (0.0, 1),
+    };
+    let (comb, key, more) = match shade {
+        Shade::Fur => ([x[3], x[4], x[5], 0.0], [0.0; 4], [1.0, 0.0, 0.0, 0.0]),
+        Shade::Foliage => ([0.0, 0.0, 0.0, x[0] * 0.05 * radius], [0.0; 4], [1.0, 0.0, x[1], 0.0]),
+        Shade::Chroma => ([0.0; 4], [x[0], x[1], x[2], x[3]], [1.0, x[4], 0.0, 0.0]),
+        _ => ([0.0; 4], [0.0; 4], [1.0, 0.0, 0.0, 0.0]),
+    };
     let uniform = Finish3 {
         color,
         emissive: [emissive[0], emissive[1], emissive[2], 0.0],
         pbr,
-        flags: [cutoff, f32::from(u8::from(lit)), 0.0, 0.0],
+        flags: [cutoff, f32::from(u8::from(lit)), f32::from(u8::from(receive)), 0.0],
         maps: [f32::from(u8::from(f.maps[2].is_some())), 0.0, 0.0, 0.0],
-        more: [1.0, 0.0, 0.0, 0.0],
+        more,
+        shade: [kind, x[0], x[1], x[2]],
+        comb,
+        key,
+        params: look.map_or([[0.0; 4]; 8], |l| l.slots),
     };
-    (uniform, Key { cull, blend, write, test, hdr })
+    let package = look.filter(|l| l.shade == Shade::Package).map_or(0, |l| l.package);
+    (uniform, Key { cull, blend, write, test, hdr, skinned, shadow: false, package }, shells)
 }

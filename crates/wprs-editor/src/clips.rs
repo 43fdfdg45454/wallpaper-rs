@@ -50,9 +50,10 @@ fn seed(dir: &std::path::Path, doc: &Value, l: &Value) -> Value {
 }
 
 pub(crate) fn clip(dir: &std::path::Path, doc: &Value, c: &ClipEdit) -> Result<Vec<Op>> {
-    let ClipEdit { layer, id, add, remove, to, length, repeat } = c;
+    let ClipEdit { layer, id, add, remove, to, length, repeat, animation, from } = c;
     let (path, l) = crate::actions::layer(doc, layer)?;
-    ensure!(l["type"] == "mesh", said("editor.not_mesh", "the layer is not a mesh", &[]));
+    let figure = l["type"] == "mesh" || l["type"] == "model";
+    ensure!(figure, said("editor.not_figure", "the layer is not a mesh or a model", &[]));
     let mut clips = l["clips"].as_array().cloned().unwrap_or_default();
     let mut plays = l["animations"].as_array().cloned().unwrap_or_default();
     if let Some(n) = length {
@@ -86,6 +87,35 @@ pub(crate) fn clip(dir: &std::path::Path, doc: &Value, c: &ClipEdit) -> Result<V
         plays.retain(|a| a["clip"] != id.as_str());
     } else {
         let c = &mut clips[i];
+        if let Some(name) = animation {
+            let (_, _, rig) = crate::skin::rigged(dir, doc, l)?;
+            let m = rig.motion(Some(name)).ok_or_else(|| {
+                anyhow!(said("editor.no_animation", "the file has no animation \"%1\"", &[name]))
+            })?;
+            c["animation"] = json!(name);
+            c["to"] = json!(f64::from(m.length));
+            drop(c.as_object_mut().and_then(|o| o.remove("from")));
+        }
+        if let Some(f) = from {
+            ensure!(
+                f.is_finite() && (0.0..=MAX_LENGTH).contains(f),
+                said("editor.time_must_more", "the time must be 0 or more seconds", &[])
+            );
+            let span = c["to"].as_f64().unwrap_or(2.0) - c["from"].as_f64().unwrap_or(0.0);
+            let end = match c["animation"].as_str() {
+                Some(a) => crate::skin::rigged(dir, doc, l)?
+                    .2
+                    .motion(Some(a))
+                    .map_or(f64::MAX, |m| f64::from(m.length)),
+                None => f64::MAX,
+            };
+            ensure!(
+                f64::from(*f) < end,
+                said("editor.time_must_more", "the time must be 0 or more seconds", &[])
+            );
+            c["from"] = json!(f);
+            c["to"] = json!((f64::from(*f) + span.max(0.0)).min(end));
+        }
         if let Some(n) = length {
             c["to"] = json!(c["from"].as_f64().unwrap_or(0.0) + f64::from(*n));
         }

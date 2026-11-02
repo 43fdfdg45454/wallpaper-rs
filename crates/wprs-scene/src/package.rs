@@ -101,3 +101,8 @@ impl Descriptor {
         checked.inspect(|d| crate::verdicts::pass(d.key))
     }
 }
+
+pub fn shader_line(line: usize) -> Option<usize> {
+    let before = CONTRACT.lines().count() + 1;
+    line.checked_sub(before).filter(|l| *l > 0)
+}

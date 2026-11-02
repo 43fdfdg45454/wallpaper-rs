@@ -1259,6 +1259,23 @@ un grupo 3D se redibuja solo cuando algo suyo cambia, y cada clase de equipo adm
 conservan en imágenes de 16 bits y `canvas.tonemap` (`aces` o `agx`) los ajusta a la pantalla en una
 última pasada; sin `tonemap`, la escena se ve como siempre.
 
+Los modelos también se animan con el mismo sistema que las mallas: clips de las animaciones del
+archivo o con claves propias (giros en x, y y z y desplazamientos en 3D por hueso, pesos de formas de
+mezcla), capas de animación con peso, velocidad, modo aditivo, fundidos y máscara de huesos, física
+de huesos (que se congela en la calidad más baja) y movimiento de raíz (`root_motion`), con el que un
+clip que avanza mueve la capa en vez del esqueleto. El esqueleto se calcula en la CPU solo para los
+modelos visibles y la GPU deforma los vértices (4 huesos por vértice) y mezcla las formas del archivo.
+Los materiales también pueden ser `fur` (capas de pelo empujadas por la normal, de 1 a 32 y menos en
+calidades bajas, con largo, densidad y dirección de peinado), `foliage` (balanceo con el viento del
+lienzo, medido por el rojo de los colores de vértice), `chroma` (un color clave que se vuelve
+transparente) o un shader de material del paquete con `fn material(s: Surface) -> Surface`, que se
+valida y se limita como cualquier efecto de paquete. Las luces puntuales, de foco y direccionales
+pueden dar sombra (`shadows`) con mapas de 2048, 1024 y 6×512 píxeles, filtrados con cuatro muestras;
+el escritorio dibuja dos luces con sombra, la clase T2 una y las clases más modestas ninguna, y un
+mapa solo se vuelve a dibujar cuando cambia su luz o lo que proyecta. La cámara 3D sigue recorridos
+(`camera3d.paths`) por claves con una curva Catmull-Rom centrípeta, en orden o al azar, con fundido a
+negro o cruzado entre ellos y bucles cerrados sin saltos.
+
 El escritorio y el teléfono dibujan también la mezcla por degradado, el revelado con el puntero,
 el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos, el fuego, el giro,
 la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela
@@ -1890,6 +1907,28 @@ En la terminal hacen lo mismo `wprs-ctl scene model CARPETA add|set|remove|info`
 CARPETA add|space|depth-test|show`, `scene material CARPETA CAPA [MATERIAL]`, `scene camera3d`,
 `scene view3d`, `scene tonemap`, `scene model-info ARCHIVO.glb` y `scene cost3d`.
 
+Para animar un modelo, su inspector tiene un panel de animación: los clips de la capa con un botón
+para abrirlos en la línea de tiempo de clips (con filas de giros y desplazamientos 3D por hueso, pesos
+de las formas de mezcla y las marcas de los eventos), *Clip nuevo del archivo* con las animaciones del
+`.glb`, *Movimiento de raíz*, huesos que se balancean con ajustes predefinidos (pelo, cola, tela,
+antena, cadena, gelatina), un deslizador por forma de mezcla y las capas de animación (clip, peso,
+velocidad, fundidos, modo aditivo y máscara de huesos), que ahora también aparecen bajo los huesos de
+las mallas. En la vista de edición el modelo elegido dibuja sus huesos, que se eligen con un clic, y el
+camino que recorre con el movimiento de raíz. Cada material elige pelo (capas por calidad, largo,
+densidad y un panel para peinarlo), vegetación (balanceo, velocidad, la flecha del viento y la máscara
+de los colores de vértice sobre la vista previa) o croma (color clave, tolerancia, suavizado y el mate
+sobre la vista previa); *Shader de material nuevo* escribe una plantilla y cada shader del paquete dice
+si compila o en qué línea y columna falla, con un aviso de que corre en la tarjeta gráfica. El panel de
+luces enciende las sombras por luz, con el tamaño del mapa y lo que dibuja cada clase de equipo, el
+desplazamiento y una vista que pinta de rojo lo que queda en sombra y dibuja los volúmenes de los
+mapas. El panel de la cámara 3D edita recorridos: claves tomadas de la vista actual, que se arrastran
+sobre la curva dibujada en la vista de edición, bucle, suavizado, orden, fundido y un botón para
+recorrerlos desde la cámara. El panel de coste suma por nivel los mapas de sombra, las capas de pelo y
+los vértices con piel. En la terminal: `wprs-ctl scene animate CARPETA CAPA layer|root|preset|morph|clips|bones`,
+`scene clip … --animation NOMBRE --from S`, `scene key … --angles X,Y,Z --shift X,Y,Z`, `scene material
+… --shader fur|foliage|chroma --key COLOR`, `scene shadows CARPETA LUZ`, `scene camera-path CARPETA
+add|key|remove|set|order|fade|show`, `scene new-material CARPETA NOMBRE [--check]` y `scene debug3d`.
+
 #### Pasar modelos FBX y OBJ a glTF con Blender
 
 wallpaper-rs lee solo glTF binario (`.glb`). Para un modelo en FBX u OBJ, con Blender 3.6 o más
@@ -1905,7 +1944,11 @@ nuevo:
    conéctala directamente al *Principled BSDF*.
 4. Usa *Archivo → Exportar → glTF 2.0*, elige el formato *glTF Binary (.glb)* y, en *Incluir*,
    *Objetos seleccionados* si solo quieres una parte. Deja activadas *Normales*, *UV* y *Tangentes*,
-   y en *Animación* las acciones y las formas de mezcla si las tiene.
+   y en *Animación* las acciones y las formas de mezcla si las tiene. Cada acción de Blender llega
+   como una animación del archivo con su nombre; las armaduras llegan como pieles de hasta 4 huesos
+   por vértice (en *Datos de malla → Pesos*, *Limitar total* a 4 antes de exportar si hace falta).
+   Para la vegetación, pinta en *Pintura de vértices* el color de los vértices: el rojo dice cuánto
+   se balancea cada vértice con el viento.
 5. Si el archivo pesa mucho, reduce texturas a 2048 píxeles o menos (lo que reciben los teléfonos) y
    usa el modificador *Diezmar* para bajar triángulos; `wprs-ctl scene model-info modelo.glb` dice si
    cabe en cada clase de equipo.

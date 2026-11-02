@@ -9,6 +9,10 @@ use wprs_scene::{Forge, ForgeMaterial, ForgeShape, Quality, Runtime, SCHEMA, Sce
 mod cached;
 mod depth;
 mod finish;
+mod paths;
+mod posed;
+mod shaders;
+mod shadows;
 mod tones;
 
 pub const SIDE: u32 = 64;

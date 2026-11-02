@@ -75,7 +75,16 @@ const SPAN: Duration = Duration::from_millis(300);
 const FRAMES: usize = 12;
 
 impl Renderer {
+    pub fn force_tier(&self, tier: Option<Tier>) {
+        let code = tier.map_or(0, |t| t as u8 + 1);
+        self.forced.store(code, std::sync::atomic::Ordering::Relaxed);
+    }
+
     pub fn tier(&self) -> Tier {
+        match self.forced.load(std::sync::atomic::Ordering::Relaxed) {
+            0 => {}
+            k => return [Tier::T0, Tier::T1, Tier::T2, Tier::T3][usize::from(k - 1).min(3)],
+        }
         self.calibration
             .get()
             .map_or_else(|| *self.tier.get_or_init(|| Tier::detect(&self.gpu_class())), |c| c.tier)

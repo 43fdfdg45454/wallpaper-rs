@@ -1,6 +1,7 @@
 use crate::rigged::math::{Mat, Trs};
 use crate::rigged::{MAX_ACTIVE_SHAPES, Rigged};
-use crate::{Kind, Layer, MeshLayer, Wake};
+use crate::{Kind, Layer, MeshLayer, MeshPart, Rig, Wake};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 mod cues;
@@ -13,6 +14,7 @@ pub(crate) mod limb;
 pub(crate) mod mount;
 mod pose;
 mod reach;
+mod root;
 mod sway;
 mod swing;
 mod touch;
@@ -36,7 +38,20 @@ pub struct Posed {
     pub palette: Vec<Mat>,
     pub morphs: Vec<[(u32, f32); MAX_ACTIVE_SHAPES]>,
     pub draws: Vec<Drawn>,
+    pub travel: [f32; 3],
 }
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Fig<'a> {
+    pub rig: &'a Rig,
+    pub parts: &'a BTreeMap<String, MeshPart>,
+    pub size: Option<[f32; 2]>,
+    pub unit: f32,
+    pub root: bool,
+}
+
+static NO_PARTS: BTreeMap<String, MeshPart> = BTreeMap::new();
+pub const MODEL_UNIT: f32 = 0.01;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Head {
@@ -52,6 +67,7 @@ pub(crate) struct Head {
     pub mask: Vec<bool>,
     pub speed: f32,
     pub fresh: bool,
+    pub laps: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -94,9 +110,19 @@ pub(crate) fn mesh(layer: &Layer) -> Option<&MeshLayer> {
     }
 }
 
+pub(crate) fn figure(layer: &Layer) -> Option<Fig<'_>> {
+    match &layer.kind {
+        Kind::Mesh(m) => Some(Fig { rig: &m.rig, parts: &m.parts, size: m.size, unit: 1.0, root: false }),
+        Kind::Model(m) if !m.rig.is_empty() || m.root_motion => {
+            Some(Fig { rig: &m.rig, parts: &NO_PARTS, size: m.size, unit: MODEL_UNIT, root: m.root_motion })
+        }
+        _ => None,
+    }
+}
+
 impl Puppet {
     pub fn new(layer: &Layer, rig: Arc<Rigged>) -> Option<Puppet> {
-        let m = mesh(layer)?;
+        let m = &figure(layer)?;
         let clips = m.rig.clips.iter().map(|c| heads::map(&rig, c)).collect();
         let heads = (0..m.rig.animations.len()).filter_map(|i| heads::head(&rig, m, Some(i), None)).collect();
         let rules: Vec<(usize, u16, u16)> = m
@@ -140,12 +166,19 @@ impl Puppet {
         &self.posed
     }
 
+    pub fn joint_worlds(&self) -> &[Mat] {
+        &self.worlds
+    }
+
     pub fn settled(&self) -> bool {
         self.bodies.iter().all(swing::Body::still)
     }
 
-    pub(crate) fn pose(&mut self, cx: &crate::resolve::Context, m: &MeshLayer, (seat, sim): (&Seat, &Sim)) {
+    pub(crate) fn pose(&mut self, cx: &crate::resolve::Context, m: &Fig, (seat, sim): (&Seat, &Sim)) {
         self.blend(cx, m);
+        if m.root {
+            self.root(m);
+        }
         self.worlds(cx, m);
         if !self.chains.is_empty() {
             self.reach(cx, m, seat);

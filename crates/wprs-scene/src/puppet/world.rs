@@ -1,5 +1,5 @@
+use super::Fig;
 use super::Puppet;
-use crate::MeshLayer;
 use crate::resolve::Context;
 use crate::rigged::Rigged;
 use crate::rigged::math::{IDENTITY, decompose, invert, mul};
@@ -28,7 +28,7 @@ pub(super) fn order(rig: &Rigged, rules: &[(usize, u16, u16)]) -> Vec<u16> {
 }
 
 impl Puppet {
-    pub(crate) fn worlds(&mut self, cx: &Context, m: &MeshLayer) {
+    pub(crate) fn worlds(&mut self, cx: &Context, m: &Fig) {
         let Puppet { rig, order, rules, held, locals, worlds, .. } = self;
         worlds.clear();
         worlds.resize(rig.joints.len(), IDENTITY);

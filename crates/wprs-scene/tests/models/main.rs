@@ -3,7 +3,10 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use wprs_scene::*;
 
+mod flight;
 mod frames;
+mod limits;
+mod posing;
 mod reading;
 
 pub fn cube() -> Vec<u8> {

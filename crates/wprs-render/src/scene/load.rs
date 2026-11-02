@@ -12,6 +12,11 @@ fn linear(scene: &Scene, id: &str) -> bool {
     scene.assets.get(id).is_some_and(|a| a.linear)
 }
 
+pub(super) fn debug3d(scene: &Scene) -> u8 {
+    let shown = scene.ext.get("editor").and_then(|e| e["debug3d"].as_str());
+    ["", "mask", "matte", "shadows"].iter().position(|k| Some(*k) == shown).unwrap_or(0) as u8
+}
+
 fn tones(scene: &Scene) -> (bool, u8, f32) {
     let tone = if scene.canvas.hdr { scene.canvas.tonemap.map_or(0, |t| t as u8) } else { 0 };
     let split = scene.ext.get("editor").and_then(|e| e["tonemap_split"].as_f64()).unwrap_or(0.0);
@@ -36,6 +41,7 @@ impl Renderer {
         view.marks.clear();
         view.pool.glow.baked = None;
         (view.hdr, view.tone, view.split) = tones(scene);
+        view.debug3d = debug3d(scene);
         let same = |id: &String| match (view.sources.get(id), assets.images.get(id)) {
             (Some(was), Some(now)) => Arc::ptr_eq(was, now),
             (was, now) => was.is_none() && now.is_none(),
@@ -180,6 +186,7 @@ impl Renderer {
                 tone: if scene.canvas.hdr { scene.canvas.tonemap.map_or(0, |t| t as u8) } else { 0 },
                 split: scene.ext.get("editor").and_then(|e| e["tonemap_split"].as_f64()).unwrap_or(0.0)
                     as f32,
+                debug3d: debug3d(scene),
             }
         })
         .inspect_err(|_| super::flight::forget(id))

@@ -4,7 +4,7 @@ mod delaunay;
 pub(crate) mod doc;
 pub(crate) mod geometry;
 pub mod math;
-mod motion;
+pub(crate) mod motion;
 pub(crate) mod read;
 mod sketch;
 mod write;

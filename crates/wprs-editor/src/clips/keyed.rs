@@ -28,8 +28,12 @@ fn ease(e: KeyEase) -> Option<Value> {
     }
 }
 
-fn tracks(k: &ClipKey, known: &wprs_scene::Rigged, posed: Option<Channels>) -> Result<Vec<Track>> {
-    let ClipKey { bone, rotation, position, scale, shape, weight, order, value, .. } = k;
+fn tracks(
+    k: &ClipKey,
+    (known, solid): (&wprs_scene::Rigged, bool),
+    posed: Option<Channels>,
+) -> Result<Vec<Track>> {
+    let ClipKey { bone, rotation, position, scale, angles, shift, shape, weight, order, value, .. } = k;
     let one = [bone.is_some(), shape.is_some(), order.is_some()].iter().filter(|x| **x).count() == 1;
     ensure!(one, said("editor.key_what", "a key is for one bone, blend shape or part order", &[]));
     let track = |path: [&str; 3], value: Option<Value>, rest: Value, range: f32| Track {
@@ -42,12 +46,23 @@ fn tracks(k: &ClipKey, known: &wprs_scene::Rigged, posed: Option<Channels>) -> R
         known.joint(b).ok_or_else(|| anyhow!(said("editor.no_bone", "there is no bone \"%1\"", &[b])))?;
         let (r, p, s) = (posed.map(|p| p.0), posed.map(|p| p.1), posed.map(|p| p.2));
         let pair = |v: Option<[f32; 2]>| v.map(|v| json!(v.map(num)));
-        let all = [
+        let three = |v: Option<[f32; 3]>| v.map(|v| json!(v.map(num)));
+        let flat = vec![
             track(["bones", b, "rotation"], rotation.or(r).map(num), json!(0), 1e5),
             track(["bones", b, "position"], pair(position.or(p)), json!([0, 0]), 1e5),
             track(["bones", b, "scale"], pair(scale.or(s)), json!([1, 1]), 1e3),
         ];
-        let named = rotation.is_some() || position.is_some() || scale.is_some();
+        let deep = angles.is_some() || shift.is_some();
+        let mut all = if solid && !(rotation.is_some() || position.is_some() || scale.is_some()) {
+            Vec::new()
+        } else {
+            flat
+        };
+        if deep || solid || k.remove || k.from.is_some() {
+            all.push(track(["bones", b, "angles"], three(*angles), json!([0, 0, 0]), 1e5));
+            all.push(track(["bones", b, "shift"], three(*shift), json!([0, 0, 0]), 1e5));
+        }
+        let named = deep || rotation.is_some() || position.is_some() || scale.is_some();
         return Ok(all.into_iter().filter(|t| !named || t.value.is_some()).collect());
     }
     if let Some(s) = shape {
@@ -75,12 +90,13 @@ pub(crate) fn key(dir: &std::path::Path, doc: &Value, k: &ClipKey) -> Result<Vec
     let base = found["from"].as_f64().unwrap_or(0.0);
     let plain =
         !remove && from.is_none() && k.rotation.is_none() && k.position.is_none() && k.scale.is_none();
+    let plain = plain && k.angles.is_none() && k.shift.is_none();
     let posed =
         k.bone.as_deref().filter(|_| plain).and_then(|b| crate::rigs::posed(&known, found, b, *t as f32));
     let (t, from) = (at(*t + base), from.map(|f| at(f + base)));
     let mut c = found.clone();
     let mut done = 0;
-    for track in tracks(k, &known, posed)? {
+    for track in tracks(k, (&known, crate::skin::solid(l)), posed)? {
         let pointer = format!("/{}", track.path.iter().map(|p| escape(p)).collect::<Vec<_>>().join("/"));
         let mut keys = c.pointer(&pointer).and_then(Value::as_array).cloned().unwrap_or_default();
         let near = |keys: &[Value], s: f64| keys.iter().position(|k| (time(k) - s).abs() < 1e-3);
@@ -101,7 +117,8 @@ pub(crate) fn key(dir: &std::path::Path, doc: &Value, k: &ClipKey) -> Result<Vec
         if let Some((v, eased)) = new {
             let within =
                 |x: &Value| x.as_f64().is_some_and(|x| x.is_finite() && x.abs() <= f64::from(track.range));
-            let ok = within(&v) || v.as_array().is_some_and(|a| a.len() == 2 && a.iter().all(within));
+            let ok = within(&v)
+                || v.as_array().is_some_and(|a| (2..=3).contains(&a.len()) && a.iter().all(within));
             ensure!(ok, said("editor.key_value", "the key holds a value out of its range", &[]));
             keys.retain(|k| (time(k) - t).abs() >= 1e-3);
             let k = eased.map_or(json!([t, v]), |x| json!([t, v, x]));

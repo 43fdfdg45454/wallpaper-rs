@@ -17,25 +17,29 @@ impl Scene {
         files: &mut impl Files,
         fail: impl Fn(String, String) -> SceneError + Copy,
     ) -> Result<(), SceneError> {
-        let mut figures = BTreeMap::<String, (bool, bool)>::new();
+        let mut figures = BTreeMap::<String, (bool, bool, bool)>::new();
         for l in self.layers().chain(self.templates.values()) {
             let Some(id) = l.figure() else { continue };
             let seen = figures.entry(id.to_owned()).or_default();
-            (seen.0, seen.1) =
-                (seen.0 | matches!(l.kind, Kind::Mesh(_)), seen.1 | matches!(l.kind, Kind::Model(_)));
+            let posed = matches!(&l.kind, Kind::Model(m) if !m.rig.is_empty() || m.root_motion);
+            (seen.0, seen.1, seen.2) = (
+                seen.0 | matches!(l.kind, Kind::Mesh(_)),
+                seen.1 | matches!(l.kind, Kind::Model(_)),
+                seen.2 | posed,
+            );
         }
-        let mut paths = BTreeMap::<String, (bool, bool)>::new();
-        for (id, (mesh, solid)) in &figures {
+        let mut paths = BTreeMap::<String, (bool, bool, bool)>::new();
+        for (id, (mesh, solid, posed)) in &figures {
             let Some(asset) = self.assets.get(id) else { continue };
             let seen = paths.entry(asset.path.clone()).or_default();
-            (seen.0, seen.1) = (seen.0 | mesh, seen.1 | solid);
+            (seen.0, seen.1, seen.2) = (seen.0 | mesh, seen.1 | solid, seen.2 | posed);
         }
         let (mut read, mut json, mut left, mut whole) =
             (BTreeMap::<String, Read>::new(), 0, MAX_MODEL_ENTRIES, 0);
         for id in figures.into_keys() {
             let Some(asset) = self.assets.get(&id).filter(|a| a.extension() == "glb") else { continue };
             let (path, at) = (asset.path.clone(), format!("/assets/{id}"));
-            let (mesh, solid) = paths.get(&path).copied().unwrap_or_default();
+            let (mesh, solid, posed) = paths.get(&path).copied().unwrap_or_default();
             if let Some((file, rig, model)) = read.get(&path) {
                 self.models.insert(id.clone(), file.clone());
                 rig.iter().for_each(|r| _ = self.rigs.insert(id.clone(), r.clone()));
@@ -73,7 +77,8 @@ impl Scene {
             }
             let file = Arc::new(ModelFile::parse_head(&bytes, total, &mut left).map_err(wrong)?);
             let rig = mesh.then(|| Rigged::decode(&bytes).map(Arc::new)).transpose().map_err(wrong)?;
-            let model = solid.then(|| Model::decode(&bytes).map(Arc::new)).transpose().map_err(wrong)?;
+            let decode = |b: &[u8]| if posed { Model::decode_posed(b) } else { Model::decode(b) };
+            let model = solid.then(|| decode(&bytes).map(Arc::new)).transpose().map_err(wrong)?;
             read.insert(path, (file.clone(), rig.clone(), model.clone()));
             self.models.insert(id.clone(), file);
             model.into_iter().for_each(|m| _ = self.solids.insert(id.clone(), m));

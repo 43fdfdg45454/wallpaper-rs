@@ -50,7 +50,7 @@ fn each_tier_caps_triangles_bones_textures_and_shadowed_lights() {
 }
 
 #[test]
-fn models_and_cameras_name_their_features_and_later_parts_stay_refused() {
+fn models_and_cameras_name_their_features() {
     let plain = scene(json!({ "camera3d": { "fov": 50 } }), json!([model("m", json!({}))]));
     let f = plain.features();
     assert!(f.contains("model3d") && f.contains("camera3d") && !f.contains("model_animation"), "{f:?}");

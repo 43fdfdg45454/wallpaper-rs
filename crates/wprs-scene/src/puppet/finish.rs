@@ -1,11 +1,11 @@
+use super::Fig;
 use super::{Drawn, Puppet};
-use crate::MeshLayer;
 use crate::resolve::Context;
 use crate::rigged::MAX_ACTIVE_SHAPES;
 use crate::rigged::math::mul;
 
 impl Puppet {
-    pub(crate) fn finish(&mut self, cx: &Context, m: &MeshLayer) {
+    pub(crate) fn finish(&mut self, cx: &Context, m: &Fig) {
         let Puppet { rig, worlds, shape, sorted, next, posed, .. } = self;
         next.palette.clear();
         next.palette.extend(rig.palette.iter().map(|(node, inverse)| mul(&worlds[*node as usize], inverse)));
@@ -23,7 +23,7 @@ impl Puppet {
             }
             next.morphs.push(slots);
         }
-        for (name, part) in &m.parts {
+        for (name, part) in m.parts {
             let Some(p) = rig.part(name) else { continue };
             if let Some(o) = &part.order {
                 sorted[p] = Some(o.get(cx).clamp(-1000.0, 1000.0));
@@ -41,6 +41,7 @@ impl Puppet {
         let key = |d: &Drawn| sorted[d.part as usize].unwrap_or(0.0);
         next.draws.sort_unstable_by(|a, b| key(a).total_cmp(&key(b)).then(a.piece.cmp(&b.piece)));
         let same = next.palette == posed.palette && next.morphs == posed.morphs && next.draws == posed.draws;
+        let same = same && next.travel == posed.travel;
         if !same || posed.generation == 0 {
             next.generation = posed.generation + 1;
             std::mem::swap(next, posed);

@@ -6,24 +6,23 @@ use wprs_format::{Descriptor, Rating};
 mod glows;
 mod lamps;
 mod limbs;
+mod motion;
 mod names;
 mod rigging;
 mod solid;
 mod swarm;
 mod tend;
 
-pub use glows::SwarmLight;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
-pub use names::ACTIONS;
+pub use motion::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
+pub use names::{ACTIONS, EDITOR};
 pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
     WeightStroke,
 };
 pub use solid::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
-pub use swarm::{ParticleEdit, Response, Strand, TendEdit};
-
-pub const EDITOR: &str = "/scene/ext/editor";
+pub use swarm::{ParticleEdit, Response, Strand, SwarmLight, TendEdit};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
@@ -195,6 +194,7 @@ pub enum Action {
     PaintMap(MapStroke),
     Ambient(AmbientEdit),
     Scene3d(Edit3d),
+    Animate(AnimEdit),
     Undo {},
     Redo {},
 }

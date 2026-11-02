@@ -194,4 +194,6 @@ pub enum Author {
     Lamping(crate::lamping::Lamping),
     #[command(flatten)]
     Modeling(crate::modeling::Modeling),
+    #[command(flatten)]
+    Flying(crate::flying::Flying),
 }

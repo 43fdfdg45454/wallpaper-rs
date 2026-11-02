@@ -23,8 +23,11 @@ ctl scene set "$draft" /scene/layers/0/blend linear_burn
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a newer blend mode was not previewed"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/camera3d '{"paths": [{"id": "a", "keys": [{"t": 0, "eye": [0, 0, 5], "center": 0}, {"t": 1, "eye": [1, 0, 5], "center": 0}]}]}'
-if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene with camera paths was previewed"; fi
-grep -q "camera_paths" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
+ctl scene preview "$draft" -o preview:1 --time 0 || fail "a scene with camera paths was not previewed"
+ctl scene undo "$draft"
+ctl scene set "$draft" /scene/layers/0 '{"id": "title", "type": "text", "text": {"media": "title"}}'
+if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene showing media titles was previewed"; fi
+grep -q "media_info" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/transform/tilt '[10, 0]'
 ctl scene set "$draft" /scene/canvas/camera '{"zoom": 1.5, "rotation": 10}'

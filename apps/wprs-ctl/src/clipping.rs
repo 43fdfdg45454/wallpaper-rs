@@ -9,7 +9,7 @@ use wprs_editor::actions::{Action, ClipEdit, ClipKey, ExpressionEdit};
 #[derive(Subcommand, Debug)]
 pub enum Clipping {
     #[command(
-        about = "Add, change, rename or remove a clip of a mesh layer; removing it also removes the animation layers that play it"
+        about = "Add, change, rename or remove a clip of a mesh or model layer; removing it also removes the animation layers that play it"
     )]
     Clip {
         #[arg(help = DIR)]
@@ -28,9 +28,17 @@ pub enum Clipping {
         length: Option<f32>,
         #[arg(id = "loop", long = "loop", value_parser = ["repeat", "pingpong", "once"], help = "How it plays")]
         repeat: Option<String>,
+        #[arg(long, help = "Play this animation of the file, whole")]
+        animation: Option<String>,
+        #[arg(
+            long,
+            value_name = "SECONDS",
+            help = "Start the clip later in its animation, keeping its length"
+        )]
+        from: Option<f32>,
     },
     #[command(
-        about = "Set, move, copy or remove a key of a clip of a mesh layer for a bone, a blend shape or the order of a part; a bone keyed without values keeps the pose it has there"
+        about = "Set, move, copy or remove a key of a clip of a mesh or model layer for a bone, a blend shape or the order of a part; a bone keyed without values keeps the pose it has there"
     )]
     Key {
         #[arg(help = DIR)]
@@ -54,6 +62,10 @@ pub enum Clipping {
         position: Option<String>,
         #[arg(long, allow_hyphen_values = true, value_name = "S or X,Y", help = "Scale of its rest pose")]
         scale: Option<String>,
+        #[arg(long, allow_hyphen_values = true, value_name = "X,Y,Z", help = "Degrees around x, y and z")]
+        angles: Option<String>,
+        #[arg(long, allow_hyphen_values = true, value_name = "X,Y,Z", help = "Model units moved")]
+        shift: Option<String>,
         #[arg(long, conflicts_with = "order", help = "The blend shape keyed")]
         shape: Option<String>,
         #[arg(long, allow_hyphen_values = true, help = "Weight of the blend shape, from -1 to 1")]
@@ -71,7 +83,7 @@ pub enum Clipping {
         #[arg(long, requires = "from", help = "Copy the key instead of moving it")]
         copy: bool,
     },
-    #[command(about = "Print the keys of a clip of a mesh layer, row by row, as JSON")]
+    #[command(about = "Print the keys of a clip of a mesh or model layer, row by row, as JSON")]
     Keys {
         #[arg(help = DIR)]
         dir: PathBuf,
@@ -107,9 +119,9 @@ pub enum Clipping {
 
 pub(crate) fn action(command: Clipping) -> Result<(PathBuf, Action), Box<Author>> {
     Ok(match command {
-        Clipping::Clip { dir, layer, id, add, remove, to, length, repeat } => {
+        Clipping::Clip { dir, layer, id, add, remove, to, length, repeat, animation, from } => {
             let repeat = repeat.and_then(|r| serde_json::from_value(json!(r)).ok());
-            (dir, Action::Clip(ClipEdit { layer, id, add, remove, to, length, repeat }))
+            (dir, Action::Clip(ClipEdit { layer, id, add, remove, to, length, repeat, animation, from }))
         }
         Clipping::Key {
             dir,
@@ -120,6 +132,8 @@ pub(crate) fn action(command: Clipping) -> Result<(PathBuf, Action), Box<Author>
             rotation,
             position,
             scale,
+            angles,
+            shift,
             shape,
             weight,
             order,
@@ -129,6 +143,8 @@ pub(crate) fn action(command: Clipping) -> Result<(PathBuf, Action), Box<Author>
             from,
             copy,
         } => {
+            let angles = angles.as_deref().and_then(crate::animated::three);
+            let shift = shift.as_deref().and_then(crate::animated::three);
             let position = position.as_deref().and_then(pair);
             let scale =
                 scale.as_deref().and_then(|s| pair(s).or_else(|| s.trim().parse().ok().map(|v| [v, v])));
@@ -143,6 +159,8 @@ pub(crate) fn action(command: Clipping) -> Result<(PathBuf, Action), Box<Author>
                     rotation,
                     position,
                     scale,
+                    angles,
+                    shift,
                     shape,
                     weight,
                     order,

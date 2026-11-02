@@ -1,56 +1,3 @@
-struct Light { at: vec4<f32>, color: vec4<f32>, dir: vec4<f32>, more: vec4<f32> };
-struct Scene3 {
-    clip: mat4x4<f32>,
-    eye: vec4<f32>,
-    forward: vec4<f32>,
-    ambient: vec4<f32>,
-    sky: vec4<f32>,
-    up: vec4<f32>,
-    slice: vec4<f32>,
-    lights: array<Light, 12>,
-};
-struct Object { model: mat4x4<f32>, normal: mat4x4<f32> };
-struct Finish { color: vec4<f32>, emissive: vec4<f32>, pbr: vec4<f32>, flags: vec4<f32>, maps: vec4<f32>, more: vec4<f32> };
-struct In {
-    @location(0) pos: vec3<f32>,
-    @location(1) normal: vec3<f32>,
-    @location(2) uv: vec2<f32>,
-    @location(3) tangent: vec4<f32>,
-};
-struct Out {
-    @builtin(position) position: vec4<f32>,
-    @location(0) world: vec3<f32>,
-    @location(1) normal: vec3<f32>,
-    @location(2) uv: vec2<f32>,
-    @location(3) tangent: vec4<f32>,
-};
-
-@group(0) @binding(0) var<uniform> scene: Scene3;
-@group(0) @binding(1) var env: texture_2d<f32>;
-@group(0) @binding(2) var env_smp: sampler;
-@group(1) @binding(0) var<uniform> object: Object;
-@group(2) @binding(0) var base_map: texture_2d<f32>;
-@group(2) @binding(1) var orm_map: texture_2d<f32>;
-@group(2) @binding(2) var normal_map: texture_2d<f32>;
-@group(2) @binding(3) var occlusion_map: texture_2d<f32>;
-@group(2) @binding(4) var emissive_map: texture_2d<f32>;
-@group(2) @binding(5) var smp: sampler;
-@group(3) @binding(0) var<uniform> finish: Finish;
-
-const PI: f32 = 3.14159265;
-
-@vertex
-fn vs_solid(v: In) -> Out {
-    let world = object.model * vec4<f32>(v.pos, 1.0);
-    var o: Out;
-    o.position = scene.clip * world;
-    o.world = world.xyz;
-    o.normal = normalize((object.normal * vec4<f32>(v.normal, 0.0)).xyz);
-    o.tangent = vec4<f32>(normalize((object.model * vec4<f32>(v.tangent.xyz, 0.0)).xyz), v.tangent.w * object.normal[3][3]);
-    o.uv = v.uv;
-    return o;
-}
-
 fn ggx(n_h: f32, a: f32) -> f32 {
     let a2 = a * a;
     let d = n_h * n_h * (a2 - 1.0) + 1.0;
@@ -87,21 +34,67 @@ fn falloff(l: Light, p: vec3<f32>) -> vec4<f32> {
     return vec4<f32>(dir, power);
 }
 
+fn tap(s: u32, uv: vec2<f32>, layer: u32, depth: f32) -> f32 {
+    if s == 0u {
+        return textureSampleCompareLevel(shadow_a, shadow_cmp, uv, layer, depth);
+    }
+    return textureSampleCompareLevel(shadow_b, shadow_cmp, uv, layer, depth);
+}
+
+fn shadowed(l: Light, p: vec3<f32>, n: vec3<f32>) -> f32 {
+    let s = i32(l.more.z) - 1;
+    if s < 0 || finish.flags.z < 0.5 {
+        return 1.0;
+    }
+    let info = shade.info[s];
+    var face = 0u;
+    if info.x > 1.5 {
+        let d = p - shade.at[s].xyz;
+        let a = abs(d);
+        if a.x >= a.y && a.x >= a.z {
+            face = select(1u, 0u, d.x > 0.0);
+        } else if a.y >= a.z {
+            face = select(3u, 2u, d.y > 0.0);
+        } else {
+            face = select(5u, 4u, d.z > 0.0);
+        }
+    }
+    let lift = n * info.w * shade.at[s].w;
+    let q = shade.mats[u32(info.y) + face] * vec4<f32>(p + lift, 1.0);
+    let c = q.xyz / q.w;
+    let uv = c.xy * vec2<f32>(0.5, -0.5) + 0.5;
+    if q.w <= 0.0 || any(uv < vec2<f32>(0.0)) || any(uv > vec2<f32>(1.0)) || c.z > 1.0 {
+        return 1.0;
+    }
+    let step = info.z * 0.5;
+    var sum = 0.0;
+    for (var k = 0u; k < 4u; k++) {
+        let o = vec2<f32>(select(-step, step, (k & 1u) == 1u), select(-step, step, k > 1u));
+        sum += tap(u32(s), uv + o, face, c.z - info.w * 0.002);
+    }
+    return sum * 0.25;
+}
+
+fn hashed(c: vec2<f32>) -> f32 {
+    return fract(sin(dot(c, vec2<f32>(127.1, 311.7))) * 43758.5453);
+}
+
 @fragment
 fn fs_solid(in: Out, @builtin(front_facing) front: bool) -> @location(0) vec4<f32> {
     let along = dot(in.world - scene.eye.xyz, scene.forward.xyz);
     if along < scene.slice.x || along >= scene.slice.y {
         discard;
     }
-    var albedo = finish.color * textureSample(base_map, smp, in.uv);
-    if finish.flags.x > 0.0 && albedo.a < finish.flags.x {
-        discard;
-    }
+    let kind = finish.shade.x;
+    var s: Surface;
+    s.albedo = finish.color * textureSample(base_map, smp, in.uv);
     let orm = textureSample(orm_map, smp, in.uv);
-    let ao = mix(1.0, textureSample(occlusion_map, smp, in.uv).r, finish.pbr.w);
-    let metal = clamp(finish.pbr.x * orm.b, 0.0, 1.0);
-    let rough = clamp(finish.pbr.y * orm.g, 0.04, 1.0);
-    let glow = finish.emissive.rgb * textureSample(emissive_map, smp, in.uv).rgb;
+    s.occlusion = mix(1.0, textureSample(occlusion_map, smp, in.uv).r, finish.pbr.w);
+    s.metallic = clamp(finish.pbr.x * orm.b, 0.0, 1.0);
+    s.roughness = clamp(finish.pbr.y * orm.g, 0.04, 1.0);
+    s.emissive = finish.emissive.rgb * textureSample(emissive_map, smp, in.uv).rgb;
+    s.position = in.world;
+    s.uv = in.uv;
     var n = normalize(in.normal);
     if !front {
         n = -n;
@@ -112,41 +105,22 @@ fn fs_solid(in: Out, @builtin(front_facing) front: bool) -> @location(0) vec4<f3
         let m = textureSample(normal_map, smp, in.uv).xyz * 2.0 - 1.0;
         n = normalize(t * m.x * finish.pbr.z + b * m.y * finish.pbr.z + n * m.z);
     }
-    if finish.flags.y < 0.5 {
-        let flat = albedo.rgb + glow;
-        return vec4<f32>(flat * albedo.a, albedo.a) * finish.more.x;
-    }
-    let v = normalize(scene.eye.xyz - in.world);
-    let n_v = max(dot(n, v), 1e-4);
-    let f0 = mix(vec3<f32>(0.04), albedo.rgb, metal);
-    let diffuse = albedo.rgb * (1.0 - metal);
-    let a = rough * rough;
-    var light = vec3<f32>(0.0);
-    for (var i = 0u; i < u32(scene.eye.w); i++) {
-        let l = scene.lights[i];
-        let f = falloff(l, in.world);
-        let n_l = max(dot(n, f.xyz), 0.0);
-        if n_l <= 0.0 || f.w <= 0.0 {
-            continue;
+    s.normal = n;
+    if kind > 1.5 && kind < 2.5 && in.shell > 0.5 {
+        let k = in.shell / max(finish.shade.y, 1.0);
+        let cells = floor(in.uv * (40.0 + finish.shade.w * 360.0));
+        if hashed(cells) < k + (1.0 - finish.shade.w) * 0.5 {
+            discard;
         }
-        let h = normalize(f.xyz + v);
-        let fresnel = f0 + (1.0 - f0) * pow(1.0 - max(dot(h, v), 0.0), 5.0);
-        let spec = fresnel * ggx(max(dot(n, h), 0.0), a) * smith(n_v, n_l, a) / max(4.0 * n_v * n_l, 1e-4);
-        light += (diffuse / PI * (1.0 - fresnel) + spec) * l.color.rgb * n_l * f.w * PI;
+        s.occlusion = s.occlusion * mix(0.4, 1.0, k);
     }
-    let up = dot(n, scene.up.xyz) * 0.5 + 0.5;
-    var around = (scene.ambient.rgb + scene.sky.rgb * up) * diffuse * ao;
-    if scene.slice.z > 0.5 {
-        let levels = f32(textureNumLevels(env));
-        let seen = textureSampleLevel(env, env_smp, equirect(n), levels - 1.0).rgb;
-        around += seen * diffuse * ao * scene.ambient.w;
-        if scene.slice.w > 0.5 {
-            let r = reflect(-v, n);
-            let shine = textureSampleLevel(env, env_smp, equirect(r), rough * (levels - 1.0)).rgb;
-            let fresnel = f0 + (max(vec3<f32>(1.0 - rough), f0) - f0) * pow(1.0 - n_v, 5.0);
-            around += shine * fresnel * ao * scene.ambient.w;
-        }
+    if kind > 3.5 && kind < 4.5 {
+        let away = distance(s.albedo.rgb, finish.key.rgb);
+        s.albedo.a = s.albedo.a * smoothstep(finish.key.w, finish.key.w + max(finish.more.y, 1e-4), away);
     }
-    let color = light + around + glow;
-    return vec4<f32>(color * albedo.a, albedo.a) * finish.more.x;
+    s = material(s);
+    if finish.flags.x > 0.0 && s.albedo.a < finish.flags.x {
+        discard;
+    }
+    return lit(s, in, front);
 }

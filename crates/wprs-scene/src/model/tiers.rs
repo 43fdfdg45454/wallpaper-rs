@@ -41,3 +41,29 @@ pub fn verdict(models: &[&Model], bones: usize, tier: Tier) -> Verdict {
     let fits = triangles <= c.triangles && bones <= c.bones;
     Verdict { tier, fits, reasons }
 }
+
+pub fn fur_shells(layers: u32, quality: crate::Quality) -> u32 {
+    let part = [0.25, 0.5, 0.75, 1.0][quality as usize];
+    ((layers.clamp(1, 32) as f32 * part).ceil() as u32).max(1)
+}
+
+pub fn shadow_side(
+    beam: crate::Beam,
+    set: Option<u32>,
+    (tier, phone): (Tier, bool),
+    q: crate::Quality,
+) -> u32 {
+    let base = match beam {
+        crate::Beam::Directional => 2048,
+        crate::Beam::Spot => 1024,
+        _ => 512,
+    };
+    let cap = match tier {
+        Tier::T0 | Tier::T1 => return 0,
+        _ if phone => 1024,
+        Tier::T2 => 2048,
+        Tier::T3 => 4096,
+    };
+    let side = set.unwrap_or(base).clamp(256, cap);
+    if q == crate::Quality::Q0 { (side / 2).max(256) } else { side }
+}

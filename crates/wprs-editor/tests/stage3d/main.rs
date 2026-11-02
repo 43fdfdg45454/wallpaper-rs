@@ -8,7 +8,9 @@ use wprs_editor::starters::starter;
 use wprs_scene::{Forge, ForgeMaterial, ForgeShape};
 
 mod edits;
+mod flight;
 mod looks;
+mod motion;
 mod views;
 
 fn state() {

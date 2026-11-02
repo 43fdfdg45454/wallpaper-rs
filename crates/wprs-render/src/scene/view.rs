@@ -49,6 +49,7 @@ pub struct SceneView {
     pub(super) hdr: bool,
     pub(super) tone: u8,
     pub(super) split: f32,
+    pub(super) debug3d: u8,
 }
 
 impl Drop for SceneView {
@@ -115,6 +116,14 @@ impl SceneView {
 
     pub fn model_renders(&self) -> u64 {
         self.solids.values().map(|s| s.renders).sum()
+    }
+
+    pub fn shadow_renders(&self) -> u64 {
+        self.solids.values().map(|s| s.shadow_renders).sum()
+    }
+
+    pub fn shadow_sides(&self) -> Vec<(u32, u32)> {
+        self.solids.values().flat_map(|s| s.maps.iter().flatten().map(|m| (m.side, m.layers))).collect()
     }
 
     pub fn damage(&self) -> Option<wprs_core::Region> {

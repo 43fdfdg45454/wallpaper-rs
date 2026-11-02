@@ -20,8 +20,22 @@ fn picture() -> wgpu::BindingType {
     }
 }
 
+fn depth() -> wgpu::BindingType {
+    wgpu::BindingType::Texture {
+        sample_type: wgpu::TextureSampleType::Depth,
+        view_dimension: wgpu::TextureViewDimension::D2Array,
+        multisampled: false,
+    }
+}
+
 pub(super) fn layouts(device: &wgpu::Device) -> [wgpu::BindGroupLayout; 4] {
     let sampler = wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering);
+    let compare = wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison);
+    let deltas = wgpu::BindingType::Texture {
+        sample_type: wgpu::TextureSampleType::Float { filterable: false },
+        view_dimension: wgpu::TextureViewDimension::D2,
+        multisampled: false,
+    };
     let both = S::VERTEX | S::FRAGMENT;
     let make = |label: &str, entries: &[wgpu::BindGroupLayoutEntry]| {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { label: Some(label), entries })
@@ -35,10 +49,23 @@ pub(super) fn layouts(device: &wgpu::Device) -> [wgpu::BindGroupLayout; 4] {
                 entry(0, both, uniform(true)),
                 entry(1, S::FRAGMENT, picture()),
                 entry(2, S::FRAGMENT, sampler),
+                entry(3, both, uniform(false)),
+                entry(4, S::FRAGMENT, depth()),
+                entry(5, S::FRAGMENT, depth()),
+                entry(6, S::FRAGMENT, compare),
+                entry(7, S::FRAGMENT, uniform(false)),
             ],
         ),
-        make("wprs-render solid object", &[entry(0, S::VERTEX, uniform(true))]),
+        make(
+            "wprs-render solid object",
+            &[
+                entry(0, S::VERTEX, uniform(true)),
+                entry(1, S::VERTEX, uniform(true)),
+                entry(2, S::VERTEX, uniform(true)),
+                entry(3, S::VERTEX, deltas),
+            ],
+        ),
         make("wprs-render solid maps", &maps),
-        make("wprs-render solid finish", &[entry(0, S::FRAGMENT, uniform(true))]),
+        make("wprs-render solid finish", &[entry(0, both, uniform(true))]),
     ]
 }

@@ -20,6 +20,7 @@ QtObject {
             "angle2": App.tr("Second angle"),
             "animated": App.tr("Animated"),
             "animation": App.tr("Animation"),
+            "angles": App.tr("Turn in 3D"),
             "animations": App.tr("Animation layers"),
             "arc": App.tr("Arc"),
             "around": App.tr("Around a point"),

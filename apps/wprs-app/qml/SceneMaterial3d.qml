@@ -12,6 +12,13 @@ GridLayout {
     readonly property var set: material.set ?? {}
     readonly property var file: material.file ?? {}
     readonly property var shaders: panel.info?.shaders ?? ["pbr", "unlit"]
+    readonly property var words: ({
+            "pbr": App.tr("Physical"),
+            "unlit": App.tr("Unlit"),
+            "fur": App.tr("Fur"),
+            "foliage": App.tr("Foliage"),
+            "chroma": App.tr("Chroma key")
+        })
     readonly property var names: ({
             "base": App.tr("Color"),
             "orm": App.tr("Metal and roughness"),
@@ -42,7 +49,7 @@ GridLayout {
 
         QQC2.ComboBox {
             Layout.fillWidth: true
-            model: row.shaders.map(s => s === "pbr" ? App.tr("Physical") : s === "unlit" ? App.tr("Unlit") : s)
+            model: row.shaders.map(s => row.words[s] ?? s)
             currentIndex: Math.max(0, row.shaders.indexOf(row.set.shader ?? (row.file.unlit ? "unlit" : "pbr")))
             onActivated: index => row.panel.set(row.material.name, {
                     "shader": row.shaders[index]
@@ -112,6 +119,12 @@ GridLayout {
                 "params": params
             });
         }
+    }
+
+    SceneMaterialShade {
+        Layout.columnSpan: 2
+        Layout.fillWidth: true
+        row: row
     }
 
     Flow {

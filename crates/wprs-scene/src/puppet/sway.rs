@@ -1,9 +1,9 @@
-use super::Puppet;
 use super::limb::{angle, end, gap, length, mirrored, pivot, range, turn, wrap};
 use super::swing::{Body, MAX_STEPS, QUIET, QUIET_STEPS, Sim};
+use super::{Fig, Puppet};
 use crate::resolve::Context;
 use crate::rigged::math::{Trs, invert, mul};
-use crate::{Body as Mode, BonePhysics, MeshLayer, Wake};
+use crate::{Body as Mode, BonePhysics, Wake};
 
 fn mix(a: [f32; 2], b: [f32; 2], f: f32) -> [f32; 2] {
     [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]
@@ -27,10 +27,11 @@ fn advance(b: &mut Body, e: &BonePhysics, sim: &Sim, (f0, f1): (f32, f32)) {
         [0, 1].map(|c| at[c] + v[c] + a[c] * h * h)
     };
     let mut speed = 0.0f32;
-    let drop = -e.gravity * 98.0;
+    let drop = -e.gravity * 98.0 * sim.unit;
     match e.translation {
         None => (b.at[0], b.was[0]) = (pin, pin),
         Some([lo, hi]) => {
+            let (lo, hi) = (lo * sim.unit, hi * sim.unit);
             let next = pull(b.at[0], b.was[0], pin, drop, 0);
             let (dx, dy) = ((next[0] - pin[0]).clamp(lo, hi), (pin[1] - next[1]).clamp(lo, hi));
             b.was[0] = b.at[0];
@@ -57,11 +58,12 @@ fn advance(b: &mut Body, e: &BonePhysics, sim: &Sim, (f0, f1): (f32, f32)) {
         b.at[i] = [b.at[i - 1][0] + rest * a.cos(), b.at[i - 1][1] + rest * a.sin()];
         speed = speed.max(length(gap(b.was[i], b.at[i])));
     }
-    b.quiet = if speed < QUIET { (b.quiet + 1).min(QUIET_STEPS) } else { 0 };
+    b.quiet = if speed < QUIET * sim.unit { (b.quiet + 1).min(QUIET_STEPS) } else { 0 };
 }
 
 impl Puppet {
-    pub(crate) fn swing(&mut self, cx: &Context, m: &MeshLayer, sim: &Sim) {
+    pub(crate) fn swing(&mut self, cx: &Context, m: &Fig, sim: &Sim) {
+        let sim = &Sim { wind: sim.wind.map(|w| w * m.unit), unit: m.unit, ..*sim };
         let steps = ((self.lag / sim.h) as u32).min(MAX_STEPS);
         self.lag = if steps == MAX_STEPS || sim.frozen { 0.0 } else { self.lag - steps as f32 * sim.h };
         let ran = sim.h * steps as f32;

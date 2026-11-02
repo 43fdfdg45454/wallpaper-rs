@@ -27,7 +27,7 @@ pub fn keys(dir: &Path, doc: &Value, id: &str, clip: &str) -> Value {
     let mut rows = Vec::new();
     let from = c["from"].as_f64().unwrap_or(0.0);
     for (bone, tracks) in c["bones"].as_object().into_iter().flatten() {
-        for channel in ["rotation", "position", "scale"] {
+        for channel in ["rotation", "position", "scale", "angles", "shift"] {
             if tracks.get(channel).is_some() {
                 rows.push(row("bone", bone, channel, &tracks[channel], from));
             }
@@ -50,5 +50,7 @@ pub fn keys(dir: &Path, doc: &Value, id: &str, clip: &str) -> Value {
         "shapes": names(|r| r.shapes.clone()),
         "defaults": rig.as_ref().map_or(Vec::new(), |r| r.defaults.clone()),
         "parts": names(|r| r.parts.clone()),
+        "events": c["events"].as_array().cloned().unwrap_or_default(),
+        "model": layer["type"] == "model",
     })
 }

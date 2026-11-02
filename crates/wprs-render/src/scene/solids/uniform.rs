@@ -21,7 +21,24 @@ pub(crate) struct Scene3 {
     pub(crate) sky: [f32; 4],
     pub(crate) up: [f32; 4],
     pub(crate) slice: [f32; 4],
+    pub(crate) wind: [f32; 4],
+    pub(crate) fade: [f32; 4],
     pub(crate) lights: [Light3; MAX_LIGHTS],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Pod, Zeroable)]
+pub(crate) struct Shadows {
+    pub(crate) mats: [[f32; 16]; 12],
+    pub(crate) info: [[f32; 4]; 2],
+    pub(crate) at: [[f32; 4]; 2],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Pod, Zeroable)]
+pub(crate) struct DrawSlots {
+    pub(crate) first: [f32; 4],
+    pub(crate) slots: [[f32; 4]; 4],
 }
 
 #[repr(C)]
@@ -40,6 +57,10 @@ pub(crate) struct Finish3 {
     pub(crate) flags: [f32; 4],
     pub(crate) maps: [f32; 4],
     pub(crate) more: [f32; 4],
+    pub(crate) shade: [f32; 4],
+    pub(crate) comb: [f32; 4],
+    pub(crate) key: [f32; 4],
+    pub(crate) params: [[f32; 4]; 8],
 }
 
 pub(crate) fn tone(c: Color, by: f32) -> [f32; 4] {
@@ -51,8 +72,7 @@ fn turn(eye: &Eye, [x, y, z]: [f32; 3]) -> [f32; 3] {
     unit3(std::array::from_fn(|i| r[i] * x - u[i] * y - f[i] * z))
 }
 
-pub(crate) fn light(stage: &Stage3d, lamp: &Lamp) -> Light3 {
-    let eye = &stage.eye;
+pub(crate) fn light_from(stage: &Stage3d, eye: &Eye, lamp: &Lamp) -> Light3 {
     let local = stage.world.inverse().apply(lamp.at());
     let px = [local[0] + stage.origin[0] * stage.size[0], local[1] + stage.origin[1] * stage.size[1]];
     let at = eye.place(px, lamp.z, stage.size);
@@ -77,13 +97,18 @@ pub(crate) fn light(stage: &Stage3d, lamp: &Lamp) -> Light3 {
     }
 }
 
-pub(crate) fn scene3(frame: &Frame, stage: &Stage3d, slice: usize, env: bool, cap: usize) -> Scene3 {
-    let eye = &stage.eye;
+pub(crate) fn scene3(
+    frame: &Frame,
+    (stage, eye): (&Stage3d, &Eye),
+    slice: usize,
+    (env, debug): (bool, u8),
+    cap: usize,
+) -> Scene3 {
     let (_, u, f) = eye.basis();
     let mut lights = [Light3::default(); MAX_LIGHTS];
     let lamps = frame.lamps.iter().take(cap.min(MAX_LIGHTS));
     let count = lamps.clone().count();
-    lamps.zip(&mut lights).for_each(|(l, out)| *out = light(stage, l));
+    lamps.zip(&mut lights).for_each(|(l, out)| *out = light_from(stage, eye, l));
     let bare = count == 0 && frame.ambient.is_none() && frame.sky.is_none() && !env;
     let ambient = frame.ambient.map_or([0.0; 4], |c| tone(c, 1.0));
     let sky = frame.sky.map_or([0.0; 4], |c| tone(c, 1.0));
@@ -110,6 +135,15 @@ pub(crate) fn scene3(frame: &Frame, stage: &Stage3d, slice: usize, env: bool, ca
         sky,
         up: [u[0], u[1], u[2], 0.0],
         slice: [near, far, f32::from(u8::from(env)), f32::from(u8::from(shine && env))],
+        wind: wind(stage, eye),
+        fade: [stage.fade, f32::from(debug), 0.0, 0.0],
         lights,
     }
+}
+
+fn wind(stage: &Stage3d, eye: &Eye) -> [f32; 4] {
+    let [x, y] = stage.wind;
+    let (r, u, _) = eye.basis();
+    let k = 0.01;
+    [r[0] * x * k - u[0] * y * k, r[1] * x * k - u[1] * y * k, r[2] * x * k - u[2] * y * k, stage.time]
 }

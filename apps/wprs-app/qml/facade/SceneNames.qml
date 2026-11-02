@@ -95,6 +95,8 @@ QtObject {
             "shade": App.tr("Shade"),
             "shader": App.tr("Shader"),
             "shadow": App.tr("Shadow"),
+            "shadow_bias": App.tr("Shadow bias"),
+            "shadow_resolution": App.tr("Shadow map size"),
             "shadows": App.tr("Shadows"),
             "shafts": App.tr("Shafts"),
             "shake": App.tr("Shake"),

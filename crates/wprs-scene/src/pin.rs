@@ -17,9 +17,10 @@ impl Context<'_> {
         let found = self.puppets.iter().find(|p| p.layer == target.id);
         let name = a.bone.as_deref().or(a.point.as_deref())?;
         let frame = match (&target.kind, found) {
-            (Kind::Mesh(m), Some(p)) => {
+            (Kind::Mesh(_), Some(p)) => {
                 let w = p.worlds.get(p.rig.joint(name)?)?;
-                let at = mount_on(self, target, size(self, target, m), place.world);
+                let fig = crate::puppet::figure(target)?;
+                let at = mount_on(self, target, size(self, target, &fig), place.world);
                 at.then(flat(w)).then(Affine::scale([1.0, -1.0]))
             }
             _ => place.world,

@@ -16,7 +16,8 @@ fn owner(doc: &Value, pointer: &str) -> Option<(String, String)> {
         if at["type"].is_string() && at["id"].is_string() {
             let part = (parts.get(i) == Some(&"parts")).then(|| parts.get(i + 1)).flatten();
             let part = part.map_or(String::new(), |p| p.replace("~1", "/").replace("~0", "~"));
-            return (at["type"] == "mesh").then_some((at["id"].as_str()?.to_owned(), part));
+            let figure = at["type"] == "mesh" || at["type"] == "model";
+            return figure.then_some((at["id"].as_str()?.to_owned(), part));
         }
     }
     None

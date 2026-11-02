@@ -20,8 +20,7 @@ pub(super) fn gather<'a>(
         return;
     }
     let stage = frame.stages.len();
-    let eye = super::eye(cx);
-    let eye = crate::eye::Eye { aspect: canvas[0] / canvas[1].max(1e-3), ..eye };
+    let (eye, fade, cross) = super::camera(cx, canvas[0] / canvas[1].max(1e-3), frame.quality);
     let end = frame.draws[at].end;
     let mut blocks: Vec<(std::ops::Range<usize>, Option<f32>)> = Vec::new();
     let mut i = at + 1;
@@ -101,5 +100,9 @@ pub(super) fn gather<'a>(
         planes: cut,
         slices,
         key: 0,
+        fade,
+        cross,
+        wind: [0.0; 2],
+        time: cx.t,
     });
 }

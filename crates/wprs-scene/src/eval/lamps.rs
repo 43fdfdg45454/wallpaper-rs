@@ -9,6 +9,8 @@ pub enum Picture<'a> {
     Layer(&'a str),
 }
 
+pub const SHADOW_BIAS: f32 = 0.2;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lamp<'a> {
     pub layer: &'a Layer,
@@ -24,6 +26,7 @@ pub struct Lamp<'a> {
     pub air: Option<[f32; 3]>,
     pub picture: Option<Picture<'a>>,
     pub slot: usize,
+    pub shadow: Option<(Option<u32>, f32)>,
 }
 
 impl Lamp<'_> {
@@ -119,6 +122,9 @@ fn lamp<'a>(
             .map(|v| [v.density.clamp(0.0, 1.0), v.samples.clamp(4, 64) as f32, v.shafts.clamp(0.0, 1.0)]),
         picture,
         slot: 0,
+        shadow: l
+            .shadows
+            .then(|| (l.shadow_resolution, l.shadow_bias.unwrap_or(SHADOW_BIAS).clamp(0.0, 1.0))),
     })
 }
 

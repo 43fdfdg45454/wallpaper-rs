@@ -56,4 +56,9 @@ ColumnLayout {
             material: modelData
         }
     }
+
+    SceneNewMaterial {
+        Layout.fillWidth: true
+        panel: panel
+    }
 }

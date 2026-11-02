@@ -4,12 +4,17 @@ use anyhow::Result;
 use serde_json::Value;
 use std::path::Path;
 
+mod bones;
 mod camera;
 mod cost;
 mod edit;
 mod gizmo;
 mod info;
 mod material;
+mod newmat;
+mod paths;
+mod shadows;
+mod spend;
 mod sphere;
 mod store;
 mod thumbs;
@@ -18,10 +23,12 @@ mod view;
 pub use cost::cost;
 pub use gizmo::stage;
 pub use info::info;
+pub use newmat::TEMPLATE;
 pub use store::file;
 pub use view::{View, preview};
 
-const QUERIES: [&str; 4] = ["model_info", "stage3d", "materials3d", "cost3d"];
+const QUERIES: [&str; 7] =
+    ["model_info", "stage3d", "materials3d", "cost3d", "shadows3d", "paths3d", "material_check"];
 
 pub(crate) fn act(dir: &Path, doc: &Value, e: &Edit3d) -> Result<Vec<Op>> {
     match e {
@@ -33,6 +40,10 @@ pub(crate) fn act(dir: &Path, doc: &Value, e: &Edit3d) -> Result<Vec<Op>> {
         Edit3d::Camera(c) => camera::camera_edit(doc, c),
         Edit3d::View(v) => camera::view_edit(dir, doc, v),
         Edit3d::Tones(t) => camera::tones(doc, t),
+        Edit3d::Shadows(s) => shadows::edit(doc, s),
+        Edit3d::Path(p) => paths::edit(dir, doc, p),
+        Edit3d::NewMaterial { name } => newmat::create(dir, doc, name),
+        Edit3d::Debug { show } => camera::debug(doc, show.as_deref()),
     }
 }
 
@@ -57,6 +68,11 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
     match () {
         _ if q.get("model_info").is_some() => model_info(dir, doc, &q["model_info"]),
         _ if q.get("stage3d").is_some() => stage(dir, doc, t(&q["stage3d"])),
+        _ if q.get("shadows3d").is_some() => shadows::shadows(dir, doc, t(&q["shadows3d"])),
+        _ if q.get("paths3d").is_some() => paths::paths(dir, doc, t(&q["paths3d"])),
+        _ if q.get("material_check").is_some() => {
+            newmat::check(dir, doc, q["material_check"]["name"].as_str().unwrap_or_default())
+        }
         _ if q.get("materials3d").is_some() => {
             material::listing(dir, doc, q["materials3d"]["layer"].as_str().unwrap_or(id))
         }
