@@ -126,8 +126,11 @@ impl SceneEditor {
             if gesture { project.drag(&action) } else { project.act(&action) }
         };
         match done {
-            Ok(_) => self.changed(),
-            Err(e) => self.fail(e),
+            Ok(_) => self.as_mut().changed(),
+            Err(e) => return self.fail(e),
+        }
+        if gesture && let Some(project) = self.rust_mut().project.as_mut() {
+            project.held();
         }
     }
 

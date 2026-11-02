@@ -104,7 +104,12 @@ impl Project {
         self.step(action, true)
     }
 
+    pub fn held(&mut self) {
+        self.history.held(now());
+    }
+
     fn step(&mut self, action: &Action, gesture: bool) -> Result<Vec<Op>> {
+        let at = now();
         self.ready()?;
         let ops = match action {
             Action::Undo {} | Action::Redo {} => {
@@ -120,7 +125,7 @@ impl Project {
                 None => plan(&self.doc, action)?,
             },
         };
-        self.commit(&action.name(), ops, gesture)
+        self.commit(&action.name(), ops, gesture, at)
     }
 
     pub fn effects(&self) -> crate::inspect::Own {
@@ -133,16 +138,16 @@ impl Project {
 
     pub fn record(&mut self, label: &str, ops: Vec<Op>) -> Result<Vec<Op>> {
         self.ready()?;
-        self.commit(label, ops, false)
+        self.commit(label, ops, false, now())
     }
 
-    fn commit(&mut self, label: &str, ops: Vec<Op>, gesture: bool) -> Result<Vec<Op>> {
+    fn commit(&mut self, label: &str, ops: Vec<Op>, gesture: bool, at: u64) -> Result<Vec<Op>> {
         let dir = Some(self.dir.as_path());
         if ops.is_empty() || cancels(&self.doc, &ops, dir) {
             return Ok(Vec::new());
         }
         let before = detected(&self.doc, dir);
-        let mut done = self.history.record(&mut self.doc, label, ops, now(), gesture)?;
+        let mut done = self.history.record(&mut self.doc, label, ops, at, gesture)?;
         let follow = sync(&self.doc, &before, dir);
         if !follow.is_empty() {
             done.extend(self.history.extend(&mut self.doc, follow)?);

@@ -57,10 +57,17 @@ pub fn step(
 }
 
 impl Editor {
-    pub fn record(mut self: Pin<&mut Self>, before: &Edit, gesture: String) {
+    pub fn record(mut self: Pin<&mut Self>, before: &Edit, gesture: String, at: Instant) {
         let mut this = self.as_mut().rust_mut();
         let this = &mut *this;
-        step(&mut this.history, &mut this.last, (before, &this.edit), (gesture, Instant::now()));
+        step(&mut this.history, &mut this.last, (before, &this.edit), (gesture, at));
+    }
+
+    pub fn held(mut self: Pin<&mut Self>, gesture: &str) {
+        let mut this = self.as_mut().rust_mut();
+        if let Some((_, at)) = this.last.as_mut().filter(|(g, _)| g == gesture) {
+            *at = Instant::now();
+        }
     }
 
     fn walk(mut self: Pin<&mut Self>, back: bool) {

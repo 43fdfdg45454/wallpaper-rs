@@ -128,7 +128,8 @@ impl Editor {
             return;
         }
         let args = serde_json::from_str::<Value>(&args.to_string());
-        let gesture = crate::editsteps::gesture(&action.to_string(), args.as_ref().ok());
+        let (gesture, at) =
+            (crate::editsteps::gesture(&action.to_string(), args.as_ref().ok()), Instant::now());
         let action =
             args.and_then(|args| serde_json::from_value::<Action>(json!({ action.to_string(): args })));
         let before = self.edit.clone();
@@ -139,8 +140,9 @@ impl Editor {
         let failed = done.err();
         self.as_mut().set_error(QString::from(failed.as_deref().unwrap_or_default()));
         if failed.is_none() {
-            self.as_mut().record(&before, gesture);
-            self.changed_edit();
+            self.as_mut().record(&before, gesture.clone(), at);
+            self.as_mut().changed_edit();
+            self.held(&gesture);
         }
     }
 

@@ -78,6 +78,12 @@ impl History {
         Ok(ops)
     }
 
+    pub fn held(&mut self, at: u64) {
+        if let Some(last) = self.done.last_mut().filter(|l| l.gesture) {
+            last.at = last.at.max(at);
+        }
+    }
+
     pub fn extend(&mut self, doc: &mut Value, ops: Vec<Op>) -> Result<Vec<Op>> {
         let undo = apply(doc, &ops)?;
         if let Some(last) = self.done.last_mut() {
