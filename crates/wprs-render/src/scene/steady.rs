@@ -121,10 +121,11 @@ fn measure(r: &Renderer, scene: Scene) -> (SceneView, Runtime, [i64; 2], u32) {
 
 #[test]
 fn steady_scene_frames_allocate_nothing_beyond_their_gpu_calls() {
-    let r = match Renderer::shared() {
+    let own = match Renderer::new() {
         Ok(r) => r,
         Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
     };
+    let r = &own;
     let (mut view, runtime, [extra, evaluated], passes) =
         measure(r, Scene::load(SCENE, &Default::default()).unwrap());
     assert!(passes >= 5 && view.stats().created == 0, "{:?}", view.stats());
@@ -165,7 +166,8 @@ fn steady_scene_frames_allocate_nothing_beyond_their_gpu_calls() {
 
 #[test]
 fn steady_package_effect_frames_allocate_nothing_beyond_their_gpu_calls() {
-    let Ok(r) = Renderer::shared() else { return };
+    let Ok(own) = Renderer::new() else { return };
+    let r = &own;
     let mut scene = Scene::load(OWN, &Default::default()).unwrap();
     let files = |path: &str, _: usize| match path {
         "fx/smear.json" => Ok(TRAIL.as_bytes().to_vec()),
