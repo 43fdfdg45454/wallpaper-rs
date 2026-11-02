@@ -1,5 +1,6 @@
 mod language;
 mod more;
+mod textures;
 
 use clap::CommandFactory;
 use image::{Rgba, RgbaImage};

@@ -31,7 +31,8 @@ fn layer(dir: &Path, doc: &Value, id: &str, t: f64) -> Value {
     let found = crate::actions::layer(doc, id).map(|(_, l)| l.clone()).unwrap_or_default();
     let asset = crate::keys::value_at(&found["image"], t);
     let path = asset.as_str().and_then(|a| doc["scene"]["assets"][a]["path"].as_str()).map(|p| dir.join(p));
-    let Some(picture) = path.filter(|_| found["type"] == "image").and_then(|p| image::open(p).ok()) else {
+    let Some(picture) = path.filter(|_| found["type"] == "image").and_then(|p| crate::pictures::open(p).ok())
+    else {
         return out;
     };
     let small = picture.thumbnail(62, 62).to_rgba8();

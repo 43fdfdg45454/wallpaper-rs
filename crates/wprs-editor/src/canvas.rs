@@ -35,7 +35,7 @@ fn size(dir: &Path, doc: &Value, layer: &Value, canvas: [f64; 2], t: f64) -> [f6
         |id: &Value| doc.pointer("/scene/assets")?.get(id.as_str()?)?["path"].as_str().map(|p| dir.join(p));
     match layer["type"].as_str().unwrap_or_default() {
         "image" => file(&value_at(&layer["image"], t))
-            .and_then(|f| image::image_dimensions(f).ok())
+            .and_then(|f| crate::pictures::dimensions(f).ok())
             .map_or([512.0; 2], |(w, h)| [f64::from(w), f64::from(h)]),
         "video" => [640.0, 360.0],
         "text" => {

@@ -256,7 +256,7 @@ the folder changed, and the stored value is the path of that copy.
 | `newer_keys` | writes a key of the manifest or of `scene.json` that the released versions do not know, whatever its value (`null`, `[]` and `{}` included), while no other feature already tells them to update, so that they say that they need an update instead of calling the package broken | runs | runs |
 | `origin2` | is `imported` or from a `provider`, or sets `origin.source_url` | runs | runs |
 | `credits2` | credits files to the package they come from (`credits[].source`) | runs | runs |
-| `ktx2` | uses KTX2 textures | refused | refused |
+| `ktx2` | uses KTX2 textures (Basis Universal pictures, `scene.md`) | runs | runs |
 | `avif` | uses AVIF pictures | refused | refused |
 | `spanned_scenes` | sets `display.span` of a scene to `all-outputs` | runs | without |
 | `rgb` | sets `permissions.rgb` or sends colors to RGB lighting from a scene | refused | without |

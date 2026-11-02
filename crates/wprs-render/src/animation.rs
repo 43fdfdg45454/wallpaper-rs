@@ -71,11 +71,12 @@ impl Pictures {
             Some(found) => found.clone(),
             None => {
                 let bytes = read()?;
-                let (image, sheet) = match asset.animated {
-                    true => animation(&bytes).map(|(atlas, durations)| (atlas, Some(durations)))?,
-                    false => (still(bytes)?, None),
+                let (image, sheet) = match (asset.animated, wprs_ktx2::is_ktx2(&bytes)) {
+                    (true, _) => animation(&bytes).map(|(atlas, d)| (crate::Pixels::new(atlas), Some(d)))?,
+                    (false, true) => (crate::Pixels::ktx2(bytes).map_err(crate::packed::failure)?, None),
+                    (false, false) => (crate::Pixels::new(still(bytes)?), None),
                 };
-                self.0.entry(key).or_insert((crate::Pixels::new(image), sheet)).clone()
+                self.0.entry(key).or_insert((image, sheet)).clone()
             }
         };
         if let Some(durations) = sheet {

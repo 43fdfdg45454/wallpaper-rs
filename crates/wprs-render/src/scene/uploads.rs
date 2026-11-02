@@ -11,6 +11,7 @@ pub struct Pixels {
     size: (u32, u32),
     kept: Mutex<Option<Arc<RgbaImage>>>,
     reload: Option<Reload>,
+    packed: Option<Arc<Vec<u8>>>,
 }
 
 type Entry = (Weak<Pixels>, [bool; 2], Weak<(crate::GpuImage, [f32; 2])>);
@@ -21,7 +22,25 @@ pub(crate) struct Uploads(Mutex<Vec<Entry>>);
 impl Pixels {
     pub fn new(image: impl Into<Arc<RgbaImage>>) -> Arc<Pixels> {
         let image = image.into();
-        Arc::new(Pixels { size: image.dimensions(), kept: Mutex::new(Some(image)), reload: None })
+        Arc::new(Pixels {
+            size: image.dimensions(),
+            kept: Mutex::new(Some(image)),
+            reload: None,
+            packed: None,
+        })
+    }
+
+    pub fn ktx2(bytes: Vec<u8>) -> Result<Arc<Pixels>, wprs_ktx2::Error> {
+        let info = wprs_ktx2::info(&bytes)?;
+        let (packed, source) = (Arc::new(bytes), Mutex::new(None));
+        let held = packed.clone();
+        let reload: Reload = Box::new(move || wprs_ktx2::rgba(&held, wprs_ktx2::MAX_SIDE).ok());
+        let size = (info.width, info.height);
+        Ok(Arc::new(Pixels { size, kept: source, reload: Some(reload), packed: Some(packed) }))
+    }
+
+    pub fn packed(&self) -> Option<&Arc<Vec<u8>>> {
+        self.packed.as_ref()
     }
 
     pub fn reloadable(
@@ -30,7 +49,7 @@ impl Pixels {
     ) -> Arc<Pixels> {
         let image = image.into();
         let (size, kept) = (image.dimensions(), Mutex::new(Some(image)));
-        Arc::new(Pixels { size, kept, reload: Some(Box::new(reload)) })
+        Arc::new(Pixels { size, kept, reload: Some(Box::new(reload)), packed: None })
     }
 
     pub fn size(&self) -> (u32, u32) {
@@ -86,6 +105,9 @@ impl Renderer {
         let mipped = || self.uploaded(pixels, [linear, true]).filter(|_| mips != Some(false));
         if let Some(found) = mipped().or_else(|| self.uploaded(pixels, [linear, false])) {
             return Some(found);
+        }
+        if let Some(made) = pixels.packed().and_then(|b| self.upload_packed(pixels, b, linear, mips)) {
+            return Some(made);
         }
         let image = pixels.image()?;
         let prepared = crate::decode::scaled(&image, 1.0, self.max_edge());

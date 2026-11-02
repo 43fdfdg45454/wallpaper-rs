@@ -109,8 +109,8 @@ through the system player, which plays only the part between `start` and `end`.
 
 Fonts may also be TrueType or OpenType collections (`.ttc`, `.otc`) and compressed `.woff2` files
 (`fonts2`). Videos may be used as masks, effect textures and the picture of a spot light
-(`video_textures`), and wherever a picture is; sounds may also be MP3 (see "Sound"). KTX2 textures are accepted by the package
-reader but refused with `ktx2` until the engine loads them. Meshes and models are binary glTF 2.0
+(`video_textures`), and wherever a picture is; sounds may also be MP3 (see "Sound"). Pictures may
+also be KTX2 textures (`ktx2`, see "KTX2 textures"). Meshes and models are binary glTF 2.0
 files (`.glb`, at most 64 MiB each; FBX or OBJ convert to it with common 3D tools): readers read
 only the header and the JSON part of each file once (at most 4 MiB, and 16 MiB for all the models
 of a scene), refuse files that load anything from outside themselves or require an extension other
@@ -124,6 +124,22 @@ entries for all the models of a scene and more than 2 000 000 triangles, and rea
 animations with their length, against which every name the scene gives is checked. Unnamed
 elements are called `node_<n>`, `mesh_<n>`, `material_<n>` and `animation_<n>`.
 
+
+### KTX2 textures
+
+A picture asset may be a `.ktx2` file holding one Basis Universal picture (ETC1S, UASTC or XUASTC
+of low dynamic range; one layer, no faces, no video), at most 16 384 pixels a side, 15 levels and
+256 MiB. Once read, the engine transcodes it to the compressed format the graphics card reads best:
+BC7 on desktop cards, ASTC 4 × 4 on most phones, ETC2 on older phones, and uncompressed RGBA where
+none of them is offered or where the level it starts from is not a multiple of 4 pixels a side. The
+levels of the file are its mipmaps: the first level no larger than the largest texture the card
+takes is drawn, `mipmaps: false` keeps only that one, and a file of one level is mipped like any
+other picture. `linear`, `filter`, `wrap`, `atlas` and the frames of a sprite sheet apply as to
+other pictures; `animated` does not. The file stays packed in memory and only becomes plain pixels
+when the CPU needs them (pointer tests against its alpha, particles shaped by it), so a scene of
+KTX2 pictures takes about a quarter of the video memory of the same pictures in PNG. The 512 MiB that
+the pictures of a scene may take once decoded counts them as uncompressed, as on cards that get
+RGBA. Picture packages may use a `.ktx2` entry too; it is shown uncompressed.
 ## Cost and frame rate
 
 The engine estimates what each frame of a scene costs before it draws it, without the GPU. A unit

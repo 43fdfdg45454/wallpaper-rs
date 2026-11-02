@@ -3,7 +3,7 @@ use anyhow::{Result, ensure};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
-use wprs_editor::actions::{Action, MaskStroke};
+use wprs_editor::actions::{Action, MaskStroke, ScriptFile};
 use wprs_editor::{Op, Project, references};
 
 pub(crate) fn value(text: &str) -> Value {
@@ -45,7 +45,7 @@ pub(crate) fn edit(dir: &Path, action: Action) -> Result<()> {
                 _ => None,
             })
             .for_each(|id| println!("{id}")),
-        Action::Thumbnail { .. } => ops
+        Action::Thumbnail { .. } | Action::Asset(_) => ops
             .iter()
             .filter_map(|op| match op {
                 Op::Add { value, .. } | Op::Replace { value, .. } => value.as_str(),
@@ -84,7 +84,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
             )
         }
         Author::ImportScript { dir, file } => {
-            (dir, Action::ImportScript { file: fs::canonicalize(&file).unwrap_or(file) })
+            (dir, Action::ImportScript(ScriptFile { file: fs::canonicalize(&file).unwrap_or(file) }))
         }
         Author::PaintMask { dir, pointer, points, channel, radius, hardness, value } => {
             let pair = |p: &str| {

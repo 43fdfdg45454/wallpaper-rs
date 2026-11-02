@@ -17,6 +17,7 @@ members = [
     "crates/wprs-script",
     "crates/wprs-sync",
     "crates/wprs-editor",
+    "crates/wprs-ktx2",
     "crates/wprs-android",
     "apps/wprsd",
     "apps/wprs-ctl",
@@ -50,6 +51,7 @@ wprs-audio = { path = "crates/wprs-audio" }
 wprs-script = { path = "crates/wprs-script" }
 wprs-sync = { path = "crates/wprs-sync" }
 wprs-editor = { path = "crates/wprs-editor" }
+wprs-ktx2 = { path = "crates/wprs-ktx2" }
 wprs-web = { path = "apps/wprs-web" }
 cxx = "1"
 cxx-qt = "=0.10.0"
@@ -107,6 +109,9 @@ brotli = { version = "7.0.0", default-features = false, features = ["std"] }
 brotli-decompressor = { version = "4.0.3", default-features = false, features = ["std"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp"] }
 jpeg-decoder = { version = "0.3.2", default-features = false }
+basisu = { version = "=0.1.0", default-features = false, features = ["std", "zstd"] }
+basisu_c_sys = { version = "=0.9.1", features = ["encoder", "extra"] }
+texture2ddecoder = "=0.1.2"
 pipewire = { version = "0.10", features = ["v0_3_65"] }
 clap = { version = "4", features = ["derive"] }
 rpassword = "7"
@@ -149,6 +154,12 @@ debug = "line-tables-only"
 
 [profile.dev.package."*"]
 debug = false
+
+[profile.dev.package.basisu]
+opt-level = 2
+
+[profile.dev.package.basisu_c_sys]
+opt-level = 2
 
 [profile.release]
 lto = "thin"

@@ -29,6 +29,19 @@ ColumnLayout {
                 onClicked: panel.page.editor.select(modelData.pointer)
 
                 QQC2.ToolButton {
+                    anchors.right: remove.left
+                    visible: row.modelData.kind === "image" && !row.modelData.path.toLowerCase().endsWith(".ktx2")
+                    icon.name: "application-x-archive"
+                    text: App.tr("Convert to KTX2…")
+                    display: QQC2.AbstractButton.IconOnly
+                    QQC2.ToolTip.text: text
+                    QQC2.ToolTip.visible: hovered
+                    onClicked: packing.show(row.modelData.id, row.modelData.pointer)
+                }
+
+                QQC2.ToolButton {
+                    id: remove
+
                     anchors.right: parent.right
                     icon.name: "edit-delete"
                     text: App.tr("Remove")
@@ -93,11 +106,17 @@ ColumnLayout {
         page: panel.page
     }
 
+    SceneKtx2 {
+        id: packing
+
+        page: panel.page
+    }
+
     FileDialog {
         id: files
 
         fileMode: FileDialog.OpenFiles
-        nameFilters: [App.tr("Pictures, videos, sounds, fonts, color tables and models") + " (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.webm *.mp4 *.mkv *.ogg *.opus *.flac *.wav *.ttf *.otf *.cube *.glb)"]
+        nameFilters: [App.tr("Pictures, videos, sounds, fonts, color tables and models") + " (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.ktx2 *.webm *.mp4 *.mkv *.ogg *.opus *.flac *.wav *.ttf *.otf *.cube *.glb)"]
         onAccepted: selectedFiles.forEach(file => panel.page.run("import", {
                 "file": App.path(file)
             }))

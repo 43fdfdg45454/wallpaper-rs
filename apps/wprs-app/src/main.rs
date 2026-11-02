@@ -16,6 +16,7 @@ mod fetch;
 mod grid;
 mod items;
 mod library;
+mod packer;
 mod picture;
 mod rows;
 mod scene;

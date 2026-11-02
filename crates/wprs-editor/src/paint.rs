@@ -32,7 +32,7 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &Stroke) -> Result<Vec<Op>> {
     let named = doc.pointer(s.pointer).and_then(Value::as_str).filter(|id| doc.pointer(&asset(id)).is_some());
     let id = named.map_or_else(|| unique(doc, s.pointer.rsplit('/').next().unwrap_or("mask")), String::from);
     let path = named.and_then(|id| doc.pointer(&format!("{}/path", asset(id)))?.as_str());
-    let old = path.and_then(|p| image::open(dir.join(p)).ok()).map(|i| i.into_rgba8());
+    let old = path.and_then(|p| crate::pictures::open(dir.join(p)).ok()).map(|i| i.into_rgba8());
     let mut picture =
         old.unwrap_or_else(|| RgbaImage::from_pixel(SIDE, SIDE, Rgba(blank(dir, doc, s.pointer))));
     stroke(&mut picture, s);

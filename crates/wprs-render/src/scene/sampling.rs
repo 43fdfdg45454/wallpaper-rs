@@ -51,7 +51,7 @@ impl Renderer {
         let (source, natural) = &**image;
         let (w, h) = source.size();
         let levels = 32 - w.max(h).leading_zeros();
-        let format = source.texture.format();
+        let format = crate::packed::drawable(source.texture.format());
         let flags = [format == wgpu::TextureFormat::Rgba8Unorm, true];
         if levels <= 1 || source.texture.mip_level_count() > 1 {
             return image.clone();

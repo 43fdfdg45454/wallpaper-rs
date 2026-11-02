@@ -61,6 +61,7 @@ mod swarming;
 mod swinging;
 mod tended;
 mod tending;
+mod texturing;
 mod undoing;
 mod userprops;
 

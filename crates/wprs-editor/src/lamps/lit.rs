@@ -4,7 +4,7 @@ use anyhow::{Result, anyhow, ensure};
 use serde_json::{Map, Value, json};
 use wprs_core::message::said;
 
-const PICTURES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
+const PICTURES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
 
 pub(crate) fn picture(doc: &Value, id: &str) -> Result<()> {
     let path = doc.pointer(&format!("/scene/assets/{}/path", escape(id))).and_then(Value::as_str);

@@ -91,7 +91,7 @@ pub fn homography(q: [[f32; 2]; 4]) -> [f32; 16] {
 
 fn thumb(dir: &Path, doc: &Value, id: &str) -> Option<String> {
     let path = doc.pointer(&format!("/scene/assets/{}/path", escape(id))).and_then(Value::as_str)?;
-    let image = image::open(dir.join(path)).ok()?.thumbnail(128, 128).into_rgba8();
+    let image = crate::pictures::open(dir.join(path)).ok()?.thumbnail(128, 128).into_rgba8();
     Some(crate::rigs::url(&image))
 }
 

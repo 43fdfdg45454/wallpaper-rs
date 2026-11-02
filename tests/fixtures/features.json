@@ -29,7 +29,7 @@
  "folder_lists": {"kind": "web", "entry": "index.html", "manifest": {"inputs": [], "properties": {"photos": {"type": "folder", "label": "Photos", "accept": ["image"], "mode": "all"}}}, "files": {"index.html": "<!doctype html><title>Page</title>"}},
  "script_folders": {"manifest": {"properties": {"photos": {"type": "folder", "label": "Photos", "accept": ["image"], "mode": "all"}}}},
  "quality_settings": {"manifest": {"properties": {"speed": {"type": "slider", "label": "Speed", "min": 0, "max": 2, "default": 1, "quality": {"q0": 0.5}}}}},
- "ktx2": {"kind": "image", "entry": "sky.ktx2", "files": {"sky.ktx2": "base64:q0tUWCAyMLsNChoKAAAAAAAAAAAAAAAAAAAAAAAAAAA="}},
+ "ktx2": {"kind": "image", "entry": "sky.ktx2", "files": {"sky.ktx2": "fixture:green-64x32.ktx2"}},
  "avif": {"kind": "image", "entry": "sky.avif", "files": {"sky.avif": "base64:AAAAHGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZg=="}},
  "spanned_scenes": {"manifest": {"display": {"span": "all-outputs"}}},
  "blend_modes2": {"scene": {"layers": [{"id": "sky", "type": "image", "image": "sky", "blend": "linear_burn"}]}},

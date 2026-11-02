@@ -25,6 +25,7 @@ pub mod hdr;
 mod import;
 mod lost;
 mod luma;
+mod packed;
 #[cfg(target_os = "linux")]
 mod page;
 mod palette;

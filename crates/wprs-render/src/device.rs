@@ -41,6 +41,7 @@ pub struct Renderer {
     pub(crate) luma: OnceLock<crate::luma::Luma>,
     pub(crate) tier: OnceLock<wprs_scene::Tier>,
     pub(crate) forced: std::sync::atomic::AtomicU8,
+    pub(crate) packing: std::sync::atomic::AtomicU8,
     pub(crate) calibration: OnceLock<wprs_scene::Calibration>,
     pub(crate) name: String,
     pub(crate) uploads: crate::scene::Uploads,
@@ -59,7 +60,8 @@ impl Renderer {
             max_buffer_size: offered.max_buffer_size,
             ..wgpu::Limits::downlevel_defaults()
         };
-        let required_features = adapter.features() & wgpu::Features::TIMESTAMP_QUERY;
+        let required_features =
+            adapter.features() & (wgpu::Features::TIMESTAMP_QUERY | crate::packed::COMPRESSED);
         let descriptor = wgpu::DeviceDescriptor {
             label: Some("wprs-render"),
             required_limits,
@@ -109,6 +111,7 @@ impl Renderer {
             luma: OnceLock::new(),
             tier: OnceLock::new(),
             forced: std::sync::atomic::AtomicU8::new(0),
+            packing: std::sync::atomic::AtomicU8::new(0),
             calibration: OnceLock::new(),
             name: info.name.clone(),
             uploads: Default::default(),

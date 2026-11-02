@@ -38,6 +38,10 @@ pub fn decode_unoriented<R: BufRead + Seek>(
     reader: ImageReader<R>,
     mut limits: Limits,
 ) -> image::ImageResult<(DynamicImage, Orientation)> {
+    let reader = match crate::packed::picture(reader, &limits)? {
+        Ok(image) => return Ok((image, Orientation::NoTransforms)),
+        Err(reader) => reader,
+    };
     let mut reader = reader.with_guessed_format()?;
     reader.limits(limits.clone());
     let mut decoder = reader.into_decoder()?;
@@ -92,7 +96,7 @@ fn turned(orientation: Orientation) -> bool {
 pub fn image_size(path: &Path) -> image::ImageResult<(u32, u32)> {
     let decoder = ImageReader::open(path)?.with_guessed_format()?.into_decoder();
     let mut decoder = match decoder {
-        Err(e) => return crate::platform::size(path).ok_or(e),
+        Err(e) => return crate::platform::size(path).or_else(|| crate::packed::size(path)).ok_or(e),
         decoder => decoder?,
     };
     let (w, h) = decoder.dimensions();

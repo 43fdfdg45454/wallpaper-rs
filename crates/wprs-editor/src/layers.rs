@@ -83,7 +83,7 @@ fn unique_among(doc: &Value, base: &str, more: &[String]) -> String {
 pub fn asset_kind(path: &str) -> &'static str {
     let ext = Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or_default().to_ascii_lowercase();
     match ext.as_str() {
-        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" => "image",
+        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "ktx2" => "image",
         "webm" | "mp4" | "mkv" => "video",
         "ogg" | "opus" | "flac" | "wav" | "mp3" => "sound",
         "ttf" | "otf" | "ttc" | "otc" | "woff2" => "font",

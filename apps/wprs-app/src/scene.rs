@@ -116,7 +116,7 @@ impl SceneEditor {
     pub fn run(mut self: Pin<&mut Self>, action: &QString, args: &QString, gesture: bool) {
         let args = serde_json::from_str::<Value>(&args.to_string()).unwrap_or(json!({}));
         let action = match serde_json::from_value::<Action>(json!({ action.to_string(): args })) {
-            Ok(action @ (Action::Import { .. } | Action::Thumbnail { .. })) => return self.import(action),
+            Ok(action) if crate::scenework::queued(&action) => return self.import(action),
             Ok(action) => action,
             Err(e) => return self.fail(e),
         };

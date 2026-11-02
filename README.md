@@ -968,7 +968,7 @@ la imagen, la extensión sobre todas las pantallas, el volteo, el límite de fot
 silencio y la reproducción única. Cada función tiene un nombre en `requires.features`, y el
 escritorio y el teléfono dicen si la ejecutan, si reproducen el paquete sin ella o si lo rechazan
 con «necesita una versión más nueva de wallpaper-rs» antes de dibujar nada; en esta versión
-rechazan los recursos publicados aparte y las texturas KTX2 y AVIF. `wprs-ctl pack check` dice qué hace cada plataforma con un paquete
+rechazan los recursos publicados aparte y las imágenes AVIF. `wprs-ctl pack check` dice qué hace cada plataforma con un paquete
 y `docs/specs/package.md` describe el formato entero.
 
 Un paquete de recursos (`assets`) ofrece capas, sistemas de partículas, scripts y efectos sueltos
@@ -1784,7 +1784,14 @@ otra página no cierra un editor con cambios sin guardar.
   que pueden leer y sus variantes, enlazables a propiedades, fotogramas clave o scripts.
   *Importar un script…* (`wprs-ctl scene import-script`) copia un módulo `.js` a `scripts/` y
   propone su declaración: los eventos que exporta o atiende con `on` y las partes de `wprs` que
-  importa o llama; conviene revisarla antes de publicar.
+  importa o llama; conviene revisarla antes de publicar. *Convertir a KTX2…*, en cada imagen fija,
+  la pasa a una textura KTX2 con Basis Universal (UASTC, más nítida, o ETC1S, más pequeña) con un
+  control de calidad: muestra el tamaño del archivo antes y después, la memoria que ocupa en cada
+  clase de tarjeta y un recorte de cómo la dibuja cada una (BC7 en escritorio, ASTC en teléfonos,
+  ETC2 en teléfonos viejos y sin comprimir en las demás). Es un paso que se deshace; `wprs-ctl scene
+  asset DIR ID` muestra lo mismo y `--ktx2 [--codec uastc|etc1s] [--quality N]` convierte, o solo
+  informa con `--dry-run [--looks CARPETA]`. Al cargar, la escena pasa cada textura KTX2 al formato
+  comprimido que lee la tarjeta y la deja así en memoria, con los niveles del archivo como mipmaps.
 - **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
   capa o el campo afectado. Esos mensajes y los rechazos del editor llevan un identificador con sus
   argumentos (`scene.color`, `editor.step.add_layer`…) y salen en el idioma del escritorio en la

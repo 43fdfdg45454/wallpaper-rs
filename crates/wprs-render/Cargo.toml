@@ -12,6 +12,7 @@ avif = ["image/avif"]
 [dependencies]
 wprs-core.workspace = true
 wprs-scene.workspace = true
+wprs-ktx2.workspace = true
 ab_glyph.workspace = true
 fontdb.workspace = true
 woff2-patched.workspace = true
@@ -32,6 +33,7 @@ ash.workspace = true
 rustix.workspace = true
 
 [dev-dependencies]
+wprs-ktx2 = { workspace = true, features = ["encode"] }
 brotli.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true

@@ -63,16 +63,19 @@ fn assets_packages_offer_scene_parts() {
 }
 
 #[test]
-fn compressed_textures_are_refused_until_they_are_drawn() {
+fn compressed_textures_play_and_avif_pictures_are_refused_until_they_are_drawn() {
     let entry = manifest(Kind::Image, "image.ktx2", json!({ "requires": { "features": ["ktx2"] } }));
     let package = load(&entry, &[("image.ktx2", b"\xabKTX 20\xbb")]).unwrap();
+    for platform in [Platform::Desktop, Platform::Android] {
+        features::playable(&package.manifest, &package.facts, platform).unwrap();
+    }
+    let avif = manifest(Kind::Image, "image.avif", json!({ "requires": { "features": ["avif"] } }));
+    let package = load(&avif, &[("image.avif", b"x")]).unwrap();
     let refused = features::playable(&package.manifest, &package.facts, Platform::Desktop).unwrap_err();
-    assert!(refused.to_string().ends_with("the feature ktx2 (uses compressed textures in the KTX2 format)"));
+    assert!(refused.to_string().ends_with("the feature avif (uses pictures in the AVIF format)"));
     let es = wprs_core::message::tr_in(&["es".into()]);
     assert!(refused.message().told(&es).starts_with("este paquete necesita una versión más reciente"));
-    assert!(
-        refused.message().told(&es).ends_with("la función ktx2 (usa texturas comprimidas en formato KTX2)")
-    );
+    assert!(refused.message().told(&es).ends_with("la función avif (usa imágenes en formato AVIF)"));
     let unlisted = manifest(Kind::Image, "image.avif", json!({}));
     assert_eq!(field(load(&unlisted, &[("image.avif", b"x")]).map(drop)), "requires.features");
 }

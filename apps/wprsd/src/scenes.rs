@@ -14,7 +14,7 @@ use wprs_video::Bank;
 
 mod load;
 
-const IMAGES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
+const IMAGES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
 const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
 const VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
 const DECODED: u64 = 512 << 20;

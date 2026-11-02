@@ -7,7 +7,7 @@ use std::sync::Arc;
 use wprs_core::Fit;
 use wprs_scene::{Lut, Quality, Runtime, Scene, Values};
 
-const PICTURES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
+const PICTURES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
 const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
 const DECODED: u64 = 512 << 20;
 
@@ -52,7 +52,7 @@ impl SceneAssets {
     ) {
         let (open, mut made) = (Arc::new(open), HashMap::new());
         for (id, pixels) in &mut self.images {
-            let Some(asset) = scene.assets.get(id) else { continue };
+            let Some(asset) = scene.assets.get(id).filter(|_| pixels.packed().is_none()) else { continue };
             let (path, animated, open) = (asset.path.clone(), asset.animated, open.clone());
             let reload = move || {
                 let bytes = open()?(&path).ok()?;

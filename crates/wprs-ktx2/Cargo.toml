@@ -1,0 +1,17 @@
+[package]
+name = "wprs-ktx2"
+description = "KTX2 textures with Basis Universal for wallpaper-rs: limits, transcoding to the formats of each graphics card, and conversion"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+encode = ["dep:basisu_c_sys", "dep:texture2ddecoder"]
+
+[dependencies]
+basisu.workspace = true
+image.workspace = true
+thiserror.workspace = true
+basisu_c_sys = { workspace = true, optional = true }
+texture2ddecoder = { workspace = true, optional = true }

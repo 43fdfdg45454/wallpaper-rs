@@ -89,9 +89,7 @@ pub enum Author {
         #[arg(long, help = "Asset id; made from the file name when omitted")]
         id: Option<String>,
     },
-    #[command(
-        about = "Copy an effect descriptor and its WGSL shader into the folder as an effect of the package"
-    )]
+    #[command(about = "Copy an effect descriptor and its WGSL shader into the folder as an effect")]
     ImportEffect {
         #[arg(help = DIR)]
         dir: PathBuf,
@@ -100,9 +98,7 @@ pub enum Author {
         #[arg(long, help = "The shader; the .wgsl file next to the descriptor when omitted")]
         wgsl: Option<PathBuf>,
     },
-    #[command(
-        about = "Copy a JavaScript module into the scripts of the folder and declare the events and parts it uses"
-    )]
+    #[command(about = "Copy a JavaScript module into the scripts and declare the events and parts it uses")]
     ImportScript {
         #[arg(help = DIR)]
         dir: PathBuf,
@@ -196,4 +192,6 @@ pub enum Author {
     Modeling(crate::modeling::Modeling),
     #[command(flatten)]
     Flying(crate::flying::Flying),
+    #[command(flatten)]
+    Texturing(crate::texturing::Texturing),
 }

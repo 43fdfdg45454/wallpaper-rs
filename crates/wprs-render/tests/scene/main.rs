@@ -12,6 +12,7 @@ use wprs_render::{Layer, Pixels, Renderer, SceneAssets, SceneView};
 use wprs_scene::{AudioFrame, Property, Quality, Runtime, SCHEMA, Scene, effective};
 
 mod compose;
+mod packed;
 mod passes;
 mod stage;
 

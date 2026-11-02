@@ -18,7 +18,8 @@ pub(super) fn samples(dir: &Path, doc: &Value, v: &Value, t: f64) -> Value {
     let layer = crate::actions::layer(doc, id).map(|(_, l)| l.clone()).unwrap_or_default();
     let asset = crate::keys::value_at(&layer["image"], t);
     let path = asset.as_str().and_then(|a| doc["scene"]["assets"][a]["path"].as_str()).map(|p| dir.join(p));
-    let Some(picture) = path.filter(|_| layer["type"] == "image").and_then(|p| image::open(p).ok()) else {
+    let Some(picture) = path.filter(|_| layer["type"] == "image").and_then(|p| crate::pictures::open(p).ok())
+    else {
         out["approximate"] = json!(true);
         return out;
     };

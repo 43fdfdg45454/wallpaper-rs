@@ -17,7 +17,7 @@ mod mirror;
 pub(crate) use info::{about, animated, check, entry, examples, lacks, media};
 pub(crate) use mirror::flip;
 
-const IMAGES: [&str; 6] = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
+const IMAGES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
 const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
 const VIDEOS: [&str; 6] = ["webm", "mp4", "mkv", "mov", "m4v", "3gp"];
 const SCENE_VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];

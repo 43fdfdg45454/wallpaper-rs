@@ -2630,6 +2630,10 @@ msgid "Add a layer playing…"
 msgstr "Añadir una capa que reproduzca…"
 
 #: apps/wprs-app/qml/SceneAssets.qml
+msgid "Convert to KTX2…"
+msgstr "Convertir a KTX2…"
+
+#: apps/wprs-app/qml/SceneAssets.qml
 msgid "Import an effect…"
 msgstr "Importar un efecto…"
 
@@ -3123,6 +3127,74 @@ msgstr "Añadir un efecto"
 #: apps/wprs-app/qml/SceneInspector.qml
 msgid "Edit the particle system"
 msgstr "Editar el sistema de partículas"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "Desktop graphics cards (BC7)"
+msgstr "Tarjetas gráficas de escritorio (BC7)"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "Phones (ASTC)"
+msgstr "Teléfonos (ASTC)"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "Older phones (ETC2)"
+msgstr "Teléfonos más viejos (ETC2)"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "Any other card (uncompressed)"
+msgstr "Cualquier otra tarjeta (sin comprimir)"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "Convert %1 to KTX2"
+msgstr "Convertir %1 a KTX2"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "Convert"
+msgstr "Convertir"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid ""
+"A KTX2 texture stays compressed on the graphics card: it takes about a "
+"quarter of the memory of a picture and loads faster, most of all on phones. "
+"Each card gets the format it reads best; the crops below show what each one "
+"draws."
+msgstr ""
+"Una textura KTX2 sigue comprimida en la tarjeta gráfica: ocupa cerca de la "
+"cuarta parte de la memoria de una imagen y carga más rápido, sobre todo en "
+"teléfonos. Cada tarjeta recibe el formato que mejor lee; los recortes de "
+"abajo muestran lo que dibuja cada una."
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "Sharper (UASTC)"
+msgstr "Más nítida (UASTC)"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "Smaller file (ETC1S)"
+msgstr "Archivo más pequeño (ETC1S)"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "Quality"
+msgstr "Calidad"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "File: %1 now, %2 as KTX2, with %3 levels of detail."
+msgstr "Archivo: %1 ahora, %2 como KTX2, con %3 niveles de detalle."
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid ""
+"Widened from %1 × %2 to %3 × %4 pixels so that every card keeps it "
+"compressed."
+msgstr ""
+"Ampliada de %1 × %2 a %3 × %4 píxeles para que todas las tarjetas la "
+"mantengan comprimida."
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "The picture now"
+msgstr "La imagen ahora"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "%1 on the card"
+msgstr "%1 en la tarjeta"
 
 #: apps/wprs-app/qml/SceneLayerRow.qml
 msgid "Drag to move the layer"
@@ -5423,8 +5495,8 @@ msgid ""
 "how bright each screen gets, instead of this tone map; the preview here "
 "shows the standard picture."
 msgstr ""
-"En las pantallas HDR los colores más brillantes que el blanco se conservan "
-"y se doblan con suavidad hasta el brillo que alcanza cada pantalla, en lugar "
+"En las pantallas HDR los colores más brillantes que el blanco se conservan y "
+"se doblan con suavidad hasta el brillo que alcanza cada pantalla, en lugar "
 "de este mapeo de tonos; la vista previa de aquí muestra la imagen normal."
 
 #: apps/wprs-app/qml/SceneTones.qml

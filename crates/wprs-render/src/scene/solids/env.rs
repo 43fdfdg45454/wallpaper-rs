@@ -7,7 +7,7 @@ const SIDE: u32 = 256;
 impl Renderer {
     pub(crate) fn env_map(&self, source: &GpuImage) -> GpuImage {
         let levels = 32 - SIDE.leading_zeros();
-        let format = source.texture.format();
+        let format = crate::packed::drawable(source.texture.format());
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("wprs-render solid env"),
             size: wgpu::Extent3d { width: SIDE, height: SIDE / 2, depth_or_array_layers: 1 },

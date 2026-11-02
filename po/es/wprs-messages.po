@@ -132,8 +132,9 @@ msgstr "%1 es demasiado grande"
 
 #: crates/wprs-core/src/edit/file.rs crates/wprs-editor/src/assets.rs
 #: crates/wprs-editor/src/offer.rs crates/wprs-editor/src/package.rs
-#: crates/wprs-editor/src/previews.rs crates/wprs-editor/src/project.rs
-#: crates/wprs-editor/src/scripts.rs crates/wprs-editor/src/shaders.rs
+#: crates/wprs-editor/src/packing.rs crates/wprs-editor/src/previews.rs
+#: crates/wprs-editor/src/project.rs crates/wprs-editor/src/scripts.rs
+#: crates/wprs-editor/src/shaders.rs
 msgid "cannot read %1: %2"
 msgstr "no se puede leer %1: %2"
 
@@ -248,8 +249,8 @@ msgstr "un sonido puede tener como mucho %1 MiB"
 msgid "the sound %1"
 msgstr "el sonido %1"
 
-#: crates/wprs-editor/src/assets.rs crates/wprs-editor/src/previews.rs
-#: crates/wprs-editor/src/rig.rs
+#: crates/wprs-editor/src/assets.rs crates/wprs-editor/src/packing.rs
+#: crates/wprs-editor/src/previews.rs crates/wprs-editor/src/rig.rs
 msgid "the picture cannot be read: %1"
 msgstr "no se puede leer la imagen: %1"
 
@@ -282,7 +283,7 @@ msgstr "una tabla de color puede tener como mucho 16 MiB"
 msgid "name a file"
 msgstr "indica un archivo"
 
-#: crates/wprs-editor/src/assets.rs
+#: crates/wprs-editor/src/assets.rs crates/wprs-editor/src/packing.rs
 msgid "assets/ has too many files named %1"
 msgstr "assets/ tiene demasiados archivos llamados %1"
 
@@ -859,6 +860,30 @@ msgstr "%1 no es un paquete de escena"
 #: crates/wprs-editor/src/package.rs
 msgid "there is no data folder"
 msgstr "no hay carpeta de datos"
+
+#: crates/wprs-editor/src/packing.rs
+msgid "there is no asset %1"
+msgstr "no hay ningún recurso %1"
+
+#: crates/wprs-editor/src/packing.rs
+msgid "%1 is not a still picture that can become KTX2"
+msgstr "%1 no es una imagen fija que pueda pasar a KTX2"
+
+#: crates/wprs-editor/src/packing.rs
+msgid "%1 is not uastc or etc1s"
+msgstr "%1 no es uastc ni etc1s"
+
+#: crates/wprs-editor/src/packing.rs
+msgid "the quality goes from 1 to 100, not %1"
+msgstr "la calidad va de 1 a 100, no %1"
+
+#: crates/wprs-editor/src/packing.rs
+msgid "the picture cannot become KTX2: %1"
+msgstr "la imagen no puede pasar a KTX2: %1"
+
+#: crates/wprs-editor/src/packing.rs
+msgid "say what to change in %1, such as ktx2"
+msgstr "di qué cambiar en %1, como ktx2"
 
 #: crates/wprs-editor/src/paint.rs
 msgid "masks are painted on a parameter of an effect"

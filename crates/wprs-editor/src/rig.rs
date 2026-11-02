@@ -47,12 +47,12 @@ pub(crate) fn mesh_from_picture(dir: &Path, doc: &Value, c: &Cutting) -> Result<
     let unreadable = |e: &dyn std::fmt::Display| {
         anyhow!(said("editor.unreadable_picture", "the picture cannot be read: %1", &[e]))
     };
-    let (w, h) = image::image_dimensions(dir.join(path)).map_err(|e| unreadable(&e))?;
+    let (w, h) = crate::pictures::dimensions(dir.join(path)).map_err(|e| unreadable(&e))?;
     ensure!(
         w <= MAX_SIDE && h <= MAX_SIDE,
         said("editor.mesh_side", "a mesh is cut from pictures of at most %1 pixels a side", &[&MAX_SIDE])
     );
-    let picture = image::open(dir.join(path)).map_err(|e| unreadable(&e))?.into_rgba8();
+    let picture = crate::pictures::open(dir.join(path)).map_err(|e| unreadable(&e))?.into_rgba8();
     let alpha: Vec<u8> = picture.pixels().map(|p| p.0[3]).collect();
     let cut = if c.outline { Cut::Outline } else { Cut::Grid };
     let sketch = Sketch::cut(&alpha, [w, h], cut, c.cells.unwrap_or(16));

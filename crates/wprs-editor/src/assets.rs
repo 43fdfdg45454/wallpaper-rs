@@ -33,7 +33,7 @@ fn seconds(file: &Path) -> Result<f32> {
 }
 
 fn pixels(file: &Path) -> Result<u64> {
-    let (w, h) = image::image_dimensions(file)
+    let (w, h) = crate::pictures::dimensions(file)
         .map_err(|e| said("editor.unreadable_picture", "the picture cannot be read: %1", &[&e]))?;
     Ok(u64::from(w) * u64::from(h) * 4)
 }

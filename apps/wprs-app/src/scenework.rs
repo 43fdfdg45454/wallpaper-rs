@@ -5,9 +5,19 @@ use cxx_qt_lib::QString;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use wprs_editor::{Action, assets, check, package, previews};
+use wprs_editor::{Action, assets, check, package, packing, previews};
 
 type Done<T> = Box<dyn FnOnce(Pin<&mut SceneEditor>, T) + Send>;
+
+enum Placed {
+    Asset(String),
+    Preview(bool),
+    Packed(String),
+}
+
+pub fn queued(action: &Action) -> bool {
+    matches!(action, Action::Import { .. } | Action::Thumbnail { .. } | Action::Asset(_))
+}
 
 impl SceneEditor {
     fn work<T: Send + 'static>(
@@ -41,23 +51,27 @@ impl SceneEditor {
         let label = action.name();
         let job = move || match action {
             Action::Thumbnail { file, animated } => {
-                Ok((None, previews::store(&dir, &doc, &file, animated)?, animated))
+                Ok((Placed::Preview(animated), previews::store(&dir, &doc, &file, animated)?))
             }
             Action::Import { file, id } => {
                 let (id, path) = assets::import(&dir, &doc, &file, id.as_deref())?;
-                Ok((Some(id), path, false))
+                Ok((Placed::Asset(id), path))
+            }
+            Action::Asset(wanted) => {
+                Ok((Placed::Packed(wanted.asset.clone()), packing::store(&dir, &doc, &wanted)?))
             }
             other => Err(anyhow::anyhow!("{} is not a file action", other.name())),
         };
         self.work(
             job,
-            Box::new(move |mut editor, (id, path, animated)| {
+            Box::new(move |mut editor, (placed, path)| {
                 let recorded = {
                     let mut this = editor.as_mut().rust_mut();
                     let Some(project) = this.project.as_mut() else { return };
-                    let ops = match &id {
-                        Some(id) => assets::adopt(&project.doc, id, &path),
-                        None => previews::adopt(&project.doc, animated, &path),
+                    let ops = match &placed {
+                        Placed::Asset(id) => assets::adopt(&project.doc, id, &path),
+                        Placed::Preview(animated) => previews::adopt(&project.doc, *animated, &path),
+                        Placed::Packed(id) => Ok(packing::adopt(&project.doc, id, &path)),
                     };
                     ops.and_then(|ops| project.record(&label, ops))
                 };
