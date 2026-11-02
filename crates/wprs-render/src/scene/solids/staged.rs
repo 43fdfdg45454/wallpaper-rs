@@ -17,6 +17,9 @@ pub(crate) struct Staged {
     pub(crate) room: usize,
     pub(crate) groups: Option<(u64, [wgpu::BindGroup; 3])>,
     pub(crate) bytes: Vec<u8>,
+    pub(crate) calls: Vec<super::calls::Call>,
+    pub(crate) objects_bytes: Vec<u8>,
+    pub(crate) finish_bytes: Vec<u8>,
     pub(crate) renders: u64,
 }
 
@@ -56,6 +59,9 @@ impl Renderer {
             room: room.max(1),
             groups: None,
             bytes: Vec::new(),
+            calls: Vec::new(),
+            objects_bytes: Vec::new(),
+            finish_bytes: Vec::new(),
             renders: 0,
         }
     }

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use wgpu::TextureFormat as Format;
 
+mod calls;
 mod env;
 mod gpu;
 mod layout;

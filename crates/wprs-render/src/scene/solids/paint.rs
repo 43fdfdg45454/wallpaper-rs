@@ -1,35 +1,9 @@
 use super::super::SceneView;
-use super::pipes::Key;
+use super::calls::{Call, put, sized};
 use super::uniform::scene3;
 use super::{SCENE_SLOT, SLOT, Staged};
 use crate::{RenderError, Renderer};
 use wprs_scene::{Frame, Stage3d};
-
-struct Call {
-    model: u64,
-    first: u32,
-    count: u32,
-    maps: usize,
-    object: u32,
-    finish: u32,
-    key: Key,
-    far: f32,
-}
-
-fn sized(size: [f32; 2], scale: f32, frame: &Frame, edge: u32) -> (u32, u32) {
-    let k = scale * frame.quality.render_scale();
-    let [w, h] = size.map(|v| ((v * k).round() as u32).clamp(1, edge));
-    (w, h)
-}
-
-fn put<T: bytemuck::Pod>(bytes: &mut Vec<u8>, at: u64, value: &T) {
-    let at = at as usize;
-    let raw = bytemuck::bytes_of(value);
-    if bytes.len() < at + raw.len() {
-        bytes.resize(at + raw.len(), 0);
-    }
-    bytes[at..at + raw.len()].copy_from_slice(raw);
-}
 
 impl Renderer {
     pub(crate) fn figures(
@@ -106,8 +80,14 @@ impl Renderer {
             put(&mut bytes, k as u64 * SCENE_SLOT, &scene3(frame, stage, k, env, self.light_cap()));
         }
         self.queue.write_buffer(&staged.scene, 0, &bytes);
-        let mut calls: Vec<Call> = Vec::new();
-        let (mut objects, mut finishes) = (Vec::new(), Vec::new());
+        let (mut calls, mut objects, mut finishes) = (
+            std::mem::take(&mut staged.calls),
+            std::mem::take(&mut staged.objects_bytes),
+            std::mem::take(&mut staged.finish_bytes),
+        );
+        calls.clear();
+        objects.clear();
+        finishes.clear();
         let mut slot = 0u32;
         for (o, p) in frame.placed[stage.models.clone()].iter().enumerate() {
             let (object, flipped) = super::looks::object(p);
@@ -140,7 +120,11 @@ impl Renderer {
                 false => std::cmp::Ordering::Equal,
             })
         });
-        let Some((_, groups)) = &staged.groups else { return };
+        let Some((_, groups)) = &staged.groups else {
+            (staged.bytes, staged.calls, staged.objects_bytes, staged.finish_bytes) =
+                (bytes, calls, objects, finishes);
+            return;
+        };
         let solids = self.solids();
         let mut encoder = self.device.create_command_encoder(&Default::default());
         for k in 0..stage.slices {
@@ -187,6 +171,7 @@ impl Renderer {
             }
         }
         self.queue.submit([encoder.finish()]);
-        staged.bytes = bytes;
+        (staged.bytes, staged.calls, staged.objects_bytes, staged.finish_bytes) =
+            (bytes, calls, objects, finishes);
     }
 }
