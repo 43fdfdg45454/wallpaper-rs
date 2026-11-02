@@ -5,6 +5,22 @@ use std::path::Path;
 const RUNS: u32 = 3;
 const STEPS: [(f64, Tier); 3] = [(0.2, Tier::T3), (0.5, Tier::T2), (2.0, Tier::T1)];
 
+const KEPT: usize = 8;
+
+#[derive(Serialize, Deserialize)]
+struct Kept {
+    #[serde(flatten)]
+    last: Calibration,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    others: Vec<Calibration>,
+}
+
+fn read(cache: Option<&Path>) -> Vec<Calibration> {
+    let bytes = cache.and_then(|p| std::fs::read(p).ok()).unwrap_or_default();
+    let kept = serde_json::from_slice::<Kept>(&bytes).ok();
+    kept.map(|k| std::iter::once(k.last).chain(k.others).collect()).unwrap_or_default()
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Calibration {
     pub adapter: String,
@@ -46,8 +62,10 @@ impl Calibration {
 
     pub fn keep(&self, path: &Path) -> std::io::Result<()> {
         path.parent().map_or(Ok(()), std::fs::create_dir_all)?;
+        let others = read(Some(path)).into_iter().filter(|c| c.adapter != self.adapter).take(KEPT - 1);
+        let kept = Kept { last: self.clone(), others: others.collect() };
         let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, serde_json::to_vec_pretty(self)?)?;
+        std::fs::write(&tmp, serde_json::to_vec_pretty(&kept)?)?;
         std::fs::rename(&tmp, path)
     }
 
@@ -74,9 +92,7 @@ pub fn calibrate(
     if Tier::detect(gpu) == Tier::T0 {
         return (made(0.0, 0), false);
     }
-    let read = cache.and_then(|p| std::fs::read(p).ok());
-    let kept = read.and_then(|bytes| serde_json::from_slice::<Calibration>(&bytes).ok());
-    let kept = kept.filter(|c| c.measured() && c.same(&made(0.0, 0)));
+    let kept = read(cache).into_iter().find(|c| c.measured() && c.same(&made(0.0, 0)));
     let low = |c: &Calibration| Tier::calibrated(gpu, c.unit_ms) < Tier::detect(gpu) && c.runs.max(1) < RUNS;
     if let Some(kept) = kept.as_ref().filter(|c| !low(c)) {
         return (made(kept.unit_ms, kept.runs), false);

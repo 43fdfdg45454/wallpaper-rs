@@ -26,9 +26,9 @@ pub use crate::custom::{
 pub use crate::document::{Color, Scene, SceneError};
 pub use crate::easing::Ease;
 pub use crate::effects::{
-    BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, Fuse, MaskMode, NOISE_WGSL, Output, PRELUDE, Pace,
-    ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage, State, Texel,
-    Tune, Use, Variant, builtin, descriptor, register,
+    BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, Fuse, GENERIC_PICTURES, MaskMode, NOISE_WGSL, Output,
+    PRELUDE, Pace, ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage,
+    State, Texel, Tune, Use, Variant, builtin, descriptor, register,
 };
 pub use crate::eval::{Content, Draw, EffectDraw, Frame};
 pub use crate::extrude::Relief;

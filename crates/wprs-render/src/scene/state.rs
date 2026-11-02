@@ -60,8 +60,6 @@ impl Painter<'_, '_, '_> {
     }
 }
 
-const GENERIC: [&str; 4] = ["white", "black", "normal_flat", "noise"];
-
 fn generic(name: &str) -> RgbaImage {
     let mix = |v: u32| {
         let v = v.wrapping_mul(0x9e37_79b1);
@@ -103,7 +101,8 @@ impl Renderer {
                     Param::Text(t) => Some(t.as_str()),
                     _ => None,
                 }));
-                let names = names.filter(|n| GENERIC.contains(n) && !scene.assets.contains_key(*n));
+                let names = names
+                    .filter(|n| wprs_scene::GENERIC_PICTURES.contains(n) && !scene.assets.contains_key(*n));
                 let mut wanted: Vec<(String, String, RgbaImage)> =
                     names.map(|n| (String::new(), n.to_string(), generic(n))).collect();
                 if let Some(paint) = p.paint.as_ref().filter(|_| p.kind == ParamKind::Mask) {

@@ -11,7 +11,8 @@ impl Check<'_> {
     fn texture(&mut self, path: &str, id: &str, lut: bool) {
         self.moving(&Value::Fixed(id.into()));
         let cube = self.scene.assets.get(id).map(|a| a.path.to_lowercase().ends_with(".cube"));
-        self.known(path, "asset", id, cube.is_some());
+        let generic = !lut && crate::GENERIC_PICTURES.contains(&id);
+        self.known(path, "asset", id, cube.is_some() || generic);
         if cube.is_some_and(|cube| cube != lut) {
             self.issues.push(Issue::Type(path.into()));
         }

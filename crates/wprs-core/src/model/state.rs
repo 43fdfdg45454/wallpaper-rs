@@ -30,7 +30,15 @@ model! {
         pub calibrating: bool,
         #[serde(default)]
         pub compute: bool,
+        #[serde(default)]
+        pub adapters: Vec<GpuAdapter>,
+        #[serde(default)]
+        pub gpu_warning: Option<String>,
+        #[serde(default)]
+        pub gpu_restart: bool,
     }
+
+    pub struct GpuAdapter { pub name: String, pub kind: String, pub backend: String, pub used: bool }
 
     pub struct OutputState {
         pub width: u32,

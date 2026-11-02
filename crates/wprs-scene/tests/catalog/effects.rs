@@ -88,6 +88,13 @@ fn described_effects_and_parameters_are_validated_like_built_in_ones() {
         issues(effect(json!({ "effect": "blur", "params": { "blend": "screen", "amount": 0.5 } }))),
         Vec::<String>::new()
     );
+    for picture in wprs_scene::GENERIC_PICTURES {
+        let named = effect(json!({ "effect": "reveal", "params": { "texture": picture } }));
+        let bound = json!({ "prop": "look", "map": { "a": picture, "b": "sky" } });
+        assert_eq!(issues(named), Vec::<String>::new(), "{picture}");
+        let mapped = effect(json!({ "effect": "reveal", "params": { "texture": bound } }));
+        assert!(issues(mapped).iter().all(|i| !i.contains("asset")), "{picture}");
+    }
     let cases = [
         (
             json!({ "effect": "light_shafts", "params": { "intensity": 9 } }),
@@ -122,4 +129,33 @@ fn described_effects_and_parameters_are_validated_like_built_in_ones() {
     let beat = scene(effect(json!({ "effect": "pulse", "params": { "audio_band": 3 } })));
     let still = scene(effect(json!({ "effect": "pulse" })));
     assert!(needs(&follow).cursor && needs(&beat).audio && !needs(&still).audio && !needs(&still).cursor);
+}
+
+#[test]
+fn a_package_effect_use_reads_a_generic_picture_by_name() {
+    let descriptor = json!({ "id": "phased", "cost": {}, "params": [
+        { "id": "phase", "type": "texture", "default": "" },
+        { "id": "flat", "type": "texture", "default": "normal_flat" }],
+        "passes": [{ "entry": "fs_phased", "inputs": ["previous", "asset:phase", "asset:flat"] }] });
+    let wgsl = "@fragment fn fs_phased(in: VertexOut) -> @location(0) vec4<f32> {
+    return sample(aux0, in.uv) * sample(aux1, in.uv);
+}";
+    let validated = |phase: &str| {
+        let used = effect(json!({ "effect": "phased", "params": { "phase": phase } }));
+        let mut doc =
+            scene(json!({ "effects": { "phased": { "descriptor": "fx/p.json", "wgsl": "fx/p.wgsl" } },
+            "layers": used["layers"] }));
+        let files = |path: &str, _| {
+            Ok::<_, String>(
+                if path.ends_with("json") { descriptor.to_string() } else { wgsl.into() }.into_bytes(),
+            )
+        };
+        let adopted = doc.adopt(&BTreeMap::new(), files).err().map(|e| e.to_string());
+        let found = doc.validate(&BTreeMap::new()).iter().map(ToString::to_string).collect::<Vec<_>>();
+        adopted.into_iter().chain(found).collect::<Vec<_>>()
+    };
+    assert_eq!(validated("white"), Vec::<String>::new());
+    assert_eq!(validated("noise"), Vec::<String>::new());
+    let unknown = validated("moon");
+    assert!(unknown.iter().any(|i| i.contains("/layers/0/effects/0/params/phase")), "{unknown:?}");
 }

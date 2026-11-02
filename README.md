@@ -502,6 +502,8 @@ wprs-ctl volume 40 | mute | unmute              # sonido de los vídeos y las es
 wprs-ctl config                                 # ver los ajustes
 wprs-ctl config transition.duration_ms 1000     # cambiar un ajuste
 wprs-ctl state                                  # estado en JSON
+wprs-ctl gpu                                    # tarjetas gráficas y la que está en uso
+wprs-ctl gpu dedicated                          # dibujar con la dedicada desde el próximo arranque
 wprs-ctl reload                                 # releer la configuración
 ```
 
@@ -534,8 +536,8 @@ ocupa, y eligen el nivel de calidad más alto que cabe en la GPU. Las GPU integr
 HD y UHD, las APU de AMD con Vega y similares) y los equipos con menos de 4 GiB de memoria tienen un
 nivel intermedio propio. La primera vez que se usa una tarjeta gráfica con un driver, un render
 corto de unos 300 ms mide cuánto tarda y ajusta su clase, que se guarda en
-`~/.local/state/wallpaper-rs/gpu-tier.json` y se vuelve a medir solo si cambian la tarjeta o el
-driver. La medida mueve la clase un paso como mucho, y si la baja (un arranque con el equipo ocupado
+`~/.local/state/wallpaper-rs/gpu-tier.json`, una por tarjeta, y se vuelve a medir solo si cambia el
+driver de esa tarjeta. La medida mueve la clase un paso como mucho, y si la baja (un arranque con el equipo ocupado
 puede hacerlo) se repite en los arranques siguientes, hasta tres veces, y cuenta la mejor. Mientras
 la escena se mueve, el tiempo que pasa cada fotograma en la GPU, partículas incluidas, guía la
 calidad: si durante 2 s pasa de la mitad del intervalo entre fotogramas (de una cuarta parte con
@@ -569,6 +571,24 @@ fotograma tarda más de un octavo de esa espera, la resolución baja por pasos y
 sobra tiempo, así que un fotograma pesado nunca se toma por una GPU colgada. Los desenfoques y las deformaciones ya no
 oscurecen los bordes derecho e inferior, y el desenfoque de movimiento puede seguir la velocidad de
 su capa (`follow`).
+
+En un equipo con una GPU integrada y otra dedicada, el daemon dibuja por defecto con la que gasta
+menos energía, que suele ser la integrada. `render.gpu` elige otra: `auto` (lo de siempre),
+`integrated`, `dedicated`, `software` (render por software, para pruebas) o parte del nombre de una
+tarjeta sin distinguir mayúsculas, como `RTX 5070`, que sirve para elegir entre dos del mismo tipo.
+La app lo ofrece en *Ajustes* → *Tarjeta gráfica* con las tarjetas que encontró el daemon (nombre,
+tipo y API) y marca la que está en uso; `wprs-ctl gpu` las lista y `wprs-ctl gpu dedicated` o
+`wprs-ctl config render.gpu dedicated` elige una. El cambio vale desde el siguiente arranque del
+daemon (`systemctl --user restart wprsd`), porque el render se crea una sola vez y lo comparten
+todas las pantallas, vídeos y escenas; hasta entonces la app, `wprs-ctl gpu` y `wprs-ctl config
+render.gpu` lo avisan (`gpu_restart` en `wprs-ctl state`); cambiar solo mayúsculas y minúsculas del
+nombre no pide reiniciar. Si ninguna tarjeta coincide, o la elegida no se puede abrir, el daemon
+arranca igual con la elección automática y lo avisa en la app, en `wprs-ctl gpu` y en
+`gpu_warning`. Con `WGPU_BACKEND` puesto, el daemon solo carga los controladores de esa API, también
+al listar las tarjetas. La clase de cada
+tarjeta se mide y se guarda aparte, así que volver a una no la mide otra vez. La dedicada dibuja
+las escenas pesadas con más calidad y gasta más energía. El ajuste no se sincroniza ni entra en los
+perfiles, y el teléfono, que tiene una sola GPU, no lo muestra y lo ignora.
 
 Para quien es sensible a los destellos, `playback.flash_guard` (*Frenar o detener los fondos que
 destellan más de tres veces por segundo* en la página *Ajustes* de la app, que el botón *Ajustes…*
@@ -1482,7 +1502,7 @@ wprs-ctl prop preset load calma -o DP-1 && wprs-ctl prop reset -o DP-1
 wprs-ctl prop preset save Noche -o DP-1      # guarda los valores actuales como preajuste propio
 wprs-ctl prop preset export Noche -f noche.json -o DP-1
 wprs-ctl prop preset import noche.json --save Noche -o HDMI-A-1
-wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon
+wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon, en la tarjeta de render.gpu
 wprs-ctl scene bench escena.wpak --screens 2   # carga, primer fotograma y memoria con dos pantallas
 ```
 

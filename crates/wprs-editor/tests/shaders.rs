@@ -68,6 +68,7 @@ fn package_effects_are_imported_listed_and_inspected() {
     let shape = fields.iter().find(|f| f.key == "shape").unwrap();
     assert_eq!((shape.widget.as_str(), shape.help.as_str()), ("ref:image", "What the glow follows"));
     assert!(!shape.options.contains(&json!({ "layer": "fill" })), "{:?}", shape.options);
+    assert!(["white", "black", "noise", "normal_flat"].iter().all(|g| shape.options.contains(&json!(g))));
     let soft = fields.iter().find(|f| f.key == "soft").unwrap();
     assert_eq!(
         (soft.widget.as_str(), &soft.options, soft.bindable),

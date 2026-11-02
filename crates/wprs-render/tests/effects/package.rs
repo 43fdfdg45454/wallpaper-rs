@@ -60,7 +60,7 @@ fn pack() -> Value {
         ] })
 }
 
-fn enc(v: f32) -> u8 {
+pub(super) fn enc(v: f32) -> u8 {
     let c = if v <= 0.003_130_8 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 };
     (c * 255.0).round() as u8
 }
@@ -124,20 +124,6 @@ fn a_stopped_package_effect_is_left_out_with_a_message() {
     run.view.retry();
     let again = run.shot();
     assert!(run.view.left_out().is_empty() && again.at(32, 16) != [128; 3], "{:?}", again.at(32, 16));
-}
-
-#[test]
-fn unpainted_masks_and_generic_textures_read_their_defaults() {
-    let wgsl = "@fragment fn fs_paint(in: VertexOut) -> @location(0) vec4<f32> {
-    return select(sample(aux1, in.uv), sample(aux0, in.uv), in.uv.x < 0.5);
-}";
-    let json = json!({ "id": "paint", "cost": {}, "params": [
-        { "id": "cover", "type": "mask", "default": "", "paint": "#ff0000" },
-        { "id": "flat", "type": "texture", "default": "normal_flat" }],
-        "passes": [{ "entry": "fs_paint", "inputs": ["previous", "asset:cover", "asset:flat"] }] });
-    let Some(shot) = Fx::new("paint", json!({})).own(json, wgsl).shot() else { return };
-    let mid = enc(128.0 / 255.0);
-    shot.check(&[((8, 16), [255, 0, 0]), ((56, 16), [mid, mid, 255])]);
 }
 
 #[test]

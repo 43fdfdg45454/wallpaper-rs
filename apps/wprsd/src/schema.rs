@@ -68,6 +68,7 @@ fn options() -> Vec<Field> {
         flag("repos.auto_refresh"),
         range(option("layout.bezel_mm", FieldKind::Float), 0.0, 100.0, Some(0.5)),
         flag("models.allow_download"),
+        values(option("render.gpu", FieldKind::Text), &wprs_core::GpuChoice::WORDS),
     ]
 }
 

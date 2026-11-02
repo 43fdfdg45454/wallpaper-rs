@@ -14,6 +14,7 @@ impl Config {
                 table.iter().map(move |(k, v)| (format!("{section}.{k}"), v.clone()))
             })
             .chain([("layout.bezel_mm".into(), toml::Value::Float(self.layout.bezel_mm))])
+            .chain([("render.gpu".into(), toml::Value::String(self.render.gpu.as_str().into()))])
             .collect()
     }
 

@@ -72,6 +72,7 @@ pub struct Daemon {
     pub(crate) remote: crate::remote::Remote,
     pub(crate) account: crate::account::Account,
     pub(crate) turned: Notify,
+    pub(crate) gpus: crate::gpus::Gpus,
 }
 
 impl Daemon {
@@ -87,8 +88,10 @@ impl Daemon {
             }
             None => tracing::debug!(path = %config_path.display(), "configuration loaded"),
         }
-        let renderer =
-            Renderer::with_display(display).context("cannot initialize the GPU renderer")?.install();
+        let chosen = Renderer::with_choice(display, &config.render.gpu)
+            .context("cannot initialize the GPU renderer")?;
+        let (gpus, renderer) = crate::gpus::Gpus::start(chosen, &config.render.gpu);
+        let renderer = renderer.install();
         let adapter = renderer.adapter().to_owned();
         crate::streams::share_video(renderer);
         let calibrated = renderer.calibrate(wprs_core::gpu_tier().as_deref());
@@ -132,6 +135,7 @@ impl Daemon {
             remote: Default::default(),
             account: Default::default(),
             turned: Notify::new(),
+            gpus,
         };
         daemon.refresh_items();
         Ok(daemon)

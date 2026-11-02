@@ -107,3 +107,11 @@ pub fn web_crashed() -> String {
         "The web page crashed or stopped answering four times in a row and is off; the background color shows instead.",
     )
 }
+
+pub fn gpu_missing(name: &str) -> String {
+    tr("No graphics card matches “%1”; the automatic choice is used.").replace("%1", name)
+}
+
+pub fn gpu_unusable(name: &str) -> String {
+    tr("The graphics card chosen by “%1” cannot be opened; the automatic choice is used.").replace("%1", name)
+}

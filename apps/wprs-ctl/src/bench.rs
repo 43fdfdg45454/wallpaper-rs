@@ -70,7 +70,9 @@ pub fn run(command: SceneCommand) -> Result<()> {
     };
     let size = dimensions(&size)?;
     let (scene, values, assets) = load(&path)?;
-    let r = Renderer::new()?;
+    let gpu =
+        wprs_core::Config::default_path().and_then(|p| wprs_core::Config::load(&p)).map(|c| c.render.gpu);
+    let r = Renderer::with_choice(None, &gpu.unwrap_or_default())?.renderer;
     let calibrated = r.calibrate(wprs_core::gpu_tier().as_deref());
     let (tier, unit_ms) = (r.tier(), calibrated.unit_ms);
     let quality = match quality.as_deref() {

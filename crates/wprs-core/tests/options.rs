@@ -22,7 +22,7 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 20);
+    assert_eq!(c.options().len(), 21);
     assert!(
         !c.playback.flash_guard && c.playback.scene_sound && c.playback.scene_capture && !c.playback.duck
     );

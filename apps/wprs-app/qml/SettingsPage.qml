@@ -56,9 +56,18 @@ Kirigami.ScrollablePage {
 
             Settings {
                 daemon: App
-                model: App.schema.options ?? []
+                model: (App.schema.options ?? []).filter(f => f.key !== "render.gpu")
                 values: App.state.options ?? {}
                 onEdited: (key, value) => App.act("SetOption", [key, value])
+            }
+
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: App.tr("Graphics card")
+            }
+
+            GpuPicker {
+                Kirigami.FormData.label: App.tr("Draw with:")
             }
 
             Kirigami.Separator {

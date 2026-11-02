@@ -160,6 +160,8 @@ Software rendering and GPUs without compute shaders keep the lowest tier without
 result is kept in `gpu-tier.json` in the state folder (`$XDG_STATE_HOME/wallpaper-rs/`, shared by
 the daemon and `wprs-ctl scene bench`) or in the files of the phone, with the name, ids and backend
 of the adapter and the version of its driver, and it is measured again when any of them changes.
+The file keeps the last card at its top level and up to seven other cards in `others`, so a
+computer that switches between two cards (`render.gpu` in `dbus.md`) measures each of them once.
 A measure that lowered the tier, which a busy start can cause, is taken again on the next starts,
 three times in all, and the fastest one counts (`runs` in the file).
 `GetState().tier` (`"t0"` to `"t3"`) and `tier_measured` tell the result, and the phone lists it
@@ -764,7 +766,7 @@ and `life`. Package descriptors may also use:
 
 | Field | Meaning |
 |-------|---------|
-| `params` | at most 24; besides the kinds above, `int` (whole numbers), `enum` (with `values`: 1 to 64 `{ "value", "label" }`), `blend` (one of the 34 blend modes, given to the shader as its number in the order of the list), `position` (a point of the layer the editor lets the author place) and `mask` (a picture painted per channel, with `channels` 1, 3 or 4 and `paint`, the color or number a mask without a picture has); a `texture` or `mask` whose value names no asset but is `white`, `black`, `noise` or `normal_flat` reads that generic picture; every parameter may have a `label` and a `help` per language, of at most 256 characters, and `yields_to`, another parameter that, while not zero, takes over: this one then asks for no input of its `uses` |
+| `params` | at most 24; besides the kinds above, `int` (whole numbers), `enum` (with `values`: 1 to 64 `{ "value", "label" }`), `blend` (one of the 34 blend modes, given to the shader as its number in the order of the list), `position` (a point of the layer the editor lets the author place) and `mask` (a picture painted per channel, with `channels` 1, 3 or 4 and `paint`, the color or number a mask without a picture has); a `texture` or `mask` whose value (its `default`, the value an effect use gives it or a value of its `map`) names no asset but is `white`, `black`, `noise` or `normal_flat` reads that generic picture, and the editor offers those four next to the assets; every parameter may have a `label` and a `help` per language, of at most 256 characters, and `yields_to`, another parameter that, while not zero, takes over: this one then asks for no input of its `uses` |
 | `targets` | at most 8 named textures `{ "scale" (0 to 2 of the layer size), "format" }` with `rgba8` (default) or `rgba16f`, kept between passes of one frame |
 | `options` | at most 8 variants `{ "id", "values", "default", "when_bound" }`, each a WGSL `override` of the shader with 1 to 16 whole numbers or flags; a use sets them through `params`, as literals or bound to a property, and every combination it may need (at most 8 per use) is built when the scene loads, never during a frame; `when_bound` turns an option on while the named texture parameter has a picture |
 | `compose` | `true` draws the layer over what lies below it first; the effect reads that picture as its input and its result replaces the layer's box on the scene |
@@ -1410,7 +1412,10 @@ scenes refer to them by id. Each has a `type` and may set `label`, `help`, `grou
 | `label`, `divider` | | none; a line of text, or a line across the form with an optional label (a divider without one shows no text) |
 
 A slider without `step` moves in steps of its decimals, which come from `decimals`, else from
-`step`, else two (none for `integer`); its value is always rounded to them. `editable` adds a box to
+`step` and the decimals of `min` and `max` (the most of the three), else two (none for `integer`);
+its value is always rounded to them. `min` and `max` are always accepted as they are, even when
+they are not on the grid of `step` (`max` 0.175 with `step` 0.01 keeps 0.175), and no rounding
+takes a value out of the range. `editable` adds a box to
 type the number and `log` spreads the range logarithmically (it needs `min > 0`). `order` is any
 number: properties sort by it and then by id, and the members of a group follow it in their own
 order; a group cannot be in another group. An option of a combo with an empty label shows its value.

@@ -1373,6 +1373,75 @@ msgstr "Buscar, por ejemplo: tag:mar kind:image -fav:yes sort:random"
 msgid "Favorites"
 msgstr "Favoritos"
 
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "integrated"
+msgstr "integrada"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "dedicated"
+msgstr "dedicada"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "virtual"
+msgstr "virtual"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "software"
+msgstr "por software"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "other kind"
+msgstr "de otro tipo"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "Automatic, the one that saves the most power"
+msgstr "Automática, la que más energía ahorra"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "Any integrated card"
+msgstr "Cualquier tarjeta integrada"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "Any dedicated card"
+msgstr "Cualquier tarjeta dedicada"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "Software rendering, for tests"
+msgstr "Render por software, para pruebas"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "The first card whose name has “%1”"
+msgstr "La primera tarjeta cuyo nombre tiene «%1»"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "“%1”, which no card matches"
+msgstr "«%1», que no coincide con ninguna tarjeta"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "in use"
+msgstr "en uso"
+
+#: apps/wprs-app/qml/GpuPicker.qml apps/wprs-app/qml/SettingsPage.qml
+#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Graphics card"
+msgstr "Tarjeta gráfica"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid ""
+"A dedicated card draws heavy scenes at a higher quality and uses more power."
+msgstr ""
+"Una tarjeta dedicada dibuja las escenas pesadas con más calidad y gasta más "
+"energía."
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "In use: %1 (%2)."
+msgstr "En uso: %1 (%2)."
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "The new choice takes effect the next time the daemon starts."
+msgstr "La nueva elección vale desde el próximo arranque del daemon."
+
 #: apps/wprs-app/qml/History.qml
 msgid "an item that was removed"
 msgstr "un elemento que se quitó"
@@ -3852,7 +3921,9 @@ msgstr "Unir las partículas con una cuerda"
 msgid ""
 "Emitters that start more than one particle a step bunch the rope; one a step "
 "spaces it evenly"
-msgstr "Los emisores que sueltan más de una partícula por paso amontonan la cuerda; una por paso la deja pareja"
+msgstr ""
+"Los emisores que sueltan más de una partícula por paso amontonan la cuerda; "
+"una por paso la deja pareja"
 
 #: apps/wprs-app/qml/SceneSwarmStrands.qml
 msgid "One particle a step"
@@ -4051,6 +4122,10 @@ msgstr "Recargar la configuración"
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "General"
 msgstr "General"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Draw with:"
+msgstr "Dibujar con:"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Library folders"
@@ -5252,10 +5327,6 @@ msgid "Mirror"
 msgstr "Espejo"
 
 #: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Graphics card"
-msgstr "Tarjeta gráfica"
-
-#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "May ask for"
 msgstr "Puede pedir"
 
@@ -6438,7 +6509,8 @@ msgstr "Arrastra para mover el emisor"
 
 #: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
 msgid "Drag to resize the box around its control point"
-msgstr "Arrastra para cambiar el tamaño de la caja alrededor de su punto de control"
+msgstr ""
+"Arrastra para cambiar el tamaño de la caja alrededor de su punto de control"
 
 #: apps/wprs-app/qml/facade/SceneSwarmKnobs.qml
 msgid "Drag to move the circle away from its control point"

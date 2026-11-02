@@ -22,6 +22,7 @@ mod error;
 mod examples;
 mod flatpak;
 mod folders;
+mod gpus;
 mod import;
 mod inputs;
 mod inputs1;

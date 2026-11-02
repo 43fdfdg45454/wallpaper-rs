@@ -190,6 +190,9 @@ impl Daemon {
                 .collect(),
             calibrating: crate::calibration::calibrating(&st),
             compute: self.compute,
+            adapters: self.gpus.adapters.clone(),
+            gpu_warning: self.gpus.warning.clone(),
+            gpu_restart: self.gpus.restart(&st.config.render.gpu),
         };
         serde_json::to_string(&state).unwrap_or_default()
     }

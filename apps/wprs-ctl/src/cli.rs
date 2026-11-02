@@ -10,9 +10,7 @@ use crate::playlists::Playlist;
 use crate::profiles::{Preset, Profile};
 use crate::props::Prop;
 use crate::providers::Provider;
-use crate::remote::Remote;
-use crate::repo::Repo;
-use crate::server::Server;
+use crate::{remote::Remote, repo::Repo, server::Server};
 use clap::{Parser, Subcommand};
 use wprs_core::Fit;
 
@@ -64,6 +62,8 @@ pub enum Command {
         #[arg(long, help = "Print the settings as a JSON object")]
         json: bool,
     },
+    #[command(about = "List the graphics cards and the one in use, or choose the one the daemon starts with")]
+    Gpu(crate::gpus::GpuArgs),
     #[command(about = "Re-read the configuration file")]
     Reload,
     #[command(about = "Draw again the effects left out after they stopped the graphics card or a program")]

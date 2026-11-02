@@ -34,6 +34,9 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
     };
     let mut options = reference.map(|r| candidates(doc, r, base)).unwrap_or(listed);
     if reference == Some("image") {
+        let generic: Vec<Value> = wprs_scene::GENERIC_PICTURES.iter().map(|g| json!(g)).collect();
+        let free: Vec<Value> = generic.into_iter().filter(|g| !options.contains(g)).collect();
+        options.extend(free);
         let own = base.split("/effects/").next().and_then(|l| doc.pointer(l)).and_then(|l| l["id"].as_str());
         let layers = walk(doc).into_iter().filter_map(|(_, l)| l["id"].as_str().map(String::from));
         options.extend(layers.filter(|id| Some(id.as_str()) != own).map(|id| json!({ "layer": id })));

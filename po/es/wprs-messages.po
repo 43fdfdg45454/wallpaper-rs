@@ -2371,7 +2371,9 @@ msgstr "%1 debe listar huesos que cuelguen cada uno del anterior"
 msgid ""
 "%1 names a system that starts particles from a layer, which a child born "
 "from its parent cannot do"
-msgstr "%1 nombra un sistema que hace nacer partículas desde una capa, algo que no puede hacer un hijo que nace de su padre"
+msgstr ""
+"%1 nombra un sistema que hace nacer partículas desde una capa, algo que no "
+"puede hacer un hijo que nace de su padre"
 
 #: crates/wprs-scene/src/issue.rs
 msgid "invalid scene: %1"

@@ -23,6 +23,7 @@ QtObject {
             "repos.auto_refresh": App.tr("Refresh repositories every day"),
             "layout.bezel_mm": App.tr("Screen frame width for spanning (mm)"),
             "models.allow_download": App.tr("Allow downloading the depth model"),
+            "render.gpu": App.tr("Graphics card"),
             "order": App.tr("Order"),
             "interval": App.tr("Change every"),
             "at": App.tr("Change at (HH:MM, …)"),

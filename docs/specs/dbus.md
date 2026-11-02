@@ -189,6 +189,26 @@ software one (`WGPU_BACKEND` chooses one instead). A swapchain that the driver r
 suboptimal is configured again, with the present modes and formats it offers then, right after the
 frame it gave.
 
+### Graphics card
+
+`render.gpu = auto` keeps the choice above: the adapter that saves the most power, so a computer
+with an integrated and a dedicated card renders on the integrated one. `integrated`, `dedicated`
+and `software` take the first Vulkan adapter of that kind, and any other value the first one whose
+name contains it, without regard to case, so two cards of the same kind are told apart by their
+names; OpenGL ES is looked at only when Vulkan has no hardware adapter or the choice is `software`,
+and `WGPU_BACKEND` still limits the backend, also when the daemon lists the cards, so no other
+driver is loaded. When no adapter matches, or the matching adapter cannot open a device, the daemon
+starts with the automatic choice, logs a warning and sets `GetState().gpu_warning`; it never fails
+to start because of this setting. The renderer is made once at start and shared by every output, video and scene,
+so a change of `render.gpu` takes effect the next time the daemon starts
+(`systemctl --user restart wprsd`); until then `GetState().gpu_restart` is true, and both
+`wprs-ctl gpu` and `wprs-ctl config render.gpu` say so. Names are compared without regard to case,
+so changing only the case of the name asks for no restart. The class of the
+card (see "Cost and frame rate" in `scene.md`) is measured and kept for each card and driver, so
+going back to a card does not measure it again; `wprs-ctl scene bench` renders on the card that
+`render.gpu` of the configuration file chooses. The phone has one graphics card and ignores this
+setting.
+
 ## Video decoding
 
 The player asks GStreamer for NV12 frames in DMA-BUF memory (`video/x-raw(memory:DMABuf)`,
@@ -534,6 +554,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
 | `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |
 | `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
+| `render.gpu` | the graphics card the daemon renders with: `auto` (the one that saves the most power, an integrated card before a dedicated one), `integrated`, `dedicated`, `software` (emulated on the processor, for tests) or part of the name of a card, without regard to case, such as `RTX 5070` (see "Graphics card"); it takes effect the next time the daemon starts, it is not synced and profiles leave it out | `auto` |
 
 Only the changed key is validated. Unknown keys and invalid or out-of-range values return
 `InvalidArgs` and change nothing.
@@ -2180,7 +2201,13 @@ of that output draws at (`"q0"` to `"q3"`, `""` for other content) and `quality_
 too heavy for the card at a higher level), `"battery"`, `"saver"` (power saving), `"heat"` or
 `"slow"` (its frames took too long on the GPU); see "Cost and frame rate" in `scene.md`. `tier` is
 the class of the graphics card, `"t0"` to `"t3"`, and `tier_measured` whether a short measured
-render set it rather than the model of the card alone. `console` holds, only for
+render set it rather than the model of the card alone. `adapters` lists the graphics cards the
+daemon found when it started, each with its `name`, `kind` (`"integrated"`, `"dedicated"`,
+`"virtual"`, `"software"` or `"other"`), `backend` (`"vulkan"` or `"gl"`) and `used`, true for the
+one it renders with. `gpu_warning` says, in the language of the daemon, that no card matched
+`render.gpu`, or that the matching card could not be opened, and the automatic choice was taken, or
+is `null`; `gpu_restart` is true while `render.gpu` differs from the value the daemon started with,
+without regard to case. `console` holds, only for
 the `preview:` outputs of the scene editor, the last 50 lines its scripts wrote with `console`, as
 `<level> <module>: <text>`; other outputs leave it empty so that scripts that write often never wake
 the bus.
@@ -2192,8 +2219,10 @@ struct State {
     library_error: Option<String>, serial: u64, paused: bool, on_battery: bool, locked: bool,
     volume: f64, muted: bool, profile: Option<Uid>, jobs: u32,
     options: BTreeMap<String, Value>,
-    outputs: BTreeMap<String, OutputState>, calibrating: bool,
+    outputs: BTreeMap<String, OutputState>, calibrating: bool, compute: bool,
+    adapters: Vec<GpuAdapter>, gpu_warning: Option<String>, gpu_restart: bool,
 }
+struct GpuAdapter { name: String, kind: String, backend: String, used: bool }
 struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,

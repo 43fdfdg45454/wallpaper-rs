@@ -6,6 +6,7 @@ mod animation;
 mod barrier;
 mod bind;
 mod calibrate;
+mod choose;
 mod color;
 mod damaged;
 mod decode;
@@ -41,6 +42,7 @@ mod timeout;
 mod yuv;
 
 pub use animation::{MAX_ANIMATION, Pictures, animation};
+pub use choose::{Chosen, Fallback};
 pub use decode::{
     decode_image, decode_limited, decode_reduced, decode_unoriented, decoded_size, image_size, needed_edge,
     picture_limits, thumbnails,

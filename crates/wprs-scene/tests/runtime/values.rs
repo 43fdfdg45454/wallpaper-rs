@@ -105,3 +105,15 @@ fn properties_check_and_clamp_values() {
     assert!(sample.cost(Quality::Q0) < sample.cost(Quality::Q3));
     assert_eq!(Quality::fit(&sample, Tier::T3, Quality::Q3), Quality::Q3);
 }
+
+#[test]
+fn a_slider_whose_end_is_off_its_step_grid_keeps_that_end() {
+    let slider =
+        json!({ "type": "slider", "label": "P", "min": 0, "max": 0.175, "step": 0.01, "default": 0.1 });
+    let props: BTreeMap<String, Property> = serde_json::from_value(json!({ "parallax": slider })).unwrap();
+    let set = |v: f64| props["parallax"].value(&json!(v));
+    assert_eq!([set(0.175), set(0.2), set(0.0), set(0.123)], [0.175, 0.175, 0.0, 0.12].map(|v| Ok(json!(v))));
+    let kept = BTreeMap::from([("parallax".to_string(), json!(0.175))]);
+    assert!(stale(&props, &[&kept]).is_empty());
+    assert_eq!(effective(&props, &[&kept])["parallax"], json!(0.175));
+}

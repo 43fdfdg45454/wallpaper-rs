@@ -84,3 +84,41 @@ fn a_calibration_timed_by_the_fence_is_taken_again_with_gpu_timestamps() {
     let (stamped, fresh) = calibrate(Some(&path), ("iris", "mesa"), &IRIS, Calibration::STAMPS, || Some(0.1));
     assert!(fresh && stamped.stamped() && stamped.unit_ms == 0.1);
 }
+
+#[test]
+fn each_graphics_card_keeps_its_own_measure_when_the_user_switches_between_them() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("gpu-tier.json");
+    let rtx = Gpu { name: "NVIDIA GeForce RTX 5070 Ti", discrete: true, ..IRIS };
+    let measures = Cell::new(0);
+    let start = |adapter: &str, gpu: &Gpu, ms: f64| {
+        let measure = || {
+            measures.set(measures.get() + 1);
+            Some(ms)
+        };
+        let (found, fresh) = calibrate(Some(&path), (adapter, "570"), gpu, Calibration::STAMPS, measure);
+        if fresh {
+            found.keep(&path).unwrap();
+        }
+        found.tier
+    };
+    assert_eq!(start("radv", &IRIS, 0.4), Tier::T2);
+    assert_eq!(start("nvidia", &rtx, 0.05), Tier::T3);
+    assert_eq!(
+        (start("radv", &IRIS, 9.0), start("nvidia", &rtx, 9.0), measures.get()),
+        (Tier::T2, Tier::T3, 2)
+    );
+    let old: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    assert_eq!(
+        (old["adapter"].as_str(), old["others"][0]["adapter"].as_str()),
+        (Some("nvidia"), Some("radv"))
+    );
+    let single: Calibration = serde_json::from_value(old).unwrap();
+    assert_eq!(single.adapter, "nvidia", "an older version still reads the last card");
+    std::fs::write(&path, serde_json::to_vec(&single).unwrap()).unwrap();
+    assert_eq!(
+        (start("nvidia", &rtx, 9.0), measures.get()),
+        (Tier::T3, 2),
+        "and a file it wrote is read too"
+    );
+}

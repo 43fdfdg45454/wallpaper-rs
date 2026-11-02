@@ -14,8 +14,15 @@ const EDIT: &str = "e:";
 const SCREENS: &str = "e:outputs/";
 const PARTS: [&str; 7] = ["geometry", "ops", "masks", "span", "depth", "parallax", "fit"];
 const EDIT_BYTES: usize = 64 << 10;
-pub const DEVICE_KEYS: [&str; 5] =
-    ["playback.volume", "playback.muted", "playback.software_parallax", "library.thumb_cache_mb", DOWNLOADS];
+pub const GPU: &str = "render.gpu";
+pub const DEVICE_KEYS: [&str; 6] = [
+    "playback.volume",
+    "playback.muted",
+    "playback.software_parallax",
+    "library.thumb_cache_mb",
+    DOWNLOADS,
+    GPU,
+];
 
 type Lookup<'a> = &'a dyn Fn(&str, &str) -> Option<String>;
 pub type Kept = BTreeMap<String, BTreeMap<String, Value>>;
