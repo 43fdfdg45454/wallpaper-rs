@@ -78,8 +78,8 @@ impl History {
         Ok(ops)
     }
 
-    pub fn held(&mut self, at: u64) {
-        if let Some(last) = self.done.last_mut().filter(|l| l.gesture) {
+    pub fn held(&mut self, stamp: u64, at: u64) {
+        if let Some(last) = self.done.last_mut().filter(|l| l.gesture && l.at == stamp) {
             last.at = last.at.max(at);
         }
     }

@@ -89,4 +89,16 @@ impl Project {
         self.bring_back();
         self.persist()
     }
+
+    pub(crate) fn ready(&self) -> Result<()> {
+        anyhow::ensure!(
+            self.pending.is_none(),
+            said(
+                "editor.unsaved_changes_earlier",
+                "unsaved changes of an earlier session wait; recover or discard them first",
+                &[]
+            )
+        );
+        Ok(())
+    }
 }

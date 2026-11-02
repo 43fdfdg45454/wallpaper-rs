@@ -51,3 +51,28 @@ fn a_gesture_that_starts_without_a_change_still_makes_one_step() {
     crate::editsteps::step(&mut history, &mut last, (&moved, &after), drag(200));
     assert_eq!(history.undo, [before]);
 }
+
+#[test]
+fn a_gesture_that_changes_nothing_never_joins_two_drags() {
+    let (mut history, mut last, now) = (wprs_core::edit::History::default(), None, std::time::Instant::now());
+    let (before, mut after) = (Edit::default(), Edit::default());
+    let drag = |ms| ("set ev ".to_owned(), now + std::time::Duration::from_millis(ms));
+    after.set("ev", "1").unwrap();
+    run(&mut history, &mut last, (&before, &after), drag(0));
+    run(&mut history, &mut last, (&after, &after), drag(1000));
+    let moved = after.clone();
+    after.set("ev", "1.5").unwrap();
+    run(&mut history, &mut last, (&moved, &after), drag(1100));
+    assert_eq!(history.undo, [before, moved]);
+}
+
+fn run(
+    history: &mut wprs_core::edit::History,
+    last: &mut crate::editsteps::Last,
+    edits: (&Edit, &Edit),
+    (gesture, at): (String, std::time::Instant),
+) {
+    if crate::editsteps::step(history, last, edits, (gesture.clone(), at)) {
+        crate::editsteps::held(last, &gesture, at);
+    }
+}

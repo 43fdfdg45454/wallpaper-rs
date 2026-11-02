@@ -46,28 +46,32 @@ pub fn step(
     last: &mut Last,
     (before, after): (&Edit, &Edit),
     gesture: (String, Instant),
-) {
+) -> bool {
     let merge = last.as_ref().is_some_and(|(g, at)| *g == gesture.0 && gesture.1 - *at < MERGE);
     match merge {
         true => history.redo.clear(),
-        false if before == after => return,
+        false if before == after => return false,
         false => history.record(before, after),
     }
     *last = Some(gesture);
+    true
+}
+
+pub fn held(last: &mut Last, gesture: &str, at: Instant) {
+    if let Some((_, then)) = last.as_mut().filter(|(g, _)| g == gesture) {
+        *then = at;
+    }
 }
 
 impl Editor {
-    pub fn record(mut self: Pin<&mut Self>, before: &Edit, gesture: String, at: Instant) {
+    pub fn record(mut self: Pin<&mut Self>, before: &Edit, gesture: String, at: Instant) -> bool {
         let mut this = self.as_mut().rust_mut();
         let this = &mut *this;
-        step(&mut this.history, &mut this.last, (before, &this.edit), (gesture, at));
+        step(&mut this.history, &mut this.last, (before, &this.edit), (gesture, at))
     }
 
     pub fn held(mut self: Pin<&mut Self>, gesture: &str) {
-        let mut this = self.as_mut().rust_mut();
-        if let Some((_, at)) = this.last.as_mut().filter(|(g, _)| g == gesture) {
-            *at = Instant::now();
-        }
+        held(&mut self.as_mut().rust_mut().last, gesture, Instant::now());
     }
 
     fn walk(mut self: Pin<&mut Self>, back: bool) {

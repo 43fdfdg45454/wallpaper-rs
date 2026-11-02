@@ -140,9 +140,11 @@ impl Editor {
         let failed = done.err();
         self.as_mut().set_error(QString::from(failed.as_deref().unwrap_or_default()));
         if failed.is_none() {
-            self.as_mut().record(&before, gesture.clone(), at);
+            let stepped = self.as_mut().record(&before, gesture.clone(), at);
             self.as_mut().changed_edit();
-            self.held(&gesture);
+            if stepped {
+                self.held(&gesture);
+            }
         }
     }
 

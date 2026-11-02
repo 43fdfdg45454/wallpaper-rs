@@ -18,6 +18,7 @@ pub struct Project {
     pub history: History,
     pub base: String,
     pub pending: Option<(Value, History)>,
+    recorded: Option<u64>,
 }
 
 pub fn stamp(doc: &Value) -> String {
@@ -68,7 +69,7 @@ impl Project {
             Some(s) => (History::default(), Some((s.doc, s.history))),
             None => (History::default(), None),
         };
-        let mut project = Project { dir: dir.to_owned(), doc, history, base, pending };
+        let mut project = Project { dir: dir.to_owned(), doc, history, base, pending, recorded: None };
         project.bring_back();
         if project.history.done.is_empty() && project.history.saved.is_none() {
             project.history.mark_saved();
@@ -81,7 +82,7 @@ impl Project {
         ensure!(empty, said("editor.not_empty_folder", "%1 is not an empty folder", &[&(dir.display())]));
         fs::create_dir_all(dir.join("assets"))?;
         let (history, base) = (History::default(), String::new());
-        let mut project = Project { dir: dir.to_owned(), doc, history, base, pending: None };
+        let mut project = Project { dir: dir.to_owned(), doc, history, base, pending: None, recorded: None };
         project.write_files()?;
         project.history.mark_saved();
         project.persist()?;
@@ -105,11 +106,14 @@ impl Project {
     }
 
     pub fn held(&mut self) {
-        self.history.held(now());
+        if let Some(stamp) = self.recorded.take() {
+            self.history.held(stamp, now());
+        }
     }
 
     fn step(&mut self, action: &Action, gesture: bool) -> Result<Vec<Op>> {
         let at = now();
+        self.recorded = None;
         self.ready()?;
         let ops = match action {
             Action::Undo {} | Action::Redo {} => {
@@ -148,6 +152,7 @@ impl Project {
         }
         let before = detected(&self.doc, dir);
         let mut done = self.history.record(&mut self.doc, label, ops, at, gesture)?;
+        self.recorded = gesture.then_some(at);
         let follow = sync(&self.doc, &before, dir);
         if !follow.is_empty() {
             done.extend(self.history.extend(&mut self.doc, follow)?);
@@ -162,18 +167,6 @@ impl Project {
         }
         self.record("sync", follow)?;
         self.save().map(|_| true)
-    }
-
-    fn ready(&self) -> Result<()> {
-        ensure!(
-            self.pending.is_none(),
-            said(
-                "editor.unsaved_changes_earlier",
-                "unsaved changes of an earlier session wait; recover or discard them first",
-                &[]
-            )
-        );
-        Ok(())
     }
 
     pub fn save(&mut self) -> Result<()> {

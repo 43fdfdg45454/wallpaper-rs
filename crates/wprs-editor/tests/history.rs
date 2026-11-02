@@ -153,9 +153,9 @@ fn a_slow_edit_does_not_split_a_drag_but_a_pause_does() {
     let (mut edited, mut history) = (doc(), History::default());
     let size = |n: i32| vec![replace("/scene/canvas/size", json!([n, n]))];
     history.record(&mut edited, "set", size(1), 0, true).unwrap();
-    history.held(900);
+    history.held(0, 900);
     history.record(&mut edited, "set", size(2), 1000, true).unwrap();
-    history.held(1100);
+    history.held(1000, 1100);
     assert_eq!(history.done.len(), 1);
     history.record(&mut edited, "set", size(3), 1700, true).unwrap();
     assert_eq!(history.done.len(), 2);
