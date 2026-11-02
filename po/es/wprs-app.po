@@ -2879,6 +2879,18 @@ msgstr "Densidad"
 msgid "Samples"
 msgstr "Muestras"
 
+#: apps/wprs-app/qml/SceneLightAir.qml apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Shafts"
+msgstr "Haces"
+
+#: apps/wprs-app/qml/SceneLightAir.qml
+msgid ""
+"Shafts let the dark parts of the layers below the light hold back its glow; "
+"layers above the light cover it."
+msgstr ""
+"Los haces dejan que las partes oscuras de las capas de debajo de la luz "
+"frenen su resplandor; las capas de encima lo tapan."
+
 #: apps/wprs-app/qml/SceneLightAir.qml
 msgid ""
 "Phones and older computers light the air at a quarter of the size; the "
@@ -2936,6 +2948,18 @@ msgid "Drag to turn the light"
 msgstr "Arrastra para girar la luz"
 
 #: apps/wprs-app/qml/SceneLightKnobs.qml
+msgid "Tilt %1°"
+msgstr "Inclinación de %1°"
+
+#: apps/wprs-app/qml/SceneLightKnobs.qml
+msgid ""
+"Drag along the aim line to tilt the light: nearer the light it faces the "
+"canvas, nearer the end it lies flat"
+msgstr ""
+"Arrastra por la línea de la dirección para inclinar la luz: cerca de la luz "
+"mira al lienzo y cerca del final queda tumbada"
+
+#: apps/wprs-app/qml/SceneLightKnobs.qml
 msgid "Drag to widen or narrow the bright middle of the cone"
 msgstr "Arrastra para abrir o cerrar el centro brillante del cono"
 
@@ -2977,6 +3001,10 @@ msgstr "Centro brillante"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Cone"
 msgstr "Cono"
+
+#: apps/wprs-app/qml/SceneLightTools.qml
+msgid "Tilt toward the canvas"
+msgstr "Inclinación hacia el lienzo"
 
 #: apps/wprs-app/qml/SceneLightTools.qml
 msgid "Light against the distance"
@@ -3022,6 +3050,29 @@ msgstr "Recibir la luz de las capas de luz"
 msgid "Generate normals…"
 msgstr "Generar normales…"
 
+#: apps/wprs-app/qml/SceneLighting.qml
+msgid ""
+"%1 is read as colors and shades wrong; pick it again to read it as a map."
+msgstr ""
+"%1 se lee como colores y sombrea mal; vuelve a elegirlo para leerlo como "
+"mapa."
+
+#: apps/wprs-app/qml/SceneLighting.qml
+msgid ""
+"Particles take the strength and the glow here; their normal map and "
+"refraction are in the particle system."
+msgstr ""
+"Las partículas toman aquí la fuerza y el brillo; su mapa de normales y la "
+"refracción están en el sistema de partículas."
+
+#: apps/wprs-app/qml/SceneLighting.qml
+#: apps/wprs-app/qml/facade/SceneEffects.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Glow"
+msgstr "Resplandor"
+
 #: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Roughness"
 msgstr "Rugosidad"
@@ -3031,14 +3082,6 @@ msgstr "Rugosidad"
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Reflection"
 msgstr "Reflejo"
-
-#: apps/wprs-app/qml/SceneLighting.qml
-#: apps/wprs-app/qml/facade/SceneEffects.qml
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Glow"
-msgstr "Resplandor"
 
 #: apps/wprs-app/qml/SceneLightsPanel.qml
 msgid "air at %1 of the size, %2 taps"

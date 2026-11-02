@@ -62,6 +62,15 @@ pub(crate) fn normals(dir: &Path, doc: &Value, m: &NormalsMake) -> Result<Vec<Op
     if let Some(layer) = &m.layer {
         lit_layer(doc, layer)?;
     }
+    if let Some(id) = m.id.as_deref() {
+        let asset = doc.pointer(&format!("/scene/assets/{}", escape(id)));
+        let ours =
+            |a: &Value| a["linear"] == true && path_of(doc, id).is_some_and(|p| p.starts_with("normals/"));
+        ensure!(
+            asset.is_none_or(ours),
+            said("editor.normals_taken", "%1 already names another asset", &[&id])
+        );
+    }
     let (from, image) = made(dir, doc, m)?;
     let base =
         m.id.clone().unwrap_or_else(|| format!("{}_normals", from.chars().take(24).collect::<String>()));
@@ -105,8 +114,14 @@ fn blank(dir: &Path, doc: &Value, layer: &Value, white: bool) -> RgbaImage {
     RgbaImage::from_pixel(w, h, Rgba([v, v, v, 255]))
 }
 
+fn own_map(doc: &Value, id: &str, here: &str) -> bool {
+    let linear = doc.pointer(&format!("/scene/assets/{}/linear", escape(id))) == Some(&json!(true));
+    let painted = path_of(doc, id).is_some_and(|p| p.starts_with("maps/"));
+    linear && painted && super::data::only_at(doc, id, here)
+}
+
 pub(crate) fn paint(dir: &Path, doc: &Value, s: &MapStroke) -> Result<Vec<Op>> {
-    let (_, layer) = lit_layer(doc, &s.layer)?;
+    let (at, layer) = lit_layer(doc, &s.layer)?;
     let fits = (1..=POINTS).contains(&s.points.len()) && s.points.iter().flatten().all(|v| v.is_finite());
     ensure!(
         fits,
@@ -126,7 +141,8 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &MapStroke) -> Result<Vec<Op>> {
         points: &s.points,
     };
     stroke(&mut picture, &brush);
-    let id = named.map_or_else(
+    let here = format!("{at}/lighting/{field}");
+    let id = named.filter(|id| own_map(doc, id, &here)).map_or_else(
         || crate::layers::unique(doc, &format!("{}_{}", s.layer, &field[..field.len() - 4])),
         String::from,
     );

@@ -12,7 +12,19 @@ fn volumetrics_are_set_checked_undone_and_dropped_with_the_type() {
     assert_eq!(layer(&p, "s")["volumetric"], json!({ "density": 0.4, "samples": 24 }));
     light(&mut p, json!({ "volumetric": { "layer": "s", "samples": 8 } })).unwrap();
     assert_eq!(layer(&p, "s")["volumetric"], json!({ "density": 0.4, "samples": 8 }));
+    let before = p.doc.clone();
+    light(&mut p, json!({ "volumetric": { "layer": "s", "shafts": 0.7 } })).unwrap();
+    undone(&mut p, &before);
+    assert_eq!(layer(&p, "s")["volumetric"], json!({ "density": 0.4, "samples": 8, "shafts": 0.7 }));
+    assert_eq!(
+        wprs_editor::lamps::air(&p.dir, &p.doc, "s", 0.0)["shafts"].as_f64().map(|v| (v * 100.0).round()),
+        Some(70.0)
+    );
+    light(&mut p, json!({ "volumetric": { "layer": "s", "shafts": 0 } })).unwrap();
+    assert_eq!(layer(&p, "s")["volumetric"], json!({ "density": 0.4, "samples": 8 }));
     for bad in [
+        json!({ "shafts": 1.5 }),
+        json!({ "shafts": -1 }),
         json!({ "density": 2 }),
         json!({ "samples": 2 }),
         json!({ "samples": 65 }),

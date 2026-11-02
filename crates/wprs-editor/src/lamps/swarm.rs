@@ -11,18 +11,21 @@ use wprs_scene::{Quality, Tier};
 
 const SIDE: u32 = 48;
 
-fn named(doc: &Value, id: &str) -> Result<Option<Value>> {
+fn named(doc: &Value, id: &str, made: &mut Vec<Op>) -> Result<Option<Value>> {
     if id.is_empty() {
         return Ok(None);
     }
     picture(doc, id)?;
+    let (id, ops) = super::data::linear(doc, id, &mut Vec::new());
+    made.extend(ops);
     Ok(Some(json!(id)))
 }
 
 pub(crate) fn edit(dir: &Path, doc: &Value, e: &SwarmLight) -> Result<Vec<Op>> {
-    let ops = match e {
+    let mut made = Vec::new();
+    let mut ops = match e {
         SwarmLight::Lit { system: id, layer, lit, normal } => {
-            let normal = normal.as_deref().map(|n| named(doc, n)).transpose()?;
+            let normal = normal.as_deref().map(|n| named(doc, n, &mut made)).transpose()?;
             render(doc, &system(doc, id)?, layer.as_deref(), |doc, at| {
                 let mut ops = Vec::new();
                 lit.iter()
@@ -40,7 +43,7 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &SwarmLight) -> Result<Vec<Op>> {
             }
             let was = rendered(doc, id, layer.as_deref())["refract"].clone();
             let normal = match normal.as_deref() {
-                Some(n) => named(doc, n)?,
+                Some(n) => named(doc, n, &mut made)?,
                 None => was.get("normal").cloned(),
             };
             let Some(normal) = normal else {
@@ -55,7 +58,8 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &SwarmLight) -> Result<Vec<Op>> {
             })?
         }
     };
-    checked(dir, doc, ops)
+    made.append(&mut ops);
+    checked(dir, doc, made)
 }
 
 fn rendered<'a>(doc: &'a Value, id: &str, layer: Option<&str>) -> &'a Value {

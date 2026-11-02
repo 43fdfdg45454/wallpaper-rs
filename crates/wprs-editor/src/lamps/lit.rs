@@ -25,8 +25,25 @@ pub(crate) fn lit_layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Val
     Ok((path, layer))
 }
 
+fn sprites(e: &LightingEdit) -> Result<()> {
+    let maps = [&e.normal, &e.env, &e.roughness_map, &e.emissive_map].iter().any(|m| m.is_some());
+    ensure!(
+        !maps && e.roughness.is_none() && e.reflection.is_none(),
+        said("editor.lighting_sprites", "a particles layer takes only strength and glow", &[])
+    );
+    Ok(())
+}
+
 pub(crate) fn lighting(doc: &Value, e: &LightingEdit) -> Result<Vec<Op>> {
-    let (path, layer) = lit_layer(doc, &e.layer)?;
+    let (path, layer) = crate::actions::layer(doc, &e.layer)?;
+    let kind = layer["type"].as_str();
+    ensure!(
+        matches!(kind, Some("image" | "video" | "text" | "particles")),
+        said("editor.lighting_kinds", "lighting is for image, video, text and particles layers", &[])
+    );
+    if kind == Some("particles") {
+        sprites(e)?;
+    }
     if e.off {
         return Ok(layer
             .get("lighting")
@@ -35,13 +52,20 @@ pub(crate) fn lighting(doc: &Value, e: &LightingEdit) -> Result<Vec<Op>> {
             .collect());
     }
     let mut block: Map<String, Value> = layer["lighting"].as_object().cloned().unwrap_or_default();
+    let (mut ops, mut taken) = (Vec::new(), Vec::new());
     let pictures = [("normal", &e.normal), ("env", &e.env), ("roughness_map", &e.roughness_map)];
     for (name, id) in pictures.into_iter().chain([("emissive_map", &e.emissive_map)]) {
         match id.as_deref() {
             None => {}
             Some("") => drop(block.remove(name)),
+            Some(id) if name == "env" => {
+                picture(doc, id)?;
+                block.insert(name.into(), json!(id));
+            }
             Some(id) => {
                 picture(doc, id)?;
+                let (id, made) = super::data::linear(doc, id, &mut taken);
+                ops.extend(made);
                 block.insert(name.into(), json!(id));
             }
         }
@@ -57,7 +81,8 @@ pub(crate) fn lighting(doc: &Value, e: &LightingEdit) -> Result<Vec<Op>> {
         );
         block.insert(name.into(), json!(v));
     }
-    Ok(set(doc, &format!("{path}/lighting"), Value::Object(block)))
+    ops.extend(set(doc, &format!("{path}/lighting"), Value::Object(block)));
+    Ok(ops)
 }
 
 pub(crate) fn ambient(doc: &Value, e: &AmbientEdit) -> Result<Vec<Op>> {

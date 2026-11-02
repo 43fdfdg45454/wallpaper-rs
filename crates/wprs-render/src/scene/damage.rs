@@ -89,14 +89,13 @@ impl Painter<'_, '_, '_> {
         self.watch_gobos();
         let lit = self.frame.draws.iter().any(|d| d.lit.is_some() && !d.hidden) || self.lit_swarms();
         let glow = &self.pool.glow;
-        let marks =
-            glow.marks[..glow.count()].iter().zip(&glow.now.bulbs).filter(|(_, b)| lit || b.air[0] > 0.0);
-        let live = |b: &super::lamps::Bulb| glow.live && b.air[2] > 0.0;
-        new.extend(
-            marks.map(|(&(id, key, rect), b)| {
-                (id, if live(b) { MOVING } else { key }, Some(rect), Reach::Own)
-            }),
-        );
+        let marks = glow.marks[..glow.count()].iter().zip(&glow.now.bulbs).enumerate();
+        let marks = marks.filter(|(_, (_, b))| lit || b.air[0] > 0.0);
+        let shafts = |k: usize, b: &super::lamps::Bulb| b.air[0] > 0.0 && b.air[3] > 0.0 && self.restless(k);
+        let live = |k, b: &super::lamps::Bulb| (glow.live && b.air[2] > 0.0) || shafts(k, b);
+        new.extend(marks.map(|(k, (&(id, key, rect), b))| {
+            (id, if live(k, b) { MOVING } else { key }, Some(rect), Reach::Own)
+        }));
         if fresh || old.is_empty() {
             return Damage::Full;
         }

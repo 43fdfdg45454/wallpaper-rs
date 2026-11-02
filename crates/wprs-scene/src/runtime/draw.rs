@@ -116,7 +116,12 @@ impl Runtime {
         if let Some(glow) = crate::glow::pick(&self.glow, quality, self.battery) {
             walk(&cx, [glow], (Affine::IDENTITY, None), quality, &mut frame, canvas);
         }
-        crate::eval::lamps::lamps(&cx, &self.scene.layers, root, true, quality, &mut frame.lamps);
+        let Frame { draws, lamps, .. } = &mut frame;
+        let mut found = crate::eval::lamps::Gather { out: lamps, draws, next: 0 };
+        crate::eval::lamps::lamps(&cx, &self.scene.layers, root, (true, self.lit), quality, &mut found);
+        if self.script.order.is_some() {
+            frame.lamps.iter_mut().for_each(|l| l.slot = frame.draws.len());
+        }
         plan(&self.swarms, (&self.systems, &self.flocks), &cx, &frame, quality, self.t);
         self.sight_puppets(&frame);
         let sighted = if self.sight(&frame) { Wake::Frame } else { Wake::Idle };

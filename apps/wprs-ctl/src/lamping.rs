@@ -26,7 +26,9 @@ pub enum Lamping {
         #[arg(long, value_parser = ["q0", "q1", "q2", "q3"], help = "Quality level the preview uses, with --cost")]
         quality: Option<String>,
     },
-    #[command(about = "Set how an image, video or text layer takes the light; an empty id clears a picture")]
+    #[command(
+        about = "Set how an image, video, text or particles layer takes the light; an empty id clears a picture"
+    )]
     Lighting(Lit),
     #[command(about = "Make a normal map from a picture by its edges and keep it as an asset")]
     Normals {

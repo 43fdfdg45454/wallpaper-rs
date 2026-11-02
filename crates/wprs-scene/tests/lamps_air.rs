@@ -35,6 +35,8 @@ fn volumetrics_keep_density_and_samples_in_range_and_only_on_points_and_spots() 
         json!({ "samples": 2 }),
         json!({ "samples": 65 }),
         json!({ "density": -1 }),
+        json!({ "shafts": 1.5 }),
+        json!({ "shafts": -0.1 }),
     ];
     for v in bad {
         assert!(!issues(json!([spot("s", json!({ "volumetric": v }))])).is_empty(), "{v}");
@@ -92,7 +94,7 @@ fn lamps_carry_their_air_and_picture_and_drop_the_air_at_the_lowest_level() {
     let runtime = Runtime::new(Arc::new(scene(json!([wall("w", false), s]))), Values::new());
     let view = [0.0, 0.0, 200.0, 100.0];
     let frame = runtime.frame(view, Quality::Q3);
-    assert_eq!(frame.lamps[0].air, Some([0.3, 24.0]));
+    assert_eq!(frame.lamps[0].air, Some([0.3, 24.0, 0.0]));
     assert_eq!(frame.lamps[0].picture, Some(Picture::Layer("w")));
     assert_eq!(runtime.frame(view, Quality::Q0).lamps[0].air, None);
     let shown = runtime.frame(view, Quality::Q3);

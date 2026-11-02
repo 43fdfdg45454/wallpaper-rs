@@ -4,12 +4,15 @@ fn fs_air(in: Out) -> @location(0) vec4<f32> {
     let p = item.lit_at.xy + in.position.xy * item.lit_at.z;
     let n = max(4u, u32(b.air.y * item.lit.x + 0.5));
     let reach_of = b.air.x;
+    let area = vec4<f32>(item.lit_at.xy, max(item.lit.yz, vec2<f32>(1.0)));
     var sum = vec3<f32>(0.0);
     for (var i = 0u; i < n; i++) {
         let q = mix(p, b.at.xy, reach_of * f32(i) / f32(n));
         let r = reach(b, q);
         if r.w > 0.0 {
-            sum += gobo(b, r.xyz) * r.w;
+            let back = textureSampleLevel(src_tex, samp, (q - area.xy) / area.zw, 0.0).rgb;
+            let open = mix(1.0, smoothstep(0.0, 0.25, dot(back, vec3<f32>(0.2126, 0.7152, 0.0722))), b.air.w);
+            sum += gobo(b, r.xyz) * r.w * open;
         }
     }
     let d = length(p - b.at.xy) / max(b.at.w, 1e-3);

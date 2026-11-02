@@ -55,6 +55,13 @@ pub struct Volumetric {
     pub density: f32,
     #[schemars(extend("x-range" = [4, 64]))]
     pub samples: u32,
+    #[serde(skip_serializing_if = "none")]
+    #[schemars(extend("x-range" = [0, 1]))]
+    pub shafts: f32,
+}
+
+fn none(v: &f32) -> bool {
+    *v == 0.0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -84,7 +91,7 @@ pub struct Lighting {
 
 impl Default for Volumetric {
     fn default() -> Self {
-        Volumetric { density: 0.2, samples: 16 }
+        Volumetric { density: 0.2, samples: 16, shafts: 0.0 }
     }
 }
 

@@ -11,7 +11,12 @@ impl<'a> Painter<'a, '_, '_> {
         let frame = self.frame;
         let draws = &frame.draws;
         let (mut static_end, mut i, mut fed) = (0, 0, 0u64);
-        while !self.frame.keep && i < draws.len() && !draws[i].dynamic && !self.shifting(i..draws[i].end) {
+        let first = self.first_air();
+        while !self.frame.keep
+            && i < draws.len().min(first)
+            && !draws[i].dynamic
+            && !self.shifting(i..draws[i].end)
+        {
             let (key, moving) = self.feeding(i..draws[i].end);
             if moving {
                 break;
@@ -20,6 +25,7 @@ impl<'a> Painter<'a, '_, '_> {
             static_end = i;
         }
         let root = Target { src: canvas, rect: self.full };
+        self.aired = (0, Some(canvas));
         let (origin, size) =
             self.clip.map_or(([0, 0], self.full.size()), |c| ([c.x as u32, c.y as u32], c.size()));
         if static_end == 0 {
@@ -41,13 +47,16 @@ impl<'a> Painter<'a, '_, '_> {
             self.ops.push(Op::Copy { from: Src::Cache(0), to: canvas, origin, size, at: origin });
         }
         self.list(static_end..draws.len(), root, false);
-        self.air(root);
+        self.air_until(usize::MAX, root);
         self.unshare();
     }
 
     pub(crate) fn list(&mut self, range: Range<usize>, target: Target, clip: bool) {
         let mut i = range.start;
         while i < range.end {
+            if self.aired.1 == Some(target.src) {
+                self.air_until(i, target);
+            }
             let frame = self.frame;
             let d = &frame.draws[i];
             let atop = clip && i > range.start;

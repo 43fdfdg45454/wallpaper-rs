@@ -12,6 +12,8 @@ ctl scene light "$draft" tube set --length 120 --at 60,40 --z 30 || fail "the tu
 ctl scene light "$draft" lamp falloff | grep -q '"curve"' || fail "the falloff of the light was not plotted"
 ctl scene lights "$draft" | grep -q '"outer"' || fail "the cone of the spot light was not listed"
 ctl scene lights "$draft" | grep -q '"ends"' || fail "the ends of the tube light were not listed"
+ctl scene lights "$draft" | grep -q '"tilt_knob"' || fail "the tilt knob of the spot light was not listed"
+ctl scene show "$draft" /scene/layers | grep -q '"tilt": \[' || fail "the tilt of the spot light was not kept"
 ctl scene lights "$draft" --cost --quality q0 | grep -q '"baked": true' || fail "the lowest level does not bake the lighting"
 ctl scene light "$draft" tube mute || fail "the tube light was not muted"
 ctl scene light "$draft" lamp solo || fail "the spot light was not lit alone"
@@ -25,6 +27,9 @@ ctl scene show "$draft" /scene/layers | grep -q '"leaf_normals"' || fail "the la
 ctl scene lighting "$draft" wall --roughness 0.3 --reflection 0.2 --emissive 0.5 --strength 0.9 ||
   fail "the lighting of the layer was not set"
 if ctl scene lighting "$draft" wall --roughness 3 2>/dev/null; then fail "a roughness of 3 was kept"; fi
+ctl scene lighting "$draft" wall --emissive-map leaf || fail "the glow map was not picked"
+ctl scene show "$draft" /scene/assets | grep -q '"leaf_linear"' || fail "the picked map was not read as linear"
+ctl scene lighting "$draft" wall --emissive-map '' || fail "the glow map was not cleared"
 ctl scene paint-map "$draft" wall roughness --points '0.2,0.5;0.8,0.5' --radius 0.1 --value 0.2 ||
   fail "no roughness was painted"
 ctl scene paint-map "$draft" wall emissive --points '0.5,0.5' --radius 0.2 || fail "no glow was painted"
@@ -35,6 +40,9 @@ ctl scene light "$draft" beam add --type spot --at 80,20 || fail "no second spot
 ctl scene light "$draft" beam volumetric --density 0.4 --samples 24 || fail "the spot light did not light the air"
 ctl scene light "$draft" beam volumetric --show | grep -q '"levels"' || fail "the air levels were not shown"
 if ctl scene light "$draft" beam volumetric --samples 99 2>/dev/null; then fail "99 samples were kept"; fi
+ctl scene light "$draft" beam volumetric --shafts 0.6 || fail "the air of the spot light took no shafts"
+ctl scene light "$draft" beam volumetric --show | grep -q '"shafts": 0.6' || fail "the shafts were not shown"
+if ctl scene light "$draft" beam volumetric --shafts 2 2>/dev/null; then fail "shafts of 2 were kept"; fi
 if ctl scene light "$draft" tube volumetric 2>/dev/null; then fail "a tube light lit the air"; fi
 ctl scene light "$draft" beam projection --asset leaf || fail "the spot light did not project a picture"
 ctl scene light "$draft" beam projection --show | grep -q '"pictures"' || fail "the pictures to project were not listed"
@@ -46,6 +54,8 @@ ctl scene remove "$draft" /scene/assets/film || fail "the video was not removed"
 ctl scene prune "$draft" | grep -q magenta || fail "the video was not pruned"
 ctl scene particles "$draft" dust lit --normal leaf_normals || fail "the particles do not take the light"
 ctl scene particles "$draft" dust lit --show | grep -q '"sides"' || fail "the two-sided preview was not shown"
+ctl scene lighting "$draft" dust --strength 0.6 --emissive 2 || fail "the particles layer took no strength or glow"
+if ctl scene lighting "$draft" dust --roughness 0.5 2>/dev/null; then fail "a particles layer took a roughness"; fi
 ctl scene particles "$draft" dust refract --normal leaf_normals --amount 0.3 || fail "the particles do not refract"
 if ctl scene particles "$draft" dust refract --amount 3 2>/dev/null; then fail "a refraction of 3 was kept"; fi
 ctl scene particles "$draft" dust refract --show | grep -q '"field"' || fail "the displacement was not shown"
@@ -56,6 +66,7 @@ for f in volumetric_lights light_textures particle_lighting; do
 done
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "lit air and particles were not previewed"
 ctl scene particles "$draft" dust refract --off && ctl scene particles "$draft" dust lit --off --normal ''
+ctl scene lighting "$draft" dust --off || fail "the particles layer kept its lighting"
 ctl scene light "$draft" beam projection --off && ctl scene light "$draft" beam volumetric --off
 ctl scene light "$draft" beam remove || fail "the second spot light was not removed"
 ctl scene validate "$draft" >/dev/null || fail "the lit scene is not valid"

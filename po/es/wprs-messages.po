@@ -596,8 +596,8 @@ msgid "only point and spot lights light the air"
 msgstr "solo las luces puntuales y los focos iluminan el aire"
 
 #: crates/wprs-editor/src/lamps/air.rs
-msgid "density goes from 0 to 1 and samples from 4 to 64"
-msgstr "la densidad va de 0 a 1 y las muestras de 4 a 64"
+msgid "density and shafts go from 0 to 1 and samples from 4 to 64"
+msgstr "la densidad y los haces van de 0 a 1 y las muestras de 4 a 64"
 
 #: crates/wprs-editor/src/lamps/cast.rs crates/wprs-editor/src/lamps/edit.rs
 msgid "only %1 lights take %2"
@@ -648,6 +648,14 @@ msgid "lighting is for image, video and text layers"
 msgstr "la iluminación es para capas de imagen, vídeo y texto"
 
 #: crates/wprs-editor/src/lamps/lit.rs
+msgid "a particles layer takes only strength and glow"
+msgstr "una capa de partículas solo toma fuerza y brillo"
+
+#: crates/wprs-editor/src/lamps/lit.rs
+msgid "lighting is for image, video, text and particles layers"
+msgstr "la iluminación es para capas de imagen, vídeo, texto y partículas"
+
+#: crates/wprs-editor/src/lamps/lit.rs
 msgid "%1 goes from 0 to %2"
 msgstr "%1 va de 0 a %2"
 
@@ -662,6 +670,10 @@ msgstr "indica una imagen o una capa de imagen"
 #: crates/wprs-editor/src/lamps/maps.rs
 msgid "strength goes from 0 to %1 and blur from 0 to %2"
 msgstr "la fuerza va de 0 a %1 y el desenfoque de 0 a %2"
+
+#: crates/wprs-editor/src/lamps/maps.rs
+msgid "%1 already names another asset"
+msgstr "%1 ya nombra otro recurso"
 
 #: crates/wprs-editor/src/lamps/maps.rs crates/wprs-editor/src/paint.rs
 msgid "a stroke has 1 to %1 points and a channel from 0 to 3"

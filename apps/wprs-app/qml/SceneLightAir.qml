@@ -57,12 +57,21 @@ ColumnLayout {
         visible: air.info?.on === true
         value: {
             "density": air.info?.density ?? 0,
-            "samples": air.info?.samples ?? 16
+            "samples": air.info?.samples ?? 16,
+            "shafts": air.info?.shafts ?? 0
         }
-        rows: [["density", App.tr("Density"), 0, 1, 0.01], ["samples", App.tr("Samples"), 4, 64, 1]]
+        rows: [["density", App.tr("Density"), 0, 1, 0.01], ["samples", App.tr("Samples"), 4, 64, 1], ["shafts", App.tr("Shafts"), 0, 1, 0.01]]
         onEdited: (key, value) => air.put({
                 [key]: value
             }, true)
+    }
+
+    QQC2.Label {
+        Layout.fillWidth: true
+        visible: air.info?.on === true
+        wrapMode: Text.Wrap
+        font: Kirigami.Theme.smallFont
+        text: App.tr("Shafts let the dark parts of the layers below the light hold back its glow; layers above the light cover it.")
     }
 
     SceneCurvePlot {

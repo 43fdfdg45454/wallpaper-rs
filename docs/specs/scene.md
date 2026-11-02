@@ -382,7 +382,7 @@ light anything.
 | `z` | height above the canvas, −100000 to 100000 px (default 100); may be bound |
 | `cone` | spot lights only: `[inner, outer]` angles from 0 to 180 degrees (default `[30, 60]`), full in the middle and dark past the outer angle |
 | `length` | tube lights only: 1 to 100000 px (default 256) |
-| `volumetric` | point and spot lights only: `{ "density" (0 to 1, default 0.2), "samples" (4 to 64, default 16) }` lights the air (`volumetric_lights`), see below |
+| `volumetric` | point and spot lights only: `{ "density" (0 to 1, default 0.2), "samples" (4 to 64, default 16), "shafts" (0 to 1, default 0) }` lights the air (`volumetric_lights`), see below |
 | `texture` | spot lights only: the asset id of a picture or video, or `{ "layer": id }`, that the light projects (`light_textures`); at most 4 spot lights of a scene project, see below |
 | `shadows` | point, spot and directional lights: `true` casts shadows of models and of materials that `receive_shadows`; at most 2 lights per scene (`shadows`) |
 
@@ -411,24 +411,27 @@ viewer, and so takes the mix of both halfway. `lighting` takes:
 The numbers may be bound. Lighting is worked out in the same pass that draws the layer, for at most
 12 lights and only where a light reaches. While the lights stay still, lit layers are drawn once and
 kept like other still layers; when one moves, only the box its radius covers is drawn again. At the
-lowest quality level the lighting is worked out once, when the scene starts or the level changes,
-and lit layers are kept as still pictures: lights that move stay where they started and ask for no
+lowest quality level the lighting is worked out once, when the scene starts, the level or the size
+of the screen changes or the scene is loaded again, and lit layers are kept as still pictures: lights that move stay where they started and ask for no
 frames. Scripts read and set `scene.ambient` and `scene.sky` as colors, like `scene.background`.
 
-A `volumetric` light glows in the air in front of the whole scene, within its radius. Each pixel
+A `volumetric` light glows in the air within its radius, added where the light layer is among the
+layers: the layers below it show through the glow and the layers above it cover it. Each pixel
 gathers, at `samples` points on the line from the pixel towards the light, the fade, the cone and
 the projected picture of the light there; `density` is the part of the line it walks and also how
-strongly the air glows, and the glow fades to nothing at the radius. The air is worked out at half
-the size of the screen (Q3 and Q2) or a quarter (Q1, and on T0 and T1 devices), with half the
-samples at Q1, and not at all at Q0; it is added to the frame, kept while the light stays still and
-drawn again only in the box of its radius when the light moves.
+strongly the air glows, and the glow fades to nothing at the radius. With `shafts`, each of those
+points also takes how bright the layers below the light are there, so their dark parts hold back the
+glow and cast shafts: 0 leaves the glow as it is and 1 lets only bright parts glow. The air is worked
+out at half the size of the screen (Q3 and Q2) or a quarter (Q1, and on T0 and T1 devices), with
+half the samples at Q1, and not at all at Q0; it is kept while the light and, with `shafts`, the
+layers below it stay still, and drawn again only in the box of its radius when one of them moves.
 
 A spot light with a `texture` multiplies its color by the picture, which fills the outer cone as a
 projector does, upright and seen from behind the light. A video plays on and asks for frames while it
 plays; a `{ "layer": id }` projects that layer as it is drawn, with its effects, even when it is
 hidden (`layer_textures`). The projected layer must not take light itself, hold or read a layer that
-does, or the scene is refused as a loop. Lit layers, lit particles and the glowing air all take the
-projected picture; layers lit by a still picture stay kept, a video or a moving layer redraws them in
+does, or the scene is refused as a loop. Lit layers and the glowing air take the projected picture,
+while lit particles take only the color of the spot; layers lit by a still picture stay kept, a video or a moving layer redraws them in
 the box of the light.
 
 ### Meshes

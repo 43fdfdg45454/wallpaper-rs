@@ -54,6 +54,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) swarms: Option<&'p mut super::swarm::Swarms>,
     pub(crate) flocks: &'a [u64],
     pub(crate) flat: std::cell::Cell<Option<(wprs_scene::Lean, wprs_scene::Lean)>>,
+    pub(crate) aired: (usize, Option<Src>),
 }
 
 #[derive(Clone, Copy)]

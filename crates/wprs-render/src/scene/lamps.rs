@@ -29,7 +29,7 @@ pub(crate) struct Glow {
     pub(crate) now: Lights,
     pub(crate) marks: [Mark; MAX_LIGHTS],
     pub(crate) moved: bool,
-    pub(crate) baked: bool,
+    pub(crate) baked: Option<(Affine, bool, usize)>,
     pub(crate) live: bool,
     pub(crate) seen: u64,
     pub(crate) slots: [usize; MAX_PROJECTIONS],
@@ -59,7 +59,7 @@ pub(crate) fn bulb(lamp: &Lamp<'_>, screen: Affine, srgb: bool) -> (Bulb, Rect) 
         color,
         dir: [hx, hy, hz, outer.min(inner - 1e-4)],
         more: [inner, a / long * half, b / long * half, 0.0],
-        air: lamp.air.map_or([0.0; 4], |[density, samples]| [density, samples, 0.0, 0.0]),
+        air: lamp.air.map_or([0.0; 4], |[density, samples, shafts]| [density, samples, 0.0, shafts]),
     };
     let ends = if lamp.beam == Beam::Tube { [bulb.more[1], bulb.more[2]] } else { [0.0; 2] };
     let rect = match lamp.beam {
@@ -113,7 +113,7 @@ impl Glow {
             now: Lights::default(),
             marks: [empty; MAX_LIGHTS],
             moved: false,
-            baked: false,
+            baked: None,
             live: false,
             seen: 0,
             slots: [0; MAX_PROJECTIONS],
@@ -131,8 +131,9 @@ impl Glow {
         cap: usize,
     ) {
         self.gobos = None;
-        let keep = frame.quality == Quality::Q0 && self.baked;
-        self.baked = frame.quality == Quality::Q0;
+        let key = (screen, srgb, cap);
+        let keep = frame.quality == Quality::Q0 && self.baked == Some(key);
+        self.baked = (frame.quality == Quality::Q0).then_some(key);
         if keep {
             self.moved = false;
             return;

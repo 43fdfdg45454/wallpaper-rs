@@ -164,9 +164,9 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &LightEdit) -> Result<Vec<Op>> {
             Some(_) => vec![Op::Remove { path: format!("{EDITOR}/lights/solo") }],
             None => Vec::new(),
         },
-        LightEdit::Volumetric { layer, density, samples, off } => {
+        LightEdit::Volumetric { layer, density, samples, shafts, off } => {
             let (path, beam) = light(doc, layer)?;
-            super::air::volumetric(doc, (&path, beam), (*density, *samples), *off)?
+            super::air::volumetric(doc, (&path, beam), (*density, *samples, *shafts), *off)?
         }
         LightEdit::Projection { layer, asset, from, off } => {
             let (path, beam) = light(doc, layer)?;

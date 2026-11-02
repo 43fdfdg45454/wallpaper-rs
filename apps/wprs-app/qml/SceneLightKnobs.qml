@@ -35,6 +35,16 @@ Item {
         onMoved: (to, done) => knobs.gizmo.aim(to)
     }
 
+    SceneKnob {
+        at: knobs.light.tilt_knob ?? null
+        ratio: knobs.ratio
+        square: true
+        tint: Kirigami.Theme.neutralTextColor
+        label: App.tr("Tilt %1°", Math.round(knobs.light.tilt))
+        tip: App.tr("Drag along the aim line to tilt the light: nearer the light it faces the canvas, nearer the end it lies flat")
+        onMoved: (to, done) => knobs.gizmo.tilt(to)
+    }
+
     Repeater {
         model: knobs.light.type === "spot" ? [[knobs.light.outer[1], false], [knobs.light.inner[1], true]] : []
 

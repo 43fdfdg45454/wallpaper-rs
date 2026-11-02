@@ -7,6 +7,7 @@ use std::path::Path;
 mod air;
 mod cast;
 mod cost;
+mod data;
 mod edit;
 mod lit;
 mod maps;
@@ -21,7 +22,7 @@ pub use edit::template;
 pub use lit::hemisphere;
 pub use maps::{heat, preview as normals_preview};
 pub use placed::{Placed, placed};
-pub use report::{AIM, FEW, Z_KNOB, falloff, handles, lights, reach, tiers};
+pub use report::{AIM, FEW, Z_KNOB, falloff, handles, lights, reach, tiers, tilt_share};
 pub(crate) use swarm::edit as glow;
 pub use swarm::{sides, swarm_light};
 

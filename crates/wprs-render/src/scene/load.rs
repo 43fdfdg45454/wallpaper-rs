@@ -28,6 +28,7 @@ impl Renderer {
         assets: &SceneAssets,
     ) -> Result<bool, RenderError> {
         view.marks.clear();
+        view.pool.glow.baked = None;
         let same = |id: &String| match (view.sources.get(id), assets.images.get(id)) {
             (Some(was), Some(now)) => Arc::ptr_eq(was, now),
             (was, now) => was.is_none() && now.is_none(),

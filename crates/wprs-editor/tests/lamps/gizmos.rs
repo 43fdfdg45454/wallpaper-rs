@@ -64,3 +64,25 @@ fn the_lighting_cost_shows_the_bake_and_the_animated_lights() {
     assert_eq!(moving["levels"][0]["per_frame"], 0.0);
     assert_eq!(moving["lit_layers"], json!(["logo"]));
 }
+
+#[test]
+fn spot_and_directional_lights_show_a_tilt_knob_on_their_aim_line() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    for (id, kind) in [("p", "point"), ("s", "spot"), ("t", "tube"), ("d", "directional")] {
+        light(&mut p, json!({ "add": { "id": id, "light": kind, "at": [400, 300] } })).unwrap();
+    }
+    let knob = |p: &wprs_editor::Project, row: usize| {
+        let rows = lamps::lights(&p.dir, &p.doc, 0.0)["lights"].clone();
+        rows[row]["tilt_knob"].as_array().map(|k| [k[0].as_f64().unwrap(), k[1].as_f64().unwrap()])
+    };
+    assert_eq!((knob(&p, 0), knob(&p, 2)), (None, None));
+    let [x, y] = knob(&p, 1).unwrap();
+    assert!(x == 400.0 && (y - (300.0 + 160.0 * f64::from(lamps::tilt_share(45.0)))).abs() < 0.01, "{y}");
+    let [_, flat] = knob(&p, 3).unwrap();
+    assert!((flat - (300.0 + 160.0 * f64::from(lamps::tilt_share(50.0)))).abs() < 0.01, "{flat}");
+    light(&mut p, json!({ "set": { "layer": "s", "tilt": -60 } })).unwrap();
+    let [_, low] = knob(&p, 1).unwrap();
+    assert!(low > y + 60.0 && low < 460.0, "a flatter beam puts the knob nearer the end: {low}");
+    assert!(lamps::tilt_share(89.0) < lamps::tilt_share(0.0) && lamps::tilt_share(-89.0) < 0.91);
+}

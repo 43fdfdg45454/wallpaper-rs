@@ -12,7 +12,12 @@ fn the_lighting_block_takes_pictures_and_numbers_in_range() {
     let l = &layer(&p, "logo")["lighting"];
     assert_eq!(
         (l["normal"].as_str(), l["roughness"].as_f64(), l["emissive"].as_f64()),
-        (Some("pic"), Some(0.2), Some(2.0))
+        (Some("pic_linear"), Some(0.2), Some(2.0))
+    );
+    assert_eq!(p.doc["scene"]["assets"]["pic_linear"], json!({ "path": "pic.png", "linear": true }));
+    assert!(
+        p.doc["scene"]["assets"]["pic"].get("linear").is_none(),
+        "the picture of the layer keeps its colors"
     );
     act(&mut p, json!({ "lighting": { "layer": "logo", "normal": "", "env": "pic" } })).unwrap();
     let l = &layer(&p, "logo")["lighting"];

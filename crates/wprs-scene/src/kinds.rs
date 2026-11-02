@@ -75,6 +75,7 @@ impl Check<'_> {
             self.uses(true, "volumetric_lights");
             self.range(&format!("{p}/volumetric/density"), v.density, 0.0, 1.0);
             self.range(&format!("{p}/volumetric/samples"), v.samples as f32, 4.0, 64.0);
+            self.range(&format!("{p}/volumetric/shafts"), v.shafts, 0.0, 1.0);
         }
         if let Some(texture) = &l.texture {
             self.uses(true, "light_textures");

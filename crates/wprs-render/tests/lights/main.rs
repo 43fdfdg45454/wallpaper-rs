@@ -6,9 +6,11 @@ use wprs_render::{Layer, Pixels, Renderer, SceneAssets, SceneView};
 use wprs_scene::{Quality, Runtime, SCHEMA, Scene, Values};
 
 mod air;
+mod baked;
 mod beams;
 mod cached;
 mod gobos;
+mod shafts;
 mod surfaces;
 mod swarm;
 
@@ -70,8 +72,12 @@ impl Shot {
     }
 
     pub fn pixels(&mut self, r: &Renderer, quality: Quality) -> RgbaImage {
-        let frame = self.runtime.frame(self.view.view(SIZE), quality);
-        let image = r.render_scene(&mut self.view, &self.runtime, &frame, SIZE, quality, &[]).unwrap();
+        self.sized(r, quality, SIZE)
+    }
+
+    pub fn sized(&mut self, r: &Renderer, quality: Quality, size: (u32, u32)) -> RgbaImage {
+        let frame = self.runtime.frame(self.view.view(size), quality);
+        let image = r.render_scene(&mut self.view, &self.runtime, &frame, size, quality, &[]).unwrap();
         let layer = Layer {
             image: Some(image),
             fit: Fit::Stretch,
@@ -82,9 +88,9 @@ impl Shot {
             flip: [false; 2],
             grade: None,
         };
-        let (mut target, mut out) = (r.create_target(SIZE.0, SIZE.1).unwrap(), Vec::new());
+        let (mut target, mut out) = (r.create_target(size.0, size.1).unwrap(), Vec::new());
         r.render_layers(&mut target, &[layer], &mut out).unwrap();
-        RgbaImage::from_raw(SIZE.0, SIZE.1, out).unwrap()
+        RgbaImage::from_raw(size.0, size.1, out).unwrap()
     }
 }
 

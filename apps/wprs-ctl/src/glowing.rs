@@ -9,6 +9,8 @@ pub struct Air {
     pub density: Option<f64>,
     #[arg(long, help = "Steps along each ray, 4 to 64")]
     pub samples: Option<u32>,
+    #[arg(long, help = "How much the dark parts of what lies behind the light hold back its air, 0 to 1")]
+    pub shafts: Option<f64>,
     #[arg(long, help = "Stop lighting the air")]
     pub off: bool,
     #[arg(long, help = "Show the glow against the distance and what each quality level keeps instead")]
@@ -58,7 +60,7 @@ pub struct Bend {
 }
 
 pub(crate) fn air(layer: String, a: &Air) -> LightEdit {
-    LightEdit::Volumetric { layer, density: a.density, samples: a.samples, off: a.off }
+    LightEdit::Volumetric { layer, density: a.density, samples: a.samples, shafts: a.shafts, off: a.off }
 }
 
 pub(crate) fn cast(layer: String, c: &Cast) -> LightEdit {

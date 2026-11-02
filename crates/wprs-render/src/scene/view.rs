@@ -88,6 +88,7 @@ impl SceneView {
 
     pub fn retry(&mut self) -> bool {
         self.marks.clear();
+        self.pool.glow.baked = None;
         let pool = &mut self.pool;
         self.caches.drain().for_each(|(_, c)| pool.give(c.tex));
         let again = !self.refused.is_empty();

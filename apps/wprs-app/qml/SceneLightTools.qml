@@ -86,11 +86,16 @@ ColumnLayout {
             "z": tools.light.z,
             "length": tools.light.length ?? 0,
             "inner": tools.light.cone?.[0] ?? 0,
-            "outer": tools.light.cone?.[1] ?? 0
+            "outer": tools.light.cone?.[1] ?? 0,
+            "tilt": tools.light.tilt ?? 0
         } : {}
-        rows: [["intensity", App.tr("Intensity"), 0, 10, 0.05], ["radius", App.tr("Radius"), 1, 4000, 1], ["z", App.tr("Height"), -1000, 2000, 1]].concat(tools.light?.type === "tube" ? [["length", App.tr("Length"), 1, 4000, 1]] : []).concat(tools.light?.type === "spot" ? [["inner", App.tr("Bright middle"), 0, 180, 0.5], ["outer", App.tr("Cone"), 0, 180, 0.5]] : [])
+        rows: [["intensity", App.tr("Intensity"), 0, 10, 0.05], ["radius", App.tr("Radius"), 1, 4000, 1], ["z", App.tr("Height"), -1000, 2000, 1]].concat(tools.light?.type === "tube" ? [["length", App.tr("Length"), 1, 4000, 1]] : []).concat(tools.light?.type === "spot" ? [["inner", App.tr("Bright middle"), 0, 180, 0.5], ["outer", App.tr("Cone"), 0, 180, 0.5]] : []).concat(["spot", "directional"].includes(tools.light?.type) ? [["tilt", App.tr("Tilt toward the canvas"), -89, 89, 1]] : [])
         onEdited: (key, value) => {
-            if (key === "inner" || key === "outer")
+            if (key === "tilt")
+                tools.set({
+                    "tilt": value
+                });
+            else if (key === "inner" || key === "outer")
                 tools.page.change(tools.node.pointer + "/cone", key === "inner" ? [Math.min(value, tools.light.cone[1]), tools.light.cone[1]] : [tools.light.cone[0], Math.max(value, tools.light.cone[0])], true);
             else
                 tools.page.change(tools.node.pointer + "/" + key, value, true);

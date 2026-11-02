@@ -1207,14 +1207,16 @@ que mezcla lo iluminado con lo de siempre, más la luz ambiente de `canvas.ambie
 luz se calcula en la misma pasada que dibuja la capa, con 12 luces como mucho (8 en los teléfonos y
 los equipos modestos) y solo hasta donde llega cada una: con las luces quietas las capas iluminadas
 se dibujan una vez y se guardan, una luz que se mueve solo redibuja la caja de su radio y, en la
-calidad más baja, la luz se calcula una sola vez al empezar y las luces que se mueven se quedan
-donde empezaron, sin pedir fotogramas. Una escena sin luces se ve exactamente como antes.
+calidad más baja, la luz se calcula una sola vez al empezar o al cambiar de nivel o de tamaño, y las
+luces que se mueven se quedan donde empezaron, sin pedir fotogramas. Una escena sin luces se ve exactamente como antes.
 
-Las luces puntuales y los focos pueden iluminar el aire (`volumetric`, con densidad y muestras): un
-resplandor con rayos que sale de la luz hasta su radio, calculado a la mitad del tamaño de la
-pantalla, a un cuarto en Q1 y en los teléfonos, y apagado en Q0; se guarda mientras la luz está
-quieta. Un foco proyecta una imagen, un vídeo o una capa con sus efectos (`texture`, hasta cuatro
-focos por escena) sobre las capas iluminadas, las partículas y el aire; una capa que recibe luz no se
+Las luces puntuales y los focos pueden iluminar el aire (`volumetric`, con densidad, muestras y
+haces): un resplandor que sale de la luz hasta su radio, en el lugar de la luz entre las capas (las
+de encima lo tapan), donde las partes oscuras de las capas de debajo cortan la luz en haces si se
+pide; se calcula a la mitad del tamaño de la pantalla, a un cuarto en Q1 y en los teléfonos, y
+apagado en Q0, y se guarda mientras la luz y lo que tiene debajo están quietos. Un foco proyecta una
+imagen, un vídeo o una capa con sus efectos (`texture`, hasta cuatro focos por escena) sobre las
+capas iluminadas y el aire (las partículas toman solo su color); una capa que recibe luz no se
 puede proyectar, para no formar un bucle. Las partículas reciben las luces (`render.lit`) en sus dos
 caras, hasta 8, con un mapa de normales que gira con cada partícula (`render.normal`), igual en la
 simulación por GPU que en la del procesador, y pueden refractar lo que tienen detrás con un mapa de

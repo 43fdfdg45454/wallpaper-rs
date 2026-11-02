@@ -35,6 +35,8 @@ pub enum LightEdit {
         #[serde(default)]
         samples: Option<u32>,
         #[serde(default)]
+        shafts: Option<f64>,
+        #[serde(default)]
         off: bool,
     },
     Projection {

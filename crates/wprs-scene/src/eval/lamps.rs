@@ -21,8 +21,9 @@ pub struct Lamp<'a> {
     pub z: f32,
     pub cone: [f32; 2],
     pub length: f32,
-    pub air: Option<[f32; 2]>,
+    pub air: Option<[f32; 3]>,
     pub picture: Option<Picture<'a>>,
+    pub slot: usize,
 }
 
 impl Lamp<'_> {
@@ -44,26 +45,37 @@ impl Lamp<'_> {
     }
 }
 
+pub(crate) struct Gather<'a, 'b> {
+    pub(crate) out: &'b mut Vec<Lamp<'a>>,
+    pub(crate) draws: &'b [super::Draw<'a>],
+    pub(crate) next: usize,
+}
+
 pub(crate) fn lamps<'a>(
     cx: &Context<'a>,
     layers: &'a [Layer],
     outer: (Affine, Option<Lean>),
-    shown: bool,
+    (shown, lit): (bool, bool),
     quality: Quality,
-    out: &mut Vec<Lamp<'a>>,
+    g: &mut Gather<'a, '_>,
 ) {
     for layer in layers {
+        if g.draws.get(g.next).is_some_and(|d| std::ptr::eq(d.layer, layer)) {
+            g.next += 1;
+        }
         match &layer.kind {
             Kind::Group { layers, .. } => {
                 let p = cx.place(layer, outer);
-                lamps(cx, layers, (p.world, p.lean), shown && p.visible, quality, out);
+                lamps(cx, layers, (p.world, p.lean), (shown && p.visible, lit), quality, g);
             }
-            Kind::Light(l) if out.len() < MAX_LIGHTS => {
+            Kind::Light(l) if g.out.len() < MAX_LIGHTS => {
                 let before = cx.wake.replace(Wake::Idle);
                 let found = lamp(cx, layer, l, outer, quality).filter(|_| shown);
-                let wake = if quality == Quality::Q0 { before } else { before.min(cx.wake.get()) };
+                let seen = lit || l.volumetric.is_some();
+                let wake = if quality == Quality::Q0 || !seen { before } else { before.min(cx.wake.get()) };
                 cx.wake.set(wake);
-                out.extend(found);
+                let slot = g.next;
+                g.out.extend(found.map(|f| Lamp { slot, ..f }));
             }
             _ => {}
         }
@@ -104,9 +116,19 @@ fn lamp<'a>(
         air: l
             .volumetric
             .filter(|_| quality != Quality::Q0 && matches!(l.light, Beam::Point | Beam::Spot))
-            .map(|v| [v.density.clamp(0.0, 1.0), v.samples.clamp(4, 64) as f32]),
+            .map(|v| [v.density.clamp(0.0, 1.0), v.samples.clamp(4, 64) as f32, v.shafts.clamp(0.0, 1.0)]),
         picture,
+        slot: 0,
     })
+}
+
+pub(crate) fn seen(scene: &crate::Scene) -> bool {
+    fn takes(l: &Layer) -> bool {
+        let sprites = matches!(&l.kind, Kind::Particles { render: Some(r), .. } if r.lit);
+        l.lighting.is_some() || sprites || l.children().iter().any(takes)
+    }
+    let systems = scene.particles.values().any(|s| s.render.lit);
+    systems || scene.layers.iter().chain(scene.templates.values()).any(takes)
 }
 
 pub(crate) fn lighting<'a>(cx: &Context<'a>, l: &'a Lighting) -> Lit<'a> {

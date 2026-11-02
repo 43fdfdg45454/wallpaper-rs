@@ -11,6 +11,7 @@ mod cast;
 mod edits;
 mod gizmos;
 mod maps;
+mod shared;
 mod surfaces;
 mod swarm;
 

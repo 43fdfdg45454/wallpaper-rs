@@ -12,7 +12,7 @@ const LEVELS: [Quality; 4] = [Quality::Q0, Quality::Q1, Quality::Q2, Quality::Q3
 pub(crate) fn volumetric(
     doc: &Value,
     (path, beam): (&str, Beam),
-    (density, samples): (Option<f64>, Option<u32>),
+    (density, samples, shafts): (Option<f64>, Option<u32>, Option<f64>),
     off: bool,
 ) -> Result<Vec<Op>> {
     let at = format!("{path}/volumetric");
@@ -27,11 +27,17 @@ pub(crate) fn volumetric(
     let old = |k: &str| doc.pointer(&format!("{at}/{k}")).and_then(Value::as_f64);
     let density = density.or(old("density")).unwrap_or((f64::from(base.density) * 1e4).round() / 1e4);
     let samples = samples.or(old("samples").map(|n| n as u32)).unwrap_or(base.samples);
+    let shafts = shafts.or(old("shafts")).unwrap_or(0.0);
+    let unit = |v: f64| v.is_finite() && (0.0..=1.0).contains(&v);
     ensure!(
-        density.is_finite() && (0.0..=1.0).contains(&density) && (4..=64).contains(&samples),
-        said("editor.light_air_range", "density goes from 0 to 1 and samples from 4 to 64", &[])
+        unit(density) && unit(shafts) && (4..=64).contains(&samples),
+        said("editor.light_air_range", "density and shafts go from 0 to 1 and samples from 4 to 64", &[])
     );
-    Ok(set(doc, &at, json!({ "density": density, "samples": samples })))
+    let mut air = json!({ "density": density, "samples": samples });
+    if shafts > 0.0 {
+        air["shafts"] = json!(shafts);
+    }
+    Ok(set(doc, &at, air))
 }
 
 pub fn levels(samples: u32, tier: Tier) -> Value {
@@ -62,7 +68,7 @@ pub fn air(dir: &Path, doc: &Value, id: &str, t: f64) -> Value {
     let pixels = super::report::reach(&l)[2..].iter().product::<f32>();
     let taps = [Quality::Q1, Quality::Q2, Quality::Q3]
         .map(|q| q.air(Tier::T3).map_or(0.0, |(s, k)| round(pixels / (s * s) * v.samples as f32 * k)));
-    json!({ "on": true, "fits": true, "density": v.density, "samples": v.samples, "curve": curve,
+    json!({ "on": true, "fits": true, "density": v.density, "samples": v.samples, "shafts": v.shafts, "curve": curve,
         "marks": [round(l.radius * (1.0 - reach))], "box": super::report::reach(&l).map(round),
         "levels": levels(v.samples, Tier::T3), "phone": levels(v.samples, Tier::T1), "taps": taps })
 }

@@ -25,6 +25,17 @@ Item {
         put("transform/rotation", Math.round((Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI - light.base) * 10) / 10);
     }
 
+    function tilt(to) {
+        const aim = light.aim, dx = aim[0] - at[0], dy = aim[1] - at[1];
+        const along = ((to[0] - at[0]) * dx + (to[1] - at[1]) * dy) / Math.max(dx * dx + dy * dy, 1e-6);
+        owner.page.run("light", {
+            "set": {
+                "layer": light.id,
+                "tilt": Math.max(-89, Math.min(89, Math.round(90 - 180 * (along - 0.1) / 0.8)))
+            }
+        }, true);
+    }
+
     function cone(to, inner) {
         const turn = Math.atan2(to[1] - at[1], to[0] - at[0]) * 180 / Math.PI - light.angle;
         const wide = Math.min(180, Math.round(Math.abs(((turn + 540) % 360) - 180) * 20) / 10);

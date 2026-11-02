@@ -96,6 +96,7 @@ QtObject {
             "shader": App.tr("Shader"),
             "shadow": App.tr("Shadow"),
             "shadows": App.tr("Shadows"),
+            "shafts": App.tr("Shafts"),
             "shake": App.tr("Shake"),
             "shape": App.tr("Shape"),
             "shapes": App.tr("Blend shapes"),

@@ -8,6 +8,10 @@ pub const Z_KNOB: f32 = 0.5;
 pub const AIM: f32 = 160.0;
 pub const FEW: usize = 8;
 
+pub fn tilt_share(tilt: f32) -> f32 {
+    0.1 + 0.8 * (90.0 - tilt.clamp(-89.0, 89.0)) / 180.0
+}
+
 fn r2(p: [f32; 2]) -> [f64; 2] {
     p.map(round)
 }
@@ -36,6 +40,7 @@ pub fn handles(l: &Placed) -> Value {
     match l.beam {
         Beam::Spot => {
             out["aim"] = json!(r2(toward(at, angle, AIM.min(l.radius))));
+            out["tilt_knob"] = json!(r2(toward(at, angle, AIM.min(l.radius) * tilt_share(l.tilt))));
             let edge = |k: f32, s: f32| r2(toward(at, angle + s * k / 2.0, AIM.min(l.radius)));
             out["cone"] = json!(l.cone.map(round));
             out["outer"] = json!([edge(l.cone[1], -1.0), edge(l.cone[1], 1.0)]);
@@ -47,7 +52,10 @@ pub fn handles(l: &Placed) -> Value {
             out["ends"] = json!([r2(toward(at, angle + 180.0, half)), r2(toward(at, angle, half))]);
             out["radius_knob"] = json!(r2(toward(at, angle + 90.0, l.radius)));
         }
-        Beam::Directional => out["aim"] = json!(r2(toward(at, angle, AIM))),
+        Beam::Directional => {
+            out["aim"] = json!(r2(toward(at, angle, AIM)));
+            out["tilt_knob"] = json!(r2(toward(at, angle, AIM * tilt_share(l.tilt))));
+        }
         Beam::Point => {}
     }
     if l.beam != Beam::Tube {
