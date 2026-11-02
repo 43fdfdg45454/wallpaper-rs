@@ -12,8 +12,8 @@ fn desk() -> Vec<(String, DeviceType, Backend)> {
     vec![
         card("Example Integrated Graphics (RADV)", DeviceType::IntegratedGpu, Backend::Gl),
         card("Example Integrated Graphics (RADV)", DeviceType::IntegratedGpu, Backend::Vulkan),
-        card("NVIDIA GeForce RTX 5070 Ti", DeviceType::DiscreteGpu, Backend::Vulkan),
-        card("NVIDIA GeForce RTX 4060", DeviceType::DiscreteGpu, Backend::Vulkan),
+        card("Example Dedicated Graphics A", DeviceType::DiscreteGpu, Backend::Vulkan),
+        card("Example Dedicated Graphics B", DeviceType::DiscreteGpu, Backend::Vulkan),
         card("Virtio-GPU Venus", DeviceType::VirtualGpu, Backend::Vulkan),
         card("llvmpipe (LLVM 19.1.7, 256 bits)", DeviceType::Cpu, Backend::Gl),
         card("llvmpipe (LLVM 19.1.7, 256 bits)", DeviceType::Cpu, Backend::Vulkan),
@@ -30,7 +30,7 @@ fn a_graphics_card_is_chosen_by_kind_or_by_part_of_its_name() {
     assert_eq!(pick(&GpuChoice::Dedicated, &all), Some(2), "the first of two dedicated cards");
     assert_eq!(pick(&GpuChoice::Software, &all), Some(6));
     assert_eq!(
-        [named("4060"), named("geforce"), named("RTX 5070 TI"), named("radv")],
+        [named("graphics b"), named("example dedicated"), named("DEDICATED GRAPHICS A"), named("radv")],
         [3, 2, 2, 1].map(Some)
     );
     assert_eq!([named("venus"), named("Unknown")], [Some(4), Some(7)]);

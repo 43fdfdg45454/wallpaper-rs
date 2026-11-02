@@ -592,7 +592,7 @@ su capa (`follow`).
 En un equipo con una GPU integrada y otra dedicada, el daemon dibuja por defecto con la que gasta
 menos energía, que suele ser la integrada. `render.gpu` elige otra: `auto` (lo de siempre),
 `integrated`, `dedicated`, `software` (render por software, para pruebas) o parte del nombre de una
-tarjeta sin distinguir mayúsculas, como `RTX 5070`, que sirve para elegir entre dos del mismo tipo.
+tarjeta sin distinguir mayúsculas, como `Graphics A`, que sirve para elegir entre dos del mismo tipo.
 La app lo ofrece en *Ajustes* → *Tarjeta gráfica* con las tarjetas que encontró el daemon (nombre,
 tipo y API) y marca la que está en uso; `wprs-ctl gpu` las lista y `wprs-ctl gpu dedicated` o
 `wprs-ctl config render.gpu dedicated` elige una. El cambio vale desde el siguiente arranque del

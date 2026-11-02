@@ -89,7 +89,7 @@ fn a_calibration_timed_by_the_fence_is_taken_again_with_gpu_timestamps() {
 fn each_graphics_card_keeps_its_own_measure_when_the_user_switches_between_them() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("gpu-tier.json");
-    let rtx = Gpu { name: "NVIDIA GeForce RTX 5070 Ti", discrete: true, ..IRIS };
+    let rtx = Gpu { name: "Example Dedicated Graphics A", discrete: true, ..IRIS };
     let measures = Cell::new(0);
     let start = |adapter: &str, gpu: &Gpu, ms: f64| {
         let measure = || {
