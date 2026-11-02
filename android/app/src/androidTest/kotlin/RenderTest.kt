@@ -1,11 +1,6 @@
 package io.github.wallpaper_rs
 
 import android.graphics.Color
-import android.graphics.PixelFormat
-import android.hardware.HardwareBuffer
-import android.media.ImageReader
-import android.os.Handler
-import android.os.HandlerThread
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.CopyOnWriteArrayList
@@ -24,15 +19,14 @@ class RenderTest {
     private val pixel = AtomicInteger()
     private val seen = CopyOnWriteArrayList<Int>()
     private val edges = CopyOnWriteArrayList<Int>()
-    private val thread = HandlerThread("reader").apply { start() }
-    private val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
-    private val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
+    private val readers = Readers("reader")
+    private val reader = readers.make(SIDE)
     private val painter = Painter(false, Videos(context), Tilt(blind(context)), Hearing(context), Pages(context))
 
     @Before
     fun attach() {
         choose(CHOSEN)
-        reader.setOnImageAvailableListener({ source ->
+        readers.listen(reader) { source ->
             generateSequence { runCatching { source.acquireNextImage() }.getOrNull() }.forEach { image ->
                 image.use {
                     val plane = it.planes[0]
@@ -43,15 +37,14 @@ class RenderTest {
                     frames.incrementAndGet()
                 }
             }
-        }, Handler(thread.looper))
+        }
         Render.call(::reattach)
     }
 
     @After
     fun detach() {
         Render.call { painter.detach() }
-        reader.close()
-        thread.quitSafely()
+        readers.close()
     }
 
     @Test

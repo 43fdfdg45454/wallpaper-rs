@@ -4,12 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.PixelFormat
-import android.hardware.HardwareBuffer
 import android.hardware.Sensor
-import android.media.ImageReader
-import android.os.Handler
-import android.os.HandlerThread
 import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -36,9 +31,8 @@ class MotionTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val frames = AtomicInteger()
     private val reds = AtomicIntegerArray(3)
-    private val thread = HandlerThread("motion").apply { start() }
-    private val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
-    private val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
+    private val readers = Readers("motion")
+    private val reader = readers.make(SIDE)
     private val tilt = Tilt(blind(context))
     private val painter = Painter(false, Videos(context), tilt, Hearing(context), Pages(context))
     private var uid = ""
@@ -47,13 +41,13 @@ class MotionTest {
     fun attach() {
         assertEquals(IMAGE, install(gradient()))
         uid = JSONObject(Native.library(JSONObject().put("op", "current").toString())).getString("image")
-        reader.setOnImageAvailableListener({ source ->
+        readers.listen(reader) { source ->
             source.acquireLatestImage()?.use { image ->
                 val plane = image.planes[0]
                 (0..2).forEach { reds.set(it, plane.buffer.get(SIDE / 2 * plane.rowStride + SIDE * (it + 1) / 4 * plane.pixelStride).toInt() and 0xff) }
                 frames.incrementAndGet()
             }
-        }, Handler(thread.looper))
+        }
         Render.call {
             painter.attach(reader.surface)
             painter.resize(SIDE, SIDE, 0)
@@ -64,8 +58,7 @@ class MotionTest {
     fun detach() {
         Render.call { painter.detach() }
         Native.library(JSONObject(mapOf("op" to "remove", "uids" to listOf(uid))).toString())
-        reader.close()
-        thread.quitSafely()
+        readers.close()
     }
 
     @Test

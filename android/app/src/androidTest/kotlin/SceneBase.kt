@@ -1,10 +1,5 @@
 package io.github.wallpaper_rs
 
-import android.graphics.PixelFormat
-import android.hardware.HardwareBuffer
-import android.media.ImageReader
-import android.os.Handler
-import android.os.HandlerThread
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
@@ -20,9 +15,8 @@ abstract class SceneBase {
     protected val context = InstrumentationRegistry.getInstrumentation().targetContext
     protected val frames = AtomicInteger()
     protected val lamp = AtomicInteger()
-    protected val thread = HandlerThread("scene").apply { start() }
-    protected val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
-    protected val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
+    protected val readers = Readers("scene")
+    protected val reader = readers.make(SIDE)
     protected val videos = Videos(context)
     protected val painter = Painter(false, videos, Tilt(context), Hearing(context), Pages(context))
 
@@ -31,21 +25,20 @@ abstract class SceneBase {
         storage()
         examples(context)
         Native.library(JSONObject().put("op", "items").put("query", "").put("languages", JSONArray(listOf("en"))).toString())
-        reader.setOnImageAvailableListener({ source ->
+        readers.listen(reader) { source ->
             source.acquireLatestImage()?.use { image ->
                 val plane = image.planes[0]
                 val at = SIDE / 2 * plane.rowStride + SIDE * 3 / 4 * plane.pixelStride
                 lamp.set((plane.buffer.get(at).toInt() and 0xff shl 8) or (plane.buffer.get(at + 1).toInt() and 0xff))
             }
             frames.incrementAndGet()
-        }, Handler(thread.looper))
+        }
     }
 
     @After
     fun detach() {
         Render.call { painter.detach() }
-        reader.close()
-        thread.quitSafely()
+        readers.close()
     }
 
     protected fun tap(x: Float) {

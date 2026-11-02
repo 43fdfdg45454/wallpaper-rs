@@ -3,9 +3,6 @@ package io.github.wallpaper_rs
 import android.graphics.Color
 import android.graphics.ImageFormat
 import android.hardware.HardwareBuffer
-import android.media.ImageReader
-import android.os.Handler
-import android.os.HandlerThread
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.atomic.AtomicInteger
@@ -18,7 +15,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class VideoTest {
-    private val thread = HandlerThread("frames").apply { start() }
+    private val readers = Readers("frames")
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val videos = Videos(context)
     private val tilt = Tilt(context)
@@ -28,14 +25,13 @@ class VideoTest {
     private inner class Screen {
         val frames = AtomicInteger()
         val painter = Painter(false, videos, tilt, Hearing(context), Pages(context))
-        val reader: ImageReader =
-            ImageReader.newInstance(SIDE, SIDE, ImageFormat.PRIVATE, 3, HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE)
+        val reader = readers.make(SIDE, ImageFormat.PRIVATE, HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE)
 
         init {
-            reader.setOnImageAvailableListener({ source ->
+            readers.listen(reader) { source ->
                 source.acquireLatestImage()?.close()
                 frames.incrementAndGet()
-            }, Handler(thread.looper))
+            }
         }
 
         fun attach() = Render.call {
@@ -52,11 +48,8 @@ class VideoTest {
 
     @After
     fun detach() {
-        listOf(lock, home).forEach {
-            Render.call { it.painter.detach() }
-            it.reader.close()
-        }
-        thread.quitSafely()
+        listOf(lock, home).forEach { Render.call { it.painter.detach() } }
+        readers.close()
     }
 
     @Test

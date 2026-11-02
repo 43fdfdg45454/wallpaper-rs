@@ -1,10 +1,5 @@
 package io.github.wallpaper_rs
 
-import android.graphics.PixelFormat
-import android.hardware.HardwareBuffer
-import android.media.ImageReader
-import android.os.Handler
-import android.os.HandlerThread
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.InputDevice
@@ -31,9 +26,8 @@ class WebPageTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
     private val pixel = AtomicInteger()
-    private val thread = HandlerThread("page").apply { start() }
-    private val usage = HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN
-    private val reader = ImageReader.newInstance(SIDE, SIDE, PixelFormat.RGBA_8888, 3, usage)
+    private val readers = Readers("page")
+    private val reader = readers.make(SIDE)
     private val pages = Pages(context)
     private val painter = Painter(false, Videos(context), Tilt(context), Hearing(context), pages)
     private val server = ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1")).apply { soTimeout = 100 }
@@ -50,13 +44,13 @@ class WebPageTest {
         File(dir, "manifest.json").writeText(PROBE_MANIFEST.replace("org.example.probe", "org.example.probe${System.nanoTime()}"))
         uid = (ask("examples", "dir" to dir.parent) as org.json.JSONArray).getString(0)
         ask("property", "uid" to uid, "key" to "port", "value" to server.localPort)
-        reader.setOnImageAvailableListener({ source ->
+        readers.listen(reader) { source ->
             source.acquireLatestImage()?.use { image ->
                 val plane = image.planes[0]
                 val at = SIDE / 2 * plane.rowStride + SIDE / 2 * plane.pixelStride
                 pixel.set((0..2).fold(0) { argb, i -> argb shl 8 or (plane.buffer.get(at + i).toInt() and 0xff) })
             }
-        }, Handler(thread.looper))
+        }
         Thread { while (!server.isClosed) runCatching { server.accept().close(); reached.incrementAndGet() }.exceptionOrNull()?.takeIf { it !is SocketTimeoutException && !server.isClosed }?.let { throw it } }.start()
         Native.library(JSONObject(mapOf("op" to "pick", "choice" to choice("item", uid))).toString())
         Render.call {
@@ -73,8 +67,7 @@ class WebPageTest {
         Render.call { painter.detach() }
         runBlocking { ask("remove", "uids" to listOf(uid)) }
         server.close()
-        reader.close()
-        thread.quitSafely()
+        readers.close()
     }
 
     private fun probe(): JSONObject? {
