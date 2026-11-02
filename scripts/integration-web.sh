@@ -7,7 +7,8 @@ uid() { ctl lib search "" --json | from "[i['uid'] for i in r['items'] if (i['pa
 pixel() { "$BIN/probe" "$1" 3 2>/dev/null | grep -q "center bgra \[$2, 255\]"; }
 seen() { wait_for 20 pixel "$@" || fail "stream $1 shows $("$BIN/probe" "$1" 3 2>&1 | tail -n 1), expected bgra $2"; }
 helpers() { pgrep -u "$(id -u)" -f "$BIN/wprs-web" | grep -c . || true; }
-stopped() { [ "$(helpers)" = 0 ] && ! pgrep -g "$group" >/dev/null; }
+alive() { ps -e -o pgid=,stat= | awk -v g="$group" '$1 == g && $2 !~ /^Z/' | grep -c . || true; }
+stopped() { [ "$(helpers)" = 0 ] && [ "$(alive)" = 0 ]; }
 helper() { field "s['outputs']['TEST-W'].get('helper')"; }
 fresh() { group=$(helper) && [ "$group" != None ] && [ "$group" != "$1" ] && [ "$(helpers)" = 1 ]; }
 ctl pack build "$ROOT/tests/fixtures/tint" -o "$pages/tint.wpak" >/dev/null
