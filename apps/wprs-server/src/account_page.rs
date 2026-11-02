@@ -15,7 +15,9 @@ fn remove(path: String) -> Markup {
 
 const VISIBILITY: [&str; 2] = ["public", "unlisted"];
 const UNLISTED: &str = "Unlisted versions stay out of the catalog and search; whoever has the link to the package \
-                        can still see and install them.";
+                        can still see and install them. Unlisted is not private: they stay in the signed \
+                        repository files, which anyone can read; keep private wallpapers in sync or in a \
+                        repository of your own.";
 
 fn visibility(v: &Value) -> Markup {
     let (id, version, now) = (text(v, "package"), text(v, "version"), text(v, "visibility"));

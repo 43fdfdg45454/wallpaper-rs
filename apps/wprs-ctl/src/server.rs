@@ -126,7 +126,8 @@ pub enum Server {
         file: String,
         #[arg(
             long,
-            help = "Keep it out of the catalog and search; whoever has its link can still install it"
+            help = "Keep it out of the catalog and search; whoever has its link can still install it, and \
+                    the public repository files still list it, so it is not private"
         )]
         unlisted: bool,
         #[command(flatten)]

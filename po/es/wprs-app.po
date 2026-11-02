@@ -5818,10 +5818,15 @@ msgstr "Oculto: solo lo encuentra quien tenga su enlace"
 #: apps/wprs-app/qml/UploadDialog.qml
 msgid ""
 "An unlisted package is still published and signed: whoever has its link or "
-"id can see and install it. You can change this later on your account page."
+"id can see and install it, and it stays in the repository files, which "
+"anyone can read, so it is not private; keep private wallpapers in sync or in "
+"a repository of your own. You can change this later on your account page."
 msgstr ""
 "Un paquete oculto se publica y se firma igual: quien tenga su enlace o su id "
-"puede verlo e instalarlo. Puedes cambiarlo después en la página de tu cuenta."
+"puede verlo e instalarlo, y sigue en los archivos del repositorio, que "
+"cualquiera puede leer, así que no es privado; guarda los fondos privados en "
+"la sincronización o en un repositorio propio. Puedes cambiarlo después en la "
+"página de tu cuenta."
 
 #: apps/wprs-app/qml/WebPrivacy.qml
 msgid "Let it see the time zone"

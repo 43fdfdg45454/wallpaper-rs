@@ -289,7 +289,10 @@ identities are refused unless `WPRS_OIDC_AUTO_PROVISION` creates an account.
 An unlisted version is published, signed and served like any other, with `listed: false` in its
 release of the repository (`repo.md`): the catalog, its search and the web site's lists leave it out,
 while its page, the package API and installing it by id keep working. Clients that do not know the
-field never see it, since first-version shards leave unlisted releases out. Clients ask for
+field never see it, since first-version shards leave unlisted releases out. Unlisted is not private:
+the detailed shards list every release with its title, description and id, and anyone can read the
+repository, so the account page, the upload dialog of the app and the page of the package say so and
+point to sync or an own repository for private wallpapers. Clients ask for
 `unlisted` only when the answer of `POST /api/v1/uploads` repeats it, and cancel the upload otherwise,
 so that a server without unlisted uploads never publishes a package openly. `/api/v1/me/packages`
 gives each version its `visibility`, and the account page has the picker on the upload form and a

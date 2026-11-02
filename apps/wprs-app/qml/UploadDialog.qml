@@ -37,7 +37,7 @@ Kirigami.Dialog {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
             font: Kirigami.Theme.smallFont
-            text: App.tr("An unlisted package is still published and signed: whoever has its link or id can see and install it. You can change this later on your account page.")
+            text: App.tr("An unlisted package is still published and signed: whoever has its link or id can see and install it, and it stays in the repository files, which anyone can read, so it is not private; keep private wallpapers in sync or in a repository of your own. You can change this later on your account page.")
         }
     }
 }

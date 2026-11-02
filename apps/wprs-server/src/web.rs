@@ -94,7 +94,8 @@ async fn package(State(app): St, auth: Option<Auth>, Path(id): Path<String>) -> 
         }
         @if versions.iter().any(|v| v["listed"] == false) {
             p.muted { "Unlisted: this wallpaper, or some of its versions, stays out of the catalog and search; \
-                whoever has this link can see and install it." }
+                whoever has this link can see and install it. It is not private: it stays in the signed \
+                repository files, which anyone can read." }
         }
         @if latest["photosensitive"] == true {
             p.warning { "This wallpaper has flashing lights or patterns that can affect people with \

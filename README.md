@@ -1534,7 +1534,9 @@ wprs-ctl server restore                          # equipo nuevo sin ningún otro
 
 Al subir un paquete eliges si es público u oculto (en el diálogo de subida de *Repositorios*, en la
 web del servidor o con `--unlisted`): uno oculto se publica y se firma igual, pero el catálogo y la
-búsqueda no lo muestran, y quien tenga su enlace o su id lo ve y lo instala. *Cuenta* lista tus
+búsqueda no lo muestran, y quien tenga su enlace o su id lo ve y lo instala. Oculto no es privado:
+sigue en los archivos firmados del repositorio, que cualquiera puede descargar y leer, con su título y
+su descripción; lo privado va en la sincronización o en un repositorio propio. *Cuenta* lista tus
 subidas y te deja cambiar la visibilidad de cada versión. En un repositorio estático, `wprs-ctl repo
 add --unlisted`, `repo hide` y `repo unhide` hacen lo mismo antes de `repo publish`.
 
