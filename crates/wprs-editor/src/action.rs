@@ -15,7 +15,7 @@ mod tend;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use motion::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
-pub use names::{ACTIONS, AssetEdit, EDITOR, ImportAssets, ScriptFile};
+pub use names::{ACTIONS, AssetEdit, EDITOR, ImportAssets, RgbEdit, ScriptFile};
 pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
     WeightStroke,
@@ -113,6 +113,7 @@ pub enum Action {
     ImportScript(ScriptFile),
     ImportAssets(ImportAssets),
     Asset(AssetEdit),
+    Rgb(RgbEdit),
     Translate {
         pointer: String,
         language: String,

@@ -55,6 +55,8 @@ mod remote;
 mod repos;
 mod repos1;
 mod reveals;
+mod rgb;
+mod rgb1;
 mod rotation;
 mod scan;
 mod scenepresets;

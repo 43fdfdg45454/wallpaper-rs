@@ -20,6 +20,32 @@
     }
     return out;
   };
+  let lit = 0;
+  const shrink = (bytes, w, h) => {
+    const scale = Math.min(64 / w, 16 / h, 1);
+    const sw = Math.max(1, Math.round(w * scale)), sh = Math.max(1, Math.round(h * scale));
+    const data = [];
+    for (let y = 0; y < sh; y++) {
+      for (let x = 0; x < sw; x++) {
+        const x0 = Math.floor(x * w / sw), x1 = Math.max(x0 + 1, Math.floor((x + 1) * w / sw));
+        const y0 = Math.floor(y * h / sh), y1 = Math.max(y0 + 1, Math.floor((y + 1) * h / sh));
+        const sx = Math.max(1, Math.floor((x1 - x0) / 4)), sy = Math.max(1, Math.floor((y1 - y0) / 4));
+        const sum = [0, 0, 0];
+        let n = 0;
+        for (let yy = y0; yy < y1; yy += sy) {
+          for (let xx = x0; xx < x1; xx += sx) {
+            const i = (yy * w + xx) * 4;
+            sum[0] += bytes[i];
+            sum[1] += bytes[i + 1];
+            sum[2] += bytes[i + 2];
+            n += 1;
+          }
+        }
+        data.push(...sum.map((s) => Math.round(s / n)));
+      }
+    }
+    return { width: sw, height: sh, data };
+  };
   const properties = typed(init.properties);
   const settings = Object.assign({}, init.settings);
   const call = (list, value) => list.forEach((cb) => { try { cb(value); } catch (e) { post({ error: String(e && e.stack || e) }); } });
@@ -46,7 +72,17 @@
       post({ open: String(prop) });
       return true;
     },
-    rgb: Object.freeze({ setImage() { return false; } }),
+    rgb: Object.freeze({
+      setImage(bytes, w, h) {
+        const now = Date.now();
+        const width = Math.floor(Number(w)), height = Math.floor(Number(h));
+        const fine = width > 0 && height > 0 && width <= 4096 && height <= 4096 && bytes && bytes.length >= width * height * 4;
+        if (!fine || now - lit < 33) return false;
+        lit = now;
+        post({ rgb: shrink(bytes, width, height) });
+        return true;
+      },
+    }),
     files(prop) { return ask("files", prop); },
     randomFile(prop) { return ask("random", prop); },
     onFiles(prop, cb) {

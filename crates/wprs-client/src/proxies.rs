@@ -49,3 +49,15 @@ pub trait Sync1 {
     fn get_votes(&self, ids: &[&str]) -> Result<String>;
     fn remove_server(&self, wipe: bool) -> Result<()>;
 }
+
+#[proxy(
+    interface = "io.github.wallpaper_rs.Rgb1",
+    default_service = "io.github.wallpaper_rs.Daemon",
+    default_path = "/io/github/wallpaper_rs/Daemon"
+)]
+pub trait Rgb1 {
+    fn get_status(&self) -> Result<String>;
+    fn connect(&self) -> Result<()>;
+    fn test(&self, device: i32) -> Result<()>;
+    fn get_strip(&self, output: &str) -> Result<(u32, u32, Vec<u8>)>;
+}

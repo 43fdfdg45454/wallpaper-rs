@@ -559,6 +559,8 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
 | `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |
 | `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
+| `rgb.enabled` | send the colors of packages granted `rgb` to RGB lighting through the OpenRGB server (see `Rgb1`) | `false` |
+| `rgb.server` | `host:port` of the OpenRGB server, at most 255 characters; an address that is not this computer sends the colors over the network | `127.0.0.1:6742` |
 | `render.gpu` | the graphics card the daemon renders with: `auto` (the one that saves the most power, an integrated card before a dedicated one), `integrated`, `dedicated`, `software` (emulated on the processor, for tests) or part of the name of a card, without regard to case, such as `Graphics A` (see "Graphics card"); it takes effect the next time the daemon starts, it is not synced and profiles leave it out | `auto` |
 
 Only the changed key is validated. Unknown keys and invalid or out-of-range values return
@@ -1352,6 +1354,10 @@ Web pages (`web.md`) take the same `audio`, `pointer` and `clicks` grants; `netw
 input that only web pages that list origins in `permissions.network.allow` declare. Only the app,
 the tray and `wprs-ctl` grant it (`AccessDenied` for other callers, which cannot ask the user for
 it), and granting or revoking it starts the shown page again with or without those origins.
+`rgb` is a fifth input, declared by packages that set `permissions.rgb` (`package.md`): a scene with
+an `adjustment` layer that sets `rgb: true` or a web page that calls `window.wprs.rgb.setImage`.
+Only the app, the tray and `wprs-ctl` grant it, as `network`; the colors reach the lights only while
+`rgb.enabled` is on (see `Rgb1`).
 
 - Audio: the daemon captures the monitor of the default output device through a PipeWire
   stream named "wallpaper-rs audio analysis" (desktop microphone indicators may show it) and
@@ -1480,6 +1486,43 @@ so not inside the Flatpak) may call it: the connection that owns `org.kde.KWin` 
 daemon has its script loaded and, outside the Flatpak, only when it runs a system `kwin_wayland` or
 `kwin_x11` (owned by root and not writable by others). Other callers, the app and the Plasma shell
 included, get `AccessDenied`.
+
+## `io.github.wallpaper_rs.Rgb1`
+
+Colors for keyboards, mice and other RGB lighting go through an OpenRGB server (its SDK protocol,
+versions 0 to 4, with a client of the daemon's own). Nothing is sent and no connection is made while
+`rgb.enabled` is `false` (the default); `rgb.server` is `127.0.0.1:6742` by default, and an address
+on another computer sends the colors over the network, which the app says next to the field. The
+daemon connects when a granted package sends colors, on `Connect` or `Test`, names itself
+`wallpaper-rs`, puts every device in its direct mode and tries again 10 s after a failure. A strip of
+at most 64 × 16 pixels comes from the shown scene or page of each output that holds the `rgb` grant
+(`Inputs1`), at most 30 times a second for all of them together; the daemon spreads it over each
+device: a zone with a matrix takes the cell of the strip under each key, the other zones the column
+under each light, averaged over the height. The devices keep the last colors when the scene stops.
+Previews (`preview:*` outputs) keep their strip for the editor but never send it.
+
+### `GetStatus() → (s json)`
+
+`{enabled, server, local, connected, error, devices, source, frames, testing, strips}`: `local` is
+`true` for addresses on this computer, `error` the last failure (`null` when fine), `devices` lists
+`{index, name, kind, leds, zones: [{name, leds, matrix: [w, h] | null}]}` as the server names them,
+`source` the output whose colors were sent last, `frames` how many were sent and `strips` the
+outputs with a strip kept.
+
+### `Connect()`
+
+Connects (again) now and reads the device list; `Failed` with the reason when RGB lighting is off
+or the server cannot be reached.
+
+### `Test(i device)`
+
+Shows a moving rainbow on one device (`-1` for all of them) for 3 s, then the last colors again;
+`Failed` when it is off, cannot connect or the device does not exist.
+
+### `GetStrip(s output) → (u width, u height, ay rgb)`
+
+The last strip of an output (`RGB` bytes, rows from the top), also for previews and packages without
+the grant, for the editor; `NotFound` when the output has none.
 
 ## `io.github.wallpaper_rs.Sync1`
 
@@ -2451,9 +2494,9 @@ struct InstalledReply { model: u32, serial: u64, packages: Vec<InstalledPackage>
 struct Update { repo_id: String, id: String, installed: String, available: String, changes: String }
 struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
 
-enum Input { Audio, Pointer, Clicks, Network }
+enum Input { Audio, Pointer, Clicks, Network, Rgb }
 struct SceneInputs {
-    scene: String, audio: bool, pointer: bool, clicks: bool, network: bool, title: String, key: String,
+    scene: String, audio: bool, pointer: bool, clicks: bool, network: bool, rgb: bool, title: String, key: String,
     granted: Vec<Input>,
 }
 struct InputsReply {
@@ -2526,6 +2569,10 @@ auto_refresh = true
 
 [models]
 allow_download = true
+
+[rgb]
+enabled = false           # send colors to RGB lighting
+server = "127.0.0.1:6742" # host:port of the OpenRGB server
 
 [providers.photos]        # one table per provider
 kind = "immich"

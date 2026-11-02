@@ -2,6 +2,7 @@ pub(super) mod clock;
 mod heard;
 mod level;
 mod listing;
+mod lit;
 mod polling;
 #[cfg(test)]
 mod spreads;

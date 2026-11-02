@@ -6954,6 +6954,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "wprs-rgb"
+version = "0.3.0"
+dependencies = [
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "wprs-scene"
 version = "0.3.0"
 dependencies = [
@@ -7135,6 +7142,7 @@ dependencies = [
  "wprs-pipewire",
  "wprs-providers",
  "wprs-render",
+ "wprs-rgb",
  "wprs-scene",
  "wprs-schedule",
  "wprs-script",

@@ -144,6 +144,12 @@ calls! {
         GetInputs get_inputs() json;
         SetClicks set_clicks(output: str, on: bool);
     }
+    Rgb1 rgb {
+        GetStatus get_status() json;
+        Connect connect();
+        Test test(device: i32);
+        GetStrip get_strip(output: str);
+    }
     Sync1 sync {
         AddServer add_server(url: str);
         AddPinnedServer add_pinned_server(url: str, fingerprint: str);

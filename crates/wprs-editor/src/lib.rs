@@ -39,6 +39,7 @@ pub mod props;
 pub mod references;
 mod rename;
 mod revisions;
+mod rgb;
 mod rig;
 mod rigging;
 pub mod rigs;

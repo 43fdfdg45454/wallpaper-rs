@@ -35,7 +35,7 @@ fn page(language: bool, more: Json) -> PageSpec {
         preload: None,
         background: [0; 3],
         network: Vec::new(),
-        uses: [false; 3],
+        uses: [false; 4],
         storage_kib: 0,
         key: "k".into(),
         shape,

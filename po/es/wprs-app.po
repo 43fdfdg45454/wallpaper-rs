@@ -702,6 +702,17 @@ msgstr ""
 "pantalla; nunca se guardan y nunca se leen las teclas."
 
 #: apps/wprs-app/qml/Consent.qml
+msgid "Send its colors to the RGB lighting"
+msgstr "Mandar sus colores a la iluminación RGB"
+
+#: apps/wprs-app/qml/Consent.qml
+msgid ""
+"Up to 64 × 16 colors of the wallpaper go to your keyboard, mouse and other "
+"lights through the OpenRGB server set in Settings, on this computer unless "
+"you set another address, and only while RGB lighting is on there."
+msgstr "Hasta 64 × 16 colores del fondo van al teclado, el ratón y otras luces a través del servidor de OpenRGB de Ajustes, en este equipo salvo que pongas otra dirección, y solo mientras la iluminación RGB está encendida allí."
+
+#: apps/wprs-app/qml/Consent.qml
 msgid "The scene %1 asks for your permission:"
 msgstr "La escena %1 te pide permiso:"
 
@@ -3733,7 +3744,7 @@ msgstr ""
 msgid "One per line"
 msgstr "Uno por línea"
 
-#: apps/wprs-app/qml/SceneMeta.qml
+#: apps/wprs-app/qml/SceneMeta.qml apps/wprs-app/qml/SettingsRgb.qml
 msgid "nothing"
 msgstr "nada"
 
@@ -4278,6 +4289,39 @@ msgstr "El puntero"
 #: apps/wprs-app/qml/SceneRefs.qml
 msgid "Bone %1"
 msgstr "Hueso %1"
+
+#: apps/wprs-app/qml/SceneRgb.qml apps/wprs-app/qml/SettingsPage.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "RGB lighting"
+msgstr "Iluminación RGB"
+
+#: apps/wprs-app/qml/SceneRgb.qml
+msgid "Send what this layer captures to RGB lighting"
+msgstr "Enviar lo que capta esta capa a la iluminación RGB"
+
+#: apps/wprs-app/qml/SceneRgb.qml
+msgid ""
+"The capture is shrunk to at most 64 × 16 and sent to keyboards, mice and "
+"other lights through OpenRGB, at most 30 times a second, only where the user "
+"allowed it. Move the region and drag its corner on the preview to choose "
+"what is sent."
+msgstr "Lo captado se reduce a 64 × 16 como mucho y se manda a teclados, ratones y otras luces a través de OpenRGB, como mucho 30 veces por segundo y solo donde el usuario lo permitió. Mueve la región y arrastra sus esquinas en la vista previa para elegir qué se manda."
+
+#: apps/wprs-app/qml/SceneRgb.qml
+msgid "Whole canvas"
+msgstr "Todo el lienzo"
+
+#: apps/wprs-app/qml/SceneRgb.qml
+msgid "A strip of it"
+msgstr "Una franja"
+
+#: apps/wprs-app/qml/SceneRgb.qml
+msgid "What the lights get, %1 × %2:"
+msgstr "Lo que reciben las luces, %1 × %2:"
+
+#: apps/wprs-app/qml/SceneRgb.qml
+msgid "Play the preview to see what the lights get."
+msgstr "Reproduce la vista previa para ver lo que reciben las luces."
 
 #: apps/wprs-app/qml/SceneRig.qml
 msgid "Place bones on the preview"
@@ -5673,6 +5717,52 @@ msgstr "modelo de datos %1"
 msgid "Configuration:"
 msgstr "Configuración:"
 
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid ""
+"Wallpapers that send colors to keyboards, mice and other lights reach them "
+"through an OpenRGB server, and only after you allow it for each package. "
+"Turn this on to let them; the address is this computer unless you change it."
+msgstr "Los fondos que mandan colores al teclado, el ratón y otras luces llegan a ellas a través de un servidor de OpenRGB, y solo después de que lo permitas para cada paquete. Enciende esto para dejarlos; la dirección es este equipo salvo que la cambies."
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "Send colors to RGB lighting"
+msgstr "Mandar colores a la iluminación RGB"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "OpenRGB server:"
+msgstr "Servidor de OpenRGB:"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "Connect"
+msgstr "Conectar"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid ""
+"The colors of your wallpaper go over the network to %1. Anyone who can watch "
+"that network could see them; use an address on this computer to keep them "
+"here."
+msgstr "Los colores de tu fondo viajan por la red hasta %1. Quien pueda observar esa red podría verlos; usa una dirección de este equipo para que no salgan de aquí."
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "Connected; %1 sends the colors now."
+msgstr "Conectado; ahora manda los colores %1."
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "Not connected."
+msgstr "Sin conectar."
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "%1, with %2 lights"
+msgstr "%1, con %2 luces"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "Test"
+msgstr "Probar"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "Test every device"
+msgstr "Probar todos los dispositivos"
+
 #: apps/wprs-app/qml/Stars.qml
 msgid "Stars: %1"
 msgstr "Estrellas: %1"
@@ -5840,6 +5930,10 @@ msgstr "lo que suena en el reproductor"
 #: apps/wprs-app/qml/facade/LabelWords.qml
 msgid "the network"
 msgstr "la red"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "the RGB lighting"
+msgstr "la iluminación RGB"
 
 #: apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
@@ -7685,10 +7779,6 @@ msgstr "Repetir a lo ancho"
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Repeat down"
 msgstr "Repetir a lo alto"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "RGB lighting"
-msgstr "Iluminación RGB"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Ring"

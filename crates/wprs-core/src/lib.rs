@@ -15,6 +15,7 @@ pub mod model;
 pub mod motion;
 mod options;
 pub mod quality;
+pub mod rgb;
 pub mod settings;
 pub mod spread;
 pub mod stash;

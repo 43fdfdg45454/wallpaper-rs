@@ -26,7 +26,7 @@ fn mode(path: &std::path::Path) -> u32 {
 
 fn scene(scene: &str, key: &str, audio: bool, pointer: bool) -> SceneInputs {
     let (scene, key, title, granted) = (scene.into(), key.into(), String::new(), Default::default());
-    SceneInputs { scene, audio, pointer, clicks: false, network: false, title, key, granted }
+    SceneInputs { scene, audio, pointer, clicks: false, network: false, rgb: false, title, key, granted }
 }
 
 fn bound(key: &str, inputs: &[Input]) -> Bound {

@@ -18,6 +18,7 @@ members = [
     "crates/wprs-sync",
     "crates/wprs-editor",
     "crates/wprs-ktx2",
+    "crates/wprs-rgb",
     "crates/wprs-android",
     "apps/wprsd",
     "apps/wprs-ctl",
@@ -52,6 +53,7 @@ wprs-script = { path = "crates/wprs-script" }
 wprs-sync = { path = "crates/wprs-sync" }
 wprs-editor = { path = "crates/wprs-editor" }
 wprs-ktx2 = { path = "crates/wprs-ktx2" }
+wprs-rgb = { path = "crates/wprs-rgb" }
 wprs-web = { path = "apps/wprs-web" }
 cxx = "1"
 cxx-qt = "=0.10.0"

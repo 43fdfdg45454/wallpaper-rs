@@ -1,10 +1,10 @@
 use crate::author::DIR;
 use crate::show::bytes;
 use anyhow::{Result, anyhow};
-use clap::Subcommand;
+use clap::{ArgAction, Subcommand};
 use serde_json::{Value, json};
 use std::path::PathBuf;
-use wprs_editor::actions::{Action, AssetEdit};
+use wprs_editor::actions::{Action, AssetEdit, RgbEdit};
 use wprs_editor::{Project, packing, pictures};
 use wprs_ktx2::TARGETS;
 
@@ -39,6 +39,26 @@ pub enum Texturing {
         looks: Option<PathBuf>,
         #[arg(long, help = crate::cli::JSON)]
         json: bool,
+    },
+    #[command(
+        about = "Send what an adjustment layer captures to RGB lighting, or stop, and choose its region"
+    )]
+    Rgb {
+        #[arg(help = DIR)]
+        dir: PathBuf,
+        #[arg(help = "Id of an adjustment layer")]
+        layer: String,
+        #[arg(long, action = ArgAction::Set, help = "true sends and sets permissions.rgb, false stops")]
+        on: Option<bool>,
+        #[arg(
+            long,
+            value_name = "WxH",
+            conflicts_with = "whole",
+            help = "Capture this region around the layer"
+        )]
+        size: Option<String>,
+        #[arg(long, help = "Capture the whole canvas")]
+        whole: bool,
     },
 }
 
@@ -91,7 +111,16 @@ fn told(v: &Value) -> String {
 }
 
 pub fn run(command: Texturing) -> Result<()> {
-    let Texturing::Asset { dir, asset, ktx2, codec, quality, dry_run, looks, json } = command;
+    let (dir, asset, ktx2, codec, quality, dry_run, looks, json) = match command {
+        Texturing::Asset { dir, asset, ktx2, codec, quality, dry_run, looks, json } => {
+            (dir, asset, ktx2, codec, quality, dry_run, looks, json)
+        }
+        Texturing::Rgb { dir, layer, on, size, whole } => {
+            let size = size.map(|s| crate::editing::dimensions(&s)).transpose()?;
+            let size = size.map(|(w, h)| [f64::from(w), f64::from(h)]);
+            return crate::steps::edit(&dir, Action::Rgb(RgbEdit { layer, on, size, whole }));
+        }
+    };
     let wanted = AssetEdit { asset: asset.clone(), ktx2, codec, quality };
     let report = match (ktx2, dry_run) {
         (true, false) => return crate::steps::edit(&dir, Action::Asset(wanted)),

@@ -1,6 +1,6 @@
 pub const EDITOR: &str = "/scene/ext/editor";
 
-pub const ACTIONS: [&str; 53] = [
+pub const ACTIONS: [&str; 54] = [
     "set",
     "add",
     "remove",
@@ -20,6 +20,7 @@ pub const ACTIONS: [&str; 53] = [
     "import_script",
     "import_assets",
     "asset",
+    "rgb",
     "translate",
     "thumbnail",
     "upgrade",
@@ -80,6 +81,18 @@ pub struct AssetEdit {
     pub codec: Option<String>,
     #[serde(default)]
     pub quality: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RgbEdit {
+    pub layer: String,
+    #[serde(default)]
+    pub on: Option<bool>,
+    #[serde(default)]
+    pub size: Option<[f64; 2]>,
+    #[serde(default)]
+    pub whole: bool,
 }
 
 impl super::Action {

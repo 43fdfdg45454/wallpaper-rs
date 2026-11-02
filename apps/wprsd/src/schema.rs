@@ -71,6 +71,8 @@ fn options() -> Vec<Field> {
         flag("repos.vote_counts"),
         range(option("layout.bezel_mm", FieldKind::Float), 0.0, 100.0, Some(0.5)),
         flag("models.allow_download"),
+        flag("rgb.enabled"),
+        option("rgb.server", FieldKind::Text),
         values(option("render.gpu", FieldKind::Text), &wprs_core::GpuChoice::WORDS),
     ]
 }

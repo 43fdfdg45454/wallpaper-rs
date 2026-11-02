@@ -30,6 +30,7 @@ pub(crate) async fn run(args: Args) -> anyhow::Result<()> {
     server.at(dbus::OBJECT_PATH, providers1::Providers(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, inputs1::Inputs(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, repos1::Repos(weak.clone())).await?;
+    server.at(dbus::OBJECT_PATH, rgb1::Rgb(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, sync1::Sync(weak)).await?;
     tokio::spawn(changes::emit(connection.clone(), daemon.clone()));
     inputs1::start(&daemon, connection.clone());
@@ -65,6 +66,7 @@ pub(crate) async fn run(args: Args) -> anyhow::Result<()> {
     tokio::spawn(picks::run(daemon.clone()));
     tokio::spawn(crate::shortcuts::serve(connection.clone(), daemon.clone()));
     crate::duck::follow(&daemon);
+    crate::rgb::follow(&daemon);
     tokio::spawn(crate::choice::follow(daemon.clone(), known));
     if cfg!(debug_assertions) && std::env::var_os("WPRS_RENDER_STOP").is_some() {
         let (daemon, mut stop) = (daemon.clone(), signal(SignalKind::user_defined2())?);

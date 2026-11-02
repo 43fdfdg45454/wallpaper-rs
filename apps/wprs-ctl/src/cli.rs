@@ -170,7 +170,7 @@ pub enum Command {
     Remote(Remote),
     #[command(subcommand, about = "Packages of the added repositories")]
     Pkg(Pkg),
-    #[command(subcommand, about = "Audio and pointer input of scenes: grants and state")]
+    #[command(subcommand, about = "Audio, pointer and other inputs of scenes and pages: grants and state")]
     Input(Inputs),
     #[command(
         subcommand,
@@ -178,11 +178,10 @@ pub enum Command {
         after_long_help = crate::account::NAMES
     )]
     Server(Server),
-    #[command(
-        subcommand,
-        about = "Edit images without changing their files; needs no daemon except for preview"
-    )]
+    #[command(subcommand, about = "Edit images, keeping their files; needs no daemon but for preview")]
     Edit(Edits),
+    #[command(subcommand, about = "RGB lighting through an OpenRGB server: status, devices and a test")]
+    Rgb(crate::rgb::Rgb),
     #[command(
         subcommand,
         about = "Download, check and remove the depth model and its runtime; needs no daemon"

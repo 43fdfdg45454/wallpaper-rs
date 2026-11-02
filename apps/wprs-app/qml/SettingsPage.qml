@@ -56,7 +56,7 @@ Kirigami.ScrollablePage {
 
             Settings {
                 daemon: App
-                model: (App.schema.options ?? []).filter(f => !["render.gpu", "playback.quality", "playback.hdr"].includes(f.key))
+                model: (App.schema.options ?? []).filter(f => !["render.gpu", "playback.quality", "playback.hdr", "rgb.enabled", "rgb.server"].includes(f.key))
                 values: App.state.options ?? {}
                 onEdited: (key, value) => App.act("SetOption", [key, value])
             }
@@ -84,6 +84,13 @@ Kirigami.ScrollablePage {
             GpuPicker {
                 Kirigami.FormData.label: App.tr("Draw with:")
             }
+
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: App.tr("RGB lighting")
+            }
+
+            SettingsRgb {}
 
             Kirigami.Separator {
                 Kirigami.FormData.isSection: true

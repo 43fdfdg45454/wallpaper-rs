@@ -15,6 +15,7 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::ImportScript(s) => crate::scripts::import(dir, doc, &s.file),
         Action::ImportAssets(wanted) => crate::bring::import(dir, doc, wanted),
         Action::Asset(wanted) => crate::packing::act(dir, doc, wanted),
+        Action::Rgb(e) => crate::rgb::act(doc, e),
         Action::Thumbnail { file, animated } => crate::previews::store(dir, doc, file, *animated)
             .and_then(|path| crate::previews::adopt(doc, *animated, &path)),
         Action::PaintMask(m) => {

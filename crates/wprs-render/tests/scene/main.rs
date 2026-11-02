@@ -15,6 +15,7 @@ mod compose;
 mod packed;
 mod passes;
 mod stage;
+mod strips;
 
 const SIZE: (u32, u32) = (100, 50);
 

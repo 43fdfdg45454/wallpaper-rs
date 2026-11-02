@@ -44,6 +44,7 @@ toml.workspace = true
 wprs-sync.workspace = true
 wprs-web.workspace = true
 base64.workspace = true
+wprs-rgb.workspace = true
 
 [dev-dependencies]
 roxmltree.workspace = true

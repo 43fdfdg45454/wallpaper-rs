@@ -40,6 +40,7 @@ mod state;
 #[cfg(test)]
 mod steady;
 mod stops;
+mod strip;
 mod swarm;
 mod text;
 mod timed;
@@ -64,6 +65,7 @@ pub(crate) use sampling::layout;
 use std::collections::HashMap;
 use std::sync::Arc;
 pub use stops::{retry_effects, stop_effects};
+pub use strip::{MOST as RGB_MOST, lit};
 pub use uploads::Pixels;
 pub(crate) use uploads::Uploads;
 pub use view::SceneView;
@@ -93,6 +95,7 @@ pub(crate) enum Op {
     Effect(Fill),
     Particles { target: Src, system: usize, slot: u32, mode: Mode, timed: u64, bend: bool },
     Read { from: Src, map: usize, size: (u32, u32) },
+    Strip { from: Src },
 }
 
 #[derive(Clone, Copy)]

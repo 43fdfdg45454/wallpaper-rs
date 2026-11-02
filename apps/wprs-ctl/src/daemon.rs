@@ -41,8 +41,7 @@ pub async fn run(command: Command) -> Result<()> {
             daemon.set_volume(f64::from(percent) / 100.0).await?;
             daemon.set_muted(false).await?
         }
-        Command::Mute => daemon.set_muted(true).await?,
-        Command::Unmute => daemon.set_muted(false).await?,
+        c @ (Command::Mute | Command::Unmute) => daemon.set_muted(matches!(c, Command::Mute)).await?,
         Command::Stream { output, width, height, wait } => {
             let interrupted = wait.then(interrupted).transpose()?;
             let (node, serial) = match wait {
@@ -87,6 +86,7 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Remote(command) => remote::run(client, command).await?,
         Command::Pkg(command) => pkg::run(client, command).await?,
         Command::Input(command) => inputs::run(client, command).await?,
+        Command::Rgb(command) => crate::rgb::run(client, command).await?,
         Command::Server(command) => serving::run(client, command).await?,
         Command::Pack(_)
         | Command::Repo(_)

@@ -960,6 +960,18 @@ msgstr "%2 todavía nombra a %1; cámbialo antes"
 msgid "%1: %2 %3"
 msgstr "%1: %2 %3"
 
+#: crates/wprs-editor/src/rgb.rs
+msgid "say what to change in %1: on, size or whole"
+msgstr "di qué cambiar en %1: on, size o whole"
+
+#: crates/wprs-editor/src/rgb.rs
+msgid "%1 is not an adjustment layer"
+msgstr "%1 no es una capa de ajuste"
+
+#: crates/wprs-editor/src/rgb.rs
+msgid "a region is from 1 pixel to twice the canvas, not %1 × %2"
+msgstr "una región va de 1 píxel al doble del lienzo, no %1 × %2"
+
 #: crates/wprs-editor/src/rig.rs
 msgid "there is no picture \"%1\" to cut a mesh from"
 msgstr "no hay ninguna imagen «%1» de la que recortar una malla"

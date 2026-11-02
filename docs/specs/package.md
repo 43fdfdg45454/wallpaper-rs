@@ -203,8 +203,11 @@ inputs of what they import from the `wprs` module (`audio` and `input`). Web pag
 `permissions.rgb: true` says that the package may send colors to keyboards, mice and other RGB
 lighting: a web page through `window.wprs.rgb.setImage`, a scene through an `adjustment` layer with
 `rgb: true` (`scene.md`), which the validator requires to be declared. Like the inputs it is no
-grant: the user allows it per package. Both name the `rgb` feature, which the desktop refuses until
-it can send colors and the phone, which has no such lighting, leaves out.
+grant: the user allows it per package (the `rgb` input of `Inputs1`, only from the app, the tray or
+`wprs-ctl`), and the colors go out only while RGB lighting is turned on (`rgb.enabled`, off by
+default) to an OpenRGB server, on this computer unless the user sets another address (`dbus.md`,
+`Rgb1`). Both name the `rgb` feature, which the desktop runs and the phone, which has no such
+lighting, leaves out.
 
 ## Features
 
@@ -259,7 +262,7 @@ the folder changed, and the stored value is the path of that copy.
 | `ktx2` | uses KTX2 textures (Basis Universal pictures, `scene.md`) | runs | runs |
 | `avif` | uses AVIF pictures | refused | refused |
 | `spanned_scenes` | sets `display.span` of a scene to `all-outputs` | runs | without |
-| `rgb` | sets `permissions.rgb` or sends colors to RGB lighting from a scene | refused | without |
+| `rgb` | sets `permissions.rgb` or sends colors to RGB lighting from a scene | runs | without |
 | `effect.<id>` | uses a built-in effect that older versions do not have; `pack build` and `pack check` name the ones a package needs | runs | runs |
 | `effect.<id>.<parameter>` | sets a parameter that an older version of a built-in effect does not have | runs | runs |
 
@@ -436,13 +439,13 @@ declares `network` in `inputs`, and only then. Pages receive their settings thro
 | `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | opaque addresses (`wpak-user://<prop>/…` on the desktop, `https://<host>/:user/<prop>/…` on the phone) for the files of a chosen folder, and the ones added and removed; never their paths |
 | `onAction(cb)` | the id of a pressed `button` property |
 | `openShortcut(prop)` | opens what the user chose for a `shortcut` property, only inside a real click and at most once a second |
-| `rgb.setImage(bytes, w, h)` | sends RGBA pixels of at most 64 × 16 to the RGB lighting of the computer, at most 30 times a second, only with `permissions.rgb` and once the user allows it for the package |
+| `rgb.setImage(bytes, w, h)` | sends a picture of `w` × `h` RGBA bytes (up to 4096 a side, such as the `data` of `getImageData`) to the RGB lighting of the computer, shrunk on the page to at most 64 × 16, at most 30 times a second; it returns `false` when the call came too soon or the size does not match, and the colors reach the lights only with `permissions.rgb`, once the user allows it for the package and while RGB lighting is on |
 
 Nothing reaches the page without the input it needs, and a page never sees paths, device names,
 the battery or the list of fonts. It sees the time zone, the language and what the graphics card
 can do through WebGL, and keeps its storage, until the user restricts each of them for the package; every client
-shows a notice saying so (`web.md`, "Privacy"). `onMedia` and `rgb.setImage` exist but do nothing
-while their features are refused. Web pages with storage get the `storage` facet.
+shows a notice saying so (`web.md`, "Privacy"). `onMedia` exists but does nothing while its
+feature is refused. Web pages with storage get the `storage` facet.
 
 ## Presets
 

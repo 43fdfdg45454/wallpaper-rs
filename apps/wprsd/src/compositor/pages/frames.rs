@@ -165,6 +165,7 @@ fn take(
         FromWeb::Said(text) if text == "sandbox: off" => slot.sandbox = "reduced",
         FromWeb::Said(text) => tracing::debug!("web page: {text}"),
         FromWeb::Open { view, prop } => open(slot, view, &prop, now),
+        FromWeb::Rgb { view, size, rgb } => super::feed::lit(slot, view, size, rgb),
     }
 }
 

@@ -40,6 +40,11 @@ impl Painter<'_, '_, '_> {
     }
 
     pub(crate) fn adjust(&mut self, i: usize, target: Target) {
+        self.adjusted(i, target);
+        self.strip(i, target);
+    }
+
+    fn adjusted(&mut self, i: usize, target: Target) {
         if let Some(how) = self.captures(i) {
             return self.capture(i, target, how);
         }

@@ -99,6 +99,7 @@ pub enum FromWeb {
     Broken { view: u32 },
     Said(String),
     Open { view: u32, prop: String },
+    Rgb { view: u32, size: (u32, u32), rgb: Vec<u8> },
 }
 
 pub fn changed(old: &Map<String, Value>, new: &Map<String, Value>) -> Map<String, Value> {

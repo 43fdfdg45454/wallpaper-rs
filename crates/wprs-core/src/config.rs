@@ -43,6 +43,7 @@ pub struct Config {
     pub library: Library,
     pub repos: Repos,
     pub models: Models,
+    pub rgb: crate::rgb::Rgb,
     #[serde(skip_serializing_if = "Layout::is_default")]
     pub layout: Layout,
     #[serde(skip_serializing_if = "Render::is_default")]
@@ -63,6 +64,7 @@ impl Config {
     pub fn normalize(&mut self) -> Vec<String> {
         let before = self.options();
         self.playback = self.playback.sanitized();
+        self.rgb = std::mem::take(&mut self.rgb).sanitized();
         self.transition.duration_ms = self.transition.duration_ms.min(Transition::MAX_MS);
         self.library.thumb_cache_mb = self.library.thumb_cache_mb.clamp(Library::MIN_MB, Library::MAX_MB);
         self.layout.bezel_mm = self.layout.bezel_mm.clamp(0.0, Layout::MAX_BEZEL_MM).max(0.0);

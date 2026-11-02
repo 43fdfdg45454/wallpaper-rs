@@ -1142,7 +1142,7 @@ y capas, y renderizadores de cuerda, estelas largas, recorte, orientación, luz,
 propios; la declaración de lo que usa cada script (eventos, partes de la interfaz, parámetros,
 plantillas de capas y reservas de geometría); valores, carátulas y disparadores del reproductor
 multimedia; escenas extendidas sobre todas las pantallas; y
-salida a la iluminación RGB con su permiso. Los modelos se leen al abrir el paquete y cada hueso,
+salida a la iluminación RGB con su permiso (ver «Iluminación RGB»). Los modelos se leen al abrir el paquete y cada hueso,
 animación, parte o material que nombra la escena se comprueba contra ellos. Las entradas de un
 paquete de la versión 2 salen solo de lo que declara: también las de sus scripts, que ya no se
 adivinan por su texto; un script de la versión 1 que no declara nada usa el sonido o el puntero solo
@@ -1395,6 +1395,26 @@ de energía, con poca batería o con el teléfono muy caliente, se cierra tras 5
 página o desde ella no tiene fundido. En un emulador, *Luces* dibuja 30 fotogramas por segundo con
 el límite de 30, una página fija no gasta nada después de su primer fotograma y una página oculta
 no dibuja ni usa el procesador.
+
+## Iluminación RGB
+
+Un fondo puede pintar el teclado, el ratón y otras luces RGB a través de un servidor de OpenRGB
+(con su protocolo SDK; el cliente es propio). Una escena lo hace con una capa `adjustment` con
+`rgb: true`, que manda lo que capta (todo el lienzo o la región de su `size`) reducido a 64 × 16
+como mucho; una página web, con `window.wprs.rgb.setImage(bytes, ancho, alto)`. En ambos casos el
+paquete declara `permissions.rgb`, se envía como mucho 30 veces por segundo y solo cuando cambia el
+fotograma, y nada sale hasta que haces dos cosas: encender la iluminación en *Ajustes → Iluminación
+RGB* (`wprs-ctl config rgb.enabled true`) y permitirla para ese paquete (el aviso de permisos de la
+app o `wprs-ctl input grant <id> rgb`). El servidor es este equipo (`127.0.0.1:6742`) salvo que
+pongas otra dirección (`rgb.server`), y entonces la app avisa de que los colores viajan por la red.
+La misma sección tiene *Conectar*, la lista de dispositivos con sus luces y *Probar* en cada uno (un
+arcoíris de 3 segundos); `wprs-ctl rgb status`, `rgb devices`, `rgb test [N]` y `rgb strip -o
+SALIDA` hacen lo mismo desde la terminal. Cada zona con matriz (las teclas) toma la celda de la
+tira que le cae encima y las demás, la columna de cada luz. En el editor, el inspector de una capa
+`adjustment` tiene *Enviar a la iluminación RGB* (activa también el permiso del paquete, `wprs-ctl
+scene rgb DIR CAPA --on true`), *Todo el lienzo* o *Una franja*, la región con asas en la vista
+previa y la tira de 64 × 16 que reciben las luces, en vivo. El teléfono no tiene iluminación RGB y
+reproduce esos paquetes sin ella.
 
 ## Servidor propio
 
@@ -2357,6 +2377,9 @@ misma pausa.
   idioma, tarjeta gráfica y sus datos guardados) se avisa en la app, la bandeja, `wprs-ctl` y el
   teléfono, y puedes ocultarlo por fondo. En el teléfono el WebView va con sus métricas y la
   navegación segura apagadas.
+- La iluminación RGB está apagada por defecto; encendida, solo manda colores (nunca otra cosa) al
+  servidor de OpenRGB de este equipo, o a la dirección que elijas con un aviso visible, y solo de los
+  paquetes a los que se lo permites.
 - El modelo de profundidad y ONNX Runtime solo se descargan si lo pides y aceptas su tamaño,
   licencia y servidores; llevan el mismo User-Agent genérico, sin cabecera Referer ni redirecciones
   de HTTPS a HTTP, se verifican con SHA-256 y los mapas se calculan en el equipo, en un proceso

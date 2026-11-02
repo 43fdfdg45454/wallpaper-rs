@@ -69,7 +69,7 @@ fn rgb_output_and_spanned_scenes_need_their_manifest_fields() {
     let granted = json!({ "permissions": { "rgb": true } });
     let package = load(&manifest(&["capture", "rgb"], granted), &lights, &[]).unwrap();
     assert_eq!(features::lacks("android", &package.facts.features), ["rgb"]);
-    assert!(features::playable(&package.manifest, &package.facts, Platform::Desktop).is_err());
+    assert!(features::playable(&package.manifest, &package.facts, Platform::Desktop).is_ok());
     let networked = json!({ "permissions": { "network": { "allow": ["https://api.example.org"] } } });
     let fault =
         load(&manifest(&["capture", "rgb"], networked), &lights, &[]).map(drop).unwrap_err().to_string();

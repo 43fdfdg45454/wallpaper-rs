@@ -119,6 +119,9 @@ pub unsafe extern "C" fn message(_manager: Ptr, value: Ptr, data: Ptr) {
     if let Some(prop) = message.get("random").and_then(Value::as_str) {
         reply(view, id, random(&tokens(prop, false).unwrap_or_default()));
     }
+    if let Some(rgb) = message.get("rgb") {
+        lit(view, rgb);
+    }
     if let Some(prop) = message.get("open").and_then(Value::as_str) {
         send(&FromWeb::Open { view, prop: prop.chars().take(64).collect() });
     }
@@ -131,4 +134,19 @@ pub unsafe extern "C" fn message(_manager: Ptr, value: Ptr, data: Ptr) {
             send(&FromWeb::Said(error.chars().take(512).collect()));
         }
     }
+}
+
+fn lit(view: u32, rgb: &Value) {
+    static LAST: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
+    let side = |key: &str, most: u64| rgb[key].as_u64().filter(|n| (1..=most).contains(n)).map(|n| n as u32);
+    let (Some(w), Some(h)) = (side("width", 64), side("height", 16)) else { return };
+    let byte = |v: &Value| v.as_u64().filter(|v| *v < 256).map(|v| v as u8);
+    let data: Option<Vec<u8>> = rgb["data"].as_array().and_then(|list| list.iter().map(byte).collect());
+    let Some(data) = data.filter(|d| d.len() == (w * h * 3) as usize) else { return };
+    let mut last = LAST.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if last.is_some_and(|at| at.elapsed() < std::time::Duration::from_millis(33)) {
+        return;
+    }
+    *last = Some(std::time::Instant::now());
+    send(&FromWeb::Rgb { view, size: (w, h), rgb: data });
 }

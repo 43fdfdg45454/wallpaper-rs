@@ -159,6 +159,12 @@ ColumnLayout {
                 node: inspector.node
             }
 
+            SceneRgb {
+                Layout.fillWidth: true
+                page: inspector.page
+                node: inspector.node
+            }
+
             SceneLightsPanel {
                 Layout.fillWidth: true
                 visible: inspector.pointer === "/scene/canvas"

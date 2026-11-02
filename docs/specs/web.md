@@ -145,7 +145,8 @@ The helper injects `window.wprs` before the page's own scripts (and before `web.
 | `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | the tokens of a chosen folder: `files` (and the `{prop, added, removed, changed}` notices, `changed` as `[old, new]` pairs for files rewritten in place) only with `mode: all`; `randomFile` in both modes; a token changes with the size and time of its file, so a rewritten file loads anew |
 | `onAction(cb)` | the id of a pressed `button` property |
 | `openShortcut(prop)` | asks to open what the user chose for a `shortcut` property; it returns `false` outside a user activation, and the daemon opens it only within 2 s of a real click that reached the page, at most once a second; the page never learns the target |
-| `onMedia`, `rgb.setImage` | present and inert: their features are refused until they work |
+| `rgb.setImage(bytes, w, h)` | RGBA bytes shrunk on the page to at most 64 × 16 and checked again by the helper (at most 64 × 16, 30 times a second); the daemon sends them only for packages with `permissions.rgb`, the `rgb` grant and RGB lighting on (`package.md`) |
+| `onMedia` | present and inert: its feature is refused until it works |
 
 Audio and video files of the package and of the user's folder play from a `blob:` copy that the
 helper's script makes when a media element (or `new Audio`) gets a `wpak:` or `wpak-user:` address,

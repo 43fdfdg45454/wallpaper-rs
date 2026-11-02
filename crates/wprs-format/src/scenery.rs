@@ -84,5 +84,5 @@ pub const SCENE: &[(&str, &str, [Support; 2])] = &[
     ("script_hierarchy", "lets its scripts read and change the parents of layers", [Yes, Yes]),
     ("layer_events", "reacts to the pointer on its layers", [Yes, Yes]),
     ("media_info", "shows the title, cover or progress of what the media player plays", [No, No]),
-    ("rgb", "sends its colors to RGB lighting", [No, Without]),
+    ("rgb", "sends its colors to RGB lighting", [Yes, Without]),
 ];

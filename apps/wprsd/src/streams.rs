@@ -155,6 +155,7 @@ impl Daemon {
             st.drafts.remove(output);
             self.compositor.remove(output);
             self.exporter.remove_stream(output)?;
+            crate::rgb::forget(output);
             tracing::info!(output, "stream released");
         }
         self.activity(st);

@@ -23,6 +23,7 @@ QtObject {
             "clicks": App.tr("clicks"),
             "media": App.tr("what the media player plays"),
             "network": App.tr("the network"),
+            "rgb": App.tr("the RGB lighting"),
             "general": App.tr("For everyone"),
             "mature": App.tr("Mature"),
             "unrated": App.tr("Not rated"),

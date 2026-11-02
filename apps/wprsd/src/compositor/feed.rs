@@ -10,13 +10,14 @@ pub(super) fn declare(output: &str, scene: Option<&SceneState>) {
     let pack = scene.map(|s| &s.spec.pack);
     let named = pack.map(|p| (p.props.id.as_str(), p.props.title.as_str(), p.key.as_str()));
     let uses = scene.map(SceneState::uses).unwrap_or_default();
-    inputs::needs(output, named.unwrap_or_default(), [uses.audio, uses.cursor, uses.clicks, false]);
+    let lit = pack.is_some_and(|p| wprs_render::lit(&p.scene));
+    inputs::needs(output, named.unwrap_or_default(), [uses.audio, uses.cursor, uses.clicks, false, lit]);
 }
 
 pub(super) fn declare_page(output: &str, page: &crate::pages::PageSpec) {
-    let (p, [audio, pointer, clicks]) = (&page.pack, page.pack.uses);
+    let (p, [audio, pointer, clicks, rgb]) = (&page.pack, page.pack.uses);
     let named = (p.props.id.as_str(), p.props.title.as_str(), p.key.as_str());
-    inputs::needs(output, named, [audio, pointer, clicks, !p.network.is_empty()]);
+    inputs::needs(output, named, [audio, pointer, clicks, !p.network.is_empty(), rgb]);
 }
 
 struct Live {
@@ -38,6 +39,9 @@ impl State {
 
     pub(super) fn feed_inputs(&mut self) {
         let now = Instant::now();
+        for (name, o) in self.outputs.iter_mut() {
+            o.dirty |= o.shown.scene.as_mut().is_some_and(|s| s.want_rgb(name));
+        }
         let live: Vec<Live> = (self.outputs.iter())
             .filter(|(name, o)| o.active && o.open(self.exporter.is_streaming(name)))
             .filter_map(|(name, o)| {

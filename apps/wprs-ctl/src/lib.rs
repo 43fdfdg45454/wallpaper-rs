@@ -49,6 +49,7 @@ pub mod propsets;
 pub mod providers;
 pub mod remote;
 pub mod repo;
+mod rgb;
 mod rigging;
 pub mod server;
 pub mod serving;

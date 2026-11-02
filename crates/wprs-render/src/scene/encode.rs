@@ -79,6 +79,11 @@ impl Renderer {
                     }
                     (stats.passes, stats.draws, k) = (stats.passes + 1, stats.draws + 1, k + 1);
                 }
+                Op::Strip { from } => {
+                    let texture = src.get(pool, *from).2;
+                    pool.strip.read(self, &mut encoder, &texture);
+                    k += 1;
+                }
                 Op::Read { from, map, size } => {
                     let texture = src.get(pool, *from).2;
                     src.swarms.iter().for_each(|s| s.read(&mut encoder, &texture, *map, *size));

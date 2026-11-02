@@ -105,6 +105,7 @@ fn show(hub: &Hub, scene: &str, output: &str, key: &str) {
         pointer: false,
         clicks: false,
         network: false,
+        rgb: false,
         title,
         key,
         granted,

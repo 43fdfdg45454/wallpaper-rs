@@ -9,7 +9,7 @@ impl State {
     pub(in crate::compositor) fn feed_pages(&mut self) {
         let now = Instant::now();
         for slot in self.pages.values_mut().filter(|s| s.link.is_some()) {
-            let [audio, pointer, clicks] = slot.spec.pack.uses;
+            let [audio, pointer, clicks, _] = slot.spec.pack.uses;
             let mut allowed = Allowed::default();
             let mut out = Vec::new();
             for (name, view) in slot.views.iter_mut().filter(|(_, v)| v.opened && v.live) {
@@ -66,5 +66,16 @@ impl State {
             self.pages.values().filter(|s| !s.spec.folders.is_empty() && s.views.values().any(|v| v.live));
         let scan = listed.filter_map(|s| s.scanned).map(|at| at + super::SCAN);
         audio.chain(due).chain(hide).chain(scan).min()
+    }
+}
+
+pub(super) fn lit(slot: &super::PageSlot, id: u32, (w, h): (u32, u32), rgb: Vec<u8>) {
+    let Some(strip) = wprs_rgb::Strip::new(w, h, rgb).filter(|_| slot.spec.pack.uses[3]) else { return };
+    for (name, _) in slot.views.iter().filter(|(_, v)| v.id == id && v.live) {
+        let preview = name.starts_with("preview:");
+        let allowed = crate::rgb::enabled() && inputs::lights(name);
+        if allowed || preview {
+            crate::rgb::frame(name, strip.clone(), !preview);
+        }
     }
 }

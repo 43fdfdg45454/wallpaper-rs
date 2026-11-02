@@ -85,6 +85,12 @@ impl Out for (u32, u64) {
     }
 }
 
+impl Out for (u32, u32, Vec<u8>) {
+    fn out(self) -> Value {
+        json!([self.0, self.1, self.2])
+    }
+}
+
 impl Out for () {
     fn out(self) -> Value {
         json!([])

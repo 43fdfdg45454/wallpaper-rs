@@ -116,13 +116,13 @@ async fn pace(hub: Arc<Hub>) {
 pub(crate) fn needs(
     output: &str,
     (scene, title, key): (&str, &str, &str),
-    [audio, pointer, clicks, network]: [bool; 4],
+    [audio, pointer, clicks, network, rgb]: [bool; 5],
 ) {
     let Some(hub) = hub() else { return };
     let (scene, title, key, granted) = (scene.into(), title.into(), key.into(), BTreeSet::new());
-    let need = SceneInputs { scene, audio, pointer, clicks, network, title, key, granted };
+    let need = SceneInputs { scene, audio, pointer, clicks, network, rgb, title, key, granted };
     let mut control = lock(&hub.control);
-    let changed = match audio || pointer || clicks || network {
+    let changed = match audio || pointer || clicks || network || rgb {
         true => control.shown.insert(output.into(), need.clone()) != Some(need),
         false => control.shown.remove(output).is_some(),
     };
@@ -147,6 +147,10 @@ pub(crate) fn audio() -> AudioFrame {
 
 pub(crate) fn hears(output: &str) -> bool {
     hub().is_some_and(|hub| lock(&hub.control).allows(output, Input::Audio))
+}
+
+pub(crate) fn lights(output: &str) -> bool {
+    hub().is_some_and(|hub| lock(&hub.control).allows(output, Input::Rgb))
 }
 
 pub(crate) fn window(output: &str, window: Option<Window>) {

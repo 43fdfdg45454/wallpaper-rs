@@ -23,6 +23,7 @@ pub(super) fn draw(
     {
         super::super::feed::declare(name, Some(scene));
     }
+    output.shown.scene.iter_mut().for_each(|s| s.send_rgb(name, renderer));
     let unchanged = output.unchanged(moved, exporter.starved(name));
     let progress = output.progress(now, output.shown.transition.map_or(transition, |d| d.as_secs_f32()));
     let opacity = if output.fade.is_some() { smoothstep(progress) } else { 1.0 };

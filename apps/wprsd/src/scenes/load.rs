@@ -86,7 +86,8 @@ impl Daemon {
         let (id, version, title, presets) =
             (m.id.clone(), m.version.clone(), m.title.pick(&languages), m.presets);
         let (path, inputs) = (wpak.to_owned(), package.manifest.declared());
-        let key = if listens(&scene, &scripts) { self.package_key(wpak, &meta)? } else { String::new() };
+        let lit = listens(&scene, &scripts) || wprs_render::lit(&scene);
+        let key = if lit { self.package_key(wpak, &meta)? } else { String::new() };
         let props = Props {
             path: path.clone(),
             id,

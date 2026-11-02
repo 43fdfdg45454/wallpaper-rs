@@ -1,0 +1,10 @@
+[package]
+name = "wprs-rgb"
+description = "Client of the OpenRGB SDK protocol for wallpaper-rs: devices, their lights and pictures spread over them"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror.workspace = true

@@ -68,6 +68,7 @@ pub enum Kind {
     Pointer,
     Clicks,
     Network,
+    Rgb,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug)]
@@ -83,6 +84,7 @@ impl Kind {
             Kind::Pointer => Input::Pointer.as_str(),
             Kind::Clicks => Input::Clicks.as_str(),
             Kind::Network => Input::Network.as_str(),
+            Kind::Rgb => Input::Rgb.as_str(),
         }
     }
 }

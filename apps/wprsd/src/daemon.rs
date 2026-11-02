@@ -168,6 +168,7 @@ impl Daemon {
             settings(&st.config)
         };
         self.compositor.set_settings(settings);
+        crate::rgb::follow(self);
         self.configure_all();
         self.refresh_items();
         self.watch_sources();

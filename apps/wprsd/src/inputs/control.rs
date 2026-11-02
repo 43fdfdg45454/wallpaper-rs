@@ -23,6 +23,7 @@ impl Control {
                     Input::Pointer => need.pointer,
                     Input::Clicks => need.clicks && self.views.get(output).is_some_and(|v| v.clicks),
                     Input::Network => need.network,
+                    Input::Rgb => need.rgb,
                 };
                 declared && self.has(&need.scene, &need.key, input)
             })
