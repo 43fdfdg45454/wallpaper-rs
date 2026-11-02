@@ -11,6 +11,7 @@ use wprs_web::{Allowed, FromWeb, Isolation, Link, Settings, ToWeb};
 pub(super) const RETRIES: u32 = 3;
 pub(super) const FIRST_FRAME: Duration = Duration::from_secs(10);
 const BACKOFF: [u64; 3] = [1, 5, 30];
+const DRAIN: Duration = Duration::from_secs(3);
 
 pub(super) type Inbox = Arc<Mutex<Vec<(FromWeb, Vec<OwnedFd>)>>>;
 
@@ -139,6 +140,9 @@ impl PageSlot {
         if let Some(mut child) = self.child.take() {
             let _ = child.kill();
             let _ = child.wait();
+            if !wprs_web::drain(child.id(), DRAIN) {
+                tracing::warn!("the web engine of a page outlived its helper and was stopped");
+            }
         }
         self.link = None;
         lock(&self.inbox).clear();

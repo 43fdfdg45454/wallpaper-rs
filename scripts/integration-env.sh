@@ -7,9 +7,14 @@ mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME"
 chmod 700 "$XDG_RUNTIME_DIR"
 
 pids=()
+ended() {
+  for _ in $(seq 100); do kill -0 "$1" 2>/dev/null || return 0; sleep 0.1; done
+  kill -KILL "$1" 2>/dev/null || true
+}
 cleanup() {
   for p in "${pids[@]}"; do kill -CONT "$p" 2>/dev/null || true; kill "$p" 2>/dev/null || true; done
-  if [ -n "${DBUS_SESSION_BUS_PID:-}" ]; then kill "$DBUS_SESSION_BUS_PID" 2>/dev/null || true; fi
+  for p in "${pids[@]}"; do ended "$p"; wait "$p" 2>/dev/null || true; done
+  if [ -n "${DBUS_SESSION_BUS_PID:-}" ] && kill "$DBUS_SESSION_BUS_PID" 2>/dev/null; then ended "$DBUS_SESSION_BUS_PID"; fi
   if [ "${status:-1}" != 0 ]; then
     for f in "$WORK"/*.log; do echo "== $f"; tail -n 40 "$f"; done
   fi
