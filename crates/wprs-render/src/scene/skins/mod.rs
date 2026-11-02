@@ -3,6 +3,7 @@ use wprs_scene::VERTEX_FLOATS;
 
 mod cast;
 mod make;
+mod mipped;
 #[cfg(test)]
 mod sharp;
 mod size;

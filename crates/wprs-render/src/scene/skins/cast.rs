@@ -26,15 +26,19 @@ impl Renderer {
             let skin = view.skins.get_mut(*layer).expect("made above");
             let named = texture.as_deref();
             let video = named.and_then(|t| videos.iter().find(|(n, _)| *n == t)).map(|(_, v)| *v);
+            let sized_as = video
+                .map(GpuImage::size)
+                .or_else(|| named.and_then(|t| view.images.get(t)).map(|i| i.0.size()));
+            let pixels = sized_as.or(skin.own.as_ref().map(GpuImage::size)).unwrap_or((1, 1));
+            let k = scale * super::size::grown(d.world, *size, scale, pixels);
+            let fits = sized(*size, k, frame.quality, edge);
+            if video.is_none() {
+                self.mip_skin((&mut view.images, &view.sources), skin, named, fits);
+            }
             let found =
                 video.or_else(|| named.and_then(|t| view.images.get(t)).map(|i| &i.0)).or(skin.own.as_ref());
             let white = &view.pool.white;
-            let (picture, pixels) = match found {
-                Some(p) => ((p.id, p.view.clone()), p.size()),
-                None => ((white.id, white.view.clone()), (1, 1)),
-            };
-            let k = scale * super::size::grown(d.world, *size, scale, pixels);
-            let fits = sized(*size, k, frame.quality, edge);
+            let picture = found.map_or((white.id, white.view.clone()), |p| (p.id, p.view.clone()));
             if skin.image.size() != fits {
                 (skin.image, skin.depth) = self.skin_targets(fits);
                 skin.generation = u64::MAX;

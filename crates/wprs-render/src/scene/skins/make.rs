@@ -99,7 +99,10 @@ impl Renderer {
             wgpu::BindGroupEntry { binding: 1, resource: skin.pieces.as_entire_binding() },
             wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::TextureView(&skin.morphs) },
             wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::TextureView(picture) },
-            wgpu::BindGroupEntry { binding: 4, resource: wgpu::BindingResource::Sampler(&self.clamp) },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: wgpu::BindingResource::Sampler(&self.pipes().sampler),
+            },
         ];
         let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("wprs-render skin"),
