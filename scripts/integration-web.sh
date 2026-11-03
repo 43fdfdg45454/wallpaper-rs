@@ -59,7 +59,7 @@ else
   lit() { [ "$(ctl rgb strip -o TEST-W --json 2>/dev/null | from "r['width'], r['height'], r['colors']")" = "(2, 1, ['#00ff00', '#00ff00'])" ]; }
   wait_for 10 lit || fail "the page sent no colors with rgb.setImage: $(ctl rgb status)"
   ctl input revoke org.example.glow-page rgb && ctl config rgb.enabled false
-  kill "$watcher"; wait "$watcher" 2>/dev/null || true
+  kill "$watcher" 2>/dev/null || true; wait "$watcher" 2>/dev/null || true
   ctl lib apply "$lights" -o TEST-W 2>/dev/null
   expect "s['outputs']['TEST-W']['kind'], s['outputs']['TEST-W']['error']" "('web', None)"
   wait_for 10 fresh "$old" || fail "no single new web helper runs for the example page: $(helper), $(helpers) running"
