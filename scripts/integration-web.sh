@@ -52,12 +52,14 @@ else
   old=$(helper)
   [ "$old" != None ] || fail "the state names no web helper for the page"
   ctl pack build "$ROOT/tests/fixtures/glow" -o "$pages/glow.wpak" >/dev/null && ctl lib import "$pages/glow.wpak" --wait >/dev/null
+  "$BIN/probe" "$web" 60 --hold >/dev/null 2>&1 & watcher=$!; pids+=("$watcher")
   ctl config rgb.enabled true && ctl lib apply "$(uid org.example.glow-page)" -o TEST-W 2>/dev/null
   if wait_for 3 ctl rgb strip -o TEST-W 2>/dev/null; then fail "a page sent colors without the grant"; fi
   ctl input grant org.example.glow-page rgb
   lit() { [ "$(ctl rgb strip -o TEST-W --json 2>/dev/null | from "r['width'], r['height'], r['colors']")" = "(2, 1, ['#00ff00', '#00ff00'])" ]; }
   wait_for 10 lit || fail "the page sent no colors with rgb.setImage: $(ctl rgb status)"
   ctl input revoke org.example.glow-page rgb && ctl config rgb.enabled false
+  kill "$watcher"; wait "$watcher" 2>/dev/null || true
   ctl lib apply "$lights" -o TEST-W 2>/dev/null
   expect "s['outputs']['TEST-W']['kind'], s['outputs']['TEST-W']['error']" "('web', None)"
   wait_for 10 fresh "$old" || fail "no single new web helper runs for the example page: $(helper), $(helpers) running"
