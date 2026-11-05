@@ -41,6 +41,14 @@ PY
 if ctl scene preview "$WORK/spread" --layout dual 2>/dev/null; then fail "--layout was taken without --out"; fi
 if ctl scene preview "$WORK/spread" --layout quad --out "$WORK/q.png" 2>/dev/null; then fail "an unknown layout was drawn"; fi
 if ctl scene preview "$WORK/spread" --layout dual --out "$WORK/q.txt" 2>/dev/null; then fail "a text file was written"; fi
+ctl scene keyframe "$WORK/spread" /scene/layers/0/color 0 '#ff0000' >/dev/null
+ctl scene keyframe "$WORK/spread" /scene/layers/0/color 2 '#00ff00' >/dev/null
+for at in poster 0 2; do
+  case $at in poster) when=() ;; *) when=(--time "$at") ;; esac
+  ctl scene preview "$WORK/spread" --layout dual --out "$WORK/at-$at.png" "${when[@]}" >/dev/null || fail "no layout preview at $at"
+done
+cmp -s "$WORK/at-poster.png" "$WORK/at-0.png" || fail "--time 0 did not draw the poster time"
+if cmp -s "$WORK/at-0.png" "$WORK/at-2.png"; then fail "--time 2 drew the same moment as --time 0"; fi
 ctl lib apply "$spread" --fit fill
 ctl lib rm "$spread"
 echo "spread scene checks passed"

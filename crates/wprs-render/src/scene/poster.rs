@@ -76,8 +76,19 @@ impl Renderer {
         scene: &Scene,
         assets: &SceneAssets,
         props: &Values,
-        (wall, lang): (f64, &str),
+        clock: (f64, &str),
         edge: u32,
+    ) -> Result<RgbaImage, RenderError> {
+        self.still(scene, assets, props, clock, (edge, f64::from(scene.clock.poster_time)))
+    }
+
+    pub fn still(
+        &self,
+        scene: &Scene,
+        assets: &SceneAssets,
+        props: &Values,
+        (wall, lang): (f64, &str),
+        (edge, time): (u32, f64),
     ) -> Result<RgbaImage, RenderError> {
         let [w, h] = scene.canvas.size.map(|v| v.max(1) as f32);
         let scale = (edge as f32 / w.max(h)).min(1.0);
@@ -87,7 +98,7 @@ impl Renderer {
         assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
         runtime.set_wall(wall);
         runtime.set_language(lang);
-        runtime.seek(f64::from(scene.clock.poster_time));
+        runtime.seek(time.max(0.0));
         let frame = runtime.frame(view.view(size), Quality::Q3);
         let image = self.render_scene(&mut view, &runtime, &frame, size, Quality::Q3, &[])?;
         let (mut target, mut pixels) = (self.create_target(size.0, size.1)?, Vec::new());

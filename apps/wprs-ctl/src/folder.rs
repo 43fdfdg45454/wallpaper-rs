@@ -52,7 +52,7 @@ pub enum Folder {
         dir: PathBuf,
         #[arg(short, long, default_value = "", help = crate::cli::OUTPUT)]
         output: String,
-        #[arg(long, default_value_t = -1.0, allow_hyphen_values = true, help = "Hold this second; plays when negative")]
+        #[arg(long, default_value_t = -1.0, allow_hyphen_values = true, help = "Hold this second; plays when negative, and with --layout draws this second instead of the poster time")]
         time: f64,
         #[arg(long, help = "End the preview")]
         stop: bool,
@@ -143,8 +143,8 @@ pub(crate) fn run(command: Folder) -> Result<()> {
                 false => println!("{sha256} {size} {}", out.display()),
             }
         }
-        Folder::Preview { dir, layout: Some(layout), out: Some(out), .. } => {
-            crate::spanning::preview(&dir, &layout, &out)?
+        Folder::Preview { dir, layout: Some(layout), out: Some(out), time, .. } => {
+            crate::spanning::preview(&dir, &layout, &out, (time >= 0.0).then_some(time))?
         }
         Folder::Preview { dir, output, time, stop, quality, restart, media, .. } => {
             let project = Project::open(&dir)?;

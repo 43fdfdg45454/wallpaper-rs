@@ -2325,6 +2325,7 @@ wprs-ctl scene undo mar && wprs-ctl scene history mar
 wprs-ctl scene validate mar                             # problemas, cada uno con su JSON Pointer
 wprs-ctl scene preview mar -o DP-1 --time 2             # verla en el escritorio 60 s sin aplicarla
 wprs-ctl scene preview mar --layout dual --out dual.png # extendida sobre dos pantallas, sin escritorio
+wprs-ctl scene preview mar --layout dual --out dual.png --time 4   # el segundo 4 en vez del póster
 wprs-ctl scene build mar --key autor.key                # firmar y crear el .wpak
 wprs-ctl scene apply mar -o DP-1                        # añadirla a la biblioteca y mostrarla
 wprs-ctl scene apply mar --span                         # mostrarla extendida sobre todas las pantallas

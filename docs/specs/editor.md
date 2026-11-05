@@ -628,9 +628,10 @@ its *Spread over every screen* box sets or removes `display.span: "all-outputs"`
 as an undoable step. The parts come from the editor query `{"spread": {"layout", "bezel",
 "monitors"}}` (`rigs::query`), which answers `{spread, canvas, screens, bounds, parts: [{id, rect}]}`
 with each rect in canvas pixels, or `error` for an unknown layout or screens without a name or a
-size (at most 64). `wprs-ctl scene preview DIR --layout dual|triple|vertical|mine --out FILE`
-writes the same view as a picture, without a desktop: the scene at its poster time, each screen's
-part at its physical place and the frames between them. Dragging a layer that is not locked
+size (at most 64). `wprs-ctl scene preview DIR --layout dual|triple|vertical|mine --out FILE
+[--time S]` writes the same view as a picture, without a desktop: the scene at its poster time, or
+at second `S` of the scene clock when `--time` is 0 or more (as the editor shows the moment its
+preview is at), each screen's part at its physical place and the frames between them. Dragging a layer that is not locked
 selects it and moves it, as one gesture. A drag that starts outside the layers, or any drag with
 Shift, draws a rectangle that selects the layers it touches and picks them as Ctrl does in the
 layer list, ready for *Group*. Ctrl and the wheel zoom, the wheel or a drag with the middle or
