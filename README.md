@@ -1999,7 +1999,13 @@ otra página no cierra un editor con cambios sin guardar.
   bloom|parallax` y `scene import --linear --atlas FILAS,COLUMNAS`, con las mismas comprobaciones.
 - **Línea de tiempo**: reproducir, pausar y mover el cabezal (la vista previa se queda en ese
   instante), una pista por valor animado con sus fotogramas clave, que se arrastran a otro
-  instante, la interpolación de cada uno y la línea de tiempo que la mueve, y la lista de líneas de tiempo para crearlas y editarlas.
+  instante, la interpolación de cada uno y la línea de tiempo que la mueve, y la lista de líneas de
+  tiempo para crearlas, renombrarlas, quitarlas y editarlas: *Editar la línea de tiempo y sus
+  eventos…* abre su panel con la duración en segundos o en cuadros y cuadros por segundo, cómo se
+  repite, el fundido del final con el principio, la velocidad (deslizador y campo), el retraso, si
+  arranca sola y qué la arranca, y una franja de eventos con nombre: un doble clic añade uno en ese
+  instante, se arrastran a otro, se renombran y se quitan (`wprs-ctl scene timeline CARPETA ID
+  --event T:NOMBRE --drop-event NOMBRE[@T] --clear-events`).
 - **Paquete**: *Detalles del paquete* lleva el manifiesto al inspector, que también se genera a
   partir de su esquema (`wprs-ctl scene schema --manifest`): título, descripción y notas de esta
   versión en cada idioma (*Traducir* añade uno a partir del texto del idioma por defecto sin tocar

@@ -90,5 +90,8 @@ QtObject {
             throw new Error("timing: straightening a curve bent the neighbouring curves: " + JSON.stringify(after));
         page.run("undo");
         page.run("undo");
+        Qt.createComponent("SceneTimelineCheck.qml").createObject(page, {
+            "page": page
+        }).exercise();
     }
 }

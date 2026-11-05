@@ -30,6 +30,15 @@ QQC2.Menu {
             title: modelData.id + " · " + App.tr("%1 s", modelData.duration)
 
             QQC2.MenuItem {
+                text: App.tr("Edit the timeline and its events…")
+                icon.name: "document-edit"
+                onTriggered: {
+                    editing.pointer = line.modelData.pointer;
+                    editing.open();
+                }
+            }
+
+            QQC2.MenuItem {
                 text: App.tr("Show in the inspector")
                 icon.name: "document-properties"
                 onTriggered: menu.timeline.page.editor.select(line.modelData.pointer)
@@ -65,6 +74,13 @@ QQC2.Menu {
             "duration": 5,
             "loop": "repeat"
         })
+    }
+
+    SceneTimelinePanel {
+        id: editing
+
+        parent: QQC2.Overlay.overlay
+        page: menu.timeline.page
     }
 
     Kirigami.PromptDialog {
