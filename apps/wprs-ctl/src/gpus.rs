@@ -57,6 +57,9 @@ pub async fn notice(client: &Client, key: &str) -> Result<()> {
     }
     if let Some(namespace) = layer.namespace.as_deref().filter(|_| key == LayerNamespace::KEY) {
         println!("in use: {} (from {})", clean(namespace), clean(&layer.from));
+        if let Some(ignored) = &layer.ignored {
+            println!("warning: {}", clean(ignored));
+        }
     }
     Ok(())
 }

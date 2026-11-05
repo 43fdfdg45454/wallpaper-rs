@@ -1813,11 +1813,15 @@ msgstr "Aplicar"
 msgid ""
 "The name the wallpaper surfaces give the compositor. Change it if the "
 "overview of your compositor shows the wallpaper black: some only show it "
-"there under a name they know. Empty chooses automatically."
+"there under a name they know. Empty chooses automatically. It takes effect "
+"the next time the daemon starts, and only when the wallpaper is shown with "
+"layer-shell surfaces."
 msgstr ""
 "El nombre que las superficies del fondo dan al compositor. Cámbialo si la "
 "vista general de tu compositor muestra el fondo en negro: algunos solo lo "
-"muestran ahí con un nombre que conocen. Vacío elige solo."
+"muestran ahí con un nombre que conocen. Vacío elige solo. Vale desde el "
+"próximo arranque del daemon y solo cuando el fondo se muestra con "
+"superficies layer-shell."
 
 #: apps/wprs-app/qml/LayerNamespaceField.qml
 msgid "In use: %1, from %2."
@@ -1826,6 +1830,14 @@ msgstr "En uso: %1, según %2."
 #: apps/wprs-app/qml/LayerNamespaceField.qml
 msgid "The new name takes effect the next time the daemon starts."
 msgstr "El nuevo nombre vale desde el próximo arranque del daemon."
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid ""
+"A name given when the daemon started was refused, so the next source was "
+"used: %1"
+msgstr ""
+"Se rechazó un nombre dado al arrancar el daemon y se usó la fuente "
+"siguiente: %1"
 
 #: apps/wprs-app/qml/LeftOut.qml
 msgid "it is too slow for this graphics card"

@@ -234,12 +234,21 @@ otro nombre. Manda, en este orden, `wprsd --layer-namespace NOMBRE`, la variable
 `WPRS_LAYER_NAMESPACE`, la clave `surfaces.layer_namespace` de `config.toml` (`wprs-ctl config
 surfaces.layer_namespace NOMBRE`, o *Ajustes* → *Superficies del escritorio* en la app) y una
 elección automática para los escritorios conocidos: con `KineticWE` en `XDG_CURRENT_DESKTOP` usa
-`noctalia-wallpaper`. `auto` o un valor vacío dejan pasar al siguiente. El nombre tiene de 1 a 64
-letras ASCII, cifras, `-`, `_` o `.`; la opción y la clave rechazan otro, y una variable mal escrita
-se ignora con un aviso en el registro. Vale desde el siguiente arranque del daemon: `wprs-ctl state`
-muestra en `layer_shell` el nombre en uso, de dónde salió y si un cambio espera a ese arranque, y
-`wprs-ctl config surfaces.layer_namespace NOMBRE` y la app lo avisan. No se sincroniza ni entra en
-los perfiles, porque depende del escritorio de cada equipo.
+`noctalia-wallpaper`. `auto` deja pasar al siguiente, y en la clave también un valor vacío. El
+nombre tiene de 1 a 64 letras ASCII, cifras, `-`, `_` o `.`; la opción y la clave rechazan otro o
+uno vacío, y una variable vacía o mal escrita se ignora con un aviso en el registro y en
+`ignored` del estado. Vale desde el siguiente arranque del daemon y solo con superficies
+`layer-shell`: `wprs-ctl state` muestra en `layer_shell` el nombre en uso, de dónde salió, si un
+cambio espera a ese arranque y qué valor se ignoró, y `wprs-ctl config surfaces.layer_namespace
+NOMBRE` y la app lo avisan. No se sincroniza ni entra en los perfiles, porque depende del
+escritorio de cada equipo.
+
+El daemon arranca como servicio de usuario de systemd, que no ve las variables ni las opciones de
+tu terminal. Lo más simple es la clave o el ajuste de la app; para la variable o la opción, usa
+`systemctl --user edit wprsd` y añade `Environment=WPRS_LAYER_NAMESPACE=NOMBRE` en `[Service]`, o
+un `ExecStart=` propio con `--layer-namespace NOMBRE`, y reinicia el servicio. La elección
+automática lee `XDG_CURRENT_DESKTOP` del entorno que la sesión pasa a systemd; si no llega, usa la
+clave.
 
 Los vídeos se pausan cuando una ventana tapa la pantalla: el compositor deja de pedir fotogramas
 al fondo, una ventana activa a pantalla completa o maximizada lo confirma y, en Hyprland, también

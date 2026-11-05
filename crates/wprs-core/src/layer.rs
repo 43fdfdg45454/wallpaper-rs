@@ -47,13 +47,20 @@ impl LayerNamespace {
         }
         let allowed = |c: char| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.');
         if text.len() > Self::MAX || !text.chars().all(allowed) {
-            return Err(format!(
-                "expected {} or a name of 1 to {} letters, digits, '-', '_' or '.'",
-                Self::AUTO,
-                Self::MAX
-            ));
+            return Err(Self::expected());
         }
         Ok(Some(LayerNamespace(text.into())))
+    }
+
+    pub fn given(text: &str) -> Result<Option<LayerNamespace>, String> {
+        if text.trim().is_empty() {
+            return Err(format!("it is empty; {}", Self::expected()));
+        }
+        Self::parse(text)
+    }
+
+    fn expected() -> String {
+        format!("expected {} or a name of 1 to {} letters, digits, '-', '_' or '.'", Self::AUTO, Self::MAX)
     }
 
     pub fn as_str(&self) -> &str {
@@ -72,7 +79,7 @@ impl LayerNamespace {
         desktop: &str,
     ) -> Chosen {
         let mut ignored = None;
-        let mut given = |text: Option<&str>, from: Source| match LayerNamespace::parse(text?) {
+        let mut given = |text: Option<&str>, from: Source| match LayerNamespace::given(text?) {
             Ok(found) => found.map(|n| (n.0, from)),
             Err(e) => {
                 ignored = Some(format!("the {} value is ignored: {e}", from.as_str()));

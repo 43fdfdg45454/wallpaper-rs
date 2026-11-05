@@ -57,7 +57,7 @@ ColumnLayout {
     QQC2.Label {
         Layout.maximumWidth: Kirigami.Units.gridUnit * 30
         wrapMode: Text.Wrap
-        text: App.tr("The name the wallpaper surfaces give the compositor. Change it if the overview of your compositor shows the wallpaper black: some only show it there under a name they know. Empty chooses automatically.")
+        text: App.tr("The name the wallpaper surfaces give the compositor. Change it if the overview of your compositor shows the wallpaper black: some only show it there under a name they know. Empty chooses automatically. It takes effect the next time the daemon starts, and only when the wallpaper is shown with layer-shell surfaces.")
     }
 
     QQC2.Label {
@@ -72,6 +72,14 @@ ColumnLayout {
         Layout.maximumWidth: Kirigami.Units.gridUnit * 30
         wrapMode: Text.Wrap
         text: App.tr("The new name takes effect the next time the daemon starts.")
+        color: Kirigami.Theme.neutralTextColor
+    }
+
+    QQC2.Label {
+        visible: !!field.shell.ignored
+        Layout.maximumWidth: Kirigami.Units.gridUnit * 30
+        wrapMode: Text.Wrap
+        text: App.tr("A name given when the daemon started was refused, so the next source was used: %1", field.shell.ignored ?? "")
         color: Kirigami.Theme.neutralTextColor
     }
 }

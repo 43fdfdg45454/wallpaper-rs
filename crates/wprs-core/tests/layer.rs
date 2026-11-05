@@ -1,4 +1,5 @@
 use wprs_core::layer::Source;
+use wprs_core::model::LayerShellState;
 use wprs_core::{Config, LayerNamespace};
 
 const KEY: &str = LayerNamespace::KEY;
@@ -58,8 +59,33 @@ fn the_option_wins_over_the_environment_the_file_and_the_desktop() {
     assert_eq!((ignored.name.as_str(), ignored.from), ("from-file", Source::Config));
     assert!(ignored.ignored.is_some_and(|e| e.contains("environment")));
     assert_eq!(LayerNamespace::choose(None, None, None, "").ignored, None);
+    for blank in ["", "  "] {
+        let set_but_blank = LayerNamespace::choose(None, Some(blank), Some(&file), "KineticWE");
+        assert_eq!(
+            (set_but_blank.name.as_str(), set_but_blank.from),
+            ("from-file", Source::Config),
+            "{blank:?}"
+        );
+        assert!(
+            set_but_blank.ignored.is_some_and(|e| e.contains("environment") && e.contains("empty")),
+            "{blank:?}"
+        );
+        assert!(LayerNamespace::given(blank).unwrap_err().contains("empty"));
+    }
+    assert_eq!(LayerNamespace::given(" Auto ").unwrap(), None);
+    assert_eq!(LayerNamespace::given("desk").unwrap(), Some(named("desk")));
     let words = [Source::Option, Source::Environment, Source::Config, Source::Automatic, Source::Default];
     assert_eq!(words.map(Source::as_str), ["option", "environment", "config", "automatic", "default"]);
+}
+
+#[test]
+fn the_state_reads_a_daemon_that_does_not_report_ignored_values() {
+    let old: LayerShellState =
+        serde_json::from_str(r#"{"namespace": "wallpaper", "from": "default", "restart": false}"#).unwrap();
+    assert_eq!(old.ignored, None);
+    let new = LayerShellState { ignored: Some("the environment value is ignored".into()), ..old };
+    let back: LayerShellState = serde_json::from_str(&serde_json::to_string(&new).unwrap()).unwrap();
+    assert_eq!(back, new);
 }
 
 #[test]

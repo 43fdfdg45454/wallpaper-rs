@@ -16,7 +16,7 @@ static STARTED: OnceLock<Started> = OnceLock::new();
 static SHOWN: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn valid(text: &str) -> Result<String, String> {
-    LayerNamespace::parse(text).map(|_| text.trim().to_owned())
+    LayerNamespace::given(text).map(|_| text.trim().to_owned())
 }
 
 pub(crate) fn choose(option: Option<&str>, config: &Path) -> String {
@@ -49,6 +49,7 @@ pub(crate) fn state(config: &Config) -> LayerShellState {
         namespace: Some(s.chosen.name.clone()),
         from: s.chosen.from.as_str().into(),
         restart: now.name != s.chosen.name,
+        ignored: s.chosen.ignored.clone(),
     }
 }
 
@@ -61,5 +62,8 @@ mod tests {
         assert_eq!(valid(" desktop ").unwrap(), "desktop");
         assert_eq!(valid("auto").unwrap(), "auto");
         assert!(valid("a b").unwrap_err().contains("auto"));
+        for blank in ["", "   "] {
+            assert!(valid(blank).unwrap_err().contains("empty"), "{blank:?}");
+        }
     }
 }

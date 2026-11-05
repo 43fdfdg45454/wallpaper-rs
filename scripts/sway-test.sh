@@ -7,8 +7,7 @@ WORK=$(mktemp -d /tmp/wprs-sway.XXXXXX)
 export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config XDG_DATA_HOME=$WORK/data XDG_CACHE_HOME=$WORK/cache XDG_STATE_HOME=$WORK/state
 export WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_HEADLESS_OUTPUTS=2 WLR_LIBINPUT_NO_DEVICES=1
 unset WAYLAND_DISPLAY DISPLAY SWAYSOCK HYPRLAND_INSTANCE_SIGNATURE XDG_CURRENT_DESKTOP WPRS_LAYER_NAMESPACE
-mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME/wallpaper-rs"
-printf '[surfaces]\nlayer_namespace = "wprs-check"\n' >"$XDG_CONFIG_HOME/wallpaper-rs/config.toml"
+mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME"
 chmod 700 "$XDG_RUNTIME_DIR"
 
 pids=()

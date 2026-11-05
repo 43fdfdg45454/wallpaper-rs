@@ -138,12 +138,21 @@ and not `auto` chooses it: `wprsd --layer-namespace NAME`, the environment varia
 `WPRS_LAYER_NAMESPACE`, `surfaces.layer_namespace` of the configuration file, then a short table of
 known desktops matched against the entries of `XDG_CURRENT_DESKTOP` without regard to case
 (`KineticWE` gives `noctalia-wallpaper`), and otherwise `wallpaper`. The option refuses an invalid
-name before the daemon starts; an invalid variable is ignored with a warning in the log. The name is
-chosen once, when the daemon connects to the compositor. `GetState().layer_shell` holds `namespace`
-(the name in use, `null` while the daemon shows no layer surfaces), `from` (`"option"`,
-`"environment"`, `"config"`, `"automatic"` or `"default"`, empty with no layer surfaces) and
+or empty name before the daemon starts; a variable that is empty or invalid is ignored with a
+warning in the log and in `ignored`. The name is chosen once, when the daemon connects to the
+compositor, and only matters with layer surfaces. `GetState().layer_shell` holds `namespace` (the
+name in use, `null` while the daemon shows no layer surfaces), `from` (`"option"`,
+`"environment"`, `"config"`, `"automatic"` or `"default"`, empty with no layer surfaces),
 `restart`, true while the configuration now chooses another name, which takes effect the next time
-the daemon starts; `wprs-ctl config surfaces.layer_namespace` says so after a change.
+the daemon starts, and `ignored`, the reason a value given at start was refused, or `null`; an older
+daemon leaves `ignored` out. `wprs-ctl config surfaces.layer_namespace` says all this after a
+change.
+
+The systemd user service starts `wprsd` without the environment or the options of a terminal: the
+configuration key is the simple way there, and `systemctl --user edit wprsd` takes
+`Environment=WPRS_LAYER_NAMESPACE=NAME` under `[Service]` or an `ExecStart=` override with
+`--layer-namespace NAME`. The automatic choice reads `XDG_CURRENT_DESKTOP` from the user's systemd
+environment (`systemctl --user show-environment`), which the session usually imports.
 
 An output that appears, changes or disappears is applied once it has stayed the same for 0.5 s: an
 output that the compositor reports twice, removes and adds back, or announces for a moment with a
@@ -2338,7 +2347,7 @@ struct State {
     adapters: Vec<GpuAdapter>, gpu_warning: Option<String>, gpu_restart: bool,
     qualities: BTreeMap<String, String>, hdrs: BTreeMap<String, String>, layer_shell: LayerShellState,
 }
-struct LayerShellState { namespace: Option<String>, from: String, restart: bool }
+struct LayerShellState { namespace: Option<String>, from: String, restart: bool, ignored: Option<String> }
 struct GpuAdapter { name: String, kind: String, backend: String, used: bool }
 struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
