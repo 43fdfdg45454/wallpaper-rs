@@ -40,6 +40,11 @@ ColumnLayout {
         target: tools.page.editor
     }
 
+    SceneSwarmSystems {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
     Kirigami.Heading {
         level: 4
         text: App.tr("Emitters")
@@ -62,6 +67,11 @@ ColumnLayout {
         tools: tools
     }
 
+    SceneSwarmStart {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
     SceneSwarmFields {
         Layout.fillWidth: true
         tools: tools
@@ -79,6 +89,11 @@ ColumnLayout {
     }
 
     SceneSwarmSteer {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
+    SceneSwarmWindows {
         Layout.fillWidth: true
         tools: tools
     }

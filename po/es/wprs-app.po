@@ -988,7 +988,7 @@ msgstr "Nivel cercano"
 msgid "Far level"
 msgstr "Nivel lejano"
 
-#: apps/wprs-app/qml/EditDepth.qml
+#: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/SceneSwarmSpread.qml
 msgid "Curve"
 msgstr "Curva"
 
@@ -1185,7 +1185,8 @@ msgid "Contrast"
 msgstr "Contraste"
 
 #: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/EditOps.qml
-#: apps/wprs-app/qml/OutputFilter.qml apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/OutputFilter.qml apps/wprs-app/qml/SceneSwarmHues.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Saturation"
 msgstr "Saturación"
 
@@ -2164,7 +2165,8 @@ msgstr "Noche"
 msgid "Warmth"
 msgstr "Calidez"
 
-#: apps/wprs-app/qml/OutputFilter.qml apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/OutputFilter.qml apps/wprs-app/qml/SceneSwarmHues.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Hue"
 msgstr "Tono"
 
@@ -2870,7 +2872,7 @@ msgstr "Peso"
 
 #: apps/wprs-app/qml/SceneAnimLayers.qml apps/wprs-app/qml/SceneBind.qml
 #: apps/wprs-app/qml/SceneMaterialShade.qml
-#: apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/SceneSwarmFields.qml apps/wprs-app/qml/SceneSwarmStart.qml
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Speed"
 msgstr "Velocidad"
@@ -2961,6 +2963,7 @@ msgid "Drag to move %1 along what it follows"
 msgstr "Arrastra para mover %1 a lo largo de lo que sigue"
 
 #: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/SceneInput.qml
+#: apps/wprs-app/qml/SceneSwarmSpread.qml
 msgid "Follows %1"
 msgstr "Sigue %1"
 
@@ -3454,6 +3457,16 @@ msgstr "Vídeos"
 #: apps/wprs-app/qml/SceneField.qml apps/wprs-app/qml/SceneLayerRow.qml
 msgid "Hide"
 msgstr "Ocultar"
+
+#: apps/wprs-app/qml/SceneGradientBar.qml
+msgid "Remove the stop"
+msgstr "Quitar la parada"
+
+#: apps/wprs-app/qml/SceneGradientBar.qml
+msgid "Click the bar to add a stop, at most %1, and drag a stop to move it"
+msgstr ""
+"Pulsa la barra para añadir una parada, %1 como mucho, y arrastra una parada "
+"para moverla"
 
 #: apps/wprs-app/qml/SceneImportSheet.qml
 msgid "Import a sprite sheet or a data map"
@@ -4027,6 +4040,7 @@ msgid "Paint"
 msgstr "Pintar"
 
 #: apps/wprs-app/qml/SceneMask.qml apps/wprs-app/qml/SceneSwarmKin.qml
+#: apps/wprs-app/qml/SceneSwarmStart.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Alpha"
@@ -4448,7 +4462,7 @@ msgstr "Refleja"
 msgid "Look at it in the authoring view"
 msgstr "Mirarlo en la vista de edición"
 
-#: apps/wprs-app/qml/SceneModelTurn.qml
+#: apps/wprs-app/qml/SceneModelTurn.qml apps/wprs-app/qml/SceneSwarmStart.qml
 msgid "Turn"
 msgstr "Girar"
 
@@ -4462,6 +4476,7 @@ msgid "The rotation follows a binding; change it in the inspector"
 msgstr "El giro sigue un enlace; cámbialo en el inspector"
 
 #: apps/wprs-app/qml/SceneModelTurn.qml apps/wprs-app/qml/SceneSwarmKin.qml
+#: apps/wprs-app/qml/SceneSwarmStart.qml
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Size"
 msgstr "Tamaño"
@@ -5612,7 +5627,7 @@ msgstr "Direcciones de salida y desfases"
 msgid "Turn starting directions with a noise"
 msgstr "Girar las direcciones de salida con un ruido"
 
-#: apps/wprs-app/qml/SceneSwarmFields.qml
+#: apps/wprs-app/qml/SceneSwarmFields.qml apps/wprs-app/qml/SceneSwarmStart.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Direction"
@@ -5696,6 +5711,15 @@ msgstr "Distancia focal %1 px"
 #: apps/wprs-app/qml/SceneSwarmFocal.qml
 msgid "Drag to change how strongly depth shrinks particles"
 msgstr "Arrastra para cambiar cuánto encoge la profundidad a las partículas"
+
+#: apps/wprs-app/qml/SceneSwarmHues.qml
+#: apps/wprs-app/qml/facade/SceneLabels.qml
+msgid "Value"
+msgstr "Valor"
+
+#: apps/wprs-app/qml/SceneSwarmHues.qml
+msgid "Pick the hue among steps"
+msgstr "Elegir el tono entre pasos"
 
 #: apps/wprs-app/qml/SceneSwarmKeep.qml
 msgid "Keep a distance from"
@@ -5803,6 +5827,26 @@ msgstr "Con un ángulo fijo"
 msgid "Turn %1°"
 msgstr "Giro de %1°"
 
+#: apps/wprs-app/qml/SceneSwarmPalette.qml
+msgid "Remove the color"
+msgstr "Quitar el color"
+
+#: apps/wprs-app/qml/SceneSwarmPalette.qml
+msgid "Add a color"
+msgstr "Añadir un color"
+
+#: apps/wprs-app/qml/SceneSwarmPalette.qml
+msgid "Hue noise"
+msgstr "Ruido del tono"
+
+#: apps/wprs-app/qml/SceneSwarmPalette.qml
+msgid "Saturation noise"
+msgstr "Ruido de la saturación"
+
+#: apps/wprs-app/qml/SceneSwarmPalette.qml
+msgid "Value noise"
+msgstr "Ruido del brillo"
+
 #: apps/wprs-app/qml/SceneSwarmPoints.qml
 msgid "Control points"
 msgstr "Puntos de control"
@@ -5884,6 +5928,39 @@ msgid ""
 msgstr ""
 "La vista previa marca la caja de esta capa; el motor emite desde sus píxeles "
 "opacos."
+
+#: apps/wprs-app/qml/SceneSwarmSpread.qml
+msgid "setting"
+msgstr "ajuste"
+
+#: apps/wprs-app/qml/SceneSwarmSpread.qml
+msgid ""
+"Below 1 picks values near the top end more often, above 1 near the bottom end"
+msgstr ""
+"Por debajo de 1 elige más a menudo valores cerca del extremo alto, por "
+"encima de 1 cerca del bajo"
+
+#: apps/wprs-app/qml/SceneSwarmSpread.qml
+msgid "Low end set here"
+msgstr "Extremo bajo fijado aquí"
+
+#: apps/wprs-app/qml/SceneSwarmSpread.qml
+msgid "High end set here"
+msgstr "Extremo alto fijado aquí"
+
+#: apps/wprs-app/qml/SceneSwarmStart.qml
+msgid "Life in seconds"
+msgstr "Vida en segundos"
+
+#: apps/wprs-app/qml/SceneSwarmStart.qml
+#: apps/wprs-app/qml/facade/SceneEffects.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Spin"
+msgstr "Velocidad de giro"
+
+#: apps/wprs-app/qml/SceneSwarmStart.qml
+msgid "Starting ranges"
+msgstr "Rangos iniciales"
 
 #: apps/wprs-app/qml/SceneSwarmSteer.qml
 msgid "Distances and flocks"
@@ -6007,6 +6084,42 @@ msgstr "Arrastra para abrir o cerrar cuánto las gira el ruido"
 msgid "Drag to change how far births move"
 msgstr "Arrastra para cambiar cuánto se mueven los nacimientos"
 
+#: apps/wprs-app/qml/SceneSwarmSystems.qml
+msgid "Particle systems of the scene"
+msgstr "Sistemas de partículas de la escena"
+
+#: apps/wprs-app/qml/SceneSwarmSystems.qml
+msgid "Edit this system"
+msgstr "Editar este sistema"
+
+#: apps/wprs-app/qml/SceneSwarmSystems.qml
+msgid "Remove the system"
+msgstr "Quitar el sistema"
+
+#: apps/wprs-app/qml/SceneSwarmSystems.qml
+msgid "Add a system without a layer"
+msgstr "Añadir un sistema sin capa"
+
+#: apps/wprs-app/qml/SceneSwarmTint.qml
+msgid "Starting colors"
+msgstr "Colores iniciales"
+
+#: apps/wprs-app/qml/SceneSwarmTint.qml
+msgid "Between two colors"
+msgstr "Entre dos colores"
+
+#: apps/wprs-app/qml/SceneSwarmTint.qml
+msgid "Hues, saturation and value"
+msgstr "Tonos, saturación y brillo"
+
+#: apps/wprs-app/qml/SceneSwarmTint.qml
+msgid "From a palette"
+msgstr "De una paleta"
+
+#: apps/wprs-app/qml/SceneSwarmTint.qml
+msgid "Along a gradient"
+msgstr "A lo largo de un degradado"
+
 #: apps/wprs-app/qml/SceneSwarmTools.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Emitters"
@@ -6015,6 +6128,22 @@ msgstr "Emisores"
 #: apps/wprs-app/qml/SceneSwarmWalls.qml
 msgid "Drag to move the collider"
 msgstr "Arrastra para mover el colisionador"
+
+#: apps/wprs-app/qml/SceneSwarmWindows.qml
+msgid "When in the life each force acts"
+msgstr "En qué parte de la vida actúa cada fuerza"
+
+#: apps/wprs-app/qml/SceneSwarmWindows.qml
+msgid "%1: only in part of the life"
+msgstr "%1: solo en parte de la vida"
+
+#: apps/wprs-app/qml/SceneSwarmWindows.qml
+msgid ""
+"From left to right the life of a particle; the force fades in, acts in full "
+"and fades out where the shape rises, stays and falls"
+msgstr ""
+"De izquierda a derecha, la vida de una partícula; la fuerza aparece, actúa "
+"por completo y se desvanece donde la forma sube, se mantiene y baja"
 
 #: apps/wprs-app/qml/SceneTexts.qml
 msgid "Remove this language"
@@ -8080,11 +8209,6 @@ msgid "Shine"
 msgstr "Destello"
 
 #: apps/wprs-app/qml/facade/SceneEffects.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Spin"
-msgstr "Velocidad de giro"
-
-#: apps/wprs-app/qml/facade/SceneEffects.qml
 msgid "Tilt-shift"
 msgstr "Efecto miniatura"
 
@@ -8225,10 +8349,6 @@ msgstr "Escala de la textura"
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Vertical alignment"
 msgstr "Alineación vertical"
-
-#: apps/wprs-app/qml/facade/SceneLabels.qml
-msgid "Value"
-msgstr "Valor"
 
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Motion fading"

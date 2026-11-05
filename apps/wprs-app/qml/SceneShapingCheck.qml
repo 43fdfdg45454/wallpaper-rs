@@ -66,5 +66,8 @@ QtObject {
             throw new Error("shaping: an authoring action did not take exactly one undo step");
         for (let k = 0; k < 6; k++)
             page.run("undo");
+        Qt.createComponent("SceneSeedingCheck.qml").createObject(page, {
+            "page": page
+        }).exercise();
     }
 }

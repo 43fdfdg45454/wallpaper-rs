@@ -2144,6 +2144,19 @@ puede dejarlos fuera. Desde la terminal hace lo mismo `wprs-ctl scene particles 
 `shape`, `control-point`, `remap add|set|remove`, `cutout`, `orient`, `perspective`,
 `emit-from-layer`, `inherit` y `shader`, y `handles` imprime lo que la vista previa dibuja.
 
+El inspector de un sistema empieza con la lista de los sistemas de la escena, donde cada uno se
+renombra (las capas y los sistemas que lo usan lo siguen), se abre o se quita, y se añade uno sin
+capa. Los rangos iniciales (vida, velocidad, dirección, tamaño, giro, rotación y alfa) tienen un
+deslizador de dos puntas, una curva que reparte los valores hacia un extremo con su dibujo y un
+selector por extremo que lo enlaza a un ajuste del paquete. Los colores iniciales salen de dos
+colores, de tonos con su saturación y su brillo (con pasos), de una paleta con su ruido o de una
+barra de degradado donde un clic añade una parada y arrastrarla la mueve. Cada fuerza puede actuar
+solo en parte de la vida de la partícula, con una forma de cuatro asas que dice dónde aparece, actúa
+y se desvanece. Desde la terminal, `wprs-ctl scene particles CARPETA SISTEMA` suma `emitter N` con
+`--burst`, `--every`, `--on`, `--periodic`, `--duration`, `--delay`, `--follow`, `--audio-gate` e
+`--inherit`, `window N A,B,C,D|none`, `rename NUEVO`, `start --hsv|--palette|--gradient`,
+`render --cycles --order`, `settings --lock` y `force turbulence --time-scale --mask`.
+
 La vista previa dibuja también los colisionadores del sistema con el color de su respuesta (rojo
 donde mueren las partículas, verde donde se pegan) y asas para cada tipo: el borde del lienzo, el
 plano con su punto y el lado en el que se quedan, el círculo con su centro y su radio, la caja con
