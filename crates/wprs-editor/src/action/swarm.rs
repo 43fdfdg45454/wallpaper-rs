@@ -118,4 +118,6 @@ pub enum ParticleEdit {
     Light(super::SwarmLight),
     #[serde(untagged)]
     Tend(TendEdit),
+    #[serde(untagged)]
+    Sow(super::SowEdit),
 }

@@ -10,6 +10,7 @@ mod names;
 mod rigging;
 mod shaping;
 mod solid;
+mod sow;
 mod swarm;
 mod tend;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
@@ -22,6 +23,7 @@ pub use rigging::{
 };
 pub use shaping::EffectsEdit;
 pub use solid::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
+pub use sow::SowEdit;
 pub use swarm::{ParticleEdit, Response, Strand, SwarmLight, TendEdit};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

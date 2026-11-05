@@ -2156,7 +2156,13 @@ empezar solo sus partículas, sin rehacer la escena. En la terminal, `wprs-ctl s
 response`, `keep distance|between|remove`, `boids`, `operator remap add|set|remove`, `rope`,
 `trail`, `texture`, `turbulent`, `offset`, `pace` y `budget` (`rope` avisa también de los emisores
 que amontonan la cuerda), y `wprs-ctl scene preview --quality Q --restart` hace lo mismo con la
-vista previa.
+vista previa. El resto del sistema también tiene subcomandos: `create` (un sistema sin capa, copia
+de otro con `--from` o hijo de otro con `--parent` y `--on`, como *Nuevo sistema hijo* del panel de
+hijos), `delete`, `settings` (capacidad, semilla, precalentado, espacio y ritmo de los emisores),
+`start` (rangos iniciales de vida, velocidad, ángulo, tamaño, giro, color, alfa, velocidad en X e Y
+y velocidad radial), `force gravity|drag|turbulence|oscillate|attractor|remove`, `child
+add|set|remove`, `size-over-life`, `color-over-life` y `render` (estiramiento, cuadros del atlas al
+azar, por tiempo o por vida, ritmo del atlas y brillo por encima del blanco).
 
 El menú *Añadir capa* ofrece *Luz* con sus cuatro tipos, cada uno con valores de partida
 razonables. Las luces se ven sobre la vista previa como marcadores que se arrastran y la elegida

@@ -5469,6 +5469,10 @@ msgstr "Arrastra para mover el punto con el que se mantiene la distancia"
 msgid "Child %1 takes from its parent:"
 msgstr "El hijo %1 toma de su padre:"
 
+#: apps/wprs-app/qml/SceneSwarmKin.qml
+msgid "Remove the child"
+msgstr "Quitar el hijo"
+
 #: apps/wprs-app/qml/SceneSwarmKin.qml apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Velocity"
 msgstr "Velocidad"
@@ -5476,6 +5480,26 @@ msgstr "Velocidad"
 #: apps/wprs-app/qml/SceneSwarmKin.qml
 msgid "Every step while it follows"
 msgstr "En cada paso mientras lo sigue"
+
+#: apps/wprs-app/qml/SceneSwarmKin.qml
+msgid "All the time"
+msgstr "Todo el tiempo"
+
+#: apps/wprs-app/qml/SceneSwarmKin.qml
+msgid "When a particle starts"
+msgstr "Al nacer una partícula"
+
+#: apps/wprs-app/qml/SceneSwarmKin.qml
+msgid "When a particle ends"
+msgstr "Al morir una partícula"
+
+#: apps/wprs-app/qml/SceneSwarmKin.qml
+msgid "Following each particle"
+msgstr "Siguiendo a cada partícula"
+
+#: apps/wprs-app/qml/SceneSwarmKin.qml
+msgid "New child system"
+msgstr "Nuevo sistema hijo"
 
 #: apps/wprs-app/qml/SceneSwarmKin.qml
 msgid "Particle shader"

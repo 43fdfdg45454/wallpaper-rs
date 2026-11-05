@@ -68,6 +68,7 @@ fn edit(system: String, what: Particle) -> P {
         Particle::Turbulent(t) => crate::fielding::turbulent(system, t),
         Particle::Offset(o) => crate::fielding::offset(system, o),
         Particle::Pace(p) => crate::fielding::pace(system, p),
+        Particle::Sowing(s) => crate::sowed::edit(system, s),
         Particle::Texture { texture, layer } => crate::tended::texture(system, texture, layered(layer)),
         Particle::Handles { .. } | Particle::Budget { .. } | Particle::Rope(_) => unreachable!(),
         Particle::Lit(_) | Particle::Refract(_) => unreachable!(),

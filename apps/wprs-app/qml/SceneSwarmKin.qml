@@ -12,6 +12,16 @@ ColumnLayout {
     readonly property var shaders: tools.info?.shaders ?? ({})
     readonly property var offered: [""].concat(shaders.offered ?? [])
     readonly property var takes: ["color", "size", "alpha", "velocity"]
+    readonly property var moments: ["static", "spawn", "death", "follow"]
+
+    function fresh() {
+        const taken = Object.keys(JSON.parse(tools.page.editor.value("/scene/particles") || "{}"));
+        const base = tools.system.slice(0, 24) + "_child";
+        let n = 1;
+        while (taken.includes(base + "_" + n))
+            n++;
+        return base + "_" + n;
+    }
 
     Repeater {
         model: kin.kids
@@ -21,8 +31,23 @@ ColumnLayout {
 
             required property var modelData
 
-            QQC2.Label {
-                text: App.tr("Child %1 takes from its parent:", child.modelData.system)
+            RowLayout {
+                Layout.fillWidth: true
+
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    text: App.tr("Child %1 takes from its parent:", child.modelData.system)
+                }
+
+                QQC2.ToolButton {
+                    icon.name: "edit-delete"
+                    text: App.tr("Remove the child")
+                    display: QQC2.AbstractButton.IconOnly
+                    onClicked: kin.tools.edit("child", {
+                        "index": child.modelData.index,
+                        "remove": true
+                    })
+                }
             }
 
             Flow {
@@ -60,6 +85,29 @@ ColumnLayout {
                     "follow": checked
                 })
             }
+        }
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+
+        QQC2.ComboBox {
+            id: moment
+
+            Layout.fillWidth: true
+            model: [App.tr("All the time"), App.tr("When a particle starts"), App.tr("When a particle ends"), App.tr("Following each particle")]
+        }
+
+        QQC2.Button {
+            icon.name: "list-add"
+            text: App.tr("New child system")
+            onClicked: kin.tools.page.run("particles", {
+                "create": {
+                    "system": kin.fresh(),
+                    "parent": kin.tools.system,
+                    "on": kin.moments[moment.currentIndex]
+                }
+            })
         }
     }
 

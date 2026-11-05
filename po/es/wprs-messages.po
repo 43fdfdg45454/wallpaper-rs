@@ -216,7 +216,7 @@ msgstr ""
 
 #: crates/wprs-editor/src/actions.rs crates/wprs-editor/src/bring.rs
 #: crates/wprs-editor/src/props.rs crates/wprs-editor/src/references.rs
-#: crates/wprs-editor/src/rig.rs
+#: crates/wprs-editor/src/rig.rs crates/wprs-editor/src/swarms/sow.rs
 msgid "the id %1 is in use"
 msgstr "el id %1 ya está en uso"
 
@@ -1371,7 +1371,7 @@ msgstr "Segundos"
 msgid "%1 is not an assets package"
 msgstr "%1 no es un paquete de recursos"
 
-#: crates/wprs-editor/src/swarms/fields.rs
+#: crates/wprs-editor/src/swarms/fields.rs crates/wprs-editor/src/swarms/sow.rs
 #: crates/wprs-editor/src/swarms/spots.rs
 msgid "the system has no emitter %1"
 msgstr "el sistema no tiene el emisor %1"
@@ -1401,9 +1401,17 @@ msgstr "la capa «%1» no dibuja partículas de este sistema"
 msgid "%1 does not fit: %2"
 msgstr "%1 no encaja: %2"
 
-#: crates/wprs-editor/src/swarms/mod.rs
+#: crates/wprs-editor/src/swarms/mod.rs crates/wprs-editor/src/swarms/sow.rs
 msgid "the system has no child %1"
 msgstr "el sistema no tiene el hijo %1"
+
+#: crates/wprs-editor/src/swarms/sow.rs
+msgid "%1 is not a starting range: %2"
+msgstr "%1 no es un rango inicial: %2"
+
+#: crates/wprs-editor/src/swarms/sow.rs
+msgid "only alpha, velocity and radial can be cleared, not %1"
+msgstr "solo se pueden quitar alpha, velocity y radial, no %1"
 
 #: crates/wprs-editor/src/swarms/spots.rs
 msgid "control points go from p0 to p7"

@@ -123,6 +123,8 @@ pub enum Particle {
         #[arg(long, help = "A particles layer whose own render changes")]
         layer: Option<String>,
     },
+    #[command(flatten)]
+    Sowing(crate::sowing::Sowing),
     #[command(
         about = "Print the particle budget as JSON: particles alive at a time on the processor, slots by device tier and path, and what each quality level keeps"
     )]
