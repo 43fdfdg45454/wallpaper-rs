@@ -8,9 +8,12 @@ use std::time::{Duration, Instant};
 use wprs_core::rgb::Rgb;
 use wprs_rgb::{Device, Strip};
 
+mod covered;
 mod worker;
 
-const EVERY: Duration = Duration::from_millis(33);
+pub(crate) use covered::{cover, follows, paused};
+
+pub(crate) const EVERY: Duration = Duration::from_millis(33);
 const KEPT: usize = 16;
 
 pub(crate) enum Ask {
@@ -19,6 +22,7 @@ pub(crate) enum Ask {
     Forget(String),
     Test(Option<u32>, Sender<Result<(), String>>),
     Connect(Sender<Result<(), String>>),
+    Covered,
 }
 
 #[derive(Default)]
@@ -30,6 +34,7 @@ pub(crate) struct Status {
     pub(crate) source: Option<String>,
     pub(crate) frames: u64,
     pub(crate) testing: bool,
+    pub(crate) held: bool,
 }
 
 struct Lights {
@@ -79,7 +84,7 @@ pub(crate) fn frame(source: &str, strip: Strip, send: bool) {
     }
     drop(strips);
     let mut sent = lock(&l.sent);
-    if send && enabled() && sent.is_none_or(|at| now.duration_since(at) >= EVERY) {
+    if send && enabled() && !paused(source) && sent.is_none_or(|at| now.duration_since(at) >= EVERY) {
         *sent = Some(now);
         l.asks.send(Ask::Frame(source.into(), strip)).ok();
     }
@@ -117,7 +122,8 @@ pub(crate) fn test(device: Option<u32>) -> Result<(), String> {
 pub(crate) fn status(rgb: &Rgb) -> Value {
     let Some(l) = LIGHTS.get() else {
         return json!({ "enabled": rgb.enabled, "server": rgb.server, "local": rgb.local(), "connected": false,
-            "error": null, "devices": [], "source": null, "frames": 0, "testing": false, "strips": [] });
+            "error": null, "devices": [], "source": null, "frames": 0, "testing": false, "strips": [],
+            "when_covered": rgb.when_covered, "held": false });
     };
     let s = lock(&l.status);
     let devices: Vec<Value> = s
@@ -137,5 +143,5 @@ pub(crate) fn status(rgb: &Rgb) -> Value {
         .collect();
     json!({ "enabled": s.rgb.enabled, "server": s.rgb.server, "local": s.rgb.local(), "connected": s.connected,
         "error": s.error, "devices": devices, "source": s.source, "frames": s.frames, "testing": s.testing,
-        "strips": lock(&l.strips).keys().collect::<Vec<_>>() })
+        "strips": lock(&l.strips).keys().collect::<Vec<_>>(), "when_covered": s.rgb.when_covered, "held": s.held })
 }

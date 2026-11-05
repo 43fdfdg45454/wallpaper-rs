@@ -74,6 +74,7 @@ fn options() -> Vec<Field> {
         flag("rgb.enabled"),
         flag("media.remote_covers"),
         option("rgb.server", FieldKind::Text),
+        values(option(wprs_core::rgb::Covered::KEY, FieldKind::Enum), &wprs_core::rgb::Covered::WORDS),
         values(option("render.gpu", FieldKind::Text), &wprs_core::GpuChoice::WORDS),
         values(option(LayerNamespace::KEY, FieldKind::Text), &[LayerNamespace::AUTO]),
     ]

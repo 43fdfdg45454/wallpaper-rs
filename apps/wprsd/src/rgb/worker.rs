@@ -3,7 +3,7 @@ use crate::compositor::lock;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use wprs_core::rgb::Rgb;
+use wprs_core::rgb::{Covered, Rgb};
 use wprs_rgb::{Client, Strip, colors, pattern};
 
 const WAIT: Duration = Duration::from_secs(2);
@@ -11,6 +11,7 @@ const RETRY: Duration = Duration::from_secs(10);
 const TEST: Duration = Duration::from_secs(3);
 const STEP: Duration = Duration::from_millis(33);
 const LISTEN: Duration = Duration::from_secs(1);
+const IDLE: Duration = Duration::from_secs(3600);
 
 struct Session {
     status: Arc<Mutex<Status>>,
@@ -31,12 +32,8 @@ pub(super) fn spawn(asks: Receiver<Ask>, status: Arc<Mutex<Status>>) {
 
 fn run(asks: Receiver<Ask>, mut s: Session) {
     loop {
-        let wait = match (&s.test, &s.client) {
-            (Some(_), _) => STEP,
-            (None, Some(_)) => LISTEN,
-            (None, None) => Duration::from_secs(3600),
-        };
-        match asks.recv_timeout(wait) {
+        lock(&s.status).held = s.held();
+        match asks.recv_timeout(s.wait()) {
             Ok(Ask::Settings(rgb)) => {
                 if rgb != s.rgb {
                     if !rgb.enabled {
@@ -47,6 +44,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                 }
             }
             Ok(Ask::Forget(source)) => s.forget(Some(&source)),
+            Ok(Ask::Covered) => {}
             Ok(Ask::Frame(source, strip)) => {
                 lock(&s.status).source = Some(source.clone());
                 s.last = Some((source, strip.clone()));
@@ -78,6 +76,19 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
 }
 
 impl Session {
+    fn held(&self) -> bool {
+        let covered = |(source, _): &(String, Strip)| super::covered::covered(source);
+        self.rgb.when_covered == Covered::Pause && self.last.as_ref().is_some_and(covered)
+    }
+
+    fn wait(&self) -> Duration {
+        match (&self.test, &self.client) {
+            (Some(_), _) => STEP,
+            (None, Some(_)) if !self.held() => LISTEN,
+            _ => IDLE,
+        }
+    }
+
     fn forget(&mut self, source: Option<&str>) {
         if self.last.as_ref().is_some_and(|(from, _)| source.is_none_or(|s| s == from)) {
             self.last = None;

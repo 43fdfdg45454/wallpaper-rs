@@ -2,16 +2,34 @@ use serde::{Deserialize, Serialize};
 
 pub const SERVER: &str = "127.0.0.1:6742";
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Covered {
+    #[default]
+    Pause,
+    Follow,
+}
+
+impl Covered {
+    pub const KEY: &str = "rgb.when_covered";
+    pub const WORDS: [&str; 2] = ["pause", "follow"];
+
+    pub fn as_str(self) -> &'static str {
+        Self::WORDS[self as usize]
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Rgb {
     pub enabled: bool,
     pub server: String,
+    pub when_covered: Covered,
 }
 
 impl Default for Rgb {
     fn default() -> Self {
-        Self { enabled: false, server: SERVER.into() }
+        Self { enabled: false, server: SERVER.into(), when_covered: Covered::Pause }
     }
 }
 

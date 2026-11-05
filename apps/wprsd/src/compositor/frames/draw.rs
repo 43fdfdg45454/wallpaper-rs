@@ -16,14 +16,18 @@ pub(super) fn draw(
     let moved = limits.map(|steps| (output.offset, steps));
     let refresh = output.refresh;
     super::super::light::light(output, renderer, power)?;
-    let lit = output.hdr.headroom();
+    let (lit, lights) = (output.hdr.headroom(), output.lights_only(name));
     output.shown.scene.iter_mut().for_each(|s| s.lit = lit);
+    let size = if lights { super::super::hidden::small(output.size) } else { output.size };
     if let Some(scene) = output.shown.scene.as_mut()
-        && scene.render(renderer, (output.size, refresh), power, players, output.active, now)?
+        && scene.render(renderer, (size, refresh), power, players, output.active || lights, now)?
     {
         super::super::feed::declare(name, Some(scene));
     }
     output.shown.scene.iter_mut().for_each(|s| s.send_rgb(name, renderer));
+    if lights {
+        return Ok(output.lit_only(now));
+    }
     let unchanged = output.unchanged(moved, exporter.starved(name));
     let progress = output.progress(now, output.shown.transition.map_or(transition, |d| d.as_secs_f32()));
     let opacity = if output.fade.is_some() { smoothstep(progress) } else { 1.0 };

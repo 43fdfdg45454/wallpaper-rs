@@ -6078,6 +6078,34 @@ msgid "Connect"
 msgstr "Conectar"
 
 #: apps/wprs-app/qml/SettingsRgb.qml
+msgid "While a window covers the wallpaper:"
+msgstr "Mientras una ventana tapa el fondo:"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "Keep following the wallpaper"
+msgstr "Seguir el fondo"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "Pause and leave the lights as they are"
+msgstr "Pausar y dejar las luces como están"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid ""
+"The lights keep changing with the scene, which keeps running without drawing "
+"the hidden wallpaper."
+msgstr ""
+"Las luces siguen cambiando con la escena, que sigue en marcha sin dibujar el "
+"fondo tapado."
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid ""
+"Nothing is sent and nothing runs for the lights until the wallpaper shows "
+"again."
+msgstr ""
+"No se manda nada ni se hace nada para las luces hasta que el fondo vuelve a "
+"verse."
+
+#: apps/wprs-app/qml/SettingsRgb.qml
 msgid ""
 "The colors of your wallpaper go over the network to %1. Anyone who can watch "
 "that network could see them; use an address on this computer to keep them "

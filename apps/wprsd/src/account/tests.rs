@@ -102,6 +102,7 @@ fn device_settings_stay_out_of_synced_settings_and_profiles() {
     let sections = settings(&options, &Replica::default(), &ids, &DEVICE_KEYS);
     let synced: BTreeSet<&str> = sections.values().flat_map(|view| view.keys().map(String::as_str)).collect();
     assert!(synced.contains("playback.max_fps") && synced.len() + DEVICE_KEYS.len() == options.len());
+    assert!(["rgb.enabled", "rgb.server", "rgb.when_covered"].iter().all(|key| synced.contains(key)));
     assert!(DEVICE_KEYS.iter().all(|key| options.contains_key(*key) && !synced.contains(key)));
     assert!(!sections.contains_key(&format!("settings/{}", ids.named("section", "models"))));
     let (volume, parallax, battery) = ("playback.volume", "playback.software_parallax", "pause.on_battery");

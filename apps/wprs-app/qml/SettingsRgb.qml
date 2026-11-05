@@ -12,6 +12,7 @@ ColumnLayout {
     readonly property var options: App.state.options ?? {}
     readonly property bool on: options["rgb.enabled"] === true
     readonly property string server: String(options["rgb.server"] ?? "127.0.0.1:6742")
+    readonly property string covered: String(options["rgb.when_covered"] ?? "pause")
 
     function load() {
         App.query("GetStatus", [], "Rgb1", reply => lights && (lights.status = reply ?? {}), error => lights && (lights.problem = error.message));
@@ -71,6 +72,29 @@ ColumnLayout {
             enabled: lights.on
             onClicked: lights.ask("Connect", [])
         }
+    }
+
+    QQC2.Label {
+        text: App.tr("While a window covers the wallpaper:")
+    }
+
+    QQC2.RadioButton {
+        text: App.tr("Keep following the wallpaper")
+        checked: lights.covered === "follow"
+        onToggled: if (checked) App.act("SetOption", ["rgb.when_covered", "follow"], "Daemon1", () => lights && lights.load())
+    }
+
+    QQC2.RadioButton {
+        text: App.tr("Pause and leave the lights as they are")
+        checked: lights.covered !== "follow"
+        onToggled: if (checked) App.act("SetOption", ["rgb.when_covered", "pause"], "Daemon1", () => lights && lights.load())
+    }
+
+    QQC2.Label {
+        Layout.maximumWidth: Kirigami.Units.gridUnit * 30
+        wrapMode: Text.Wrap
+        color: Kirigami.Theme.disabledTextColor
+        text: lights.covered === "follow" ? App.tr("The lights keep changing with the scene, which keeps running without drawing the hidden wallpaper.") : App.tr("Nothing is sent and nothing runs for the lights until the wallpaper shows again.")
     }
 
     Kirigami.InlineMessage {

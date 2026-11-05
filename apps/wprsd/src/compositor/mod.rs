@@ -1,6 +1,7 @@
 mod feed;
 mod frames;
 mod guard;
+mod hidden;
 mod iio;
 mod light;
 mod motion;
@@ -42,7 +43,7 @@ enum Command {
     Repaint(String),
     Region(String),
     Backdrop(String),
-    SetActive(String, bool, bool),
+    SetActive(String, bool, (bool, bool)),
     Settings(Settings),
     Calm(bool),
     Power(bool),
@@ -129,7 +130,7 @@ impl Compositor {
         self.send(Command::Attach(output.into(), window))
     }
 
-    pub fn set_active(&self, output: &str, active: bool, covered: bool) {
+    pub fn set_active(&self, output: &str, active: bool, covered: (bool, bool)) {
         self.send(Command::SetActive(output.into(), active, covered))
     }
 

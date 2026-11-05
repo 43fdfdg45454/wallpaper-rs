@@ -72,11 +72,11 @@ impl State {
     fn wanted(&self) -> Wanted {
         let mut wanted = Wanted::new();
         for (name, o) in &self.outputs {
-            let visible = (o.active, o.watched(self.exporter.is_streaming(name)));
+            let (visible, fps) = o.page_view(name, self.exporter.is_streaming(name), self.power);
             for spec in o.layers().filter_map(|l| l.content.page()) {
                 let entry =
                     wanted.entry(spec.pack.path.clone()).or_insert_with(|| (spec.clone(), Vec::new()));
-                entry.1.push((name.clone(), o.size, visible, o.fps(self.power), spec.clone()));
+                entry.1.push((name.clone(), o.size, visible, fps, spec.clone()));
             }
         }
         wanted

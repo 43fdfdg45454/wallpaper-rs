@@ -8,6 +8,7 @@ impl State {
             Command::Configure(output, size, spec) => self.configure(output, size, spec),
             Command::Remove(output) => {
                 super::super::feed::declare(&output, None);
+                crate::rgb::cover(&output, false);
                 drop((self.outputs.remove(&output), self.windows.remove(&output)));
                 self.pictures.prune(&self.outputs);
                 self.follow(&output);
@@ -17,8 +18,12 @@ impl State {
             Command::Repaint(output) => self.repaint(&output),
             Command::Region(output) => self.region(&output),
             Command::Backdrop(output) => self.backdrop_again(&output),
-            Command::SetActive(output, active, covered) => {
-                self.outputs.get_mut(&output).into_iter().for_each(|o| o.covered = covered);
+            Command::SetActive(output, active, (covered, awake)) => {
+                crate::rgb::cover(&output, covered);
+                self.outputs
+                    .get_mut(&output)
+                    .into_iter()
+                    .for_each(|o| (o.covered, o.awake) = (covered, awake));
                 if let Some(o) = self.outputs.get_mut(&output).filter(|o| o.active != active) {
                     o.active = active;
                     o.shown.scene.iter_mut().filter(|_| !active).for_each(SceneState::pause);

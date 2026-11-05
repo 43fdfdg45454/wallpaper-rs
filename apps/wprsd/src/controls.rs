@@ -6,11 +6,12 @@ use zbus::fdo::Error::InvalidArgs;
 
 impl State {
     pub(crate) fn active(&self, info: &OutputInfo) -> bool {
+        self.awake() && !(self.config.pause.when_covered && info.covered())
+    }
+
+    pub(crate) fn awake(&self) -> bool {
         let p = &self.config.pause;
-        !(self.user_paused
-            || (p.when_covered && info.covered())
-            || (p.on_battery && self.on_battery)
-            || (p.when_locked && self.locked))
+        !(self.user_paused || (p.on_battery && self.on_battery) || (p.when_locked && self.locked))
     }
 }
 
@@ -162,7 +163,7 @@ impl Daemon {
 
     pub(crate) fn activity(&self, st: &State) {
         for (name, info) in &st.outputs {
-            self.compositor.set_active(name, st.active(info), info.covered());
+            self.compositor.set_active(name, st.active(info), (info.covered(), st.awake()));
         }
     }
 }

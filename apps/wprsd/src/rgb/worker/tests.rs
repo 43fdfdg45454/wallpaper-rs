@@ -24,3 +24,18 @@ fn a_forgotten_or_revoked_source_is_never_painted_again() {
     s.forget(None);
     assert!(s.last.is_none());
 }
+
+#[test]
+fn the_lights_idle_only_while_the_screen_they_follow_is_covered_and_they_pause() {
+    let mut s = session("TEST-HELD");
+    assert!(!s.held() && s.wait() == IDLE);
+    super::super::cover("TEST-HELD", true);
+    assert!(s.held(), "a covered source kept the lights listening");
+    s.rgb.when_covered = Covered::Follow;
+    assert!(!s.held(), "following lights idled");
+    s.rgb.when_covered = Covered::Pause;
+    s.test = Some((Instant::now(), None));
+    assert_eq!(s.wait(), STEP, "a test pattern waited for the screen");
+    super::super::cover("TEST-HELD", false);
+    assert!(!s.held());
+}

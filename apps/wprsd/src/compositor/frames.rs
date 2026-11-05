@@ -58,7 +58,8 @@ impl State {
         let open = |name: &String, o: &Output| o.open(self.exporter.is_streaming(name));
         let renders = self.outputs.iter().filter_map(|(name, o)| deadline(o, open(name, o), self.power, now));
         let moving = self.outputs.values().filter(|o| o.moving).map(|o| o.fps(self.power)).max();
-        let scenes = self.outputs.iter().filter(|(name, o)| o.active && open(name, o));
+        let scenes =
+            self.outputs.iter().filter(|(name, o)| (o.active && open(name, o)) || o.lights_only(name));
         let scenes = scenes.filter_map(|(_, o)| o.shown.scene.as_ref()?.due);
         renders
             .chain(scenes)
@@ -76,13 +77,15 @@ impl State {
             (Instant::now(), self.relief_limits(), self.settings.transition.as_secs_f32());
         let shared = (self.renderer, &*self.exporter, &self.players, self.power, limits);
         for (name, output) in &mut self.outputs {
-            let streaming = shared.1.is_streaming(name);
-            if output.active && output.shown.scene.as_ref().and_then(|s| s.due).is_some_and(|at| at <= now) {
+            let (streaming, lights) = (shared.1.is_streaming(name), output.lights_only(name));
+            if (output.active || lights)
+                && output.shown.scene.as_ref().and_then(|s| s.due).is_some_and(|at| at <= now)
+            {
                 output.dirty = true;
             }
             output.dirty |= shared.1.starved(name);
             output.unwatched(streaming);
-            if deadline(output, output.open(streaming), self.power, now).is_none_or(|at| at > now) {
+            if deadline(output, output.open(streaming) || lights, self.power, now).is_none_or(|at| at > now) {
                 continue;
             }
             if !output.watched(streaming) {

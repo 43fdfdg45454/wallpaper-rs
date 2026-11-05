@@ -3,10 +3,14 @@ use wprs_render::Renderer;
 use wprs_rgb::Strip;
 
 fn allowed(output: &str) -> bool {
-    crate::rgb::enabled() && crate::inputs::lights(output)
+    crate::rgb::enabled() && crate::inputs::lights(output) && !crate::rgb::paused(output)
 }
 
 impl SceneState {
+    pub(in crate::compositor) fn sends_rgb(&self) -> bool {
+        wprs_render::lit(&self.spec.pack.scene)
+    }
+
     pub(in crate::compositor) fn want_rgb(&mut self, output: &str) -> bool {
         let Some(view) = self.view.as_mut() else { return false };
         let lit = wprs_render::lit(&self.spec.pack.scene);

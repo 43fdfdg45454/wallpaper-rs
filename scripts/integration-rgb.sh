@@ -105,6 +105,7 @@ sleep 0.5
 if tail -n "+$((before + 1))" "$rgbs/painted" | grep -q '"device": 0'; then
   fail "the colors of a revoked package came back after a test"
 fi
+source "$(dirname "$0")"/integration-rgb-covered.sh
 ctl config rgb.enabled false
 [ "$(ctl rgb status --json | js "r['enabled'], r['connected']")" = "(False, False)" ] || fail "RGB lighting stayed on"
 ctl release TEST-RGB && expect "list(s['outputs'])" "[]"
