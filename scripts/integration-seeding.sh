@@ -21,6 +21,11 @@ ctl scene particles "$craft" dust render --frames life --cycles 2 --order oldest
 if ctl scene particles "$craft" dust render --order sideways 2>/dev/null; then fail "an unknown order was kept"; fi
 ctl scene particles "$craft" dust force turbulence --strength 5 --scale 0.01 --time-scale 2 --mask 0.2,0.8 || fail "the turbulence took no mask"
 if ctl scene particles "$craft" dust force turbulence --strength 5 --scale 0.01 --mask 0.2,3 2>/dev/null; then fail "a mask of 3 was kept"; fi
+for force in "noise 30" "cap 200" "torque -90" "spin-drag 0.5" "orbit p0 --strength 40 --radius 200" "vortex cursor --strength -60 --inner 5 --ring 80,20,2"; do
+  read -ra words <<<"$force"
+  ctl scene particles "$craft" dust force "${words[@]}" || fail "no $force force was added"
+done
+if ctl scene particles "$craft" dust force vortex p9 --strength 10 2>/dev/null; then fail "a vortex around p9 was kept"; fi
 ctl scene layer "$craft" dust instance --point 10,20 --point 30,-40 || fail "the instance took no control points"
 ctl scene particles "$craft" sparks rename embers || fail "the system was not renamed"
 [ "$(ctl scene show "$craft" /scene/particles/dust/children/0/system)" = '"embers"' ] || fail "the child did not follow the new name"

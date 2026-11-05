@@ -66,6 +66,8 @@ pub enum Force {
     },
     #[command(about = "Remove the force at INDEX")]
     Remove { index: usize },
+    #[command(flatten)]
+    Pull(crate::pulling::Pull),
 }
 
 #[derive(Args, Debug)]

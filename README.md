@@ -2158,7 +2158,8 @@ solo en parte de la vida de la partícula, con una forma de cuatro asas que dice
 y se desvanece. Desde la terminal, `wprs-ctl scene particles CARPETA SISTEMA` suma `emitter N` con
 `--burst`, `--every`, `--on`, `--periodic`, `--duration`, `--delay`, `--follow`, `--audio-gate` e
 `--inherit`, `window N A,B,C,D|none`, `rename NUEVO`, `start --hsv|--palette|--gradient`,
-`render --cycles --order`, `settings --lock` y `force turbulence --time-scale --mask`.
+`render --cycles --order`, `settings --lock`, `force turbulence --time-scale --mask` y las fuerzas
+`noise`, `cap`, `torque`, `spin-drag`, `vortex` y `orbit`.
 
 La vista previa dibuja también los colisionadores del sistema con el color de su respuesta (rojo
 donde mueren las partículas, verde donde se pegan) y asas para cada tipo: el borde del lienzo, el

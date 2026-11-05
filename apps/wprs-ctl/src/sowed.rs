@@ -75,6 +75,7 @@ fn force(what: Force) -> (Option<usize>, Option<Value>) {
             (index, Some(json!({ "attractor": a })))
         }
         Force::Remove { index } => (Some(index), None),
+        Force::Pull(p) => crate::pulling::pull(p),
     }
 }
 
