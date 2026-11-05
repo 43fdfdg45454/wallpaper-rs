@@ -52,7 +52,8 @@ impl Runtime {
         let (kept, mut costs) = self.costs.get();
         costs = if kept == at { costs } else { [None; 4] };
         let cost = *costs[quality as usize].get_or_insert_with(|| {
-            self.scene.cost(quality) + self.scene.copies_cost(self.spawned(), quality)
+            let lent = self.glow[0].as_deref().filter(|_| self.scene.canvas.bloom.is_none());
+            self.scene.cost(quality) + self.scene.copies_cost(self.spawned().chain(lent), quality)
         });
         self.costs.set((at, costs));
         cost

@@ -104,3 +104,15 @@ fn copies_of_templates_count_in_the_cost_of_the_scene() {
     rt.set_script(ScriptOutputs::default());
     assert_eq!(rt.cost(Quality::Q3), alone);
 }
+
+#[test]
+fn bloom_a_script_turns_on_counts_in_the_cost_until_it_is_turned_off() {
+    let mut rt = runtime(json!({}));
+    let alone = rt.cost(Quality::Q3);
+    let bloom = BloomSet { threshold: Some(0.5), strength: Some(2.0), radius: Some(8.0), tint: None };
+    let stage = Some(StageSet { bloom: Some(bloom), ..StageSet::default() });
+    rt.set_script(ScriptOutputs { stage, ..ScriptOutputs::default() });
+    assert!(rt.cost(Quality::Q3) > alone + 1.0, "{} {alone}", rt.cost(Quality::Q3));
+    rt.set_script(ScriptOutputs::default());
+    assert_eq!(rt.cost(Quality::Q3), alone);
+}
