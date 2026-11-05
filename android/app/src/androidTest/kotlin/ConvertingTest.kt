@@ -69,6 +69,6 @@ class ConvertingTest {
         Converting.stop(uid)
         assertTrue(waitFor { uid !in Converting.progress })
         assertEquals(path, item(uid).getString("path"))
-        assertFalse(File(storage(), "converting/$uid.mp4").exists())
+        assertFalse(File(File(path).parentFile?.parentFile, "converting/$uid.mp4").exists())
     }
 }

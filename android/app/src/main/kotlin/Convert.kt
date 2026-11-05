@@ -55,7 +55,9 @@ object Convert {
                 .firstOrNull { it.getString(MediaFormat.KEY_MIME).orEmpty().startsWith("video/") } ?: return null
             val fps = if (format.containsKey(MediaFormat.KEY_FRAME_RATE)) format.getNumber(MediaFormat.KEY_FRAME_RATE, RATE).toDouble() else RATE
             val avc = decoders(MediaFormat.createVideoFormat(AVC, 2, 2))
-            target(decoders(format), avc, format.getInteger(MediaFormat.KEY_WIDTH), format.getInteger(MediaFormat.KEY_HEIGHT), fps)
+            val turned = format.containsKey(MediaFormat.KEY_ROTATION) && format.getInteger(MediaFormat.KEY_ROTATION) % 180 != 0
+            val size = target(decoders(format), avc, format.getInteger(MediaFormat.KEY_WIDTH), format.getInteger(MediaFormat.KEY_HEIGHT), fps)
+            size?.let { if (turned) it.second to it.first else it }
         } finally {
             extractor.release()
         }

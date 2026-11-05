@@ -27,7 +27,7 @@ class KeptTest {
 
     @Before
     fun prepare() = runBlocking {
-        val dir = File(storage(), "web/kept").apply { deleteRecursively(); mkdirs() }
+        val dir = File(storage(), "kept-web/kept").apply { deleteRecursively(); mkdirs() }
         File(dir, "manifest.json").writeText(MANIFEST.replace("org.example.kept", "org.example.kept${System.nanoTime()}"))
         File(dir, "index.html").writeText(PAGE)
         uid = (ask("examples", "dir" to dir.parent) as org.json.JSONArray).getString(0)
