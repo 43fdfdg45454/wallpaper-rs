@@ -177,8 +177,8 @@ what it would show now with the simulated player of the Player tab. An optional 
 can go back to its default.
 
 The Player tab is a simulated media player for the preview, so that a scene can be made without
-music playing: a switch turns it on, and it has the title, artist and album of a made-up track
-and its cover, picked among the pictures of the scene, with the five colors that the scene would
+music playing: a switch turns it on, and it has the title, artist and album of a made-up track,
+whether it plays and its cover, picked among the pictures of the scene, with the five colors that the scene would
 get from it (or from the placeholder) as swatches.
 The preview then shows that track instead of what a media player plays, without asking for the
 `media` grant and without reading the players; it reaches only the preview.

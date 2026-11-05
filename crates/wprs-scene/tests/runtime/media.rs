@@ -89,3 +89,20 @@ fn cover_colours_reach_colours_and_ease_with_smooth() {
     let frame = rt.frame(VIEW, Quality::Q3);
     assert!(solid(&frame, 2).0[0] < 0.01 && frame.wake == Wake::Idle);
 }
+
+#[test]
+fn playing_shows_and_hides_layers_and_drives_numbers() {
+    let layers = json!([
+        { "id": "on", "type": "solid", "color": "#ffffff", "visible": { "media": "playing" } },
+        { "id": "lvl", "type": "solid", "color": "#ffffff", "opacity": { "media": "playing", "scale": 0.5 } }
+    ]);
+    let mut rt = runtime(&scene(layers));
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert!(frame.draws.is_empty(), "nothing plays, so one layer is hidden and the other clear");
+    rt.set_media(playing());
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert_eq!(frame.draws.len(), 2);
+    assert!(close(frame.draws[1].opacity, 0.5) && frame.wake == Wake::Idle);
+    rt.set_media(MediaState { playing: false, ..playing() });
+    assert!(rt.frame(VIEW, Quality::Q3).draws.is_empty(), "a pause hides them again");
+}

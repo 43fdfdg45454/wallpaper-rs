@@ -28,6 +28,10 @@ impl Context<'_> {
     pub(crate) fn media<T: Animate>(&self, m: Media) -> T {
         match m.reading() {
             Reading::Words => T::from_text(self.words(m)).unwrap_or_default(),
+            Reading::Flag => {
+                let s = self.media_state();
+                T::from_signal(f32::from(u8::from(s.present() && s.playing))).unwrap_or_default()
+            }
             Reading::Color => {
                 let i = [Media::Primary, Media::Secondary, Media::Tertiary, Media::Text];
                 let i = i.iter().position(|c| *c == m).unwrap_or(4);

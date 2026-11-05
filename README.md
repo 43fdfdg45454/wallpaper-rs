@@ -1463,7 +1463,7 @@ puede saber que esa pista suena aquí; las carátulas solo viven en memoria.
 En el editor, el menú de enlace de cada campo tiene *Seguir al reproductor multimedia* con los
 datos que le caben: el título, el artista, el álbum, el artista del álbum, el subtítulo, los
 géneros y el tipo para un texto, cada uno con lo que mostraría ahora. La pestaña *Reproductor*
-simula una pista (título, artista, álbum y carátula) para diseñar sin música sonando; solo la ve la vista
+simula una pista (título, artista, álbum, si suena y carátula) para diseñar sin música sonando; solo la ve la vista
 previa, sin pedir permiso ni leer los reproductores. Desde la terminal, `wprs-ctl scene preview
 CARPETA --media pista.json` hace lo mismo con un JSON de esos campos.
 
@@ -1478,6 +1478,8 @@ De cada carátula salen cinco colores, calculados una vez: el principal, el secu
 terciario (los más frecuentes), uno de texto que se lee bien sobre el principal y negro o blanco de
 alto contraste: `{"media": "primary"}`, `secondary`, `tertiary`, `text` y `contrast`, con `smooth`
 para pasar de uno a otro sin saltos. La pestaña *Reproductor* los muestra como muestras de color.
+`{"media": "playing"}` vale 1 (o verdadero) mientras suena y 0 en pausa, parado o sin pista, y
+sirve para mostrar u ocultar capas o para cualquier número.
 
 ## Servidor propio
 

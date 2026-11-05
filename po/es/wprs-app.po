@@ -3873,6 +3873,12 @@ msgid "Cover"
 msgstr "Carátula"
 
 #: apps/wprs-app/qml/SceneMedia.qml
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Playing"
+msgstr "Reproduciendo"
+
+#: apps/wprs-app/qml/SceneMedia.qml
 msgid "Cover colors"
 msgstr "Colores de la carátula"
 
@@ -7905,11 +7911,6 @@ msgstr "Color de texto legible sobre el principal"
 #: apps/wprs-app/qml/facade/SceneMediaWords.qml
 msgid "Black or white over the primary"
 msgstr "Negro o blanco sobre el principal"
-
-#: apps/wprs-app/qml/facade/SceneMediaWords.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Playing"
-msgstr "Reproduciendo"
 
 #: apps/wprs-app/qml/facade/SceneMediaWords.qml
 msgid "yes"

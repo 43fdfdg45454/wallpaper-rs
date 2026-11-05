@@ -64,6 +64,12 @@ QQC2.ScrollView {
                 onActivated: index => player.change("cover", index > 0 ? player.pictures[index - 1].path : "")
             }
 
+            QQC2.Switch {
+                Kirigami.FormData.label: App.tr("Playing")
+                checked: player.media.playing === true
+                onToggled: player.change("playing", checked)
+            }
+
             Row {
                 Kirigami.FormData.label: App.tr("Cover colors")
                 spacing: Kirigami.Units.smallSpacing

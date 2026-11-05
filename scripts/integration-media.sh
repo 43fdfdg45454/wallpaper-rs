@@ -90,6 +90,12 @@ ctl scene preview "$tuning" -o preview:2 --time 0 --media "$WORK/track.json"
 shown "$s22" 0 0 255
 ctl scene preview "$tuning" -o preview:2 --time 0
 shown "$s22" 255 0 0
+ctl scene set "$tuning" /scene/layers/0/visible '{"media": "playing"}'
+ctl scene preview "$tuning" -o preview:2 --time 0 --media "$WORK/track.json"
+shown "$s22" 0 0 255
+printf '{"title": "Night Drive", "playing": false, "cover": "blue.png"}' >"$WORK/paused.json"
+ctl scene preview "$tuning" -o preview:2 --time 0 --media "$WORK/paused.json"
+shown "$s22" 0 0 0
 printf '{"title": "%s"}' "$(printf 'x%.0s' $(seq 600))" >"$WORK/long.json"
 if ctl scene preview "$tuning" -o preview:2 --media "$WORK/long.json" 2>"$WORK/long.err"; then fail "a title of 600 characters was previewed"; fi
 grep -q "512" "$WORK/long.err" || fail "the long title was refused without saying why: $(cat "$WORK/long.err")"
