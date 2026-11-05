@@ -1295,7 +1295,11 @@ un cuerpo quieto medio segundo deja de pedir fotogramas y en la calidad más baj
 quedan en la pose de la animación. Con `depth` la profundidad de los vértices se proyecta con la
 perspectiva de `canvas.perspective` (también bajo la inclinación de la capa y la de los grupos y padres
 que la contienen, siempre a lo largo de la cara de la capa tal como la giran) y las caras vistas por
-detrás se ocultan si se pide. Cualquier capa se sujeta a un hueso o a un nodo de una malla con
+detrás se ocultan si se pide; las piezas se dibujan solas de atrás hacia adelante según la
+profundidad media de sus vértices en la pose (se puede apagar por capa con `depth.sort: false`), así
+los bordes suaves de una pieza cercana dejan ver lo de atrás sin halo. El panel de la malla en el
+editor enciende la profundidad y ajusta su perspectiva, el ocultado de caras y este orden, y
+`wprs-ctl scene parts` hace lo mismo con `--depth-scale`, `--cull`, `--sort` y `--flat`. Cualquier capa se sujeta a un hueso o a un nodo de una malla con
 `attach`, siguiendo su posición, giro y escala del mismo fotograma; lo que no hereda del hueso
 lo sigue tomando de la cámara, que la acerca y la gira igual que al resto de la escena. Los scripts leen y mueven huesos
 con `scene.layer("zorro").bone("brazo")` (giro, posición y escala locales o del mundo, para el

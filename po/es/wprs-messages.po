@@ -495,6 +495,14 @@ msgid "a package is derived from at most 64 works"
 msgstr "un paquete deriva de 64 obras como mucho"
 
 #: crates/wprs-editor/src/cutouts.rs
+msgid "depth is turned off or changed, not both"
+msgstr "la profundidad se apaga o se cambia, no las dos cosas"
+
+#: crates/wprs-editor/src/cutouts.rs
+msgid "the depth scale goes from 0 to 10"
+msgstr "la escala de la profundidad va de 0 a 10"
+
+#: crates/wprs-editor/src/cutouts.rs
 msgid "say what changes in the parts"
 msgstr "indica qué cambia en las partes"
 

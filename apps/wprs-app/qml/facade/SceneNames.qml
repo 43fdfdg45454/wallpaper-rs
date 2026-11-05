@@ -118,6 +118,7 @@ QtObject {
             "smoothness": App.tr("Smoothness"),
             "softness": App.tr("Softness"),
             "solid": App.tr("Opaque"),
+            "sort": App.tr("Back to front"),
             "sound": App.tr("Sound"),
             "sounds": App.tr("Sounds"),
             "source": App.tr("Light source"),

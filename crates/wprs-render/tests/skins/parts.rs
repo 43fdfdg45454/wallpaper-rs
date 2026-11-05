@@ -3,6 +3,10 @@ use serde_json::json;
 use wprs_scene::Quality;
 
 fn quads(z: f32) -> Vec<u8> {
+    colored(z, [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0]])
+}
+
+pub(super) fn colored(z: f32, colors: [[f32; 4]; 2]) -> Vec<u8> {
     let mut bin = Vec::new();
     let mut views = Vec::new();
     let mut add = |values: Vec<u8>| {
@@ -20,8 +24,8 @@ fn quads(z: f32) -> Vec<u8> {
     let doc = json!({ "asset": { "version": "2.0" },
         "nodes": [{ "name": "back", "mesh": 0 }, { "name": "front", "mesh": 1 }],
         "meshes": [{ "name": "back", "primitives": [primitive(0, 0)] }, { "name": "front", "primitives": [primitive(1, 1)] }],
-        "materials": [{ "pbrMetallicRoughness": { "baseColorFactor": [1, 0, 0, 1] } },
-                      { "pbrMetallicRoughness": { "baseColorFactor": [0, 1, 0, 1] } }],
+        "materials": [{ "pbrMetallicRoughness": { "baseColorFactor": colors[0] } },
+                      { "pbrMetallicRoughness": { "baseColorFactor": colors[1] } }],
         "accessors": [accessor(back, "VEC3", 5126, 4), accessor(front, "VEC3", 5126, 4), accessor(list, "SCALAR", 5125, 6)],
         "bufferViews": views, "buffers": [{ "byteLength": bin.len() }] });
     let mut text = doc.to_string().into_bytes();

@@ -3,7 +3,7 @@ use crate::rigging::pair;
 use clap::{Args, Subcommand};
 use serde_json::json;
 use std::path::PathBuf;
-use wprs_editor::actions::{Action, IkEdit, PartsEdit, WindEdit};
+use wprs_editor::actions::{Action, DepthSet, IkEdit, PartsEdit, WindEdit};
 
 #[derive(Subcommand, Debug)]
 pub enum Limbing {
@@ -68,6 +68,19 @@ pub enum Limbing {
         clip: Vec<String>,
         #[arg(long, value_name = "PART", help = "Show a part over everything again")]
         unclip: Vec<String>,
+        #[arg(
+            id = "depth",
+            long = "depth-scale",
+            value_name = "N",
+            help = "How far the depth of the vertices pushes them, from 0 to 10; turns depth on"
+        )]
+        depth_scale: Option<f32>,
+        #[arg(long, value_parser = ["on", "off"], help = "Hide the triangles seen from behind; turns depth on")]
+        cull: Option<String>,
+        #[arg(long, value_parser = ["on", "off"], help = "Draw the parts from back to front by their depth (on by default); turns depth on")]
+        sort: Option<String>,
+        #[arg(long, conflicts_with_all = ["depth", "cull", "sort"], help = "Turn depth off")]
+        flat: bool,
     },
 }
 
@@ -156,11 +169,15 @@ pub(crate) fn action(command: Limbing) -> Result<(PathBuf, Action), Box<Author>>
             (dir, Action::Wind(WindEdit { angle, strength, gusts, off }))
         }
         Limbing::Marking(command) => crate::marking::action(command),
-        Limbing::Parts { dir, layer, order, hide, show, clip, unclip } => {
+        Limbing::Parts { dir, layer, order, hide, show, clip, unclip, depth_scale, cull, sort, flat } => {
+            let on = |v: Option<String>| v.map(|v| v == "on");
+            let (cull, sort) = (on(cull), on(sort));
+            let set = DepthSet { off: flat, scale: depth_scale, cull, sort };
+            let depth = (set != DepthSet::default()).then_some(set);
             let order =
                 order.chunks(2).filter_map(|c| Some((c[0].clone(), c.get(1)?.parse().ok()?))).collect();
             let clip = clip.chunks(2).filter_map(|c| Some((c[0].clone(), c.get(1)?.clone()))).collect();
-            (dir, Action::Parts(PartsEdit { layer, order, hide, show, clip, unclip }))
+            (dir, Action::Parts(PartsEdit { layer, order, hide, show, clip, unclip, depth }))
         }
     })
 }

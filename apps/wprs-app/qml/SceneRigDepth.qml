@@ -10,6 +10,18 @@ ColumnLayout {
     required property string layerId
     required property bool editable
     readonly property bool painting: page.mesh.sculpt !== null && page.mesh.rigging === layerId
+    property var depth: null
+
+    function load() {
+        depth = JSON.parse(page.editor.value(page.mesh.pointer(layerId) + "/depth") || "null");
+    }
+
+    function change(args) {
+        page.run("parts", {
+            "layer": layerId,
+            "depth": args
+        });
+    }
 
     function brush() {
         if (painting)
@@ -19,9 +31,65 @@ ColumnLayout {
             };
     }
 
-    visible: editable
+    Component.onCompleted: load()
+
+    Connections {
+        function onViewChanged() {
+            sculpt.load();
+        }
+
+        target: sculpt.page.editor
+    }
+
+    QQC2.CheckBox {
+        text: App.tr("Depth: nearer vertices cover farther ones")
+        checked: sculpt.depth !== null
+        onToggled: sculpt.change(checked ? {
+            "scale": 1
+        } : {
+            "off": true
+        })
+    }
+
+    RowLayout {
+        visible: sculpt.depth !== null
+
+        QQC2.Label {
+            text: App.tr("Perspective of the depth")
+        }
+
+        QQC2.Slider {
+            Layout.fillWidth: true
+            from: 0
+            to: 10
+            stepSize: 0.1
+            value: sculpt.depth?.scale ?? 1
+            onMoved: sculpt.change({
+                "scale": Math.round(value * 10) / 10
+            })
+        }
+    }
+
+    QQC2.CheckBox {
+        visible: sculpt.depth !== null
+        text: App.tr("Hide faces seen from behind")
+        checked: sculpt.depth?.cull === true
+        onToggled: sculpt.change({
+            "cull": checked
+        })
+    }
+
+    QQC2.CheckBox {
+        visible: sculpt.depth !== null
+        text: App.tr("Draw the parts from back to front, so soft edges show what lies behind them")
+        checked: sculpt.depth?.sort !== false
+        onToggled: sculpt.change({
+            "sort": checked
+        })
+    }
 
     QQC2.Button {
+        visible: sculpt.editable
         text: App.tr("Paint depth on the preview")
         icon.name: "draw-brush"
         checkable: true

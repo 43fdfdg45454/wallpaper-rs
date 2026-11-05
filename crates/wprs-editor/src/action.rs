@@ -13,7 +13,7 @@ mod solid;
 mod swarm;
 mod tend;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
-pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
+pub use limbs::{AttachEdit, BodyEdit, DepthSet, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use motion::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
 pub use names::{ACTIONS, AssetEdit, EDITOR, ImportAssets, RgbEdit, ScriptFile};
 pub use rigging::{

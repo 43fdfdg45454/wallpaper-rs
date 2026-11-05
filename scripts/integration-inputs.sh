@@ -101,6 +101,9 @@ ctl scene point "$draft" puppet peg --remove || fail "the point was not removed"
 ctl scene validate "$draft" >/dev/null || fail "removing a point left the scene invalid"
 ctl scene parts "$draft" puppet --order body 2 --hide body || fail "the part was not ordered"
 ctl scene parts "$draft" puppet --show body || fail "the part was not shown"
+ctl scene parts "$draft" puppet --depth-scale 2 --cull on --sort off || fail "the depth of the mesh was not set"
+if ctl scene parts "$draft" puppet --depth-scale 20 2>/dev/null; then fail "a depth scale of 20 was kept"; fi
+ctl scene parts "$draft" puppet --flat || fail "the depth of the mesh was not turned off"
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with chains, a rope, wind and attachments was not previewed"
 ctl scene attach "$draft" badge --detach || fail "the layer was not let go"
 source "$(dirname "$0")"/integration-particles.sh

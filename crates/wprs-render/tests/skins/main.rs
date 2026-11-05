@@ -1,3 +1,4 @@
+mod halos;
 mod kit;
 mod motion;
 mod parts;

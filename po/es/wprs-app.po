@@ -4694,6 +4694,25 @@ msgstr ""
 "mover los puntos y los anillos para mover las capas que los siguen."
 
 #: apps/wprs-app/qml/SceneRigDepth.qml
+msgid "Depth: nearer vertices cover farther ones"
+msgstr "Profundidad: los vértices cercanos tapan a los lejanos"
+
+#: apps/wprs-app/qml/SceneRigDepth.qml
+msgid "Perspective of the depth"
+msgstr "Perspectiva de la profundidad"
+
+#: apps/wprs-app/qml/SceneRigDepth.qml
+msgid "Hide faces seen from behind"
+msgstr "Ocultar las caras vistas por detrás"
+
+#: apps/wprs-app/qml/SceneRigDepth.qml
+msgid ""
+"Draw the parts from back to front, so soft edges show what lies behind them"
+msgstr ""
+"Dibujar las piezas de atrás hacia adelante, para que los bordes suaves dejen "
+"ver lo que hay detrás"
+
+#: apps/wprs-app/qml/SceneRigDepth.qml
 msgid "Paint depth on the preview"
 msgstr "Pintar la profundidad sobre la vista previa"
 
@@ -5437,8 +5456,8 @@ msgid ""
 "The rays on the preview are the first particles born with seed %1, as the "
 "preview runs them."
 msgstr ""
-"Los rayos de la vista previa son las primeras partículas nacidas con la semilla "
-"%1, tal como las corre la vista previa."
+"Los rayos de la vista previa son las primeras partículas nacidas con la "
+"semilla %1, tal como las corre la vista previa."
 
 #: apps/wprs-app/qml/SceneSwarmFields.qml
 msgid "Sound multiplies the phase"
@@ -8444,6 +8463,10 @@ msgstr "Suavidad"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Opaque"
 msgstr "Opaca"
+
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Back to front"
+msgstr "De atrás hacia adelante"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
