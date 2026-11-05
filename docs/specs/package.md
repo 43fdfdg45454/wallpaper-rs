@@ -491,7 +491,8 @@ The phone does the same: a preset in its library previews its base, *Set as wall
 values of the preset as the settings of the base (its files go to the app's own storage) and shows
 the base, and without the base it says which package to install. Installing a package from a
 repository on the phone also installs, from that repository, the newest release of each package of
-`requires.packages` that meets its range and is missing, and theirs in turn, four levels deep.
+`requires.packages` that meets its range and is missing, and theirs in turn, four levels deep; an
+installed package of any kind, presets and asset packages included, counts as present.
 
 ## Shared resources
 
