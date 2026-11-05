@@ -38,8 +38,8 @@ fn hdr(o: &OutputState) -> String {
 pub fn note(o: &OutputState) -> Option<String> {
     let over = o.quality_budget > 0.0 && o.quality_cost > o.quality_budget;
     let note = match o.quality_auto.as_str() {
-        "stop" if !over && o.quality_reason == "user" => TRIANGLES.to_owned(),
-        "stop" if !over => STOPPED.to_owned(),
+        "still" => STOPPED.to_owned(),
+        "stop" if !over => TRIANGLES.to_owned(),
         auto if over => format!(
             "this scene costs {:.1} units a frame at {}, more than the {:.0} this device is estimated to hold: frames may drop and battery use rise; automatic quality would {}",
             o.quality_cost,

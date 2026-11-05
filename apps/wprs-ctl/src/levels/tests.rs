@@ -12,10 +12,12 @@ fn shown(reason: &str, cost: f64, auto: &str) -> OutputState {
 
 #[test]
 fn a_chosen_level_on_a_scene_heavy_only_in_model_triangles_still_warns() {
-    let triangles = note(&shown("user", 0.0, "stop")).unwrap();
-    assert!(triangles.starts_with("this scene draws more model triangles than this device holds"));
-    assert!(triangles.ends_with("automatic quality would keep it still at its poster"), "{triangles}");
-    let stopped = note(&shown("device", 0.0, "stop")).unwrap();
+    for reason in ["user", "device", "slow"] {
+        let triangles = note(&shown(reason, 0.0, "stop")).unwrap();
+        assert!(triangles.starts_with("this scene draws more model triangles than this device holds"));
+        assert!(triangles.ends_with("automatic quality would keep it still at its poster"), "{triangles}");
+    }
+    let stopped = note(&shown("device", 0.0, "still")).unwrap();
     assert!(
         stopped.starts_with("this scene is too heavy for this device and automatic quality keeps it still")
     );

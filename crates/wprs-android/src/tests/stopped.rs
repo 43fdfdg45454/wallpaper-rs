@@ -35,7 +35,7 @@ pub(super) fn only_automatic_stops_heavy_scenes() {
         shot.unwrap().fps
     };
     assert_eq!(shoot(0), 0, "automatic played a scene too heavy for the phone");
-    assert_eq!((report::automatic(), report::over()), ("stop", None));
+    assert_eq!((report::automatic(), report::over()), ("still", None));
     for choice in ["q0", "q1", "min-q1"] {
         assert_eq!(settings::setting("playback.quality", Some(choice)).unwrap(), choice);
         assert!(shoot(1) > 0, "{choice} kept the scene still");
@@ -44,6 +44,6 @@ pub(super) fn only_automatic_stops_heavy_scenes() {
         assert_eq!(report::automatic(), "stop", "{choice}");
     }
     assert_eq!(settings::setting("playback.quality", Some("auto")).unwrap(), "auto");
-    assert_eq!((shoot(2), report::automatic()), (0, "stop"), "automatic did not stop it again");
+    assert_eq!((shoot(2), report::automatic()), (0, "still"), "automatic did not stop it again");
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }

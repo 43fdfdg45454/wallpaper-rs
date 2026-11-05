@@ -21,7 +21,7 @@ ctl lib apply "$heavy" -o TEST-Q
 costs="s['outputs']['TEST-Q']['quality_auto'], s['outputs']['TEST-Q']['quality_cost'] > s['outputs']['TEST-Q']['quality_budget']"
 frames() { field "s['outputs']['TEST-Q']['frames']"; }
 moves() { local before; before=$(frames); sleep 1; [ "$(frames)" -gt "$before" ]; }
-expect "s['outputs']['TEST-Q']['kind'], $costs" "('scene', 'stop', False)"
+expect "s['outputs']['TEST-Q']['kind'], $costs" "('scene', 'still', False)"
 moves && fail "automatic quality played a scene too heavy for this device"
 ctl quality | grep -q "^TEST-Q: this scene is too heavy for this device" || fail "wprs-ctl quality: $(ctl quality)"
 ctl quality q0 | grep -q "^TEST-Q: this scene costs .* frames may drop and battery use rise; automatic quality would keep it still" ||
@@ -32,7 +32,7 @@ ctl quality min-q1 -o TEST-Q | grep -q "^TEST-Q: this scene costs" || fail "wprs
 expect "$level, $costs" "('q1', 'user', 'stop', True)"
 wait_for 10 moves || fail "a floor left the heavy scene still"
 ctl quality none -o TEST-Q >/dev/null && ctl quality auto >/dev/null
-expect "$costs" "('stop', False)"
+expect "$costs" "('still', False)"
 sleep 1
 moves && fail "going back to automatic quality kept the heavy scene moving"
 ctl lib apply "$glow" -o TEST-Q

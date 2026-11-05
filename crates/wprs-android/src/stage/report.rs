@@ -48,10 +48,10 @@ pub(crate) fn over() -> Option<[f32; 2]> {
     (bits != 0).then(|| [f32::from_bits((bits >> 32) as u32), f32::from_bits(bits as u32)])
 }
 
-pub(crate) const AUTOMATIC: [&str; 3] = ["", "lower", "stop"];
+pub(crate) const AUTOMATIC: [&str; 4] = ["", "lower", "stop", "still"];
 
 pub(crate) fn automatic() -> &'static str {
-    AUTOMATIC[AUTO.load(Relaxed).min(2) as usize]
+    AUTOMATIC[AUTO.load(Relaxed).min(3) as usize]
 }
 
 pub(crate) fn wall() -> f64 {

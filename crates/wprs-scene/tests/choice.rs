@@ -95,7 +95,7 @@ fn only_the_automatic_choice_stops_a_scene_too_heavy_for_the_tier() {
         ..Budget::new(Tier::T0, true, 60)
     };
     assert!(budget("auto").heavy(&heavy) && budget("auto").still(&heavy));
-    assert_eq!(budget("auto").automatic(&heavy, Quality::Q0), "stop");
+    assert_eq!(budget("auto").automatic(&heavy, Quality::Q0), "still");
     for choice in ["q0", "q3", "min-q1", "min-q2"] {
         let power = Budget { saver: true, heat: Heat::Hot, ..budget(choice) };
         assert!(!power.still(&heavy), "{choice} stopped the scene");

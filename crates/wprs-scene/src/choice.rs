@@ -31,6 +31,7 @@ impl Budget {
 
     pub fn automatic(&self, runtime: &Runtime, quality: Quality) -> &'static str {
         match () {
+            _ if self.still(runtime) => "still",
             _ if self.heavy(runtime) => "stop",
             _ if self.over(runtime, quality).is_some() => "lower",
             _ => "",

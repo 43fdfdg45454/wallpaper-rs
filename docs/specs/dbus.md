@@ -2356,11 +2356,13 @@ of `playback.quality.<output>` or `null` when the output follows `playback.quali
 units the GPU class holds, both `0` unless the user's choice (a fixed level or a floor) put the level
 where it costs more than the class holds, in which case clients warn that frames may drop and
 battery use rise. `quality_auto` says what the automatic choice does or would do with the scene:
-`"stop"` (under `auto` the scene is too heavy for the class and stays at its `poster_time`; under
-the user's choice `auto` would keep it still, also when only its model triangles exceed the class
-and its cost fits, in which case clients warn that it draws more model triangles than the device
-holds), `"lower"` (with the user's choice over
-budget, `auto` would only lower the level) or `""`. `tier` is
+`"still"` (the scene is too heavy for the class and stays at its `poster_time` because the
+automatic choice is in charge), `"stop"` (a fixed level or a floor plays a scene that `auto` would
+keep still, also when only its model triangles exceed the class and its cost fits, in which case
+clients warn that it draws more model triangles than the device holds, whatever the reason of the
+level), `"lower"` (with the user's choice over budget, `auto` would only lower the level) or `""`.
+Clients tell a still scene from a playing one by this value, never by `quality_reason`, which keeps
+the automatic reason (or `"slow"`) when a floor does not raise the level. `tier` is
 the class of the graphics card, `"t0"` to `"t3"`, and `tier_measured` whether a short measured
 render set it rather than the model of the card alone. `adapters` lists the graphics cards the
 daemon found when it started, each with its `name`, `kind` (`"integrated"`, `"dedicated"`,

@@ -602,7 +602,9 @@ reproduce en el nivel fijo elegido y, con `min-q1` o `min-q2`, en ese mínimo (o
 cabe). La app (junto a la elección de calidad en *Ajustes* y en cada pantalla con escena), la
 bandeja, el teléfono (bajo su ajuste de calidad), `wprs-ctl quality` y `wprs-ctl state` avisan de
 lo que cuesta frente al presupuesto del equipo, que puede perder fotogramas y gastar más batería, y
-si la elección automática la bajaría o la dejaría quieta (`quality_auto` en el estado); si solo
+si la elección automática la bajaría o la dejaría quieta (`quality_auto` en el estado: `still` si
+está quieta en su póster, `stop` si la reproduce un nivel fijo o un mínimo y `auto` la dejaría
+quieta, `lower` si solo la bajaría); si solo
 la pesan los triángulos de modelos y su costo cabe, avisan de que dibuja más triángulos de los que
 aguanta el equipo y de que la elección automática la dejaría quieta. Solo se mantienen con
 cualquier elección los límites que protegen la memoria y el controlador: los datos y triángulos de

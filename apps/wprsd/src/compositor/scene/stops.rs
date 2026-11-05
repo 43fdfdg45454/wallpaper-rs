@@ -21,7 +21,7 @@ fn a_fixed_level_never_freezes_a_scene_too_heavy_for_the_device_and_automatic_st
     let state = SceneState::new(heavy(), auto);
     assert!(state.still && state.runtime.time() == 2.0, "automatic left the heavy scene moving");
     let level = state.quality();
-    assert_eq!((level.reason, level.automatic, level.cost), ("device", "stop", 0.0));
+    assert_eq!((level.reason, level.automatic, level.cost), ("device", "still", 0.0));
     for choice in ["q0", "q2", "min-q1"] {
         let chosen = Power { choice: QualityChoice::parse(choice).unwrap(), saver: true, ..auto };
         let mut state = SceneState::new(heavy(), chosen);
