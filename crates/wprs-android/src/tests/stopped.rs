@@ -31,7 +31,8 @@ pub(super) fn only_automatic_stops_heavy_scenes() {
     };
     let mut stage = Stage::new(uid.clone(), pack::load(&path).unwrap());
     let mut shoot = |n: i64| {
-        let shot = stage.render(r, ((64, 32), n * 100_000_000, 30), (power, wprs_scene::Tier::T0), &[], false);
+        let shot =
+            stage.render(r, ((64, 32), n * 100_000_000, 30), (power, wprs_scene::Tier::T0), &[], false);
         shot.unwrap().fps
     };
     assert_eq!(shoot(0), 0, "automatic played a scene too heavy for the phone");

@@ -168,7 +168,10 @@ fn a_tier_shows_the_poster_of_models_past_its_triangles_counting_fur_shells() {
         assert_eq!(chosen.over(&plain, Quality::Q0), None, "{choice}");
         assert_eq!(chosen.automatic(&plain, level), "stop", "{choice} hid that automatic stops it");
     }
-    let floor = Budget { choice: wprs_core::QualityChoice::parse("min-q1").unwrap(), ..Budget::new(Tier::T1, false, 60) };
+    let floor = Budget {
+        choice: wprs_core::QualityChoice::parse("min-q1").unwrap(),
+        ..Budget::new(Tier::T1, false, 60)
+    };
     let (level, why) = floor.level(&furry);
     assert!(level >= Quality::Q1 && why != wprs_scene::Why::User, "the floor kept the automatic level");
     assert_eq!(floor.automatic(&furry, level), "stop", "a floor that plays it said it stays still");
