@@ -97,6 +97,13 @@ pub enum Repo {
         #[arg(long, default_value = "")]
         message: String,
     },
+    #[command(about = "Withdraw the revocation of a package or of one version; publish next")]
+    Unrevoke {
+        dir: PathBuf,
+        id: String,
+        #[arg(long, help = "The version revoked on its own; without it, the revocation of every version")]
+        version: Option<String>,
+    },
     #[command(about = "Revoke an author key; publish next")]
     RevokeKey {
         dir: PathBuf,

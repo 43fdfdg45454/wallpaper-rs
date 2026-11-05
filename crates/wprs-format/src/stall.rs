@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 pub struct Stocked {
     pub id: String,
     pub author: Option<String>,
+    pub revoked: bool,
     pub featured: bool,
     pub note: Option<String>,
     pub versions: Vec<Shelved>,
@@ -38,6 +39,7 @@ pub fn stock(dir: &Path) -> Result<Vec<Stocked>> {
         Stocked {
             id: listing.id.clone(),
             author: listing.author.clone(),
+            revoked: revoked(&listing.id, "*"),
             featured: pick.is_some(),
             note: pick.and_then(|p| p.note.clone()),
             versions: versions.collect(),
@@ -47,8 +49,7 @@ pub fn stock(dir: &Path) -> Result<Vec<Stocked>> {
 }
 
 pub fn opened(dir: &Path) -> Result<Value> {
-    let (status, name) = (crate::status(dir)?, crate::settings(dir)?.name);
-    Ok(json!({ "name": name, "repo_id": status.repo_id, "packages": stock(dir)? }))
+    shown(dir)
 }
 
 pub fn added(dir: &Path, files: &[PathBuf], unlisted: bool, now: i64) -> Result<Value> {
@@ -80,5 +81,65 @@ pub fn listed(dir: &Path, id: &str, version: Option<&str>, on: bool) -> Result<V
 
 pub fn featured(dir: &Path, id: &str, note: Option<&str>, on: bool) -> Result<Value> {
     crate::feature(dir, id, note, on)?;
+    opened(dir)
+}
+
+fn fingerprints(keys: &[String]) -> Vec<String> {
+    keys.iter().filter_map(|k| crate::fingerprint(k).ok()).collect()
+}
+
+fn shown(dir: &Path) -> Result<Value> {
+    let (status, settings, catalog) = (crate::status(dir)?, crate::settings(dir)?, Catalog::load(dir)?);
+    let authors: serde_json::Map<String, Value> =
+        settings.authors.iter().map(|(id, keys)| (id.clone(), json!(fingerprints(keys)))).collect();
+    Ok(json!({
+        "name": settings.name, "repo_id": status.repo_id, "packages": stock(dir)?, "root": status,
+        "root_keys": fingerprints(&settings.root_keys), "online_keys": fingerprints(&settings.online_keys),
+        "authors": authors, "revoked_keys": catalog.keys.iter().map(|k| &k.fingerprint).collect::<Vec<_>>(),
+        "policy": {
+            "threshold": settings.root_threshold, "online_authors": settings.online_authors,
+            "require_author_signature": settings.require_author_signature,
+            "entry_max_days": settings.entry_max_days, "max_package_size": settings.max_package_size,
+            "mirrors": settings.mirrors, "shard_bits": settings.shard_bits,
+        },
+    }))
+}
+
+fn reason(text: &str) -> Result<crate::Reason> {
+    Ok(serde_json::from_value(json!(text))?)
+}
+
+pub fn revoked(dir: &Path, id: &str, version: Option<&str>, why: &str, message: &str) -> Result<Value> {
+    crate::revoke(dir, id, version, reason(why)?, message)?;
+    opened(dir)
+}
+
+pub fn unrevoked(dir: &Path, id: &str, version: &str) -> Result<Value> {
+    crate::unrevoke(dir, id, version)?;
+    opened(dir)
+}
+
+pub fn key_revoked(dir: &Path, fingerprint: &str, why: &str) -> Result<Value> {
+    crate::revoke_key(dir, fingerprint, reason(why)?)?;
+    opened(dir)
+}
+
+pub fn made(dir: &Path, charter: crate::Charter, now: i64) -> Result<Value> {
+    let mut settings = crate::Settings::default();
+    charter.apply(&mut settings)?;
+    crate::init(dir, &settings, now)?;
+    opened(dir)
+}
+
+pub fn rotated(dir: &Path, charter: crate::Charter, now: i64) -> Result<Value> {
+    let mut settings = crate::settings(dir)?;
+    charter.apply(&mut settings)?;
+    crate::rotate_root(dir, &settings, now)?;
+    opened(dir)
+}
+
+#[cfg(feature = "sign")]
+pub fn root_signed(dir: &Path, signer: &crate::Signer) -> Result<Value> {
+    crate::sign_root(dir, signer)?;
     opened(dir)
 }

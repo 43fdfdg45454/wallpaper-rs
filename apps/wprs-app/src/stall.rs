@@ -22,6 +22,25 @@ pub mod qobject {
         fn list(self: Pin<&mut Stall>, folder: &QString, id: &QString, version: &QString, listed: bool);
         #[qinvokable]
         fn feature(self: Pin<&mut Stall>, folder: &QString, id: &QString, note: &QString, on: bool);
+        #[qinvokable]
+        fn revoke(
+            self: Pin<&mut Stall>,
+            folder: &QString,
+            id: &QString,
+            version: &QString,
+            reason: &QString,
+            message: &QString,
+        );
+        #[qinvokable]
+        fn unrevoke(self: Pin<&mut Stall>, folder: &QString, id: &QString, version: &QString);
+        #[qinvokable]
+        fn revoke_key(self: Pin<&mut Stall>, folder: &QString, fingerprint: &QString, reason: &QString);
+        #[qinvokable]
+        fn create(self: Pin<&mut Stall>, folder: &QString, charter: &QString);
+        #[qinvokable]
+        fn rotate(self: Pin<&mut Stall>, folder: &QString, charter: &QString);
+        #[qinvokable]
+        fn sign_root(self: Pin<&mut Stall>, folder: &QString, key: &QString, password: &QString);
         #[qsignal]
         fn answered(self: Pin<&mut Stall>, answer: QString);
     }
@@ -31,6 +50,7 @@ pub mod qobject {
 
 use crate::bus;
 use crate::scenefile::Shown;
+use crate::stallwork::{added, changed, chartered, published, rooted};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use qobject::Stall;
@@ -38,7 +58,6 @@ use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::{Mutex, PoisonError};
-use std::time::{SystemTime, UNIX_EPOCH};
 use wprs_format::stall;
 
 static CATALOG: Mutex<()> = Mutex::new(());
@@ -52,25 +71,6 @@ pub struct StallRust {
 pub fn queued<T>(job: impl FnOnce() -> T) -> T {
     let _held = CATALOG.lock().unwrap_or_else(PoisonError::into_inner);
     job()
-}
-
-pub(crate) fn changed(state: wprs_format::Result<Value>) -> anyhow::Result<Value> {
-    let mut state = state?;
-    state["changed"] = json!(true);
-    Ok(state)
-}
-
-fn now() -> anyhow::Result<i64> {
-    Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs().try_into()?)
-}
-
-pub fn added(dir: &Path, files: &[PathBuf], unlisted: bool) -> anyhow::Result<Value> {
-    Ok(stall::added(dir, files, unlisted, now()?)?)
-}
-
-pub fn published(dir: &Path, key: &Path, password: Option<String>, days: u32) -> anyhow::Result<Value> {
-    let signer = wprs_format::Signer::new(&std::fs::read_to_string(key)?, password)?;
-    Ok(stall::published(dir, &signer, days, now()?)?)
 }
 
 fn answer(result: anyhow::Result<Value>) -> QString {
@@ -123,5 +123,46 @@ impl Stall {
     pub fn feature(self: Pin<&mut Self>, folder: &QString, id: &QString, note: &QString, on: bool) {
         let (dir, id, note) = (PathBuf::from(folder.to_string()), id.to_string(), text(note));
         self.behind(move || changed(stall::featured(&dir, &id, note.as_deref(), on)));
+    }
+
+    pub fn revoke(
+        self: Pin<&mut Self>,
+        folder: &QString,
+        id: &QString,
+        version: &QString,
+        reason: &QString,
+        message: &QString,
+    ) {
+        let (dir, id, version) = (PathBuf::from(folder.to_string()), id.to_string(), text(version));
+        let (reason, message) = (reason.to_string(), message.to_string());
+        self.behind(move || changed(stall::revoked(&dir, &id, version.as_deref(), &reason, &message)));
+    }
+
+    pub fn unrevoke(self: Pin<&mut Self>, folder: &QString, id: &QString, version: &QString) {
+        let (dir, id) = (PathBuf::from(folder.to_string()), id.to_string());
+        let version = text(version).unwrap_or_else(|| "*".into());
+        self.behind(move || changed(stall::unrevoked(&dir, &id, &version)));
+    }
+
+    pub fn revoke_key(self: Pin<&mut Self>, folder: &QString, fingerprint: &QString, reason: &QString) {
+        let (dir, key, reason) =
+            (PathBuf::from(folder.to_string()), fingerprint.to_string(), reason.to_string());
+        self.behind(move || changed(stall::key_revoked(&dir, &key, &reason)));
+    }
+
+    pub fn create(self: Pin<&mut Self>, folder: &QString, charter: &QString) {
+        let (dir, charter) = (PathBuf::from(folder.to_string()), charter.to_string());
+        self.behind(move || chartered(&dir, &charter, true));
+    }
+
+    pub fn rotate(self: Pin<&mut Self>, folder: &QString, charter: &QString) {
+        let (dir, charter) = (PathBuf::from(folder.to_string()), charter.to_string());
+        self.behind(move || chartered(&dir, &charter, false));
+    }
+
+    pub fn sign_root(self: Pin<&mut Self>, folder: &QString, key: &QString, password: &QString) {
+        let (dir, key, password) =
+            (PathBuf::from(folder.to_string()), PathBuf::from(key.to_string()), text(password));
+        self.behind(move || rooted(&dir, &key, password));
     }
 }

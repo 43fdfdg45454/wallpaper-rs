@@ -36,6 +36,17 @@ ColumnLayout {
             onClicked: stock.stall.ask(stock.shown ? App.tr("Unlist %1: out of browsing and search, still installable by id.", stock.modelData.id) : App.tr("List %1 again in browsing and search.", stock.modelData.id), () => stock.stall.list(stock.modelData.id, "", !stock.shown))
         }
 
+        QQC2.Button {
+            text: stock.modelData.revoked ? App.tr("Withdraw the revocation") : App.tr("Revoke…")
+            enabled: !stock.stall.busy
+            onClicked: {
+                if (stock.modelData.revoked)
+                    stock.stall.ask(App.tr("Withdraw the revocation of every version of %1. Publish next.", stock.modelData.id), () => stock.stall.unrevoke(stock.modelData.id, ""));
+                else
+                    stock.stall.revoke(stock.modelData.id, "");
+            }
+        }
+
         QQC2.TextField {
             id: note
 
@@ -71,6 +82,19 @@ ColumnLayout {
                 enabled: !stock.stall.busy
                 text: version.modelData.listed ? App.tr("Unlist this version") : App.tr("List this version again")
                 onClicked: stock.stall.ask(version.modelData.listed ? App.tr("Unlist %1 %2: out of browsing and search, still installable by id.", stock.modelData.id, version.modelData.version) : App.tr("List %1 %2 again in browsing and search.", stock.modelData.id, version.modelData.version), () => stock.stall.list(stock.modelData.id, version.modelData.version, !version.modelData.listed))
+            }
+
+            QQC2.Button {
+                flat: true
+                visible: !stock.modelData.revoked
+                enabled: !stock.stall.busy
+                text: version.modelData.revoked ? App.tr("Withdraw the revocation") : App.tr("Revoke this version…")
+                onClicked: {
+                    if (version.modelData.revoked)
+                        stock.stall.ask(App.tr("Withdraw the revocation of %1 %2. Publish next.", stock.modelData.id, version.modelData.version), () => stock.stall.unrevoke(stock.modelData.id, version.modelData.version));
+                    else
+                        stock.stall.revoke(stock.modelData.id, version.modelData.version);
+                }
             }
         }
     }

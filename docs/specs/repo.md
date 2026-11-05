@@ -137,7 +137,18 @@ revoked), adds `.wpak` files with *Add unlisted* as `repo add --unlisted` does, 
 again a package or one version and features (with an optional note) or unfeatures a package, each
 after a confirmation that says what the CLI says, through the same `wprs_format` functions. *Publish…*
 takes a secret key file of an online key, its password when it has one, and the days until the index
-expires (7 by default), and calls `publish` as `wprs-ctl repo publish` does. Every change to the
+expires (7 by default), and calls `publish` as `wprs-ctl repo publish` does. The same tab revokes a
+package or one version with a reason and a message (`stall::revoked`, as `repo revoke`), withdraws a
+revocation (`stall::unrevoked`, as `repo unrevoke DIR ID [--version V]`, which `unrevoke` the whole
+package without a version) and, from *Author keys…*, revokes an author key by its fingerprint
+(`stall::key_revoked`, as `repo revoke-key`). *New repository…* writes `root/1.json` in an empty
+folder from a name, root and online `.pub` files, the root threshold, an author with its keys and the
+policy (`stall::made` with a `wprs_format::Charter`, as `repo init`); *Root…* shows the version of the
+root, how many root keys signed it of its threshold and the anchor query, signs it with a root key file
+and its password (`stall::root_signed`, as `repo sign-root`) and *Rotate the root…* writes the next
+root with other keys, removed or added authors and another policy (`stall::rotated`, as `repo
+rotate-root`). `stall::opened` also answers the root status, the fingerprints of the root, online and
+author keys, the revoked keys and the policy. Every change to the
 catalog runs off the window thread, one after another, and answers when done; the page shows that it
 is busy meanwhile and keeps the other changes and *Open* disabled until then. The phone does the
 same from *Static repository* in *Devices*: it opens a folder picked through the system picker, copies

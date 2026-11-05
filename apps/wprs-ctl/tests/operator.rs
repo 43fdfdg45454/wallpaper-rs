@@ -70,6 +70,10 @@ fn operator_commands_parse() {
             r#"Repo(Revoke { dir: "site", id: "org.example.dawn", version: Some("1.0.0"), reason: "broken", message: "" })"#,
         ),
         (
+            "repo unrevoke site org.example.dawn --version 1.0.0",
+            r#"Repo(Unrevoke { dir: "site", id: "org.example.dawn", version: Some("1.0.0") })"#,
+        ),
+        (
             "repo revoke-key site ab12 --reason malware",
             r#"Repo(RevokeKey { dir: "site", fingerprint: "ab12", reason: "malware" })"#,
         ),

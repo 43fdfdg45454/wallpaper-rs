@@ -27,6 +27,7 @@ mod scenework;
 mod secret;
 mod shelf;
 mod stall;
+mod stallwork;
 #[cfg(test)]
 mod tests;
 mod tr;

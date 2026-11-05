@@ -1602,31 +1602,51 @@ msgstr ""
 msgid "the title needs a text"
 msgstr "el título necesita un texto"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "an event name has 1 to 32 small letters, digits or _"
+msgstr "el nombre de un evento tiene de 1 a 32 minúsculas, dígitos o _"
+
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "the timeline has no event %1"
+msgstr "la línea de tiempo no tiene el evento %1"
+
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "an event fires from 0 s to the end of the timeline, %1 s"
+msgstr "un evento salta entre 0 s y el final de la línea de tiempo, %1 s"
+
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "the event %1 is already at %2 s"
+msgstr "el evento %1 ya está a los %2 s"
+
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "a timeline has at most %1 events"
+msgstr "una línea de tiempo tiene como mucho %1 eventos"
+
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "a timeline id has 1 to 32 small letters, digits or _"
 msgstr "el id de una línea de tiempo tiene de 1 a 32 minúsculas, cifras o _"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "%1 of a timeline is a finite number"
 msgstr "%1 de una línea de tiempo es un número finito"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "a timeline lasts seconds or frames, not both"
 msgstr "una línea de tiempo dura segundos o fotogramas, no ambos"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "there is already a timeline \"%1\""
 msgstr "ya hay una línea de tiempo «%1»"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "a scene has at most %1 timelines"
 msgstr "una escena tiene como mucho %1 líneas de tiempo"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "there is no timeline \"%1\""
 msgstr "no hay ninguna línea de tiempo «%1»"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "add or remove a timeline, not both"
 msgstr "añade o quita una línea de tiempo, no ambas cosas"
 
@@ -1682,6 +1702,10 @@ msgstr "el paquete debe llevar una firma de autor"
 #: crates/wprs-format/src/catalog.rs
 msgid "no author key of this repository signed it"
 msgstr "no lo firmó ninguna clave de autor de este repositorio"
+
+#: crates/wprs-format/src/charter.rs
+msgid "is not an author of the root"
+msgstr "no es un autor de la raíz"
 
 #: crates/wprs-format/src/check.rs
 msgid "is required: a rating of general or mature and its reasons"

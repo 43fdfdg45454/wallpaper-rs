@@ -1748,7 +1748,14 @@ add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo
 *Repositorio estático* de *Repositorios* abre la carpeta del repositorio y añade paquetes (también
 ocultos), oculta o vuelve a mostrar un paquete o una versión y destaca o deja de destacar, con la misma
 confirmación, y *Publicar…* firma el índice con un archivo de clave en línea (con su contraseña, si
-la tiene) y los días hasta que caduca, como `wprs-ctl repo publish`. Cada cambio del catálogo
+la tiene) y los días hasta que caduca, como `wprs-ctl repo publish`. La misma pestaña revoca un
+paquete o una versión con su motivo y un mensaje (`repo revoke`) y retira la revocación (`repo
+unrevoke`), y *Claves de autor…* revoca una clave de autor por su huella (`repo revoke-key`).
+*Repositorio nuevo…* crea uno en una carpeta vacía con su nombre, las claves raíz y en línea (archivos
+`.pub`), cuántas claves raíz deben firmar, un autor con sus claves y la política (`repo init`); *Raíz…*
+muestra la versión de la raíz, cuántas claves la firmaron y la consulta que la ancla, la firma con un
+archivo de clave raíz y su contraseña (`repo sign-root`) y *Rotar la raíz…* escribe la siguiente con
+otras claves, autores quitados o añadidos y otra política (`repo rotate-root`). Cada cambio del catálogo
 trabaja fuera de la ventana, uno detrás de otro, y mientras dura los demás cambios y *Abrir* esperan
 desactivados. En el teléfono, *Repositorio estático* de
 *Dispositivos* hace lo mismo con una carpeta que eliges en el selector del sistema (por ejemplo la que

@@ -7,7 +7,7 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
-use wprs_format::{Settings, Signer};
+use wprs_format::{Charter, Signer};
 
 #[derive(Args, Debug)]
 pub struct Policy {
@@ -38,24 +38,24 @@ pub struct Policy {
 }
 
 impl Policy {
-    pub fn apply(self, s: &mut Settings) -> Result<()> {
+    pub fn charter(self) -> Result<Charter> {
         let mut authors = BTreeMap::<String, Vec<String>>::new();
         for author in &self.authors {
             let (id, key) = author.split_once('=').ok_or_else(|| usage(format!("{author} is not ID=PUB")))?;
-            authors.entry(id.into()).or_default().push(key_text(key)?);
+            authors.entry(id.into()).or_default().push(key.into());
         }
-        s.authors.extend(authors);
-        s.root_threshold = self.threshold.unwrap_or(s.root_threshold);
-        s.require_author_signature = self.require_author_signature.unwrap_or(s.require_author_signature);
-        s.online_authors = self.online_authors.unwrap_or(s.online_authors);
-        s.root_days = self.root_days.unwrap_or(s.root_days);
-        s.entry_max_days = self.entry_max_days.unwrap_or(s.entry_max_days);
-        s.max_package_size = self.max_package_size.unwrap_or(s.max_package_size);
-        s.shard_bits = self.shard_bits.unwrap_or(s.shard_bits);
-        if !self.mirrors.is_empty() {
-            s.mirrors = self.mirrors;
-        }
-        Ok(())
+        Ok(Charter {
+            authors,
+            threshold: self.threshold,
+            require_author_signature: self.require_author_signature,
+            online_authors: self.online_authors,
+            root_days: self.root_days,
+            entry_max_days: self.entry_max_days,
+            max_package_size: self.max_package_size,
+            mirrors: self.mirrors,
+            shard_bits: self.shard_bits,
+            ..Charter::default()
+        })
     }
 }
 
@@ -79,7 +79,7 @@ fn create(path: &str, text: &str, mode: u32) -> Result<()> {
 }
 
 pub fn key_text(key: &str) -> Result<String> {
-    Ok(if Path::new(key).is_file() { fs::read_to_string(key)? } else { key.into() })
+    Ok(wprs_format::key_text(key)?)
 }
 
 pub fn keys(keys: &[String]) -> Result<Vec<String>> {
