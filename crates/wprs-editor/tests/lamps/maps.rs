@@ -72,3 +72,29 @@ fn roughness_and_emissive_maps_are_painted_in_gray() {
         .is_err()
     );
 }
+
+#[test]
+fn maps_made_from_a_ktx2_picture_stay_ktx2_with_its_codec_and_quality() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    act(&mut p, json!({ "asset": { "asset": "pic", "ktx2": true, "codec": "etc1s", "quality": 35 } }))
+        .unwrap();
+    act(&mut p, json!({ "normals": { "layer": "logo", "strength": 4, "blur": 0 } })).unwrap();
+    let id = layer(&p, "logo")["lighting"]["normal"].as_str().unwrap().to_string();
+    let path = p.doc["scene"]["assets"][&id]["path"].as_str().unwrap().to_string();
+    assert!(path.starts_with("normals/") && path.ends_with(".ktx2"), "{path}");
+    let bytes = std::fs::read(p.dir.join(&path)).unwrap();
+    let info = wprs_ktx2::info(&bytes).unwrap();
+    assert_eq!((info.codec, wprs_ktx2::quality(&bytes), info.picture(0)), ("etc1s", Some(35), (40, 20)));
+    let stroke =
+        json!({ "layer": "logo", "map": "emissive", "radius": 0.2, "value": 1, "points": [[0.5, 0.5]] });
+    act(&mut p, json!({ "paint_map": stroke.clone() })).unwrap();
+    let id = layer(&p, "logo")["lighting"]["emissive_map"].as_str().unwrap().to_string();
+    let first = p.doc["scene"]["assets"][&id]["path"].as_str().unwrap().to_string();
+    assert!(first.ends_with(".ktx2"), "{first}");
+    act(&mut p, json!({ "paint_map": stroke })).unwrap();
+    let again = p.doc["scene"]["assets"][&id]["path"].as_str().unwrap().to_string();
+    assert!(again.ends_with(".ktx2") && again != first, "{again}");
+    let map = wprs_editor::pictures::open(p.dir.join(&again)).unwrap().into_rgba8();
+    assert!(map.get_pixel(20, 10).0[0] > 180, "{:?}", map.get_pixel(20, 10));
+}

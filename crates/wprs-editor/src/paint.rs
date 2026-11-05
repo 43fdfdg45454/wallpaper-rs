@@ -36,10 +36,7 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &Stroke) -> Result<Vec<Op>> {
     let mut picture =
         old.unwrap_or_else(|| RgbaImage::from_pixel(SIDE, SIDE, Rgba(blank(dir, doc, s.pointer))));
     stroke(&mut picture, s);
-    let saved =
-        (1..).map(|n| format!("masks/{id}-{n}.png")).find(|p| !dir.join(p).exists()).unwrap_or_default();
-    std::fs::create_dir_all(dir.join("masks"))?;
-    picture.save(dir.join(&saved))?;
+    let saved = crate::pictures::store(dir, ("masks", &id), &picture, path.map(|p| dir.join(p)).as_deref())?;
     let mut ops = set(doc, &asset(&id), json!({ "path": saved, "linear": true }));
     ops.extend(set(doc, s.pointer, json!(id)));
     Ok(ops)

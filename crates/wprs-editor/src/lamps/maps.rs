@@ -43,12 +43,8 @@ fn made(dir: &Path, doc: &Value, m: &NormalsMake) -> Result<(String, RgbaImage)>
     Ok((id, wprs_depth::normals(&picture, m.strength, m.blur)))
 }
 
-fn saved(dir: &Path, folder: &str, name: &str, image: &RgbaImage) -> Result<String> {
-    let path =
-        (1..).map(|n| format!("{folder}/{name}-{n}.png")).find(|p| !dir.join(p).exists()).unwrap_or_default();
-    std::fs::create_dir_all(dir.join(folder))?;
-    image.save(dir.join(&path))?;
-    Ok(path)
+fn saved(dir: &Path, (folder, name): (&str, &str), image: &RgbaImage, like: Option<&str>) -> Result<String> {
+    crate::pictures::store(dir, (folder, name), image, like.map(|p| dir.join(p)).as_deref())
 }
 
 fn with(doc: &Value, layer: &str, field: &str, id: &str) -> Result<Vec<Op>> {
@@ -75,7 +71,7 @@ pub(crate) fn normals(dir: &Path, doc: &Value, m: &NormalsMake) -> Result<Vec<Op
     let base =
         m.id.clone().unwrap_or_else(|| format!("{}_normals", from.chars().take(24).collect::<String>()));
     let id = if m.id.is_some() { base } else { crate::layers::unique(doc, &base) };
-    let path = saved(dir, "normals", &id, &image)?;
+    let path = saved(dir, ("normals", &id), &image, path_of(doc, &from))?;
     let mut ops =
         set(doc, &format!("/scene/assets/{}", escape(&id)), json!({ "path": path, "linear": true }));
     if let Some(layer) = &m.layer {
@@ -147,7 +143,10 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &MapStroke) -> Result<Vec<Op>> {
         || crate::layers::unique(doc, &format!("{}_{}", s.layer, &field[..field.len() - 4])),
         String::from,
     );
-    let path = saved(dir, "maps", &id, &picture)?;
+    let like = named
+        .and_then(|id| path_of(doc, id))
+        .or_else(|| layer["image"].as_str().and_then(|i| path_of(doc, i)));
+    let path = saved(dir, ("maps", &id), &picture, like)?;
     let mut ops =
         set(doc, &format!("/scene/assets/{}", escape(&id)), json!({ "path": path, "linear": true }));
     ops.extend(with(doc, &s.layer, field, &id)?);

@@ -9,6 +9,9 @@ ctl scene import "$packed/scene" "$ROOT/tests/fixtures/green-64x32.png" --id mea
 ctl scene asset "$packed/scene" meadow --ktx2 --dry-run --json | grep -q '"size":\[64,32\]' || fail "no KTX2 trial"
 [ "$(ctl scene asset "$packed/scene" meadow --ktx2)" = assets/green-64x32.ktx2 ] || fail "the picture did not become KTX2"
 ctl scene add-layer "$packed/scene" image --source meadow >/dev/null
+ctl scene normals "$packed/scene" meadow --generate --id meadow_normals >/dev/null || fail "no normal map of KTX2"
+ctl scene show "$packed/scene" /scene/assets/meadow_normals/path | grep -q 'normals/meadow_normals-1\.ktx2' ||
+  fail "the normal map of a KTX2 picture is not KTX2"
 ctl scene import "$packed/scene" "$ROOT/tests/fixtures/blink-16x8.gif" --id blink >/dev/null
 ctl scene set "$packed/scene" /scene/assets/blink/animated true
 [ "$(ctl scene asset "$packed/scene" blink --ktx2)" = assets/blink-16x8.ktx2 ] || fail "the animation did not become KTX2"

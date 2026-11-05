@@ -121,3 +121,31 @@ fn an_animated_picture_becomes_a_ktx2_array_that_keeps_its_timing() {
     assert_eq!((glance.frames, glance.cube, glance.hdr), (3, false, false));
     assert_eq!(wprs_editor::pictures::glance(&file), None);
 }
+
+#[test]
+fn pictures_written_from_a_ktx2_source_keep_its_codec_and_quality() {
+    let root = tempfile::tempdir().unwrap();
+    let dir = root.path();
+    let picture = RgbaImage::from_pixel(12, 6, Rgba([200, 100, 50, 255]));
+    let options = wprs_ktx2::Options {
+        codec: wprs_ktx2::Codec::Etc1s,
+        quality: 33,
+        srgb: true,
+        mips: false,
+        repeat: false,
+    };
+    std::fs::write(dir.join("old.ktx2"), wprs_ktx2::encode(&picture, &options).unwrap()).unwrap();
+    picture.save(dir.join("old.png")).unwrap();
+    let store = |like: Option<&str>| {
+        wprs_editor::pictures::store(dir, ("masks", "m"), &picture, like.map(|l| dir.join(l)).as_deref())
+            .unwrap()
+    };
+    let packed = store(Some("old.ktx2"));
+    assert_eq!(packed, "masks/m-1.ktx2");
+    let bytes = std::fs::read(dir.join(&packed)).unwrap();
+    assert_eq!((wprs_ktx2::info(&bytes).unwrap().codec, wprs_ktx2::quality(&bytes)), ("etc1s", Some(33)));
+    assert_eq!(
+        (store(Some("old.png")), store(None), store(Some("gone.ktx2"))),
+        ("masks/m-1.png".to_string(), "masks/m-2.png".to_string(), "masks/m-3.png".to_string())
+    );
+}

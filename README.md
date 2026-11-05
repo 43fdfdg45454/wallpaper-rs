@@ -2071,7 +2071,9 @@ El editor de escenas pinta también las máscaras de los efectos que las piden p
 cada parámetro de máscara hay un botón para pintar, el canal (rojo, verde, azul o alfa), un modo
 para borrar y el tamaño del pincel, y cada trazo sobre la capa en la vista previa se guarda como una
 imagen nueva en `masks/`, de modo que deshacer vuelve a la anterior (`wprs-ctl scene paint-mask`
-hace lo mismo desde la terminal).
+hace lo mismo desde la terminal). Si la máscara, el mapa o la imagen de partida es KTX2, la imagen
+nueva también lo es, con el mismo códec y la misma calidad, en lugar de un PNG; cada trazo vuelve a
+comprimirla, así que conviene pintar sobre PNG y convertir al final.
 
 También recorta una malla de una imagen de la escena («Malla desde una imagen» en el menú para añadir
 capas), con una cuadrícula de celdas o siguiendo el contorno de la parte opaca, y le pone huesos, igual
