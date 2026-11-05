@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-03 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -710,7 +710,10 @@ msgid ""
 "While the scene is shown, the title, artist, album, cover and progress of "
 "what a media player on this computer plays reach it; nothing of it is kept, "
 "logged or sent."
-msgstr "Mientras la escena se ve, le llegan el título, el artista, el álbum, la carátula y el avance de lo que suena en un reproductor de este equipo; nada de eso se guarda, se registra ni se envía."
+msgstr ""
+"Mientras la escena se ve, le llegan el título, el artista, el álbum, la "
+"carátula y el avance de lo que suena en un reproductor de este equipo; nada "
+"de eso se guarda, se registra ni se envía."
 
 #: apps/wprs-app/qml/Consent.qml
 msgid "Send its colors to the RGB lighting"
@@ -2815,6 +2818,14 @@ msgstr "Nivel"
 msgid "Beat"
 msgstr "Pulso"
 
+#: apps/wprs-app/qml/SceneBind.qml
+msgid "Follow the media player"
+msgstr "Seguir al reproductor multimedia"
+
+#: apps/wprs-app/qml/SceneBind.qml
+msgid "%1 (now %2)"
+msgstr "%1 (ahora %2)"
+
 #: apps/wprs-app/qml/SceneBind.qml apps/wprs-app/qml/facade/SceneLabels.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Horizontal position"
@@ -3805,6 +3816,35 @@ msgstr ""
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Materials"
 msgstr "Materiales"
+
+#: apps/wprs-app/qml/SceneMedia.qml
+msgid ""
+"Try the scene with a made-up track instead of what a player plays. Only the "
+"preview shows it, without asking for permission."
+msgstr ""
+"Prueba la escena con una pista inventada en vez de lo que suena en un "
+"reproductor. Solo la muestra la vista previa, sin pedir permiso."
+
+#: apps/wprs-app/qml/SceneMedia.qml
+msgid "Simulated player"
+msgstr "Reproductor simulado"
+
+#: apps/wprs-app/qml/SceneMedia.qml apps/wprs-app/qml/facade/ManifestWords.qml
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "Title"
+msgstr "Título"
+
+#: apps/wprs-app/qml/SceneMedia.qml
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Artist"
+msgstr "Artista"
+
+#: apps/wprs-app/qml/SceneMedia.qml apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Album"
+msgstr "Álbum"
 
 #: apps/wprs-app/qml/SceneMeshCut.qml
 msgid "Mesh from a picture"
@@ -4862,6 +4902,10 @@ msgstr "Recursos"
 msgid "Package"
 msgstr "Paquete"
 
+#: apps/wprs-app/qml/SceneSide.qml
+msgid "Player"
+msgstr "Reproductor"
+
 #: apps/wprs-app/qml/SceneSpan.qml
 msgid "These screens cannot be shown: %1"
 msgstr "Estas pantallas no se pueden mostrar: %1"
@@ -5741,7 +5785,11 @@ msgid ""
 "media player on this computer plays only after you allow it for that "
 "package, and only while it is shown. Nothing of it is kept, logged or sent "
 "anywhere."
-msgstr "Una escena o una página muestra el título, el artista, el álbum, la carátula y el avance de lo que suena en un reproductor de este equipo solo después de que lo permitas para ese paquete, y solo mientras se ve. Nada de eso se guarda, se registra ni se envía a ningún sitio."
+msgstr ""
+"Una escena o una página muestra el título, el artista, el álbum, la carátula "
+"y el avance de lo que suena en un reproductor de este equipo solo después de "
+"que lo permitas para ese paquete, y solo mientras se ve. Nada de eso se "
+"guarda, se registra ni se envía a ningún sitio."
 
 #: apps/wprs-app/qml/SettingsMedia.qml
 msgid "No shown wallpaper reads the media player now."
@@ -5781,7 +5829,11 @@ msgid ""
 "With this on, such a cover is downloaded (at most 4 MiB, within 5 seconds) "
 "while an allowed wallpaper shows it, so that site learns that the track "
 "plays here; covers stay in memory only."
-msgstr "Algunos reproductores dan la dirección de una carátula en internet en vez de un archivo. Con esto encendido, esa carátula se descarga (como mucho 4 MiB, en 5 segundos) mientras la muestra un fondo con permiso, así que esa web sabe que la pista suena aquí; las carátulas solo se guardan en memoria."
+msgstr ""
+"Algunos reproductores dan la dirección de una carátula en internet en vez de "
+"un archivo. Con esto encendido, esa carátula se descarga (como mucho 4 MiB, "
+"en 5 segundos) mientras la muestra un fondo con permiso, así que esa web "
+"sabe que la pista suena aquí; las carátulas solo se guardan en memoria."
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Add folder…"
@@ -6511,10 +6563,6 @@ msgstr "Nombre de usuario"
 msgid "Server"
 msgstr "Servidor"
 
-#: apps/wprs-app/qml/facade/Labels.qml apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Album"
-msgstr "Álbum"
-
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Allow unencrypted HTTP"
 msgstr "Permitir HTTP sin cifrar"
@@ -7086,6 +7134,7 @@ msgid "Address of the item"
 msgstr "Dirección del elemento"
 
 #: apps/wprs-app/qml/facade/ManifestWords.qml
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
 msgid "Kind"
 msgstr "Tipo"
 
@@ -7197,10 +7246,6 @@ msgstr "Condiciones de uso"
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Thumbnail"
 msgstr "Miniatura"
-
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Title"
-msgstr "Título"
 
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Values"
@@ -7761,6 +7806,69 @@ msgstr "Tramo activo"
 msgid "Wrap"
 msgstr "Ajuste de línea"
 
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Album artist"
+msgstr "Artista del álbum"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Subtitle"
+msgstr "Subtítulo"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Genres"
+msgstr "Géneros"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Position"
+msgstr "Posición"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Duration"
+msgstr "Duración"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Progress"
+msgstr "Progreso"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "Primary color of the cover"
+msgstr "Color principal de la carátula"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "Secondary color of the cover"
+msgstr "Color secundario de la carátula"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "Tertiary color of the cover"
+msgstr "Color terciario de la carátula"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "Text color readable over the primary"
+msgstr "Color de texto legible sobre el principal"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "Black or white over the primary"
+msgstr "Negro o blanco sobre el principal"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Playing"
+msgstr "Reproduciendo"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "yes"
+msgstr "sí"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "no"
+msgstr "no"
+
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Padding"
 msgstr "Margen"
@@ -7827,10 +7935,6 @@ msgid "Play on"
 msgstr "Sonar con"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Playing"
-msgstr "Reproduciendo"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Pointer influence"
 msgstr "Influencia del puntero"
 
@@ -7851,10 +7955,6 @@ msgid "Shape pools"
 msgstr "Reservas de formas"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Position"
-msgstr "Posición"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Still frame at"
 msgstr "Fotograma fijo en"
 
@@ -7865,10 +7965,6 @@ msgstr "Precalentamiento"
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Probability"
 msgstr "Probabilidad"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Progress"
-msgstr "Progreso"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "User property"
@@ -8642,14 +8738,6 @@ msgid "AgX"
 msgstr "AgX"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Album artist"
-msgstr "Artista del álbum"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Artist"
-msgstr "Artista"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Average"
 msgstr "Media"
 
@@ -8756,10 +8844,6 @@ msgstr "Delante"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Files of chosen folders"
 msgstr "Archivos de carpetas elegidas"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Genres"
-msgstr "Géneros"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Shapes"
@@ -8987,10 +9071,6 @@ msgid "Storage"
 msgstr "Almacenamiento"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Subtitle"
-msgstr "Subtítulo"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Third color"
 msgstr "Tercer color"
 
@@ -9069,6 +9149,10 @@ msgstr "el reloj"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "the keyframes"
 msgstr "los fotogramas clave"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "the media player"
+msgstr "el reproductor multimedia"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "a user property"
@@ -9425,10 +9509,6 @@ msgstr "Bajada"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Drag"
 msgstr "Rozamiento"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Duration"
-msgstr "Duración"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Frame durations"

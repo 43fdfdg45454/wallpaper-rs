@@ -60,6 +60,8 @@ pub enum Folder {
         quality: Option<String>,
         #[arg(long, help = "Start the particle systems and the scene again")]
         restart: bool,
+        #[arg(long, value_name = "FILE", help = crate::media::MEDIA)]
+        media: Option<PathBuf>,
         #[arg(long, value_parser = ["dual", "triple", "vertical", "mine"], requires = "out", help = SPREAD)]
         layout: Option<String>,
         #[arg(long, requires = "layout", help = "Picture file of --layout: .png, .jpg, .webp or .avif")]
@@ -144,11 +146,13 @@ pub(crate) fn run(command: Folder) -> Result<()> {
         Folder::Preview { dir, layout: Some(layout), out: Some(out), .. } => {
             crate::spanning::preview(&dir, &layout, &out)?
         }
-        Folder::Preview { dir, output, time, stop, quality, restart, .. } => {
+        Folder::Preview { dir, output, time, stop, quality, restart, media, .. } => {
             let project = Project::open(&dir)?;
             let mut document = json!({"manifest": project.doc["manifest"], "scene": visible(&project.doc)});
             let nonce = restart.then(|| std::time::UNIX_EPOCH.elapsed().map_or(1, |d| d.as_millis() as u64));
-            let staged = wprs_editor::rigs::staged(&json!({ "quality": quality, "restart": nonce }));
+            let media = media.map(|f| crate::media::simulated(&f)).transpose()?;
+            let look = json!({ "quality": quality, "restart": nonce, "media": media });
+            let staged = wprs_editor::rigs::staged(&look);
             staged.into_iter().for_each(|s| document["preview"] = s);
             let document = document.to_string();
             let (dir, document) = (fs::canonicalize(&dir)?, if stop { String::new() } else { document });

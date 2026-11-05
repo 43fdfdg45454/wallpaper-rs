@@ -165,6 +165,7 @@ QtObject {
             "clock": App.tr("the clock"),
             "cursor": App.tr("the pointer"),
             "keys": App.tr("the keyframes"),
+            "media": App.tr("the media player"),
             "prop": App.tr("a user property"),
             "script": App.tr("a script")
         })

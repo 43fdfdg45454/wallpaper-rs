@@ -1,4 +1,4 @@
-use crate::input::{AudioFrame, PointerState, ScriptOutputs};
+use crate::input::{AudioFrame, MediaState, PointerState, ScriptOutputs};
 use crate::kin::Place;
 use crate::timeline::{Loop, Playhead, local};
 use crate::value::{AudioChannel, Axis, Band, Binding, Level};
@@ -7,6 +7,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 pub(crate) mod binding;
+pub(crate) mod media;
 
 pub(crate) struct Context<'a> {
     pub(crate) t: f32,
@@ -18,6 +19,7 @@ pub(crate) struct Context<'a> {
     pub(crate) lang: &'a str,
     pub(crate) audio: &'a AudioFrame,
     pub(crate) pointer: &'a PointerState,
+    pub(crate) media: &'a (MediaState, f64),
     pub(crate) script: &'a ScriptOutputs,
     pub(crate) props: &'a Values,
     pub(crate) timelines: &'a [(Timeline, Playhead)],

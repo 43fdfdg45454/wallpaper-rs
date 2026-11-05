@@ -103,6 +103,20 @@ pub(crate) fn of(output: &str) -> Option<Arc<Frame>> {
     frame(output, crate::inputs::allows(output, wprs_core::model::Input::Media))
 }
 
+pub(crate) fn simulate(output: &str, frame: Option<Arc<Frame>>) {
+    let Some(l) = LISTENER.get() else { return };
+    let mut simulated = lock(&l.simulated);
+    let changed = match frame {
+        Some(frame) => simulated.insert(output.to_owned(), frame).is_none(),
+        None => simulated.remove(output).is_some(),
+    };
+    drop(simulated);
+    (l.wake)();
+    if changed {
+        crate::inputs::poke();
+    }
+}
+
 pub(crate) fn simulated(output: &str) -> bool {
     LISTENER.get().is_some_and(|l| lock(&l.simulated).contains_key(output))
 }

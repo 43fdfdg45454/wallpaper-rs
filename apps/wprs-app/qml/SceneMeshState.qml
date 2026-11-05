@@ -35,7 +35,7 @@ QtObject {
             "shapes": shapes,
             "still": still
         } : {};
-        ["quality", "restart"].filter(k => kept[k] !== undefined).forEach(k => look[k] = kept[k]);
+        ["quality", "restart", "media"].filter(k => kept[k] !== undefined).forEach(k => look[k] = kept[k]);
         page.editor.look = Object.keys(look).length > 0 ? JSON.stringify(look) : "";
         page.editor.seek(page.clock, page.editor.playing);
     }

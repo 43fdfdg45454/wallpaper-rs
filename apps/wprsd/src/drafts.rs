@@ -7,6 +7,7 @@ use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
 
 mod again;
+mod media;
 mod pack;
 
 const LIFE: Duration = Duration::from_secs(60);
@@ -43,6 +44,9 @@ impl Daemon {
             name => vec![output_name(name)?],
         };
         ensure!(document.len() <= MAX_DOCUMENT, invalid("the scene is too large"));
+        let (document, simulated) = media::split(document);
+        let document = document.as_str();
+        let simulated = simulated.map(|m| media::frame(dir, m).map(Arc::new)).transpose()?;
         let hold = (time >= 0.0 && time.is_finite()).then_some(time.min(600.0));
         let pack = match document.trim() {
             "" => None,
@@ -81,6 +85,8 @@ impl Daemon {
             }
             (started, again)
         };
+        let simulated = simulated.filter(|_| pack.is_some());
+        outputs.iter().for_each(|o| crate::media::simulate(o, simulated.clone()));
         if started {
             tokio::spawn(expire(Arc::downgrade(self)));
         }
@@ -104,6 +110,7 @@ async fn expire(daemon: Weak<Daemon>) {
             gone.iter().for_each(|o| drop(st.drafts.remove(o)));
             (gone, st.drafts.values().map(|x| x.at + LIFE).min())
         };
+        gone.iter().for_each(|o| crate::media::simulate(o, None));
         if !gone.is_empty() {
             let daemon = d.clone();
             tokio::task::spawn_blocking(move || gone.iter().for_each(|o| drop(daemon.configure_output(o))));

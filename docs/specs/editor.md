@@ -168,10 +168,18 @@ choices and bindable to a property. The outline adds `effect_names`, the `name` 
 the package in the language of the desktop. Problems and refused actions show the message of the validator and of the editor, the
 same English text that `wprs-ctl scene validate` and the commands print, under a translated
 heading; each problem leads to its field, whose name is translated. A field that may follow a
-source (keyframes, a user property, the sound analysis or the pointer) has
+source (keyframes, a user property, the sound analysis, the pointer or the media player) has
 a menu to add or remove a keyframe at the current time, bind it, make it fixed again or edit the
-binding itself (timeline, loop, scale, offset, clamp, smoothing). An optional field that is set
+binding itself (timeline, loop, scale, offset, clamp, smoothing). Follow the media player lists
+only the `media` values that fit the field (the texts of the track for a text, the numbers and
+`playing` for a number, `playing` for a switch, the colors of the cover for a color), each with
+what it would show now with the simulated player of the Player tab. An optional field that is set
 can go back to its default.
+
+The Player tab is a simulated media player for the preview, so that a scene can be made without
+music playing: a switch turns it on, and it has the title, artist and album of a made-up track.
+The preview then shows that track instead of what a media player plays, without asking for the
+`media` grant and without reading the players; it reaches only the preview.
 
 ## Package details
 
@@ -585,8 +593,13 @@ previews on every screen the same way. The app repeats the call every 30 seconds
 on and ends it when the editor closes; the daemon ends it 60 seconds after the last call. A
 minimized window marks the preview output covered. `wprs-ctl scene preview DIR [-o OUTPUT] [--time
 T] [--quality Q] [--restart]` shows the saved folder for 60 seconds, at most at that quality level and
-started again, and `--stop` ends it. The document of a preview may carry `preview: { quality,
-restart }`, which the daemon reads only for previews.
+started again, and `--stop` ends it; `--media FILE` shows a made-up track from a JSON file of at
+most 64 KiB (`title`, `artist`, `album`, `album_artist`, `subtitle`, `genres`, the last three
+words or lists of words, `playing`, `position` and `duration` in seconds from 0 to 10 000 000 and
+`rate` from −100 to 100; texts of at most 512 characters without control characters) instead of a
+media player. The document of a preview may carry `preview: { quality, restart, media }`, which the
+daemon reads only for previews; `media` is refused, naming the field, when a value is out of
+range, and never reads the media players or needs the `media` grant.
 
 The canvas draws the outline of each layer with handles to turn and scale the selected one, and
 guides for 16:9, 21:9, 32:9, 4:3, 16:10 and 9:16 screens. *Screens* previews the scene spread over

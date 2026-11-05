@@ -93,6 +93,26 @@ QQC2.ToolButton {
         }
 
         QQC2.Menu {
+            title: App.tr("Follow the media player")
+            enabled: media.count > 0
+
+            Repeater {
+                id: media
+
+                model: SceneMediaWords.sources(bind.field.widget)
+
+                delegate: QQC2.MenuItem {
+                    required property var modelData
+
+                    text: modelData[2] !== "" ? App.tr("%1 (now %2)", modelData[1], modelData[2]) : modelData[1]
+                    onTriggered: bind.bound({
+                        "media": modelData[0]
+                    })
+                }
+            }
+        }
+
+        QQC2.Menu {
             title: App.tr("Follow the pointer")
 
             Repeater {

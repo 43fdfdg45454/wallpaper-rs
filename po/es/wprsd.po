@@ -100,7 +100,10 @@ msgstr "¿Dejar que un fondo muestre lo que suena?"
 msgid ""
 "Let “%1” show the title, artist, album, cover and progress of what the media "
 "player plays? Nothing of it is kept, logged or sent."
-msgstr "¿Dejar que «%1» muestre el título, el artista, el álbum, la carátula y el avance de lo que suena en el reproductor? Nada de eso se guarda, se registra ni se envía."
+msgstr ""
+"¿Dejar que «%1» muestre el título, el artista, el álbum, la carátula y el "
+"avance de lo que suena en el reproductor? Nada de eso se guarda, se registra "
+"ni se envía."
 
 #: apps/wprsd/src/words.rs
 msgid "Let a scene follow the sound?"

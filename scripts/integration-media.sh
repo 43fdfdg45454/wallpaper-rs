@@ -50,4 +50,21 @@ ctl config media.remote_covers false
 ctl input revoke "$tune" media
 wait_for 10 says "r['listening']" False || fail "the player was read after the permission was taken back"
 leave && ctl release TEST-21 && bus Library1 Remove asb 1 "$uid" false >/dev/null
+tuning=$WORK/scene/tuning
+ctl scene new "$tuning" >/dev/null
+ctl scene set "$tuning" /manifest/inputs '["media"]'
+ctl scene set "$tuning" /scene/canvas/background '#000000'
+ctl scene add "$tuning" /scene/layers/- '{"id": "title", "type": "text", "text": {"media": "title"}, "size": 40}'
+printf '{"title": "Night Drive", "artist": ["Example Artist"], "playing": true, "position": 5, "duration": 100}' >"$WORK/track.json"
+read -r _ _ _ s22 < <(ctl stream preview:2 160 90)
+consume "$s22"
+ctl scene preview "$tuning" -o preview:2 --time 0 --media "$WORK/track.json" || fail "a made-up track was not previewed"
+ctl media status | grep -q "^media player: not read" || fail "a made-up track read the media player: $(ctl media status)"
+printf '{"title": "%s"}' "$(printf 'x%.0s' $(seq 600))" >"$WORK/long.json"
+if ctl scene preview "$tuning" -o preview:2 --media "$WORK/long.json" 2>"$WORK/long.err"; then fail "a title of 600 characters was previewed"; fi
+grep -q "512" "$WORK/long.err" || fail "the long title was refused without saying why: $(cat "$WORK/long.err")"
+printf '[1, 2]' >"$WORK/list.json"
+if ctl scene preview "$tuning" -o preview:2 --media "$WORK/list.json" 2>/dev/null; then fail "a list was taken for a made-up track"; fi
+ctl scene preview "$tuning" -o preview:2 --stop
+leave && ctl release preview:2
 echo "media permission checks passed"

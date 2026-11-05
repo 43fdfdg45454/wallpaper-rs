@@ -43,6 +43,7 @@ impl Runtime {
             lang: &self.lang,
             audio: &self.audio,
             pointer: &self.pointer,
+            media: &self.media,
             script: &self.script,
             props: &self.props,
             timelines: &self.timelines,

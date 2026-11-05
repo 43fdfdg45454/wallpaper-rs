@@ -114,7 +114,10 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
 pub fn staged(look: &Value) -> Option<Value> {
     let quality = look.get("quality").filter(|q| q.is_string());
     let restart = look.get("restart").filter(|r| r.is_u64());
-    (quality.is_some() || restart.is_some()).then(|| json!({ "quality": quality, "restart": restart }))
+    let media = look.get("media").filter(|m| m.is_object());
+    let mut staged = json!({ "quality": quality, "restart": restart });
+    media.into_iter().for_each(|m| staged["media"] = m.clone());
+    (quality.is_some() || restart.is_some() || media.is_some()).then_some(staged)
 }
 
 pub fn preview(scene: &mut Value, look: &Value) {

@@ -355,7 +355,7 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `script_shortcuts` | has scripts that use `shortcuts` | runs | without |
 | `script_hierarchy` | has scripts that use `hierarchy` | runs | runs |
 | `layer_events` | sets `solid: { "alpha" }`, `hit` bones, `click:`, `enter:` or `leave:` triggers or scripts that handle pointer events | runs | runs |
-| `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | refused | refused |
+| `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | runs | refused |
 
 ## Profiles
 

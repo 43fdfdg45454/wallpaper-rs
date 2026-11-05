@@ -28,6 +28,10 @@ ColumnLayout {
         QQC2.TabButton {
             text: App.tr("Package")
         }
+
+        QQC2.TabButton {
+            text: App.tr("Player")
+        }
     }
 
     StackLayout {
@@ -48,6 +52,10 @@ ColumnLayout {
         SceneProperties {
             id: settings
 
+            page: panel.page
+        }
+
+        SceneMedia {
             page: panel.page
         }
     }

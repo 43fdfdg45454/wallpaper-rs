@@ -1460,6 +1460,13 @@ descarga con *Descargar carátulas de internet* encendido (`wprs-ctl config medi
 true`, apagado por defecto y propio de cada equipo), como mucho 4 MiB y en 5 segundos, y esa web
 puede saber que esa pista suena aquí; las carátulas solo viven en memoria.
 
+En el editor, el menú de enlace de cada campo tiene *Seguir al reproductor multimedia* con los
+datos que le caben: el título, el artista, el álbum, el artista del álbum, el subtítulo, los
+géneros y el tipo para un texto, cada uno con lo que mostraría ahora. La pestaña *Reproductor*
+simula una pista (título, artista y álbum) para diseñar sin música sonando; solo la ve la vista
+previa, sin pedir permiso ni leer los reproductores. Desde la terminal, `wprs-ctl scene preview
+CARPETA --media pista.json` hace lo mismo con un JSON de esos campos.
+
 ## Servidor propio
 
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas
