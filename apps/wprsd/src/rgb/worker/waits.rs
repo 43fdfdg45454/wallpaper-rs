@@ -24,7 +24,23 @@ impl Session {
 
     pub(super) fn retry(&mut self) {
         if self.client.is_none() && self.retries() {
-            self.ready().ok();
+            self.opened = self.ready().is_ok();
+        }
+        self.release();
+    }
+
+    pub(super) fn unwanted(&self, source: Option<&str>) -> bool {
+        let follows = self.rgb.when_covered == Covered::Follow && !super::super::covered::wanted();
+        follows && self.test.is_none() && source.is_none_or(super::super::covered::covered)
+    }
+
+    fn release(&mut self) {
+        if self.opened
+            && self.client.is_some()
+            && self.unwanted(self.last.as_ref().map(|(source, _)| source.as_str()))
+        {
+            (self.client, self.opened) = (None, false);
+            self.publish(None, Vec::new());
         }
     }
 }

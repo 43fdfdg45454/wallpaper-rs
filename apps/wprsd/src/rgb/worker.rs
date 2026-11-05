@@ -20,10 +20,19 @@ struct Session {
     failed: Option<Instant>,
     last: Option<(String, Strip)>,
     test: Option<(Instant, Option<u32>)>,
+    opened: bool,
 }
 
 pub(super) fn spawn(asks: Receiver<Ask>, status: Arc<Mutex<Status>>) {
-    let session = Session { status, rgb: Rgb::default(), client: None, failed: None, last: None, test: None };
+    let session = Session {
+        status,
+        rgb: Rgb::default(),
+        client: None,
+        failed: None,
+        last: None,
+        test: None,
+        opened: false,
+    };
     let started = std::thread::Builder::new().name("wprsd-rgb".into()).spawn(move || run(asks, session));
     if let Err(e) = started {
         tracing::warn!("cannot start the RGB lighting: {e}");
@@ -39,7 +48,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                     if !rgb.enabled {
                         s.forget(None);
                     }
-                    (s.client, s.failed, s.rgb) = (None, None, rgb);
+                    (s.client, s.failed, s.rgb, s.opened) = (None, None, rgb, false);
                     s.publish(None, Vec::new());
                     s.retry();
                 }
@@ -48,13 +57,13 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
             Ok(Ask::Covered) => s.retry(),
             Ok(Ask::Frame(source, strip)) => {
                 lock(&s.status).source = Some(source.clone());
-                s.last = Some((source, strip.clone()));
-                if s.test.is_none() {
+                s.last = Some((source.clone(), strip.clone()));
+                if s.test.is_none() && !s.unwanted(Some(&source)) {
                     s.paint(&strip, None);
                 }
             }
             Ok(Ask::Connect(reply)) => {
-                (s.client, s.failed) = (None, None);
+                (s.client, s.failed, s.opened) = (None, None, false);
                 reply.send(s.ready()).ok();
             }
             Ok(Ask::Test(device, reply)) => {
@@ -65,7 +74,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                     false => Err(format!("there is no RGB device {}", device.unwrap_or_default())),
                 });
                 if ready.is_ok() {
-                    s.test = Some((Instant::now(), device));
+                    (s.test, s.opened) = (Some((Instant::now(), device)), false);
                     lock(&s.status).testing = true;
                 }
                 reply.send(ready).ok();

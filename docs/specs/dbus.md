@@ -1551,7 +1551,11 @@ on another computer sends the colors over the network, which the app says next t
 daemon connects when a granted package sends colors, when a covered wallpaper that holds the grant
 and sends colors would follow with `rgb.when_covered` set to `follow` (never for an image, a video, a
 package without colors or an output paused, locked or on battery), on `Connect` or `Test`, names itself
-`wallpaper-rs`, puts every device in its direct mode and tries again 10 s after a failure. A strip of
+`wallpaper-rs`, puts every device in its direct mode and tries again 10 s after a failure. A
+connection made only for a covered wallpaper closes again, leaving the devices with their last
+colors, as soon as nothing covered wants the lights (the session locks or pauses, the computer goes
+on battery, the wallpaper changes or the output goes away), unless an uncovered output sends colors;
+the daemon then sleeps until something asks for the lights again. A strip of
 at most 64 × 16 pixels comes from the shown scene or page of each output that holds the `rgb` grant
 (`Inputs1`), at most 30 times a second for all of them together; the daemon spreads it over each
 device: a zone with a matrix takes the cell of the strip under each key, the other zones the column

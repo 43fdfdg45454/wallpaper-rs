@@ -1467,7 +1467,10 @@ mucho, dibujada a 320 píxeles por lado como mucho solo para la tira y nunca en 
 que esos fotogramas cambien su nivel de calidad, y una página sigue igual sin mostrarse, las dos solo mientras el servidor está conectado y tiene
 dispositivos (si no, el fondo tapado sigue en pausa y el servicio vuelve a probar el servidor cada
 10 segundos, solo mientras ese fondo tiene el permiso `rgb`, manda colores y nada más lo pausa:
-nunca por una imagen, un video, un paquete sin colores, la sesión bloqueada o la batería). Si el fondo tapado no se pausa, sigue dibujándose y las luces lo
+nunca por una imagen, un video, un paquete sin colores, la sesión bloqueada o la batería; si el
+servicio se conectó solo para ese fondo tapado, cierra la conexión en cuanto nada tapado pide las
+luces, al bloquear, pausar, pasar a batería, cambiar de fondo o quitar la pantalla, salvo que una
+pantalla a la vista mande colores, y los dispositivos quedan con sus últimos colores). Si el fondo tapado no se pausa, sigue dibujándose y las luces lo
 siguen como siempre, elijas lo que elijas. `wprs-ctl rgb covered` y `wprs-ctl rgb status` muestran
 la elección y si las luces están en pausa ahora. Cada zona con matriz (las teclas) toma la celda de
 la tira que le cae encima y las demás, la columna de cada luz. En el editor, el inspector de una capa
