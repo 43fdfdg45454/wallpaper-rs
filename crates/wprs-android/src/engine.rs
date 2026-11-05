@@ -59,6 +59,7 @@ pub(crate) struct Engine {
     hidden: bool,
     window: NativeWindow,
     steered: steer::Steered,
+    reel: crate::reel::Reel,
 }
 
 fn size(width: i32, height: i32) -> (u32, u32) {
@@ -105,6 +106,7 @@ impl Engine {
             hidden: !visible,
             window,
             steered: Default::default(),
+            reel: Default::default(),
         }
     }
 
@@ -138,7 +140,8 @@ impl Engine {
             return Ok(0);
         }
         let power = Power::now();
-        let fps = power.fps(self.preview);
+        let cap = if self.film.is_some() { self.reel.fps } else { wprs_core::settings::fps::DISPLAY };
+        let fps = wprs_core::settings::fps::lower(power.fps(self.preview), cap);
         let due = self.presented + 1_000_000_000 / i64::from(fps.max(1)) - SLACK_NS;
         if !force && nanos < due {
             return Ok(((due - nanos) / 1_000_000).max(1));

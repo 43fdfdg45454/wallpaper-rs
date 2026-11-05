@@ -27,7 +27,7 @@ pub const REGISTRY: &[(&str, &str, [Support; 2])] = &[
     ("properties2", "has settings of the newer kinds", [Yes, Yes]),
     ("folder", "shows pictures from a folder the user chooses", [Yes, Yes]),
     ("user_videos", "plays videos the user chooses", [Yes, Yes]),
-    ("video_properties", "sets how its video plays", [Yes, Without]),
+    ("video_properties", "sets how its video plays", [Yes, Yes]),
     ("web", "is a web page", [Yes, Yes]),
     ("preset", "sets the values of another package", [Yes, No]),
     ("assets", "holds resources for other packages", [No, No]),

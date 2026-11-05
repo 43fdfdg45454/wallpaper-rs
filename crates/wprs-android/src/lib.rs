@@ -44,6 +44,7 @@ mod playing;
 mod power;
 mod private;
 mod props;
+mod reel;
 #[cfg(target_os = "android")]
 mod relief;
 mod reply;

@@ -1,6 +1,5 @@
 use crate::pack::Pack;
 use crate::{Error, said};
-use serde_json::json;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
@@ -61,12 +60,11 @@ pub(crate) fn pack(package: &mut Package<BufReader<File>>, path: &Path) -> Resul
     let web = web(package, path)?;
     let (m, inputs) = (package.manifest.localized(), package.manifest.declared());
     let labels = wprs_scene::labels(&m.properties, &m.default_locale.iter().cloned().collect::<Vec<_>>());
-    let blank = json!({"schema": wprs_scene::SCHEMA, "canvas": {"size": [1, 1]}});
     Ok(Pack {
         id: m.id,
         version: m.version,
         locale: m.default_locale,
-        scene: Arc::new(serde_json::from_value(blank)?),
+        scene: Arc::new(crate::pack::blank()?),
         properties: m.properties,
         presets: m.presets,
         assets: Default::default(),
@@ -75,5 +73,6 @@ pub(crate) fn pack(package: &mut Package<BufReader<File>>, path: &Path) -> Resul
         scripts: Vec::new(),
         labels,
         web: Some(web),
+        video: None,
     })
 }

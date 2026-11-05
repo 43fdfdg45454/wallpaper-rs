@@ -156,7 +156,9 @@ author gives their defaults in the second version:
   "requires": { "features": ["video_properties"] } }
 ```
 
-Presets of a video package set these ids.
+Presets of a video package set these ids. The phone shows the same settings and presets on the page
+of the package; a video with a zoom, a position or a frame cap goes through the graphics card there
+instead of playing straight on the screen, and the volume applies while video sound is on.
 Once the length of the video is known, `start` stays at least half a second before its end; a part
 that plays nothing, such as a `start` past the end of the file, loops the whole video instead.
 Speed and frame rate are independent: a faster video draws no more frames per second than the
@@ -248,7 +250,7 @@ the folder changed, and the stored value is the path of that copy.
 | `user_videos` | lets the user choose videos for its files or folders | runs | runs |
 | `shortcut` | has a `shortcut` property | runs | without |
 | `quality_settings` | has properties with `quality` values | runs | runs |
-| `video_properties` | sets `playback` or `display` of a video | runs | without |
+| `video_properties` | sets `playback` or `display` of a video | runs | runs |
 | `playback2` | sets `max_fps`, `muted` or `loop`, or `playback` of a web page or a scene | runs | without |
 | `display2` | sets `display` of a picture, or its `background` or `span` | runs | without |
 | `flip` | sets `display.flip` to `horizontal` or `vertical` | runs | runs |

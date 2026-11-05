@@ -79,7 +79,6 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                 val notes = lacks.mapNotNull { lack ->
                     when (lack) {
                         "sound" -> R.string.lacks_sound
-                        "video_properties" -> R.string.lacks_video_properties
                         "playback2" -> R.string.lacks_playback2
                         "gpu" -> R.string.lacks_gpu
                         "display2" -> R.string.lacks_display2
@@ -119,12 +118,12 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
             preview(Modifier.weight(1f).fillMaxHeight())
             Column(Modifier.weight(1f)) {
                 about(Modifier.weight(1f, false))
-                if (item?.scene == true) Scene(main, uid, Modifier.weight(1f))
+                if (item?.scene == true || item?.reel == true) Scene(main, uid, Modifier.weight(1f))
             }
         } else {
             preview(Modifier.weight(1f).fillMaxWidth())
             about(Modifier.heightIn(max = 360.dp))
-            if (item?.scene == true) Scene(main, uid, Modifier.weight(1f))
+            if (item?.scene == true || item?.reel == true) Scene(main, uid, Modifier.weight(1f))
         }
         item?.exposes?.let { Exposes(it) }
         Row(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {

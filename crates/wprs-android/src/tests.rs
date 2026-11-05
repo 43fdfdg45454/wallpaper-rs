@@ -19,6 +19,7 @@ mod looks;
 mod pages;
 mod played;
 mod records;
+mod reeled;
 mod refused;
 mod relief;
 mod saved;
@@ -131,6 +132,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     assert!(settings::look(false).fade.is_zero());
     assert_eq!(settings::setting("playback.max_fps", None).unwrap(), "30");
     graded::each_screen_has_its_own_filter();
+    reeled::video_settings_play_on_the_phone();
     frames::framing(&green, &bands);
     relief::relief(&green);
     relief::heif_photos_get_maps();

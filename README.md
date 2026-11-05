@@ -442,8 +442,9 @@ subcarpetas hasta la profundidad que pide y como mucho los archivos que pide. La
 permiso de lectura de la carpeta y, cada vez que se abre, copia otra vez lo que cambió en ella;
 *Quitar* borra la copia y devuelve el permiso. Como en el escritorio, la escena muestra el archivo
 de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cambia mientras se ve.
-Los ajustes de reproducción de los paquetes de vídeo no se usan en el teléfono, y la página del
-paquete lo avisa, igual que de todo lo que el teléfono omite: el color alrededor de la imagen y la
+La página de un paquete de vídeo tiene sus ajustes (velocidad, inicio, final, volumen, zoom y
+posición) y sus preajustes, como en el escritorio; con zoom o posición el vídeo pasa por la gráfica.
+La página de un paquete avisa de todo lo que el teléfono omite: el color alrededor de la imagen y la
 extensión sobre varias pantallas, el límite de fotogramas, el inicio en silencio y la reproducción
 única de vídeos y páginas, los atajos, los sonidos nuevos, lo que no tiene sentido en el teléfono
 (los sonidos de los scripts) y la iluminación RGB. Los scripts de escena guardan datos, crean formas,

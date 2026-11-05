@@ -44,6 +44,7 @@ pub(crate) struct Shown {
     pub(crate) scene: bool,
     pub(crate) web: bool,
     pub(crate) flip: [bool; 2],
+    pub(crate) package: Option<PathBuf>,
 }
 
 pub(crate) fn pick(choice: Option<Choice>) {
@@ -129,7 +130,8 @@ pub(crate) fn shown_on(preview: bool, lock: bool) -> Option<Shown> {
     let (path, kind) = crate::pack::media(&item).inspect_err(|e| log::warn!("{e}")).ok()?;
     let (video, scene, web) = (kind == "video", kind == "scene", kind == "web");
     let flip = if video || kind == "image" { crate::pack::flip(&item) } else { [false; 2] };
-    Some(Shown { video, scene, web, flip, uid: item.uid, path })
+    let package = (item.kind == wprs_library::Kind::Package).then_some(item.path);
+    Some(Shown { video, scene, web, flip, uid: item.uid, path, package })
 }
 
 pub(crate) fn colors(preview: bool, lock: bool) -> Result<Option<[i32; 4]>, Error> {

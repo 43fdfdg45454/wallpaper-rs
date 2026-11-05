@@ -92,7 +92,8 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
             TextButton({ keeping.launch(arrayOf(JSON, "text/plain")) }) { Text(stringResource(R.string.import_preset)) }
         }
         val fields = form.optJSONArray("fields") ?: JSONArray()
-        val all = (0 until fields.length()).map(fields::getJSONObject)
+        val video = form.optBoolean("video")
+        val all = (0 until fields.length()).map(fields::getJSONObject).map { if (video) reeled(it) else it }
         val folded = all.filter { it.getString("kind") == "group" && it.optBoolean("collapsed") != (it.getString("key") in flipped) }.map { it.getString("key") }
         all.filter { it.optBoolean("visible") && it.optString("group") !in folded }.forEach { field ->
             val key = field.getString("key")
@@ -117,6 +118,17 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
             main.act { if (preset.isEmpty()) ask("save", "uid" to uid, "name" to chosen) else ask("rename", "preset" to preset, "name" to chosen) }
         }
     }
+}
+
+private val REEL = mapOf(
+    "speed" to (R.string.video_speed to 0), "start" to (R.string.video_start to 0), "end" to (R.string.video_end to R.string.video_end_help),
+    "volume" to (R.string.video_volume to 0), "zoom" to (R.string.video_zoom to 0), "x" to (R.string.video_x to 0), "y" to (R.string.video_y to 0),
+)
+
+@Composable
+private fun reeled(field: JSONObject): JSONObject {
+    val (label, help) = REEL[field.optString("key")] ?: return field
+    return JSONObject(field.toString()).put("label", stringResource(label)).apply { if (help != 0) put("help", stringResource(help)) }
 }
 
 fun options(list: JSONArray?) =

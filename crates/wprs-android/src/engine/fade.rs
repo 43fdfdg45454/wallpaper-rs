@@ -41,6 +41,7 @@ impl Engine {
         self.forget_old_gpu();
         let shown = choice::shown_on(self.preview, self.lock).filter(|shown| shown.video);
         let flip = shown.as_ref().map_or([false; 2], |s| s.flip);
+        self.reel = crate::reel::of(shown.as_ref().and_then(|s| s.package.as_deref()));
         let shown = shown.map(|shown| shown.path);
         let current = self.direct.clone().or_else(|| self.film.clone());
         if shown != current {
@@ -65,20 +66,24 @@ impl Engine {
             };
             (self.film, self.look, self.dirty) = (shown, look, true);
         }
-        if self.film.is_some()
-            && self.fading.is_none()
-            && direct(&settings::Look { flip, ..settings::look(self.lock) })
-        {
+        let plain = direct(&settings::Look { flip, ..settings::look(self.lock) }) && self.reel.direct();
+        if self.film.is_some() && self.fading.is_none() && plain {
             self.hint(0);
             self.direct = self.film.take();
             (self.target, self.image, self.raised, self.stage) = (None, None, None, None);
             gpu::trim();
+        } else if self.direct.is_some() && !plain {
+            (self.film, self.dirty) = (self.direct.take(), true);
         }
         if self.video != self.direct.is_some() {
             (self.video, self.checked, self.dirty) = (self.direct.is_some(), (0, 0, (0, 0)), true);
         }
         self.unreport();
         self.direct.as_ref().map(|path| format!("file://{}", path.display()))
+    }
+
+    pub(crate) fn reel(&self) -> Option<String> {
+        self.direct.as_ref().or(self.film.as_ref()).map(|_| self.reel.told().to_string())
     }
 
     pub(crate) fn film(&self) -> Option<String> {
@@ -141,10 +146,14 @@ impl Engine {
             None => (None, look),
         };
         let waiting = self.fading.as_ref().is_some_and(|fading| fading.start.is_none());
-        let layers = match self.fading {
+        let mut layers = match self.fading {
             Some(_) => [layer(was, 1.0, &was_look, size, None), layer(now, progress, &now_look, size, None)],
             None => [layer(now, 1.0, &now_look, size, None), layer(None, 0.0, &now_look, size, None)],
         };
+        let shown = &mut layers[usize::from(self.fading.is_some())];
+        if self.film.is_some() && self.reel.framed() {
+            shown.uv = shown.uv.map(|uv| uv.framed(self.reel.zoom, self.reel.pan));
+        }
         if !waiting && (now.is_some() || was.is_some()) {
             self.dirty = !gpu.renderer.present_layers(surface, size, &layers, || {})?;
             if !self.dirty {
@@ -155,8 +164,9 @@ impl Engine {
         if self.fading.is_some() && (fps == 0 || progress >= 1.0) {
             self.fading = None;
             let flip = self.look.flip;
-            self.handover =
-                self.film.is_some() && direct(&settings::Look { flip, ..settings::look(self.lock) });
+            self.handover = self.film.is_some()
+                && self.reel.direct()
+                && direct(&settings::Look { flip, ..settings::look(self.lock) });
             gpu::trim();
         }
         let busy = self.fading.is_some() || (self.film.is_some() && power.moving());

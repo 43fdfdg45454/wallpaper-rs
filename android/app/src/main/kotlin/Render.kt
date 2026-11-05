@@ -65,6 +65,8 @@ object Native {
 
     external fun media(told: String?, cover: IntArray?, width: Int, access: Boolean)
 
+    external fun reel(engine: Long): String?
+
     external fun clips(engine: Long): String?
 
     external fun film(engine: Long): String?

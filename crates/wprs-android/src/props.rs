@@ -42,7 +42,7 @@ pub(crate) enum Request {
 pub(crate) fn request(request: Request) -> Result<Value, Error> {
     let done = |result: Result<(), Error>| result.map(|()| Value::Null);
     match request {
-        Request::Scene { uid, languages } => form(&*scene(&uid)?, &languages),
+        Request::Scene { uid, languages } => form(&*scene(&uid)?, &languages, &uid),
         Request::Property { uid, key, value } => done(set(&*scene(&uid)?, &key, &value)),
         Request::Preset { uid, preset } => {
             let pack = scene(&uid)?;
@@ -98,10 +98,13 @@ pub(crate) fn allows(id: &str, input: Input) -> bool {
     grants().get(id).is_some_and(|g| g.contains(&input))
 }
 
-fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
+fn form(pack: &Pack, languages: &[String], uid: &str) -> Result<Value, Error> {
     let values = values(pack);
     let sounds = pack.scene.sounds().next().is_some();
-    let mut props = pack.properties.clone();
+    let length =
+        || with(|lib| Ok(lib.item(uid)?.meta.duration_ms)).ok().flatten().map(|ms| ms as f64 / 1000.0);
+    let video = pack.video.as_ref().map(|m| m.video_properties(&crate::reel::labels(), length()));
+    let mut props = video.unwrap_or_else(|| pack.properties.clone());
     props.retain(|key, _| !sounds || key != VOLUME);
     let languages: Vec<String> = languages.iter().cloned().chain(pack.locale.clone()).collect();
     let (mut fields, presets) = wprs_scene::form(&props, &pack.presets, &values, &languages);
@@ -120,7 +123,7 @@ fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
         "uses": { "audio": uses[0], "touch": uses[1], "taps": uses[2], "media": media, "network": network },
         "granted": { "audio": audio, "touch": touch, "taps": taps, "media": allows(&pack.id, Input::Media),
             "media_network": allows(&pack.id, Input::MediaNetwork) },
-        "access": crate::playing::access(),
+        "access": crate::playing::access(), "video": pack.video.is_some(),
     }))
 }
 

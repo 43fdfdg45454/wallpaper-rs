@@ -1,7 +1,6 @@
 package io.github.wallpaper_rs
 
 import android.content.Context
-import android.os.Handler
 import android.view.Surface
 import androidx.annotation.OptIn
 import androidx.media3.common.C
@@ -9,9 +8,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.upstream.BandwidthMeter
 import org.json.JSONObject
 
 @OptIn(UnstableApi::class)
@@ -78,6 +75,17 @@ class Videos(private val context: Context) {
         update()
     }
 
+    fun cut(key: String?, reel: String?) {
+        val (video, told) = (videos[key ?: return] ?: return) to JSONObject(reel ?: return)
+        video.speed = told.getDouble("rate").toFloat()
+        video.looped = told.getBoolean("loop")
+        video.loudness = told.getDouble("volume").toFloat()
+        val range = told.getLong("start") to (told.getLong("end").takeIf { it >= 0 } ?: C.TIME_END_OF_SOURCE)
+        val cut = range != video.clip
+        video.clip = range
+        video.player?.let { video.steer(it, null, cut) }
+    }
+
     fun positions() = videos.mapValues { it.value.at() }
 
     fun trim() = videos.values.filter { it.player?.playWhenReady == false }.forEach { it.release() }
@@ -101,6 +109,7 @@ class Videos(private val context: Context) {
         var held = true
         var speed = 1f
         var looped = true
+        var loudness = 1f
         var player: ExoPlayer? = null
         var output: Surface? = null
         var position = from
@@ -154,6 +163,7 @@ class Videos(private val context: Context) {
         fun steer(player: ExoPlayer, seek: Long?, cut: Boolean = false) {
             player.repeatMode = if (looped) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
             player.setPlaybackSpeed(speed.coerceIn(0.1f, 4f))
+            player.volume = loudness.coerceIn(0f, 1f)
             if (cut) player.setMediaItem(item(), seek ?: 0L) else seek?.let(player::seekTo)
         }
 
@@ -177,16 +187,6 @@ class Videos(private val context: Context) {
             player = null
             output = null
         }
-    }
-
-    private object Offline : BandwidthMeter {
-        override fun getBitrateEstimate() = 0L
-
-        override fun getTransferListener(): TransferListener? = null
-
-        override fun addEventListener(eventHandler: Handler, eventListener: BandwidthMeter.EventListener) = Unit
-
-        override fun removeEventListener(eventListener: BandwidthMeter.EventListener) = Unit
     }
 
     private companion object {

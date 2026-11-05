@@ -69,9 +69,11 @@ class Painter(
             pages.show(this, surface, spec, size, shown && Native.moving())
             return follow()
         }
+        videos.cut(Native.film(handle)?.let(::key), Native.reel(handle))
         if (uri == null) return wake()
         frames.stop()
         videos.join(uri, this)
+        videos.cut(uri, Native.reel(handle))
         follow()
     }
 

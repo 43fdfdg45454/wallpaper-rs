@@ -42,6 +42,11 @@ pub(crate) struct Pack {
     pub(crate) scripts: Vec<(String, String)>,
     pub(crate) labels: serde_json::Value,
     pub(crate) web: Option<crate::page::Web>,
+    pub(crate) video: Option<Arc<wprs_format::Manifest>>,
+}
+
+pub(crate) fn blank() -> Result<Scene, Error> {
+    Ok(serde_json::from_value(serde_json::json!({"schema": wprs_scene::SCHEMA, "canvas": {"size": [1, 1]}}))?)
 }
 
 fn open(path: &Path) -> Result<Package<BufReader<fs::File>>, Error> {
@@ -99,6 +104,11 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
     let mut package = open(path)?;
     if crate::page::is_web(&package) {
         let pack = Arc::new(crate::page::pack(&mut package, path)?);
+        loaded.push((stamp, Arc::downgrade(&pack)));
+        return Ok(pack);
+    }
+    if package.manifest.kind == Kind::Video {
+        let pack = Arc::new(crate::reel::pack(&package)?);
         loaded.push((stamp, Arc::downgrade(&pack)));
         return Ok(pack);
     }
@@ -164,6 +174,7 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         scripts,
         labels,
         web: None,
+        video: None,
     });
     loaded.push((stamp, Arc::downgrade(&pack)));
     Ok(pack)
