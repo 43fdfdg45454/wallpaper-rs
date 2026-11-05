@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-04 00:00+0000\n"
+"POT-Creation-Date: 2026-11-05 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -314,16 +314,6 @@ msgstr "elegida por ti"
 
 #: integrations/plasma-tray/contents/ui/LeftOut.qml
 #, kde-format
-msgid ""
-"this scene costs %1 units a frame at this level, more than the %2 this "
-"graphics card is estimated to hold; expect fewer frames per second"
-msgstr ""
-"esta escena cuesta %1 unidades por fotograma en este nivel, más de las %2 "
-"que se calcula que aguanta esta tarjeta gráfica; espera menos fotogramas por "
-"segundo"
-
-#: integrations/plasma-tray/contents/ui/LeftOut.qml
-#, kde-format
 msgid "Quality %1 of 3"
 msgstr "Calidad %1 de 3"
 
@@ -336,6 +326,45 @@ msgstr "tarjeta gráfica de clase %1 de 3, medida"
 #, kde-format
 msgid "graphics card class %1 of 3, from its model"
 msgstr "tarjeta gráfica de clase %1 de 3, según su modelo"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid ""
+"Effects left out to protect the graphics card stay out at every level: %1"
+msgstr ""
+"Los efectos que quedan fuera para proteger la tarjeta gráfica siguen fuera "
+"en todos los niveles: %1"
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid ""
+"This scene costs %1 units a frame at this level, more than the %2 this "
+"device is estimated to hold: frames may drop and battery use rise."
+msgstr ""
+"Esta escena cuesta %1 unidades por fotograma en este nivel, más de las %2 "
+"que se calcula que aguanta este equipo: puede perder fotogramas y gastar más "
+"batería."
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "Automatic quality would keep it still at its poster."
+msgstr "La calidad automática la dejaría quieta en su póster."
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid "Automatic quality would lower it."
+msgstr "La calidad automática la bajaría."
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid ""
+"This scene is too heavy for this device, so automatic quality keeps it still "
+"at its poster. A fixed level plays it anyway, with fewer frames per second "
+"and more battery use."
+msgstr ""
+"Esta escena es demasiado pesada para este equipo, así que la calidad "
+"automática la deja quieta en su póster. Un nivel fijo la reproduce igual, "
+"con menos fotogramas por segundo y más gasto de batería."
 
 #: integrations/plasma-tray/contents/ui/Panel.qml
 #, kde-format

@@ -1948,15 +1948,6 @@ msgid "chosen by you"
 msgstr "elegida por ti"
 
 #: apps/wprs-app/qml/LeftOut.qml
-msgid ""
-"this scene costs %1 units a frame at this level, more than the %2 this "
-"graphics card is estimated to hold; expect fewer frames per second"
-msgstr ""
-"esta escena cuesta %1 unidades por fotograma en este nivel, más de las %2 "
-"que se calcula que aguanta esta tarjeta gráfica; espera menos fotogramas por "
-"segundo"
-
-#: apps/wprs-app/qml/LeftOut.qml
 msgid "Quality %1 of 3"
 msgstr "Calidad %1 de 3"
 
@@ -1967,6 +1958,40 @@ msgstr "tarjeta gráfica de clase %1 de 3, medida"
 #: apps/wprs-app/qml/LeftOut.qml
 msgid "graphics card class %1 of 3, from its model"
 msgstr "tarjeta gráfica de clase %1 de 3, según su modelo"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid ""
+"Effects left out to protect the graphics card stay out at every level: %1"
+msgstr ""
+"Los efectos que quedan fuera para proteger la tarjeta gráfica siguen fuera "
+"en todos los niveles: %1"
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid ""
+"This scene costs %1 units a frame at this level, more than the %2 this "
+"device is estimated to hold: frames may drop and battery use rise."
+msgstr ""
+"Esta escena cuesta %1 unidades por fotograma en este nivel, más de las %2 "
+"que se calcula que aguanta este equipo: puede perder fotogramas y gastar más "
+"batería."
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "Automatic quality would keep it still at its poster."
+msgstr "La calidad automática la dejaría quieta en su póster."
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid "Automatic quality would lower it."
+msgstr "La calidad automática la bajaría."
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid ""
+"This scene is too heavy for this device, so automatic quality keeps it still "
+"at its poster. A fixed level plays it anyway, with fewer frames per second "
+"and more battery use."
+msgstr ""
+"Esta escena es demasiado pesada para este equipo, así que la calidad "
+"automática la deja quieta en su póster. Un nivel fijo la reproduce igual, "
+"con menos fotogramas por segundo y más gasto de batería."
 
 #: apps/wprs-app/qml/LibraryPage.qml apps/wprs-app/qml/Navigation.qml
 msgid "Library"
@@ -2580,6 +2605,10 @@ msgstr ""
 "El nivel que elijas se mantiene también con batería, con el equipo caliente "
 "y en escenas pesadas; una escena más pesada de lo que aguanta esta tarjeta "
 "gráfica muestra entonces menos fotogramas por segundo."
+
+#: apps/wprs-app/qml/QualityPicker.qml apps/wprs-app/qml/SceneNewMaterial.qml
+msgid "%1: %2"
+msgstr "%1: %2"
 
 #: apps/wprs-app/qml/RepoList.qml
 msgid "No repositories yet"
@@ -4216,10 +4245,6 @@ msgstr "%1 se compila"
 #: apps/wprs-app/qml/SceneNewMaterial.qml
 msgid "%1, line %2, column %3: %4"
 msgstr "%1, línea %2, columna %3: %4"
-
-#: apps/wprs-app/qml/SceneNewMaterial.qml
-msgid "%1: %2"
-msgstr "%1: %2"
 
 #: apps/wprs-app/qml/SceneNewMaterial.qml
 msgid "Check again"

@@ -8,6 +8,8 @@ mod polling;
 #[cfg(test)]
 mod spreads;
 #[cfg(test)]
+mod stops;
+#[cfg(test)]
 mod tests;
 
 use super::SceneSpec;
@@ -75,6 +77,7 @@ pub(super) struct SceneState {
     governor: Governor,
     why: Why,
     over: Option<(f32, f32)>,
+    automatic: &'static str,
     samples: u64,
     listed: listing::Listed,
     keeper: Option<wprs_core::stash::Keeper>,
@@ -106,7 +109,7 @@ impl SceneState {
             None => {}
         }
         let (quality, why) = power.level(&runtime);
-        let over = power.over(&runtime, quality);
+        let (over, automatic) = (power.over(&runtime, quality), power.automatic(&runtime, quality));
         runtime.set_leveling(wprs_scene::Leveling::of(&spec.pack.props.properties));
         runtime.set_quality(quality);
         let exposed = wprs_scene::exposed(&spec.pack.props.properties, runtime.props());
@@ -160,6 +163,7 @@ impl SceneState {
             governor: Governor::default(),
             why,
             over,
+            automatic,
             samples: 0,
             listed: Default::default(),
             keeper: None,

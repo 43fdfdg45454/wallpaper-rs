@@ -24,6 +24,7 @@ pub struct Level {
     pub reason: &'static str,
     pub cost: f32,
     pub budget: f32,
+    pub automatic: &'static str,
 }
 
 impl OutputStatus {

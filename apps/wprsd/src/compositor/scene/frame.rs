@@ -24,7 +24,8 @@ impl SceneState {
         let pointer = self.runtime.pointer().follow(p.pos, p.buttons, dt as f32);
         self.runtime.set_pointer(pointer);
         self.runtime.set_wall(crate::zone::wall());
-        let (quality, uses) = (self.level(power), self.uses);
+        let uses = self.uses;
+        let quality = self.level(power);
         if quality != self.quality {
             let retuned = self.runtime.set_quality(quality);
             self.restock |= retuned;

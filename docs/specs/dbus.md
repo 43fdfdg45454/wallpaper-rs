@@ -562,7 +562,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `playback.flash_guard` | measure the brightness of every scene frame and slow down, or stop, a scene that flashes more than three times a second (see "Cost and frame rate" in `scene.md`); it costs a small read back from the GPU per frame | `false` |
 | `playback.scene_sound` | let scenes play their sound layers (see "Scene sound"); `false` keeps every scene silent, whatever its permissions and volume, and leaves the sound of videos alone | `true` |
 | `playback.scene_capture` | let scenes that were granted `audio` follow the sound that plays (see "Inputs"); `false` closes the audio capture for every scene | `true` |
-| `playback.quality` | the quality level of scenes: `auto` lets the engine choose it from the cost of the scene, the GPU class, the GPU time of the frames, battery, power saving and heat (see "Cost and frame rate" in `scene.md`); `q0` to `q3` fix it, and `min-q1` or `min-q2` keep the automatic choice but never below that level; a level the user sets holds on battery, with power saving, while warm and over the cost, and a heavy scene shows fewer frames a second instead; it is not synced and profiles leave it out | `auto` |
+| `playback.quality` | the quality level of scenes: `auto` lets the engine choose it from the cost of the scene, the GPU class, the GPU time of the frames, battery, power saving and heat (see "Cost and frame rate" in `scene.md`); `q0` to `q3` fix it, and `min-q1` or `min-q2` keep the automatic choice but never below that level; a level the user sets holds on battery, with power saving, while warm and over the cost, and a heavy scene shows fewer frames a second instead, also one that `auto` keeps still because it is too heavy for the device; it is not synced and profiles leave it out | `auto` |
 | `playback.hdr` | HDR output (`auto`, `on` or `off`): on a screen whose surface the graphics driver can present in extended linear sRGB (half floats, which on Wayland the driver announces through the color management protocol of the desktop), scenes keep their colors brighter than white and tone map them to the peak brightness of that screen, read from the preferred image description the desktop gives the surface (its target or maximum luminance over its reference white; twice the white when the desktop says nothing); `auto` does it only when the desktop says the screen shows HDR, on mains power and while the scene of the screen has `canvas.hdr` with a tone map and draws at `q3`, `on` whenever the surface can even if the desktop says nothing, `off` never; other screens, streams and X11 keep standard colors, and pictures and videos look the same either way | `auto` |
 | `playback.hdr.<output>` | the same values for one output, or `none` to follow `playback.hdr`; kept as `hdr` in `[outputs."<output>"]`, not listed in `options` but in `hdrs`, read back with `wprs-ctl config playback.hdr.<output>` and kept when a profile is used | none |
 | `playback.quality.<output>` | the same values for the scenes of one output, or `none` (or an empty value) to follow `playback.quality` again; kept as `quality` in `[outputs."<output>"]`, not listed in `options` but in `qualities`, read back with `wprs-ctl config playback.quality.<output>` even while the output is not connected, kept when a profile is used; web pages follow `playback.quality` | none |
@@ -2346,8 +2346,12 @@ too heavy for the card at a higher level), `"battery"`, `"saver"` (power saving)
 kept it above a floor); see "Cost and frame rate" in `scene.md`. `quality_choice` is the own value
 of `playback.quality.<output>` or `null` when the output follows `playback.quality`;
 `quality_cost` and `quality_budget` are the units a frame the scene costs at its level and the
-units the GPU class holds, both `0` unless the user's choice put the level where it costs more than
-the class holds, in which case clients say that fewer frames a second are to be expected. `tier` is
+units the GPU class holds, both `0` unless the user's choice (a fixed level or a floor) put the level
+where it costs more than the class holds, in which case clients warn that frames may drop and
+battery use rise. `quality_auto` says what the automatic choice does or would do with the scene:
+`"stop"` (under `auto` the scene is too heavy for the class and stays at its `poster_time`; with
+the user's choice over budget, `auto` would keep it still), `"lower"` (with the user's choice over
+budget, `auto` would only lower the level) or `""`. `tier` is
 the class of the graphics card, `"t0"` to `"t3"`, and `tier_measured` whether a short measured
 render set it rather than the model of the card alone. `adapters` lists the graphics cards the
 daemon found when it started, each with its `name`, `kind` (`"integrated"`, `"dedicated"`,
@@ -2387,7 +2391,7 @@ struct OutputState {
     edited: bool, screen: Option<Screen>, mm: Option<[f64; 4]>, parallax: bool, frames: u64, refresh: u32, fps: u32,
     buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
     particles: String, quality: String, quality_reason: String, quality_choice: Option<String>,
-    quality_cost: f64, quality_budget: f64, console: Vec<String>, sandbox: String,
+    quality_cost: f64, quality_budget: f64, quality_auto: String, console: Vec<String>, sandbox: String,
     accent: Option<String>, filter: Option<Filter>, hdr: HdrState,
 }
 struct HdrState {

@@ -31,7 +31,13 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Quality(args) => crate::levels::run(client, args).await?,
         Command::Reload => daemon.reload().await?,
         Command::RetryEffects => daemon.retry_effects().await?,
-        Command::State { .. } => println!("{}", daemon.get_state().await?),
+        Command::State { .. } => {
+            let state = daemon.get_state().await?;
+            println!("{state}");
+            if std::io::IsTerminal::is_terminal(&std::io::stderr()) {
+                crate::levels::notes(&state);
+            }
+        }
         Command::Calibrate { state } => daemon.show_calibration(state == "on").await?,
         Command::Pause => daemon.set_paused(true).await?,
         Command::Resume => daemon.set_paused(false).await?,

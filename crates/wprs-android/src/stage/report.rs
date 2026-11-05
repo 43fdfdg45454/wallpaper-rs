@@ -1,4 +1,4 @@
-use super::{CALMING, ENGINE, LEFT, LEVEL, OVER, RETRIES};
+use super::{AUTO, CALMING, ENGINE, LEFT, LEVEL, OVER, RETRIES};
 use std::sync::PoisonError;
 use std::sync::atomic::Ordering::Relaxed;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -46,6 +46,12 @@ pub(crate) fn level() -> Option<[String; 3]> {
 pub(crate) fn over() -> Option<[f32; 2]> {
     let bits = OVER.load(Relaxed);
     (bits != 0).then(|| [f32::from_bits((bits >> 32) as u32), f32::from_bits(bits as u32)])
+}
+
+pub(crate) const AUTOMATIC: [&str; 3] = ["", "lower", "stop"];
+
+pub(crate) fn automatic() -> &'static str {
+    AUTOMATIC[AUTO.load(Relaxed).min(2) as usize]
 }
 
 pub(crate) fn wall() -> f64 {

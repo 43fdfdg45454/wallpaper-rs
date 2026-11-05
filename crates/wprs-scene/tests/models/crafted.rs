@@ -160,6 +160,8 @@ fn a_tier_shows_the_poster_of_models_past_its_triangles_counting_fur_shells() {
     assert!(furry.cost(Quality::Q3) > furry.cost(Quality::Q0));
     assert!(Budget::new(Tier::T1, false, 60).still(&furry), "the shells count at the lowest quality");
     assert!(!Budget::new(Tier::T2, false, 60).still(&furry));
+    let fixed = Budget { choice: wprs_core::QualityChoice::Fixed(0), ..Budget::new(Tier::T0, false, 60) };
+    assert!(fixed.heavy(&plain) && !fixed.still(&plain), "a fixed level plays it anyway");
 }
 
 #[test]

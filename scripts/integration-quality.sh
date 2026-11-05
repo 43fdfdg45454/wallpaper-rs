@@ -71,6 +71,7 @@ if ctl quality --hdr bright 2>/dev/null; then fail "wprs-ctl quality took an inv
 grep -q '^hdr = "off"' "$config" || fail "the own HDR choice was not saved: $(cat "$config")"
 ctl config playback.hdr.TEST-GONE none && ctl quality --hdr none -o TEST-Q >/dev/null && ctl quality --hdr auto >/dev/null
 expect "$hdr, s['hdrs']" "('auto', False, 'display', {})"
+source "$(dirname "$0")"/integration-heavy.sh
 kill "$held" 2>/dev/null || true
 ctl release TEST-Q
 echo "quality choice checks passed ($auto on battery)"

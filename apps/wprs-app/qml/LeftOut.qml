@@ -26,11 +26,23 @@ QtObject {
             "slow": daemon.tr("lowered because its frames took too long on the graphics card"),
             "user": daemon.tr("chosen by you")
         };
-        const over = info.quality_reason === "user" && info.quality_budget > 0 && info.quality_cost > info.quality_budget;
-        const note = over ? daemon.tr("this scene costs %1 units a frame at this level, more than the %2 this graphics card is estimated to hold; expect fewer frames per second", Number(info.quality_cost).toFixed(1), Number(info.quality_budget).toFixed(0)) : "";
         const quality = daemon.tr("Quality %1 of 3", info.quality.slice(1));
         const tier = String(state?.tier ?? "").slice(1);
         const card = !tier ? "" : state.tier_measured ? daemon.tr("graphics card class %1 of 3, measured", tier) : daemon.tr("graphics card class %1 of 3, from its model", tier);
-        return [[reasons[info.quality_reason] ? quality + ": " + reasons[info.quality_reason] : quality, card].filter(t => t).join(" · "), note].filter(t => t).join("\n");
+        return [reasons[info.quality_reason] ? quality + ": " + reasons[info.quality_reason] : quality, card].filter(t => t).join(" · ");
+    }
+
+    function note(info) {
+        const over = info.quality_budget > 0 && info.quality_cost > info.quality_budget;
+        const auto = info.quality_auto ?? "";
+        const left = (info.left_out ?? []).length;
+        const kept = left ? daemon.tr("Effects left out to protect the graphics card stay out at every level: %1", left) : "";
+        const cost = daemon.tr("This scene costs %1 units a frame at this level, more than the %2 this device is estimated to hold: frames may drop and battery use rise.", Number(info.quality_cost).toFixed(1), Number(info.quality_budget).toFixed(0));
+        const would = auto === "stop" ? daemon.tr("Automatic quality would keep it still at its poster.") : daemon.tr("Automatic quality would lower it.");
+        if (over)
+            return [cost, would, kept].filter(t => t).join(" ");
+        if (auto === "stop")
+            return [daemon.tr("This scene is too heavy for this device, so automatic quality keeps it still at its poster. A fixed level plays it anyway, with fewer frames per second and more battery use."), kept].filter(t => t).join(" ");
+        return "";
     }
 }

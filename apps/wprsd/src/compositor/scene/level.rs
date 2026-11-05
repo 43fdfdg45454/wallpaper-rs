@@ -11,12 +11,26 @@ impl SceneState {
 
     pub(super) fn level(&mut self, power: Power) -> Quality {
         let power = self.own(power);
+        self.restop(power);
         self.governor.hold(power.floor());
         let (quality, why) = self.governor.level(power.level(&self.runtime));
         self.why = why;
         let quality = quality.min(self.spec.pack.cap.unwrap_or(Quality::Q3));
         self.over = power.over(&self.runtime, quality);
+        self.automatic = power.automatic(&self.runtime, quality);
         quality
+    }
+
+    fn restop(&mut self, power: Power) {
+        let still = self.spec.hold.is_some() || power.still(&self.runtime);
+        if std::mem::replace(&mut self.still, still) == still {
+            return;
+        }
+        if still && self.spec.hold.is_none() {
+            tracing::debug!("the scene is too heavy for this device and stays at its poster time");
+            self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
+        }
+        self.uses = self.needs(self.quality);
     }
 
     pub(super) fn judge(&mut self, (samples, gpu_ms): (u64, f64), power: Power, refresh: u32, now: Instant) {
@@ -36,6 +50,6 @@ impl SceneState {
     pub(in super::super) fn quality(&self) -> Level {
         let (cost, budget) = self.over.unwrap_or_default();
         let quality = ["q0", "q1", "q2", "q3"][self.quality as usize];
-        Level { quality, reason: self.why.name(), cost, budget }
+        Level { quality, reason: self.why.name(), cost, budget, automatic: self.automatic }
     }
 }

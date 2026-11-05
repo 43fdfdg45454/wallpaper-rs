@@ -36,12 +36,40 @@ fn hdr(o: &OutputState) -> String {
 }
 
 pub fn note(o: &OutputState) -> Option<String> {
-    (o.quality_reason == "user" && o.quality_cost > o.quality_budget && o.quality_budget > 0.0).then(|| {
-        format!(
-            "this scene costs {:.1} units a frame at {}, more than the {:.0} this graphics card is estimated to hold; expect fewer frames per second",
-            o.quality_cost, o.quality, o.quality_budget
-        )
+    let over = o.quality_budget > 0.0 && o.quality_cost > o.quality_budget;
+    let note = match o.quality_auto.as_str() {
+        "stop" if !over => STOPPED.to_owned(),
+        auto if over => format!(
+            "this scene costs {:.1} units a frame at {}, more than the {:.0} this device is estimated to hold: frames may drop and battery use rise; automatic quality would {}",
+            o.quality_cost,
+            o.quality,
+            o.quality_budget,
+            if auto == "stop" { "keep it still at its poster" } else { "lower it" }
+        ),
+        _ => return None,
+    };
+    let left = o.left_out.len();
+    Some(match left {
+        0 => note,
+        _ => format!(
+            "{note}; {left} {} out at every level to protect the graphics card",
+            WORDS[usize::from(left > 1)]
+        ),
     })
+}
+
+const STOPPED: &str = "this scene is too heavy for this device and automatic quality keeps it still at its poster; a fixed level such as wprs-ctl quality q0 plays it anyway, with fewer frames per second and more battery use";
+const WORDS: [&str; 2] = ["effect stays", "effects stay"];
+
+pub fn notes(state: &str) {
+    let Ok(state) = serde_json::from_str::<State>(state) else {
+        return;
+    };
+    state
+        .outputs
+        .iter()
+        .filter_map(|(name, o)| Some((name, note(o)?)))
+        .for_each(|(name, n)| eprintln!("{name}: {n}"));
 }
 
 fn general(state: &State) -> String {

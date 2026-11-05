@@ -464,8 +464,9 @@ y solo vuelve a subir con el cargador puesto y el teléfono frío. El motor de l
 cuando el sistema cambia la superficie del fondo, así que no se vuelve a cargar ni compilar. Las capas con
 paralaje de una escena siguen la inclinación del teléfono con los mismos sensores que el paralaje de
 las fotos, aunque la escena no lo pida con `gyro`, y sin sensores, el paso de páginas del lanzador;
-con el ahorro de energía se quedan quietas. Una escena demasiado pesada para el teléfono se queda
-quieta en su fotograma de muestra. Cada escena dibuja a sus propios fotogramas por segundo, como
+con el ahorro de energía se quedan quietas. Con la calidad automática, una escena demasiado pesada
+para el teléfono se queda quieta en su fotograma de muestra; con un nivel fijo o un mínimo elegido
+se reproduce igual y los ajustes avisan de lo que cuesta. Cada escena dibuja a sus propios fotogramas por segundo, como
 mucho a los de los ajustes, solo mientras algo cambia y nunca mientras no se ve. Los vídeos dentro
 de una escena los decodifica el hardware y se copian a la GPU fotograma a fotograma, sin sonido, y
 se pausan si la escena se queda quieta. Los scripts de las escenas se ejecutan en el teléfono como en
@@ -594,10 +595,18 @@ El nivel también se puede elegir a mano con `playback.quality`: `auto` (lo de s
 fijo de `q0` a `q3`, o `min-q1` y `min-q2`, que dejan la elección automática pero nunca por debajo de
 ese nivel (puede subir más). Lo que elijas se respeta siempre, también con batería, con el ahorro
 de energía, con calor y aunque la escena pese más de lo que aguanta la GPU: entonces la escena se
-ve con todos sus detalles y con menos fotogramas por segundo, y la app, la bandeja, el teléfono y
-`wprs-ctl quality` avisan de lo que cuesta («esta escena cuesta X unidades por fotograma…; espera
-menos fotogramas»); las bajadas automáticas solo valen en `auto` o por encima del mínimo elegido, y
-el motivo es `user`. La app lo ofrece en *Ajustes* → *Calidad de las escenas* y en cada pantalla con
+ve con todos sus detalles y con menos fotogramas por segundo. Solo la elección automática detiene
+una escena: la que pesa más que el presupuesto del equipo aun en el nivel más bajo (o dibuja más
+triángulos de modelos de los que admite su clase) se queda quieta en su póster con `auto`, se
+reproduce en el nivel fijo elegido y, con `min-q1` o `min-q2`, en ese mínimo (o más arriba si
+cabe). La app (junto a la elección de calidad en *Ajustes* y en cada pantalla con escena), la
+bandeja, el teléfono (bajo su ajuste de calidad), `wprs-ctl quality` y `wprs-ctl state` avisan de
+lo que cuesta frente al presupuesto del equipo, que puede perder fotogramas y gastar más batería, y
+si la elección automática la bajaría o la dejaría quieta (`quality_auto` en el estado). Solo se
+mantienen con cualquier elección los límites que protegen la memoria y el controlador: los datos y
+triángulos de modelos que puede cargar una escena, el tamaño de las texturas y los efectos que
+quedan fuera por el presupuesto fijo o porque detuvieron la GPU, que el aviso cuenta. Las bajadas
+automáticas solo valen en `auto` o por encima del mínimo elegido, y el motivo es `user`. La app lo ofrece en *Ajustes* → *Calidad de las escenas* y en cada pantalla con
 escena, con su propio valor (*Como todas las pantallas* vuelve al general); el teléfono, en sus
 ajustes. `wprs-ctl quality q3`, `wprs-ctl quality min-q1 -o DP-1`, `wprs-ctl quality none -o DP-1`
 o `wprs-ctl config playback.quality q2` y `wprs-ctl config playback.quality.DP-1 q1` lo cambian, y
@@ -1324,7 +1333,8 @@ cercano y lejano, ojo, centro y arriba) sirve para los modelos, los grupos 3D y 
 y los scripts la cambian para el fotograma siguiente. Un modelo quieto se dibuja una vez y se guarda,
 un grupo 3D se redibuja solo cuando algo suyo cambia, y cada clase de equipo admite 50 000, 150 000,
 500 000 o 2 000 000 de triángulos (con las capas de pelo de la calidad más baja): si los modelos
-dibujan más, ese equipo muestra el póster de la escena. Con `canvas.hdr` los colores más brillantes que el blanco se
+dibujan más, con la calidad automática ese equipo muestra el póster de la escena (con un nivel
+fijo o un mínimo elegido la reproduce igual y avisa de lo que cuesta). Con `canvas.hdr` los colores más brillantes que el blanco se
 conservan en imágenes de 16 bits y `canvas.tonemap` (`aces` o `agx`) los ajusta a la pantalla en una
 última pasada; sin `tonemap`, la escena se ve como siempre.
 

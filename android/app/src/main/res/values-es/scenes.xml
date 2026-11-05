@@ -54,7 +54,11 @@
     <string name="choose_file">Elegir</string>
     <string name="tier_timed">La clase se midió con marcas de tiempo de la GPU, sin contar la espera del procesador.</string>
     <string name="level_chosen">Nivel elegido por ti: se mantiene aunque el teléfono no se esté cargando o esté caliente.</string>
-    <string name="level_over">Esta escena cuesta %1$s unidades por fotograma en este nivel, más de las %2$s que se calcula que aguanta esta GPU; espera menos fotogramas por segundo.</string>
+    <string name="level_over">Esta escena cuesta %1$s unidades por fotograma en este nivel, más de las %2$s que se calcula que aguanta este teléfono: puede perder fotogramas y gastar más batería.</string>
+    <string name="auto_would_stop">La calidad automática la dejaría quieta en su póster.</string>
+    <string name="auto_would_lower">La calidad automática la bajaría.</string>
+    <string name="level_stopped">Esta escena es demasiado pesada para este teléfono, así que la calidad automática la deja quieta en su póster. Un nivel fijo la reproduce igual, con menos fotogramas por segundo y más gasto de batería.</string>
+    <string name="level_kept">Los efectos que quedan fuera para proteger la GPU siguen fuera en todos los niveles: %1$d</string>
     <string name="hdr_output">HDR en las pantallas que lo admiten</string>
     <string name="hdr_auto">Automático: en pantallas HDR, mientras se carga, para escenas con colores brillantes en la calidad más alta</string>
     <string name="hdr_on">Siempre que la pantalla lo admita, también con batería</string>

@@ -33,6 +33,11 @@ ColumnLayout {
         return found;
     }
 
+    LeftOut {
+        id: reasons
+        daemon: picker.daemon
+    }
+
     QQC2.ComboBox {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 24
         Accessible.name: picker.output ? picker.daemon.tr("Scene quality of %1", picker.output) : picker.daemon.tr("Scene quality")
@@ -48,5 +53,21 @@ ColumnLayout {
         visible: !picker.output
         wrapMode: Text.Wrap
         text: picker.daemon.tr("A level you choose holds on battery, when the computer is hot and for heavy scenes too; a scene heavier than this graphics card holds then shows fewer frames per second.")
+    }
+
+    Kirigami.InlineMessage {
+        Layout.maximumWidth: Kirigami.Units.gridUnit * 30
+        Layout.fillWidth: true
+        type: Kirigami.MessageType.Warning
+        visible: text !== ""
+        text: {
+            if (picker.output)
+                return reasons.note(picker.info);
+            const outputs = picker.daemon.state?.outputs ?? {};
+            return Object.keys(outputs).map(name => {
+                const note = reasons.note(outputs[name]);
+                return note ? picker.daemon.tr("%1: %2", name, note) : "";
+            }).filter(t => t).join("\n");
+        }
     }
 }

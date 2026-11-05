@@ -164,8 +164,8 @@ from `wprs-ctl pack check`, `pack build` and the scene editor, since those devic
 fewer details. The quality level is the highest whose cost fits the budget of the device: 4, 8, 16
 or 40 units for the tiers of software rendering or GPUs without compute shaders, older integrated
 and phone GPUs (Intel HD and UHD, AMD Vega and other older APUs, Mali-G up to G710, Adreno 5xx and
-6xx, or less than 4 GiB of memory), newer integrated GPUs and discrete GPUs. A scene over budget at the lowest
-level stays at `poster_time`.
+6xx, or less than 4 GiB of memory), newer integrated GPUs and discrete GPUs. With the automatic choice, a scene over budget at the
+lowest level stays at `poster_time`.
 
 The tier starts from the model of the graphics card, as above. The first time a program renders
 scenes with a graphics card and driver, it times a short render: frames of 16 passes over a
@@ -212,10 +212,18 @@ always holds, also on battery, with power saving, while the device is warm and w
 more than the tier holds: only the frame rate still follows the tier, the power source and the
 temperature, so a heavy scene shows fewer frames a second instead of fewer details. Above a floor,
 the automatic choice and the GPU time of the frames move the level as usual. The reason is then
-`user`, and when the chosen level costs more than the budget of the tier the app, the tray, the phone
-and `wprs-ctl quality` say what the scene costs and that fewer frames are to be expected. A scene
-over budget even at the lowest level still stays at `poster_time`. The phone keeps its own value,
-and stopping on battery saver or at a critical temperature still stops it.
+`user`, and when the chosen level costs more than the budget of the tier the app (next to the
+quality choice in the settings and on each screen that shows the scene), the tray, the phone (under
+its quality setting) and `wprs-ctl quality` and `wprs-ctl state` warn: the cost against the budget,
+that frames may drop and battery use rise, and whether the automatic choice would lower the level
+or keep the scene still. Only the automatic choice stops a scene: a scene over budget even at the
+lowest level, or with more model triangles than the tier draws, stays at `poster_time` under `auto`
+and plays at the chosen level under `q0` to `q3`, and at the floor (or higher, when it fits) under
+`min-q1` and `min-q2`; clients say so too. Only the hard limits that protect memory and the driver
+stay with every choice: the model data and triangles a scene may load, texture sizes, and the
+effects left out by the hard budget below or after they stopped the GPU, which the warning counts.
+The phone keeps its own value, and stopping on battery saver or at a critical temperature still
+stops it.
 
 Every view of a scene also holds a hard budget, whatever the quality level: each effect use, built
 in or packaged, does its units (at the highest level, four times for an effect with a `state`, which

@@ -1,4 +1,4 @@
-use super::{FIXTURES, acting, ask, calm, cued, flight, looks, open, renderer, saved};
+use super::{FIXTURES, acting, ask, calm, cued, flight, looks, open, renderer, saved, stopped};
 use crate::stage::Stage;
 use crate::{choice, hearing, library, pack, power, store};
 use serde_json::{Value, json};
@@ -152,6 +152,7 @@ pub(super) fn scenes() {
     cued::cued();
     acting::scripted();
     calm::calmed();
+    stopped::only_automatic_stops_heavy_scenes();
     flight::flown();
     looks::drawn();
     power::device(false, 0);

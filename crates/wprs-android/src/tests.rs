@@ -23,6 +23,7 @@ mod saved;
 mod scenes;
 mod screens;
 mod steady;
+mod stopped;
 mod tilted;
 mod words;
 

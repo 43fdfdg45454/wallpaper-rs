@@ -88,6 +88,37 @@ fn chosen_levels_above_what_the_card_holds_report_their_cost() {
 }
 
 #[test]
+fn only_the_automatic_choice_stops_a_scene_too_heavy_for_the_tier() {
+    let (heavy, light) = (runtime(120), runtime(0));
+    let budget = |choice: &str| Budget {
+        choice: QualityChoice::parse(choice).unwrap(),
+        ..Budget::new(Tier::T0, true, 60)
+    };
+    assert!(budget("auto").heavy(&heavy) && budget("auto").still(&heavy));
+    assert_eq!(budget("auto").automatic(&heavy, Quality::Q0), "stop");
+    for choice in ["q0", "q3", "min-q1", "min-q2"] {
+        let power = Budget { saver: true, heat: Heat::Hot, ..budget(choice) };
+        assert!(!power.still(&heavy), "{choice} stopped the scene");
+        let (quality, why) = power.level(&heavy);
+        assert_eq!((quality, why), (Quality::from_level(power.choice.floor()), Why::User), "{choice}");
+        let (cost, most) = power.over(&heavy, quality).expect(choice);
+        assert!(cost > most && most == Tier::T0.budget(), "{choice} {cost} {most}");
+        assert_eq!(power.automatic(&heavy, quality), "stop", "{choice}");
+    }
+    let fixed = budget("q3");
+    assert_eq!((fixed.still(&light), fixed.automatic(&light, Quality::Q3)), (false, ""));
+    assert_eq!(budget("auto").automatic(&light, Quality::Q0), "");
+}
+
+#[test]
+fn a_chosen_level_over_the_budget_says_automatic_would_lower_it_when_it_fits_lower() {
+    let pond = runtime(6);
+    let power = Budget { choice: QualityChoice::Fixed(3), ..Budget::new(Tier::T0, false, 60) };
+    assert!(!power.heavy(&pond) && power.over(&pond, Quality::Q3).is_some());
+    assert_eq!(power.automatic(&pond, Quality::Q3), "lower");
+}
+
+#[test]
 fn slow_frames_never_take_the_level_below_the_floor() {
     let (mut g, mut at) = (Governor::default(), Instant::now());
     let slow = |g: &mut Governor, at: &mut Instant, ceiling| {

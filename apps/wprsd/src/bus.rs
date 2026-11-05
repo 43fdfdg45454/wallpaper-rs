@@ -144,6 +144,7 @@ impl Daemon {
                 quality_choice: st.config.own_quality(name).map(|q| q.as_str().into()),
                 quality_cost: f64::from((s.level.cost * 10.0).round() / 10.0),
                 quality_budget: f64::from(s.level.budget),
+                quality_auto: s.level.automatic.into(),
                 decode: s.decode.into(),
                 left_out: s.left_out,
                 console: s.console,

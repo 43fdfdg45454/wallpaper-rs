@@ -85,6 +85,7 @@ fun Settings(main: Main) {
         items(CHOICES) { (label, key, options) ->
             val texts = options.map { (value, text) -> value to stringResource(text, value.toIntOrNull() ?: 0) }
             Choices(stringResource(label), texts, values[key].orEmpty()) { set(key, it) }
+            if (key == "playback.quality") CostWarning(report)
         }
         items(TOGGLES) { (label, key, states) ->
             val (on, off) = states
@@ -117,7 +118,7 @@ fun Settings(main: Main) {
                 stringResource(R.string.tier_timed).takeIf { report.optBoolean("timed") && report.optString("tier").isNotEmpty() },
                 levelReason(report.optString("reason"))?.let { stringResource(R.string.level_reason, stringResource(it)) },
                 stringResource(R.string.level_chosen).takeIf { report.optString("reason") == "user" },
-                report.optJSONArray("over")?.let { stringResource(R.string.level_over, "%.1f".format(it.optDouble(0)), "%.0f".format(it.optDouble(1))) },
+                costNote(report),
                 hdrState(report.optJSONObject("hdr")),
                 stringResource(R.string.particles_cpu).takeIf { report.optString("particles") == "cpu" },
                 stringResource(R.string.scripts_stopped).takeIf { report.optString("scripts") == "off" },

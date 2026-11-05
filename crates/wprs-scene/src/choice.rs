@@ -26,6 +26,24 @@ impl Budget {
 
     pub fn over(&self, runtime: &Runtime, quality: Quality) -> Option<(f32, f32)> {
         let (cost, budget) = (runtime.cost(quality), self.tier.budget());
-        (!self.choice.is_auto() && quality > Quality::Q0 && cost > budget).then_some((cost, budget))
+        (!self.choice.is_auto() && cost > budget).then_some((cost, budget))
+    }
+
+    pub fn automatic(&self, runtime: &Runtime, quality: Quality) -> &'static str {
+        let over = self.over(runtime, quality).is_some();
+        match () {
+            _ if (over || self.choice.is_auto()) && self.heavy(runtime) => "stop",
+            _ if over => "lower",
+            _ => "",
+        }
+    }
+
+    pub fn heavy(&self, runtime: &Runtime) -> bool {
+        let most = crate::model_caps(self.tier, false).triangles;
+        runtime.cost(Quality::Q0) > self.tier.budget() || runtime.scene.model_triangles(Quality::Q0) > most
+    }
+
+    pub fn still(&self, runtime: &Runtime) -> bool {
+        self.choice.is_auto() && self.heavy(runtime)
     }
 }

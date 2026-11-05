@@ -50,11 +50,6 @@ impl Budget {
         self.level(runtime).0
     }
 
-    pub fn still(&self, runtime: &Runtime) -> bool {
-        let most = crate::model_caps(self.tier, false).triangles;
-        runtime.cost(Quality::Q0) > self.tier.budget() || runtime.scene.model_triangles(Quality::Q0) > most
-    }
-
     fn chosen(&self, refresh: u32) -> u32 {
         match self.max_fps {
             DISPLAY if self.strained() => BATTERY,
@@ -101,7 +96,7 @@ mod tests {
     }
 
     #[test]
-    fn scenes_over_budget_at_the_lowest_level_stay_still() {
+    fn scenes_over_budget_at_the_lowest_level_stay_still_in_automatic() {
         let power = |tier| Budget::new(tier, false, 60);
         assert!(!power(Tier::T0).still(&runtime(1)) && !power(Tier::T3).still(&runtime(16)));
         assert!(power(Tier::T0).still(&runtime(256)));

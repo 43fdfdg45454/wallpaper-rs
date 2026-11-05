@@ -7,6 +7,7 @@ macro_rules! model {
 }
 
 mod account;
+mod field;
 mod inputs;
 mod jobs;
 mod layer;
@@ -19,6 +20,7 @@ mod sources;
 mod state;
 
 pub use account::*;
+pub use field::*;
 pub use inputs::*;
 pub use jobs::*;
 pub use layer::*;

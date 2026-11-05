@@ -1,5 +1,5 @@
 use super::report::wall;
-use super::{CALMING, ENGINE, LEFT, LEVEL, OVER, RETRIES, Shot, Stage};
+use super::{AUTO, CALMING, ENGINE, LEFT, LEVEL, OVER, RETRIES, Shot, Stage};
 use crate::acting::Sent;
 use crate::hearing;
 use crate::power::{Power, delay_ms};
@@ -28,7 +28,7 @@ impl Stage {
             Budget { choice: crate::power::choice(), ..Budget::new(tier, !power.charging, cap.max(1)) };
         self.runtime.set_battery(!power.charging);
         self.heavy = budget.still(&self.runtime);
-        if self.heavy && !std::mem::replace(&mut self.posed, true) {
+        if std::mem::replace(&mut self.posed, self.heavy) != self.heavy && self.heavy {
             self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
         }
         let calm = power.still && !self.heavy && !self.moving;
@@ -86,6 +86,9 @@ impl Stage {
             .over(&self.runtime, quality)
             .map(|(c, b)| u64::from(c.to_bits()) << 32 | u64::from(b.to_bits()));
         OVER.store(over.unwrap_or_default(), Relaxed);
+        let automatic =
+            super::report::AUTOMATIC.iter().position(|a| *a == budget.automatic(&self.runtime, quality));
+        AUTO.store(automatic.unwrap_or_default() as u32, Relaxed);
         let fps = if still { 0 } else { budget.fps(&self.runtime, quality, 0) };
         let retried = RETRIES.load(Relaxed);
         if std::mem::replace(&mut self.retried, retried) != retried {

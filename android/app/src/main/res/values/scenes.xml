@@ -54,7 +54,11 @@
     <string name="choose_file">Choose</string>
     <string name="tier_timed">The class was measured with GPU timestamps, without counting the wait for the processor.</string>
     <string name="level_chosen">Level chosen by you: it holds while not charging and when the phone is warm.</string>
-    <string name="level_over">This scene costs %1$s units a frame at this level, more than the %2$s this GPU is estimated to hold; expect fewer frames per second.</string>
+    <string name="level_over">This scene costs %1$s units a frame at this level, more than the %2$s this phone is estimated to hold: frames may drop and battery use rise.</string>
+    <string name="auto_would_stop">Automatic quality would keep it still at its poster.</string>
+    <string name="auto_would_lower">Automatic quality would lower it.</string>
+    <string name="level_stopped">This scene is too heavy for this phone, so automatic quality keeps it still at its poster. A fixed level plays it anyway, with fewer frames per second and more battery use.</string>
+    <string name="level_kept">Effects left out to protect the GPU stay out at every level: %1$d</string>
     <string name="hdr_output">HDR on screens that support it</string>
     <string name="hdr_auto">Automatic: on HDR screens, while charging, for scenes with bright colors at the highest quality</string>
     <string name="hdr_on">Always when the screen supports it, also on battery</string>
