@@ -22,7 +22,10 @@ ColumnLayout {
             return;
         }
         shown = reply;
-        message = reply.added ? App.tr("Added %1. Publish the repository next.", reply.added.join(", ")) : "";
+        if (reply.published)
+            message = App.tr("Published index %1 with %2 packages; it expires %3", reply.published.version, reply.published.packages, reply.published.expires);
+        else
+            message = reply.added ? App.tr("Added %1. Publish the repository next.", reply.added.join(", ")) : "";
     }
 
     function ask(text, run) {
@@ -42,11 +45,13 @@ ColumnLayout {
     function done(answer) {
         take(answer);
         if (!failed)
-            message = App.tr("Changed. Publish the repository next: wprs-ctl repo publish %1 --key <online key>", folder);
+            message = App.tr("Changed. Publish the repository next.");
     }
 
     Stall {
         id: backend
+
+        onAnswered: answer => stall.take(answer)
     }
 
     RowLayout {
@@ -75,8 +80,20 @@ ColumnLayout {
         QQC2.Button {
             icon.name: "list-add"
             text: App.tr("Add packages…")
-            enabled: stall.shown !== null
+            enabled: stall.shown !== null && !backend.busy
             onClicked: wpaks.open()
+        }
+
+        QQC2.Button {
+            icon.name: "document-send"
+            text: App.tr("Publish…")
+            enabled: stall.shown !== null && !backend.busy
+            onClicked: publishing.open()
+        }
+
+        QQC2.BusyIndicator {
+            visible: backend.busy
+            running: visible
         }
     }
 
@@ -125,6 +142,12 @@ ColumnLayout {
 
         fileMode: FileDialog.OpenFiles
         nameFilters: [App.tr("Packages (*.wpak)")]
-        onAccepted: stall.take(backend.add(stall.folder, JSON.stringify(selectedFiles.map(file => App.path(file))), unlisted.checked))
+        onAccepted: backend.add(stall.folder, JSON.stringify(selectedFiles.map(file => App.path(file))), unlisted.checked)
+    }
+
+    RepoPublish {
+        id: publishing
+
+        onPublish: (key, password, days) => backend.publish(stall.folder, key, password, days)
     }
 }

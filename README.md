@@ -1747,7 +1747,10 @@ subidas y te deja cambiar la visibilidad de cada versión. En un repositorio est
 add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo publish`, y la pestaña
 *Repositorio estático* de *Repositorios* abre la carpeta del repositorio y añade paquetes (también
 ocultos), oculta o vuelve a mostrar un paquete o una versión y destaca o deja de destacar, con la misma
-confirmación; publicar sigue siendo `wprs-ctl repo publish` con la clave en línea.
+confirmación, y *Publicar…* firma el índice con un archivo de clave en línea (con su contraseña, si
+la tiene) y los días hasta que caduca, como `wprs-ctl repo publish`. Añadir y publicar trabajan fuera
+de la ventana, que sigue respondiendo mientras tanto. El teléfono todavía no opera repositorios
+estáticos.
 
 En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
 del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o la pestaña *Repositorio estático*, o desde

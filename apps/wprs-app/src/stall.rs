@@ -9,28 +9,44 @@ pub mod qobject {
     extern "RustQt" {
         #[qobject]
         #[qml_element]
+        #[qproperty(bool, busy)]
         type Stall = super::StallRust;
 
         #[qinvokable]
         fn open(self: &Stall, folder: &QString) -> QString;
         #[qinvokable]
-        fn add(self: &Stall, folder: &QString, files: &QString, unlisted: bool) -> QString;
+        fn add(self: Pin<&mut Stall>, folder: &QString, files: &QString, unlisted: bool);
+        #[qinvokable]
+        fn publish(self: Pin<&mut Stall>, folder: &QString, key: &QString, password: &QString, days: u32);
         #[qinvokable]
         fn list(self: &Stall, folder: &QString, id: &QString, version: &QString, listed: bool) -> QString;
         #[qinvokable]
         fn feature(self: &Stall, folder: &QString, id: &QString, note: &QString, on: bool) -> QString;
+        #[qsignal]
+        fn answered(self: Pin<&mut Stall>, answer: QString);
     }
+
+    impl cxx_qt::Threading for Stall {}
 }
 
+use crate::bus;
 use crate::scenefile::Shown;
+use cxx_qt::Threading;
 use cxx_qt_lib::QString;
 use qobject::Stall;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Default)]
-pub struct StallRust;
+pub struct StallRust {
+    busy: bool,
+}
+
+fn now() -> anyhow::Result<i64> {
+    Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs().try_into()?)
+}
 
 pub fn opened(dir: &Path) -> anyhow::Result<Value> {
     let status = wprs_format::status(dir)?;
@@ -40,7 +56,7 @@ pub fn opened(dir: &Path) -> anyhow::Result<Value> {
 }
 
 pub fn added(dir: &Path, files: &[PathBuf], unlisted: bool) -> anyhow::Result<Value> {
-    let now: i64 = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs().try_into()?;
+    let now = now()?;
     let mut done = Vec::new();
     for file in files {
         let added = wprs_format::add(dir, file, None, now)?;
@@ -51,6 +67,14 @@ pub fn added(dir: &Path, files: &[PathBuf], unlisted: bool) -> anyhow::Result<Va
     }
     let mut state = opened(dir)?;
     state["added"] = json!(done);
+    Ok(state)
+}
+
+pub fn published(dir: &Path, key: &Path, password: Option<String>, days: u32) -> anyhow::Result<Value> {
+    let signer = wprs_format::Signer::new(&std::fs::read_to_string(key)?, password)?;
+    let done = wprs_format::publish(dir, &signer, days, now()?)?;
+    let mut state = opened(dir)?;
+    state["published"] = serde_json::to_value(&done)?;
     Ok(state)
 }
 
@@ -74,13 +98,33 @@ fn text(q: &QString) -> Option<String> {
 }
 
 impl Stall {
+    fn behind(mut self: Pin<&mut Self>, job: impl FnOnce() -> anyhow::Result<Value> + Send + 'static) {
+        self.as_mut().set_busy(true);
+        let qt = self.qt_thread();
+        bus::spawn(async move {
+            let result = tokio::task::spawn_blocking(job).await.map_err(anyhow::Error::from).and_then(|r| r);
+            let reply = answer(result);
+            qt.queue(move |mut stall| {
+                stall.as_mut().set_busy(false);
+                stall.answered(reply);
+            })
+            .ok();
+        });
+    }
+
     pub fn open(&self, folder: &QString) -> QString {
         answer(opened(Path::new(&folder.to_string())))
     }
 
-    pub fn add(&self, folder: &QString, files: &QString, unlisted: bool) -> QString {
-        let files = serde_json::from_str::<Vec<PathBuf>>(&files.to_string()).map_err(anyhow::Error::from);
-        answer(files.and_then(|f| added(Path::new(&folder.to_string()), &f, unlisted)))
+    pub fn add(self: Pin<&mut Self>, folder: &QString, files: &QString, unlisted: bool) {
+        let (dir, files) = (PathBuf::from(folder.to_string()), files.to_string());
+        self.behind(move || added(&dir, &serde_json::from_str::<Vec<PathBuf>>(&files)?, unlisted));
+    }
+
+    pub fn publish(self: Pin<&mut Self>, folder: &QString, key: &QString, password: &QString, days: u32) {
+        let (dir, key, password) =
+            (PathBuf::from(folder.to_string()), PathBuf::from(key.to_string()), text(password));
+        self.behind(move || published(&dir, &key, password, days));
     }
 
     pub fn list(&self, folder: &QString, id: &QString, version: &QString, listed: bool) -> QString {

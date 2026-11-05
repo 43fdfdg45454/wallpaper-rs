@@ -5,16 +5,9 @@ use cxx_qt_lib::QString;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use wprs_editor::{Action, assets, check, package, packing, placing, previews};
+use wprs_editor::{Action, check, package};
 
 type Done<T> = Box<dyn FnOnce(Pin<&mut SceneEditor>, T) + Send>;
-
-enum Placed {
-    Asset(String, (bool, Option<[u32; 2]>)),
-    Preview(bool),
-    Packed(String),
-    Layer(String, Box<Action>),
-}
 
 pub fn queued(action: &Action) -> bool {
     let placing = matches!(action, Action::AddLayer { file: Some(_), .. });
@@ -51,39 +44,14 @@ impl SceneEditor {
         let Some(project) = self.project.as_ref() else { return };
         let (dir, doc) = (project.dir.clone(), project.doc.clone());
         let label = action.name();
-        let job = move || match action {
-            Action::Thumbnail { file, animated } => {
-                Ok((Placed::Preview(animated), previews::store(&dir, &doc, &file, animated)?))
-            }
-            Action::Import { file, id, linear, atlas } => {
-                assets::cuttable(&file.to_string_lossy(), (linear, atlas))?;
-                let (id, path) = assets::import(&dir, &doc, &file, id.as_deref())?;
-                Ok((Placed::Asset(id, (linear, atlas)), path))
-            }
-            Action::Asset(wanted) => {
-                Ok((Placed::Packed(wanted.asset.clone()), packing::store(&dir, &doc, &wanted)?))
-            }
-            placing @ Action::AddLayer { file: Some(_), .. } => {
-                let (asset, path) = placing::import(&dir, &doc, &placing)?;
-                Ok((Placed::Layer(asset, Box::new(placing)), path))
-            }
-            other => Err(anyhow::anyhow!("{} is not a file action", other.name())),
-        };
+        let job = move || crate::landing::land(&dir, doc, action);
         self.work(
             job,
-            Box::new(move |mut editor, (placed, path)| {
+            Box::new(move |mut editor, landed| {
                 let recorded = {
                     let mut this = editor.as_mut().rust_mut();
                     let Some(project) = this.project.as_mut() else { return };
-                    let ops = match &placed {
-                        Placed::Asset(id, cut) => assets::sheet(&project.dir, &project.doc, id, &path, *cut),
-                        Placed::Preview(animated) => previews::adopt(&project.doc, *animated, &path),
-                        Placed::Packed(id) => Ok(packing::adopt(&project.doc, id, &path)),
-                        Placed::Layer(asset, add) => {
-                            placing::placed(&project.dir, &project.doc, add, asset, &path)
-                        }
-                    };
-                    ops.and_then(|ops| project.record(&label, ops))
+                    crate::landing::settle(project, landed).and_then(|ops| project.record(&label, ops))
                 };
                 match recorded {
                     Ok(_) => {

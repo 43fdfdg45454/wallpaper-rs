@@ -1,7 +1,9 @@
-use crate::stall::{added, featured, listed, opened};
+use crate::stall::{added, featured, listed, opened, published};
 use std::fs;
 use std::path::{Path, PathBuf};
-use wprs_format::{Kind, Limits, Manifest, SCHEMA_V1, Settings, Text, build, init, keygen};
+use wprs_format::{
+    Kind, Limits, Manifest, SCHEMA_V1, Settings, Signer, Text, build, init, keygen, sign_root,
+};
 
 fn package(dir: &Path, id: &str) -> PathBuf {
     let src = dir.join(format!("src-{id}"));
@@ -54,4 +56,28 @@ fn a_static_repository_is_opened_filled_unlisted_and_featured_from_the_app() {
     assert!(listed(&dir, "org.example.dawn", Some("9.0.0"), false).is_err());
     let state = featured(&dir, "org.example.dusk", None, false).unwrap();
     assert_eq!(state["packages"][1]["featured"], false);
+}
+
+#[test]
+fn a_static_repository_is_published_from_the_app_with_an_online_key() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("repo");
+    let (root, online) = (keygen(None).unwrap(), keygen(Some("example".into())).unwrap());
+    let settings = Settings {
+        root_keys: vec![root.public.clone()],
+        online_keys: vec![online.public],
+        ..Settings::default()
+    };
+    init(&dir, &settings, 1_800_000_000).unwrap();
+    let (root_file, online_file) = (tmp.path().join("root.key"), tmp.path().join("online.key"));
+    fs::write(&root_file, &root.secret).unwrap();
+    fs::write(&online_file, &online.secret).unwrap();
+    added(&dir, &[package(tmp.path(), "org.example.dawn")], false).unwrap();
+    assert!(published(&dir, &online_file, Some("example".into()), 7).is_err());
+    sign_root(&dir, &Signer::new(&root.secret, None).unwrap()).unwrap();
+    assert!(published(&dir, &root_file, None, 7).is_err());
+    assert!(published(&dir, &online_file, Some("wrong".into()), 7).is_err());
+    let state = published(&dir, &online_file, Some("example".into()), 7).unwrap();
+    assert_eq!(state["published"]["packages"], 1);
+    assert_eq!(state["packages"][0]["id"], "org.example.dawn");
 }
