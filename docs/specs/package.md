@@ -66,7 +66,7 @@ releases where they look (`repo.md`).
 | `description` | 1, 2 | plain text in *1*; in *2* text, map or `"@key"` of at most 8000 characters, with the markup below |
 | `changes` | 2 | notes of this version, at most 2000 characters, with the markup below |
 | `default_locale`, `strings` | 2 | see "Languages" |
-| `authors`, `license`, `tags` | 1, 2 | authors of 1 to 128 characters, an SPDX expression, at most 32 tags of 1 to 32 characters; in *2* authors and tags have no `<` or `>` |
+| `authors`, `license`, `tags` | 1, 2 | at most 64 authors of 1 to 128 characters, an SPDX expression of at most 256 characters, at most 32 tags of 1 to 32 characters; in *2* authors and tags have no `<` or `>` |
 | `platforms` | 2 | `[desktop, android]`, each once: the devices the package is made for, see "Platforms" |
 | `content` | 2, required | `{rating: general \| mature, descriptors: [sexual, violence, gore, language]}`; `mature` names at least one reason, each once |
 | `photosensitive` | 2, required | `true` when the package flashes or shows fast patterns that can trigger seizures |

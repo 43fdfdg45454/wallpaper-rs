@@ -1990,8 +1990,9 @@ otra página no cierra un editor con cambios sin guardar.
 - **Paquete**: *Detalles del paquete* lleva el manifiesto al inspector, que también se genera a
   partir de su esquema (`wprs-ctl scene schema --manifest`): título, descripción y notas de esta
   versión en cada idioma (*Traducir* añade uno a partir del texto del idioma por defecto sin tocar
-  los que ya hay, y los textos `@clave` se escriben en `strings`), versión, id, autores, licencia,
-  clasificación (para todos o para adultos, con sus motivos), si destella, origen y obras de las que
+  los que ya hay, y los textos `@clave` se escriben en `strings`), versión, id, autores (hasta
+  64), licencia (una expresión SPDX de hasta 256 caracteres), clasificación (para todos o para
+  adultos, con sus motivos), si destella, origen y obras de las que
   procede, créditos por archivo, miniatura y vista previa animada (*Elegir…* copia la imagen a
   `assets/` y reduce la miniatura si pasa de 1024 píxeles o de 1 MiB), enlaces, etiquetas, idioma
   por defecto y las entradas que puede pedir. Las entradas que usa la escena se marcan solas y no se
