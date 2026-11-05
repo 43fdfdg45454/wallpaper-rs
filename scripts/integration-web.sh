@@ -53,6 +53,8 @@ else
   [ "$old" != None ] || fail "the state names no web helper for the page"
   ctl pack build "$ROOT/tests/fixtures/glow" -o "$pages/glow.wpak" >/dev/null && ctl lib import "$pages/glow.wpak" --wait >/dev/null
   "$BIN/probe" "$web" 60 --hold >/dev/null 2>&1 & watcher=$!; pids+=("$watcher")
+  source "$(dirname "$0")"/integration-openrgb.sh
+  ctl config rgb.server "127.0.0.1:$openrgb" >/dev/null
   ctl config rgb.enabled true && ctl lib apply "$(uid org.example.glow-page)" -o TEST-W 2>/dev/null
   if wait_for 3 ctl rgb strip -o TEST-W 2>/dev/null; then fail "a page sent colors without the grant"; fi
   ctl input grant org.example.glow-page rgb
