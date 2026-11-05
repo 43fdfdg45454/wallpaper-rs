@@ -9,6 +9,7 @@ pub struct GpuImage {
     pub(crate) texture: wgpu::Texture,
     pub(crate) view: wgpu::TextureView,
     pub(crate) id: u64,
+    pub(crate) crop: [f32; 2],
 }
 
 impl GpuImage {
@@ -118,7 +119,15 @@ pub(crate) fn next_id() -> u64 {
 }
 
 pub(crate) fn gpu_image(texture: wgpu::Texture) -> GpuImage {
-    GpuImage { view: texture.create_view(&Default::default()), texture, id: next_id() }
+    cropped(texture, [1.0; 2])
+}
+
+pub(crate) fn cropped(texture: wgpu::Texture, crop: [f32; 2]) -> GpuImage {
+    GpuImage { view: texture.create_view(&Default::default()), texture, id: next_id(), crop }
+}
+
+pub(crate) fn within(rect: [f32; 4], crop: [f32; 2]) -> [f32; 4] {
+    [rect[0] * crop[0], rect[1] * crop[1], rect[2] * crop[0], rect[3] * crop[1]]
 }
 
 pub(crate) fn create_image(

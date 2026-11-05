@@ -41,12 +41,12 @@ fn a_picture_becomes_a_ktx2_texture_as_one_undoable_step() {
     let path = p.doc["scene"]["assets"]["sky"]["path"].as_str().unwrap().to_string();
     assert_eq!(path, "assets/sky.ktx2");
     let info = wprs_ktx2::info(&std::fs::read(p.dir.join(&path)).unwrap()).unwrap();
-    assert_eq!((info.width, info.height, info.codec, info.levels), (72, 32, "uastc", 7));
+    assert_eq!((info.width, info.height, info.codec, info.levels), (70, 30, "uastc", 7));
     act(&mut p, json!({ "undo": {} })).unwrap();
     assert_eq!(p.doc["scene"]["assets"]["sky"]["path"], json!("assets/sky.png"));
     act(&mut p, json!({ "redo": {} })).unwrap();
     assert_eq!(p.doc["scene"]["assets"]["sky"]["path"], json!(path));
-    assert_eq!(wprs_editor::pictures::dimensions(p.dir.join(&path)).unwrap(), (72, 32));
+    assert_eq!(wprs_editor::pictures::dimensions(p.dir.join(&path)).unwrap(), (70, 30));
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn the_trial_reports_both_sizes_and_what_each_class_of_card_gets() {
     let looks = root.path().join("looks");
     let report = packing::trial(&p.dir, &p.doc, &wanted(Some("etc1s"), Some(40)), Some(&looks)).unwrap();
     assert_eq!(report["source"], json!([70, 30]));
-    assert_eq!((report["size"].clone(), report["resized"].clone()), (json!([72, 32]), json!(true)));
+    assert_eq!((report["size"].clone(), report.get("resized")), (json!([70, 30]), None));
     assert_eq!((report["codec"].as_str(), report["quality"].as_u64()), (Some("etc1s"), Some(40)));
     assert!(report["after"].as_u64().unwrap() > 0 && report["before"].as_u64().unwrap() > 0);
     let classes = report["classes"].as_array().unwrap();
@@ -65,7 +65,7 @@ fn the_trial_reports_both_sizes_and_what_each_class_of_card_gets() {
     assert!(classes[0]["gpu"].as_u64().unwrap() * 3 < classes[3]["gpu"].as_u64().unwrap());
     for class in classes {
         let look = image::open(class["look"].as_str().unwrap()).unwrap();
-        assert_eq!((look.width(), look.height()), (72, 32));
+        assert_eq!((look.width(), look.height()), (70, 30));
     }
     assert!(std::path::Path::new(report["original"].as_str().unwrap()).is_file());
     let quiet = packing::trial(&p.dir, &p.doc, &wanted(None, None), None).unwrap();

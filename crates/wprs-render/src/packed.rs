@@ -1,6 +1,6 @@
 use crate::Renderer;
 use crate::scene::{Image, Pixels};
-use crate::texture::gpu_image;
+use crate::texture::cropped;
 use image::error::{DecodingError, ImageFormatHint, LimitError, LimitErrorKind};
 use image::{DynamicImage, ImageError, ImageReader, ImageResult, Limits};
 use std::io::{BufRead, Read, Seek};
@@ -110,7 +110,7 @@ impl Renderer {
         let made = wprs_ktx2::levels(bytes, target, self.max_edge(), mipped).ok()?;
         let descriptor = wgpu::TextureDescriptor {
             label: Some("wprs-render ktx2"),
-            size: wgpu::Extent3d { width: made.width, height: made.height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d { width: made.padded.0, height: made.padded.1, depth_or_array_layers: 1 },
             mip_level_count: made.count,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -124,7 +124,8 @@ impl Renderer {
             TextureDataOrder::LayerMajor,
             &made.data,
         );
-        let image = Arc::new((gpu_image(texture), [info.width as f32, info.height as f32]));
+        let crop = [made.width as f32 / made.padded.0 as f32, made.height as f32 / made.padded.1 as f32];
+        let image = Arc::new((cropped(texture, crop), [info.width as f32, info.height as f32]));
         self.keep(pixels, [linear, mipped], &image);
         Some(image)
     }

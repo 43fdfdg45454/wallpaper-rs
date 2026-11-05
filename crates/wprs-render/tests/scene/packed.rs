@@ -41,6 +41,24 @@ fn ktx2_pictures_look_like_their_source_on_every_target_the_card_offers() {
 }
 
 #[test]
+fn ktx2_pictures_with_odd_sides_stay_compressed_and_exact() {
+    let Some(r) = renderer() else { return };
+    let source = RgbaImage::from_fn(30, 18, |x, y| match (x >= 27, y >= 15) {
+        (true, _) => Rgba([255, 0, 0, 255]),
+        (_, true) => Rgba([0, 0, 255, 255]),
+        _ => Rgba([0, 200, 0, 255]),
+    });
+    let plain = shot(r, json!({ "path": "p.png" }), [90, 54], Pixels::new(source.clone()));
+    for target in r.ktx2_targets() {
+        r.force_ktx2(Some(target));
+        let seen = shot(r, json!({ "path": "p.ktx2" }), [90, 54], packed(&source, Codec::Uastc, false));
+        let off = apart(&plain, &seen);
+        assert!(off < 8.0, "{target:?}: {off}");
+    }
+    r.force_ktx2(None);
+}
+
+#[test]
 fn ktx2_mipmaps_come_from_the_file_and_can_be_left_out() {
     let Some(r) = renderer() else { return };
     let checker =

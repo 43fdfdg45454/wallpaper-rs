@@ -42,6 +42,7 @@ pub struct Levels {
     pub target: Target,
     pub width: u32,
     pub height: u32,
+    pub padded: (u32, u32),
     pub count: u32,
     pub data: Vec<u8>,
 }
@@ -94,6 +95,15 @@ pub fn supports(bytes: &[u8], target: Target) -> bool {
     open(bytes).is_ok_and(|(t, _)| t.supports(target.basis()))
 }
 
+fn blocks(side: u32) -> u32 {
+    side.max(1).div_ceil(4)
+}
+
+fn whole(sized: (u32, u32), padded: (u32, u32), level: u32) -> bool {
+    blocks(sized.0 >> level) == blocks(padded.0 >> level)
+        && blocks(sized.1 >> level) == blocks(padded.1 >> level)
+}
+
 pub fn levels(bytes: &[u8], target: Target, max_edge: u32, mips: bool) -> Result<Levels, Error> {
     let (t, info) = open(bytes)?;
     let start = first(&info, max_edge);
@@ -101,17 +111,19 @@ pub fn levels(bytes: &[u8], target: Target, max_edge: u32, mips: bool) -> Result
     if (width.max(height) > max_edge.max(1)) || !t.supports(target.basis()) {
         return Err(Error::Unsupported);
     }
-    if target != Target::Rgba && (width % 4 != 0 || height % 4 != 0) {
-        return Err(Error::Unsupported);
-    }
-    let count = if mips { info.levels - start } else { 1 };
+    let padded = match target.compressed() {
+        true => (blocks(width) * 4, blocks(height) * 4),
+        false => (width, height),
+    };
+    let wanted = if mips { info.levels - start } else { 1 };
+    let count = (0..wanted).take_while(|l| whole((width, height), padded, *l)).count() as u32;
     let mut data = Vec::new();
     for level in start..start + count {
         data.extend(
             t.transcode(level, target.basis(), DecodeFlags::HIGH_QUALITY).map_err(|_| Error::Broken)?,
         );
     }
-    Ok(Levels { target, width, height, count, data })
+    Ok(Levels { target, width, height, padded, count, data })
 }
 
 pub fn rgba(bytes: &[u8], max_edge: u32) -> Result<RgbaImage, Error> {

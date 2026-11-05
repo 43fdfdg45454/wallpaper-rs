@@ -11,7 +11,7 @@ pub(super) fn retarget(r: &Renderer, view: &mut SceneView, size: (u32, u32)) {
     let pool = &mut view.pool;
     view.caches.drain().for_each(|(_, c)| pool.give(c.tex));
     if let Some((canvas, output)) = view.target.take() {
-        let GpuImage { texture, view, id } = output;
+        let GpuImage { texture, view, id, .. } = output;
         if id != canvas.id {
             pool.give(Tex { texture, view, id });
         }
@@ -21,9 +21,12 @@ pub(super) fn retarget(r: &Renderer, view: &mut SceneView, size: (u32, u32)) {
     let output = match view.srgb || view.tone > 0 {
         true => {
             let Tex { texture, view, id } = pool.take(&r.device, size, wanted);
-            GpuImage { texture, view, id }
+            GpuImage { texture, view, id, crop: [1.0; 2] }
         }
-        false => GpuImage { texture: canvas.texture.clone(), view: canvas.view.clone(), id: canvas.id },
+        false => {
+            let (texture, view) = (canvas.texture.clone(), canvas.view.clone());
+            GpuImage { texture, view, id: canvas.id, crop: [1.0; 2] }
+        }
     };
     view.target = Some((canvas, output));
     view.marks.clear();

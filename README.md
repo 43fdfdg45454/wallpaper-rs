@@ -2048,7 +2048,9 @@ otra página no cierra un editor con cambios sin guardar.
   ETC2 en teléfonos viejos y sin comprimir en las demás). Es un paso que se deshace; `wprs-ctl scene
   asset DIR ID` muestra lo mismo y `--ktx2 [--codec uastc|etc1s] [--quality N]` convierte, o solo
   informa con `--dry-run [--looks CARPETA]`. Al cargar, la escena pasa cada textura KTX2 al formato
-  comprimido que lee la tarjeta y la deja así en memoria, con los niveles del archivo como mipmaps.
+  comprimido que lee la tarjeta y la deja así en memoria, con los niveles del archivo como mipmaps;
+  la imagen conserva su tamaño exacto aunque un lado no sea múltiplo de 4 píxeles, porque la textura
+  se rellena hasta el bloque siguiente y solo se dibujan sus píxeles reales.
 - **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
   capa o el campo afectado. Esos mensajes y los rechazos del editor llevan un identificador con sus
   argumentos (`scene.color`, `editor.step.add_layer`…) y salen en el idioma del escritorio en la

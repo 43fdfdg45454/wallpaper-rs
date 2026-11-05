@@ -1,7 +1,7 @@
 use super::item::{invert, scale_of};
 use super::{Image, Pixels, SceneAssets};
 use crate::Renderer;
-use crate::texture::gpu_image;
+use crate::texture::cropped;
 use std::collections::HashMap;
 use std::sync::Arc;
 use wgpu::TextureUsages as U;
@@ -80,7 +80,7 @@ impl Renderer {
             pipes.shrink(&self.device, &mut encoder, &from, &to, format);
         }
         self.queue.submit([encoder.finish()]);
-        let made = Arc::new((gpu_image(texture), *natural));
+        let made = Arc::new((cropped(texture, source.crop), *natural));
         pixels.into_iter().for_each(|p| self.keep(p, flags, &made));
         made
     }

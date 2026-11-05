@@ -131,7 +131,9 @@ A picture asset may be a `.ktx2` file holding one Basis Universal picture (ETC1S
 of low dynamic range; one layer, no faces, no video), at most 16 384 pixels a side, 15 levels and
 256 MiB. Once read, the engine transcodes it to the compressed format the graphics card reads best:
 BC7 on desktop cards, ASTC 4 × 4 on most phones, ETC2 on older phones, and uncompressed RGBA where
-none of them is offered or where the level it starts from is not a multiple of 4 pixels a side. The
+none of them is offered. A side that is not a multiple of 4 pixels stays compressed: the texture is
+padded to whole blocks and the picture, its sprite frames and its particles sample only the real
+pixels; the mipmaps whose blocks no longer line up with the padded texture are left out. The
 levels of the file are its mipmaps: the first level no larger than the largest texture the card
 takes is drawn, `mipmaps: false` keeps only that one, and a file of one level is mipped like any
 other picture. `linear`, `filter`, `wrap`, `atlas` and the frames of a sprite sheet apply as to

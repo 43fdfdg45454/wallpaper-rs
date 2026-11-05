@@ -100,7 +100,7 @@ pub fn trial(dir: &Path, doc: &Value, wanted: &AssetEdit, cache: Option<&Path>) 
     let (w, h) = source.image.dimensions();
     Ok(json!({
         "asset": wanted.asset, "path": source.path, "before": source.bytes, "after": bytes.len(),
-        "source": [w, h], "size": [info.width, info.height], "resized": (w, h) != (info.width, info.height),
+        "source": [w, h], "size": [info.width, info.height],
         "levels": info.levels, "codec": info.codec, "quality": source.options.quality,
         "original": original, "classes": classes,
     }))

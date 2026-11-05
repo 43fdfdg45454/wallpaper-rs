@@ -1186,9 +1186,9 @@ msgid ""
 "part of a spread wallpaper they show; one placed by hand appears on the "
 "board above to be dragged."
 msgstr ""
-"Las transmisiones, las vistas previas y algunas pantallas no tienen lugar "
-"en el escritorio. Elige qué parte de un fondo extendido muestran; una "
-"colocada a mano aparece en el tablero de arriba para arrastrarla."
+"Las transmisiones, las vistas previas y algunas pantallas no tienen lugar en "
+"el escritorio. Elige qué parte de un fondo extendido muestran; una colocada "
+"a mano aparece en el tablero de arriba para arrastrarla."
 
 #: apps/wprs-app/qml/EditLayoutLoose.qml
 msgid "Part shown by %1"
@@ -3676,14 +3676,6 @@ msgstr "Calidad"
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "File: %1 now, %2 as KTX2, with %3 levels of detail."
 msgstr "Archivo: %1 ahora, %2 como KTX2, con %3 niveles de detalle."
-
-#: apps/wprs-app/qml/SceneKtx2.qml
-msgid ""
-"Widened from %1 × %2 to %3 × %4 pixels so that every card keeps it "
-"compressed."
-msgstr ""
-"Ampliada de %1 × %2 a %3 × %4 píxeles para que todas las tarjetas la "
-"mantengan comprimida."
 
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "The picture now"

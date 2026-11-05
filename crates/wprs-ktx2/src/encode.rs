@@ -9,7 +9,6 @@ use basisu_c_sys::extra::{
     BasisuEncoder, BasisuEncoderParams, SourceImage, SourceImageFormat, basisu_encoder_init,
 };
 use image::RgbaImage;
-use image::imageops::FilterType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Codec {
@@ -36,21 +35,11 @@ pub struct Options {
     pub repeat: bool,
 }
 
-fn fourfold(image: &RgbaImage) -> RgbaImage {
-    let (w, h) = image.dimensions();
-    let (fw, fh) = (w.div_ceil(4) * 4, h.div_ceil(4) * 4);
-    match (fw, fh) == (w, h) {
-        true => image.clone(),
-        false => image::imageops::resize(image, fw, fh, FilterType::CatmullRom),
-    }
-}
-
 pub fn encode(image: &RgbaImage, o: &Options) -> Result<Vec<u8>, Error> {
     let (w, h) = image.dimensions();
     if w == 0 || h == 0 || w.max(h) > MAX_SIDE {
         return Err(Error::TooLarge);
     }
-    let image = fourfold(image);
     let size = Extent3d { width: image.width(), height: image.height(), depth_or_array_layers: 1 };
     basisu_encoder_init();
     let mut encoder = BasisuEncoder::new();

@@ -74,7 +74,8 @@ impl Swarms {
         let kits = renders(scene).into_iter().zip(&sprites).map(|((system, layer, render), sprite)| {
             let frames = sprite.as_ref().and_then(|t| cells.get(t)).map_or(&[][..], |c| &c.cells[..]);
             let sprite = sprite.as_deref().map(|t| (t, images.get(t)));
-            let mut kit = kit(r, &layouts[2], (system, layer), render, scene, (sprite, frames), white, srgb);
+            let frames = cropped(frames, sprite.and_then(|s| s.1).map_or([1.0; 2], |i| i.0.crop));
+            let mut kit = kit(r, &layouts[2], (system, layer), render, scene, (sprite, &frames), white, srgb);
             super::lamp::light(r, &mut kit, render, &lamp);
             kit
         });
@@ -140,5 +141,13 @@ impl Swarms {
         swarms.prepare(r, gpu);
         drawn.into_iter().chain([&Blend::Normal]).for_each(|b| swarms.pipeline(r, mode(*b, false)));
         Some(swarms)
+    }
+}
+
+fn cropped(frames: &[[f32; 4]], crop: [f32; 2]) -> Vec<[f32; 4]> {
+    match (crop == [1.0; 2], frames) {
+        (true, _) => frames.to_vec(),
+        (false, []) => vec![[0.0, 0.0, crop[0], crop[1]]],
+        (false, _) => frames.iter().map(|f| crate::texture::within(*f, crop)).collect(),
     }
 }
