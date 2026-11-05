@@ -49,7 +49,7 @@ pub enum Clipping {
         layer: String,
         #[arg(help = "Id of the clip")]
         clip: String,
-        #[arg(help = "Seconds from the start of the clip")]
+        #[arg(allow_negative_numbers = true, help = "Seconds from the start of the clip")]
         time: f64,
         #[arg(long, conflicts_with_all = ["shape", "order"], help = "The bone keyed")]
         bone: Option<String>,
@@ -80,7 +80,12 @@ pub enum Clipping {
         ease: Option<String>,
         #[arg(long, help = "Remove the key")]
         remove: bool,
-        #[arg(long, value_name = "SECONDS", help = "Move the key that is at these seconds")]
+        #[arg(
+            allow_negative_numbers = true,
+            long,
+            value_name = "SECONDS",
+            help = "Move the key that is at these seconds"
+        )]
         from: Option<f64>,
         #[arg(long, requires = "from", help = "Copy the key instead of moving it")]
         copy: bool,

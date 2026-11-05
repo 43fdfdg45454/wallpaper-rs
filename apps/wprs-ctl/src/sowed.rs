@@ -22,6 +22,17 @@ pub(crate) fn color_stop(text: &str) -> Result<String, String> {
     if fits || text == "none" { Ok(text.to_owned()) } else { Err(format!("{text} is not TIME:COLOR")) }
 }
 
+pub(crate) fn colors(text: &str) -> Result<String, String> {
+    let ends: Vec<&str> = text.split(',').map(str::trim).collect();
+    if ends.len() != 2 {
+        return Err(format!("{text} is not two colors COLOR,COLOR"));
+    }
+    match ends.iter().find(|c| wprs_scene::Color::parse(c).is_none()) {
+        Some(bad) => Err(format!("{bad} is not a color such as #ffcc88")),
+        None => Ok(text.to_owned()),
+    }
+}
+
 pub(crate) fn sweep(text: &str) -> Result<[[f64; 2]; 2], String> {
     let (a, b) = text.split_once(':').ok_or_else(|| format!("{text} is not X,Y:X,Y"))?;
     Ok([pair(a)?, pair(b)?])

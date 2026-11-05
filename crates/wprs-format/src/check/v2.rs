@@ -1,13 +1,13 @@
-use super::apply;
+use super::broken;
 use crate::meta::{Content, Credit, Links};
 use crate::names::safe;
 use crate::origin::Origin;
-use crate::{Display, Manifest, Playback, Result};
+use crate::{Display, Error, Manifest, Playback};
 use std::collections::HashSet;
 use wprs_scene::Control;
 
 impl Manifest {
-    pub(super) fn check_v2(&self) -> Result<()> {
+    pub(super) fn faults_v2(&self) -> Vec<Error> {
         let (content, origin) = (self.content.as_ref(), self.origin.as_ref());
         let credits = self.credits.len() <= 64 && self.credits.iter().all(Credit::valid);
         let mut lower = HashSet::new();
@@ -23,10 +23,8 @@ impl Manifest {
         let accepted = self.properties.values().all(|p| accept(&p.control));
         let limits = self.properties.len() <= 256 && self.presets.len() <= 64;
         let plain = self.authors.iter().chain(&self.tags).all(|t| safe(t));
-        if let Some(missing) = self.missing().into_iter().next() {
-            return Err(missing);
-        }
-        apply(&[
+        let mut out = self.missing();
+        out.extend(broken(&[
             ("authors", plain, "authors and tags have no < or >"),
             (
                 "content.descriptors",
@@ -72,7 +70,8 @@ impl Manifest {
                 unique && options,
                 "ids differ in more than case and combos have 64 options at most",
             ),
-        ])?;
-        self.check_texts()
+        ]));
+        out.extend(self.check_texts().err());
+        out
     }
 }

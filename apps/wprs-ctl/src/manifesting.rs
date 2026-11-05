@@ -29,32 +29,39 @@ pub enum Meta {
         source_url: Option<String>,
     },
     #[command(about = "Set the license as an SPDX expression such as CC-BY-4.0")]
-    License { license: String },
+    License {
+        #[arg(help = "SPDX expression of at most 256 characters, such as CC-BY-4.0 or MIT OR Apache-2.0")]
+        license: String,
+    },
     #[command(about = "Replace the tags, or add or remove some")]
     Tags {
+        #[arg(help = "Tags of 1 to 32 characters, at most 32; the list that replaces the old one")]
         tags: Vec<String>,
-        #[arg(long, conflicts_with = "remove")]
+        #[arg(long, conflicts_with = "remove", help = "Add the tags to the ones there are")]
         add: bool,
-        #[arg(long)]
+        #[arg(long, help = "Remove the tags from the ones there are")]
         remove: bool,
     },
     #[command(about = "Replace the authors; none removes them")]
-    Authors { authors: Vec<String> },
+    Authors {
+        #[arg(help = "Names of 1 to 128 characters, at most 64, or none to remove them")]
+        authors: Vec<String>,
+    },
     #[command(
         about = "Set how the package fills the screen, its accent color and whether it spans every screen"
     )]
     Display {
-        #[arg(long, value_parser = ["fill", "fit", "stretch", "center", "tile", "span"])]
+        #[arg(long, value_parser = ["fill", "fit", "stretch", "center", "tile", "span"], help = "How a picture or video fills the screen")]
         fit: Option<String>,
-        #[arg(long)]
+        #[arg(allow_negative_numbers = true, long, help = "Zoom of a picture, from 1 to 8")]
         zoom: Option<f64>,
-        #[arg(long, value_name = "X,Y", value_parser = crate::sowed::pair, help = "Fractions of the picture")]
+        #[arg(allow_hyphen_values = true, long, value_name = "X,Y", value_parser = crate::sowed::pair, help = "Center of a picture, two numbers from -1 to 1")]
         position: Option<[f64; 2]>,
         #[arg(long, help = "Color as #rrggbb")]
         background: Option<String>,
-        #[arg(long, value_parser = ["per-output", "all-outputs"])]
+        #[arg(long, value_parser = ["per-output", "all-outputs"], help = "Draw on each screen, or once across all of them")]
         span: Option<String>,
-        #[arg(long, value_parser = ["none", "horizontal", "vertical"])]
+        #[arg(long, value_parser = ["none", "horizontal", "vertical"], help = "Mirror a picture or video")]
         flip: Option<String>,
         #[arg(long, help = "Color as #rrggbb, or prop:ID to take it from a property")]
         accent: Option<String>,

@@ -14,17 +14,22 @@ pub enum Force {
     },
     #[command(about = "Slow the particles down, a share of their speed a second")]
     Drag {
+        #[arg(allow_negative_numbers = true)]
         amount: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
     #[command(about = "Push the particles along a moving noise")]
     Turbulence {
-        #[arg(long, help = "Pixels a second squared")]
+        #[arg(allow_negative_numbers = true, long, help = "Pixels a second squared")]
         strength: f64,
-        #[arg(long, help = "Size of the noise, as cycles a pixel such as 0.004")]
+        #[arg(
+            allow_negative_numbers = true,
+            long,
+            help = "Size of the noise, as cycles a pixel such as 0.004"
+        )]
         scale: f64,
-        #[arg(long, help = "How fast the noise moves")]
+        #[arg(allow_negative_numbers = true, long, help = "How fast the noise moves")]
         speed: Option<f64>,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
@@ -33,7 +38,7 @@ pub enum Force {
     Oscillate {
         #[arg(value_parser = ["position", "alpha", "size"])]
         what: String,
-        #[arg(long, value_name = "MIN,MAX", value_parser = pair, help = "Swings a second")]
+        #[arg(allow_hyphen_values = true, long, value_name = "MIN,MAX", value_parser = pair, help = "Swings a second")]
         freq: [f64; 2],
         #[arg(long, value_name = "MIN,MAX", value_parser = pair, allow_hyphen_values = true, help = "Reach of the swing")]
         scale: [f64; 2],
@@ -48,7 +53,7 @@ pub enum Force {
         target: String,
         #[arg(long, allow_hyphen_values = true, help = "Pixels a second squared; negative pushes away")]
         strength: f64,
-        #[arg(long, help = "Pixels beyond which it does not pull")]
+        #[arg(allow_negative_numbers = true, long, help = "Pixels beyond which it does not pull")]
         radius: Option<f64>,
         #[arg(long, value_parser = ["constant", "linear", "inverse_square"])]
         falloff: Option<String>,
@@ -65,7 +70,7 @@ pub struct Kin {
     pub system: String,
     #[arg(long, value_parser = ["static", "spawn", "death", "follow"], help = "When a particle starts it")]
     pub on: String,
-    #[arg(long, help = "Chance from 0 to 1 that a particle starts it")]
+    #[arg(allow_negative_numbers = true, long, help = "Chance from 0 to 1 that a particle starts it")]
     pub probability: Option<f64>,
     #[arg(long, help = "Most particles of the child at a time for each parent particle")]
     pub max: Option<u32>,
@@ -73,7 +78,7 @@ pub struct Kin {
     pub offset: Option<[f64; 2]>,
     #[arg(long, allow_hyphen_values = true, help = "Degrees turned from the parent particle")]
     pub angle: Option<f64>,
-    #[arg(long, help = "Size of the child from 0 to 100")]
+    #[arg(allow_negative_numbers = true, long, help = "Size of the child from 0 to 100")]
     pub scale: Option<f64>,
     #[arg(long, help = "Start from the control points of the parent particle")]
     pub points_from: bool,

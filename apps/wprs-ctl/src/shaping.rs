@@ -64,7 +64,7 @@ pub enum Shaping {
         min: Option<f64>,
         #[arg(long, allow_hyphen_values = true, help = "Largest value of a slider")]
         max: Option<f64>,
-        #[arg(long, help = "Step of a slider")]
+        #[arg(allow_negative_numbers = true, long, help = "Step of a slider")]
         step: Option<f64>,
         #[arg(long, allow_hyphen_values = true, help = "Default value as JSON or text")]
         default: Option<String>,

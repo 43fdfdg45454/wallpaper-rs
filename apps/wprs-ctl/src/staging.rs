@@ -24,7 +24,7 @@ pub enum Stage {
         skew: Option<[f64; 2]>,
         #[arg(long, value_name = XY, value_parser = pair, allow_hyphen_values = true, help = "Point it turns and scales around, in fractions of the layer")]
         origin: Option<[f64; 2]>,
-        #[arg(long, value_name = "W,H", value_parser = pair, help = "Pixels of an image, video, solid, adjustment or spectrum layer")]
+        #[arg(allow_hyphen_values = true, long, value_name = "W,H", value_parser = pair, help = "Pixels of an image, video, solid, adjustment or spectrum layer")]
         size: Option<[f64; 2]>,
         #[arg(long, help = crate::sowing::REPLACE)]
         replace: bool,
@@ -40,19 +40,19 @@ pub enum Stage {
         about = "Change one particles layer from the system it draws: alpha, size, count, speed, life, time scale, brightness and color"
     )]
     Instance {
-        #[arg(long, help = "From 0 to 1")]
+        #[arg(allow_negative_numbers = true, long, help = "From 0 to 1")]
         alpha: Option<f64>,
-        #[arg(long, help = "Times the size, from 0 to 100")]
+        #[arg(allow_negative_numbers = true, long, help = "Times the size, from 0 to 100")]
         size: Option<f64>,
-        #[arg(long, help = "Share of the particles, from 0 to 1")]
+        #[arg(allow_negative_numbers = true, long, help = "Share of the particles, from 0 to 1")]
         count: Option<f64>,
-        #[arg(long, help = "Times the speed, from 0 to 100")]
+        #[arg(allow_negative_numbers = true, long, help = "Times the speed, from 0 to 100")]
         speed: Option<f64>,
-        #[arg(long, help = "Times the life, from 0 to 100")]
+        #[arg(allow_negative_numbers = true, long, help = "Times the life, from 0 to 100")]
         life: Option<f64>,
-        #[arg(long, help = "Times the pace of time, from 0 to 100")]
+        #[arg(allow_negative_numbers = true, long, help = "Times the pace of time, from 0 to 100")]
         time_scale: Option<f64>,
-        #[arg(long, help = "From 0 to 16")]
+        #[arg(allow_negative_numbers = true, long, help = "From 0 to 16")]
         brightness: Option<f64>,
         #[arg(long, help = "Color that tints the particles, such as #ffcc88")]
         color: Option<String>,

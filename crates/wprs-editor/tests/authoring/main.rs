@@ -8,6 +8,7 @@ use wprs_editor::starters::starter;
 mod effects;
 mod layers;
 mod marks;
+mod masking;
 mod placing;
 mod reaching;
 mod timing;

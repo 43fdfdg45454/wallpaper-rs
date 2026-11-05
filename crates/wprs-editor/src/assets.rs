@@ -167,5 +167,15 @@ pub fn sheet(
     path: &str,
     cut: (bool, Option<[u32; 2]>),
 ) -> Result<Vec<Op>> {
+    cuttable(path, cut)?;
     crate::shaping::sheet(dir, doc, adopt(doc, id, path)?, cut.0, cut.1)
+}
+
+pub fn cuttable(path: &str, (linear, atlas): (bool, Option<[u32; 2]>)) -> Result<()> {
+    let picture = !(linear || atlas.is_some()) || asset_kind(path) == "image";
+    ensure!(
+        picture,
+        said("editor.sheet_picture", "only a picture is read as data or split into a sprite sheet", &[])
+    );
+    Ok(())
 }

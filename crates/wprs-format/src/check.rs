@@ -15,37 +15,62 @@ const NEEDED: [(&str, &str); 4] = [
 
 type Rule<'a> = (&'a str, bool, &'a str);
 
+const MAX_AUTHORS: usize = 64;
+const MAX_LICENSE: usize = 256;
+
 impl Manifest {
     pub fn check(&self) -> Result<()> {
+        first(self.faults())
+    }
+
+    pub fn faults(&self) -> Vec<Error> {
         let schema = [SCHEMA, SCHEMA_V1].contains(&self.schema.as_str());
         let tags = self.tags.len() <= 32 && self.tags.iter().all(|t| within(t, 32));
-        apply(&[
+        let authors = self.authors.len() <= MAX_AUTHORS && self.authors.iter().all(|a| within(a, 128));
+        let license = self.license.chars().count() <= MAX_LICENSE && valid_license(&self.license);
+        let mut out = broken(&[
             ("schema", schema, "expected wallpaper-rs.wpak/2"),
             ("id", valid_id(&self.id), "expected a lowercase reverse-DNS name like org.example.name"),
             ("version", semver::Version::parse(&self.version).is_ok(), "expected a semantic version"),
-            ("authors", self.authors.iter().all(|a| within(a, 128)), "expected 1 to 128 characters each"),
-            ("license", valid_license(&self.license), "expected an SPDX license expression"),
+            ("authors", authors, "expected at most 64 authors of 1 to 128 characters each"),
+            ("license", license, "expected an SPDX license expression of at most 256 characters"),
             ("tags", tags, "expected at most 32 tags of 1 to 32 characters"),
-        ])?;
-        if self.v2() { self.check_v2() } else { self.check_v1() }?;
-        self.check_kind()?;
-        self.check_properties()
+        ]);
+        out.extend(if self.v2() { self.faults_v2() } else { self.check_v1().err().into_iter().collect() });
+        let kind = self.check_kind().err();
+        let shown = self
+            .check_display()
+            .err()
+            .filter(|s| kind.as_ref().is_none_or(|k| k.to_string() != s.to_string()));
+        out.extend(kind.into_iter().chain(shown));
+        out.extend(self.property_faults());
+        out
     }
 
     pub fn check_properties(&self) -> Result<()> {
-        self.properties.iter().try_for_each(|(name, property)| {
-            let field = format!("properties.{name}");
-            let valid = if self.v2() { valid_property(name) } else { valid_name(name) };
-            require(valid, &field, "expected a letter followed by letters, digits or _")?;
-            property.check().map_err(|reason| Error::Invalid { field, reason: reason.into() })
-        })?;
+        first(self.property_faults())
+    }
+
+    fn property_faults(&self) -> Vec<Error> {
+        let mut out: Vec<Error> = self
+            .properties
+            .iter()
+            .filter_map(|(name, property)| {
+                let field = format!("properties.{name}");
+                let valid = if self.v2() { valid_property(name) } else { valid_name(name) };
+                require(valid, &field, "expected a letter followed by letters, digits or _").err().or_else(
+                    || property.check().err().map(|reason| Error::Invalid { field, reason: reason.into() }),
+                )
+            })
+            .collect();
         let mut properties = match self.kind {
             Kind::Video => self.video_properties(&Default::default(), None),
             _ => Default::default(),
         };
         properties.extend(self.properties.clone());
-        wprs_scene::check_presets(&properties, &self.presets)
-            .map_err(|(field, reason)| Error::Invalid { field, reason: reason.into() })
+        let presets = wprs_scene::check_presets(&properties, &self.presets);
+        out.extend(presets.err().map(|(field, reason)| Error::Invalid { field, reason: reason.into() }));
+        out
     }
 
     pub fn missing(&self) -> Vec<Error> {
@@ -77,6 +102,14 @@ impl Manifest {
     }
 }
 
+fn broken(rules: &[Rule]) -> Vec<Error> {
+    rules.iter().filter_map(|(field, ok, reason)| require(*ok, field, reason).err()).collect()
+}
+
 fn apply(rules: &[Rule]) -> Result<()> {
-    rules.iter().try_for_each(|(field, ok, reason)| require(*ok, field, reason))
+    first(broken(rules))
+}
+
+fn first(faults: Vec<Error>) -> Result<()> {
+    faults.into_iter().next().map_or(Ok(()), Err)
 }

@@ -27,11 +27,11 @@ pub enum Sowing {
         capacity: Option<u32>,
         #[arg(long, help = "Seed of the random numbers")]
         seed: Option<u64>,
-        #[arg(long, help = "Seconds simulated before the first frame")]
+        #[arg(allow_negative_numbers = true, long, help = "Seconds simulated before the first frame")]
         prewarm: Option<f64>,
         #[arg(long, value_parser = ["local", "world"], help = "local moves the particles with the layer")]
         space: Option<String>,
-        #[arg(long, help = "Particles each emitter starts a second")]
+        #[arg(allow_negative_numbers = true, long, help = "Particles each emitter starts a second")]
         rate: Option<f64>,
         #[arg(long, requires = "rate", help = "Set the rate of this emitter only")]
         emitter: Option<usize>,
@@ -54,9 +54,9 @@ pub enum Sowing {
         spin: Option<[f64; 2]>,
         #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Frame of the atlas")]
         frame: Option<[f64; 2]>,
-        #[arg(long, value_name = "COLOR,COLOR", help = "Two colors such as #ffffff,#a0c8ff")]
+        #[arg(long, value_name = "COLOR,COLOR", value_parser = crate::sowed::colors, help = "Two colors such as #ffffff,#a0c8ff")]
         color: Option<String>,
-        #[arg(long, value_name = RANGE, value_parser = pair, help = "From 0 to 1")]
+        #[arg(allow_hyphen_values = true, long, value_name = RANGE, value_parser = pair, help = "From 0 to 1")]
         alpha: Option<[f64; 2]>,
         #[arg(long, value_name = "X,Y:X,Y", value_parser = sweep, allow_hyphen_values = true, help = "Pixels a second, instead of speed and angle")]
         velocity: Option<[[f64; 2]; 2]>,
@@ -73,7 +73,7 @@ pub enum Sowing {
         about = "Scale the particles over their life with TIME:SCALE keys, the time from 0 to 1, or none"
     )]
     SizeOverLife {
-        #[arg(required = true, value_name = "TIME:SCALE", value_parser = crate::sowed::scale_key)]
+        #[arg(required = true, value_name = "TIME:SCALE", value_parser = crate::sowed::scale_key, help = "TIME from 0 to 1 of the life and SCALE from 0 to 100, or none")]
         keys: Vec<String>,
         #[arg(long, help = LAYER)]
         layer: Option<String>,
@@ -82,7 +82,7 @@ pub enum Sowing {
         about = "Tint the particles over their life with TIME:COLOR stops, the time from 0 to 1, or none"
     )]
     ColorOverLife {
-        #[arg(required = true, value_name = "TIME:COLOR", value_parser = crate::sowed::color_stop)]
+        #[arg(required = true, value_name = "TIME:COLOR", value_parser = crate::sowed::color_stop, help = "TIME from 0 to 1 of the life and a color such as #ff000080, or none")]
         stops: Vec<String>,
         #[arg(long, help = LAYER)]
         layer: Option<String>,
@@ -99,11 +99,15 @@ pub enum Sowing {
         stretch: Option<String>,
         #[arg(long, value_parser = ["time", "life", "random", "none"], help = "How a particle walks the frames of the atlas")]
         frames: Option<String>,
-        #[arg(long, help = "Frames a second of the atlas")]
+        #[arg(allow_negative_numbers = true, long, help = "Frames a second of the atlas")]
         fps: Option<f64>,
         #[arg(long, action = ArgAction::Set, help = "true blends one frame into the next")]
         mix: Option<bool>,
-        #[arg(long, help = "Brightness from 0 to 16; above 1 shines over white")]
+        #[arg(
+            allow_negative_numbers = true,
+            long,
+            help = "Brightness from 0 to 16; above 1 shines over white"
+        )]
         brightness: Option<f64>,
         #[arg(long, help = LAYER)]
         layer: Option<String>,

@@ -291,6 +291,10 @@ msgstr "assets/ tiene demasiados archivos llamados %1"
 msgid "the asset %1 exists"
 msgstr "el recurso %1 ya existe"
 
+#: crates/wprs-editor/src/assets.rs
+msgid "only a picture is read as data or split into a sprite sheet"
+msgstr "solo una imagen se lee como datos o se divide en una hoja de sprites"
+
 #: crates/wprs-editor/src/attach.rs crates/wprs-editor/src/spots.rs
 msgid "a point is placed in fractions of the layer"
 msgstr "un punto se coloca en fracciones de la capa"
@@ -686,7 +690,7 @@ msgstr "%1 ya tiene un fotograma clave en %2 s"
 msgid "%1 has no keyframes"
 msgstr "%1 no tiene fotogramas clave"
 
-#: crates/wprs-editor/src/keys.rs
+#: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/shaping/mod.rs
 msgid "%1 follows another source; set a plain value first"
 msgstr "%1 sigue a otra fuente; pon antes un valor fijo"
 
@@ -1160,6 +1164,10 @@ msgstr "una malla tiene como mucho %1 expresiones"
 msgid "an expression weighs each blend shape from -1 to 1"
 msgstr "una expresión pesa cada forma de mezcla de -1 a 1"
 
+#: crates/wprs-editor/src/shaping/canvas.rs
+msgid "the glare of a glow is none or a threshold and a strength"
+msgstr "el destello de un resplandor es none o un umbral y una intensidad"
+
 #: crates/wprs-editor/src/shaping/effects.rs
 msgid "there is no effect \"%1\""
 msgstr "no hay ningún efecto «%1»"
@@ -1207,6 +1215,10 @@ msgstr "%1 no es un ajuste de presentación: %2"
 #: crates/wprs-editor/src/shaping/marks.rs
 msgid "only a slider has a minimum, a maximum and a step"
 msgstr "solo un deslizador tiene mínimo, máximo y paso"
+
+#: crates/wprs-editor/src/shaping/masks.rs
+msgid "a mask takes one of a picture, a layer or a shape"
+msgstr "una máscara toma una sola de una imagen, una capa o una forma"
 
 #: crates/wprs-editor/src/shaping/masks.rs
 msgid "a mask needs a picture, a layer or a shape"
@@ -1498,6 +1510,10 @@ msgstr "%1 no es un rango inicial: %2"
 msgid "only alpha, velocity and radial can be cleared, not %1"
 msgstr "solo se pueden quitar alpha, velocity y radial, no %1"
 
+#: crates/wprs-editor/src/swarms/sow.rs
+msgid "%1 is not a color such as #ffcc88"
+msgstr "%1 no es un color como #ffcc88"
+
 #: crates/wprs-editor/src/swarms/spots.rs
 msgid "control points go from p0 to p7"
 msgstr "los puntos de control van de p0 a p7"
@@ -1652,12 +1668,13 @@ msgid "expected a semantic version"
 msgstr "se esperaba una versión semántica"
 
 #: crates/wprs-format/src/check.rs
-msgid "expected 1 to 128 characters each"
-msgstr "se esperaban de 1 a 128 caracteres cada uno"
+msgid "expected at most 64 authors of 1 to 128 characters each"
+msgstr "se esperaban como mucho 64 autores de 1 a 128 caracteres cada uno"
 
 #: crates/wprs-format/src/check.rs
-msgid "expected an SPDX license expression"
-msgstr "se esperaba una expresión de licencia SPDX"
+msgid "expected an SPDX license expression of at most 256 characters"
+msgstr ""
+"se esperaba una expresión de licencia SPDX de 256 caracteres como mucho"
 
 #: crates/wprs-format/src/check.rs
 msgid "expected at most 32 tags of 1 to 32 characters"

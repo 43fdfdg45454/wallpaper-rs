@@ -51,9 +51,14 @@ pub enum Effect {
     Mask {
         #[arg(help = INDEX)]
         index: usize,
-        #[arg(long, help = "Picture asset whose channel masks the effect")]
+        #[arg(long, conflicts_with_all = ["from", "shape"], help = "Picture asset whose channel masks the effect")]
         texture: Option<String>,
-        #[arg(long, value_name = "LAYER", help = "Layer whose picture masks the effect")]
+        #[arg(
+            long,
+            value_name = "LAYER",
+            conflicts_with = "shape",
+            help = "Layer whose picture masks the effect"
+        )]
         from: Option<String>,
         #[arg(long, help = "Shape as JSON, such as '{\"ellipse\": {\"size\": [400, 300]}}'")]
         shape: Option<String>,
@@ -61,9 +66,9 @@ pub enum Effect {
         channel: Option<String>,
         #[arg(long, action = ArgAction::Set, help = "true masks the outside instead")]
         invert: Option<bool>,
-        #[arg(long, help = "Pixels the edge of a shape fades over")]
+        #[arg(allow_negative_numbers = true, long, help = "Pixels the edge of a shape fades over")]
         feather: Option<f64>,
-        #[arg(long, help = "How much the mask holds back, from 0 to 1")]
+        #[arg(allow_negative_numbers = true, long, help = "How much the mask holds back, from 0 to 1")]
         strength: Option<f64>,
         #[arg(long, conflicts_with_all = ["texture", "from", "shape"], help = "Remove the mask")]
         off: bool,

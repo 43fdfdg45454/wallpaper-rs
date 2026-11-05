@@ -70,4 +70,11 @@ fn an_asset_is_imported_as_linear_data_or_as_a_sprite_sheet() {
     assert!(
         refused(&mut p, json!({"import": {"file": file, "id": "tall", "atlas": [300, 1]}})).contains("256")
     );
+    let sound = root.path().join("tone.ogg");
+    std::fs::write(&sound, b"OggS").unwrap();
+    for cut in [json!({"linear": true}), json!({"atlas": [2, 2]})] {
+        let mut import = json!({"file": sound, "id": "tone"});
+        import.as_object_mut().unwrap().extend(cut.as_object().unwrap().clone());
+        assert!(refused(&mut p, json!({ "import": import })).contains("picture"));
+    }
 }

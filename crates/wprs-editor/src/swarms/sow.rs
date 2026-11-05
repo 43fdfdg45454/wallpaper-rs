@@ -2,7 +2,7 @@ use super::tend::listed;
 use super::{parsed, render, system};
 use crate::action::SowEdit as S;
 use crate::ops::{Op, escape, set};
-use anyhow::{Result, ensure};
+use anyhow::{Result, bail, ensure};
 use serde_json::{Map, Value, json};
 use wprs_core::message::said;
 use wprs_scene::{Child, Frames, Moment};
@@ -71,6 +71,10 @@ fn start(doc: &Value, sys: &str, ranges: &Map<String, Value>, clear: &[String]) 
             said("editor.start_cleared", "only alpha, velocity and radial can be cleared, not %1", &[key])
         );
         init.remove(key);
+    }
+    let colors = ranges.get("color").and_then(Value::as_array).into_iter().flatten();
+    if let Some(bad) = colors.filter_map(Value::as_str).find(|c| wprs_scene::Color::parse(c).is_none()) {
+        bail!(said("editor.not_color", "%1 is not a color such as #ffcc88", &[&bad]));
     }
     ranges.iter().for_each(|(k, v)| drop(init.insert(k.clone(), v.clone())));
     Ok(set(doc, &at, Value::Object(init)))

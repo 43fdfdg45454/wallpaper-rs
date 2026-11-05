@@ -14,7 +14,10 @@ pub enum Keying {
         dir: PathBuf,
         #[arg(help = POINTER)]
         pointer: String,
-        #[arg(help = "Seconds on the timeline, or on the scene clock without one")]
+        #[arg(
+            allow_negative_numbers = true,
+            help = "Seconds on the timeline, or on the scene clock without one"
+        )]
         time: f64,
         #[arg(allow_hyphen_values = true, help = "JSON value; the current value when omitted")]
         value: Option<String>,
@@ -41,6 +44,7 @@ pub enum Keying {
         #[arg(long, help = "Remove the keyframe at this time")]
         remove: bool,
         #[arg(
+            allow_negative_numbers = true,
             long,
             value_name = "TIME",
             help = "Move the keyframe at this time to TIME, keeping its value and easing"
@@ -61,9 +65,9 @@ pub enum Keying {
         remove: bool,
         #[arg(long = "rename", value_name = "ID", help = "A new id")]
         to: Option<String>,
-        #[arg(long, help = "Length in seconds")]
+        #[arg(allow_negative_numbers = true, long, help = "Length in seconds")]
         duration: Option<f64>,
-        #[arg(long, help = "Frames a second, from 1 to 240, with --frames")]
+        #[arg(allow_negative_numbers = true, long, help = "Frames a second, from 1 to 240, with --frames")]
         fps: Option<f64>,
         #[arg(long, help = "Length in frames, with --fps")]
         frames: Option<u32>,
@@ -73,7 +77,7 @@ pub enum Keying {
         repeat: Option<String>,
         #[arg(long, allow_hyphen_values = true, help = "Speed, from -100 to 100; below 0 plays backwards")]
         speed: Option<f64>,
-        #[arg(long, help = "Seconds before it starts")]
+        #[arg(allow_negative_numbers = true, long, help = "Seconds before it starts")]
         delay: Option<f64>,
         #[arg(long, action = ArgAction::Set, help = "Start on its own; false waits for its trigger")]
         autoplay: Option<bool>,

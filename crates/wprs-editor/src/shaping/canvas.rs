@@ -2,9 +2,10 @@ use super::effects::put;
 use super::refused;
 use crate::action::CanvasEdit as C;
 use crate::ops::Op;
-use anyhow::Result;
+use anyhow::{Result, bail};
 use serde_json::{Map, Value, json};
 use std::path::Path;
+use wprs_core::message::said;
 
 fn tidy(v: Value) -> Value {
     match v {
@@ -44,7 +45,14 @@ pub(crate) fn canvas(dir: &Path, doc: &Value, e: &C) -> Result<Vec<Op>> {
                 Some(Some((Some(t), Some(s)))) => {
                     drop(next.insert("hdr".into(), json!({ "threshold": t, "strength": s })))
                 }
-                Some(_) => drop(next.remove("hdr")),
+                Some(None) if hdr.as_ref().is_some_and(|h| h.is_null() || h == "none") => {
+                    drop(next.remove("hdr"))
+                }
+                Some(_) => bail!(said(
+                    "editor.hdr_pair",
+                    "the glare of a glow is none or a threshold and a strength",
+                    &[]
+                )),
                 None => {}
             }
             put(doc, "/scene/canvas/bloom", Some(Value::Object(next)))

@@ -53,7 +53,7 @@ pub enum Particle {
     },
     #[command(about = "Give the particles depth seen with a focal length in pixels")]
     Perspective {
-        #[arg(long)]
+        #[arg(allow_negative_numbers = true, long)]
         focal: Option<f64>,
         #[arg(long, allow_hyphen_values = true, value_name = "MIN,MAX", help = "Starting depth in pixels")]
         depth: Option<String>,
@@ -66,13 +66,13 @@ pub enum Particle {
     EmitFromLayer {
         emitter: usize,
         layer: String,
-        #[arg(long, help = "Alpha from 0 to 1 above which a pixel emits")]
+        #[arg(allow_negative_numbers = true, long, help = "Alpha from 0 to 1 above which a pixel emits")]
         threshold: Option<f64>,
         #[arg(long, help = "Take the color of the layer")]
         color: bool,
         #[arg(long, help = "Take the motion of the layer")]
         inherit: bool,
-        #[arg(long, help = "Pixels births spread over")]
+        #[arg(allow_negative_numbers = true, long, help = "Pixels births spread over")]
         jitter: Option<f64>,
         #[arg(long, value_parser = ["static", "on_change"])]
         refresh: Option<String>,
@@ -129,7 +129,7 @@ pub enum Particle {
         about = "Print the particle budget as JSON: particles alive at a time on the processor, slots by device tier and path, and what each quality level keeps"
     )]
     Budget {
-        #[arg(long, default_value_t = 2.0)]
+        #[arg(allow_negative_numbers = true, long, default_value_t = 2.0)]
         time: f64,
         #[arg(long, value_parser = ["q0", "q1", "q2", "q3"])]
         quality: Option<String>,
@@ -140,7 +140,7 @@ pub enum Particle {
     Handles {
         #[arg(long)]
         layer: Option<String>,
-        #[arg(long, default_value_t = 0.0)]
+        #[arg(allow_negative_numbers = true, long, default_value_t = 0.0)]
         time: f64,
     },
 }

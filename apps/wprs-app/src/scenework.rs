@@ -56,6 +56,7 @@ impl SceneEditor {
                 Ok((Placed::Preview(animated), previews::store(&dir, &doc, &file, animated)?))
             }
             Action::Import { file, id, linear, atlas } => {
+                assets::cuttable(&file.to_string_lossy(), (linear, atlas))?;
                 let (id, path) = assets::import(&dir, &doc, &file, id.as_deref())?;
                 Ok((Placed::Asset(id, (linear, atlas)), path))
             }

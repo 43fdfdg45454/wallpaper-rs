@@ -27,6 +27,11 @@ ctl scene particles "$craft" dust force oscillate size --freq 1,2 --scale 0.5,1 
 ctl scene particles "$craft" dust force attractor 40,30 --strength 30 --falloff linear || fail "no attractor was added"
 ctl scene particles "$craft" dust force turbulence --strength 10 --scale 0.01 || fail "no turbulence was added"
 ctl scene particles "$craft" dust force remove 1 || fail "the force was not removed"
+ctl scene particles "$craft" dust force turbulence --strength -20 --scale 0.01 || fail "a turbulence that pulls back was refused"
+words=$(ctl scene particles "$craft" dust settings --prewarm -5 2>&1) && fail "a negative warm-up was kept"
+case $words in *unexpected*) fail "a negative warm-up was not checked by the editor: $words" ;; esac
+if ctl scene particles "$craft" dust start --color '#fff,notacolor' 2>/dev/null; then fail "a wrong starting color was taken"; fi
+if ctl scene canvas "$craft" bloom --hdr 1 2>/dev/null; then fail "a glare of 1 was taken"; fi
 ctl scene particles "$craft" dust child add sparks --on death --probability 0.5 || fail "no child was added"
 ctl scene particles "$craft" dust child set 1 sparks --on spawn --max 3 || fail "the child was not replaced"
 ctl scene particles "$craft" dust child remove 0 || fail "the child was not removed"
@@ -56,6 +61,7 @@ ctl scene manifest "$craft" tags sea night || fail "the tags were not set"
 ctl scene manifest "$craft" tags --remove night || fail "the tag was not removed"
 ctl scene manifest "$craft" origin derived --derived-from Ana || fail "the origin was not set"
 if ctl scene manifest "$craft" license 'free as in beer' 2>/dev/null; then fail "an unknown license was kept"; fi
+if ctl scene manifest "$craft" license "$(printf 'a%.0s' {1..300})" 2>/dev/null; then fail "a license of 300 characters was kept"; fi
 ctl scene manifest "$craft" display --span all-outputs --accent '#ff8800' || fail "the display was not set"
 if ctl scene manifest "$craft" display --fit fit 2>/dev/null; then fail "a scene took the fit of a picture"; fi
 ctl scene add-property "$craft" slider --id speed >/dev/null

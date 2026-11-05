@@ -21,7 +21,12 @@ pub(super) fn mask(dir: &Path, doc: &Value, e: &E) -> Result<Vec<Op>> {
     }
     let mut mask = old["mask"].as_object().cloned().unwrap_or_default();
     let given = [texture.as_ref().map(|t| json!(t)), from.as_ref().map(|f| json!(f)), shape.clone()];
-    if given.iter().any(Option::is_some) {
+    let sources = given.iter().filter(|g| g.is_some()).count();
+    ensure!(
+        sources <= 1,
+        said("editor.mask_one_source", "a mask takes one of a picture, a layer or a shape", &[])
+    );
+    if sources == 1 {
         SOURCES.iter().for_each(|k| drop(mask.remove(*k)));
     }
     for (key, value) in SOURCES.iter().zip(given) {
