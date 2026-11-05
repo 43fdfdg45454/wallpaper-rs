@@ -2104,7 +2104,10 @@ son cuadrados que se arrastran; un punto creado para una sola capa se va con ell
 deja de seguirlo. Los puntos nunca cuentan como el final de un hueso, así que no cambian las
 cadenas ni la física. Las partes se
 ordenan arrastrándolas en una lista de atrás hacia delante, se ocultan y se recortan para verse solo
-sobre otra parte, cuyo contorno se marca en la vista previa. En el inspector general, todo campo que
+sobre otra parte, cuyo contorno se marca en la vista previa. Los contornos de las partes, los huesos
+y puntos y las asas de cadenas y física se ven en cualquier malla que el editor muestre, también en
+las que dibujan una misma malla con varios nodos, aunque en esas los huesos y pesos solo se cambian en
+el archivo. En el inspector general, todo campo que
 nombra un hueso, un punto, una parte o una forma de mezcla (cadenas, objetivos y límites, física,
 reglas, máscaras de huesos de las capas de animación, `hit`, `attach` y `parts`) ofrece los de la
 malla en una lista.
@@ -2119,7 +2122,8 @@ RAÍZ PUNTA`, `set N` y `remove N`, con `--target`, `--limit HUESO MÍN MÁX`, `
 HUESO...`), `wind` (`--angle`, `--strength`, `--noise` y `--off`), `attach` (`--to`, `--bone`,
 `--point X,Y` o un nodo, `--offset`, `--nudge`, `--inherit` y `--detach`), `point` (puntos de sujeción
 con `--at`, `--parent`, `--root`, `--rename` y `--remove`) y `parts` (`--order`, `--hide`,
-`--show`, `--clip` y `--unclip`); `bones`, `vertex-weights` y `keys` imprimen los huesos y puntos,
+`--show`, `--clip`, `--unclip`, `--depth-scale`, `--cull`, `--sort` y `--flat`); `bones`,
+`part-outlines`, `vertex-weights` y `keys` imprimen los huesos y puntos, el contorno de cada parte,
 los pesos de cada vértice y las claves de un clip.
 
 Al elegir un sistema de partículas o una capa de partículas, la vista previa dibuja encima sus

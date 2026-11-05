@@ -69,7 +69,7 @@ ColumnLayout {
             Layout.fillWidth: true
             visible: !rig.editable
             wrapMode: Text.Wrap
-            text: App.tr("Bones are placed here on meshes whose parts are each drawn once; other meshes keep the bones of their file.")
+            text: App.tr("Bones are placed here on meshes whose parts are each drawn once; other meshes keep the bones of their file, which the preview still shows with the outlines of their parts and the handles of their chains.")
         }
 
         SceneRigWeights {

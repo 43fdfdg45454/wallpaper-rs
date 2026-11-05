@@ -52,6 +52,7 @@ pub mod remote;
 pub mod repo;
 mod rgb;
 mod rigging;
+mod rigshow;
 pub mod server;
 pub mod serving;
 pub mod shelving;

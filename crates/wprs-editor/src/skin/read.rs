@@ -38,9 +38,16 @@ impl Skin {
                 &[]
             )
         );
+        Ok(Skin::seen(glb, rig, size))
+    }
+
+    pub(super) fn seen(glb: Glb, rig: &Rigged, size: [f32; 2]) -> Skin {
+        let doc = &glb.json;
+        let nodes = list(&doc["nodes"]);
+        let mesh = |n: usize| nodes.get(n).and_then(|n| n["mesh"].as_u64()).map(|m| m as usize);
         let joints: Vec<u64> =
             list(&doc["skins"]).iter().flat_map(|s| list(&s["joints"])).filter_map(Value::as_u64).collect();
-        let point = |n: usize| nodes[n]["extras"]["point"] == true;
+        let point = |n: usize| nodes.get(n).is_some_and(|n| n["extras"]["point"] == true);
         let loose = |n: usize| mesh(n).is_none() && !point(n);
         let bones = (0..nodes.len()).filter(|n| joints.contains(&(*n as u64)) || loose(*n)).collect();
         let auto = list(&doc["skins"]).first().is_none_or(|s| s["extras"]["weights"] == "auto");
@@ -93,6 +100,6 @@ impl Skin {
                 skin.pieces.push(Piece { node: n, mesh: m, primitive, first, count, targets });
             }
         }
-        Ok(skin)
+        skin
     }
 }

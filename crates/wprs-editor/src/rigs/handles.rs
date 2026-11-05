@@ -55,7 +55,7 @@ impl Frame<'_> {
 
 pub fn handles(dir: &Path, doc: &Value, id: &str) -> Value {
     let Ok((_, layer)) = crate::actions::layer(doc, id) else { return Value::Null };
-    let Ok((_, skin)) = Skin::load(dir, doc, layer) else { return Value::Null };
+    let Ok(skin) = Skin::view(dir, doc, layer) else { return Value::Null };
     let f = Frame { worlds: skin.worlds(), skin: &skin };
     let list = |key: &str| layer[key].as_array().cloned().unwrap_or_default();
     let ik = list("ik").into_iter().map(|c| {
@@ -83,7 +83,7 @@ pub fn handles(dir: &Path, doc: &Value, id: &str) -> Value {
 
 pub(crate) fn rest_end(dir: &Path, doc: &Value, id: &str, bone: &str) -> Option<[f32; 2]> {
     let (_, layer) = crate::actions::layer(doc, id).ok()?;
-    let (_, skin) = Skin::load(dir, doc, layer).ok()?;
+    let skin = Skin::view(dir, doc, layer).ok()?;
     let f = Frame { worlds: skin.worlds(), skin: &skin };
     let [x, y] = f.tail(f.node(bone)?);
     Some([x * skin.size[0], y * skin.size[1]])

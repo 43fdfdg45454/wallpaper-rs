@@ -74,6 +74,15 @@ impl Skin {
         Ok((id, Skin::read(dir, &path, &rig, size(doc, layer))?))
     }
 
+    pub fn view(dir: &Path, doc: &Value, layer: &Value) -> Result<Skin> {
+        let (_, path, rig) = rigged(dir, doc, layer)?;
+        Skin::shown(dir, &path, &rig, size(doc, layer))
+    }
+
+    pub fn shown(dir: &Path, path: &str, rig: &Rigged, size: [f32; 2]) -> Result<Skin> {
+        Ok(Skin::seen(Glb::read(&std::fs::read(dir.join(path))?)?, rig, size))
+    }
+
     pub fn read(dir: &Path, path: &str, rig: &Rigged, size: [f32; 2]) -> Result<Skin> {
         Skin::from(Glb::read(&std::fs::read(dir.join(path))?)?, rig, size)
     }

@@ -56,6 +56,7 @@ ctl scene mesh-from-picture "$draft" leaf --cells 8 --id puppet >/dev/null || fa
 ctl scene bone "$draft" puppet root --at 0.2,0.5 || fail "the mesh took no root bone"
 ctl scene bone "$draft" puppet arm --parent root --at 0.6,0.5 || fail "the mesh took no arm"
 ctl scene bones "$draft" puppet | grep -q '"arm"' || fail "the bones of the mesh were not listed"
+ctl scene part-outlines "$draft" puppet | grep '\[' >/dev/null || fail "the outlines of the parts were not listed"
 ctl scene set "$draft" /scene/layers/1/clips '[{"id": "wave", "bones": {"arm": {"rotation": [[0, 0], [1, 40]]}}}]'
 ctl scene set "$draft" /scene/layers/1/animations '[{"clip": "wave"}]'
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a bent mesh was not previewed"

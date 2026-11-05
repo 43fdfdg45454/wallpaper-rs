@@ -44,8 +44,10 @@ fn body(dir: &Path, doc: &Value, layer: &Value) -> Value {
     out["animations"] =
         json!(rig.motions.iter().map(|m| json!({ "name": m.name, "length": m.length })).collect::<Vec<_>>());
     out["model"] = json!(crate::skin::solid(layer));
-    let skin =
-        (!crate::skin::solid(layer)).then(|| Skin::read(dir, &path, &rig, crate::skin::size(doc, layer)));
+    let size = crate::skin::size(doc, layer);
+    let skin = (!crate::skin::solid(layer)).then(|| Skin::read(dir, &path, &rig, size));
+    let editable = skin.as_ref().is_some_and(Result::is_ok);
+    let skin = skin.map(|s| s.or_else(|_| Skin::shown(dir, &path, &rig, size)));
     match skin.unwrap_or_else(|| Err(anyhow::anyhow!("a model"))) {
         Ok(skin) => {
             let worlds = skin.worlds();
@@ -61,7 +63,7 @@ fn body(dir: &Path, doc: &Value, layer: &Value) -> Value {
                 json!({ "name": skin.names[n], "at": at, "part": !skin.is_point(n), "parent": parent })
             });
             out["points"] = json!(points.collect::<Vec<_>>());
-            (out["editable"], out["auto"]) = (json!(true), json!(skin.auto));
+            (out["editable"], out["auto"]) = (json!(editable), json!(skin.auto));
         }
         Err(_) => {
             let mut seen = std::collections::BTreeSet::new();

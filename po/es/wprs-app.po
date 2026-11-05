@@ -4656,12 +4656,8 @@ msgid "Place bones on the preview"
 msgstr "Colocar huesos sobre la vista previa"
 
 #: apps/wprs-app/qml/SceneRig.qml
-msgid ""
-"Bones are placed here on meshes whose parts are each drawn once; other "
-"meshes keep the bones of their file."
-msgstr ""
-"Aquí se colocan huesos en mallas cuyas partes se dibujan una sola vez; las "
-"demás mallas conservan los huesos de su archivo."
+msgid "Bones are placed here on meshes whose parts are each drawn once; other meshes keep the bones of their file, which the preview still shows with the outlines of their parts and the handles of their chains."
+msgstr "Aquí se colocan huesos en mallas cuyas partes se dibujan una sola vez; las demás mallas conservan los huesos de su archivo, que la vista previa igual muestra con el contorno de sus partes y las asas de sus cadenas."
 
 #: apps/wprs-app/qml/SceneRig.qml
 msgid "Clip in the preview"
