@@ -22,7 +22,7 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 27);
+    assert_eq!(c.options().len(), 28);
     assert!(!c.media.remote_covers && c.repos.vote_counts);
     c.set_option("media.remote_covers", "true").unwrap();
     assert!(c.media.remote_covers && c.set_option("media.remote_covers", "maybe").is_err());
