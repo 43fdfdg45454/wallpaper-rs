@@ -1,12 +1,18 @@
 package io.github.wallpaper_rs
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
@@ -23,7 +29,7 @@ import kotlin.concurrent.thread
 import org.json.JSONObject
 import org.json.JSONTokener
 
-class Conversion(val uid: String, val path: String, val title: String, val keep: Boolean, val size: Pair<Int, Int>) {
+class Conversion(val uid: String, val path: String, val title: String, val keep: Boolean, val size: Pair<Int, Int>, val asked: Boolean = true) {
     var target = ""
 }
 
@@ -35,7 +41,13 @@ object Converting {
     private val queue = ArrayDeque<Conversion>()
     private var running: Pair<Conversion, Transformer>? = null
     private var app: Context? = null
+    private var watching = false
     private const val POLL_MS = 500L
+    private val saver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (Convert.saving(context)) saved(context)
+        }
+    }
 
     @Volatile
     var finished: ((String) -> Unit)? = null
@@ -59,10 +71,31 @@ object Converting {
         settle(conversion, false)
     }
 
+    private fun saved(context: Context) {
+        val skipped = queue.filter { !it.asked }
+        queue.removeAll(skipped)
+        val stopping = running?.takeIf { !it.first.asked }
+        skipped.forEach { settle(it, false) }
+        stopping?.let { (conversion, transformer) ->
+            transformer.cancel()
+            settle(conversion, false)
+        }
+        if (skipped.isNotEmpty() || stopping != null) Toast.makeText(context, R.string.convert_saver, Toast.LENGTH_LONG).show()
+    }
+
+    private fun watch(context: Context, on: Boolean) {
+        if (on == watching) return
+        watching = on
+        if (on) ContextCompat.registerReceiver(context, saver, IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
+        else runCatching { context.unregisterReceiver(saver) }
+    }
+
     private fun next() {
         val context = app ?: return
         if (running != null) return
-        val conversion = queue.removeFirstOrNull() ?: return
+        if (Convert.saving(context)) saved(context)
+        val conversion = queue.removeFirstOrNull() ?: return watch(context, false)
+        watch(context, true)
         val target = runCatching { library("convert_to", conversion.uid) }.getOrNull() ?: return settle(conversion, false)
         val transformer = Transformer.Builder(context).setVideoMimeType(MimeTypes.VIDEO_H264).addListener(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, result: ExportResult) = settle(conversion, true)

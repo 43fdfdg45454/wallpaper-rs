@@ -25,7 +25,7 @@ fun Main.convert(uid: String, name: String, asked: Boolean, keep: Boolean = Conv
     val path = JSONObject(Native.library(JSONObject().put("op", "item").put("uid", uid).toString())).optString("path")
     val size = path.takeIf { it.isNotEmpty() }?.let(Convert::plan) ?: return null
     if (!asked && Convert.saving(this)) return Convert.SAVER
-    Converting.offer(this, Conversion(uid, path, File(name).nameWithoutExtension.ifEmpty { name }, keep, size))
+    Converting.offer(this, Conversion(uid, path, File(name).nameWithoutExtension.ifEmpty { name }, keep, size, asked))
     return Convert.STARTED
 }
 
