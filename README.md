@@ -1538,7 +1538,9 @@ no dibuja ni usa el procesador.
 Un fondo puede pintar el teclado, el ratón y otras luces RGB a través de un servidor de OpenRGB
 (con su protocolo SDK; el cliente es propio). Una escena lo hace con una capa `adjustment` con
 `rgb: true`, que manda lo que capta (todo el lienzo o la región de su `size`) reducido a 64 × 16
-como mucho; una página web, con `window.wprs.rgb.setImage(bytes, ancho, alto)`. En ambos casos el
+como mucho; una página web, con `window.wprs.rgb.setImage(bytes, ancho, alto)`, que devuelve `true`
+solo cuando los colores llegan a las luces (o a la vista previa) y `false` sin el permiso, con la
+iluminación apagada o en el teléfono. En ambos casos el
 paquete declara `permissions.rgb`, se envía como mucho 30 veces por segundo y solo cuando cambia el
 fotograma, y nada sale hasta que haces dos cosas: encender la iluminación en *Ajustes → Iluminación
 RGB* (`wprs-ctl config rgb.enabled true`) y permitirla para ese paquete (el aviso de permisos de la

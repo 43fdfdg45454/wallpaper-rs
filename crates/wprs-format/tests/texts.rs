@@ -157,3 +157,11 @@ fn texts_of_the_engine_need_no_strings() {
     own.strings.get_mut("en").unwrap().insert("wprs.speed".into(), "Mine".into());
     assert_eq!(field(&own), "strings");
 }
+
+#[test]
+fn rgb_set_image_says_false_unless_the_page_may_light() {
+    let api = wprs_format::page::api(&serde_json::json!({"lights": false}), "(m) => m");
+    assert!(api.contains("let lights = init.lights === true;"), "the page could light by default");
+    assert!(api.contains("if (!fine || !lights || now - lit < 33) return false;"));
+    assert!(api.contains(r#"if (typeof message.lights === "boolean") lights = message.lights;"#));
+}

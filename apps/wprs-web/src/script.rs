@@ -19,6 +19,7 @@ fn source(view: u32) -> Vec<(String, c_int)> {
             "kinds": engine.start.shape.get("kinds").cloned().unwrap_or(json!({})),
             "labels": engine.start.shape.get("labels").cloned().unwrap_or(json!({})),
             "settings": {"fps": s.fps, "quality": s.quality, "locale": s.locale, "volume": s.volume},
+            "lights": l.lights.contains(&view),
         })
     });
     let mut scripts = vec![(wprs_format::page::api(&init, POST), TOP)];
@@ -149,6 +150,9 @@ pub unsafe extern "C" fn message(_manager: Ptr, value: Ptr, data: Ptr) {
 }
 
 fn lit(view: u32, rgb: &Value) {
+    if !live(|l| l.lights.contains(&view)) {
+        return;
+    }
     static LAST: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
     let side = |key: &str, most: u64| rgb[key].as_u64().filter(|n| (1..=most).contains(n)).map(|n| n as u32);
     let (Some(w), Some(h)) = (side("width", 64), side("height", 16)) else { return };

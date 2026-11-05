@@ -69,8 +69,13 @@ else
   [ "$(painted)" = "$before" ] || fail "a covered page sent colors while the lights pause"
   ctl covered TEST-W false
   wait_for 10 sends || fail "the lights did not follow the page once shown again"
-  ctl input revoke org.example.glow-page rgb && ctl config rgb.enabled false
   kill "$watcher" 2>/dev/null || true; wait "$watcher" 2>/dev/null || true
+  seen "$web" "0, 255, 0"
+  ctl config rgb.enabled false
+  seen "$web" "255, 0, 0"
+  ctl config rgb.enabled true && ctl input revoke org.example.glow-page rgb
+  seen "$web" "255, 0, 0"
+  ctl config rgb.enabled false
   ctl lib apply "$lights" -o TEST-W 2>/dev/null
   expect "s['outputs']['TEST-W']['kind'], s['outputs']['TEST-W']['error']" "('web', None)"
   wait_for 10 fresh "$old" || fail "no single new web helper runs for the example page: $(helper), $(helpers) running"

@@ -10,6 +10,8 @@ mod ending;
 mod feed;
 mod frames;
 mod heard;
+#[cfg(test)]
+mod lit;
 mod slot;
 #[cfg(test)]
 mod tests;

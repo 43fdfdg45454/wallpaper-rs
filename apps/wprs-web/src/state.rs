@@ -38,6 +38,7 @@ pub struct View {
 pub struct Live {
     pub settings: Settings,
     pub allowed: Allowed,
+    pub lights: std::collections::BTreeSet<u32>,
     pub properties: serde_json::Map<String, serde_json::Value>,
     pub views: BTreeMap<u32, serde_json::Map<String, serde_json::Value>>,
     pub folders: BTreeMap<String, Folder>,
