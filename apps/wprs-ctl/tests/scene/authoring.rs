@@ -128,4 +128,8 @@ fn starting_ranges_take_a_curve_and_ends_that_follow_a_setting() {
     assert!(fails(dir, &pt(&["start", "--radial", "_,4"])).contains("radial"));
     assert!(!fails(dir, &pt(&["start", "--life", "1,prop:nothing"])).is_empty());
     assert_eq!(super::run(dir, &pt(&["start", "--life", "1,2,3,4"])).status.code(), Some(2));
+    for curve in ["1,4,nan", "1,4,inf", "1,4,-infinity"] {
+        assert_eq!(super::run(dir, &pt(&["start", "--life", curve])).status.code(), Some(2), "{curve}");
+    }
+    assert_eq!(shown(dir, "/scene/particles/dust/init/life"), json!([1.0, 4.0]));
 }

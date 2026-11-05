@@ -24,7 +24,7 @@ pub(crate) fn range(text: &str) -> Result<Value, String> {
     };
     let curve = match parts.get(2) {
         None | Some(&"_") => Value::Null,
-        Some(c) => json!(c.parse::<f64>().map_err(|_| bad())?),
+        Some(c) => json!(c.parse::<f64>().ok().filter(|c| c.is_finite()).ok_or_else(bad)?),
     };
     match parts.len() <= 3 {
         true => Ok(json!([low, high, curve])),
