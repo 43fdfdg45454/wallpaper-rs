@@ -1,3 +1,4 @@
+mod eight;
 mod fonts;
 mod styles;
 mod text;

@@ -30,7 +30,8 @@ impl Renderer {
                 continue;
             };
             let k = scale_of(screen.then(d.world)).max(1e-3);
-            let fielded = ink.filter(|_| view.state_format == wgpu::TextureFormat::Rgba16Float);
+            let half = view.state_format == wgpu::TextureFormat::Rgba16Float;
+            let fielded = ink.filter(|_| half || self.floods());
             let px = match fielded {
                 Some(ink) if ink.field => reference(*size),
                 _ => (size * k * 2.0).round() / 2.0,
@@ -52,8 +53,9 @@ impl Renderer {
                 if let Some(image) = raster(&fonts, text, px, *align, px / size, layout) {
                     let (w, h) = image.dimensions();
                     let mut gpu = create_image(&self.device, &self.queue, image.as_raw(), w, h, w * 4);
+                    let reach = (layout.reach * px / size).ceil() as u32;
                     if fielded.is_some() {
-                        gpu = self.field(&gpu, (layout.reach * px / size).ceil() as u32);
+                        gpu = if half { self.field(&gpu, reach) } else { self.flooded(&image, reach) };
                     }
                     view.pool.created += 1 + 3 * u32::from(fielded.is_some());
                     let field = if fielded.is_some() { px / size } else { 0.0 };

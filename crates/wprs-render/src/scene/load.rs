@@ -88,6 +88,7 @@ impl Renderer {
         let half = self.gpu.get_texture_format_features(Format::Rgba16Float);
         let flags = wgpu::TextureFormatFeatureFlags::FILTERABLE | wgpu::TextureFormatFeatureFlags::BLENDABLE;
         let usable = half.allowed_usages.contains(Usage::RENDER_ATTACHMENT) && half.flags.contains(flags);
+        let usable = usable && !self.eight.load(std::sync::atomic::Ordering::Relaxed);
         let deep = scene.canvas.hdr && usable;
         let format = match (srgb, usable) {
             (true, _) if deep => Format::Rgba16Float,

@@ -72,7 +72,7 @@ impl Pipes {
     }
 }
 
-fn steps(reach: u32) -> Vec<u32> {
+pub(crate) fn steps(reach: u32) -> Vec<u32> {
     let first = (reach + 2).next_power_of_two();
     std::iter::successors(Some(first), |s| (*s > 1).then_some(s / 2)).chain([1]).collect()
 }
