@@ -103,3 +103,45 @@ fn the_palette_of_a_picture_is_shown_as_its_cover_colours() {
     assert_eq!(ask(path), colours, "a path of the folder works as well as the asset id");
     assert!(ask(json!("missing.png")).is_null() && ask(json!(null)).is_null());
 }
+
+#[test]
+fn choosing_the_cover_for_a_field_never_turns_a_plain_picture_into_one_and_undoes_in_one_step() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let file = root.path().join("dark.png");
+    image::RgbImage::from_pixel(32, 32, image::Rgb([20, 20, 30])).save(&file).unwrap();
+    act(&mut p, json!({ "import": { "file": file.clone(), "id": "cover" } })).unwrap();
+    act(
+        &mut p,
+        json!({ "set": { "pointer": "/scene/layers/0", "value":
+        { "id": "art", "type": "image", "image": "cover", "size": [64, 64] } } }),
+    )
+    .unwrap();
+    let plain = p.doc["scene"]["assets"]["cover"].clone();
+    let field = "/scene/layers/0/image";
+    let pick = |kind: &str| json!({ "asset": { "asset": "cover", "cover": kind, "placeholder": "cover", "field": field } });
+    act(&mut p, pick("current")).unwrap();
+    assert_eq!(p.doc["scene"]["assets"]["cover"], plain, "the plain picture called cover stays plain");
+    let made = p.doc.pointer(field).and_then(Value::as_str).unwrap().to_owned();
+    assert_ne!(made, "cover");
+    assert_eq!(p.doc["scene"]["assets"][&made], json!({ "path": plain["path"], "media": "current" }));
+    act(&mut p, json!({ "undo": {} })).unwrap();
+    assert_eq!(p.doc.pointer(field), Some(&json!("cover")), "one undo takes the field back");
+    assert!(p.doc["scene"]["assets"].get(&made).is_none(), "and the cover asset it made");
+    act(&mut p, json!({ "redo": {} })).unwrap();
+    act(&mut p, json!({ "set": { "pointer": field, "value": "cover" } })).unwrap();
+    act(&mut p, pick("current")).unwrap();
+    assert_eq!(p.doc.pointer(field), Some(&json!(made)), "an existing cover of that kind is used again");
+    let count = p.doc["scene"]["assets"].as_object().unwrap().len();
+    act(&mut p, pick("previous")).unwrap();
+    let previous = p.doc.pointer(field).and_then(Value::as_str).unwrap().to_owned();
+    assert_eq!(p.doc["scene"]["assets"][&previous]["media"], "previous");
+    assert_eq!(p.doc["scene"]["assets"].as_object().unwrap().len(), count + 1);
+    let refused = |p: &mut Project, v: Value| act(p, json!({ "asset": v })).unwrap_err().to_string();
+    let bad = |at: &str| json!({ "asset": "cover", "cover": "current", "field": at });
+    assert!(refused(&mut p, bad("/manifest/title")).contains("not a field of the scene"));
+    assert!(refused(&mut p, bad("/scene/assets/cover/path")).contains("not a field of the scene"));
+    assert!(refused(&mut p, bad("/scene/layers/9/image")).contains("not a field of the scene"));
+    let none = json!({ "asset": "cover", "cover": "none", "field": field });
+    assert!(refused(&mut p, none).contains("current or the previous cover"));
+}

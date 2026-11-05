@@ -13,32 +13,28 @@ ColumnLayout {
     readonly property var chosen: assets.find(a => a.id === input.value) ?? null
 
     function cover(kind) {
-        const id = kind === "current" ? "cover" : "previous_cover";
-        const known = assets.find(a => a.id === id);
         const placeholder = chosen && !chosen.media ? chosen.id : (pictures[0]?.id ?? "");
-        if (!known || known.media !== kind)
-            page.run("asset", known ? {
-                "asset": id,
-                "cover": kind
-            } : {
-                "asset": id,
-                "cover": kind,
-                "placeholder": placeholder
-            });
-        input.commit(id);
+        const wanted = {
+            "asset": kind === "current" ? "cover" : "previous_cover",
+            "cover": kind,
+            "field": input.field.pointer
+        };
+        if (placeholder)
+            wanted.placeholder = placeholder;
+        page.run("asset", wanted);
     }
 
     RowLayout {
         QQC2.Button {
             icon.name: "media-playback-start"
             text: App.tr("Cover of what plays")
-            enabled: pick.pictures.length > 0 || pick.assets.some(a => a.id === "cover")
+            enabled: pick.pictures.length > 0 || pick.assets.some(a => a.media === "current")
             onClicked: pick.cover("current")
         }
 
         QQC2.Button {
             text: App.tr("Previous cover")
-            enabled: pick.pictures.length > 0 || pick.assets.some(a => a.id === "previous_cover")
+            enabled: pick.pictures.length > 0 || pick.assets.some(a => a.media === "previous")
             onClicked: pick.cover("previous")
         }
     }

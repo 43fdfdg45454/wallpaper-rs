@@ -1,6 +1,6 @@
 use crate::action::AssetEdit;
-use crate::layers::asset_kind;
-use crate::ops::{Op, diff, escape};
+use crate::layers::{asset_kind, taken, unique};
+use crate::ops::{Op, apply, diff, escape, set};
 use anyhow::{Result, anyhow, ensure};
 use image::imageops::FilterType;
 use serde_json::{Value, json};
@@ -21,6 +21,44 @@ fn picture(doc: &Value, wanted: &str) -> Result<String> {
 }
 
 pub(crate) fn act(doc: &Value, wanted: &AssetEdit) -> Result<Vec<Op>> {
+    match &wanted.field {
+        Some(field) => used(doc, wanted, field),
+        None => edited(doc, wanted),
+    }
+}
+
+fn used(doc: &Value, wanted: &AssetEdit, field: &str) -> Result<Vec<Op>> {
+    let kind = wanted.cover.as_deref().filter(|k| matches!(*k, "current" | "previous")).ok_or_else(|| {
+        anyhow!(said("editor.cover_field_kind", "a field takes the current or the previous cover", &[]))
+    })?;
+    let parent = field.rsplit_once('/').map_or("", |(p, _)| p);
+    let inside =
+        (parent == "/scene" || parent.starts_with("/scene/")) && !field.starts_with("/scene/assets/");
+    let inside = inside && doc.pointer(parent).is_some_and(|p| p.is_object() || p.is_array());
+    ensure!(inside, said("editor.cover_field", "%1 is not a field of the scene", &[&field]));
+    let assets = doc.pointer("/scene/assets").and_then(Value::as_object).into_iter().flatten();
+    let mut covers = assets.filter(|(_, a)| a["media"] == kind).map(|(id, _)| id.as_str());
+    let found = covers.clone().find(|id| *id == wanted.asset).or_else(|| covers.next());
+    let (id, mut ops) = match found {
+        Some(id) => (id.to_owned(), Vec::new()),
+        None => {
+            let base = match wanted.asset.as_str() {
+                "" if kind == "current" => "cover",
+                "" => "previous_cover",
+                named => named,
+            };
+            let id = if taken(doc, base) { unique(doc, base) } else { base.to_owned() };
+            let made = AssetEdit { asset: id.clone(), field: None, ..wanted.clone() };
+            (id, edited(doc, &made)?)
+        }
+    };
+    let mut probe = doc.clone();
+    apply(&mut probe, &ops)?;
+    ops.extend(set(&probe, field, json!(id)));
+    Ok(ops)
+}
+
+fn edited(doc: &Value, wanted: &AssetEdit) -> Result<Vec<Op>> {
     let id = &wanted.asset;
     let pointer = format!("/scene/assets/{}", escape(id));
     let old = doc.pointer(&pointer).cloned();

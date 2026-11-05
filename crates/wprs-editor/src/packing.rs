@@ -137,7 +137,7 @@ pub fn adopt(doc: &Value, id: &str, path: &str) -> Vec<Op> {
 }
 
 pub(crate) fn act(dir: &Path, doc: &Value, wanted: &AssetEdit) -> Result<Vec<Op>> {
-    if wanted.cover.is_some() || wanted.placeholder.is_some() {
+    if wanted.cover.is_some() || wanted.placeholder.is_some() || wanted.field.is_some() {
         return crate::covers::act(doc, wanted);
     }
     ensure!(

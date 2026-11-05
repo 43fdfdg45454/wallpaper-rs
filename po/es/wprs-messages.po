@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-04 00:00+0000\n"
+"POT-Creation-Date: 2026-11-05 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -464,6 +464,14 @@ msgstr "el clip no tiene ninguna clave ahí en %1 s"
 #: crates/wprs-editor/src/covers.rs
 msgid "%1 is not a still picture of the scene"
 msgstr "%1 no es una imagen fija de la escena"
+
+#: crates/wprs-editor/src/covers.rs
+msgid "a field takes the current or the previous cover"
+msgstr "un campo lleva la carátula actual o la anterior"
+
+#: crates/wprs-editor/src/covers.rs
+msgid "%1 is not a field of the scene"
+msgstr "%1 no es un campo de la escena"
 
 #: crates/wprs-editor/src/covers.rs
 msgid "a new cover %1 needs a placeholder picture"

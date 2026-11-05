@@ -724,7 +724,10 @@ msgid ""
 "This web wallpaper may also reach the sites it names, so the title, artist "
 "and cover of what plays could leave this computer. Allow it only if you "
 "trust it with them."
-msgstr "Este fondo web también puede conectarse a los sitios que nombra, así que el título, el artista y la carátula de lo que suena podrían salir de este equipo. Permítelo solo si le confías esos datos."
+msgstr ""
+"Este fondo web también puede conectarse a los sitios que nombra, así que el "
+"título, el artista y la carátula de lo que suena podrían salir de este "
+"equipo. Permítelo solo si le confías esos datos."
 
 #: apps/wprs-app/qml/Consent.qml
 msgid "Send its colors to the RGB lighting"

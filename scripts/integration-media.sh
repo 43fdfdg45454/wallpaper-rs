@@ -109,6 +109,13 @@ ctl scene asset "$tuning" cover --cover current --placeholder red || fail "no co
 if ctl scene asset "$tuning" other --cover current 2>/dev/null; then fail "a cover without a placeholder was made"; fi
 ctl scene add "$tuning" /scene/layers/- '{"id": "art", "type": "image", "image": "cover", "size": [1920, 1080], "transform": {"position": [960, 540]}}'
 ctl scene add "$tuning" /scene/layers/- '{"id": "title", "type": "text", "text": {"media": "title"}, "size": 40, "transform": {"position": [40, 40]}}'
+ctl scene add "$tuning" /scene/layers/- '{"id": "before", "type": "image", "image": "red", "size": [8, 8], "visible": false}'
+ctl scene import "$tuning" "$WORK/tune/red.png" --id previous_cover >/dev/null
+ctl scene asset "$tuning" previous_cover --cover previous --placeholder red --field /scene/layers/2/image
+doc() { python3 -c "import json, sys; d = json.load(open(sys.argv[2])); print(eval(sys.argv[1]))" "$1" "$tuning/scene.json"; }
+[ "$(doc "'media' in d['assets']['previous_cover'], d['assets'][d['layers'][2]['image']]['media']")" = "(False, 'previous')" ] ||
+  fail "choosing the previous cover for a field: $(doc "d['assets'], d['layers'][2]")"
+if ctl scene asset "$tuning" cover --cover none --field /scene/layers/2/image 2>/dev/null; then fail "a field took no cover"; fi
 cp "$WORK/blue cover.png" "$tuning/blue.png"
 printf '{"title": "Night Drive", "artist": ["Example Artist"], "playing": true, "position": 5, "duration": 100, "cover": "blue.png"}' >"$WORK/track.json"
 read -r _ _ _ s22 < <(ctl stream preview:2 160 90)

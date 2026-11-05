@@ -87,6 +87,8 @@ pub struct AssetEdit {
     pub cover: Option<String>,
     #[serde(default)]
     pub placeholder: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub field: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

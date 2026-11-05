@@ -47,6 +47,13 @@ pub enum Texturing {
             help = "Picture shown while nothing plays: an asset id or a picture of the folder"
         )]
         placeholder: Option<String>,
+        #[arg(
+            long,
+            requires = "cover",
+            value_name = "POINTER",
+            help = "Show that cover in this field, such as /scene/layers/0/image, in one step: a cover asset of that kind is used again, or a new one is made, and a plain picture never becomes a cover"
+        )]
+        field: Option<String>,
         #[arg(long, help = crate::cli::JSON)]
         json: bool,
     },
@@ -121,10 +128,20 @@ fn told(v: &Value) -> String {
 }
 
 pub fn run(command: Texturing) -> Result<()> {
-    let (dir, asset, ktx2, codec, quality, dry_run, looks, json, cover, placeholder) = match command {
-        Texturing::Asset { dir, asset, ktx2, codec, quality, dry_run, looks, json, cover, placeholder } => {
-            (dir, asset, ktx2, codec, quality, dry_run, looks, json, cover, placeholder)
-        }
+    let (dir, asset, ktx2, codec, quality, dry_run, looks, json, cover, placeholder, field) = match command {
+        Texturing::Asset {
+            dir,
+            asset,
+            ktx2,
+            codec,
+            quality,
+            dry_run,
+            looks,
+            json,
+            cover,
+            placeholder,
+            field,
+        } => (dir, asset, ktx2, codec, quality, dry_run, looks, json, cover, placeholder, field),
         Texturing::Rgb { dir, layer, on, size, whole } => {
             let size = size.map(|s| crate::editing::dimensions(&s)).transpose()?;
             let size = size.map(|(w, h)| [f64::from(w), f64::from(h)]);
@@ -132,7 +149,7 @@ pub fn run(command: Texturing) -> Result<()> {
         }
     };
     let covered = cover.is_some() || placeholder.is_some();
-    let wanted = AssetEdit { asset: asset.clone(), ktx2, codec, quality, cover, placeholder };
+    let wanted = AssetEdit { asset: asset.clone(), ktx2, codec, quality, cover, placeholder, field };
     if covered {
         return crate::steps::edit(&dir, Action::Asset(wanted));
     }

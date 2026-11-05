@@ -1480,7 +1480,9 @@ La carátula es un recurso de imagen con `media: current` (la de lo que suena) o
 (la anterior), que vale donde vale una imagen; su archivo es lo que se ve mientras no suena nada o
 sin permiso. El selector de imagen del editor ofrece *Carátula de lo que suena* y *Carátula
 anterior*, hechas a partir de la imagen elegida, y deja elegir esa imagen de reemplazo; desde la
-terminal, `wprs-ctl scene asset CARPETA cover --cover current --placeholder IMAGEN`. Las carátulas
+terminal, `wprs-ctl scene asset CARPETA cover --cover current --placeholder IMAGEN`, y con
+`--field /scene/layers/0/image` la pone en ese campo en un solo paso, usando una carátula que ya
+exista o creando otra sin convertir nunca una imagen normal. Las carátulas
 se leen una vez por pista, se reducen a 256 píxeles como mucho y solo viven en memoria.
 
 De cada carátula salen cinco colores, calculados una vez: el principal, el secundario y el
