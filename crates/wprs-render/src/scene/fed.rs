@@ -27,6 +27,13 @@ fn bound<'e>(e: &EffectDraw<'e>) -> impl Iterator<Item = (&'e str, &'e str)> + u
     params.filter_map(|(p, v)| Some((p.as_str(), v.binding()?.layer.as_deref()?)))
 }
 
+fn projection(j: usize, m: Affine, size: (u32, u32)) -> usize {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::hash::DefaultHasher::new();
+    (j, m.0.map(f32::to_bits), size).hash(&mut h);
+    h.finish() as usize | 1 << (usize::BITS - 1)
+}
+
 fn quad(color: [f32; 4]) -> Item {
     Item { quad: [0.0, 0.0, 1.0, 1.0], uv: [0.0, 0.0, 1.0, 1.0], color, ..Item::default() }
 }
@@ -111,12 +118,17 @@ impl Painter<'_, '_, '_> {
     pub(crate) fn drawn(&mut self, id: &str, m: Affine, (w, h): (u32, u32)) -> Option<Src> {
         let j = self.frame.draws.iter().position(|d| d.layer.id == id)?;
         let (src, r) = self.shared(j)?;
+        let key = projection(j, m, (w, h));
+        if let Some((_, Some((out, _)))) = self.isolated.iter().find(|(k, _)| *k == key) {
+            return Some(*out);
+        }
         let out = self.acquire((w, h));
         if let Some(out) = out {
             let full = Rect { x: 0.0, y: 0.0, w: w as f32, h: h as f32 };
             let mut item = quad([1.0; 4]);
             (item.m0, item.m1) = ndc(full, full.affine().then(invert(m)).then(r.affine()));
             self.paint(out, item, [src, Src::White, Src::Clear]);
+            self.isolated.push((key, Some((out, full))));
         }
         out
     }
