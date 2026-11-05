@@ -1,6 +1,6 @@
 [Unit]
 Description=wallpaper-rs wallpaper daemon
-Documentation=https://github.com/43fdfdg45454/wallpaper-rs
+Documentation=https://github.com/wallpaper-rs/wallpaper-rs
 PartOf=graphical-session.target
 After=graphical-session.target pipewire.service
 Wants=pipewire.service

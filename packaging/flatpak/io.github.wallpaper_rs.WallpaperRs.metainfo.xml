@@ -23,7 +23,7 @@
     </p>
   </description>
   <launchable type="desktop-id">io.github.wallpaper_rs.WallpaperRs.desktop</launchable>
-  <url type="homepage">https://github.com/43fdfdg45454/wallpaper-rs</url>
+  <url type="homepage">https://github.com/wallpaper-rs/wallpaper-rs</url>
   <categories>
     <category>Settings</category>
     <category>DesktopSettings</category>

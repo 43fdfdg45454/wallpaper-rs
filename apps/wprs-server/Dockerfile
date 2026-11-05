@@ -13,7 +13,7 @@ FROM gcr.io/distroless/static-debian13:nonroot@sha256:d62067879de890a1def9da0e77
 LABEL org.opencontainers.image.title="wprs-server" \
       org.opencontainers.image.description="Self-hosted wallpaper-rs server" \
       org.opencontainers.image.licenses="GPL-3.0-or-later" \
-      org.opencontainers.image.source="https://github.com/43fdfdg45454/wallpaper-rs"
+      org.opencontainers.image.source="https://github.com/wallpaper-rs/wallpaper-rs"
 COPY --from=build /out/wprs-server /usr/local/bin/wprs-server
 COPY --from=build --chown=65532:65532 /out/data /data
 ENV WPRS_DATA=/data WPRS_LISTEN=0.0.0.0:8080

@@ -5,7 +5,7 @@ Version:        %{wprs_core}
 Release:        %{wprs_release}%{?dist}
 Summary:        Animated and static wallpapers for KDE Plasma
 License:        GPL-3.0-or-later
-URL:            https://github.com/43fdfdg45454/wallpaper-rs
+URL:            https://github.com/wallpaper-rs/wallpaper-rs
 Source0:        wallpaper-rs-%{wprs_version}-x86_64-linux.tar.gz
 ExclusiveArch:  x86_64
 BuildRequires:  systemd-rpm-macros

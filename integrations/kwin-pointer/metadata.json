@@ -7,7 +7,7 @@
         "Description[es]": "Indica a wallpaper-rs dónde está el puntero mientras se muestra una escena que lo sigue",
         "License": "GPL-3.0-or-later",
         "Version": "0.3.0",
-        "Website": "https://github.com/43fdfdg45454/wallpaper-rs",
+        "Website": "https://github.com/wallpaper-rs/wallpaper-rs",
         "Authors": [
             {
                 "Name": "wallpaper-rs contributors"

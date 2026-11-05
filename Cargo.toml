@@ -33,7 +33,7 @@ version = "0.3.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
 rust-version = "1.99"
-repository = "https://github.com/43fdfdg45454/wallpaper-rs"
+repository = "https://github.com/wallpaper-rs/wallpaper-rs"
 
 [workspace.dependencies]
 wprs-core = { path = "crates/wprs-core" }

@@ -8,7 +8,7 @@
         "Icon": "preferences-desktop-wallpaper",
         "License": "GPL-3.0-or-later",
         "Version": "0.3.0",
-        "Website": "https://github.com/43fdfdg45454/wallpaper-rs",
+        "Website": "https://github.com/wallpaper-rs/wallpaper-rs",
         "Authors": [
             {
                 "Name": "wallpaper-rs contributors"
