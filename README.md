@@ -467,7 +467,9 @@ posición) y sus preajustes, como en el escritorio; con zoom, posición o límit
 vídeo pasa por la gráfica. El límite de fotogramas del autor, el inicio en silencio y la
 reproducción única valen para vídeos y páginas como en el escritorio, y una página sin volumen
 propio tiene el ajuste *Volumen*, que se multiplica por el sonido de los vídeos. Un vídeo en
-silencio o con volumen 0 no descodifica su sonido ni ocupa la salida de audio.
+silencio o con volumen 0 no descodifica su sonido ni ocupa la salida de audio. Cuando dos pantallas
+o una vista previa muestran el mismo vídeo con ajustes distintos (un preajuste y su base, por
+ejemplo), cada una lo reproduce con los suyos al verse.
 La página de un paquete avisa de todo lo que el teléfono omite: el color alrededor de la imagen y la
 extensión sobre varias pantallas, los sonidos nuevos, lo que no tiene sentido en el teléfono
 (los sonidos de los scripts) y la iluminación RGB. Los scripts de escena guardan datos, crean formas,

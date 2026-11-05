@@ -30,6 +30,7 @@ internal class Video(
     from: Long = 0L,
 ) : Player.Listener {
     val viewers = mutableListOf<Painter>()
+    val reels = mutableMapOf<Painter, Reel>()
     var held = true
     var speed = 1f
     var looped = true
@@ -81,6 +82,20 @@ internal class Video(
         active.trackSelectionParameters =
             active.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, muted).build()
         heard()
+    }
+
+    fun lead() = viewers.lastOrNull { it.shown } ?: viewers.lastOrNull()
+
+    fun follow() {
+        val reel = lead()?.let(reels::get) ?: return
+        val cut = reel.clip != clip
+        val hushed = (reel.loudness <= 0f) != (loudness <= 0f)
+        speed = reel.speed
+        looped = reel.looped
+        loudness = reel.loudness
+        clip = reel.clip
+        if (hushed) configure()
+        player?.let { steer(it, null, cut) }
     }
 
     fun duck() {

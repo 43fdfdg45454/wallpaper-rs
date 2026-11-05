@@ -8,9 +8,20 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import org.json.JSONObject
 
+internal data class Reel(val speed: Float, val looped: Boolean, val loudness: Float, val clip: Pair<Long, Long>) {
+    companion object {
+        fun of(told: JSONObject) = Reel(
+            told.getDouble("rate").toFloat(),
+            told.getBoolean("loop"),
+            told.getDouble("volume").toFloat(),
+            told.getLong("start") to (told.getLong("end").takeIf { it >= 0 } ?: C.TIME_END_OF_SOURCE),
+        )
+    }
+}
+
 @OptIn(UnstableApi::class)
 class Videos(private val context: Context) : Ducked {
-    private val videos = mutableMapOf<String, Video>()
+    internal val videos = mutableMapOf<String, Video>()
 
     init {
         Duck.listen(this)
@@ -55,13 +66,17 @@ class Videos(private val context: Context) : Ducked {
 
     fun leave(uri: String, painter: Painter) = videos[uri]?.run {
         viewers -= painter
+        reels -= painter
         if (output === painter.surface) detach()
-        if (viewers.isNotEmpty()) update() else release().also { videos -= uri }
+        if (viewers.isEmpty()) return@run release().also { videos -= uri }
+        follow()
+        update()
     }
 
     fun show(uri: String, painter: Painter) = videos[uri]?.run {
         viewers -= painter
         viewers += painter
+        follow()
         update()
     }
 
@@ -80,18 +95,10 @@ class Videos(private val context: Context) : Ducked {
         update()
     }
 
-    fun cut(key: String?, reel: String?) {
-        val (video, told) = (videos[key ?: return] ?: return) to JSONObject(reel ?: return)
-        video.speed = told.getDouble("rate").toFloat()
-        video.looped = told.getBoolean("loop")
-        val loudness = told.getDouble("volume").toFloat()
-        val hushed = (loudness <= 0f) != (video.loudness <= 0f)
-        video.loudness = loudness
-        if (hushed) video.configure()
-        val range = told.getLong("start") to (told.getLong("end").takeIf { it >= 0 } ?: C.TIME_END_OF_SOURCE)
-        val cut = range != video.clip
-        video.clip = range
-        video.player?.let { video.steer(it, null, cut) }
+    fun cut(key: String?, reel: String?, painter: Painter) {
+        val video = videos[key ?: return] ?: return
+        video.reels[painter] = Reel.of(JSONObject(reel ?: return))
+        if (video.lead() === painter) video.follow()
     }
 
     fun positions() = videos.mapValues { it.value.at() }

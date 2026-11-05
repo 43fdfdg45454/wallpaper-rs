@@ -6,6 +6,7 @@ import android.hardware.HardwareBuffer
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.atomic.AtomicInteger
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -100,6 +101,27 @@ class VideoTest {
         val shared = before.values.single()
         val lent = after.filterKeys { it !in before }.values.single()
         assertTrue("the video went from $shared to $lent", kotlin.math.abs(lent - shared) < 100)
+    }
+
+    @Test
+    fun eachScreenPlaysASharedVideoWithItsOwnSettings() {
+        val uri = "file://${fixture(CLIP).path}"
+        val reel = { rate: Double -> JSONObject().put("rate", rate).put("loop", true).put("volume", 1.0).put("start", 0).put("end", -1).toString() }
+        val speeds = Render.call {
+            val speed = { videos.videos.getValue(uri).speed }
+            listOf(lock, home).forEach { videos.join(uri, it.painter) }
+            videos.cut(uri, reel(2.0), lock.painter)
+            videos.cut(uri, reel(0.5), home.painter)
+            lock.painter.show(true)
+            videos.show(uri, lock.painter)
+            val shownOnLock = speed()
+            home.painter.show(true)
+            videos.show(uri, home.painter)
+            val shownAtHome = speed()
+            videos.leave(uri, home.painter)
+            listOf(shownOnLock, shownAtHome, speed()).also { videos.leave(uri, lock.painter) }
+        }
+        assertEquals(listOf(2f, 0.5f, 2f), speeds)
     }
 
     @Test
