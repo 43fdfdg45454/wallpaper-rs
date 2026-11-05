@@ -448,7 +448,11 @@ extensión sobre varias pantallas, el límite de fotogramas, el inicio en silenc
 única de vídeos y páginas, los atajos, los sonidos nuevos, lo que no tiene sentido en el teléfono
 (los sonidos de los scripts) y la iluminación RGB. Los scripts de escena guardan datos, crean formas,
 mueven la cámara, cambian los padres de las capas y listan la carpeta elegida igual que en el
-escritorio. El filtro de color de la sección `[default]` de `config.toml` y el volteo de imágenes y
+escritorio. *Ajustes > Filtro* elige el filtro de color de la pantalla de inicio y el de la de
+bloqueo, con los mismos aspectos y deslizadores (fuerza, exposición, contraste, saturación, calidez
+y tono, con su valor a la vista) que la app de escritorio y *Mostrar tal cual*; la de bloqueo usa el
+de inicio mientras *El mismo filtro que la pantalla de inicio* está activo, y el fondo cambia al
+mover cada control. El filtro y el volteo de imágenes y
 vídeos se aplican también aquí; un vídeo con filtro o volteado pasa por la gráfica en vez de
 reproducirse directo en la pantalla. Un vídeo HDR se ve como lo decodifica Android: al reproducirse
 directo, el sistema adapta sus tonos. Si un paquete pide sombreadores de cálculo y la gráfica del teléfono no los tiene, su página lo

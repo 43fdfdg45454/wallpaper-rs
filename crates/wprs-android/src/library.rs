@@ -71,9 +71,12 @@ pub(crate) fn with<T>(work: impl FnOnce(&mut Library) -> Result<T, Error>) -> Re
 pub(crate) fn request(text: &str, on_battery: bool) -> String {
     let answer = match serde_json::from_str(text) {
         Ok(scene) => props::request(scene),
-        Err(_) => serde_json::from_str(text)
-            .map_err(Error::from)
-            .and_then(|r| with(|lib| answer(lib, r, on_battery))),
+        Err(_) => match serde_json::from_str(text) {
+            Ok(graded) => crate::graded::request(graded),
+            Err(_) => serde_json::from_str(text)
+                .map_err(Error::from)
+                .and_then(|r| with(|lib| answer(lib, r, on_battery))),
+        },
     };
     answer.unwrap_or_else(|e| e.reply()).to_string()
 }

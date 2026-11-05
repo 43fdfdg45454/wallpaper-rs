@@ -109,4 +109,6 @@
     <string name="error_format_elsewhere">This package is made for the desktop only.</string>
     <string name="error_format_newer">This package needs a newer version of wallpaper-rs.</string>
     <string name="error_android_no_depth_map">This picture has no depth map yet</string>
+    <string name="error_android_filter_value">The filter cannot be read: %1$s</string>
+    <string name="error_android_filter_range">The filter takes %1$s</string>
 </resources>

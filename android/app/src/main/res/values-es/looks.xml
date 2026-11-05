@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="filter">Filtro</string>
+    <string name="filter_look">Aspecto</string>
+    <string name="filter_follows_home">El mismo filtro que la pantalla de inicio</string>
+    <string name="show_as_it_is">Mostrar tal cual</string>
+    <string name="filter_note">El filtro colorea las imágenes, los vídeos y las escenas de esta pantalla; los vídeos con filtro pasan por la tarjeta gráfica.</string>
+    <string name="filter_strength">Fuerza</string>
+    <string name="filter_exposure">Exposición</string>
+    <string name="filter_contrast">Contraste</string>
+    <string name="filter_saturation">Saturación</string>
+    <string name="filter_warmth">Calidez</string>
+    <string name="filter_hue">Tono</string>
+    <string name="look_none">Ninguno</string>
+    <string name="look_warm">Cálido</string>
+    <string name="look_cool">Frío</string>
+    <string name="look_golden">Dorado</string>
+    <string name="look_vivid">Vivo</string>
+    <string name="look_punch">Intenso</string>
+    <string name="look_muted">Apagado</string>
+    <string name="look_matte">Mate</string>
+    <string name="look_fade">Desvaído</string>
+    <string name="look_mono">Blanco y negro</string>
+    <string name="look_noir">Noir</string>
+    <string name="look_sepia">Sepia</string>
+    <string name="look_dusk">Atardecer</string>
+    <string name="look_mint">Menta</string>
+    <string name="look_rose">Rosa</string>
+    <string name="look_night">Noche</string>
+</resources>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="filter">Filter</string>
+    <string name="filter_look">Look</string>
+    <string name="filter_follows_home">Same filter as the home screen</string>
+    <string name="show_as_it_is">Show as it is</string>
+    <string name="filter_note">The filter colors pictures, videos and scenes of this screen; videos with a filter go through the graphics card.</string>
+    <string name="filter_strength">Strength</string>
+    <string name="filter_exposure">Exposure</string>
+    <string name="filter_contrast">Contrast</string>
+    <string name="filter_saturation">Saturation</string>
+    <string name="filter_warmth">Warmth</string>
+    <string name="filter_hue">Hue</string>
+    <string name="look_none">None</string>
+    <string name="look_warm">Warm</string>
+    <string name="look_cool">Cool</string>
+    <string name="look_golden">Golden</string>
+    <string name="look_vivid">Vivid</string>
+    <string name="look_punch">Punch</string>
+    <string name="look_muted">Subdued</string>
+    <string name="look_matte">Matte</string>
+    <string name="look_fade">Faded</string>
+    <string name="look_mono">Black and white</string>
+    <string name="look_noir">Noir</string>
+    <string name="look_sepia">Sepia</string>
+    <string name="look_dusk">Dusk</string>
+    <string name="look_mint">Mint</string>
+    <string name="look_rose">Rose</string>
+    <string name="look_night">Night</string>
+</resources>

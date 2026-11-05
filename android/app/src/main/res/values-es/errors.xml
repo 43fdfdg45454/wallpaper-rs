@@ -109,4 +109,6 @@
     <string name="error_format_elsewhere">Este paquete está hecho solo para el escritorio.</string>
     <string name="error_format_newer">Este paquete necesita una versión más nueva de wallpaper-rs.</string>
     <string name="error_android_no_depth_map">Esta imagen todavía no tiene mapa de profundidad</string>
+    <string name="error_android_filter_value">No se puede leer el filtro: %1$s</string>
+    <string name="error_android_filter_range">El filtro admite %1$s</string>
 </resources>

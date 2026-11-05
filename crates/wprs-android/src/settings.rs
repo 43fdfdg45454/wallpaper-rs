@@ -152,6 +152,6 @@ pub(crate) fn look(lock: bool) -> Look {
         listed.and_then(|uid| crate::library::with(|lib| Ok(lib.playlist(&uid)?.rules.transition_ms)).ok());
     let fade =
         own.flatten().map_or_else(|| config.transition.duration(), |ms| Duration::from_millis(ms.into()));
-    let grade = config.filter("").grade();
+    let grade = config.filter(crate::choice::screen(lock)).grade();
     Look { fit: shown.fit, background: shown.background, fade, flip: [false; 2], grade }
 }
