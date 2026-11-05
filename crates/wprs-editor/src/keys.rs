@@ -1,5 +1,5 @@
 use crate::action::KeyframeEdit;
-use crate::handles::{based, end, key, shaped};
+use crate::handles::{based, end, key, reach, shaped};
 use crate::ops::{Op, set};
 use anyhow::{Result, anyhow, bail, ensure};
 use serde_json::{Value, json};
@@ -72,8 +72,8 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
     shaped(e)?;
     let current = doc.pointer(pointer);
     let mut ops = match current.and_then(|c| c.get("keys")).and_then(Value::as_array) {
-        Some(keys) => {
-            let mut keys = keys.clone();
+        Some(old) => {
+            let mut keys = old.clone();
             let (mut value, mut third) = (e.value.clone(), None);
             if let Some(from) = e.from {
                 let i = keys.iter().position(|k| (time_of(k) - from).abs() < 1e-3).ok_or_else(|| {
@@ -93,6 +93,7 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
                     anyhow!(said("editor.no_keyframe_s", "%1 has no keyframe at %2 s", &[&pointer, &time]))
                 })?;
                 let removed = keys.remove(i);
+                reach(pointer, old, &keys)?;
                 return Ok(match keys.is_empty() {
                     true => set(doc, pointer, removed[1].clone()),
                     false => set(doc, &format!("{pointer}/keys"), Value::Array(keys)),
@@ -107,6 +108,7 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
                 Some(i) => keys[i] = new,
                 None => keys.insert(keys.partition_point(|k| time_of(k) <= time), new),
             }
+            reach(pointer, old, &keys)?;
             set(doc, &format!("{pointer}/keys"), Value::Array(keys))
         }
         None => {
@@ -126,7 +128,9 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
                 anyhow!(said("editor.no_value_yet", "%1 has no value yet; give one", &[&pointer]))
             })?;
             let third = end(None, e, &value)?;
-            set(doc, pointer, json!({"keys": [key(time, value, third)]}))
+            let new = [key(time, value, third)];
+            reach(pointer, &[], &new)?;
+            set(doc, pointer, json!({"keys": new}))
         }
     };
     let mut staged = doc.clone();

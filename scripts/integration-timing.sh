@@ -17,6 +17,10 @@ ctl scene keyframe "$timed" /scene/layers/0/opacity 3 -0.5 --base 0.75 || fail "
 ctl scene keyframe "$timed" /scene/layers/0/opacity 0 --out-handle 1,0 || fail "the keyframe took no handle"
 ctl scene keyframe "$timed" /scene/layers/0/opacity 3 --in-handle 1,0 || fail "the keyframe took no handle into it"
 if ctl scene keyframe "$timed" /scene/layers/0/opacity 0 --out-handle -1,0 2>/dev/null; then fail "a handle went back in time"; fi
+if ctl scene keyframe "$timed" /scene/layers/0/opacity 0 --out-handle 5,0 2>/dev/null; then fail "a handle reached past the next keyframe"; fi
+if ctl scene keyframe "$timed" /scene/layers/0/opacity 3 --out-handle 1,0 2>/dev/null; then fail "the last keyframe took a handle out of it"; fi
+if ctl scene keyframe "$timed" /scene/layers/0/opacity 0.5 --from 3 2>/dev/null; then fail "a move left a handle past its neighbour"; fi
+ctl scene validate "$timed" >/dev/null || fail "keyframes with handles left the scene invalid"
 if ctl scene keyframe "$timed" /scene/layers/0/opacity 0 --base '"#ffffff"' 2>/dev/null; then fail "a color was the base of a number"; fi
 ctl scene timeline "$timed" intro --rename opening --speed 2 || fail "the timeline was not renamed"
 [ "$(ctl scene show "$timed" /scene/layers/0/opacity/timeline)" = '"opening"' ] || fail "the keyframes lost their timeline"

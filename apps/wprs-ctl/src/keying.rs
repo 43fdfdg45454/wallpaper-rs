@@ -82,10 +82,8 @@ pub enum Keying {
     },
 }
 
-const HANDLE_IN: &str =
-    "Bézier handle into this keyframe: seconds before it and how much less the value is there";
-const HANDLE_OUT: &str =
-    "Bézier handle out of this keyframe: seconds after it and how much more the value is there";
+const HANDLE_IN: &str = "Bézier handle into this keyframe: seconds before it, up to the previous keyframe, and how much less the value is there";
+const HANDLE_OUT: &str = "Bézier handle out of this keyframe: seconds after it, up to the next keyframe, and how much more the value is there";
 
 fn pair(text: &str) -> Result<[f64; 2], String> {
     let parsed =

@@ -1,6 +1,6 @@
 use crate::action::KeyframeEdit;
 use crate::ops::{Op, set};
-use anyhow::{Result, ensure};
+use anyhow::{Result, bail, ensure};
 use serde_json::{Map, Value, json};
 use wprs_core::message::said;
 
@@ -33,12 +33,12 @@ pub(crate) fn curve(a: &Value, b: &Value, t: f64) -> Option<Value> {
 
 pub(crate) fn shaped(e: &KeyframeEdit) -> Result<()> {
     let handles = [e.in_handle, e.out_handle];
-    let fine = |[dt, dv]: [f64; 2]| dt.is_finite() && dv.is_finite() && (0.0..=3600.0).contains(&dt);
+    let fine = |[dt, dv]: [f64; 2]| dt.is_finite() && dv.is_finite() && dt >= 0.0;
     ensure!(
         handles.iter().flatten().all(|h| fine(*h)),
         said(
             "editor.handle_reach",
-            "a Bézier handle reaches 0 to 3600 s along the timeline and any finite value",
+            "a Bézier handle reaches from 0 s up to the neighbouring keyframe and any finite value",
             &[]
         )
     );
@@ -51,6 +51,35 @@ pub(crate) fn shaped(e: &KeyframeEdit) -> Result<()> {
         !(e.base.is_some() && e.absolute),
         said("editor.base_or_absolute", "give a base or make the value absolute, not both", &[])
     );
+    Ok(())
+}
+
+fn strays(keys: &[Value]) -> Vec<(f64, &'static str, f32)> {
+    let at = |k: &Value| k[0].as_f64().unwrap_or(0.0);
+    let mut out = Vec::new();
+    for (i, k) in keys.iter().enumerate() {
+        let before = i.checked_sub(1).map_or(0.0, |j| at(k) as f32 - at(&keys[j]) as f32);
+        let after = keys.get(i + 1).map_or(0.0, |n| at(n) as f32 - at(k) as f32);
+        for (side, room) in [("in", before.max(0.0)), ("out", after.max(0.0))] {
+            if handle(k, side).is_some_and(|[dt, _]| dt as f32 > room) {
+                out.push((at(k), side, room));
+            }
+        }
+    }
+    out
+}
+
+pub(crate) fn reach(pointer: &str, old: &[Value], new: &[Value]) -> Result<()> {
+    let known = strays(old);
+    let fresh = strays(new).into_iter().find(|s| !known.iter().any(|k| k.0 == s.0 && k.1 == s.1));
+    if let Some((time, _, room)) = fresh {
+        let room = (f64::from(room) * 1000.0).round() / 1000.0;
+        bail!(said(
+            "editor.handle_past_neighbour",
+            "a handle of the keyframe of %1 at %2 s reaches past the neighbouring keyframe; it reaches up to %3 s",
+            &[&pointer, &time, &room]
+        ));
+    }
     Ok(())
 }
 

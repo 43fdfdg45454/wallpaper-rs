@@ -529,10 +529,11 @@ msgstr "%1: se reproduce sin %2"
 
 #: crates/wprs-editor/src/handles.rs
 msgid ""
-"a Bézier handle reaches 0 to 3600 s along the timeline and any finite value"
+"a Bézier handle reaches from 0 s up to the neighbouring keyframe and any "
+"finite value"
 msgstr ""
-"un tirador Bézier llega de 0 a 3600 s a lo largo de la línea de tiempo y a "
-"cualquier valor finito"
+"un tirador Bézier llega de 0 s hasta el fotograma clave vecino y a cualquier "
+"valor finito"
 
 #: crates/wprs-editor/src/handles.rs
 msgid "a keyframe eases or has Bézier handles, not both"
@@ -541,6 +542,14 @@ msgstr "un fotograma clave tiene suavizado o tiradores Bézier, no ambos"
 #: crates/wprs-editor/src/handles.rs
 msgid "give a base or make the value absolute, not both"
 msgstr "da una base o haz absoluto el valor, no ambos"
+
+#: crates/wprs-editor/src/handles.rs
+msgid ""
+"a handle of the keyframe of %1 at %2 s reaches past the neighbouring "
+"keyframe; it reaches up to %3 s"
+msgstr ""
+"un tirador del fotograma clave de %1 en %2 s pasa del fotograma clave "
+"vecino; llega hasta %3 s"
 
 #: crates/wprs-editor/src/handles.rs
 msgid "Bézier handles shape keyframes of single numbers"

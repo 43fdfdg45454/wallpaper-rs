@@ -2305,7 +2305,7 @@ wprs-ctl scene keyframe mar /scene/layers/1/opacity 2 1 --ease in_out_sine
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 3 --from 2   # moverlo a otro instante
 wprs-ctl scene timeline mar olas --add --duration 6 --loop repeat   # y --rename, --remove, --frames con --fps
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 -0.5 --timeline olas --base 0.5   # relativo a 0,5
-wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 --out-handle 1,0   # asa Bézier; también --in-handle
+wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 --out-handle 1,0   # asa Bézier hasta la clave vecina (aquí la de 3 s); también --in-handle
 wprs-ctl scene clip titere zorro saludo --add --play     # un clip nuevo que ya suena en una capa de animación
 wprs-ctl scene translate mar /manifest/title es Mar     # otro idioma; --add no pisa nada, --remove lo quita
 wprs-ctl scene set mar /manifest/content '{"rating": "mature", "descriptors": ["violence"]}'
