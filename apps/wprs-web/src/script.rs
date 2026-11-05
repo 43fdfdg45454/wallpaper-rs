@@ -177,3 +177,9 @@ pub fn heard(heard: Value) {
         tell(&json!({ "media": heard }));
     }
 }
+
+pub fn replay(view: u32) {
+    if let Some(last) = live(|l| l.heard.clone().filter(|_| l.media)) {
+        tell_view(view, &json!({ "media": last }));
+    }
+}

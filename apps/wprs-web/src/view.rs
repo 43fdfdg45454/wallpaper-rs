@@ -168,6 +168,7 @@ unsafe extern "C" fn loaded(web: Ptr, event: c_int, _data: Ptr) {
     if let Some(view) = by_web(web).filter(|_| event == 3) {
         view.loaded.set(true);
         send(&FromWeb::Loaded { view: view.id });
+        crate::script::replay(view.id);
         let (id, crashes) = (view.id, view.crashes.get());
         if crashes > 0 {
             crate::glib::later(STABLE, move || {

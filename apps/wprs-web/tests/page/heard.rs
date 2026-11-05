@@ -1,4 +1,4 @@
-use super::helper::{Page, available, start};
+use super::helper::{Page, available, start, with};
 use base64::Engine;
 use serde_json::json;
 use wprs_web::{Isolation, ToWeb};
@@ -33,4 +33,30 @@ fn the_page_hears_the_media_player_with_its_cover_as_a_blob() {
     page.said.remove("media");
     page.link.send(&ToWeb::Media(json!({ "enabled": false, "cover": "" })), &[]).unwrap();
     assert_eq!(page.wait("media", 10), json!(false));
+}
+
+const SLOW: &str = r#"wprs.onMedia((m) => {
+  console.log(`probe media ${JSON.stringify(m.enabled ? [m.state, m.title, Boolean(m.cover)] : false)}`);
+  if (m.cover) fetch(m.cover).then((r) => r.blob()).then((b) => console.log(`probe cover ${JSON.stringify(b.type)}`));
+});
+console.log("probe asked true");
+const end = Date.now() + 3000;
+while (Date.now() < end) {}
+"#;
+
+#[test]
+fn a_cover_heard_before_the_page_has_loaded_reaches_it_once_it_has() {
+    if !available() {
+        return eprintln!("skipped: no WPE WebKit 2.54");
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let html = b"<!doctype html><html><body><script src=\"slow.js\"></script></body></html>";
+    let start = with(dir.path(), 9, &[("index.html", html), ("slow.js", SLOW.as_bytes())]);
+    let mut page = Page::open(start, Isolation { network: true, devices: false, limits: false });
+    assert_eq!(page.wait("asked", 20), json!(true));
+    let heard = json!({ "enabled": true, "state": "playing", "title": "Night Drive", "colors": null,
+        "position": 1.0, "duration": 200.0, "rate": 1.0, "cover": png() });
+    page.link.send(&ToWeb::Media(heard), &[]).unwrap();
+    assert_eq!(page.wait("cover", 20), json!("image/png"), "the cover reached the page once it loaded");
+    assert_eq!(page.said["media"].last(), Some(&json!(["playing", "Night Drive", true])));
 }
