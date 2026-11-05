@@ -25,7 +25,11 @@ fn kde(desktop: &str) -> bool {
     desktop.split(':').any(|d| d.eq_ignore_ascii_case("KDE"))
 }
 
-pub async fn select(backend: Backend, bus: &DBusProxy<'_>) -> anyhow::Result<Option<Session>> {
+pub async fn select(
+    backend: Backend,
+    bus: &DBusProxy<'_>,
+    namespace: impl FnOnce() -> String,
+) -> anyhow::Result<Option<Session>> {
     let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
     let sandboxed = crate::flatpak::app_id().is_some();
     let plasma = backend == Backend::Auto
@@ -37,7 +41,7 @@ pub async fn select(backend: Backend, bus: &DBusProxy<'_>) -> anyhow::Result<Opt
         Some((chosen, required)) => {
             let (session, what) = match chosen {
                 Backend::X11 => (wprs_wayland::connect_x11(), "X11 windows"),
-                _ => (wprs_wayland::connect(), "layer-shell surfaces"),
+                _ => (wprs_wayland::connect(&namespace()), "layer-shell surfaces"),
             };
             match session {
                 Err(e) if required => return Err(e.context(format!("cannot show {what}"))),
@@ -46,6 +50,9 @@ pub async fn select(backend: Backend, bus: &DBusProxy<'_>) -> anyhow::Result<Opt
         }
     };
     let backend = session.as_ref().map_or("streams", Session::kind);
+    if backend == "layer-shell" {
+        crate::layers::shown();
+    }
     tracing::info!(backend, "presentation backend chosen");
     Ok(session)
 }

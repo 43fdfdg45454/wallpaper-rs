@@ -132,6 +132,19 @@ the desktop window is fully obscured (`VisibilityNotify`, without a compositing 
 `pause.when_covered` then pauses their video as for streams. In X11, still images also become the root window background (`_XROOTPMAP_ID` and
 `ESETROOT_PMAP_ID`).
 
+Every layer surface carries a namespace, which some compositors read to tell the desktop background
+from other surfaces (and only then show it behind their overview). The first of these that is set
+and not `auto` chooses it: `wprsd --layer-namespace NAME`, the environment variable
+`WPRS_LAYER_NAMESPACE`, `surfaces.layer_namespace` of the configuration file, then a short table of
+known desktops matched against the entries of `XDG_CURRENT_DESKTOP` without regard to case
+(`KineticWE` gives `noctalia-wallpaper`), and otherwise `wallpaper`. The option refuses an invalid
+name before the daemon starts; an invalid variable is ignored with a warning in the log. The name is
+chosen once, when the daemon connects to the compositor. `GetState().layer_shell` holds `namespace`
+(the name in use, `null` while the daemon shows no layer surfaces), `from` (`"option"`,
+`"environment"`, `"config"`, `"automatic"` or `"default"`, empty with no layer surfaces) and
+`restart`, true while the configuration now chooses another name, which takes effect the next time
+the daemon starts; `wprs-ctl config surfaces.layer_namespace` says so after a change.
+
 An output that appears, changes or disappears is applied once it has stayed the same for 0.5 s: an
 output that the compositor reports twice, removes and adds back, or announces for a moment with a
 zero size keeps its wallpaper, its playback and a single surface; a layer surface without a size
@@ -562,6 +575,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `rgb.enabled` | send the colors of packages granted `rgb` to RGB lighting through the OpenRGB server (see `Rgb1`) | `false` |
 | `rgb.server` | `host:port` of the OpenRGB server, at most 255 characters; an address that is not this computer sends the colors over the network | `127.0.0.1:6742` |
 | `render.gpu` | the graphics card the daemon renders with: `auto` (the one that saves the most power, an integrated card before a dedicated one), `integrated`, `dedicated`, `software` (emulated on the processor, for tests) or part of the name of a card, without regard to case, such as `Graphics A` (see "Graphics card"); it takes effect the next time the daemon starts, it is not synced and profiles leave it out | `auto` |
+| `surfaces.layer_namespace` | the namespace of the layer-shell surfaces (see "Layer-shell and X11 outputs"): `auto` (or an empty value) for the automatic choice, or 1 to 64 ASCII letters, digits, `-`, `_` or `.`; it takes effect the next time the daemon starts, it is not synced and profiles leave it out | `auto` |
 
 Only the changed key is validated. Unknown keys and invalid or out-of-range values return
 `InvalidArgs` and change nothing.
@@ -2322,8 +2336,9 @@ struct State {
     options: BTreeMap<String, Value>,
     outputs: BTreeMap<String, OutputState>, calibrating: bool, compute: bool,
     adapters: Vec<GpuAdapter>, gpu_warning: Option<String>, gpu_restart: bool,
-    qualities: BTreeMap<String, String>, hdrs: BTreeMap<String, String>,
+    qualities: BTreeMap<String, String>, hdrs: BTreeMap<String, String>, layer_shell: LayerShellState,
 }
+struct LayerShellState { namespace: Option<String>, from: String, restart: bool }
 struct GpuAdapter { name: String, kind: String, backend: String, used: bool }
 struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,

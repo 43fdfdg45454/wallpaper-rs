@@ -48,6 +48,8 @@ pub struct Config {
     pub layout: Layout,
     #[serde(skip_serializing_if = "Render::is_default")]
     pub render: Render,
+    #[serde(skip_serializing_if = "crate::Surfaces::is_default")]
+    pub surfaces: crate::Surfaces,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub providers: BTreeMap<String, toml::Value>,
 }

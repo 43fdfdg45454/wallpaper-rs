@@ -30,6 +30,7 @@ mod items;
 mod jobs;
 mod keyring;
 mod kinds;
+mod layers;
 mod library1;
 mod lights;
 mod look;
@@ -104,6 +105,8 @@ pub(crate) struct Args {
     script_host: bool,
     #[arg(long, value_enum, default_value = "auto", help = "How wallpapers reach the desktop")]
     pub(crate) backend: present::Backend,
+    #[arg(long, value_name = "NAME", value_parser = layers::valid, help = "Namespace of the layer-shell surfaces, or auto; also WPRS_LAYER_NAMESPACE")]
+    pub(crate) layer_namespace: Option<String>,
 }
 
 fn main() -> anyhow::Result<()> {

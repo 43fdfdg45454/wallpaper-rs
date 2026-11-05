@@ -9,6 +9,7 @@ macro_rules! model {
 mod account;
 mod inputs;
 mod jobs;
+mod layer;
 mod library;
 mod light;
 mod playlists;
@@ -20,6 +21,7 @@ mod state;
 pub use account::*;
 pub use inputs::*;
 pub use jobs::*;
+pub use layer::*;
 pub use library::*;
 pub use light::*;
 pub use playlists::*;

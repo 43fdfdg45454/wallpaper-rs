@@ -1,4 +1,4 @@
-use super::{Credit, HdrState, Time, Uid};
+use super::{Credit, HdrState, LayerShellState, Time, Uid};
 use crate::{Filter, Fit, Screen};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -40,6 +40,8 @@ model! {
         pub qualities: BTreeMap<String, String>,
         #[serde(default)]
         pub hdrs: BTreeMap<String, String>,
+        #[serde(default)]
+        pub layer_shell: LayerShellState,
     }
 
     pub struct GpuAdapter { pub name: String, pub kind: String, pub backend: String, pub used: bool }

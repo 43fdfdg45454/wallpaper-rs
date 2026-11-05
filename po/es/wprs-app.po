@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-02 00:00+0000\n"
+"POT-Creation-Date: 2026-11-05 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -710,7 +710,10 @@ msgid ""
 "Up to 64 × 16 colors of the wallpaper go to your keyboard, mouse and other "
 "lights through the OpenRGB server set in Settings, on this computer unless "
 "you set another address, and only while RGB lighting is on there."
-msgstr "Hasta 64 × 16 colores del fondo van al teclado, el ratón y otras luces a través del servidor de OpenRGB de Ajustes, en este equipo salvo que pongas otra dirección, y solo mientras la iluminación RGB está encendida allí."
+msgstr ""
+"Hasta 64 × 16 colores del fondo van al teclado, el ratón y otras luces a "
+"través del servidor de OpenRGB de Ajustes, en este equipo salvo que pongas "
+"otra dirección, y solo mientras la iluminación RGB está encendida allí."
 
 #: apps/wprs-app/qml/Consent.qml
 msgid "The scene %1 asks for your permission:"
@@ -1770,6 +1773,59 @@ msgstr "Instalarlo"
 #: apps/wprs-app/qml/ItemKin.qml
 msgid "Presets of this wallpaper:"
 msgstr "Preajustes de este fondo:"
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "the option the daemon was started with"
+msgstr "la opción con la que se arrancó el daemon"
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "the WPRS_LAYER_NAMESPACE variable"
+msgstr "la variable WPRS_LAYER_NAMESPACE"
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "this setting"
+msgstr "este ajuste"
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "the automatic choice for this desktop"
+msgstr "la elección automática para este escritorio"
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "the usual name"
+msgstr "el nombre de siempre"
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Surface name"
+msgstr "Nombre de la superficie"
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+#: apps/wprs-app/qml/SceneShadows3d.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Automatic"
+msgstr "Automático"
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "Apply"
+msgstr "Aplicar"
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid ""
+"The name the wallpaper surfaces give the compositor. Change it if the "
+"overview of your compositor shows the wallpaper black: some only show it "
+"there under a name they know. Empty chooses automatically."
+msgstr ""
+"El nombre que las superficies del fondo dan al compositor. Cámbialo si la "
+"vista general de tu compositor muestra el fondo en negro: algunos solo lo "
+"muestran ahí con un nombre que conocen. Vacío elige solo."
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "In use: %1, from %2."
+msgstr "En uso: %1, según %2."
+
+#: apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "The new name takes effect the next time the daemon starts."
+msgstr "El nuevo nombre vale desde el próximo arranque del daemon."
 
 #: apps/wprs-app/qml/LeftOut.qml
 msgid "it is too slow for this graphics card"
@@ -4309,7 +4365,11 @@ msgid ""
 "other lights through OpenRGB, at most 30 times a second, only where the user "
 "allowed it. Move the region and drag its corner on the preview to choose "
 "what is sent."
-msgstr "Lo captado se reduce a 64 × 16 como mucho y se manda a teclados, ratones y otras luces a través de OpenRGB, como mucho 30 veces por segundo y solo donde el usuario lo permitió. Mueve la región y arrastra sus esquinas en la vista previa para elegir qué se manda."
+msgstr ""
+"Lo captado se reduce a 64 × 16 como mucho y se manda a teclados, ratones y "
+"otras luces a través de OpenRGB, como mucho 30 veces por segundo y solo "
+"donde el usuario lo permitió. Mueve la región y arrastra sus esquinas en la "
+"vista previa para elegir qué se manda."
 
 #: apps/wprs-app/qml/SceneRgb.qml
 msgid "Whole canvas"
@@ -4634,11 +4694,6 @@ msgstr "Como mucho %1 luces dan sombra; los niveles de equipo dibujan %2."
 #: apps/wprs-app/qml/SceneShadows3d.qml
 msgid "%1 casts shadows"
 msgstr "%1 da sombra"
-
-#: apps/wprs-app/qml/SceneShadows3d.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Automatic"
-msgstr "Automático"
 
 #: apps/wprs-app/qml/SceneShadows3d.qml apps/wprs-app/qml/SceneSwarmSwirl.qml
 msgid "%1 px"
@@ -5627,6 +5682,10 @@ msgstr "Cambiar el nombre de la etiqueta"
 msgid "Rate"
 msgstr "Valorar"
 
+#: apps/wprs-app/qml/SettingsGrants.qml
+msgid "Stop using %1"
+msgstr "Dejar de usar %1"
+
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Add folder…"
 msgstr "Añadir una carpeta…"
@@ -5650,6 +5709,14 @@ msgstr "HDR:"
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Draw with:"
 msgstr "Dibujar con:"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Desktop surfaces"
+msgstr "Superficies del escritorio"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Surface name:"
+msgstr "Nombre de la superficie:"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Library folders"
@@ -5702,10 +5769,6 @@ msgid "No scene has been allowed yet."
 msgstr "Todavía no has dado permiso a ninguna escena."
 
 #: apps/wprs-app/qml/SettingsPage.qml
-msgid "Stop using %1"
-msgstr "Dejar de usar %1"
-
-#: apps/wprs-app/qml/SettingsPage.qml
 msgid "About"
 msgstr "Acerca de"
 
@@ -5726,7 +5789,11 @@ msgid ""
 "Wallpapers that send colors to keyboards, mice and other lights reach them "
 "through an OpenRGB server, and only after you allow it for each package. "
 "Turn this on to let them; the address is this computer unless you change it."
-msgstr "Los fondos que mandan colores al teclado, el ratón y otras luces llegan a ellas a través de un servidor de OpenRGB, y solo después de que lo permitas para cada paquete. Enciende esto para dejarlos; la dirección es este equipo salvo que la cambies."
+msgstr ""
+"Los fondos que mandan colores al teclado, el ratón y otras luces llegan a "
+"ellas a través de un servidor de OpenRGB, y solo después de que lo permitas "
+"para cada paquete. Enciende esto para dejarlos; la dirección es este equipo "
+"salvo que la cambies."
 
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid "Send colors to RGB lighting"
@@ -5745,7 +5812,10 @@ msgid ""
 "The colors of your wallpaper go over the network to %1. Anyone who can watch "
 "that network could see them; use an address on this computer to keep them "
 "here."
-msgstr "Los colores de tu fondo viajan por la red hasta %1. Quien pueda observar esa red podría verlos; usa una dirección de este equipo para que no salgan de aquí."
+msgstr ""
+"Los colores de tu fondo viajan por la red hasta %1. Quien pueda observar esa "
+"red podría verlos; usa una dirección de este equipo para que no salgan de "
+"aquí."
 
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid "Connected; %1 sends the colors now."

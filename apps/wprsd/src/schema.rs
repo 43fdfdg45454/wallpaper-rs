@@ -1,7 +1,7 @@
 use serde_json::{Value, json};
 use wprs_core::model::{Field, FieldKind, MODEL, QueryKey, Schema};
 use wprs_core::settings::fps;
-use wprs_core::{Config, Fit, QualityChoice};
+use wprs_core::{Config, Fit, LayerNamespace, QualityChoice};
 
 mod providers;
 
@@ -74,6 +74,7 @@ fn options() -> Vec<Field> {
         flag("rgb.enabled"),
         option("rgb.server", FieldKind::Text),
         values(option("render.gpu", FieldKind::Text), &wprs_core::GpuChoice::WORDS),
+        values(option(LayerNamespace::KEY, FieldKind::Text), &[LayerNamespace::AUTO]),
     ]
 }
 

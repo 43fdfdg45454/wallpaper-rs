@@ -57,11 +57,11 @@ pub(crate) type Sink = Arc<dyn Fn(Event) + Send + Sync>;
 pub struct Session(Kind);
 
 enum Kind {
-    Wayland(Connection, GlobalList, EventQueue<State>),
+    Wayland(Connection, GlobalList, EventQueue<State>, String),
     X11(Arc<X11>),
 }
 
-pub fn connect() -> anyhow::Result<Session> {
+pub fn connect(namespace: &str) -> anyhow::Result<Session> {
     let conn = Connection::connect_to_env()?;
     let (globals, queue) = registry_queue_init::<State>(&conn)?;
     let offered = |list: &[_]| list.iter().any(|g: &_| state::is_layer_shell(g));
@@ -69,7 +69,7 @@ pub fn connect() -> anyhow::Result<Session> {
         globals.contents().with_list(offered),
         "the compositor does not offer layer-shell surfaces"
     );
-    Ok(Session(Kind::Wayland(conn, globals, queue)))
+    Ok(Session(Kind::Wayland(conn, globals, queue, namespace.to_owned())))
 }
 
 pub fn connect_x11() -> anyhow::Result<Session> {
@@ -93,11 +93,11 @@ impl Session {
 
     pub fn start(self, sink: impl Fn(Event) + Send + Sync + 'static) -> anyhow::Result<()> {
         let sink: Sink = Arc::new(sink);
-        let (conn, globals, mut queue) = match self.0 {
-            Kind::Wayland(conn, globals, queue) => (conn, globals, queue),
+        let (conn, globals, mut queue, namespace) = match self.0 {
+            Kind::Wayland(conn, globals, queue, namespace) => (conn, globals, queue, namespace),
             Kind::X11(x) => return monitors::start(x, sink),
         };
-        let mut state = State::new(conn, &globals, &queue.handle(), sink.clone())?;
+        let mut state = State::new(conn, &globals, &queue.handle(), sink.clone(), namespace)?;
         hyprland::watch(sink);
         std::thread::Builder::new().name("wprs-wayland".into()).spawn(move || {
             let error = loop {

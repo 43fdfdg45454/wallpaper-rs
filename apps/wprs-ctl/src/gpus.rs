@@ -3,6 +3,7 @@ use anyhow::Result;
 use clap::Args;
 use serde_json::json;
 use wprs_client::Client;
+use wprs_core::LayerNamespace;
 use wprs_core::model::State;
 
 #[derive(Args, Debug)]
@@ -46,12 +47,16 @@ pub async fn run(client: &Client, args: GpuArgs) -> Result<()> {
 }
 
 pub async fn notice(client: &Client, key: &str) -> Result<()> {
-    if key != "render.gpu" {
+    if key != "render.gpu" && key != LayerNamespace::KEY {
         return Ok(());
     }
     let state: State = serde_json::from_str(&client.daemon.get_state().await?)?;
-    if state.gpu_restart {
+    let layer = &state.layer_shell;
+    if (key == "render.gpu" && state.gpu_restart) || (key == LayerNamespace::KEY && layer.restart) {
         println!("{LATER}");
+    }
+    if let Some(namespace) = layer.namespace.as_deref().filter(|_| key == LayerNamespace::KEY) {
+        println!("in use: {} (from {})", clean(namespace), clean(&layer.from));
     }
     Ok(())
 }

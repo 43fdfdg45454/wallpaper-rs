@@ -59,7 +59,10 @@ msgid ""
 "Up to 64 × 16 colors of the wallpaper go to your keyboard, mouse and other "
 "lights through the OpenRGB server set in Settings, on this computer unless "
 "you set another address, and only while RGB lighting is on there."
-msgstr "Hasta 64 × 16 colores del fondo van al teclado, el ratón y otras luces a través del servidor de OpenRGB de Ajustes, en este equipo salvo que pongas otra dirección, y solo mientras la iluminación RGB está encendida allí."
+msgstr ""
+"Hasta 64 × 16 colores del fondo van al teclado, el ratón y otras luces a "
+"través del servidor de OpenRGB de Ajustes, en este equipo salvo que pongas "
+"otra dirección, y solo mientras la iluminación RGB está encendida allí."
 
 #: integrations/plasma-tray/contents/ui/Consent.qml
 #, kde-format

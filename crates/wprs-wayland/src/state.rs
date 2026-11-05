@@ -74,6 +74,7 @@ pub(crate) struct State {
     pub(crate) sink: Sink,
     conn: Connection,
     qh: QueueHandle<State>,
+    namespace: String,
 }
 
 impl State {
@@ -82,6 +83,7 @@ impl State {
         globals: &GlobalList,
         qh: &QueueHandle<Self>,
         sink: Sink,
+        namespace: String,
     ) -> anyhow::Result<Self> {
         let state = Self {
             registry: RegistryState::new(globals),
@@ -106,6 +108,7 @@ impl State {
             sink,
             conn,
             qh: qh.clone(),
+            namespace,
         };
         crate::toplevel::bind(globals, qh);
         Ok(state)
@@ -119,7 +122,7 @@ impl State {
             qh,
             surface,
             Layer::Background,
-            Some("wallpaper"),
+            Some(self.namespace.clone()),
             Some(&output),
         );
         layer.set_anchor(Anchor::all());
@@ -129,7 +132,7 @@ impl State {
         let empty = Region::new(&self.compositor).ok();
         layer.wl_surface().set_input_region(empty.as_ref().map(Region::wl_region));
         layer.commit();
-        tracing::info!(output = name, "layer surface created");
+        tracing::info!(output = name, namespace = self.namespace, "layer surface created");
         let overlaps = crate::cosmic::watch(self.overlap.as_ref(), &layer, qh);
         let presentation = self.presentation.clone();
         let (wanted, light) = Default::default();

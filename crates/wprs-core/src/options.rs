@@ -16,6 +16,7 @@ impl Config {
             })
             .chain([("layout.bezel_mm".into(), toml::Value::Float(self.layout.bezel_mm))])
             .chain([("render.gpu".into(), toml::Value::String(self.render.gpu.as_str().into()))])
+            .chain([(crate::LayerNamespace::KEY.into(), self.surfaces.layer_namespace().into())])
             .collect()
     }
 

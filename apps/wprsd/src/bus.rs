@@ -186,6 +186,7 @@ impl Daemon {
             gpu_restart: self.gpus.restart(&st.config.render.gpu),
             qualities: st.config.own_qualities(),
             hdrs: st.config.own_hdrs(),
+            layer_shell: crate::layers::state(&st.config),
         };
         serde_json::to_string(&state).unwrap_or_default()
     }

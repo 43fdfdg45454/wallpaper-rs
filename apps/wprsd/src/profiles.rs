@@ -7,6 +7,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
+use wprs_core::LayerNamespace;
 use wprs_core::model::{MODEL, Profile, ProfileAuto, ProfileOutput, ProfileReply, ProfilesReply};
 use wprs_core::{Config, OutputConfig};
 
@@ -70,7 +71,8 @@ impl Daemon {
         let text = |value: Value| value.as_str().map_or_else(|| value.to_string(), String::from);
         let options = serde_json::to_value(config.options()).ok().and_then(|v| v.as_object().cloned());
         let options = options.into_iter().flatten().filter(|(k, _)| {
-            with_options && ![DOWNLOADS, wprs_sync::GPU, wprs_sync::QUALITY].contains(&k.as_str())
+            with_options
+                && ![DOWNLOADS, wprs_sync::GPU, wprs_sync::QUALITY, LayerNamespace::KEY].contains(&k.as_str())
         });
         let options: BTreeMap<String, String> = options.map(|(k, v)| (k, text(v))).collect();
         let (outputs, options) = (stored(&outputs), stored(&options));

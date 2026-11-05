@@ -15,7 +15,8 @@ pub(crate) async fn run(args: Args) -> anyhow::Result<()> {
         return Err(taken());
     }
     compositor::stops::restore();
-    let session = present::select(args.backend, &bus).await?;
+    let option = args.layer_namespace.as_deref();
+    let session = present::select(args.backend, &bus, || layers::choose(option, &config_path)).await?;
     let display = session.as_ref().map(|s| Box::new(s.display()) as wprs_render::Display);
     let daemon =
         Arc::new(tokio::task::spawn_blocking(move || daemon::Daemon::new(config_path, display)).await??);

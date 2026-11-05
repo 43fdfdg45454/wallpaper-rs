@@ -227,6 +227,20 @@ una pantalla que el compositor anuncia dos veces, quita y vuelve a poner, o deja
 tamaño no rehace su superficie ni reinicia su vídeo. Si el compositor corta la conexión por un error
 de protocolo, `wprsd` sale con estado 70 y el servicio de usuario lo arranca de nuevo.
 
+Cada superficie lleva un nombre (el *namespace* de `wlr-layer-shell`), que por defecto es
+`wallpaper`. Algunos compositores deciden por ese nombre si la superficie es el fondo del
+escritorio, y solo entonces la muestran detrás de su vista general; si la tuya se ve negra, elige
+otro nombre. Manda, en este orden, `wprsd --layer-namespace NOMBRE`, la variable
+`WPRS_LAYER_NAMESPACE`, la clave `surfaces.layer_namespace` de `config.toml` (`wprs-ctl config
+surfaces.layer_namespace NOMBRE`, o *Ajustes* → *Superficies del escritorio* en la app) y una
+elección automática para los escritorios conocidos: con `KineticWE` en `XDG_CURRENT_DESKTOP` usa
+`noctalia-wallpaper`. `auto` o un valor vacío dejan pasar al siguiente. El nombre tiene de 1 a 64
+letras ASCII, cifras, `-`, `_` o `.`; la opción y la clave rechazan otro, y una variable mal escrita
+se ignora con un aviso en el registro. Vale desde el siguiente arranque del daemon: `wprs-ctl state`
+muestra en `layer_shell` el nombre en uso, de dónde salió y si un cambio espera a ese arranque, y
+`wprs-ctl config surfaces.layer_namespace NOMBRE` y la app lo avisan. No se sincroniza ni entra en
+los perfiles, porque depende del escritorio de cada equipo.
+
 Los vídeos se pausan cuando una ventana tapa la pantalla: el compositor deja de pedir fotogramas
 al fondo, una ventana activa a pantalla completa o maximizada lo confirma y, en Hyprland, también
 su IPC; en COSMIC, sus avisos de solapamiento, cuando las ventanas, junto con los paneles, cubren

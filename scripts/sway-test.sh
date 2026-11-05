@@ -6,8 +6,9 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=$(mktemp -d /tmp/wprs-sway.XXXXXX)
 export XDG_RUNTIME_DIR=$WORK/run XDG_CONFIG_HOME=$WORK/config XDG_DATA_HOME=$WORK/data XDG_CACHE_HOME=$WORK/cache XDG_STATE_HOME=$WORK/state
 export WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_HEADLESS_OUTPUTS=2 WLR_LIBINPUT_NO_DEVICES=1
-unset WAYLAND_DISPLAY DISPLAY SWAYSOCK HYPRLAND_INSTANCE_SIGNATURE
-mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME"
+unset WAYLAND_DISPLAY DISPLAY SWAYSOCK HYPRLAND_INSTANCE_SIGNATURE XDG_CURRENT_DESKTOP WPRS_LAYER_NAMESPACE
+mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME/wallpaper-rs"
+printf '[surfaces]\nlayer_namespace = "wprs-check"\n' >"$XDG_CONFIG_HOME/wallpaper-rs/config.toml"
 chmod 700 "$XDG_RUNTIME_DIR"
 
 pids=()
@@ -64,7 +65,7 @@ output HEADLESS-2 mode --custom 640x360@60Hz scale 1.5 pos 640 0
 output HEADLESS-3 mode --custom 480x270@120Hz
 for_window [app_id="foot"] fullscreen enable
 EOF
-sway -c "$WORK/sway.conf" >"$WORK/sway.log" 2>&1 & sway=$!; pids+=("$sway")
+sway -d -c "$WORK/sway.conf" >"$WORK/sway.log" 2>&1 & sway=$!; pids+=("$sway")
 wait_for 10 compgen -G "$XDG_RUNTIME_DIR/sway-ipc.*.sock" || fail "sway did not start"
 SWAYSOCK=$(compgen -G "$XDG_RUNTIME_DIR/sway-ipc.*.sock")
 WAYLAND_DISPLAY=$(basename "$(compgen -G "$XDG_RUNTIME_DIR/wayland-[0-9]")")
@@ -155,6 +156,7 @@ expect "s['outputs']['HEADLESS-2']['covered']" False
 expect "s['outputs']['HEADLESS-2']['playing']" True
 echo "video output flap checks passed"
 
+source "$(dirname "$0")"/sway-namespace.sh
 source "$(dirname "$0")"/sway-spread.sh
 source "$(dirname "$0")"/sway-inputs.sh
 

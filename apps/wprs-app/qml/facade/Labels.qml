@@ -25,6 +25,7 @@ QtObject {
             "layout.bezel_mm": App.tr("Screen frame width for spanning (mm)"),
             "models.allow_download": App.tr("Allow downloading the depth model"),
             "render.gpu": App.tr("Graphics card"),
+            "surfaces.layer_namespace": App.tr("Surface name"),
             "playback.quality": App.tr("Scene quality"),
             "order": App.tr("Order"),
             "interval": App.tr("Change every"),

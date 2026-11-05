@@ -56,7 +56,7 @@ Kirigami.ScrollablePage {
 
             Settings {
                 daemon: App
-                model: (App.schema.options ?? []).filter(f => !["render.gpu", "playback.quality", "playback.hdr", "rgb.enabled", "rgb.server"].includes(f.key))
+                model: (App.schema.options ?? []).filter(f => !["render.gpu", "surfaces.layer_namespace", "playback.quality", "playback.hdr", "rgb.enabled", "rgb.server"].includes(f.key))
                 values: App.state.options ?? {}
                 onEdited: (key, value) => App.act("SetOption", [key, value])
             }
@@ -91,6 +91,15 @@ Kirigami.ScrollablePage {
             }
 
             SettingsRgb {}
+
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: App.tr("Desktop surfaces")
+            }
+
+            LayerNamespaceField {
+                Kirigami.FormData.label: App.tr("Surface name:")
+            }
 
             Kirigami.Separator {
                 Kirigami.FormData.isSection: true
@@ -143,30 +152,8 @@ Kirigami.ScrollablePage {
                 text: [App.tr("A scene follows the sound that plays or the pointer, or takes clicks, only after you allow it for that scene, and only while it is shown; clicks also have to be turned on for each screen in its scene settings. The sound is turned into levels on this computer and never recorded, kept or sent; pointer positions and clicks are never kept."), page.inputs.capturing ? App.tr("A scene is following the sound now.") : "", page.inputs.tracking ? App.tr("A scene is following the pointer now.") : "", Object.keys(page.grants).length ? "" : App.tr("No scene has been allowed yet.")].filter(t => t).join("\n")
             }
 
-            Repeater {
-                model: Object.keys(page.grants)
-
-                delegate: RowLayout {
-                    id: grant
-
-                    required property string modelData
-
-                    QQC2.Label {
-                        text: grant.modelData
-                    }
-
-                    Repeater {
-                        model: page.grants[grant.modelData]
-
-                        delegate: QQC2.Button {
-                            required property string modelData
-
-                            icon.name: "dialog-cancel"
-                            text: App.tr("Stop using %1", Labels.value(modelData))
-                            onClicked: App.act("Revoke", [grant.modelData, modelData], "Inputs1")
-                        }
-                    }
-                }
+            SettingsGrants {
+                given: page.grants
             }
 
             Kirigami.Separator {
