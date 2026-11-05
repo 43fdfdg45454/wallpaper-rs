@@ -51,6 +51,7 @@ impl PlayerSlot {
             planes,
             hlg: hdr.transfer == Transfer::Hlg,
             full: hdr.full,
+            headroom: self.lit,
         };
         let image = renderer.convert_deep(&mut self.deep, &wanted)?.clone();
         self.texture = Some(image);

@@ -64,7 +64,9 @@ impl State {
             }
             slot.steer(steer);
             slot.tick(reel, heard, &self.tx, now);
+            slot.lit = super::light::video(outputs, reel);
         }
+        super::light::bright_videos(&self.players, &mut self.outputs);
     }
 
     pub(super) fn take_video_frames(&mut self) {

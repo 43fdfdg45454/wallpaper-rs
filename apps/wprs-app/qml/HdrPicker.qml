@@ -23,7 +23,7 @@ ColumnLayout {
             "off": daemon.tr("turned off"),
             "display": daemon.tr("this screen or the desktop offers no HDR"),
             "battery": daemon.tr("on battery"),
-            "quality": daemon.tr("no scene with bright colors is shown at the highest quality")
+            "quality": daemon.tr("no HDR video and no scene with bright colors at the highest quality is shown")
         })
     readonly property var choices: {
         const found = Object.keys(words).map(value => ({

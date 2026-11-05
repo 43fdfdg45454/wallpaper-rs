@@ -37,6 +37,7 @@ pub(super) struct Output {
     pub(super) failed: u32,
     pub(super) ages: Ages,
     pub(super) hdr: super::light::Hdr,
+    pub(super) bright_video: bool,
 }
 
 impl Output {
@@ -63,6 +64,7 @@ impl Output {
             composed: None,
             ages: Ages::default(),
             hdr: Default::default(),
+            bright_video: false,
         }
     }
 

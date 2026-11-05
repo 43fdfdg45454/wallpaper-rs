@@ -1,6 +1,9 @@
+use super::Reel;
 use super::output::{Output, Sink};
 use super::power::Power;
+use super::slot::PlayerSlot;
 use super::surface::Screen;
+use std::collections::{BTreeMap, HashMap};
 use wprs_core::HdrChoice;
 use wprs_core::hdr::headroom;
 use wprs_render::{Encoding, RenderError, Renderer};
@@ -37,7 +40,8 @@ impl Hdr {
 impl Output {
     fn top(&self) -> bool {
         let bright = |s: &super::scene::SceneState| s.spec.pack.scene.canvas.bright();
-        self.shown.scene.as_ref().is_some_and(|s| s.quality().quality == "q3" && bright(s))
+        self.bright_video
+            || self.shown.scene.as_ref().is_some_and(|s| s.quality().quality == "q3" && bright(s))
     }
 }
 
@@ -82,6 +86,19 @@ pub(super) fn light(output: &mut Output, renderer: &Renderer, power: Power) -> R
     }
     output.hdr = found;
     Ok(())
+}
+
+pub(super) fn video(outputs: &BTreeMap<String, Output>, reel: &Reel) -> f32 {
+    let shows = |o: &&Output| o.layers().any(|s| s.content.videos().iter().any(|(r, _)| *r == reel));
+    let least = outputs.values().filter(shows).map(|o| o.hdr.headroom()).fold(f32::INFINITY, f32::min);
+    if least.is_finite() { least } else { 1.0 }
+}
+
+pub(super) fn bright_videos(players: &HashMap<Reel, PlayerSlot>, outputs: &mut BTreeMap<String, Output>) {
+    let bright: Vec<&Reel> = players.iter().filter(|(_, s)| s.bright()).map(|(r, _)| r).collect();
+    for o in outputs.values_mut() {
+        o.bright_video = o.shown.content.videos().iter().any(|(r, _)| bright.contains(r));
+    }
 }
 
 #[cfg(test)]

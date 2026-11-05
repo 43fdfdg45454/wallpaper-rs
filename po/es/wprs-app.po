@@ -1627,8 +1627,11 @@ msgid "on battery"
 msgstr "con batería"
 
 #: apps/wprs-app/qml/HdrPicker.qml
-msgid "no scene with bright colors is shown at the highest quality"
-msgstr "no se muestra una escena con colores brillantes en la calidad más alta"
+msgid ""
+"no HDR video and no scene with bright colors at the highest quality is shown"
+msgstr ""
+"no se muestra ningún vídeo HDR ni ninguna escena con colores brillantes en "
+"la calidad más alta"
 
 #: apps/wprs-app/qml/HdrPicker.qml apps/wprs-app/qml/QualityPicker.qml
 msgid "Like every screen: %1"

@@ -25,7 +25,7 @@ fn deep_ms(r: &Renderer, (w, h): (u32, u32)) -> (f64, f64) {
     let (luma, chroma) = (vec![0x80u8; (w * h * 2) as usize], vec![0x80u8; (w * h / 2) as usize]);
     let planes = [(luma.as_slice(), w * 2), (chroma.as_slice(), w), (chroma.as_slice(), w)];
     let (mut slot, rgba) = (None, vec![128u8; (w * h * 4) as usize]);
-    let deep = DeepPlanes { size: (w, h), planes, hlg: false, full: false };
+    let deep = DeepPlanes { size: (w, h), planes, hlg: false, full: false, headroom: 1.0 };
     r.convert_deep(&mut slot, &deep).unwrap();
     let mut plain = r.upload_rgba(&rgba, w, h, w * 4).unwrap();
     r.finish().unwrap();

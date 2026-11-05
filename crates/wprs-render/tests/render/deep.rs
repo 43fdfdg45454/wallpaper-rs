@@ -45,7 +45,10 @@ fn hdr_frames_are_mapped_to_standard_colors_on_the_gpu() {
             let (luma, cb, cr) = (bytes(&[codes[0]; 16]), bytes(&[codes[1]; 4]), bytes(&[codes[2]; 4]));
             let planes = [(luma.as_slice(), 8), (cb.as_slice(), 4), (cr.as_slice(), 4)];
             let image = r
-                .convert_deep(&mut slot, &DeepPlanes { size: (4, 4), planes, hlg: hlg_, full: false })
+                .convert_deep(
+                    &mut slot,
+                    &DeepPlanes { size: (4, 4), planes, hlg: hlg_, full: false, headroom: 1.0 },
+                )
                 .unwrap();
             let mut target = r.create_target(4, 4).unwrap();
             let layer = super::layer(Some(image), wprs_core::Fit::Stretch, [0; 3], 1.0);
@@ -63,7 +66,11 @@ fn hdr_frames_are_mapped_to_standard_colors_on_the_gpu() {
     let short = vec![0u8; 8];
     let planes = [(short.as_slice(), 8), (short.as_slice(), 4), (short.as_slice(), 4)];
     assert!(
-        r.convert_deep(&mut None, &DeepPlanes { size: (4, 4), planes, hlg: false, full: false }).is_err()
+        r.convert_deep(
+            &mut None,
+            &DeepPlanes { size: (4, 4), planes, hlg: false, full: false, headroom: 1.0 }
+        )
+        .is_err()
     );
 }
 
@@ -141,4 +148,26 @@ fn hdr_frames_keep_their_highlights_on_an_hdr_screen() {
         "standard videos stay as they are"
     );
     assert_eq!(lit(220, Coding::Pq, f32::NAN).0, wgpu::TextureFormat::Rgba8UnormSrgb);
+}
+
+#[test]
+fn hdr_frames_keep_their_highlights_above_white_on_hdr_screens() {
+    let Some(r) = renderer() else { return };
+    let (luma, cb, cr) = (bytes(&[880; 16]), bytes(&[512; 4]), bytes(&[512; 4]));
+    let planes = [(luma.as_slice(), 8), (cb.as_slice(), 4), (cr.as_slice(), 4)];
+    let deep = |headroom| DeepPlanes { size: (4, 4), planes, hlg: false, full: false, headroom };
+    let mut slot = None;
+    let lit = r.convert_deep(&mut slot, &deep(4.0)).unwrap().clone();
+    assert_eq!(lit.format(), wgpu::TextureFormat::Rgba16Float);
+    let top = r.read_light(&lit).unwrap()[5][..3].iter().copied().fold(0.0, f32::max);
+    assert!(top > 1.5 && top <= 4.001, "{top}");
+    let plain = r.convert_deep(&mut slot, &deep(1.0)).unwrap();
+    assert_eq!(
+        plain.format(),
+        wgpu::TextureFormat::Rgba8UnormSrgb,
+        "an SDR screen gets standard colors again"
+    );
+    assert!(
+        r.convert_deep(&mut None, &deep(f32::NAN)).unwrap().format() == wgpu::TextureFormat::Rgba8UnormSrgb
+    );
 }
