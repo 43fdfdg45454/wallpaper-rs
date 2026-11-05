@@ -1567,7 +1567,15 @@ se le pintan colores y recupera su propio modo (y sus colores, si ese modo fija 
 nada manda colores: al detenerse o cambiar el paquete, al quitar la pantalla, al apagar la
 iluminación, al cambiar de servidor, al terminar una prueba sin nada que pintar y al detenerse el
 servicio. La lista de dispositivos de la app y `wprs-ctl rgb devices` muestran ese modo propio y si
-volverá cuando paren las luces. Cada zona con matriz (las teclas) toma la celda de
+volverá cuando paren las luces. Cada dispositivo toma toda la imagen hasta que lo ubicas: en la
+misma sección, el tablero de luces muestra la imagen que reciben (la tira de 64 × 16 del fondo que
+las manda) y eliges un dispositivo o una de sus zonas, arrastras su marco sobre la imagen y tiras de
+su esquina para darle tamaño; también eliges hacia dónde corre una fila de luces (de izquierda a
+derecha, al revés, de arriba abajo o de abajo arriba), *Toda la imagen*, *Dejar el dispositivo en
+paz* (no se le toca el modo) o *Dejar la zona apagada*. En la terminal es `wprs-ctl rgb place
+"NOMBRE" "x y ancho alto [right|left|down|up]"` (fracciones de la imagen; `--zone N` para una zona,
+`off` o `none`), y `wprs-ctl rgb place` lista lo ubicado; se guarda en este equipo y no se
+sincroniza. Cada zona con matriz (las teclas) toma la celda de
 la tira que le cae encima y las demás, la columna de cada luz. En el editor, el inspector de una capa
 `adjustment` tiene *Enviar a la iluminación RGB* (activa también el permiso del paquete, `wprs-ctl
 scene rgb DIR CAPA --on true`), *Todo el lienzo* o *Una franja*, la región con asas en la vista

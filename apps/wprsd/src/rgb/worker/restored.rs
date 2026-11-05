@@ -89,3 +89,18 @@ fn turning_the_lights_off_gives_the_devices_back() {
     s.forget(None);
     assert_eq!(sent(&heard), [1101]);
 }
+
+#[test]
+fn a_device_left_alone_is_never_taken_and_placing_it_again_needs_no_new_connection() {
+    let (address, heard) = server();
+    let mut s = session("TEST-PLACED");
+    s.rgb = Rgb { enabled: true, server: address, ..Rgb::default() };
+    s.rgb.set_place("Example keyboard", "off").unwrap();
+    s.paint(&Strip::new(1, 1, vec![255, 0, 0]).unwrap(), None);
+    assert!(sent(&heard).is_empty(), "a device left alone was taken or painted");
+    s.last = Some(("TEST-PLACED".into(), Strip::new(1, 1, vec![255, 0, 0]).unwrap()));
+    let mut placed = s.rgb.clone();
+    placed.set_place("Example keyboard", "0 0 0.5 1 down").unwrap();
+    s.settle(placed);
+    assert!(s.client.is_some(), "placing a device dropped the connection");
+}

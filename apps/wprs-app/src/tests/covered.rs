@@ -22,3 +22,18 @@ fn the_rgb_choice_while_covered_applies_only_while_the_covered_wallpaper_pauses(
         "{hint}"
     );
 }
+
+#[test]
+fn the_lights_board_places_devices_and_zones_by_their_own_keys() {
+    let files = qml_files();
+    let text = |name: &str| files.iter().find(|(n, _)| n == name).map(|(_, t)| t.clone()).unwrap();
+    let (board, picture) = (text("RgbBoard.qml"), text("RgbPicture.qml"));
+    assert!(board.contains(r#""rgb.place." + target.key"#), "the board wrote another setting");
+    assert!(board.contains(r##"d.name + "#" + i"##), "zones were not placed by their index");
+    assert!(board.contains(r#"board.save("off")"#) && board.contains(r#"board.save("none")"#));
+    for flow in ["right", "left", "down", "up"] {
+        assert!(board.contains(&format!(r#""value": "{flow}""#)), "{flow} cannot be chosen");
+    }
+    assert!(picture.contains("drag.target: handle") && picture.contains("onPositionChanged"));
+    assert!(text("SettingsRgb.qml").contains("RgbBoard {"));
+}

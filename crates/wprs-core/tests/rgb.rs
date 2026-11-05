@@ -60,3 +60,51 @@ fn the_lights_pause_while_covered_until_told_to_follow() {
         Covered::WORDS
     );
 }
+
+#[test]
+fn devices_and_zones_are_placed_on_the_picture_and_bad_places_refused() {
+    use wprs_core::rgb::{Flow, MAX_PLACES, Place};
+    let mut c = Config::default();
+    c.set_option("rgb.place.Example keyboard", " 0 0.5 0.5 0.5 left ").unwrap();
+    c.set_option("rgb.place.Example keyboard#1", "off").unwrap();
+    c.set_option("rgb.place.Example mouse", "0.75 0 0.25 1").unwrap();
+    assert_eq!(
+        c.rgb.place("Example keyboard"),
+        Some(Place::At { rect: [0.0, 0.5, 0.5, 0.5], flow: Flow::Left })
+    );
+    assert_eq!(c.rgb.zone_place("Example keyboard", 1), Some(Place::Off));
+    assert_eq!(c.rgb.zone_place("Example keyboard", 0), None);
+    assert_eq!(c.rgb.places["Example mouse"], "0.75 0 0.25 1 right");
+    assert!(!c.options().contains_key("rgb.places"), "the places were listed as a setting");
+    let text = toml::to_string(&c).unwrap();
+    assert!(text.contains("[rgb.places]"));
+    assert_eq!(toml::from_str::<Config>(&text).unwrap().rgb, c.rgb);
+    for bad in [
+        "",
+        "on",
+        "0 0 1",
+        "0 0 0 1",
+        "0.5 0 0.6 1",
+        "-0.1 0 0.5 1",
+        "0 0 1 1 sideways",
+        "0 0 1 1 right x",
+        "NaN 0 1 1",
+    ] {
+        assert!(c.set_option("rgb.place.Example mouse", bad).is_err() || bad.is_empty(), "{bad:?}");
+    }
+    assert_eq!(c.rgb.places.get("Example mouse"), None, "an empty value did not clear the place");
+    for bad_key in ["rgb.place.", "rgb.place.bad\u{7}name", &format!("rgb.place.{}", "d".repeat(129))] {
+        assert!(c.set_option(bad_key, "off").is_err(), "{bad_key:?}");
+    }
+    c.set_option("rgb.place.Example keyboard", "none").unwrap();
+    assert_eq!(c.rgb.place("Example keyboard"), None);
+    for i in 0..MAX_PLACES {
+        let _ = c.set_option(&format!("rgb.place.D{i}"), "off");
+    }
+    assert!(c.set_option("rgb.place.One more", "off").is_err(), "more places than allowed were kept");
+    let mut read: Config =
+        toml::from_str("[rgb.places]\nA = \"off\"\nB = \"2 0 1 1\"\n\"\" = \"off\"\nC = \"0 0 1 1 up\"")
+            .unwrap();
+    read.normalize();
+    assert_eq!(read.rgb.places.keys().collect::<Vec<_>>(), ["A", "C"]);
+}

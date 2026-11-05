@@ -30,7 +30,8 @@ fn server(during: impl FnOnce() + Send + 'static) -> (String, Heard<()>) {
 
 fn follower(source: &str, address: String) -> Session {
     let mut s = session(source);
-    (s.last, s.rgb) = (None, Rgb { enabled: true, server: address, when_covered: Covered::Follow });
+    (s.last, s.rgb) =
+        (None, Rgb { enabled: true, server: address, when_covered: Covered::Follow, ..Rgb::default() });
     s
 }
 
@@ -87,7 +88,8 @@ fn covered_lights_that_follow_a_server_without_devices_retry_it_instead_of_drawi
     assert!(!empty.receiving(), "a server without devices counted as receiving");
     assert!(Status { connected: true, devices: vec![device], ..Status::default() }.receiving());
     let mut s = session("TEST-RETRY");
-    s.rgb = Rgb { enabled: true, server: "127.0.0.1:1".into(), when_covered: Covered::Follow };
+    s.rgb =
+        Rgb { enabled: true, server: "127.0.0.1:1".into(), when_covered: Covered::Follow, ..Rgb::default() };
     super::super::cover("TEST-RETRY", true);
     s.retry();
     assert_eq!(s.wait(), IDLE, "a covered screen that sends no lights kept retrying the server");

@@ -135,6 +135,13 @@ ColumnLayout {
         }
     }
 
+    RgbBoard {
+        visible: (lights.status.devices ?? []).length > 0
+        status: lights.status
+        onSaved: lights.load()
+        onFailed: error => lights.failed(error)
+    }
+
     QQC2.Button {
         visible: (lights.status.devices ?? []).length > 1
         text: App.tr("Test every device")

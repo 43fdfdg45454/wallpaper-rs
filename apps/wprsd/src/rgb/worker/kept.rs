@@ -1,6 +1,7 @@
 use super::Session;
 use crate::compositor::lock;
 use std::time::Instant;
+use wprs_core::rgb::Rgb;
 use wprs_rgb::{Device, Error};
 
 impl Session {
@@ -19,6 +20,25 @@ impl Session {
             self.direct.push(device.index);
         }
         Ok(())
+    }
+
+    pub(super) fn settle(&mut self, rgb: Rgb) {
+        if rgb == self.rgb {
+            return;
+        }
+        let placed = Rgb { places: self.rgb.places.clone(), ..rgb.clone() };
+        if placed == self.rgb {
+            self.restore();
+            self.rgb = rgb;
+            return self.repaint();
+        }
+        if !rgb.enabled {
+            self.forget(None);
+        }
+        self.restore();
+        (self.client, self.failed, self.rgb, self.opened) = (None, None, rgb, false);
+        self.publish(None, Vec::new());
+        self.retry();
     }
 
     pub(super) fn idle(&mut self) {

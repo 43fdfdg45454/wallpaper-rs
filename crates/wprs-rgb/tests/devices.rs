@@ -2,7 +2,7 @@ mod server;
 
 use server::{Shape, blob, serve};
 use std::time::Duration;
-use wprs_rgb::{Client, Error, STRIP, Strip, colors, controller, pattern, shrink};
+use wprs_rgb::{Area, Client, Error, Flow, STRIP, Strip, colors, controller, pattern, shrink};
 
 const WAIT: Duration = Duration::from_secs(2);
 
@@ -50,7 +50,7 @@ fn a_strip_spreads_over_matrices_and_lines() {
     }
     let strip = Strip::new(4, 2, pixels).unwrap();
     let device = controller(0, &blob(&shapes()[0], 4), 4).unwrap();
-    let painted = colors(&device, &strip);
+    let painted = colors(&device, &strip, Area::default(), &|_| None);
     assert_eq!(painted.len(), 8);
     assert_eq!(painted[0][1], 0);
     assert_eq!(painted[3][1], 200);
@@ -119,4 +119,32 @@ fn a_device_without_modes_or_colors_is_still_read() {
     r.truncate(r.len() - 6);
     let cut = controller(0, &r, 0).unwrap();
     assert!(cut.colors.is_empty(), "colors were read from a cut answer");
+}
+
+#[test]
+fn each_device_and_zone_takes_its_own_part_of_the_picture() {
+    let mut pixels = Vec::new();
+    for y in 0..2u8 {
+        for x in 0..4u8 {
+            pixels.extend([x * 60, y * 200, 7]);
+        }
+    }
+    let strip = Strip::new(4, 2, pixels).unwrap();
+    let device = controller(0, &blob(&shapes()[0], 4), 4).unwrap();
+    let right = Area { rect: [0.5, 0.5, 0.5, 0.5], flow: Flow::Right };
+    let painted = colors(&device, &strip, right, &|_| None);
+    assert!(painted.iter().all(|c| c[1] == 200), "the lower half was not used: {painted:?}");
+    assert!(painted.iter().all(|c| c[0] >= 120), "the right half was not used: {painted:?}");
+    let back = colors(&device, &strip, Area { flow: Flow::Left, ..Area::default() }, &|_| None);
+    assert_eq!((back[6], back[7]), ([150, 100, 7], [30, 100, 7]), "the line did not run from the right");
+    let down = colors(&device, &strip, Area { flow: Flow::Down, ..Area::default() }, &|_| None);
+    assert_eq!((down[6], down[7]), ([90, 0, 7], [90, 200, 7]), "the line did not run downwards");
+    let up = colors(&device, &strip, Area { flow: Flow::Up, ..Area::default() }, &|_| None);
+    assert_eq!(up[0][1], 200, "a matrix was not turned upside down");
+    let zoned = colors(&device, &strip, Area::default(), &|zone| match zone {
+        0 => Some(None),
+        _ => Some(Some(Area { rect: [0.0, 0.0, 0.25, 0.5], flow: Flow::Right })),
+    });
+    assert!(zoned[..6].iter().all(|c| *c == [0, 0, 0]), "a zone left dark got colors");
+    assert_eq!((zoned[6], zoned[7]), ([0, 0, 7], [0, 0, 7]), "a placed zone did not take its own corner");
 }

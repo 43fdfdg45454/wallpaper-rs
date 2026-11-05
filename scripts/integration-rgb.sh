@@ -42,6 +42,18 @@ wait_for 20 stripped || fail "no strip after the grant: $(ctl rgb status)"
 green() { tail -n 2 "$rgbs/painted" | grep -q '"device": 0, "colors": \[\[0, 255, 0\], \[0, 255, 0\], \[0, 255, 0\], \[0, 255, 0\]\]'; }
 wait_for 10 green || fail "the keyboard did not turn green: $(tail -n 3 "$rgbs/painted")"
 [ "$(ctl rgb status --json | js "r['source'], r['frames'] > 0")" = "('TEST-RGB', True)" ] || fail "status: $(ctl rgb status)"
+ctl rgb place "Example keyboard" off
+[ "$(ctl rgb place --json | js "r")" = "{'Example keyboard': 'off'}" ] || fail "places: $(ctl rgb place)"
+wait_for 10 grep -q '"mode": 0, "index": 1' "$rgbs/painted" || fail "the keyboard left alone kept direct colors"
+if ctl rgb place "Example keyboard" "0.5 0 0.6 1" 2>/dev/null; then fail "a place outside the picture was accepted"; fi
+before=$(wc -l <"$rgbs/painted")
+ctl rgb place "Example keyboard" "0 0 0.5 1 down" --zone 0
+ctl rgb place "Example keyboard" none
+again() { tail -n "+$((before + 1))" "$rgbs/painted" | grep -q '"device": 0'; }
+wait_for 10 again || fail "the keyboard placed again got no colors"
+[ "$(ctl rgb place "Example keyboard" --zone 0)" = "Example keyboard#0: 0 0 0.5 1 down" ] ||
+  fail "zone place: $(ctl rgb place "Example keyboard" --zone 0)"
+ctl rgb place "Example keyboard" none --zone 0
 ctl input revoke org.example.lit rgb
 sleep 0.5
 before=$(wc -l <"$rgbs/painted")
@@ -53,9 +65,14 @@ if tail -n "+$((before + 1))" "$rgbs/painted" | grep -q '"device": 0'; then
   fail "the colors of a revoked package came back after a test"
 fi
 source "$(dirname "$0")"/integration-rgb-covered.sh
+ctl rgb test 0
+held() { [ "$(ctl rgb status --json | js "r['devices'][0]['taken'], r['devices'][0]['own_mode']")" = "(True, 'Rainbow')" ]; }
+wait_for 10 held || fail "the tested keyboard was not taken: $(ctl rgb status --json)"
+modes=$(grep -c '"mode": 0' "$rgbs/painted")
 ctl config rgb.enabled false
 [ "$(ctl rgb status --json | js "r['enabled'], r['connected']")" = "(False, False)" ] || fail "RGB lighting stayed on"
-wait_for 10 grep -q '"mode": 0, "index": 1' "$rgbs/painted" || fail "the keyboard did not get its own mode back"
+returned() { [ "$(grep -c '"mode": 0' "$rgbs/painted")" -gt "$modes" ]; }
+wait_for 10 returned || fail "the keyboard did not get its own mode back"
 ctl release TEST-RGB && expect "list(s['outputs'])" "[]"
 bus Library1 Remove asb 1 "$rgbuid" false >/dev/null
 echo "rgb checks passed"

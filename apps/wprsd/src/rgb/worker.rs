@@ -1,8 +1,10 @@
 use super::{Ask, Status};
 use crate::compositor::lock;
+use placed::{area, zone};
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use wprs_core::rgb::Place;
 use wprs_core::rgb::Rgb;
 use wprs_rgb::{Client, Device, Strip, colors, pattern};
 
@@ -37,17 +39,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
     loop {
         lock(&s.status).held = s.held();
         match asks.recv_timeout(s.wait()) {
-            Ok(Ask::Settings(rgb)) => {
-                if rgb != s.rgb {
-                    if !rgb.enabled {
-                        s.forget(None);
-                    }
-                    s.restore();
-                    (s.client, s.failed, s.rgb, s.opened) = (None, None, rgb, false);
-                    s.publish(None, Vec::new());
-                    s.retry();
-                }
-            }
+            Ok(Ask::Settings(rgb)) => s.settle(rgb),
             Ok(Ask::Forget(source)) => s.forget(Some(&source)),
             Ok(Ask::Covered) => s.retry(),
             Ok(Ask::Frame(source, strip)) => {
@@ -139,11 +131,17 @@ impl Session {
             return;
         }
         let devices = lock(&self.status).devices.clone();
-        let wanted: Vec<&Device> = devices.iter().filter(|d| only.is_none_or(|i| i == d.index)).collect();
+        let off = |d: &Device| only.is_none() && self.rgb.place(&d.name) == Some(Place::Off);
+        let wanted: Vec<&Device> =
+            devices.iter().filter(|d| only.is_none_or(|i| i == d.index) && !off(d)).collect();
         let taken = self.take(&wanted);
         let Some(client) = self.client.as_mut() else { return };
-        let painted =
-            taken.and_then(|()| wanted.iter().try_for_each(|d| client.paint(d.index, &colors(d, strip))));
+        let rgb = &self.rgb;
+        let painted = taken.and_then(|()| {
+            wanted.iter().try_for_each(|d| {
+                client.paint(d.index, &colors(d, strip, area(rgb, d), &|z| zone(rgb, d, z)))
+            })
+        });
         match painted {
             Ok(()) => lock(&self.status).frames += 1,
             Err(e) => {
@@ -182,6 +180,7 @@ impl Session {
 }
 
 mod kept;
+mod placed;
 #[cfg(test)]
 mod restored;
 #[cfg(test)]

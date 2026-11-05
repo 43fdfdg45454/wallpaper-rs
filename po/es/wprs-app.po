@@ -1387,7 +1387,7 @@ msgstr "Quitar"
 msgid "Strength"
 msgstr "Fuerza"
 
-#: apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/RgbBoard.qml
 msgid "Whole picture"
 msgstr "Toda la imagen"
 
@@ -2900,6 +2900,74 @@ msgstr "Quitar el repositorio"
 #: apps/wprs-app/qml/ReposPage.qml
 msgid "Also uninstall its packages"
 msgstr "Desinstalar también sus paquetes"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "%1, zone %2"
+msgstr "%1, zona %2"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Lights run left to right"
+msgstr "Las luces van de izquierda a derecha"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Lights run right to left"
+msgstr "Las luces van de derecha a izquierda"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Lights run top to bottom"
+msgstr "Las luces van de arriba abajo"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Lights run bottom to top"
+msgstr "Las luces van de abajo arriba"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid ""
+"Every device takes the whole picture until you place it. Choose a device or "
+"one of its zones, drag its frame over the picture and pull its corner to "
+"size it."
+msgstr "Cada dispositivo toma toda la imagen hasta que lo ubicas. Elige un dispositivo o una de sus zonas, arrastra su marco sobre la imagen y tira de su esquina para darle tamaño."
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Device or zone to place"
+msgstr "Dispositivo o zona que ubicar"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Direction of the lights"
+msgstr "Dirección de las luces"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Keep the zone dark"
+msgstr "Dejar la zona apagada"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Leave the device alone"
+msgstr "Dejar el dispositivo en paz"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid ""
+"This zone stays dark while the rest of the device follows the wallpaper."
+msgstr "Esta zona queda apagada mientras el resto del dispositivo sigue al fondo."
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "This device keeps its own mode and gets no colors."
+msgstr "Este dispositivo conserva su propio modo y no recibe colores."
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Takes the whole picture."
+msgstr "Toma toda la imagen."
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Takes the framed part of the picture."
+msgstr "Toma la parte enmarcada de la imagen."
+
+#: apps/wprs-app/qml/RgbPicture.qml
+msgid "The picture the lights take their colors from"
+msgstr "La imagen de la que las luces toman sus colores"
+
+#: apps/wprs-app/qml/RgbPicture.qml
+msgid "Size of the frame"
+msgstr "Tamaño del marco"
 
 #: apps/wprs-app/qml/SavedPresets.qml apps/wprs-app/qml/SceneBoneRow.qml
 #: apps/wprs-app/qml/SceneShapes.qml

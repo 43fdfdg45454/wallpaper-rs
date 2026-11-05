@@ -3,7 +3,7 @@ mod paint;
 mod read;
 
 pub use client::{Client, Error};
-pub use paint::{Strip, colors, pattern, shrink};
+pub use paint::{Area, Flow, Strip, colors, pattern, shrink};
 pub use read::{Device, Mode, Zone, controller};
 
 pub const PORT: u16 = 6742;

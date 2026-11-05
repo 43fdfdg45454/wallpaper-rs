@@ -14,7 +14,10 @@ impl Config {
             .iter()
             .filter_map(|section| Some((section, doc.get(section)?.as_table()?)))
             .flat_map(|(section, table)| {
-                table.iter().map(move |(k, v)| (format!("{section}.{k}"), v.clone()))
+                table
+                    .iter()
+                    .filter(|(k, v)| !v.is_table() || k.as_str() != "places")
+                    .map(move |(k, v)| (format!("{section}.{k}"), v.clone()))
             })
             .chain([("layout.bezel_mm".into(), toml::Value::Float(self.layout.bezel_mm))])
             .chain([("render.gpu".into(), toml::Value::String(self.render.gpu.as_str().into()))])
@@ -25,6 +28,9 @@ impl Config {
     pub fn set_option(&mut self, key: &str, value: &str) -> Result<(), String> {
         if let Some(id) = key.strip_prefix("layout.monitors.") {
             return self.layout.place(id, value);
+        }
+        if let Some(device) = key.strip_prefix(crate::rgb::PLACE) {
+            return self.rgb.set_place(device, value);
         }
         if let Some(output) = key.strip_prefix(Layout::FOLLOW) {
             return self.layout.follow(output, value);

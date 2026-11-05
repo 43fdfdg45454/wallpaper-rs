@@ -7,6 +7,8 @@ use wprs_core::rgb::Covered;
 
 const COVERED: &str = "follow keeps the lights following the scene without drawing it while the server has devices connected, pause sends nothing and leaves the lights as they are until the wallpaper shows again; both apply while the covered wallpaper pauses (pause.when_covered)";
 
+const PLACES: &str = "x y w h as parts of the picture from 0 to 1, then right, left, down or up for the way a line of lights runs; off leaves the device alone (a zone stays dark); none takes the whole picture again";
+
 fn covered(s: &Value) -> String {
     let choice = s["when_covered"].as_str().unwrap_or("pause");
     let now = if s["held"] == true { ", paused now" } else { "" };
@@ -38,6 +40,19 @@ pub enum Rgb {
     Covered {
         #[arg(value_parser = Covered::WORDS, help = COVERED)]
         choice: Option<String>,
+        #[arg(long, help = JSON)]
+        json: bool,
+    },
+    #[command(
+        about = "Show or choose the part of the picture each device or zone takes; list every place without a device"
+    )]
+    Place {
+        #[arg(help = "The device name as wprs-ctl rgb devices shows it")]
+        device: Option<String>,
+        #[arg(help = PLACES)]
+        place: Option<String>,
+        #[arg(long, help = "Place one zone of the device, counted from 0 in wprs-ctl rgb devices --json")]
+        zone: Option<u16>,
         #[arg(long, help = JSON)]
         json: bool,
     },
@@ -101,6 +116,25 @@ pub async fn run(client: &Client, command: Rgb) -> Result<()> {
             let s: Value = serde_json::from_str(&rgb.get_status().await?)?;
             let shown = json!({ "when_covered": s["when_covered"], "held": s["held"] });
             println!("{}", if json { shown.to_string() } else { covered(&s) });
+        }
+        Rgb::Place { device, place, zone, json } => {
+            let key = device.map(|d| zone.map_or(d.clone(), |z| format!("{d}#{z}")));
+            if let (Some(key), Some(place)) = (&key, &place) {
+                client.daemon.set_option(&format!("{}{key}", wprs_core::rgb::PLACE), place).await?;
+            }
+            let s: Value = serde_json::from_str(&rgb.get_status().await?)?;
+            let places = s["places"].as_object().cloned().unwrap_or_default();
+            let shown: Vec<(String, Value)> = match &key {
+                Some(key) => vec![(key.clone(), places.get(key).cloned().unwrap_or(Value::Null))],
+                None => places.into_iter().collect(),
+            };
+            match json {
+                true => println!("{}", Value::Object(shown.into_iter().collect())),
+                false if shown.is_empty() => println!("every device takes the whole picture"),
+                false => {
+                    shown.iter().for_each(|(k, v)| println!("{k}: {}", v.as_str().unwrap_or("whole picture")))
+                }
+            }
         }
         Rgb::Strip { output, json } => {
             let (w, h, colors) = rgb.get_strip(&output).await?;
