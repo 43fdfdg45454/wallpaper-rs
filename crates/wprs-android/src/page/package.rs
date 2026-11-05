@@ -17,7 +17,7 @@ pub(crate) struct Web {
     pub(crate) preload: Option<String>,
     pub(crate) background: String,
     pub(crate) network: Vec<String>,
-    pub(crate) storage: bool,
+    pub(crate) storage_kib: u32,
     pub(crate) uses: [bool; 3],
     pub(crate) media: bool,
     pub(crate) own_volume: bool,
@@ -53,8 +53,8 @@ fn web(package: &mut Package<BufReader<File>>, path: &Path) -> Result<Web, Error
         None => None,
     };
     let background = block.background.unwrap_or_else(|| "#000000".into());
-    let (wpak, storage) = (path.to_owned(), block.storage_kib > 0);
-    Ok(Web { wpak, entry, entries, preload, background, network, storage, uses, media, own_volume, fps })
+    let (wpak, storage_kib) = (path.to_owned(), block.storage_kib);
+    Ok(Web { wpak, entry, entries, preload, background, network, storage_kib, uses, media, own_volume, fps })
 }
 
 pub(crate) fn is_web(package: &Package<BufReader<File>>) -> bool {

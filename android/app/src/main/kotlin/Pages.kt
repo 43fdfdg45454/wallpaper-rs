@@ -24,7 +24,8 @@ class Pages(private val context: Context) {
 
         fun open() {
             if (page != null || crashes > MAX_CRASHES || !surface.isValid) return
-            page = Page(context, painter.handle, spec, surface, size, ::crashed) { Render.post(painter::wake) }.also { it.visible(visible) }
+            val wake = { Render.post(painter::wake) }
+            page = Page(context, painter.handle, spec, surface, size, ::crashed, wake) { Render.post(painter::refresh) }.also { it.visible(visible) }
         }
 
         fun crashed() = main.post {

@@ -98,7 +98,7 @@ pub use source::{Folder, fill, inspect, locale_names, with_strings};
 pub use upgrade::{Renames, rename_json, upgrade, upgrade_json};
 pub use validate::{FileEntry, Limits, MANIFEST, SIGNATURE, check_path, validate};
 pub use video::{Playback, VIDEO_PROPERTIES};
-pub use web::{PresetFile, Web, web_notice, web_restrict};
+pub use web::{PresetFile, Web, kept_allowance, web_notice, web_restrict};
 pub use wprs_core::markup;
 pub use wprs_scene::{Choice, Condition, Control, Preset, Property, Scene, Slider, Text};
 

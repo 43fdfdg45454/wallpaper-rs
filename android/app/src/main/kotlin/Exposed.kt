@@ -49,6 +49,7 @@ fun WebPrivacy(main: Main, uid: String, web: JSONObject?) {
     val cleared = stringResource(R.string.web_cleared)
     Text(stringResource(R.string.web_privacy), Modifier.padding(16.dp, 8.dp), style = MaterialTheme.typography.titleSmall)
     Exposes(strings(web.optJSONArray("exposes")))
+    if (web.optBoolean("full")) Note(stringResource(R.string.web_full), MaterialTheme.colorScheme.error)
     SHOWN.filter { (what, _) -> what != "storage" || web.optBoolean("storage") }.forEach { (what, label) ->
         Toggle(stringResource(label), !hidden.optBoolean(what)) { on ->
             main.act { ask(if (on) "unconfirm" else "confirm", "uid" to uid, "what" to "hide_$what") }

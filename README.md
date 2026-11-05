@@ -1448,7 +1448,10 @@ bandeja y `wprs-ctl` avisan de qué usa, y puedes ocultar cada cosa por fondo: e
 paquete en la app (*Privacidad*) o con
 `wprs-ctl lib confirm hide_zone|hide_language|hide_gpu|hide_storage ELEMENTO` (`lib unconfirm` lo
 deshace). *Borrar datos* en la app o `wprs-ctl lib clear-data ELEMENTO` borra lo que guardó, y se
-borra solo al quitar el paquete. Los permisos de sonido, puntero y clics son los mismos que los de
+borra solo al quitar el paquete. Si lo que guarda pasa del doble de lo que declara más 1 MiB, la
+página arranca sin guardar nada y su error lo dice hasta que se borren sus datos; en el escritorio
+eso se comprueba solo al arrancar la página, porque WPE WebKit no deja fijar un límite por origen.
+Los permisos de sonido, puntero y clics son los mismos que los de
 las escenas: los clics solo llegan desde clics reales en las pantallas donde los activas. Una página
 oculta deja de dibujar al momento y, tras 5 minutos oculta, se detiene su proceso y queda su último
 fotograma. El ejemplo *Luces* (`scenes/lights`) es una página web.
@@ -1461,7 +1464,11 @@ ventanas, diálogos, descargas ni permisos, y se le quitan las conexiones entre 
 de que corran sus scripts. Su página en la app avisa, encima de *Usar como fondo*, de lo que
 usa (zona horaria, idioma, modelo del chip gráfico y datos que guarda en el teléfono), y su sección
 *Privacidad* tiene un interruptor para cada cosa, otro para la red si la declara y *Borrar datos*;
-el mismo aviso sale al importarla. Ocultar la zona horaria y el idioma lo hace un script que corre
+el mismo aviso sale al importarla. El límite de lo que guarda es el del escritorio: el teléfono lo
+mide cada vez que la página arranca (lo que cuenta el WebView para su origen más su
+`localStorage`) y, mientras corre, rechaza con `QuotaExceededError` lo que `localStorage.setItem`
+quiera guardar de más; si al arrancar ya pasa del límite, la página corre sin guardar nada y su
+sección *Privacidad* lo avisa hasta *Borrar datos*. Ocultar la zona horaria y el idioma lo hace un script que corre
 antes que los de la página (en ella y sus marcos, no en sus workers). *Reaccionar al tacto* le da
 el puntero y *Reaccionar a los toques* los clics, solo desde toques reales y solo en la pantalla de
 inicio; su sonido sigue el ajuste de sonido de los vídeos. Se pausa al dejar de verse, con el ahorro

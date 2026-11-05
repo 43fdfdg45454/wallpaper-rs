@@ -62,8 +62,15 @@ always opaque.
   `MemorySwapMax=0` and `TasksMax=512`, so a page takes at most one processor and 1.5 GB in all;
   where the scope cannot be made the helper starts without it.
 - A page whose kept data (`data` below) grows past twice its `web.storage_kib` plus 1 MiB starts
-  without keeping anything, and its error says so until its data is cleared. WPE WebKit has no
-  quota per origin in its current interface, so the limit is checked when the page starts.
+  without keeping anything, and its error says so until its data is cleared. On the desktop the
+  limit is checked only when the page starts, because WPE WebKit has no quota per origin in its
+  current interface: a running page can keep more until its next start. On the phone the WebView
+  has no quota per origin either, so each start of a page measures what its origin keeps (the
+  WebView's own count for IndexedDB, Cache Storage and the like, plus `localStorage`, which a script
+  that runs before the page counts) against the same limit, and while it runs `localStorage.setItem`
+  past the limit throws `QuotaExceededError`; the other stores are measured at the next start. A
+  page over the limit runs on a passing origin that keeps nothing, and its page in the app says so
+  until *Clear data*, which also starts a new origin.
 - Changing a property sends only the changed values to the running page; changing what the page may
   see (below), clearing its data or granting the network starts it again.
 

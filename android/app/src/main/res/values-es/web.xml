@@ -16,4 +16,5 @@
     <string name="web_reach">Dejar que llegue a los sitios que nombra</string>
     <string name="web_clear">Borrar datos</string>
     <string name="web_cleared">Sus datos están borrados</string>
+    <string name="web_full">La página web guarda muchos más datos de los que declaró, así que funciona sin guardar nada hasta que se borren sus datos.</string>
 </resources>

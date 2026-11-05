@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, HashSet};
 use wprs_scene::{Control, Values};
 
 pub const MAX_STORAGE_KIB: u32 = 5120;
+const KEPT_SLACK: u64 = 1 << 20;
 pub const MAX_PRESET_VALUES: usize = 256;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -21,6 +22,10 @@ pub struct Web {
     #[serde(default, skip_serializing_if = "is_zero")]
     #[schemars(extend("x-unit" = "KiB", "x-range" = [0, 5120]))]
     pub storage_kib: u32,
+}
+
+pub fn kept_allowance(storage_kib: u32) -> u64 {
+    u64::from(storage_kib) * 2048 + KEPT_SLACK
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]

@@ -28,7 +28,8 @@ pub(super) fn source(view: &mut View) -> String {
     });
     view.sent = Some((values, settings, folders));
     let preload = view.pack.web.as_ref().and_then(|w| w.preload.clone());
-    let parts = [Some(api(&init, POST)), Some(guard(view)), Some(PHONE.into()), preload];
+    let kept = super::kept::script(view, POST);
+    let parts = [Some(api(&init, POST)), Some(guard(view)), Some(PHONE.into()), kept, preload];
     parts.into_iter().flatten().collect::<Vec<_>>().join("\n")
 }
 
@@ -104,6 +105,9 @@ pub(crate) fn heard(handle: i64, text: &str) -> Option<String> {
     let mut views = views();
     let view = views.get_mut(&handle)?;
     let (id, empty) = (message.get("id").cloned().unwrap_or(Value::Null), Folders::new());
+    if super::kept::measured(view, &message) {
+        return None;
+    }
     let folders = view.sent.as_ref().map_or(&empty, |s| &s.2);
     if let Some(prop) = message.get("files").and_then(Value::as_str) {
         return reply(&id, folders::listed(folders, prop, true).map_or(Value::Null, |t| json!(t)));

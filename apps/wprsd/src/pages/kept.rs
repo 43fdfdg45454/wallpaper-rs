@@ -1,10 +1,9 @@
 use std::path::Path;
 
-const SLACK: u64 = 1 << 20;
 const MAX_ENTRIES: usize = 100_000;
 
 pub fn within(dir: &Path, kib: u32) -> bool {
-    let allowed = u64::from(kib) * 2048 + SLACK;
+    let allowed = wprs_format::kept_allowance(kib);
     let (mut used, mut seen, mut todo) = (0u64, 0usize, vec![dir.join("data")]);
     while let Some(dir) = todo.pop() {
         for entry in std::fs::read_dir(&dir).into_iter().flatten().flatten() {

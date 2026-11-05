@@ -12,6 +12,7 @@ use wprs_core::model::Input;
 mod exports;
 mod folders;
 mod heard;
+pub(crate) mod kept;
 mod package;
 pub(crate) mod script;
 pub(crate) mod serve;
@@ -44,6 +45,7 @@ pub(crate) struct View {
     said: u32,
     files: BTreeMap<String, PathBuf>,
     heard: Option<(bool, u64, u64)>,
+    kept: [u64; 2],
 }
 
 static VIEWS: Mutex<BTreeMap<i64, View>> = Mutex::new(BTreeMap::new());
@@ -60,7 +62,9 @@ pub(crate) fn privacy(pack: &Pack) -> Privacy {
     let [zone, language, gpu, storage] = decided(&pack.id).map(|hidden| !hidden);
     let web = pack.web.as_ref();
     let network = web.is_some_and(|w| !w.network.is_empty()) && props::allows(&pack.id, Input::Network);
-    let storage = storage && web.is_some_and(|w| w.storage);
+    let storage = storage
+        && web.is_some_and(|w| w.storage_kib > 0)
+        && !kept::full(&host(&pack.id, folders::count(&pack.id)));
     Privacy { zone, language, gpu, storage, network }
 }
 
@@ -112,6 +116,7 @@ pub(crate) fn spec(handle: i64, uid: &str, path: &Path, preview: bool) -> Result
         said: 0,
         files: BTreeMap::new(),
         heard: None,
+        kept: [0; 2],
     };
     let mut views = views();
     let view = views.entry(handle).or_insert_with(fresh);
@@ -162,13 +167,14 @@ pub(crate) fn form(pack: &Pack) -> Value {
     let hidden = decided(&pack.id);
     let confirmed: Vec<String> =
         HIDES.iter().zip(hidden).filter(|(_, h)| *h).map(|(w, _)| w.to_string()).collect();
-    let facets = [(web.storage, "storage"), (!web.network.is_empty(), "network")];
+    let facets = [(web.storage_kib > 0, "storage"), (!web.network.is_empty(), "network")];
     let facets: Vec<String> = facets.into_iter().filter(|f| f.0).map(|f| f.1.to_owned()).collect();
     let online = props::allows(&pack.id, Input::Network);
+    let origin = host(&pack.id, folders::count(&pack.id));
     json!({
         "exposes": wprs_core::model::exposes("web", &facets, &confirmed, online),
         "hidden": {"zone": hidden[0], "language": hidden[1], "gpu": hidden[2], "storage": hidden[3]},
-        "storage": web.storage, "network": !web.network.is_empty(), "online": online, "own_volume": web.own_volume,
-        "origin": format!("https://{}", host(&pack.id, folders::count(&pack.id))),
+        "storage": web.storage_kib > 0, "network": !web.network.is_empty(), "online": online, "own_volume": web.own_volume,
+        "origin": format!("https://{origin}"), "full": kept::full(&origin),
     })
 }

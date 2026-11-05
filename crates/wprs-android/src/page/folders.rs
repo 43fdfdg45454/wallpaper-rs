@@ -109,6 +109,7 @@ pub(crate) fn cleared() -> Result<Value, Error> {
     let pending = std::mem::take(&mut all.pending);
     if !pending.is_empty() {
         keep(&all)?;
+        super::kept::forget(&pending)?;
     }
     Ok(json!(pending))
 }

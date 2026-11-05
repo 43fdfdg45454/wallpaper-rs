@@ -24,7 +24,7 @@ import java.io.FileInputStream
 import org.json.JSONObject
 
 @SuppressLint("SetJavaScriptEnabled")
-class Page(private val context: Context, private val handle: Long, spec: JSONObject, val surface: Surface, size: Pair<Int, Int>, private val gone: () -> Unit, private val heard: () -> Unit) {
+class Page(private val context: Context, private val handle: Long, spec: JSONObject, val surface: Surface, size: Pair<Int, Int>, private val gone: () -> Unit, private val heard: () -> Unit, private val measured: () -> Unit) {
     val key: String = spec.getString("key")
     private val origin = spec.getString("origin")
     private val host = spec.getString("url").removePrefix("https://").trimEnd('/')
@@ -73,6 +73,7 @@ class Page(private val context: Context, private val handle: Long, spec: JSONObj
         presentation.show()
         follow(spec)
         val url = spec.getString("url")
+        if (storage) WebStorage.getInstance().getUsageForOrigin(origin) { used -> told("{\"used\": ${used ?: 0}}") }
         web.post { web.loadUrl(url) }
     }
 
@@ -109,15 +110,18 @@ class Page(private val context: Context, private val handle: Long, spec: JSONObj
         }
     }
 
+    private fun told(message: String) {
+        val reply = Native.heard(handle, message)
+        if (message.startsWith(OPEN)) Shortcuts.each(Native.opened(handle)) { Shortcuts.open(context, it) }
+        if (message.startsWith(AUDIO) || message.startsWith(MEDIA)) heard()
+        if (message.startsWith(KEPT) || message.startsWith(USED)) measured()
+        reply ?: return
+        web.post { web.evaluateJavascript(reply, null) }
+    }
+
     private inner class Bridge {
         @JavascriptInterface
-        fun post(message: String) {
-            val reply = Native.heard(handle, message)
-            if (message.startsWith(OPEN)) Shortcuts.each(Native.opened(handle)) { Shortcuts.open(context, it) }
-            if (message.startsWith(AUDIO) || message.startsWith(MEDIA)) heard()
-            reply ?: return
-            web.post { web.evaluateJavascript(reply, null) }
-        }
+        fun post(message: String) = told(message)
     }
 
     companion object {
@@ -126,6 +130,8 @@ class Page(private val context: Context, private val handle: Long, spec: JSONObj
         private const val AUDIO = "{\"audio\""
         private const val OPEN = "{\"open\""
         private const val MEDIA = "{\"media\""
+        private const val KEPT = "{\"kept\""
+        private const val USED = "{\"used\""
 
         fun answer(text: String): WebResourceResponse? {
             val reply = JSONObject(text)
