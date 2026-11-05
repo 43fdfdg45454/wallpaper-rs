@@ -1,7 +1,7 @@
-use super::{IDLE, LISTEN, RETRY, STEP, Session};
+use super::{IDLE, LISTEN, RETRY, STEP, Session, Status};
 use std::time::Duration;
 use wprs_core::rgb::Covered;
-use wprs_rgb::Strip;
+use wprs_rgb::{Device, Strip};
 
 impl Session {
     pub(super) fn held(&self) -> bool {
@@ -26,5 +26,14 @@ impl Session {
         if self.client.is_none() && self.retries() {
             self.ready().ok();
         }
+    }
+}
+
+impl Status {
+    pub(super) fn show(&mut self, connected: bool, devices: Vec<Device>, error: Option<String>) -> bool {
+        let was = self.receiving();
+        (self.connected, self.error) = (connected, error);
+        self.devices = if connected { devices } else { Vec::new() };
+        was != self.receiving()
     }
 }

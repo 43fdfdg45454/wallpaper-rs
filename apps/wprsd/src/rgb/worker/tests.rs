@@ -58,3 +58,14 @@ fn covered_lights_that_follow_a_server_without_devices_retry_it_instead_of_drawi
     assert_eq!(s.wait(), IDLE, "lights turned off kept retrying");
     super::super::cover("TEST-RETRY", false);
 }
+
+#[test]
+fn a_server_that_finds_its_first_device_wakes_the_covered_scene() {
+    let device =
+        wprs_rgb::Device { index: 0, name: "keys".into(), kind: "keyboard", leds: 1, zones: Vec::new() };
+    let mut status = Status { connected: true, ..Status::default() };
+    assert!(status.show(true, vec![device.clone()], None), "a new device list never woke the scene");
+    assert!(!status.show(true, vec![device.clone()], None), "the same devices woke the scene again");
+    assert!(status.show(false, vec![device], None) && status.devices.is_empty());
+    assert!(!status.show(true, Vec::new(), None), "a server without devices woke the scene");
+}

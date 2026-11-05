@@ -4,7 +4,7 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use wprs_core::rgb::Rgb;
-use wprs_rgb::{Client, Strip, colors, pattern};
+use wprs_rgb::{Client, Device, Strip, colors, pattern};
 
 const WAIT: Duration = Duration::from_secs(2);
 const RETRY: Duration = Duration::from_secs(10);
@@ -40,7 +40,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                         s.forget(None);
                     }
                     (s.client, s.failed, s.rgb) = (None, None, rgb);
-                    s.publish(None);
+                    s.publish(None, Vec::new());
                     s.retry();
                 }
             }
@@ -92,17 +92,9 @@ impl Session {
         }
     }
 
-    fn publish(&mut self, error: Option<String>) {
-        let mut status = lock(&self.status);
-        let was = status.receiving();
-        status.connected = self.client.is_some();
-        status.error = error;
-        if self.client.is_none() {
-            status.devices.clear();
-        }
-        let now = status.receiving();
-        drop(status);
-        if was != now {
+    fn publish(&mut self, error: Option<String>, devices: Vec<Device>) {
+        let connected = self.client.is_some();
+        if lock(&self.status).show(connected, devices, error) {
             super::wake();
         }
     }
@@ -125,13 +117,12 @@ impl Session {
         match opened {
             Ok((client, devices)) => {
                 self.client = Some(client);
-                lock(&self.status).devices = devices;
-                self.publish(None);
+                self.publish(None, devices);
                 Ok(())
             }
             Err(e) => {
                 (self.client, self.failed) = (None, Some(Instant::now()));
-                self.publish(Some(e.to_string()));
+                self.publish(Some(e.to_string()), Vec::new());
                 Err(e.to_string())
             }
         }
@@ -149,7 +140,7 @@ impl Session {
             Ok(()) => lock(&self.status).frames += 1,
             Err(e) => {
                 (self.client, self.failed) = (None, Some(Instant::now()));
-                self.publish(Some(e.to_string()));
+                self.publish(Some(e.to_string()), Vec::new());
             }
         }
     }
@@ -173,7 +164,7 @@ impl Session {
             }
             Some(Err(e)) => {
                 (self.client, self.failed) = (None, Some(Instant::now()));
-                self.publish(Some(e.to_string()));
+                self.publish(Some(e.to_string()), Vec::new());
             }
             Some(Ok(false)) => {}
             None => self.retry(),
