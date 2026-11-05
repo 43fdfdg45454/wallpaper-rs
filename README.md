@@ -235,9 +235,9 @@ otro nombre. Manda, en este orden, `wprsd --layer-namespace NOMBRE`, la variable
 surfaces.layer_namespace NOMBRE`, o *Ajustes* → *Superficies del escritorio* en la app) y una
 elección automática para los escritorios conocidos: con `KineticWE` en `XDG_CURRENT_DESKTOP` usa
 `noctalia-wallpaper`. `auto` deja pasar al siguiente, y en la clave también un valor vacío. El
-nombre tiene de 1 a 64 letras ASCII, cifras, `-`, `_` o `.`; la opción y la clave rechazan otro o
-uno vacío, y una variable vacía o mal escrita se ignora con un aviso en el registro y en
-`ignored` del estado. Vale desde el siguiente arranque del daemon y solo con superficies
+nombre tiene de 1 a 64 letras ASCII, cifras, `-`, `_` o `.`; la opción rechaza uno mal escrito o
+vacío, la clave rechaza uno mal escrito, y una variable vacía o mal escrita se ignora con un
+aviso en el registro y en `ignored` del estado. Vale desde el siguiente arranque del daemon y solo con superficies
 `layer-shell`: `wprs-ctl state` muestra en `layer_shell` el nombre en uso, de dónde salió, si un
 cambio espera a ese arranque y qué valor se ignoró, y `wprs-ctl config surfaces.layer_namespace
 NOMBRE` y la app lo avisan. No se sincroniza ni entra en los perfiles, porque depende del

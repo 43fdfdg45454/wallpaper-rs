@@ -9,7 +9,7 @@ saw() {
 }
 expect "s['layer_shell']" "{'namespace': 'wallpaper', 'from': 'default', 'restart': False, 'ignored': None}"
 saw 1 wallpaper
-if [ -n "$(announced <"$WORK/sway.log")" ]; then known=1; else known=0; fi
+[ -n "$(announced <"$WORK/sway.log")" ] || fail "the compositor log does not show layer surface namespaces"
 ctl config "$key" | grep -qx "$key = \"auto\"" || fail "config does not read back the automatic namespace"
 ctl config "$key" wprs-check >"$WORK/namespace.out"
 grep -q "next time the daemon starts" "$WORK/namespace.out" || fail "no restart notice: $(cat "$WORK/namespace.out")"
@@ -31,12 +31,8 @@ expect "[s['layer_shell'][k] for k in ('namespace', 'from', 'restart')]" "['wprs
 expect "'environment' in (s['layer_shell']['ignored'] or '')" True
 check HEADLESS-1 "0.5,0.5,$magenta"
 saw "$mark" wprs-check
-if [ "$known" = 1 ]; then
-  [ -n "$(tail -n "+$mark" "$WORK/sway.log" | announced)" ] || fail "the compositor did not log the new surfaces"
-  echo "the compositor read the namespace before and after the restart"
-else
-  echo "the compositor log does not show namespaces, only the daemon state was checked"
-fi
+[ -n "$(tail -n "+$mark" "$WORK/sway.log" | announced)" ] || fail "the compositor did not log the new surfaces"
+echo "the compositor read the namespace before and after the restart"
 ctl config "$key" "" >/dev/null
 expect "s['layer_shell']['restart'], s['options']['$key']" "(True, 'auto')"
 echo "layer namespace checks passed"
