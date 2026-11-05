@@ -1,5 +1,5 @@
 use super::*;
-use crate::hdr::{Screen, headroom, report, screen, wanted};
+use crate::hdr::{Screen, headroom, report, screen, unlit, wanted};
 
 pub(super) fn hdr_follows_the_setting_and_the_display() {
     assert_eq!(report()["choice"], "auto");
@@ -28,5 +28,8 @@ pub(super) fn hdr_follows_the_setting_and_the_display() {
     settings::setting("playback.hdr", Some("on")).unwrap();
     screen(false, 0.0, 0.0);
     assert_eq!(wanted(true, false, false), (true, "on"));
+    assert_eq!(unlit(), "quality", "pictures stay in standard colors even with HDR on");
+    settings::setting("playback.hdr", Some("off")).unwrap();
+    assert_eq!(unlit(), "off");
     settings::setting("playback.hdr", Some("auto")).unwrap();
 }

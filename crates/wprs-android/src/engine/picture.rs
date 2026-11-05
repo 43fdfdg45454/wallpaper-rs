@@ -101,6 +101,7 @@ impl Engine {
         let current = self.image.as_ref().map(|(_, image)| image.as_ref());
         let raised = self.raised.as_ref().map(|raised| (raised, power.charging));
         let layers = [layer(current, 1.0, &look, size, raised)];
+        crate::hdr::dark(&gpu.renderer, surface)?;
         self.dirty = !gpu.renderer.present_layers(surface, size, &layers, || {})?;
         if !self.dirty {
             self.presented = nanos;

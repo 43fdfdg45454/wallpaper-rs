@@ -70,6 +70,17 @@ pub(crate) fn light(
     Ok(headroom)
 }
 
+pub(crate) fn unlit() -> &'static str {
+    if get(&CHOICE) == HdrChoice::Off { "off" } else { "quality" }
+}
+
+pub(crate) fn dark(r: &Renderer, surface: &mut Surface) -> Result<(), RenderError> {
+    r.light(surface, false)?;
+    let (active, offered) = (surface.hdr(), surface.hdr_offered());
+    put(&LIT, Lit { active, offered, reason: unlit(), headroom: 1.0 });
+    Ok(())
+}
+
 pub(crate) fn report() -> Value {
     let (lit, screen) = (get(&LIT), get(&SCREEN));
     json!({ "choice": get(&CHOICE).as_str(), "active": lit.active, "offered": lit.offered, "reason": lit.reason,

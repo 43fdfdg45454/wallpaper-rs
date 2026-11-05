@@ -484,7 +484,8 @@ reproducirse directo en la pantalla. Los tonos de un vídeo HDR (PQ o HLG) los a
 cuando se reproduce directo y la propia app cuando pasa por la gráfica, con la misma curva que el
 escritorio (blanco de 203 nits y luz máxima de 1000 nits); si `playback.hdr` enciende el HDR de la
 pantalla, la app conserva las luces por encima del blanco hasta lo que la pantalla admite, también
-con filtro, y si el decodificador ya entrega los fotogramas en colores estándar los muestra tal cual. Si un paquete pide sombreadores de cálculo y la gráfica del teléfono no los tiene, su página lo
+con filtro, y si el decodificador ya entrega los fotogramas en colores estándar los muestra tal cual
+sin encender el HDR. Cuando una foto o nada ocupa el lugar del vídeo, la pantalla sale del HDR. Si un paquete pide sombreadores de cálculo y la gráfica del teléfono no los tiene, su página lo
 avisa. El color de acento del fondo (o, si no propone uno, el dominante de su vista previa) es el
 color que Android da al sistema. Un paquete de más de 1 GiB descomprimido se rechaza. Al instalar un
 paquete de un repositorio también se instalan del mismo repositorio los paquetes que nombra en

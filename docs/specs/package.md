@@ -580,7 +580,8 @@ same way (BT.2020 YCbCr, PQ or HLG read from that colour description, the same k
 nits). When `playback.hdr` lights the screen in HDR for such a video, the app writes extended linear
 values instead, with 203 nits at 1.0 and the knee toward the headroom of the screen, and a color
 filter keeps the highlights above white; when the decoder reports that its frames are already
-standard (it mapped them itself), the app shows them as they come. `wprs-ctl pack check` says so. Readers look for it only when they
+standard (it mapped them itself), the app shows them as they come and does not light the screen in
+HDR for them. Once a picture or nothing takes the place of the video, the screen leaves HDR. `wprs-ctl pack check` says so. Readers look for it only when they
 record facets (adding to a repository, indexing the library, the server and `pack check`), never
 when they open a package to show it. The inputs of a web page come from its manifest as declared;
 for the other kinds every input, `media` included, comes from what the package uses, and an

@@ -68,7 +68,7 @@
     <string name="hdr_state_off">HDR desactivado: %1$s</string>
     <string name="hdr_why_display">esta pantalla o el controlador gráfico no ofrecen HDR, o la pantalla no dice que lo muestre</string>
     <string name="hdr_why_battery">con batería</string>
-    <string name="hdr_why_quality">no se muestra una escena con colores brillantes en la calidad más alta</string>
+    <string name="hdr_why_quality">no se muestra nada con colores HDR, como un vídeo HDR o una escena con colores brillantes en la calidad más alta</string>
     <string name="hdr_why_off">desactivado</string>
     <string name="hdr_screen">La pantalla dice que muestra HDR: %1$s, pico de %2$s nits</string>
     <string name="shortcut_none">Nada elegido: un toque no abre nada</string>
