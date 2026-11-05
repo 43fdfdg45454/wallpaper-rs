@@ -256,7 +256,8 @@ directly instead of a copy. `wprs-ctl scene bench` prints these notes after its
 numbers.
 
 On battery the level drops one step and the rate is capped at 30 frames per second (15 with
-software rendering); power saving (the `power-saver` profile on Linux, battery saver on Android)
+software rendering), unless the user chose a rate (`playback.max_fps`, on the phone its rate on
+battery), which then holds as on mains power; power saving (the `power-saver` profile on Linux, battery saver on Android)
 drops one step more. A GPU or CPU within 20 °C of its critical temperature (95 °C when its driver
 reports none) drops one level and caps the rate at 30; within 10 °C, or once the system starts
 throttling it, it falls to the lowest level and 15 frames per second. Other sensors, such as

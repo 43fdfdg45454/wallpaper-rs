@@ -58,8 +58,12 @@ impl Budget {
         }
     }
 
+    fn capped(&self) -> bool {
+        self.saver || (self.on_battery && self.max_fps == DISPLAY)
+    }
+
     pub fn rate(&self, refresh: u32, cost: Option<f32>) -> u32 {
-        let rate = self.tier.max_fps(self.strained(), known(refresh, self.chosen(refresh)), cost);
+        let rate = self.tier.max_fps(self.capped(), known(refresh, self.chosen(refresh)), cost);
         rate.min(self.heat.fps()).max(1)
     }
 
@@ -114,7 +118,7 @@ mod tests {
         assert_eq!(mains.map(|(tier, cost)| rate(tier, false, display, 170, cost)), [24, 170, 60, 60, 170]);
         let tiers = [Tier::T0, Tier::T2, Tier::T3];
         assert_eq!(tiers.map(|tier| rate(tier, true, display, 170, light)), [15, 30, 30]);
-        assert_eq!(tiers.map(|tier| rate(tier, true, 144, 170, light)), [15, 30, 60]);
+        assert_eq!(tiers.map(|tier| rate(tier, true, 144, 170, light)), [24, 144, 144]);
         assert_eq!([300, 0, 60].map(|hz| rate(Tier::T3, false, display, hz, None)), [240, 60, 60]);
         assert_eq!(
             [(30, 60), (144, 60), (144, 0)].map(|(fps, hz)| rate(Tier::T3, false, fps, hz, None)),
