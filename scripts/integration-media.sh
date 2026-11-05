@@ -85,6 +85,11 @@ ctl scene preview "$tuning" -o preview:2 --time 0 || fail "the scene was not pre
 shown "$s22" 255 0 0
 printf '{"cover": "../blue cover.png"}' >"$WORK/outside.json"
 if ctl scene preview "$tuning" -o preview:2 --media "$WORK/outside.json" 2>/dev/null; then fail "a cover outside the folder was read"; fi
+ctl scene set "$tuning" /scene/layers/0 '{"id": "art", "type": "solid", "color": {"media": "primary"}, "size": [1920, 1080], "transform": {"position": [960, 540]}}'
+ctl scene preview "$tuning" -o preview:2 --time 0 --media "$WORK/track.json"
+shown "$s22" 0 0 255
+ctl scene preview "$tuning" -o preview:2 --time 0
+shown "$s22" 255 0 0
 printf '{"title": "%s"}' "$(printf 'x%.0s' $(seq 600))" >"$WORK/long.json"
 if ctl scene preview "$tuning" -o preview:2 --media "$WORK/long.json" 2>"$WORK/long.err"; then fail "a title of 600 characters was previewed"; fi
 grep -q "512" "$WORK/long.err" || fail "the long title was refused without saying why: $(cat "$WORK/long.err")"

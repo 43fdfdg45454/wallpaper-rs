@@ -105,6 +105,7 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
             crate::motion::motion(dir, doc, q["motion"]["layer"].as_str().unwrap_or(id))
         }
         _ if q.get("outline").is_some() => outline(dir, doc, id),
+        _ if q.get("palette").is_some() => crate::covers::palette(dir, doc, q["palette"].as_str()),
         _ if q.get("wind").is_some() => wind_arrow(doc),
         _ if q.get("spread").is_some() => crate::spread::spread(doc, &q["spread"]),
         _ => rig(dir, doc, id),

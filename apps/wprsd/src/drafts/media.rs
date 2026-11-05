@@ -112,7 +112,7 @@ pub(crate) fn frame(dir: &Path, media: Value) -> Result<Frame> {
         position: if duration > 0.0 { position.min(duration) } else { position },
         duration,
         rate,
-        colors: None,
+        colors: cover.as_ref().map(|c| c.colors),
     };
     Ok(Frame { cover, ..Frame::new(state) })
 }

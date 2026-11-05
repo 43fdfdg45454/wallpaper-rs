@@ -51,3 +51,41 @@ fn media_texts_follow_the_track_and_stay_empty_without_one() {
     limited.declare(Uses { media: false, ..Uses::default() });
     assert!(!limited.uses().media && !limited.set_media(playing()));
 }
+
+fn solid(frame: &Frame, i: usize) -> Color {
+    match &frame.draws[i].content {
+        Content::Solid { color, .. } => *color,
+        other => panic!("not a solid: {other:?}"),
+    }
+}
+
+#[test]
+fn cover_colours_reach_colours_and_ease_with_smooth() {
+    let layers = json!([
+        { "id": "p", "type": "solid", "color": { "media": "primary" } },
+        { "id": "t", "type": "solid", "color": { "media": "text" } },
+        { "id": "c", "type": "solid", "color": { "media": "contrast", "smooth": 1 } }
+    ]);
+    let mut rt = runtime(&scene(layers));
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert_eq!(solid(&frame, 0), Color(FALLBACK[0]), "no cover and no placeholder colours give the fallback");
+    let colors =
+        [[0.9, 0.1, 0.1, 1.0], [0.1, 0.1, 0.9, 1.0], [0.9, 0.9, 0.1, 1.0], [1.0; 4], [0.0, 0.0, 0.0, 1.0]];
+    rt.set_media(MediaState { colors: Some(colors), ..playing() });
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert_eq!((solid(&frame, 0), solid(&frame, 1)), (Color(colors[0]), Color(colors[3])));
+    let eased = solid(&frame, 2).0;
+    assert!(
+        eased[0] > 0.9 && frame.wake == Wake::Frame,
+        "the smoothed colour starts where it was: {eased:?}"
+    );
+    rt.advance(0.1);
+    let half = solid(&rt.frame(VIEW, Quality::Q3), 2).0;
+    assert!(half[0] > 0.05 && half[0] < 0.95, "the smoothed colour moves towards black: {half:?}");
+    for _ in 0..200 {
+        rt.advance(0.1);
+        rt.frame(VIEW, Quality::Q3);
+    }
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert!(solid(&frame, 2).0[0] < 0.01 && frame.wake == Wake::Idle);
+}

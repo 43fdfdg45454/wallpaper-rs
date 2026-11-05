@@ -85,3 +85,21 @@ fn a_picture_becomes_the_cover_with_its_placeholder_and_back() {
     act(&mut p, json!({ "undo": {} })).unwrap();
     assert_eq!(p.doc["scene"]["assets"]["cover"]["media"], "current");
 }
+
+#[test]
+fn the_palette_of_a_picture_is_shown_as_its_cover_colours() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let file = root.path().join("dusk.png");
+    image::RgbImage::from_fn(64, 64, |x, _| image::Rgb(if x < 40 { [20, 20, 60] } else { [250, 230, 180] }))
+        .save(&file)
+        .unwrap();
+    act(&mut p, json!({ "import": { "file": file, "id": "dusk" } })).unwrap();
+    let ask = |what: Value| wprs_editor::rigs::query(&p.dir, &p.doc, "", &json!({ "palette": what }));
+    let colours = ask(json!("dusk"));
+    assert_eq!(colours.as_array().map(Vec::len), Some(5), "{colours}");
+    assert_eq!((colours[0].as_str(), colours[3].as_str()), (Some("#14143c"), Some("#fae6b4")));
+    let path = p.doc["scene"]["assets"]["dusk"]["path"].clone();
+    assert_eq!(ask(path), colours, "a path of the folder works as well as the asset id");
+    assert!(ask(json!("missing.png")).is_null() && ask(json!(null)).is_null());
+}

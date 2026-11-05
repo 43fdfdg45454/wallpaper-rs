@@ -144,6 +144,7 @@ impl Reading {
         }
         self.pictures.ask(active.as_ref().map_or("", |p| p.track.art.as_str()));
         state.cover = self.pictures.serial();
+        state.colors = self.pictures.cover.as_ref().map(|c| c.colors);
         let (playing, cover) = (state.playing, state.cover != 0);
         let status = MediaStatus {
             listening: true,

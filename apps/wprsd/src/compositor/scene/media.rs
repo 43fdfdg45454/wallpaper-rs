@@ -8,11 +8,12 @@ pub(in crate::compositor) struct Shown {
     serial: u64,
     serials: [u64; 2],
     pub(super) covers: Vec<(String, Arc<Pixels>)>,
+    placeholder: Option<Option<[[f32; 4]; 5]>>,
 }
 
 impl Default for Shown {
     fn default() -> Shown {
-        Shown { serial: u64::MAX, serials: [0; 2], covers: Vec::new() }
+        Shown { serial: u64::MAX, serials: [0; 2], covers: Vec::new(), placeholder: None }
     }
 }
 
@@ -26,10 +27,24 @@ impl SceneState {
         if std::mem::replace(&mut self.media.serial, serial) == serial {
             return false;
         }
-        let state = frame.as_ref().map(|f| f.at(Instant::now())).unwrap_or_default();
+        let mut state = frame.as_ref().map(|f| f.at(Instant::now())).unwrap_or_default();
+        if state.colors.is_none() {
+            state.colors = self.placeholder_colors();
+        }
         let (cover, previous) = frame.map_or((None, None), |f| (f.cover.clone(), f.previous.clone()));
         let restocked = self.show_covers(cover, previous);
         self.runtime.set_media(state) || restocked
+    }
+
+    fn placeholder_colors(&mut self) -> Option<[[f32; 4]; 5]> {
+        let pack = &self.spec.pack;
+        let found = || {
+            let mut covers = pack.scene.assets.iter().filter(|(_, a)| a.media.is_some());
+            let id = covers.find(|(_, a)| a.media == Some(wprs_scene::Cover::Current)).map(|(id, _)| id);
+            let image = pack.assets.images.get(id?)?.image()?;
+            crate::media::covers::colors(&image)
+        };
+        *self.media.placeholder.get_or_insert_with(found)
     }
 
     fn show_covers(&mut self, cover: Option<Arc<Cover>>, previous: Option<Arc<Cover>>) -> bool {

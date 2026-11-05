@@ -800,7 +800,13 @@ cover cannot be read. Covers are read once per track from `file://` addresses of
 or, only with `media.remote_covers` on (`dbus.md`), from `http` and `https` addresses of at most
 4 MiB within 5 seconds; they are reduced in memory to at most 256 pixels on the longer side in
 sRGB, keeping their shape, and never written to disk. A layer that shows a cover keeps its `size`,
-so a square `size` suits most covers.
+so a square `size` suits most covers. The colors are worked out once per cover: the three
+most common colors of the cover reduced to 64 × 64 (k-means of three in OKLab, transparent pixels
+left out), the most common first; `text` is the secondary or tertiary color with a WCAG contrast of
+at least 4.5 against the primary one, the higher one first, and otherwise white or black;
+`contrast` is white or black, whichever contrasts more with the primary color. Without a cover
+they are the colors of the placeholder of the first `current` cover asset, or dark greys with white
+text when there is none; `smooth` eases between them part by part.
 
 ## Effects
 

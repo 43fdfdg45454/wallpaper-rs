@@ -1,4 +1,5 @@
 use crate::animate::Animate;
+use crate::cover::FALLBACK;
 use crate::input::MediaState;
 use crate::media::{Media, Reading};
 use crate::resolve::Context;
@@ -27,6 +28,12 @@ impl Context<'_> {
     pub(crate) fn media<T: Animate>(&self, m: Media) -> T {
         match m.reading() {
             Reading::Words => T::from_text(self.words(m)).unwrap_or_default(),
+            Reading::Color => {
+                let i = [Media::Primary, Media::Secondary, Media::Tertiary, Media::Text];
+                let i = i.iter().position(|c| *c == m).unwrap_or(4);
+                let colors = self.media_state().colors.unwrap_or(FALLBACK);
+                T::from_json(&serde_json::json!(colors[i])).unwrap_or_default()
+            }
             _ => T::default(),
         }
     }

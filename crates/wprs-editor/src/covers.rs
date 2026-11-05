@@ -2,7 +2,9 @@ use crate::action::AssetEdit;
 use crate::layers::asset_kind;
 use crate::ops::{Op, diff, escape};
 use anyhow::{Result, anyhow, ensure};
+use image::imageops::FilterType;
 use serde_json::{Value, json};
+use std::path::Path;
 use wprs_core::message::said;
 
 pub const KINDS: [&str; 3] = ["current", "previous", "none"];
@@ -49,4 +51,12 @@ pub(crate) fn act(doc: &Value, wanted: &AssetEdit) -> Result<Vec<Op>> {
     let mut new = doc.clone();
     new["scene"]["assets"][id.as_str()] = asset;
     Ok(diff(doc, &new, ""))
+}
+
+pub fn palette(dir: &Path, doc: &Value, wanted: Option<&str>) -> Value {
+    let Some(path) = wanted.and_then(|w| picture(doc, w).ok()) else { return Value::Null };
+    let Ok(image) = crate::pictures::open(dir.join(path)) else { return Value::Null };
+    let small = image::imageops::resize(&image.into_rgba8(), 64, 64, FilterType::Triangle);
+    let found = wprs_scene::palette(small.as_raw());
+    found.map_or(Value::Null, |p| json!(p.map(wprs_scene::hex)))
 }

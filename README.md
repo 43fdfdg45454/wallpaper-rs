@@ -1474,6 +1474,11 @@ anterior*, hechas a partir de la imagen elegida, y deja elegir esa imagen de ree
 terminal, `wprs-ctl scene asset CARPETA cover --cover current --placeholder IMAGEN`. Las carátulas
 se leen una vez por pista, se reducen a 256 píxeles como mucho y solo viven en memoria.
 
+De cada carátula salen cinco colores, calculados una vez: el principal, el secundario y el
+terciario (los más frecuentes), uno de texto que se lee bien sobre el principal y negro o blanco de
+alto contraste: `{"media": "primary"}`, `secondary`, `tertiary`, `text` y `contrast`, con `smooth`
+para pasar de uno a otro sin saltos. La pestaña *Reproductor* los muestra como muestras de color.
+
 ## Servidor propio
 
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas

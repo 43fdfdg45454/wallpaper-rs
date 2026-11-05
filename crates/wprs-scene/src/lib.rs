@@ -17,6 +17,7 @@ mod clip;
 mod content;
 mod cost;
 mod counter;
+mod cover;
 mod cube;
 mod cue;
 mod custom;

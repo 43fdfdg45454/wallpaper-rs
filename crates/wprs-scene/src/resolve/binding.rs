@@ -59,14 +59,14 @@ impl<T: Animate> Binding<T> {
         };
         let times = b.smooth.map(crate::Smooth::times).filter(|t| t.iter().any(|v| *v > 0.0));
         let Some([up, down]) = times else { return value };
-        let (comps, n) = value.comps();
+        let (comps, n) = if b.media.is_some() { value.parts() } else { value.comps() };
         let mut memo = cx.memo.borrow_mut();
         let last = memo.entry(std::ptr::from_ref(b).addr()).or_insert(comps);
         last[..n].iter_mut().zip(&comps).for_each(|(l, c)| *l = crate::ease(*l, *c, cx.dt, up, down));
         if last[..n].iter().zip(&comps).any(|(l, c)| (l - c).abs() > 1e-3) {
             cx.note(Wake::Frame);
         }
-        value.with_comps(*last)
+        if b.media.is_some() { value.with_parts(*last) } else { value.with_comps(*last) }
     }
 }
 

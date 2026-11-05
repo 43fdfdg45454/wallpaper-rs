@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use wprs_render::Pixels;
-use wprs_scene::COVER_SIDE;
+use wprs_scene::{COVER_SIDE, FALLBACK, PALETTE_SIDE, palette};
 
 pub(crate) const MAX_FILE: u64 = 16 << 20;
 pub(crate) const MAX_REMOTE: usize = 4 << 20;
@@ -19,12 +19,18 @@ static SERIAL: AtomicU64 = AtomicU64::new(1);
 pub(crate) struct Cover {
     pub(crate) serial: u64,
     pub(crate) pixels: Arc<Pixels>,
+    pub(crate) colors: [[f32; 4]; 5],
 }
 
 impl std::fmt::Debug for Cover {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Cover({})", self.serial)
     }
+}
+
+pub(crate) fn colors(image: &RgbaImage) -> Option<[[f32; 4]; 5]> {
+    let small = image::imageops::resize(image, PALETTE_SIDE, PALETTE_SIDE, FilterType::Triangle);
+    palette(small.as_raw())
 }
 
 pub(crate) fn reduced(image: RgbaImage) -> RgbaImage {
@@ -44,8 +50,9 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Arc<Cover>> {
     limits.max_alloc = Some(512 << 20);
     reader.limits(limits);
     let image = reduced(reader.decode().ok()?.into_rgba8());
+    let colors = colors(&image).unwrap_or(FALLBACK);
     let serial = SERIAL.fetch_add(1, Ordering::Relaxed);
-    Some(Arc::new(Cover { serial, pixels: Pixels::new(image) }))
+    Some(Arc::new(Cover { serial, pixels: Pixels::new(image), colors }))
 }
 
 pub(crate) fn local(url: &Url) -> Option<Vec<u8>> {

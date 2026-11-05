@@ -17,6 +17,7 @@ pub use crate::clip::{
 pub use crate::content::{
     Align, EffectUse, Gradient, Mask, MaskChannel, Shape, Spectrum, SpectrumStyle, Stroke,
 };
+pub use crate::cover::{FALLBACK, PALETTE_SIDE, contrast, hex, luminance, palette};
 pub use crate::cube::{Lut, LutError, MAX_LUT_BYTES, MAX_LUT_SIZE, MAX_LUT_TOTAL};
 pub use crate::cue::{Course, Fired, MAX_FIRED};
 pub use crate::custom::{
