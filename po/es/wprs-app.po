@@ -6088,8 +6088,8 @@ msgid "Connect"
 msgstr "Conectar"
 
 #: apps/wprs-app/qml/SettingsRgb.qml
-msgid "While a window covers the wallpaper:"
-msgstr "Mientras una ventana tapa el fondo:"
+msgid "While a window covers the wallpaper and it pauses:"
+msgstr "Mientras una ventana tapa el fondo y este se pausa:"
 
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid "Keep following the wallpaper"
@@ -6101,11 +6101,22 @@ msgstr "Pausar y dejar las luces como están"
 
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid ""
-"The lights keep changing with the scene, which keeps running without drawing "
-"the hidden wallpaper."
+"Pausing while a window covers the screen is off, so the covered wallpaper "
+"keeps drawing and the lights keep following it whatever you choose here."
 msgstr ""
-"Las luces siguen cambiando con la escena, que sigue en marcha sin dibujar el "
-"fondo tapado."
+"La pausa mientras una ventana tapa la pantalla está desactivada, así que el "
+"fondo tapado sigue dibujándose y las luces lo siguen elijas lo que elijas "
+"aquí."
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid ""
+"While the covered wallpaper pauses, the lights keep changing with the scene "
+"or page, which keeps running without being drawn, as long as the server has "
+"devices connected."
+msgstr ""
+"Mientras el fondo tapado está en pausa, las luces siguen cambiando con la "
+"escena o la página, que sigue en marcha sin dibujarse, siempre que el "
+"servidor tenga dispositivos conectados."
 
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid ""

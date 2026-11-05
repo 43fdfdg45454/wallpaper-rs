@@ -13,6 +13,7 @@ ColumnLayout {
     readonly property bool on: options["rgb.enabled"] === true
     readonly property string server: String(options["rgb.server"] ?? "127.0.0.1:6742")
     readonly property string covered: String(options["rgb.when_covered"] ?? "pause")
+    readonly property bool pauses: options["pause.when_covered"] !== false
 
     function load() {
         App.query("GetStatus", [], "Rgb1", reply => lights && (lights.status = reply ?? {}), error => lights && (lights.problem = error.message));
@@ -75,18 +76,20 @@ ColumnLayout {
     }
 
     QQC2.Label {
-        text: App.tr("While a window covers the wallpaper:")
+        text: App.tr("While a window covers the wallpaper and it pauses:")
     }
 
     QQC2.RadioButton {
         text: App.tr("Keep following the wallpaper")
         checked: lights.covered === "follow"
+        enabled: lights.pauses
         onToggled: if (checked) App.act("SetOption", ["rgb.when_covered", "follow"], "Daemon1", () => lights && lights.load())
     }
 
     QQC2.RadioButton {
         text: App.tr("Pause and leave the lights as they are")
         checked: lights.covered !== "follow"
+        enabled: lights.pauses
         onToggled: if (checked) App.act("SetOption", ["rgb.when_covered", "pause"], "Daemon1", () => lights && lights.load())
     }
 
@@ -94,7 +97,7 @@ ColumnLayout {
         Layout.maximumWidth: Kirigami.Units.gridUnit * 30
         wrapMode: Text.Wrap
         color: Kirigami.Theme.disabledTextColor
-        text: lights.covered === "follow" ? App.tr("The lights keep changing with the scene, which keeps running without drawing the hidden wallpaper.") : App.tr("While the covered wallpaper pauses, nothing is sent and nothing runs for the lights until it shows again.")
+        text: !lights.pauses ? App.tr("Pausing while a window covers the screen is off, so the covered wallpaper keeps drawing and the lights keep following it whatever you choose here.") : lights.covered === "follow" ? App.tr("While the covered wallpaper pauses, the lights keep changing with the scene or page, which keeps running without being drawn, as long as the server has devices connected.") : App.tr("While the covered wallpaper pauses, nothing is sent and nothing runs for the lights until it shows again.")
     }
 
     Kirigami.InlineMessage {

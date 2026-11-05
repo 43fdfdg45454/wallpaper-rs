@@ -1,3 +1,4 @@
+mod covered;
 mod depth;
 mod editor;
 mod fake;
