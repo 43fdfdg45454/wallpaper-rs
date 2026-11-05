@@ -28,7 +28,8 @@ impl Stage {
             Budget { choice: crate::power::choice(), ..Budget::new(tier, !power.charging, cap.max(1)) };
         self.runtime.set_battery(!power.charging);
         self.heavy = budget.still(&self.runtime);
-        if std::mem::replace(&mut self.posed, self.heavy) != self.heavy && self.heavy {
+        let turned = std::mem::replace(&mut self.posed, self.heavy) != self.heavy;
+        if turned && self.heavy {
             self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
         }
         let calm = power.still && !self.heavy && !self.moving;
@@ -99,6 +100,7 @@ impl Stage {
         }
         let due = self.due.is_some_and(|due| nanos >= due - SLACK_NS) || std::mem::take(&mut self.touch.2);
         if !(force
+            || turned
             || due
             || heard
             || played
