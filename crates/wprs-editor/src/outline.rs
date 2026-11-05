@@ -48,7 +48,7 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
         .into_iter()
         .map(|(pointer, v)| {
             let key = pointer.rsplit('/').next().unwrap_or_default().to_owned();
-            json!({"pointer": pointer, "layer": layer_of(&pointer), "key": key, "keys": v["keys"], "timeline": v["timeline"]})
+            json!({"pointer": pointer, "layer": layer_of(&pointer), "key": key, "keys": v["keys"], "timeline": v["timeline"], "base": v["base"]})
         })
         .collect();
     let assets = doc.pointer("/scene/assets").and_then(Value::as_object).into_iter().flatten();

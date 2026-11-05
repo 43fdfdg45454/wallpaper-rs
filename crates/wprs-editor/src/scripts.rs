@@ -13,6 +13,16 @@ const CALLS: [(&str, ScriptApi); 4] = [
     ("console.", ScriptApi::Console),
 ];
 
+const STAGE: [&str; 7] = ["camera", "camera3d", "parallax", "bloom", "background", "ambient", "sky"];
+
+fn staged(source: &str) -> bool {
+    let word = |c: char| c.is_alphanumeric() || c == '_';
+    STAGE.iter().any(|key| {
+        let call = format!("scene.{key}");
+        source.match_indices(&call).any(|(i, _)| !source[i + call.len()..].starts_with(word))
+    })
+}
+
 fn exported(source: &str) -> Vec<String> {
     let mut found = Vec::new();
     for line in source.lines().map(str::trim_start).filter_map(|l| l.strip_prefix("export ")) {
@@ -42,6 +52,7 @@ pub fn declaration(source: &str) -> Value {
     events.dedup();
     let mut uses = imported(source);
     uses.extend(CALLS.iter().filter(|(call, _)| source.contains(call)).map(|(_, api)| *api));
+    uses.extend(staged(source).then_some(ScriptApi::Camera));
     uses.sort();
     uses.dedup();
     let mut entry = json!({});

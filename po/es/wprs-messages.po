@@ -279,7 +279,7 @@ msgstr "las imágenes de una escena pueden ocupar 512 MiB una vez decodificadas"
 msgid "a color table may have at most 16 MiB"
 msgstr "una tabla de color puede tener como mucho 16 MiB"
 
-#: crates/wprs-editor/src/assets.rs
+#: crates/wprs-editor/src/assets.rs crates/wprs-editor/src/placing.rs
 msgid "name a file"
 msgstr "indica un archivo"
 
@@ -414,6 +414,10 @@ msgstr "el id de un clip tiene de 1 a 32 minúsculas, cifras o _"
 msgid "there is no clip \"%1\""
 msgstr "no hay ningún clip «%1»"
 
+#: crates/wprs-editor/src/clips.rs
+msgid "only a clip being added starts playing in a new animation layer"
+msgstr "solo un clip que se añade empieza a sonar en una capa de animación nueva"
+
 #: crates/wprs-editor/src/clips.rs crates/wprs-editor/src/motion/mod.rs
 #: crates/wprs-editor/src/skin/mod.rs
 msgid "the layer is not a mesh or a model"
@@ -439,6 +443,10 @@ msgstr "el archivo no tiene ninguna animación «%1»"
 #: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/stage3d/paths.rs
 msgid "the time must be 0 or more seconds"
 msgstr "el tiempo debe ser de 0 segundos o más"
+
+#: crates/wprs-editor/src/clips.rs crates/wprs-editor/src/motion/play.rs
+msgid "a layer has at most %1 animation layers"
+msgstr "una capa tiene como mucho %1 capas de animación"
 
 #: crates/wprs-editor/src/clips/keyed.rs
 msgid "a key is for one bone, blend shape or part order"
@@ -517,6 +525,32 @@ msgstr "%1: rechazado: %2"
 #: crates/wprs-editor/src/findings.rs
 msgid "%1: plays without %2"
 msgstr "%1: se reproduce sin %2"
+
+#: crates/wprs-editor/src/handles.rs
+msgid ""
+"a Bézier handle reaches 0 to 3600 s along the timeline and any finite value"
+msgstr "un tirador Bézier llega de 0 a 3600 s a lo largo de la línea de tiempo y a cualquier valor finito"
+
+#: crates/wprs-editor/src/handles.rs
+msgid "a keyframe eases or has Bézier handles, not both"
+msgstr "un fotograma clave tiene suavizado o tiradores Bézier, no ambos"
+
+#: crates/wprs-editor/src/handles.rs
+msgid "give a base or make the value absolute, not both"
+msgstr "da una base o haz absoluto el valor, no ambos"
+
+#: crates/wprs-editor/src/handles.rs
+msgid "Bézier handles shape keyframes of single numbers"
+msgstr "los tiradores Bézier dan forma a fotogramas clave de un solo número"
+
+#: crates/wprs-editor/src/handles.rs
+msgid "only a value with keyframes adds them to a base"
+msgstr "solo un valor con fotogramas clave los suma a una base"
+
+#: crates/wprs-editor/src/handles.rs
+msgid ""
+"the base of %1 is a number, a list of numbers or a color like its keyframes"
+msgstr "la base de %1 es un número, una lista de números o un color, como sus fotogramas clave"
 
 #: crates/wprs-editor/src/history.rs
 msgid "Change a value"
@@ -647,8 +681,8 @@ msgid "%1 has no value yet; give one"
 msgstr "%1 aún no tiene valor; da uno"
 
 #: crates/wprs-editor/src/keys.rs
-msgid "there is no timeline \"%1\""
-msgstr "no hay ninguna línea de tiempo «%1»"
+msgid "there is no timeline \"%1\"; add it with the timeline action first"
+msgstr "no hay una línea de tiempo «%1»; añádela antes con la acción timeline"
 
 #: crates/wprs-editor/src/lamps/air.rs
 msgid "only point and spot lights light the air"
@@ -821,10 +855,6 @@ msgid "%1 of an animation layer goes from %2 to %3"
 msgstr "%1 de una capa de animación va de %2 a %3"
 
 #: crates/wprs-editor/src/motion/play.rs
-msgid "a layer has at most %1 animation layers"
-msgstr "una capa tiene como mucho %1 capas de animación"
-
-#: crates/wprs-editor/src/motion/play.rs
 msgid "there is no animation layer %1"
 msgstr "no hay ninguna capa de animación %1"
 
@@ -912,6 +942,12 @@ msgstr "di qué cambiar en %1, como ktx2"
 #: crates/wprs-editor/src/paint.rs
 msgid "masks are painted on a parameter of an effect"
 msgstr "las máscaras se pintan en un parámetro de un efecto"
+
+#: crates/wprs-editor/src/placing.rs
+msgid ""
+"a %1 layer cannot show %2; image, video, sound, mesh and model layers take a "
+"file of their kind"
+msgstr "una capa %1 no puede mostrar %2; las capas image, video, sound, mesh y model toman un archivo de su tipo"
 
 #: crates/wprs-editor/src/previews.rs
 msgid "the picture does not fit in 1 MiB even as a jpeg of 512 pixels"
@@ -1489,6 +1525,34 @@ msgstr ""
 #: crates/wprs-editor/src/texts.rs
 msgid "the title needs a text"
 msgstr "el título necesita un texto"
+
+#: crates/wprs-editor/src/timelines.rs
+msgid "a timeline id has 1 to 32 small letters, digits or _"
+msgstr "el id de una línea de tiempo tiene de 1 a 32 minúsculas, cifras o _"
+
+#: crates/wprs-editor/src/timelines.rs
+msgid "%1 of a timeline is a finite number"
+msgstr "%1 de una línea de tiempo es un número finito"
+
+#: crates/wprs-editor/src/timelines.rs
+msgid "a timeline lasts seconds or frames, not both"
+msgstr "una línea de tiempo dura segundos o fotogramas, no ambos"
+
+#: crates/wprs-editor/src/timelines.rs
+msgid "there is already a timeline \"%1\""
+msgstr "ya hay una línea de tiempo «%1»"
+
+#: crates/wprs-editor/src/timelines.rs
+msgid "a scene has at most %1 timelines"
+msgstr "una escena tiene como mucho %1 líneas de tiempo"
+
+#: crates/wprs-editor/src/timelines.rs
+msgid "there is no timeline \"%1\""
+msgstr "no hay ninguna línea de tiempo «%1»"
+
+#: crates/wprs-editor/src/timelines.rs
+msgid "add or remove a timeline, not both"
+msgstr "añade o quita una línea de tiempo, no ambas cosas"
 
 #: crates/wprs-format/src/admin.rs
 msgid "already holds a repository"

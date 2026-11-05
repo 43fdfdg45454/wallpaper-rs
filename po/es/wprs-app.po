@@ -2408,6 +2408,7 @@ msgid "Automatic rules"
 msgstr "Reglas automáticas"
 
 #: apps/wprs-app/qml/ProfileCard.qml apps/wprs-app/qml/SceneSettingMenu.qml
+#: apps/wprs-app/qml/SceneTimelineMenu.qml
 msgid "Rename…"
 msgstr "Cambiar el nombre…"
 
@@ -3158,6 +3159,7 @@ msgstr "Reproducir"
 #: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/ScenePathLanes.qml
 #: apps/wprs-app/qml/ScenePathRow.qml apps/wprs-app/qml/ScenePaths3d.qml
 #: apps/wprs-app/qml/SceneTimeBar.qml apps/wprs-app/qml/SceneTimeline.qml
+#: apps/wprs-app/qml/SceneTimelineMenu.qml
 msgid "%1 s"
 msgstr "%1 s"
 
@@ -3185,6 +3187,10 @@ msgstr "Quitar la clave"
 #: apps/wprs-app/qml/SceneClipEdit.qml
 msgid "Add a clip"
 msgstr "Añadir un clip"
+
+#: apps/wprs-app/qml/SceneClipEdit.qml
+msgid "Add a clip and play it in a new animation layer"
+msgstr "Añadir un clip y reproducirlo en una capa de animación nueva"
 
 #: apps/wprs-app/qml/SceneClipEdit.qml
 msgid "Rename the clip"
@@ -3371,7 +3377,8 @@ msgstr "Datos:"
 
 #: apps/wprs-app/qml/SceneImportSheet.qml
 msgid "Read it as data, such as a normal map or a mask, not as colors"
-msgstr "Leerla como datos, como un mapa de normales o una máscara, no como colores"
+msgstr ""
+"Leerla como datos, como un mapa de normales o una máscara, no como colores"
 
 #: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/SceneRefs.qml
 #: apps/wprs-app/qml/SceneRigIk.qml
@@ -3394,6 +3401,45 @@ msgstr "Añadir un efecto"
 #: apps/wprs-app/qml/SceneInspector.qml
 msgid "Edit the particle system"
 msgstr "Editar el sistema de partículas"
+
+#: apps/wprs-app/qml/SceneKeyBase.qml
+msgid "Straighten the curve"
+msgstr "Enderezar la curva"
+
+#: apps/wprs-app/qml/SceneKeyBase.qml
+msgid "The keyframes are added to this base value:"
+msgstr "Los fotogramas clave se suman a este valor base:"
+
+#: apps/wprs-app/qml/SceneKeyBase.qml
+msgid "Make the keyframes relative by adding them to a base value:"
+msgstr "Haz relativos los fotogramas clave sumándolos a un valor base:"
+
+#: apps/wprs-app/qml/SceneKeyBase.qml
+msgid "A number, [x, y] or a color"
+msgstr "Un número, [x, y] o un color"
+
+#: apps/wprs-app/qml/SceneKeyBase.qml
+msgid "Set the base"
+msgstr "Fijar la base"
+
+#: apps/wprs-app/qml/SceneKeyBase.qml
+msgid "Absolute"
+msgstr "Absoluto"
+
+#: apps/wprs-app/qml/SceneKeyCurve.qml
+msgid "Curve to the next keyframe"
+msgstr "Curva hasta el siguiente fotograma clave"
+
+#: apps/wprs-app/qml/SceneKeyCurve.qml
+msgid ""
+"Drag the two handles to bend how the number moves between the keyframes."
+msgstr "Arrastra los dos tiradores para curvar cómo cambia el número entre los fotogramas clave."
+
+#: apps/wprs-app/qml/SceneKeyCurve.qml
+msgid ""
+"Handles bend the curve between two keyframes of a single number; pick one "
+"that has another after it."
+msgstr "Los tiradores curvan el tramo entre dos fotogramas clave de un solo número; elige uno que tenga otro después."
 
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "Desktop graphics cards (BC7)"
@@ -3515,8 +3561,16 @@ msgid "3D model from a file…"
 msgstr "Modelo 3D desde un archivo…"
 
 #: apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Mesh from a .glb file…"
+msgstr "Malla desde un archivo .glb…"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Mesh from a picture…"
 msgstr "Malla desde una imagen…"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Binary glTF meshes"
+msgstr "Mallas glTF binarias"
 
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Duplicate"
@@ -5866,13 +5920,13 @@ msgstr "Traducir"
 msgid "Remove the keyframe"
 msgstr "Quitar el fotograma clave"
 
+#: apps/wprs-app/qml/SceneTimeBar.qml
+msgid "Curve and base of the keyframe"
+msgstr "Curva y base del fotograma clave"
+
 #: apps/wprs-app/qml/SceneTimeBar.qml apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Timelines"
 msgstr "Líneas de tiempo"
-
-#: apps/wprs-app/qml/SceneTimeBar.qml
-msgid "Add a timeline"
-msgstr "Añadir una línea de tiempo"
 
 #: apps/wprs-app/qml/SceneTimeline.qml
 msgid ""
@@ -5884,6 +5938,22 @@ msgstr ""
 #: apps/wprs-app/qml/SceneTimeline.qml
 msgid "Scene clock"
 msgstr "Reloj de la escena"
+
+#: apps/wprs-app/qml/SceneTimelineMenu.qml
+msgid "Show in the inspector"
+msgstr "Ver en el inspector"
+
+#: apps/wprs-app/qml/SceneTimelineMenu.qml
+msgid "Remove; the values it drives follow the scene clock"
+msgstr "Quitar; los valores que mueve siguen el reloj de la escena"
+
+#: apps/wprs-app/qml/SceneTimelineMenu.qml
+msgid "Add a timeline"
+msgstr "Añadir una línea de tiempo"
+
+#: apps/wprs-app/qml/SceneTimelineMenu.qml
+msgid "Rename the timeline"
+msgstr "Renombrar la línea de tiempo"
 
 #: apps/wprs-app/qml/SceneTones.qml
 msgid "Bright colors"

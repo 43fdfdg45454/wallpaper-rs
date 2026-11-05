@@ -5,7 +5,7 @@ use cxx_qt_lib::QString;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use wprs_editor::{Action, assets, check, package, packing, previews};
+use wprs_editor::{Action, assets, check, package, packing, placing, previews};
 
 type Done<T> = Box<dyn FnOnce(Pin<&mut SceneEditor>, T) + Send>;
 
@@ -13,10 +13,12 @@ enum Placed {
     Asset(String, (bool, Option<[u32; 2]>)),
     Preview(bool),
     Packed(String),
+    Layer(String, Box<Action>),
 }
 
 pub fn queued(action: &Action) -> bool {
-    matches!(action, Action::Import { .. } | Action::Thumbnail { .. } | Action::Asset(_))
+    let placing = matches!(action, Action::AddLayer { file: Some(_), .. });
+    placing || matches!(action, Action::Import { .. } | Action::Thumbnail { .. } | Action::Asset(_))
 }
 
 impl SceneEditor {
@@ -60,6 +62,10 @@ impl SceneEditor {
             Action::Asset(wanted) => {
                 Ok((Placed::Packed(wanted.asset.clone()), packing::store(&dir, &doc, &wanted)?))
             }
+            placing @ Action::AddLayer { file: Some(_), .. } => {
+                let (asset, path) = placing::import(&dir, &doc, &placing)?;
+                Ok((Placed::Layer(asset, Box::new(placing)), path))
+            }
             other => Err(anyhow::anyhow!("{} is not a file action", other.name())),
         };
         self.work(
@@ -72,6 +78,9 @@ impl SceneEditor {
                         Placed::Asset(id, cut) => assets::sheet(&project.dir, &project.doc, id, &path, *cut),
                         Placed::Preview(animated) => previews::adopt(&project.doc, *animated, &path),
                         Placed::Packed(id) => Ok(packing::adopt(&project.doc, id, &path)),
+                        Placed::Layer(asset, add) => {
+                            placing::placed(&project.dir, &project.doc, add, asset, &path)
+                        }
                     };
                     ops.and_then(|ops| project.record(&label, ops))
                 };

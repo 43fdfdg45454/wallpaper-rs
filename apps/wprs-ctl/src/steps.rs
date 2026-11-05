@@ -74,6 +74,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
         Author::Remove { dir, pointer } => (dir, Action::Remove { pointer }),
         Author::Move { dir, from, to } => (dir, Action::Move { from, to }),
         Author::Layers(command) => crate::layering::action(command),
+        Author::Keying(command) => crate::keying::action(command),
         Author::Shaping(command) => crate::shaping::action(command),
         Author::ImportEffect { dir, descriptor, wgsl } => {
             let wgsl = wgsl.map(|w| fs::canonicalize(&w).unwrap_or(w));

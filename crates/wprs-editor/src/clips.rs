@@ -3,7 +3,7 @@ use crate::ops::{Op, set};
 use anyhow::{Result, anyhow, ensure};
 use serde_json::{Value, json};
 use wprs_core::message::said;
-use wprs_scene::MAX_CLIPS_PER_MODEL;
+use wprs_scene::{MAX_ANIMATION_LAYERS, MAX_CLIPS_PER_MODEL};
 
 mod keyed;
 
@@ -50,7 +50,11 @@ fn seed(dir: &std::path::Path, doc: &Value, l: &Value) -> Value {
 }
 
 pub(crate) fn clip(dir: &std::path::Path, doc: &Value, c: &ClipEdit) -> Result<Vec<Op>> {
-    let ClipEdit { layer, id, add, remove, to, length, repeat, animation, from } = c;
+    let ClipEdit { layer, id, add, remove, to, length, repeat, animation, from, play } = c;
+    ensure!(
+        !*play || *add,
+        said("editor.clip_play_add", "only a clip being added starts playing in a new animation layer", &[])
+    );
     let (path, l) = crate::actions::layer(doc, layer)?;
     let figure = l["type"] == "mesh" || l["type"] == "model";
     ensure!(figure, said("editor.not_figure", "the layer is not a mesh or a model", &[]));
@@ -130,8 +134,15 @@ pub(crate) fn clip(dir: &std::path::Path, doc: &Value, c: &ClipEdit) -> Result<V
             plays.iter_mut().filter(|a| a["clip"] == id.as_str()).for_each(|a| a["clip"] = json!(to));
         }
     }
+    if *play {
+        ensure!(
+            plays.len() < MAX_ANIMATION_LAYERS,
+            said("editor.plays_most", "a layer has at most %1 animation layers", &[&MAX_ANIMATION_LAYERS])
+        );
+        plays.push(json!({ "clip": id }));
+    }
     let mut ops = field(doc, &path, "clips", clips);
-    if l.get("animations").is_some() {
+    if l.get("animations").is_some() || *play {
         ops.extend(field(doc, &path, "animations", plays));
     }
     Ok(ops)

@@ -86,6 +86,7 @@ pub(crate) fn model(dir: &Path, doc: &Value, e: &ModelEdit) -> Result<Vec<Op>> {
                 source: Some(asset.clone()),
                 into: into.clone(),
                 at: None,
+                file: None,
             };
             let mut ops = crate::actions::plan(doc, &add)?;
             if let (Some(at), Some(Op::Add { value, .. })) = (at, ops.last_mut()) {
@@ -117,6 +118,7 @@ pub(crate) fn group(
             source: None,
             into: into.clone(),
             at: None,
+            file: None,
         };
         crate::actions::plan(doc, &add)?
     } else {

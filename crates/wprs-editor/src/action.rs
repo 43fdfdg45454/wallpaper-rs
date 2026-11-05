@@ -14,6 +14,7 @@ mod solid;
 mod sow;
 mod swarm;
 mod tend;
+mod timing;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use marks::{CanvasEdit, LayerEdit, ManifestEdit, PropertyEdit};
@@ -27,6 +28,7 @@ pub use shaping::EffectsEdit;
 pub use solid::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
 pub use sow::SowEdit;
 pub use swarm::{ParticleEdit, Response, Strand, SwarmLight, TendEdit};
+pub use timing::{KeyframeEdit, TimelineEdit};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
@@ -58,6 +60,8 @@ pub enum Action {
         into: Option<String>,
         #[serde(default)]
         at: Option<usize>,
+        #[serde(default)]
+        file: Option<PathBuf>,
     },
     RemoveLayer {
         id: String,
@@ -91,20 +95,7 @@ pub enum Action {
         #[serde(default)]
         id: Option<String>,
     },
-    Keyframe {
-        pointer: String,
-        time: f64,
-        #[serde(default)]
-        value: Option<Value>,
-        #[serde(default)]
-        ease: Option<Value>,
-        #[serde(default)]
-        timeline: Option<String>,
-        #[serde(default)]
-        remove: bool,
-        #[serde(default)]
-        from: Option<f64>,
-    },
+    Keyframe(KeyframeEdit),
     Import {
         file: PathBuf,
         #[serde(default)]
@@ -194,6 +185,7 @@ pub enum Action {
     Manifest(ManifestEdit),
     Property(PropertyEdit),
     Canvas(CanvasEdit),
+    Timeline(TimelineEdit),
     Undo {},
     Redo {},
 }

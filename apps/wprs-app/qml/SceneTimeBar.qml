@@ -4,6 +4,8 @@ import QtQuick.Controls as QQC2
 import io.github.wallpaper_rs.app
 
 QQC2.ToolBar {
+    id: bar
+
     required property var timeline
 
     RowLayout {
@@ -47,29 +49,28 @@ QQC2.ToolBar {
         }
 
         QQC2.ToolButton {
+            icon.name: "draw-bezier-curves"
+            text: App.tr("Curve and base of the keyframe")
+            display: QQC2.AbstractButton.IconOnly
+            enabled: timeline.picked !== null
+            onClicked: curves.open()
+
+            SceneKeyCurve {
+                id: curves
+
+                timeline: bar.timeline
+            }
+        }
+
+        QQC2.ToolButton {
             icon.name: "chronometer"
             text: App.tr("Timelines")
             onClicked: lines.popup()
 
-            QQC2.Menu {
+            SceneTimelineMenu {
                 id: lines
 
-                Repeater {
-                    model: timeline.page.view.timelines ?? []
-
-                    delegate: QQC2.MenuItem {
-                        required property var modelData
-
-                        text: modelData.id + " · " + App.tr("%1 s", modelData.duration)
-                        onTriggered: timeline.page.editor.select(modelData.pointer)
-                    }
-                }
-
-                QQC2.MenuItem {
-                    text: App.tr("Add a timeline")
-                    icon.name: "list-add"
-                    onTriggered: timeline.add()
-                }
+                timeline: bar.timeline
             }
         }
     }

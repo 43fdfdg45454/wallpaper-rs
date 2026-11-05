@@ -4,6 +4,7 @@ mod language;
 mod marks;
 mod more;
 mod textures;
+mod timing;
 
 use clap::CommandFactory;
 use image::{Rgba, RgbaImage};

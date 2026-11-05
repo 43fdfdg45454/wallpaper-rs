@@ -9,7 +9,7 @@ use wprs_editor::actions::{Action, ClipEdit, ClipKey, ExpressionEdit};
 #[derive(Subcommand, Debug)]
 pub enum Clipping {
     #[command(
-        about = "Add, change, rename or remove a clip of a mesh or model layer; removing it also removes the animation layers that play it"
+        about = "Add, change, rename or remove a clip of a mesh or model layer; --play also adds an animation layer that plays a new clip, and removing it also removes the animation layers that play it"
     )]
     Clip {
         #[arg(help = DIR)]
@@ -20,6 +20,8 @@ pub enum Clipping {
         id: String,
         #[arg(long, help = "Add it, of 2 s unless --length says otherwise")]
         add: bool,
+        #[arg(long, requires = "add", help = "Also add an animation layer that plays the new clip")]
+        play: bool,
         #[arg(long, conflicts_with = "add", help = "Remove it")]
         remove: bool,
         #[arg(long = "rename", value_name = "ID", help = "A new id")]
@@ -119,9 +121,10 @@ pub enum Clipping {
 
 pub(crate) fn action(command: Clipping) -> Result<(PathBuf, Action), Box<Author>> {
     Ok(match command {
-        Clipping::Clip { dir, layer, id, add, remove, to, length, repeat, animation, from } => {
+        Clipping::Clip { dir, layer, id, add, play, remove, to, length, repeat, animation, from } => {
             let repeat = repeat.and_then(|r| serde_json::from_value(json!(r)).ok());
-            (dir, Action::Clip(ClipEdit { layer, id, add, remove, to, length, repeat, animation, from }))
+            let clip = ClipEdit { layer, id, add, remove, to, length, repeat, animation, from, play };
+            (dir, Action::Clip(clip))
         }
         Clipping::Key {
             dir,

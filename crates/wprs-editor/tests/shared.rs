@@ -40,6 +40,7 @@ fn source(root: &Path) -> Project {
         source: None,
         into: None,
         at: None,
+        file: None,
     };
     project.act(&layer("image", "glow")).unwrap();
     project.act(&layer("particles", "snow")).unwrap();
@@ -95,6 +96,7 @@ fn asset_packages_are_made_from_chosen_parts_and_imported_with_credits() {
             source: None,
             into: None,
             at: None,
+            file: None,
         })
         .unwrap();
     let wanted = ImportAssets { package: wpak.clone(), parts: vec!["layer:glow".into()] };

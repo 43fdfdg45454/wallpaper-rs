@@ -2296,9 +2296,14 @@ wprs-ctl scene import mar ola.ogg                       # copiar un recurso a as
 wprs-ctl scene import mar espuma.png --atlas 4,4         # hoja de sprites; --linear para mapas de datos
 wprs-ctl scene add-layer mar sound --source ola         # y remove-layer, duplicate-layer, move-layer
 wprs-ctl scene add-layer mar text --name Título         # id «titulo», con ese texto
+wprs-ctl scene add-layer mar mesh --file zorro.glb      # importa el .glb y lo muestra en una capa mesh
 wprs-ctl scene set mar /scene/layers/1/opacity 0.5      # cualquier campo por su JSON Pointer
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 2 1 --ease in_out_sine
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 3 --from 2   # moverlo a otro instante
+wprs-ctl scene timeline mar olas --add --duration 6 --loop repeat   # y --rename, --remove, --frames con --fps
+wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 -0.5 --timeline olas --base 0.5   # relativo a 0,5
+wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 --out-handle 1,0   # asa Bézier; también --in-handle
+wprs-ctl scene clip titere zorro saludo --add --play     # un clip nuevo que ya suena en una capa de animación
 wprs-ctl scene translate mar /manifest/title es Mar     # otro idioma; --add no pisa nada, --remove lo quita
 wprs-ctl scene set mar /manifest/content '{"rating": "mature", "descriptors": ["violence"]}'
 wprs-ctl scene thumbnail mar captura.png                # miniatura en assets/, reducida si hace falta

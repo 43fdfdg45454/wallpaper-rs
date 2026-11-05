@@ -89,6 +89,8 @@ pub struct ClipEdit {
     pub animation: Option<String>,
     #[serde(default)]
     pub from: Option<f32>,
+    #[serde(default)]
+    pub play: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

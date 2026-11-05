@@ -80,6 +80,8 @@ pub enum Author {
     #[command(flatten)]
     Layers(crate::layering::Layering),
     #[command(flatten)]
+    Keying(crate::keying::Keying),
+    #[command(flatten)]
     Shaping(crate::shaping::Shaping),
     #[command(about = "Copy an effect descriptor and its WGSL shader into the folder as an effect")]
     ImportEffect {

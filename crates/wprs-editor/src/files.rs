@@ -6,6 +6,9 @@ use serde_json::Value;
 use std::path::Path;
 
 pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec<Op>>> {
+    if let Some(ops) = crate::placing::act(dir, doc, action) {
+        return Some(ops);
+    }
     Some(match action {
         Action::Import { file, id, linear, atlas } => crate::assets::import(dir, doc, file, id.as_deref())
             .and_then(|(id, path)| crate::assets::sheet(dir, doc, &id, &path, (*linear, *atlas))),

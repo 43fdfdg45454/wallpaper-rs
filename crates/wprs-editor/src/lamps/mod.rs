@@ -44,6 +44,7 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::Manifest(e) => crate::shaping::marks::manifest(dir, doc, e),
         Action::Property(e) => crate::shaping::marks::property(dir, doc, e),
         Action::Canvas(e) => crate::shaping::canvas::canvas(dir, doc, e),
+        Action::Timeline(e) => crate::timelines::edit(dir, doc, e),
         _ => return None,
     })
 }

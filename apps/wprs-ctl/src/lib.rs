@@ -30,6 +30,7 @@ mod gpus;
 pub mod input;
 pub mod inputs;
 pub mod items;
+mod keying;
 pub mod keys;
 mod lamped;
 mod lamping;
