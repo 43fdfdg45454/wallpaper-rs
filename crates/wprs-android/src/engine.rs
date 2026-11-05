@@ -27,7 +27,6 @@ pub(crate) use parked::forget;
 pub(crate) static FRAMES: AtomicU64 = AtomicU64::new(0);
 
 const RETRY_MS: i64 = 50;
-const SLACK_NS: i64 = 2_000_000;
 const ATTEMPTS: u32 = 3;
 
 pub(crate) struct Engine {
@@ -49,6 +48,7 @@ pub(crate) struct Engine {
     shown: f32,
     dirty: bool,
     presented: i64,
+    paced: crate::power::pace::Pace,
     rate: u32,
     failures: u32,
     video: bool,
@@ -98,6 +98,7 @@ impl Engine {
             shown,
             dirty,
             presented,
+            paced: Default::default(),
             rate,
             failures,
             video,
@@ -151,11 +152,11 @@ impl Engine {
         let power = Power::now();
         let cap = if self.film.is_some() { self.reel.fps } else { wprs_core::settings::fps::DISPLAY };
         let fps = wprs_core::settings::fps::lower(power.fps(self.preview), cap);
-        let due = self.presented + 1_000_000_000 / i64::from(fps.max(1)) - SLACK_NS;
-        if !force && nanos < due {
-            return Ok(((due - nanos) / 1_000_000).max(1));
+        if let Some(wait) = self.paced.wait(nanos, fps, self.rate).filter(|_| !force) {
+            return Ok(wait);
         }
         self.dirty |= force;
+        let shown = self.presented;
         let next = self.frame(nanos, fps, power).inspect_err(|e| {
             (self.target, self.image, self.fading, self.raised, self.dirty) = (None, None, None, None, true);
             log::warn!("{e}");
@@ -168,8 +169,10 @@ impl Engine {
             Err(e) if self.failures >= ATTEMPTS => return Err(e.into()),
             result => result.unwrap_or((0, 0)),
         };
+        self.paced.shown(nanos, self.presented != shown);
         self.hint(hint);
         Ok(match () {
+            _ if delay > 0 && hint > 0 => delay.min(self.paced.armed(nanos, hint.min(fps.max(1)))).max(1),
             _ if delay > 0 => delay,
             _ if self.dirty && self.failures < ATTEMPTS => RETRY_MS,
             _ => 0,

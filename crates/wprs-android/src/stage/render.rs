@@ -149,7 +149,8 @@ impl Stage {
             Wake::At(seconds) => ((seconds * 1000.0).clamp(0.0, DAY_MS) as i64).max(interval),
             Wake::Idle => idle,
         };
-        self.due = (delay > 0 && wake != Wake::Idle).then_some(nanos + delay * 1_000_000);
+        let ahead = if wake == Wake::Frame { 0 } else { delay * 1_000_000 };
+        self.due = (delay > 0 && wake != Wake::Idle).then_some(nanos + ahead);
         self.fps = if wake == Wake::Frame { fps } else { 0 };
         let rendered =
             crate::counted::gpu(|| r.render_scene(view, &self.runtime, &frame, inner, quality, videos))

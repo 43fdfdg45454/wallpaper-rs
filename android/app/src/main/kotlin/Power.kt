@@ -79,7 +79,7 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
         val ratio = if (Build.VERSION.SDK_INT >= 34 && shown.isHdrSdrRatioAvailable) shown.hdrSdrRatio else 0f
         @Suppress("DEPRECATION")
         val peak = shown.hdrCapabilities?.desiredMaxLuminance ?: 0f
-        Native.display(shown.isHdr, peak, ratio)
+        Native.display(shown.isHdr, peak, ratio, shown.refreshRate)
     }
 
     private companion object {

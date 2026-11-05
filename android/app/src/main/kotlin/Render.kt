@@ -39,7 +39,7 @@ object Native {
 
     external fun power(charging: Boolean, saver: Boolean, low: Boolean, thermal: Int, headroom: Float, still: Boolean)
 
-    external fun display(hdr: Boolean, peak: Float, ratio: Float)
+    external fun display(hdr: Boolean, peak: Float, ratio: Float, refresh: Float)
 
     external fun moving(): Boolean
 
@@ -146,7 +146,8 @@ class Frames(private val draw: Draw) : Choreographer.FrameCallback {
         at = Long.MAX_VALUE
     }
 
-    fun schedule(delay: Long) = if (delay > 0L) post(delay) else stop()
+    fun schedule(delay: Long, since: Long = System.nanoTime()) =
+        if (delay > 0L) post((delay - (System.nanoTime() - since) / NANOS_PER_MS).coerceAtLeast(0L)) else stop()
 
     private fun post(delay: Long) {
         stop()
@@ -154,7 +155,8 @@ class Frames(private val draw: Draw) : Choreographer.FrameCallback {
         at = SystemClock.uptimeMillis() + delay
     }
 
-    override fun doFrame(frameTimeNanos: Long) = schedule(draw.frame(frameTimeNanos))
+    override fun doFrame(frameTimeNanos: Long) = schedule(draw.frame(frameTimeNanos), frameTimeNanos)
 }
 
 private const val SOON_MS = 100L
+private const val NANOS_PER_MS = 1_000_000L
