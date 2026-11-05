@@ -16,4 +16,5 @@
     <string name="video_zoom">Zoom</string>
     <string name="video_x">Horizontal position</string>
     <string name="video_y">Vertical position</string>
+    <string name="duck">Silence the wallpaper while another app plays sound</string>
 </resources>

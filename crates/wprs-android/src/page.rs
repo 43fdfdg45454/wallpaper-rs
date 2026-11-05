@@ -4,6 +4,7 @@ use crate::{Error, library, props, settings};
 use serde_json::{Map, Value, json};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use wprs_core::model::Input;
 
@@ -55,7 +56,7 @@ fn decided(id: &str) -> [bool; 4] {
     HIDES.map(|what| library::with(|lib| Ok(lib.decided(id, what)?)).unwrap_or(false))
 }
 
-fn privacy(pack: &Pack) -> Privacy {
+pub(crate) fn privacy(pack: &Pack) -> Privacy {
     let [zone, language, gpu, storage] = decided(&pack.id).map(|hidden| !hidden);
     let web = pack.web.as_ref();
     let network = web.is_some_and(|w| !w.network.is_empty()) && props::allows(&pack.id, Input::Network);
@@ -70,11 +71,18 @@ fn languages(pack: &Pack, privacy: Privacy) -> Vec<String> {
     user.into_iter().chain(pack.locale.clone()).collect()
 }
 
-fn settings(pack: &Pack, preview: bool, privacy: Privacy) -> Value {
+static DUCK: AtomicU32 = AtomicU32::new(0x3f80_0000);
+
+pub(crate) fn duck(gain: f32) {
+    let gain = if gain.is_finite() { gain.clamp(0.0, 1.0) } else { 1.0 };
+    DUCK.store(gain.to_bits(), Relaxed);
+}
+
+pub(crate) fn settings(pack: &Pack, preview: bool, privacy: Privacy) -> Value {
     let power = Power::now();
     let locale = languages(pack, privacy).first().cloned().unwrap_or_default();
     let muted = settings::setting("playback.muted", None).map_or(true, |m| m != "false");
-    let volume = if muted { 0.0 } else { 1.0 };
+    let volume = if muted { 0.0 } else { f64::from(f32::from_bits(DUCK.load(Relaxed))) };
     json!({"fps": power.fps(preview), "quality": power.ceiling() as u8, "locale": locale, "volume": volume})
 }
 

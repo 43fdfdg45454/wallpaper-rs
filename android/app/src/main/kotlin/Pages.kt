@@ -12,6 +12,10 @@ import org.json.JSONObject
 class Pages(private val context: Context) {
     private val shown = mutableMapOf<Painter, Shown>()
 
+    init {
+        Duck.listen { main.post { shown.keys.forEach { Render.post(it::refresh) } } }
+    }
+
     private inner class Shown(val painter: Painter, var spec: JSONObject, val surface: Surface, var size: Pair<Int, Int>) {
         var page: Page? = null
         var visible = false
@@ -47,6 +51,7 @@ class Pages(private val context: Context) {
 
     private fun show(entry: Shown, visible: Boolean) {
         entry.visible = visible
+        Duck.want(context, entry.painter, visible && Native.setting(SOUND, null) == "false")
         main.removeCallbacks(entry.sleep)
         if (visible) entry.open() else main.postDelayed(entry.sleep, SLEEP_MS)
         entry.page?.visible(visible)
@@ -60,6 +65,7 @@ class Pages(private val context: Context) {
 
     fun drop(painter: Painter) {
         val entry = shown.remove(painter) ?: return
+        Duck.want(context, painter, false)
         main.removeCallbacks(entry.sleep)
         entry.page?.close()
     }
@@ -76,6 +82,7 @@ class Pages(private val context: Context) {
         private val main = Handler(Looper.getMainLooper())
         private const val SLEEP_MS = 5 * 60_000L
         private const val MAX_CRASHES = 3
+        private const val SOUND = "playback.muted"
         private const val PASSING = ".e.wpak.invalid"
 
         private var swept = false

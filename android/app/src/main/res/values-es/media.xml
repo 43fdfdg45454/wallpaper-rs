@@ -16,4 +16,5 @@
     <string name="video_zoom">Zoom</string>
     <string name="video_x">Posición horizontal</string>
     <string name="video_y">Posición vertical</string>
+    <string name="duck">Silenciar el fondo mientras otra app reproduce sonido</string>
 </resources>

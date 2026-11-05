@@ -137,7 +137,10 @@ multiplies the general volume; a page reads the product as `wprs.volume`, and on
 `volume` property of its own keeps it instead. The general option `playback.duck` (off by default)
 fades every wallpaper sound out while another application plays sound and back in when it stops:
 the daemon counts the PipeWire playback streams of other processes that are running, without
-reading their names, their media or their sound.
+reading their names, their media or their sound. The phone counts the active playbacks Android
+reports (only their audio attributes, which name no app), listens only while a video or a page
+with sound is shown, marks its own players (movie content that only the system may capture) so as
+not to count them, and takes one unmarked playback off for each page shown with sound.
 
 ### Video settings
 

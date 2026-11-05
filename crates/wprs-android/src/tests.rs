@@ -16,6 +16,7 @@ mod guarded;
 mod kept;
 mod lit;
 mod looks;
+mod paced;
 mod pages;
 mod played;
 mod records;
@@ -147,6 +148,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     chosen::chosen_files_and_folders();
     refused::packages_the_phone_cannot_play_are_refused();
     pages::pages_are_served_from_their_package_only();
+    paced::pages_fade_out_while_another_app_plays();
     unreadable();
 }
 
