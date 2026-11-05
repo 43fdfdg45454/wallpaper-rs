@@ -12,6 +12,7 @@ pub(super) fn remove(lib: &mut Library, uids: &[String], now: i64) -> Result<Val
     crate::keeping::forget(lib, &items)?;
     crate::state::forget(removed, now * 1000)?;
     items.iter().try_for_each(store::forget)?;
+    items.iter().for_each(crate::converted::forget);
     let gone =
         |o: &wprs_core::config::OutputConfig| items.iter().any(|item| o.image.as_ref() == Some(&item.path));
     let config = settings::config();

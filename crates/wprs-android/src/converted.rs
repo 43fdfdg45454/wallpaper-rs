@@ -3,9 +3,12 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 use wprs_library::{Item, Kind, qhash};
 
 const MADE: &str = "converting";
+
+static SWEPT: AtomicBool = AtomicBool::new(false);
 
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
@@ -36,8 +39,11 @@ pub(crate) fn request(request: Request) -> Result<Value, Error> {
     match request {
         Request::ConvertTo { uid } => {
             video(&uid)?;
-            let path = made(&uid)?;
-            fs::create_dir_all(store::dir()?.join(MADE))?;
+            let (path, dir) = (made(&uid)?, store::dir()?.join(MADE));
+            if !SWEPT.swap(true, Relaxed) {
+                drop(fs::remove_dir_all(&dir));
+            }
+            fs::create_dir_all(dir)?;
             let _ = fs::remove_file(&path);
             Ok(json!(path))
         }
@@ -46,6 +52,12 @@ pub(crate) fn request(request: Request) -> Result<Value, Error> {
             Ok(Value::Null)
         }
         Request::Converted { uid } => replace(&uid),
+    }
+}
+
+pub(crate) fn forget(item: &Item) {
+    if let Ok(path) = made(&item.uid) {
+        drop(fs::remove_file(path));
     }
 }
 
