@@ -137,13 +137,15 @@ revoked), adds `.wpak` files with *Add unlisted* as `repo add --unlisted` does, 
 again a package or one version and features (with an optional note) or unfeatures a package, each
 after a confirmation that says what the CLI says, through the same `wprs_format` functions. *Publish…*
 takes a secret key file of an online key, its password when it has one, and the days until the index
-expires (7 by default), and calls `publish` as `wprs-ctl repo publish` does. Adding and publishing run
-off the window thread and answer when done; the page shows that it is busy meanwhile. The phone does the
+expires (7 by default), and calls `publish` as `wprs-ctl repo publish` does. Every change to the
+catalog runs off the window thread, one after another, and answers when done; the page shows that it
+is busy meanwhile and keeps the other changes and *Open* disabled until then. The phone does the
 same from *Static repository* in *Devices*: it opens a folder picked through the system picker, copies
 its files except `packages/` and `previews/` into its cache, runs the same `wprs_format::stall`
 functions there (`Native.stall`, ops `open`, `add`, `list`, `feature` and `publish`, each answering
 with the files it changed), writes those files back into the folder and clears the copy; the
-picked `.wpak` files and the online key are read only for that step.
+picked `.wpak` files and the online key are read only for that step. Its steps run one at a time, and
+the buttons that change the catalog stay disabled while one runs.
 
 `featured/<sha256>.json` (optional): `format` (`wpak-repo-featured/1.0`), `repo_id` and `items`: at
 most 64 `{id, note?}`, ids of packages of the repository, each once, with a note of at most 200

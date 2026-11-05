@@ -34,7 +34,7 @@ typealias Go = (String, Array<out Pair<String, Any?>>) -> Unit
 const val NOTE = 200
 
 @Composable
-fun Stocked(stocked: JSONObject, ask: Ask, go: Go) {
+fun Stocked(stocked: JSONObject, busy: Boolean, ask: Ask, go: Go) {
     val id = stocked.getString("id")
     val versions = stocked.optJSONArray("versions").objects()
     val (listed, featured) = versions.any { it.optBoolean("listed") } to stocked.optBoolean("featured")
@@ -48,10 +48,10 @@ fun Stocked(stocked: JSONObject, ask: Ask, go: Go) {
                 val by = stocked.optString("author").takeUnless { stocked.isNull("author") }?.let { stringResource(R.string.stall_by, it) }
                 (stocked.optString("note").takeUnless { stocked.isNull("note") } ?: by)?.let { Text(it) }
                 Row {
-                    TextButton({ ask(listing, false) { go("list", arrayOf("id" to id, "listed" to !listed)) } }) {
+                    TextButton({ ask(listing, false) { go("list", arrayOf("id" to id, "listed" to !listed)) } }, enabled = !busy) {
                         Text(stringResource(if (listed) R.string.stall_unlist else R.string.stall_list_again))
                     }
-                    TextButton({ ask(picking, !featured) { note -> go("feature", arrayOf("id" to id, "note" to note.ifBlank { null }, "on" to !featured)) } }) {
+                    TextButton({ ask(picking, !featured) { note -> go("feature", arrayOf("id" to id, "note" to note.ifBlank { null }, "on" to !featured)) } }, enabled = !busy) {
                         Text(stringResource(if (featured) R.string.stall_unfeature else R.string.stall_feature))
                     }
                 }
@@ -61,7 +61,7 @@ fun Stocked(stocked: JSONObject, ask: Ask, go: Go) {
                     val asking = stringResource(if (shown) R.string.stall_ask_unlist_version else R.string.stall_ask_list_version, id, version)
                     Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text((listOf(version, titled(release.opt("title"))) + marks).joinToString(" · "), Modifier.weight(1f))
-                        TextButton({ ask(asking, false) { go("list", arrayOf("id" to id, "version" to version, "listed" to !shown)) } }) {
+                        TextButton({ ask(asking, false) { go("list", arrayOf("id" to id, "version" to version, "listed" to !shown)) } }, enabled = !busy) {
                             Text(stringResource(if (shown) R.string.stall_unlist_version else R.string.stall_list_version))
                         }
                     }

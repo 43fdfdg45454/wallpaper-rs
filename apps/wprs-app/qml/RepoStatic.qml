@@ -13,6 +13,7 @@ ColumnLayout {
     property string message: ""
     property bool failed: false
     property var pending: null
+    readonly property bool busy: backend.busy
 
     function take(answer) {
         const reply = JSON.parse(answer);
@@ -24,8 +25,10 @@ ColumnLayout {
         shown = reply;
         if (reply.published)
             message = App.tr("Published index %1 with %2 packages; it expires %3", reply.published.version, reply.published.packages, reply.published.expires);
+        else if (reply.added)
+            message = App.tr("Added %1. Publish the repository next.", reply.added.join(", "));
         else
-            message = reply.added ? App.tr("Added %1. Publish the repository next.", reply.added.join(", ")) : "";
+            message = reply.changed ? App.tr("Changed. Publish the repository next.") : "";
     }
 
     function ask(text, run) {
@@ -35,17 +38,11 @@ ColumnLayout {
     }
 
     function list(id, version, on) {
-        return backend.list(folder, id, version, on);
+        backend.list(folder, id, version, on);
     }
 
     function feature(id, note, on) {
-        return backend.feature(folder, id, note, on);
-    }
-
-    function done(answer) {
-        take(answer);
-        if (!failed)
-            message = App.tr("Changed. Publish the repository next.");
+        backend.feature(folder, id, note, on);
     }
 
     Stall {
@@ -60,6 +57,7 @@ ColumnLayout {
         QQC2.Button {
             icon.name: "document-open-folder"
             text: App.tr("Open a static repository…")
+            enabled: !backend.busy
             onClicked: folders.open()
         }
 
@@ -125,7 +123,10 @@ ColumnLayout {
 
         title: App.tr("Change the repository")
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
-        onAccepted: stall.done(stall.pending())
+        onAccepted: {
+            if (!stall.busy)
+                stall.pending();
+        }
     }
 
     FolderDialog {

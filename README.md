@@ -1748,8 +1748,9 @@ add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo
 *Repositorio estático* de *Repositorios* abre la carpeta del repositorio y añade paquetes (también
 ocultos), oculta o vuelve a mostrar un paquete o una versión y destaca o deja de destacar, con la misma
 confirmación, y *Publicar…* firma el índice con un archivo de clave en línea (con su contraseña, si
-la tiene) y los días hasta que caduca, como `wprs-ctl repo publish`. Añadir y publicar trabajan fuera
-de la ventana, que sigue respondiendo mientras tanto. En el teléfono, *Repositorio estático* de
+la tiene) y los días hasta que caduca, como `wprs-ctl repo publish`. Cada cambio del catálogo
+trabaja fuera de la ventana, uno detrás de otro, y mientras dura los demás cambios y *Abrir* esperan
+desactivados. En el teléfono, *Repositorio estático* de
 *Dispositivos* hace lo mismo con una carpeta que eliges en el selector del sistema (por ejemplo la que
 sincronizas con tu servidor): añade paquetes (también ocultos), oculta o vuelve a mostrar, destaca o
 deja de destacar con la misma confirmación y publica con un archivo de clave en línea; trabaja sobre

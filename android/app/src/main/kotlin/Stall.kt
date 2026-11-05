@@ -92,7 +92,7 @@ fun Stall(main: Main) {
         if (said.isNotEmpty()) Text(said, color = MaterialTheme.colorScheme.primary)
     }
     shown?.optJSONArray("packages").objects().forEach { stocked ->
-        Stocked(stocked, { text, noting, then -> asked = Asked(text, noting, then) }) { op, args -> act(op, *args) }
+        Stocked(stocked, busy, { text, noting, then -> asked = Asked(text, noting, then) }) { op, args -> act(op, *args) }
     }
     asked?.let { Asking(it) { asked = null } }
     if (publishing) Publishing({ publishing = false }) { key, password, days ->

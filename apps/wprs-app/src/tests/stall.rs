@@ -1,6 +1,8 @@
-use crate::stall::{added, published};
+use crate::stall::{added, changed, published, queued};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc;
+use std::time::Duration;
 use wprs_format::stall::{featured, listed, opened};
 use wprs_format::{
     Kind, Limits, Manifest, SCHEMA_V1, Settings, Signer, Text, build, init, keygen, sign_root,
@@ -46,7 +48,8 @@ fn a_static_repository_is_opened_filled_unlisted_and_featured_from_the_app() {
     assert_eq!(state["added"], serde_json::json!(["org.example.dawn 1.0.0", "org.example.dusk 1.0.0"]));
     assert_eq!(state["name"], "Example wallpapers");
     assert_eq!(state["packages"][0]["versions"][0]["listed"], false);
-    let state = listed(&dir, "org.example.dawn", None, true).unwrap();
+    let state = changed(listed(&dir, "org.example.dawn", None, true)).unwrap();
+    assert_eq!(state["changed"], true);
     assert_eq!(state["packages"][0]["versions"][0]["listed"], true);
     let state = featured(&dir, "org.example.dusk", Some("Calm evening"), true).unwrap();
     assert_eq!(
@@ -81,4 +84,24 @@ fn a_static_repository_is_published_from_the_app_with_an_online_key() {
     let state = published(&dir, &online_file, Some("example".into()), 7).unwrap();
     assert_eq!(state["published"]["packages"], 1);
     assert_eq!(state["packages"][0]["id"], "org.example.dawn");
+}
+
+#[test]
+fn a_catalog_change_from_the_app_waits_for_the_one_that_runs() {
+    let (entered, enter) = mpsc::channel();
+    let (release, wait) = mpsc::channel::<()>();
+    let first = std::thread::spawn(move || {
+        queued(|| {
+            entered.send(()).unwrap();
+            wait.recv().unwrap();
+        })
+    });
+    enter.recv().unwrap();
+    let (finished, done) = mpsc::channel();
+    let second = std::thread::spawn(move || queued(|| finished.send(()).unwrap()));
+    assert!(done.recv_timeout(Duration::from_millis(300)).is_err(), "two catalog changes ran at once");
+    release.send(()).unwrap();
+    done.recv_timeout(Duration::from_secs(10)).unwrap();
+    first.join().unwrap();
+    second.join().unwrap();
 }
