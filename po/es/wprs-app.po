@@ -1336,13 +1336,13 @@ msgstr "Bajar"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/PlaylistItems.qml
 #: apps/wprs-app/qml/SceneAssets.qml apps/wprs-app/qml/SceneBoneRow.qml
-#: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/SceneInspector.qml
-#: apps/wprs-app/qml/SceneLayerTools.qml apps/wprs-app/qml/SceneModelSwing.qml
-#: apps/wprs-app/qml/ScenePairs.qml apps/wprs-app/qml/SceneProperties.qml
-#: apps/wprs-app/qml/SceneRigIk.qml apps/wprs-app/qml/SceneRigPhysics.qml
-#: apps/wprs-app/qml/SceneRigRow.qml apps/wprs-app/qml/SceneSettingMenu.qml
-#: apps/wprs-app/qml/SceneShapes.qml apps/wprs-app/qml/SceneSwarmPoints.qml
-#: apps/wprs-app/qml/SettingsPage.qml
+#: apps/wprs-app/qml/SceneEmitterList.qml apps/wprs-app/qml/SceneInput.qml
+#: apps/wprs-app/qml/SceneInspector.qml apps/wprs-app/qml/SceneLayerTools.qml
+#: apps/wprs-app/qml/SceneModelSwing.qml apps/wprs-app/qml/ScenePairs.qml
+#: apps/wprs-app/qml/SceneProperties.qml apps/wprs-app/qml/SceneRigIk.qml
+#: apps/wprs-app/qml/SceneRigPhysics.qml apps/wprs-app/qml/SceneRigRow.qml
+#: apps/wprs-app/qml/SceneSettingMenu.qml apps/wprs-app/qml/SceneShapes.qml
+#: apps/wprs-app/qml/SceneSwarmPoints.qml apps/wprs-app/qml/SettingsPage.qml
 msgid "Remove"
 msgstr "Quitar"
 
@@ -3273,6 +3273,38 @@ msgstr "Elemento %1"
 #: apps/wprs-app/qml/SceneEditors.qml
 msgid "%1 is not valid JSON"
 msgstr "%1 no es JSON válido"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "Add a point emitter"
+msgstr "Agregar un emisor de punto"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "Add a line emitter"
+msgstr "Agregar un emisor de línea"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "Drag the emitters on the canvas to place them"
+msgstr "Arrastra los emisores sobre el lienzo para colocarlos"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "Line %1"
+msgstr "Línea %1"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "Point %1"
+msgstr "Punto %1"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "Direction %1°"
+msgstr "Dirección %1°"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "Strength %1"
+msgstr "Fuerza %1"
+
+#: apps/wprs-app/qml/SceneEmitters.qml
+msgid "Fluid emitter %1: drag to move it"
+msgstr "Emisor de fluido %1: arrástralo para moverlo"
 
 #: apps/wprs-app/qml/SceneEntry.qml
 msgid "Stored in the keyring"
@@ -8401,14 +8433,6 @@ msgid "Light source"
 msgstr "Fuente de luz"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Source angle"
-msgstr "Ángulo de la fuente"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Source strength"
-msgstr "Fuerza de la fuente"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Space"
 msgstr "Espacio"
 
@@ -8751,20 +8775,8 @@ msgid "Limits"
 msgstr "Límites"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Line start"
-msgstr "Inicio de la línea"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Line height"
 msgstr "Altura de línea"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Line strength"
-msgstr "Fuerza de la línea"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Line end"
-msgstr "Final de la línea"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Linear color"

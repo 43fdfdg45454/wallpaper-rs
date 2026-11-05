@@ -39,6 +39,11 @@ pub(crate) fn volume(device: &wgpu::Device, queue: &wgpu::Queue, size: u32, data
 impl Painter<'_, '_, '_> {
     pub(crate) fn asset(&mut self, e: &EffectDraw<'_>, param: &str, kind: ParamKind) -> Option<Src> {
         let def = e.descriptor.params.iter().find(|p| p.id == param && p.kind == kind)?;
+        if kind == ParamKind::Emitters {
+            let key = wprs_scene::emitter_key(emitted(e.effect.params.get(param), &def.default));
+            let found = self.paints.iter().find(|(owner, k, _)| owner == EMITTERS && *k == key);
+            return found.map(|(.., image)| &image.0).map(|image| self.ext(image));
+        }
         let bound = e.textures.iter().find(|(id, _)| *id == param).map(|(_, name)| name.as_str());
         let id = bound.or_else(|| def.named(e.effect));
         let (images, luts, paints) = (self.images, self.luts, self.paints);
@@ -58,6 +63,20 @@ impl Painter<'_, '_, '_> {
         let found = e.descriptor.params.iter().find(|p| p.kind == ParamKind::Lut);
         found.and_then(|p| self.asset(e, &p.id, ParamKind::Lut)).unwrap_or(Src::Void)
     }
+}
+
+const EMITTERS: &str = "emitters";
+
+fn emitted<'a>(value: Option<&'a Value<Param>>, default: &'a Param) -> &'a [wprs_scene::EffectEmitter] {
+    match (value, default) {
+        (Some(Value::Fixed(Param::Emitters(list))), _) | (None, Param::Emitters(list)) => list,
+        _ => &[],
+    }
+}
+
+fn emitters(list: &[wprs_scene::EffectEmitter]) -> Option<RgbaImage> {
+    let texels: Vec<u8> = wprs_scene::emitter_texels(list).into_iter().flatten().collect();
+    RgbaImage::from_raw((texels.len() / 4) as u32, 1, texels).filter(|_| !list.is_empty())
 }
 
 fn generic(name: &str) -> RgbaImage {
@@ -92,6 +111,15 @@ impl Renderer {
         let mut out: Vec<(String, String, Image)> = Vec::new();
         for e in scene.drawable().flat_map(|l| &l.effects) {
             let Some(d) = scene.effect(&e.effect) else { continue };
+            for p in d.params.iter().filter(|p| p.kind == ParamKind::Emitters) {
+                let list = emitted(e.params.get(&p.id), &p.default);
+                let key = wprs_scene::emitter_key(list);
+                let fresh = !out.iter().any(|(o, k, _)| o == EMITTERS && *k == key);
+                let made = emitters(list)
+                    .filter(|_| fresh)
+                    .map(|i| self.upload_pixels(&Pixels::new(i), true, Some(false)));
+                out.extend(made.flatten().map(|image| (EMITTERS.to_owned(), key, image)));
+            }
             for p in d.params.iter().filter(|p| p.kind.asset() && p.kind != ParamKind::Lut) {
                 let mapped = match e.params.get(&p.id) {
                     Some(Value::Bound(b)) => b.map.iter().flat_map(|m| m.values()).collect(),

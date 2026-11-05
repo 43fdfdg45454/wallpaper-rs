@@ -96,6 +96,12 @@ ColumnLayout {
         input: parent
     }
 
+    SceneHosts {
+        id: hosts
+
+        input: parent
+    }
+
     Loader {
         Layout.fillWidth: true
         active: !input.bound && input.field.widget !== "group"
@@ -107,22 +113,23 @@ ColumnLayout {
                 "variant": choiceEditor,
                 "color": colorEditor,
                 "rgb": colorEditor,
-                "condition": conditionEditor,
+                "condition": hosts.condition,
                 "vec2": editors.pair,
                 "curve": editors.curve,
-                "stops": pairsEditor,
-                "points": pairsEditor,
-                "styles": stylesEditor,
+                "stops": hosts.pairs,
+                "points": hosts.pairs,
+                "styles": hosts.styles,
+                "emitters": hosts.emitters,
                 "list": editors.list,
                 "ref:mask": editors.mask,
                 "ref:model": editors.rig,
-                "texts": textsEditor,
-                "markup": textsEditor,
-                "flags": metaEditor,
-                "lines": metaEditor,
-                "computed": metaEditor,
-                "ref:thumbnail": metaEditor,
-                "ref:animated": metaEditor
+                "texts": hosts.texts,
+                "markup": hosts.texts,
+                "flags": hosts.meta,
+                "lines": hosts.meta,
+                "computed": hosts.meta,
+                "ref:thumbnail": hosts.meta,
+                "ref:animated": hosts.meta
             })[input.field.widget] ?? (/^(refs|map):|^ref:reach$/.test(input.field.widget) ? editors.refs : input.field.widget.startsWith("ref:") ? choiceEditor : editors.raw)
     }
 
@@ -154,46 +161,6 @@ ColumnLayout {
             alpha: input.field.widget !== "rgb"
             hex: typeof input.value === "string" ? input.value : "#ffffff"
             onPicked: hex => input.commit(hex)
-        }
-    }
-
-    Component {
-        id: pairsEditor
-
-        ScenePairs {
-            host: input
-        }
-    }
-
-    Component {
-        id: stylesEditor
-
-        SceneStyles {
-            host: input
-        }
-    }
-
-    Component {
-        id: conditionEditor
-
-        SceneCondition {
-            host: input
-        }
-    }
-
-    Component {
-        id: textsEditor
-
-        SceneTexts {
-            host: input
-        }
-    }
-
-    Component {
-        id: metaEditor
-
-        SceneMeta {
-            host: input
         }
     }
 }

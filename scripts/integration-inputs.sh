@@ -36,7 +36,7 @@ ctl scene undo "$draft" && ctl scene undo "$draft" && ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/solid '{"alpha": 0.5}'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with solid layers was not previewed"
 ctl scene undo "$draft"
-ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "glitter", "params": {"speed": 0}}, {"effect": "fluid", "params": {"source_strength": 8}}, {"effect": "god_rays", "params": {"mode": 2}}]'
+ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "glitter", "params": {"speed": 0}}, {"effect": "fluid", "params": {"emitters": [{"from": [0.3, 0.9], "strength": 8}, {"from": [0.2, 1], "to": [0.8, 1], "strength": 4}]}}, {"effect": "god_rays", "params": {"mode": 2}}]'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with glitter, fluid and a star of rays was not previewed"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "blend_gradient"}]'

@@ -145,6 +145,9 @@ pub use crate::timeline::{Event, Handles, Key, Loop, Timeline, local, sample};
 pub use crate::typeset::{Backing, Glyphs, Layout, MAX_FALLBACK, Outline, Shadow, TextLayer, Valign, Wrap};
 pub use crate::uses::{Uses, needs, source, tells_time, variants};
 pub use crate::validate::Issue;
-pub use crate::value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2, Vec3};
+pub use crate::value::{
+    AudioChannel, Axis, Band, Binding, EMITTER_TEXELS, EffectEmitter, Level, MAX_EFFECT_EMITTERS, Param,
+    Value, Vec2, Vec3, emitter_key, emitter_texels,
+};
 pub use crate::voice::{Playlist, Spot, Walk};
 pub use crate::wake::Wake;

@@ -169,7 +169,9 @@ impl Descriptor {
         let kind = |name: &str, kind| self.param(name).is_some_and(|i| self.params[i].kind == kind);
         match input.split_once(':') {
             Some(("pass", k)) => k.parse::<usize>().is_ok_and(|k| k < n),
-            Some(("asset", p)) => kind(p, ParamKind::Texture) || kind(p, ParamKind::Mask),
+            Some(("asset", p)) => {
+                [ParamKind::Texture, ParamKind::Mask, ParamKind::Emitters].into_iter().any(|k| kind(p, k))
+            }
             Some(("target", t)) => self.targets.contains_key(t),
             Some(_) => false,
             None => {

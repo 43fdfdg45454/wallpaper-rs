@@ -139,7 +139,12 @@ impl Animate for Param {
             Json::Bool(b) => Some(Param::Bool(*b)),
             Json::Number(n) => n.as_f64().map(|n| Param::Number(n as f32)),
             Json::String(s) => Some(Color::parse(s).map_or_else(|| Param::Text(s.clone()), Param::Color)),
-            _ => floats(v).map(Param::Vec2).or_else(|| Color::from_json(v).map(Param::Color)),
+            _ => floats(v).map(Param::Vec2).or_else(|| Color::from_json(v).map(Param::Color)).or_else(|| {
+                serde_json::from_value(v.clone())
+                    .ok()
+                    .filter(|l: &Vec<crate::EffectEmitter>| !l.is_empty())
+                    .map(Param::Emitters)
+            }),
         }
     }
     fn from_signal(x: f32) -> Option<Param> {

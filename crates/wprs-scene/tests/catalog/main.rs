@@ -4,6 +4,7 @@ use wprs_scene::*;
 
 mod drawn;
 mod effects;
+mod emitters;
 mod timelines;
 
 const NEWER: &str =

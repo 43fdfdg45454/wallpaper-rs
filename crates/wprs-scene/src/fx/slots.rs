@@ -14,6 +14,9 @@ impl ParamDef {
             (ParamKind::Int, Param::Number(n)) => n.fract() == 0.0,
             (ParamKind::Enum, Param::Number(n)) => self.values.iter().any(|e| e.value == *n),
             (ParamKind::Blend, Param::Text(name)) => Blend::named(name).is_some(),
+            (ParamKind::Emitters, Param::Emitters(list)) => {
+                list.len() <= crate::MAX_EFFECT_EMITTERS && list.iter().all(crate::EffectEmitter::fits)
+            }
             (kind, value) => matches!(
                 (kind, value),
                 (ParamKind::Float, Param::Number(_))
@@ -49,6 +52,9 @@ impl ParamDef {
                 [r, g, b, *a]
             }
             (ParamKind::Bool, Param::Bool(b)) => [f32::from(*b), 0.0, 0.0, 0.0],
+            (ParamKind::Emitters, Param::Emitters(list)) => {
+                [list.len().min(crate::MAX_EFFECT_EMITTERS) as f32, 0.0, 0.0, 0.0]
+            }
             (ParamKind::Texture | ParamKind::Lut | ParamKind::Mask, _) => [0.0; 4],
             _ => self.slot(&self.default),
         }

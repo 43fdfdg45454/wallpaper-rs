@@ -39,6 +39,7 @@ impl Check<'_> {
                         self.range(&path, *n, def.min.unwrap_or(f32::MIN), def.max.unwrap_or(f32::MAX))
                     }
                     Value::Fixed(Param::Text(id)) if def.kind.asset() => self.texture(&path, id, lut),
+                    Value::Bound(_) if def.kind == ParamKind::Emitters => self.issues.push(Issue::Type(path)),
                     Value::Bound(b) if b.layer.is_some() => self.fed(&path, def, b),
                     Value::Bound(b) if def.kind.asset() => {
                         match (&b.map, b.prop.as_ref().and_then(|p| self.props.get(p))) {

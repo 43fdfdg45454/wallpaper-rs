@@ -29,6 +29,7 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
         ParamKind::Lut => ("ref:lut", Some("lut")),
         ParamKind::Int => ("integer", None),
         ParamKind::Enum | ParamKind::Blend => ("enum", None),
+        ParamKind::Emitters => ("emitters", None),
     };
     let listed = match p.kind {
         ParamKind::Blend => wprs_scene::BLENDS.iter().filter_map(|b| serde_json::to_value(b).ok()).collect(),
@@ -55,7 +56,7 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
         set: current.is_some(),
         options,
         range: p.min.zip(p.max).map_or(Value::Null, |(a, b)| json!([a, b])),
-        bindable: reference.is_none(),
+        bindable: reference.is_none() && p.kind != ParamKind::Emitters,
         source: source(current),
         depth,
         names,

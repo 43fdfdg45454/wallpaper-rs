@@ -121,8 +121,6 @@ QtObject {
             "sound": App.tr("Sound"),
             "sounds": App.tr("Sounds"),
             "source": App.tr("Light source"),
-            "source_angle": App.tr("Source angle"),
-            "source_strength": App.tr("Source strength"),
             "space": App.tr("Space"),
             "span": App.tr("Part of the line"),
             "specular": App.tr("Specular highlights"),
