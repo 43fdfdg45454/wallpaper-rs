@@ -182,6 +182,8 @@ pub enum Command {
     Edit(Edits),
     #[command(subcommand, about = "RGB lighting through an OpenRGB server: status, devices and a test")]
     Rgb(crate::rgb::Rgb),
+    #[command(subcommand, about = "Whether the media player is read now, and for which screens")]
+    Media(crate::media::Media),
     #[command(
         subcommand,
         about = "Download, check and remove the depth model and its runtime; needs no daemon"

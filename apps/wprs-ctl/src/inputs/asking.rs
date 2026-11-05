@@ -1,4 +1,4 @@
-use super::shown::{AUDIO, CLICKS, NETWORK, POINTER, RGB, SLOW};
+use super::shown::{AUDIO, CLICKS, MEDIA, NETWORK, POINTER, RGB, SLOW};
 use crate::show;
 use anyhow::Result;
 use std::collections::BTreeSet;
@@ -61,6 +61,7 @@ async fn asks(client: &Client, output: &str, mut serial: u64) -> Result<BTreeSet
             (s.clicks, Input::Clicks, CLICKS),
             (s.network, Input::Network, NETWORK),
             (s.rgb, Input::Rgb, RGB),
+            (s.media, Input::Media, MEDIA),
         ];
         let decided = move |input: Input| s.granted.contains(&input) || declined(&s.scene, input);
         let open = used.into_iter().filter(move |(on, input, _)| *on && !decided(*input));

@@ -701,6 +701,17 @@ msgstr ""
 "Solo llegan a la escena los clics y toques reales sobre el fondo de esta "
 "pantalla; nunca se guardan y nunca se leen las teclas."
 
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid "Show what the media player plays"
+msgstr "Mostrar lo que suena"
+
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid ""
+"While the scene is shown, the title, artist, album, cover and progress of "
+"what a media player on this computer plays reach it; nothing of it is kept, "
+"logged or sent."
+msgstr "Mientras la escena se ve, le llegan el título, el artista, el álbum, la carátula y el avance de lo que suena en un reproductor de este equipo; nada de eso se guarda, se registra ni se envía."
+
 #: apps/wprs-app/qml/Consent.qml
 msgid "Send its colors to the RGB lighting"
 msgstr "Mandar sus colores a la iluminación RGB"
@@ -5695,8 +5706,82 @@ msgid "Rate"
 msgstr "Valorar"
 
 #: apps/wprs-app/qml/SettingsGrants.qml
+msgid ""
+"A scene follows the sound that plays or the pointer, or takes clicks, only "
+"after you allow it for that scene, and only while it is shown; clicks also "
+"have to be turned on for each screen in its scene settings. The sound is "
+"turned into levels on this computer and never recorded, kept or sent; "
+"pointer positions and clicks are never kept."
+msgstr ""
+"Una escena sigue el sonido que suena o el puntero, o recibe clics, solo "
+"después de que lo permitas para esa escena y solo mientras se ve; los clics "
+"además hay que encenderlos en cada pantalla, en los ajustes de su escena. El "
+"sonido se convierte en niveles en este equipo y nunca se graba, se guarda ni "
+"se envía; las posiciones del puntero y los clics nunca se guardan."
+
+#: apps/wprs-app/qml/SettingsGrants.qml
+msgid "A scene is following the sound now."
+msgstr "Ahora mismo una escena está siguiendo el sonido."
+
+#: apps/wprs-app/qml/SettingsGrants.qml
+msgid "A scene is following the pointer now."
+msgstr "Ahora mismo una escena está siguiendo el puntero."
+
+#: apps/wprs-app/qml/SettingsGrants.qml
+msgid "No scene has been allowed yet."
+msgstr "Todavía no has dado permiso a ninguna escena."
+
+#: apps/wprs-app/qml/SettingsGrants.qml
 msgid "Stop using %1"
 msgstr "Dejar de usar %1"
+
+#: apps/wprs-app/qml/SettingsMedia.qml
+msgid ""
+"A scene or page shows the title, artist, album, cover and progress of what a "
+"media player on this computer plays only after you allow it for that "
+"package, and only while it is shown. Nothing of it is kept, logged or sent "
+"anywhere."
+msgstr "Una escena o una página muestra el título, el artista, el álbum, la carátula y el avance de lo que suena en un reproductor de este equipo solo después de que lo permitas para ese paquete, y solo mientras se ve. Nada de eso se guarda, se registra ni se envía a ningún sitio."
+
+#: apps/wprs-app/qml/SettingsMedia.qml
+msgid "No shown wallpaper reads the media player now."
+msgstr "Ningún fondo visible lee ahora el reproductor multimedia."
+
+#: apps/wprs-app/qml/SettingsMedia.qml
+msgid "Read now for: %1"
+msgstr "Se lee ahora para: %1"
+
+#: apps/wprs-app/qml/SettingsMedia.qml
+msgid "Media players found: %1"
+msgstr "Reproductores encontrados: %1"
+
+#: apps/wprs-app/qml/SettingsMedia.qml
+msgid "No media player is open."
+msgstr "No hay ningún reproductor abierto."
+
+#: apps/wprs-app/qml/SettingsMedia.qml
+msgid "Something is playing."
+msgstr "Algo está sonando."
+
+#: apps/wprs-app/qml/SettingsMedia.qml
+msgid "Playback is paused or stopped."
+msgstr "La reproducción está en pausa o detenida."
+
+#: apps/wprs-app/qml/SettingsMedia.qml
+msgid "A cover is shown."
+msgstr "Se muestra una carátula."
+
+#: apps/wprs-app/qml/SettingsMedia.qml apps/wprs-app/qml/facade/Labels.qml
+msgid "Fetch covers from the internet"
+msgstr "Descargar carátulas de internet"
+
+#: apps/wprs-app/qml/SettingsMedia.qml
+msgid ""
+"Some players give the address of a cover on the internet instead of a file. "
+"With this on, such a cover is downloaded (at most 4 MiB, within 5 seconds) "
+"while an allowed wallpaper shows it, so that site learns that the track "
+"plays here; covers stay in memory only."
+msgstr "Algunos reproductores dan la dirección de una carátula en internet en vez de un archivo. Con esto encendido, esa carátula se descarga (como mucho 4 MiB, en 5 segundos) mientras la muestra un fondo con permiso, así que esa web sabe que la pista suena aquí; las carátulas solo se guardan en memoria."
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Add folder…"
@@ -5754,31 +5839,9 @@ msgstr "Incluir las subcarpetas"
 msgid "Scene permissions"
 msgstr "Permisos de las escenas"
 
-#: apps/wprs-app/qml/SettingsPage.qml
-msgid ""
-"A scene follows the sound that plays or the pointer, or takes clicks, only "
-"after you allow it for that scene, and only while it is shown; clicks also "
-"have to be turned on for each screen in its scene settings. The sound is "
-"turned into levels on this computer and never recorded, kept or sent; "
-"pointer positions and clicks are never kept."
-msgstr ""
-"Una escena sigue el sonido que suena o el puntero, o recibe clics, solo "
-"después de que lo permitas para esa escena y solo mientras se ve; los clics "
-"además hay que encenderlos en cada pantalla, en los ajustes de su escena. El "
-"sonido se convierte en niveles en este equipo y nunca se graba, se guarda ni "
-"se envía; las posiciones del puntero y los clics nunca se guardan."
-
-#: apps/wprs-app/qml/SettingsPage.qml
-msgid "A scene is following the sound now."
-msgstr "Ahora mismo una escena está siguiendo el sonido."
-
-#: apps/wprs-app/qml/SettingsPage.qml
-msgid "A scene is following the pointer now."
-msgstr "Ahora mismo una escena está siguiendo el puntero."
-
-#: apps/wprs-app/qml/SettingsPage.qml
-msgid "No scene has been allowed yet."
-msgstr "Todavía no has dado permiso a ninguna escena."
+#: apps/wprs-app/qml/SettingsPage.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Media player"
+msgstr "Reproductor multimedia"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "About"
@@ -8448,10 +8511,6 @@ msgstr "Velocidad máxima"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Most vertices"
 msgstr "Máximo de vértices"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Media player"
-msgstr "Reproductor multimedia"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml

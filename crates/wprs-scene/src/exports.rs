@@ -60,9 +60,9 @@ pub use crate::hitbox::{AlphaMap, Hitbox, Hitboxes};
 pub use crate::ink::Ink;
 pub use crate::input::{
     AudioFrame, BANDS, BloomSet, BoneSet, Camera3dSet, CameraSet, GlideSet, LayerOverride, MAX_DRIVEN_BONES,
-    MAX_DRIVEN_RIGS, MAX_DRIVEN_SHAPES, MAX_IMPULSES, MAX_MESH_BYTES, MESH_FLOATS, Mesh, ParticleCommand,
-    ParticleControl, PointerState, RigControl, ScriptOutputs, ShakeSet, SoundCommand, SoundControl, StageSet,
-    TimelineCommand, Tuning, VideoCommand, VideoControl,
+    MAX_DRIVEN_RIGS, MAX_DRIVEN_SHAPES, MAX_IMPULSES, MAX_MESH_BYTES, MESH_FLOATS, MediaState, Mesh,
+    ParticleCommand, ParticleControl, PointerState, RigControl, ScriptOutputs, ShakeSet, SoundCommand,
+    SoundControl, StageSet, TimelineCommand, Tuning, VideoCommand, VideoControl,
 };
 pub use crate::layer::{Anchor, Inherit, Kind, Layer, Parallax, Solid, Transform};
 pub use crate::lean::Lean;

@@ -18,11 +18,7 @@ fn scenes_name_their_newer_features_and_engines_refuse_what_they_cannot_draw() {
     listed.inputs = vec![wprs_format::Input::Media];
     let package = load(&listed, &files).unwrap();
     assert_eq!(package.facts.features.iter().collect::<Vec<_>>(), all);
-    let desktop = features::playable(&package.manifest, &package.facts, Platform::Desktop).unwrap_err();
-    assert_eq!(
-        desktop.to_string(),
-        "this package needs a newer version of wallpaper-rs: it uses the feature media_info (shows the title, cover or progress of what the media player plays)"
-    );
+    assert!(features::playable(&package.manifest, &package.facts, Platform::Desktop).is_ok());
     let phone =
         features::playable(&package.manifest, &package.facts, Platform::Android).unwrap_err().to_string();
     assert!(
@@ -30,7 +26,8 @@ fn scenes_name_their_newer_features_and_engines_refuse_what_they_cannot_draw() {
         "{phone}"
     );
     assert_eq!(features::lacks("android", &package.facts.features), ["sound", "sound2"]);
-    assert!(package.facts.facets.iter().all(|f| f != "desktop" && f != "android"));
+    assert!(package.facts.facets.iter().any(|f| f == "desktop"));
+    assert!(package.facts.facets.iter().all(|f| f != "android"));
     let mut few = manifest(&["sound", "sound2"]);
     few.inputs = vec![wprs_format::Input::Media];
     let unlisted = load(&few, &files).map(drop).unwrap_err().to_string();
@@ -41,7 +38,8 @@ fn scenes_name_their_newer_features_and_engines_refuse_what_they_cannot_draw() {
     let mut older = v1(Kind::Scene);
     older.preview = Some("preview.png".into());
     let package = load(&older, &files).unwrap();
-    assert!(features::playable(&package.manifest, &package.facts, Platform::Desktop).is_err());
+    assert!(features::playable(&package.manifest, &package.facts, Platform::Desktop).is_ok());
+    assert!(features::playable(&package.manifest, &package.facts, Platform::Android).is_err());
     let plain = scene(json!([{ "id": "sky", "type": "image", "image": "sky", "parallax": 0.2 }]), json!({}));
     let package = load(&manifest(&["inputs.pointer"]), &[("scene.json", plain.as_bytes())]);
     assert!(package.is_err_and(|e| e.to_string().contains("inputs")));

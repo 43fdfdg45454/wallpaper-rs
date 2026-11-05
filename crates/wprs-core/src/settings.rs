@@ -177,3 +177,9 @@ impl Default for Models {
         Self { allow_download: true }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Media {
+    pub remote_covers: bool,
+}

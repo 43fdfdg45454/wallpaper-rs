@@ -88,7 +88,7 @@ pub(crate) fn filmed(lengths: &mut BTreeMap<String, f32>, videos: &[(String, Ree
 
 pub(crate) fn listens(scene: &Scene, scripts: &[(String, String)]) -> bool {
     let uses = wprs_scene::needs(scene);
-    uses.audio || uses.cursor || wprs_scene::script_inputs(scene, scripts).contains(&true)
+    uses.audio || uses.cursor || uses.media || wprs_scene::script_inputs(scene, scripts).contains(&true)
 }
 
 fn kind(path: &str) -> String {

@@ -28,7 +28,8 @@ pub(super) fn status(reply: InputsReply) -> String {
     lines.extend(reply.shown.iter().map(|(output, shown)| {
         let used =
             [(shown.audio, Input::Audio), (shown.pointer, Input::Pointer), (shown.clicks, Input::Clicks)];
-        let used = used.into_iter().chain([(shown.network, Input::Network), (shown.rgb, Input::Rgb)]);
+        let more = [(shown.network, Input::Network), (shown.rgb, Input::Rgb), (shown.media, Input::Media)];
+        let used = used.into_iter().chain(more);
         let used: BTreeSet<Input> = used.filter_map(|(on, input)| on.then_some(input)).collect();
         format!(
             "{output} shows {} using {} (allowed: {})",
@@ -60,5 +61,8 @@ pub(super) const SLOW: &str = "its particles run on the processor, so fewer of t
 
 pub(super) const NETWORK: &str =
     "the network, to reach the sites it names (they can learn that it runs on this computer)";
+
+pub(super) const MEDIA: &str =
+    "what the media player plays (title, artist, album, cover and progress, never kept, logged or sent)";
 
 pub(super) const RGB: &str = "the RGB lighting, to color it through the OpenRGB server set with rgb.server (only while rgb.enabled is on)";

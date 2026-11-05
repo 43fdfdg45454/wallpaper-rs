@@ -51,6 +51,7 @@ pub enum SceneInput {
     Audio(String, Box<AudioFrame>),
     Pointer(String, PointerState, Vec<wprs_scene::Press>, [bool; 2]),
     Script(String, Box<ScriptOutputs>),
+    Media(String, Option<Arc<crate::media::Frame>>),
 }
 
 #[derive(Clone)]

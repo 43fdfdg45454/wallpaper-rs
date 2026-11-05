@@ -25,6 +25,7 @@ pub const DEVICE_KEYS: [&str; 8] = [
     GPU,
     QUALITY,
     wprs_core::LayerNamespace::KEY,
+    "media.remote_covers",
 ];
 
 type Lookup<'a> = &'a dyn Fn(&str, &str) -> Option<String>;

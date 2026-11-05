@@ -24,6 +24,7 @@ QtObject {
             "repos.vote_counts": App.tr("Show vote counts from your server in the catalog"),
             "layout.bezel_mm": App.tr("Screen frame width for spanning (mm)"),
             "models.allow_download": App.tr("Allow downloading the depth model"),
+            "media.remote_covers": App.tr("Fetch covers from the internet"),
             "render.gpu": App.tr("Graphics card"),
             "surfaces.layer_namespace": App.tr("Surface name"),
             "playback.quality": App.tr("Scene quality"),

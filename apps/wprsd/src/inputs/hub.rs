@@ -94,7 +94,12 @@ impl Hub {
             .map(|(output, window)| (window.clone(), followed.contains(output)))
             .collect();
         let refollowed = std::mem::replace(&mut control.followed, followed.clone()) != followed;
+        let mut media = control.wants(Input::Media);
+        media.retain(|output| !crate::media::simulated(output));
         drop(control);
+        let listened = !media.is_empty();
+        crate::media::using(media);
+        crate::media::follow(listened);
         flips.into_iter().for_each(|(window, on)| window.track_pointer(on));
         if refollowed {
             lock(&self.pointers).retain(|output, _| followed.contains(output));

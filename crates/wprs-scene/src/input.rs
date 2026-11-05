@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+mod media;
 mod mesh;
 mod outputs;
 mod rigs;
 mod stage;
 
+pub use media::MediaState;
 pub use mesh::{MAX_MESH_BYTES, MESH_FLOATS, Mesh};
 pub(crate) use outputs::UNSET;
 pub use outputs::{

@@ -50,6 +50,7 @@ impl SceneState {
                 self.allowed = allowed;
                 (moved || pressed) && self.uses.cursor
             }
+            SceneInput::Media(_, frame) => self.hear_media(frame),
             SceneInput::Script(_, outputs) => {
                 let changed = self.runtime.set_script(*outputs);
                 self.calm = if changed { 0 } else { self.calm };

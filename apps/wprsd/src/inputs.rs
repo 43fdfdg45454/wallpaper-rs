@@ -80,7 +80,9 @@ pub(crate) fn start(daemon: &Arc<Daemon>, connection: zbus::Connection, grants: 
     let weak = Arc::downgrade(daemon);
     let changed = move || weak.upgrade().into_iter().for_each(|d| d.changes.changed("inputs", vec![]));
     let wake = Arc::new(daemon.compositor.waker());
-    let hub = HUB.get_or_init(|| Arc::new(Hub::new(grants, wake, Arc::new(changed))));
+    let changed: Wake = Arc::new(changed);
+    crate::media::start(connection.clone(), wake.clone(), changed.clone());
+    let hub = HUB.get_or_init(|| Arc::new(Hub::new(grants, wake, changed)));
     tokio::spawn(follow(daemon.clone(), hub.clone()));
     tokio::spawn(pace(hub.clone()));
     tokio::spawn(kwin::follow(connection, hub.tracking.subscribe()));
@@ -95,7 +97,11 @@ pub(crate) async fn stop(connection: &zbus::Connection) {
 async fn follow(daemon: Arc<Daemon>, hub: Arc<Hub>) {
     let mut serial = daemon.changes.subscribe();
     loop {
-        let blocked = !daemon.state().config.playback.scene_capture;
+        let (blocked, remote) = {
+            let config = &daemon.state().config;
+            (!config.playback.scene_capture, config.media.remote_covers)
+        };
+        crate::media::remote_covers(remote);
         let (views, task) = ((daemon.views(), blocked), hub.clone());
         let _ = tokio::task::spawn_blocking(move || task.update(Some(views))).await;
         tokio::select! {
@@ -116,13 +122,13 @@ async fn pace(hub: Arc<Hub>) {
 pub(crate) fn needs(
     output: &str,
     (scene, title, key): (&str, &str, &str),
-    [audio, pointer, clicks, network, rgb]: [bool; 5],
+    [audio, pointer, clicks, network, rgb, media]: [bool; 6],
 ) {
     let Some(hub) = hub() else { return };
     let (scene, title, key, granted) = (scene.into(), title.into(), key.into(), BTreeSet::new());
-    let need = SceneInputs { scene, audio, pointer, clicks, network, rgb, title, key, granted };
+    let need = SceneInputs { scene, audio, pointer, clicks, network, rgb, media, title, key, granted };
     let mut control = lock(&hub.control);
-    let changed = match audio || pointer || clicks || network || rgb {
+    let changed = match audio || pointer || clicks || network || rgb || media {
         true => control.shown.insert(output.into(), need.clone()) != Some(need),
         false => control.shown.remove(output).is_some(),
     };
@@ -145,12 +151,16 @@ pub(crate) fn audio() -> AudioFrame {
     hub().map_or_else(AudioFrame::default, |hub| lock(&hub.audio).frame())
 }
 
+pub(crate) fn allows(output: &str, input: Input) -> bool {
+    hub().is_some_and(|hub| lock(&hub.control).allows(output, input))
+}
+
 pub(crate) fn hears(output: &str) -> bool {
-    hub().is_some_and(|hub| lock(&hub.control).allows(output, Input::Audio))
+    allows(output, Input::Audio)
 }
 
 pub(crate) fn lights(output: &str) -> bool {
-    hub().is_some_and(|hub| lock(&hub.control).allows(output, Input::Rgb))
+    allows(output, Input::Rgb)
 }
 
 pub(crate) fn window(output: &str, window: Option<Window>) {

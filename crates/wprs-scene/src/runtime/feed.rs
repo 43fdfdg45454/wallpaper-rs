@@ -1,6 +1,6 @@
 use super::{MAX_STEP, Runtime};
 use crate::Values;
-use crate::input::{AudioFrame, PointerState, ScriptOutputs, TimelineCommand};
+use crate::input::{AudioFrame, MediaState, PointerState, ScriptOutputs, TimelineCommand};
 use crate::uses;
 use std::collections::BTreeSet;
 
@@ -52,6 +52,12 @@ impl Runtime {
             self.beat = self.t;
             self.trigger(|t| t == "beat");
         }
+        changed
+    }
+
+    pub fn set_media(&mut self, media: MediaState) -> bool {
+        let changed = self.uses().media && media != self.media.0;
+        self.media = (media, self.t);
         changed
     }
 

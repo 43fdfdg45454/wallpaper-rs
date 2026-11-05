@@ -582,6 +582,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |
 | `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
 | `rgb.enabled` | send the colors of packages granted `rgb` to RGB lighting through the OpenRGB server (see `Rgb1`) | `false` |
+| `media.remote_covers` | download covers that media players give as `http` or `https` addresses (at most 4 MiB, within 5 s, kept in memory only); off, only `file://` covers are read. Kept on each device, never synced | `false` |
 | `rgb.server` | `host:port` of the OpenRGB server, at most 255 characters; an address that is not this computer sends the colors over the network | `127.0.0.1:6742` |
 | `render.gpu` | the graphics card the daemon renders with: `auto` (the one that saves the most power, an integrated card before a dedicated one), `integrated`, `dedicated`, `software` (emulated on the processor, for tests) or part of the name of a card, without regard to case, such as `Graphics A` (see "Graphics card"); it takes effect the next time the daemon starts, it is not synced and profiles leave it out | `auto` |
 | `surfaces.layer_namespace` | the namespace of the layer-shell surfaces (see "Layer-shell and X11 outputs"): `auto` (or an empty value) for the automatic choice, or 1 to 64 ASCII letters, digits, `-`, `_` or `.`; it takes effect the next time the daemon starts, it is not synced and profiles leave it out | `auto` |
@@ -1400,6 +1401,14 @@ Only the app, the tray and `wprs-ctl` grant it, as `network`; the colors reach t
   `SetPointer`, at most 60 times per second and only while the pointer moves, and unloads it when
   no scene or parallax image needs the pointer. Keys are never read, and positions are neither
   kept nor logged: each output only has the latest one.
+- Media: what a media player plays (`media` values, covers, `media:` triggers and scripts that
+  declare it). The daemon follows the players on the session bus (`org.mpris.MediaPlayer2.*`
+  names, their `PropertiesChanged` and `Seeked` signals, never polling) only while an output that
+  is active, shown and not covered shows a package that declares `media` and holds the grant; it
+  stops listening as soon as none does. It chooses the player that plays, the one that started
+  playing last when several do, otherwise the one that changed last. Titles, artists, albums,
+  genres, the length and the cover address are read only to be shown: they are never kept, logged
+  or sent anywhere. A package without the grant receives empty texts and its placeholders.
 - Clicks: presses and releases of the left, right, middle, back and forward buttons and taps on a
   touch screen (a tap is a press of the left button). They reach a scene only on an output that
   takes clicks (`SetClicks`, off for every output by default), when the scene declares them
@@ -1413,7 +1422,7 @@ Only the app, the tray and `wprs-ctl` grant it, as `network`; the colors reach t
 
 ### `Grant(s scene, s input)`
 
-Lets the scene or web package with id `scene` that an output shows now use `input`, `audio`, `pointer`, `clicks` or `network`,
+Lets the scene or web package with id `scene` that an output shows now use `input`, `audio`, `pointer`, `clicks`, `network`, `rgb` or `media`,
 whenever it is shown. A package that already has the input gets it again at once, from any caller
 and without asking. `InvalidArgs` for another input or a malformed id (1 to 255 characters of
 `a-z`, `0-9`, `.`, `_`, `-`) and while the outputs show more than one package with that id (other
@@ -1479,7 +1488,10 @@ and whether the pointer is being followed (`tracking`), the outputs that take cl
 setting of `SetClicks`), the ones whose scene takes them now (`clicking`) and the ones that clicks
 cannot reach here (`unreached`: in the Flatpak, the outputs that a client such as the Plasma
 wallpaper plugin draws, since only a Plasma shell outside the Flatpak may call `Touch`), where the
-app warns on the settings of a scene that uses clicks.
+app warns on the settings of a scene that uses clicks. `media` says whether the media players are
+read now (`listening`), for which outputs (`using`), how many players are open (`players`), whether
+the chosen one has a track (`track`), plays it (`playing`) and has a cover shown (`cover`), and the
+value of `media.remote_covers` (`remote_covers`); it never carries what plays.
 
 ### `SetClicks(s output, b on)`
 
@@ -2524,16 +2536,19 @@ struct InstalledReply { model: u32, serial: u64, packages: Vec<InstalledPackage>
 struct Update { repo_id: String, id: String, installed: String, available: String, changes: String }
 struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
 
-enum Input { Audio, Pointer, Clicks, Network, Rgb }
+enum Input { Audio, Pointer, Clicks, Network, Rgb, Media }
 struct SceneInputs {
-    scene: String, audio: bool, pointer: bool, clicks: bool, network: bool, rgb: bool, title: String, key: String,
-    granted: Vec<Input>,
+    scene: String, audio: bool, pointer: bool, clicks: bool, network: bool, rgb: bool, media: bool, title: String,
+    key: String, granted: Vec<Input>,
+}
+struct MediaStatus {
+    listening: bool, players: u32, playing: bool, track: bool, cover: bool, remote_covers: bool, using: Vec<String>,
 }
 struct InputsReply {
     model: u32, serial: u64, capturing: bool, tracking: bool,
     grants: BTreeMap<String, Vec<Input>>, shown: BTreeMap<String, SceneInputs>, parallax: Vec<String>,
     declined: BTreeMap<String, Vec<Input>>, asking: BTreeMap<String, Vec<Input>>,
-    quiet: BTreeMap<String, Vec<Input>>, clicks: Vec<String>, clicking: Vec<String>,
+    quiet: BTreeMap<String, Vec<Input>>, clicks: Vec<String>, clicking: Vec<String>, media: MediaStatus,
 }
 enum AccountState { Unlinked, Linking, NeedsKey, Ready, Paused, Error }
 struct AccountDevice {

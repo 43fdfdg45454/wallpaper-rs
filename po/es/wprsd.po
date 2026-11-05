@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 00:00+0000\n"
+"POT-Creation-Date: 2026-11-02 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -91,6 +91,16 @@ msgstr "Permitir"
 #: apps/wprsd/src/words.rs
 msgid "Not now"
 msgstr "Ahora no"
+
+#: apps/wprsd/src/words.rs
+msgid "Let a wallpaper show what plays?"
+msgstr "¿Dejar que un fondo muestre lo que suena?"
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"Let “%1” show the title, artist, album, cover and progress of what the media "
+"player plays? Nothing of it is kept, logged or sent."
+msgstr "¿Dejar que «%1» muestre el título, el artista, el álbum, la carátula y el avance de lo que suena en el reproductor? Nada de eso se guarda, se registra ni se envía."
 
 #: apps/wprsd/src/words.rs
 msgid "Let a scene follow the sound?"

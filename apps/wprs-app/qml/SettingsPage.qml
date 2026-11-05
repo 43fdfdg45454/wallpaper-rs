@@ -10,7 +10,6 @@ Kirigami.ScrollablePage {
 
     property var sources: []
     property var inputs: ({})
-    readonly property var grants: inputs.grants ?? {}
 
     function load() {
         App.query("ListSources", [], "Library1", reply => page && (page.sources = reply.sources));
@@ -56,7 +55,7 @@ Kirigami.ScrollablePage {
 
             Settings {
                 daemon: App
-                model: (App.schema.options ?? []).filter(f => !["render.gpu", "surfaces.layer_namespace", "playback.quality", "playback.hdr", "rgb.enabled", "rgb.server"].includes(f.key))
+                model: (App.schema.options ?? []).filter(f => !["render.gpu", "surfaces.layer_namespace", "playback.quality", "playback.hdr", "rgb.enabled", "rgb.server", "media.remote_covers"].includes(f.key))
                 values: App.state.options ?? {}
                 onEdited: (key, value) => App.act("SetOption", [key, value])
             }
@@ -146,14 +145,17 @@ Kirigami.ScrollablePage {
                 Kirigami.FormData.label: App.tr("Scene permissions")
             }
 
-            QQC2.Label {
-                Layout.maximumWidth: Kirigami.Units.gridUnit * 30
-                wrapMode: Text.Wrap
-                text: [App.tr("A scene follows the sound that plays or the pointer, or takes clicks, only after you allow it for that scene, and only while it is shown; clicks also have to be turned on for each screen in its scene settings. The sound is turned into levels on this computer and never recorded, kept or sent; pointer positions and clicks are never kept."), page.inputs.capturing ? App.tr("A scene is following the sound now.") : "", page.inputs.tracking ? App.tr("A scene is following the pointer now.") : "", Object.keys(page.grants).length ? "" : App.tr("No scene has been allowed yet.")].filter(t => t).join("\n")
+            SettingsGrants {
+                inputs: page.inputs
             }
 
-            SettingsGrants {
-                given: page.grants
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: App.tr("Media player")
+            }
+
+            SettingsMedia {
+                inputs: page.inputs
             }
 
             Kirigami.Separator {

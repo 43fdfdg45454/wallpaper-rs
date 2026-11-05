@@ -52,7 +52,7 @@ pub fn answers() -> (String, String) {
     (tr("Allow"), tr("Not now"))
 }
 
-pub fn request(title: &str, audio: bool) -> (String, String) {
+pub fn request(title: &str, input: wprs_core::model::Input) -> (String, String) {
     let safe = |c| match c {
         '<' => '‹',
         '>' => '›',
@@ -60,12 +60,16 @@ pub fn request(title: &str, audio: bool) -> (String, String) {
         c => c,
     };
     let title: String = title.chars().map(safe).collect();
-    match audio {
-        true => (
+    match input {
+        wprs_core::model::Input::Media => (
+            tr("Let a wallpaper show what plays?"),
+            tr("Let “%1” show the title, artist, album, cover and progress of what the media player plays? Nothing of it is kept, logged or sent.").replace("%1", &title),
+        ),
+        wprs_core::model::Input::Audio => (
             tr("Let a scene follow the sound?"),
             tr("Let “%1” follow the sound that plays? The sound is turned into levels on this computer; nothing is recorded, kept or sent.").replace("%1", &title),
         ),
-        false => (
+        _ => (
             tr("Let a scene follow the pointer?"),
             tr("Let “%1” follow the pointer? Only its latest position over the screen reaches the scene, and it is never kept.").replace("%1", &title),
         ),

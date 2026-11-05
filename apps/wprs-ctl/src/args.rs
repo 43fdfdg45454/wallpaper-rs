@@ -1,6 +1,7 @@
 use crate::cli::OUTPUT;
 use anyhow::Result;
 use clap::Args;
+use tokio::signal::unix::{SignalKind, signal};
 use wprs_client::Daemon1Proxy;
 
 #[derive(Args, Debug)]
@@ -55,4 +56,14 @@ impl Placement {
         let (width, height) = crate::editing::dimensions(&size)?;
         Ok(daemon.set_output_info(&output, x, y, width, height, scale, density, &identity).await?)
     }
+}
+
+pub fn interrupted() -> std::io::Result<impl Future<Output = ()>> {
+    let (mut interrupt, mut terminate) = (signal(SignalKind::interrupt())?, signal(SignalKind::terminate())?);
+    Ok(async move {
+        tokio::select! {
+            _ = interrupt.recv() => {}
+            _ = terminate.recv() => {}
+        }
+    })
 }

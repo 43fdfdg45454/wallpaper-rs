@@ -26,8 +26,7 @@ ctl scene set "$draft" /scene/camera3d '{"paths": [{"id": "a", "keys": [{"t": 0,
 ctl scene preview "$draft" -o preview:1 --time 0 || fail "a scene with camera paths was not previewed"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0 '{"id": "title", "type": "text", "text": {"media": "title"}}'
-if refused=$(ctl scene preview "$draft" -o preview:1 2>&1); then fail "a scene showing media titles was previewed"; fi
-grep -q "media_info" <<<"$refused" || fail "the refused preview did not name its feature: $refused"
+ctl scene preview "$draft" -o preview:1 --time 0 || fail "a scene showing media titles was not previewed"
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/transform/tilt '[10, 0]'
 ctl scene set "$draft" /scene/canvas/camera '{"zoom": 1.5, "rotation": 10}'
@@ -187,7 +186,7 @@ if ctl input grant "$sea" audio 2>"$WORK/grant.err"; then fail "an input was gra
 grep -q "is not shown" "$WORK/grant.err" || fail "grant before showing: $(cat "$WORK/grant.err")"
 ctl input pointer 10 10 && ctl input pointer -10 -10
 ctl input status | grep -qx "audio capture: off" || fail "status: $(ctl input status)"
-refused "is not audio, pointer, clicks, network or rgb" Inputs1 Grant ss "$sea" camera
+refused "is not audio, pointer, clicks, network, rgb or media" Inputs1 Grant ss "$sea" camera
 refused "is not a scene package id" Inputs1 Grant ss "Not A Scene" audio
 refused "Signature mismatch" Inputs1 SetPointer dd 1 1
 denied "only the KWin script of wprsd and wprs-ctl report the pointer" Inputs1.SetPointer int32:1 int32:1

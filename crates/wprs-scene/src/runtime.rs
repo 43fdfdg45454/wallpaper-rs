@@ -1,5 +1,5 @@
 use crate::cue::Fired;
-use crate::input::{AudioFrame, PointerState, ScriptOutputs};
+use crate::input::{AudioFrame, MediaState, PointerState, ScriptOutputs};
 use crate::particles::{Flock, Swarm, System, flocks};
 use crate::timeline::Playhead;
 use crate::uses::{self, Uses};
@@ -30,6 +30,7 @@ pub struct Runtime {
     audio: AudioFrame,
     heard: f64,
     pointer: PointerState,
+    pub(crate) media: (MediaState, f64),
     glide: PointerState,
     glided: f64,
     tilt: [f32; 2],
@@ -130,6 +131,7 @@ impl Runtime {
             audio,
             heard: 0.0,
             pointer,
+            media: Default::default(),
             glide: pointer,
             glided: 0.0,
             tilt: [0.0; 2],

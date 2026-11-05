@@ -3,7 +3,8 @@ use crate::quality::QualityChoice;
 use crate::settings::fps;
 use std::collections::BTreeMap;
 
-const OPTION_SECTIONS: [&str; 7] = ["playback", "transition", "pause", "library", "repos", "models", "rgb"];
+const OPTION_SECTIONS: [&str; 8] =
+    ["playback", "transition", "pause", "library", "repos", "models", "rgb", "media"];
 
 impl Config {
     pub fn options(&self) -> BTreeMap<String, toml::Value> {

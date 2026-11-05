@@ -120,7 +120,7 @@ pub(crate) async fn grant(
         hub.changed();
         let bus = bus.clone();
         tokio::spawn(async move {
-            let words = crate::words::request(&title, input == Input::Audio);
+            let words = crate::words::request(&title, input);
             let answer = ask(&bus, words).await.inspect_err(|e| tracing::warn!("cannot ask the user: {e}"));
             let quiet = matches!(answer, Ok(None | Some(false)));
             if let Ok(Some(allowed)) = answer {

@@ -1441,6 +1441,25 @@ scene rgb DIR CAPA --on true`), *Todo el lienzo* o *Una franja*, la región con 
 previa y la tira de 64 × 16 que reciben las luces, en vivo. El teléfono no tiene iluminación RGB y
 reproduce esos paquetes sin ella.
 
+## Reproductor multimedia
+
+Una escena puede mostrar lo que suena en un reproductor del equipo: el título, el artista, el
+álbum, la carátula, sus colores, si suena o está en pausa y por dónde va. El paquete declara la
+entrada `media` (`inputs` del manifiesto; el validador exige que la declare si la usa) y nada le
+llega hasta que la permites para ese paquete: el aviso de permisos de la app y de la bandeja, el
+interruptor *Mostrar lo que suena* de sus ajustes o `wprs-ctl input grant <id> media`. Sin permiso
+recibe textos vacíos y lo que el autor puso para cuando no suena nada. El servicio escucha a los
+reproductores por el bus de sesión (MPRIS) solo mientras una pantalla visible muestra un fondo con
+ese permiso que lo usa; sigue sus señales sin preguntar cada poco, elige el que suena (o el último
+que sonó) y deja de escuchar en cuanto nada visible lo necesita. Nada de lo que lee se guarda, se
+registra ni se envía a ningún sitio. *Ajustes → Reproductor multimedia* y `wprs-ctl media status`
+dicen si se está leyendo, para qué pantallas y si hay un reproductor abierto, sin mostrar la pista.
+
+Algunos reproductores dan la carátula como una dirección de internet en vez de un archivo. Solo se
+descarga con *Descargar carátulas de internet* encendido (`wprs-ctl config media.remote_covers
+true`, apagado por defecto y propio de cada equipo), como mucho 4 MiB y en 5 segundos, y esa web
+puede saber que esa pista suena aquí; las carátulas solo viven en memoria.
+
 ## Servidor propio
 
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas
@@ -2406,6 +2425,9 @@ misma pausa.
   idioma, tarjeta gráfica y sus datos guardados) se avisa en la app, la bandeja, `wprs-ctl` y el
   teléfono, y puedes ocultarlo por fondo. En el teléfono el WebView va con sus métricas y la
   navegación segura apagadas.
+- Lo que suena en el reproductor multimedia solo se lee mientras un fondo visible con tu permiso lo
+  usa, y nunca se guarda, se registra ni se envía; las carátulas de internet solo se descargan con
+  `media.remote_covers`, apagado por defecto.
 - La iluminación RGB está apagada por defecto; encendida, solo manda colores (nunca otra cosa) al
   servidor de OpenRGB de este equipo, o a la dirección que elijas con un aviso visible, y solo de los
   paquetes a los que se lo permites.

@@ -51,6 +51,17 @@ msgstr ""
 "pantalla; nunca se guardan y nunca se leen las teclas."
 
 #: integrations/plasma-tray/contents/ui/Consent.qml
+msgid "Show what the media player plays"
+msgstr "Mostrar lo que suena"
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+msgid ""
+"While the scene is shown, the title, artist, album, cover and progress of "
+"what a media player on this computer plays reach it; nothing of it is kept, "
+"logged or sent."
+msgstr "Mientras la escena se ve, le llegan el título, el artista, el álbum, la carátula y el avance de lo que suena en un reproductor de este equipo; nada de eso se guarda, se registra ni se envía."
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
 msgid "Send its colors to the RGB lighting"
 msgstr "Mandar sus colores a la iluminación RGB"
 

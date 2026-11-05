@@ -3,7 +3,7 @@ use crate::fit::Fit;
 use crate::gpu::Render;
 use crate::layout::Layout;
 use crate::quality::QualityChoice;
-use crate::settings::{Library, Models, Pause, Playback, Repos, Transition};
+use crate::settings::{Library, Media, Models, Pause, Playback, Repos, Transition};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -43,6 +43,7 @@ pub struct Config {
     pub library: Library,
     pub repos: Repos,
     pub models: Models,
+    pub media: Media,
     pub rgb: crate::rgb::Rgb,
     #[serde(skip_serializing_if = "Layout::is_default")]
     pub layout: Layout,

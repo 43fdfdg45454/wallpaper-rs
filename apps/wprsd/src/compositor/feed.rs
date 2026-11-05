@@ -11,13 +11,17 @@ pub(super) fn declare(output: &str, scene: Option<&SceneState>) {
     let named = pack.map(|p| (p.props.id.as_str(), p.props.title.as_str(), p.key.as_str()));
     let uses = scene.map(SceneState::uses).unwrap_or_default();
     let lit = pack.is_some_and(|p| wprs_render::lit(&p.scene));
-    inputs::needs(output, named.unwrap_or_default(), [uses.audio, uses.cursor, uses.clicks, false, lit]);
+    inputs::needs(
+        output,
+        named.unwrap_or_default(),
+        [uses.audio, uses.cursor, uses.clicks, false, lit, uses.media],
+    );
 }
 
 pub(super) fn declare_page(output: &str, page: &crate::pages::PageSpec) {
     let (p, [audio, pointer, clicks, rgb]) = (&page.pack, page.pack.uses);
     let named = (p.props.id.as_str(), p.props.title.as_str(), p.key.as_str());
-    inputs::needs(output, named, [audio, pointer, clicks, !p.network.is_empty(), rgb]);
+    inputs::needs(output, named, [audio, pointer, clicks, !p.network.is_empty(), rgb, false]);
 }
 
 struct Live {
@@ -29,8 +33,10 @@ struct Live {
 
 impl State {
     fn feed(&mut self, input: SceneInput) {
-        let (SceneInput::Audio(name, _) | SceneInput::Pointer(name, ..) | SceneInput::Script(name, _)) =
-            &input;
+        let (SceneInput::Audio(name, _)
+        | SceneInput::Pointer(name, ..)
+        | SceneInput::Script(name, _)
+        | SceneInput::Media(name, _)) = &input;
         if let Some(o) = self.outputs.get_mut(name) {
             let changed = o.shown.scene.as_mut().is_some_and(|scene| scene.input(input));
             o.dirty |= changed && o.active;
@@ -57,6 +63,9 @@ impl State {
             if live.uses.audio && live.waiting {
                 let audio = if hears { heard.clone() } else { AudioFrame::default() };
                 self.feed(SceneInput::Audio(live.name.clone(), Box::new(audio)));
+            }
+            if live.uses.media {
+                self.feed(SceneInput::Media(live.name.clone(), crate::media::of(&live.name)));
             }
             if live.uses.cursor {
                 let (pointer, presses, allowed) = inputs::touch(&live.name);

@@ -58,7 +58,7 @@ impl Inputs {
 
 fn parse(input: &str) -> Result<Input> {
     Input::parse(input)
-        .ok_or_else(|| invalid(format!("{input} is not audio, pointer, clicks, network or rgb")))
+        .ok_or_else(|| invalid(format!("{input} is not audio, pointer, clicks, network, rgb or media")))
 }
 
 fn reopen(d: &Daemon, input: Input) -> anyhow::Result<()> {
@@ -132,6 +132,7 @@ impl Inputs {
             clicks,
             clicking,
             unreached,
+            media: crate::media::status(),
         })
     }
 

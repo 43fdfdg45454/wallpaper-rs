@@ -34,6 +34,7 @@ mod levels;
 pub mod library;
 mod limbing;
 mod marking;
+pub mod media;
 mod modeled;
 mod modeling;
 pub mod models;

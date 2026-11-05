@@ -7,7 +7,6 @@ use serde_json::{Value, json};
 use std::cell::Cell;
 use std::io::{self, IsTerminal};
 use std::pin::pin;
-use tokio::signal::unix::{SignalKind, signal};
 use wprs_client::{Client, explain};
 use wprs_core::Fit;
 use zbus::export::ordered_stream::{OrderedStreamExt, join};
@@ -43,7 +42,7 @@ pub async fn run(command: Command) -> Result<()> {
         }
         c @ (Command::Mute | Command::Unmute) => daemon.set_muted(matches!(c, Command::Mute)).await?,
         Command::Stream { output, width, height, wait } => {
-            let interrupted = wait.then(interrupted).transpose()?;
+            let interrupted = wait.then(crate::args::interrupted).transpose()?;
             let (node, serial) = match wait {
                 true => daemon.request_stream(&output, width, height).await?,
                 false => daemon.hold_stream(&output, width, height).await?,
@@ -87,6 +86,7 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Pkg(command) => pkg::run(client, command).await?,
         Command::Input(command) => inputs::run(client, command).await?,
         Command::Rgb(command) => crate::rgb::run(client, command).await?,
+        Command::Media(command) => crate::media::run(client, command).await?,
         Command::Server(command) => serving::run(client, command).await?,
         Command::Pack(_)
         | Command::Repo(_)
@@ -167,16 +167,6 @@ async fn watch(client: &Client, json: bool) -> Result<()> {
         println!("{line}");
     }
     Ok(())
-}
-
-fn interrupted() -> io::Result<impl Future<Output = ()>> {
-    let (mut interrupt, mut terminate) = (signal(SignalKind::interrupt())?, signal(SignalKind::terminate())?);
-    Ok(async move {
-        tokio::select! {
-            _ = interrupt.recv() => {}
-            _ = terminate.recv() => {}
-        }
-    })
 }
 
 fn options(state: &str, filter: Option<&str>, json: bool) -> Result<()> {
