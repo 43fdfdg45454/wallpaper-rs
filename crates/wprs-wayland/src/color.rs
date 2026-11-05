@@ -26,7 +26,7 @@ pub(crate) struct Gathered {
 
 pub(crate) fn bind(globals: &GlobalList, qh: &QueueHandle<State>) -> Option<Manager> {
     globals
-        .bind::<Manager, _, _>(qh, 1..=1, ())
+        .bind::<Manager, _, _>(qh, 1..=1, crate::described::Support::default())
         .inspect_err(|e| tracing::debug!("no color management: {e}"))
         .ok()
 }
@@ -49,15 +49,16 @@ pub(crate) fn light(found: Gathered) -> Option<Light> {
     Some(Light { peak_nits, reference_nits, hdr: found.wide || peak_nits > reference_nits * 1.05 })
 }
 
-impl Dispatch<Manager, ()> for State {
+impl Dispatch<Manager, crate::described::Support> for State {
     fn event(
         _: &mut Self,
         _: &Manager,
-        _: cm::wp_color_manager_v1::Event,
-        _: &(),
+        event: cm::wp_color_manager_v1::Event,
+        support: &crate::described::Support,
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
+        crate::described::offered(support, event);
     }
 }
 

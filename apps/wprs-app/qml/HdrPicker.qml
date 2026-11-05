@@ -42,8 +42,13 @@ ColumnLayout {
         if (!h)
             return "";
         const state = h.active ? daemon.tr("HDR is on: %1", reasons[h.reason] ?? h.reason) : daemon.tr("HDR is off: %1", reasons[h.reason] ?? h.reason);
-        const light = h.peak_nits ? daemon.tr("The screen reaches %1 nits and shows white at %2 nits.", h.peak_nits, h.reference_nits ?? "?") : "";
-        return [state, light].filter(t => t).join(" ");
+        const light = h.peak_nits ? daemon.tr("The screen reaches %1 nits and shows white at %2 nits.", h.peak_nits, h.reference_nits ?? "?") : daemon.tr("The screen does not say how bright it gets, so the brightest colors are kept at twice its white.");
+        const way = ({
+                "scrgb": daemon.tr("Colors go to the desktop as linear extended sRGB."),
+                "pq": daemon.tr("Colors go to the desktop encoded in PQ (BT.2100), the only HDR way the driver offers."),
+                "pq-own": daemon.tr("Colors go to the desktop encoded in PQ with a description of their own, brightest %1 nits and %2 nits on average.", h.max_cll ?? "?", h.max_fall ?? "?")
+            })[h.active ? h.encoding : ""] ?? "";
+        return [state, h.active || h.peak_nits ? light : "", way].filter(t => t).join(" ");
     }
 
     QQC2.ComboBox {

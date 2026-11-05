@@ -9,11 +9,13 @@ pub struct Presentation {
     pub latency: u32,
     pub format: Option<Format>,
     pub hdr: bool,
+    pub own_pq: bool,
 }
 
 impl Presentation {
-    pub const DESKTOP: Self = Self { vsync: false, latency: 2, format: Some(TARGET_FORMAT), hdr: false };
-    pub const MOBILE: Self = Self { vsync: true, latency: 1, format: None, hdr: false };
+    pub const DESKTOP: Self =
+        Self { vsync: false, latency: 2, format: Some(TARGET_FORMAT), hdr: false, own_pq: false };
+    pub const MOBILE: Self = Self { vsync: true, latency: 1, format: None, hdr: false, own_pq: false };
 }
 
 pub struct Surface {
@@ -22,6 +24,9 @@ pub struct Surface {
     pub(crate) presentation: Presentation,
     pub(crate) slots: Vec<Slot>,
     pub(crate) offered: bool,
+    pub(crate) encoding: crate::Encoding,
+    pub(crate) pq: Option<Box<crate::pq::Pq>>,
+    pub(crate) light: [f32; 2],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,15 +83,17 @@ impl Renderer {
         if !self.gpu.is_surface_supported(&surface) {
             return Err(RenderError::Surface(format!("{} cannot present to this surface", self.adapter())));
         }
-        let (config, offered) = self.surface_config(&surface, (width, height), presentation)?;
+        let (config, offered, encoding) = self.surface_config(&surface, (width, height), presentation)?;
         self.scoped(|| surface.configure(&self.device, &config))?;
-        Ok(Surface { surface, config, presentation, slots: Vec::new(), offered })
+        let light = [crate::REFERENCE_NITS, 1.0];
+        Ok(Surface { surface, config, presentation, slots: Vec::new(), offered, encoding, pq: None, light })
     }
 
     pub(crate) fn renew(&self, target: &mut Surface) -> Result<(), RenderError> {
         let size = (target.config.width, target.config.height);
-        let (config, offered) = self.surface_config(&target.surface, size, target.presentation)?;
-        target.offered = offered;
+        let (config, offered, encoding) = self.surface_config(&target.surface, size, target.presentation)?;
+        (target.offered, target.encoding) = (offered, encoding);
+        target.pq = target.pq.take().filter(|_| encoding.pq());
         if config.format != target.config.format {
             target.slots.clear();
         }
@@ -99,12 +106,12 @@ impl Renderer {
         surface: &wgpu::Surface<'static>,
         (width, height): (u32, u32),
         presentation: Presentation,
-    ) -> Result<(wgpu::SurfaceConfiguration, bool), RenderError> {
+    ) -> Result<(wgpu::SurfaceConfiguration, bool, crate::Encoding), RenderError> {
         let failed = RenderError::Surface;
         let caps = surface.get_capabilities(&self.gpu);
         let format = surface_format(&caps.formats, presentation.format)
             .ok_or_else(|| failed("no surface format".into()))?;
-        let (offered, lit) = crate::hdr::lit(&caps, presentation.hdr);
+        let (offered, lit) = crate::encoding::lit(&caps, presentation.hdr, presentation.own_pq);
         let opaque = caps.alpha_modes.contains(&CompositeAlphaMode::Opaque);
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -117,7 +124,7 @@ impl Renderer {
             alpha_mode: if opaque { CompositeAlphaMode::Opaque } else { CompositeAlphaMode::Auto },
             view_formats: Vec::new(),
         };
-        Ok((config, offered))
+        Ok((config, offered, lit.map_or(crate::Encoding::Sdr, |l| l.2)))
     }
 
     pub fn present_layers(
@@ -149,8 +156,17 @@ impl Renderer {
         };
         let view = frame.texture.create_view(&Default::default());
         self.scoped(|| {
-            let format = target.config.format;
-            let encoder = self.encode(&view, &mut target.slots, layers, (width, height), format, None);
+            let (format, size) = (target.config.format, (width, height));
+            let encoder = match target.encoding.pq() {
+                false => self.encode(&view, &mut target.slots, layers, size, format, None),
+                true => {
+                    let pq = self.pq(&mut target.pq, size, format);
+                    let mut encoder =
+                        self.encode(pq.view(), &mut target.slots, layers, size, Format::Rgba16Float, None);
+                    pq.finish(self, &mut encoder, &view, target.light);
+                    encoder
+                }
+            };
             self.queue.submit([encoder.finish()]);
         })
         .inspect_err(|_| target.slots.clear())?;

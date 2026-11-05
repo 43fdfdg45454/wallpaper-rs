@@ -670,7 +670,12 @@ Las pantallas HDR muestran los colores más brillantes que el blanco de las esce
 `canvas.hdr`: si el escritorio y el controlador gráfico ofrecen una superficie HDR (en Wayland, con el
 protocolo de gestión de color), la escena guarda 16 bits hasta el final y dobla lo que pasa de 0,8
 del blanco hacia el brillo máximo de esa pantalla, que el escritorio comunica junto a su blanco de
-referencia (si no lo dice, se supone el doble del blanco). `playback.hdr` vale `auto` (solo si
+referencia (si no lo dice, se supone el doble del blanco, una decisión que se mantiene). Los colores
+van al escritorio en sRGB lineal extendido si el controlador lo ofrece; si solo ofrece PQ (BT.2100),
+el daemon los codifica en PQ; y si no ofrece ninguno de los dos pero el escritorio acepta
+descripciones de imagen propias, el daemon codifica en PQ y describe la superficie él mismo con
+sus metadatos HDR (MaxCLL, la luz más alta que puede dibujar, y MaxFALL, su blanco). La app,
+`wprs-ctl quality` y `wprs-ctl state` dicen cuál de las tres se usa. `playback.hdr` vale `auto` (solo si
 el escritorio o el teléfono dicen que la pantalla muestra HDR, con corriente y con una escena con
 `canvas.hdr` y mapeo de tonos en `q3`, porque gasta más; las imágenes, los vídeos y las páginas
 siguen en SDR), `on` (siempre que la superficie lo admita, aunque la pantalla no lo diga) u `off`, y cada pantalla puede tener el

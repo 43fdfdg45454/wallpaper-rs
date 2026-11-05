@@ -17,11 +17,13 @@ struct Lit {
     offered: bool,
     reason: &'static str,
     headroom: f32,
+    encoding: &'static str,
 }
 
 static CHOICE: Mutex<HdrChoice> = Mutex::new(HdrChoice::Auto);
 static SCREEN: Mutex<Screen> = Mutex::new(Screen { hdr: false, peak_nits: 0.0, ratio: 0.0 });
-static LIT: Mutex<Lit> = Mutex::new(Lit { active: false, offered: false, reason: "display", headroom: 1.0 });
+static LIT: Mutex<Lit> =
+    Mutex::new(Lit { active: false, offered: false, reason: "display", headroom: 1.0, encoding: "sdr" });
 
 fn get<T: Copy>(m: &Mutex<T>) -> T {
     *m.lock().unwrap_or_else(PoisonError::into_inner)
@@ -66,7 +68,8 @@ pub(crate) fn light(
     let (active, offered) = (surface.hdr(), surface.hdr_offered());
     let reason = if want && !active { "display" } else { reason };
     let headroom = if active { headroom(get(&SCREEN)) } else { 1.0 };
-    put(&LIT, Lit { active, offered, reason, headroom });
+    surface.set_light(wprs_render::REFERENCE_NITS, headroom);
+    put(&LIT, Lit { active, offered, reason, headroom, encoding: surface.encoding().name() });
     Ok((headroom, changed))
 }
 
@@ -77,12 +80,12 @@ pub(crate) fn unlit() -> &'static str {
 pub(crate) fn dark(r: &Renderer, surface: &mut Surface) -> Result<bool, RenderError> {
     let changed = r.light(surface, false)?;
     let (active, offered) = (surface.hdr(), surface.hdr_offered());
-    put(&LIT, Lit { active, offered, reason: unlit(), headroom: 1.0 });
+    put(&LIT, Lit { active, offered, reason: unlit(), headroom: 1.0, encoding: surface.encoding().name() });
     Ok(changed)
 }
 
 pub(crate) fn report() -> Value {
     let (lit, screen) = (get(&LIT), get(&SCREEN));
     json!({ "choice": get(&CHOICE).as_str(), "active": lit.active, "offered": lit.offered, "reason": lit.reason,
-        "headroom": lit.headroom, "display": screen.hdr, "peak_nits": screen.peak_nits })
+        "headroom": lit.headroom, "display": screen.hdr, "peak_nits": screen.peak_nits, "encoding": lit.encoding })
 }

@@ -1,32 +1,12 @@
 use crate::SceneView;
 use crate::{RenderError, Renderer, Surface};
-use wgpu::{
-    SurfaceCapabilities, SurfaceColorSpace as Space, SurfaceColorSpaces as Spaces, TextureFormat as Format,
-};
+use wgpu::TextureFormat as Format;
 
 pub const MAX_HEADROOM: f32 = 64.0;
-
-pub fn lit(caps: &SurfaceCapabilities, wanted: bool) -> (bool, Option<(Format, Space)>) {
-    let linear = |f: &&wgpu::SurfaceFormatCapabilities| {
-        f.format == Format::Rgba16Float && f.color_spaces.contains(Spaces::EXTENDED_SRGB_LINEAR)
-    };
-    let offered = caps.format_capabilities.iter().any(|f| linear(&f));
-    (offered, (offered && wanted).then_some((Format::Rgba16Float, Space::ExtendedSrgbLinear)))
-}
 
 impl crate::GpuImage {
     pub fn format(&self) -> Format {
         self.texture.format()
-    }
-}
-
-impl Surface {
-    pub fn hdr(&self) -> bool {
-        self.config.color_space == Space::ExtendedSrgbLinear
-    }
-
-    pub fn hdr_offered(&self) -> bool {
-        self.offered
     }
 }
 
@@ -83,24 +63,5 @@ impl SceneView {
 
     pub fn headroom(&self) -> f32 {
         self.headroom
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn hdr_needs_a_linear_half_float_surface() {
-        let with = |format, color_spaces| SurfaceCapabilities {
-            format_capabilities: vec![wgpu::SurfaceFormatCapabilities { format, color_spaces }],
-            ..Default::default()
-        };
-        let scrgb = with(Format::Rgba16Float, Spaces::SRGB | Spaces::EXTENDED_SRGB_LINEAR);
-        assert_eq!(lit(&scrgb, true), (true, Some((Format::Rgba16Float, Space::ExtendedSrgbLinear))));
-        assert_eq!(lit(&scrgb, false), (true, None));
-        assert_eq!(lit(&with(Format::Rgba16Float, Spaces::SRGB), true), (false, None));
-        assert_eq!(lit(&with(Format::Rgb10a2Unorm, Spaces::BT2100_PQ), true), (false, None));
-        assert_eq!(lit(&SurfaceCapabilities::default(), true), (false, None));
     }
 }

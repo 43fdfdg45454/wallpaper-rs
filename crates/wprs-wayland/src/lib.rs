@@ -2,6 +2,7 @@ mod backdrop;
 mod color;
 mod cosmic;
 mod cover;
+mod described;
 mod desk;
 mod handlers;
 mod hyprland;
@@ -18,6 +19,7 @@ mod window;
 mod x11;
 
 pub use color::Light;
+pub use described::Mastered;
 pub use modes::watch_modes;
 pub use pacer::Pacer;
 pub use window::{Display, Window};

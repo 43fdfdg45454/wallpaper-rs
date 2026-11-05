@@ -1,4 +1,4 @@
-use super::note;
+use super::{hdr, note};
 use serde_json::json;
 use wprs_core::model::OutputState;
 
@@ -25,4 +25,18 @@ fn a_chosen_level_on_a_scene_heavy_only_in_model_triangles_still_warns() {
     assert!(over.starts_with("this scene costs 6.0 units a frame at q0, more than the 4"), "{over}");
     assert!(over.ends_with("automatic quality would keep it still at its poster"), "{over}");
     assert_eq!(note(&shown("user", 0.0, "")), None);
+}
+
+#[test]
+fn the_hdr_line_says_how_the_colors_reach_the_desktop() {
+    let mut o = shown("user", 0.0, "");
+    o.hdr = serde_json::from_value(json!({ "choice": "on", "own": null, "active": true, "offered": true,
+        "display": true, "peak_nits": 800.0, "reference_nits": 203.0, "reason": "on", "encoding": "pq-own",
+        "max_cll": 800, "max_fall": 203 }))
+    .unwrap();
+    assert_eq!(hdr(&o), "on on (on, 800 nits, PQ with its own description, MaxCLL 800)");
+    o.hdr.encoding = "scrgb".into();
+    assert_eq!(hdr(&o), "on on (on, 800 nits, scRGB)");
+    o.hdr.active = false;
+    assert_eq!(hdr(&o), "on off (on, 800 nits)");
 }

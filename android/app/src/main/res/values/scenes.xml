@@ -70,6 +70,7 @@
     <string name="hdr_why_battery">on battery</string>
     <string name="hdr_why_quality">nothing with HDR colors is shown, such as an HDR video or a scene with bright colors at the highest quality</string>
     <string name="hdr_why_off">turned off</string>
+    <string name="hdr_pq">Colors are encoded in PQ (BT.2100) for the screen</string>
     <string name="hdr_screen">The screen says it shows HDR: %1$s, peak %2$s nits</string>
     <string name="shortcut_none">Nothing chosen: a tap opens nothing</string>
     <string name="shortcut_app">App</string>

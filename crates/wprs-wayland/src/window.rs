@@ -28,6 +28,8 @@ pub(crate) struct Parts {
     pub(crate) wanted: std::sync::Mutex<Option<bool>>,
     pub(crate) light: std::sync::Mutex<Option<crate::Light>>,
     pub(crate) feedback: Option<crate::color::Feedback>,
+    pub(crate) color: Option<crate::color::Manager>,
+    pub(crate) own: std::sync::Mutex<crate::described::Own>,
 }
 
 impl Drop for Parts {

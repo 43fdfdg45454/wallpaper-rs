@@ -1647,6 +1647,34 @@ msgid "The screen reaches %1 nits and shows white at %2 nits."
 msgstr "La pantalla llega a %1 nits y muestra el blanco a %2 nits."
 
 #: apps/wprs-app/qml/HdrPicker.qml
+msgid ""
+"The screen does not say how bright it gets, so the brightest colors are kept "
+"at twice its white."
+msgstr ""
+"La pantalla no dice cuánto brilla, así que los colores más brillantes se "
+"quedan en el doble de su blanco."
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "Colors go to the desktop as linear extended sRGB."
+msgstr "Los colores van al escritorio en sRGB lineal extendido."
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid ""
+"Colors go to the desktop encoded in PQ (BT.2100), the only HDR way the "
+"driver offers."
+msgstr ""
+"Los colores van al escritorio codificados en PQ (BT.2100), la única forma de "
+"HDR que ofrece el controlador."
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid ""
+"Colors go to the desktop encoded in PQ with a description of their own, "
+"brightest %1 nits and %2 nits on average."
+msgstr ""
+"Los colores van al escritorio codificados en PQ con una descripción propia: "
+"%1 nits como máximo y %2 nits de media."
+
+#: apps/wprs-app/qml/HdrPicker.qml
 msgid "HDR of %1"
 msgstr "HDR de %1"
 

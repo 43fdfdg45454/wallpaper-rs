@@ -17,6 +17,7 @@ mod device;
 #[cfg(target_os = "linux")]
 mod dmabuf;
 mod draw;
+mod encoding;
 mod export;
 #[cfg(target_os = "linux")]
 mod exported;
@@ -35,6 +36,7 @@ mod parallax;
 #[cfg(target_os = "linux")]
 mod plane;
 mod platform;
+mod pq;
 mod readback;
 mod save;
 mod scene;
@@ -57,6 +59,7 @@ pub use device::{Display, Renderer};
 #[cfg(target_os = "linux")]
 pub use dmabuf::{Dmabuf, Dmabufs};
 pub use draw::Target;
+pub use encoding::Encoding;
 #[cfg(target_os = "linux")]
 pub use exported::Exported;
 #[cfg(target_os = "linux")]
@@ -67,6 +70,7 @@ pub use page::{ARGB8888, PageBuffer, XRGB8888};
 pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};
 pub use platform::{Platform, heif, set_platform_decoder};
+pub use pq::pq_code;
 pub use readback::TargetLimits;
 pub use save::{FORMATS, save};
 pub use scene::{

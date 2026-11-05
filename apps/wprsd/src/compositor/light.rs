@@ -3,7 +3,8 @@ use super::power::Power;
 use super::surface::Screen;
 use wprs_core::HdrChoice;
 use wprs_core::hdr::headroom;
-use wprs_render::{RenderError, Renderer};
+use wprs_render::{Encoding, RenderError, Renderer};
+use wprs_wayland::Mastered;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize)]
 pub struct Hdr {
@@ -13,11 +14,23 @@ pub struct Hdr {
     pub peak_nits: Option<f32>,
     pub reference_nits: Option<f32>,
     pub reason: &'static str,
+    pub encoding: &'static str,
+    #[serde(skip)]
+    pub described: Option<Mastered>,
 }
 
 impl Hdr {
     pub fn headroom(&self) -> f32 {
         if self.active { headroom(self.peak_nits, self.reference_nits) } else { 1.0 }
+    }
+
+    pub fn reference(&self) -> f32 {
+        self.reference_nits.filter(|n| n.is_finite() && *n > 0.0).unwrap_or(wprs_render::REFERENCE_NITS)
+    }
+
+    pub fn mastered(&self) -> Mastered {
+        let nits = |v: f32| v.round().clamp(1.0, 10_000.0) as u32;
+        Mastered { max_cll: nits(self.headroom() * self.reference()), max_fall: nits(self.reference()) }
     }
 }
 
@@ -42,11 +55,17 @@ impl Screen {
             let reason = choice.decide((false, display), battery, top).1;
             return Ok(Hdr { display, peak_nits, reference_nits, reason, ..Hdr::default() });
         };
+        renderer.own_pq(surface, self.window.describes_pq())?;
         let (want, reason) = choice.decide((surface.hdr_offered(), display), battery, top);
         renderer.light(surface, want)?;
-        let (active, offered) = (surface.hdr(), surface.hdr_offered());
+        let (active, offered, encoding) = (surface.hdr(), surface.hdr_offered(), surface.encoding());
         let reason = if want && !active { "display" } else { reason };
-        Ok(Hdr { active, offered, display, peak_nits, reference_nits, reason })
+        let mut hdr = Hdr { active, offered, display, peak_nits, reference_nits, reason, ..Hdr::default() };
+        surface.set_light(hdr.reference(), hdr.headroom());
+        (hdr.encoding, hdr.described) =
+            (encoding.name(), (encoding == Encoding::OwnPq).then(|| hdr.mastered()));
+        self.window.describe(hdr.described);
+        Ok(hdr)
     }
 }
 
