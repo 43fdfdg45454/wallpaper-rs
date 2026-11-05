@@ -4,6 +4,7 @@ use crate::{Kind, Layer, MeshLayer, MeshPart, Rig, Wake};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+mod arc;
 mod cues;
 mod drive;
 #[cfg(test)]

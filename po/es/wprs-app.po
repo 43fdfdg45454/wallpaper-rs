@@ -3334,6 +3334,14 @@ msgstr "Vídeos"
 msgid "Hide"
 msgstr "Ocultar"
 
+#: apps/wprs-app/qml/SceneIkKnobs.qml
+msgid "Bends clockwise; click to bend the other way"
+msgstr "Se dobla en sentido horario; pulsa para doblarla al otro lado"
+
+#: apps/wprs-app/qml/SceneIkKnobs.qml
+msgid "Bends counterclockwise; click to bend the other way"
+msgstr "Se dobla en sentido antihorario; pulsa para doblarla al otro lado"
+
 #: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Default"
 msgstr "Valor por defecto"

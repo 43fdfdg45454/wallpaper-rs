@@ -1285,8 +1285,9 @@ cuando se dibuja más pequeña, así que los bordes del personaje siguen suaves,
 
 También se mueven solas: las cadenas de cinemática inversa giran sus huesos hasta alcanzar un punto,
 un hueso, otra capa o el puntero (este solo con el permiso del puntero, que la app avisa como
-cualquier otro uso del puntero), exactas para dos huesos y por rondas para cadenas más largas, con
-límites por hueso, peso y sentido del codo. La física de huesos simula muelles, péndulos y cuerdas a
+cualquier otro uso del puntero), exactas para dos huesos y, en cadenas más largas, desde un arco parejo
+seguido de rondas que nunca doblan una articulación al otro lado, con límites por hueso, peso y el
+sentido en que se doblan todas las articulaciones (que el editor invierte con un toque sobre la cadena). La física de huesos simula muelles, péndulos y cuerdas a
 un paso fijo de 1/60 s (1/30 s con batería y como mucho 15 pasos por fotograma), con inercia,
 amortiguación, gravedad, límites de giro y de estiramiento y el viento de `canvas.wind` con ráfagas
 (`canvas.gusts`, de 0 a 1) tomadas en el instante de cada paso, iguales a cualquier tasa de fotogramas;

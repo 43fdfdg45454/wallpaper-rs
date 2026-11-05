@@ -1,5 +1,7 @@
 import QtQuick
+import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
+import io.github.wallpaper_rs.app
 
 Item {
     id: knobs
@@ -61,6 +63,46 @@ Item {
                         });
                 }
             }
+        }
+    }
+
+    Repeater {
+        model: knobs.chains.length
+
+        delegate: Rectangle {
+            id: bend
+
+            required property int index
+            readonly property var chain: knobs.chains[index]
+            readonly property var joint: chain.at[Math.max(1, Math.floor(chain.at.length / 2))] ?? chain.at[0] ?? [0.5, 0.5]
+            readonly property bool clockwise: chain.bend !== "counterclockwise"
+
+            x: joint[0] * knobs.width + Kirigami.Units.gridUnit * 0.6
+            y: joint[1] * knobs.height - Kirigami.Units.gridUnit * 1.8
+            width: Kirigami.Units.gridUnit * 1.2
+            height: width
+            radius: width / 2
+            color: Kirigami.Theme.backgroundColor
+            border.color: Kirigami.Theme.neutralTextColor
+
+            Kirigami.Icon {
+                anchors.fill: parent
+                anchors.margins: 2
+                source: bend.clockwise ? "object-rotate-right" : "object-rotate-left"
+            }
+
+            TapHandler {
+                onTapped: knobs.run(bend.index, {
+                    "bend": bend.clockwise ? "counterclockwise" : "clockwise"
+                })
+            }
+
+            HoverHandler {
+                id: hover
+            }
+
+            QQC2.ToolTip.visible: hover.hovered
+            QQC2.ToolTip.text: bend.clockwise ? App.tr("Bends clockwise; click to bend the other way") : App.tr("Bends counterclockwise; click to bend the other way")
         }
     }
 

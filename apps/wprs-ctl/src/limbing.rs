@@ -83,7 +83,7 @@ pub struct Reaching {
     limits: Vec<String>,
     #[arg(long, value_name = "BONE", help = "Let a bone turn freely again")]
     unlimit: Vec<String>,
-    #[arg(long, value_parser = ["clockwise", "counterclockwise"], help = "Which way a chain of two bones bends")]
+    #[arg(long, value_parser = ["clockwise", "counterclockwise"], help = "Which way the joints of the chain bend")]
     bend: Option<String>,
     #[arg(long, help = "How much it moves the pose, from 0 to 1")]
     weight: Option<f32>,

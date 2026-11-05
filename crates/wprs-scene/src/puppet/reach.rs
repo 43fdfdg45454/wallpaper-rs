@@ -107,13 +107,18 @@ impl Puppet {
             c.points[i + 1..].iter_mut().for_each(|p| *p = around(*p, center, delta));
             c.turns[i] += delta;
         };
+        let side = if bend == Bend::Clockwise { 1.0 } else { -1.0 };
+        if n > 2 {
+            for (i, want) in super::arc::directions(&c.points, target, side).into_iter().enumerate() {
+                rotate(c, i, wrap(want - angle(gap(c.points[i], c.points[i + 1]))));
+            }
+        }
         if n == 2 {
             let (l1, l2) = (length(gap(c.points[0], c.points[1])), length(gap(c.points[1], c.points[2])));
             let d = length(gap(c.points[0], target));
             if l1 > 1e-4 && l2 > 1e-4 && d > 1e-4 {
                 let d = d.clamp((l1 - l2).abs(), l1 + l2);
                 let cos = ((l1 * l1 + d * d - l2 * l2) / (2.0 * l1 * d)).clamp(-1.0, 1.0);
-                let side = if bend == Bend::Clockwise { 1.0 } else { -1.0 };
                 let want = angle(gap(c.points[0], target)) + side * cos.acos();
                 rotate(c, 0, wrap(want - angle(gap(c.points[0], c.points[1]))));
                 let swing = angle(gap(c.points[1], target)) - angle(gap(c.points[1], c.points[2]));
@@ -125,8 +130,15 @@ impl Puppet {
         }
         for _ in 0..IK_ROUNDS {
             for i in (0..n).rev() {
-                let swing = angle(gap(c.points[i], target)) - angle(gap(c.points[i], c.points[n]));
-                rotate(c, i, wrap(swing));
+                let swing = wrap(angle(gap(c.points[i], target)) - angle(gap(c.points[i], c.points[n])));
+                let swing = match i {
+                    0 => swing,
+                    _ => {
+                        let before = gap(c.points[i - 1], c.points[i]);
+                        super::arc::sided(gap(c.points[i], c.points[i + 1]), before, swing, side)
+                    }
+                };
+                rotate(c, i, swing);
             }
             if length(gap(c.points[n], target)) < 0.01 {
                 break;
