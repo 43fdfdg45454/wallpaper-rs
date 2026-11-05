@@ -37,6 +37,12 @@ pub(crate) struct Status {
     pub(crate) held: bool,
 }
 
+impl Status {
+    pub(crate) fn receiving(&self) -> bool {
+        self.connected && !self.devices.is_empty()
+    }
+}
+
 struct Lights {
     asks: Sender<Ask>,
     status: Arc<Mutex<Status>>,
@@ -45,6 +51,7 @@ struct Lights {
 }
 
 static LIGHTS: OnceLock<Lights> = OnceLock::new();
+static WAKE: OnceLock<Box<dyn Fn() + Send + Sync>> = OnceLock::new();
 
 fn lights() -> &'static Lights {
     LIGHTS.get_or_init(|| {
@@ -60,12 +67,17 @@ pub(crate) fn follow(daemon: &Daemon) {
     if !wanted.enabled && LIGHTS.get().is_none() {
         return;
     }
+    WAKE.get_or_init(|| Box::new(daemon.compositor.waker()));
     let l = lights();
     if lock(&l.status).rgb != wanted {
         lock(&l.status).rgb = wanted.clone();
         l.asks.send(Ask::Settings(wanted)).ok();
         daemon.compositor.waker()();
     }
+}
+
+fn wake() {
+    WAKE.get().into_iter().for_each(|wake| wake());
 }
 
 pub(crate) fn enabled() -> bool {

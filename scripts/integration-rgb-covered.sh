@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-declare rgbs sr config
+declare rgbs sr config openrgb
 cp -r "$rgbs/scene" "$rgbs/pulse"
 ctl scene set "$rgbs/pulse" /manifest/id org.example.pulse
 ctl scene set "$rgbs/pulse" /scene/timelines '[{"id": "pulse", "duration": 1, "loop": "repeat"}]'
@@ -49,6 +49,12 @@ sent=$(($(painted) - before))
 if [ "$sent" -lt 20 ] || [ "$sent" -gt 140 ]; then fail "following lights got $sent colors in 2 s while covered"; fi
 [ "$(drawn)" = "$frames" ] || fail "the covered screen was drawn while its lights followed the scene"
 held follow False || fail "following lights said they paused"
+colors() { ctl rgb strip -o TEST-RGB --json | js "r['colors'][0]"; }
+still() { [ "$(for _ in 1 2 3 4 5; do colors; sleep 0.2; done | sort -u | wc -l)" = 1 ]; }
+ctl config rgb.server "127.0.0.1:1" >/dev/null
+wait_for 10 still || fail "a covered scene kept drawing for lights no server receives: $(ctl rgb status)"
+ctl config rgb.server "127.0.0.1:$openrgb" >/dev/null
+wait_for 30 grows 10 || fail "the lights did not follow the covered scene once the server came back: $(ctl rgb status)"
 ctl rgb covered pause >/dev/null
 wait_for 10 held pause True || fail "pausing while covered did not hold the lights"
 if ctl rgb covered sometimes 2>/dev/null; then fail "wprs-ctl rgb covered took an invalid choice"; fi

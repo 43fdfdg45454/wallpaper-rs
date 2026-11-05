@@ -23,8 +23,13 @@ fn mode() -> Option<Covered> {
     LIGHTS.get().map(|l| lock(&l.status).rgb.when_covered)
 }
 
+pub(crate) fn any() -> bool {
+    !lock(&COVERED).is_empty()
+}
+
 pub(crate) fn follows() -> bool {
-    super::enabled() && mode() == Some(Covered::Follow)
+    let receiving = LIGHTS.get().is_some_and(|l| lock(&l.status).receiving());
+    super::enabled() && mode() == Some(Covered::Follow) && receiving
 }
 
 pub(crate) fn paused(source: &str) -> bool {

@@ -39,3 +39,21 @@ fn the_lights_idle_only_while_the_screen_they_follow_is_covered_and_they_pause()
     super::super::cover("TEST-HELD", false);
     assert!(!s.held());
 }
+
+#[test]
+fn covered_lights_that_follow_a_server_without_devices_retry_it_instead_of_drawing_for_nothing() {
+    let device =
+        wprs_rgb::Device { index: 0, name: "keys".into(), kind: "keyboard", leds: 1, zones: Vec::new() };
+    let empty = Status { connected: true, ..Status::default() };
+    assert!(!empty.receiving(), "a server without devices counted as receiving");
+    assert!(Status { connected: true, devices: vec![device], ..Status::default() }.receiving());
+    let mut s = session("TEST-RETRY");
+    s.rgb = Rgb { enabled: true, server: "127.0.0.1:1".into(), when_covered: Covered::Follow };
+    super::super::cover("TEST-RETRY", true);
+    assert_eq!(s.wait(), RETRY, "covered following lights never tried the server again");
+    s.retry();
+    assert!(s.failed.is_some() && !lock(&s.status).receiving(), "an unreachable server counted as receiving");
+    s.rgb.enabled = false;
+    assert_eq!(s.wait(), IDLE, "lights turned off kept retrying");
+    super::super::cover("TEST-RETRY", false);
+}

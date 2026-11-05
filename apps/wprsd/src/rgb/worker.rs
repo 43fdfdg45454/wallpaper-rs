@@ -41,6 +41,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                     }
                     (s.client, s.failed, s.rgb) = (None, None, rgb);
                     s.publish(None);
+                    s.retry();
                 }
             }
             Ok(Ask::Forget(source)) => s.forget(Some(&source)),
@@ -76,19 +77,6 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
 }
 
 impl Session {
-    fn held(&self) -> bool {
-        let covered = |(source, _): &(String, Strip)| super::covered::covered(source);
-        self.rgb.when_covered == Covered::Pause && self.last.as_ref().is_some_and(covered)
-    }
-
-    fn wait(&self) -> Duration {
-        match (&self.test, &self.client) {
-            (Some(_), _) => STEP,
-            (None, Some(_)) if !self.held() => LISTEN,
-            _ => IDLE,
-        }
-    }
-
     fn forget(&mut self, source: Option<&str>) {
         if self.last.as_ref().is_some_and(|(from, _)| source.is_none_or(|s| s == from)) {
             self.last = None;
@@ -106,10 +94,16 @@ impl Session {
 
     fn publish(&mut self, error: Option<String>) {
         let mut status = lock(&self.status);
+        let was = status.receiving();
         status.connected = self.client.is_some();
         status.error = error;
         if self.client.is_none() {
             status.devices.clear();
+        }
+        let now = status.receiving();
+        drop(status);
+        if was != now {
+            super::wake();
         }
     }
 
@@ -181,10 +175,12 @@ impl Session {
                 (self.client, self.failed) = (None, Some(Instant::now()));
                 self.publish(Some(e.to_string()));
             }
-            _ => {}
+            Some(Ok(false)) => {}
+            None => self.retry(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests;
+mod waits;
