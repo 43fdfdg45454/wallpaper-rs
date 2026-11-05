@@ -19,7 +19,9 @@ class MirrorsTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val tree = "content://com.android.externalstorage.documents/tree/primary%3APictures"
 
-    private fun plan(vararg kinds: String) = JSONObject().put("tree", tree).put("accept", JSONArray(kinds.toList()))
+    private val cloud = "content://org.example.cloud.documents/tree/root%3APhotos"
+
+    private fun plan(vararg kinds: String, at: String = tree) = JSONObject().put("tree", at).put("accept", JSONArray(kinds.toList()))
 
     @Test
     fun aChosenFolderWakesTheCopyOnlyWhenItsFilesChange() {
@@ -28,6 +30,8 @@ class MirrorsTest {
         assertTrue(MediaStore.Images.Media.EXTERNAL_CONTENT_URI in triggers)
         assertFalse("pictures only do not wake for videos", MediaStore.Video.Media.EXTERNAL_CONTENT_URI in triggers)
         assertEquals(3, Mirrors.triggers(listOf(plan("image", "video"), plan("image"))).size)
+        val elsewhere = Mirrors.triggers(listOf(plan("image", "video", at = cloud)))
+        assertEquals("a folder of another provider wakes only for its own files", listOf(Uri.parse("$cloud/document/root%3APhotos/children")), elsewhere)
         val work = WorkManager.getInstance(context)
         work.enqueueUniqueWork(TEST, androidx.work.ExistingWorkPolicy.REPLACE, Mirrors.request(triggers)).result.get()
         val info = work.getWorkInfosForUniqueWork(TEST).get().single()

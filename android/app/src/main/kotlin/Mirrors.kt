@@ -26,6 +26,7 @@ object Mirrors {
     const val WORK = "mirror"
     private const val SETTLE_S = 10L
     private const val LONGEST_S = 120L
+    private val LOCAL = setOf("com.android.externalstorage.documents", "com.android.providers.media.documents")
 
     fun plans(): List<JSONObject> {
         val mirrors = runCatching { Native.library(JSONObject().put("op", "mirrors").toString()) }.getOrNull()?.let(::JSONArray) ?: return emptyList()
@@ -39,7 +40,8 @@ object Mirrors {
 
     fun triggers(plans: List<JSONObject>): List<Uri> {
         val trees = plans.map { Uri.parse(it.getString("tree")) }.distinct()
-        val kinds = plans.flatMap { it.getJSONArray("accept").strings() }.toSet()
+        val local = plans.filter { Uri.parse(it.getString("tree")).authority in LOCAL }
+        val kinds = local.flatMap { it.getJSONArray("accept").strings() }.toSet()
         val shared = listOfNotNull(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI.takeIf { "image" in kinds },
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI.takeIf { "video" in kinds },
