@@ -8,13 +8,16 @@ use std::collections::BTreeSet;
 use wprs_core::message::said;
 use wprs_format::features;
 
-pub use crate::action::{ACTIONS, Action, AssetEdit, EDITOR, ImportAssets, KeyEase, RgbEdit, ScriptFile};
+pub use crate::action::{
+    ACTIONS, Action, AssetEdit, ConditionEdit, EDITOR, ImportAssets, KeyEase, RgbEdit, ScriptFile,
+    UpgradeEdit,
+};
 pub use crate::action::{
     AmbientEdit, AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit,
     IkEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, MaskStroke, MeshCut, NormalsMake,
     ParticleEdit, PartsEdit, PointEdit, Response, Spot, Strand, SwarmLight, TendEdit, WeightStroke, WindEdit,
 };
-pub use crate::action::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
+pub use crate::action::{AnimEdit, EffectsEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
 pub use crate::action::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {
@@ -158,8 +161,8 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         Action::Translate { pointer, language, text, add } => {
             crate::texts::translate(doc, pointer, language, text.as_deref(), *add)?
         }
-        Action::Upgrade { rating, reasons, photosensitive, derived_from } => {
-            crate::meta::upgrade(doc, *rating, reasons, *photosensitive, derived_from)?
+        Action::Upgrade(u) => {
+            crate::meta::upgrade(doc, u.rating, &u.reasons, u.photosensitive, &u.derived_from)?
         }
         Action::AddProperty { kind, id, group, label } => {
             crate::props::add_property(doc, kind, id.as_deref(), group.as_deref(), label.as_deref())?
@@ -169,7 +172,7 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         }
         Action::RenameProperty { id, to } => crate::references::rename_property(doc, id, to)?,
         Action::RemoveProperty { id } => crate::references::remove_property(doc, id)?,
-        Action::Condition { id, enabled, text } => crate::references::condition(doc, id, *enabled, text)?,
+        Action::Condition(c) => crate::references::condition(doc, &c.id, c.enabled, &c.text)?,
         Action::AddPreset { id, label } => crate::props::add_preset(doc, id.as_deref(), label.as_deref())?,
         _ => Vec::new(),
     })

@@ -1107,6 +1107,30 @@ msgstr "una malla tiene como mucho %1 expresiones"
 msgid "an expression weighs each blend shape from -1 to 1"
 msgstr "una expresión pesa cada forma de mezcla de -1 a 1"
 
+#: crates/wprs-editor/src/shaping/effects.rs
+msgid "there is no effect \"%1\""
+msgstr "no hay ningún efecto «%1»"
+
+#: crates/wprs-editor/src/shaping/effects.rs
+msgid "the effect %1 has no parameter %2"
+msgstr "el efecto %1 no tiene el parámetro %2"
+
+#: crates/wprs-editor/src/shaping/effects.rs
+msgid "%1 of the effect %2 goes from %3 to %4"
+msgstr "%1 del efecto %2 va de %3 a %4"
+
+#: crates/wprs-editor/src/shaping/effects.rs
+msgid "the layer %1 has no effect %2"
+msgstr "la capa %1 no tiene el efecto %2"
+
+#: crates/wprs-editor/src/shaping/effects.rs
+msgid "a sound or light layer takes no effects"
+msgstr "una capa de sonido o de luz no lleva efectos"
+
+#: crates/wprs-editor/src/shaping/masks.rs
+msgid "a mask needs a picture, a layer or a shape"
+msgstr "una máscara necesita una imagen, una capa o una forma"
+
 #: crates/wprs-editor/src/shelf.rs
 msgid "name a part as layer:ID, particles:ID, script:PATH or effect:ID, not %1"
 msgstr ""

@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
-use wprs_format::{Descriptor, Rating};
 
 mod glows;
 mod lamps;
@@ -9,17 +8,19 @@ mod limbs;
 mod motion;
 mod names;
 mod rigging;
+mod shaping;
 mod solid;
 mod swarm;
 mod tend;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use motion::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
-pub use names::{ACTIONS, AssetEdit, EDITOR, ImportAssets, RgbEdit, ScriptFile};
+pub use names::{ACTIONS, AssetEdit, ConditionEdit, EDITOR, ImportAssets, RgbEdit, ScriptFile, UpgradeEdit};
 pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
     WeightStroke,
 };
+pub use shaping::EffectsEdit;
 pub use solid::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
 pub use swarm::{ParticleEdit, Response, Strand, SwarmLight, TendEdit};
 
@@ -127,16 +128,7 @@ pub enum Action {
         #[serde(default)]
         animated: bool,
     },
-    Upgrade {
-        #[serde(default)]
-        rating: Option<Rating>,
-        #[serde(default)]
-        reasons: Vec<Descriptor>,
-        #[serde(default)]
-        photosensitive: Option<bool>,
-        #[serde(default)]
-        derived_from: Vec<String>,
-    },
+    Upgrade(UpgradeEdit),
     AddProperty {
         kind: String,
         #[serde(default)]
@@ -159,13 +151,7 @@ pub enum Action {
     RemoveProperty {
         id: String,
     },
-    Condition {
-        id: String,
-        #[serde(default)]
-        enabled: bool,
-        #[serde(default)]
-        text: String,
-    },
+    Condition(ConditionEdit),
     AddPreset {
         #[serde(default)]
         id: Option<String>,
@@ -195,6 +181,7 @@ pub enum Action {
     Ambient(AmbientEdit),
     Scene3d(Edit3d),
     Animate(AnimEdit),
+    Effects(EffectsEdit),
     Undo {},
     Redo {},
 }

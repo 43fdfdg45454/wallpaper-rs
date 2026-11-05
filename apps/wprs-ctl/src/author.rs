@@ -79,14 +79,8 @@ pub enum Author {
     },
     #[command(flatten)]
     Layers(crate::layering::Layering),
-    #[command(about = "Copy a picture, video, sound, font or .cube table into the folder as an asset")]
-    Import {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        file: PathBuf,
-        #[arg(long, help = "Asset id; made from the file name when omitted")]
-        id: Option<String>,
-    },
+    #[command(flatten)]
+    Shaping(crate::shaping::Shaping),
     #[command(about = "Copy an effect descriptor and its WGSL shader into the folder as an effect")]
     ImportEffect {
         #[arg(help = DIR)]

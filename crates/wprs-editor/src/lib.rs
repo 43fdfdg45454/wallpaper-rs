@@ -52,6 +52,7 @@ mod session;
 pub mod settings;
 pub mod shaders;
 mod shapes;
+mod shaping;
 pub mod shelf;
 pub mod skin;
 mod spots;

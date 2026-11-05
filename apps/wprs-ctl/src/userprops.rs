@@ -2,6 +2,7 @@ use crate::author::DIR;
 use clap::Subcommand;
 use std::path::PathBuf;
 use wprs_editor::Action;
+use wprs_editor::actions::ConditionEdit;
 
 const PROPERTY: &str = "Id of a user property";
 const KINDS: &str = "slider, bool, color, combo, text, file, folder, button, group, label or divider";
@@ -85,7 +86,9 @@ pub fn action(command: UserProps) -> (PathBuf, Action) {
         UserProps::MoveProperty { dir, id, to, group } => (dir, Action::MoveProperty { id, to, group }),
         UserProps::RenameProperty { dir, id, to } => (dir, Action::RenameProperty { id, to }),
         UserProps::RemoveProperty { dir, id } => (dir, Action::RemoveProperty { id }),
-        UserProps::Condition { dir, id, text, enabled } => (dir, Action::Condition { id, enabled, text }),
+        UserProps::Condition { dir, id, text, enabled } => {
+            (dir, Action::Condition(ConditionEdit { id, enabled, text }))
+        }
         UserProps::AddPreset { dir, id, label } => (dir, Action::AddPreset { id, label }),
     }
 }

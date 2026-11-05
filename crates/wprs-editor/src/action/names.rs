@@ -1,6 +1,6 @@
 pub const EDITOR: &str = "/scene/ext/editor";
 
-pub const ACTIONS: [&str; 54] = [
+pub const ACTIONS: [&str; 55] = [
     "set",
     "add",
     "remove",
@@ -53,6 +53,7 @@ pub const ACTIONS: [&str; 54] = [
     "ambient",
     "scene3d",
     "animate",
+    "effects",
     "undo",
     "redo",
 ];
@@ -101,6 +102,29 @@ pub struct RgbEdit {
     pub size: Option<[f64; 2]>,
     #[serde(default)]
     pub whole: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UpgradeEdit {
+    #[serde(default)]
+    pub rating: Option<wprs_format::Rating>,
+    #[serde(default)]
+    pub reasons: Vec<wprs_format::Descriptor>,
+    #[serde(default)]
+    pub photosensitive: Option<bool>,
+    #[serde(default)]
+    pub derived_from: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConditionEdit {
+    pub id: String,
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub text: String,
 }
 
 impl super::Action {

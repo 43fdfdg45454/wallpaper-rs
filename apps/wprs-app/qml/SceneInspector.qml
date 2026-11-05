@@ -39,23 +39,12 @@ ColumnLayout {
     }
 
     function addEffect(id) {
-        const list = pointer + "/effects";
-        if (node.effects > 0)
-            page.run("add", {
-                "pointer": list + "/-",
-                "value": {
-                    "effect": id
-                }
-            });
-        else
-            page.run("set", {
-                "pointer": list,
-                "value": [
-                    {
-                        "effect": id
-                    }
-                ]
-            });
+        page.run("effects", {
+            "add": {
+                "layer": node.id,
+                "effect": id
+            }
+        });
     }
 
     Kirigami.Heading {

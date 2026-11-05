@@ -133,11 +133,7 @@ impl Project {
     }
 
     pub fn effects(&self) -> crate::inspect::Own {
-        let Ok(mut scene) = serde_json::from_value::<wprs_scene::Scene>(self.doc["scene"].clone()) else {
-            return Default::default();
-        };
-        crate::cache::read_files(&mut scene, &self.dir);
-        scene.loaded
+        crate::shaping::own(&self.dir, &self.doc)
     }
 
     pub fn record(&mut self, label: &str, ops: Vec<Op>) -> Result<Vec<Op>> {

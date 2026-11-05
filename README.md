@@ -2296,6 +2296,7 @@ wprs-ctl scene add-property mar slider --id velocidad --label Speed
 wprs-ctl scene translate mar /manifest/properties/velocidad/label es Velocidad
 wprs-ctl scene condition mar velocidad "tiempo == 'tormenta'" --enabled   # comprobada como en validate
 wprs-ctl scene add-preset mar --label Calm && wprs-ctl scene set mar /manifest/presets/0/values/tiempo calma
+wprs-ctl scene effects mar far add vignette --param intensity=0.5   # y set, remove, move, mask
 wprs-ctl scene group mar near far --id colinas && wprs-ctl scene hide mar sky
 wprs-ctl scene undo mar && wprs-ctl scene history mar
 wprs-ctl scene validate mar                             # problemas, cada uno con su JSON Pointer

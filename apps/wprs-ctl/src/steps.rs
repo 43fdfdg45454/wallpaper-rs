@@ -3,7 +3,7 @@ use anyhow::{Result, ensure};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
-use wprs_editor::actions::{Action, MaskStroke, ScriptFile};
+use wprs_editor::actions::{Action, MaskStroke, ScriptFile, UpgradeEdit};
 use wprs_editor::{Op, Project, references};
 
 pub(crate) const OPEN: &str = "Describe a scene folder, or first extract a .wpak scene package into it as an unsigned copy with the id <id>.copy";
@@ -74,9 +74,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
         Author::Remove { dir, pointer } => (dir, Action::Remove { pointer }),
         Author::Move { dir, from, to } => (dir, Action::Move { from, to }),
         Author::Layers(command) => crate::layering::action(command),
-        Author::Import { dir, file, id } => {
-            (dir, Action::Import { file: fs::canonicalize(&file).unwrap_or(file), id })
-        }
+        Author::Shaping(command) => crate::shaping::action(command),
         Author::ImportEffect { dir, descriptor, wgsl } => {
             let wgsl = wgsl.map(|w| fs::canonicalize(&w).unwrap_or(w));
             (
@@ -110,7 +108,7 @@ pub(crate) fn action(command: Author) -> Result<(PathBuf, Action), Box<Author>> 
         Author::Upgrade { dir, rating, reasons, photosensitive, derived_from } => {
             let rating = rating.and_then(|r| serde_json::from_value(json!(r)).ok());
             let reasons = reasons.iter().filter_map(|r| serde_json::from_value(json!(r)).ok()).collect();
-            (dir, Action::Upgrade { rating, reasons, photosensitive, derived_from })
+            (dir, Action::Upgrade(UpgradeEdit { rating, reasons, photosensitive, derived_from }))
         }
         Author::Properties(command) => crate::userprops::action(command),
         Author::Rigging(command) => return crate::rigging::action(command),

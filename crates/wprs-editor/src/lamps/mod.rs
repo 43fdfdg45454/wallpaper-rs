@@ -39,6 +39,7 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::Ambient(e) => lit::ambient(doc, e),
         Action::Scene3d(e) => crate::stage3d::act(dir, doc, e),
         Action::Animate(e) => crate::motion::act(dir, doc, e),
+        Action::Effects(e) => crate::shaping::effects(dir, doc, e),
         _ => return None,
     })
 }

@@ -1,3 +1,4 @@
+mod authoring;
 mod cues;
 mod language;
 mod more;
