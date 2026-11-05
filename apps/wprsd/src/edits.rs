@@ -98,14 +98,13 @@ impl Daemon {
 
     pub(crate) fn place(&self, output: &str, fit: Fit, edit: Option<&Edit>) -> Place {
         let st = self.state();
-        let lead = Some(st.config.layout.leader(output)).filter(|l| st.outputs.contains_key(*l));
-        let lead = lead.unwrap_or(output);
+        let lead =
+            Some(st.config.layout.leader(output)).filter(|l| st.outputs.contains_key(*l)).unwrap_or(output);
         let screen = st.outputs.get(lead).and_then(|info| info.screen.as_ref());
         if let Some(crop) = edit.and_then(|e| e.crop_for(lead, screen.map(|s| s.identity.as_str()))) {
             return Place::Crop(crop);
         }
-        let placed = !st.config.layout.loose([lead]).is_empty();
-        if fit != Fit::Span || (screen.is_none() && !placed) {
+        if fit != Fit::Span || (screen.is_none() && st.config.layout.loose([lead]).is_empty()) {
             return Place::Fit;
         }
         let spread = |name: &str, info: &OutputInfo| {
