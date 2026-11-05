@@ -12,11 +12,11 @@ ColumnLayout {
     readonly property var modes: ["color", "hsv", "palette", "gradient"]
     readonly property string mode: init.hsv ? "hsv" : init.palette ? "palette" : (init.gradient ?? []).length > 0 ? "gradient" : "color"
     readonly property var pair: Array.isArray(init.color) && typeof init.color[0] === "string" ? init.color : ["#ffffff", "#ffffff"]
-    readonly property var hues: init.hsv ?? ({
+    readonly property var hues: Object.assign({
             "hue": [0, 360],
             "sat": [1, 1],
             "val": [1, 1]
-        })
+        }, init.hsv ?? {})
     readonly property var colors: init.palette?.colors ?? []
     readonly property var stops: init.gradient ?? []
 

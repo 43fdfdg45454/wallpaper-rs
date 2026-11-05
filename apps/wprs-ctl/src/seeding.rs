@@ -66,9 +66,9 @@ pub enum Seeding {
 pub struct Tint {
     #[arg(long, value_name = "MIN,MAX", value_parser = pair, help = "Hues in degrees from 0 to 360 that new particles pick from")]
     pub hsv: Option<[f64; 2]>,
-    #[arg(long, value_name = "MIN,MAX", value_parser = pair, requires = "hsv", help = "Saturation from 0 to 1 of the hues")]
+    #[arg(long, value_name = "MIN,MAX", value_parser = pair, requires = "hsv", help = "Saturation from 0 to 1 of the hues; 1,1 when omitted")]
     pub saturation: Option<[f64; 2]>,
-    #[arg(long, value_name = "MIN,MAX", value_parser = pair, requires = "hsv", help = "Value from 0 to 1 of the hues")]
+    #[arg(long, value_name = "MIN,MAX", value_parser = pair, requires = "hsv", help = "Value from 0 to 1 of the hues; 1,1 when omitted")]
     pub value: Option<[f64; 2]>,
     #[arg(long, requires = "hsv", help = "Pick the hue among this many steps, from 1 to 360")]
     pub hue_steps: Option<u32>,

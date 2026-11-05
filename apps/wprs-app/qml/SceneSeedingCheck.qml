@@ -44,6 +44,16 @@ QtObject {
         tint.hue("hue", [100, 200], false);
         if (read("/scene/particles/flakes/init/hsv/hue")[1] !== 200)
             fail("the hue range was not set");
+        tools.edit("start", {
+                "ranges": {
+                    "hsv": {
+                        "hue": [180, 240]
+                    }
+                }
+            });
+        tint.init = read("/scene/particles/flakes/init");
+        if (JSON.stringify([tint.hues.sat, tint.hues.val]) !== "[[1,1],[1,1]]")
+            fail("hues written without saturation or value do not show their full defaults");
         tint.choose(2);
         if ((read("/scene/particles/flakes/init/palette/colors") ?? []).length !== 2 || read("/scene/particles/flakes/init/hsv") !== null)
             fail("the palette did not replace the hues");
@@ -86,9 +96,9 @@ QtObject {
         systems.rename("lonely", "alone");
         if (read("/scene/particles/alone") === null || read("/scene/particles/lonely") !== null)
             fail("the systems panel did not rename a system");
-        if (page.view.history.done.length !== steps + 8)
+        if (page.view.history.done.length !== steps + 9)
             fail("a tool of the particles did not take exactly one undo step");
-        for (let k = 0; k < 8; k++)
+        for (let k = 0; k < 9; k++)
             page.run("undo");
         [tools, life, tint, bar, fade, windows, systems].forEach(o => o.destroy());
     }
