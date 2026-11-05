@@ -32,7 +32,8 @@ class MirrorsTest {
         assertFalse("pictures only do not wake for videos", MediaStore.Video.Media.EXTERNAL_CONTENT_URI in triggers)
         assertEquals(3, Mirrors.triggers(listOf(plan("image", "video"), plan("image"))).size)
         val elsewhere = Mirrors.triggers(listOf(plan("image", "video", at = cloud)))
-        assertEquals("a folder of another provider wakes only for its own files", listOf(Uri.parse("$cloud/document/root%3APhotos/children")), elsewhere)
+        assertEquals("a cloud announces its own reads, so its folders never wake the copy", emptyList<Uri>(), elsewhere)
+        assertEquals(triggers, Mirrors.triggers(listOf(plan("image"), plan("image", at = cloud))))
         val work = WorkManager.getInstance(context)
         work.enqueueUniqueWork(TEST, androidx.work.ExistingWorkPolicy.REPLACE, Mirrors.request(triggers)).result.get()
         val info = work.getWorkInfosForUniqueWork(TEST).get().single()
@@ -46,8 +47,8 @@ class MirrorsTest {
     @Test
     fun foldersOfACloudWaitForAnUnmeteredNetworkInTheBackground() {
         val (phone, far) = plan("image") to plan("image", at = cloud)
-        assertEquals("mobile data copies only the folders of the phone", listOf(phone), Mirrors.now(listOf(phone, far), unmetered = false))
-        assertEquals(listOf(phone, far), Mirrors.now(listOf(phone, far), unmetered = true))
+        assertEquals("a change copies only the folders of the phone", listOf(phone), Mirrors.now(listOf(phone, far), waiting = false))
+        assertEquals("clouds are copied by the job that waits for an unmetered network", listOf(far), Mirrors.now(listOf(phone, far), waiting = true))
         val work = WorkManager.getInstance(context)
         work.enqueueUniqueWork(TEST, androidx.work.ExistingWorkPolicy.REPLACE, Mirrors.waiting()).result.get()
         val info = work.getWorkInfosForUniqueWork(TEST).get().single()

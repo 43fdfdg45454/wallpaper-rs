@@ -454,12 +454,13 @@ Android: el archivo elegido (una imagen o, si la propiedad los admite, un vídeo
 archivos de la app, y de una carpeta se copian las imágenes y los vídeos que admite, con sus
 subcarpetas hasta la profundidad que pide y como mucho los archivos que pide. La app guarda el
 permiso de lectura de la carpeta y copia otra vez lo que cambió en ella cada vez que se abre y,
-en segundo plano, cuando Android avisa de un cambio en la carpeta o, solo para las carpetas del
-propio teléfono, en sus fotos y vídeos: WorkManager espera a que los cambios se calmen 10 segundos (2 minutos como mucho), sin
+para las carpetas del propio teléfono, en segundo plano cuando Android avisa de un cambio en la
+carpeta o en sus fotos y vídeos: WorkManager espera a que los cambios se calmen 10 segundos (2 minutos como mucho), sin
 batería baja y sin consultar nada a intervalos, así que la copia suele ponerse al día en menos de un
-minuto. En segundo plano una carpeta de una nube o de la red se copia solo por Wi-Fi u otra red sin
-límite de datos: con datos móviles su copia espera a una red así, sin consultar nada mientras tanto.
-Una carpeta de una nube que no avisa de sus cambios se pone al día al abrir la app;
+minuto. Los avisos de una nube o de la red no despiertan la copia, porque muchas avisan después de
+cada lectura: su carpeta se pone al día al abrir la app y, en segundo plano, después de cada copia
+de una carpeta del teléfono, solo por Wi-Fi u otra red sin límite de datos (con datos móviles espera
+a una red así, sin consultar nada mientras tanto);
 *Quitar* borra la copia y devuelve el permiso. Como en el escritorio, la escena muestra el archivo
 de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cambia mientras se ve.
 La página de un paquete de vídeo tiene sus ajustes (velocidad, inicio, final, volumen, zoom y

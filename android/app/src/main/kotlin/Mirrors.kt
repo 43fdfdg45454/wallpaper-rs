@@ -1,8 +1,6 @@
 package io.github.wallpaper_rs
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.MediaStore
@@ -23,10 +21,10 @@ class Remirror(context: Context, params: WorkerParameters) : Worker(context, par
         val context = applicationContext
         val kept = runCatching { Mirrors.kept(context, Mirrors.plans()) }.getOrDefault(emptyList())
         val waiting = inputData.getBoolean(Mirrors.WAITING, false)
-        val free = waiting || Mirrors.unmetered(context)
-        runCatching { context.remirror(if (waiting) kept.filterNot(Mirrors::local) else Mirrors.now(kept, free)) }
-        if (!free && kept.any { !Mirrors.local(it) }) Mirrors.later(context)
-        if (!waiting) Mirrors.watch(context, ExistingWorkPolicy.APPEND_OR_REPLACE)
+        runCatching { context.remirror(Mirrors.now(kept, waiting)) }
+        if (waiting) return Result.success()
+        Mirrors.later(context, kept)
+        Mirrors.watch(context, ExistingWorkPolicy.APPEND_OR_REPLACE)
         return Result.success()
     }
 }
@@ -51,15 +49,11 @@ object Mirrors {
 
     fun local(plan: JSONObject) = Uri.parse(plan.getString("tree")).authority in LOCAL
 
-    fun now(plans: List<JSONObject>, unmetered: Boolean) = plans.filter { unmetered || local(it) }
-
-    fun unmetered(context: Context) = context.getSystemService(ConnectivityManager::class.java)?.run {
-        getNetworkCapabilities(activeNetwork)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-    } == true
+    fun now(plans: List<JSONObject>, waiting: Boolean) = plans.filter { local(it) != waiting }
 
     fun triggers(plans: List<JSONObject>): List<Uri> {
-        val trees = plans.map { Uri.parse(it.getString("tree")) }.distinct()
         val local = plans.filter(::local)
+        val trees = local.map { Uri.parse(it.getString("tree")) }.distinct()
         val kinds = local.flatMap { it.getJSONArray("accept").strings() }.toSet()
         val shared = listOfNotNull(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI.takeIf { "image" in kinds },
@@ -81,12 +75,16 @@ object Mirrors {
         return OneTimeWorkRequest.Builder(Remirror::class.java).setConstraints(constraints).setInputData(workDataOf(WAITING to true)).build()
     }
 
-    fun later(context: Context) = WorkManager.getInstance(context).enqueueUniqueWork(CLOUD, ExistingWorkPolicy.KEEP, waiting())
+    fun later(context: Context, plans: List<JSONObject>) {
+        if (plans.any { !local(it) }) WorkManager.getInstance(context).enqueueUniqueWork(CLOUD, ExistingWorkPolicy.KEEP, waiting())
+    }
 
     fun watch(context: Context, policy: ExistingWorkPolicy = ExistingWorkPolicy.REPLACE) {
-        val triggers = triggers(kept(context, plans()))
+        val kept = kept(context, plans())
+        val triggers = triggers(kept)
         val work = WorkManager.getInstance(context)
-        if (triggers.isEmpty()) listOf(WORK, CLOUD).forEach(work::cancelUniqueWork) else work.enqueueUniqueWork(WORK, policy, request(triggers))
+        if (triggers.isEmpty()) work.cancelUniqueWork(WORK) else work.enqueueUniqueWork(WORK, policy, request(triggers))
+        if (kept.all(::local)) work.cancelUniqueWork(CLOUD)
     }
 }
 
