@@ -30,14 +30,15 @@ object Updates {
 
     fun count() = runCatching { JSONArray(Native.account("{\"op\": \"updates\"}")).length() }.getOrDefault(0)
 
-    fun schedule(context: Context) {
-        val repos = runCatching { JSONObject(Native.account("{\"op\": \"repos\"}")).optJSONArray("repos")?.length() }.getOrNull() ?: 0
+    fun repos() = runCatching { JSONObject(Native.account("{\"op\": \"repos\"}")).optJSONArray("repos")?.length() }.getOrNull() ?: 0
+
+    fun schedule(context: Context, repos: Int = repos()) {
         val work = WorkManager.getInstance(context)
         if (repos == 0) {
             work.cancelUniqueWork(WORK)
             return
         }
         val request = PeriodicWorkRequest.Builder(RepoCheck::class.java, 1, TimeUnit.DAYS).setConstraints(Sync.constraints()).build()
-        work.enqueueUniquePeriodicWork(WORK, ExistingPeriodicWorkPolicy.KEEP, request)
+        work.enqueueUniquePeriodicWork(WORK, ExistingPeriodicWorkPolicy.UPDATE, request)
     }
 }
