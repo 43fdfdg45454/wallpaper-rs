@@ -89,12 +89,19 @@ impl Renderer {
                     src.swarms.iter().for_each(|s| s.read(&mut encoder, &texture, *map, *size));
                     k += 1;
                 }
-                Op::Particles { target, system, slot, mode, bend, .. } => {
-                    let view = src.get(pool, *target).1;
-                    let mut pass = pass(&mut encoder, &view, wgpu::LoadOp::Load, clock.writes(k));
+                Op::Particles { target, .. } => {
+                    let (view, writes, first) = (src.get(pool, *target).1, clock.writes(k), k);
+                    let alone = writes.is_some();
+                    let mut pass = pass(&mut encoder, &view, wgpu::LoadOp::Load, writes);
                     src.clip(&mut pass, *target);
-                    src.swarms.iter().for_each(|s| s.draw(&mut pass, *system, *slot, (*mode, *bend)));
-                    (stats.passes, stats.draws, k) = (stats.passes + 1, stats.draws + 1, k + 1);
+                    while let Some(Op::Particles { target: t, system, slot, mode, bend, .. }) = ops.get(k) {
+                        if k > first && (alone || t != target || clock.writes(k).is_some()) {
+                            break;
+                        }
+                        src.swarms.iter().for_each(|s| s.draw(&mut pass, *system, *slot, (*mode, *bend)));
+                        (stats.draws, k) = (stats.draws + 1, k + 1);
+                    }
+                    stats.passes += 1;
                 }
                 Op::Clear(target, _) | Op::Draw { target, .. } | Op::Lit { target, .. } => {
                     let target = *target;
