@@ -55,7 +55,7 @@ fn emit<'a>(
     let origin = set.origin.or(t.origin).or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5, valign]);
     let mut content = content(cx, layer, set, canvas, quality);
     if let (Content::Mesh { size, relief, .. }, Kind::Mesh(m)) = (&mut content, &layer.kind) {
-        *relief = m.depth.map(|d| cx.relief(layer, &place, (origin, *size), d));
+        *relief = m.depth.map(|d| cx.relief(&place, (origin, *size), d));
     }
     let playing = match &content {
         Content::Image { asset, .. } => cx.playing.contains(asset.as_ref()) || cx.rolls(asset, false),

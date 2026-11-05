@@ -4,6 +4,7 @@ mod cues;
 mod decode;
 mod gusts;
 mod kit;
+mod lifted;
 mod pin;
 mod points;
 mod pose;

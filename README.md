@@ -1292,7 +1292,8 @@ amortiguación, gravedad, límites de giro y de estiramiento y el viento de `can
 (`canvas.gusts`, de 0 a 1) tomadas en el instante de cada paso, iguales a cualquier tasa de fotogramas;
 un cuerpo quieto medio segundo deja de pedir fotogramas y en la calidad más baja los huesos se
 quedan en la pose de la animación. Con `depth` la profundidad de los vértices se proyecta con la
-perspectiva de `canvas.perspective` (también bajo la inclinación de la capa) y las caras vistas por
+perspectiva de `canvas.perspective` (también bajo la inclinación de la capa y la de los grupos y padres
+que la contienen, siempre a lo largo de la cara de la capa tal como la giran) y las caras vistas por
 detrás se ocultan si se pide. Cualquier capa se sujeta a un hueso o a un nodo de una malla con
 `attach`, siguiendo su posición, giro y escala del mismo fotograma; lo que no hereda del hueso
 lo sigue tomando de la cámara, que la acerca y la gira igual que al resto de la escena. Los scripts leen y mueven huesos
