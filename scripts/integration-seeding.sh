@@ -13,6 +13,8 @@ ctl scene particles "$craft" dust start --gradient '0:#000000' --gradient '1:#ff
 if ctl scene show "$craft" /scene/particles/dust/init/palette >/dev/null 2>&1; then fail "the palette stayed beside the gradient"; fi
 ctl scene particles "$craft" dust start --clear gradient || fail "the gradient was not removed"
 ctl scene particles "$craft" dust window 0 0,0.2,0.8,1 || fail "the force took no window of the life"
+ctl scene particles "$craft" dust force gravity 0,200 --index 0 || fail "the force was not replaced"
+[ "$(ctl scene show "$craft" /scene/particles/dust/forces/0/window | tr -d " \n")" = '[0.0,0.2,0.8,1.0]' ] || fail "replacing the force dropped its window"
 if ctl scene particles "$craft" dust window 0 0.9,0.2,0.8,1 2>/dev/null; then fail "a window out of order was kept"; fi
 ctl scene particles "$craft" dust window 0 none || fail "the window was not removed"
 ctl scene particles "$craft" dust settings --lock size,speed || fail "nothing was locked"

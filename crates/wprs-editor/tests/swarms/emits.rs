@@ -32,6 +32,9 @@ fn a_force_acts_inside_a_window_of_the_life_and_a_system_locks_values() {
     assert_eq!(system(&p)["forces"][last]["window"], json!([0.0, 0.1, 0.8, 1.0]));
     assert!(edit(&mut p, "window", json!({"index": last, "window": [0.5, 0.1, 0.8, 1]})).is_err());
     assert!(edit(&mut p, "window", json!({"index": 40, "window": [0, 0, 1, 1]})).is_err());
+    edit(&mut p, "force", json!({"index": last, "force": {"gravity": [0, 200]}})).unwrap();
+    let kept = &system(&p)["forces"][last];
+    assert_eq!((&kept["gravity"], &kept["window"]), (&json!([0, 200]), &json!([0.0, 0.1, 0.8, 1.0])));
     edit(&mut p, "window", json!({"index": last})).unwrap();
     assert!(system(&p)["forces"][last].get("window").is_none());
     edit(&mut p, "settings", json!({"lock": ["alpha", "size"]})).unwrap();

@@ -2,7 +2,7 @@ use crate::sowed::pair;
 use clap::Subcommand;
 use serde_json::{Value, json};
 
-const REPLACE: &str = "Replace the force at this place instead of adding one";
+const REPLACE: &str = "Replace the force at this place instead of adding one, keeping its window of the life";
 const FALLOFF: [&str; 3] = ["constant", "linear", "inverse_square"];
 
 #[derive(Subcommand, Debug)]

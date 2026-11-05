@@ -1,7 +1,7 @@
 use crate::sowed::pair;
 use clap::{Args, Subcommand};
 
-const REPLACE: &str = "Replace the force at this place instead of adding one";
+const REPLACE: &str = "Replace the force at this place instead of adding one, keeping its window of the life";
 
 #[derive(Subcommand, Debug)]
 pub enum Force {
