@@ -87,6 +87,14 @@ pub fn reel<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong) -> JStri
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn opened<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong) -> JString<'a> {
+    on(&mut env, |env| match crate::opened::taken(handle) {
+        opens if opens.is_empty() => Ok(JString::default()),
+        opens => Ok(env.new_string(serde_json::Value::from(opens).to_string())?),
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
 pub fn duck<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, gain: jfloat) {
     on(&mut env, |_| {
         crate::page::duck(gain);

@@ -53,6 +53,8 @@ pub(crate) struct Stage {
     extras: Extras,
     assets: SceneAssets,
     media: heard::Shown,
+    gate: crate::opened::Gate,
+    opens: Vec<serde_json::Value>,
 }
 
 pub(crate) struct Shot<'a> {
@@ -126,6 +128,8 @@ impl Stage {
             extras,
             assets,
             media,
+            gate: Default::default(),
+            opens: Vec::new(),
         }
     }
 

@@ -132,6 +132,7 @@ pub(crate) fn spec(handle: i64, uid: &str, path: &Path, preview: bool) -> Result
 
 pub(crate) fn close(handle: i64) {
     views().remove(&handle);
+    crate::opened::forget(handle);
 }
 
 pub(crate) fn heeds(handle: i64) -> bool {

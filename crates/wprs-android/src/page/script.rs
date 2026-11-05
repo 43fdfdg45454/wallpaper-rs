@@ -114,6 +114,11 @@ pub(crate) fn heard(handle: i64, text: &str) -> Option<String> {
     if message.get("media").is_some() {
         return call(&[super::heard::told(view, true)?]);
     }
+    if let Some(prop) = message.get("open").and_then(Value::as_str)
+        && !view.preview
+    {
+        crate::opened::page(handle, &view.pack, prop);
+    }
     if message.get("audio").is_some() {
         view.audio = true;
         crate::store::changed();

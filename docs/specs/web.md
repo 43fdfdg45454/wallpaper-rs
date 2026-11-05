@@ -208,7 +208,11 @@ these are the differences:
   *React to taps* the clicks: a tap that does not move becomes one real click. With both the page
   gets the touches as they are. The lock screen gives none.
 - **Sound.** The page's own sound follows the phone's sound setting for videos: `wprs.volume` is 0,
-  and the page muted, unless video sound is on. `onAudio` reads the Visualizer of Android, as scenes
+  and the page muted, unless video sound is on; then it is the page's *Volume* setting (from the
+  author's `playback.volume`, or 0 with `muted`, unless the page has a `volume` property of its own)
+  times the fade of `playback.duck`. `playback.max_fps` caps `settings.fps` as on the desktop.
+  `wprs.openShortcut(prop)` opens the app or `https://` address the user chose, within 2 s of a tap
+  on the home screen and with the taps grant, at most once a second. `onAudio` reads the Visualizer of Android, as scenes
   do, at most 30 times a second.
 - **Console.** `console` output and errors reach logcat (tag `wprs`, `page:`), at most 200 lines a
   load.

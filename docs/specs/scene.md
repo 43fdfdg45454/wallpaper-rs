@@ -1710,7 +1710,10 @@ content never sees the target, only `true` when one is set and `null` otherwise:
 `click` of a layer and a page calls `wprs.openShortcut(prop)`; the daemon opens it only within 2 s
 of a click that reached the scene or page on a screen that takes clicks, for a package that holds
 the `clicks` grant, at most once a second per screen, and only for a `shortcut` property of the
-package shown there. The phone plays such packages without opening shortcuts. `quality` maps
+package shown there. On the phone the user chooses an installed app (one the launcher lists, by its
+package name) or an `https://` address from the page of the package (files and folders stay on the
+desktop), and the app opens it with Android only within 2 s of a tap on the home screen, for a
+package that holds the taps grant, at most once a second, never from the lock screen or a preview. `quality` maps
 quality levels (`q0` to `q3`, `q3` the highest) to a value of the property: on that level and the
 lower ones the value is at most that one for a slider and exactly that one for a combo or a flag,
 as the scene, its scripts and web pages see it (the stored value does not change), so a

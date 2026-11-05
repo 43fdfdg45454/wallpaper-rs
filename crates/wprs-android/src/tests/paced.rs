@@ -69,3 +69,43 @@ pub(super) fn pages_keep_the_frame_cap_and_the_volume_of_their_author() {
     settings::setting("playback.muted", Some("true")).unwrap();
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid, mine] })), Value::Null);
 }
+
+pub(super) fn shortcuts_open_what_the_user_chose_after_a_tap() {
+    let open = json!({ "open": { "type": "shortcut", "label": "Open" } });
+    let (uid, path) = page_named("opens", json!({}), open);
+    let set = |value: Value| ask(json!({ "op": "property", "uid": uid, "key": "open", "value": value }));
+    for bad in [
+        json!({ "uri": "http://example.org" }),
+        json!({ "file": "/sdcard/notes.txt" }),
+        json!({ "app": "a/b" }),
+        json!(1),
+    ] {
+        assert!(set(bad.clone())["error"].is_string(), "{bad}");
+    }
+    assert_eq!(set(json!({ "uri": "https://example.org/" })), Value::Null);
+    let pack = pack::load(&path).unwrap();
+    assert_eq!(crate::opened::chosen(&pack, "open"), Some(json!({ "uri": "https://example.org/" })));
+    assert_eq!(crate::opened::chosen(&pack, "missing"), None);
+    let handle = 0x0be7;
+    crate::opened::pressed(handle);
+    crate::opened::page(handle, &pack, "open");
+    assert!(crate::opened::taken(handle).is_empty(), "the package does not hold the taps grant");
+    ask(json!({ "op": "grant", "uid": uid, "input": "taps", "on": true }));
+    crate::opened::page(handle, &pack, "open");
+    assert_eq!(crate::opened::taken(handle), vec![json!({ "uri": "https://example.org/" })]);
+    crate::opened::page(handle, &pack, "open");
+    assert!(crate::opened::taken(handle).is_empty(), "one tap opens once");
+    crate::opened::pressed(handle);
+    crate::opened::page(handle, &pack, "open");
+    assert!(crate::opened::taken(handle).is_empty(), "at most once a second");
+    std::thread::sleep(std::time::Duration::from_millis(1050));
+    crate::opened::pressed(handle);
+    crate::opened::page(handle, &pack, "open");
+    assert_eq!(crate::opened::taken(handle).len(), 1);
+    assert_eq!(set(json!({ "app": "org.example.notes" })), Value::Null);
+    assert_eq!(crate::opened::chosen(&pack, "open"), Some(json!({ "app": "org.example.notes" })));
+    assert_eq!(set(Value::Null), Value::Null);
+    assert_eq!(crate::opened::chosen(&pack, "open"), None);
+    crate::opened::forget(handle);
+    assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
+}

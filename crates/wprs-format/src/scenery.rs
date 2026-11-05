@@ -80,7 +80,7 @@ pub const SCENE: &[(&str, &str, [Support; 2])] = &[
     ("script_sounds", "plays and stops its sounds from scripts", [Yes, Without]),
     ("script_animations", "drives pictures, videos, clips and bones from scripts", [Yes, Yes]),
     ("script_camera", "moves the camera or the parallax from scripts", [Yes, Yes]),
-    ("script_shortcuts", "opens what the user chooses from a script", [Yes, Without]),
+    ("script_shortcuts", "opens what the user chooses from a script", [Yes, Yes]),
     ("script_hierarchy", "lets its scripts read and change the parents of layers", [Yes, Yes]),
     ("layer_events", "reacts to the pointer on its layers", [Yes, Yes]),
     ("media_info", "shows the title, cover or progress of what the media player plays", [Yes, Yes]),

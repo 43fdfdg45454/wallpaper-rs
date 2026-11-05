@@ -24,7 +24,7 @@ import java.io.FileInputStream
 import org.json.JSONObject
 
 @SuppressLint("SetJavaScriptEnabled")
-class Page(context: Context, private val handle: Long, spec: JSONObject, val surface: Surface, size: Pair<Int, Int>, private val gone: () -> Unit, private val heard: () -> Unit) {
+class Page(private val context: Context, private val handle: Long, spec: JSONObject, val surface: Surface, size: Pair<Int, Int>, private val gone: () -> Unit, private val heard: () -> Unit) {
     val key: String = spec.getString("key")
     private val origin = spec.getString("origin")
     private val host = spec.getString("url").removePrefix("https://").trimEnd('/')
@@ -113,6 +113,7 @@ class Page(context: Context, private val handle: Long, spec: JSONObject, val sur
         @JavascriptInterface
         fun post(message: String) {
             val reply = Native.heard(handle, message)
+            if (message.startsWith(OPEN)) Shortcuts.each(Native.opened(handle)) { Shortcuts.open(context, it) }
             if (message.startsWith(AUDIO) || message.startsWith(MEDIA)) heard()
             reply ?: return
             web.post { web.evaluateJavascript(reply, null) }
@@ -123,6 +124,7 @@ class Page(context: Context, private val handle: Long, spec: JSONObject, val sur
         private const val NAME = "wprs-page"
         private const val BRIDGE = "wprsHost"
         private const val AUDIO = "{\"audio\""
+        private const val OPEN = "{\"open\""
         private const val MEDIA = "{\"media\""
 
         fun answer(text: String): WebResourceResponse? {

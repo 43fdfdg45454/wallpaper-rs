@@ -37,6 +37,7 @@ mod link;
 mod listen;
 mod local;
 mod media;
+mod opened;
 mod pack;
 mod page;
 mod pairing;

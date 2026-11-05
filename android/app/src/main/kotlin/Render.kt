@@ -69,6 +69,8 @@ object Native {
 
     external fun duck(gain: Float)
 
+    external fun opened(engine: Long): String?
+
     external fun clips(engine: Long): String?
 
     external fun film(engine: Long): String?

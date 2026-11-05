@@ -251,7 +251,7 @@ the folder changed, and the stored value is the path of that copy.
 | `folder_lists` | lets its page list a chosen folder (`mode: all` in a `web` package) | runs | runs |
 | `script_folders` | lets its scene scripts list a chosen folder (`mode: all` in other kinds) | runs | runs |
 | `user_videos` | lets the user choose videos for its files or folders | runs | runs |
-| `shortcut` | has a `shortcut` property | runs | without |
+| `shortcut` | has a `shortcut` property | runs | runs |
 | `quality_settings` | has properties with `quality` values | runs | runs |
 | `video_properties` | sets `playback` or `display` of a video | runs | runs |
 | `playback2` | sets `max_fps`, `muted` or `loop`, or `playback` of a web page or a scene | runs | runs |
@@ -362,7 +362,7 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `script_sounds` | has scripts that use `sounds` | runs | without |
 | `script_animations` | has scripts that use `animations` | runs | runs |
 | `script_camera` | has scripts that use `camera` | runs | runs |
-| `script_shortcuts` | has scripts that use `shortcuts` | runs | without |
+| `script_shortcuts` | has scripts that use `shortcuts` | runs | runs |
 | `script_hierarchy` | has scripts that use `hierarchy` | runs | runs |
 | `layer_events` | sets `solid: { "alpha" }`, `hit` bones, `click:`, `enter:` or `leave:` triggers or scripts that handle pointer events | runs | runs |
 | `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | runs | runs |

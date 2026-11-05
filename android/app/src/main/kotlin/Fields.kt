@@ -77,6 +77,7 @@ fun Field(field: JSONObject, folded: Boolean, fold: () -> Unit, set: (String, An
             HorizontalDivider()
             if (label.isNotEmpty()) Text(label, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelMedium)
         }
+        "shortcut" -> Shortcut(field, padded, enabled) { set(key, it) }
         "button" -> OutlinedButton(press, Modifier.padding(16.dp, 4.dp), enabled = enabled) {
             icon(field.optString("icon"))?.let { Icon(it, null, Modifier.padding(end = 8.dp)) }
             Text(label)

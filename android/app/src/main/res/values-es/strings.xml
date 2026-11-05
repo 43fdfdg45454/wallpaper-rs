@@ -41,8 +41,6 @@
     <string name="lacks_script_sounds">Sus scripts no reproducen ni paran sonidos en el teléfono.</string>
     <string name="lacks_script_animations">Sus scripts no mueven imágenes, vídeos, clips ni huesos en el teléfono.</string>
     <string name="lacks_script_camera">Sus scripts no mueven la cámara ni el paralaje en el teléfono.</string>
-    <string name="lacks_shortcut">Los atajos que elijas para él solo se abren en el escritorio.</string>
-    <string name="lacks_script_shortcuts">Sus scripts no abren atajos en el teléfono.</string>
     <string name="lacks_script_hierarchy">Sus scripts no cambian los padres de las capas en el teléfono.</string>
     <string name="lacks_rgb">Sus colores no se envían a la iluminación RGB en el teléfono.</string>
     <string name="lacks_media_info">En el teléfono muestra sus imágenes de reemplazo en vez de la carátula, el título y el avance de lo que suena.</string>

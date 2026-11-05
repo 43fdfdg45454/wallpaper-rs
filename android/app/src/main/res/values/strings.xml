@@ -42,8 +42,6 @@
     <string name="lacks_script_sounds">Its scripts do not play or stop sounds on the phone.</string>
     <string name="lacks_script_animations">Its scripts do not drive pictures, videos, clips or bones on the phone.</string>
     <string name="lacks_script_camera">Its scripts do not move the camera or the parallax on the phone.</string>
-    <string name="lacks_shortcut">The shortcuts you choose for it open only on the desktop.</string>
-    <string name="lacks_script_shortcuts">Its scripts open no shortcuts on the phone.</string>
     <string name="lacks_script_hierarchy">Its scripts do not change the parents of layers on the phone.</string>
     <string name="lacks_rgb">Its colors are not sent to RGB lighting on the phone.</string>
     <string name="lacks_media_info">It shows its placeholders instead of the cover, title and progress of what plays on the phone.</string>

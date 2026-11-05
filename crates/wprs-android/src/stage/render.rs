@@ -70,6 +70,7 @@ impl Stage {
             listens: hears,
         };
         let acted = !still && self.acting.step(&mut self.runtime, sent);
+        self.opening();
         if std::mem::take(&mut self.acting.moved) {
             self.gather();
         }

@@ -1,13 +1,11 @@
 package io.github.wallpaper_rs
 
-import android.app.WallpaperColors
-import android.graphics.Color
 import android.view.Surface
 import org.json.JSONArray
 import org.json.JSONObject
 
 class Painter(
-    private val preview: Boolean,
+    val preview: Boolean,
     private val videos: Videos,
     private val tilt: Tilt,
     private val hearing: Hearing,
@@ -17,6 +15,7 @@ class Painter(
 ) {
     var handle = 0L
         private set
+    var opened: (JSONObject) -> Unit = {}
     private var page: JSONObject? = null
     private var size = 1 to 1
     private var video: String? = null
@@ -125,10 +124,6 @@ class Painter(
         if (Native.touch(handle, x, y, down)) move()
     }
 
-    fun colors(): WallpaperColors? = Native.colors(preview, lock)?.let { (primary, secondary, tertiary, hints) ->
-        WallpaperColors(Color.valueOf(primary), color(secondary), color(tertiary), hints)
-    }
-
     fun detach() {
         frames.stop()
         if (page != null) pages.leave(this)
@@ -162,7 +157,7 @@ class Painter(
     private fun key(path: String) = "$path#$handle"
 
     private fun steer(list: JSONArray) = (0 until list.length()).map(list::getJSONObject).forEach {
-        videos.steer(key(it.getString("path")), it)
+        if (it.has("open")) opened(it.getJSONObject("open")) else videos.steer(key(it.getString("path")), it)
     }
 
     private fun follow() {
@@ -183,8 +178,6 @@ class Painter(
         Native.listen(handle)?.let { pages.tell(this, it) }
         return if (hears) AUDIO_MS else 0L
     }
-
-    private fun color(argb: Int) = if (argb == 0) null else Color.valueOf(argb)
 
     private companion object {
         const val AUDIO = 1

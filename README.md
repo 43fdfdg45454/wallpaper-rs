@@ -448,7 +448,7 @@ vídeo pasa por la gráfica. El límite de fotogramas del autor, el inicio en si
 reproducción única valen para vídeos y páginas como en el escritorio, y una página sin volumen
 propio tiene el ajuste *Volumen*, que se multiplica por el sonido de los vídeos.
 La página de un paquete avisa de todo lo que el teléfono omite: el color alrededor de la imagen y la
-extensión sobre varias pantallas, los atajos, los sonidos nuevos, lo que no tiene sentido en el teléfono
+extensión sobre varias pantallas, los sonidos nuevos, lo que no tiene sentido en el teléfono
 (los sonidos de los scripts) y la iluminación RGB. Los scripts de escena guardan datos, crean formas,
 mueven la cámara, cambian los padres de las capas y listan la carpeta elegida igual que en el
 escritorio. *Ajustes > Filtro* elige el filtro de color de la pantalla de inicio y el de la de
@@ -1066,7 +1066,9 @@ cuando el equipo ahorra energía, y scripts y páginas reciben el nivel. Un ataj
 eliges tú en los ajustes del fondo: una dirección `https://` (se abre con el portal del escritorio),
 un archivo o una carpeta (con el selector) o una aplicación por su id `.desktop` (fuera del
 Flatpak); el fondo nunca ve qué elegiste y solo puede pedir abrirlo dentro de un clic real, como
-mucho una vez por segundo, en una pantalla que acepta clics. Si una escena usa clics en una pantalla
+mucho una vez por segundo, en una pantalla que acepta clics. En el teléfono eliges en la página
+del paquete una app instalada o una dirección `https://`, y se abre con un toque en la pantalla de
+inicio si el paquete tiene permiso para los toques (nunca desde la de bloqueo). Si una escena usa clics en una pantalla
 a la que no llegan (como Plasma dentro del Flatpak), sus ajustes lo avisan. Un paquete que pide
 sombreadores de cálculo avisa antes de aplicarlo si la gráfica no los tiene, y la ficha de cada
 paquete dice en qué equipos funciona entero (`desktop`, `android`): el validador lo calcula con las

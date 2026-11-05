@@ -43,7 +43,7 @@ pub const REGISTRY: &[(&str, &str, [Support; 2])] = &[
     ("accent", "suggests an accent color for the desktop", [Yes, Yes]),
     ("flip", "shows its picture or video mirrored", [Yes, Yes]),
     ("playback2", "limits its frame rate, starts muted or plays once", [Yes, Yes]),
-    ("shortcut", "opens what the user chooses when clicked", [Yes, Without]),
+    ("shortcut", "opens what the user chooses when clicked", [Yes, Yes]),
     ("folder2", "reads the subfolders of a chosen folder or fewer of its files", [Yes, Yes]),
     ("folder_lists", "lets its page list a chosen folder", [Yes, Yes]),
     ("script_folders", "lets its scene scripts list a chosen folder", [Yes, Yes]),

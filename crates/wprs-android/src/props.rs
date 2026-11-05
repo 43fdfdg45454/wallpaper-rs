@@ -1,7 +1,7 @@
 use crate::library::with;
 use crate::pack::{self, Pack};
 use crate::said;
-use crate::{Error, chosen, saved, settings, store};
+use crate::{Error, chosen, opened, saved, settings, store};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
@@ -9,7 +9,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use wprs_core::model::Input;
-use wprs_scene::{Runtime, VOLUME, Values};
+use wprs_scene::{Control, Property, Runtime, VOLUME, Values};
 
 const GRANTS: &str = "inputs.json";
 
@@ -147,7 +147,10 @@ pub(crate) fn stored(value: &Value) -> Option<toml::Value> {
 }
 
 fn set(pack: &Pack, key: &str, value: &Value) -> Result<(), Error> {
-    let property = pack.properties.get(key).filter(|p| p.holds_value() && !p.personal());
+    let shortcut = |p: &&Property| {
+        matches!(p.control, Control::Shortcut {}) && (value.is_null() || opened::openable(value))
+    };
+    let property = pack.properties.get(key).filter(|p| p.holds_value() && (!p.personal() || shortcut(p)));
     let property =
         property.ok_or_else(|| said("android.property_set_here", "no property %1 to set here", &[&key]))?;
     let checked = property.value(value).map_err(|e| said("android.property_value", "%1 %2", &[&key, &e]))?;

@@ -150,6 +150,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     pages::pages_are_served_from_their_package_only();
     paced::pages_fade_out_while_another_app_plays();
     paced::pages_keep_the_frame_cap_and_the_volume_of_their_author();
+    paced::shortcuts_open_what_the_user_chose_after_a_tap();
     unreadable();
 }
 

@@ -44,6 +44,7 @@ class Wallpaper : WallpaperService() {
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
             painter = Painter(isPreview, videos, tilt, hearing, pages, players) { on -> mainExecutor.execute { setTouchEventsEnabled(on) } }
+            if (!isPreview) painter.opened = { Shortcuts.open(this@Wallpaper, it) }
             if (!isPreview) live++
             if (!isPreview) screens[this] = flags()
             val lock = lock()
@@ -100,8 +101,8 @@ class Wallpaper : WallpaperService() {
             Render.post { painter.offset(if (xStep > 0f && xStep <= 1f) x else 0.5f) }
 
         override fun onTouchEvent(event: MotionEvent) {
-            if (pages.press(painter, event)) return
             val (x, y, action) = Triple(event.x, event.y, event.actionMasked)
+            if (pages.press(painter, event) && action != MotionEvent.ACTION_DOWN) return
             Render.post { painter.touch(x, y, action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) }
         }
 

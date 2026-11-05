@@ -71,4 +71,9 @@
     <string name="hdr_why_quality">no se muestra una escena con colores brillantes en la calidad más alta</string>
     <string name="hdr_why_off">desactivado</string>
     <string name="hdr_screen">La pantalla dice que muestra HDR: %1$s, pico de %2$s nits</string>
+    <string name="shortcut_none">Nada elegido: un toque no abre nada</string>
+    <string name="shortcut_app">App</string>
+    <string name="shortcut_web">Dirección web</string>
+    <string name="shortcut_keep">Guardar</string>
+    <string name="shortcut_https">Una dirección que empiece con https://</string>
 </resources>

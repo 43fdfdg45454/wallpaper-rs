@@ -80,6 +80,9 @@ impl Engine {
     }
 
     pub(crate) fn touch(&mut self, x: f32, y: f32, down: bool) -> bool {
+        if let Some(handle) = self.paged.filter(|_| down && !self.lock) {
+            crate::opened::pressed(handle);
+        }
         let at = [x / self.size.0 as f32, y / self.size.1 as f32].map(|v| v.clamp(0.0, 1.0));
         self.stage.as_mut().is_some_and(|stage| stage.touch(at, down))
     }

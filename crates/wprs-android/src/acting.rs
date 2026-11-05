@@ -26,6 +26,7 @@ pub(crate) struct Sent<'a> {
 
 #[derive(Default)]
 pub(crate) struct Acting {
+    pub(crate) asked: Option<String>,
     local: Option<Local>,
     fired: Vec<Fired>,
     courses: Vec<Course>,
@@ -137,6 +138,7 @@ impl Acting {
                     log::warn!("a scene script stopped: {}", out.stopped.join("; "));
                 }
                 self.timer = out.wake.map(|w| runtime.time() + w);
+                self.asked = out.open.first().cloned().or(self.asked.take());
                 self.moved |= self.keeping.heard(&mut out);
                 let changed = runtime.set_script(out);
                 self.calm = if changed { 0 } else { self.calm };
