@@ -216,7 +216,8 @@ msgstr ""
 
 #: crates/wprs-editor/src/actions.rs crates/wprs-editor/src/bring.rs
 #: crates/wprs-editor/src/props.rs crates/wprs-editor/src/references.rs
-#: crates/wprs-editor/src/rig.rs crates/wprs-editor/src/swarms/sow.rs
+#: crates/wprs-editor/src/rig.rs crates/wprs-editor/src/swarms/emits.rs
+#: crates/wprs-editor/src/swarms/sow.rs
 msgid "the id %1 is in use"
 msgstr "el id %1 ya está en uso"
 
@@ -1468,10 +1469,23 @@ msgstr "Segundos"
 msgid "%1 is not an assets package"
 msgstr "%1 no es un paquete de recursos"
 
+#: crates/wprs-editor/src/swarms/emits.rs
 #: crates/wprs-editor/src/swarms/fields.rs crates/wprs-editor/src/swarms/sow.rs
 #: crates/wprs-editor/src/swarms/spots.rs
 msgid "the system has no emitter %1"
 msgstr "el sistema no tiene el emisor %1"
+
+#: crates/wprs-editor/src/swarms/emits.rs
+msgid "%1 is not a value of an emitter: %2"
+msgstr "%1 no es un valor de un emisor: %2"
+
+#: crates/wprs-editor/src/swarms/emits.rs crates/wprs-editor/src/swarms/tend.rs
+msgid "the system has no force %1"
+msgstr "el sistema no tiene la fuerza %1"
+
+#: crates/wprs-editor/src/swarms/emits.rs
+msgid "a life window rises and falls in order, each from 0 to 1"
+msgstr "una ventana de vida sube y baja en orden, cada valor de 0 a 1"
 
 #: crates/wprs-editor/src/swarms/fields.rs
 msgid "an emitter starts at least one particle a step"
@@ -1507,12 +1521,16 @@ msgid "%1 is not a starting range: %2"
 msgstr "%1 no es un rango inicial: %2"
 
 #: crates/wprs-editor/src/swarms/sow.rs
-msgid "only alpha, velocity and radial can be cleared, not %1"
-msgstr "solo se pueden quitar alpha, velocity y radial, no %1"
+msgid "only %1 can be cleared, not %2"
+msgstr "solo se pueden quitar %1, no %2"
 
 #: crates/wprs-editor/src/swarms/sow.rs
 msgid "%1 is not a color such as #ffcc88"
 msgstr "%1 no es un color como #ffcc88"
+
+#: crates/wprs-editor/src/swarms/sow.rs
+msgid "particles start with hues, a palette or a gradient, one of them"
+msgstr "las partículas empiezan con tonos, una paleta o un degradado, uno solo"
 
 #: crates/wprs-editor/src/swarms/spots.rs
 msgid "control points go from p0 to p7"
@@ -1536,10 +1554,6 @@ msgstr "indica qué añadir o poner, o el índice de lo que hay que quitar"
 #: crates/wprs-editor/src/swarms/tend.rs
 msgid "the system has no collider %1"
 msgstr "el sistema no tiene el colisionador %1"
-
-#: crates/wprs-editor/src/swarms/tend.rs
-msgid "the system has no force %1"
-msgstr "el sistema no tiene la fuerza %1"
 
 #: crates/wprs-editor/src/texts.rs
 msgid "name a language such as en or pt-BR and a text of the manifest"

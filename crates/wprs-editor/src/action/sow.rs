@@ -33,6 +33,8 @@ pub enum SowEdit {
         emitter: Option<usize>,
         #[serde(default)]
         replace: bool,
+        #[serde(default)]
+        lock: Option<Vec<String>>,
     },
     Start {
         system: String,
@@ -73,5 +75,27 @@ pub enum SowEdit {
         mix: Option<bool>,
         #[serde(default)]
         brightness: Option<f64>,
+        #[serde(default)]
+        cycles: Option<u32>,
+        #[serde(default)]
+        order: Option<String>,
+    },
+    Emit {
+        system: String,
+        emitter: usize,
+        #[serde(default)]
+        values: serde_json::Map<String, Value>,
+        #[serde(default)]
+        clear: Vec<String>,
+    },
+    Window {
+        system: String,
+        index: usize,
+        #[serde(default)]
+        window: Option<[f64; 4]>,
+    },
+    Rename {
+        system: String,
+        to: String,
     },
 }

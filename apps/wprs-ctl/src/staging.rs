@@ -37,7 +37,7 @@ pub enum Stage {
         blend: wprs_scene::Blend,
     },
     #[command(
-        about = "Change one particles layer from the system it draws: alpha, size, count, speed, life, time scale, brightness and color"
+        about = "Change one particles layer from the system it draws: alpha, size, count, speed, life, time scale, brightness, color and control points"
     )]
     Instance {
         #[arg(allow_negative_numbers = true, long, help = "From 0 to 1")]
@@ -56,6 +56,8 @@ pub enum Stage {
         brightness: Option<f64>,
         #[arg(long, help = "Color that tints the particles, such as #ffcc88")]
         color: Option<String>,
+        #[arg(long = "point", value_name = "X,Y", value_parser = pair, allow_hyphen_values = true, help = "A control point of this layer in pixels, p0 first; repeat it for the next ones")]
+        points: Vec<[f64; 2]>,
         #[arg(long, value_name = "VALUE", help = "Draw this value as the system does again")]
         unset: Vec<String>,
         #[arg(long, help = "Draw the layer as the system does in every value")]
@@ -69,13 +71,28 @@ pub(crate) fn edit(layer: String, what: Stage) -> L {
             L::Transform { layer, position, rotation, scale, skew, origin, size, replace }
         }
         Stage::Blend { blend } => L::Blend { layer, blend },
-        Stage::Instance { alpha, size, count, speed, life, time_scale, brightness, color, unset, clear } => {
+        Stage::Instance {
+            alpha,
+            size,
+            count,
+            speed,
+            life,
+            time_scale,
+            brightness,
+            color,
+            points,
+            unset,
+            clear,
+        } => {
             let numbers =
                 [("alpha", alpha), ("size", size), ("count", count), ("speed", speed), ("life", life)];
             let more = [("time_scale", time_scale), ("brightness", brightness)];
             let mut values: Map<String, Value> =
                 numbers.into_iter().chain(more).filter_map(|(k, v)| Some((k.into(), json!(v?)))).collect();
             color.iter().for_each(|c| drop(values.insert("color".into(), value(c))));
+            if !points.is_empty() {
+                values.insert("points".into(), json!(points));
+            }
             unset.into_iter().for_each(|k| drop(values.insert(k, Value::Null)));
             L::Instance { layer, values, clear }
         }

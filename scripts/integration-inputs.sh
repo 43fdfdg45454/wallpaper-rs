@@ -108,6 +108,7 @@ source "$(dirname "$0")"/integration-lights.sh
 source "$(dirname "$0")"/integration-models.sh
 source "$(dirname "$0")"/integration-shared.sh
 source "$(dirname "$0")"/integration-authoring.sh
+source "$(dirname "$0")"/integration-seeding.sh
 source "$(dirname "$0")"/integration-timing.sh
 ctl scene bone "$draft" puppet tip --parent arm --at 0.9,0.5 || fail "the mesh took no tip"
 ctl scene ik "$draft" puppet add arm tip --limit tip -30 30 || fail "no chain to the tip was added"

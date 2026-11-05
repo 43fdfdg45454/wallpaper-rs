@@ -125,6 +125,8 @@ pub enum Particle {
     },
     #[command(flatten)]
     Sowing(crate::sowing::Sowing),
+    #[command(flatten)]
+    Seeding(crate::seeding::Seeding),
     #[command(
         about = "Print the particle budget as JSON: particles alive at a time on the processor, slots by device tier and path, and what each quality level keeps"
     )]

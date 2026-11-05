@@ -58,6 +58,7 @@ pub mod remote;
 pub mod repo;
 mod rgb;
 mod rigging;
+mod seeding;
 pub mod server;
 pub mod serving;
 mod shaping;

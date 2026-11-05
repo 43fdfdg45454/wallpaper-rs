@@ -56,9 +56,11 @@ fn force(what: Force) -> (Option<usize>, Option<Value>) {
     match what {
         Force::Gravity { pull, index } => (index, Some(json!({ "gravity": pull }))),
         Force::Drag { amount, index } => (index, Some(json!({ "drag": amount }))),
-        Force::Turbulence { strength, scale, speed, index } => {
+        Force::Turbulence { strength, scale, speed, time_scale, mask, index } => {
             let mut t = json!({ "strength": strength, "scale": scale });
             speed.iter().for_each(|s| t["speed"] = json!(s));
+            time_scale.iter().for_each(|s| t["time_scale"] = json!(s));
+            mask.iter().for_each(|m| t["mask"] = json!(m));
             (index, Some(json!({ "turbulence": t })))
         }
         Force::Oscillate { what, freq, scale, phase, index } => {
@@ -96,7 +98,7 @@ pub(crate) fn edit(system: String, what: Sowing) -> P {
             S::Create { system, from, parent, on: on.as_deref().and_then(parsed) }
         }
         Sowing::Delete => S::Delete { system },
-        Sowing::Settings { capacity, seed, prewarm, space, rate, emitter, replace } => S::Settings {
+        Sowing::Settings { capacity, seed, prewarm, space, rate, emitter, replace, lock } => S::Settings {
             system,
             capacity,
             seed,
@@ -105,6 +107,7 @@ pub(crate) fn edit(system: String, what: Sowing) -> P {
             rate,
             emitter,
             replace,
+            lock: (!lock.is_empty()).then_some(lock),
         },
         Sowing::Start {
             life,
@@ -118,6 +121,7 @@ pub(crate) fn edit(system: String, what: Sowing) -> P {
             alpha,
             velocity,
             radial,
+            tint,
             clear,
         } => {
             let mut ranges = Map::new();
@@ -131,6 +135,7 @@ pub(crate) fn edit(system: String, what: Sowing) -> P {
             let colors = color.as_deref().map(|c| c.split(',').map(str::trim).collect::<Vec<_>>());
             colors.iter().for_each(|c| drop(ranges.insert("color".into(), json!(c))));
             velocity.iter().for_each(|v| drop(ranges.insert("velocity".into(), json!(v))));
+            tint.fill(&mut ranges);
             S::Start { system, ranges, clear }
         }
         Sowing::Force(f) => {
@@ -155,7 +160,7 @@ pub(crate) fn edit(system: String, what: Sowing) -> P {
             let color = color.into_iter().filter_map(|(t, v)| Some((t, v.as_str()?.to_owned()))).collect();
             S::Over { system, layer: layered(layer), size: None, color: Some(color) }
         }
-        Sowing::Render { stretch, frames, fps, mix, brightness, layer } => {
+        Sowing::Render { stretch, frames, fps, mix, brightness, cycles, order, layer } => {
             let stretch = stretch.map(|s| {
                 let n: Vec<f64> = s.split(',').filter_map(|v| v.trim().parse().ok()).collect();
                 match n.as_slice() {
@@ -164,7 +169,7 @@ pub(crate) fn edit(system: String, what: Sowing) -> P {
                     _ => json!(s),
                 }
             });
-            S::Render { system, layer: layered(layer), stretch, frames, fps, mix, brightness }
+            S::Render { system, layer: layered(layer), stretch, frames, fps, mix, brightness, cycles, order }
         }
     })
 }

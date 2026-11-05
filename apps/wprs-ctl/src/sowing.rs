@@ -37,6 +37,8 @@ pub enum Sowing {
         emitter: Option<usize>,
         #[arg(long, requires = "rate", help = REPLACE)]
         replace: bool,
+        #[arg(long, value_delimiter = ',', value_parser = ["alpha", "size", "count", "speed", "life", "time_scale", "brightness", "color", "points", "none"], help = "Values a particles layer cannot change from the system, or none")]
+        lock: Vec<String>,
     },
     #[command(about = "Set the ranges new particles start from; the next value is picked between the two")]
     Start {
@@ -62,7 +64,9 @@ pub enum Sowing {
         velocity: Option<[[f64; 2]; 2]>,
         #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Pixels a second away from the center of the emitter")]
         radial: Option<[f64; 2]>,
-        #[arg(long, value_parser = ["alpha", "velocity", "radial"], help = "Remove a range")]
+        #[command(flatten)]
+        tint: Box<crate::seeding::Tint>,
+        #[arg(long, value_parser = ["alpha", "velocity", "radial", "hsv", "palette", "gradient"], help = "Remove a range or a way of picking colors")]
         clear: Vec<String>,
     },
     #[command(subcommand, about = "Add, replace or remove the forces that move the particles")]
@@ -109,6 +113,13 @@ pub enum Sowing {
             help = "Brightness from 0 to 16; above 1 shines over white"
         )]
         brightness: Option<f64>,
+        #[arg(
+            long,
+            help = "Times a particle walks the frames of the atlas over its life, from 1 to 64, with --frames life; 0 removes it"
+        )]
+        cycles: Option<u32>,
+        #[arg(long, value_parser = ["newest", "oldest", "largest", "smallest", "lowest", "none"], help = "Which particles are drawn on top")]
+        order: Option<String>,
         #[arg(long, help = LAYER)]
         layer: Option<String>,
     },

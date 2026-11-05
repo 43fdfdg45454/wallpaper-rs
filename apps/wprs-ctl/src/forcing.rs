@@ -31,6 +31,10 @@ pub enum Force {
         scale: f64,
         #[arg(allow_negative_numbers = true, long, help = "How fast the noise moves")]
         speed: Option<f64>,
+        #[arg(allow_negative_numbers = true, long, help = "Times the pace of the noise, from 0 to 100")]
+        time_scale: Option<f64>,
+        #[arg(long, value_name = "MIN,MAX", value_parser = pair, allow_hyphen_values = true, help = "Share of the noise from 0 to 1 that pushes; the rest is still")]
+        mask: Option<[f64; 2]>,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },

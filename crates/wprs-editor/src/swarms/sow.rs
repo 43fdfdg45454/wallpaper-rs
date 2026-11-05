@@ -7,9 +7,12 @@ use serde_json::{Map, Value, json};
 use wprs_core::message::said;
 use wprs_scene::{Child, Frames, Moment};
 
-const RANGES: [&str; 11] =
-    ["life", "speed", "angle", "size", "rotation", "spin", "frame", "color", "alpha", "velocity", "radial"];
-const CLEARED: [&str; 3] = ["alpha", "velocity", "radial"];
+const RANGES: [&str; 14] = [
+    "life", "speed", "angle", "size", "rotation", "spin", "frame", "color", "alpha", "velocity", "radial",
+    "hsv", "palette", "gradient",
+];
+const TINTS: [&str; 3] = ["hsv", "palette", "gradient"];
+const CLEARED: [&str; 6] = ["alpha", "velocity", "radial", "hsv", "palette", "gradient"];
 
 fn object(doc: &Value, at: &str) -> Map<String, Value> {
     doc.pointer(at).and_then(Value::as_object).cloned().unwrap_or_default()
@@ -68,13 +71,21 @@ fn start(doc: &Value, sys: &str, ranges: &Map<String, Value>, clear: &[String]) 
         let known = CLEARED.contains(&key.as_str());
         ensure!(
             known,
-            said("editor.start_cleared", "only alpha, velocity and radial can be cleared, not %1", &[key])
+            said("editor.start_cleared", "only %1 can be cleared, not %2", &[&CLEARED.join(", "), key])
         );
         init.remove(key);
     }
     let colors = ranges.get("color").and_then(Value::as_array).into_iter().flatten();
     if let Some(bad) = colors.filter_map(Value::as_str).find(|c| wprs_scene::Color::parse(c).is_none()) {
         bail!(said("editor.not_color", "%1 is not a color such as #ffcc88", &[&bad]));
+    }
+    let tints = TINTS.iter().filter(|t| ranges.contains_key(**t)).count();
+    ensure!(
+        tints <= 1,
+        said("editor.one_tint", "particles start with hues, a palette or a gradient, one of them", &[])
+    );
+    if tints == 1 {
+        TINTS.iter().for_each(|t| drop(init.remove(*t)));
     }
     ranges.iter().for_each(|(k, v)| drop(init.insert(k.clone(), v.clone())));
     Ok(set(doc, &at, Value::Object(init)))
@@ -99,13 +110,16 @@ pub(super) fn edit(doc: &Value, e: &S) -> Result<Vec<Op>> {
             create(doc, id, from.as_deref(), parent.as_deref(), *on)?
         }
         S::Delete { system: s } => vec![Op::Remove { path: system(doc, s)? }],
-        S::Settings { system: s, capacity, seed, prewarm, space, rate: r, emitter, replace } => {
+        S::Settings { system: s, capacity, seed, prewarm, space, rate: r, emitter, replace, lock } => {
             let sys = system(doc, s)?;
             let mut ops = Vec::new();
             capacity.iter().for_each(|c| ops.extend(set(doc, &format!("{sys}/capacity"), json!(c))));
             seed.iter().for_each(|c| ops.extend(set(doc, &format!("{sys}/seed"), json!(c))));
             prewarm.iter().for_each(|c| ops.extend(set(doc, &format!("{sys}/prewarm"), json!(c))));
             space.iter().for_each(|c| ops.extend(set(doc, &format!("{sys}/space"), json!(c))));
+            if let Some(lock) = lock {
+                ops.extend(super::emits::lock(doc, &sys, lock)?);
+            }
             if let Some(r) = r {
                 ops.extend(rate(doc, &sys, *r, (*emitter, *replace))?);
             }
@@ -126,7 +140,10 @@ pub(super) fn edit(doc: &Value, e: &S) -> Result<Vec<Op>> {
                 })
             })?
         }
-        S::Render { system: s, layer, stretch, frames, fps, mix, brightness } => {
+        S::Render { system: s, layer, stretch, frames, fps, mix, brightness, cycles, order } => {
+            if let Some(o) = order.as_deref().filter(|o| *o != "none") {
+                parsed::<wprs_scene::Stack>(&json!(o), "order")?;
+            }
             if let Some(f) = frames.as_deref().filter(|f| *f != "none") {
                 parsed::<Frames>(&json!(f), "frames")?;
             }
@@ -138,8 +155,17 @@ pub(super) fn edit(doc: &Value, e: &S) -> Result<Vec<Op>> {
                     fps.iter().for_each(|f| keep(r, "fps", Some(json!(f))));
                     mix.iter().for_each(|m| keep(r, "mix", m.then_some(json!(true))));
                     brightness.iter().for_each(|b| keep(r, "brightness", Some(json!(b))));
+                    cycles.iter().for_each(|c| keep(r, "cycles", (*c > 0).then(|| json!(c))));
+                    order.iter().for_each(|o| keep(r, "order", (o != "none").then(|| json!(o))));
                 })
             })?
         }
+        S::Emit { system: s, emitter, values, clear } => {
+            super::emits::emit(doc, &system(doc, s)?, *emitter, values, clear)?
+        }
+        S::Window { system: s, index, window } => {
+            super::emits::window(doc, &system(doc, s)?, *index, *window)?
+        }
+        S::Rename { system: s, to } => super::emits::rename(doc, &system(doc, s)?, s, to)?,
     })
 }
