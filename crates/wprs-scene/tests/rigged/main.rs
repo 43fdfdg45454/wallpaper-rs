@@ -12,3 +12,4 @@ mod settle;
 mod sketch;
 mod spawned;
 mod swing;
+mod zoom;

@@ -26,9 +26,12 @@ impl Context<'_> {
             _ => place.world,
         };
         let has = |f: Follows| a.inherit.as_ref().is_none_or(|l| l.contains(&f));
-        let (at, turn, scale) = parts(frame);
-        let at = if has(Follows::Position) { at } else { [place.world.0[4], place.world.0[5]] };
-        let base = Affine::translate(at)
+        let back = self.camera.inverse();
+        let (at, turn, scale) = parts(back.then(frame));
+        let at = if has(Follows::Position) { at } else { back.apply([place.world.0[4], place.world.0[5]]) };
+        let base = self
+            .camera
+            .then(Affine::translate(at))
             .then(Affine::rotate(if has(Follows::Rotation) { turn } else { 0.0 }))
             .then(Affine::scale(if has(Follows::Scale) { scale } else { [1.0; 2] }))
             .then(Affine::translate(a.offset.unwrap_or_default()));
