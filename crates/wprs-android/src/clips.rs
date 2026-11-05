@@ -44,7 +44,11 @@ fn media(e: ndk::media_error::MediaError) -> Error {
     said("android.video_frames", "video frames: %1", &[&e])
 }
 
-fn planes<'a>(image: &'a Image, chroma: &'a mut Vec<u8>, coding: Coding) -> Result<Planes<'a>, Error> {
+fn planes<'a>(
+    image: &'a Image,
+    chroma: &'a mut Vec<u8>,
+    (coding, headroom): (Coding, f32),
+) -> Result<Planes<'a>, Error> {
     let crop = image.crop_rect().map_err(media)?;
     let (left, top) = (crop.left.max(0) as usize & !1, crop.top.max(0) as usize & !1);
     let (w, h) =
@@ -70,6 +74,7 @@ fn planes<'a>(image: &'a Image, chroma: &'a mut Vec<u8>, coding: Coding) -> Resu
         bt709: h >= 720,
         full: false,
         coding,
+        headroom,
     })
 }
 
@@ -103,7 +108,7 @@ impl Clips {
     pub(crate) fn frames<'a>(
         &'a mut self,
         r: &Renderer,
-        epoch: u64,
+        (epoch, headroom): (u64, f32),
         wanted: &'a [(String, PathBuf)],
     ) -> Vec<(&'a str, &'a GpuImage)> {
         let mut shown = Vec::new();
@@ -113,7 +118,8 @@ impl Clips {
             }
             let converted = match clip.reader.acquire_latest_image() {
                 Ok(AcquireResult::Image(image)) => {
-                    planes(&image, &mut clip.chroma, clip.coding).and_then(|planes| {
+                    let coding = crate::media::shown_as(&clip.path, clip.coding);
+                    planes(&image, &mut clip.chroma, (coding, headroom)).and_then(|planes| {
                         crate::counted::gpu(|| r.convert_yuv(&mut clip.yuv, &planes).map(drop))
                             .map_err(Error::from)
                             .inspect(|()| {

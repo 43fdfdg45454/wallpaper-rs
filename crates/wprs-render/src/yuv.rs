@@ -11,9 +11,10 @@ pub struct Planes<'a> {
     pub bt709: bool,
     pub full: bool,
     pub coding: Coding,
+    pub headroom: f32,
 }
 
-type Key = ((u32, u32), bool, bool, Coding);
+type Key = ((u32, u32), bool, bool, Coding, u32);
 
 pub struct Yuv {
     key: Key,
@@ -33,6 +34,7 @@ pub(crate) struct Converter {
     layout: wgpu::BindGroupLayout,
     pipeline: wgpu::RenderPipeline,
     coded: wgpu::RenderPipeline,
+    lit: wgpu::RenderPipeline,
 }
 
 const TURNS: [[f32; 4]; 8] = [
@@ -100,23 +102,28 @@ impl Renderer {
     pub(crate) fn converter(&self) -> &Converter {
         self.yuv.get_or_init(|| {
             let layout = bind_group_layout(&self.device, 2);
-            let made = |source| {
+            let made = |source, format: Format| {
                 let shader = module(&self.device, source);
-                pipeline(&self.device, &layout, &shader, "fs_main", Format::Rgba8UnormSrgb.into())
+                pipeline(&self.device, &layout, &shader, "fs_main", format.into())
             };
-            let (pipeline, coded) = (made(include_str!("yuv.wgsl")), made(crate::coded::source()));
-            Converter { layout, pipeline, coded }
+            let (pipeline, coded) = (
+                made(include_str!("yuv.wgsl"), Format::Rgba8UnormSrgb),
+                made(crate::coded::source(), Format::Rgba8UnormSrgb),
+            );
+            let lit = made(crate::coded::source(), Format::Rgba16Float);
+            Converter { layout, pipeline, coded, lit }
         })
     }
 
     fn yuv_slot(&self, key: Key) -> Yuv {
-        let ((w, h), bt709, full, coding) = key;
+        let ((w, h), bt709, full, coding, light) = key;
+        let headroom = f32::from_bits(light);
         let (sampled, drawn) =
             (Usage::TEXTURE_BINDING | Usage::COPY_DST, Usage::TEXTURE_BINDING | Usage::COPY_SRC);
         let luma = create_texture(&self.device, "wprs-render luma", (w, h), Format::R8Unorm, sampled);
         let half = (w.div_ceil(2), h.div_ceil(2));
         let chroma = create_texture(&self.device, "wprs-render chroma", half, Format::Rg8Unorm, sampled);
-        let target = Format::Rgba8UnormSrgb;
+        let target = if headroom > 1.0 { Format::Rgba16Float } else { Format::Rgba8UnormSrgb };
         let image = gpu_image(create_texture(
             &self.device,
             "wprs-render video",
@@ -126,7 +133,7 @@ impl Renderer {
         ));
         let rows = match coding {
             Coding::Sdr => uniform(self, bt709, full, 0),
-            hdr => crate::coded::uniform(self, full, hdr),
+            hdr => crate::coded::uniform(self, full, hdr, headroom),
         };
         let group = group(self, &rows, [&luma, &chroma]);
         Yuv { key, luma, chroma, group, image }
@@ -142,7 +149,8 @@ impl Renderer {
         if !self.limits.fits(w, h) || !covers(planes.luma, (w, h), 1) || !covers(planes.chroma, half, 2) {
             return Err(RenderError::InvalidSize(w, h));
         }
-        let key = (planes.size, planes.bt709, planes.full, planes.coding);
+        let light = crate::coded::lighting(planes.coding, planes.headroom).to_bits();
+        let key = (planes.size, planes.bt709, planes.full, planes.coding, light);
         if slot.as_ref().is_none_or(|yuv| yuv.key != key) {
             *slot = Some(self.scoped(|| self.yuv_slot(key))?);
         }
@@ -150,9 +158,10 @@ impl Renderer {
         self.scoped(|| {
             write(&self.queue, &yuv.luma, planes.luma);
             write(&self.queue, &yuv.chroma, planes.chroma);
-            match yuv.key.3 {
-                Coding::Sdr => self.convert(&yuv.group, &yuv.image),
-                _ => self.draw_with(&self.converter().coded, &yuv.group, &yuv.image),
+            match (yuv.key.3, f32::from_bits(yuv.key.4) > 1.0) {
+                (Coding::Sdr, _) => self.convert(&yuv.group, &yuv.image),
+                (_, false) => self.draw_with(&self.converter().coded, &yuv.group, &yuv.image),
+                (_, true) => self.draw_with(&self.converter().lit, &yuv.group, &yuv.image),
             }
         })?;
         Ok(&yuv.image)

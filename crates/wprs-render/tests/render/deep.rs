@@ -82,6 +82,7 @@ fn eight_bit_hdr_frames_are_mapped_like_ten_bit_ones() {
                 bt709: true,
                 full: false,
                 coding,
+                headroom: 1.0,
             };
             let shown = |image| {
                 let mut target = r.create_target(4, 4).unwrap();
@@ -100,4 +101,44 @@ fn eight_bit_hdr_frames_are_mapped_like_ten_bit_ones() {
             assert_ne!(sdr, got, "{codes:?} {coding:?} read as standard colors");
         }
     }
+}
+
+#[test]
+fn hdr_frames_keep_their_highlights_on_an_hdr_screen() {
+    let Some(r) = renderer() else { return };
+    let frame = |code: u8| ([code; 16], [128u8, 128].repeat(4));
+    let lit = |code: u8, coding: Coding, headroom: f32| {
+        let (luma, chroma) = frame(code);
+        let planes = Planes {
+            size: (4, 4),
+            luma: (&luma, 4),
+            chroma: (&chroma, 4),
+            bt709: true,
+            full: false,
+            coding,
+            headroom,
+        };
+        let mut slot = None;
+        let image = r.convert_yuv(&mut slot, &planes).unwrap();
+        (image.format(), r.read_light(image).ok().map(|light| light[5][0]))
+    };
+    let (format, bright) = lit(220, Coding::Pq, 4.0);
+    assert_eq!(format, wgpu::TextureFormat::Rgba16Float);
+    let bright = bright.unwrap();
+    assert!(bright > 1.5 && bright <= 4.0, "a bright highlight shows at {bright}");
+    let white = lit(143, Coding::Pq, 4.0).1.unwrap();
+    assert!((white - 1.0).abs() < 0.12, "reference white shows at {white}");
+    let hlg = lit(220, Coding::Hlg, 4.0).1.unwrap();
+    assert!(hlg > 1.0 && hlg <= 4.0, "{hlg}");
+    assert_eq!(
+        lit(220, Coding::Pq, 1.0).0,
+        wgpu::TextureFormat::Rgba8UnormSrgb,
+        "a standard screen keeps the mapped picture"
+    );
+    assert_eq!(
+        lit(220, Coding::Sdr, 4.0).0,
+        wgpu::TextureFormat::Rgba8UnormSrgb,
+        "standard videos stay as they are"
+    );
+    assert_eq!(lit(220, Coding::Pq, f32::NAN).0, wgpu::TextureFormat::Rgba8UnormSrgb);
 }

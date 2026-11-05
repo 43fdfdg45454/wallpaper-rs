@@ -102,7 +102,12 @@ impl Engine {
     pub(super) fn compose(&mut self, nanos: i64, fps: u32, power: Power) -> Result<(u32, i64), RenderError> {
         let reels = self.reels();
         let Some((gpu, surface)) = self.target.as_mut() else { return Ok((0, 0)) };
-        let frames = self.clips.frames(&gpu.renderer, gpu.epoch, &reels);
+        let coded = self.film.as_deref().map(crate::media::coding).filter(|c| *c != wprs_render::Coding::Sdr);
+        let headroom = match self.film {
+            Some(_) => crate::hdr::light(&gpu.renderer, surface, power.charging, coded.is_some())?,
+            None => 1.0,
+        };
+        let frames = self.clips.frames(&gpu.renderer, (gpu.epoch, headroom), &reels);
         let reel = |id: &str| frames.iter().find(|(key, _)| *key == id).map(|(_, image)| *image);
         let size = self.size;
         let (fit, background, flip, grade) =

@@ -10,13 +10,25 @@ fn hlg(e: vec3<f32>) -> vec3<f32> {
     return 1000.0 * lin * pow(max(y, 1e-6), 0.2);
 }
 
-fn mapped(e: vec3<f32>, tone: vec4<f32>, m0: vec3<f32>, m1: vec3<f32>, m2: vec3<f32>) -> vec3<f32> {
+fn lighted(e: vec3<f32>, tone: vec4<f32>, m0: vec3<f32>, m1: vec3<f32>, m2: vec3<f32>) -> vec3<f32> {
     let light = select(pq(e), hlg(e), tone.x > 1.5) / tone.y;
-    let c = max(vec3(dot(m0, light), dot(m1, light), dot(m2, light)), vec3(0.0));
-    let k = tone.w;
+    return max(vec3(dot(m0, light), dot(m1, light), dot(m2, light)), vec3(0.0));
+}
+
+fn kneed(c: vec3<f32>, k: f32, top: f32) -> vec3<f32> {
     let l = max(max(c.r, c.g), c.b);
     let x = max(l - k, 0.0) / (1.0 - k);
-    let wx = (tone.z / tone.y - k) / (1.0 - k);
+    let wx = (top - k) / (1.0 - k);
     let m = select(l, k + (1.0 - k) * x * (1.0 + x / (wx * wx)) / (1.0 + x), l > k);
     return clamp(c * (m / max(l, 1e-6)), vec3(0.0), vec3(1.0));
+}
+
+fn mapped(e: vec3<f32>, tone: vec4<f32>, m0: vec3<f32>, m1: vec3<f32>, m2: vec3<f32>) -> vec3<f32> {
+    return kneed(lighted(e, tone, m0, m1, m2), tone.w, tone.z / tone.y);
+}
+
+fn lit(e: vec3<f32>, tone: vec4<f32>, m0: vec3<f32>, m1: vec3<f32>, m2: vec3<f32>, headroom: f32) -> vec3<f32> {
+    let c = lighted(e, tone, m0, m1, m2) / headroom;
+    let top = tone.z / tone.y / headroom;
+    return headroom * select(clamp(c, vec3(0.0), vec3(1.0)), kneed(c, tone.w, top), top > 1.0);
 }

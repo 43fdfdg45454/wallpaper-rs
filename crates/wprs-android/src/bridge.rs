@@ -137,6 +137,14 @@ pub fn clip<'a>(
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn decoded<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, path: JString<'a>, transfer: jint) {
+    on(&mut env, |env| {
+        crate::media::decoded(Path::new(&path.try_to_string(env)?), transfer);
+        Ok(())
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
 pub fn media<'a>(
     mut env: EnvUnowned<'a>,
     _: JObject<'a>,

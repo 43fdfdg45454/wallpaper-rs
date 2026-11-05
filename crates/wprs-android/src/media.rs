@@ -9,7 +9,11 @@ use wprs_render::Coding;
 type Coded = (PathBuf, Option<SystemTime>, u64, Coding);
 
 static CODED: Mutex<Vec<Coded>> = Mutex::new(Vec::new());
+static DECODED: Mutex<Vec<(PathBuf, Coding)>> = Mutex::new(Vec::new());
 const KEPT: usize = 8;
+const SDR: i32 = 3;
+const ST2084: i32 = 6;
+const HLG: i32 = 7;
 
 const STILL_BRANDS: [[u8; 4]; 10] =
     [*b"avif", *b"avis", *b"heic", *b"heix", *b"heim", *b"heis", *b"hevc", *b"hevx", *b"mif1", *b"msf1"];
@@ -62,6 +66,26 @@ pub(crate) fn coding(path: &Path) -> Coding {
     coding
 }
 
+pub(crate) fn decoded(path: &Path, transfer: i32) {
+    let coding = match transfer {
+        SDR => Some(Coding::Sdr),
+        ST2084 => Some(Coding::Pq),
+        HLG => Some(Coding::Hlg),
+        _ => None,
+    };
+    let mut decoded = DECODED.lock().unwrap_or_else(PoisonError::into_inner);
+    decoded.retain(|(p, _)| p != path);
+    if decoded.len() >= KEPT {
+        decoded.remove(0);
+    }
+    decoded.extend(coding.map(|c| (path.to_owned(), c)));
+}
+
+pub(crate) fn shown_as(path: &Path, coding: Coding) -> Coding {
+    let decoded = DECODED.lock().unwrap_or_else(PoisonError::into_inner);
+    decoded.iter().find(|(p, _)| p == path).map_or(coding, |(_, c)| *c)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,5 +134,17 @@ mod tests {
         std::fs::copy(Path::new(FIXTURES).join("magenta-64x32.webm"), copy.path()).unwrap();
         assert_eq!(coding(copy.path()), Coding::Sdr, "a changed file is read again");
         assert_eq!(at("missing.webm"), Coding::Sdr);
+    }
+
+    #[test]
+    fn frames_a_decoder_already_mapped_are_shown_as_they_come() {
+        let path = Path::new("/clips/decoded.mkv");
+        assert_eq!(shown_as(path, Coding::Pq), Coding::Pq);
+        decoded(path, SDR);
+        assert_eq!(shown_as(path, Coding::Pq), Coding::Sdr, "the decoder mapped the frames already");
+        decoded(path, HLG);
+        assert_eq!(shown_as(path, Coding::Pq), Coding::Hlg);
+        decoded(path, 99);
+        assert_eq!(shown_as(path, Coding::Pq), Coding::Pq, "an unknown transfer keeps the file's own");
     }
 }

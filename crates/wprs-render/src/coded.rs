@@ -11,9 +11,16 @@ pub enum Coding {
     Hlg,
 }
 
-pub(crate) fn uniform(renderer: &Renderer, full: bool, coding: Coding) -> wgpu::Buffer {
+pub(crate) fn lighting(coding: Coding, headroom: f32) -> f32 {
+    let fine = headroom.is_finite() && coding != Coding::Sdr;
+    if fine { headroom.clamp(1.0, crate::hdr::MAX_HEADROOM) } else { 1.0 }
+}
+
+pub(crate) fn uniform(renderer: &Renderer, full: bool, coding: Coding, headroom: f32) -> wgpu::Buffer {
     let tone = [if coding == Coding::Hlg { 2.0 } else { 1.0 }, REFERENCE_NITS, PEAK_NITS, KNEE];
+    let light = [headroom, 0.0, 0.0, 0.0];
     let values = yuv::rows_of(BT2020, full).into_iter().chain([[1.0, 0.0, 0.0, 1.0], tone]).chain(GAMUT);
+    let values = values.chain([light]);
     let contents: Vec<u8> = values.flatten().flat_map(f32::to_le_bytes).collect();
     let usage = wgpu::BufferUsages::UNIFORM;
     crate::filled::filled((&renderer.device, &renderer.queue), "wprs-render coded rows", &contents, usage)

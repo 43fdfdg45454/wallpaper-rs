@@ -1,6 +1,7 @@
 package io.github.wallpaper_rs
 
 import android.content.Context
+import android.media.MediaFormat
 import android.view.Surface
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
@@ -10,11 +11,13 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 
 private const val FITTING = "fit"
 private const val STRETCH = "stretch"
 private const val SOUND = "playback.muted"
 private const val IDLE_MS = 30_000L
+private const val FILE = "file://"
 internal val WHOLE = 0L to C.TIME_END_OF_SOURCE
 private val MOVIE = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build()
 
@@ -37,7 +40,15 @@ internal class Video(
     var clip = WHOLE
     private var muted = true
     private var retried = false
+    private var transfer = -1
     private val idle = Runnable { release() }
+    private val decoded = VideoFrameMetadataListener { _, _, _, format ->
+        val told = format?.takeIf { it.containsKey(MediaFormat.KEY_COLOR_TRANSFER) }?.getInteger(MediaFormat.KEY_COLOR_TRANSFER)
+        if (told != null && told != transfer) {
+            transfer = told
+            Native.decoded(uri.removePrefix(FILE), told)
+        }
+    }
 
     fun update() {
         Render.cancel(idle)
@@ -91,6 +102,7 @@ internal class Video(
         player = ExoPlayer.Builder(context).setBandwidthMeter(Offline).setUsePlatformDiagnostics(false)
             .setAudioAttributes(MOVIE, false).build().apply {
                 addListener(this@Video)
+                if (fixed != null) setVideoFrameMetadataListener(decoded)
                 steer(this, null)
                 setVideoSurface(target)
                 setMediaItem(item(), position)

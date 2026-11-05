@@ -99,6 +99,7 @@ fn yuv_frames_convert_to_rgb_in_place() {
             bt709: true,
             full: false,
             coding: Default::default(),
+            headroom: 1.0,
         };
         let image = r.read_image(r.convert_yuv(&mut slot, &planes).unwrap()).unwrap();
         let pixel = |x, y| -> [u8; 3] { image.get_pixel(x, y).0[..3].try_into().unwrap() };
@@ -117,6 +118,7 @@ fn yuv_frames_convert_to_rgb_in_place() {
         bt709: false,
         full: true,
         coding: Default::default(),
+        headroom: 1.0,
     };
     assert!(r.convert_yuv(&mut slot, &planes).is_err());
 }

@@ -109,7 +109,7 @@ impl Engine {
         stage.turn();
         stage.reports = (!self.preview).then_some(usize::from(self.lock));
         let wanted = stage.videos();
-        let videos = self.clips.frames(&gpu.renderer, gpu.epoch, &wanted);
+        let videos = self.clips.frames(&gpu.renderer, (gpu.epoch, 1.0), &wanted);
         let shot =
             stage.render(&gpu.renderer, (self.size, nanos, fps), (power, tier), &videos, self.dirty)?;
         let (hint, delay) = (shot.fps, shot.delay);

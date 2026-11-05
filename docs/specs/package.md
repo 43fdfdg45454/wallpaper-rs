@@ -577,7 +577,10 @@ the screen and 1000 nits as the brightest light); on the phone the system maps i
 straight on the screen, and when a filter, a flip, a fit other than fill or stretch or a setting of
 the package sends it through the graphics card, the app maps the 8 bits the decoder gives it the
 same way (BT.2020 YCbCr, PQ or HLG read from that colour description, the same knee toward 1000
-nits). `wprs-ctl pack check` says so. Readers look for it only when they
+nits). When `playback.hdr` lights the screen in HDR for such a video, the app writes extended linear
+values instead, with 203 nits at 1.0 and the knee toward the headroom of the screen, and a color
+filter keeps the highlights above white; when the decoder reports that its frames are already
+standard (it mapped them itself), the app shows them as they come. `wprs-ctl pack check` says so. Readers look for it only when they
 record facets (adding to a repository, indexing the library, the server and `pack check`), never
 when they open a package to show it. The inputs of a web page come from its manifest as declared;
 for the other kinds every input, `media` included, comes from what the package uses, and an

@@ -41,6 +41,8 @@ object Native {
 
     external fun moving(): Boolean
 
+    external fun decoded(path: String, transfer: Int)
+
     external fun parallax(engine: Long): Int
 
     external fun tilt(x: Float, y: Float, z: Float, rotation: Int): Boolean
