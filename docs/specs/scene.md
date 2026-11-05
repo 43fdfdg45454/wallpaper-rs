@@ -792,7 +792,13 @@ the package declares `media` and the user allows it: the texts `title`, `artist`
 `album_artist`, `subtitle`, `genres` and `kind`; the numbers `position`, `duration` (seconds) and
 `progress` (0 to 1); `playing` as a flag or number; and the colors `primary`, `secondary` and
 `tertiary` of the cover, `text` (readable over the primary color) and `contrast` (black or white).
-Texts are empty and colors those of the placeholder while nothing plays. An asset with `media: current` shows the
+Texts are empty and colors those of the placeholder while nothing plays. The numbers also fit
+texts, written `m:ss` (`h:mm:ss` from an hour) for `position` and `duration` and as a whole
+percentage for `progress`. The position runs on from the last reading of the player at its rate,
+and starts again from where the player says it jumped (`Seeked`), without asking the player while
+it plays: a number that follows `position` or `progress` asks for at most 30 frames a second and a
+text one frame a second, only while the track plays and the scene is shown; paused, stopped or at
+the end of the track they wake nothing. An asset with `media: current` shows the
 cover of the track and one with `media: previous` the cover of the track before it (both still
 pictures, usable wherever a picture is: image layers, masks, effects, particles); `path` is the
 placeholder shown until a cover arrives, while nothing plays, without the grant and when the

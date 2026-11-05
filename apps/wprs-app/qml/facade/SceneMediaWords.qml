@@ -37,7 +37,7 @@ QtObject {
 
     function sources(widget) {
         const text = ["text", "texts", "markup"].includes(widget);
-        const found = text ? words : widget === "color" ? colors : ["bool", "number", "integer", "scalar"].includes(widget) ? playing : [];
+        const found = text ? words.concat(numbers) : widget === "color" ? colors : widget === "bool" ? playing : ["number", "integer", "scalar"].includes(widget) ? playing.concat(numbers) : [];
         return found.map(s => [s[0], s[1], widget === "color" ? "" : sample(s[0], text)]);
     }
 }

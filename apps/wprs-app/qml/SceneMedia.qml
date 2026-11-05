@@ -70,6 +70,22 @@ QQC2.ScrollView {
                 onToggled: player.change("playing", checked)
             }
 
+            QQC2.Slider {
+                Kirigami.FormData.label: App.tr("Position: %1", SceneMediaWords.clock(value))
+                from: 0
+                to: Math.max(1, player.media.duration ?? 0)
+                value: player.media.position ?? 0
+                onMoved: player.change("position", Math.round(value))
+            }
+
+            QQC2.Slider {
+                Kirigami.FormData.label: App.tr("Duration: %1", SceneMediaWords.clock(value))
+                from: 0
+                to: 1200
+                value: player.media.duration ?? 0
+                onMoved: player.change("duration", Math.round(value))
+            }
+
             Row {
                 Kirigami.FormData.label: App.tr("Cover colors")
                 spacing: Kirigami.Units.smallSpacing

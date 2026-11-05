@@ -138,7 +138,7 @@ impl Check<'_> {
             self.uses(true, "media_info");
             let fits = match m.reading() {
                 Reading::Words => T::TEXT,
-                Reading::Number => T::SCALAR,
+                Reading::Number => T::SCALAR || T::TEXT,
                 Reading::Flag => T::FLAG || T::SCALAR,
                 Reading::Color => T::COLOR,
             };

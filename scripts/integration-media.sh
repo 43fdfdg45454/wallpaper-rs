@@ -20,7 +20,9 @@ tuned() {
 uid=$(tuned '{"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 32], "background": "#000000"},
   "assets": {"cover": {"path": "red.png", "media": "current"}},
   "layers": [{"id": "art", "type": "image", "image": "cover", "size": [64, 32], "transform": {"position": [32, 16]}},
-    {"id": "title", "type": "text", "text": {"media": "title"}, "size": 4, "transform": {"position": [2, 2]}}]}' 1.0.0)
+    {"id": "title", "type": "text", "text": {"media": "title"}, "size": 4, "transform": {"position": [2, 2]}},
+    {"id": "bar", "type": "solid", "color": "#00ff00", "size": [4, 2], "opacity": {"media": "progress"},
+      "transform": {"position": [62, 31]}}]}' 1.0.0)
 read -r _ _ _ s21 < <(ctl stream TEST-21 160 90)
 consume "$s21"
 ctl lib apply "$uid" -o TEST-21
@@ -51,8 +53,19 @@ wait_for 10 says "r['cover']" False || fail "a cover from the internet was read 
 shown "$s21" 255 0 0
 play "{\"title\": \"Morning\", \"artist\": [\"Example Artist\"], \"length\": 100, \"art\": \"$art\"}"
 shown "$s21" 0 0 255
+more() { [ "$(grep -c '^gets' "$WORK/player.out")" -gt "$1" ]; }
+asked() {
+  local n
+  n=$(grep -c '^gets' "$WORK/player.out" || true)
+  play '{"gets": true}' && wait_for 5 more "$n" && sed -n 's/^gets //p' "$WORK/player.out" | tail -1
+}
+before=$(asked) && sleep 3 && after=$(asked)
+[ "$before" = "$after" ] || fail "the position was asked $((after - before)) times in 3 s while the track played"
+play '{"seek": 50}'
 play '{"status": "Paused"}'
 wait_for 10 says "r['playing']" False || fail "a pause was not followed: $(ctl media status --json)"
+idle=$(ticks) && sleep 2 && idle=$(($(ticks) - idle))
+[ "$idle" -lt 8 ] || fail "the daemon used $idle ticks in 2 s for a paused track with a progress bar"
 play '{"quit": true}'
 exec 8>&-
 wait_for 10 says "r['players'], r['track']" "(0, False)" || fail "a player that left was kept: $(ctl media status --json)"

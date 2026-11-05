@@ -106,3 +106,57 @@ fn playing_shows_and_hides_layers_and_drives_numbers() {
     rt.set_media(MediaState { playing: false, ..playing() });
     assert!(rt.frame(VIEW, Quality::Q3).draws.is_empty(), "a pause hides them again");
 }
+
+#[test]
+fn the_position_runs_on_from_the_last_reading_only_while_playing() {
+    let layers = json!([
+        { "id": "bar", "type": "solid", "color": "#ffffff", "opacity": { "media": "progress", "scale": 0.5, "offset": 0.5 } },
+        { "id": "at", "type": "text", "text": { "media": "position" } },
+        { "id": "len", "type": "text", "text": { "media": "duration" } },
+        { "id": "done", "type": "text", "text": { "media": "progress" } }
+    ]);
+    let mut rt = runtime(&scene(layers));
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert!(close(frame.draws[0].opacity, 0.5) && text(&frame, 1) == "0:00" && frame.wake == Wake::Idle);
+    rt.set_media(playing());
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert!(close(frame.draws[0].opacity, 0.525), "10 s of 200 s");
+    assert_eq!(
+        (text(&frame, 1), text(&frame, 2), text(&frame, 3)),
+        ("0:10".into(), "3:20".into(), "5%".into())
+    );
+    assert_eq!(frame.wake, Wake::Frame, "a bar moves while the track plays");
+    rt.advance(5.0);
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert!(close(frame.draws[0].opacity, 0.5375) && text(&frame, 1) == "0:15");
+    rt.set_media(MediaState { rate: 2.0, ..playing() });
+    rt.advance(5.0);
+    assert_eq!(text(&rt.frame(VIEW, Quality::Q3), 1), "0:20", "twice as fast from the new reading");
+    rt.set_media(MediaState { playing: false, position: 3725.0, duration: 4000.0, ..playing() });
+    rt.advance(30.0);
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert_eq!(
+        (text(&frame, 1), frame.wake),
+        ("1:02:05".into(), Wake::Idle),
+        "a pause stops the clock and wakes nothing"
+    );
+    rt.set_media(MediaState { position: 199.5, ..playing() });
+    rt.advance(10.0);
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert!(
+        close(frame.draws[0].opacity, 1.0) && frame.wake == Wake::Idle,
+        "the end of the track stays still"
+    );
+}
+
+#[test]
+fn a_text_of_the_position_wakes_once_a_second() {
+    let mut rt = runtime(&scene(json!([{ "id": "at", "type": "text", "text": { "media": "position" } }])));
+    rt.set_media(MediaState { position: 10.25, ..playing() });
+    let frame = rt.frame(VIEW, Quality::Q3);
+    assert!(matches!(frame.wake, Wake::At(t) if close(t as f32, 0.75)), "{:?}", frame.wake);
+    rt.set_media(MediaState { position: 10.25, rate: 0.5, ..playing() });
+    assert!(matches!(rt.frame(VIEW, Quality::Q3).wake, Wake::At(t) if close(t as f32, 1.5)));
+    rt.set_media(MediaState { playing: false, ..playing() });
+    assert_eq!(rt.frame(VIEW, Quality::Q3).wake, Wake::Idle);
+}

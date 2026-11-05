@@ -40,7 +40,7 @@ fn scripts_media_and_pointer_hooks_name_their_broken_fields() {
             "/layers/2/layers/2/color/media does not fit",
         ),
         (
-            vec![("/layers/2/layers/2/text", json!({ "media": "progress" }))],
+            vec![("/layers/2/layers/2/text", json!({ "media": "primary" }))],
             "/layers/2/layers/2/text/media does not fit",
         ),
         (vec![("/layers/2/layers/2/text", json!({ "media": "lyrics" }))], "did not match any variant"),

@@ -1479,7 +1479,10 @@ terciario (los más frecuentes), uno de texto que se lee bien sobre el principal
 alto contraste: `{"media": "primary"}`, `secondary`, `tertiary`, `text` y `contrast`, con `smooth`
 para pasar de uno a otro sin saltos. La pestaña *Reproductor* los muestra como muestras de color.
 `{"media": "playing"}` vale 1 (o verdadero) mientras suena y 0 en pausa, parado o sin pista, y
-sirve para mostrar u ocultar capas o para cualquier número.
+sirve para mostrar u ocultar capas o para cualquier número. `position` y `duration` (segundos) y
+`progress` (de 0 a 1) sirven para barras de avance y, en un texto, se escriben como `3:25` o `42%`.
+La posición avanza sola desde la última lectura del reproductor, sin volver a preguntarle: una
+barra pide como mucho 30 fotogramas por segundo y un texto uno por segundo, solo mientras suena.
 
 ## Servidor propio
 
