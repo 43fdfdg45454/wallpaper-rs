@@ -1519,8 +1519,10 @@ positions as its own `trail` asks for, or none.
   particle is born.
 - **Turbulent start.** `init.turbulent` replaces `speed` and `angle`: each particle starts at a speed
   picked from `speed`, along `forward` degrees turned by up to `scale` half turns by a smooth noise
-  read at `phase + noise_speed · t + offset · u` (`t` the time of the system, `u` a number picked per
-  particle, so `offset` spreads the directions of the particles born together); with `audio` the
+  read at `phase + noise_speed · t + offset · u + s` (`t` the time of the system, `u` a number picked per
+  particle, so `offset` spreads the directions of the particles born together, and `s` a whole number
+  below 1024 taken from the `seed` of the system mixed with `clock.seed`, so each seed reads another
+  stretch of the noise); with `audio` the
   level of that band multiplies `phase`. The noise is read again from its start every 4 096 units,
   so a long run never loses precision.
 - **Fractal offset.** `init.offset_noise` moves each birth by up to `distance` pixels along the

@@ -33,6 +33,7 @@ ctl scene particles "$draft" dust turbulent --quiet || fail "the turbulent start
 ctl scene particles "$draft" dust offset --distance 12 --octaves 3 --sign 0,1 || fail "no fractal offset was set"
 if ctl scene particles "$draft" dust offset --octaves 9 2>/dev/null; then fail "nine octaves were kept"; fi
 ctl scene particles "$draft" dust handles | grep '"arrows"' >/dev/null || fail "the fractal offset is not shown"
+ctl scene particles "$draft" dust handles | grep -E '"seed": [0-9]+' >/dev/null || fail "the turbulent rays name no seed"
 ctl scene show "$draft" /manifest/requires/features | grep -q particle_depth || fail "depth left particle_depth out"
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with newer particles was not previewed"
 ctl scene particles "$draft" dust perspective --off || fail "the depth was not removed"

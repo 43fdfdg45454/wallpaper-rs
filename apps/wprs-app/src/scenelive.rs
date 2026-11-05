@@ -80,6 +80,7 @@ impl SceneEditor {
             return;
         }
         let mut scene = visible(&project.doc);
+        wprs_editor::swarms::pin_seed(&mut scene);
         let look: Value = serde_json::from_str(&self.look.to_string()).unwrap_or_default();
         wprs_editor::rigs::preview(&mut scene, &look);
         let mut document = json!({"manifest": project.doc["manifest"], "scene": scene});

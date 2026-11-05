@@ -67,8 +67,11 @@ fn the_fan_and_the_offset_arrows_are_what_the_engine_computes() {
     assert_eq!((fan["forward"].clone(), fan["fan"].clone()), (json!(30.0), json!([-15.0, 75.0])));
     let samples = fan["samples"].as_array().unwrap();
     assert_eq!(samples.len(), 12);
+    let t: wprs_scene::Turbulent = serde_json::from_value(gust).unwrap();
+    let seed = system(&p)["seed"].as_u64().unwrap_or(0);
+    let salt = wprs_scene::particle_salt(seed, h["seed"].as_u64().unwrap(), 0, 0);
     for (k, s) in samples.iter().enumerate() {
-        let want = wprs_scene::swirl(30.0, 0.25, 3.0 + 4.0 * k as f32 / 12.0);
+        let want = wprs_scene::turbulent_ray(&t, salt, k as u32, 1.5);
         assert!((s.as_f64().unwrap() - f64::from(want)).abs() < 0.01, "{k}: {s} {want}");
     }
     assert_eq!(fan["at"], json!([960.0, -20.0]), "the fan starts at the middle of the emitter");

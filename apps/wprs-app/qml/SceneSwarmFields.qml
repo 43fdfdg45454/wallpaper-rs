@@ -44,6 +44,14 @@ ColumnLayout {
         onEdited: (key, v) => fields.set("turbulent", key, v)
     }
 
+    QQC2.Label {
+        Layout.fillWidth: true
+        visible: fields.gust !== null
+        wrapMode: Text.Wrap
+        opacity: 0.7
+        text: App.tr("The rays on the preview are the first particles born with seed %1, as the preview runs them.", String(fields.tools.info?.seed ?? 0))
+    }
+
     RowLayout {
         visible: fields.gust !== null
 

@@ -5433,6 +5433,14 @@ msgid "Phase"
 msgstr "Fase"
 
 #: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid ""
+"The rays on the preview are the first particles born with seed %1, as the "
+"preview runs them."
+msgstr ""
+"Los rayos de la vista previa son las primeras partículas nacidas con la semilla "
+"%1, tal como las corre la vista previa."
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
 msgid "Sound multiplies the phase"
 msgstr "El sonido multiplica la fase"
 
@@ -5525,7 +5533,8 @@ msgstr "Velocidad"
 msgid ""
 "Also the speed in depth, when the parent and the child both have perspective"
 msgstr ""
-"También la velocidad en profundidad, cuando el padre y el hijo tienen perspectiva"
+"También la velocidad en profundidad, cuando el padre y el hijo tienen "
+"perspectiva"
 
 #: apps/wprs-app/qml/SceneSwarmKin.qml
 msgid "Every step while it follows"

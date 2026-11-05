@@ -56,6 +56,7 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
             "follow_inherit": c["follow_inherit"].as_bool().unwrap_or(false) })
     });
     let emitters = shapes(dir, doc, s, (&f, &spots), t);
+    let (salt, seed) = super::salt::salt(doc, system);
     let count = spots.len();
     let inputs = [
         "daytime",
@@ -91,7 +92,8 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
         "boids": super::steers::boids(s, &f),
         "operators": super::steers::operators(s),
         "strands": super::steers::strands(doc, s, render),
-        "fields": super::view::fields(s, &f, &emitters, t),
+        "fields": super::view::fields(s, &f, &emitters, (t, salt)),
+        "seed": seed,
         "outputs": ["size", "alpha", "color", "speed", "life", "rotation", "spin", "frame"],
         "domains": looks::domains(),
         "cutout": looks::cutout(render),

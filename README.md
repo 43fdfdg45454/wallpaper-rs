@@ -2125,7 +2125,9 @@ un punto en cada lugar de nacimiento; para `between`, sus extremos, un asa que c
 que desliza el punto más ancho del afinado; para `layer`, el contorno de la capa y los píxeles que
 pasan el umbral), los puntos de control `p0` a `p7` como marcadores que se arrastran y un anillo con
 un asa para la distancia focal de la perspectiva. La velocidad turbulenta dibuja el abanico de
-direcciones que puede dar el ruido, las de algunas partículas que nacen ahora y una flecha con un asa
+direcciones que puede dar el ruido, las exactas de las primeras partículas que nacen ahora con la
+semilla con que corre la vista previa (`clock.seed` o, si es `null`, una que el editor elige para la
+sesión y le pasa a la vista previa) y una flecha con un asa
 que la gira y otra que abre o cierra el abanico; el desfase fractal dibuja flechas desde una rejilla
 de lugares de nacimiento hasta donde los lleva el ruido, calculadas como en el motor, y un anillo con
 un asa para la distancia. El inspector del sistema ofrece el tipo de cada

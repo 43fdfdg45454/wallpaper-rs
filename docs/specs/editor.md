@@ -401,8 +401,10 @@ line and one that slides the widest point of the taper, with dots sized as the t
 for `layer`, the outline of the layer and the pixels above the threshold of an image layer, or
 only its outline for other layers), the control points `p0` to `p7` as markers to drag, and a ring
 whose handle sets the focal length of the perspective. A turbulent start draws, from the middle of
-the first emitter, a fan of the directions the noise may give, the directions of a few particles born
-now and an arrow with a handle that turns its direction and one on the edge of the fan that widens
+the first emitter, a fan of the directions the noise may give, the exact directions of the first
+particles born now with the seed the preview runs (`clock.seed`, or while it is `null` one seed the
+editor picks for its session and gives the preview, shown by the controls and printed as `seed` by
+`handles`) and an arrow with a handle that turns its direction and one on the edge of the fan that widens
 or narrows it; a fractal offset draws arrows from a grid of birth places to where the noise moves
 them, computed as the engine does, and a ring with a handle for the distance. An end of `around` or `between` that names a
 control point moves that point. The inspector of the system lists its emitters with a picker of
