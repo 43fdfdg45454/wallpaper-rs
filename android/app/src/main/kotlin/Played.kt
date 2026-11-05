@@ -106,6 +106,12 @@ internal class Video(
 
     private fun heard() = Duck.want(context, this, player?.playWhenReady == true && !muted && loudness > 0f)
 
+    override fun onPlaybackStateChanged(state: Int) {
+        if (fixed == null) return
+        val path = uri.removePrefix(FILE)
+        viewers.toList().forEach { it.ended(path, state == Player.STATE_ENDED) }
+    }
+
     override fun onPlayerError(error: PlaybackException) = Render.post {
         if (!retried && player?.playerError != null) {
             retried = true

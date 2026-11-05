@@ -61,6 +61,7 @@ pub(crate) struct Engine {
     steered: steer::Steered,
     reel: crate::reel::Reel,
     still: Option<i64>,
+    over: bool,
 }
 
 fn size(width: i32, height: i32) -> (u32, u32) {
@@ -109,6 +110,7 @@ impl Engine {
             steered: Default::default(),
             reel: Default::default(),
             still: None,
+            over: false,
         }
     }
 
@@ -131,6 +133,11 @@ impl Engine {
         let tilts = self.stage.as_mut().is_some_and(|stage| stage.offset(self.offset));
         let pictured = self.stage.is_none() && (pans || self.raised.is_some());
         !self.video && self.paged.is_none() && (tilts || pictured) && Power::now().moving()
+    }
+
+    pub(crate) fn ended(&mut self, path: &str, over: bool) -> bool {
+        let ours = self.film.as_deref() == Some(std::path::Path::new(path));
+        ours && std::mem::replace(&mut self.over, over) && !over
     }
 
     pub(crate) fn parallax(&mut self) -> u32 {

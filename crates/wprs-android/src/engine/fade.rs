@@ -66,7 +66,7 @@ impl Engine {
                 Some(_) => None,
                 None => self.fading.take(),
             };
-            (self.film, self.look, self.dirty, self.still) = (shown, look, true, None);
+            (self.film, self.look, self.dirty, self.still, self.over) = (shown, look, true, None, false);
         }
         let plain = direct(&settings::Look { flip, ..settings::look(self.lock) }) && self.reel.direct();
         if self.film.is_some() && self.fading.is_none() && plain {
@@ -187,7 +187,7 @@ impl Engine {
                 && direct(&settings::Look { flip, ..settings::look(self.lock) });
             gpu::trim();
         }
-        let ended = blend::rests(self.reel.once, now.is_some(), nanos - since);
+        let ended = blend::rests(self.reel.once, now.is_some(), self.over, nanos - since);
         let busy = self.fading.is_some() || (self.film.is_some() && power.moving() && !ended);
         if !busy || fps == 0 {
             self.still = None;

@@ -112,6 +112,10 @@ class Painter(
         if (uri != null) videos.update(uri) else if (shown) frames.start()
     }
 
+    fun ended(path: String, over: Boolean) {
+        if (handle != 0L && Native.ended(handle, path, over)) wake()
+    }
+
     fun move() {
         if (shown && video == null) frames.start()
     }

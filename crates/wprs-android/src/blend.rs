@@ -1,14 +1,14 @@
 use std::time::Duration;
 
 pub(crate) const PATIENCE_NS: i64 = 2_000_000_000;
-pub(crate) const STILL_NS: i64 = 3_000_000_000;
+pub(crate) const STILL_NS: i64 = 1_000_000_000;
 
 pub(crate) fn begins(gone: bool, coming: bool, waited_ns: i64) -> bool {
     (gone && coming) || waited_ns > PATIENCE_NS
 }
 
-pub(crate) fn rests(once: bool, shown: bool, since_new_ns: i64) -> bool {
-    once && shown && since_new_ns > STILL_NS
+pub(crate) fn rests(once: bool, shown: bool, over: bool, since_new_ns: i64) -> bool {
+    once && shown && over && since_new_ns > STILL_NS
 }
 
 pub(crate) fn fades(fade: Duration, fps: u32, hidden: bool, from_video: bool) -> bool {
@@ -47,11 +47,12 @@ mod tests {
 
     #[test]
     fn a_video_played_once_stops_drawing_after_its_last_frame() {
-        assert!(rests(true, true, STILL_NS + 1));
-        assert!(!rests(true, true, STILL_NS / 2), "a slow video still gives a frame now and then");
-        assert!(!rests(false, true, STILL_NS * 10), "a looping video keeps going");
+        assert!(rests(true, true, true, STILL_NS + 1));
+        assert!(!rests(true, true, false, STILL_NS * 100), "a slow video that has not ended keeps playing");
+        assert!(!rests(true, true, true, STILL_NS / 2), "its last frame may still be on its way");
+        assert!(!rests(false, true, true, STILL_NS * 10), "a looping video keeps going");
         assert!(
-            !rests(true, false, STILL_NS * 10),
+            !rests(true, false, true, STILL_NS * 10),
             "a video that has not given its first frame is waited for"
         );
     }

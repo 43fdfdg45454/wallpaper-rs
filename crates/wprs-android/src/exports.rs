@@ -70,6 +70,20 @@ pub fn offset<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong, x: jfl
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn ended<'a>(
+    mut env: EnvUnowned<'a>,
+    _: JObject<'a>,
+    handle: jlong,
+    path: JString<'a>,
+    over: jboolean,
+) -> jboolean {
+    on(&mut env, |env| {
+        let path = path.try_to_string(env)?;
+        engine(handle, |e| Ok(e.ended(&path, over)))
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
 pub fn draw<'a>(
     mut env: EnvUnowned<'a>,
     _: JObject<'a>,

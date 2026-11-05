@@ -33,6 +33,8 @@ object Native {
 
     external fun draw(engine: Long, nanos: Long, force: Boolean): Long
 
+    external fun ended(engine: Long, path: String, over: Boolean): Boolean
+
     external fun detach(engine: Long)
 
     external fun power(charging: Boolean, saver: Boolean, low: Boolean, thermal: Int, headroom: Float, still: Boolean)
