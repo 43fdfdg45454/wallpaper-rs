@@ -19,11 +19,15 @@ Kirigami.FormLayout {
         });
     }
 
-    function slid(what, key, value, held) {
-        if (!held)
-            edit(what, {
-                [key]: Math.round(value * 100) / 100
-            });
+    function slid(what, key, value, fallback) {
+        const stored = (what === "bloom" ? bloom : glide)?.[key];
+        const rounded = Math.round(value * 100) / 100;
+        if (rounded !== (typeof stored === "number" ? stored : fallback))
+            page.run("canvas", {
+                [what]: {
+                    [key]: rounded
+                }
+            }, true);
     }
 
     QQC2.Switch {
@@ -47,8 +51,7 @@ Kirigami.FormLayout {
             to: modelData[3]
             stepSize: (modelData[3] - modelData[2]) / 100
             value: typeof look.bloom?.[modelData[0]] === "number" ? look.bloom[modelData[0]] : modelData[4]
-            onMoved: look.slid("bloom", modelData[0], value, pressed)
-            onPressedChanged: look.slid("bloom", modelData[0], value, pressed)
+            onMoved: look.slid("bloom", modelData[0], value, modelData[4])
         }
     }
 
@@ -72,9 +75,8 @@ Kirigami.FormLayout {
             from: modelData[2]
             to: modelData[3]
             stepSize: (modelData[3] - modelData[2]) / 100
-            value: look.glide?.[modelData[0]] ?? modelData[4]
-            onMoved: look.slid("parallax", modelData[0], value, pressed)
-            onPressedChanged: look.slid("parallax", modelData[0], value, pressed)
+            value: typeof look.glide?.[modelData[0]] === "number" ? look.glide[modelData[0]] : modelData[4]
+            onMoved: look.slid("parallax", modelData[0], value, modelData[4])
         }
     }
 

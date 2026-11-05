@@ -15,13 +15,27 @@ QtObject {
         const look = Qt.createComponent("SceneCanvasLook.qml").createObject(page, {
             "page": page
         });
-        for (const value of [1.5, 2.5, 3.5])
-            look.slid("bloom", "strength", value, true);
-        look.slid("bloom", "strength", 4, false);
-        look.destroy();
+        look.slid("bloom", "strength", 1.5, 1);
+        if (read("/scene/canvas/bloom/strength") !== 1.5)
+            throw new Error("shaping: the glow did not change while its slider was dragged");
+        for (const value of [2.5, 3.5, 4])
+            look.slid("bloom", "strength", value, 1);
         if (read("/scene/canvas/bloom/strength") !== 4 || page.view.history.done.length !== steps + 1)
             throw new Error("shaping: one drag of the glow took other than one undo step");
         page.run("undo");
+        const before = page.view.history.done.length;
+        page.run("set", {
+            "pointer": "/scene/canvas/bloom",
+            "value": {}
+        });
+        const glowing = page.view.history.done.length;
+        look.slid("bloom", "radius", 16, 16);
+        look.slid("parallax", "amount", 1, 1);
+        if (page.view.history.done.length !== glowing || read("/scene/canvas/bloom/radius") !== null)
+            throw new Error("shaping: a click on a canvas slider that did not move it took an undo step");
+        if (glowing !== before)
+            page.run("undo");
+        look.destroy();
     }
 
     function exercise() {
